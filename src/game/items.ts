@@ -8,6 +8,10 @@ import { article, capital, fill, listed, numberWord, percent, share, spanWords, 
 import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
 import { elementIslands, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
+import {
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantHitChance, enchantMarker, SCROLL_HARM, type Enchant,
+} from './enchant';
+import { QL_TOP } from './limits';
 
 export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 
@@ -522,6 +526,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   rope_tool: { name: 'Rope tool', category: 'tool', weight: 1.2, description: 'A grooved block the strands are laid round and twisted against. Nothing is roped without one.' },
   spindle: { name: 'Spindle', category: 'misc', weight: 5, decay: 4, description: 'Spins wool, cotton and wemp into yarn. Stand at it to work.' },
   loom: { name: 'Loom', category: 'misc', weight: 30, decay: 4, description: 'Weaves yarn into cloth. Stand at it to work.' },
+  // Reed is pressed into papyrus at one of these and nowhere else (`enchant.ts`).
+  paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'A wooden screw press. Reed is pressed into papyrus standing at one set down on the ground, and nowhere else.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
   smelter: { name: 'Smelter', category: 'misc', weight: 52, decay: 3, description: 'A stone smelter, built flat-packed and bedded in where you set it down. Turns ore into lumps, and mixes alloys. It stands on your own deed.' },
   kiln: { name: 'Kiln', category: 'misc', weight: 34, decay: 3, description: 'A brick kiln for firing clay. Set it down anywhere dry and flat; take it up again when it is cold and empty.' },
@@ -626,6 +632,28 @@ ITEM_DEFS[TELESTONE] ??= {
     + `After a journey you wait ${spanWords(TELE_SLOW)} at QL ${TELE_QL_LOW} and ${spanWords(TELE_FAST)} at QL ${TELE_QL_HIGH} before travelling by Telestone again, `
     + `${(TELE_REST_STEP / 60).toFixed(1)} minutes less for every point between. The wait is yours whichever Telestone you carry, and a journey does not use it up.`,
 };
+
+/*
+ * An enchantment scroll (`enchant.ts`), one to each row of the table: written
+ * with enchanting out of papyrus and motes, and put into a melee weapon with
+ * Enchant. What a hit then does is put in by `enchanting.ts`
+ * (`{enchant.<id>.does}`), off the rules it borrows: a Kindler's burn, a
+ * knife's bleed, a stun.
+ */
+for (const e of ENCHANTMENT_LIST) {
+  ITEM_DEFS[e.scroll] ??= {
+    name: `${e.name} scroll`,
+    category: 'misc',
+    weight: 0.05,
+    decay: 14,
+    description: `Put into a melee weapon in your pack with Enchant, on the scroll. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
+      + `never under ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}, and the enchantment comes out at about that average, never above the scroll's QL `
+      + `and never above the weapon's own. If it does not take, the weapon takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces outright and is gone. `
+      + `The scroll is used up either way, and a weapon holds one enchantment. A melee hit that lands with a weapon holding ${e.name} `
+      + `{enchant.${e.id}.does} ${percent(enchantHitChance(e, QL_TOP))} of the time at QL ${QL_TOP}, and in proportion below. `
+      + `A scroll that fails in the writing loses its motes, and its sheet of papyrus takes ${SCROLL_HARM} damage.`,
+  };
+}
 
 /**
  * Put numbers into every item's text from the module that holds them.
@@ -753,6 +781,11 @@ export interface Item {
   creature?: number;
   /** What its maker's perks put into it as it was made (`Mark`), which stays with it. */
   mark?: Mark;
+  /**
+   * The enchantment put into it from a scroll, and its quality (`enchant.ts`):
+   * a Firebrand sword. One to a thing. The island keeps the same column.
+   */
+  enchant?: Enchant;
 }
 
 /**
@@ -1254,7 +1287,8 @@ export function itemName(item: Item): string {
   let name = item.extra ? `${base} (${item.extra.toLowerCase()})` : base;
   if (held) name += ` (${held.litres} ${held.litres === 1 ? 'litre' : 'litres'})`;
   if (def.charges) name += ` (${item.charges ?? 0}/${def.charges})`;
-  return name;
+  // And what is enchanted into it: a Sword (iron) (Firebrand).
+  return name + enchantMarker(item.enchant);
 }
 
 /**

@@ -3711,6 +3711,24 @@ const MODELS: Record<string, Model> = {
   },
 
   /*
+   * The paper press (`enchant.ts`): a screw press. A bed box on the floor
+   * with a stack of pressed sheets on it, the platen over them, two uprights
+   * carrying a head beam, and the wooden screw down through the beam onto the
+   * platen with a bar through its head to turn it by.
+   */
+  paper_press: ({ sc, wood }) => {
+    const SHEETS = paintOf(hex('#efe4c4'));
+    sc.shadows = [[-4.4, 4.4, -2.8, 2.8]];
+    sc.box(-4.2, 4.2, -2.6, 2.6, 0, 3.2, wood, { top: grain(sc, wood, 2) });
+    sc.box(-2.6, 2.6, -1.8, 1.8, 3.2, 4, SHEETS);
+    sc.box(-3, 3, -2.1, 2.1, 5.2, 6, wood);
+    for (const x of [-3.7, 3.7]) sc.box(x - 0.5, x + 0.5, -0.6, 0.6, 3.2, 13.4, wood);
+    sc.box(-4.4, 4.4, -0.8, 0.8, 11.8, 13.4, wood);
+    sc.rod([0, 0, 6], [0, 0, 15.2], 0.55, wood);
+    sc.rod([-3, 0, 14.6], [3, 0, 14.6], 0.3, wood);
+  },
+
+  /*
    * Masonry. The oven is a dome of stone brick on a plinth, a chimney at the
    * back and an arched mouth at the front with a niche for the wood under
    * it; lit, the mouth is full of fire. The brazier is a shallow bowl of

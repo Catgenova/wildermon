@@ -339,6 +339,15 @@ export const FURNITURE: FurnitureDef[] = [
   // The two the cloth trade is built on. Stand at one to spin or weave.
   piece('spindle', 'Spindle', 1, 1, [['plank', 8], ['shaft', 3], ['nail', 16]], 14, 9, 'You turn a spindle and set it on its stand.'),
   piece('loom', 'Loom', 2, 2, [['plank', 32], ['timber', 16], ['shaft', 6], ['nail', 48]], 22, 18, 'You build a loom and thread the warp.'),
+  /*
+   * Where reed is pressed into papyrus, and nowhere else (`enchant.ts`): a
+   * screw press, built with carpentry. Between a spindle and a loom in what
+   * it takes -- a frame of timber the loom's weight would want, on a spindle's
+   * footing -- since it is a bench of one job as each of those is.
+   */
+  piece('paper_press', 'Paper press', 1, 1, [['plank', 24], ['timber', 12], ['shaft', 4], ['nail', 36]], 20, 16,
+    'You raise the frame, thread the screw through its head beam and hang the platen under it. Stand at it to press reed into papyrus.', undefined,
+    { skill: 'carpentry' }),
   // Masonry, not carpentry: these two are laid in brick and mortar.
   piece('oven', 'Oven', 2, 2, [['stone_brick', 40], ['mortar', 16]], 24, 18, 'You lay the courses, turn an arch over the mouth and leave it to set. An oven.', undefined, { skill: 'masonry', tool: 'trowel', hearth: true }),
   /*

@@ -210,6 +210,8 @@ const BY_SKILL: Record<string, Stroke> = {
   foraging: 'cloth', botanizing: 'cloth',
   // Motes gathered out of a swirl by hand, as a forager gathers (`motes.ts`).
   elementalism: 'cloth',
+  // A scroll written and a weapon enchanted, at a bench as papyrus is pressed.
+  enchanting: 'cloth',
   fishing: 'water',
 };
 

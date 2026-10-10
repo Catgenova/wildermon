@@ -2,6 +2,10 @@ import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, SCROLL_HARM } from '../../game/enchant';
+import { EFFECT_HEAD, EFFECT_TAIL } from '../../game/enchanting';
+import { STUN_SECS } from '../../game/fight';
+import { QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_WIND, SWING_WIND_KG, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
 import {
@@ -1638,6 +1642,22 @@ export const NEWS: News[] = [
           + 'The repeat key asks again. Where none holds enough, it says how many litres it takes and the most any one of them holds.',
       ];
     },
+  },
+  {
+    n: 118,
+    day: '2026-10-10',
+    lines: () => [
+      `Enchanting, a new skill. Papyrus is pressed standing at a paper press now (${recipeBill('make_paper_press')}, ${skillOf('make_paper_press')}), and nowhere else.`,
+      `A scroll is written at the crafting window with ${skillOf(`make_${ENCHANTMENT_LIST[0].scroll}`)}: ${listed(ENCHANTMENT_LIST.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}. `
+        + `It comes out no better than its sheet of papyrus. A scroll that fails loses its motes, and the sheet takes ${SCROLL_HARM} damage.`,
+      `Enchant, on a scroll, puts it into a melee weapon in your pack: it takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
+        + `from ${percent(ENCHANT_LEAST)} to ${percent(ENCHANT_MOST)}, at a quality rolled about that average and held to the scroll's QL and the weapon's own. `
+        + `Otherwise the weapon takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces. The scroll is used up either way, and a weapon holds one.`,
+      ...ENCHANTMENT_LIST.map((e) => `${e.name}: a melee hit that lands ${EFFECT_HEAD[e.effect]} ${percent(enchantHitChance(e, NEWS_QL_TOP))} of the time at QL ${NEWS_QL_TOP}, `
+        + `in proportion below. ${EFFECT_TAIL[e.effect]}`),
+      `A stun is new: for ${STUN_SECS} seconds the creature neither moves nor strikes, and loses a heavy blow it was drawing back for. Another stun starts it again rather than adding on, `
+        + 'and the target panel says "stunned" while it lasts. The name of an enchanted weapon carries it, a Sword (Firebrand), and Examine says its quality and how often it works.',
+    ],
   },
 ];
 

@@ -182,6 +182,8 @@ export const JOURNAL: Chapter[] = [
       { id: 'prayed', text: 'Pray at an altar', met: did('prayed') },
       { id: 'cunning', text: 'Cast a circle of cunning on a tool', hint: 'A favour bought at an altar', met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) > 0) },
       { id: 'thrice', text: `Cast ${numberWord(BLESS_CAP)} circles of cunning on one tool`, met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) >= BLESS_CAP) },
+      // A scroll written at the crafting window and put into a weapon (`enchant.ts`): held, not counted, so the island has nothing to note.
+      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Write a scroll from papyrus and motes, then Enchant, on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant) },
       { id: 'goblin', text: 'Kill a goblin', met: did('slew:goblin') },
       { id: 'orc', text: 'Kill an orc', met: did('slew:orc') },
       { id: 'ogre', text: 'Kill an ogre', met: did('slew:ogre') },

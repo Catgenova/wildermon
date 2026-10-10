@@ -1,4 +1,5 @@
 import { Springs, type SpringSave } from './springs';
+import { DAMAGE_MAX, QL_TOP } from './limits';
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { rankAtLeast, type DeedRole } from './ranks';
@@ -348,8 +349,8 @@ export const ASH_RATE = 1 / 120;
 /** Damage at which a tool starts warning you, and every `DAMAGE_WARN_STEP` points after. */
 export const DAMAGE_WARN = 75;
 export const DAMAGE_WARN_STEP = 5;
-/** Damage a thing goes to pieces at. */
-export const DAMAGE_MAX = 100;
+/** Damage a thing goes to pieces at (`limits.ts`). */
+export { DAMAGE_MAX };
 /**
  * Damage one use puts on a tool of this quality, before what it is made of
  * and its rarity: a poor tool goes to pieces far faster than a good one.
@@ -491,8 +492,8 @@ export const goSeconds = (baseTime: number, skill = 50, toolQl = 0, control = 1)
   Math.max(ACTION_FLOOR, baseTime * ACTION_PACE * (1 - skill / 140) * (1 - toolQl / TOOL_QL_SPAN) * control);
 /** Each point of a tool's QL takes one part in this many off a go's time: a QL 100 tool, a quarter of it. */
 export const TOOL_QL_SPAN = 400;
-/** The best a thing's QL can be. */
-export const QL_TOP = 100;
+/** The best a thing's QL can be (`limits.ts`). */
+export { QL_TOP };
 
 /**
  * What you wash ashore with: each tool, the quality it comes at and what its

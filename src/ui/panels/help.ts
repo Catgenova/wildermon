@@ -136,6 +136,13 @@ import { BOARD_RULES, REFRESH as BOARD_REFRESH } from './boards';
 import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
+import {
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, enchantHitChance, ENCHANTMENT_LIST, SCROLL_HARM,
+} from '../../game/enchant';
+import { EFFECT_HEAD, EFFECT_TAIL, meleeNames } from '../../game/enchanting';
+import { STUN_SECS } from '../../game/fight';
+import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
+import { TRY_LEARN } from '../../game/learn';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -196,6 +203,36 @@ const recipe = (id: string) => {
 /** Each size a dyeing goes by, as the help names it (`DYE_LITRES`). */
 const DYE_SIZE_SAID = { garment: 'a garment', banner: 'a banner', sail: 'a sailing boat', ship: 'a caravel', wall: 'a side of a wall', floor: 'a tile of floor' } as const;
 /** What a recipe takes, as it is read: "a shaft, two leathers and four nails", or in figures. */
+/**
+ * Enchanting, off its table (`enchant.ts`): the scrolls, what Enchant takes
+ * and makes, and what each enchantment does, every number from the rule.
+ */
+function enchantingHelp(): string {
+  const pts: Array<[number, number]> = [[1, 20], [20, 40], [50, 50], [90, 100]];
+  const rows = ENCHANTMENT_LIST.map((e) => `<li><b>${e.name}</b> &mdash; ${bill(`make_${e.scroll}`)}: a hit ${EFFECT_HEAD[e.effect]}
+      ${percent(enchantHitChance(e, ENCHANT_TOP))} of the time at QL ${ENCHANT_TOP}, and in proportion below (${percent(enchantHitChance(e, ENCHANT_TOP / 2))} at QL ${ENCHANT_TOP / 2}).
+      ${EFFECT_TAIL[e.effect]}</li>`).join('');
+  const first = ENCHANTMENT_LIST[0];
+  return `<p><b>Scrolls</b> are written at the crafting window with <b>enchanting</b>, one to each enchantment, at ${workedAt(`make_${first.scroll}`)}.
+    A scroll comes out at the quality any craft's roll makes, and never better than the sheet of papyrus it is written on. One that
+    fails loses its motes, and the sheet takes ${SCROLL_HARM} damage (as one sheet of its pile: the pile's damage rises by that over
+    its sheets); a sheet that would reach ${BROKEN_AT} is used up instead.</p>
+    <ul>${rows}</ul>
+    <p>Choose <b>Enchant</b> on a scroll in your pack and pick a melee weapon in your pack (${meleeNames()}; not a bow or a thrown
+    weapon). It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
+    ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}
+    (${pts.map(([sk, q]) => `${percent(enchantChance(sk, q))} at enchanting ${sk} with a QL ${q} scroll`).join('; ')}).
+    What took comes out at that average times ${QL_LOW} to ${Number((QL_LOW + QL_SPAN).toFixed(2))}, plus ${QL_BARE}, as any craft's quality is
+    rolled, and never above the scroll's QL nor above the weapon's own; the log says which held it down when one did.
+    One that does not take puts ${ENCHANT_HARM} damage on the weapon, and ${percent(ENCHANT_BREAK)} of the time the weapon
+    goes to pieces outright; a weapon that reaches ${BROKEN_AT} damage is gone. The scroll is used up either way. A weapon
+    holds one enchantment, which its name carries &mdash; a Sword (${first.name}) &mdash; and Examine says at its quality.
+    Every go trains <b>enchanting</b>, a go that did not take ${percent(TRY_LEARN)} as much.</p>
+    <p>A <b>stun</b> lasts ${STUN_SECS} seconds: the creature neither moves nor strikes, and a heavy blow it was drawing back for
+    is lost. A stun on one already stunned starts again rather than adding on. The target panel says "stunned" while it lasts.
+    Enchantments work on a melee swing that lands, not on a shot, a throw or a spell.</p>`;
+}
+
 const bill = (id: string, figures = false): string =>
   billWords(recipe(id).inputs.map((i) => [i.item, i.count ?? 1] as const), figures);
 /** How many of one thing a recipe takes. */
@@ -1644,6 +1681,8 @@ export function helpText(): string {
     <p>It will not take you while you are fighting or something is hunting you, while you drive, pull, ride or are aboard
     anything, while you swim, while you carry too much to walk, while a wildermon follows you (it would be left behind), or
     in the middle of another job.</p>
+    <h3>Enchanting</h3>
+    ${enchantingHelp()}
     <h3>Large carts and wagons</h3>
     <p>A small cart is a barrow you pull yourself. The ones that follow are <b>driven</b>: a wildermon
     goes in the traces, you sit on the seat, and what is on the back weighs nothing at all as far as the
@@ -2149,7 +2188,8 @@ export function helpText(): string {
     <p>The <b>reed beds</b> along the shallows are worth cutting. Take a knife to one and you get
     reeds; cut it again too soon and there is nothing left to take. ${capital(countOf('reed', need('make_papyrus', 'reed')))} soaked in a bucket of
     water, split, laid crosswise and pressed give ${numberWord(made('make_papyrus'))} sheets of <b>papyrus</b>, which is the
-    <b>Papyrusmaking</b> skill.</p>
+    <b>Papyrusmaking</b> skill. Papyrus is pressed standing at a <b>paper press</b> set down on the ground, and nowhere else: one
+    is ${bill('make_paper_press')}, built with a mallet at ${workedAt('make_paper_press')}.</p>
     <p><b>Ink</b> is the alchemist's part: a gland &mdash; the rare thing off a carcass &mdash; ground with
     ${numberWord(need('make_ink', 'ash'))} lots of ashes into a bucket of water, for ${numberWord(made('make_ink'))} lots of ink.
     ${capital(numberWord(need('make_book', 'papyrus')))} sheets, ${numberWord(need('make_book', 'leather'))} leather boards, a lot of ink and a needle bind into a <b>book</b>.</p>

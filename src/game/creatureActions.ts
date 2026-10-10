@@ -1,4 +1,5 @@
 import { DARK_SHOT, DARK_SWING, tryGain } from './learn';
+import { ENCHANT_BURN, enchantHitSaid, enchantRoll, stun } from './enchanting';
 import type { ActionDef, Target } from './actions';
 import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
@@ -569,6 +570,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.gainSkill('body_strength', tryGain(landed, SWING_BODY));
       // And, if it is dark enough to matter, what it teaches you about noticing.
       g.fought(DARK_SWING);
+      let dealt = 0;
       if (!landed) {
         g.logMsg(`You swing at the ${def.name.toLowerCase()}${item ? ` with your ${itemName(item).toLowerCase()}` : ''} and miss.`, 'fight');
       } else {
@@ -586,6 +588,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
           // And what your fighting trade's passives make of it (`classDealt`).
           * classDealt(g, c);
         g.creatures.hurt(g, c, dmg, 'player', crit);
+        dealt = dmg;
         // And what the weapon does besides: a maul staggers, a spear holds it off, a knife opens it up (a fist none of these).
         if (c.health > 0 && usable.id !== FIST.id) sideBlow(g, c, usable.kind, dmg);
         // Less for a Mender's Armour Care, as `perform_fight` has it.
@@ -607,6 +610,14 @@ export const CREATURE_ACTIONS: ActionDef[] = [
        * swinging or not.
        */
       g.creatures.engage(g, c);
+      // And what is enchanted into the weapon, now and then, on a hit that landed (`enchanting.ts`): a burn, a bleed, a stun.
+      const e = landed ? enchantRoll(g, item, c) : null;
+      if (e) {
+        if (e.effect === 'burn') g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs);
+        else if (e.effect === 'bleed') sideBlow(g, c, 'knives', dealt);
+        else stun(g, c);
+        g.logMsg(enchantHitSaid(e, def.name.toLowerCase()), 'fight');
+      }
       // Keep swinging while it is still within reach.
       return Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
     },

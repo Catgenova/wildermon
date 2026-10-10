@@ -1,4 +1,5 @@
 import type { WornWire } from '../game/worn';
+import type { Enchant } from '../game/enchant';
 import { firedIn, toldIn, type FiredWire, type ToldWire } from './told';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { ErrorReport } from './errors';
@@ -317,6 +318,8 @@ export interface ItemRow {
   creature?: number | null;
   /** What its maker's perks put into it: a Carpenter's chest that holds more. Null for most things. */
   mark?: Mark | null;
+  /** What is enchanted into it from a scroll (`enchant.ts`). Null for most things. */
+  enchant?: Enchant | null;
   /** Alight, for the things that burn, and when it was set going. */
   lit: boolean;
   lit_at: string | null;
@@ -445,7 +448,7 @@ export interface Deal {
   /** Silver asked for it, or silver offered with it. One or the other, never both. */
   want: number;
   give: number;
-  things: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null; rare: number | null; creature?: Occupant | null }>;
+  things: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null; rare: number | null; creature?: Occupant | null; enchant?: Enchant | null }>;
 }
 
 /** The wildermon in a creature crate, as a deal, a parcel or a stall names it. */
@@ -467,6 +470,8 @@ export interface Good {
   rare: number | null;
   price: number | null;
   creature: Occupant | null;
+  /** What is enchanted into it (`enchant.ts`). */
+  enchant?: Enchant | null;
 }
 
 /** A stall on the market board: where it stands, whose it is, and what is on it. */
@@ -523,6 +528,8 @@ export interface Parcel {
   letter: number | null;
   from: string | null;
   creature?: Occupant | null;
+  /** What is enchanted into it (`enchant.ts`). */
+  enchant?: Enchant | null;
 }
 
 /**

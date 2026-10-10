@@ -1876,6 +1876,8 @@ export interface IslandCreature {
   hunting?: boolean;
   /** Seconds left of a heavy blow it is drawing back for, when it is. */
   windup?: number;
+  /** Seconds left of a stun on it (`STUN_SECS`), when it is stunned. */
+  stunned?: number;
   /** The one leading the pack it hunts with, when it runs with one. */
   lead?: number | null;
   /** What a companion of yours is fighting, said only of your own. */
@@ -2013,6 +2015,8 @@ export interface Creature {
   bleedFrom?: number;
   /** The game time a burn a Kindler started on it stops, which is a bleed while it runs; missing on one never burned. */
   burnUntil?: number;
+  /** The game time a stun on it ends (`STUN_SECS`): until then it neither moves nor strikes. Missing on one never stunned. */
+  stunUntil?: number;
   busyUntil: number;
   searchAt: number;
   /** Where it first had your scent, which is what the leash is tied to. */
@@ -2568,6 +2572,8 @@ export class Creatures {
       // The island says `hunting` only of one that is after you (`rpc_creatures`), and that is what `PLAYER_ATTACKER` means here.
       c.enemy = r.hunting ? PLAYER_ATTACKER : (r.enemy ?? null);
       c.windup = r.windup ?? 0;
+      // A stun the island says it is under, to the game clock here, for the target panel (`enchant_stun`).
+      c.stunUntil = r.stunned ? time + r.stunned : undefined;
       c.packLead = r.lead ?? null;
       c.brawl = r.brawl ?? null;
       // Whose it is, which the island says and the journal has to know.
@@ -3043,6 +3049,12 @@ export class Creatures {
       // wander off, and it does not fight.
       if (c.trapped !== null) {
         c.enemy = null;
+        c.moving = false;
+        this.place(c);
+        continue;
+      }
+      // Stunned (`STUN_SECS`): it neither moves nor strikes until the stun runs out, and keeps its fight.
+      if ((c.stunUntil ?? 0) > game.time) {
         c.moving = false;
         this.place(c);
         continue;

@@ -61,6 +61,8 @@ export function packed(it: ItemRow, island: Aged): Item {
     piece: it.piece ?? undefined,
     creature: it.creature ?? undefined,
     mark: it.mark ?? undefined,
+    // And what is enchanted into it, which a browser that dropped it would name and use without (`enchant.ts`).
+    enchant: it.enchant ?? undefined,
   };
 }
 

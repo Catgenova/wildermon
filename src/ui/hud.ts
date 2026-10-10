@@ -569,7 +569,8 @@ export class Hud {
         : c.state === 'flee' ? 'Running from you'
           : def.hunter || def.monster ? `Hunts on sight within ${def.notice ?? HUNT_SIGHT} tiles`
             : 'Not after you';
-    const bleeding = c.bleedUntil > g.time ? ', bleeding' : '';
+    // And what is on it: a bleed, a burn, a stun (`enchanting.ts`).
+    const bleeding = `${(c.burnUntil ?? 0) > g.time ? ', burning' : c.bleedUntil > g.time ? ', bleeding' : ''}${(c.stunUntil ?? 0) > g.time ? ', stunned' : ''}`;
     const blow = blowOf(swungWith(g).def);
     const yours = hideTakes(def.hide, blow);
     const note = [

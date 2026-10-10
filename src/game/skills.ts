@@ -120,6 +120,12 @@ export const SKILL_DEFS: SkillDef[] = [
    * sets how many motes a swirl gives, and only a swirl collected trains it.
    */
   { id: 'elementalism', name: 'Elementalism', group: 'Skills', start: 1 },
+  /*
+   * Writing an enchantment scroll and putting one into a weapon (`enchant.ts`):
+   * it sets how often each comes off and how good what comes off is, and each
+   * trains it, a go apiece.
+   */
+  { id: 'enchanting', name: 'Enchanting', group: 'Skills', start: 1 },
 ];
 
 /**

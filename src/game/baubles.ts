@@ -169,7 +169,7 @@ export const MINOR_SKILLS: string[] = [
   'smelting', 'blacksmithing', 'weaponsmithing', 'armorsmithing', 'farming', 'taming', 'animal_husbandry', 'butchering',
   'alchemy', 'prayer', 'meditation', 'repair', 'first_aid', 'chirurgy', 'papyrusmaking', 'archaeology', 'restoration',
   'leatherworking', 'chainsmithing', 'platesmithing', 'jewellery', 'bowyery', 'fletching', 'glassblowing', 'praying',
-  'elementalism',
+  'elementalism', 'enchanting',
 ];
 
 /**
@@ -184,6 +184,8 @@ export const MAJOR_SKILLS: string[] = [
   'alchemy', 'animal_husbandry', 'armorsmithing', 'blacksmithing', 'bowyery', 'brewing', 'carpentry', 'chainsmithing', 'cooking',
   'fine_carpentry', 'first_aid', 'fletching', 'jewellery', 'leatherworking', 'masonry', 'milling', 'papyrusmaking',
   'platesmithing', 'pottery', 'repair', 'ropemaking', 'smelting', 'stonecutting', 'tailoring', 'weaponsmithing', 'glassblowing',
+  // A scroll written at the crafting window (`enchant.ts`).
+  'enchanting',
 ];
 
 export interface AncientEffect {

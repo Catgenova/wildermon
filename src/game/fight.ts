@@ -296,6 +296,13 @@ export const STAGGER_POLE = 0.6;
  */
 export const KNIFE_BLEED = 0.15;
 export const KNIFE_BLEED_SECS = 6;
+/**
+ * A stun (a Concussion weapon's, `enchant.ts`): what is stunned neither moves
+ * nor strikes for this many seconds, and a heavy blow it was drawing back for
+ * is lost. A stun on one already stunned starts again from then rather than
+ * adding on. On the island it is a hold of this length (`enchant_stun`).
+ */
+export const STUN_SECS = 2;
 /** What a landed blow of this weapon does besides its damage, in the game's words. */
 export function sideOf(w: WeaponDef): string | null {
   if (w.kind === 'mauls') return `knocks a heavy blow off its stroke and puts the next blow back ${STAGGER_MAUL} second${STAGGER_MAUL === 1 ? '' : 's'}`;

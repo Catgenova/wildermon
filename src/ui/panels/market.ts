@@ -1,4 +1,5 @@
 import { LETTER_MAX, type Deal, type Good, type Island, type Occupant, type Order, type Parcel, type Stall } from '../../net/island';
+import type { Enchant } from '../../game/enchant';
 import type { Game } from '../../game/game';
 import { billWords, ITEM_DEFS, itemName, RARITIES, type Item } from '../../game/items';
 import { furnitureDef } from '../../game/furniture';
@@ -573,8 +574,9 @@ export class MarketPanel {
 const PICK_SHOWN = 40;
 
 /** A thing in a deal or in the post, named the way the pack names it, and a crate with who is in it. */
-const nameOf = (t: { def: string; extra: string | null; ql: number; count: number; creature?: Occupant | null }): string => {
-  const named = itemName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: 0 } as Item);
+const nameOf = (t: { def: string; extra: string | null; ql: number; count: number; creature?: Occupant | null; enchant?: Enchant | null }): string => {
+  // With what is enchanted into it, which the island sends with every thing on offer (`enchant.ts`).
+  const named = itemName({ uid: 0, id: t.def, extra: t.extra ?? undefined, ql: t.ql, count: t.count, dmg: 0, enchant: t.enchant ?? undefined } as Item);
   return t.creature ? `${named} — ${t.creature.name}, ${t.creature.rare ? `${t.creature.rare} ` : ''}${speciesName(t.creature.species)}` : named;
 };
 /** A species as a sentence names it. */

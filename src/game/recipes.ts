@@ -21,6 +21,8 @@ import { CLASSES } from './classes';
 import { CIRCLET_STONES } from './gems';
 import { SKILL_DEFS } from './skills';
 import { CANDLE_DRAWN } from './light';
+import { ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_MOTES, SCROLL_SHEETS, scrollOf } from './enchant';
+import { DAMAGE_MAX } from './limits';
 
 /** What working a thing out with your hands teaches the head. */
 export const CRAFT_HEAD = 0.25;
@@ -62,10 +64,11 @@ const article = (id: string): string => (/^[aeiou]/.test(lower(id)) ? 'an ' : 'a
  * the material's menu as well as in the crafting window.
  */
 export type RecipeCategory = 'Woodwork' | 'Furniture' | 'Stonework' | 'Clay & thatch' | 'Cloth' | 'Alchemy' | 'Writing' | 'Cooking' | 'Smelting' | 'Glassblowing'
-  | 'Jewellery' | 'Mending';
+  | 'Jewellery' | 'Mending' | 'Enchanting';
 /** A place a recipe has to be worked at, beyond what is carried. */
-export type Station = 'campfire' | 'smelter' | 'spindle' | 'loom';
-const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom' };
+export type Station = 'campfire' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS;
+/** What a station is called where a recipe says it wants one. The island's `station_name` is generated from this. */
+export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press' };
 
 export interface RecipeInput {
   item: string;
@@ -317,8 +320,23 @@ export const RECIPES: Recipe[] = [
   { id: 'make_lye', category: 'Alchemy', result: 'lye_bucket', inputs: [{ item: 'water_bucket' }, { item: 'ash', count: 2 }], skill: 'alchemy', label: 'Leach into lye', verb: 'making lye', baseTime: 12, stamina: 0.03, difficulty: 14, done: 'You stir the ashes into the water and leave it to leach. It comes off sharp and slippery: lye.', fail: 'The ashes settle out again and you are left with dirty water.', consumeOnFail: true, salvage: [['bucket', 1]] },
   { id: 'tan_hide', category: 'Alchemy', result: 'leather', inputs: [{ item: 'hide' }, { item: 'lye_bucket' }], tool: 'carving_knife', skill: 'leatherworking', returns: [['bucket', 1]], label: 'Tan in lye', verb: 'tanning a hide', baseTime: 14, stamina: 0.05, difficulty: 16, done: 'The lye takes the hair off the hide and you work it soft. It is leather now.', fail: 'The hide is left too long in the lye and comes out brittle and useless.', consumeOnFail: true },
   // Writing: reed beds into paper, and what is written on it.
-  { id: 'make_papyrus', category: 'Writing', result: 'papyrus', count: 3, inputs: [{ item: 'reed', count: 4 }, { item: 'water_bucket' }], skill: 'papyrusmaking', returns: [['bucket', 1]], label: 'Press into papyrus', verb: 'pressing papyrus', baseTime: 13, stamina: 0.04, difficulty: 16, done: 'You split the reeds, lay them crosswise and press them until they take to each other. {count:W} sheets.', fail: 'The sheet dries in ridges and tears as you lift it.', consumeOnFail: true },
+  // Pressed standing at a paper press, as cloth is woven at a loom (`enchant.ts`).
+  { id: 'make_papyrus', category: 'Writing', result: 'papyrus', count: 3, inputs: [{ item: 'reed', count: 4 }, { item: 'water_bucket' }], station: PAPER_PRESS, skill: 'papyrusmaking', returns: [['bucket', 1]], label: 'Press into papyrus', verb: 'pressing papyrus', baseTime: 13, stamina: 0.04, difficulty: 16, done: 'You split the reeds, lay them crosswise and screw the press down on them until they take to each other. {count:W} sheets.', fail: 'The sheet dries in ridges and tears as you lift it.', consumeOnFail: true },
   { id: 'make_ink', category: 'Writing', result: 'ink', count: 2, inputs: [{ item: 'gland' }, { item: 'ash', count: 2 }, { item: 'water_bucket' }], skill: 'alchemy', returns: [['bucket', 1]], label: 'Grind into ink', verb: 'grinding ink', baseTime: 11, stamina: 0.03, difficulty: 20, done: 'You grind soot and gland into the water until it flows black and stays black.', fail: 'It separates into grey water and grit. No ink today.', consumeOnFail: true },
+  /*
+   * An enchantment scroll, one to each enchantment there is (`enchant.ts`):
+   * papyrus and motes, rolled on enchanting. A scroll that fails loses its
+   * motes and damages its sheet (`scrollFails`); one that comes off is never
+   * better than the sheet it was written on.
+   */
+  ...ENCHANTMENT_LIST.map((e): Recipe => ({
+    id: `make_${e.scroll}`, category: 'Enchanting', result: e.scroll,
+    inputs: [{ item: 'papyrus', count: SCROLL_SHEETS }, { item: e.mote, count: SCROLL_MOTES }],
+    skill: ENCHANTING, label: `Write a ${e.name} scroll`, verb: 'writing a scroll', baseTime: 12, stamina: 0.03, difficulty: SCROLL_DIFFICULTY,
+    note: 'Never better than the papyrus it is written on',
+    done: `You write ${e.name} onto the sheet, and the motes go into the words.`,
+    fail: `The words will not take, and the ${numberWord(SCROLL_MOTES)} motes are lost.`,
+  })),
   { id: 'make_book', category: 'Writing', result: 'book', inputs: [{ item: 'papyrus', count: 6 }, { item: 'leather', count: 2 }, { item: 'ink' }], tool: 'needle', skill: 'papyrusmaking', label: 'Write and bind a book', verb: 'binding a book', baseTime: 26, stamina: 0.07, difficulty: 28, done: 'You fill the sheets, sew the gatherings and bind them between leather boards.', fail: 'The ink runs on a sheet and the whole gathering is spoiled.', consumeOnFail: true },
   { id: 'make_thatch', category: 'Clay & thatch', result: 'thatch', inputs: [{ item: 'mixed_grass', count: 2 }], skill: 'carpentry', label: 'Bundle into thatch', verb: 'bundling thatch', baseTime: 3, stamina: 0.02, done: 'You bundle the grass into thatch.' },
   { id: 'make_clay_bowl', category: 'Clay & thatch', result: 'unfired_clay_bowl', inputs: [{ item: 'clay' }], skill: 'pottery', label: 'Shape a bowl', verb: 'shaping a bowl', baseTime: 6, stamina: 0.02, difficulty: 8, done: 'You shape a clay bowl. It needs a kiln before it will hold anything.', fail: 'The walls collapse as you draw them up. You fail to shape a bowl.' },
@@ -766,7 +784,7 @@ const secondAltar = (r: Recipe, g: Game): boolean => ALTARS.has(r.result) && !!g
  * stone's own menu. It is listed now, with the circlet.
  */
 export const RECIPE_CATEGORIES: RecipeCategory[] = ['Woodwork', 'Furniture', 'Stonework', 'Clay & thatch', 'Cloth', 'Alchemy', 'Writing', 'Cooking', 'Smelting',
-  'Glassblowing', 'Jewellery', 'Mending'];
+  'Glassblowing', 'Jewellery', 'Mending', 'Enchanting'];
 export const stationName = (s: Station): string => STATION_NAME[s];
 
 export interface RecipeStatus {
@@ -1094,6 +1112,30 @@ function consumeAcross(stock: readonly CraftStock[], id: string, n: number, pref
   return left === 0;
 }
 
+/**
+ * A scroll that did not come off: its motes are used up, and the sheet of
+ * papyrus a go would have spent first takes `SCROLL_HARM` damage as one of its
+ * pile -- the pile's damage up by that over its sheets -- or, where that takes
+ * the sheet to `DAMAGE_MAX`, is used up. Which of the two, for the words. The
+ * island's `scroll_fails` does the same to the same sheet.
+ */
+function scrollFails(stock: readonly CraftStock[], r: Recipe, preferUid: number): 'harmed' | 'used' | 'none' {
+  for (const i of r.inputs) if (i.item !== 'papyrus') consumeAcross(stock, i.item, i.count ?? 1, preferUid);
+  const s = drawFor(stock, 'papyrus', SCROLL_SHEETS, preferUid)?.[0];
+  if (!s) return 'none';
+  if (s.item.dmg + SCROLL_HARM >= DAMAGE_MAX) {
+    s.spend(1);
+    return 'used';
+  }
+  s.item.dmg += SCROLL_HARM / s.item.count;
+  return 'harmed';
+}
+
+/** What a failed scroll did to its sheet, in the words the island says too (`scroll_harm_said`). */
+export const scrollHarmSaid = (harm: 'harmed' | 'used' | 'none'): string =>
+  (harm === 'used' ? `A sheet of papyrus takes ${SCROLL_HARM} damage and is used up.`
+    : harm === 'harmed' ? `A sheet of papyrus takes ${SCROLL_HARM} damage.` : '');
+
 export function recipeAction(r: Recipe): ActionDef {
   const materials = r.inputs.map((i) => i.item);
   const toolQl = (g: Game): number => (r.tool ? g.toolQl(r.tool) : 0);
@@ -1166,6 +1208,15 @@ export function recipeAction(r: Recipe): ActionDef {
       const hard = (r.difficulty ?? 0) + matOf(mat).difficulty;
       // Surer for a perk on the recipe (a Mason's Sure Chisel, a Tailor's Sure Needle).
       if (r.difficulty !== undefined && !g.sureCheck(r.id, r.skill, hard, toolQl(g), ease)) {
+        // A scroll that fails loses its motes and damages the sheet it was being written on (`scrollFails`).
+        if (scrollOf(r.result)) {
+          const harm = scrollFails(stock, r, t.uid);
+          carryOn(t, g, was, mat);
+          g.missed();
+          g.gainSkill('mind_logic', tryGain(false, CRAFT_HEAD));
+          g.logMsg([r.fail, scrollHarmSaid(harm)].filter(Boolean).join(' '), 'event');
+          return more(t, g);
+        }
         // And nothing lost of what went into it, now and then, for a perk on
         // the recipe (a Mason's or a Tailor's Nothing Wasted), as the island has it.
         const keep = r.consumeOnFail ? g.perk(`spare:${r.id}`, 0) : 0;
@@ -1189,6 +1240,8 @@ export function recipeAction(r: Recipe): ActionDef {
         return more(t, g);
       }
       const fromInputs = r.qlFromInputs ? inputQl(stock, r, t.uid, mat) : 0;
+      // A scroll is never better than the sheet it is written on, read off the sheet a go spends first.
+      const sheet = scrollOf(r.result) ? drawFor(stock, 'papyrus', SCROLL_SHEETS, t.uid)?.[0]?.item.ql : undefined;
       // What the parts the anvil beat out carry of their makers' marks, read
       // off the stacks a go spends first, before spending them: a Smith's Keen
       // Edge in a sword blade goes into the sword whoever fits it.
@@ -1233,9 +1286,10 @@ export function recipeAction(r: Recipe): ActionDef {
        * of that survives -- 78% of it at no skill and 99.7% at a hundred. The
        * ceiling is the parts; nothing is finer than what it is made of.
        */
-      const made = r.qlFromInputs ? Math.max(1, Math.min(100, fromInputs * inputKeep(g, r))) : g.productQl(r.skill, toolQl(g) + (oven ? oven.ql * 0.3 : 0));
-      // And better for a perk on the recipe (a Cook's Fine Fare).
-      const ql = Math.min(100, made * g.perk(`ql:${r.id}`, 1));
+      const rolled = r.qlFromInputs ? Math.max(1, Math.min(100, fromInputs * inputKeep(g, r))) : g.productQl(r.skill, toolQl(g) + (oven ? oven.ql * 0.3 : 0));
+      // And better for a perk on the recipe (a Cook's Fine Fare), and a scroll never better than its sheet, whatever made it.
+      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1));
+      const ql = sheet === undefined ? better : Math.min(better, sheet);
       // More, the go a bauble on the trade comes up in the altar of the settlement
       // you work on, and more again for a perk (a Carpenter's Clean Sawing).
       const goes = g.madeAGo(r) + served;

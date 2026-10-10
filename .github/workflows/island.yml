@@ -2196,6 +2196,24 @@ jobs:
           npx esbuild supabase/test/telestone.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/telestone.mjs --log-level=error
           node node_modules/.cache/telestone.mjs
+      - name: Enchanting, the paper press and three melee enchantments, the same on both sides
+        run: |
+          # Papyrus is pressed at a paper press, built with carpentry and set
+          # down, and refused without one. A scroll is written from papyrus and
+          # two motes with enchanting -- Firebrand from fire (a burn), Razoredge
+          # from ice (a knife's bleed), Concussion from earth (a stun) -- never
+          # better than its sheet; one that fails loses its motes and damages
+          # the sheet, or uses it up. Enchant puts one into a melee weapon at
+          # the average of enchanting and the scroll's QL as a percent, from 5%
+          # to 95%, held to the scroll's QL and the weapon's own; otherwise 30
+          # damage, or 5% of the time the weapon gone. Every refusal, the name's
+          # marker, Examine, the post, a counter and a save; each enchantment
+          # just under and just over its chance on a hit, through a swing; and
+          # the stun itself: nothing moves or strikes for its two seconds, and a
+          # second stun starts again rather than adding on. Every roll is set.
+          npx esbuild supabase/test/enchant.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/enchant.mjs --log-level=error
+          node node_modules/.cache/enchant.mjs
 
       - name: An altar goes up on your own ground
         run: |

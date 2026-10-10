@@ -155,6 +155,15 @@ import {
   TELESTONE, TELESTONE_SAID, TRAVEL,
 } from '../src/game/runestones';
 
+import {
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, SCROLL_HARM, SCROLL_SHEETS,
+} from '../src/game/enchant';
+import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, MELEE_WEAPONS } from '../src/game/enchanting';
+import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
+import { STUN_SECS } from '../src/game/fight';
+import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
+import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
+
 const q = (v: unknown): string => {
   if (v === undefined || v === null) return 'null';
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'null';
@@ -1917,6 +1926,33 @@ for (const [fn, v] of [
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
 out.push(`create or replace function telestone_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(TELESTONE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+/*
+ * Enchanting (`enchant.ts`, `enchanting.ts`): the skill, the station papyrus
+ * is pressed at and what every station is called where a recipe wants one,
+ * every enchantment's row -- its name, scroll, mote, what a hit does and how
+ * often for each point of its quality -- the numbers of writing a scroll and
+ * of putting one into a weapon, the weapons that take one, the burn a
+ * Firebrand starts, the stun, the spread a quality is rolled with, and every
+ * sentence either says.
+ */
+out.push(`create or replace function station_name(p_station text) returns text language sql immutable as $fn$ select case p_station ${Object.entries(STATION_NAME).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}else p_station end $fn$;`);
+out.push(`create or replace function enchanting_skill() returns text language sql immutable as $fn$ select ${q(ENCHANTING)} $fn$;`);
+out.push(`create or replace function enchant_action() returns text language sql immutable as $fn$ select ${q(ENCHANT)} $fn$;`);
+out.push(`create or replace function enchantments() returns table (ord int, id text, name text, scroll text, mote text, effect text, per_ql double precision) language sql immutable as $fn$ values ${ENCHANTMENT_LIST.map((e, i) => `(${i}, ${q(e.id)}, ${q(e.name)}, ${q(e.scroll)}, ${q(e.mote)}, ${q(e.effect)}, ${q(e.perQl)}::double precision)`).join(', ')} $fn$;`);
+out.push(`create or replace function melee_weapon(p_def text) returns boolean language sql immutable as $fn$ select p_def = any (array[${MELEE_WEAPONS.map(q).join(', ')}]::text[]) $fn$;`);
+for (const [fn, v] of [
+  ['scroll_harm', SCROLL_HARM], ['scroll_sheets', SCROLL_SHEETS], ['enchant_least', ENCHANT_LEAST], ['enchant_most', ENCHANT_MOST],
+  ['enchant_harm', ENCHANT_HARM], ['enchant_break', ENCHANT_BREAK], ['stun_secs', STUN_SECS],
+  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs],
+  ['ql_low', QL_LOW], ['ql_span', QL_SPAN], ['ql_bare', QL_BARE], ['ql_top', QL_TOP], ['damage_max', DAMAGE_MAX],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function enchant_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(ENCHANT_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+for (const [fn, table] of [['enchant_head', EFFECT_HEAD], ['enchant_tail', EFFECT_TAIL], ['enchant_hit_said', EFFECT_SAID]] as Array<[string, Record<string, string>]>) {
+  out.push(`create or replace function ${fn}(p_effect text) returns text language sql immutable as $fn$ select case p_effect ${Object.entries(table).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+}
+out.push(`create or replace function scroll_harm_said(p_harm text) returns text language sql immutable as $fn$ select case p_harm ${(['harmed', 'used', 'none'] as const).map((k) => `when ${q(k)} then ${q(scrollHarmSaid(k))} `).join('')}end $fn$;`);
 for (const w of WALL_TYPES) {
   out.push(`insert into wall_type_def values (${q(w.id)}, ${q(w.name)}, ${q(w.factor)}, ${q(w.passable)}, ${q(w.height ?? null)}, ${q(!!w.low)}, ${q(!!w.railed)}, ${q(!!w.standalone)});`);
   if (w.beastProof) out.push(`update wall_type_def set beast_proof = true where id = ${q(w.id)};`);
