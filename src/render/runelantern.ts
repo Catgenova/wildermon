@@ -678,7 +678,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     // The corner it snapped at, where a low tooth of the taller stone still stands on the rim.
     const hi = corners.reduce((b, q, i) => (q[0] - 0.6 * q[1] < corners[b][0] - 0.6 * corners[b][1] ? i : b), 0);
     const nx = (hi + 1) % n, op = (hi + 2) % n, pv = (hi + 3) % n;
-    const rim: V3[] = corners.map((q, i) => at3([q[0] * 0.86, q[1] * 0.86], i === hi ? 0.69 + 0.06 * Q() : i === op ? 0.36 + 0.05 * Q() : 0.44 + 0.06 * Q()));
+    const rim: V3[] = corners.map((q, i) => at3([q[0] * 0.86, q[1] * 0.86], i === hi ? 0.61 + 0.06 * Q() : i === op ? 0.36 + 0.05 * Q() : 0.44 + 0.06 * Q()));
     // Where the tooth's two broken faces meet the flat of the break: a notch on each rim either side of it, and a point in from it.
     const m1 = at3(lerp(corners[hi], corners[nx], 0.4, 0.86), 0.52 + 0.04 * Q());
     const m2 = at3(lerp(corners[hi], corners[pv], 0.4, 0.86), 0.5 + 0.04 * Q());
@@ -858,6 +858,8 @@ const HEAD_WARM = 0.3;
 /** What grows at its foot after dark: taken toward this pale gold, out to so many pixels at zoom one from its middle. */
 const FLORA_GOLD = '226, 210, 168';
 const FLORA_GLOW = 16;
+/** And how far toward it at its middle: a tint, so each flower keeps its own colours and ink. */
+const FLORA_TINT = 0.12;
 /** Pixels a unit up is on the screen at zoom one. */
 const HEIGHT_PX = 2.25;
 /** How much a lantern's runes add after dark against a runestone's: it stands in its own light. */
@@ -1108,8 +1110,8 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
      */
     const [fx, fy] = proj(e, [0, 0, 0]);
     const gold = wg.createRadialGradient(fx, fy, 0, fx, fy, FLORA_GLOW);
-    gold.addColorStop(0, `rgba(${FLORA_GOLD}, 0.32)`);
-    gold.addColorStop(0.6, `rgba(${FLORA_GOLD}, 0.16)`);
+    gold.addColorStop(0, `rgba(${FLORA_GOLD}, ${FLORA_TINT})`);
+    gold.addColorStop(0.6, `rgba(${FLORA_GOLD}, ${FLORA_TINT / 2})`);
     gold.addColorStop(1, `rgba(${FLORA_GOLD}, 0)`);
     const [fl, flg] = canvasOf(canvas.width, canvas.height);
     flg.setTransform(M0);
@@ -1276,6 +1278,8 @@ const BLOOM = 12;
 const FOOT_HOLE = 28;
 /** The least that is on the screen, in pixels, however far out it is drawn. */
 const FOOT_HOLE_PX = 24;
+/** That middle hole across, on the screen at a zoom: the five along the ground and the one at the foot are all laid off it. */
+const holeAt = (zoom: number): number => Math.max(FOOT_HOLE * zoom, FOOT_HOLE_PX);
 /** How far down the screen from its footprint's middle that spot's middle is, in pixels at zoom one: `POOL_OUT` tiles toward the eye. */
 const POOL_DOWN = POOL_OUT * Math.SQRT2 * HALF_H;
 
@@ -1385,10 +1389,12 @@ export function runeLanternHit(look: RuneLanternLook, rotation: number, zoom = 1
  */
 export function runeLanternNight(look: RuneLanternLook, rotation: number, zoom: number): NightSource {
   const b = bakedFor(look.facing, rotation, mossOf(look.stage, look.stages), look.variant, zoom);
+  const F = holeAt(zoom);
   return {
     glows: b.glows,
     rise: 0,
-    reach: [-FOOT_HOLE * 2.4, -FOOT_HOLE * POOL_FLAT, FOOT_HOLE * 2.4, FOOT_HOLE + POOL_DOWN],
+    // As far as its holes reach, at the size they are drawn at this zoom: the outer pair's far edges across, the foot's up, the middle's down.
+    reach: [-1.95 * F / zoom, -0.45 * POOL_FLAT * F / zoom, 1.95 * F / zoom, POOL_DOWN + POOL_FLAT * F / zoom],
     holes: (sx, sy, z, t): NightHole[] => {
       const out = glowHoles(b.glows, sx, sy, z, t, 1.5).map((h, i) => ({ ...h, a: h.a * b.seen[i] }));
       const p = 0.5 + 0.5 * Math.sin((t / 4.8) * TAU);
@@ -1400,7 +1406,7 @@ export function runeLanternNight(look: RuneLanternLook, rotation: number, zoom: 
        * the band; never smaller on the screen than `FOOT_HOLE_PX`, and a little
        * deeper the smaller it is drawn, so it still reads far out.
        */
-      const F = Math.max(FOOT_HOLE * z, FOOT_HOLE_PX), fy = sy + POOL_DOWN * z;
+      const F = holeAt(z), fy = sy + POOL_DOWN * z;
       const deep = 1 + 0.3 * Math.min(1, Math.max(0, (FOOT_HOLE_PX * 1.5 - FOOT_HOLE * z) / FOOT_HOLE_PX));
       out.push({ x: sx, y: fy, r: F, ry: F * POOL_FLAT, a: (0.48 + 0.06 * p) * deep });
       for (const d of [-1, 1]) {
