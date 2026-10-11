@@ -41,7 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import { swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { ENCHANTMENTS, moreSaid, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -3347,6 +3347,16 @@ export class Game {
     return wornEnchant(Object.values(this.player.equipped).map((uid) => (uid === null || uid === undefined ? null : this.inventory.get(uid))), effect);
   }
 
+  /** What hunger and thirst fall at: a body's own rate times Power's Enduring and a Hearthbound worn (`body_settle`). */
+  upkeepMul(): number {
+    return this.pathFx('upkeep', 1) * (1 - this.wornEnchant('upkeep'));
+  }
+
+  /** What a Steady Heart worn makes of the wind coming back (`body_settle`). */
+  windMul(): number {
+    return 1 + this.wornEnchant('wind');
+  }
+
   /** What is left of a blow of this kind after the Stoneskin and Emberward you wear (`enchant_guard`). */
   enchantTaken(kind: WoundKind): number {
     return (1 - this.wornEnchant('guard')) * (kind === 'burn' ? 1 - this.wornEnchant('fireguard') : 1);
@@ -3449,6 +3459,8 @@ export class Game {
     // And the stone you wear, worth a knack on the one trade it favours.
     // A jewel worn, and a circlet on the head, for each stone of theirs that favours it.
     mult += jewelGain(this.worn('jewel'), id) + jewelGain(this.worn('head'), id);
+    // And a Scholar's Band worn, on every trade.
+    mult += this.wornEnchant('learn');
     // And a reader's Attentive, for good, and a Clarity while it lasts (`meditation.ts`).
     mult += this.pathFx('learn', 0);
     if (this.player.clarityUntil > this.time) mult += PATH_PICK_BY_ID.get('knowledge_clarity')?.fx.more ?? 0;
@@ -3512,7 +3524,8 @@ export class Game {
    * teaches you.
    */
   private earnKnacks(skill: string, base: number): void {
-    if (this.rand() >= knackChance(skill, base, this.pathFx('knack', 1))) return;
+    // A Knackstone worn multiplies with a reader's Polymath (`earn_knacks`).
+    if (this.rand() >= knackChance(skill, base, this.pathFx('knack', 1) * (1 + this.wornEnchant('knack')))) return;
     const id = knackLands(skill, this.rand);
     const had = this.player.knacks[id] ?? 0;
     if (had >= KNACK_CAP) return;
@@ -4041,8 +4054,8 @@ export class Game {
     const keep = upkeepMul(p.nutrition);
     for (const k of NUTRIENTS) p.nutrition[k] = Math.max(0, p.nutrition[k] - dt * NUTRIENT_DECAY);
     if (!this.bodyFromIsland) {
-      // And slower for Power's Enduring.
-      const upkeep = this.pathFx('upkeep', 1);
+      // And slower for Power's Enduring and a Hearthbound worn.
+      const upkeep = this.upkeepMul();
       s.hunger = Math.max(0, s.hunger - dt * HUNGER_RATE * keep * upkeep);
       s.thirst = Math.max(0, s.thirst - dt * THIRST_RATE * keep * upkeep);
     } else {
@@ -4061,7 +4074,7 @@ export class Game {
        * `bodyForward` is `body_settle` to the letter and deliberately not the
        * richer version above it — see the note on it.
        */
-      const wind = 1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL;
+      const wind = (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
       // What the wounds are taking, by the island's own sum — `woundDrain` and
       // `wound_drain` are the same arithmetic over the same table.
       const drain = p.wounds.reduce((n, w) => n + woundDrain(w), 0);
@@ -4081,7 +4094,7 @@ export class Game {
       const spend = doing && a.def.stamina > 0 && !this.pathHolds('unbroken')
         ? (a.def.stamina * body) / Math.max(0.001, a.duration)
         : 0;
-      const now = bodyForward(s, dt, { acting: doing, wind, drain, spend, upkeep: this.pathFx('upkeep', 1) });
+      const now = bodyForward(s, dt, { acting: doing, wind, drain, spend, upkeep: this.upkeepMul() });
       s.hunger = now.hunger;
       s.thirst = now.thirst;
       s.stamina = now.stamina;
@@ -4161,7 +4174,7 @@ export class Game {
       }
     } else if (!performing && !this.bodyFromIsland) {
       // Body stamina is what gets your wind back between jobs.
-      const wind = 1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL;
+      const wind = (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
       const regen = (moved > 0 ? WIND_WALK : WIND_REST) * wind;
       const starving = s.hunger <= 0 || s.thirst <= 0 ? WIND_STARVING : 1;
       s.stamina = Math.min(1, s.stamina + dt * regen * starving);
@@ -5335,6 +5348,21 @@ export class Game {
   /** What an enchantment on that tool comes to, for an effect it has: Swiftwork's share, Bountiful's chance. The island's `tool_enchant`. */
   toolEnchant(id: string, effect: EnchantEffect): number {
     return swingEnchant(this.jobTool(id), effect);
+  }
+
+  /**
+   * A go that may bring one more: a Bountiful on the sickle or the rod, a
+   * Lodestone on the pickaxe, at its chance. Gathers the one more at the
+   * quality the go made and says so. The island's `enchant_more`. Here and
+   * not in `enchanting.ts` so that the jobs calling it (fishing's among them)
+   * need nothing that loads the job table back round in a circle.
+   */
+  enchantMore(tool: string, effect: 'bounty' | 'lode', item: string, ql: number, what = itemDef(item).name.toLowerCase()): void {
+    const held = this.jobTool(tool)?.enchant;
+    const e = held && ENCHANTMENTS[held.id];
+    if (!e || e.effect !== effect || !(this.rand() < this.toolEnchant(tool, effect))) return;
+    this.gather(item, { ql });
+    this.logMsg(moreSaid(e, what), 'event');
   }
 
   /**

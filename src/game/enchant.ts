@@ -67,14 +67,15 @@ export const SCROLL_HARM = 25;
  * every hit back as health (`leech`).
  */
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
-  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace';
+  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace'
+  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
 export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -89,6 +90,8 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   reaper: 'a sickle or a fishing rod',
   pick: 'a pickaxe',
   light: 'a lantern or a torch',
+  ring: 'a jewelled ring',
+  amulet: 'a jewelled pendant',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -187,6 +190,18 @@ export const LODESTONE_PER_QL = 0.001;
 export const GRACE_PER_QL = 0.01;
 /** and it throws its light this many tiles further, at any quality. */
 export const GRACE_TILES = 2;
+/** Scholar's Band: QL/20 percent more skill from every go, on every trade. */
+export const SCHOLARS_PER_QL = 0.0005;
+/** Knackstone: the chance of a knack at a go is QL/2 percent greater (times 1 + QL/200, so half again at QL 100). */
+export const KNACKSTONE_PER_QL = 0.005;
+/** Steady Heart: your wind comes back QL/5 percent faster. */
+export const STEADY_HEART_PER_QL = 0.002;
+/** Hearthbound: hunger and thirst fall QL/5 percent slower. */
+export const HEARTHBOUND_PER_QL = 0.002;
+/** Favoured: QL/10 percent more favour from a prayer. */
+export const FAVOURED_PER_QL = 0.001;
+/** Stillwater: QL/10 percent more Calm banked from a sitting. */
+export const STILLWATER_PER_QL = 0.001;
 WORN_CAP.guard = STONESKIN_CAP;
 WORN_CAP.fireguard = EMBERWARD_CAP;
 WORN_CAP.thorns = THORNHIDE_CAP;
@@ -221,6 +236,12 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('bountiful', 'Bountiful', 'life', 'reaper', 'bounty', BOUNTIFUL_PER_QL),
   row('lodestone', 'Lodestone', 'earth', 'pick', 'lode', LODESTONE_PER_QL),
   row('lanterns_grace', 'Lantern\'s Grace', 'light', 'light', 'grace', GRACE_PER_QL),
+  row('scholars_band', 'Scholar\'s Band', 'light', 'ring', 'learn', SCHOLARS_PER_QL),
+  row('knackstone', 'Knackstone', ['light', 'life'], 'ring', 'knack', KNACKSTONE_PER_QL),
+  row('steady_heart', 'Steady Heart', 'water', 'amulet', 'wind', STEADY_HEART_PER_QL),
+  row('hearthbound', 'Hearthbound', 'earth', 'amulet', 'upkeep', HEARTHBOUND_PER_QL),
+  row('favoured', 'Favoured', 'light', 'amulet', 'favour', FAVOURED_PER_QL),
+  row('stillwater', 'Stillwater', 'water', 'amulet', 'calm', STILLWATER_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';

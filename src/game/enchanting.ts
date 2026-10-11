@@ -22,7 +22,7 @@ import { BLOW_SHARE, DAMAGE_MAX, QL_TOP } from './limits';
 import { HELD_LIGHTS } from './light';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, moreSaid, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
+  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -113,6 +113,12 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'temper': return 'it takes {v} less damage from use.';
     case 'bounty': return 'a bush harvested with a sickle, or a fish landed with a rod, brings one more {v} of the time.';
     case 'grace': return `a candle set in it, or the torch when it is struck, burns {v} longer, and it throws its light ${GRACE_TILES} tiles further.`;
+    case 'learn': return 'while it is worn, every go at any trade teaches {v} more skill.';
+    case 'knack': return 'while it is worn, the chance of a knack from a go is {v} greater.';
+    case 'wind': return 'while it is worn, your stamina comes back {v} faster.';
+    case 'upkeep': return 'while it is worn, hunger and thirst fall {v} slower.';
+    case 'favour': return 'while it is worn, a prayer gives {v} more favour.';
+    case 'calm': return 'while it is worn, a sitting banks {v} more Calm.';
     case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
   }
 }
@@ -149,6 +155,8 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'reaper': return REAPERS.includes(id);
     case 'pick': return id === 'pickaxe';
     case 'light': return (HELD_LIGHTS as readonly string[]).includes(id);
+    case 'ring': return id === 'jewelled_ring';
+    case 'amulet': return id === 'jewelled_pendant';
   }
 };
 /** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
@@ -179,6 +187,8 @@ export const FITS: Record<EnchantOn, string[]> = {
   reaper: REAPERS,
   pick: ['pickaxe'],
   light: [...HELD_LIGHTS],
+  ring: ['jewelled_ring'],
+  amulet: ['jewelled_pendant'],
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */
@@ -194,19 +204,6 @@ export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: 
   if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
   if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
   return { scroll, weapon, e };
-}
-
-/**
- * A go that may bring one more: a Bountiful on the sickle or the rod, a
- * Lodestone on the pickaxe, at its chance. Gathers the one more at the
- * quality the go made and says so. The island's `enchant_more`.
- */
-export function enchantMore(g: Game, tool: string, effect: 'bounty' | 'lode', item: string, ql: number, what = itemDef(item).name.toLowerCase()): void {
-  const held = g.jobTool(tool)?.enchant;
-  const e = held && ENCHANTMENTS[held.id];
-  if (!e || e.effect !== effect || !(g.rand() < g.toolEnchant(tool, effect))) return;
-  g.gather(item, { ql });
-  g.logMsg(moreSaid(e, what), 'event');
 }
 
 /** What may take this scroll, of what is in the pack: everything of the kind it goes on. */

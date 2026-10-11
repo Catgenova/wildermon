@@ -1713,6 +1713,16 @@ export const NEWS: News[] = [
         `On an island a torch burned ${times(WORLD_PACE)} too fast, as a candle once did. It lasts what it does here now, ${spanWords(torchBurn(1))} to ${spanWords(torchBurn(100))} by how well it was wound.`,
       ];
     },
+  },  {
+    n: 125,
+    day: '2026-10-11',
+    lines: () => {
+      const jewel = ENCHANTMENT_LIST.filter((e) => e.on === 'ring' || e.on === 'amulet');
+      return [
+        `Six enchantments for what is worn in the jewel slot, one at a time: ${listed(jewel.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...jewel.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
   },
 ];
 

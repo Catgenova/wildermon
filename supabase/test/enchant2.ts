@@ -37,7 +37,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/action
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { EMBERWARD_CAP, ENCHANTMENT_LIST, GRACE_TILES, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
-import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantMore, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
+import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
 import { classDealt } from '../../src/game/creatureActions';
 import { blowEvery, bowReach, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
@@ -621,15 +621,15 @@ pick.enchant = { id: LODE.id, ql: HIT_QL };
 const more = (): string => g.inventory.items.filter((it) => it.id === 'raspberry' || it.id === 'iron_ore')
   .sort((a, b) => a.id.localeCompare(b.id)).map((it) => `${it.id}*${it.count}@${it.ql.toFixed(1)}`).join(',');
 dice(enchantValue(BOUNTY, HIT_QL) + 0.001);
-enchantMore(g, 'sickle', 'bounty', 'raspberry', 33);
+g.enchantMore('sickle', 'bounty', 'raspberry', 33);
 dice(enchantValue(LODE, HIT_QL) + 0.001);
-enchantMore(g, 'pickaxe', 'lode', 'iron_ore', 33);
+g.enchantMore('pickaxe', 'lode', 'iron_ore', 33);
 const over = more();
 const before = said.length;
 dice(enchantValue(BOUNTY, HIT_QL) - 0.001);
-enchantMore(g, 'sickle', 'bounty', 'raspberry', 33);
+g.enchantMore('sickle', 'bounty', 'raspberry', 33);
 dice(enchantValue(LODE, HIT_QL) - 0.001);
-enchantMore(g, 'pickaxe', 'lode', 'iron_ore', 33);
+g.enchantMore('pickaxe', 'lode', 'iron_ore', 33);
 const lines = said.slice(before).join('#');
 check(`Bountiful at QL ${HIT_QL} (${enchantValue(BOUNTY, HIT_QL) * 100}%) and Lodestone at QL ${HIT_QL} (${enchantValue(LODE, HIT_QL) * 100}%): a roll just over brings nothing more, just under one more at the go's quality, said the same on both sides`,
   over === '' && isle.get('MOREOVER') === '0' && more() === 'iron_ore*1@33.0,raspberry*1@33.0' && isle.get('MOREUNDER') === more()

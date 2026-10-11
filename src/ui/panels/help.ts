@@ -262,7 +262,13 @@ function enchantingHelp(): string {
     Lodestone on Mine, with the pickaxe. The one more comes at the quality the go made, and a fish is never rare for it.</p>
     <p>Lantern's Grace counts on a lantern or a torch you carry: its share is added to the candle when one is set in the lantern, and to
     the torch when it is struck with nothing left in it, so a candle already in it when the scroll goes in burns as it was; its
-    ${GRACE_TILES} tiles go on whatever reach the light throws. A lantern hung on a lantern post burns and throws as the post's own.</p>`;
+    ${GRACE_TILES} tiles go on whatever reach the light throws. A lantern hung on a lantern post burns and throws as the post's own.</p>
+    <p>A jewelled ring or a jewelled pendant counts while it is worn in the jewel slot, and there is one jewel slot, so one of
+    ${listed(ENCHANTMENT_LIST.filter((e) => e.on === 'ring' || e.on === 'amulet').map((e) => e.name))} at a time.
+    Scholar's Band's share is added to how fast every trade goes into you, as a worn stone's is, beside a reader's Attentive and your knacks;
+    Knackstone's multiplies with a reader's Polymath; Steady Heart's with what body stamina gives your wind; Hearthbound's with Power's
+    Enduring and with what is in you; Favoured's with what a prayer banks before your faith's cap holds it; Stillwater's with what the place
+    you sit in gives.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

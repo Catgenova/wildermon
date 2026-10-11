@@ -2232,6 +2232,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/enchant2.mjs --log-level=error
           node node_modules/.cache/enchant2.mjs
 
+      - name: Enchanting, part three
+        run: |
+          # The enchantments on new kinds of thing, on both sides: the scrolls,
+          # Examine's words, the refusals by kind, and what each does -- the
+          # jewel slot's Scholar's Band, Knackstone, Steady Heart, Hearthbound,
+          # Favoured and Stillwater.
+          npx esbuild supabase/test/enchant3.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/enchant3.mjs --log-level=error
+          node node_modules/.cache/enchant3.mjs
+
       - name: An altar goes up on your own ground
         run: |
           # Asked for: "Make the altar only craftable within deed perimeter".
