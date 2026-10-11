@@ -15,7 +15,9 @@
  * at scroll QL. A failure when applying an enchantment causes significant
  * damage to the item, with a small chance to completely break it." And then
  * two more beside it, Razoredge (a bleed) and Concussion (a stun), and the
- * enchantment's quality held to the item's own as well as the scroll's.
+ * enchantment's quality held to the item's own as well as the scroll's. The
+ * first was renamed Emberbrand afterwards, so that it is not mistaken for the
+ * Kindler's Firebrand spell (`talents.ts`), which keeps the name.
  *
  * An enchantment is one row of `ENCHANTMENT_LIST`: what it is called, the mote
  * its scroll is written with, what a hit does (`effect`) and how often for
@@ -46,7 +48,7 @@ export type EnchantEffect = 'burn' | 'bleed' | 'stun';
 
 export interface EnchantmentDef {
   id: string;
-  /** What it is called, and what the name of a thing holding it carries: "Sword (Firebrand)". */
+  /** What it is called, and what the name of a thing holding it carries: "Sword (Emberbrand)". */
   name: string;
   /** The scroll it is written on. */
   scroll: string;
@@ -62,17 +64,17 @@ const row = (id: string, name: string, element: string, effect: EnchantEffect, p
   ({ id, name, scroll: `${id}_scroll`, mote: `${element}_mote`, effect, perQl });
 
 /**
- * Every enchantment there is. Firebrand and Razoredge a quarter of their
+ * Every enchantment there is. Emberbrand and Razoredge a quarter of their
  * quality as a percent (25% at QL 100), Concussion a tenth (10% at QL 100):
  * the owner's numbers.
  */
 export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
-  row('firebrand', 'Firebrand', 'fire', 'burn', 0.0025),
+  row('emberbrand', 'Emberbrand', 'fire', 'burn', 0.0025),
   row('razoredge', 'Razoredge', 'ice', 'bleed', 0.0025),
   row('concussion', 'Concussion', 'earth', 'stun', 0.001),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
-export const FIREBRAND = 'firebrand';
+export const EMBERBRAND = 'emberbrand';
 export const RAZOREDGE = 'razoredge';
 export const CONCUSSION = 'concussion';
 /** The enchantment a scroll carries, by the scroll's item id, or undefined for anything that is not a scroll. */
@@ -147,7 +149,7 @@ export const enchantHitChance = (e: EnchantmentDef, ql: number): number => Math.
 /** A quality as the log says one: to the tenth. The island's `to_char(.., 'FM990.0')`. */
 export const qlWord = (ql: number): string => ql.toFixed(1);
 
-/** What the name of a thing holding one carries: " (Firebrand)". */
+/** What the name of a thing holding one carries: " (Emberbrand)". */
 export const enchantMarker = (e: Enchant | undefined | null): string =>
   (e && ENCHANTMENTS[e.id] ? ` (${ENCHANTMENTS[e.id].name})` : '');
 

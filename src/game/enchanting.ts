@@ -37,14 +37,16 @@ export const isMelee = (id: string): boolean => {
 export const MELEE_WEAPONS: string[] = WEAPONS.filter((w) => isMelee(w.id)).map((w) => w.id);
 
 /**
- * A Firebrand's burn is a Kindler's Scorch: the smallest burn the game starts,
- * a share of the creature's full health a second for a few seconds, through
- * the same rule (`Game.burn`, the island's `class_burn`), so a Kindler's
- * Lingering and Searing Burn and their Firebrand spell lengthen and deepen
- * it as they do every burn of theirs.
+ * An Emberbrand's burn is a Kindler's Scorch: the smallest burn the game
+ * starts, a share of the creature's full health a second for a few seconds,
+ * through the same rule (`Game.burn`, the island's `class_burn`), so a
+ * Kindler's Lingering and Searing Burn and their Firebrand spell lengthen and
+ * deepen it as they do every burn of theirs.
  */
 const SCORCH = CLASS_SPELLS.find((s) => s.id === 'kindler_scorch');
 export const ENCHANT_BURN = { each: SCORCH?.fx.each ?? 0, secs: SCORCH?.fx.secs ?? 0 };
+/** The Kindler's Firebrand spell (not this enchantment): while it holds, every burn its caster starts lasts `long` times as long. */
+export const BRAND_SPELL = CLASS_SPELLS.find((s) => s.id === 'kindler_firebrand');
 
 /** What a hit does, as Examine's line begins it: "sets the target burning". */
 export const EFFECT_HEAD: Record<EnchantEffect, string> = {
@@ -58,7 +60,7 @@ export const EFFECT_TAIL: Record<EnchantEffect, string> = {
   bleed: `A bleed takes ${enchantPct(KNIFE_BLEED)} of the blow a second for ${KNIFE_BLEED_SECS} seconds, never the last of it, as a knife's does.`,
   stun: 'Stunned, it neither moves nor strikes; a stun on one already stunned starts again rather than adding to it.',
 };
-/** And what the log says when it does it, `{t}` the creature: "Your Firebrand sets the boar burning." */
+/** And what the log says when it does it, `{t}` the creature: "Your Emberbrand sets the boar burning." */
 export const EFFECT_SAID: Record<EnchantEffect, string> = {
   burn: 'sets the {t} burning.',
   bleed: 'opens the {t} up, and it bleeds.',
@@ -106,7 +108,7 @@ export const enchantable = (g: Game): Item[] => g.inventory.items.filter((it) =>
 /** The spread every craft's quality is rolled with (`Game.productQl` with no tool), about a figure rather than a skill. */
 export const craftSpread = (base: number, r: number): number => base * (QL_LOW + r * QL_SPAN) + QL_BARE;
 
-/** What a go that took says: "Firebrand goes into the sword (iron) at QL 34.0, held to the sword's QL 34.0. The scroll is used up." */
+/** What a go that took says: "Emberbrand goes into the sword (iron) at QL 34.0, held to the sword's QL 34.0. The scroll is used up." */
 export function enchantedSaid(e: EnchantmentDef, name: string, kind: string, ql: number, held: EnchantHeld, scrollQl: number, itemQl: number): string {
   const by = held === 'item' ? `, held to the ${kind}'s QL ${qlWord(itemQl)}` : held === 'scroll' ? `, held to the scroll's QL ${qlWord(scrollQl)}` : '';
   return `${e.name} goes into the ${name} at QL ${qlWord(ql)}${by}. The scroll is used up.`;

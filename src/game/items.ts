@@ -649,8 +649,8 @@ for (const e of ENCHANTMENT_LIST) {
     description: `Put into a melee weapon in your pack with Enchant, on the scroll. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
       + `never under ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}, and the enchantment comes out at about that average, never above the scroll's QL `
       + `and never above the weapon's own. If it does not take, the weapon takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces outright and is gone. `
-      + `The scroll is used up either way, and a weapon holds one enchantment. A melee hit that lands with a weapon holding ${e.name} `
-      + `{enchant.${e.id}.does} ${percent(enchantHitChance(e, QL_TOP))} of the time at QL ${QL_TOP}, and in proportion below. `
+      + `The scroll is used up either way, and a weapon holds one enchantment. An ordinary melee swing that lands with a weapon holding ${e.name} `
+      + `{enchant.${e.id}.does} ${percent(enchantHitChance(e, QL_TOP))} of the time at QL ${QL_TOP}, and in proportion below; class blows, shots and throws don't. `
       + `A scroll that fails in the writing loses its motes, and its sheet of papyrus takes ${SCROLL_HARM} damage.`,
   };
 }
@@ -783,7 +783,7 @@ export interface Item {
   mark?: Mark;
   /**
    * The enchantment put into it from a scroll, and its quality (`enchant.ts`):
-   * a Firebrand sword. One to a thing. The island keeps the same column.
+   * an Emberbrand sword. One to a thing. The island keeps the same column.
    */
   enchant?: Enchant;
 }
@@ -1287,7 +1287,7 @@ export function itemName(item: Item): string {
   let name = item.extra ? `${base} (${item.extra.toLowerCase()})` : base;
   if (held) name += ` (${held.litres} ${held.litres === 1 ? 'litre' : 'litres'})`;
   if (def.charges) name += ` (${item.charges ?? 0}/${def.charges})`;
-  // And what is enchanted into it: a Sword (iron) (Firebrand).
+  // And what is enchanted into it: a Sword (iron) (Emberbrand).
   return name + enchantMarker(item.enchant);
 }
 

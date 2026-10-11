@@ -139,7 +139,7 @@ import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
   ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, enchantHitChance, ENCHANTMENT_LIST, SCROLL_HARM,
 } from '../../game/enchant';
-import { EFFECT_HEAD, EFFECT_TAIL, meleeNames } from '../../game/enchanting';
+import { BRAND_SPELL, EFFECT_HEAD, EFFECT_TAIL, meleeNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
@@ -209,9 +209,17 @@ const DYE_SIZE_SAID = { garment: 'a garment', banner: 'a banner', sail: 'a saili
  */
 function enchantingHelp(): string {
   const pts: Array<[number, number]> = [[1, 20], [20, 40], [50, 50], [90, 100]];
+  // A Kindler's own burns grow, and this is one of theirs when they swing it (`class_burn`).
+  const linger = PERKS.find((p) => 'burn:secs' in p.fx);
+  const sear = PERKS.find((p) => 'burn:rate' in p.fx);
+  const kindled = BRAND_SPELL && linger && sear
+    ? ` Swung by a Kindler it is a burn of theirs: it lasts ${times(BRAND_SPELL.fx.long)} as long while their ${BRAND_SPELL.name} spell
+      holds (${BRAND_SPELL.fx.secs} seconds), ${percent(linger.fx['burn:secs'] - 1)} longer with ${linger.name}, and takes
+      ${percent(sear.fx['burn:rate'] - 1)} more a second with ${sear.name}.`
+    : '';
   const rows = ENCHANTMENT_LIST.map((e) => `<li><b>${e.name}</b> &mdash; ${bill(`make_${e.scroll}`)}: a hit ${EFFECT_HEAD[e.effect]}
       ${percent(enchantHitChance(e, ENCHANT_TOP))} of the time at QL ${ENCHANT_TOP}, and in proportion below (${percent(enchantHitChance(e, ENCHANT_TOP / 2))} at QL ${ENCHANT_TOP / 2}).
-      ${EFFECT_TAIL[e.effect]}</li>`).join('');
+      ${EFFECT_TAIL[e.effect]}${e.effect === 'burn' ? kindled : ''}</li>`).join('');
   const first = ENCHANTMENT_LIST[0];
   return `<p><b>Scrolls</b> are written at the crafting window with <b>enchanting</b>, one to each enchantment, at ${workedAt(`make_${first.scroll}`)}.
     A scroll comes out at the quality any craft's roll makes, and never better than the sheet of papyrus it is written on. One that
@@ -228,9 +236,10 @@ function enchantingHelp(): string {
     goes to pieces outright; a weapon that reaches ${BROKEN_AT} damage is gone. The scroll is used up either way. A weapon
     holds one enchantment, which its name carries &mdash; a Sword (${first.name}) &mdash; and Examine says at its quality.
     Every go trains <b>enchanting</b>, a go that did not take ${percent(TRY_LEARN)} as much.</p>
-    <p>A <b>stun</b> lasts ${STUN_SECS} seconds: the creature neither moves nor strikes, and a heavy blow it was drawing back for
-    is lost. A stun on one already stunned starts again rather than adding on. The target panel says "stunned" while it lasts.
-    Enchantments work on a melee swing that lands, not on a shot, a throw or a spell.</p>`;
+    <p>A <b>stun</b> lasts ${STUN_SECS} seconds, on a creature: it neither moves, fleeing included, nor strikes, and a heavy
+    blow it was drawing back for is lost. A stun on one already stunned starts again rather
+    than adding on. The target panel says "stunned" while it lasts.
+    Only an ordinary melee swing that lands can set off an enchantment; class blows, shots and throws don't.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

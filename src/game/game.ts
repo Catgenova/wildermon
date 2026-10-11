@@ -41,6 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
+import type { Enchant } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -7637,10 +7638,7 @@ export class Game {
           ...at, ...down, kind: r.sub ?? 'chest', ql: r.ql ?? 20,
           // What the island says is in it, and empty for one too far off to
           // reach into, which is the only reason this is ever short.
-          items: (r.things ?? []).map((it) => ({
-            uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count,
-            extra: it.extra ?? undefined,
-          })),
+          items: (r.things ?? []).map(storedThing),
           name: r.name ?? undefined,
           // The wood it was built of and the rarity it was made with, both of
           // which the island used to drop on the floor at the moment a piece
@@ -7782,10 +7780,7 @@ export class Game {
         kind: c.kind as PlacedCrate['kind'],
         // What the island says is in it. Empty for a crate too far off to
         // reach into, which is why `units` rides along beside it.
-        items: (c.things ?? []).map((it) => ({
-          uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count,
-          extra: it.extra ?? undefined,
-        })),
+        items: (c.things ?? []).map(storedThing),
         units: c.units,
         name: c.name ?? undefined, deed: c.deed ?? undefined, material: c.material ?? undefined,
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
@@ -7964,10 +7959,7 @@ export class Game {
       this.crates.set(c.id, {
         id: c.id, x: c.x, y: c.y, sx: c.sx, sy: c.sy,
         kind: c.kind as PlacedCrate['kind'],
-        items: (c.things ?? []).map((it) => ({
-          uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count,
-          extra: it.extra ?? undefined,
-        })),
+        items: (c.things ?? []).map(storedThing),
         units: c.units,
         name: c.name ?? undefined, deed: c.deed ?? undefined, material: c.material ?? undefined,
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
@@ -9368,7 +9360,7 @@ export interface IslandPlaced {
    * have since crates crossed, and only within reach, since a yard of full
    * chests is not worth a phone's second.
    */
-  things?: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null }>;
+  things?: StoredThing[];
   /**
    * For a grave: whose it is, by name, and the seconds it has left before it
    * crumbles. What is in it rides in `things`, to its owner only and from
@@ -9415,8 +9407,38 @@ export interface IslandCrate {
    * island's truth a moment later.
    */
   units?: number;
-  things?: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null }>;
+  things?: StoredThing[];
 }
+
+/**
+ * A thing in a chest, a bin or a crate, as the island sends one: the island's
+ * `rpc_ground` and `crates_near`. Its rarity, its colour and its enchantment
+ * ride with it, so an enchanted sword put away still reads "(Razoredge)";
+ * absent from an island from before they did.
+ */
+export interface StoredThing {
+  id: number;
+  def: string;
+  ql: number;
+  dmg: number;
+  count: number;
+  extra: string | null;
+  /** 'rare', 'supreme' or 'fantastic'; null for the ordinary run of things. */
+  rare?: string | null;
+  /** The colour it has taken, as a `dye_def` id. */
+  dye?: string | null;
+  /** What is enchanted into it from a scroll (`enchant.ts`). */
+  enchant?: Enchant | null;
+}
+
+/** A stored thing as this side holds one: the same fields `packed` reads off a pack's row. */
+export const storedThing = (it: StoredThing): Item => ({
+  uid: it.id, id: it.def, ql: it.ql, dmg: it.dmg, count: it.count,
+  extra: it.extra ?? undefined,
+  rare: rarityStep(it.rare),
+  dye: it.dye ?? undefined,
+  enchant: it.enchant ?? undefined,
+});
 
 /**
  * Seconds ago on the island as a moment on this machine's clock, in real
