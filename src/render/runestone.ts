@@ -1092,6 +1092,10 @@ export const FLOWER: Record<string, { petal: string; ring: string; eye: string }
   yellow: { petal: '#f4d35a', ring: '#a5852a', eye: '#dd8f2b' },
   blue: { petal: '#98b8ee', ring: '#4f6b99', eye: '#f3eed6' },
   lilac: { petal: '#cdb4ee', ring: '#7a63a6', eye: '#f6e6a8' },
+  // And three chalkier ones, for what a player plants at a memorial stone (`memorial.ts`).
+  dusk: { petal: '#cbbcd8', ring: '#857895', eye: '#efe2b4' },
+  cream: { petal: '#f2e5bc', ring: '#a39568', eye: '#dcb35e' },
+  rose: { petal: '#e6bcbf', ring: '#9c7d82', eye: '#f0d48c' },
 };
 
 /**
@@ -2021,6 +2025,8 @@ export interface Glow {
   nightOnly?: boolean;
   /** No glow laid round it by day, only its lit groove: fine line-work that a halo would fill in solid. */
   noDayHalo?: boolean;
+  /** Lit in its strokes alone after dark, with no soft light round it to fill the stone between them. */
+  tight?: boolean;
 }
 
 interface Baked {
@@ -2162,7 +2168,7 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
  * only (`nightOnly`).
  */
 export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x: number, z: number, s: number, i: number, roundel: boolean,
-  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; gold?: boolean } = {}): Glow {
+  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; gold?: boolean; tight?: boolean } = {}): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2192,7 +2198,7 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     }
   });
   const dusk = sheet((h) => {
-    for (const [k, al] of [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]] as Array<[number, number]>) {
+    for (const [k, al] of (o.tight ? [[1.7, 0.12], [1.25, 0.2]] : [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]]) as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 176, 80, ${al})`;
       h.lineWidth = w * k;
@@ -2203,11 +2209,11 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     if (o.gold) {
       // Line-work too fine for a white heart: gold all through, a deeper gold at its edge, as gilding in a cut is.
       path(h);
-      h.strokeStyle = 'rgba(190, 146, 58, 0.9)';
+      h.strokeStyle = 'rgba(206, 170, 72, 0.95)';
       h.lineWidth = w * 1.1;
       h.stroke();
       path(h);
-      h.strokeStyle = '#e8c45c';
+      h.strokeStyle = '#eccb60';
       h.lineWidth = w * 0.7;
       h.stroke();
       return;
@@ -2239,15 +2245,15 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     path(h);
     // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
     h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    h.lineWidth = w * (roundel ? 2.6 : 3.6);
+    h.lineWidth = w * (o.tight ? 1.8 : roundel ? 2.6 : 3.6);
     h.stroke();
     path(h);
     h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = w * (roundel ? 1.8 : 2.2);
+    h.lineWidth = w * (o.tight ? 1.2 : roundel ? 1.8 : 2.2);
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2441,7 +2447,7 @@ export function glowHoles(glows: readonly Glow[], sx: number, sy: number, zoom: 
   return glows.map((gl) => {
     const p = breath(gl, t);
     // A wide, faint hole round each, so the stone round a rune is lit by it; the rune itself goes by its own shape (`glowMasks`).
-    return { x: sx + gl.cx * zoom, y: sy + gl.cy * zoom, r: gl.r * 1.5 * zoom, a: (0.06 + 0.04 * p) * (gl.faint ?? 1) };
+    return { x: sx + gl.cx * zoom, y: sy + gl.cy * zoom, r: gl.r * 1.5 * zoom, a: gl.tight ? 0 : (0.06 + 0.04 * p) * (gl.faint ?? 1) };
   });
 }
 

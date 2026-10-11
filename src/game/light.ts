@@ -121,8 +121,8 @@ export const runestoneLight = (x: number, y: number): LightSource => ({
  * own plinth and the turf at its foot, no further. Drawn only.
  */
 export const MEMORIAL_REACH = 0.7;
-export const MEMORIAL_GLOW = 0.2;
-export const MEMORIAL_CAST_ALPHA = 0.22;
+export const MEMORIAL_GLOW = 0.14;
+export const MEMORIAL_CAST_ALPHA = 0.16;
 /** The light of a memorial stone whose middle is at world (x, y). */
 export const memorialLight = (x: number, y: number): LightSource => ({
   x, y, radius: MEMORIAL_REACH, strength: MEMORIAL_GLOW, steady: true, soft: true, cast: RUNESTONE_CAST, castAlpha: MEMORIAL_CAST_ALPHA,

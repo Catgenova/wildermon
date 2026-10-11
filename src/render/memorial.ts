@@ -1,8 +1,8 @@
 import type { Side } from '../game/building';
-import { rand, strandPic, STAGES, PPM } from './ivy';
+import { MOSS, rand } from './ivy';
 import {
   add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump,
-  glyphPath, grassTuft, groundNear, hex, inset, lichen, mix, mul, newell, noise2, plate, proj, scaleFor, stoneSkin, strokesPath, TAU,
+  grassTuft, groundNear, hex, inset, mix, mul, newell, plate, proj, scaleFor, stoneSkin, strokesPath, TAU,
   toneOf, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
 } from './runestone';
 
@@ -50,8 +50,8 @@ const SET_ASKEW = -Math.PI / 8;
 const STONE: Tone = toneOf('#f1e6d2', '#b2a4a8');
 const ROCK: Tone = toneOf('#ddd2c0', '#a2979f');
 const DRESSED: Tone = toneOf('#e9dfcc', '#a99da5');
-const LICHENS: [string, string] = ['#e6e2bc', '#d3dcb4'];
-const FLOWERS = ['white', 'yellow', 'white', 'blue', 'white', 'yellow'];
+/** The flowers planted at its foot: chalky, dusty and faded, with white among them (`FLOWER` in `runestone.ts`). */
+const FLOWERS = ['white', 'dusk', 'cream', 'rose', 'white', 'cream', 'dusk'];
 
 /** How high the two courses stand, and where the stone stands on them: sunk a little into the upper. */
 const LOWER_H = 1.7;
@@ -118,26 +118,30 @@ function headAt(x: number, outline: readonly Pt[] = OUTLINE): number {
 
 /** The roundel at its head and the panel the line is cut in: in the face, across and up. */
 const ROUNDEL = { x: 0, z: 12.0, r: 1.95 };
-/** How wide the roundel's lit strokes are: fine line-work, stone between them, never a lit disc. */
-const ROUNDEL_W = 0.16;
+/** How wide the roundel's lit strokes are: line-work, stone between them, never a lit disc. */
+const ROUNDEL_W = 0.27;
 /**
- * The roundel's figure: one ring, and a star of six points inside it, its
- * arms long and short by turns and kept well in from the ring -- the
- * Runestones' line-work, sparser, for a stone a tenth their height.
+ * The roundel's figure: the Runestones' wheel (`roundelStrokes('wheel')`)
+ * drawn in line-work for a stone a tenth their height -- one ring, a small
+ * hub, and six spokes between them, stopped short of both.
  */
-const ROUNDEL_STROKES: Stroke[] = (() => {
-  const ring: Pt[] = Array.from({ length: 37 }, (_, i) => [Math.cos((i / 36) * TAU), Math.sin((i / 36) * TAU)] as Pt);
-  const star: Pt[] = [];
-  for (let i = 0; i < 12; i++) {
-    const a = Math.PI / 2 + (i / 12) * TAU, k = i % 2 ? 0.22 : i % 4 === 0 ? 0.72 : 0.5;
-    star.push([Math.cos(a) * k, Math.sin(a) * k]);
+const wheel = (spokes: number): Stroke[] => {
+  const circle = (r: number, n: number): Stroke => ({ pts: Array.from({ length: n + 1 }, (_, i) => [Math.cos((i / n) * TAU) * r, Math.sin((i / n) * TAU) * r] as Pt) });
+  const out: Stroke[] = [circle(1, 36), circle(0.17, 10)];
+  for (let i = 0; i < spokes; i++) {
+    const a = Math.PI / 2 + (i / spokes) * TAU + Math.PI / spokes;
+    out.push({ pts: [[Math.cos(a) * 0.32, Math.sin(a) * 0.32], [Math.cos(a) * 0.82, Math.sin(a) * 0.82]] });
   }
-  return [{ pts: ring }, { pts: star, closed: true }];
-})();
+  return out;
+};
+const ROUNDEL_STROKES: Stroke[] = wheel(6);
+const BACK_STROKES: Stroke[] = wheel(4);
+/** And the smaller one cut on its back. */
+const BACK_ROUNDEL = { x: 0, z: 11.7, r: 1.45 };
 const PANEL = { x: 0, w: 5.5, z0: 1.55, z1: 8.65, arch: 1.15 };
 /** The marks of the line: how high each is from its middle, how wide, how far apart, and the room a space takes. */
-const MARK_H = 0.4;
-const MARK_W = 0.24;
+const MARK_H = 0.42;
+const MARK_W = 0.2;
 const MARK_STEP = 0.66;
 const WORD_GAP = 0.5;
 const LINE_STEP = 1.35;
@@ -153,15 +157,13 @@ const ROW_WIDE = PANEL.w - 1.3;
  */
 const MARKS: Stroke[][] = [
   [{ pts: [[0, -1], [0, 1]] }],
-  [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, 0.35], [0.6, -0.3]] }],
-  [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.65, 0.35], [0, 1], [0.65, 0.35]] }],
-  [{ pts: [[-0.55, -1], [-0.55, 0.85], [0.55, 0.45], [0.55, -1]] }],
+  [{ pts: [[0, -1], [0, 1]] }, { pts: [[0, 0.45], [0.7, -0.05]] }],
+  [{ pts: [[0, -1], [0, 1]] }, { pts: [[0, 0.95], [0.7, 0.4]] }],
+  [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, 0.45], [0, 1], [0.6, 0.45]] }],
   [{ pts: [[0.6, 1], [-0.5, 0], [0.6, -1]] }],
-  [{ pts: [[-0.4, -1], [-0.4, 1], [0.55, 0.4]] }],
-  [{ pts: [[-0.5, 1], [0.45, 0.3], [-0.45, -0.3], [0.5, -1]] }],
-  [{ pts: [[-0.5, -1], [-0.5, 1]] }, { pts: [[-0.5, 0.95], [0.55, 0.45], [-0.5, -0.05]] }],
-  [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, 1], [0, 0.3], [0.6, 1]] }],
-  [{ pts: [[-0.55, -1], [-0.55, 1]] }, { pts: [[0.55, -1], [0.55, 1]] }, { pts: [[-0.55, 0.55], [0.55, -0.15]] }],
+  [{ pts: [[-0.35, -1], [-0.35, 1], [0.5, 0.4]] }],
+  [{ pts: [[-0.4, 1], [0.4, 0.25], [-0.4, -0.25], [0.4, -1]] }],
+  [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, -0.3], [0.6, 0.3]] }],
 ];
 
 /** One mark of a line: which of `MARKS`, and where in the face. */
@@ -254,7 +256,7 @@ interface Model {
 const models = new Map<string, Model>();
 
 /** Moss as cushions at points of a face, drawn over it on the screen (`drawPads`): its frame's transform now, and its base. */
-const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, number, number]>, squat = 0.9): void => {
+const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, number, number]>, squat = 0.9, lit = true): void => {
   const tr = g.getTransform(), inv = base.inverse();
   const across = Math.hypot(e.ux, e.uy) * 0.9;
   const ps: Pad[] = pts.map(([x, z, r]) => {
@@ -264,8 +266,124 @@ const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, num
   g.save();
   g.setTransform(base);
   drawPads(g, ps);
+  // And a lit lip on the upper half of each cushion big enough to have one: the moss's top catching the light.
+  if (lit) {
+    g.fillStyle = MOSS.lit;
+    g.beginPath();
+    for (const [x, y, rx, ry] of ps) {
+      if (rx < 0.45) continue;
+      g.moveTo(x - rx * 0.22 + rx * 0.5, y - ry * 0.42);
+      g.ellipse(x - rx * 0.22, y - ry * 0.42, rx * 0.5, ry * 0.32, 0, 0, TAU);
+    }
+    g.fill();
+  }
   g.restore();
 };
+
+/**
+ * A cushion of moss: a dozen or two pads gathered in a ragged mound `w`
+ * across and `h` high round (cx, cz), thickest and biggest at its foot and
+ * breaking up toward a ragged top -- so drawn together their dark under-edge
+ * runs round the whole of it, and the lit lips sit along its top.
+ */
+function clump(R: () => number, cx: number, cz: number, w: number, h: number, size = 1): Array<[number, number, number]> {
+  const out: Array<[number, number, number]> = [];
+  const n = Math.round(10 + w * h * 9);
+  for (let i = 0; i < n; i++) {
+    const u = (R() - 0.5) * 2, v = Math.pow(R(), 1.4);
+    // Narrower toward its top, and not every pad up there.
+    const wide = 1 - 0.55 * v;
+    if (v > 0.6 && R() < 0.45) continue;
+    out.push([cx + u * wide * w * 0.5, cz + v * h - h * 0.2, (0.42 + 0.62 * R()) * size * (1.15 - 0.5 * v)]);
+  }
+  return out;
+}
+
+/** Lichen as the Runestones' rocks wear it, here soft: a few grey-green blots, uneven, faint, no rim. */
+function blot(g: Ctx, R: () => number, x: number, z: number, r: number): void {
+  g.beginPath();
+  for (let i = 0; i < 4 + Math.floor(R() * 3); i++) {
+    const a = R() * TAU, d = R() * r * 0.6, rr = r * (0.35 + R() * 0.4);
+    const bx = x + Math.cos(a) * d, bz = z + Math.sin(a) * d * 0.8;
+    g.moveTo(bx + rr, bz);
+    g.ellipse(bx, bz, rr, rr * (0.7 + R() * 0.3), R() * TAU, 0, TAU);
+  }
+  g.fillStyle = 'rgba(200, 205, 180, 0.32)';
+  g.fill();
+}
+
+/** The ivy's own greens (`ivy.ts`): a leaf in the light, in shade, its rim, and the vine. */
+const LEAF = { lit: '#74ba87', shade: '#65957a', top: '#93d9a2', line: '#4b6c57', stem: '#5d6b4c' };
+
+/**
+ * A strand of ivy painted on a face in its own units, from (x0, z0), `len`
+ * long, up (`dir` 1) or hanging down (-1): a thin stem wandering as it goes,
+ * leaves off it to left and right by turns, each its own size and set at its
+ * own angle, a gap now and then where the stem shows, and a short shoot or
+ * two off it. Kept between `x0 - lo` and `x0 + hi` across.
+ */
+function ivy(g: Ctx, R: () => number, x0: number, z0: number, len: number, dir: 1 | -1, lo: number, hi: number, leaf = 0.5): void {
+  const stems: Pt[][] = [];
+  const leaves: Array<{ x: number; z: number; a: number; s: number; lit: boolean }> = [];
+  const grow = (sx: number, sz: number, a0: number, l: number, shoots: number): void => {
+    const pts: Pt[] = [[sx, sz]];
+    let a = a0, x = sx, z = sz, side = R() < 0.5 ? -1 : 1;
+    for (let d = 0; d < l; d += 0.3) {
+      a += (R() - 0.5) * 0.5 + (Math.PI / 2 * dir - a) * 0.15;
+      x = Math.max(x0 - lo, Math.min(x0 + hi, x + Math.cos(a) * 0.3));
+      z += Math.sin(a) * 0.3;
+      pts.push([x, z]);
+      if (Math.floor((d + 0.3) / 0.42) > Math.floor(d / 0.42)) {
+        side = -side;
+        if (R() < 0.2) continue;
+        const la = a + side * (0.9 + R() * 0.6) - (dir < 0 ? Math.PI : 0) * 0;
+        leaves.push({ x: x + Math.cos(la) * 0.12, z: z + Math.sin(la) * 0.12, a: la, s: leaf * (0.6 + 0.7 * R()), lit: side < 0 });
+      }
+      if (shoots > 0 && R() < 0.12 && d > l * 0.25) {
+        shoots--;
+        grow(x, z, a + (R() < 0.5 ? -1 : 1) * (0.7 + R() * 0.4), l * (0.2 + R() * 0.15), 0);
+      }
+    }
+    stems.push(pts);
+  };
+  grow(x0, z0, dir > 0 ? Math.PI / 2 : -Math.PI / 2, len, 2);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.strokeStyle = LEAF.stem;
+  g.lineWidth = 0.09;
+  for (const st of stems) {
+    g.beginPath();
+    st.forEach(([x, z], i) => (i ? g.lineTo(x, z) : g.moveTo(x, z)));
+    g.stroke();
+  }
+  // A heart-shaped leaf on its stalk, its point away from the stem: the notch at (0, 0), the tip `s` out along its angle.
+  for (const lf of leaves) {
+    g.save();
+    g.translate(lf.x, lf.z);
+    g.rotate(lf.a - Math.PI / 2);
+    const L = lf.s;
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(-0.72 * L, -0.18 * L, -0.48 * L, 0.42 * L);
+    g.quadraticCurveTo(-0.24 * L, 0.82 * L, 0, L);
+    g.quadraticCurveTo(0.24 * L, 0.82 * L, 0.48 * L, 0.42 * L);
+    g.quadraticCurveTo(0.72 * L, -0.18 * L, 0, 0);
+    g.closePath();
+    g.fillStyle = lf.lit ? LEAF.lit : LEAF.shade;
+    g.fill();
+    g.strokeStyle = LEAF.line;
+    g.lineWidth = 0.05;
+    g.stroke();
+    // The pale of it where the light lands, and its middle vein.
+    g.beginPath();
+    g.ellipse(-0.14 * L, 0.5 * L, 0.18 * L, 0.12 * L, 0.5, 0, TAU);
+    g.fillStyle = LEAF.top;
+    g.globalAlpha = lf.lit ? 0.7 : 0.35;
+    g.fill();
+    g.globalAlpha = 1;
+    g.restore();
+  }
+}
 
 function modelOf(text: string, facing: Side): Model {
   const key = `${facing}|${text}`;
@@ -282,16 +400,16 @@ function modelOf(text: string, facing: Side): Model {
 
   /* -- the plinth: two courses of rough-dressed stone, the upper set a little askew on the lower -- */
   const course = (hw: number, hd: number, z0: number, h: number, turn: number, dx: number, dy: number, tone: Tone, seed: number, top: Painter,
-    chips: { fr?: number; fl?: number; br?: number } = {}): Face[] => {
+    chips: { fr?: number; fl?: number; br?: number; bl?: number } = {}, tilt: [number, number] = [0, 0]): Face[] => {
     const C = rand(seed);
     const c = Math.cos(turn), s = Math.sin(turn);
     // Its corners, a chip knocked off one or two of them: front right, front left, back right.
     const corner = (x: number, y: number, k: number | undefined, sx: number, sy: number): Pt[] => (k ? [[x, y - sy * k * 0.8], [x - sx * k, y]] : [[x, y]]);
-    const raw: Pt[] = [[-hw, -hd], [-hw * 0.35, -hd - 0.12], [hw * 0.4, -hd + 0.08], ...corner(hw, -hd, chips.br, 1, -1).reverse(), [hw + 0.1, 0],
+    const raw: Pt[] = [...corner(-hw, -hd, chips.bl, -1, -1), [-hw * 0.35, -hd - 0.12], [hw * 0.4, -hd + 0.08], ...corner(hw, -hd, chips.br, 1, -1).reverse(), [hw + 0.1, 0],
       ...corner(hw, hd, chips.fr, 1, 1), [0, hd + 0.14], ...corner(-hw, hd, chips.fl, -1, 1).reverse(), [-hw - 0.08, 0]];
     const outline = raw.map(([x, y]) => [x + (C() - 0.5) * 0.22, y + (C() - 0.5) * 0.18] as Pt);
     return plate({
-      o: [dx, dy, z0 + h / 2], U: [c, s, 0], W: [-s, c, 0], A: [0, 0, 1], outline, half: [h / 2, h / 2], tTop: 1, bevel: 0.32, tone,
+      o: [dx, dy, z0 + h / 2], U: [c, s, 0], W: [-s, c, 0], A: [tilt[0], tilt[1], 1], outline, half: [h / 2, h / 2], tTop: 1, bevel: 0.32, tone,
       front: top,
       edge: (i) => (i % 2 ? { paint: (g, k) => {
         const T = rand(seed * 5 + i);
@@ -312,34 +430,36 @@ function modelOf(text: string, facing: Side): Model {
     }
     g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.32);
     for (let i = 0; i < 40; i++) g.fillRect((T() - 0.5) * hw * 2, (T() - 0.5) * hd * 2, 0.1 + T() * 0.08, 0.1 + T() * 0.08);
-    for (let i = 0; i < 2; i++) lichen(g, T, (T() - 0.2) * hw, (T() - 0.5) * hd, 0.32 + T() * 0.22, LICHENS);
+    for (let i = 0; i < 2; i++) blot(g, T, (T() - 0.2) * hw, (T() - 0.5) * hd, 0.4 + T() * 0.3);
     /*
-     * Moss gathered round the stone's foot, thickest on its mossy side and
-     * behind it, and in the back corner on that side: where the damp lies
-     * longest. Close enough that the cushions run together into masses.
+     * Moss gathered round the stone's foot in cushions, on its mossy side and
+     * behind it, and one in the back corner on that side: where the damp
+     * lies longest. `inner` is the box it gathers round, from this stone's
+     * own middle less `ox` across.
      */
+    const [ix, iy, icy] = inner;
     const pts: Array<[number, number, number]> = [];
-    for (let i = 0; i < 600; i++) {
-      const x = (T() - 0.5) * hw * 2, y = (T() - 0.5) * hd * 2;
-      const [ix, iy, icy] = inner;
-      const fx = Math.max(0, Math.abs(x + ox) - ix), fy = Math.max(0, Math.abs(y - icy) - iy);
-      const foot = Math.max(0, 1 - Math.hypot(fx, fy) / 1.8) * (0.55 + 0.45 * Math.max(0, ((x + ox) * mossSide) / ix)) * (y < icy + iy * 0.5 ? 1 : 0.6);
-      const corner = Math.max(0, ((x + ox) * mossSide) / (hw + Math.abs(ox))) * 0.6 + Math.max(0, -y / hd) * 0.5;
-      const share = Math.max(foot * 1.15, corner * 0.85);
-      const nz = noise2(x / 1.4, y / 1.4, seed);
-      if (moss * share * 1.4 + (nz - 0.5) * 1.1 < 0.6) continue;
-      pts.push([x, y, (0.18 + 0.55 * T() * T()) * (0.6 + 0.6 * Math.min(1, share))]);
+    const spots: Array<[number, number, number, number]> = [
+      [mossSide * ix - ox, icy - iy * 0.4, 1.5, 0.9], [mossSide * (ix - 1.4) - ox, icy - iy - 0.3, 1.2, 0.7],
+      [mossSide * (ix + 0.6) - ox, icy + iy * 0.5, 0.9, 0.6], [mossSide * hw * 0.85, -hd * 0.75, 1.1, 0.8],
+    ];
+    for (const [cx, cy, w, h] of spots) {
+      if (Math.abs(cx) > hw + 0.3 || Math.abs(cy) > hd + 0.3) continue;
+      // A cushion laid flat: its spread across, and back from the face.
+      for (const pt of clump(T, cx, cy, w * moss * 1.6, h * moss * 1.5, 0.95)) pts.push(pt);
     }
     padsOn(g, k.base, k.e, pts, 0.62);
   };
   /*
    * The lower course sunk into the turf, so it rises out of the ground with
-   * no ruled foot; the upper laid as two stones, the right one a hair taller
-   * and set a little forward and off line, as a hand lays them.
+   * no ruled foot, a different chip off each corner; the upper laid as two
+   * stones of unequal length, set a little off line, as a hand lays them.
    */
-  const lower = course(7.3, 4.3, -0.4, LOWER_H + 0.4, 0.035, 0.1, 0.25, ROCK, SEED * 3 + 1, plinthTop(7.3, 4.3, SEED * 3 + 2, 1, [5.5, 2.75, -0.6]), { fr: 0.9, br: 0.5 });
-  const upperL = course(2.72, 2.75, LOWER_H, UPPER_H, -0.03, -2.78, -0.38, DRESSED, SEED * 3 + 5, plinthTop(2.72, 2.75, SEED * 3 + 6, 0.95, [4.45, 1.65, -0.2], -2.78), { fl: 0.55 });
-  const upperR = course(2.68, 2.66, LOWER_H, UPPER_H + 0.1, -0.075, 2.74, -0.2, DRESSED, SEED * 3 + 9, plinthTop(2.68, 2.66, SEED * 3 + 10, 0.8, [4.45, 1.65, -0.2], 2.74), { fr: 0.45 });
+  const lower = course(7.3, 4.3, -0.4, LOWER_H + 0.4, 0.035, 0.1, 0.25, ROCK, SEED * 3 + 1, plinthTop(7.3, 4.3, SEED * 3 + 2, 1, [5.5, 2.75, -0.6]),
+    { fr: 0.9, fl: 0.35, br: 0.55, bl: 1.2 });
+  // The joint a third of the way across, the short stone a hair lower and the long one tipped a hair back.
+  const upperL = course(1.85, 2.72, LOWER_H, UPPER_H - 0.06, -0.05, -3.68, -0.42, DRESSED, SEED * 3 + 5, plinthTop(1.85, 2.72, SEED * 3 + 6, 0.95, [4.45, 1.65, -0.2], -3.68), { fl: 0.5 });
+  const upperR = course(3.62, 2.68, LOWER_H, UPPER_H + 0.04, -0.02, 1.86, -0.26, DRESSED, SEED * 3 + 9, plinthTop(3.62, 2.68, SEED * 3 + 10, 0.8, [4.45, 1.65, -0.2], 1.86), { fr: 0.4, br: 0.25 }, [0, -0.018]);
   const upper = [...upperL, ...upperR];
 
   /* -- the stone's faces -- */
@@ -378,9 +498,9 @@ function modelOf(text: string, facing: Side): Model {
           cut(g, fill, 0.15, () => { g.beginPath(); ring.forEach(([x, z], i) => (i ? g.lineTo(x, z) : g.moveTo(x, z))); });
         }
         // The line, row by row, cut into its floor.
-        for (const row of rows) cut(g, fill, 0.17, () => rowPath(g, row));
+        for (const row of rows) cut(g, fill, 0.12, () => rowPath(g, row));
         /* -- the roundel, cut, under the light it will have: bare stone between its strokes -- */
-        cut(g, fill, 0.17, () => strokesPath(g, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
+        cut(g, fill, 0.3, () => strokesPath(g, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
         // A crack in from the chipped shoulder, its lit lip under it.
         const C = rand(seed * 3 + 7);
         const pts: Pt[] = [[3.3, 11.1]];
@@ -394,85 +514,51 @@ function modelOf(text: string, facing: Side): Model {
         cut(g, fill, 0.11, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
       } else {
         // The back: dressed plain, a ring cut at its head with a six-pointed star in it, and a rule across under it.
-        cut(g, fill, 0.16, () => { g.beginPath(); g.arc(ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.75, 0, TAU); });
-        cut(g, fill, 0.16, () => glyphPath(g, 'star6', ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.45));
+        cut(g, fill, 0.24, () => strokesPath(g, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r));
         cut(g, fill, 0.14, () => { g.beginPath(); g.moveTo(-2.4, 9.1); g.lineTo(2.4, 9.05); });
       }
-      /* -- lichen on its upper half, away from the moss -- */
-      for (let i = 0; i < 5; i++) {
+      /* -- lichen: a few soft grey-green blots on its upper half, away from the moss and off the carving -- */
+      for (let i = 0; i < 4; i++) {
         const z = T_TOP * (0.35 + 0.6 * T()), [a, b] = xs(z);
         const u = sideK > 0 ? Math.pow(T(), 1.6) : 1 - Math.pow(T(), 1.6);
-        const x = a + u * (b - a);
+        const x = a + 0.3 + u * (b - a - 0.6);
         if (which === 'front' && Math.abs(x - PANEL.x) < PANEL.w / 2 + 0.3 && z < PANEL.z1 + PANEL.arch + 0.2) continue;
-        if (which === 'front' && Math.hypot(x - ROUNDEL.x, z - ROUNDEL.z) < ROUNDEL.r + 0.3) continue;
-        lichen(g, T, x, z, 0.24 + T() * 0.28, LICHENS);
+        if (Math.hypot(x - ROUNDEL.x, z - ROUNDEL.z) < ROUNDEL.r + 0.3) continue;
+        blot(g, T, x, z, 0.3 + T() * 0.3);
       }
-      /* -- moss: up from the foot on the mossy side, and over that shoulder of the head -- */
-      const pts: Array<[number, number, number]> = [];
-      for (let i = 0; i < 2400; i++) {
-        const z = 0.1 + T() * T_TOP, [a, b] = xs(z);
-        if (b - a < 0.4) continue;
-        const x = a + 0.1 + T() * (b - a - 0.2);
-        const side = (x * sideK) / 4.4;
-        const d = sideK > 0 ? b - x : x - a;
-        const inFoot = 1 - z / (4.2 * (0.3 + 0.9 * Math.max(0, side + 0.35)));
-        const inEdge = 1 - d / (1.5 * Math.max(0, 1 - z / 11.5));
-        const inHead = 0.95 * Math.max(0, side + 0.15) * (1 - (headAt(x, outline) - z) / 1.1);
-        const share = Math.max(inFoot, inEdge, inHead);
-        if (share <= 0) continue;
-        if (which === 'front' && Math.abs(x - PANEL.x) < PANEL.w / 2 && z > PANEL.z0 + 0.6 && inFoot < 0.6) continue;
-        if (which === 'front' && Math.hypot(x - ROUNDEL.x, z - ROUNDEL.z) < ROUNDEL.r) continue;
-        // A ragged top to every mass: coarse noise for where it has got to, fine noise and a throw of the hand for its edge.
-        const n = noise2(x / 1.3, z / 1.3, seed) * 0.55 + noise2(x / 0.45, z / 0.45, seed + 1) * 0.45;
-        if (share * 1.3 + (n - 0.5) * 1.7 + (T() - 0.5) * 0.35 < 0.66) continue;
-        pts.push([x, z, (0.16 + 0.5 * T() * T()) * (0.6 + 0.6 * Math.min(1, share))]);
-      }
+      /*
+       * Moss in cushions, each its own size and height: two or three up from
+       * the foot on the mossy side, and one in the lee of that shoulder.
+       */
+      const [fa, fb] = xs(0.5);
+      const foot = sideK > 0 ? fb : fa;
+      const pts: Array<[number, number, number]> = [
+        ...clump(T, foot - sideK * 0.9, 0.1, 2.1, 1.7, 1.15),
+        ...clump(T, foot - sideK * 2.5, 0.0, 1.3, 0.8, 0.9),
+        ...clump(T, foot - sideK * 0.4, 2.4, 0.6, 0.9, 0.75),
+        ...clump(T, sideK * 3.0, headAt(sideK * 3.0, outline) - 0.9, 1.1, 0.7, 0.75),
+      ];
       padsOn(g, k.base, k.e, pts);
     };
     const over: Painter = (g, k) => {
       /* -- ivy up the mossy edge, kept to the stone and off the carving -- */
-      const strands: Array<{ kind: 'climb' | 'vine' | 'hang'; x: number; z: number; v: number; k: number }> = which === 'front'
-        ? [{ kind: 'climb', x: -3.45, z: 0.1, v: 0, k: 0.85 }, { kind: 'vine', x: -2.9, z: 0.6, v: 0, k: 0.55 }, { kind: 'hang', x: -3.0, z: headAt(-3.0, outline) - 0.2, v: 0, k: 0.45 }]
-        : [{ kind: 'vine', x: 3.3, z: 0.4, v: 0, k: 0.62 }, { kind: 'hang', x: 3.1, z: headAt(3.1, outline) - 0.2, v: 0, k: 0.42 }];
+      const V = rand(seed * 11 + 5);
       const halo: Pt[] = inset(area2(outline) < 0 ? outline.slice().reverse() : outline, -0.18);
-      const tr0 = g.getTransform();
-      const sprays: Array<[number, number]> = [];
-      for (const iv of strands) {
-        const pic = strandPic(iv.kind, iv.v, STAGES, true);
-        if (!pic) continue;
-        const sc = (iv.k * 10) / PPM;
-        g.save();
-        g.beginPath();
-        halo.forEach(([hx, hz], i) => (i ? g.lineTo(hx, hz) : g.moveTo(hx, hz)));
-        g.closePath();
-        g.clip();
-        if (which === 'front') {
-          // Not over the panel: a ragged line down its mossy side.
-          const edge = PANEL.x - PANEL.w / 2 - 0.25;
-          g.beginPath();
-          g.moveTo(edge, -1);
-          for (let z = -1; z <= T_TOP + 1; z += 0.5) g.lineTo(edge - 0.2 - 0.2 * Math.sin(z * 2.3), z);
-          g.lineTo(-20, T_TOP + 1);
-          g.lineTo(-20, -1);
-          g.closePath();
-          g.clip();
-        }
-        g.translate(iv.x, iv.z);
-        g.scale(sc, -sc);
-        g.drawImage(pic.img, -pic.ax, -pic.ay);
-        g.restore();
-        sprays.push([iv.x + 0.35, iv.z + STRAND_REACH_M(iv.kind, iv.v) * 10 * iv.k * 0.55]);
-      }
-      // A spray of small flowers on the climbing strand, in the colours at its foot.
-      const B = rand(seed * 5 + 3);
-      const inv = k.base.inverse();
       g.save();
-      g.setTransform(k.base);
-      for (const [x, z] of sprays.slice(0, 1)) {
-        const q = inv.transformPoint(tr0.transformPoint(new DOMPoint(x, z)));
-        blossomSmall(g, q.x, q.y, 'white', B);
-      }
+      g.beginPath();
+      halo.forEach(([hx, hz], i) => (i ? g.lineTo(hx, hz) : g.moveTo(hx, hz)));
+      g.closePath();
+      g.clip();
+      const [fa, fb] = xs(0.3);
+      const edge = sideK > 0 ? fb : fa;
+      // Across, it keeps between the stone's edge and the panel's.
+      const lo = sideK > 0 ? (which === 'front' ? 0.9 : 2.2) : 0.35, hi = sideK > 0 ? 0.35 : (which === 'front' ? 0.9 : 2.2);
+      ivy(g, V, edge - sideK * 0.45, 0.15, which === 'front' ? 6.2 : 7.4, 1, lo, hi, 0.62);
+      if (which === 'front') ivy(g, V, sideK * 3.05, headAt(sideK * 3.05, outline) - 0.15, 1.6, -1, 0.5, 0.5, 0.5);
       g.restore();
+      // A cushion of moss lapping over the chipped shoulder from the face, its edge let run past the stone's.
+      const chip = which === 'front' ? 3.35 : -3.35;
+      padsOn(g, k.base, k.e, clump(V, chip, 10.75, 0.9, 0.55, 0.8));
     };
     return { paint, over };
   };
@@ -505,30 +591,25 @@ function modelOf(text: string, facing: Side): Model {
        * noise at the very place on the stone, not on the strip.
        */
       over: (g, k) => {
+        /*
+         * Moss on the edge in two or three cushions at their own heights, laid
+         * over it after every face so one runs on across the join of two
+         * strips: at the foot of the mossy side, part way up it, and on its
+         * shoulder. A cushion belongs to the strip its middle is on.
+         */
         const T = rand(SEED * 103 + i);
+        const spots: Array<[number, number, number, number]> = [[0.35, 1.6, 1.0, 1.05], [4.9, 0.8, 0.6, 0.75], [10.6, 1.0, 0.7, 0.8]];
         const pts: Array<[number, number, number]> = [];
-        const at = (s0: number): Pt => [p[0] + (dx * s0) / len, p[1] + (dz * s0) / len];
-        if (up > 0.35) {
-          const n = Math.round(len * 2 * G * 7);
-          for (let j = 0; j < n; j++) {
-            const s0 = T() * len, y = -G + T() * 2 * G;
-            const [x, z] = at(s0);
-            const cover = 0.5 + 0.75 * Math.max(0, (x * mossSide) / 4) - 0.25 * Math.max(0, (-x * mossSide) / 4);
-            const nz = noise2(x / 1.1, y / 1.1 + z / 3, SEED * 7 + 3) * 0.6 + noise2(x / 0.45, y / 0.45, SEED * 7 + 4) * 0.4;
-            if (cover * 1.2 + (nz - 0.5) * 1.6 + (T() - 0.5) * 0.3 < 0.72) continue;
-            pts.push([s0, y, 0.15 + 0.42 * T() * T()]);
-          }
-        } else if (Math.sign(mx) === mossSide && Math.min(p[1], q[1]) < 4) {
-          const n = Math.round(len * 2 * G * 6);
-          for (let j = 0; j < n; j++) {
-            const s0 = T() * len, y = -G + T() * 2 * G;
-            const [, z] = at(s0);
-            const nz = noise2(z / 1.1, y / 1.1, SEED * 7 + 11) * 0.6 + noise2(z / 0.45, y / 0.45, SEED * 7 + 12) * 0.4;
-            if ((1 - z / 4) * 1.3 + (nz - 0.5) * 1.6 + (T() - 0.5) * 0.3 < 0.64) continue;
-            pts.push([s0, y, (0.16 + 0.45 * T() * T()) * (0.7 + 0.5 * (1 - z / 4))]);
+        if (Math.sign(mx) === mossSide) {
+          for (const [z, w, h, size] of spots) {
+            const lo = Math.min(p[1], q[1]), hiZ = Math.max(p[1], q[1]);
+            if (z < lo || z >= hiZ) continue;
+            const s0 = ((z - p[1]) / (dz || 1)) * len;
+            // Across the edge's thickness, and along it: a cushion on its side, nearer the front it grows from.
+            for (const [y, sa, rr] of clump(T, 0.25 * G, s0, w * G * 0.9, h * 2.2, size)) pts.push([sa, y, rr]);
           }
         }
-        if (pts.length) padsOn(g, k.base, k.e, pts, up > 0.5 ? 0.62 : 0.9);
+        if (pts.length) padsOn(g, k.base, k.e, pts, 0.85);
       },
     };
   };
@@ -547,27 +628,38 @@ function modelOf(text: string, facing: Side): Model {
   const solid = [upperL, upperR, stone];
   // Turf and moss grown up over the foot of the lower course where it is seen, so it goes into the ground and does not stand on it.
   const skirt: Array<[number, number, number]> = [];
+  const skirtZ: number[] = [];
   {
     const K = rand(SEED * 29 + 3);
-    for (let i = 0; i < 200; i++) {
-      const u = K() * 4 - 2, side = Math.floor(K() * 4);
-      const t = u / 2;
-      const [x, y] = side === 0 ? [t * 7.4, 4.45] : side === 1 ? [t * 7.4, -4.0] : side === 2 ? [7.5, t * 4.3] : [-7.35, t * 4.3];
-      const nz = noise2(x / 1.7, y / 1.7, SEED + 77);
-      if (nz < 0.38) continue;
-      skirt.push([x + (K() - 0.5) * 0.5, y + 0.25 + (K() - 0.5) * 0.4, (0.18 + 0.45 * K() * K()) * (0.6 + nz)]);
+    // Cushions along its foot, each its own size, the grass rising up its lip between them.
+    const along: Array<[number, number, number]> = [[-5.6, 4.45, 1.6], [-1.2, 4.55, 1.0], [3.2, 4.5, 1.3], [7.4, 2.2, 1.1], [7.6, -1.6, 0.8],
+      [-7.4, 1.0, 1.4], [-7.4, -2.6, 0.9], [2.0, -4.1, 1.2], [-3.6, -4.05, 0.9]];
+    for (const [x, y, w] of along) {
+      const flat = Math.abs(y) > 4;
+      for (const pt of clump(K, flat ? x : y, 0.15, w, 0.75 + K() * 0.6, 0.95)) {
+        skirt.push(flat ? [pt[0], y + (K() - 0.5) * 0.3, pt[2]] : [x + (K() - 0.5) * 0.3, pt[0], pt[2]]);
+        skirtZ.push(pt[1]);
+      }
     }
   }
   const drawSkirt = (g: Ctx, e: Eye): void => {
     const across = Math.hypot(e.ux, e.uy);
     const ps: Pad[] = [];
-    for (const [x, y, rr] of skirt) {
-      // Only on the side of it the eye sees, and up the face a little, at its foot.
-      if (x * e.toward[0] + y * e.toward[1] <= 1.5) continue;
-      const [px, py] = proj(e, [x, y, 0.15 + rr * 0.3]);
-      ps.push([px, py, rr * across * 1.15, rr * across * 0.75]);
-    }
+    skirt.forEach(([x, y, rr], i) => {
+      // Only on the side of it the eye sees, climbing its face from the ground.
+      if (x * e.toward[0] + y * e.toward[1] <= 1.5) return;
+      const [px, py] = proj(e, [x, y, Math.max(0.05, skirtZ[i])]);
+      ps.push([px, py, rr * across * 1.1, rr * across * 0.8]);
+    });
     drawPads(g, ps);
+    g.fillStyle = MOSS.lit;
+    g.beginPath();
+    for (const [x, y, rx, ry] of ps) {
+      if (rx < 0.45) continue;
+      g.moveTo(x - rx * 0.22 + rx * 0.5, y - ry * 0.42);
+      g.ellipse(x - rx * 0.22, y - ry * 0.42, rx * 0.5, ry * 0.32, 0, 0, TAU);
+    }
+    g.fill();
   };
   things.push({
     x: 0, y: 0, reach: [...lower, ...solid.flat()].flatMap((fc) => fc.pts),
@@ -624,29 +716,6 @@ function modelOf(text: string, facing: Side): Model {
   const model: Model = { things, solid: [...stone, ...upper, ...lower], frames: { front: frontFrame, back: backFrame }, normals: { front: nf, back: nb }, rows, turf };
   models.set(key, model);
   return model;
-}
-
-/** How far a strand of ivy reaches at its full growth, in metres: the ivy's own table, the few this stone uses. */
-const STRAND_REACH_M = (kind: 'climb' | 'vine' | 'hang', v: number): number => ({ climb: [0.6, 0.9, 1.25], vine: [1.2, 1.8, 2.6], hang: [0.45, 0.7, 1.0] }[kind][v] ?? 1);
-
-/** A small spray of flowers on ivy, at a stone this size: the Runestones' sprays, smaller. */
-function blossomSmall(g: Ctx, x: number, y: number, colour: string, R: () => number): void {
-  const col = { white: ['#fbf8ef', '#7f988a', '#efc23f'], pink: ['#f0a3b7', '#a85f75', '#f6d467'] }[colour === 'pink' ? 'pink' : 'white'];
-  for (let i = 0; i < 3; i++) {
-    const cx = x + (R() - 0.5) * 2.2, cy = y + (R() - 0.5) * 1.8, r = 0.6 + R() * 0.2;
-    g.beginPath();
-    g.arc(cx, cy, r + 0.3, 0, TAU);
-    g.fillStyle = col[1];
-    g.fill();
-    g.beginPath();
-    g.arc(cx, cy, r, 0, TAU);
-    g.fillStyle = col[0];
-    g.fill();
-    g.beginPath();
-    g.arc(cx, cy, r * 0.38, 0, TAU);
-    g.fillStyle = col[2];
-    g.fill();
-  }
 }
 
 /* ---- baking ----------------------------------------------------------------------- */
@@ -755,17 +824,17 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
     if (which === 'front') {
       // The roundel: its lit strokes only by day, so bare stone shows between them; glowing lines after dark.
       glows.push(bakeGlow(M, scale, (h) => strokesPath(h, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 4, true,
-        { w: ROUNDEL_W, noDayHalo: true, gold: true }));
+        { w: ROUNDEL_W, noDayHalo: true, gold: true, tight: true }));
       // The line: its rows catch the light after dark, faintly, the lowest first.
       model.rows.slice().reverse().forEach((row, j) => {
         if (!row.length) return;
         const x0r = Math.min(...row.map((m) => m.x)), x1r = Math.max(...row.map((m) => m.x));
         const half = (x1r - x0r) / 2 + MARK_W;
-        glows.push(bakeGlow(M, scale, (h) => rowPath(h, row), (x0r + x1r) / 2, row[0].z, half, j, false, { w: 0.17, faint: 0.6, nightOnly: true }));
+        glows.push(bakeGlow(M, scale, (h) => rowPath(h, row), (x0r + x1r) / 2, row[0].z, half, j, false, { w: 0.11, faint: 0.38, nightOnly: true, tight: true }));
       });
     } else {
-      glows.push(bakeGlow(M, scale, (h) => glyphPath(h, 'star6', ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.45), ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.45, 0, false,
-        { w: ROUNDEL_W, faint: 0.8, noDayHalo: true, gold: true }));
+      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r), BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r, 0, true,
+        { w: ROUNDEL_W * 0.85, faint: 0.8, noDayHalo: true, gold: true, tight: true }));
     }
   }
 
