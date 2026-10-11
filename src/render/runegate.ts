@@ -48,6 +48,8 @@ const LINTEL_Z = FOOT_TOP + PILLAR_H - 0.6;
 /** How far a rune's middle is from its top, on a pillar's panel and on the lintel. */
 const RUNE_S = 1.9;
 const LINTEL_RUNE_S = 1.35;
+/** And the rune down each pillar's outer end. */
+const END_RUNE_S = 1.6;
 /** Nothing of it stands further than this from the middle of the border along it: a hair inside the tile's corner. */
 const REACH_X = 19.6;
 
@@ -66,7 +68,7 @@ interface Hand {
   mossSide: -1 | 1;
   moss: number;
   /** The runes down each pillar's front and back, from the foot up, left then right; and either side of the roundel. */
-  runes: { front: [string[], string[]]; back: [string[], string[]]; lintel: [string, string] };
+  runes: { front: [string[], string[]]; back: [string[], string[]]; lintel: [string, string]; ends: [string, string] };
   roundel: string;
   /** The colours of the flowers at its feet, by how many of each. */
   flowers: Array<[string, number]>;
@@ -76,20 +78,20 @@ interface Hand {
 const VARIANTS: Hand[] = [
   {
     stone: toneOf('#eee4d0', '#aa9fac'), rock: toneOf('#dcd1bf', '#9d95a5'), lichen: ['#e6e0ae', '#ead9a0'],
-    lean: [[0.02, 0.004], [-0.014, -0.003]], tilt: 0.011, girth: [1, 0.93], mossSide: 1, moss: 0.72,
-    runes: { front: [['othala', 'algiz', 'dagaz'], ['ingwaz', 'tiwaz', 'diamondDot']], back: [['tiwaz', 'ring', 'algiz'], ['dagaz', 'othala', 'star6']], lintel: ['algiz', 'othala'] },
+    lean: [[0.045, 0.004], [-0.04, -0.003]], tilt: 0.011, girth: [1, 0.87], mossSide: 1, moss: 0.72,
+    runes: { front: [['othala', 'algiz', 'dagaz'], ['ingwaz', 'tiwaz', 'diamondDot']], back: [['tiwaz', 'ring', 'algiz'], ['dagaz', 'othala', 'star6']], lintel: ['algiz', 'othala'], ends: ['tiwaz', 'ingwaz'] },
     roundel: 'key', flowers: [['white', 4], ['yellow', 2], ['pink', 2]], seed: 101,
   },
   {
     stone: toneOf('#e6e4d6', '#a2a4b0'), rock: toneOf('#d4d2c4', '#999ba8'), lichen: ['#d3dcb4', '#e2e0b4'],
-    lean: [[0.012, -0.004], [-0.022, 0.003]], tilt: -0.013, girth: [0.94, 1.04], mossSide: -1, moss: 0.85,
-    runes: { front: [['laguz', 'ingwaz', 'algiz'], ['othala', 'dagaz', 'crescent']], back: [['diamond', 'tiwaz', 'laguz'], ['algiz', 'ingwaz', 'ring']], lintel: ['tiwaz', 'algiz'] },
+    lean: [[0.04, -0.004], [-0.05, 0.003]], tilt: -0.013, girth: [0.88, 1], mossSide: -1, moss: 0.85,
+    runes: { front: [['laguz', 'ingwaz', 'algiz'], ['othala', 'dagaz', 'crescent']], back: [['diamond', 'tiwaz', 'laguz'], ['algiz', 'ingwaz', 'ring']], lintel: ['tiwaz', 'algiz'], ends: ['othala', 'dagaz'] },
     roundel: 'eye', flowers: [['lilac', 3], ['blue', 2], ['white', 3]], seed: 211,
   },
   {
     stone: toneOf('#f2e0cf', '#b29fa9'), rock: toneOf('#e0d1bd', '#a596a3'), lichen: ['#efcf7a', '#e6e0ae'],
-    lean: [[0.024, 0.002], [-0.01, -0.004]], tilt: 0.008, girth: [1.05, 0.95], mossSide: 1, moss: 0.6,
-    runes: { front: [['algiz', 'sowilo', 'othala'], ['dagaz', 'star8', 'ingwaz']], back: [['ingwaz', 'algiz', 'sunDot'], ['othala', 'tiwaz', 'diamond']], lintel: ['sowilo', 'dagaz'] },
+    lean: [[0.05, 0.002], [-0.042, -0.004]], tilt: 0.008, girth: [1, 0.86], mossSide: 1, moss: 0.6,
+    runes: { front: [['algiz', 'sowilo', 'othala'], ['dagaz', 'star8', 'ingwaz']], back: [['ingwaz', 'algiz', 'sunDot'], ['othala', 'tiwaz', 'diamond']], lintel: ['sowilo', 'dagaz'], ends: ['algiz', 'tiwaz'] },
     roundel: 'star8', flowers: [['pink', 3], ['yellow', 3], ['white', 2]], seed: 307,
   },
 ];
@@ -124,9 +126,11 @@ const models = new Map<number, Model>();
 
 /**
  * A pillar's outline, across it from its middle and up it, its outer side
- * on `out`'s side: wider at the foot, the long sides not quite straight, and
- * its head cut off at its own slant -- one with the outer shoulder knocked
- * off, the other sloping down to the outside -- every hand its own.
+ * on `out`'s side: widest at the foot and drawn in to a head about four
+ * fifths as wide, the long sides not quite straight; one with its outer
+ * shoulder cut back on a slant under the lintel's overhang, the other square.
+ * Its head is cut level and stands into the lintel, so nothing of it shows
+ * between the two.
  */
 function pillarOutline(R: () => number, out: -1 | 1, kind: number, H: number, girth: number): Pt[] {
   const j = (k: number): number => (R() - 0.5) * k;
@@ -136,22 +140,24 @@ function pillarOutline(R: () => number, out: -1 | 1, kind: number, H: number, gi
    * to the head, and every point off the true line by a little -- a side
    * dressed by eye, not ruled.
    */
+  const top = H * 0.86;
   const side = (w0: number, w1: number, n: number, up: boolean): Pt[] => Array.from({ length: n }, (_, i) => {
     const u = up ? i / (n - 1) : 1 - i / (n - 1);
-    const t = H * 0.93 * u;
-    const w = w0 + (w1 - w0) * u + 0.32 * Math.sin(Math.PI * Math.min(1, u * 1.6)) + j(0.32);
+    const t = top * u;
+    const w = w0 + (w1 - w0) * u + 0.28 * Math.sin(Math.PI * Math.min(1, u * 1.6)) + j(0.3);
     return [w, t] as Pt;
   });
-  const outer = side(4.35 * girth, 3.35 * girth, 7, true);
-  const inner = side(4.3 * girth, 3.45 * girth, 7, false).map(([w, t]) => [-w, t] as Pt);
-  const head: Pt[] = kind === 0
-    // The outer shoulder knocked off in a ragged step.
-    ? [[3.15 + j(0.2), H - 2.7 + j(0.4)], [2.3 + j(0.3), H - 1.9], [1.8, H - 0.5 + j(0.3)], [0.2 + j(0.4), H + 0.1], [-1.6 + j(0.3), H + 0.35], [-3.0, H - 0.1]]
-    // A head that slopes down to the outside, its edge a little hollowed.
-    : [[3.2 + j(0.2), H - 1.9 + j(0.3)], [1.9 + j(0.3), H - 0.95], [-0.1 + j(0.3), H - 0.3], [-1.9 + j(0.3), H + 0.2], [-3.1, H - 0.05]];
-  const pts = [...outer, ...head, ...inner];
+  const foot = 4.15 * girth, head = foot * 0.82;
+  const outer = side(foot, head, 7, true);
+  const inner = side(foot * 0.98, head * 1.02, 7, false).map(([w, t]) => [-w, t] as Pt);
+  const hw = head + 0.05;
+  const crown: Pt[] = kind === 0
+    // The outer shoulder cut back on a slant, the cut under the lintel's overhang.
+    ? [[hw - 0.1, H - 3.2], [hw - 1.5, H - 1.0], [hw - 1.6, H + 0.15], [0.3 + j(0.3), H + 0.3], [-hw + 0.2, H + 0.1]]
+    : [[hw - 0.15, H + 0.05], [0.6 + j(0.3), H + 0.3], [-hw + 0.2, H + 0.15]];
+  const pts = [...outer, ...crown, ...inner];
   // `s` runs from the inner side to the outer: as the model's `x`, that is the way `out` says.
-  return pts.map(([s, t]) => [s * out, t] as Pt);
+  return pts.map(([s2, t]) => [s2 * out, t] as Pt);
 }
 
 /** The lintel's outline, across the gate and up from its underside: a slab with a low crest in the middle, the roundel's, and one end chipped. */
@@ -360,12 +366,12 @@ function modelOf(variant: number): Model {
     const seed = hand.seed * 13 + li * 7;
 
     // The foot stone: a dressed block, its edges knocked off, a step wider than the pillar, kept inside the border's length.
-    const fx = cx - side * 0.45;
+    const fx = cx - side * 0.55;
     const footOut: Pt[] = Array.from({ length: 10 }, (_, i) => {
       const a = (i / 10) * TAU + (R() - 0.5) * 0.12;
       const r = 1 + (R() - 0.5) * 0.1;
-      return [fx + Math.cos(a) * 4.95 * r, Math.sin(a) * 5.7 * r] as Pt;
-    }).map(([x, y]) => [Math.max(-REACH_X, Math.min(REACH_X, x)), y] as Pt);
+      return [fx + Math.cos(a) * 4.55 * r, Math.sin(a) * 6.7 * r] as Pt;
+    });
     const footSeed = seed + 3;
     things.push({
       x: cx, y: 0,
@@ -376,10 +382,12 @@ function modelOf(variant: number): Model {
           // Its top: lichen, and moss round the rim, thickest on the gate's outer side and on the mossy pillar, none under the pillar.
           const T = rand(footSeed);
           lichen(g, T, fx + (T() - 0.5) * 4, -4.2, 0.7, hand.lichen);
-          const pts = mossMass(T, 160, () => {
+          const pts = mossMass(T, 180, () => {
             const a = T() * TAU, rr = 0.55 + T() * 0.45;
-            return [fx + Math.cos(a) * 4.7 * rr, Math.sin(a) * 5.4 * rr];
-          }, (x, y) => (Math.abs(x - cx) < 4.1 && Math.abs(y) < 3.7 ? 0 : m * (0.75 + 0.5 * Math.max(0, (x - fx) * side / 5))), footSeed, 0.62);
+            return [fx + Math.cos(a) * 4.3 * rr, Math.sin(a) * 6.3 * rr];
+          }, (x, y) => (Math.abs(x - cx) < 4.0 && Math.abs(y) < 5.1 ? 0 : m * (0.75 + 0.5 * Math.max(0, (x - fx) * side / 5))), footSeed, 0.62)
+            // Rounded off short of the border's end, where a wall run up to the gate would stand over it.
+            .filter(([x, , r]) => Math.abs(x) + r < REACH_X);
           padsIn(g, k.base, k.e, pts, 0.62);
         },
         edge: (i) => ({
@@ -392,7 +400,9 @@ function modelOf(variant: number): Model {
               g.fill();
             }
             // Its sides: moss up out of the grass, in a band along the foot.
-            const pts = mossMass(T, 26, () => [T() * 3.4, -1.6 + T() * 1.8], (_s, y) => m * (1.05 - (y + 1.6) / 2.4), footSeed + i * 7, 0.62);
+            // Smaller on its outer end, which a wall run up to the gate stands against.
+            const end = (footOut[i][0] - fx) * side > 2.4;
+            const pts = mossMass(T, 26, () => [T() * 3.4, -1.6 + T() * 1.8], (_s, y) => m * (1.05 - (y + 1.6) / 2.4), footSeed + i * 7, end ? 0.32 : 0.62);
             padsIn(g, k.base, k.e, pts, 0.85);
           },
         }),
@@ -403,11 +413,14 @@ function modelOf(variant: number): Model {
     // As tall as the lintel is high over it: the lintel is laid a little off level.
     const outline = pillarOutline(R, side, (li + hand.seed) % 2, PILLAR_H + Math.tan(hand.tilt) * cx, hand.girth[li])
       // And never out past the end of the border, whatever its swell.
-      .map(([s, t]) => [Math.min(s * side, REACH_X - 0.2 - PILLAR_X) * side, t] as Pt);
+      .map(([s, t]) => [Math.min(s * side, REACH_X - 0.3 - PILLAR_X) * side, t] as Pt);
+    // Anticlockwise, as `plate` lays it, so an edge's number here is its number there.
+    if (area2(outline) < 0) outline.reverse();
     const tTop = Math.max(...outline.map((p) => p[1]));
     const [lx, ly] = hand.lean[li];
     const W: V3 = [lx, ly, 1];
-    const half: [number, number] = [3.8 * (0.9 + 0.1 * hand.girth[li]), 3.15 * (0.9 + 0.1 * hand.girth[li])];
+    // Deep enough to stand out past both faces of a wall run up to it, as a buttress does, and less so at the head.
+    const half: [number, number] = [5.3 * (0.85 + 0.15 * hand.girth[li]), 4.0 * (0.85 + 0.15 * hand.girth[li])];
     const f = (half[1] - half[0]) / tTop;
     const O: V3 = [cx, 0, FOOT_TOP - 0.2];
     const widthAt = (z: number): [number, number] => {
@@ -495,7 +508,9 @@ function modelOf(variant: number): Model {
           const inEdge = w > 0 ? 1 - d / w : 0;
           if (Math.abs(x) < hw && z > panel.z0 + 1.2 && z < panel.z1 + panel.arch && inFoot < 0.5) return 0;
           return Math.max(inFoot, inEdge);
-        }, fseed, 0.75);
+        }, fseed, 0.75)
+          // Rounded off short of the border's end, where a wall run up to the gate would stand in front of it.
+          .filter(([x, , r]) => Math.abs(cx + (which === 'front' ? x : -x)) + r < REACH_X);
         padsIn(g, k.base, k.e, pts);
       };
       const over: Painter = (g) => {
@@ -529,6 +544,15 @@ function modelOf(variant: number): Model {
           g.lineTo(edgeX + outer * 50, -5);
           g.closePath();
           g.clip();
+          // Nor out past the border's end, where a wall run up to it would stand in front: its leaves end along a ragged line.
+          g.beginPath();
+          const endX = outer * (REACH_X - 0.6 - PILLAR_X);
+          g.moveTo(endX, -5);
+          for (let z = -5; z <= tTop + 5; z += 0.8) g.lineTo(endX - outer * (0.35 + 0.35 * Math.sin(z * 2.3 + fseed) + 0.3 * noise2(z / 1.5, 3, fseed)), z);
+          g.lineTo(endX - outer * 50, tTop + 5);
+          g.lineTo(endX - outer * 50, -5);
+          g.closePath();
+          g.clip();
           g.translate(x, iv.z);
           g.scale(outer > 0 ? sc : -sc, -sc);
           g.drawImage(pic.img, -pic.ax, -pic.ay);
@@ -539,6 +563,37 @@ function modelOf(variant: number): Model {
     };
     const front = face('front');
     const back = face('back');
+    /*
+     * A rune down the pillar's outer side, the narrow end it shows along the
+     * wall: on the edge of the outline that crosses about halfway up, upright
+     * on it however the edge leans, in a sunk oval, and lit in the climb with
+     * the panels' middle runes -- so a gate seen end on shows its light too.
+     */
+    const P = (pt: Pt): V3 => at(O, [pt[0], [1, 0, 0]], [pt[1], W]);
+    const endAt = tTop * 0.55;
+    const endI = outline.findIndex((pt, i) => {
+      const q = outline[(i + 1) % outline.length];
+      return pt[0] * side > 0 && q[0] * side > 0 && (pt[1] - endAt) * (q[1] - endAt) <= 0 && pt[1] !== q[1];
+    });
+    const endRune = ((): { s: number; dir: 1 | -1; hand: 1 | -1 } | null => {
+      if (endI < 0) return null;
+      const p0 = outline[endI], q0 = outline[(endI + 1) % outline.length];
+      const P0 = P(p0), Q0 = P(q0);
+      const d: V3 = [Q0[0] - P0[0], Q0[1] - P0[1], Q0[2] - P0[2]];
+      const len = Math.hypot(d[0], d[1], d[2]);
+      const along: V3 = [d[0] / len, d[1] / len, d[2] / len];
+      const fz = (endAt - p0[1]) / (q0[1] - p0[1]);
+      const dir = (along[2] > 0 ? 1 : -1) as 1 | -1;
+      // Out of the face, away from the opening; and which way along the face the eye reads as right, looking at it.
+      // Its normal is square to the edge and to the way through the gate; facing it, right is along that way by the normal's sign.
+      let n: V3 = [-along[2], 0, along[0]];
+      if (n[0] * side < 0) n = mul(n, -1);
+      const handed = (n[0] > 0 ? 1 : -1) as 1 | -1;
+      const o = at(P0, [fz * len, along]);
+      runes.push({ face: `${li}end`, glyph: hand.runes.ends[li], x: 0, z: 0, s: END_RUNE_S, o: 1 });
+      frames.set(`${li}end`, { o, a: [0, handed, 0], b: mul(along, dir), n });
+      return { s: fz * len, dir, hand: handed };
+    })();
     const edge = (i: number, up: number): { paint?: Painter; over?: Painter } | undefined => {
       const p = outline[i], q = outline[(i + 1) % outline.length];
       const mx = (p[0] + q[0]) / 2;
@@ -557,6 +612,19 @@ function modelOf(variant: number): Model {
           }
           g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.3);
           for (let j = 0; j < len * 1.5; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.14 + T() * 0.12, 0.14 + T() * 0.12);
+          if (i === endI && endRune) {
+            // The end rune, in its sunk oval, upright on the face.
+            g.save();
+            g.transform(0, endRune.hand, endRune.dir, 0, endRune.s, 0);
+            g.beginPath();
+            g.ellipse(0, 0.1, END_RUNE_S * 1.25, END_RUNE_S * 1.75, 0, 0, TAU);
+            g.fillStyle = css(mix(k.fill, hex('#a39aac'), 0.42), 0.5);
+            g.fill();
+            cut(g, k.fill, 0.3, () => { g.beginPath(); g.ellipse(0, 0.1, END_RUNE_S * 1.25, END_RUNE_S * 1.75, 0, 0, TAU); });
+            const rr = runes.find((r) => r.face === `${li}end`);
+            if (rr) cut(g, k.fill, 0.5, () => glyphPath(g, rr.glyph, 0, 0, END_RUNE_S));
+            g.restore();
+          }
           let pts: Array<[number, number, number]> = [];
           if (up > 0.35) {
             // A head: moss over what the lintel leaves showing.
@@ -579,14 +647,16 @@ function modelOf(variant: number): Model {
             const rise = (inner ? 3 : 4.8) + 9 * m;
             const along = dz >= 0 ? 1 : -1;
             const zAt = (s: number): number => Math.min(p[1], q[1]) + (along > 0 ? s : len - s) * Math.abs(dz) / Math.max(0.01, len);
-            pts = mossMass(T, Math.round(len * 9), () => [T() * len, (T() - 0.5) * 2 * G], (s) => 1 - zAt(s) / rise, seed + i * 3, 0.7);
+            // Kept small on the outer end, which a wall run up to the gate stands against.
+            pts = mossMass(T, Math.round(len * 9), () => [T() * len, (T() - 0.5) * 2 * G], (s, y) => (i === endI && Math.abs(y) < END_RUNE_S * 1.6 ? 0 : 1 - zAt(s) / rise),
+              seed + i * 3, inner ? 0.7 : 0.42);
           }
           padsIn(g, k.base, k.e, pts);
         },
       };
     };
     const faces = plate({
-      o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline, half, tTop, bevel: 0.8, tone: hand.stone,
+      o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline, half, tTop, bevel: 1.1, tone: hand.stone,
       front: front.paint, frontOver: front.over, back: back.paint, backOver: back.over, edge, sunk: true,
     });
     things.push({ x: cx, y: 0, faces });
@@ -603,8 +673,8 @@ function modelOf(variant: number): Model {
     /* -- rocks hugging the foot stone in front and behind, mossy as the pillar is -- */
     for (let i = 0; i < 3; i++) {
       const sy = i === 1 ? -1 : 1;
-      const x = Math.max(-REACH_X + 2, Math.min(REACH_X - 2, cx + side * (1.2 + R() * 2.2) - (i === 2 ? side * 4.4 : 0)));
-      const y = sy * (6.6 + R() * 1.4);
+      const x = Math.max(-REACH_X + 3.4, Math.min(REACH_X - 3.4, cx + side * (1.2 + R() * 2.2) - (i === 2 ? side * 4.4 : 0)));
+      const y = sy * (8.2 + R() * 1.2);
       const r = 1.3 + R() * 1.1;
       things.push({ x, y, faces: boulder(x, y, r, r * (0.7 + R() * 0.3), 1 + R() * 1.2, R() * TAU, seed * 17 + i, hand.rock, Math.min(1, m + 0.25)) });
     }
@@ -619,7 +689,8 @@ function modelOf(variant: number): Model {
     // Along it and up it, laid off level by the hand's tilt.
     const U: V3 = [Math.cos(hand.tilt), 0, Math.sin(hand.tilt)];
     const Wl: V3 = [-Math.sin(hand.tilt), 0, Math.cos(hand.tilt)];
-    const half: [number, number] = [3.5, 3.3];
+    // Deeper than the pillars' heads, so it covers them through and through.
+    const half: [number, number] = [4.7, 4.5];
     const f = (half[1] - half[0]) / tTop;
     const lseed = hand.seed * 41;
     for (const which of ['front', 'back'] as const) {
@@ -725,7 +796,7 @@ function modelOf(variant: number): Model {
     frames.set('lback', { ...bk, n: [0, -1, 0] });
 
     // A tuft of grass and a few flowers rooted in the moss on its mossy end.
-    for (const [dx, dy, flower] of [[14.2, 0.6, true], [16.6, -1.2, false], [11.6, -0.4, false]] as Array<[number, number, boolean]>) {
+    for (const [dx, dy, flower] of [[13.4, 0.8, true], [15.2, -1.6, false], [10.8, -0.6, false]] as Array<[number, number, boolean]>) {
       const x = hand.mossSide * dx, y = dy;
       const top = LINTEL_Z + 5.5 + Math.tan(hand.tilt) * x;
       const colour = hand.flowers[0][0];
@@ -767,7 +838,7 @@ function modelOf(variant: number): Model {
   const kinds: string[] = [];
   for (const [c, k] of hand.flowers) for (let i = 0; i < k; i++) kinds.push(c);
   const tuft = (x: number, y: number, z: number, flower: boolean, big: number): void => {
-    if (Math.abs(x) > REACH_X - 3) return;
+    if (Math.abs(x) + 4.6 * big > REACH_X) return;
     const colour = kinds[Math.floor(R() * kinds.length)];
     const seed = hand.seed * 1000 + things.length;
     things.push({
@@ -779,16 +850,21 @@ function modelOf(variant: number): Model {
       },
     });
   };
+  /*
+   * At each foot, in front and behind, and either side of the threshold: a
+   * clump's leaves and heads spread about four units either way of its root,
+   * so every root is that far inside the border's end, where a wall run up to
+   * the gate would stand over anything further out.
+   */
   for (const side of [-1, 1]) {
     const cx = side * PILLAR_X;
     for (const sy of [-1, 1]) {
-      // A clump at each corner of the foot, in front and behind: flowers on the mossy side.
-      tuft(cx + side * (1 + R() * 2), sy * (6.4 + R() * 1.2), 0, side === hand.mossSide || R() < 0.4, 0.95 + R() * 0.2);
-      tuft(cx - side * (3 + R() * 2.5), sy * (6.2 + R() * 1.5), 0, false, 0.95 + R() * 0.2);
-      tuft(cx + side * (R() * 2.5), sy * (8.4 + R() * 2.2), 0, R() < 0.5, 0.85 + R() * 0.2);
+      tuft(cx - side * (0.5 + R() * 1.5), sy * (7.6 + R() * 1.2), 0, side === hand.mossSide || R() < 0.4, 0.95 + R() * 0.15);
+      tuft(cx - side * (3.5 + R() * 2), sy * (7 + R() * 1.5), 0, false, 0.95 + R() * 0.2);
+      tuft(cx - side * (1.5 + R() * 2), sy * (10 + R() * 1.6), 0, R() < 0.5, 0.85 + R() * 0.2);
     }
   }
-  for (const sy of [-1, 1]) for (const sx of [-1, 1]) tuft(sx * (5 + R() * 4.5), sy * (5 + R() * 1.1), 0, false, 0.85);
+  for (const sy of [-1, 1]) for (const sx of [-1, 1]) tuft(sx * (5 + R() * 3.5), sy * (5.4 + R() * 1.1), 0, false, 0.85);
 
   /* -- the turf it stands in: a ragged band along the border, a little past the feet -- */
   const turf: Pt[] = Array.from({ length: 24 }, (_, i) => {
@@ -1013,15 +1089,16 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     }
     if (night > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = Math.min(1, night * q * (gl.roundel ? 0.32 : 0.4));
+      ctx.globalAlpha = Math.min(1, night * q * (gl.roundel ? 0.24 : 0.28));
       ctx.drawImage(gl.dusk, Xg, Yg, Wg, Hg);
     }
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = Math.min(1, q * (0.85 + 0.15 * night));
+    // The lit groove: by day a little light added over it as well; after dark only the groove, so each rune stays its own shape.
+    ctx.globalAlpha = Math.min(1, q * (0.85 - 0.2 * night));
     ctx.drawImage(gl.core, Xg, Yg, Wg, Hg);
-    if (!gl.roundel) {
+    if (!gl.roundel && day > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (0.1 + 0.12 * night) * q;
+      ctx.globalAlpha = 0.1 * day * q;
       ctx.drawImage(gl.core, Xg, Yg, Wg, Hg);
     }
   });
@@ -1059,7 +1136,7 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   out.holes = (x0, y0) => {
     const hs: NightHole[] = [];
     b.glows.forEach((gl, i) => {
-      if (each[i] > 0.002) hs.push({ x: x0 + gl.cx * zoom, y: y0 + gl.cy * zoom, r: gl.r * 1.5 * zoom, a: (0.06 + 0.04 * night) * each[i] });
+      if (each[i] > 0.002) hs.push({ x: x0 + gl.cx * zoom, y: y0 + gl.cy * zoom, r: gl.r * 1.1 * zoom, a: 0.05 * each[i] });
     });
     for (const m of motes) hs.push({ x: x0 + m.x * zoom, y: y0 + m.y * zoom, r: m.r * 2.2, a: 0.8 * m.a });
     return hs;
@@ -1067,7 +1144,7 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   out.masks = (x0, y0) => b.glows.flatMap((gl, i) => {
     if (each[i] <= 0.002) return [];
     const [x, y, w, h] = gl.box;
-    return [{ canvas: gl.mask, x: x0 + x * zoom, y: y0 + y * zoom, w: w * zoom, h: h * zoom, a: Math.min(1, (gl.roundel ? 0.75 : 0.85) * each[i]) }];
+    return [{ canvas: gl.mask, x: x0 + x * zoom, y: y0 + y * zoom, w: w * zoom, h: h * zoom, a: Math.min(1, (gl.roundel ? 0.55 : 0.6) * each[i]) }];
   });
   return out;
 }
