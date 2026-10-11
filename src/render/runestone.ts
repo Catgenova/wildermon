@@ -257,6 +257,8 @@ export interface PlateOpts {
   edge?: (i: number, up: number) => { paint?: Painter; over?: Painter } | undefined;
   /** Leave out the face along the bottom edge, which stands in the ground. */
   sunk?: boolean;
+  /** How strong the line is round its edge strips and their chamfers, where not the usual: a side dressed as one face. */
+  edgeCrease?: number;
   /**
    * Where through it its thickness is centred, and how thick each way, at a
    * point (s, t) of its outline, given how thick it would be there: so the
@@ -307,9 +309,9 @@ export function plate(o: PlateOpts): Face[] {
     const up = newell(side)[2] * Math.sign(dot(newell(side), out) || 1);
     const along = unit(sub(P(q, 0), P(p, 0)));
     const dress = o.edge?.(i, up);
-    face([front(inner[i]), front(inner[j]), frontEdge(q), frontEdge(p)], add(out, A), { crease: 0.32 });
-    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: 0.4 });
-    face([backEdge(p), backEdge(q), back(inner[j]), back(inner[i])], sub(out, A), { crease: 0.32 });
+    face([front(inner[i]), front(inner[j]), frontEdge(q), frontEdge(p)], add(out, A), { crease: o.edgeCrease ?? 0.32 });
+    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: o.edgeCrease ?? 0.4 });
+    face([backEdge(p), backEdge(q), back(inner[j]), back(inner[i])], sub(out, A), { crease: o.edgeCrease ?? 0.32 });
   }
   return faces;
 }
@@ -996,7 +998,7 @@ const FLOWER: Record<string, { petal: string; ring: string; eye: string }> = {
  * or, for lilac and now and then pink, a spike: a stem with a column of
  * small heads up it, the lupins and foxgloves of the reference.
  */
-export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: number, big = 1, most = Infinity): void {
+export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: number, big = 1, most = Infinity, taper = 0.8): void {
   const R = rand(seed);
   const col = FLOWER[colour] ?? FLOWER.white;
   g.lineCap = 'round';
@@ -1033,7 +1035,8 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
       g.quadraticCurveTo(sx + lean * 0.3, y - tall * 0.5, sx + lean, y - tall);
       g.stroke();
       for (let j = 0; j < 7; j++) {
-        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * 0.8) * big;
+        // `taper`: how much smaller its heads get toward the tip.
+        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * taper) * big;
         const hx = sx + lean * t * t + (j % 2 ? 0.7 : -0.7) * (1 - t), hy = y - tall * t;
         g.beginPath();
         g.arc(hx, hy, r + 0.42, 0, TAU);
@@ -2131,10 +2134,11 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
  * face's frame (across, up, in model units) to pixels at zoom one from the
  * footprint's middle, and `r` is the glyph (or the roundel) at (x, z), `s`
  * from its middle to its top; `stroke` how wide its grooves are against a
- * Runestone's. Shared with what else is cut with runes of
+ * Runestone's, `bloom` how wide its glow is against that, and `cutout` how
+ * wide the shape the night is taken off in. Shared with what else is cut with runes of
  * this light: a rune gate (`runegate.ts`).
  */
-export function glowOf(M: DOMMatrix, r: { x: number; z: number; s: number; glyph: string; roundel?: string }, scale: number, stroke = 1): Omit<Glow, 'i' | 'roundel'> {
+export function glowOf(M: DOMMatrix, r: { x: number; z: number; s: number; glyph: string; roundel?: string }, scale: number, stroke = 1, bloom = 1, cutout = 1): Omit<Glow, 'i' | 'roundel'> {
   const reach = r.roundel ? r.s * 1.25 : r.s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2160,7 +2164,7 @@ export function glowOf(M: DOMMatrix, r: { x: number; z: number; s: number; glyph
     for (const [k, al] of [[5.2, 0.05], [3.8, 0.08], [2.6, 0.12], [1.7, 0.2]] as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 172, 72, ${al})`;
-      h.lineWidth = w * k * (r.roundel ? 0.6 : 1);
+      h.lineWidth = w * k * bloom * (r.roundel ? 0.6 : 1);
       h.stroke();
     }
   });
@@ -2168,7 +2172,7 @@ export function glowOf(M: DOMMatrix, r: { x: number; z: number; s: number; glyph
     for (const [k, al] of [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]] as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 176, 80, ${al})`;
-      h.lineWidth = w * k;
+      h.lineWidth = w * k * bloom;
       h.stroke();
     }
   });
@@ -2200,11 +2204,11 @@ export function glowOf(M: DOMMatrix, r: { x: number; z: number; s: number; glyph
     path(h);
     // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
     h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    h.lineWidth = w * (r.roundel ? 2.6 : 3.6);
+    h.lineWidth = w * cutout * (r.roundel ? 2.6 : 3.6);
     h.stroke();
     path(h);
     h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = w * (r.roundel ? 1.8 : 2.2);
+    h.lineWidth = w * Math.max(1.1, cutout * (r.roundel ? 1.8 : 2.2));
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
