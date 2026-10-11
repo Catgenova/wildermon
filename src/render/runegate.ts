@@ -125,7 +125,8 @@ interface GateRune {
 }
 
 /** A thing of the model and where in the order it goes: under everything, by where it stands, the lintel, or on the lintel. */
-type GateThing = Thing & { rank?: number };
+/** `carved`: the plate whose runes these are -- a pillar, '0' or '1', or the lintel, 'l' -- so their light can be kept off whatever is drawn over it. */
+type GateThing = Thing & { rank?: number; carved?: string };
 
 interface Model {
   hand: Hand;
@@ -364,7 +365,7 @@ function mossMass(T: () => number, n: number, at: () => [number, number], share:
 
 /** The ivy's greens, as the Runestones' leaves are laid: the rim round every leaf, three fills, and the lit edge. */
 const IVY = {
-  rim: '#3d6a4c', fills: ['#4f7a5f', '#5e9165', '#6f9c7c'], lit: 'rgba(176, 214, 158, 0.9)', stem: '#4a5a40', stemLit: '#71805a',
+  rim: '#3d6a4c', fills: ['#4f7a5f', '#5e9165', '#6f9c7c', '#86b48a', '#3f6650'], lit: 'rgba(176, 214, 158, 0.9)', stem: '#4a5a40', stemLit: '#71805a',
   /** A leaf turned to show its underside: paler, its veins standing out darker. */
   under: { rim: '#5f8a68', fill: '#a6c79e', vein: 'rgba(70, 112, 82, 0.7)' },
 };
@@ -454,7 +455,7 @@ interface IvyLeaf {
  * the screen. Shown only while `seen` says its face is in view; `shift`
  * moves it over the stone where the face it grows on is seen nearly edge on.
  */
-function ivyThing(stems: V3[][], leaves: IvyLeaf[], rank: number, seen: (e: Eye) => boolean, shift?: (e: Eye) => { stem: V3; leaf: V3; size: number }): GateThing {
+function ivyThing(stems: V3[][], leaves: IvyLeaf[], rank: number, seen: (e: Eye) => boolean, shift?: (e: Eye) => { stem: V3; leaf: V3; size: number; lean: number; alternate: boolean }): GateThing {
   const all = [...stems.flat(), ...leaves.map((l) => l.at)];
   const big = Math.max(...leaves.map((l) => l.w));
   const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]), zs = all.map((p) => p[2]);
@@ -464,7 +465,7 @@ function ivyThing(stems: V3[][], leaves: IvyLeaf[], rank: number, seen: (e: Eye)
     draw: (g, e) => {
       if (!seen(e)) return;
       const across = Math.hypot(e.ux, e.uy);
-      const sh = shift?.(e) ?? { stem: [0, 0, 0] as V3, leaf: [0, 0, 0] as V3, size: 1 };
+      const sh = shift?.(e) ?? { stem: [0, 0, 0] as V3, leaf: [0, 0, 0] as V3, size: 1, lean: 1, alternate: false };
       const P = (p: V3, d: V3): Pt => proj(e, add(p, d));
       g.save();
       g.lineCap = 'round';
@@ -484,8 +485,8 @@ function ivyThing(stems: V3[][], leaves: IvyLeaf[], rank: number, seen: (e: Eye)
         g.strokeStyle = IVY.stem;
         g.lineWidth = Math.max(0.8, 0.16 * across);
         g.stroke();
-        const dir = Math.abs(lx - px) > 0.3 * across ? Math.sign(lx - px) : lf.side;
-        ivyLeaf(g, lx, ly, lf.w * sh.size * across, dir * lf.lean, lf.tone, (dir < 0) === lf.lit, lf.under);
+        const dir = !sh.alternate && Math.abs(lx - px) > 0.3 * across ? Math.sign(lx - px) : lf.side;
+        ivyLeaf(g, lx, ly, lf.w * sh.size * across, dir * lf.lean * sh.lean, lf.tone, (dir < 0) === lf.lit, lf.under);
       }
       g.restore();
     },
@@ -897,7 +898,7 @@ function modelOf(variant: number): Model {
       o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline, half, tTop, bevel: 1.4, tone: hand.stone,
       front: front.paint, back: back.paint, edge, sunk: true, edgeCrease: 0.05,
     });
-    things.push({ x: cx, y: 0, faces });
+    things.push({ x: cx, y: 0, faces, carved: `${li}` });
     const A: V3 = [0, 1, 0];
     const fr = { o: at(O, [half[0], A]), a: [1, 0, 0] as V3, b: at(W, [f, A]) };
     const bk = { o: at(O, [-half[0], A]), a: [-1, 0, 0] as V3, b: at(W, [-f, A]) };
@@ -953,14 +954,17 @@ function modelOf(variant: number): Model {
           }
         }
       }
-      // One or two turned to the light, showing their underside.
+      // One or two turned to the light, showing their underside; one or two a step lighter where the light falls, one deeper in shade.
       for (let k = 0; k < 2; k++) leaves[Math.floor(J() * leaves.length)].under = true;
+      leaves[Math.floor(J() * leaves.length * 0.5) + Math.floor(leaves.length * 0.5)].tone = 3;
+      leaves[Math.floor(J() * leaves.length * 0.4)].tone = 3;
+      leaves[Math.floor(J() * leaves.length * 0.3)].tone = 4;
       // Seen nearly edge on, the jamb is a line down the pillar's inner arris: the stem stays on it, the leaves lie over the face beside it.
       const edgeOn = (e: Eye): number => Math.max(0, Math.min(1, 1 - dot(nJamb, e.toward) / 0.45));
       things.push(ivyThing([stem], leaves, 0.5, seenJamb, (e) => {
         const t = edgeOn(e);
         // A step smaller there, so the leaves over the face stop short of its panel's runes.
-        return { stem: [side * 0.3 * t, 0, 0], leaf: [side * 0.75 * t, 0, 0], size: 1 - 0.22 * t };
+        return { stem: [side * 0.3 * t, 0, 0], leaf: [side * 0.5 * t, 0, 0], size: 1 - 0.22 * t, lean: 1 - 0.45 * t, alternate: t > 0.5 };
       }));
     }
 
@@ -1078,7 +1082,7 @@ function modelOf(variant: number): Model {
       o: O, U, W: Wl, A: [0, 1, 0], outline, half, tTop, bevel: 0.75, tone: hand.stone,
       front: face('front'), back: face('back'), edge,
     });
-    things.push({ x: 0, y: 0, faces, rank: 1 });
+    things.push({ x: 0, y: 0, faces, rank: 1, carved: 'l' });
     const A: V3 = [0, 1, 0];
     const fr = { o: at(O, [half[0], A]), a: U, b: at(Wl, [f, A]) };
     const bk = { o: at(O, [-half[0], A]), a: mul(U, -1), b: at(Wl, [-f, A]) };
@@ -1121,6 +1125,8 @@ function modelOf(variant: number): Model {
       leaf(fork, lf * 0.7, 0.4, 2.9 * (0.85 + 0.2 * H2()), 0.12 + (H2() - 0.5) * 0.4, 1);
       leaf(fork, lf, -0.2, 2.6, 0.05, -1);
       leaves[3 + Math.floor(H2() * 3)].under = true;
+      leaves[0].tone = 3;
+      leaves[leaves.length - 3].tone = 4;
       things.push(ivyThing([main, fork], leaves, 1.5, seen));
     }
 
@@ -1288,11 +1294,13 @@ function grooveShade(M: DOMMatrix, r: GateRune, scale: number, box: [number, num
   const px = Math.min(Math.hypot(M.a, M.b), Math.hypot(M.c, M.d));
   // A roundel's strokes lie close: thinner, so its ring and figure stay apart.
   const core = Math.max(w, (r.roundel ? 0.75 : 1.15) / px);
+  // The cool shadow a pixel down and to the right of the groove, at three quarters: the pale core stands off the pale stone by it.
   h.save();
-  h.translate(0, -r.s * 0.12);
+  h.setTransform(scale, 0, 0, scale, (1 - a) * scale, (1 - b) * scale);
+  h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
   path();
   h.strokeStyle = 'rgba(58, 60, 92, 0.75)';
-  h.lineWidth = core * 1.9;
+  h.lineWidth = core * 1.25;
   h.stroke();
   h.restore();
   // The groove itself, lit: solid, in the Runestones' pale gold, and a pixel's highlight down its middle.
@@ -1442,13 +1450,44 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
   const rank = (t: GateThing): number => t.rank ?? 0;
   const near = (x: number, y: number): boolean => groundNear(e, x, y) > NEAR;
   const things = model.things.slice().sort((a, b) => rank(a) - rank(b) || groundNear(e, a.x, a.y) - groundNear(e, b.x, b.y));
+  /*
+   * And, for each carved plate, a picture of whatever its own picture lays
+   * over it after it -- ivy, flowers, the lintel over a pillar's head -- for
+   * its runes' light to be cut out of (`keepOff`), so no rune glows through a
+   * leaf in front of it, by day or after dark.
+   */
+  const over = new Map<string, typeof g>();
+  const openOn = new Map<typeof g, string[]>([[g, []], [gf, []]]);
+  const lay = (t: GateThing, h: typeof g): void => {
+    if (t.draw) t.draw(h, e);
+    else if (t.faces) drawFaces(h, e, t.faces, 0.8);
+  };
   for (const t of things) {
-    const on = rank(t) >= 1 || near(t.x, t.y) ? [gf] : [g];
-    for (const h of on) {
-      if (t.draw) t.draw(h, e);
-      else if (t.faces) drawFaces(h, e, t.faces, 0.8);
+    const h = rank(t) >= 1 || near(t.x, t.y) ? gf : g;
+    lay(t, h);
+    for (const k of openOn.get(h)!) lay(t, over.get(k)!);
+    if (t.carved) {
+      const [, oc] = canvasOf(canvas.width, canvas.height);
+      oc.setTransform(base);
+      over.set(t.carved, oc);
+      openOn.get(h)!.push(t.carved);
     }
   }
+  /** Cut what lies over a rune's plate out of each of its light's pictures. */
+  const keepOff = (gl: Omit<Glow, 'i' | 'roundel'>, shade: HTMLCanvasElement | null, key: string): void => {
+    const oc = over.get(key.startsWith('l') ? 'l' : key[0]);
+    if (!oc) return;
+    const [a, b] = gl.box;
+    for (const cv of [gl.core, gl.halo, gl.dusk, gl.mask, shade]) {
+      if (!cv) continue;
+      const h = cv.getContext('2d')!;
+      h.save();
+      h.setTransform(1, 0, 0, 1, 0, 0);
+      h.globalCompositeOperation = 'destination-out';
+      h.drawImage(oc.canvas, (x0 - a) * scale, (y0 - b) * scale);
+      h.restore();
+    }
+  };
 
   /* -- each rune's light, for the faces the eye sees -- */
   const glows: GateGlow[] = [];
@@ -1465,6 +1504,7 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
       const stroke = (r.roundel ? 0.55 : 0.68) * (scale <= 1 ? 1.45 : 1);
       const gl = glowOf(M, r, scale, stroke, 0.5, 0.5);
       const shade = scale <= 1 ? grooveShade(M, r, scale, gl.box, (r.roundel ? 0.62 : 0.78) * stroke) : null;
+      keepOff(gl, shade, key);
       glows.push({ ...gl, o: r.o, roundel: !!r.roundel, front: onFront, shade });
     }
   }
