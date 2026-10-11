@@ -74,10 +74,10 @@ const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER, WIND, DEEP, AXLE, BAG,
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
-const billIsle = psql(`select string_agg(r.id || '=' || (select string_agg(ri.item || '*' || ri.count, '+' order by ri.item) from recipe_input ri where ri.recipe = r.id),
-  '|' order by r.id) from recipe r where r.id in (${PART3.map((e) => `'make_${e.scroll}'`).join(', ')})`);
+const billIsle = psql(`select string_agg(r.id || '=' || (select string_agg(ri.item || '*' || ri.count, '+' order by ri.item collate "C") from recipe_input ri where ri.recipe = r.id),
+  '|' order by r.id collate "C") from recipe r where r.id in (${PART3.map((e) => `'make_${e.scroll}'`).join(', ')})`);
 const billHere = PART3.map((e) => `make_${e.scroll}=${[...(RECIPE_BY_ID.get(`make_${e.scroll}`)?.inputs ?? [])]
-  .sort((a, b) => a.item.localeCompare(b.item)).map((i) => `${i.item}*${i.count ?? 1}`).join('+')}`).sort().join('|');
+  .sort((a, b) => (a.item < b.item ? -1 : a.item > b.item ? 1 : 0)).map((i) => `${i.item}*${i.count ?? 1}`).join('+')}`).sort().join('|');
 check(`every scroll is written from the same papyrus and motes on both sides: ${PART3.map((e) => `${e.name} (${e.motes.map(([m, n]) => `${n} ${m}`).join(' + ')})`).join(', ')}`,
   billIsle === billHere && billHere.includes('make_knackstone_scroll=life_mote*1+light_mote*1+papyrus*1'), billIsle === billHere ? '' : `${billIsle} / ${billHere}`);
 

@@ -73,10 +73,10 @@ const [VENOM, GALE, NIGHT, SUN, LEECH, TIDE, FAR, FLAME, FROST] = ['venomfang', 
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
-const billIsle = psql(`select string_agg(r.id || '=' || (select string_agg(ri.item || '*' || ri.count, '+' order by ri.item) from recipe_input ri where ri.recipe = r.id),
-  '|' order by r.id) from recipe r where r.id like 'make\\_%\\_scroll'`);
+const billIsle = psql(`select string_agg(r.id || '=' || (select string_agg(ri.item || '*' || ri.count, '+' order by ri.item collate "C") from recipe_input ri where ri.recipe = r.id),
+  '|' order by r.id collate "C") from recipe r where r.id like 'make\\_%\\_scroll'`);
 const billHere = ENCHANTMENT_LIST.map((e) => `make_${e.scroll}=${[...(RECIPE_BY_ID.get(`make_${e.scroll}`)?.inputs ?? [])]
-  .sort((a, b) => a.item.localeCompare(b.item)).map((i) => `${i.item}*${i.count ?? 1}`).join('+')}`).sort().join('|');
+  .sort((a, b) => (a.item < b.item ? -1 : a.item > b.item ? 1 : 0)).map((i) => `${i.item}*${i.count ?? 1}`).join('+')}`).sort().join('|');
 check(`every scroll is written from the same papyrus and motes on both sides: ${LATER.map((e) => `${e.name} (${e.motes.map(([m, n]) => `${n} ${m}`).join(' + ')})`).join(', ')}`,
   billIsle === billHere && billHere.includes('make_leeching_scroll=dark_mote*1+life_mote*1+papyrus*1') && billHere.includes('make_gale_scroll=papyrus*1+wind_mote*2'),
   billIsle === billHere ? '' : `${billIsle} / ${billHere}`);
