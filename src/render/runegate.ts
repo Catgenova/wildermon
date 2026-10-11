@@ -1274,7 +1274,7 @@ function modelOf(variant: number): Model {
 /* ---- baking ------------------------------------------------------------------ */
 
 /** A rune's light, baked, with its turn in the climb. */
-type GateGlow = Omit<Glow, 'i' | 'roundel'> & { o: number; roundel: boolean; front: boolean; shade: HTMLCanvasElement | null };
+type GateGlow = Omit<Glow, 'i' | 'roundel'> & { o: number; roundel: boolean; front: boolean; shade: HTMLCanvasElement | null; key: string };
 
 /**
  * A thin cool shadow under a rune's groove, a little down the face from it,
@@ -1450,47 +1450,10 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
   const rank = (t: GateThing): number => t.rank ?? 0;
   const near = (x: number, y: number): boolean => groundNear(e, x, y) > NEAR;
   const things = model.things.slice().sort((a, b) => rank(a) - rank(b) || groundNear(e, a.x, a.y) - groundNear(e, b.x, b.y));
-  /*
-   * And, for each carved plate, a picture of whatever its own picture lays
-   * over it after it -- ivy, flowers, the lintel over a pillar's head -- for
-   * its runes' light to be cut out of (`keepOff`), so no rune glows through a
-   * leaf in front of it, by day or after dark.
-   */
-  const over = new Map<string, typeof g>();
-  const openOn = new Map<typeof g, string[]>([[g, []], [gf, []]]);
-  const lay = (t: GateThing, h: typeof g): void => {
-    if (t.draw) t.draw(h, e);
-    else if (t.faces) drawFaces(h, e, t.faces, 0.8);
-  };
-  for (const t of things) {
-    const h = rank(t) >= 1 || near(t.x, t.y) ? gf : g;
-    lay(t, h);
-    for (const k of openOn.get(h)!) lay(t, over.get(k)!);
-    if (t.carved) {
-      const [, oc] = canvasOf(canvas.width, canvas.height);
-      oc.setTransform(base);
-      over.set(t.carved, oc);
-      openOn.get(h)!.push(t.carved);
-    }
-  }
-  /** Cut what lies over a rune's plate out of each of its light's pictures. */
-  const keepOff = (gl: Omit<Glow, 'i' | 'roundel'>, shade: HTMLCanvasElement | null, key: string): void => {
-    const oc = over.get(key.startsWith('l') ? 'l' : key[0]);
-    if (!oc) return;
-    const [a, b] = gl.box;
-    for (const cv of [gl.core, gl.halo, gl.dusk, gl.mask, shade]) {
-      if (!cv) continue;
-      const h = cv.getContext('2d')!;
-      h.save();
-      h.setTransform(1, 0, 0, 1, 0, 0);
-      h.globalCompositeOperation = 'destination-out';
-      h.drawImage(oc.canvas, (x0 - a) * scale, (y0 - b) * scale);
-      h.restore();
-    }
-  };
-
-  /* -- each rune's light, for the faces the eye sees -- */
+  /* -- each rune's light, for the faces the eye sees; and what each carved plate's light covers on the screen -- */
   const glows: GateGlow[] = [];
+  const lightOf = new Map<string, [number, number, number, number]>();
+  const plateOf = (key: string): string => (key.startsWith('l') ? 'l' : key[0]);
   for (const [key, fr] of model.frames) {
     if (dot(fr.n, e.toward) <= 1e-6) continue;
     const [ox, oy] = proj(e, fr.o), [ax, ay] = proj(e, fr.a), [bx, by] = proj(e, fr.b);
@@ -1504,8 +1467,76 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
       const stroke = (r.roundel ? 0.55 : 0.68) * (scale <= 1 ? 1.45 : 1);
       const gl = glowOf(M, r, scale, stroke, 0.5, 0.5);
       const shade = scale <= 1 ? grooveShade(M, r, scale, gl.box, (r.roundel ? 0.62 : 0.78) * stroke) : null;
-      keepOff(gl, shade, key);
-      glows.push({ ...gl, o: r.o, roundel: !!r.roundel, front: onFront, shade });
+      glows.push({ ...gl, o: r.o, roundel: !!r.roundel, front: onFront, shade, key });
+      const [gx, gy, gw, gh] = gl.box, had = lightOf.get(plateOf(key));
+      lightOf.set(plateOf(key), had ? [Math.min(had[0], gx), Math.min(had[1], gy), Math.max(had[2], gx + gw), Math.max(had[3], gy + gh)] : [gx, gy, gx + gw, gy + gh]);
+    }
+  }
+
+  /*
+   * And, for each carved plate, a picture of whatever its own picture lays
+   * over it after it -- ivy, flowers, the lintel over a pillar's head -- for
+   * its runes' light to be cut out of (`keepOff`), so no rune glows through a
+   * leaf in front of it, by day or after dark. Only as big as that light
+   * covers, set on the picture's own pixels, and only what falls on it drawn
+   * into it again.
+   */
+  const over = new Map<string, { g: CanvasRenderingContext2D; px: number; py: number; box: [number, number, number, number] }>();
+  const openOn = new Map<typeof g, string[]>([[g, []], [gf, []]]);
+  const lay = (t: GateThing, h: CanvasRenderingContext2D): void => {
+    if (t.draw) t.draw(h, e);
+    else if (t.faces) drawFaces(h, e, t.faces, 0.8);
+  };
+  /** Where a thing is on the screen at zoom one, with room for what it paints past its corners (moss, leaves, petals); null for one that gives no corners. */
+  const spread = (t: GateThing): [number, number, number, number] | null => {
+    const pts = [...(t.faces ?? []).flatMap((f) => f.pts), ...(t.reach ?? [])];
+    if (!pts.length) return null;
+    let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
+    for (const p of pts) {
+      const [x, y] = proj(e, p);
+      L = Math.min(L, x); T = Math.min(T, y); R = Math.max(R, x); B = Math.max(B, y);
+    }
+    const m = 16;
+    return [L - m, T - m, R + m, B + m];
+  };
+  for (const t of things) {
+    const h = rank(t) >= 1 || near(t.x, t.y) ? gf : g;
+    lay(t, h);
+    const opened = openOn.get(h);
+    if (opened?.length) {
+      const sp = spread(t);
+      for (const k of opened) {
+        const o = over.get(k);
+        if (!o) continue;
+        if (sp && (sp[2] < o.box[0] || sp[0] > o.box[2] || sp[3] < o.box[1] || sp[1] > o.box[3])) continue;
+        lay(t, o.g);
+      }
+    }
+    const lit = t.carved ? lightOf.get(t.carved) : undefined;
+    if (t.carved && lit && opened) {
+      // On the picture's own pixel grid, a couple of pixels past the light either way.
+      const px = Math.floor((lit[0] - x0) * scale) - 2, py = Math.floor((lit[1] - y0) * scale) - 2;
+      const [cv, oc] = canvasOf(Math.ceil((lit[2] - x0) * scale) + 2 - px, Math.ceil((lit[3] - y0) * scale) + 2 - py);
+      void cv;
+      oc.setTransform(scale, 0, 0, scale, -x0 * scale - px, -y0 * scale - py);
+      over.set(t.carved, { g: oc, px, py, box: lit });
+      opened.push(t.carved);
+    }
+  }
+  /** Cut what lies over a rune's plate out of each of its light's pictures. */
+  for (const gl of glows) {
+    const o = over.get(plateOf(gl.key));
+    if (!o) continue;
+    const [a, b] = gl.box;
+    for (const cv of [gl.core, gl.halo, gl.dusk, gl.mask, gl.shade]) {
+      if (!cv) continue;
+      const h = cv.getContext('2d');
+      if (!h) continue;
+      h.save();
+      h.setTransform(1, 0, 0, 1, 0, 0);
+      h.globalCompositeOperation = 'destination-out';
+      h.drawImage(o.g.canvas, (x0 - a) * scale + o.px, (y0 - b) * scale + o.py);
+      h.restore();
     }
   }
   const [mx, my] = proj(e, [0, 0, 0]);
@@ -1593,6 +1624,39 @@ export interface GateDrawn {
  */
 export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, dir: 'h' | 'v', rotation: number, variant: number,
   lit: number, since: number, rise: number, night: number, t: number, layer: 'back' | 'front' = 'back'): GateDrawn {
+  /*
+   * A fault in a gate -- its bake above all -- must never stop the frame: the
+   * gate is left out of this frame and of every frame for the next while,
+   * the context put back as it was, and the fault told once.
+   */
+  const key = `${dir}|${((rotation % 8) + 8) % 8}|${variant}|${scaleFor(zoom)}`;
+  const failed = gateFaults.get(key);
+  const now = performance.now();
+  if (failed !== undefined && now - failed < FAULT_WAIT) return nothingDrawn(sx, sy);
+  const was = ctx.globalCompositeOperation, wasA = ctx.globalAlpha;
+  try {
+    return drawGateNow(ctx, sx, sy, zoom, dir, rotation, variant, lit, since, rise, night, t, layer);
+  } catch (err) {
+    ctx.globalCompositeOperation = was;
+    ctx.globalAlpha = wasA;
+    if (failed === undefined) console.error('rune gate: could not be drawn; left out for now', key, err);
+    gateFaults.set(key, now);
+    return nothingDrawn(sx, sy);
+  }
+}
+
+/** When a gate last failed to be drawn, by its bake's key; and how long it is left out after, in milliseconds. */
+const gateFaults = new Map<string, number>();
+const FAULT_WAIT = 10_000;
+let blank: HTMLCanvasElement | null = null;
+/** What a gate left out of the frame leaves: nothing drawn, no light. */
+function nothingDrawn(sx: number, sy: number): GateDrawn {
+  blank ??= canvasOf(1, 1)[0];
+  return { img: blank, x: sx, y: sy, w: 0, h: 0, lightBox: null, holes: () => [], masks: () => [] };
+}
+
+function drawGateNow(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, dir: 'h' | 'v', rotation: number, variant: number,
+  lit: number, since: number, rise: number, night: number, t: number, layer: 'back' | 'front'): GateDrawn {
   const b0 = bakedFor(dir, rotation, variant, zoom);
   const isFront = layer === 'front';
   // This layer's picture and its runes; the motes rise behind whoever is in the opening, with the back.
