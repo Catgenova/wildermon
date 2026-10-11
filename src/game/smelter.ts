@@ -1,4 +1,5 @@
 import type { ActionDef, Target } from './actions';
+import { enchantTail, furnaceBurn, type Enchant } from './enchant';
 import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
@@ -33,6 +34,10 @@ export interface SmeltJob {
 }
 
 export interface PlacedSmelter {
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
+  /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
+  dmg?: number;
   /** 1 rare, 2 supreme, 3 fantastic; absent for the ordinary run of things. */
   rare?: number;
   id: number;
@@ -76,9 +81,11 @@ export function smelterAnchor(sx: number, sy: number): [number, number] {
   return [Math.max(0, Math.min(SUBTILES - SMELTER_W, sx)), Math.max(0, Math.min(SUBTILES - SMELTER_H, sy))];
 }
 
+/** How long its fuel keeps it hot: longer for an Ember Heart (`furnaceBurn`). */
 export const smelterBurnsFor = (s: PlacedSmelter): string => {
-  const m = Math.round(s.fuel / 60);
-  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(s.fuel)} seconds`;
+  const secs = s.fuel / furnaceBurn(s);
+  const m = Math.round(secs / 60);
+  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(secs)} seconds`;
 };
 
 /** What a job in the furnace is making, said plainly: a shovel head casting, an iron lump, an anvil. */
@@ -89,7 +96,7 @@ export function smelterState(s: PlacedSmelter): string {
   const heat = s.lit ? `hot, ${smelterBurnsFor(s)} of fuel` : s.fuel > 0 ? `banked and cold, ${smelterBurnsFor(s)} of fuel` : 'cold and empty';
   const work = s.jobs.length ? ` · ${s.jobs.length} in the furnace` : '';
   const out = s.output.length ? ` · ${s.output.length} waiting` : '';
-  return `QL ${s.ql.toFixed(0)} · ${heat}${work}${out}`;
+  return `QL ${s.ql.toFixed(0)} · ${heat}${work}${out}${enchantTail(s)}`;
 }
 
 type SmelterTarget = Extract<Target, { kind: 'smelter' }>;
@@ -129,6 +136,9 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const s = g.addSmelter(t.x, t.y, t.sx, t.sy, item.ql);
       // A rare furnace bedded in is a rare furnace: it holds a bigger charge.
       if (item.rare) s.rare = item.rare;
+      // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
+      if (item.enchant) s.enchant = item.enchant;
+      if (item.dmg) s.dmg = item.dmg;
       g.logMsg(`You set the ${smelterName(s).toLowerCase()} down and bed it in. (QL ${s.ql.toFixed(1)}, holds ${smelterCapacity(s)}) Feed it fuel and light it.`, 'event');
       g.events.emit('world', s.x, s.y);
     },
@@ -154,6 +164,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       g.removeSmelter(s.id);
       const back = g.inventory.add('smelter', { ql: s.ql });
       if (s.rare) back.rare = s.rare;
+      if (s.enchant) back.enchant = s.enchant;
+      if (s.dmg) back.dmg = s.dmg;
       g.logMsg('You take the smelter apart and carry it off in one piece.', 'event');
       g.events.emit('world', s.x, s.y);
     },

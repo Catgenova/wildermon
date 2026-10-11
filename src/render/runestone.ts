@@ -95,6 +95,26 @@ export function inset(poly: readonly Pt[], d: number): Pt[] {
   });
 }
 
+/**
+ * The same with each edge drawn in by its own distance, `ds[i]` for the edge
+ * from corner i to the next: the faces of a slab chamfered by eye, no two the
+ * same width.
+ */
+export function insetBy(poly: readonly Pt[], ds: readonly number[]): Pt[] {
+  const n = poly.length;
+  return poly.map((p, i) => {
+    const j = (i + n - 1) % n, a = poly[j], b = poly[(i + 1) % n];
+    const l1 = Math.hypot(p[0] - a[0], p[1] - a[1]) || 1, l2 = Math.hypot(b[0] - p[0], b[1] - p[1]) || 1;
+    const u1: Pt = [(p[0] - a[0]) / l1, (p[1] - a[1]) / l1], u2: Pt = [(b[0] - p[0]) / l2, (b[1] - p[1]) / l2];
+    const p1: Pt = [p[0] - u1[1] * ds[j], p[1] + u1[0] * ds[j]], p2: Pt = [p[0] - u2[1] * ds[i], p[1] + u2[0] * ds[i]];
+    const det = u2[0] * u1[1] - u1[0] * u2[1];
+    if (Math.abs(det) < 1e-6) return p1;
+    const rx = p2[0] - p1[0], ry = p2[1] - p1[1];
+    const t = (u2[0] * ry - u2[1] * rx) / det;
+    return [p1[0] + u1[0] * t, p1[1] + u1[1] * t] as Pt;
+  });
+}
+
 /** Smooth noise over the plane, nought to one, a cell a unit wide: where moss has got to and where it has not. */
 export function noise2(x: number, y: number, seed: number): number {
   const ix = Math.floor(x), iy = Math.floor(y);
@@ -140,6 +160,11 @@ export function eyeOf(yaw: number, rotation: number): Eye {
   const c = Math.cos(yaw), s = Math.sin(yaw);
   const [ux, uy] = scr(c, s);
   const [vx, vy] = scr(-s, c);
+  return eyeOfView({ ux, uy, vx, vy });
+}
+
+/** The same from a piece's own turn on the screen (`pieceView` in `furniture.ts`): what a placed piece built of this kit is seen by. */
+export function eyeOfView({ ux, uy, vx, vy }: { ux: number; uy: number; vx: number; vy: number }): Eye {
   const k = vx * uy - ux * vy;
   const g = Math.sign(k) || 1;
   return { ux, uy, vx, vy, toward: [g * vx, -g * ux, (g * k) / HEIGHT_SCALE] };
@@ -253,10 +278,14 @@ export interface PlateOpts {
   back?: Painter;
   frontOver?: Painter;
   backOver?: Painter;
-  /** What is painted on the edge strips, in and over them: given which edge and how far it is turned up; its frame is along it and through it. */
-  edge?: (i: number, up: number) => { paint?: Painter; over?: Painter } | undefined;
+  /** What is painted on the edge strips, in and over them, and how strong the line between them (0.4 when it does not say): given which edge and how far it is turned up; its frame is along it and through it. */
+  edge?: (i: number, up: number) => { paint?: Painter; over?: Painter; crease?: number } | undefined;
   /** Leave out the face along the bottom edge, which stands in the ground. */
   sunk?: boolean;
+  /** How strong the line is round its edge strips and their chamfers, where not the usual: a side dressed as one face. */
+  edgeCrease?: number;
+  /** How wide each edge's chamfer is, edge i running from corner i of the outline (as drawn anticlockwise), in place of `bevel`. */
+  bevels?: number[];
   /**
    * Where through it its thickness is centred, and how thick each way, at a
    * point (s, t) of its outline, given how thick it would be there: so the
@@ -264,13 +293,15 @@ export interface PlateOpts {
    * depths and be told apart from the side.
    */
   depthAt?: (s: number, t: number, half: number) => [number, number];
-  /** How strong the line between two of its edge strips is: a Runestone's 0.4, fainter where the edge is one rounded surface. */
-  edgeCrease?: number;
 }
 
 export function plate(o: PlateOpts): Face[] {
   const outline = area2(o.outline) < 0 ? o.outline.slice().reverse() : o.outline;
-  const inner = inset(outline, o.bevel);
+  const inner = o.bevels ? insetBy(outline, o.bevels) : inset(outline, o.bevel);
+  // How deep the chamfer is at a corner: its own, or the two edges' at it between them.
+  const deep = new Map<Pt, number>();
+  if (o.bevels) outline.forEach((p, i) => deep.set(p, (o.bevels![i] + o.bevels![(i + outline.length - 1) % outline.length]) / 2));
+  const bev = (p: Pt): number => deep.get(p) ?? o.bevel;
   const f = (o.half[1] - o.half[0]) / o.tTop;
   const h = (t: number): number => o.half[0] + f * t;
   const P = ([s, t]: Pt, side: number): V3 => at(o.o, [s, o.U], [t, o.W], [side, o.A]);
@@ -278,8 +309,8 @@ export function plate(o: PlateOpts): Face[] {
   const mid = (p: Pt): [number, number] => o.depthAt?.(p[0], p[1], h(p[1])) ?? [0, h(p[1])];
   const front = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c + hh); };
   const back = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c - hh); };
-  const frontEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c + hh - o.bevel); };
-  const backEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c - (hh - o.bevel)); };
+  const frontEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c + hh - bev(p)); };
+  const backEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c - (hh - bev(p))); };
   const faces: Face[] = [];
   const face = (pts: V3[], expect: V3, extra: Partial<Face> = {}): void => {
     let n = newell(pts);
@@ -309,9 +340,9 @@ export function plate(o: PlateOpts): Face[] {
     const up = newell(side)[2] * Math.sign(dot(newell(side), out) || 1);
     const along = unit(sub(P(q, 0), P(p, 0)));
     const dress = o.edge?.(i, up);
-    face([front(inner[i]), front(inner[j]), frontEdge(q), frontEdge(p)], add(out, A), { crease: 0.32 });
-    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: o.edgeCrease ?? 0.4 });
-    face([backEdge(p), backEdge(q), back(inner[j]), back(inner[i])], sub(out, A), { crease: 0.32 });
+    face([front(inner[i]), front(inner[j]), frontEdge(q), frontEdge(p)], add(out, A), { crease: o.edgeCrease ?? 0.32 });
+    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: dress?.crease ?? o.edgeCrease ?? 0.4 });
+    face([backEdge(p), backEdge(q), back(inner[j]), back(inner[i])], sub(out, A), { crease: o.edgeCrease ?? 0.32 });
   }
   return faces;
 }
@@ -369,7 +400,7 @@ export function boulder(cx: number, cy: number, rx: number, ry: number, h: numbe
  * it goes down -- cushions on the screen at points of the stone, so they lie
  * flat on the top and stand up on the sides.
  */
-function mossOver(top: Pt[], hz: number, bands: Array<{ pts: V3[]; k: number; n: V3 }>, moss: number, seed: number): Painter {
+export function mossOver(top: Pt[], hz: number, bands: Array<{ pts: V3[]; k: number; n: V3 }>, moss: number, seed: number): Painter {
   return (g, k) => {
     const T = rand(seed * 3 + 1);
     const across = Math.hypot(k.e.ux, k.e.uy);
@@ -407,6 +438,23 @@ function mossOver(top: Pt[], hz: number, bands: Array<{ pts: V3[]; k: number; n:
     drawPads(g, ps);
     g.restore();
   };
+}
+
+/**
+ * A stone's skin over a strip `len` long and `G` either side of its middle,
+ * in the face's frame: flat patches a step paler and a step greyer, as the
+ * island draws everything -- fields of colour, not a blur -- and specks of
+ * grit, drawn off `T` in that order.
+ */
+export function skin(g: Ctx, fill: RGB, T: () => number, len: number, G: number): void {
+  for (let j = 0; j < Math.ceil(len / 5); j++) {
+    g.beginPath();
+    g.ellipse(T() * len, (T() - 0.5) * 2 * G, 1.5 + T() * 4, 1 + T() * 2.5, (T() - 0.5) * 0.6, 0, TAU);
+    g.fillStyle = T() < 0.5 ? css(mix(fill, [255, 252, 244], 0.4), 0.4) : css(mix(fill, hex('#9c94a4'), 0.32), 0.3);
+    g.fill();
+  }
+  g.fillStyle = css(mix(fill, hex('#6d6274'), 0.5), 0.35);
+  for (let j = 0; j < len * 1.2; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.35 + T() * 0.3, 0.35 + T() * 0.3);
 }
 
 /* ---- moss and lichen ------------------------------------------------------- */
@@ -614,6 +662,7 @@ export const GLYPHS: Record<string, Stroke[]> = {
   cross: [{ pts: [[-0.6, -0.9], [0.6, 0.9]] }, { pts: [[-0.6, 0.9], [0.6, -0.9]] }],
   algiz: [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.62, 0.92], [0, 0.22], [0.62, 0.92]] }],
   tiwaz: [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, 0.38], [0, 1], [0.6, 0.38]] }],
+  staff: [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.55, 0.3], [0.55, 0.3]] }],
   ingwaz: [{ pts: [[0, 0.62], [0.48, 0], [0, -0.62], [-0.48, 0]], closed: true }, { pts: [[0, 1], [0, 0.62]] }, { pts: [[0, -0.62], [0, -1]] }],
   dagaz: [{ pts: [[-0.6, 0.9], [0.6, -0.9], [0.6, 0.9], [-0.6, -0.9]], closed: true }],
   othala: [{ pts: [[0.62, -1], [-0.5, 0.25], [0, 0.95], [0.5, 0.25], [-0.62, -1]] }],
@@ -1096,11 +1145,14 @@ export const FLOWER: Record<string, { petal: string; ring: string; eye: string; 
   yellow: { petal: '#f4d35a', ring: '#a5852a', eye: '#dd8f2b' },
   blue: { petal: '#98b8ee', ring: '#4f6b99', eye: '#f3eed6' },
   lilac: { petal: '#cdb4ee', ring: '#7a63a6', eye: '#f6e6a8' },
-  // And three chalkier ones, for what a player plants at a memorial stone (`memorial.ts`).
-  // Chalk-soft heads, ring and eye kept near the petal so a small head is its colour and not a gold ring.
+  // Chalkier, for smaller things than a runestone that stand in their own light: a cream for the white, a dusty rose for the pink.
+  cream: { petal: '#e9e3d2', ring: '#84968a', eye: '#e2b955' },
+  rose: { petal: '#e3b3bd', ring: '#a27b88', eye: '#ecd07c' },
+  // And four chalkier still, for what a player plants at a memorial stone (`memorial.ts`):
+  // ring and eye kept near the petal, so a small head is its colour and not a gold ring; the dusk one grows in spikes.
   dusk: { petal: '#c9b9d9', ring: '#a596b8', eye: '#ddd2e6', spike: true },
-  cream: { petal: '#f1e6c4', ring: '#d0c29c', eye: '#e6d29a' },
-  rose: { petal: '#e8bcc0', ring: '#c69ca1', eye: '#f0d6d2' },
+  linen: { petal: '#f1e6c4', ring: '#d0c29c', eye: '#e6d29a' },
+  blush: { petal: '#e8bcc0', ring: '#c69ca1', eye: '#f0d6d2' },
   chalk: { petal: '#f5f2e8', ring: '#d4d0c4', eye: '#e8dfc0' },
 };
 
@@ -1111,7 +1163,7 @@ export const FLOWER: Record<string, { petal: string; ring: string; eye: string; 
  * or, for lilac and now and then pink, a spike: a stem with a column of
  * small heads up it, the lupins and foxgloves of the reference.
  */
-export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: number, big = 1): void {
+export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: number, big = 1, most = Infinity, taper = 0.8): void {
   const R = rand(seed);
   const col = FLOWER[colour] ?? FLOWER.white;
   g.lineCap = 'round';
@@ -1155,7 +1207,8 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
       g.quadraticCurveTo(sx + lean * 0.3, y - tall * 0.5, sx + lean, y - tall);
       g.stroke();
       for (let j = 0; j < 7; j++) {
-        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * 0.8) * big * (own ? 0.78 : 1);
+        // `taper`: how much smaller its heads get toward the tip.
+        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * taper) * big * (own ? 0.78 : 1);
         const hx = sx + lean * t * t + (j % 2 ? 0.7 : -0.7) * (1 - t), hy = y - tall * t;
         g.beginPath();
         g.arc(hx, hy, r + (own ? 0.32 : 0.42), 0, TAU);
@@ -1174,7 +1227,8 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
     return;
   }
   const heads: Pt[] = [];
-  const n = 5 + Math.floor(R() * 4);
+  // As many heads as the seed says, or `most` where a caller wants a smaller clump.
+  const n = Math.min(most, 5 + Math.floor(R() * 4));
   for (let i = 0; i < n; i++) heads.push([(R() - 0.5) * 13 * big, (4 + R() * 9) * big]);
   g.strokeStyle = '#5b876a';
   g.lineWidth = 0.55;
@@ -1672,14 +1726,7 @@ function modelOf(id: RunestoneId): Model {
         ps.push([q0.x, q0.y, r * across, r * across * (up > 0.5 ? 0.62 : 0.9)]);
       };
       // The same skin as the broad faces: flat patches paler and greyer, and grit.
-      for (let j = 0; j < Math.ceil(len / 5); j++) {
-        g.beginPath();
-        g.ellipse(T() * len, (T() - 0.5) * 2 * G, 1.5 + T() * 4, 1 + T() * 2.5, (T() - 0.5) * 0.6, 0, TAU);
-        g.fillStyle = T() < 0.5 ? css(mix(k.fill, [255, 252, 244], 0.4), 0.4) : css(mix(k.fill, hex('#9c94a4'), 0.32), 0.3);
-        g.fill();
-      }
-      g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.35);
-      for (let j = 0; j < len * 1.2; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.35 + T() * 0.3, 0.35 + T() * 0.3);
+      skin(g, k.fill, T, len, G);
       /*
        * Down each long side, notches cut across its front
        * arris in groups of one to five, as the oldest stones are lettered on
@@ -2032,31 +2079,44 @@ export interface Glow {
   r: number;
   i: number;
   roundel: boolean;
-  /** How strong it is against a rune's, nought to one: a memorial stone's cut line catches the light faintly. */
-  faint?: number;
-  /** Lit only after dark: by day a cut, and nothing more. */
-  nightOnly?: boolean;
-  /** No glow laid round it by day, only its lit groove: fine line-work that a halo would fill in solid. */
-  noDayHalo?: boolean;
-  /** Lit in its strokes alone after dark, with no soft light round it to fill the stone between them. */
-  tight?: boolean;
-  /** Line-work too fine for its cream heart to show: a faint gold edge, a wide heart, and after dark laid over in cream. */
-  fine?: boolean;
-  /** For a fine one, its strokes in the Runestones' night cream, to be laid over it after dark. */
-  cream?: HTMLCanvasElement;
-  /** How much more of the night its shape takes off than a Runestone's rune's does, up to all of it: for strokes too fine for the usual share to clear. */
-  maskA?: number;
-  /** And its strokes again in a warm gold, laid on as light after dark (`lift` strong): where they are under a pixel wide, so they come up to a Runestone's and stay warm. */
-  glint?: HTMLCanvasElement;
-  /**
-   * And its strokes in the night's own blue, laid over them after dark as
-   * it breathes out (`dim` strong): for one whose shape takes all the night
-   * off (`maskA`), the dimming a Runestone's rune gets from the night it
-   * leaves on, but the same whatever light is near.
+  /** How much of its light is laid, nought to one, where it is not all of it: a rune on a face turning away from the eye. */
+  fade?: number;
+  /*
+   * And for finer line-work than a Runestone's (`GlowFine`, a memorial
+   * stone's): laid fainter (`faint`); lit after dark only (`nightOnly`); no
+   * glow round it by day (`noDayHalo`); its strokes after dark in a
+   * Runestone's night cream (`cream`), and a warm glint laid on as light
+   * (`glint`, `lift` strong); how much more of the night its shape takes off
+   * (`maskA`, laid by whoever reads its masks); and its strokes in the
+   * night's own blue (`dimShade`), laid over them as it breathes out (`dim`).
    */
-  shade?: HTMLCanvasElement;
-  dim?: number;
+  faint?: number;
+  nightOnly?: boolean;
+  noDayHalo?: boolean;
+  cream?: HTMLCanvasElement;
+  glint?: HTMLCanvasElement;
   lift?: number;
+  maskA?: number;
+  dimShade?: HTMLCanvasElement;
+  dim?: number;
+}
+
+/**
+ * How a finer light than a Runestone's is baked (`bakeGlow`): fainter, after
+ * dark only, with no day glow, its dusk and its night shape tight round its
+ * strokes (`tight`), and line-work too fine for its cream heart to show
+ * (`fine`): a faint gold edge, a wide heart, and after dark laid over in cream
+ * -- narrower still at the smallest scale; and how much more of the night its
+ * shape takes off (`maskA`) and how far it dims itself breathing out (`dim`).
+ */
+export interface GlowFine {
+  faint?: number;
+  nightOnly?: boolean;
+  noDayHalo?: boolean;
+  tight?: boolean;
+  fine?: boolean;
+  maskA?: number;
+  dim?: number;
 }
 
 interface Baked {
@@ -2105,7 +2165,7 @@ export function aboveGround(pts: readonly V3[]): V3[] {
   return out;
 }
 
-export function drawFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number): void {
+export function drawFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number, inkColour: RGB = STONE_INK): void {
   const base = g.getTransform();
   // What stands under the turf -- a sunk disc's lower half, a boulder's foot -- is not drawn.
   const faces = faces0.map((f) => ({ ...f, pts: aboveGround(f.pts) })).filter((f) => f.pts.length >= 3);
@@ -2123,7 +2183,7 @@ export function drawFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number):
    * is left of it is the rim outside them.
    */
   g.lineJoin = 'round';
-  g.strokeStyle = css(STONE_INK);
+  g.strokeStyle = css(inkColour);
   g.lineWidth = ink * 2;
   for (const { f } of seen) {
     path(f.pts.map((p) => proj(e, p)));
@@ -2188,116 +2248,26 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
   return [Math.floor(x0 - pad), Math.floor(y0 - pad), Math.ceil(x1 + pad), Math.ceil(y1 + pad)];
 }
 
-/**
- * One rune's light, baked: its lit groove, the glow round it by day and after
- * dark, and its own shape for the night to be taken off with, each a picture
- * the size of its light. `M` takes the frame of the face it is cut in to the
- * screen at zoom one, `path` lays its strokes in that frame, and (`x`, `z`)
- * and `s` are where its middle is and how far from it to its top. A cut line
- * of a memorial stone is laid finer (`w`) and fainter (`faint`), and after dark
- * only (`nightOnly`).
- */
-export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x: number, z: number, s: number, i: number, roundel: boolean,
-  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; tight?: boolean; fine?: boolean; maskA?: number; dim?: number } = {}): Glow {
-  const reach = roundel ? s * 1.25 : s * 1.9;
-  // Its box on the screen: the corners of its square in the face, and room for the glow.
-  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
-  for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
-    const p = M.transformPoint(new DOMPoint(x + dx * reach, z + dz * reach));
-    a = Math.min(a, p.x); c = Math.max(c, p.x); b = Math.min(b, p.y); d = Math.max(d, p.y);
-  }
-  a -= 3; b -= 3; c += 3; d += 3;
-  const box: [number, number, number, number] = [a, b, c - a, d - b];
-  const sheet = (draw: (h: Ctx) => void): HTMLCanvasElement => {
-    const [cv, h] = canvasOf((c - a) * scale, (d - b) * scale);
-    h.setTransform(scale, 0, 0, scale, -a * scale, -b * scale);
-    h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
-    h.lineCap = 'round';
-    h.lineJoin = 'round';
-    draw(h);
-    return cv;
-  };
-  const w = o.w ?? (roundel ? 0.62 : 0.78);
-  const halo = sheet((h) => {
-    // Soft by being laid in widening strokes, each faint: light, which may be soft where nothing else on the island is.
-    for (const [k, al] of [[5.2, 0.05], [3.8, 0.08], [2.6, 0.12], [1.7, 0.2]] as Array<[number, number]>) {
-      path(h);
-      h.strokeStyle = `rgba(255, 172, 72, ${al})`;
-      h.lineWidth = w * k * (roundel ? 0.6 : 1);
-      h.stroke();
-    }
-  });
-  /*
-   * A fine one baked for the smallest scale has its strokes under a pixel
-   * wide: its light and its night shape kept narrower there, so the stone
-   * shows dark between them and it is a wheel and not a lit disc.
-   */
-  const small = !!o.fine && scale <= 1;
-  const dusk = sheet((h) => {
-    for (const [k, al] of (small ? [[1.2, 0.1], [0.9, 0.18]] : o.tight ? [[1.7, 0.12], [1.25, 0.2]] : [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]]) as Array<[number, number]>) {
-      path(h);
-      h.strokeStyle = `rgba(255, 176, 80, ${al})`;
-      h.lineWidth = w * k;
-      h.stroke();
-    }
-  });
-  const core = sheet((h) => {
-    // The same three strokes; a fine line keeps its gold edge faint and its cream heart wide, or it is all edge.
-    path(h);
-    h.strokeStyle = o.fine ? 'rgba(204, 150, 80, 0.72)' : 'rgba(214, 140, 52, 0.9)';
-    h.lineWidth = w * (o.fine ? 1 : 1.05);
-    h.stroke();
-    path(h);
-    h.strokeStyle = '#ffd98c';
-    h.lineWidth = w * (o.fine ? 0.74 : 0.72);
-    h.stroke();
-    path(h);
-    h.strokeStyle = '#fffbea';
-    h.lineWidth = w * (o.fine ? 0.46 : 0.34);
-    h.stroke();
-  });
-  // A fine one's strokes in the cream a Runestone's roundel comes to after dark, laid over it then, not added.
-  const cream = o.fine ? sheet((h) => {
-    path(h);
-    h.strokeStyle = 'rgb(244, 221, 180)';
-    h.lineWidth = w * (small ? 0.8 : 1.25);
-    h.stroke();
-  }) : undefined;
-  const shade = o.dim ? sheet((h) => {
-    path(h);
-    h.strokeStyle = 'rgb(14, 22, 46)';
-    h.lineWidth = w * (small ? 1.2 : 1.6);
-    h.stroke();
-  }) : undefined;
-  const glint = o.fine ? sheet((h) => {
-    path(h);
-    h.strokeStyle = 'rgb(255, 188, 112)';
-    h.lineWidth = w * (small ? 0.8 : 1.25);
-    h.stroke();
-  }) : undefined;
-  const mid = M.transformPoint(new DOMPoint(x, z));
-  // How far its light reaches on the screen: no further than the face it is on is wide there, seen slantwise.
-  const up = Math.hypot(M.c, M.d) * s, across = Math.hypot(M.a, M.b) * s;
-  const reachPx = roundel ? Math.min(up, across) * 1.1 : Math.min(up * 1.25, across * 1.5 + 1.5);
-  /*
-   * The night taken off it in its own shape: its strokes laid wide and
-   * whole, and wider still and faint round them, on a picture the size of
-   * its light -- so what shows through the dark is the rune and a little
-   * of the stone round it, never a round spot, however slantwise its face.
-   */
-  const mask = sheet((h) => {
-    path(h);
-    // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
-    h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    h.lineWidth = w * (small ? 2.1 : o.tight ? 1.8 : roundel ? 2.6 : 3.6);
-    h.stroke();
-    path(h);
-    h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = w * (small ? 2 : o.tight ? 1.2 : roundel ? 1.8 : 2.2);
-    h.stroke();
-  });
-  const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream, glint, lift: scale <= 1 ? 0.03 : 0.025 } : {}), ...(o.maskA !== undefined ? { maskA: o.maskA } : {}), ...(o.dim ? { shade, dim: o.dim } : {}) };
+/** A rune's lit groove: the amber at its edge, the gold of it, and the all-but-white at its middle. */
+export const RUNE_EDGE = 'rgba(214, 140, 52, 0.9)';
+export const RUNE_GOLD = '#ffd98c';
+export const RUNE_WHITE = '#fffbea';
+
+/** What a rune's light is baked from, as data (`bakeRune`): where it is on its face, how big, which glyph or roundel, and its place in the beat. */
+export interface GlowSpec {
+  glyph: string;
+  x: number;
+  z: number;
+  s: number;
+  i: number;
+  roundel?: string;
+  /** How wide its groove is, in units, where a runestone's is 0.78 (a roundel's 0.62). */
+  w?: number;
+  /** The very middle of its lit groove, where a runestone's is all but white; and the gold round that. */
+  inner?: string;
+  mid?: string;
+  /** And the edge of the groove round the gold, where a runestone's is amber. */
+  edge?: string;
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2370,10 +2340,127 @@ function bake(id: RunestoneId, rotation: number, scale: number): Baked {
     for (const r of model.runes) {
       if (r.face !== which) continue;
       const path = (h: Ctx): void => (r.roundel ? strokesPath(h, roundelStrokes(r.roundel), r.x, r.z, r.s) : glyphPath(h, r.glyph, r.x, r.z, r.s));
-      glows.push(bakeGlow(M, scale, path, r.x, r.z, r.s, r.i, !!r.roundel));
+      glows.push(bakeGlow(M, path, r.x, r.z, r.s, !!r.roundel, r.i, scale));
     }
   }
   return { canvas, scale, ox: -x0 * scale, oy: -y0 * scale, bounds: [x0, y0, x1, y1], glows, motes };
+}
+
+/**
+ * One rune's light, baked at `scale`: a rune on a face whose frame lands on
+ * the screen through `M` (pixels at zoom one), drawn by `path` about (x, z) in
+ * that frame, `s` units from its middle to its top, its strokes `width` wide
+ * (a runestone's own when it does not say), its soft light `spread` times as
+ * wide as a runestone's -- the lit groove, the glow
+ * round it by day and after dark, and its own shape to take the night off
+ * with. A roundel's strokes lie closer and are lit narrower. `i` is its place
+ * in whatever order it breathes in. `colours` gives its groove's edge, gold
+ * and middle where they are not a runestone's (`RUNE_EDGE`, `RUNE_GOLD`,
+ * `RUNE_WHITE`). `cut`, where given, is how wide the shape the night is
+ * taken off in is against a runestone's, in place of `spread`, its groove
+ * never cut narrower than 1.1 of its width: a small rune's own shape.
+ */
+export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: number, s: number, roundel: boolean, i: number, scale: number, width?: number, spread = 1, colours: { edge?: string; mid?: string; inner?: string } = {}, cut?: number, o: GlowFine = {}): Glow {
+  const reach = roundel ? s * 1.25 : s * 1.9;
+  // Its box on the screen: the corners of its square in the face, and room for the glow.
+  let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+  for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    const p = M.transformPoint(new DOMPoint(x + dx * reach, z + dz * reach));
+    a = Math.min(a, p.x); c = Math.max(c, p.x); b = Math.min(b, p.y); d = Math.max(d, p.y);
+  }
+  a -= 3; b -= 3; c += 3; d += 3;
+  const box: [number, number, number, number] = [a, b, c - a, d - b];
+  const sheet = (draw: (h: Ctx) => void): HTMLCanvasElement => {
+    const [cv, h] = canvasOf((c - a) * scale, (d - b) * scale);
+    h.setTransform(scale, 0, 0, scale, -a * scale, -b * scale);
+    h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
+    h.lineCap = 'round';
+    h.lineJoin = 'round';
+    draw(h);
+    return cv;
+  };
+  const w = width ?? (roundel ? 0.62 : 0.78);
+  const halo = sheet((h) => {
+    // Soft by being laid in widening strokes, each faint: light, which may be soft where nothing else on the island is.
+    for (const [k, al] of [[5.2, 0.05], [3.8, 0.08], [2.6, 0.12], [1.7, 0.2]] as Array<[number, number]>) {
+      path(h);
+      h.strokeStyle = `rgba(255, 172, 72, ${al})`;
+      h.lineWidth = w * k * (roundel ? 0.6 : 1) * spread;
+      h.stroke();
+    }
+  });
+  // A fine one baked for the smallest scale has its strokes under a pixel wide: its light and night shape narrower there, so it is line-work and not a lit disc.
+  const small = !!o.fine && scale <= 1;
+  const dusk = sheet((h) => {
+    for (const [k, al] of (small ? [[1.2, 0.1], [0.9, 0.18]] : o.tight ? [[1.7, 0.12], [1.25, 0.2]] : [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]]) as Array<[number, number]>) {
+      path(h);
+      h.strokeStyle = `rgba(255, 176, 80, ${al})`;
+      h.lineWidth = w * k * spread;
+      h.stroke();
+    }
+  });
+  const core = sheet((h) => {
+    // A fine line keeps its gold edge faint and its cream heart wide, or it is all edge.
+    path(h);
+    h.strokeStyle = o.fine ? 'rgba(204, 150, 80, 0.72)' : colours.edge ?? RUNE_EDGE;
+    h.lineWidth = w * (o.fine ? 1 : 1.05);
+    h.stroke();
+    path(h);
+    h.strokeStyle = colours.mid ?? RUNE_GOLD;
+    h.lineWidth = w * (o.fine ? 0.74 : 0.72);
+    h.stroke();
+    path(h);
+    h.strokeStyle = colours.inner ?? RUNE_WHITE;
+    h.lineWidth = w * (o.fine ? 0.46 : 0.34);
+    h.stroke();
+  });
+  // A fine one's strokes in the cream a Runestone's roundel comes to after dark, laid over it then; and in a warm gold, laid on as light.
+  const line = (colour: string, k: number): HTMLCanvasElement => sheet((h) => {
+    path(h);
+    h.strokeStyle = colour;
+    h.lineWidth = w * k;
+    h.stroke();
+  });
+  const cream = o.fine ? line('rgb(244, 221, 180)', small ? 0.8 : 1.25) : undefined;
+  const glint = o.fine ? line('rgb(255, 188, 112)', small ? 0.8 : 1.25) : undefined;
+  // And in the night's own blue, for one that dims itself as it breathes out.
+  const dimShade = o.dim ? line('rgb(14, 22, 46)', small ? 1.2 : 1.6) : undefined;
+  const mid = M.transformPoint(new DOMPoint(x, z));
+  // How far its light reaches on the screen: no further than the face it is on is wide there, seen slantwise.
+  const up = Math.hypot(M.c, M.d) * s, across = Math.hypot(M.a, M.b) * s;
+  const reachPx = roundel ? Math.min(up, across) * 1.1 : Math.min(up * 1.25, across * 1.5 + 1.5);
+  /*
+   * The night taken off it in its own shape: its strokes laid wide and
+   * whole, and wider still and faint round them, on a picture the size of
+   * its light -- so what shows through the dark is the rune and a little
+   * of the stone round it, never a round spot, however slantwise its face.
+   */
+  const mask = sheet((h) => {
+    path(h);
+    // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
+    h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    h.lineWidth = small ? w * 2.1 : o.tight ? w * 1.8 : cut === undefined ? w * (roundel ? 2.6 : 3.6) * spread : w * cut * (roundel ? 2.6 : 3.6);
+    h.stroke();
+    path(h);
+    h.strokeStyle = 'rgba(0, 0, 0, 1)';
+    h.lineWidth = small ? w * 2 : o.tight ? w * 1.2 : cut === undefined ? w * (roundel ? 1.8 : 2.2) * Math.max(1, spread) : w * Math.max(1.1, cut * (roundel ? 1.8 : 2.2));
+    h.stroke();
+  });
+  const square = Math.max(0.15, Math.min(1, across / up / 0.53));
+  const out: Glow = { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel };
+  if (o.faint !== undefined) out.faint = o.faint;
+  if (o.nightOnly) out.nightOnly = true;
+  if (o.noDayHalo) out.noDayHalo = true;
+  if (o.fine) Object.assign(out, { cream, glint, lift: scale <= 1 ? 0.03 : 0.025 });
+  if (o.maskA !== undefined) out.maskA = o.maskA;
+  if (o.dim) Object.assign(out, { dimShade, dim: o.dim });
+  return out;
+}
+
+/** One rune's light from its spec (`GlowSpec`), baked at `scale` on a face whose frame lands on the screen through `M` (`bakeGlow`). */
+export function bakeRune(M: DOMMatrix, r: GlowSpec, scale: number): Glow {
+  const path = (h: Ctx): void => (r.roundel ? strokesPath(h, roundelStrokes(r.roundel), r.x, r.z, r.s) : glyphPath(h, r.glyph, r.x, r.z, r.s));
+  return bakeGlow(M, path, r.x, r.z, r.s, !!r.roundel, r.i, scale, r.w, 1, { edge: r.edge, mid: r.mid, inner: r.inner });
 }
 
 function bakedFor(id: RunestoneId, rotation: number, zoom: number): Baked {
@@ -2441,18 +2528,19 @@ function motesAt(b: Baked, t: number, zoom: number): Array<{ x: number; y: numbe
 }
 
 /**
- * Lay baked runes' light over their stone, drawn with its footprint's middle
- * at (sx, sy): by day the glow is colour, as wide as its face is seen square
- * on, and after dark light, added; the lit groove always, brighter as it
- * breathes in. A faint one is laid fainter, and one lit after dark only is not
- * laid by day at all. Leaves the context's compositing as it found it.
+ * Baked runes' light laid over what they are cut in, at (sx, sy) on the
+ * screen, at `t` seconds and `night` dark: the glow round each as colour by
+ * day and as light after dark, and the lit groove over it, each as far into
+ * its breath as it is, the light it adds after dark `heat` times a
+ * runestone's. Leaves the context's compositing and alpha as it found them.
  */
-export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: number, zoom: number, night: number, t: number): void {
+export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: number, zoom: number, night: number, t: number, heat = 1): void {
   const was = ctx.globalCompositeOperation;
   const wasA = ctx.globalAlpha;
   const day = 1 - night;
   for (const gl of glows) {
     const p = breath(gl, t);
+    // A fainter one (`faint`) laid fainter throughout.
     const f = gl.faint ?? 1;
     const [x, y, w, h] = gl.box;
     const X = sx + x * zoom, Y = sy + y * zoom, Wd = w * zoom, Ht = h * zoom;
@@ -2464,21 +2552,21 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
      */
     if (day > 0.01 && !gl.nightOnly && !gl.noDayHalo) {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square * f;
+      ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square * (gl.fade ?? 1) * f;
       ctx.drawImage(gl.halo, X, Y, Wd, Ht);
     }
     if (night > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = night * (gl.roundel ? 0.22 + 0.14 * p : 0.2 + 0.3 * p) * f;
+      ctx.globalAlpha = night * (gl.roundel ? 0.22 + 0.14 * p : 0.2 + 0.3 * p) * heat * (gl.fade ?? 1) * f;
       ctx.drawImage(gl.dusk, X, Y, Wd, Ht);
     }
-    // The lit groove itself, always there and brighter as it breathes in.
+    // The lit groove itself, always there and brighter as it breathes in; one lit after dark only, only after dark.
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = Math.min(1, 0.55 + 0.25 * night + 0.35 * p) * f * (gl.nightOnly ? night : 1);
+    ctx.globalAlpha = Math.min(1, 0.55 + 0.25 * night + 0.35 * p) * (gl.fade ?? 1) * f * (gl.nightOnly ? night : 1);
     ctx.drawImage(gl.core, X, Y, Wd, Ht);
     if (!gl.roundel) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (0.08 + 0.16 * night) * p * f;
+      ctx.globalAlpha = (0.08 + 0.16 * night) * p * heat * (gl.fade ?? 1) * f;
       ctx.drawImage(gl.core, X, Y, Wd, Ht);
     } else if (gl.cream && night > 0.01) {
       // A fine roundel's cream heart is thinner than a pixel: after dark its strokes are laid over in cream, a shade over a Runestone's so that where a stroke is mixed with the stone round it, its middle comes to theirs.
@@ -2491,33 +2579,15 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
         ctx.globalAlpha = night * gl.lift * (gl.dim ? 2.2 * p * p : 0.7 + 0.6 * p) * f;
         ctx.drawImage(gl.glint, X, Y, Wd, Ht);
       }
-      if (gl.dim && gl.shade) {
+      if (gl.dim && gl.dimShade) {
         ctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = night * gl.dim * (1 - p) * f;
-        ctx.drawImage(gl.shade, X, Y, Wd, Ht);
+        ctx.drawImage(gl.dimShade, X, Y, Wd, Ht);
       }
     }
   }
   ctx.globalCompositeOperation = was;
   ctx.globalAlpha = wasA;
-}
-
-/** The soft hole round each of a stone's baked runes, as strong as each is lit: in screen pixels, for a stone drawn at (sx, sy). */
-export function glowHoles(glows: readonly Glow[], sx: number, sy: number, zoom: number, t: number): Array<{ x: number; y: number; r: number; a: number }> {
-  return glows.map((gl) => {
-    const p = breath(gl, t);
-    // A wide, faint hole round each, so the stone round a rune is lit by it; the rune itself goes by its own shape (`glowMasks`).
-    return { x: sx + gl.cx * zoom, y: sy + gl.cy * zoom, r: gl.r * 1.5 * zoom, a: gl.tight ? 0 : (0.06 + 0.04 * p) * (gl.faint ?? 1) };
-  });
-}
-
-/** Each of a stone's baked runes in its own shape, to take the night off with, as strongly as it breathes. */
-export function glowMasks(glows: readonly Glow[], sx: number, sy: number, zoom: number, t: number): NightMask[] {
-  return glows.map((gl) => {
-    const p = breath(gl, t);
-    const [x, y, w, h] = gl.box;
-    return { canvas: gl.mask, x: sx + x * zoom, y: sy + y * zoom, w: w * zoom, h: h * zoom, a: Math.min(1, (gl.roundel ? 0.72 + 0.18 * p : 0.68 + 0.27 * p) * (gl.faint ?? 1) * (gl.maskA ?? 1)) };
-  });
 }
 
 /**
@@ -2535,9 +2605,9 @@ export function drawRunestone(ctx: Ctx, sx: number, sy: number, zoom: number, id
   const b = bakedFor(id, rotation, zoom);
   const k = zoom / b.scale;
   ctx.drawImage(b.canvas, sx - b.ox * k, sy - b.oy * k, b.canvas.width * k, b.canvas.height * k);
-  drawGlows(ctx, b.glows, sx, sy, zoom, night, t);
   const was = ctx.globalCompositeOperation;
   const wasA = ctx.globalAlpha;
+  drawGlows(ctx, b.glows, sx, sy, zoom, night, t);
   // Motes of light rising up the panel and fading.
   for (const m of motesAt(b, t, zoom)) {
     const px = sx + m.x * zoom, py = sy + m.y * zoom;
@@ -2590,6 +2660,38 @@ export function runestoneMasks(sx: number, sy: number, zoom: number, id: Runesto
   return glowMasks(bakedFor(id, rotation, zoom).glows, sx, sy, zoom, t);
 }
 
+/** A soft hole in the night: its middle and reach on the screen, and how much of the night it takes at its middle. */
+export interface NightHole {
+  x: number;
+  y: number;
+  r: number;
+  a: number;
+  /** How far it reaches up and down, where that is less than across: a pool on the ground. */
+  ry?: number;
+}
+
+/**
+ * The soft light round baked runes drawn at (sx, sy): a wide, faint hole
+ * round each, as strong as it is lit, so the stone round a rune is lit by
+ * it; the rune itself goes by its own shape (`glowMasks`). `k` is how much
+ * stronger than a runestone's.
+ */
+export function glowHoles(glows: readonly Glow[], sx: number, sy: number, zoom: number, t: number, k = 1): NightHole[] {
+  return glows.map((gl) => {
+    const p = breath(gl, t);
+    return { x: sx + gl.cx * zoom, y: sy + gl.cy * zoom, r: gl.r * 1.5 * zoom, a: (0.06 + 0.04 * p) * k };
+  });
+}
+
+/** Baked runes drawn at (sx, sy) in their own shapes, to take the night back off with, each as strongly as it breathes. */
+export function glowMasks(glows: readonly Glow[], sx: number, sy: number, zoom: number, t: number): NightMask[] {
+  return glows.map((gl) => {
+    const p = breath(gl, t);
+    const [x, y, w, h] = gl.box;
+    return { canvas: gl.mask, x: sx + x * zoom, y: sy + y * zoom, w: w * zoom, h: h * zoom, a: gl.roundel ? 0.72 + 0.18 * p : 0.68 + 0.27 * p };
+  });
+}
+
 /** A shape to take the night off with: a picture whose alpha is how much, where it goes on the screen, and how strongly. */
 export interface NightMask {
   canvas: HTMLCanvasElement;
@@ -2618,10 +2720,10 @@ export interface OccluderClip {
   rule?: CanvasFillRule;
 }
 
-/** A carved stone drawn this frame: its night shapes, what they cover, and what has been drawn over them since. */
+/** A runestone drawn this frame: where, what its night shapes cover, and what has been drawn over them since. */
 interface Lit {
-  /** The soft holes round its runes and the runes' own shapes, in the context's units moved by (dx, dy). */
-  holes: (dx: number, dy: number) => Array<{ x: number; y: number; r: number; a: number }>;
+  /** Its soft light round its runes this frame, and its runes in their own shapes, drawn at (sx, sy) moved by (dx, dy). */
+  holes: (dx: number, dy: number) => NightHole[];
   masks: (dx: number, dy: number) => NightMask[];
   /** The context's transform when it was drawn: its units to the canvas's pixels. */
   m: DOMMatrix;
@@ -2631,6 +2733,22 @@ interface Lit {
   over: Kept;
   /** Whether anything has been; until it has, its canvas is not even cleared. */
   touched: boolean;
+}
+
+/**
+ * Something whose runes take the night back off themselves: its baked glows,
+ * which its box is taken round, how far over them what rises past them goes
+ * (in pixels at zoom one), and its soft light and its shapes as drawn at
+ * (sx, sy) at `t`. A runestone is one; a rune lantern post is another
+ * (`runelantern.ts`).
+ */
+export interface NightSource {
+  glows: readonly Glow[];
+  rise: number;
+  /** What its soft light reaches past its runes, if anything does: left, top, right, bottom in pixels at zoom one from where it is drawn. */
+  reach?: [number, number, number, number];
+  holes(sx: number, sy: number, zoom: number, t: number): NightHole[];
+  masks(sx: number, sy: number, zoom: number, t: number): NightMask[];
 }
 
 /**
@@ -2678,34 +2796,46 @@ export class RunestoneNight {
   stone(ctx: Ctx, sx: number, sy: number, zoom: number, id: RunestoneId, rotation: number, t = performance.now() / 1000): void {
     if (!this.open) return;
     const b = bakedFor(id, rotation, zoom);
-    this.carved(ctx, b.glows, sx, sy, zoom, b.motes ? 12 : 0,
-      (dx, dy) => runestoneHoles(sx + dx, sy + dy, zoom, id, rotation, t),
-      (dx, dy) => runestoneMasks(sx + dx, sy + dy, zoom, id, rotation, t));
+    this.source(ctx, sx, sy, zoom, {
+      glows: b.glows,
+      rise: b.motes ? 12 : 0,
+      holes: (x, y, z, tt) => runestoneHoles(x, y, z, id, rotation, tt),
+      masks: (x, y, z, tt) => runestoneMasks(x, y, z, id, rotation, tt),
+    }, t);
   }
 
   /**
-   * Any other carved stone with baked runes (`bakeGlow`) just drawn on `ctx`
-   * with its footprint's middle at (sx, sy) -- a memorial stone's: from now
-   * on, what falls on its runes is kept off their light, as a Runestone's is.
+   * Anything with baked runes of its own (`NightSource`) -- a runestone, a
+   * rune lantern post (`runelantern.ts`) -- has just been drawn at (sx, sy):
+   * its box taken round its glows, what rises over them and what its soft
+   * light reaches, and kept as `glowing` keeps anything.
    */
-  glows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: number, zoom: number, t = performance.now() / 1000): void {
-    if (!this.open || !glows.length) return;
-    this.carved(ctx, glows, sx, sy, zoom, 0,
-      (dx, dy) => glowHoles(glows, sx + dx, sy + dy, zoom, t),
-      (dx, dy) => glowMasks(glows, sx + dx, sy + dy, zoom, t));
-  }
-
-  /** Keep a carved stone's night shapes: the box its runes and their light cover, `above` units more over the top, and how to lay them. */
-  private carved(ctx: Ctx, glows: readonly Glow[], sx: number, sy: number, zoom: number, above: number, holes: Lit['holes'], masks: Lit['masks']): void {
+  source(ctx: Ctx, sx: number, sy: number, zoom: number, src: NightSource, t = performance.now() / 1000): void {
+    if (!this.open || !src.glows.length) return;
     let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
-    for (const gl of glows) {
+    for (const gl of src.glows) {
       const [x, y, w, h] = gl.box;
       L = Math.min(L, sx + x * zoom, sx + (gl.cx - gl.r * 1.5) * zoom); T = Math.min(T, sy + y * zoom, sy + (gl.cy - gl.r * 1.5) * zoom);
       R = Math.max(R, sx + (x + w) * zoom, sx + (gl.cx + gl.r * 1.5) * zoom); B = Math.max(B, sy + (y + h) * zoom, sy + (gl.cy + gl.r * 1.5) * zoom);
     }
     // The motes rise past the head of the panel: room for them over it.
-    T -= above * zoom;
-    if (!(R > L && B > T)) return;
+    T -= src.rise * zoom;
+    if (src.reach) {
+      L = Math.min(L, sx + src.reach[0] * zoom); T = Math.min(T, sy + src.reach[1] * zoom);
+      R = Math.max(R, sx + src.reach[2] * zoom); B = Math.max(B, sy + src.reach[3] * zoom);
+    }
+    this.glowing(ctx, L, T, R, B, (dx, dy) => src.holes(sx + dx, sy + dy, zoom, t), (dx, dy) => src.masks(sx + dx, sy + dy, zoom, t));
+  }
+
+  /**
+   * Anything else of the runestones' kind with runes that light the night
+   * (an enchanter's plinth, `plinth.ts`) has just been drawn on `ctx`, its
+   * shapes inside the box left, top, right, bottom in `ctx`'s units: kept as
+   * a stone is. `holes` and `masks` give its soft light and its runes' shapes
+   * as it was drawn, moved by (dx, dy).
+   */
+  glowing(ctx: Ctx, L: number, T: number, R: number, B: number, holes: Lit['holes'], masks: Lit['masks']): void {
+    if (!this.open || !(R > L && B > T)) return;
     const m = ctx.getTransform();
     const dev = devBox(m, L, T, R - L, B - T);
     const i = this.lit.length;
@@ -2855,7 +2985,7 @@ export class RunestoneNight {
         this.shapes(pg, s, 0, 0);
       } else {
         pg.setTransform(1, 0, 0, 1, 0, 0);
-        pg.drawImage(this.kept(s), 0, 0, w, h, 0, 0, w, h);
+        pg.drawImage(this.carved(s), 0, 0, w, h, 0, 0, w, h);
       }
       pg.globalCompositeOperation = 'source-over';
       ctx.save();
@@ -2884,14 +3014,14 @@ export class RunestoneNight {
         const m = s.m;
         const [L, T, R, B] = s.dev;
         const w = R - L, h = B - T;
-        night.drawImage(this.kept(s), 0, 0, w, h, (L - m.e) / m.a - ox, (T - m.f) / m.d - oy, w / m.a, h / m.d);
+        night.drawImage(this.carved(s), 0, 0, w, h, (L - m.e) / m.a - ox, (T - m.f) / m.d - oy, w / m.a, h / m.d);
       }
       night.globalCompositeOperation = was;
     }
   }
 
   /** A stone's shapes less what was drawn over them, in its box's pixels from the corner, on the scratch canvas. */
-  private kept(s: Lit): HTMLCanvasElement {
+  private carved(s: Lit): HTMLCanvasElement {
     const m = s.m;
     const [L, T, R, B] = s.dev;
     const w = R - L, h = B - T;
@@ -2912,14 +3042,22 @@ export class RunestoneNight {
   /** A stone's shapes onto `g` in the context's units moved by (dx, dy): the soft light round its runes, then the runes. */
   private shapes(g: CanvasRenderingContext2D, s: Lit, dx: number, dy: number): void {
     for (const hole of s.holes(dx, dy)) {
-      const grad = g.createRadialGradient(hole.x, hole.y, 0, hole.x, hole.y, hole.r);
+      const flat = hole.ry !== undefined && hole.ry !== hole.r;
+      const x = flat ? 0 : hole.x, y = flat ? 0 : hole.y;
+      if (flat) {
+        g.save();
+        g.translate(hole.x, hole.y);
+        g.scale(1, (hole.ry as number) / hole.r);
+      }
+      const grad = g.createRadialGradient(x, y, 0, x, y, hole.r);
       grad.addColorStop(0, `rgba(0,0,0,${hole.a.toFixed(2)})`);
       grad.addColorStop(0.5, `rgba(0,0,0,${(hole.a * 0.45).toFixed(2)})`);
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = grad;
       g.beginPath();
-      g.arc(hole.x, hole.y, hole.r, 0, TAU);
+      g.arc(x, y, hole.r, 0, TAU);
       g.fill();
+      if (flat) g.restore();
     }
     for (const mk of s.masks(dx, dy)) {
       g.globalAlpha = mk.a;

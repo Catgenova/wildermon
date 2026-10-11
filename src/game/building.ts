@@ -3,11 +3,11 @@
  * walls that sit on tile borders, and stacked floors. Walls and floors are
  * planned first, then built by feeding them materials one unit at a time.
  */
-import { fill, listedOr } from './words';
+import { article, capital, fill, listedOr } from './words';
 
 export type WallType = 'solid' | 'window' | 'bay' | 'door' | 'double_door' | 'arch' | 'fence' | 'fence_gate' | 'half_wall' | 'iron_gate'
   | 'counter' | 'railing'
-  | 'portcullis' | 'hidden_door';
+  | 'portcullis' | 'hidden_door' | 'rune_gate';
 
 /**
  * How high a railing stands, as a share of a storey: waist-high, a little
@@ -61,6 +61,11 @@ export interface WallTypeDef {
   stone?: boolean;
   /** Raised only in a wall on the ground floor: a portcullis (`gates.ts`). */
   ground?: boolean;
+  /**
+   * The one material it is laid in, and no other: a rune gate in stone brick
+   * (`runegate.ts`). Asked where a material's `only` is (`onlyRefusal`).
+   */
+  laidIn?: string;
 }
 
 export const WALL_TYPES: WallTypeDef[] = [
@@ -124,6 +129,15 @@ export const WALL_TYPES: WallTypeDef[] = [
    * any different to anybody else. Never to a beast.
    */
   { id: 'hidden_door', name: 'Hidden door', factor: 1, passable: true, beastProof: true },
+  /*
+   * A settlement's way in: two pillars cut with runes under a lintel, on a
+   * border of its own as a fence gate is (`runegate.ts`). Nothing hangs in it
+   * and nothing locks it -- people, carts and beasts all pass, and the eye
+   * goes through -- and its runes light while a citizen of the settlement it
+   * stands on is in the opening. Laid in stone brick, with a light mote set
+   * in each pillar, on the ground floor; nothing rests on its lintel.
+   */
+  { id: 'rune_gate', name: 'Rune gate', factor: 0.75, passable: true, wide: true, height: 1.1, low: true, standalone: true, ground: true, laidIn: 'stone_brick', fittings: [['light_mote', 2]] },
 ];
 export const WALL_TYPE_BY_ID = new Map(WALL_TYPES.map((w) => [w.id, w]));
 /** Whether a wall type is waist-high work that nothing can be built over. */
@@ -244,12 +258,26 @@ export const onlySaid = (m: MaterialDef): string =>
  */
 export function onlyRefusal(material: string | undefined, as: { wall?: string; floor?: string; column?: boolean }): string | null {
   const m = material ? MATERIAL_BY_ID.get(material) : undefined;
-  if (!m?.only) return null;
-  if (as.column) return onlySaid(m);
-  if (as.wall && !(m.only.walls as readonly string[]).includes(as.wall)) return onlySaid(m);
-  if (as.floor && !(m.only.floors as readonly string[]).includes(as.floor)) return onlySaid(m);
+  if (m?.only) {
+    if (as.column) return onlySaid(m);
+    if (as.wall && !(m.only.walls as readonly string[]).includes(as.wall)) return onlySaid(m);
+    if (as.floor && !(m.only.floors as readonly string[]).includes(as.floor)) return onlySaid(m);
+  }
+  // And a wall type laid in one material only, in any other (`WallTypeDef.laidIn`).
+  const wt = as.wall ? WALL_TYPE_BY_ID.get(as.wall as WallType) : undefined;
+  if (material && wt?.laidIn && material !== wt.laidIn) return laidInSaid(wt);
   return null;
 }
+/**
+ * What is said of a wall type laid in one material, asked for in another: "A
+ * rune gate is laid in stone brick and nothing else." The island holds the
+ * same sentence (`material_only_refusal`).
+ */
+export const laidInSaid = (w: WallTypeDef): string => {
+  const name = w.name.toLowerCase();
+  const mat = (MATERIAL_BY_ID.get(w.laidIn ?? '')?.name ?? w.laidIn ?? '').toLowerCase();
+  return `${capital(article(name))} ${name} is laid in ${mat} and nothing else.`;
+};
 /** Whether a menu offers this material for this wall type or floor kind at all. */
 export const takesAs = (m: MaterialDef, as: { wall?: string; floor?: string; column?: boolean }): boolean => onlyRefusal(m.id, as) === null;
 

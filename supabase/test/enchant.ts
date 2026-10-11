@@ -9,7 +9,8 @@
  * scroll put into a melee weapon with Enchant, at the average of enchanting
  * and the scroll's QL as a percent, between the least and the most, at a
  * quality rolled about that average and held to the scroll's QL and the
- * weapon's own, and otherwise the weapon damaged or gone; every refusal; the
+ * weapon's own, and otherwise the weapon damaged or gone, standing at an
+ * enchanter's plinth and refused away from one; every refusal; the
  * marker on a name, Examine's line, the enchantment in every payload that
  * carries a thing and through a save; what a landed hit does with each, just
  * under its chance and just over it, and through a swing; and the stun
@@ -30,7 +31,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/action
 import { itemName, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID, STATION_NAME, scrollHarmSaid } from '../../src/game/recipes';
 import {
-  alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, enchantChance, enchantHitChance, ENCHANTMENT_LIST,
+  alreadyEnchanted, ENCHANTERS_PLINTH, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, enchantChance, enchantHitChance, ENCHANTMENT_LIST,
   ENCHANTMENTS, enchantQl, qlWord, SCROLL_HARM, SCROLL_MOTES, wrongKind, type EnchantmentDef,
 } from '../../src/game/enchant';
 import {
@@ -254,6 +255,9 @@ begin
   v_sw := give(w, u, 'sword', 1, 34, 'Iron');
   v_s := give(w, u, 'emberbrand_scroll', 1, 90);
   insert into said values ('R:scroll', coalesce(act_refusal(w, u, 'enchant', ${T('v_sw', 'v_sw')}), 'none'));
+  -- Away from an enchanter's plinth, refused; then one set down beside her, and the rest at it.
+  insert into said values ('R:plinth', coalesce(act_refusal(w, u, 'enchant', ${T('v_sw', 'v_s')}), 'none'));
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 11, 11, 0, 0, 11.25, 11.25, 50);
   insert into said values ('R:weapon', coalesce(act_refusal(w, u, 'enchant', ${T('987654', 'v_s')}), 'none'));
   v_x := give(w, u, 'short_bow', 1, 50, 'Willow');
   insert into said values ('R:bow', coalesce(act_refusal(w, u, 'enchant', ${T('v_x', 'v_s')}), 'none'));
@@ -603,8 +607,13 @@ const enchant = act('enchant');
 const sword = thing('sword', 34, 0, 'Iron');
 let scroll = thing(EMBER.scroll, 90);
 const ask = (uid: number, scrollUid: number): string => enchant.check?.({ kind: 'item', uid, scroll: scrollUid } as Target, g) ?? 'none';
+// Away from an enchanter's plinth, refused; then one set down beside her, as on the island, and the rest at it.
+const scrollFirst = ask(sword.uid, sword.uid);
+const awayHere = ask(sword.uid, scroll.uid);
+g.addFurniture(ENCHANTERS_PLINTH, 11, 11, 0, 0, 50);
 const here: Record<string, string> = {
-  scroll: ask(sword.uid, sword.uid),
+  scroll: scrollFirst,
+  plinth: awayHere,
   weapon: ask(987654, scroll.uid),
   bow: ask(thing('short_bow', 50, 0, 'Willow').uid, scroll.uid),
   javelin: ask(thing('javelin', 50, 0, 'Iron').uid, scroll.uid),
@@ -614,7 +623,7 @@ const maul = thing('maul', 50, 0, 'Iron');
 maul.enchant = { id: 'razoredge', ql: 41.3 };
 here.held = ask(maul.uid, scroll.uid);
 here.none = ask(sword.uid, scroll.uid);
-for (const [k, want] of [['scroll', ENCHANT_SAID.scroll], ['weapon', ENCHANT_SAID.weapon], ['bow', wrongKind(EMBER)], ['javelin', wrongKind(EMBER)],
+for (const [k, want] of [['scroll', ENCHANT_SAID.scroll], ['plinth', ENCHANT_SAID.plinth], ['weapon', ENCHANT_SAID.weapon], ['bow', wrongKind(EMBER)], ['javelin', wrongKind(EMBER)],
   ['broken', ENCHANT_SAID.broken], ['held', alreadyEnchanted({ id: 'razoredge', ql: 41.3 })], ['none', 'none']] as Array<[string, string]>) {
   check(`Enchant is refused in the same words on both sides: ${want}`, isle.get(`R:${k}`) === want && here[k] === want, `island ${isle.get(`R:${k}`)}, browser ${here[k]}`);
 }

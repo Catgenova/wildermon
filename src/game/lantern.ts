@@ -2,7 +2,7 @@ import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { billWords, itemDef, itemName, type Item } from './items';
 import { FURNITURE, furnitureDef } from './furniture';
-import { CANDLE_DRAWN, candleBurn, heldReach, HELD_LIGHTS, torchBurn } from './light';
+import { CANDLE_DRAWN, heldBurn, heldReachOf, HELD_LIGHTS } from './light';
 import { NumberWord } from './words';
 
 /**
@@ -109,7 +109,7 @@ export const LANTERN_ACTIONS: ActionDef[] = [
       const candle = g.inventory.find('candle');
       if (!it || !candle) return;
       g.inventory.remove(candle.uid, 1);
-      it.charges = Math.round(candleBurn(it.ql));
+      it.charges = Math.round(heldBurn(it));
       g.logMsg(`You set a candle in the lantern. ${Math.ceil(it.charges / 60)} minutes of it, at a guess.`, 'event');
       g.events.emit('inventory');
     },
@@ -140,12 +140,12 @@ export const LANTERN_ACTIONS: ActionDef[] = [
       if (!from) return;
       // A torch is wound and then lit; the pitch in it only starts burning at
       // the moment it catches, so the clock starts here rather than at the bench.
-      if (it.id === 'torch' && candleLeft(it) <= 0) it.charges = Math.round(torchBurn(it.ql));
+      if (it.id === 'torch' && candleLeft(it) <= 0) it.charges = Math.round(heldBurn(it));
       it.lit = true;
       g.logMsg(
         it.id === 'torch'
-          ? `You touch the torch to the ${from} and it takes. ${Math.ceil(candleLeft(it) / 60)} minutes of it, throwing ${heldReach(it.id, it.ql)} tiles.`
-          : `You take a light off the ${from} and the lantern throws it ${heldReach(it.id, it.ql)} tiles.`,
+          ? `You touch the torch to the ${from} and it takes. ${Math.ceil(candleLeft(it) / 60)} minutes of it, throwing ${heldReachOf(it)} tiles.`
+          : `You take a light off the ${from} and the lantern throws it ${heldReachOf(it)} tiles.`,
         'event',
       );
       g.events.emit('inventory');

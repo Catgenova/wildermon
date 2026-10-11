@@ -268,7 +268,7 @@ begin
   return null;
 end $function$;
 
-/* ---- perform_last: from 20261010230740_enchanting.sql, the newest that defines it. With a memorial stone. ---- */
+/* ---- perform_last: from 20261011034859_snarecraft_netmender_dreamweave.sql, the newest that defines it. With a memorial stone. ---- */
 
 CREATE OR REPLACE FUNCTION public.perform_last(p_world uuid, p_uid uuid, p_action text, p_target jsonb)
  RETURNS void
@@ -442,7 +442,9 @@ begin
         * case when case when pc.level < 0 then cellar_done(p_world, floor(pc.x)::int, floor(pc.y)::int) -- cellar: always indoors
                          else indoors(p_world, 0, floor(pc.x)::int, floor(pc.y)::int) end -- cellar
                then indoors_rest() else 1 end, -- cellar
-      lower(placed_name(pc)));
+      lower(placed_name(pc)),
+      -- And a Dreamweave set into it banks more of the night.
+      placed_enchant(pc, 'dream'));
 
   elsif p_action = 'set_home' then
     select * into pc from placed where world_id = p_world and id = (p_target->>'id')::bigint;
@@ -549,7 +551,7 @@ begin
   end if;
 end $function$;
 
-/* ---- perform_fire: from 20261002115207_shop_counters_and_lantern_posts.sql, the newest that defines it. A memorial stone set down and picked up keeps its line. ---- */
+/* ---- perform_fire: from 20261011031657_enchanted_where_it_stands.sql, the newest that defines it. A memorial stone set down and picked up keeps its line. ---- */
 
 CREATE OR REPLACE FUNCTION public.perform_fire(p_world uuid, p_uid uuid, p_action text, p_target jsonb)
  RETURNS void
@@ -594,7 +596,7 @@ begin
      * moment they were standing. Both are on the item being consumed here,
      * and both come across now.
      */
-    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, rare, material, creature, mark, dye, engraving)
+    insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, rare, material, creature, mark, dye, enchant, dmg, engraving)
     values (p_world, case p_action when 'place_smelter' then 'smelter'
                                    when 'place_kiln' then 'kiln' else 'furniture' end, sub,
             (p_target->>'x')::int, (p_target->>'y')::int, ax, ay,
@@ -606,6 +608,8 @@ begin
             it.mark,
             -- And its colour: a banner, a flag or a sail dyed in the pack stands dyed.
             it.dye,
+            -- And its enchantment and its wear, which it keeps standing and takes up again (`enchanting.ts`).
+            it.enchant, it.dmg,
             -- And a memorial stone's line, which it reads standing as it did in the pack.
             it.engraving)
     returning id into made;
@@ -634,7 +638,7 @@ begin
     update placed set lit = true, since = now() where id = p.id;
     if p_action = 'light_campfire' then perform journal_note(p_world, p_uid, 'fire'); end if;
     perform tell(p_world, p_uid, 'The kindling catches and the ' || p.kind || ' burns. It has '
-      || burns_for(p.fuel) || ' of fuel.', 'event');
+      || burns_for(p.fuel / placed_burn_rate(p)) || ' of fuel.', 'event');
   elsif p_action in ('put_out_campfire', 'damp_smelter', 'damp_kiln') then
     update placed set lit = false, since = now() where id = p.id;
     perform tell(p_world, p_uid, 'You smother the fire. The wood is saved for later.', 'event');
@@ -660,7 +664,7 @@ begin
     update placed set fuel = least(fire_capacity(), p.fuel + per * fits), since = now() where id = p.id;
     perform tell(p_world, p_uid, 'You feed ' || case when fits > 1 then fits || ' × ' else 'a ' end
       || lower((select name from item_def where id = it.def)) || ' to the fire. '
-      || burns_for(least(fire_capacity(), p.fuel + per * fits)) || ' of fuel.', 'event');
+      || burns_for(least(fire_capacity(), p.fuel + per * fits) / placed_burn_rate(p)) || ' of fuel.', 'event');
   elsif p_action in ('take_ashes_fire', 'take_ashes_smelter', 'take_ashes_kiln') then
     whole := floor(p.ash)::int;
     update placed set ash = p.ash - whole, since = now() where id = p.id;
@@ -712,6 +716,8 @@ begin
     if p.mark is not null then update item set mark = p.mark where id = made; end if;
     -- And its colour, back on the thing in the pack.
     if p.dye is not null then update item set dye = p.dye where id = made; end if;
+    -- And its enchantment and its wear, back on the thing in the pack.
+    update item set enchant = p.enchant, dmg = p.dmg where id = made;
     -- And a memorial stone's line, carried in the pack as it stood.
     if p.engraving is not null then update item set engraving = p.engraving where id = made; end if;
     if p.creature is not null then

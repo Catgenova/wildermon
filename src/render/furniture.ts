@@ -11,6 +11,8 @@ import { ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY } from '../game/roses';
 import { VIEWS } from './view';
 import { MOSS, hashOf } from './ivy';
 import { LAMP_ARM, LAMP_GLASS, LAMP_HANG } from '../game/lamps';
+import { ENCHANTERS_PLINTH } from '../game/enchant';
+import { drawPlinth, drawPlinthRunes } from './plinth';
 
 /**
  * Furniture, built rather than drawn.
@@ -3716,6 +3718,16 @@ const MODELS: Record<string, Model> = {
    * carrying a head beam, and the wooden screw down through the beam onto the
    * platen with a bar through its head to turn it by.
    */
+  /*
+   * An enchanter's plinth is drawn with the Runestones' kit (`plinth.ts`), not
+   * here: this is only its size, for how tall it stands and what it is
+   * clicked by -- a step, a shaft and a slab across its head.
+   */
+  [ENCHANTERS_PLINTH]: ({ sc }) => {
+    sc.box(-8.6, 8.6, -7.8, 7.8, 0, 1.5, STONE);
+    sc.box(-4.6, 4.6, -4, 3.4, 1.5, 8.4, STONE);
+    sc.box(-9.1, 9.3, -7.9, 7.9, 8.4, 11.3, STONE);
+  },
   paper_press: ({ sc, wood }) => {
     const SHEETS = paintOf(hex('#efe4c4'));
     sc.shadows = [[-4.4, 4.4, -2.8, 2.8]];
@@ -5241,6 +5253,12 @@ const wheelBlock = (at: Array<[number, number, number, number]>, i: number): num
  */
 export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, kind: string, lit = false, tint?: Tint, trim?: number, view: PieceView = pieceView('s', 0), material?: string,
   crew?: Crew, layer: number | 'all' = 'all', live = true, seeHelm: Silhouette | null = null, manned = false): [number, number, number, number] {
+  // Built of the Runestones' kit rather than of boxes: its stone, and its runes at rest over it unless the caller lays them (`plinth.ts`).
+  if (kind === ENCHANTERS_PLINTH) {
+    const box = drawPlinth(ctx, sx, sy, zoom, view, trim);
+    if (live) drawPlinthRunes(ctx, sx, sy, zoom, view, trim, 0, false);
+    return box;
+  }
   const rolling = !crew && !!WHEELS[kind];
   const b = bakedFor(zoom, kind, lit, tint, rolling ? undefined : trim, view, material, crew, manned, rolling);
   const k = zoom / b.scale;

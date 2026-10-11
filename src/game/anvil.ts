@@ -1,4 +1,5 @@
 import { tryGain } from './learn';
+import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
@@ -15,6 +16,10 @@ import type { CraftStock } from './recipes';
  */
 export interface PlacedAnvil {
   id: number;
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
+  /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
+  dmg?: number;
   /** 1 rare, 2 supreme, 3 fantastic; absent for the ordinary run of things. */
   rare?: number;
   /**
@@ -128,6 +133,9 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const a = g.addAnvil(t.x, t.y, t.sx, t.sy, item.extra ?? 'copper', item.ql);
       // An anvil that was rare on your shoulder is rare on the ground.
       if (item.rare) a.rare = item.rare;
+      // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
+      if (item.enchant) a.enchant = item.enchant;
+      if (item.dmg) a.dmg = item.dmg;
       g.logMsg(`You set the ${anvilName(a).toLowerCase()} down. Bring a casting to it.`, 'event');
       g.events.emit('world', a.x, a.y);
     },
@@ -145,6 +153,8 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       g.removeAnvil(a.id);
       const back = g.inventory.add('anvil', { ql: a.ql, extra: a.metal });
       if (a.rare) back.rare = a.rare;
+      if (a.enchant) back.enchant = a.enchant;
+      if (a.dmg) back.dmg = a.dmg;
       g.logMsg(`You heave the ${anvilName(a).toLowerCase()} up onto your shoulder.`, 'event');
       g.events.emit('world', a.x, a.y);
     },
@@ -193,7 +203,8 @@ export const ANVIL_ACTIONS: ActionDef[] = [
         g.logMsg(`${struck ? 'The gold is too poor to take the die and the blanks crack' : 'The blanks come out smeared'}; the lump is lost.${broke ? ' The die is worn through.' : ''}`, 'event');
         return;
       }
-      const ql = smithQl(g, { skill: 'blacksmithing' } as MouldDef, dieQl, lump.ql, a);
+      // And higher for a Masterwork on the anvil (`enchanting.ts`).
+      const ql = Math.min(100, smithQl(g, { skill: 'blacksmithing' } as MouldDef, dieQl, lump.ql, a) + swingEnchant(a, 'master'));
       g.gainSkill('blacksmithing', tryGain(true, SMITH_GAIN));
       const made = g.inventory.add('coin', { ql, extra: metal.name, count: COINS_PER_LUMP });
       const rare = rollRarity(g.rand);
@@ -258,7 +269,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       g.events.emit('inventory');
       // The casting carries the mould and the metal it was poured from, so it
       // stands for both. More for a Smith's Toolsmith on a tool's head or blade.
-      const ql = Math.min(100, smithQl(g, def, casting.ql, casting.ql, a) * g.perk(`ql:${def.makes}`, 1));
+      const ql = Math.min(100, smithQl(g, def, casting.ql, casting.ql, a) * g.perk(`ql:${def.makes}`, 1) + swingEnchant(a, 'master'));
       g.gainSkill(def.skill, tryGain(true, SMITH_GAIN));
       // More to a filling for a Smith's Nail Maker, as `count:` has it on the island.
       const per = g.perk(`count:${def.makes}`, def.per ?? 1);

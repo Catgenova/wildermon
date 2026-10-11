@@ -14,6 +14,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
+import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, takesAs,
@@ -55,7 +56,7 @@ import { MOTE_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
-import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
@@ -74,7 +75,7 @@ import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guidePages, keepable } from '../../game/guide';
 import { MOBS_RANGE } from '../../game/keep';
 import { KILN_CAPACITY } from '../../game/kiln';
-import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, torchBurn, torchReach } from '../../game/light';
+import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
 import { MARK_CAP } from '../../game/marks';
 import { MATERIAL_BY_ID, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
@@ -90,7 +91,7 @@ import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } 
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
 import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
-import { CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
+import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
   betterThanCommon, CHANNELS as BLOOD, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, pct as cardPct, TIERS, TRAIT_SLOTS,
   TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier,
@@ -137,11 +138,11 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTERS_PLINTH, enchantChance, ENCHANTMENT_LIST, enchantPct, FROST_PACE, FROST_SECS, GRACE_TILES, NETMENDER_WEAR, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
-import { BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
+import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
-import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
+import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
 import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 
@@ -156,6 +157,23 @@ const CELLAR_NOT_DOWN = FURNITURE.filter((d) => cellarOutdoor().includes(d.id) &
 /** The Farmer's perk that holds an effect, by name. */
 const farmerPerk = (key: string): string => perksOf('farmer').find((p) => key in p.fx)?.name ?? key;
 /** What a tile of glass roof of a shape takes: "12 glass panes and 4 timbers". */
+/**
+ * The rune gate's paragraph (`runegate.ts`): where it stands, what it costs
+ * and what lights it, every number off the rule.
+ */
+const runeGateHelp = (): string => {
+  const def = WALL_TYPE_BY_ID.get(RUNE_GATE);
+  const mat = (WALL_MATERIALS.find((m) => m.id === def?.laidIn)?.name ?? '').toLowerCase();
+  return `<p>A <b>${runeGateName()}</b> is two pillars cut with runes under a lintel, for the way into a settlement. Point at the edge of a tile on
+    the ground and choose <b>Plan fence</b>, <b>${def?.name}</b>: it is laid in ${mat} and nothing else, ${billWords(Object.entries(wallBill(def?.laidIn ?? '', RUNE_GATE).total))},
+    and fed with <b>Build fence</b> as a fence is. Nothing hangs in it and nothing locks it: people, carts and wildermon all pass it, and it is
+    seen through. Nothing rests on its lintel. While a citizen of a settlement whose border takes in the tile on either side of it &mdash; its
+    founder, a mayor or a builder, not a guest &mdash; stands within ${RUNE_GATE_REACH} of a tile of the middle of its opening, the runes on both
+    pillars and the roundel on the lintel light, the lowest first, over ${RUNE_GATE_RISE} seconds; once no citizen is there they go out over
+    ${RUNE_GATE_FADE} seconds. Strangers, guests and wildermon do not light it. While it is lit after dark it throws pale gold
+    ${RUNE_GATE_GLOW_REACH} tiles round its opening. The light is all it does. On an island the rolls of the settlements rune gates stand on are
+    sent to everybody ashore, which is how your browser knows who lights one.</p>`;
+};
 /** The wall types too low to close in a glasshouse, from their own `low`: "a fence, a fence gate, an iron-bound gate or a half wall". */
 const lowWalls = (): string => {
   const names = WALL_TYPES.filter((w) => w.low).map((w) => w.name.toLowerCase()).map((n) => `${article(n)} ${n}`);
@@ -227,8 +245,12 @@ function enchantingHelp(): string {
     fails loses its motes, and the sheet takes ${SCROLL_HARM} damage (as one sheet of its pile: the pile's damage rises by that over
     its sheets); a sheet that would reach ${BROKEN_AT} is used up instead.</p>
     <ul>${rows}</ul>
+    <p>Enchant is done standing at an <b>enchanter's plinth</b> set down on the ground, within ${STATION_REACH} tiles of its middle,
+    and nowhere else; writing a scroll needs none. One is ${bill(`make_${ENCHANTERS_PLINTH}`)}, built with a trowel at ${workedAt(`make_${ENCHANTERS_PLINTH}`)},
+    and moss gathers on it as on a statue. While somebody is enchanting at one its runes brighten and at night it lights
+    ${PLINTH_BUSY_REACH} tiles round its middle, where it lights ${PLINTH_REACH} at rest.</p>
     <p>Choose <b>Enchant</b> on a scroll in your pack and pick what it goes on, in your pack: a melee weapon is ${meleeNames()},
-    not a bow or a thrown weapon. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
+    not a bow or a thrown weapon; a bow is ${listed(BOWS.map((id) => itemDef(id).name.toLowerCase()))}. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
     ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}
     (${pts.map(([sk, q]) => `${percent(enchantChance(sk, q))} at enchanting ${sk} with a QL ${q} scroll`).join('; ')}).
     What took comes out at that average times ${QL_LOW} to ${Number((QL_LOW + QL_SPAN).toFixed(2))}, plus ${QL_BARE}, as any craft's quality is
@@ -246,7 +268,62 @@ function enchantingHelp(): string {
     <p>How they add up with the rest: Gale's share comes off a swing's time after everything else that changes it (tired or wounded arms,
     a Berserker's Wild Strength or Adrenaline), multiplying with them. Nightblade's share is added to your chance of a critical blow,
     on top of your skill and a Skirmisher's Keen Edge. Sunstrike's share multiplies with every other change to a blow's damage; the hostile monsters are ${monsterNames()}.
-    Leeching's health comes on top of a Berserker's Thirst for Blood.</p>`;
+    Leeching's health comes on top of a Berserker's Thirst for Blood. Farsight's share multiplies with a bow's own range, its maker's mark
+    and an Archer's Long Draw. What you wear adds up piece by piece: ${listed(ENCHANTMENT_LIST.filter((e) => WORN_CAP[e.effect] !== undefined)
+      .map((e) => `${e.name} to ${percent(WORN_CAP[e.effect] ?? 0)} at most`))} together, and each multiplies with every other change to a blow
+    (your stance, armour, a ward or a spell). Featherstep's share multiplies with every other change to your pace, Power's Long Stride among them;
+    Shadowcloak's with how far each hunter would see you, and only while it is night; Bulwark's points go on top of a shield's chance, past the
+    most a shield otherwise blocks. The game has no cloaks, so Shadowcloak goes on what is worn on the chest.</p>
+    <p>Only an ordinary shot from a bow that lands can set off ${listed(ENCHANTMENT_LIST.filter((e) => SHOT_EFFECTS.has(e.effect)).map((e) => e.name))}.
+    A <b>slow</b> holds a creature to ${percent(FROST_PACE)} of its pace for ${FROST_SECS} seconds; the stronger of two slows holds, to the later end,
+    and the target panel says "slowed" while it lasts.</p>
+    <p>A tool a job is done with is ${listed([...jobTools()].map((id) => itemDef(id).name.toLowerCase()))}; a weapon takes
+    ${listed(ENCHANTMENT_LIST.filter((e) => e.on === 'tool').map((e) => e.name))} only if it is one of them. Where you carry more than one
+    of a tool, the one worth most at the work is the one a job uses, and its enchantment is the one that counts.
+    Swiftwork's share comes off a job's time after the floor, multiplying with a perk on the job's time, a piece standing near and a Steady Hands;
+    Truesteel's multiplies with a perk on the tool's wear. Bountiful works on Harvest on a bush, with the sickle, and on a fish landed with the rod;
+    Lodestone on Mine, with the pickaxe. The one more comes at the quality the go made, and a fish is never rare for it.</p>
+    <p>Lantern's Grace counts on a lantern or a torch you carry: its share is added to the candle when one is set in the lantern, and to
+    the torch when it is struck with nothing left in it, so a candle already in it when the scroll goes in burns as it was; its
+    ${GRACE_TILES} tiles go on whatever reach the light throws. A lantern hung on a lantern post burns and throws as the post's own.</p>
+    <p>A jewelled ring or a jewelled pendant counts while it is worn in the jewel slot, and there is one jewel slot, so one of
+    ${listed(ENCHANTMENT_LIST.filter((e) => e.on === 'ring' || e.on === 'amulet').map((e) => e.name))} at a time.
+    Scholar's Band's share is added to how fast every trade goes into you, as a worn stone's is, beside a reader's Attentive and your knacks;
+    Knackstone's multiplies with a reader's Polymath; Steady Heart's with what body stamina gives your wind; Hearthbound's with Power's
+    Enduring and with what is in you; Favoured's with what a prayer banks before your faith's cap holds it; Stillwater's with what the place
+    you sit in gives.</p>
+    <p>Packmule's kilos are added to what you carry before the weight tells, beside a Terraformer's Strong Back and Power's Pack Mule,
+    for each backpack or satchel carried with one (a pack inside another pack is the outer pack's, not yours). Seal's Coat's share
+    multiplies with how fast your swimming lets you swim, never past a walk, and takes its share off what swimming costs your stamina,
+    with Power's Hard Breath. Hawk's Eye's share multiplies with how far you see, a reader's Keen Sight among it.</p>
+    <p>${listed(ENCHANTMENT_LIST.filter((e) => e.on === 'furnace' || e.on === 'station').map((e) => `${e.name} goes on ${ON_WORDS[e.on]}`))},
+    enchanted where it stands: choose it under Enchant on the scroll in your pack, from within ${PLACED_REACH} tiles of its middle, and only
+    a thing you may open past any padlock on it. It takes as it takes in the pack, held to the thing's own QL. One that does not take puts
+    ${ENCHANT_HARM} damage on it, but never takes it past ${BROKEN_AT - 1}: a thing standing on the ground never goes to pieces from a scroll.
+    Its enchantment and its damage go into the pack with it when it is picked up, and back onto the ground when it is set down again.</p>
+    <p>Ember Heart's share comes off the fuel a second of heat burns, so the same work takes that much less fuel and a firebox full keeps
+    it hot that much longer; the work goes at its own pace. Masterwork's points are added to what is made at the anvil or the loom after
+    a perk on the recipe multiplies it, never past QL ${ENCHANT_TOP}, and a scroll is still never better than its sheet; where more than one loom
+    is within reach, the best counts.</p>
+    <p>Fair Wind's share multiplies a boat's pace under sail on every point of sail, after the wind, her build, her maker's mark and your
+    Sailing. Deep Hold, True Axle and a Bag of Holding multiply what the thing holds, in whatever it is measured in (things, kilos or a
+    barrel's litres), before its rarity adds its own; for a cart or a wagon what it holds is the load it pulls, and its pace is not
+    changed. A crate takes one where it stands, as the furniture does. What is inside still weighs all it weighs, on a cart, on a boat and
+    on your back. A thing holds one enchantment, so a boat holds Deep Hold or a Bag of Holding, not both, and says which when asked for
+    the other. An enchantment is never taken out of a thing; were one ever lost, what was in it would stay in it, and nothing more would
+    go in until it was under what it then held.</p>
+    <p>Snarecraft's share multiplies a trap's chance of taking a creature that comes to it, after its quality, the creature's wariness
+    and whether it is timid or a hunter, never past ${enchantPct(CATCH_MOST)}; on a creel it multiplies the chance of a fish, after its
+    maker's mark. A trap takes it where it stands or in the pack, and keeps it through being picked up and set down. Netmender's share
+    multiplies a drag's haul on the average, after a Fisher's Full Net and the net's maker's mark, and ${NETMENDER_WEAR} times its share comes
+    off the wear a drag puts on the net, beside Truesteel and a perk. Dreamweave's share multiplies the rest a night in the bed banks,
+    after the bed's quality and the roof over it, and raises the most rest you can hold after that night by the same share; a night in a
+    plain bed later never takes rest away.</p>
+    <p>Fleetfoot's share multiplies a mount's pace under you after its makers' marks on its saddle and bridle, past the most a mount
+    otherwise goes. Tamer's Bridle's share multiplies an offering's chance to tame, after Love's Gentle Hand, with the best bridle in your
+    pack counted; and a mount wearing it goes on with a fight however far from you it leads, as Love's Steady Herd has every one of yours do.
+    Both go into the saddle or the bridle in the pack, ride on the mount when it is saddled, and come back into the pack with the tack. An
+    enchanted saddle or bridle is a pile of its own, never folded into a plain one.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>
@@ -1212,6 +1289,7 @@ export function helpText(): string {
     through. Point at it from either side, on any storey, to read whether it is up or down and padlocked. Without a padlock
     anybody may raise or lower it; <b>Fit a padlock</b> to it and only its key and the founder of the settlement it stands on may
     raise it, lower it or take it down.</p>
+    ${runeGateHelp()}
     <p>A <b>hidden door</b> is built of exactly a solid wall's bill and drawn exactly as one. <b>Plan wall</b>, <b>Hidden door</b>
     plans a solid wall there, in every way anybody else can see or read: the same job, ${spanWords(goSeconds(PLAN_WALL?.baseTime ?? 0))} and
     ${percent(PLAN_WALL?.stamina ?? 0)} of your stamina, the same words over your head, and on an island the same record. Only you and
@@ -1405,6 +1483,11 @@ export function helpText(): string {
     <p>A <b>padlock</b> on a post or a pillar keeps its lantern: without the key nobody fits one, takes it down, puts a candle in,
     puts it out or picks the piece up. Anybody may <b>strike a light</b> in it. A post is not set down with its arm and lantern
     reaching into a wall beside it: <i>${LAMP_INTO_WALL}</i> <b>Turn it</b> goes on round past such a facing.</p>
+    <p>A <b>rune lantern post</b> (${bill('make_rune_lantern')} &mdash; ${workedAt('make_rune_lantern')}) needs no lantern. At night it
+    lights the ground round it for everybody as a lantern of its own QL does, <b>${numberWord(lanternReach(LOW_QL))} tiles at QL ${LOW_QL}
+    to ${numberWord(lanternReach(TOP_QL))} at QL ${TOP_QL}</b>, and that ground is in sight from as far off as you can see. It takes no
+    lantern and no candle, burns nothing and never goes out; it is set down, turned, padlocked and picked up as any piece is, and
+    does not go down into a cellar.</p>
     <h3>Memorial stones</h3>
     <p>A <b>memorial stone</b> (${bill(`make_${MEMORIAL}`)} &mdash; ${workedAt(`make_${MEMORIAL}`)}) is set down like furniture on a
     ${numberWord(furnitureDef(MEMORIAL).w)} by ${numberWord(furnitureDef(MEMORIAL).h)} block of subtiles. Within <b>${STORE_REACH} tiles</b> of it, with a

@@ -3,8 +3,10 @@ import { isDone, MATERIAL_BY_ID, WALL_TYPE_BY_ID } from './building';
 import { CELLAR_DAYLIGHT } from './cellar';
 import { bloodMul } from './creatures';
 import type { Game } from './game';
-import { heldReach } from './light';
+import { heldReachOf } from './light';
 import { isLampPiece, lampAt, lampBurning, lampReach } from './lamps';
+import { isRuneLantern, runeLanternReach } from './runelantern';
+import { furnitureCentre } from './furniture';
 
 /**
  * What can be seen from where you are standing.
@@ -198,9 +200,10 @@ export class Vision {
     // A reader's Night Eyes keep none of what the dark would take (`knowledge_night_eyes`).
     const day = 1 - NIGHT_LOSS * g.pathFx('dark', 1) * (down ? 1 : g.darkness()) * (lamp ? 1 - LIGHT_GIVES_BACK : 1);
     // And a reader's Keen Sight sees further, and further than the furthest anybody else does (`knowledge_keen`).
-    const keen = g.pathFx('sight', 1);
+    // And a Hawk's Eye worn, multiplying with it.
+    const keen = g.pathFx('sight', 1) * (1 + g.wornEnchant('sight'));
     const seen = Math.max(3, Math.min(MAX_SIGHT * keen, open * day * keen));
-    return lamp ? Math.max(seen, heldReach(lamp.id, lamp.ql)) : seen;
+    return lamp ? Math.max(seen, heldReachOf(lamp)) : seen;
   }
 
   private recompute(): void {
@@ -257,9 +260,13 @@ export class Vision {
     for (const f of g.campfires.values()) if (f.lit) this.cast(next, f.x + 0.5, f.y + 0.5, FIRE_SIGHT, mark);
     for (const s of g.smelters.values()) if (s.lit) this.cast(next, s.x + 0.5, s.y + 0.5, FIRE_SIGHT, mark);
     for (const k of g.kilns.values()) if (k.lit) this.cast(next, k.x + 0.5, k.y + 0.5, FIRE_SIGHT, mark);
+    // A rune lantern shows its ground only while there is a night for it to light (`runelantern.ts`).
+    const night = g.darkness() > 0.01;
     for (const f of g.furniture.values()) {
-      // A lantern post shows the ground out to its lantern's reach (`lamps.ts`); anything else alight, a fire's.
-      if (isLampPiece(f)) {
+      // A rune lantern shows the ground out to a lantern's reach of its quality; a lantern post out to its lantern's (`lamps.ts`); anything else alight, a fire's.
+      if (isRuneLantern(f)) {
+        if (night && (f.level ?? 0) >= 0) this.cast(next, ...furnitureCentre(f), runeLanternReach(f), mark);
+      } else if (isLampPiece(f)) {
         if (lampBurning(f)) this.cast(next, ...lampAt(f), lampReach(f), mark);
       } else if (f.lit) this.cast(next, f.x + 0.5, f.y + 0.5, FIRE_SIGHT, mark);
     }

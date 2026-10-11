@@ -1,9 +1,9 @@
 import type { Side } from '../game/building';
 import { rand } from './ivy';
 import {
-  add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump,
+  add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump, glowHoles, glowMasks,
   grassTuft, groundNear, hex, inset, mix, mul, newell, plate, proj, scaleFor, stoneSkin, strokesPath, TAU,
-  toneOf, GLYPHS, RUNESTONE_MOSS, type MossPalette, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
+  toneOf, GLYPHS, RUNESTONE_MOSS, type MossPalette, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3, type NightSource,
 } from './runestone';
 
 /**
@@ -781,13 +781,15 @@ function modelOf(text: string, facing: Side): Model {
   const back = carved('back');
 
   /* -- the edges of the stone: its skin, and the ivy round the corner at the mossy foot -- */
-  const edgePaint = (i: number, up: number): { paint?: Painter; over?: Painter } | undefined => {
+  const edgePaint = (i: number, up: number): { paint?: Painter; over?: Painter; crease?: number } | undefined => {
     const p = OUTLINE[i], q = OUTLINE[(i + 1) % OUTLINE.length];
     const mx = (p[0] + q[0]) / 2;
     const dx = q[0] - p[0], dz = q[1] - p[1];
     const len = Math.hypot(dx + LEAN[0] * dz, LEAN[1] * dz, dz);
     const G = half0 + f * ((p[1] + q[1]) / 2) - 0.4;
     return {
+      // One rounded edge, not a stack of strips: the lines between them barely there.
+      crease: 0.1,
       paint: (g, k) => {
         const T = rand(SEED * 101 + i);
         for (let j = 0; j < Math.ceil(len / 1.6); j++) {
@@ -824,8 +826,6 @@ function modelOf(text: string, facing: Side): Model {
   const stone = plate({
     o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline: OUTLINE, half: [half0, half1], tTop: T_TOP, bevel: 0.42, tone: STONE,
     front: front.paint, frontOver: front.over, back: back.paint, backOver: back.over, edge: edgePaint, sunk: true,
-    // One rounded edge, not a stack of strips: the lines between them barely there.
-    edgeCrease: 0.1,
   });
   /*
    * The plinth and the stone on it are one thing in the order: the lower
@@ -916,10 +916,10 @@ function modelOf(text: string, facing: Side): Model {
    * gives, so some of each is seen from every side; the rest chalk and cream.
    */
   const Fv = rand(SEED * 53 + ['s', 'e', 'n', 'w'].indexOf(facing) * 101);
-  const [left, right] = Fv() < 0.5 ? ['dusk', 'rose'] : ['rose', 'dusk'];
+  const [left, right] = Fv() < 0.5 ? ['dusk', 'blush'] : ['blush', 'dusk'];
   const flowers: Array<[number, number, number, string]> = [
     [-8.5, -2.7, 0.56, left], [8.5, -1.0, 0.54, right],
-    [2.6, 5.7, 0.55, Fv() < 0.5 ? 'chalk' : 'cream'], [0.1, 6.4, 0.5, Fv() < 0.5 ? 'rose' : 'chalk'],
+    [2.6, 5.7, 0.55, Fv() < 0.5 ? 'chalk' : 'linen'], [0.1, 6.4, 0.5, Fv() < 0.5 ? 'blush' : 'chalk'],
   ];
   flowers.forEach(([x, y, big, colour], i) => {
     // Each clump its own: its seed off where it is and the way the stone was set, so no two spikes stand alike.
@@ -1067,7 +1067,7 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
     const M = new DOMMatrix([ax, ay, bx, by, ox, oy]);
     if (which === 'front') {
       // The roundel: its lit strokes only by day, so bare stone shows between them; glowing lines after dark.
-      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, scale <= 1 ? ROUNDEL_SMALL : ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 4, true,
+      glows.push(bakeGlow(M, (h) => strokesPath(h, scale <= 1 ? ROUNDEL_SMALL : ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, true, 4, scale, ROUNDEL_W, 1, {}, undefined,
         /*
          * Its night shape takes all the night off its strokes, as they are too
          * fine for a Runestone's share to clear, and it dims as it breathes out
@@ -1075,17 +1075,17 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
          * one; at the smallest scale a shade less is taken off, and that is
          * its breath.
          */
-        { w: ROUNDEL_W, noDayHalo: true, tight: true, fine: true, maskA: 1 / (scale <= 1 ? 0.95 : 0.72), dim: scale <= 1 ? 0 : 0.13 }));
+        { noDayHalo: true, tight: true, fine: true, maskA: 1 / (scale <= 1 ? 0.95 : 0.72), dim: scale <= 1 ? 0 : 0.13 }));
       // The line: its rows catch the light after dark, faintly, the lowest first.
       model.rows.slice().reverse().forEach((row, j) => {
         if (!row.length) return;
         const x0r = Math.min(...row.map((m) => m.x)), x1r = Math.max(...row.map((m) => m.x));
         const half = (x1r - x0r) / 2 + MARK_W;
-        glows.push(bakeGlow(M, scale, (h) => rowPath(h, row), (x0r + x1r) / 2, row[0].z, half, j, false, { w: 0.11, faint: 0.38, nightOnly: true, tight: true }));
+        glows.push(bakeGlow(M, (h) => rowPath(h, row), (x0r + x1r) / 2, row[0].z, half, false, j, scale, 0.11, 1, {}, undefined, { faint: 0.38, nightOnly: true, tight: true }));
       });
     } else {
-      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r), BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r, 0, true,
-        { w: ROUNDEL_W * 0.85, faint: 0.8, noDayHalo: true, tight: true, fine: true, maskA: 1 / ((scale <= 1 ? 0.95 : 0.72) * 0.8), dim: scale <= 1 ? 0 : 0.13 }));
+      glows.push(bakeGlow(M, (h) => strokesPath(h, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r), BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r, true, 0, scale, ROUNDEL_W * 0.85, 1, {}, undefined,
+        { faint: 0.8, noDayHalo: true, tight: true, fine: true, maskA: 1 / ((scale <= 1 ? 0.95 : 0.72) * 0.8), dim: scale <= 1 ? 0 : 0.13 }));
     }
   }
 
@@ -1137,6 +1137,19 @@ export function drawMemorial(ctx: Ctx, sx: number, sy: number, zoom: number, fac
   return [l * zoom, tp * zoom, r * zoom, bt * zoom];
 }
 
-/** Its runes' and its line's light, baked, for the night to be taken off in their shapes (`RunestoneNight.glows`). */
-export const memorialGlows = (facing: Side, rotation: number, zoom: number, text: string | undefined): Glow[] =>
-  bakedFor(facing, rotation, zoom, text ?? '').glows;
+/**
+ * Its runes' and its line's light as something that takes the night back off
+ * itself (`NightSource`, laid through `RunestoneNight.source`): no soft hole
+ * round them, their light kept tight to their strokes, and the night taken
+ * off in their own shapes, the roundel's more fully than a Runestone's rune's
+ * (`maskA`) and the line's more faintly (`faint`).
+ */
+export function memorialNight(facing: Side, rotation: number, zoom: number, text: string | undefined): NightSource {
+  const glows = bakedFor(facing, rotation, zoom, text ?? '').glows;
+  return {
+    glows,
+    rise: 0,
+    holes: (sx, sy, z, t) => glowHoles(glows, sx, sy, z, t, 0),
+    masks: (sx, sy, z, t) => glowMasks(glows, sx, sy, z, t).map((m, i) => ({ ...m, a: Math.min(1, m.a * (glows[i].faint ?? 1) * (glows[i].maskA ?? 1)) })),
+  };
+}

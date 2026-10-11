@@ -1,3 +1,4 @@
+import { GRACE_TILES, swingEnchant, type Enchant } from './enchant';
 import { world } from './pace';
 /**
  * Light after dark.
@@ -24,6 +25,8 @@ export interface LightSource {
   cast?: string;
   /** How strong that colour is at its middle at full dark; a fire's is a sixth of its strength. */
   castAlpha?: number;
+  /** Its colour laid flattened up and down the screen by this much, as a pool on the ground is seen; round when it does not say. */
+  flat?: number;
   /**
    * A spell's light: at night it falls off smoothly from its middle (`lightFall`) and cuts the dark and adds its cast
    * less the wider it is (`lightHole`), where a lamp's falls off straight at its full strength.
@@ -79,6 +82,12 @@ export const torchReach = (ql: number): number => 3 + Math.round(Math.max(1, Mat
 /** Things you can carry alight, and how far each of them throws. */
 export const HELD_LIGHTS = ['lantern', 'torch'] as const;
 export const heldReach = (id: string, ql: number): number => (id === 'torch' ? torchReach(ql) : lanternReach(ql));
+/** What a light you carry throws: its reach, and `GRACE_TILES` more with a Lantern's Grace in it. The island's `held_reach_of`. */
+export const heldReachOf = (it: { id: string; ql: number; enchant?: Enchant }): number =>
+  heldReach(it.id, it.ql) + (swingEnchant(it, 'grace') > 0 ? GRACE_TILES : 0);
+/** How long the fuel set in a light you carry burns: a candle in a lantern or a torch struck, longer for a Lantern's Grace. The island's `held_burn`. */
+export const heldBurn = (it: { id: string; ql: number; enchant?: Enchant }): number =>
+  (it.id === 'torch' ? torchBurn(it.ql) : candleBurn(it.ql)) * (1 + swingEnchant(it, 'grace'));
 
 /** What a lit fire throws, by what it is. */
 export const FIRE_REACH = 5;
@@ -113,6 +122,28 @@ export const RUNESTONE_CAST_ALPHA = 0.28;
 /** The light of a runestone whose middle is at world (x, y). */
 export const runestoneLight = (x: number, y: number): LightSource => ({
   x, y, radius: RUNESTONE_REACH, strength: RUNESTONE_GLOW, steady: true, soft: true, cast: RUNESTONE_CAST, castAlpha: RUNESTONE_CAST_ALPHA,
+});
+
+/**
+ * And an enchanter's plinth's runes: a small pool of the runestones' pale gold
+ * round its middle, steady and soft-edged -- at rest a little round its foot,
+ * and a little wider and brighter while somebody stands at it enchanting
+ * (`plinthBusy`), on the stone and its step and no further: whoever stands
+ * at it is left to the night, and the light is in its dish and runes. Drawn
+ * only, as a runestone's is: no rule asks
+ * how far it reaches. The runes themselves shine through the wash in their
+ * own shapes, as a runestone's do.
+ */
+export const PLINTH_REACH = 0.45;
+export const PLINTH_GLOW = 0.1;
+export const PLINTH_BUSY_REACH = 0.7;
+export const PLINTH_BUSY_GLOW = 0.2;
+export const PLINTH_CAST_ALPHA = 0.16;
+export const PLINTH_BUSY_CAST_ALPHA = 0.24;
+/** The light of an enchanter's plinth whose middle is at world (x, y), at rest or in use. */
+export const plinthLight = (x: number, y: number, busy: boolean): LightSource => ({
+  x, y, radius: busy ? PLINTH_BUSY_REACH : PLINTH_REACH, strength: busy ? PLINTH_BUSY_GLOW : PLINTH_GLOW, steady: true, soft: true,
+  cast: RUNESTONE_CAST, castAlpha: busy ? PLINTH_BUSY_CAST_ALPHA : PLINTH_CAST_ALPHA,
 });
 
 /**

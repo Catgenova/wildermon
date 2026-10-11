@@ -74,13 +74,14 @@ export const groundFloorAt = (w: World, x: number, y: number): number => w.getHe
  * and nothing about them rolls or floats: a market stall, a mailbox, a trash
  * crate, a hive, a fish pond, a planter, a well and a tiered fountain, a rose
  * arch of either kind, a flagpole, a lantern post and a lantern pillar (whose
- * lantern lights the ground round it for everybody, `lamps.ts`), a creature
+ * lantern lights the ground round it for everybody, `lamps.ts`), a rune
+ * lantern post (which does the same by itself, `runelantern.ts`), a creature
  * crate and a grave. The island reads the same list (`cellar_outdoor`,
  * written out by `npm run defs`).
  */
 export function cellarOutdoor(): readonly string[] {
   outdoor ??= FURNITURE.filter((d) => d.stall || d.post || d.trash || d.hive || d.pond || d.planter
-    || d.well || d.roses || d.grave || d.lamp || d.id === 'flagpole' || d.id === 'creature_crate').map((d) => d.id);
+    || d.well || d.roses || d.grave || d.lamp || d.runes || d.id === 'flagpole' || d.id === 'creature_crate').map((d) => d.id);
   return outdoor;
 }
 let outdoor: readonly string[] | undefined;

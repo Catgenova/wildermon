@@ -38,6 +38,14 @@ import { percent } from './words';
 export const ENCHANTING = 'enchanting';
 /** The station papyrus is pressed at: a wooden screw press set down on the ground. */
 export const PAPER_PRESS = 'paper_press';
+/**
+ * The station a scroll is put into a thing at, and nowhere else: a carved
+ * stone table set down on the ground (`furniture.ts`), stood at as every
+ * station is (`Game.atStation`, the island's `at_station`). Writing a scroll
+ * wants none. What the station rule calls it, and what its refusal says.
+ */
+export const ENCHANTERS_PLINTH = 'enchanters_plinth';
+export const PLINTH_NAME = "enchanter's plinth";
 
 /**
  * Writing a scroll. Its recipe takes `SCROLL_SHEETS` papyrus and
@@ -66,16 +74,55 @@ export const SCROLL_HARM = 25;
  * swing, more critical blows, more damage to hostile monsters, and a share of
  * every hit back as health (`leech`).
  */
-export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech';
+export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
+  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace'
+  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight' | 'ember' | 'master'
+  | 'sail' | 'room' | 'bag' | 'snare' | 'mend' | 'dream' | 'fleet' | 'tame';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
+/** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
+export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head'
+  | 'furnace' | 'station' | 'ship' | 'hull' | 'cart' | 'store' | 'trap' | 'net' | 'bed' | 'saddle' | 'bridle';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
+  bow: 'a bow',
+  armour: 'a piece of armour or clothing that is worn',
+  boots: 'boots or shoes',
+  // The game has no cloaks; what hangs over the body is the piece worn on the chest.
+  chest: 'what is worn on the chest: a tunic, a jerkin, a hauberk, a breastplate or a cuirass',
+  shield: 'a shield',
+  // A weapon takes one of these only where a job is done with it (`FITS.tool`).
+  tool: 'a tool that a job is done with',
+  reaper: 'a sickle or a fishing rod',
+  pick: 'a pickaxe',
+  light: 'a lantern or a torch',
+  ring: 'a jewelled ring',
+  amulet: 'a jewelled pendant',
+  pack: 'a backpack or a satchel',
+  head: 'what is worn on the head: a cap, a coif or a helm',
+  // These two are enchanted where they stand (`Game.placedFor`).
+  furnace: 'a smelter or a kiln',
+  station: 'an anvil or a loom',
+  ship: 'a sailing boat or a caravel',
+  hull: 'a boat: a rowing boat, a sailing boat or a caravel',
+  cart: 'a cart, a large cart or a wagon',
+  store: 'anything that holds things: a chest, a barrel, a larder, a crate, a bag or a pack, a cart, a wagon or a boat',
+  trap: 'a trap: a snare, a deadfall or a creel',
+  net: 'a fishing net',
+  bed: 'a bed: a bed, a cot or a tent',
+  saddle: 'a saddle',
+  bridle: 'a bridle',
 };
+/**
+ * The ones a worn piece holds, and the most all of that kind you wear can come
+ * to together; each piece adds its share. Featherstep and Bulwark go on the
+ * one slot there is for them, so their cap is the piece's own.
+ */
+export const WORN_CAP: Partial<Record<EnchantEffect, number>> = {};
 
 export interface EnchantmentDef {
   id: string;
@@ -99,10 +146,10 @@ export interface EnchantmentDef {
   perQl: number;
 }
 
-/** Two motes of one element, `SCROLL_MOTES` of them, or one each of the elements named. */
-const row = (id: string, name: string, elements: string | readonly string[], on: EnchantOn, effect: EnchantEffect, perQl: number): EnchantmentDef => {
+/** Two motes of one element (`SCROLL_MOTES`, or as many as `count` says), or one each of the elements named. */
+const row = (id: string, name: string, elements: string | readonly string[], on: EnchantOn, effect: EnchantEffect, perQl: number, count = SCROLL_MOTES): EnchantmentDef => {
   const motes: Array<readonly [string, number]> = typeof elements === 'string'
-    ? [[`${elements}_mote`, SCROLL_MOTES]]
+    ? [[`${elements}_mote`, count]]
     : elements.map((el) => [`${el}_mote`, 1] as const);
   return { id, name, scroll: `${id}_scroll`, mote: motes[0][0], motes, on, effect, perQl };
 };
@@ -127,10 +174,99 @@ export const SUNSTRIKE_PER_QL = 0.0025;
 export const LEECHING_PER_QL = 0.001;
 /** Tidecaller: every hit puts the creature's next blow back by QL/5 percent of the time between its blows. */
 export const TIDECALLER_PER_QL = 0.002;
+/** Farsight: a bow reaches QL/4 percent further. */
+export const FARSIGHT_PER_QL = 0.0025;
+/** Flamearrow: a shot that lands sets the target burning QL/5 percent of the time. */
+export const FLAMEARROW_PER_QL = 0.002;
+/** Frostbite: a shot that lands slows the target QL/5 percent of the time, */
+export const FROSTBITE_PER_QL = 0.002;
+/** to this share of its pace (30% slower), */
+export const FROST_PACE = 0.7;
+/** for this many seconds; another frost on one already slowed starts it again from then. */
+export const FROST_SECS = 3;
+/** Stoneskin: every blow that reaches you lands QL/20 percent lighter, for each piece, */
+export const STONESKIN_PER_QL = 0.0005;
+/** and all the Stoneskin you wear together never more than this. */
+export const STONESKIN_CAP = 0.15;
+/** Emberward: a burn's blow lands QL/5 percent lighter, for each piece, */
+export const EMBERWARD_PER_QL = 0.002;
+/** and never more than this together. */
+export const EMBERWARD_CAP = 0.5;
+/** Featherstep: you walk QL/20 percent faster. */
+export const FEATHERSTEP_PER_QL = 0.0005;
+/** Thornhide: what lands on you, QL/10 percent of it back on whatever struck, for each piece, */
+export const THORNHIDE_PER_QL = 0.001;
+/** and never more than this together. */
+export const THORNHIDE_CAP = 0.25;
+/** Shadowcloak: at night a hunter notices you from QL/4 percent closer. */
+export const SHADOWCLOAK_PER_QL = 0.0025;
+/** Bulwark: QL/10 percentage points on a shield's chance of a block. */
+export const BULWARK_PER_QL = 0.001;
+/** Swiftwork: a job done with the tool takes QL/5 percent less time. */
+export const SWIFTWORK_PER_QL = 0.002;
+/** Truesteel: the tool takes QL/2 percent less damage from use. */
+export const TRUESTEEL_PER_QL = 0.005;
+/** Bountiful: QL/5 percent of the goes at a harvest or a catch with it bring one more of what they bring. */
+export const BOUNTIFUL_PER_QL = 0.002;
+/** Lodestone: QL/10 percent of the goes at mining with it bring one more ore or stone. */
+export const LODESTONE_PER_QL = 0.001;
+/** Lantern's Grace: a candle set in it, or a torch struck, burns QL percent longer (twice as long at QL 100), */
+export const GRACE_PER_QL = 0.01;
+/** and it throws its light this many tiles further, at any quality. */
+export const GRACE_TILES = 2;
+/** Scholar's Band: QL/20 percent more skill from every go, on every trade. */
+export const SCHOLARS_PER_QL = 0.0005;
+/** Knackstone: the chance of a knack at a go is QL/2 percent greater (times 1 + QL/200, so half again at QL 100). */
+export const KNACKSTONE_PER_QL = 0.005;
+/** Steady Heart: your wind comes back QL/5 percent faster. */
+export const STEADY_HEART_PER_QL = 0.002;
+/** Hearthbound: hunger and thirst fall QL/5 percent slower. */
+export const HEARTHBOUND_PER_QL = 0.002;
+/** Favoured: QL/10 percent more favour from a prayer. */
+export const FAVOURED_PER_QL = 0.001;
+/** Stillwater: QL/10 percent more Calm banked from a sitting. */
+export const STILLWATER_PER_QL = 0.001;
+/** Packmule: a pack you carry lets you carry QL/10 kilos more before it tells on you. */
+export const PACKMULE_PER_QL = 0.1;
+/** Seal's Coat: you swim QL/5 percent faster, and swimming costs QL/5 percent less wind. */
+export const SEALS_COAT_PER_QL = 0.002;
+/** Hawk's Eye: you see QL/10 percent further. */
+export const HAWKS_EYE_PER_QL = 0.001;
+/** Ember Heart: a smelter or a kiln burns QL/2 percent less fuel for the same work. */
+export const EMBER_HEART_PER_QL = 0.005;
+/** Masterwork: a thing made at the anvil or the loom comes out QL/20 points of quality higher. */
+export const MASTERWORK_PER_QL = 0.05;
+/** Fair Wind: a boat under sail goes QL/10 percent faster, on every point of sail. Its scroll takes three wind motes. */
+export const FAIR_WIND_PER_QL = 0.001;
+export const FAIR_WIND_MOTES = 3;
+/** Deep Hold: a boat's hold takes QL/4 percent more. */
+export const DEEP_HOLD_PER_QL = 0.0025;
+/** True Axle: a cart or a wagon takes QL/4 percent more load. */
+export const TRUE_AXLE_PER_QL = 0.0025;
+/** Bag of Holding: what it holds times 1 + 2 × QL/100, three times as much at QL 100. */
+export const BAG_OF_HOLDING_PER_QL = 0.02;
+/** Snarecraft: a trap's chance of taking what comes to it is QL/4 percent better. */
+export const SNARECRAFT_PER_QL = 0.0025;
+/** Netmender: a drag of the net brings up QL/10 percent more fish, and the net wears `NETMENDER_WEAR` times that share slower: QL/2 percent. */
+export const NETMENDER_PER_QL = 0.001;
+export const NETMENDER_WEAR = 5;
+/** Dreamweave: a night in the bed banks QL/4 percent more rest, and holds that much more past the most rest otherwise banked. */
+export const DREAMWEAVE_PER_QL = 0.0025;
+/** Fleetfoot: a mount wearing the saddle carries you QL/10 percent faster. */
+export const FLEETFOOT_PER_QL = 0.001;
+/** Tamer's Bridle: taming with it in your pack QL/4 percent likelier; a mount wearing it never breaks off a fight. */
+export const TAMERS_BRIDLE_PER_QL = 0.0025;
+/** What an enchantment's figure is counted in, where it is not a share: Packmule's in kilos, Masterwork's in points of quality. */
+export const FIGURE_UNITS: Partial<Record<EnchantEffect, string>> = { mule: 'kg', master: 'QL' };
+WORN_CAP.guard = STONESKIN_CAP;
+WORN_CAP.fireguard = EMBERWARD_CAP;
+WORN_CAP.thorns = THORNHIDE_CAP;
 
 /**
  * Every enchantment there is. The first three are the owner's first asks; the
- * six after them go on a melee weapon too.
+ * six after them go on a melee weapon too, the three after those on a bow,
+ * the six after those on what you wear and the shield you hold, and the four
+ * after those on the tools a job is done with, and the last on a light you carry.
  */
 export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('emberbrand', 'Emberbrand', 'fire', 'melee', 'burn', EMBERBRAND_PER_QL),
@@ -142,7 +278,46 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('sunstrike', 'Sunstrike', 'light', 'melee', 'smite', SUNSTRIKE_PER_QL),
   row('leeching', 'Leeching', ['life', 'dark'], 'melee', 'leech', LEECHING_PER_QL),
   row('tidecaller', 'Tidecaller', 'water', 'melee', 'drain', TIDECALLER_PER_QL),
+  row('farsight', 'Farsight', 'wind', 'bow', 'range', FARSIGHT_PER_QL),
+  row('flamearrow', 'Flamearrow', 'fire', 'bow', 'flame', FLAMEARROW_PER_QL),
+  row('frostbite', 'Frostbite', 'ice', 'bow', 'frost', FROSTBITE_PER_QL),
+  row('stoneskin', 'Stoneskin', 'earth', 'armour', 'guard', STONESKIN_PER_QL),
+  row('emberward', 'Emberward', 'ice', 'armour', 'fireguard', EMBERWARD_PER_QL),
+  row('featherstep', 'Featherstep', 'wind', 'boots', 'stride', FEATHERSTEP_PER_QL),
+  row('thornhide', 'Thornhide', 'life', 'armour', 'thorns', THORNHIDE_PER_QL),
+  row('shadowcloak', 'Shadowcloak', 'dark', 'chest', 'shadow', SHADOWCLOAK_PER_QL),
+  row('bulwark', 'Bulwark', 'earth', 'shield', 'block', BULWARK_PER_QL),
+  row('swiftwork', 'Swiftwork', 'wind', 'tool', 'work', SWIFTWORK_PER_QL),
+  row('truesteel', 'Truesteel', 'earth', 'tool', 'temper', TRUESTEEL_PER_QL),
+  row('bountiful', 'Bountiful', 'life', 'reaper', 'bounty', BOUNTIFUL_PER_QL),
+  row('lodestone', 'Lodestone', 'earth', 'pick', 'lode', LODESTONE_PER_QL),
+  row('lanterns_grace', 'Lantern\'s Grace', 'light', 'light', 'grace', GRACE_PER_QL),
+  row('scholars_band', 'Scholar\'s Band', 'light', 'ring', 'learn', SCHOLARS_PER_QL),
+  row('knackstone', 'Knackstone', ['light', 'life'], 'ring', 'knack', KNACKSTONE_PER_QL),
+  row('steady_heart', 'Steady Heart', 'water', 'amulet', 'wind', STEADY_HEART_PER_QL),
+  row('hearthbound', 'Hearthbound', 'earth', 'amulet', 'upkeep', HEARTHBOUND_PER_QL),
+  row('favoured', 'Favoured', 'light', 'amulet', 'favour', FAVOURED_PER_QL),
+  row('stillwater', 'Stillwater', 'water', 'amulet', 'calm', STILLWATER_PER_QL),
+  row('packmule', 'Packmule', 'earth', 'pack', 'mule', PACKMULE_PER_QL),
+  row('seals_coat', 'Seal\'s Coat', 'water', 'chest', 'swim', SEALS_COAT_PER_QL),
+  row('hawks_eye', 'Hawk\'s Eye', 'wind', 'head', 'sight', HAWKS_EYE_PER_QL),
+  row('ember_heart', 'Ember Heart', 'fire', 'furnace', 'ember', EMBER_HEART_PER_QL),
+  row('masterwork', 'Masterwork', ['fire', 'light'], 'station', 'master', MASTERWORK_PER_QL),
+  row('fair_wind', 'Fair Wind', 'wind', 'ship', 'sail', FAIR_WIND_PER_QL, FAIR_WIND_MOTES),
+  row('deep_hold', 'Deep Hold', 'water', 'hull', 'room', DEEP_HOLD_PER_QL),
+  row('true_axle', 'True Axle', 'earth', 'cart', 'room', TRUE_AXLE_PER_QL),
+  row('bag_of_holding', 'Bag of Holding', ['dark', 'earth'], 'store', 'bag', BAG_OF_HOLDING_PER_QL),
+  row('snarecraft', 'Snarecraft', 'dark', 'trap', 'snare', SNARECRAFT_PER_QL),
+  row('netmender', 'Netmender', 'water', 'net', 'mend', NETMENDER_PER_QL),
+  row('dreamweave', 'Dreamweave', ['dark', 'light'], 'bed', 'dream', DREAMWEAVE_PER_QL),
+  row('fleetfoot', 'Fleetfoot', 'wind', 'saddle', 'fleet', FLEETFOOT_PER_QL),
+  row('tamers_bridle', 'Tamer\'s Bridle', 'life', 'bridle', 'tame', TAMERS_BRIDLE_PER_QL),
 ];
+/**
+ * The ones with a second figure, `{w}` in the line: this many times the first.
+ * Netmender's wear. The island's `enchant_second`.
+ */
+export const SECOND_FIGURE: Partial<Record<EnchantEffect, number>> = { mend: NETMENDER_WEAR };
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
 export const RAZOREDGE = 'razoredge';
@@ -216,6 +391,9 @@ export const ENCHANT_SAID = {
   scroll: 'Choose an enchantment scroll.',
   weapon: 'Choose something in your pack to enchant.',
   broken: 'It is broken.',
+  gone: 'It is gone.',
+  reach: 'Stand within reach of it.',
+  plinth: `You need to stand at an ${PLINTH_NAME}.`,
 } as const;
 /** Why this scroll will not go into a thing of the wrong kind: "Featherstep goes on boots." */
 export const wrongKind = (e: EnchantmentDef): string => `${e.name} goes on ${ON_WORDS[e.on]}.`;
@@ -233,5 +411,42 @@ export const swingEnchant = (item: { enchant?: Enchant } | null | undefined, eff
   return e && item?.enchant && e.effect === effect ? enchantValue(e, item.enchant.ql) : 0;
 };
 
-/** A share as Examine says it: the island's `enchant_pct`. */
-export const enchantPct = (x: number): string => percent(x);
+/** What a placed thing's status line adds for the enchantment set into it where it stands: " · Ember Heart QL 60.0". */
+export const enchantTail = (t: { enchant?: Enchant }): string =>
+  (t.enchant && ENCHANTMENTS[t.enchant.id] ? ` · ${ENCHANTMENTS[t.enchant.id].name} QL ${qlWord(t.enchant.ql)}` : '');
+/** What a thing holding Deep Hold, True Axle or a Bag of Holding holds, times what it held: the island's `room_mul`. */
+export const roomMul = (t: { enchant?: Enchant }): number => 1 + swingEnchant(t, 'room') + swingEnchant(t, 'bag');
+/** The fuel a smelter or a kiln burns for each second of heat: one, less an Ember Heart's share. The island's `placed_burn_rate`. */
+export const furnaceBurn = (f: { enchant?: Enchant }): number => 1 - swingEnchant(f, 'ember');
+
+/**
+ * What every piece you wear and hold of one enchantment comes to together,
+ * held to its cap where it has one (`WORN_CAP`). The island's `worn_enchant`.
+ */
+export const wornEnchant = (worn: ReadonlyArray<{ enchant?: Enchant } | null | undefined>, effect: EnchantEffect): number => {
+  const sum = worn.reduce((n, it) => n + swingEnchant(it, effect), 0);
+  const cap = WORN_CAP[effect];
+  return cap === undefined ? sum : Math.min(cap, sum);
+};
+
+/** What a go that brings one more says: "Bountiful brings one more of the raspberries." The island's `enchant_more` says it. */
+export const moreSaid = (e: EnchantmentDef, what: string): string => `${e.name} brings one more of the ${what}.`;
+
+/** An enchantment's figure as Examine says it: kilos for Packmule, to the tenth, and a share for the rest. The island's `enchant_figure`. */
+export const enchantFigure = (e: EnchantmentDef, x: number): string => {
+  const unit = FIGURE_UNITS[e.effect];
+  if (!unit) return enchantPct(x);
+  const dec = (n: number): number => Number(n.toPrecision(12));
+  return `${Math.round(dec(dec(x) * 10)) / 10} ${unit}`;
+};
+
+/**
+ * A share as Examine says it: the island's `enchant_pct`, which rounds the
+ * figure as it is written in decimals, a half up (20.65 is 20.7), where
+ * `toFixed` would round what the float holds (20.6499..., so 20.6).
+ */
+export const enchantPct = (x: number): string => {
+  const dec = (n: number): number => Number(n.toPrecision(12));
+  const p = dec(x * 100);
+  return Math.abs(p - Math.round(p)) < 1e-6 ? percent(x) : `${Math.round(dec(p * 10)) / 10}%`;
+};

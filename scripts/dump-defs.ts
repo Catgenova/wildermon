@@ -146,7 +146,7 @@ import {
 import {
   LAMP_ARM_CROSSES, LAMP_ARM_REACH, LAMP_HAS_ONE, LAMP_INTO_WALL, LAMP_NO_LANTERN, LAMP_NONE, LAMP_TAKE_FIRST, lampTooFar, noCandleLine, noFlameLine,
 } from '../src/game/lamps';
-import { CANDLE_BURN } from '../src/game/light';
+import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
 } from '../src/game/motes';
@@ -156,7 +156,7 @@ import {
 } from '../src/game/runestones';
 
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, SCROLL_HARM, SCROLL_SHEETS, wrongKind,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, GRACE_TILES, FIGURE_UNITS, SCROLL_HARM, SCROLL_SHEETS, SECOND_FIGURE, WORN_CAP, wrongKind,
 } from '../src/game/enchant';
 import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLine, FITS, MELEE_WEAPONS } from '../src/game/enchanting';
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
@@ -227,6 +227,8 @@ out.push(`create table if not exists wall_fitting (type text not null, item text
 /* Laid only in stone or brick, and raised only on the ground floor: a portcullis (`gates.ts`). */
 out.push(`alter table wall_type_def add column if not exists stone boolean not null default false;`);
 out.push(`alter table wall_type_def add column if not exists ground boolean not null default false;`);
+/* Laid in one material and no other: a rune gate in stone brick (`runegate.ts`, `material_only_refusal`). */
+out.push(`alter table wall_type_def add column if not exists laid_in text;`);
 out.push(`create table if not exists build_material_def (
   id text primary key, name text not null, kind text not null, tool text not null, skill text not null
 );`);
@@ -1948,11 +1950,14 @@ out.push(`create or replace function melee_weapon(p_def text) returns boolean la
 out.push(`create or replace function enchant_on(p_id text) returns text language sql immutable as $fn$ select case p_id ${ENCHANTMENT_LIST.map((e) => `when ${q(e.id)} then ${q(e.on)} `).join('')}end $fn$;`);
 out.push(`create or replace function enchant_fits(p_on text, p_def text) returns boolean language sql immutable as $fn$ select case p_on ${Object.entries(FITS).map(([on, ids]) => `when ${q(on)} then p_def = any (array[${ids.map(q).join(', ')}]::text[]) `).join('')}else false end $fn$;`);
 out.push(`create or replace function enchant_wrong_kind(p_id text) returns text language sql immutable as $fn$ select case p_id ${ENCHANTMENT_LIST.map((e) => `when ${q(e.id)} then ${q(wrongKind(e))} `).join('')}end $fn$;`);
+out.push(`create or replace function enchant_second(p_effect text) returns double precision language sql immutable as $fn$ select case p_effect ${Object.entries(SECOND_FIGURE).map(([k, v]) => `when ${q(k)} then ${q(v as number)}::double precision `).join('')}else 0::double precision end $fn$;`);
+out.push(`create or replace function enchant_unit(p_effect text) returns text language sql immutable as $fn$ select case p_effect ${Object.entries(FIGURE_UNITS).map(([k, v]) => `when ${q(k)} then ${q(v as string)} `).join('')}end $fn$;`);
+out.push(`create or replace function worn_cap(p_effect text) returns double precision language sql immutable as $fn$ select case p_effect ${Object.entries(WORN_CAP).map(([k, v]) => `when ${q(k)} then ${q(v)}::double precision `).join('')}end $fn$;`);
 out.push(`create or replace function enchant_line(p_id text) returns text language sql immutable as $fn$ select case p_id ${ENCHANTMENT_LIST.map((e) => `when ${q(e.id)} then ${q(enchantLine(e))} `).join('')}end $fn$;`);
 for (const [fn, v] of [
   ['scroll_harm', SCROLL_HARM], ['scroll_sheets', SCROLL_SHEETS], ['enchant_least', ENCHANT_LEAST], ['enchant_most', ENCHANT_MOST],
   ['enchant_harm', ENCHANT_HARM], ['enchant_break', ENCHANT_BREAK], ['stun_secs', STUN_SECS],
-  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs],
+  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs], ['frost_pace', FROST_PACE], ['frost_secs', FROST_SECS], ['grace_tiles', GRACE_TILES],
   ['ql_low', QL_LOW], ['ql_span', QL_SPAN], ['ql_bare', QL_BARE], ['ql_top', QL_TOP], ['damage_max', DAMAGE_MAX],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
@@ -1968,6 +1973,7 @@ for (const w of WALL_TYPES) {
   if (w.wide) out.push(`update wall_type_def set wide = true where id = ${q(w.id)};`);
   if (w.stone) out.push(`update wall_type_def set stone = true where id = ${q(w.id)};`);
   if (w.ground) out.push(`update wall_type_def set ground = true where id = ${q(w.id)};`);
+  if (w.laidIn) out.push(`update wall_type_def set laid_in = ${q(w.laidIn)} where id = ${q(w.id)};`);
   for (const [item, n] of w.fittings ?? []) out.push(`insert into wall_fitting values (${q(w.id)}, ${q(item)}, ${q(n)});`);
 }
 for (const r of ROOF_SHAPES) {
@@ -2271,7 +2277,7 @@ for (const [fn, v] of [
  * that the island says them in the browser's words.
  */
 for (const [fn, v] of [
-  ['counter_reach', COUNTER_REACH], ['counter_holds', COUNTER_HOLDS], ['counter_seen', COUNTER_SEEN], ['candle_burn_full', CANDLE_BURN],
+  ['counter_reach', COUNTER_REACH], ['counter_holds', COUNTER_HOLDS], ['counter_seen', COUNTER_SEEN], ['candle_burn_full', CANDLE_BURN], ['torch_burn_full', TORCH_BURN],
   ['lamp_arm_reach', LAMP_ARM_REACH], ['wall_half_thick', WALL_THICK],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);

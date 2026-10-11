@@ -2223,24 +2223,54 @@ jobs:
           # does, measured the same way: Venomfang's venom just under and just
           # over its chance, a Gale's swing, a Nightblade's critical chance, a
           # Sunstrike on a goblin and on a shaggan, a Leeching's health back on
-          # every hit with no roll, and how far a Tidecaller puts a blow back.
+          # every hit with no roll, and how far a Tidecaller puts a blow back;
+          # a Farsight bow's reach, and a Flamearrow's burn and a Frostbite's
+          # slow on a shot that lands, the slow in the creatures' door too;
+          # and what is worn: Stoneskin and Emberward to their caps, Featherstep's
+          # walk, Bulwark's block, Shadowcloak by night, and Thornhide's payback.
           npx esbuild supabase/test/enchant2.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/enchant2.mjs --log-level=error
           node node_modules/.cache/enchant2.mjs
 
-      - name: A memorial stone, engraved with somebody's own words, the same on both sides
+      - name: Enchanting, part three
         run: |
-          # Built with masonry and a trowel and set down like any piece. A
-          # stone chisel cuts a line of up to 72 characters into it, cleaned
-          # as talk is, by whoever set it down or anybody of the settlement
-          # it stands on, never by somebody a keeper has muted; every refusal
-          # in the same words; a new line over the old; Examine reads it back
-          # in quotes; and the line goes with the stone, picked up into the
-          # pack, said on Examine there, set down again, through the ground
-          # read, the pack's row and a save.
-          npx esbuild supabase/test/memorial.ts --bundle --platform=node --format=esm \
-            --outfile=node_modules/.cache/memorial.mjs --log-level=error
-          node node_modules/.cache/memorial.mjs
+          # The enchantments on new kinds of thing, on both sides: the scrolls,
+          # Examine's words, the refusals by kind, and what each does -- the
+          # jewel slot's Scholar's Band, Knackstone, Steady Heart, Hearthbound,
+          # Favoured and Stillwater.
+          npx esbuild supabase/test/enchant3.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/enchant3.mjs --log-level=error
+          node node_modules/.cache/enchant3.mjs
+
+      - name: The enchanter's plinth, the same on both sides
+        run: |
+          # Enchant, putting a scroll into a thing, is done standing at an
+          # enchanter's plinth and nowhere else, as papyrus is pressed at a
+          # paper press. Built with masonry and a trowel from 32 stone bricks,
+          # 12 mortar, 2 stone slabs, a light mote and a dark mote, refused a
+          # mote short; set down as any piece; Enchant refused away from one in
+          # the station rule's words, taken 2.3 tiles from its middle and
+          # refused at 2.5 (the station reach, 2.4); a scroll still written
+          # away from one. In the browser, the plinth in use while you or
+          # anybody else enchants within that reach, and the light it throws.
+          npx esbuild supabase/test/plinth.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/plinth.mjs --log-level=error
+          node node_modules/.cache/plinth.mjs
+
+      - name: A rune lantern post, on both sides
+        run: |
+          # Asked for: a squat carved stone pillar with a band of runes round
+          # it, built with masonry from stone bricks and light motes and set
+          # down like other furniture, that lights like a lantern of its QL and
+          # never needs fuel. The same recipe, item, words and moss on both
+          # sides; refused short of a mote in the same words, then built; set
+          # down, kept out of a cellar, picked up, and none of a lantern post's
+          # jobs applying to it; what a ground read sends of it; and at night a
+          # lantern's reach at its quality from the middle of the pillar, the
+          # ground round it in sight from far off, still alight hours on.
+          npx esbuild supabase/test/runelantern.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/runelantern.mjs --log-level=error
+          node node_modules/.cache/runelantern.mjs
 
       - name: An altar goes up on your own ground
         run: |
@@ -2512,6 +2542,36 @@ jobs:
           npx esbuild supabase/test/gates.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/gates.mjs --log-level=error
           node node_modules/.cache/gates.mjs
+
+      - name: A rune gate is laid, passed and lit the same on both sides
+        run: |
+          # Two rune pillars under a lintel on a border of their own, in stone
+          # brick and nothing else with a light mote in each pillar, that shut
+          # nothing out; their runes light while a citizen of the settlement
+          # they stand on is in the opening. This asks what it is and costs on
+          # both sides, every material against every wall type in the same
+          # words, planning one on both sides, what goes through it, the rolls
+          # the island sends whoever is ashore (founder, mayors and builders of
+          # each settlement a rune gate stands on, never a guest), and a
+          # browser fed them lighting it for a citizen in reach and not for a
+          # guest or a stranger, fading out when they go.
+          npx esbuild supabase/test/runegate.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/runegate.mjs --log-level=error
+          node node_modules/.cache/runegate.mjs
+
+      - name: A memorial stone, engraved with somebody's own words, the same on both sides
+        run: |
+          # Built with masonry and a trowel and set down like any piece. A
+          # stone chisel cuts a line of up to 72 characters into it, cleaned
+          # as talk is, by whoever set it down or anybody of the settlement
+          # it stands on, never by somebody a keeper has muted; every refusal
+          # in the same words; a new line over the old; Examine reads it back
+          # in quotes; and the line goes with the stone, picked up into the
+          # pack, said on Examine there, set down again, through the ground
+          # read, the pack's row and a save.
+          npx esbuild supabase/test/memorial.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/memorial.mjs --log-level=error
+          node node_modules/.cache/memorial.mjs
 
       - name: The exact benefit, and where its number comes from
         run: |

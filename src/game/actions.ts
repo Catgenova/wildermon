@@ -53,7 +53,7 @@ import { FAITH_ACTIONS } from './faith';
 import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { SACRIFICE_ACTIONS } from './sacrifice';
-import { ENCHANT_ACTIONS, enchantSays } from './enchanting';
+import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
 import { SPECIES, type Stance } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollsAt, rollTable } from './forage';
@@ -115,12 +115,12 @@ export type Target =
        */
       down?: boolean;
     }
-  | { kind: 'crate'; id: number }
+  | { kind: 'crate'; id: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   /** Somebody else on the island, by who they are (anybody dressing their wounds). */
   | { kind: 'person'; uid: string; name?: string }
   | { kind: 'campfire'; id: number; itemUid?: number; count?: number }
-  | { kind: 'smelter'; id: number; itemUid?: number; count?: number; mouldUid?: number }
-  | { kind: 'kiln'; id: number; itemUid?: number; count?: number }
+  | { kind: 'smelter'; id: number; itemUid?: number; count?: number; mouldUid?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
+  | { kind: 'kiln'; id: number; itemUid?: number; count?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | {
       kind: 'furniture';
       id: number;
@@ -129,10 +129,12 @@ export type Target =
       brew?: string;
       /** Which socket of its tier a bauble goes into, when one is asked for (`set_bauble`). */
       slot?: number;
+      /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */
+      scroll?: number;
     }
-  | { kind: 'anvil'; id: number; itemUid?: number }
+  | { kind: 'anvil'; id: number; itemUid?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | { kind: 'post'; id: number; creatureId?: number }
-  | { kind: 'trap'; id: number }
+  | { kind: 'trap'; id: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | { kind: 'bridge'; id: number }
   | {
       kind: 'item';
@@ -1444,6 +1446,8 @@ export const ACTIONS: ActionDef[] = [
       const item = g.gather(yieldId, { ql: Math.min(rock.maxQl, g.productQl('mining', pickQl)) });
       const what = itemDef(yieldId).name.toLowerCase();
       g.logMsg(yieldId.endsWith('lump') ? `You chip a ${what} out of the vein. (QL ${item.ql.toFixed(1)})` : `You mine some ${what}. (QL ${item.ql.toFixed(1)})`, 'event');
+      // And one more, now and then, for a Lodestone on the pickaxe.
+      g.enchantMore('pickaxe', 'lode', yieldId, item.ql);
       // And one swing in a thousand that brings out something nobody quarried.
       maybeMap(g, 'mining', 'pickaxe');
       // And a stone, now and again, which is the other thing a miner is for.
@@ -1783,6 +1787,8 @@ export const ACTIONS: ActionDef[] = [
       g.markForaged(t.x, t.y, 'forage');
       g.gainSkill('forestry', 0.35);
       g.logMsg(`You cut ${count} ${itemDef(def.yields).name.toLowerCase()} off the ${def.name.toLowerCase()}. (QL ${made.ql.toFixed(1)})`, 'event');
+      // And one more, now and then, for a Bountiful on the sickle.
+      g.enchantMore('sickle', 'bounty', def.yields, made.ql);
     },
   },
   {
@@ -3200,3 +3206,4 @@ for (const def of ACTIONS) {
 }
 
 export const ACTION_BY_ID = new Map(ACTIONS.map((a) => [a.id, a]));
+knowJobs(() => ACTIONS);
