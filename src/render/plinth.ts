@@ -539,7 +539,6 @@ function modelOf(stage: number): Model {
   const FRAME_OF = { front: frontF, back: backF, right: rightF, left: leftF };
   const shaftFaces: Face[] = [];
   for (let k = 0; k + 1 < rings.length; k++) {
-    const z0 = RINGS[k], z1 = RINGS[k + 1];
     for (let j = 0; j < 8; j++) {
       const pts = [rings[k][j], rings[k][(j + 1) % 8], rings[k + 1][(j + 1) % 8], rings[k + 1][j]];
       const a2: Pt = [pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]];
@@ -547,7 +546,6 @@ function modelOf(stage: number): Model {
       let n = newell(pts);
       if (dot(n, out) < 0) n = mul(n, -1);
       const side = SIDE_OF[j];
-      const lo = z0, hi = z1;
       const len = Math.hypot(a2[0], a2[1]);
       // One frame and one skin for each side the whole way up, so the rings do not read as courses.
       const frame = side ? FRAME_OF[side] : { o: rings[0][j], a: unit(sub(rings[0][(j + 1) % 8], rings[0][j])), b: W };
@@ -559,62 +557,114 @@ function modelOf(stage: number): Model {
           skin(g, kk.fill, rand(5200 + j), len + 1, SHAFT_TOP / 2 + 0.3);
           g.restore();
         }
-        // The same stone turned from the light: a clear step darker and cooler on the far side, no line between.
-        const away = turnedFrom(kk.e, out);
-        if (away > 0.05) { g.fillStyle = css(mix(kk.fill, hex('#3f5b63'), 0.5), 0.4 * away); g.fillRect(-8, -2, 16, 12); }
-        // The slab's shade over the head of it and the cool where it stands on the step, by height alone, so they meet round the corners; softened in two steps.
-        if (hi > UNDER - 0.5) {
-          g.fillStyle = css(mix(kk.fill, hex('#3f5464'), 0.55), 0.13);
-          for (const z of [UNDER - 0.45, UNDER - 0.2, UNDER, UNDER + 0.25]) g.fillRect(-8, z, 16, 12);
-        }
-        if (lo < 1.4) {
-          g.fillStyle = css(mix(kk.fill, hex('#465a66'), 0.5), 0.09);
-          for (const z of [1.35, 1.1, 0.85, 0.6, 0.35]) g.fillRect(-8, -2, 16, z + 2);
-        }
       };
       shaftFaces.push({ pts, n, tone: STONE, frame, paint, crease: 0 });
     }
   }
-  // Ivy up its shady front left arris, a thin chain of leaves with a spray of flower, from the step toward the cap.
+  /*
+   * Its shading laid over each side the whole way up at once, after every
+   * face is down: the far sides a clear step darker and cooler, the slab's
+   * shade over its head and the cool where it stands on the step by height
+   * alone. Painted per side rather than per ring, so no ring's edge shows
+   * through as a line where one ring's shade stops and the next's begins.
+   */
+  const shaftShade = (g: Ctx, e: Eye): void => {
+    for (let j = 0; j < 8; j++) {
+      const seen = RINGS.slice(1).map((_, k) => shaftFaces[k * 8 + j]).filter((f) => dot(f.n, e.toward) > 1e-6);
+      if (!seen.length) continue;
+      const n = unit(seen.reduce<V3>((s, f) => add(s, f.n), [0, 0, 0]));
+      const fill = faceColour(STONE, lightOf(e, n));
+      const a = sub(rings[0][(j + 1) % 8], rings[0][j]);
+      const out: V3 = unit([a[1], -a[0], 0]);
+      g.save();
+      g.beginPath();
+      for (const f of seen) f.pts.forEach((p, i) => { const [x, y] = proj(e, p); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
+      g.clip();
+      const fr = shaftFaces[j].frame!;
+      const [ox, oy] = proj(e, fr.o), [ax, ay] = proj(e, fr.a), [bx, by] = proj(e, fr.b);
+      g.transform(ax, ay, bx, by, ox, oy);
+      const away = turnedFrom(e, out);
+      if (away > 0.05) { g.fillStyle = css(mix(fill, hex('#3f5b63'), 0.5), 0.4 * away); g.fillRect(-8, -2, 16, 12); }
+      g.fillStyle = css(mix(fill, hex('#3f5464'), 0.55), 0.13);
+      for (const z of [UNDER - 0.45, UNDER - 0.2, UNDER, UNDER + 0.25]) g.fillRect(-8, z, 16, 12);
+      g.fillStyle = css(mix(fill, hex('#465a66'), 0.5), 0.09);
+      for (const z of [1.35, 1.1, 0.85, 0.6, 0.35]) g.fillRect(-8, -2, 16, z + 2);
+      g.restore();
+    }
+  };
   /*
    * Ivy up two of its corners from the step, the Runestones' strand at the
    * plinth's leaf size: a long one up the shady front left corner and a
    * shorter one up the front right, so some shows from wherever it is seen.
-   * Each roots on its corner face and is let run over the faces beside it;
-   * how high it has got goes with how long the stone has stood -- half the
-   * shaft at a week, to the cap's underside at the most -- along a ragged
-   * line, never a ruled one.
+   * Each roots on its corner face and is let run over the faces beside it,
+   * wider as it grows; how high it has got goes with how long the stone has
+   * stood -- half the shaft at a week, to the cap's underside at the most --
+   * along a ragged line, never a ruled one, and its sides as ragged.
    */
-  const ivyUp = (j: number, v: number, reach: number, seed: number): void => {
+  const outOf = (i: number): V3 => {
+    const a = rings[0][(i + 8) % 8], b = rings[0][(i + 9) % 8];
+    return unit([b[1] - a[1], -(b[0] - a[0]), 0]);
+  };
+  const ivyUp = (j: number, v: number, reach: number, seed: number): ((g: Ctx, e: Eye) => void) => {
     const v0 = rings[0][j], v1 = rings[0][(j + 1) % 8];
     const half = Math.hypot(v1[0] - v0[0], v1[1] - v0[1]) / 2;
     const grow = Math.max(0, Math.min(1, (m - 0.4) / 0.6));
     const top = Math.min(SHAFT_TOP - 0.15, SHAFT_TOP * reach * (0.15 + 0.85 * grow));
-    const outN: V3 = unit([v1[1] - v0[1], -(v1[0] - v0[0]), 0]);
-    shaftFaces[j].over = (g, k) => {
+    const outN = outOf(j);
+    const face = shaftFaces[j];
+    const R = rand(seed);
+    /*
+     * Kept to its corner and the faces either side, its sides wandering in
+     * and out as it goes up and its top pointed and uneven, highest off to
+     * one side, with two or three runners led up past the mass of it.
+     */
+    const w = half + 0.3 + 0.9 * grow, peak = (R() - 0.5) * half;
+    const runners = [peak + (R() - 0.5) * 0.4, -w * 0.6 + R() * 0.3, w * 0.55 - R() * 0.3];
+    const wander = (z: number, s: number): number => 0.6 * Math.sin(z * 2.3 + s) + 0.4 * Math.sin(z * 5.7 + 2.1 * s);
+    const sideAt = (side: number, z: number): number => side * w * (1 + 0.35 * wander(z, seed * 1.7 + (side > 0 ? 0 : 3.1)));
+    const crown = (x: number): number => top * (0.62 + 0.38 * Math.max(0, 1 - Math.abs(x - peak) / (2 * w)));
+    const zL = crown(-w), zR = crown(w);
+    const outline: Pt[] = [];
+    for (let z = -0.8; z < zL; z += 0.2) outline.push([sideAt(-1, z), z]);
+    const xl = sideAt(-1, zL), xr = sideAt(1, zR);
+    const steps = Math.max(2, Math.ceil((xr - xl) / 0.1));
+    for (let i = 0; i <= steps; i++) {
+      const x = xl + ((xr - xl) * i) / steps;
+      let z = crown(x) + (R() - 0.5) * 0.25;
+      for (const [n, rx] of runners.entries()) if (n < 2 + Math.round(grow) && Math.abs(x - rx) < 0.16) z = Math.max(z, top + (0.5 + 0.4 * n) * (1 - 0.5 * grow));
+      outline.push([x, Math.min(SHAFT_TOP - 0.15, z)]);
+    }
+    for (let z = zR; z > -0.8; z -= 0.2) outline.push([sideAt(1, z), z]);
+    // At its fullest a few leaves let lap out past that edge, here and there up each side.
+    const laps: Array<[number, number, number]> = grow > 0.85
+      ? [-1, 1].flatMap((side) => [0.3, 0.55, 0.75].filter(() => R() < 0.8).map((t) => {
+        const z = top * (t + (R() - 0.5) * 0.08);
+        return [sideAt(side, z) + side * 0.12, z, 0.32 + R() * 0.12] as [number, number, number];
+      }))
+      : [];
+    return (g, e) => {
+      if (dot(face.n, e.toward) <= 1e-6) return;
       const pic = strandPic('climb', v, Math.max(3, Math.round(STAGES * (0.35 + 0.65 * grow))), true);
       if (!pic) return;
       const sc = (0.5 * 10) / PPM;
       const stemTop = Math.min(top, pic.ay * sc * 0.85);
-      const R = rand(seed);
+      const fr = face.frame!;
+      const [ox, oy] = proj(e, fr.o), [ax, ay] = proj(e, fr.a), [bx, by] = proj(e, fr.b);
       g.save();
+      g.transform(ax, ay, bx, by, ox, oy);
       g.translate(half, 0);
-      /*
-       * Kept to its corner and a little over the faces either side, so no leaf
-       * stands out in the air past the shaft's edge; its top pointed and
-       * uneven, highest off to one side, with two or three runners led up
-       * past the mass of it.
-       */
-      const w = half + 0.3, peak = (R() - 0.5) * half;
-      const runners = [peak + (R() - 0.5) * 0.4, -w * 0.6 + R() * 0.3, w * 0.55 - R() * 0.3];
+      // Lightened toward the Runestones' greens where its corner is in the light, and a little in shade while it is young.
+      const img = turnedFrom(e, outN) < 0.35 ? ivyOf(pic) : grow < 0.5 ? ivyOf(pic, 0.1) : pic.img;
+      const leaves = (): void => {
+        g.save();
+        g.translate(0, -0.1);
+        g.scale(sc, -sc);
+        g.drawImage(img, -pic.ax, -pic.ay);
+        g.restore();
+      };
+      g.save();
       g.beginPath();
-      g.moveTo(-w, -0.8);
-      for (let x = -w; x <= w + 1e-6; x += 0.1) {
-        let z = top * (0.62 + 0.38 * (1 - Math.abs(x - peak) / (2 * w))) + (R() - 0.5) * 0.25;
-        for (const [n, rx] of runners.entries()) if (n < 2 + Math.round(grow) && Math.abs(x - rx) < 0.16) z = Math.max(z, top + (0.5 + 0.4 * n) * (1 - 0.5 * grow));
-        g.lineTo(x, Math.min(SHAFT_TOP - 0.15, z));
-      }
-      g.lineTo(w, -0.8);
+      outline.forEach(([x, z], i) => (i ? g.lineTo(x, z) : g.moveTo(x, z)));
       g.closePath();
       g.clip();
       // The stem it climbs by, under its leaves, so it reads as one strand.
@@ -627,41 +677,45 @@ function modelOf(stage: number): Model {
       g.lineWidth = 0.17;
       g.lineCap = 'round';
       g.stroke();
-      g.translate(0, -0.1);
-      g.scale(sc, -sc);
-      // Lightened toward the Runestones' greens where its corner is in the light, and a little in shade while it is young.
-      const lit = turnedFrom(k.e, outN) < 0.35;
-      g.drawImage(lit ? ivyOf(pic) : grow < 0.5 ? ivyOf(pic, 0.1) : pic.img, -pic.ax, -pic.ay);
+      leaves();
       g.restore();
-      // At its fullest, two small white flowers in the long strand, as the Runestones' ivy has.
+      if (laps.length) {
+        g.save();
+        g.beginPath();
+        for (const [x, z, r] of laps) { g.moveTo(x + r, z); g.arc(x, z, r, 0, TAU); }
+        g.clip();
+        leaves();
+        g.restore();
+      }
+      // At its fullest, two white flowers in the long strand on its lit side, as the Runestones' ivy has.
       if (reach >= 1 && grow > 0.85) {
-        for (const [fx, fz] of [[0.25, top * 0.55], [-0.3, top * 0.8]] as Array<[number, number]>) {
+        const side = turnedFrom(e, outOf(j + 1)) < turnedFrom(e, outOf(j - 1)) ? 1 : -1;
+        for (const [fx, fz] of [[half * 0.15, top * 0.42], [half * 0.75, top * 0.66]] as Array<[number, number]>) {
           g.save();
-          g.translate(half + fx, fz);
+          g.translate(side * fx, fz);
           for (let i = 0; i < 5; i++) {
-            const a = (i / 5) * TAU;
+            const a = (i / 5) * TAU + 0.3;
             g.beginPath();
-            g.arc(Math.cos(a) * 0.14, Math.sin(a) * 0.14, 0.12, 0, TAU);
+            g.arc(Math.cos(a) * 0.3, Math.sin(a) * 0.3, 0.25, 0, TAU);
             g.fillStyle = '#fbf8ef';
             g.fill();
             g.strokeStyle = 'rgba(127, 152, 138, 0.8)';
-            g.lineWidth = 0.03;
+            g.lineWidth = 0.05;
             g.stroke();
           }
           g.beginPath();
-          g.arc(0, 0, 0.08, 0, TAU);
+          g.arc(0, 0, 0.16, 0, TAU);
           g.fillStyle = '#efc23f';
           g.fill();
           g.restore();
         }
       }
+      g.restore();
     };
   };
-  if (m >= 0.35) {
-    ivyUp(4, 5, 1, 3);
-    ivyUp(2, 2, 0.6, 7);
-  }
   things.push({ x: 0, y: 0, faces: shaftFaces });
+  const ivies = m >= 0.35 ? [ivyUp(4, 5, 1, 3), ivyUp(2, 2, 0.6, 7)] : [];
+  things.push({ x: 0, y: 0, draw: (g, e) => { shaftShade(g, e); for (const d of ivies) d(g, e); } });
   // A drape of moss over its foot on the shady side, low down, beaded: drawn only where it lies on a side the eye sees.
   {
     const M = rand(5401);
@@ -745,6 +799,8 @@ function modelOf(stage: number): Model {
     });
     return unit(n);
   })();
+  /** The break's raw stone as the light finds it. */
+  const breakFill = (e: Eye): ReturnType<typeof faceColour> => mix(faceColour(STONE, lightOf(e, BREAK_N)), [252, 246, 232], 0.36);
   const slabEdge = (i: number, up: number): { paint?: Painter; over?: Painter; crease?: number } | undefined => {
     if (Math.abs(up) > 0.3) return undefined;
     const len = per[i];
@@ -753,36 +809,64 @@ function modelOf(stage: number): Model {
     const nOut = unit(at([0, 0, 0], [et, SU], [-es, SW]));
     const hi = bandTop(i);
     if (broken(i)) {
-      // The break: raw stone, paler than the weathered skin, one rough surface lit as a whole by its mean turn, grained slantwise; no rules and no runes.
-      return {
-        crease: 0.06,
-        paint: (g, k) => {
-          const T = rand(6500 + i);
-          g.fillStyle = css(mix(faceColour(STONE, lightOf(k.e, BREAK_N)), [252, 246, 232], 0.36));
-          g.fillRect(-1, -2.5, len + 2, 5);
-          // The grain of the break, running slantwise and wandering as stone parts, laid along the whole break so it runs on across its facets.
-          g.lineCap = 'round';
-          const from = breakFrom.get(i) ?? 0;
-          for (const gr of BREAK_GRAIN) {
-            const x = gr.u - from;
-            if (x < -1 || x > len + 1) continue;
-            g.beginPath();
-            g.moveTo(x, gr.y);
-            g.lineTo(x + Math.cos(gr.a) * gr.l, gr.y - Math.sin(gr.a) * gr.l * 0.6);
-            g.strokeStyle = gr.pale ? css([255, 252, 244], 0.55) : css(mix(k.fill, hex('#a99aa2'), 0.45), 0.45);
-            g.lineWidth = gr.w;
-            g.stroke();
-          }
+      /*
+       * The break: raw stone, paler than the weathered skin, one rough surface
+       * lit as a whole by its mean turn, grained slantwise; no rules, no runes
+       * and no crease. Laid after every face of the slab is down and a little
+       * past each end where the next facet of the break goes on, so nothing
+       * of where one facet meets the next shows.
+       */
+      const n = slab.length;
+      const corner = (c: number): { top: number; foot: number } => {
+        const [s, t] = slab[c];
+        const bev = (SLAB_BEVELS[c] + SLAB_BEVELS[(c + n - 1) % n]) / 2;
+        return { top: SLAB_UP - breakDrop(s, t) - bev, foot: -slabDepth(s, t) + bev };
+      };
+      const P0 = corner(i), P1 = corner((i + 1) % n);
+      const g0 = broken((i + n - 1) % n) ? 0.15 : 0, g1 = broken((i + 1) % n) ? 0.15 : 0;
+      const raw: Painter = (g, k) => {
+        const T = rand(6500 + i);
+        const fill = breakFill(k.e);
+        g.fillStyle = css(fill);
+        g.fillRect(-1, -2.5, len + 2, 5);
+        // The grain of the break, running slantwise and wandering as stone parts, laid along the whole break so it runs on across its facets.
+        g.lineCap = 'round';
+        const from = breakFrom.get(i) ?? 0;
+        for (const gr of BREAK_GRAIN) {
+          const x = gr.u - from;
+          if (x < -1 || x > len + 1) continue;
           g.beginPath();
-          g.arc(len * 0.5, -1.6, 1.1 + T() * 0.4, Math.PI * 1.15, Math.PI * 1.75);
-          g.strokeStyle = css(mix(k.fill, hex('#8f879c'), 0.4), 0.45);
-          g.lineWidth = 0.1;
+          g.moveTo(x, gr.y);
+          g.lineTo(x + Math.cos(gr.a) * gr.l, gr.y - Math.sin(gr.a) * gr.l * 0.6);
+          g.strokeStyle = gr.pale ? css([255, 252, 244], 0.55) : css(mix(fill, hex('#a99aa2'), 0.45), 0.45);
+          g.lineWidth = gr.w;
           g.stroke();
-          const away = turnedFrom(k.e, BREAK_N);
-          if (away > 0.05) { g.fillStyle = css(mix(k.fill, hex('#425c66'), 0.5), 0.42 * away); g.fillRect(-1, -2.5, len + 2, 5); }
+        }
+        g.beginPath();
+        g.arc(len * 0.5, -1.6, 1.1 + T() * 0.4, Math.PI * 1.15, Math.PI * 1.75);
+        g.strokeStyle = css(mix(fill, hex('#8f879c'), 0.4), 0.45);
+        g.lineWidth = 0.1;
+        g.stroke();
+        const away = turnedFrom(k.e, BREAK_N);
+        if (away > 0.05) { g.fillStyle = css(mix(fill, hex('#425c66'), 0.5), 0.42 * away); g.fillRect(-1, -2.5, len + 2, 5); }
+      };
+      return {
+        crease: 0,
+        paint: raw,
+        over: (g, k) => {
+          g.save();
+          g.beginPath();
+          g.moveTo(-g0, P0.top); g.lineTo(len + g1, P1.top); g.lineTo(len + g1, P1.foot); g.lineTo(-g0, P0.foot);
+          g.closePath();
+          g.clip();
+          raw(g, k);
+          g.restore();
         },
       };
     }
+    // Where a rim face meets the break, its stone shades on into the break's over the last of its length, so the two do not jump.
+    const nb = slab.length;
+    const toBreak = broken((i + 1) % nb) ? len : broken((i + nb - 1) % nb) ? 0 : -1;
     return {
       paint: (g, k) => {
         const T = rand(6100 + i);
@@ -804,6 +888,16 @@ function modelOf(stage: number): Model {
           g.fill();
         }
         if (p[0] < 0 || p[1] < -4.5) lichen(g, T, len * (0.2 + 0.6 * T()), -0.85, 0.32, LICHEN);
+        if (toBreak >= 0) {
+          const fill = breakFill(k.e);
+          const away = turnedFrom(k.e, BREAK_N);
+          const into = away > 0.05 ? mix(fill, mix(fill, hex('#425c66'), 0.5), 0.42 * away) : fill;
+          const ramp = g.createLinearGradient(toBreak, 0, toBreak + (toBreak ? -0.9 : 0.9), 0);
+          ramp.addColorStop(0, css(into, 0.55));
+          ramp.addColorStop(1, css(into, 0));
+          g.fillStyle = ramp;
+          g.fillRect(toBreak ? len - 0.9 : 0, -2.5, 0.9, 5);
+        }
       },
     };
   };
