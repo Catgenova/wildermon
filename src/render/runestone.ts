@@ -2573,6 +2573,8 @@ interface Lit {
 export interface NightSource {
   glows: readonly Glow[];
   rise: number;
+  /** What its soft light reaches past its runes, if anything does: left, top, right, bottom in pixels at zoom one from where it is drawn. */
+  reach?: [number, number, number, number];
   holes(sx: number, sy: number, zoom: number, t: number): NightHole[];
   masks(sx: number, sy: number, zoom: number, t: number): NightMask[];
 }
@@ -2641,6 +2643,10 @@ export class RunestoneNight {
     }
     // The motes rise past the head of the panel: room for them over it.
     T -= src.rise * zoom;
+    if (src.reach) {
+      L = Math.min(L, sx + src.reach[0] * zoom); T = Math.min(T, sy + src.reach[1] * zoom);
+      R = Math.max(R, sx + src.reach[2] * zoom); B = Math.max(B, sy + src.reach[3] * zoom);
+    }
     if (!(R > L && B > T)) return;
     const m = ctx.getTransform();
     const dev = devBox(m, L, T, R - L, B - T);

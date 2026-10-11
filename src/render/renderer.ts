@@ -39,7 +39,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
-import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternVariant, type RuneLanternLook } from './runelantern';
+import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { isRuneLantern } from '../game/runelantern';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
@@ -1641,6 +1641,18 @@ export class Renderer {
   private lit: { mask: HTMLCanvasElement; warm: HTMLCanvasElement; key: string; cx: number; cy: number; pad: number } | null = null;
   private litNow: { mask: HTMLCanvasElement; warm: HTMLCanvasElement } | null = null;
 
+  /** Each rune lantern post's spot at its foot near enough to matter (`runeLanternPool`), as `lights` gathers what burns. */
+  private runeLanternPools(): LightSource[] {
+    const out: LightSource[] = [];
+    const { x: px, y: py, level } = this.game.player;
+    if (level < 0) return out;
+    for (const f of this.game.furniture.values()) {
+      if (!isRuneLantern(f) || (f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
+      out.push(runeLanternPool(f, this.camera.rotation));
+    }
+    return out;
+  }
+
   private lightLayers(lights: LightSource[], w: number, h: number): { mask: HTMLCanvasElement; warm: HTMLCanvasElement; box: Box } {
     const cam = this.camera;
     const zoom = cam.zoom;
@@ -3026,7 +3038,7 @@ export class Renderer {
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
-    this.lightsNow = this.game.darkness() > 0.02 ? this.game.lights() : [];
+    this.lightsNow = this.game.darkness() > 0.02 ? [...this.game.lights(), ...this.runeLanternPools()] : [];
     this.glassNight.length = 0;
     // Every drawbridge by the border it is hinged on, and the two tiles either side of that border, one of
     // which draws it (`drawGateAt`): a number per tile, so the tiles with none cost one lookup.
