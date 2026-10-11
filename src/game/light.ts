@@ -123,9 +123,9 @@ export const runestoneLight = (x: number, y: number): LightSource => ({
  * how far it reaches. The runes themselves shine through the wash in their
  * own shapes, as a runestone's do.
  */
-export const PLINTH_REACH = 0.6;
+export const PLINTH_REACH = 0.45;
 export const PLINTH_GLOW = 0.1;
-export const PLINTH_BUSY_REACH = 1.1;
+export const PLINTH_BUSY_REACH = 0.7;
 export const PLINTH_BUSY_GLOW = 0.2;
 export const PLINTH_CAST_ALPHA = 0.16;
 export const PLINTH_BUSY_CAST_ALPHA = 0.24;
