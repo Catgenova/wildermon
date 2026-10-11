@@ -1824,6 +1824,14 @@ export const NEWS: News[] = [
         + 'Examine reads it back in quotes. Picked up and set down again, it keeps its line. It does not decay.',
     ],
   },
+  {
+    n: 135,
+    day: '2026-10-11',
+    lines: () => [
+      'Meditating is drawn sat cross-legged on the ground with the eyes shut and the hands on the knees, breathing slowly, '
+        + 'where it used to be drawn as the work at a bench. What it does is unchanged.',
+    ],
+  },
 ];
 
 

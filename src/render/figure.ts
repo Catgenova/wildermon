@@ -2327,6 +2327,11 @@ export interface FigurePose {
   facing: number;
   swimming: boolean;
   working: boolean;
+  /**
+   * The job being worked at, by its action id, for the few jobs that are not done stood up with a tool: meditating
+   * (`meditate`) is done sat cross-legged on the ground. Left out, or any other job, is the work at the bench.
+   */
+  job?: string;
   driving?: boolean;
   /**
    * For a body `driving`, what it is sat on and what its hands are doing
@@ -4172,6 +4177,53 @@ interface Kept {
   farLeft?: boolean;
 }
 
+/*
+ * Meditating. It was the work at the bench -- stood up swinging a mallet at
+ * nothing -- because that is what every job was. Now it is done sat on the
+ * ground cross-legged: the hips down on it, the thighs out to either side and
+ * turned out so the knees fall open, the shins folded back across each other
+ * in front, the hands resting palm up on the knees. The back is held up from
+ * the hips and the head held level, the eyes shut, and the only thing
+ * that moves is the breath: in and out once in five and a half seconds, the
+ * chest lifting and the shoulders rising a little with it, the head nodding
+ * back up a degree on the in-breath.
+ */
+/** The job sat down for (`FigurePose.job`). */
+export const MEDITATE = 'meditate';
+/** How high the hips sit over the ground, sat on it: the round of the buttocks and the cloth under them. */
+const MEDITATE_UP = 0.35;
+/** One breath, in seconds, in and out. */
+const MEDITATE_BREATH = 5.5;
+function meditate(r: Rig, phi: number, fr: Frame): void {
+  const t = phi / 6;
+  // In (one) and out (minus one): longer at the top and the bottom than through the middle, as a slow breath is.
+  const s = Math.sin((t * TAU) / MEDITATE_BREATH), breath = Math.sign(s) * Math.pow(Math.abs(s), 0.7);
+  // Sat on the ground, the feet not stood on it: they rest where the legs fold them.
+  r.sit = { up: MEDITATE_UP, astride: true };
+  r.flat = [false, false];
+  // The thighs forward and out, turned out so the knees fall open; the shins folded back across each other, the right over the left.
+  r.leg = [[39, -65, -83], [41, -63, -83]];
+  r.knee = [127, 124];
+  r.foot = [24, 24];
+  // The back held up from the hips, the chest lifting with the breath and the head let down a little.
+  r.pelvis = [4, 0, 0];
+  r.spine = [-3 - 1.2 * breath, 0, 0];
+  r.chest = [-2 - 1.6 * breath, 0, 0];
+  r.neck = [3, 0, 0];
+  r.head = [1 + 1.2 * breath, 0, 0];
+  r.shrug = [0.1 + 0.08 * breath, 0.1 + 0.08 * breath];
+  r.blink = true;
+  // The hands on the knees, palm up and a little cupped, the elbows out and back at the sides.
+  const b = skeleton(fr, r);
+  r.reach = [0, 1].map((k) => {
+    const knee = b[`knee${k}`].t, side = k ? 1 : -1;
+    return { at: [knee[0] * 0.78, knee[1] * 0.85, knee[2] + 0.95 + 0.04 * breath], pole: [side * 1, -0.35, -0.2] };
+  }) as [HandGoal, HandGoal];
+  r.shape = [{ cup: 0.55 }, { cup: 0.55 }];
+  r.open = [0.6, 0.6];
+  r.loose = [false, false];
+}
+
 /**
  * The pose for `p`, at `p.facing` as drawn -- between two of the eight ways while turning, so that whatever is set by facing
  * (`byFacing`) comes round with the body -- and the work done left-handed or not as `left` says (see `lefty`, `settle`), with
@@ -4185,6 +4237,7 @@ function rigOf(p: FigurePose, fr: Frame, left = lefty(p.facing), kept: Kept = {}
     swim(r, p.phase, p.moving, fr, p.facing);
   } else if (p.driving) drive(r, p.phase, p.moving, p.seat ?? BOX, fr);
   else if (p.moving) walk(r, p.phase + TAU * strideSeed(p.id), Math.max(0, Math.min(1, p.gait ?? 0)), fr, p.facing);
+  else if (p.working && p.job === MEDITATE) meditate(r, p.phase, fr);
   else if (p.working) work(r, p.phase, fr, left, kept.far !== undefined && kept.farLeft === left ? kept.far : left ? 1 - byFacing(LEFTY, p.facing) : byFacing(LEFTY, p.facing));
   else idle(r, p.phase / 6, fr, busy, /helm/.test(p.gear?.head?.id ?? ''), p.facing);
   if (p.emote && !p.swimming && !p.driving) emote(r, p.emote, p.emoteT ?? 0, p.facing, fr, busy, kept.wave, kept.waveFacing);
@@ -4772,7 +4825,7 @@ export function armToward(k: number, dir: V3, bend: V3 = [0, 1, 0]): Euler {
  * for both let the breaststroke drop to treading water, and an oar or the
  * reins jump from the middle of a stroke to lying still, in one frame.
  */
-const doing = (p: FigurePose): string => (p.swimming ? (p.moving ? 'swim' : 'tread') : p.driving ? (p.moving ? 'drive' : 'drive still') : p.moving ? 'walk' : p.working ? 'work' : 'idle');
+const doing = (p: FigurePose): string => (p.swimming ? (p.moving ? 'swim' : 'tread') : p.driving ? (p.moving ? 'drive' : 'drive still') : p.moving ? 'walk' : p.working ? (p.job === MEDITATE ? MEDITATE : 'work') : 'idle');
 
 /**
  * And the either/or choices made in it: work done left-handed (`left`, see `settle`), the emote, and the arm a wave is made with

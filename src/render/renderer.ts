@@ -4659,7 +4659,7 @@ export class Renderer {
       const [x, y] = game.roster.drawnAt(peer);
       const z = this.footOn(x, y, peer.level) + peer.level * WALL_HEIGHT;
       return personBody(x, y, z, peer.facing, 'peer', {
-        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.time * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working,
+        id: 'o' + peer.id, phase: peer.moving ? peer.stepPhase : this.time * 6, moving: peer.moving, facing: peer.facing, swimming: peer.swimming, working: !!peer.working, job: peer.act,
         look: peer.look, gear: peer.gear,
       });
     }
@@ -4842,6 +4842,8 @@ export class Renderer {
             facing: ent.seatFacing ?? this.playerFacing,
             swimming: player.swimming,
             working: this.game.action?.state === 'performing',
+            // What at: meditating is done sat on the ground rather than at the bench (`FigurePose.job`).
+            job: this.game.action?.def.id,
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
             seat: ent.seat,
             look: player.look,
@@ -4889,6 +4891,7 @@ export class Renderer {
             facing: ent.seatFacing ?? peer.facing,
             swimming: peer.swimming,
             working: peer.working,
+            job: peer.act,
             driving: (ent.lift ?? 0) > 0 && !ent.standing,
             seat: ent.seat,
             tunic: peer.tunic,
