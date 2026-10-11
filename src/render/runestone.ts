@@ -1137,10 +1137,16 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
   leafPass(-0.35, '#8db898', 0.5);
   const spike = !!col.spike || colour === 'lilac' || (colour === 'pink' && R() < 0.3);
   if (spike) {
-    // Two or three spikes, each a stem with heads up it smaller toward the tip.
-    const n = 2 + Math.floor(R() * 2);
+    /*
+     * Two or three spikes, each a stem with heads up it smaller toward the
+     * tip; a planted one's (`spike`) one to four, each its own height and
+     * lean, so no two clumps of them stand alike.
+     */
+    const own = !!col.spike;
+    const n = own ? 1 + Math.floor(R() * 4) : 2 + Math.floor(R() * 2);
     for (let k = 0; k < n; k++) {
-      const sx = x + (k - (n - 1) / 2) * 4.2 * big + (R() - 0.5) * 1.5, tall = (12 + R() * 6) * big, lean = (R() - 0.5) * 2.4;
+      const sx = x + (k - (n - 1) / 2) * 4.2 * big + (R() - 0.5) * 1.5;
+      const tall = (own ? 8 + R() * 13 : 12 + R() * 6) * big, lean = (R() - 0.5) * (own ? 5 : 2.4);
       g.strokeStyle = '#5b876a';
       g.lineWidth = 0.6;
       g.beginPath();
@@ -2033,8 +2039,10 @@ export interface Glow {
   noDayHalo?: boolean;
   /** Lit in its strokes alone after dark, with no soft light round it to fill the stone between them. */
   tight?: boolean;
-  /** Line-work too fine for its cream heart to show: a faint gold edge, a wide heart, and laid again as light after dark. */
+  /** Line-work too fine for its cream heart to show: a faint gold edge, a wide heart, and after dark laid over in cream. */
   fine?: boolean;
+  /** For a fine one, its strokes in the Runestones' night cream, to be laid over it after dark. */
+  cream?: HTMLCanvasElement;
 }
 
 interface Baked {
@@ -2176,7 +2184,7 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
  * only (`nightOnly`).
  */
 export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x: number, z: number, s: number, i: number, roundel: boolean,
-  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; gold?: boolean; tight?: boolean; fine?: boolean } = {}): Glow {
+  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; tight?: boolean; fine?: boolean } = {}): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2214,21 +2222,9 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     }
   });
   const core = sheet((h) => {
-    if (o.gold) {
-      // Line-work too fine for a white heart: gold all through, a deeper gold at its edge, as gilding in a cut is.
-      path(h);
-      h.strokeStyle = 'rgba(206, 170, 72, 0.95)';
-      h.lineWidth = w * 1.1;
-      h.stroke();
-      path(h);
-      h.strokeStyle = '#eccb60';
-      h.lineWidth = w * 0.7;
-      h.stroke();
-      return;
-    }
     // The same three strokes; a fine line keeps its gold edge faint and its cream heart wide, or it is all edge.
     path(h);
-    h.strokeStyle = o.fine ? 'rgba(206, 152, 84, 0.62)' : 'rgba(214, 140, 52, 0.9)';
+    h.strokeStyle = o.fine ? 'rgba(204, 150, 80, 0.72)' : 'rgba(214, 140, 52, 0.9)';
     h.lineWidth = w * (o.fine ? 1 : 1.05);
     h.stroke();
     path(h);
@@ -2240,6 +2236,13 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.lineWidth = w * (o.fine ? 0.46 : 0.34);
     h.stroke();
   });
+  // A fine one's strokes in the cream a Runestone's roundel comes to after dark, laid over it then, not added.
+  const cream = o.fine ? sheet((h) => {
+    path(h);
+    h.strokeStyle = 'rgb(244, 221, 180)';
+    h.lineWidth = w * 1.05;
+    h.stroke();
+  }) : undefined;
   const mid = M.transformPoint(new DOMPoint(x, z));
   // How far its light reaches on the screen: no further than the face it is on is wide there, seen slantwise.
   const up = Math.hypot(M.c, M.d) * s, across = Math.hypot(M.a, M.b) * s;
@@ -2262,7 +2265,7 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2445,11 +2448,11 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = (0.08 + 0.16 * night) * p * f;
       ctx.drawImage(gl.core, X, Y, Wd, Ht);
-    } else if (gl.fine && night > 0.01) {
-      // A fine roundel's cream heart is thinner than a pixel: after dark its groove is laid again as light, so it whitens as a Runestone's does.
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = night * (0.3 + 0.15 * p) * f;
-      ctx.drawImage(gl.core, X, Y, Wd, Ht);
+    } else if (gl.cream && night > 0.01) {
+      // A fine roundel's cream heart is thinner than a pixel: after dark its strokes are laid over in cream, a shade over a Runestone's so that where a stroke is mixed with the stone round it, its middle comes to theirs.
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = Math.min(1, night * (0.95 + 0.1 * p) * f);
+      ctx.drawImage(gl.cream, X, Y, Wd, Ht);
     }
   }
   ctx.globalCompositeOperation = was;

@@ -107,7 +107,7 @@ function widthAt(z: number, outline: readonly Pt[] = OUTLINE): [number, number] 
 /** The roundel at its head and the panel the line is cut in: in the face, across and up. */
 const ROUNDEL = { x: 0, z: 12.0, r: 1.95 };
 /** How wide the roundel's lit strokes are: line-work, stone between them, never a lit disc. */
-const ROUNDEL_W = 0.2;
+const ROUNDEL_W = 0.25;
 /**
  * The roundel's figure: the Runestones' wheel (`roundelStrokes('wheel')`)
  * drawn in line-work for a stone a tenth their height -- one ring, a small
@@ -169,54 +169,78 @@ interface Mark { k: number; x: number; z: number }
  */
 export function engravingMarks(text: string | undefined): Mark[][] {
   const words = (text ?? '').split(' ').filter((w) => w.length);
+  if (!words.length) return [];
   // The hand's own unevenness, off the words themselves: the same line is cut the same way every time.
   let h = 0;
   for (const ch of text ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const H = rand(h % 100000 + 7);
-  const rows: Array<Array<number[]>> = [];
-  let row: Array<number[]> = [];
-  let wide = 0;
-  // Each row its own length: the hand fits the words as they come, not to a ruled measure.
-  let room = ROW_WIDE * (0.8 + 0.2 * H());
+  // Its marks, one to every two letters, chosen by those letters, run on as one stream.
+  const stream: number[] = [];
   for (const word of words) {
-    const marks: number[] = [];
     for (let i = 0; i < word.length; i += 2) {
       const a = word.charCodeAt(i), b = i + 1 < word.length ? word.charCodeAt(i + 1) : 0;
-      marks.push((a * 7 + b * 13 + i) % MARKS.length);
+      stream.push((a * 7 + b * 13 + i) % MARKS.length);
     }
-    const len = marks.length * MARK_STEP;
-    if (row.length && wide + WORD_GAP + len > room) {
-      rows.push(row);
-      row = [];
-      wide = 0;
-      room = ROW_WIDE * (0.78 + 0.22 * H());
-    }
-    // A word longer than the row is cut short at the row's end.
-    const fit = Math.max(1, Math.min(marks.length, Math.floor((room - (row.length ? wide + WORD_GAP : 0)) / MARK_STEP)));
-    row.push(marks.slice(0, fit));
-    wide += (row.length > 1 ? WORD_GAP : 0) + fit * MARK_STEP;
   }
-  if (row.length) rows.push(row);
-  let kept = rows.slice(0, LINES_MOST);
-  // The last line short: a full last row gives up its last word to a row of its own, where there is room for one.
-  const last = kept[kept.length - 1];
-  if (kept.length > 1 && kept.length < LINES_MOST && last.length > 2) kept = [...kept.slice(0, -1), last.slice(0, -1), last.slice(-1)];
-  const top = ROWS_MID + ((kept.length - 1) * LINE_STEP) / 2;
-  return kept.map((r, j) => {
-    // Its spacing wanders a little, mark to mark, and the row starts a little off the middle.
-    const steps = r.map((w) => w.map(() => MARK_STEP * (0.82 + 0.36 * H())));
-    const span = steps.reduce((n, w) => n + w.reduce((m, st) => m + st, 0), 0) + (r.length - 1) * WORD_GAP - MARK_STEP + MARK_W * 2;
-    let x = PANEL.x - span / 2 + MARK_W + (H() - 0.5) * 0.25;
-    const z = top - j * LINE_STEP + (H() - 0.5) * 0.12;
-    const out: Mark[] = [];
-    r.forEach((w, i) => {
-      if (i) x += WORD_GAP * (0.8 + 0.4 * H());
-      w.forEach((k, n) => {
-        out.push({ k, x, z: z + (H() - 0.5) * 0.08 });
-        x += steps[i][n];
+  /*
+   * Cut into rows as a hand cuts them: each its own length, its own one to
+   * three breaks, and the last row short and set from the left. A break is
+   * never put where one in a row above it stands, so no gap runs down
+   * through the rows and the line does not stand in a grid.
+   */
+  const rows: Array<Array<{ k: number; x: number }>> = [];
+  // Where the breaks in the row above fall.
+  const breaksAt: number[] = [];
+  let at = 0;
+  const most = Math.floor(ROW_WIDE / MARK_STEP);
+  while (at < stream.length && rows.length < LINES_MOST) {
+    // A full row of four to six; what is left at the end, two to four, on a short last row; nothing past the fourth.
+    const rem = stream.length - at;
+    let n: number;
+    if (rows.length === LINES_MOST - 1) n = Math.min(rem, 2 + Math.floor(H() * 3));
+    else if (rem <= 4) n = rem;
+    else if (rem <= most + 2) n = rem - 2 - Math.floor(H() * 2);
+    else n = Math.min(rem - 2, most - 2 + Math.floor(H() * 3));
+    const marks = stream.slice(at, at + n);
+    at += n;
+    const last = rows.length > 0 && (at >= stream.length || rows.length === LINES_MOST - 1);
+    const want = marks.length < 4 ? (marks.length > 2 ? 1 : 0) : 1 + Math.floor(H() * 3);
+    let best: { row: Array<{ k: number; x: number }>; mids: number[]; clash: number } | undefined;
+    for (let tries = 0; tries < 24 && (!best || best.clash > 0); tries++) {
+      const breaks = new Set<number>();
+      // Fewer breaks the longer it takes to find a place for them.
+      const most = tries > 12 ? Math.min(want, 1) : want;
+      for (let t = 0; t < 12 && breaks.size < most; t++) breaks.add(1 + Math.floor(H() * (marks.length - 1)));
+      // Its spacing wanders a little, mark to mark, and the row starts a little off the middle.
+      const steps = marks.map(() => MARK_STEP * (0.82 + 0.36 * H()));
+      const gaps = marks.map((_, i) => (breaks.has(i) ? WORD_GAP * (0.7 + 0.6 * H()) : 0));
+      const span = steps.reduce((m, st) => m + st, 0) + gaps.reduce((m, g) => m + g, 0) - MARK_STEP + MARK_W * 2;
+      // The last row starts where the others do, from the left, as a short line ends a verse.
+      const room = Math.max(0, (ROW_WIDE + 0.5 - span) / 2);
+      let x = last ? PANEL.x - ROW_WIDE / 2 + MARK_W + H() * 0.3 : PANEL.x - span / 2 + MARK_W + (H() - 0.5) * 2 * Math.min(room, 0.6);
+      const row: Array<{ k: number; x: number }> = [];
+      const mids: number[] = [];
+      marks.forEach((k, i) => {
+        if (gaps[i]) {
+          x += gaps[i];
+          mids.push(x - (gaps[i] + steps[i - 1]) / 2);
+        }
+        row.push({ k, x });
+        x += steps[i];
       });
-    });
-    return out;
+      const clash = mids.filter((m) => breaksAt.some((b) => Math.abs(b - m) < 1)).length;
+      if (!best || clash < best.clash) best = { row, mids, clash };
+    }
+    rows.push(best!.row);
+    breaksAt.splice(0, breaksAt.length, ...best!.mids);
+  }
+  // Rows a hand apart, give or take: the pitch wanders up to a sixth either way.
+  const pitch = rows.map((_, j) => (j ? LINE_STEP * (0.85 + 0.3 * H()) : 0));
+  const total = pitch.reduce((n, p) => n + p, 0);
+  let z = ROWS_MID + total / 2;
+  return rows.map((r, j) => {
+    z -= pitch[j];
+    return r.map(({ k, x }) => ({ k, x, z: z + (H() - 0.5) * 0.09 }));
   });
 }
 
@@ -303,6 +327,45 @@ function clump(R: () => number, cx: number, cz: number, w: number, h: number, si
   return out;
 }
 
+/** A run of moss along a joint: from (x0, y0) to (x1, y1) in a face's own plane, spreading `d` off it toward (nx, ny). */
+type Mat = [number, number, number, number, number, number, number];
+
+/**
+ * Moss as it lies in a joint: a flat mat in the face's own plane, so it is
+ * foreshortened with it and lies down rather than standing up. Thickest
+ * mid-run and spreading furthest there, tattered to nothing at its ends and
+ * along its outer edge; a dark rim round it, its body, and light speckled
+ * over its top.
+ */
+function mat(g: Ctx, R: () => number, [x0, y0, x1, y1, d, nx, ny]: Mat): void {
+  const len = Math.hypot(x1 - x0, y1 - y0);
+  const blobs: Array<[number, number, number, number]> = [];
+  const n = Math.ceil(len / 0.22) + 6;
+  for (let i = 0; i < n; i++) {
+    const t = R();
+    const thick = Math.pow(Math.sin(Math.PI * t), 0.7);
+    // Most of it hugging the joint, now and then a tongue of it out across the stone.
+    const off = Math.pow(R(), 1.15) * d * thick * (R() < 0.15 ? 1.5 : 1);
+    const rr = (0.28 + R() * 0.38) * (0.45 + 0.75 * thick);
+    blobs.push([x0 + (x1 - x0) * t + nx * off, y0 + (y1 - y0) * t + ny * off, rr, R()]);
+  }
+  const pass = (fill: string, k: number, dx: number, dy: number, every = 1, min = 0): void => {
+    g.beginPath();
+    for (const [x, y, rr, q] of blobs) {
+      if (q * every > 1 || rr < min) continue;
+      g.moveTo(x + dx + rr * k, y + dy);
+      g.ellipse(x + dx, y + dy, rr * k, rr * k * 0.8, 0, 0, TAU);
+    }
+    g.fillStyle = fill;
+    g.fill();
+  };
+  pass(MOSS_GREENS.line, 1.18, 0, 0);
+  pass(MOSS_GREENS.under, 1.06, 0, 0);
+  pass(MOSS_GREENS.fill, 0.92, nx * 0.04, ny * 0.04);
+  pass(MOSS_GREENS.lit, 0.5, nx * 0.08, ny * 0.08, 2.2, 0.3);
+  pass(MOSS_GREENS.top, 0.24, nx * 0.1, ny * 0.1, 4, 0.36);
+}
+
 /** Lichen as the Runestones' rocks wear it, here soft: a few grey-green blots, uneven, faint, no rim. */
 function blot(g: Ctx, R: () => number, x: number, z: number, r: number): void {
   g.beginPath();
@@ -322,7 +385,7 @@ function blot(g: Ctx, R: () => number, x: number, z: number, r: number): void {
  * than the Runestones' paler cushions, so a few small ones read as moss in
  * the joints and not as lime beads -- a cool under-edge, a body, and a lit lip.
  */
-const MOSS_GREENS: MossPalette = { line: '#3a584e', dark: '#41634f', under: '#4a6e5d', fill: '#547c69', lit: '#6c9478', top: '#78a080' };
+const MOSS_GREENS: MossPalette = { line: '#44614f', dark: '#4b6c58', under: '#557a64', fill: '#608870', lit: '#78a283', top: '#86ad8e' };
 
 const LEAF = { lit: '#74ba87', shade: '#65957a', top: '#93d9a2', line: '#4b6c57', stem: '#5d6b4c' };
 
@@ -431,7 +494,7 @@ function modelOf(text: string, facing: Side): Model {
       } } : undefined),
     });
   };
-  const plinthTop = (hw: number, hd: number, seed: number, moss: number, inner: [number, number, number], ox = 0): Painter => (g, k) => {
+  const plinthTop = (hw: number, hd: number, seed: number, mats: Mat[]): Painter => (g, k) => {
     const T = rand(seed);
     for (let i = 0; i < 9; i++) {
       g.beginPath();
@@ -442,35 +505,29 @@ function modelOf(text: string, facing: Side): Model {
     g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.32);
     for (let i = 0; i < 40; i++) g.fillRect((T() - 0.5) * hw * 2, (T() - 0.5) * hd * 2, 0.1 + T() * 0.08, 0.1 + T() * 0.08);
     for (let i = 0; i < 2; i++) blot(g, T, (T() - 0.2) * hw, (T() - 0.5) * hd, 0.4 + T() * 0.3);
-    /*
-     * Moss gathered round the stone's foot in cushions, on its mossy side and
-     * behind it, and one in the back corner on that side: where the damp
-     * lies longest. `inner` is the box it gathers round, from this stone's
-     * own middle less `ox` across.
-     */
-    const [ix, iy, icy] = inner;
-    const pts: Array<[number, number, number]> = [];
-    const spots: Array<[number, number, number, number]> = [
-      [mossSide * ix - ox, icy - iy * 0.4, 1.5, 0.9], [mossSide * (ix - 1.4) - ox, icy - iy - 0.3, 1.2, 0.7],
-      [mossSide * (ix + 0.6) - ox, icy + iy * 0.5, 0.9, 0.6], [mossSide * hw * 0.85, -hd * 0.75, 1.1, 0.8],
-    ];
-    for (const [cx, cy, w, h] of spots) {
-      if (Math.abs(cx) > hw + 0.3 || Math.abs(cy) > hd + 0.3) continue;
-      // A cushion laid flat: its spread across, and back from the face.
-      for (const pt of clump(T, cx, cy, w * moss * 1.6, h * moss * 1.5, 0.95)) pts.push(pt);
-    }
-    padsOn(g, k.base, k.e, pts, 0.62);
+    // Moss in the joints on its mossy side, where the damp lies longest: flat, along the foot of what stands on it.
+    for (const m of mats) mat(g, T, m);
   };
   /*
    * The lower course sunk into the turf, so it rises out of the ground with
    * no ruled foot, a different chip off each corner; the upper laid as two
    * stones of unequal length, set a little off line, as a hand lays them.
    */
-  const lower = course(7.3, 4.3, -0.4, LOWER_H + 0.4, 0.035, 0.1, 0.25, ROCK, SEED * 3 + 1, plinthTop(7.3, 4.3, SEED * 3 + 2, 1, [5.5, 2.75, -0.6]),
+  /*
+   * Where the moss lies, in each course's own plane: on the lower, along the
+   * foot of the short upper stone, in front of it and down its far end, and
+   * a tatter into the joint of the two; on the short stone, along the foot of
+   * the memorial, at its end and in front.
+   */
+  const lowerMoss: Mat[] = [
+    [-6.7, 2.15, -1.5, 2.25, 2.1, 0, 1], [-5.8, 2.3, -5.75, -3.1, 1.4, -1, 0], [-1.95, 2.3, -0.1, 2.35, 0.9, 0, 1],
+  ];
+  const upperMoss: Mat[] = [[-0.85, 2.4, -0.8, -2.5, 1.1, -1, 0], [-1.7, 2.05, 1.75, 2.0, 0.75, 0, 1]];
+  const lower = course(7.3, 4.3, -0.4, LOWER_H + 0.4, 0.035, 0.1, 0.25, ROCK, SEED * 3 + 1, plinthTop(7.3, 4.3, SEED * 3 + 2, lowerMoss),
     { fr: 0.9, fl: 0.35, br: 0.55, bl: 1.2 });
   // The joint a third of the way across, the short stone a hair lower and the long one tipped a hair back.
-  const upperL = course(1.85, 2.72, LOWER_H, UPPER_H - 0.06, -0.05, -3.68, -0.42, DRESSED, SEED * 3 + 5, plinthTop(1.85, 2.72, SEED * 3 + 6, 0.95, [4.45, 1.65, -0.2], -3.68), { fl: 0.5 });
-  const upperR = course(3.62, 2.68, LOWER_H, UPPER_H + 0.04, -0.02, 1.86, -0.26, DRESSED, SEED * 3 + 9, plinthTop(3.62, 2.68, SEED * 3 + 10, 0.8, [4.45, 1.65, -0.2], 1.86), { fr: 0.4, br: 0.25 }, [0, -0.018]);
+  const upperL = course(1.85, 2.72, LOWER_H, UPPER_H - 0.06, -0.05, -3.68, -0.42, DRESSED, SEED * 3 + 5, plinthTop(1.85, 2.72, SEED * 3 + 6, upperMoss), { fl: 0.5 });
+  const upperR = course(3.62, 2.68, LOWER_H, UPPER_H + 0.04, -0.02, 1.86, -0.26, DRESSED, SEED * 3 + 9, plinthTop(3.62, 2.68, SEED * 3 + 10, []), { fr: 0.4, br: 0.25 }, [0, -0.018]);
   const upper = [...upperL, ...upperR];
 
   /* -- the stone's faces -- */
@@ -555,12 +612,7 @@ function modelOf(text: string, facing: Side): Model {
        */
       const [fa, fb] = xs(0.5);
       const foot = sideK > 0 ? fb : fa;
-      const pts: Array<[number, number, number]> = [
-        ...clump(T, foot - sideK * 0.9, 0.1, 2.1, 1.7, 1.15),
-        ...clump(T, foot - sideK * 2.5, 0.0, 1.3, 0.8, 0.9),
-        ...clump(T, foot - sideK * 0.4, 2.4, 0.6, 0.9, 0.75),
-      ];
-      padsOn(g, k.base, k.e, pts);
+      mat(g, T, [foot + sideK * 0.2, 0.05, foot - sideK * 3.6, 0.05, 2.1, 0, 1]);
     };
     const over: Painter = (g, k) => {
       /* -- ivy up the mossy edge, kept to the stone and off the carving -- */
@@ -574,8 +626,8 @@ function modelOf(text: string, facing: Side): Model {
       const [fa, fb] = xs(0.3);
       const edge = sideK > 0 ? fb : fa;
       // Across, it keeps between the stone's edge and the panel's.
-      const lo = sideK > 0 ? (which === 'front' ? 0.9 : 2.2) : 0.35, hi = sideK > 0 ? 0.35 : (which === 'front' ? 0.9 : 2.2);
-      ivy(g, V, edge - sideK * 0.45, 0.15, which === 'front' ? 6.2 : 7.4, 1, lo, hi, 0.62);
+      const lo = sideK > 0 ? (which === 'front' ? 0.55 : 1.6) : 0.5, hi = sideK > 0 ? 0.5 : (which === 'front' ? 0.55 : 1.6);
+      ivy(g, V, edge - sideK * 1.05, 0.1, which === 'front' ? 4.2 : 5.2, 1, lo, hi, 0.95);
       g.restore();
     };
     return { paint, over };
@@ -615,7 +667,7 @@ function modelOf(text: string, facing: Side): Model {
          * across the join of two strips. It belongs to the strip its middle is on.
          */
         const T = rand(SEED * 103 + i);
-        const spots: Array<[number, number, number, number]> = [[0.35, 1.6, 1.0, 1.05]];
+        const spots: Array<[number, number, number, number]> = [[0.25, 1.6, 0.5, 0.95]];
         const pts: Array<[number, number, number]> = [];
         if (Math.sign(mx) === mossSide) {
           for (const [z, w, h, size] of spots) {
@@ -655,6 +707,21 @@ function modelOf(text: string, facing: Side): Model {
       for (const pt of clump(K, flat ? x : y, 0.15, w, 0.75 + K() * 0.6, 0.95)) {
         skirt.push(flat ? [pt[0], y + (K() - 0.5) * 0.3, pt[2]] : [x + (K() - 0.5) * 0.3, pt[0], pt[2]]);
         skirtZ.push(pt[1]);
+      }
+    }
+    /*
+     * And on its mossy corner the moss of its top spilling over the lip and
+     * a little way down its faces, ragged, thickest at the corner: so the
+     * plinth's foot on that side is green, as a Runestone's outcrop is.
+     */
+    const lip: Array<[number, number, number, number, number]> = [[-7.0, 4.5, -2.6, 4.55, 0], [-7.15, 4.2, -7.1, -1.2, 1]];
+    for (const [x0, y0, x1, y1, side] of lip) {
+      const n = Math.round(Math.hypot(x1 - x0, y1 - y0) * 2.6);
+      for (let i = 0; i < n; i++) {
+        const t = Math.pow(K(), 1.3);
+        const down = Math.pow(K(), 1.8) * (1.1 - t) * 1.1;
+        skirt.push([x0 + (x1 - x0) * t + (side ? -0.1 : 0), y0 + (y1 - y0) * t + (side ? 0 : 0.1), (0.55 + 0.5 * K()) * (1.15 - 0.5 * t)]);
+        skirtZ.push(LOWER_H - 0.05 - down);
       }
     }
   }
@@ -703,16 +770,21 @@ function modelOf(text: string, facing: Side): Model {
   const Fv = rand(SEED * 53 + ['s', 'e', 'n', 'w'].indexOf(facing) * 101);
   const [left, right] = Fv() < 0.5 ? ['dusk', 'rose'] : ['rose', 'dusk'];
   const flowers: Array<[number, number, number, string]> = [
-    [-8.4, -1.6, 0.56, left], [8.5, -1.0, 0.54, right],
-    [2.6, 5.7, 0.55, Fv() < 0.5 ? 'chalk' : 'cream'], [-2.4, 6.0, 0.5, Fv() < 0.5 ? 'rose' : 'chalk'],
-    [-1.2, -7.6, 0.52, Fv() < 0.5 ? 'dusk' : 'chalk'],
+    [-8.5, -2.7, 0.56, left], [8.5, -1.0, 0.54, right],
+    [2.6, 5.7, 0.55, Fv() < 0.5 ? 'chalk' : 'cream'], [0.1, 6.4, 0.5, Fv() < 0.5 ? 'rose' : 'chalk'],
   ];
   flowers.forEach(([x, y, big, colour], i) => {
+    // Each clump its own: its seed off where it is and the way the stone was set, so no two spikes stand alike.
+    const seed = (SEED * 7919 + i * 104729 + ['s', 'e', 'n', 'w'].indexOf(facing) * 1299709) % 1000003;
+    const size = big * (0.88 + 0.24 * Fv());
     things.push({
       x, y, reach: [[x, y, 12]],
       draw: (g, e) => {
+        // Not one the stone stands in front of: only its heads would show, on stalks over the slab.
+        const [sx] = proj(e, [0, -0.55, 0]);
         const [px, py] = proj(e, [x, y, 0]);
-        flowerClump(g, px, py, colour, SEED * 1000 + i * 7 + ['s', 'e', 'n', 'w'].indexOf(facing), big);
+        if (groundNear(e, x, y) < groundNear(e, 0, -0.55) - 1 && Math.abs(px - sx) < 9) return;
+        flowerClump(g, px, py, colour, seed, size);
       },
     });
   });
