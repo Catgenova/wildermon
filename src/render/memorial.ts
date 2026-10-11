@@ -227,6 +227,7 @@ export function engravingMarks(text: string | undefined): Mark[][] {
     let above: Array<[number, number]> = [];
     const every: Array<Array<[number, number]>> = [];
     let clearAll: Array<[number, number]> = [];
+    let aboveWide = 0;
     let at = 0;
     while (at < units.length && rows.length < LINES_MOST) {
       // As many words as the row has room for, at least one.
@@ -242,8 +243,8 @@ export function engravingMarks(text: string | undefined): Mark[][] {
        * of one mark where a word can come down to it.
        */
       const short = Math.max(1, Math.round(fit * 0.6));
-      // A hand pushed to find another way (`push`) may also wrap shorter.
-      const floor = push ? 0.3 : 0.5;
+      // A hand pushed hardest to find another way (`push` beyond one) may also wrap shorter.
+      const floor = Math.abs(push) > 1 ? 0.3 : 0.5;
       const plain = (capped && !ends ? [short, short + 1, short - 1].filter((n) => n <= fit)
         : ends && rows.length ? [fit]
         : [fit, fit + 1, fit - 1, fit - 2, fit - 3].filter((n) => at + n <= units.length && (n <= fit ? wide(units.slice(at, at + n)) >= wide(units.slice(at, at + fit)) * floor : wide(units.slice(at, at + n)) <= ROW_WIDE + 0.75)))
@@ -275,8 +276,8 @@ export function engravingMarks(text: string | undefined): Mark[][] {
           const lean = last ? LAST_IN[0] + H() * (LAST_IN[1] - LAST_IN[0]) : rows.length === 0 && push ? Math.sign(push) * room : (H() - 0.5) * 2 * Math.min(room, 0.3);
           // And where it may start instead, a little either side of that, to keep its spaces off the row above's.
           for (let k = 0; k <= 12; k++) {
-            // (A pushed hand may start the last row further in still, though never past the middle of where it may go.)
-            const shift = last ? LAST_IN[0] + (k / 12) * ((push ? 2 : 1) * LAST_IN[1] - LAST_IN[0]) : -room + (k / 12) * 2 * room;
+            // (A hand pushed hardest may start the last row further in still, though never past the middle of where it may go.)
+            const shift = last ? LAST_IN[0] + (k / 12) * ((Math.abs(push) > 1 ? 2 : 1) * LAST_IN[1] - LAST_IN[0]) : -room + (k / 12) * 2 * room;
             let x = last ? PANEL.x - ROW_REACH + shift : PANEL.x - (centres * squeeze) / 2 + shift;
             const row: Array<{ k: number; x: number }> = [];
             // Each space as the stone shows it: from the edge of the mark before it to the edge of the mark after.
@@ -304,7 +305,10 @@ export function engravingMarks(text: string | undefined): Mark[][] {
             const down = rows.length > 1 ? spaces.reduce((c, [a0, b0]) => c + clearAll.reduce((d, [p0, q0]) => d + Math.max(0, Math.min(b0, q0) - Math.max(a0, p0) + 0.15), 0), 0) : 0;
             // (The plain wrap is the fullest, or for a hand pushed harder (`push` of two, three or four) a word short of it, a word over it, or two short, on the first row.)
             const aim = rows.length === 0 && Math.abs(push) > 1 ? fit + [0, 0, -1, 1, -2][Math.abs(push)] : fit;
-            const sc = 2.2 * clash + 4 * down + 0.25 * Math.abs(shift - lean) + 0.08 * Math.abs(n - aim);
+            // And a row in the middle of the inscription much narrower than the one above it: a short word sat alone.
+            const span2 = row[row.length - 1].x - row[0].x + MARK_W * 2;
+            const narrow = rows.length > 0 && !last && span2 < 0.45 * aboveWide ? 3 : 0;
+            const sc = 2.2 * clash + 4 * down + narrow + 0.25 * Math.abs(shift - lean) + 0.08 * Math.abs(n - aim);
             if (!best || sc < best.score - 1e-9) best = { row, spaces, score: sc, n };
           }
         }
@@ -314,35 +318,49 @@ export function engravingMarks(text: string | undefined): Mark[][] {
       if (!got) break;
       rows.push(got.row);
       above = got.spaces;
+      aboveWide = got.row[got.row.length - 1].x - got.row[0].x + MARK_W * 2;
       every.push(got.spaces);
       clearAll = rows.length === 1 ? got.spaces : clearAll.flatMap(([a0, b0]) => got.spaces.map(([p0, q0]) => [Math.max(a0, p0), Math.min(b0, q0)] as [number, number])).filter(([a0, b0]) => b0 > a0 - 0.15);
       at += got.n;
       score += got.score;
     }
-    // And never a space running down through every row: what is clear in all of them, which a hand would see as a gutter.
-    if (every.length > 1) {
+    // Nor a first row much narrower than the one under it, the same short word sat alone at the head.
+    if (rows.length > 2) {
+      const span = (r: Array<{ x: number }>): number => r[r.length - 1].x - r[0].x + MARK_W * 2;
+      if (span(rows[0]) < 0.45 * span(rows[1])) score += 3;
+    }
+    /*
+     * And never a gutter: in three rows or more a space running down
+     * through every one of them; in two, a space standing well over the
+     * other row's (more than 0.3), unless the line is all one-mark words,
+     * which cannot help it. A layout with one is not kept if another can be
+     * found (the pushed hands, below).
+     */
+    if (every.length > 2) {
       let clear: Array<[number, number]> = every[0];
       for (const sp of every.slice(1)) {
         clear = clear.flatMap(([a0, b0]) => sp.map(([p0, q0]) => [Math.max(a0, p0), Math.min(b0, q0)] as [number, number])).filter(([a0, b0]) => b0 > a0);
       }
       score += clear.reduce((n, [a0, b0]) => n + 100 + 100 * (b0 - a0), 0);
+    } else if (every.length === 2 && units.some((w) => w.length > 1)) {
+      for (const [a0, b0] of every[1]) for (const [p0, q0] of every[0]) if (Math.min(b0, q0) - Math.max(a0, p0) > 0) score += 100;
     }
     return { rows, score };
   };
   let rows: Array<Array<{ k: number; x: number }>> = [];
   let H = rand(h % 100000 + 7);
   let least = Infinity;
-  for (let hand = 0; hand < 24; hand++) {
+  for (let hand = 0; hand < 28; hand++) {
     const Hh = rand(h % 100000 + 7 + hand * 7919);
     /*
-     * The later hands set the first row hard to one side or the other, and
-     * the last of them wrap it a word or two short or a word long too, for a line
-     * whose rows would otherwise leave a space clear down them all. They are
-     * only tried when the plain hands all leave one.
+     * The later hands set the first row hard to one side or the other, for a
+     * line whose rows would otherwise leave a gutter, and pay a little for it
+     * so they win only where they must. Past those, and only if every one of
+     * them still leaves a gutter, hands that also wrap the first row a word
+     * or two short or a word long and start the last row further in.
      */
-    if (hand === 8 && least < 100) break;
-    const got = lay(Hh, hand < 8 ? 0 : (hand % 2 ? 1 : -1) * (1 + Math.floor((hand - 8) / 4)));
-    // Only where it must be: a pushed hand pays for it.
+    if (hand === 16 && least < 100) break;
+    const got = lay(Hh, hand < 8 ? 0 : (hand % 2 ? 1 : -1) * (hand < 16 ? 1 : 2 + Math.floor((hand - 16) / 4)));
     if (hand >= 8) got.score += 2;
     if (got.score < least) {
       least = got.score;
