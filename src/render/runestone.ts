@@ -1139,14 +1139,15 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
   if (spike) {
     /*
      * Two or three spikes, each a stem with heads up it smaller toward the
-     * tip; a planted one's (`spike`) one to four, each its own height and
-     * lean, so no two clumps of them stand alike.
+     * tip; a planted one's (`spike`) each its own height, from as tall to
+     * half as tall again, and its own lean, so no two clumps stand alike.
      */
     const own = !!col.spike;
-    const n = own ? 1 + Math.floor(R() * 4) : 2 + Math.floor(R() * 2);
+    const n = 2 + Math.floor(R() * 2);
     for (let k = 0; k < n; k++) {
-      const sx = x + (k - (n - 1) / 2) * 4.2 * big + (R() - 0.5) * 1.5;
-      const tall = (own ? 8 + R() * 13 : 12 + R() * 6) * big, lean = (R() - 0.5) * (own ? 5 : 2.4);
+      // A planted one's spikes stand further apart and fan out a little from the clump, so each is a spike and not a bunch.
+      const sx = x + (k - (n - 1) / 2) * (own ? 6 : 4.2) * big + (R() - 0.5) * 1.5;
+      const tall = (own ? 12 + R() * 9 : 12 + R() * 6) * big, lean = own ? (k - (n - 1) / 2) * 1.4 + (R() - 0.5) * 1.6 : (R() - 0.5) * 2.4;
       g.strokeStyle = '#5b876a';
       g.lineWidth = 0.6;
       g.beginPath();
@@ -1154,10 +1155,10 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
       g.quadraticCurveTo(sx + lean * 0.3, y - tall * 0.5, sx + lean, y - tall);
       g.stroke();
       for (let j = 0; j < 7; j++) {
-        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * 0.8) * big;
+        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * 0.8) * big * (own ? 0.78 : 1);
         const hx = sx + lean * t * t + (j % 2 ? 0.7 : -0.7) * (1 - t), hy = y - tall * t;
         g.beginPath();
-        g.arc(hx, hy, r + 0.42, 0, TAU);
+        g.arc(hx, hy, r + (own ? 0.32 : 0.42), 0, TAU);
         g.fillStyle = col.ring;
         g.fill();
         g.beginPath();
@@ -2043,8 +2044,18 @@ export interface Glow {
   fine?: boolean;
   /** For a fine one, its strokes in the Runestones' night cream, to be laid over it after dark. */
   cream?: HTMLCanvasElement;
+  /** How much more of the night its shape takes off than a Runestone's rune's does, up to all of it: for strokes too fine for the usual share to clear. */
+  maskA?: number;
   /** And its strokes again in a warm gold, laid on as light after dark (`lift` strong): where they are under a pixel wide, so they come up to a Runestone's and stay warm. */
   glint?: HTMLCanvasElement;
+  /**
+   * And its strokes in the night's own blue, laid over them after dark as
+   * it breathes out (`dim` strong): for one whose shape takes all the night
+   * off (`maskA`), the dimming a Runestone's rune gets from the night it
+   * leaves on, but the same whatever light is near.
+   */
+  shade?: HTMLCanvasElement;
+  dim?: number;
   lift?: number;
 }
 
@@ -2187,7 +2198,7 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
  * only (`nightOnly`).
  */
 export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x: number, z: number, s: number, i: number, roundel: boolean,
-  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; tight?: boolean; fine?: boolean } = {}): Glow {
+  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; tight?: boolean; fine?: boolean; maskA?: number; dim?: number } = {}): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2252,6 +2263,12 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.lineWidth = w * (small ? 0.8 : 1.25);
     h.stroke();
   }) : undefined;
+  const shade = o.dim ? sheet((h) => {
+    path(h);
+    h.strokeStyle = 'rgb(14, 22, 46)';
+    h.lineWidth = w * (small ? 1.2 : 1.6);
+    h.stroke();
+  }) : undefined;
   const glint = o.fine ? sheet((h) => {
     path(h);
     h.strokeStyle = 'rgb(255, 188, 112)';
@@ -2276,11 +2293,11 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.stroke();
     path(h);
     h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = w * (small ? 1.5 : o.tight ? 1.2 : roundel ? 1.8 : 2.2);
+    h.lineWidth = w * (small ? 2 : o.tight ? 1.2 : roundel ? 1.8 : 2.2);
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream, glint, lift: scale <= 1 ? 0.35 : 0.06 } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream, glint, lift: scale <= 1 ? 0.03 : 0.02 } : {}), ...(o.maskA !== undefined ? { maskA: o.maskA } : {}), ...(o.dim ? { shade, dim: o.dim } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2473,6 +2490,11 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
         ctx.globalAlpha = night * gl.lift * (0.7 + 0.6 * p) * f;
         ctx.drawImage(gl.glint, X, Y, Wd, Ht);
       }
+      if (gl.dim && gl.shade) {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = night * gl.dim * (1 - p) * f;
+        ctx.drawImage(gl.shade, X, Y, Wd, Ht);
+      }
     }
   }
   ctx.globalCompositeOperation = was;
@@ -2493,7 +2515,7 @@ export function glowMasks(glows: readonly Glow[], sx: number, sy: number, zoom: 
   return glows.map((gl) => {
     const p = breath(gl, t);
     const [x, y, w, h] = gl.box;
-    return { canvas: gl.mask, x: sx + x * zoom, y: sy + y * zoom, w: w * zoom, h: h * zoom, a: (gl.roundel ? 0.72 + 0.18 * p : 0.68 + 0.27 * p) * (gl.faint ?? 1) };
+    return { canvas: gl.mask, x: sx + x * zoom, y: sy + y * zoom, w: w * zoom, h: h * zoom, a: Math.min(1, (gl.roundel ? 0.72 + 0.18 * p : 0.68 + 0.27 * p) * (gl.faint ?? 1) * (gl.maskA ?? 1)) };
   });
 }
 
