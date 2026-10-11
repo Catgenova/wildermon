@@ -2148,6 +2148,8 @@ export interface GlowSpec {
   /** The very middle of its lit groove, where a runestone's is all but white; and the gold round that. */
   inner?: string;
   mid?: string;
+  /** And the edge of the groove round the gold, where a runestone's is amber. */
+  edge?: string;
 }
 
 /**
@@ -2196,7 +2198,7 @@ export function bakeGlow(M: DOMMatrix, r: GlowSpec, scale: number): Glow {
   });
   const core = sheet((h) => {
     path(h);
-    h.strokeStyle = RUNE_EDGE;
+    h.strokeStyle = r.edge ?? RUNE_EDGE;
     h.lineWidth = w * 1.05;
     h.stroke();
     path(h);

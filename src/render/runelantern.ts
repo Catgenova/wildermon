@@ -3,7 +3,8 @@ import { furnitureCentre, type PlacedFurniture } from '../game/furniture';
 import { LAMP_CAST_ALPHA } from '../game/lamps';
 import type { LightSource } from '../game/light';
 import { VIEWS } from './view';
-import { hashOf, MOSS, rand, STAGES, strandPic, PPM } from './ivy';
+import { HALF_H } from './iso';
+import { hashOf, rand, STAGES, strandPic, PPM } from './ivy';
 import {
   add, at, sub, unit, bakeGlow, canvasOf, cut, dot, drawFaces, drawGlows, drawPads, flowerClump, glowHoles, glowMasks,
   glyphPath, grassTuft, groundNear, hex, mix, RUNE_GOLD, RUNE_WHITE, STONE_INK, CREASE_INK, mossOver, mul, newell, noise2, plate, proj, scaleFor, strokesPath, roundelStrokes, eyeOf, css,
@@ -77,10 +78,12 @@ const LEAN: [number, number] = [0.018, -0.012];
 /** The runes round the band: the sun-stave and stars, one to a face, in order round it, from where its cut starts in this list. */
 const BAND_RUNES = ['sowilo', 'sunDot', 'star6', 'algiz', 'diamondDot', 'ingwaz', 'tiwaz', 'star8'];
 /** How big a rune on the band is, in units from its middle to its top, and how wide its groove. */
-const RUNE_S = 1.1;
+const RUNE_S = 1.3;
 const RUNE_W = 0.42;
-/** The least a rune's lit groove is across at a scale, as units times the scale: about a pixel and a quarter on the screen. */
-const RUNE_PX = 1.1;
+/** The least a rune's lit groove is across at a scale, as units times the scale: its gold, the middle seven tenths of it (`bakeGlow`), at least a pixel on the screen. */
+const RUNE_PX = 1.45;
+/** And its cut channel round that, darker: so much wider again on the screen, in pixels. */
+const CHANNEL_PX = 2.6;
 /** How high a face's rune stands up the band, and how far either side of it a drilled dot is. */
 const RUNE_Z = 1.32;
 const DOT_X = 1.48;
@@ -93,6 +96,8 @@ const REVEAL = '#5a5266';
  */
 const RUNE_INNER = css(mix(hex(RUNE_WHITE), hex(RUNE_GOLD), 0.6));
 const RUNE_MID = RUNE_GOLD;
+/** The edge of its groove round the gold: the shadow down the side of its cut channel, not a runestone's amber, so a small rune reads as cut and not as a blur of light. */
+const RUNE_CHANNEL = 'rgba(112, 84, 74, 0.9)';
 /**
  * And after dark, under the island's warm light, which lays about 46, 37, 23
  * over it at the lantern: the same gold and white taken down to what that
@@ -188,22 +193,35 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     const T = rand(seed * 13 + salt);
     const tr = g.getTransform(), inv = k.base.inverse();
     const across = Math.hypot(k.e.ux, k.e.uy) * 0.9;
+    // How long a unit across the face and up it is where the pads are laid: a face seen slantwise has its cushions narrowed as it is.
+    const o0 = inv.transformPoint(tr.transformPoint(new DOMPoint(0, 0)));
+    const o1 = inv.transformPoint(tr.transformPoint(new DOMPoint(1, 0)));
+    const o2 = inv.transformPoint(tr.transformPoint(new DOMPoint(0, 1)));
+    const kx = Math.max(0.3 * across, Math.min(across, 0.9 * Math.hypot(o1.x - o0.x, o1.y - o0.y)));
+    const kz = Math.max(0.3 * across, Math.min(across, 0.9 * Math.hypot(o2.x - o0.x, o2.y - o0.y)));
     const ps: Pad[] = [];
-    // One mass up from the foot, its top lobed where the noise has it, cushions close enough to run together.
-    const top = (x: number): number => (0.45 + rise * amount) * (0.25 + 0.75 * noise2(x / 1.1, 0.5, seed + salt) + 0.35 * noise2(x / 0.45, 1.5, seed + salt));
-    for (let x = x0 + 0.45; x < x1 - 0.35; x += 0.62 + 0.25 * T()) {
-      const h = top(x);
-      for (let z = 0.15 + 0.2 * T(); z < h; z += 0.65 + 0.2 * T()) {
-        const q = inv.transformPoint(tr.transformPoint(new DOMPoint(x + (T() - 0.5) * 0.4, z)));
-        const r = (0.85 + 0.5 * T() * T()) * (0.8 + 0.3 * (1 - z / Math.max(0.4, h)));
-        ps.push([q.x, q.y, r * across, r * across * 0.9]);
+    /*
+     * One mass up from the foot, cushions close enough to run together: its
+     * top lobed where the noise has it, dropping all but away here and there;
+     * its foot ragged too, the ground showing under it in places; and strays
+     * over it where it is creeping up.
+     */
+    // Noise along a row of its lattice, not between two, so it swings its whole way.
+    const n1 = (x: number): number => noise2(x / 0.9, 0, seed + salt), n2 = (x: number): number => noise2(x / 0.38, 3, seed + salt);
+    const top = (x: number): number => (0.4 + rise * amount) * Math.max(0, 0.15 + 1.25 * n1(x) + 0.6 * (n2(x) - 0.5));
+    const low = (x: number): number => 0.05 + 0.55 * noise2(x / 0.7, 6, seed + salt) * (1 - 0.5 * amount);
+    for (let x = x0 + 0.35; x < x1 - 0.3; x += 0.42 + 0.25 * T()) {
+      const h = top(x), z0 = low(x);
+      for (let z = z0; z < h; z += 0.5 + 0.2 * T()) {
+        const q = inv.transformPoint(tr.transformPoint(new DOMPoint(x + (T() - 0.5) * 0.3, z)));
+        const r = (0.5 + 0.4 * T()) * (0.75 + 0.5 * Math.min(1, h / 1.4)) * (z + 0.6 > h ? 0.8 : 1);
+        ps.push([q.x, q.y, r * kx, r * kz]);
       }
-      // A stray cushion or two over the mass, where it is creeping up.
-      if (T() < 0.35 * amount) {
-        const z = h + 0.4 + T() * 0.8;
+      if (T() < 0.18 + 0.35 * amount) {
+        const z = Math.max(h, z0) + 0.35 + T() * 0.9;
         const q = inv.transformPoint(tr.transformPoint(new DOMPoint(x + (T() - 0.5) * 0.5, z)));
-        const r = 0.45 + 0.35 * T();
-        ps.push([q.x, q.y, r * across, r * across * 0.9]);
+        const r = 0.3 + 0.3 * T();
+        ps.push([q.x, q.y, r * kx, r * kz]);
       }
     }
     g.save();
@@ -308,7 +326,10 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     g.fillRect(-half - 1, BAND_H - 0.42, 2 * half + 2, 2);
     // A drilled dot either side of its rune.
     for (const x of [-DOT_X, DOT_X]) cut(g, fill, 0.26, () => { g.beginPath(); g.moveTo(x, RUNE_Z + 0.03); g.lineTo(x, RUNE_Z - 0.03); });
-    for (const r of runes) cut(g, fill, RUNE_W, () => glyphPath(g, r.glyph, r.x, r.z, r.s));
+    // The channel each is cut in, never so narrow on the screen that its dark does not show either side of its gold.
+    const tr = g.getTransform();
+    const px = Math.max(1e-6, Math.min(Math.hypot(tr.a, tr.b), Math.hypot(tr.c, tr.d)));
+    for (const r of runes) cut(g, fill, Math.max(RUNE_W, CHANNEL_PX / px), () => glyphPath(g, r.glyph, r.x, r.z, r.s));
   };
 
   /*
@@ -600,8 +621,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
   /*
    * Moss on the cap's top: lumps on its mossy shoulder, drawn straight after
    * it and before the head -- one at first, two from halfway, three at the
-   * end -- each a soft cushion, its underside a step down, its body, and the
-   * light on its top, with no line round it: moss in the stone, not on it.
+   * end -- each cushions run together, as the runestones' are (`drawPads`).
    */
   if (capM > 0) {
     const spots: Array<[number, number, number]> = [[2.85, 2.05, 1], [1.75, 2.25, 0.8], [3.15, 0.95, 0.85]];
@@ -612,35 +632,23 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
       draw: (g, e) => {
         const across = Math.hypot(e.ux, e.uy);
         const T = rand(seed * 31 + 5);
+        const ps: Pad[] = [];
         for (const { at: q, r } of lumps) {
           const [px, py] = proj(e, q);
           const rx = r * across, ry = rx * 0.62;
           // Each lump three cushions run together, a little uneven.
-          const parts = [[0, 0, 1], [-0.5, -0.22, 0.72 + 0.2 * T()], [0.48, -0.12, 0.62 + 0.2 * T()]];
-          for (const [col, dy, kk] of [[MOSS.dark, 0.32, 1.04], [MOSS.under, 0.12, 1], [MOSS.fill, -0.06, 0.88]] as Array<[string, number, number]>) {
-            g.fillStyle = col;
-            g.beginPath();
-            for (const [dx, dd, pk] of parts) {
-              const x = px + dx * rx, y = py + (dd + dy) * ry * 2;
-              g.moveTo(x + rx * pk * kk, y);
-              g.ellipse(x, y, rx * pk * kk, ry * pk * kk, 0, 0, TAU);
-            }
-            g.fill();
-          }
-          g.fillStyle = MOSS.lit;
-          g.beginPath();
-          g.ellipse(px - rx * 0.25, py - ry * 0.45, rx * 0.42, ry * 0.36, 0, 0, TAU);
-          g.fill();
+          for (const [dx, dd, pk] of [[0, 0, 1], [-0.5, -0.22, 0.72 + 0.2 * T()], [0.48, -0.12, 0.62 + 0.2 * T()]]) ps.push([px + dx * rx, py + dd * ry * 2, rx * pk, ry * pk]);
         }
+        drawPads(g, ps);
       },
     });
   }
 
   /*
-   * The head: what is left of a taller capstone, broken off across a sheared
-   * diagonal -- a low faceted stub whose top is the fracture, paler and
-   * rougher than the dressed stone, tilted so it is seen from every side and
-   * stands highest at one corner.
+   * The head: what is left of a taller capstone, sheared off all but level --
+   * a low stub whose top is mostly the flat of the break, paler and rougher
+   * than the dressed stone, with a low tooth of the old stone left standing on
+   * the rim at one corner.
    */
   const head: Face[] = [];
   {
@@ -655,49 +663,55 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     });
     const at3 = ([u, v]: Pt, z: number): V3 => P(capF, u, CAP_H - 0.1 + z, v);
     const foot = corners.map((q) => at3(q, -0.1));
-    // Sheared across: each corner of its rim lower the farther it stands from the corner it snapped at, drawn in a little as it rises.
+    const lerp = (a: Pt, b: Pt, t: number, k = 1): Pt => [(a[0] + (b[0] - a[0]) * t) * k, (a[1] + (b[1] - a[1]) * t) * k];
+    // The corner it snapped at, where a low tooth of the taller stone still stands on the rim.
     const hi = corners.reduce((b, q, i) => (q[0] - 0.6 * q[1] < corners[b][0] - 0.6 * corners[b][1] ? i : b), 0);
-    const far = corners.map((q) => Math.hypot(q[0] - corners[hi][0], q[1] - corners[hi][1]));
-    const most = Math.max(...far);
-    const rim = corners.map((q, i) => at3([q[0] * 0.84, q[1] * 0.84], 1.4 - 0.95 * (far[i] / most) + 0.2 * (Q() - 0.5)));
-    // The ridge it snapped along, a little over that corner's rim and in from it, so the break slopes away from it in facets.
-    const peak = at3([corners[hi][0] * 0.4 + 0.3 * (Q() - 0.5), corners[hi][1] * 0.4], 1.55 + 0.15 * Q());
-    const ctr = at3([0, 0], 0.5);
+    const nx = (hi + 1) % n, op = (hi + 2) % n, pv = (hi + 3) % n;
+    const rim: V3[] = corners.map((q, i) => at3([q[0] * 0.86, q[1] * 0.86], i === hi ? 0.84 + 0.06 * Q() : i === op ? 0.36 + 0.05 * Q() : 0.44 + 0.06 * Q()));
+    // Where the tooth's two broken faces meet the flat of the break: a notch on each rim either side of it, and a point in from it.
+    const m1 = at3(lerp(corners[hi], corners[nx], 0.4, 0.86), 0.52 + 0.04 * Q());
+    const m2 = at3(lerp(corners[hi], corners[pv], 0.4, 0.86), 0.5 + 0.04 * Q());
+    const inner = at3([corners[hi][0] * 0.32, corners[hi][1] * 0.32], 0.56 + 0.04 * Q());
+    const ctr = at3([0, 0], 0.2);
+    const side = (pts: V3[], a: V3, b: V3): void => {
+      let nn = newell(pts);
+      if (dot(nn, sub(mul(add(a, b), 0.5), ctr)) < 0) nn = mul(nn, -1);
+      head.push({ pts, n: nn, tone: STONE, crease: 0.35 });
+    };
     for (let i = 0; i < n; i++) {
       const j = (i + 1) % n;
-      const pts = [foot[i], foot[j], rim[j], rim[i]];
-      let nn = newell(pts);
-      if (dot(nn, sub(mul(add(foot[i], foot[j]), 0.5), ctr)) < 0) nn = mul(nn, -1);
-      head.push({ pts, n: nn, tone: STONE, crease: 0.35 });
+      if (i === hi) side([foot[i], foot[j], rim[j], m1, rim[i]], foot[i], foot[j]);
+      else if (j === hi) side([foot[i], foot[j], rim[j], m2, rim[i]], foot[i], foot[j]);
+      else side([foot[i], foot[j], rim[j], rim[i]], foot[i], foot[j]);
     }
-    // The facets of its break; the one turned most toward the front-left, where the light comes from as it is set down, the fresh pale fracture.
-    const facets = Array.from({ length: n }, (_, i) => {
-      const j = (i + 1) % n;
-      const pts = [rim[i], rim[j], peak];
-      let nn = newell(pts);
-      if (nn[2] < 0) nn = mul(nn, -1);
-      return { pts, n: nn };
-    });
-    const fresh = facets.reduce((best, f, i) => (f.n[1] - f.n[0] > facets[best].n[1] - facets[best].n[0] ? i : best), 0);
-    facets.forEach((f, i) => {
-      if (i !== fresh) {
-        head.push({ pts: f.pts, n: f.n, tone: STONE, crease: 0.5 });
-        return;
-      }
-      const o = f.pts[0], a = unit(sub(f.pts[1], f.pts[0])), b = unit(sub(f.pts[2], f.pts[0]));
+    const up = (pts: V3[]): V3 => {
+      const nn = newell(pts);
+      return nn[2] < 0 ? mul(nn, -1) : nn;
+    };
+    // The tooth's two broken faces, steep, falling from its point on the rim to the flat.
+    for (const pts of [[rim[hi], m1, inner], [rim[hi], inner, m2]]) head.push({ pts, n: up(pts), tone: STONE, crease: 0.5 });
+    // And the flat of the break: the most of its top, all but level, the fresh pale stone it sheared to.
+    {
+      const pts = [m1, rim[nx], rim[op], rim[pv], m2, inner];
+      const nn = up(pts);
+      const mid = mul(pts.reduce((acc, q) => add(acc, q), [0, 0, 0] as V3), 1 / pts.length);
+      const a = unit(sub(rim[op], rim[hi]));
+      const b0 = sub(rim[nx], rim[pv]);
+      const b = unit(sub(b0, mul(a, dot(a, b0))));
+      const o = sub(sub(mid, mul(a, 2)), mul(b, 1.6));
       head.push({
-        pts: f.pts, n: f.n, tone: FRACTURE, crease: 0.55,
+        pts, n: nn, tone: FRACTURE, crease: 0.55,
         frame: { o, a, b },
         // Grainy and pitted, with a step or two where it broke unevenly.
         paint: (g, k) => {
           const T = rand(seed * 61 + 1);
-          for (let q = 0; q < 34; q++) {
-            const x = T() * 3.4, y = T() * 2.4;
+          for (let q = 0; q < 40; q++) {
+            const x = T() * 4, y = T() * 3.2;
             g.fillStyle = T() < 0.5 ? css(mix(k.fill, hex('#6d6274'), 0.4), 0.4) : css(mix(k.fill, [255, 253, 246], 0.6), 0.55);
             g.fillRect(x, y, 0.1 + 0.12 * T(), 0.1 + 0.12 * T());
           }
           for (let q = 0; q < 2; q++) {
-            let x = 0.2 + T() * 0.6, y = 0.3 + T() * 1.4;
+            let x = 0.4 + T() * 0.6, y = 0.6 + T() * 1.8;
             g.beginPath();
             g.moveTo(x, y);
             for (let j = 0; j < 3; j++) { x += 0.5 + T() * 0.5; y += (T() - 0.5) * 0.6; g.lineTo(x, y); }
@@ -707,7 +721,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
           }
         },
       });
-    });
+    }
   }
   const headT: Thing = { x: 0, y: 0, faces: head };
   things.push(headT);
@@ -750,7 +764,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     return [Math.cos(a) * r, Math.sin(a) * r * 0.92] as Pt;
   });
   const model: Model = {
-    things, pillar: [...shaft, ...band, ...cap, ...head], solids: new Set([shaftT, bandT, capT, headT]), lit: new Set([outcropT, shaftT, capT, headT]), shaftT, capT,
+    things, pillar: [...shaft, ...band, ...cap, ...head], solids: new Set([shaftT, bandT, capT, headT]), lit: new Set([shaftT, capT, headT]), shaftT, capT,
     heights: { band: P(bandF, 0, 0), foot: P(shaftF, 0, 0.4), cap: P(capF, 0, 0) }, over: [...cap, ...head], band: bandFaces,
     glowAt: P(bandF, 0, BAND_H / 2), top: Math.max(...head.flatMap((f) => f.pts.map((q) => q[2]))), turf,
   };
@@ -817,6 +831,8 @@ const NIGHT_STONE = 'rgb(46, 44, 72)';
 const NIGHT_KEEP = 0.45;
 /** How much of that night what grows and lies round its foot keeps, against its stone's. */
 const FLORA_KEEP = 0.7;
+/** And of the outcrop under it. */
+const OUTCROP_KEEP = 0.5;
 /** The ink after dark, and how much more of the night it keeps than the stone. */
 const NIGHT_INK = 'rgb(38, 32, 46)';
 const NIGHT_INK_KEEP = 0.35;
@@ -942,8 +958,9 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
   /*
    * The night it keeps: the pillar's faces and their ink whole, and what grows
    * and lies round its foot -- grass, flowers, rocks, moss -- at `FLORA_KEEP`
-   * of that, each over what it stands in front of; the outcrop and the turf
-   * not at all, which are the ground its light falls on.
+   * of that, each over what it stands in front of; the outcrop, which is
+   * ground its light falls on, at `OUTCROP_KEEP`, so its pale stone under that
+   * light comes up no brighter than the band.
    */
   const [shade, sg] = canvasOf(canvas.width, canvas.height);
   const [lone, lg] = canvasOf(canvas.width, canvas.height);
@@ -965,7 +982,6 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     }
   };
   for (const t of things) {
-    if (t.first) continue;
     if (model.solids.has(t)) {
       sg.globalCompositeOperation = 'source-over';
       sg.globalAlpha = 1;
@@ -993,7 +1009,7 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     sg.globalCompositeOperation = 'destination-out';
     sg.drawImage(lone, 0, 0);
     sg.globalCompositeOperation = 'source-over';
-    sg.globalAlpha = FLORA_KEEP;
+    sg.globalAlpha = t.first ? OUTCROP_KEEP : FLORA_KEEP;
     sg.drawImage(lone, 0, 0);
     sg.restore();
   }
@@ -1160,9 +1176,11 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     for (const r of f.runes) {
       // A groove no thinner on the screen than `RUNE_PX` over the scale it is baked at, so at a small zoom a rune is still a stroke of light and not a hair.
       const spec = { ...r, w: Math.max(r.w ?? RUNE_W, RUNE_PX / scale) };
-      const gl = bakeGlow(M, { ...spec, inner: RUNE_INNER, mid: RUNE_MID }, scale);
+      const gl = bakeGlow(M, { ...spec, inner: RUNE_INNER, mid: RUNE_MID, edge: RUNE_CHANNEL }, scale);
       const gn = bakeGlow(M, { ...spec, inner: NIGHT_INNER, mid: NIGHT_MID }, scale);
       gl.fade = ease;
+      // By day the groove alone, gold in its channel, with no haze round it.
+      (gl.halo.getContext('2d') as Ctx).clearRect(0, 0, gl.halo.width, gl.halo.height);
       // Each picture of its light kept to its own face of the band, and off the cap and head over it.
       for (const c of [gl.core, gl.halo, gl.dusk, gl.mask, gn.core, gn.halo, gn.dusk, gn.mask]) keepTo(c, gl.box, f.poly);
       glows.push(gl);
@@ -1214,20 +1232,20 @@ export interface RuneLanternLook {
 
 /* ---- the motes ---------------------------------------------------------------------- */
 
-/** How far the band's bloom reaches after dark, in pixels at zoom one. */
-const BLOOM = 12;
-/** And how far its pool on the ground reaches across, in pixels at zoom one. */
-const POOL = 46;
-/** And the hole its spot makes in the night, at its middle, in pixels at zoom one. */
-const FOOT_HOLE = 28;
-
 /** How far its spot at its foot reaches across the ground, in tiles. */
 const POOL_REACH = 1.2;
 /** How far toward the eye its middle stands from the middle of its footprint, in tiles: out on the ground in front of its foot rather than up its stone. */
 const POOL_OUT = 0.6;
-/** The pale gold of that spot, and how strong it is at its middle at full dark: half as warm again as a lantern. */
+/** The pale gold of that spot, and how strong it is at its middle at full dark: twice a lantern's warmth. */
 const POOL_CAST = '255, 214, 158';
-const POOL_CAST_ALPHA = LAMP_CAST_ALPHA * 1.5;
+const POOL_CAST_ALPHA = LAMP_CAST_ALPHA * 2;
+
+/** How far the band's bloom reaches after dark, in pixels at zoom one. */
+const BLOOM = 12;
+/** And the hole its spot makes in the night, at its middle, in pixels at zoom one. */
+const FOOT_HOLE = 28;
+/** How far down the screen from its footprint's middle that spot's middle is, in pixels at zoom one: `POOL_OUT` tiles toward the eye. */
+const POOL_DOWN = POOL_OUT * Math.SQRT2 * HALF_H;
 
 /**
  * Its spot at its foot, seen from viewpoint `rotation`, laid as a light of
@@ -1279,10 +1297,11 @@ export function drawRuneLantern(ctx: Ctx, sx: number, sy: number, zoom: number, 
 }
 
 /**
- * After dark, a pale gold bloom round the band, breathing with its runes, and
- * a pool of the same on the ground at its foot: laid before the stone
- * (`drawRuneLantern`), so they light the grass, the air round the pillar and
- * whatever stands behind it, and not the pillar itself.
+ * After dark, a pale gold bloom round the band, breathing with its runes:
+ * laid before the stone (`drawRuneLantern`), so it lights the air round the
+ * pillar and not the pillar itself. Its spot on the ground is the night's
+ * (`runeLanternNight`, `runeLanternPool`), laid over the ground and the paths
+ * and kept off whoever stands in front.
  */
 export function drawRuneLanternBloom(ctx: Ctx, sx: number, sy: number, zoom: number, look: RuneLanternLook, rotation: number, night = 0, t = performance.now() / 1000): void {
   if (night <= 0.02) return;
@@ -1302,23 +1321,6 @@ export function drawRuneLanternBloom(ctx: Ctx, sx: number, sy: number, zoom: num
     ctx.beginPath();
     ctx.arc(x, y, R, 0, TAU);
     ctx.fill();
-  }
-  {
-    // Its own spot on the ground, about twice its footprint across, flattened as the ground is seen: pale gold laid over the grass.
-    ctx.globalCompositeOperation = 'source-over';
-    const R = POOL * zoom;
-    ctx.save();
-    ctx.translate(sx, sy);
-    ctx.scale(1, 0.5);
-    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
-    grad.addColorStop(0, `rgba(238, 222, 182, ${(0.78 * night * (0.92 + 0.08 * p)).toFixed(3)})`);
-    grad.addColorStop(0.55, `rgba(232, 214, 172, ${(0.42 * night).toFixed(3)})`);
-    grad.addColorStop(1, 'rgba(232, 214, 172, 0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, TAU);
-    ctx.fill();
-    ctx.restore();
   }
   ctx.globalCompositeOperation = was;
   ctx.globalAlpha = wasA;
@@ -1354,14 +1356,15 @@ export function runeLanternNight(look: RuneLanternLook, rotation: number, zoom: 
   return {
     glows: b.glows,
     rise: 0,
-    reach: [-FOOT_HOLE * 1.5, -FOOT_HOLE, FOOT_HOLE * 1.5, FOOT_HOLE],
+    reach: [-FOOT_HOLE * 1.5, -FOOT_HOLE + POOL_DOWN, FOOT_HOLE * 1.5, FOOT_HOLE + POOL_DOWN],
     holes: (sx, sy, z, t): NightHole[] => {
       const out = glowHoles(b.glows, sx, sy, z, t, 1.5).map((h, i) => ({ ...h, a: h.a * b.seen[i] }));
       const p = 0.5 + 0.5 * Math.sin((t / 4.8) * TAU);
       out.push({ x: sx + b.glowAt[0] * z, y: sy + b.glowAt[1] * z, r: 14 * z, a: 0.27 + 0.05 * p });
-      // Its spot on the ground: three holes along the ground, flattened as it is seen, breathing with the band.
-      out.push({ x: sx, y: sy, r: FOOT_HOLE * z, a: 0.48 + 0.06 * p });
-      for (const d of [-1, 1]) out.push({ x: sx + d * FOOT_HOLE * 0.7 * z, y: sy, r: FOOT_HOLE * 0.75 * z, a: 0.26 + 0.04 * p });
+      // Its spot on the ground, out in front of its foot where its warmth is laid: three holes along the ground, flattened as it is seen, breathing with the band.
+      const fy = sy + POOL_DOWN * z;
+      out.push({ x: sx, y: fy, r: FOOT_HOLE * z, a: 0.48 + 0.06 * p });
+      for (const d of [-1, 1]) out.push({ x: sx + d * FOOT_HOLE * 0.7 * z, y: fy, r: FOOT_HOLE * 0.75 * z, a: 0.26 + 0.04 * p });
       return out;
     },
     masks: (sx, sy, z, t): NightMask[] => [
