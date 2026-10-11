@@ -1723,6 +1723,16 @@ export const NEWS: News[] = [
         ...jewel.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       ];
     },
+  },  {
+    n: 126,
+    day: '2026-10-11',
+    lines: () => {
+      const three = ['packmule', 'seals_coat', 'hawks_eye'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Three more: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
   },
 ];
 

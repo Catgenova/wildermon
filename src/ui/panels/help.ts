@@ -268,7 +268,11 @@ function enchantingHelp(): string {
     Scholar's Band's share is added to how fast every trade goes into you, as a worn stone's is, beside a reader's Attentive and your knacks;
     Knackstone's multiplies with a reader's Polymath; Steady Heart's with what body stamina gives your wind; Hearthbound's with Power's
     Enduring and with what is in you; Favoured's with what a prayer banks before your faith's cap holds it; Stillwater's with what the place
-    you sit in gives.</p>`;
+    you sit in gives.</p>
+    <p>Packmule's kilos are added to what you carry before the weight tells, beside a Terraformer's Strong Back and Power's Pack Mule,
+    for each backpack or satchel carried with one (a pack inside another pack is the outer pack's, not yours). Seal's Coat's share
+    multiplies with how fast your swimming lets you swim, never past a walk, and takes its share off what swimming costs your stamina,
+    with Power's Hard Breath. Hawk's Eye's share multiplies with how far you see, a reader's Keen Sight among it.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

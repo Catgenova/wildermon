@@ -2237,7 +2237,8 @@ export class Game {
    */
   swimWind(): number {
     if (this.pathHolds('lungs') || this.pathHolds('unbroken')) return 0;
-    return SWIM_WIND * Math.max(0.4, 1 - this.skills.get('swimming') / 200) * this.pathFx('swim', 1);
+    // And less for a Seal's Coat worn (`body_settle`).
+    return SWIM_WIND * Math.max(0.4, 1 - this.skills.get('swimming') / 200) * this.pathFx('swim', 1) * (1 - this.wornEnchant('swim'));
   }
 
   /** Body stamina makes the same work cost less wind; armour makes it dearer. */
@@ -2646,7 +2647,9 @@ export class Game {
   carryLimit(): number {
     // And whatever a trade's perks add to it: a Terraformer's Strong Back.
     // And Power's Pack Mule.
-    return CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0);
+    // And a Packmule on each pack carried (`pack_mule`).
+    return CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0)
+      + this.inventory.items.reduce((n, it) => n + swingEnchant(it, 'mule'), 0);
   }
 
   /** How far past the limit you are, 0 when you are inside it. */
@@ -4117,7 +4120,8 @@ export class Game {
     p.maxStep = this.climbStep();
     p.maxDrop = this.dropStep();
     p.maxStand = this.standSlope();
-    p.swimSpeed = Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033);
+    // And faster for a Seal's Coat worn, but never past a walk, which is all the island lets a body cover (`travel_speed`).
+    p.swimSpeed = Math.min(1, Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033) * (1 + this.wornEnchant('swim')));
     if (p.lastClimb > 0) {
       /*
        * Only ground that would have turned you back at the start teaches you

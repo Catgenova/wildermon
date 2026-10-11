@@ -54,21 +54,24 @@ const near = (a: number, b: number, eps = 1e-6): boolean => Math.abs(a - b) <= e
 const E = (id: string): EnchantmentDef => ENCHANTMENTS[id];
 const [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL] = ['scholars_band', 'knackstone', 'steady_heart', 'hearthbound', 'favoured', 'stillwater'].map(E);
 const JEWEL = [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL];
+const [MULE, SEAL, HAWK] = ['packmule', 'seals_coat', 'hawks_eye'].map(E);
+/** Everything part 3 has added so far, for the scrolls and the words. */
+const PART3 = [...JEWEL, MULE, SEAL, HAWK];
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
 const billIsle = psql(`select string_agg(r.id || '=' || (select string_agg(ri.item || '*' || ri.count, '+' order by ri.item) from recipe_input ri where ri.recipe = r.id),
-  '|' order by r.id) from recipe r where r.id in (${JEWEL.map((e) => `'make_${e.scroll}'`).join(', ')})`);
-const billHere = JEWEL.map((e) => `make_${e.scroll}=${[...(RECIPE_BY_ID.get(`make_${e.scroll}`)?.inputs ?? [])]
+  '|' order by r.id) from recipe r where r.id in (${PART3.map((e) => `'make_${e.scroll}'`).join(', ')})`);
+const billHere = PART3.map((e) => `make_${e.scroll}=${[...(RECIPE_BY_ID.get(`make_${e.scroll}`)?.inputs ?? [])]
   .sort((a, b) => a.item.localeCompare(b.item)).map((i) => `${i.item}*${i.count ?? 1}`).join('+')}`).sort().join('|');
-check(`every jewel scroll is written from the same papyrus and motes on both sides: ${JEWEL.map((e) => `${e.name} (${e.motes.map(([m, n]) => `${n} ${m}`).join(' + ')})`).join(', ')}`,
+check(`every scroll is written from the same papyrus and motes on both sides: ${PART3.map((e) => `${e.name} (${e.motes.map(([m, n]) => `${n} ${m}`).join(' + ')})`).join(', ')}`,
   billIsle === billHere && billHere.includes('make_knackstone_scroll=life_mote*1+light_mote*1+papyrus*1'), billIsle === billHere ? '' : `${billIsle} / ${billHere}`);
 
 const QLS = [0.4, 37.48, 50, 100, 140];
 const saysIsle = psql(`select string_agg(enchant_says(jsonb_build_object('id', e.id, 'ql', q)), '#' order by e.ord, o)
-  from enchantments() e, unnest(array[${QLS.join(',')}]::float8[]) with ordinality u(q, o) where e.id in (${JEWEL.map((e) => `'${e.id}'`).join(', ')})`);
-const saysHere = JEWEL.flatMap((e) => QLS.map((q) => enchantSays({ enchant: { id: e.id, ql: q } }))).join('#').trim();
-check('Examine says each at its quality in the same words on both sides', saysIsle === saysHere,
+  from enchantments() e, unnest(array[${QLS.join(',')}]::float8[]) with ordinality u(q, o) where e.id in (${PART3.map((e) => `'${e.id}'`).join(', ')})`);
+const saysHere = PART3.flatMap((e) => QLS.map((q) => enchantSays({ enchant: { id: e.id, ql: q } }))).join('#').trim();
+check('Examine says each at its quality in the same words on both sides, a Packmule\'s in kilos', saysIsle === saysHere && saysHere.includes('you carry 3.7 kg more') && saysHere.includes('you carry 10 kg more'),
   saysIsle === saysHere ? '' : (() => { const i = [...saysIsle].findIndex((ch, k) => ch !== saysHere[k]); return `at ${i}: ${saysIsle.slice(i - 40, i + 60)} / ${saysHere.slice(i - 40, i + 60)}`; })());
 check(`and the figures at QL 100 are the owner's: Scholar's Band 5% more skill, Knackstone half again the chance of a knack, Steady Heart 20% faster wind, Hearthbound 20% slower hunger and thirst, Favoured and Stillwater 10% more`,
   near(enchantValue(SCHOLAR, 100), 0.05) && near(enchantValue(KNACK, 100), 0.5) && near(enchantValue(HEART, 100), 0.2)
@@ -100,6 +103,7 @@ begin
 end $f$;
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_ring bigint; v_pend bigint; v_s bigint; v_altar bigint; v_at jsonb; c0 double precision;
+        v_pack bigint; v_chest bigint; v_cap bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 3', 318, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -180,6 +184,25 @@ begin
   insert into said select 'CALM0', s.calm::text from sitting_worth(w, u) s;
   update player set equipped = jsonb_build_object('jewel', v_pend) where world_id = w and uid = u;
   insert into said select 'CALM', s.calm::text from sitting_worth(w, u) s;
+
+  -- 7. Packmule, Seal's Coat and Hawk's Eye: refused elsewhere, and a Packmule on what you carry.
+  update player set equipped = '{}'::jsonb where world_id = w and uid = u;
+  v_pack := give(w, u, 'backpack', 1, 100);
+  v_chest := give(w, u, 'leather_jerkin', 1, 100);
+  v_cap := give(w, u, 'leather_cap', 1, 100);
+  v_s := give(w, u, 'packmule_scroll', 1, 90);
+  insert into said values ('R:mulechest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_chest, 'scroll', v_s)), 'none'));
+  insert into said values ('R:mulepack', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_pack, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'seals_coat_scroll', 1, 90);
+  insert into said values ('R:sealcap', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_cap, 'scroll', v_s)), 'none'));
+  insert into said values ('R:sealchest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_chest, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'hawks_eye_scroll', 1, 90);
+  insert into said values ('R:hawkchest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_chest, 'scroll', v_s)), 'none'));
+  insert into said values ('R:hawkcap', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_cap, 'scroll', v_s)), 'none'));
+  insert into said values ('CARRY0', carry_limit(w, u)::text);
+  update item set enchant = '{"id": "packmule", "ql": 100}'::jsonb where id = v_pack;
+  insert into said values ('CARRY', carry_limit(w, u)::text);
+  insert into said values ('SWIMSRC', (pg_get_functiondef('body_settle(uuid, uuid)'::regprocedure) like '%* (1 - worn_enchant(p_world, p_uid, ''swim''))%')::text);
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -282,7 +305,38 @@ check(`Stillwater at QL 100 worn: a sitting banks ${enchantValue(STILL, 100) * 1
   near(calm, calm0 * (1 + enchantValue(STILL, 100))) && num('CALM0') > 0 && near(num('CALM'), num('CALM0') * (1 + enchantValue(STILL, 100))),
   `${isle.get('CALM0')} ${isle.get('CALM')} / ${calm0} ${calm}`);
 
-check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => JEWEL.includes(e)).length === JEWEL.length);
+/* 7. Packmule, Seal's Coat, Hawk's Eye. */
+g.player.equipped.jewel = null;
+const pack = thing('backpack', 100);
+const jerkin = thing('leather_jerkin', 100);
+const cap = thing('leather_cap', 100);
+const refusals3b: Array<[string, string, string]> = [
+  ['R:mulechest', askWith(MULE, jerkin.uid), wrongKind(MULE)], ['R:mulepack', askWith(MULE, pack.uid), 'none'],
+  ['R:sealcap', askWith(SEAL, cap.uid), wrongKind(SEAL)], ['R:sealchest', askWith(SEAL, jerkin.uid), 'none'],
+  ['R:hawkchest', askWith(HAWK, jerkin.uid), wrongKind(HAWK)], ['R:hawkcap', askWith(HAWK, cap.uid), 'none'],
+];
+check(`Packmule goes on a backpack or a satchel, Seal's Coat on what is worn on the chest, Hawk's Eye on the head, each refused elsewhere in words that say so, on both sides`,
+  refusals3b.every(([k, here, want]) => isle.get(k) === want && here === want),
+  refusals3b.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+const carry0 = g.carryLimit();
+pack.enchant = { id: MULE.id, ql: 100 };
+const carry = g.carryLimit();
+check(`a Packmule at QL 100 on a backpack carried: ${enchantValue(MULE, 100)} kilos more before the weight tells, on both sides`,
+  near(carry - carry0, enchantValue(MULE, 100)) && near(num('CARRY') - num('CARRY0'), enchantValue(MULE, 100)), `${isle.get('CARRY0')} ${isle.get('CARRY')} / ${carry0} ${carry}`);
+g.player.equipped.chest = jerkin.uid;
+const wind0 = g.swimWind();
+jerkin.enchant = { id: SEAL.id, ql: 100 };
+const wind = g.swimWind();
+check(`a Seal's Coat at QL 100 worn: swimming costs ${enchantValue(SEAL, 100) * 100}% less stamina in the browser and in the island's body_settle`,
+  wind0 > 0 && near(wind, wind0 * (1 - enchantValue(SEAL, 100))) && isle.get('SWIMSRC') === 'true', `${wind0} ${wind} ${isle.get('SWIMSRC')}`);
+g.player.equipped.head = cap.uid;
+const sight0 = g.vision.sightRange();
+cap.enchant = { id: HAWK.id, ql: 100 };
+const sight = g.vision.sightRange();
+check(`a Hawk's Eye at QL 100 worn: sight ${enchantValue(HAWK, 100) * 100}% further (the browser's own reckoning; the island keeps no sight)`,
+  sight0 > 3 && near(sight, sight0 * (1 + enchantValue(HAWK, 100))), `${sight0} ${sight}`);
+
+check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => PART3.includes(e)).length === PART3.length);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nenchanting, part 3 — ${ok.length} of ${ok.length + bad.length}`);

@@ -68,14 +68,14 @@ export const SCROLL_HARM = 25;
  */
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
   | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace'
-  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm';
+  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
 export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -92,6 +92,8 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   light: 'a lantern or a torch',
   ring: 'a jewelled ring',
   amulet: 'a jewelled pendant',
+  pack: 'a backpack or a satchel',
+  head: 'what is worn on the head: a cap, a coif or a helm',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -202,6 +204,14 @@ export const HEARTHBOUND_PER_QL = 0.002;
 export const FAVOURED_PER_QL = 0.001;
 /** Stillwater: QL/10 percent more Calm banked from a sitting. */
 export const STILLWATER_PER_QL = 0.001;
+/** Packmule: a pack you carry lets you carry QL/10 kilos more before it tells on you. */
+export const PACKMULE_PER_QL = 0.1;
+/** Seal's Coat: you swim QL/5 percent faster, and swimming costs QL/5 percent less wind. */
+export const SEALS_COAT_PER_QL = 0.002;
+/** Hawk's Eye: you see QL/10 percent further. */
+export const HAWKS_EYE_PER_QL = 0.001;
+/** What an enchantment's figure is counted in, where it is not a share: Packmule's in kilos. */
+export const KILO_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['mule']);
 WORN_CAP.guard = STONESKIN_CAP;
 WORN_CAP.fireguard = EMBERWARD_CAP;
 WORN_CAP.thorns = THORNHIDE_CAP;
@@ -242,6 +252,9 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('hearthbound', 'Hearthbound', 'earth', 'amulet', 'upkeep', HEARTHBOUND_PER_QL),
   row('favoured', 'Favoured', 'light', 'amulet', 'favour', FAVOURED_PER_QL),
   row('stillwater', 'Stillwater', 'water', 'amulet', 'calm', STILLWATER_PER_QL),
+  row('packmule', 'Packmule', 'earth', 'pack', 'mule', PACKMULE_PER_QL),
+  row('seals_coat', 'Seal\'s Coat', 'water', 'chest', 'swim', SEALS_COAT_PER_QL),
+  row('hawks_eye', 'Hawk\'s Eye', 'wind', 'head', 'sight', HAWKS_EYE_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
@@ -345,6 +358,13 @@ export const wornEnchant = (worn: ReadonlyArray<{ enchant?: Enchant } | null | u
 
 /** What a go that brings one more says: "Bountiful brings one more of the raspberries." The island's `enchant_more` says it. */
 export const moreSaid = (e: EnchantmentDef, what: string): string => `${e.name} brings one more of the ${what}.`;
+
+/** An enchantment's figure as Examine says it: kilos for Packmule, to the tenth, and a share for the rest. The island's `enchant_figure`. */
+export const enchantFigure = (e: EnchantmentDef, x: number): string => {
+  if (!KILO_EFFECTS.has(e.effect)) return enchantPct(x);
+  const dec = (n: number): number => Number(n.toPrecision(12));
+  return `${Math.round(dec(dec(x) * 10)) / 10} kg`;
+};
 
 /**
  * A share as Examine says it: the island's `enchant_pct`, which rounds the

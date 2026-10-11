@@ -22,7 +22,7 @@ import { BLOW_SHARE, DAMAGE_MAX, QL_TOP } from './limits';
 import { HELD_LIGHTS } from './light';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
+  enchantChance, enchantFigure, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -119,11 +119,14 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'upkeep': return 'while it is worn, hunger and thirst fall {v} slower.';
     case 'favour': return 'while it is worn, a prayer gives {v} more favour.';
     case 'calm': return 'while it is worn, a sitting banks {v} more Calm.';
+    case 'mule': return 'while it is carried, you carry {v} more before the weight tells on you; each pack with it adds its own.';
+    case 'swim': return 'while it is worn, you swim {v} faster, never past a walk, and swimming costs {v} less stamina.';
+    case 'sight': return 'while it is worn, you see {v} further.';
     case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
   }
 }
 /** That line with its figure at this quality. */
-export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e).replace('{v}', enchantPct(enchantValue(e, ql)));
+export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e).replaceAll('{v}', enchantFigure(e, enchantValue(e, ql)));
 
 /** Examine's line for a thing holding an enchantment, or nothing. */
 export function enchantSays(item: Pick<Item, 'enchant'>): string {
@@ -156,9 +159,13 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'pick': return id === 'pickaxe';
     case 'light': return (HELD_LIGHTS as readonly string[]).includes(id);
     case 'ring': return id === 'jewelled_ring';
+    case 'pack': return PACKS.includes(id);
+    case 'head': return ARMOUR_BY_ID.get(id)?.slot === 'head';
     case 'amulet': return id === 'jewelled_pendant';
   }
 };
+/** What Packmule goes on: the packs that are carried. */
+export const PACKS = ['backpack', 'satchel'];
 /** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
 export const REAPERS = ['sickle', 'fishing_rod'];
 /**
@@ -188,6 +195,8 @@ export const FITS: Record<EnchantOn, string[]> = {
   pick: ['pickaxe'],
   light: [...HELD_LIGHTS],
   ring: ['jewelled_ring'],
+  pack: PACKS,
+  head: ARMOUR.filter((a) => a.slot === 'head').map((a) => a.id),
   amulet: ['jewelled_pendant'],
 };
 
