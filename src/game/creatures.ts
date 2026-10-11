@@ -4617,7 +4617,8 @@ export class Creatures {
       if (game.time < c.searchAt || game.time < c.huntRest) return false;
       // One of its pack already on you brings it, from wherever it can hear.
       const mate = def.pack ? this.packmateOn(game, c) : null;
-      if (!mate && d > (def.notice ?? HUNT_SIGHT)) return false;
+      // And from closer by night to one in a Shadowcloak (`shadowNotice`).
+      if (!mate && d > (def.notice ?? HUNT_SIGHT) * game.shadowNotice()) return false;
       c.searchAt = game.time + 2;
       if (!this.tileOk(game, Math.floor(p.x), Math.floor(p.y))) return false;
       c.enemy = PLAYER_ATTACKER;

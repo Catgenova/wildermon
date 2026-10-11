@@ -41,7 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import type { Enchant } from './enchant';
+import { wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -2698,7 +2698,8 @@ export class Game {
       // Less of a chance for every other thing on you than the one that struck (`CROWD_BLOCK`).
       const crowd = Math.max(0, 1 - CROWD_BLOCK * this.othersOnYou());
       // And what a Sworn Blade's Shield Mastery adds, under the ceiling it raises (`blockChance`).
-      const chance = blockChance(sh.block, shield.ql, this.skills.get('shields'), (k, o) => this.perk(k, o)) * crowd;
+      // And a Bulwark's points on top, past the ceiling (`worn_enchant`).
+      const chance = (blockChance(sh.block, shield.ql, this.skills.get('shields'), (k, o) => this.perk(k, o)) + this.wornEnchant('block')) * crowd;
       this.gainSkill('shields', 0.12);
       if (this.rand() < chance) {
         // Less for a Mender's Armour Care, as `hurt_player` has it.
@@ -2762,7 +2763,8 @@ export class Game {
     let through = raw * stanceTaken(this.settings.fightStance, perk) * (1 - this.dodge());
     const shield = this.worn('offhand');
     const sh = shield && SHIELDS[shield.id];
-    if (sh) through *= 1 - blockChance(sh.block, shield.ql, this.skills.get('shields'), perk);
+    if (sh) through *= 1 - Math.min(1, blockChance(sh.block, shield.ql, this.skills.get('shields'), perk) + this.wornEnchant('block'));
+    through *= this.enchantTaken(kind);
     let soaked = 0;
     for (const [slot, share] of HIT_LOCATIONS) {
       const item = this.worn(slot);
@@ -2822,8 +2824,9 @@ export class Game {
     const still = this.time - this.movedAt >= FIGHT_BACK_STILL ? this.perk('still:taken', 1) : 1;
     // and less from a creature that is burning for a Kindler's Flame Ward.
     const ward = from && (from.burnUntil ?? 0) > this.time ? this.perk('ward:burning', 1) : 1;
-    const hit = this.absorb(raw * stanceTaken(this.settings.fightStance, (k, o) => this.perk(k, o)) * (flank ? FLANK_HIT : 1) * still * ward,
-      kind);
+    // And lighter for a Stoneskin you wear, and a burn lighter for an Emberward (`enchant_guard`).
+    const hit = this.absorb(raw * stanceTaken(this.settings.fightStance, (k, o) => this.perk(k, o)) * (flank ? FLANK_HIT : 1) * still * ward
+      * this.enchantTaken(kind), kind);
     if (hit.blocked) {
       this.player.attackedAt = this.time;
       this.events.emit('hit', this.player.x, this.player.y, 0, 'taken');
@@ -2835,6 +2838,9 @@ export class Game {
     const retort = this.perk('retort:each', 0);
     if (retort > 0 && from) this.burn(from, retort, this.perk('retort:secs', 0));
     // Less of it on you while your companion beside you takes its share, for a Beastmaster's Shared Wounds (`class_bond_take`).
+    // And a Thornhide's share of what landed back on whatever struck, as a blow of yours that size would hurt it (`worn_enchant`).
+    const prick = this.wornEnchant('thorns');
+    if (prick > 0 && from && from.health > 0) this.creatures.hurt(this, from, (hit.taken * prick) / BLOW_SHARE, 'player');
     const lost = this.bondTake(hit.taken, from);
     this.player.stats.health = Math.max(0, this.player.stats.health - lost);
     // A blow that would kill you leaves you standing, once in so long, for Power's Hard to Kill (`path_hard_to_kill`).
@@ -3334,6 +3340,21 @@ export class Game {
 
   isNight(): boolean {
     return this.darkness() > 0.45;
+  }
+
+  /** What every piece you wear and hold of one enchantment comes to together, to its cap (`wornEnchant`, the island's `worn_enchant`). */
+  wornEnchant(effect: EnchantEffect): number {
+    return wornEnchant(Object.values(this.player.equipped).map((uid) => (uid === null || uid === undefined ? null : this.inventory.get(uid))), effect);
+  }
+
+  /** What is left of a blow of this kind after the Stoneskin and Emberward you wear (`enchant_guard`). */
+  enchantTaken(kind: WoundKind): number {
+    return (1 - this.wornEnchant('guard')) * (kind === 'burn' ? 1 - this.wornEnchant('fireguard') : 1);
+  }
+
+  /** How far a hunter notices you from, as a share of how far it would: less at night in a Shadowcloak (`enchant_shadow`). */
+  shadowNotice(): number {
+    return this.isNight() ? 1 - Math.min(1, this.wornEnchant('shadow')) : 1;
   }
 
   /**
@@ -3956,7 +3977,8 @@ export class Game {
     p.spellPace = this.time < this.paceUntil ? this.paceMul : 1;
     // And Power's Long Stride, and a Surge while it holds, which nothing slows (`travel_speed`).
     const surge = this.pathHolds('surge');
-    p.pathPace = this.pathFx('stride', 1) * (surge ? PATH_PICK_BY_ID.get('power_surge')?.fx.pace ?? 1 : 1);
+    // And quicker in a Featherstep's boots (`travel_speed`).
+    p.pathPace = this.pathFx('stride', 1) * (surge ? PATH_PICK_BY_ID.get('power_surge')?.fx.pace ?? 1 : 1) * (1 + this.wornEnchant('stride'));
     p.unslowed = surge;
     // Only wheels feel the ground: a boat is on water and feet are feet.
     p.wheelLoad = driven ? this.vehicleLoad(driven) : 0;

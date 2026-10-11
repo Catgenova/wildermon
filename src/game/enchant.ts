@@ -66,19 +66,31 @@ export const SCROLL_HARM = 25;
  * swing, more critical blows, more damage to hostile monsters, and a share of
  * every hit back as health (`leech`).
  */
-export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost';
+export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
+  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
 export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee' | 'bow';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
   bow: 'a bow',
+  armour: 'a piece of armour or clothing that is worn',
+  boots: 'boots or shoes',
+  // The game has no cloaks; what hangs over the body is the piece worn on the chest.
+  chest: 'what is worn on the chest: a tunic, a jerkin, a hauberk, a breastplate or a cuirass',
+  shield: 'a shield',
 };
+/**
+ * The ones a worn piece holds, and the most all of that kind you wear can come
+ * to together; each piece adds its share. Featherstep and Bulwark go on the
+ * one slot there is for them, so their cap is the piece's own.
+ */
+export const WORN_CAP: Partial<Record<EnchantEffect, number>> = {};
 
 export interface EnchantmentDef {
   id: string;
@@ -140,10 +152,32 @@ export const FROSTBITE_PER_QL = 0.002;
 export const FROST_PACE = 0.7;
 /** for this many seconds; another frost on one already slowed starts it again from then. */
 export const FROST_SECS = 3;
+/** Stoneskin: every blow that reaches you lands QL/20 percent lighter, for each piece, */
+export const STONESKIN_PER_QL = 0.0005;
+/** and all the Stoneskin you wear together never more than this. */
+export const STONESKIN_CAP = 0.15;
+/** Emberward: a burn's blow lands QL/5 percent lighter, for each piece, */
+export const EMBERWARD_PER_QL = 0.002;
+/** and never more than this together. */
+export const EMBERWARD_CAP = 0.5;
+/** Featherstep: you walk QL/20 percent faster. */
+export const FEATHERSTEP_PER_QL = 0.0005;
+/** Thornhide: what lands on you, QL/10 percent of it back on whatever struck, for each piece, */
+export const THORNHIDE_PER_QL = 0.001;
+/** and never more than this together. */
+export const THORNHIDE_CAP = 0.25;
+/** Shadowcloak: at night a hunter notices you from QL/4 percent closer. */
+export const SHADOWCLOAK_PER_QL = 0.0025;
+/** Bulwark: QL/10 percentage points on a shield's chance of a block. */
+export const BULWARK_PER_QL = 0.001;
+WORN_CAP.guard = STONESKIN_CAP;
+WORN_CAP.fireguard = EMBERWARD_CAP;
+WORN_CAP.thorns = THORNHIDE_CAP;
 
 /**
  * Every enchantment there is. The first three are the owner's first asks; the
- * six after them go on a melee weapon too, and the three after those on a bow.
+ * six after them go on a melee weapon too, the three after those on a bow,
+ * and the six after those on what you wear and the shield you hold.
  */
 export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('emberbrand', 'Emberbrand', 'fire', 'melee', 'burn', EMBERBRAND_PER_QL),
@@ -158,6 +192,12 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('farsight', 'Farsight', 'wind', 'bow', 'range', FARSIGHT_PER_QL),
   row('flamearrow', 'Flamearrow', 'fire', 'bow', 'flame', FLAMEARROW_PER_QL),
   row('frostbite', 'Frostbite', 'ice', 'bow', 'frost', FROSTBITE_PER_QL),
+  row('stoneskin', 'Stoneskin', 'earth', 'armour', 'guard', STONESKIN_PER_QL),
+  row('emberward', 'Emberward', 'ice', 'armour', 'fireguard', EMBERWARD_PER_QL),
+  row('featherstep', 'Featherstep', 'wind', 'boots', 'stride', FEATHERSTEP_PER_QL),
+  row('thornhide', 'Thornhide', 'life', 'armour', 'thorns', THORNHIDE_PER_QL),
+  row('shadowcloak', 'Shadowcloak', 'dark', 'chest', 'shadow', SHADOWCLOAK_PER_QL),
+  row('bulwark', 'Bulwark', 'earth', 'shield', 'block', BULWARK_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
@@ -247,6 +287,16 @@ export const alreadyEnchanted = (e: Enchant): string => `It already holds ${ENCH
 export const swingEnchant = (item: { enchant?: Enchant } | null | undefined, effect: EnchantEffect): number => {
   const e = item?.enchant && ENCHANTMENTS[item.enchant.id];
   return e && item?.enchant && e.effect === effect ? enchantValue(e, item.enchant.ql) : 0;
+};
+
+/**
+ * What every piece you wear and hold of one enchantment comes to together,
+ * held to its cap where it has one (`WORN_CAP`). The island's `worn_enchant`.
+ */
+export const wornEnchant = (worn: ReadonlyArray<{ enchant?: Enchant } | null | undefined>, effect: EnchantEffect): number => {
+  const sum = worn.reduce((n, it) => n + swingEnchant(it, effect), 0);
+  const cap = WORN_CAP[effect];
+  return cap === undefined ? sum : Math.min(cap, sum);
 };
 
 /** A share as Examine says it: the island's `enchant_pct`. */

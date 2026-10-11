@@ -15,13 +15,13 @@ import type { ActionDef, Target } from './actions';
 import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from './creatures';
 import { QL_BARE, QL_LOW, QL_SPAN, type Game } from './game';
 import { describeWith, itemDef, itemName, type Item } from './items';
-import { WEAPON_BY_ID, WEAPONS } from './gear';
+import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
 import { DAMAGE_MAX, QL_TOP } from './limits';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, enchantValue, FROST_PACE, FROST_SECS, qlWord, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
+  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -98,6 +98,16 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'frost':
       return `a shot from it that lands slows the target to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds {v} of the time; `
         + 'another on one already slowed starts it again rather than adding on.';
+    case 'guard':
+      return `while it is worn, every blow that reaches you lands {v} lighter; each piece with it adds its share, ${enchantPct(STONESKIN_CAP)} at most together.`;
+    case 'fireguard':
+      return `while it is worn, a burn that reaches you lands {v} lighter; each piece with it adds its share, ${enchantPct(EMBERWARD_CAP)} at most together.`;
+    case 'stride': return 'while they are worn, you walk {v} faster.';
+    case 'thorns':
+      return 'while it is worn, a creature whose blow lands on you takes {v} of the damage it did you back, as a blow of yours of that size would hurt it; '
+        + `each piece with it adds its share, ${enchantPct(THORNHIDE_CAP)} at most together.`;
+    case 'shadow': return 'while it is worn, at night a hunting creature notices you from {v} closer.';
+    case 'block': return '{v} is added to the shield\'s chance of turning a blow aside, past the most a shield otherwise blocks.';
   }
 }
 /** That line with its figure at this quality. */
@@ -125,6 +135,10 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
   switch (on) {
     case 'melee': return isMelee(id);
     case 'bow': return isBowId(id);
+    case 'armour': return isArmour(id);
+    case 'boots': return ARMOUR_BY_ID.get(id)?.slot === 'feet';
+    case 'chest': return ARMOUR_BY_ID.get(id)?.slot === 'chest';
+    case 'shield': return isShield(id);
   }
 };
 /** A bow: a weapon that shoots, rather than one that is swung or thrown. */
@@ -132,7 +146,14 @@ export const isBowId = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.ammo;
 /** Every bow there is. */
 export const BOWS: string[] = WEAPONS.filter((w) => isBowId(w.id)).map((w) => w.id);
 /** Every item id each kind of enchantment goes on, for the help and the island. */
-export const FITS: Record<EnchantOn, string[]> = { melee: MELEE_WEAPONS, bow: BOWS };
+export const FITS: Record<EnchantOn, string[]> = {
+  melee: MELEE_WEAPONS,
+  bow: BOWS,
+  armour: ARMOUR.map((a) => a.id),
+  boots: ARMOUR.filter((a) => a.slot === 'feet').map((a) => a.id),
+  chest: ARMOUR.filter((a) => a.slot === 'chest').map((a) => a.id),
+  shield: Object.keys(SHIELDS),
+};
 
 /* ---- the Enchant job ------------------------------------------------------ */
 

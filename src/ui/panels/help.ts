@@ -137,7 +137,7 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
 import { BOWS, BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
@@ -246,7 +246,11 @@ function enchantingHelp(): string {
     a Berserker's Wild Strength or Adrenaline), multiplying with them. Nightblade's share is added to your chance of a critical blow,
     on top of your skill and a Skirmisher's Keen Edge. Sunstrike's share multiplies with every other change to a blow's damage; the hostile monsters are ${monsterNames()}.
     Leeching's health comes on top of a Berserker's Thirst for Blood. Farsight's share multiplies with a bow's own range, its maker's mark
-    and an Archer's Long Draw.</p>
+    and an Archer's Long Draw. What you wear adds up piece by piece: ${listed(ENCHANTMENT_LIST.filter((e) => WORN_CAP[e.effect] !== undefined)
+      .map((e) => `${e.name} to ${percent(WORN_CAP[e.effect] ?? 0)} at most`))} together, and each multiplies with every other change to a blow
+    (your stance, armour, a ward or a spell). Featherstep's share multiplies with every other change to your pace, Power's Long Stride among them;
+    Shadowcloak's with how far each hunter would see you, and only while it is night; Bulwark's points go on top of a shield's chance, past the
+    most a shield otherwise blocks. The game has no cloaks, so Shadowcloak goes on what is worn on the chest.</p>
     <p>Only an ordinary shot from a bow that lands can set off ${listed(ENCHANTMENT_LIST.filter((e) => SHOT_EFFECTS.has(e.effect)).map((e) => e.name))}.
     A <b>slow</b> holds a creature to ${percent(FROST_PACE)} of its pace for ${FROST_SECS} seconds; the stronger of two slows holds, to the later end,
     and the target panel says "slowed" while it lasts.</p>`;

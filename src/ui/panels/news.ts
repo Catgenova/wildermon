@@ -2,7 +2,7 @@ import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
-import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, SCROLL_HARM, wrongKind } from '../../game/enchant';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { QL_TOP as NEWS_QL_TOP } from '../../game/limits';
@@ -1684,6 +1684,14 @@ export const NEWS: News[] = [
       `Three enchantments for a bow: ${listed(ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
       ...ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       'A slowed creature is said on the target panel, "slowed", as a stunned one is.',
+    ],
+  },
+  {
+    n: 122,
+    day: '2026-10-11',
+    lines: () => [
+      `Six enchantments for what you wear and hold: ${listed(ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+      ...ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
     ],
   },
 ];

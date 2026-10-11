@@ -31,7 +31,7 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { ENCHANTMENT_LIST, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { EMBERWARD_CAP, ENCHANTMENT_LIST, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
 import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
 import { classDealt } from '../../src/game/creatureActions';
 import { blowEvery, bowReach, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
@@ -119,6 +119,7 @@ create or replace function perk_rare(p_chance double precision) returns text lan
 create or replace function rarity_roll() returns text language sql as 'select null::text';
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_sw bigint; v_bow bigint; v_s bigint; v_c creature; v_g creature; v_until timestamptz;
+        v_boot bigint; v_chest bigint; v_cap bigint; v_arm bigint; v_leg bigint; v_sh bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 2', 218, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -221,6 +222,62 @@ begin
                         where (t->>'id')::int = 9212), 'none')
     || '|' || (select e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1)
     from creature c where c.world_id = w and c.id = 9212;
+
+  -- 8. What is worn: refusals by kind.
+  update player set equipped = '{}'::jsonb where world_id = w and uid = u;
+  perform pg_temp.nodice();
+  v_boot := give(w, u, 'leather_boots', 1, 100);
+  v_chest := give(w, u, 'leather_jerkin', 1, 100);
+  v_cap := give(w, u, 'leather_cap', 1, 100);
+  v_arm := give(w, u, 'leather_sleeves', 1, 100);
+  v_leg := give(w, u, 'leather_trousers', 1, 100);
+  v_sh := give(w, u, 'wooden_shield', 1, 100, 'Pine');
+  v_s := give(w, u, 'featherstep_scroll', 1, 90);
+  insert into said values ('R:featherchest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_chest, 'scroll', v_s)), 'none'));
+  insert into said values ('R:featherboot', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_boot, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'shadowcloak_scroll', 1, 90);
+  insert into said values ('R:shadowcap', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_cap, 'scroll', v_s)), 'none'));
+  insert into said values ('R:shadowchest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_chest, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'bulwark_scroll', 1, 90);
+  insert into said values ('R:bulwarksword', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sw, 'scroll', v_s)), 'none'));
+  insert into said values ('R:bulwarkshield', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sh, 'scroll', v_s)), 'none'));
+
+  -- 9. Stoneskin on two pieces, then on four (past the cap); Emberward on one, then three; Featherstep; Bulwark; Shadowcloak.
+  update player set equipped = jsonb_build_object('feet', v_boot, 'chest', v_chest, 'head', v_cap, 'arms', v_arm, 'legs', v_leg, 'offhand', v_sh)
+   where world_id = w and uid = u;
+  insert into said values ('WALK0', travel_speed(w, u)::text);
+  update item set enchant = '{"id": "stoneskin", "ql": 100}'::jsonb where id in (v_chest, v_cap);
+  insert into said values ('SKIN2', enchant_guard(w, u, 'bite')::text || '|' || enchant_guard(w, u, 'burn')::text);
+  update item set enchant = '{"id": "stoneskin", "ql": 100}'::jsonb where id in (v_arm, v_leg);
+  insert into said values ('SKIN4', enchant_guard(w, u, 'bite')::text);
+  update item set enchant = null where id in (v_chest, v_cap, v_arm, v_leg);
+  update item set enchant = '{"id": "emberward", "ql": 100}'::jsonb where id = v_chest;
+  insert into said values ('EMBER1', enchant_guard(w, u, 'bite')::text || '|' || enchant_guard(w, u, 'burn')::text);
+  update item set enchant = '{"id": "emberward", "ql": 100}'::jsonb where id in (v_cap, v_arm);
+  insert into said values ('EMBER3', enchant_guard(w, u, 'burn')::text);
+  update item set enchant = '{"id": "featherstep", "ql": 100}'::jsonb where id = v_boot;
+  insert into said values ('WALK', travel_speed(w, u)::text);
+  update item set enchant = '{"id": "bulwark", "ql": 100}'::jsonb where id = v_sh;
+  insert into said values ('BLOCK', worn_enchant(w, u, 'block')::text);
+  update item set enchant = '{"id": "shadowcloak", "ql": 100}'::jsonb where id = v_chest;
+  insert into said values ('SHADOW', enchant_shadow(w, u)::text || '|' || is_night(w)::text);
+
+  -- 10. Thornhide on two pieces: a shaggan's blow, and what is owed back to it.
+  update item set enchant = null where id in (v_chest, v_cap, v_arm, v_leg, v_boot, v_sh);
+  update player set equipped = jsonb_build_object('chest', v_chest, 'head', v_cap) where world_id = w and uid = u;
+  update item set enchant = '{"id": "thornhide", "ql": 100}'::jsonb where id in (v_chest, v_cap);
+  insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
+    values (w, 9221, 'shaggan', 'Shaggan', 'wild', 41.2, 40.5, 41.2, 40.5, 90, 'male');
+  update player set stats = stats || jsonb_build_object('health', 1, 'hurtBy', 9221), wounds = '[]'::jsonb, blessings = '{}'::jsonb
+   where world_id = w and uid = u;
+  delete from faith_owed where world_id = w;
+  perform pg_temp.dice('0.99');
+  perform hurt_player(w, u, 0.1, 'The shaggan bites', 'bite');
+  perform pg_temp.nodice();
+  insert into said select 'THORN', (1 - (p.stats->>'health')::double precision)::text
+    || '|' || coalesce((select sum(o.dmg)::text from faith_owed o where o.world_id = w and o.creature_id = 9221), 'none')
+    || '|' || worn_enchant(w, u, 'thorns')::text
+    from player p where p.world_id = w and p.uid = u;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -379,6 +436,87 @@ check(`a Frostbite at QL ${HIT_QL} (${enchantHitChance(FROST, HIT_QL) * 100}%): 
     && ic.slowPace === FROST_PACE && near((ic.slowUntil ?? 0) - g.time, FROST_SECS) && slowed(g, ic)
     && part('IUNDER', 4) === said[said.length - 1] && said[said.length - 1] === `Your Frostbite slows the shaggan to ${FROST_PACE * 100}% of its pace for ${FROST_SECS} seconds.`,
   `${isle.get('IOVER')} ${isle.get('IUNDER')} / ${ic.slowPace} ${(ic.slowUntil ?? 0) - g.time} ${said[said.length - 1]}`);
+
+/* 8. What is worn: refusals by kind. */
+const [FEATHER, SHADOW, BULWARK, STONE, EMBERW, THORN] = ['featherstep', 'shadowcloak', 'bulwark', 'stoneskin', 'emberward', 'thornhide'].map(E);
+g.player.equipped.weapon = null;
+const boot = thing('leather_boots', 100);
+const jerkin = thing('leather_jerkin', 100);
+const cap = thing('leather_cap', 100);
+const sleeves = thing('leather_sleeves', 100);
+const trousers = thing('leather_trousers', 100);
+const shield = thing('wooden_shield', 100, 'Pine');
+const askWith = (e: EnchantmentDef, uid: number): string => {
+  const sc = thing(e.scroll, 90);
+  return act('enchant').check?.({ kind: 'item', uid, scroll: sc.uid } as Target, g) ?? 'none';
+};
+const refusals: Array<[string, string, string]> = [
+  ['R:featherchest', askWith(FEATHER, jerkin.uid), wrongKind(FEATHER)], ['R:featherboot', askWith(FEATHER, boot.uid), 'none'],
+  ['R:shadowcap', askWith(SHADOW, cap.uid), wrongKind(SHADOW)], ['R:shadowchest', askWith(SHADOW, jerkin.uid), 'none'],
+  ['R:bulwarksword', askWith(BULWARK, sword.uid), wrongKind(BULWARK)], ['R:bulwarkshield', askWith(BULWARK, shield.uid), 'none'],
+];
+check('Featherstep goes on boots, Shadowcloak on what is worn on the chest, Bulwark on a shield, and each is refused elsewhere in words that say so, on both sides',
+  refusals.every(([k, here, want]) => isle.get(k) === want && here === want) && wrongKind(FEATHER) === 'Featherstep goes on boots or shoes.',
+  refusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+
+/* 9. Stoneskin, Emberward, Featherstep, Bulwark, Shadowcloak. */
+Object.assign(g.player.equipped, { feet: boot.uid, chest: jerkin.uid, head: cap.uid, arms: sleeves.uid, legs: trousers.uid, offhand: shield.uid });
+const set = (e: EnchantmentDef | null, ...its: Item[]): void => { for (const it of its) it.enchant = e ? { id: e.id, ql: 100 } : undefined; };
+set(STONE, jerkin, cap);
+const skin2 = [g.enchantTaken('bite'), g.enchantTaken('burn')];
+set(STONE, sleeves, trousers);
+const skin4 = g.enchantTaken('bite');
+check(`Stoneskin at QL 100 takes ${enchantValue(STONE, 100) * 100}% off every blow a piece: two pieces ${Math.round((1 - skin2[0]) * 100)}%, four held to ${STONESKIN_CAP * 100}%, on both sides`,
+  near(skin2[0], 1 - 2 * enchantValue(STONE, 100)) && near(skin2[1], skin2[0]) && near(skin4, 1 - STONESKIN_CAP)
+    && near(Number(part('SKIN2', 0)), skin2[0]) && near(Number(part('SKIN2', 1)), skin2[1]) && near(Number(isle.get('SKIN4')), skin4),
+  `${isle.get('SKIN2')} ${isle.get('SKIN4')} / ${skin2.join('|')} ${skin4}`);
+set(null, jerkin, cap, sleeves, trousers);
+set(EMBERW, jerkin);
+const ember1 = [g.enchantTaken('bite'), g.enchantTaken('burn')];
+set(EMBERW, cap, sleeves);
+const ember3 = g.enchantTaken('burn');
+check(`Emberward at QL 100 takes ${enchantValue(EMBERW, 100) * 100}% off a burn a piece and nothing off a bite; three held to ${EMBERWARD_CAP * 100}%, on both sides`,
+  near(ember1[0], 1) && near(ember1[1], 1 - enchantValue(EMBERW, 100)) && near(ember3, 1 - EMBERWARD_CAP)
+    && near(Number(part('EMBER1', 0)), ember1[0]) && near(Number(part('EMBER1', 1)), ember1[1]) && near(Number(isle.get('EMBER3')), ember3),
+  `${isle.get('EMBER1')} ${isle.get('EMBER3')} / ${ember1.join('|')} ${ember3}`);
+set(FEATHER, boot);
+check(`Featherstep at QL 100: you walk ${enchantValue(FEATHER, 100) * 100}% faster, on both sides`,
+  near(g.wornEnchant('stride'), enchantValue(FEATHER, 100)) && near(Number(isle.get('WALK')), Number(isle.get('WALK0')) * (1 + enchantValue(FEATHER, 100))),
+  `${isle.get('WALK0')} to ${isle.get('WALK')}`);
+set(BULWARK, shield);
+check(`Bulwark at QL 100 adds ${enchantValue(BULWARK, 100) * 100} points to a shield's chance of a block, on both sides`,
+  near(g.wornEnchant('block'), enchantValue(BULWARK, 100)) && near(Number(isle.get('BLOCK')), g.wornEnchant('block')), `${isle.get('BLOCK')}`);
+set(SHADOW, jerkin);
+const [shadowIsle, nightIsle] = (isle.get('SHADOW') ?? '').split('|');
+check(`Shadowcloak at QL 100: at night a hunter notices you from ${enchantValue(SHADOW, 100) * 100}% closer, and by day as ever, on both sides`,
+  near(Number(shadowIsle), nightIsle === 'true' ? 1 - enchantValue(SHADOW, 100) : 1)
+    && near(g.shadowNotice(), g.isNight() ? 1 - enchantValue(SHADOW, 100) : 1) && near(g.wornEnchant('shadow'), enchantValue(SHADOW, 100)),
+  `${isle.get('SHADOW')} / ${g.shadowNotice()} ${g.isNight()}`);
+
+/* 10. Thornhide. */
+set(null, jerkin, cap, sleeves, trousers, boot, shield);
+for (const k of Object.keys(g.player.equipped)) g.player.equipped[k] = null;
+Object.assign(g.player.equipped, { chest: jerkin.uid, head: cap.uid });
+set(THORN, jerkin, cap);
+const tc = g.creatures.spawn('shaggan', 41.2, 40.5, 'wild', () => 0.5, 0);
+tc.health = 90;
+g.player.stats.health = 1;
+g.player.wounds = [];
+g.player.attackedBy = tc.id;
+dice(0.99);
+// What is sent back, before the creature's own hide and blood have their say (the island's `faith_owed` row is the same figure).
+let sent = 0;
+const hurtOf = g.creatures.hurt.bind(g.creatures);
+g.creatures.hurt = (gg, c, dmg, ...rest) => { if (c === tc) sent += dmg; return hurtOf(gg, c, dmg, ...rest); };
+g.hurtPlayer(0.1, 'The shaggan bites', 'bite');
+g.creatures.hurt = hurtOf;
+const lostHere = 1 - g.player.stats.health;
+const share = g.wornEnchant('thorns');
+const [lostIsle, owedIsle, shareIsle] = (isle.get('THORN') ?? '').split('|').map(Number);
+check(`Thornhide at QL 100 on two pieces sends ${share * 100}% of what a blow did you back on whatever struck, at what a blow of yours that size is to it, on both sides`,
+  near(share, 2 * enchantValue(THORN, 100)) && near(shareIsle, share) && lostHere > 0 && near(sent, (lostHere * share) / BLOW_SHARE, 1e-6) && tc.health < 90
+    && near(owedIsle, (lostIsle * share) / BLOW_SHARE, 1e-6),
+  `${isle.get('THORN')} / lost ${lostHere}, sent ${sent}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nenchanting, part 2 — ${ok.length} of ${ok.length + bad.length}`);
