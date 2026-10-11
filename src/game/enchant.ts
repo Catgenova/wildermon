@@ -68,14 +68,15 @@ export const SCROLL_HARM = 25;
  */
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
   | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace'
-  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight';
+  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight' | 'ember' | 'master';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
 export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head'
+  | 'furnace' | 'station';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -94,6 +95,9 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   amulet: 'a jewelled pendant',
   pack: 'a backpack or a satchel',
   head: 'what is worn on the head: a cap, a coif or a helm',
+  // These two are enchanted where they stand (`Game.placedFor`).
+  furnace: 'a smelter or a kiln',
+  station: 'an anvil or a loom',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -210,8 +214,12 @@ export const PACKMULE_PER_QL = 0.1;
 export const SEALS_COAT_PER_QL = 0.002;
 /** Hawk's Eye: you see QL/10 percent further. */
 export const HAWKS_EYE_PER_QL = 0.001;
-/** What an enchantment's figure is counted in, where it is not a share: Packmule's in kilos. */
-export const KILO_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['mule']);
+/** Ember Heart: a smelter or a kiln burns QL/2 percent less fuel for the same work. */
+export const EMBER_HEART_PER_QL = 0.005;
+/** Masterwork: a thing made at the anvil or the loom comes out QL/20 points of quality higher. */
+export const MASTERWORK_PER_QL = 0.05;
+/** What an enchantment's figure is counted in, where it is not a share: Packmule's in kilos, Masterwork's in points of quality. */
+export const FIGURE_UNITS: Partial<Record<EnchantEffect, string>> = { mule: 'kg', master: 'QL' };
 WORN_CAP.guard = STONESKIN_CAP;
 WORN_CAP.fireguard = EMBERWARD_CAP;
 WORN_CAP.thorns = THORNHIDE_CAP;
@@ -255,6 +263,8 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('packmule', 'Packmule', 'earth', 'pack', 'mule', PACKMULE_PER_QL),
   row('seals_coat', 'Seal\'s Coat', 'water', 'chest', 'swim', SEALS_COAT_PER_QL),
   row('hawks_eye', 'Hawk\'s Eye', 'wind', 'head', 'sight', HAWKS_EYE_PER_QL),
+  row('ember_heart', 'Ember Heart', 'fire', 'furnace', 'ember', EMBER_HEART_PER_QL),
+  row('masterwork', 'Masterwork', ['fire', 'light'], 'station', 'master', MASTERWORK_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
@@ -329,6 +339,8 @@ export const ENCHANT_SAID = {
   scroll: 'Choose an enchantment scroll.',
   weapon: 'Choose something in your pack to enchant.',
   broken: 'It is broken.',
+  gone: 'It is gone.',
+  reach: 'Stand within reach of it.',
 } as const;
 /** Why this scroll will not go into a thing of the wrong kind: "Featherstep goes on boots." */
 export const wrongKind = (e: EnchantmentDef): string => `${e.name} goes on ${ON_WORDS[e.on]}.`;
@@ -346,6 +358,12 @@ export const swingEnchant = (item: { enchant?: Enchant } | null | undefined, eff
   return e && item?.enchant && e.effect === effect ? enchantValue(e, item.enchant.ql) : 0;
 };
 
+/** What a placed thing's status line adds for the enchantment set into it where it stands: " · Ember Heart QL 60.0". */
+export const enchantTail = (t: { enchant?: Enchant }): string =>
+  (t.enchant && ENCHANTMENTS[t.enchant.id] ? ` · ${ENCHANTMENTS[t.enchant.id].name} QL ${qlWord(t.enchant.ql)}` : '');
+/** The fuel a smelter or a kiln burns for each second of heat: one, less an Ember Heart's share. The island's `placed_burn_rate`. */
+export const furnaceBurn = (f: { enchant?: Enchant }): number => 1 - swingEnchant(f, 'ember');
+
 /**
  * What every piece you wear and hold of one enchantment comes to together,
  * held to its cap where it has one (`WORN_CAP`). The island's `worn_enchant`.
@@ -361,9 +379,10 @@ export const moreSaid = (e: EnchantmentDef, what: string): string => `${e.name} 
 
 /** An enchantment's figure as Examine says it: kilos for Packmule, to the tenth, and a share for the rest. The island's `enchant_figure`. */
 export const enchantFigure = (e: EnchantmentDef, x: number): string => {
-  if (!KILO_EFFECTS.has(e.effect)) return enchantPct(x);
+  const unit = FIGURE_UNITS[e.effect];
+  if (!unit) return enchantPct(x);
   const dec = (n: number): number => Number(n.toPrecision(12));
-  return `${Math.round(dec(dec(x) * 10)) / 10} kg`;
+  return `${Math.round(dec(dec(x) * 10)) / 10} ${unit}`;
 };
 
 /**

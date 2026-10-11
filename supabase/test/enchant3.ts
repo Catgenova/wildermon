@@ -24,7 +24,8 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { DAMAGE_MAX } from '../../src/game/limits';
 import { enchantSays } from '../../src/game/enchanting';
 import { knackChance } from '../../src/game/titles';
 import { sittingWorth } from '../../src/game/meditation';
@@ -55,8 +56,9 @@ const E = (id: string): EnchantmentDef => ENCHANTMENTS[id];
 const [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL] = ['scholars_band', 'knackstone', 'steady_heart', 'hearthbound', 'favoured', 'stillwater'].map(E);
 const JEWEL = [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL];
 const [MULE, SEAL, HAWK] = ['packmule', 'seals_coat', 'hawks_eye'].map(E);
+const [EMBER, MASTER] = ['ember_heart', 'masterwork'].map(E);
 /** Everything part 3 has added so far, for the scrolls and the words. */
-const PART3 = [...JEWEL, MULE, SEAL, HAWK];
+const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER];
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
@@ -80,6 +82,7 @@ check(`and the figures at QL 100 are the owner's: Scholar's Band 5% more skill, 
 /* ---- on the island --------------------------------------------------------------- */
 
 const MIRA = 'e1c4a170-0000-4000-8000-000000000003';
+const lastSaid = `(select e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1)`;
 const out = psql(`
 begin;
 create temp table said (k text, v text);
@@ -103,7 +106,7 @@ begin
 end $f$;
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_ring bigint; v_pend bigint; v_s bigint; v_altar bigint; v_at jsonb; c0 double precision;
-        v_pack bigint; v_chest bigint; v_cap bigint;
+        v_pack bigint; v_chest bigint; v_cap bigint; v_sm bigint; v_sm2 bigint; v_anv bigint; v_loom bigint; v_back bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 3', 318, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -203,6 +206,64 @@ begin
   update item set enchant = '{"id": "packmule", "ql": 100}'::jsonb where id = v_pack;
   insert into said values ('CARRY', carry_limit(w, u)::text);
   insert into said values ('SWIMSRC', (pg_get_functiondef('body_settle(uuid, uuid)'::regprocedure) like '%* (1 - worn_enchant(p_world, p_uid, ''swim''))%')::text);
+
+  -- 8. Things standing where they were set down: a smelter, a second one, an anvil and a loom round the body.
+  update player set equipped = '{}'::jsonb where world_id = w and uid = u;
+  delete from event where world_id = w and uid = u;
+  insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql) values (w, 'smelter', 41, 40, 0, 0, 41.375, 40.25, 60) returning id into v_sm;
+  insert into placed (world_id, kind, x, y, sx, sy, cx, cy, ql) values (w, 'smelter', 39, 41, 0, 0, 39.375, 41.25, 60) returning id into v_sm2;
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'anvil', 'iron', 39, 40, 0, 0, 39.25, 40.25, 50) returning id into v_anv;
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'loom', 40, 41, 0, 0, 40.25, 41.25, 50) returning id into v_loom;
+  v_s := give(w, u, 'ember_heart_scroll', 1, 90);
+  insert into said values ('R:embanvil', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'anvil', 'id', v_anv, 'scroll', v_s)), 'none'));
+  insert into said values ('R:embsm', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm, 'scroll', v_s)), 'none'));
+  update player set x = 46.5 where world_id = w and uid = u;
+  insert into said values ('R:far', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm, 'scroll', v_s)), 'none'));
+  update player set x = 40.5 where world_id = w and uid = u;
+  -- Taken, through the job: enchanting 100, a QL 90 scroll, a QL 60 smelter -- held to the smelter.
+  perform pg_temp.dice('0.01,0.5');
+  perform act_perform(w, u, 'enchant', jsonb_build_object('kind', 'smelter', 'id', v_sm, 'scroll', v_s));
+  perform pg_temp.nodice();
+  insert into said select 'EMB', (p.enchant->>'ql') || '|' || ${lastSaid} from placed p where p.id = v_sm;
+  -- Not taken, twice, on the other: harm, and then harm held a point short of broken.
+  v_s := give(w, u, 'ember_heart_scroll', 1, 90);
+  perform pg_temp.dice('0.99,0.01');
+  perform perform_enchant(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm2, 'scroll', v_s));
+  perform pg_temp.nodice();
+  insert into said select 'MISS', p.dmg || '|' || ${lastSaid} from placed p where p.id = v_sm2;
+  update placed set dmg = 90 where id = v_sm2;
+  v_s := give(w, u, 'ember_heart_scroll', 1, 90);
+  perform pg_temp.dice('0.99,0.01');
+  perform perform_enchant(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm2, 'scroll', v_s));
+  perform pg_temp.nodice();
+  insert into said select 'MISS2', p.dmg || '|' || (p.enchant is null)::text || '|' || ${lastSaid} from placed p where p.id = v_sm2;
+  -- Up into the pack and down again: the enchantment goes with it both ways.
+  perform perform_fire(w, u, 'pick_up_smelter', jsonb_build_object('kind', 'smelter', 'id', v_sm));
+  select i.id into v_back from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'smelter';
+  insert into said select 'UP', coalesce(i.enchant::text, 'none') || '|' || item_name(i) from item i where i.id = v_back;
+  perform perform_fire(w, u, 'place_smelter', jsonb_build_object('kind', 'tile', 'x', 41, 'y', 40, 'sx', 0, 'sy', 0, 'itemUid', v_back));
+  select p.id into v_sm from placed p where p.world_id = w and p.kind = 'smelter' and p.x = 41 and p.y = 40;
+  insert into said select 'DOWN', coalesce(p.enchant::text, 'none') from placed p where p.id = v_sm;
+  -- Ember Heart in the fire: ten seconds of a lit smelter with a job on, and the fuel and the work it comes to.
+  update placed set lit = true, fuel = 100, since = now() - interval '10 seconds',
+         state = jsonb_build_object('jobs', jsonb_build_array(jsonb_build_object('left', 20, 'makes', 'copper_lump', 'ql', 50)), 'output', '[]'::jsonb)
+   where id = v_sm;
+  insert into said select 'RATE', placed_burn_rate(p)::text from placed p where p.id = v_sm;
+  perform furnace_settle(w, v_sm);
+  insert into said select 'BURN', p.fuel || '|' || (p.state->'jobs'->0->>'left') from placed p where p.id = v_sm;
+  -- Masterwork: refused on a smelter, refused on a locked loom, and what it adds at the loom it stands on.
+  v_s := give(w, u, 'masterwork_scroll', 1, 90);
+  insert into said values ('R:mastersm', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'smelter', 'id', v_sm2, 'scroll', v_s)), 'none'));
+  update placed set lock = 999999 where id = v_loom;
+  insert into said values ('R:lock', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_loom, 'scroll', v_s)), 'none'));
+  update placed set lock = null where id = v_loom;
+  insert into said values ('R:loom', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_loom, 'scroll', v_s)), 'none'));
+  insert into said values ('R:anvil', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'anvil', 'id', v_anv, 'scroll', v_s)), 'none'));
+  update placed set enchant = '{"id": "masterwork", "ql": 60}'::jsonb where id = v_loom;
+  insert into said values ('MASTER', station_master(w, u, 'loom')::text || '|' || station_master(w, u, 'campfire')::text);
+  insert into said values ('MASTERSRC', (pg_get_functiondef('perform_craft(uuid, uuid, text, jsonb)'::regprocedure) like '%+ station_master(p_world, p_uid, r.station)%')::text
+    || '|' || ((length(pg_get_functiondef('perform_forge(uuid, uuid, text, jsonb)'::regprocedure))
+                - length(replace(pg_get_functiondef('perform_forge(uuid, uuid, text, jsonb)'::regprocedure), '+ placed_enchant(p, ''master'')', ''))) / length('+ placed_enchant(p, ''master'')'))::text);
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -335,6 +396,62 @@ cap.enchant = { id: HAWK.id, ql: 100 };
 const sight = g.vision.sightRange();
 check(`a Hawk's Eye at QL 100 worn: sight ${enchantValue(HAWK, 100) * 100}% further (the browser's own reckoning; the island keeps no sight)`,
   sight0 > 3 && near(sight, sight0 * (1 + enchantValue(HAWK, 100))), `${sight0} ${sight}`);
+
+/* 8. Things standing where they were set down: Ember Heart and Masterwork. */
+const said: string[] = [];
+const logOf = g.logMsg.bind(g);
+g.logMsg = (m: string, k?: Parameters<typeof logOf>[1]) => { said.push(m); logOf(m, k); };
+g.player.equipped = {};
+const sm = g.addSmelter(41, 40, 0, 0, 60);
+const sm2 = g.addSmelter(39, 41, 0, 0, 60);
+const anv = g.addAnvil(39, 40, 0, 0, 'iron', 50);
+const loom = g.addFurniture('loom', 40, 41, 0, 0, 50);
+const placedAsk = (e: EnchantmentDef, t: Target): string => act('enchant').check?.({ ...t, scroll: thing(e.scroll, 90).uid } as Target, g) ?? 'none';
+const placedRefusals: Array<[string, string, string]> = [
+  ['R:embanvil', placedAsk(EMBER, { kind: 'anvil', id: anv.id }), wrongKind(EMBER)],
+  ['R:embsm', placedAsk(EMBER, { kind: 'smelter', id: sm.id }), 'none'],
+  ['R:mastersm', placedAsk(MASTER, { kind: 'smelter', id: sm2.id }), wrongKind(MASTER)],
+  ['R:loom', placedAsk(MASTER, { kind: 'furniture', id: loom.id }), 'none'],
+  ['R:anvil', placedAsk(MASTER, { kind: 'anvil', id: anv.id }), 'none'],
+];
+g.putBody(46.5, 40.5, 0);
+placedRefusals.push(['R:far', placedAsk(EMBER, { kind: 'smelter', id: sm.id }), ENCHANT_SAID.reach]);
+g.putBody(40.5, 40.5, 0);
+loom.lock = 999999;
+placedRefusals.push(['R:lock', placedAsk(MASTER, { kind: 'furniture', id: loom.id }), 'It is locked, and you have no key to it.']);
+loom.lock = undefined;
+check(`Ember Heart goes on ${ON_WORDS.furnace} and Masterwork on ${ON_WORDS.station}, enchanted where they stand: each refused on the other kind, out of reach, and past a padlock you have no key to, in the same words on both sides`,
+  placedRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
+  placedRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+const placedGo = (e: EnchantmentDef, t: Target, ...rolls: number[]): string => {
+  dice(...rolls);
+  act('enchant').perform({ ...t, scroll: thing(e.scroll, 90).uid } as Target, g);
+  return said[said.length - 1];
+};
+const took = placedGo(EMBER, { kind: 'smelter', id: sm.id }, 0.01, 0.5);
+check('a scroll that takes on a smelter where it stands: the same quality, held to the smelter\'s, and the same words on both sides',
+  took === part('EMB', 1) && near(sm.enchant?.ql ?? -1, num('EMB', 0)) && took.includes('held to the smelter\'s QL 60.0'), `${isle.get('EMB')} / ${sm.enchant?.ql} ${took}`);
+const miss = placedGo(EMBER, { kind: 'smelter', id: sm2.id }, 0.99, 0.01);
+sm2.dmg = 90;
+const miss2 = placedGo(EMBER, { kind: 'smelter', id: sm2.id }, 0.99, 0.01);
+check(`one that does not take leaves the scroll's ${ENCHANT_HARM} damage on a placed thing and never breaks it, even on the roll that breaks a thing in the pack: the harm stops at ${DAMAGE_MAX - 1}, on both sides`,
+  miss === part('MISS', 1) && num('MISS', 0) === ENCHANT_HARM && miss2 === part('MISS2', 2) && num('MISS2', 0) === DAMAGE_MAX - 1 && sm2.dmg === DAMAGE_MAX - 1
+    && part('MISS2', 1) === 'true' && g.smelters.has(sm2.id),
+  `${isle.get('MISS')} ${isle.get('MISS2')} / ${miss} ${miss2}`);
+check('picked up, the smelter carries its enchantment in the pack, and set down again it carries it back to the ground, on the island',
+  part('UP', 0).includes('"ember_heart"') && part('UP', 1).endsWith('(Ember Heart)') && isle.get('DOWN') === part('UP', 0), `${isle.get('UP')} ${isle.get('DOWN')}`);
+sm.lit = true;
+sm.fuel = 100;
+sm.jobs = [{ left: 20, makes: 'copper_lump', ql: 50 } as unknown as (typeof sm.jobs)[number]];
+(g as unknown as { runSmelters(dt: number): void }).runSmelters(10);
+const rate = 1 - enchantValue(EMBER, sm.enchant?.ql ?? 0);
+check(`an Ember Heart at QL ${sm.enchant?.ql.toFixed(1)}: ten seconds of heat take ${(10 * rate).toFixed(1)} fuel and do ten seconds of work, on both sides`,
+  near(num('RATE'), rate) && near(sm.fuel, 100 - 10 * rate, 1e-9) && near(num('BURN', 0), 100 - 10 * rate, 1e-3)
+    && near(sm.jobs[0]?.left ?? -1, 10, 1e-9) && near(num('BURN', 1), 10, 1e-3), `${isle.get('RATE')} ${isle.get('BURN')} / ${sm.fuel} ${sm.jobs[0]?.left}`);
+loom.enchant = { id: MASTER.id, ql: 60 };
+check(`a Masterwork at QL 60 on a loom adds ${enchantValue(MASTER, 60)} to the quality of what is made at it, and nothing at a fire, on both sides; the island's craft and forge add it`,
+  near(g.masterAt('loom'), enchantValue(MASTER, 60)) && g.masterAt('campfire') === 0 && near(num('MASTER', 0), enchantValue(MASTER, 60)) && num('MASTER', 1) === 0
+    && isle.get('MASTERSRC') === 'true|2', `${isle.get('MASTER')} ${isle.get('MASTERSRC')} / ${g.masterAt('loom')}`);
 
 check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => PART3.includes(e)).length === PART3.length);
 

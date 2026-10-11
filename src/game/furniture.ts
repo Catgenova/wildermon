@@ -1,4 +1,5 @@
 import type { ActionDef, Target } from './actions';
+import { enchantTail, type Enchant } from './enchant';
 import { SIDE_NAMES, type Side } from './building';
 import { STORE_REACH, SUBTILES } from './crates';
 import { CROP_BY_SEED } from './farming';
@@ -477,6 +478,10 @@ export const STORES = FURNITURE.filter((f) => f.capacity).sort((a, b) => (b.capa
 
 export interface PlacedFurniture {
   id: number;
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
+  /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
+  dmg?: number;
   /**
    * Whose this is, on an island. Absent in the game you play by yourself,
    * where everything on the ground is yours because there is only you.
@@ -923,7 +928,9 @@ export function furnitureRefuses(f: PlacedFurniture, item: Item): string | null 
   return null;
 }
 
-export function furnitureState(f: PlacedFurniture): string {
+/** A piece's status line, and the enchantment set into it where it stands (`enchantTail`). */
+export const furnitureState = (f: PlacedFurniture): string => stateOf(f) + enchantTail(f);
+function stateOf(f: PlacedFurniture): string {
   const def = furnitureDef(f.kind);
   const ql = `QL ${f.ql.toFixed(0)}`;
   if (holdsLiquid(f)) {
@@ -999,6 +1006,9 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (furnitureDef(item.id).roses) f.setAt = Date.now() / 1000;
       // Everything the thing was keeps standing when the thing is standing.
       if (item.rare) f.rare = item.rare;
+      // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
+      if (item.enchant) f.enchant = item.enchant;
+      if (item.dmg) f.dmg = item.dmg;
       if (item.maker) f.maker = item.maker;
       if (item.mark) f.mark = item.mark;
       // And whoever is shut in it, who stands where it stands and is seen in it.
@@ -1096,6 +1106,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       const back = g.inventory.add(f.kind, { ql: f.ql, extra: f.material });
       if (f.dye) back.dye = f.dye;
       if (f.rare) back.rare = f.rare;
+      if (f.enchant) back.enchant = f.enchant;
+      if (f.dmg) back.dmg = f.dmg;
       if (f.maker) back.maker = f.maker;
       if (f.mark) back.mark = f.mark;
       // Whoever is shut in it comes too, and is where you are from now on.

@@ -13,12 +13,12 @@
  */
 import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
-import { QL_BARE, QL_LOW, QL_SPAN, type Game } from './game';
+import { QL_BARE, QL_LOW, QL_SPAN, type Game, type PlacedEnchantable } from './game';
 import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
 import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
-import { BLOW_SHARE, DAMAGE_MAX, QL_TOP } from './limits';
+import { BLOW_SHARE, DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
 import { HELD_LIGHTS } from './light';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
@@ -123,6 +123,8 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'swim': return 'while it is worn, you swim {v} faster, never past a walk, and swimming costs {v} less stamina.';
     case 'sight': return 'while it is worn, you see {v} further.';
     case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
+    case 'ember': return 'it burns {v} less fuel for the same work: a firebox full keeps it hot that much longer.';
+    case 'master': return `a thing made at it comes out {v} higher, never past QL ${QL_TOP}; where more than one is within reach, the best counts.`;
   }
 }
 /** That line with its figure at this quality. */
@@ -162,8 +164,14 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'pack': return PACKS.includes(id);
     case 'head': return ARMOUR_BY_ID.get(id)?.slot === 'head';
     case 'amulet': return id === 'jewelled_pendant';
+    case 'furnace': return FURNACES.includes(id);
+    case 'station': return STATIONS.includes(id);
   }
 };
+/** What Ember Heart goes on, where it stands. */
+export const FURNACES = ['smelter', 'kiln'];
+/** What Masterwork goes on, where it stands: the two places a thing is made at that stand on the ground. */
+export const STATIONS = ['anvil', 'loom'];
 /** What Packmule goes on: the packs that are carried. */
 export const PACKS = ['backpack', 'satchel'];
 /** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
@@ -198,21 +206,43 @@ export const FITS: Record<EnchantOn, string[]> = {
   pack: PACKS,
   head: ARMOUR.filter((a) => a.slot === 'head').map((a) => a.id),
   amulet: ['jewelled_pendant'],
+  furnace: FURNACES,
+  station: STATIONS,
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */
 
-/** Why this scroll will not go into this weapon, or the three of them when it will. */
-export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: Item; weapon: Item; e: EnchantmentDef } {
-  const scroll = t.kind === 'item' && t.scroll !== undefined ? g.inventory.get(t.scroll) : undefined;
+/** The kinds of target a scroll can be aimed at: a thing in the pack, or a thing standing on the ground (`Game.placedFor`). */
+const SCROLL_TARGETS: ReadonlySet<Target['kind']> = new Set(['item', 'furniture', 'smelter', 'kiln', 'anvil', 'trap']);
+const scrollUid = (t: Target): number | undefined => (SCROLL_TARGETS.has(t.kind) ? (t as { scroll?: number }).scroll : undefined);
+
+/** What a scroll is going into: a thing in the pack, or a thing standing where it was set down. */
+export type EnchantInto = { item: Item } | { placed: PlacedEnchantable };
+
+/** Why this scroll will not go into this thing, or the three of them when it will. */
+export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: Item; into: EnchantInto; e: EnchantmentDef } {
+  const uid = scrollUid(t);
+  const scroll = uid !== undefined ? g.inventory.get(uid) : undefined;
   const e = scroll ? scrollOf(scroll.id) : undefined;
   if (!scroll || !e) return { why: ENCHANT_SAID.scroll };
-  const weapon = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
-  if (!weapon) return { why: ENCHANT_SAID.weapon };
-  if (!fitsOn(e.on, weapon.id)) return { why: wrongKind(e) };
-  if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
-  if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
-  return { scroll, weapon, e };
+  if (t.kind === 'item') {
+    const weapon = g.inventory.get(t.uid);
+    if (!weapon) return { why: ENCHANT_SAID.weapon };
+    if (!fitsOn(e.on, weapon.id)) return { why: wrongKind(e) };
+    if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
+    if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
+    return { scroll, into: { item: weapon }, e };
+  }
+  // Something standing where it was set down: enchanted there, from within reach, if it is yours to use.
+  const placed = g.placedFor(t);
+  if (!placed) return { why: ENCHANT_SAID.gone };
+  if (Math.hypot(placed.at[0] - g.player.x, placed.at[1] - g.player.y) > PLACED_REACH) return { why: ENCHANT_SAID.reach };
+  const shut = placed.lock ? g.lockRefusal({ lock: placed.lock, x: placed.thing.x, y: placed.thing.y }) : null;
+  if (shut) return { why: shut };
+  if (!fitsOn(e.on, placed.def)) return { why: wrongKind(e) };
+  if ((placed.thing.dmg ?? 0) >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
+  if (placed.thing.enchant) return { why: alreadyEnchanted(placed.thing.enchant) };
+  return { scroll, into: { placed }, e };
 }
 
 /** What may take this scroll, of what is in the pack: everything of the kind it goes on. */
@@ -226,6 +256,16 @@ export function enchantedSaid(e: EnchantmentDef, name: string, kind: string, ql:
   const by = held === 'item' ? `, held to the ${kind}'s QL ${qlWord(itemQl)}` : held === 'scroll' ? `, held to the scroll's QL ${qlWord(scrollQl)}` : '';
   return `${e.name} goes into the ${name} at QL ${qlWord(ql)}${by}. The scroll is used up.`;
 }
+/**
+ * What a go that did not take on a thing standing where it was set down says.
+ * It takes the scroll's harm, but no more than leaves it whole: a placed thing
+ * never goes to pieces from a scroll (`ENCHANT_SAID.standing`).
+ */
+export function placedNotTakenSaid(e: EnchantmentDef, name: string, harm: number, dmg: number): string {
+  return `The ${e.name} scroll does not take. The ${name} takes ${qlWord(harm)} damage and is at ${qlWord(dmg)}. The scroll is used up.`;
+}
+/** The damage a scroll that did not take leaves on a placed thing: its harm, held short of broken. */
+export const placedHarm = (dmg: number): number => Math.min(DAMAGE_MAX - 1, dmg + ENCHANT_HARM);
 /** What a go that did not take says: what happened to the weapon. */
 export function notTakenSaid(e: EnchantmentDef, name: string, how: 'broke' | 'harm' | 'harmBroke', dmg: number): string {
   const head = `The ${e.name} scroll does not take`;
@@ -248,7 +288,7 @@ export const ENCHANT_ACTIONS: ActionDef[] = [
     hidden: true,
     stamina: ENCHANT_WIND,
     baseTime: ENCHANT_TIME,
-    applies: (t) => t.kind === 'item' && t.scroll !== undefined,
+    applies: (t) => scrollUid(t) !== undefined,
     check: (t, g) => {
       const s = enchantSetting(g, t);
       return 'why' in s ? s.why : null;
@@ -256,13 +296,31 @@ export const ENCHANT_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const s = enchantSetting(g, t);
       if ('why' in s) return;
-      const { scroll, weapon, e } = s;
+      const { scroll, into, e } = s;
       const skill = g.skills.get(ENCHANTING);
-      const name = itemName({ ...weapon, count: 1 }).toLowerCase();
       // Both rolls first, as the island takes them: whether it takes, then its quality or whether the weapon breaks.
       const r1 = g.rand();
       const r = g.rand();
       g.inventory.remove(scroll.uid, 1);
+      if ('placed' in into) {
+        const { thing, def, name } = into.placed;
+        const said = name.toLowerCase();
+        if (r1 < enchantChance(skill, scroll.ql)) {
+          const { ql, held } = enchantQl(skill, scroll.ql, thing.ql, (base) => craftSpread(base, r));
+          thing.enchant = { id: e.id, ql };
+          g.logMsg(enchantedSaid(e, said, itemDef(def).name.toLowerCase(), ql, held, scroll.ql, thing.ql), 'event');
+        } else {
+          g.missed();
+          const was = thing.dmg ?? 0;
+          thing.dmg = placedHarm(was);
+          g.logMsg(placedNotTakenSaid(e, said, thing.dmg - was, thing.dmg), 'error');
+        }
+        g.events.emit('world', Math.floor(into.placed.at[0]), Math.floor(into.placed.at[1]));
+        g.events.emit('inventory');
+        return;
+      }
+      const weapon = into.item;
+      const name = itemName({ ...weapon, count: 1 }).toLowerCase();
       if (r1 < enchantChance(skill, scroll.ql)) {
         const { ql, held } = enchantQl(skill, scroll.ql, weapon.ql, (base) => craftSpread(base, r));
         weapon.enchant = { id: e.id, ql };

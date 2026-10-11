@@ -1,4 +1,5 @@
 import { tryGain } from './learn';
+import { enchantTail, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
@@ -100,6 +101,8 @@ export const TRAPS: Record<TrapKind, TrapDef> = {
 
 export interface PlacedTrap {
   id: number;
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
   /** What you have called it, when you have called it anything. */
   name?: string;
   x: number;
@@ -179,7 +182,9 @@ export function catchChance(t: PlacedTrap, c: Creature): number {
 }
 
 /** What it says it is doing, for the menu and the log. */
-export function trapState(t: PlacedTrap, g: Game): string {
+/** A trap's status line, and the enchantment set into it where it stands (`enchantTail`). */
+export const trapState = (t: PlacedTrap, g: Game): string => trapStateOf(t, g) + enchantTail(t);
+function trapStateOf(t: PlacedTrap, g: Game): string {
   if (trapDef(t).water) {
     const n = (t.fish ?? []).reduce((a, f) => a + f.count, 0);
     const left = Math.ceil(trapLeft(t, trapKeep(g, t.kind)) / 60);
@@ -236,6 +241,8 @@ export const TRAP_ACTIONS: ActionDef[] = [
       const trap = g.addTrap(item.id as TrapKind, t.x, t.y, t.sx, t.sy, item.ql, item.extra);
       // Its maker's hand goes into the water with it (a Tailor's Fisher's Friend).
       if (item.mark && Object.keys(item.mark).length) trap.mark = item.mark;
+      // Its enchantment goes into the ground with it, and comes up again with it (`enchanting.ts`).
+      if (item.enchant) trap.enchant = item.enchant;
       const mins = Math.round(trapLife(trap.kind, trap.ql) * trapKeep(g, trap.kind) / 60);
       g.logMsg(
         trapDef(trap).water
@@ -437,6 +444,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
       for (const f of trap.fish ?? []) g.inventory.addItem(f);
       const back = g.inventory.add(trap.kind, { ql: trap.ql, extra: trap.material, ...(trap.mark ? { mark: trap.mark } : {}) });
       back.dmg = trap.dmg;
+      if (trap.enchant) back.enchant = trap.enchant;
       g.removeTrap(trap.id);
       g.logMsg(`You take the ${trapName(trap).toLowerCase()} up${trap.bait ? ' and pocket the bait' : ''}.`, 'event');
       g.events.emit('world', trap.x, trap.y);

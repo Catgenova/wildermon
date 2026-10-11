@@ -118,8 +118,8 @@ export type Target =
   /** Somebody else on the island, by who they are (anybody dressing their wounds). */
   | { kind: 'person'; uid: string; name?: string }
   | { kind: 'campfire'; id: number; itemUid?: number; count?: number }
-  | { kind: 'smelter'; id: number; itemUid?: number; count?: number; mouldUid?: number }
-  | { kind: 'kiln'; id: number; itemUid?: number; count?: number }
+  | { kind: 'smelter'; id: number; itemUid?: number; count?: number; mouldUid?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
+  | { kind: 'kiln'; id: number; itemUid?: number; count?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | {
       kind: 'furniture';
       id: number;
@@ -128,10 +128,12 @@ export type Target =
       brew?: string;
       /** Which socket of its tier a bauble goes into, when one is asked for (`set_bauble`). */
       slot?: number;
+      /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */
+      scroll?: number;
     }
-  | { kind: 'anvil'; id: number; itemUid?: number }
+  | { kind: 'anvil'; id: number; itemUid?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | { kind: 'post'; id: number; creatureId?: number }
-  | { kind: 'trap'; id: number }
+  | { kind: 'trap'; id: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | { kind: 'bridge'; id: number }
   | {
       kind: 'item';

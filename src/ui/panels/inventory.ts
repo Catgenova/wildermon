@@ -8,9 +8,9 @@ import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import type { UIWindow } from '../windows';
 import { COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
-import { ACTION_BY_ID, type ActionDef } from '../../game/actions';
+import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import { ABSORB_SAID, absorbable, MOTE } from '../../game/sacrifice';
-import { ENCHANT, enchantable } from '../../game/enchanting';
+import { ENCHANT, enchantable, fitsOn } from '../../game/enchanting';
 import { enchantChance, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
 import { percent } from '../../game/words';
 import { hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
@@ -244,16 +244,25 @@ export class InventoryPanel {
     const enchant = written ? ACTION_BY_ID.get(ENCHANT) : undefined;
     if (enchant && written) {
       const into = enchantable(this.game, written);
+      // And what stands within reach that it goes on, enchanted where it stands (`Game.placedNear`).
+      const standing = this.game.placedNear().filter(({ placed }) => fitsOn(written.on, placed.def));
       entries.push({
         label: 'Enchant',
         note: `takes ${percent(enchantChance(this.game.skills.get(ENCHANTING), item.ql))} of the time`,
-        hint: into.length ? undefined : wrongKind(written),
-        disabled: !into.length,
-        children: into.map((it) => {
-          const t = { kind: 'item' as const, uid: it.uid, scroll: item.uid };
-          const why = enchant.check?.(t, this.game) ?? null;
-          return { label: itemName(it), note: `QL ${it.ql.toFixed(1)}`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(enchant, t) };
-        }),
+        hint: into.length || standing.length ? undefined : wrongKind(written),
+        disabled: !into.length && !standing.length,
+        children: [
+          ...into.map((it) => {
+            const t = { kind: 'item' as const, uid: it.uid, scroll: item.uid };
+            const why = enchant.check?.(t, this.game) ?? null;
+            return { label: itemName(it), note: `QL ${it.ql.toFixed(1)}`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(enchant, t) };
+          }),
+          ...standing.map(({ target, placed }) => {
+            const t = { ...target, scroll: item.uid } as Target;
+            const why = enchant.check?.(t, this.game) ?? null;
+            return { label: placed.name, note: `QL ${placed.thing.ql.toFixed(1)}, standing`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(enchant, t) };
+          }),
+        ],
       });
     }
     /*

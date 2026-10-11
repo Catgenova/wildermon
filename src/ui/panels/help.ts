@@ -141,7 +141,7 @@ import {
 } from '../../game/enchant';
 import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
-import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
+import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
@@ -272,7 +272,16 @@ function enchantingHelp(): string {
     <p>Packmule's kilos are added to what you carry before the weight tells, beside a Terraformer's Strong Back and Power's Pack Mule,
     for each backpack or satchel carried with one (a pack inside another pack is the outer pack's, not yours). Seal's Coat's share
     multiplies with how fast your swimming lets you swim, never past a walk, and takes its share off what swimming costs your stamina,
-    with Power's Hard Breath. Hawk's Eye's share multiplies with how far you see, a reader's Keen Sight among it.</p>`;
+    with Power's Hard Breath. Hawk's Eye's share multiplies with how far you see, a reader's Keen Sight among it.</p>
+    <p>${listed(ENCHANTMENT_LIST.filter((e) => e.on === 'furnace' || e.on === 'station').map((e) => `${e.name} goes on ${ON_WORDS[e.on]}`))},
+    enchanted where it stands: choose it under Enchant on the scroll in your pack, from within ${PLACED_REACH} tiles of its middle, and only
+    a thing you may open past any padlock on it. It takes as it takes in the pack, held to the thing's own QL. One that does not take puts
+    ${ENCHANT_HARM} damage on it, but never takes it past ${BROKEN_AT - 1}: a thing standing on the ground never goes to pieces from a scroll.
+    Its enchantment and its damage go into the pack with it when it is picked up, and back onto the ground when it is set down again.</p>
+    <p>Ember Heart's share comes off the fuel a second of heat burns, so the same work takes that much less fuel and a firebox full keeps
+    it hot that much longer; the work goes at its own pace. Masterwork's points are added to what is made at the anvil or the loom after
+    a perk on the recipe multiplies it, never past QL ${ENCHANT_TOP}, and a scroll is still never better than its sheet; where more than one loom
+    is within reach, the best counts.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

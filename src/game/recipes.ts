@@ -1287,8 +1287,9 @@ export function recipeAction(r: Recipe): ActionDef {
        * ceiling is the parts; nothing is finer than what it is made of.
        */
       const rolled = r.qlFromInputs ? Math.max(1, Math.min(100, fromInputs * inputKeep(g, r))) : g.productQl(r.skill, toolQl(g) + (oven ? oven.ql * 0.3 : 0));
-      // And better for a perk on the recipe (a Cook's Fine Fare), and a scroll never better than its sheet, whatever made it.
-      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1));
+      // And better for a perk on the recipe (a Cook's Fine Fare), and for a Masterwork on the station it is made at
+      // (`Game.masterAt`), and a scroll never better than its sheet, whatever made it.
+      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1) + (r.station ? g.masterAt(r.station) : 0));
       const ql = sheet === undefined ? better : Math.min(better, sheet);
       // More, the go a bauble on the trade comes up in the altar of the settlement
       // you work on, and more again for a perk (a Carpenter's Clean Sawing).

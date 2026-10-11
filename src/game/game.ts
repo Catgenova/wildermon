@@ -1,5 +1,5 @@
 import { Springs, type SpringSave } from './springs';
-import { DAMAGE_MAX, QL_TOP } from './limits';
+import { DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { rankAtLeast, type DeedRole } from './ranks';
@@ -24,10 +24,10 @@ import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CEL
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
-import { anvilAnchor, anvilCovers, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
+import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { smelterAnchor, smelterCentre, smelterCovers, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
-import { kilnAnchor, kilnCovers, KILN_SUBTILES, type PlacedKiln } from './kiln';
+import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
+import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, type BoatDef } from './furniture';
 import { emptyCrate, occupiedRefusal, shutIn } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
@@ -41,7 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import { ENCHANTMENTS, moreSaid, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { ENCHANTMENTS, furnaceBurn, moreSaid, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -100,6 +100,17 @@ export type { ActiveAction } from './actor';
 
 /** A settlement: a square of land around a token that the player may build on. */
 /** One place on the deed that holds things, whatever it is underneath. */
+/** A thing standing on the ground that a scroll can be set into where it stands (`Game.placedFor`). */
+export interface PlacedEnchantable {
+  thing: { x: number; y: number; ql: number; enchant?: Enchant; dmg?: number };
+  /** What it is by the catalogue: the item it was in the pack. */
+  def: string;
+  name: string;
+  /** Its middle, in tiles. */
+  at: [number, number];
+  lock?: number;
+}
+
 export interface DeedStore {
   x: number;
   y: number;
@@ -2038,6 +2049,52 @@ export class Game {
   lockRefusal(store: Lockable & { x: number; y: number }): string | null {
     const mine = this.deedOfMineAt(Math.floor(store.x), Math.floor(store.y));
     return lockRefusal(this.inventory.items, store, !!mine && rankAtLeast(mine.role, 'founder'));
+  }
+
+  /**
+   * The thing standing on the ground that a job is aimed at, when it is one a
+   * scroll can be set into where it stands: a piece of furniture, a smelter, a
+   * kiln, an anvil or a trap. With it, what it is by the catalogue (`def`, the
+   * item it was in the pack and goes back to), what to call it, and where its
+   * middle is, which is what "within reach" is measured to. The island's
+   * `placed_def` and `placed_in_reach` answer the same.
+   */
+  placedFor(t: Target): PlacedEnchantable | undefined {
+    if (t.kind === 'furniture') {
+      const f = this.furniture.get(t.id);
+      return f && { thing: f, def: f.kind, name: furnitureName(f), at: furnitureCentre(f), lock: f.lock };
+    }
+    if (t.kind === 'smelter') {
+      const p = this.smelters.get(t.id);
+      return p && { thing: p, def: 'smelter', name: smelterName(p), at: smelterCentre(p) };
+    }
+    if (t.kind === 'kiln') {
+      const p = this.kilns.get(t.id);
+      return p && { thing: p, def: 'kiln', name: kilnName(p), at: kilnCentre(p) };
+    }
+    if (t.kind === 'anvil') {
+      const p = this.anvils.get(t.id);
+      return p && { thing: p, def: 'anvil', name: anvilName(p), at: anvilCentre(p) };
+    }
+    if (t.kind === 'trap') {
+      const p = this.traps.get(t.id);
+      return p && { thing: p, def: p.kind, name: trapName(p), at: trapCentre(p) };
+    }
+    return undefined;
+  }
+  /** Everything standing within reach that a scroll could be set into, for the scroll's menu (`placedFor`). */
+  placedNear(range = PLACED_REACH): { target: Target; placed: PlacedEnchantable }[] {
+    const near: { target: Target; placed: PlacedEnchantable }[] = [];
+    const ids: [Target['kind'], Iterable<number>][] = [
+      ['furniture', this.furniture.keys()], ['smelter', this.smelters.keys()], ['kiln', this.kilns.keys()],
+      ['anvil', this.anvils.keys()], ['trap', this.traps.keys()],
+    ];
+    for (const [kind, keys] of ids) for (const id of keys) {
+      const target = { kind, id } as Target;
+      const placed = this.placedFor(target);
+      if (placed && Math.hypot(placed.at[0] - this.player.x, placed.at[1] - this.player.y) <= range) near.push({ target, placed });
+    }
+    return near;
   }
 
   /**
@@ -6648,6 +6705,22 @@ export class Game {
     return this.furnitureNear(station) !== undefined;
   }
 
+  /**
+   * What Masterwork adds to the quality of a thing made at a station: the best
+   * of the pieces of that kind within reach (`swingEnchant`), and none for a
+   * fire. The island's `station_master`.
+   */
+  masterAt(station: Station): number {
+    if (station === 'campfire' || station === 'smelter') return 0;
+    let most = 0;
+    this.placed.furniture.around(this.player.x, this.player.y, PLACED_REACH + 2, (f) => {
+      if (f.kind !== station) return;
+      const [cx, cy] = furnitureCentre(f);
+      if (Math.hypot(cx - this.player.x, cy - this.player.y) <= PLACED_REACH) most = Math.max(most, swingEnchant(f, 'master'));
+    }, this.player.level);
+    return most;
+  }
+
   /** The nearest piece of furniture of a kind, within arm's reach. */
   furnitureNear(kind: string, range = 2.4): PlacedFurniture | undefined {
     let best: PlacedFurniture | undefined;
@@ -7664,6 +7737,8 @@ export class Game {
        * there is only you.
        */
       const at = { id: r.id, x: r.x, y: r.y, sx: r.sx, sy: r.sy, mine: r.mine };
+      // An enchantment set into it where it stands, and the wear a scroll that did not take left on it (`enchanting.ts`).
+      const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}) };
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
@@ -7671,13 +7746,13 @@ export class Game {
         this.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0 });
       } else if (r.kind === 'smelter') {
         this.smelters.set(r.id, {
-          ...at, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
       } else if (r.kind === 'kiln') {
         this.kilns.set(r.id, {
-          ...at, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
@@ -7687,7 +7762,7 @@ export class Game {
         // `anvil_ql` read it back from there; `material` is never written for
         // one. Reported as "made a copper anvil and placed down an iron anvil":
         // this read `material`, found nothing, and called every anvil iron.
-        this.anvils.set(r.id, { ...at, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
+        this.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
       } else if (r.kind === 'post') {
         const p: PlacedPost = { ...at, ql: r.ql ?? 20, dmg: r.dmg ?? 0, worker: null, name: r.name ?? undefined, material: r.material ?? undefined };
         this.posts.set(r.id, p);
@@ -7698,6 +7773,7 @@ export class Game {
           bait: r.bait ? { uid: -r.id, id: r.bait, ql: r.bait_ql ?? 1, dmg: 0, count: 1 } : null,
           caught: r.caught ?? null, checkAt: this.time, name: r.name ?? undefined,
           material: r.material ?? undefined,
+          ...(r.enchant ? { enchant: r.enchant } : {}),
         };
         this.traps.set(r.id, t);
         this.placed.traps.add(t);
@@ -7706,7 +7782,7 @@ export class Game {
         this.counters.saw(r as unknown as CounterWire);
       } else if (r.kind === 'furniture') {
         this.furniture.set(r.id, {
-          ...at, ...down, kind: r.sub ?? 'chest', ql: r.ql ?? 20,
+          ...at, ...kept, ...down, kind: r.sub ?? 'chest', ql: r.ql ?? 20,
           // What the island says is in it, and empty for one too far off to
           // reach into, which is the only reason this is ever short.
           items: (r.things ?? []).map(storedThing),
@@ -8579,9 +8655,11 @@ export class Game {
   private runSmelters(dt: number): void {
     for (const s of this.smelters.values()) {
       if (!s.lit) continue;
-      const burn = Math.min(s.fuel, dt);
-      s.ash = (s.ash ?? 0) + burn * ASH_RATE;
-      s.fuel -= burn;
+      // Seconds of heat, and the fuel they take: less of it for an Ember Heart (`furnaceBurn`).
+      const per = furnaceBurn(s);
+      const burn = Math.min(s.fuel / per, dt);
+      s.ash = (s.ash ?? 0) + burn * per * ASH_RATE;
+      s.fuel -= burn * per;
       if (s.fuel <= 0) {
         s.fuel = 0;
         s.lit = false;
@@ -8616,9 +8694,10 @@ export class Game {
   private runKilns(dt: number): void {
     for (const k of this.kilns.values()) {
       if (!k.lit) continue;
-      const burn = Math.min(k.fuel, dt);
-      k.ash = (k.ash ?? 0) + burn * ASH_RATE;
-      k.fuel -= burn;
+      const per = furnaceBurn(k);
+      const burn = Math.min(k.fuel / per, dt);
+      k.ash = (k.ash ?? 0) + burn * per * ASH_RATE;
+      k.fuel -= burn * per;
       if (k.fuel <= 0) {
         k.fuel = 0;
         k.lit = false;
@@ -9378,6 +9457,8 @@ export interface IslandPlaced {
   ql: number | null;
   fuel: number | null;
   ash: number | null;
+  /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
+  enchant?: Enchant | null;
   lit: boolean | null;
   dmg: number | null;
   name: string | null;
