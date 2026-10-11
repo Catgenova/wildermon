@@ -3,7 +3,7 @@ import { isDone, MATERIAL_BY_ID, WALL_TYPE_BY_ID } from './building';
 import { CELLAR_DAYLIGHT } from './cellar';
 import { bloodMul } from './creatures';
 import type { Game } from './game';
-import { heldReach } from './light';
+import { heldReachOf } from './light';
 import { isLampPiece, lampAt, lampBurning, lampReach } from './lamps';
 
 /**
@@ -200,7 +200,7 @@ export class Vision {
     // And a reader's Keen Sight sees further, and further than the furthest anybody else does (`knowledge_keen`).
     const keen = g.pathFx('sight', 1);
     const seen = Math.max(3, Math.min(MAX_SIGHT * keen, open * day * keen));
-    return lamp ? Math.max(seen, heldReach(lamp.id, lamp.ql)) : seen;
+    return lamp ? Math.max(seen, heldReachOf(lamp)) : seen;
   }
 
   private recompute(): void {

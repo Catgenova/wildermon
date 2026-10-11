@@ -1,3 +1,4 @@
+import { GRACE_TILES, swingEnchant, type Enchant } from './enchant';
 import { world } from './pace';
 /**
  * Light after dark.
@@ -79,6 +80,12 @@ export const torchReach = (ql: number): number => 3 + Math.round(Math.max(1, Mat
 /** Things you can carry alight, and how far each of them throws. */
 export const HELD_LIGHTS = ['lantern', 'torch'] as const;
 export const heldReach = (id: string, ql: number): number => (id === 'torch' ? torchReach(ql) : lanternReach(ql));
+/** What a light you carry throws: its reach, and `GRACE_TILES` more with a Lantern's Grace in it. The island's `held_reach_of`. */
+export const heldReachOf = (it: { id: string; ql: number; enchant?: Enchant }): number =>
+  heldReach(it.id, it.ql) + (swingEnchant(it, 'grace') > 0 ? GRACE_TILES : 0);
+/** How long the fuel set in a light you carry burns: a candle in a lantern or a torch struck, longer for a Lantern's Grace. The island's `held_burn`. */
+export const heldBurn = (it: { id: string; ql: number; enchant?: Enchant }): number =>
+  (it.id === 'torch' ? torchBurn(it.ql) : candleBurn(it.ql)) * (1 + swingEnchant(it, 'grace'));
 
 /** What a lit fire throws, by what it is. */
 export const FIRE_REACH = 5;

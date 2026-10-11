@@ -19,9 +19,10 @@ import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPON
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
 import { BLOW_SHARE, DAMAGE_MAX, QL_TOP } from './limits';
+import { HELD_LIGHTS } from './light';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, moreSaid, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
+  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, moreSaid, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -111,6 +112,7 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'work': return 'a job done with it takes {v} less time.';
     case 'temper': return 'it takes {v} less damage from use.';
     case 'bounty': return 'a bush harvested with a sickle, or a fish landed with a rod, brings one more {v} of the time.';
+    case 'grace': return `a candle set in it, or the torch when it is struck, burns {v} longer, and it throws its light ${GRACE_TILES} tiles further.`;
     case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
   }
 }
@@ -146,6 +148,7 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'tool': return jobTools().has(id);
     case 'reaper': return REAPERS.includes(id);
     case 'pick': return id === 'pickaxe';
+    case 'light': return (HELD_LIGHTS as readonly string[]).includes(id);
   }
 };
 /** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
@@ -175,6 +178,7 @@ export const FITS: Record<EnchantOn, string[]> = {
   get tool() { return [...jobTools()]; },
   reaper: REAPERS,
   pick: ['pickaxe'],
+  light: [...HELD_LIGHTS],
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */

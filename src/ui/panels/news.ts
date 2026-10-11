@@ -2,7 +2,7 @@ import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
-import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { QL_TOP as NEWS_QL_TOP } from '../../game/limits';
@@ -15,7 +15,7 @@ import {
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
-import { candleBurn, lanternReach } from '../../game/light';
+import { candleBurn, lanternReach, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
 import { WORLD_PACE } from '../../game/pace';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
@@ -1702,6 +1702,17 @@ export const NEWS: News[] = [
       ...ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       'Where you carry more than one of a tool, the job uses the one worth most at the work, and its enchantment is the one that counts.',
     ],
+  },
+  {
+    n: 124,
+    day: '2026-10-11',
+    lines: () => {
+      const e = ENCHANTMENTS.lanterns_grace;
+      return [
+        `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`,
+        `On an island a torch burned ${times(WORLD_PACE)} too fast, as a candle once did. It lasts what it does here now, ${spanWords(torchBurn(1))} to ${spanWords(torchBurn(100))} by how well it was wound.`,
+      ];
+    },
   },
 ];
 

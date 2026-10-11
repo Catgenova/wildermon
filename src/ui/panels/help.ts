@@ -137,7 +137,7 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, GRACE_TILES, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
 import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
@@ -259,7 +259,10 @@ function enchantingHelp(): string {
     of a tool, the one worth most at the work is the one a job uses, and its enchantment is the one that counts.
     Swiftwork's share comes off a job's time after the floor, multiplying with a perk on the job's time, a piece standing near and a Steady Hands;
     Truesteel's multiplies with a perk on the tool's wear. Bountiful works on Harvest on a bush, with the sickle, and on a fish landed with the rod;
-    Lodestone on Mine, with the pickaxe. The one more comes at the quality the go made, and a fish is never rare for it.</p>`;
+    Lodestone on Mine, with the pickaxe. The one more comes at the quality the go made, and a fish is never rare for it.</p>
+    <p>Lantern's Grace counts on a lantern or a torch you carry: its share is added to the candle when one is set in the lantern, and to
+    the torch when it is struck with nothing left in it, so a candle already in it when the scroll goes in burns as it was; its
+    ${GRACE_TILES} tiles go on whatever reach the light throws. A lantern hung on a lantern post burns and throws as the post's own.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

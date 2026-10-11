@@ -146,7 +146,7 @@ import {
 import {
   LAMP_ARM_CROSSES, LAMP_ARM_REACH, LAMP_HAS_ONE, LAMP_INTO_WALL, LAMP_NO_LANTERN, LAMP_NONE, LAMP_TAKE_FIRST, lampTooFar, noCandleLine, noFlameLine,
 } from '../src/game/lamps';
-import { CANDLE_BURN } from '../src/game/light';
+import { CANDLE_BURN, TORCH_BURN } from '../src/game/light';
 import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
 } from '../src/game/motes';
@@ -156,7 +156,7 @@ import {
 } from '../src/game/runestones';
 
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, SCROLL_HARM, SCROLL_SHEETS, WORN_CAP, wrongKind,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, GRACE_TILES, SCROLL_HARM, SCROLL_SHEETS, WORN_CAP, wrongKind,
 } from '../src/game/enchant';
 import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLine, FITS, MELEE_WEAPONS } from '../src/game/enchanting';
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
@@ -1952,7 +1952,7 @@ out.push(`create or replace function enchant_line(p_id text) returns text langua
 for (const [fn, v] of [
   ['scroll_harm', SCROLL_HARM], ['scroll_sheets', SCROLL_SHEETS], ['enchant_least', ENCHANT_LEAST], ['enchant_most', ENCHANT_MOST],
   ['enchant_harm', ENCHANT_HARM], ['enchant_break', ENCHANT_BREAK], ['stun_secs', STUN_SECS],
-  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs], ['frost_pace', FROST_PACE], ['frost_secs', FROST_SECS],
+  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs], ['frost_pace', FROST_PACE], ['frost_secs', FROST_SECS], ['grace_tiles', GRACE_TILES],
   ['ql_low', QL_LOW], ['ql_span', QL_SPAN], ['ql_bare', QL_BARE], ['ql_top', QL_TOP], ['damage_max', DAMAGE_MAX],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
@@ -2271,7 +2271,7 @@ for (const [fn, v] of [
  * that the island says them in the browser's words.
  */
 for (const [fn, v] of [
-  ['counter_reach', COUNTER_REACH], ['counter_holds', COUNTER_HOLDS], ['counter_seen', COUNTER_SEEN], ['candle_burn_full', CANDLE_BURN],
+  ['counter_reach', COUNTER_REACH], ['counter_holds', COUNTER_HOLDS], ['counter_seen', COUNTER_SEEN], ['candle_burn_full', CANDLE_BURN], ['torch_burn_full', TORCH_BURN],
   ['lamp_arm_reach', LAMP_ARM_REACH], ['wall_half_thick', WALL_THICK],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);

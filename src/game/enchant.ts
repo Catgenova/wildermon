@@ -67,14 +67,14 @@ export const SCROLL_HARM = 25;
  * every hit back as health (`leech`).
  */
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
-  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode';
+  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
 export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -88,6 +88,7 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   tool: 'a tool that a job is done with',
   reaper: 'a sickle or a fishing rod',
   pick: 'a pickaxe',
+  light: 'a lantern or a torch',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -182,6 +183,10 @@ export const TRUESTEEL_PER_QL = 0.005;
 export const BOUNTIFUL_PER_QL = 0.002;
 /** Lodestone: QL/10 percent of the goes at mining with it bring one more ore or stone. */
 export const LODESTONE_PER_QL = 0.001;
+/** Lantern's Grace: a candle set in it, or a torch struck, burns QL percent longer (twice as long at QL 100), */
+export const GRACE_PER_QL = 0.01;
+/** and it throws its light this many tiles further, at any quality. */
+export const GRACE_TILES = 2;
 WORN_CAP.guard = STONESKIN_CAP;
 WORN_CAP.fireguard = EMBERWARD_CAP;
 WORN_CAP.thorns = THORNHIDE_CAP;
@@ -190,7 +195,7 @@ WORN_CAP.thorns = THORNHIDE_CAP;
  * Every enchantment there is. The first three are the owner's first asks; the
  * six after them go on a melee weapon too, the three after those on a bow,
  * the six after those on what you wear and the shield you hold, and the four
- * after those on the tools a job is done with.
+ * after those on the tools a job is done with, and the last on a light you carry.
  */
 export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('emberbrand', 'Emberbrand', 'fire', 'melee', 'burn', EMBERBRAND_PER_QL),
@@ -215,6 +220,7 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('truesteel', 'Truesteel', 'earth', 'tool', 'temper', TRUESTEEL_PER_QL),
   row('bountiful', 'Bountiful', 'life', 'reaper', 'bounty', BOUNTIFUL_PER_QL),
   row('lodestone', 'Lodestone', 'earth', 'pick', 'lode', LODESTONE_PER_QL),
+  row('lanterns_grace', 'Lantern\'s Grace', 'light', 'light', 'grace', GRACE_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';

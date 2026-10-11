@@ -86,7 +86,7 @@ import {
   SHRUG_SAID, gatherSpot, skySaid, STRUCK_SAID, surgeSaid, TECHNIQUE_GAIN, tookSaid, traceNone, traceSaid, unbrokenSaid, type PathBeat, type PathId, type PathSaid,
 } from './meditation';
 import { ledgerTotals, record, type Ledger } from './ledger';
-import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReach, HELD_LIGHTS, lanternReach, OVEN_REACH, runestoneLight, type LightSource } from './light';
+import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, OVEN_REACH, runestoneLight, type LightSource } from './light';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
@@ -3190,7 +3190,7 @@ export class Game {
     for (const it of this.inventory.items) {
       if (!it.lit || (it.charges ?? 0) <= 0) continue;
       if (!(HELD_LIGHTS as readonly string[]).includes(it.id)) continue;
-      if (!best || heldReach(it.id, it.ql) > heldReach(best.id, best.ql)) best = it;
+      if (!best || heldReachOf(it) > heldReachOf(best)) best = it;
     }
     return best;
   }
@@ -3226,7 +3226,7 @@ export class Game {
     const near = (x: number, y: number): boolean => Math.abs(x - px) < 60 && Math.abs(y - py) < 60;
     const lamp = this.litLantern();
     // Carried down into a cellar, it lights the cellar and nothing up here (`cellarLights`).
-    if (lamp && this.player.level >= 0) out.push({ x: px, y: py, radius: lanternReach(lamp.ql), strength: 0.92, steady: true, level: this.player.level });
+    if (lamp && this.player.level >= 0) out.push({ x: px, y: py, radius: heldReachOf(lamp), strength: 0.92, steady: true, level: this.player.level });
     for (const f of this.campfires.values()) {
       if (!f.lit || !near(f.x, f.y)) continue;
       const [cx, cy] = fireCentre(f);
@@ -3274,7 +3274,7 @@ export class Game {
     const out: LightSource[] = [];
     const held = this.heldLight();
     if (held && this.player.level < 0) {
-      out.push({ x: this.player.x, y: this.player.y, radius: heldReach(held.id, held.ql), strength: 0.94, steady: held.id !== 'torch', level: CELLAR_LEVEL });
+      out.push({ x: this.player.x, y: this.player.y, radius: heldReachOf(held), strength: 0.94, steady: held.id !== 'torch', level: CELLAR_LEVEL });
     }
     const day = 1 - this.darkness();
     if (day <= 0.01) return out;

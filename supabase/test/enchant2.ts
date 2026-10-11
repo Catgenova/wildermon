@@ -21,7 +21,8 @@
  *   * what is worn: Stoneskin, Emberward, Featherstep, Bulwark, Shadowcloak
  *     and Thornhide;
  *   * the tools: Swiftwork on a job's time, Truesteel on a use's wear, and
- *     Bountiful and Lodestone's one more, a roll just over and just under.
+ *     Bountiful and Lodestone's one more, a roll just over and just under;
+ *   * Lantern's Grace: the fuel set in a lantern and a torch, and the reach.
  *
  * Every roll is set: dice on the island (`random()` read off a list) and the
  * same list as the browser's `rand`. Runs against the database the suite
@@ -35,13 +36,14 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { EMBERWARD_CAP, ENCHANTMENT_LIST, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { EMBERWARD_CAP, ENCHANTMENT_LIST, GRACE_TILES, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
 import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantMore, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
 import { classDealt } from '../../src/game/creatureActions';
 import { blowEvery, bowReach, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
 import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from '../../src/game/creatures';
 import { TileType } from '../../src/world/tiles';
+import { heldBurn, heldReachOf, torchBurn } from '../../src/game/light';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -124,7 +126,7 @@ create or replace function rarity_roll() returns text language sql as 'select nu
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_sw bigint; v_bow bigint; v_s bigint; v_c creature; v_g creature; v_until timestamptz;
         v_boot bigint; v_chest bigint; v_cap bigint; v_arm bigint; v_leg bigint; v_sh bigint;
-        v_saw bigint; v_sick bigint; v_pick bigint;
+        v_saw bigint; v_sick bigint; v_pick bigint; v_lan bigint; v_torch bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 2', 218, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -325,6 +327,22 @@ begin
   insert into said select 'MOREUNDER', string_agg(def || '*' || count || '@' || round(ql::numeric, 1), ',' order by def)
     from item where world_id = w and holder = 'player' and holder_uid = u and def in ('raspberry', 'iron_ore');
   insert into said select 'MORESAID', string_agg(e.text, '#' order by e.n) from event e where e.world_id = w and e.kind = 'event';
+
+  -- 12. Lantern's Grace: refused on a pickaxe, taken on a lantern; a candle set in and a torch struck, with it and without.
+  v_lan := give(w, u, 'lantern', 1, 50);
+  v_torch := give(w, u, 'torch', 1, 50);
+  v_s := give(w, u, 'lanterns_grace_scroll', 1, 90);
+  insert into said values ('R:gracepick', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_pick, 'scroll', v_s)), 'none'));
+  insert into said values ('R:gracelantern', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_lan, 'scroll', v_s)), 'none'));
+  insert into said values ('R:gracetorch', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_torch, 'scroll', v_s)), 'none'));
+  perform give(w, u, 'candle', 2, 50);
+  perform perform_forge(w, u, 'candle_lantern', jsonb_build_object('kind', 'item', 'uid', v_lan));
+  insert into said select 'CANDLE0', charges::text || '|' || held_reach_of(i)::text from item i where id = v_lan;
+  update item set charges = 0, enchant = '{"id": "lanterns_grace", "ql": 100}'::jsonb where id = v_lan;
+  perform perform_forge(w, u, 'candle_lantern', jsonb_build_object('kind', 'item', 'uid', v_lan));
+  insert into said select 'CANDLE', charges::text || '|' || held_reach_of(i)::text from item i where id = v_lan;
+  update item set enchant = '{"id": "lanterns_grace", "ql": 40}'::jsonb, charges = 0 where id = v_torch;
+  insert into said select 'TORCH', round(held_burn(i))::text || '|' || held_reach_of(i)::text from item i where id = v_torch;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -617,6 +635,33 @@ check(`Bountiful at QL ${HIT_QL} (${enchantValue(BOUNTY, HIT_QL) * 100}%) and Lo
   over === '' && isle.get('MOREOVER') === '0' && more() === 'iron_ore*1@33.0,raspberry*1@33.0' && isle.get('MOREUNDER') === more()
     && lines === 'Bountiful brings one more of the raspberries.#Lodestone brings one more of the iron ore.' && isle.get('MORESAID') === lines,
   `${isle.get('MOREOVER')} ${isle.get('MOREUNDER')} ${isle.get('MORESAID')} / ${over} ${more()} ${lines}`);
+
+/* 12. Lantern's Grace. */
+const GRACE = E('lanterns_grace');
+const lantern = thing('lantern', 50);
+const torch = thing('torch', 50);
+const graceRefusals: Array<[string, string, string]> = [
+  ['R:gracepick', askWith(GRACE, pick.uid), wrongKind(GRACE)], ['R:gracelantern', askWith(GRACE, lantern.uid), 'none'], ['R:gracetorch', askWith(GRACE, torch.uid), 'none'],
+];
+check(`Lantern's Grace goes on a lantern or a torch and is refused elsewhere in words that say so, on both sides: ${wrongKind(GRACE)}`,
+  graceRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
+  graceRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+thing('candle', 50);
+thing('candle', 50);
+act('candle_lantern').perform({ kind: 'item', uid: lantern.uid } as Target, g);
+const plain = [lantern.charges ?? 0, heldReachOf(lantern)];
+lantern.charges = 0;
+lantern.enchant = { id: GRACE.id, ql: 100 };
+act('candle_lantern').perform({ kind: 'item', uid: lantern.uid } as Target, g);
+const graced = [lantern.charges ?? 0, heldReachOf(lantern)];
+torch.enchant = { id: GRACE.id, ql: 40 };
+check(`a candle in a lantern with Lantern's Grace at QL 100 burns ${enchantValue(GRACE, 100) * 100}% longer (${plain[0]} to ${graced[0]} seconds) and throws ${GRACE_TILES} tiles further (${plain[1]} to ${graced[1]}); a torch with it at QL 40 burns ${enchantValue(GRACE, 40) * 100}% longer; the same on both sides`,
+  near(graced[0], Math.round(plain[0] * (1 + enchantValue(GRACE, 100))), 1) && graced[1] === plain[1] + GRACE_TILES
+    // The two sides' candle differs in its last second (the island rounds its own figure), so a second either way.
+    && near(Number(part('CANDLE0', 0)), plain[0], 1) && Number(part('CANDLE0', 1)) === plain[1]
+    && near(Number(part('CANDLE', 0)), graced[0], 1) && Number(part('CANDLE', 1)) === graced[1]
+    && isle.get('TORCH') === `${Math.round(heldBurn(torch))}|${heldReachOf(torch)}` && near(heldBurn(torch), torchBurn(50) * (1 + enchantValue(GRACE, 40))),
+  `${isle.get('CANDLE0')} ${isle.get('CANDLE')} ${isle.get('TORCH')} / ${plain.join('|')} ${graced.join('|')} ${Math.round(heldBurn(torch))}|${heldReachOf(torch)}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nenchanting, part 2 — ${ok.length} of ${ok.length + bad.length}`);
