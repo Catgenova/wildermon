@@ -1,7 +1,7 @@
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
-import { CRAFT_REACH, DEED_ONLY, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { CRAFT_REACH, DEED_ONLY, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { UIWindow } from '../windows';
@@ -9,6 +9,31 @@ import { Repaint } from '../repaint';
 
 const skillName = (id: string): string => SKILL_DEFS.find((s) => s.id === id)?.name ?? id;
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
+
+/** Where the pinned and the lately made are kept: in this browser, like the window layout, since they are about whoever sits here. */
+const KEPT_KEY = 'wurm-iso-recipes';
+/** How many of the lately made are shown above the book. */
+export const RECENT = 6;
+/** Every recipe that makes a thing, by the thing. */
+const MAKES = new Map<string, Recipe[]>();
+for (const r of RECIPES) MAKES.set(r.result, [...(MAKES.get(r.result) ?? []), r]);
+/** The recipes that make an item, if any do. */
+export const recipesMaking = (item: string): Recipe[] => MAKES.get(item) ?? [];
+
+interface Kept {
+  pinned: string[];
+  recent: string[];
+}
+
+function readKept(): Kept {
+  try {
+    const got = JSON.parse(localStorage.getItem(KEPT_KEY) ?? '{}') as Partial<Kept>;
+    const ids = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && RECIPE_BY_ID.has(x)) : []);
+    return { pinned: ids(got.pinned), recent: ids(got.recent).slice(0, RECENT) };
+  } catch {
+    return { pinned: [], recent: [] };
+  }
+}
 
 /**
  * The recipe book, grouped by craft. Every recipe is listed with its tool and
@@ -32,6 +57,17 @@ export class CraftPanel {
   private readonly wants = new Map<string, string>();
   /** The tile you were on when the book last looked, since a step can bring a store into reach or take one out of it. */
   private tile = '';
+  private readyBox: HTMLInputElement;
+  /** Pinned and lately made, shown in their own groups above the book. */
+  private kept: Kept = readKept();
+  /** Only these recipes, when the book was opened onto what makes one thing (`showMaking`); cleared by typing. */
+  private only: Set<string> | null = null;
+  /** The recipe to bring into view and light up on the next draw. */
+  private reveal: string | null = null;
+  /** The last job asked for that the book has already counted as made, so one job is one entry. */
+  private counted: unknown = null;
+  /** Told when a missing material is clicked that no recipe makes: the help is asked instead. */
+  onNoRecipe: ((item: string) => void) | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     win.body.classList.add('inv-body');
@@ -41,6 +77,7 @@ export class CraftPanel {
     this.search.placeholder = 'Search recipes: a thing, a skill, a material…';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
+      this.only = null;
       this.render();
     });
     this.search.addEventListener('keydown', (e) => {
@@ -48,6 +85,7 @@ export class CraftPanel {
       if (e.key !== 'Escape') return;
       this.search.value = '';
       this.query = '';
+      this.only = null;
       this.render();
     });
     const head = document.createElement('div');
@@ -58,6 +96,8 @@ export class CraftPanel {
     const toggle = document.createElement('label');
     const box = document.createElement('input');
     box.type = 'checkbox';
+    box.id = 'craft-ready-only';
+    this.readyBox = box;
     box.addEventListener('change', () => {
       this.readyOnly = box.checked;
       this.render();
@@ -76,7 +116,75 @@ export class CraftPanel {
     game.events.on('skill', () => this.repaint.ask());
     // What is in the crates and chests around you counts too.
     game.events.on('crate', () => this.repaint.ask());
+    /*
+     * What was made lately, however it was asked for: this window, a menu, the
+     * toolbelt or the key that does it again. Every one of them goes through
+     * `requestAction`, which keeps what it was last asked.
+     */
+    game.events.on('action', () => {
+      const asked = game.lastAsked;
+      if (!asked || asked === this.counted) return;
+      this.counted = asked;
+      if (RECIPE_BY_ID.has(asked.def.id)) this.made(asked.def.id);
+    });
     this.render();
+  }
+
+  private putKept(): void {
+    try {
+      localStorage.setItem(KEPT_KEY, JSON.stringify(this.kept));
+    } catch {
+      // Kept for as long as the page is open.
+    }
+  }
+
+  /** Put a recipe at the head of the lately made. */
+  private made(id: string): void {
+    this.kept.recent = [id, ...this.kept.recent.filter((r) => r !== id)].slice(0, RECENT);
+    this.putKept();
+    this.repaint.ask();
+  }
+
+  private togglePin(id: string): void {
+    const on = this.kept.pinned.includes(id);
+    this.kept.pinned = on ? this.kept.pinned.filter((r) => r !== id) : [...this.kept.pinned, id];
+    this.putKept();
+    this.render(performance.now(), true);
+  }
+
+  /** Clear the search and the switch, so whatever is asked for next is on the page. */
+  private unfilter(): void {
+    this.search.value = '';
+    this.query = '';
+    this.only = null;
+    this.readyOnly = false;
+    this.readyBox.checked = false;
+  }
+
+  /** Open the book at one recipe, lit up. */
+  showRecipe(id: string): void {
+    if (!RECIPE_BY_ID.has(id)) return;
+    this.unfilter();
+    this.reveal = id;
+    this.win.open();
+    this.render(performance.now(), true);
+  }
+
+  /**
+   * Open the book at whatever makes a thing, and only that: what a missing
+   * material on a row leads to when it is clicked. False when nothing does,
+   * for the caller to say where it comes from instead.
+   */
+  showMaking(item: string): boolean {
+    const makes = recipesMaking(item);
+    if (!makes.length) return false;
+    this.unfilter();
+    this.only = new Set(makes.map((r) => r.id));
+    this.search.value = itemDef(item).name;
+    this.reveal = makes[0].id;
+    this.win.open();
+    this.render(performance.now(), true);
+    return true;
   }
 
   /**
@@ -104,7 +212,7 @@ export class CraftPanel {
     this.render(now);
   }
 
-  render(now = performance.now()): void {
+  render(now = performance.now(), force = false): void {
     // What is at hand, listed once for each reach the book asks for rather
     // than once a row: three tiles, or further for a Smith's Forge Reach at
     // the smelter and a Cook's Pantry Reach at the fire (`reachFor`).
@@ -119,11 +227,11 @@ export class CraftPanel {
     // What the book would say. Standing at an anvil hammering, this is the
     // same from one second to the next, so nothing is touched.
     const { fromStores, spareRare } = this.game.settings;
-    const sig = `${this.query}\u0000${this.readyOnly ? 1 : 0}${fromStores ? 1 : 0}${spareRare ? 1 : 0}\u0000${RECIPES.map((r) => {
+    const sig = `${this.query}\u0000${this.only ? [...this.only].join() : ''}\u0000${this.kept.pinned.join()}\u0000${this.kept.recent.join()}\u0000${this.readyOnly ? 1 : 0}${fromStores ? 1 : 0}${spareRare ? 1 : 0}\u0000${RECIPES.map((r) => {
       const st = statuses.get(r);
       return `${r.id}${st?.ready ? 1 : 0}${st?.max ?? 0}${st?.inputs.map((i) => `.${i.have}.${i.carried}`).join('') ?? ''}`;
     }).join('')}`;
-    if (!this.repaint.changed(now, sig)) return;
+    if (!this.repaint.changed(now, sig) && !force) return;
     // What the counts count, which Settings decides.
     const atHand = fromStores ? `what you carry and what is in your stores within ${CRAFT_REACH} tiles` : 'what you carry';
     this.hint.title = `Materials count ${fromStores
@@ -134,8 +242,27 @@ export class CraftPanel {
     this.list.replaceChildren();
     let shown = 0;
     let ready = 0;
+    const wanted = (r: Recipe): boolean => (this.only ? this.only.has(r.id) : this.matches(r)) && (!this.readyOnly || !!statuses.get(r)?.ready);
+    /*
+     * Pinned, and lately made, above the book and in the order they were
+     * pinned or made: the few things somebody makes over and over, without
+     * scrolling a hundred and fifty recipes to find them. They are in the book
+     * below as well, under their craft. Not while the book is opened onto one
+     * thing, which is a question with one answer.
+     */
+    if (!this.only) {
+      for (const [title, ids] of [['Pinned', this.kept.pinned], ['Made lately', this.kept.recent.filter((id) => !this.kept.pinned.includes(id))]] as Array<[string, string[]]>) {
+        const rows = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r): r is Recipe => !!r && wanted(r));
+        if (!rows.length) continue;
+        const header = document.createElement('div');
+        header.className = 'inv-group craft-kept';
+        header.textContent = title;
+        this.list.append(header);
+        for (const r of rows) this.list.append(this.row(r, statuses.get(r)!, stockOf(r)));
+      }
+    }
     for (const cat of RECIPE_CATEGORIES) {
-      const rows = RECIPES.filter((r) => r.category === cat && this.matches(r) && (!this.readyOnly || statuses.get(r)?.ready));
+      const rows = RECIPES.filter((r) => r.category === cat && wanted(r));
       // What can be made now sits above what still needs gathering.
       rows.sort((a, b) => Number(statuses.get(b)?.ready ?? false) - Number(statuses.get(a)?.ready ?? false));
       if (!rows.length) continue;
@@ -153,20 +280,35 @@ export class CraftPanel {
     if (!shown) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = this.query
+      empty.textContent = this.query || this.only
         ? `No recipe answers to “${this.search.value.trim()}”${this.readyOnly ? ' that you can make right now' : ''}.`
         : `Nothing can be made with ${atHand}. Untick "Only what I can make" to see what each thing needs.`;
       this.list.append(empty);
     }
     const within = `with ${atHand}`;
-    this.footer.textContent = this.query
-      ? `${shown} recipes match, ${ready} of them possible ${within}`
-      : `${ready} of ${RECIPES.length} recipes possible ${within}`;
+    this.footer.textContent = this.only
+      ? `${shown === 1 ? 'One recipe makes' : `${shown} recipes make`} this, ${ready} of them possible ${within}`
+      : this.query
+        ? `${shown} recipes match, ${ready} of them possible ${within}`
+        : `${ready} of ${RECIPES.length} recipes possible ${within}`;
+    // Opened onto one recipe: the last row of it drawn (the one in the book, under its craft) is brought into view and lit.
+    if (this.reveal) {
+      const rows = this.list.querySelectorAll<HTMLElement>(`.craft-row[data-recipe="${this.reveal}"]`);
+      const row = rows[rows.length - 1];
+      this.reveal = null;
+      if (row) {
+        row.scrollIntoView({ block: 'center' });
+        row.classList.remove('found-flash');
+        void row.offsetWidth;
+        row.classList.add('found-flash');
+      }
+    }
   }
 
   private row(r: Recipe, st: RecipeStatus, stock: readonly CraftStock[]): HTMLDivElement {
     const row = document.createElement('div');
     row.className = 'craft-row' + (st.ready ? '' : ' locked');
+    row.dataset.recipe = r.id;
     const name = document.createElement('div');
     name.className = 'craft-name';
     const count = this.game.madeAGo(r);
@@ -275,6 +417,23 @@ export class CraftPanel {
       const have = document.createElement('em');
       have.textContent = ` (${i.have})`;
       span.append(have);
+      /*
+       * Short of something: click it to see what makes it. Asked for as "click
+       * a missing ingredient to jump to its recipe": a row that says it wants
+       * tin you have not got was a dead end, and the recipe for the tin was a
+       * search away that nothing pointed at. What no recipe makes is gathered,
+       * and the help is opened at what it says about it instead.
+       */
+      if (i.have < i.need) {
+        const makes = recipesMaking(i.item).length;
+        span.classList.add('craft-find');
+        span.title += makes
+          ? `. Click for ${makes === 1 ? 'the recipe that makes it' : `the ${makes} recipes that make it`}.`
+          : '. Nothing makes it at a bench: click to see what the help says about where it comes from.';
+        span.addEventListener('click', () => {
+          if (!this.showMaking(i.item)) this.onNoRecipe?.(i.item);
+        });
+      }
       parts.push(span);
     }
     // What it would come out made of, since the same bill in two woods makes
@@ -310,6 +469,14 @@ export class CraftPanel {
     });
     const buttons = document.createElement('div');
     buttons.className = 'craft-btns';
+    const pinned = this.kept.pinned.includes(r.id);
+    const pin = document.createElement('button');
+    pin.type = 'button';
+    pin.className = 'tb-btn tb-small craft-pin' + (pinned ? ' tb-on' : '');
+    pin.textContent = pinned ? '★' : '☆';
+    pin.title = pinned ? 'Unpin: take it out of Pinned at the top of the book' : 'Pin: keep it at the top of the book, under Pinned';
+    pin.addEventListener('click', () => this.togglePin(r.id));
+    buttons.append(pin);
     const craft = document.createElement('button');
     craft.type = 'button';
     craft.className = 'tb-btn tb-small';

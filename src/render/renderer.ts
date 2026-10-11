@@ -66,7 +66,7 @@ import { postCentre, postLeft, postLife, type PlacedPost } from '../game/posts';
 import { trapCentre, type PlacedTrap } from '../game/traps';
 import { ageDef } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
-import { fireCentre, type PlacedCampfire } from '../game/campfire';
+import { FIRE_CAPACITY, fireCentre, type PlacedCampfire } from '../game/campfire';
 import { smelterCentre, type PlacedSmelter } from '../game/smelter';
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
@@ -889,6 +889,11 @@ type CellarLaid = { cv: HTMLCanvasElement; x0: number; y0: number; ax: number; a
 
 /** You, as the spell stage names whoever casts. */
 const PLAYER_CASTS: Who = { kind: 'player' };
+
+/** Tiles round you within which a fire, a smelter or a kiln has its ring drawn (`drawStationRings`). */
+export const RING_REACH = 14;
+/** The zoom below which the rings are left off, as too small to read. */
+const RING_ZOOM = 0.55;
 
 export class Renderer {
   readonly camera = new Camera();
@@ -3969,6 +3974,7 @@ export class Renderer {
     this.drawWakes(ctx, zoom);
     this.drawAir(ctx, zoom);
     if (!this.fast) this.drawHaze(ctx, zoom);
+    if (this.game.settings.stationRings) this.drawStationRings(ctx, zoom);
     this.drawFloaters(ctx, zoom);
 
     // One pass for all of it, so a remembered wood goes cold with its ground.
@@ -12826,6 +12832,75 @@ export class Renderer {
    * wildermon in the dark is still readable — which is the whole point of it
    * being a number rather than a line in the log.
    */
+  /**
+   * A ring over every fire, smelter and kiln near you: the outer arc its fuel,
+   * out of the most it holds (`FIRE_CAPACITY`), orange while it burns and grey
+   * while it is cold; the inner arc how far the piece at the front of it has
+   * come, for a smelter or a kiln with work in it; and a dot when something is
+   * finished and waiting to be taken out. Asked for so a station can be read
+   * from across the yard instead of clicked to find out.
+   */
+  private drawStationRings(ctx: CanvasRenderingContext2D, zoom: number): void {
+    if (zoom < RING_ZOOM) return;
+    const cam = this.camera;
+    const w = this.game.world;
+    const p = this.game.player;
+    const level = p.level ?? 0;
+    const r = Math.max(6, Math.min(12, 8 * zoom));
+    // Over the top of what it is drawn over: a fire is low, a smelter and a kiln stand chest high.
+    const ring = (x: number, y: number, lift: number, fuel: number, lit: boolean, work: number | null, ready: boolean): void => {
+      const sx = cam.worldToScreenX(x, y);
+      const sy = cam.worldToScreenY(x, y, w.heightAt(x, y)) - lift * zoom - r;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r + 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(12,12,14,0.62)';
+      ctx.fill();
+      const top = -Math.PI / 2;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      const share = Math.max(0, Math.min(1, fuel / FIRE_CAPACITY));
+      if (share > 0) {
+        ctx.strokeStyle = lit ? 'rgb(240,150,52)' : 'rgb(150,146,138)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, top, top + share * Math.PI * 2);
+        ctx.stroke();
+      }
+      if (work !== null) {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgb(170,214,120)';
+        ctx.beginPath();
+        ctx.arc(sx, sy, r * 0.55, top, top + Math.max(0.02, Math.min(1, work)) * Math.PI * 2);
+        ctx.stroke();
+      }
+      if (ready) {
+        ctx.fillStyle = 'rgb(227,182,87)';
+        ctx.beginPath();
+        ctx.arc(sx + r * 0.75, sy - r * 0.75, 2.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.lineCap = 'butt';
+      ctx.lineWidth = 1;
+    };
+    const front = (jobs: Array<{ left: number; total: number }>): number | null =>
+      jobs.length ? 1 - jobs[0].left / Math.max(0.001, jobs[0].total) : null;
+    this.game.placed.campfires.around(p.x, p.y, RING_REACH, (f) => {
+      const [x, y] = fireCentre(f);
+      ring(x, y, 30, f.fuel, f.lit, null, false);
+    }, level);
+    this.game.placed.smelters.around(p.x, p.y, RING_REACH, (s) => {
+      const [x, y] = smelterCentre(s);
+      ring(x, y, 64, s.fuel, s.lit, front(s.jobs), s.output.length > 0);
+    }, level);
+    this.game.placed.kilns.around(p.x, p.y, RING_REACH, (k) => {
+      const [x, y] = kilnCentre(k);
+      ring(x, y, 64, k.fuel, k.lit, front(k.jobs), k.output.length > 0);
+    }, level);
+  }
+
   private drawFloaters(ctx: CanvasRenderingContext2D, zoom: number): void {
     const live = this.floaters.live(this.time);
     if (!live.length) return;

@@ -1,4 +1,5 @@
 import { uiBox, uiFloor, uiPoint } from './screen';
+import { LAYOUT_NAMES } from '../game/keybinds';
 
 export type Anchor = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -12,6 +13,13 @@ export interface WindowOptions {
   height: number;
   anchor?: Anchor;
   open?: boolean;
+  /**
+   * Whether it can be made see-through: dimmed, with clicks on it going to the
+   * island underneath, and only its title bar still taking hold of it. For the
+   * windows that are read rather than worked in -- the tracker, the event log,
+   * the map -- which otherwise cover a piece of the island for good.
+   */
+  seeThrough?: boolean;
 }
 
 interface Geometry {
@@ -25,11 +33,28 @@ interface SavedState extends Geometry {
   open: boolean;
   /** Expanded to (nearly) the whole viewport; x/y/w/h hold the geometry to restore. */
   max?: boolean;
+  /** See-through (`WindowOptions.seeThrough`). */
+  see?: boolean;
+}
+
+/** One saved arrangement of every window: where each is, how big, and whether it is open. */
+export interface Layout {
+  name: string;
+  windows: Record<string, SavedState>;
 }
 
 const STORAGE_KEY = 'wurm-iso-windows';
+const LAYOUT_KEY = 'wurm-iso-layouts';
 const EXPAND_ICON = '⤢';
 const RESTORE_ICON = '⤡';
+const SEE_ICON = '◐';
+
+/** How close, in interface pixels, an edge has to come to another before a drag puts it against it. */
+export const SNAP = 10;
+/** The arrangements of windows kept, each called back with a key of its own (`layout_1`…). */
+export const LAYOUT_SLOTS = LAYOUT_NAMES.length;
+/** Windows that are never part of an arrangement, because they are opened by something happening rather than by you. */
+const NOT_LAID_OUT = new Set(['away', 'news', 'hoard']);
 
 /** A draggable, resizable overlay window in the Wurm style. */
 export class UIWindow {
@@ -37,7 +62,9 @@ export class UIWindow {
   readonly body: HTMLDivElement;
   readonly titleText: HTMLSpanElement;
   private readonly expandBtn: HTMLButtonElement;
+  private readonly seeBtn: HTMLButtonElement | null = null;
   private maximized = false;
+  private see = false;
   /** Geometry to go back to when the window is restored from expanded. */
   private normal: Geometry | null = null;
 
@@ -68,6 +95,15 @@ export class UIWindow {
     close.title = 'Close';
     close.textContent = '×';
     close.addEventListener('click', () => this.close());
+    if (opts.seeThrough) {
+      const see = document.createElement('button');
+      see.className = 'win-btn win-see-btn';
+      see.type = 'button';
+      see.textContent = SEE_ICON;
+      see.addEventListener('click', () => this.setSeeThrough(!this.see));
+      this.seeBtn = see;
+      buttons.append(see);
+    }
     buttons.append(this.expandBtn, close);
     title.append(this.titleText, buttons);
     this.body = document.createElement('div');
@@ -91,6 +127,7 @@ export class UIWindow {
     }
     this.el.hidden = !(saved?.open ?? opts.open ?? true);
     if (saved?.max) this.setMaximized(true, false);
+    this.setSeeThrough(!!(opts.seeThrough && saved?.see), false);
 
     let drag: { dx: number; dy: number } | null = null;
     title.addEventListener('pointerdown', (e) => {
@@ -105,6 +142,8 @@ export class UIWindow {
       const at = uiPoint(e);
       this.el.style.left = `${at.x - drag.dx}px`;
       this.el.style.top = `${at.y - drag.dy}px`;
+      // Alt held lets a window go exactly where it is put.
+      if (!e.altKey) this.snap();
       this.clamp();
     });
     title.addEventListener('pointerup', (e) => {
@@ -127,6 +166,83 @@ export class UIWindow {
 
   get isMaximized(): boolean {
     return this.maximized;
+  }
+
+  get isSeeThrough(): boolean {
+    return this.see;
+  }
+
+  /**
+   * See-through or solid. See-through, the window is dimmed and the island
+   * takes every click that lands on it but the title bar's, so it can sit over
+   * the ground you are working; holding Alt makes it solid again for as long
+   * as Alt is down (`WindowManager`), to scroll it or click in it.
+   */
+  setSeeThrough(on: boolean, persist = true): void {
+    if (!this.opts.seeThrough) return;
+    this.see = on;
+    this.el.classList.toggle('win-see', on);
+    if (this.seeBtn) {
+      this.seeBtn.classList.toggle('win-btn-on', on);
+      this.seeBtn.title = on
+        ? 'Solid again. While it is see-through, hold Alt to click in it.'
+        : 'See-through: dimmed, and clicks on it go to the island. Hold Alt to click in it.';
+    }
+    if (persist) this.mgr.persist();
+  }
+
+  /**
+   * Put the window's edges against the edges near them: the sides of the
+   * interface, and the sides of every other open window, either butted up to
+   * one or lined up with it. Each axis takes its nearest edge within `SNAP`,
+   * or stays where the drag left it.
+   */
+  private snap(): void {
+    const box = uiBox();
+    const floor = uiFloor();
+    const me = { x: this.el.offsetLeft, y: this.el.offsetTop, w: this.el.offsetWidth, h: this.el.offsetHeight };
+    const xs = [0, box.w - me.w];
+    const ys = [floor, box.h - me.h];
+    for (const o of this.mgr.windows.values()) {
+      if (o === this || !o.isOpen || o.isMaximized) continue;
+      const r = { x: o.el.offsetLeft, y: o.el.offsetTop, w: o.el.offsetWidth, h: o.el.offsetHeight };
+      // Only windows level with this one, give or take, offer their sides; and only ones above or below it their tops and bottoms.
+      const level = me.y < r.y + r.h + SNAP && me.y + me.h > r.y - SNAP;
+      const stacked = me.x < r.x + r.w + SNAP && me.x + me.w > r.x - SNAP;
+      if (level || stacked) xs.push(r.x - me.w, r.x + r.w, r.x, r.x + r.w - me.w);
+      if (stacked || level) ys.push(r.y - me.h, r.y + r.h, r.y, r.y + r.h - me.h);
+    }
+    const nearest = (at: number, to: number[]): number => {
+      let best = at;
+      let gap = SNAP + 1;
+      for (const c of to) {
+        const d = Math.abs(c - at);
+        if (d < gap) {
+          gap = d;
+          best = c;
+        }
+      }
+      return best;
+    };
+    this.el.style.left = `${nearest(me.x, xs)}px`;
+    this.el.style.top = `${nearest(me.y, ys)}px`;
+  }
+
+  /** Put the window where a saved arrangement has it: its place, its size, open or shut, expanded or not. */
+  apply(st: SavedState): void {
+    if (this.maximized) this.setMaximized(false, false);
+    this.applyGeometry(st);
+    if (st.max) this.setMaximized(true, false);
+    if (st.see !== undefined) this.setSeeThrough(st.see, false);
+    const was = this.isOpen;
+    this.el.hidden = !st.open;
+    if (st.open) {
+      this.clamp();
+      if (!was) {
+        this.mgr.bringToFront(this);
+        this.onOpen?.();
+      }
+    }
   }
 
   /** Raise above the other windows. */
@@ -248,7 +364,7 @@ export class UIWindow {
 
   state(): SavedState {
     const g = this.maximized && this.normal ? this.normal : this.geometry();
-    return { ...g, open: this.isOpen, max: this.maximized };
+    return { ...g, open: this.isOpen, max: this.maximized, ...(this.opts.seeThrough ? { see: this.see } : {}) };
   }
 }
 
@@ -256,6 +372,8 @@ export class WindowManager {
   readonly windows = new Map<string, UIWindow>();
   private z = 100;
   private saved: Record<string, SavedState> = {};
+  /** The kept arrangements, one a slot, null where nothing has been kept yet. */
+  private layouts: Array<Layout | null> = [];
 
   constructor(readonly root: HTMLElement) {
     try {
@@ -264,7 +382,79 @@ export class WindowManager {
     } catch {
       this.saved = {};
     }
+    try {
+      const raw = localStorage.getItem(LAYOUT_KEY);
+      const got = raw ? (JSON.parse(raw) as unknown) : null;
+      if (Array.isArray(got)) this.layouts = got.map((l) => (l && typeof l === 'object' && typeof (l as Layout).name === 'string' && (l as Layout).windows ? (l as Layout) : null));
+    } catch {
+      this.layouts = [];
+    }
     window.addEventListener('resize', () => this.clampAll());
+    /*
+     * Alt held makes every see-through window solid for as long as it is down:
+     * the one way to scroll a see-through log or click a line in it without
+     * making it solid and see-through again.
+     */
+    const alt = (on: boolean): void => {
+      root.classList.toggle('alt-held', on);
+    };
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Alt') alt(true);
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Alt') alt(false);
+    });
+    window.addEventListener('blur', () => alt(false));
+  }
+
+  /** What a slot is called, kept or not. */
+  layoutName(slot: number): string {
+    return this.layouts[slot]?.name ?? LAYOUT_NAMES[slot] ?? `Layout ${slot + 1}`;
+  }
+
+  /** Whether anything has been kept in a slot. */
+  layoutKept(slot: number): boolean {
+    return Object.keys(this.layouts[slot]?.windows ?? {}).length > 0;
+  }
+
+  /** Keep the windows as they are now in a slot, under the name it has. */
+  saveLayout(slot: number): void {
+    const windows: Record<string, SavedState> = {};
+    for (const [id, w] of this.windows) if (!NOT_LAID_OUT.has(id)) windows[id] = w.state();
+    this.layouts[slot] = { name: this.layoutName(slot), windows };
+    this.putLayouts();
+  }
+
+  /** Put every window where a slot has it. False when nothing is kept there. */
+  useLayout(slot: number): boolean {
+    const l = this.layouts[slot];
+    if (!l || !this.layoutKept(slot)) return false;
+    for (const [id, w] of this.windows) {
+      const st = l.windows[id];
+      if (st) w.apply(st);
+    }
+    this.persist();
+    return true;
+  }
+
+  renameLayout(slot: number, name: string): void {
+    const n = name.trim() || LAYOUT_NAMES[slot] || `Layout ${slot + 1}`;
+    const l = this.layouts[slot];
+    if (l) l.name = n;
+    else {
+      // A name for a slot nothing is kept in yet is kept anyway, with no windows in it.
+      while (this.layouts.length <= slot) this.layouts.push(null);
+      this.layouts[slot] = { name: n, windows: {} };
+    }
+    this.putLayouts();
+  }
+
+  private putLayouts(): void {
+    try {
+      localStorage.setItem(LAYOUT_KEY, JSON.stringify(this.layouts));
+    } catch {
+      // Storage unavailable; the arrangement lasts as long as the page.
+    }
   }
 
   /**

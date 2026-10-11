@@ -92,8 +92,12 @@ import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
 import { MARK_COLOURS } from '../game/marks';
 import { SettingsPanel } from './panels/settings';
+import { Palette, type PaletteEntry } from './palette';
+import { compareLines } from './compare';
+import { Notices } from './notices';
+import type { HelpPages } from './panels/help';
 import { LookPanel } from './panels/looks';
-import { keyName, type Keybinds } from '../game/keybinds';
+import { BINDS, keyName, type Keybinds } from '../game/keybinds';
 import { Hud, WINDOWS } from './hud';
 import { EventLogPanel } from './panels/eventlog';
 import { InventoryPanel } from './panels/inventory';
@@ -111,7 +115,7 @@ import { HoardPanel } from './panels/hoard';
 import { KeeperPanel } from './panels/keeper';
 import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
-import { WindowManager } from './windows';
+import { LAYOUT_SLOTS, WindowManager, type UIWindow } from './windows';
 import type { Island } from '../net/island';
 import { awayLines } from '../game/away';
 import { clearQuestion } from '../game/keeper';
@@ -289,6 +293,17 @@ export class UI {
   private readonly keys: Keybinds;
   /** Something on its way to the ground, or nothing. */
   placing: Placing | null = null;
+  /** Lines near the top of the screen for a new whole number, a knack, work done or a birth. */
+  readonly notices: Notices;
+  /** Find anything (`palette`, Ctrl+K). */
+  private readonly palette: Palette;
+  private helpWin!: UIWindow;
+  /** The help, built into its window the first time anything asks for it. */
+  private helpBuilt: Promise<HelpPages> | null = null;
+  /** The help's section headings, once it has been built. */
+  private helpTitles: string[] = [];
+  /** What a key does, by its binding's id, for the Find anything box to do the same. Set by `main`. */
+  presses: Record<string, () => void> = {};
 
   constructor(
     private readonly game: Game,
@@ -320,33 +335,39 @@ export class UI {
     cb.keys.onChange = () => {
       this.hud.drawKeys();
       this.settings.drawKeys();
+      this.settings.drawLayouts();
     };
 
-    const events = this.windows.create({ id: 'events', title: 'Event', x: 12, y: 12, width: 420, height: 210, anchor: 'bl' });
+    const events = this.windows.create({ id: 'events', title: 'Event', x: 12, y: 12, width: 420, height: 210, anchor: 'bl', seeThrough: true });
     this.eventLog = new EventLogPanel(events, game);
     const inventory = this.windows.create({ id: 'inventory', title: 'Inventory', x: 12, y: 56, width: 340, height: 300, anchor: 'tr' });
     new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
-      (uid) => this.spellBar?.entriesFor({ kind: 'item', id: uid }) ?? []);
+      (uid) => this.spellBar?.entriesFor({ kind: 'item', id: uid }) ?? [],
+      (item) => {
+        const e = this.cratePanel?.putKindEntry(item);
+        return e ? [e] : [];
+      },
+      (item, x, y) => this.compareCard(item, x, y));
     const skills = this.windows.create({ id: 'skills', title: 'Skills', x: 364, y: 56, width: 260, height: 380, anchor: 'tr', open: false });
     new SkillsPanel(skills, game);
     // The handful you are moving today, beside the book that holds all forty.
-    const tracker = this.windows.create({ id: 'tracker', title: 'Tracker', x: 364, y: 446, width: 260, height: 210, anchor: 'tr', open: false });
+    const tracker = this.windows.create({ id: 'tracker', title: 'Tracker', x: 364, y: 446, width: 260, height: 210, anchor: 'tr', open: false, seeThrough: true });
     new TrackerPanel(tracker, game, (x, y, title, items) => this.menu.show(x, y, title, items));
     const craft = this.windows.create({ id: 'craft', title: 'Crafting', x: 364, y: 56, width: 360, height: 360, anchor: 'tr', open: false });
     this.craftPanel = new CraftPanel(craft, game);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick), this.tooltip);
-    const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 262, anchor: 'tr', open: false });
+    const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 262, anchor: 'tr', open: false, seeThrough: true });
     this.minimap = new MinimapPanel(map, game, renderer);
     const settings = this.windows.create({ id: 'settings', title: 'Settings', x: 12, y: 56, width: 380, height: 520, anchor: 'tr', open: false });
     // How you look: the creator, opened from Settings. Wide enough for the
     // mirror beside the choices; narrower, and the mirror goes over them.
     const lookWin = this.windows.create({ id: 'look', title: 'How you look', x: 60, y: 48, width: 720, height: 640, anchor: 'tl', open: false });
     new LookPanel(lookWin, game, this.island);
-    this.settings = new SettingsPanel(settings, game, cb.keys, () => lookWin.open());
+    this.settings = new SettingsPanel(settings, game, cb.keys, () => lookWin.open(), this.windows);
     const crate = this.windows.create({ id: 'crate', title: 'Deed crate', x: 364, y: 56, width: 320, height: 260, anchor: 'tr', open: false });
     this.cratePanel = new CratePanel(crate, game, (p) => this.moveDragged(p, 'store'),
-      (x, y, title, items) => this.menu.show(x, y, title, items));
+      (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));
     // Somebody else's shop counter: what is on it is bought, on an island.
     if (this.island) this.cratePanel.buyer = (it) => void this.buyOffCounter(it);
     const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 330, height: 420, anchor: 'tr', open: false });
@@ -438,12 +459,12 @@ export class UI {
      * file now: the island starts sooner, and the handbook costs a moment the
      * first time somebody asks for it, by which point they are reading.
      */
-    let built = false;
-    help.onOpen = () => {
-      if (built) return;
-      built = true;
-      void import('./panels/help').then((m) => m.buildHelp(help));
-    };
+    help.onOpen = () => void this.helpPages();
+    this.helpWin = help;
+    // A material no recipe makes: the help, opened at what it says about it.
+    this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
+    this.palette = new Palette(root, () => this.findables());
+    this.notices = new Notices(root, game);
 
     /*
      * While you were away: what the island counted for you, shown once as you
@@ -509,6 +530,111 @@ export class UI {
     this.windows.toggle(id);
   }
 
+  /** The help's pages, building them into the help window the first time (it is a file of its own, fetched then). */
+  private helpPages(): Promise<HelpPages> {
+    if (!this.helpBuilt) {
+      this.helpBuilt = import('./panels/help').then((m) => {
+        const pages = m.buildHelp(this.helpWin);
+        this.helpTitles = pages.titles;
+        return pages;
+      });
+    }
+    return this.helpBuilt;
+  }
+
+  /**
+   * The help, opened at what it says about something nothing makes at a bench.
+   * The first section that names it, by its heading or else its text; the
+   * whole help with a line to say so when none does.
+   */
+  private async helpAbout(item: string): Promise<void> {
+    const name = itemDef(item).name;
+    const pages = await this.helpPages();
+    this.helpWin.open();
+    const hit = pages.search(name);
+    this.game.logMsg(hit
+      ? `Nothing makes ${name.toLowerCase()} at a bench. The help is open at what it says about it.`
+      : `Nothing makes ${name.toLowerCase()} at a bench, and the help says nothing about it by that name.`, 'info');
+  }
+
+  /** A weapon or armour under the pointer in the pack or a store, set against what you have on; nothing for anything else. */
+  private compareCard(item: Item | null, x: number, y: number): void {
+    const lines = item ? compareLines(this.game, item) : null;
+    if (lines) this.tooltip.show(x, y, lines, this.compareHolder);
+    else this.tooltip.hide(this.compareHolder);
+  }
+
+  /** Who holds the tooltip while a comparison card is up, so the world's hover does not wipe it. */
+  private readonly compareHolder = {};
+
+  /** Open Find anything. */
+  openPalette(): void {
+    if (this.palette.isOpen) return;
+    this.palette.open();
+    // The help's pages come with the help, which is fetched the first time: added when they arrive.
+    if (!this.helpBuilt) void this.helpPages().then(() => this.palette.refresh());
+  }
+
+  /** Put the windows where a layout keeps them, or keep them as they are in it (`keep`, Shift and the layout's key). */
+  layout(slot: number, keep: boolean): void {
+    const name = this.windows.layoutName(slot);
+    if (keep) {
+      this.windows.saveLayout(slot);
+      this.game.logMsg(`The windows as they are now are kept as layout ${slot + 1}, “${name}”.`, 'info');
+    } else if (!this.windows.useLayout(slot)) {
+      const k = this.keys.label(`layout_${slot + 1}`);
+      this.game.logMsg(`Nothing is kept as layout ${slot + 1}, “${name}”, yet. Arrange the windows and press ${k === 'unbound' ? 'Keep in Settings, under Windows' : `Shift+${k}`}.`, 'info');
+    }
+    this.settings.drawLayouts();
+    this.settings.refresh();
+  }
+
+  /** Everything Find anything can find. */
+  private findables(): PaletteEntry[] {
+    const out: PaletteEntry[] = [];
+    const key = (id: string): string | undefined => {
+      const l = this.keys.label(id);
+      return l === 'unbound' ? undefined : l;
+    };
+    for (const b of BINDS) {
+      if (b.id.startsWith('win_')) {
+        const w = this.windows.get(b.id === 'win_events' ? 'events' : b.id.slice(4));
+        if (!w) continue;
+        out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => w.open() });
+      } else if (b.id.startsWith('layout_') || b.id === 'palette' || b.id.startsWith('pan_')) {
+        continue;
+      } else if (this.presses[b.id]) {
+        const press = this.presses[b.id];
+        out.push({ label: b.label, kind: 'Do', hint: b.hint, key: key(b.id), run: press });
+      }
+    }
+    for (let slot = 0; slot < LAYOUT_SLOTS; slot++) {
+      const name = this.windows.layoutName(slot);
+      const k = key(`layout_${slot + 1}`);
+      if (this.windows.layoutKept(slot)) out.push({ label: `Use layout: ${name}`, kind: 'Layout', hint: `Every window where layout ${slot + 1} keeps it`, key: k, run: () => this.layout(slot, false) });
+      out.push({ label: `Keep layout: ${name}`, kind: 'Layout', hint: `Store the windows as they are now as layout ${slot + 1}`, key: k ? `Shift+${k}` : undefined, run: () => this.layout(slot, true) });
+    }
+    for (const r of RECIPES) {
+      const made = itemDef(r.result).name;
+      out.push({ label: made, kind: 'Recipe', hint: `${r.label} · ${r.category}`, run: () => this.craftPanel.showRecipe(r.id) });
+    }
+    const settingsWin = this.windows.get('settings');
+    for (const f of this.settings.findables()) {
+      out.push({ label: f.label, kind: 'Setting', hint: f.hint, run: () => {
+        settingsWin?.open();
+        f.reveal();
+      } });
+    }
+    // Once the help has arrived: `openPalette` asks again when it does.
+    for (const title of this.helpTitles) {
+      out.push({ label: title, kind: 'Help', run: () => void this.helpPages().then((p) => {
+        this.helpWin.open();
+        p.jump(title);
+      }) });
+    }
+    return out;
+  }
+
   /** Open the storage window on a crate or a piece of furniture. */
   openCrate(id: number): void {
     this.cratePanel.open(id);
@@ -570,6 +696,26 @@ export class UI {
    * container, and it has to be willing to hold what you are giving it.
    */
   private moveDragged(p: DragPayload, to: 'inventory' | 'store'): void {
+    /*
+     * Shift held as the drag began: how many of the stack, asked first. Asked
+     * for as "split a stack": fifteen of a hundred and twenty copper lumps
+     * into the crate was a drag of the lot and fifteen trips back one at a
+     * time, or a pile dropped on the ground and picked over.
+     */
+    const store = this.cratePanel.currentStore();
+    const held = to === 'inventory' ? store?.items.find((it) => it.uid === p.uid) : this.game.inventory.get(p.uid);
+    const ask = this.game.hooks.count;
+    if (p.split && held && held.count > 1 && ask) {
+      void ask(`${p.name}: how many of the ${held.count} to move?`, held.count, Math.ceil(held.count / 2)).then((n) => {
+        if (n) this.moveDraggedN(p, to, n);
+      });
+      return;
+    }
+    this.moveDraggedN(p, to);
+  }
+
+  /** Move a dragged stack, or `n` of it. */
+  private moveDraggedN(p: DragPayload, to: 'inventory' | 'store', n?: number): void {
     const g = this.game;
     const store = this.cratePanel.currentStore();
     if (!store) return;
@@ -604,7 +750,7 @@ export class UI {
         : g.inventory.get(p.uid);
       // Which store it was dragged into, so that it goes into that one rather
       // than into whichever happens to stand nearest.
-      g.requestAction(def, { kind: 'item', uid: p.uid, count: held?.count ?? 1, into: store.id });
+      g.requestAction(def, { kind: 'item', uid: p.uid, count: Math.min(n ?? Infinity, held?.count ?? 1), into: store.id });
       return;
     }
     if (to === 'inventory') {
@@ -632,7 +778,7 @@ export class UI {
     }
     // What there is room for rather than the whole armful: the rest stays in
     // the pack and is said so, instead of the drag being refused outright.
-    const fits = store.fits(held);
+    const fits = Math.min(store.fits(held), n ?? Infinity);
     const item = fits > 0 ? g.inventory.take(held.uid, fits) : null;
     if (!item) {
       g.logMsg(`The ${store.what} is full.`, 'error');
@@ -662,6 +808,7 @@ export class UI {
   }
 
   update(fps: number): void {
+    this.notices.update(performance.now());
     this.hud.update(this.renderer, fps);
     this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down } : null;
     this.minimap.update();

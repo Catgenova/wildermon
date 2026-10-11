@@ -117,6 +117,13 @@ export const SETTING_DEFAULTS = {
   graphics: 'full' as 'full' | 'fast',
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
+  /** Notices near the top of the screen (`src/ui/notices.ts`): a skill at a new whole number, a knack, a run of work done, a birth. */
+  noticeLevel: true,
+  noticeKnack: true,
+  noticeDone: true,
+  noticeBirth: true,
+  /** A ring over each fire, smelter and kiln near you: its fuel, the work in it, and a dot when something is ready (`drawStationRings`). */
+  stationRings: true,
 };
 
 export type Settings = typeof SETTING_DEFAULTS & {

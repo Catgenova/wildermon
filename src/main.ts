@@ -236,6 +236,7 @@ game.hooks = {
   prompt: (question, fallback) => asker.name(question, fallback),
   confirm: (question) => asker.sure(question),
   choose: (question, choices) => asker.choose(question, choices),
+  count: (question, most, fallback) => asker.count(question, most, fallback),
 };
 
 const player = game.player;
@@ -388,7 +389,10 @@ const PRESSES: Record<string, () => void> = {
     // has to mean "stop following", or it stops the walk and the next tick
     // starts it again.
     else if (game.following()) game.unfollow('You stop following.');
-    else if (game.action) game.cancelAction();
+    else if (game.action) {
+      ui.notices.hush();
+      game.cancelAction();
+    }
     else player.stop();
   },
   chat: () => ui.focusChat(),
@@ -397,7 +401,10 @@ const PRESSES: Record<string, () => void> = {
   fight_stance: () => game.cycleStance(),
   pet_attack: () => game.orderAttack(),
   pet_back: () => game.orderHeel(),
+  palette: () => ui.openPalette(),
 };
+// What each key does, for Find anything to offer by name.
+ui.presses = PRESSES;
 
 input.onKey = (code, ev) => {
   /*
@@ -407,6 +414,12 @@ input.onKey = (code, ev) => {
    */
   if (ui.grabKey(code)) {
     ev.preventDefault();
+    return;
+  }
+  // Ctrl+K, and ⌘K on a Mac: Find anything, as most programs have it.
+  if ((ev.ctrlKey || ev.metaKey) && code === 'KeyK') {
+    ev.preventDefault();
+    ui.openPalette();
     return;
   }
   if (code === 'Escape' && ui.placing) {
@@ -427,8 +440,15 @@ input.onKey = (code, ev) => {
   }
   const id = keys.actionFor(code);
   if (!id) return;
-  // Tab bound to something is that thing, not a walk of the focus round the page.
-  if (code === 'Tab') ev.preventDefault();
+  // Tab bound to something is that thing, not a walk of the focus round the page;
+  // F6 is not the address bar, and / is not the browser's quick find nor a / typed into the box it opens.
+  if (code === 'Tab' || code === 'Slash' || /^F\d+$/.test(code)) ev.preventDefault();
+  // A window layout: Shift keeps the windows as they are in it, the key alone puts them back.
+  const layout = /^layout_(\d+)$/.exec(id);
+  if (layout) {
+    ui.layout(Number(layout[1]) - 1, ev.shiftKey);
+    return;
+  }
   PRESSES[id]?.();
 };
 

@@ -4,11 +4,14 @@ import { whoAmI } from '../../net/accounts';
 import { RARITIES } from '../../game/items';
 import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
-import type { UIWindow } from '../windows';
+import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR } from '../../game/settings';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
 import { listed, numberWord } from '../../game/words';
+import { DONE_AFTER, NOTICE_MS } from '../notices';
+import { RING_REACH } from '../../render/renderer';
+import { FIRE_CAPACITY, fireBurnsFor, type PlacedCampfire } from '../../game/campfire';
 
 interface Toggle {
   input: HTMLInputElement;
@@ -34,18 +37,24 @@ export class SettingsPanel {
   private keyRows = new Map<string, HTMLButtonElement[]>();
   /** Rows for a keeper of the island alone, hidden until the island says this body is one. */
   private keeperRows: HTMLDivElement[] = [];
+  /** The window layouts' rows: the name, Use, and the key that does the same. */
+  private layoutRows: Array<{ name: HTMLInputElement; use: HTMLButtonElement; key: HTMLElement }> = [];
+  /** The see-through switches, one a window that can be made see-through. */
+  private seeRows: Array<{ input: HTMLInputElement; win: UIWindow }> = [];
 
   constructor(
     win: UIWindow,
     game: Game,
     private readonly keys: Keybinds,
     openLook: () => void,
+    private readonly windows: WindowManager,
   ) {
     win.body.classList.add('settings-body');
     const bar = document.createElement('div');
     bar.className = 'log-tabs';
     for (const [id, label, title] of [
       ['display', 'Display', 'What the island looks like'],
+      ['windows', 'Windows', 'Window layouts, and windows you can see through'],
       ['keys', 'Keys', 'What every key does'],
     ] as Array<[string, string, string]>) {
       const b = document.createElement('button');
@@ -64,9 +73,14 @@ export class SettingsPanel {
     const keyPage = document.createElement('div');
     keyPage.className = 'settings-page keys-page';
     keyPage.hidden = true;
+    const winPage = document.createElement('div');
+    winPage.className = 'settings-page';
+    winPage.hidden = true;
     this.pages.set('display', display);
+    this.pages.set('windows', winPage);
     this.pages.set('keys', keyPage);
-    win.body.append(display, keyPage);
+    win.body.append(display, winPage, keyPage);
+    this.buildWindows(winPage);
 
     const add = (label: string, hint: string, read: () => boolean, write: (v: boolean) => void): void => {
       const row = document.createElement('label');
@@ -333,6 +347,24 @@ export class SettingsPanel {
       (v) => (game.settings.compactFight = v),
     );
 
+    add('Rings over fires, smelters and kilns', `Over each one within ${RING_REACH} tiles: an outer ring of its fuel, full at ${fireBurnsFor({ fuel: FIRE_CAPACITY } as PlacedCampfire)} of burning, orange while it burns and grey while it is cold; an inner ring of how far the piece at the front of it has come; and a gold dot when something is finished and waiting to be taken out.`,
+      () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
+
+    // Notices (src/ui/notices.ts): a line near the top of the screen, gone after a few seconds; the event log says the same either way.
+    const noticeHead = document.createElement('h4');
+    noticeHead.className = 'keys-group';
+    noticeHead.textContent = 'Notices';
+    display.append(noticeHead);
+    const seconds = Math.round(NOTICE_MS / 1000 * 10) / 10;
+    add('A skill at a new whole number', `A line at the top of the screen for ${seconds} seconds when a skill reaches its next whole number, naming the skill and the number.`,
+      () => game.settings.noticeLevel, (v) => (game.settings.noticeLevel = v));
+    add('A knack', `A line at the top of the screen for ${seconds} seconds when a go leaves a knack behind.`,
+      () => game.settings.noticeKnack, (v) => (game.settings.noticeKnack = v));
+    add('Work done', `A line at the top of the screen for ${seconds} seconds when a job and everything queued behind it is finished, after ${DONE_AFTER} seconds or more of work. Not when you stop it yourself.`,
+      () => game.settings.noticeDone, (v) => (game.settings.noticeDone = v));
+    add('A birth', `A line at the top of the screen for ${seconds} seconds when one of your wildermon gives birth.`,
+      () => game.settings.noticeBirth, (v) => (game.settings.noticeBirth = v));
+
     /**
      * Who you are, and the one thing the game can do about it.
      *
@@ -435,6 +467,124 @@ export class SettingsPanel {
     this.drawKeys();
   }
 
+  /**
+   * The Windows tab: the layouts, kept and called back, and which windows are
+   * see-through.
+   */
+  private buildWindows(page: HTMLDivElement): void {
+    const intro = document.createElement('p');
+    intro.className = 'setting-note';
+    intro.innerHTML = '<b>Window layouts</b><small>Each keeps every window&rsquo;s place, size, and whether it is open, expanded or see-through. <b>Keep</b> stores the windows as they are now; <b>Use</b>, or the layout&rsquo;s key, puts them all back. Shift and the key keeps instead of using. A window dragged near the edge of the screen or of another window is put against it; hold Alt while dragging to place it freely.</small>';
+    page.append(intro);
+    const note = document.createElement('p');
+    note.className = 'keys-note';
+    note.hidden = true;
+    const sayHere = (text: string): void => {
+      note.textContent = text;
+      note.hidden = false;
+    };
+    for (let slot = 0; slot < LAYOUT_SLOTS; slot++) {
+      const row = document.createElement('div');
+      row.className = 'setting-row layout-row';
+      const name = document.createElement('input');
+      name.type = 'text';
+      name.id = `layout-name-${slot + 1}`;
+      name.className = 'layout-name';
+      name.maxLength = 24;
+      name.value = this.windows.layoutName(slot);
+      name.title = 'What this layout is called';
+      name.addEventListener('keydown', (e) => e.stopPropagation());
+      name.addEventListener('change', () => {
+        this.windows.renameLayout(slot, name.value);
+        this.drawLayouts();
+      });
+      const keep = document.createElement('button');
+      keep.type = 'button';
+      keep.className = 'tb-btn tb-small';
+      keep.textContent = 'Keep';
+      keep.title = 'Store the windows as they are now in this layout';
+      keep.addEventListener('click', () => {
+        this.windows.saveLayout(slot);
+        this.drawLayouts();
+        sayHere(`The windows as they are now are kept as “${this.windows.layoutName(slot)}”.`);
+      });
+      const use = document.createElement('button');
+      use.type = 'button';
+      use.className = 'tb-btn tb-small';
+      use.textContent = 'Use';
+      use.addEventListener('click', () => {
+        if (this.windows.useLayout(slot)) sayHere(`The windows are where “${this.windows.layoutName(slot)}” keeps them.`);
+      });
+      const key = document.createElement('kbd');
+      row.append(name, keep, use, key);
+      page.append(row);
+      this.layoutRows.push({ name, use, key });
+    }
+    page.append(note);
+    const seeHead = document.createElement('p');
+    seeHead.className = 'setting-note';
+    seeHead.innerHTML = '<b>See-through windows</b><small>Dimmed, and every click on them goes to the island underneath; only the title bar still takes hold of one, to move it or make it solid again. Hold Alt to click or scroll in one. The ◐ on its title bar does the same as the box here.</small>';
+    page.append(seeHead);
+    for (const w of this.windows.windows.values()) {
+      if (!w.opts.seeThrough) continue;
+      const row = document.createElement('label');
+      row.className = 'setting-row';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = `see-${w.opts.id}`;
+      input.checked = w.isSeeThrough;
+      input.addEventListener('change', () => w.setSeeThrough(input.checked));
+      const text = document.createElement('span');
+      text.innerHTML = `<b>${w.opts.title}</b>`;
+      row.append(input, text);
+      page.append(row);
+      this.seeRows.push({ input, win: w });
+    }
+    this.drawLayouts();
+  }
+
+  /** The layouts' names, whether each has anything kept, and their keys. */
+  drawLayouts(): void {
+    this.layoutRows.forEach((r, slot) => {
+      if (document.activeElement !== r.name) r.name.value = this.windows.layoutName(slot);
+      const kept = this.windows.layoutKept(slot);
+      r.use.disabled = !kept;
+      r.use.title = kept ? 'Put every window where this layout keeps it' : 'Nothing is kept in this layout yet: arrange the windows and press Keep';
+      const k = this.keys.label(`layout_${slot + 1}`);
+      r.key.textContent = k;
+      r.key.title = k === 'unbound' ? 'No key: set one under Keys' : `${k} uses it; Shift+${k} keeps the windows as they are now`;
+    });
+  }
+
+  /**
+   * Every row on the Display and Windows tabs, by what it is called, for the
+   * Find anything box: opening one shows its tab and lights the row up.
+   */
+  findables(): Array<{ label: string; hint: string; reveal: () => void }> {
+    const out: Array<{ label: string; hint: string; reveal: () => void }> = [];
+    for (const tab of ['display', 'windows']) {
+      const page = this.pages.get(tab);
+      if (!page) continue;
+      for (const row of page.querySelectorAll<HTMLElement>('.setting-row, .setting-note')) {
+        const b = row.querySelector('b');
+        const label = (b?.textContent ?? '').replace(/\s+—.*$/, '').trim();
+        if (!label) continue;
+        out.push({
+          label,
+          hint: row.querySelector('small')?.textContent ?? '',
+          reveal: () => {
+            this.show(tab);
+            row.scrollIntoView({ block: 'center' });
+            row.classList.remove('found-flash');
+            void row.offsetWidth;
+            row.classList.add('found-flash');
+          },
+        });
+      }
+    }
+    return out;
+  }
+
   /** The island says this body keeps it: its keys are listed with the rest. */
   showKeeper(): void {
     for (const row of this.keeperRows) row.hidden = false;
@@ -534,5 +684,6 @@ export class SettingsPanel {
       const v = t.read();
       if (t.input.checked !== v) t.input.checked = v;
     }
+    for (const r of this.seeRows) if (r.input.checked !== r.win.isSeeThrough) r.input.checked = r.win.isSeeThrough;
   }
 }

@@ -32,6 +32,8 @@ export class InventoryPanel {
   private selected: number | null = null;
   private sort: SortKey = 'name';
   private grouped = true;
+  private load: HTMLDivElement;
+  private loadFill: HTMLDivElement;
 
   constructor(
     private readonly win: UIWindow,
@@ -44,6 +46,10 @@ export class InventoryPanel {
     private readonly readMap?: (uid: number) => void,
     /** The spells on the bar that can be cast on a thing, as rows for its menu. */
     private readonly spellsFor?: (uid: number) => MenuItem[],
+    /** What the open store offers a thing from the pack: "Put every … in the crate". */
+    private readonly storeEntries?: (item: Item) => MenuItem[],
+    /** A card for what is under the pointer: a weapon or armour set against what you have on (`compareLines`). */
+    private readonly hover?: (item: Item | null, x: number, y: number) => void,
   ) {
     this.search = document.createElement('input');
     this.search.type = 'search';
@@ -88,7 +94,21 @@ export class InventoryPanel {
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
     this.footer.className = 'inv-footer';
-    win.body.append(this.search, bar, head, this.list, this.footer);
+    /*
+     * What you carry, as a bar: the mark is where the load starts to slow you
+     * (`carryLimit`), the end is half again past it (`CARRY_STOP`), where you
+     * are down to a crawl. Asked for so the slowdown is seen coming rather
+     * than found by walking into it.
+     */
+    this.load = document.createElement('div');
+    this.load.className = 'inv-load';
+    this.loadFill = document.createElement('div');
+    this.loadFill.className = 'inv-load-fill';
+    const mark = document.createElement('div');
+    mark.className = 'inv-load-mark';
+    mark.style.left = `${(100 / CARRY_STOP).toFixed(2)}%`;
+    this.load.append(this.loadFill, mark);
+    win.body.append(this.search, bar, head, this.list, this.load, this.footer);
     win.body.classList.add('inv-body');
     makeDropZone(
       this.list,
@@ -145,6 +165,10 @@ export class InventoryPanel {
     this.footer.textContent = this.query ? `${shown.reduce((n, it) => n + it.count, 0)} of ${all}` : all;
     this.footer.classList.toggle('inv-over', over > 0);
     this.footer.classList.toggle('inv-stuck', stuck);
+    this.loadFill.style.width = `${Math.min(100, (weight / Math.max(0.001, stop)) * 100).toFixed(1)}%`;
+    this.load.classList.toggle('inv-over', over > 0);
+    this.load.classList.toggle('inv-stuck', stuck);
+    this.load.title = `${weight.toFixed(1)} kg of ${stop.toFixed(0)}. The mark is ${limit.toFixed(0)} kg, where the load starts to slow you and tire you faster; at the end, ${stop.toFixed(0)} kg, you are down to a twentieth of your pace.`;
     this.footer.title = stuck
       ? `${weight.toFixed(1)} kg on a back that takes ${limit.toFixed(0)}. Over ${stop.toFixed(0)} kg you are down to a twentieth of your pace: put ${(weight - stop).toFixed(1)} kg down, or into a cart or a crate.`
       : over > 0
@@ -170,6 +194,10 @@ export class InventoryPanel {
     };
     row.addEventListener('click', open);
     row.addEventListener('contextmenu', open);
+    if (this.hover) {
+      row.addEventListener('mousemove', (e) => this.hover?.(item, e.clientX, e.clientY));
+      row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
+    }
     makeDraggable(row, { uid: item.uid, from: 'inventory', name: itemName(item) });
     return row;
   }
@@ -335,6 +363,7 @@ export class InventoryPanel {
       });
     }
     this.win.focus();
+    entries.push(...(this.storeEntries?.(item) ?? []));
     entries.push(...(this.spellsFor?.(item.uid) ?? []));
     this.menu.show(x, y, itemName(item), entries);
   }

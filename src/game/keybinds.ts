@@ -25,6 +25,9 @@ import { TURNS } from '../render/view';
 import { capital, numberWord, share } from './words';
 import { FALL_BACK, FIGHT_STANCE_NAMES, FIGHT_STANCES, FOLLOW_RANGE, stanceSays, TARGET_RANGE } from './fight';
 
+/** What each kept arrangement of windows is called until it is renamed: what most people keep a screen for, and a spare. */
+export const LAYOUT_NAMES = ['Crafting', 'Fighting', 'Building', 'Travelling'];
+
 /** What a turn key turns by: the view one of its viewpoints, a piece being set down one of its sides. */
 const VIEW_TURN = share(1 / TURNS);
 const PIECE_TURN = share(1 / Object.keys(SIDE_NAMES).length);
@@ -91,6 +94,16 @@ export const BINDS: BindDef[] = [
   { id: 'win_help', label: 'Help', hint: 'How any of this works.', group: 'Windows', keys: ['F1', 'KeyH'] },
   // No key out of the box: every letter is spoken for, and it opens by itself when there is something new.
   { id: 'win_news', label: "What's new", hint: 'What changed on the island, newest first, with what you had not read yet marked.', group: 'Windows', keys: [] },
+  // Ctrl+K and ⌘K open it too, wherever they are not taken by something you are typing in.
+  { id: 'palette', label: 'Find anything', hint: 'A box to type in that finds any window, recipe, setting, help page, layout or key by name, and opens it. Ctrl+K opens it as well.', group: 'Windows', keys: ['Slash'] },
+  // F6 to F9: the letters are spoken for, and F1, F2 and F4 already open windows.
+  ...LAYOUT_NAMES.map((name, i) => ({
+    id: `layout_${i + 1}`,
+    label: `Window layout ${i + 1} (${name} until renamed)`,
+    hint: `Put every window where layout ${i + 1} keeps it: its place, its size, and open or shut. With Shift, keep the windows as they are now as layout ${i + 1}. Named and kept in Settings, under Windows.`,
+    group: 'Windows',
+    keys: [`F${6 + i}`],
+  })),
 
   { id: 'walk_home', label: 'Walk home', hint: 'Set off for your settlement token, or your bed.', group: 'Doing things', keys: ['Home'] },
   /*

@@ -5,6 +5,9 @@ import {
 import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
+import { LAYOUT_NAMES } from '../../game/keybinds';
+import { SNAP } from '../windows';
+import { RECENT } from './craft';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_WIND, SWING_WIND_KG, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
@@ -1830,6 +1833,29 @@ export const NEWS: News[] = [
     lines: () => [
       'Meditating is drawn sat cross-legged on the ground with the eyes shut and the hands on the knees, breathing slowly, '
         + 'where it used to be drawn as the work at a bench. What it does is unchanged.',
+    ],
+  },
+  {
+    n: 136,
+    day: '2026-10-11',
+    lines: () => [
+      `Find anything: ${defaultKey('palette')} or Ctrl+K opens a box that finds any window, recipe, setting, page of the help, `
+        + 'window layout or key by name and opens it.',
+      `Window layouts: ${LAYOUT_NAMES.length} of them, on ${defaultKey('layout_1')} to ${defaultKey(`layout_${LAYOUT_NAMES.length}`)}. `
+        + 'Shift and the key keeps the windows as they are; the key alone puts them back. Named in Settings, under Windows.',
+      `A window dragged within ${SNAP} pixels of the edge of the screen or of another window is put against it; hold Alt to place it freely.`,
+      'The event log, the tracker and the map can be made see-through with the ◐ on their title bars: dimmed, with clicks going '
+        + 'to the island underneath. Hold Alt to click in one.',
+      'Hovering a weapon, a piece of armour or a shield in the pack or a store shows its damage, swing, chance to land, share of '
+        + 'a blow turned aside or chance to block, each against what you have on in its place.',
+      'Shift and drag a stack to move part of it: it asks how many.',
+      'The pack has a bar for its load, marked where the weight starts to slow you and ending where you are down to a crawl.',
+      'Right-click a thing in a store for Take every one of it, stack by stack; the pack’s menu has Put every one of it in the store you have open.',
+      `The Crafting window keeps Pinned recipes (the ☆ on a row) and the ${RECENT} you made lately at the top. A material you are short of `
+        + 'is a link: to the recipes that make it, or to what the help says about it when nothing does.',
+      'A ring over every fire, smelter and kiln near you shows its fuel, the work in it and a dot when something is ready.',
+      'Notices near the top of the screen for a skill at a new whole number, a knack, a run of work done and a birth. Each '
+        + 'can be switched off in Settings.',
     ],
   },
 ];

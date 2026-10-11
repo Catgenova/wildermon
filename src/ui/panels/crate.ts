@@ -117,6 +117,8 @@ export class CratePanel {
      * window with only a Take button is no way to say so.
      */
     private readonly showMenu?: (x: number, y: number, title: string, items: MenuItem[]) => void,
+    /** A card for what is under the pointer: a weapon or armour set against what you have on (`compareLines`). */
+    private readonly hover?: (item: Item | null, x: number, y: number) => void,
   ) {
     win.body.classList.add('inv-body');
     const head = document.createElement('div');
@@ -328,6 +330,68 @@ export class CratePanel {
   }
 
   /** Empty the open store into the pack, as far as it will go. */
+  /**
+   * Take one stack out, by the door the Take button uses: the island's
+   * `take_from_store` (or the store's own door), or straight across when
+   * nobody else keeps the store.
+   */
+  private takeOne(item: Item, count = item.count): void {
+    const store = this.store();
+    if (!store) return;
+    if (!this.withinReach()) {
+      this.game.logMsg(`Stand next to the ${store.what} to take things out.`, 'error');
+      return;
+    }
+    const def = ACTION_BY_ID.get(store.doors?.out ?? 'take_from_store');
+    if ((this.game.ask || store.doors) && def && store.kind !== 'carried') {
+      this.game.requestAction(def, { kind: 'item', uid: item.uid, count });
+      return;
+    }
+    const it = store.take(item.uid);
+    if (it) this.game.inventory.addItem(it);
+    this.render();
+  }
+
+  /**
+   * "Take every one of these": each stack of the same thing in the open store,
+   * a stack at a time through the same door as Take. Asked for as "move all of
+   * this kind": twelve stacks of iron lumps at twelve different qualities were
+   * twelve clicks.
+   */
+  private takeKindEntry(item: Item): MenuItem | null {
+    const store = this.store();
+    if (!store || store.sell || store.grave !== undefined) return null;
+    const same = store.items.filter((it) => it.id === item.id);
+    const total = same.reduce((n, it) => n + it.count, 0);
+    if (same.length < 2) return null;
+    return {
+      label: `Take every ${itemDef(item.id).name.toLowerCase()}`,
+      note: `${same.length} stacks, ${total} in all`,
+      onSelect: () => {
+        for (const it of same) this.takeOne(it);
+      },
+    };
+  }
+
+  /**
+   * "Put every one of these in": for a row of the pack, while a store is open
+   * and in reach. Each stack of the same thing that is loose (not worn, not
+   * kept back), through `putAll`'s door. Null when there is no such store or
+   * nothing else of the kind to put in.
+   */
+  putKindEntry(item: Item): MenuItem | null {
+    const store = this.store();
+    if (!store || store.sell || store.grave !== undefined || !this.win.isOpen || !this.withinReach()) return null;
+    const loose = this.game.inventory.items.filter((it) => it.id === item.id && !it.locked && it.creature === undefined && !this.game.isEquipped(it.uid));
+    if (!loose.length) return null;
+    const total = loose.reduce((n, it) => n + it.count, 0);
+    return {
+      label: `Put every ${itemDef(item.id).name.toLowerCase()} in the ${store.what}`,
+      note: `${loose.length === 1 ? 'one stack' : `${loose.length} stacks`}, ${total} in all`,
+      onSelect: () => this.putAll(false, item.id),
+    };
+  }
+
   private takeAll(): void {
     const store = this.store();
     if (!store) return;
@@ -366,7 +430,7 @@ export class CratePanel {
    * goes in, which is how a store is topped up rather than filled with
    * everything you happen to be holding.
    */
-  private putAll(sameKinds = false): void {
+  private putAll(sameKinds = false, only?: string): void {
     const store = this.store();
     if (!store) return;
     if (!this.withinReach()) {
@@ -386,6 +450,7 @@ export class CratePanel {
       for (const item of [...this.game.inventory.items]) {
         if (item.locked || item.creature !== undefined || this.game.isEquipped(item.uid)) continue;
         if (sameKinds && !kinds.has(item.id)) continue;
+        if (only && item.id !== only) continue;
         asked++;
         this.game.requestAction(door, { kind: 'item', uid: item.uid, count: item.count, into: store.id });
       }
@@ -398,6 +463,7 @@ export class CratePanel {
     for (const item of [...this.game.inventory.items]) {
       if (item.locked || item.creature !== undefined || this.game.isEquipped(item.uid)) continue;
       if (sameKinds && !kinds.has(item.id)) continue;
+      if (only && item.id !== only) continue;
       const why = store.refuses(item);
       if (why) {
         refused ||= why;
@@ -514,11 +580,15 @@ export class CratePanel {
         if (it) this.game.inventory.addItem(it);
       });
       row.append(name, ql, dmg, take);
-      if (store.kind === 'bag' && this.showMenu) {
+      if (this.showMenu && !sell) {
         row.addEventListener('contextmenu', (e) => {
           e.preventDefault();
           this.openMenu(item, e.clientX, e.clientY);
         });
+      }
+      if (this.hover) {
+        row.addEventListener('mousemove', (e) => this.hover?.(item, e.clientX, e.clientY));
+        row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
       }
       makeDraggable(row, { uid: item.uid, from: 'store', name: itemName(item) });
       this.list.append(row);
@@ -542,6 +612,13 @@ export class CratePanel {
    */
   private openMenu(item: Item, x: number, y: number): void {
     const target = { kind: 'item' as const, uid: item.uid };
+    const kind = this.takeKindEntry(item);
+    // Only a bag's things are worked on where they lie; anything else in a store is taken out first.
+    if (this.store()?.kind !== 'bag') {
+      this.win.focus();
+      this.showMenu?.(x, y, itemName(item), [{ label: 'Take out', onSelect: () => this.takeOne(item) }, ...(kind ? [kind] : [])]);
+      return;
+    }
     const entries: MenuItem[] = [{
       label: 'Take out',
       onSelect: () => {
@@ -556,6 +633,7 @@ export class CratePanel {
         this.render();
       },
     }];
+    if (kind) entries.push(kind);
     for (const { def, reason } of this.game.actionsFor(target)) {
       entries.push({
         label: def.label,

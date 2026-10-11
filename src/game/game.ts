@@ -277,6 +277,8 @@ export interface GameHooks {
   confirm: (question: string) => Promise<boolean>;
   /** Choose one of several: each with a colour to show beside it and what it says. Resolves with the key chosen, or null. */
   choose: (question: string, choices: ReadonlyArray<{ key: string; colour?: string; text: string }>) => Promise<string | null>;
+  /** How many, from 1 to `most`, with `fallback` offered: a part of a stack to move. Resolves with the number, or null. */
+  count?: (question: string, most: number, fallback: number) => Promise<number | null>;
 }
 
 export interface GameInit {

@@ -44,6 +44,18 @@ export class Asker {
     return this.ask(question, { text: fallback, max });
   }
 
+  /**
+   * Ask how many, from one to `most`: what part of a stack to move. The box
+   * opens with `fallback` in it, selected; what is typed is held to the range,
+   * and anything that is not a number is a cancel.
+   */
+  async count(question: string, most: number, fallback: number): Promise<number | null> {
+    const got = await this.ask(question, { text: String(fallback), max: String(most).length, number: most, ok: 'Move' });
+    if (got === null) return null;
+    const n = Math.floor(Number(got));
+    return Number.isFinite(n) && n >= 1 ? Math.min(most, n) : null;
+  }
+
   /** Ask whether to go ahead. Resolves true only for a deliberate yes. */
   async sure(question: string): Promise<boolean> {
     return (await this.ask(question, null)) !== null;
@@ -65,7 +77,7 @@ export class Asker {
    * dialogues on the screen at once is a way to answer the wrong one, and
    * nothing here asks twice in a row on purpose.
    */
-  private ask(question: string, field: { text: string; max: number } | null,
+  private ask(question: string, field: { text: string; max: number; number?: number; ok?: string } | null,
     choices?: ReadonlyArray<{ key: string; colour?: string; text: string }>): Promise<string | null> {
     this.close(null);
     return new Promise<string | null>((settle) => {
@@ -82,7 +94,12 @@ export class Asker {
       let input: HTMLInputElement | null = null;
       if (field) {
         input = document.createElement('input');
-        input.type = 'text';
+        input.type = field.number ? 'number' : 'text';
+        if (field.number) {
+          input.min = '1';
+          input.max = String(field.number);
+          input.inputMode = 'numeric';
+        }
         input.className = 'ask-input';
         input.value = field.text;
         input.maxLength = field.max;
@@ -126,7 +143,7 @@ export class Asker {
       const yes = document.createElement('button');
       yes.type = 'button';
       yes.className = 'tb-btn tb-small ask-ok';
-      yes.textContent = field ? 'Name it' : 'Yes';
+      yes.textContent = field ? field.ok ?? 'Name it' : 'Yes';
       // A choice is made by pressing it: there is nothing for a yes to say.
       buttons.append(...(picks.length ? [no] : [no, yes]));
       box.append(buttons);

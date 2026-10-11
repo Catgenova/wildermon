@@ -3129,7 +3129,17 @@ function waterGarden(): string {
  * top and a box to search the lot. Searching keeps whole sections rather than
  * single lines, because half an explanation is worse than none.
  */
-export function buildHelp(win: UIWindow): void {
+/** What the help can be asked to do once it is built: open at a section. */
+export interface HelpPages {
+  /** Every section's heading, in order. */
+  titles: string[];
+  /** Clear any search and put the section with this heading at the top. */
+  jump(title: string): void;
+  /** Search the help for this, as the box at its top does; false when no section answers. */
+  search(query: string): boolean;
+}
+
+export function buildHelp(win: UIWindow): HelpPages {
   win.body.classList.add('help-body');
   const holder = document.createElement('div');
   holder.innerHTML = helpText();
@@ -3181,8 +3191,8 @@ export function buildHelp(win: UIWindow): void {
   });
   contents.append(...links);
 
-  /** Keep only the sections that answer to what has been typed. */
-  const show = (query: string): void => {
+  /** Keep only the sections that answer to what has been typed, and say how many did. */
+  const show = (query: string): number => {
     const q = query.trim().toLowerCase();
     let kept = 0;
     for (let i = 0; i < sections.length; i += 1) {
@@ -3195,6 +3205,7 @@ export function buildHelp(win: UIWindow): void {
     count.hidden = !q;
     count.textContent = kept ? `${kept} of ${sections.length} sections` : `Nothing in the help answers to “${query.trim()}”.`;
     pages.scrollTop = 0;
+    return kept;
   };
   search.addEventListener('input', () => show(search.value));
   search.addEventListener('keydown', (e) => {
@@ -3206,4 +3217,15 @@ export function buildHelp(win: UIWindow): void {
 
   pages.append(...sections.map((s) => s.el));
   win.body.replaceChildren(search, contents, count, pages);
+  return {
+    titles: sections.map((s) => s.title),
+    jump: (title) => {
+      const i = sections.findIndex((s) => s.title === title);
+      if (i >= 0) links[i].click();
+    },
+    search: (query) => {
+      search.value = query;
+      return show(query) > 0;
+    },
+  };
 }

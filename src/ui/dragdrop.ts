@@ -10,6 +10,12 @@ export interface DragPayload {
   from: 'inventory' | 'store';
   /** What it is called, for the message when it will not go. */
   name: string;
+  /**
+   * Shift was held as the drag began: ask how many of the stack to move rather
+   * than moving the lot (`DragEvent.shiftKey`, read at the start because a
+   * drop's own is unreliable across browsers).
+   */
+  split?: boolean;
 }
 
 let carried: DragPayload | null = null;
@@ -20,7 +26,7 @@ export const dragging = (): DragPayload | null => carried;
 export function makeDraggable(row: HTMLElement, payload: DragPayload): void {
   row.draggable = true;
   row.addEventListener('dragstart', (e) => {
-    carried = payload;
+    carried = { ...payload, split: e.shiftKey };
     row.classList.add('drag-source');
     e.dataTransfer?.setData('text/plain', String(payload.uid));
     if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
