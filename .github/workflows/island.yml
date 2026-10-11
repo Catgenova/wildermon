@@ -2499,6 +2499,22 @@ jobs:
             --outfile=node_modules/.cache/gates.mjs --log-level=error
           node node_modules/.cache/gates.mjs
 
+      - name: A rune gate is laid, passed and lit the same on both sides
+        run: |
+          # Two rune pillars under a lintel on a border of their own, in stone
+          # brick and nothing else with a light mote in each pillar, that shut
+          # nothing out; their runes light while a citizen of the settlement
+          # they stand on is in the opening. This asks what it is and costs on
+          # both sides, every material against every wall type in the same
+          # words, planning one on both sides, what goes through it, the rolls
+          # the island sends whoever is ashore (founder, mayors and builders of
+          # each settlement a rune gate stands on, never a guest), and a
+          # browser fed them lighting it for a citizen in reach and not for a
+          # guest or a stranger, fading out when they go.
+          npx esbuild supabase/test/runegate.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/runegate.mjs --log-level=error
+          node node_modules/.cache/runegate.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

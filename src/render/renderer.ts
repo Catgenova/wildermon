@@ -39,6 +39,8 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
+import { drawRuneGate, gateVariant } from './runegate';
+import { gateMiddle, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
@@ -6483,7 +6485,8 @@ export class Renderer {
     /** How far out a wall's shade reaches from its line, or 0 for a wall that throws none. */
     const reachOf = (w: Wall): number => {
       const cob = this.masonryOf(w);
-      if (!cob) return 0;
+      // A rune gate throws its own, under its pillars, in its picture (`runegate.ts`).
+      if (!cob || isRuneGate(w)) return 0;
       if (WALL_TYPE_BY_ID.get(w.type)?.low) return 2.1 * halfOf(w);
       return cob.plinth && level === 0 ? 3.4 * halfOf(w) : 0;
     };
@@ -9522,6 +9525,11 @@ export class Renderer {
    * that is the right amount of a wall.
    */
   private drawWall(wall: Wall, border: Border, base: number, alpha: number): void {
+    // A rune gate, finished, is a model of its own, its runes' light laid over it each frame (`runegate.ts`).
+    if (isRuneGate(wall) && isDone(wall)) {
+      this.drawRuneGateWall(wall, border, base, alpha);
+      return;
+    }
     const cam = this.camera;
     const [ax, ay, bx, by] = borderPoints(border);
     const dx = bx - ax, dy = by - ay;
@@ -9543,6 +9551,30 @@ export class Renderer {
     const key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.building}|${base}`;
     this.baked(key, cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, base), [x0, y0, x1, y1],
       () => this.drawWallNow(wall, border, base, alpha));
+  }
+
+  /**
+   * A finished rune gate, standing on the middle of its border at `base`
+   * (`runegate.ts`): its picture, its runes as lit as a citizen in its
+   * opening has them (`runeGateLit`), and after dark, from here on in the
+   * order, its runes' light kept off whatever stands in front of it
+   * (`RunestoneNight.light`) -- and its own picture kept off the light of a
+   * runestone or another gate behind it.
+   */
+  private drawRuneGateWall(wall: Wall, border: Border, base: number, alpha: number): void {
+    const ctx = this.canvas.ctx;
+    const cam = this.camera;
+    const m = gateMiddle(border);
+    const sx = cam.worldToScreenX(m.x, m.y), sy = cam.worldToScreenY(m.x, m.y, base);
+    const { lit, since } = runeGateLit(this.game, wall, performance.now() / 1000);
+    const was = ctx.globalAlpha;
+    ctx.globalAlpha = alpha;
+    const d = drawRuneGate(ctx, sx, sy, cam.zoom, border.dir, cam.rotation, gateVariant(border.dir, border.x, border.y),
+      lit, since, RUNE_GATE_RISE, this.game.darkness(), this.time);
+    ctx.globalAlpha = was;
+    if (alpha < 1) return;
+    if (this.runeNight.active) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
+    if (d.lightBox) this.runeNight.light(ctx, sx, sy, d.lightBox, d.holes, d.masks);
   }
 
   private drawWallNow(wall: Wall, border: Border, base: number, alpha: number): void {

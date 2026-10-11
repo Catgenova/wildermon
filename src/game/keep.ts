@@ -515,3 +515,11 @@ export const SPRINGS_EVERY = 4;
  * word that went astray takes to be put right.
  */
 export const SWIRLS_EVERY = 60;
+
+/**
+ * How often the rolls of the settlements rune gates stand on are asked for,
+ * in seconds, while a rune gate is in what this side holds
+ * (`rpc_rune_gate_folk`): how long somebody asked onto a settlement walks
+ * through its gate before it knows them.
+ */
+export const GATE_FOLK_EVERY = 60;

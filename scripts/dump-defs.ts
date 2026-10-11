@@ -226,6 +226,8 @@ out.push(`create table if not exists wall_fitting (type text not null, item text
 /* Laid only in stone or brick, and raised only on the ground floor: a portcullis (`gates.ts`). */
 out.push(`alter table wall_type_def add column if not exists stone boolean not null default false;`);
 out.push(`alter table wall_type_def add column if not exists ground boolean not null default false;`);
+/* Laid in one material and no other: a rune gate in stone brick (`runegate.ts`, `material_only_refusal`). */
+out.push(`alter table wall_type_def add column if not exists laid_in text;`);
 out.push(`create table if not exists build_material_def (
   id text primary key, name text not null, kind text not null, tool text not null, skill text not null
 );`);
@@ -1967,6 +1969,7 @@ for (const w of WALL_TYPES) {
   if (w.wide) out.push(`update wall_type_def set wide = true where id = ${q(w.id)};`);
   if (w.stone) out.push(`update wall_type_def set stone = true where id = ${q(w.id)};`);
   if (w.ground) out.push(`update wall_type_def set ground = true where id = ${q(w.id)};`);
+  if (w.laidIn) out.push(`update wall_type_def set laid_in = ${q(w.laidIn)} where id = ${q(w.id)};`);
   for (const [item, n] of w.fittings ?? []) out.push(`insert into wall_fitting values (${q(w.id)}, ${q(item)}, ${q(n)});`);
 }
 for (const r of ROOF_SHAPES) {

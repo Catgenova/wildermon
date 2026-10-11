@@ -42,6 +42,7 @@ import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, type PlacedFurniture } from '../../game/furniture';
 import { billWords, countOf, type Item } from '../../game/items';
+import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
 import { ORDER_LIFE } from '../../game/orders';
@@ -1676,6 +1677,21 @@ export const NEWS: News[] = [
       ...ENCHANTMENT_LIST.slice(3, 9).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       `A scroll put into the wrong kind of thing is refused in words that name the right one: "${wrongKind(ENCHANTMENT_LIST[4])}"`,
     ],
+  },
+  {
+    n: 121,
+    day: '2026-10-11',
+    lines: () => {
+      const def = WALL_TYPE_BY_ID.get(RUNE_GATE);
+      const mat = (MATERIAL_BY_ID.get(def?.laidIn ?? '')?.name ?? '').toLowerCase();
+      return [
+        `A ${runeGateName()}, for the way into a settlement: Plan fence, ${def?.name}, on the edge of a tile on the ground, in ${mat} and nothing else, `
+          + `${billWords(Object.entries(typeBill(def?.laidIn ?? '', RUNE_GATE).total), true)}. People, carts and wildermon pass it, it is seen through, and nothing locks it.`,
+        `Its runes light while a citizen of the settlement it stands on (its founder, a mayor or a builder) is within ${RUNE_GATE_REACH} of a tile of the middle of its opening, `
+          + `coming up over ${RUNE_GATE_RISE} seconds, and go out over ${RUNE_GATE_FADE} seconds once none is. Strangers and guests do not light it. `
+          + `Lit after dark, it throws pale gold ${RUNE_GATE_GLOW_REACH} tiles round its opening. The light is all it does.`,
+      ];
+    },
   },
 ];
 
