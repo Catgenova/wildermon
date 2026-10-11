@@ -123,12 +123,12 @@ export const runestoneLight = (x: number, y: number): LightSource => ({
  * how far it reaches. The runes themselves shine through the wash in their
  * own shapes, as a runestone's do.
  */
-export const PLINTH_REACH = 0.8;
-export const PLINTH_GLOW = 0.1;
+export const PLINTH_REACH = 0.75;
+export const PLINTH_GLOW = 0.2;
 export const PLINTH_BUSY_REACH = 1.6;
-export const PLINTH_BUSY_GLOW = 0.22;
-export const PLINTH_CAST_ALPHA = 0.12;
-export const PLINTH_BUSY_CAST_ALPHA = 0.26;
+export const PLINTH_BUSY_GLOW = 0.28;
+export const PLINTH_CAST_ALPHA = 0.2;
+export const PLINTH_BUSY_CAST_ALPHA = 0.28;
 /** The light of an enchanter's plinth whose middle is at world (x, y), at rest or in use. */
 export const plinthLight = (x: number, y: number, busy: boolean): LightSource => ({
   x, y, radius: busy ? PLINTH_BUSY_REACH : PLINTH_REACH, strength: busy ? PLINTH_BUSY_GLOW : PLINTH_GLOW, steady: true, soft: true,

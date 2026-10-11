@@ -2220,12 +2220,13 @@ function bake(id: RunestoneId, rotation: number, scale: number): Baked {
  * One rune's light, baked at `scale`: a rune on a face whose frame lands on
  * the screen through `M` (pixels at zoom one), drawn by `path` about (x, z) in
  * that frame, `s` units from its middle to its top, its strokes `width` wide
- * (a runestone's own when it does not say) -- the lit groove, the glow
+ * (a runestone's own when it does not say), its soft light `spread` times as
+ * wide as a runestone's -- the lit groove, the glow
  * round it by day and after dark, and its own shape to take the night off
  * with. A roundel's strokes lie closer and are lit narrower. `i` is its place
  * in whatever order it breathes in.
  */
-export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: number, s: number, roundel: boolean, i: number, scale: number, width?: number): Glow {
+export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: number, s: number, roundel: boolean, i: number, scale: number, width?: number, spread = 1): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2250,7 +2251,7 @@ export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: num
     for (const [k, al] of [[5.2, 0.05], [3.8, 0.08], [2.6, 0.12], [1.7, 0.2]] as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 172, 72, ${al})`;
-      h.lineWidth = w * k * (roundel ? 0.6 : 1);
+      h.lineWidth = w * k * (roundel ? 0.6 : 1) * spread;
       h.stroke();
     }
   });
@@ -2258,7 +2259,7 @@ export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: num
     for (const [k, al] of [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]] as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 176, 80, ${al})`;
-      h.lineWidth = w * k;
+      h.lineWidth = w * k * spread;
       h.stroke();
     }
   });
@@ -2290,11 +2291,11 @@ export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: num
     path(h);
     // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
     h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    h.lineWidth = w * (roundel ? 2.6 : 3.6);
+    h.lineWidth = w * (roundel ? 2.6 : 3.6) * spread;
     h.stroke();
     path(h);
     h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = w * (roundel ? 1.8 : 2.2);
+    h.lineWidth = w * (roundel ? 1.8 : 2.2) * Math.max(1, spread);
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
