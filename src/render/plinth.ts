@@ -2,8 +2,8 @@ import { HEIGHT_SCALE } from './iso';
 import { PPM, rand, STAGES, strandPic } from './ivy';
 import { star } from './shine';
 import {
-  add, area2, at, bakeGlow, boulder, canvasOf, css, cushion, cut, dot, drawFaces, drawPads, eyeOfView, flowerClump, glyphPath, grassTuft, groundNear,
-  hex, inset, lichen, mix, mul, noise2, plate, proj, scaleFor, skin, strokesPath, sub, toneOf, unit,
+  add, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawPads, eyeOfView, flowerClump, glyphPath, grassTuft, groundNear,
+  hex, inset, lichen, mix, mul, newell, noise2, plate, proj, scaleFor, skin, strokesPath, sub, toneOf, unit,
   type Ctx, type Eye, type Face, type Glow, type NightMask, type Pad, type PaintCtx, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
 } from './runestone';
 
@@ -78,11 +78,6 @@ const TIP: [number, number] = [0.035, -0.025];
 const STEP_OUTLINE: Pt[] = [[-7.6, -5.6], [-6.0, -7.1], [5.4, -6.9], [7.7, -5.1], [7.5, 5.3], [5.8, 7.0], [-5.3, 7.2], [-7.8, 5.1]];
 /** The step's top at a point of its plan. */
 const stepZ = (x: number, y: number): number => STEP_TOP + STEP_FALL[0] * x + STEP_FALL[1] * y;
-/** The shaft, across and up: broad at its foot, drawn in at the waist, flaring to its head. */
-const SHAFT_OUTLINE: Pt[] = [
-  [-3.9, 0], [4.1, 0], [3.8, 0.9], [3.0, 2.0], [2.6, 3.2], [2.75, 4.4], [3.3, 5.3], [3.7, 6.2],
-  [-3.6, 6.2], [-3.15, 5.35], [-2.6, 4.3], [-2.45, 3.1], [-2.85, 1.9], [-3.6, 0.8],
-];
 const SHAFT_TOP = 6.2;
 /** The shaft's left edge, across, at a height up it: where the shady arris is, for the ivy. */
 const shaftLeft = (z: number): number => {
@@ -164,8 +159,6 @@ interface Model {
 /** The moss a stage is worth, nought (bare, the day it is set down) to one. */
 const mossK = (stage: number): number => Math.max(0, Math.min(7, stage)) / 7;
 
-/** A point of a face's frame. */
-const onFrame = (f: { o: V3; a: V3; b: V3 }, s: number, t: number): V3 => at(f.o, [s, f.a], [t, f.b]);
 
 /** Cushions of moss at points of the model, laid on the screen at zoom one (`drawPads`): each point, how big, how flat. */
 type MossAt = [V3, number, number];
@@ -179,24 +172,27 @@ function padsAt(g: Ctx, k: PaintCtx, pts: MossAt[]): void {
   g.save();
   g.setTransform(k.base);
   drawPads(g, ps);
+  specks(g, ps);
   g.restore();
 }
 
 /**
- * A clump of moss: cushions crowded about (cx, cy) on a surface `on`, big in
- * the middle and smaller out to a ragged edge `R` across, close enough that
- * they close over one another into one lobed mass, as the Runestones' do.
+ * Moss beaded over the stone, the Runestones' way: many small cushions, each a
+ * point on a surface, how big, and which way the side it sits on faces (none
+ * for a top, which is always seen). Laid on the screen at zoom one, only those
+ * on a side the eye sees, flat on a top and standing on a side, with their
+ * flecks.
  */
-function clump(T: () => number, on: (x: number, y: number) => V3 | null, cx: number, cy: number, R: number, m: number, flat: number, out: MossAt[]): void {
-  if (R <= 0.2) return;
-  const n = Math.round(6 + 7 * R);
-  for (let i = 0; i < n; i++) {
-    const a = T() * TAU, d = R * Math.sqrt(T()) * (0.65 + 0.5 * noise2(Math.cos(a) * 2 + cx, Math.sin(a) * 2 + cy, 71));
-    const p = on(cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.85);
-    if (!p) continue;
-    out.push([p, (cushion(T, m) * 0.8 + 0.3) * (1.1 - 0.45 * (d / R)) * Math.min(1, 0.35 + R / 2.2), flat]);
-  }
-}
+type Drape = Array<[V3, number, V3 | null]>;
+const drapeOf = (drape: Drape) => (g: Ctx, e: Eye): void => {
+  const across = Math.hypot(e.ux, e.uy) * 0.9;
+  const ps: Pad[] = drape.filter(([, , n]) => !n || dot(n, e.toward) > 0).map(([p, r, n]) => {
+    const [x, y] = proj(e, p);
+    return [x, y, r * across, r * across * (n ? 0.82 : 0.58)] as Pad;
+  });
+  drawPads(g, ps);
+  specks(g, ps);
+};
 
 /** How far a face turned along `n` is turned from the light on the screen, nought to one: away to the right and toward the eye. */
 function turnedFrom(e: Eye, n: V3): number {
@@ -233,6 +229,33 @@ function shadeStrip(g: Ctx, k: PaintCtx, n: V3, len: number, lo: number, hi: num
   }
 }
 
+/** The pale flecks on moss where the sky catches it, on every other cushion and the small ones too: the Runestones' beading. */
+function specks(g: Ctx, ps: readonly Pad[]): void {
+  g.fillStyle = '#d4eab4';
+  g.beginPath();
+  ps.forEach(([x, y, rx, ry], i) => {
+    if (i % 2) return;
+    const r = Math.max(0.35, rx * 0.32);
+    g.moveTo(x - rx * 0.3 + r, y - ry * 0.35);
+    g.ellipse(x - rx * 0.3, y - ry * 0.35, r, r * 0.8, 0, 0, TAU);
+  });
+  g.fill();
+}
+
+/** Ivy a step lighter than the walls' own, toward the Runestones' greens, so a thin strand reads on pale stone: each picture once. */
+const lightened = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
+function ivyOf(pic: { img: HTMLCanvasElement }): HTMLCanvasElement {
+  let c = lightened.get(pic.img);
+  if (c) return c;
+  const [cv, h] = canvasOf(pic.img.width, pic.img.height);
+  h.drawImage(pic.img, 0, 0);
+  h.globalCompositeOperation = 'source-atop';
+  h.fillStyle = 'rgba(162, 205, 147, 0.38)';
+  h.fillRect(0, 0, cv.width, cv.height);
+  lightened.set(pic.img, (c = cv));
+  return c;
+}
+
 const models = new Map<number, Model>();
 
 function modelOf(stage: number): Model {
@@ -243,14 +266,11 @@ function modelOf(stage: number): Model {
   const runes: RuneAt[] = [];
 
   /* -- the shaft's frame first: the step's shade and moss gather about its foot -- */
-  const shaft = norm(SHAFT_OUTLINE);
   // Leaning a hand's breadth over its height, toward its right and back, and set off the step's middle.
   const W: V3 = [0.12, -0.045, 1];
   const half0 = 3.3, half1 = 2.4;
   const f = (half1 - half0) / SHAFT_TOP;
   const O: V3 = [1.1, -0.55, SHAFT_FOOT];
-  const frontFrame = { o: at(O, [half0, [0, 1, 0]]), a: [1, 0, 0] as V3, b: at(W, [f, [0, 1, 0]]) };
-  const backFrame = { o: at(O, [-half0, [0, 1, 0]]), a: [-1, 0, 0] as V3, b: at(W, [-f, [0, 1, 0]]) };
   /** Where the overhang's shade begins down the shaft. */
   const UNDER = SHAFT_TOP - 1.8;
 
@@ -259,8 +279,6 @@ function modelOf(stage: number): Model {
   const stepU: V3 = unit([1, 0, STEP_FALL[0]]), stepW: V3 = unit([0, 1, STEP_FALL[1]]);
   const stepA: V3 = unit([stepU[1] * stepW[2] - stepU[2] * stepW[1], stepU[2] * stepW[0] - stepU[0] * stepW[2], stepU[0] * stepW[1] - stepU[1] * stepW[0]]);
   const stepO: V3 = [0, 0, STEP_TOP - 1];
-  // Out to the arris itself, so a clump runs over the edge of it.
-  const onStepEdge = (x: number, y: number): V3 | null => (inside(inset(step, -0.2), x, y) ? [x, y, stepZ(x, y) + 0.05] : null);
   /** The shaft's foot on the step, drawn out by `k`: what its contact shade covers. */
   const footRing = (k: number): Pt[] => Array.from({ length: 18 }, (_, i) => {
     const a = (i / 18) * TAU;
@@ -290,40 +308,52 @@ function modelOf(stage: number): Model {
     }
     lichen(g, T, 5.9, 4.6, 0.55, LICHEN);
     lichen(g, T, -4.8, 5.6, 0.4, LICHEN);
-    // Moss, the Runestones' own cushions: one mass on its shady side running to the arris and over it, and one in the corner behind the shaft.
-    const M = rand(4219), pts: MossAt[] = [];
-    clump(M, onStepEdge, -6.4, 3.4, 2.9 * m, m, 0.6, pts);
-    clump(M, onStepEdge, -3.4, -3.8, 2.2 * (m - 0.2), m, 0.6, pts);
-    padsAt(g, k, pts);
   };
   const stepEdge = (i: number, up: number): { paint?: Painter } | undefined => {
     if (up > 0.35) return undefined;
     const p = step[i], q = step[(i + 1) % step.length];
     const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
     const out: V3 = [(q[1] - p[1]) / len, -(q[0] - p[0]) / len, 0];
-    const shady = Math.max(0, -out[0] * 0.8 - out[1] * 0.6);
     return {
       paint: (g, k) => {
         const T = rand(4300 + i);
         skin(g, k.fill, T, len, 1);
         shadeStrip(g, k, out, len, -1, 0.6, T);
-        // Moss up its foot on the shady side, in a clump or two.
-        if (shady > 0.3 && m > 0) {
-          const a = unit(sub([q[0], q[1], 0], [p[0], p[1], 0]));
-          const pts: MossAt[] = [];
-          const on = (s: number, z: number): V3 | null => {
-            if (s < 0.2 || s > len - 0.2) return null;
-            const pt = add(add([p[0], p[1], 0], mul(a, s)), mul(out, 0.25));
-            const zz = Math.max(0.05, z);
-            return zz > stepZ(pt[0], pt[1]) - 0.1 ? null : [pt[0], pt[1], zz];
-          };
-          clump(T, on, len * (0.3 + 0.4 * T()), 0.15, 1.6 * m * shady, m, 0.85, pts);
-          padsAt(g, k, pts);
-        }
       },
     };
   };
   things.push({ x: 0, y: 0, faces: plate({ o: stepO, U: stepU, W: stepW, A: stepA, outline: step, half: [1, 1], tTop: 1, bevel: 0.4, tone: STEP, front: stepTop, edge: stepEdge }) });
+  /*
+   * Moss as the Runestones drape it: beads of it along the step's shady
+   * arrises, on the top within a hand of the edge and down over the edge no
+   * more than a third of its height, gathered where the noise has it.
+   */
+  {
+    const M = rand(4219);
+    const drape: Drape = [];
+    step.forEach((p, i) => {
+      const q = step[(i + 1) % step.length];
+      const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      const out: V3 = [(q[1] - p[1]) / len, -(q[0] - p[0]) / len, 0];
+      const shady = Math.max(0, -out[0] * 0.8 - out[1] * 0.6);
+      if (shady < 0.25 || m <= 0.1) return;
+      const a: V3 = [(q[0] - p[0]) / len, (q[1] - p[1]) / len, 0];
+      for (let j = 0; j < len * 14 * m * shady; j++) {
+        const sAlong = 0.3 + M() * (len - 0.6);
+        if (noise2(sAlong / 1.6, i * 3.1, 77) < 0.5 - 0.35 * m) continue;
+        const bx = p[0] + a[0] * sAlong, by = p[1] + a[1] * sAlong;
+        if (M() < 0.55) {
+          const d = M() * (0.4 + 0.8 * m);
+          drape.push([[bx - out[0] * d, by - out[1] * d, stepZ(bx, by) + 0.04], 0.16 + 0.28 * M(), null]);
+        } else {
+          const z = stepZ(bx, by) - M() * 0.34;
+          if (z < 0.05) continue;
+          drape.push([[bx + out[0] * 0.1, by + out[1] * 0.1, z], 0.16 + 0.26 * M(), out]);
+        }
+      }
+    });
+    if (drape.length) things.push({ x: 0, y: 0, draw: drapeOf(drape) });
+  }
 
   /*
    * -- fieldstones the step is bedded on, sunk in the turf to a third and
@@ -331,16 +361,41 @@ function modelOf(stage: number): Model {
    * grey, one green with moss -- and grass grown up over where they go in --
    */
   // The big one tucked under the step's sunk corner, so the step's edge cuts across it; and one at each other side, so one breaks the step's outline from wherever it is seen.
-  const stones: Array<[number, number, number, number, number, number, number, Tone, number]> = [
-    [-7.0, -5.6, 4.1, 3.0, 2.4, 1.0, 911, FIELD, 0.25 + 0.7 * m],
-    [8.5, -1.4, 1.9, 1.35, 1.4, 0.55, 923, FIELD_GREY, 0],
-    [-4.4, 8.2, 1.25, 0.9, 0.9, 0.3, 937, FIELD_GREEN, 0],
-    [5.6, 8.0, 1.4, 1.0, 1.0, 0.4, 949, FIELD, 0],
+  const stones: Array<[number, number, number, number, number, number, number, Tone]> = [
+    [-7.0, -5.6, 4.1, 3.0, 2.4, 1.0, 911, FIELD],
+    [8.4, -1.6, 2.5, 1.8, 1.7, 0.65, 923, FIELD_GREY],
+    [-1.4, 8.7, 2.2, 1.5, 1.4, 0.55, 937, FIELD_GREEN],
   ];
-  stones.forEach(([x, y, rx, ry, h, sink, seed, tone, moss], n) => {
-    const faces = boulder(x, y, rx, ry, h, seed * 0.37, seed, tone, moss);
+  stones.forEach(([x, y, rx, ry, h, sink, seed, tone], n) => {
+    const faces = boulder(x, y, rx, ry, h, seed * 0.37, seed, tone, 0);
     for (const fc of faces) fc.pts = fc.pts.map((p) => [p[0], p[1], p[2] - sink] as V3);
+    // Its own cool shade on the turf, thrown away from the light, under it.
+    things.push({
+      x, y,
+      draw: (g, e) => {
+        const [px, py] = proj(e, [x, y, 0]);
+        const across = Math.hypot(e.ux, e.uy);
+        g.fillStyle = 'rgba(44, 74, 78, 0.2)';
+        g.beginPath();
+        g.ellipse(px + rx * 0.35 * across, py + 0.4 * across, rx * 1.15 * across, ry * 0.75 * across, 0.1, 0, TAU);
+        g.fill();
+      },
+    });
     things.push({ x, y, faces });
+    // Moss beaded over the top of the big one, where it is shaded by the step.
+    if (n === 0 && m > 0.1) {
+      const top = faces[faces.length - 1].pts;
+      const flat = top.map((p) => [p[0], p[1]] as Pt);
+      const zt = top.reduce((a, p) => a + p[2], 0) / top.length;
+      const M = rand(seed + 5);
+      const drape: Drape = [];
+      for (let j = 0; j < 120 * m; j++) {
+        const px = x + (M() - 0.5) * rx * 2, py = y + (M() - 0.5) * ry * 2;
+        if (!inside(flat, px, py) || noise2(px / 1.5, py / 1.5, 91) < 0.55 - 0.3 * m) continue;
+        drape.push([[px, py, zt + 0.05], 0.18 + 0.3 * M(), null]);
+      }
+      if (drape.length) things.push({ x, y, draw: drapeOf(drape) });
+    }
     for (const [a, k] of [[0.6, 1], [2.3, 0.8], [4.1, 0.9]] as Array<[number, number]>) {
       const gx = x + Math.cos(a + n) * rx * 0.95, gy = y + Math.sin(a + n) * ry * 0.95;
       things.push({ x: gx + 0.01, y: gy + 0.01, reach: [[gx, gy, 5]], draw: (g, e) => { const [px, py] = proj(e, [gx, gy, 0]); grassTuft(g, px, py, seed + Math.round(a * 10), 0.3 * k); } });
@@ -370,8 +425,9 @@ function modelOf(stage: number): Model {
   /* -- grass and a flower or two breaking out of the moss at the foot, different all round -- */
   if (m > 0.25) {
     const spots: Array<[number, number, string]> = [[-8.4, 1.6, 'grass'], [-2.6, -8.2, 'grass'], [7.4, -6.6, 'grass'], [-8.6, 4.4, 'grass'], [2.8, 8.6, 'grass']];
-    // Clusters of heads beside the grass, as at the Runestones' feet: a different colour on each side.
-    if (m > 0.45) spots.push([-8.9, 2.8, 'white'], [-3.6, -8.6, 'yellow'], [8.0, -5.6, 'lilac'], [3.8, 8.9, 'pink']);
+    // Clusters of heads beside the grass, as at the Runestones' feet: two colours, white the more, a cluster more as the moss comes on.
+    const blooms: Array<[number, number, string]> = [[-9.3, -1.6, 'white'], [5.8, -7.6, 'yellow'], [-4.6, 9.1, 'white']];
+    spots.push(...blooms.slice(0, m > 0.8 ? 3 : m > 0.45 ? 2 : 0));
     spots.forEach(([x, y, kind], i) => things.push({
       x, y, reach: [[x, y, 7]],
       draw: (g, e) => {
@@ -382,139 +438,166 @@ function modelOf(stage: number): Model {
     }));
   }
 
-  /* -- the shaft: waisted across and tapering through its depth, leaning and off the step's middle, a sigil cut on its front and back, a rune down each side -- */
-  const shaftDepth = (t: number): number => half0 + f * t;
-  const faceOf = (which: 'front' | 'back'): V3[] => shaft.map(([x, t]) => at(O, [x, [1, 0, 0]], [t, W], [(which === 'front' ? 1 : -1) * shaftDepth(t), [0, 1, 0]]));
+  /*
+   * -- the shaft: one solid, eight-sided in plan, its plan drawn in at the
+   * waist and out at its foot and head, both across and through it, and
+   * leaning off the step's middle. Each ring of it a little wider or
+   * narrower than the last, the faces between them lit as they are turned and
+   * no line drawn where one meets the next, so it is one stone turned to the
+   * light. A sigil cut on its front and back, a rune up each side. --
+   */
+  const RINGS = [0, 0.9, 2.0, 3.1, 4.3, 5.35, SHAFT_TOP];
+  const sideAt = (pts: Pt[], z: number): number => {
+    for (let i = 1; i < pts.length; i++) if (z <= pts[i][1]) return pts[i - 1][0] + ((pts[i][0] - pts[i - 1][0]) * (z - pts[i - 1][1])) / (pts[i][1] - pts[i - 1][1]);
+    return pts[pts.length - 1][0];
+  };
+  const RIGHT: Pt[] = [[4.1, 0], [3.8, 0.9], [3.0, 2.0], [2.6, 3.2], [2.75, 4.4], [3.3, 5.3], [3.7, SHAFT_TOP]];
+  const xr = (z: number): number => sideAt(RIGHT, z), xl = (z: number): number => shaftLeft(z);
+  const shaftDepthAt = (z: number): number => half0 + f * z - 0.55 * Math.sin((Math.PI * z) / SHAFT_TOP);
+  const centre = (z: number): V3 => at(O, [z, W]);
+  /** A ring's eight corners, anticlockwise from the back right, about its middle. */
+  const ring = (z: number): V3[] => {
+    const R = xr(z), L = xl(z), Y = shaftDepthAt(z), c = 0.75 + 0.1 * Math.sin(z * 1.3);
+    const o = centre(z);
+    return ([[R - c, -Y], [R, -Y + c], [R, Y - c], [R - c, Y], [L + c, Y], [L, Y - c], [L, -Y + c], [L + c, -Y]] as Pt[]).map(([x, y]) => [o[0] + x, o[1] + y, o[2]] as V3);
+  };
+  const rings = RINGS.map(ring);
+  const PANEL = { z: 2.9, r: 1.2 };
+  const yFace = shaftDepthAt(PANEL.z);
+  const frontF = { o: at(O, [yFace, [0, 1, 0]]), a: [1, 0, 0] as V3, b: W };
+  const backF = { o: at(O, [-yFace, [0, 1, 0]]), a: [-1, 0, 0] as V3, b: W };
+  const SIDE_Z = 3.4;
+  const rightF = { o: at(O, [xr(SIDE_Z), [1, 0, 0]]), a: [0, -1, 0] as V3, b: W };
+  const leftF = { o: at(O, [xl(SIDE_Z), [1, 0, 0]]), a: [0, 1, 0] as V3, b: W };
+  // Front and back as polygons up one corner and down the other, for the sigils' light to be kept to.
+  const facePoly = (a: number, b: number): V3[] => [...rings.map((r) => r[a]), ...rings.map((r) => r[b]).reverse()];
   const slabHull: V3[] = [];
   for (const [s, t] of SLAB_OUTLINE) slabHull.push(onSlab(s, t, SLAB_UP), onSlab(s, t, -slabDepth(s, t)));
-  const PANEL = { z: 2.9, r: 1.2 };
-  runes.push({ frame: frontFrame, n: [0, 1, 0], glyph: '', x: 0, z: PANEL.z, s: PANEL.r, sigil: 'star', kind: 'panel', round: 0, clip: { keep: faceOf('front'), off: slabHull } });
-  runes.push({ frame: backFrame, n: [0, -1, 0], glyph: '', x: 0, z: PANEL.z, s: 1.1, sigil: 'eye', kind: 'panel', round: 0.5, clip: { keep: faceOf('back'), off: slabHull } });
-  const shaftFace = (which: 'front' | 'back'): { paint: Painter; over?: Painter } => {
-    const fr = which === 'front' ? frontFrame : backFrame;
-    const paint: Painter = (g, k) => {
-      const T = rand(which === 'front' ? 5101 : 5107);
-      g.save();
-      g.translate(-5, 3);
-      skin(g, k.fill, T, 10, 3.4);
-      g.restore();
-      // The damp and the contact shade up out of the step, cool, in a band with a wandering top.
-      g.beginPath();
-      g.moveTo(-6, -1);
-      for (let x = -6; x <= 6; x += 1) g.lineTo(x, 0.7 + 0.45 * noise2(x / 2.5, 0.5, which === 'front' ? 3 : 4));
-      g.lineTo(6, -1);
-      g.closePath();
-      g.fillStyle = css(mix(k.fill, hex('#57536e'), 0.5), 0.42);
-      g.fill();
-      // The overhang's shade over the head of it, the slab's ragged underside thrown down it.
-      g.beginPath();
-      g.moveTo(-6, 9);
-      for (let x = -6; x <= 6; x += 1) g.lineTo(x, UNDER + 0.35 * noise2(x / 1.8, 3.5, which === 'front' ? 5 : 6));
-      g.lineTo(6, 9);
-      g.closePath();
-      g.fillStyle = css(mix(k.fill, hex('#4e4868'), 0.55), 0.46);
-      g.fill();
-      // The sigil, sunk a step into it: a shallow disc, then the ring and the rays cut in that, the stone between them.
-      const r = which === 'front' ? PANEL.r : 1.1;
+  runes.push({ frame: frontF, n: [0, 1, 0], glyph: '', x: 0, z: PANEL.z, s: PANEL.r, sigil: 'star', kind: 'panel', round: 0, clip: { keep: facePoly(3, 4), off: slabHull } });
+  runes.push({ frame: backF, n: [0, -1, 0], glyph: '', x: 0, z: PANEL.z, s: 1.1, sigil: 'eye', kind: 'panel', round: 0.5, clip: { keep: facePoly(7, 0), off: slabHull } });
+  runes.push({ frame: rightF, n: [1, 0, 0], glyph: 'sowilo', x: 0, z: SIDE_Z, s: 0.62, kind: 'rim', round: 0.25, clip: { keep: facePoly(1, 2), off: slabHull } });
+  runes.push({ frame: leftF, n: [-1, 0, 0], glyph: 'othala', x: 0, z: SIDE_Z, s: 0.62, kind: 'rim', round: 0.75, clip: { keep: facePoly(5, 6), off: slabHull } });
+
+  /** What is cut and grows on a broad side of it, in that side's frame: across it and up it. */
+  const broad = (side: 'front' | 'back' | 'right' | 'left'): Painter => (g, k) => {
+    const T = rand({ front: 5101, back: 5107, right: 5113, left: 5119 }[side]);
+    g.save();
+    g.translate(-5, 3.2);
+    skin(g, k.fill, T, 10, 3.6);
+    g.restore();
+    if (side === 'front' || side === 'back') {
+      const r = side === 'front' ? PANEL.r : 1.1;
       g.beginPath();
       g.arc(0, PANEL.z, r * 1.05, 0, TAU);
       g.fillStyle = css(mix(k.fill, hex('#8f879c'), 0.3), 0.32);
       g.fill();
-      g.beginPath();
-      g.arc(0, PANEL.z, r * 1.05, Math.PI * 0.15, Math.PI * 0.95);
-      g.strokeStyle = css(mix(k.fill, hex('#5d5668'), 0.4), 0.55);
-      g.lineWidth = 0.16;
-      g.stroke();
-      cut(g, k.fill, 0.24, () => strokesPath(g, sigil(which === 'front' ? 'star' : 'eye'), 0, PANEL.z, r));
+      cut(g, k.fill, 0.24, () => strokesPath(g, sigil(side === 'front' ? 'star' : 'eye'), 0, PANEL.z, r));
       for (const sx of [-1, 1]) for (const dz of [-0.7, 0, 0.7]) cut(g, k.fill, 0.22, () => { g.beginPath(); g.moveTo(sx * (r + 0.7), PANEL.z + dz + 0.04); g.lineTo(sx * (r + 0.7), PANEL.z + dz - 0.04); });
-      if (which === 'back') cut(g, k.fill, 0.2, () => { g.beginPath(); g.moveTo(2.9, 4.2); g.lineTo(2.1, 3.9); g.lineTo(1.7, 4.1); g.lineTo(1.1, 3.6); });
-      lichen(g, T, which === 'front' ? 2.2 : -1.9, 3.6, 0.45, LICHEN);
-      // Moss up its foot, in clumps on its shady side.
-      const pts: MossAt[] = [];
-      const on = (x: number, z: number): V3 | null => (z < 0.05 || z > 4.2 || Math.abs(x) > 3.4 - z * 0.25 || Math.hypot(x, z - PANEL.z) < r + 0.3 ? null : onFrame(fr, x, z));
-      const side = which === 'front' ? -1 : 1;
-      clump(T, on, side * 2.7, 0.4, 1.5 * (m - 0.3), m, 0.88, pts);
-      padsAt(g, k, pts);
-    };
-    // Ivy up its shady arris from the step, the Runestones' own strand at their leaf size, on up over the slab's edge.
-    const over: Painter | undefined = m >= 0.35 && which === 'front' ? (g) => {
-      const pic = strandPic('climb', 1, Math.max(2, Math.round(STAGES * 0.35 * Math.min(1, (m - 0.2) / 0.7))), true);
-      if (!pic) return;
-      const sc = (0.8 * 10) / PPM;
-      g.save();
-      g.translate(shaftLeft(0.3) + 0.55, 0.2);
-      g.scale(sc, -sc);
-      g.drawImage(pic.img, -pic.ax, -pic.ay);
-      g.restore();
-    } : undefined;
-    return { paint, over };
+      if (side === 'back') cut(g, k.fill, 0.2, () => { g.beginPath(); g.moveTo(2.4, 4.2); g.lineTo(1.7, 3.9); g.lineTo(1.3, 4.1); g.lineTo(0.8, 3.6); });
+      lichen(g, T, side === 'front' ? 1.9 : -1.6, 3.7, 0.42, LICHEN);
+    } else {
+      // A rune up the side, in a little sunk field of its own.
+      g.beginPath();
+      g.ellipse(0, SIDE_Z, 0.8, 0.95, 0, 0, TAU);
+      g.fillStyle = css(mix(k.fill, hex('#8a8098'), 0.4), 0.5);
+      g.fill();
+      cut(g, k.fill, RIM_W, () => glyphPath(g, side === 'right' ? 'sowilo' : 'othala', 0, SIDE_Z, 0.62));
+    }
   };
-  const sf = shaftFace('front'), sb = shaftFace('back');
-  // A rune down each long side of the waist, upright, so the shaft seen end on is written on too.
-  const SIDE_RUNES: Record<number, string> = {};
-  shaft.forEach((p, i) => {
-    const q = shaft[(i + 1) % shaft.length];
-    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    if (len < 1.1 || Math.abs(q[1] - p[1]) < 0.8 * len || Math.min(p[1], q[1]) < 1.8 || Math.max(p[1], q[1]) > 4.6) return;
-    SIDE_RUNES[i] = p[0] > 0 ? 'sowilo' : 'othala';
-    const along = unit(sub(at(O, [q[0], [1, 0, 0]], [q[1], W]), at(O, [p[0], [1, 0, 0]], [p[1], W])));
-    const o = at(O, [p[0], [1, 0, 0]], [p[1], W], [len / 2, along]);
-    const up = along[2] > 0 ? along : mul(along, -1);
-    runes.push({ frame: { o, a: [0, 1, 0], b: up }, n: [Math.sign(p[0]), 0, 0], glyph: SIDE_RUNES[i], x: 0, z: 0, s: 0.48, kind: 'rim', round: p[0] > 0 ? 0.25 : 0.75, upright: true });
-  });
-  const shaftEdge = (i: number): { paint?: Painter } | undefined => {
-    const p = shaft[i], q = shaft[(i + 1) % shaft.length];
-    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    const out: V3 = [(q[1] - p[1]) / len, 0, 0];
-    return {
-      paint: (g, k) => {
-        const T = rand(5200 + i);
-        skin(g, k.fill, T, len, half0);
-        const away = turnedFrom(k.e, [Math.sign(out[0]) || 1, 0, 0]);
-        if (away > 0.05) { g.fillStyle = css(mix(k.fill, hex('#5a5474'), 0.5), 0.3 * away); g.fillRect(-1, -half0 - 1, len + 2, 2 * half0 + 2); }
-        // The overhang's shade and the contact shade, carried round onto the sides.
-        const z = (s: number): number => p[1] + ((q[1] - p[1]) * s) / len;
-        for (let s = 0; s < len; s += 0.25) {
-          const zz = z(s);
-          if (zz > UNDER - 0.2) { g.fillStyle = css(mix(k.fill, hex('#4e4868'), 0.55), 0.46); g.fillRect(s, -half0 - 1, 0.27, 2 * half0 + 2); }
-          if (zz < 0.8) { g.fillStyle = css(mix(k.fill, hex('#57536e'), 0.5), 0.4); g.fillRect(s, -half0 - 1, 0.27, 2 * half0 + 2); }
-        }
-        if (SIDE_RUNES[i]) {
-          // The rune, upright across the strip: its up along the edge, the right way however the strip runs.
-          const dir = q[1] > p[1] ? 1 : -1;
+  const SIDE_OF: Array<'front' | 'back' | 'right' | 'left' | null> = [null, 'right', null, 'front', null, 'left', null, 'back'];
+  const FRAME_OF = { front: frontF, back: backF, right: rightF, left: leftF };
+  const shaftFaces: Face[] = [];
+  for (let k = 0; k + 1 < rings.length; k++) {
+    const z0 = RINGS[k], z1 = RINGS[k + 1];
+    for (let j = 0; j < 8; j++) {
+      const pts = [rings[k][j], rings[k][(j + 1) % 8], rings[k + 1][(j + 1) % 8], rings[k + 1][j]];
+      const a2: Pt = [pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]];
+      const out: V3 = unit([a2[1], -a2[0], 0]);
+      let n = newell(pts);
+      if (dot(n, out) < 0) n = mul(n, -1);
+      const side = SIDE_OF[j];
+      const lo = z0, hi = z1;
+      const len = Math.hypot(a2[0], a2[1]);
+      const frame = side ? FRAME_OF[side] : { o: pts[0], a: unit(sub(pts[1], pts[0])), b: W };
+      const T = rand(5200 + k * 8 + j);
+      const paint: Painter = (g, kk) => {
+        if (side) broad(side)(g, kk);
+        else {
           g.save();
-          g.translate(len / 2, 0);
-          g.transform(0, 1, dir, 0, 0, 0);
-          g.fillStyle = css(mix(k.fill, hex('#4a4462'), 0.45), 0.6);
-          g.beginPath();
-          g.ellipse(0, 0, 0.75, 0.85, 0, 0, TAU);
-          g.fill();
-          cut(g, k.fill, RIM_W, () => glyphPath(g, SIDE_RUNES[i], 0, 0, 0.48));
+          g.translate(0, (lo + hi) / 2 - lo);
+          skin(g, kk.fill, T, len, (hi - lo) / 2 + 0.3);
           g.restore();
         }
-        // Moss up the shady side's foot.
-        if (m > 0 && p[0] < 0 && Math.min(p[1], q[1]) < 2.2) {
-          const a = unit(sub(at(O, [q[0], [1, 0, 0]], [q[1], W]), at(O, [p[0], [1, 0, 0]], [p[1], W])));
-          const base = at(O, [p[0], [1, 0, 0]], [p[1], W]);
-          const pts: MossAt[] = [];
-          const on = (s: number, y: number): V3 | null => {
-            if (s < 0 || s > len) return null;
-            const pt = add(add(base, mul(a, s)), [-0.15, y, 0]);
-            return pt[2] > SHAFT_FOOT + 2.4 ? null : pt;
-          };
-          clump(T, on, 0.4, 0.4, 1.6 * m, m, 0.88, pts);
-          padsAt(g, k, pts);
+        // The same stone turned from the light: a clear step darker and cooler on the far side, no line between.
+        const away = turnedFrom(kk.e, out);
+        if (away > 0.05) { g.fillStyle = css(mix(kk.fill, hex('#57517a'), 0.55), 0.38 * away); g.fillRect(-8, -2, 16, 12); }
+        // The slab's shade over the head of it, and the cool where it stands on the step.
+        const zz = (z: number): number => (side ? z : z - lo);
+        if (hi > UNDER) {
+          g.beginPath();
+          g.moveTo(-8, 12);
+          for (let x = -8; x <= 8; x += 1) g.lineTo(x, zz(UNDER) + 0.35 * noise2(x / 1.8, 3.5 + j, 5));
+          g.lineTo(8, 12);
+          g.closePath();
+          g.fillStyle = css(mix(kk.fill, hex('#4e4868'), 0.55), 0.46);
+          g.fill();
         }
-      },
+        if (lo < 1) {
+          g.beginPath();
+          g.moveTo(-8, -2);
+          for (let x = -8; x <= 8; x += 1) g.lineTo(x, zz(0.75) + 0.4 * noise2(x / 2.5, 0.5 + j, 3));
+          g.lineTo(8, -2);
+          g.closePath();
+          g.fillStyle = css(mix(kk.fill, hex('#57536e'), 0.5), 0.42);
+          g.fill();
+        }
+      };
+      shaftFaces.push({ pts, n, tone: STONE, frame, paint, crease: 0 });
+    }
+  }
+  // Ivy up its shady front left arris, a thin chain of leaves with a spray of flower, from the step toward the cap.
+  if (m >= 0.35) {
+    const fr = shaftFaces[3];
+    fr.over = (g) => {
+      const pic = strandPic('climb', 3, Math.max(2, Math.round(STAGES * 0.4 * Math.min(1, (m - 0.2) / 0.7))), true);
+      if (!pic) return;
+      const sc = (0.4 * 10) / PPM;
+      g.save();
+      g.translate(xl(0.2) + 0.7, 0.1);
+      g.scale(sc, -sc);
+      g.drawImage(ivyOf(pic), -pic.ax, -pic.ay);
+      g.restore();
     };
-  };
-  things.push({
-    x: 0, y: 0,
-    faces: plate({
-      o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline: shaft, half: [half0, half1], tTop: SHAFT_TOP, bevel: 0.5, tone: STONE,
-      front: sf.paint, frontOver: sf.over, back: sb.paint, backOver: sb.over, edge: shaftEdge, sunk: true,
-    }),
-  });
+  }
+  things.push({ x: 0, y: 0, faces: shaftFaces });
+  // A drape of moss over its foot on the shady side, low down, beaded: drawn only where it lies on a side the eye sees.
+  {
+    const M = rand(5401);
+    const drape: Array<[V3, number, V3]> = [];
+    for (let i = 0; m > 0.15 && i < 80 * m; i++) {
+      const j = 4 + Math.floor(M() * 4), r0 = rings[0];
+      const u = M(), a = r0[j], b = r0[(j + 1) % 8];
+      const z = Math.pow(M(), 1.8) * (0.35 + 0.65 * m);
+      const p = add(add(a, mul(sub(b, a), u)), [0, 0, z]);
+      const o = centre(z);
+      const outw = unit([p[0] - o[0], p[1] - o[1], 0]);
+      drape.push([add(p, mul(outw, 0.12)), 0.2 + 0.26 * M(), outw]);
+    }
+    if (drape.length) {
+      things.push({
+        x: 0, y: 0,
+        draw: (g, e) => {
+          const across = Math.hypot(e.ux, e.uy) * 0.9;
+          const ps: Pad[] = drape.filter(([, , n]) => dot(n, e.toward) > 0).map(([p, r]) => {
+            const [x, y] = proj(e, p);
+            return [x, y, r * across, r * across * 0.82] as Pad;
+          });
+          drawPads(g, ps);
+          specks(g, ps);
+        },
+      });
+    }
+  }
 
   /* -- the slab: tipped, its chamfers unequal, a corner snapped off, a dark band of runes round its rim, its top dished -- */
   const slab = norm(SLAB_OUTLINE);
@@ -570,14 +653,20 @@ function modelOf(stage: number): Model {
       };
     }
     // Ivy hanging over the back left corner of the cap, from the strand up the shaft.
-    const hangOver: Painter | undefined = i === 0 && m >= 0.5 ? (g) => {
+    // Kept to the face, rooted under its top, and not drawn at all when the face is near edge on.
+    const hangOver: Painter | undefined = i === 0 && m >= 0.5 ? (g, k) => {
+      const tw = k.e.toward, tl = Math.hypot(tw[0], tw[1], tw[2]) || 1;
+      if (dot(nOut, tw) / tl < 0.42) return;
       const pic = strandPic('hang', 0, Math.max(2, Math.round(STAGES * 0.5 * Math.min(1, (m - 0.4) / 0.6))), true);
       if (!pic) return;
-      const sc = (0.85 * 10) / PPM;
+      const sc = (0.45 * 10) / PPM;
       g.save();
-      g.translate(len * 0.55, hi + 0.25);
+      g.beginPath();
+      g.rect(0, -2.2, len, hi + 2.2);
+      g.clip();
+      g.translate(len * 0.5, hi - 0.15);
       g.scale(sc, -sc);
-      g.drawImage(pic.img, -pic.ax, -pic.ay);
+      g.drawImage(ivyOf(pic), -pic.ax, -pic.ay);
       g.restore();
     } : undefined;
     return {
@@ -609,11 +698,7 @@ function modelOf(stage: number): Model {
   const topFace = slab.map(([s, t]) => onSlab(s, t, SLAB_UP));
   runes.push({ frame: top, n: SA, glyph: '', x: DISH.x, z: DISH.y, s: 1.75, sigil: 'dish', kind: 'dish', round: 0, clip: { keep: topFace } });
   // Moss only where water stands: in the low side of the dish, low down.
-  const onLip = (x: number, y: number): V3 | null => {
-    if (!inside(inset(slab, 0.3), x, y)) return null;
-    const u = (x - DISH.x) / DISH.rx, v = (y - DISH.y) / DISH.ry;
-    return onSlab(x, y, u * u + v * v < 1 ? SLAB_UP - 0.35 : SLAB_UP);
-  };
+
   const slabTop: Painter = (g, k) => {
     const T = rand(7001);
     g.save();
@@ -628,12 +713,13 @@ function modelOf(stage: number): Model {
     });
     dish(g, k);
     for (const [x, y, r] of [[-5.4, -3.5, 0.5], [5.3, -4.4, 0.4], [-4.9, 4.6, 0.38]] as Array<[number, number, number]>) lichen(g, T, x, y, r, LICHEN);
-    // Moss along the dish's lip on its low side, where the rain stands, a run of cushions one into the next.
+    // Moss beaded along the outer margin on its sheltered back and left, out of the dish.
     const pts: MossAt[] = [];
-    for (let j = 0; m > 0.3 && j < 22 * (m - 0.2); j++) {
-      const a = Math.PI * (1.05 + 0.5 * T()) + (T() - 0.5) * 0.1, r = 0.92 + 0.16 * T();
-      const p = onLip(DISH.x + Math.cos(a) * DISH.rx * r, DISH.y + Math.sin(a) * DISH.ry * r);
-      if (p) pts.push([p, (cushion(T, m) * 0.5 + 0.3) * (0.8 + 0.4 * Math.sin(((a / Math.PI) - 1.05) * Math.PI * 2)), 0.55]);
+    for (let j = 0; m > 0.25 && j < 90 * m; j++) {
+      const x = -6.6 + T() * 13, y = -5.8 + T() * 11.6;
+      if (!(x < -3 || y < -3.6) || !inside(inset(slab, 0.15), x, y) || inside(inset(slab, 1.0), x, y)) continue;
+      if (noise2(x / 1.8, y / 1.8, 63) < 0.55 - 0.3 * m) continue;
+      pts.push([onSlab(x, y, SLAB_UP + 0.03), 0.16 + 0.26 * T(), 0.55]);
     }
     padsAt(g, k, pts);
   };
@@ -706,7 +792,7 @@ function dish(g: Ctx, k: PaintCtx): void {
   dishPath(g, -right[0] * 0.6, -right[1] * 0.6, 1, true, false);
   g.fillStyle = css(lit, 0.5);
   g.fill('evenodd');
-  cut(g, floor, 0.22, () => strokesPath(g, sigil('dish'), DISH.x, DISH.y, 1.75));
+  cut(g, floor, 0.36, () => strokesPath(g, sigil('dish'), DISH.x, DISH.y, 1.75));
   g.restore();
   // The near lip catching the light, outside the bowl.
   g.save();
@@ -818,7 +904,7 @@ function bake(view: PlinthView, stage: number, scale: number): Baked {
     const [ox, oy] = proj(e, r.frame.o), [ax, ay] = proj(e, r.frame.a), [bx, by] = proj(e, r.frame.b);
     const M = new DOMMatrix([ax, ay, bx, by, ox, oy]);
     const path = (h: Ctx): void => (r.sigil ? strokesPath(h, sigil(r.sigil), r.x, r.z, r.s) : glyphPath(h, r.glyph, r.x, r.z, r.s));
-    const gl = bakeGlow(M, path, r.x, r.z, r.s, !!r.sigil, 0, scale, r.sigil ? 0.2 : RIM_W, r.sigil ? 0.8 : 0.55);
+    const gl = bakeGlow(M, path, r.x, r.z, r.s, !!r.sigil, 0, scale, r.sigil === 'dish' ? 0.3 : r.sigil ? 0.2 : RIM_W, r.sigil ? 0.8 : 0.5);
     if (r.clip) clipGlow(gl, scale, r.clip.keep.map((p) => proj(e, p)), r.clip.off ? hull(r.clip.off.map((p) => proj(e, p))) : undefined);
     glows.push({ gl, kind: r.kind, round: r.round });
   }
@@ -982,6 +1068,18 @@ export function drawPlinthRunes(ctx: Ctx, sx: number, sy: number, zoom: number, 
     ctx.fill();
     ctx.restore();
     ctx.globalCompositeOperation = 'source-over';
+    // And a pool of pale gold filling the bowl itself, laid over and never past the dish's own light: the brightest thing on it.
+    ctx.beginPath();
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * TAU;
+      const [px, py] = onTop(b, DISH.x + Math.cos(a) * DISH.rx * 0.92, DISH.y + Math.sin(a) * DISH.ry * 0.92, -0.2);
+      if (i) ctx.lineTo(sx + px * zoom, sy + py * zoom); else ctx.moveTo(sx + px * zoom, sy + py * zoom);
+    }
+    ctx.closePath();
+    ctx.globalAlpha = 0.6 + 0.08 * Math.sin(t * 5.7);
+    ctx.fillStyle = 'rgb(240, 214, 152)';
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
   for (const l of b.glows) {
     const gl = l.gl;
@@ -997,11 +1095,11 @@ export function drawPlinthRunes(ctx: Ctx, sx: number, sy: number, zoom: number, 
     }
     if (night > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = night * (busy ? (round ? 0.2 + 0.12 * p : 0.1 + 0.1 * p) : 0.05 + 0.05 * p);
+      ctx.globalAlpha = night * (busy ? (round ? 0.2 + 0.12 * p : 0.08 + 0.08 * p) : 0.02 + 0.02 * p);
       ctx.drawImage(gl.dusk, X, Y, Wd, Ht);
     }
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = Math.min(0.92, busy ? 0.72 + 0.2 * p : round ? 0.36 + 0.2 * night + 0.12 * p : 0.62 + 0.1 * night + 0.2 * p);
+    ctx.globalAlpha = Math.min(0.92, busy ? 0.72 + 0.2 * p : round ? 0.36 + 0.1 * night + 0.12 * p : 0.62 - 0.14 * night + 0.2 * p);
     ctx.drawImage(gl.core, X, Y, Wd, Ht);
   }
   ctx.globalCompositeOperation = 'source-over';
@@ -1058,10 +1156,12 @@ export function plinthNight(sx: number, sy: number, zoom: number, view: PlinthVi
     holes: (dx, dy) => {
       const out: Array<{ x: number; y: number; r: number; a: number }> = [];
       for (const l of b.glows) {
+        // The rim's runes take the night off in their own shapes alone: a soft round of light about each read as a lit window.
+        if (l.kind === 'rim') continue;
         const p = breath(l, t, busy);
         out.push({ x: sx + dx + l.gl.cx * zoom, y: sy + dy + l.gl.cy * zoom, r: l.gl.r * 1.5 * zoom, a: busy ? 0.04 + 0.03 * p : 0.015 + 0.015 * p });
       }
-      out.push({ x: sx + dx + cx * zoom, y: sy + dy + cy * zoom, r: dishR * zoom, a: busy ? 0.14 + 0.04 * Math.sin(t * 5.7) : 0.04 });
+      out.push({ x: sx + dx + cx * zoom, y: sy + dy + cy * zoom, r: dishR * zoom * (busy ? 0.75 : 1), a: busy ? 0.42 + 0.06 * Math.sin(t * 5.7) : 0.03 });
       if (busy) for (const m of motesAt(b, t, zoom)) out.push({ x: sx + dx + m.x * zoom, y: sy + dy + m.y * zoom, r: m.r * 2.2, a: 0.8 * m.a });
       return out;
     },
