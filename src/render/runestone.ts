@@ -996,7 +996,7 @@ const FLOWER: Record<string, { petal: string; ring: string; eye: string }> = {
  * or, for lilac and now and then pink, a spike: a stem with a column of
  * small heads up it, the lupins and foxgloves of the reference.
  */
-export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: number, big = 1): void {
+export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: number, big = 1, most = Infinity): void {
   const R = rand(seed);
   const col = FLOWER[colour] ?? FLOWER.white;
   g.lineCap = 'round';
@@ -1052,7 +1052,8 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
     return;
   }
   const heads: Pt[] = [];
-  const n = 5 + Math.floor(R() * 4);
+  // As many heads as the seed says, or `most` where a caller wants a smaller clump.
+  const n = Math.min(most, 5 + Math.floor(R() * 4));
   for (let i = 0; i < n; i++) heads.push([(R() - 0.5) * 13 * big, (4 + R() * 9) * big]);
   g.strokeStyle = '#5b876a';
   g.lineWidth = 0.55;

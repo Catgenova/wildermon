@@ -1,4 +1,4 @@
-import { hashOf, PPM, rand, STAGES, strandPic, type StrandKind } from './ivy';
+import { hashOf, PPM, rand, STAGES, strandPic } from './ivy';
 import {
   add, area2, at, boulder, canvasOf, css, cushion, cut, dot, drawFaces, drawPads, eyeOf, flowerClump, glowOf, glyphPath, grassTuft, groundNear,
   hex, inset, lichen, mix, mul, newell, noise2, plate, proj, roundelStrokes, scaleFor, strokesPath, TAU, toneOf,
@@ -41,12 +41,12 @@ import { star } from './shine';
 /** How far each pillar's middle stands from the middle of the border, in units: the opening between their inner faces is about two and a half metres. */
 const PILLAR_X = 15.1;
 /** The top of a foot stone, which a pillar stands on. */
-const FOOT_TOP = 2.4;
+const FOOT_TOP = 3.0;
 /** How tall a pillar stands over its foot stone, and so where the lintel's underside is. */
 const PILLAR_H = 26.4;
 const LINTEL_Z = FOOT_TOP + PILLAR_H - 0.6;
 /** How far a rune's middle is from its top, on a pillar's panel and on the lintel. */
-const RUNE_S = 1.9;
+const RUNE_S = 1.75;
 const LINTEL_RUNE_S = 1.35;
 /** And the rune down each pillar's outer end. */
 const END_RUNE_S = 1.6;
@@ -141,15 +141,16 @@ function pillarOutline(R: () => number, out: -1 | 1, kind: number, H: number, gi
    * dressed by eye, not ruled.
    */
   const top = H * 0.86;
-  const side = (w0: number, w1: number, n: number, up: boolean): Pt[] => Array.from({ length: n }, (_, i) => {
-    const u = up ? i / (n - 1) : 1 - i / (n - 1);
+  const side = (w0: number, w1: number, us: readonly number[], up: boolean): Pt[] => us.map((_, i) => {
+    const u = up ? us[i] : us[us.length - 1 - i];
     const t = top * u;
     const w = w0 + (w1 - w0) * u + 0.28 * Math.sin(Math.PI * Math.min(1, u * 1.6)) + j(0.3);
     return [w, t] as Pt;
   });
   const foot = 4.15 * girth, head = foot * 0.82;
-  const outer = side(foot, head, 7, true);
-  const inner = side(foot * 0.98, head * 1.02, 7, false).map(([w, t]) => [-w, t] as Pt);
+  // The outer side runs straight through its middle, a long face for the end rune's panel.
+  const outer = side(foot, head, [0, 0.14, 0.3, 0.76, 0.88, 1], true);
+  const inner = side(foot * 0.98, head * 1.02, [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1], false).map(([w, t]) => [-w, t] as Pt);
   const hw = head + 0.05;
   const crown: Pt[] = kind === 0
     // The outer shoulder cut back on a slant, the cut under the lintel's overhang.
@@ -160,14 +161,22 @@ function pillarOutline(R: () => number, out: -1 | 1, kind: number, H: number, gi
   return pts.map(([s2, t]) => [s2 * out, t] as Pt);
 }
 
-/** The lintel's outline, across the gate and up from its underside: a slab with a low crest in the middle, the roundel's, and one end chipped. */
-function lintelOutline(R: () => number, chip: -1 | 1): Pt[] {
+/**
+ * The lintel's crest: three flat planes cut over the roundel -- a shoulder
+ * either side at one slope, rising `rise` from the slab's top to a short flat
+ * top -- its ridge `c` off the middle, toward the dry end.
+ */
+const SLAB_TOP = 5.5;
+const CREST = { foot: 6.0, top: 2.6, rise: 1.9 };
+/** The lintel's outline, across the gate and up from its underside: a slab, the crest over its middle a little off centre, and one end chipped. */
+function lintelOutline(R: () => number, chip: -1 | 1, c: number): Pt[] {
   const j = (k: number): number => (R() - 0.5) * k;
   const E = REACH_X - 0.1;
+  const T = SLAB_TOP, H = SLAB_TOP + CREST.rise;
   const pts: Pt[] = [
     [-E + 0.6, 0.6 + j(0.3)], [-E + 1.8 + j(0.4), -0.05], [-7, -0.2], [0, -0.05], [7, -0.15], [E - 1.7 + j(0.4), 0], [E - 0.2, 0.7 + j(0.3)],
-    [E, 3.2 + j(0.3)], [E - 0.5, 4.9], [E - 2.2, 5.5 + j(0.2)], [9.6, 5.75 + j(0.2)], [6.6, 6.2], [4.6, 8.1], [1.8, 9.4], [-1.4, 9.55],
-    [-4.4, 8.4], [-6.6, 6.3], [-9.8, 5.7 + j(0.2)], [-E + 2.3, 5.45 + j(0.3)], [-E + 0.3, 4.6], [-E, 2.6 + j(0.3)],
+    [E, 3.2 + j(0.3)], [E - 0.5, 4.9], [E - 2.2, T + j(0.15)], [c + CREST.foot, T], [c + CREST.top, H], [c - CREST.top, H],
+    [c - CREST.foot, T], [-E + 2.3, T + j(0.15)], [-E + 0.3, 4.6], [-E, 2.6 + j(0.3)],
   ];
   // A corner broken off one end, along the top: the end steps down in two facets.
   return pts.map(([x, z]) => {
@@ -175,7 +184,8 @@ function lintelOutline(R: () => number, chip: -1 | 1): Pt[] {
     return [x, z] as Pt;
   });
 }
-const LINTEL_ROUNDEL = { x: 0, z: 5.15, r: 2.95 };
+/** The roundel in the crest, across from the ridge: as high and as big as the flat top over it allows. */
+const LINTEL_ROUNDEL = { z: 4.4, r: 2.15 };
 
 /**
  * A gate's face's skin, in its frame: flat patches a step paler and a step
@@ -311,6 +321,79 @@ function mossMass(T: () => number, n: number, at: () => [number, number], share:
   return out;
 }
 
+/**
+ * A sprig of ivy climbing a face, in its frame: a stem wandering up from the
+ * foot along `at(z)` (where across the face it climbs at a height), thick low
+ * down and thinning, to `tall`, and three or four knots of leaves on it, big
+ * low and smaller higher, each leaf a heart turned its own way, in the
+ * island's ivy greens with a darker rim. `out` is which way across is away
+ * from the panel; the leaves lean that way.
+ */
+function ivySprig(g: CanvasRenderingContext2D, at: (z: number) => number, out: number, tall: number, seed: number): void {
+  const V = rand(seed * 17 + 3);
+  const n = 18;
+  const phase = V() * TAU;
+  const stem: Pt[] = Array.from({ length: n + 1 }, (_, i) => {
+    const z = 0.2 + (tall * i) / n;
+    return [at(z) + Math.sin(z * 0.55 + phase) * 0.55 + Math.sin(z * 1.7 + phase * 2) * 0.18, z] as Pt;
+  });
+  g.lineCap = 'round';
+  for (let i = 0; i < n; i++) {
+    const w = 0.7 - 0.48 * (i / n);
+    g.beginPath();
+    g.moveTo(stem[i][0], stem[i][1]);
+    g.lineTo(stem[i + 1][0], stem[i + 1][1]);
+    g.strokeStyle = '#4f5f43';
+    g.lineWidth = w + 0.12;
+    g.stroke();
+    g.strokeStyle = '#6d7a55';
+    g.lineWidth = w;
+    g.stroke();
+  }
+  const leaf = (x: number, z: number, size: number, ang: number, lit: boolean): void => {
+    g.save();
+    g.translate(x, z);
+    g.rotate(ang);
+    g.scale(size, size);
+    const heart = (): void => {
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.bezierCurveTo(-0.55, 0.15, -0.7, 0.75, -0.05, 1.15);
+      g.lineTo(0, 1.05);
+      g.lineTo(0.05, 1.15);
+      g.bezierCurveTo(0.7, 0.75, 0.55, 0.15, 0, 0);
+      g.closePath();
+    };
+    heart();
+    g.fillStyle = '#3e6b4d';
+    g.fill();
+    g.scale(0.86, 0.86);
+    g.translate(0, 0.08);
+    heart();
+    g.fillStyle = lit ? '#79a77a' : '#5f8f63';
+    g.fill();
+    g.beginPath();
+    g.moveTo(0, 0.1);
+    g.lineTo(0, 0.9);
+    g.strokeStyle = 'rgba(40, 70, 52, 0.45)';
+    g.lineWidth = 0.06;
+    g.stroke();
+    g.restore();
+  };
+  const knots = 3 + (V() < 0.5 ? 1 : 0);
+  for (let k = 0; k < knots; k++) {
+    const u = 0.12 + (0.8 * k) / Math.max(1, knots - 1) + (V() - 0.5) * 0.08;
+    const i = Math.min(n, Math.round(u * n));
+    const [x, z] = stem[i];
+    const size = 2.1 - 0.9 * u + V() * 0.3;
+    const count = Math.max(2, 6 - k - Math.floor(V() * 2));
+    for (let l = 0; l < count; l++) {
+      const a = (l / count - 0.5) * 2.6 + (V() - 0.5) * 0.5;
+      leaf(x + Math.sin(a) * size * 0.55 + out * 0.2, z + Math.cos(a) * size * 0.3 - size * 0.2, size * (0.75 + V() * 0.4), a + Math.PI + out * 0.35, l % 2 === 0);
+    }
+  }
+}
+
 function modelOf(variant: number): Model {
   const had = models.get(variant);
   if (had) return had;
@@ -370,7 +453,7 @@ function modelOf(variant: number): Model {
     const footOut: Pt[] = Array.from({ length: 10 }, (_, i) => {
       const a = (i / 10) * TAU + (R() - 0.5) * 0.12;
       const r = 1 + (R() - 0.5) * 0.1;
-      return [fx + Math.cos(a) * 4.55 * r, Math.sin(a) * 6.7 * r] as Pt;
+      return [fx + Math.cos(a) * 4.55 * r, Math.sin(a) * 7.0 * r] as Pt;
     });
     const footSeed = seed + 3;
     things.push({
@@ -433,7 +516,7 @@ function modelOf(variant: number): Model {
       }
       return lo < hi ? [lo, hi] : [0, 0];
     };
-    const panel = { w: 4.6, z0: 3.4, z1: 19.0, arch: 2.4 };
+    const panel = { w: 4.6, z0: 2.8, z1: 20.0, arch: 2.4 };
     const face = (which: 'front' | 'back'): { paint: Painter; over: Painter } => {
       const key = `${li}${which}`;
       const glyphs = hand.runes[which][li];
@@ -514,50 +597,28 @@ function modelOf(variant: number): Model {
         padsIn(g, k.base, k.e, pts);
       };
       const over: Painter = (g) => {
-        // Ivy up the outer edge of the mossy pillar, front and back, kept off the panel.
+        // Ivy up the inner edge of the mossy pillar, the side to the opening, front and back: kept off the panel and well short of the head.
         if (!mossy) return;
         const B = rand(fseed * 3 + 1);
-        const strands: Array<{ kind: StrandKind; v: number; k: number; z: number }> = which === 'front'
-          ? [{ kind: 'climb', v: 2 + (hand.seed % 3), k: 1.05, z: 0.3 }, { kind: 'vine', v: 1, k: 0.8, z: 7 }]
-          : [{ kind: 'climb', v: 4, k: 0.9, z: 0.3 }];
-        for (const iv of strands) {
-          const pic = strandPic(iv.kind, iv.v, STAGES, true);
-          if (!pic) continue;
-          const sc = (iv.k * 10) / PPM;
-          const [a, b] = xs(Math.max(1, iv.z));
-          const right = (pic.img.width - pic.ax) * sc, left = pic.ax * sc;
-          // As far out on the outer edge as keeps its root on the stone and its leaves off the panel.
-          const x = outer > 0 ? Math.min(b - 0.6, Math.max(hw + 0.4 + left, b - 1.2)) : Math.max(a + 0.6, Math.min(-hw - 0.4 - right, a + 1.2));
-          g.save();
-          g.beginPath();
-          // No leaf further off the stone than about a leaf.
-          const grown = inset(area2(outline) < 0 ? outline.slice().reverse() : outline, -0.8).map(([s, t]) => [which === 'front' ? s : -s, t] as Pt);
-          grown.forEach(([hx, hz], i) => (i ? g.lineTo(hx + (B() - 0.5) * 0.5, hz) : g.moveTo(hx, hz)));
-          g.closePath();
-          g.clip();
-          // And never over the panel.
-          g.beginPath();
-          const edgeX = outer > 0 ? hw + 0.35 : -hw - 0.35;
-          g.moveTo(edgeX, -5);
-          for (let z = -5; z <= tTop + 5; z += 1) g.lineTo(edgeX + outer * (0.3 + 0.3 * Math.sin(z * 1.7) + 0.25 * noise2(z / 2, 1, fseed)), z);
-          g.lineTo(edgeX + outer * 50, tTop + 5);
-          g.lineTo(edgeX + outer * 50, -5);
-          g.closePath();
-          g.clip();
-          // Nor out past the border's end, where a wall run up to it would stand in front: its leaves end along a ragged line.
-          g.beginPath();
-          const endX = outer * (REACH_X - 0.6 - PILLAR_X);
-          g.moveTo(endX, -5);
-          for (let z = -5; z <= tTop + 5; z += 0.8) g.lineTo(endX - outer * (0.35 + 0.35 * Math.sin(z * 2.3 + fseed) + 0.3 * noise2(z / 1.5, 3, fseed)), z);
-          g.lineTo(endX - outer * 50, tTop + 5);
-          g.lineTo(endX - outer * 50, -5);
-          g.closePath();
-          g.clip();
-          g.translate(x, iv.z);
-          g.scale(outer > 0 ? sc : -sc, -sc);
-          g.drawImage(pic.img, -pic.ax, -pic.ay);
-          g.restore();
-        }
+        const inward = -outer;
+        g.save();
+        g.beginPath();
+        // No leaf further off the stone than about a leaf.
+        const grown = inset(area2(outline) < 0 ? outline.slice().reverse() : outline, -1.9).map(([s2, t]) => [which === 'front' ? s2 : -s2, t] as Pt);
+        grown.forEach(([hx, hz], i) => (i ? g.lineTo(hx + (B() - 0.5) * 0.5, hz) : g.moveTo(hx, hz)));
+        g.closePath();
+        g.clip();
+        // And never over the panel.
+        g.beginPath();
+        const edgeX = inward * (hw + 0.3);
+        g.moveTo(edgeX, -5);
+        for (let z = -5; z <= tTop + 5; z += 1) g.lineTo(edgeX + inward * (0.25 + 0.25 * Math.sin(z * 1.7) + 0.2 * noise2(z / 2, 1, fseed)), z);
+        g.lineTo(edgeX + inward * 50, tTop + 5);
+        g.lineTo(edgeX + inward * 50, -5);
+        g.closePath();
+        g.clip();
+        ivySprig(g, (z) => { const [a2, b2] = xs(z); return inward > 0 ? b2 - 0.9 : a2 + 0.9; }, inward, tTop * (which === 'front' ? 0.56 : 0.42), fseed);
+        g.restore();
       };
       return { paint, over };
     };
@@ -570,7 +631,7 @@ function modelOf(variant: number): Model {
      * the panels' middle runes -- so a gate seen end on shows its light too.
      */
     const P = (pt: Pt): V3 => at(O, [pt[0], [1, 0, 0]], [pt[1], W]);
-    const endAt = tTop * 0.55;
+    const endAt = tTop * 0.47;
     const endI = outline.findIndex((pt, i) => {
       const q = outline[(i + 1) % outline.length];
       return pt[0] * side > 0 && q[0] * side > 0 && (pt[1] - endAt) * (q[1] - endAt) <= 0 && pt[1] !== q[1];
@@ -613,14 +674,25 @@ function modelOf(variant: number): Model {
           g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.3);
           for (let j = 0; j < len * 1.5; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.14 + T() * 0.12, 0.14 + T() * 0.12);
           if (i === endI && endRune) {
-            // The end rune, in its sunk oval, upright on the face.
+            // The end rune, upright on the face, in a sunk panel with a pointed head ruled twice round, as the broad faces' are.
             g.save();
             g.transform(0, endRune.hand, endRune.dir, 0, endRune.s, 0);
-            g.beginPath();
-            g.ellipse(0, 0.1, END_RUNE_S * 1.25, END_RUNE_S * 1.75, 0, 0, TAU);
-            g.fillStyle = css(mix(k.fill, hex('#a39aac'), 0.42), 0.5);
+            const pw = END_RUNE_S * 1.35, z0 = -END_RUNE_S * 2.1, z1 = END_RUNE_S * 1.45, arch = END_RUNE_S * 0.9;
+            const border = (d: number): void => {
+              const top = z1 + arch - d * 0.4;
+              g.beginPath();
+              g.moveTo(-pw + d, z0 + d);
+              g.lineTo(-pw + d, z1);
+              g.quadraticCurveTo(-pw + d, z1 + (top - z1) * 0.7, 0, top);
+              g.quadraticCurveTo(pw - d, z1 + (top - z1) * 0.7, pw - d, z1);
+              g.lineTo(pw - d, z0 + d);
+              g.closePath();
+            };
+            border(0.5);
+            g.fillStyle = css(mix(k.fill, hex('#a39aac'), 0.42), 0.55);
             g.fill();
-            cut(g, k.fill, 0.3, () => { g.beginPath(); g.ellipse(0, 0.1, END_RUNE_S * 1.25, END_RUNE_S * 1.75, 0, 0, TAU); });
+            cut(g, k.fill, 0.36, () => border(0));
+            cut(g, k.fill, 0.26, () => border(0.5));
             const rr = runes.find((r) => r.face === `${li}end`);
             if (rr) cut(g, k.fill, 0.5, () => glyphPath(g, rr.glyph, 0, 0, END_RUNE_S));
             g.restore();
@@ -656,7 +728,7 @@ function modelOf(variant: number): Model {
       };
     };
     const faces = plate({
-      o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline, half, tTop, bevel: 1.1, tone: hand.stone,
+      o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline, half, tTop, bevel: 1.4, tone: hand.stone,
       front: front.paint, frontOver: front.over, back: back.paint, backOver: back.over, edge, sunk: true,
     });
     things.push({ x: cx, y: 0, faces });
@@ -683,7 +755,9 @@ function modelOf(variant: number): Model {
   /* -- the lintel: a slab laid over both heads, a crest in its middle with the roundel cut in it -- */
   {
     const chip = (-hand.mossSide) as -1 | 1;
-    const outline = lintelOutline(R, chip);
+    // The ridge a unit off the middle, toward the dry end.
+    const C = -hand.mossSide * 1.0;
+    const outline = lintelOutline(R, chip, C);
     const tTop = Math.max(...outline.map((p) => p[1]));
     const O: V3 = [0, 0, LINTEL_Z];
     // Along it and up it, laid off level by the hand's tilt.
@@ -697,29 +771,34 @@ function modelOf(variant: number): Model {
       const key = `l${which}`;
       const [ga, gb] = hand.runes.lintel;
       const g2 = which === 'front' ? [ga, gb] : [gb, ga];
-      runes.push({ face: key, glyph: g2[0], x: -6.4, z: 2.75, s: LINTEL_RUNE_S, o: climb });
-      runes.push({ face: key, glyph: g2[1], x: 6.4, z: 2.75, s: LINTEL_RUNE_S, o: climb });
-      runes.push({ face: key, glyph: '', x: LINTEL_ROUNDEL.x, z: LINTEL_ROUNDEL.z, s: LINTEL_ROUNDEL.r, o: climb + 1, roundel: hand.roundel });
+      // The back's frame runs the other way along it.
+      const c = which === 'front' ? C : -C;
+      runes.push({ face: key, glyph: g2[0], x: c - 6.4, z: 2.75, s: LINTEL_RUNE_S, o: climb });
+      runes.push({ face: key, glyph: g2[1], x: c + 6.4, z: 2.75, s: LINTEL_RUNE_S, o: climb });
+      runes.push({ face: key, glyph: '', x: c, z: LINTEL_ROUNDEL.z, s: LINTEL_ROUNDEL.r, o: climb + 1, roundel: hand.roundel });
     }
-    const xsL = (z: number): [number, number] => (z > 5.6 ? [-6.5 + (z - 5.6) * 1.3, 6.5 - (z - 5.6) * 1.3] : [-REACH_X + 0.5, REACH_X - 0.5]);
+    const slope = (CREST.foot - CREST.top) / CREST.rise;
+    const xsL = (z: number, c = C): [number, number] => (z > SLAB_TOP
+      ? [c - CREST.foot + (z - SLAB_TOP) * slope, c + CREST.foot - (z - SLAB_TOP) * slope] : [-REACH_X + 0.5, REACH_X - 0.5]);
     const face = (which: 'front' | 'back'): Painter => (g, k) => {
       const key = `l${which}`;
       const T = rand(lseed + (which === 'front' ? 1 : 2));
       const fill = k.fill;
       // Which end of it the moss is on, as this face's frame runs.
       const toMoss = which === 'front' ? hand.mossSide : -hand.mossSide;
-      skin(g, fill, T, xsL, tTop, false);
+      const c = which === 'front' ? C : -C;
+      skin(g, fill, T, (z) => xsL(z, c), tTop, false);
       // A rule cut along its foot and one along its brow, stopping short of the crest.
       const E = REACH_X - 1.8;
       cut(g, fill, 0.36, () => { g.beginPath(); g.moveTo(-E, 0.95); g.lineTo(E, 0.9); });
-      cut(g, fill, 0.3, () => { g.beginPath(); g.moveTo(-E + 0.2, 4.45); g.lineTo(-5.5, 4.4); g.moveTo(5.5, 4.4); g.lineTo(E - 0.2, 4.45); });
+      cut(g, fill, 0.3, () => { g.beginPath(); g.moveTo(-E + 0.2, 4.45); g.lineTo(c - 3.1, 4.4); g.moveTo(c + 3.1, 4.4); g.lineTo(E - 0.2, 4.45); });
       // Drilled dots between the rules, out toward each end.
       for (let x = -E + 0.8; x <= E - 0.8; x += 1.7) {
-        if (Math.abs(x) < 9) continue;
+        if (Math.abs(x - c) < 9) continue;
         cut(g, fill, 0.24, () => { g.beginPath(); g.moveTo(x, 2.7 + 0.03); g.lineTo(x, 2.7 - 0.03); });
       }
       // The roundel, sunk, ringed and carved.
-      const { x, z, r } = LINTEL_ROUNDEL;
+      const x = c, { z, r } = LINTEL_ROUNDEL;
       g.beginPath();
       g.arc(x, z, r * 0.9, 0, TAU);
       g.fillStyle = css(mix(fill, hex('#a39aac'), 0.38), 0.5);
@@ -733,15 +812,15 @@ function modelOf(variant: number): Model {
         const lx = -toMoss * (11 + T() * 6), lz = 1.6 + T() * 2.4;
         lichen(g, T, lx, lz, 0.45 + T() * 0.45, hand.lichen);
       }
-      // Moss hanging over its brow at the mossy end in one mass, running out along it.
+      // Moss along its brow at the mossy end in one mass, kept on the face, short of the crest.
       const pts = mossMass(T, 260, () => {
         const sx = toMoss * (6.8 + Math.pow(T(), 0.8) * (REACH_X - 7.6));
-        return [sx, 5.5 - Math.pow(T(), 1.6) * 2.4];
+        return [sx, 4.6 - Math.pow(T(), 1.6) * 2.0];
       }, (sx, zz) => {
         const along = (sx * toMoss - 6.8) / (REACH_X - 6.8);
-        const drop = (5.5 - zz) / 2.4;
+        const drop = (4.6 - zz) / 2.0;
         return hand.moss * (1.15 - 0.55 * along) - drop * 0.55;
-      }, lseed, 0.75);
+      }, lseed, 0.6);
       padsIn(g, k.base, k.e, pts);
     };
     // Ivy hanging off the lintel's brow at the mossy end, over the head of the pillar under it, short of its panel.
@@ -770,13 +849,13 @@ function modelOf(variant: number): Model {
             g.fillStyle = T() < 0.5 ? css(mix(k.fill, [255, 252, 244], 0.4), 0.4) : css(mix(k.fill, hex('#9c94a4'), 0.32), 0.28);
             g.fill();
           }
-          if (up > 0.35) {
-            // Its top: a carpet of moss over the mossy end, thinning out toward the crest and the other end in masses.
+          if (up > 0.35 && Math.abs(mx - C) > CREST.foot) {
+            // Its top: a carpet of moss over the mossy end, thinning out toward the crest, which is bare; well inside the face, so it never stands proud of its edge.
             const xAt = (s: number): number => p[0] + ((q[0] - p[0]) * s) / Math.max(0.01, len);
-            const pts = mossMass(T, Math.round(len * 14), () => [T() * len, (T() - 0.5) * 6.2], (s, y) => {
+            const pts = mossMass(T, Math.round(len * 14), () => [0.8 + T() * Math.max(0, len - 1.6), (T() - 0.5) * 4.6], (s, y) => {
               const toward = (xAt(s) * hand.mossSide) / REACH_X;
-              return hand.moss * (0.62 + 0.62 * toward) - Math.max(0, Math.abs(y) - 2.4) * 0.25;
-            }, lseed + 3, 0.8);
+              return hand.moss * (0.62 + 0.62 * toward) - Math.max(0, Math.abs(y) - 1.8) * 0.3;
+            }, lseed + 3, 0.5);
             padsIn(g, k.base, k.e, pts, 0.62);
           } else if (Math.abs(mx) > REACH_X - 2 && Math.abs(up) < 0.4) {
             lichen(g, T, len / 2, (T() - 0.5) * 3, 0.55, hand.lichen);
@@ -834,37 +913,68 @@ function modelOf(variant: number): Model {
     });
   }
 
-  /* -- flowers and grass at the feet and along the threshold, never in the way through and never past the border's ends -- */
-  const kinds: string[] = [];
-  for (const [c, k] of hand.flowers) for (let i = 0; i < k; i++) kinds.push(c);
-  const tuft = (x: number, y: number, z: number, flower: boolean, big: number): void => {
+  /*
+   * Flowers, grass and moss at the feet, as on a Runestone's outcrop, never
+   * in the way through: a foxglove at the mossy pillar's foot and the hand's
+   * yellow at the other, a few daisies behind, grass between; each clump's
+   * leaves and heads spread about four units either way of its root, so every
+   * root is that far inside the border's end, where a wall run up to the gate
+   * would stand over anything further out, and no two closer than five.
+   */
+  const placed: Array<[number, number]> = [];
+  /** A seed `flowerClump` draws a spike for, in pink: a foxglove. Its own draws, in its own order: leaves, their lengths, then the spike. */
+  const spikeSeed = (from: number): number => {
+    for (let sd = from; ; sd++) {
+      const Q = rand(sd);
+      const leaves = 5 + Math.floor(Q() * 3);
+      for (let i = 0; i < leaves; i++) Q();
+      if (Q() < 0.3) return sd;
+    }
+  };
+  const has = (c: string): boolean => hand.flowers.some(([k]) => k === c);
+  const tuft = (x: number, y: number, flower: string | null, big: number, seedAt?: number): void => {
     if (Math.abs(x) + 4.6 * big > REACH_X) return;
-    const colour = kinds[Math.floor(R() * kinds.length)];
-    const seed = hand.seed * 1000 + things.length;
+    if (placed.some(([px, py]) => Math.hypot(px - x, py - y) < 5)) return;
+    placed.push([x, y]);
+    const seed = seedAt ?? hand.seed * 1000 + things.length;
     things.push({
-      x, y, reach: [[x, y, z + 10]],
+      x, y, reach: [[x, y, 16]],
       draw: (g, e) => {
-        const [px, py] = proj(e, [x, y, z]);
-        if (flower) flowerClump(g, px, py, colour, seed, big);
+        const [px, py] = proj(e, [x, y, 0]);
+        if (flower) flowerClump(g, px, py, flower, seed, big, 5);
         else grassTuft(g, px, py, seed, big);
       },
     });
   };
-  /*
-   * At each foot, in front and behind, and either side of the threshold: a
-   * clump's leaves and heads spread about four units either way of its root,
-   * so every root is that far inside the border's end, where a wall run up to
-   * the gate would stand over anything further out.
-   */
+  /** A low cushion of moss on the ground beside a foot: a few pads flat on the turf. */
+  const cushionAt = (x: number, y: number, n: number, seed: number): void => {
+    const C = rand(seed);
+    const pts: V3[] = Array.from({ length: n }, () => [x + (C() - 0.5) * 3, y + (C() - 0.5) * 2, 0] as V3);
+    const rs = pts.map(() => 0.7 + C() * 0.7);
+    things.push({
+      x, y, reach: [[x, y, 2]],
+      draw: (g, e) => {
+        const across = Math.hypot(e.ux, e.uy);
+        drawPads(g, pts.map((p, i) => { const [px, py] = proj(e, p); return [px, py, rs[i] * across, rs[i] * across * 0.55] as Pad; }));
+      },
+    });
+  };
   for (const side of [-1, 1]) {
     const cx = side * PILLAR_X;
-    for (const sy of [-1, 1]) {
-      tuft(cx - side * (0.5 + R() * 1.5), sy * (7.6 + R() * 1.2), 0, side === hand.mossSide || R() < 0.4, 0.95 + R() * 0.15);
-      tuft(cx - side * (3.5 + R() * 2), sy * (7 + R() * 1.5), 0, false, 0.95 + R() * 0.2);
-      tuft(cx - side * (1.5 + R() * 2), sy * (10 + R() * 1.6), 0, R() < 0.5, 0.85 + R() * 0.2);
+    const mossy = side === hand.mossSide;
+    // In front: the foxglove at the mossy foot, the hand's yellow at the other, grass further in.
+    tuft(cx - side * 1, 8.2, mossy ? 'pink' : has('yellow') ? 'yellow' : hand.flowers[0][0], 0.9, mossy ? spikeSeed(hand.seed * 50 + 7) : undefined);
+    tuft(cx - side * 6.2, 6.6, null, 0.95);
+    // Behind: the hand's first flower, a small clump, and grass.
+    tuft(cx - side * 1.6, -8.4, hand.flowers[0][0], 0.8);
+    tuft(cx - side * 6.4, -6.8, null, 0.9);
+    // Rubble chipped off in the dressing, mossed over, and a cushion of moss on the turf at the foot.
+    for (const [dx, sy, r] of [[2.6, 1, 0.9], [-1.8, -1, 1.1]] as Array<[number, number, number]>) {
+      const x = cx - side * dx, y = sy * (7.6 + R() * 0.8);
+      things.push({ x, y, faces: boulder(x, y, r, r * 0.75, 0.75, R() * TAU, hand.seed * 31 + side * 5 + sy, hand.rock, 0.95) });
     }
+    cushionAt(cx - side * 3.4, 7.4 * (mossy ? 1 : -1), 6, hand.seed * 13 + side);
   }
-  for (const sy of [-1, 1]) for (const sx of [-1, 1]) tuft(sx * (5 + R() * 3.5), sy * (5.4 + R() * 1.1), 0, false, 0.85);
 
   /* -- the turf it stands in: a ragged band along the border, a little past the feet -- */
   const turf: Pt[] = Array.from({ length: 24 }, (_, i) => {
@@ -1076,6 +1186,8 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   if (lit <= 0.001) return out;
   const was = ctx.globalCompositeOperation, wasA = ctx.globalAlpha;
   const day = 1 - night;
+  // Drawn small, a rune's glow is drawn tighter and fainter, so the three down a panel stay three marks.
+  const near = Math.min(1, Math.max(0, zoom - 1));
   const each = b.glows.map((gl) => runeLit(gl, lit, since, rise, model.top, t));
   b.glows.forEach((gl, i) => {
     const q = each[i];
@@ -1084,12 +1196,12 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     const Xg = sx + x * zoom, Yg = sy + y * zoom, Wg = w * zoom, Hg = h * zoom;
     if (day > 0.01) {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = Math.min(1, day * q * 0.85 * (gl.roundel ? 0.75 : 1) * gl.square);
+      ctx.globalAlpha = Math.min(1, day * q * 0.85 * (gl.roundel ? 0.75 : 1) * gl.square * (0.7 + 0.3 * near));
       ctx.drawImage(gl.halo, Xg, Yg, Wg, Hg);
     }
     if (night > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = Math.min(1, night * q * (gl.roundel ? 0.24 : 0.28));
+      ctx.globalAlpha = Math.min(1, night * q * (gl.roundel ? 0.24 : 0.28) * (0.5 + 0.5 * near));
       ctx.drawImage(gl.dusk, Xg, Yg, Wg, Hg);
     }
     ctx.globalCompositeOperation = 'source-over';
@@ -1136,7 +1248,7 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   out.holes = (x0, y0) => {
     const hs: NightHole[] = [];
     b.glows.forEach((gl, i) => {
-      if (each[i] > 0.002) hs.push({ x: x0 + gl.cx * zoom, y: y0 + gl.cy * zoom, r: gl.r * 1.1 * zoom, a: 0.05 * each[i] });
+      if (each[i] > 0.002) hs.push({ x: x0 + gl.cx * zoom, y: y0 + gl.cy * zoom, r: gl.r * 1.1 * zoom * (0.6 + 0.4 * near), a: 0.05 * each[i] });
     });
     for (const m of motes) hs.push({ x: x0 + m.x * zoom, y: y0 + m.y * zoom, r: m.r * 2.2, a: 0.8 * m.a });
     return hs;
@@ -1144,7 +1256,7 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   out.masks = (x0, y0) => b.glows.flatMap((gl, i) => {
     if (each[i] <= 0.002) return [];
     const [x, y, w, h] = gl.box;
-    return [{ canvas: gl.mask, x: x0 + x * zoom, y: y0 + y * zoom, w: w * zoom, h: h * zoom, a: Math.min(1, (gl.roundel ? 0.55 : 0.6) * each[i]) }];
+    return [{ canvas: gl.mask, x: x0 + x * zoom, y: y0 + y * zoom, w: w * zoom, h: h * zoom, a: Math.min(1, (gl.roundel ? 0.55 : 0.6) * (0.7 + 0.3 * near) * each[i]) }];
   });
   return out;
 }
