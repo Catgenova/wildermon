@@ -809,6 +809,18 @@ async function main(): Promise<void> {
     let cy = Math.floor(me.y);
     let found = false;
     /*
+     * The first few corners that pass, nearest first, not only the first.
+     *
+     * The path to one is worked out on our own copy of the land, and the
+     * island walks by its own: live run 1119 picked a corner three tiles off,
+     * found a path to it, and then could not get the body there in eight goes
+     * -- the island turned the walk back somewhere our copy said was open.
+     * That is about walking, not digging, so a corner the body cannot reach is
+     * passed over for the next one, and only none of them reached fails.
+     */
+    const corners: Array<[number, number]> = [];
+    const CORNERS_TRIED = 6;
+    /*
      * Out as far as the island goes, a ring at a time, rather than twelve
      * tiles. Twelve was the whole of a live run's search the day it came
      * ashore on a spur of rock, and it said "all rock and water" of an island
@@ -817,9 +829,10 @@ async function main(): Promise<void> {
      * looks only at its own edge, so no tile is asked about twice.
      */
     const farthest = Math.max(back.w, back.h);
-    for (let r = 0; r <= farthest && !found; r++) {
-      for (let dy = -r; dy <= r && !found; dy++) {
-        for (let dx = -r; dx <= r && !found; dx++) {
+    const full = (): boolean => corners.length >= CORNERS_TRIED;
+    for (let r = 0; r <= farthest && !full(); r++) {
+      for (let dy = -r; dy <= r && !full(); dy++) {
+        for (let dx = -r; dx <= r && !full(); dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
           const x = Math.floor(me.x) + dx;
           const y = Math.floor(me.y) + dy;
@@ -844,7 +857,7 @@ async function main(): Promise<void> {
            * again about the wrong thing.
            */
           if ((dx || dy) && !findPath(back, Math.floor(me.x), Math.floor(me.y), 0, x, y, pathOptions(back))) continue;
-          cx = x; cy = y; found = true;
+          corners.push([x, y]);
         }
       }
     }
@@ -859,6 +872,8 @@ async function main(): Promise<void> {
     const left = await drain(id, uid);
     check('everything we started has finished', left === 0,
       left === 0 ? 'the head is empty' : 'jobs still waiting after thirty seconds of sweeping');
+    found = corners.length > 0;
+    if (found) [cx, cy] = corners[0];
     check('there is somewhere on this island worth digging', found,
       found ? `corner ${cx},${cy}: ${back.getDirt(cx, cy)} of soil over the rock` : 'all rock and water, or none of it to be walked to, on the whole island');
     /*
@@ -868,9 +883,20 @@ async function main(): Promise<void> {
      * where it stood and the next check failed with "you are too far away from
      * that" — which reads as a fault in digging and is a fault in walking.
      */
-    const reached = await walkTo(id, back, uid, cx + 0.5, cy + 0.5);
+    let reached = false;
+    const missed: string[] = [];
+    for (const [x, y] of corners) {
+      reached = await walkTo(id, back, uid, x + 0.5, y + 0.5);
+      if (reached) { cx = x; cy = y; break; }
+      const { data: stopped } = await supabase().from('player').select('x,y')
+        .eq('world_id', id).eq('uid', uid).single();
+      const st = stopped as { x: number; y: number } | null;
+      missed.push(`${x},${y} (stopped at ${st ? `${st.x.toFixed(1)}, ${st.y.toFixed(1)}` : 'somewhere unknown'})`);
+    }
     check('and the body can get to it', reached,
-      reached ? 'at the corner' : `no way onto ${cx},${cy} from where we stand`);
+      reached
+        ? `at the corner ${cx},${cy}${missed.length ? `, after the island turned us back from ${missed.join('; ')}` : ''}`
+        : `no way onto any of ${missed.join('; ')}`);
     const before = back.getHeight(cx, cy);
     /*
      * Six goes, not one.
