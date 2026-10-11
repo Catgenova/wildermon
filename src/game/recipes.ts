@@ -332,7 +332,7 @@ export const RECIPES: Recipe[] = [
   ...ENCHANTMENT_LIST.map((e): Recipe => ({
     id: `make_${e.scroll}`, category: 'Enchanting', result: e.scroll,
     inputs: [{ item: 'papyrus', count: SCROLL_SHEETS }, { item: e.mote, count: SCROLL_MOTES }],
-    skill: ENCHANTING, label: `Write a ${e.name} scroll`, verb: 'writing a scroll', baseTime: 12, stamina: 0.03, difficulty: SCROLL_DIFFICULTY,
+    skill: ENCHANTING, label: `Write ${article(e.name)}${e.name} scroll`, verb: 'writing a scroll', baseTime: 12, stamina: 0.03, difficulty: SCROLL_DIFFICULTY,
     note: 'Never better than the papyrus it is written on',
     done: `You write ${e.name} onto the sheet, and the motes go into the words.`,
     fail: `The words will not take, and the ${numberWord(SCROLL_MOTES)} motes are lost.`,

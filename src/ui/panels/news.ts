@@ -1653,10 +1653,10 @@ export const NEWS: News[] = [
       `Enchant, on a scroll, puts it into a melee weapon in your pack: it takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
         + `from ${percent(ENCHANT_LEAST)} to ${percent(ENCHANT_MOST)}, at a quality rolled about that average and held to the scroll's QL and the weapon's own. `
         + `Otherwise the weapon takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces. The scroll is used up either way, and a weapon holds one.`,
-      ...ENCHANTMENT_LIST.map((e) => `${e.name}: a melee hit that lands ${EFFECT_HEAD[e.effect]} ${percent(enchantHitChance(e, NEWS_QL_TOP))} of the time at QL ${NEWS_QL_TOP}, `
+      ...ENCHANTMENT_LIST.map((e) => `${e.name}: an ordinary melee swing that lands ${EFFECT_HEAD[e.effect]} ${percent(enchantHitChance(e, NEWS_QL_TOP))} of the time at QL ${NEWS_QL_TOP}, `
         + `in proportion below. ${EFFECT_TAIL[e.effect]}`),
       `A stun is new: for ${STUN_SECS} seconds the creature neither moves nor strikes, and loses a heavy blow it was drawing back for. Another stun starts it again rather than adding on, `
-        + 'and the target panel says "stunned" while it lasts. The name of an enchanted weapon carries it, a Sword (Firebrand), and Examine says its quality and how often it works.',
+        + `and the target panel says "stunned" while it lasts. The name of an enchanted weapon carries it, a Sword (${ENCHANTMENT_LIST[0].name}), and Examine says its quality and how often it works.`,
     ],
   },
 ];
