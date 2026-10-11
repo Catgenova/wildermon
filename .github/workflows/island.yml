@@ -2215,6 +2215,19 @@ jobs:
             --outfile=node_modules/.cache/enchant.mjs --log-level=error
           node node_modules/.cache/enchant.mjs
 
+      - name: Enchanting, part two
+        run: |
+          # The enchantments after the first three, on both sides: each scroll's
+          # motes (Leeching's a life and a dark), what Examine says each does at
+          # its quality, the refusal that names what it goes on, and what each
+          # does, measured the same way: Venomfang's venom just under and just
+          # over its chance, a Gale's swing, a Nightblade's critical chance, a
+          # Sunstrike on a goblin and on a shaggan, a Leeching's health back on
+          # every hit with no roll, and how far a Tidecaller puts a blow back.
+          npx esbuild supabase/test/enchant2.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/enchant2.mjs --log-level=error
+          node node_modules/.cache/enchant2.mjs
+
       - name: An altar goes up on your own ground
         run: |
           # Asked for: "Make the altar only craftable within deed perimeter".

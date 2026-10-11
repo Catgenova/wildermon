@@ -21,7 +21,7 @@ import { CLASSES } from './classes';
 import { CIRCLET_STONES } from './gems';
 import { SKILL_DEFS } from './skills';
 import { CANDLE_DRAWN } from './light';
-import { ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_MOTES, SCROLL_SHEETS, scrollOf } from './enchant';
+import { ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_SHEETS, scrollOf } from './enchant';
 import { DAMAGE_MAX } from './limits';
 
 /** What working a thing out with your hands teaches the head. */
@@ -331,11 +331,11 @@ export const RECIPES: Recipe[] = [
    */
   ...ENCHANTMENT_LIST.map((e): Recipe => ({
     id: `make_${e.scroll}`, category: 'Enchanting', result: e.scroll,
-    inputs: [{ item: 'papyrus', count: SCROLL_SHEETS }, { item: e.mote, count: SCROLL_MOTES }],
+    inputs: [{ item: 'papyrus', count: SCROLL_SHEETS }, ...e.motes.map(([item, count]) => ({ item, count }))],
     skill: ENCHANTING, label: `Write ${article(e.name)}${e.name} scroll`, verb: 'writing a scroll', baseTime: 12, stamina: 0.03, difficulty: SCROLL_DIFFICULTY,
     note: 'Never better than the papyrus it is written on',
     done: `You write ${e.name} onto the sheet, and the motes go into the words.`,
-    fail: `The words will not take, and the ${numberWord(SCROLL_MOTES)} motes are lost.`,
+    fail: `The words will not take, and the ${numberWord(e.motes.reduce((n, [, k]) => n + k, 0))} motes are lost.`,
   })),
   { id: 'make_book', category: 'Writing', result: 'book', inputs: [{ item: 'papyrus', count: 6 }, { item: 'leather', count: 2 }, { item: 'ink' }], tool: 'needle', skill: 'papyrusmaking', label: 'Write and bind a book', verb: 'binding a book', baseTime: 26, stamina: 0.07, difficulty: 28, done: 'You fill the sheets, sew the gatherings and bind them between leather boards.', fail: 'The ink runs on a sheet and the whole gathering is spoiled.', consumeOnFail: true },
   { id: 'make_thatch', category: 'Clay & thatch', result: 'thatch', inputs: [{ item: 'mixed_grass', count: 2 }], skill: 'carpentry', label: 'Bundle into thatch', verb: 'bundling thatch', baseTime: 3, stamina: 0.02, done: 'You bundle the grass into thatch.' },

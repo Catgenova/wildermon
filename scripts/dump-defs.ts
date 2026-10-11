@@ -156,9 +156,9 @@ import {
 } from '../src/game/runestones';
 
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, SCROLL_HARM, SCROLL_SHEETS,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, SCROLL_HARM, SCROLL_SHEETS, wrongKind,
 } from '../src/game/enchant';
-import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, MELEE_WEAPONS } from '../src/game/enchanting';
+import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLine, FITS, MELEE_WEAPONS } from '../src/game/enchanting';
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
@@ -1940,6 +1940,14 @@ out.push(`create or replace function enchanting_skill() returns text language sq
 out.push(`create or replace function enchant_action() returns text language sql immutable as $fn$ select ${q(ENCHANT)} $fn$;`);
 out.push(`create or replace function enchantments() returns table (ord int, id text, name text, scroll text, mote text, effect text, per_ql double precision) language sql immutable as $fn$ values ${ENCHANTMENT_LIST.map((e, i) => `(${i}, ${q(e.id)}, ${q(e.name)}, ${q(e.scroll)}, ${q(e.mote)}, ${q(e.effect)}, ${q(e.perQl)}::double precision)`).join(', ')} $fn$;`);
 out.push(`create or replace function melee_weapon(p_def text) returns boolean language sql immutable as $fn$ select p_def = any (array[${MELEE_WEAPONS.map(q).join(', ')}]::text[]) $fn$;`);
+/*
+ * What each enchantment goes on, the things of each kind, and what Examine
+ * says each does with `{v}` where its figure goes (`enchantLine`).
+ */
+out.push(`create or replace function enchant_on(p_id text) returns text language sql immutable as $fn$ select case p_id ${ENCHANTMENT_LIST.map((e) => `when ${q(e.id)} then ${q(e.on)} `).join('')}end $fn$;`);
+out.push(`create or replace function enchant_fits(p_on text, p_def text) returns boolean language sql immutable as $fn$ select case p_on ${Object.entries(FITS).map(([on, ids]) => `when ${q(on)} then p_def = any (array[${ids.map(q).join(', ')}]::text[]) `).join('')}else false end $fn$;`);
+out.push(`create or replace function enchant_wrong_kind(p_id text) returns text language sql immutable as $fn$ select case p_id ${ENCHANTMENT_LIST.map((e) => `when ${q(e.id)} then ${q(wrongKind(e))} `).join('')}end $fn$;`);
+out.push(`create or replace function enchant_line(p_id text) returns text language sql immutable as $fn$ select case p_id ${ENCHANTMENT_LIST.map((e) => `when ${q(e.id)} then ${q(enchantLine(e))} `).join('')}end $fn$;`);
 for (const [fn, v] of [
   ['scroll_harm', SCROLL_HARM], ['scroll_sheets', SCROLL_SHEETS], ['enchant_least', ENCHANT_LEAST], ['enchant_most', ENCHANT_MOST],
   ['enchant_harm', ENCHANT_HARM], ['enchant_break', ENCHANT_BREAK], ['stun_secs', STUN_SECS],
@@ -1949,7 +1957,7 @@ for (const [fn, v] of [
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
 out.push(`create or replace function enchant_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(ENCHANT_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
-for (const [fn, table] of [['enchant_head', EFFECT_HEAD], ['enchant_tail', EFFECT_TAIL], ['enchant_hit_said', EFFECT_SAID]] as Array<[string, Record<string, string>]>) {
+for (const [fn, table] of [['enchant_head', EFFECT_HEAD], ['enchant_tail', EFFECT_TAIL], ['enchant_hit_said', EFFECT_SAID]] as Array<[string, Partial<Record<string, string>>]>) {
   out.push(`create or replace function ${fn}(p_effect text) returns text language sql immutable as $fn$ select case p_effect ${Object.entries(table).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 }
 out.push(`create or replace function scroll_harm_said(p_harm text) returns text language sql immutable as $fn$ select case p_harm ${(['harmed', 'used', 'none'] as const).map((k) => `when ${q(k)} then ${q(scrollHarmSaid(k))} `).join('')}end $fn$;`);

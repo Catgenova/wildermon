@@ -11,7 +11,7 @@ import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { ACTION_BY_ID, type ActionDef } from '../../game/actions';
 import { ABSORB_SAID, absorbable, MOTE } from '../../game/sacrifice';
 import { ENCHANT, enchantable } from '../../game/enchanting';
-import { ENCHANT_SAID, enchantChance, ENCHANTING, scrollOf } from '../../game/enchant';
+import { enchantChance, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
 import { percent } from '../../game/words';
 import { hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
 import { improvable, improveCeiling } from '../../game/improve';
@@ -237,16 +237,17 @@ export class InventoryPanel {
       });
     }
     /*
-     * And a scroll goes into a melee weapon, which is chosen here, with the
+     * And a scroll goes into what it goes on, which is chosen here, with the
      * chance it takes at your enchanting and the scroll's QL (`enchant.ts`).
      */
-    const enchant = scrollOf(item.id) ? ACTION_BY_ID.get(ENCHANT) : undefined;
-    if (enchant) {
-      const into = enchantable(this.game);
+    const written = scrollOf(item.id);
+    const enchant = written ? ACTION_BY_ID.get(ENCHANT) : undefined;
+    if (enchant && written) {
+      const into = enchantable(this.game, written);
       entries.push({
         label: 'Enchant',
         note: `takes ${percent(enchantChance(this.game.skills.get(ENCHANTING), item.ql))} of the time`,
-        hint: into.length ? undefined : ENCHANT_SAID.weapon,
+        hint: into.length ? undefined : wrongKind(written),
         disabled: !into.length,
         children: into.map((it) => {
           const t = { kind: 'item' as const, uid: it.uid, scroll: item.uid };

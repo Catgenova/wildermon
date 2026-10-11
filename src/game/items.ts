@@ -9,9 +9,8 @@ import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
 import { elementIslands, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantHitChance, enchantMarker, SCROLL_HARM, type Enchant,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, type Enchant,
 } from './enchant';
-import { QL_TOP } from './limits';
 
 export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 
@@ -646,11 +645,11 @@ for (const e of ENCHANTMENT_LIST) {
     category: 'misc',
     weight: 0.05,
     decay: 14,
-    description: `Put into a melee weapon in your pack with Enchant, on the scroll. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
+    description: `Put into ${ON_WORDS[e.on]} in your pack with Enchant, on the scroll. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
       + `never under ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}, and the enchantment comes out at about that average, never above the scroll's QL `
-      + `and never above the weapon's own. If it does not take, the weapon takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces outright and is gone. `
-      + `The scroll is used up either way, and a weapon holds one enchantment. An ordinary melee swing that lands with a weapon holding ${e.name} `
-      + `{enchant.${e.id}.does} ${percent(enchantHitChance(e, QL_TOP))} of the time at QL ${QL_TOP}, and in proportion below; class blows, shots and throws don't. `
+      + `and never above the QL of what it goes into. If it does not take, that takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces outright and is gone. `
+      + `The scroll is used up either way, and a thing holds one enchantment. {enchant.${e.id}.does}`
+      + `${ROLLED_EFFECTS.has(e.effect) ? ' Only an ordinary melee swing that lands sets it off; class blows, shots and throws don\'t.' : ''} `
       + `A scroll that fails in the writing loses its motes, and its sheet of papyrus takes ${SCROLL_HARM} damage.`,
   };
 }

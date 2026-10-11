@@ -40,53 +40,6 @@ export const ENCHANTING = 'enchanting';
 export const PAPER_PRESS = 'paper_press';
 
 /**
- * What a melee hit with an enchanted weapon does, the share of the time it
- * does it: a burn as a Kindler's Scorch starts one, a bleed as a knife opens
- * one, or a stun (`STUN_SECS`, `fight.ts`).
- */
-export type EnchantEffect = 'burn' | 'bleed' | 'stun';
-
-export interface EnchantmentDef {
-  id: string;
-  /** What it is called, and what the name of a thing holding it carries: "Sword (Emberbrand)". */
-  name: string;
-  /** The scroll it is written on. */
-  scroll: string;
-  /** The mote it is written with. */
-  mote: string;
-  /** What a hit that lands does, now and then. */
-  effect: EnchantEffect;
-  /** The share of hits it does it on, for each point of the enchantment's quality, up to `QL_TOP`. */
-  perQl: number;
-}
-
-const row = (id: string, name: string, element: string, effect: EnchantEffect, perQl: number): EnchantmentDef =>
-  ({ id, name, scroll: `${id}_scroll`, mote: `${element}_mote`, effect, perQl });
-
-/**
- * Every enchantment there is. Emberbrand and Razoredge a quarter of their
- * quality as a percent (25% at QL 100), Concussion a tenth (10% at QL 100):
- * the owner's numbers.
- */
-export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
-  row('emberbrand', 'Emberbrand', 'fire', 'burn', 0.0025),
-  row('razoredge', 'Razoredge', 'ice', 'bleed', 0.0025),
-  row('concussion', 'Concussion', 'earth', 'stun', 0.001),
-];
-export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
-export const EMBERBRAND = 'emberbrand';
-export const RAZOREDGE = 'razoredge';
-export const CONCUSSION = 'concussion';
-/** The enchantment a scroll carries, by the scroll's item id, or undefined for anything that is not a scroll. */
-export const scrollOf = (item: string): EnchantmentDef | undefined => ENCHANTMENT_LIST.find((e) => e.scroll === item);
-
-/** What an enchanted thing carries: which enchantment, and at what quality. On the island, `item.enchant`. */
-export interface Enchant {
-  id: string;
-  ql: number;
-}
-
-/**
  * Writing a scroll. Its recipe takes `SCROLL_SHEETS` papyrus and
  * `SCROLL_MOTES` motes and rolls on enchanting at `SCROLL_DIFFICULTY`, as any
  * craft rolls -- a first-tier one, beside a loom's cloth (12) and a papyrus
@@ -103,6 +56,106 @@ export const SCROLL_DIFFICULTY = 14;
  * damage goes up by this over how many sheets are in it.
  */
 export const SCROLL_HARM = 25;
+
+/**
+ * What an enchantment does. The first five are what a hit that lands does to
+ * the creature it lands on: now and then -- a burn as a Kindler's Scorch
+ * starts one, a bleed as a knife opens one, a stun (`STUN_SECS`, `fight.ts`),
+ * venom (`VENOM_DRAIN`) -- or every time, for `drain`, which puts its next
+ * blow back. The rest are always so while the thing is in hand: a quicker
+ * swing, more critical blows, more damage to hostile monsters, and a share of
+ * every hit back as health (`leech`).
+ */
+export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech';
+/** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
+export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
+
+/** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
+export type EnchantOn = 'melee';
+/** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
+export const ON_WORDS: Record<EnchantOn, string> = {
+  melee: 'a melee weapon, not a bow or a thrown weapon',
+};
+
+export interface EnchantmentDef {
+  id: string;
+  /** What it is called, and what the name of a thing holding it carries: "Sword (Emberbrand)". */
+  name: string;
+  /** The scroll it is written on. */
+  scroll: string;
+  /** The first mote it is written with (`motes` has them all). */
+  mote: string;
+  /** Every mote it is written with, and how many of each: two of one element, or one each of two. */
+  motes: ReadonlyArray<readonly [string, number]>;
+  /** What it goes on. */
+  on: EnchantOn;
+  /** What it does. */
+  effect: EnchantEffect;
+  /**
+   * How much, for each point of the enchantment's quality, up to `QL_TOP`: the
+   * share of hits it works on for a rolled effect, and otherwise the share it
+   * changes the number it changes by.
+   */
+  perQl: number;
+}
+
+/** Two motes of one element, `SCROLL_MOTES` of them, or one each of the elements named. */
+const row = (id: string, name: string, elements: string | readonly string[], on: EnchantOn, effect: EnchantEffect, perQl: number): EnchantmentDef => {
+  const motes: Array<readonly [string, number]> = typeof elements === 'string'
+    ? [[`${elements}_mote`, SCROLL_MOTES]]
+    : elements.map((el) => [`${el}_mote`, 1] as const);
+  return { id, name, scroll: `${id}_scroll`, mote: motes[0][0], motes, on, effect, perQl };
+};
+
+/**
+ * The share for each point of quality, as the owner asked for each: a quarter
+ * of the quality as a percent is 0.0025, a tenth 0.001, a fifth 0.002, a
+ * twentieth 0.0005.
+ */
+export const EMBERBRAND_PER_QL = 0.0025;
+export const RAZOREDGE_PER_QL = 0.0025;
+export const CONCUSSION_PER_QL = 0.001;
+/** Venomfang: a hit poisons QL/4 percent of the time. */
+export const VENOMFANG_PER_QL = 0.0025;
+/** Gale: a swing takes QL/10 percent less time. */
+export const GALE_PER_QL = 0.001;
+/** Nightblade: QL/20 percentage points more chance of a critical blow. */
+export const NIGHTBLADE_PER_QL = 0.0005;
+/** Sunstrike: QL/4 percent more damage to a hostile monster. */
+export const SUNSTRIKE_PER_QL = 0.0025;
+/** Leeching: QL/10 percent of what every hit deals comes back as health. */
+export const LEECHING_PER_QL = 0.001;
+/** Tidecaller: every hit puts the creature's next blow back by QL/5 percent of the time between its blows. */
+export const TIDECALLER_PER_QL = 0.002;
+
+/**
+ * Every enchantment there is. The first three are the owner's first asks; the
+ * six after them go on a melee weapon too.
+ */
+export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
+  row('emberbrand', 'Emberbrand', 'fire', 'melee', 'burn', EMBERBRAND_PER_QL),
+  row('razoredge', 'Razoredge', 'ice', 'melee', 'bleed', RAZOREDGE_PER_QL),
+  row('concussion', 'Concussion', 'earth', 'melee', 'stun', CONCUSSION_PER_QL),
+  row('venomfang', 'Venomfang', 'life', 'melee', 'venom', VENOMFANG_PER_QL),
+  row('gale', 'Gale', 'wind', 'melee', 'swing', GALE_PER_QL),
+  row('nightblade', 'Nightblade', 'dark', 'melee', 'crit', NIGHTBLADE_PER_QL),
+  row('sunstrike', 'Sunstrike', 'light', 'melee', 'smite', SUNSTRIKE_PER_QL),
+  row('leeching', 'Leeching', ['life', 'dark'], 'melee', 'leech', LEECHING_PER_QL),
+  row('tidecaller', 'Tidecaller', 'water', 'melee', 'drain', TIDECALLER_PER_QL),
+];
+export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
+export const EMBERBRAND = 'emberbrand';
+export const RAZOREDGE = 'razoredge';
+export const CONCUSSION = 'concussion';
+/** The enchantment a scroll carries, by the scroll's item id, or undefined for anything that is not a scroll. */
+export const scrollOf = (item: string): EnchantmentDef | undefined => ENCHANTMENT_LIST.find((e) => e.scroll === item);
+
+/** What an enchanted thing carries: which enchantment, and at what quality. On the island, `item.enchant`. */
+export interface Enchant {
+  id: string;
+  ql: number;
+}
+
 
 /**
  * Putting a scroll into a weapon. It takes when a roll falls under the average
@@ -143,8 +196,13 @@ export function enchantQl(skill: number, scrollQl: number, itemQl: number, rolle
   return { ql: cap, held: itemQl < scrollQl ? 'item' : 'scroll' };
 }
 
-/** The share of hits an enchantment at this quality does what it does. */
+/**
+ * What an enchantment at this quality comes to: the share of hits it works on
+ * for a rolled effect, and otherwise the share it changes its number by.
+ */
 export const enchantHitChance = (e: EnchantmentDef, ql: number): number => Math.max(0, Math.min(QL_TOP, ql)) * e.perQl;
+/** The same, by its other name, for the ones that are not a roll. */
+export const enchantValue = enchantHitChance;
 
 /** A quality as the log says one: to the tenth. The island's `to_char(.., 'FM990.0')`. */
 export const qlWord = (ql: number): string => ql.toFixed(1);
@@ -156,12 +214,24 @@ export const enchantMarker = (e: Enchant | undefined | null): string =>
 /** Why a scroll will not go into this, or null; in the words both sides say. */
 export const ENCHANT_SAID = {
   scroll: 'Choose an enchantment scroll.',
-  weapon: 'Choose a melee weapon to enchant.',
-  notMelee: 'Only a melee weapon takes an enchantment, not a bow or a thrown weapon.',
+  weapon: 'Choose something in your pack to enchant.',
   broken: 'It is broken.',
 } as const;
+/** Why this scroll will not go into a thing of the wrong kind: "Featherstep goes on boots." */
+export const wrongKind = (e: EnchantmentDef): string => `${e.name} goes on ${ON_WORDS[e.on]}.`;
 /** Why a thing that holds an enchantment already takes no other. */
 export const alreadyEnchanted = (e: Enchant): string => `It already holds ${ENCHANTMENTS[e.id]?.name ?? e.id} at QL ${qlWord(e.ql)}.`;
+
+/**
+ * What an enchantment on what you swing makes of the swing: the share of time
+ * it takes off (Gale), the critical chance it adds (Nightblade), and the
+ * damage it adds against a hostile monster (Sunstrike). Nothing for one that
+ * does none of these. The island's `enchant_of`.
+ */
+export const swingEnchant = (item: { enchant?: Enchant } | null | undefined, effect: EnchantEffect): number => {
+  const e = item?.enchant && ENCHANTMENTS[item.enchant.id];
+  return e && item?.enchant && e.effect === effect ? enchantValue(e, item.enchant.ql) : 0;
+};
 
 /** A share as Examine says it: the island's `enchant_pct`. */
 export const enchantPct = (x: number): string => percent(x);

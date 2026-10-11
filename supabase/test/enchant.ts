@@ -31,7 +31,7 @@ import { itemName, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID, STATION_NAME, scrollHarmSaid } from '../../src/game/recipes';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, enchantChance, enchantHitChance, ENCHANTMENT_LIST,
-  ENCHANTMENTS, enchantQl, qlWord, SCROLL_HARM, SCROLL_MOTES, type EnchantmentDef,
+  ENCHANTMENTS, enchantQl, qlWord, SCROLL_HARM, SCROLL_MOTES, wrongKind, type EnchantmentDef,
 } from '../../src/game/enchant';
 import {
   BRAND_SPELL, craftSpread, EFFECT_HEAD, ENCHANT_BURN, enchantedSaid, enchantHitSaid, enchantRoll, enchantSays, MELEE_WEAPONS, notTakenSaid, stun,
@@ -343,7 +343,8 @@ begin
   delete from placed where id = v_pl;
 
   -- 9. Each enchantment on a hit at QL ${HIT_QL}: a roll just over its chance does nothing; just under, it does.
-  for v_e in select * from enchantments() order by ord loop
+  -- The first three, each a roll on a hit; enchant2.ts has the rest.
+  for v_e in select * from enchantments() where effect in ('burn', 'bleed', 'stun') order by ord loop
     insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
       values (w, 9100 + v_e.ord, 'shaggan', 'Shaggan', 'wild', 30.5, 30.5, 30.5, 30.5, 90, 'female');
     update item set enchant = jsonb_build_object('id', v_e.id, 'ql', ${HIT_QL}) where id = v_sw;
@@ -613,7 +614,7 @@ const maul = thing('maul', 50, 0, 'Iron');
 maul.enchant = { id: 'razoredge', ql: 41.3 };
 here.held = ask(maul.uid, scroll.uid);
 here.none = ask(sword.uid, scroll.uid);
-for (const [k, want] of [['scroll', ENCHANT_SAID.scroll], ['weapon', ENCHANT_SAID.weapon], ['bow', ENCHANT_SAID.notMelee], ['javelin', ENCHANT_SAID.notMelee],
+for (const [k, want] of [['scroll', ENCHANT_SAID.scroll], ['weapon', ENCHANT_SAID.weapon], ['bow', wrongKind(EMBER)], ['javelin', wrongKind(EMBER)],
   ['broken', ENCHANT_SAID.broken], ['held', alreadyEnchanted({ id: 'razoredge', ql: 41.3 })], ['none', 'none']] as Array<[string, string]>) {
   check(`Enchant is refused in the same words on both sides: ${want}`, isle.get(`R:${k}`) === want && here[k] === want, `island ${isle.get(`R:${k}`)}, browser ${here[k]}`);
 }
@@ -698,7 +699,7 @@ const spawn = (x: number, y: number) => {
   c.health = 90;
   return c;
 };
-for (const e of ENCHANTMENT_LIST) {
+for (const e of [EMBER, RAZOR, CONC]) {
   const c = spawn(30.5, 30.5);
   const blade = thing('sword', 50, 0, 'Iron');
   blade.enchant = { id: e.id, ql: HIT_QL };

@@ -137,9 +137,9 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, enchantHitChance, ENCHANTMENT_LIST, SCROLL_HARM,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM,
 } from '../../game/enchant';
-import { BRAND_SPELL, EFFECT_HEAD, EFFECT_TAIL, meleeNames } from '../../game/enchanting';
+import { BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
@@ -217,17 +217,17 @@ function enchantingHelp(): string {
       holds (${BRAND_SPELL.fx.secs} seconds), ${percent(linger.fx['burn:secs'] - 1)} longer with ${linger.name}, and takes
       ${percent(sear.fx['burn:rate'] - 1)} more a second with ${sear.name}.`
     : '';
-  const rows = ENCHANTMENT_LIST.map((e) => `<li><b>${e.name}</b> &mdash; ${bill(`make_${e.scroll}`)}: a hit ${EFFECT_HEAD[e.effect]}
-      ${percent(enchantHitChance(e, ENCHANT_TOP))} of the time at QL ${ENCHANT_TOP}, and in proportion below (${percent(enchantHitChance(e, ENCHANT_TOP / 2))} at QL ${ENCHANT_TOP / 2}).
-      ${EFFECT_TAIL[e.effect]}${e.effect === 'burn' ? kindled : ''}</li>`).join('');
+  const rows = ENCHANTMENT_LIST.map((e) => `<li><b>${e.name}</b> &mdash; ${bill(`make_${e.scroll}`)}; goes on ${ON_WORDS[e.on]}.
+      At QL ${ENCHANT_TOP}, ${enchantLineAt(e, ENCHANT_TOP)} In proportion below: at QL ${ENCHANT_TOP / 2}, ${enchantLineAt(e, ENCHANT_TOP / 2)}
+      ${e.effect === 'burn' ? kindled : ''}</li>`).join('');
   const first = ENCHANTMENT_LIST[0];
   return `<p><b>Scrolls</b> are written at the crafting window with <b>enchanting</b>, one to each enchantment, at ${workedAt(`make_${first.scroll}`)}.
     A scroll comes out at the quality any craft's roll makes, and never better than the sheet of papyrus it is written on. One that
     fails loses its motes, and the sheet takes ${SCROLL_HARM} damage (as one sheet of its pile: the pile's damage rises by that over
     its sheets); a sheet that would reach ${BROKEN_AT} is used up instead.</p>
     <ul>${rows}</ul>
-    <p>Choose <b>Enchant</b> on a scroll in your pack and pick a melee weapon in your pack (${meleeNames()}; not a bow or a thrown
-    weapon). It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
+    <p>Choose <b>Enchant</b> on a scroll in your pack and pick what it goes on, in your pack: a melee weapon is ${meleeNames()},
+    not a bow or a thrown weapon. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
     ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}
     (${pts.map(([sk, q]) => `${percent(enchantChance(sk, q))} at enchanting ${sk} with a QL ${q} scroll`).join('; ')}).
     What took comes out at that average times ${QL_LOW} to ${Number((QL_LOW + QL_SPAN).toFixed(2))}, plus ${QL_BARE}, as any craft's quality is
@@ -239,7 +239,13 @@ function enchantingHelp(): string {
     <p>A <b>stun</b> lasts ${STUN_SECS} seconds, on a creature: it neither moves, fleeing included, nor strikes, and a heavy
     blow it was drawing back for is lost. A stun on one already stunned starts again rather
     than adding on. The target panel says "stunned" while it lasts.
-    Only an ordinary melee swing that lands can set off an enchantment; class blows, shots and throws don't.</p>`;
+    Only an ordinary melee swing that lands can set off an enchantment that works on a hit (${listed(ENCHANTMENT_LIST.filter((e) => ROLLED_EFFECTS.has(e.effect) || e.effect === 'leech' || e.effect === 'drain').map((e) => e.name))});
+    class blows, shots and throws don't. ${listed(ENCHANTMENT_LIST.filter((e) => e.effect === 'swing' || e.effect === 'crit' || e.effect === 'smite').map((e) => e.name))}
+    are the weapon's own and count on every blow with it.</p>
+    <p>How they add up with the rest: Gale's share comes off a swing's time after everything else that changes it (tired or wounded arms,
+    a Berserker's Wild Strength or Adrenaline), multiplying with them. Nightblade's share is added to your chance of a critical blow,
+    on top of your skill and a Skirmisher's Keen Edge. Sunstrike's share multiplies with every other change to a blow's damage; the hostile monsters are ${monsterNames()}.
+    Leeching's health comes on top of a Berserker's Thirst for Blood.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

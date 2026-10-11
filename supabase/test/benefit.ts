@@ -362,11 +362,12 @@ check('and none left in the journal', goalsLeft.length === 0, goalsLeft.join(' '
 /*
  * What the island reads. The definitions dump carries every item's text into
  * `item_def`, and a placeholder a module never filled would reach every
- * examine line on every island. `{n}` and `{t}` are the spell lines' own and
- * `{food}` a refused taming's, filled by the island when it says them.
+ * examine line on every island. `{n}` and `{t}` are the spell lines' own,
+ * `{food}` a refused taming's and `{v}` an enchantment's figure at its quality
+ * (`enchant_line`), filled by the island when it says them.
  */
 const state = readFileSync('supabase/defs-state.sql', 'utf8');
-const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}']);
+const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}']);
 const unfilled = [...state.matchAll(PLACEHOLDER)].map((m) => m[0]).filter((p) => !ISLANDS_OWN.has(p));
 check('the definitions the island reads have no placeholder in them', unfilled.length === 0, [...new Set(unfilled)].join(' '));
 

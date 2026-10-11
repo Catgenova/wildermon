@@ -12,16 +12,17 @@
  * words; `supabase/test/enchant.ts` holds the two to each other.
  */
 import type { ActionDef, Target } from './actions';
-import type { Creature } from './creatures';
+import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from './creatures';
 import { QL_BARE, QL_LOW, QL_SPAN, type Game } from './game';
 import { describeWith, itemDef, itemName, type Item } from './items';
 import { WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
-import { KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS } from './fight';
-import { DAMAGE_MAX } from './limits';
+import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
+import { DAMAGE_MAX, QL_TOP } from './limits';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, qlWord, scrollOf, type EnchantEffect, type EnchantHeld, type EnchantmentDef,
+  enchantChance, enchantHitChance, enchantPct, enchantQl, enchantValue, qlWord, ROLLED_EFFECTS, scrollOf, wrongKind,
+  type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
 
@@ -48,44 +49,78 @@ export const ENCHANT_BURN = { each: SCORCH?.fx.each ?? 0, secs: SCORCH?.fx.secs 
 /** The Kindler's Firebrand spell (not this enchantment): while it holds, every burn its caster starts lasts `long` times as long. */
 export const BRAND_SPELL = CLASS_SPELLS.find((s) => s.id === 'kindler_firebrand');
 
-/** What a hit does, as Examine's line begins it: "sets the target burning". */
-export const EFFECT_HEAD: Record<EnchantEffect, string> = {
+/** What a rolled hit does, as Examine's line begins it: "sets the target burning". */
+export const EFFECT_HEAD: Partial<Record<EnchantEffect, string>> = {
   burn: 'sets the target burning',
   bleed: 'opens a bleed on the target',
   stun: `stuns the target for ${STUN_SECS} seconds`,
+  venom: 'puts venom in the target',
 };
 /** And what that is, after it: the rule it borrows, in its numbers. */
-export const EFFECT_TAIL: Record<EnchantEffect, string> = {
+export const EFFECT_TAIL: Partial<Record<EnchantEffect, string>> = {
   burn: `A burn takes ${enchantPct(ENCHANT_BURN.each)} of its full health a second for ${ENCHANT_BURN.secs} seconds, never the last of it.`,
   bleed: `A bleed takes ${enchantPct(KNIFE_BLEED)} of the blow a second for ${KNIFE_BLEED_SECS} seconds, never the last of it, as a knife's does.`,
   stun: 'Stunned, it neither moves nor strikes; a stun on one already stunned starts again rather than adding to it.',
+  venom: `Venom takes ${enchantPct(VENOM_DRAIN)} of its full health a second for ${VENOM_SECS} seconds, never the last of it, as a venomous bite's does on you.`,
 };
 /** And what the log says when it does it, `{t}` the creature: "Your Emberbrand sets the boar burning." */
-export const EFFECT_SAID: Record<EnchantEffect, string> = {
+export const EFFECT_SAID: Partial<Record<EnchantEffect, string>> = {
   burn: 'sets the {t} burning.',
   bleed: 'opens the {t} up, and it bleeds.',
   stun: `stuns the {t} for ${STUN_SECS} seconds.`,
+  venom: 'puts venom in the {t}.',
 };
+
+/** Every hostile monster, by name, for what Sunstrike is harder on. */
+export const monsterNames = (): string => listed(Object.values(SPECIES).filter((d) => d.monster).map((d) => `${d.name.toLowerCase()}s`));
+
+/**
+ * What an enchantment does at a quality, as Examine says it after "Gale at QL
+ * 40.0: ", with `{v}` where the figure goes -- the share of hits, or the
+ * share its number changes by. The island's `enchant_line`, crossed in the
+ * defs; `enchantSays` and `enchant_says` put the figure in.
+ */
+export function enchantLine(e: EnchantmentDef): string {
+  switch (e.effect) {
+    case 'burn': case 'bleed': case 'stun': case 'venom':
+      return `a hit ${EFFECT_HEAD[e.effect]} {v} of the time. ${EFFECT_TAIL[e.effect]}`;
+    case 'swing': return 'a swing with it takes {v} less time.';
+    case 'crit': return '{v} more of its blows that land are critical: that much is added to your chance.';
+    case 'smite': return 'a blow with it does {v} more damage to a hostile monster, one that cannot be tamed.';
+    case 'leech':
+      return `every hit with it that lands and leaves the creature standing gives you back {v} of the damage it deals as health, each point of it worth ${enchantPct(BLOW_SHARE)} of your health, as a creature's blow is.`;
+    case 'drain':
+      return 'every hit with it that lands puts the creature\'s next blow back by {v} of the time between its blows.';
+  }
+}
+/** That line with its figure at this quality. */
+export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e).replace('{v}', enchantPct(enchantValue(e, ql)));
 
 /** Examine's line for a thing holding an enchantment, or nothing. */
 export function enchantSays(item: Pick<Item, 'enchant'>): string {
   const e = item.enchant && ENCHANTMENTS[item.enchant.id];
   if (!e || !item.enchant) return '';
-  const ql = item.enchant.ql;
-  return ` ${e.name} at QL ${qlWord(ql)}: a hit ${EFFECT_HEAD[e.effect]} ${enchantPct(enchantHitChance(e, ql))} of the time. ${EFFECT_TAIL[e.effect]}`;
+  return ` ${e.name} at QL ${qlWord(item.enchant.ql)}: ${enchantLineAt(e, item.enchant.ql)}`;
 }
 
-// What each scroll says a hit does, off the rule it borrows.
+// What each scroll says it does: its line at the top of the scale, and in proportion below.
 describeWith({
   enchant: Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, {
-    does: e.effect === 'burn' ? `sets what it lands on burning, ${enchantPct(ENCHANT_BURN.each)} of its full health a second for ${ENCHANT_BURN.secs} seconds, never the last of it,`
-      : e.effect === 'bleed' ? `opens a bleed on what it lands on, ${enchantPct(KNIFE_BLEED)} of the blow a second for ${KNIFE_BLEED_SECS} seconds, never the last of it,`
-        : `stuns what it lands on for ${STUN_SECS} seconds, in which it neither moves nor strikes,`,
+    does: `At QL ${QL_TOP}, ${enchantLineAt(e, QL_TOP)} In proportion below.`,
   }])),
 });
 
 /** What the help lists as what an enchantment goes into. */
 export const meleeNames = (): string => listed(MELEE_WEAPONS.map((id) => itemDef(id).name.toLowerCase()));
+
+/** Whether a thing of this kind takes an enchantment that goes on this. The island's `enchant_fits`, generated from this. */
+export const fitsOn = (on: EnchantOn, id: string): boolean => {
+  switch (on) {
+    case 'melee': return isMelee(id);
+  }
+};
+/** Every item id each kind of enchantment goes on, for the help and the island. */
+export const FITS: Record<EnchantOn, string[]> = { melee: MELEE_WEAPONS };
 
 /* ---- the Enchant job ------------------------------------------------------ */
 
@@ -96,14 +131,14 @@ export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: 
   if (!scroll || !e) return { why: ENCHANT_SAID.scroll };
   const weapon = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
   if (!weapon) return { why: ENCHANT_SAID.weapon };
-  if (!isMelee(weapon.id)) return { why: ENCHANT_SAID.notMelee };
+  if (!fitsOn(e.on, weapon.id)) return { why: wrongKind(e) };
   if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
   if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
   return { scroll, weapon, e };
 }
 
-/** What may take a scroll, of what is in the pack: every melee weapon. */
-export const enchantable = (g: Game): Item[] => g.inventory.items.filter((it) => isMelee(it.id));
+/** What may take this scroll, of what is in the pack: everything of the kind it goes on. */
+export const enchantable = (g: Game, e: EnchantmentDef): Item[] => g.inventory.items.filter((it) => fitsOn(e.on, it.id));
 
 /** The spread every craft's quality is rolled with (`Game.productQl` with no tool), about a figure rather than a skill. */
 export const craftSpread = (base: number, r: number): number => base * (QL_LOW + r * QL_SPAN) + QL_BARE;
@@ -177,19 +212,65 @@ export const ENCHANT_ACTIONS: ActionDef[] = [
 /* ---- a hit ---------------------------------------------------------------- */
 
 /**
- * The enchantment on what a hit that landed was struck with, when its roll
- * comes up this time, or null. Asked once a landed melee hit is done with,
- * of a creature still alive; the island's `enchant_hit` asks the same.
+ * The enchantment on what a hit that landed was struck with, when it works
+ * this time, or null: a rolled one when its roll comes up, and Leeching and
+ * Tidecaller every time. Asked once a landed melee hit is done with, of a
+ * creature still alive; the island's `enchant_hit` asks the same. A rolled
+ * one takes a roll and the others none, on both sides.
  */
 export function enchantRoll(g: Game, item: Item | null | undefined, c: Creature): EnchantmentDef | null {
   const e = item?.enchant && ENCHANTMENTS[item.enchant.id];
   if (!e || !item?.enchant || c.health <= 0) return null;
+  if (e.effect === 'leech' || e.effect === 'drain') return e;
+  if (!ROLLED_EFFECTS.has(e.effect)) return null;
   return g.rand() < enchantHitChance(e, item.enchant.ql) ? e : null;
 }
 
-/** "Your Concussion stuns the boar for 2 seconds." */
+/** "Your Concussion stuns the boar for 2 seconds." Nothing for one that works every time, which would say so on every swing. */
 export const enchantHitSaid = (e: EnchantmentDef, creature: string): string =>
-  `Your ${e.name} ${EFFECT_SAID[e.effect].replace('{t}', creature)}`;
+  (EFFECT_SAID[e.effect] ? `Your ${e.name} ${EFFECT_SAID[e.effect]!.replace('{t}', creature)}` : '');
+
+/**
+ * Venom in a creature, as the island's `enchant_venom`: a bleed of
+ * `VENOM_DRAIN` of its full health a second for `VENOM_SECS`, the stronger of
+ * it and any bleed already running, to the later end, never the last of its
+ * health. A creature has no wounds to hold venom as you do; its bleed is the
+ * one hurt that runs on in it, so that is where it goes.
+ */
+export function venom(g: Game, c: Creature): void {
+  if (c.health <= 0) return;
+  const rate = maxHealth(c, SPECIES[c.species]) * VENOM_DRAIN;
+  const running = c.bleedUntil > g.time;
+  c.bleedRate = running ? Math.max(c.bleedRate, rate) : rate;
+  if (!running) c.bleedFrom = g.time;
+  c.bleedUntil = Math.max(running ? c.bleedUntil : 0, g.time + VENOM_SECS);
+}
+
+/** Leeching: this much of what a hit dealt back as your health, at what a creature's blow of that size takes (`BLOW_SHARE`). The island's `enchant_leech`. */
+export const leechHeal = (e: EnchantmentDef, ql: number, dealt: number): number => Math.max(0, dealt) * enchantValue(e, ql) * BLOW_SHARE;
+/** Tidecaller: how many seconds its next blow is put back, a share of the time between its blows. The island's `enchant_drain`. */
+export const drainSecs = (e: EnchantmentDef, ql: number, c: Creature): number => blowEvery(SPECIES[c.species]) * enchantValue(e, ql);
+
+/**
+ * What an enchantment that works does, once a landed hit of `dealt` is done
+ * with. The burn, the bleed and the stun are the swing's own (`Game.burn`,
+ * `sideBlow`, `stun`), handed in, as the island's `enchant_hit` calls its own.
+ */
+export function enchantWorks(g: Game, e: EnchantmentDef, ql: number, c: Creature, dealt: number,
+  own: { burn: () => void; bleed: () => void }): void {
+  switch (e.effect) {
+    case 'burn': own.burn(); break;
+    case 'bleed': own.bleed(); break;
+    case 'stun': stun(g, c); break;
+    case 'venom': venom(g, c); break;
+    case 'leech': g.player.stats.health = Math.min(1, g.player.stats.health + leechHeal(e, ql, dealt)); break;
+    case 'drain': c.cooldown = Math.max(0, c.cooldown) + drainSecs(e, ql, c); break;
+    default: break;
+  }
+  const said = enchantHitSaid(e, SPECIES[c.species]?.name.toLowerCase() ?? 'thing');
+  if (said) g.logMsg(said, 'fight');
+}
+
 
 /**
  * A stun: for `STUN_SECS` from now it neither moves nor strikes, and a heavy

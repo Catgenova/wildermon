@@ -1,5 +1,6 @@
 import { DARK_SHOT, DARK_SWING, tryGain } from './learn';
-import { ENCHANT_BURN, enchantHitSaid, enchantRoll, stun } from './enchanting';
+import { ENCHANT_BURN, enchantRoll, enchantWorks } from './enchanting';
+import { swingEnchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
@@ -153,7 +154,9 @@ export function classDealt(g: Game, c: Creature): number {
   return (c.health < maxHealth(c, def) * g.perk('finish:below', 0) ? g.perk('finish:dmg', 1) : 1)
     * (health < g.perk('pain:deep', 0) ? g.perk('pain:deeper', 1) : health < g.perk('pain:below', 0) ? g.perk('pain:dmg', 1) : 1)
     * (def.monster ? g.perk('monster:dmg', 1) : 1)
-    * (d <= meleeReach(g) && d > beastReach(def) ? g.perk('gap:dmg', 1) : 1);
+    * (d <= meleeReach(g) && d > beastReach(def) ? g.perk('gap:dmg', 1) : 1)
+    // And harder on a hostile monster for a Sunstrike in what you swing (`enchant_of`).
+    * (def.monster ? 1 + swingEnchant(swungWith(g).item, 'smite') : 1);
 }
 
 /**
@@ -610,13 +613,17 @@ export const CREATURE_ACTIONS: ActionDef[] = [
        * swinging or not.
        */
       g.creatures.engage(g, c);
-      // And what is enchanted into the weapon, now and then, on a hit that landed (`enchanting.ts`): a burn, a bleed, a stun.
+      /*
+       * And what is enchanted into the weapon, on a hit that landed
+       * (`enchanting.ts`): now and then a burn, a bleed, a stun or venom, and
+       * every time a Leeching's share back or a Tidecaller's put-back blow.
+       */
       const e = landed ? enchantRoll(g, item, c) : null;
-      if (e) {
-        if (e.effect === 'burn') g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs);
-        else if (e.effect === 'bleed') sideBlow(g, c, 'knives', dealt);
-        else stun(g, c);
-        g.logMsg(enchantHitSaid(e, def.name.toLowerCase()), 'fight');
+      if (e && item?.enchant) {
+        enchantWorks(g, e, item.enchant.ql, c, dealt, {
+          burn: () => g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs),
+          bleed: () => sideBlow(g, c, 'knives', dealt),
+        });
       }
       // Keep swinging while it is still within reach.
       return Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
