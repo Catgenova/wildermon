@@ -114,7 +114,7 @@ export type Target =
        */
       down?: boolean;
     }
-  | { kind: 'crate'; id: number }
+  | { kind: 'crate'; id: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   /** Somebody else on the island, by who they are (anybody dressing their wounds). */
   | { kind: 'person'; uid: string; name?: string }
   | { kind: 'campfire'; id: number; itemUid?: number; count?: number }

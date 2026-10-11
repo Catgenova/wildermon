@@ -1745,6 +1745,16 @@ export const NEWS: News[] = [
         ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       ];
     },
+  },  {
+    n: 128,
+    day: '2026-10-11',
+    lines: () => {
+      const four = ['fair_wind', 'deep_hold', 'true_axle', 'bag_of_holding'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Four for what carries and holds: ${listed(four.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. A crate takes one where it stands too.`,
+        ...four.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
   },
 ];
 

@@ -22,9 +22,11 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
-import type { Item } from '../../src/game/items';
+import { bagRoom, type Item } from '../../src/game/items';
+import { furnitureCapacity, liquidCapacity } from '../../src/game/furniture';
+import { crateCapacity } from '../../src/game/crates';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { alreadyEnchanted, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
 import { DAMAGE_MAX } from '../../src/game/limits';
 import { enchantSays } from '../../src/game/enchanting';
 import { knackChance } from '../../src/game/titles';
@@ -57,8 +59,9 @@ const [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL] = ['scholars_band', 'knacks
 const JEWEL = [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL];
 const [MULE, SEAL, HAWK] = ['packmule', 'seals_coat', 'hawks_eye'].map(E);
 const [EMBER, MASTER] = ['ember_heart', 'masterwork'].map(E);
+const [WIND, DEEP, AXLE, BAG] = ['fair_wind', 'deep_hold', 'true_axle', 'bag_of_holding'].map(E);
 /** Everything part 3 has added so far, for the scrolls and the words. */
-const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER];
+const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER, WIND, DEEP, AXLE, BAG];
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
@@ -107,6 +110,7 @@ end $f$;
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_ring bigint; v_pend bigint; v_s bigint; v_altar bigint; v_at jsonb; c0 double precision;
         v_pack bigint; v_chest bigint; v_cap bigint; v_sm bigint; v_sm2 bigint; v_anv bigint; v_loom bigint; v_back bigint;
+        v_boat bigint; v_ship bigint; v_wagon bigint; v_chestp bigint; v_barrel bigint; v_cart bigint; v_bag bigint; v_crate int; v_q double precision;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 3', 318, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -264,6 +268,62 @@ begin
   insert into said values ('MASTERSRC', (pg_get_functiondef('perform_craft(uuid, uuid, text, jsonb)'::regprocedure) like '%+ station_master(p_world, p_uid, r.station)%')::text
     || '|' || ((length(pg_get_functiondef('perform_forge(uuid, uuid, text, jsonb)'::regprocedure))
                 - length(replace(pg_get_functiondef('perform_forge(uuid, uuid, text, jsonb)'::regprocedure), '+ placed_enchant(p, ''master'')', ''))) / length('+ placed_enchant(p, ''master'')'))::text);
+
+  -- 9. Fair Wind, Deep Hold, True Axle and Bag of Holding: the refusals, and what each holds at QL 50 and 100.
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'rowing_boat', 30, 30, 30.5, 30.5, 50) returning id into v_boat;
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'sailing_boat', 30, 33, 30.5, 33.5, 50) returning id into v_ship;
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'wagon', 33, 30, 33.5, 30.5, 50) returning id into v_wagon;
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'chest', 33, 33, 33.5, 33.5, 50) returning id into v_chestp;
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'barrel', 36, 30, 36.5, 30.5, 50) returning id into v_barrel;
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'cart', 36, 33, 36.5, 33.5, 50) returning id into v_cart;
+  v_bag := give(w, u, 'satchel', 1, 50);
+  update player set x = 30.5, y = 31.5 where world_id = w and uid = u;
+  v_s := give(w, u, 'fair_wind_scroll', 1, 90);
+  insert into said values ('R:windrow', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_boat, 'scroll', v_s)), 'none'));
+  insert into said values ('R:windship', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_ship, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'deep_hold_scroll', 1, 90);
+  insert into said values ('R:deeprow', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_boat, 'scroll', v_s)), 'none'));
+  update player set x = 33.5, y = 31.5 where world_id = w and uid = u;
+  insert into said values ('R:deepwagon', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_wagon, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'true_axle_scroll', 1, 90);
+  insert into said values ('R:axlewagon', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_wagon, 'scroll', v_s)), 'none'));
+  insert into said values ('R:axlechest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_chestp, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'bag_of_holding_scroll', 1, 90);
+  insert into said values ('R:bagchest', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_chestp, 'scroll', v_s)), 'none'));
+  insert into said values ('R:bagsatchel', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_bag, 'scroll', v_s)), 'none'));
+  update placed set enchant = '{"id": "deep_hold", "ql": 60}'::jsonb where id = v_boat;
+  update player set x = 30.5, y = 31.5 where world_id = w and uid = u;
+  insert into said values ('R:bagheld', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_boat, 'scroll', v_s)), 'none'));
+  update placed set enchant = null where id = v_boat;
+  -- Plain, then at QL 50 and 100.
+  insert into said select 'ROOM0', (select furniture_capacity(p) from placed p where id = v_boat) || '|' || (select furniture_capacity(p) from placed p where id = v_wagon)
+    || '|' || (select furniture_capacity(p) from placed p where id = v_chestp) || '|' || (select liquid_capacity(p) from placed p where id = v_barrel)
+    || '|' || (select furniture_capacity(p) from placed p where id = v_cart) || '|' || (select bag_room(i) from item i where id = v_bag);
+  foreach v_q in array array[50, 100]::float8[] loop
+    update placed set enchant = jsonb_build_object('id', 'deep_hold', 'ql', v_q) where id = v_boat;
+    update placed set enchant = jsonb_build_object('id', 'true_axle', 'ql', v_q) where id = v_wagon;
+    update placed set enchant = jsonb_build_object('id', 'bag_of_holding', 'ql', v_q) where id in (v_chestp, v_barrel, v_cart);
+    update item set enchant = jsonb_build_object('id', 'bag_of_holding', 'ql', v_q) where id = v_bag;
+    insert into said select 'ROOM' || v_q::int, (select furniture_capacity(p) from placed p where id = v_boat) || '|' || (select furniture_capacity(p) from placed p where id = v_wagon)
+      || '|' || (select furniture_capacity(p) from placed p where id = v_chestp) || '|' || (select liquid_capacity(p) from placed p where id = v_barrel)
+      || '|' || (select furniture_capacity(p) from placed p where id = v_cart) || '|' || (select bag_room(i) from item i where id = v_bag);
+  end loop;
+  insert into said values ('SAILSRC', (pg_get_functiondef('travel_speed(uuid, uuid)'::regprocedure) like '%* (1 + placed_enchant(p, ''sail''))%')::text);
+  -- A crate: enchanted where it stands, what it holds, and up into the pack and down again.
+  select coalesce(max(id), 0) + 1 into v_crate from crate where world_id = w;
+  insert into crate (world_id, id, kind, x, y, sx, sy, made_by, ql) values (w, v_crate, 'plank', 30, 36, 1, 1, u, 50);
+  update player set x = 30.5, y = 35.5 where world_id = w and uid = u;
+  insert into said select 'CRATE0', crate_capacity(c)::text from crate c where world_id = w and id = v_crate;
+  v_s := give(w, u, 'bag_of_holding_scroll', 1, 90);
+  perform pg_temp.dice('0.01,0.5');
+  perform perform_enchant(w, u, jsonb_build_object('kind', 'crate', 'id', v_crate, 'scroll', v_s));
+  perform pg_temp.nodice();
+  insert into said select 'CRATE', (c.enchant->>'ql') || '|' || crate_capacity(c) || '|' || ${lastSaid} from crate c where world_id = w and id = v_crate;
+  perform perform_crate(w, u, 'pick_up_crate', jsonb_build_object('kind', 'crate', 'id', v_crate));
+  select i.id into v_back from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'crate_plank';
+  insert into said select 'CRATEUP', coalesce(i.enchant->>'id', 'none') from item i where i.id = v_back;
+  perform perform_crate(w, u, 'place_crate', jsonb_build_object('kind', 'tile', 'x', 30, 'y', 36, 'sx', 1, 'sy', 1, 'itemUid', v_back));
+  insert into said select 'CRATEDOWN', coalesce(c.enchant->>'id', 'none') from crate c where world_id = w and c.x = 30 and c.y = 36;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -452,6 +512,62 @@ loom.enchant = { id: MASTER.id, ql: 60 };
 check(`a Masterwork at QL 60 on a loom adds ${enchantValue(MASTER, 60)} to the quality of what is made at it, and nothing at a fire, on both sides; the island's craft and forge add it`,
   near(g.masterAt('loom'), enchantValue(MASTER, 60)) && g.masterAt('campfire') === 0 && near(num('MASTER', 0), enchantValue(MASTER, 60)) && num('MASTER', 1) === 0
     && isle.get('MASTERSRC') === 'true|2', `${isle.get('MASTER')} ${isle.get('MASTERSRC')} / ${g.masterAt('loom')}`);
+
+/* 9. Fair Wind, Deep Hold, True Axle and Bag of Holding. */
+const boat = g.addFurniture('rowing_boat', 30, 30, 0, 0, 50);
+const ship = g.addFurniture('sailing_boat', 30, 33, 0, 0, 50);
+const wagon = g.addFurniture('wagon', 33, 30, 0, 0, 50);
+const chestP = g.addFurniture('chest', 33, 33, 0, 0, 50);
+const barrel = g.addFurniture('barrel', 36, 30, 0, 0, 50);
+const cart = g.addFurniture('cart', 36, 33, 0, 0, 50);
+const satchel = thing('satchel', 50);
+const at = (x: number, y: number): void => g.putBody(x, y, 0);
+const fu = (f: { id: number }): Target => ({ kind: 'furniture', id: f.id });
+at(30.5, 31.5);
+const roomRefusals: Array<[string, string, string]> = [
+  ['R:windrow', placedAsk(WIND, fu(boat)), wrongKind(WIND)], ['R:windship', placedAsk(WIND, fu(ship)), 'none'],
+  ['R:deeprow', placedAsk(DEEP, fu(boat)), 'none'],
+];
+at(33.5, 31.5);
+roomRefusals.push(['R:deepwagon', placedAsk(DEEP, fu(wagon)), wrongKind(DEEP)], ['R:axlewagon', placedAsk(AXLE, fu(wagon)), 'none'],
+  ['R:axlechest', placedAsk(AXLE, fu(chestP)), wrongKind(AXLE)], ['R:bagchest', placedAsk(BAG, fu(chestP)), 'none'],
+  ['R:bagsatchel', askWith(BAG, satchel.uid), 'none']);
+boat.enchant = { id: DEEP.id, ql: 60 };
+at(30.5, 31.5);
+roomRefusals.push(['R:bagheld', placedAsk(BAG, fu(boat)), alreadyEnchanted({ id: DEEP.id, ql: 60 })]);
+delete boat.enchant;
+check(`Fair Wind goes on ${ON_WORDS.ship}, Deep Hold on ${ON_WORDS.hull}, True Axle on ${ON_WORDS.cart} and Bag of Holding on ${ON_WORDS.store}: each refused elsewhere, and one already holding an enchantment says which, on both sides`,
+  roomRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
+  roomRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+const rooms = (): string => [furnitureCapacity(boat), furnitureCapacity(wagon), furnitureCapacity(chestP), liquidCapacity(barrel), furnitureCapacity(cart), bagRoom(satchel)].join('|');
+const room0 = rooms();
+const roomAt: Record<number, string> = {};
+for (const q of [50, 100]) {
+  boat.enchant = { id: DEEP.id, ql: q };
+  wagon.enchant = { id: AXLE.id, ql: q };
+  for (const f of [chestP, barrel, cart]) f.enchant = { id: BAG.id, ql: q };
+  satchel.enchant = { id: BAG.id, ql: q };
+  roomAt[q] = rooms();
+}
+const base = room0.split('|').map(Number);
+const want = (q: number): number[] => base.map((n, i) => Math.round(n * (1 + enchantValue(i === 0 ? DEEP : i === 1 ? AXLE : BAG, q))));
+check(`what each holds, plain and at QL 50 and 100, the same on both sides: Deep Hold and True Axle ${enchantValue(DEEP, 100) * 100}% more at QL 100, a Bag of Holding ${1 + enchantValue(BAG, 100)} times as much on a chest, a barrel's litres, a cart and a satchel`,
+  isle.get('ROOM0') === room0 && isle.get('ROOM50') === roomAt[50] && isle.get('ROOM100') === roomAt[100]
+    && roomAt[100] === want(100).join('|') && roomAt[50] === want(50).join('|'),
+  `${isle.get('ROOM0')} ${isle.get('ROOM50')} ${isle.get('ROOM100')} / ${room0} ${roomAt[50]} ${roomAt[100]} / ${want(50).join('|')} ${want(100).join('|')}`);
+const sail0 = g.boatSpeed(ship);
+ship.enchant = { id: WIND.id, ql: 100 };
+const sail = g.boatSpeed(ship);
+check(`a Fair Wind at QL 100 on a sailing boat: ${enchantValue(WIND, 100) * 100}% faster under sail, in the browser and in the island's travel_speed`,
+  sail0 > 0 && near(sail / sail0, 1 + enchantValue(WIND, 100)) && isle.get('SAILSRC') === 'true', `${sail0} ${sail} ${isle.get('SAILSRC')}`);
+const crateP = g.addCrate('plank', 30, 36, 1, 1, [], false, undefined, 50);
+at(30.5, 35.5);
+const crate0 = crateCapacity(crateP);
+const crateSaid = placedGo(BAG, { kind: 'crate', id: crateP.id }, 0.01, 0.5);
+check('a crate takes a Bag of Holding where it stands, the same quality and words and what it then holds on both sides, and keeps it through being picked up and set down on the island',
+  isle.get('CRATE0') === String(crate0) && near(crateP.enchant?.ql ?? -1, num('CRATE', 0)) && part('CRATE', 1) === String(crateCapacity(crateP))
+    && crateSaid === part('CRATE', 2) && isle.get('CRATEUP') === BAG.id && isle.get('CRATEDOWN') === BAG.id,
+  `${isle.get('CRATE0')} ${isle.get('CRATE')} ${isle.get('CRATEUP')} ${isle.get('CRATEDOWN')} / ${crate0} ${crateP.enchant?.ql} ${crateCapacity(crateP)} ${crateSaid}`);
 
 check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => PART3.includes(e)).length === PART3.length);
 

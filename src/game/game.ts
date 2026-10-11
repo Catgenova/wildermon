@@ -23,7 +23,7 @@ import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
 import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, type BuildingsJSON, type Building, type Wall, type Side } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
-import { crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
+import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
@@ -1522,7 +1522,8 @@ export class Game {
     const load = heft ? Math.min(1, furnitureKg(f) / heft) : cap ? Math.min(1, furnitureUnits(f) / cap) : 0;
     // And her builder's hand in her, for a hull a Carpenter laid the keel of,
     // and the hand at her helm: Sailing (`sailingPace`).
-    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(this.skills.get(SAILING));
+    // And a Fair Wind set into her, on every point of sail (`enchanting.ts`), which only a boat with a sail takes.
+    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(this.skills.get(SAILING)) * (1 + swingEnchant(f, 'sail'));
   }
 
   /**
@@ -2080,6 +2081,10 @@ export class Game {
       const p = this.traps.get(t.id);
       return p && { thing: p, def: p.kind, name: trapName(p), at: trapCentre(p) };
     }
+    if (t.kind === 'crate') {
+      const c = this.crates.get(t.id);
+      return c && { thing: c, def: CRATE_DEFS[c.kind].item, name: crateName(c), at: crateCentre(c), lock: c.lock };
+    }
     return undefined;
   }
   /** Everything standing within reach that a scroll could be set into, for the scroll's menu (`placedFor`). */
@@ -2087,7 +2092,7 @@ export class Game {
     const near: { target: Target; placed: PlacedEnchantable }[] = [];
     const ids: [Target['kind'], Iterable<number>][] = [
       ['furniture', this.furniture.keys()], ['smelter', this.smelters.keys()], ['kiln', this.kilns.keys()],
-      ['anvil', this.anvils.keys()], ['trap', this.traps.keys()],
+      ['anvil', this.anvils.keys()], ['trap', this.traps.keys()], ['crate', this.crates.keys()],
     ];
     for (const [kind, keys] of ids) for (const id of keys) {
       const target = { kind, id } as Target;
@@ -7931,6 +7936,7 @@ export class Game {
         units: c.units,
         name: c.name ?? undefined, deed: c.deed ?? undefined, material: c.material ?? undefined,
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
+        ...(c.enchant ? { enchant: c.enchant } : {}), ...(c.dmg ? { dmg: c.dmg } : {}),
         /*
          * The padlock and whose it is, which the island has always sent and
          * this dropped. A craft reaches only into a store that is yours and
@@ -8110,6 +8116,7 @@ export class Game {
         units: c.units,
         name: c.name ?? undefined, deed: c.deed ?? undefined, material: c.material ?? undefined,
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
+        ...(c.enchant ? { enchant: c.enchant } : {}), ...(c.dmg ? { dmg: c.dmg } : {}),
         lock: c.lock ?? undefined, mine: c.mine,
         ...((c.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : {}),
       });
@@ -9531,6 +9538,10 @@ export interface IslandPlaced {
 export interface IslandCrate {
   id: number;
   kind: string;
+  /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
+  enchant?: Enchant | null;
+  /** Its wear, out of a hundred. */
+  dmg?: number | null;
   /** The storey it stands on: -1 down in a cellar; absent from older islands, and 0 on the ground. */
   level?: number | null;
   /** The padlock fitted to it, by the number it shares with its key. */

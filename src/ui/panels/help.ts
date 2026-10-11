@@ -281,7 +281,14 @@ function enchantingHelp(): string {
     <p>Ember Heart's share comes off the fuel a second of heat burns, so the same work takes that much less fuel and a firebox full keeps
     it hot that much longer; the work goes at its own pace. Masterwork's points are added to what is made at the anvil or the loom after
     a perk on the recipe multiplies it, never past QL ${ENCHANT_TOP}, and a scroll is still never better than its sheet; where more than one loom
-    is within reach, the best counts.</p>`;
+    is within reach, the best counts.</p>
+    <p>Fair Wind's share multiplies a boat's pace under sail on every point of sail, after the wind, her build, her maker's mark and your
+    Sailing. Deep Hold, True Axle and a Bag of Holding multiply what the thing holds, in whatever it is measured in (things, kilos or a
+    barrel's litres), before its rarity adds its own; for a cart or a wagon what it holds is the load it pulls, and its pace is not
+    changed. A crate takes one where it stands, as the furniture does. What is inside still weighs all it weighs, on a cart, on a boat and
+    on your back. A thing holds one enchantment, so a boat holds Deep Hold or a Bag of Holding, not both, and says which when asked for
+    the other. An enchantment is never taken out of a thing; were one ever lost, what was in it would stay in it, and nothing more would
+    go in until it was under what it then held.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

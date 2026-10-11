@@ -1,5 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
+import { roomMul, type Enchant } from './enchant';
 import { describeFrom, itemName, rarityOf, roomFor, storedLine, type Item } from './items';
 import { matOf } from './materials';
 import { furnitureDef } from './furniture';
@@ -13,6 +14,10 @@ export type CrateKind = 'log' | 'plank';
 
 export interface PlacedCrate {
   id: number;
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
+  /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
+  dmg?: number;
   /**
    * Whether the island counts it yours: set down by you, from before crates
    * had owners, or standing on a settlement of yours. Absent in the game you
@@ -95,7 +100,7 @@ export const crateKindOfItem = (itemId: string): CrateKind | null => (itemId ===
 export const crateUnits = (c: PlacedCrate): number =>
   c.items.length ? c.items.reduce((n, it) => n + it.count, 0) : c.units ?? 0;
 /** What it holds: its build, and how strong a wood it was built out of. */
-export const crateCapacity = (c: PlacedCrate): number => roomFor(CRATE_DEFS[c.kind].capacity * matOf(c.material).hold, c);
+export const crateCapacity = (c: PlacedCrate): number => roomFor(CRATE_DEFS[c.kind].capacity * matOf(c.material).hold * roomMul(c), c);
 /** How much more it will take, which is what a put is allowed to be. */
 export const crateSpare = (c: PlacedCrate): number => Math.max(0, crateCapacity(c) - crateUnits(c));
 export const crateName = (c: PlacedCrate): string => {
@@ -189,6 +194,9 @@ export const CRATE_ACTIONS: ActionDef[] = [
       const crate = g.addCrate(kind, t.x, t.y, t.sx, t.sy, [], false, item.extra, item.ql, floorOf(g.player.level));
       // A rare crate holds more, so it has to stay rare once it is standing.
       if (item.rare) crate.rare = item.rare;
+      // And its enchantment, which goes down with it and comes up again with it (`enchanting.ts`).
+      if (item.enchant) crate.enchant = item.enchant;
+      if (item.dmg) crate.dmg = item.dmg;
       g.note('crate');
       g.logMsg(`You set the ${crateName(crate).toLowerCase()} down.`, 'event');
       g.events.emit('world', crate.x, crate.y);
@@ -217,6 +225,8 @@ export const CRATE_ACTIONS: ActionDef[] = [
       g.removeCrate(c.id);
       const back = g.inventory.add(CRATE_DEFS[c.kind].item, { ql: c.ql, extra: c.material });
       if (c.rare) back.rare = c.rare;
+      if (c.enchant) back.enchant = c.enchant;
+      if (c.dmg) back.dmg = c.dmg;
       g.logMsg(`You pick up the ${CRATE_DEFS[c.kind].name.toLowerCase()}.${c.deed ? ' Deed workers will leave their finds by the token until a deed crate stands again.' : ''}`, 'event');
       g.events.emit('world', c.x, c.y);
     },

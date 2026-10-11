@@ -9,7 +9,7 @@ import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
 import { elementIslands, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, roomMul, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
 } from './enchant';
 
 export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
@@ -1130,7 +1130,7 @@ export const itemWeight = (item: { id: string; extra?: string; count: number; in
 
 /** How many a bag takes, or nothing at all for the things that are not bags. */
 /** What a bag holds: its make, its maker's mark (a Tailor's Sack Maker and Deep Pockets), and its rarity. The island's `bag_room`. */
-export const bagRoom = (item: Item): number => roomFor((itemDef(item.id).holds ?? 0) * markOf(item, 'hold'), item);
+export const bagRoom = (item: Item): number => roomFor((itemDef(item.id).holds ?? 0) * markOf(item, 'hold') * roomMul(item), item);
 export const isBag = (item: Item): boolean => bagRoom(item) > 0;
 export const bagUnits = (item: Item): number => (item.inside ?? []).reduce((n, it) => n + it.count, 0);
 /** How much more a bag will take. */

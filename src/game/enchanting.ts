@@ -15,6 +15,8 @@ import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
 import { QL_BARE, QL_LOW, QL_SPAN, type Game, type PlacedEnchantable } from './game';
 import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
+import { FURNITURE } from './furniture';
+import { CRATE_DEFS } from './crates';
 import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
@@ -125,6 +127,9 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
     case 'ember': return 'it burns {v} less fuel for the same work: a firebox full keeps it hot that much longer.';
     case 'master': return `a thing made at it comes out {v} higher, never past QL ${QL_TOP}; where more than one is within reach, the best counts.`;
+    case 'sail': return 'under sail she goes {v} faster, on every point of sail.';
+    case 'room': return 'it takes {v} more, in things or in kilos, whichever it is measured in.';
+    case 'bag': return 'it holds {v} more, in things, kilos or litres, whichever it is measured in; what is in it still weighs all it weighs.';
   }
 }
 /** That line with its figure at this quality. */
@@ -166,12 +171,33 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'amulet': return id === 'jewelled_pendant';
     case 'furnace': return FURNACES.includes(id);
     case 'station': return STATIONS.includes(id);
+    case 'ship': return SHIPS().includes(id);
+    case 'hull': return HULLS().includes(id);
+    case 'cart': return CARTS().includes(id);
+    case 'store': return STORES().includes(id);
   }
 };
 /** What Ember Heart goes on, where it stands. */
 export const FURNACES = ['smelter', 'kiln'];
 /** What Masterwork goes on, where it stands: the two places a thing is made at that stand on the ground. */
 export const STATIONS = ['anvil', 'loom'];
+/** What Fair Wind goes on: the boats that carry a sail. */
+export const SHIPS = (): string[] => FURNITURE.filter((f) => f.boat?.sail).map((f) => f.id);
+/** What Deep Hold goes on: every boat. */
+export const HULLS = (): string[] => FURNITURE.filter((f) => f.boat).map((f) => f.id);
+/** What True Axle goes on: what is pulled on wheels. */
+export const CARTS = (): string[] => FURNITURE.filter((f) => !f.boat && (f.vehicle || f.id === 'cart') && (f.capacity || f.heft)).map((f) => f.id);
+/**
+ * What Bag of Holding goes on: everything that holds things -- every piece
+ * that keeps things, kilos or litres (`furnitureCapacity`, `furnitureHeft`,
+ * `liquidCapacity`) but a hive and a pond, which fill themselves; the crates;
+ * and every bag (`bagRoom`).
+ */
+export const STORES = (): string[] => [
+  ...FURNITURE.filter((f) => (f.capacity || f.heft || f.liquid) && !f.hive && !f.pond && !f.well).map((f) => f.id),
+  ...Object.values(CRATE_DEFS).map((c) => c.item),
+  ...Object.entries(ITEM_DEFS).filter(([, d]) => d.holds).map(([id]) => id),
+];
 /** What Packmule goes on: the packs that are carried. */
 export const PACKS = ['backpack', 'satchel'];
 /** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
@@ -208,12 +234,16 @@ export const FITS: Record<EnchantOn, string[]> = {
   amulet: ['jewelled_pendant'],
   furnace: FURNACES,
   station: STATIONS,
+  get ship() { return SHIPS(); },
+  get hull() { return HULLS(); },
+  get cart() { return CARTS(); },
+  get store() { return STORES(); },
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */
 
 /** The kinds of target a scroll can be aimed at: a thing in the pack, or a thing standing on the ground (`Game.placedFor`). */
-const SCROLL_TARGETS: ReadonlySet<Target['kind']> = new Set(['item', 'furniture', 'smelter', 'kiln', 'anvil', 'trap']);
+const SCROLL_TARGETS: ReadonlySet<Target['kind']> = new Set(['item', 'furniture', 'smelter', 'kiln', 'anvil', 'trap', 'crate']);
 const scrollUid = (t: Target): number | undefined => (SCROLL_TARGETS.has(t.kind) ? (t as { scroll?: number }).scroll : undefined);
 
 /** What a scroll is going into: a thing in the pack, or a thing standing where it was set down. */

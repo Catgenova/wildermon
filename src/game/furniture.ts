@@ -1,5 +1,5 @@
 import type { ActionDef, Target } from './actions';
-import { enchantTail, type Enchant } from './enchant';
+import { enchantTail, roomMul, type Enchant } from './enchant';
 import { SIDE_NAMES, type Side } from './building';
 import { STORE_REACH, SUBTILES } from './crates';
 import { CROP_BY_SEED } from './farming';
@@ -705,11 +705,12 @@ export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n,
 /** How much more a counting piece will take. `furnitureRoom` is the general one. */
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));
 /** What it holds: its build, how strong a wood it was built out of, and its maker's mark. */
+// And more for a Deep Hold, a True Axle or a Bag of Holding set into it (`roomMul`), in all three measures.
 export const furnitureCapacity = (f: PlacedFurniture): number =>
-  roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold'), f);
+  roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
 /** Kilograms it holds, for a piece measured that way. Nought for the rest. */
 export const furnitureHeft = (f: PlacedFurniture): number =>
-  roomFor((furnitureDef(f.kind).heft ?? 0) * matOf(f.material).hold * markOf(f, 'hold'), f);
+  roomFor((furnitureDef(f.kind).heft ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
 /** Kilograms standing in it, which is the only thing a heft bin counts. */
 export const furnitureKg = (f: PlacedFurniture): number =>
   f.items.reduce((kg, it) => kg + itemDef(it.id).weight * it.count, 0);
@@ -834,7 +835,7 @@ export const teamOf = (f: PlacedFurniture): number[] => f.team ?? [];
 export const liquidCapacity = (f: PlacedFurniture): number => {
   const def = furnitureDef(f.kind);
   // A well is a lined shaft in the ground; only the coopered things vary.
-  return def.liquid ? Math.round(def.liquid * matOf(f.material).hold * markOf(f, 'hold')) : def.well ?? 0;
+  return def.liquid ? Math.round(def.liquid * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f)) : def.well ?? 0;
 };
 export const holdsLiquid = (f: PlacedFurniture): boolean => liquidCapacity(f) > 0;
 export const litresIn = (f: PlacedFurniture): number => f.litres ?? 0;

@@ -68,7 +68,8 @@ export const SCROLL_HARM = 25;
  */
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
   | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace'
-  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight' | 'ember' | 'master';
+  | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight' | 'ember' | 'master'
+  | 'sail' | 'room' | 'bag';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
@@ -76,7 +77,7 @@ export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
 export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head'
-  | 'furnace' | 'station';
+  | 'furnace' | 'station' | 'ship' | 'hull' | 'cart' | 'store';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -98,6 +99,10 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   // These two are enchanted where they stand (`Game.placedFor`).
   furnace: 'a smelter or a kiln',
   station: 'an anvil or a loom',
+  ship: 'a sailing boat or a caravel',
+  hull: 'a boat: a rowing boat, a sailing boat or a caravel',
+  cart: 'a cart, a large cart or a wagon',
+  store: 'anything that holds things: a chest, a barrel, a larder, a crate, a bag or a pack, a cart, a wagon or a boat',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -128,10 +133,10 @@ export interface EnchantmentDef {
   perQl: number;
 }
 
-/** Two motes of one element, `SCROLL_MOTES` of them, or one each of the elements named. */
-const row = (id: string, name: string, elements: string | readonly string[], on: EnchantOn, effect: EnchantEffect, perQl: number): EnchantmentDef => {
+/** Two motes of one element (`SCROLL_MOTES`, or as many as `count` says), or one each of the elements named. */
+const row = (id: string, name: string, elements: string | readonly string[], on: EnchantOn, effect: EnchantEffect, perQl: number, count = SCROLL_MOTES): EnchantmentDef => {
   const motes: Array<readonly [string, number]> = typeof elements === 'string'
-    ? [[`${elements}_mote`, SCROLL_MOTES]]
+    ? [[`${elements}_mote`, count]]
     : elements.map((el) => [`${el}_mote`, 1] as const);
   return { id, name, scroll: `${id}_scroll`, mote: motes[0][0], motes, on, effect, perQl };
 };
@@ -218,6 +223,15 @@ export const HAWKS_EYE_PER_QL = 0.001;
 export const EMBER_HEART_PER_QL = 0.005;
 /** Masterwork: a thing made at the anvil or the loom comes out QL/20 points of quality higher. */
 export const MASTERWORK_PER_QL = 0.05;
+/** Fair Wind: a boat under sail goes QL/10 percent faster, on every point of sail. Its scroll takes three wind motes. */
+export const FAIR_WIND_PER_QL = 0.001;
+export const FAIR_WIND_MOTES = 3;
+/** Deep Hold: a boat's hold takes QL/4 percent more. */
+export const DEEP_HOLD_PER_QL = 0.0025;
+/** True Axle: a cart or a wagon takes QL/4 percent more load. */
+export const TRUE_AXLE_PER_QL = 0.0025;
+/** Bag of Holding: what it holds times 1 + 2 × QL/100, three times as much at QL 100. */
+export const BAG_OF_HOLDING_PER_QL = 0.02;
 /** What an enchantment's figure is counted in, where it is not a share: Packmule's in kilos, Masterwork's in points of quality. */
 export const FIGURE_UNITS: Partial<Record<EnchantEffect, string>> = { mule: 'kg', master: 'QL' };
 WORN_CAP.guard = STONESKIN_CAP;
@@ -265,6 +279,10 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('hawks_eye', 'Hawk\'s Eye', 'wind', 'head', 'sight', HAWKS_EYE_PER_QL),
   row('ember_heart', 'Ember Heart', 'fire', 'furnace', 'ember', EMBER_HEART_PER_QL),
   row('masterwork', 'Masterwork', ['fire', 'light'], 'station', 'master', MASTERWORK_PER_QL),
+  row('fair_wind', 'Fair Wind', 'wind', 'ship', 'sail', FAIR_WIND_PER_QL, FAIR_WIND_MOTES),
+  row('deep_hold', 'Deep Hold', 'water', 'hull', 'room', DEEP_HOLD_PER_QL),
+  row('true_axle', 'True Axle', 'earth', 'cart', 'room', TRUE_AXLE_PER_QL),
+  row('bag_of_holding', 'Bag of Holding', ['dark', 'earth'], 'store', 'bag', BAG_OF_HOLDING_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
@@ -361,6 +379,8 @@ export const swingEnchant = (item: { enchant?: Enchant } | null | undefined, eff
 /** What a placed thing's status line adds for the enchantment set into it where it stands: " · Ember Heart QL 60.0". */
 export const enchantTail = (t: { enchant?: Enchant }): string =>
   (t.enchant && ENCHANTMENTS[t.enchant.id] ? ` · ${ENCHANTMENTS[t.enchant.id].name} QL ${qlWord(t.enchant.ql)}` : '');
+/** What a thing holding Deep Hold, True Axle or a Bag of Holding holds, times what it held: the island's `room_mul`. */
+export const roomMul = (t: { enchant?: Enchant }): number => 1 + swingEnchant(t, 'room') + swingEnchant(t, 'bag');
 /** The fuel a smelter or a kiln burns for each second of heat: one, less an Ember Heart's share. The island's `placed_burn_rate`. */
 export const furnaceBurn = (f: { enchant?: Enchant }): number => 1 - swingEnchant(f, 'ember');
 
