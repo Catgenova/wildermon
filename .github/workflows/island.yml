@@ -2559,6 +2559,20 @@ jobs:
             --outfile=node_modules/.cache/runegate.mjs --log-level=error
           node node_modules/.cache/runegate.mjs
 
+      - name: A memorial stone, engraved with somebody's own words, the same on both sides
+        run: |
+          # Built with masonry and a trowel and set down like any piece. A
+          # stone chisel cuts a line of up to 72 characters into it, cleaned
+          # as talk is, by whoever set it down or anybody of the settlement
+          # it stands on, never by somebody a keeper has muted; every refusal
+          # in the same words; a new line over the old; Examine reads it back
+          # in quotes; and the line goes with the stone, picked up into the
+          # pack, said on Examine there, set down again, through the ground
+          # read, the pack's row and a save.
+          npx esbuild supabase/test/memorial.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/memorial.mjs --log-level=error
+          node node_modules/.cache/memorial.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

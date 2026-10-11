@@ -51,6 +51,7 @@ import { COUNTER_ACTIONS } from './counters';
 import { LAMP_ACTIONS } from './lamps';
 import { FAITH_ACTIONS } from './faith';
 import { BAUBLE_ACTIONS } from './baubles';
+import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
@@ -2264,7 +2265,8 @@ export const ACTIONS: ActionDef[] = [
       const rare = r.name ? ` It is ${r.name}: better at what it is for by a ${r.boost > 1.3 ? 'half' : r.boost > 1.15 ? 'quarter' : 'tenth'}, slower to wear and to rot, and can be bettered ${r.ceiling} past your own skill.` : '';
       // Rare work is signed, and what a maker's perks put into it is said.
       // And what is enchanted into it, at its quality (`enchanting.ts`): the island's `enchant_says`.
-      const by = `${item.maker ? ` Made by ${item.maker}.` : ''}${markSays(item.mark)}${enchantSays(item)}`;
+      // And the line cut into a memorial stone (`memorial.ts`): the island's `engraved_item_says`.
+      const by = `${item.maker ? ` Made by ${item.maker}.` : ''}${markSays(item.mark)}${enchantSays(item)}${engravedItemSays(item)}`;
       // A knack comes off something somebody made, so the examine line says so
       // for the same things the eating does.
       const skill = knackable(item.id) ? boonOf(g.seed, item.id) : null;
@@ -3112,6 +3114,8 @@ export const ACTIONS: ActionDef[] = [
   ...STEPS_ACTIONS,
   ...FAITH_ACTIONS,
   ...BAUBLE_ACTIONS,
+  // A memorial stone's line, cut and read (`memorial.ts`).
+  ...MEMORIAL_ACTIONS,
   ...SACRIFICE_ACTIONS,
   ...ENCHANT_ACTIONS,
   ...MEDITATION_ACTIONS,

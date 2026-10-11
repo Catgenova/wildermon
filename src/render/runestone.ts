@@ -473,7 +473,11 @@ export const cushion = (R: () => number, share = 1): number => (0.6 + 1.8 * R() 
  * one on an upright face stands up.
  */
 export type Pad = [number, number, number, number];
-export function drawPads(g: Ctx, ps: readonly Pad[]): void {
+/** The greens a cushion is painted in: its rim, the dark and the shade under it, its body, and its lights. */
+export interface MossPalette { line: string; dark: string; under: string; fill: string; lit: string; top: string }
+export const RUNESTONE_MOSS: MossPalette = { ...MOSS, top: '#c3dea6' };
+
+export function drawPads(g: Ctx, ps: readonly Pad[], pal: MossPalette = RUNESTONE_MOSS): void {
   const pass = (fill: string, k: number, dx: number, dy: number, min = 0, every = 1): void => {
     g.beginPath();
     for (let i = 0; i < ps.length; i++) {
@@ -492,13 +496,13 @@ export function drawPads(g: Ctx, ps: readonly Pad[]): void {
    * over all of them, so the dark shows only along the lower edge of a whole
    * clump, as one line round it, never round each bead.
    */
-  pass(MOSS.line, 1.1, 0.05, 0.24);
-  pass(MOSS.dark, 1.04, 0.03, 0.14);
-  pass(MOSS.under, 1, 0, 0.05);
-  pass(MOSS.fill, 0.98, -0.02, -0.07);
+  pass(pal.line, 1.1, 0.05, 0.24);
+  pass(pal.dark, 1.04, 0.03, 0.14);
+  pass(pal.under, 1, 0, 0.05);
+  pass(pal.fill, 0.98, -0.02, -0.07);
   // The light on the bigger cushions now and then, so a mass of them is moss and not a pattern.
-  pass(MOSS.lit, 0.58, -0.22, -0.32, 1.6, 3);
-  pass('#c3dea6', 0.26, -0.3, -0.45, 2.2, 5);
+  pass(pal.lit, 0.58, -0.22, -0.32, 1.6, 3);
+  pass(pal.top, 0.26, -0.3, -0.45, 2.2, 5);
 }
 
 /** Lichen: rosettes of pale yellow-green crust, flat on the stone, a fine darker rim round each. */
@@ -525,6 +529,109 @@ export function lichen(g: Ctx, R: () => number, x: number, y: number, r: number,
   all(1.15, css(mix(tone, hex('#6e6648'), 0.5), 0.3));
   all(1, css(tone, 0.78));
   all(0.45, 'rgba(255, 252, 226, 0.5)');
+}
+
+/** How a stone's skin is laid: how big its marks are against a Runestone's (`size`), and how many of each. */
+export interface SkinOpts {
+  size?: number;
+  patches?: number;
+  grit?: number;
+  pits?: number;
+  hairs?: number;
+  streaks?: number;
+}
+
+/**
+ * The stone's own skin on a carved face, in the face's frame: flat patches a
+ * step paler and a step greyer, as the island draws everything -- fields of
+ * colour, not a blur -- the damp up out of the ground and the foot darker
+ * where it comes up, grit, more toward the foot, pits weathered into it,
+ * hairlines crazing it and streaks where rain runs off the head. `xs` is how
+ * wide the face is at a height; `tTop` how tall it is. A smaller stone lays
+ * the same marks smaller and fewer (`SkinOpts`).
+ */
+export function stoneSkin(g: Ctx, T: () => number, fill: RGB, tTop: number, xs: (z: number) => [number, number], seed: number, o: SkinOpts = {}): void {
+  const k = o.size ?? 1;
+  for (let i = 0; i < (o.patches ?? 44); i++) {
+    const z = T() * tTop, [a, b] = xs(z);
+    const x = a + T() * (b - a);
+    const rx = (1.5 + T() * 6.5) * k, rz = (1 + T() * 4.5) * k, turn = (T() - 0.5) * 0.8, n = 6 + Math.floor(T() * 3);
+    g.beginPath();
+    for (let j = 0; j < n; j++) {
+      const q = (j / n) * TAU, w = 0.7 + T() * 0.45;
+      const px = Math.cos(q) * rx * w, pz = Math.sin(q) * rz * w;
+      const X = x + px * Math.cos(turn) - pz * Math.sin(turn), Z = z + px * Math.sin(turn) + pz * Math.cos(turn);
+      if (j) g.lineTo(X, Z); else g.moveTo(X, Z);
+    }
+    g.closePath();
+    g.fillStyle = T() < 0.5 ? css(mix(fill, [255, 252, 244], 0.4), 0.4) : css(mix(fill, hex('#9c94a4'), 0.32), 0.3);
+    g.fill();
+  }
+  // The damp up out of the ground, a broad band a step darker over the lowest seventh of it.
+  g.beginPath();
+  g.moveTo(-40, -2);
+  for (let x = -40; x <= 40; x += 3 * k) g.lineTo(x, tTop * (0.11 + 0.06 * noise2(x / (9 * k), 2.5, seed)));
+  g.lineTo(40, -2);
+  g.closePath();
+  g.fillStyle = css(mix(fill, hex('#8c8f8e'), 0.3), 0.3);
+  g.fill();
+  // The foot, darker where the damp comes up out of the ground: one flat field with a wandering top.
+  g.beginPath();
+  g.moveTo(-40, -2);
+  for (let x = -40; x <= 40; x += 3 * k) g.lineTo(x, (4.5 + 3.5 * noise2(x / (7 * k), 0.5, seed)) * k);
+  g.lineTo(40, -2);
+  g.closePath();
+  g.fillStyle = css(mix(fill, hex('#7f8486'), 0.35), 0.45);
+  g.fill();
+  g.fillStyle = css(mix(fill, hex('#6d6274'), 0.5), 0.35);
+  for (let i = 0; i < (o.grit ?? 150); i++) {
+    const z = Math.pow(T(), 1.6) * tTop, [a, b] = xs(z);
+    const x = a + T() * (b - a);
+    g.fillRect(x, z, (0.35 + T() * 0.3) * k, (0.35 + T() * 0.3) * k);
+  }
+  // Pits weathered into it: a dark hollow and the lit lip below it.
+  for (let i = 0; i < (o.pits ?? 26); i++) {
+    const z = T() * tTop * 0.95, [a, b] = xs(z);
+    const x = a + k + T() * (b - a - 2 * k), r = (0.3 + T() * 0.45) * k;
+    g.beginPath();
+    g.ellipse(x, z, r * 1.3, r, 0, 0, TAU);
+    g.fillStyle = css(mix(fill, hex('#5d5464'), 0.4), 0.55);
+    g.fill();
+    g.beginPath();
+    g.ellipse(x + r * 0.35, z - r * 0.45, r * 1.1, r * 0.5, 0, 0, TAU);
+    g.fillStyle = css(mix(fill, [255, 252, 244], 0.6), 0.6);
+    g.fill();
+  }
+  // Hairlines crazing it, branching, too fine to be cut.
+  g.lineCap = 'round';
+  for (let i = 0; i < (o.hairs ?? 7); i++) {
+    let z = T() * tTop;
+    const [a, b] = xs(z);
+    let x = a + T() * (b - a), ang = T() * TAU;
+    g.beginPath();
+    g.moveTo(x, z);
+    for (let j = 0; j < 5 + T() * 5; j++) {
+      ang += (T() - 0.5) * 1.1;
+      x += Math.cos(ang) * 1.8 * k;
+      z += Math.sin(ang) * 1.8 * k;
+      g.lineTo(x, z);
+      if (T() < 0.2) { g.moveTo(x, z); g.lineTo(x + Math.cos(ang + 1.2) * 2.2 * k, z + Math.sin(ang + 1.2) * 2.2 * k); g.moveTo(x, z); }
+    }
+    g.strokeStyle = css(mix(fill, hex('#6d6274'), 0.45), 0.4);
+    g.lineWidth = 0.24 * k;
+    g.stroke();
+  }
+  // Weathering down from the top: a few streaks a step darker, where rain runs off the head.
+  for (let i = 0; i < (o.streaks ?? 9); i++) {
+    const z1 = tTop * (0.6 + T() * 0.35), [a, b] = xs(z1);
+    const x = a + (0.1 + T() * 0.8) * (b - a), len = (14 + T() * 30) * k, w = (0.6 + T() * 1.4) * k;
+    g.beginPath();
+    g.moveTo(x - w, z1);
+    g.quadraticCurveTo(x - w * 0.6, z1 - len * 0.6, x, z1 - len);
+    g.quadraticCurveTo(x + w * 0.6, z1 - len * 0.6, x + w, z1);
+    g.fillStyle = css(mix(fill, hex('#8e8798'), 0.4), 0.2);
+    g.fill();
+  }
 }
 
 /* ---- the carving ----------------------------------------------------------- */
@@ -1032,7 +1139,7 @@ const SPECS: Record<RunestoneId, Spec> = {
 /* ---- the flowers ------------------------------------------------------------- */
 
 /** The flowers at their feet: the meadow's own (`flowers.ts`), with a lilac besides. */
-export const FLOWER: Record<string, { petal: string; ring: string; eye: string }> = {
+export const FLOWER: Record<string, { petal: string; ring: string; eye: string; spike?: boolean }> = {
   pink: { petal: '#f0a3b7', ring: '#a85f75', eye: '#f6d467' },
   white: { petal: '#fbf8ef', ring: '#7f988a', eye: '#efc23f' },
   yellow: { petal: '#f4d35a', ring: '#a5852a', eye: '#dd8f2b' },
@@ -1041,6 +1148,12 @@ export const FLOWER: Record<string, { petal: string; ring: string; eye: string }
   // Chalkier, for smaller things than a runestone that stand in their own light: a cream for the white, a dusty rose for the pink.
   cream: { petal: '#e9e3d2', ring: '#84968a', eye: '#e2b955' },
   rose: { petal: '#e3b3bd', ring: '#a27b88', eye: '#ecd07c' },
+  // And four chalkier still, for what a player plants at a memorial stone (`memorial.ts`):
+  // ring and eye kept near the petal, so a small head is its colour and not a gold ring; the dusk one grows in spikes.
+  dusk: { petal: '#c9b9d9', ring: '#a596b8', eye: '#ddd2e6', spike: true },
+  linen: { petal: '#f1e6c4', ring: '#d0c29c', eye: '#e6d29a' },
+  blush: { petal: '#e8bcc0', ring: '#c69ca1', eye: '#f0d6d2' },
+  chalk: { petal: '#f5f2e8', ring: '#d4d0c4', eye: '#e8dfc0' },
 };
 
 /**
@@ -1074,12 +1187,19 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
   leafPass(0.5, '#4f7a5f');
   leafPass(0, '#6f9c7c');
   leafPass(-0.35, '#8db898', 0.5);
-  const spike = colour === 'lilac' || (colour === 'pink' && R() < 0.3);
+  const spike = !!col.spike || colour === 'lilac' || (colour === 'pink' && R() < 0.3);
   if (spike) {
-    // Two or three spikes, each a stem with heads up it smaller toward the tip.
+    /*
+     * Two or three spikes, each a stem with heads up it smaller toward the
+     * tip; a planted one's (`spike`) each its own height, from as tall to
+     * half as tall again, and its own lean, so no two clumps stand alike.
+     */
+    const own = !!col.spike;
     const n = 2 + Math.floor(R() * 2);
     for (let k = 0; k < n; k++) {
-      const sx = x + (k - (n - 1) / 2) * 4.2 * big + (R() - 0.5) * 1.5, tall = (12 + R() * 6) * big, lean = (R() - 0.5) * 2.4;
+      // A planted one's spikes stand further apart and fan out a little from the clump, so each is a spike and not a bunch.
+      const sx = x + (k - (n - 1) / 2) * (own ? 6 : 4.2) * big + (R() - 0.5) * 1.5;
+      const tall = (own ? 12 + R() * 9 : 12 + R() * 6) * big, lean = own ? (k - (n - 1) / 2) * 1.4 + (R() - 0.5) * 1.6 : (R() - 0.5) * 2.4;
       g.strokeStyle = '#5b876a';
       g.lineWidth = 0.6;
       g.beginPath();
@@ -1088,10 +1208,10 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
       g.stroke();
       for (let j = 0; j < 7; j++) {
         // `taper`: how much smaller its heads get toward the tip.
-        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * taper) * big;
+        const t = 0.38 + (j / 6) * 0.62, r = (1.5 - t * taper) * big * (own ? 0.78 : 1);
         const hx = sx + lean * t * t + (j % 2 ? 0.7 : -0.7) * (1 - t), hy = y - tall * t;
         g.beginPath();
-        g.arc(hx, hy, r + 0.42, 0, TAU);
+        g.arc(hx, hy, r + (own ? 0.32 : 0.42), 0, TAU);
         g.fillStyle = col.ring;
         g.fill();
         g.beginPath();
@@ -1290,91 +1410,7 @@ function modelOf(id: RunestoneId): Model {
     const paint: Painter = (g, k) => {
       const T = rand(seed);
       const fill = k.fill;
-      /*
-       * The stone's own skin: flat patches a step paler and a step greyer,
-       * as the island draws everything -- fields of colour, not a blur --
-       * and specks of grit, more toward the foot.
-       */
-      for (let i = 0; i < 44; i++) {
-        const z = T() * tTop, [a, b] = xs(z);
-        const x = a + T() * (b - a);
-        const rx = 1.5 + T() * 6.5, rz = 1 + T() * 4.5, turn = (T() - 0.5) * 0.8, n = 6 + Math.floor(T() * 3);
-        g.beginPath();
-        for (let j = 0; j < n; j++) {
-          const q = (j / n) * TAU, w = 0.7 + T() * 0.45;
-          const px = Math.cos(q) * rx * w, pz = Math.sin(q) * rz * w;
-          const X = x + px * Math.cos(turn) - pz * Math.sin(turn), Z = z + px * Math.sin(turn) + pz * Math.cos(turn);
-          if (j) g.lineTo(X, Z); else g.moveTo(X, Z);
-        }
-        g.closePath();
-        g.fillStyle = T() < 0.5 ? css(mix(fill, [255, 252, 244], 0.4), 0.4) : css(mix(fill, hex('#9c94a4'), 0.32), 0.3);
-        g.fill();
-      }
-      // The damp up out of the ground, a broad band a step darker over the lowest seventh of it.
-      g.beginPath();
-      g.moveTo(-40, -2);
-      for (let x = -40; x <= 40; x += 3) g.lineTo(x, tTop * (0.11 + 0.06 * noise2(x / 9, 2.5, seed)));
-      g.lineTo(40, -2);
-      g.closePath();
-      g.fillStyle = css(mix(fill, hex('#8c8f8e'), 0.3), 0.3);
-      g.fill();
-      // The foot, darker where the damp comes up out of the ground: one flat field with a wandering top.
-      g.beginPath();
-      g.moveTo(-40, -2);
-      for (let x = -40; x <= 40; x += 3) g.lineTo(x, 4.5 + 3.5 * noise2(x / 7, 0.5, seed));
-      g.lineTo(40, -2);
-      g.closePath();
-      g.fillStyle = css(mix(fill, hex('#7f8486'), 0.35), 0.45);
-      g.fill();
-      g.fillStyle = css(mix(fill, hex('#6d6274'), 0.5), 0.35);
-      for (let i = 0; i < 150; i++) {
-        const z = Math.pow(T(), 1.6) * tTop, [a, b] = xs(z);
-        const x = a + T() * (b - a);
-        g.fillRect(x, z, 0.35 + T() * 0.3, 0.35 + T() * 0.3);
-      }
-      // Pits weathered into it: a dark hollow and the lit lip below it.
-      for (let i = 0; i < 26; i++) {
-        const z = T() * tTop * 0.95, [a, b] = xs(z);
-        const x = a + 1 + T() * (b - a - 2), r = 0.3 + T() * 0.45;
-        g.beginPath();
-        g.ellipse(x, z, r * 1.3, r, 0, 0, TAU);
-        g.fillStyle = css(mix(fill, hex('#5d5464'), 0.4), 0.55);
-        g.fill();
-        g.beginPath();
-        g.ellipse(x + r * 0.35, z - r * 0.45, r * 1.1, r * 0.5, 0, 0, TAU);
-        g.fillStyle = css(mix(fill, [255, 252, 244], 0.6), 0.6);
-        g.fill();
-      }
-      // Hairlines crazing it, branching, too fine to be cut.
-      g.lineCap = 'round';
-      for (let i = 0; i < 7; i++) {
-        let z = T() * tTop;
-        const [a, b] = xs(z);
-        let x = a + T() * (b - a), ang = T() * TAU;
-        g.beginPath();
-        g.moveTo(x, z);
-        for (let j = 0; j < 5 + T() * 5; j++) {
-          ang += (T() - 0.5) * 1.1;
-          x += Math.cos(ang) * 1.8;
-          z += Math.sin(ang) * 1.8;
-          g.lineTo(x, z);
-          if (T() < 0.2) { g.moveTo(x, z); g.lineTo(x + Math.cos(ang + 1.2) * 2.2, z + Math.sin(ang + 1.2) * 2.2); g.moveTo(x, z); }
-        }
-        g.strokeStyle = css(mix(fill, hex('#6d6274'), 0.45), 0.4);
-        g.lineWidth = 0.24;
-        g.stroke();
-      }
-      // Weathering down from the top: a few streaks a step darker, where rain runs off the head.
-      for (let i = 0; i < 9; i++) {
-        const z1 = tTop * (0.6 + T() * 0.35), [a, b] = xs(z1);
-        const x = a + (0.1 + T() * 0.8) * (b - a), len = 14 + T() * 30, w = 0.6 + T() * 1.4;
-        g.beginPath();
-        g.moveTo(x - w, z1);
-        g.quadraticCurveTo(x - w * 0.6, z1 - len * 0.6, x, z1 - len);
-        g.quadraticCurveTo(x + w * 0.6, z1 - len * 0.6, x + w, z1);
-        g.fillStyle = css(mix(fill, hex('#8e8798'), 0.4), 0.2);
-        g.fill();
-      }
+      stoneSkin(g, T, fill, tTop, xs, seed);
 
       /* -- the panel: a field sunk a step into the face, ruled twice round, a pointed head -- */
       const border = (d: number): void => {
@@ -2045,6 +2081,42 @@ export interface Glow {
   roundel: boolean;
   /** How much of its light is laid, nought to one, where it is not all of it: a rune on a face turning away from the eye. */
   fade?: number;
+  /*
+   * And for finer line-work than a Runestone's (`GlowFine`, a memorial
+   * stone's): laid fainter (`faint`); lit after dark only (`nightOnly`); no
+   * glow round it by day (`noDayHalo`); its strokes after dark in a
+   * Runestone's night cream (`cream`), and a warm glint laid on as light
+   * (`glint`, `lift` strong); how much more of the night its shape takes off
+   * (`maskA`, laid by whoever reads its masks); and its strokes in the
+   * night's own blue (`dimShade`), laid over them as it breathes out (`dim`).
+   */
+  faint?: number;
+  nightOnly?: boolean;
+  noDayHalo?: boolean;
+  cream?: HTMLCanvasElement;
+  glint?: HTMLCanvasElement;
+  lift?: number;
+  maskA?: number;
+  dimShade?: HTMLCanvasElement;
+  dim?: number;
+}
+
+/**
+ * How a finer light than a Runestone's is baked (`bakeGlow`): fainter, after
+ * dark only, with no day glow, its dusk and its night shape tight round its
+ * strokes (`tight`), and line-work too fine for its cream heart to show
+ * (`fine`): a faint gold edge, a wide heart, and after dark laid over in cream
+ * -- narrower still at the smallest scale; and how much more of the night its
+ * shape takes off (`maskA`) and how far it dims itself breathing out (`dim`).
+ */
+export interface GlowFine {
+  faint?: number;
+  nightOnly?: boolean;
+  noDayHalo?: boolean;
+  tight?: boolean;
+  fine?: boolean;
+  maskA?: number;
+  dim?: number;
 }
 
 interface Baked {
@@ -2288,7 +2360,7 @@ function bake(id: RunestoneId, rotation: number, scale: number): Baked {
  * taken off in is against a runestone's, in place of `spread`, its groove
  * never cut narrower than 1.1 of its width: a small rune's own shape.
  */
-export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: number, s: number, roundel: boolean, i: number, scale: number, width?: number, spread = 1, colours: { edge?: string; mid?: string; inner?: string } = {}, cut?: number): Glow {
+export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: number, s: number, roundel: boolean, i: number, scale: number, width?: number, spread = 1, colours: { edge?: string; mid?: string; inner?: string } = {}, cut?: number, o: GlowFine = {}): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2317,8 +2389,10 @@ export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: num
       h.stroke();
     }
   });
+  // A fine one baked for the smallest scale has its strokes under a pixel wide: its light and night shape narrower there, so it is line-work and not a lit disc.
+  const small = !!o.fine && scale <= 1;
   const dusk = sheet((h) => {
-    for (const [k, al] of [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]] as Array<[number, number]>) {
+    for (const [k, al] of (small ? [[1.2, 0.1], [0.9, 0.18]] : o.tight ? [[1.7, 0.12], [1.25, 0.2]] : [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]]) as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 176, 80, ${al})`;
       h.lineWidth = w * k * spread;
@@ -2326,19 +2400,31 @@ export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: num
     }
   });
   const core = sheet((h) => {
+    // A fine line keeps its gold edge faint and its cream heart wide, or it is all edge.
     path(h);
-    h.strokeStyle = colours.edge ?? RUNE_EDGE;
-    h.lineWidth = w * 1.05;
+    h.strokeStyle = o.fine ? 'rgba(204, 150, 80, 0.72)' : colours.edge ?? RUNE_EDGE;
+    h.lineWidth = w * (o.fine ? 1 : 1.05);
     h.stroke();
     path(h);
     h.strokeStyle = colours.mid ?? RUNE_GOLD;
-    h.lineWidth = w * 0.72;
+    h.lineWidth = w * (o.fine ? 0.74 : 0.72);
     h.stroke();
     path(h);
     h.strokeStyle = colours.inner ?? RUNE_WHITE;
-    h.lineWidth = w * 0.34;
+    h.lineWidth = w * (o.fine ? 0.46 : 0.34);
     h.stroke();
   });
+  // A fine one's strokes in the cream a Runestone's roundel comes to after dark, laid over it then; and in a warm gold, laid on as light.
+  const line = (colour: string, k: number): HTMLCanvasElement => sheet((h) => {
+    path(h);
+    h.strokeStyle = colour;
+    h.lineWidth = w * k;
+    h.stroke();
+  });
+  const cream = o.fine ? line('rgb(244, 221, 180)', small ? 0.8 : 1.25) : undefined;
+  const glint = o.fine ? line('rgb(255, 188, 112)', small ? 0.8 : 1.25) : undefined;
+  // And in the night's own blue, for one that dims itself as it breathes out.
+  const dimShade = o.dim ? line('rgb(14, 22, 46)', small ? 1.2 : 1.6) : undefined;
   const mid = M.transformPoint(new DOMPoint(x, z));
   // How far its light reaches on the screen: no further than the face it is on is wide there, seen slantwise.
   const up = Math.hypot(M.c, M.d) * s, across = Math.hypot(M.a, M.b) * s;
@@ -2353,15 +2439,22 @@ export function bakeGlow(M: DOMMatrix, path: (h: Ctx) => void, x: number, z: num
     path(h);
     // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
     h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    h.lineWidth = cut === undefined ? w * (roundel ? 2.6 : 3.6) * spread : w * cut * (roundel ? 2.6 : 3.6);
+    h.lineWidth = small ? w * 2.1 : o.tight ? w * 1.8 : cut === undefined ? w * (roundel ? 2.6 : 3.6) * spread : w * cut * (roundel ? 2.6 : 3.6);
     h.stroke();
     path(h);
     h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = cut === undefined ? w * (roundel ? 1.8 : 2.2) * Math.max(1, spread) : w * Math.max(1.1, cut * (roundel ? 1.8 : 2.2));
+    h.lineWidth = small ? w * 2 : o.tight ? w * 1.2 : cut === undefined ? w * (roundel ? 1.8 : 2.2) * Math.max(1, spread) : w * Math.max(1.1, cut * (roundel ? 1.8 : 2.2));
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel };
+  const out: Glow = { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel };
+  if (o.faint !== undefined) out.faint = o.faint;
+  if (o.nightOnly) out.nightOnly = true;
+  if (o.noDayHalo) out.noDayHalo = true;
+  if (o.fine) Object.assign(out, { cream, glint, lift: scale <= 1 ? 0.03 : 0.025 });
+  if (o.maskA !== undefined) out.maskA = o.maskA;
+  if (o.dim) Object.assign(out, { dimShade, dim: o.dim });
+  return out;
 }
 
 /** One rune's light from its spec (`GlowSpec`), baked at `scale` on a face whose frame lands on the screen through `M` (`bakeGlow`). */
@@ -2447,6 +2540,8 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
   const day = 1 - night;
   for (const gl of glows) {
     const p = breath(gl, t);
+    // A fainter one (`faint`) laid fainter throughout.
+    const f = gl.faint ?? 1;
     const [x, y, w, h] = gl.box;
     const X = sx + x * zoom, Y = sy + y * zoom, Wd = w * zoom, Ht = h * zoom;
     /*
@@ -2455,24 +2550,40 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
      * after dark light, tight round its shape, a roundel's fainter still so
      * where its strokes cross it does not burn to a white spot.
      */
-    if (day > 0.01) {
+    if (day > 0.01 && !gl.nightOnly && !gl.noDayHalo) {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square * (gl.fade ?? 1);
+      ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square * (gl.fade ?? 1) * f;
       ctx.drawImage(gl.halo, X, Y, Wd, Ht);
     }
     if (night > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = night * (gl.roundel ? 0.22 + 0.14 * p : 0.2 + 0.3 * p) * heat * (gl.fade ?? 1);
+      ctx.globalAlpha = night * (gl.roundel ? 0.22 + 0.14 * p : 0.2 + 0.3 * p) * heat * (gl.fade ?? 1) * f;
       ctx.drawImage(gl.dusk, X, Y, Wd, Ht);
     }
-    // The lit groove itself, always there and brighter as it breathes in.
+    // The lit groove itself, always there and brighter as it breathes in; one lit after dark only, only after dark.
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = Math.min(1, 0.55 + 0.25 * night + 0.35 * p) * (gl.fade ?? 1);
+    ctx.globalAlpha = Math.min(1, 0.55 + 0.25 * night + 0.35 * p) * (gl.fade ?? 1) * f * (gl.nightOnly ? night : 1);
     ctx.drawImage(gl.core, X, Y, Wd, Ht);
     if (!gl.roundel) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (0.08 + 0.16 * night) * p * heat * (gl.fade ?? 1);
+      ctx.globalAlpha = (0.08 + 0.16 * night) * p * heat * (gl.fade ?? 1) * f;
       ctx.drawImage(gl.core, X, Y, Wd, Ht);
+    } else if (gl.cream && night > 0.01) {
+      // A fine roundel's cream heart is thinner than a pixel: after dark its strokes are laid over in cream, a shade over a Runestone's so that where a stroke is mixed with the stone round it, its middle comes to theirs.
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = Math.min(1, night * (0.95 + 0.1 * p) * f);
+      ctx.drawImage(gl.cream, X, Y, Wd, Ht);
+      if (gl.lift && gl.glint) {
+        ctx.globalCompositeOperation = 'lighter';
+        // One that dims itself as it breathes out (`dim`) takes its glint only toward the height of its breath, as a Runestone's brightens there.
+        ctx.globalAlpha = night * gl.lift * (gl.dim ? 2.2 * p * p : 0.7 + 0.6 * p) * f;
+        ctx.drawImage(gl.glint, X, Y, Wd, Ht);
+      }
+      if (gl.dim && gl.dimShade) {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = night * gl.dim * (1 - p) * f;
+        ctx.drawImage(gl.dimShade, X, Y, Wd, Ht);
+      }
     }
   }
   ctx.globalCompositeOperation = was;

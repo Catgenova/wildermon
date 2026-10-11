@@ -163,6 +163,7 @@ import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
+import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 
 const q = (v: unknown): string => {
   if (v === undefined || v === null) return 'null';
@@ -2301,5 +2302,26 @@ for (const [fn, v] of [
   ['no_candle_said', noCandleLine()], ['no_flame_said', noFlameLine()],
 ] as Array<[string, string]>) {
   out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+/*
+ * A memorial stone (`memorial.ts`): the two jobs at it, the longest line it
+ * takes, what its cutting is done with, and every sentence it says -- the
+ * three with the words in them round the words the island puts in.
+ */
+out.push(`create or replace function memorial_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(ENGRAVE)}, ${q(READ_MEMORIAL)}) $fn$;`);
+out.push(`create or replace function memorial_kind() returns text language sql immutable as $fn$ select ${q(MEMORIAL)} $fn$;`);
+out.push(`create or replace function engrave_max() returns int language sql immutable as $fn$ select ${ENGRAVE_MAX} $fn$;`);
+out.push(`create or replace function engrave_tool() returns text language sql immutable as $fn$ select ${q(ENGRAVE_TOOL)} $fn$;`);
+out.push(`create or replace function engrave_skill() returns text language sql immutable as $fn$ select ${q(ENGRAVE_SKILL)} $fn$;`);
+out.push(`create or replace function memorial_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (['notYours', 'noChisel', 'nothing', 'same'] as const).map((k) => `when ${q(k)} then ${q(MEMORIAL_SAID[k])} `).join('')}end $fn$;`);
+{
+  const [rh, rt] = memorialSays('\u0000').split('\u0000');
+  out.push(`create or replace function memorial_says(p_text text) returns text language sql immutable as $fn$ select case when coalesce(p_text, '') = '' then ${q(memorialSays(undefined))} else ${q(rh)} || p_text || ${q(rt)} end $fn$;`);
+  const [nh, nt] = engravedSaid('\u0000', false).split('\u0000');
+  const [ch, ct] = engravedSaid('\u0000', true).split('\u0000');
+  out.push(`create or replace function engraved_said(p_text text, p_recut boolean) returns text language sql immutable as $fn$ select case when p_recut then ${q(ch)} || p_text || ${q(ct)} else ${q(nh)} || p_text || ${q(nt)} end $fn$;`);
+  const [ih, it] = engravedItemSays({ engraving: '\u0000' }).split('\u0000');
+  out.push(`create or replace function engraved_item_says(p_text text) returns text language sql immutable as $fn$ select case when coalesce(p_text, '') = '' then '' else ${q(ih)} || p_text || ${q(it)} end $fn$;`);
 }
 console.log(out.join('\n'));

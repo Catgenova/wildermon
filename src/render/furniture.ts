@@ -3882,6 +3882,18 @@ const MODELS: Record<string, Model> = {
     sc.box(-1.4, 1.4, -1.4, 1.4, foot - 0.5, foot, IRON);
     if (trim === 1) streetLantern(sc, [0, 0, LAMP_HANG.top], k, lit, frame);
   },
+  /*
+   * A memorial stone is drawn as the Runestones are, by `memorial.ts`; this
+   * is its block, for how tall it stands (`FURNITURE_HEIGHT`) and for
+   * anything that draws a piece by its kind alone: its two courses and its
+   * stone, as high as that draws them.
+   */
+  memorial_stone: ({ sc }) => {
+    sc.shadows = [[-7, 7, -4, 4]];
+    sc.box(-7.3, 7.3, -4.3, 4.3, 0, 1.7, STONE);
+    sc.box(-5.5, 5.5, -2.75, 2.75, 1.7, 2.95, STONE);
+    sc.box(-4.4, 4.4, -1.6, 1.6, 2.95, 18.2, STONE);
+  },
   altar: ({ sc }) => {
     // The dressed stone of the step, capital and slab, a shade off white and inked like the rest of the masonry.
     const SLAB: Paint = { body: hex('#e5dfd2'), ink: STONE.ink }, GOLD = paintOf(hex('#eec766'), 0.5), POOL = paintOf(hex('#3f3572'), 0.5);

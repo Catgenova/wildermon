@@ -44,5 +44,12 @@ export const SAY_A_MINUTE = 20;
  * to push the window about. The island cleans it again the same way — this is
  * the courtesy, that is the rule.
  */
-export const cleanSaid = (raw: string): string =>
-  raw.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, SAY_MAX);
+export const cleanSaid = (raw: string): string => cleanLine(raw, SAY_MAX);
+
+/**
+ * The same cleaning for any line somebody writes for others to read, at its
+ * own length: what talk is held to, and what is cut into a memorial stone
+ * (`memorial.ts`).
+ */
+export const cleanLine = (raw: string, max: number): string =>
+  raw.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim().slice(0, max);
