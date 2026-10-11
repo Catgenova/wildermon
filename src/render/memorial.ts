@@ -1,8 +1,8 @@
 import type { Side } from '../game/building';
 import { rand, strandPic, STAGES, PPM } from './ivy';
 import {
-  add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cushion, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump,
-  glyphPath, grassTuft, groundNear, hex, inset, lichen, mix, mul, newell, noise2, plate, proj, roundelStrokes, scaleFor, stoneSkin, strokesPath, TAU,
+  add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump,
+  glyphPath, grassTuft, groundNear, hex, inset, lichen, mix, mul, newell, noise2, plate, proj, scaleFor, stoneSkin, strokesPath, TAU,
   toneOf, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
 } from './runestone';
 
@@ -51,7 +51,7 @@ const STONE: Tone = toneOf('#f1e6d2', '#b2a4a8');
 const ROCK: Tone = toneOf('#ddd2c0', '#a2979f');
 const DRESSED: Tone = toneOf('#e9dfcc', '#a99da5');
 const LICHENS: [string, string] = ['#e6e2bc', '#d3dcb4'];
-const FLOWERS = ['white', 'lilac', 'yellow', 'white', 'pink'];
+const FLOWERS = ['white', 'yellow', 'white', 'blue', 'white', 'yellow'];
 
 /** How high the two courses stand, and where the stone stands on them: sunk a little into the upper. */
 const LOWER_H = 1.7;
@@ -73,7 +73,8 @@ const INK = 0.75;
 const OUTLINE: Pt[] = (() => {
   const R = rand(SEED * 7 + 3);
   const w = (n: number): number => (R() - 0.5) * n;
-  const out: Pt[] = [[-4.45, 0], [4.45, 0], [4.36 + w(0.08), 3.6], [4.22 + w(0.1), 7.4], [4.08, 10.1],
+  // Each side one straight cut from foot to shoulder: an edge that turns at every few units reads as courses, not one stone.
+  const out: Pt[] = [[-4.45, 0], [4.45, 0], [4.08, 10.1],
     // The chip off its right shoulder.
     [3.9, 10.55], [3.35, 10.7], [3.15, 11.25], [3.42, 11.6]];
   // The head, from the chip round over the point to the left shoulder.
@@ -85,7 +86,7 @@ const OUTLINE: Pt[] = (() => {
     if (x > 3.3) continue;
     out.push([x + w(0.12), 10.95 + lift * 3.4 + point + w(0.14) + (x < 0 ? 0.18 * (-x / 3.95) : 0)]);
   }
-  out.push([-4.02, 11.1], [-4.14, 10.2], [-4.26 + w(0.1), 7.2], [-4.38 + w(0.08), 3.5]);
+  out.push([-4.02, 11.1], [-4.14, 10.2]);
   return out;
 })();
 const T_TOP = Math.max(...OUTLINE.map((p) => p[1]));
@@ -115,18 +116,32 @@ function headAt(x: number, outline: readonly Pt[] = OUTLINE): number {
 
 /* ---- what is cut into it ----------------------------------------------------------- */
 
-/** The roundel at its head, the rune either side of it, and the panel the line is cut in: in the face, across and up. */
-const ROUNDEL = { x: 0, z: 12.05, r: 1.75 };
-const SIDE_RUNES: Array<{ glyph: string; x: number; z: number }> = [{ glyph: 'algiz', x: -2.95, z: 11.0 }, { glyph: 'tiwaz', x: 2.62, z: 10.55 }];
-const SIDE_RUNE_SIZE = 0.52;
+/** The roundel at its head and the panel the line is cut in: in the face, across and up. */
+const ROUNDEL = { x: 0, z: 12.0, r: 1.95 };
+/** How wide the roundel's lit strokes are: fine line-work, stone between them, never a lit disc. */
+const ROUNDEL_W = 0.16;
+/**
+ * The roundel's figure: one ring, and a star of six points inside it, its
+ * arms long and short by turns and kept well in from the ring -- the
+ * Runestones' line-work, sparser, for a stone a tenth their height.
+ */
+const ROUNDEL_STROKES: Stroke[] = (() => {
+  const ring: Pt[] = Array.from({ length: 37 }, (_, i) => [Math.cos((i / 36) * TAU), Math.sin((i / 36) * TAU)] as Pt);
+  const star: Pt[] = [];
+  for (let i = 0; i < 12; i++) {
+    const a = Math.PI / 2 + (i / 12) * TAU, k = i % 2 ? 0.22 : i % 4 === 0 ? 0.72 : 0.5;
+    star.push([Math.cos(a) * k, Math.sin(a) * k]);
+  }
+  return [{ pts: ring }, { pts: star, closed: true }];
+})();
 const PANEL = { x: 0, w: 5.5, z0: 1.55, z1: 8.65, arch: 1.15 };
 /** The marks of the line: how high each is from its middle, how wide, how far apart, and the room a space takes. */
 const MARK_H = 0.4;
 const MARK_W = 0.24;
 const MARK_STEP = 0.66;
 const WORD_GAP = 0.5;
-const LINE_STEP = 1.2;
-const LINES_MOST = 5;
+const LINE_STEP = 1.35;
+const LINES_MOST = 4;
 /** Where in the panel the rows go, and how wide they may run. */
 const ROWS_MID = (PANEL.z0 + PANEL.z1) / 2 + 0.2;
 const ROW_WIDE = PANEL.w - 1.3;
@@ -252,8 +267,9 @@ const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, num
   g.restore();
 };
 
-function modelOf(text: string): Model {
-  const had = models.get(text);
+function modelOf(text: string, facing: Side): Model {
+  const key = `${facing}|${text}`;
+  const had = models.get(key);
   if (had) return had;
   const R = rand(SEED * 13 + 1);
   const things: Thing[] = [];
@@ -265,10 +281,14 @@ function modelOf(text: string): Model {
   const mossSide = -1;
 
   /* -- the plinth: two courses of rough-dressed stone, the upper set a little askew on the lower -- */
-  const course = (hw: number, hd: number, z0: number, h: number, turn: number, dx: number, dy: number, tone: Tone, seed: number, top: Painter): Face[] => {
+  const course = (hw: number, hd: number, z0: number, h: number, turn: number, dx: number, dy: number, tone: Tone, seed: number, top: Painter,
+    chips: { fr?: number; fl?: number; br?: number } = {}): Face[] => {
     const C = rand(seed);
     const c = Math.cos(turn), s = Math.sin(turn);
-    const raw: Pt[] = [[-hw, -hd], [-hw * 0.35, -hd - 0.12], [hw * 0.4, -hd + 0.08], [hw, -hd], [hw + 0.1, 0], [hw, hd], [0, hd + 0.14], [-hw, hd], [-hw - 0.08, 0]];
+    // Its corners, a chip knocked off one or two of them: front right, front left, back right.
+    const corner = (x: number, y: number, k: number | undefined, sx: number, sy: number): Pt[] => (k ? [[x, y - sy * k * 0.8], [x - sx * k, y]] : [[x, y]]);
+    const raw: Pt[] = [[-hw, -hd], [-hw * 0.35, -hd - 0.12], [hw * 0.4, -hd + 0.08], ...corner(hw, -hd, chips.br, 1, -1).reverse(), [hw + 0.1, 0],
+      ...corner(hw, hd, chips.fr, 1, 1), [0, hd + 0.14], ...corner(-hw, hd, chips.fl, -1, 1).reverse(), [-hw - 0.08, 0]];
     const outline = raw.map(([x, y]) => [x + (C() - 0.5) * 0.22, y + (C() - 0.5) * 0.18] as Pt);
     return plate({
       o: [dx, dy, z0 + h / 2], U: [c, s, 0], W: [-s, c, 0], A: [0, 0, 1], outline, half: [h / 2, h / 2], tTop: 1, bevel: 0.32, tone,
@@ -282,7 +302,7 @@ function modelOf(text: string): Model {
       } } : undefined),
     });
   };
-  const plinthTop = (hw: number, hd: number, seed: number, moss: number, inner: [number, number, number]): Painter => (g, k) => {
+  const plinthTop = (hw: number, hd: number, seed: number, moss: number, inner: [number, number, number], ox = 0): Painter => (g, k) => {
     const T = rand(seed);
     for (let i = 0; i < 9; i++) {
       g.beginPath();
@@ -299,21 +319,28 @@ function modelOf(text: string): Model {
      * longest. Close enough that the cushions run together into masses.
      */
     const pts: Array<[number, number, number]> = [];
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < 600; i++) {
       const x = (T() - 0.5) * hw * 2, y = (T() - 0.5) * hd * 2;
       const [ix, iy, icy] = inner;
-      const fx = Math.max(0, Math.abs(x) - ix), fy = Math.max(0, Math.abs(y - icy) - iy);
-      const foot = Math.max(0, 1 - Math.hypot(fx, fy) / 1.8) * (0.55 + 0.45 * Math.max(0, (x * mossSide) / ix)) * (y < icy + iy * 0.5 ? 1 : 0.6);
-      const corner = Math.max(0, (x * mossSide) / hw) * 0.6 + Math.max(0, -y / hd) * 0.5;
+      const fx = Math.max(0, Math.abs(x + ox) - ix), fy = Math.max(0, Math.abs(y - icy) - iy);
+      const foot = Math.max(0, 1 - Math.hypot(fx, fy) / 1.8) * (0.55 + 0.45 * Math.max(0, ((x + ox) * mossSide) / ix)) * (y < icy + iy * 0.5 ? 1 : 0.6);
+      const corner = Math.max(0, ((x + ox) * mossSide) / (hw + Math.abs(ox))) * 0.6 + Math.max(0, -y / hd) * 0.5;
       const share = Math.max(foot * 1.15, corner * 0.85);
       const nz = noise2(x / 1.4, y / 1.4, seed);
       if (moss * share * 1.4 + (nz - 0.5) * 1.1 < 0.6) continue;
-      pts.push([x, y, (cushion(T, share) + 0.25) * 0.58]);
+      pts.push([x, y, (0.18 + 0.55 * T() * T()) * (0.6 + 0.6 * Math.min(1, share))]);
     }
     padsOn(g, k.base, k.e, pts, 0.62);
   };
-  const lower = course(7.3, 4.3, 0, LOWER_H, 0.035, 0.1, 0.25, ROCK, SEED * 3 + 1, plinthTop(7.3, 4.3, SEED * 3 + 2, 1, [5.5, 2.75, -0.6]));
-  const upper = course(5.5, 2.75, LOWER_H, UPPER_H, -0.03, -0.05, -0.35, DRESSED, SEED * 3 + 5, plinthTop(5.5, 2.75, SEED * 3 + 6, 0.9, [4.45, 1.65, -0.2]));
+  /*
+   * The lower course sunk into the turf, so it rises out of the ground with
+   * no ruled foot; the upper laid as two stones, the right one a hair taller
+   * and set a little forward and off line, as a hand lays them.
+   */
+  const lower = course(7.3, 4.3, -0.4, LOWER_H + 0.4, 0.035, 0.1, 0.25, ROCK, SEED * 3 + 1, plinthTop(7.3, 4.3, SEED * 3 + 2, 1, [5.5, 2.75, -0.6]), { fr: 0.9, br: 0.5 });
+  const upperL = course(2.72, 2.75, LOWER_H, UPPER_H, -0.03, -2.78, -0.38, DRESSED, SEED * 3 + 5, plinthTop(2.72, 2.75, SEED * 3 + 6, 0.95, [4.45, 1.65, -0.2], -2.78), { fl: 0.55 });
+  const upperR = course(2.68, 2.66, LOWER_H, UPPER_H + 0.1, -0.075, 2.74, -0.2, DRESSED, SEED * 3 + 9, plinthTop(2.68, 2.66, SEED * 3 + 10, 0.8, [4.45, 1.65, -0.2], 2.74), { fr: 0.45 });
+  const upper = [...upperL, ...upperR];
 
   /* -- the stone's faces -- */
   const carved = (which: 'front' | 'back'): { paint: Painter; over: Painter } => {
@@ -352,13 +379,8 @@ function modelOf(text: string): Model {
         }
         // The line, row by row, cut into its floor.
         for (const row of rows) cut(g, fill, 0.17, () => rowPath(g, row));
-        /* -- the roundel and its two runes, cut, under the light they will have -- */
-        g.beginPath();
-        g.arc(ROUNDEL.x, ROUNDEL.z, ROUNDEL.r * 0.86, 0, TAU);
-        g.fillStyle = css(mix(fill, hex('#a39aac'), 0.36), 0.48);
-        g.fill();
-        cut(g, fill, 0.2, () => strokesPath(g, roundelStrokes('star'), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
-        for (const r of SIDE_RUNES) cut(g, fill, 0.2, () => glyphPath(g, r.glyph, r.x, r.z, SIDE_RUNE_SIZE));
+        /* -- the roundel, cut, under the light it will have: bare stone between its strokes -- */
+        cut(g, fill, 0.17, () => strokesPath(g, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
         // A crack in from the chipped shoulder, its lit lip under it.
         const C = rand(seed * 3 + 7);
         const pts: Pt[] = [[3.3, 11.1]];
@@ -372,12 +394,8 @@ function modelOf(text: string): Model {
         cut(g, fill, 0.11, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
       } else {
         // The back: dressed plain, a ring cut at its head with a six-pointed star in it, and a rule across under it.
-        g.beginPath();
-        g.arc(ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.72, 0, TAU);
-        g.fillStyle = css(mix(fill, hex('#a39aac'), 0.32), 0.42);
-        g.fill();
-        cut(g, fill, 0.2, () => { g.beginPath(); g.arc(ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.84, 0, TAU); });
-        cut(g, fill, 0.2, () => glyphPath(g, 'star6', ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.55));
+        cut(g, fill, 0.16, () => { g.beginPath(); g.arc(ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.75, 0, TAU); });
+        cut(g, fill, 0.16, () => glyphPath(g, 'star6', ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.45));
         cut(g, fill, 0.14, () => { g.beginPath(); g.moveTo(-2.4, 9.1); g.lineTo(2.4, 9.05); });
       }
       /* -- lichen on its upper half, away from the moss -- */
@@ -391,7 +409,7 @@ function modelOf(text: string): Model {
       }
       /* -- moss: up from the foot on the mossy side, and over that shoulder of the head -- */
       const pts: Array<[number, number, number]> = [];
-      for (let i = 0; i < 1100; i++) {
+      for (let i = 0; i < 2400; i++) {
         const z = 0.1 + T() * T_TOP, [a, b] = xs(z);
         if (b - a < 0.4) continue;
         const x = a + 0.1 + T() * (b - a - 0.2);
@@ -404,17 +422,18 @@ function modelOf(text: string): Model {
         if (share <= 0) continue;
         if (which === 'front' && Math.abs(x - PANEL.x) < PANEL.w / 2 && z > PANEL.z0 + 0.6 && inFoot < 0.6) continue;
         if (which === 'front' && Math.hypot(x - ROUNDEL.x, z - ROUNDEL.z) < ROUNDEL.r) continue;
-        const n = noise2(x / 1.3, z / 1.3, seed) * 0.7 + noise2(x / 0.55, z / 0.55, seed + 1) * 0.3;
-        if (share * 1.3 + (n - 0.5) * 1.15 < 0.62) continue;
-        pts.push([x, z, (cushion(T, share) + 0.25) * 0.52]);
+        // A ragged top to every mass: coarse noise for where it has got to, fine noise and a throw of the hand for its edge.
+        const n = noise2(x / 1.3, z / 1.3, seed) * 0.55 + noise2(x / 0.45, z / 0.45, seed + 1) * 0.45;
+        if (share * 1.3 + (n - 0.5) * 1.7 + (T() - 0.5) * 0.35 < 0.66) continue;
+        pts.push([x, z, (0.16 + 0.5 * T() * T()) * (0.6 + 0.6 * Math.min(1, share))]);
       }
       padsOn(g, k.base, k.e, pts);
     };
     const over: Painter = (g, k) => {
       /* -- ivy up the mossy edge, kept to the stone and off the carving -- */
       const strands: Array<{ kind: 'climb' | 'vine' | 'hang'; x: number; z: number; v: number; k: number }> = which === 'front'
-        ? [{ kind: 'climb', x: -3.4, z: 0.1, v: 2, k: 0.5 }, { kind: 'vine', x: -3.0, z: 1.0, v: 1, k: 0.34 }, { kind: 'hang', x: -3.1, z: headAt(-3.1, outline) - 0.25, v: 1, k: 0.42 }]
-        : [{ kind: 'climb', x: 3.4, z: 0.1, v: 1, k: 0.5 }, { kind: 'hang', x: 3.0, z: headAt(3.0, outline) - 0.25, v: 0, k: 0.42 }];
+        ? [{ kind: 'climb', x: -3.45, z: 0.1, v: 0, k: 0.85 }, { kind: 'vine', x: -2.9, z: 0.6, v: 0, k: 0.55 }, { kind: 'hang', x: -3.0, z: headAt(-3.0, outline) - 0.2, v: 0, k: 0.45 }]
+        : [{ kind: 'vine', x: 3.3, z: 0.4, v: 0, k: 0.62 }, { kind: 'hang', x: 3.1, z: headAt(3.1, outline) - 0.2, v: 0, k: 0.42 }];
       const halo: Pt[] = inset(area2(outline) < 0 ? outline.slice().reverse() : outline, -0.18);
       const tr0 = g.getTransform();
       const sprays: Array<[number, number]> = [];
@@ -461,7 +480,7 @@ function modelOf(text: string): Model {
   const back = carved('back');
 
   /* -- the edges of the stone: its skin, and moss along the tops -- */
-  const edgePaint = (i: number, up: number): { paint?: Painter } | undefined => {
+  const edgePaint = (i: number, up: number): { paint?: Painter; over?: Painter } | undefined => {
     const p = OUTLINE[i], q = OUTLINE[(i + 1) % OUTLINE.length];
     const mx = (p[0] + q[0]) / 2;
     const dx = q[0] - p[0], dz = q[1] - p[1];
@@ -478,24 +497,35 @@ function modelOf(text: string): Model {
         }
         g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.35);
         for (let j = 0; j < len * 3; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.09 + T() * 0.07, 0.09 + T() * 0.07);
+      },
+      /*
+       * Moss on the edge, laid over it after every face so a mass runs on
+       * across the joins of the strips: on the tops of the head on its
+       * mossy side, and up the mossy side from the foot. Where it is, off
+       * noise at the very place on the stone, not on the strip.
+       */
+      over: (g, k) => {
+        const T = rand(SEED * 103 + i);
         const pts: Array<[number, number, number]> = [];
+        const at = (s0: number): Pt => [p[0] + (dx * s0) / len, p[1] + (dz * s0) / len];
         if (up > 0.35) {
-          // A top: moss over it on the mossy side.
-          const cover = 0.55 + 0.6 * Math.max(0, (mx * mossSide) / 4);
-          for (let j = 0, n = Math.round(len * 2 * G * 3); j < n; j++) {
-            const s = T() * len, y = -G + 0.1 + T() * (2 * G - 0.2);
-            const nz = noise2((mx + s) / 1.2, y / 1.2, SEED * 7 + 3);
-            if (cover * 1.2 + (nz - 0.5) * 1.2 < 0.7) continue;
-            pts.push([s, y, (cushion(T) + 0.3) * 0.48]);
+          const n = Math.round(len * 2 * G * 7);
+          for (let j = 0; j < n; j++) {
+            const s0 = T() * len, y = -G + T() * 2 * G;
+            const [x, z] = at(s0);
+            const cover = 0.5 + 0.75 * Math.max(0, (x * mossSide) / 4) - 0.25 * Math.max(0, (-x * mossSide) / 4);
+            const nz = noise2(x / 1.1, y / 1.1 + z / 3, SEED * 7 + 3) * 0.6 + noise2(x / 0.45, y / 0.45, SEED * 7 + 4) * 0.4;
+            if (cover * 1.2 + (nz - 0.5) * 1.6 + (T() - 0.5) * 0.3 < 0.72) continue;
+            pts.push([s0, y, 0.15 + 0.42 * T() * T()]);
           }
-        } else if (Math.sign(mx) === mossSide && Math.min(p[1], q[1]) < 3) {
-          // The mossy side, low down: a band up from the foot.
-          for (let j = 0, n = Math.round(len * 2 * G * 2.5); j < n; j++) {
-            const s = T() * len, y = -G + 0.1 + T() * (2 * G - 0.2);
-            const z = p[1] + (dz * s) / len;
-            const nz = noise2(z / 1.2, y / 1.2, SEED * 7 + 11);
-            if ((1 - z / 3) * 1.3 + (nz - 0.5) * 1.1 < 0.62) continue;
-            pts.push([s, y, (cushion(T, 1 - z / 3) + 0.25) * 0.52]);
+        } else if (Math.sign(mx) === mossSide && Math.min(p[1], q[1]) < 4) {
+          const n = Math.round(len * 2 * G * 6);
+          for (let j = 0; j < n; j++) {
+            const s0 = T() * len, y = -G + T() * 2 * G;
+            const [, z] = at(s0);
+            const nz = noise2(z / 1.1, y / 1.1, SEED * 7 + 11) * 0.6 + noise2(z / 0.45, y / 0.45, SEED * 7 + 12) * 0.4;
+            if ((1 - z / 4) * 1.3 + (nz - 0.5) * 1.6 + (T() - 0.5) * 0.3 < 0.64) continue;
+            pts.push([s0, y, (0.16 + 0.45 * T() * T()) * (0.7 + 0.5 * (1 - z / 4))]);
           }
         }
         if (pts.length) padsOn(g, k.base, k.e, pts, up > 0.5 ? 0.62 : 0.9);
@@ -505,6 +535,8 @@ function modelOf(text: string): Model {
   const stone = plate({
     o: O, U: [1, 0, 0], W, A: [0, 1, 0], outline: OUTLINE, half: [half0, half1], tTop: T_TOP, bevel: 0.42, tone: STONE,
     front: front.paint, frontOver: front.over, back: back.paint, backOver: back.over, edge: edgePaint, sunk: true,
+    // One rounded edge, not a stack of strips: the lines between them barely there.
+    edgeCrease: 0.1,
   });
   /*
    * The plinth and the stone on it are one thing in the order: the lower
@@ -512,19 +544,54 @@ function modelOf(text: string): Model {
    * seen -- what grows round it is kept off the plinth, so the order is only
    * ever asked between whole things.
    */
-  const solid = [lower, upper, stone];
-  things.push({ x: 0, y: 0, reach: solid.flat().flatMap((fc) => fc.pts), draw: (g, e) => { for (const fs of solid) drawFaces(g, e, fs, INK); } });
+  const solid = [upperL, upperR, stone];
+  // Turf and moss grown up over the foot of the lower course where it is seen, so it goes into the ground and does not stand on it.
+  const skirt: Array<[number, number, number]> = [];
+  {
+    const K = rand(SEED * 29 + 3);
+    for (let i = 0; i < 200; i++) {
+      const u = K() * 4 - 2, side = Math.floor(K() * 4);
+      const t = u / 2;
+      const [x, y] = side === 0 ? [t * 7.4, 4.45] : side === 1 ? [t * 7.4, -4.0] : side === 2 ? [7.5, t * 4.3] : [-7.35, t * 4.3];
+      const nz = noise2(x / 1.7, y / 1.7, SEED + 77);
+      if (nz < 0.38) continue;
+      skirt.push([x + (K() - 0.5) * 0.5, y + 0.25 + (K() - 0.5) * 0.4, (0.18 + 0.45 * K() * K()) * (0.6 + nz)]);
+    }
+  }
+  const drawSkirt = (g: Ctx, e: Eye): void => {
+    const across = Math.hypot(e.ux, e.uy);
+    const ps: Pad[] = [];
+    for (const [x, y, rr] of skirt) {
+      // Only on the side of it the eye sees, and up the face a little, at its foot.
+      if (x * e.toward[0] + y * e.toward[1] <= 1.5) continue;
+      const [px, py] = proj(e, [x, y, 0.15 + rr * 0.3]);
+      ps.push([px, py, rr * across * 1.15, rr * across * 0.75]);
+    }
+    drawPads(g, ps);
+  };
+  things.push({
+    x: 0, y: 0, reach: [...lower, ...solid.flat()].flatMap((fc) => fc.pts),
+    draw: (g, e) => {
+      drawFaces(g, e, lower, INK);
+      drawSkirt(g, e);
+      for (const fs of solid) drawFaces(g, e, fs, INK);
+    },
+  });
 
   /* -- a rock or two at its back, mossed over, and pebbles -- */
   // Kept inside a circle that fits its footprint, since it is set askew in it.
-  const rocks: Array<[number, number, number, number, number]> = [[-5.5, -6.1, 1.65, 1.5, 0.3], [6.1, -5.7, 1.2, 1.05, 0.22], [8.3, 1.7, 0.72, 0.5, 0.12], [-8.4, 2.3, 0.6, 0.42, 0.12]];
+  const rocks: Array<[number, number, number, number, number]> = [[-5.5, -6.1, 1.65, 1.5, 0.3], [6.1, -5.7, 1.2, 1.05, 0.22], [-8.1, -2.9, 0.55, 0.4, 0.15], [3.6, 7.2, 0.48, 0.34, 0.1]];
   rocks.forEach(([x, y, r, h, moss], i) => {
     things.push({ x, y, faces: boulder(x, y, r, r * (0.72 + R() * 0.2), h, R() * TAU, SEED * 17 + i, ROCK, moss) });
   });
 
   /* -- flowers laid at its foot and grown up round the plinth, and grass -- */
   const flowers: Array<[number, number, number, number]> = [[2.3, 5.5, 0.34, 0], [-1.7, 5.85, 0.3, 2], [-8.5, -1.9, 0.3, 1], [8.6, -1.4, 0.28, 3], [5.4, 5.1, 0.26, 4], [-5.3, 5.3, 0.27, 0]];
-  flowers.forEach(([x, y, big, c], i) => {
+  // Which clumps are up, and their colours, off the way it was set: no two facings of it are dressed alike.
+  const Fv = rand(SEED * 53 + ['s', 'e', 'n', 'w'].indexOf(facing) * 101);
+  flowers.forEach(([x, y, big, c0], i) => {
+    if (i > 1 && Fv() < 0.35) return;
+    const c = c0 + Math.floor(Fv() * 3);
     things.push({
       x, y, reach: [[x, y, 7]],
       draw: (g, e) => {
@@ -534,7 +601,7 @@ function modelOf(text: string): Model {
     });
   });
   for (let i = 0; i < 22; i++) {
-    const a = R() * TAU, d = 5.2 + R() * 4.1;
+    const a = R() * TAU + Fv() * 0.4, d = 5.2 + R() * 4.1;
     const x = Math.cos(a) * d, y = Math.sin(a) * d;
     if (Math.abs(x) < 7.9 && Math.abs(y) < 4.9) continue;
     const seed = SEED * 77 + i;
@@ -555,7 +622,7 @@ function modelOf(text: string): Model {
   let nb = newell([backFrame.o, add(backFrame.o, backFrame.a), add(add(backFrame.o, backFrame.a), backFrame.b)]);
   if (nb[1] > 0) nb = mul(nb, -1);
   const model: Model = { things, solid: [...stone, ...upper, ...lower], frames: { front: frontFrame, back: backFrame }, normals: { front: nf, back: nb }, rows, turf };
-  models.set(text, model);
+  models.set(key, model);
   return model;
 }
 
@@ -598,6 +665,9 @@ const BUDGET = 6e6;
 const baked = new Map<string, Baked>();
 let bakedArea = 0;
 
+/** The stone's shade on the ground, from under its foot on the screen at zoom one: how far off the light, and how wide and deep. */
+const SHADE = { dx: 6, dy: 2.5, rx: 21, ry: 8 };
+
 function measure(model: Model, e: Eye): [number, number, number, number] {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   const take = (p: V3): void => {
@@ -609,12 +679,17 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
     for (const p of t.reach ?? []) take(p);
   }
   for (const [x, y] of model.turf) take([x, y, 0]);
+  // And the shade it throws, all of its feathered edge.
+  const [sx, sy] = proj(e, [0, -0.5, 0]);
+  x1 = Math.max(x1, sx + SHADE.dx + SHADE.rx);
+  y1 = Math.max(y1, sy + SHADE.dy + SHADE.ry);
+  x0 = Math.min(x0, sx + SHADE.dx - SHADE.rx);
   const pad = 6;
   return [Math.floor(x0 - pad), Math.floor(y0 - pad), Math.ceil(x1 + pad), Math.ceil(y1 + pad)];
 }
 
 function bake(facing: Side, rotation: number, scale: number, text: string): Baked {
-  const model = modelOf(text);
+  const model = modelOf(text, facing);
   const e = eyeOf(FACING_YAW[facing] + SET_ASKEW, rotation);
   const [x0, y0, x1, y1] = measure(model, e);
   const [canvas, g] = canvasOf((x1 - x0) * scale, (y1 - y0) * scale);
@@ -646,11 +721,21 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
       g.ellipse(px, py, r, r * 0.5, 0, 0, TAU);
       g.fill();
     }
+    // Its shade, thrown off the light: the island's cool teal, one soft field fading out to nothing at its rim.
     const [sx, sy] = proj(e, [0, -0.5, 0]);
-    g.fillStyle = 'rgba(44, 74, 78, 0.17)';
+    g.save();
+    g.translate(sx + SHADE.dx, sy + SHADE.dy);
+    g.rotate(0.1);
+    g.scale(1, SHADE.ry / SHADE.rx);
+    const shade = g.createRadialGradient(0, 0, 0, 0, 0, SHADE.rx);
+    shade.addColorStop(0, 'rgba(44, 74, 78, 0.2)');
+    shade.addColorStop(0.55, 'rgba(44, 74, 78, 0.14)');
+    shade.addColorStop(1, 'rgba(44, 74, 78, 0)');
+    g.fillStyle = shade;
     g.beginPath();
-    g.ellipse(sx + 6, sy + 2.5, 20, 7.5, 0.1, 0, TAU);
+    g.arc(0, 0, SHADE.rx, 0, TAU);
     g.fill();
+    g.restore();
   }
 
   /* -- everything standing, in order: the lower course first, the rest by where it stands -- */
@@ -668,17 +753,19 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
     const [ox, oy] = proj(e, fr.o), [ax, ay] = proj(e, fr.a), [bx, by] = proj(e, fr.b);
     const M = new DOMMatrix([ax, ay, bx, by, ox, oy]);
     if (which === 'front') {
-      SIDE_RUNES.forEach((r, i) => glows.push(bakeGlow(M, scale, (h) => glyphPath(h, r.glyph, r.x, r.z, SIDE_RUNE_SIZE), r.x, r.z, SIDE_RUNE_SIZE, i, false, { w: 0.24 })));
-      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, roundelStrokes('star'), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 2, true, { w: 0.22 }));
+      // The roundel: its lit strokes only by day, so bare stone shows between them; glowing lines after dark.
+      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 4, true,
+        { w: ROUNDEL_W, noDayHalo: true, gold: true }));
       // The line: its rows catch the light after dark, faintly, the lowest first.
       model.rows.slice().reverse().forEach((row, j) => {
         if (!row.length) return;
         const x0r = Math.min(...row.map((m) => m.x)), x1r = Math.max(...row.map((m) => m.x));
         const half = (x1r - x0r) / 2 + MARK_W;
-        glows.push(bakeGlow(M, scale, (h) => rowPath(h, row), (x0r + x1r) / 2, row[0].z, half, j, false, { w: 0.17, faint: 0.42, nightOnly: true }));
+        glows.push(bakeGlow(M, scale, (h) => rowPath(h, row), (x0r + x1r) / 2, row[0].z, half, j, false, { w: 0.17, faint: 0.6, nightOnly: true }));
       });
     } else {
-      glows.push(bakeGlow(M, scale, (h) => glyphPath(h, 'star6', ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.55), ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.55, 0, false, { w: 0.22, faint: 0.8 }));
+      glows.push(bakeGlow(M, scale, (h) => glyphPath(h, 'star6', ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.45), ROUNDEL.x, ROUNDEL.z - 0.3, ROUNDEL.r * 0.45, 0, false,
+        { w: ROUNDEL_W, faint: 0.8, noDayHalo: true, gold: true }));
     }
   }
 

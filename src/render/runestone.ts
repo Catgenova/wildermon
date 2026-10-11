@@ -264,6 +264,8 @@ export interface PlateOpts {
    * depths and be told apart from the side.
    */
   depthAt?: (s: number, t: number, half: number) => [number, number];
+  /** How strong the line between two of its edge strips is: a Runestone's 0.4, fainter where the edge is one rounded surface. */
+  edgeCrease?: number;
 }
 
 export function plate(o: PlateOpts): Face[] {
@@ -308,7 +310,7 @@ export function plate(o: PlateOpts): Face[] {
     const along = unit(sub(P(q, 0), P(p, 0)));
     const dress = o.edge?.(i, up);
     face([front(inner[i]), front(inner[j]), frontEdge(q), frontEdge(p)], add(out, A), { crease: 0.32 });
-    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: 0.4 });
+    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: o.edgeCrease ?? 0.4 });
     face([backEdge(p), backEdge(q), back(inner[j]), back(inner[i])], sub(out, A), { crease: 0.32 });
   }
   return faces;
@@ -2017,6 +2019,8 @@ export interface Glow {
   faint?: number;
   /** Lit only after dark: by day a cut, and nothing more. */
   nightOnly?: boolean;
+  /** No glow laid round it by day, only its lit groove: fine line-work that a halo would fill in solid. */
+  noDayHalo?: boolean;
 }
 
 interface Baked {
@@ -2158,7 +2162,7 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
  * only (`nightOnly`).
  */
 export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x: number, z: number, s: number, i: number, roundel: boolean,
-  o: { w?: number; faint?: number; nightOnly?: boolean } = {}): Glow {
+  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; gold?: boolean } = {}): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2196,6 +2200,18 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     }
   });
   const core = sheet((h) => {
+    if (o.gold) {
+      // Line-work too fine for a white heart: gold all through, a deeper gold at its edge, as gilding in a cut is.
+      path(h);
+      h.strokeStyle = 'rgba(190, 146, 58, 0.9)';
+      h.lineWidth = w * 1.1;
+      h.stroke();
+      path(h);
+      h.strokeStyle = '#e8c45c';
+      h.lineWidth = w * 0.7;
+      h.stroke();
+      return;
+    }
     path(h);
     h.strokeStyle = 'rgba(214, 140, 52, 0.9)';
     h.lineWidth = w * 1.05;
@@ -2231,7 +2247,7 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2396,7 +2412,7 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
      * after dark light, tight round its shape, a roundel's fainter still so
      * where its strokes cross it does not burn to a white spot.
      */
-    if (day > 0.01 && !gl.nightOnly) {
+    if (day > 0.01 && !gl.nightOnly && !gl.noDayHalo) {
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square * f;
       ctx.drawImage(gl.halo, X, Y, Wd, Ht);
