@@ -2,8 +2,8 @@ import type { Side } from '../game/building';
 import { hashOf, MOSS, rand, STAGES, strandPic, PPM } from './ivy';
 import { star } from './shine';
 import {
-  add, at, bakeGlow, boulder, canvasOf, cut, dot, drawFaces, drawGlows, drawPads, flowerClump, glowHoles, glowMasks,
-  glyphPath, grassTuft, groundNear, hex, mix, mul, newell, noise2, plate, proj, scaleFor, strokesPath, roundelStrokes, eyeOf, css,
+  add, at, bakeGlow, canvasOf, cut, dot, drawFaces, drawGlows, drawPads, flowerClump, glowHoles, glowMasks,
+  glyphPath, grassTuft, groundNear, hex, mix, RUNE_GOLD, RUNE_WHITE, STONE_INK, CREASE_INK, mossOver, mul, newell, noise2, plate, proj, scaleFor, strokesPath, roundelStrokes, eyeOf, css,
   type Ctx, type Eye, type Face, type Glow, type GlowSpec, type NightHole, type NightMask, type NightSource, type Pad, type PaintCtx, type Painter, type Pt, type Thing, type Tone, type V3,
   toneOf, TAU,
 } from './runestone';
@@ -18,9 +18,9 @@ import {
  * and leaning, a corner knocked off its head, with a sun cut in its front; a
  * band set deep under a broad capstone dropped at one corner, a dark reveal
  * round each face and the cap's shadow across its head, one rune lit in each
- * face like a lantern's firebox; and over the cap the runestones' split head
- * in little, two uneven points with a cleft between, apart through its
- * thickness so the split shows from the side. The runes breathe one after
+ * face like a lantern's firebox; and over the cap a low broken capstone,
+ * split as the runestones' heads are into two unequal horns off its middle,
+ * apart through its thickness so the split shows from the side. The runes breathe one after
  * another round the band, and after dark light motes rise off the head. It
  * stands an eighth of a half turn off square to the way it faces, as the
  * runestones do, each course turned a little off the last.
@@ -33,7 +33,8 @@ import {
  * flowers grow round its foot from the first day.
  *
  * After dark its stone keeps some of the night whatever light falls on it,
- * and what grows round it a little less; the band lights its own stone, down
+ * and what grows round it a little less; each face of the band is a window
+ * lit from inside, pale gold behind its rune; the band lights its own stone, down
  * the shaft from under the band to nothing at its foot and up the cap's
  * underside, so the band is the brightest thing on it; a bloom round the band
  * and a pool at its foot light the ground and not the stone; and the runes
@@ -64,7 +65,7 @@ const FOOT = 1.0;
 const SHAFT_H = 4.0;
 const BAND_H = 2.8;
 const CAP_H = 1.45;
-const HEAD_H = 2.4;
+const HEAD_H = 1.8;
 /** How far the shaft leans, across and toward its front, per unit up: a hair, so it is not set out with a rule. */
 const LEAN: [number, number] = [0.018, -0.012];
 
@@ -78,11 +79,28 @@ const RUNE_PX = 1.1;
 /** How high a face's rune stands up the band, and how far either side of it a drilled dot is. */
 const RUNE_Z = 1.32;
 const DOT_X = 1.48;
-/** The reveal round a face of the band and the cap's shadow across its head: a cool dark a step under the band's shade. */
-const REVEAL = '#3a3350';
-/** The gold of a rune's lit groove, middle and round it: amber, so the island's warm light over it at night stays pale gold. */
-const RUNE_INNER = '#efc98f';
-const RUNE_MID = '#e9b670';
+/** The reveal round a face of the band and the cap's shadow across its head: a cool grey-mauve a step under the band's shade. */
+const REVEAL = '#5a5266';
+/**
+ * A rune's lit groove: the runestones' own gold through and through, without
+ * their all-but-white middle, so that in the island's warm light over it at
+ * night it peaks a pale gold and never lemon or white.
+ */
+const RUNE_INNER = css(mix(hex(RUNE_WHITE), hex(RUNE_GOLD), 0.6));
+const RUNE_MID = RUNE_GOLD;
+/**
+ * And after dark, under the island's warm light, which lays about 46, 37, 23
+ * over it at the lantern: the same gold and white taken down to what that
+ * light lifts to a pale gold of about 255, 238, 185 and no further.
+ */
+const NIGHT_LIFT: [number, number, number] = [46, 37, 23];
+const NIGHT_INNER = css(mix(hex(RUNE_WHITE), hex(RUNE_GOLD), 0.6).map((v, i) => Math.min(v, [255, 238, 185][i] - NIGHT_LIFT[i] - 1)) as [number, number, number]);
+const NIGHT_MID = css(hex(RUNE_GOLD).map((v, i) => Math.min(v * 0.92, [255, 222, 150][i] - NIGHT_LIFT[i])) as [number, number, number]);
+/**
+ * The window each face of the band is after dark, lit from inside behind its
+ * rune: pale gold at the rune, a dim warm at the reveal round it.
+ */
+const WINDOW: Array<[number, string]> = [[0, 'rgba(246, 227, 176, 0.95)'], [0.5, 'rgba(222, 186, 138, 0.9)'], [1, 'rgba(138, 106, 88, 0.85)']];
 
 interface Model {
   things: Thing[];
@@ -97,7 +115,7 @@ interface Model {
   /** What stands over the band and in front of its top, the cap and the head: no rune's light is laid over them. */
   over: Face[];
   /** The band's four faces as frames runes are laid in: across each as the eye sees it, and up it. */
-  band: Array<{ o: V3; a: V3; b: V3; n: V3; runes: GlowSpec[]; poly: V3[] }>;
+  band: Array<{ o: V3; a: V3; b: V3; n: V3; runes: GlowSpec[]; poly: V3[]; xs: number }>;
   /** The middle of the band, and the top of the head: where the motes rise from and to. */
   glowAt: V3;
   top: number;
@@ -142,13 +160,13 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
   const m = moss;
   /*
    * How far each growth has got, nought to one, so the stages read apart:
-   * a lump on the cap from the first, cushions on the outcrop and up the
-   * shaft's foot and a first strand of ivy from halfway, the ivy up to the
-   * band at the end.
+   * a lump on the cap and a first sprig of ivy from the first, cushions on
+   * the outcrop and at the shaft's foot from halfway, the ivy climbing to the
+   * band by the end.
    */
   const capM = Math.min(1, m / 0.6);
   const footM = Math.min(1, Math.max(0, (m - 0.3) / 0.6));
-  const ivyM = Math.max(0, (m - 0.5) / 0.5);
+  const ivyM = Math.max(0, (m - 0.2) / 0.8);
   // Which way across it is shady, in its own frame: its left (-1) or its right (1).
   const shadySide = MOSS_SIDE;
   const shadyFront = MOSS_FRONT;
@@ -157,7 +175,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
   const A: V3 = [0, 1, 0];
 
   /* -- moss on an upright face: cushions up from its foot, more and higher the shadier the face -- */
-  const footMoss = (g: Ctx, k: PaintCtx, x0: number, x1: number, shade: number, salt: number, rise = 1.1): void => {
+  const footMoss = (g: Ctx, k: PaintCtx, x0: number, x1: number, shade: number, salt: number, rise = 1.8): void => {
     const amount = footM * (0.15 + 0.95 * shade);
     if (amount <= 0.08) return;
     const T = rand(seed * 13 + salt);
@@ -279,14 +297,61 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     for (const r of runes) cut(g, fill, RUNE_W, () => glyphPath(g, r.glyph, r.x, r.z, r.s));
   };
 
+  /*
+   * A rock of the outcrop: a ring of six to eight corners on the ground, one
+   * up its side a little in, and a broad top a little in from that, each
+   * corner pushed about by its seed -- a flat-topped, faceted stone, as the
+   * runestones' outcrops are split, not a rounded one; moss over its top and
+   * down the sides seen as far as `moss` says (`mossOver`).
+   */
+  const slab = (cx: number, cy: number, rx: number, ry: number, h: number, turn: number, salt: number, moss: number): Face[] => {
+    const Q = rand(salt);
+    const n = 6 + Math.floor(Q() * 3);
+    const c = Math.cos(turn), sn = Math.sin(turn);
+    const jit = Array.from({ length: n }, () => [(Q() - 0.5) * 0.4, 1 + (Q() - 0.5) * 0.25] as Pt);
+    const ring = (k: number, z: number, tilt: number): V3[] => jit.map(([da, dr], i) => {
+      const a = (i / n) * TAU + da;
+      const x = Math.cos(a) * rx * k * dr, y = Math.sin(a) * ry * k * dr;
+      return [cx + x * c - y * sn, cy + x * sn + y * c, z + tilt * (x / rx) + (Q() - 0.5) * 0.12 * h] as V3;
+    });
+    const tilt = (Q() - 0.5) * 0.18 * h;
+    const rings = [ring(1, -0.5, 0), ring(0.98, h * 0.62, tilt * 0.6), ring(0.8, h, tilt)];
+    const own: Tone = { lit: mix(ROCK.lit, Q() < 0.5 ? hex('#ecdcc4') : hex('#d7dad6'), 0.2 + 0.2 * Q()), shade: ROCK.shade };
+    const faces: Face[] = [];
+    const bands: Array<{ pts: V3[]; k: number; n: V3 }> = [];
+    const face = (pts: V3[], expect: V3, extra: Partial<Face> = {}): Face => {
+      let nn = newell(pts);
+      if (dot(nn, expect) < 0) nn = mul(nn, -1);
+      const f: Face = { pts, n: nn, tone: own, crease: 0.3, ...extra };
+      faces.push(f);
+      return f;
+    };
+    for (let b = 0; b < 2; b++) {
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        const lo = rings[b], hi = rings[b + 1];
+        const mid = mul(add(lo[i], lo[j]), 0.5);
+        const f = face([lo[i], lo[j], hi[j], hi[i]], add([mid[0] - cx, mid[1] - cy, 0], [0, 0, b * 0.8]));
+        bands.push({ pts: f.pts, k: b, n: f.n });
+      }
+    }
+    const top = rings[2];
+    const hz = top.reduce((sum, p) => sum + p[2], 0) / n;
+    face(top.slice(), [0, 0, 1], {
+      frame: { o: [cx, cy, hz], a: [1, 0, 0], b: [0, 1, 0] }, crease: 0.4,
+      over: moss > 0 ? mossOver(top.map((p) => [p[0], p[1]] as Pt), hz, bands, moss, salt) : undefined,
+    });
+    return faces;
+  };
+
   /* -- the outcrop it stands on, and rocks hugging its foot -- */
-  things.push({ x: 0, y: 0, first: true, faces: boulder(0, 0, 5.6, 5.1, OUTCROP_H, R() * TAU, seed * 3 + 1, ROCK, footM * 0.75) });
+  things.push({ x: 0, y: 0, first: true, faces: slab(0, 0, 5.6, 5.1, OUTCROP_H, R() * TAU, seed * 3 + 1, footM * 0.75) });
   for (let i = 0; i < 3; i++) {
     const a = ((i + 0.3 + R() * 0.4) / 3) * TAU, d = 5 + R() * 1.2;
     const x = Math.cos(a) * d, y = Math.sin(a) * d * 0.9;
     const r = 1.1 + R() * 0.8;
     const sh = shadeOf(Math.cos(a), Math.sin(a));
-    things.push({ x, y, faces: boulder(x, y, r, r * (0.7 + R() * 0.3), 0.9 + R() * 0.8, R() * TAU, seed * 17 + i, ROCK, footM * (0.1 + 0.4 * sh)) });
+    things.push({ x, y, faces: slab(x, y, r, r * (0.7 + R() * 0.3), 0.8 + R() * 0.6, R() * TAU, seed * 17 + i, footM * (0.1 + 0.4 * sh)) });
   }
 
   /*
@@ -294,6 +359,22 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
    * outcrops, big enough to carry their flecks of light: from halfway on.
    */
   if (footM > 0) {
+    // At the foot of the shaft's mossy corner, banked up against it.
+    const fx = shadySide * 3.25, fy = shadyFront * 2.75, fr = 1.2 + 1.0 * footM;
+    things.push({
+      x: fx * 1.06, y: fy * 1.06, reach: [[fx, fy, OUTCROP_H + 2]],
+      draw: (g, e) => {
+        const T = rand(seed * 43 + 1);
+        const across = Math.hypot(e.ux, e.uy);
+        const ps: Pad[] = [];
+        for (let j = 0; j < 4; j++) {
+          const [px, py] = proj(e, [fx + (T() - 0.5) * fr * 1.4, fy + (T() - 0.5) * fr * 1.2, FOOT + 0.25 + T() * 0.5]);
+          const rr = fr * (0.6 + 0.4 * T());
+          ps.push([px, py, rr * across, rr * across * 0.8]);
+        }
+        drawPads(g, ps);
+      },
+    });
     const d = Math.hypot(shadySide, shadyFront);
     for (const [k, r, salt] of [[1, 1.0 + 0.8 * footM, 1], [-0.45, 0.6 + 0.5 * footM, 2]] as Array<[number, number, number]>) {
       const ax = (shadySide / d) * (k > 0 ? 1 : -0.3) + (k > 0 ? 0 : shadyFront * 0.9), ay = (shadyFront / d) * (k > 0 ? 1 : 0.5);
@@ -398,6 +479,20 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
       paint: (g, k) => {
         inFrame(g, k, fr);
         skin(g, k.fill, -half - 0.5, half + 0.5, h, salt + (fr.right ? 5 : 6), ledge);
+        if (ledge) {
+          // A margin drafted a finger in from its arrises, and notches cut across the front one in groups, as the old stones are lettered on their edges.
+          cut(g, k.fill, 0.15, () => { g.beginPath(); g.moveTo(-half + 0.75, 0.9); g.lineTo(-half + 0.95, h - 0.6); g.lineTo(half - 0.95, h - 0.65); g.lineTo(half - 0.75, 0.9); });
+          const N = rand(seed * 211 + salt + (fr.right ? 1 : 2));
+          const front = fr.right ? -1 : 1;
+          for (let z = 1.4; z < h - 0.9;) {
+            const n = 1 + Math.floor(N() * 3);
+            for (let j = 0; j < n; j++) {
+              const zz = z + j * 0.42;
+              cut(g, k.fill, 0.15, () => { g.beginPath(); g.moveTo(front * (half - 0.2), zz); g.lineTo(front * (half - 0.62), zz); });
+            }
+            z += n * 0.42 + 0.55 + N() * 0.4;
+          }
+        }
         if (ledge) footMoss(g, k, -half - 0.5, half + 0.5, shadeOf(fr.right ? 1 : -1, 0), salt + (fr.right ? 5 : 6));
       },
     };
@@ -408,10 +503,10 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
    * leaves laid in the face and let run a leaf past its edge, never up onto
    * the band. A first strand from halfway, a second as it thickens.
    */
-  const ivyStage = Math.round(ivyM * STAGES);
+  const ivyStage = Math.ceil(ivyM * STAGES);
   const strands = ivyStage > 0 ? [
-    { kind: 'climb' as const, v: 1 + variant, x: shadySide * 2.6, z: 0.15, k: 0.34, stage: ivyStage },
-    { kind: 'vine' as const, v: variant, x: shadySide * 1.7, z: 0.1, k: 0.28, stage: Math.round(Math.max(0, ivyM - 0.45) / 0.55 * STAGES) },
+    { kind: 'climb' as const, v: 1 + variant, x: shadySide * 2.7, z: -0.5, k: 0.52, stage: ivyStage },
+    { kind: 'vine' as const, v: variant, x: shadySide * 1.8, z: -0.3, k: 0.4, stage: Math.round(Math.max(0, ivyM - 0.6) / 0.4 * STAGES) },
   ] : [];
   const ivy: Painter | undefined = strands.length ? (g) => {
     g.save();
@@ -480,7 +575,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
   if (capM > 0) {
     const spots: Array<[number, number, number]> = [[2.55, 1.55, 1], [1.35, 1.95, 0.8], [2.8, 0.35, 0.85]];
     const n = capM < 0.5 ? 1 : capM < 0.95 ? 2 : 3;
-    const lumps = spots.slice(0, n).map(([cs, cy, k]) => ({ at: P(capF, shadySide * cs, CAP_H - 0.05, shadyFront * cy), r: k * (1.0 + 0.8 * capM) }));
+    const lumps = spots.slice(0, n).map(([cs, cy, k]) => ({ at: P(capF, shadySide * cs, CAP_H - 0.05, shadyFront * cy), r: k * (1.3 + 1.0 * capM) }));
     things.push({
       x: 0, y: 0,
       draw: (g, e) => {
@@ -510,16 +605,16 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     });
   }
 
-  /* -- the head: a little pointed stone, the runestones' head in small, a star cut in its front -- */
+  /* -- the head: a low broken capstone, split into two unequal horns off its middle as the runestones' heads are -- */
   const headF: Frame = onTop(capF, 0.1, CAP_H - 0.12, 0.11 - 0.06 * variant, [-0.03, 0.02]);
-  const headOutline: Pt[] = [[-1.65, 0], [1.6, 0], [1.5, 0.75], [1.08, 1.55], [0.66, 2.02], [0.3, 1.38], [0.04, 1.12], [-0.26, 1.48], [-0.74, HEAD_H], [-1.22, 1.68], [-1.6, 0.75]];
+  const headOutline: Pt[] = [[-2.3, 0], [2.2, 0], [2.15, 0.58], [1.72, 1.02], [1.28, 1.5], [0.8, 1.02], [0.32, 0.7], [-0.18, 1.12], [-0.85, HEAD_H], [-1.62, 1.4], [-2.25, 0.68]];
   const head = plate({
-    ...headF, outline: headOutline, half: [1.3, 0.55], tTop: HEAD_H, bevel: 0.26, tone: STONE,
-    // Over the foot of its cleft the two points stand apart through its thickness, the taller forward, so the split shows from the side too.
+    ...headF, outline: headOutline, half: [1.6, 0.95], tTop: HEAD_H, bevel: 0.3, tone: STONE,
+    // Over the foot of its cleft the two horns stand apart through its thickness, the taller forward, so the split shows from the side too.
     depthAt: (hs, ht, h) => {
-      if (ht < 1.05) return [0, h];
-      const k = Math.min(1, (ht - 1.05) / 0.5), u = Math.max(0, Math.min(1, (hs + 0.35) / 0.8));
-      return [(0.42 * (1 - u) - 0.45 * u) * k, h - (h - 0.5) * 0.5 * k];
+      if (ht < 0.68) return [0, h];
+      const k = Math.min(1, (ht - 0.68) / 0.45), u = Math.max(0, Math.min(1, (hs - 0.05) / 0.6));
+      return [(0.5 * (1 - u) - 0.5 * u) * k, h - (h - 0.75) * k];
     },
     front: (g, k) => {
       skin(g, k.fill, -2.2, 2.2, HEAD_H, 50, false);
@@ -560,7 +655,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     // The face itself, out to the arrises: across it from one corner to the other, and up it.
     const xs = j % 2 === 0 ? bandHalfX : bandHalfY;
     const poly: V3[] = [at(fr.o, [-xs, fr.a]), at(fr.o, [xs, fr.a]), at(fr.o, [xs, fr.a], [BAND_H, fr.b]), at(fr.o, [-xs, fr.a], [BAND_H, fr.b])];
-    return { o: fr.o, a: fr.a, b: fr.b, n, runes: runesOf[j], poly };
+    return { o: fr.o, a: fr.a, b: fr.b, n, runes: runesOf[j], poly, xs };
   });
 
   const turf: Pt[] = Array.from({ length: 16 }, (_, i) => {
@@ -593,14 +688,24 @@ const NIGHT_STONE = 'rgb(46, 44, 72)';
 const NIGHT_KEEP = 0.45;
 /** How much of that night what grows and lies round its foot keeps, against its stone's. */
 const FLORA_KEEP = 0.7;
+/** The ink after dark, and how much more of the night it keeps than the stone. */
+const NIGHT_INK = 'rgb(38, 32, 46)';
+const NIGHT_INK_KEEP = 0.35;
 /** The band's light on its own stone after dark: its colour, how strong just under the band, and on the cap's underside. */
 const WARM = '236, 196, 146';
 const WARM_SHAFT = 0.5;
-const WARM_SOFFIT = 0.42;
+const WARM_SOFFIT = 0.6;
 /** Pixels a unit up is on the screen at zoom one. */
 const HEIGHT_PX = 2.25;
 /** How much a lantern's runes add after dark against a runestone's: it stands in its own light. */
-const HEAT = 0.22;
+const HEAT = 0.12;
+
+/** A face of the band lit from inside after dark: its picture, where it goes from the footprint's middle in pixels at zoom one, and how square on it is seen. */
+interface Window {
+  canvas: HTMLCanvasElement;
+  box: [number, number, number, number];
+  fade: number;
+}
 
 interface Baked {
   canvas: HTMLCanvasElement;
@@ -618,9 +723,15 @@ interface Baked {
    * thing on it.
    */
   shade: HTMLCanvasElement;
-  /** And the light its band throws on its own stone, laid over that shade after dark. */
+  /** And the light its band throws on its own stone, laid over that shade after dark; and its outline's own night. */
   warm: HTMLCanvasElement;
+  rim: HTMLCanvasElement;
+  /** Each face of the band the eye sees, lit from inside after dark. */
+  windows: Window[];
   glows: Glow[];
+  /** The same runes in their colours after dark, and how square on each is seen: the two are laid crossfaded by how dark it is. */
+  nightGlows: Glow[];
+  seen: number[];
   /** The middle of the band and the top of the head, on the screen at zoom one from the footprint's middle, for the motes. */
   glowAt: Pt;
   topAt: Pt;
@@ -688,7 +799,7 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
   const things = model.things.slice().sort((a, b) => (a.first ? -1 : b.first ? 1 : groundNear(e, a.x, a.y) - groundNear(e, b.x, b.y)));
   for (const t of things) {
     if (t.draw) t.draw(g, e);
-    else if (t.faces) drawFaces(g, e, t.faces, INK);
+    else if (t.faces) drawFaces(g, e, t.faces, INK, scale <= 1 ? mix(STONE_INK, CREASE_INK, 0.45) : STONE_INK);
   }
 
   /*
@@ -753,6 +864,36 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
   sg.globalAlpha = 1;
 
   /*
+   * Its outline after dark: the ink round the pillar alone -- its solids drawn
+   * with their ink, less the solids without it -- less what stands in front,
+   * laid over the shade so the ink stays a step under the stone at night.
+   */
+  const [rim, rg] = canvasOf(canvas.width, canvas.height);
+  rg.setTransform(M0);
+  rg.lineJoin = 'round';
+  {
+    rg.fillStyle = rg.strokeStyle = NIGHT_INK;
+    rg.lineWidth = INK * 2;
+    let past = false;
+    for (const t of things) {
+      if (t.first) continue;
+      if (model.solids.has(t)) {
+        rg.globalCompositeOperation = 'source-over';
+        solid(rg, t, true);
+        past = true;
+        continue;
+      }
+      if (!past) continue;
+      rg.globalCompositeOperation = 'destination-out';
+      if (t.draw) t.draw(rg, e);
+      else solid(rg, t, false);
+    }
+    rg.globalCompositeOperation = 'destination-out';
+    for (const t of things) if (model.solids.has(t)) solid(rg, t, false);
+    rg.globalCompositeOperation = 'source-over';
+  }
+
+  /*
    * The light the band throws on its own stone after dark: down the shaft,
    * warmest under the band and gone by its foot, and up the cap's underside
    * and lip in one soft band -- less whatever stands in front of either.
@@ -765,7 +906,7 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     down.addColorStop(0, `rgba(${WARM}, ${WARM_SHAFT})`);
     down.addColorStop(0.45, `rgba(${WARM}, ${(WARM_SHAFT * 0.45).toFixed(3)})`);
     down.addColorStop(1, `rgba(${WARM}, 0)`);
-    const up = wg.createLinearGradient(0, yCap, 0, yCap - CAP_H * 0.6 * HEIGHT_PX);
+    const up = wg.createLinearGradient(0, yCap, 0, yCap - CAP_H * 0.45 * HEIGHT_PX);
     up.addColorStop(0, `rgba(${WARM}, ${WARM_SOFFIT})`);
     up.addColorStop(1, `rgba(${WARM}, 0)`);
     // Laid in the order everything is drawn: each lit solid where it is drawn, and whatever is drawn after it in front taken off.
@@ -787,8 +928,22 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     wg.globalCompositeOperation = 'source-over';
   }
 
-  /* -- each rune's light, on the faces of the band the eye sees -- */
+  /* -- each rune's light, on the faces of the band the eye sees, and the window it is lit in -- */
   const glows: Glow[] = [];
+  const nightGlows: Glow[] = [];
+  const seen: number[] = [];
+  const windows: Window[] = [];
+  /** A picture laid on the screen in a box, kept to a face of the band and off the cap and head over it. */
+  const keepTo = (c: HTMLCanvasElement, box: readonly number[], face: readonly V3[]): void => {
+    const h = c.getContext('2d') as Ctx;
+    h.setTransform(scale, 0, 0, scale, -box[0] * scale, -box[1] * scale);
+    h.globalCompositeOperation = 'destination-in';
+    poly(h, face);
+    h.fill();
+    h.globalCompositeOperation = 'destination-out';
+    for (const o of model.over) { poly(h, o.pts); h.fill(); }
+    h.globalCompositeOperation = 'source-over';
+  };
   for (const f of model.band) {
     /*
      * Not on a face seen all but edge on, where a rune's light would be a
@@ -800,22 +955,38 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     const fade = Math.min(1, (cos - GLOW_SEEN) / GLOW_FULL);
     const [ox, oy] = proj(e, f.o), [ax, ay] = proj(e, f.a), [bx, by] = proj(e, f.b);
     const M = new DOMMatrix([ax, ay, bx, by, ox, oy]);
+    const ease = fade * fade * (3 - 2 * fade);
+    {
+      // The window inside the reveal: pale gold behind the rune, a dim warm at the reveal round it.
+      const x0w = -f.xs + 0.36, x1w = f.xs - 0.36, z0w = 0.3, z1w = BAND_H - 0.4;
+      let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (const [x, z] of [[x0w, z0w], [x1w, z0w], [x1w, z1w], [x0w, z1w]]) {
+        const q = M.transformPoint(new DOMPoint(x, z));
+        a = Math.min(a, q.x); c = Math.max(c, q.x); b = Math.min(b, q.y); d = Math.max(d, q.y);
+      }
+      a -= 1; b -= 1; c += 1; d += 1;
+      const [cv, h] = canvasOf((c - a) * scale, (d - b) * scale);
+      h.setTransform(scale, 0, 0, scale, -a * scale, -b * scale);
+      h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
+      const gr = h.createRadialGradient(0, RUNE_Z, 0, 0, RUNE_Z, Math.max(f.xs, BAND_H * 0.55));
+      for (const [k, col] of WINDOW) gr.addColorStop(k, col);
+      h.fillStyle = gr;
+      h.fillRect(x0w, z0w, x1w - x0w, z1w - z0w);
+      const box: [number, number, number, number] = [a, b, c - a, d - b];
+      keepTo(cv, box, f.poly);
+      windows.push({ canvas: cv, box, fade: ease });
+    }
     for (const r of f.runes) {
       // A groove no thinner on the screen than `RUNE_PX` over the scale it is baked at, so at a small zoom a rune is still a stroke of light and not a hair.
-      const gl = bakeGlow(M, { ...r, w: Math.max(r.w ?? RUNE_W, RUNE_PX / scale), inner: RUNE_INNER, mid: RUNE_MID }, scale);
-      gl.fade = fade * fade * (3 - 2 * fade);
+      const spec = { ...r, w: Math.max(r.w ?? RUNE_W, RUNE_PX / scale) };
+      const gl = bakeGlow(M, { ...spec, inner: RUNE_INNER, mid: RUNE_MID }, scale);
+      const gn = bakeGlow(M, { ...spec, inner: NIGHT_INNER, mid: NIGHT_MID }, scale);
+      gl.fade = ease;
       // Each picture of its light kept to its own face of the band, and off the cap and head over it.
-      for (const c of [gl.core, gl.halo, gl.dusk, gl.mask]) {
-        const h = c.getContext('2d') as Ctx;
-        h.setTransform(scale, 0, 0, scale, -gl.box[0] * scale, -gl.box[1] * scale);
-        h.globalCompositeOperation = 'destination-in';
-        poly(h, f.poly);
-        h.fill();
-        h.globalCompositeOperation = 'destination-out';
-        for (const o of model.over) { poly(h, o.pts); h.fill(); }
-        h.globalCompositeOperation = 'source-over';
-      }
+      for (const c of [gl.core, gl.halo, gl.dusk, gl.mask, gn.core, gn.halo, gn.dusk, gn.mask]) keepTo(c, gl.box, f.poly);
       glows.push(gl);
+      nightGlows.push(gn);
+      seen.push(ease);
     }
   }
   let hx0 = Infinity, hy0 = Infinity, hx1 = -Infinity, hy1 = -Infinity;
@@ -825,7 +996,7 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
   }
   return {
     canvas, scale, ox: -x0 * scale, oy: -y0 * scale, bounds: [x0, y0, x1, y1], hit: [Math.floor(hx0 - 2), Math.floor(hy0 - 2), Math.ceil(hx1 + 2), Math.ceil(hy1 + 1)],
-    glows, glowAt: proj(e, model.glowAt), topAt: proj(e, [0, 0, model.top]), shade, warm,
+    glows, nightGlows, seen, windows, glowAt: proj(e, model.glowAt), topAt: proj(e, [0, 0, model.top]), shade, warm, rim,
   };
 }
 
@@ -906,8 +1077,15 @@ export function drawRuneLantern(ctx: Ctx, sx: number, sy: number, zoom: number, 
     const wasA = ctx.globalAlpha;
     ctx.globalAlpha = wasA * night * NIGHT_KEEP;
     ctx.drawImage(b.shade, sx - b.ox * k, sy - b.oy * k, b.canvas.width * k, b.canvas.height * k);
+    ctx.globalAlpha = wasA * night * NIGHT_INK_KEEP;
+    ctx.drawImage(b.rim, sx - b.ox * k, sy - b.oy * k, b.canvas.width * k, b.canvas.height * k);
     ctx.globalAlpha = wasA * night;
     ctx.drawImage(b.warm, sx - b.ox * k, sy - b.oy * k, b.canvas.width * k, b.canvas.height * k);
+    for (const w of b.windows) {
+      ctx.globalAlpha = wasA * night * w.fade;
+      const [x, y, ww, wh] = w.box;
+      ctx.drawImage(w.canvas, sx + x * zoom, sy + y * zoom, ww * zoom, wh * zoom);
+    }
     ctx.globalAlpha = wasA;
   }
   if (live) drawRuneLanternLive(ctx, sx, sy, zoom, look, rotation, night, t);
@@ -946,8 +1124,8 @@ export function drawRuneLanternBloom(ctx: Ctx, sx: number, sy: number, zoom: num
     ctx.translate(sx, sy);
     ctx.scale(1, 0.5);
     const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, R);
-    grad.addColorStop(0, `rgba(255, 198, 120, ${(0.3 * night * (0.9 + 0.1 * p)).toFixed(3)})`);
-    grad.addColorStop(0.5, `rgba(255, 192, 112, ${(0.16 * night).toFixed(3)})`);
+    grad.addColorStop(0, `rgba(255, 198, 120, ${(0.17 * night * (0.9 + 0.1 * p)).toFixed(3)})`);
+    grad.addColorStop(0.5, `rgba(255, 192, 112, ${(0.09 * night).toFixed(3)})`);
     grad.addColorStop(1, 'rgba(255, 192, 112, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -962,7 +1140,10 @@ export function drawRuneLanternBloom(ctx: Ctx, sx: number, sy: number, zoom: num
 /** What of a rune lantern post moves, over its bake: its runes' light as it breathes, and after dark the motes rising off them. */
 export function drawRuneLanternLive(ctx: Ctx, sx: number, sy: number, zoom: number, look: RuneLanternLook, rotation: number, night = 0, t = performance.now() / 1000): void {
   const b = bakedFor(look.facing, rotation, mossOf(look.stage, look.stages), look.variant, zoom);
+  b.glows.forEach((gl, i) => { gl.fade = b.seen[i] * (1 - night); });
+  b.nightGlows.forEach((gl, i) => { gl.fade = b.seen[i] * night; });
   drawGlows(ctx, b.glows, sx, sy, zoom, night, t, HEAT);
+  if (night > 0.01) drawGlows(ctx, b.nightGlows, sx, sy, zoom, night, t, HEAT);
   const was = ctx.globalCompositeOperation, wasA = ctx.globalAlpha;
   for (const m of night > 0.05 ? motesAt(b, t, zoom) : []) {
     const px = sx + m.x * zoom, py = sy + m.y * zoom;
@@ -1005,13 +1186,16 @@ export function runeLanternNight(look: RuneLanternLook, rotation: number, zoom: 
     glows: b.glows,
     rise: b.glowAt[1] - b.topAt[1] + MOTE_UP + 6,
     holes: (sx, sy, z, t): NightHole[] => {
-      const out = glowHoles(b.glows, sx, sy, z, t, 1.5).map((h, i) => ({ ...h, a: h.a * (b.glows[i].fade ?? 1) }));
+      const out = glowHoles(b.glows, sx, sy, z, t, 1.5).map((h, i) => ({ ...h, a: h.a * b.seen[i] }));
       const p = 0.5 + 0.5 * Math.sin((t / 4.8) * TAU);
       out.push({ x: sx + b.glowAt[0] * z, y: sy + b.glowAt[1] * z, r: 8 * z, a: 0.15 + 0.03 * p });
       for (const m of motesAt(b, t, z)) out.push({ x: sx + m.x * z, y: sy + m.y * z, r: m.r * 2.2, a: 0.8 * m.a });
       return out;
     },
-    masks: (sx, sy, z, t): NightMask[] => glowMasks(b.glows, sx, sy, z, t).map((mk, i) => ({ ...mk, a: mk.a * (b.glows[i].fade ?? 1) })),
+    masks: (sx, sy, z, t): NightMask[] => [
+      ...b.windows.map((w) => ({ canvas: w.canvas, x: sx + w.box[0] * z, y: sy + w.box[1] * z, w: w.box[2] * z, h: w.box[3] * z, a: 0.6 * w.fade })),
+      ...glowMasks(b.glows, sx, sy, z, t).map((mk, i) => ({ ...mk, a: mk.a * b.seen[i] })),
+    ],
   };
 }
 

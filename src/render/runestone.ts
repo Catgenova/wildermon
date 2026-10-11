@@ -2047,7 +2047,7 @@ export function aboveGround(pts: readonly V3[]): V3[] {
   return out;
 }
 
-export function drawFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number): void {
+export function drawFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number, inkColour: RGB = STONE_INK): void {
   const base = g.getTransform();
   // What stands under the turf -- a sunk disc's lower half, a boulder's foot -- is not drawn.
   const faces = faces0.map((f) => ({ ...f, pts: aboveGround(f.pts) })).filter((f) => f.pts.length >= 3);
@@ -2065,7 +2065,7 @@ export function drawFaces(g: Ctx, e: Eye, faces0: readonly Face[], ink: number):
    * is left of it is the rim outside them.
    */
   g.lineJoin = 'round';
-  g.strokeStyle = css(STONE_INK);
+  g.strokeStyle = css(inkColour);
   g.lineWidth = ink * 2;
   for (const { f } of seen) {
     path(f.pts.map((p) => proj(e, p)));
@@ -2130,6 +2130,11 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
   return [Math.floor(x0 - pad), Math.floor(y0 - pad), Math.ceil(x1 + pad), Math.ceil(y1 + pad)];
 }
 
+/** A rune's lit groove: the amber at its edge, the gold of it, and the all-but-white at its middle. */
+export const RUNE_EDGE = 'rgba(214, 140, 52, 0.9)';
+export const RUNE_GOLD = '#ffd98c';
+export const RUNE_WHITE = '#fffbea';
+
 /** What a rune's light is baked from: where it is on its face, how big, which glyph or roundel, and its place in the beat. */
 export interface GlowSpec {
   glyph: string;
@@ -2191,15 +2196,15 @@ export function bakeGlow(M: DOMMatrix, r: GlowSpec, scale: number): Glow {
   });
   const core = sheet((h) => {
     path(h);
-    h.strokeStyle = 'rgba(214, 140, 52, 0.9)';
+    h.strokeStyle = RUNE_EDGE;
     h.lineWidth = w * 1.05;
     h.stroke();
     path(h);
-    h.strokeStyle = r.mid ?? '#ffd98c';
+    h.strokeStyle = r.mid ?? RUNE_GOLD;
     h.lineWidth = w * 0.72;
     h.stroke();
     path(h);
-    h.strokeStyle = r.inner ?? '#fffbea';
+    h.strokeStyle = r.inner ?? RUNE_WHITE;
     h.lineWidth = w * 0.34;
     h.stroke();
   });
