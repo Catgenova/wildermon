@@ -63,6 +63,8 @@ export function packed(it: ItemRow, island: Aged): Item {
     mark: it.mark ?? undefined,
     // And what is enchanted into it, which a browser that dropped it would name and use without (`enchant.ts`).
     enchant: it.enchant ?? undefined,
+    // And the line cut into a memorial stone, which it carries as it stood (`memorial.ts`).
+    engraving: it.engraving ?? undefined,
   };
 }
 

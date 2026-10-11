@@ -320,6 +320,8 @@ export interface ItemRow {
   mark?: Mark | null;
   /** What is enchanted into it from a scroll (`enchant.ts`). Null for most things. */
   enchant?: Enchant | null;
+  /** The line cut into a memorial stone (`memorial.ts`). Null for everything else. */
+  engraving?: string | null;
   /** Alight, for the things that burn, and when it was set going. */
   lit: boolean;
   lit_at: string | null;

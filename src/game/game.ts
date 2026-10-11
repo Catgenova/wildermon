@@ -86,7 +86,8 @@ import {
   SHRUG_SAID, gatherSpot, skySaid, STRUCK_SAID, surgeSaid, TECHNIQUE_GAIN, tookSaid, traceNone, traceSaid, unbrokenSaid, type PathBeat, type PathId, type PathSaid,
 } from './meditation';
 import { ledgerTotals, record, type Ledger } from './ledger';
-import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReach, HELD_LIGHTS, lanternReach, OVEN_REACH, runestoneLight, type LightSource } from './light';
+import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReach, HELD_LIGHTS, lanternReach, memorialLight, OVEN_REACH, runestoneLight, type LightSource } from './light';
+import { MEMORIAL } from './memorial';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
@@ -3233,6 +3234,11 @@ export class Game {
       // A lantern post throws what its lantern throws, from under the lantern (`lamps.ts`).
       if (isLampPiece(f)) {
         if (lampBurning(f)) out.push(lampLight(f));
+        continue;
+      }
+      // A memorial stone's runes, a small pool of pale gold at its foot (`memorialLight`).
+      if (f.kind === MEMORIAL) {
+        out.push(memorialLight(cx, cy));
         continue;
       }
       if (f.lit) out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: 0.8 });
@@ -7662,6 +7668,8 @@ export class Game {
           ...(typeof r.state?.sown === 'string' ? { sown: r.state.sown } : {}),
           // A lantern post's lantern (`lamps.ts`).
           ...lampFrom(r.state),
+          // A memorial stone's line (`memorial.ts`).
+          ...(typeof r.engraving === 'string' && r.engraving ? { engraving: r.engraving } : {}),
           /*
            * The reins and the shafts, which the island has always sent and
            * this dropped: somebody who took the reins on an island walked
@@ -9343,6 +9351,8 @@ export interface IslandPlaced {
   mark?: Mark | null;
   /** The colour a banner, a flag or a sail was dyed; null undyed, and absent from older islands. */
   dye?: string | null;
+  /** The line cut into a memorial stone (`memorial.ts`); null uncut. */
+  engraving?: string | null;
   /**
    * When it was set down, in epoch seconds, for a piece with roses on it
    * (`furniture_def.roses`): what its roses grow from (`roses.ts`).

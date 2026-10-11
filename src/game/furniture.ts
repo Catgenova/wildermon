@@ -373,6 +373,15 @@ export const FURNITURE: FurnitureDef[] = [
   piece('lamp_pillar', 'Lantern pillar', 1, 1, [['stone_brick', 8], ['mortar', 4], ['ribbon', 2]], 20, 16,
     'You lay the courses up to a capital and band an iron cage into its top. Set a lantern in it.', undefined,
     { skill: 'masonry', tool: 'trowel', lamp: 'top' }),
+  /*
+   * A memorial stone: a carved stone on a plinth with a line of somebody's
+   * own words cut into it (`memorial.ts`). A lantern pillar's mason's work in
+   * a slab rather than a column -- a stone slab for its face, bricks and
+   * mortar for its plinth -- on a two-by-two block, room round its foot.
+   */
+  piece('memorial_stone', 'Memorial stone', 2, 2, [['stone_slab', 2], ['stone_brick', 8], ['mortar', 4]], 22, 18,
+    'You bed the plinth, set the stone up on it and dress its face. Engrave it with a stone chisel.', undefined,
+    { skill: 'masonry', tool: 'trowel' }),
   piece('altar', 'Altar', 2, 2, [['stone_brick', 64], ['mortar', 32], ['stone_slab', 4]], 40, 40, 'You lay the courses and bed the slab on top. Kneel here at dawn.', undefined, { skill: 'masonry', tool: 'trowel', altar: true, deed: true }),
   piece('banner', 'Banner', 1, 1, [['cloth', 16], ['shaft', 2], ['rope', 1], ['nail', 12]], 10, 10, 'You hem the cloth, lash it to the staff and run it up. Dye it and it is your colour.', undefined, { skill: 'tailoring' }),
   /*
@@ -616,6 +625,8 @@ export interface PlacedFurniture {
   sown?: string;
   /** The lantern fitted to a lantern post or pillar (`lamps.ts`); on the island `state -> lamp`. */
   lamp?: Lamp;
+  /** The line cut into a memorial stone (`memorial.ts`); on the island the placed row's `engraving`. */
+  engraving?: string;
 }
 
 /** Whether a piece is a planter: a box of earth a crop is sown in (`FurnitureDef.planter`). */
@@ -937,6 +948,8 @@ export function furnitureState(f: PlacedFurniture): string {
     return `${ql} · ${litres.toFixed(0)} / ${liquidCapacity(f)} litres of ${what}${working}`;
   }
   if (def.hearth) return `${ql} · ${f.lit ? 'lit' : 'cold'}`;
+  // A memorial stone, what is cut into it (`memorial.ts`).
+  if (f.engraving) return `${ql} · \u201c${f.engraving}\u201d`;
   if (def.roses) return `${ql} · ${roseSays(f.setAt, Date.now() / 1000)}`;
   if (def.hive) return `${ql} · ${furnitureUnits(f)} / ${furnitureCapacity(f)} of comb`;
   if (def.pond) return `${ql} · ${furnitureUnits(f)} / ${furnitureCapacity(f)} fish`;
@@ -1001,6 +1014,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (item.rare) f.rare = item.rare;
       if (item.maker) f.maker = item.maker;
       if (item.mark) f.mark = item.mark;
+      // And a memorial stone's line, which it reads standing as it did in the pack (`memorial.ts`).
+      if (item.engraving) f.engraving = item.engraving;
       // And whoever is shut in it, who stands where it stands and is seen in it.
       const inside = item.creature !== undefined ? g.creatures.get(item.creature) : undefined;
       if (inside?.mode === 'stored') {
@@ -1098,6 +1113,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.rare) back.rare = f.rare;
       if (f.maker) back.maker = f.maker;
       if (f.mark) back.mark = f.mark;
+      if (f.engraving) back.engraving = f.engraving;
       // Whoever is shut in it comes too, and is where you are from now on.
       const inside = f.creature !== undefined ? g.creatures.get(f.creature) : undefined;
       if (inside?.mode === 'stored') {

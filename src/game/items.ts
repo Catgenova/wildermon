@@ -526,6 +526,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   spindle: { name: 'Spindle', category: 'misc', weight: 5, decay: 4, description: 'Spins wool, cotton and wemp into yarn. Stand at it to work.' },
   loom: { name: 'Loom', category: 'misc', weight: 30, decay: 4, description: 'Weaves yarn into cloth. Stand at it to work.' },
   // Reed is pressed into papyrus at one of these and nowhere else (`enchant.ts`).
+  // A mason's stone with a line of somebody's own words cut into it (`memorial.ts`).
+  memorial_stone: { name: 'Memorial stone', category: 'misc', weight: 40, decay: 0, description: 'A carved stone on a plinth. Set it down, and Engrave it with a {chisel}: a line of up to {max} characters, cut with masonry. Whoever set it down may cut a new line over the old one, and so may anybody of the settlement it stands on. Examine reads it back. Picked up and set down again it keeps its line. It does not decay.' },
   paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'A wooden screw press. Reed is pressed into papyrus standing at one set down on the ground, and nowhere else.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
   smelter: { name: 'Smelter', category: 'misc', weight: 52, decay: 3, description: 'A stone smelter, built flat-packed and bedded in where you set it down. Turns ore into lumps, and mixes alloys. It stands on your own deed.' },
@@ -785,6 +787,11 @@ export interface Item {
    * an Emberbrand sword. One to a thing. The island keeps the same column.
    */
   enchant?: Enchant;
+  /**
+   * The line cut into a memorial stone, carried in the pack as it stood on
+   * the ground (`memorial.ts`). The island keeps the same column.
+   */
+  engraving?: string;
 }
 
 /**

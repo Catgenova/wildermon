@@ -116,6 +116,19 @@ export const runestoneLight = (x: number, y: number): LightSource => ({
 });
 
 /**
+ * And a memorial stone's runes and the line cut into it (`memorial.ts`): a
+ * Runestone's pale gold, a third of its reach and fainter -- a pool on its
+ * own plinth and the turf at its foot, no further. Drawn only.
+ */
+export const MEMORIAL_REACH = 0.7;
+export const MEMORIAL_GLOW = 0.2;
+export const MEMORIAL_CAST_ALPHA = 0.22;
+/** The light of a memorial stone whose middle is at world (x, y). */
+export const memorialLight = (x: number, y: number): LightSource => ({
+  x, y, radius: MEMORIAL_REACH, strength: MEMORIAL_GLOW, steady: true, soft: true, cast: RUNESTONE_CAST, castAlpha: MEMORIAL_CAST_ALPHA,
+});
+
+/**
  * What the night is worth over a point, given everything burning near it: 1
  * where nothing reaches and 0 in the middle of a good fire. The falloff is
  * square rather than linear, so a light has a bright heart and a soft edge

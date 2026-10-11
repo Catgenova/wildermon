@@ -76,6 +76,8 @@ import { sailTrim } from '../game/wind';
 import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furniture';
 import { isLampPiece, lampBurning } from '../game/lamps';
 import { drawLampBloom } from './furniture';
+import { drawMemorial, memorialGlows } from './memorial';
+import { MEMORIAL } from '../game/memorial';
 import { COUNTER_HOLDS, counterHeld, counterSeat, streetOf } from '../game/counters';
 import { counterHole, counterWares, drawCounterDaylight, drawCounterFrontKept, drawCounterInside, drawCounterReveal, stripeOf, type CounterLook } from './counter';
 import { cropDef, type CropLook } from '../game/farming';
@@ -5011,6 +5013,18 @@ export class Renderer {
             ctx.textAlign = 'left';
             ctx.lineWidth = 1;
           }
+        } else if (piece.kind === MEMORIAL) {
+          /*
+           * A memorial stone, drawn as the Runestones are (`memorial.ts`): its
+           * runes and the line cut into it lit over its picture, and after
+           * dark taken off the night in their own shapes, kept off whatever
+           * stands in front of it. Clicked by its stone and its plinth.
+           */
+          const facing = pieceFacing(piece), turn = this.camera.rotation, dark = this.game.darkness();
+          this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+            drawn = drawMemorial(g, px, py, zoom, facing, turn, piece.engraving, dark, this.time);
+          }, undefined, pieceBox);
+          this.runeNight.glows(ctx, memorialGlows(facing, turn, zoom, piece.engraving), ent.sx, ent.sy, zoom, this.time);
         } else if (piece.kind === 'fountain') {
           /*
            * A tiered fountain: its stone in three layers with its water drawn
@@ -5462,7 +5476,9 @@ export class Renderer {
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;
       const px = cam.worldToScreenX(wx, wy);
       const py = cam.worldToScreenY(wx, wy, below ? cellarFloorHeight(this.game, ghost.x, ghost.y) : this.pieceBase({ kind: ghost.piece }, wx, wy));
-      drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
+      // A memorial stone is drawn as itself (`memorial.ts`), blank, as it will be set down.
+      if (ghost.piece === MEMORIAL) drawMemorial(ctx, px, py, zoom, ghost.facing, cam.rotation, undefined, 0, this.time);
+      else drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
       if (!ghost.ok) {
         const [W, D] = furnitureSpan(ghost.piece);
         ctx.fillStyle = 'rgba(214, 58, 42, 0.5)';

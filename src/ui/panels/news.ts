@@ -110,6 +110,7 @@ import { SEASONS } from '../../world/calendar';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import type { UIWindow } from '../windows';
+import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 
 /**
  * What's new: what changed on the island, a line each, shown once as you come
@@ -1675,6 +1676,16 @@ export const NEWS: News[] = [
         + `${listed(ENCHANTMENT_LIST.slice(3, 9).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
       ...ENCHANTMENT_LIST.slice(3, 9).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       `A scroll put into the wrong kind of thing is refused in words that name the right one: "${wrongKind(ENCHANTMENT_LIST[4])}"`,
+    ],
+  },
+  {
+    n: 121,
+    day: '2026-10-11',
+    lines: () => [
+      `A memorial stone, built at the crafting window from ${recipeBill(`make_${MEMORIAL}`)} with ${skillOf(`make_${MEMORIAL}`)}, and set down like furniture.`,
+      `Engrave it with a ${itemDef(ENGRAVE_TOOL).name.toLowerCase()}: one line of up to ${ENGRAVE_MAX} characters, cleaned as talk is. `
+        + 'Whoever set it down may cut a new line over the old one, and so may anybody of the settlement it stands on; nobody else, and nobody muted. '
+        + 'Examine reads it back in quotes. Picked up and set down again, it keeps its line. It does not decay.',
     ],
   },
 ];
