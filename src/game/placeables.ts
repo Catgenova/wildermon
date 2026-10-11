@@ -27,6 +27,7 @@ import {
 } from './furniture';
 import type { Game } from './game';
 import { itemDef, markOf, type Item } from './items';
+import { swingEnchant } from './enchant';
 import { world } from './pace';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
 
@@ -813,7 +814,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const inside = g.buildings.indoors(f.level ?? 0, Math.floor(f.x), Math.floor(f.y));
       const rest = (def.bed ?? 1) * (0.6 + f.ql / 250) * (inside ? INDOORS_REST : 1);
       g.note('slept');
-      g.sleepUntilMorning(rest, furnitureName(f).toLowerCase());
+      // And a Dreamweave set into it banks more of the night (`bankRest`).
+      g.sleepUntilMorning(rest, furnitureName(f).toLowerCase(), swingEnchant(f, 'dream'));
     },
   },
   {

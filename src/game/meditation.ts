@@ -292,7 +292,8 @@ export function sitFacts(g: Game): SitFacts {
 /** What a sitting where you stand is worth: the meditation it trains and the Calm it banks. */
 export function sittingWorth(g: Game): { gain: number; calm: number; place: number; where: string } {
   const { place, where } = sitPlace(sitFacts(g));
-  return { gain: SIT_GAIN * place, calm: SIT_CALM * place, place, where };
+  // And more Calm banked for a Stillwater worn (`sitting_worth`).
+  return { gain: SIT_GAIN * place, calm: SIT_CALM * place * (1 + g.wornEnchant('calm')), place, where };
 }
 
 /** What a sitting says when a blow lands in the middle of it (`stillness`). The island's `sitting_struck` says the same. */

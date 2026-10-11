@@ -215,6 +215,10 @@ import {
   CELLAR_DARK, CELLAR_DARK_INK, CELLAR_FALL, CELLAR_VEIL, cellarFloor, cellarFloorHeight, cellarOrder, cutFace, earthEnd, earthFace, faceOn, KERB, OUT, UNDER,
   flightShade, SHAFT_STOPS, shaftAlpha, shaftShade, sidesOf, type CellarCanvas,
 } from './cellar';
+// After the rest: the game's tables are read as these load (`plinth.ts`).
+import { drawPlinthRunes, plinthNight } from './plinth';
+import { plinthBusy } from '../game/plinth';
+import { ENCHANTERS_PLINTH } from '../game/enchant';
 
 /** Result of picking a screen point: the tile, the approximate world position and the nearest corner. */
 /**
@@ -5073,7 +5077,7 @@ export class Renderer {
             drawRuneLantern(g, px, py, zoom, look, turn, dark, this.time, false);
           }, undefined, box);
           drawRuneLanternLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
-          this.runeNight.glowing(ctx, ent.sx, ent.sy, zoom, runeLanternNight(look, turn, zoom), this.time);
+          this.runeNight.source(ctx, ent.sx, ent.sy, zoom, runeLanternNight(look, turn, zoom), this.time);
           drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
         } else {
           /*
@@ -5091,6 +5095,19 @@ export class Renderer {
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(), clothInWind(piece.kind) ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
+          /*
+           * An enchanter's plinth's runes, over its stone and outside the ring under the pointer: faint at rest and
+           * bright while somebody enchants at it (`plinth.ts`); after dark taken off the night in their own shapes and
+           * kept off whatever stands in front of them, as a runestone's are (`RunestoneNight`).
+           */
+          if (piece.kind === ENCHANTERS_PLINTH) {
+            const busy = plinthBusy(this.game, piece), trim = this.pieceTrim(piece), dark = this.game.darkness();
+            drawPlinthRunes(ctx, ent.sx, ent.sy, zoom, view, trim, dark, busy, this.time);
+            if (dark > 0.02) {
+              const lit = plinthNight(ent.sx, ent.sy, zoom, view, trim, busy, this.time);
+              this.runeNight.glowing(ctx, ...lit.box, lit.holes, lit.masks);
+            }
+          }
           // Not indoors: a roof or a wall stands in front of it there, and the night cut away at its stars would be cut out of that.
           if (glowsAtNight(piece.kind) && !this.game.buildings.buildingAt(Math.floor(piece.x), Math.floor(piece.y))) {
             this.glows.push({ sx: ent.sx, sy: ent.sy, kind: piece.kind, view });

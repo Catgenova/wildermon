@@ -6,7 +6,7 @@ import { VIEWS } from './view';
 import { HALF_H } from './iso';
 import { hashOf, rand, STAGES, strandPic, PPM } from './ivy';
 import {
-  add, at, sub, unit, bakeGlow, canvasOf, cut, dot, drawFaces, drawGlows, drawPads, flowerClump, glowHoles, glowMasks,
+  add, at, sub, unit, bakeRune, canvasOf, cut, dot, drawFaces, drawGlows, drawPads, flowerClump, glowHoles, glowMasks,
   glyphPath, grassTuft, groundNear, hex, mix, RUNE_GOLD, RUNE_WHITE, STONE_INK, CREASE_INK, mossOver, mul, newell, noise2, plate, proj, scaleFor, strokesPath, roundelStrokes, eyeOf, css,
   type Ctx, type Eye, type Face, type Glow, type GlowSpec, type NightHole, type NightMask, type NightSource, type Pad, type PaintCtx, type Painter, type Pt, type Thing, type Tone, type V3,
   toneOf, TAU,
@@ -80,7 +80,7 @@ const BAND_RUNES = ['sowilo', 'sunDot', 'star6', 'algiz', 'diamondDot', 'ingwaz'
 /** How big a rune on the band is, in units from its middle to its top, and how wide its groove. */
 const RUNE_S = 1.3;
 const RUNE_W = 0.42;
-/** The least a rune's lit groove is across at a scale, as units times the scale: its gold, the middle seven tenths of it (`bakeGlow`), at least a pixel on the screen. */
+/** The least a rune's lit groove is across at a scale, as units times the scale: its gold, the middle seven tenths of it (`bakeGlow` by way of `bakeRune`), at least a pixel on the screen. */
 const RUNE_PX = 1.45;
 /**
  * Baked smaller than this, a rune on the band is a handful of pixels: there
@@ -1201,8 +1201,8 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
       // A groove no thinner on the screen than `RUNE_PX` over the scale it is baked at, so at a small zoom a rune is still a stroke of light and not a hair.
       const small = scale < RUNE_SMALL;
       const spec = { ...r, glyph: small ? 'staff' : r.glyph, w: Math.max(r.w ?? RUNE_W, (small ? RUNE_PX_SMALL : RUNE_PX) / scale) };
-      const gl = bakeGlow(M, { ...spec, inner: RUNE_INNER, mid: RUNE_MID, edge: RUNE_CHANNEL }, scale);
-      const gn = bakeGlow(M, { ...spec, inner: NIGHT_INNER, mid: NIGHT_MID }, scale);
+      const gl = bakeRune(M, { ...spec, inner: RUNE_INNER, mid: RUNE_MID, edge: RUNE_CHANNEL }, scale);
+      const gn = bakeRune(M, { ...spec, inner: NIGHT_INNER, mid: NIGHT_MID }, scale);
       gl.fade = ease;
       // By day the groove alone, gold in its channel, with no haze round it.
       (gl.halo.getContext('2d') as Ctx).clearRect(0, 0, gl.halo.width, gl.halo.height);
@@ -1382,7 +1382,7 @@ export function runeLanternHit(look: RuneLanternLook, rotation: number, zoom = 1
 
 /**
  * How it takes the night back off itself, drawn at a zoom, for the
- * runestones' keeping (`RunestoneNight.glowing`): each rune in its own shape,
+ * runestones' keeping (`RunestoneNight.source`): each rune in its own shape,
  * a soft hole round each a half again a runestone's, a small one over the
  * band and the cap's underside, and the motes -- each faded as its face
  * turns away.

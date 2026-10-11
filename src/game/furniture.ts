@@ -1,4 +1,5 @@
 import type { ActionDef, Target } from './actions';
+import { enchantTail, roomMul, type Enchant } from './enchant';
 import { SIDE_NAMES, type Side } from './building';
 import { STORE_REACH, SUBTILES } from './crates';
 import { CROP_BY_SEED } from './farming';
@@ -9,6 +10,7 @@ import { matOf } from './materials';
 import { roseSays, ROSES_RULE } from './roses';
 import type { Lamp } from './lamps';
 import { colourWord, dyeHex, readDye } from './dyestuffs';
+import { ENCHANTERS_PLINTH } from './enchant';
 import { lanternReach } from './light';
 
 /**
@@ -381,6 +383,16 @@ export const FURNITURE: FurnitureDef[] = [
     'You lay the courses up to a capital and band an iron cage into its top. Set a lantern in it.', undefined,
     { skill: 'masonry', tool: 'trowel', lamp: 'top' }),
   /*
+   * Where a scroll is put into a thing, and nowhere else (`enchant.ts`): a
+   * carved stone table, hip high, its rim cut with runes and its top dished
+   * where the scroll is laid. Laid in brick like a brazier, a little more of
+   * it for the shaft and two slabs for the top, and a light mote and a dark
+   * one for its runes. Moss gathers on it as on a statue (`greening.ts`).
+   */
+  piece(ENCHANTERS_PLINTH, 'Enchanter\'s plinth', 2, 2, [['stone_brick', 32], ['mortar', 12], ['stone_slab', 2], ['light_mote', 1], ['dark_mote', 1]], 26, 24,
+    'You lay a coursed foot, set a shaft on it and bed a dished slab across its head, then cut the runes round its rim with a light mote and a dark one in them. Stand at it to enchant.',
+    undefined, { skill: 'masonry', tool: 'trowel', mossy: true }),
+  /*
    * And one that needs no lantern (`runelantern.ts`): a squat stone pillar
    * with a band of runes cut round its head and light motes set in them. It
    * lights the ground at night as a lantern of its own quality does, burns
@@ -494,6 +506,10 @@ export const STORES = FURNITURE.filter((f) => f.capacity).sort((a, b) => (b.capa
 
 export interface PlacedFurniture {
   id: number;
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
+  /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
+  dmg?: number;
   /**
    * Whose this is, on an island. Absent in the game you play by yourself,
    * where everything on the ground is yours because there is only you.
@@ -692,6 +708,13 @@ for (const f of FURNITURE) {
   describeFrom(f.id, said);
 }
 describeWith({ bucketLitres: BUCKET_LITRES });
+/**
+ * How far from a station's middle you can stand and still be at it, in tiles,
+ * for every station that is a piece set down (`Game.furnitureNear`): a paper
+ * press, a loom, an enchanter's plinth. The island's `at_station` the same.
+ */
+export const STATION_REACH = 2.4;
+describeFrom(ENCHANTERS_PLINTH, { reach: STATION_REACH });
 // What a fountain draws, off the well's own rate: litres a minute at the least, and at quality 100.
 describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1), top: WELL_TRICKLE_AT });
 // A tent's night measured against a bed's, off the two pieces.
@@ -717,11 +740,12 @@ export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n,
 /** How much more a counting piece will take. `furnitureRoom` is the general one. */
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));
 /** What it holds: its build, how strong a wood it was built out of, and its maker's mark. */
+// And more for a Deep Hold, a True Axle or a Bag of Holding set into it (`roomMul`), in all three measures.
 export const furnitureCapacity = (f: PlacedFurniture): number =>
-  roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold'), f);
+  roomFor((furnitureDef(f.kind).capacity ?? furnitureDef(f.kind).hive ?? furnitureDef(f.kind).pond ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
 /** Kilograms it holds, for a piece measured that way. Nought for the rest. */
 export const furnitureHeft = (f: PlacedFurniture): number =>
-  roomFor((furnitureDef(f.kind).heft ?? 0) * matOf(f.material).hold * markOf(f, 'hold'), f);
+  roomFor((furnitureDef(f.kind).heft ?? 0) * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f), f);
 /** Kilograms standing in it, which is the only thing a heft bin counts. */
 export const furnitureKg = (f: PlacedFurniture): number =>
   f.items.reduce((kg, it) => kg + itemDef(it.id).weight * it.count, 0);
@@ -846,7 +870,7 @@ export const teamOf = (f: PlacedFurniture): number[] => f.team ?? [];
 export const liquidCapacity = (f: PlacedFurniture): number => {
   const def = furnitureDef(f.kind);
   // A well is a lined shaft in the ground; only the coopered things vary.
-  return def.liquid ? Math.round(def.liquid * matOf(f.material).hold * markOf(f, 'hold')) : def.well ?? 0;
+  return def.liquid ? Math.round(def.liquid * matOf(f.material).hold * markOf(f, 'hold') * roomMul(f)) : def.well ?? 0;
 };
 export const holdsLiquid = (f: PlacedFurniture): boolean => liquidCapacity(f) > 0;
 export const litresIn = (f: PlacedFurniture): number => f.litres ?? 0;
@@ -940,7 +964,9 @@ export function furnitureRefuses(f: PlacedFurniture, item: Item): string | null 
   return null;
 }
 
-export function furnitureState(f: PlacedFurniture): string {
+/** A piece's status line, and the enchantment set into it where it stands (`enchantTail`). */
+export const furnitureState = (f: PlacedFurniture): string => stateOf(f) + enchantTail(f);
+function stateOf(f: PlacedFurniture): string {
   const def = furnitureDef(f.kind);
   const ql = `QL ${f.ql.toFixed(0)}`;
   if (holdsLiquid(f)) {
@@ -1018,6 +1044,9 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (furnitureDef(item.id).roses) f.setAt = Date.now() / 1000;
       // Everything the thing was keeps standing when the thing is standing.
       if (item.rare) f.rare = item.rare;
+      // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
+      if (item.enchant) f.enchant = item.enchant;
+      if (item.dmg) f.dmg = item.dmg;
       if (item.maker) f.maker = item.maker;
       if (item.mark) f.mark = item.mark;
       // And whoever is shut in it, who stands where it stands and is seen in it.
@@ -1115,6 +1144,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       const back = g.inventory.add(f.kind, { ql: f.ql, extra: f.material });
       if (f.dye) back.dye = f.dye;
       if (f.rare) back.rare = f.rare;
+      if (f.enchant) back.enchant = f.enchant;
+      if (f.dmg) back.dmg = f.dmg;
       if (f.maker) back.maker = f.maker;
       if (f.mark) back.mark = f.mark;
       // Whoever is shut in it comes too, and is where you are from now on.

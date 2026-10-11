@@ -2,10 +2,10 @@ import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
-import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, SCROLL_HARM, wrongKind } from '../../game/enchant';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
-import { QL_TOP as NEWS_QL_TOP } from '../../game/limits';
+import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_WIND, SWING_WIND_KG, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
 import {
@@ -15,7 +15,7 @@ import {
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
-import { candleBurn, lanternReach } from '../../game/light';
+import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
 import { WORLD_PACE } from '../../game/pace';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
@@ -40,7 +40,7 @@ import { WALK_FRAMES } from '../../render/figure';
 import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
-import { furnitureDef, liquidCapacity, POND_EVERY, type PlacedFurniture } from '../../game/furniture';
+import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
 import { billWords, countOf, type Item } from '../../game/items';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
@@ -1679,6 +1679,117 @@ export const NEWS: News[] = [
   },
   {
     n: 121,
+    day: '2026-10-11',
+    lines: () => [
+      `Three enchantments for a bow: ${listed(ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
+      ...ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      'A slowed creature is said on the target panel, "slowed", as a stunned one is.',
+    ],
+  },
+  {
+    n: 122,
+    day: '2026-10-11',
+    lines: () => [
+      `Six enchantments for what you wear and hold: ${listed(ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+      ...ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+    ],
+  },
+  {
+    n: 123,
+    day: '2026-10-11',
+    lines: () => [
+      `Four enchantments for tools: ${listed(ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+      ...ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      'Where you carry more than one of a tool, the job uses the one worth most at the work, and its enchantment is the one that counts.',
+    ],
+  },
+  {
+    n: 124,
+    day: '2026-10-11',
+    lines: () => {
+      const e = ENCHANTMENTS.lanterns_grace;
+      return [
+        `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`,
+        `On an island a torch burned ${times(WORLD_PACE)} too fast, as a candle once did. It lasts what it does here now, ${spanWords(torchBurn(1))} to ${spanWords(torchBurn(100))} by how well it was wound.`,
+      ];
+    },
+  },  {
+    n: 125,
+    day: '2026-10-11',
+    lines: () => {
+      const jewel = ENCHANTMENT_LIST.filter((e) => e.on === 'ring' || e.on === 'amulet');
+      return [
+        `Six enchantments for what is worn in the jewel slot, one at a time: ${listed(jewel.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...jewel.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
+  },  {
+    n: 126,
+    day: '2026-10-11',
+    lines: () => {
+      const three = ['packmule', 'seals_coat', 'hawks_eye'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Three more: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
+  },  {
+    n: 127,
+    day: '2026-10-11',
+    lines: () => {
+      const two = ['ember_heart', 'masterwork'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `A scroll goes into a thing standing where it was set down now: under Enchant on the scroll, from within ${PLACED_REACH} tiles of it. `
+          + `One that does not take puts ${ENCHANT_HARM} damage on it but never breaks it, and its enchantment goes with it when it is picked up and set down again.`,
+        `Two to start: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
+  },  {
+    n: 128,
+    day: '2026-10-11',
+    lines: () => {
+      const four = ['fair_wind', 'deep_hold', 'true_axle', 'bag_of_holding'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Four for what carries and holds: ${listed(four.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. A crate takes one where it stands too.`,
+        ...four.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
+  },  {
+    n: 129,
+    day: '2026-10-11',
+    lines: () => {
+      const three = ['snarecraft', 'netmender', 'dreamweave'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Three for traps, nets and beds: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. A trap and a bed take one where they stand.`,
+        ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
+  },  {
+    n: 130,
+    day: '2026-10-11',
+    lines: () => {
+      const two = ['fleetfoot', 'tamers_bridle'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Two for tack: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. `
+          + 'They ride on the mount with the tack, come back into the pack when it is taken off, and an enchanted saddle or bridle is a pile of its own.',
+        ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
+  },
+  {
+    n: 131,
+    day: '2026-10-11',
+    lines: () => [
+      `The enchanter's plinth, a carved stone table: ${recipeBill(`make_${ENCHANTERS_PLINTH}`)}, ${skillOf(`make_${ENCHANTERS_PLINTH}`)} with a trowel. `
+        + `Enchant is done standing within ${STATION_REACH} tiles of the middle of one set down on the ground, and nowhere else; anywhere else it says "${ENCHANT_SAID.plinth}", `
+        + 'on the Enchant entry of a scroll before you choose what it goes on, and for a thing standing where it was set down as well as one in the pack. Writing a scroll needs none.',
+      `While somebody is enchanting at one its runes brighten and at night it lights ${PLINTH_BUSY_REACH} tiles round it, where it lights ${PLINTH_REACH} at rest. `
+        + 'Moss gathers on it as on a statue.',
+    ],
+  },
+  {
+    n: 132,
     day: '2026-10-11',
     lines: () => [
       `A rune lantern post (${recipeBill('make_rune_lantern')}, ${skillOf('make_rune_lantern')}): at night it lights the ground round it for everybody `
