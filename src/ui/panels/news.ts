@@ -1755,6 +1755,16 @@ export const NEWS: News[] = [
         ...four.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       ];
     },
+  },  {
+    n: 129,
+    day: '2026-10-11',
+    lines: () => {
+      const three = ['snarecraft', 'netmender', 'dreamweave'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Three for traps, nets and beds: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. A trap and a bed take one where they stand.`,
+        ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
   },
 ];
 

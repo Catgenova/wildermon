@@ -90,7 +90,7 @@ import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } 
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
 import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
-import { CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
+import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
   betterThanCommon, CHANNELS as BLOOD, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, pct as cardPct, TIERS, TRAIT_SLOTS,
   TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier,
@@ -137,7 +137,7 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, GRACE_TILES, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, enchantPct, FROST_PACE, FROST_SECS, GRACE_TILES, NETMENDER_WEAR, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
 import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
@@ -288,7 +288,14 @@ function enchantingHelp(): string {
     changed. A crate takes one where it stands, as the furniture does. What is inside still weighs all it weighs, on a cart, on a boat and
     on your back. A thing holds one enchantment, so a boat holds Deep Hold or a Bag of Holding, not both, and says which when asked for
     the other. An enchantment is never taken out of a thing; were one ever lost, what was in it would stay in it, and nothing more would
-    go in until it was under what it then held.</p>`;
+    go in until it was under what it then held.</p>
+    <p>Snarecraft's share multiplies a trap's chance of taking a creature that comes to it, after its quality, the creature's wariness
+    and whether it is timid or a hunter, never past ${enchantPct(CATCH_MOST)}; on a creel it multiplies the chance of a fish, after its
+    maker's mark. A trap takes it where it stands or in the pack, and keeps it through being picked up and set down. Netmender's share
+    multiplies a drag's haul on the average, after a Fisher's Full Net and the net's maker's mark, and ${NETMENDER_WEAR} times its share comes
+    off the wear a drag puts on the net, beside Truesteel and a perk. Dreamweave's share multiplies the rest a night in the bed banks,
+    after the bed's quality and the roof over it, and raises the most rest you can hold after that night by the same share; a night in a
+    plain bed later never takes rest away.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

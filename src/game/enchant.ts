@@ -69,7 +69,7 @@ export const SCROLL_HARM = 25;
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
   | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode' | 'grace'
   | 'learn' | 'knack' | 'wind' | 'upkeep' | 'favour' | 'calm' | 'mule' | 'swim' | 'sight' | 'ember' | 'master'
-  | 'sail' | 'room' | 'bag';
+  | 'sail' | 'room' | 'bag' | 'snare' | 'mend' | 'dream';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
@@ -77,7 +77,7 @@ export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
 export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head'
-  | 'furnace' | 'station' | 'ship' | 'hull' | 'cart' | 'store';
+  | 'furnace' | 'station' | 'ship' | 'hull' | 'cart' | 'store' | 'trap' | 'net' | 'bed';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -103,6 +103,9 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   hull: 'a boat: a rowing boat, a sailing boat or a caravel',
   cart: 'a cart, a large cart or a wagon',
   store: 'anything that holds things: a chest, a barrel, a larder, a crate, a bag or a pack, a cart, a wagon or a boat',
+  trap: 'a trap: a snare, a deadfall or a creel',
+  net: 'a fishing net',
+  bed: 'a bed: a bed, a cot or a tent',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -232,6 +235,13 @@ export const DEEP_HOLD_PER_QL = 0.0025;
 export const TRUE_AXLE_PER_QL = 0.0025;
 /** Bag of Holding: what it holds times 1 + 2 × QL/100, three times as much at QL 100. */
 export const BAG_OF_HOLDING_PER_QL = 0.02;
+/** Snarecraft: a trap's chance of taking what comes to it is QL/4 percent better. */
+export const SNARECRAFT_PER_QL = 0.0025;
+/** Netmender: a drag of the net brings up QL/10 percent more fish, and the net wears `NETMENDER_WEAR` times that share slower: QL/2 percent. */
+export const NETMENDER_PER_QL = 0.001;
+export const NETMENDER_WEAR = 5;
+/** Dreamweave: a night in the bed banks QL/4 percent more rest, and holds that much more past the most rest otherwise banked. */
+export const DREAMWEAVE_PER_QL = 0.0025;
 /** What an enchantment's figure is counted in, where it is not a share: Packmule's in kilos, Masterwork's in points of quality. */
 export const FIGURE_UNITS: Partial<Record<EnchantEffect, string>> = { mule: 'kg', master: 'QL' };
 WORN_CAP.guard = STONESKIN_CAP;
@@ -283,7 +293,15 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('deep_hold', 'Deep Hold', 'water', 'hull', 'room', DEEP_HOLD_PER_QL),
   row('true_axle', 'True Axle', 'earth', 'cart', 'room', TRUE_AXLE_PER_QL),
   row('bag_of_holding', 'Bag of Holding', ['dark', 'earth'], 'store', 'bag', BAG_OF_HOLDING_PER_QL),
+  row('snarecraft', 'Snarecraft', 'dark', 'trap', 'snare', SNARECRAFT_PER_QL),
+  row('netmender', 'Netmender', 'water', 'net', 'mend', NETMENDER_PER_QL),
+  row('dreamweave', 'Dreamweave', ['dark', 'light'], 'bed', 'dream', DREAMWEAVE_PER_QL),
 ];
+/**
+ * The ones with a second figure, `{w}` in the line: this many times the first.
+ * Netmender's wear. The island's `enchant_second`.
+ */
+export const SECOND_FIGURE: Partial<Record<EnchantEffect, number>> = { mend: NETMENDER_WEAR };
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
 export const RAZOREDGE = 'razoredge';

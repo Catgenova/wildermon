@@ -2,6 +2,7 @@ import { tryGain } from './learn';
 import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { ITEM_DEFS, itemDef, markOf, RARITIES, RARITY_WORD, rollRarity } from './items';
+import { swingEnchant } from './enchant';
 
 /** What one cast and one sweep of the net teach, fish or no fish. */
 export const ROD_GAIN = 0.4;
@@ -295,7 +296,9 @@ export const FISHING_ACTIONS: ActionDef[] = [
         + Math.floor(g.perk('haul:drag_net', 0));
       // And more of it for its maker's hand in the net (a Tailor's Fisher's Friend): the share over a
       // whole fish is a chance at one more, so the catch is that much more on the average.
-      const more = hauled * markOf(g.inventory.tool('fishing_net') ?? {}, 'catch');
+      // And a Netmender in it, the same way.
+      const net = g.inventory.tool('fishing_net');
+      const more = hauled * markOf(net ?? {}, 'catch') * (1 + swingEnchant(net, 'mend'));
       const haul = more === hauled ? hauled : Math.floor(more) + (g.rand() < more - Math.floor(more) ? 1 : 0);
       const perk: PerkOf = (k, d) => g.perk(k, d);
       const odds = g.perk('rare:drag_net', 0);

@@ -17,6 +17,7 @@ import { QL_BARE, QL_LOW, QL_SPAN, type Game, type PlacedEnchantable } from './g
 import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
 import { FURNITURE } from './furniture';
 import { CRATE_DEFS } from './crates';
+import { CATCH_MOST, TRAPS } from './traps';
 import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
@@ -24,7 +25,7 @@ import { BLOW_SHARE, DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
 import { HELD_LIGHTS } from './light';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantFigure, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
+  enchantChance, enchantFigure, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, SECOND_FIGURE, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -130,10 +131,15 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'sail': return 'under sail she goes {v} faster, on every point of sail.';
     case 'room': return 'it takes {v} more, in things or in kilos, whichever it is measured in.';
     case 'bag': return 'it holds {v} more, in things, kilos or litres, whichever it is measured in; what is in it still weighs all it weighs.';
+    case 'snare': return `its chance of taking a creature that comes to it is {v} better, never past ${enchantPct(CATCH_MOST)}; a creel's chance of taking a fish, {v} better.`;
+    case 'mend': return 'a drag with it brings up {v} more fish on the average, and it wears {w} slower.';
+    case 'dream': return 'a night in it banks {v} more rest, and you can hold {v} more rest than the most otherwise banked.';
   }
 }
 /** That line with its figure at this quality. */
-export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e).replaceAll('{v}', enchantFigure(e, enchantValue(e, ql)));
+export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e)
+  .replaceAll('{v}', enchantFigure(e, enchantValue(e, ql)))
+  .replaceAll('{w}', enchantPct(enchantValue(e, ql) * (SECOND_FIGURE[e.effect] ?? 0)));
 
 /** Examine's line for a thing holding an enchantment, or nothing. */
 export function enchantSays(item: Pick<Item, 'enchant'>): string {
@@ -175,8 +181,13 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'hull': return HULLS().includes(id);
     case 'cart': return CARTS().includes(id);
     case 'store': return STORES().includes(id);
+    case 'trap': return id in TRAPS;
+    case 'net': return id === 'fishing_net';
+    case 'bed': return BEDS().includes(id);
   }
 };
+/** What Dreamweave goes on: every piece that is slept in. */
+export const BEDS = (): string[] => FURNITURE.filter((f) => f.bed).map((f) => f.id);
 /** What Ember Heart goes on, where it stands. */
 export const FURNACES = ['smelter', 'kiln'];
 /** What Masterwork goes on, where it stands: the two places a thing is made at that stand on the ground. */
@@ -238,6 +249,9 @@ export const FITS: Record<EnchantOn, string[]> = {
   get hull() { return HULLS(); },
   get cart() { return CARTS(); },
   get store() { return STORES(); },
+  get trap() { return Object.keys(TRAPS); },
+  net: ['fishing_net'],
+  get bed() { return BEDS(); },
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */

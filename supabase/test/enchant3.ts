@@ -26,7 +26,10 @@ import { bagRoom, type Item } from '../../src/game/items';
 import { furnitureCapacity, liquidCapacity } from '../../src/game/furniture';
 import { crateCapacity } from '../../src/game/crates';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { alreadyEnchanted, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { alreadyEnchanted, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, NETMENDER_WEAR, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { CATCH_MOST, catchChance } from '../../src/game/traps';
+import { REST_CAP } from '../../src/game/boons';
+import type { Creature } from '../../src/game/creatures';
 import { DAMAGE_MAX } from '../../src/game/limits';
 import { enchantSays } from '../../src/game/enchanting';
 import { knackChance } from '../../src/game/titles';
@@ -60,8 +63,9 @@ const JEWEL = [SCHOLAR, KNACK, HEART, HEARTH, FAVOUR, STILL];
 const [MULE, SEAL, HAWK] = ['packmule', 'seals_coat', 'hawks_eye'].map(E);
 const [EMBER, MASTER] = ['ember_heart', 'masterwork'].map(E);
 const [WIND, DEEP, AXLE, BAG] = ['fair_wind', 'deep_hold', 'true_axle', 'bag_of_holding'].map(E);
+const [SNARE, MEND, DREAM] = ['snarecraft', 'netmender', 'dreamweave'].map(E);
 /** Everything part 3 has added so far, for the scrolls and the words. */
-const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER, WIND, DEEP, AXLE, BAG];
+const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER, WIND, DEEP, AXLE, BAG, SNARE, MEND, DREAM];
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
@@ -111,6 +115,7 @@ do $t$
 declare w uuid; u uuid := '${MIRA}'; v_ring bigint; v_pend bigint; v_s bigint; v_altar bigint; v_at jsonb; c0 double precision;
         v_pack bigint; v_chest bigint; v_cap bigint; v_sm bigint; v_sm2 bigint; v_anv bigint; v_loom bigint; v_back bigint;
         v_boat bigint; v_ship bigint; v_wagon bigint; v_chestp bigint; v_barrel bigint; v_cart bigint; v_bag bigint; v_crate int; v_q double precision;
+        v_trap bigint; v_bed bigint; v_net bigint; v_rod bigint; v_c creature; v_d0 double precision;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 3', 318, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -324,6 +329,43 @@ begin
   insert into said select 'CRATEUP', coalesce(i.enchant->>'id', 'none') from item i where i.id = v_back;
   perform perform_crate(w, u, 'place_crate', jsonb_build_object('kind', 'tile', 'x', 30, 'y', 36, 'sx', 1, 'sy', 1, 'itemUid', v_back));
   insert into said select 'CRATEDOWN', coalesce(c.enchant->>'id', 'none') from crate c where world_id = w and c.x = 30 and c.y = 36;
+
+  -- 10. Snarecraft, Netmender and Dreamweave: the refusals, a trap's chance, a net's wear, a night's rest.
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'trap', 'snare', 20, 20, 20.5, 20.5, 30) returning id into v_trap;
+  insert into placed (world_id, kind, sub, x, y, cx, cy, ql) values (w, 'furniture', 'bed', 21, 20, 21.5, 20.5, 50) returning id into v_bed;
+  v_net := give(w, u, 'fishing_net', 1, 50);
+  v_rod := give(w, u, 'fishing_rod', 1, 50);
+  update player set x = 20.5, y = 21.5 where world_id = w and uid = u;
+  v_s := give(w, u, 'snarecraft_scroll', 1, 90);
+  insert into said values ('R:snaretrap', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'trap', 'id', v_trap, 'scroll', v_s)), 'none'));
+  insert into said values ('R:snarebed', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_bed, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'netmender_scroll', 1, 90);
+  insert into said values ('R:mendnet', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_net, 'scroll', v_s)), 'none'));
+  insert into said values ('R:mendrod', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_rod, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'dreamweave_scroll', 1, 90);
+  insert into said values ('R:dreambed', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'furniture', 'id', v_bed, 'scroll', v_s)), 'none'));
+  insert into said values ('R:dreamtrap', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'trap', 'id', v_trap, 'scroll', v_s)), 'none'));
+  v_c.species := 'orse';
+  insert into said select 'SNARE', catch_chance(p, v_c)::text from placed p where id = v_trap;
+  update placed set enchant = '{"id": "snarecraft", "ql": 100}'::jsonb where id = v_trap;
+  insert into said select 'SNARE100', catch_chance(p, v_c)::text from placed p where id = v_trap;
+  insert into said values ('CREELSRC', (pg_get_functiondef('trap_settle(bigint)'::regprocedure) like '%* (1 + placed_enchant(p, ''snare''))%')::text);
+  -- A net's wear for one drag, plain and with a Netmender at QL 100; and its haul.
+  perform wear_tool(v_net, 1.4);
+  select dmg into v_d0 from item where id = v_net;
+  update item set dmg = 0, enchant = '{"id": "netmender", "ql": 100}'::jsonb where id = v_net;
+  perform wear_tool(v_net, 1.4);
+  insert into said select 'WEAR', v_d0 || '|' || dmg from item where id = v_net;
+  insert into said values ('HAULSRC', (pg_get_functiondef('perform_fish(uuid, uuid, text, jsonb)'::regprocedure) like '%* (1 + v_mend)%')::text);
+  -- A night with rest already at the most banked: plain, it stays there; in a Dreamweave at QL 100, it goes that much past; plain again, nothing is lost.
+  update player set rested = rest_cap(), rested_at = now() where world_id = w and uid = u;
+  perform sleep_until_morning(w, u, 1, 'bed');
+  insert into said select 'REST0', rested::text from player where world_id = w and uid = u;
+  perform sleep_until_morning(w, u, 1, 'bed', enchant_hit_chance('dreamweave', 100));
+  insert into said select 'REST100', rested::text from player where world_id = w and uid = u;
+  perform sleep_until_morning(w, u, 1, 'bed');
+  insert into said select 'RESTKEPT', rested::text from player where world_id = w and uid = u;
+  insert into said values ('DREAMSRC', (pg_get_functiondef('perform_last(uuid, uuid, text, jsonb)'::regprocedure) like '%placed_enchant(pc, ''dream'')%')::text);
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -568,6 +610,49 @@ check('a crate takes a Bag of Holding where it stands, the same quality and word
   isle.get('CRATE0') === String(crate0) && near(crateP.enchant?.ql ?? -1, num('CRATE', 0)) && part('CRATE', 1) === String(crateCapacity(crateP))
     && crateSaid === part('CRATE', 2) && isle.get('CRATEUP') === BAG.id && isle.get('CRATEDOWN') === BAG.id,
   `${isle.get('CRATE0')} ${isle.get('CRATE')} ${isle.get('CRATEUP')} ${isle.get('CRATEDOWN')} / ${crate0} ${crateP.enchant?.ql} ${crateCapacity(crateP)} ${crateSaid}`);
+
+/* 10. Snarecraft, Netmender and Dreamweave. */
+const trapP = g.addTrap('snare', 20, 20, 1, 1, 30);
+const bedP = g.addFurniture('bed', 21, 20, 0, 0, 50);
+const net = thing('fishing_net', 50);
+const rod = thing('fishing_rod', 50);
+at(20.5, 21.5);
+const trapRefusals: Array<[string, string, string]> = [
+  ['R:snaretrap', placedAsk(SNARE, { kind: 'trap', id: trapP.id }), 'none'], ['R:snarebed', placedAsk(SNARE, fu(bedP)), wrongKind(SNARE)],
+  ['R:mendnet', askWith(MEND, net.uid), 'none'], ['R:mendrod', askWith(MEND, rod.uid), wrongKind(MEND)],
+  ['R:dreambed', placedAsk(DREAM, fu(bedP)), 'none'], ['R:dreamtrap', placedAsk(DREAM, { kind: 'trap', id: trapP.id }), wrongKind(DREAM)],
+];
+check(`Snarecraft goes on ${ON_WORDS.trap}, Netmender on ${ON_WORDS.net} and Dreamweave on ${ON_WORDS.bed}, each refused elsewhere in words that say so, on both sides`,
+  trapRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
+  trapRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+const orse = { species: 'orse' } as unknown as Creature;
+const snare0 = catchChance(trapP, orse);
+trapP.enchant = { id: SNARE.id, ql: 100 };
+const snare100 = catchChance(trapP, orse);
+check(`a Snarecraft at QL 100 on a snare: its chance of taking a creature ${enchantValue(SNARE, 100) * 100}% better, never past ${CATCH_MOST * 100}%, on both sides; a creel's chance of a fish the same, in the island's trap_settle`,
+  near(num('SNARE'), snare0) && near(num('SNARE100'), snare100) && near(snare100, Math.min(CATCH_MOST, snare0 * (1 + enchantValue(SNARE, 100)))) && snare100 > snare0
+    && isle.get('CREELSRC') === 'true', `${isle.get('SNARE')} ${isle.get('SNARE100')} ${isle.get('CREELSRC')} / ${snare0} ${snare100}`);
+g.inventory.items.splice(g.inventory.items.indexOf(rod), 1);
+g.wearTool('fishing_net', 1.4);
+const wear0 = net.dmg ?? 0;
+net.dmg = 0;
+net.enchant = { id: MEND.id, ql: 100 };
+g.wearTool('fishing_net', 1.4);
+const wear100 = net.dmg ?? 0;
+check(`a Netmender at QL 100 on a net: a drag wears it ${enchantValue(MEND, 100) * NETMENDER_WEAR * 100}% less, the same on both sides, and brings up ${enchantValue(MEND, 100) * 100}% more fish in the island's perform_fish`,
+  wear0 > 0 && near(wear100, wear0 * (1 - enchantValue(MEND, 100) * NETMENDER_WEAR)) && near(num('WEAR', 0), wear0, 1e-4) && near(num('WEAR', 1), wear100, 1e-4)
+    && isle.get('HAULSRC') === 'true', `${isle.get('WEAR')} ${isle.get('HAULSRC')} / ${wear0} ${wear100}`);
+g.player.rested = REST_CAP;
+const night = 8 * 3600;
+g.bankRest(night, 1);
+const rest0 = g.player.rested;
+g.bankRest(night, 1, enchantValue(DREAM, 100));
+const rest100 = g.player.rested;
+g.bankRest(night, 1);
+check(`a night in a bed with a Dreamweave at QL 100 banks ${enchantValue(DREAM, 100) * 100}% more rest, past the most a night otherwise banks, and a plain night after takes none of it away, on both sides`,
+  rest0 === REST_CAP && near(rest100, REST_CAP * (1 + enchantValue(DREAM, 100))) && g.player.rested === rest100
+    && near(num('REST0'), rest0) && near(num('REST100'), rest100) && near(num('RESTKEPT'), rest100) && isle.get('DREAMSRC') === 'true',
+  `${isle.get('REST0')} ${isle.get('REST100')} ${isle.get('RESTKEPT')} ${isle.get('DREAMSRC')} / ${rest0} ${rest100} ${g.player.rested}`);
 
 check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => PART3.includes(e)).length === PART3.length);
 

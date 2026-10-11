@@ -1,5 +1,5 @@
 import { tryGain } from './learn';
-import { enchantTail, type Enchant } from './enchant';
+import { enchantTail, swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
@@ -170,6 +170,8 @@ export const creelHold = (t: PlacedTrap): number => Math.round((trapDef(t).hold 
 /** What a timid thing's chance of walking into a trap is multiplied by, and a hunter's. */
 export const TIMID_TRAPPED = 1.5;
 export const HUNTER_TRAPPED = 0.6;
+/** The best a trap's chance of taking a creature ever comes to. */
+export const CATCH_MOST = 0.9;
 
 export function catchChance(t: PlacedTrap, c: Creature): number {
   const def = TRAPS[t.kind] ?? TRAPS.snare;
@@ -178,7 +180,8 @@ export function catchChance(t: PlacedTrap, c: Creature): number {
   const quality = 0.5 + clampQl(t.ql) / 140;
   const wary = Math.max(0.15, 1 - s.tameLevel / (trapHolds(t) * 1.8));
   const timid = s.timid ? TIMID_TRAPPED : s.hunter ? HUNTER_TRAPPED : 1;
-  return Math.min(0.9, def.odds * quality * wary * timid);
+  // And better for a Snarecraft set into it where it stands.
+  return Math.min(CATCH_MOST, def.odds * quality * wary * timid * (1 + swingEnchant(t, 'snare')));
 }
 
 /** What it says it is doing, for the menu and the log. */

@@ -41,7 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import { ENCHANTMENTS, furnaceBurn, moreSaid, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -3436,7 +3436,7 @@ export class Game {
    * Sleep until morning. The world does not stop for it: fires burn down,
    * crops come on and everything left outside ages by however long you slept.
    */
-  sleepUntilMorning(rest: number, what: string): void {
+  sleepUntilMorning(rest: number, what: string, dream = 0): void {
     const h = this.hourOfDay();
     const wake = DAWN + WAKE_AFTER_DAWN;
     const hours = h < wake ? wake - h : 24 - h + wake;
@@ -3474,8 +3474,8 @@ export class Game {
     s.hunger = Math.max(0, s.hunger - 0.2);
     s.thirst = Math.max(0, s.thirst - 0.25);
     this.gainSkill('body_stamina', 0.3 * rest);
-    // A good bed banks more of the night than a poor one.
-    const banked = this.bankRest(seconds, rest);
+    // A good bed banks more of the night than a poor one, and a Dreamweave in it more again.
+    const banked = this.bankRest(seconds, rest, dream);
     const bank = banked > 1 ? ` You have ${clockLeft(this.player.rested)} of rest in you; while it burns, everything teaches you twice as much.` : '';
     this.logMsg(
       skipped
@@ -3835,9 +3835,10 @@ export class Game {
   }
 
   /** Bank a night's sleep as rest, up to the hour that will stay banked. */
-  bankRest(seconds: number, quality: number): number {
+  bankRest(seconds: number, quality: number, dream = 0): number {
     const before = this.player.rested;
-    this.player.rested = Math.min(REST_CAP, before + seconds * REST_PER_SECOND * quality);
+    // What a Dreamweave in the bed adds, to the night and to the most that is held.
+    this.player.rested = Math.max(before, Math.min(REST_CAP * (1 + dream), before + seconds * REST_PER_SECOND * quality * (1 + dream)));
     return this.player.rested - before;
   }
 
@@ -5522,7 +5523,9 @@ export class Game {
     const tool = this.inventory.tool(id);
     if (!tool) return;
     // Less for a perk on the tool (a Carpenter's Saw Care) and a Truesteel in it, as `wear_tool` has it.
-    this.damageItem(tool, wearPerUse(tool.ql) * multiplier * this.perk(`wear:${id}`, 1) * (1 - swingEnchant(tool, 'temper')));
+    this.damageItem(tool, wearPerUse(tool.ql) * multiplier * this.perk(`wear:${id}`, 1) * (1 - swingEnchant(tool, 'temper'))
+      // And a Netmender in a net, that many times its share of the catch.
+      * (1 - swingEnchant(tool, 'mend') * NETMENDER_WEAR));
   }
 
   /**
@@ -6096,8 +6099,8 @@ export class Game {
     const depth = waterDepth(this, t.x, t.y);
     const pool = fishHere(depth, this.skills.get('fishing'));
     if (!pool.length) return;
-    // Better odds for its maker's hand in it (a Tailor's Fisher's Friend).
-    if (this.rand() >= creelOdds(t.ql) * markOf(t, 'catch')) return;
+    // Better odds for its maker's hand in it (a Tailor's Fisher's Friend), and for a Snarecraft set into it.
+    if (this.rand() >= creelOdds(t.ql) * markOf(t, 'catch') * (1 + swingEnchant(t, 'snare'))) return;
     // What its bait draws, and what its setter's perks make of that (a Fisher's Strong Bait and Big Fish).
     const bait = t.bait ? BAIT_BY_ID.get(t.bait.id) : undefined;
     const got = pickFish(this, pool, bait, (k, d) => this.perk(k, d));
