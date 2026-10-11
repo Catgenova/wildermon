@@ -5,6 +5,7 @@ import { damageCell, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import type { ContextMenu, MenuItem } from '../contextmenu';
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
+import { Picking } from '../picking';
 import type { UIWindow } from '../windows';
 import { COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
@@ -34,6 +35,11 @@ export class InventoryPanel {
   private grouped = true;
   private load: HTMLDivElement;
   private loadFill: HTMLDivElement;
+  /** Several things picked at once with Ctrl- and Shift-click (`Picking`), and the bar that moves them. */
+  private readonly picking = new Picking();
+  private pickBar: HTMLDivElement;
+  /** The rows' uids in the order they are drawn, for a Shift-click's run. */
+  private order: number[] = [];
 
   constructor(
     private readonly win: UIWindow,
@@ -50,6 +56,8 @@ export class InventoryPanel {
     private readonly storeEntries?: (item: Item) => MenuItem[],
     /** A card for what is under the pointer: a weapon or armour set against what you have on (`compareLines`). */
     private readonly hover?: (item: Item | null, x: number, y: number) => void,
+    /** Where the picked things can go in one press: the open store, by its name, or null when none is open and in reach. */
+    private readonly pickedTo?: () => { where: string; go: (uids: number[]) => void } | null,
   ) {
     this.search = document.createElement('input');
     this.search.type = 'search';
@@ -108,7 +116,10 @@ export class InventoryPanel {
     mark.className = 'inv-load-mark';
     mark.style.left = `${(100 / CARRY_STOP).toFixed(2)}%`;
     this.load.append(this.loadFill, mark);
-    win.body.append(this.search, bar, head, this.list, this.load, this.footer);
+    this.pickBar = document.createElement('div');
+    this.pickBar.className = 'pick-bar';
+    this.pickBar.hidden = true;
+    win.body.append(this.search, bar, head, this.list, this.pickBar, this.load, this.footer);
     win.body.classList.add('inv-body');
     makeDropZone(
       this.list,
@@ -134,6 +145,8 @@ export class InventoryPanel {
   render(): void {
     const items = this.game.inventory.items;
     const shown = items.filter((it) => this.matches(it));
+    this.picking.keep(new Set(shown.map((it) => it.uid)));
+    this.order = [];
     this.list.replaceChildren();
     if (!this.grouped) {
       for (const item of this.ordered(shown)) this.list.append(this.row(item));
@@ -153,6 +166,7 @@ export class InventoryPanel {
       empty.textContent = items.length ? `Nothing you are carrying answers to “${this.search.value.trim()}”.` : 'Your inventory is empty.';
       this.list.append(empty);
     }
+    this.drawPickBar();
     const weight = this.game.inventory.totalWeight();
     const limit = this.game.carryLimit();
     const over = this.game.overloaded();
@@ -176,9 +190,45 @@ export class InventoryPanel {
         : `${(limit - weight).toFixed(1)} kg to spare.`;
   }
 
+  /** "3 picked", and the press that moves them all, when more than none are picked. */
+  private drawPickBar(): void {
+    const n = this.picking.size;
+    this.pickBar.hidden = n === 0;
+    if (!n) return;
+    const say = document.createElement('span');
+    say.textContent = `${n} picked`;
+    say.title = 'Ctrl-click a row to add it or take it off, Shift-click for every row from the last one picked. Drag any picked row to move them all.';
+    const parts: HTMLElement[] = [say];
+    const to = this.pickedTo?.();
+    if (to) {
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'tb-btn tb-small';
+      go.textContent = `Put in the ${to.where}`;
+      go.title = `Every picked stack, whole, into the ${to.where}`;
+      go.addEventListener('click', () => {
+        to.go([...this.picking.uids]);
+        this.picking.clear();
+        this.render();
+      });
+      parts.push(go);
+    }
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'tb-btn tb-small';
+    clear.textContent = 'Clear';
+    clear.addEventListener('click', () => {
+      this.picking.clear();
+      this.render();
+    });
+    parts.push(clear);
+    this.pickBar.replaceChildren(...parts);
+  }
+
   private row(item: Item): HTMLDivElement {
     const row = document.createElement('div');
-    row.className = 'inv-row' + (item.uid === this.selected ? ' selected' : '');
+    this.order.push(item.uid);
+    row.className = 'inv-row' + (item.uid === this.selected ? ' selected' : '') + (this.picking.uids.has(item.uid) ? ' picked' : '');
     const name = nameCell(item, { worn: this.game.isEquipped(item.uid), occupant: occupantOf(this.game, item) });
     const ql = qualityCell(this.game, item);
     const dmg = damageCell(item);
@@ -192,13 +242,21 @@ export class InventoryPanel {
       this.render();
       this.openMenu(item, e.clientX, e.clientY);
     };
-    row.addEventListener('click', open);
+    row.addEventListener('click', (e) => {
+      if (this.picking.click(item.uid, this.order, e)) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.render();
+        return;
+      }
+      open(e);
+    });
     row.addEventListener('contextmenu', open);
     if (this.hover) {
       row.addEventListener('mousemove', (e) => this.hover?.(item, e.clientX, e.clientY));
       row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
     }
-    makeDraggable(row, { uid: item.uid, from: 'inventory', name: itemName(item) });
+    makeDraggable(row, () => ({ uid: item.uid, from: 'inventory', name: itemName(item), uids: this.picking.carried(item.uid) }));
     return row;
   }
 

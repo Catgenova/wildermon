@@ -7,6 +7,7 @@ import type { Game } from '../../game/game';
 import { bagAdd, bagRefuses, bagRoom, bagSpare, bagTake, itemDef, type Item, itemName } from '../../game/items';
 import type { MenuItem } from '../contextmenu';
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
+import { Picking } from '../picking';
 import type { UIWindow } from '../windows';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { damageCell, nameCell, qualityCell } from '../itemcells';
@@ -105,6 +106,10 @@ export class CratePanel {
   private waysIn: HTMLButtonElement[] = [];
   /** And the one that takes everything out, which somebody else's counter does not offer. */
   private wayOut: HTMLButtonElement | null = null;
+  /** Several things picked at once with Ctrl- and Shift-click (`Picking`), and the bar that takes them out. */
+  private readonly picking = new Picking();
+  private pickBar: HTMLDivElement;
+  private order: number[] = [];
 
   constructor(
     private readonly win: UIWindow,
@@ -178,7 +183,10 @@ export class CratePanel {
       this.query = '';
       this.render();
     });
-    win.body.append(this.search, head, this.list, this.bar, this.footer);
+    this.pickBar = document.createElement('div');
+    this.pickBar.className = 'pick-bar';
+    this.pickBar.hidden = true;
+    win.body.append(this.search, head, this.list, this.pickBar, this.bar, this.footer);
     makeDropZone(
       this.list,
       (p) => p.from === 'inventory' && this.store() !== undefined,
@@ -330,6 +338,42 @@ export class CratePanel {
   }
 
   /** Empty the open store into the pack, as far as it will go. */
+  /** "3 picked", and Take them out, when more than none are picked. */
+  private drawPickBar(store: Store): void {
+    const n = this.picking.size;
+    this.pickBar.hidden = n === 0;
+    if (!n) return;
+    const say = document.createElement('span');
+    say.textContent = `${n} picked`;
+    say.title = 'Ctrl-click a row to add it or take it off, Shift-click for every row from the last one picked. Drag any picked row to move them all.';
+    const take = document.createElement('button');
+    take.type = 'button';
+    take.className = 'tb-btn tb-small';
+    take.textContent = 'Take them out';
+    take.title = `Every picked stack, whole, out of the ${store.what} into your pack`;
+    take.addEventListener('click', () => {
+      for (const it of store.items.filter((i) => this.picking.uids.has(i.uid))) this.takeOne(it);
+      this.picking.clear();
+      this.render();
+    });
+    const clear = document.createElement('button');
+    clear.type = 'button';
+    clear.className = 'tb-btn tb-small';
+    clear.textContent = 'Clear';
+    clear.addEventListener('click', () => {
+      this.picking.clear();
+      this.render();
+    });
+    this.pickBar.replaceChildren(say, take, clear);
+  }
+
+  /** Where the pack's picked things go in one press: this store, when it is open and in reach. */
+  pickedTo(move: (uid: number) => void): { where: string; go: (uids: number[]) => void } | null {
+    const store = this.store();
+    if (!store || store.sell || store.grave !== undefined || !this.win.isOpen || !this.withinReach()) return null;
+    return { where: store.what, go: (uids) => uids.forEach(move) };
+  }
+
   /**
    * Take one stack out, by the door the Take button uses: the island's
    * `take_from_store` (or the store's own door), or straight across when
@@ -533,9 +577,18 @@ export class CratePanel {
         : `The ${store.what} is empty.`;
       this.list.append(empty);
     }
-    for (const item of orderBy(store.items.filter((it) => this.matches(it)), this.sort)) {
+    const listed = orderBy(store.items.filter((it) => this.matches(it)), this.sort);
+    this.picking.keep(new Set(listed.map((it) => it.uid)));
+    this.order = listed.map((it) => it.uid);
+    for (const item of listed) {
       const row = document.createElement('div');
-      row.className = 'inv-row';
+      row.className = 'inv-row' + (this.picking.uids.has(item.uid) ? ' picked' : '');
+      // Ctrl-click and Shift-click pick rows; a plain click on the row does nothing, as it never did.
+      if (!store.sell) {
+        row.addEventListener('click', (e) => {
+          if (this.picking.click(item.uid, this.order, e)) this.render();
+        });
+      }
       /*
        * The same three cells the pack window writes, off the same helpers.
        * A rare thing in a crate was written in the ordinary colour and a
@@ -590,9 +643,10 @@ export class CratePanel {
         row.addEventListener('mousemove', (e) => this.hover?.(item, e.clientX, e.clientY));
         row.addEventListener('mouseleave', () => this.hover?.(null, 0, 0));
       }
-      makeDraggable(row, { uid: item.uid, from: 'store', name: itemName(item) });
+      makeDraggable(row, () => ({ uid: item.uid, from: 'store', name: itemName(item), uids: this.picking.carried(item.uid) }));
       this.list.append(row);
     }
+    this.drawPickBar(store);
     const weight = store.items.reduce((s, it) => s + itemDef(it.id).weight * it.count, 0);
     const used = store.items.reduce((n, it) => n + it.count, 0);
     this.footer.textContent = store.grave !== undefined

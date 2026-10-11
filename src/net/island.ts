@@ -1,3 +1,4 @@
+import type { Prices } from '../game/prices';
 import type { WornWire } from '../game/worn';
 import type { Enchant } from '../game/enchant';
 import { firedIn, toldIn, type FiredWire, type ToldWire } from './told';
@@ -3322,6 +3323,15 @@ export class Island {
     if (error || !data) return { board: false, stalls: [] };
     const got = data as { board?: boolean; stalls?: unknown };
     return { board: !!got.board, stalls: rowsIn<Stall>(got.stalls) };
+  }
+
+  /** What everything has sold for on the island in the last `SALE_DAYS` days, a row a day per thing (`rpc_prices`). */
+  async prices(): Promise<Prices> {
+    if (!this.info) return {};
+    const { data, error } = await supabase().rpc('rpc_prices', { p_world: this.info.id });
+    if (error || !data) return {};
+    const sold = (data as { sold?: unknown }).sold;
+    return sold && typeof sold === 'object' ? (sold as Prices) : {};
   }
 
   async post(uid: string, text: string, items: number[]): Promise<string | null> {

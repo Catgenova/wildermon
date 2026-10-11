@@ -94,6 +94,7 @@ import { MARK_COLOURS } from '../game/marks';
 import { SettingsPanel } from './panels/settings';
 import { Palette, type PaletteEntry } from './palette';
 import { compareLines } from './compare';
+import { priceLine } from '../game/prices';
 import { Notices } from './notices';
 import type { HelpPages } from './panels/help';
 import { LookPanel } from './panels/looks';
@@ -347,7 +348,11 @@ export class UI {
         const e = this.cratePanel?.putKindEntry(item);
         return e ? [e] : [];
       },
-      (item, x, y) => this.compareCard(item, x, y));
+      (item, x, y) => this.compareCard(item, x, y),
+      () => this.cratePanel?.pickedTo((uid) => {
+        const it = game.inventory.get(uid);
+        if (it) this.moveDraggedN({ uid, from: 'inventory', name: itemName(it) }, 'store');
+      }) ?? null);
     const skills = this.windows.create({ id: 'skills', title: 'Skills', x: 364, y: 56, width: 260, height: 380, anchor: 'tr', open: false });
     new SkillsPanel(skills, game);
     // The handful you are moving today, beside the book that holds all forty.
@@ -559,7 +564,10 @@ export class UI {
 
   /** A weapon or armour under the pointer in the pack or a store, set against what you have on; nothing for anything else. */
   private compareCard(item: Item | null, x: number, y: number): void {
-    const lines = item ? compareLines(this.game, item) : null;
+    // And for anything, what its like has sold for on the island this month (`priceLine`).
+    const sold = item ? priceLine(this.market.prices[item.id]) : null;
+    const lines = item ? compareLines(this.game, item) ?? (sold ? [itemName(item)] : null) : null;
+    if (lines && sold) lines.push(sold);
     if (lines) this.tooltip.show(x, y, lines, this.compareHolder);
     else this.tooltip.hide(this.compareHolder);
   }
@@ -702,6 +710,15 @@ export class UI {
      * into the crate was a drag of the lot and fifteen trips back one at a
      * time, or a pile dropped on the ground and picked over.
      */
+    // Several picked and dragged together: each goes, whole.
+    if (p.uids && p.uids.length > 1) {
+      const store = this.cratePanel.currentStore();
+      for (const uid of p.uids) {
+        const it = to === 'inventory' ? store?.items.find((i) => i.uid === uid) : this.game.inventory.get(uid);
+        if (it) this.moveDraggedN({ uid, from: p.from, name: itemName(it) }, to);
+      }
+      return;
+    }
     const store = this.cratePanel.currentStore();
     const held = to === 'inventory' ? store?.items.find((it) => it.uid === p.uid) : this.game.inventory.get(p.uid);
     const ask = this.game.hooks.count;

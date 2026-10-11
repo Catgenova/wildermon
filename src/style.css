@@ -3586,3 +3586,58 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .notice { animation: none; transition: none; }
 }
+
+/* Market prices: a row a thing, its month of sales as a bar a day. */
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.price-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.price-name small {
+  display: block;
+  color: var(--ui-dim);
+  font-weight: 400;
+}
+
+.price-chart {
+  flex: 0 0 auto;
+}
+
+.price-bar {
+  fill: var(--ui-accent);
+}
+
+.price-bar-none {
+  fill: rgba(255, 255, 255, 0.12);
+}
+
+/* Several rows picked at once (src/ui/picking.ts), and the bar that moves them. */
+.inv-row.picked {
+  background: rgba(120, 170, 220, 0.2);
+  box-shadow: inset 2px 0 0 #8fb8e0;
+}
+
+.pick-bar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--ui-border);
+  color: var(--ui-text);
+}
+
+.pick-bar span {
+  margin-right: auto;
+  font-weight: 600;
+}

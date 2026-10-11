@@ -16,6 +16,8 @@ export interface DragPayload {
    * drop's own is unreliable across browsers).
    */
   split?: boolean;
+  /** Every thing picked (`Picking`), when the row dragged is one of several picked: they all go, each whole. */
+  uids?: number[];
 }
 
 let carried: DragPayload | null = null;
@@ -23,12 +25,14 @@ let carried: DragPayload | null = null;
 export const dragging = (): DragPayload | null => carried;
 
 /** Make a row something that can be picked up and carried to another window. */
-export function makeDraggable(row: HTMLElement, payload: DragPayload): void {
+export function makeDraggable(row: HTMLElement, payload: DragPayload | (() => DragPayload)): void {
   row.draggable = true;
   row.addEventListener('dragstart', (e) => {
-    carried = { ...payload, split: e.shiftKey };
+    const p = typeof payload === 'function' ? payload() : payload;
+    // A part of a stack is asked for only when one stack is carried.
+    carried = { ...p, split: e.shiftKey && !(p.uids && p.uids.length > 1) };
     row.classList.add('drag-source');
-    e.dataTransfer?.setData('text/plain', String(payload.uid));
+    e.dataTransfer?.setData('text/plain', String(p.uid));
     if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
   });
   row.addEventListener('dragend', () => {

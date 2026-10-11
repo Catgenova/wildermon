@@ -45,6 +45,7 @@ import type { Item } from '../../src/game/items';
 import { priceWords } from '../../src/game/money';
 import { couldBring, fitsOrder, ORDER_LIFE, orderWords } from '../../src/game/orders';
 import { spanWords } from '../../src/game/words';
+import { SALE_DAYS } from '../../src/game/prices';
 import { helpText } from '../../src/ui/panels/help';
 import type { Order } from '../../src/net/island';
 
@@ -219,6 +220,16 @@ begin
           from item i join letter l on l.world_id = i.world_id and l.n = i.letter
          where i.world_id = w and i.holder = 'post' and i.holder_uid = dane));
   insert into said values ('PAID', purse(w, cato)::text);
+  -- Written down as a sale: what, how many, and the silver for them all; and read back a day at a time.
+  insert into said values ('SALE', (select def || ':' || count || ':' || silver from sale where world_id = w order by n desc limit 1));
+  insert into said values ('PRICES', (select (d->>'ago') || ':' || (d->>'n') || ':' || (d->>'silver') || ':' || (d->>'lo') || ':' || (d->>'hi')
+    from jsonb_array_elements(rpc_prices(w)->'sold'->'iron_ore') d limit 1) || '|' || (rpc_prices(w)->>'days'));
+  -- A sale from before the month out goes when the next of the same thing is written down.
+  insert into sale (world_id, def, count, silver, at) values (w, 'iron_ore', 5, 50, now() - make_interval(days => sale_days() + 1));
+  perform note_sale(w, 'iron_ore', 1, 4);
+  insert into said values ('PRUNED', (select count(*) from sale where world_id = w and def = 'iron_ore'
+    and at < now() - make_interval(days => sale_days()))::text || '|'
+    || (select count(*) from sale where world_id = w and def = 'iron_ore')::text);
   insert into said values ('HALF', (select got || ' of ' || want || ',' || (closed_at is null) from buy_order where n = a));
   insert into said values ('HEARD', (select text from event where world_id = w and uid = dane order by n desc limit 1));
   insert into said values ('SAID', (select text from event where world_id = w and uid = cato order by n desc limit 1));
@@ -316,6 +327,10 @@ begin
     || has_table_privilege('authenticated', 'buy_order', 'select') || '|' || has_table_privilege('anon', 'buy_order', 'insert')
     || '|' || has_function_privilege('authenticated', 'rpc_order_fill(uuid, bigint, integer)', 'execute')
     || '|' || has_function_privilege('authenticated', 'order_sweep(uuid)', 'execute'));
+  insert into said values ('SALESHUT', (select relrowsecurity from pg_class where relname = 'sale')::text || '|'
+    || has_table_privilege('authenticated', 'sale', 'select') || '|' || has_table_privilege('anon', 'sale', 'insert')
+    || '|' || has_function_privilege('authenticated', 'rpc_prices(uuid)', 'execute')
+    || '|' || has_function_privilege('authenticated', 'note_sale(uuid, text, bigint, bigint)', 'execute'));
 end $b$;
 select k || '|' || coalesce(v, 'NULL') from said;
 rollback;
@@ -387,6 +402,13 @@ check('what was brought is in his post, from whoever brought it',
   said('POST') === '3 iron_ore from Cato, 3 iron_ore from Cato, 1 pickaxe from Cato, 1 pickaxe from Edda, 1 satchel from Edda', said('POST'));
 check('and in his pack once collected', said('COLLECT') === 'collected|0', said('COLLECT'));
 check('the table is nobody\'s to read or write but the doors\'', said('SHUT') === 'true|false|false|true|false', said('SHUT'));
+check('a month of sales is kept, the same number on both sides', psql('select sale_days();') === String(SALE_DAYS), psql('select sale_days();'));
+check('what was brought to an order is written down as a sale: three iron ore for nine silver',
+  said('SALE') === 'iron_ore:3:9', said('SALE'));
+check(`and read back as today's: three sold, nine silver, three a piece at least and at most, over ${SALE_DAYS} days`,
+  said('PRICES') === `0:3:9:3:3|${SALE_DAYS}`, said('PRICES'));
+check('a sale older than the month goes when the next is written', said('PRUNED') === '0|2', said('PRUNED'));
+check('the sales are nobody\'s to read or write but the doors\'', said('SALESHUT') === 'true|false|false|true|false', said('SALESHUT'));
 
 /* ---- two at once ------------------------------------------------------------ */
 console.log('--- two at once');

@@ -7,6 +7,7 @@ import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { LAYOUT_NAMES } from '../../game/keybinds';
 import { SNAP } from '../windows';
+import { SALE_DAYS } from '../../game/prices';
 import { RECENT } from './craft';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
@@ -1856,6 +1857,16 @@ export const NEWS: News[] = [
       'A ring over every fire, smelter and kiln near you shows its fuel, the work in it and a dot when something is ready.',
       'Notices near the top of the screen for a skill at a new whole number, a knack, a run of work done and a birth. Each '
         + 'can be switched off in Settings.',
+    ],
+  },
+  {
+    n: 137,
+    day: '2026-10-11',
+    lines: () => [
+      `The Market window has a Prices tab: everything bought off a stall or a counter, or brought to a buy order, in the last ${SALE_DAYS} days, `
+        + 'with how many sold, the cheapest, dearest and average price of one, and a bar a day. Hovering a thing in the pack or a store says the same of its kind.',
+      'Ctrl-click (⌘-click on a Mac) rows in the pack or a store to pick several, and Shift-click to pick every row from the last one picked. '
+        + 'Drag any picked row to move them all, or use Put in the store or Take them out on the bar under the list.',
     ],
   },
 ];

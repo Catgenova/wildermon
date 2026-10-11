@@ -1,7 +1,8 @@
 import { LETTER_MAX, type Deal, type Good, type Island, type Occupant, type Order, type Parcel, type Stall } from '../../net/island';
 import type { Enchant } from '../../game/enchant';
 import type { Game } from '../../game/game';
-import { billWords, ITEM_DEFS, itemName, RARITIES, type Item } from '../../game/items';
+import { billWords, ITEM_DEFS, itemDef, itemName, RARITIES, type Item } from '../../game/items';
+import { dailyEach, SALE_DAYS, silverEach, summarise, type Prices, type SaleDay, type SaleSummary } from '../../game/prices';
 import { furnitureDef } from '../../game/furniture';
 import { SPECIES } from '../../game/creatures';
 import { priceWords, purse } from '../../game/money';
@@ -51,7 +52,44 @@ const REFRESH = 5;
  * A creature crate with a wildermon in it goes everywhere the rest do: into a
  * deal, onto a stall, into the post. Whoever it goes to keeps the wildermon.
  */
-type Tab = 'board' | 'orders' | 'deals' | 'stall' | 'post';
+/**
+ * A month of what one thing sold for, as an inline drawing: a bar a day,
+ * oldest on the left, each as tall as that day's average price of one against
+ * the dearest day's. A hover on a bar says the day, how many and the price.
+ */
+function priceChart(days: readonly SaleDay[]): SVGSVGElement {
+  const NS = 'http://www.w3.org/2000/svg';
+  const W = 120, H = 26, gap = 1;
+  const each = dailyEach(days);
+  const top = Math.max(1, ...each.map((v) => v ?? 0));
+  const bw = (W - gap * (SALE_DAYS - 1)) / SALE_DAYS;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', String(W));
+  svg.setAttribute('height', String(H));
+  svg.classList.add('price-chart');
+  const byAgo = new Map(days.map((d) => [d.ago, d]));
+  each.forEach((v, i) => {
+    const x = i * (bw + gap);
+    const ago = SALE_DAYS - 1 - i;
+    const r = document.createElementNS(NS, 'rect');
+    const h = v === null ? 1.5 : Math.max(2, (v / top) * (H - 2));
+    r.setAttribute('x', x.toFixed(2));
+    r.setAttribute('y', (H - h).toFixed(2));
+    r.setAttribute('width', bw.toFixed(2));
+    r.setAttribute('height', h.toFixed(2));
+    r.setAttribute('rx', '1');
+    r.setAttribute('class', v === null ? 'price-bar-none' : 'price-bar');
+    const d = byAgo.get(ago);
+    const t = document.createElementNS(NS, 'title');
+    t.textContent = `${ago === 0 ? 'Today' : ago === 1 ? 'Yesterday' : `${ago} days ago`}: ${d ? `${d.n} sold, ${silverEach(d.silver / d.n)} silver each on average` : 'none sold'}`;
+    r.append(t);
+    svg.append(r);
+  });
+  return svg;
+}
+
+type Tab = 'board' | 'prices' | 'orders' | 'deals' | 'stall' | 'post';
 export class MarketPanel {
   private readonly bar: HTMLDivElement;
   private readonly page: HTMLDivElement;
@@ -60,6 +98,8 @@ export class MarketPanel {
   private deals: Deal[] = [];
   private market: { board: boolean; stalls: Stall[] } = { board: false, stalls: [] };
   private orders: { board: boolean; orders: Order[] } = { board: false, orders: [] };
+  /** What everything has sold for on the island in the last month (`rpc_prices`), read when the window is and once at the start. */
+  prices: Prices = {};
   /** The order being written: the name of what is wanted, the least quality, how many and the silver for each. */
   private wanted = { name: '', ql: 0, count: 1, price: 1 };
   /** How many somebody has typed that they will bring to an order, by the order's number. */
@@ -86,6 +126,7 @@ export class MarketPanel {
     this.bar.className = 'log-tabs';
     for (const [id, label, title] of [
       ['board', 'Board', 'Every stall and buy order on the island, read at a settlement token or a mailbox'],
+      ['prices', 'Prices', `What everything has sold for on the island in the last ${SALE_DAYS} days`],
       ['orders', 'Orders', 'What you have asked for, and asking for something'],
       ['deals', 'Deals', 'Offers out and offers in'],
       ['stall', 'Stall', 'What you have laid out, and what it has taken'],
@@ -104,6 +145,8 @@ export class MarketPanel {
     win.body.append(this.bar, this.page);
     win.onOpen = () => void this.refresh();
     this.draw();
+    // Once at the start, so a thing in the pack can say what its like went for before the window is ever opened.
+    if (island) void island.prices().then((p) => (this.prices = p));
   }
 
   /** Open on the Stall tab, where your stalls' and counters' goods are priced. */
@@ -141,6 +184,7 @@ export class MarketPanel {
       this.waiting = await this.island.waiting();
       this.market = await this.island.market();
       this.orders = await this.island.orders();
+      this.prices = await this.island.prices();
     } finally {
       this.asking = false;
     }
@@ -168,10 +212,43 @@ export class MarketPanel {
       return;
     }
     if (this.tab === 'board') this.drawBoard();
+    else if (this.tab === 'prices') this.drawPrices();
     else if (this.tab === 'orders') this.drawOrders();
     else if (this.tab === 'deals') this.drawDeals();
     else if (this.tab === 'stall') this.drawStall();
     else this.drawPost();
+  }
+
+  /**
+   * Every thing sold on the island in the month, most sold first: how many,
+   * the cheapest and dearest one and the average, and a bar a day of what one
+   * fetched, oldest on the left. Read wherever you stand, unlike the board:
+   * what things go for is common knowledge.
+   */
+  private drawPrices(): void {
+    const rows = Object.entries(this.prices)
+      .map(([def, days]) => ({ def, days, s: summarise(days) }))
+      .filter((r): r is { def: string; days: SaleDay[]; s: SaleSummary } => !!r.s)
+      .sort((a, b) => b.s.n - a.s.n || itemDef(a.def).name.localeCompare(itemDef(b.def).name));
+    if (!rows.length) {
+      this.say(`Nothing has been bought off a stall or a counter, or brought to a buy order, on this island in the last ${SALE_DAYS} days.`);
+      return;
+    }
+    this.say(`Everything bought off a stall or a counter, or brought to a buy order, in the last ${SALE_DAYS} days. Each bar is a day, `
+      + 'oldest on the left, as tall as what one sold for that day against its dearest day; a gap is a day it did not sell.');
+    for (const { def, days, s } of rows) {
+      const row = document.createElement('div');
+      row.className = 'price-row';
+      const name = document.createElement('div');
+      name.className = 'price-name';
+      name.textContent = itemDef(def).name;
+      const said = document.createElement('small');
+      said.textContent = `${s.n} sold · ${s.lo === s.hi ? `${silverEach(s.lo)} each` : `${silverEach(s.lo)}–${silverEach(s.hi)} each, ${silverEach(s.each)} on average`}`
+        + ` · last ${s.last === 0 ? 'today' : s.last === 1 ? 'yesterday' : `${s.last} days ago`}`;
+      name.append(said);
+      row.append(name, priceChart(days));
+      this.page.append(row);
+    }
   }
 
   private say(text: string): HTMLDivElement {
