@@ -39,6 +39,7 @@ import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
+import { runeGateLights } from './runegate';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
@@ -3338,6 +3339,8 @@ export class Game {
         if (near(p.x, p.y)) out.push(runestoneLight(p.x, p.y));
       }
     }
+    // And the rune gates a citizen of their settlement is passing through, as lit as each is (`runegate.ts`).
+    out.push(...runeGateLights(this, performance.now() / 1000, near));
     return out;
   }
 

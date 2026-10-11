@@ -14,7 +14,7 @@ import { cleanLook, type Look } from '../game/look';
 import type { IslandCrate, IslandGround } from '../game/game';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
-import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
+import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import type { Away } from '../game/away';
@@ -871,6 +871,14 @@ export interface IslandHooks {
   swirls?: (rows: unknown[]) => void;
   /** Swirls somebody collected, by id, said over the block's channel the moment they went. */
   swirlsGone?: (ids: number[]) => void;
+  /**
+   * The rolls of the settlements rune gates stand on (`rpc_rune_gate_folk`),
+   * as the island sent them, for the game to light its gates by
+   * (`sawGateFolk`); and whether this side holds a rune gate at all, which is
+   * when they are asked for.
+   */
+  gateFolk?: (rows: unknown[]) => void;
+  gatesHeld?: () => boolean;
   /** Somebody waved or hopped, which nothing but the renderer cares about. */
   emote?: (uid: string, name: string, emote: string) => void;
   /**
@@ -994,6 +1002,8 @@ export class Island {
   private lastSprings = 0;
   /** When the swirls were last asked for, and whether something has said to ask again now. */
   private lastSwirls = 0;
+  /** When the rolls rune gates are lit by were last asked for (`refreshGateFolk`), in seconds; never, to begin with. */
+  private lastGateFolk = -Infinity;
   private swirlsOwed = true;
   private lastSaid = '';
   /**
@@ -2491,6 +2501,21 @@ export class Island {
     this.hooks.swirls(data as unknown[]);
   }
 
+  /**
+   * The rolls of the settlements rune gates stand on (`rpc_rune_gate_folk`):
+   * while this side holds a rune gate at all, every `GATE_FOLK_EVERY`
+   * seconds. A citizen asked onto a settlement lights its gates from the next
+   * answer; a call that failed is asked again then, and keeps what it had.
+   */
+  async refreshGateFolk(now: number): Promise<void> {
+    if (!this.info || !this.hooks.gateFolk || !this.hooks.gatesHeld?.()) return;
+    if (now - this.lastGateFolk < GATE_FOLK_EVERY * this.slower()) return;
+    this.lastGateFolk = now;
+    const { data, error } = await supabase().rpc('rpc_rune_gate_folk', { p_world: this.info.id });
+    if (error || !Array.isArray(data)) return;
+    this.hooks.gateFolk(data as unknown[]);
+  }
+
   async refreshPeople(): Promise<void> {
     if (!this.info) return;
     // And what each of them has on, which their rows cannot say: see `rpc_worn`.
@@ -2573,6 +2598,7 @@ export class Island {
     void this.refreshGround(now);
     void this.refreshSprings(now);
     void this.refreshSwirls(now);
+    void this.refreshGateFolk(now);
     void this.keepFog(now);
     void this.keepGuide(now);
     const said = `${x.toFixed(2)},${y.toFixed(2)},${level}`;

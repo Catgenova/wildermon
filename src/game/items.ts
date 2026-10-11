@@ -616,7 +616,9 @@ for (const e of MOTE_ELEMENTS) {
     stackable: true,
     description: `Collected from ${article(e)} ${e} mote swirl with Collect motes; ${e} swirls turn ${where}. `
       + `A swirl gives ${numberWord(MOTES_LEAST)} at Elementalism under ${MOTES_STEP}, one more for every ${MOTES_STEP} points, `
-      + `and ${numberWord(MOTES_MOST)} from ${MOTES_MOST_AT}.`,
+      + `and ${numberWord(MOTES_MOST)} from ${MOTES_MOST_AT}.`
+      // A light mote is what a rune gate's pillars are lit by (`runegate.ts`).
+      + (e === 'light' ? ' A rune gate takes {wall.rune_gate.light_mote:w} over its stone, one set in each pillar.' : ''),
   };
 }
 

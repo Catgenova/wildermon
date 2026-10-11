@@ -17,7 +17,7 @@
 import { execFileSync } from 'node:child_process';
 // First, so the rules load in the order the game loads them: building and items lean on each other.
 import { ACTIONS } from '../../src/game/actions';
-import { MATERIAL_BY_ID, onlyRefusal, onlySaid, wallBill, WALL_TYPE_BY_ID, WALL_TYPES } from '../../src/game/building';
+import { laidInSaid, MATERIAL_BY_ID, onlyRefusal, onlySaid, wallBill, WALL_TYPE_BY_ID, WALL_TYPES } from '../../src/game/building';
 import { CRAFT_CLASSES } from '../../src/game/classes';
 import { bagRefuses, ITEM_DEFS, type Item } from '../../src/game/items';
 import { RECIPE_BY_ID, type Recipe } from '../../src/game/recipes';
@@ -204,8 +204,10 @@ check('stained glass is laid as a solid wall, a floor or a roof, and as nothing 
   asked.every((a, i) => (a.mine ?? 'ALLOWED') === theirsOnly[i]) && allowed.join() === 'a solid,a floor,a roof',
   `allowed: ${allowed.join(', ')}; differ: ${asked.filter((a, i) => (a.mine ?? 'ALLOWED') !== theirsOnly[i]).map((a) => a.what).join(', ') || 'none'}`);
 check('and it says so in the same words everywhere it is refused', theirsOnly.filter((s) => s !== 'ALLOWED').every((s) => s === onlySaid(M)), onlySaid(M));
-check('every other material is laid as anything', [...MATERIAL_BY_ID.values()].filter((m) => !m.only).every((m) =>
-  WALL_TYPES.every((wt) => onlyRefusal(m.id, { wall: wt.id }) === null) && onlyRefusal(m.id, { column: true }) === null));
+// Anything but a wall type laid in one material of its own (`laidIn`): a rune gate is stone brick's (`runegate.ts`).
+check('every other material is laid as anything not held to one material', [...MATERIAL_BY_ID.values()].filter((m) => !m.only).every((m) =>
+  WALL_TYPES.every((wt) => onlyRefusal(m.id, { wall: wt.id }) === (wt.laidIn && wt.laidIn !== m.id ? laidInSaid(wt) : null))
+    && onlyRefusal(m.id, { column: true }) === null));
 check('the island turns away a half wall of stained glass in those words, and lets one of stone brick through that check',
   got('FENCE') === onlySaid(M) && got('SOLIDFENCE') !== onlySaid(M), `${got('FENCE')} / ${got('SOLIDFENCE')}`);
 const planWall = ACTIONS.find((a) => a.id === 'plan_wall')!;

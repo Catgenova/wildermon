@@ -14,6 +14,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
+import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, takesAs,
@@ -155,6 +156,23 @@ const CELLAR_NOT_DOWN = FURNITURE.filter((d) => cellarOutdoor().includes(d.id) &
 /** The Farmer's perk that holds an effect, by name. */
 const farmerPerk = (key: string): string => perksOf('farmer').find((p) => key in p.fx)?.name ?? key;
 /** What a tile of glass roof of a shape takes: "12 glass panes and 4 timbers". */
+/**
+ * The rune gate's paragraph (`runegate.ts`): where it stands, what it costs
+ * and what lights it, every number off the rule.
+ */
+const runeGateHelp = (): string => {
+  const def = WALL_TYPE_BY_ID.get(RUNE_GATE);
+  const mat = (WALL_MATERIALS.find((m) => m.id === def?.laidIn)?.name ?? '').toLowerCase();
+  return `<p>A <b>${runeGateName()}</b> is two pillars cut with runes under a lintel, for the way into a settlement. Point at the edge of a tile on
+    the ground and choose <b>Plan fence</b>, <b>${def?.name}</b>: it is laid in ${mat} and nothing else, ${billWords(Object.entries(wallBill(def?.laidIn ?? '', RUNE_GATE).total))},
+    and fed with <b>Build fence</b> as a fence is. Nothing hangs in it and nothing locks it: people, carts and wildermon all pass it, and it is
+    seen through. Nothing rests on its lintel. While a citizen of a settlement whose border takes in the tile on either side of it &mdash; its
+    founder, a mayor or a builder, not a guest &mdash; stands within ${RUNE_GATE_REACH} of a tile of the middle of its opening, the runes on both
+    pillars and the roundel on the lintel light, the lowest first, over ${RUNE_GATE_RISE} seconds; once no citizen is there they go out over
+    ${RUNE_GATE_FADE} seconds. Strangers, guests and wildermon do not light it. While it is lit after dark it throws pale gold
+    ${RUNE_GATE_GLOW_REACH} tiles round its opening. The light is all it does. On an island the rolls of the settlements rune gates stand on are
+    sent to everybody ashore, which is how your browser knows who lights one.</p>`;
+};
 /** The wall types too low to close in a glasshouse, from their own `low`: "a fence, a fence gate, an iron-bound gate or a half wall". */
 const lowWalls = (): string => {
   const names = WALL_TYPES.filter((w) => w.low).map((w) => w.name.toLowerCase()).map((n) => `${article(n)} ${n}`);
@@ -1270,6 +1288,7 @@ export function helpText(): string {
     through. Point at it from either side, on any storey, to read whether it is up or down and padlocked. Without a padlock
     anybody may raise or lower it; <b>Fit a padlock</b> to it and only its key and the founder of the settlement it stands on may
     raise it, lower it or take it down.</p>
+    ${runeGateHelp()}
     <p>A <b>hidden door</b> is built of exactly a solid wall's bill and drawn exactly as one. <b>Plan wall</b>, <b>Hidden door</b>
     plans a solid wall there, in every way anybody else can see or read: the same job, ${spanWords(goSeconds(PLAN_WALL?.baseTime ?? 0))} and
     ${percent(PLAN_WALL?.stamina ?? 0)} of your stamina, the same words over your head, and on an island the same record. Only you and

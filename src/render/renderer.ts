@@ -41,6 +41,8 @@ import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARI
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { isRuneLantern } from '../game/runelantern';
+import { drawRuneGate, gateVariant, RUNE_GATE_OPENING } from './runegate';
+import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
@@ -3920,6 +3922,16 @@ export class Renderer {
       // What spells lay on this line's ground, under everything standing on it; and what of them stands here, sorted in with it.
       this.spells.groundLine(ctx, d);
       for (const rec of this.spells.itemsAt(d)) this.take('spell', Math.floor(rec.x), Math.floor(rec.y), rec.sx, rec.sy, null).fx = rec;
+      // Whoever stands in a rune gate's opening is drawn on the line of its front tile, between its two pictures (`runegate.ts`):
+      // they first, then the gates' fronts, then everything else on the line, which stands in front of both.
+      if (this.gateBodies(d, V)) {
+        const rest = this.ents;
+        this.ents = this.gateIn;
+        this.drawEntities(ctx, zoom);
+        this.ents = rest;
+        this.gateIn = [];
+      }
+      this.flushGateFront();
       if (this.ents.length) this.drawEntities(ctx, zoom);
       // Remembered ground on this line came down over what was waiting to take the wash off: the wash so far is laid, and that taken off it, first.
       if (lineOver) {
@@ -3940,6 +3952,15 @@ export class Renderer {
         lineAny = false;
       }
     }
+    // Anybody put off to a line past the last drawn, and any rune gate's front still waiting.
+    if (this.gateDeferred.size) {
+      this.ents.length = 0;
+      for (const list of this.gateDeferred.values()) this.ents.push(...list);
+      this.gateDeferred.clear();
+      if (this.ents.length) this.drawEntities(ctx, zoom);
+    }
+    this.flushGateFront();
+    this.ents.length = 0;
     // The surface and then what crossed it, both clipped to the water, so
     // neither washes up over a beach standing in front of them.
     if (!this.fast) this.drawSwell(ctx, zoom);
@@ -6544,7 +6565,8 @@ export class Renderer {
     /** How far out a wall's shade reaches from its line, or 0 for a wall that throws none. */
     const reachOf = (w: Wall): number => {
       const cob = this.masonryOf(w);
-      if (!cob) return 0;
+      // A rune gate throws its own, under its pillars, in its picture (`runegate.ts`).
+      if (!cob || isRuneGate(w)) return 0;
       if (WALL_TYPE_BY_ID.get(w.type)?.low) return 2.1 * halfOf(w);
       return cob.plinth && level === 0 ? 3.4 * halfOf(w) : 0;
     };
@@ -9583,6 +9605,11 @@ export class Renderer {
    * that is the right amount of a wall.
    */
   private drawWall(wall: Wall, border: Border, base: number, alpha: number): void {
+    // A rune gate, finished, is a model of its own, its runes' light laid over it each frame (`runegate.ts`).
+    if (isRuneGate(wall) && isDone(wall)) {
+      this.drawRuneGateWall(wall, border, base, alpha);
+      return;
+    }
     const cam = this.camera;
     const [ax, ay, bx, by] = borderPoints(border);
     const dx = bx - ax, dy = by - ay;
@@ -9604,6 +9631,123 @@ export class Renderer {
     const key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.building}|${base}`;
     this.baked(key, cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, base), [x0, y0, x1, y1],
       () => this.drawWallNow(wall, border, base, alpha));
+  }
+
+  /**
+   * A finished rune gate, standing on the middle of its border at `base`
+   * (`runegate.ts`): its picture, its runes as lit as a citizen in its
+   * opening has them (`runeGateLit`), and after dark, from here on in the
+   * order, its runes' light kept off whatever stands in front of it
+   * (`RunestoneNight.light`) -- and its own picture kept off the light of a
+   * runestone or another gate behind it.
+   */
+  private drawRuneGateWall(wall: Wall, border: Border, base: number, alpha: number): void {
+    const cam = this.camera;
+    const m = gateMiddle(border);
+    const sx = cam.worldToScreenX(m.x, m.y), sy = cam.worldToScreenY(m.x, m.y, base);
+    const { lit, since } = runeGateLit(this.game, wall, performance.now() / 1000);
+    const zoom = cam.zoom, turn = cam.rotation, variant = gateVariant(border.dir, border.x, border.y), dark = this.game.darkness(), t = this.time;
+    const layer = (which: 'back' | 'front'): void => {
+      const ctx = this.canvas.ctx;
+      const was = ctx.globalAlpha;
+      ctx.globalAlpha = alpha;
+      const d = drawRuneGate(ctx, sx, sy, zoom, border.dir, turn, variant, lit, since, RUNE_GATE_RISE, dark, t, which);
+      ctx.globalAlpha = was;
+      if (alpha < 1) return;
+      if (this.runeNight.active) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
+      // Its runes take the night off themselves through the one night the runestones use, their shapes given as drawn at (sx, sy) moved by (dx, dy).
+      if (d.lightBox) this.runeNight.glowing(ctx, ...d.lightBox, (dx, dy) => d.holes(sx + dx, sy + dy), (dx, dy) => d.masks(sx + dx, sy + dy));
+    };
+    // What stands behind the opening now; what stands in front of it once this line's bodies are drawn (`flushGateFront`).
+    layer('back');
+    this.gateFront.push(() => layer('front'));
+  }
+
+  /** The front pictures of the rune gates drawn on this line, over whoever this line drew in their openings. */
+  private gateFront: Array<() => void> = [];
+  private flushGateFront(): void {
+    if (!this.gateFront.length) return;
+    for (const lay of this.gateFront) lay();
+    this.gateFront.length = 0;
+  }
+
+  /** Bodies put off to a later line, by the line: whoever stands in a rune gate's opening, on the tile behind it. */
+  private gateDeferred = new Map<number, Entity[]>();
+  /** This line's bodies standing in the opening of a rune gate drawn on it, drawn before its front picture. */
+  private gateIn: Entity[] = [];
+  /**
+   * Sorts out this line's bodies -- people, peers, and every creature: beasts,
+   * wildermon, workers, mounts and their riders -- that stand inside a rune
+   * gate's opening (`gateSpotOf`). One on the tile behind it is put off to the
+   * line of the tile in front, where the gate is drawn; one on that line is
+   * taken out of the line's run into `gateIn`, with those put off to it, to
+   * be drawn between the gate's two pictures: over its threshold, the far
+   * pillar and what grows behind, under the near pillar, what grows in front
+   * and the lintel. Anyone standing anywhere else is drawn as before: behind
+   * a pillar, before the gate; in front of it, after both pictures. Whether
+   * there is anybody in `gateIn`.
+   */
+  private gateBodies(d: number, V: View): boolean {
+    const had = this.gateDeferred.get(d);
+    if (had) this.gateDeferred.delete(d);
+    if (!this.game.buildings.walls.size && !had) return false;
+    const inn = this.gateIn;
+    inn.length = 0;
+    for (let i = this.ents.length - 1; i >= 0; i--) {
+      const e = this.ents[i];
+      const at = this.bodyAt(e);
+      if (!at) continue;
+      const to = this.gateSpotOf(at[0], at[1], V);
+      if (to === null || to < d) continue;
+      if (to > d) {
+        // Pooled entities are lent for this line only: the one put off is a copy.
+        const list = this.gateDeferred.get(to) ?? [];
+        list.push({ ...e });
+        this.gateDeferred.set(to, list);
+      } else inn.push(e);
+      this.ents.splice(i, 1);
+    }
+    if (had) inn.push(...had);
+    return inn.length > 0;
+  }
+
+  /** Where on the ground a body this line took stands, if it is one that can walk through a gate, on the ground floor; else null. */
+  private bodyAt(e: Entity): [number, number] | null {
+    switch (e.kind) {
+      // Not a driver on a box, whose cart is drawn where it stands; a rider is drawn with the mount.
+      case 'player':
+        return this.game.player.level === 0 && !(e.lift && e.seat === undefined) ? [this.game.player.x, this.game.player.y] : null;
+      case 'peer':
+        return e.peer && e.peer.level === 0 && !(e.lift && e.seat === undefined) ? this.game.roster.drawnAt(e.peer) : null;
+      case 'creature': {
+        const cr = e.creature;
+        // Not one in a wagon's traces, which goes with the wagon.
+        return cr && cr.hitchedTo === null ? [cr.x, cr.y] : null;
+      }
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * The line of the front tile of a finished rune gate whose opening a point
+   * stands inside, or null: between its pillars' inner faces, less a body's
+   * breadth, and no further through it either way than its pillars and the
+   * planting at their feet stand (`RUNE_GATE_OPENING`).
+   */
+  private gateSpotOf(x: number, y: number, V: View): number | null {
+    const tx = Math.floor(x), ty = Math.floor(y);
+    const bld = this.game.buildings;
+    for (const side of ['n', 's', 'w', 'e'] as const) {
+      const b = borderOf(tx, ty, side);
+      const w = bld.wallOnBorder(0, b);
+      if (!w || !isRuneGate(w) || !isDone(w)) continue;
+      const m = gateMiddle(b);
+      const along = b.dir === 'h' ? x - m.x : y - m.y, through = b.dir === 'h' ? y - m.y : x - m.x;
+      if (Math.abs(along) >= RUNE_GATE_OPENING.half - RUNE_GATE_OPENING.body || Math.abs(through) >= RUNE_GATE_OPENING.depth) continue;
+      return Math.max(...gateTiles(b).map(([gx, gy]) => depthOf(V, gx, gy)));
+    }
+    return null;
   }
 
   private drawWallNow(wall: Wall, border: Border, base: number, alpha: number): void {

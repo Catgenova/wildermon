@@ -13,6 +13,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../game/actions';
 import { hiddenAsk } from '../game/gates';
 import { swirlIn, type Swirl } from '../game/motes';
 import { TELESTONE_KEY } from '../game/runestones';
+import { runeGatesHeld, sawGateFolk } from '../game/runegate';
 import { isFightJob, isFightStance } from '../game/fight';
 import { FIGHT_BACK_GOES } from '../game/creatures';
 import { saidWords } from '../game/roster';
@@ -326,6 +327,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   island.hooks.knownSprings = () => Object.fromEntries([...game.springs.list.values()].map((s) => [String(s.id), s.ver]));
   // And the mote swirls round us, which the island puts down at dawn and takes away as they are collected (`motes.ts`).
   island.hooks.swirls = (rows) => game.setSwirls(rows.map(swirlIn).filter((s): s is Swirl => s !== null));
+  // And who lights a rune gate: the rolls of the settlements they stand on, while one is in view (`runegate.ts`).
+  island.hooks.gateFolk = (rows) => sawGateFolk(game, rows);
+  island.hooks.gatesHeld = () => runeGatesHeld(game);
   island.hooks.swirlsGone = (ids) => {
     for (const id of ids) game.takeSwirl(id);
   };
