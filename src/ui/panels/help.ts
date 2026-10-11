@@ -295,7 +295,12 @@ function enchantingHelp(): string {
     multiplies a drag's haul on the average, after a Fisher's Full Net and the net's maker's mark, and ${NETMENDER_WEAR} times its share comes
     off the wear a drag puts on the net, beside Truesteel and a perk. Dreamweave's share multiplies the rest a night in the bed banks,
     after the bed's quality and the roof over it, and raises the most rest you can hold after that night by the same share; a night in a
-    plain bed later never takes rest away.</p>`;
+    plain bed later never takes rest away.</p>
+    <p>Fleetfoot's share multiplies a mount's pace under you after its makers' marks on its saddle and bridle, past the most a mount
+    otherwise goes. Tamer's Bridle's share multiplies an offering's chance to tame, after Love's Gentle Hand, with the best bridle in your
+    pack counted; and a mount wearing it goes on with a fight however far from you it leads, as Love's Steady Herd has every one of yours do.
+    Both go into the saddle or the bridle in the pack, ride on the mount when it is saddled, and come back into the pack with the tack. An
+    enchanted saddle or bridle is a pile of its own, never folded into a plain one.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

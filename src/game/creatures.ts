@@ -11,6 +11,7 @@ import { bedrockAt, oreAt } from '../world/ore';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
 import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
+import { swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { fill, listed, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
@@ -1895,6 +1896,8 @@ export interface IslandCreature {
   shod?: boolean;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
   tack?: Record<string, Mark> | null;
+  /** The enchantments in the tack on it, by the piece, when any (Fleetfoot, Tamer's Bridle). */
+  tack_enchant?: Record<string, Enchant> | null;
   /** What its keeper's perks make of keeping it (a Herdsman's), when anything. */
   kept?: Record<string, number> | null;
   /** The vehicle it is in the traces of; absent from older islands. */
@@ -2085,6 +2088,8 @@ export interface Creature {
    * Tailor's Saddler's pace. Absent for plain tack, and gone with the tack.
    */
   tack?: Record<string, Mark>;
+  /** The enchantments in the tack on it, by the piece (Fleetfoot, Tamer's Bridle). Absent for plain tack, and gone with the tack. */
+  tackEnchant?: Record<string, Enchant>;
   /** When it was last shod; shoes hold `SHOE_DAYS`. Long ago when it never was. */
   shodAt: number;
   /** What is riding on its back, for the sorts that carry panniers. */
@@ -2125,6 +2130,7 @@ export interface CreatureJSON {
   skills?: Record<string, number>;
   tacked?: boolean;
   tack?: Record<string, Mark>;
+  tackEnchant?: Record<string, Enchant>;
   shodAt?: number;
   pannier?: Item[];
   post?: number | null;
@@ -2191,8 +2197,13 @@ export const TACK = ['saddle', 'bridle'];
  * makers' marks (a Tailor's Saddler), after the cap, as the island's
  * `tack_speed` has it. One for plain tack.
  */
-export const tackSpeed = (c: { tack?: Record<string, Mark> }): number =>
-  Math.max(1, ...TACK.map((id) => markOf({ mark: c.tack?.[id] }, 'speed')));
+export const tackSpeed = (c: { tack?: Record<string, Mark>; tackEnchant?: Record<string, Enchant> }): number =>
+  Math.max(1, ...TACK.map((id) => markOf({ mark: c.tack?.[id] }, 'speed')))
+  // And a Fleetfoot in its saddle on top.
+  * (1 + tackEnchant(c, 'fleet'));
+/** What the enchantments in the tack on it come to for this effect: the most of any one piece. The island's `tack_enchant_of`. */
+export const tackEnchant = (c: { tackEnchant?: Record<string, Enchant> }, effect: EnchantEffect): number =>
+  Math.max(0, ...TACK.map((id) => swingEnchant({ enchant: c.tackEnchant?.[id] }, effect)));
 
 export const isShod = (now: number, c: { shodAt: number }): boolean => now - c.shodAt < SHOE_DAYS * DAY_SECONDS;
 /** How close it comes before standing still, well inside arm's reach. */
@@ -2595,6 +2606,10 @@ export class Creatures {
       if (r.tack !== undefined) {
         if (r.tack) c.tack = r.tack;
         else delete c.tack;
+      }
+      if (r.tack_enchant !== undefined) {
+        if (r.tack_enchant) c.tackEnchant = r.tack_enchant;
+        else delete c.tackEnchant;
       }
       // What its keeper's perks make of keeping it: the island's word, never this machine's perks.
       c.kept = r.kept ?? null;
@@ -4870,8 +4885,8 @@ export class Creatures {
     }
     if (c.enemy !== null) {
       const e = c.enemy === PLAYER_ATTACKER ? undefined : this.list.get(c.enemy);
-      // However far it has gone for Love's Steady Herd (`companion_target`).
-      const steady = game.pathFx('steady', 0) > 0;
+      // However far it has gone for Love's Steady Herd (`companion_target`), or a Tamer's Bridle on it.
+      const steady = game.pathFx('steady', 0) > 0 || (c.tacked && tackEnchant(c, 'tame') > 0);
       if (!e || !quarry(e) || (!steady && Math.hypot(e.x - p.x, e.y - p.y) > (c.stance === 'guard' ? GUARD_RANGE : leash))) {
         c.enemy = null;
       } else {
@@ -5317,6 +5332,7 @@ export class Creatures {
         skills: c.skills,
         tacked: c.tacked,
         tack: c.tack,
+        tackEnchant: c.tackEnchant,
         pannier: c.pannier,
         post: c.post,
         trapped: c.trapped,
@@ -5344,7 +5360,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: { ...startSkills(SPECIES[j.species] ?? SPECIES.rabba), ...(j.skills ?? {}) } });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: { ...startSkills(SPECIES[j.species] ?? SPECIES.rabba), ...(j.skills ?? {}) } });
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }

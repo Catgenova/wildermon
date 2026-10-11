@@ -1,6 +1,6 @@
 import { DARK_SHOT, DARK_SWING, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
-import { swingEnchant } from './enchant';
+import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
@@ -84,7 +84,8 @@ export function tameChance(g: Game, c: Creature): number {
   // A young one easier still for a Herdsman's Young Trust.
   const age = ageOf(c, g.time) === 'young' ? g.perk('tame:young', AGES.young.tame) : ageDef(c, g.time).tame;
   // And every offering so many points likelier for a Herdsman's Soft Hand, over all the rest of it.
-  return Math.max(0, Math.min(TAME_MOST, raw * age * g.pathFx('tame', 1) + g.perk('tame:offer', 0)));
+  // And a Tamer's Bridle in your pack (`tool_enchant`).
+  return Math.max(0, Math.min(TAME_MOST, raw * age * g.pathFx('tame', 1) * (1 + swingEnchant(g.inventory.tool('bridle'), 'tame')) + g.perk('tame:offer', 0)));
 }
 
 function nearPlayer(g: Game, c: Creature): boolean {
@@ -795,16 +796,21 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c) return;
       // What each piece carries of its maker's hand goes onto the mount with it (a Tailor's Saddler).
       const marks: Record<string, Mark> = {};
+      // And what each is enchanted with (Fleetfoot, Tamer's Bridle).
+      const enchants: Record<string, Enchant> = {};
       for (const id of TACK) {
         const it = g.inventory.find(id);
         if (!it) return;
-        const mark = it.mark;
+        const { mark, enchant } = it;
         if (!g.inventory.remove(it.uid, 1)) return;
         if (mark && Object.keys(mark).length) marks[id] = mark;
+        if (enchant) enchants[id] = enchant;
       }
       c.tacked = true;
       if (Object.keys(marks).length) c.tack = marks;
       else delete c.tack;
+      if (Object.keys(enchants).length) c.tackEnchant = enchants;
+      else delete c.tackEnchant;
       g.logMsg(`You saddle ${c.name} and slip the bit into its mouth. It stands for it.`, 'event');
     },
   },
@@ -855,8 +861,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return;
       c.tacked = false;
-      for (const id of TACK) g.inventory.add(id, { ql: 40, ...(c.tack?.[id] ? { mark: c.tack[id] } : {}) });
+      for (const id of TACK) g.inventory.add(id, { ql: 40, ...(c.tack?.[id] ? { mark: c.tack[id] } : {}), ...(c.tackEnchant?.[id] ? { enchant: c.tackEnchant[id] } : {}) });
       delete c.tack;
+      delete c.tackEnchant;
       g.logMsg(`You strip the saddle and bridle off ${c.name}.`, 'event');
     },
   },

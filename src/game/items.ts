@@ -1192,7 +1192,9 @@ export function sameStack(a: Item, b: Item): boolean {
   return a.id === b.id && !a.locked && !b.locked && !a.lit && !b.lit
     && a.extra === b.extra && a.rare === b.rare && a.dye === b.dye
     && a.bless === b.bless && a.maker === b.maker && a.piece === b.piece
-    && !!a.issued === !!b.issued && a.charges === b.charges && sameMark(a, b);
+    && !!a.issued === !!b.issued && a.charges === b.charges && sameMark(a, b)
+    // An enchanted saddle or bridle is a pile of its own, by the enchantment and its quality.
+    && a.enchant?.id === b.enchant?.id && a.enchant?.ql === b.enchant?.ql;
 }
 
 /** Fold one thing into another, both quality and damage by the unit. */
@@ -1330,7 +1332,7 @@ export class Inventory {
     this.well.next = v;
   }
 
-  add(id: string, opts: { ql?: number; count?: number; extra?: string; issued?: boolean; piece?: string; mark?: Mark; rare?: number; maker?: string } = {}): Item {
+  add(id: string, opts: { ql?: number; count?: number; extra?: string; issued?: boolean; piece?: string; mark?: Mark; rare?: number; maker?: string; enchant?: Item['enchant'] } = {}): Item {
     const def = itemDef(id);
     const count = opts.count ?? 1;
     const ql = Math.max(1, Math.min(100, opts.ql ?? 20));
@@ -1342,6 +1344,8 @@ export class Inventory {
     if (opts.piece) item.piece = opts.piece;
     // Marked before it is folded in, so it goes on the pile with the same mark or starts one of its own.
     if (opts.mark && Object.keys(opts.mark).length) item.mark = opts.mark;
+    // And enchanted the same way: a saddle back off a mount with its Fleetfoot in it.
+    if (opts.enchant) item.enchant = opts.enchant;
     if (def.charges) item.charges = def.charges;
     return this.addItem(item);
   }

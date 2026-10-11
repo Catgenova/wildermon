@@ -28,6 +28,10 @@ import { crateCapacity } from '../../src/game/crates';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { alreadyEnchanted, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, NETMENDER_WEAR, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
 import { CATCH_MOST, catchChance } from '../../src/game/traps';
+import { sameStack } from '../../src/game/items';
+import { tackEnchant, tackSpeed } from '../../src/game/creatures';
+import { tameChance } from '../../src/game/creatureActions';
+import { DAY_SECONDS } from '../../src/game/game';
 import { REST_CAP } from '../../src/game/boons';
 import type { Creature } from '../../src/game/creatures';
 import { DAMAGE_MAX } from '../../src/game/limits';
@@ -64,8 +68,9 @@ const [MULE, SEAL, HAWK] = ['packmule', 'seals_coat', 'hawks_eye'].map(E);
 const [EMBER, MASTER] = ['ember_heart', 'masterwork'].map(E);
 const [WIND, DEEP, AXLE, BAG] = ['fair_wind', 'deep_hold', 'true_axle', 'bag_of_holding'].map(E);
 const [SNARE, MEND, DREAM] = ['snarecraft', 'netmender', 'dreamweave'].map(E);
+const [FLEET, TAMER] = ['fleetfoot', 'tamers_bridle'].map(E);
 /** Everything part 3 has added so far, for the scrolls and the words. */
-const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER, WIND, DEEP, AXLE, BAG, SNARE, MEND, DREAM];
+const PART3 = [...JEWEL, MULE, SEAL, HAWK, EMBER, MASTER, WIND, DEEP, AXLE, BAG, SNARE, MEND, DREAM, FLEET, TAMER];
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
@@ -116,6 +121,7 @@ declare w uuid; u uuid := '${MIRA}'; v_ring bigint; v_pend bigint; v_s bigint; v
         v_pack bigint; v_chest bigint; v_cap bigint; v_sm bigint; v_sm2 bigint; v_anv bigint; v_loom bigint; v_back bigint;
         v_boat bigint; v_ship bigint; v_wagon bigint; v_chestp bigint; v_barrel bigint; v_cart bigint; v_bag bigint; v_crate int; v_q double precision;
         v_trap bigint; v_bed bigint; v_net bigint; v_rod bigint; v_c creature; v_d0 double precision;
+        v_sad bigint; v_bri bigint; v_wild int; v_mount int; v_w creature;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 3', 318, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -365,6 +371,39 @@ begin
   insert into said select 'REST100', rested::text from player where world_id = w and uid = u;
   perform sleep_until_morning(w, u, 1, 'bed');
   insert into said select 'RESTKEPT', rested::text from player where world_id = w and uid = u;
+  -- 11. Fleetfoot and Tamer's Bridle: the refusals, a pile of its own, taming, and the tack on a mount and off it.
+  insert into skill (world_id, uid, id, value) values (w, u, 'taming', 60) on conflict (world_id, uid, id) do update set value = excluded.value;
+  v_sad := give(w, u, 'saddle', 1, 50);
+  v_bri := give(w, u, 'bridle', 1, 50);
+  v_s := give(w, u, 'fleetfoot_scroll', 1, 90);
+  insert into said values ('R:fleetsaddle', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sad, 'scroll', v_s)), 'none'));
+  insert into said values ('R:fleetbridle', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_bri, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'tamers_bridle_scroll', 1, 90);
+  insert into said values ('R:tamerbridle', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_bri, 'scroll', v_s)), 'none'));
+  insert into said values ('R:tamersaddle', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sad, 'scroll', v_s)), 'none'));
+  update item set enchant = '{"id": "fleetfoot", "ql": 100}'::jsonb where id = v_sad;
+  update item set enchant = '{"id": "tamers_bridle", "ql": 100}'::jsonb where id = v_bri;
+  perform give(w, u, 'saddle', 1, 40);
+  insert into said select 'PILES', count(*)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'saddle';
+  v_wild := creature_spawn(w, 'orse', 22.5, 21.5, 'wild', now() - interval '3 days', null);
+  select * into v_w from creature where world_id = w and id = v_wild;
+  insert into said select 'TAME', tame_chance(w, u, v_w)::text;
+  update item set enchant = null where id = v_bri;
+  insert into said select 'TAME0', tame_chance(w, u, v_w)::text;
+  update item set enchant = '{"id": "tamers_bridle", "ql": 100}'::jsonb where id = v_bri;
+  delete from creature where world_id = w and id = v_wild;
+  v_mount := creature_spawn(w, 'orse', 20.5, 20.5, 'active', now() - interval '3 days', u);
+  update creature set keeper = u, hunger = 1, from_x = 20.5, from_y = 20.5, to_x = 20.5, to_y = 20.5,
+         leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Greyfell' where world_id = w and id = v_mount;
+  perform act_perform(w, u, 'tack_creature', jsonb_build_object('kind', 'creature', 'id', v_mount));
+  insert into said select 'TACK', coalesce(c.tack_enchant->'saddle'->>'id', 'none') || '|' || coalesce(c.tack_enchant->'bridle'->>'id', 'none') || '|' || tack_speed(c)
+    || '|' || coalesce((select x->'tack_enchant'->'saddle'->>'id' from jsonb_array_elements(rpc_creatures(w, 20)) x where (x->>'id')::int = v_mount), 'unsent')
+    from creature c where world_id = w and id = v_mount;
+  perform act_perform(w, u, 'untack_creature', jsonb_build_object('kind', 'creature', 'id', v_mount));
+  insert into said select 'UNTACK', (select string_agg(i.def || '=' || coalesce(i.enchant->>'id', 'none'), '#' order by i.def, i.id)
+      from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def in ('saddle', 'bridle'))
+    || '|' || coalesce((select tack_enchant::text from creature where world_id = w and id = v_mount), 'none');
+  insert into said values ('LEASHSRC', (pg_get_functiondef('companion_target(uuid, creature, player)'::regprocedure) like '%c.tacked and tack_enchant_of(c, ''tame'') > 0%')::text);
   insert into said values ('DREAMSRC', (pg_get_functiondef('perform_last(uuid, uuid, text, jsonb)'::regprocedure) like '%placed_enchant(pc, ''dream'')%')::text);
 end $t$;
 select k || '=' || v from said order by k;
@@ -653,6 +692,51 @@ check(`a night in a bed with a Dreamweave at QL 100 banks ${enchantValue(DREAM, 
   rest0 === REST_CAP && near(rest100, REST_CAP * (1 + enchantValue(DREAM, 100))) && g.player.rested === rest100
     && near(num('REST0'), rest0) && near(num('REST100'), rest100) && near(num('RESTKEPT'), rest100) && isle.get('DREAMSRC') === 'true',
   `${isle.get('REST0')} ${isle.get('REST100')} ${isle.get('RESTKEPT')} ${isle.get('DREAMSRC')} / ${rest0} ${rest100} ${g.player.rested}`);
+
+/* 11. Fleetfoot and Tamer's Bridle. */
+const saddle = thing('saddle', 50);
+const bridle = thing('bridle', 50);
+const tackRefusals: Array<[string, string, string]> = [
+  ['R:fleetsaddle', askWith(FLEET, saddle.uid), 'none'], ['R:fleetbridle', askWith(FLEET, bridle.uid), wrongKind(FLEET)],
+  ['R:tamerbridle', askWith(TAMER, bridle.uid), 'none'], ['R:tamersaddle', askWith(TAMER, saddle.uid), wrongKind(TAMER)],
+];
+check(`Fleetfoot goes on ${ON_WORDS.saddle} and Tamer's Bridle on ${ON_WORDS.bridle}, each refused on the other in words that say so, on both sides`,
+  tackRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
+  tackRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+saddle.enchant = { id: FLEET.id, ql: 100 };
+bridle.enchant = { id: TAMER.id, ql: 100 };
+const plainSaddle = thing('saddle', 40);
+check('an enchanted saddle is a pile of its own beside a plain one, on both sides',
+  !sameStack(saddle, plainSaddle) && g.inventory.items.filter((it) => it.id === 'saddle').length === 2 && isle.get('PILES') === '2',
+  `${isle.get('PILES')} / ${g.inventory.items.filter((it) => it.id === 'saddle').length}`);
+g.skills.values.set('taming', 60);
+const wildOrse = g.creatures.spawn('orse', 22.5, 21.5, 'wild', () => 0.5, g.time - 3 * DAY_SECONDS);
+wildOrse.hunger = 1;
+const tame100 = tameChance(g, wildOrse);
+delete bridle.enchant;
+const tame0 = tameChance(g, wildOrse);
+bridle.enchant = { id: TAMER.id, ql: 100 };
+g.creatures.list.delete(wildOrse.id);
+check(`a Tamer's Bridle at QL 100 in the pack: an offering ${enchantValue(TAMER, 100) * 100}% likelier to tame, on both sides`,
+  tame0 > 0 && near(tame100 / tame0, 1 + enchantValue(TAMER, 100)) && near(num('TAME') / num('TAME0'), 1 + enchantValue(TAMER, 100)),
+  `${isle.get('TAME')} ${isle.get('TAME0')} / ${tame100} ${tame0}`);
+const mount = g.creatures.spawn('orse', 20.5, 20.5, 'active', () => 0.5, g.time - 3 * DAY_SECONDS);
+mount.hunger = 1;
+const plainSpeed = tackSpeed(mount);
+act('tack_creature').perform({ kind: 'creature', id: mount.id } as Target, g);
+const tackedSpeed = tackSpeed(mount);
+const onIt = `${mount.tackEnchant?.saddle?.id ?? 'none'}|${mount.tackEnchant?.bridle?.id ?? 'none'}`;
+check(`a Fleetfoot at QL 100 in the saddle on a mount: it carries you ${enchantValue(FLEET, 100) * 100}% faster; both pieces ride on the mount and the island tells the browser, on both sides`,
+  onIt === `${FLEET.id}|${TAMER.id}` && near(tackedSpeed, plainSpeed * (1 + enchantValue(FLEET, 100)))
+    && isle.get('TACK') === `${onIt}|${tackedSpeed}|${FLEET.id}`, `${isle.get('TACK')} / ${onIt}|${tackedSpeed}`);
+check('a mount wearing a Tamer\'s Bridle never breaks off a fight, however far from you it goes, in the browser and in the island\'s companion_target',
+  tackEnchant(mount, 'tame') > 0 && isle.get('LEASHSRC') === 'true', `${tackEnchant(mount, 'tame')} ${isle.get('LEASHSRC')}`);
+act('untack_creature').perform({ kind: 'creature', id: mount.id } as Target, g);
+const back = g.inventory.items.filter((it) => it.id === 'saddle' || it.id === 'bridle').sort((a, b) => a.id.localeCompare(b.id) || a.uid - b.uid)
+  .map((it) => `${it.id}=${it.enchant?.id ?? 'none'}`).join('#');
+check('taken off, the saddle and bridle come back into the pack with their enchantments, on both sides',
+  isle.get('UNTACK') === `${back}|none` && back.includes(`saddle=${FLEET.id}`) && back.includes(`bridle=${TAMER.id}`) && !mount.tackEnchant,
+  `${isle.get('UNTACK')} / ${back}`);
 
 check('every one of them is in the table once', ENCHANTMENT_LIST.filter((e) => PART3.includes(e)).length === PART3.length);
 

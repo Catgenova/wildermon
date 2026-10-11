@@ -1765,6 +1765,17 @@ export const NEWS: News[] = [
         ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       ];
     },
+  },  {
+    n: 130,
+    day: '2026-10-11',
+    lines: () => {
+      const two = ['fleetfoot', 'tamers_bridle'].map((id) => ENCHANTMENTS[id]);
+      return [
+        `Two for tack: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. `
+          + 'They ride on the mount with the tack, come back into the pack when it is taken off, and an enchanted saddle or bridle is a pile of its own.',
+        ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      ];
+    },
   },
 ];
 

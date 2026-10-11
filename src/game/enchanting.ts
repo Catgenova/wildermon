@@ -133,6 +133,8 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'bag': return 'it holds {v} more, in things, kilos or litres, whichever it is measured in; what is in it still weighs all it weighs.';
     case 'snare': return `its chance of taking a creature that comes to it is {v} better, never past ${enchantPct(CATCH_MOST)}; a creel's chance of taking a fish, {v} better.`;
     case 'mend': return 'a drag with it brings up {v} more fish on the average, and it wears {w} slower.';
+    case 'fleet': return 'a mount wearing it carries you {v} faster, after its makers\' marks on its tack.';
+    case 'tame': return 'an offering made with it in your pack is {v} likelier to tame, and a mount wearing it never breaks off a fight, however far from you the fight goes.';
     case 'dream': return 'a night in it banks {v} more rest, and you can hold {v} more rest than the most otherwise banked.';
   }
 }
@@ -184,6 +186,8 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'trap': return id in TRAPS;
     case 'net': return id === 'fishing_net';
     case 'bed': return BEDS().includes(id);
+    case 'saddle': return id === 'saddle';
+    case 'bridle': return id === 'bridle';
   }
 };
 /** What Dreamweave goes on: every piece that is slept in. */
@@ -252,6 +256,8 @@ export const FITS: Record<EnchantOn, string[]> = {
   get trap() { return Object.keys(TRAPS); },
   net: ['fishing_net'],
   get bed() { return BEDS(); },
+  saddle: ['saddle'],
+  bridle: ['bridle'],
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */
