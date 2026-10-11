@@ -1878,6 +1878,9 @@ export interface IslandCreature {
   windup?: number;
   /** Seconds left of a stun on it (`STUN_SECS`), when it is stunned. */
   stunned?: number;
+  /** Seconds left of a slow on it, and the share of its pace it goes at (`enchant_frost`). */
+  slowed?: number;
+  slowPace?: number;
   /** The one leading the pack it hunts with, when it runs with one. */
   lead?: number | null;
   /** What a companion of yours is fighting, said only of your own. */
@@ -2017,6 +2020,9 @@ export interface Creature {
   burnUntil?: number;
   /** The game time a stun on it ends (`STUN_SECS`): until then it neither moves nor strikes. Missing on one never stunned. */
   stunUntil?: number;
+  /** The game time a slow on it ends, and the share of its pace it goes at until then (a Frostbite, `frost`). Missing on one never slowed. */
+  slowUntil?: number;
+  slowPace?: number;
   busyUntil: number;
   searchAt: number;
   /** Where it first had your scent, which is what the leash is tied to. */
@@ -2574,6 +2580,9 @@ export class Creatures {
       c.windup = r.windup ?? 0;
       // A stun the island says it is under, to the game clock here, for the target panel (`enchant_stun`).
       c.stunUntil = r.stunned ? time + r.stunned : undefined;
+      // And a slow, with the share of its pace it goes at (`enchant_frost`, a Binder's or a Sworn Blade's too).
+      c.slowUntil = r.slowed ? time + r.slowed : undefined;
+      c.slowPace = r.slowed ? r.slowPace ?? undefined : undefined;
       c.packLead = r.lead ?? null;
       c.brawl = r.brawl ?? null;
       // Whose it is, which the island says and the journal has to know.
@@ -3307,7 +3316,9 @@ export class Creatures {
     const dist = Math.hypot(dx, dy);
     if (dist < 0.12) return 'arrived';
     const pace = c.mode === 'deed' ? 1 + Math.max(1, ...Object.values(c.skills)) / 500 : 1;
-    const step = Math.min(this.species(c).speed * ageDef(c, game.time).speed * this.speedMul(c) * speedMul * pace * dt, dist);
+    // And slower while a frost holds it (`frost`), as the island's `beast_mul` has a slow.
+    const slow = (c.slowUntil ?? 0) > game.time ? c.slowPace ?? 1 : 1;
+    const step = Math.min(this.species(c).speed * ageDef(c, game.time).speed * this.speedMul(c) * speedMul * pace * slow * dt, dist);
     const vx = dx / dist;
     const vy = dy / dist;
     const nx = c.x + vx * step;

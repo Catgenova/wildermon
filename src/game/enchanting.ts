@@ -21,7 +21,7 @@ import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM
 import { DAMAGE_MAX, QL_TOP } from './limits';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, enchantValue, qlWord, ROLLED_EFFECTS, scrollOf, wrongKind,
+  enchantChance, enchantHitChance, enchantPct, enchantQl, enchantValue, FROST_PACE, FROST_SECS, qlWord, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -69,6 +69,8 @@ export const EFFECT_SAID: Partial<Record<EnchantEffect, string>> = {
   bleed: 'opens the {t} up, and it bleeds.',
   stun: `stuns the {t} for ${STUN_SECS} seconds.`,
   venom: 'puts venom in the {t}.',
+  flame: 'sets the {t} burning.',
+  frost: `slows the {t} to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds.`,
 };
 
 /** Every hostile monster, by name, for what Sunstrike is harder on. */
@@ -91,6 +93,11 @@ export function enchantLine(e: EnchantmentDef): string {
       return `every hit with it that lands and leaves the creature standing gives you back {v} of the damage it deals as health, each point of it worth ${enchantPct(BLOW_SHARE)} of your health, as a creature's blow is.`;
     case 'drain':
       return 'every hit with it that lands puts the creature\'s next blow back by {v} of the time between its blows.';
+    case 'range': return 'it reaches {v} further.';
+    case 'flame': return `a shot from it that lands sets the target burning {v} of the time. ${EFFECT_TAIL.burn}`;
+    case 'frost':
+      return `a shot from it that lands slows the target to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds {v} of the time; `
+        + 'another on one already slowed starts it again rather than adding on.';
   }
 }
 /** That line with its figure at this quality. */
@@ -117,10 +124,15 @@ export const meleeNames = (): string => listed(MELEE_WEAPONS.map((id) => itemDef
 export const fitsOn = (on: EnchantOn, id: string): boolean => {
   switch (on) {
     case 'melee': return isMelee(id);
+    case 'bow': return isBowId(id);
   }
 };
+/** A bow: a weapon that shoots, rather than one that is swung or thrown. */
+export const isBowId = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.ammo;
+/** Every bow there is. */
+export const BOWS: string[] = WEAPONS.filter((w) => isBowId(w.id)).map((w) => w.id);
 /** Every item id each kind of enchantment goes on, for the help and the island. */
-export const FITS: Record<EnchantOn, string[]> = { melee: MELEE_WEAPONS };
+export const FITS: Record<EnchantOn, string[]> = { melee: MELEE_WEAPONS, bow: BOWS };
 
 /* ---- the Enchant job ------------------------------------------------------ */
 
@@ -265,12 +277,41 @@ export function enchantWorks(g: Game, e: EnchantmentDef, ql: number, c: Creature
     case 'venom': venom(g, c); break;
     case 'leech': g.player.stats.health = Math.min(1, g.player.stats.health + leechHeal(e, ql, dealt)); break;
     case 'drain': c.cooldown = Math.max(0, c.cooldown) + drainSecs(e, ql, c); break;
+    case 'flame': own.burn(); break;
+    case 'frost': frost(g, c); break;
     default: break;
   }
   const said = enchantHitSaid(e, SPECIES[c.species]?.name.toLowerCase() ?? 'thing');
   if (said) g.logMsg(said, 'fight');
 }
 
+
+/**
+ * The enchantment on the bow a shot that landed came from, when its roll comes
+ * up this time, or null: Flamearrow and Frostbite. Asked once a landed shot is
+ * done with, of a creature still alive; the island's `enchant_shot` asks the
+ * same, one roll each side.
+ */
+export function shotRoll(g: Game, bow: Item | null | undefined, c: Creature): EnchantmentDef | null {
+  const e = bow?.enchant && ENCHANTMENTS[bow.enchant.id];
+  if (!e || !bow?.enchant || c.health <= 0 || !SHOT_EFFECTS.has(e.effect)) return null;
+  return g.rand() < enchantHitChance(e, bow.enchant.ql) ? e : null;
+}
+
+/**
+ * A frost: for `FROST_SECS` from now it goes at `FROST_PACE` of its pace; on
+ * one already slowed it runs from now rather than adding on. The island's
+ * `enchant_frost`, which keeps it in the creature's `slow` and `slow_until`.
+ */
+export function frost(g: Game, c: Creature): void {
+  if (c.health <= 0) return;
+  // The stronger of it and any slow already holding, to the later end, as `enchant_frost` keeps it.
+  const running = (c.slowUntil ?? 0) > g.time;
+  c.slowPace = running ? Math.min(c.slowPace ?? 1, FROST_PACE) : FROST_PACE;
+  c.slowUntil = Math.max(running ? c.slowUntil ?? 0 : 0, g.time + FROST_SECS);
+}
+/** Whether it is slowed now. */
+export const slowed = (g: Game, c: Creature): boolean => (c.slowUntil ?? 0) > g.time;
 
 /**
  * A stun: for `STUN_SECS` from now it neither moves nor strikes, and a heavy

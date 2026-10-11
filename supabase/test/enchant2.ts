@@ -14,7 +14,10 @@
  *   * Sunstrike: a blow's damage on a hostile monster and on a creature that
  *     is not one;
  *   * Leeching: the health a hit gives back, every hit, with no roll;
- *   * Tidecaller: how far a hit puts the creature's next blow back.
+ *   * Tidecaller: how far a hit puts the creature's next blow back;
+ *   * Farsight: a bow's reach, with it and without;
+ *   * Flamearrow and Frostbite: a shot's roll just over and just under, the
+ *     burn, and the slow on both sides and in the creatures' door.
  *
  * Every roll is set: dice on the island (`random()` read off a list) and the
  * same list as the browser's `rand`. Runs against the database the suite
@@ -28,12 +31,12 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { ENCHANTMENT_LIST, ENCHANTMENTS, enchantHitChance, enchantValue, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
-import { drainSecs, enchantLineAt, enchantRoll, enchantSays, enchantWorks, leechHeal } from '../../src/game/enchanting';
+import { ENCHANTMENT_LIST, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
 import { classDealt } from '../../src/game/creatureActions';
-import { blowEvery, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
+import { blowEvery, bowReach, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
-import { BLOW_SHARE, maxHealth, SPECIES } from '../../src/game/creatures';
+import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from '../../src/game/creatures';
 import { TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -60,7 +63,7 @@ const near = (a: number, b: number, eps = 1e-6): boolean => Math.abs(a - b) <= e
 /** Everything after the first three: what this test is about. */
 const LATER = ENCHANTMENT_LIST.slice(3);
 const E = (id: string): EnchantmentDef => ENCHANTMENTS[id];
-const [VENOM, GALE, NIGHT, SUN, LEECH, TIDE] = ['venomfang', 'gale', 'nightblade', 'sunstrike', 'leeching', 'tidecaller'].map(E);
+const [VENOM, GALE, NIGHT, SUN, LEECH, TIDE, FAR, FLAME, FROST] = ['venomfang', 'gale', 'nightblade', 'sunstrike', 'leeching', 'tidecaller', 'farsight', 'flamearrow', 'frostbite'].map(E);
 
 /* ---- the scrolls and the words, on both sides ------------------------------ */
 
@@ -182,6 +185,42 @@ begin
   perform enchant_hit(w, u, 9201, (select i from item i where i.id = v_sw), 10);
   insert into said select 'TIDE', round(extract(epoch from (c.until - v_until))::numeric, 6)::text
     from creature c where c.world_id = w and c.id = 9201;
+
+  -- 6. A bow: Farsight refused on a sword and taken on the bow; its reach with it and without.
+  v_s := give(w, u, 'farsight_scroll', 1, 90);
+  insert into said values ('R:farsword', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sw, 'scroll', v_s)), 'none'));
+  insert into said values ('R:farbow', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_bow, 'scroll', v_s)), 'none'));
+  update player set equipped = jsonb_build_object('weapon', v_bow) where world_id = w and uid = u;
+  insert into said select 'REACH', bow_range(w, u, b, (select i from item i where i.id = v_bow))::text from weapon_def b where b.id = 'short_bow';
+  update item set enchant = '{"id": "farsight", "ql": 100}'::jsonb where id = v_bow;
+  insert into said select 'FAR', bow_range(w, u, b, (select i from item i where i.id = v_bow))::text from weapon_def b where b.id = 'short_bow';
+
+  -- 7. Flamearrow and Frostbite at QL ${HIT_QL}: a roll just over its chance, then just under, on a fresh shaggan each.
+  insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
+    values (w, 9211, 'shaggan', 'Shaggan', 'wild', 30.5, 30.5, 30.5, 30.5, 90, 'female'),
+           (w, 9212, 'shaggan', 'Shaggan', 'wild', 32.5, 30.5, 32.5, 30.5, 90, 'female');
+  update item set enchant = jsonb_build_object('id', 'flamearrow', 'ql', ${HIT_QL}) where id = v_bow;
+  perform pg_temp.dice((enchant_hit_chance('flamearrow', ${HIT_QL}) + 0.001)::text);
+  perform enchant_shot(w, u, 9211, (select i from item i where i.id = v_bow));
+  insert into said select 'FOVER', coalesce((select string_agg(m.kind, ',') from class_mark m where m.world_id = w and m.creature_id = 9211 and m.until > now()), '-');
+  perform pg_temp.dice((enchant_hit_chance('flamearrow', ${HIT_QL}) - 0.001)::text);
+  perform enchant_shot(w, u, 9211, (select i from item i where i.id = v_bow));
+  insert into said select 'FUNDER', coalesce((select string_agg(m.kind, ',') from class_mark m where m.world_id = w and m.creature_id = 9211 and m.until > now()), '-')
+    || '|' || (select e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1);
+  update item set enchant = jsonb_build_object('id', 'frostbite', 'ql', ${HIT_QL}) where id = v_bow;
+  insert into said select 'SPEED0', beast_mul(c, 'speed')::text from creature c where c.world_id = w and c.id = 9212;
+  perform pg_temp.dice((enchant_hit_chance('frostbite', ${HIT_QL}) + 0.001)::text);
+  perform enchant_shot(w, u, 9212, (select i from item i where i.id = v_bow));
+  insert into said select 'IOVER', coalesce((c.slow_until > now())::text, 'null') from creature c where c.world_id = w and c.id = 9212;
+  perform pg_temp.dice((enchant_hit_chance('frostbite', ${HIT_QL}) - 0.001)::text);
+  perform enchant_shot(w, u, 9212, (select i from item i where i.id = v_bow));
+  perform pg_temp.nodice();
+  insert into said select 'IUNDER', c.slow::text || '|' || round(extract(epoch from (c.slow_until - now()))::numeric, 1)::text
+    || '|' || beast_mul(c, 'speed')::text
+    || '|' || coalesce((select (t->>'slowed')::double precision::text || ',' || (t->>'slowPace') from jsonb_array_elements(rpc_creatures(w, 40)) t
+                        where (t->>'id')::int = 9212), 'none')
+    || '|' || (select e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1)
+    from creature c where c.world_id = w and c.id = 9212;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -296,6 +335,50 @@ const tideSecs = blowEvery(SPECIES.shaggan) * enchantValue(TIDE, HIT_QL);
 check(`a Tidecaller at QL ${HIT_QL} puts a shaggan's next blow back ${enchantValue(TIDE, HIT_QL) * 100}% of the ${blowEvery(SPECIES.shaggan)} s between its blows (${tideSecs} s), on both sides`,
   near(shaggan.cooldown, 1 + tideSecs) && near(drainSecs(TIDE, HIT_QL, shaggan), tideSecs) && near(Number(isle.get('TIDE')), tideSecs, 1e-3),
   `${isle.get('TIDE')} / ${shaggan.cooldown - 1}`);
+
+/* 6. A bow: Farsight. */
+const farScroll = thing(FAR.scroll, 90);
+const askFar = (uid: number): string => act('enchant').check?.({ kind: 'item', uid, scroll: farScroll.uid } as Target, g) ?? 'none';
+check(`a Farsight scroll is refused on a sword, in words that name a bow, and taken on a bow, on both sides: ${wrongKind(FAR)}`,
+  isle.get('R:farsword') === wrongKind(FAR) && askFar(sword.uid) === wrongKind(FAR) && wrongKind(FAR) === 'Farsight goes on a bow.'
+    && isle.get('R:farbow') === 'none' && askFar(bow.uid) === 'none', `${isle.get('R:farsword')} / ${askFar(sword.uid)}`);
+g.player.equipped.weapon = bow.uid;
+const bowDef = WEAPON_BY_ID.get('short_bow')!;
+const reachPlain = bowReach(g, bowDef, bow);
+bow.enchant = { id: FAR.id, ql: 100 };
+const reachFar = bowReach(g, bowDef, bow);
+check(`a Farsight at QL 100 lets a short bow reach ${enchantValue(FAR, 100) * 100}% further on both sides: ${reachPlain} to ${reachFar} tiles`,
+  near(reachFar, reachPlain * (1 + enchantValue(FAR, 100))) && near(Number(isle.get('REACH')), reachPlain) && near(Number(isle.get('FAR')), reachFar),
+  `${isle.get('REACH')} ${isle.get('FAR')}`);
+
+/* 7. Flamearrow and Frostbite. */
+const shotAt = (e: EnchantmentDef, c: Creature): { over: EnchantmentDef | null; under: EnchantmentDef | null } => {
+  bow.enchant = { id: e.id, ql: HIT_QL };
+  dice(enchantHitChance(e, HIT_QL) + 0.001);
+  const over = shotRoll(g, bow, c);
+  dice(enchantHitChance(e, HIT_QL) - 0.001);
+  const under = shotRoll(g, bow, c);
+  if (under) enchantWorks(g, under, HIT_QL, c, 10, { burn: () => g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs), bleed: () => {} });
+  return { over, under };
+};
+const fc = g.creatures.spawn('shaggan', 30.5, 30.5, 'wild', () => 0.5, 0);
+fc.health = 90;
+const fl = shotAt(FLAME, fc);
+check(`a Flamearrow at QL ${HIT_QL} (${enchantHitChance(FLAME, HIT_QL) * 100}%): a shot's roll just over does nothing and just under sets it burning, on both sides`,
+  isle.get('FOVER') === '-' && fl.over === null && fl.under?.id === FLAME.id && part('FUNDER', 0) === 'burn' && (fc.burnUntil ?? 0) > g.time
+    && part('FUNDER', 1) === said[said.length - 1] && said[said.length - 1] === 'Your Flamearrow sets the shaggan burning.',
+  `${isle.get('FOVER')} ${isle.get('FUNDER')} / ${said[said.length - 1]}`);
+const ic = g.creatures.spawn('shaggan', 32.5, 30.5, 'wild', () => 0.5, 0);
+ic.health = 90;
+const fr = shotAt(FROST, ic);
+check(`a Frostbite at QL ${HIT_QL} (${enchantHitChance(FROST, HIT_QL) * 100}%): just over does nothing; just under holds it to ${FROST_PACE * 100}% of its pace for ${FROST_SECS} seconds, on both sides, and the island's creatures door says so`,
+  part('IOVER') !== 'true' && fr.over === null && fr.under?.id === FROST.id
+    && near(Number(part('IUNDER', 0)), FROST_PACE) && near(Number(part('IUNDER', 1)), FROST_SECS, 0.2)
+    && near(Number(part('IUNDER', 2)), Number(isle.get('SPEED0')) * FROST_PACE)
+    && near(Number((part('IUNDER', 3)).split(',')[0]), FROST_SECS, 0.2) && near(Number((part('IUNDER', 3)).split(',')[1]), FROST_PACE)
+    && ic.slowPace === FROST_PACE && near((ic.slowUntil ?? 0) - g.time, FROST_SECS) && slowed(g, ic)
+    && part('IUNDER', 4) === said[said.length - 1] && said[said.length - 1] === `Your Frostbite slows the shaggan to ${FROST_PACE * 100}% of its pace for ${FROST_SECS} seconds.`,
+  `${isle.get('IOVER')} ${isle.get('IUNDER')} / ${ic.slowPace} ${(ic.slowUntil ?? 0) - g.time} ${said[said.length - 1]}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nenchanting, part 2 — ${ok.length} of ${ok.length + bad.length}`);

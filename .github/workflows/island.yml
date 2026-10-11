@@ -2223,7 +2223,9 @@ jobs:
           # does, measured the same way: Venomfang's venom just under and just
           # over its chance, a Gale's swing, a Nightblade's critical chance, a
           # Sunstrike on a goblin and on a shaggan, a Leeching's health back on
-          # every hit with no roll, and how far a Tidecaller puts a blow back.
+          # every hit with no roll, and how far a Tidecaller puts a blow back;
+          # a Farsight bow's reach, and a Flamearrow's burn and a Frostbite's
+          # slow on a shot that lands, the slow in the creatures' door too.
           npx esbuild supabase/test/enchant2.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/enchant2.mjs --log-level=error
           node node_modules/.cache/enchant2.mjs

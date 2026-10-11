@@ -9,7 +9,7 @@ import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
 import { elementIslands, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, type Enchant,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
 } from './enchant';
 
 export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
@@ -649,7 +649,8 @@ for (const e of ENCHANTMENT_LIST) {
       + `never under ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}, and the enchantment comes out at about that average, never above the scroll's QL `
       + `and never above the QL of what it goes into. If it does not take, that takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces outright and is gone. `
       + `The scroll is used up either way, and a thing holds one enchantment. {enchant.${e.id}.does}`
-      + `${ROLLED_EFFECTS.has(e.effect) ? ' Only an ordinary melee swing that lands sets it off; class blows, shots and throws don\'t.' : ''} `
+      + `${ROLLED_EFFECTS.has(e.effect) ? ' Only an ordinary melee swing that lands sets it off; class blows, shots and throws don\'t.' : ''}`
+      + `${SHOT_EFFECTS.has(e.effect) ? ' Only an ordinary shot from the bow that lands sets it off; class shots don\'t.' : ''} `
       + `A scroll that fails in the writing loses its motes, and its sheet of papyrus takes ${SCROLL_HARM} damage.`,
   };
 }

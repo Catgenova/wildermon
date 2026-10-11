@@ -156,7 +156,7 @@ import {
 } from '../src/game/runestones';
 
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, SCROLL_HARM, SCROLL_SHEETS, wrongKind,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTING, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, SCROLL_HARM, SCROLL_SHEETS, wrongKind,
 } from '../src/game/enchant';
 import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLine, FITS, MELEE_WEAPONS } from '../src/game/enchanting';
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
@@ -1951,7 +1951,7 @@ out.push(`create or replace function enchant_line(p_id text) returns text langua
 for (const [fn, v] of [
   ['scroll_harm', SCROLL_HARM], ['scroll_sheets', SCROLL_SHEETS], ['enchant_least', ENCHANT_LEAST], ['enchant_most', ENCHANT_MOST],
   ['enchant_harm', ENCHANT_HARM], ['enchant_break', ENCHANT_BREAK], ['stun_secs', STUN_SECS],
-  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs],
+  ['enchant_burn_each', ENCHANT_BURN.each], ['enchant_burn_secs', ENCHANT_BURN.secs], ['frost_pace', FROST_PACE], ['frost_secs', FROST_SECS],
   ['ql_low', QL_LOW], ['ql_span', QL_SPAN], ['ql_bare', QL_BARE], ['ql_top', QL_TOP], ['damage_max', DAMAGE_MAX],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);

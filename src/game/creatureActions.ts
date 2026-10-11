@@ -1,5 +1,5 @@
 import { DARK_SHOT, DARK_SWING, tryGain } from './learn';
-import { ENCHANT_BURN, enchantRoll, enchantWorks } from './enchanting';
+import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type Stance, type GatherKind } from './creatures';
@@ -695,6 +695,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         // A broadhead bleeds it as a knife does, a blunt staggers it as a maul does (`headSide`).
         const side = headSide(shape);
         if (side && c.health > 0) sideBlow(g, c, side, dmg);
+        // And what is enchanted into the bow, now and then (`shotRoll`): a Flamearrow's burn, a Frostbite's slow.
+        const e = c.health > 0 ? shotRoll(g, held, c) : null;
+        if (e && held.enchant) enchantWorks(g, e, held.enchant.ql, c, dmg, { burn: () => g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs), bleed: () => {} });
         g.logMsg(`Your arrow goes home${crit ? ', a critical hit' : ''}. The ${def.name.toLowerCase()} is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, def)}.`, 'fight');
       }
       if (c.health <= 0) return false;

@@ -137,9 +137,9 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS,
 } from '../../game/enchant';
-import { BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
+import { BOWS, BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
@@ -227,7 +227,7 @@ function enchantingHelp(): string {
     its sheets); a sheet that would reach ${BROKEN_AT} is used up instead.</p>
     <ul>${rows}</ul>
     <p>Choose <b>Enchant</b> on a scroll in your pack and pick what it goes on, in your pack: a melee weapon is ${meleeNames()},
-    not a bow or a thrown weapon. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
+    not a bow or a thrown weapon; a bow is ${listed(BOWS.map((id) => itemDef(id).name.toLowerCase()))}. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
     ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}
     (${pts.map(([sk, q]) => `${percent(enchantChance(sk, q))} at enchanting ${sk} with a QL ${q} scroll`).join('; ')}).
     What took comes out at that average times ${QL_LOW} to ${Number((QL_LOW + QL_SPAN).toFixed(2))}, plus ${QL_BARE}, as any craft's quality is
@@ -245,7 +245,11 @@ function enchantingHelp(): string {
     <p>How they add up with the rest: Gale's share comes off a swing's time after everything else that changes it (tired or wounded arms,
     a Berserker's Wild Strength or Adrenaline), multiplying with them. Nightblade's share is added to your chance of a critical blow,
     on top of your skill and a Skirmisher's Keen Edge. Sunstrike's share multiplies with every other change to a blow's damage; the hostile monsters are ${monsterNames()}.
-    Leeching's health comes on top of a Berserker's Thirst for Blood.</p>`;
+    Leeching's health comes on top of a Berserker's Thirst for Blood. Farsight's share multiplies with a bow's own range, its maker's mark
+    and an Archer's Long Draw.</p>
+    <p>Only an ordinary shot from a bow that lands can set off ${listed(ENCHANTMENT_LIST.filter((e) => SHOT_EFFECTS.has(e.effect)).map((e) => e.name))}.
+    A <b>slow</b> holds a creature to ${percent(FROST_PACE)} of its pace for ${FROST_SECS} seconds; the stronger of two slows holds, to the later end,
+    and the target panel says "slowed" while it lasts.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

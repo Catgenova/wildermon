@@ -1677,6 +1677,15 @@ export const NEWS: News[] = [
       `A scroll put into the wrong kind of thing is refused in words that name the right one: "${wrongKind(ENCHANTMENT_LIST[4])}"`,
     ],
   },
+  {
+    n: 121,
+    day: '2026-10-11',
+    lines: () => [
+      `Three enchantments for a bow: ${listed(ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
+      ...ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      'A slowed creature is said on the target panel, "slowed", as a stunned one is.',
+    ],
+  },
 ];
 
 

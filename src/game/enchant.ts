@@ -66,15 +66,18 @@ export const SCROLL_HARM = 25;
  * swing, more critical blows, more damage to hostile monsters, and a share of
  * every hit back as health (`leech`).
  */
-export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech';
+export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
+/** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
+export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee';
+export type EnchantOn = 'melee' | 'bow';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
+  bow: 'a bow',
 };
 
 export interface EnchantmentDef {
@@ -127,10 +130,20 @@ export const SUNSTRIKE_PER_QL = 0.0025;
 export const LEECHING_PER_QL = 0.001;
 /** Tidecaller: every hit puts the creature's next blow back by QL/5 percent of the time between its blows. */
 export const TIDECALLER_PER_QL = 0.002;
+/** Farsight: a bow reaches QL/4 percent further. */
+export const FARSIGHT_PER_QL = 0.0025;
+/** Flamearrow: a shot that lands sets the target burning QL/5 percent of the time. */
+export const FLAMEARROW_PER_QL = 0.002;
+/** Frostbite: a shot that lands slows the target QL/5 percent of the time, */
+export const FROSTBITE_PER_QL = 0.002;
+/** to this share of its pace (30% slower), */
+export const FROST_PACE = 0.7;
+/** for this many seconds; another frost on one already slowed starts it again from then. */
+export const FROST_SECS = 3;
 
 /**
  * Every enchantment there is. The first three are the owner's first asks; the
- * six after them go on a melee weapon too.
+ * six after them go on a melee weapon too, and the three after those on a bow.
  */
 export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('emberbrand', 'Emberbrand', 'fire', 'melee', 'burn', EMBERBRAND_PER_QL),
@@ -142,6 +155,9 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('sunstrike', 'Sunstrike', 'light', 'melee', 'smite', SUNSTRIKE_PER_QL),
   row('leeching', 'Leeching', ['life', 'dark'], 'melee', 'leech', LEECHING_PER_QL),
   row('tidecaller', 'Tidecaller', 'water', 'melee', 'drain', TIDECALLER_PER_QL),
+  row('farsight', 'Farsight', 'wind', 'bow', 'range', FARSIGHT_PER_QL),
+  row('flamearrow', 'Flamearrow', 'fire', 'bow', 'flame', FLAMEARROW_PER_QL),
+  row('frostbite', 'Frostbite', 'ice', 'bow', 'frost', FROSTBITE_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
