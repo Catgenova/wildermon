@@ -38,6 +38,14 @@ import { percent } from './words';
 export const ENCHANTING = 'enchanting';
 /** The station papyrus is pressed at: a wooden screw press set down on the ground. */
 export const PAPER_PRESS = 'paper_press';
+/**
+ * The station a scroll is put into a thing at, and nowhere else: a carved
+ * stone table set down on the ground (`furniture.ts`), stood at as every
+ * station is (`Game.atStation`, the island's `at_station`). Writing a scroll
+ * wants none. What the station rule calls it, and what its refusal says.
+ */
+export const ENCHANTERS_PLINTH = 'enchanters_plinth';
+export const PLINTH_NAME = "enchanter's plinth";
 
 /**
  * Writing a scroll. Its recipe takes `SCROLL_SHEETS` papyrus and
@@ -385,6 +393,7 @@ export const ENCHANT_SAID = {
   broken: 'It is broken.',
   gone: 'It is gone.',
   reach: 'Stand within reach of it.',
+  plinth: `You need to stand at an ${PLINTH_NAME}.`,
 } as const;
 /** Why this scroll will not go into a thing of the wrong kind: "Featherstep goes on boots." */
 export const wrongKind = (e: EnchantmentDef): string => `${e.name} goes on ${ON_WORDS[e.on]}.`;

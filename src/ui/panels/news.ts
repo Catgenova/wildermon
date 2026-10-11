@@ -2,7 +2,7 @@ import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../game/fight';
-import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
+import { ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANT_SAID, ENCHANTERS_PLINTH, enchantHitChance, ENCHANTMENT_LIST, ENCHANTMENTS, ON_WORDS, SCROLL_HARM, wrongKind } from '../../game/enchant';
 import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
@@ -15,7 +15,7 @@ import {
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
-import { candleBurn, lanternReach, torchBurn } from '../../game/light';
+import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
 import { WORLD_PACE } from '../../game/pace';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
@@ -40,7 +40,7 @@ import { WALK_FRAMES } from '../../render/figure';
 import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
-import { furnitureDef, liquidCapacity, POND_EVERY, type PlacedFurniture } from '../../game/furniture';
+import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
 import { billWords, countOf, type Item } from '../../game/items';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
@@ -1776,6 +1776,17 @@ export const NEWS: News[] = [
         ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
       ];
     },
+  },
+  {
+    n: 131,
+    day: '2026-10-11',
+    lines: () => [
+      `The enchanter's plinth, a carved stone table: ${recipeBill(`make_${ENCHANTERS_PLINTH}`)}, ${skillOf(`make_${ENCHANTERS_PLINTH}`)} with a trowel. `
+        + `Enchant is done standing within ${STATION_REACH} tiles of the middle of one set down on the ground, and nowhere else; anywhere else it says "${ENCHANT_SAID.plinth}", `
+        + 'on the Enchant entry of a scroll before you choose what it goes on, and for a thing standing where it was set down as well as one in the pack. Writing a scroll needs none.',
+      `While somebody is enchanting at one its runes brighten and at night it lights ${PLINTH_BUSY_REACH} tiles round it, where it lights ${PLINTH_REACH} at rest. `
+        + 'Moss gathers on it as on a statue.',
+    ],
   },
 ];
 

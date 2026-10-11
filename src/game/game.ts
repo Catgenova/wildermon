@@ -28,7 +28,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, type BoatDef } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef } from './furniture';
 import { emptyCrate, occupiedRefusal, shutIn } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
@@ -41,7 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import { ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -86,7 +86,8 @@ import {
   SHRUG_SAID, gatherSpot, skySaid, STRUCK_SAID, surgeSaid, TECHNIQUE_GAIN, tookSaid, traceNone, traceSaid, unbrokenSaid, type PathBeat, type PathId, type PathSaid,
 } from './meditation';
 import { ledgerTotals, record, type Ledger } from './ledger';
-import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, OVEN_REACH, runestoneLight, type LightSource } from './light';
+import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, OVEN_REACH, plinthLight, runestoneLight, type LightSource } from './light';
+import { plinthBusy } from './plinth';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
@@ -3304,6 +3305,11 @@ export class Game {
       // A lantern post throws what its lantern throws, from under the lantern (`lamps.ts`).
       if (isLampPiece(f)) {
         if (lampBurning(f)) out.push(lampLight(f));
+        continue;
+      }
+      // An enchanter's plinth's runes, brighter while somebody enchants at it (`plinth.ts`).
+      if (f.kind === ENCHANTERS_PLINTH) {
+        out.push(plinthLight(cx, cy, plinthBusy(this, f)));
         continue;
       }
       if (f.lit) out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: 0.8 });
@@ -6730,7 +6736,7 @@ export class Game {
   }
 
   /** The nearest piece of furniture of a kind, within arm's reach. */
-  furnitureNear(kind: string, range = 2.4): PlacedFurniture | undefined {
+  furnitureNear(kind: string, range = STATION_REACH): PlacedFurniture | undefined {
     let best: PlacedFurniture | undefined;
     this.placed.furniture.around(this.player.x, this.player.y, range + 2, (f) => {
       if (best || f.kind !== kind) return;

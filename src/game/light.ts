@@ -123,6 +123,28 @@ export const runestoneLight = (x: number, y: number): LightSource => ({
 });
 
 /**
+ * And an enchanter's plinth's runes: a small pool of the runestones' pale gold
+ * round its middle, steady and soft-edged -- at rest a little round its foot,
+ * and a little wider and brighter while somebody stands at it enchanting
+ * (`plinthBusy`), on the stone and its step and no further: whoever stands
+ * at it is left to the night, and the light is in its dish and runes. Drawn
+ * only, as a runestone's is: no rule asks
+ * how far it reaches. The runes themselves shine through the wash in their
+ * own shapes, as a runestone's do.
+ */
+export const PLINTH_REACH = 0.45;
+export const PLINTH_GLOW = 0.1;
+export const PLINTH_BUSY_REACH = 0.7;
+export const PLINTH_BUSY_GLOW = 0.2;
+export const PLINTH_CAST_ALPHA = 0.16;
+export const PLINTH_BUSY_CAST_ALPHA = 0.24;
+/** The light of an enchanter's plinth whose middle is at world (x, y), at rest or in use. */
+export const plinthLight = (x: number, y: number, busy: boolean): LightSource => ({
+  x, y, radius: busy ? PLINTH_BUSY_REACH : PLINTH_REACH, strength: busy ? PLINTH_BUSY_GLOW : PLINTH_GLOW, steady: true, soft: true,
+  cast: RUNESTONE_CAST, castAlpha: busy ? PLINTH_BUSY_CAST_ALPHA : PLINTH_CAST_ALPHA,
+});
+
+/**
  * What the night is worth over a point, given everything burning near it: 1
  * where nothing reaches and 0 in the middle of a good fire. The falloff is
  * square rather than linear, so a light has a bright heart and a soft edge

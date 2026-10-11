@@ -2242,6 +2242,21 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/enchant3.mjs --log-level=error
           node node_modules/.cache/enchant3.mjs
 
+      - name: The enchanter's plinth, the same on both sides
+        run: |
+          # Enchant, putting a scroll into a thing, is done standing at an
+          # enchanter's plinth and nowhere else, as papyrus is pressed at a
+          # paper press. Built with masonry and a trowel from 32 stone bricks,
+          # 12 mortar, 2 stone slabs, a light mote and a dark mote, refused a
+          # mote short; set down as any piece; Enchant refused away from one in
+          # the station rule's words, taken 2.3 tiles from its middle and
+          # refused at 2.5 (the station reach, 2.4); a scroll still written
+          # away from one. In the browser, the plinth in use while you or
+          # anybody else enchants within that reach, and the light it throws.
+          npx esbuild supabase/test/plinth.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/plinth.mjs --log-level=error
+          node node_modules/.cache/plinth.mjs
+
       - name: An altar goes up on your own ground
         run: |
           # Asked for: "Make the altar only craftable within deed perimeter".

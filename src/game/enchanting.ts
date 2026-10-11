@@ -24,7 +24,7 @@ import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM
 import { BLOW_SHARE, DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
 import { HELD_LIGHTS } from './light';
 import {
-  alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
+  alreadyEnchanted, ENCHANTERS_PLINTH, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
   enchantChance, enchantFigure, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, SECOND_FIGURE, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
@@ -275,6 +275,8 @@ export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: 
   const scroll = uid !== undefined ? g.inventory.get(uid) : undefined;
   const e = scroll ? scrollOf(scroll.id) : undefined;
   if (!scroll || !e) return { why: ENCHANT_SAID.scroll };
+  // Done standing at an enchanter's plinth, and nowhere else (`enchant.ts`).
+  if (!g.atStation(ENCHANTERS_PLINTH)) return { why: ENCHANT_SAID.plinth };
   if (t.kind === 'item') {
     const weapon = g.inventory.get(t.uid);
     if (!weapon) return { why: ENCHANT_SAID.weapon };

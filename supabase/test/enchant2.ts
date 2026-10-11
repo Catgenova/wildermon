@@ -36,7 +36,7 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { EMBERWARD_CAP, ENCHANTMENT_LIST, GRACE_TILES, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { EMBERWARD_CAP, ENCHANT_SAID, ENCHANTERS_PLINTH, ENCHANTMENT_LIST, GRACE_TILES, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
 import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
 import { classDealt } from '../../src/game/creatureActions';
 import { blowEvery, bowReach, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
@@ -142,8 +142,10 @@ begin
   v_sw := give(w, u, 'sword', 1, 100, 'Iron');
   v_bow := give(w, u, 'short_bow', 1, 50, 'Willow');
 
-  -- 1. Refused on a thing of the wrong kind, in words that name the right one.
+  -- 1. Refused away from an enchanter's plinth; then at one, refused on a thing of the wrong kind, in words that name the right one.
   v_s := give(w, u, 'gale_scroll', 1, 90);
+  insert into said values ('R:plinth', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sw, 'scroll', v_s)), 'none'));
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 40, 39, 0, 0, 40.25, 39.25, 50);
   insert into said values ('R:bow', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_bow, 'scroll', v_s)), 'none'));
   insert into said values ('R:sword', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sw, 'scroll', v_s)), 'none'));
 
@@ -382,6 +384,10 @@ const bow = thing('short_bow', 50, 'Willow');
 /* 1. Refusals. */
 const galeScroll = thing(GALE.scroll, 90);
 const ask = (uid: number): string => act('enchant').check?.({ kind: 'item', uid, scroll: galeScroll.uid } as Target, g) ?? 'none';
+const away = ask(sword.uid);
+check(`away from an enchanter's plinth Enchant is refused on both sides: ${ENCHANT_SAID.plinth}`,
+  isle.get('R:plinth') === ENCHANT_SAID.plinth && away === ENCHANT_SAID.plinth, `${isle.get('R:plinth')} / ${away}`);
+g.addFurniture(ENCHANTERS_PLINTH, 40, 39, 0, 0, 50);
 check(`a Gale scroll is refused on a bow in words that name what it goes on, on both sides: ${wrongKind(GALE)}`,
   isle.get('R:bow') === wrongKind(GALE) && ask(bow.uid) === wrongKind(GALE) && wrongKind(GALE) === 'Gale goes on a melee weapon, not a bow or a thrown weapon.',
   `${isle.get('R:bow')} / ${ask(bow.uid)}`);

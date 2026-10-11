@@ -26,7 +26,7 @@ import { bagRoom, type Item } from '../../src/game/items';
 import { furnitureCapacity, liquidCapacity } from '../../src/game/furniture';
 import { crateCapacity } from '../../src/game/crates';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
-import { alreadyEnchanted, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, NETMENDER_WEAR, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
+import { alreadyEnchanted, ENCHANTERS_PLINTH, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, NETMENDER_WEAR, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
 import { CATCH_MOST, catchChance } from '../../src/game/traps';
 import { sameStack } from '../../src/game/items';
 import { tackEnchant, tackSpeed } from '../../src/game/creatures';
@@ -128,6 +128,13 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  -- Enchant is done at an enchanter's plinth: one within reach of every place she stands.
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 41, 42, 0, 0, 41.25, 42.25, 50);
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 47, 42, 0, 0, 47.25, 42.25, 50);
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 28, 31, 0, 0, 28.25, 31.25, 50);
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 35, 32, 0, 0, 35.25, 32.25, 50);
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 28, 35, 0, 0, 28.25, 35.25, 50);
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'enchanters_plinth', 19, 23, 0, 0, 19.25, 23.25, 50);
   update player set x = 40.5, y = 40.5, body_at = now(), swim_at = now(), equipped = '{}'::jsonb, craft_from_stores = false,
          class_mul = null, combat_class = null, craft_class = null, wounds = '[]'::jsonb, blessings = '{}'::jsonb, knacks = '{}'::jsonb,
          stats = coalesce(stats, '{}'::jsonb) || jsonb_build_object('hunger', 1, 'thirst', 1, 'health', 1, 'stamina', 1)
@@ -424,6 +431,8 @@ for (const id of [...g.creatures.list.keys()]) g.creatures.list.delete(id);
 g.inventory.items.length = 0;
 g.putBody(40.5, 40.5, 0);
 g.settings.fromStores = false;
+// An enchanter's plinth within reach of every place the body stands, as on the island.
+for (const [x, y] of [[41, 42], [47, 42], [28, 31], [35, 32], [28, 35], [19, 23]]) g.addFurniture(ENCHANTERS_PLINTH, x, y, 0, 0, 50);
 const dice = (...xs: number[]): void => {
   let n = 0;
   g.rand = () => xs[n++ % xs.length];
