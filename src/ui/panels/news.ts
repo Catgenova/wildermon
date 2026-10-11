@@ -1694,6 +1694,15 @@ export const NEWS: News[] = [
       ...ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
     ],
   },
+  {
+    n: 123,
+    day: '2026-10-11',
+    lines: () => [
+      `Four enchantments for tools: ${listed(ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+      ...ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      'Where you carry more than one of a tool, the job uses the one worth most at the work, and its enchantment is the one that counts.',
+    ],
+  },
 ];
 
 

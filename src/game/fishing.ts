@@ -1,3 +1,4 @@
+import { enchantMore } from './enchanting';
 import { tryGain } from './learn';
 import type { ActionDef } from './actions';
 import type { Game } from './game';
@@ -401,6 +402,8 @@ export const FISHING_ACTIONS: ActionDef[] = [
         g.note(RARITIES[rare].name);
         g.logMsg(RARITY_WORD[rare], 'skill');
       }
+      // And one more, now and then, for a Bountiful on the rod: the same fish, never rare.
+      enchantMore(g, 'fishing_rod', 'bounty', got.id, item.ql, got.name.toLowerCase());
       return true;
     },
   },

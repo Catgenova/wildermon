@@ -1817,8 +1817,9 @@ export const maxHealth = (c: Creature, species: SpeciesDef): number =>
   Math.round(species.health * bloodMul(c, 'hardy') * companionMul(c, 'hardy'));
 /** What its attack lands for. */
 export const attackOf = (c: Creature, species: SpeciesDef): number => species.attack * bloodMul(c, 'tough');
-/** What a creature's attack takes off a player it lands on, as a share of a life, before armour. */
-export const BLOW_SHARE = 0.012;
+// What a creature's attack takes off a player, as a share of a life: kept in `limits.ts`, a leaf, so that what reads it as it loads (enchanting's words) never waits on this.
+import { BLOW_SHARE } from './limits';
+export { BLOW_SHARE };
 
 /** What a set of traits is worth, written out for a log line. */
 export const TRAIT_COUNT = TRAIT_SLOTS;

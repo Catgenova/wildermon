@@ -139,7 +139,7 @@ import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
   ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, FROST_PACE, FROST_SECS, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
-import { BOWS, BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
+import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
@@ -253,7 +253,13 @@ function enchantingHelp(): string {
     most a shield otherwise blocks. The game has no cloaks, so Shadowcloak goes on what is worn on the chest.</p>
     <p>Only an ordinary shot from a bow that lands can set off ${listed(ENCHANTMENT_LIST.filter((e) => SHOT_EFFECTS.has(e.effect)).map((e) => e.name))}.
     A <b>slow</b> holds a creature to ${percent(FROST_PACE)} of its pace for ${FROST_SECS} seconds; the stronger of two slows holds, to the later end,
-    and the target panel says "slowed" while it lasts.</p>`;
+    and the target panel says "slowed" while it lasts.</p>
+    <p>A tool a job is done with is ${listed([...jobTools()].map((id) => itemDef(id).name.toLowerCase()))}; a weapon takes
+    ${listed(ENCHANTMENT_LIST.filter((e) => e.on === 'tool').map((e) => e.name))} only if it is one of them. Where you carry more than one
+    of a tool, the one worth most at the work is the one a job uses, and its enchantment is the one that counts.
+    Swiftwork's share comes off a job's time after the floor, multiplying with a perk on the job's time, a piece standing near and a Steady Hands;
+    Truesteel's multiplies with a perk on the tool's wear. Bountiful works on Harvest on a bush, with the sickle, and on a fish landed with the rod;
+    Lodestone on Mine, with the pickaxe. The one more comes at the quality the go made, and a fish is never rare for it.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>

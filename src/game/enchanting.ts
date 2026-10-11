@@ -12,16 +12,16 @@
  * words; `supabase/test/enchant.ts` holds the two to each other.
  */
 import type { ActionDef, Target } from './actions';
-import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from './creatures';
+import { maxHealth, SPECIES, type Creature } from './creatures';
 import { QL_BARE, QL_LOW, QL_SPAN, type Game } from './game';
-import { describeWith, itemDef, itemName, type Item } from './items';
+import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
 import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
-import { DAMAGE_MAX, QL_TOP } from './limits';
+import { BLOW_SHARE, DAMAGE_MAX, QL_TOP } from './limits';
 import {
   alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
+  enchantChance, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, moreSaid, qlWord, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -108,6 +108,10 @@ export function enchantLine(e: EnchantmentDef): string {
         + `each piece with it adds its share, ${enchantPct(THORNHIDE_CAP)} at most together.`;
     case 'shadow': return 'while it is worn, at night a hunting creature notices you from {v} closer.';
     case 'block': return '{v} is added to the shield\'s chance of turning a blow aside, past the most a shield otherwise blocks.';
+    case 'work': return 'a job done with it takes {v} less time.';
+    case 'temper': return 'it takes {v} less damage from use.';
+    case 'bounty': return 'a bush harvested with a sickle, or a fish landed with a rod, brings one more {v} of the time.';
+    case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
   }
 }
 /** That line with its figure at this quality. */
@@ -139,8 +143,23 @@ export const fitsOn = (on: EnchantOn, id: string): boolean => {
     case 'boots': return ARMOUR_BY_ID.get(id)?.slot === 'feet';
     case 'chest': return ARMOUR_BY_ID.get(id)?.slot === 'chest';
     case 'shield': return isShield(id);
+    case 'tool': return jobTools().has(id);
+    case 'reaper': return REAPERS.includes(id);
+    case 'pick': return id === 'pickaxe';
   }
 };
+/** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
+export const REAPERS = ['sickle', 'fishing_rod'];
+/**
+ * Every tool a job is done with: whatever any job names as its tool. The job
+ * table is `actions.ts`'s, which loads after this and hands it over
+ * (`knowJobs`); a value import of it here would load the two in a circle.
+ */
+let jobs: () => readonly ActionDef[] = () => [];
+let toolSet: Set<string> | undefined;
+export const knowJobs = (all: () => readonly ActionDef[]): void => { jobs = all; toolSet = undefined; };
+export const jobTools = (): Set<string> =>
+  (toolSet ??= new Set(jobs().flatMap((a) => (a.tool && ITEM_DEFS[a.tool] ? [a.tool] : [])).sort()));
 /** A bow: a weapon that shoots, rather than one that is swung or thrown. */
 export const isBowId = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.ammo;
 /** Every bow there is. */
@@ -153,6 +172,9 @@ export const FITS: Record<EnchantOn, string[]> = {
   boots: ARMOUR.filter((a) => a.slot === 'feet').map((a) => a.id),
   chest: ARMOUR.filter((a) => a.slot === 'chest').map((a) => a.id),
   shield: Object.keys(SHIELDS),
+  get tool() { return [...jobTools()]; },
+  reaper: REAPERS,
+  pick: ['pickaxe'],
 };
 
 /* ---- the Enchant job ------------------------------------------------------ */
@@ -168,6 +190,19 @@ export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: 
   if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
   if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
   return { scroll, weapon, e };
+}
+
+/**
+ * A go that may bring one more: a Bountiful on the sickle or the rod, a
+ * Lodestone on the pickaxe, at its chance. Gathers the one more at the
+ * quality the go made and says so. The island's `enchant_more`.
+ */
+export function enchantMore(g: Game, tool: string, effect: 'bounty' | 'lode', item: string, ql: number, what = itemDef(item).name.toLowerCase()): void {
+  const held = g.jobTool(tool)?.enchant;
+  const e = held && ENCHANTMENTS[held.id];
+  if (!e || e.effect !== effect || !(g.rand() < g.toolEnchant(tool, effect))) return;
+  g.gather(item, { ql });
+  g.logMsg(moreSaid(e, what), 'event');
 }
 
 /** What may take this scroll, of what is in the pack: everything of the kind it goes on. */

@@ -41,7 +41,7 @@ import { HOST_ID, type PeerId } from '../net/protocol';
 import { Roster } from './roster';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import { wornEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -5316,8 +5316,25 @@ export class Game {
     const toolQl = def.tool ? Math.min(QL_TOP, this.toolQl(def.tool) + this.perk(`tool:${def.id}`, 0)) : 0;
     // And less of it on a settlement whose altar has a bauble for the trade.
     // A fight goes at the weapon's own swing, and slower on tired arms (`fight.ts`).
+    // And a Swiftwork on the tool takes its share off after the floor, as the island's `faith_steady` does.
     return goSeconds(fightBase(this, def) ?? def.baseTime, skill, toolQl, this.controlSpeed() * baublePace(this.baubleHere(), def.skill))
-      * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill);
+      * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
+  }
+
+  /**
+   * The tool of a kind a job is done with, as the island picks it: the one
+   * worth most at the work (`toolWorth`, the island's `tool_worth`).
+   */
+  jobTool(id: string): Item | undefined {
+    let best: Item | undefined;
+    let worth = -1;
+    for (const it of this.inventory.items) if (it.id === id && this.toolWorth(it) > worth) [worth, best] = [this.toolWorth(it), it];
+    return best;
+  }
+
+  /** What an enchantment on that tool comes to, for an effect it has: Swiftwork's share, Bountiful's chance. The island's `tool_enchant`. */
+  toolEnchant(id: string, effect: EnchantEffect): number {
+    return swingEnchant(this.jobTool(id), effect);
   }
 
   /**
@@ -5410,8 +5427,8 @@ export class Game {
   wearTool(id: string, multiplier = 1): void {
     const tool = this.inventory.tool(id);
     if (!tool) return;
-    // Less for a perk on the tool (a Carpenter's Saw Care), as `wear_tool` has it.
-    this.damageItem(tool, wearPerUse(tool.ql) * multiplier * this.perk(`wear:${id}`, 1));
+    // Less for a perk on the tool (a Carpenter's Saw Care) and a Truesteel in it, as `wear_tool` has it.
+    this.damageItem(tool, wearPerUse(tool.ql) * multiplier * this.perk(`wear:${id}`, 1) * (1 - swingEnchant(tool, 'temper')));
   }
 
   /**

@@ -17,7 +17,11 @@
  *   * Tidecaller: how far a hit puts the creature's next blow back;
  *   * Farsight: a bow's reach, with it and without;
  *   * Flamearrow and Frostbite: a shot's roll just over and just under, the
- *     burn, and the slow on both sides and in the creatures' door.
+ *     burn, and the slow on both sides and in the creatures' door;
+ *   * what is worn: Stoneskin, Emberward, Featherstep, Bulwark, Shadowcloak
+ *     and Thornhide;
+ *   * the tools: Swiftwork on a job's time, Truesteel on a use's wear, and
+ *     Bountiful and Lodestone's one more, a roll just over and just under.
  *
  * Every roll is set: dice on the island (`random()` read off a list) and the
  * same list as the browser's `rand`. Runs against the database the suite
@@ -32,7 +36,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/action
 import type { Item } from '../../src/game/items';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { EMBERWARD_CAP, ENCHANTMENT_LIST, ENCHANTMENTS, enchantHitChance, enchantValue, FROST_PACE, FROST_SECS, STONESKIN_CAP, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
-import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
+import { drainSecs, ENCHANT_BURN, enchantLineAt, enchantMore, enchantRoll, enchantSays, enchantWorks, leechHeal, shotRoll, slowed } from '../../src/game/enchanting';
 import { classDealt } from '../../src/game/creatureActions';
 import { blowEvery, bowReach, fightBase, myCritChance, VENOM_DRAIN } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
@@ -120,6 +124,7 @@ create or replace function rarity_roll() returns text language sql as 'select nu
 do $t$
 declare w uuid; u uuid := '${MIRA}'; v_sw bigint; v_bow bigint; v_s bigint; v_c creature; v_g creature; v_until timestamptz;
         v_boot bigint; v_chest bigint; v_cap bigint; v_arm bigint; v_leg bigint; v_sh bigint;
+        v_saw bigint; v_sick bigint; v_pick bigint;
 begin
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Enchanting 2', 218, 64, 10, 10, true) returning id into w;
   perform land_blank(w, 64);
@@ -278,6 +283,48 @@ begin
     || '|' || coalesce((select sum(o.dmg)::text from faith_owed o where o.world_id = w and o.creature_id = 9221), 'none')
     || '|' || worn_enchant(w, u, 'thorns')::text
     from player p where p.world_id = w and p.uid = u;
+
+  -- 11. The tools: refusals by kind, Swiftwork on a job's time, Truesteel on wear, Bountiful and Lodestone's one more.
+  perform pg_temp.nodice();
+  update player set equipped = '{}'::jsonb where world_id = w and uid = u;
+  v_saw := give(w, u, 'saw', 1, 50);
+  v_sick := give(w, u, 'sickle', 1, 50);
+  v_pick := give(w, u, 'pickaxe', 1, 50);
+  v_s := give(w, u, 'swiftwork_scroll', 1, 90);
+  insert into said values ('R:swiftsword', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sw, 'scroll', v_s)), 'none'));
+  insert into said values ('R:swiftsaw', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_saw, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'bountiful_scroll', 1, 90);
+  insert into said values ('R:bountypick', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_pick, 'scroll', v_s)), 'none'));
+  insert into said values ('R:bountysickle', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sick, 'scroll', v_s)), 'none'));
+  v_s := give(w, u, 'lodestone_scroll', 1, 90);
+  insert into said values ('R:lodesickle', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_sick, 'scroll', v_s)), 'none'));
+  insert into said values ('R:lodepick', coalesce(enchant_refusal(w, u, jsonb_build_object('kind', 'item', 'uid', v_pick, 'scroll', v_s)), 'none'));
+  insert into said values ('STEADY0', faith_steady(w, u, 'saw')::text);
+  update item set enchant = '{"id": "swiftwork", "ql": 100}'::jsonb where id = v_saw;
+  insert into said values ('STEADY', faith_steady(w, u, 'saw')::text || '|' || faith_steady(w, u, 'sickle')::text);
+  update item set enchant = null, dmg = 0 where id = v_saw;
+  perform wear_tool(v_saw);
+  insert into said select 'WEAR0', dmg::text from item where id = v_saw;
+  update item set enchant = '{"id": "truesteel", "ql": 100}'::jsonb, dmg = 0 where id = v_saw;
+  perform wear_tool(v_saw);
+  insert into said select 'WEAR', dmg::text from item where id = v_saw;
+  update item set enchant = '{"id": "bountiful", "ql": ${HIT_QL}}'::jsonb where id = v_sick;
+  update item set enchant = '{"id": "lodestone", "ql": ${HIT_QL}}'::jsonb where id = v_pick;
+  delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('raspberry', 'iron_ore');
+  delete from event where world_id = w;
+  perform pg_temp.dice('${(0.002 * 50 + 0.001).toFixed(3)}');
+  perform enchant_more(w, u, 'sickle', 'bounty', 'raspberry', 33);
+  perform pg_temp.dice('${(0.001 * 50 + 0.001).toFixed(3)}');
+  perform enchant_more(w, u, 'pickaxe', 'lode', 'iron_ore', 33);
+  insert into said select 'MOREOVER', coalesce(sum(count), 0)::text from item where world_id = w and holder = 'player' and holder_uid = u and def in ('raspberry', 'iron_ore');
+  perform pg_temp.dice('${(0.002 * 50 - 0.001).toFixed(3)}');
+  perform enchant_more(w, u, 'sickle', 'bounty', 'raspberry', 33);
+  perform pg_temp.dice('${(0.001 * 50 - 0.001).toFixed(3)}');
+  perform enchant_more(w, u, 'pickaxe', 'lode', 'iron_ore', 33);
+  perform pg_temp.nodice();
+  insert into said select 'MOREUNDER', string_agg(def || '*' || count || '@' || round(ql::numeric, 1), ',' order by def)
+    from item where world_id = w and holder = 'player' and holder_uid = u and def in ('raspberry', 'iron_ore');
+  insert into said select 'MORESAID', string_agg(e.text, '#' order by e.n) from event e where e.world_id = w and e.kind = 'event';
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -517,6 +564,59 @@ check(`Thornhide at QL 100 on two pieces sends ${share * 100}% of what a blow di
   near(share, 2 * enchantValue(THORN, 100)) && near(shareIsle, share) && lostHere > 0 && near(sent, (lostHere * share) / BLOW_SHARE, 1e-6) && tc.health < 90
     && near(owedIsle, (lostIsle * share) / BLOW_SHARE, 1e-6),
   `${isle.get('THORN')} / lost ${lostHere}, sent ${sent}`);
+
+/* 11. The tools. */
+const [SWIFT, TRUE, BOUNTY, LODE] = ['swiftwork', 'truesteel', 'bountiful', 'lodestone'].map(E);
+set(null, jerkin, cap);
+for (const k of Object.keys(g.player.equipped)) g.player.equipped[k] = null;
+const saw = thing('saw', 50);
+const sickle = thing('sickle', 50);
+const pick = thing('pickaxe', 50);
+const toolRefusals: Array<[string, string, string]> = [
+  ['R:swiftsword', askWith(SWIFT, sword.uid), wrongKind(SWIFT)], ['R:swiftsaw', askWith(SWIFT, saw.uid), 'none'],
+  ['R:bountypick', askWith(BOUNTY, pick.uid), wrongKind(BOUNTY)], ['R:bountysickle', askWith(BOUNTY, sickle.uid), 'none'],
+  ['R:lodesickle', askWith(LODE, sickle.uid), wrongKind(LODE)], ['R:lodepick', askWith(LODE, pick.uid), 'none'],
+];
+check('Swiftwork goes on a tool a job is done with and not on a sword, Bountiful on a sickle or a rod, Lodestone on a pickaxe, and each is refused elsewhere in words that say so, on both sides',
+  toolRefusals.every(([k, here, want]) => isle.get(k) === want && here === want) && wrongKind(LODE) === 'Lodestone goes on a pickaxe.',
+  toolRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
+const planks = act('make_planks');
+const t0 = g.duration(planks);
+saw.enchant = { id: SWIFT.id, ql: 100 };
+const t1 = g.duration(planks);
+check(`Swiftwork at QL 100: a job done with the saw takes ${enchantValue(SWIFT, 100) * 100}% less time, and a job with another tool none less, on both sides`,
+  near(t1, t0 * (1 - enchantValue(SWIFT, 100))) && near(Number(isle.get('STEADY0')), 1)
+    && near(Number(part('STEADY', 0)), 1 - enchantValue(SWIFT, 100)) && near(Number(part('STEADY', 1)), 1),
+  `${t0} to ${t1} / ${isle.get('STEADY0')} ${isle.get('STEADY')}`);
+saw.enchant = undefined;
+saw.dmg = 0;
+g.wearTool('saw');
+const wear0 = saw.dmg;
+saw.enchant = { id: TRUE.id, ql: 100 };
+saw.dmg = 0;
+g.wearTool('saw');
+check(`Truesteel at QL 100: the saw takes ${enchantValue(TRUE, 100) * 100}% less damage from a use, the same on both sides`,
+  wear0 > 0 && near(saw.dmg, wear0 * (1 - enchantValue(TRUE, 100))) && near(Number(isle.get('WEAR0')), wear0) && near(Number(isle.get('WEAR')), saw.dmg),
+  `${isle.get('WEAR0')} ${isle.get('WEAR')} / ${wear0} ${saw.dmg}`);
+sickle.enchant = { id: BOUNTY.id, ql: HIT_QL };
+pick.enchant = { id: LODE.id, ql: HIT_QL };
+const more = (): string => g.inventory.items.filter((it) => it.id === 'raspberry' || it.id === 'iron_ore')
+  .sort((a, b) => a.id.localeCompare(b.id)).map((it) => `${it.id}*${it.count}@${it.ql.toFixed(1)}`).join(',');
+dice(enchantValue(BOUNTY, HIT_QL) + 0.001);
+enchantMore(g, 'sickle', 'bounty', 'raspberry', 33);
+dice(enchantValue(LODE, HIT_QL) + 0.001);
+enchantMore(g, 'pickaxe', 'lode', 'iron_ore', 33);
+const over = more();
+const before = said.length;
+dice(enchantValue(BOUNTY, HIT_QL) - 0.001);
+enchantMore(g, 'sickle', 'bounty', 'raspberry', 33);
+dice(enchantValue(LODE, HIT_QL) - 0.001);
+enchantMore(g, 'pickaxe', 'lode', 'iron_ore', 33);
+const lines = said.slice(before).join('#');
+check(`Bountiful at QL ${HIT_QL} (${enchantValue(BOUNTY, HIT_QL) * 100}%) and Lodestone at QL ${HIT_QL} (${enchantValue(LODE, HIT_QL) * 100}%): a roll just over brings nothing more, just under one more at the go's quality, said the same on both sides`,
+  over === '' && isle.get('MOREOVER') === '0' && more() === 'iron_ore*1@33.0,raspberry*1@33.0' && isle.get('MOREUNDER') === more()
+    && lines === 'Bountiful brings one more of the raspberries.#Lodestone brings one more of the iron ore.' && isle.get('MORESAID') === lines,
+  `${isle.get('MOREOVER')} ${isle.get('MOREUNDER')} ${isle.get('MORESAID')} / ${over} ${more()} ${lines}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nenchanting, part 2 — ${ok.length} of ${ok.length + bad.length}`);

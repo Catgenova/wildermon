@@ -67,14 +67,14 @@ export const SCROLL_HARM = 25;
  * every hit back as health (`leech`).
  */
 export type EnchantEffect = 'burn' | 'bleed' | 'stun' | 'venom' | 'drain' | 'swing' | 'crit' | 'smite' | 'leech' | 'range' | 'flame' | 'frost'
-  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block';
+  | 'guard' | 'fireguard' | 'stride' | 'thorns' | 'shadow' | 'block' | 'work' | 'temper' | 'bounty' | 'lode';
 /** The ones that happen on a hit now and then, at `perQl` a point of quality: a hit's roll comes up or it does not. */
 export const ROLLED_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['burn', 'bleed', 'stun', 'venom']);
 /** And the ones a bow's shot that lands sets off now and then, the same way: a burn, or a frost that slows. */
 export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost']);
 
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
-export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield';
+export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick';
 /** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
 export const ON_WORDS: Record<EnchantOn, string> = {
   melee: 'a melee weapon, not a bow or a thrown weapon',
@@ -84,6 +84,10 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   // The game has no cloaks; what hangs over the body is the piece worn on the chest.
   chest: 'what is worn on the chest: a tunic, a jerkin, a hauberk, a breastplate or a cuirass',
   shield: 'a shield',
+  // A weapon takes one of these only where a job is done with it (`FITS.tool`).
+  tool: 'a tool that a job is done with',
+  reaper: 'a sickle or a fishing rod',
+  pick: 'a pickaxe',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -170,6 +174,14 @@ export const THORNHIDE_CAP = 0.25;
 export const SHADOWCLOAK_PER_QL = 0.0025;
 /** Bulwark: QL/10 percentage points on a shield's chance of a block. */
 export const BULWARK_PER_QL = 0.001;
+/** Swiftwork: a job done with the tool takes QL/5 percent less time. */
+export const SWIFTWORK_PER_QL = 0.002;
+/** Truesteel: the tool takes QL/2 percent less damage from use. */
+export const TRUESTEEL_PER_QL = 0.005;
+/** Bountiful: QL/5 percent of the goes at a harvest or a catch with it bring one more of what they bring. */
+export const BOUNTIFUL_PER_QL = 0.002;
+/** Lodestone: QL/10 percent of the goes at mining with it bring one more ore or stone. */
+export const LODESTONE_PER_QL = 0.001;
 WORN_CAP.guard = STONESKIN_CAP;
 WORN_CAP.fireguard = EMBERWARD_CAP;
 WORN_CAP.thorns = THORNHIDE_CAP;
@@ -177,7 +189,8 @@ WORN_CAP.thorns = THORNHIDE_CAP;
 /**
  * Every enchantment there is. The first three are the owner's first asks; the
  * six after them go on a melee weapon too, the three after those on a bow,
- * and the six after those on what you wear and the shield you hold.
+ * the six after those on what you wear and the shield you hold, and the four
+ * after those on the tools a job is done with.
  */
 export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('emberbrand', 'Emberbrand', 'fire', 'melee', 'burn', EMBERBRAND_PER_QL),
@@ -198,6 +211,10 @@ export const ENCHANTMENT_LIST: readonly EnchantmentDef[] = [
   row('thornhide', 'Thornhide', 'life', 'armour', 'thorns', THORNHIDE_PER_QL),
   row('shadowcloak', 'Shadowcloak', 'dark', 'chest', 'shadow', SHADOWCLOAK_PER_QL),
   row('bulwark', 'Bulwark', 'earth', 'shield', 'block', BULWARK_PER_QL),
+  row('swiftwork', 'Swiftwork', 'wind', 'tool', 'work', SWIFTWORK_PER_QL),
+  row('truesteel', 'Truesteel', 'earth', 'tool', 'temper', TRUESTEEL_PER_QL),
+  row('bountiful', 'Bountiful', 'life', 'reaper', 'bounty', BOUNTIFUL_PER_QL),
+  row('lodestone', 'Lodestone', 'earth', 'pick', 'lode', LODESTONE_PER_QL),
 ];
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
 export const EMBERBRAND = 'emberbrand';
@@ -299,5 +316,16 @@ export const wornEnchant = (worn: ReadonlyArray<{ enchant?: Enchant } | null | u
   return cap === undefined ? sum : Math.min(cap, sum);
 };
 
-/** A share as Examine says it: the island's `enchant_pct`. */
-export const enchantPct = (x: number): string => percent(x);
+/** What a go that brings one more says: "Bountiful brings one more of the raspberries." The island's `enchant_more` says it. */
+export const moreSaid = (e: EnchantmentDef, what: string): string => `${e.name} brings one more of the ${what}.`;
+
+/**
+ * A share as Examine says it: the island's `enchant_pct`, which rounds the
+ * figure as it is written in decimals, a half up (20.65 is 20.7), where
+ * `toFixed` would round what the float holds (20.6499..., so 20.6).
+ */
+export const enchantPct = (x: number): string => {
+  const dec = (n: number): number => Number(n.toPrecision(12));
+  const p = dec(x * 100);
+  return Math.abs(p - Math.round(p)) < 1e-6 ? percent(x) : `${Math.round(dec(p * 10)) / 10}%`;
+};
