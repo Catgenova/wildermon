@@ -145,12 +145,17 @@ const LINES_MOST = 4;
 const ROWS_MID = (PANEL.z0 + PANEL.z1) / 2 + 0.2;
 const ROW_WIDE = PANEL.w - 1.3;
 /**
- * How far either way of the panel's middle a mark's middle may stand: inside
- * its inner rule (half its width less 0.32) by a mark's own half-width and a
- * hair. And how far a row may be moved from where the hand would start it.
+ * How far either way of the panel's middle a mark's middle may stand: the
+ * inner edge of its inner rule (half its width less 0.32, less half the
+ * rule's 0.13 groove), less the most a mark reaches from its middle (0.7 of
+ * its half-width, and half its 0.15 groove), less a clear gap of plain floor
+ * between the two. And how far a row may be moved from where the hand would
+ * start it, and how far in from that limit the last row starts.
  */
-const ROW_REACH = PANEL.w / 2 - 0.32 - MARK_W - 0.06;
+const MARK_REACH = MARK_W * 0.7 + 0.075;
+const ROW_REACH = PANEL.w / 2 - 0.32 - 0.065 - MARK_REACH - 0.18;
 const SHIFT_MOST = 0.45;
+const LAST_IN: [number, number] = [0.15, 0.4];
 
 /**
  * The small rune-marks a line is cut as: a stave, a stave and a twig, an
@@ -215,11 +220,13 @@ export function engravingMarks(text: string | undefined): Mark[][] {
    * and the truest kept, so a choice early on that leaves a later row
    * nowhere clear to go is not kept.
    */
-  const lay = (H: () => number): { rows: Array<Array<{ k: number; x: number }>>; score: number } => {
+  const lay = (H: () => number, push: number): { rows: Array<Array<{ k: number; x: number }>>; score: number } => {
     const rows: Array<Array<{ k: number; x: number }>> = [];
     let score = 0;
-    // Where the spaces in the row above fall.
+    // Where the spaces in the row above fall, and in every row so far.
     let above: Array<[number, number]> = [];
+    const every: Array<Array<[number, number]>> = [];
+    let clearAll: Array<[number, number]> = [];
     let at = 0;
     while (at < units.length && rows.length < LINES_MOST) {
       // As many words as the row has room for, at least one.
@@ -254,10 +261,10 @@ export function engravingMarks(text: string | undefined): Mark[][] {
           const squeeze = centres > ROW_REACH * 2 ? (ROW_REACH * 2) / centres : 1;
           const room = Math.min(SHIFT_MOST, Math.max(0, ROW_REACH - (centres * squeeze) / 2));
           // Where the hand would start it: a little off the middle, or for the last row a little in from the left, as a short line ends a verse.
-          const lean = last ? H() * 0.3 : (H() - 0.5) * 2 * Math.min(room, 0.3);
+          const lean = last ? LAST_IN[0] + H() * (LAST_IN[1] - LAST_IN[0]) : rows.length === 0 && push ? push * room : (H() - 0.5) * 2 * Math.min(room, 0.3);
           // And where it may start instead, a little either side of that, to keep its spaces off the row above's.
           for (let k = 0; k <= 12; k++) {
-            const shift = last ? (k / 12) * SHIFT_MOST : -room + (k / 12) * 2 * room;
+            const shift = last ? LAST_IN[0] + (k / 12) * (LAST_IN[1] - LAST_IN[0]) : -room + (k / 12) * 2 * room;
             let x = last ? PANEL.x - ROW_REACH + shift : PANEL.x - (centres * squeeze) / 2 + shift;
             const row: Array<{ k: number; x: number }> = [];
             // Each space as the stone shows it: from the edge of the mark before it to the edge of the mark after.
@@ -277,15 +284,27 @@ export function engravingMarks(text: string | undefined): Mark[][] {
             if (row.some((m) => Math.abs(m.x - PANEL.x) > ROW_REACH + 1e-6)) continue;
             // How far its spaces stand over the row above's, with a little to spare; how far it is from where the hand would start it; and how far from the plain wrap.
             const clash = spaces.reduce((c, [a0, b0]) => c + above.reduce((d, [p0, q0]) => d + Math.max(0, Math.min(b0, q0) - Math.max(a0, p0) + 0.15), 0), 0);
-            const sc = clash + 0.25 * Math.abs(shift - lean) + 0.08 * Math.abs(n - fit);
+            // And, dearer still, over a space clear down through every row above: that would make a gutter.
+            const down = rows.length > 1 ? spaces.reduce((c, [a0, b0]) => c + clearAll.reduce((d, [p0, q0]) => d + Math.max(0, Math.min(b0, q0) - Math.max(a0, p0) + 0.15), 0), 0) : 0;
+            const sc = 2.2 * clash + 4 * down + 0.25 * Math.abs(shift - lean) + 0.08 * Math.abs(n - fit);
             if (!best || sc < best.score - 1e-9) best = { row, spaces, score: sc, n };
           }
         }
       }
       rows.push(best!.row);
       above = best!.spaces;
+      every.push(best!.spaces);
+      clearAll = rows.length === 1 ? best!.spaces : clearAll.flatMap(([a0, b0]) => best!.spaces.map(([p0, q0]) => [Math.max(a0, p0), Math.min(b0, q0)] as [number, number])).filter(([a0, b0]) => b0 > a0 - 0.15);
       at += best!.n;
       score += best!.score;
+    }
+    // And never a space running down through every row: what is clear in all of them, which a hand would see as a gutter.
+    if (every.length > 1) {
+      let clear: Array<[number, number]> = every[0];
+      for (const sp of every.slice(1)) {
+        clear = clear.flatMap(([a0, b0]) => sp.map(([p0, q0]) => [Math.max(a0, p0), Math.min(b0, q0)] as [number, number])).filter(([a0, b0]) => b0 > a0);
+      }
+      score += clear.reduce((n, [a0, b0]) => n + 100 + 100 * (b0 - a0), 0);
     }
     return { rows, score };
   };
@@ -293,7 +312,10 @@ export function engravingMarks(text: string | undefined): Mark[][] {
   let H = rand(h % 100000 + 7);
   for (let hand = 0, least = Infinity; hand < 16; hand++) {
     const Hh = rand(h % 100000 + 7 + hand * 7919);
-    const got = lay(Hh);
+    // The later hands set the first row hard to one side or the other, for a line whose rows would otherwise leave a space clear down them all.
+    const got = lay(Hh, hand < 8 ? 0 : hand % 2 ? 1 : -1);
+    // Only where it must be: a pushed hand pays for it.
+    if (hand >= 8) got.score += 2;
     if (got.score < least) {
       least = got.score;
       rows = got.rows;
@@ -730,7 +752,7 @@ function modelOf(text: string, facing: Side): Model {
          * front is +), lower than either broad face's, wandering back across
          * the edge toward the back's as it climbs.
          */
-        ivy(g, V, G * 0.6, 0.1, 2.8, 1, G * 1.3, G * 0.3, 0.85);
+        ivy(g, V, G * 0.6, 0.1, 2.8, 1, G * 1.3, G * 0.3, 0.6);
         g.restore();
       },
     };
