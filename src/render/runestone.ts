@@ -95,6 +95,26 @@ export function inset(poly: readonly Pt[], d: number): Pt[] {
   });
 }
 
+/**
+ * The same with each edge drawn in by its own distance, `ds[i]` for the edge
+ * from corner i to the next: the faces of a slab chamfered by eye, no two the
+ * same width.
+ */
+export function insetBy(poly: readonly Pt[], ds: readonly number[]): Pt[] {
+  const n = poly.length;
+  return poly.map((p, i) => {
+    const j = (i + n - 1) % n, a = poly[j], b = poly[(i + 1) % n];
+    const l1 = Math.hypot(p[0] - a[0], p[1] - a[1]) || 1, l2 = Math.hypot(b[0] - p[0], b[1] - p[1]) || 1;
+    const u1: Pt = [(p[0] - a[0]) / l1, (p[1] - a[1]) / l1], u2: Pt = [(b[0] - p[0]) / l2, (b[1] - p[1]) / l2];
+    const p1: Pt = [p[0] - u1[1] * ds[j], p[1] + u1[0] * ds[j]], p2: Pt = [p[0] - u2[1] * ds[i], p[1] + u2[0] * ds[i]];
+    const det = u2[0] * u1[1] - u1[0] * u2[1];
+    if (Math.abs(det) < 1e-6) return p1;
+    const rx = p2[0] - p1[0], ry = p2[1] - p1[1];
+    const t = (u2[0] * ry - u2[1] * rx) / det;
+    return [p1[0] + u1[0] * t, p1[1] + u1[1] * t] as Pt;
+  });
+}
+
 /** Smooth noise over the plane, nought to one, a cell a unit wide: where moss has got to and where it has not. */
 export function noise2(x: number, y: number, seed: number): number {
   const ix = Math.floor(x), iy = Math.floor(y);
@@ -262,6 +282,8 @@ export interface PlateOpts {
   edge?: (i: number, up: number) => { paint?: Painter; over?: Painter } | undefined;
   /** Leave out the face along the bottom edge, which stands in the ground. */
   sunk?: boolean;
+  /** How wide each edge's chamfer is, edge i running from corner i of the outline (as drawn anticlockwise), in place of `bevel`. */
+  bevels?: number[];
   /**
    * Where through it its thickness is centred, and how thick each way, at a
    * point (s, t) of its outline, given how thick it would be there: so the
@@ -273,7 +295,11 @@ export interface PlateOpts {
 
 export function plate(o: PlateOpts): Face[] {
   const outline = area2(o.outline) < 0 ? o.outline.slice().reverse() : o.outline;
-  const inner = inset(outline, o.bevel);
+  const inner = o.bevels ? insetBy(outline, o.bevels) : inset(outline, o.bevel);
+  // How deep the chamfer is at a corner: its own, or the two edges' at it between them.
+  const deep = new Map<Pt, number>();
+  if (o.bevels) outline.forEach((p, i) => deep.set(p, (o.bevels![i] + o.bevels![(i + outline.length - 1) % outline.length]) / 2));
+  const bev = (p: Pt): number => deep.get(p) ?? o.bevel;
   const f = (o.half[1] - o.half[0]) / o.tTop;
   const h = (t: number): number => o.half[0] + f * t;
   const P = ([s, t]: Pt, side: number): V3 => at(o.o, [s, o.U], [t, o.W], [side, o.A]);
@@ -281,8 +307,8 @@ export function plate(o: PlateOpts): Face[] {
   const mid = (p: Pt): [number, number] => o.depthAt?.(p[0], p[1], h(p[1])) ?? [0, h(p[1])];
   const front = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c + hh); };
   const back = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c - hh); };
-  const frontEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c + hh - o.bevel); };
-  const backEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c - (hh - o.bevel)); };
+  const frontEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c + hh - bev(p)); };
+  const backEdge = (p: Pt): V3 => { const [c, hh] = mid(p); return P(p, c - (hh - bev(p))); };
   const faces: Face[] = [];
   const face = (pts: V3[], expect: V3, extra: Partial<Face> = {}): void => {
     let n = newell(pts);
