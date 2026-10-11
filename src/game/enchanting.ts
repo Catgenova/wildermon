@@ -12,16 +12,20 @@
  * words; `supabase/test/enchant.ts` holds the two to each other.
  */
 import type { ActionDef, Target } from './actions';
-import { BLOW_SHARE, maxHealth, SPECIES, type Creature } from './creatures';
-import { QL_BARE, QL_LOW, QL_SPAN, type Game } from './game';
-import { describeWith, itemDef, itemName, type Item } from './items';
-import { WEAPON_BY_ID, WEAPONS } from './gear';
+import { maxHealth, SPECIES, type Creature } from './creatures';
+import { QL_BARE, QL_LOW, QL_SPAN, type Game, type PlacedEnchantable } from './game';
+import { describeWith, ITEM_DEFS, itemDef, itemName, type Item } from './items';
+import { FURNITURE } from './furniture';
+import { CRATE_DEFS } from './crates';
+import { CATCH_MOST, TRAPS } from './traps';
+import { ARMOUR, ARMOUR_BY_ID, isArmour, isShield, SHIELDS, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
-import { DAMAGE_MAX, QL_TOP } from './limits';
+import { BLOW_SHARE, DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
+import { HELD_LIGHTS } from './light';
 import {
-  alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
-  enchantChance, enchantHitChance, enchantPct, enchantQl, enchantValue, qlWord, ROLLED_EFFECTS, scrollOf, wrongKind,
+  alreadyEnchanted, ENCHANTERS_PLINTH, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
+  enchantChance, enchantFigure, enchantHitChance, enchantPct, enchantQl, EMBERWARD_CAP, enchantValue, FROST_PACE, FROST_SECS, GRACE_TILES, qlWord, SECOND_FIGURE, STONESKIN_CAP, THORNHIDE_CAP, ROLLED_EFFECTS, scrollOf, SHOT_EFFECTS, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
@@ -69,6 +73,8 @@ export const EFFECT_SAID: Partial<Record<EnchantEffect, string>> = {
   bleed: 'opens the {t} up, and it bleeds.',
   stun: `stuns the {t} for ${STUN_SECS} seconds.`,
   venom: 'puts venom in the {t}.',
+  flame: 'sets the {t} burning.',
+  frost: `slows the {t} to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds.`,
 };
 
 /** Every hostile monster, by name, for what Sunstrike is harder on. */
@@ -91,10 +97,51 @@ export function enchantLine(e: EnchantmentDef): string {
       return `every hit with it that lands and leaves the creature standing gives you back {v} of the damage it deals as health, each point of it worth ${enchantPct(BLOW_SHARE)} of your health, as a creature's blow is.`;
     case 'drain':
       return 'every hit with it that lands puts the creature\'s next blow back by {v} of the time between its blows.';
+    case 'range': return 'it reaches {v} further.';
+    case 'flame': return `a shot from it that lands sets the target burning {v} of the time. ${EFFECT_TAIL.burn}`;
+    case 'frost':
+      return `a shot from it that lands slows the target to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds {v} of the time; `
+        + 'another on one already slowed starts it again rather than adding on.';
+    case 'guard':
+      return `while it is worn, every blow that reaches you lands {v} lighter; each piece with it adds its share, ${enchantPct(STONESKIN_CAP)} at most together.`;
+    case 'fireguard':
+      return `while it is worn, a burn that reaches you lands {v} lighter; each piece with it adds its share, ${enchantPct(EMBERWARD_CAP)} at most together.`;
+    case 'stride': return 'while they are worn, you walk {v} faster.';
+    case 'thorns':
+      return 'while it is worn, a creature whose blow lands on you takes {v} of the damage it did you back, as a blow of yours of that size would hurt it; '
+        + `each piece with it adds its share, ${enchantPct(THORNHIDE_CAP)} at most together.`;
+    case 'shadow': return 'while it is worn, at night a hunting creature notices you from {v} closer.';
+    case 'block': return '{v} is added to the shield\'s chance of turning a blow aside, past the most a shield otherwise blocks.';
+    case 'work': return 'a job done with it takes {v} less time.';
+    case 'temper': return 'it takes {v} less damage from use.';
+    case 'bounty': return 'a bush harvested with a sickle, or a fish landed with a rod, brings one more {v} of the time.';
+    case 'grace': return `a candle set in it, or the torch when it is struck, burns {v} longer, and it throws its light ${GRACE_TILES} tiles further.`;
+    case 'learn': return 'while it is worn, every go at any trade teaches {v} more skill.';
+    case 'knack': return 'while it is worn, the chance of a knack from a go is {v} greater.';
+    case 'wind': return 'while it is worn, your stamina comes back {v} faster.';
+    case 'upkeep': return 'while it is worn, hunger and thirst fall {v} slower.';
+    case 'favour': return 'while it is worn, a prayer gives {v} more favour.';
+    case 'calm': return 'while it is worn, a sitting banks {v} more Calm.';
+    case 'mule': return 'while it is carried, you carry {v} more before the weight tells on you; each pack with it adds its own.';
+    case 'swim': return 'while it is worn, you swim {v} faster, never past a walk, and swimming costs {v} less stamina.';
+    case 'sight': return 'while it is worn, you see {v} further.';
+    case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
+    case 'ember': return 'it burns {v} less fuel for the same work: a firebox full keeps it hot that much longer.';
+    case 'master': return `a thing made at it comes out {v} higher, never past QL ${QL_TOP}; where more than one is within reach, the best counts.`;
+    case 'sail': return 'under sail she goes {v} faster, on every point of sail.';
+    case 'room': return 'it takes {v} more, in things or in kilos, whichever it is measured in.';
+    case 'bag': return 'it holds {v} more, in things, kilos or litres, whichever it is measured in; what is in it still weighs all it weighs.';
+    case 'snare': return `its chance of taking a creature that comes to it is {v} better, never past ${enchantPct(CATCH_MOST)}; a creel's chance of taking a fish, {v} better.`;
+    case 'mend': return 'a drag with it brings up {v} more fish on the average, and it wears {w} slower.';
+    case 'fleet': return 'a mount wearing it carries you {v} faster, after its makers\' marks on its tack.';
+    case 'tame': return 'an offering made with it in your pack is {v} likelier to tame, and a mount wearing it never breaks off a fight, however far from you the fight goes.';
+    case 'dream': return 'a night in it banks {v} more rest, and you can hold {v} more rest than the most otherwise banked.';
   }
 }
 /** That line with its figure at this quality. */
-export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e).replace('{v}', enchantPct(enchantValue(e, ql)));
+export const enchantLineAt = (e: EnchantmentDef, ql: number): string => enchantLine(e)
+  .replaceAll('{v}', enchantFigure(e, enchantValue(e, ql)))
+  .replaceAll('{w}', enchantPct(enchantValue(e, ql) * (SECOND_FIGURE[e.effect] ?? 0)));
 
 /** Examine's line for a thing holding an enchantment, or nothing. */
 export function enchantSays(item: Pick<Item, 'enchant'>): string {
@@ -117,24 +164,137 @@ export const meleeNames = (): string => listed(MELEE_WEAPONS.map((id) => itemDef
 export const fitsOn = (on: EnchantOn, id: string): boolean => {
   switch (on) {
     case 'melee': return isMelee(id);
+    case 'bow': return isBowId(id);
+    case 'armour': return isArmour(id);
+    case 'boots': return ARMOUR_BY_ID.get(id)?.slot === 'feet';
+    case 'chest': return ARMOUR_BY_ID.get(id)?.slot === 'chest';
+    case 'shield': return isShield(id);
+    case 'tool': return jobTools().has(id);
+    case 'reaper': return REAPERS.includes(id);
+    case 'pick': return id === 'pickaxe';
+    case 'light': return (HELD_LIGHTS as readonly string[]).includes(id);
+    case 'ring': return id === 'jewelled_ring';
+    case 'pack': return PACKS.includes(id);
+    case 'head': return ARMOUR_BY_ID.get(id)?.slot === 'head';
+    case 'amulet': return id === 'jewelled_pendant';
+    case 'furnace': return FURNACES.includes(id);
+    case 'station': return STATIONS.includes(id);
+    case 'ship': return SHIPS().includes(id);
+    case 'hull': return HULLS().includes(id);
+    case 'cart': return CARTS().includes(id);
+    case 'store': return STORES().includes(id);
+    case 'trap': return id in TRAPS;
+    case 'net': return id === 'fishing_net';
+    case 'bed': return BEDS().includes(id);
+    case 'saddle': return id === 'saddle';
+    case 'bridle': return id === 'bridle';
   }
 };
+/** What Dreamweave goes on: every piece that is slept in. */
+export const BEDS = (): string[] => FURNITURE.filter((f) => f.bed).map((f) => f.id);
+/** What Ember Heart goes on, where it stands. */
+export const FURNACES = ['smelter', 'kiln'];
+/** What Masterwork goes on, where it stands: the two places a thing is made at that stand on the ground. */
+export const STATIONS = ['anvil', 'loom'];
+/** What Fair Wind goes on: the boats that carry a sail. */
+export const SHIPS = (): string[] => FURNITURE.filter((f) => f.boat?.sail).map((f) => f.id);
+/** What Deep Hold goes on: every boat. */
+export const HULLS = (): string[] => FURNITURE.filter((f) => f.boat).map((f) => f.id);
+/** What True Axle goes on: what is pulled on wheels. */
+export const CARTS = (): string[] => FURNITURE.filter((f) => !f.boat && (f.vehicle || f.id === 'cart') && (f.capacity || f.heft)).map((f) => f.id);
+/**
+ * What Bag of Holding goes on: everything that holds things -- every piece
+ * that keeps things, kilos or litres (`furnitureCapacity`, `furnitureHeft`,
+ * `liquidCapacity`) but a hive and a pond, which fill themselves; the crates;
+ * and every bag (`bagRoom`).
+ */
+export const STORES = (): string[] => [
+  ...FURNITURE.filter((f) => (f.capacity || f.heft || f.liquid) && !f.hive && !f.pond && !f.well).map((f) => f.id),
+  ...Object.values(CRATE_DEFS).map((c) => c.item),
+  ...Object.entries(ITEM_DEFS).filter(([, d]) => d.holds).map(([id]) => id),
+];
+/** What Packmule goes on: the packs that are carried. */
+export const PACKS = ['backpack', 'satchel'];
+/** What Bountiful goes on: the tools a bush is harvested and a fish caught with. */
+export const REAPERS = ['sickle', 'fishing_rod'];
+/**
+ * Every tool a job is done with: whatever any job names as its tool. The job
+ * table is `actions.ts`'s, which loads after this and hands it over
+ * (`knowJobs`); a value import of it here would load the two in a circle.
+ */
+let jobs: () => readonly ActionDef[] = () => [];
+let toolSet: Set<string> | undefined;
+export const knowJobs = (all: () => readonly ActionDef[]): void => { jobs = all; toolSet = undefined; };
+export const jobTools = (): Set<string> =>
+  (toolSet ??= new Set(jobs().flatMap((a) => (a.tool && ITEM_DEFS[a.tool] ? [a.tool] : [])).sort()));
+/** A bow: a weapon that shoots, rather than one that is swung or thrown. */
+export const isBowId = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.ammo;
+/** Every bow there is. */
+export const BOWS: string[] = WEAPONS.filter((w) => isBowId(w.id)).map((w) => w.id);
 /** Every item id each kind of enchantment goes on, for the help and the island. */
-export const FITS: Record<EnchantOn, string[]> = { melee: MELEE_WEAPONS };
+export const FITS: Record<EnchantOn, string[]> = {
+  melee: MELEE_WEAPONS,
+  bow: BOWS,
+  armour: ARMOUR.map((a) => a.id),
+  boots: ARMOUR.filter((a) => a.slot === 'feet').map((a) => a.id),
+  chest: ARMOUR.filter((a) => a.slot === 'chest').map((a) => a.id),
+  shield: Object.keys(SHIELDS),
+  get tool() { return [...jobTools()]; },
+  reaper: REAPERS,
+  pick: ['pickaxe'],
+  light: [...HELD_LIGHTS],
+  ring: ['jewelled_ring'],
+  pack: PACKS,
+  head: ARMOUR.filter((a) => a.slot === 'head').map((a) => a.id),
+  amulet: ['jewelled_pendant'],
+  furnace: FURNACES,
+  station: STATIONS,
+  get ship() { return SHIPS(); },
+  get hull() { return HULLS(); },
+  get cart() { return CARTS(); },
+  get store() { return STORES(); },
+  get trap() { return Object.keys(TRAPS); },
+  net: ['fishing_net'],
+  get bed() { return BEDS(); },
+  saddle: ['saddle'],
+  bridle: ['bridle'],
+};
 
 /* ---- the Enchant job ------------------------------------------------------ */
 
-/** Why this scroll will not go into this weapon, or the three of them when it will. */
-export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: Item; weapon: Item; e: EnchantmentDef } {
-  const scroll = t.kind === 'item' && t.scroll !== undefined ? g.inventory.get(t.scroll) : undefined;
+/** The kinds of target a scroll can be aimed at: a thing in the pack, or a thing standing on the ground (`Game.placedFor`). */
+const SCROLL_TARGETS: ReadonlySet<Target['kind']> = new Set(['item', 'furniture', 'smelter', 'kiln', 'anvil', 'trap', 'crate']);
+const scrollUid = (t: Target): number | undefined => (SCROLL_TARGETS.has(t.kind) ? (t as { scroll?: number }).scroll : undefined);
+
+/** What a scroll is going into: a thing in the pack, or a thing standing where it was set down. */
+export type EnchantInto = { item: Item } | { placed: PlacedEnchantable };
+
+/** Why this scroll will not go into this thing, or the three of them when it will. */
+export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: Item; into: EnchantInto; e: EnchantmentDef } {
+  const uid = scrollUid(t);
+  const scroll = uid !== undefined ? g.inventory.get(uid) : undefined;
   const e = scroll ? scrollOf(scroll.id) : undefined;
   if (!scroll || !e) return { why: ENCHANT_SAID.scroll };
-  const weapon = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
-  if (!weapon) return { why: ENCHANT_SAID.weapon };
-  if (!fitsOn(e.on, weapon.id)) return { why: wrongKind(e) };
-  if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
-  if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
-  return { scroll, weapon, e };
+  // Done standing at an enchanter's plinth, and nowhere else (`enchant.ts`).
+  if (!g.atStation(ENCHANTERS_PLINTH)) return { why: ENCHANT_SAID.plinth };
+  if (t.kind === 'item') {
+    const weapon = g.inventory.get(t.uid);
+    if (!weapon) return { why: ENCHANT_SAID.weapon };
+    if (!fitsOn(e.on, weapon.id)) return { why: wrongKind(e) };
+    if (weapon.dmg >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
+    if (weapon.enchant) return { why: alreadyEnchanted(weapon.enchant) };
+    return { scroll, into: { item: weapon }, e };
+  }
+  // Something standing where it was set down: enchanted there, from within reach, if it is yours to use.
+  const placed = g.placedFor(t);
+  if (!placed) return { why: ENCHANT_SAID.gone };
+  if (Math.hypot(placed.at[0] - g.player.x, placed.at[1] - g.player.y) > PLACED_REACH) return { why: ENCHANT_SAID.reach };
+  const shut = placed.lock ? g.lockRefusal({ lock: placed.lock, x: placed.thing.x, y: placed.thing.y }) : null;
+  if (shut) return { why: shut };
+  if (!fitsOn(e.on, placed.def)) return { why: wrongKind(e) };
+  if ((placed.thing.dmg ?? 0) >= DAMAGE_MAX) return { why: ENCHANT_SAID.broken };
+  if (placed.thing.enchant) return { why: alreadyEnchanted(placed.thing.enchant) };
+  return { scroll, into: { placed }, e };
 }
 
 /** What may take this scroll, of what is in the pack: everything of the kind it goes on. */
@@ -148,6 +308,16 @@ export function enchantedSaid(e: EnchantmentDef, name: string, kind: string, ql:
   const by = held === 'item' ? `, held to the ${kind}'s QL ${qlWord(itemQl)}` : held === 'scroll' ? `, held to the scroll's QL ${qlWord(scrollQl)}` : '';
   return `${e.name} goes into the ${name} at QL ${qlWord(ql)}${by}. The scroll is used up.`;
 }
+/**
+ * What a go that did not take on a thing standing where it was set down says.
+ * It takes the scroll's harm, but no more than leaves it whole: a placed thing
+ * never goes to pieces from a scroll (`ENCHANT_SAID.standing`).
+ */
+export function placedNotTakenSaid(e: EnchantmentDef, name: string, harm: number, dmg: number): string {
+  return `The ${e.name} scroll does not take. The ${name} takes ${qlWord(harm)} damage and is at ${qlWord(dmg)}. The scroll is used up.`;
+}
+/** The damage a scroll that did not take leaves on a placed thing: its harm, held short of broken. */
+export const placedHarm = (dmg: number): number => Math.min(DAMAGE_MAX - 1, dmg + ENCHANT_HARM);
 /** What a go that did not take says: what happened to the weapon. */
 export function notTakenSaid(e: EnchantmentDef, name: string, how: 'broke' | 'harm' | 'harmBroke', dmg: number): string {
   const head = `The ${e.name} scroll does not take`;
@@ -170,7 +340,7 @@ export const ENCHANT_ACTIONS: ActionDef[] = [
     hidden: true,
     stamina: ENCHANT_WIND,
     baseTime: ENCHANT_TIME,
-    applies: (t) => t.kind === 'item' && t.scroll !== undefined,
+    applies: (t) => scrollUid(t) !== undefined,
     check: (t, g) => {
       const s = enchantSetting(g, t);
       return 'why' in s ? s.why : null;
@@ -178,13 +348,31 @@ export const ENCHANT_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const s = enchantSetting(g, t);
       if ('why' in s) return;
-      const { scroll, weapon, e } = s;
+      const { scroll, into, e } = s;
       const skill = g.skills.get(ENCHANTING);
-      const name = itemName({ ...weapon, count: 1 }).toLowerCase();
       // Both rolls first, as the island takes them: whether it takes, then its quality or whether the weapon breaks.
       const r1 = g.rand();
       const r = g.rand();
       g.inventory.remove(scroll.uid, 1);
+      if ('placed' in into) {
+        const { thing, def, name } = into.placed;
+        const said = name.toLowerCase();
+        if (r1 < enchantChance(skill, scroll.ql)) {
+          const { ql, held } = enchantQl(skill, scroll.ql, thing.ql, (base) => craftSpread(base, r));
+          thing.enchant = { id: e.id, ql };
+          g.logMsg(enchantedSaid(e, said, itemDef(def).name.toLowerCase(), ql, held, scroll.ql, thing.ql), 'event');
+        } else {
+          g.missed();
+          const was = thing.dmg ?? 0;
+          thing.dmg = placedHarm(was);
+          g.logMsg(placedNotTakenSaid(e, said, thing.dmg - was, thing.dmg), 'error');
+        }
+        g.events.emit('world', Math.floor(into.placed.at[0]), Math.floor(into.placed.at[1]));
+        g.events.emit('inventory');
+        return;
+      }
+      const weapon = into.item;
+      const name = itemName({ ...weapon, count: 1 }).toLowerCase();
       if (r1 < enchantChance(skill, scroll.ql)) {
         const { ql, held } = enchantQl(skill, scroll.ql, weapon.ql, (base) => craftSpread(base, r));
         weapon.enchant = { id: e.id, ql };
@@ -265,12 +453,41 @@ export function enchantWorks(g: Game, e: EnchantmentDef, ql: number, c: Creature
     case 'venom': venom(g, c); break;
     case 'leech': g.player.stats.health = Math.min(1, g.player.stats.health + leechHeal(e, ql, dealt)); break;
     case 'drain': c.cooldown = Math.max(0, c.cooldown) + drainSecs(e, ql, c); break;
+    case 'flame': own.burn(); break;
+    case 'frost': frost(g, c); break;
     default: break;
   }
   const said = enchantHitSaid(e, SPECIES[c.species]?.name.toLowerCase() ?? 'thing');
   if (said) g.logMsg(said, 'fight');
 }
 
+
+/**
+ * The enchantment on the bow a shot that landed came from, when its roll comes
+ * up this time, or null: Flamearrow and Frostbite. Asked once a landed shot is
+ * done with, of a creature still alive; the island's `enchant_shot` asks the
+ * same, one roll each side.
+ */
+export function shotRoll(g: Game, bow: Item | null | undefined, c: Creature): EnchantmentDef | null {
+  const e = bow?.enchant && ENCHANTMENTS[bow.enchant.id];
+  if (!e || !bow?.enchant || c.health <= 0 || !SHOT_EFFECTS.has(e.effect)) return null;
+  return g.rand() < enchantHitChance(e, bow.enchant.ql) ? e : null;
+}
+
+/**
+ * A frost: for `FROST_SECS` from now it goes at `FROST_PACE` of its pace; on
+ * one already slowed it runs from now rather than adding on. The island's
+ * `enchant_frost`, which keeps it in the creature's `slow` and `slow_until`.
+ */
+export function frost(g: Game, c: Creature): void {
+  if (c.health <= 0) return;
+  // The stronger of it and any slow already holding, to the later end, as `enchant_frost` keeps it.
+  const running = (c.slowUntil ?? 0) > g.time;
+  c.slowPace = running ? Math.min(c.slowPace ?? 1, FROST_PACE) : FROST_PACE;
+  c.slowUntil = Math.max(running ? c.slowUntil ?? 0 : 0, g.time + FROST_SECS);
+}
+/** Whether it is slowed now. */
+export const slowed = (g: Game, c: Creature): boolean => (c.slowUntil ?? 0) > g.time;
 
 /**
  * A stun: for `STUN_SECS` from now it neither moves nor strikes, and a heavy

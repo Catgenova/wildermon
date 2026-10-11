@@ -1,6 +1,6 @@
 import { hashOf, rand } from './ivy';
 import {
-  add, area2, at, boulder, canvasOf, css, cushion, cut, dot, drawFaces, drawPads, eyeOf, flowerClump, glowOf, glyphPath, grassTuft, groundNear,
+  add, area2, at, bakeGlow, boulder, canvasOf, css, cushion, cut, dot, drawFaces, drawPads, eyeOf, flowerClump, glyphPath, grassTuft, groundNear,
   hex, lichen, mix, mul, newell, noise2, plate, proj, roundelStrokes, scaleFor, strokesPath, TAU, toneOf,
   type Eye, type Glow, type NightHole, type NightMask, type Pad, type Painter, type Pt, type Thing, type Tone, type V3,
 } from './runestone';
@@ -1465,7 +1465,9 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
       if (r.face !== key) continue;
       // Drawn at play zoom the groove's light is a little heavier, so a lit gate reads as lit; the bloom and the night's cut-out are half a Runestone's, so a small rune stays its own shape.
       const stroke = (r.roundel ? 0.55 : 0.68) * (scale <= 1 ? 1.45 : 1);
-      const gl = glowOf(M, r, scale, stroke, 0.5, 0.5);
+      // Baked as a Runestone's are (`bakeGlow`): its grooves `stroke` of a Runestone's, its glow half as wide, and the night cut in its own shape half as wide.
+      const path = (h: CanvasRenderingContext2D): void => (r.roundel ? strokesPath(h, roundelStrokes(r.roundel), r.x, r.z, r.s) : glyphPath(h, r.glyph, r.x, r.z, r.s));
+      const gl = bakeGlow(M, path, r.x, r.z, r.s, !!r.roundel, r.o, scale, (r.roundel ? 0.62 : 0.78) * stroke, 0.5, {}, 0.5);
       const shade = scale <= 1 ? grooveShade(M, r, scale, gl.box, (r.roundel ? 0.62 : 0.78) * stroke) : null;
       glows.push({ ...gl, o: r.o, roundel: !!r.roundel, front: onFront, shade, key });
       const [gx, gy, gw, gh] = gl.box, had = lightOf.get(plateOf(key));

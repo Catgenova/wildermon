@@ -290,7 +290,8 @@ export const FAITH_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return;
       const hour = g.hourOfDay();
-      const gained = prayerWorth(f.ql, hour, g.skills.get(PRAYER));
+      // And more for a Favoured worn (`perform_faith`).
+      const gained = prayerWorth(f.ql, hour, g.skills.get(PRAYER)) * (1 + g.wornEnchant('favour'));
       const cap = favourCap(g.skills.get(FAITH));
       const before = g.player.favour;
       g.player.favour = Math.min(cap, before + gained);

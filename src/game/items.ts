@@ -9,7 +9,7 @@ import { CIRCLET_SHARE, CIRCLET_STONES, JEWEL_BONUS } from './gems';
 import { TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, TELESTONE } from './runestones';
 import { elementIslands, MOTE_ELEMENTS, moteItem, moteName, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT } from './motes';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, type Enchant,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTMENT_LIST, enchantMarker, ON_WORDS, roomMul, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, type Enchant,
 } from './enchant';
 
 export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
@@ -484,6 +484,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   // The two a lantern is fitted to, and burns at for everybody: see `lamps.ts`.
   lamp_post: { name: 'Lantern post', category: 'misc', weight: 12, decay: 4, description: 'A squared timber post with an iron arm off its head. Set it down and hang a lantern of yours on it: the lantern throws its own reach for everybody at night, {light.lanternNear:w} tiles at the roughest and {light.lanternFar:w} at the best, and a candle in it burns as long as in that lantern in your hand, {light.candleShort:span} to {light.candleLong:span}. It is lit, put out and given a candle as a lantern is.' },
   lamp_pillar: { name: 'Lantern pillar', category: 'misc', weight: 60, decay: 3, description: 'A coursed stone pillar with an iron cage in its top. Set it down and stand a lantern of yours in it: the lantern throws its own reach for everybody at night, {light.lanternNear:w} tiles at the roughest and {light.lanternFar:w} at the best, and a candle in it burns as long as in that lantern in your hand, {light.candleShort:span} to {light.candleLong:span}. It is lit, put out and given a candle as a lantern is.' },
+  // And one with no lantern in it: see `runelantern.ts`.
+  rune_lantern: { name: 'Rune lantern post', category: 'misc', weight: 60, decay: 3, description: 'A squat stone pillar with a band of runes round its head and light motes set in them. Set it down and at night it lights the ground round it for everybody as a lantern of its own quality does, {light.lanternNear:w} tiles at the roughest and {light.lanternFar:w} at the best. It takes no lantern and no candle, and never goes out.' },
   ale_bucket: { name: 'Bucket of ale', category: 'food', weight: 6, decay: 2, drink: 0.4, charges: 5, description: 'Thin, sour and honest. Drink it and the work goes easier for a good while.', feeds: { starch: 0.12 } },
   cider_bucket: { name: 'Bucket of cider', category: 'food', weight: 6, decay: 2, drink: 0.45, charges: 5, description: 'Pressed apples gone dangerous. A trade comes easier after it.', feeds: { greens: 0.1 } },
   juice_bucket: { name: 'Bucket of juice', category: 'food', weight: 6, decay: 6, drink: 0.5, charges: 5, description: 'Fruit pressed under a quern, sweet and cloudy, with nothing dangerous in it. Drink it while it is fresh.', feeds: { greens: 0.1 } },
@@ -526,6 +528,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   spindle: { name: 'Spindle', category: 'misc', weight: 5, decay: 4, description: 'Spins wool, cotton and wemp into yarn. Stand at it to work.' },
   loom: { name: 'Loom', category: 'misc', weight: 30, decay: 4, description: 'Weaves yarn into cloth. Stand at it to work.' },
   // Reed is pressed into papyrus at one of these and nowhere else (`enchant.ts`).
+  enchanters_plinth: { name: 'Enchanter\'s plinth', category: 'misc', weight: 60, decay: 3, description: 'A carved stone table, runes round its rim and its top dished. Enchant, putting a scroll into a thing, is done standing within {reach} tiles of the middle of one set down on the ground, and nowhere else; writing a scroll needs none.' },
   paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'A wooden screw press. Reed is pressed into papyrus standing at one set down on the ground, and nowhere else.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
   smelter: { name: 'Smelter', category: 'misc', weight: 52, decay: 3, description: 'A stone smelter, built flat-packed and bedded in where you set it down. Turns ore into lumps, and mixes alloys. It stands on your own deed.' },
@@ -651,7 +654,8 @@ for (const e of ENCHANTMENT_LIST) {
       + `never under ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}, and the enchantment comes out at about that average, never above the scroll's QL `
       + `and never above the QL of what it goes into. If it does not take, that takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces outright and is gone. `
       + `The scroll is used up either way, and a thing holds one enchantment. {enchant.${e.id}.does}`
-      + `${ROLLED_EFFECTS.has(e.effect) ? ' Only an ordinary melee swing that lands sets it off; class blows, shots and throws don\'t.' : ''} `
+      + `${ROLLED_EFFECTS.has(e.effect) ? ' Only an ordinary melee swing that lands sets it off; class blows, shots and throws don\'t.' : ''}`
+      + `${SHOT_EFFECTS.has(e.effect) ? ' Only an ordinary shot from the bow that lands sets it off; class shots don\'t.' : ''} `
       + `A scroll that fails in the writing loses its motes, and its sheet of papyrus takes ${SCROLL_HARM} damage.`,
   };
 }
@@ -1006,7 +1010,8 @@ export const RARITY_ROOM = 0.05;
 export function roomFor(base: number, thing: { rare?: number }): number {
   const plain = Math.round(base);
   const step = Math.max(0, Math.min(RARITIES.length - 1, thing.rare ?? 0));
-  return step ? plain + Math.max(step, Math.round(plain * RARITY_ROOM * step)) : plain;
+  // A measure the thing has none of stays none: a rare larder counts things, and never gains a kilo of heft.
+  return step && plain > 0 ? plain + Math.max(step, Math.round(plain * RARITY_ROOM * step)) : plain;
 }
 
 /**
@@ -1131,7 +1136,7 @@ export const itemWeight = (item: { id: string; extra?: string; count: number; in
 
 /** How many a bag takes, or nothing at all for the things that are not bags. */
 /** What a bag holds: its make, its maker's mark (a Tailor's Sack Maker and Deep Pockets), and its rarity. The island's `bag_room`. */
-export const bagRoom = (item: Item): number => roomFor((itemDef(item.id).holds ?? 0) * markOf(item, 'hold'), item);
+export const bagRoom = (item: Item): number => roomFor((itemDef(item.id).holds ?? 0) * markOf(item, 'hold') * roomMul(item), item);
 export const isBag = (item: Item): boolean => bagRoom(item) > 0;
 export const bagUnits = (item: Item): number => (item.inside ?? []).reduce((n, it) => n + it.count, 0);
 /** How much more a bag will take. */
@@ -1193,7 +1198,9 @@ export function sameStack(a: Item, b: Item): boolean {
   return a.id === b.id && !a.locked && !b.locked && !a.lit && !b.lit
     && a.extra === b.extra && a.rare === b.rare && a.dye === b.dye
     && a.bless === b.bless && a.maker === b.maker && a.piece === b.piece
-    && !!a.issued === !!b.issued && a.charges === b.charges && sameMark(a, b);
+    && !!a.issued === !!b.issued && a.charges === b.charges && sameMark(a, b)
+    // An enchanted saddle or bridle is a pile of its own, by the enchantment and its quality.
+    && a.enchant?.id === b.enchant?.id && a.enchant?.ql === b.enchant?.ql;
 }
 
 /** Fold one thing into another, both quality and damage by the unit. */
@@ -1331,7 +1338,7 @@ export class Inventory {
     this.well.next = v;
   }
 
-  add(id: string, opts: { ql?: number; count?: number; extra?: string; issued?: boolean; piece?: string; mark?: Mark; rare?: number; maker?: string } = {}): Item {
+  add(id: string, opts: { ql?: number; count?: number; extra?: string; issued?: boolean; piece?: string; mark?: Mark; rare?: number; maker?: string; enchant?: Item['enchant'] } = {}): Item {
     const def = itemDef(id);
     const count = opts.count ?? 1;
     const ql = Math.max(1, Math.min(100, opts.ql ?? 20));
@@ -1343,6 +1350,8 @@ export class Inventory {
     if (opts.piece) item.piece = opts.piece;
     // Marked before it is folded in, so it goes on the pile with the same mark or starts one of its own.
     if (opts.mark && Object.keys(opts.mark).length) item.mark = opts.mark;
+    // And enchanted the same way: a saddle back off a mount with its Fleetfoot in it.
+    if (opts.enchant) item.enchant = opts.enchant;
     if (def.charges) item.charges = def.charges;
     return this.addItem(item);
   }

@@ -21,7 +21,7 @@ import { CLASSES } from './classes';
 import { CIRCLET_STONES } from './gems';
 import { SKILL_DEFS } from './skills';
 import { CANDLE_DRAWN } from './light';
-import { ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_SHEETS, scrollOf } from './enchant';
+import { ENCHANTERS_PLINTH, ENCHANTING, ENCHANTMENT_LIST, PAPER_PRESS, PLINTH_NAME, SCROLL_DIFFICULTY, SCROLL_HARM, SCROLL_SHEETS, scrollOf } from './enchant';
 import { DAMAGE_MAX } from './limits';
 
 /** What working a thing out with your hands teaches the head. */
@@ -66,9 +66,10 @@ const article = (id: string): string => (/^[aeiou]/.test(lower(id)) ? 'an ' : 'a
 export type RecipeCategory = 'Woodwork' | 'Furniture' | 'Stonework' | 'Clay & thatch' | 'Cloth' | 'Alchemy' | 'Writing' | 'Cooking' | 'Smelting' | 'Glassblowing'
   | 'Jewellery' | 'Mending' | 'Enchanting';
 /** A place a recipe has to be worked at, beyond what is carried. */
-export type Station = 'campfire' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS;
+export type Station = 'campfire' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH;
 /** What a station is called where a recipe says it wants one. The island's `station_name` is generated from this. */
-export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press' };
+export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press',
+  [ENCHANTERS_PLINTH]: PLINTH_NAME };
 
 export interface RecipeInput {
   item: string;
@@ -509,7 +510,7 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave).map((f) =>
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
   label: `Build ${f.name.toLowerCase()}`,
-  verb: `building a ${f.name.toLowerCase()}`,
+  verb: `building ${/^[aeiou]/i.test(f.name) ? 'an' : 'a'} ${f.name.toLowerCase()}`,
   baseTime: f.time,
   stamina: 0.05,
   difficulty: f.difficulty,
@@ -1287,8 +1288,9 @@ export function recipeAction(r: Recipe): ActionDef {
        * ceiling is the parts; nothing is finer than what it is made of.
        */
       const rolled = r.qlFromInputs ? Math.max(1, Math.min(100, fromInputs * inputKeep(g, r))) : g.productQl(r.skill, toolQl(g) + (oven ? oven.ql * 0.3 : 0));
-      // And better for a perk on the recipe (a Cook's Fine Fare), and a scroll never better than its sheet, whatever made it.
-      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1));
+      // And better for a perk on the recipe (a Cook's Fine Fare), and for a Masterwork on the station it is made at
+      // (`Game.masterAt`), and a scroll never better than its sheet, whatever made it.
+      const better = Math.min(100, rolled * g.perk(`ql:${r.id}`, 1) + (r.station ? g.masterAt(r.station) : 0));
       const ql = sheet === undefined ? better : Math.min(better, sheet);
       // More, the go a bauble on the trade comes up in the altar of the settlement
       // you work on, and more again for a perk (a Carpenter's Clean Sawing).

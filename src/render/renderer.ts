@@ -39,6 +39,8 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
+import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
+import { isRuneLantern } from '../game/runelantern';
 import { drawRuneGate, gateVariant, RUNE_GATE_OPENING } from './runegate';
 import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
@@ -215,6 +217,10 @@ import {
   CELLAR_DARK, CELLAR_DARK_INK, CELLAR_FALL, CELLAR_VEIL, cellarFloor, cellarFloorHeight, cellarOrder, cutFace, earthEnd, earthFace, faceOn, KERB, OUT, UNDER,
   flightShade, SHAFT_STOPS, shaftAlpha, shaftShade, sidesOf, type CellarCanvas,
 } from './cellar';
+// After the rest: the game's tables are read as these load (`plinth.ts`).
+import { drawPlinthRunes, plinthNight } from './plinth';
+import { plinthBusy } from '../game/plinth';
+import { ENCHANTERS_PLINTH } from '../game/enchant';
 
 /** Result of picking a screen point: the tile, the approximate world position and the nearest corner. */
 /**
@@ -1641,6 +1647,18 @@ export class Renderer {
   private lit: { mask: HTMLCanvasElement; warm: HTMLCanvasElement; key: string; cx: number; cy: number; pad: number } | null = null;
   private litNow: { mask: HTMLCanvasElement; warm: HTMLCanvasElement } | null = null;
 
+  /** Each rune lantern post's spot at its foot near enough to matter (`runeLanternPool`), as `lights` gathers what burns. */
+  private runeLanternPools(): LightSource[] {
+    const out: LightSource[] = [];
+    const { x: px, y: py, level } = this.game.player;
+    if (level < 0) return out;
+    for (const f of this.game.furniture.values()) {
+      if (!isRuneLantern(f) || (f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
+      out.push(runeLanternPool(f, this.camera.rotation));
+    }
+    return out;
+  }
+
   private lightLayers(lights: LightSource[], w: number, h: number): { mask: HTMLCanvasElement; warm: HTMLCanvasElement; box: Box } {
     const cam = this.camera;
     const zoom = cam.zoom;
@@ -1704,16 +1722,25 @@ export class Renderer {
         const a = (l.castAlpha ?? 0.16 * l.strength) * (l.soft ? lightHole(l.radius) : 1);
         const [r0, g0, b0] = (l.cast ?? '255, 186, 92').split(',').map((v) => Number(v) * a);
         let grad: CanvasGradient;
-        if (l.soft) grad = fallGradient(g, p.sx, p.sy, p.r, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`);
+        // A pool on the ground flattened as the ground is seen (`LightSource.flat`): laid round its middle squashed up and down.
+        const flat = l.flat ?? 1;
+        const cy = flat === 1 ? p.sy : 0, cx = flat === 1 ? p.sx : 0;
+        if (flat !== 1) {
+          g.save();
+          g.translate(p.sx, p.sy);
+          g.scale(1, flat);
+        }
+        if (l.soft) grad = fallGradient(g, cx, cy, p.r, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`);
         else {
-          grad = g.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, p.r);
+          grad = g.createRadialGradient(cx, cy, 0, cx, cy, p.r);
           grad.addColorStop(0, `rgb(${Math.round(r0)}, ${Math.round(g0)}, ${Math.round(b0)})`);
           grad.addColorStop(1, 'rgb(0, 0, 0)');
         }
         g.fillStyle = grad;
         g.beginPath();
-        g.arc(p.sx, p.sy, p.r, 0, Math.PI * 2);
+        g.arc(cx, cy, p.r, 0, Math.PI * 2);
         g.fill();
+        if (flat !== 1) g.restore();
       }
       g.globalCompositeOperation = 'source-over';
     };
@@ -1726,7 +1753,7 @@ export class Renderer {
     const live = lights.filter((l) => !l.steady);
     // Not where the camera is: the layers are slid with it (`lit`).
     const key = `${lw}x${lh}|${zoom},${cam.rotation}|`
-      + steady.map((l) => `${l.x.toFixed(3)},${l.y.toFixed(3)},${this.standTop(l.x, l.y)},${l.radius},${l.strength},${l.cast ?? ''},${l.castAlpha ?? ''}`).join(';');
+      + steady.map((l) => `${l.x.toFixed(3)},${l.y.toFixed(3)},${this.standTop(l.x, l.y)},${l.radius},${l.strength},${l.cast ?? ''},${l.castAlpha ?? ''},${l.flat ?? ''}`).join(';');
     const slid = (at: { cx: number; cy: number }): [number, number] => [(at.cx - cam.cx) * zoom, (at.cy - cam.cy) * zoom];
     const stale = (at: NonNullable<Renderer['lit']>): boolean => {
       const [ox, oy] = slid(at);
@@ -3026,7 +3053,7 @@ export class Renderer {
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
-    this.lightsNow = this.game.darkness() > 0.02 ? this.game.lights() : [];
+    this.lightsNow = this.game.darkness() > 0.02 ? [...this.game.lights(), ...this.runeLanternPools()] : [];
     this.glassNight.length = 0;
     // Every drawbridge by the border it is hinged on, and the two tiles either side of that border, one of
     // which draws it (`drawGateAt`): a number per tile, so the tiles with none cost one lookup.
@@ -5054,6 +5081,25 @@ export class Renderer {
             });
           }, undefined, pieceBox);
           drawn = box;
+        } else if (isRuneLantern(piece)) {
+          /*
+           * A rune lantern post, drawn as the runestones are (`runelantern.ts`):
+           * its bake under the pointer's ring, its runes' light and motes over
+           * it, and after dark its runes taken off the night in their own
+           * shapes, kept off whatever stands in front of it (`RunestoneNight`).
+           */
+          const look = this.runeLook(piece);
+          const turn = this.camera.rotation, dark = this.game.darkness();
+          const [hl, ht, hr, hb] = runeLanternHit(look, turn, zoom);
+          const box: [number, number, number, number] = [ent.sx + (hl - 12) * zoom, ent.sy + (ht - 12) * zoom, (hr - hl + 24) * zoom, (hb - ht + 20) * zoom];
+          // Its bloom under it, lighting the ground and whatever stands behind it, not its own stone.
+          drawRuneLanternBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+          this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+            drawRuneLantern(g, px, py, zoom, look, turn, dark, this.time, false);
+          }, undefined, box);
+          drawRuneLanternLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+          this.runeNight.source(ctx, ent.sx, ent.sy, zoom, runeLanternNight(look, turn, zoom), this.time);
+          drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
         } else {
           /*
            * Only the first of her layers when she is drawn in layers round her
@@ -5070,6 +5116,19 @@ export class Renderer {
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(), clothInWind(piece.kind) ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());
+          /*
+           * An enchanter's plinth's runes, over its stone and outside the ring under the pointer: faint at rest and
+           * bright while somebody enchants at it (`plinth.ts`); after dark taken off the night in their own shapes and
+           * kept off whatever stands in front of them, as a runestone's are (`RunestoneNight`).
+           */
+          if (piece.kind === ENCHANTERS_PLINTH) {
+            const busy = plinthBusy(this.game, piece), trim = this.pieceTrim(piece), dark = this.game.darkness();
+            drawPlinthRunes(ctx, ent.sx, ent.sy, zoom, view, trim, dark, busy, this.time);
+            if (dark > 0.02) {
+              const lit = plinthNight(ent.sx, ent.sy, zoom, view, trim, busy, this.time);
+              this.runeNight.glowing(ctx, ...lit.box, lit.holes, lit.masks);
+            }
+          }
           // Not indoors: a roof or a wall stands in front of it there, and the night cut away at its stars would be cut out of that.
           if (glowsAtNight(piece.kind) && !this.game.buildings.buildingAt(Math.floor(piece.x), Math.floor(piece.y))) {
             this.glows.push({ sx: ent.sx, sy: ent.sy, kind: piece.kind, view });
@@ -5483,7 +5542,9 @@ export class Renderer {
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;
       const px = cam.worldToScreenX(wx, wy);
       const py = cam.worldToScreenY(wx, wy, below ? cellarFloorHeight(this.game, ghost.x, ghost.y) : this.pieceBase({ kind: ghost.piece }, wx, wy));
-      drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
+      if (isRuneLantern({ kind: ghost.piece })) {
+        drawRuneLantern(ctx, px, py, zoom, { facing: ghost.facing, stage: 0, stages: PIECE_STAGES, variant: runeLanternVariant(ghost.x, ghost.y, ghost.sx, ghost.sy) }, cam.rotation, 0, this.time);
+      } else drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
       if (!ghost.ok) {
         const [W, D] = furnitureSpan(ghost.piece);
         ctx.fillStyle = 'rgba(214, 58, 42, 0.5)';
@@ -9594,7 +9655,8 @@ export class Renderer {
       ctx.globalAlpha = was;
       if (alpha < 1) return;
       if (this.runeNight.active) this.runeNight.occlude(ctx, d.img, d.x, d.y, d.w, d.h);
-      if (d.lightBox) this.runeNight.light(ctx, sx, sy, d.lightBox, d.holes, d.masks);
+      // Its runes take the night off themselves through the one night the runestones use, their shapes given as drawn at (sx, sy) moved by (dx, dy).
+      if (d.lightBox) this.runeNight.glowing(ctx, ...d.lightBox, (dx, dy) => d.holes(sx + dx, sy + dy), (dx, dy) => d.masks(sx + dx, sy + dy));
     };
     // What stands behind the opening now; what stands in front of it once this line's bodies are drawn (`flushGateFront`).
     layer('back');
@@ -13554,6 +13616,13 @@ export class Renderer {
     if (piece.helm || piece.riders?.length) this.pieceHeadings.set(piece.id, Math.round(this.game.shipHeading(piece) / step) * step);
     const heading = this.pieceHeadings.get(piece.id);
     return heading !== undefined ? headingView(heading, this.camera.rotation) : pieceView(pieceFacing(piece), this.camera.rotation);
+  }
+
+  /** How a rune lantern post is drawn: the way it faces, its moss as the stage of a statue's would be, and which of its cuts it is. */
+  private runeLook(f: PlacedFurniture): RuneLanternLook {
+    const days = pieceGreen(this.game, f, this.greenAt) ?? 0;
+    const stage = Math.round(greenShows(days, 0, this.wetness(f.x, f.y)) * PIECE_STAGES);
+    return { facing: pieceFacing(f), stage, stages: PIECE_STAGES, variant: runeLanternVariant(f.x, f.y, f.sx, f.sy) };
   }
 
   private pieceTrim(f: PlacedFurniture): number | undefined {

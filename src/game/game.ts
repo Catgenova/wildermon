@@ -1,5 +1,5 @@
 import { Springs, type SpringSave } from './springs';
-import { DAMAGE_MAX, QL_TOP } from './limits';
+import { DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { rankAtLeast, type DeedRole } from './ranks';
@@ -23,12 +23,12 @@ import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
 import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, type BuildingsJSON, type Building, type Wall, type Side } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
-import { crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
-import { anvilAnchor, anvilCovers, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
+import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
+import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { smelterAnchor, smelterCentre, smelterCovers, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
-import { kilnAnchor, kilnCovers, KILN_SUBTILES, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, type BoatDef } from './furniture';
+import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
+import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef } from './furniture';
 import { emptyCrate, occupiedRefusal, shutIn } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
@@ -42,7 +42,7 @@ import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, type LogEntry, type LogKind } from './events';
 import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, type Mark, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unrestored } from './items';
-import type { Enchant } from './enchant';
+import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, standsOn, walkKey, writePlayer, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
@@ -87,9 +87,11 @@ import {
   SHRUG_SAID, gatherSpot, skySaid, STRUCK_SAID, surgeSaid, TECHNIQUE_GAIN, tookSaid, traceNone, traceSaid, unbrokenSaid, type PathBeat, type PathId, type PathSaid,
 } from './meditation';
 import { ledgerTotals, record, type Ledger } from './ledger';
-import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReach, HELD_LIGHTS, lanternReach, OVEN_REACH, runestoneLight, type LightSource } from './light';
+import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, OVEN_REACH, plinthLight, runestoneLight, type LightSource } from './light';
+import { plinthBusy } from './plinth';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
+import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/sound';
 import { lockRefusal, type Lockable } from './locks';
@@ -101,6 +103,17 @@ export type { ActiveAction } from './actor';
 
 /** A settlement: a square of land around a token that the player may build on. */
 /** One place on the deed that holds things, whatever it is underneath. */
+/** A thing standing on the ground that a scroll can be set into where it stands (`Game.placedFor`). */
+export interface PlacedEnchantable {
+  thing: { x: number; y: number; ql: number; enchant?: Enchant; dmg?: number };
+  /** What it is by the catalogue: the item it was in the pack. */
+  def: string;
+  name: string;
+  /** Its middle, in tiles. */
+  at: [number, number];
+  lock?: number;
+}
+
 export interface DeedStore {
   x: number;
   y: number;
@@ -1512,7 +1525,8 @@ export class Game {
     const load = heft ? Math.min(1, furnitureKg(f) / heft) : cap ? Math.min(1, furnitureUnits(f) / cap) : 0;
     // And her builder's hand in her, for a hull a Carpenter laid the keel of,
     // and the hand at her helm: Sailing (`sailingPace`).
-    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(this.skills.get(SAILING));
+    // And a Fair Wind set into her, on every point of sail (`enchanting.ts`), which only a boat with a sail takes.
+    return hullSpeed(def, f.ql, body, weather, load) * markOf(f, 'speed') * sailingPace(this.skills.get(SAILING)) * (1 + swingEnchant(f, 'sail'));
   }
 
   /**
@@ -2042,6 +2056,56 @@ export class Game {
   }
 
   /**
+   * The thing standing on the ground that a job is aimed at, when it is one a
+   * scroll can be set into where it stands: a piece of furniture, a smelter, a
+   * kiln, an anvil or a trap. With it, what it is by the catalogue (`def`, the
+   * item it was in the pack and goes back to), what to call it, and where its
+   * middle is, which is what "within reach" is measured to. The island's
+   * `placed_def` and `placed_in_reach` answer the same.
+   */
+  placedFor(t: Target): PlacedEnchantable | undefined {
+    if (t.kind === 'furniture') {
+      const f = this.furniture.get(t.id);
+      return f && { thing: f, def: f.kind, name: furnitureName(f), at: furnitureCentre(f), lock: f.lock };
+    }
+    if (t.kind === 'smelter') {
+      const p = this.smelters.get(t.id);
+      return p && { thing: p, def: 'smelter', name: smelterName(p), at: smelterCentre(p) };
+    }
+    if (t.kind === 'kiln') {
+      const p = this.kilns.get(t.id);
+      return p && { thing: p, def: 'kiln', name: kilnName(p), at: kilnCentre(p) };
+    }
+    if (t.kind === 'anvil') {
+      const p = this.anvils.get(t.id);
+      return p && { thing: p, def: 'anvil', name: anvilName(p), at: anvilCentre(p) };
+    }
+    if (t.kind === 'trap') {
+      const p = this.traps.get(t.id);
+      return p && { thing: p, def: p.kind, name: trapName(p), at: trapCentre(p) };
+    }
+    if (t.kind === 'crate') {
+      const c = this.crates.get(t.id);
+      return c && { thing: c, def: CRATE_DEFS[c.kind].item, name: crateName(c), at: crateCentre(c), lock: c.lock };
+    }
+    return undefined;
+  }
+  /** Everything standing within reach that a scroll could be set into, for the scroll's menu (`placedFor`). */
+  placedNear(range = PLACED_REACH): { target: Target; placed: PlacedEnchantable }[] {
+    const near: { target: Target; placed: PlacedEnchantable }[] = [];
+    const ids: [Target['kind'], Iterable<number>][] = [
+      ['furniture', this.furniture.keys()], ['smelter', this.smelters.keys()], ['kiln', this.kilns.keys()],
+      ['anvil', this.anvils.keys()], ['trap', this.traps.keys()], ['crate', this.crates.keys()],
+    ];
+    for (const [kind, keys] of ids) for (const id of keys) {
+      const target = { kind, id } as Target;
+      const placed = this.placedFor(target);
+      if (placed && Math.hypot(placed.at[0] - this.player.x, placed.at[1] - this.player.y) <= range) near.push({ target, placed });
+    }
+    return near;
+  }
+
+  /**
    * On the one settlement this browser calls its own, and no other.
    *
    * What an upgrade is counted against. `onDeed` is "may I work here" and is
@@ -2238,7 +2302,8 @@ export class Game {
    */
   swimWind(): number {
     if (this.pathHolds('lungs') || this.pathHolds('unbroken')) return 0;
-    return SWIM_WIND * Math.max(0.4, 1 - this.skills.get('swimming') / 200) * this.pathFx('swim', 1);
+    // And less for a Seal's Coat worn (`body_settle`).
+    return SWIM_WIND * Math.max(0.4, 1 - this.skills.get('swimming') / 200) * this.pathFx('swim', 1) * (1 - this.wornEnchant('swim'));
   }
 
   /** Body stamina makes the same work cost less wind; armour makes it dearer. */
@@ -2647,7 +2712,9 @@ export class Game {
   carryLimit(): number {
     // And whatever a trade's perks add to it: a Terraformer's Strong Back.
     // And Power's Pack Mule.
-    return CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0);
+    // And a Packmule on each pack carried (`pack_mule`).
+    return CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0)
+      + this.inventory.items.reduce((n, it) => n + swingEnchant(it, 'mule'), 0);
   }
 
   /** How far past the limit you are, 0 when you are inside it. */
@@ -2699,7 +2766,8 @@ export class Game {
       // Less of a chance for every other thing on you than the one that struck (`CROWD_BLOCK`).
       const crowd = Math.max(0, 1 - CROWD_BLOCK * this.othersOnYou());
       // And what a Sworn Blade's Shield Mastery adds, under the ceiling it raises (`blockChance`).
-      const chance = blockChance(sh.block, shield.ql, this.skills.get('shields'), (k, o) => this.perk(k, o)) * crowd;
+      // And a Bulwark's points on top, past the ceiling (`worn_enchant`).
+      const chance = (blockChance(sh.block, shield.ql, this.skills.get('shields'), (k, o) => this.perk(k, o)) + this.wornEnchant('block')) * crowd;
       this.gainSkill('shields', 0.12);
       if (this.rand() < chance) {
         // Less for a Mender's Armour Care, as `hurt_player` has it.
@@ -2763,7 +2831,8 @@ export class Game {
     let through = raw * stanceTaken(this.settings.fightStance, perk) * (1 - this.dodge());
     const shield = this.worn('offhand');
     const sh = shield && SHIELDS[shield.id];
-    if (sh) through *= 1 - blockChance(sh.block, shield.ql, this.skills.get('shields'), perk);
+    if (sh) through *= 1 - Math.min(1, blockChance(sh.block, shield.ql, this.skills.get('shields'), perk) + this.wornEnchant('block'));
+    through *= this.enchantTaken(kind);
     let soaked = 0;
     for (const [slot, share] of HIT_LOCATIONS) {
       const item = this.worn(slot);
@@ -2823,8 +2892,9 @@ export class Game {
     const still = this.time - this.movedAt >= FIGHT_BACK_STILL ? this.perk('still:taken', 1) : 1;
     // and less from a creature that is burning for a Kindler's Flame Ward.
     const ward = from && (from.burnUntil ?? 0) > this.time ? this.perk('ward:burning', 1) : 1;
-    const hit = this.absorb(raw * stanceTaken(this.settings.fightStance, (k, o) => this.perk(k, o)) * (flank ? FLANK_HIT : 1) * still * ward,
-      kind);
+    // And lighter for a Stoneskin you wear, and a burn lighter for an Emberward (`enchant_guard`).
+    const hit = this.absorb(raw * stanceTaken(this.settings.fightStance, (k, o) => this.perk(k, o)) * (flank ? FLANK_HIT : 1) * still * ward
+      * this.enchantTaken(kind), kind);
     if (hit.blocked) {
       this.player.attackedAt = this.time;
       this.events.emit('hit', this.player.x, this.player.y, 0, 'taken');
@@ -2836,6 +2906,9 @@ export class Game {
     const retort = this.perk('retort:each', 0);
     if (retort > 0 && from) this.burn(from, retort, this.perk('retort:secs', 0));
     // Less of it on you while your companion beside you takes its share, for a Beastmaster's Shared Wounds (`class_bond_take`).
+    // And a Thornhide's share of what landed back on whatever struck, as a blow of yours that size would hurt it (`worn_enchant`).
+    const prick = this.wornEnchant('thorns');
+    if (prick > 0 && from && from.health > 0) this.creatures.hurt(this, from, (hit.taken * prick) / BLOW_SHARE, 'player');
     const lost = this.bondTake(hit.taken, from);
     this.player.stats.health = Math.max(0, this.player.stats.health - lost);
     // A blow that would kill you leaves you standing, once in so long, for Power's Hard to Kill (`path_hard_to_kill`).
@@ -3185,7 +3258,7 @@ export class Game {
     for (const it of this.inventory.items) {
       if (!it.lit || (it.charges ?? 0) <= 0) continue;
       if (!(HELD_LIGHTS as readonly string[]).includes(it.id)) continue;
-      if (!best || heldReach(it.id, it.ql) > heldReach(best.id, best.ql)) best = it;
+      if (!best || heldReachOf(it) > heldReachOf(best)) best = it;
     }
     return best;
   }
@@ -3221,7 +3294,7 @@ export class Game {
     const near = (x: number, y: number): boolean => Math.abs(x - px) < 60 && Math.abs(y - py) < 60;
     const lamp = this.litLantern();
     // Carried down into a cellar, it lights the cellar and nothing up here (`cellarLights`).
-    if (lamp && this.player.level >= 0) out.push({ x: px, y: py, radius: lanternReach(lamp.ql), strength: 0.92, steady: true, level: this.player.level });
+    if (lamp && this.player.level >= 0) out.push({ x: px, y: py, radius: heldReachOf(lamp), strength: 0.92, steady: true, level: this.player.level });
     for (const f of this.campfires.values()) {
       if (!f.lit || !near(f.x, f.y)) continue;
       const [cx, cy] = fireCentre(f);
@@ -3231,9 +3304,19 @@ export class Game {
       // A piece down in a cellar lights nothing up here: an altar's glow stays under the floor.
       if (!near(f.x, f.y) || (f.level ?? 0) < 0) continue;
       const [cx, cy] = furnitureCentre(f);
+      // A rune lantern throws what a lantern of its quality throws, and needs nothing to (`runelantern.ts`).
+      if (isRuneLantern(f)) {
+        out.push(runeLanternLight(f));
+        continue;
+      }
       // A lantern post throws what its lantern throws, from under the lantern (`lamps.ts`).
       if (isLampPiece(f)) {
         if (lampBurning(f)) out.push(lampLight(f));
+        continue;
+      }
+      // An enchanter's plinth's runes, brighter while somebody enchants at it (`plinth.ts`).
+      if (f.kind === ENCHANTERS_PLINTH) {
+        out.push(plinthLight(cx, cy, plinthBusy(this, f)));
         continue;
       }
       if (f.lit) out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: 0.8 });
@@ -3271,7 +3354,7 @@ export class Game {
     const out: LightSource[] = [];
     const held = this.heldLight();
     if (held && this.player.level < 0) {
-      out.push({ x: this.player.x, y: this.player.y, radius: heldReach(held.id, held.ql), strength: 0.94, steady: held.id !== 'torch', level: CELLAR_LEVEL });
+      out.push({ x: this.player.x, y: this.player.y, radius: heldReachOf(held), strength: 0.94, steady: held.id !== 'torch', level: CELLAR_LEVEL });
     }
     const day = 1 - this.darkness();
     if (day <= 0.01) return out;
@@ -3339,11 +3422,36 @@ export class Game {
     return this.darkness() > 0.45;
   }
 
+  /** What every piece you wear and hold of one enchantment comes to together, to its cap (`wornEnchant`, the island's `worn_enchant`). */
+  wornEnchant(effect: EnchantEffect): number {
+    return wornEnchant(Object.values(this.player.equipped).map((uid) => (uid === null || uid === undefined ? null : this.inventory.get(uid))), effect);
+  }
+
+  /** What hunger and thirst fall at: a body's own rate times Power's Enduring and a Hearthbound worn (`body_settle`). */
+  upkeepMul(): number {
+    return this.pathFx('upkeep', 1) * (1 - this.wornEnchant('upkeep'));
+  }
+
+  /** What a Steady Heart worn makes of the wind coming back (`body_settle`). */
+  windMul(): number {
+    return 1 + this.wornEnchant('wind');
+  }
+
+  /** What is left of a blow of this kind after the Stoneskin and Emberward you wear (`enchant_guard`). */
+  enchantTaken(kind: WoundKind): number {
+    return (1 - this.wornEnchant('guard')) * (kind === 'burn' ? 1 - this.wornEnchant('fireguard') : 1);
+  }
+
+  /** How far a hunter notices you from, as a share of how far it would: less at night in a Shadowcloak (`enchant_shadow`). */
+  shadowNotice(): number {
+    return this.isNight() ? 1 - Math.min(1, this.wornEnchant('shadow')) : 1;
+  }
+
   /**
    * Sleep until morning. The world does not stop for it: fires burn down,
    * crops come on and everything left outside ages by however long you slept.
    */
-  sleepUntilMorning(rest: number, what: string): void {
+  sleepUntilMorning(rest: number, what: string, dream = 0): void {
     const h = this.hourOfDay();
     const wake = DAWN + WAKE_AFTER_DAWN;
     const hours = h < wake ? wake - h : 24 - h + wake;
@@ -3381,8 +3489,8 @@ export class Game {
     s.hunger = Math.max(0, s.hunger - 0.2);
     s.thirst = Math.max(0, s.thirst - 0.25);
     this.gainSkill('body_stamina', 0.3 * rest);
-    // A good bed banks more of the night than a poor one.
-    const banked = this.bankRest(seconds, rest);
+    // A good bed banks more of the night than a poor one, and a Dreamweave in it more again.
+    const banked = this.bankRest(seconds, rest, dream);
     const bank = banked > 1 ? ` You have ${clockLeft(this.player.rested)} of rest in you; while it burns, everything teaches you twice as much.` : '';
     this.logMsg(
       skipped
@@ -3431,6 +3539,8 @@ export class Game {
     // And the stone you wear, worth a knack on the one trade it favours.
     // A jewel worn, and a circlet on the head, for each stone of theirs that favours it.
     mult += jewelGain(this.worn('jewel'), id) + jewelGain(this.worn('head'), id);
+    // And a Scholar's Band worn, on every trade.
+    mult += this.wornEnchant('learn');
     // And a reader's Attentive, for good, and a Clarity while it lasts (`meditation.ts`).
     mult += this.pathFx('learn', 0);
     if (this.player.clarityUntil > this.time) mult += PATH_PICK_BY_ID.get('knowledge_clarity')?.fx.more ?? 0;
@@ -3494,7 +3604,8 @@ export class Game {
    * teaches you.
    */
   private earnKnacks(skill: string, base: number): void {
-    if (this.rand() >= knackChance(skill, base, this.pathFx('knack', 1))) return;
+    // A Knackstone worn multiplies with a reader's Polymath (`earn_knacks`).
+    if (this.rand() >= knackChance(skill, base, this.pathFx('knack', 1) * (1 + this.wornEnchant('knack')))) return;
     const id = knackLands(skill, this.rand);
     const had = this.player.knacks[id] ?? 0;
     if (had >= KNACK_CAP) return;
@@ -3739,9 +3850,10 @@ export class Game {
   }
 
   /** Bank a night's sleep as rest, up to the hour that will stay banked. */
-  bankRest(seconds: number, quality: number): number {
+  bankRest(seconds: number, quality: number, dream = 0): number {
     const before = this.player.rested;
-    this.player.rested = Math.min(REST_CAP, before + seconds * REST_PER_SECOND * quality);
+    // What a Dreamweave in the bed adds, to the night and to the most that is held.
+    this.player.rested = Math.max(before, Math.min(REST_CAP * (1 + dream), before + seconds * REST_PER_SECOND * quality * (1 + dream)));
     return this.player.rested - before;
   }
 
@@ -3959,7 +4071,8 @@ export class Game {
     p.spellPace = this.time < this.paceUntil ? this.paceMul : 1;
     // And Power's Long Stride, and a Surge while it holds, which nothing slows (`travel_speed`).
     const surge = this.pathHolds('surge');
-    p.pathPace = this.pathFx('stride', 1) * (surge ? PATH_PICK_BY_ID.get('power_surge')?.fx.pace ?? 1 : 1);
+    // And quicker in a Featherstep's boots (`travel_speed`).
+    p.pathPace = this.pathFx('stride', 1) * (surge ? PATH_PICK_BY_ID.get('power_surge')?.fx.pace ?? 1 : 1) * (1 + this.wornEnchant('stride'));
     p.unslowed = surge;
     // Only wheels feel the ground: a boat is on water and feet are feet.
     p.wheelLoad = driven ? this.vehicleLoad(driven) : 0;
@@ -4022,8 +4135,8 @@ export class Game {
     const keep = upkeepMul(p.nutrition);
     for (const k of NUTRIENTS) p.nutrition[k] = Math.max(0, p.nutrition[k] - dt * NUTRIENT_DECAY);
     if (!this.bodyFromIsland) {
-      // And slower for Power's Enduring.
-      const upkeep = this.pathFx('upkeep', 1);
+      // And slower for Power's Enduring and a Hearthbound worn.
+      const upkeep = this.upkeepMul();
       s.hunger = Math.max(0, s.hunger - dt * HUNGER_RATE * keep * upkeep);
       s.thirst = Math.max(0, s.thirst - dt * THIRST_RATE * keep * upkeep);
     } else {
@@ -4042,7 +4155,7 @@ export class Game {
        * `bodyForward` is `body_settle` to the letter and deliberately not the
        * richer version above it — see the note on it.
        */
-      const wind = 1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL;
+      const wind = (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
       // What the wounds are taking, by the island's own sum — `woundDrain` and
       // `wound_drain` are the same arithmetic over the same table.
       const drain = p.wounds.reduce((n, w) => n + woundDrain(w), 0);
@@ -4062,7 +4175,7 @@ export class Game {
       const spend = doing && a.def.stamina > 0 && !this.pathHolds('unbroken')
         ? (a.def.stamina * body) / Math.max(0.001, a.duration)
         : 0;
-      const now = bodyForward(s, dt, { acting: doing, wind, drain, spend, upkeep: this.pathFx('upkeep', 1) });
+      const now = bodyForward(s, dt, { acting: doing, wind, drain, spend, upkeep: this.upkeepMul() });
       s.hunger = now.hunger;
       s.thirst = now.thirst;
       s.stamina = now.stamina;
@@ -4085,7 +4198,8 @@ export class Game {
     p.maxStep = this.climbStep();
     p.maxDrop = this.dropStep();
     p.maxStand = this.standSlope();
-    p.swimSpeed = Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033);
+    // And faster for a Seal's Coat worn, but never past a walk, which is all the island lets a body cover (`travel_speed`).
+    p.swimSpeed = Math.min(1, Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033) * (1 + this.wornEnchant('swim')));
     if (p.lastClimb > 0) {
       /*
        * Only ground that would have turned you back at the start teaches you
@@ -4142,7 +4256,7 @@ export class Game {
       }
     } else if (!performing && !this.bodyFromIsland) {
       // Body stamina is what gets your wind back between jobs.
-      const wind = 1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL;
+      const wind = (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
       const regen = (moved > 0 ? WIND_WALK : WIND_REST) * wind;
       const starving = s.hunger <= 0 || s.thirst <= 0 ? WIND_STARVING : 1;
       s.stamina = Math.min(1, s.stamina + dt * regen * starving);
@@ -5297,8 +5411,40 @@ export class Game {
     const toolQl = def.tool ? Math.min(QL_TOP, this.toolQl(def.tool) + this.perk(`tool:${def.id}`, 0)) : 0;
     // And less of it on a settlement whose altar has a bauble for the trade.
     // A fight goes at the weapon's own swing, and slower on tired arms (`fight.ts`).
+    // And a Swiftwork on the tool takes its share off after the floor, as the island's `faith_steady` does.
     return goSeconds(fightBase(this, def) ?? def.baseTime, skill, toolQl, this.controlSpeed() * baublePace(this.baubleHere(), def.skill))
-      * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill);
+      * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
+  }
+
+  /**
+   * The tool of a kind a job is done with, as the island picks it: the one
+   * worth most at the work (`toolWorth`, the island's `tool_worth`).
+   */
+  jobTool(id: string): Item | undefined {
+    let best: Item | undefined;
+    let worth = -1;
+    for (const it of this.inventory.items) if (it.id === id && this.toolWorth(it) > worth) [worth, best] = [this.toolWorth(it), it];
+    return best;
+  }
+
+  /** What an enchantment on that tool comes to, for an effect it has: Swiftwork's share, Bountiful's chance. The island's `tool_enchant`. */
+  toolEnchant(id: string, effect: EnchantEffect): number {
+    return swingEnchant(this.jobTool(id), effect);
+  }
+
+  /**
+   * A go that may bring one more: a Bountiful on the sickle or the rod, a
+   * Lodestone on the pickaxe, at its chance. Gathers the one more at the
+   * quality the go made and says so. The island's `enchant_more`. Here and
+   * not in `enchanting.ts` so that the jobs calling it (fishing's among them)
+   * need nothing that loads the job table back round in a circle.
+   */
+  enchantMore(tool: string, effect: 'bounty' | 'lode', item: string, ql: number, what = itemDef(item).name.toLowerCase()): void {
+    const held = this.jobTool(tool)?.enchant;
+    const e = held && ENCHANTMENTS[held.id];
+    if (!e || e.effect !== effect || !(this.rand() < this.toolEnchant(tool, effect))) return;
+    this.gather(item, { ql });
+    this.logMsg(moreSaid(e, what), 'event');
   }
 
   /**
@@ -5391,8 +5537,10 @@ export class Game {
   wearTool(id: string, multiplier = 1): void {
     const tool = this.inventory.tool(id);
     if (!tool) return;
-    // Less for a perk on the tool (a Carpenter's Saw Care), as `wear_tool` has it.
-    this.damageItem(tool, wearPerUse(tool.ql) * multiplier * this.perk(`wear:${id}`, 1));
+    // Less for a perk on the tool (a Carpenter's Saw Care) and a Truesteel in it, as `wear_tool` has it.
+    this.damageItem(tool, wearPerUse(tool.ql) * multiplier * this.perk(`wear:${id}`, 1) * (1 - swingEnchant(tool, 'temper'))
+      // And a Netmender in a net, that many times its share of the catch.
+      * (1 - swingEnchant(tool, 'mend') * NETMENDER_WEAR));
   }
 
   /**
@@ -5966,8 +6114,8 @@ export class Game {
     const depth = waterDepth(this, t.x, t.y);
     const pool = fishHere(depth, this.skills.get('fishing'));
     if (!pool.length) return;
-    // Better odds for its maker's hand in it (a Tailor's Fisher's Friend).
-    if (this.rand() >= creelOdds(t.ql) * markOf(t, 'catch')) return;
+    // Better odds for its maker's hand in it (a Tailor's Fisher's Friend), and for a Snarecraft set into it.
+    if (this.rand() >= creelOdds(t.ql) * markOf(t, 'catch') * (1 + swingEnchant(t, 'snare'))) return;
     // What its bait draws, and what its setter's perks make of that (a Fisher's Strong Bait and Big Fish).
     const bait = t.bait ? BAIT_BY_ID.get(t.bait.id) : undefined;
     const got = pickFish(this, pool, bait, (k, d) => this.perk(k, d));
@@ -6580,8 +6728,24 @@ export class Game {
     return this.furnitureNear(station) !== undefined;
   }
 
+  /**
+   * What Masterwork adds to the quality of a thing made at a station: the best
+   * of the pieces of that kind within reach (`swingEnchant`), and none for a
+   * fire. The island's `station_master`.
+   */
+  masterAt(station: Station): number {
+    if (station === 'campfire' || station === 'smelter') return 0;
+    let most = 0;
+    this.placed.furniture.around(this.player.x, this.player.y, PLACED_REACH + 2, (f) => {
+      if (f.kind !== station) return;
+      const [cx, cy] = furnitureCentre(f);
+      if (Math.hypot(cx - this.player.x, cy - this.player.y) <= PLACED_REACH) most = Math.max(most, swingEnchant(f, 'master'));
+    }, this.player.level);
+    return most;
+  }
+
   /** The nearest piece of furniture of a kind, within arm's reach. */
-  furnitureNear(kind: string, range = 2.4): PlacedFurniture | undefined {
+  furnitureNear(kind: string, range = STATION_REACH): PlacedFurniture | undefined {
     let best: PlacedFurniture | undefined;
     this.placed.furniture.around(this.player.x, this.player.y, range + 2, (f) => {
       if (best || f.kind !== kind) return;
@@ -7596,6 +7760,8 @@ export class Game {
        * there is only you.
        */
       const at = { id: r.id, x: r.x, y: r.y, sx: r.sx, sy: r.sy, mine: r.mine };
+      // An enchantment set into it where it stands, and the wear a scroll that did not take left on it (`enchanting.ts`).
+      const kept = { ...(r.enchant ? { enchant: r.enchant } : {}), ...(r.dmg ? { dmg: r.dmg } : {}) };
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
@@ -7603,13 +7769,13 @@ export class Game {
         this.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0 });
       } else if (r.kind === 'smelter') {
         this.smelters.set(r.id, {
-          ...at, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
       } else if (r.kind === 'kiln') {
         this.kilns.set(r.id, {
-          ...at, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
@@ -7619,7 +7785,7 @@ export class Game {
         // `anvil_ql` read it back from there; `material` is never written for
         // one. Reported as "made a copper anvil and placed down an iron anvil":
         // this read `material`, found nothing, and called every anvil iron.
-        this.anvils.set(r.id, { ...at, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
+        this.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
       } else if (r.kind === 'post') {
         const p: PlacedPost = { ...at, ql: r.ql ?? 20, dmg: r.dmg ?? 0, worker: null, name: r.name ?? undefined, material: r.material ?? undefined };
         this.posts.set(r.id, p);
@@ -7630,6 +7796,7 @@ export class Game {
           bait: r.bait ? { uid: -r.id, id: r.bait, ql: r.bait_ql ?? 1, dmg: 0, count: 1 } : null,
           caught: r.caught ?? null, checkAt: this.time, name: r.name ?? undefined,
           material: r.material ?? undefined,
+          ...(r.enchant ? { enchant: r.enchant } : {}),
         };
         this.traps.set(r.id, t);
         this.placed.traps.add(t);
@@ -7638,7 +7805,7 @@ export class Game {
         this.counters.saw(r as unknown as CounterWire);
       } else if (r.kind === 'furniture') {
         this.furniture.set(r.id, {
-          ...at, ...down, kind: r.sub ?? 'chest', ql: r.ql ?? 20,
+          ...at, ...kept, ...down, kind: r.sub ?? 'chest', ql: r.ql ?? 20,
           // What the island says is in it, and empty for one too far off to
           // reach into, which is the only reason this is ever short.
           items: (r.things ?? []).map(storedThing),
@@ -7787,6 +7954,7 @@ export class Game {
         units: c.units,
         name: c.name ?? undefined, deed: c.deed ?? undefined, material: c.material ?? undefined,
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
+        ...(c.enchant ? { enchant: c.enchant } : {}), ...(c.dmg ? { dmg: c.dmg } : {}),
         /*
          * The padlock and whose it is, which the island has always sent and
          * this dropped. A craft reaches only into a store that is yours and
@@ -7966,6 +8134,7 @@ export class Game {
         units: c.units,
         name: c.name ?? undefined, deed: c.deed ?? undefined, material: c.material ?? undefined,
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
+        ...(c.enchant ? { enchant: c.enchant } : {}), ...(c.dmg ? { dmg: c.dmg } : {}),
         lock: c.lock ?? undefined, mine: c.mine,
         ...((c.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : {}),
       });
@@ -8511,9 +8680,11 @@ export class Game {
   private runSmelters(dt: number): void {
     for (const s of this.smelters.values()) {
       if (!s.lit) continue;
-      const burn = Math.min(s.fuel, dt);
-      s.ash = (s.ash ?? 0) + burn * ASH_RATE;
-      s.fuel -= burn;
+      // Seconds of heat, and the fuel they take: less of it for an Ember Heart (`furnaceBurn`).
+      const per = furnaceBurn(s);
+      const burn = Math.min(s.fuel / per, dt);
+      s.ash = (s.ash ?? 0) + burn * per * ASH_RATE;
+      s.fuel -= burn * per;
       if (s.fuel <= 0) {
         s.fuel = 0;
         s.lit = false;
@@ -8548,9 +8719,10 @@ export class Game {
   private runKilns(dt: number): void {
     for (const k of this.kilns.values()) {
       if (!k.lit) continue;
-      const burn = Math.min(k.fuel, dt);
-      k.ash = (k.ash ?? 0) + burn * ASH_RATE;
-      k.fuel -= burn;
+      const per = furnaceBurn(k);
+      const burn = Math.min(k.fuel / per, dt);
+      k.ash = (k.ash ?? 0) + burn * per * ASH_RATE;
+      k.fuel -= burn * per;
       if (k.fuel <= 0) {
         k.fuel = 0;
         k.lit = false;
@@ -9310,6 +9482,8 @@ export interface IslandPlaced {
   ql: number | null;
   fuel: number | null;
   ash: number | null;
+  /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
+  enchant?: Enchant | null;
   lit: boolean | null;
   dmg: number | null;
   name: string | null;
@@ -9382,6 +9556,10 @@ export interface IslandPlaced {
 export interface IslandCrate {
   id: number;
   kind: string;
+  /** The enchantment set into it where it stands (`enchanting.ts`), absent for none. */
+  enchant?: Enchant | null;
+  /** Its wear, out of a hundred. */
+  dmg?: number | null;
   /** The storey it stands on: -1 down in a cellar; absent from older islands, and 0 on the ground. */
   level?: number | null;
   /** The padlock fitted to it, by the number it shares with its key. */

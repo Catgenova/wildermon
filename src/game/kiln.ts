@@ -1,4 +1,5 @@
 import type { ActionDef, Target } from './actions';
+import { enchantTail, furnaceBurn, type Enchant } from './enchant';
 import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
@@ -24,6 +25,10 @@ export interface KilnJob {
 }
 
 export interface PlacedKiln {
+  /** The enchantment set into it where it stands (`enchanting.ts`), which it keeps through being picked up and set down. */
+  enchant?: Enchant;
+  /** How far gone it is, out of a hundred: a scroll that did not take on it (`enchanting.ts`). Absent is none. */
+  dmg?: number;
   /** 1 rare, 2 supreme, 3 fantastic; absent for the ordinary run of things. */
   rare?: number;
   id: number;
@@ -103,16 +108,18 @@ export function kilnAnchor(sx: number, sy: number): [number, number] {
   return [Math.max(0, Math.min(SUBTILES - KILN_SUBTILES, sx)), Math.max(0, Math.min(SUBTILES - KILN_SUBTILES, sy))];
 }
 
+/** How long its fuel keeps it hot: longer for an Ember Heart (`furnaceBurn`). */
 export const kilnBurnsFor = (k: PlacedKiln): string => {
-  const m = Math.round(k.fuel / 60);
-  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(k.fuel)} seconds`;
+  const secs = k.fuel / furnaceBurn(k);
+  const m = Math.round(secs / 60);
+  return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(secs)} seconds`;
 };
 
 export function kilnState(k: PlacedKiln): string {
   const heat = k.lit ? `firing, ${kilnBurnsFor(k)} of fuel` : k.fuel > 0 ? `laid and cold, ${kilnBurnsFor(k)} of fuel` : 'cold and empty';
   const work = k.jobs.length ? ` · ${k.jobs.length} inside` : '';
   const out = k.output.length ? ` · ${k.output.length} waiting` : '';
-  return `QL ${k.ql.toFixed(0)} · ${heat}${work}${out}`;
+  return `QL ${k.ql.toFixed(0)} · ${heat}${work}${out}${enchantTail(k)}`;
 }
 
 type KilnTarget = Extract<Target, { kind: 'kiln' }>;
@@ -144,6 +151,9 @@ export const KILN_ACTIONS: ActionDef[] = [
       const k = g.addKiln(t.x, t.y, t.sx, t.sy, item.ql);
       // A rare kiln set down is a rare kiln: it takes a bigger load.
       if (item.rare) k.rare = item.rare;
+      // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
+      if (item.enchant) k.enchant = item.enchant;
+      if (item.dmg) k.dmg = item.dmg;
       g.logMsg(`You set the ${kilnName(k).toLowerCase()} down on level ground. (QL ${k.ql.toFixed(1)}, holds ${kilnCapacity(k)}) Fill it with green ware, feed it and light it.`, 'event');
       g.events.emit('world', k.x, k.y);
     },
@@ -169,6 +179,8 @@ export const KILN_ACTIONS: ActionDef[] = [
       g.removeKiln(k.id);
       const back = g.inventory.add('kiln', { ql: k.ql });
       if (k.rare) back.rare = k.rare;
+      if (k.enchant) back.enchant = k.enchant;
+      if (k.dmg) back.dmg = k.dmg;
       g.logMsg('You lift the kiln off its base and carry it away whole.', 'event');
       g.events.emit('world', k.x, k.y);
     },
