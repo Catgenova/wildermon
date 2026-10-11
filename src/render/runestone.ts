@@ -427,7 +427,7 @@ export const cushion = (R: () => number, share = 1): number => (0.6 + 1.8 * R() 
 export type Pad = [number, number, number, number];
 /** The greens a cushion is painted in: its rim, the dark and the shade under it, its body, and its lights. */
 export interface MossPalette { line: string; dark: string; under: string; fill: string; lit: string; top: string }
-const RUNESTONE_MOSS: MossPalette = { ...MOSS, top: '#c3dea6' };
+export const RUNESTONE_MOSS: MossPalette = { ...MOSS, top: '#c3dea6' };
 
 export function drawPads(g: Ctx, ps: readonly Pad[], pal: MossPalette = RUNESTONE_MOSS): void {
   const pass = (fill: string, k: number, dx: number, dy: number, min = 0, every = 1): void => {
@@ -2043,6 +2043,9 @@ export interface Glow {
   fine?: boolean;
   /** For a fine one, its strokes in the Runestones' night cream, to be laid over it after dark. */
   cream?: HTMLCanvasElement;
+  /** And its strokes again in a warm gold, laid on as light after dark (`lift` strong): where they are under a pixel wide, so they come up to a Runestone's and stay warm. */
+  glint?: HTMLCanvasElement;
+  lift?: number;
 }
 
 interface Baked {
@@ -2213,8 +2216,14 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
       h.stroke();
     }
   });
+  /*
+   * A fine one baked for the smallest scale has its strokes under a pixel
+   * wide: its light and its night shape kept narrower there, so the stone
+   * shows dark between them and it is a wheel and not a lit disc.
+   */
+  const small = !!o.fine && scale <= 1;
   const dusk = sheet((h) => {
-    for (const [k, al] of (o.tight ? [[1.7, 0.12], [1.25, 0.2]] : [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]]) as Array<[number, number]>) {
+    for (const [k, al] of (small ? [[1.2, 0.1], [0.9, 0.18]] : o.tight ? [[1.7, 0.12], [1.25, 0.2]] : [[2.6, 0.08], [1.8, 0.14], [1.3, 0.2]]) as Array<[number, number]>) {
       path(h);
       h.strokeStyle = `rgba(255, 176, 80, ${al})`;
       h.lineWidth = w * k;
@@ -2240,7 +2249,13 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
   const cream = o.fine ? sheet((h) => {
     path(h);
     h.strokeStyle = 'rgb(244, 221, 180)';
-    h.lineWidth = w * 1.05;
+    h.lineWidth = w * (small ? 0.8 : 1.25);
+    h.stroke();
+  }) : undefined;
+  const glint = o.fine ? sheet((h) => {
+    path(h);
+    h.strokeStyle = 'rgb(255, 188, 112)';
+    h.lineWidth = w * (small ? 0.8 : 1.25);
     h.stroke();
   }) : undefined;
   const mid = M.transformPoint(new DOMPoint(x, z));
@@ -2257,15 +2272,15 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     path(h);
     // A roundel's strokes lie close, so its are narrower: its ring and figure lit, not the whole disc.
     h.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-    h.lineWidth = w * (o.tight ? 1.8 : roundel ? 2.6 : 3.6);
+    h.lineWidth = w * (small ? 2.1 : o.tight ? 1.8 : roundel ? 2.6 : 3.6);
     h.stroke();
     path(h);
     h.strokeStyle = 'rgba(0, 0, 0, 1)';
-    h.lineWidth = w * (o.tight ? 1.2 : roundel ? 1.8 : 2.2);
+    h.lineWidth = w * (small ? 1.5 : o.tight ? 1.2 : roundel ? 1.8 : 2.2);
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream, glint, lift: scale <= 1 ? 0.35 : 0.06 } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2453,6 +2468,11 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = Math.min(1, night * (0.95 + 0.1 * p) * f);
       ctx.drawImage(gl.cream, X, Y, Wd, Ht);
+      if (gl.lift && gl.glint) {
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = night * gl.lift * (0.7 + 0.6 * p) * f;
+        ctx.drawImage(gl.glint, X, Y, Wd, Ht);
+      }
     }
   }
   ctx.globalCompositeOperation = was;

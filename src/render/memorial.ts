@@ -3,7 +3,7 @@ import { rand } from './ivy';
 import {
   add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump,
   grassTuft, groundNear, hex, inset, mix, mul, newell, plate, proj, scaleFor, stoneSkin, strokesPath, TAU,
-  toneOf, GLYPHS, type MossPalette, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
+  toneOf, GLYPHS, RUNESTONE_MOSS, type MossPalette, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
 } from './runestone';
 
 /**
@@ -19,13 +19,13 @@ import {
  * leaning a little, chamfered and thinning as it rises (`plate`), bedded in
  * two hand-laid courses of stone on a patch of turf, with a mossy rock or two
  * at its back and flowers at its foot. Its face is the stones' face: their
- * skin (`stoneSkin`), lichen, moss up from the foot on one side and over the
- * shoulder, and ivy climbing that edge; a carved roundel at its head with a
- * star in it and a rune either side, lit pale gold and breathing as a
- * Runestone's runes do; and under them a sunk panel, ruled twice round, with
- * the line cut into it as rows of small rune-marks -- one mark to every two
- * letters of a word, so a short line is a short row and every stone's rows
- * are its own words' -- that catch the runes' light faintly after dark.
+ * skin (`stoneSkin`), lichen, moss lying flat in the joints of its plinth and
+ * up its foot on one side, and ivy climbing from there; a wheel cut at its
+ * head (a smaller one on its back), lit pale gold by day and cream after dark
+ * as a Runestone's roundel is; and under it a sunk panel, ruled twice round,
+ * with the line cut into it as rows of small rune-marks -- one mark to every
+ * two letters of a word, a word's marks kept together, so a short line is a
+ * short row -- that catch the light faintly after dark.
  *
  * Baked once for each way it is seen, each facing, each scale and each line,
  * and kept; a frame after that is a blit and the runes' light over it
@@ -113,16 +113,23 @@ const ROUNDEL_W = 0.25;
  * drawn in line-work for a stone a tenth their height -- one ring, a small
  * hub, and six spokes between them, stopped short of both.
  */
-const wheel = (spokes: number): Stroke[] => {
+const wheel = (spokes: number, hub = true): Stroke[] => {
   const circle = (r: number, n: number): Stroke => ({ pts: Array.from({ length: n + 1 }, (_, i) => [Math.cos((i / n) * TAU) * r, Math.sin((i / n) * TAU) * r] as Pt) });
-  const out: Stroke[] = [circle(1, 36), circle(0.17, 10)];
+  const out: Stroke[] = hub ? [circle(1, 36), circle(0.17, 10)] : [circle(1, 36)];
   for (let i = 0; i < spokes; i++) {
     const a = Math.PI / 2 + (i / spokes) * TAU + Math.PI / spokes;
-    out.push({ pts: [[Math.cos(a) * 0.32, Math.sin(a) * 0.32], [Math.cos(a) * 0.82, Math.sin(a) * 0.82]] });
+    const from = hub ? 0.32 : 0.4;
+    out.push({ pts: [[Math.cos(a) * from, Math.sin(a) * from], [Math.cos(a) * 0.82, Math.sin(a) * 0.82]] });
   }
   return out;
 };
 const ROUNDEL_STROKES: Stroke[] = wheel(6);
+/**
+ * Its light at the smallest scale, where the wheel is eight pixels across:
+ * no hub, the spokes stopped further out, so its middle stays dark and it is
+ * a wheel and not a lit disc.
+ */
+const ROUNDEL_SMALL: Stroke[] = wheel(6, false);
 const BACK_STROKES: Stroke[] = wheel(4);
 /** And the smaller one cut on its back. */
 const BACK_ROUNDEL = { x: 0, z: 11.7, r: 1.45 };
@@ -163,9 +170,12 @@ interface Mark { k: number; x: number; z: number }
 
 /**
  * A line laid out as rows of marks, off its own letters: every word one mark
- * for each two of its letters, its marks chosen by those letters; the words
- * set along a row as far as the panel is wide, then the next row; the rows
- * stood in the middle of the panel. Nothing for a blank stone.
+ * for each two of its letters, its marks chosen by those letters and kept
+ * together, a word longer than a row cut at the row's end; the words wrapped
+ * onto rows a hand cuts them in -- each row's spacing its own, the last row
+ * short and set from the left, the rows a wandering pitch apart -- and where
+ * a row wraps chosen so no space between words falls under one in the row
+ * above. Nothing for a blank stone.
  */
 export function engravingMarks(text: string | undefined): Mark[][] {
   const words = (text ?? '').split(' ').filter((w) => w.length);
@@ -174,65 +184,69 @@ export function engravingMarks(text: string | undefined): Mark[][] {
   let h = 0;
   for (const ch of text ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   const H = rand(h % 100000 + 7);
-  // Its marks, one to every two letters, chosen by those letters, run on as one stream.
-  const stream: number[] = [];
+  const most = Math.floor(ROW_WIDE / MARK_STEP);
+  // Each word its marks, one to every two letters; one too long for a row goes on in the next.
+  const units: number[][] = [];
   for (const word of words) {
+    const ms: number[] = [];
     for (let i = 0; i < word.length; i += 2) {
       const a = word.charCodeAt(i), b = i + 1 < word.length ? word.charCodeAt(i + 1) : 0;
-      stream.push((a * 7 + b * 13 + i) % MARKS.length);
+      ms.push((a * 7 + b * 13 + i) % MARKS.length);
     }
+    // In even pieces, so a long word's last few marks are not left alone on a row.
+    const each = Math.ceil(ms.length / Math.ceil(ms.length / most));
+    for (let i = 0; i < ms.length; i += each) units.push(ms.slice(i, i + each));
   }
-  /*
-   * Cut into rows as a hand cuts them: each its own length, its own one to
-   * three breaks, and the last row short and set from the left. A break is
-   * never put where one in a row above it stands, so no gap runs down
-   * through the rows and the line does not stand in a grid.
-   */
+  // How wide some words stand at the plain spacing: their marks, and a space between each two.
+  const wide = (ws: number[][]): number => ws.reduce((n, w) => n + w.length, 0) * MARK_STEP - MARK_STEP + MARK_W * 2 + (ws.length - 1) * WORD_GAP;
   const rows: Array<Array<{ k: number; x: number }>> = [];
-  // Where the breaks in the row above fall.
-  const breaksAt: number[] = [];
+  // Where the spaces in the row above fall.
+  let above: number[] = [];
   let at = 0;
-  const most = Math.floor(ROW_WIDE / MARK_STEP);
-  while (at < stream.length && rows.length < LINES_MOST) {
-    // A full row of four to six; what is left at the end, two to four, on a short last row; nothing past the fourth.
-    const rem = stream.length - at;
-    let n: number;
-    if (rows.length === LINES_MOST - 1) n = Math.min(rem, 2 + Math.floor(H() * 3));
-    else if (rem <= 4) n = rem;
-    else if (rem <= most + 2) n = rem - 2 - Math.floor(H() * 2);
-    else n = Math.min(rem - 2, most - 2 + Math.floor(H() * 3));
-    const marks = stream.slice(at, at + n);
-    at += n;
-    const last = rows.length > 0 && (at >= stream.length || rows.length === LINES_MOST - 1);
-    const want = marks.length < 4 ? (marks.length > 2 ? 1 : 0) : 1 + Math.floor(H() * 3);
-    let best: { row: Array<{ k: number; x: number }>; mids: number[]; clash: number } | undefined;
-    for (let tries = 0; tries < 24 && (!best || best.clash > 0); tries++) {
-      const breaks = new Set<number>();
-      // Fewer breaks the longer it takes to find a place for them.
-      const most = tries > 12 ? Math.min(want, 1) : want;
-      for (let t = 0; t < 12 && breaks.size < most; t++) breaks.add(1 + Math.floor(H() * (marks.length - 1)));
-      // Its spacing wanders a little, mark to mark, and the row starts a little off the middle.
-      const steps = marks.map(() => MARK_STEP * (0.82 + 0.36 * H()));
-      const gaps = marks.map((_, i) => (breaks.has(i) ? WORD_GAP * (0.7 + 0.6 * H()) : 0));
-      const span = steps.reduce((m, st) => m + st, 0) + gaps.reduce((m, g) => m + g, 0) - MARK_STEP + MARK_W * 2;
-      // The last row starts where the others do, from the left, as a short line ends a verse.
-      const room = Math.max(0, (ROW_WIDE + 0.5 - span) / 2);
-      let x = last ? PANEL.x - ROW_WIDE / 2 + MARK_W + H() * 0.3 : PANEL.x - span / 2 + MARK_W + (H() - 0.5) * 2 * Math.min(room, 0.6);
-      const row: Array<{ k: number; x: number }> = [];
-      const mids: number[] = [];
-      marks.forEach((k, i) => {
-        if (gaps[i]) {
-          x += gaps[i];
-          mids.push(x - (gaps[i] + steps[i - 1]) / 2);
-        }
-        row.push({ k, x });
-        x += steps[i];
-      });
-      const clash = mids.filter((m) => breaksAt.some((b) => Math.abs(b - m) < 1)).length;
-      if (!best || clash < best.clash) best = { row, mids, clash };
+  while (at < units.length && rows.length < LINES_MOST) {
+    // As many words as the row has room for, at least one.
+    let fit = 1;
+    while (at + fit < units.length && wide(units.slice(at, at + fit + 1)) <= ROW_WIDE + 0.3) fit++;
+    const ends = at + fit >= units.length;
+    const capped = rows.length === LINES_MOST - 1;
+    /*
+     * Where it may wrap: after all those words, or one or two fewer if that
+     * keeps its spaces off the row above's -- and the last row, if the line
+     * runs on past it, short. The fullest that keeps clear wins.
+     */
+    const counts = capped && !ends ? [Math.max(1, Math.round(fit * 0.6))] : ends && rows.length ? [fit] : [fit, fit - 1, fit - 2].filter((n) => n >= 1 && wide(units.slice(at, at + n)) >= wide(units.slice(at, at + fit)) * 0.6);
+    const last = rows.length > 0 && (capped || ends);
+    let best: { row: Array<{ k: number; x: number }>; mids: number[]; clash: number; n: number } | undefined;
+    for (const n of counts) {
+      const ws = units.slice(at, at + n);
+      for (let tries = 0; tries < 8 && !(best && best.clash === 0); tries++) {
+        // Its spacing wanders a little, mark to mark and space to space, and the row starts a little off the middle.
+        const steps = ws.map((w) => w.map(() => MARK_STEP * (0.82 + 0.36 * H())));
+        const gaps = ws.map((_, i) => (i ? WORD_GAP * (0.75 + 0.5 * H()) : 0));
+        const span = steps.reduce((m, w) => m + w.reduce((q, st) => q + st, 0), 0) + gaps.reduce((m, g) => m + g, 0) - MARK_STEP + MARK_W * 2;
+        const room = Math.max(0, (ROW_WIDE + 0.5 - span) / 2);
+        // The last row starts where the others do, from the left, as a short line ends a verse.
+        let x = last ? PANEL.x - ROW_WIDE / 2 + MARK_W + H() * 0.3 : PANEL.x - span / 2 + MARK_W + (H() - 0.5) * 2 * Math.min(room, 0.6);
+        const row: Array<{ k: number; x: number }> = [];
+        const mids: number[] = [];
+        ws.forEach((w, i) => {
+          if (i) {
+            x += gaps[i];
+            mids.push(x - (gaps[i] + steps[i - 1][steps[i - 1].length - 1]) / 2);
+          }
+          w.forEach((k, m) => {
+            row.push({ k, x });
+            x += steps[i][m];
+          });
+        });
+        const clash = mids.filter((m) => above.some((b) => Math.abs(b - m) < 0.9)).length;
+        if (!best || clash < best.clash) best = { row, mids, clash, n };
+      }
+      if (best && best.clash === 0) break;
     }
     rows.push(best!.row);
-    breaksAt.splice(0, breaksAt.length, ...best!.mids);
+    above = best!.mids;
+    at += best!.n;
   }
   // Rows a hand apart, give or take: the pitch wanders up to a sixth either way.
   const pitch = rows.map((_, j) => (j ? LINE_STEP * (0.85 + 0.3 * H()) : 0));
@@ -282,31 +296,6 @@ interface Model {
 }
 
 const models = new Map<string, Model>();
-
-/** Moss as cushions at points of a face, drawn over it on the screen (`drawPads`): its frame's transform now, and its base. */
-const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, number, number]>, squat = 0.9, lit = true): void => {
-  const tr = g.getTransform(), inv = base.inverse();
-  const across = Math.hypot(e.ux, e.uy) * 0.9;
-  const ps: Pad[] = pts.map(([x, z, r]) => {
-    const q = inv.transformPoint(tr.transformPoint(new DOMPoint(x, z)));
-    return [q.x, q.y, r * across, r * across * squat] as Pad;
-  });
-  g.save();
-  g.setTransform(base);
-  drawPads(g, ps, MOSS_GREENS);
-  // And a lit lip on the upper half of each cushion big enough to have one: the moss's top catching the light.
-  if (lit) {
-    g.fillStyle = MOSS_GREENS.lit;
-    g.beginPath();
-    for (const [x, y, rx, ry] of ps) {
-      if (rx < 0.45) continue;
-      g.moveTo(x - rx * 0.22 + rx * 0.5, y - ry * 0.42);
-      g.ellipse(x - rx * 0.22, y - ry * 0.42, rx * 0.5, ry * 0.32, 0, 0, TAU);
-    }
-    g.fill();
-  }
-  g.restore();
-};
 
 /**
  * A cushion of moss: a dozen or two pads gathered in a ragged mound `w`
@@ -379,14 +368,10 @@ function blot(g: Ctx, R: () => number, x: number, z: number, r: number): void {
   g.fill();
 }
 
-/** The ivy's own greens (`ivy.ts`): a leaf in the light, in shade, its rim, and the vine. */
-/**
- * The moss's greens on a stone this small: the ivy's own deep greens rather
- * than the Runestones' paler cushions, so a few small ones read as moss in
- * the joints and not as lime beads -- a cool under-edge, a body, and a lit lip.
- */
-const MOSS_GREENS: MossPalette = { line: '#44614f', dark: '#4b6c58', under: '#557a64', fill: '#608870', lit: '#78a283', top: '#86ad8e' };
+/** The moss's greens: the Runestones' own (`ivy.ts`'s `MOSS`), so it is the same moss on the same shore. */
+const MOSS_GREENS: MossPalette = RUNESTONE_MOSS;
 
+/** The ivy's own greens (`ivy.ts`): a leaf in the light, in shade, its rim, and the vine. */
 const LEAF = { lit: '#74ba87', shade: '#65957a', top: '#93d9a2', line: '#4b6c57', stem: '#5d6b4c' };
 
 /**
@@ -577,7 +562,18 @@ function modelOf(text: string, facing: Side): Model {
           g.lineWidth = 0.15;
           g.stroke();
           g.restore();
-          cut(g, fill, 0.13, () => rowPath(g, row));
+          // The groove itself, deep: the island's cool teal shade in it, and a hair of light on its upper lip.
+          rowPath(g, row);
+          g.strokeStyle = css(mix(fill, hex('#3c565e'), 0.66), 0.97);
+          g.lineWidth = 0.15;
+          g.stroke();
+          g.save();
+          g.translate(-0.04, 0.05);
+          rowPath(g, row);
+          g.strokeStyle = css(mix(fill, [255, 250, 238], 0.55), 0.55);
+          g.lineWidth = 0.05;
+          g.stroke();
+          g.restore();
         }
         /* -- the roundel, cut, under the light it will have: bare stone between its strokes -- */
         cut(g, fill, 0.22, () => strokesPath(g, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
@@ -593,9 +589,8 @@ function modelOf(text: string, facing: Side): Model {
         }
         cut(g, fill, 0.11, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
       } else {
-        // The back: dressed plain, a smaller wheel cut at its head, and a rule across under it.
+        // The back: dressed plain, and a smaller wheel cut at its head.
         cut(g, fill, 0.24, () => strokesPath(g, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r));
-        cut(g, fill, 0.14, () => { g.beginPath(); g.moveTo(-2.4, 9.1); g.lineTo(2.4, 9.05); });
       }
       /* -- lichen: a few soft grey-green blots on its upper half, away from the moss and off the carving -- */
       for (let i = 0; i < 4; i++) {
@@ -606,23 +601,21 @@ function modelOf(text: string, facing: Side): Model {
         if (Math.hypot(x - ROUNDEL.x, z - ROUNDEL.z) < ROUNDEL.r + 0.3) continue;
         blot(g, T, x, z, 0.3 + T() * 0.3);
       }
-      /*
-       * Moss in cushions, each its own size and height, in the corner where
-       * the stone meets its plinth on the mossy side.
-       */
+      // Moss lying flat up the foot of its mossy side from the joint with the plinth, ragged at its top.
       const [fa, fb] = xs(0.5);
       const foot = sideK > 0 ? fb : fa;
       mat(g, T, [foot + sideK * 0.2, 0.05, foot - sideK * 3.6, 0.05, 2.1, 0, 1]);
     };
     const over: Painter = (g, k) => {
-      /* -- ivy up the mossy edge, kept to the stone and off the carving -- */
+      /* -- ivy up from the moss at the foot of its mossy edge: on the stone, and off the panel and its frame -- */
       const V = rand(seed * 11 + 5);
       const halo: Pt[] = inset(area2(outline) < 0 ? outline.slice().reverse() : outline, -0.18);
       g.save();
       g.beginPath();
       halo.forEach(([hx, hz], i) => (i ? g.lineTo(hx, hz) : g.moveTo(hx, hz)));
       g.closePath();
-      g.clip();
+      if (which === 'front') g.rect(PANEL.x - PANEL.w / 2 - 0.2, PANEL.z0 - 0.2, PANEL.w + 0.4, PANEL.z1 + PANEL.arch + 0.4 - PANEL.z0);
+      g.clip('evenodd');
       const [fa, fb] = xs(0.3);
       const edge = sideK > 0 ? fb : fa;
       // Across, it keeps between the stone's edge and the panel's.
@@ -635,7 +628,7 @@ function modelOf(text: string, facing: Side): Model {
   const front = carved('front');
   const back = carved('back');
 
-  /* -- the edges of the stone: its skin, and moss along the tops -- */
+  /* -- the edges of the stone: its skin, and the ivy round the corner at the mossy foot -- */
   const edgePaint = (i: number, up: number): { paint?: Painter; over?: Painter } | undefined => {
     const p = OUTLINE[i], q = OUTLINE[(i + 1) % OUTLINE.length];
     const mx = (p[0] + q[0]) / 2;
@@ -655,30 +648,19 @@ function modelOf(text: string, facing: Side): Model {
         for (let j = 0; j < len * 3; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.09 + T() * 0.07, 0.09 + T() * 0.07);
       },
       /*
-       * Moss on the edge, laid over it after every face so a mass runs on
-       * across the joins of the strips: on the tops of the head on its
-       * mossy side, and up the mossy side from the foot. Where it is, off
-       * noise at the very place on the stone, not on the strip.
+       * The ivy round the corner: on the mossy side's edge, from its foot, a
+       * short strand across from one broad face's to the other's, so it is
+       * one plant wrapping the chamfer and not two cut off at it. The edge's
+       * frame runs along it from its upper end, and across its thickness.
        */
-      over: (g, k) => {
-        /*
-         * Moss on the edge in a cushion at the foot of its mossy side, where
-         * it meets the plinth, laid over it after every face so it runs on
-         * across the join of two strips. It belongs to the strip its middle is on.
-         */
-        const T = rand(SEED * 103 + i);
-        const spots: Array<[number, number, number, number]> = [[0.25, 1.6, 0.5, 0.95]];
-        const pts: Array<[number, number, number]> = [];
-        if (Math.sign(mx) === mossSide) {
-          for (const [z, w, h, size] of spots) {
-            const lo = Math.min(p[1], q[1]), hiZ = Math.max(p[1], q[1]);
-            if (z < lo || z >= hiZ) continue;
-            const s0 = ((z - p[1]) / (dz || 1)) * len;
-            // Across the edge's thickness, and along it: a cushion on its side, nearer the front it grows from.
-            for (const [y, sa, rr] of clump(T, 0.25 * G, s0, w * G * 0.9, h * 2.2, size)) pts.push([sa, y, rr]);
-          }
-        }
-        if (pts.length) padsOn(g, k.base, k.e, pts, 0.85);
+      over: (g) => {
+        if (Math.sign(mx) !== mossSide || Math.min(p[1], q[1]) > 0.5) return;
+        const V = rand(SEED * 107 + i);
+        g.save();
+        // The ivy's up is up the edge, from its foot at the far end of the strip.
+        g.transform(0, 1, -1, 0, len, 0);
+        ivy(g, V, 0, 0.1, 3.4, 1, G * 0.85, G * 0.85, 0.85);
+        g.restore();
       },
     };
   };
@@ -716,12 +698,16 @@ function modelOf(text: string, facing: Side): Model {
      */
     const lip: Array<[number, number, number, number, number]> = [[-7.0, 4.5, -2.6, 4.55, 0], [-7.15, 4.2, -7.1, -1.2, 1]];
     for (const [x0, y0, x1, y1, side] of lip) {
-      const n = Math.round(Math.hypot(x1 - x0, y1 - y0) * 2.6);
+      // Tongues of it hanging from the lip, each its own length, longest at the corner, thinning as they hang.
+      const n = Math.round(Math.hypot(x1 - x0, y1 - y0) * 1.7);
       for (let i = 0; i < n; i++) {
         const t = Math.pow(K(), 1.3);
-        const down = Math.pow(K(), 1.8) * (1.1 - t) * 1.1;
-        skirt.push([x0 + (x1 - x0) * t + (side ? -0.1 : 0), y0 + (y1 - y0) * t + (side ? 0 : 0.1), (0.55 + 0.5 * K()) * (1.15 - 0.5 * t)]);
-        skirtZ.push(LOWER_H - 0.05 - down);
+        const hang = Math.pow(K(), 1.4) * (1.1 - t) * 1.2;
+        const x = x0 + (x1 - x0) * t + (side ? -0.1 : 0), y = y0 + (y1 - y0) * t + (side ? 0 : 0.1);
+        for (let d = 0; d <= hang; d += 0.28) {
+          skirt.push([x + (K() - 0.5) * 0.25, y + (K() - 0.5) * 0.25, (0.3 + 0.24 * K()) * (1 - 0.45 * d / Math.max(hang, 0.01))]);
+          skirtZ.push(LOWER_H - 0.02 - d);
+        }
       }
     }
   }
@@ -762,8 +748,8 @@ function modelOf(text: string, facing: Side): Model {
 
   /* -- flowers laid at its foot and grown up round the plinth, and grass -- */
   /*
-   * Five clumps, larger than a Runestone's to be seen at a stone this size:
-   * one either side of it, two in front, one behind. The sides always hold
+   * Four clumps, larger than a Runestone's to be seen at a stone this size:
+   * one either side of it and two in front. The sides always hold
    * the dusk spike and the faded rose, in whichever order the way it was set
    * gives, so some of each is seen from every side; the rest chalk and cream.
    */
@@ -919,7 +905,7 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
     const M = new DOMMatrix([ax, ay, bx, by, ox, oy]);
     if (which === 'front') {
       // The roundel: its lit strokes only by day, so bare stone shows between them; glowing lines after dark.
-      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 4, true,
+      glows.push(bakeGlow(M, scale, (h) => strokesPath(h, scale <= 1 ? ROUNDEL_SMALL : ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 4, true,
         { w: ROUNDEL_W, noDayHalo: true, tight: true, fine: true }));
       // The line: its rows catch the light after dark, faintly, the lowest first.
       model.rows.slice().reverse().forEach((row, j) => {
