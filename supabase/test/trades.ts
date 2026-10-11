@@ -20,7 +20,8 @@
  *   * the two sides agree on what a trade *is*: the same twenty-four ids, the
  *     same names, notes and levers as `src/game/classes.ts`, which is what
  *     generated them;
- *   * the refusals read as sentences, and an archer is an archer;
+ *   * the refusals read as sentences, an artisan is an artisan, and a fighting
+ *     trade has no refusal at all;
  *   * and the three write-doors do what the buttons promise: take a trade, buy
  *     a node, and have the answers move.
  *
@@ -80,13 +81,17 @@ begin
    * The refusal, read before any skill is raised.
    *
    * It has to come before any skill is raised, because a trade that has been
-   * earned has no refusal to read; the archer is asked because its name begins
-   * with a vowel. A coalesce rather than a bare
+   * earned has no refusal to read; the artisan is asked because its name begins
+   * with a vowel, and the archer because a fighting trade asks for no skill and
+   * so has no refusal even now. A coalesce rather than a bare
    * concatenation, so that a null arrives as the word "none" and fails one
    * check by name, instead of deleting the whole line and failing every check
    * that reads it. That is this afternoon's lesson, and it costs one call.
    */
   insert into said select 'WHY|' || coalesce(c.value->>'why', 'none')
+    from jsonb_array_elements(rpc_classes(w.world_id)->'classes') c
+   where c.value->>'id' = 'artisan';
+  insert into said select 'FIGHTWHY|' || (c.value->>'open') || '|' || coalesce(c.value->>'why', 'none')
     from jsonb_array_elements(rpc_classes(w.world_id)->'classes') c
    where c.value->>'id' = 'archer';
 
@@ -245,11 +250,19 @@ check('and the two sides describe them identically, name, note and lever',
 
 /* ---- the sentences, which the panel puts on the card ------------------ */
 
-const archer = CLASSES.find((c) => c.id === 'archer')!;
-const browserWhy = classRefusal(archer, () => 0);
-check('an archer is an archer on the island', say('WHY').startsWith('You are not an archer'), say('WHY'));
-check('and on the browser', !!browserWhy?.startsWith('You are not an archer'), browserWhy ?? 'none');
+const artisan = CLASSES.find((c) => c.id === 'artisan')!;
+const browserWhy = classRefusal(artisan, () => 0);
+check('an artisan is an artisan on the island', say('WHY').startsWith('You are not an artisan'), say('WHY'));
+check('and on the browser', !!browserWhy?.startsWith('You are not an artisan'), browserWhy ?? 'none');
 check('word for word, both of them', say('WHY') === browserWhy, `island: ${say('WHY')}`);
+
+/* A fighting trade asks for no skill: open, and nothing to refuse, with every skill at nothing. */
+const archer = CLASSES.find((c) => c.id === 'archer')!;
+check('a fighting trade is open with no skill on the island', say('FIGHTWHY') === 'true|none', say('FIGHTWHY'));
+check('and on the browser', classRefusal(archer, () => 0) === null, classRefusal(archer, () => 0) ?? 'none');
+check('every fighting trade, and no craft trade',
+  CLASSES.every((c) => (classRefusal(c, () => 0) === null) === (c.kind === 'combat')),
+  CLASSES.filter((c) => (classRefusal(c, () => 0) === null) !== (c.kind === 'combat')).map((c) => c.id).join(', '));
 
 /* ---- the Tree tab ----------------------------------------------------- */
 

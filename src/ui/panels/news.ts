@@ -55,7 +55,7 @@ import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
-import { CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
+import { CLASS_AT, CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
 import { spellDef, spellForce, spellsOf } from '../../game/arcane';
 import { PERK_BY_ID, perksOf } from '../../game/perks';
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_ID, CLASS_SPELLS, classSpellsOf, FIRE_LOW, FIRE_TOP, skinOf, spellTerms } from '../../game/talents';
@@ -1657,6 +1657,14 @@ export const NEWS: News[] = [
         + `in proportion below. ${EFFECT_TAIL[e.effect]}`),
       `A stun is new: for ${STUN_SECS} seconds the creature neither moves nor strikes, and loses a heavy blow it was drawing back for. Another stun starts it again rather than adding on, `
         + `and the target panel says "stunned" while it lasts. The name of an enchanted weapon carries it, a Sword (${ENCHANTMENT_LIST[0].name}), and Examine says its quality and how often it works.`,
+    ],
+  },
+  {
+    n: 119,
+    day: '2026-10-11',
+    lines: () => [
+      `A fighting trade (${listed(CLASSES.filter((c) => c.kind === 'combat').map((c) => c.name))}) no longer asks for ${CLASS_AT} in one of its skills: `
+        + `anybody can take one from the start. A craft trade still opens at ${CLASS_AT} in any skill it covers.`,
     ],
   },
 ];

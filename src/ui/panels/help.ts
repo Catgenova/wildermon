@@ -786,8 +786,8 @@ export function helpText(): string {
       <tr><td>⤢ / double-click title</td><td>Expand a window to nearly the whole screen, and back</td></tr>
     </table>
     <h3>Trades</h3>
-    <p>A trade is the thing you are, on top of the things you know. Take one to <b>${CLASS_AT}</b> in any skill it
-    covers and it opens; you may hold <b>one craft trade and one fighting trade</b> at once, and the
+    <p>A trade is the thing you are, on top of the things you know. A craft trade opens once you have <b>${CLASS_AT}</b>
+    in any skill it covers; a <b>fighting trade</b> asks for no skill and can be taken from the start. You may hold <b>one craft trade and one fighting trade</b> at once, and the
     <b>Trades</b> window (<kbd>F</kbd>) is where you take them up and spend what they earn.</p>
     ${COLUMNS ? `<p>A trade on a <b>tree</b> earns <b>points</b> off the best skill it covers, and its tree is <b>${numberWord(COLUMNS)} columns of
     ${numberWord(RANKS)}</b>. A column is one <b>channel</b>: one number in the rules, and every card names it and says

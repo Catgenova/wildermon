@@ -231,7 +231,7 @@ export class TradesPanel {
     const taken = [said.taken.craft, said.taken.combat].filter(Boolean).length;
     head.textContent = taken === 2
       ? `A trade of each. Putting one down for another costs ${said.change_cost} silver; you have ${Math.floor(said.purse)}.`
-      : `A trade opens at ${said.at} in any skill it covers, and you may hold one craft and one fighting trade at once.`;
+      : `A craft trade opens at ${said.at} in any skill it covers; a fighting trade is open from the start. You may hold one craft and one fighting trade at once.`;
     this.page.append(head);
 
     for (const [kind, title] of GROUPS) {

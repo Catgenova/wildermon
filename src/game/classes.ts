@@ -34,7 +34,7 @@
 
 import { numberWord } from './words';
 
-/** Fifty in any skill the class covers, and the card is on the table. */
+/** Fifty in any skill a craft trade covers, and its card is on the table. A fighting trade asks nothing. */
 export const CLASS_AT = 50;
 
 /**
@@ -268,12 +268,15 @@ export const classOfSkill = (skill: string): ClassDef | undefined =>
 /**
  * Whether a card is on the table, given what somebody has reached.
  *
+ * A fighting trade is open to anybody from the first day; only a craft trade
+ * asks for `CLASS_AT` in one of its skills.
+ *
  * `at` is asked for one skill at a time rather than handed a whole sheet,
  * because that is the shape both sides have: the browser holds a map and the
  * island holds a table, and neither wants to build the other's.
  */
 export const classOpen = (c: ClassDef, at: (skill: string) => number): boolean =>
-  c.skills.some((s) => at(s) >= CLASS_AT);
+  c.kind === 'combat' || c.skills.some((s) => at(s) >= CLASS_AT);
 
 /**
  * What to say when somebody asks for a trade they have not earned.
@@ -281,12 +284,12 @@ export const classOpen = (c: ClassDef, at: (skill: string) => number): boolean =
  * "An" before a vowel, the way the bins have said it since they were named.
  * Twenty-two of the twenty-four read the same either way; the archer and the
  * artisan did not, and the trades window puts this sentence on the card rather
- * than in a log line nobody rereads.
+ * than in a log line nobody rereads. The skills go in the island's order, by id.
  */
 export const classRefusal = (c: ClassDef, at: (skill: string) => number): string | null =>
   classOpen(c, at) ? null
     : `You are not ${/^[aeiou]/i.test(c.name) ? 'an' : 'a'} ${c.name.toLowerCase()} yet. `
-      + `That wants ${CLASS_AT} in one of ${c.skills.map((s) => s.replace(/_/g, ' ')).join(', ')}.`;
+      + `That wants ${CLASS_AT} in one of ${[...c.skills].sort().map((s) => s.replace(/_/g, ' ')).join(', ')}.`;
 
 /*
  * ---------------------------------------------------------------------------
