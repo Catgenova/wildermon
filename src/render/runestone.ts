@@ -505,6 +505,7 @@ export const GLYPHS: Record<string, Stroke[]> = {
   cross: [{ pts: [[-0.6, -0.9], [0.6, 0.9]] }, { pts: [[-0.6, 0.9], [0.6, -0.9]] }],
   algiz: [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.62, 0.92], [0, 0.22], [0.62, 0.92]] }],
   tiwaz: [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, 0.38], [0, 1], [0.6, 0.38]] }],
+  staff: [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.55, 0.3], [0.55, 0.3]] }],
   ingwaz: [{ pts: [[0, 0.62], [0.48, 0], [0, -0.62], [-0.48, 0]], closed: true }, { pts: [[0, 1], [0, 0.62]] }, { pts: [[0, -0.62], [0, -1]] }],
   dagaz: [{ pts: [[-0.6, 0.9], [0.6, -0.9], [0.6, 0.9], [-0.6, -0.9]], closed: true }],
   othala: [{ pts: [[0.62, -1], [-0.5, 0.25], [0, 0.95], [0.5, 0.25], [-0.62, -1]] }],
@@ -2495,6 +2496,8 @@ export interface NightHole {
   y: number;
   r: number;
   a: number;
+  /** How far it reaches up and down, where that is less than across: a pool on the ground. */
+  ry?: number;
 }
 
 /**
@@ -2856,14 +2859,22 @@ export class RunestoneNight {
   /** A stone's shapes onto `g` in the context's units moved by (dx, dy): the soft light round its runes, then the runes. */
   private shapes(g: CanvasRenderingContext2D, s: Lit, dx: number, dy: number): void {
     for (const hole of s.src.holes(s.sx + dx, s.sy + dy, s.zoom, s.t)) {
-      const grad = g.createRadialGradient(hole.x, hole.y, 0, hole.x, hole.y, hole.r);
+      const flat = hole.ry !== undefined && hole.ry !== hole.r;
+      const x = flat ? 0 : hole.x, y = flat ? 0 : hole.y;
+      if (flat) {
+        g.save();
+        g.translate(hole.x, hole.y);
+        g.scale(1, (hole.ry as number) / hole.r);
+      }
+      const grad = g.createRadialGradient(x, y, 0, x, y, hole.r);
       grad.addColorStop(0, `rgba(0,0,0,${hole.a.toFixed(2)})`);
       grad.addColorStop(0.5, `rgba(0,0,0,${(hole.a * 0.45).toFixed(2)})`);
       grad.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = grad;
       g.beginPath();
-      g.arc(hole.x, hole.y, hole.r, 0, TAU);
+      g.arc(x, y, hole.r, 0, TAU);
       g.fill();
+      if (flat) g.restore();
     }
     for (const mk of s.src.masks(s.sx + dx, s.sy + dy, s.zoom, s.t)) {
       g.globalAlpha = mk.a;

@@ -1,7 +1,7 @@
 import type { Side } from '../game/building';
 import { furnitureCentre, type PlacedFurniture } from '../game/furniture';
 import { LAMP_CAST_ALPHA } from '../game/lamps';
-import type { LightSource } from '../game/light';
+import { RUNESTONE_CAST, type LightSource } from '../game/light';
 import { VIEWS } from './view';
 import { HALF_H } from './iso';
 import { hashOf, rand, STAGES, strandPic, PPM } from './ivy';
@@ -82,6 +82,14 @@ const RUNE_S = 1.3;
 const RUNE_W = 0.42;
 /** The least a rune's lit groove is across at a scale, as units times the scale: its gold, the middle seven tenths of it (`bakeGlow`), at least a pixel on the screen. */
 const RUNE_PX = 1.45;
+/**
+ * Baked smaller than this, a rune on the band is a handful of pixels: there
+ * it is cut as a staff with one bar across (\`staff\`), its gold and its
+ * channel wider, so it reads as a cut rune and not a speck.
+ */
+const RUNE_SMALL = 1.5;
+const RUNE_PX_SMALL = 1.9;
+const CHANNEL_PX_SMALL = 3.2;
 /** And its cut channel round that, darker: so much wider again on the screen, in pixels. */
 const CHANNEL_PX = 2.6;
 /** How high a face's rune stands up the band, and how far either side of it a drilled dot is. */
@@ -122,6 +130,8 @@ interface Model {
   lit: Set<Thing>;
   shaftT: Thing;
   capT: Thing;
+  /** The broken stub on the cap, which keeps less of the night than the rest (\`HEAD_KEEP\`). */
+  headT: Thing;
   /** The foot of the band, the foot of the shaft and the foot of the cap, up from the ground: where its light on its own stone is laid from. */
   heights: { band: V3; foot: V3; cap: V3 };
   /** What stands over the band and in front of its top, the cap and the head: no rune's light is laid over them. */
@@ -313,7 +323,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
   const bandRunes = (face: number): GlowSpec[] => [{
     glyph: BAND_RUNES[(face * 2 + variant * 3) % BAND_RUNES.length], x: 0, z: RUNE_Z, s: RUNE_S, i: face * 2, w: RUNE_W,
   }];
-  const carveBand = (g: Ctx, fill: [number, number, number], half: number, runes: GlowSpec[], salt: number): void => {
+  const carveBand = (g: Ctx, fill: [number, number, number], half: number, runes: GlowSpec[], salt: number, bake: number): void => {
     skin(g, fill, -half, half, BAND_H, salt, false);
     // A cool dark reveal round the face, where it is set in under the cap and over the shaft's ledge.
     g.strokeStyle = css(hex(REVEAL), 0.5);
@@ -329,7 +339,8 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     // The channel each is cut in, never so narrow on the screen that its dark does not show either side of its gold.
     const tr = g.getTransform();
     const px = Math.max(1e-6, Math.min(Math.hypot(tr.a, tr.b), Math.hypot(tr.c, tr.d)));
-    for (const r of runes) cut(g, fill, Math.max(RUNE_W, CHANNEL_PX / px), () => glyphPath(g, r.glyph, r.x, r.z, r.s));
+    const small = bake < RUNE_SMALL;
+    for (const r of runes) cut(g, fill, Math.max(RUNE_W, (small ? CHANNEL_PX_SMALL : CHANNEL_PX) / px), () => glyphPath(g, small ? 'staff' : r.glyph, r.x, r.z, r.s));
   };
 
   /*
@@ -582,11 +593,11 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     if (Math.abs(up) > 0.35) return undefined;
     const p = bandOutline[i], q = bandOutline[(i + 1) % bandOutline.length];
     const fr = sideFrame(bandF, p, q);
-    return { paint: (g, k) => { inFrame(g, k, fr); carveBand(g, k.fill, bandHalfY, runesOf[fr.right ? 1 : 3], fr.right ? 21 : 23); } };
+    return { paint: (g, k) => { inFrame(g, k, fr); carveBand(g, k.fill, bandHalfY, runesOf[fr.right ? 1 : 3], fr.right ? 21 : 23, Math.hypot(k.base.a, k.base.b)); } };
   };
   const band = plate({
     ...bandF, outline: bandOutline, half: [bandHalfY, bandHalfY], tTop: BAND_H, bevel: 0.22, tone: BAND,
-    front: (g, k) => carveBand(g, k.fill, bandHalfX, runesOf[0], 20), back: (g, k) => carveBand(g, k.fill, bandHalfX, runesOf[2], 22), edge: bandEdge, sunk: true,
+    front: (g, k) => carveBand(g, k.fill, bandHalfX, runesOf[0], 20, Math.hypot(k.base.a, k.base.b)), back: (g, k) => carveBand(g, k.fill, bandHalfX, runesOf[2], 22, Math.hypot(k.base.a, k.base.b)), edge: bandEdge, sunk: true,
   });
   const bandT: Thing = { x: 0, y: 0, faces: band };
   things.push(bandT);
@@ -667,7 +678,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     // The corner it snapped at, where a low tooth of the taller stone still stands on the rim.
     const hi = corners.reduce((b, q, i) => (q[0] - 0.6 * q[1] < corners[b][0] - 0.6 * corners[b][1] ? i : b), 0);
     const nx = (hi + 1) % n, op = (hi + 2) % n, pv = (hi + 3) % n;
-    const rim: V3[] = corners.map((q, i) => at3([q[0] * 0.86, q[1] * 0.86], i === hi ? 0.84 + 0.06 * Q() : i === op ? 0.36 + 0.05 * Q() : 0.44 + 0.06 * Q()));
+    const rim: V3[] = corners.map((q, i) => at3([q[0] * 0.86, q[1] * 0.86], i === hi ? 0.69 + 0.06 * Q() : i === op ? 0.36 + 0.05 * Q() : 0.44 + 0.06 * Q()));
     // Where the tooth's two broken faces meet the flat of the break: a notch on each rim either side of it, and a point in from it.
     const m1 = at3(lerp(corners[hi], corners[nx], 0.4, 0.86), 0.52 + 0.04 * Q());
     const m2 = at3(lerp(corners[hi], corners[pv], 0.4, 0.86), 0.5 + 0.04 * Q());
@@ -764,7 +775,7 @@ function modelOf(yaw: number, moss: number, variant: number): Model {
     return [Math.cos(a) * r, Math.sin(a) * r * 0.92] as Pt;
   });
   const model: Model = {
-    things, pillar: [...shaft, ...band, ...cap, ...head], solids: new Set([shaftT, bandT, capT, headT]), lit: new Set([shaftT, capT, headT]), shaftT, capT,
+    things, pillar: [...shaft, ...band, ...cap, ...head], solids: new Set([shaftT, bandT, capT, headT]), lit: new Set([shaftT, capT, headT]), shaftT, capT, headT,
     heights: { band: P(bandF, 0, 0), foot: P(shaftF, 0, 0.4), cap: P(capF, 0, 0) }, over: [...cap, ...head], band: bandFaces,
     glowAt: P(bandF, 0, BAND_H / 2), top: Math.max(...head.flatMap((f) => f.pts.map((q) => q[2]))), turf,
   };
@@ -830,7 +841,9 @@ const INK = 0.75;
 const NIGHT_STONE = 'rgb(46, 44, 72)';
 const NIGHT_KEEP = 0.45;
 /** How much of that night what grows and lies round its foot keeps, against its stone's. */
-const FLORA_KEEP = 0.7;
+const FLORA_KEEP = 0.85;
+/** And of the stub on its cap, up in the band's light off the cap's top: so it is no dark lid on it. */
+const HEAD_KEEP = 0.55;
 /** And of the outcrop under it. */
 const OUTCROP_KEEP = 0.5;
 /** The ink after dark, and how much more of the night it keeps than the stone. */
@@ -840,6 +853,8 @@ const NIGHT_INK_KEEP = 0.35;
 const WARM = '242, 222, 190';
 const WARM_SHAFT = 0.78;
 const WARM_SOFFIT = 0.72;
+/** And on the stub over the cap, all over it. */
+const HEAD_WARM = 0.3;
 /** What grows at its foot after dark: taken toward this pale gold, out to so many pixels at zoom one from its middle. */
 const FLORA_GOLD = '226, 210, 168';
 const FLORA_GLOW = 16;
@@ -984,7 +999,7 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
   for (const t of things) {
     if (model.solids.has(t)) {
       sg.globalCompositeOperation = 'source-over';
-      sg.globalAlpha = 1;
+      sg.globalAlpha = t === model.headT ? HEAD_KEEP : 1;
       sg.fillStyle = sg.strokeStyle = NIGHT_STONE;
       sg.lineWidth = INK * 2;
       solid(sg, t, true);
@@ -1070,6 +1085,13 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
         wg.fillStyle = t === model.shaftT ? down : up;
         solid(wg, t, false);
         past = true;
+        continue;
+      }
+      if (t === model.headT) {
+        // The stub on the cap, faintly: what of the band's light the cap's top throws back up on it.
+        wg.globalCompositeOperation = 'source-over';
+        wg.fillStyle = `rgba(${WARM}, ${HEAD_WARM})`;
+        solid(wg, t, false);
         continue;
       }
       if (!past || t.first) continue;
@@ -1175,7 +1197,8 @@ function bake(facing: Side, rotation: number, moss: number, variant: number, sca
     }
     for (const r of f.runes) {
       // A groove no thinner on the screen than `RUNE_PX` over the scale it is baked at, so at a small zoom a rune is still a stroke of light and not a hair.
-      const spec = { ...r, w: Math.max(r.w ?? RUNE_W, RUNE_PX / scale) };
+      const small = scale < RUNE_SMALL;
+      const spec = { ...r, glyph: small ? 'staff' : r.glyph, w: Math.max(r.w ?? RUNE_W, (small ? RUNE_PX_SMALL : RUNE_PX) / scale) };
       const gl = bakeGlow(M, { ...spec, inner: RUNE_INNER, mid: RUNE_MID, edge: RUNE_CHANNEL }, scale);
       const gn = bakeGlow(M, { ...spec, inner: NIGHT_INNER, mid: NIGHT_MID }, scale);
       gl.fade = ease;
@@ -1233,17 +1256,26 @@ export interface RuneLanternLook {
 /* ---- the motes ---------------------------------------------------------------------- */
 
 /** How far its spot at its foot reaches across the ground, in tiles. */
-const POOL_REACH = 1.2;
+const POOL_REACH = 1.4;
 /** How far toward the eye its middle stands from the middle of its footprint, in tiles: out on the ground in front of its foot rather than up its stone. */
-const POOL_OUT = 0.6;
-/** The pale gold of that spot, and how strong it is at its middle at full dark: twice a lantern's warmth. */
-const POOL_CAST = '255, 214, 158';
-const POOL_CAST_ALPHA = LAMP_CAST_ALPHA * 2;
+const POOL_OUT = 0.35;
+/**
+ * The colour of that spot, the runestones' gold (\`RUNESTONE_CAST\`), whose
+ * blue is low enough that white cloth stood in it never burns to white; and
+ * how strong it is at its middle at full dark: a lantern's warmth and four
+ * fifths again.
+ */
+const POOL_CAST = RUNESTONE_CAST;
+const POOL_CAST_ALPHA = LAMP_CAST_ALPHA * 1.8;
+/** How much flatter up and down the screen than across the spot lies, as the ground is seen. */
+const POOL_FLAT = 0.5;
 
 /** How far the band's bloom reaches after dark, in pixels at zoom one. */
 const BLOOM = 12;
 /** And the hole its spot makes in the night, at its middle, in pixels at zoom one. */
 const FOOT_HOLE = 28;
+/** The least that is on the screen, in pixels, however far out it is drawn. */
+const FOOT_HOLE_PX = 24;
 /** How far down the screen from its footprint's middle that spot's middle is, in pixels at zoom one: `POOL_OUT` tiles toward the eye. */
 const POOL_DOWN = POOL_OUT * Math.SQRT2 * HALF_H;
 
@@ -1259,7 +1291,7 @@ export function runeLanternPool(f: PlacedFurniture, rotation: number): LightSour
   // Straight down the screen, on the ground: (u, v) = (1, 1) turned back by the view.
   const { cos, sin } = VIEWS[((rotation % 8) + 8) % 8];
   const k = POOL_OUT / Math.SQRT2;
-  return { x: x + k * (cos - sin), y: y + k * (sin + cos), radius: POOL_REACH, strength: 0, steady: true, cast: POOL_CAST, castAlpha: POOL_CAST_ALPHA };
+  return { x: x + k * (cos - sin), y: y + k * (sin + cos), radius: POOL_REACH, strength: 0, steady: true, cast: POOL_CAST, castAlpha: POOL_CAST_ALPHA, flat: POOL_FLAT };
 }
 
 /* ---- drawing it ------------------------------------------------------------------------ */
@@ -1356,15 +1388,26 @@ export function runeLanternNight(look: RuneLanternLook, rotation: number, zoom: 
   return {
     glows: b.glows,
     rise: 0,
-    reach: [-FOOT_HOLE * 1.5, -FOOT_HOLE + POOL_DOWN, FOOT_HOLE * 1.5, FOOT_HOLE + POOL_DOWN],
+    reach: [-FOOT_HOLE * 2.4, -FOOT_HOLE * POOL_FLAT, FOOT_HOLE * 2.4, FOOT_HOLE + POOL_DOWN],
     holes: (sx, sy, z, t): NightHole[] => {
       const out = glowHoles(b.glows, sx, sy, z, t, 1.5).map((h, i) => ({ ...h, a: h.a * b.seen[i] }));
       const p = 0.5 + 0.5 * Math.sin((t / 4.8) * TAU);
       out.push({ x: sx + b.glowAt[0] * z, y: sy + b.glowAt[1] * z, r: 14 * z, a: 0.27 + 0.05 * p });
-      // Its spot on the ground, out in front of its foot where its warmth is laid: three holes along the ground, flattened as it is seen, breathing with the band.
-      const fy = sy + POOL_DOWN * z;
-      out.push({ x: sx, y: fy, r: FOOT_HOLE * z, a: 0.48 + 0.06 * p });
-      for (const d of [-1, 1]) out.push({ x: sx + d * FOOT_HOLE * 0.7 * z, y: fy, r: FOOT_HOLE * 0.75 * z, a: 0.26 + 0.04 * p });
+      /*
+       * Its spot on the ground, round its foot and out a little in front where
+       * its warmth is laid: five holes along the ground, each flattened as the
+       * ground is seen, and a small soft one at the foot itself, breathing with
+       * the band; never smaller on the screen than `FOOT_HOLE_PX`, and a little
+       * deeper the smaller it is drawn, so it still reads far out.
+       */
+      const F = Math.max(FOOT_HOLE * z, FOOT_HOLE_PX), fy = sy + POOL_DOWN * z;
+      const deep = 1 + 0.3 * Math.min(1, Math.max(0, (FOOT_HOLE_PX * 1.5 - FOOT_HOLE * z) / FOOT_HOLE_PX));
+      out.push({ x: sx, y: fy, r: F, ry: F * POOL_FLAT, a: (0.48 + 0.06 * p) * deep });
+      for (const d of [-1, 1]) {
+        out.push({ x: sx + d * F * 0.9, y: fy, r: F * 0.75, ry: F * 0.75 * POOL_FLAT, a: (0.26 + 0.04 * p) * deep });
+        out.push({ x: sx + d * F * 1.4, y: fy, r: F * 0.55, ry: F * 0.55 * POOL_FLAT, a: (0.16 + 0.03 * p) * deep });
+      }
+      out.push({ x: sx, y: sy, r: F * 0.45, ry: F * 0.45 * POOL_FLAT, a: (0.3 + 0.04 * p) * deep });
       return out;
     },
     masks: (sx, sy, z, t): NightMask[] => [

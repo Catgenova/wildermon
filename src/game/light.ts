@@ -24,6 +24,8 @@ export interface LightSource {
   cast?: string;
   /** How strong that colour is at its middle at full dark; a fire's is a sixth of its strength. */
   castAlpha?: number;
+  /** Its colour laid flattened up and down the screen by this much, as a pool on the ground is seen; round when it does not say. */
+  flat?: number;
   /**
    * A spell's light: at night it falls off smoothly from its middle (`lightFall`) and cuts the dark and adds its cast
    * less the wider it is (`lightHole`), where a lamp's falls off straight at its full strength.

@@ -1716,16 +1716,25 @@ export class Renderer {
         const a = (l.castAlpha ?? 0.16 * l.strength) * (l.soft ? lightHole(l.radius) : 1);
         const [r0, g0, b0] = (l.cast ?? '255, 186, 92').split(',').map((v) => Number(v) * a);
         let grad: CanvasGradient;
-        if (l.soft) grad = fallGradient(g, p.sx, p.sy, p.r, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`);
+        // A pool on the ground flattened as the ground is seen (`LightSource.flat`): laid round its middle squashed up and down.
+        const flat = l.flat ?? 1;
+        const cy = flat === 1 ? p.sy : 0, cx = flat === 1 ? p.sx : 0;
+        if (flat !== 1) {
+          g.save();
+          g.translate(p.sx, p.sy);
+          g.scale(1, flat);
+        }
+        if (l.soft) grad = fallGradient(g, cx, cy, p.r, (f) => `rgb(${Math.round(r0 * f)}, ${Math.round(g0 * f)}, ${Math.round(b0 * f)})`);
         else {
-          grad = g.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, p.r);
+          grad = g.createRadialGradient(cx, cy, 0, cx, cy, p.r);
           grad.addColorStop(0, `rgb(${Math.round(r0)}, ${Math.round(g0)}, ${Math.round(b0)})`);
           grad.addColorStop(1, 'rgb(0, 0, 0)');
         }
         g.fillStyle = grad;
         g.beginPath();
-        g.arc(p.sx, p.sy, p.r, 0, Math.PI * 2);
+        g.arc(cx, cy, p.r, 0, Math.PI * 2);
         g.fill();
+        if (flat !== 1) g.restore();
       }
       g.globalCompositeOperation = 'source-over';
     };
@@ -1738,7 +1747,7 @@ export class Renderer {
     const live = lights.filter((l) => !l.steady);
     // Not where the camera is: the layers are slid with it (`lit`).
     const key = `${lw}x${lh}|${zoom},${cam.rotation}|`
-      + steady.map((l) => `${l.x.toFixed(3)},${l.y.toFixed(3)},${this.standTop(l.x, l.y)},${l.radius},${l.strength},${l.cast ?? ''},${l.castAlpha ?? ''}`).join(';');
+      + steady.map((l) => `${l.x.toFixed(3)},${l.y.toFixed(3)},${this.standTop(l.x, l.y)},${l.radius},${l.strength},${l.cast ?? ''},${l.castAlpha ?? ''},${l.flat ?? ''}`).join(';');
     const slid = (at: { cx: number; cy: number }): [number, number] => [(at.cx - cam.cx) * zoom, (at.cy - cam.cy) * zoom];
     const stale = (at: NonNullable<Renderer['lit']>): boolean => {
       const [ox, oy] = slid(at);
