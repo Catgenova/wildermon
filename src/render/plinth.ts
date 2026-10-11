@@ -68,7 +68,7 @@ const SHAFT_FOOT = 0.9;
 const SLAB_O: V3 = [0.9, -0.35, 8.3];
 const SLAB_UP = 1.2;
 /** How wide each of the slab's chamfers is, edge by edge: cut by eye, no two the same; the break raw. */
-const SLAB_BEVELS = [0.42, 0.22, 0.34, 0.27, 0.46, 0.05, 0.05, 0.05, 0.05, 0.05, 0.3, 0.4, 0.24, 0.36];
+const SLAB_BEVELS = [0.42, 0.22, 0.34, 0.27, 0.46, 0, 0, 0, 0, 0, 0.3, 0.4, 0.24, 0.36];
 /** The step is bedded out of level, its back left edge sunk into the turf: how far it falls along each way. */
 const STEP_FALL: [number, number] = [0.06, 0.035];
 /** The slab is tipped this far, across and toward its front: two degrees or so. */
@@ -95,7 +95,9 @@ const SLAB_OUTLINE: Pt[] = [
 /** The edges of the break, by the corner each starts from: raw, pale, unchamfered and uncut. */
 const BREAK_FROM = new Set(['6.4,1', '5.7,1.2', '5.2,1.95', '4.5,3.85', '3.3,4.15']);
 /** How far the top's line drops where it broke away: most in the bites, a little at the ends of the break. */
-const BREAK_DROP: Record<string, number> = { '6.4,1': 0.08, '5.7,1.2': 0.3, '5.2,1.95': 0.36, '4.5,3.85': 0.22, '3.3,4.15': 0.34, '2.5,5.6': 0.08 };
+const BREAK_DROP: Array<[number, number, number]> = [[6.4, 1.0, 0.1], [5.7, 1.2, 0.42], [5.2, 1.95, 0.5], [4.5, 3.85, 0.3], [3.3, 4.15, 0.5], [2.5, 5.6, 0.1]];
+/** How far the top has dropped at a point of the slab's plan: most at the bites, falling off within a unit and a half of the break, so the top's own edge dips as well as the break's. */
+const breakDrop = (s: number, t: number): number => Math.max(0, ...BREAK_DROP.map(([x, y, d]) => d * Math.max(0, 1 - Math.hypot(s - x, t - y) / 1.5)));
 /** How deep the slab is under its top at a point of its outline: uneven, as a slab split from the bed is. */
 const slabDepth = (s: number, t: number): number => 1.3 + 0.22 * (0.5 + 0.5 * Math.sin(s * 0.9 + t * 0.4 + 1.3)) + 0.12 * (0.5 + 0.5 * Math.cos(t * 1.3 - s * 0.2));
 /** The dish in its top, in the slab's own plan: its middle and how far it reaches each way. */
@@ -248,16 +250,18 @@ function specks(g: Ctx, ps: readonly Pad[]): void {
 }
 
 /** Ivy a step lighter than the walls' own, toward the Runestones' greens, so a thin strand reads on pale stone: each picture once. */
-const lightened = new WeakMap<HTMLCanvasElement, HTMLCanvasElement>();
-function ivyOf(pic: { img: HTMLCanvasElement }): HTMLCanvasElement {
-  let c = lightened.get(pic.img);
+const lightened = new Map<number, WeakMap<HTMLCanvasElement, HTMLCanvasElement>>();
+function ivyOf(pic: { img: HTMLCanvasElement }, by = 0.19): HTMLCanvasElement {
+  let kept = lightened.get(by);
+  if (!kept) lightened.set(by, (kept = new WeakMap()));
+  let c = kept.get(pic.img);
   if (c) return c;
   const [cv, h] = canvasOf(pic.img.width, pic.img.height);
   h.drawImage(pic.img, 0, 0);
   h.globalCompositeOperation = 'source-atop';
-  h.fillStyle = 'rgba(162, 205, 147, 0.19)';
+  h.fillStyle = `rgba(162, 205, 147, ${by})`;
   h.fillRect(0, 0, cv.width, cv.height);
-  lightened.set(pic.img, (c = cv));
+  kept.set(pic.img, (c = cv));
   return c;
 }
 
@@ -563,9 +567,9 @@ function modelOf(stage: number): Model {
           g.fillStyle = css(mix(kk.fill, hex('#3f5464'), 0.55), 0.13);
           for (const z of [UNDER - 0.45, UNDER - 0.2, UNDER, UNDER + 0.25]) g.fillRect(-8, z, 16, 12);
         }
-        if (lo < 1.2) {
-          g.fillStyle = css(mix(kk.fill, hex('#465a66'), 0.5), 0.12);
-          for (const z of [1.05, 0.8, 0.55, 0.3]) g.fillRect(-8, -2, 16, z + 2);
+        if (lo < 1.4) {
+          g.fillStyle = css(mix(kk.fill, hex('#465a66'), 0.5), 0.09);
+          for (const z of [1.35, 1.1, 0.85, 0.6, 0.35]) g.fillRect(-8, -2, 16, z + 2);
         }
       };
       shaftFaces.push({ pts, n, tone: STONE, frame, paint, crease: 0 });
@@ -595,10 +599,22 @@ function modelOf(stage: number): Model {
       const R = rand(seed);
       g.save();
       g.translate(half, 0);
+      /*
+       * Kept to its corner and a little over the faces either side, so no leaf
+       * stands out in the air past the shaft's edge; its top pointed and
+       * uneven, highest off to one side, with two or three runners led up
+       * past the mass of it.
+       */
+      const w = half + 0.3, peak = (R() - 0.5) * half;
+      const runners = [peak + (R() - 0.5) * 0.4, -w * 0.6 + R() * 0.3, w * 0.55 - R() * 0.3];
       g.beginPath();
-      g.moveTo(-8, -0.8);
-      for (let x = -8; x <= 8; x += 0.5) g.lineTo(x, top - (0.6 * Math.abs(x)) / 3 + (R() - 0.5) * 0.5);
-      g.lineTo(8, -0.8);
+      g.moveTo(-w, -0.8);
+      for (let x = -w; x <= w + 1e-6; x += 0.1) {
+        let z = top * (0.62 + 0.38 * (1 - Math.abs(x - peak) / (2 * w))) + (R() - 0.5) * 0.25;
+        for (const [n, rx] of runners.entries()) if (n < 2 + Math.round(grow) && Math.abs(x - rx) < 0.16) z = Math.max(z, top + (0.5 + 0.4 * n) * (1 - 0.5 * grow));
+        g.lineTo(x, Math.min(SHAFT_TOP - 0.15, z));
+      }
+      g.lineTo(w, -0.8);
       g.closePath();
       g.clip();
       // The stem it climbs by, under its leaves, so it reads as one strand.
@@ -613,9 +629,32 @@ function modelOf(stage: number): Model {
       g.stroke();
       g.translate(0, -0.1);
       g.scale(sc, -sc);
-      // Lightened toward the Runestones' greens only where its corner is in the light.
-      g.drawImage(turnedFrom(k.e, outN) < 0.35 ? ivyOf(pic) : pic.img, -pic.ax, -pic.ay);
+      // Lightened toward the Runestones' greens where its corner is in the light, and a little in shade while it is young.
+      const lit = turnedFrom(k.e, outN) < 0.35;
+      g.drawImage(lit ? ivyOf(pic) : grow < 0.5 ? ivyOf(pic, 0.1) : pic.img, -pic.ax, -pic.ay);
       g.restore();
+      // At its fullest, two small white flowers in the long strand, as the Runestones' ivy has.
+      if (reach >= 1 && grow > 0.85) {
+        for (const [fx, fz] of [[0.25, top * 0.55], [-0.3, top * 0.8]] as Array<[number, number]>) {
+          g.save();
+          g.translate(half + fx, fz);
+          for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * TAU;
+            g.beginPath();
+            g.arc(Math.cos(a) * 0.14, Math.sin(a) * 0.14, 0.12, 0, TAU);
+            g.fillStyle = '#fbf8ef';
+            g.fill();
+            g.strokeStyle = 'rgba(127, 152, 138, 0.8)';
+            g.lineWidth = 0.03;
+            g.stroke();
+          }
+          g.beginPath();
+          g.arc(0, 0, 0.08, 0, TAU);
+          g.fillStyle = '#efc23f';
+          g.fill();
+          g.restore();
+        }
+      }
     };
   };
   if (m >= 0.35) {
@@ -683,6 +722,19 @@ function modelOf(stage: number): Model {
     along += len;
     return out;
   });
+  // How far along the break each of its facets begins, and grain laid along the whole of it.
+  const breakFrom = new Map<number, number>();
+  {
+    let u = 0;
+    slab.forEach((_, i) => { if (broken(i)) { breakFrom.set(i, u); u += per[i]; } });
+  }
+  const BREAK_GRAIN = (() => {
+    const G = rand(6577);
+    const total = [...breakFrom.keys()].reduce((a, i) => a + per[i], 0);
+    return Array.from({ length: Math.round(total * 5) }, () => ({
+      u: G() * total, y: -1.4 + G() * 2.4, a: 0.55 + (G() - 0.5) * 0.7, l: 0.3 + G() * 0.55, w: 0.08 + G() * 0.06, pale: G() < 0.5,
+    }));
+  })();
   // The break's mean turn: what lights it as one face.
   const BREAK_N: V3 = (() => {
     let n: V3 = [0, 0, 0];
@@ -708,15 +760,17 @@ function modelOf(stage: number): Model {
           const T = rand(6500 + i);
           g.fillStyle = css(mix(faceColour(STONE, lightOf(k.e, BREAK_N)), [252, 246, 232], 0.36));
           g.fillRect(-1, -2.5, len + 2, 5);
-          // The grain of the break, running slantwise and wandering as stone parts, and the shell-curves of the blow.
+          // The grain of the break, running slantwise and wandering as stone parts, laid along the whole break so it runs on across its facets.
           g.lineCap = 'round';
-          for (let j = 0; j < 3 + len * 4; j++) {
-            const x = T() * len, y = -1.4 + T() * 2.4, a = 0.55 + (T() - 0.5) * 0.7, l = 0.25 + T() * 0.45;
+          const from = breakFrom.get(i) ?? 0;
+          for (const gr of BREAK_GRAIN) {
+            const x = gr.u - from;
+            if (x < -1 || x > len + 1) continue;
             g.beginPath();
-            g.moveTo(x, y);
-            g.lineTo(x + Math.cos(a) * l, y - Math.sin(a) * l * 0.6);
-            g.strokeStyle = T() < 0.55 ? css(mix(k.fill, hex('#a99aa2'), 0.45), 0.5) : css([255, 252, 244], 0.55);
-            g.lineWidth = 0.08 + T() * 0.06;
+            g.moveTo(x, gr.y);
+            g.lineTo(x + Math.cos(gr.a) * gr.l, gr.y - Math.sin(gr.a) * gr.l * 0.6);
+            g.strokeStyle = gr.pale ? css([255, 252, 244], 0.55) : css(mix(k.fill, hex('#a99aa2'), 0.45), 0.45);
+            g.lineWidth = gr.w;
             g.stroke();
           }
           g.beginPath();
@@ -786,7 +840,7 @@ function modelOf(stage: number): Model {
     padsAt(g, k, pts);
   };
   const depthAt = (s: number, t: number): [number, number] => {
-    const d = slabDepth(s, t), top = SLAB_UP - (BREAK_DROP[`${s},${t}`] ?? 0);
+    const d = slabDepth(s, t), top = SLAB_UP - breakDrop(s, t);
     return [(top - d) / 2, (top + d) / 2];
   };
   things.push({ x: 0, y: 0, faces: plate({ o: SLAB_O, U: SU, W: SW, A: SA, outline: slab, half: [SLAB_UP, SLAB_UP], tTop: 1, bevel: 0.3, bevels: SLAB_BEVELS, tone: STONE, front: slabTop, edge: slabEdge, depthAt }) });
