@@ -2228,6 +2228,21 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/enchant2.mjs --log-level=error
           node node_modules/.cache/enchant2.mjs
 
+      - name: A rune lantern post, on both sides
+        run: |
+          # Asked for: a squat carved stone pillar with a band of runes round
+          # it, built with masonry from stone bricks and light motes and set
+          # down like other furniture, that lights like a lantern of its QL and
+          # never needs fuel. The same recipe, item, words and moss on both
+          # sides; refused short of a mote in the same words, then built; set
+          # down, kept out of a cellar, picked up, and none of a lantern post's
+          # jobs applying to it; what a ground read sends of it; and at night a
+          # lantern's reach at its quality from the middle of the pillar, the
+          # ground round it in sight from far off, still alight hours on.
+          npx esbuild supabase/test/runelantern.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/runelantern.mjs --log-level=error
+          node node_modules/.cache/runelantern.mjs
+
       - name: An altar goes up on your own ground
         run: |
           # Asked for: "Make the altar only craftable within deed perimeter".

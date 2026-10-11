@@ -9,6 +9,7 @@ import { matOf } from './materials';
 import { roseSays, ROSES_RULE } from './roses';
 import type { Lamp } from './lamps';
 import { colourWord, dyeHex, readDye } from './dyestuffs';
+import { lanternReach } from './light';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -169,6 +170,12 @@ export interface FurnitureDef {
    * an iron arm (`arm`), or standing in the top of a pillar (`top`).
    */
   lamp?: 'arm' | 'top';
+  /**
+   * A light of its own: a band of runes with light motes set in them, which
+   * at night lights the ground round it as a lantern of the piece's own
+   * quality does, for everybody, and burns nothing (`runelantern.ts`).
+   */
+  runes?: boolean;
 }
 
 /**
@@ -373,6 +380,16 @@ export const FURNITURE: FurnitureDef[] = [
   piece('lamp_pillar', 'Lantern pillar', 1, 1, [['stone_brick', 8], ['mortar', 4], ['ribbon', 2]], 20, 16,
     'You lay the courses up to a capital and band an iron cage into its top. Set a lantern in it.', undefined,
     { skill: 'masonry', tool: 'trowel', lamp: 'top' }),
+  /*
+   * And one that needs no lantern (`runelantern.ts`): a squat stone pillar
+   * with a band of runes cut round its head and light motes set in them. It
+   * lights the ground at night as a lantern of its own quality does, burns
+   * nothing and never goes out. Stone out of doors, it greens over as a
+   * statue does.
+   */
+  piece('rune_lantern', 'Rune lantern post', 1, 1, [['stone_brick', 8], ['light_mote', 3]], 24, 20,
+    'You lay the courses, cut a band of runes round the head and set the light motes into them. It lights itself at night and burns nothing.', undefined,
+    { skill: 'masonry', tool: 'trowel', runes: true, mossy: true }),
   piece('altar', 'Altar', 2, 2, [['stone_brick', 64], ['mortar', 32], ['stone_slab', 4]], 40, 40, 'You lay the courses and bed the slab on top. Kneel here at dawn.', undefined, { skill: 'masonry', tool: 'trowel', altar: true, deed: true }),
   piece('banner', 'Banner', 1, 1, [['cloth', 16], ['shaft', 2], ['rope', 1], ['nail', 12]], 10, 10, 'You hem the cloth, lash it to the staff and run it up. Dye it and it is your colour.', undefined, { skill: 'tailoring' }),
   /*
@@ -937,6 +954,8 @@ export function furnitureState(f: PlacedFurniture): string {
     return `${ql} · ${litres.toFixed(0)} / ${liquidCapacity(f)} litres of ${what}${working}`;
   }
   if (def.hearth) return `${ql} · ${f.lit ? 'lit' : 'cold'}`;
+  // A rune lantern's reach is a lantern's of its quality (`runelantern.ts`).
+  if (def.runes) return `${ql} · lights ${lanternReach(f.ql)} tiles at night, burns nothing`;
   if (def.roses) return `${ql} · ${roseSays(f.setAt, Date.now() / 1000)}`;
   if (def.hive) return `${ql} · ${furnitureUnits(f)} / ${furnitureCapacity(f)} of comb`;
   if (def.pond) return `${ql} · ${furnitureUnits(f)} / ${furnitureCapacity(f)} fish`;

@@ -89,6 +89,7 @@ import { ledgerTotals, record, type Ledger } from './ledger';
 import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReach, HELD_LIGHTS, lanternReach, OVEN_REACH, runestoneLight, type LightSource } from './light';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
+import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/sound';
 import { lockRefusal, type Lockable } from './locks';
@@ -3230,6 +3231,11 @@ export class Game {
       // A piece down in a cellar lights nothing up here: an altar's glow stays under the floor.
       if (!near(f.x, f.y) || (f.level ?? 0) < 0) continue;
       const [cx, cy] = furnitureCentre(f);
+      // A rune lantern throws what a lantern of its quality throws, and needs nothing to (`runelantern.ts`).
+      if (isRuneLantern(f)) {
+        out.push(runeLanternLight(f));
+        continue;
+      }
       // A lantern post throws what its lantern throws, from under the lantern (`lamps.ts`).
       if (isLampPiece(f)) {
         if (lampBurning(f)) out.push(lampLight(f));

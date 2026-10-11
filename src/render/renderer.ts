@@ -39,6 +39,8 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
+import { drawRuneLantern, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternVariant, type RuneLanternLook } from './runelantern';
+import { isRuneLantern } from '../game/runelantern';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
@@ -5033,6 +5035,23 @@ export class Renderer {
             });
           }, undefined, pieceBox);
           drawn = box;
+        } else if (isRuneLantern(piece)) {
+          /*
+           * A rune lantern post, drawn as the runestones are (`runelantern.ts`):
+           * its bake under the pointer's ring, its runes' light and motes over
+           * it, and after dark its runes taken off the night in their own
+           * shapes, kept off whatever stands in front of it (`RunestoneNight`).
+           */
+          const look = this.runeLook(piece);
+          const turn = this.camera.rotation, dark = this.game.darkness();
+          const [hl, ht, hr, hb] = runeLanternHit(look, turn, zoom);
+          const box: [number, number, number, number] = [ent.sx + (hl - 12) * zoom, ent.sy + (ht - 12) * zoom, (hr - hl + 24) * zoom, (hb - ht + 20) * zoom];
+          this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+            drawRuneLantern(g, px, py, zoom, look, turn, dark, this.time, false);
+          }, undefined, box);
+          drawRuneLanternLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+          this.runeNight.glowing(ctx, ent.sx, ent.sy, zoom, runeLanternNight(look, turn, zoom), this.time);
+          drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
         } else {
           /*
            * Only the first of her layers when she is drawn in layers round her
@@ -5462,7 +5481,9 @@ export class Renderer {
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;
       const px = cam.worldToScreenX(wx, wy);
       const py = cam.worldToScreenY(wx, wy, below ? cellarFloorHeight(this.game, ghost.x, ghost.y) : this.pieceBase({ kind: ghost.piece }, wx, wy));
-      drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
+      if (isRuneLantern({ kind: ghost.piece })) {
+        drawRuneLantern(ctx, px, py, zoom, { facing: ghost.facing, stage: 0, stages: PIECE_STAGES, variant: runeLanternVariant(ghost.x, ghost.y, ghost.sx, ghost.sy) }, cam.rotation, 0, this.time);
+      } else drawFurniture(ctx, px, py, zoom, ghost.piece, false, undefined, undefined, pieceView(ghost.facing, cam.rotation), ghost.material);
       if (!ghost.ok) {
         const [W, D] = furnitureSpan(ghost.piece);
         ctx.fillStyle = 'rgba(214, 58, 42, 0.5)';
@@ -13411,6 +13432,13 @@ export class Renderer {
     if (piece.helm || piece.riders?.length) this.pieceHeadings.set(piece.id, Math.round(this.game.shipHeading(piece) / step) * step);
     const heading = this.pieceHeadings.get(piece.id);
     return heading !== undefined ? headingView(heading, this.camera.rotation) : pieceView(pieceFacing(piece), this.camera.rotation);
+  }
+
+  /** How a rune lantern post is drawn: the way it faces, its moss as the stage of a statue's would be, and which of its cuts it is. */
+  private runeLook(f: PlacedFurniture): RuneLanternLook {
+    const days = pieceGreen(this.game, f, this.greenAt) ?? 0;
+    const stage = Math.round(greenShows(days, 0, this.wetness(f.x, f.y)) * PIECE_STAGES);
+    return { facing: pieceFacing(f), stage, stages: PIECE_STAGES, variant: runeLanternVariant(f.x, f.y, f.sx, f.sy) };
   }
 
   private pieceTrim(f: PlacedFurniture): number | undefined {

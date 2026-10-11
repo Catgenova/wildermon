@@ -1677,6 +1677,15 @@ export const NEWS: News[] = [
       `A scroll put into the wrong kind of thing is refused in words that name the right one: "${wrongKind(ENCHANTMENT_LIST[4])}"`,
     ],
   },
+  {
+    n: 121,
+    day: '2026-10-11',
+    lines: () => [
+      `A rune lantern post (${recipeBill('make_rune_lantern')}, ${skillOf('make_rune_lantern')}): at night it lights the ground round it for everybody `
+        + `as a lantern of its own QL does, ${numberWord(lanternReach(1))} tiles at QL 1 to ${numberWord(lanternReach(100))} at QL 100, and that ground is in sight from as far off as you can see. `
+        + `It takes no lantern and no candle, burns nothing and never goes out. Moss gathers on it over ${GREEN_DAYS} days, as on a statue.`,
+    ],
+  },
 ];
 
 

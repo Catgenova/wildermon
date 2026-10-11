@@ -1404,6 +1404,11 @@ export function helpText(): string {
     <p>A <b>padlock</b> on a post or a pillar keeps its lantern: without the key nobody fits one, takes it down, puts a candle in,
     puts it out or picks the piece up. Anybody may <b>strike a light</b> in it. A post is not set down with its arm and lantern
     reaching into a wall beside it: <i>${LAMP_INTO_WALL}</i> <b>Turn it</b> goes on round past such a facing.</p>
+    <p>A <b>rune lantern post</b> (${bill('make_rune_lantern')} &mdash; ${workedAt('make_rune_lantern')}) needs no lantern. At night it
+    lights the ground round it for everybody as a lantern of its own QL does, <b>${numberWord(lanternReach(LOW_QL))} tiles at QL ${LOW_QL}
+    to ${numberWord(lanternReach(TOP_QL))} at QL ${TOP_QL}</b>, and that ground is in sight from as far off as you can see. It takes no
+    lantern and no candle, burns nothing and never goes out; it is set down, turned, padlocked and picked up as any piece is, and
+    does not go down into a cellar.</p>
     <h3>Calling things by name</h3>
     <p>A settlement of any age has bins, crates and a row of chests, and every one of them is
     called <i>Raw material bin (oak)</i>. Any crate, bin, chest, cart, piece of furniture, work post or trap
