@@ -1006,7 +1006,8 @@ export const RARITY_ROOM = 0.05;
 export function roomFor(base: number, thing: { rare?: number }): number {
   const plain = Math.round(base);
   const step = Math.max(0, Math.min(RARITIES.length - 1, thing.rare ?? 0));
-  return step ? plain + Math.max(step, Math.round(plain * RARITY_ROOM * step)) : plain;
+  // A measure the thing has none of stays none: a rare larder counts things, and never gains a kilo of heft.
+  return step && plain > 0 ? plain + Math.max(step, Math.round(plain * RARITY_ROOM * step)) : plain;
 }
 
 /**

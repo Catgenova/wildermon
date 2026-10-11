@@ -22,8 +22,8 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
-import { bagRoom, type Item } from '../../src/game/items';
-import { furnitureCapacity, liquidCapacity } from '../../src/game/furniture';
+import { bagRoom, roomFor, type Item } from '../../src/game/items';
+import { furnitureCapacity, furnitureHeft, liquidCapacity } from '../../src/game/furniture';
 import { crateCapacity } from '../../src/game/crates';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { alreadyEnchanted, ENCHANTERS_PLINTH, ENCHANT_HARM, ENCHANT_SAID, ENCHANTMENT_LIST, ENCHANTMENTS, enchantValue, NETMENDER_WEAR, ON_WORDS, wrongKind, type EnchantmentDef } from '../../src/game/enchant';
@@ -326,6 +326,7 @@ begin
       || '|' || (select furniture_capacity(p) from placed p where id = v_chestp) || '|' || (select liquid_capacity(p) from placed p where id = v_barrel)
       || '|' || (select furniture_capacity(p) from placed p where id = v_cart) || '|' || (select bag_room(i) from item i where id = v_bag);
   end loop;
+  insert into said values ('RAREROOM', room_for(0, 'rare') || '|' || room_for(280, 'rare'));
   insert into said values ('SAILSRC', (pg_get_functiondef('travel_speed(uuid, uuid)'::regprocedure) like '%* (1 + placed_enchant(p, ''sail''))%')::text);
   -- A crate: enchanted where it stands, what it holds, and up into the pack and down again.
   select coalesce(max(id), 0) + 1 into v_crate from crate where world_id = w;
@@ -645,6 +646,11 @@ check(`what each holds, plain and at QL 50 and 100, the same on both sides: Deep
   isle.get('ROOM0') === room0 && isle.get('ROOM50') === roomAt[50] && isle.get('ROOM100') === roomAt[100]
     && roomAt[100] === want(100).join('|') && roomAt[50] === want(50).join('|'),
   `${isle.get('ROOM0')} ${isle.get('ROOM50')} ${isle.get('ROOM100')} / ${room0} ${roomAt[50]} ${roomAt[100]} / ${want(50).join('|')} ${want(100).join('|')}`);
+const rareLarder = g.addFurniture('larder', 36, 36, 0, 0, 43, [], 'oak');
+rareLarder.rare = 1;
+check('a rare store keeps its measure: a rare larder holds more things and no kilos, as a plain one, on both sides',
+  furnitureHeft(rareLarder) === 0 && furnitureCapacity(rareLarder) === roomFor(furnitureCapacity({ ...rareLarder, rare: 0 }), { rare: 1 })
+    && isle.get('RAREROOM') === `0|${roomFor(280, { rare: 1 })}`, `${isle.get('RAREROOM')} / ${furnitureHeft(rareLarder)} ${furnitureCapacity(rareLarder)}`);
 const sail0 = g.boatSpeed(ship);
 ship.enchant = { id: WIND.id, ql: 100 };
 const sail = g.boatSpeed(ship);
