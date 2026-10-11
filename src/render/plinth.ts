@@ -3,7 +3,7 @@ import { PPM, rand, STAGES, strandPic } from './ivy';
 import { star } from './shine';
 import {
   add, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawPads, eyeOfView, flowerClump, glyphPath, grassTuft, groundNear,
-  hex, inset, lichen, mix, mul, newell, noise2, plate, proj, scaleFor, skin, strokesPath, sub, toneOf, unit,
+  hex, inset, lichen, mix, mul, newell, plate, proj, scaleFor, skin, strokesPath, sub, toneOf, unit,
   type Ctx, type Eye, type Face, type Glow, type NightMask, type Pad, type PaintCtx, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
 } from './runestone';
 
@@ -68,7 +68,7 @@ const SHAFT_FOOT = 0.9;
 const SLAB_O: V3 = [0.9, -0.35, 8.3];
 const SLAB_UP = 1.2;
 /** How wide each of the slab's chamfers is, edge by edge: cut by eye, no two the same; the break raw. */
-const SLAB_BEVELS = [0.42, 0.22, 0.34, 0.27, 0.46, 0.06, 0.06, 0.06, 0.3, 0.4, 0.24, 0.36];
+const SLAB_BEVELS = [0.42, 0.22, 0.34, 0.27, 0.46, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.3, 0.4, 0.24, 0.36];
 /** The step is bedded out of level, its back left edge sunk into the turf: how far it falls along each way. */
 const STEP_FALL: [number, number] = [0.06, 0.035];
 /** The slab is tipped this far, across and toward its front: two degrees or so. */
@@ -87,10 +87,13 @@ const shaftLeft = (z: number): number => {
 };
 /** The slab, in plan: an octagon cut by eye, its front right corner knocked off. */
 const SLAB_OUTLINE: Pt[] = [
-  [-6.4, -3.9], [-5.2, -5.5], [-1.4, -5.7], [4.6, -5.4], [6.5, -3.6], [6.4, 1.0], [5.0, 2.3], [4.4, 4.1], [2.5, 5.6], [-4.7, 5.7], [-6.3, 4.3], [-6.6, 0.3],
+  [-6.4, -3.9], [-5.2, -5.5], [-1.4, -5.7], [4.6, -5.4], [6.5, -3.6],
+  // The break, chipped along its line rather than cut straight.
+  [6.4, 1.0], [5.95, 1.25], [5.7, 1.85], [5.0, 2.3], [4.95, 3.05], [4.4, 4.1], [3.7, 4.45], [3.2, 5.15], [2.5, 5.6],
+  [-4.7, 5.7], [-6.3, 4.3], [-6.6, 0.3],
 ];
 /** The edges of the break, by the corner each starts from: raw, pale, unchamfered and uncut. */
-const BREAK_FROM = new Set(['6.4,1', '5,2.3', '4.4,4.1']);
+const BREAK_FROM = new Set(['6.4,1', '5.95,1.25', '5.7,1.85', '5,2.3', '4.95,3.05', '4.4,4.1', '3.7,4.45', '3.2,5.15']);
 /** How deep the slab is under its top at a point of its outline: uneven, as a slab split from the bed is. */
 const slabDepth = (s: number, t: number): number => 1.3 + 0.22 * (0.5 + 0.5 * Math.sin(s * 0.9 + t * 0.4 + 1.3)) + 0.12 * (0.5 + 0.5 * Math.cos(t * 1.3 - s * 0.2));
 /** The dish in its top, in the slab's own plan: its middle and how far it reaches each way. */
@@ -250,7 +253,7 @@ function ivyOf(pic: { img: HTMLCanvasElement }): HTMLCanvasElement {
   const [cv, h] = canvasOf(pic.img.width, pic.img.height);
   h.drawImage(pic.img, 0, 0);
   h.globalCompositeOperation = 'source-atop';
-  h.fillStyle = 'rgba(162, 205, 147, 0.38)';
+  h.fillStyle = 'rgba(162, 205, 147, 0.19)';
   h.fillRect(0, 0, cv.width, cv.height);
   lightened.set(pic.img, (c = cv));
   return c;
@@ -338,17 +341,23 @@ function modelOf(stage: number): Model {
       const shady = Math.max(0, -out[0] * 0.8 - out[1] * 0.6);
       if (shady < 0.25 || m <= 0.1) return;
       const a: V3 = [(q[0] - p[0]) / len, (q[1] - p[1]) / len, 0];
-      for (let j = 0; j < len * 16 * (0.35 + m) * shady; j++) {
-        const sAlong = 0.3 + M() * (len - 0.6);
-        if (noise2(sAlong / 1.6, i * 3.1, 77) < 0.42 - 0.3 * m) continue;
-        const bx = p[0] + a[0] * sAlong, by = p[1] + a[1] * sAlong;
-        if (M() < 0.55) {
-          const d = M() * (0.4 + 0.8 * m);
-          drape.push([[bx - out[0] * d, by - out[1] * d, stepZ(bx, by) + 0.04], 0.35 + 0.25 * M(), null]);
-        } else {
-          const z = stepZ(bx, by) - M() * 0.34;
-          if (z < 0.05) continue;
-          drape.push([[bx + out[0] * 0.1, by + out[1] * 0.1, z], 0.35 + 0.22 * M(), out]);
+      // A few masses along the edge, more as it greens, each of overlapping cushions two or three deep onto the top and a little over the arris.
+      const seeds = Math.round((2 + len / 3.2) * Math.min(1, 0.35 + m) * shady);
+      for (let c = 0; c < seeds; c++) {
+        const s0 = 0.6 + M() * (len - 1.2);
+        const each = Math.round(6 + 5 * m + 2 * M());
+        for (let j = 0; j < each; j++) {
+          const sAlong = Math.max(0.2, Math.min(len - 0.2, s0 + (M() - 0.5) * 1.1));
+          const bx = p[0] + a[0] * sAlong, by = p[1] + a[1] * sAlong;
+          const r = 0.5 + 0.3 * M();
+          if (M() < 0.72) {
+            const d = M() * (0.5 + 0.9 * m);
+            drape.push([[bx - out[0] * d, by - out[1] * d, stepZ(bx, by) + 0.04], r * (1 - 0.25 * d), null]);
+          } else {
+            const z = stepZ(bx, by) - M() * 0.3;
+            if (z < 0.05) continue;
+            drape.push([[bx + out[0] * 0.12, by + out[1] * 0.12, z], r * 0.85, out]);
+          }
         }
       }
     });
@@ -389,10 +398,12 @@ function modelOf(stage: number): Model {
       const zt = top.reduce((a, p) => a + p[2], 0) / top.length;
       const M = rand(seed + 5);
       const drape: Drape = [];
-      for (let j = 0; j < 120 * m; j++) {
-        const px = x + (M() - 0.5) * rx * 2, py = y + (M() - 0.5) * ry * 2;
-        if (!inside(flat, px, py) || noise2(px / 1.5, py / 1.5, 91) < 0.55 - 0.3 * m) continue;
-        drape.push([[px, py, zt + 0.05], 0.35 + 0.25 * M(), null]);
+      for (let c = 0; c < 2 + Math.round(2 * m); c++) {
+        const cx = x + (M() - 0.5) * rx, cy = y + (M() - 0.5) * ry;
+        for (let j = 0; j < 7 + 4 * m; j++) {
+          const px = cx + (M() - 0.5) * 1.1, py = cy + (M() - 0.5) * 1.1;
+          if (inside(flat, px, py)) drape.push([[px, py, zt + 0.05], 0.5 + 0.3 * M(), null]);
+        }
       }
       if (drape.length) things.push({ x, y, draw: drapeOf(drape) });
     }
@@ -532,44 +543,53 @@ function modelOf(stage: number): Model {
         const away = turnedFrom(kk.e, out);
         if (away > 0.05) { g.fillStyle = css(mix(kk.fill, hex('#3f5b63'), 0.5), 0.4 * away); g.fillRect(-8, -2, 16, 12); }
         // The slab's shade over the head of it and the cool where it stands on the step, by height alone, so they meet round the corners; softened in two steps.
-        if (hi > UNDER) {
-          g.fillStyle = css(mix(kk.fill, hex('#3f5464'), 0.55), 0.24);
-          g.fillRect(-8, UNDER - 0.3, 16, 12);
-          g.fillRect(-8, UNDER, 16, 12);
+        if (hi > UNDER - 0.5) {
+          g.fillStyle = css(mix(kk.fill, hex('#3f5464'), 0.55), 0.13);
+          for (const z of [UNDER - 0.45, UNDER - 0.2, UNDER, UNDER + 0.25]) g.fillRect(-8, z, 16, 12);
         }
-        if (lo < 1) {
-          g.fillStyle = css(mix(kk.fill, hex('#465a66'), 0.5), 0.22);
-          g.fillRect(-8, -2, 16, 2.85);
-          g.fillRect(-8, -2, 16, 2.5);
+        if (lo < 1.2) {
+          g.fillStyle = css(mix(kk.fill, hex('#465a66'), 0.5), 0.12);
+          for (const z of [1.05, 0.8, 0.55, 0.3]) g.fillRect(-8, -2, 16, z + 2);
         }
       };
       shaftFaces.push({ pts, n, tone: STONE, frame, paint, crease: 0 });
     }
   }
   // Ivy up its shady front left arris, a thin chain of leaves with a spray of flower, from the step toward the cap.
-  if (m >= 0.35) {
-    // On the corner face itself, the front left one, in its frame: across the corner from its right edge, and up the lean.
-    const v4 = rings[0][4], v5 = rings[0][5];
-    const fr = shaftFaces[4];
-    fr.over = (g) => {
-      const grow = Math.min(1, (m - 0.2) / 0.6);
-      const pic = strandPic('climb', 5, Math.max(3, Math.round(STAGES * (0.5 + 0.5 * grow))), true);
+  /*
+   * Ivy up two of its corners from the step, the Runestones' strand at the
+   * plinth's leaf size: a long one up the shady front left corner and a
+   * shorter one up the front right, so some shows from wherever it is seen.
+   * Each roots on its corner face and is let run over the faces beside it;
+   * how high it has got goes with how long the stone has stood -- half the
+   * shaft at a week, to the cap's underside at the most -- along a ragged
+   * line, never a ruled one.
+   */
+  const ivyUp = (j: number, v: number, reach: number, seed: number): void => {
+    const v0 = rings[0][j], v1 = rings[0][(j + 1) % 8];
+    const half = Math.hypot(v1[0] - v0[0], v1[1] - v0[1]) / 2;
+    const grow = Math.max(0, Math.min(1, (m - 0.35) / 0.65));
+    const top = Math.min(SHAFT_TOP - 0.15, SHAFT_TOP * reach * (0.5 + 0.5 * grow));
+    shaftFaces[j].over = (g) => {
+      const pic = strandPic('climb', v, Math.max(3, Math.round(STAGES * (0.55 + 0.45 * grow))), true);
       if (!pic) return;
       const sc = (0.4 * 10) / PPM;
-      const half = Math.hypot(v5[0] - v4[0], v5[1] - v4[1]) / 2;
-      const top = Math.min(SHAFT_TOP - 0.25, pic.ay * sc);
+      const R = rand(seed);
       g.save();
       g.translate(half, 0);
       g.beginPath();
-      g.rect(-4, -0.6, 8, SHAFT_TOP - 0.15 + 0.6);
+      g.moveTo(-8, -0.8);
+      for (let x = -8; x <= 8; x += 0.5) g.lineTo(x, top - (0.6 * Math.abs(x)) / 3 + (R() - 0.5) * 0.5);
+      g.lineTo(8, -0.8);
+      g.closePath();
       g.clip();
-      // The stem it climbs by, under its leaves, so it reads as one strand to the cap.
+      // The stem it climbs by, under its leaves, so it reads as one strand.
       g.beginPath();
       for (let z = -0.2; z <= top; z += 0.3) {
-        const x = 0.22 * Math.sin(z * 1.9) + 0.1 * Math.sin(z * 4.3);
+        const x = 0.22 * Math.sin(z * 1.9 + seed) + 0.1 * Math.sin(z * 4.3);
         if (z === -0.2) g.moveTo(x, z); else g.lineTo(x, z);
       }
-      g.strokeStyle = '#66684a';
+      g.strokeStyle = '#5f6346';
       g.lineWidth = 0.17;
       g.lineCap = 'round';
       g.stroke();
@@ -578,6 +598,10 @@ function modelOf(stage: number): Model {
       g.drawImage(ivyOf(pic), -pic.ax, -pic.ay);
       g.restore();
     };
+  };
+  if (m >= 0.35) {
+    ivyUp(4, 5, 1, 3);
+    ivyUp(2, 2, 0.6, 7);
   }
   things.push({ x: 0, y: 0, faces: shaftFaces });
   // A drape of moss over its foot on the shady side, low down, beaded: drawn only where it lies on a side the eye sees.
@@ -591,7 +615,7 @@ function modelOf(stage: number): Model {
       const p = add(add(a, mul(sub(b, a), u)), [0, 0, z]);
       const o = centre(z);
       const outw = unit([p[0] - o[0], p[1] - o[1], 0]);
-      drape.push([add(p, mul(outw, 0.12)), 0.35 + 0.22 * M(), outw]);
+      drape.push([add(p, mul(outw, 0.12)), 0.45 + 0.22 * M(), outw]);
     }
     if (drape.length) {
       things.push({
@@ -649,16 +673,24 @@ function modelOf(stage: number): Model {
           const T = rand(6500 + i);
           g.fillStyle = css(mix(k.fill, [252, 246, 232], 0.42), 0.9);
           g.fillRect(-1, -2, len + 2, 4);
-          for (let j = 0; j < len * 6; j++) {
-            g.fillStyle = T() < 0.5 ? css(mix(k.fill, hex('#a99aa2'), 0.4), 0.45) : css([255, 252, 244], 0.5);
-            g.fillRect(T() * len, -1.4 + T() * 2.6, 0.18 + T() * 0.25, 0.12 + T() * 0.15);
+          // The grain of the break, running slantwise and wandering as stone parts, and the shell-curves of the blow.
+          g.lineCap = 'round';
+          for (let j = 0; j < 3 + len * 4; j++) {
+            const x = T() * len, y = -1.4 + T() * 2.4, a = 0.55 + (T() - 0.5) * 0.7, l = 0.25 + T() * 0.45;
+            g.beginPath();
+            g.moveTo(x, y);
+            g.lineTo(x + Math.cos(a) * l, y - Math.sin(a) * l * 0.6);
+            g.strokeStyle = T() < 0.55 ? css(mix(k.fill, hex('#a99aa2'), 0.45), 0.5) : css([255, 252, 244], 0.55);
+            g.lineWidth = 0.08 + T() * 0.06;
+            g.stroke();
           }
-          // Two little facets where it came away, a step in the break.
           g.beginPath();
-          g.moveTo(len * 0.3, -1.5); g.lineTo(len * 0.45, 0.2); g.lineTo(len * 0.7, -0.3); g.lineTo(len * 0.8, -1.5);
-          g.fillStyle = css(mix(k.fill, hex('#8f879c'), 0.35), 0.5);
-          g.fill();
-          shadeStrip(g, k, nOut, len, -1.5, hi, T);
+          g.arc(len * 0.5, -1.6, 1.1 + T() * 0.4, Math.PI * 1.15, Math.PI * 1.75);
+          g.strokeStyle = css(mix(k.fill, hex('#8f879c'), 0.4), 0.45);
+          g.lineWidth = 0.1;
+          g.stroke();
+          const away = turnedFrom(k.e, nOut);
+          if (away > 0.05) { g.fillStyle = css(mix(k.fill, hex('#425c66'), 0.5), 0.42 * away); g.fillRect(-1, -2, len + 2, 4); }
         },
       };
     }
@@ -707,11 +739,14 @@ function modelOf(stage: number): Model {
     for (const [x, y, r] of [[-5.4, -3.5, 0.5], [5.3, -4.4, 0.4], [-4.9, 4.6, 0.38]] as Array<[number, number, number]>) lichen(g, T, x, y, r, LICHEN);
     // Moss beaded along the outer margin on its sheltered back and left, out of the dish.
     const pts: MossAt[] = [];
-    for (let j = 0; m > 0.25 && j < 90 * m; j++) {
-      const x = -6.6 + T() * 13, y = -5.8 + T() * 11.6;
-      if (!(x < -3 || y < -3.6) || !inside(inset(slab, 0.15), x, y) || inside(inset(slab, 1.0), x, y)) continue;
-      if (noise2(x / 1.8, y / 1.8, 63) < 0.55 - 0.3 * m) continue;
-      pts.push([onSlab(x, y, SLAB_UP + 0.03), 0.16 + 0.26 * T(), 0.55]);
+    // A few masses along the margin, at the Runestones' cushion size.
+    for (const [cx, cy, at0] of [[-5.9, -2.2, 0.25], [-4.6, -4.9, 0.4], [-6.0, 1.8, 0.6], [-1.8, -5.1, 0.8]] as Array<[number, number, number]>) {
+      if (m < at0) continue;
+      for (let j = 0; j < 7 + 3 * m; j++) {
+        const x = cx + (T() - 0.5) * 1.2, y = cy + (T() - 0.5) * 1.2;
+        if (!inside(inset(slab, 0.15), x, y) || inside(inset(slab, 1.1), x, y)) continue;
+        pts.push([onSlab(x, y, SLAB_UP + 0.03), 0.42 + 0.26 * T(), 0.55]);
+      }
     }
     padsAt(g, k, pts);
   };

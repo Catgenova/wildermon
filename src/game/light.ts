@@ -117,9 +117,11 @@ export const runestoneLight = (x: number, y: number): LightSource => ({
 
 /**
  * And an enchanter's plinth's runes: a small pool of the runestones' pale gold
- * round its middle, steady and soft-edged -- at rest just past its own top,
- * and wider and brighter while somebody stands at it enchanting (`plinthBusy`),
- * enough to light whoever it is. Drawn only, as a runestone's is: no rule asks
+ * round its middle, steady and soft-edged -- at rest a little round its foot,
+ * and a little wider and brighter while somebody stands at it enchanting
+ * (`plinthBusy`), on the stone and its step and no further: whoever stands
+ * at it is left to the night, and the light is in its dish and runes. Drawn
+ * only, as a runestone's is: no rule asks
  * how far it reaches. The runes themselves shine through the wash in their
  * own shapes, as a runestone's do.
  */
