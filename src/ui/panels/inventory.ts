@@ -11,7 +11,7 @@ import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { ACTION_BY_ID, type ActionDef } from '../../game/actions';
 import { ABSORB_SAID, absorbable, MOTE } from '../../game/sacrifice';
 import { ENCHANT, enchantable } from '../../game/enchanting';
-import { enchantChance, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
+import { ENCHANT_SAID, enchantChance, ENCHANTERS_PLINTH, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
 import { percent } from '../../game/words';
 import { hasRunestones, RUNESTONES, stoneChoice, stoneDistance, TELESTONE, TELESTONE_SAID, telestoneRange, telestoneWait, timeLeftNote, TRAVEL } from '../../game/runestones';
 import { improvable, improveCeiling } from '../../game/improve';
@@ -244,11 +244,13 @@ export class InventoryPanel {
     const enchant = written ? ACTION_BY_ID.get(ENCHANT) : undefined;
     if (enchant && written) {
       const into = enchantable(this.game, written);
+      // Done standing at an enchanter's plinth and nowhere else, which is said here before anything is chosen.
+      const away = this.game.atStation(ENCHANTERS_PLINTH) ? undefined : ENCHANT_SAID.plinth;
       entries.push({
         label: 'Enchant',
         note: `takes ${percent(enchantChance(this.game.skills.get(ENCHANTING), item.ql))} of the time`,
-        hint: into.length ? undefined : wrongKind(written),
-        disabled: !into.length,
+        hint: away ?? (into.length ? undefined : wrongKind(written)),
+        disabled: !!away || !into.length,
         children: into.map((it) => {
           const t = { kind: 'item' as const, uid: it.uid, scroll: item.uid };
           const why = enchant.check?.(t, this.game) ?? null;

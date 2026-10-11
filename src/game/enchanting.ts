@@ -20,7 +20,7 @@ import { CLASS_SPELLS } from './talents';
 import { blowEvery, KNIFE_BLEED, KNIFE_BLEED_SECS, STUN_SECS, VENOM_DRAIN, VENOM_SECS } from './fight';
 import { DAMAGE_MAX, QL_TOP } from './limits';
 import {
-  alreadyEnchanted, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
+  alreadyEnchanted, ENCHANTERS_PLINTH, ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_SAID, ENCHANT_TIME, ENCHANT_WIND, ENCHANTING, ENCHANTMENT_LIST, ENCHANTMENTS,
   enchantChance, enchantHitChance, enchantPct, enchantQl, enchantValue, qlWord, ROLLED_EFFECTS, scrollOf, wrongKind,
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
@@ -129,6 +129,7 @@ export function enchantSetting(g: Game, t: Target): { why: string } | { scroll: 
   const scroll = t.kind === 'item' && t.scroll !== undefined ? g.inventory.get(t.scroll) : undefined;
   const e = scroll ? scrollOf(scroll.id) : undefined;
   if (!scroll || !e) return { why: ENCHANT_SAID.scroll };
+  if (!g.atStation(ENCHANTERS_PLINTH)) return { why: ENCHANT_SAID.plinth };
   const weapon = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
   if (!weapon) return { why: ENCHANT_SAID.weapon };
   if (!fitsOn(e.on, weapon.id)) return { why: wrongKind(e) };

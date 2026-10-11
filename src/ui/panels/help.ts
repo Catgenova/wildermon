@@ -55,7 +55,7 @@ import { MOTE_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
-import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
@@ -74,7 +74,7 @@ import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guidePages, keepable } from '../../game/guide';
 import { MOBS_RANGE } from '../../game/keep';
 import { KILN_CAPACITY } from '../../game/kiln';
-import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, OVEN_REACH, torchBurn, torchReach } from '../../game/light';
+import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
 import { MARK_CAP } from '../../game/marks';
 import { MATERIAL_BY_ID, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
@@ -137,7 +137,7 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import {
-  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, enchantChance, ENCHANTMENT_LIST, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM,
+  ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTERS_PLINTH, enchantChance, ENCHANTMENT_LIST, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM,
 } from '../../game/enchant';
 import { BRAND_SPELL, enchantLineAt, meleeNames, monsterNames } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
@@ -226,6 +226,10 @@ function enchantingHelp(): string {
     fails loses its motes, and the sheet takes ${SCROLL_HARM} damage (as one sheet of its pile: the pile's damage rises by that over
     its sheets); a sheet that would reach ${BROKEN_AT} is used up instead.</p>
     <ul>${rows}</ul>
+    <p>Enchant is done standing at an <b>enchanter's plinth</b> set down on the ground, within ${STATION_REACH} tiles of its middle,
+    and nowhere else; writing a scroll needs none. One is ${bill(`make_${ENCHANTERS_PLINTH}`)}, built with a trowel at ${workedAt(`make_${ENCHANTERS_PLINTH}`)},
+    and moss gathers on it as on a statue. While somebody is enchanting at one its runes brighten and at night it lights
+    ${PLINTH_BUSY_REACH} tiles round its middle, where it lights ${PLINTH_REACH} at rest.</p>
     <p>Choose <b>Enchant</b> on a scroll in your pack and pick what it goes on, in your pack: a melee weapon is ${meleeNames()},
     not a bow or a thrown weapon. It takes the average of your enchanting and the scroll's QL, as a percent, of the time, never under
     ${percent(ENCHANT_LEAST)} and never over ${percent(ENCHANT_MOST)}

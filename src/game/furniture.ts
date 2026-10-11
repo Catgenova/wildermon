@@ -9,6 +9,7 @@ import { matOf } from './materials';
 import { roseSays, ROSES_RULE } from './roses';
 import type { Lamp } from './lamps';
 import { colourWord, dyeHex, readDye } from './dyestuffs';
+import { ENCHANTERS_PLINTH } from './enchant';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -373,6 +374,16 @@ export const FURNITURE: FurnitureDef[] = [
   piece('lamp_pillar', 'Lantern pillar', 1, 1, [['stone_brick', 8], ['mortar', 4], ['ribbon', 2]], 20, 16,
     'You lay the courses up to a capital and band an iron cage into its top. Set a lantern in it.', undefined,
     { skill: 'masonry', tool: 'trowel', lamp: 'top' }),
+  /*
+   * Where a scroll is put into a thing, and nowhere else (`enchant.ts`): a
+   * carved stone table, hip high, its rim cut with runes and its top dished
+   * where the scroll is laid. Laid in brick like a brazier, a little more of
+   * it for the shaft and two slabs for the top, and a light mote and a dark
+   * one for its runes. Moss gathers on it as on a statue (`greening.ts`).
+   */
+  piece(ENCHANTERS_PLINTH, 'Enchanter\'s plinth', 2, 2, [['stone_brick', 32], ['mortar', 12], ['stone_slab', 2], ['light_mote', 1], ['dark_mote', 1]], 26, 24,
+    'You lay a coursed foot, set a shaft on it and bed a dished slab across its head, then cut the runes round its rim with a light mote and a dark one in them. Stand at it to enchant.',
+    undefined, { skill: 'masonry', tool: 'trowel', mossy: true }),
   piece('altar', 'Altar', 2, 2, [['stone_brick', 64], ['mortar', 32], ['stone_slab', 4]], 40, 40, 'You lay the courses and bed the slab on top. Kneel here at dawn.', undefined, { skill: 'masonry', tool: 'trowel', altar: true, deed: true }),
   piece('banner', 'Banner', 1, 1, [['cloth', 16], ['shaft', 2], ['rope', 1], ['nail', 12]], 10, 10, 'You hem the cloth, lash it to the staff and run it up. Dye it and it is your colour.', undefined, { skill: 'tailoring' }),
   /*
@@ -675,6 +686,13 @@ for (const f of FURNITURE) {
   describeFrom(f.id, said);
 }
 describeWith({ bucketLitres: BUCKET_LITRES });
+/**
+ * How far from a station's middle you can stand and still be at it, in tiles,
+ * for every station that is a piece set down (`Game.furnitureNear`): a paper
+ * press, a loom, an enchanter's plinth. The island's `at_station` the same.
+ */
+export const STATION_REACH = 2.4;
+describeFrom(ENCHANTERS_PLINTH, { reach: STATION_REACH });
 // What a fountain draws, off the well's own rate: litres a minute at the least, and at quality 100.
 describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1), top: WELL_TRICKLE_AT });
 // A tent's night measured against a bed's, off the two pieces.
