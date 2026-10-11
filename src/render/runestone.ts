@@ -987,6 +987,9 @@ export const FLOWER: Record<string, { petal: string; ring: string; eye: string }
   yellow: { petal: '#f4d35a', ring: '#a5852a', eye: '#dd8f2b' },
   blue: { petal: '#98b8ee', ring: '#4f6b99', eye: '#f3eed6' },
   lilac: { petal: '#cdb4ee', ring: '#7a63a6', eye: '#f6e6a8' },
+  // Chalkier, for smaller things than a runestone that stand in their own light: a cream for the white, a dusty rose for the pink.
+  cream: { petal: '#e9e3d2', ring: '#84968a', eye: '#e2b955' },
+  rose: { petal: '#e3b3bd', ring: '#a27b88', eye: '#ecd07c' },
 };
 
 /**
@@ -2137,8 +2140,9 @@ export interface GlowSpec {
   roundel?: string;
   /** How wide its groove is, in units, where a runestone's is 0.78 (a roundel's 0.62). */
   w?: number;
-  /** The very middle of its lit groove, where a runestone's is all but white. */
+  /** The very middle of its lit groove, where a runestone's is all but white; and the gold round that. */
   inner?: string;
+  mid?: string;
 }
 
 /**
@@ -2191,7 +2195,7 @@ export function bakeGlow(M: DOMMatrix, r: GlowSpec, scale: number): Glow {
     h.lineWidth = w * 1.05;
     h.stroke();
     path(h);
-    h.strokeStyle = '#ffd98c';
+    h.strokeStyle = r.mid ?? '#ffd98c';
     h.lineWidth = w * 0.72;
     h.stroke();
     path(h);
