@@ -1,9 +1,9 @@
 import type { Side } from '../game/building';
-import { MOSS, rand } from './ivy';
+import { rand } from './ivy';
 import {
   add, aboveGround, area2, at, bakeGlow, boulder, canvasOf, css, cut, dot, drawFaces, drawGlows, drawPads, eyeOf, flowerClump,
   grassTuft, groundNear, hex, inset, mix, mul, newell, plate, proj, scaleFor, stoneSkin, strokesPath, TAU,
-  toneOf, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
+  toneOf, GLYPHS, type MossPalette, type Ctx, type Eye, type Face, type Glow, type Pad, type Painter, type Pt, type Stroke, type Thing, type Tone, type V3,
 } from './runestone';
 
 /**
@@ -50,8 +50,6 @@ const SET_ASKEW = -Math.PI / 8;
 const STONE: Tone = toneOf('#f1e6d2', '#b2a4a8');
 const ROCK: Tone = toneOf('#ddd2c0', '#a2979f');
 const DRESSED: Tone = toneOf('#e9dfcc', '#a99da5');
-/** The flowers planted at its foot: chalky, dusty and faded, with white among them (`FLOWER` in `runestone.ts`). */
-const FLOWERS = ['white', 'dusk', 'cream', 'rose', 'white', 'cream', 'dusk'];
 
 /** How high the two courses stand, and where the stone stands on them: sunk a little into the upper. */
 const LOWER_H = 1.7;
@@ -103,23 +101,13 @@ function widthAt(z: number, outline: readonly Pt[] = OUTLINE): [number, number] 
   }
   return lo < hi ? [lo, hi] : [0, 0];
 }
-/** How high it stands at `x` across its face. */
-function headAt(x: number, outline: readonly Pt[] = OUTLINE): number {
-  let top = 0;
-  for (let i = 0; i < outline.length; i++) {
-    const a = outline[i], b = outline[(i + 1) % outline.length];
-    if ((a[0] - x) * (b[0] - x) > 0 || a[0] === b[0]) continue;
-    top = Math.max(top, a[1] + ((x - a[0]) / (b[0] - a[0])) * (b[1] - a[1]));
-  }
-  return top;
-}
 
 /* ---- what is cut into it ----------------------------------------------------------- */
 
 /** The roundel at its head and the panel the line is cut in: in the face, across and up. */
 const ROUNDEL = { x: 0, z: 12.0, r: 1.95 };
 /** How wide the roundel's lit strokes are: line-work, stone between them, never a lit disc. */
-const ROUNDEL_W = 0.27;
+const ROUNDEL_W = 0.2;
 /**
  * The roundel's figure: the Runestones' wheel (`roundelStrokes('wheel')`)
  * drawn in line-work for a stone a tenth their height -- one ring, a small
@@ -140,8 +128,8 @@ const BACK_STROKES: Stroke[] = wheel(4);
 const BACK_ROUNDEL = { x: 0, z: 11.7, r: 1.45 };
 const PANEL = { x: 0, w: 5.5, z0: 1.55, z1: 8.65, arch: 1.15 };
 /** The marks of the line: how high each is from its middle, how wide, how far apart, and the room a space takes. */
-const MARK_H = 0.42;
-const MARK_W = 0.2;
+const MARK_H = 0.46;
+const MARK_W = 0.22;
 const MARK_STEP = 0.66;
 const WORD_GAP = 0.5;
 const LINE_STEP = 1.35;
@@ -164,6 +152,10 @@ const MARKS: Stroke[][] = [
   [{ pts: [[-0.35, -1], [-0.35, 1], [0.5, 0.4]] }],
   [{ pts: [[-0.4, 1], [0.4, 0.25], [-0.4, -0.25], [0.4, -1]] }],
   [{ pts: [[0, -1], [0, 1]] }, { pts: [[-0.6, -0.3], [0.6, 0.3]] }],
+  [{ pts: [[-0.5, -1], [0.5, 1]] }],
+  [{ pts: [[-0.4, -1], [0.3, 1]] }, { pts: [[0, 0], [0.6, -0.2]] }],
+  // And the Runestones' own staves, at the size of a letter.
+  GLYPHS.tiwaz, GLYPHS.algiz, GLYPHS.laguz, GLYPHS.sowilo, GLYPHS.othala, GLYPHS.cross,
 ];
 
 /** One mark of a line: which of `MARKS`, and where in the face. */
@@ -177,9 +169,15 @@ interface Mark { k: number; x: number; z: number }
  */
 export function engravingMarks(text: string | undefined): Mark[][] {
   const words = (text ?? '').split(' ').filter((w) => w.length);
+  // The hand's own unevenness, off the words themselves: the same line is cut the same way every time.
+  let h = 0;
+  for (const ch of text ?? '') h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  const H = rand(h % 100000 + 7);
   const rows: Array<Array<number[]>> = [];
   let row: Array<number[]> = [];
   let wide = 0;
+  // Each row its own length: the hand fits the words as they come, not to a ruled measure.
+  let room = ROW_WIDE * (0.8 + 0.2 * H());
   for (const word of words) {
     const marks: number[] = [];
     for (let i = 0; i < word.length; i += 2) {
@@ -187,30 +185,36 @@ export function engravingMarks(text: string | undefined): Mark[][] {
       marks.push((a * 7 + b * 13 + i) % MARKS.length);
     }
     const len = marks.length * MARK_STEP;
-    if (row.length && wide + WORD_GAP + len > ROW_WIDE) {
+    if (row.length && wide + WORD_GAP + len > room) {
       rows.push(row);
       row = [];
       wide = 0;
+      room = ROW_WIDE * (0.78 + 0.22 * H());
     }
     // A word longer than the row is cut short at the row's end.
-    const fit = Math.max(1, Math.min(marks.length, Math.floor((ROW_WIDE - (row.length ? wide + WORD_GAP : 0)) / MARK_STEP)));
+    const fit = Math.max(1, Math.min(marks.length, Math.floor((room - (row.length ? wide + WORD_GAP : 0)) / MARK_STEP)));
     row.push(marks.slice(0, fit));
     wide += (row.length > 1 ? WORD_GAP : 0) + fit * MARK_STEP;
   }
   if (row.length) rows.push(row);
-  const kept = rows.slice(0, LINES_MOST);
+  let kept = rows.slice(0, LINES_MOST);
+  // The last line short: a full last row gives up its last word to a row of its own, where there is room for one.
+  const last = kept[kept.length - 1];
+  if (kept.length > 1 && kept.length < LINES_MOST && last.length > 2) kept = [...kept.slice(0, -1), last.slice(0, -1), last.slice(-1)];
   const top = ROWS_MID + ((kept.length - 1) * LINE_STEP) / 2;
   return kept.map((r, j) => {
-    const span = r.reduce((n, w) => n + w.length * MARK_STEP, 0) + (r.length - 1) * WORD_GAP - (MARK_STEP - MARK_W * 2);
-    let x = PANEL.x - span / 2 + MARK_W;
-    const z = top - j * LINE_STEP;
+    // Its spacing wanders a little, mark to mark, and the row starts a little off the middle.
+    const steps = r.map((w) => w.map(() => MARK_STEP * (0.82 + 0.36 * H())));
+    const span = steps.reduce((n, w) => n + w.reduce((m, st) => m + st, 0), 0) + (r.length - 1) * WORD_GAP - MARK_STEP + MARK_W * 2;
+    let x = PANEL.x - span / 2 + MARK_W + (H() - 0.5) * 0.25;
+    const z = top - j * LINE_STEP + (H() - 0.5) * 0.12;
     const out: Mark[] = [];
     r.forEach((w, i) => {
-      if (i) x += WORD_GAP;
-      for (const k of w) {
-        out.push({ k, x, z });
-        x += MARK_STEP;
-      }
+      if (i) x += WORD_GAP * (0.8 + 0.4 * H());
+      w.forEach((k, n) => {
+        out.push({ k, x, z: z + (H() - 0.5) * 0.08 });
+        x += steps[i][n];
+      });
     });
     return out;
   });
@@ -265,10 +269,10 @@ const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, num
   });
   g.save();
   g.setTransform(base);
-  drawPads(g, ps);
+  drawPads(g, ps, MOSS_GREENS);
   // And a lit lip on the upper half of each cushion big enough to have one: the moss's top catching the light.
   if (lit) {
-    g.fillStyle = MOSS.lit;
+    g.fillStyle = MOSS_GREENS.lit;
     g.beginPath();
     for (const [x, y, rx, ry] of ps) {
       if (rx < 0.45) continue;
@@ -288,7 +292,7 @@ const padsOn = (g: Ctx, base: DOMMatrix, e: Eye, pts: ReadonlyArray<[number, num
  */
 function clump(R: () => number, cx: number, cz: number, w: number, h: number, size = 1): Array<[number, number, number]> {
   const out: Array<[number, number, number]> = [];
-  const n = Math.round(10 + w * h * 9);
+  const n = Math.round(5 + w * h * 4.5);
   for (let i = 0; i < n; i++) {
     const u = (R() - 0.5) * 2, v = Math.pow(R(), 1.4);
     // Narrower toward its top, and not every pad up there.
@@ -313,6 +317,13 @@ function blot(g: Ctx, R: () => number, x: number, z: number, r: number): void {
 }
 
 /** The ivy's own greens (`ivy.ts`): a leaf in the light, in shade, its rim, and the vine. */
+/**
+ * The moss's greens on a stone this small: the ivy's own deep greens rather
+ * than the Runestones' paler cushions, so a few small ones read as moss in
+ * the joints and not as lime beads -- a cool under-edge, a body, and a lit lip.
+ */
+const MOSS_GREENS: MossPalette = { line: '#3a584e', dark: '#41634f', under: '#4a6e5d', fill: '#547c69', lit: '#6c9478', top: '#78a080' };
+
 const LEAF = { lit: '#74ba87', shade: '#65957a', top: '#93d9a2', line: '#4b6c57', stem: '#5d6b4c' };
 
 /**
@@ -498,9 +509,21 @@ function modelOf(text: string, facing: Side): Model {
           cut(g, fill, 0.15, () => { g.beginPath(); ring.forEach(([x, z], i) => (i ? g.lineTo(x, z) : g.moveTo(x, z))); });
         }
         // The line, row by row, cut into its floor.
-        for (const row of rows) cut(g, fill, 0.12, () => rowPath(g, row));
+        // The line, row by row, cut into its floor: each groove with a cool lavender shadow down its lower right.
+        for (const row of rows) {
+          g.save();
+          g.translate(0.07, -0.07);
+          rowPath(g, row);
+          g.lineCap = 'round';
+          g.lineJoin = 'round';
+          g.strokeStyle = css(mix(fill, hex('#7d7499'), 0.55), 0.75);
+          g.lineWidth = 0.15;
+          g.stroke();
+          g.restore();
+          cut(g, fill, 0.13, () => rowPath(g, row));
+        }
         /* -- the roundel, cut, under the light it will have: bare stone between its strokes -- */
-        cut(g, fill, 0.3, () => strokesPath(g, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
+        cut(g, fill, 0.22, () => strokesPath(g, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r));
         // A crack in from the chipped shoulder, its lit lip under it.
         const C = rand(seed * 3 + 7);
         const pts: Pt[] = [[3.3, 11.1]];
@@ -513,7 +536,7 @@ function modelOf(text: string, facing: Side): Model {
         }
         cut(g, fill, 0.11, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
       } else {
-        // The back: dressed plain, a ring cut at its head with a six-pointed star in it, and a rule across under it.
+        // The back: dressed plain, a smaller wheel cut at its head, and a rule across under it.
         cut(g, fill, 0.24, () => strokesPath(g, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r));
         cut(g, fill, 0.14, () => { g.beginPath(); g.moveTo(-2.4, 9.1); g.lineTo(2.4, 9.05); });
       }
@@ -527,8 +550,8 @@ function modelOf(text: string, facing: Side): Model {
         blot(g, T, x, z, 0.3 + T() * 0.3);
       }
       /*
-       * Moss in cushions, each its own size and height: two or three up from
-       * the foot on the mossy side, and one in the lee of that shoulder.
+       * Moss in cushions, each its own size and height, in the corner where
+       * the stone meets its plinth on the mossy side.
        */
       const [fa, fb] = xs(0.5);
       const foot = sideK > 0 ? fb : fa;
@@ -536,7 +559,6 @@ function modelOf(text: string, facing: Side): Model {
         ...clump(T, foot - sideK * 0.9, 0.1, 2.1, 1.7, 1.15),
         ...clump(T, foot - sideK * 2.5, 0.0, 1.3, 0.8, 0.9),
         ...clump(T, foot - sideK * 0.4, 2.4, 0.6, 0.9, 0.75),
-        ...clump(T, sideK * 3.0, headAt(sideK * 3.0, outline) - 0.9, 1.1, 0.7, 0.75),
       ];
       padsOn(g, k.base, k.e, pts);
     };
@@ -554,11 +576,7 @@ function modelOf(text: string, facing: Side): Model {
       // Across, it keeps between the stone's edge and the panel's.
       const lo = sideK > 0 ? (which === 'front' ? 0.9 : 2.2) : 0.35, hi = sideK > 0 ? 0.35 : (which === 'front' ? 0.9 : 2.2);
       ivy(g, V, edge - sideK * 0.45, 0.15, which === 'front' ? 6.2 : 7.4, 1, lo, hi, 0.62);
-      if (which === 'front') ivy(g, V, sideK * 3.05, headAt(sideK * 3.05, outline) - 0.15, 1.6, -1, 0.5, 0.5, 0.5);
       g.restore();
-      // A cushion of moss lapping over the chipped shoulder from the face, its edge let run past the stone's.
-      const chip = which === 'front' ? 3.35 : -3.35;
-      padsOn(g, k.base, k.e, clump(V, chip, 10.75, 0.9, 0.55, 0.8));
     };
     return { paint, over };
   };
@@ -592,13 +610,12 @@ function modelOf(text: string, facing: Side): Model {
        */
       over: (g, k) => {
         /*
-         * Moss on the edge in two or three cushions at their own heights, laid
-         * over it after every face so one runs on across the join of two
-         * strips: at the foot of the mossy side, part way up it, and on its
-         * shoulder. A cushion belongs to the strip its middle is on.
+         * Moss on the edge in a cushion at the foot of its mossy side, where
+         * it meets the plinth, laid over it after every face so it runs on
+         * across the join of two strips. It belongs to the strip its middle is on.
          */
         const T = rand(SEED * 103 + i);
-        const spots: Array<[number, number, number, number]> = [[0.35, 1.6, 1.0, 1.05], [4.9, 0.8, 0.6, 0.75], [10.6, 1.0, 0.7, 0.8]];
+        const spots: Array<[number, number, number, number]> = [[0.35, 1.6, 1.0, 1.05]];
         const pts: Array<[number, number, number]> = [];
         if (Math.sign(mx) === mossSide) {
           for (const [z, w, h, size] of spots) {
@@ -632,8 +649,7 @@ function modelOf(text: string, facing: Side): Model {
   {
     const K = rand(SEED * 29 + 3);
     // Cushions along its foot, each its own size, the grass rising up its lip between them.
-    const along: Array<[number, number, number]> = [[-5.6, 4.45, 1.6], [-1.2, 4.55, 1.0], [3.2, 4.5, 1.3], [7.4, 2.2, 1.1], [7.6, -1.6, 0.8],
-      [-7.4, 1.0, 1.4], [-7.4, -2.6, 0.9], [2.0, -4.1, 1.2], [-3.6, -4.05, 0.9]];
+    const along: Array<[number, number, number]> = [[-5.6, 4.45, 1.5], [3.2, 4.5, 1.1], [7.4, 2.2, 0.9], [-7.4, -2.6, 1.2], [2.0, -4.1, 1.0]];
     for (const [x, y, w] of along) {
       const flat = Math.abs(y) > 4;
       for (const pt of clump(K, flat ? x : y, 0.15, w, 0.75 + K() * 0.6, 0.95)) {
@@ -651,8 +667,8 @@ function modelOf(text: string, facing: Side): Model {
       const [px, py] = proj(e, [x, y, Math.max(0.05, skirtZ[i])]);
       ps.push([px, py, rr * across * 1.1, rr * across * 0.8]);
     });
-    drawPads(g, ps);
-    g.fillStyle = MOSS.lit;
+    drawPads(g, ps, MOSS_GREENS);
+    g.fillStyle = MOSS_GREENS.lit;
     g.beginPath();
     for (const [x, y, rx, ry] of ps) {
       if (rx < 0.45) continue;
@@ -678,17 +694,25 @@ function modelOf(text: string, facing: Side): Model {
   });
 
   /* -- flowers laid at its foot and grown up round the plinth, and grass -- */
-  const flowers: Array<[number, number, number, number]> = [[2.3, 5.5, 0.34, 0], [-1.7, 5.85, 0.3, 2], [-8.5, -1.9, 0.3, 1], [8.6, -1.4, 0.28, 3], [5.4, 5.1, 0.26, 4], [-5.3, 5.3, 0.27, 0]];
-  // Which clumps are up, and their colours, off the way it was set: no two facings of it are dressed alike.
+  /*
+   * Five clumps, larger than a Runestone's to be seen at a stone this size:
+   * one either side of it, two in front, one behind. The sides always hold
+   * the dusk spike and the faded rose, in whichever order the way it was set
+   * gives, so some of each is seen from every side; the rest chalk and cream.
+   */
   const Fv = rand(SEED * 53 + ['s', 'e', 'n', 'w'].indexOf(facing) * 101);
-  flowers.forEach(([x, y, big, c0], i) => {
-    if (i > 1 && Fv() < 0.35) return;
-    const c = c0 + Math.floor(Fv() * 3);
+  const [left, right] = Fv() < 0.5 ? ['dusk', 'rose'] : ['rose', 'dusk'];
+  const flowers: Array<[number, number, number, string]> = [
+    [-8.4, -1.6, 0.56, left], [8.5, -1.0, 0.54, right],
+    [2.6, 5.7, 0.55, Fv() < 0.5 ? 'chalk' : 'cream'], [-2.4, 6.0, 0.5, Fv() < 0.5 ? 'rose' : 'chalk'],
+    [-1.2, -7.6, 0.52, Fv() < 0.5 ? 'dusk' : 'chalk'],
+  ];
+  flowers.forEach(([x, y, big, colour], i) => {
     things.push({
-      x, y, reach: [[x, y, 7]],
+      x, y, reach: [[x, y, 12]],
       draw: (g, e) => {
         const [px, py] = proj(e, [x, y, 0]);
-        flowerClump(g, px, py, FLOWERS[c % FLOWERS.length], SEED * 1000 + i * 7, big);
+        flowerClump(g, px, py, colour, SEED * 1000 + i * 7 + ['s', 'e', 'n', 'w'].indexOf(facing), big);
       },
     });
   });
@@ -824,7 +848,7 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
     if (which === 'front') {
       // The roundel: its lit strokes only by day, so bare stone shows between them; glowing lines after dark.
       glows.push(bakeGlow(M, scale, (h) => strokesPath(h, ROUNDEL_STROKES, ROUNDEL.x, ROUNDEL.z, ROUNDEL.r), ROUNDEL.x, ROUNDEL.z, ROUNDEL.r, 4, true,
-        { w: ROUNDEL_W, noDayHalo: true, gold: true, tight: true }));
+        { w: ROUNDEL_W, noDayHalo: true, tight: true, fine: true }));
       // The line: its rows catch the light after dark, faintly, the lowest first.
       model.rows.slice().reverse().forEach((row, j) => {
         if (!row.length) return;
@@ -834,7 +858,7 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
       });
     } else {
       glows.push(bakeGlow(M, scale, (h) => strokesPath(h, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r), BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r, 0, true,
-        { w: ROUNDEL_W * 0.85, faint: 0.8, noDayHalo: true, gold: true, tight: true }));
+        { w: ROUNDEL_W * 0.85, faint: 0.8, noDayHalo: true, tight: true, fine: true }));
     }
   }
 

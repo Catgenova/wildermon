@@ -425,7 +425,11 @@ export const cushion = (R: () => number, share = 1): number => (0.6 + 1.8 * R() 
  * one on an upright face stands up.
  */
 export type Pad = [number, number, number, number];
-export function drawPads(g: Ctx, ps: readonly Pad[]): void {
+/** The greens a cushion is painted in: its rim, the dark and the shade under it, its body, and its lights. */
+export interface MossPalette { line: string; dark: string; under: string; fill: string; lit: string; top: string }
+const RUNESTONE_MOSS: MossPalette = { ...MOSS, top: '#c3dea6' };
+
+export function drawPads(g: Ctx, ps: readonly Pad[], pal: MossPalette = RUNESTONE_MOSS): void {
   const pass = (fill: string, k: number, dx: number, dy: number, min = 0, every = 1): void => {
     g.beginPath();
     for (let i = 0; i < ps.length; i++) {
@@ -444,13 +448,13 @@ export function drawPads(g: Ctx, ps: readonly Pad[]): void {
    * over all of them, so the dark shows only along the lower edge of a whole
    * clump, as one line round it, never round each bead.
    */
-  pass(MOSS.line, 1.1, 0.05, 0.24);
-  pass(MOSS.dark, 1.04, 0.03, 0.14);
-  pass(MOSS.under, 1, 0, 0.05);
-  pass(MOSS.fill, 0.98, -0.02, -0.07);
+  pass(pal.line, 1.1, 0.05, 0.24);
+  pass(pal.dark, 1.04, 0.03, 0.14);
+  pass(pal.under, 1, 0, 0.05);
+  pass(pal.fill, 0.98, -0.02, -0.07);
   // The light on the bigger cushions now and then, so a mass of them is moss and not a pattern.
-  pass(MOSS.lit, 0.58, -0.22, -0.32, 1.6, 3);
-  pass('#c3dea6', 0.26, -0.3, -0.45, 2.2, 5);
+  pass(pal.lit, 0.58, -0.22, -0.32, 1.6, 3);
+  pass(pal.top, 0.26, -0.3, -0.45, 2.2, 5);
 }
 
 /** Lichen: rosettes of pale yellow-green crust, flat on the stone, a fine darker rim round each. */
@@ -1086,16 +1090,18 @@ const SPECS: Record<RunestoneId, Spec> = {
 /* ---- the flowers ------------------------------------------------------------- */
 
 /** The flowers at their feet: the meadow's own (`flowers.ts`), with a lilac besides. */
-export const FLOWER: Record<string, { petal: string; ring: string; eye: string }> = {
+export const FLOWER: Record<string, { petal: string; ring: string; eye: string; spike?: boolean }> = {
   pink: { petal: '#f0a3b7', ring: '#a85f75', eye: '#f6d467' },
   white: { petal: '#fbf8ef', ring: '#7f988a', eye: '#efc23f' },
   yellow: { petal: '#f4d35a', ring: '#a5852a', eye: '#dd8f2b' },
   blue: { petal: '#98b8ee', ring: '#4f6b99', eye: '#f3eed6' },
   lilac: { petal: '#cdb4ee', ring: '#7a63a6', eye: '#f6e6a8' },
   // And three chalkier ones, for what a player plants at a memorial stone (`memorial.ts`).
-  dusk: { petal: '#cbbcd8', ring: '#857895', eye: '#efe2b4' },
-  cream: { petal: '#f2e5bc', ring: '#a39568', eye: '#dcb35e' },
-  rose: { petal: '#e6bcbf', ring: '#9c7d82', eye: '#f0d48c' },
+  // Chalk-soft heads, ring and eye kept near the petal so a small head is its colour and not a gold ring.
+  dusk: { petal: '#c9b9d9', ring: '#a596b8', eye: '#ddd2e6', spike: true },
+  cream: { petal: '#f1e6c4', ring: '#d0c29c', eye: '#e6d29a' },
+  rose: { petal: '#e8bcc0', ring: '#c69ca1', eye: '#f0d6d2' },
+  chalk: { petal: '#f5f2e8', ring: '#d4d0c4', eye: '#e8dfc0' },
 };
 
 /**
@@ -1129,7 +1135,7 @@ export function flowerClump(g: Ctx, x: number, y: number, colour: string, seed: 
   leafPass(0.5, '#4f7a5f');
   leafPass(0, '#6f9c7c');
   leafPass(-0.35, '#8db898', 0.5);
-  const spike = colour === 'lilac' || (colour === 'pink' && R() < 0.3);
+  const spike = !!col.spike || colour === 'lilac' || (colour === 'pink' && R() < 0.3);
   if (spike) {
     // Two or three spikes, each a stem with heads up it smaller toward the tip.
     const n = 2 + Math.floor(R() * 2);
@@ -2027,6 +2033,8 @@ export interface Glow {
   noDayHalo?: boolean;
   /** Lit in its strokes alone after dark, with no soft light round it to fill the stone between them. */
   tight?: boolean;
+  /** Line-work too fine for its cream heart to show: a faint gold edge, a wide heart, and laid again as light after dark. */
+  fine?: boolean;
 }
 
 interface Baked {
@@ -2168,7 +2176,7 @@ function measure(model: Model, e: Eye): [number, number, number, number] {
  * only (`nightOnly`).
  */
 export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x: number, z: number, s: number, i: number, roundel: boolean,
-  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; gold?: boolean; tight?: boolean } = {}): Glow {
+  o: { w?: number; faint?: number; nightOnly?: boolean; noDayHalo?: boolean; gold?: boolean; tight?: boolean; fine?: boolean } = {}): Glow {
   const reach = roundel ? s * 1.25 : s * 1.9;
   // Its box on the screen: the corners of its square in the face, and room for the glow.
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -2218,17 +2226,18 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
       h.stroke();
       return;
     }
+    // The same three strokes; a fine line keeps its gold edge faint and its cream heart wide, or it is all edge.
     path(h);
-    h.strokeStyle = 'rgba(214, 140, 52, 0.9)';
-    h.lineWidth = w * 1.05;
+    h.strokeStyle = o.fine ? 'rgba(206, 152, 84, 0.62)' : 'rgba(214, 140, 52, 0.9)';
+    h.lineWidth = w * (o.fine ? 1 : 1.05);
     h.stroke();
     path(h);
     h.strokeStyle = '#ffd98c';
-    h.lineWidth = w * 0.72;
+    h.lineWidth = w * (o.fine ? 0.74 : 0.72);
     h.stroke();
     path(h);
     h.strokeStyle = '#fffbea';
-    h.lineWidth = w * 0.34;
+    h.lineWidth = w * (o.fine ? 0.46 : 0.34);
     h.stroke();
   });
   const mid = M.transformPoint(new DOMPoint(x, z));
@@ -2253,7 +2262,7 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2435,6 +2444,11 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
     if (!gl.roundel) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = (0.08 + 0.16 * night) * p * f;
+      ctx.drawImage(gl.core, X, Y, Wd, Ht);
+    } else if (gl.fine && night > 0.01) {
+      // A fine roundel's cream heart is thinner than a pixel: after dark its groove is laid again as light, so it whitens as a Runestone's does.
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = night * (0.3 + 0.15 * p) * f;
       ctx.drawImage(gl.core, X, Y, Wd, Ht);
     }
   }
