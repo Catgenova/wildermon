@@ -1,4 +1,4 @@
-import { hashOf, PPM, rand, STAGES, STRAND_REACH, strandPic, type StrandKind } from './ivy';
+import { hashOf, rand } from './ivy';
 import {
   add, area2, at, boulder, canvasOf, css, cushion, cut, dot, drawFaces, drawPads, eyeOf, flowerClump, glowOf, glyphPath, grassTuft, groundNear,
   hex, lichen, mix, mul, newell, noise2, plate, proj, roundelStrokes, scaleFor, strokesPath, TAU, toneOf,
@@ -260,10 +260,32 @@ function skin(g: CanvasRenderingContext2D, fill: [number, number, number], T: ()
     g.fill();
   }
   // Grit, as the Runestones' is and in their colour, sparser, more toward the foot.
-  g.fillStyle = css(mix(fill, hex('#6d6274'), 0.5), 0.35);
-  for (let i = 0; i < 34; i++) {
+  g.fillStyle = css(mix(fill, hex('#6d6274'), 0.5), 0.5);
+  for (let i = 0; i < 26; i++) {
     const z = Math.pow(T(), 1.6) * tall, [a, b] = xs(z);
-    g.fillRect(a + T() * (b - a), z, 0.3 + T() * 0.25, 0.3 + T() * 0.25);
+    g.fillRect(a + T() * (b - a), z, 0.5 + T() * 0.3, 0.5 + T() * 0.3);
+  }
+  // Two or three spalls, where a flake has come away: a shallow scar a step paler, its broken upper edge dark.
+  for (let i = 0, n = 2 + (T() < 0.5 ? 1 : 0); i < n; i++) {
+    const z = tall * (0.15 + 0.7 * T()), [a, b] = xs(z);
+    const x = a + 1 + T() * Math.max(0, b - a - 2), rx = 1.1 + T() * 0.5, rz = 0.8 + T() * 0.35, k = 7;
+    const pts: Pt[] = Array.from({ length: k }, (_, j) => {
+      const q = (j / k) * TAU, w = 0.75 + T() * 0.4;
+      return [x + Math.cos(q) * rx * w, z + Math.sin(q) * rz * w] as Pt;
+    });
+    g.beginPath();
+    pts.forEach(([px, pz], j) => (j ? g.lineTo(px, pz) : g.moveTo(px, pz)));
+    g.closePath();
+    g.fillStyle = css(mix(fill, [255, 250, 238], 0.45), 0.85);
+    g.fill();
+    g.beginPath();
+    for (let j = 0; j <= k / 2; j++) {
+      const [px, pz] = pts[j % k];
+      if (j) g.lineTo(px, pz); else g.moveTo(px, pz);
+    }
+    g.strokeStyle = css(mix(fill, hex('#5d5464'), 0.55), 0.85);
+    g.lineWidth = 0.4;
+    g.stroke();
   }
   // Pits weathered into it: a dark hollow and the lit lip below it.
   for (let i = 0; i < 6; i++) {
@@ -340,40 +362,132 @@ function mossMass(T: () => number, n: number, at: () => [number, number], share:
   return out;
 }
 
+/** The ivy's greens, as the Runestones' leaves are laid: the rim round every leaf, three fills, and the lit edge. */
+const IVY = { rim: '#3d6a4c', fills: ['#4f7a5f', '#5e9165', '#6f9c7c'], lit: 'rgba(176, 214, 158, 0.9)', stem: '#4a5a40', stemLit: '#71805a' };
+
 /**
- * A strand of the Runestones' own ivy (`ivy.ts`, `strandPic`) as a thing of
- * the model, rooted at `root` -- a hanging one down from there, a climbing
- * one up -- and laid upright on the screen at the island's scale, as the
- * moss's cushions and the flowers are: a pillar's faces are narrow and seen
- * slantwise, and painted into one a strand would be squeezed to a thread.
- * Its leaves overlap down its length, so it reads as a column of leaf.
- * `size` is against a Runestone strand of that reach; it leans toward
- * `lean` along the gate (1 or -1). It keeps off each carved panel in `off`
- * whose face `n` is turned to the eye, and shows only while `seen` says so.
+ * One ivy leaf on the screen, as the Runestones' are: a heart hanging from
+ * its stalk at (x, y), `w` pixels across, turned `ang` off straight down
+ * (more than nought swings its tip to the right), in fill `tone` of `IVY`,
+ * with a lighter rim along one lobe and its midrib.
  */
-function strand(kind: StrandKind, v: number, root: V3, size: number, lean: number, off: Array<{ pts: V3[]; n: V3 }>, rank: number, seen?: (e: Eye) => boolean): GateThing {
-  const reach = STRAND_REACH[kind][v] * 10 * size;
-  const down = kind === 'hang' ? -1 : 1;
-  return {
-    x: root[0], y: root[1], rank,
-    reach: [[root[0] - 3, root[1], root[2]], [root[0] + 3, root[1], root[2] + down * reach]],
-    draw: (g, e) => {
-      if (seen && !seen(e)) return;
-      const pic = strandPic(kind, v, STAGES, false);
-      if (!pic) return;
-      g.save();
-      const cuts = off.filter((o) => dot(o.n, e.toward) > 1e-6);
-      if (cuts.length) {
-        g.beginPath();
-        g.rect(-4000, -4000, 8000, 8000);
-        for (const o of cuts) o.pts.forEach((p, i) => { const [px, py] = proj(e, p); if (i) g.lineTo(px, py); else g.moveTo(px, py); });
-        g.clip('evenodd');
+function ivyLeaf(g: CanvasRenderingContext2D, x: number, y: number, w: number, ang: number, tone: number, lit: boolean): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(-ang);
+  // The heart's path is about 1.25 across at size one.
+  const k = w / 1.25;
+  g.scale(k, -k);
+  const heart = (): void => {
+    g.beginPath();
+    g.moveTo(0, -0.08);
+    g.bezierCurveTo(0.32, 0.18, 0.72, 0.05, 0.6, -0.36);
+    g.bezierCurveTo(0.5, -0.68, 0.16, -0.92, 0, -1.12);
+    g.bezierCurveTo(-0.16, -0.92, -0.5, -0.68, -0.6, -0.36);
+    g.bezierCurveTo(-0.72, 0.05, -0.32, 0.18, 0, -0.08);
+    g.closePath();
+  };
+  heart();
+  g.fillStyle = IVY.rim;
+  g.fill();
+  g.save();
+  g.scale(0.82, 0.84);
+  g.translate(0, -0.08);
+  heart();
+  g.fillStyle = IVY.fills[tone];
+  g.fill();
+  g.restore();
+  if (lit) {
+    g.beginPath();
+    g.moveTo(-0.1, -0.16);
+    g.bezierCurveTo(-0.34, 0.02, -0.6, -0.08, -0.5, -0.38);
+    g.bezierCurveTo(-0.44, -0.6, -0.22, -0.78, -0.08, -0.94);
+    g.strokeStyle = IVY.lit;
+    g.lineWidth = 0.11;
+    g.stroke();
+  }
+  g.beginPath();
+  g.moveTo(0, -0.12);
+  g.lineTo(0, -0.9);
+  g.strokeStyle = 'rgba(38, 72, 50, 0.55)';
+  g.lineWidth = 0.06;
+  g.stroke();
+  g.restore();
+}
+
+/**
+ * A strand of ivy as a thing of the model: a stem through `stem` (points on
+ * the stone, root first) and `n` leaves along it, alternating sides, each
+ * stalk set off the stem along `off` (a direction in the stone's face), the
+ * leaves from `big` units across at the root down to `small` at the tip, in
+ * the three greens. Drawn upright on the screen at the island's scale, as
+ * the moss's cushions and the flowers are -- a pillar's faces are narrow
+ * and seen slantwise, and painted into one a leaf would be squeezed to a
+ * sliver -- so at any zoom a leaf is the size of a Runestone's, and stone
+ * shows between them. Shown only while `seen` says its face is in view.
+ */
+function ivyStrand(stem: V3[], n: number, off: V3, big: number, small: number, seed: number, rank: number, seen: (e: Eye) => boolean): GateThing {
+  const L = rand(seed);
+  // Where along the stem each leaf is, and its side, tone, turn and size.
+  const total = stem.slice(1).reduce((m, p, i) => m + Math.hypot(p[0] - stem[i][0], p[1] - stem[i][1], p[2] - stem[i][2]), 0);
+  const pointAt = (d: number): V3 => {
+    let left = d;
+    for (let i = 1; i < stem.length; i++) {
+      const a = stem[i - 1], b = stem[i];
+      const l = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+      if (left <= l || i === stem.length - 1) {
+        const u = Math.min(1, left / Math.max(1e-6, l));
+        return [a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u];
       }
-      const [px, py] = proj(e, root);
-      const sc = (Math.hypot(e.ux, e.uy) * size * 10) / PPM;
-      g.translate(px, py);
-      g.scale(e.ux * lean < 0 ? -sc : sc, sc);
-      g.drawImage(pic.img, -pic.ax, -pic.ay);
+      left -= l;
+    }
+    return stem[stem.length - 1];
+  };
+  const leaves = Array.from({ length: n }, (_, i) => {
+    const u = (i + 0.4 + (L() - 0.5) * 0.3) / n;
+    const side = i % 2 ? 1 : -1;
+    const p = pointAt(u * total);
+    const w = big + (small - big) * u + (L() - 0.5) * 0.3;
+    return { p, side, w, reach: 0.38 * w, tone: Math.floor(L() * 3), turn: 0.45 + L() * 0.45, lit: L() < 0.5 };
+  });
+  const lo = Math.min(...stem.map((p) => p[2])), hi = Math.max(...stem.map((p) => p[2]));
+  const xs = stem.map((p) => p[0]), ys = stem.map((p) => p[1]);
+  return {
+    x: stem[0][0], y: stem[0][1], rank,
+    reach: [[Math.min(...xs) - big, Math.min(...ys) - big, lo - big], [Math.max(...xs) + big, Math.max(...ys) + big, hi + big]],
+    draw: (g, e) => {
+      if (!seen(e)) return;
+      const across = Math.hypot(e.ux, e.uy);
+      const pts = stem.map((p) => proj(e, p));
+      // Which way the stalks go off the stem on the screen: along the face, and never less than a little either side.
+      const [ox, oy] = proj(e, off), [zx, zy] = proj(e, [0, 0, 0]);
+      let sx = ox - zx, sy = oy - zy;
+      const sl = Math.hypot(sx, sy);
+      if (sl < 0.35 * across) { sx = 0.35 * across; sy = 0; } else { sx *= 1 / Math.max(1, sl / across); sy *= 1 / Math.max(1, sl / across); }
+      const right = sx >= 0 ? 1 : -1;
+      g.save();
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      for (const [col, wd] of [[IVY.stem, 0.42], [IVY.stemLit, 0.22]] as Array<[string, number]>) {
+        g.beginPath();
+        pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+        g.strokeStyle = col;
+        g.lineWidth = Math.max(1, wd * across);
+        g.stroke();
+      }
+      for (const lf of leaves) {
+        const [px, py] = proj(e, lf.p);
+        const lx = px + sx * lf.side * lf.reach, ly = py + sy * lf.side * lf.reach;
+        // The stalk.
+        g.beginPath();
+        g.moveTo(px, py);
+        g.lineTo(lx, ly);
+        g.strokeStyle = IVY.stem;
+        g.lineWidth = Math.max(0.8, 0.16 * across);
+        g.stroke();
+        const toRight = lf.side * right;
+        ivyLeaf(g, lx, ly, lf.w * across, toRight * lf.turn, lf.tone, toRight < 0 === lf.lit);
+      }
       g.restore();
     },
   };
@@ -388,8 +502,6 @@ function modelOf(variant: number): Model {
   const frames = new Map<string, { o: V3; a: V3; b: V3; n: V3 }>();
   const runes: GateRune[] = [];
   const climb = 3;
-  /** Each pillar's carved panels, front and back, in the model: what ivy keeps off. */
-  const panels = new Map<string, { pts: V3[]; n: V3 }>();
 
   /* -- the threshold: a worn flag lying flush between the feet, a crack across it and moss in its joints -- */
   {
@@ -567,24 +679,43 @@ function modelOf(variant: number): Model {
             z += Math.sin(ang) * 0.6;
             pts.push([x, z]);
           }
-          if (which === (li === 0 ? 'front' : 'back')) cut(g, fill, 0.36, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
+          if (which === (li === 0 ? 'front' : 'back')) {
+            // One unbroken dark hairline, and the pale lip of stone over it.
+            const line = (): void => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); };
+            g.lineCap = 'round';
+            g.lineJoin = 'round';
+            g.save();
+            g.translate(0.2, 0.32);
+            line();
+            g.strokeStyle = css(mix(fill, [255, 250, 238], 0.7), 0.9);
+            g.lineWidth = 0.34;
+            g.stroke();
+            g.restore();
+            line();
+            g.strokeStyle = css(mix(fill, hex('#463d50'), 0.7), 1);
+            g.lineWidth = 0.5;
+            g.stroke();
+          }
         }
         // One chip off the outer arris of the front, at its own height on each pillar: a fresh pale break and its shadowed lip.
         if (which === 'front') {
           const zc = tTop * (li === 0 ? 0.3 : 0.62), [a, b] = xs(zc);
           const ex = outer > 0 ? b : a;
-          const chip: Pt[] = [[ex + outer * 0.2, zc - 1.3], [ex - outer * 1.05, zc - 0.35], [ex - outer * 0.8, zc + 0.5], [ex + outer * 0.2, zc + 0.95]];
+          const chip: Pt[] = [[ex + outer * 0.3, zc - 2.4], [ex - outer * 2.0, zc - 0.8], [ex - outer * 1.7, zc + 0.9], [ex - outer * 0.4, zc + 1.6], [ex + outer * 0.3, zc + 1.7]];
           g.beginPath();
           chip.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz)));
           g.closePath();
-          g.fillStyle = css(mix(fill, [255, 250, 238], 0.5), 0.95);
+          // The fresh break: paler than the weathered face round it, and its far edge in shadow.
+          g.fillStyle = css(mix(fill, [255, 251, 242], 0.7), 1);
           g.fill();
           g.beginPath();
           g.moveTo(chip[0][0], chip[0][1]);
           g.lineTo(chip[1][0], chip[1][1]);
           g.lineTo(chip[2][0], chip[2][1]);
-          g.strokeStyle = css(mix(fill, hex('#5d5464'), 0.55), 0.75);
-          g.lineWidth = 0.22;
+          g.lineTo(chip[3][0], chip[3][1]);
+          g.strokeStyle = css(mix(fill, hex('#463d50'), 0.65), 0.95);
+          g.lineWidth = 0.45;
+          g.lineJoin = 'round';
           g.stroke();
         }
         /* -- lichen on the upper half, outside the panel -- */
@@ -664,8 +795,26 @@ function modelOf(variant: number): Model {
             g.fillStyle = T() < 0.5 ? css(mix(k.fill, [255, 252, 244], 0.4), 0.4) : css(mix(k.fill, hex('#9c94a4'), 0.32), 0.28);
             g.fill();
           }
-          g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.3);
-          for (let j = 0; j < len * 1.5; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.14 + T() * 0.12, 0.14 + T() * 0.12);
+          g.fillStyle = css(mix(k.fill, hex('#6d6274'), 0.5), 0.5);
+          for (let j = 0; j < len * 0.6; j++) g.fillRect(T() * len, (T() - 0.5) * 2 * G, 0.5 + T() * 0.3, 0.5 + T() * 0.3);
+          if (len > 10 && Math.abs(up) < 0.3) {
+            // A spall: a flake gone, its scar a step paler, its broken edge dark.
+            const sx = len * (0.3 + 0.4 * T()), sy = (T() - 0.5) * G, rx = 1.2 + T() * 0.5, ry = 0.9 + T() * 0.4;
+            const pts: Pt[] = Array.from({ length: 7 }, (_, j) => {
+              const q = (j / 7) * TAU, w = 0.75 + T() * 0.4;
+              return [sx + Math.cos(q) * rx * w, sy + Math.sin(q) * ry * w] as Pt;
+            });
+            g.beginPath();
+            pts.forEach(([px, py], j) => (j ? g.lineTo(px, py) : g.moveTo(px, py)));
+            g.closePath();
+            g.fillStyle = css(mix(k.fill, [255, 250, 238], 0.45), 0.85);
+            g.fill();
+            g.beginPath();
+            for (let j = 0; j <= 3; j++) { const [px, py] = pts[j]; if (j) g.lineTo(px, py); else g.moveTo(px, py); }
+            g.strokeStyle = css(mix(k.fill, hex('#5d5464'), 0.55), 0.85);
+            g.lineWidth = 0.4;
+            g.stroke();
+          }
           if (i === endI && endRune) {
             // The end rune, upright on the face, in a sunk panel with a pointed head ruled twice round, as the broad faces' are.
             g.save();
@@ -743,20 +892,27 @@ function modelOf(variant: number): Model {
     };
     frames.set(`${li}front`, { ...fr, n: nOf(fr, [0, 1, 0]) });
     frames.set(`${li}back`, { ...bk, n: nOf(bk, [0, -1, 0]) });
-    // Each broad face's panel in the model, a little wide, for the ivy to keep off.
-    for (const [which, q] of [['front', fr], ['back', bk]] as const) {
-      const hw = panel.w / 2 + 0.4, top = panel.z1 + panel.arch + 0.4;
-      const pts: Pt[] = [[-hw, panel.z0 - 0.4], [-hw, panel.z1], [-hw * 0.6, panel.z1 + panel.arch * 0.75], [0, top], [hw * 0.6, panel.z1 + panel.arch * 0.75], [hw, panel.z1], [hw, panel.z0 - 0.4]];
-      panels.set(`${li}${which}`, { pts: pts.map(([x, z]) => at(q.o, [x, q.a], [z, q.b])), n: frames.get(`${li}${which}`)!.n });
-    }
     if (mossy) {
-      // Ivy: up the jamb from the foot, front and back, at the arris to the opening; and a short strand up the outer arris of the front.
+      /*
+       * Ivy up the jamb, the face to the opening, from the foot nearly to the
+       * head, wandering a little, its leaves either side of it across the
+       * jamb (no panel on it). Seen while the jamb is, or near enough edge on
+       * that it shows down the pillar's inner edge.
+       */
       const [lo, hi] = widthAt(0.5);
-      const innerX = cx + (side < 0 ? hi : lo) + side * 0.5, outerX = cx + (side < 0 ? lo : hi) - side * 0.5;
-      const off = [panels.get(`${li}front`)!, panels.get(`${li}back`)!];
-      things.push(strand('climb', 1, [innerX, half[0] + 0.3, FOOT_TOP + 0.2], 1.05, -side, off, 0));
-      things.push(strand('climb', 0, [innerX, -half[0] - 0.3, FOOT_TOP + 0.2], 1.0, -side, off, 0));
-      things.push(strand('climb', 0, [outerX, half[0] + 0.3, FOOT_TOP + 0.2], 1.05, -side, off, 0));
+      const jx = cx + (side < 0 ? hi : lo) - side * 0.2;
+      const nJamb: V3 = [-side, 0, 0];
+      const seenJamb = (e: Eye): boolean => dot(nJamb, e.toward) > -0.05;
+      const climbStem = (y0: number, top: number, sd: number): V3[] => {
+        const W2 = rand(sd);
+        return Array.from({ length: 9 }, (_, i) => {
+          const z = FOOT_TOP + 0.6 + (top * i) / 8;
+          // Up the pillar's lean as it goes.
+          return [jx + lx * (z - FOOT_TOP) - side * 0.02 * z, y0 + Math.sin(i * 1.3 + W2() * 2) * 0.5 + ly * (z - FOOT_TOP), z] as V3;
+        });
+      };
+      // Its leaves as big on the screen as a Runestone's: about 4.8 units across at the root.
+      things.push(ivyStrand(climbStem(-0.8, tTop * 0.84, seed + 41), 12, [0, 1, 0], 4.8, 3.9, seed + 43, 0.5, seenJamb));
     }
 
     /* -- rocks hugging the foot stone in front and behind, mossy as the pillar is -- */
@@ -880,15 +1036,22 @@ function modelOf(variant: number): Model {
     frames.set('lfront', { ...fr, n: [0, 1, 0] });
     frames.set('lback', { ...bk, n: [0, -1, 0] });
 
-    // Ivy hanging off its brow at the mossy end, two strands either face, over the outer arris of the pillar under it and off its panel; only on a face the eye sees.
-    const mi = hand.mossSide < 0 ? 0 : 1;
+    /*
+     * Ivy trailing along its brow from the mossy end toward the crest, one
+     * strand either face, its leaves turned up over the edge into the moss
+     * and down over the face; from a leaf inside the lintel's end to short
+     * of the rune at that end. Only on a face the eye sees.
+     */
     for (const sy of [1, -1]) {
-      const off = [panels.get(`${mi}${sy > 0 ? 'front' : 'back'}`)!];
       const seen = (e: Eye): boolean => e.toward[1] * sy > 0.02;
-      for (const [dx, v, size] of [[1.2, 1, 1.1], [2.3, 0, 0.9]] as Array<[number, number, number]>) {
-        const x = hand.mossSide * (PILLAR_X + dx + (hashOf(dx * 10, sy, hand.seed, 61) - 0.5) * 0.3);
-        things.push(strand('hang', v, [x, sy * (half[0] + 0.25), LINTEL_Z + 3.2 + Math.tan(hand.tilt) * x], size, -hand.mossSide, off, 1.5, seen));
-      }
+      // Where the rune nearest the mossy end is cut, along the gate, and how far it reaches.
+      const runeAt = hand.mossSide * (6.4 - 1.0) + hand.mossSide * LINTEL_RUNE_S;
+      const x0 = hand.mossSide * (REACH_X - 0.1 - 2.5), x1 = runeAt + hand.mossSide * 2.4;
+      const stem: V3[] = Array.from({ length: 7 }, (_, i) => {
+        const x = x0 + ((x1 - x0) * i) / 6;
+        return [x, sy * (half[0] + 0.25), LINTEL_Z + 4.0 - 0.5 * Math.sin((i / 6) * Math.PI) + Math.tan(hand.tilt) * x] as V3;
+      });
+      things.push(ivyStrand(stem, 9, [0, 0, 1], 4.2, 3.4, lseed + 71 + sy, 1.5, seen));
     }
 
     // A tuft of grass and a few flowers rooted in the moss on its mossy end.
@@ -939,6 +1102,8 @@ function modelOf(variant: number): Model {
    * would stand over anything further out, and no two closer than five.
    */
   const placed: Array<[number, number]> = [];
+  /** The size of a tuft of grass in front of the opening: its blades under 0.3 m, so they never stand over a boot. */
+  const LOW = 0.5;
   /** A seed `flowerClump` draws a spike for, in pink: a foxglove. Its own draws, in its own order: leaves, their lengths, then the spike. */
   const spikeSeed = (from: number): number => {
     for (let sd = from; ; sd++) {
@@ -980,11 +1145,12 @@ function modelOf(variant: number): Model {
     const cx = side * PILLAR_X;
     const mossy = side === hand.mossSide;
     // In front: the foxglove at the mossy foot, the hand's yellow at the other, grass further in.
-    tuft(cx - side * 1, 8.2, mossy ? 'pink' : has('yellow') ? 'yellow' : hand.flowers[0][0], 0.9, mossy ? spikeSeed(hand.seed * 50 + 7) : undefined);
-    tuft(cx - side * 6.2, 6.6, null, 0.95);
+    // Anything taller than a boot stands out past the pillar's middle, toward the border's end; in front of the opening only short grass.
+    tuft(side * (REACH_X - 4.6 * 0.9 - 0.05), 8.2, mossy ? 'pink' : has('yellow') ? 'yellow' : hand.flowers[0][0], 0.9, mossy ? spikeSeed(hand.seed * 50 + 7) : undefined);
+    tuft(cx - side * 6.2, 7.4, null, LOW);
     // Behind: the hand's first flower, a small clump, and grass.
-    tuft(cx - side * 1.6, -8.4, hand.flowers[0][0], 0.8);
-    tuft(cx - side * 6.4, -6.8, null, 0.9);
+    tuft(side * (REACH_X - 4.6 * 0.8 - 0.05), -8.4, hand.flowers[0][0], 0.8);
+    tuft(cx - side * 6.4, -7.4, null, LOW);
     // Rubble chipped off in the dressing, mossed over, and a cushion of moss on the turf at the foot.
     for (const [dx, sy, r] of [[2.6, 1, 0.9], [-1.8, -1, 1.1]] as Array<[number, number, number]>) {
       const x = cx - side * dx, y = sy * (7.6 + R() * 0.8), turn = R() * TAU;
@@ -1047,11 +1213,22 @@ function grooveShade(M: DOMMatrix, r: GateRune, scale: number, box: [number, num
   h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
   h.lineCap = 'round';
   h.lineJoin = 'round';
+  const path = (): void => (r.roundel ? strokesPath(h, roundelStrokes(r.roundel), r.x, r.z, r.s) : glyphPath(h, r.glyph, r.x, r.z, r.s));
+  // Never thinner than a pixel at zoom one: how many pixels a unit of the face is, at its narrower way.
+  const px = Math.min(Math.hypot(M.a, M.b), Math.hypot(M.c, M.d));
+  // A roundel's strokes lie close: thinner, so its ring and figure stay apart.
+  const core = Math.max(w, (r.roundel ? 0.75 : 1.15) / px);
+  h.save();
   h.translate(0, -r.s * 0.12);
-  if (r.roundel) strokesPath(h, roundelStrokes(r.roundel), r.x, r.z, r.s);
-  else glyphPath(h, r.glyph, r.x, r.z, r.s);
-  h.strokeStyle = 'rgba(58, 60, 92, 0.55)';
-  h.lineWidth = w * 1.5;
+  path();
+  h.strokeStyle = 'rgba(58, 60, 92, 0.6)';
+  h.lineWidth = core * 1.6;
+  h.stroke();
+  h.restore();
+  // The groove itself, lit: solid pale gold.
+  path();
+  h.strokeStyle = '#ffd36e';
+  h.lineWidth = core;
   h.stroke();
   return cv;
 }
@@ -1109,6 +1286,15 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
   g.setTransform(base);
 
   /* -- the turf, a flat field of moss green, ragged at its edge; and the shade thrown away from the light -- */
+  // Kept within the opening's depth through the gate: whoever stands further off, drawn before the gate, is not tinted by it.
+  g.save();
+  {
+    const D = RUNE_GATE_OPENING.depth * TILE;
+    g.beginPath();
+    ([[-30, -D], [30, -D], [30, D], [-30, D]] as Pt[]).forEach(([x, y], i) => { const [px, py] = proj(e, [x, y, 0]); if (i) g.lineTo(px, py); else g.moveTo(px, py); });
+    g.closePath();
+    g.clip();
+  }
   const ring = (k: number): void => {
     g.beginPath();
     model.turf.forEach(([x, y], i) => {
@@ -1144,6 +1330,7 @@ function bake(dir: 'h' | 'v', rotation: number, variant: number, scale: number):
       g.fill();
     }
   }
+  g.restore();
 
   /*
    * Everything standing, in order: what lies flat first, then by where it
@@ -1289,14 +1476,15 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     if (q <= 0.002) return;
     const [x, y, w, h] = gl.box;
     const Xg = sx + x * zoom, Yg = sy + y * zoom, Wg = w * zoom, Hg = h * zoom;
-    if (day > 0.01) {
+    // Drawn small by day, each groove a solid pale-gold stroke over its cool shadow, and no wide glow to blur three runes into one.
+    const small = !!gl.shade && zoom <= 1.25 && day > 0.01;
+    if (small) {
       ctx.globalCompositeOperation = 'source-over';
-      // Drawn small, a cool shadow under the groove first, and the glow a step stronger.
-      if (gl.shade && zoom <= 1.25) {
-        ctx.globalAlpha = Math.min(1, day * q * 0.85);
-        ctx.drawImage(gl.shade, Xg, Yg, Wg, Hg);
-      }
-      ctx.globalAlpha = Math.min(1, day * q * 0.85 * (gl.roundel ? 0.75 : 1) * gl.square * (0.7 + 0.3 * near) + (zoom <= 1.25 ? 0.15 * day * q : 0));
+      ctx.globalAlpha = Math.min(1, day * q / 0.8);
+      ctx.drawImage(gl.shade!, Xg, Yg, Wg, Hg);
+    } else if (day > 0.01) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = Math.min(1, day * q * 0.85 * (gl.roundel ? 0.75 : 1) * gl.square * (0.7 + 0.3 * near));
       ctx.drawImage(gl.halo, Xg, Yg, Wg, Hg);
     }
     if (night > 0.01) {
@@ -1306,9 +1494,9 @@ export function drawRuneGate(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     }
     ctx.globalCompositeOperation = 'source-over';
     // The lit groove: by day a little light added over it as well; after dark only the groove, so each rune stays its own shape.
-    ctx.globalAlpha = Math.min(1, q * (0.85 - 0.2 * night));
-    ctx.drawImage(gl.core, Xg, Yg, Wg, Hg);
-    if (!gl.roundel && day > 0.01) {
+    ctx.globalAlpha = Math.min(1, q * (0.85 - 0.2 * night) * (small ? night : 1));
+    if (ctx.globalAlpha > 0.002) ctx.drawImage(gl.core, Xg, Yg, Wg, Hg);
+    if (!gl.roundel && day > 0.01 && !small) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.1 * day * q;
       ctx.drawImage(gl.core, Xg, Yg, Wg, Hg);
