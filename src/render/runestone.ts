@@ -278,8 +278,8 @@ export interface PlateOpts {
   back?: Painter;
   frontOver?: Painter;
   backOver?: Painter;
-  /** What is painted on the edge strips, in and over them: given which edge and how far it is turned up; its frame is along it and through it. */
-  edge?: (i: number, up: number) => { paint?: Painter; over?: Painter } | undefined;
+  /** What is painted on the edge strips, in and over them, and how strong the line between them (0.4 when it does not say): given which edge and how far it is turned up; its frame is along it and through it. */
+  edge?: (i: number, up: number) => { paint?: Painter; over?: Painter; crease?: number } | undefined;
   /** Leave out the face along the bottom edge, which stands in the ground. */
   sunk?: boolean;
   /** How wide each edge's chamfer is, edge i running from corner i of the outline (as drawn anticlockwise), in place of `bevel`. */
@@ -339,7 +339,7 @@ export function plate(o: PlateOpts): Face[] {
     const along = unit(sub(P(q, 0), P(p, 0)));
     const dress = o.edge?.(i, up);
     face([front(inner[i]), front(inner[j]), frontEdge(q), frontEdge(p)], add(out, A), { crease: 0.32 });
-    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: 0.4 });
+    face(side, out, { frame: { o: P(p, 0), a: along, b: A }, paint: dress?.paint, over: dress?.over, crease: dress?.crease ?? 0.4 });
     face([backEdge(p), backEdge(q), back(inner[j]), back(inner[i])], sub(out, A), { crease: 0.32 });
   }
   return faces;
