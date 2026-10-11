@@ -1994,6 +1994,8 @@ export interface Glow {
   r: number;
   i: number;
   roundel: boolean;
+  /** How much of its light is laid, nought to one, where it is not all of it: a rune on a face turning away from the eye. */
+  fade?: number;
 }
 
 interface Baked {
@@ -2135,6 +2137,8 @@ export interface GlowSpec {
   roundel?: string;
   /** How wide its groove is, in units, where a runestone's is 0.78 (a roundel's 0.62). */
   w?: number;
+  /** The very middle of its lit groove, where a runestone's is all but white. */
+  inner?: string;
 }
 
 /**
@@ -2191,7 +2195,7 @@ export function bakeGlow(M: DOMMatrix, r: GlowSpec, scale: number): Glow {
     h.lineWidth = w * 0.72;
     h.stroke();
     path(h);
-    h.strokeStyle = '#fffbea';
+    h.strokeStyle = r.inner ?? '#fffbea';
     h.lineWidth = w * 0.34;
     h.stroke();
   });
@@ -2363,10 +2367,10 @@ function motesAt(b: Baked, t: number, zoom: number): Array<{ x: number; y: numbe
  * Baked runes' light laid over what they are cut in, at (sx, sy) on the
  * screen, at `t` seconds and `night` dark: the glow round each as colour by
  * day and as light after dark, and the lit groove over it, each as far into
- * its breath as it is. Leaves the context's compositing and alpha as it
- * found them.
+ * its breath as it is, the light it adds after dark `heat` times a
+ * runestone's. Leaves the context's compositing and alpha as it found them.
  */
-export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: number, zoom: number, night: number, t: number): void {
+export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: number, zoom: number, night: number, t: number, heat = 1): void {
   const was = ctx.globalCompositeOperation;
   const wasA = ctx.globalAlpha;
   const day = 1 - night;
@@ -2382,21 +2386,21 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
      */
     if (day > 0.01) {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square;
+      ctx.globalAlpha = day * (0.3 + 0.45 * p) * (gl.roundel ? 0.7 : 1) * gl.square * (gl.fade ?? 1);
       ctx.drawImage(gl.halo, X, Y, Wd, Ht);
     }
     if (night > 0.01) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = night * (gl.roundel ? 0.22 + 0.14 * p : 0.2 + 0.3 * p);
+      ctx.globalAlpha = night * (gl.roundel ? 0.22 + 0.14 * p : 0.2 + 0.3 * p) * heat * (gl.fade ?? 1);
       ctx.drawImage(gl.dusk, X, Y, Wd, Ht);
     }
     // The lit groove itself, always there and brighter as it breathes in.
     ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = Math.min(1, 0.55 + 0.25 * night + 0.35 * p);
+    ctx.globalAlpha = Math.min(1, 0.55 + 0.25 * night + 0.35 * p) * (gl.fade ?? 1);
     ctx.drawImage(gl.core, X, Y, Wd, Ht);
     if (!gl.roundel) {
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = (0.08 + 0.16 * night) * p;
+      ctx.globalAlpha = (0.08 + 0.16 * night) * p * heat * (gl.fade ?? 1);
       ctx.drawImage(gl.core, X, Y, Wd, Ht);
     }
   }

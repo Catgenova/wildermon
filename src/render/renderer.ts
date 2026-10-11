@@ -39,7 +39,7 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
-import { drawRuneLantern, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternVariant, type RuneLanternLook } from './runelantern';
+import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { isRuneLantern } from '../game/runelantern';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
@@ -5046,6 +5046,8 @@ export class Renderer {
           const turn = this.camera.rotation, dark = this.game.darkness();
           const [hl, ht, hr, hb] = runeLanternHit(look, turn, zoom);
           const box: [number, number, number, number] = [ent.sx + (hl - 12) * zoom, ent.sy + (ht - 12) * zoom, (hr - hl + 24) * zoom, (hb - ht + 20) * zoom];
+          // Its bloom under it, lighting the ground and whatever stands behind it, not its own stone.
+          drawRuneLanternBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
             drawRuneLantern(g, px, py, zoom, look, turn, dark, this.time, false);
           }, undefined, box);
