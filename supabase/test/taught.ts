@@ -187,8 +187,13 @@ check('and says it in the same sentence the island says',
  *
  * A small base on purpose: enough to carry 0.999 over the line and never
  * enough to carry it over the next one, whatever the rest and the knacks make
- * of it, so the sentence is the same every run.
+ * of it, so the sentence is the same every run. A raise can also leave a knack
+ * behind, at its own odds, and that is told as a skill line too ("You have a
+ * knack for mind logic now"), so a check that asked for silence failed in the
+ * runs that rolled one (live run 1115); the knack is not what these ask about
+ * and is left out on both sides.
  */
+const KNACK_SAID = 'You have a knack for';
 const CREEP = 0.05;
 const isleMind = (at: number): string => {
   const out = psql(`
@@ -207,7 +212,8 @@ insert into skill (world_id, uid, id, value) values (${W}, ${DANE}, 'mind_logic'
 delete from event where uid = ${DANE};
 select skill_raise(${W}, ${DANE}, 'mind_logic', ${CREEP});
 select 'MIND|' || coalesce((select string_agg(text, ' ;; ' order by n) from event
-                            where uid = ${DANE} and kind = 'skill'), 'NOTHING SAID');
+                            where uid = ${DANE} and kind = 'skill'
+                              and text not like '${KNACK_SAID}%'), 'NOTHING SAID');
 rollback;
 `);
   return field('MIND', out);
@@ -216,7 +222,8 @@ const browserMind = (at: number): string => {
   game.skills.values.set('mind_logic', at);
   game.log.length = 0;
   game.gainSkill('mind_logic', CREEP);
-  return game.log.filter((l) => l.kind === 'skill').map((l) => l.text).join(' ;; ') || 'NOTHING SAID';
+  return game.log.filter((l) => l.kind === 'skill' && !l.text.startsWith(KNACK_SAID)).map((l) => l.text).join(' ;; ')
+    || 'NOTHING SAID';
 };
 for (const [at, want] of [
   [24.999, 'Mind logic is now 25.'],
@@ -228,9 +235,10 @@ for (const [at, want] of [
   check(`mind logic at ${at} says it has reached a new number`, isleLine === want && hereLine === want,
     `the island "${isleLine}", the browser "${hereLine}"`);
 }
+const isleBetween = isleMind(30.2), hereBetween = browserMind(30.2);
 check('and says nothing on the way between two of them',
-  isleMind(30.2) === 'NOTHING SAID' && browserMind(30.2) === 'NOTHING SAID',
-  `the island "${isleMind(30.2)}", the browser "${browserMind(30.2)}"`);
+  isleBetween === 'NOTHING SAID' && hereBetween === 'NOTHING SAID',
+  `the island "${isleBetween}", the browser "${hereBetween}"`);
 /* And the number in that sentence is the same number on both sides. */
 const caps = [20, 25, 29.999, 30, 39.9, 40, 61, 100];
 const isleCaps = psql(`select ${caps.map((c) => `queue_capacity(${c}::double precision)`).join(" || ',' || ")};`)
