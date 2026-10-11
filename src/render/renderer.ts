@@ -39,8 +39,8 @@ import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
-import { drawRuneGate, gateVariant } from './runegate';
-import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
+import { drawRuneGate, gateVariant, RUNE_GATE_OPENING } from './runegate';
+import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { beastReach, HUNT_REACH, inFightReach, isFightJob, WIND_UP } from '../game/fight';
 import { depthOf, type View } from './view';
@@ -3895,10 +3895,17 @@ export class Renderer {
       // What spells lay on this line's ground, under everything standing on it; and what of them stands here, sorted in with it.
       this.spells.groundLine(ctx, d);
       for (const rec of this.spells.itemsAt(d)) this.take('spell', Math.floor(rec.x), Math.floor(rec.y), rec.sx, rec.sy, null).fx = rec;
-      // Whoever stands in a rune gate's opening is drawn on the line of its front tile, between its two pictures (`runegate.ts`).
-      this.deferGateBodies(d, V);
-      if (this.ents.length) this.drawEntities(ctx, zoom);
+      // Whoever stands in a rune gate's opening is drawn on the line of its front tile, between its two pictures (`runegate.ts`):
+      // they first, then the gates' fronts, then everything else on the line, which stands in front of both.
+      if (this.gateBodies(d, V)) {
+        const rest = this.ents;
+        this.ents = this.gateIn;
+        this.drawEntities(ctx, zoom);
+        this.ents = rest;
+        this.gateIn = [];
+      }
       this.flushGateFront();
+      if (this.ents.length) this.drawEntities(ctx, zoom);
       // Remembered ground on this line came down over what was waiting to take the wash off: the wash so far is laid, and that taken off it, first.
       if (lineOver) {
         wash ??= this.fogLayer(drawnAt);
@@ -3926,6 +3933,7 @@ export class Renderer {
       if (this.ents.length) this.drawEntities(ctx, zoom);
     }
     this.flushGateFront();
+    this.ents.length = 0;
     // The surface and then what crossed it, both clipped to the water, so
     // neither washes up over a beach standing in front of them.
     if (!this.fast) this.drawSwell(ctx, zoom);
@@ -9603,37 +9611,69 @@ export class Renderer {
 
   /** Bodies put off to a later line, by the line: whoever stands in a rune gate's opening, on the tile behind it. */
   private gateDeferred = new Map<number, Entity[]>();
+  /** This line's bodies standing in the opening of a rune gate drawn on it, drawn before its front picture. */
+  private gateIn: Entity[] = [];
   /**
-   * Whoever this line drew standing in a rune gate's opening on the tile
-   * behind it is put off to the line of the tile in front, where the gate is
-   * drawn, so they stand between its two pictures: in front of its threshold
-   * and of what grows behind it, behind its near pillar. And those put off
-   * to this line come in now.
+   * Sorts out this line's bodies -- people, peers, and every creature: beasts,
+   * wildermon, workers, mounts and their riders -- that stand inside a rune
+   * gate's opening (`gateSpotOf`). One on the tile behind it is put off to the
+   * line of the tile in front, where the gate is drawn; one on that line is
+   * taken out of the line's run into `gateIn`, with those put off to it, to
+   * be drawn between the gate's two pictures: over its threshold, the far
+   * pillar and what grows behind, under the near pillar, what grows in front
+   * and the lintel. Anyone standing anywhere else is drawn as before: behind
+   * a pillar, before the gate; in front of it, after both pictures. Whether
+   * there is anybody in `gateIn`.
    */
-  private deferGateBodies(d: number, V: View): void {
+  private gateBodies(d: number, V: View): boolean {
     const had = this.gateDeferred.get(d);
+    if (had) this.gateDeferred.delete(d);
+    if (!this.game.buildings.walls.size && !had) return false;
+    const inn = this.gateIn;
+    inn.length = 0;
     for (let i = this.ents.length - 1; i >= 0; i--) {
       const e = this.ents[i];
-      if ((e.kind !== 'player' && e.kind !== 'peer') || e.lift || e.seat !== undefined) continue;
-      const at = e.kind === 'player'
-        ? (this.game.player.level === 0 ? [this.game.player.x, this.game.player.y] : null)
-        : e.peer && e.peer.level === 0 ? this.game.roster.drawnAt(e.peer) : null;
+      const at = this.bodyAt(e);
       if (!at) continue;
-      const to = this.gateLineOf(at[0], at[1], V);
-      if (to === null || to <= d) continue;
-      const list = this.gateDeferred.get(to) ?? [];
-      list.push({ ...e });
-      this.gateDeferred.set(to, list);
+      const to = this.gateSpotOf(at[0], at[1], V);
+      if (to === null || to < d) continue;
+      if (to > d) {
+        // Pooled entities are lent for this line only: the one put off is a copy.
+        const list = this.gateDeferred.get(to) ?? [];
+        list.push({ ...e });
+        this.gateDeferred.set(to, list);
+      } else inn.push(e);
       this.ents.splice(i, 1);
     }
-    if (had) {
-      this.ents.push(...had);
-      this.gateDeferred.delete(d);
+    if (had) inn.push(...had);
+    return inn.length > 0;
+  }
+
+  /** Where on the ground a body this line took stands, if it is one that can walk through a gate, on the ground floor; else null. */
+  private bodyAt(e: Entity): [number, number] | null {
+    switch (e.kind) {
+      // Not a driver on a box, whose cart is drawn where it stands; a rider is drawn with the mount.
+      case 'player':
+        return this.game.player.level === 0 && !(e.lift && e.seat === undefined) ? [this.game.player.x, this.game.player.y] : null;
+      case 'peer':
+        return e.peer && e.peer.level === 0 && !(e.lift && e.seat === undefined) ? this.game.roster.drawnAt(e.peer) : null;
+      case 'creature': {
+        const cr = e.creature;
+        // Not one in a wagon's traces, which goes with the wagon.
+        return cr && cr.hitchedTo === null ? [cr.x, cr.y] : null;
+      }
+      default:
+        return null;
     }
   }
 
-  /** The line of the front tile of a finished rune gate whose opening a point is in, or null. */
-  private gateLineOf(x: number, y: number, V: View): number | null {
+  /**
+   * The line of the front tile of a finished rune gate whose opening a point
+   * stands inside, or null: between its pillars' inner faces, less a body's
+   * breadth, and no further through it either way than its pillars and the
+   * planting at their feet stand (`RUNE_GATE_OPENING`).
+   */
+  private gateSpotOf(x: number, y: number, V: View): number | null {
     const tx = Math.floor(x), ty = Math.floor(y);
     const bld = this.game.buildings;
     for (const side of ['n', 's', 'w', 'e'] as const) {
@@ -9641,7 +9681,8 @@ export class Renderer {
       const w = bld.wallOnBorder(0, b);
       if (!w || !isRuneGate(w) || !isDone(w)) continue;
       const m = gateMiddle(b);
-      if (Math.hypot(x - m.x, y - m.y) > RUNE_GATE_REACH + 0.25) continue;
+      const along = b.dir === 'h' ? x - m.x : y - m.y, through = b.dir === 'h' ? y - m.y : x - m.x;
+      if (Math.abs(along) >= RUNE_GATE_OPENING.half - RUNE_GATE_OPENING.body || Math.abs(through) >= RUNE_GATE_OPENING.depth) continue;
       return Math.max(...gateTiles(b).map(([gx, gy]) => depthOf(V, gx, gy)));
     }
     return null;
