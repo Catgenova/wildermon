@@ -144,6 +144,13 @@ const LINES_MOST = 4;
 /** Where in the panel the rows go, and how wide they may run. */
 const ROWS_MID = (PANEL.z0 + PANEL.z1) / 2 + 0.2;
 const ROW_WIDE = PANEL.w - 1.3;
+/**
+ * How far either way of the panel's middle a mark's middle may stand: inside
+ * its inner rule (half its width less 0.32) by a mark's own half-width and a
+ * hair. And how far a row may be moved from where the hand would start it.
+ */
+const ROW_REACH = PANEL.w / 2 - 0.32 - MARK_W - 0.06;
+const SHIFT_MOST = 0.45;
 
 /**
  * The small rune-marks a line is cut as: a stave, a stave and a twig, an
@@ -173,9 +180,11 @@ interface Mark { k: number; x: number; z: number }
  * for each two of its letters, its marks chosen by those letters and kept
  * together, a word longer than a row cut at the row's end; the words wrapped
  * onto rows a hand cuts them in -- each row's spacing its own, the last row
- * short and set from the left, the rows a wandering pitch apart -- and where
- * a row wraps chosen so no space between words falls under one in the row
- * above. Nothing for a blank stone.
+ * short and set from the left and never one mark alone, the rows a
+ * wandering pitch apart, every mark inside the panel's inner rule -- and
+ * where a row wraps, and how far it is set off the middle, chosen so a space
+ * between words seldom stands over one in the row above and none runs down
+ * through them all. Nothing for a blank stone.
  */
 export function engravingMarks(text: string | undefined): Mark[][] {
   const words = (text ?? '').split(' ').filter((w) => w.length);
@@ -198,87 +207,95 @@ export function engravingMarks(text: string | undefined): Mark[][] {
   }
   // How wide some words stand at the plain spacing: their marks, and a space between each two.
   const wide = (ws: number[][]): number => ws.reduce((n, w) => n + w.length, 0) * MARK_STEP - MARK_STEP + MARK_W * 2 + (ws.length - 1) * WORD_GAP;
+  const marksIn = (from: number, to: number): number => units.slice(from, to).reduce((n, w) => n + w.length, 0);
   /*
-   * The rows laid by one hand's unevenness `H`, and how far their spaces
-   * stand over each other's in all. A few hands are tried and the clearest
-   * kept, so a choice early on that leaves a later row nowhere clear to go
-   * is not kept.
+   * The rows laid by one hand's unevenness `H`, and how far off true they
+   * came out: their spaces standing over the row above's, and how far each
+   * row was pushed from where the hand would start it. A few hands are tried
+   * and the truest kept, so a choice early on that leaves a later row
+   * nowhere clear to go is not kept.
    */
-  const lay = (H: () => number): { rows: Array<Array<{ k: number; x: number }>>; clash: number } => {
-  const rows: Array<Array<{ k: number; x: number }>> = [];
-  let clashes = 0;
-  // Where the spaces in the row above fall.
-  let above: Array<[number, number]> = [];
-  let at = 0;
-  while (at < units.length && rows.length < LINES_MOST) {
-    // As many words as the row has room for, at least one.
-    let fit = 1;
-    while (at + fit < units.length && wide(units.slice(at, at + fit + 1)) <= ROW_WIDE + 0.3) fit++;
-    const ends = at + fit >= units.length;
-    const capped = rows.length === LINES_MOST - 1;
-    /*
-     * Where it may wrap: after all those words, one more if it will just
-     * squeeze in, or one or two fewer, so its spaces stay off the row
-     * above's -- and the last row, if the line runs on past it, short. The
-     * one nearest the plain wrap that keeps clear wins.
-     */
-    const short = Math.max(1, Math.round(fit * 0.6));
-    const counts = (capped && !ends ? [short, short + 1, short - 1].filter((n) => n <= fit)
-      : ends && rows.length ? [fit]
-      : [fit, fit + 1, fit - 1, fit - 2, fit - 3].filter((n) => at + n <= units.length && (n <= fit ? wide(units.slice(at, at + n)) >= wide(units.slice(at, at + fit)) * 0.5 : wide(units.slice(at, at + n)) <= ROW_WIDE + 0.75)))
-      .filter((n) => n >= 1);
-    let best: { row: Array<{ k: number; x: number }>; spaces: Array<[number, number]>; clash: number; n: number; off: number } | undefined;
-    for (const n of counts) {
-      const ws = units.slice(at, at + n);
-      const last = rows.length > 0 && (capped || at + n >= units.length);
-      for (let draw = 0; draw < 8 && !(best && best.clash === 0); draw++) {
-        // Its spacing wanders a little, mark to mark and space to space.
-        const steps = ws.map((w) => w.map(() => MARK_STEP * (0.82 + 0.36 * H())));
-        const gaps = ws.map((_, i) => (i ? WORD_GAP * (0.75 + 0.5 * H()) : 0));
-        const span = steps.reduce((m, w) => m + w.reduce((q, st) => q + st, 0), 0) + gaps.reduce((m, g) => m + g, 0) - MARK_STEP + MARK_W * 2;
-        const room = Math.min(0.9, Math.max(0, (ROW_WIDE + 0.8 - span) / 2));
-        // Where the hand would start it: a little off the middle, or for the last row a little in from the left, as a short line ends a verse.
-        const lean = last ? H() * 0.5 : (H() - 0.5) * 2 * Math.min(room, 0.6);
-        // And where it may start instead, to keep its spaces off the row above's: anywhere it has room to.
-        for (let k = 0; k <= 18; k++) {
-          const shift = last ? (k / 18) * 0.9 : -room + (k / 18) * 2 * room;
-          let x = last ? PANEL.x - ROW_WIDE / 2 + MARK_W + shift : PANEL.x - span / 2 + MARK_W + shift;
-          const row: Array<{ k: number; x: number }> = [];
-          // Each space as the stone shows it: from the edge of the mark before it to the edge of the mark after.
-          const spaces: Array<[number, number]> = [];
-          ws.forEach((w, i) => {
-            if (i) {
-              const was = x - steps[i - 1][steps[i - 1].length - 1];
-              x += gaps[i];
-              spaces.push([was + MARK_W, x - MARK_W]);
-            }
-            w.forEach((mk, m) => {
-              row.push({ k: mk, x });
-              x += steps[i][m];
+  const lay = (H: () => number): { rows: Array<Array<{ k: number; x: number }>>; score: number } => {
+    const rows: Array<Array<{ k: number; x: number }>> = [];
+    let score = 0;
+    // Where the spaces in the row above fall.
+    let above: Array<[number, number]> = [];
+    let at = 0;
+    while (at < units.length && rows.length < LINES_MOST) {
+      // As many words as the row has room for, at least one.
+      let fit = 1;
+      while (at + fit < units.length && wide(units.slice(at, at + fit + 1)) <= ROW_WIDE + 0.3) fit++;
+      const ends = at + fit >= units.length;
+      const capped = rows.length === LINES_MOST - 1;
+      /*
+       * Where it may wrap: after all those words, one more if it will just
+       * squeeze in, or one to three fewer, so its spaces stay off the row
+       * above's -- and the last row, if the line runs on past it, short. Never
+       * so that a single mark is left to make a row of its own, nor a last row
+       * of one mark where a word can come down to it.
+       */
+      const short = Math.max(1, Math.round(fit * 0.6));
+      const counts = (capped && !ends ? [short, short + 1, short - 1].filter((n) => n <= fit)
+        : ends && rows.length ? [fit]
+        : [fit, fit + 1, fit - 1, fit - 2, fit - 3].filter((n) => at + n <= units.length && (n <= fit ? wide(units.slice(at, at + n)) >= wide(units.slice(at, at + fit)) * 0.5 : wide(units.slice(at, at + n)) <= ROW_WIDE + 0.75)))
+        .filter((n) => n >= 1)
+        .filter((n, _, all) => all.length === 1 || !(capped ? marksIn(at, at + n) < 2 : at + n === units.length - 1 && units[at + n].length === 1));
+      let best: { row: Array<{ k: number; x: number }>; spaces: Array<[number, number]>; score: number; n: number } | undefined;
+      for (const n of counts.length ? counts : [fit]) {
+        const ws = units.slice(at, at + n);
+        const last = rows.length > 0 && (capped || at + n >= units.length);
+        for (let draw = 0; draw < 8; draw++) {
+          // Its spacing wanders a little, mark to mark and space to space.
+          const steps = ws.map((w) => w.map(() => MARK_STEP * (0.82 + 0.36 * H())));
+          const gaps = ws.map((_, i) => (i ? WORD_GAP * (0.75 + 0.5 * H()) : 0));
+          const span = steps.reduce((m, w) => m + w.reduce((q, st) => q + st, 0), 0) + gaps.reduce((m, g) => m + g, 0) - MARK_STEP + MARK_W * 2;
+          // Squeezed to fit inside the panel's inner rule if it would not, its spacing taken in evenly.
+          const centres = span - MARK_W * 2;
+          const squeeze = centres > ROW_REACH * 2 ? (ROW_REACH * 2) / centres : 1;
+          const room = Math.min(SHIFT_MOST, Math.max(0, ROW_REACH - (centres * squeeze) / 2));
+          // Where the hand would start it: a little off the middle, or for the last row a little in from the left, as a short line ends a verse.
+          const lean = last ? H() * 0.3 : (H() - 0.5) * 2 * Math.min(room, 0.3);
+          // And where it may start instead, a little either side of that, to keep its spaces off the row above's.
+          for (let k = 0; k <= 12; k++) {
+            const shift = last ? (k / 12) * SHIFT_MOST : -room + (k / 12) * 2 * room;
+            let x = last ? PANEL.x - ROW_REACH + shift : PANEL.x - (centres * squeeze) / 2 + shift;
+            const row: Array<{ k: number; x: number }> = [];
+            // Each space as the stone shows it: from the edge of the mark before it to the edge of the mark after.
+            const spaces: Array<[number, number]> = [];
+            ws.forEach((w, i) => {
+              if (i) {
+                const was = x - steps[i - 1][steps[i - 1].length - 1] * squeeze;
+                x += gaps[i] * squeeze;
+                spaces.push([was + MARK_W, x - MARK_W]);
+              }
+              w.forEach((mk, m) => {
+                row.push({ k: mk, x });
+                x += steps[i][m] * squeeze;
+              });
             });
-          });
-          // How far its spaces stand over the row above's, with a little to spare; then how far it is from where the hand would start it.
-          const clash = spaces.reduce((c, [a0, b0]) => c + above.reduce((d, [p0, q0]) => d + Math.max(0, Math.min(b0, q0) - Math.max(a0, p0) + 0.15), 0), 0);
-          const off = Math.abs(shift - lean);
-          if (!best || clash < best.clash - 1e-9 || (Math.abs(clash - best.clash) < 1e-9 && best.n === n && off < best.off)) best = { row, spaces, clash, n, off };
+            // Inside the rule, every mark.
+            if (row.some((m) => Math.abs(m.x - PANEL.x) > ROW_REACH + 1e-6)) continue;
+            // How far its spaces stand over the row above's, with a little to spare; how far it is from where the hand would start it; and how far from the plain wrap.
+            const clash = spaces.reduce((c, [a0, b0]) => c + above.reduce((d, [p0, q0]) => d + Math.max(0, Math.min(b0, q0) - Math.max(a0, p0) + 0.15), 0), 0);
+            const sc = clash + 0.25 * Math.abs(shift - lean) + 0.08 * Math.abs(n - fit);
+            if (!best || sc < best.score - 1e-9) best = { row, spaces, score: sc, n };
+          }
         }
       }
-      if (best && best.clash === 0) break;
+      rows.push(best!.row);
+      above = best!.spaces;
+      at += best!.n;
+      score += best!.score;
     }
-    rows.push(best!.row);
-    above = best!.spaces;
-    at += best!.n;
-    clashes += best!.clash;
-  }
-  return { rows, clash: clashes };
+    return { rows, score };
   };
   let rows: Array<Array<{ k: number; x: number }>> = [];
   let H = rand(h % 100000 + 7);
-  for (let hand = 0, least = Infinity; hand < 16 && least > 0; hand++) {
+  for (let hand = 0, least = Infinity; hand < 16; hand++) {
     const Hh = rand(h % 100000 + 7 + hand * 7919);
     const got = lay(Hh);
-    if (got.clash < least) {
-      least = got.clash;
+    if (got.score < least) {
+      least = got.score;
       rows = got.rows;
       H = Hh;
     }
@@ -698,19 +715,22 @@ function modelOf(text: string, facing: Side): Model {
       },
       /*
        * The ivy round the corner: on the mossy side's edge, from its foot, the
-       * rest of each broad face's strand, hard against the corner it comes
-       * round, so it is one plant wrapping the chamfer and not two cut off at
-       * it. The edge's frame runs along it from its upper end, and across its
-       * thickness.
+       * broad faces' plant come round it, so it is one plant wrapping the
+       * chamfer and not two cut off at it. The edge's frame runs along it from
+       * its upper end, and across its thickness.
        */
       over: (g) => {
         if (Math.sign(mx) !== mossSide || Math.min(p[1], q[1]) > 0.5) return;
-        const V = rand(SEED * 107 + i);
+        const V = rand(SEED * 109 + i * 3);
         g.save();
         // The ivy's up is up the edge, from its foot at the far end of the strip.
         g.transform(0, 1, -1, 0, len, 0);
-        // A strand on each side of it, against the corner with the broad face its own runs up, as tall, so the leaves run on round it.
-        for (const side of [-1, 1] as const) ivy(g, V, side * G * 0.75, 0.1, 4.6, 1, side > 0 ? G * 0.45 : G * 0.3, side > 0 ? G * 0.3 : G * 0.45, 0.85);
+        /*
+         * One strand, the front face's run come round the corner (across, the
+         * front is +), lower than either broad face's, wandering back across
+         * the edge toward the back's as it climbs.
+         */
+        ivy(g, V, G * 0.6, 0.1, 2.8, 1, G * 1.3, G * 0.3, 0.85);
         g.restore();
       },
     };
@@ -969,7 +989,7 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
          * one; at the smallest scale a shade less is taken off, and that is
          * its breath.
          */
-        { w: ROUNDEL_W, noDayHalo: true, tight: true, fine: true, maskA: 1 / (scale <= 1 ? 0.95 : 0.72), dim: scale <= 1 ? 0 : 0.17 }));
+        { w: ROUNDEL_W, noDayHalo: true, tight: true, fine: true, maskA: 1 / (scale <= 1 ? 0.95 : 0.72), dim: scale <= 1 ? 0 : 0.13 }));
       // The line: its rows catch the light after dark, faintly, the lowest first.
       model.rows.slice().reverse().forEach((row, j) => {
         if (!row.length) return;
@@ -979,7 +999,7 @@ function bake(facing: Side, rotation: number, scale: number, text: string): Bake
       });
     } else {
       glows.push(bakeGlow(M, scale, (h) => strokesPath(h, BACK_STROKES, BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r), BACK_ROUNDEL.x, BACK_ROUNDEL.z, BACK_ROUNDEL.r, 0, true,
-        { w: ROUNDEL_W * 0.85, faint: 0.8, noDayHalo: true, tight: true, fine: true, maskA: 1 / ((scale <= 1 ? 0.95 : 0.72) * 0.8), dim: scale <= 1 ? 0 : 0.17 }));
+        { w: ROUNDEL_W * 0.85, faint: 0.8, noDayHalo: true, tight: true, fine: true, maskA: 1 / ((scale <= 1 ? 0.95 : 0.72) * 0.8), dim: scale <= 1 ? 0 : 0.13 }));
     }
   }
 

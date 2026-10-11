@@ -2297,7 +2297,7 @@ export function bakeGlow(M: DOMMatrix, scale: number, path: (h: Ctx) => void, x:
     h.stroke();
   });
   const square = Math.max(0.15, Math.min(1, across / up / 0.53));
-  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream, glint, lift: scale <= 1 ? 0.03 : 0.02 } : {}), ...(o.maskA !== undefined ? { maskA: o.maskA } : {}), ...(o.dim ? { shade, dim: o.dim } : {}) };
+  return { core, halo, dusk, mask, square, box, cx: mid.x, cy: mid.y, r: reachPx, i, roundel, ...(o.faint !== undefined ? { faint: o.faint } : {}), ...(o.nightOnly ? { nightOnly: true } : {}), ...(o.noDayHalo ? { noDayHalo: true } : {}), ...(o.tight ? { tight: true } : {}), ...(o.fine ? { fine: true, cream, glint, lift: scale <= 1 ? 0.03 : 0.025 } : {}), ...(o.maskA !== undefined ? { maskA: o.maskA } : {}), ...(o.dim ? { shade, dim: o.dim } : {}) };
 }
 
 function bake(id: RunestoneId, rotation: number, scale: number): Baked {
@@ -2487,7 +2487,8 @@ export function drawGlows(ctx: Ctx, glows: readonly Glow[], sx: number, sy: numb
       ctx.drawImage(gl.cream, X, Y, Wd, Ht);
       if (gl.lift && gl.glint) {
         ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = night * gl.lift * (0.7 + 0.6 * p) * f;
+        // One that dims itself as it breathes out (`dim`) takes its glint only toward the height of its breath, as a Runestone's brightens there.
+        ctx.globalAlpha = night * gl.lift * (gl.dim ? 2.2 * p * p : 0.7 + 0.6 * p) * f;
         ctx.drawImage(gl.glint, X, Y, Wd, Ht);
       }
       if (gl.dim && gl.shade) {
