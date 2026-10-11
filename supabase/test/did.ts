@@ -177,8 +177,9 @@ begin
   ${CLEAR}
   update player set combat_class = 'berserker', blessings = '{}'::jsonb, equipped = jsonb_build_object('weapon', v_maul)
    where world_id = w.world_id and uid = w.uid;
-  -- Each blow is a roll; tried until one lands, the three put down afresh each time.
-  for i in 1 .. 12 loop
+  -- Each blow is a roll; tried until one lands on both in reach and neither dies of it (a maul's blow can kill the
+  -- ulva outright, and a dead creature is not held), the three put down afresh each time.
+  for i in 1 .. 24 loop
     ${CLEAR}
     delete from said where k in ('SHAKE', 'SHAKE:IDS');
     ${SPAWN('a', MONSTER, 'v_px + 1.5', 'v_py')}
@@ -186,7 +187,7 @@ begin
     ${SPAWN('e', MONSTER, `v_px + ${fx('berserker_earthshaker', 'reach')} + 2`, 'v_py')}
     ${IDS('SHAKE:IDS', 'a, b, e')}
     ${CAST('SHAKE', 'berserker_earthshaker', ON_ME)}
-    exit when r ? 'held';
+    exit when r ? 'held' and jsonb_array_length(r->'held') = 2;
   end loop;
   ${HURT('SHAKE:HURT', 'a, b, e')}
   insert into said select 'SHAKE:HELD', string_agg(cr.id || ':' || class_held(w.world_id, cr.id)::text, ',' order by cr.id)
