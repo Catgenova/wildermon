@@ -59,7 +59,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'letter', label: 'Sketches on an oak board', for: ['social'] },
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
-  { kind: 'mirror', label: 'Gilded mirror', for: ['look'] },
   { kind: 'turf', label: 'Turf', for: ['tile'] },
   { kind: 'rope', label: 'Knotted rope', for: ['tracker'] },
   { kind: 'ironbound', label: 'Iron-bound oak', for: ['settings'] },
@@ -5583,45 +5582,6 @@ const PAINTERS: Record<string, Painter> = {
       goldStar4(g, cx + d * F * 3, h - F * 0.36, F * 0.32);
     }
     medallion(g, cx, cy, r, wood, (x, y, s) => rabbitMark(g, x, y, s));
-  },
-
-  /* How you look: a gilded mirror frame, mitred, beaded inside, a shell at each corner. */
-  mirror(g, w, h, F, R) {
-    eachSide(g, w, h, (s) => {
-      g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      const gr = g.createLinearGradient(0, 0, 0, F);
-      gr.addColorStop(0, css(shade(GOLD, 0.25)));
-      gr.addColorStop(0.4, css(light(GOLD, 0.35 * s.lit)));
-      gr.addColorStop(1, css(shade(GOLD, 0.35)));
-      g.fillStyle = gr;
-      g.fillRect(0, 0, s.len, F);
-      for (let x = 2; x < s.len; x += 4) head(g, x, F - 2.6, 1.1, light(GOLD, 0.2), shade(GOLD, 0.55));
-      g.restore();
-      g.strokeStyle = css(shade(GOLD, 0.6));
-      g.lineWidth = 0.8;
-      g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(F, F);
-      g.stroke();
-    });
-    eachCorner(g, w, h, () => {
-      g.save();
-      g.translate(F * 0.45, F * 0.45);
-      for (let k = 0; k < 5; k++) {
-        g.beginPath();
-        g.ellipse(0, 0, F * 0.48, F * 0.13, Math.PI / 4 + (k - 2) * 0.32, 0, Math.PI * 2);
-        g.fillStyle = css(light(GOLD, 0.25 + k * 0.05));
-        g.fill();
-        g.strokeStyle = css(shade(GOLD, 0.55));
-        g.lineWidth = 0.6;
-        g.stroke();
-      }
-      g.restore();
-    });
-    inkBand(g, w, h, F);
-    void R;
   },
 
   /* The tile: turf, sod round its edge and grass standing off the top, over a cut of the soil with roots and pebbles in it, moss at two corners. */

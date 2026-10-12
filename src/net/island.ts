@@ -3110,7 +3110,7 @@ export class Island {
   }
 
   /**
-   * A new look, from the "How you look" window.
+   * A new look, worn on this body at once (the account page keeps one through the same door).
    *
    * `rpc_set_look` keeps it with the account, if there is one, and puts it on
    * every body this sign-in has ashore. What comes back is what was kept —

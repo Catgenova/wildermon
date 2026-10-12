@@ -282,17 +282,20 @@ async function onward(line: string): Promise<void> {
   } catch {
     had = null;
   }
-  if (had) {
+  if (had && !lookAgain) {
     creator.look = had;
     return settle(line);
   }
-  say(`${line} Now, who are you?`, 'good');
-  toMaker(randomLook());
+  say(had ? `${line} Change whatever you like, then step ashore.` : `${line} Now, who are you?`, 'good');
+  toMaker(had ?? randomLook());
 }
 
 /* ---- Step two: who you are ---------------------------------------------- */
 
-/** The creator: the same one the game's "How you look" window shows, put in ahead of the button that keeps what it chose. */
+/** Sent here from the game's Settings to choose a look again: the creator, on the one worn, rather than a door held open. */
+const lookAgain = new URLSearchParams(location.search).has('look');
+
+/** The creator, put in ahead of the button that keeps what it chose. */
 const creator = new Creator(randomLook(), () => !maker.hidden);
 maker.prepend(creator.el);
 
@@ -380,6 +383,10 @@ async function onArrival(): Promise<void> {
   row.append(on, document.createTextNode(' — or '), again, document.createTextNode(', or '), out,
              document.createTextNode(' and be somebody else.'));
   card.insertBefore(row, said.nextSibling);
+  if (lookAgain) {
+    say(`Signed in as ${name}. Change whatever you like, then step ashore.`, 'good');
+    toMaker(had);
+  }
 }
 
 setMode('new');

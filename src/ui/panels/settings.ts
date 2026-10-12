@@ -48,7 +48,7 @@ export class SettingsPanel {
     win: UIWindow,
     game: Game,
     private readonly keys: Keybinds,
-    openLook: () => void,
+    openLook: (() => void) | null,
     private readonly windows: WindowManager,
   ) {
     win.body.classList.add('settings-body');
@@ -274,19 +274,19 @@ export class SettingsPanel {
       display.append(row);
     }
     /*
-     * How you look, which is chosen once on the account page and was never
-     * offered again. The creator itself is a window of its own: a mirror and
-     * eight rows of choices do not fit in a list of tick boxes.
+     * How you look, chosen on the account page as an account is made: this
+     * goes back there, to the same creator, on the look you have on. Only on
+     * an island, where there is an account to keep it with.
      */
-    {
+    if (openLook) {
       const row = document.createElement('div');
       row.className = 'setting-row setting-look';
       const text = document.createElement('span');
-      text.innerHTML = '<b>How you look</b><small>Build, skin, hair, hair colour, eyes, beard, shirt and trousers, in the creator from the account page. Nothing changes until you wear it.</small>';
+      text.innerHTML = '<b>How you look</b><small>Leaves the island for the character creator you started in: build, skin, hair, hair colour, eyes, beard, shirt and trousers. <i>Step ashore</i> there wears the new look and brings you back; leaving by <i>On to the island</i> changes nothing.</small>';
       const open = document.createElement('button');
       open.type = 'button';
       open.className = 'tb-btn tb-small';
-      open.textContent = 'Change…';
+      open.textContent = 'Customize character';
       open.addEventListener('click', openLook);
       row.append(text, open);
       display.append(row);

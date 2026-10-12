@@ -97,7 +97,6 @@ import { compareLines } from './compare';
 import { priceLine } from '../game/prices';
 import { Notices } from './notices';
 import type { HelpPages } from './panels/help';
-import { LookPanel } from './panels/looks';
 import { BINDS, keyName, type Keybinds } from '../game/keybinds';
 import { Hud, WINDOWS } from './hud';
 import { EventLogPanel } from './panels/eventlog';
@@ -256,6 +255,17 @@ const metalLabel = (it: Item): string =>
   isIngot(it.id)
     ? `${itemName(it)} (${it.count}, ${lumpsIn(it)} lumps)`
     : `${metalOfBar(it.id)?.name ?? itemName(it)} (${it.count})`;
+/**
+ * The account page opened at its character creator, carrying the island this
+ * page is on so that stepping ashore there comes back to it.
+ */
+function creatorPage(): string {
+  const go = new URLSearchParams({ look: '1' });
+  const island = new URLSearchParams(location.search).get('island');
+  if (island !== null) go.set('island', island);
+  return `./account.html?${go}`;
+}
+
 /** What a station's menu says when nothing it takes is at hand: on you, and in your stores too unless Settings keeps them out. */
 const noneAtHand = (g: Game, what: string, reach = CRAFT_REACH): string =>
   g.settings.fromStores ? `You have ${what} on you or in your stores within ${reach} tiles.` : `You have ${what} on you.`;
@@ -380,11 +390,9 @@ export class UI {
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 262, anchor: 'tr', open: false, seeThrough: true });
     this.minimap = new MinimapPanel(map, game, renderer);
     const settings = this.windows.create({ id: 'settings', title: 'Settings', x: 12, y: 56, width: 380, height: 520, anchor: 'tr', open: false });
-    // How you look: the creator, opened from Settings. Wide enough for the
-    // mirror beside the choices; narrower, and the mirror goes over them.
-    const lookWin = this.windows.create({ id: 'look', title: 'How you look', x: 60, y: 48, width: 720, height: 640, anchor: 'tl', open: false });
-    new LookPanel(lookWin, game, this.island);
-    this.settings = new SettingsPanel(settings, game, cb.keys, () => lookWin.open(), this.windows);
+    // How you look: back to the character creator on the account page, for
+    // somebody on an island, who has an account to keep a look with.
+    this.settings = new SettingsPanel(settings, game, cb.keys, this.island ? () => location.assign(creatorPage()) : null, this.windows);
     const crate = this.windows.create({ id: 'crate', title: 'Deed crate', x: 364, y: 56, width: 320, height: 260, anchor: 'tr', open: false });
     this.cratePanel = new CratePanel(crate, game, (p) => this.moveDragged(p, 'store'),
       (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));

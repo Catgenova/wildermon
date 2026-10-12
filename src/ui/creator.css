@@ -16,12 +16,6 @@
   container-type: inline-size;
 }
 
-/* In a window, where the mirror has to share the space with the choices. */
-.cr.cr-snug {
-  --cr-w: 250px;
-  --cr-h: 330px;
-}
-
 .cr-in {
   display: flex;
   gap: 20px;

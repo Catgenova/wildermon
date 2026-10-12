@@ -372,10 +372,11 @@ import{$a as e,$i as t,Ac as n,Al as r,As as i,Ci as a,Cl as o,Cr as s,Cs as ee,
     that trade down with ${gl} for it, leaving its slot empty, so the next trade you take up in
     that slot costs nothing. The other slot keeps what it had.</p>
     <p>Drag a window by its title bar and resize it from the bottom-right corner. The layout is remembered.</p>
-    <p><b>How you look</b> can be changed at any time: <i>Change…</i> under <b>How you look</b> in
-    Settings (<kbd>O</kbd>) opens the creator from the account page on the look you have on. Nothing
-    changes until you press <i>Wear this look</i>. On an island the look is kept with your account and
-    goes on your body on every island you have one on; playing on your own, it is saved with the game.</p>
+    <p><b>How you look</b> can be changed at any time on an island: <i>Customize character</i> under
+    <b>How you look</b> in Settings (<kbd>O</kbd>) takes you back to the character creator on the account
+    page, on the look you have on. Nothing changes until you press <i>Step ashore</i> there, which keeps the
+    look with your account, puts it on your body on every island you have one on, and brings you back.
+    Playing on your own, the look you were given is the one you keep.</p>
     <p>The <b>map</b> (<kbd>M</kbd>) shows the same states: dark where you have not been, dim
     where you have, and bright where somebody is looking now. An island is far bigger than the window, so
     the map does not try to show all of it at once: it looks at the ground you have walked and widens as

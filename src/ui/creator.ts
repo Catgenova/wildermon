@@ -29,12 +29,10 @@ const button = (className: string, text: string, label?: string): HTMLButtonElem
  * The character creator: a mirror, and a row of choices for every part of a
  * look.
  *
- * One of it, in two places. The account page shows it to a new account before
- * it comes ashore, and the game's "How you look" window, off Settings, shows it
- * to anybody who wants to change their look afterwards. The two are the same
- * code so that they cannot offer different things: a haircut you could choose
- * on the way in and not on a second visit would be a haircut you could never
- * get back.
+ * The account page shows it to a new account before it comes ashore, and to
+ * anybody sent back to it from the game's Settings to change their look. It is
+ * the one creator either way, so a second visit offers exactly what the first
+ * did.
  *
  * It keeps the look being chosen and nothing else. Keeping it anywhere is the
  * page's business, off a button of its own. Its rules are in `creator.css`,
