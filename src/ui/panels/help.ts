@@ -1,3 +1,6 @@
+import { CELL, CLEAR_CELLS } from '../snapgrid';
+import { JOINT_EVERY, PIN_EVERY, SOFT, STITCH_EVERY } from '../runecut-dress';
+import { FRAMES } from '../runecut-frames';
 import {
   ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
   PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE,
@@ -154,6 +157,12 @@ const CELLAR_BURNS = FURNITURE.filter((d) => d.hearth).map((d) => article(d.name
 const CELLAR_NOT_DOWN = FURNITURE.filter((d) => cellarOutdoor().includes(d.id) && d.bill.length).map((d) => article(d.name) + ' ' + d.name.toLowerCase());
 
 /** The Farmer's perk that holds an effect, by name. */
+/** The frames a seam is stitched between, by name (`SOFT`): "the burlap sack, the starred leather book or the treasure map". */
+const softFrames = (): string => {
+  const names = FRAMES.filter((f) => SOFT.has(f.kind)).map((f) => `the ${f.label.toLowerCase()}`);
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}` : names.join('');
+};
+
 const farmerPerk = (key: string): string => perksOf('farmer').find((p) => key in p.fx)?.name ?? key;
 /** What a tile of glass roof of a shape takes: "12 glass panes and 4 timbers". */
 /**
@@ -911,7 +920,16 @@ export function helpText(): string {
     whole. With one in your pack, the card of a trade you hold has <i>Undo</i>: it breaks the bauble and puts
     that trade down with ${BOUGHT} for it, leaving its slot empty, so the next trade you take up in
     that slot costs nothing. The other slot keeps what it had.</p>
-    <p>Drag a window by its title bar and resize it from the bottom-right corner. The layout is remembered.</p>
+    <p>Drag a window by its title bar, and the status panel or the toolbar by anywhere on it; resize a window from
+    its bottom-right corner. While you do, a grid of ${CELL}-pixel cells shows and what you hold lands on whole cells.
+    Windows, the status panel and the toolbar never cover one another: they can only share an edge. Nothing goes in the
+    square kept clear round your character in the middle of the screen, ${CLEAR_CELLS} cells across (fewer on a small
+    screen). A window dropped on another or on that square goes to the nearest free room its size, and a resize stops
+    at them. The status panel and the toolbar cannot be resized or closed. The layout is remembered. On a phone's
+    screen there is no grid.</p>
+    <p>In Runecut, where pieces share an edge their frames stop at it and one seam runs down it, capped in gold at each
+    end: ${softFrames()} to the same stitched every ${STITCH_EVERY} pixels, anything else to anything else mortared with a
+    joint every ${JOINT_EVERY}, and one of each pinned in brass every ${PIN_EVERY}.</p>
     <p><b>How you look</b> can be changed at any time on an island: <i>Customize character</i> under
     <b>How you look</b> in Settings (<kbd>O</kbd>) takes you back to the character creator on the account
     page, on the look you have on. Nothing changes until you press <i>Step ashore</i> there, which keeps the

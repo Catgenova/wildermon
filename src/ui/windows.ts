@@ -1,6 +1,7 @@
 import { uiBox, uiFloor, uiPoint } from './screen';
 import { LAYOUT_NAMES } from '../game/keybinds';
 import { runeFor, runeSvg } from './theme';
+import { CELL, CELL_MAJOR, cells, clearPatch, joinsOf, onScreen, placeFor, seamKey, seamsOf, sizeFor, snap, type Box, type Join, type Seam } from './snapgrid';
 
 export type Anchor = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -36,6 +37,9 @@ interface SavedState extends Geometry {
   max?: boolean;
   /** See-through (`WindowOptions.seeThrough`). */
   see?: boolean;
+  /** Its box on the grid, rim and all (`UIWindow.want`). */
+  ow?: number;
+  oh?: number;
 }
 
 /** One saved arrangement of every window: where each is, how big, and whether it is open. */
@@ -50,15 +54,39 @@ const EXPAND_ICON = '⤢';
 const RESTORE_ICON = '⤡';
 const SEE_ICON = '◐';
 
-/** How close, in interface pixels, an edge has to come to another before a drag puts it against it. */
+/** How close, in interface pixels, an edge used to have to come to another before a drag put it against it (news 136); windows go on the grid now (`src/ui/snapgrid.ts`). */
 export const SNAP = 10;
+/** How far, in interface pixels, a press on the status panel or the toolbar has to travel before it is a drag rather than a click. */
+const BAR_DRAG = 6;
+/** Windows are raised by z-index from here; past `Z_TOP` they are counted down again, keeping them under the seams (`.rc-seams`, src/style.css). */
+const Z_FLOOR = 100;
+const Z_TOP = 5000;
 /** The arrangements of windows kept, each called back with a key of its own (`layout_1`…). */
 export const LAYOUT_SLOTS = LAYOUT_NAMES.length;
 /** Windows that are never part of an arrangement, because they are opened by something happening rather than by you. */
 const NOT_LAID_OUT = new Set(['away', 'hoard']);
 
+/** Something laid on the grid: a window, or the status panel or toolbar, which are always on screen. */
+interface Piece {
+  readonly id: string;
+  readonly el: HTMLElement;
+  /** Never resized or closed: the status panel and the toolbar. */
+  readonly fixed: boolean;
+  /** On screen and taking up its room: a window open and not expanded, or a bar. */
+  readonly placed: boolean;
+  /** Its box, rim and all, in interface pixels. */
+  box(): Box;
+  /** Put it on a box: a window takes the place and the size, a bar only the place. `kept`: a size chosen, by a resize or a layout, rather than rounded to the grid. */
+  put(b: Box, kept?: boolean): void;
+  /** The size it is meant to be on the grid, if one was chosen (`UIWindow.want`). */
+  readonly wanted?: { w: number; h: number } | null;
+  /** The smallest it may be made, in whole cells. */
+  least(): { w: number; h: number };
+}
+
 /** A draggable, resizable overlay window in the Wurm style. */
-export class UIWindow {
+export class UIWindow implements Piece {
+  readonly fixed = false;
   readonly el: HTMLDivElement;
   readonly body: HTMLDivElement;
   readonly titleText: HTMLSpanElement;
@@ -68,6 +96,15 @@ export class UIWindow {
   private see = false;
   /** Geometry to go back to when the window is restored from expanded. */
   private normal: Geometry | null = null;
+  /**
+   * The size of its box on the grid, rim and all, once that has been chosen
+   * by a resize or kept from before: held to when its rim changes under it
+   * (Runecut's frames are put on after a window is made, and a closed one's
+   * when it opens), so the box stays the same cells and the room inside
+   * gives or takes the difference. Until then it is rounded to the grid
+   * from whatever size it is.
+   */
+  private want: { w: number; h: number } | null = null;
 
   constructor(
     private readonly mgr: WindowManager,
@@ -114,7 +151,18 @@ export class UIWindow {
     title.append(head, buttons);
     this.body = document.createElement('div');
     this.body.className = 'win-body';
-    this.el.append(title, this.body);
+    // Resized from its bottom-right corner, onto whole cells (`WindowManager.begin`); a phone's windows are not resized.
+    const grip = document.createElement('div');
+    grip.className = 'win-grip';
+    grip.title = 'Drag to resize';
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || this.maximized) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.mgr.bringToFront(this);
+      this.mgr.begin(this, 'size', e, grip);
+    });
+    this.el.append(title, this.body, grip);
 
     // Never start larger than the screen, whatever the saved layout says.
     const w = Math.min(saved?.w ?? opts.width, Math.max(160, uiBox().w - 16));
@@ -132,24 +180,29 @@ export class UIWindow {
       this.el.style.top = `${top}px`;
     }
     this.el.hidden = !(saved?.open ?? opts.open ?? true);
+    if (saved?.ow && saved?.oh) this.want = { w: saved.ow, h: saved.oh };
     if (saved?.max) this.setMaximized(true, false);
     this.setSeeThrough(!!(opts.seeThrough && saved?.see), false);
 
+    // On the grid a window is moved by `WindowManager.begin`; on a phone, where windows are as wide as the screen, only up and down.
     let drag: { dx: number; dy: number } | null = null;
     title.addEventListener('pointerdown', (e) => {
       if (buttons.contains(e.target as Node) || e.button !== 0 || this.maximized) return;
+      e.preventDefault();
+      if (this.mgr.grid) {
+        this.mgr.bringToFront(this);
+        this.mgr.begin(this, 'move', e, title);
+        return;
+      }
       const at = uiPoint(e);
       drag = { dx: at.x - this.el.offsetLeft, dy: at.y - this.el.offsetTop };
       title.setPointerCapture(e.pointerId);
-      e.preventDefault();
     });
     title.addEventListener('pointermove', (e) => {
       if (!drag) return;
       const at = uiPoint(e);
       this.el.style.left = `${at.x - drag.dx}px`;
       this.el.style.top = `${at.y - drag.dy}px`;
-      // Alt held lets a window go exactly where it is put.
-      if (!e.altKey) this.snap();
       this.clamp();
     });
     title.addEventListener('pointerup', (e) => {
@@ -178,6 +231,35 @@ export class UIWindow {
     return this.see;
   }
 
+  get id(): string {
+    return this.opts.id;
+  }
+
+  get placed(): boolean {
+    return this.isOpen && !this.maximized;
+  }
+
+  box(): Box {
+    return { x: this.el.offsetLeft, y: this.el.offsetTop, w: this.el.offsetWidth, h: this.el.offsetHeight };
+  }
+
+  get wanted(): { w: number; h: number } | null {
+    return this.want;
+  }
+
+  /** Its place and its box's size; the size it is given is the box less its rim (`frame`). */
+  put(b: Box, kept = false): void {
+    const [fw, fh] = this.frame();
+    this.applyGeometry({ x: b.x, y: b.y, w: b.w - fw, h: b.h - fh });
+    if (kept || this.want) this.want = { w: b.w, h: b.h };
+  }
+
+  /** The least a window may be (`.win` in src/style.css), rim and all, in whole cells. */
+  least(): { w: number; h: number } {
+    const [fw, fh] = this.frame();
+    return { w: cells(160 + fw), h: cells(70 + fh) };
+  }
+
   /**
    * See-through or solid. See-through, the window is dimmed and the island
    * takes every click that lands on it but the title bar's, so it can sit over
@@ -197,47 +279,11 @@ export class UIWindow {
     if (persist) this.mgr.persist();
   }
 
-  /**
-   * Put the window's edges against the edges near them: the sides of the
-   * interface, and the sides of every other open window, either butted up to
-   * one or lined up with it. Each axis takes its nearest edge within `SNAP`,
-   * or stays where the drag left it.
-   */
-  private snap(): void {
-    const box = uiBox();
-    const floor = uiFloor();
-    const me = { x: this.el.offsetLeft, y: this.el.offsetTop, w: this.el.offsetWidth, h: this.el.offsetHeight };
-    const xs = [0, box.w - me.w];
-    const ys = [floor, box.h - me.h];
-    for (const o of this.mgr.windows.values()) {
-      if (o === this || !o.isOpen || o.isMaximized) continue;
-      const r = { x: o.el.offsetLeft, y: o.el.offsetTop, w: o.el.offsetWidth, h: o.el.offsetHeight };
-      // Only windows level with this one, give or take, offer their sides; and only ones above or below it their tops and bottoms.
-      const level = me.y < r.y + r.h + SNAP && me.y + me.h > r.y - SNAP;
-      const stacked = me.x < r.x + r.w + SNAP && me.x + me.w > r.x - SNAP;
-      if (level || stacked) xs.push(r.x - me.w, r.x + r.w, r.x, r.x + r.w - me.w);
-      if (stacked || level) ys.push(r.y - me.h, r.y + r.h, r.y, r.y + r.h - me.h);
-    }
-    const nearest = (at: number, to: number[]): number => {
-      let best = at;
-      let gap = SNAP + 1;
-      for (const c of to) {
-        const d = Math.abs(c - at);
-        if (d < gap) {
-          gap = d;
-          best = c;
-        }
-      }
-      return best;
-    };
-    this.el.style.left = `${nearest(me.x, xs)}px`;
-    this.el.style.top = `${nearest(me.y, ys)}px`;
-  }
-
   /** Put the window where a saved arrangement has it: its place, its size, open or shut, expanded or not. */
   apply(st: SavedState): void {
     if (this.maximized) this.setMaximized(false, false);
     this.applyGeometry(st);
+    this.want = st.ow && st.oh ? { w: st.ow, h: st.oh } : null;
     if (st.max) this.setMaximized(true, false);
     if (st.see !== undefined) this.setSeeThrough(st.see, false);
     const was = this.isOpen;
@@ -278,7 +324,12 @@ export class UIWindow {
       this.expandBtn.title = 'Expand';
       this.clamp();
     }
-    if (persist) this.mgr.persist();
+    if (persist) {
+      // Back from expanded, it goes on the grid again where there is room; while expanded it is over the rest, and the seams are put away.
+      if (!on) this.mgr.settle(this);
+      this.mgr.rejoin(false);
+      this.mgr.persist();
+    }
   }
 
   private applyMaximized(): void {
@@ -328,12 +379,16 @@ export class UIWindow {
     this.el.hidden = false;
     this.mgr.bringToFront(this);
     this.clamp();
+    // Where it was, unless something has taken that room since: then the nearest free room of its size.
+    this.mgr.settle(this);
+    this.mgr.rejoin(false);
     this.onOpen?.();
     this.mgr.persist();
   }
 
   close(): void {
     this.el.hidden = true;
+    this.mgr.rejoin(false);
     this.mgr.persist();
   }
 
@@ -384,16 +439,135 @@ export class UIWindow {
 
   state(): SavedState {
     const g = this.maximized && this.normal ? this.normal : this.geometry();
-    return { ...g, open: this.isOpen, max: this.maximized, ...(this.opts.seeThrough ? { see: this.see } : {}) };
+    // An open window on the grid keeps its box's cells, so the next time it is made it is made that size whatever rim it is given first.
+    if (!this.want && this.mgr.grid && this.placed) {
+      const b = this.box();
+      if (b.w && b.h && b.w % CELL === 0 && b.h % CELL === 0) this.want = { w: b.w, h: b.h };
+    }
+    return {
+      ...g,
+      open: this.isOpen,
+      max: this.maximized,
+      ...(this.opts.seeThrough ? { see: this.see } : {}),
+      ...(this.want ? { ow: this.want.w, oh: this.want.h } : {}),
+    };
   }
+}
+
+/**
+ * The status panel or the toolbar as a piece on the grid: always on screen,
+ * moved by pressing anywhere on it and dragging (a press that does not travel
+ * is a click on whatever it landed on), never resized or closed. Whole cells
+ * big, by being made at least that big: what is in it sits at its top left,
+ * or in the middle of the toolbar.
+ */
+export class Bar implements Piece {
+  readonly fixed = true;
+  readonly placed = true;
+
+  constructor(
+    private readonly mgr: WindowManager,
+    readonly id: string,
+    readonly el: HTMLElement,
+  ) {
+    let press: { x: number; y: number; e: PointerEvent } | null = null;
+    // A press that became a drag makes no click on the button it started on.
+    let dragged = false;
+    el.addEventListener('click', (c) => {
+      if (!dragged) return;
+      dragged = false;
+      c.stopPropagation();
+      c.preventDefault();
+    }, { capture: true });
+    el.addEventListener('pointerdown', (e) => {
+      dragged = false;
+      if (e.button !== 0 || !this.mgr.grid) return;
+      press = { ...uiPoint(e), e };
+    });
+    el.addEventListener('pointermove', (e) => {
+      if (!press) return;
+      const at = uiPoint(e);
+      if (Math.hypot(at.x - press.x, at.y - press.y) < BAR_DRAG) return;
+      const from = press.e;
+      press = null;
+      dragged = true;
+      this.mgr.begin(this, 'move', from, el);
+    });
+    const lift = (): void => {
+      press = null;
+    };
+    el.addEventListener('pointerup', lift);
+    el.addEventListener('pointercancel', lift);
+    // What is in it grows and shrinks (a companion, a wound, a key rebound): it is made whole cells again, and windows it now covers move off it.
+    new ResizeObserver(() => {
+      if (this.mgr.grid && !this.fitting && this.el.offsetWidth % CELL + this.el.offsetHeight % CELL !== 0) this.mgr.settleAll();
+    }).observe(el);
+  }
+
+  private fitting = false;
+
+  box(): Box {
+    return { x: this.el.offsetLeft, y: this.el.offsetTop, w: this.el.offsetWidth, h: this.el.offsetHeight };
+  }
+
+  put(b: Box): void {
+    this.el.style.left = `${b.x}px`;
+    this.el.style.top = `${b.y}px`;
+  }
+
+  least(): { w: number; h: number } {
+    const b = this.box();
+    return { w: b.w, h: b.h };
+  }
+
+  /** Made the size of what is in it, up to whole cells. */
+  fit(): void {
+    this.fitting = true;
+    const s = this.el.style;
+    s.minWidth = s.minHeight = '';
+    const w = cells(this.el.offsetWidth), h = cells(this.el.offsetHeight);
+    s.minWidth = `${w}px`;
+    s.minHeight = `${h}px`;
+    // Whatever its box-sizing, it comes out at the size asked for.
+    const dw = w - this.el.offsetWidth, dh = h - this.el.offsetHeight;
+    if (dw) s.minWidth = `${w + dw}px`;
+    if (dh) s.minHeight = `${h + dh}px`;
+    this.fitting = false;
+  }
+
+  /** Back to the look's own place and size, off the grid: a phone's screen. */
+  loose(): void {
+    const s = this.el.style;
+    s.left = s.top = s.minWidth = s.minHeight = '';
+  }
+}
+
+/** A move or a resize under way: the piece, where the pointer started, where it was, and where it will land. */
+interface Drag {
+  p: Piece;
+  kind: 'move' | 'size';
+  x0: number;
+  y0: number;
+  from: Box;
+  to: Box;
+  /** The seams there were when it started, so the ones it makes are the ones that are new. */
+  before: Set<string>;
 }
 
 export class WindowManager {
   readonly windows = new Map<string, UIWindow>();
-  private z = 100;
+  /** The status panel and the toolbar. */
+  readonly bars = new Map<string, Bar>();
+  private z = Z_FLOOR;
   private saved: Record<string, SavedState> = {};
   /** The kept arrangements, one a slot, null where nothing has been kept yet. */
   private layouts: Array<Layout | null> = [];
+  /** The grid, drawn while something is being moved or resized; and where it will land. */
+  private readonly gridCanvas: HTMLCanvasElement;
+  private readonly ghost: HTMLDivElement;
+  private drag: Drag | null = null;
+  /** The seams as they were last laid, by `seamKey`. */
+  private seamKeys = new Set<string>();
 
   constructor(readonly root: HTMLElement) {
     try {
@@ -409,6 +583,13 @@ export class WindowManager {
     } catch {
       this.layouts = [];
     }
+    this.gridCanvas = document.createElement('canvas');
+    this.gridCanvas.className = 'snap-grid';
+    this.gridCanvas.hidden = true;
+    this.ghost = document.createElement('div');
+    this.ghost.className = 'snap-ghost';
+    this.ghost.hidden = true;
+    root.append(this.gridCanvas, this.ghost);
     window.addEventListener('resize', () => this.clampAll());
     /*
      * Alt held makes every see-through window solid for as long as it is down:
@@ -427,6 +608,228 @@ export class WindowManager {
     window.addEventListener('blur', () => alt(false));
   }
 
+  /**
+   * Whether the interface is on the grid: everywhere but a phone's screen,
+   * where every window is as wide as the screen and the status panel and
+   * toolbar have their own places (`#ui.narrow` in src/style.css).
+   */
+  get grid(): boolean {
+    return !this.root.classList.contains('narrow');
+  }
+
+  /** Every piece on the grid: the bars, then the windows. */
+  private pieces(): Piece[] {
+    return [...this.bars.values(), ...this.windows.values()];
+  }
+
+  /** What a piece may not cover: the clear patch round your character, and every other piece on screen. */
+  private walls(p: Piece | null): Box[] {
+    const { w, h } = uiBox();
+    return [clearPatch(w, h), ...this.pieces().filter((q) => q !== p && q.placed).map((q) => q.box())];
+  }
+
+  /**
+   * Put one piece on the grid among the rest: whole cells big (a window no
+   * bigger than the screen), on whole cells, on the screen, and where that
+   * covers something, in the nearest free room of its size. With no room
+   * anywhere it stays where it is, on the grid.
+   */
+  settle(p: Piece, walls: Box[] = this.walls(p)): void {
+    if (!this.grid || !p.placed) return;
+    const { w: sw, h: sh } = uiBox();
+    let b = p.box();
+    if (!p.fixed) {
+      const m = p.least();
+      const want = p.wanted ?? b;
+      b = {
+        ...b,
+        w: Math.max(m.w, Math.min(snap(want.w), Math.floor(sw / CELL) * CELL)),
+        h: Math.max(m.h, Math.min(snap(want.h), Math.floor(sh / CELL) * CELL)),
+      };
+    }
+    b = onScreen({ ...b, x: snap(b.x), y: snap(b.y) }, sw, sh);
+    p.put(placeFor(b, walls, sw, sh)?.r ?? b);
+  }
+
+  /**
+   * Every piece on the grid, the bars first and then the windows from the
+   * front back, each taking the room it has unless one before it took it.
+   * Off the grid, on a phone, the bars go back to their own places.
+   */
+  settleAll(): void {
+    if (this.drag) return;
+    this.root.classList.toggle('snapgrid', this.grid);
+    if (!this.grid) {
+      for (const b of this.bars.values()) b.loose();
+      this.rejoin(false);
+      return;
+    }
+    const { w, h } = uiBox();
+    const walls = [clearPatch(w, h)];
+    for (const b of this.bars.values()) {
+      b.fit();
+      this.settle(b, walls);
+      walls.push(b.box());
+    }
+    const open = [...this.windows.values()].filter((win) => win.placed).sort((a, b) => Number(b.el.style.zIndex) - Number(a.el.style.zIndex));
+    for (const win of open) {
+      this.settle(win, walls);
+      walls.push(win.box());
+    }
+    this.rejoin(false);
+  }
+
+  /**
+   * Take hold of a piece to move it or, from its corner, resize it. The grid
+   * shows until it is let go, with the room it will land in outlined; a
+   * window being moved follows the pointer and drops into that room.
+   */
+  begin(p: Piece, kind: 'move' | 'size', e: PointerEvent, handle: HTMLElement): void {
+    if (!this.grid || this.drag) return;
+    const at = uiPoint(e);
+    const from = p.box();
+    this.drag = { p, kind, x0: at.x, y0: at.y, from, to: from, before: new Set(this.seamKeys) };
+    try {
+      handle.setPointerCapture(e.pointerId);
+    } catch {
+      // A pointer already let go of; the drag ends on the next move or release.
+    }
+    p.el.classList.add('snap-moving');
+    this.drawGrid();
+    this.showGhost(from);
+    // While it is held it is joined to nothing, and its neighbours have their whole frames back.
+    this.rejoin(false, p);
+    const move = (ev: PointerEvent): void => this.moveTo(ev);
+    const up = (): void => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      handle.removeEventListener('pointercancel', up);
+      this.end();
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+    handle.addEventListener('pointercancel', up);
+  }
+
+  private moveTo(e: PointerEvent): void {
+    const d = this.drag;
+    if (!d) return;
+    const at = uiPoint(e);
+    const dx = at.x - d.x0, dy = at.y - d.y0;
+    const { w, h } = uiBox();
+    const walls = this.walls(d.p);
+    if (d.kind === 'move') {
+      const loose = { ...d.from, x: d.from.x + dx, y: d.from.y + dy };
+      d.p.el.style.left = `${loose.x}px`;
+      d.p.el.style.top = `${loose.y}px`;
+      d.to = placeFor(loose, walls, w, h)?.r ?? d.from;
+    } else {
+      d.to = sizeFor(d.from, d.from.w + dx, d.from.h + dy, d.p.least(), walls, w, h).r;
+      d.p.put(d.to, true);
+    }
+    this.showGhost(d.to);
+  }
+
+  private end(): void {
+    const d = this.drag;
+    if (!d) return;
+    this.drag = null;
+    d.p.put(d.to, d.kind === 'size');
+    d.p.el.classList.remove('snap-moving');
+    this.gridCanvas.hidden = true;
+    this.ghost.hidden = true;
+    this.rejoin(true, null, d.before);
+    this.persist();
+  }
+
+  private showGhost(b: Box): void {
+    Object.assign(this.ghost.style, { left: `${b.x}px`, top: `${b.y}px`, width: `${b.w}px`, height: `${b.h}px` });
+    this.ghost.hidden = false;
+  }
+
+  /** The grid over the island: a line every cell and a heavier one every few, none in the clear patch, whose edge is marked. */
+  private drawGrid(): void {
+    const c = this.gridCanvas;
+    const { w, h } = uiBox();
+    const k = (window.devicePixelRatio || 1) * (this.root.offsetWidth ? this.root.getBoundingClientRect().width / this.root.offsetWidth : 1);
+    c.width = Math.ceil(w * k);
+    c.height = Math.ceil(h * k);
+    c.style.width = `${w}px`;
+    c.style.height = `${h}px`;
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(k, 0, 0, k, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const lines = (major: boolean, colour: string, width: number, off: number): void => {
+      g.beginPath();
+      for (let x = 0; x <= w; x += CELL) if ((x % (CELL * CELL_MAJOR) === 0) === major) g.rect(x + off - width / 2, 0, width, h);
+      for (let y = 0; y <= h; y += CELL) if ((y % (CELL * CELL_MAJOR) === 0) === major) g.rect(0, y + off - width / 2, w, width);
+      g.fillStyle = colour;
+      g.fill();
+    };
+    // A dark line under each pale one, so the grid shows over snow and sea alike.
+    lines(false, 'rgba(20, 16, 12, 0.22)', 1, 1);
+    lines(false, 'rgba(255, 246, 225, 0.26)', 1, 0);
+    lines(true, 'rgba(20, 16, 12, 0.3)', 1.5, 1);
+    lines(true, 'rgba(255, 246, 225, 0.5)', 1.5, 0);
+    const z = clearPatch(w, h);
+    g.clearRect(z.x - 1, z.y - 1, z.w + 2, z.h + 2);
+    g.setLineDash([6, 5]);
+    g.lineWidth = 1.5;
+    g.strokeStyle = 'rgba(255, 246, 225, 0.75)';
+    g.strokeRect(z.x + 0.75, z.y + 0.75, z.w - 1.5, z.h - 1.5);
+    g.setLineDash([]);
+    g.font = '600 12px system-ui, sans-serif';
+    g.textAlign = 'center';
+    g.fillStyle = 'rgba(20, 16, 12, 0.55)';
+    g.fillText('Kept clear', z.x + z.w / 2 + 1, z.y + z.h - 9);
+    g.fillStyle = 'rgba(255, 246, 225, 0.9)';
+    g.fillText('Kept clear', z.x + z.w / 2, z.y + z.h - 10);
+    c.hidden = false;
+  }
+
+  /**
+   * Lay the seams: every stretch of edge two pieces on screen share, and
+   * along each, the stretches of each piece's own sides that touch a
+   * neighbour. `onSeams` draws them (Runecut, `src/ui/runecut-dress.ts`).
+   * With `glint`, the ones that are new since `before` are marked, and
+   * `onJoin` sounds once if there are any. `skip`, a piece being held, is
+   * joined to nothing.
+   */
+  rejoin(glint: boolean, skip: Piece | null = null, before: Set<string> = this.seamKeys): void {
+    const on = this.grid ? this.pieces().filter((p) => p.placed && p !== skip).map((p) => ({ id: p.id, box: p.box() })) : [];
+    const seams = seamsOf(on);
+    const joins = new Map<string, Join[]>();
+    for (const p of this.pieces()) joins.set(p.id, []);
+    for (const p of on) joins.set(p.id, joinsOf(p.id, p.box, seams));
+    const fresh = glint ? seams.filter((s) => !before.has(seamKey(s))) : [];
+    this.seamKeys = new Set(seams.map(seamKey));
+    // An expanded window is over the rest, and seams drawn over it would be on it.
+    const shown = ![...this.windows.values()].some((w) => w.isOpen && w.isMaximized);
+    this.onSeams?.(seams, joins, fresh, shown);
+    if (fresh.length) this.onJoin?.();
+  }
+
+  /** Told of the seams each time they are laid (`rejoin`). */
+  onSeams: ((seams: Seam[], joins: Map<string, Join[]>, fresh: Seam[], shown: boolean) => void) | null = null;
+  /** Told when a move or a resize has made a new join: a click (`Sound.join`). */
+  onJoin: (() => void) | null = null;
+
+  /** Put the status panel or the toolbar on the grid, where it was kept or, the first time, at `at`. */
+  addBar(id: string, el: HTMLElement, at: (b: Box) => { x: number; y: number }): Bar {
+    const bar = new Bar(this, id, el);
+    this.bars.set(id, bar);
+    if (this.grid) {
+      this.root.classList.add('snapgrid');
+      bar.fit();
+      const kept = this.saved[id];
+      const b = bar.box();
+      bar.put(kept ? { ...b, x: kept.x, y: kept.y } : { ...b, ...at(b) });
+      this.settle(bar);
+    }
+    return bar;
+  }
+
   /** What a slot is called, kept or not. */
   layoutName(slot: number): string {
     return this.layouts[slot]?.name ?? LAYOUT_NAMES[slot] ?? `Layout ${slot + 1}`;
@@ -437,10 +840,11 @@ export class WindowManager {
     return Object.keys(this.layouts[slot]?.windows ?? {}).length > 0;
   }
 
-  /** Keep the windows as they are now in a slot, under the name it has. */
+  /** Keep the windows as they are now in a slot, under the name it has, and where the status panel and toolbar are. */
   saveLayout(slot: number): void {
     const windows: Record<string, SavedState> = {};
     for (const [id, w] of this.windows) if (!NOT_LAID_OUT.has(id)) windows[id] = w.state();
+    if (this.grid) for (const [id, b] of this.bars) windows[id] = { ...b.box(), open: true };
     this.layouts[slot] = { name: this.layoutName(slot), windows };
     this.putLayouts();
   }
@@ -453,6 +857,11 @@ export class WindowManager {
       const st = l.windows[id];
       if (st) w.apply(st);
     }
+    for (const [id, b] of this.bars) {
+      const st = l.windows[id];
+      if (st) b.put({ ...b.box(), x: st.x, y: st.y });
+    }
+    this.settleAll();
     this.persist();
     return true;
   }
@@ -478,7 +887,7 @@ export class WindowManager {
   }
 
   /**
-   * Pull every window back inside the interface.
+   * Pull every window back inside the interface, and on the grid.
    *
    * Called when the interface's own box changes, which is not the same event
    * as the window resizing: a pinch, or a browser deciding to lay the page out
@@ -489,6 +898,7 @@ export class WindowManager {
    */
   clampAll(): void {
     for (const w of this.windows.values()) w.clamp();
+    this.settleAll();
   }
 
   /** Told of every window as it is made, after it is placed: Runecut's stone and frame are added here (`src/ui/runecut-dress.ts`). */
@@ -499,8 +909,18 @@ export class WindowManager {
     this.windows.set(opts.id, win);
     this.root.append(win.el);
     win.clamp();
+    // Its rim can change under it (Runecut's frames are wider than its stone, and a phone's narrower): whole cells again, and off anything it now covers.
+    new ResizeObserver(() => {
+      if (!this.grid || this.drag || !win.placed) return;
+      const b = win.box();
+      if (b.w % CELL === 0 && b.h % CELL === 0) return;
+      this.settle(win);
+      this.rejoin(false);
+    }).observe(win.el);
     this.bringToFront(win);
     this.onCreate?.(win);
+    this.settle(win);
+    this.rejoin(false);
     return win;
   }
 
@@ -516,6 +936,11 @@ export class WindowManager {
   private front: UIWindow | null = null;
 
   bringToFront(win: UIWindow): void {
+    // Counted down again before they reach the seams, keeping the order they are in.
+    if (this.z >= Z_TOP) {
+      this.z = Z_FLOOR;
+      for (const w of [...this.windows.values()].sort((a, b) => Number(a.el.style.zIndex) - Number(b.el.style.zIndex))) w.el.style.zIndex = String(++this.z);
+    }
     win.el.style.zIndex = String(++this.z);
     if (this.front === win) return;
     this.front?.el.classList.remove('win-front');
@@ -526,10 +951,13 @@ export class WindowManager {
   persist(): void {
     const out: Record<string, SavedState> = {};
     for (const [id, w] of this.windows) out[id] = w.state();
+    if (this.grid) for (const [id, b] of this.bars) out[id] = { ...b.box(), open: true };
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(out));
     } catch {
       // Storage unavailable; layout simply will not persist.
     }
+    // What was kept for a window not made yet is kept for when it is.
+    this.saved = { ...this.saved, ...out };
   }
 }

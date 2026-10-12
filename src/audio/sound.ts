@@ -336,6 +336,23 @@ export class Sound {
     return { node: gain, at: now };
   }
 
+  /** Two pieces of the interface joined edge to edge (`WindowManager.onJoin`): a short click, in both ears, at the volume setting. */
+  join(): void {
+    const ctx = this.ctx;
+    const master = this.master;
+    if (!ctx || !master || this.volume <= 0) return;
+    if (master.gain.value !== this.volume) master.gain.setTargetAtTime(this.volume, ctx.currentTime, 0.02);
+    const t = ctx.currentTime, o = ctx.createOscillator(), v = ctx.createGain();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(1800, t);
+    o.frequency.exponentialRampToValueAtTime(600, t + 0.05);
+    v.gain.setValueAtTime(0.08, t);
+    v.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+    o.connect(v).connect(master);
+    o.start(t);
+    o.stop(t + 0.1);
+  }
+
   /** A number that wanders about between 0 and 1, so nothing repeats exactly. */
   private next(): number {
     this.vary = (this.vary * 1103515245 + 12345) % 2147483648;

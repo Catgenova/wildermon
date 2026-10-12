@@ -7,6 +7,8 @@ import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { LAYOUT_NAMES } from '../../game/keybinds';
 import { SNAP } from '../windows';
+import { CELL, CLEAR_CELLS } from '../snapgrid';
+import { JOINT_EVERY, PIN_EVERY, STITCH_EVERY } from '../runecut-dress';
 import { islandTime } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS } from '../../game/prices';
@@ -1886,6 +1888,20 @@ export const NEWS: News[] = [
       `Each window's border, ${RIM} pixels wide (${frameOddities(FRAME_RIM)}), is drawn as the stuff of what it holds, in ${FRAMES.length} kinds: the pack in a ${frameLabel('inventory').toLowerCase()}, `
         + `the stores in a ${frameLabel('stores').toLowerCase()}, crafting on a ${frameLabel('craft').toLowerCase()}, events on a ${frameLabel('events').toLowerCase()}, the status panel in a ${frameLabel('hud').toLowerCase()} and the toolbar in a ${frameLabel('toolbar').toLowerCase()}. `
         + `A knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge (${frameOddities(FRAME_REACHES)}); clicks go through it, and the room inside a window is no smaller. Settings, Display, Window frames: Themed, or Stone for the plain stone rim on all.`,
+    ],
+  },
+  {
+    n: 139,
+    day: '2026-10-12',
+    lines: () => [
+      `Windows go on a grid of ${CELL}-pixel cells, shown while a window is moved or resized: place and size land on whole cells. `
+        + 'Windows resize from a grip in their bottom-right corner. Edges no longer snap to each other within a few pixels, and Alt no longer places a window freely.',
+      'No window covers another, the status panel or the toolbar: they can only share an edge. One dropped on another goes to the nearest free room its size, and a resize stops at its neighbour.',
+      `A square round your character in the middle of the screen, ${CLEAR_CELLS} cells across (fewer on a small screen), is kept clear of windows.`,
+      'The status panel and the toolbar can be moved: press anywhere on one and drag. They take up whole cells, cannot be resized or closed, and are kept in window layouts.',
+      `In Runecut, where two share an edge their frames stop at it and one seam runs down it, capped in gold at each end: cloth, leather or paper to the same stitched every ${STITCH_EVERY} pixels, `
+        + `anything else to anything else mortared with a joint every ${JOINT_EVERY}, and one of each pinned in brass every ${PIN_EVERY}. A join you make glints along its length and clicks.`,
+      'A phone\'s screen has no grid; windows there are as they were.',
     ],
   },
 ];

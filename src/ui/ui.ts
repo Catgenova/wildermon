@@ -116,6 +116,7 @@ import { KeeperPanel } from './panels/keeper';
 import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
 import { LAYOUT_SLOTS, WindowManager } from './windows';
+import { CELL } from './snapgrid';
 import type { Island } from '../net/island';
 import { awayLines } from '../game/away';
 import { clearQuestion } from '../game/keeper';
@@ -354,11 +355,15 @@ export class UI {
      * its own rows; the toolbar has to be told, because the button that says
      * `Inventory I` is not the thing that changed it.
      */
-    // The HUD and the toolbar are slabs too, in a strap and a tool belt.
+    // The HUD and the toolbar are slabs too, in a strap and a tool belt; and on the grid with the windows, moved but never resized or closed.
     for (const [id, sel] of [['hud', '.hud-status'], ['toolbar', '.toolbar']] as const) {
       const el = root.querySelector<HTMLElement>(sel);
-      if (el) this.art.add(id, el, () => RIMS[id]);
+      if (!el) continue;
+      this.art.add(id, el, () => RIMS[id]);
+      // The first time: the status panel a cell in from the top left, the toolbar a cell down in the middle.
+      this.windows.addBar(id, el, (b) => (id === 'hud' ? { x: CELL, y: CELL } : { x: (uiBox().w - b.w) / 2, y: CELL }));
     }
+    this.windows.onSeams = (seams, joins, fresh, shown) => this.art.seams(seams, joins, fresh, shown);
     cb.keys.onChange = () => {
       this.hud.drawKeys();
       this.settings.drawKeys();

@@ -5060,3 +5060,84 @@ kbd {
     opacity: 0.8;
   }
 }
+
+/*
+ * The grid (src/ui/snapgrid.ts, src/ui/windows.ts). Everywhere but a phone's
+ * screen, every window, the status panel and the toolbar sit on whole 24 px
+ * cells and are whole cells big. While one is moved or resized the grid is
+ * drawn over the island, under the bars and windows, and the room it will
+ * land in is outlined. Windows are resized from their own corner grip, which
+ * lands on whole cells, rather than the browser's.
+ */
+.snap-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none !important;
+}
+
+.snap-ghost {
+  position: absolute;
+  z-index: 5999;
+  border: 2px dashed rgba(255, 246, 225, 0.85);
+  background: rgba(255, 246, 225, 0.08);
+  box-shadow: 0 0 0 1px rgba(20, 16, 12, 0.45), inset 0 0 0 1px rgba(20, 16, 12, 0.45);
+  pointer-events: none !important;
+}
+
+#ui.snapgrid .hud-status,
+#ui.snapgrid .toolbar {
+  z-index: 2;
+  touch-action: none;
+}
+
+#ui.snapgrid .toolbar {
+  transform: none;
+  align-items: center;
+  align-content: center;
+}
+
+#ui.snapgrid .win {
+  resize: none;
+}
+
+.win-grip {
+  display: none;
+}
+
+#ui.snapgrid .win-grip {
+  display: block;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  width: calc(var(--rim, 0px) + 14px);
+  height: calc(var(--rim, 0px) + 14px);
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(135deg, transparent 0 62%, var(--ui-border-light, #8a7a62) 62% 66%, transparent 66% 74%, var(--ui-border-light, #8a7a62) 74% 78%, transparent 78%);
+  opacity: 0.7;
+}
+
+#ui.snapgrid .win-grip:hover {
+  opacity: 1;
+}
+
+#ui.snapgrid .win.maximized .win-grip {
+  display: none;
+}
+
+/* Where two pieces share an edge, over every window and under menus and tooltips (src/ui/runecut-dress.ts). */
+.rc-seams,
+.rc-glints {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 6000;
+  pointer-events: none !important;
+}
+
+.rc-glints {
+  z-index: 6001;
+}

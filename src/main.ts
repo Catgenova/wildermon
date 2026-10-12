@@ -220,6 +220,8 @@ for (const ev of ['pointerdown', 'keydown', 'touchstart']) {
 }
 
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, island });
+// A window or bar moved or resized against another clicks as they join.
+ui.windows.onJoin = () => sound.join();
 // Only an island can refuse to save; a game in this browser always can.
 if (island) mountSavingBanner(uiRoot);
 

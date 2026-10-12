@@ -1,5 +1,6 @@
 import { frameFor, frameLamps, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
 import { watchLook, type Look } from './theme';
+import type { Join, Seam } from './snapgrid';
 
 /**
  * Runecut's art on the page: each window's slab, its niche and its frame
@@ -67,6 +68,23 @@ function cachedCanvas(key: string, w: number, h: number, k: number, cls: string,
   return c;
 }
 
+/** Frames of cloth, leather or paper; every other is hard (wood, stone, metal), for how a seam between two is fastened (`RunecutArt.paintSeams`). */
+export const SOFT = new Set(['burlap', 'book', 'treasure']);
+/** Along a seam: a cross-stitch, a mortar joint and a brass pin every so many interface px. */
+export const STITCH_EVERY = 16;
+export const JOINT_EVERY = 48;
+export const PIN_EVERY = 40;
+/** How long a new seam's glint takes to run its length. */
+const GLINT_MS = 650;
+
+function gold(g: CanvasRenderingContext2D, x0: number, y0: number, x1: number, y1: number, night: boolean): CanvasGradient {
+  const f = g.createLinearGradient(x0, y0, x1, y1);
+  f.addColorStop(0, night ? '#d8c58e' : '#fbe7a6');
+  f.addColorStop(0.45, night ? '#b8954c' : '#d9b25c');
+  f.addColorStop(1, '#8e6526');
+  return f;
+}
+
 const reduced = (): boolean => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 /** One thing dressed in the art: a window, the HUD or the toolbar. */
@@ -87,6 +105,11 @@ class Dressed {
   /** The glow of each lamp on its frame: over the window's edge, inside it, and under it past the edge, with where each lamp is on the window. */
   private lamps: Array<{ x: number; y: number; r: number; over: HTMLElement; under: HTMLElement }> = [];
   private readonly seed: number;
+  /** The stretches of its sides another piece is joined along (`src/ui/snapgrid.ts`): no part of its frame stands past them. */
+  private joins: Join[] = [];
+  private joinsKey = '';
+  /** Its frame with what stands past a join cut away: its own copy, so the picture in the cache stays whole. */
+  private cut: HTMLCanvasElement | null = null;
 
   constructor(
     private readonly art: RunecutArt,
@@ -113,6 +136,15 @@ class Dressed {
         this.refresh();
       }, 150);
     }).observe(el);
+  }
+
+  /** Told which stretches of its sides are joined; its frame is laid again when that changes. */
+  join(joins: Join[]): void {
+    const key = joins.map((j) => `${j.side}${j.s0}-${j.s1}`).join(',');
+    if (key === this.joinsKey) return;
+    this.joins = joins;
+    this.joinsKey = key;
+    if (!this.el.hidden && !this.due) this.refresh();
   }
 
   get isFront(): boolean {
@@ -171,6 +203,7 @@ class Dressed {
       frame.style.clipPath = `path(evenodd, 'M0 0 H${W} V${H} H0 Z M${R + bl} ${R + bt} H${R + w - bl} V${R + h - bt} H${R + bl} Z')`;
     }
     this.edge = frame ? this.edgeOf(frame, w, h, k, R) : null;
+    const laid = frame && this.joins.length ? this.cutOf(frame, w, h, k, R) : frame;
     this.lampsFor(frame ? frameLamps(kind, w, h, rim) : [], night);
     let niche: HTMLCanvasElement | null = null;
     if (this.glyph) {
@@ -181,7 +214,44 @@ class Dressed {
       // The same picture serves every window with this rune, so each takes its own copy to show.
       niche = this.copyOf(niche);
     }
-    this.lay(plate, frame, niche);
+    this.lay(plate, laid, niche);
+  }
+
+  /**
+   * Its frame with nothing standing past a stretch of side that another piece
+   * is joined along, nor for a reach either way along it: the seam there is
+   * the two of them, and a knob or a knot would lie across the neighbour.
+   */
+  private cutOf(src: HTMLCanvasElement, w: number, h: number, k: number, R: number): HTMLCanvasElement {
+    let c = this.cut;
+    if (!c) {
+      c = document.createElement('canvas');
+      this.cut = c;
+    }
+    c.className = src.className;
+    c.dataset.frameFor = src.dataset.frameFor;
+    c.dataset.frame = src.dataset.frame;
+    c.style.clipPath = src.style.clipPath;
+    c.width = src.width;
+    c.height = src.height;
+    c.style.width = src.style.width;
+    c.style.height = src.style.height;
+    const g = c.getContext('2d');
+    if (!g) return src;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, c.width, c.height);
+    g.drawImage(src, 0, 0);
+    g.setTransform(k, 0, 0, k, R * k, R * k);
+    g.globalCompositeOperation = 'destination-out';
+    for (const j of this.joins) {
+      const along = j.s1 - j.s0 + 2 * R;
+      if (j.side === 'right') g.fillRect(w, j.s0 - R, R + 1, along);
+      if (j.side === 'left') g.fillRect(-R - 1, j.s0 - R, R + 1, along);
+      if (j.side === 'bottom') g.fillRect(j.s0 - R, h, along, R + 1);
+      if (j.side === 'top') g.fillRect(j.s0 - R, -R - 1, along, R + 1);
+    }
+    g.globalCompositeOperation = 'source-over';
+    return c;
   }
 
   /** A glow for each lamp, made or kept; each swells in step with every other, on the page's own clock. */
@@ -356,15 +426,195 @@ export class RunecutArt {
   private tick = 0;
 
   constructor(private readonly root: HTMLElement) {
+    this.seamCanvas = this.layer('rc-seams');
+    this.glintCanvas = this.layer('rc-glints');
     watchLook((look) => {
       this.look = look;
       for (const d of this.all) d.refresh();
+      this.paintSeams();
       this.wake();
     });
     // The interface's own scale, which the canvases are drawn at, moves with the screen and the size setting.
     window.addEventListener('resize', () => {
       for (const d of this.all) d.refresh();
+      this.paintSeams();
     });
+  }
+
+  /** A canvas over the whole interface, over every window and under menus and tooltips (src/style.css), taking no clicks. */
+  private layer(cls: string): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.className = cls;
+    c.hidden = true;
+    this.root.append(c);
+    return c;
+  }
+
+  private readonly seamCanvas: HTMLCanvasElement;
+  private readonly glintCanvas: HTMLCanvasElement;
+  private seamList: Seam[] = [];
+  private seamsShown = false;
+  private glintFrame = 0;
+
+  /**
+   * Where pieces are joined (`WindowManager.rejoin`): each piece's frame
+   * stops at the stretches of it that are joined, and the seams are drawn
+   * over them, the ones in `fresh` with a glint running along them.
+   */
+  seams(seams: Seam[], joins: Map<string, Join[]>, fresh: Seam[], shown: boolean): void {
+    this.seamList = seams;
+    this.seamsShown = shown;
+    for (const d of this.all) d.join(joins.get(d.id) ?? []);
+    this.paintSeams();
+    if (fresh.length && shown && this.look?.ui === 'runecut' && !reduced()) this.glint(fresh);
+  }
+
+  /** The frame a piece wears, as `Dressed.refresh` chooses it. */
+  private kindOf(id: string): string {
+    return this.look?.frames === 'themed' ? frameFor(id) : 'stone';
+  }
+
+  private fit(c: HTMLCanvasElement): CanvasRenderingContext2D | null {
+    const w = this.root.offsetWidth, h = this.root.offsetHeight;
+    const k = (window.devicePixelRatio || 1) * this.scale();
+    c.width = Math.max(1, Math.ceil(w * k));
+    c.height = Math.max(1, Math.ceil(h * k));
+    c.style.width = `${w}px`;
+    c.style.height = `${h}px`;
+    const g = c.getContext('2d');
+    g?.setTransform(k, 0, 0, k, 0, 0);
+    return g;
+  }
+
+  /**
+   * Every seam: one groove down the join, then by what the two frames are
+   * made of (`SOFT`), cloth or leather to cloth or leather cross-stitched
+   * every `STITCH_EVERY` px, anything hard to hard mortared with a joint every
+   * `JOINT_EVERY` px, and soft to hard pinned in brass every `PIN_EVERY` px;
+   * a gold lozenge caps each end, over the corners that meet there.
+   */
+  private paintSeams(): void {
+    const c = this.seamCanvas;
+    const on = this.look?.ui === 'runecut' && this.seamsShown && this.seamList.length > 0;
+    c.hidden = !on;
+    if (!on) return;
+    const g = this.fit(c);
+    if (!g) return;
+    const night = this.look?.rc === 'night';
+    for (const sm of this.seamList) {
+      const soft = [this.kindOf(sm.a), this.kindOf(sm.b)].filter((k) => SOFT.has(k)).length;
+      const pt = (t: number, d = 0): [number, number] => (sm.vertical ? [sm.at + d, t] : [t, sm.at + d]);
+      const line = (d: number, wd: number, col: string): void => {
+        g.beginPath();
+        g.moveTo(...pt(sm.s0 + 6, d));
+        g.lineTo(...pt(sm.s1 - 6, d));
+        g.strokeStyle = col;
+        g.lineWidth = wd;
+        g.lineCap = 'round';
+        g.stroke();
+      };
+      line(0, 5, 'rgba(38, 30, 26, 0.55)');
+      line(-1.5, 1, night ? 'rgba(200, 210, 230, 0.35)' : 'rgba(255, 244, 220, 0.55)');
+      if (soft === 0) {
+        line(0, 2.2, night ? '#8f8a82' : '#cfc6b6');
+        for (let t = sm.s0 + JOINT_EVERY / 2; t < sm.s1 - 12; t += JOINT_EVERY) {
+          g.beginPath();
+          g.moveTo(...pt(t, -6));
+          g.lineTo(...pt(t, 6));
+          g.strokeStyle = 'rgba(60, 52, 46, 0.7)';
+          g.lineWidth = 1.4;
+          g.stroke();
+        }
+      } else if (soft === 2) {
+        for (let t = sm.s0 + 14; t < sm.s1 - 10; t += STITCH_EVERY) {
+          for (const [a, b] of [[-5, 5], [5, -5]]) {
+            for (const [col, wd] of [['rgba(40, 28, 20, 0.45)', 2.6], [night ? '#b9ad94' : '#efe2c4', 1.4]] as const) {
+              g.beginPath();
+              g.moveTo(...pt(t - 4, a));
+              g.lineTo(...pt(t + 4, b));
+              g.strokeStyle = col;
+              g.lineWidth = wd;
+              g.stroke();
+            }
+          }
+        }
+      } else {
+        for (let t = sm.s0 + PIN_EVERY / 2; t < sm.s1 - 14; t += PIN_EVERY) {
+          const [x, y] = pt(t);
+          g.save();
+          g.shadowColor = 'rgba(20, 14, 10, 0.5)';
+          g.shadowBlur = 2;
+          g.shadowOffsetY = 1;
+          g.beginPath();
+          g.arc(x, y, 4.2, 0, Math.PI * 2);
+          g.fillStyle = gold(g, x - 4, y - 4, x + 4, y + 4, night);
+          g.fill();
+          g.restore();
+          g.beginPath();
+          g.arc(x, y, 4.2, 0, Math.PI * 2);
+          g.strokeStyle = '#5b4220';
+          g.lineWidth = 0.8;
+          g.stroke();
+          g.beginPath();
+          g.arc(x - 1.2, y - 1.3, 1.2, 0, Math.PI * 2);
+          g.fillStyle = 'rgba(255, 250, 225, 0.9)';
+          g.fill();
+        }
+      }
+      for (const t of [sm.s0, sm.s1]) {
+        const [x, y] = pt(t), r = 9;
+        const lozenge = (s: number): void => {
+          g.beginPath();
+          g.moveTo(x, y - r * s);
+          g.lineTo(x + r * 0.8 * s, y);
+          g.lineTo(x, y + r * s);
+          g.lineTo(x - r * 0.8 * s, y);
+          g.closePath();
+        };
+        g.save();
+        g.shadowColor = 'rgba(20, 14, 10, 0.5)';
+        g.shadowBlur = 3;
+        g.shadowOffsetY = 1;
+        lozenge(1);
+        g.fillStyle = gold(g, x - r, y - r, x + r, y + r, night);
+        g.fill();
+        g.restore();
+        g.strokeStyle = '#5b4220';
+        g.lineWidth = 0.9;
+        g.stroke();
+        lozenge(0.5);
+        g.fillStyle = sm.vertical ? '#8fa6c4' : '#a7bcd6';
+        g.fill();
+      }
+    }
+  }
+
+  /** A glow running the length of each new seam once, over `GLINT_MS`. */
+  private glint(fresh: Seam[]): void {
+    const c = this.glintCanvas;
+    const g = this.fit(c);
+    if (!g) return;
+    c.hidden = false;
+    cancelAnimationFrame(this.glintFrame);
+    const w = this.root.offsetWidth, h = this.root.offsetHeight;
+    const start = performance.now();
+    const frame = (now: number): void => {
+      const u = Math.min(1, (now - start) / GLINT_MS);
+      g.clearRect(0, 0, w, h);
+      for (const sm of fresh) {
+        const t = sm.s0 + (sm.s1 - sm.s0) * u;
+        const [x, y] = sm.vertical ? [sm.at, t] : [t, sm.at];
+        const r = 26, fade = 1 - u * 0.6, f = g.createRadialGradient(x, y, 0, x, y, r);
+        f.addColorStop(0, `rgba(255, 246, 210, ${0.95 * fade})`);
+        f.addColorStop(0.4, `rgba(255, 220, 140, ${0.45 * fade})`);
+        f.addColorStop(1, 'rgba(255, 220, 140, 0)');
+        g.fillStyle = f;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      if (u < 1) this.glintFrame = requestAnimationFrame(frame);
+      else c.hidden = true;
+    };
+    this.glintFrame = requestAnimationFrame(frame);
   }
 
   /** Device pixels an interface pixel is drawn at, before the screen's own ratio. */
