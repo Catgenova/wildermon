@@ -64,6 +64,7 @@ import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } f
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
+import { DRESSING_RANK } from '../../game/wounds';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { CLASS_AT, CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
 import { spellDef, spellForce, spellsOf } from '../../game/arcane';
@@ -75,7 +76,7 @@ import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, MOTE_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
-import { DAMAGE_MAX, DAY_SECONDS, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
+import { DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
 import { defaultKey } from '../../game/keybinds';
 import { guidePages } from '../../game/guide';
@@ -1912,6 +1913,35 @@ export const NEWS: News[] = [
       `Runecut's themed frames have small animals and lights going about them: ${lifeWords()}.`,
       'They keep to the frame and never cross what is inside a window, and clicks go through them. Settings, Display, Frame life turns them off; '
         + 'they are not shown on a phone\'s screen, with Fast graphics, or when your system asks for less motion.',
+    ],
+  },
+  {
+    n: 141,
+    day: '2026-10-12',
+    lines: () => [
+      'A bandage or a cover goes on the worst wound it would close faster than what is on it now, on you or on somebody you dress, and says which wound it went on. '
+        + 'A wound gone bad used to be picked first and refuse the dressing, so none went on anything else; now it is passed over, and named only when nothing else will take a dressing.',
+      `Dressings rank by how fast they close a wound, slowest first: ${listed(DRESSING_RANK)}. A dressing goes only over one ranked below it: `
+        + 'cloth no longer goes over a cover and takes the herb off it, and a cover goes over cloth. Where every wound is already dressed as well, it is refused and says so.',
+    ],
+  },
+  {
+    n: 142,
+    day: '2026-10-12',
+    lines: () => [
+      'The Social window\'s Friends tab has Invite beside friends and beside people you share another settlement with, not only beside everybody else ashore. '
+        + `Living on a settlement is no bar: anybody may be a citizen of ${DEEDS_JOINED} other people's settlements.`,
+      `Invite reads Citizen of ${DEEDS_JOINED} and cannot be pressed for somebody already on ${DEEDS_JOINED}, and Asked for somebody who has not answered; `
+        + 'the right-click menu greys it out with the same reason. Move in on an invitation cannot be pressed while you are on as many as anybody may be.',
+    ],
+  },
+  {
+    n: 143,
+    day: '2026-10-12',
+    lines: () => [
+      'A window can be moved and resized flush against the right and bottom edges of the screen, which are seldom on a whole cell; before, the last strip of the screen could not be reached.',
+      'Every animal and light on Runecut\'s frames is redrawn and moves for itself: they land, look about, rest and go again, each frame its own way. '
+        + 'The mouse, ladybird, spider, snail and snow take the night\'s light after dark, as their frames do.',
     ],
   },
 ];

@@ -390,6 +390,13 @@ export interface Social {
   deeds: MyDeed[];
   /** How many more you may join. */
   room: number;
+  /**
+   * How many other people's settlements everybody else is a citizen of, by
+   * uid, for those on at least one: what decides whether you may ask them
+   * onto yours. Optional because an island that has not had the migration
+   * answers without it, and then the island's own refusal is what says so.
+   */
+  joined?: Record<string, number>;
   /** Somewhere asking you to come and live there. */
   invites: Array<{ founder: string; by: string; deed: string; at: number }>;
   /** And the ones you have out, which only a founder ever has. */

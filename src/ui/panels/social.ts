@@ -1,5 +1,5 @@
 import { LETTER_MAX, type Folk, type Island, type Letter, type MyDeed, type Social } from '../../net/island';
-import type { Game } from '../../game/game';
+import { DEEDS_JOINED, type Game } from '../../game/game';
 import type { UIWindow } from '../windows';
 
 /** How often the window asks again while it is open. */
@@ -52,6 +52,51 @@ export function writeTo(s: Social): Folk[] {
   return [...by.values()];
 }
 
+/**
+ * Whether somebody is on as many other people's settlements as anybody may be.
+ *
+ * Counted by the island (`joined`, which is `deeds_joined_by`), so this and
+ * `rpc_invite` cannot disagree about who has room.
+ */
+export const rollFull = (s: Social, uid: string): boolean => (s.joined?.[uid] ?? 0) >= DEEDS_JOINED;
+
+/**
+ * Whether you may ask somebody onto the settlement you founded, and if not,
+ * why: the same checks as `rpc_invite`, in its order and its words.
+ *
+ * Living somewhere already is no bar. One settlement is yours and
+ * `DEEDS_JOINED` more may be other people's, whether or not you hold one, and
+ * only somebody already on that many rolls is refused. The island has kept
+ * that rule since citizens landed; it was this window that withheld it,
+ * offering Invite only under "Everybody else ashore" -- so a friend, or
+ * anybody you share a settlement with, could not be asked at all. Reported
+ * from the island: "I don't have an invite option for you and [another
+ * player] since we're already in a deed."
+ */
+export function inviteRefusal(s: Social, uid: string, name: string): string | null {
+  const own = s.deeds.find((d) => d.mine);
+  if (!own) return 'You hold no settlement to invite anybody to.';
+  if (own.folk.some((f) => f.uid === uid)) return `${name} already lives here.`;
+  if (rollFull(s, uid)) {
+    return `${name} is a citizen of ${DEEDS_JOINED} settlements already, which is as many as anybody may be.`;
+  }
+  if (s.sent.some((w) => w.uid === uid)) return `${name} has already been asked, and has not answered.`;
+  return null;
+}
+
+/**
+ * Whether you may take up an invitation, and if not, why: the one refusal in
+ * `rpc_invite_answer`, a full roll, in its words. The invitation is left
+ * standing, so leaving a settlement is all it takes.
+ */
+export function moveInRefusal(s: Social): string | null {
+  if (s.room > 0) return null;
+  return `You are a citizen of ${DEEDS_JOINED - s.room} settlements already, which is as many as anybody may be. Leave one first.`;
+}
+
+/** How long an answer is trusted by somebody who is not looking at the window. */
+const STALE = 60;
+
 export class SocialPanel {
   private readonly bar: HTMLDivElement;
   private readonly page: HTMLDivElement;
@@ -70,6 +115,8 @@ export class SocialPanel {
   }
   private asking = false;
   private lastAsk = -1e9;
+  /** When the island last answered, by the wall clock, for `known`. */
+  private seenAt = -1e12;
   /** Whose thread is open on the letters tab, and what is in it. */
   private talkingTo: Folk | null = null;
   private thread: Letter[] = [];
@@ -115,6 +162,21 @@ export class SocialPanel {
     void this.refresh(false);
   }
 
+  /**
+   * The island's last answer, while it is recent enough to refuse something
+   * on: the right-click menu greys Invite out with the window's own reason,
+   * and an answer from ten minutes ago would say "already asked" of somebody
+   * who has since said no. Null means the menu offers it and the island says.
+   */
+  known(): Social | null {
+    return this.seen && Date.now() - this.seenAt < STALE * 1000 ? this.seen : null;
+  }
+
+  /** Ask the island again if the last answer is older than the window's own beat. */
+  prime(): void {
+    if (Date.now() - this.seenAt >= REFRESH * 1000) void this.refresh(true);
+  }
+
   /** Open on somebody, from wherever they were picked. */
   openOn(uid: string, tab: 'friends' | 'letters' = 'letters'): void {
     this.tab = tab;
@@ -143,7 +205,10 @@ export class SocialPanel {
     this.asking = true;
     try {
       const said = await this.island.social();
-      if (said) this.seen = said;
+      if (said) {
+        this.seen = said;
+        this.seenAt = Date.now();
+      }
     } finally {
       this.asking = false;
     }
@@ -233,6 +298,25 @@ export class SocialPanel {
     return el;
   }
 
+  /**
+   * Invite, beside anybody not already on the roll of the settlement you
+   * founded, wherever the window lists them. Greyed with the island's reason
+   * when there is one, and labelled with it: "Citizen of 3" when they are on
+   * as many rolls as anybody may be, "Asked" when they have not answered.
+   * Nothing for somebody who holds none, or somebody already on yours.
+   */
+  private inviteButton(s: Social, who: Folk): HTMLButtonElement | null {
+    const isle = this.island;
+    const own = s.deeds.find((d) => d.mine);
+    if (!isle || !own || own.folk.some((f) => f.uid === who.uid)) return null;
+    const why = inviteRefusal(s, who.uid, who.name);
+    const label = !why ? 'Invite' : rollFull(s, who.uid) ? `Citizen of ${DEEDS_JOINED}` : 'Asked';
+    const b = this.button(label, why ?? `Ask ${who.name} to live at ${own.name}`,
+      () => void this.did(isle.invite(who.uid)));
+    b.disabled = !!why;
+    return b;
+  }
+
   /** Where somebody is, when the island is willing to say. */
   private whereabouts(who: Folk): string {
     if (!who.online) return 'away';
@@ -279,6 +363,8 @@ export class SocialPanel {
     }
     if (s.invites.length) {
       this.page.append(this.head('Asked to live somewhere'));
+      const full = moveInRefusal(s);
+      if (full) this.page.append(this.empty(full));
       for (const inv of s.invites) {
         const el = document.createElement('div');
         el.className = 'social-row social-ask';
@@ -287,9 +373,11 @@ export class SocialPanel {
         text.textContent = `${inv.by} · ${inv.deed}`;
         const acts = document.createElement('span');
         acts.className = 'social-acts';
+        const moveIn = this.button('Move in', full ?? `Become a citizen of ${inv.deed}`,
+          () => void this.did(isle.answerInvite(inv.founder, true)));
+        moveIn.disabled = !!full;
         acts.append(
-          this.button('Move in', `Become a citizen of ${inv.deed}`,
-            () => void this.did(isle.answerInvite(inv.founder, true))),
+          moveIn,
           this.button('No', `Turn ${inv.by} down`,
             () => void this.did(isle.answerInvite(inv.founder, false))),
         );
@@ -337,10 +425,13 @@ export class SocialPanel {
       this.page.append(this.empty('Nobody yet. Right-click somebody on the island, or pick a name below.'));
     }
     for (const who of s.friends) {
-      this.page.append(this.row(who, this.whereabouts(who), [
+      const acts = [
         this.button('Write', `Write to ${who.name}`, () => void this.openThread(who)),
         this.button('Drop', `Take ${who.name} off the list`, () => void this.did(isle.unfriend(who.uid))),
-      ]));
+      ];
+      const ask = this.inviteButton(s, who);
+      if (ask) acts.unshift(ask);
+      this.page.append(this.row(who, this.whereabouts(who), acts));
     }
 
     for (const d of s.deeds) this.drawDeed(s, d);
@@ -349,6 +440,8 @@ export class SocialPanel {
       this.page.append(this.empty('You hold none and live on none. Plant a stake, or wait to be asked.'));
     } else if (s.room > 0) {
       this.page.append(this.empty(`You may be a citizen of ${s.room} more.`));
+    } else {
+      this.page.append(this.empty(`You are a citizen of ${DEEDS_JOINED} other people's settlements, which is as many as anybody may be.`));
     }
 
     const known = new Set([...s.friends, ...this.neighbours(s)].map((f) => f.uid));
@@ -360,11 +453,8 @@ export class SocialPanel {
         this.button('Befriend', `Ask ${who.name} to be a friend`, () => void this.did(isle.befriend(who.uid))),
         this.button('Write', `Write to ${who.name}`, () => void this.openThread(who)),
       ];
-      const own = s.deeds.find((d) => d.mine);
-      if (own) {
-        acts.unshift(this.button('Invite', `Ask ${who.name} to live at ${own.name}`,
-          () => void this.did(isle.invite(who.uid))));
-      }
+      const ask = this.inviteButton(s, who);
+      if (ask) acts.unshift(ask);
       this.page.append(this.row(who, this.whereabouts(who), acts));
     }
     /*
@@ -399,6 +489,9 @@ export class SocialPanel {
     }
     for (const who of d.folk) {
       const acts = [this.button('Write', `Write to ${who.name}`, () => void this.openThread(who))];
+      // Somebody off a settlement you were asked onto may be asked onto yours.
+      const ask = d.mine ? null : this.inviteButton(s, who);
+      if (ask) acts.unshift(ask);
       if (d.mine && who.uid !== d.founder) {
         acts.push(this.button('Send away', `Take ${who.name} off the roll of ${d.name}`,
           () => void this.did(isle.leaveDeed(d.founder, who.uid))));

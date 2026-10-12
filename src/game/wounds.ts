@@ -110,12 +110,23 @@ export const CLOSE_PER_SKILL = 0.00002;
 export const FESTER_CLOTH = 0.12;
 export const FESTER_WRONG = 0.05;
 
+/**
+ * How fast a dressing closes this wound, as a multiple: nothing, cloth, the
+ * wrong herb or the herb that suits it. It is also how dressings are ranked
+ * against each other (`dressingHelps`). The island's `dressing_pace`.
+ */
+export function dressingPace(w: Wound, dressing: string | null): number {
+  return dressing === null ? CLOSE_BARE : dressing === '' ? CLOSE_CLOTH : dressing === WOUND_KINDS[w.kind].herb ? CLOSE_RIGHT : CLOSE_WRONG;
+}
+
+/** The dressings, slowest to close a wound to fastest (`dressingPace`): a dressing goes only over one before it. */
+export const DRESSING_RANK: string[] = ([['nothing', CLOSE_BARE], ['cloth', CLOSE_CLOTH], ['the wrong herb', CLOSE_WRONG], ['the herb that suits it', CLOSE_RIGHT]] as const)
+  .slice().sort((a, b) => a[1] - b[1]).map(([name]) => name);
+
 /** How fast a wound closes, given what is on it, and faster for the hands that dressed it (a Naturalist's Quick Mend). */
 export function woundClose(w: Wound, chirurgy: number): number {
   if (w.infected) return 0;
-  const k = WOUND_KINDS[w.kind];
-  const dressed = w.dressing === null ? CLOSE_BARE : w.dressing === '' ? CLOSE_CLOTH : w.dressing === k.herb ? CLOSE_RIGHT : CLOSE_WRONG;
-  return w.severity * dressed * (CLOSE_PACE + chirurgy * CLOSE_PER_SKILL) * (w.mend ?? 1);
+  return w.severity * dressingPace(w, w.dressing) * (CLOSE_PACE + chirurgy * CLOSE_PER_SKILL) * (w.mend ?? 1);
 }
 
 /**
@@ -145,6 +156,27 @@ export function worstWound(wounds: Wound[]): Wound | null {
   }
   return worst;
 }
+
+/**
+ * Whether a dressing (a cover's herb, '' for cloth) would do this wound any
+ * good: it has not gone bad, and the dressing closes it faster than what is
+ * on it already (`dressingPace`). Cloth never goes over cloth or a cover, and
+ * nothing goes over the herb that suits the wound.
+ */
+export const dressingHelps = (w: Wound, dressing: string): boolean =>
+  !w.infected && dressingPace(w, dressing) > dressingPace(w, w.dressing);
+
+/**
+ * Where a dressing goes: the worst wound it would do good (`dressingHelps`),
+ * given what would go on each (`dressingOn`, null for nothing to put on it).
+ * A wound gone bad, or one already dressed as well, is passed over rather
+ * than standing in the way of the rest. The island's `wound_to_dress`.
+ */
+export const woundToDress = (wounds: Wound[], dressingOn: (w: Wound) => string | null): Wound | null =>
+  worstWound(wounds.filter((w) => {
+    const d = dressingOn(w);
+    return d !== null && dressingHelps(w, d);
+  }));
 
 /** What kind of wound a weapon of this sort leaves. */
 export const WOUND_BY_WEAPON: Record<string, WoundKind> = {

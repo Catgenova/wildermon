@@ -1,7 +1,7 @@
 import { uiBox, uiFloor, uiPoint } from './screen';
 import { LAYOUT_NAMES } from '../game/keybinds';
 import { runeFor, runeSvg } from './theme';
-import { CELL, CELL_MAJOR, cells, clearPatch, joinsOf, onScreen, placeFor, seamKey, seamsOf, sizeFor, snap, type Box, type Join, type Seam } from './snapgrid';
+import { CELL, CELL_MAJOR, cells, clearPatch, fits, joinsOf, onScreen, placeFor, seamKey, seamsOf, sizeFor, snap, snapAt, type Box, type Join, type Seam } from './snapgrid';
 
 export type Anchor = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -442,7 +442,8 @@ export class UIWindow implements Piece {
     // An open window on the grid keeps its box's cells, so the next time it is made it is made that size whatever rim it is given first.
     if (!this.want && this.mgr.grid && this.placed) {
       const b = this.box();
-      if (b.w && b.h && b.w % CELL === 0 && b.h % CELL === 0) this.want = { w: b.w, h: b.h };
+      const { w, h } = uiBox();
+      if (b.w && b.h && fits(b.x, b.w, w) && fits(b.y, b.h, h)) this.want = { w: b.w, h: b.h };
     }
     return {
       ...g,
@@ -641,13 +642,11 @@ export class WindowManager {
     if (!p.fixed) {
       const m = p.least();
       const want = p.wanted ?? b;
-      b = {
-        ...b,
-        w: Math.max(m.w, Math.min(snap(want.w), Math.floor(sw / CELL) * CELL)),
-        h: Math.max(m.h, Math.min(snap(want.h), Math.floor(sh / CELL) * CELL)),
-      };
+      // Whole cells, or out to the screen's far edge if that is where it reached (`fits`).
+      const size = (v: number, at: number, span: number): number => Math.min(fits(at, v, span) ? v : snap(v), span);
+      b = { ...b, w: Math.max(m.w, size(want.w, b.x, sw)), h: Math.max(m.h, size(want.h, b.y, sh)) };
     }
-    b = onScreen({ ...b, x: snap(b.x), y: snap(b.y) }, sw, sh);
+    b = onScreen({ ...b, x: snapAt(b.x, b.w, sw), y: snapAt(b.y, b.h, sh) }, sw, sh);
     p.put(placeFor(b, walls, sw, sh)?.r ?? b);
   }
 
@@ -912,8 +911,8 @@ export class WindowManager {
     // Its rim can change under it (Runecut's frames are wider than its stone, and a phone's narrower): whole cells again, and off anything it now covers.
     new ResizeObserver(() => {
       if (!this.grid || this.drag || !win.placed) return;
-      const b = win.box();
-      if (b.w % CELL === 0 && b.h % CELL === 0) return;
+      const b = win.box(), { w, h } = uiBox();
+      if (fits(b.x, b.w, w) && fits(b.y, b.h, h)) return;
       this.settle(win);
       this.rejoin(false);
     }).observe(win.el);

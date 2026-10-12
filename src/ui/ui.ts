@@ -107,7 +107,7 @@ import { TradesPanel } from './panels/trades';
 import { FaithPanel } from './panels/faith';
 import { FaithBook } from './faithbook';
 import { SpellBar, type SpellAim } from './spellbar';
-import { SocialPanel } from './panels/social';
+import { inviteRefusal, SocialPanel } from './panels/social';
 import { MarketPanel } from './panels/market';
 import { BoardsPanel } from './panels/boards';
 import { GuidePanel } from './panels/guide';
@@ -2824,11 +2824,26 @@ export class UI {
         onSelect: () => this.game.requestAction(dress, patient),
       });
     }
+    /*
+     * Asking them onto your settlement. Whatever they already belong to is
+     * no bar short of the cap, so this is offered beside anybody, and greyed
+     * with the island's own reason (`inviteRefusal`) when the Social window's
+     * answer is recent enough to know one; otherwise the island says. The
+     * settlement handed over as yours is the one you founded when you hold
+     * one, and only its founder may ask anybody onto it.
+     */
     const deed = this.game.deed;
     if (deed) {
+      this.social.prime();
+      const known = this.social.known();
+      const why = !rankAtLeast(deed.role, 'founder')
+        ? `Only whoever founded ${deed.name} can invite anybody to it.`
+        : known ? inviteRefusal(known, uid, name) : null;
       entries.push({
         label: `Invite ${name} to ${deed.name}`,
-        note: 'They may build and store here',
+        note: why ? undefined : 'They may build and store here',
+        hint: why ?? undefined,
+        disabled: !!why,
         onSelect: () => said(isle.invite(uid)),
       });
     }

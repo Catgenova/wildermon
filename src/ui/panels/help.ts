@@ -114,7 +114,7 @@ import {
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import {
-  CLOSE_BARE, CLOSE_CLOTH, CLOSE_PACE, CLOSE_PER_SKILL, CLOSE_RIGHT, CLOSE_WRONG, FESTER_CLOTH, FESTER_WRONG, WOUND_KINDS,
+  CLOSE_BARE, CLOSE_CLOTH, CLOSE_PACE, CLOSE_PER_SKILL, CLOSE_RIGHT, CLOSE_WRONG, DRESSING_RANK, FESTER_CLOTH, FESTER_WRONG, WOUND_KINDS,
 } from '../../game/wounds';
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
@@ -720,6 +720,12 @@ export function helpText(): string {
     or not you hold one. A border you may work inside is drawn at the same weight as your own, so land
     you were asked onto does not look like a stranger's. Leaving a roll frees the place at once, and an
     invitation you had no room for is left standing until you do.</p>
+    <p>Only a settlement's founder may invite anybody to it. Living on another settlement is no bar: the
+    Social window's Friends tab has <b>Invite</b> beside everybody not already on your roll &mdash; friends,
+    people you share another settlement with, and everybody else ashore. It reads <b>Citizen of ${DEEDS_JOINED}</b>
+    and cannot be pressed for somebody already a citizen of ${numberWord(DEEDS_JOINED)} other people's settlements,
+    and <b>Asked</b> for somebody who has not answered yet. Once you are a citizen of ${numberWord(DEEDS_JOINED)}
+    yourself, <b>Move in</b> on an invitation cannot be pressed until you leave one.</p>
     <p>To <b>leave</b> a settlement you were asked onto, right-click its land and choose <b>Leave</b> under
     its name, or use the button in the Settlement window or the People window. You come off its roll at
     once and are a stranger there: you may walk it and shape nothing, and of the stores on it only the ones
@@ -2203,7 +2209,9 @@ export function helpText(): string {
     <b>healing cover</b> is the herb itself, bruised into cotton, ${numberWord(made(`make_cover_${KINDS[0].herb}`))} to a batch on the
     <b>first aid</b> skill. Put on cleanly, either stops the bleeding and puts back between ${percent(healAmount(startOf('first_aid'), LOW_QL))} and
     ${percent(healAmount(TOP_SKILL, TOP_QL))} of your health at once, by your first aid and its quality. Right-click either
-    and it goes on the worst thing open.</p>
+    and it goes on the worst wound on you that it would close faster than what is on it now, and says which.
+    Dressings rank by how fast they close a wound, slowest first: ${listed(DRESSING_RANK)}. A dressing goes only over one
+    ranked below it, so it is refused, and says why, where every wound is already dressed as well.</p>
     <p>What is on a wound decides how fast it closes and whether it turns. Under cloth it closes
     ${times(CLOSE_CLOTH / CLOSE_BARE)} as fast as with nothing on it. The <b>right herb</b> puts back
     ${times(SUITS_HEAL)} as much at once, closes it ${times(CLOSE_RIGHT / CLOSE_CLOTH)} as fast as cloth, and it <b>never
@@ -2212,7 +2220,7 @@ export function helpText(): string {
     And every ${numberWord(Math.round(CLOSE_PACE / CLOSE_PER_SKILL))} points of <b>chirurgy</b> closes every wound on you as fast again as
     it closed at none.</p>
     <p>A wound that has <b>gone bad</b> is a different problem: it drains rather than closes and no
-    dressing will hold on it. Scour it out with a bucket of <b>lye</b> first &mdash; a hard piece of
+    dressing will hold on it, so a dressing passes it over for the next worst. Scour it out with a bucket of <b>lye</b> first &mdash; a hard piece of
     first aid, and it leaves the wound open and bleeding again, so dress it straight after.</p>
     <p>A <b>Naturalist</b> who has learned them makes a tea, a salve and a tincture, each of any one of the ${numberWord(KINDS.length)} healing herbs,
     and anybody who has one may use it. <b>Herb tea</b> (${numberWord(recipe(`brew_tea_${KINDS[0].herb}`).inputs[0].count ?? 1)} of the herb
@@ -2223,7 +2231,7 @@ export function helpText(): string {
     (${numberWord(recipe(`make_tincture_${KINDS[0].herb}`).inputs[0].count ?? 1)} of the herb) makes ${TINCTURE_NAMES} each go in
     ${percent(TINCTURE_BONUS)} faster for ${spanWords(TINCTURE_SECONDS)}, beside anything a dish's knack is doing for the same trade.</p>
     <p>Anybody can dress somebody else: stand beside them, right-click them and choose
-    <b>Dress</b> <i>their name</i><b>'s wounds</b>. It goes on their worst wound, at your first aid and out of your pack. A
+    <b>Dress</b> <i>their name</i><b>'s wounds</b>. It goes on their worst wound it would close faster, by the same rule, at your first aid and out of your pack. A
     Naturalist with <b>Field Medic</b> or a Chirurgeon with <b>Field Surgeon</b> puts back
     ${percent((PERK_BY_ID.get('naturalist_field_medic')?.fx['heal:others'] ?? 1) - 1)} more with a dressing on somebody else.</p>
     <p>The same hands do as much for a hurt <b>wildermon</b>. Stand beside a tame one that has been in

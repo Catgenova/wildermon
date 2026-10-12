@@ -6138,7 +6138,7 @@ function paperBack(g: Ctx, w: number, h: number, F: number, c: RGB): void {
  * fifths. Under the whole of it every frame went the same slate and could
  * not be told from the next.
  */
-const NIGHT_FRAME = 0.6;
+export const NIGHT_FRAME = 0.6;
 
 /**
  * A window's frame of `kind` (`FRAMES`), round a w × h window, its band

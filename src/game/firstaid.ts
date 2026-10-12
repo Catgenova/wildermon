@@ -3,7 +3,7 @@ import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
 import type { Game } from './game';
 import { itemName, type Item } from './items';
-import { PART_NAMES, worstWound, WOUND_KINDS, woundText, type Wound } from './wounds';
+import { PART_NAMES, worstWound, WOUND_KINDS, woundText, woundToDress, type Wound } from './wounds';
 
 /** How hard a dressing is to put on well: a wound gone bad takes none until it is cleaned out. */
 export const DRESS_CHECK = 10;
@@ -47,6 +47,33 @@ function dressingFor(g: Game, w: Wound | null): { item: Item; herb: string } | n
   return cloth ? { item: cloth, herb: '' } : null;
 }
 
+/** "the cut on your arm": which wound a dressing went on, or would. */
+const onYou = (w: Wound): string => `the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}`;
+
+/** The wound on you a dressing out of your pack would go on (`woundToDress`), or null. */
+const yoursToDress = (g: Game): Wound | null => woundToDress(g.player.wounds, (w) => dressingFor(g, w)?.herb ?? null);
+
+/** What a dressing says when every open wound is already dressed as well as yours would. The island says the same. */
+export const DRESSED_AS_WELL = 'Every wound on you that has not gone bad is already dressed at least as well as what you carry would dress it. '
+  + 'A dressing only goes over one that closes the wound slower.';
+
+/**
+ * Why a dressing will not go on you, or null: nothing open, nothing to dress
+ * it with, or nothing it would do good -- a wound gone bad, which is named,
+ * or one already dressed at least as well (`dressingHelps`). The island's
+ * `fight_refusal` says the same.
+ */
+export function dressRefusal(g: Game): string | null {
+  const wounds = g.player.wounds;
+  if (!wounds.length) return g.player.stats.health >= 0.999 ? 'There is nothing wrong with you.' : 'Nothing is open. You are only tired and thin.';
+  if (yoursToDress(g)) return null;
+  // Nothing to put on a wound that could take one; with every wound gone bad, what wants doing first is the lye.
+  if (!dressingFor(g, null) && wounds.some((w) => !w.infected)) return 'You have nothing to dress it with.';
+  const bad = worstWound(wounds.filter((w) => w.infected));
+  if (bad) return `The ${WOUND_KINDS[bad.kind].name} on your ${PART_NAMES[bad.part] ?? bad.part} has gone bad. Clean it out before anything will hold on it.`;
+  return DRESSED_AS_WELL;
+}
+
 /** Who a person target is, as far as this machine knows: a name and where they stand. */
 const personOf = (g: Game, t: Target): { name: string } | undefined =>
   t.kind === 'person' ? (g.roster.list().find((p) => p.uid === t.uid) ?? (t.name ? { name: t.name } : undefined)) : undefined;
@@ -66,26 +93,23 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       || t.kind === 'person',
     labelFor: (t, g) => {
       if (t.kind === 'person') return `Dress ${personOf(g, t)?.name ?? 'their'}'s wounds`;
-      const w = worstWound(g.player.wounds);
-      return w ? `Dress the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}` : 'Dress a wound';
+      // The wound it will go on: never one gone bad, nor one already dressed as well.
+      const w = yoursToDress(g);
+      return w ? `Dress ${onYou(w)}` : 'Dress a wound';
     },
     check: (t, g) => {
       // What is wrong with somebody else is the island's to know; the dressing is yours.
       if (t.kind === 'person') return dressingFor(g, null) ? null : 'You have nothing to dress it with.';
       if (t.kind !== 'item') return null;
       if (!['bandage', 'cover'].includes(g.inventory.get(t.uid)?.id ?? '')) return 'That is not a dressing.';
-      const w = worstWound(g.player.wounds);
-      if (!w) return g.player.stats.health >= 0.999 ? 'There is nothing wrong with you.' : 'Nothing is open. You are only tired and thin.';
-      if (w.infected) return `The ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part} has gone bad. Clean it out before anything will hold on it.`;
-      if (!dressingFor(g, w)) return 'You have nothing to dress it with.';
-      return null;
+      return dressRefusal(g);
     },
     perform: (t, g) => {
       // Nobody else is here to dress offline: another's wounds are dressed on the island, and a Naturalist's Field Medic or a
       // Chirurgeon's Field Surgeon (`heal:others`) puts back more there.
       if (t.kind === 'person') return;
-      const w = worstWound(g.player.wounds);
-      if (!w || w.infected) return;
+      const w = yoursToDress(g);
+      if (!w) return;
       const use = dressingFor(g, w);
       if (!use || !g.inventory.remove(use.item.uid, 1)) return;
       const suits = use.herb === WOUND_KINDS[w.kind].herb;
@@ -117,15 +141,14 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
         !clean
           ? `The dressing slips and you make a poor job of it. You still have ${woundText(w)}.`
           : suits
-            ? `You lay the ${use.herb} cover on and bind it. The bleeding stops at once and it is already closing.`
+            ? `You lay the ${use.herb} cover on ${onYou(w)} and bind it. The bleeding stops at once and it is already closing.`
             : use.herb
-              ? `You bind the ${use.herb} cover over it. It is the wrong herb for a ${WOUND_KINDS[w.kind].name}, but it holds and the bleeding stops.`
-              : `You clean it and bind it with cloth. The bleeding stops, though it will be slow to close.`,
+              ? `You bind the ${use.herb} cover over ${onYou(w)}. It is the wrong herb for a ${WOUND_KINDS[w.kind].name}, but it holds and the bleeding stops.`
+              : `You clean ${onYou(w)} and bind it with cloth. The bleeding stops, though it will be slow to close.`,
         'event',
       );
-      // Keep going while something is open and there is something to put on it.
-      const next = worstWound(g.player.wounds);
-      return !!next && !next.infected && !!dressingFor(g, next);
+      // Keep going while a dressing out of the pack would still do some wound good.
+      return !!yoursToDress(g);
     },
   },
   {

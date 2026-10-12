@@ -1417,7 +1417,13 @@ jobs:
           # still refuses a second in the same words, that a mayor, builder
           # or guest of another is offered the stake, that the border is the
           # one refusal left, and that a builder founds their own on the
-          # island and stays a builder of the other.
+          # island and stays a builder of the other. And the other way round:
+          # "I don't have an invite option for you and [another player] since
+          # we're already in a deed". The Social window offered Invite only to
+          # strangers; this asks that somebody on another roll is offered and
+          # asked, and that "already asked", a full roll and Move in with no
+          # room are refused in the same words by the browser, reading the
+          # island's own `rpc_social`, and by `rpc_invite`.
           npx esbuild supabase/test/citizen.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/citizen.mjs --log-level=error
           node node_modules/.cache/citizen.mjs
@@ -1763,6 +1769,19 @@ jobs:
           npx esbuild supabase/test/chirurgeon.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/chirurgeon.mjs --log-level=error
           node node_modules/.cache/chirurgeon.mjs
+
+      - name: A dressing goes past a wound gone bad
+        run: |
+          # Reported: "Bandages don't seem to want to dress a wound if any of
+          # your wounds have gone bad." A dressing went on the worst wound, and
+          # a wound gone bad is always the worst, and nothing holds on one, so
+          # it was refused with a cut bleeding beside it. Both sides now pick
+          # the worst wound that has not gone bad, and are asked which wound
+          # that is, what it left the bad one as, what it said, and what the
+          # refusal says once the bad one is all there is.
+          npx esbuild supabase/test/dress.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/dress.mjs --log-level=error
+          node node_modules/.cache/dress.mjs
 
       - name: The Beastmaster's spells and passives
         run: |

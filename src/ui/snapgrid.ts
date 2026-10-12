@@ -39,13 +39,36 @@ export function clearPatch(w: number, h: number): Box {
   return { x: snap(w / 2 - side / 2), y: snap(h / 2 - side / 2), w: side, h: side };
 }
 
-/** Kept wholly on a screen `w` by `h`, on whole cells. */
+/** Kept wholly on a screen `w` by `h`: up to its far edges, which are seldom on a whole cell. */
 export function onScreen(r: Box, w: number, h: number): Box {
   return {
     ...r,
-    x: Math.max(0, Math.min(Math.floor((w - r.w) / CELL) * CELL, r.x)),
-    y: Math.max(0, Math.min(Math.floor((h - r.h) / CELL) * CELL, r.y)),
+    x: Math.max(0, Math.min(w - r.w, r.x)),
+    y: Math.max(0, Math.min(h - r.h, r.y)),
   };
+}
+
+/**
+ * Where something `size` long lands along a screen `span` long, asked to be at
+ * `v`: on the nearest whole cell, or against the screen's far edge where that
+ * is nearer. A screen is seldom a whole number of cells, and without the edge
+ * the last strip of it, up to a cell less a pixel wide, could not be reached.
+ */
+export function snapAt(v: number, size: number, span: number): number {
+  const flush = Math.max(0, span - size);
+  const cell = Math.max(0, Math.min(Math.floor(flush / CELL) * CELL, snap(v)));
+  return Math.abs(flush - v) < Math.abs(cell - v) ? flush : cell;
+}
+
+/** A length that lands on a whole number of cells, or that reaches from `at` to the far edge of a screen `span` long. */
+export const fits = (at: number, size: number, span: number): boolean => size % CELL === 0 || at + size === span;
+
+/** Every place along one axis something `size` long can land: each whole cell, and against the far edge. */
+function stops(size: number, span: number): number[] {
+  const flush = Math.max(0, span - size), out: number[] = [];
+  for (let v = 0; v <= flush; v += CELL) out.push(v);
+  if (out[out.length - 1] !== flush) out.push(flush);
+  return out;
 }
 
 const free = (r: Box, walls: Box[]): boolean => !walls.some((b) => overlap(r, b));
@@ -57,14 +80,14 @@ const free = (r: Box, walls: Box[]): boolean => !walls.some((b) => overlap(r, b)
  * anywhere.
  */
 export function placeFor(r: Box, walls: Box[], w: number, h: number): { r: Box; bumped: boolean } | null {
-  const s = onScreen({ x: snap(r.x), y: snap(r.y), w: r.w, h: r.h }, w, h);
+  const s = onScreen({ x: snapAt(r.x, r.w, w), y: snapAt(r.y, r.h, h), w: r.w, h: r.h }, w, h);
   if (free(s, walls)) return { r: s, bumped: false };
-  const maxX = Math.floor((w - r.w) / CELL), maxY = Math.floor((h - r.h) / CELL);
   let best: Box | null = null;
   let bestD = Infinity;
-  for (let cy = 0; cy <= maxY; cy++) {
-    for (let cx = 0; cx <= maxX; cx++) {
-      const c = { x: cx * CELL, y: cy * CELL, w: r.w, h: r.h };
+  const xs = stops(r.w, w);
+  for (const y of stops(r.h, h)) {
+    for (const x of xs) {
+      const c = { x, y, w: r.w, h: r.h };
       const d = (c.x - r.x) ** 2 + (c.y - r.y) ** 2;
       if (d < bestD && free(c, walls)) {
         best = c;
@@ -82,14 +105,22 @@ export function placeFor(r: Box, walls: Box[], w: number, h: number): { r: Box; 
  * left corner stays put.
  */
 export function sizeFor(at: Box, w: number, h: number, min: { w: number; h: number }, walls: Box[], sw: number, sh: number): { r: Box; bumped: boolean } {
-  const r = { x: at.x, y: at.y, w: Math.max(min.w, snap(w)), h: Math.max(min.h, snap(h)) };
-  r.w = Math.max(min.w, Math.min(r.w, Math.floor((sw - r.x) / CELL) * CELL));
-  r.h = Math.max(min.h, Math.min(r.h, Math.floor((sh - r.y) / CELL) * CELL));
+  // Whole cells, or out to the screen's far edge when asked to within half a cell of it.
+  const length = (asked: number, from: number, span: number, least: number): number => {
+    const room = span - from;
+    return Math.max(least, asked >= room - CELL / 2 ? room : Math.min(snap(asked), Math.floor(room / CELL) * CELL));
+  };
+  const r = { x: at.x, y: at.y, w: length(w, at.x, sw, min.w), h: length(h, at.y, sh, min.h) };
   if (free(r, walls)) return { r, bumped: false };
   // The biggest box no bigger than asked that fits: for each width, the tallest height that does.
+  const down = (from: number, least: number): number[] => {
+    const out = [from];
+    for (let v = Math.floor((from - 1) / CELL) * CELL; v >= least; v -= CELL) out.push(v);
+    return out;
+  };
   let best: Box | null = null;
-  for (let cw = r.w; cw >= min.w; cw -= CELL) {
-    for (let ch = r.h; ch >= min.h; ch -= CELL) {
+  for (const cw of down(r.w, min.w)) {
+    for (const ch of down(r.h, min.h)) {
       const c = { ...r, w: cw, h: ch };
       if (!free(c, walls)) continue;
       if (!best || c.w * c.h > best.w * best.h) best = c;

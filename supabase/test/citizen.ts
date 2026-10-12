@@ -21,10 +21,27 @@
  *   * and on the island a builder of the other settlement founds their own,
  *     which is then the settlement they are handed, as its founder, while they
  *     stay a builder of the other -- and a second stake is refused.
+ *
+ * And the other way round, reported from the island: "You're supposed to be
+ * able to be a citizen of three deeds, right? I don't have an invite option
+ * for you and [another player] since we're already in a deed." The island
+ * never refused it; the Social window offered Invite only to strangers, so a
+ * friend or anybody you share a settlement with could not be asked. Asked of
+ * both sides, the browser reading the island's own `rpc_social` answer:
+ *
+ *   * somebody already a citizen of another settlement may be asked, and is;
+ *   * asked twice, both sides refuse in the same words;
+ *   * on `DEEDS_JOINED` rolls, both sides refuse in the same words, and the
+ *     browser knows it is the cap that refuses;
+ *   * and with an invitation standing and no room, Move in is refused in the
+ *     words the island answers with.
  */
 import { execFileSync } from 'node:child_process';
 import { Game, type DeedRole } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
+import { DEEDS_JOINED } from '../../src/game/game';
+import type { Social } from '../../src/net/island';
+import { inviteRefusal, moveInRefusal, rollFull } from '../../src/ui/panels/social';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -138,6 +155,101 @@ check('the builder founds their own, which is then the settlement they are hande
 check('a second stake is refused', said('SECOND') === HELD, said('SECOND'));
 check('and the founder of the first is refused in the words the browser uses',
   said('FOUNDER') === browserHeld, `${said('FOUNDER')} / ${browserHeld}`);
+
+/* ---- asking somebody who already lives somewhere -------------------------- */
+
+const stranger = { uid: 'u-sten', name: 'Sten', online: true };
+const friend = { uid: 'u-ash', name: 'Ash', online: true };
+const deedmate = { uid: 'u-ivy', name: 'Ivy', online: true };
+const own = { name: 'Hearth', x: 5, y: 5, level: 1, radius: 5, founder: 'u-me', by: 'Me', mine: true, folk: [] };
+const theirs = { name: 'Oceanport', x: 40, y: 5, level: 1, radius: 5, founder: 'u-boss', by: 'Boss', mine: false, folk: [deedmate] };
+const social = (over: Partial<Social> = {}): Social => ({
+  deeds: [own, theirs], room: DEEDS_JOINED - 1, invites: [], sent: [], friends: [friend], asked: [], asking: [],
+  unread: [], here: [stranger, friend, deedmate], joined: { 'u-ivy': 1, 'u-ash': 2 }, ...over,
+} as Social);
+
+console.log('--- asking, in the browser');
+check('a stranger may be asked', inviteRefusal(social(), stranger.uid, stranger.name) === null);
+check('and so may a friend on two other settlements',
+  inviteRefusal(social(), friend.uid, friend.name) === null, String(inviteRefusal(social(), friend.uid, friend.name)));
+check('and so may somebody you share another settlement with',
+  inviteRefusal(social(), deedmate.uid, deedmate.name) === null, String(inviteRefusal(social(), deedmate.uid, deedmate.name)));
+const capped = social({ joined: { 'u-ivy': DEEDS_JOINED } });
+check(`and on ${DEEDS_JOINED} rolls the cap is what refuses, and says so`,
+  rollFull(capped, deedmate.uid) && inviteRefusal(capped, deedmate.uid, deedmate.name)?.includes(`citizen of ${DEEDS_JOINED} settlements`) === true,
+  String(inviteRefusal(capped, deedmate.uid, deedmate.name)));
+check('an island that does not count rolls yet leaves it to the island',
+  inviteRefusal(social({ joined: undefined }), deedmate.uid, deedmate.name) === null);
+check('with none of your own there is nobody to ask anybody onto',
+  inviteRefusal(social({ deeds: [theirs] }), stranger.uid, stranger.name) === 'You hold no settlement to invite anybody to.');
+check('with room, Move in is not refused', moveInRefusal(social()) === null);
+
+const asking = psql(`
+begin;
+create temp table said (k text);
+do $$
+declare w uuid; boss uuid; cit uuid; f uuid[];
+begin
+  select id into w from world where name = 'Hoarding';
+  select founded_by into boss from deed where world_id = w order by founded_at limit 1;
+  -- Four people with no settlement of their own: the one being asked about,
+  -- and three whose settlements they will be a citizen of.
+  select array_agg(q.uid order by q.uid) into f from (
+    select p.uid from player p where p.world_id = w and p.uid <> boss
+       and not exists (select 1 from deed d where d.world_id = w and d.founded_by = p.uid)
+     order by p.uid limit 4) q;
+  cit := f[1];
+  delete from deed_member where world_id = w and uid = cit;
+  delete from deed_invite where world_id = w and uid = cit;
+  insert into deed (world_id, name, x, y, radius, level, founded_by)
+  select w, 'Rollfold ' || i, 2 + 3 * i, 2, 1, 1, f[i + 1] from generate_series(1, 3) i;
+  insert into said values ('NAME|' || folk_name(w, cit));
+
+  -- Already a citizen of one settlement, and asked onto the boss's.
+  insert into deed_member (world_id, founder, uid, role) values (w, f[2], cit, 'builder');
+  perform set_config('request.jwt.claims', json_build_object('sub', boss)::text, true);
+  insert into said values ('BEFORE|' || rpc_social(w)::text);
+  insert into said values ('ASKED|' || coalesce(rpc_invite(w, cit)->>'asked', 'REFUSED'));
+  insert into said values ('AGAIN|' || rpc_social(w)::text);
+  insert into said values ('TWICE|' || coalesce(rpc_invite(w, cit)->>'why', 'ALLOWED'));
+
+  -- On as many rolls as anybody may be, with nothing standing.
+  delete from deed_invite where world_id = w and founder = boss and uid = cit;
+  insert into deed_member (world_id, founder, uid, role) values (w, f[3], cit, 'builder'), (w, f[4], cit, 'builder');
+  insert into said values ('FULL|' || rpc_social(w)::text);
+  insert into said values ('CAPPED|' || coalesce(rpc_invite(w, cit)->>'why', 'ALLOWED'));
+
+  -- And the same person with an invitation standing and no room for it.
+  insert into deed_invite (world_id, founder, uid) values (w, boss, cit);
+  perform set_config('request.jwt.claims', json_build_object('sub', cit)::text, true);
+  insert into said values ('MINE|' || rpc_social(w)::text);
+  insert into said values ('MOVEIN|' || coalesce(rpc_invite_answer(w, boss, true)->>'why', 'ALLOWED'));
+  insert into said values ('CIT|' || cit);
+end $$;
+select string_agg(k, E'\\n') from said;
+rollback;
+`);
+const got = (key: string): string => asking.split('\n').find((l) => l.startsWith(`${key}|`))?.slice(key.length + 1) ?? '(nothing)';
+const answer = (key: string): Social => JSON.parse(got(key)) as Social;
+const cit = got('CIT');
+const name = got('NAME');
+
+console.log('--- asking, on the island and in the browser over its answer');
+const before = answer('BEFORE');
+check('the island counts the roll somebody is already on', before.joined?.[cit] === 1, JSON.stringify(before.joined?.[cit]));
+check('and the browser offers to ask them', inviteRefusal(before, cit, name) === null, String(inviteRefusal(before, cit, name)));
+check('and the island asks them', got('ASKED') === name, got('ASKED'));
+check('asked twice, both sides refuse in the same words',
+  inviteRefusal(answer('AGAIN'), cit, name) === got('TWICE') && got('TWICE') !== 'ALLOWED',
+  `${inviteRefusal(answer('AGAIN'), cit, name)} / ${got('TWICE')}`);
+const full = answer('FULL');
+check(`on ${DEEDS_JOINED} rolls, both sides refuse in the same words`,
+  inviteRefusal(full, cit, name) === got('CAPPED') && got('CAPPED') !== 'ALLOWED',
+  `${inviteRefusal(full, cit, name)} / ${got('CAPPED')}`);
+check('and the browser knows it is the cap', rollFull(full, cit), JSON.stringify(full.joined?.[cit]));
+check('with an invitation standing and no room, Move in is refused in the island\'s words',
+  moveInRefusal(answer('MINE')) === got('MOVEIN') && got('MOVEIN') !== 'ALLOWED',
+  `${moveInRefusal(answer('MINE'))} / ${got('MOVEIN')}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {
