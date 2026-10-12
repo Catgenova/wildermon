@@ -1277,14 +1277,6 @@ function peg(g: Ctx, x: number, y: number): void {
   head(g, x, y, 2, IRON.body, IRON.ink);
 }
 
-/** A coil of rope hung on a peg at (x, y), its loops falling below it and a tail hanging. */
-function ropeCoil(g: Ctx, x: number, y: number, F: number): void {
-  const tone = H('#c79f68');
-  peg(g, x, y);
-  for (const [rx, ry, dy] of [[F * 0.34, F * 0.75, 0], [F * 0.3, F * 0.7, 2], [F * 0.26, F * 0.65, 4]]) twist(g, ellipsePts(x + 1, y + F * 0.62 + dy, rx, ry, 0.08), 2.4, tone);
-  twist(g, curve([x + 2, y + F * 1.2], [x + 6, y + F * 1.9], [x + 3, y + F * 2.4]), 2.4, tone);
-}
-
 /** A cloth hung over a peg at (x, y), `len` long: folds down it, and a hem at its foot. */
 function drape(g: Ctx, R: () => number, x: number, y: number, F: number, len: number): void {
   const cloth = H('#e9dfc8'), wd = F * 0.9;
@@ -1325,68 +1317,128 @@ function drape(g: Ctx, R: () => number, x: number, y: number, F: number, len: nu
   g.stroke();
 }
 
-/** A saw hung by its handle from a peg at (x, y), blade down. */
-function hangSaw(g: Ctx, x: number, y: number, F: number): void {
-  peg(g, x, y);
-  const bl = F * 2.2;
+/**
+ * A firmer chisel hung by a leather thong from a peg at (x, y), handle up: a
+ * turned handle with a domed top, a brass ferrule, the bolster, and a flat
+ * blade ground to a bevel at its edge.
+ */
+function hangChisel(g: Ctx, x0: number, y0: number, F: number): void {
+  // Drawn at a third over the beam's scale, so it reads as a tool across the room.
+  g.save();
+  g.translate(x0, y0);
+  g.scale(4 / 3, 4 / 3);
+  const x = 0, y = 0;
+  const top = y + 3, hEnd = top + F * 1.25, fEnd = hEnd + 3, bTop = fEnd + 3, bEnd = bTop + F * 1.35;
+  // Its shadow on the beam first.
+  g.save();
+  g.translate(-1.5, 2);
+  g.fillStyle = 'rgba(30, 18, 12, 0.35)';
   g.beginPath();
-  g.moveTo(x - 4, y + F * 0.7);
-  g.lineTo(x + 4, y + F * 0.7);
-  g.lineTo(x + 3, y + F * 0.7 + bl);
-  g.lineTo(x - 2, y + F * 0.7 + bl);
-  g.closePath();
-  const steel = g.createLinearGradient(x - 4, 0, x + 4, 0);
-  steel.addColorStop(0, css(light(IRON.body, 0.5)));
-  steel.addColorStop(1, css(IRON.body));
-  g.fillStyle = steel;
+  g.roundRect(x - 4, top, 8, bEnd - top, 3);
   g.fill();
-  g.strokeStyle = css(IRON.ink);
-  g.lineWidth = 0.9;
+  g.restore();
+  // The thong, looped over the peg and through the handle's end.
+  g.beginPath();
+  g.moveTo(x - 2.4, top + 3);
+  g.bezierCurveTo(x - 3.5, y - 4, x + 3.5, y - 4, x + 2.4, top + 3);
+  g.strokeStyle = css(H('#5c3b26'));
+  g.lineWidth = 1.4;
   g.stroke();
-  for (let t = y + F * 0.8; t < y + F * 0.7 + bl; t += 2.2) {
+  peg(g, x, y - 1);
+  // The handle: domed at the top, swelling, then waisted down to the ferrule.
+  const handle = (): void => {
     g.beginPath();
-    g.moveTo(x - 2.5, t);
-    g.lineTo(x - 4.2, t + 1.1);
+    g.moveTo(x - 2.6, top + 2.5);
+    g.quadraticCurveTo(x, top - 2, x + 2.6, top + 2.5);
+    g.bezierCurveTo(x + 4.2, top + F * 0.35, x + 4, top + F * 0.8, x + 2.8, hEnd);
+    g.lineTo(x - 2.8, hEnd);
+    g.bezierCurveTo(x - 4, top + F * 0.8, x - 4.2, top + F * 0.35, x - 2.6, top + 2.5);
+    g.closePath();
+  };
+  handle();
+  const wood = g.createLinearGradient(x - 4, 0, x + 4, 0);
+  wood.addColorStop(0, css(light(WOOD.cherry, 0.35)));
+  wood.addColorStop(0.4, css(WOOD.cherry));
+  wood.addColorStop(1, css(shade(WOOD.cherry, 0.35)));
+  g.fillStyle = wood;
+  g.fill();
+  g.save();
+  handle();
+  g.clip();
+  g.strokeStyle = 'rgba(60, 30, 20, 0.35)';
+  g.lineWidth = 0.6;
+  for (const dx of [-1.6, 0.4, 2]) {
+    g.beginPath();
+    g.moveTo(x + dx, top);
+    g.quadraticCurveTo(x + dx * 1.3, top + F * 0.6, x + dx * 0.8, hEnd);
     g.stroke();
   }
-  g.beginPath();
-  g.roundRect(x - 5, y - 1, 10, F * 0.8, 3);
-  g.fillStyle = css(WOOD.cherry);
-  g.fill();
-  g.strokeStyle = INK;
-  g.stroke();
-  g.beginPath();
-  g.roundRect(x - 2.5, y + 2, 5, F * 0.3, 2);
-  g.fillStyle = 'rgba(40, 26, 18, 0.7)';
-  g.fill();
-}
-
-/** A hatchet hung head up from a peg at (x, y). */
-function hangHatchet(g: Ctx, x: number, y: number, F: number): void {
-  peg(g, x, y);
-  g.beginPath();
-  g.roundRect(x - 1.6, y, 3.2, F * 1.7, 1.5);
-  g.fillStyle = css(WOOD.oak);
-  g.fill();
+  g.restore();
+  handle();
   g.strokeStyle = INK;
   g.lineWidth = 0.9;
   g.stroke();
+  // The ferrule.
   g.beginPath();
-  g.moveTo(x - 1, y + 1);
-  g.lineTo(x + 6, y - 2);
-  g.quadraticCurveTo(x + 9, y + 4, x + 6, y + 9);
-  g.lineTo(x - 1, y + 6);
-  g.closePath();
-  g.fillStyle = css(light(IRON.body, 0.2));
+  g.roundRect(x - 3.1, hEnd - 0.5, 6.2, fEnd - hEnd + 0.5, 1);
+  const brass = g.createLinearGradient(x - 3, 0, x + 3, 0);
+  brass.addColorStop(0, css(light(BRASS.body, 0.45)));
+  brass.addColorStop(0.5, css(BRASS.body));
+  brass.addColorStop(1, css(shade(BRASS.body, 0.35)));
+  g.fillStyle = brass;
   g.fill();
-  g.strokeStyle = css(IRON.ink);
-  g.stroke();
-  g.beginPath();
-  g.moveTo(x + 6.2, y - 1.5);
-  g.quadraticCurveTo(x + 8.5, y + 4, x + 5.8, y + 8.5);
-  g.strokeStyle = css(light(IRON.body, 0.7));
+  g.strokeStyle = css(BRASS.ink);
   g.lineWidth = 0.8;
   g.stroke();
+  // The bolster, a collar of the steel before the blade.
+  const steel = (x0: number, x1: number): CanvasGradient => {
+    const s = g.createLinearGradient(x0, 0, x1, 0);
+    s.addColorStop(0, css(light(IRON.body, 0.55)));
+    s.addColorStop(0.45, css(light(IRON.body, 0.2)));
+    s.addColorStop(1, css(shade(IRON.body, 0.15)));
+    return s;
+  };
+  g.beginPath();
+  g.moveTo(x - 2.2, fEnd);
+  g.lineTo(x + 2.2, fEnd);
+  g.lineTo(x + 1.6, bTop);
+  g.lineTo(x - 1.6, bTop);
+  g.closePath();
+  g.fillStyle = steel(x - 2.2, x + 2.2);
+  g.fill();
+  g.strokeStyle = css(IRON.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  // The blade: flat, widening a little to its edge, the bevel ground in the last of it.
+  const bevel = bEnd - 4.5;
+  g.beginPath();
+  g.moveTo(x - 2, bTop);
+  g.lineTo(x + 2, bTop);
+  g.lineTo(x + 2.9, bEnd);
+  g.lineTo(x - 2.9, bEnd);
+  g.closePath();
+  g.fillStyle = steel(x - 3, x + 3);
+  g.fill();
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x - 2.75, bevel);
+  g.lineTo(x + 2.75, bevel);
+  g.lineTo(x + 2.9, bEnd);
+  g.lineTo(x - 2.9, bEnd);
+  g.closePath();
+  g.fillStyle = css(light(IRON.body, 0.75));
+  g.fill();
+  g.strokeStyle = css(IRON.ink);
+  g.lineWidth = 0.6;
+  g.stroke();
+  // The light down the flat.
+  g.beginPath();
+  g.moveTo(x - 0.9, bTop + 1);
+  g.lineTo(x - 1.3, bevel - 1);
+  g.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+  g.lineWidth = 0.7;
+  g.stroke();
+  g.restore();
 }
 
 /** A lantern on an iron bracket out of the beam at (x, y): the arm, a short chain, its cap, the glass lit from inside, and the light round it. */
@@ -1695,9 +1747,8 @@ const PAINTERS: Record<string, Painter> = {
    * Crafting: a carpenter's frame of dark weathered beams, the sides run
    * full height and the top and bottom laid across them, bolted with iron
    * where they cross and along their length. A lantern hangs on its bracket
-   * at the top left; a coil of rope, a cloth and the saw and hatchet hang on
-   * pegs down the right; ivy has grown over the corners and along the top,
-   * flowering.
+   * at the top left; a cloth and a chisel hang on pegs down the right; ivy
+   * has grown over the corners and along the top, flowering.
    */
   bench(g, w, h, F, R) {
     const beamTone = H('#86603f'), dark = H('#6a4a32');
@@ -1721,14 +1772,14 @@ const PAINTERS: Record<string, Painter> = {
     // Bolts where they cross, and along each beam.
     for (const [x, y] of [[F * 0.3, F * 0.3], [F * 0.7, F * 0.7], [w - F * 0.3, F * 0.3], [w - F * 0.7, F * 0.7], [F * 0.3, h - F * 0.3], [F * 0.7, h - F * 0.7], [w - F * 0.3, h - F * 0.3], [w - F * 0.7, h - F * 0.7]] as Pt[]) head(g, x, y, F * 0.1, IRON.body, IRON.ink);
     for (let x = F * 2.4 + R() * 20; x < w - F * 2.4; x += 70 + R() * 40) for (const y of [F * 0.5, h - F * 0.5]) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
-    for (let y = F * 2.4 + R() * 20; y < h - F * 2.4; y += 80 + R() * 40) for (const x of [F * 0.5, w - F * 0.5]) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
-    // Down the right: a coil of rope on its peg, a cloth hung over another, and the saw and hatchet below.
-    const right = w - F * 0.5;
-    if (h > F * 10) {
-      ropeCoil(g, right, F * 2.6, F);
-      drape(g, R, right + 2, h * 0.38, F, h * 0.2);
-      hangSaw(g, right + 1, h * 0.62, F);
-      hangHatchet(g, right - 3, h * 0.74, F);
+    // Down the right: a cloth hung over a peg, and a chisel below it; no bolt goes where they hang.
+    const right = w - F * 0.5, hung = h > F * 10;
+    const clothAt = h * 0.34, clothLen = h * 0.2, chiselAt = h * 0.62, chiselLen = F * 4.2;
+    const behind = (y: number): boolean => hung && ((y > clothAt - F && y < clothAt + clothLen + F * 0.6) || (y > chiselAt - F && y < chiselAt + chiselLen));
+    for (let y = F * 2.4 + R() * 20; y < h - F * 2.4; y += 80 + R() * 40) for (const x of [F * 0.5, w - F * 0.5]) if (x === F * 0.5 || !behind(y)) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
+    if (hung) {
+      drape(g, R, right + 2, clothAt, F, clothLen);
+      hangChisel(g, right, chiselAt, F);
     }
     // The lantern at the top left, on its bracket, lit.
     if (h > F * 6) lantern(g, F * 0.15, F * 1.4, F);
