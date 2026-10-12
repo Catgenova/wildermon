@@ -1,6 +1,6 @@
 import {
-  css, cushion, drawPads, faceColour, glyphPath, grassTuft, hex, mix, STONE_INK, toneOf,
-  type Ctx, type Pad, type Pt, type RGB,
+  css, faceColour, glyphPath, hex, mix, STONE_INK, toneOf,
+  type Ctx, type Pt, type RGB,
 } from '../render/runestone';
 import { MOSS, rand } from '../render/ivy';
 import { star } from '../render/star';
@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, turf: 14 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -59,7 +59,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'letter', label: 'Sketches on an oak board', for: ['social'] },
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
-  { kind: 'turf', label: 'Turf', for: ['tile'] },
+  { kind: 'turf', label: 'Mossy wood and stone', for: ['tile'] },
   { kind: 'rope', label: 'Knotted rope', for: ['tracker'] },
   { kind: 'ironbound', label: 'Iron-bound oak', for: ['settings'] },
   { kind: 'chain', label: 'Iron chain', for: ['keeper'] },
@@ -3218,6 +3218,149 @@ function flowerClump(g: Ctx, R: () => number, x: number, y: number, r: number, F
   }
 }
 
+/* ---- the tile's own kit ---------------------------------------------------- */
+
+/** The tile's wood, and the pale stone of its pebbles and corner blocks. */
+const TURF_WOOD = H('#9a7352');
+/** The tile's moss: yellower than the stones' and lusher, its shadow, its light and a darker fleck. */
+const TURF_MOSS = { body: H('#8cb257'), deep: H('#5d8442'), lit: H('#b9d47a'), dark: H('#476a35') };
+const PALE_STONE = { body: H('#d8d2c9'), lit: H('#f1ece5'), deep: H('#a8a097'), ink: H('#6f675f') };
+const BRONZE = { body: H('#a7744a'), lit: H('#d7a77a'), deep: H('#6e4a2e') };
+
+/** A clump of moss at (x, y), about `r` across: round tufts piled, darker under and lit on top, a few fronds out of it. */
+function mossTuft(g: Ctx, R: () => number, x: number, y: number, r: number): void {
+  const blobs: Array<[number, number, number]> = [];
+  for (let k = 0; k < 26; k++) {
+    const a = R() * Math.PI * 2, d = Math.sqrt(R()) * r * 0.6;
+    blobs.push([x + Math.cos(a) * d, y + Math.sin(a) * d * 0.75, r * (0.1 + R() * 0.12) * (1 - d / r * 0.6)]);
+  }
+  blobs.sort((a, b) => a[1] - b[1]);
+  // Fronds first, under the tufts.
+  for (let k = 0; k < 5; k++) {
+    const a = R() * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5 - r * 0.1, x + Math.cos(a) * r * 0.85, y + Math.sin(a) * r * 0.75);
+    g.strokeStyle = css(TURF_MOSS.deep);
+    g.lineWidth = 1.1;
+    g.lineCap = 'round';
+    g.stroke();
+  }
+  for (const [bx, by, br] of blobs) {
+    g.beginPath();
+    g.arc(bx, by, br, 0, Math.PI * 2);
+    g.fillStyle = css(TURF_MOSS.deep);
+    g.fill();
+    g.strokeStyle = css(TURF_MOSS.dark, 0.8);
+    g.lineWidth = 0.6;
+    g.stroke();
+    g.beginPath();
+    g.arc(bx - br * 0.12, by - br * 0.18, br * 0.8, 0, Math.PI * 2);
+    g.fillStyle = css(R() < 0.25 ? TURF_MOSS.lit : TURF_MOSS.body);
+    g.fill();
+  }
+}
+
+/** Blades of grass standing up from (x, y), `ht` tall at most, leaning out from the middle. */
+function grassBlades(g: Ctx, R: () => number, x: number, y: number, ht: number): void {
+  g.lineCap = 'round';
+  for (let k = 0; k < 7; k++) {
+    const off = (k - 3) * ht * 0.09, lean = off * 1.6 + (R() - 0.5) * ht * 0.15, tall = ht * (0.55 + R() * 0.45) * (1 - Math.abs(k - 3) * 0.1);
+    g.beginPath();
+    g.moveTo(x + off - 0.9, y);
+    g.quadraticCurveTo(x + off + lean * 0.3, y - tall * 0.6, x + off + lean, y - tall);
+    g.quadraticCurveTo(x + off + lean * 0.3 + 1.2, y - tall * 0.55, x + off + 0.9, y);
+    g.closePath();
+    g.fillStyle = css(k % 2 ? TURF_MOSS.body : TURF_MOSS.lit);
+    g.fill();
+    g.strokeStyle = css(TURF_MOSS.dark);
+    g.lineWidth = 0.6;
+    g.stroke();
+  }
+}
+
+/** A pale pebble at (x, y), `r` across its long half, turned `rot`: lit on its top left, inked round. */
+function pebble(g: Ctx, x: number, y: number, r: number, rot: number): void {
+  g.save();
+  g.beginPath();
+  g.ellipse(x, y, r * 1.25, r, rot, 0, Math.PI * 2);
+  g.shadowColor = 'rgba(40, 26, 18, 0.4)';
+  g.shadowBlur = 1.5;
+  g.shadowOffsetY = 0.8;
+  const f = g.createLinearGradient(x - r, y - r, x + r, y + r);
+  f.addColorStop(0, css(PALE_STONE.lit));
+  f.addColorStop(0.5, css(PALE_STONE.body));
+  f.addColorStop(1, css(PALE_STONE.deep));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(PALE_STONE.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(x - r * 0.35, y - r * 0.35, r * 0.35, r * 0.18, -0.5, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  g.fill();
+}
+
+/** A block of pale stone centred on (x, y), `r` from its middle to a side: its corners knocked off, lit on its top left, a bronze diamond let into its face. */
+function cornerStone(g: Ctx, x: number, y: number, r: number): void {
+  const c = r * 0.32, path = (): void => {
+    g.beginPath();
+    g.moveTo(x - r + c, y - r);
+    g.lineTo(x + r - c * 0.6, y - r + c * 0.1);
+    g.lineTo(x + r, y - r + c);
+    g.lineTo(x + r - c * 0.1, y + r - c * 0.7);
+    g.lineTo(x + r - c, y + r);
+    g.lineTo(x - r + c * 0.7, y + r - c * 0.1);
+    g.lineTo(x - r, y + r - c);
+    g.lineTo(x - r + c * 0.1, y - r + c * 0.8);
+    g.closePath();
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(40, 30, 24, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 1.2;
+  const f = g.createLinearGradient(x - r, y - r, x + r, y + r);
+  f.addColorStop(0, css(PALE_STONE.lit));
+  f.addColorStop(0.55, css(PALE_STONE.body));
+  f.addColorStop(1, css(PALE_STONE.deep));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  path();
+  g.strokeStyle = css(PALE_STONE.ink);
+  g.lineWidth = 1;
+  g.stroke();
+  // The worn lip along its top and left.
+  g.beginPath();
+  g.moveTo(x - r + c * 0.4, y + r - c * 1.2);
+  g.lineTo(x - r + c * 0.4, y - r + c * 1.1);
+  g.lineTo(x - r + c * 1.2, y - r + c * 0.4);
+  g.lineTo(x + r - c * 1.1, y - r + c * 0.45);
+  g.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  g.lineWidth = 1;
+  g.stroke();
+  // The bronze diamond.
+  const d = r * 0.42;
+  g.beginPath();
+  g.moveTo(x, y - d);
+  g.lineTo(x + d * 0.62, y);
+  g.lineTo(x, y + d);
+  g.lineTo(x - d * 0.62, y);
+  g.closePath();
+  const b = g.createLinearGradient(x - d, y - d, x + d, y + d);
+  b.addColorStop(0, css(BRONZE.lit));
+  b.addColorStop(0.5, css(BRONZE.body));
+  b.addColorStop(1, css(BRONZE.deep));
+  g.fillStyle = b;
+  g.fill();
+  g.strokeStyle = css(shade(BRONZE.deep, 0.3));
+  g.lineWidth = 0.8;
+  g.stroke();
+}
+
 /* ---- the wildermon's own kit ---------------------------------------------- */
 
 /** The wildermon's pale wood, and the brown of its twigs and its marks. */
@@ -5584,70 +5727,47 @@ const PAINTERS: Record<string, Painter> = {
     medallion(g, cx, cy, r, wood, (x, y, s) => rabbitMark(g, x, y, s));
   },
 
-  /* The tile: turf, sod round its edge and grass standing off the top, over a cut of the soil with roots and pebbles in it, moss at two corners. */
-  turf(g, w, h, F, R, o) {
-    const soil = H('#9b7b5e'), dark = H('#7d614b'), grass = H('#8fbf7a'), deep = H('#5f8a6c');
+  /*
+   * The tile: a band of brown wood, grained, with pale pebbles set into it
+   * along every side; a block of pale stone at each corner with a bronze
+   * diamond let into its face; cushions of moss with small white flowers
+   * round the corner stones and here and there along the sides; tufts of
+   * grass standing up off the top and the foot, and a pebble or two sat on
+   * the top edge.
+   */
+  turf(g, w, h, F, R) {
+    const wood = TURF_WOOD;
     eachSide(g, w, h, (s) => {
-      const top = s.i === 0;
       g.save();
       mitre(g, s.len, F);
       g.clip();
-      g.fillStyle = css(mix(shade(soil, 0.2), soil, s.lit));
-      g.fillRect(0, 0, s.len, F);
-      // Darker earth deeper in, and roots threading down through it.
-      g.fillStyle = css(dark, 0.55);
-      g.fillRect(0, F * 0.65, s.len, F * 0.35);
-      g.strokeStyle = css(shade(soil, 0.45), 0.7);
-      g.lineWidth = 0.7;
-      for (let x = 3; x < s.len; x += 5 + R() * 6) {
-        g.beginPath();
-        g.moveTo(x, top ? F * 0.4 : 0);
-        g.quadraticCurveTo(x + (R() - 0.5) * 5, F * 0.6, x + (R() - 0.5) * 4, F * (0.7 + R() * 0.25));
-        g.stroke();
-      }
-      // Pebbles in the earth, 2 to 5 px.
-      for (let k = 0; k < s.len / 10; k++) {
-        const x = R() * s.len, y = F * ((top ? 0.5 : 0.25) + R() * 0.45), r = 1 + R() * 1.5;
-        g.beginPath();
-        g.ellipse(x, y, r * 1.3, r, R(), 0, Math.PI * 2);
-        g.fillStyle = css(mix(H('#d3cbbd'), H('#a39a8c'), R()));
-        g.fill();
-        g.strokeStyle = INK;
-        g.lineWidth = 0.6;
-        g.stroke();
-      }
-      // Sod along every outer edge, deepest along the top.
-      const sod = top ? F * 0.42 : 3;
-      g.fillStyle = css(mix(deep, grass, s.lit));
-      g.fillRect(0, 0, s.len, sod);
-      g.fillStyle = css(deep);
-      g.fillRect(0, sod - 1, s.len, 1);
+      board(g, R, 0, s.len, 0, F, wood, s.lit);
       g.restore();
-      // Grass standing up off the top and out past the edge, no further than the frame may reach.
-      if (top) {
-        g.lineCap = 'round';
-        for (let x = 2; x < s.len - 2; x += 1.6 + R() * 2.2) {
-          const tall = 3 + R() * (FRAME_REACH + F * 0.2 - 3.5), lean = (R() - 0.5) * 3;
-          g.beginPath();
-          g.moveTo(x, sod);
-          g.quadraticCurveTo(x, sod - tall * 0.6, Math.max(-FRAME_REACH + 0.5, x + lean), Math.max(-FRAME_REACH + 0.6, sod - tall - F * 0.2));
-          g.strokeStyle = css(R() < 0.5 ? deep : mix(grass, deep, 0.3));
-          g.lineWidth = 1.3;
-          g.stroke();
-        }
-      }
+      // Pebbles set into the wood every 40 to 75 px, clear of the corner stones.
+      for (let x = F * 2 + R() * 20; x < s.len - F * 2; x += 40 + R() * 35) pebble(g, x, F * (0.45 + (R() - 0.5) * 0.2), F * (0.2 + R() * 0.1), R() * 0.8);
     });
-    // A cushion of moss at two corners (`drawPads`), and a tuft of grass by each.
-    const pads: Pad[] = [];
-    for (const [cx, cy] of [[F * 0.6, F * 0.75], [w - F * 0.6, h - F * 0.55]] as Pt[]) {
-      for (let k = 0; k < 8; k++) {
-        const r = cushion(R) * 1.2 + 0.8;
-        pads.push([cx + (R() - 0.5) * F * 0.8, cy + (R() - 0.5) * F * 0.6, r, r * 0.65]);
-      }
-    }
-    drawPads(g, pads.sort((a, b) => a[1] - b[1]));
-    grassTuft(g, w - F * 0.4, h - F * 0.3, (o.seed + 5) | 0, F / 16);
     inkBand(g, w, h, F);
+    // The corner stones, each with its bronze diamond, and moss spilling over and out from them.
+    const corners: Pt[] = [[F * 0.5, F * 0.5], [w - F * 0.5, F * 0.5], [F * 0.5, h - F * 0.5], [w - F * 0.5, h - F * 0.5]];
+    for (const [cx, cy] of corners) cornerStone(g, cx, cy, F * 0.85);
+    for (const [cx, cy] of corners) {
+      const dx = cx < w / 2 ? 1 : -1, dy = cy < h / 2 ? 1 : -1;
+      mossTuft(g, R, cx + dx * F * 1.25, cy - dy * F * 0.2, F * 1.4);
+      mossTuft(g, R, cx - dx * F * 0.25, cy + dy * F * 1.35, F * 1.4);
+      mossTuft(g, R, cx + dx * F * 0.65, cy + dy * F * 0.7, F * 0.7);
+      blossom(g, cx + dx * F * 1.4, cy - dy * F * 0.4, F * 0.17);
+      blossom(g, cx + dx * F * 0.95, cy - dy * F * 0.05, F * 0.13);
+      blossom(g, cx - dx * F * 0.35, cy + dy * F * 1.5, F * 0.17);
+    }
+    // Moss here and there down the sides, a white flower in some.
+    for (const [x, y, fl] of [[F * 0.15, h * 0.3, 1], [F * 0.1, h * 0.58, 1], [F * 0.15, h * 0.8, 0], [w - F * 0.15, h * 0.22, 0], [w - F * 0.1, h * 0.48, 1], [w - F * 0.15, h * 0.72, 0]] as Array<[number, number, number]>) {
+      mossTuft(g, R, x, y, F * 1.05);
+      if (fl) blossom(g, x - F * 0.05, y - F * 0.35, F * 0.15);
+    }
+    // Grass off the top and the foot, and pebbles sat on the top edge.
+    for (const x of [w * 0.32, w * 0.6]) grassBlades(g, R, x, F * 0.2, F * 0.9);
+    grassBlades(g, R, w * 0.66, h - F * 0.15, F * 0.85);
+    for (const x of [w * 0.18, w * 0.74]) pebble(g, x, -F * 0.05, F * 0.26, 0.3);
   },
 
   /* The tracker: a knotted rope all round, a tally knot every 30 to 42 px, the ropes lashed at each corner. */
