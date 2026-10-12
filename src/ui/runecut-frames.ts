@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -55,7 +55,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'treasure', label: 'Treasure map', for: ['hoard'] },
   { kind: 'stall', label: 'Market stall', for: ['market'] },
   { kind: 'scroll', label: 'Blue marble and gold', for: ['events'] },
-  { kind: 'book', label: 'Leather book', for: ['journal'] },
+  { kind: 'book', label: 'Starred leather book', for: ['journal'] },
   { kind: 'ledger', label: 'Account book', for: ['ledger'] },
   { kind: 'clothbook', label: 'Cloth-bound book', for: ['help'] },
   { kind: 'noticeboard', label: 'Notice board', for: ['news'] },
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -3490,6 +3490,17 @@ function giltScroll(g: Ctx, x: number, y: number, len: number, dir: 1 | -1, F: n
   g.restore();
 }
 
+/** A four-pointed star with arms of a length, centred on the origin, `r` to each point and `inner` to the dips between, its sides curving in. */
+function crossStar(g: Ctx, r: number, inner: number): void {
+  g.beginPath();
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2 - Math.PI / 2, b = a + Math.PI / 4, c = a + Math.PI / 2;
+    if (!k) g.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    g.quadraticCurveTo(Math.cos(b) * inner, Math.sin(b) * inner, Math.cos(c) * r, Math.sin(c) * r);
+  }
+  g.closePath();
+}
+
 /** An eight-pointed star of gold at (x, y), `r` to its great points: a lesser star turned under the great one. */
 function goldStar8(g: Ctx, x: number, y: number, r: number): void {
   g.save();
@@ -3499,11 +3510,11 @@ function goldStar8(g: Ctx, x: number, y: number, r: number): void {
   g.shadowOffsetY = 1;
   g.save();
   g.rotate(Math.PI / 4);
-  star(g, r * 0.6, r * 0.13);
+  crossStar(g, r * 0.62, r * 0.16);
   g.fillStyle = goldFill(g, -r, -r, r, r);
   g.fill();
   g.restore();
-  star(g, r, r * 0.2);
+  crossStar(g, r, r * 0.2);
   g.fillStyle = goldFill(g, -r, -r, r, r);
   g.fill();
   g.shadowColor = 'transparent';
@@ -3517,7 +3528,7 @@ function goldStar8(g: Ctx, x: number, y: number, r: number): void {
     g.beginPath();
     g.moveTo(0, 0);
     g.lineTo(0, -r);
-    g.lineTo(-r * 0.2 * 0.7, -r * 0.2 * 0.7);
+    g.lineTo(-r * 0.12, -r * 0.12);
     g.closePath();
     g.fillStyle = 'rgba(255, 246, 214, 0.45)';
     g.fill();
@@ -3612,6 +3623,302 @@ function crest(g: Ctx, R: () => number, x: number, F: number): void {
     g.arc(x, my, mr, 0, Math.PI * 2);
   }, 1.4);
   goldStar8(g, x, my, F * 1.05);
+}
+
+/* ---- the journal's own kit ---------------------------------------------------- */
+
+/** The journal's leather, its pages' edges, and its ribbon. */
+const HIDE = { body: H('#8e5a3c'), lit: H('#b47a55'), deep: H('#5c3624') };
+const LEAVES = { body: H('#f1e6cc'), line: H('#c9b892') };
+const RIBBON = { body: H('#7e9ab8'), lit: H('#a9c0d8'), deep: H('#566f8c') };
+
+/** Leather over the box (x0, y0)–(x1, y1), in whatever is clipped: its face, a soft grain of pores and a few scuffs. */
+function hide(g: Ctx, R: () => number, x0: number, y0: number, x1: number, y1: number, F: number): void {
+  const f = g.createLinearGradient(x0, y0, x1, y1);
+  f.addColorStop(0, css(HIDE.lit));
+  f.addColorStop(0.5, css(HIDE.body));
+  f.addColorStop(1, css(mix(HIDE.body, HIDE.deep, 0.45)));
+  g.fillStyle = f;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const area = (x1 - x0) * (y1 - y0);
+  for (let k = 0; k < area / 14; k++) {
+    g.fillStyle = css(HIDE.deep, 0.22 + R() * 0.2);
+    g.fillRect(x0 + R() * (x1 - x0), y0 + R() * (y1 - y0), 0.9, 0.9);
+  }
+  for (let k = 0; k < area / (F * F * 2); k++) {
+    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0), r = F * (0.3 + R() * 0.6);
+    const c = g.createRadialGradient(x, y, 0, x, y, r);
+    c.addColorStop(0, css(R() < 0.5 ? HIDE.lit : HIDE.deep, 0.22));
+    c.addColorStop(1, css(HIDE.body, 0));
+    g.fillStyle = c;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+}
+
+/** A four-pointed gold star at (x, y), `r` to its points, a dot of light at its heart. */
+function goldStar4(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.translate(x, y);
+  g.shadowColor = 'rgba(40, 20, 10, 0.45)';
+  g.shadowBlur = 1.5;
+  g.shadowOffsetY = 0.8;
+  crossStar(g, r, r * 0.21);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.shadowColor = 'transparent';
+  g.strokeStyle = css(BRASS.ink, 0.85);
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.beginPath();
+  g.arc(0, 0, r * 0.12, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255, 246, 214, 0.9)';
+  g.fill();
+  g.restore();
+}
+
+/** A tooled gold flourish on the spine at (x, y), `s` high: a drop-shaped leaf above and below a small lozenge, curls out to either side. */
+function spineFlourish(g: Ctx, x: number, y: number, s: number): void {
+  g.save();
+  g.translate(x, y);
+  g.shadowColor = 'rgba(40, 20, 10, 0.4)';
+  g.shadowBlur = 1.2;
+  g.shadowOffsetY = 0.6;
+  g.fillStyle = goldFill(g, -s, -s, s, s);
+  for (const d of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(0, d * s * 0.16);
+    g.quadraticCurveTo(s * 0.16, d * s * 0.38, 0, d * s * 0.62);
+    g.quadraticCurveTo(-s * 0.16, d * s * 0.38, 0, d * s * 0.16);
+    g.fill();
+  }
+  g.beginPath();
+  g.moveTo(0, -s * 0.12);
+  g.lineTo(s * 0.12, 0);
+  g.lineTo(0, s * 0.12);
+  g.lineTo(-s * 0.12, 0);
+  g.closePath();
+  g.fill();
+  g.shadowColor = 'transparent';
+  g.strokeStyle = css(BRASS.body);
+  g.lineWidth = 1;
+  g.lineCap = 'round';
+  for (const d of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(d * s * 0.16, 0);
+    g.bezierCurveTo(d * s * 0.32, -s * 0.06, d * s * 0.32, -s * 0.24, d * s * 0.2, -s * 0.24);
+    g.moveTo(d * s * 0.16, 0);
+    g.bezierCurveTo(d * s * 0.32, s * 0.06, d * s * 0.32, s * 0.24, d * s * 0.2, s * 0.24);
+    g.stroke();
+  }
+  g.restore();
+}
+
+/**
+ * The book's spine down the left, from x0 to x1 and y0 to y1: leather
+ * rounded across, raised bands across it each edged in gold, and between
+ * them gold stars and a tooled flourish.
+ */
+function spine(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, F: number): void {
+  const wd = x1 - x0, cx = (x0 + x1) / 2, len = y1 - y0, rr = wd * 0.22;
+  const path = (): void => {
+    g.beginPath();
+    g.roundRect(x0, y0, wd, len, rr);
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(30, 16, 8, 0.45)';
+  g.shadowBlur = 4;
+  g.shadowOffsetX = 2;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(HIDE.body);
+  g.fill();
+  g.restore();
+  g.save();
+  path();
+  g.clip();
+  hide(g, R, x0, y0, x1, y1, F);
+  const round = g.createLinearGradient(x0, 0, x1, 0);
+  round.addColorStop(0, 'rgba(40, 20, 10, 0.45)');
+  round.addColorStop(0.32, 'rgba(255, 220, 180, 0.18)');
+  round.addColorStop(0.55, 'rgba(255, 220, 180, 0)');
+  round.addColorStop(1, 'rgba(40, 20, 10, 0.5)');
+  g.fillStyle = round;
+  g.fillRect(x0, y0, wd, len);
+  g.restore();
+  path();
+  g.strokeStyle = css(HIDE.deep);
+  g.lineWidth = 1;
+  g.stroke();
+  // The raised bands: a rib standing proud of the spine, rounded at its ends, lit on top and shaded under, two gold lines along it.
+  const bands = [0.06, 0.16, 0.37, 0.56, 0.78, 0.94];
+  for (const t of bands) {
+    const y = y0 + len * t, bh = F * 0.42;
+    const rib = (): void => {
+      g.beginPath();
+      g.roundRect(x0 - 1.5, y - bh / 2, wd + 3, bh, bh * 0.45);
+    };
+    g.save();
+    rib();
+    g.shadowColor = 'rgba(30, 16, 8, 0.45)';
+    g.shadowBlur = 2;
+    g.shadowOffsetY = 1.5;
+    const ridge = g.createLinearGradient(0, y - bh / 2, 0, y + bh / 2);
+    ridge.addColorStop(0, css(light(HIDE.lit, 0.1)));
+    ridge.addColorStop(0.4, css(HIDE.body));
+    ridge.addColorStop(1, css(HIDE.deep));
+    g.fillStyle = ridge;
+    g.fill();
+    g.restore();
+    g.save();
+    rib();
+    g.clip();
+    g.fillStyle = round;
+    g.fillRect(x0 - 2, y - bh / 2, wd + 4, bh);
+    g.restore();
+    rib();
+    g.strokeStyle = css(HIDE.deep);
+    g.lineWidth = 0.8;
+    g.stroke();
+    for (const e of [-1, 1]) gilt(g, () => {
+      g.beginPath();
+      g.moveTo(x0 + 1, y + e * bh * 0.22);
+      g.lineTo(x1 - 1, y + e * bh * 0.22);
+    }, 0.8);
+  }
+  // Between the bands: the stars, and the flourish in the longest gap.
+  const between = (a: number, b: number): number => y0 + len * (a + b) / 2;
+  goldStar4(g, cx, between(0.06, 0.16), wd * 0.26);
+  goldStar8(g, cx, between(0.16, 0.37), wd * 0.48);
+  goldStar4(g, cx, between(0.37, 0.56), wd * 0.3);
+  spineFlourish(g, cx, between(0.56, 0.78), Math.min(wd * 0.9, len * 0.18));
+  goldStar4(g, cx, between(0.78, 0.94), wd * 0.3);
+}
+
+/** A brass corner cap over the corner at the origin of the side frame (the corner square [0, F]): a triangle with its inner edge scalloped in, a gold star on it, two rivets. */
+function brassCorner(g: Ctx, F: number): void {
+  const s = F * 1.45;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(-F * 0.12, -F * 0.12);
+    g.lineTo(s, -F * 0.12);
+    g.quadraticCurveTo(s * 0.62, s * 0.18, s * 0.5, s * 0.5);
+    g.quadraticCurveTo(s * 0.18, s * 0.62, -F * 0.12, s);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(30, 16, 8, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = 1;
+  g.shadowOffsetY = 1.5;
+  g.fillStyle = goldFill(g, 0, 0, s, s);
+  g.fill();
+  g.restore();
+  shape();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(s * 0.86, F * 0.06);
+  g.quadraticCurveTo(s * 0.55, s * 0.24, s * 0.44, s * 0.44);
+  g.quadraticCurveTo(s * 0.24, s * 0.55, F * 0.06, s * 0.86);
+  g.strokeStyle = css(light(BRASS.body, 0.45), 0.8);
+  g.lineWidth = 0.8;
+  g.stroke();
+  goldStar4(g, s * 0.3, s * 0.3, F * 0.34);
+  head(g, s * 0.72, F * 0.16, 1.3, BRASS.body, BRASS.ink);
+  head(g, F * 0.16, s * 0.72, 1.3, BRASS.body, BRASS.ink);
+}
+
+/** The edges of the pages over the box (x0, y0)–(x1, y1), seen side on: cream, fine lines along the long way. */
+function pageEdges(g: Ctx, x0: number, y0: number, x1: number, y1: number, along: 'x' | 'y'): void {
+  const f = along === 'y' ? g.createLinearGradient(x0, 0, x1, 0) : g.createLinearGradient(0, y0, 0, y1);
+  f.addColorStop(0, css(light(LEAVES.body, 0.3)));
+  f.addColorStop(1, css(mix(LEAVES.body, LEAVES.line, 0.6)));
+  g.fillStyle = f;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  g.strokeStyle = css(LEAVES.line, 0.8);
+  g.lineWidth = 0.5;
+  const n = Math.floor(((along === 'y' ? x1 - x0 : y1 - y0)) / 1.6);
+  for (let k = 1; k < n; k++) {
+    g.beginPath();
+    if (along === 'y') {
+      const x = x0 + k * 1.6;
+      g.moveTo(x, y0);
+      g.lineTo(x, y1);
+    } else {
+      const y = y0 + k * 1.6;
+      g.moveTo(x0, y);
+      g.lineTo(x1, y);
+    }
+    g.stroke();
+  }
+}
+
+/** The clasp strap over the right edge at y, `ht` high, from x0 out to x1: leather stitched along both edges, its end rounded, a gold star stud on it. */
+function claspStrap(g: Ctx, R: () => number, x0: number, x1: number, y: number, ht: number, F: number): void {
+  const path = (): void => {
+    g.beginPath();
+    g.roundRect(x0, y, x1 - x0, ht, [2, ht * 0.3, ht * 0.3, 2]);
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(30, 16, 8, 0.5)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = 1.5;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(HIDE.body);
+  g.fill();
+  g.restore();
+  g.save();
+  path();
+  g.clip();
+  hide(g, R, x0, y, x1, y + ht, F);
+  const round = g.createLinearGradient(0, y, 0, y + ht);
+  round.addColorStop(0, 'rgba(255, 220, 180, 0.2)');
+  round.addColorStop(1, 'rgba(40, 20, 10, 0.35)');
+  g.fillStyle = round;
+  g.fillRect(x0, y, x1 - x0, ht);
+  g.restore();
+  path();
+  g.strokeStyle = css(HIDE.deep);
+  g.lineWidth = 1;
+  g.stroke();
+  for (const sy of [y + 3, y + ht - 3]) stitches(g, x0 + 3, x1 - 4, sy, LEAVES.body, 2.4, 2);
+  goldStar4(g, x0 + (x1 - x0) * 0.62, y + ht / 2, ht * 0.32);
+}
+
+/** A ribbon marking the page, hanging from (x, y) `len` down, `wd` across: blue silk, gold lines down its edges, a gold star on it, cut in a swallowtail. */
+function ribbonMark(g: Ctx, x: number, y: number, wd: number, len: number): void {
+  const x0 = x - wd / 2, x1 = x + wd / 2, notch = wd * 0.6;
+  const shape = (d: number): void => {
+    g.beginPath();
+    g.moveTo(x0 + d, y);
+    g.lineTo(x1 - d, y);
+    g.lineTo(x1 - d, y + len - d * 0.5);
+    g.lineTo(x, y + len - notch + d * 0.8);
+    g.lineTo(x0 + d, y + len - d * 0.5);
+    g.closePath();
+  };
+  g.save();
+  shape(0);
+  g.shadowColor = 'rgba(30, 30, 50, 0.4)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = 1.5;
+  g.shadowOffsetY = 2;
+  const f = g.createLinearGradient(x0, 0, x1, 0);
+  f.addColorStop(0, css(RIBBON.lit));
+  f.addColorStop(0.5, css(RIBBON.body));
+  f.addColorStop(1, css(RIBBON.deep));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  shape(0);
+  g.strokeStyle = css(shade(RIBBON.deep, 0.3));
+  g.lineWidth = 0.8;
+  g.stroke();
+  gilt(g, () => shape(wd * 0.14), 0.6);
+  goldStar4(g, x, y + len * 0.6, wd * 0.42);
 }
 
 /* ---- the frames -------------------------------------------------------------- */
@@ -4369,22 +4676,49 @@ const PAINTERS: Record<string, Painter> = {
     }, 0.9);
   },
 
-  /* The journal: a leather binding, its spine stitched down the left with raised bands, metal corners. */
+  /*
+   * The journal: a book bound in brown leather, stitched round its cover.
+   * Down the left its spine, rounded and standing out past the cover, raised
+   * bands across it edged in gold, gold stars and a tooled flourish between
+   * them. Down the right and along the foot the edges of its pages; brass
+   * caps with a gold star on the right-hand corners; a strap over the right
+   * edge with a gold star stud, and a blue ribbon marking the page hanging
+   * from under it.
+   */
   book(g, w, h, F, R) {
-    leatherBand(g, w, h, F, H('#9c5f4c'), R);
-    // The spine on the left: raised bands across it.
-    for (let y = F * 2; y < h - F * 2; y += 34) {
-      g.fillStyle = css(shade(H('#9c5f4c'), 0.35));
-      g.fillRect(1, y, F - 2, 3);
-      g.fillStyle = css(light(H('#9c5f4c'), 0.35), 0.8);
-      g.fillRect(1, y, F - 2, 1);
-    }
+    // The cover.
     g.save();
-    g.translate(0, h);
-    g.rotate(-Math.PI / 2);
-    stitches(g, F, h - F, F - 3, LINEN);
+    g.beginPath();
+    g.roundRect(0, 0, w + F * 0.12, h, [2, 6, 6, 2]);
+    g.clip();
+    hide(g, R, 0, 0, w + F * 0.12, h, F);
     g.restore();
-    eachCorner(g, w, h, (i) => { if (i === 0 || i === 1) cornerPlate(g, F, METAL_TONE.pewter, IRON.ink); });
+    g.beginPath();
+    g.roundRect(0.5, 0.5, w + F * 0.12 - 1, h - 1, [2, 6, 6, 2]);
+    g.strokeStyle = css(HIDE.deep);
+    g.lineWidth = 1;
+    g.stroke();
+    // The pages' edges inside it, down the right and along the foot.
+    pageEdges(g, w - F * 0.72, F * 0.55, w - F * 0.14, h - F * 0.3, 'y');
+    pageEdges(g, F, h - F * 0.72, w - F * 0.14, h - F * 0.3, 'x');
+    // The stitching round the cover.
+    stitches(g, F, w - F * 0.8, F * 0.28, LEAVES.body, 3, 2.4);
+    stitches(g, F, w - F * 0.8, h - F * 0.14, LEAVES.body, 3, 2.4);
+    // A gold line round the page, just inside the cover.
+    gilt(g, () => {
+      g.beginPath();
+      g.rect(F - 2.5, F - 2.5, w - F * 2 + 5, h - F * 2 + 5);
+    }, 0.8);
+    // The brass caps on the right-hand corners.
+    eachCorner(g, w, h, (i) => { if (i === 1 || i === 2) brassCorner(g, F); });
+    // The strap and the ribbon under it.
+    if (h > F * 8) {
+      const sy = Math.max(F * 2.6, h * 0.24), sh = F * 1.3;
+      ribbonMark(g, w + F * 0.42, sy + sh * 0.5, F * 0.85, Math.min(h * 0.32, F * 7));
+      claspStrap(g, R, w - F * 0.75, w + F * 0.75, sy, sh, F);
+    }
+    // The spine.
+    spine(g, R, -F * 0.72, F * 0.92, -F * 0.28, h + F * 0.28, F);
   },
 
   /* The ledger: an account book in cloth, its corners in gilt. */
