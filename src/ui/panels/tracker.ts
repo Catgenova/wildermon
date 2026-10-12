@@ -1,7 +1,6 @@
 import type { Game } from '../../game/game';
 import { SKILL_DEFS } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
-import type { UIWindow } from '../windows';
 
 /**
  * How many trades you may keep an eye on at once.
@@ -59,7 +58,9 @@ export function toNext(value: number): { level: number; part: number; capped: bo
  * of them a number to two places — and reading a single one of them climb
  * means finding it again each time. This is the handful you care about this
  * session, each with how far it has come toward its next level and what it
- * actually stands at.
+ * actually stands at. It is the journal's Tracker tab (`JournalPanel`), drawn
+ * into the page the UI hands it, and redrawn as skills move only while that
+ * tab is showing.
  */
 export class TrackerPanel {
   private tracked: string[] = load();
@@ -67,11 +68,12 @@ export class TrackerPanel {
   private readonly addBtn: HTMLButtonElement;
 
   constructor(
-    private readonly win: UIWindow,
+    host: HTMLElement,
     private readonly game: Game,
     private readonly showMenu: (x: number, y: number, title: string, items: MenuItem[]) => void,
+    private readonly showing: () => boolean,
   ) {
-    win.body.classList.add('track-body');
+    host.classList.add('track-body');
     this.list = document.createElement('div');
     this.list.className = 'track-list';
     this.addBtn = document.createElement('button');
@@ -81,14 +83,13 @@ export class TrackerPanel {
       const r = this.addBtn.getBoundingClientRect();
       this.showMenu(r.left, r.bottom, 'Track a trade', this.choices());
     });
-    win.body.append(this.list, this.addBtn);
+    host.append(this.list, this.addBtn);
     this.draw();
-    win.onOpen = () => this.draw();
     // Every action gains something, so this fires several times a second while
     // you work. Redrawing five rows is nothing; the Skills window is the one
     // that has to be careful.
     game.events.on('skill', () => {
-      if (this.win.isOpen) this.draw();
+      if (this.showing()) this.draw();
     });
   }
 
@@ -131,7 +132,7 @@ export class TrackerPanel {
     }));
   }
 
-  private draw(): void {
+  draw(): void {
     this.list.replaceChildren();
     this.addBtn.textContent = this.tracked.length >= TRACKED_MAX
       ? `Watching ${TRACKED_MAX} — swap one out`

@@ -297,6 +297,7 @@ export class UI {
   private readonly market: MarketPanel;
   private readonly boards: BoardsPanel;
   private readonly guide: GuidePanel;
+  private readonly tracker: TrackerPanel;
   private readonly hoard: HoardPanel;
   /**
    * The Island keeper window, made only once the island has said this body
@@ -381,8 +382,6 @@ export class UI {
     const skills = this.windows.create({ id: 'skills', title: 'Skills', x: 364, y: 56, width: 260, height: 380, anchor: 'tr', open: false });
     new SkillsPanel(skills, game);
     // The handful you are moving today, beside the book that holds all forty.
-    const tracker = this.windows.create({ id: 'tracker', title: 'Tracker', x: 364, y: 446, width: 260, height: 210, anchor: 'tr', open: false, seeThrough: true });
-    new TrackerPanel(tracker, game, (x, y, title, items) => this.menu.show(x, y, title, items));
     const craft = this.windows.create({ id: 'craft', title: 'Crafting', x: 364, y: 56, width: 360, height: 360, anchor: 'tr', open: false });
     this.craftPanel = new CraftPanel(craft, game);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
@@ -400,6 +399,8 @@ export class UI {
     if (this.island) this.cratePanel.buyer = (it) => void this.buyOffCounter(it);
     const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 440, height: 460, anchor: 'tr', open: false });
     this.journalPanel = new JournalPanel(journal, game);
+    // The trades you are watching: the journal's Tracker tab, redrawn as skills move only while it shows.
+    this.tracker = new TrackerPanel(this.journalPanel.trackerPage, game, (x, y, title, items) => this.menu.show(x, y, title, items), () => journal.isOpen && this.journalPanel.tab === 'tracker');
     this.ledgerPanel = this.journalPanel.ledger;
     // "The rest of it" on the first-steps card opens the whole list.
     this.hud.openJournal = () => journal.open();
@@ -486,6 +487,7 @@ export class UI {
       if (tab === 'help') void this.helpPages();
       if (tab === 'boards') this.boards.shown();
       if (tab === 'guide') this.guide.shown();
+      if (tab === 'tracker') this.tracker.draw();
     };
     // A material no recipe makes: the help, opened at what it says about it.
     this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
@@ -620,9 +622,9 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      const journalTab = ({ win_ledger: 'ledger', win_help: 'help', win_news: 'news', win_boards: 'boards', win_guide: 'guide' } as const)[b.id as 'win_ledger'];
+      const journalTab = ({ win_ledger: 'ledger', win_help: 'help', win_news: 'news', win_boards: 'boards', win_guide: 'guide', win_tracker: 'tracker' } as const)[b.id as 'win_ledger'];
       if (journalTab) {
-        // The ledger, the help, what's new, the leaderboards and the field guide are tabs of the journal, not windows of their own.
+        // The ledger, the help, what's new, the leaderboards, the field guide and the tracker are tabs of the journal, not windows of their own.
         const tab = journalTab;
         out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open(tab) });
       } else if (b.id.startsWith('win_')) {

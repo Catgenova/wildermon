@@ -360,7 +360,7 @@ const PRESSES: Record<string, () => void> = {
   win_skills: () => ui.toggleWindow('skills'),
   win_trades: () => ui.toggleWindow('trades'),
   win_faith: () => ui.toggleWindow('faith'),
-  win_tracker: () => ui.toggleWindow('tracker'),
+  win_tracker: () => ui.toggleJournal('tracker'),
   win_events: () => ui.toggleWindow('events'),
   win_map: () => ui.toggleWindow('map'),
   win_wildermon: () => ui.toggleWindow('wildermon'),

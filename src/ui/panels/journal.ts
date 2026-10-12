@@ -4,8 +4,8 @@ import type { UIWindow } from '../windows';
 import { LedgerPanel } from './ledger';
 import { NewsPanel } from './news';
 
-/** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, who stands highest, and every kind of creature. */
-export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards' | 'guide';
+/** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, who stands highest, every kind of creature, and the trades you are watching. */
+export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards' | 'guide' | 'tracker';
 
 /**
  * The journal: everything somebody thought worth doing on this island, in
@@ -20,9 +20,11 @@ export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards' | 'guid
  * when something has changed since this browser last showed it. Its fifth is
  * the island's leaderboards (`BoardsPanel`), made into `boardsPage` by the UI,
  * which holds the island they are asked of. Its sixth is the field guide
- * (`GuidePanel`), made into `guidePage` by the UI the same way. What there is
- * to do, what has been done, how any of it works, what is new, who stands
- * highest and every kind of creature there is are one book.
+ * (`GuidePanel`), made into `guidePage` by the UI the same way, and its
+ * seventh the trades you are watching (`TrackerPanel`), in `trackerPage`.
+ * What there is to do, what has been done, how any of it works, what is new,
+ * who stands highest, every kind of creature there is and how your trades
+ * are climbing are one book.
  */
 export class JournalPanel {
   private readonly rows = new Map<string, HTMLDivElement>();
@@ -40,13 +42,15 @@ export class JournalPanel {
   readonly boardsPage: HTMLDivElement;
   /** The Field guide tab's page. */
   readonly guidePage: HTMLDivElement;
+  /** The Tracker tab's page. */
+  readonly trackerPage: HTMLDivElement;
   /** Told whenever a tab is shown, the window open. */
   onShow: ((tab: JournalTab) => void) | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     win.body.classList.add('settings-body');
     const bar = document.createElement('div');
-    bar.className = 'log-tabs';
+    bar.className = 'log-tabs journal-tabs';
     for (const [id, label, title] of [
       ['goals', 'Goals', 'Everything worth doing here, ticking itself off'],
       ['ledger', 'Ledger', 'Everything you have ever made: how many, how many rare, and the best'],
@@ -54,6 +58,7 @@ export class JournalPanel {
       ['news', "What's new", 'What changed on the island, newest first, with what you had not read yet marked'],
       ['boards', 'Leaderboards', 'Who holds each skill highest on the island, its best-bred wildermon and its biggest settlements'],
       ['guide', 'Field guide', 'A page for every kind of creature: which you have seen, tamed and bred, where each lives and what it gives'],
+      ['tracker', 'Tracker', 'The few trades you are watching, with a bar apiece toward the next level'],
     ] as Array<[JournalTab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -87,8 +92,12 @@ export class JournalPanel {
     this.guidePage.className = 'settings-page';
     this.guidePage.hidden = true;
     this.pages.set('boards', this.boardsPage);
+    this.trackerPage = document.createElement('div');
+    this.trackerPage.className = 'settings-page';
+    this.trackerPage.hidden = true;
     this.pages.set('guide', this.guidePage);
-    win.body.append(bar, goals, made, this.helpPage, news, this.boardsPage, this.guidePage);
+    this.pages.set('tracker', this.trackerPage);
+    win.body.append(bar, goals, made, this.helpPage, news, this.boardsPage, this.guidePage, this.trackerPage);
     this.ledger = new LedgerPanel(made, game, () => win.isOpen && this.tab === 'ledger');
     this.count = document.createElement('div');
     this.count.className = 'skill-group';

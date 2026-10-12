@@ -60,7 +60,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
   { kind: 'turf', label: 'Mossy wood and stone', for: ['tile'] },
-  { kind: 'rope', label: 'Knotted rope', for: ['tracker'] },
   { kind: 'ironbound', label: 'Iron-bound oak', for: ['settings'] },
   { kind: 'chain', label: 'Iron chain', for: ['keeper'] },
   { kind: 'strap', label: 'Leather strap', for: ['hud'] },
@@ -260,36 +259,6 @@ function stitches(g: Ctx, x0: number, x1: number, y: number, thread: RGB, len = 
     g.lineTo(x + len, y);
     g.strokeStyle = css(thread);
     g.lineWidth = 1.1;
-    g.stroke();
-  }
-}
-
-/**
- * A twisted rope from x0 to x1 along y, `t` thick: its body, and the twist
- * as slanted strands every `t` or so, edged in ink.
- */
-function rope(g: Ctx, x0: number, x1: number, y: number, t: number, tone: RGB): void {
-  g.lineCap = 'round';
-  g.beginPath();
-  g.moveTo(x0, y);
-  g.lineTo(x1, y);
-  g.strokeStyle = INK;
-  g.lineWidth = t + 1.2;
-  g.stroke();
-  g.strokeStyle = css(tone);
-  g.lineWidth = t;
-  g.stroke();
-  g.lineWidth = 1;
-  for (let x = x0 + 1; x < x1 - 1; x += t * 0.9) {
-    g.beginPath();
-    g.moveTo(x - t * 0.3, y + t * 0.45);
-    g.quadraticCurveTo(x, y, x + t * 0.3, y - t * 0.45);
-    g.strokeStyle = css(shade(tone, 0.42));
-    g.stroke();
-    g.beginPath();
-    g.moveTo(x - t * 0.05, y + t * 0.1);
-    g.lineTo(x + t * 0.25, y - t * 0.3);
-    g.strokeStyle = css(light(tone, 0.45), 0.8);
     g.stroke();
   }
 }
@@ -5768,25 +5737,6 @@ const PAINTERS: Record<string, Painter> = {
     for (const x of [w * 0.32, w * 0.6]) grassBlades(g, R, x, F * 0.2, F * 0.9);
     grassBlades(g, R, w * 0.66, h - F * 0.15, F * 0.85);
     for (const x of [w * 0.18, w * 0.74]) pebble(g, x, -F * 0.05, F * 0.26, 0.3);
-  },
-
-  /* The tracker: a knotted rope all round, a tally knot every 30 to 42 px, the ropes lashed at each corner. */
-  rope(g, w, h, F, R) {
-    const hemp = H('#cdb07e');
-    paperBack(g, w, h, F, light(LINEN, 0.1));
-    eachSide(g, w, h, (s) => {
-      rope(g, F * 0.5, s.len - F * 0.5, F * 0.5, F * 0.4, hemp);
-      // A tally knot every 30 to 42 px: the rope tied back on itself, a fat barrel of turns.
-      for (let x = F * 2 + R() * 10; x < s.len - F * 2; x += 30 + R() * 12) barrel(g, x, F * 0.5, F * 0.42, hemp);
-    });
-    // At each corner the two ropes lashed together, a bigger barrel across the corner.
-    eachCorner(g, w, h, () => {
-      g.save();
-      g.translate(F * 0.5, F * 0.5);
-      g.rotate(Math.PI / 4);
-      barrel(g, 0, 0, F * 0.55, shade(hemp, 0.08));
-      g.restore();
-    });
   },
 
   /* Settings: oak bound in iron, straps across it and brackets at its corners, riveted. */
