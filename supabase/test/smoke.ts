@@ -395,14 +395,23 @@ async function main(): Promise<void> {
       mobErr ? mobErr.message : `${mob.length} within sixty tiles`);
     if (mob.length) {
       await new Promise((go) => setTimeout(go, WATCH));
-      const { data: second } = await supabase().rpc('rpc_creatures', { p_world: id, p_range: 60 });
+      const { data: second, error: laterErr } = await supabase().rpc('rpc_creatures', { p_world: id, p_range: 60 });
       const later = new Map(((second ?? []) as typeof mob).map((c) => [c.id, c]));
+      const seen = mob.filter((c) => later.has(c.id)).length;
       const moved = mob.filter((c) => {
         const then = later.get(c.id);
         return then && (Math.abs(then.x - c.x) > 0.05 || Math.abs(then.y - c.y) > 0.05);
       });
-      check('and it moves when it is looked at', moved.length > 0,
-        `${moved.length} of ${mob.length} are somewhere else ${Math.round(WATCH / 1000)}s later`);
+      /*
+       * A second read that failed is not wildlife standing still. It came back
+       * empty and read as nothing having moved, which is the one answer that
+       * sends you looking at the wildlife; say what the island said instead,
+       * and how many of the first lot it still knew about.
+       */
+      check('and it moves when it is looked at', !laterErr && moved.length > 0,
+        laterErr ? `the second look was refused: ${laterErr.message}`
+          : `${moved.length} of ${mob.length} are somewhere else ${Math.round(WATCH / 1000)}s later`
+            + (seen < mob.length ? `, and ${mob.length - seen} of them were not there to look at` : ''));
       const wild = mob[0];
       const noBait = await island.act('tame', { kind: 'creature', id: wild.id }, 1);
       check('taming one with an empty hand is refused in its own words',
