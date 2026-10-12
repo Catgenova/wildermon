@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -1458,10 +1458,10 @@ function lanternBody(x: number, y: number, F: number): { cx: number; top: number
 /**
  * The lights a frame carries, in its own px from its top left, each with the
  * reach of its light: the window lays a glow over each that breathes
- * (src/ui/runecut-dress.ts). Crafting's lantern is the one.
+ * (src/ui/runecut-dress.ts): Crafting's lantern, and the market's.
  */
 export function frameLamps(kind: string, w: number, h: number, F: number): Array<{ x: number; y: number; r: number }> {
-  const at = kind === 'bench' && h > F * 6 ? benchLamp(F) : null;
+  const at = kind === 'bench' && h > F * 6 ? benchLamp(F) : kind === 'stall' && h > F * 7.5 ? stallLamp(F) : null;
   if (!at) return [];
   const b = lanternBody(at[0], at[1], F);
   return [{ x: b.flame[0], y: b.flame[1], r: F * 1.9 }];
@@ -2724,6 +2724,581 @@ function knot(g: Ctx, x: number, y: number, r: number, t: number): void {
 }
 
 
+/* ---- the market stall's own kit ----------------------------------------- */
+
+/** The stall's weathered timber, its awning's green and cream, the teal of a cloth, the gold of its trim and tassels, and the ink of the banner's marks. */
+const STALL_WOOD = H('#9a7553');
+const AWNING = { green: H('#7aa27b'), greenDeep: H('#4f7553'), cream: H('#f3ecd8'), creamDeep: H('#cbbd9c') };
+const TEAL = H('#7fb0b4');
+const TASSEL = H('#d9b25c');
+const MARK = H('#8a5a34');
+
+/** Where the market's lantern hangs on its left post, `F` its rim: the end of its bracket. */
+const stallLamp = (F: number): Pt => [F * 0.2, F * 5.3];
+
+/** An upright post from (x0, y0) to (x1, y1): a plank stood on end, lit from the left. */
+function post(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, tone: RGB): void {
+  g.save();
+  g.translate(x0, y1);
+  g.rotate(-Math.PI / 2);
+  plank(g, R, 0, y1 - y0, 0, x1 - x0, tone);
+  g.restore();
+}
+
+/** A brass finial on a post's top at (x, y), `s` across: a square collar and a pointed cap over it, lit on the left. */
+function finial(g: Ctx, x: number, y: number, s: number): void {
+  g.save();
+  g.shadowColor = 'rgba(50, 30, 15, 0.4)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.beginPath();
+  g.roundRect(x - s * 0.5, y - s * 0.32, s, s * 0.36, 1.5);
+  g.fillStyle = goldFill(g, x - s / 2, y - s * 0.32, x + s / 2, y);
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  const top = y - s * 1.25, foot = y - s * 0.32;
+  for (const [side, c] of [[-1, light(BRASS.body, 0.35)], [1, shade(BRASS.body, 0.25)]] as Array<[number, RGB]>) {
+    g.beginPath();
+    g.moveTo(x, top);
+    g.lineTo(x + side * s * 0.34, foot);
+    g.lineTo(x, foot);
+    g.closePath();
+    g.fillStyle = css(c);
+    g.fill();
+  }
+  g.beginPath();
+  g.moveTo(x, top);
+  g.lineTo(x + s * 0.34, foot);
+  g.lineTo(x - s * 0.34, foot);
+  g.closePath();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.arc(x, top + 0.5, 1.4, 0, Math.PI * 2);
+  g.fillStyle = css(light(BRASS.body, 0.5));
+  g.fill();
+}
+
+/** A lashing of `n` turns of cord round a post across it from x0 to x1, the first turn at y, on the slant. */
+function lashing(g: Ctx, x0: number, x1: number, y: number, n: number): void {
+  for (let k = 0; k < n; k++) twist(g, [[x0 - 1, y + k * 3.3 - 1.6], [x1 + 1, y + k * 3.3 + 1.6]], 2.6, CORD);
+}
+
+/**
+ * The awning from x0 to x1, its head at y0: panels green and cream in turn,
+ * each billowed and swagged down to a scallop `drop` below, trimmed in gold
+ * along its hem, gathered in a roll along its head.
+ */
+function awning(g: Ctx, x0: number, x1: number, y0: number, drop: number, F: number): void {
+  const n = Math.max(3, Math.round((x1 - x0) / (F * 2.3)));
+  const pw = (x1 - x0) / n;
+  for (let i = 0; i < n; i++) {
+    const px = x0 + i * pw, green = i % 2 === 0;
+    const side = y0 + drop * 0.66;
+    const shape = (): void => {
+      g.beginPath();
+      g.moveTo(px, y0);
+      g.lineTo(px + pw, y0);
+      g.lineTo(px + pw, side);
+      g.quadraticCurveTo(px + pw / 2, y0 + drop * 1.4, px, side);
+      g.closePath();
+    };
+    g.save();
+    shape();
+    g.shadowColor = 'rgba(40, 30, 20, 0.35)';
+    g.shadowBlur = 3;
+    g.shadowOffsetY = 2;
+    const [c, deep] = green ? [AWNING.green, AWNING.greenDeep] : [AWNING.cream, AWNING.creamDeep];
+    const f = g.createLinearGradient(px, 0, px + pw, 0);
+    f.addColorStop(0, css(mix(c, deep, 0.45)));
+    f.addColorStop(0.35, css(light(c, 0.12)));
+    f.addColorStop(0.7, css(c));
+    f.addColorStop(1, css(mix(c, deep, 0.6)));
+    g.fillStyle = f;
+    g.fill();
+    g.restore();
+    // Its folds, gathered at the head and falling to the scallop.
+    g.save();
+    shape();
+    g.clip();
+    for (const t of [0.3, 0.55, 0.78]) {
+      g.beginPath();
+      g.moveTo(px + pw * (0.5 + (t - 0.5) * 0.5), y0);
+      g.quadraticCurveTo(px + pw * t, y0 + drop * 0.5, px + pw * (0.5 + (t - 0.5) * 1.3), y0 + drop * 1.05);
+      g.strokeStyle = css(green ? AWNING.greenDeep : AWNING.creamDeep, 0.55);
+      g.lineWidth = 1;
+      g.stroke();
+    }
+    const head = g.createLinearGradient(0, y0, 0, y0 + drop * 0.35);
+    head.addColorStop(0, 'rgba(50, 36, 24, 0.3)');
+    head.addColorStop(1, 'rgba(50, 36, 24, 0)');
+    g.fillStyle = head;
+    g.fillRect(px, y0, pw, drop * 0.35);
+    g.restore();
+    shape();
+    g.strokeStyle = css(green ? shade(AWNING.greenDeep, 0.2) : AWNING.creamDeep);
+    g.lineWidth = 0.8;
+    g.stroke();
+    // The gold along its hem.
+    gilt(g, () => {
+      g.beginPath();
+      g.moveTo(px + pw, side);
+      g.quadraticCurveTo(px + pw / 2, y0 + drop * 1.4, px, side);
+    }, 1.7);
+  }
+  // The roll at its head, over the beam.
+  for (let i = 0; i < n; i++) {
+    const px = x0 + i * pw;
+    g.beginPath();
+    g.moveTo(px, y0 + 2.5);
+    g.quadraticCurveTo(px + pw / 2, y0 - 3.5, px + pw, y0 + 2.5);
+    g.lineTo(px + pw, y0 + 4.5);
+    g.quadraticCurveTo(px + pw / 2, y0 + 0.5, px, y0 + 4.5);
+    g.closePath();
+    g.fillStyle = css(i % 2 ? AWNING.creamDeep : AWNING.greenDeep);
+    g.fill();
+  }
+}
+
+/** The scales, the market's mark, inked at (x, y), their top, `s` high: a post, a beam, a pan hung from each end, and a foot. */
+function scalesMark(g: Ctx, x: number, y: number, s: number): void {
+  g.save();
+  g.strokeStyle = css(MARK);
+  g.fillStyle = css(MARK);
+  g.lineWidth = 1.3;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.beginPath();
+  g.moveTo(x, y + s * 0.08);
+  g.lineTo(x, y + s * 0.82);
+  g.moveTo(x - s * 0.44, y + s * 0.24);
+  g.quadraticCurveTo(x, y + s * 0.14, x + s * 0.44, y + s * 0.24);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x, y);
+  g.lineTo(x + s * 0.06, y + s * 0.08);
+  g.lineTo(x, y + s * 0.16);
+  g.lineTo(x - s * 0.06, y + s * 0.08);
+  g.closePath();
+  g.fill();
+  for (const d of [-1, 1]) {
+    const ex = x + d * s * 0.44, ey = y + s * 0.24, py = y + s * 0.56;
+    g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(ex, ey);
+    g.lineTo(ex - s * 0.15, py);
+    g.moveTo(ex, ey);
+    g.lineTo(ex + s * 0.15, py);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(ex - s * 0.18, py);
+    g.quadraticCurveTo(ex, py + s * 0.16, ex + s * 0.18, py);
+    g.closePath();
+    g.fill();
+  }
+  g.beginPath();
+  g.moveTo(x - s * 0.2, y + s * 0.92);
+  g.quadraticCurveTo(x, y + s * 0.76, x + s * 0.2, y + s * 0.92);
+  g.closePath();
+  g.fill();
+  g.restore();
+}
+
+/** A sprig inked at (x, y), its tip, `s` long: a stem down with two pairs of leaves. */
+function sprigMark(g: Ctx, x: number, y: number, s: number): void {
+  g.save();
+  g.strokeStyle = css(MARK);
+  g.fillStyle = css(MARK);
+  g.lineWidth = 1.2;
+  g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(x, y);
+  g.lineTo(x, y + s);
+  g.stroke();
+  for (const [t, len] of [[0.35, 0.42], [0.65, 0.5]]) {
+    for (const d of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(x + d * s * len * 0.45, y + s * t - s * 0.08, s * len * 0.42, s * 0.1, d * -0.6, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.beginPath();
+  g.ellipse(x, y - s * 0.02, s * 0.08, s * 0.16, 0, 0, Math.PI * 2);
+  g.fill();
+  g.restore();
+}
+
+/**
+ * The market's banner on a rod from x0 to x1 at y, `len` long to its point:
+ * cream on green, edged in gold, the scales and a sprig on it, gold tassels
+ * at its corners and its point.
+ */
+function marketBanner(g: Ctx, x0: number, x1: number, y: number, len: number): void {
+  const wd = x1 - x0, mid = (x0 + x1) / 2;
+  const shape = (d: number): void => {
+    g.beginPath();
+    g.moveTo(x0 + d, y + 1);
+    g.lineTo(x1 - d, y + 1);
+    g.lineTo(x1 - d, y + len * 0.8 - d * 0.4);
+    g.lineTo(mid, y + len - d * 1.5);
+    g.lineTo(x0 + d, y + len * 0.8 - d * 0.4);
+    g.closePath();
+  };
+  g.save();
+  shape(0);
+  g.shadowColor = 'rgba(40, 30, 20, 0.4)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = 1;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(AWNING.green);
+  g.fill();
+  g.restore();
+  shape(0);
+  g.strokeStyle = css(AWNING.greenDeep);
+  g.lineWidth = 1;
+  g.stroke();
+  const b = wd * 0.14;
+  shape(b);
+  const f = g.createLinearGradient(x0, 0, x1, 0);
+  f.addColorStop(0, css(light(AWNING.cream, 0.3)));
+  f.addColorStop(1, css(mix(AWNING.cream, AWNING.creamDeep, 0.4)));
+  g.fillStyle = f;
+  g.fill();
+  gilt(g, () => shape(b), 0.9);
+  scalesMark(g, mid, y + len * 0.13, wd * 0.82);
+  sprigMark(g, mid, y + len * 0.5, wd * 0.6);
+  // The rod: wood, a brass knob at each end.
+  g.beginPath();
+  g.roundRect(x0 - 5, y - 2.2, wd + 10, 4.4, 2.2);
+  g.fillStyle = css(shade(STALL_WOOD, 0.15));
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.8;
+  g.stroke();
+  head(g, x0 - 5, y, 2.6, BRASS.body, BRASS.ink);
+  head(g, x1 + 5, y, 2.6, BRASS.body, BRASS.ink);
+  for (const [tx, ty] of [[x0 + 2, y + len * 0.8], [x1 - 2, y + len * 0.8], [mid, y + len - 1]] as Pt[]) tassel(g, tx, ty, TASSEL);
+}
+
+/** A cloth hung down the right post from (x0, y) to x1, `len` long on its inner edge: cream, folded, two gold lines down that edge, its hem cut on the slant up to its outer one. */
+function hungCloth(g: Ctx, x0: number, x1: number, y: number, len: number): void {
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x0 + 2, y);
+    g.quadraticCurveTo((x0 + x1) / 2, y - 3, x1, y + 1);
+    g.quadraticCurveTo(x1 + 2, y + len * 0.3, x1 - 1, y + len * 0.62);
+    g.quadraticCurveTo((x0 + x1) / 2 - 2, y + len * 0.78, x0 - 1, y + len);
+    g.quadraticCurveTo(x0 - 3, y + len * 0.5, x0 + 2, y);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 30, 20, 0.4)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = -1;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(AWNING.cream);
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  const wd = x1 - x0;
+  // Two soft folds falling from where it hangs, wider toward the hem.
+  for (const t of [0.35, 0.7]) {
+    const fx = x0 + wd * t;
+    g.beginPath();
+    g.moveTo(fx - 1, y);
+    g.lineTo(fx + 1, y);
+    g.lineTo(fx + 4, y + len);
+    g.lineTo(fx - 4, y + len);
+    g.closePath();
+    const fold = g.createLinearGradient(fx - 4, 0, fx + 4, 0);
+    fold.addColorStop(0, 'rgba(120, 100, 70, 0)');
+    fold.addColorStop(0.5, 'rgba(120, 100, 70, 0.32)');
+    fold.addColorStop(1, 'rgba(120, 100, 70, 0)');
+    g.fillStyle = fold;
+    g.fill();
+  }
+  const side = g.createLinearGradient(x0, 0, x1, 0);
+  side.addColorStop(0.6, 'rgba(90, 70, 50, 0)');
+  side.addColorStop(1, 'rgba(90, 70, 50, 0.3)');
+  g.fillStyle = side;
+  g.fillRect(x0 - 2, y - 4, wd + 4, len + 4);
+  for (const dx of [3.5, 6]) gilt(g, () => {
+    g.beginPath();
+    g.moveTo(x0 + dx, y + 2);
+    g.quadraticCurveTo(x0 + dx - 3, y + len * 0.5, x0 + dx - 1, y + len - dx * 0.6);
+  }, 0.7);
+  g.restore();
+  shape();
+  g.strokeStyle = css(AWNING.creamDeep);
+  g.lineWidth = 0.9;
+  g.stroke();
+}
+
+/** A barrel stood on end at (x, yb), its foot, `wd` × `ht`: staves bellied out, three iron hoops, its head. */
+function standingBarrel(g: Ctx, x: number, yb: number, wd: number, ht: number, tone: RGB): void {
+  const hw = wd * 0.42, bulge = wd * 0.54;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x - hw, yb - ht);
+    g.quadraticCurveTo(x - bulge * 1.08, yb - ht / 2, x - hw, yb);
+    g.lineTo(x + hw, yb);
+    g.quadraticCurveTo(x + bulge * 1.08, yb - ht / 2, x + hw, yb - ht);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 26, 18, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 2;
+  const f = g.createLinearGradient(x - bulge, 0, x + bulge, 0);
+  f.addColorStop(0, css(shade(tone, 0.2)));
+  f.addColorStop(0.35, css(light(tone, 0.2)));
+  f.addColorStop(1, css(shade(tone, 0.35)));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  for (let k = -2; k <= 2; k++) {
+    const sx = x + k * hw * 0.42;
+    g.beginPath();
+    g.moveTo(sx, yb - ht);
+    g.quadraticCurveTo(sx + k * wd * 0.07, yb - ht / 2, sx, yb);
+    g.strokeStyle = css(shade(tone, 0.45), 0.8);
+    g.lineWidth = 0.8;
+    g.stroke();
+  }
+  for (const t of [0.14, 0.5, 0.86]) {
+    const yy = yb - ht * t, ww = t === 0.5 ? bulge * 1.04 : hw * 1.1;
+    g.beginPath();
+    g.moveTo(x - ww - 2, yy - 1);
+    g.quadraticCurveTo(x, yy + 3, x + ww + 2, yy - 1);
+    g.strokeStyle = css(IRON.ink);
+    g.lineWidth = 3.4;
+    g.stroke();
+    g.strokeStyle = css(light(IRON.body, 0.1));
+    g.lineWidth = 2.2;
+    g.stroke();
+  }
+  g.restore();
+  shape();
+  g.strokeStyle = css(shade(tone, 0.55));
+  g.lineWidth = 1;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(x, yb - ht, hw, wd * 0.11, 0, 0, Math.PI * 2);
+  g.fillStyle = css(light(tone, 0.15));
+  g.fill();
+  g.stroke();
+  g.beginPath();
+  g.ellipse(x, yb - ht + 0.6, hw * 0.78, wd * 0.07, 0, 0, Math.PI * 2);
+  g.strokeStyle = css(shade(tone, 0.35), 0.8);
+  g.lineWidth = 0.7;
+  g.stroke();
+}
+
+/** A crate from (x0, y0) to (x1, y1): boards across, framed round, braced on the diagonal, nailed at its corners. */
+function crate(g: Ctx, R: () => number, x0: number, y0: number, x1: number, y1: number, tone: RGB): void {
+  const wd = x1 - x0, ht = y1 - y0, b = Math.min(wd, ht) * 0.16;
+  g.save();
+  g.shadowColor = 'rgba(40, 26, 18, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(shade(tone, 0.12));
+  g.fillRect(x0, y0, wd, ht);
+  g.restore();
+  g.save();
+  g.beginPath();
+  g.rect(x0, y0, wd, ht);
+  g.clip();
+  grain(g, R, x0, x1, y0 + 1, y1 - 1, shade(tone, 0.12), false);
+  for (let k = 1; k < 3; k++) {
+    g.fillStyle = css(shade(tone, 0.5), 0.7);
+    g.fillRect(x0, y0 + (ht * k) / 3, wd, 0.9);
+  }
+  // The brace, across the inside of the frame.
+  const ang = Math.atan2(-(ht - b * 2), wd - b * 2), L = Math.hypot(wd, ht);
+  g.save();
+  g.translate(x0 + wd / 2, y0 + ht / 2);
+  g.rotate(ang);
+  g.fillStyle = css(tone);
+  g.fillRect(-L / 2, -b * 0.45, L, b * 0.9);
+  g.strokeStyle = css(shade(tone, 0.5));
+  g.lineWidth = 0.8;
+  g.strokeRect(-L / 2, -b * 0.45, L, b * 0.9);
+  g.restore();
+  // The frame round it, lit on its top and its left.
+  for (const [rx, ry, rw, rh, lit] of [[x0, y0, wd, b, 0.25], [x0, y1 - b, wd, b, 0], [x0, y0, b, ht, 0.18], [x1 - b, y0, b, ht, -0.1]] as Array<[number, number, number, number, number]>) {
+    g.fillStyle = css(lit >= 0 ? light(tone, lit) : shade(tone, -lit));
+    g.fillRect(rx, ry, rw, rh);
+    g.strokeStyle = css(shade(tone, 0.5));
+    g.lineWidth = 0.8;
+    g.strokeRect(rx + 0.4, ry + 0.4, rw - 0.8, rh - 0.8);
+  }
+  g.restore();
+  g.strokeStyle = css(H('#5a3e28'));
+  g.lineWidth = 1.1;
+  g.strokeRect(x0, y0, wd, ht);
+  for (const [nx, ny] of [[x0 + b / 2, y0 + b / 2], [x1 - b / 2, y0 + b / 2], [x0 + b / 2, y1 - b / 2], [x1 - b / 2, y1 - b / 2]] as Pt[]) head(g, nx, ny, 1, IRON.body, IRON.ink);
+}
+
+/** A cloth thrown over the corner of a crate from (x, y), `wd` wide, falling `len`: cream with a teal stripe down it, gold lines either side, fringed at its foot. */
+function throwCloth(g: Ctx, x: number, y: number, wd: number, len: number): void {
+  const lean = wd * 0.18;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + wd, y - 2);
+    g.lineTo(x + wd + lean, y + len);
+    g.lineTo(x + lean, y + len + 1.5);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 30, 20, 0.4)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.5;
+  g.fillStyle = css(AWNING.cream);
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  g.beginPath();
+  g.moveTo(x + wd * 0.38, y - 2);
+  g.lineTo(x + wd * 0.66, y - 2);
+  g.lineTo(x + wd * 0.66 + lean, y + len + 2);
+  g.lineTo(x + wd * 0.38 + lean, y + len + 2);
+  g.closePath();
+  g.fillStyle = css(TEAL);
+  g.fill();
+  for (const t of [0.32, 0.72]) gilt(g, () => {
+    g.beginPath();
+    g.moveTo(x + wd * t, y - 2);
+    g.lineTo(x + wd * t + lean, y + len + 2);
+  }, 0.6);
+  const fold = g.createLinearGradient(0, y, 0, y + len);
+  fold.addColorStop(0, 'rgba(90, 70, 50, 0.25)');
+  fold.addColorStop(0.3, 'rgba(90, 70, 50, 0)');
+  g.fillStyle = fold;
+  g.fillRect(x - 2, y - 3, wd + lean + 4, len + 6);
+  g.restore();
+  shape();
+  g.strokeStyle = css(AWNING.creamDeep);
+  g.lineWidth = 0.8;
+  g.stroke();
+  for (let fx = x + lean + 1; fx < x + wd + lean; fx += 1.8) {
+    g.beginPath();
+    g.moveTo(fx, y + len + 1);
+    g.lineTo(fx + 0.3, y + len + 4.5);
+    g.strokeStyle = css(AWNING.creamDeep);
+    g.lineWidth = 0.7;
+    g.stroke();
+  }
+}
+
+/** A sack stood at (x, yb), its foot, `wd` × `ht`: burlap, full at its foot, tied at its neck with twine, its mouth ruffled open. */
+function sackOf(g: Ctx, x: number, yb: number, wd: number, ht: number): void {
+  const hw = wd / 2, neck = yb - ht * 0.72, burlap = H('#d9c49c');
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x - hw * 0.28, neck);
+    g.bezierCurveTo(x - hw * 1.15, neck + ht * 0.15, x - hw * 1.1, yb, x - hw * 0.5, yb);
+    g.lineTo(x + hw * 0.5, yb);
+    g.bezierCurveTo(x + hw * 1.1, yb, x + hw * 1.15, neck + ht * 0.15, x + hw * 0.28, neck);
+    g.lineTo(x + hw * 0.5, yb - ht);
+    g.lineTo(x + hw * 0.15, yb - ht * 0.94);
+    g.lineTo(x - hw * 0.1, yb - ht * 1.02);
+    g.lineTo(x - hw * 0.5, yb - ht * 0.95);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 30, 20, 0.4)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 2;
+  const f = g.createRadialGradient(x - hw * 0.35, yb - ht * 0.4, 1, x, yb - ht * 0.3, wd);
+  f.addColorStop(0, css(light(burlap, 0.3)));
+  f.addColorStop(1, css(shade(burlap, 0.3)));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  for (let yy = neck; yy < yb; yy += 2.2) {
+    g.fillStyle = css(shade(burlap, 0.25), 0.35);
+    g.fillRect(x - wd, yy, wd * 2, 0.6);
+  }
+  g.restore();
+  shape();
+  g.strokeStyle = css(H('#7d6a4c'));
+  g.lineWidth = 0.9;
+  g.stroke();
+  twist(g, [[x - hw * 0.34, neck - 0.5], [x + hw * 0.34, neck + 0.5]], 2, CORD);
+  twist(g, [[x - hw * 0.3, neck + 2.2], [x + hw * 0.3, neck + 2.8]], 2, CORD);
+}
+
+/** A bottle stood at (x, yb), its foot, `wd` × `ht`: blue glass, round-shouldered, corked, a light down its left. */
+function bottle(g: Ctx, x: number, yb: number, wd: number, ht: number): void {
+  const hw = wd / 2, sh = yb - ht * 0.55, nk = wd * 0.17;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x - nk, yb - ht * 0.88);
+    g.lineTo(x - nk, sh - ht * 0.12);
+    g.quadraticCurveTo(x - hw, sh - ht * 0.05, x - hw, sh + ht * 0.1);
+    g.quadraticCurveTo(x - hw * 1.05, yb, x - hw * 0.7, yb);
+    g.lineTo(x + hw * 0.7, yb);
+    g.quadraticCurveTo(x + hw * 1.05, yb, x + hw, sh + ht * 0.1);
+    g.quadraticCurveTo(x + hw, sh - ht * 0.05, x + nk, sh - ht * 0.12);
+    g.lineTo(x + nk, yb - ht * 0.88);
+    g.closePath();
+  };
+  shape();
+  const f = g.createLinearGradient(x - hw, 0, x + hw, 0);
+  f.addColorStop(0, 'rgba(176, 200, 214, 0.95)');
+  f.addColorStop(0.5, 'rgba(126, 156, 182, 0.95)');
+  f.addColorStop(1, 'rgba(86, 110, 138, 0.95)');
+  g.fillStyle = f;
+  g.fill();
+  g.strokeStyle = css(H('#4a5a6c'));
+  g.lineWidth = 0.9;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x - hw * 0.55, sh + ht * 0.08);
+  g.lineTo(x - hw * 0.55, yb - ht * 0.1);
+  g.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+  g.lineWidth = 1;
+  g.stroke();
+  g.beginPath();
+  g.roundRect(x - nk * 1.15, yb - ht, nk * 2.3, ht * 0.14, 1);
+  g.fillStyle = css(H('#b08a5e'));
+  g.fill();
+  g.strokeStyle = css(H('#6a4a30'));
+  g.lineWidth = 0.7;
+  g.stroke();
+}
+
+/** A clump of ivy and white flowers about (x, y), `r` across. */
+function flowerClump(g: Ctx, R: () => number, x: number, y: number, r: number, F: number): void {
+  for (let k = 0; k < 7; k++) {
+    const a = R() * Math.PI * 2, d = r * (0.2 + R() * 0.6);
+    ivyLeaf(g, x + Math.cos(a) * d * 0.5, y + Math.sin(a) * d * 0.5, a, F * (0.32 + R() * 0.12), R() < 0.5);
+  }
+  for (let k = 0; k < 3; k++) {
+    const a = R() * Math.PI * 2, d = r * R() * 0.5;
+    blossom(g, x + Math.cos(a) * d, y + Math.sin(a) * d, F * 0.15);
+  }
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -3382,37 +3957,54 @@ const PAINTERS: Record<string, Painter> = {
     starTag(g, mx + 0.5, my + mr + F * 0.3, F * 0.52, F * 0.68);
   },
 
-  /* The market: a striped awning scalloped along the top, a plank counter round the rest. */
+  /*
+   * The market: a stall of weathered timber, a post up each side capped in
+   * brass and a beam across the top and the foot, lashed with cord. Under the
+   * top beam a green and cream awning swagged to a gold-trimmed scallop. On
+   * the left post the market's banner, the scales, and a lantern under it
+   * (`frameLamps`), ivy flowering white down it; a barrel and a crate with a
+   * striped cloth at its foot. A cloth hung over the right post, and crates,
+   * a sack and a bottle at its foot among flowering ivy.
+   */
   stall(g, w, h, F, R) {
-    const counter = WOOD.cherry;
-    eachSide(g, w, h, (s) => {
-      if (s.i !== 0) planks(g, R, s.len, 0, F, counter, s.lit, s.i === 2 ? 0 : F, s.i === 2 ? s.len : s.len - F);
-    });
-    // The awning: stripes across, a scallop along its lower edge.
-    const stripe = 8, a = H('#f1e4cc'), b = H('#d77f71');
-    g.save();
-    g.beginPath();
-    g.moveTo(0, -1);
-    g.lineTo(w, -1);
-    g.lineTo(w, F * 0.7);
-    for (let x = w; x > 0; x -= stripe) g.arc(x - stripe / 2, F * 0.7, stripe / 2, 0, Math.PI, false);
-    g.closePath();
-    g.save();
-    g.clip();
-    for (let x = 0; x < w; x += stripe) {
-      g.fillStyle = css(Math.floor(x / stripe) % 2 ? a : b);
-      g.fillRect(x, -1, stripe, F + 1);
-    }
-    g.fillStyle = 'rgba(64, 52, 58, 0.12)';
-    g.fillRect(0, F * 0.45, w, F * 0.6);
-    g.restore();
+    const wood = STALL_WOOD, top = -F * 0.45;
+    fillBand(g, w, h, F, css(shade(wood, 0.45)));
+    plank(g, R, -4, w + 4, top, F * 0.1, wood);
+    awning(g, F * 0.85, w - F * 0.85, F * 0.02, F * 0.9, F);
+    post(g, R, 0, F * 0.92, top, h, wood);
+    post(g, R, w - F * 0.92, w, top, h, wood);
+    plank(g, R, -4, w + 4, h - F * 0.68, h + 2, shade(wood, 0.05));
     g.strokeStyle = INK;
     g.lineWidth = 1;
-    g.stroke();
-    g.restore();
-    // The rod along its head.
-    rope(g, 1, w - 1, 1.2, 2.2, shade(counter, 0.1));
-    inkBand(g, w, h, F);
+    g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
+    finial(g, F * 0.46, top, F * 0.55);
+    finial(g, w - F * 0.46, top, F * 0.55);
+    // Lashings: the beam to each post, and round the posts below.
+    for (const x of [0, w - F * 0.92]) lashing(g, x, x + F * 0.92, top + F * 0.12, 3);
+    lashing(g, 0, F * 0.92, h * 0.64, 3);
+    lashing(g, w - F * 0.92, w, h * 0.66, 3);
+    // The right post: the cloth over it, tied on.
+    hungCloth(g, w - F * 0.78, w + F * 0.28, F * 0.55, Math.min(h * 0.45, F * 8));
+    lashing(g, w - F * 0.82, w + F * 0.2, F * 1.6, 3);
+    // The left post: banner, lantern, ivy.
+    marketBanner(g, -F * 0.62, F * 0.9, F * 0.95, F * 4);
+    if (h > F * 7.5) {
+      const [lx, ly] = stallLamp(F);
+      lantern(g, lx, ly, F);
+    }
+    vine(g, R, wander([F * 0.85, h * 0.42], [F * 0.5, h * 0.55], [F * 0.8, h * 0.68], [F * 0.45, h * 0.8], [F * 0.75, h - F * 1.7]), F, true);
+    // The foot of the left post: a barrel, and a crate with a cloth over it.
+    standingBarrel(g, -F * 0.18, h + 8, F * 1.5, F * 2.0, H(WOOD_TONE.oak));
+    crate(g, R, F * 0.45, h - F * 0.98, F * 2.9, h + 8, H('#a98a5c'));
+    throwCloth(g, F * 0.7, h - F * 1.0, F * 0.95, F * 1.0);
+    flowerClump(g, R, F * 0.45, h - F * 0.95, F * 0.7, F);
+    // The foot of the right post: crates, a sack and a bottle, and ivy.
+    vine(g, R, wander([w - F * 0.2, h - F * 2.2], [w - F * 0.6, h - F * 3.4], [w - F * 0.35, h - F * 4.4]), F, true);
+    crate(g, R, w - F * 0.9, h - F * 2.25, w + F * 0.65, h - F * 0.98, H('#a98a5c'));
+    crate(g, R, w - F * 1.7, h - F * 0.98, w + F * 0.6, h + 8, H('#9c7c52'));
+    flowerClump(g, R, w - F * 0.95, h - F * 2.25, F * 0.7, F);
+    sackOf(g, w - F * 2.15, h + 8, F * 1.3, F * 1.25);
+    bottle(g, w - F * 3.1, h + 6, F * 0.6, F * 1.15);
   },
 
   /* The log: a paper scroll, rolled at the top and the bottom on wooden rods, their knobs standing out at the corners. */
