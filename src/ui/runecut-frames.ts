@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -54,7 +54,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'parchment', label: 'Map stone, gold and sky', for: ['map'] },
   { kind: 'treasure', label: 'Treasure map', for: ['hoard'] },
   { kind: 'stall', label: 'Market stall', for: ['market'] },
-  { kind: 'scroll', label: 'Scroll', for: ['events'] },
+  { kind: 'scroll', label: 'Blue marble and gold', for: ['events'] },
   { kind: 'book', label: 'Leather book', for: ['journal'] },
   { kind: 'ledger', label: 'Account book', for: ['ledger'] },
   { kind: 'clothbook', label: 'Cloth-bound book', for: ['help'] },
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -3296,6 +3296,324 @@ function flowerClump(g: Ctx, R: () => number, x: number, y: number, r: number, F
   }
 }
 
+/* ---- the event log's own kit ------------------------------------------------ */
+
+/** The event log's marble: white, clouded in patches of pale blue, the patches parted by veins of gold. */
+const VEIN_GOLD = 'rgba(206, 164, 76, 0.85)';
+const PATCH = { body: H('#a9c3dc'), lit: H('#d4e3f0'), deep: H('#7f9fc0') };
+
+/** Blue-veined marble over the box (x0, y0)–(x1, y1), in whatever is clipped: its white, the blue patches, and the gold and grey veins between them. */
+function blueMarble(g: Ctx, R: () => number, x0: number, y0: number, x1: number, y1: number, F: number): void {
+  const base = g.createLinearGradient(x0, y0, x1, y1);
+  base.addColorStop(0, '#fbf8f2');
+  base.addColorStop(1, '#ece8e1');
+  g.fillStyle = base;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const area = (x1 - x0) * (y1 - y0), rx = (): number => x0 + R() * (x1 - x0), ry = (): number => y0 + R() * (y1 - y0);
+  // Clouds of blue, soft, run together.
+  for (let k = 0; k < area / (F * F * 1.3); k++) {
+    const cx = rx(), cy = ry(), r = F * (0.45 + R() * 0.6);
+    g.save();
+    g.translate(cx, cy);
+    g.scale(1.4, 0.8);
+    const c = g.createRadialGradient(0, 0, 0, 0, 0, r);
+    c.addColorStop(0, css(PATCH.body, 0.38));
+    c.addColorStop(1, css(PATCH.body, 0));
+    g.fillStyle = c;
+    g.fillRect(-r, -r, r * 2, r * 2);
+    g.restore();
+  }
+  // Patches of a deeper blue, broken stone-like, their edges softened.
+  const edges: Pt[][] = [];
+  for (let k = 0; k < area / (F * F * 1.6); k++) {
+    const cx = rx(), cy = ry(), r = F * (0.25 + R() * 0.35), m = 5 + Math.floor(R() * 3);
+    const pts: Pt[] = [];
+    for (let j = 0; j < m; j++) {
+      const a = (j / m) * Math.PI * 2 + R() * 0.5, d = r * (0.6 + R() * 0.55);
+      pts.push([cx + Math.cos(a) * d, cy + Math.sin(a) * d * 0.7]);
+    }
+    g.save();
+    g.filter = 'blur(0.8px)';
+    poly(g, pts);
+    const f = g.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    f.addColorStop(0, css(PATCH.lit, 0.55));
+    f.addColorStop(1, css(PATCH.deep, 0.5));
+    g.fillStyle = f;
+    g.fill();
+    g.restore();
+    edges.push(pts);
+  }
+  // Gold cracks: along some patch edges, and wandering through the white, now and then forking.
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  for (const pts of edges) {
+    if (R() < 0.35) continue;
+    const s0 = Math.floor(R() * pts.length), n = 2 + Math.floor(R() * 2);
+    g.beginPath();
+    for (let j = 0; j <= n; j++) {
+      const [px, py] = pts[(s0 + j) % pts.length];
+      if (j) g.lineTo(px, py);
+      else g.moveTo(px, py);
+    }
+    g.strokeStyle = VEIN_GOLD;
+    g.lineWidth = 0.7;
+    g.stroke();
+  }
+  const crack = (x: number, y: number, a: number, steps: number, wd: number): void => {
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let j = 0; j < steps; j++) {
+      a += (R() - 0.5) * 0.9;
+      x += Math.cos(a) * (3 + R() * 5);
+      y += Math.sin(a) * (3 + R() * 5);
+      g.lineTo(x, y);
+      if (wd > 0.45 && R() < 0.12) {
+        g.strokeStyle = VEIN_GOLD;
+        g.lineWidth = wd;
+        g.stroke();
+        crack(x, y, a + (R() < 0.5 ? 1 : -1) * (0.6 + R() * 0.5), Math.floor(steps / 2), wd * 0.7);
+        g.beginPath();
+        g.moveTo(x, y);
+      }
+    }
+    g.strokeStyle = VEIN_GOLD;
+    g.lineWidth = wd;
+    g.stroke();
+  };
+  for (let k = 0; k < area / (F * F * 3); k++) crack(rx(), ry(), R() * Math.PI * 2, 5 + Math.floor(R() * 6), 0.65);
+  for (let k = 0; k < area / (F * F * 2.5); k++) {
+    let x = rx(), y = ry();
+    const a = R() * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(x, y);
+    for (let j = 0; j < 4; j++) {
+      x += Math.cos(a) * 5 + (R() - 0.5) * 3;
+      y += Math.sin(a) * 5 + (R() - 0.5) * 3;
+      g.lineTo(x, y);
+    }
+    g.strokeStyle = 'rgba(150, 160, 176, 0.35)';
+    g.lineWidth = 0.45;
+    g.stroke();
+  }
+}
+
+/** Marble in a path: clipped to it, filled over its box, and edged in gold. */
+function marbleShape(g: Ctx, R: () => number, path: () => void, x0: number, y0: number, x1: number, y1: number, F: number, edge = 1.2): void {
+  g.save();
+  path();
+  g.shadowColor = 'rgba(60, 60, 80, 0.3)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 1.5;
+  g.fillStyle = '#f4f1ea';
+  g.fill();
+  g.restore();
+  g.save();
+  path();
+  g.clip();
+  blueMarble(g, R, x0, y0, x1, y1, F);
+  g.restore();
+  gilt(g, path, edge);
+}
+
+/** A square pillar from x0 to x1, y0 to y1: blue-veined marble shaded round from the left, gold down both its edges. */
+function marblePillar(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, F: number): void {
+  const path = (): void => {
+    g.beginPath();
+    g.rect(x0, y0, x1 - x0, y1 - y0);
+  };
+  marbleShape(g, R, path, x0, y0, x1, y1, F, 1.1);
+  g.save();
+  path();
+  g.clip();
+  const round = g.createLinearGradient(x0, 0, x1, 0);
+  round.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+  round.addColorStop(0.3, 'rgba(255, 255, 255, 0)');
+  round.addColorStop(0.8, 'rgba(70, 80, 110, 0.05)');
+  round.addColorStop(1, 'rgba(70, 80, 110, 0.22)');
+  g.fillStyle = round;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  g.restore();
+  for (const x of [x0 + 3, x1 - 3]) gilt(g, () => {
+    g.beginPath();
+    g.moveTo(x, y0 + 2);
+    g.lineTo(x, y1 - 2);
+  }, 0.6);
+}
+
+/** A pillar's capital or base about (x, y), `wd` across: two marble slabs stepped, the wider outside, gold-edged. `up` for a capital, whose wide slab is on top. */
+function plinthAt(g: Ctx, R: () => number, x: number, y: number, wd: number, F: number, up: boolean): void {
+  const d = up ? -1 : 1;
+  // The narrow slab against the pillar, a gold band, then the wide slab beyond.
+  const slab = (w2: number, ya: number, tall: number): void => {
+    const top = d < 0 ? ya - tall : ya;
+    marbleShape(g, R, () => {
+      g.beginPath();
+      g.roundRect(x - w2 / 2, top, w2, tall, 1.5);
+    }, x - w2 / 2, top, x + w2 / 2, top + tall, F, 1);
+  };
+  slab(wd * 1.06, y, F * 0.26);
+  const by = y + d * F * 0.26;
+  g.beginPath();
+  g.roundRect(x - wd * 0.6, d < 0 ? by - F * 0.12 : by, wd * 1.2, F * 0.12, 1);
+  g.fillStyle = goldFill(g, x - wd * 0.6, by - F * 0.1, x + wd * 0.6, by + F * 0.1);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.6;
+  g.stroke();
+  slab(wd * 1.3, by + d * F * 0.12, F * 0.3);
+}
+
+/** A gold scroll from (x, y) running `len` along, `dir` 1 to the right or -1 to the left: a swelling curve ending in a curl, and a leaf off it. */
+function giltScroll(g: Ctx, x: number, y: number, len: number, dir: 1 | -1, F: number, sag = 1): void {
+  const ex = x + dir * len, r = F * 0.17;
+  gilt(g, () => {
+    g.beginPath();
+    g.moveTo(x, y);
+    g.bezierCurveTo(x + dir * len * 0.35, y + F * 0.3 * sag, x + dir * len * 0.7, y - F * 0.2 * sag, ex, y + F * 0.05);
+    for (let k = 0; k <= 16; k++) {
+      const a = (k / 16) * Math.PI * 1.7, rr = r * (1 - k / 22);
+      g.lineTo(ex - dir * r + dir * Math.cos(a) * rr * 1, y + F * 0.05 - r + Math.sin(a + Math.PI / 2) * rr);
+    }
+  }, 1.2);
+  g.save();
+  g.translate(x + dir * len * 0.45, y + F * 0.06 * sag);
+  g.rotate(dir > 0 ? -0.6 : Math.PI + 0.6);
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.quadraticCurveTo(F * 0.16, -F * 0.13, F * 0.34, 0);
+  g.quadraticCurveTo(F * 0.16, F * 0.13, 0, 0);
+  g.fillStyle = goldFill(g, 0, -F * 0.2, F * 0.4, F * 0.2);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.restore();
+}
+
+/** An eight-pointed star of gold at (x, y), `r` to its great points: a lesser star turned under the great one. */
+function goldStar8(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.translate(x, y);
+  g.shadowColor = 'rgba(60, 40, 10, 0.35)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.save();
+  g.rotate(Math.PI / 4);
+  star(g, r * 0.6, r * 0.13);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.restore();
+  star(g, r, r * 0.2);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.shadowColor = 'transparent';
+  g.strokeStyle = css(BRASS.ink, 0.85);
+  g.lineWidth = 0.6;
+  g.stroke();
+  // Each great point ridged: lit on one face.
+  for (let k = 0; k < 4; k++) {
+    g.save();
+    g.rotate((k * Math.PI) / 2);
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.lineTo(0, -r);
+    g.lineTo(-r * 0.2 * 0.7, -r * 0.2 * 0.7);
+    g.closePath();
+    g.fillStyle = 'rgba(255, 246, 214, 0.45)';
+    g.fill();
+    g.restore();
+  }
+  g.restore();
+}
+
+/** A star of pale crystal at (x, y) in a gold lozenge `r` to its points: the lozenge's face blue, the star white and blue, faceted. */
+function crystalStar(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.translate(x, y);
+  const lozenge = (k: number): void => {
+    g.beginPath();
+    g.moveTo(0, -r * k);
+    g.lineTo(r * k * 0.82, 0);
+    g.lineTo(0, r * k);
+    g.lineTo(-r * k * 0.82, 0);
+    g.closePath();
+  };
+  g.save();
+  lozenge(1);
+  g.shadowColor = 'rgba(40, 50, 70, 0.4)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.2;
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.7;
+  g.stroke();
+  lozenge(0.78);
+  const face = g.createLinearGradient(-r, -r, r, r);
+  face.addColorStop(0, css(PATCH.lit));
+  face.addColorStop(1, css(PATCH.deep));
+  g.fillStyle = face;
+  g.fill();
+  star(g, r * 0.72, r * 0.16);
+  const s = g.createLinearGradient(-r, -r, r, r);
+  s.addColorStop(0, '#ffffff');
+  s.addColorStop(0.5, '#dfeaf5');
+  s.addColorStop(1, '#9db8d4');
+  g.fillStyle = s;
+  g.fill();
+  g.strokeStyle = 'rgba(70, 96, 130, 0.8)';
+  g.lineWidth = 0.6;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(-r * 0.72, 0);
+  g.lineTo(r * 0.72, 0);
+  g.moveTo(0, -r * 0.72);
+  g.lineTo(0, r * 0.72);
+  g.strokeStyle = 'rgba(70, 96, 130, 0.35)';
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.restore();
+}
+
+/**
+ * The crest over the middle of the top at x, `F` the rim: an arch of the
+ * marble rising out of the band, gold round it and a gold line inside it,
+ * a round of blue in it with the great gold star over that, and gold
+ * scrolls running off its feet along the band.
+ */
+function crest(g: Ctx, R: () => number, x: number, F: number): void {
+  const A = F * 3.1, T = F * 1.25, foot = F * 0.55;
+  const arch = (k: number): void => {
+    g.beginPath();
+    g.moveTo(x - A * k, foot);
+    g.bezierCurveTo(x - A * k, -T * k * 0.55, x - A * k * 0.55, -T * k, x, -T * k);
+    g.bezierCurveTo(x + A * k * 0.55, -T * k, x + A * k, -T * k * 0.55, x + A * k, foot);
+    g.closePath();
+  };
+  marbleShape(g, R, () => arch(1), x - A, -T, x + A, foot, F, 1.5);
+  gilt(g, () => {
+    g.beginPath();
+    g.moveTo(x - A * 0.84, foot - 1);
+    g.bezierCurveTo(x - A * 0.84, -T * 0.84 * 0.55, x - A * 0.84 * 0.55, -T * 0.84, x, -T * 0.84);
+    g.bezierCurveTo(x + A * 0.84 * 0.55, -T * 0.84, x + A * 0.84, -T * 0.84 * 0.55, x + A * 0.84, foot - 1);
+  }, 0.9);
+  for (const dir of [-1, 1] as const) giltScroll(g, x + dir * A * 0.92, F * 0.45, F * 2.3, dir, F);
+  const my = -F * 0.25, mr = F * 0.72;
+  g.beginPath();
+  g.arc(x, my, mr, 0, Math.PI * 2);
+  const blue = g.createRadialGradient(x - mr * 0.3, my - mr * 0.3, 1, x, my, mr);
+  blue.addColorStop(0, css(PATCH.lit));
+  blue.addColorStop(1, css(mix(PATCH.deep, H('#5f7898'), 0.5)));
+  g.fillStyle = blue;
+  g.fill();
+  gilt(g, () => {
+    g.beginPath();
+    g.arc(x, my, mr, 0, Math.PI * 2);
+  }, 1.4);
+  goldStar8(g, x, my, F * 1.05);
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -4000,50 +4318,55 @@ const PAINTERS: Record<string, Painter> = {
     bottle(g, w - F * 3.1, h + 6, F * 0.6, F * 1.15);
   },
 
-  /* The log: a paper scroll, rolled at the top and the bottom on wooden rods, their knobs standing out at the corners. */
+  /*
+   * The event log: a band of white marble clouded in pale blue and veined
+   * in gold, edged in gold; a square pillar of it up each side on a stepped
+   * base under a stepped capital, a gold star near its head and a gold
+   * scroll under that. Over the middle of the top an arch of the marble
+   * with the great gold star on a round of blue, gold scrolls off its feet;
+   * at the middle of the foot a crystal star in a gold lozenge, scrolls
+   * either side of it.
+   */
   scroll(g, w, h, F, R) {
-    const p = light(PARCH, 0.15), rod = WOOD.walnut;
-    eachSide(g, w, h, (s) => {
-      if (s.i === 1 || s.i === 3) {
-        g.fillStyle = css(mix(shade(p, 0.12), p, s.lit));
-        g.fillRect(F, 0, s.len - F * 2, F);
-        g.fillStyle = css(shade(p, 0.25), 0.6);
-        g.fillRect(F, F * 0.15, s.len - F * 2, 0.8);
-      }
-    });
+    const px = F * 0.12;
+    // The top and the foot, between the pillars.
     for (const y of [0, h - F]) {
-      // The roll: shaded round, the turn of the paper at its lip.
-      const gr = g.createLinearGradient(0, y, 0, y + F);
-      gr.addColorStop(0, css(shade(p, 0.15)));
-      gr.addColorStop(0.35, css(light(p, 0.4)));
-      gr.addColorStop(1, css(shade(p, 0.3)));
-      g.fillStyle = gr;
-      g.fillRect(F * 0.35, y + 0.5, w - F * 0.7, F - 1);
-      g.strokeStyle = INK;
-      g.lineWidth = 1;
-      g.strokeRect(F * 0.35 + 0.5, y + 1, w - F * 0.7 - 1, F - 2);
-      g.strokeStyle = css(shade(p, 0.35), 0.7);
-      g.lineWidth = 0.7;
-      g.beginPath();
-      g.moveTo(F * 0.6, y + F * (y === 0 ? 0.72 : 0.28));
-      g.lineTo(w - F * 0.6, y + F * (y === 0 ? 0.72 : 0.28));
-      g.stroke();
-      // The rod's knobs, turned wood, standing out at both ends.
-      for (const x of [F * 0.2, w - F * 0.2]) {
-        const r = F * 0.42;
+      marbleShape(g, R, () => {
         g.beginPath();
-        g.arc(x, y + F / 2, r, 0, Math.PI * 2);
-        const kg = g.createRadialGradient(x - r * 0.3, y + F / 2 - r * 0.3, 1, x, y + F / 2, r);
-        kg.addColorStop(0, css(light(rod, 0.45)));
-        kg.addColorStop(1, css(rod));
-        g.fillStyle = kg;
-        g.fill();
-        g.strokeStyle = INK;
-        g.lineWidth = 1;
-        g.stroke();
+        g.rect(F * 0.9, y, w - F * 1.8, F);
+      }, F * 0.9, y, w - F * 0.9, y + F, F, 1);
+      gilt(g, () => {
+        g.beginPath();
+        g.moveTo(F, y === 0 ? F * 0.2 : h - F * 0.2);
+        g.lineTo(w - F, y === 0 ? F * 0.2 : h - F * 0.2);
+      }, 0.6);
+    }
+    crest(g, R, w / 2, F);
+    // The foot's middle: the crystal star, scrolls off either side.
+    for (const dir of [-1, 1] as const) giltScroll(g, w / 2 + dir * F * 0.75, h - F * 0.5, F * 2.4, dir, F, -1);
+    crystalStar(g, w / 2, h - F * 0.42, F * 0.82);
+    // The pillars, their capitals and bases, a star and a scroll at the head of each.
+    for (const [x0, x1] of [[-px, F], [w - F, w + px]]) {
+      const cx = (x0 + x1) / 2, wd = x1 - x0;
+      marblePillar(g, R, x0, x1, F * 0.12, h - F * 0.12, F);
+      plinthAt(g, R, cx, F * 0.12, wd * 1.05, F, true);
+      plinthAt(g, R, cx, h - F * 0.12, wd * 1.05, F, false);
+      if (h > F * 6) {
+        goldStar8(g, cx, F * 1.7, F * 0.72);
+        const inner = x0 < w / 2 ? x1 - 3 : x0 + 3, dir = x0 < w / 2 ? -1 : 1;
+        gilt(g, () => {
+          g.beginPath();
+          g.moveTo(cx, F * 2.25);
+          g.bezierCurveTo(inner, F * 2.6, inner + dir * F * 0.05, F * 3.3, cx + dir * F * 0.05, F * 3.9);
+          g.arc(cx + dir * F * 0.05 + F * 0.14 * -dir, F * 3.95, F * 0.14, dir > 0 ? 0 : Math.PI, dir > 0 ? Math.PI * 1.6 : -Math.PI * 0.6, dir < 0);
+        }, 1.1);
       }
     }
-    void R;
+    // Gold round the content.
+    gilt(g, () => {
+      g.beginPath();
+      g.rect(F - 1.5, F - 1.5, w - F * 2 + 3, h - F * 2 + 3);
+    }, 0.9);
   },
 
   /* The journal: a leather binding, its spine stitched down the left with raised bands, metal corners. */
