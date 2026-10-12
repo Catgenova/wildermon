@@ -1,6 +1,7 @@
 import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { JOINT_EVERY, PIN_EVERY, SOFT, STITCH_EVERY } from '../runecut-dress';
 import { FRAMES } from '../runecut-frames';
+import { lifeWords } from '../runecut-life';
 import {
   ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
   PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE,
@@ -930,6 +931,9 @@ export function helpText(): string {
     <p>In Runecut, where pieces share an edge their frames stop at it and one seam runs down it, capped in gold at each
     end: ${softFrames()} to the same stitched every ${STITCH_EVERY} pixels, anything else to anything else mortared with a
     joint every ${JOINT_EVERY}, and one of each pinned in brass every ${PIN_EVERY}.</p>
+    <p>With <i>Frame life</i> on in Settings (<kbd>O</kbd>), Display, Runecut's themed frames have small animals and
+    lights going about them: ${lifeWords()}. They keep to the frame and never cross what is inside a window.
+    They are not shown on a phone's screen, with Fast graphics, or when your system asks for less motion.</p>
     <p><b>How you look</b> can be changed at any time on an island: <i>Customize character</i> under
     <b>How you look</b> in Settings (<kbd>O</kbd>) takes you back to the character creator on the account
     page, on the look you have on. Nothing changes until you press <i>Step ashore</i> there, which keeps the

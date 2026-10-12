@@ -9,6 +9,7 @@ import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
+import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
 import { listed, numberWord } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
@@ -231,11 +232,18 @@ export class SettingsPanel {
         },
       );
     }
+    add(
+      'Frame life',
+      `Runecut, with themed frames, not on a phone's screen and not with Fast graphics. Small animals and lights on the window frames: ${lifeWords()}. `
+        + 'They keep to the frame and what stands past it, never over what is inside a window, and take no clicks. Not shown when your system asks for less motion.',
+      () => game.settings.uiLife,
+      (v) => (game.settings.uiLife = v),
+    );
     choose<'full' | 'fast'>(
       'Graphics',
       `Fast draws ${FAST_DPR} pixel for each screen pixel on a high-density screen instead of up to ${FULL_DPR}, `
         + `which is ${Math.round((1 - (FAST_DPR / FULL_DPR) ** 2) * 100)}% fewer pixels on a ${FULL_DPR}× screen, and leaves out the swell on the sea, `
-        + 'the haze over distant country, and the butterflies, dragonflies, fireflies, petals and falling leaves.',
+        + 'the haze over distant country, the butterflies, dragonflies, fireflies, petals and falling leaves, and the life on the window frames.',
       [['full', 'Full'], ['fast', 'Fast']],
       () => game.settings.graphics,
       (v) => {

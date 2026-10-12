@@ -134,6 +134,8 @@ export const SETTING_DEFAULTS = {
   uiLight: 'day' as UiLight,
   /** Runecut's window borders: each drawn as the stuff of what its window holds, or all plain stone (`src/ui/runecut-frames.ts`); nothing in Classic. */
   uiFrames: 'themed' as UiFrames,
+  /** Runecut's themed frames have small animals and lights going about them (`src/ui/runecut-life.ts`). */
+  uiLife: true,
 };
 
 export const UI_STYLES = ['runecut', 'classic'] as const;

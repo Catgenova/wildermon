@@ -1,6 +1,7 @@
 import { frameFor, frameLamps, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
 import { watchLook, type Look } from './theme';
 import type { Join, Seam } from './snapgrid';
+import { paintLife, type LifePiece, type LifeWorld } from './runecut-life';
 
 /**
  * Runecut's art on the page: each window's slab, its niche and its frame
@@ -74,6 +75,8 @@ export const SOFT = new Set(['burlap', 'book', 'treasure']);
 export const STITCH_EVERY = 16;
 export const JOINT_EVERY = 48;
 export const PIN_EVERY = 40;
+/** The life on the frames is drawn this often, in ms: thirty times a second. */
+const LIFE_MS = 1000 / 30;
 /** How long a new seam's glint takes to run its length. */
 const GLINT_MS = 650;
 
@@ -102,6 +105,9 @@ class Dressed {
   private size = '';
   /** How far its frame stands past it (`reachOf`), for laying the frame's canvas under it. */
   private reach = 0;
+  /** The frame it wears and how wide its band is, as last laid (`refresh`), for what lives on it (`lifePiece`). */
+  private kind = 'stone';
+  private rim = 0;
   /** The glow of each lamp on its frame: over the window's edge, inside it, and under it past the edge, with where each lamp is on the window. */
   private lamps: Array<{ x: number; y: number; r: number; over: HTMLElement; under: HTMLElement }> = [];
   private readonly seed: number;
@@ -147,6 +153,13 @@ class Dressed {
     if (!this.el.hidden && !this.due) this.refresh();
   }
 
+  /** Where it is and what it wears, for the life on its frame; null while it is not laid (hidden, not Runecut, or between sizes). */
+  lifePiece(): LifePiece | null {
+    if (this.el.hidden || !this.plate || this.due || !this.plate.isConnected) return null;
+    const at = this.art.place(this.el);
+    return { kind: this.kind, x: at.x, y: at.y, w: this.el.offsetWidth, h: this.el.offsetHeight, F: this.rim, R: this.reach, seed: this.seed };
+  }
+
   get isFront(): boolean {
     return this.el.classList.contains('win-front') && !this.el.hidden;
   }
@@ -167,6 +180,8 @@ class Dressed {
     // Which frame it wears, for the parts of the window itself that wear it too (src/style.css).
     if (this.el.dataset.frame !== kind) this.el.dataset.frame = kind;
     const rim = this.rimOf(kind);
+    this.kind = kind;
+    this.rim = rim;
     // The content's inset, from the same number the rim is painted at.
     if (this.el.style.getPropertyValue('--rim') !== `${rim}px`) {
       this.el.style.setProperty('--rim', `${rim}px`);
@@ -428,6 +443,14 @@ export class RunecutArt {
   constructor(private readonly root: HTMLElement) {
     this.seamCanvas = this.layer('rc-seams');
     this.glintCanvas = this.layer('rc-glints');
+    this.lifeCanvas = this.layer('rc-life');
+    const step = (now: number): void => {
+      requestAnimationFrame(step);
+      if (now - this.lifeLast < LIFE_MS) return;
+      this.lifeLast = now;
+      this.paintLife(now / 1000);
+    };
+    requestAnimationFrame(step);
     watchLook((look) => {
       this.look = look;
       for (const d of this.all) d.refresh();
@@ -451,6 +474,55 @@ export class RunecutArt {
   }
 
   private readonly seamCanvas: HTMLCanvasElement;
+  private readonly lifeCanvas: HTMLCanvasElement;
+  private lifeLast = 0;
+  private lifeDrew = false;
+  /** Whether the life on the frames is wanted (the setting, Fast graphics, a phone's screen), and what the island says to it; set by the UI. */
+  lifeOn: () => boolean = () => false;
+  lifeWorld: (() => Omit<LifeWorld, 'night'>) | null = null;
+
+  /**
+   * The animals and lights on the frames (`src/ui/runecut-life.ts`), drawn
+   * afresh every `LIFE_MS` over everything but what is inside a window: each
+   * window's and bar's room inside its band is cut out of the canvas first.
+   */
+  private paintLife(t: number): void {
+    const c = this.lifeCanvas;
+    const on = this.look?.ui === 'runecut' && this.seamsShown && !reduced() && this.lifeOn() && !!this.lifeWorld;
+    if (!on) {
+      if (this.lifeDrew) {
+        c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
+        c.hidden = true;
+        this.lifeDrew = false;
+      }
+      return;
+    }
+    const w = this.root.offsetWidth, h = this.root.offsetHeight;
+    const k = (window.devicePixelRatio || 1) * this.scale();
+    const cw = Math.max(1, Math.ceil(w * k)), ch = Math.max(1, Math.ceil(h * k));
+    if (c.width !== cw || c.height !== ch) {
+      c.width = cw;
+      c.height = ch;
+      c.style.width = `${w}px`;
+      c.style.height = `${h}px`;
+    }
+    const g = c.getContext('2d');
+    if (!g || !this.lifeWorld) return;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, cw, ch);
+    g.setTransform(k, 0, 0, k, 0, 0);
+    const pieces = this.all.map((d) => d.lifePiece()).filter((p): p is LifePiece => !!p);
+    g.save();
+    g.beginPath();
+    g.rect(0, 0, w, h);
+    for (const p of pieces) g.rect(p.x + p.F, p.y + p.F, Math.max(0, p.w - p.F * 2), Math.max(0, p.h - p.F * 2));
+    g.clip('evenodd');
+    const world = { ...this.lifeWorld(), night: this.look?.rc === 'night' };
+    for (const p of pieces) paintLife(g, p, t, world);
+    g.restore();
+    c.hidden = false;
+    this.lifeDrew = true;
+  }
   private readonly glintCanvas: HTMLCanvasElement;
   private seamList: Seam[] = [];
   private seamsShown = false;

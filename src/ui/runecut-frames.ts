@@ -1335,6 +1335,29 @@ function lanternBody(x: number, y: number, F: number): { cx: number; top: number
  * reach of its light: the window lays a glow over each that breathes
  * (src/ui/runecut-dress.ts). Crafting's lantern is the one.
  */
+/**
+ * Where the crystals are on a frame that has them, and how big: the status
+ * panel's four corners and the middles of its top and foot, the toolbar's
+ * arch crowns and the foot between them. Painted here, and glinted by
+ * `src/ui/runecut-life.ts` after dark.
+ */
+export function frameCrystals(kind: string, w: number, h: number, F: number): Array<{ x: number; y: number; r: number }> {
+  if (kind === 'strap') {
+    return [
+      ...([[F * 0.5, F * 0.5], [w - F * 0.5, F * 0.5], [F * 0.5, h - F * 0.5], [w - F * 0.5, h - F * 0.5]] as Pt[]).map(([x, y]) => ({ x, y, r: F * 0.85 })),
+      { x: w / 2, y: F * 0.4, r: F * 1.1 },
+      { x: w / 2, y: h - F * 0.4, r: F * 1.1 },
+    ];
+  }
+  if (kind === 'toolbelt') {
+    const n = Math.max(2, Math.round(w / 110)), step = w / n, out = [];
+    for (let k = 0; k < n; k++) out.push({ x: step * (k + 0.5), y: -F * 0.75, r: F * 0.5 });
+    for (let k = 1; k < n; k++) out.push({ x: step * k, y: h - F * 0.45, r: F * 0.6 });
+    return out;
+  }
+  return [];
+}
+
 export function frameLamps(kind: string, w: number, h: number, F: number): Array<{ x: number; y: number; r: number }> {
   const at = kind === 'bench' && h > F * 6 ? benchLamp(F) : null;
   if (!at) return [];
@@ -6076,11 +6099,8 @@ const PAINTERS: Record<string, Painter> = {
    */
   strap(g, w, h, F, R) {
     marbleBand(g, R, w, h, F);
-    for (const [x, y] of [[F * 0.5, F * 0.5], [w - F * 0.5, F * 0.5], [F * 0.5, h - F * 0.5], [w - F * 0.5, h - F * 0.5]] as Pt[]) gemLozenge(g, x, y, F * 0.85, GEM_FACETS.crystal);
-    for (const [y, d] of [[F * 0.4, -1], [h - F * 0.4, 1]] as Array<[number, -1 | 1]>) {
-      goldPoint(g, w / 2, y + d * F * 0.9, d, F * 0.7);
-      gemLozenge(g, w / 2, y, F * 1.1, GEM_FACETS.crystal);
-    }
+    for (const [y, d] of [[F * 0.4, -1], [h - F * 0.4, 1]] as Array<[number, -1 | 1]>) goldPoint(g, w / 2, y + d * F * 0.9, d, F * 0.7);
+    for (const c of frameCrystals('strap', w, h, F)) gemLozenge(g, c.x, c.y, c.r, GEM_FACETS.crystal);
     for (const t of [0.3, 0.55, 0.8]) {
       goldSidePoint(g, 0, h * t, -1, F * 0.55);
       goldSidePoint(g, w, h * t, 1, F * 0.55);
@@ -6097,8 +6117,7 @@ const PAINTERS: Record<string, Painter> = {
     const n = Math.max(2, Math.round(w / 110)), step = w / n;
     for (let k = 0; k < n; k++) marbleArch(g, step * (k + 0.5), step * 0.62, F * 0.8, F);
     marbleBand(g, R, w, h, F);
-    for (let k = 0; k < n; k++) gemLozenge(g, step * (k + 0.5), -F * 0.75, F * 0.5, GEM_FACETS.crystal);
-    for (let k = 1; k < n; k++) gemLozenge(g, step * k, h - F * 0.45, F * 0.6, GEM_FACETS.crystal);
+    for (const c of frameCrystals('toolbelt', w, h, F)) gemLozenge(g, c.x, c.y, c.r, GEM_FACETS.crystal);
     const r = Math.min(h * 0.45, F * 1.6);
     for (const x of [0, w]) {
       for (const d of [-1, 1] as const) goldPoint(g, x, h / 2 + d * r * 1.05, d, r * 0.9);

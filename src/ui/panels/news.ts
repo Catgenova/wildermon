@@ -9,6 +9,7 @@ import { LAYOUT_NAMES } from '../../game/keybinds';
 import { SNAP } from '../windows';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { JOINT_EVERY, PIN_EVERY, STITCH_EVERY } from '../runecut-dress';
+import { lifeWords } from '../runecut-life';
 import { islandTime } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS } from '../../game/prices';
@@ -1902,6 +1903,15 @@ export const NEWS: News[] = [
       `In Runecut, where two share an edge their frames stop at it and one seam runs down it, capped in gold at each end: cloth, leather or paper to the same stitched every ${STITCH_EVERY} pixels, `
         + `anything else to anything else mortared with a joint every ${JOINT_EVERY}, and one of each pinned in brass every ${PIN_EVERY}. A join you make glints along its length and clicks.`,
       'A phone\'s screen has no grid; windows there are as they were.',
+    ],
+  },
+  {
+    n: 140,
+    day: '2026-10-12',
+    lines: () => [
+      `Runecut's themed frames have small animals and lights going about them: ${lifeWords()}.`,
+      'They keep to the frame and never cross what is inside a window, and clicks go through them. Settings, Display, Frame life turns them off; '
+        + 'they are not shown on a phone\'s screen, with Fast graphics, or when your system asks for less motion.',
     ],
   },
 ];

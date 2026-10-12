@@ -71,7 +71,7 @@ import { swirlName } from '../game/motes';
 import { runestoneAt } from '../game/runestones';
 import { cornerReading, groundReading } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, rankAtLeast, type Deed } from '../game/game';
-import { CRAFT_REACH, reachFor, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
+import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
 import { CratePanel } from './panels/crate';
@@ -117,6 +117,7 @@ import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
 import { LAYOUT_SLOTS, WindowManager } from './windows';
 import { CELL } from './snapgrid';
+import { seasonAt } from '../world/calendar';
 import type { Island } from '../net/island';
 import { awayLines } from '../game/away';
 import { clearQuestion } from '../game/keeper';
@@ -364,6 +365,17 @@ export class UI {
       this.windows.addBar(id, el, (b) => (id === 'hud' ? { x: CELL, y: CELL } : { x: (uiBox().w - b.w) / 2, y: CELL }));
     }
     this.windows.onSeams = (seams, joins, fresh, shown) => this.art.seams(seams, joins, fresh, shown);
+    // The life on the frames (`src/ui/runecut-life.ts`): wanted unless turned off, with Fast graphics or on a phone's screen; and what the island says to it.
+    this.art.lifeOn = () => game.settings.uiLife && game.settings.graphics !== 'fast' && !root.classList.contains('narrow');
+    this.art.lifeWorld = () => {
+      const a = game.action;
+      return {
+        winter: seasonAt(game.wallNow()).season === 'winter',
+        crafting: !!a && a.state === 'performing' && RECIPE_BY_ID.has(a.def.id),
+        favour: game.player.favour / Math.max(1, favourCap(game.skills.get(FAITH))),
+        map: game.inventory.items.some((it) => it.id === 'treasure_map'),
+      };
+    };
     cb.keys.onChange = () => {
       this.hud.drawKeys();
       this.settings.drawKeys();

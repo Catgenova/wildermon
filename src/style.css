@@ -5141,3 +5141,12 @@ kbd {
 .rc-glints {
   z-index: 6001;
 }
+
+/* The animals and lights on the frames (src/ui/runecut-life.ts): over the windows, under the seams, menus and tooltips. */
+.rc-life {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5990;
+  pointer-events: none !important;
+}
