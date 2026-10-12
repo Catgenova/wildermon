@@ -1,5 +1,6 @@
 import { uiBox, uiFloor, uiPoint } from './screen';
 import { LAYOUT_NAMES } from '../game/keybinds';
+import { runeFor, runeSvg } from './theme';
 
 export type Anchor = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -105,7 +106,12 @@ export class UIWindow {
       buttons.append(see);
     }
     buttons.append(this.expandBtn, close);
-    title.append(this.titleText, buttons);
+    // The window's rune, cut at the head of the title in Runecut and not shown in Classic (src/style.css).
+    const rune = runeSvg(runeFor(opts.id), 'rc-rune win-rune');
+    const head = document.createElement('span');
+    head.className = 'win-head';
+    head.append(rune, this.titleText);
+    title.append(head, buttons);
     this.body = document.createElement('div');
     this.body.className = 'win-body';
     this.el.append(title, this.body);
@@ -277,12 +283,25 @@ export class UIWindow {
 
   private applyMaximized(): void {
     const margin = Math.max(8, Math.round(Math.min(uiBox().w, uiBox().h) * 0.04));
+    const [fw, fh] = this.frame();
     this.applyGeometry({
       x: margin,
       y: margin,
-      w: Math.max(160, uiBox().w - margin * 2),
-      h: Math.max(70, uiBox().h - margin * 2),
+      w: Math.max(160, uiBox().w - margin * 2 - fw),
+      h: Math.max(70, uiBox().h - margin * 2 - fh),
     });
+  }
+
+  /**
+   * How much the window's box is bigger than the size it is given, across and
+   * down. Nothing in Classic; in Runecut, its stone rim, which is added round
+   * the size a window is given rather than taken out of it, so a window's
+   * content is as big in either look and a saved layout keeps its content's
+   * size (`.win` in src/style.css). What fits the screen is the whole box.
+   */
+  private frame(): [number, number] {
+    const w = parseFloat(this.el.style.width), h = parseFloat(this.el.style.height);
+    return [w ? Math.max(0, this.el.offsetWidth - w) : 0, h ? Math.max(0, this.el.offsetHeight - h) : 0];
   }
 
   private applyGeometry(g: Geometry): void {
@@ -352,9 +371,10 @@ export class UIWindow {
      * opened on a narrow one comes back in rather than off the side.
      */
     const room = Math.max(70, box.h - floor - 12);
-    if (this.el.offsetHeight > room) this.el.style.height = `${room}px`;
+    const [fw, fh] = this.frame();
+    if (this.el.offsetHeight > room) this.el.style.height = `${room - fh}px`;
     const wide = Math.max(160, box.w - 12);
-    if (this.el.offsetWidth > wide) this.el.style.width = `${wide}px`;
+    if (this.el.offsetWidth > wide) this.el.style.width = `${wide - fw}px`;
 
     const maxLeft = Math.max(0, box.w - this.el.offsetWidth);
     const maxTop = Math.max(floor, box.h - this.el.offsetHeight);
@@ -471,12 +491,16 @@ export class WindowManager {
     for (const w of this.windows.values()) w.clamp();
   }
 
+  /** Told of every window as it is made, after it is placed: Runecut's stone and frame are added here (`src/ui/runecut-dress.ts`). */
+  onCreate: ((win: UIWindow) => void) | null = null;
+
   create(opts: WindowOptions): UIWindow {
     const win = new UIWindow(this, opts, this.saved[opts.id]);
     this.windows.set(opts.id, win);
     this.root.append(win.el);
     win.clamp();
     this.bringToFront(win);
+    this.onCreate?.(win);
     return win;
   }
 
@@ -488,8 +512,15 @@ export class WindowManager {
     this.windows.get(id)?.toggle();
   }
 
+  /** The window last brought to the front, marked `win-front` so Runecut can light its rune. */
+  private front: UIWindow | null = null;
+
   bringToFront(win: UIWindow): void {
     win.el.style.zIndex = String(++this.z);
+    if (this.front === win) return;
+    this.front?.el.classList.remove('win-front');
+    win.el.classList.add('win-front');
+    this.front = win;
   }
 
   persist(): void {

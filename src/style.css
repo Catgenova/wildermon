@@ -1,3 +1,17 @@
+/*
+ * Two looks, one set of names.
+ *
+ * Every colour below the token blocks is written `var(--t-name, literal)`: the
+ * token is what Runecut paints with, and the literal is the colour the rule
+ * had before Runecut existed. The `--t-*` tokens are only defined while the
+ * interface is not Classic, so with `data-ui="classic"` on the page every one
+ * of them falls through to its literal and the dark interface comes back
+ * exactly as it was, rule for rule. The `--ui-*` tokens work the other way
+ * round: their Classic values sit on `:root`, and Runecut overrides them.
+ *
+ * `data-ui` and `data-rc` are put on <html> by `src/ui/theme.ts` from the
+ * settings, and by `src/index.html` before any script runs.
+ */
 :root {
   --ui-bg: rgba(22, 20, 17, 0.9);
   --ui-bg-2: rgba(34, 30, 25, 0.95);
@@ -7,6 +21,183 @@
   --ui-dim: #8f8574;
   --ui-accent: #e3b657;
   --ui-font: 13px/1.4 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+/*
+ * Runecut: the stone of the runestones, the plinth, the rune gate and the rune
+ * lantern, as the interface. Each value is traced to the colour it is drawn
+ * with in src/render, so a window and a stone beside it are the same stone.
+ *
+ * Day is the lit face. `--rc-rune` is the light in the grooves and is for
+ * fills and glows only: as text on stone it is 2.2:1. Amber writing uses
+ * `--rc-rune-ink` (5.7:1 on the panel face, 4.9:1 on the darkest of its
+ * painted mottling), and focus rings `--rc-rune-deep`.
+ */
+:root {
+  --rc-stone: #f2e7d3;
+  --rc-stone-2: #e8dcc6;
+  --rc-stone-hi: #fffcf4;
+  --rc-shade: #aa9fac;
+  --rc-shade-2: #8f879c;
+  --rc-carve: #5d5464;
+  --rc-ink: #463d50;
+  --rc-edge-ink: #5f5148;
+  --rc-rune: #d68c34;
+  --rc-rune-deep: #a7631a;
+  --rc-rune-ink: #824c0f;
+  --rc-rune-gold: #ffd98c;
+  --rc-rune-white: #fffbea;
+  --rc-moss: #7fa36c;
+  --rc-moss-ink: #3f6632;
+  --rc-moss-pale: #c3dea6;
+  --rc-lichen: #b8bfa4;
+  --rc-teal: #425c66;
+  --rc-rose: #c4a2a7;
+  --rc-rose-ink: #7a4a6a;
+  --rc-ember: #933f30;
+  --rc-ember-fill: #b4584a;
+  --rc-rare: #285d84;
+  --rc-supreme: #6b4699;
+  --rc-fantastic: #7a4e08;
+  --rc-backdrop: rgba(70, 61, 80, 0.1);
+  --rc-glow: 0 0 0 rgba(255, 217, 140, 0);
+  /* Day-only shapes of the same stone: the floor of a groove, a field cut to write in, and the shadow a plate throws. */
+  --rc-deep: #d8cbb5;
+  --rc-field: #fbf6ec;
+  --rc-shadow: rgba(70, 61, 80, 0.3);
+  --rc-strong: #2b2333;
+  --rc-fat: #c9b47a;
+}
+
+/*
+ * Night: the same stone under the island's night, as the renderer lays it
+ * (`NIGHT_WASH` in src/render/nightwash.ts: rgb(12, 20, 44) at 68%), so the
+ * windows after dark are the stones after dark. The surfaces are the day's
+ * mixed into the wash; the writing is chosen to read on them, at least 4.5:1
+ * on the face and on the recessed rows.
+ */
+:root[data-rc='night'] {
+  --rc-stone: color-mix(in srgb, #f2e7d3, rgb(12 20 44) 68%);
+  --rc-stone-2: color-mix(in srgb, #e8dcc6, rgb(12 20 44) 68%);
+  --rc-stone-hi: color-mix(in srgb, #fffcf4, rgb(12 20 44) 68%);
+  --rc-shade: color-mix(in srgb, #aa9fac, rgb(12 20 44) 68%);
+  --rc-shade-2: color-mix(in srgb, #8f879c, rgb(12 20 44) 50%);
+  --rc-deep: color-mix(in srgb, #d8cbb5, rgb(12 20 44) 74%);
+  --rc-field: color-mix(in srgb, #fbf6ec, rgb(12 20 44) 72%);
+  --rc-carve: #e2dae8;
+  --rc-ink: #fbf6ea;
+  --rc-edge-ink: #1f1a24;
+  --rc-rune: #e7a14a;
+  --rc-rune-deep: #f2b968;
+  --rc-rune-ink: #f9cf93;
+  --rc-moss: #9cc488;
+  --rc-moss-ink: #c2e4ae;
+  --rc-lichen: #8d947c;
+  --rc-teal: #b5dde3;
+  --rc-rose: #d8b6ba;
+  --rc-rose-ink: #efd6d9;
+  --rc-ember: #fbcabf;
+  --rc-ember-fill: #e07a68;
+  --rc-rare: #b8dcf5;
+  --rc-supreme: #e2cff7;
+  --rc-fantastic: #f8d68e;
+  --rc-backdrop: rgba(10, 8, 14, 0.35);
+  --rc-glow: 0 0 10px rgba(255, 217, 140, 0.55);
+  --rc-shadow: rgba(0, 0, 0, 0.55);
+  --rc-strong: #fffbea;
+  --rc-fat: #e0d9a8;
+}
+
+/* Runecut's answers for the interface's own names. */
+:root:not([data-ui='classic']) {
+  --ui-bg: color-mix(in srgb, var(--rc-stone) 94%, transparent);
+  --ui-bg-2: var(--rc-stone-2);
+  --ui-border: var(--rc-shade);
+  /* A border picked out from the rest. Classic picks it out by making it paler; on pale stone that is invisible, so here it is the deeper shade. */
+  --ui-border-light: var(--rc-shade-2);
+  --ui-text: var(--rc-ink);
+  --ui-dim: var(--rc-carve);
+  --ui-accent: var(--rc-rune-ink);
+  --ui-font: 14px/1.4 'Alegreya Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --rc-title-font: 'Cormorant Unicase', 'Cormorant SC', Georgia, 'Times New Roman', serif;
+  --rc-label-font: 'Alegreya Sans SC', 'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  color-scheme: light;
+
+  /* Writing. */
+  --t-strong: var(--rc-strong);
+  --t-text: var(--rc-ink);
+  --t-dim: var(--rc-carve);
+  --t-accent-ink: var(--rc-rune-ink);
+  --t-good: var(--rc-moss-ink);
+  --t-bad: var(--rc-ember);
+  --t-warn: var(--rc-rune-ink);
+  --t-gold: var(--rc-fantastic);
+  --t-info: var(--rc-teal);
+  --t-rose: var(--rc-rose-ink);
+
+  /* Stone: panels, cards, fields, the floors of grooves and the lines between things. */
+  --t-panel: var(--ui-bg);
+  --t-card: color-mix(in srgb, var(--rc-shade) 12%, transparent);
+  --t-hover: color-mix(in srgb, var(--rc-ink) 7%, transparent);
+  --t-ghost: color-mix(in srgb, var(--rc-shade) 45%, transparent);
+  --t-track: var(--rc-deep);
+  --t-well: var(--rc-deep);
+  --t-field: var(--rc-field);
+  --t-field-focus: var(--rc-stone-hi);
+  --t-btn: linear-gradient(var(--rc-stone-hi), var(--rc-stone-2));
+  --t-btn-flat: var(--rc-stone-2);
+  --t-btn-flat-hover: var(--rc-stone-hi);
+  --t-title: linear-gradient(var(--rc-stone-hi), var(--rc-stone));
+  --t-see: color-mix(in srgb, var(--rc-stone) 32%, transparent);
+  --t-line-2: var(--rc-shade);
+  --t-line-hi: var(--rc-shade-2);
+  --t-rule: color-mix(in srgb, var(--rc-shade) 60%, transparent);
+  --t-edge: var(--rc-edge-ink);
+  --t-thumb: var(--rc-shade);
+  --t-off: var(--rc-shade);
+  --t-ring: color-mix(in srgb, var(--rc-edge-ink) 55%, transparent);
+  --t-groove-edge: color-mix(in srgb, var(--rc-edge-ink) 60%, transparent);
+  --t-shadow: var(--rc-shadow);
+  --t-scrim: var(--rc-backdrop);
+  --t-veil: color-mix(in srgb, var(--rc-ink) 38%, transparent);
+
+  /* Light, growth and harm, as washes behind a row and as the fill in a groove. */
+  --t-wash: color-mix(in srgb, var(--rc-rune) 22%, transparent);
+  --t-wash-soft: color-mix(in srgb, var(--rc-rune) 11%, transparent);
+  --t-wash-strong: color-mix(in srgb, var(--rc-rune) 42%, transparent);
+  --t-good-line: var(--rc-moss);
+  --t-good-fill: var(--rc-moss);
+  --t-good-glow: color-mix(in srgb, var(--rc-moss) 70%, transparent);
+  --t-good-wash: color-mix(in srgb, var(--rc-moss) 42%, transparent);
+  --t-bad-line: var(--rc-ember);
+  --t-bad-fill: var(--rc-ember-fill);
+  --t-bad-wash: color-mix(in srgb, var(--rc-ember-fill) 18%, transparent);
+  --t-warn-fill: var(--rc-rune);
+  --t-warn-wash: color-mix(in srgb, var(--rc-rune) 20%, transparent);
+  --t-info-wash: color-mix(in srgb, var(--rc-teal) 16%, transparent);
+  --t-fill-health: linear-gradient(color-mix(in srgb, var(--rc-ember-fill) 78%, var(--rc-rune-white)), var(--rc-ember-fill));
+  --t-fill-stamina: linear-gradient(color-mix(in srgb, var(--rc-moss) 78%, var(--rc-rune-white)), var(--rc-moss));
+  --t-fill-food: linear-gradient(var(--rc-rune-gold), var(--rc-rune));
+  --t-fill-water: linear-gradient(color-mix(in srgb, var(--rc-teal) 72%, var(--rc-rune-white)), var(--rc-teal));
+  --t-fill-action: linear-gradient(var(--rc-rune-gold), var(--rc-rune));
+  --t-fill-track: linear-gradient(var(--rc-moss-pale), var(--rc-moss));
+  --t-fill-care: linear-gradient(90deg, var(--rc-moss), var(--rc-moss-pale));
+  --t-food-starch: var(--rc-rune);
+  --t-food-flesh: var(--rc-ember-fill);
+  --t-food-fat: var(--rc-fat);
+  --t-food-greens: var(--rc-moss);
+
+  /* Rarity, read by `RARITIES` and `TIER_COLOUR` in src/game. */
+  --rarity-rare: var(--rc-rare);
+  --rarity-supreme: var(--rc-supreme);
+  --rarity-fantastic: var(--rc-fantastic);
+  --rarity-common: var(--rc-carve);
+}
+
+/* Night drops the panel a little further toward opaque: pale writing over a lit island needs the darker ground. */
+:root[data-rc='night']:not([data-ui='classic']) {
+  --ui-bg: color-mix(in srgb, var(--rc-stone) 95%, transparent);
   color-scheme: dark;
 }
 
@@ -182,7 +373,7 @@ body {
   border: 1px solid var(--ui-accent);
   border-radius: 3px;
   background: var(--ui-bg);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
   color: var(--ui-accent);
   font: inherit;
   cursor: pointer;
@@ -216,7 +407,7 @@ kbd {
   border: 1px solid var(--ui-border);
   border-bottom-width: 2px;
   border-radius: 3px;
-  background: #2b2621;
+  background: var(--t-btn-flat, #2b2621);
   color: var(--ui-accent);
   font: 11px/1.4 inherit;
   font-family: inherit;
@@ -233,8 +424,8 @@ kbd {
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 8px 28px rgba(0, 0, 0, 0.55);
+    0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6)),
+    0 8px 28px var(--t-shadow, rgba(0, 0, 0, 0.55));
   resize: both;
   overflow: hidden;
   backdrop-filter: blur(3px);
@@ -250,7 +441,7 @@ kbd {
   align-items: center;
   justify-content: space-between;
   padding: 3px 4px 3px 9px;
-  background: linear-gradient(#463a2a, #2a231b);
+  background: var(--t-title, linear-gradient(#463a2a, #2a231b));
   border-bottom: 1px solid var(--ui-border);
   color: var(--ui-accent);
   font-weight: 600;
@@ -282,9 +473,9 @@ kbd {
 }
 
 .win-btn:hover {
-  color: #fff;
+  color: var(--t-strong, #fff);
   border-color: var(--ui-border);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--t-hover, rgba(255, 255, 255, 0.06));
 }
 
 .win.maximized {
@@ -330,7 +521,7 @@ kbd {
   overflow: auto;
   padding: 6px 8px;
   scrollbar-width: thin;
-  scrollbar-color: #5a4a30 transparent;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 /* While you were away: a line a count, and the first says for how long. */
@@ -383,7 +574,7 @@ kbd {
   padding: 8px 10px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
 }
 
 .hud-name {
@@ -412,9 +603,9 @@ kbd {
 
 .hud-bar {
   height: 9px;
-  border: 1px solid #000;
-  background: #1a1612;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--t-groove-edge, #000);
+  background: var(--t-track, #1a1612);
+  box-shadow: inset 0 0 0 1px var(--t-hover, rgba(255, 255, 255, 0.05));
 }
 
 .hud-bar-fill {
@@ -424,16 +615,16 @@ kbd {
 }
 
 .bar-health {
-  background: linear-gradient(#e0574d, #9a2c26);
+  background: var(--t-fill-health, linear-gradient(#e0574d, #9a2c26));
 }
 .bar-stamina {
-  background: linear-gradient(#f0c95a, #b3862b);
+  background: var(--t-fill-stamina, linear-gradient(#f0c95a, #b3862b));
 }
 .bar-hunger {
-  background: linear-gradient(#8bc352, #4f7d2a);
+  background: var(--t-fill-food, linear-gradient(#8bc352, #4f7d2a));
 }
 .bar-thirst {
-  background: linear-gradient(#5fa8e6, #2c6aa5);
+  background: var(--t-fill-water, linear-gradient(#5fa8e6, #2c6aa5));
 }
 
 .hud-bar-value {
@@ -470,7 +661,7 @@ kbd {
 
 /* Rest and affinities: the same row as a companion, in a quieter colour. */
 .hud-boons {
-  color: #9ec27a;
+  color: var(--t-good, #9ec27a);
   flex-wrap: wrap;
 }
 
@@ -482,7 +673,7 @@ kbd {
 
 .goal-tick {
   width: 12px;
-  color: #6b6255;
+  color: var(--t-dim, #6b6255);
   text-align: center;
 }
 
@@ -491,7 +682,7 @@ kbd {
 }
 
 .goal-done .goal-tick {
-  color: #9ec27a;
+  color: var(--t-good, #9ec27a);
 }
 
 .hud-companion {
@@ -500,7 +691,7 @@ kbd {
   gap: 6px;
   margin-top: 5px;
   padding-top: 5px;
-  border-top: 1px solid #3a3128;
+  border-top: 1px solid var(--t-line-2, #3a3128);
   color: var(--ui-accent);
   font-size: 11px;
 }
@@ -521,9 +712,9 @@ kbd {
 .pal-card {
   margin: 4px 0 8px;
   padding: 6px 8px;
-  border: 1px solid #3f3428;
+  border: 1px solid var(--t-line-2, #3f3428);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--t-card, rgba(255, 255, 255, 0.03));
 }
 
 .pal-head {
@@ -580,7 +771,7 @@ kbd {
   padding: 4px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
 }
 
 /*
@@ -699,9 +890,9 @@ kbd {
 
 .tb-btn {
   padding: 4px 9px;
-  border: 1px solid #3f3428;
+  border: 1px solid var(--t-line-2, #3f3428);
   border-radius: 3px;
-  background: linear-gradient(#3a3128, #241f19);
+  background: var(--t-btn, linear-gradient(#3a3128, #241f19));
   color: var(--ui-text);
   font: inherit;
   cursor: pointer;
@@ -710,7 +901,7 @@ kbd {
 
 .tb-btn:hover {
   border-color: var(--ui-border-light);
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 
 .tb-btn.active {
@@ -728,7 +919,7 @@ kbd {
   padding: 8px 10px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
   text-align: center;
   pointer-events: none !important;
 }
@@ -740,14 +931,14 @@ kbd {
 
 .action-track {
   height: 10px;
-  border: 1px solid #000;
-  background: #1a1612;
+  border: 1px solid var(--t-groove-edge, #000);
+  background: var(--t-track, #1a1612);
 }
 
 .action-fill {
   height: 100%;
   width: 0;
-  background: linear-gradient(#e3b657, #a97e2a);
+  background: var(--t-fill-action, linear-gradient(#e3b657, #a97e2a));
 }
 
 .action-queue {
@@ -773,9 +964,9 @@ kbd {
   bottom: 118px;
   width: min(430px, calc(100vw - 32px));
   padding: 9px 11px 8px;
-  border: 1px solid #5e4a2c;
+  border: 1px solid var(--t-line-2, #5e4a2c);
   border-radius: 4px;
-  background: rgba(26, 22, 18, 0.94);
+  background: var(--t-panel, rgba(26, 22, 18, 0.94));
   transform: translateX(-50%);
   pointer-events: auto;
 }
@@ -803,9 +994,9 @@ kbd {
 .goal-next {
   margin: 2px 0 8px;
   padding: 7px 8px;
-  border: 1px solid #4a3c26;
+  border: 1px solid var(--t-line-2, #4a3c26);
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--t-card, rgba(0, 0, 0, 0.18));
 }
 
 .goal-next-head {
@@ -911,9 +1102,9 @@ kbd {
   gap: 2px;
   min-width: 0;
   padding: 4px 2px 5px;
-  border: 1px solid #3f3428;
+  border: 1px solid var(--t-line-2, #3f3428);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--t-card, rgba(255, 255, 255, 0.03));
   color: var(--ui-text);
   font: inherit;
   cursor: pointer;
@@ -944,9 +1135,9 @@ kbd {
 
 .guide-tag {
   padding: 0 4px;
-  border: 1px solid #6f9a6a;
+  border: 1px solid var(--t-good-line, #6f9a6a);
   border-radius: 2px;
-  color: #a8d08a;
+  color: var(--t-good, #a8d08a);
   font-size: 9px;
   line-height: 11px;
 }
@@ -974,9 +1165,9 @@ kbd {
 }
 
 .guide-head .guide-picture {
-  border: 1px solid #3f3428;
+  border: 1px solid var(--t-line-2, #3f3428);
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--t-card, rgba(255, 255, 255, 0.03));
 }
 
 .guide-title {
@@ -994,16 +1185,16 @@ kbd {
 
 .guide-mark {
   padding: 2px 6px;
-  border: 1px dashed #4a5550;
+  border: 1px dashed var(--t-line-2, #4a5550);
   border-radius: 3px;
-  color: #6d7a72;
+  color: var(--t-dim, #6d7a72);
   font-size: 11px;
 }
 
 .guide-mark.guide-mark-on {
   border-style: solid;
-  border-color: #6f9a6a;
-  color: #a8d08a;
+  border-color: var(--t-good-line, #6f9a6a);
+  color: var(--t-good, #a8d08a);
 }
 
 .guide-lines {
@@ -1060,7 +1251,7 @@ kbd {
   color: var(--ui-text);
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
   cursor: pointer;
 }
 
@@ -1146,7 +1337,7 @@ kbd {
   color: var(--ui-text);
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
   cursor: pointer;
 }
 
@@ -1186,7 +1377,7 @@ kbd {
   right: 0;
   bottom: 0;
   height: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--t-veil, rgba(0, 0, 0, 0.55));
   pointer-events: none;
 }
 
@@ -1206,15 +1397,15 @@ kbd {
 }
 
 .faith-good {
-  color: #e3c56b;
+  color: var(--t-gold, #e3c56b);
 }
 
 .faith-neutral {
-  color: #9fb4c8;
+  color: var(--t-info, #9fb4c8);
 }
 
 .faith-evil {
-  color: #d07a70;
+  color: var(--t-bad, #d07a70);
 }
 
 /* Context menu & tooltip ------------------------------------------------ */
@@ -1225,7 +1416,7 @@ kbd {
   padding: 3px;
   background: var(--ui-bg-2);
   border: 1px solid var(--ui-border-light);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 6px 20px var(--t-shadow, rgba(0, 0, 0, 0.6));
   z-index: 10000;
 }
 
@@ -1257,8 +1448,8 @@ kbd {
 }
 
 .ctx-item:hover {
-  background: rgba(227, 182, 87, 0.18);
-  color: #fff;
+  background: var(--t-wash, rgba(227, 182, 87, 0.18));
+  color: var(--t-strong, #fff);
 }
 
 .ctx-item.disabled {
@@ -1296,7 +1487,7 @@ kbd {
   overflow-y: auto;
   padding: 6px 8px;
   scrollbar-width: thin;
-  scrollbar-color: #5a4a30 transparent;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 .keys-lead {
@@ -1344,7 +1535,7 @@ kbd {
 }
 
 .keys-row + .keys-row {
-  border-top: 1px solid rgba(107, 88, 54, 0.35);
+  border-top: 1px solid var(--t-rule, rgba(107, 88, 54, 0.35));
 }
 
 .keys-what {
@@ -1416,7 +1607,7 @@ kbd {
 .setting-note {
   margin: 12px 2px 2px;
   padding-top: 10px;
-  border-top: 1px solid rgba(107, 88, 54, 0.4);
+  border-top: 1px solid var(--t-rule, rgba(107, 88, 54, 0.4));
   color: var(--ui-dim);
 }
 
@@ -1452,7 +1643,7 @@ kbd {
   overflow-y: auto;
   padding: 6px 8px;
   scrollbar-width: thin;
-  scrollbar-color: #5a4a30 transparent;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 .look-lead {
@@ -1466,7 +1657,7 @@ kbd {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  border-top: 1px solid rgba(107, 88, 54, 0.4);
+  border-top: 1px solid var(--t-rule, rgba(107, 88, 54, 0.4));
 }
 
 .look-note {
@@ -1475,11 +1666,11 @@ kbd {
   color: var(--ui-dim);
 }
 
-.look-note.bad { color: #ef8a7a; }
+.look-note.bad { color: var(--t-bad, #ef8a7a); }
 
 .look-wear {
   border-color: var(--ui-border-light);
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 
 .look-wear:disabled { opacity: 0.55; cursor: progress; }
@@ -1495,7 +1686,7 @@ kbd {
   line-height: 1.3;
   text-align: center;
   color: var(--ui-accent);
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--t-well, rgba(0, 0, 0, 0.35));
   border: 1px solid var(--ui-border);
   border-radius: 2px;
 }
@@ -1523,18 +1714,18 @@ kbd {
 }
 
 .ctx-chevron:hover {
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 
 .ctx-child {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--t-card, rgba(255, 255, 255, 0.03));
 }
 
 .ctx-hint {
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #8a5a4a;
+  color: var(--t-bad, #8a5a4a);
   font-size: 11px;
 }
 
@@ -1610,11 +1801,11 @@ kbd {
 }
 
 .inv-row:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--t-hover, rgba(255, 255, 255, 0.05));
 }
 
 .inv-row.selected {
-  background: rgba(227, 182, 87, 0.16);
+  background: var(--t-wash, rgba(227, 182, 87, 0.16));
 }
 
 .inv-name {
@@ -1630,7 +1821,7 @@ kbd {
   height: 0.8em;
   margin-right: 4px;
   vertical-align: -0.05em;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--t-ring, rgba(255, 255, 255, 0.35));
   border-radius: 2px;
 }
 
@@ -1662,7 +1853,7 @@ kbd {
   padding: 5px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
   pointer-events: auto;
 }
 
@@ -1719,7 +1910,7 @@ kbd {
 }
 
 .inv-list.drop-target {
-  background: rgba(227, 182, 87, 0.1);
+  background: var(--t-wash-soft, rgba(227, 182, 87, 0.1));
   box-shadow: inset 0 0 0 1px var(--ui-accent);
 }
 
@@ -1743,7 +1934,7 @@ kbd {
   padding: 5px 8px;
   border: 0;
   border-bottom: 1px solid var(--ui-border);
-  background: #17140f;
+  background: var(--t-field, #17140f);
   color: var(--ui-text);
   font: inherit;
   outline: none;
@@ -1754,7 +1945,7 @@ kbd {
 }
 
 .panel-search:focus {
-  background: #1f1a14;
+  background: var(--t-field-focus, #1f1a14);
 }
 
 /* Crafting --------------------------------------------------------------- */
@@ -1786,7 +1977,7 @@ kbd {
   gap: 1px 8px;
   align-items: center;
   padding: 5px 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.05));
 }
 
 .craft-row.locked {
@@ -1828,7 +2019,7 @@ kbd {
 }
 
 .craft-ql-held {
-  color: #d8a54b;
+  color: var(--t-warn, #d8a54b);
 }
 
 .craft-needs {
@@ -1838,11 +2029,11 @@ kbd {
 }
 
 .craft-needs .have {
-  color: #9fcf7c;
+  color: var(--t-good, #9fcf7c);
 }
 
 .craft-needs .lack {
-  color: #e0866f;
+  color: var(--t-bad, #e0866f);
 }
 
 .craft-needs em {
@@ -1853,9 +2044,9 @@ kbd {
 /* The wood or metal a piece is to be made of, where there is a choice. */
 .craft-needs .craft-of {
   font: inherit;
-  color: #9fcf7c;
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(159, 207, 124, 0.45);
+  color: var(--t-good, #9fcf7c);
+  background: var(--t-well, rgba(0, 0, 0, 0.35));
+  border: 1px solid var(--t-good-line, rgba(159, 207, 124, 0.45));
   border-radius: 3px;
   padding: 0 2px;
   cursor: pointer;
@@ -1893,9 +2084,9 @@ kbd {
 .hud-mini {
   margin-left: 0;
   padding: 0 6px;
-  border: 1px solid #5a4c38;
+  border: 1px solid var(--t-line-2, #5a4c38);
   border-radius: 2px;
-  background: #2a231b;
+  background: var(--t-btn-flat, #2a231b);
   color: var(--ui-accent);
   font: inherit;
   font-size: 10px;
@@ -1904,7 +2095,7 @@ kbd {
 }
 
 .hud-mini:hover:not(:disabled) {
-  background: #3a3024;
+  background: var(--t-btn-flat-hover, #3a3024);
 }
 
 /* What you are fighting or have marked, top and middle, out of the way of the status and the windows. */
@@ -1917,7 +2108,7 @@ kbd {
   padding: 7px 10px 8px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
   font-size: 11px;
   pointer-events: none;
 }
@@ -1941,7 +2132,7 @@ kbd {
 }
 
 .hud-target-intent.hud-target-warn {
-  color: #ff6a4d;
+  color: var(--t-bad, #ff6a4d);
   font-weight: bold;
 }
 
@@ -1950,9 +2141,9 @@ kbd {
   font-weight: 600;
   margin-top: 2px;
 }
-.hud-target-consider[data-rating="easy"] { color: #8fd37a; }
-.hud-target-consider[data-rating="even"] { color: #e8c45a; }
-.hud-target-consider[data-rating="hard"] { color: #f07a62; }
+.hud-target-consider[data-rating="easy"] { color: var(--t-good, #8fd37a); }
+.hud-target-consider[data-rating="even"] { color: var(--t-warn, #e8c45a); }
+.hud-target-consider[data-rating="hard"] { color: var(--t-bad, #f07a62); }
 .hud-target-note {
   margin-top: 2px;
   color: var(--ui-dim);
@@ -1973,11 +2164,11 @@ kbd {
 }
 
 .hud-stance[data-stance='aggressive'] {
-  color: #e8846a;
+  color: var(--t-bad, #e8846a);
 }
 
 .hud-stance[data-stance='defensive'] {
-  color: #8fb7d8;
+  color: var(--t-info, #8fb7d8);
 }
 
 .hud-mini:disabled {
@@ -2008,7 +2199,7 @@ kbd {
 
 @keyframes skill-flash {
   0% {
-    background: rgba(140, 200, 90, 0.45);
+    background: var(--t-good-wash, rgba(140, 200, 90, 0.45));
   }
   100% {
     background: transparent;
@@ -2056,9 +2247,9 @@ kbd {
   width: 16px;
   height: 16px;
   padding: 0;
-  border: 1px solid #5a4c38;
+  border: 1px solid var(--t-line-2, #5a4c38);
   border-radius: 2px;
-  background: #2a231b;
+  background: var(--t-btn-flat, #2a231b);
   color: var(--ui-dim);
   font: inherit;
   line-height: 1;
@@ -2075,7 +2266,7 @@ kbd {
 }
 
 .track-fill {
-  background: linear-gradient(#b6d07a, #7fa044);
+  background: var(--t-fill-track, linear-gradient(#b6d07a, #7fa044));
 }
 
 .track-next {
@@ -2089,9 +2280,9 @@ kbd {
   width: 100%;
   margin-top: 8px;
   padding: 4px;
-  border: 1px solid #5a4c38;
+  border: 1px solid var(--t-line-2, #5a4c38);
   border-radius: 2px;
-  background: #2a231b;
+  background: var(--t-btn-flat, #2a231b);
   color: var(--ui-accent);
   font: inherit;
   cursor: pointer;
@@ -2152,28 +2343,28 @@ kbd {
 }
 
 .log-time {
-  color: #6f6759;
+  color: var(--t-dim, #6f6759);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .log-info {
-  color: #c9c1ad;
+  color: var(--t-text, #c9c1ad);
 }
 .log-event {
-  color: #eadfbf;
+  color: var(--t-text, #eadfbf);
 }
 .log-skill {
-  color: #9fd06c;
+  color: var(--t-good, #9fd06c);
 }
 .log-error {
-  color: #ef8a7a;
+  color: var(--t-bad, #ef8a7a);
 }
 .log-fight {
-  color: #f0b060;
+  color: var(--t-warn, #f0b060);
 }
 .log-chat {
-  color: #9fc9ef;
+  color: var(--t-info, #9fc9ef);
 }
 .log-system {
   color: var(--ui-accent);
@@ -2185,14 +2376,14 @@ kbd {
   padding: 5px 8px;
   border: 0;
   border-top: 1px solid var(--ui-border);
-  background: #17140f;
+  background: var(--t-field, #17140f);
   color: var(--ui-text);
   font: inherit;
   outline: none;
 }
 
 .log-input:focus {
-  background: #1f1a14;
+  background: var(--t-field-focus, #1f1a14);
 }
 
 /* Map & help -------------------------------------------------------------- */
@@ -2239,15 +2430,15 @@ kbd {
   padding: 2px 6px;
   font: inherit;
   font-size: 11px;
-  color: #c9c1ad;
-  background: rgba(255, 255, 255, 0.04);
+  color: var(--t-text, #c9c1ad);
+  background: var(--t-card, rgba(255, 255, 255, 0.04));
   border: 1px solid var(--ui-border);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .help-link:hover {
-  color: #fff;
+  color: var(--t-strong, #fff);
   border-color: var(--ui-accent);
 }
 
@@ -2276,7 +2467,7 @@ kbd {
 
 /* A section jumped to from the contents, marked for a moment so it is found. */
 .help-sec.help-found h3 {
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 
 .help-body h3 {
@@ -2302,90 +2493,90 @@ kbd {
 
 .help-body p {
   margin: 6px 0;
-  color: #c9c1ad;
+  color: var(--t-text, #c9c1ad);
 }
 
 /* A wildermon's care, and the three traits it was born with. */
-.hud-bar-fill.bar-care { background: linear-gradient(90deg, #6f9a6a, #a8d08a); }
+.hud-bar-fill.bar-care { background: var(--t-fill-care, linear-gradient(90deg, #6f9a6a, #a8d08a)); }
 .pal-traits { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }
 .trait-chip {
   font-size: 11px;
   line-height: 1;
   padding: 3px 6px;
-  border: 1px solid #4a5550;
+  border: 1px solid var(--t-line-2, #4a5550);
   border-radius: 3px;
-  color: #9fb0a4;
-  background: rgba(0, 0, 0, 0.18);
+  color: var(--t-dim, #9fb0a4);
+  background: var(--t-card, rgba(0, 0, 0, 0.18));
   white-space: nowrap;
 }
-.trait-chip.trait-unread { color: #6d7a72; border-style: dashed; font-style: italic; }
+.trait-chip.trait-unread { color: var(--t-dim, #6d7a72); border-style: dashed; font-style: italic; }
 /* A bred one's dam and sire, over the traits, and on each trait where it came from. */
 .pal-pedigree { margin: 4px 0 0; color: var(--ui-dim); font-size: 11px; }
 .pal-rarity { margin: 2px 0 4px; font-size: 11px; font-weight: 600; }
-.trait-from { font-size: 10px; color: #b8b09a; font-style: italic; }
+.trait-from { font-size: 10px; color: var(--t-dim, #b8b09a); font-style: italic; }
 
 /* What a trait is worth, printed beside its name rather than hidden in a hover. */
 .trait-fig { font-size: 10px; opacity: 0.92; }
 .trait-fig + .trait-fig::before { content: ' '; }
-.trait-up { color: #8fd49a; }
-.trait-down { color: #e0a06a; }
+.trait-up { color: var(--t-good, #8fd49a); }
+.trait-down { color: var(--t-warn, #e0a06a); }
 /* And what the three of them come to once the herd and the brush are in. */
 .pal-worth { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 3px; }
-.worth-label { font-size: 10px; line-height: 1; padding: 3px 0; color: #7c8a80; text-transform: uppercase; letter-spacing: 0.04em; }
+.worth-label { font-size: 10px; line-height: 1; padding: 3px 0; color: var(--t-dim, #7c8a80); text-transform: uppercase; letter-spacing: 0.04em; }
 .worth-tag {
   font-size: 11px;
   line-height: 1;
   padding: 2px 5px;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.26);
-  border: 1px solid #3c4642;
+  background: var(--t-card, rgba(0, 0, 0, 0.26));
+  border: 1px solid var(--t-line-2, #3c4642);
   white-space: nowrap;
 }
 
 /* Titles earned from the trades, worn one at a time. */
 .title-box { display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 6px 6px; }
-.title-none { color: #7c8a80; font-size: 11px; font-style: italic; padding: 2px 0; }
+.title-none { color: var(--t-dim, #7c8a80); font-size: 11px; font-style: italic; padding: 2px 0; }
 .title-chip {
   font: inherit;
   font-size: 11px;
   line-height: 1;
   padding: 4px 7px;
-  border: 1px solid #4a5550;
+  border: 1px solid var(--t-line-2, #4a5550);
   border-radius: 3px;
-  color: #b9c6bc;
-  background: rgba(0, 0, 0, 0.2);
+  color: var(--t-text, #b9c6bc);
+  background: var(--t-card, rgba(0, 0, 0, 0.2));
   cursor: pointer;
 }
-.title-chip:hover { border-color: #7d8d84; color: #e2e9e2; }
-.title-chip.title-worn { color: #f0c060; border-color: #f0c060; background: rgba(240, 192, 96, 0.1); }
+.title-chip:hover { border-color: var(--t-line-hi, #7d8d84); color: var(--t-strong, #e2e9e2); }
+.title-chip.title-worn { color: var(--t-gold, #f0c060); border-color: var(--t-gold, #f0c060); background: var(--t-wash-soft, rgba(240, 192, 96, 0.1)); }
 
 /* What is open on you, under the bars. */
 .hud-wounds { display: flex; flex-direction: column; gap: 1px; }
-.wound-row { font-size: 11px; color: #b9a99c; line-height: 1.35; }
-.wound-row.wound-open { color: #e08a72; }
-.wound-row.wound-bad { color: #d05a4a; font-weight: 600; }
+.wound-row { font-size: 11px; color: var(--t-dim, #b9a99c); line-height: 1.35; }
+.wound-row.wound-open { color: var(--t-bad, #e08a72); }
+.wound-row.wound-bad { color: var(--t-bad, #d05a4a); font-weight: 600; }
 
 /* The wind, when there is a sail over you. */
-.hud-wind { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: #a8bcc4; }
-.wind-arrow { display: inline-block; font-size: 13px; line-height: 1; color: #8fc8f0; }
-.wind-irons { color: #e08a72; font-weight: 600; }
+.hud-wind { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--t-info, #a8bcc4); }
+.wind-arrow { display: inline-block; font-size: 13px; line-height: 1; color: var(--t-info, #8fc8f0); }
+.wind-irons { color: var(--t-bad, #e08a72); font-weight: 600; }
 
 /* What is kept back, what is nearly worn out, and a pack that is too heavy. */
 .inv-kept { font-style: italic; }
-.inv-worn-out { color: #e3b657; }
+.inv-worn-out { color: var(--t-accent-ink, #e3b657); }
 /* A tool worth less, or more, than the number it was stamped with. */
 .inv-blunt {
-  color: #c4a86a;
+  color: var(--t-warn, #c4a86a);
 }
 
 .inv-keen {
-  color: #9fd06c;
+  color: var(--t-good, #9fd06c);
 }
 
-.inv-breaking { color: #e0574d; font-weight: 600; }
-.inv-footer.inv-over { color: #e0574d; font-weight: 600; }
+.inv-breaking { color: var(--t-bad, #e0574d); font-weight: 600; }
+.inv-footer.inv-over { color: var(--t-bad, #e0574d); font-weight: 600; }
 /* Over the stop it is not a warning any more: nothing moves until it comes off. */
-.inv-footer.inv-stuck { color: #ffb3ab; background: rgba(160, 36, 28, 0.35); }
+.inv-footer.inv-stuck { color: var(--t-bad, #ffb3ab); background: var(--t-bad-wash, rgba(160, 36, 28, 0.35)); }
 
 /* A small strip of controls at the head of a list. */
 .panel-bar { display: flex; gap: 6px; align-items: center; padding: 4px 6px 2px; }
@@ -2393,12 +2584,12 @@ kbd {
   font: inherit;
   font-size: 11px;
   padding: 3px 4px;
-  color: #cfd8cf;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid #4a5550;
+  color: var(--t-text, #cfd8cf);
+  background: var(--t-card, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--t-line-2, #4a5550);
   border-radius: 3px;
 }
-.tb-btn.tb-on { border-color: #e3b657; color: #e3b657; }
+.tb-btn.tb-on { border-color: var(--t-accent-ink, #e3b657); color: var(--t-accent-ink, #e3b657); }
 
 /* Where everything is: one row a store. */
 .store-row {
@@ -2408,13 +2599,13 @@ kbd {
   gap: 0 8px;
   align-items: center;
   padding: 5px 7px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.05));
 }
-.store-name { grid-area: name; font-size: 12px; color: #d6ded6; display: flex; gap: 6px; align-items: baseline; }
-.store-fill { font-size: 10px; color: #8b978d; }
-.store-fill.store-full { color: #e3b657; }
-.store-what { grid-area: what; font-size: 11px; color: #8b978d; line-height: 1.35; }
-.store-what.store-hit { color: #a8d08a; }
+.store-name { grid-area: name; font-size: 12px; color: var(--t-text, #d6ded6); display: flex; gap: 6px; align-items: baseline; }
+.store-fill { font-size: 10px; color: var(--t-dim, #8b978d); }
+.store-fill.store-full { color: var(--t-accent-ink, #e3b657); }
+.store-what { grid-area: what; font-size: 11px; color: var(--t-dim, #8b978d); line-height: 1.35; }
+.store-what.store-hit { color: var(--t-good, #a8d08a); }
 .store-row .tb-btn { grid-area: go; }
 
 /* The settlement window ---------------------------------------------------- */
@@ -2451,20 +2642,20 @@ kbd {
   justify-content: space-between;
   gap: 8px;
   padding: 2px 0;
-  color: #c9c1ad;
+  color: var(--t-text, #c9c1ad);
 }
 
 .deed-value {
-  color: #eadfbf;
+  color: var(--t-text, #eadfbf);
   font-variant-numeric: tabular-nums;
 }
 
 .deed-met {
-  color: #9fd06c;
+  color: var(--t-good, #9fd06c);
 }
 
 .deed-unmet {
-  color: #8e857a;
+  color: var(--t-dim, #8e857a);
 }
 
 .deed-place span {
@@ -2533,12 +2724,12 @@ kbd {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  color: #c9c1ad;
+  color: var(--t-text, #c9c1ad);
   cursor: text;
 }
 
 .map-mark-name:hover {
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 
 .map-mark-away {
@@ -2581,8 +2772,8 @@ kbd {
   flex: 1 1 auto;
   height: 4px;
   min-width: 0;
-  background: #1a1612;
-  border: 1px solid #000;
+  background: var(--t-track, #1a1612);
+  border: 1px solid var(--t-groove-edge, #000);
 }
 
 .hud-food-fill {
@@ -2591,10 +2782,10 @@ kbd {
   transition: width 0.25s linear;
 }
 
-.food-starch { background: #d8b45c; }
-.food-flesh { background: #c2705f; }
-.food-fat { background: #e0d9a8; }
-.food-greens { background: #8fbf63; }
+.food-starch { background: var(--t-food-starch, #d8b45c); }
+.food-flesh { background: var(--t-food-flesh, #c2705f); }
+.food-fat { background: var(--t-food-fat, #e0d9a8); }
+.food-greens { background: var(--t-food-greens, #8fbf63); }
 
 /* Every one of them full, which is the fifth on everything. */
 .hud-food.hud-food-full .hud-food-label {
@@ -2668,8 +2859,8 @@ kbd {
 /* Wildermon that want something ------------------------------------------- */
 
 .pal-card-wants {
-  border-color: #8a4a3c;
-  background: rgba(190, 90, 70, 0.07);
+  border-color: var(--t-bad-line, #8a4a3c);
+  background: var(--t-bad-wash, rgba(190, 90, 70, 0.07));
 }
 
 .pal-flags {
@@ -2687,13 +2878,13 @@ kbd {
 }
 
 .pal-flag-hurt {
-  background: rgba(198, 78, 62, 0.22);
-  color: #f0907e;
+  background: var(--t-bad-wash, rgba(198, 78, 62, 0.22));
+  color: var(--t-bad, #f0907e);
 }
 
 .pal-flag-hungry {
-  background: rgba(214, 160, 60, 0.2);
-  color: #e8bc6a;
+  background: var(--t-warn-wash, rgba(214, 160, 60, 0.2));
+  color: var(--t-warn, #e8bc6a);
 }
 
 .pal-jump {
@@ -2725,7 +2916,7 @@ kbd {
   align-items: center;
   justify-content: center;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--t-scrim, rgba(0, 0, 0, 0.55));
 }
 .ask-box {
   width: min(320px, 100%);
@@ -2734,7 +2925,7 @@ kbd {
   padding: 12px;
   background: var(--ui-bg-2);
   border: 1px solid var(--ui-border-light);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 8px 28px var(--t-shadow, rgba(0, 0, 0, 0.7));
 }
 .ask-question {
   margin-bottom: 9px;
@@ -2746,7 +2937,7 @@ kbd {
   box-sizing: border-box;
   margin-bottom: 10px;
   padding: 7px 8px;
-  background: #15120d;
+  background: var(--t-field, #15120d);
   border: 1px solid var(--ui-border-light);
   color: var(--ui-text);
   font: inherit;
@@ -2818,7 +3009,7 @@ kbd {
   align-items: center;
   column-gap: 6px;
   padding: 3px 0;
-  border-bottom: 1px solid rgba(107, 88, 54, 0.3);
+  border-bottom: 1px solid var(--t-rule, rgba(107, 88, 54, 0.3));
 }
 
 /*
@@ -2835,13 +3026,13 @@ kbd {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #4b453a;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  background: var(--t-off, #4b453a);
+  box-shadow: inset 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.4));
 }
 
 .social-on {
-  background: #8fc45a;
-  box-shadow: 0 0 5px rgba(143, 196, 90, 0.7);
+  background: var(--t-good-fill, #8fc45a);
+  box-shadow: 0 0 5px var(--t-good-glow, rgba(143, 196, 90, 0.7));
 }
 
 .social-name {
@@ -2897,7 +3088,7 @@ kbd {
 }
 
 .keeper-muted {
-  color: #ef8a7a;
+  color: var(--t-bad, #ef8a7a);
 }
 
 /*
@@ -2976,7 +3167,7 @@ kbd {
   height: auto;
   aspect-ratio: 1;
   align-self: center;
-  border: 2px solid rgba(70, 54, 32, 0.9);
+  border: 2px solid var(--t-edge, rgba(70, 54, 32, 0.9));
   border-radius: 2px;
   background: #1b2732;
   /* Tile edges are information here, not an artefact: the ground is drawn a
@@ -2987,7 +3178,7 @@ kbd {
 .hoard-caption {
   font-size: 12px;
   line-height: 1.4;
-  color: #d8c9a6;
+  color: var(--t-text, #d8c9a6);
 }
 
 /*
@@ -2997,9 +3188,9 @@ kbd {
 .hoard-warm {
   font-size: 13px;
   line-height: 1.4;
-  color: #f0e2bd;
+  color: var(--t-text, #f0e2bd);
   padding-top: 6px;
-  border-top: 1px solid rgba(107, 88, 54, 0.45);
+  border-top: 1px solid var(--t-rule, rgba(107, 88, 54, 0.45));
   min-height: 2.8em;
 }
 
@@ -3108,7 +3299,7 @@ kbd {
 
 /* The island's sentence, never ours: why this button will not do anything. */
 .trade-why {
-  color: #c98d6a;
+  color: var(--t-bad, #c98d6a);
   font-size: 11px;
   line-height: 1.35;
 }
@@ -3167,7 +3358,7 @@ kbd {
 /* One that can actually be called, which is the whole question mid-fight. */
 .trade-rite-ready {
   border-color: var(--ui-accent);
-  box-shadow: inset 0 0 0 1px rgba(227, 182, 87, 0.18);
+  box-shadow: inset 0 0 0 1px var(--t-wash, rgba(227, 182, 87, 0.18));
 }
 
 /*
@@ -3221,7 +3412,7 @@ kbd {
 
 .trade-node-taken {
   border-color: var(--ui-accent);
-  background: rgba(227, 182, 87, 0.08);
+  background: var(--t-wash-soft, rgba(227, 182, 87, 0.08));
 }
 
 .trade-node-shut {
@@ -3266,7 +3457,7 @@ kbd {
   padding: 6px 7px;
   border: 1px solid var(--ui-accent);
   border-radius: 3px;
-  background: rgba(227, 182, 87, 0.08);
+  background: var(--t-wash-soft, rgba(227, 182, 87, 0.08));
 }
 
 .trade-confirm-ask {
@@ -3299,10 +3490,10 @@ kbd {
  */
 #ui > .win.win-see {
   pointer-events: none;
-  background: rgba(20, 16, 12, 0.32);
+  background: var(--t-see, rgba(20, 16, 12, 0.32));
   backdrop-filter: none;
   box-shadow: none;
-  border-color: rgba(120, 100, 70, 0.45);
+  border-color: var(--t-rule, rgba(120, 100, 70, 0.45));
   resize: none;
 }
 
@@ -3348,7 +3539,7 @@ kbd {
   justify-content: center;
   align-items: flex-start;
   padding: 12vh 16px 16px;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--t-scrim, rgba(0, 0, 0, 0.35));
 }
 
 .palette-box {
@@ -3358,7 +3549,7 @@ kbd {
   flex-direction: column;
   background: var(--ui-bg-2);
   border: 1px solid var(--ui-border-light);
-  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 10px 34px var(--t-shadow, rgba(0, 0, 0, 0.7));
 }
 
 .palette-input {
@@ -3366,7 +3557,7 @@ kbd {
   padding: 7px 9px;
   border: 1px solid var(--ui-border);
   border-radius: 3px;
-  background: #1a1713;
+  background: var(--t-field, #1a1713);
   color: var(--ui-text);
   font: 15px/1.3 inherit;
   font-family: inherit;
@@ -3382,7 +3573,7 @@ kbd {
   overflow-y: auto;
   padding: 0 4px;
   scrollbar-width: thin;
-  scrollbar-color: #5a4a30 transparent;
+  scrollbar-color: var(--t-thumb, #5a4a30) transparent;
 }
 
 .palette-row {
@@ -3401,7 +3592,7 @@ kbd {
 }
 
 .palette-row.palette-at {
-  background: rgba(227, 182, 87, 0.16);
+  background: var(--t-wash, rgba(227, 182, 87, 0.16));
 }
 
 .palette-kind {
@@ -3416,11 +3607,11 @@ kbd {
   letter-spacing: 0.06em;
 }
 
-.palette-kind-window { color: #9fc4e0; }
-.palette-kind-recipe { color: #b6d68a; }
-.palette-kind-setting { color: #d8b0e6; }
-.palette-kind-help { color: #e8c98a; }
-.palette-kind-layout { color: #8fd6c8; }
+.palette-kind-window { color: var(--t-info, #9fc4e0); }
+.palette-kind-recipe { color: var(--t-good, #b6d68a); }
+.palette-kind-setting { color: var(--t-rose, #d8b0e6); }
+.palette-kind-help { color: var(--t-warn, #e8c98a); }
+.palette-kind-layout { color: var(--t-info, #8fd6c8); }
 
 .palette-name {
   flex: 1 1 auto;
@@ -3449,7 +3640,7 @@ kbd {
 }
 
 @keyframes found-flash {
-  0%, 30% { background: rgba(227, 182, 87, 0.35); }
+  0%, 30% { background: var(--t-wash-strong, rgba(227, 182, 87, 0.35)); }
   100% { background: transparent; }
 }
 
@@ -3461,7 +3652,7 @@ kbd {
 }
 
 .craft-needs .craft-find:hover {
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 
 .craft-pin {
@@ -3494,7 +3685,7 @@ kbd {
   padding: 3px 6px;
   border: 1px solid var(--ui-border);
   border-radius: 3px;
-  background: #1a1713;
+  background: var(--t-field, #1a1713);
   color: var(--ui-text);
   font: inherit;
 }
@@ -3505,22 +3696,22 @@ kbd {
   flex: 0 0 auto;
   height: 5px;
   margin: 4px 8px 0;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--t-track, rgba(255, 255, 255, 0.07));
   border-radius: 2px;
   overflow: hidden;
 }
 
 .inv-load-fill {
   height: 100%;
-  background: #7f9a5a;
+  background: var(--t-good-fill, #7f9a5a);
 }
 
 .inv-load.inv-over .inv-load-fill {
-  background: #c9933a;
+  background: var(--t-warn-fill, #c9933a);
 }
 
 .inv-load.inv-stuck .inv-load-fill {
-  background: #c0503a;
+  background: var(--t-bad-fill, #c0503a);
 }
 
 .inv-load-mark {
@@ -3552,7 +3743,7 @@ kbd {
   border: 1px solid var(--ui-border);
   border-radius: 3px;
   background: var(--ui-bg-2);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 14px var(--t-shadow, rgba(0, 0, 0, 0.5));
   color: var(--ui-text);
   font-weight: 600;
   text-align: center;
@@ -3564,14 +3755,14 @@ kbd {
   margin-right: 7px;
 }
 
-.notice-level { border-color: #b6d68a; }
-.notice-level::before { content: '▲'; color: #b6d68a; }
+.notice-level { border-color: var(--t-good, #b6d68a); }
+.notice-level::before { content: '▲'; color: var(--t-good, #b6d68a); }
 .notice-knack { border-color: var(--ui-accent); }
 .notice-knack::before { content: '✦'; color: var(--ui-accent); }
-.notice-done { border-color: #9fc4e0; }
-.notice-done::before { content: '✓'; color: #9fc4e0; }
-.notice-birth { border-color: #e6a6c8; }
-.notice-birth::before { content: '❀'; color: #e6a6c8; }
+.notice-done { border-color: var(--t-info, #9fc4e0); }
+.notice-done::before { content: '✓'; color: var(--t-info, #9fc4e0); }
+.notice-birth { border-color: var(--t-rose, #e6a6c8); }
+.notice-birth::before { content: '❀'; color: var(--t-rose, #e6a6c8); }
 
 .notice-going {
   opacity: 0;
@@ -3593,7 +3784,7 @@ kbd {
   align-items: center;
   gap: 10px;
   padding: 5px 2px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.05));
 }
 
 .price-name {
@@ -3617,13 +3808,13 @@ kbd {
 }
 
 .price-bar-none {
-  fill: rgba(255, 255, 255, 0.12);
+  fill: var(--t-ghost, rgba(255, 255, 255, 0.12));
 }
 
 /* Several rows picked at once (src/ui/picking.ts), and the bar that moves them. */
 .inv-row.picked {
-  background: rgba(120, 170, 220, 0.2);
-  box-shadow: inset 2px 0 0 #8fb8e0;
+  background: var(--t-info-wash, rgba(120, 170, 220, 0.2));
+  box-shadow: inset 2px 0 0 var(--t-info, #8fb8e0);
 }
 
 .pick-bar {
@@ -3640,4 +3831,864 @@ kbd {
 .pick-bar span {
   margin-right: auto;
   font-weight: 600;
+}
+
+/* Runecut ------------------------------------------------------------------ */
+
+/*
+ * The shapes Runecut adds, as against the colours it changes.
+ *
+ * Every rule here is behind `[data-ui='runecut']`, so Classic never sees any
+ * of it. The colours above already follow the tokens; what is below is the
+ * cut of the stone: chamfered plates, the lintel over a window, the window's
+ * rune, grooves for the bars to fill with light, and the faces the writing is
+ * set in.
+ */
+
+/* The rune at the head of a window: not drawn at all in Classic. */
+.win-rune {
+  display: none;
+}
+
+.win-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+:root {
+  /* The grain of the stone: a faint noise laid over every plate's face, in the ink's own colour. */
+  --rc-tex: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .27 0 0 0 0 .24 0 0 0 0 .31 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* How opaque a window's face is: enough of the island shows through to place it, not enough to read against. */
+  --rc-face: 94%;
+  /* How strongly the light in a groove shows: paint by day, a glow after dark. */
+  --rc-light-op: 0.85;
+  --rc-light: var(--rc-rune);
+}
+
+:root[data-rc='night'] {
+  --rc-face: 95%;
+  --rc-light-op: 1;
+  --rc-light: var(--rc-rune-gold);
+}
+
+.rc-rune path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rc-rune-groove {
+  stroke: var(--rc-carve);
+  stroke-width: 0.3;
+  opacity: 0.55;
+}
+
+/* The light in a rune's groove: dim on a window behind, breathing on the one in front. */
+.rc-rune-light {
+  stroke: var(--rc-light);
+  stroke-width: 0.13;
+  opacity: calc(var(--rc-light-op) * 0.35);
+}
+
+[data-ui='runecut'] .win-front .win-rune .rc-rune-light {
+  opacity: var(--rc-light-op);
+  filter: drop-shadow(var(--rc-glow));
+  animation: rc-breathe 3.2s ease-in-out infinite;
+}
+
+@keyframes rc-breathe {
+  0%,
+  100% {
+    opacity: calc(var(--rc-light-op) * 0.45);
+  }
+  50% {
+    opacity: var(--rc-light-op);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui='runecut'] .win-front .win-rune .rc-rune-light {
+    animation: none;
+  }
+}
+
+[data-ui='runecut'] body {
+  font-feature-settings: 'lnum' 1;
+}
+
+/* Thin scrollbars in the lilac shade, on every list. */
+[data-ui='runecut'] * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rc-shade) transparent;
+}
+
+/* Focus that can be seen: two pixels of the rune's amber, on everything that takes the keyboard. */
+[data-ui='runecut'] :focus-visible {
+  outline: 2px solid var(--rc-rune-deep);
+  outline-offset: 1px;
+}
+
+[data-ui='runecut'] input,
+[data-ui='runecut'] select {
+  accent-color: var(--rc-rune-deep);
+}
+
+/*
+ * A plate of stone with its corners cut.
+ *
+ * The cut is a clip-path, and a clip-path takes a box's shadow and border with
+ * it, so the stone is drawn on `::before`, under the content, and the box
+ * itself keeps only a soft shadow, which cannot show the square corners it
+ * is cast from. The outline along the four cuts is a line in a gradient laid
+ * at forty-five degrees in each corner, the same distance in from it as the cut.
+ */
+[data-ui='runecut'] :is(.win, .hud-status, .toolbar, .ctx-menu, .tooltip, .action-bar, .hud-target, .storey, .palette-box, .ask-box) {
+  --cut: 5px;
+  --face: color-mix(in srgb, var(--rc-stone) var(--rc-face), transparent);
+  --plate: var(--rc-tex),
+    linear-gradient(
+      color-mix(in srgb, var(--rc-stone-hi) var(--rc-face), transparent),
+      var(--face) 3px,
+      var(--face) 60%,
+      color-mix(in srgb, color-mix(in srgb, var(--rc-stone) 88%, var(--rc-shade)) var(--rc-face), transparent)
+    );
+  --cut-line: var(--rc-edge-ink);
+  isolation: isolate;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 0;
+  box-shadow: 0 10px 22px -8px var(--rc-shadow);
+  backdrop-filter: none;
+}
+
+[data-ui='runecut'] :is(.palette-box, .ask-box) {
+  position: relative;
+}
+
+[data-ui='runecut'] :is(.win, .hud-status, .toolbar, .ctx-menu, .tooltip, .action-bar, .hud-target, .storey, .palette-box, .ask-box)::before {
+  --d: calc(var(--cut) * 0.7071);
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  background:
+    linear-gradient(135deg, transparent var(--d), var(--cut-line) 0 calc(var(--d) + 1px), transparent 0),
+    linear-gradient(225deg, transparent var(--d), var(--cut-line) 0 calc(var(--d) + 1px), transparent 0),
+    linear-gradient(315deg, transparent var(--d), var(--cut-line) 0 calc(var(--d) + 1px), transparent 0),
+    linear-gradient(45deg, transparent var(--d), var(--cut-line) 0 calc(var(--d) + 1px), transparent 0),
+    var(--plate);
+  box-shadow: inset 0 0 0 1px var(--cut-line);
+  backdrop-filter: blur(3px);
+}
+
+/* Small plates are cut less deep than a window, and are solid: they are read in a glance. */
+[data-ui='runecut'] :is(.tooltip, .storey, .ctx-menu) {
+  --cut: 5px;
+  --rc-face: 100%;
+}
+
+[data-ui='runecut'] :is(.toolbar, .hud-status) {
+  --cut: 6px;
+}
+
+[data-ui='runecut'] :is(.ctx-menu, .palette-box, .ask-box) {
+  --rc-face: 100%;
+  box-shadow: 0 12px 30px -8px var(--rc-shadow);
+}
+
+[data-ui='runecut'] .win {
+  --cut: 7px;
+}
+
+/* See-through: the plate thins to a wash of stone, and comes back while Alt is held. */
+[data-ui='runecut'] #ui > .win.win-see {
+  --plate: var(--t-see);
+  background: transparent;
+  box-shadow: none;
+}
+
+[data-ui='runecut'] #ui.alt-held > .win.win-see {
+  --plate: var(--face);
+  background: transparent;
+}
+
+/*
+ * The lintel: the title cut across the head of the window, in Cormorant
+ * Unicase, with the window's rune before it, clear of the corner's
+ * scroll-work, and a double groove under it.
+ */
+[data-ui='runecut'] .win-title {
+  position: relative;
+  padding: 7px 7px 9px 12px;
+  background: none;
+  border-bottom: 0;
+  color: var(--rc-ink);
+  font: 700 17px/1.1 var(--rc-title-font);
+  letter-spacing: 0.02em;
+}
+
+[data-ui='runecut'] .win-title::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 0;
+  height: 5px;
+  background: linear-gradient(var(--rc-shade) 0 1px, var(--rc-stone-hi) 1px 2px, transparent 2px 3px, var(--rc-shade) 3px 4px, var(--rc-stone-hi) 4px 5px);
+  pointer-events: none;
+}
+
+[data-ui='runecut'] .win-front .win-title::after {
+  background: linear-gradient(var(--rc-shade) 0 1px, var(--rc-stone-hi) 1px 2px, transparent 2px 3px, color-mix(in srgb, var(--rc-rune) 70%, var(--rc-shade)) 3px 4px, var(--rc-stone-hi) 4px 5px);
+}
+
+[data-ui='runecut'] .win-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-ui='runecut'] .win-rune {
+  display: block;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+}
+
+/*
+ * Everything in a window stands two pixels inside its rim, which is `--rim`
+ * wide: written on each window by src/ui/runecut-dress.ts from the same
+ * number the rim and its frame are painted at (`RIMS` in
+ * src/ui/runecut-art.ts), so the frame never lies over anything to read or
+ * press.
+ */
+[data-ui='runecut'] .win {
+  --rim: 16px;
+}
+
+/*
+ * The rim is added round a window, not taken out of it: the size a window is
+ * given, by default or from a saved layout, is the size of what is inside the
+ * insets it had before the rim (the title's 7px, the body's 3px), and the
+ * window's padding is the rest of the way to two pixels inside the rim. So
+ * its content is no narrower and no shorter than it was. A phone's windows
+ * are as wide as the screen whatever they are given, so there the rim comes
+ * out of them.
+ */
+[data-ui='runecut'] .win {
+  box-sizing: content-box;
+  padding: calc(var(--rim) + 2px - 7px) calc(var(--rim) + 2px - 3px) calc(var(--rim) + 2px - 3px);
+}
+
+[data-ui='runecut'] #ui.narrow .win {
+  box-sizing: border-box;
+}
+
+[data-ui='runecut'] .win-body {
+  margin: 2px 3px 3px;
+}
+
+[data-ui='runecut'] .win-buttons {
+  gap: 3px;
+}
+
+/* The title's buttons: small tiles with their corners cut, a groove lit along the foot when pointed at. */
+[data-ui='runecut'] .win-btn {
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi), inset 0 0 0 1px var(--rc-shade);
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color: var(--rc-carve);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+}
+
+[data-ui='runecut'] .win-btn:hover,
+[data-ui='runecut'] .win-btn.win-btn-on {
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi), inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .win-btn:focus-visible {
+  outline-offset: -3px;
+}
+
+/* Labels and headings ------------------------------------------------------ */
+
+/*
+ * Small labels in Alegreya Sans's small capitals. The small capitals are the
+ * face's own, so these lose the forced upper case and keep the case they are
+ * written in: a capital, then small capitals.
+ */
+[data-ui='runecut'] :is(.inv-head, .inv-group, .skill-group, .trade-group, .trade-col-head, .keys-group, .news-day, .tile-head, .spell-cap, .palette-kind, .goal-next-head, .hud-bar-label, .hud-food-label, .pal-flag, .faith-align, .worth-label, .guide-tag, kbd, .log-tab, .ctx-title) {
+  font-family: var(--rc-label-font);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+[data-ui='runecut'] :is(.inv-group, .skill-group, .trade-group, .keys-group, .goal-next-head) {
+  font-weight: 700;
+  font-size: 12px;
+}
+
+[data-ui='runecut'] :is(.hud-bar-label, .hud-food-label) {
+  color: var(--rc-carve);
+}
+
+[data-ui='runecut'] :is(.hud-name, .help-body h3, .guide-title, .deed-head, .trade-tree-head, .hud-target-name) {
+  font-family: var(--rc-title-font);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+[data-ui='runecut'] .hud-name {
+  color: var(--rc-ink);
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+[data-ui='runecut'] :is(.help-body h3, .deed-head) {
+  font-size: 16px;
+}
+
+/* Toolbar and buttons ------------------------------------------------------ */
+
+/*
+ * A button is a small tile cut from the stone, its corners cut and its edge a
+ * line of shade inside it; pointing at it lights the groove along its foot,
+ * and an open one keeps it lit with the rune's gold warming the tile.
+ */
+[data-ui='runecut'] .tb-btn {
+  border-color: transparent;
+  border-radius: 0;
+  background: linear-gradient(var(--rc-stone-hi), var(--rc-stone-2) 30%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade);
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  color: var(--rc-ink);
+  font-weight: 500;
+}
+
+[data-ui='runecut'] .tb-btn:focus-visible {
+  outline-offset: -4px;
+}
+
+[data-ui='runecut'] .tb-btn:hover:not(:disabled) {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+  color: var(--rc-strong);
+}
+
+[data-ui='runecut'] :is(.tb-btn.active, .tb-btn.tb-on, .tb-windows) {
+  border-color: transparent;
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune-gold) 30%, var(--rc-stone-2)) 80%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+  color: var(--rc-ink);
+}
+
+[data-rc='night'][data-ui='runecut'] :is(.tb-btn.active, .tb-btn.tb-on, .tb-windows) {
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune) 22%, var(--rc-stone-2)) 80%);
+}
+
+[data-ui='runecut'] .tb-btn kbd {
+  border: 0;
+  background: none;
+  color: var(--rc-carve);
+  font-weight: 700;
+}
+
+/* Bars --------------------------------------------------------------------- */
+
+/* A channel cut into the stone, pointed at its ends, and what it measures as light lying in it. */
+[data-ui='runecut'] :is(.hud-bar, .action-track, .hud-food-track, .inv-load) {
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow:
+    inset 0 1px 1px color-mix(in srgb, var(--rc-edge-ink) 45%, transparent),
+    0 1px 0 var(--rc-stone-hi);
+  clip-path: polygon(3px 0, calc(100% - 3px) 0, 100% 50%, calc(100% - 3px) 100%, 3px 100%, 0 50%);
+}
+
+[data-ui='runecut'] .hud-bar {
+  height: 9px;
+  padding: 1px 0;
+}
+
+[data-ui='runecut'] .action-track {
+  height: 11px;
+  padding: 1px 0;
+}
+
+[data-ui='runecut'] :is(.hud-bar-fill, .action-fill, .hud-food-fill, .inv-load-fill) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+[data-rc='night'][data-ui='runecut'] :is(.hud-bar-fill, .action-fill, .hud-food-fill, .inv-load-fill) {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+[data-ui='runecut'] :is(.hud-bar-value, .hud-pos, .skill-value, .log-time, .trade-points, .board-rank, .map-mark-away) {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-ui='runecut'] .hud-companion {
+  border-top-color: var(--rc-shade);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .hud-mini {
+  border-color: var(--rc-shade);
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  color: var(--rc-carve);
+}
+
+/* Lists of things ---------------------------------------------------------- */
+
+/*
+ * Rows sit one step down, on the recessed stone, each with a small diamond
+ * notch at its head. A rare thing's notch is in its rarity's colour and a
+ * size larger at each step, so rarity is not told by the colour of its name
+ * alone; the word is in the name and its tooltip besides.
+ */
+[data-ui='runecut'] .inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 4px;
+}
+
+[data-ui='runecut'] .inv-list > * {
+  flex-shrink: 0;
+}
+
+[data-ui='runecut'] .inv-row {
+  position: relative;
+  padding-left: 14px;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent), inset 0 -1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .inv-head {
+  padding-left: 18px;
+  padding-right: 12px;
+  border-bottom: 0;
+}
+
+[data-ui='runecut'] .inv-row::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  background: var(--rc-shade);
+  opacity: 0.7;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+[data-ui='runecut'] .inv-row:has(.inv-name[data-rare='rare'])::before {
+  background: var(--rc-rare);
+  opacity: 1;
+}
+
+[data-ui='runecut'] .inv-row:has(.inv-name[data-rare='supreme'])::before {
+  width: 6px;
+  height: 6px;
+  background: var(--rc-supreme);
+  opacity: 1;
+}
+
+[data-ui='runecut'] .inv-row:has(.inv-name[data-rare='fantastic'])::before {
+  width: 7px;
+  height: 7px;
+  background: var(--rc-fantastic);
+  box-shadow: 0 0 0 1px var(--rc-stone-hi);
+  opacity: 1;
+}
+
+[data-ui='runecut'] .inv-name[data-rare] {
+  font-weight: 700;
+}
+
+[data-ui='runecut'] .inv-row:hover {
+  background: linear-gradient(90deg, var(--t-wash-soft), transparent 70%), var(--rc-stone-2);
+}
+
+[data-ui='runecut'] .inv-row.selected {
+  background: linear-gradient(90deg, var(--t-wash), color-mix(in srgb, var(--rc-rune) 9%, transparent)), var(--rc-stone-2);
+  box-shadow: inset 2px 0 0 var(--rc-rune), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
+}
+
+[data-ui='runecut'] .inv-row.picked {
+  background: linear-gradient(90deg, var(--t-info-wash), transparent 80%), var(--rc-stone-2);
+  box-shadow: inset 2px 0 0 var(--rc-teal), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
+}
+
+[data-ui='runecut'] .inv-group {
+  padding-left: 6px;
+}
+
+[data-ui='runecut'] :is(.inv-footer, .tile-head, .craft-head, .help-count, .palette-count) {
+  border-color: var(--rc-shade);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .inv-footer {
+  padding-left: 12px;
+}
+
+[data-ui='runecut'] :is(.craft-row, .store-row, .price-row) {
+  border-bottom-color: var(--rc-shade);
+  box-shadow: 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .skill-row:hover {
+  background: var(--t-hover);
+}
+
+/* Fields to write in: cut into the stone, a step down, with an edge of shade. */
+[data-ui='runecut'] :is(.panel-search, .log-input, .palette-input, .ask-input, .layout-name) {
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow:
+    inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 35%, transparent),
+    inset 0 0 0 1px var(--rc-shade),
+    0 1px 0 var(--rc-stone-hi);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] :is(.panel-search, .log-input) {
+  margin: 6px 6px 4px;
+}
+
+[data-ui='runecut'] :is(.panel-search, .log-input, .palette-input, .ask-input, .layout-name):focus {
+  background: color-mix(in srgb, var(--rc-stone-2) 60%, var(--rc-stone-hi));
+}
+
+[data-ui='runecut'] :is(.panel-search, .log-input, .palette-input, .ask-input, .layout-name)::placeholder {
+  color: var(--rc-carve);
+  opacity: 0.8;
+}
+
+[data-ui='runecut'] :is(.setting-row select, .panel-select) {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), 0 1px 0 var(--rc-stone-hi);
+  color: var(--rc-ink);
+  font: inherit;
+}
+
+/* Tabs: set into the foot of the lintel, the open one a step down and lit along its foot. */
+[data-ui='runecut'] .log-tabs {
+  gap: 2px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--rc-shade);
+  box-shadow: 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .log-tab {
+  padding: 7px 7px 8px;
+  letter-spacing: 0.03em;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  clip-path: none;
+  color: var(--rc-carve);
+  font-size: 13px;
+}
+
+[data-ui='runecut'] .log-tab:hover:not(:disabled) {
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--rc-rune) 45%, transparent);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .log-tab.tb-on {
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 -2px 0 var(--rc-rune), inset 1px 0 0 var(--rc-shade), inset -1px 0 0 var(--rc-shade);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .log-tab.log-waiting {
+  color: var(--rc-rune-ink);
+}
+
+[data-ui='runecut'] .log-tabs .log-search {
+  margin: 3px 0;
+  padding: 4px 6px;
+}
+
+[data-ui='runecut'] .log-list {
+  margin: 6px 8px 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 25%, transparent);
+}
+
+/* Context menu and tooltip ------------------------------------------------- */
+
+/* The menu's head is a label over a carved line: shade, with the lit edge under it. */
+[data-ui='runecut'] .ctx-menu {
+  padding: 6px;
+}
+
+[data-ui='runecut'] .ctx-title {
+  padding: 6px 8px 7px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--rc-shade);
+  box-shadow: 0 1px 0 var(--rc-stone-hi);
+  color: var(--rc-carve);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+[data-ui='runecut'] .ctx-item {
+  padding: 5px 8px;
+}
+
+[data-ui='runecut'] .ctx-item:hover:not(.disabled) {
+  background: var(--t-wash);
+  box-shadow: inset 2px 0 0 var(--rc-rune);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .ctx-item.disabled {
+  color: var(--rc-carve);
+}
+
+[data-ui='runecut'] .ctx-key {
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -1px 0 var(--rc-shade);
+  color: var(--rc-carve);
+  font-family: var(--rc-label-font);
+}
+
+[data-ui='runecut'] .tooltip {
+  padding: 8px 11px 9px;
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .tooltip-title {
+  margin-bottom: 4px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--rc-shade);
+  box-shadow: 0 1px 0 var(--rc-stone-hi);
+  color: var(--rc-ink);
+  font: 700 16px/1.1 var(--rc-title-font);
+}
+
+[data-ui='runecut'] .tooltip-line {
+  color: var(--rc-carve);
+  font-size: 13px;
+}
+
+/*
+ * Notices: small plaques pointed at both ends. The outline is the drop
+ * shadow of the column they stand in, which is cast from the shapes after
+ * they are cut, so it follows the points.
+ */
+[data-ui='runecut'] .notices {
+  filter: drop-shadow(0 0 0.6px var(--rc-edge-ink)) drop-shadow(0 6px 8px var(--rc-shadow));
+}
+
+[data-ui='runecut'] .notice {
+  padding: 7px 18px 7px 16px;
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-tex), linear-gradient(var(--rc-stone-hi), var(--rc-stone) 40%);
+  box-shadow: none;
+  clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%, 0 50%);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .notice::before {
+  text-shadow: var(--rc-glow);
+}
+
+/* The command palette and the questions ------------------------------------ */
+
+[data-ui='runecut'] .palette-row.palette-at {
+  background: var(--t-wash);
+  box-shadow: inset 2px 0 0 var(--rc-rune);
+}
+
+[data-ui='runecut'] .palette-row:hover {
+  background: var(--t-hover);
+}
+
+[data-ui='runecut'] .palette-kind {
+  border: 0;
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 0 0 1px var(--rc-shade);
+  font-size: 11px;
+}
+
+/* Settings: a carved line between rows, so a description is plainly the one under its own heading. */
+[data-ui='runecut'] .setting-row + .setting-row {
+  border-top: 1px solid var(--rc-shade);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .setting-row b {
+  color: var(--rc-ink);
+  font-weight: 700;
+}
+
+[data-ui='runecut'] .setting-row small {
+  color: var(--rc-carve);
+  line-height: 1.4;
+}
+
+/* Cards in the trades and the companions: a recess, where Classic had a faint lift. */
+[data-ui='runecut'] :is(.trade-card, .trade-rite, .trade-node, .pal-card, .goal-next, .guide-card) {
+  border-color: var(--rc-shade);
+  border-radius: 0;
+  background: var(--rc-stone-2);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 14%, transparent);
+}
+
+[data-ui='runecut'] :is(.trade-mine, .trade-node-taken, .trade-rite-ready, .trade-confirm) {
+  border-color: var(--rc-rune-deep);
+}
+
+[data-ui='runecut'] :is(.spell-slot, .belt-loop) {
+  border-color: var(--rc-shade);
+  border-radius: 0;
+  background: var(--rc-tex), linear-gradient(var(--rc-stone-hi), var(--rc-stone) 30%);
+  box-shadow: 0 4px 10px -4px var(--rc-shadow);
+}
+
+[data-ui='runecut'] :is(.spell-slot, .belt-loop):hover {
+  box-shadow: inset 0 -2px 0 var(--rc-rune), 0 4px 10px -4px var(--rc-shadow);
+}
+
+[data-ui='runecut'] :is(.zoom-out, .saving-banner) {
+  border-color: var(--rc-rune-deep);
+  border-radius: 0;
+  background: var(--rc-stone);
+  box-shadow: 0 6px 16px -6px var(--rc-shadow);
+}
+
+[data-ui='runecut'] .zoom-out {
+  color: var(--rc-rune-ink);
+}
+
+/*
+ * Shut and locked, said without fading. Classic fades a trade whose skill is
+ * not there yet, and a recipe you cannot make, to half strength; on pale
+ * stone half-strength carving is under 3.5:1, too faint to read what it is
+ * you would be working toward. Here the writing stays whole and the card's
+ * edge goes to a dashed line, its name to the carving's grey.
+ */
+[data-ui='runecut'] .trade-shut > :not(.trade-offer):not(.trade-acts),
+[data-ui='runecut'] .craft-row.locked {
+  opacity: 1;
+}
+
+[data-ui='runecut'] .trade-shut {
+  border-style: dashed;
+}
+
+[data-ui='runecut'] :is(.trade-shut .trade-name, .craft-row.locked .craft-name) {
+  color: var(--rc-carve);
+}
+
+
+/*
+ * Runecut's painted stone (src/ui/runecut-dress.ts, src/ui/runecut-art.ts):
+ * the slab under a window's content, the niche at the head of its title, and
+ * the frame laid round it. None of them is drawn in Classic, and none takes a
+ * click.
+ */
+.rc-plate,
+.rc-niche,
+.ui-frame-edge,
+#ui > .ui-frame {
+  display: none;
+  pointer-events: none !important;
+}
+
+[data-ui='runecut'] .rc-plate {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -2;
+}
+
+/* The painted slab stands in for the plate drawn in CSS. */
+[data-ui='runecut'] :has(> .rc-plate)::before {
+  display: none;
+}
+
+/* Under everything in the interface: first in it, at its bottom layer. */
+[data-ui='runecut'] #ui > .ui-frame {
+  display: block;
+  position: absolute;
+  z-index: 0;
+}
+
+/* The frame's band over its own window's edge, over the slab and the content, which never comes within its reach. */
+[data-ui='runecut'] .ui-frame-edge {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+}
+
+/* The niche is set into the frame's top, over it, as a stone let into the wood or the cloth. */
+[data-ui='runecut'] .rc-niche {
+  display: block;
+  position: relative;
+  z-index: 4;
+  flex: 0 0 auto;
+  margin: -12px 0 -12px -6px;
+}
+
+[data-ui='runecut'] .win-head:has(.rc-niche) .win-rune {
+  display: none;
+}
+
+[data-ui='runecut'] .win-title:has(.rc-niche) {
+  padding-left: 12px;
+}
+
+/* The status panel and the toolbar keep inside their narrower rims the same way. */
+[data-ui='runecut'] .hud-status {
+  --rim: 10px;
+  padding: calc(var(--rim) + 2px);
+}
+
+[data-ui='runecut'] .toolbar {
+  --rim: 8px;
+  padding: calc(var(--rim) + 2px);
+}
+
+/* A see-through window's slab thins with it, and comes back while Alt is held. */
+[data-ui='runecut'] #ui > .win.win-see > .rc-plate {
+  opacity: 0.32;
+}
+
+[data-ui='runecut'] #ui.alt-held > .win.win-see > .rc-plate {
+  opacity: 1;
+}
+
+/* On a phone the status panel's own padding is narrower, which would put its bars on its rim. */
+[data-ui='runecut'] #ui.narrow .hud-status {
+  padding: calc(var(--rim) + 2px);
 }

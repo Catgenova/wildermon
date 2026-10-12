@@ -85,6 +85,15 @@ export const TIER_COLOUR: Record<TraitTier, string> = {
   fantastic: '#f0c060',
 };
 
+/**
+ * The same colours for the page, as tokens the interface's look sets
+ * (`--rarity-*` in src/style.css) with the colours above as the fallback that
+ * Classic uses: pale blue writing on Runecut's pale stone cannot be read.
+ * `TIER_COLOUR` itself stays plain hex for what is not the game's page, such
+ * as the wildermon sheet.
+ */
+export const TIER_CSS = Object.fromEntries(TIERS.map((t) => [t, `var(--rarity-${t}, ${TIER_COLOUR[t]})`])) as Record<TraitTier, string>;
+
 const PLAIN_TRAITS: TraitDef[] = [
   // ---- Common: a few percent apiece, and most of what the wild holds. ----
   { id: 'light_footed', name: 'light-footed', tier: 'common', effects: { speed: 1.08 }, note: 'It picks its way quickly.' },

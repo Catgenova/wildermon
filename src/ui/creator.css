@@ -1,7 +1,9 @@
 /*
  * The character creator, wherever it is shown: the account page, and the
  * game's "How you look" window. Both pages define the --ui-* colours, and
- * nothing else here is assumed of either.
+ * nothing else here is assumed of either: the few --t-* tokens are the game's
+ * Runecut look (src/style.css), and where they are not defined, as on the
+ * account page and in Classic, each falls back to the colour beside it.
  *
  * It measures itself rather than the screen. On the account page the width it
  * has is the card's, and in the game it is a window's, which is as narrow as
@@ -75,7 +77,7 @@
   padding: 5px 0;
   border: 1px solid var(--ui-border);
   border-radius: 3px;
-  background: rgba(60, 50, 30, 0.55);
+  background: var(--t-btn-flat, rgba(60, 50, 30, 0.55));
   color: var(--ui-text);
   font: inherit;
   font-size: 12px;
@@ -90,7 +92,7 @@
 .cr-turn button[aria-pressed='true'], .cr-motions button[aria-pressed='true'] {
   border-color: var(--ui-accent);
   box-shadow: 0 0 0 1px var(--ui-accent);
-  color: #fff;
+  color: var(--t-strong, #fff);
 }
 .cr-turn button:focus-visible, .cr-motions button:focus-visible, .cr-roll:focus-visible, .cr-pick:focus-visible {
   outline: 2px solid var(--ui-accent);
@@ -102,13 +104,13 @@
   padding: 8px 12px;
   border: 1px solid var(--ui-border);
   border-radius: 4px;
-  background: rgba(60, 50, 30, 0.7);
+  background: var(--t-btn-flat, rgba(60, 50, 30, 0.7));
   color: var(--ui-text);
   font: inherit;
   cursor: pointer;
 }
 
-.cr-roll:hover { border-color: var(--ui-accent); color: #fff; }
+.cr-roll:hover { border-color: var(--ui-accent); color: var(--t-strong, #fff); }
 
 .cr-choices {
   flex: 1 1 auto;

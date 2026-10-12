@@ -79,6 +79,7 @@ import { findPath } from './world/pathfinding';
 import { WATER_PALETTE, waterRgb } from './render/water';
 import { drawHeadshot, drawPortrait } from './render/sprites';
 import { followScreen, pageZoom, setUiSize, unzoomPage } from './ui/screen';
+import { applyLook } from './ui/theme';
 
 const canvasEl = document.getElementById('game') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui') as HTMLElement;
@@ -552,6 +553,8 @@ zoomOut.addEventListener('click', () => unzoomPage());
 uiRoot.append(zoomOut);
 // At the size asked for, from the first fit, rather than at 100% for a frame.
 setUiSize(game.settings.uiSize);
+// The interface's look before the first frame, so it does not open in one look and change to another.
+applyLook(game.settings, game.isNight());
 followScreen(uiRoot, () => {
   zoomOut.hidden = pageZoom() <= 1.02;
   // The box the windows live in has just changed, and `resize` did not fire:

@@ -1,7 +1,7 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
 import { isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
-import { CHANNELS, isGain, pct, TIER_COLOUR, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
+import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
 import { TIER_LEVEL } from '../../game/husbandry';
 
 import type { Game } from '../../game/game';
@@ -395,7 +395,7 @@ export class WildermonPanel {
       const rare = rarityLine(c);
       if (rarity.textContent !== rare) rarity.textContent = rare;
       rarity.hidden = !rare;
-      const hue = c.rare ? rarityOf(c).colour : '';
+      const hue = c.rare ? rarityOf(c).css : '';
       if (rarity.style.color !== hue) rarity.style.color = hue;
       // Age reads before anything else: a yearling cannot be worked at all.
       const age = ageOf(c, this.game.time);
@@ -502,8 +502,8 @@ export class WildermonPanel {
       const known = this.game.holds('knowledge_reader') || skill >= 1 + TIER_LEVEL[t.tier];
       if (known) {
         chip.textContent = t.aura ? `◉ ${t.name}` : t.name;
-        chip.style.color = TIER_COLOUR[t.tier];
-        chip.style.borderColor = TIER_COLOUR[t.tier];
+        chip.style.color = TIER_CSS[t.tier];
+        chip.style.borderColor = TIER_CSS[t.tier];
         // The figures, beside the name rather than behind a hover: a trait you
         // have to point at to learn anything about is one you never read.
         for (const ch of CHANNELS) {

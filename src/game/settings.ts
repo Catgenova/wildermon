@@ -124,7 +124,24 @@ export const SETTING_DEFAULTS = {
   noticeBirth: true,
   /** A ring over each fire, smelter and kiln near you: its fuel, the work in it, and a dot when something is ready (`drawStationRings`). */
   stationRings: true,
+  /**
+   * How the windows, menus and bars are drawn (`src/ui/theme.ts`): Runecut,
+   * pale stone cut like the runestones', or Classic, the dark interface as it
+   * was before Runecut.
+   */
+  uiStyle: 'runecut' as UiStyle,
+  /** Runecut's stone by day, after dark, or following the island's own clock (`Game.isNight`). */
+  uiLight: 'day' as UiLight,
+  /** Runecut's window borders: each drawn as the stuff of what its window holds, or all plain stone (`src/ui/runecut-frames.ts`); nothing in Classic. */
+  uiFrames: 'themed' as UiFrames,
 };
+
+export const UI_STYLES = ['runecut', 'classic'] as const;
+export type UiStyle = (typeof UI_STYLES)[number];
+export const UI_LIGHTS = ['day', 'night', 'clock'] as const;
+export type UiLight = (typeof UI_LIGHTS)[number];
+export const UI_FRAMES = ['themed', 'stone'] as const;
+export type UiFrames = (typeof UI_FRAMES)[number];
 
 export type Settings = typeof SETTING_DEFAULTS & {
   /**
@@ -162,6 +179,9 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     if (!['aggressive', 'balanced', 'defensive'].includes(out.fightStance as string)) delete out.fightStance;
     if (!['full', 'fast'].includes(out.graphics as string)) delete out.graphics;
     if (!(FRAME_CAPS as readonly number[]).includes(out.frameCap as number)) delete out.frameCap;
+    if (!(UI_STYLES as readonly string[]).includes(out.uiStyle as string)) delete out.uiStyle;
+    if (!(UI_LIGHTS as readonly string[]).includes(out.uiLight as string)) delete out.uiLight;
+    if (!(UI_FRAMES as readonly string[]).includes(out.uiFrames as string)) delete out.uiFrames;
     return out as Partial<typeof SETTING_DEFAULTS>;
   } catch {
     return {};

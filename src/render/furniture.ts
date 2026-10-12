@@ -13,6 +13,7 @@ import { MOSS, hashOf } from './ivy';
 import { LAMP_ARM, LAMP_GLASS, LAMP_HANG } from '../game/lamps';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
 import { drawPlinth, drawPlinthRunes } from './plinth';
+import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, WOOD_TONE } from './materials';
 
 /**
  * Furniture, built rather than drawn.
@@ -169,16 +170,7 @@ const INK_WARM: RGB = [46, 32, 28];
 /** A material from its colour, inked in a darker warm shade of itself. */
 const paintOf = (body: RGB, ink = 0.62): Paint => ({ body, ink: mix(body, INK_WARM, ink) });
 
-/**
- * The woods, sawn and planed: what a board of each looks like on a bench,
- * rather than the bark on the tree. Oak is honey, pine and birch are pale,
- * cedar and cherry run red, plum is darkest.
- */
-const WOOD_TONE: Record<string, string> = {
-  pine: '#dcc093', birch: '#e4d2ae', oak: '#bb8f5c', maple: '#d8b489', willow: '#cfbe9a', cedar: '#bf7d5e',
-  apple: '#bf8f72', cherry: '#ad6a4e', olive: '#bba27a', pear: '#c69e86', plum: '#955f50', peach: '#cfa682',
-  fig: '#d2bb93', lemon: '#dcc692', pomegranate: '#a26e56', apricot: '#cc9f67', quince: '#caa87d',
-};
+/* The woods, sawn and planed, are `WOOD_TONE` in materials.ts. */
 /** What a piece is built of when it does not say: oak. */
 const WOOD_PLAIN = '#b88c5a';
 /**
@@ -194,9 +186,9 @@ export const woodHex = (material?: string): string => {
   return WOOD_TONE[id] ?? WOOD_PLAIN;
 };
 
-const IRON: Paint = { body: hex('#6b6873'), ink: hex('#34323b') };
-const BRASS: Paint = { body: hex('#d9b460'), ink: hex('#7c5e28') };
-const LINEN: Paint = { body: hex('#efe9dc'), ink: hex('#9a8f7e') };
+const IRON: Paint = { body: hex(IRON_PAINT.body), ink: hex(IRON_PAINT.ink) };
+const BRASS: Paint = { body: hex(BRASS_PAINT.body), ink: hex(BRASS_PAINT.ink) };
+const LINEN: Paint = { body: hex(LINEN_PAINT.body), ink: hex(LINEN_PAINT.ink) };
 const STONE: Paint = { body: hex('#d2cabb'), ink: hex('#857c6c') };
 /** Water standing still in a basin, as a piece is shown when it is not being drawn live. */
 const STILL_WATER = 'rgb(104,208,204)';

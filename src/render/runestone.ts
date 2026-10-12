@@ -1,7 +1,7 @@
 import type { RunestoneId } from '../game/runestones';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { hashOf, MOSS, PPM, rand, STAGES, strandPic, type StrandKind } from './ivy';
-import { star } from './shine';
+import { star } from './star';
 import { VIEWS } from './view';
 
 /**
@@ -781,6 +781,39 @@ export function cut(g: Ctx, fill: RGB, w: number, path: () => void): void {
   g.restore();
 }
 
+/**
+ * The outline of a panel sunk into a face, `d` in from its rule: straight up
+ * from its foot at `z0` to `z1`, its middle running from `mid0` to `mid1` as
+ * it rises, `hw` either side, and a pointed head `arch` over that. In the
+ * face's frame, z up. The interface cuts its windows' niches with it too
+ * (`src/ui/runecut-art.ts`).
+ */
+export function panelArch(g: Ctx, mid0: number, mid1: number, hw: number, z0: number, z1: number, arch: number, d: number): void {
+  const top = z1 + arch - d * 0.4;
+  const l0 = mid0 - hw + d, r0 = mid0 + hw - d;
+  const l1 = mid1 - hw + d, r1 = mid1 + hw - d;
+  g.beginPath();
+  g.moveTo(l0, z0 + d);
+  g.lineTo(l1, z1);
+  g.quadraticCurveTo(l1, z1 + (top - z1) * 0.7, mid1, top);
+  g.quadraticCurveTo(r1, z1 + (top - z1) * 0.7, r1, z1);
+  g.lineTo(r0, z0 + d);
+  g.closePath();
+}
+
+/** A crack: a dark line jagging in from (x, z) at `a` for `len`, cut with its lit lip, its turns off `T`. */
+export function crack(g: Ctx, fill: RGB, T: () => number, x: number, z: number, a: number, len: number): void {
+  const pts: Pt[] = [[x, z]];
+  for (let i = 0; i < 6; i++) {
+    const d = len / 6;
+    a += (T() - 0.5) * 0.9;
+    x += Math.cos(a) * d;
+    z += Math.sin(a) * d;
+    pts.push([x, z]);
+  }
+  cut(g, fill, 0.55, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
+}
+
 /* ---- the five ---------------------------------------------------------------- */
 
 /** The panel down a face: its middle at its foot and at its head, how wide, where it starts and stops, and its runes. */
@@ -1413,18 +1446,7 @@ function modelOf(id: RunestoneId): Model {
       stoneSkin(g, T, fill, tTop, xs, seed);
 
       /* -- the panel: a field sunk a step into the face, ruled twice round, a pointed head -- */
-      const border = (d: number): void => {
-        const zA = panel.z1, top = panel.z1 + panel.arch - d * 0.4;
-        const l0 = midAt(panel.z0) - hw + d, r0 = midAt(panel.z0) + hw - d;
-        const l1 = midAt(zA) - hw + d, r1 = midAt(zA) + hw - d, mx = midAt(zA);
-        g.beginPath();
-        g.moveTo(l0, panel.z0 + d);
-        g.lineTo(l1, zA);
-        g.quadraticCurveTo(l1, zA + (top - zA) * 0.7, mx, top);
-        g.quadraticCurveTo(r1, zA + (top - zA) * 0.7, r1, zA);
-        g.lineTo(r0, panel.z0 + d);
-        g.closePath();
-      };
+      const border = (d: number): void => panelArch(g, midAt(panel.z0), midAt(panel.z1), hw, panel.z0, panel.z1, panel.arch, d);
       border(1.8);
       g.fillStyle = css(mix(fill, hex('#a39aac'), 0.42), 0.55);
       g.fill();
@@ -1454,16 +1476,7 @@ function modelOf(id: RunestoneId): Model {
       /* -- cracks: a dark line jagging in from an edge, its lit lip below it -- */
       {
         for (const c of which === 'front' ? spec.cracks : spec.backCracks ?? []) {
-          const pts: Pt[] = [[c.x, c.z]];
-          let a = c.a, x = c.x, z = c.z;
-          for (let i = 0; i < 6; i++) {
-            const d = c.len / 6;
-            a += (T() - 0.5) * 0.9;
-            x += Math.cos(a) * d;
-            z += Math.sin(a) * d;
-            pts.push([x, z]);
-          }
-          cut(g, fill, 0.55, () => { g.beginPath(); pts.forEach(([px, pz], i) => (i ? g.lineTo(px, pz) : g.moveTo(px, pz))); });
+          crack(g, fill, T, c.x, c.z, c.a, c.len);
         }
       }
 
@@ -2498,8 +2511,28 @@ export const breath = (g: Glow, t: number): number => g.roundel
   : 0.5 + 0.5 * Math.sin((t / BREATH - g.i * STAGGER) * TAU);
 
 /** Motes rising past the runes: how many, and the seconds each takes to rise. */
-const MOTES = 7;
+export const MOTES = 7;
 const MOTE_RISE = 6.5;
+
+/** How far up its rise the `i`th mote is at `t`, nought to one, on its own clock. */
+export const moteU = (i: number, t: number): number => ((t / (MOTE_RISE + i * 0.6) + i * 0.37) % 1 + 1) % 1;
+
+/** One mote at (x, y): a warm haze and a small four-pointed star in it, `a` bright, `r` big. */
+export function drawMote(ctx: Ctx, x: number, y: number, r: number, a: number): void {
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = a * 0.3;
+  ctx.fillStyle = 'rgb(255, 196, 110)';
+  ctx.beginPath();
+  ctx.arc(x, y, r * 1.5, 0, TAU);
+  ctx.fill();
+  ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgb(255, 238, 190)';
+  ctx.save();
+  ctx.translate(x, y);
+  star(ctx, r * 1.7, r * 0.6);
+  ctx.fill();
+  ctx.restore();
+}
 
 /**
  * Where the motes are at `t`: each rising from the foot of the panel past its
@@ -2514,7 +2547,7 @@ function motesAt(b: Baked, t: number, zoom: number): Array<{ x: number; y: numbe
   const top = pn.roundel ? pn.roundel.z + pn.roundel.r : pn.z1 + pn.arch;
   const out: Array<{ x: number; y: number; a: number; r: number }> = [];
   for (let i = 0; i < MOTES; i++) {
-    const u = ((t / (MOTE_RISE + i * 0.6) + i * 0.37) % 1 + 1) % 1;
+    const u = moteU(i, t);
     const z = pn.z0 + u * (top - pn.z0 + 6);
     const mid = pn.x0 + (pn.x1 - pn.x0) * Math.min(1, (z - pn.z0) / Math.max(1, pn.z1 - pn.z0));
     const x = mid + Math.sin(u * TAU * 0.8 + i * 1.9) * pn.w * 0.62;
@@ -2610,21 +2643,7 @@ export function drawRunestone(ctx: Ctx, sx: number, sy: number, zoom: number, id
   drawGlows(ctx, b.glows, sx, sy, zoom, night, t);
   // Motes of light rising up the panel and fading.
   for (const m of motesAt(b, t, zoom)) {
-    const px = sx + m.x * zoom, py = sy + m.y * zoom;
-    const a = m.a * (0.2 + 0.8 * night);
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.globalAlpha = a * 0.3;
-    ctx.fillStyle = 'rgb(255, 196, 110)';
-    ctx.beginPath();
-    ctx.arc(px, py, m.r * 1.5, 0, TAU);
-    ctx.fill();
-    ctx.globalAlpha = a;
-    ctx.fillStyle = 'rgb(255, 238, 190)';
-    ctx.save();
-    ctx.translate(px, py);
-    star(ctx, m.r * 1.7, m.r * 0.6);
-    ctx.fill();
-    ctx.restore();
+    drawMote(ctx, sx + m.x * zoom, sy + m.y * zoom, m.r, m.a * (0.2 + 0.8 * night));
   }
   ctx.globalCompositeOperation = was;
   ctx.globalAlpha = wasA;

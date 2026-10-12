@@ -58,6 +58,7 @@ import { jettyBase } from '../game/frame';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { drawShine, shines } from './shine';
+import { NIGHT_WASH } from './nightwash';
 import { ARCH, BAY, DOOR, DOUBLE, FENCE_GAP, WINDOW, type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { CAP_D, CAP_W, capMoss, hashOf, ivyLayout, mossStrip, PAVE_STAGES, pavingMoss, PPM, slabTopMoss, strandPic, vigour, type Keep } from './ivy';
 import { bridgeGreen, greenNow, greenShows, GREEN_WET_REACH, mossyPiece, pavingGreen, pieceGreen, slabGreen, wallGreen, wetFrom } from '../game/greening';
@@ -794,7 +795,7 @@ export function skyWash(hour: number, dark: number): Array<{ colour: string; alp
   const dawn = bell(DAWN);
   if (dusk > 0.01) out.push({ colour: '255, 146, 58', alpha: dusk * 0.22 });
   if (dawn > 0.01) out.push({ colour: '255, 168, 146', alpha: dawn * 0.18 });
-  if (dark > 0.01) out.push({ colour: '12, 20, 44', alpha: dark * 0.68 });
+  if (dark > 0.01) out.push({ colour: NIGHT_WASH.colour, alpha: dark * NIGHT_WASH.alpha });
   return out;
 }
 

@@ -1,4 +1,5 @@
-import type { Game } from '../../game/game';
+import { NIGHT_ENDS, NIGHT_STARTS, type Game } from '../../game/game';
+import { applyLook, islandTime } from '../theme';
 import { BINDS, BIND_GROUPS, keyName, keyReserved, MAX_KEYS, type Keybinds } from '../../game/keybinds';
 import { whoAmI } from '../../net/accounts';
 import { RARITIES } from '../../game/items';
@@ -6,7 +7,8 @@ import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR } from '../../game/settings';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { FRAME_REACH, FRAMES, frameLabel, RIM, RIMS } from '../runecut-art';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
 import { listed, numberWord } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
@@ -184,6 +186,51 @@ export class SettingsPanel {
       row.append(select, text);
       display.append(row);
     };
+    /*
+     * The interface's look, and Runecut's light. Both take effect at once:
+     * they are two attributes on the page (`src/ui/theme.ts`).
+     */
+    const relook = (): void => applyLook(game.settings, game.isNight());
+    choose<UiStyle>(
+      'Interface look',
+      'Runecut draws every window, menu, tooltip and bar as pale carved stone with dark writing, with the window\'s rune at the head of its title, '
+        + 'in Alegreya Sans at 14 pixels. Classic draws them dark with pale writing in the system font at 13 pixels, as before Runecut.',
+      [['runecut', 'Runecut'], ['classic', 'Classic']],
+      () => game.settings.uiStyle,
+      (v) => {
+        game.settings.uiStyle = v;
+        relook();
+      },
+    );
+    choose<UiLight>(
+      'Runecut light',
+      'Day is pale stone with dark writing. Night is dark stone with pale writing, and the rune of the window in front glows. '
+        + `Island clock shows Night from ${islandTime(NIGHT_STARTS)} to ${islandTime(NIGHT_ENDS)} island time and Day the rest of the day. No effect in Classic.`,
+      [['day', 'Day'], ['night', 'Night'], ['clock', 'Island clock']],
+      () => game.settings.uiLight,
+      (v) => {
+        game.settings.uiLight = v;
+        relook();
+      },
+    );
+    {
+      const framed = FRAMES.reduce((n, f) => n + f.for.length, 0);
+      const of = (id: string): string => frameLabel(id).toLowerCase();
+      choose<UiFrames>(
+        'Window frames',
+        `Runecut only. The border round each window, ${RIM} pixels wide (${RIMS.phone} on a phone, ${RIMS.hud} on the status panel, ${RIMS.toolbar} on the toolbar). `
+          + `Themed: the border is drawn as the stuff of what the window holds, in ${FRAMES.length} kinds over ${framed} windows and bars: `
+          + `the pack in a ${of('inventory')}, a crate or the stores in a ${of('crate')}, crafting on a ${of('craft')}, events on a ${of('events')}, the map on ${of('map')} with a compass rose; `
+          + `a knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge, and clicks go through it. Any other window has plain stone. `
+          + 'Stone: every border is the plain stone rim. The room inside a window is the same either way.',
+        [['themed', 'Themed'], ['stone', 'Stone']],
+        () => game.settings.uiFrames,
+        (v) => {
+          game.settings.uiFrames = v;
+          relook();
+        },
+      );
+    }
     choose<'full' | 'fast'>(
       'Graphics',
       `Fast draws ${FAST_DPR} pixel for each screen pixel on a high-density screen instead of up to ${FULL_DPR}, `

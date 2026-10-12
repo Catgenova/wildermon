@@ -1,3 +1,4 @@
+import { METAL_TONE } from './materials';
 import { HOPS, emotePose } from '../game/emotes';
 import {
   BUILDS, DEFAULT_LOOK, eyeColour, hairColour, shirtColour, skinColour, trouserColour, type Look,
@@ -6358,18 +6359,11 @@ export const gearKey = (g?: GearLook): string =>
 /** Whether anything on a body is rare enough to shine. */
 export const gearShines = (g?: GearLook): boolean => !!g && DRESSED.some((s) => (g[s]?.rare ?? 0) > 0);
 
-/**
- * The metals, worked, in the island's range: each one chalky and a shade
- * toward blue in its shadow, steel the palest of the working metals, copper
- * and bronze warm, and the rare ones each a colour nobody could take for
- * iron.
+/*
+ * The metals, worked, are `METAL_TONE` in materials.ts, where Runecut's
+ * window frames take them from too.
  */
-const METAL_TONE: Record<string, RGB> = {
-  iron: [138, 147, 164], steel: [160, 170, 188], copper: [188, 128, 104], bronze: [180, 148, 106], brass: [200, 180, 120],
-  tin: [196, 200, 204], zinc: [176, 188, 198], lead: [124, 130, 148], silver: [212, 218, 228], gold: [222, 190, 112],
-  electrum: [222, 204, 142], pewter: [164, 168, 172], adamantine: [104, 136, 166], glimmersteel: [210, 226, 240],
-  mithril: [170, 198, 232], seryll: [214, 198, 152],
-};
+
 /** The woods, as the furniture is built of them. */
 const WOOD_GEAR: Record<string, RGB> = {
   pine: [220, 192, 147], birch: [228, 210, 174], oak: [187, 143, 92], maple: [216, 180, 137], willow: [207, 190, 154],

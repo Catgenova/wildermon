@@ -122,6 +122,9 @@ import { awayLines } from '../game/away';
 import { clearQuestion } from '../game/keeper';
 import { uiBox } from './screen';
 import { capital } from '../game/words';
+import { applyLook, runeFor } from './theme';
+import { RunecutArt } from './runecut-dress';
+import { RIMS } from './runecut-art';
 
 export interface UICallbacks {
   /** Quarter-turn the camera: +1 or -1. */
@@ -261,6 +264,8 @@ export class UI {
   readonly windows: WindowManager;
   readonly menu: ContextMenu;
   readonly tooltip: Tooltip;
+  /** Runecut's stone, niches and frames on the windows, the HUD and the toolbar. */
+  private readonly art: RunecutArt;
   readonly hud: Hud;
   readonly minimap: MinimapPanel;
   private readonly eventLog: EventLogPanel;
@@ -316,6 +321,11 @@ export class UI {
     this.keys = cb.keys;
     this.island = cb.island ?? null;
     this.windows = new WindowManager(root);
+    // Every window as it is made is dressed in Runecut's stone, its niche and its frame; menus, tooltips, notices and the palette are there for a moment and stay plain.
+    this.art = new RunecutArt(root);
+    // A window's rim is narrower on a phone's screen, where every pixel across counts.
+    const rim = (): number => (root.classList.contains('narrow') ? RIMS.phone : RIMS.window);
+    this.windows.onCreate = (win) => this.art.add(win.opts.id, win.el, rim, runeFor(win.opts.id));
     this.menu = new ContextMenu(root, canvas);
     this.tooltip = new Tooltip(root);
     this.hud = new Hud(root, game, {
@@ -333,6 +343,11 @@ export class UI {
      * its own rows; the toolbar has to be told, because the button that says
      * `Inventory I` is not the thing that changed it.
      */
+    // The HUD and the toolbar are slabs too, in a strap and a tool belt.
+    for (const [id, sel] of [['hud', '.hud-status'], ['toolbar', '.toolbar']] as const) {
+      const el = root.querySelector<HTMLElement>(sel);
+      if (el) this.art.add(id, el, () => RIMS[id]);
+    }
     cb.keys.onChange = () => {
       this.hud.drawKeys();
       this.settings.drawKeys();
@@ -825,6 +840,8 @@ export class UI {
   }
 
   update(fps: number): void {
+    // Runecut's light on the island clock turns at dusk and dawn; set to Day or Night this writes nothing.
+    applyLook(this.game.settings, this.game.isNight());
     this.notices.update(performance.now());
     this.hud.update(this.renderer, fps);
     this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down } : null;

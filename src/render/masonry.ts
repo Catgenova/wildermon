@@ -1,6 +1,7 @@
 import { WALL_HEIGHT } from '../game/building';
 import { HEIGHT_SCALE, TILE_H } from './iso';
 import { STAINED_OPACITY } from './flooring';
+import { LOG as LOG_HUE, MARBLE as MARBLE_HUE, PLANK as PLANK_HUE } from './materials';
 
 /**
  * Cobblestone, five ways, one seam.
@@ -832,12 +833,12 @@ const STONE: Stock = ((P) => ({
 const MARBLE_PASTEL: Record<string, string> = {
   ...RUBBLE_PASTEL,
   // the white, cool: its field tone, its shade, the light along an arris, and its darkest
-  stone: '#edeff1', stoneShade: '#e0e3e7', stoneHi: '#f8f9fa', stoneDark: '#d3d7dc',
+  stone: MARBLE_HUE.stone, stoneShade: MARBLE_HUE.shade, stoneHi: MARBLE_HUE.hi, stoneDark: MARBLE_HUE.dark,
   // a bed a step whiter and one a step greyer, out of the same quarry: one cool family, never cream
   warm: '#f1f3f5', warmShade: '#e4e7eb', warmHi: '#f9fafb',
   dark: '#e2e5e9', darkHi: '#eef0f3',
   // the joint, a hair wide, and the ink round every piece: a soft cool grey, never dark
-  joint: '#c3c7cd', line: '#9aa1ab',
+  joint: MARBLE_HUE.joint, line: MARBLE_HUE.line,
   // the dove grey it is dressed in, and the band of it at a floor line
   dress: '#bec2c9', dressShade: '#adb1b9', dressHi: '#d1d4da',
   band: '#c6c9d0', bandShade: '#b4b8c0', bandHi: '#d8dbe0',
@@ -1231,11 +1232,11 @@ const LOG_PASTEL: Record<string, string> = {
   warm: '#d9cfb9', warmShade: '#c4baa3', warmHi: '#e3dccc',
   dark: '#c7bda7', darkHi: '#d3cab6',
   // the logs: their side in the light, their underside, and the light along their top
-  dress: '#98806c', dressShade: '#6c5a57', dressHi: '#b59e86',
-  band: '#98806c', bandShade: '#6c5a57', bandHi: '#b59e86',
-  joint: '#bcb09a', line: '#473935',
+  dress: LOG_HUE.side, dressShade: LOG_HUE.under, dressHi: LOG_HUE.top,
+  band: LOG_HUE.side, bandShade: LOG_HUE.under, bandHi: LOG_HUE.top,
+  joint: '#bcb09a', line: LOG_HUE.line,
   // the end grain where a log is cut, and the rings in it
-  grain: '#c8ad8b', grainRing: '#a38a70',
+  grain: LOG_HUE.grain, grainRing: LOG_HUE.ring,
   ringJoint: '#4e4a53', reveal: '#6a574e',
   stain: '#c1baa1', stainShade: '#aca58c',
   footing: '#7d787a', footingShade: '#686366', footingHi: '#8c888c',
@@ -1297,11 +1298,11 @@ const LOG: Stock = ((P) => ({
 const PLANK_PASTEL: Record<string, string> = {
   ...RUBBLE_PASTEL,
   // the boards: pine gone pale in the weather
-  stone: '#c9b395', stoneShade: '#b49e81', stoneHi: '#d8c5aa', stoneDark: '#a18a6d',
+  stone: PLANK_HUE.board, stoneShade: PLANK_HUE.boardShade, stoneHi: PLANK_HUE.boardHi, stoneDark: PLANK_HUE.boardDark,
   warm: '#cdb391', warmShade: '#b89e7d', warmHi: '#dac3a3',
   dark: '#bea789', darkHi: '#ccb697',
   // the battens over the joints, a step darker than the boards
-  batten: '#b09678', battenShade: '#8e785f', battenHi: '#c5ad90',
+  batten: PLANK_HUE.batten, battenShade: PLANK_HUE.battenShade, battenHi: PLANK_HUE.battenHi,
   // the trim: the band at a storey's head, the corner boards, the skirt
   dress: '#8d7361', dressShade: '#65524f', dressHi: '#a78c78',
   band: '#8d7361', bandShade: '#65524f', bandHi: '#a78c78',

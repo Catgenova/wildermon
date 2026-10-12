@@ -454,6 +454,11 @@ export const DAWN = 3;
 export const DUSK = 21;
 /** Game hours either side of sundown and of sunrise that the light takes to go, and to come back. */
 export const TWILIGHT = 1;
+/** How dark it has to be (`Game.darkness`) for `isNight`: past it, the night's things happen and Runecut's clock light turns to Night. */
+export const NIGHT_FROM = 0.45;
+/** The game hours, after sundown and before sunrise, at which `darkness` crosses `NIGHT_FROM`. */
+export const NIGHT_STARTS = DUSK - TWILIGHT + NIGHT_FROM * 2 * TWILIGHT;
+export const NIGHT_ENDS = DAWN + TWILIGHT - NIGHT_FROM * 2 * TWILIGHT;
 /** Game hours after sunrise that somebody asleep wakes up. */
 export const WAKE_AFTER_DAWN = 0.5;
 const FORAGE_COOLDOWN = world(180);
@@ -3427,7 +3432,7 @@ export class Game {
   }
 
   isNight(): boolean {
-    return this.darkness() > 0.45;
+    return this.darkness() > NIGHT_FROM;
   }
 
   /** What every piece you wear and hold of one enchantment comes to together, to its cap (`wornEnchant`, the island's `worn_enchant`). */

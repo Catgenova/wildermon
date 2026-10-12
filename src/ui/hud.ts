@@ -229,7 +229,7 @@ export class Hud {
     this.compass.className = 'hud-compass';
     this.compass.title = 'North';
     this.compass.innerHTML =
-      '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><polygon points="10,1 14,15 10,11.5 6,15" fill="#e3b657"/><polygon points="10,11.5 14,15 10,19 6,15" fill="#6b5836"/></svg><b>N</b>';
+      '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><polygon points="10,1 14,15 10,11.5 6,15" style="fill: var(--ui-accent)"/><polygon points="10,11.5 14,15 10,19 6,15" style="fill: var(--ui-border)"/></svg><b>N</b>';
     footer.append(this.posEl, this.compass);
     status.append(footer);
     // Rest banked and whatever the last meal favours.

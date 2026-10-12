@@ -947,8 +947,15 @@ export interface RarityDef {
   keep: number;
   /** Quality it may be improved past your own skill by. */
   ceiling: number;
-  /** Colour it is written in. */
+  /** Its colour, as the island draws it: the shine on a rare thing and the tint on a rare beast. */
   colour: string;
+  /**
+   * The colour its name is written in on the page: a token the interface's
+   * look sets (`--rarity-*` in src/style.css), falling back to `colour` in
+   * Classic. Pale blue on pale stone is unreadable, so the page cannot simply
+   * reuse the canvas colour.
+   */
+  css: string;
   /** How much bigger a wildermon that came into the world this rare is than an ordinary one of its kind. */
   size: number;
   /**
@@ -961,10 +968,10 @@ export interface RarityDef {
 }
 
 export const RARITIES: RarityDef[] = [
-  { name: '', boost: 1, keep: 1, ceiling: 0, colour: '', size: 1, blood: 1 },
-  { name: 'rare', boost: 1.1, keep: 0.8, ceiling: 5, colour: '#8fc8f0', size: 1.5, blood: 1.2 },
-  { name: 'supreme', boost: 1.25, keep: 0.6, ceiling: 12, colour: '#c79bf0', size: 2, blood: 1.4 },
-  { name: 'fantastic', boost: 1.5, keep: 0.35, ceiling: 25, colour: '#f0c060', size: 3, blood: 1.6 },
+  { name: '', boost: 1, keep: 1, ceiling: 0, colour: '', css: '', size: 1, blood: 1 },
+  { name: 'rare', boost: 1.1, keep: 0.8, ceiling: 5, colour: '#8fc8f0', css: 'var(--rarity-rare, #8fc8f0)', size: 1.5, blood: 1.2 },
+  { name: 'supreme', boost: 1.25, keep: 0.6, ceiling: 12, colour: '#c79bf0', css: 'var(--rarity-supreme, #c79bf0)', size: 2, blood: 1.4 },
+  { name: 'fantastic', boost: 1.5, keep: 0.35, ceiling: 25, colour: '#f0c060', css: 'var(--rarity-fantastic, #f0c060)', size: 3, blood: 1.6 },
 ];
 
 /**

@@ -50,7 +50,11 @@ export function nameCell(item: Item, opts: { worn?: boolean; occupant?: string }
     name.title += ` · ${hex}`;
   }
   const rare = rarityOf(item);
-  if (rare.colour) name.style.color = rare.colour;
+  if (rare.css) {
+    name.style.color = rare.css;
+    // For the notch Runecut cuts at the head of the row (src/style.css), so rarity is not told by colour alone.
+    name.dataset.rare = rare.name;
+  }
   if (worn) name.classList.add('inv-worn');
   if (item.locked) name.classList.add('inv-kept');
   return name;

@@ -7,6 +7,8 @@ import { EFFECT_HEAD, EFFECT_TAIL, enchantLineAt } from '../../game/enchanting';
 import { STUN_SECS } from '../../game/fight';
 import { LAYOUT_NAMES } from '../../game/keybinds';
 import { SNAP } from '../windows';
+import { islandTime } from '../theme';
+import { FRAME_REACH, FRAMES, frameLabel, RIM } from '../runecut-art';
 import { SALE_DAYS } from '../../game/prices';
 import { RECENT } from './craft';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
@@ -70,7 +72,7 @@ import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, MOTE_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
-import { DAMAGE_MAX, DAY_SECONDS, goSeconds, QL_TOP } from '../../game/game';
+import { DAMAGE_MAX, DAY_SECONDS, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
 import { defaultKey } from '../../game/keybinds';
 import { guidePages } from '../../game/guide';
@@ -1867,6 +1869,24 @@ export const NEWS: News[] = [
         + 'with how many sold, the cheapest, dearest and average price of one, and a bar a day. Hovering a thing in the pack or a store says the same of its kind.',
       'Ctrl-click (⌘-click on a Mac) rows in the pack or a store to pick several, and Shift-click to pick every row from the last one picked. '
         + 'Drag any picked row to move them all, or use Put in the store or Take them out on the bar under the list.',
+    ],
+  },
+  {
+    n: 138,
+    day: '2026-10-11',
+    lines: () => [
+      'A new interface look, Runecut: every window, menu, tooltip and bar is pale carved stone with dark writing, its corners cut, '
+        + 'with the window\'s rune at the head of its title (lit on the window in front) and its title in Cormorant Unicase. '
+        + 'Writing is Alegreya Sans at 14 pixels, up from 13, with small labels in its small capitals.',
+      'The health, stamina, food and water bars are grooves filled red, green, amber and blue-grey. A rare, supreme or fantastic thing '
+        + 'has a diamond notch at the head of its row in its rarity\'s colour, a size larger at each step, as well as its name in that colour.',
+      `Settings, Display: Interface look switches between Runecut and Classic, the dark look as it was. Runecut light picks Day, Night `
+        + `(dark stone with pale writing) or Island clock, which shows Night from ${islandTime(NIGHT_STARTS)} to ${islandTime(NIGHT_ENDS)} island time.`,
+      'Each Runecut window is a slab of the runestones\' stone, painted with their own painters: its face in their skin with lichen, cracks and chipped edges, '
+        + 'a side and a foot in their shade, and its rune cut in a pointed niche at the head of the title, lit amber by day and, on the window in front after dark, breathing with motes rising off it.',
+      `Each window's border, ${RIM} pixels wide, is drawn as the stuff of what it holds, in ${FRAMES.length} kinds: the pack in a ${frameLabel('inventory').toLowerCase()}, `
+        + `the stores in a ${frameLabel('stores').toLowerCase()}, crafting on a ${frameLabel('craft').toLowerCase()}, events on a ${frameLabel('events').toLowerCase()}, the status panel in a ${frameLabel('hud').toLowerCase()} and the toolbar in a ${frameLabel('toolbar').toLowerCase()}. `
+        + `A knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge; clicks go through it, and the room inside a window is no smaller. Settings, Display, Window frames: Themed, or Stone for the plain stone rim on all.`,
     ],
   },
 ];

@@ -135,7 +135,7 @@ export class LedgerPanel {
     made.textContent = String(rec.n);
     const rare = document.createElement('span');
     rare.textContent = rec.rare ? String(rec.rare) : '—';
-    if (rec.rare) rare.style.color = rarityOf({ rare: 1 }).colour ?? '';
+    if (rec.rare) rare.style.color = rarityOf({ rare: 1 }).css;
     const best = document.createElement('span');
     best.textContent = rec.best.toFixed(1);
     if (rec.best >= 90) best.classList.add('inv-keen');
