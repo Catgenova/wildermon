@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -58,7 +58,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'book', label: 'Starred leather book', for: ['journal'] },
   { kind: 'letter', label: 'Sketches on an oak board', for: ['social'] },
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
-  { kind: 'wicker', label: 'Wicker basket', for: ['wildermon'] },
+  { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
   { kind: 'fieldbook', label: 'Field-worn leather', for: ['guide'] },
   { kind: 'mirror', label: 'Gilded mirror', for: ['look'] },
   { kind: 'turf', label: 'Turf', for: ['tile'] },
@@ -74,7 +74,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -3220,6 +3220,193 @@ function flowerClump(g: Ctx, R: () => number, x: number, y: number, r: number, F
   }
 }
 
+/* ---- the wildermon's own kit ---------------------------------------------- */
+
+/** The wildermon's pale wood, and the brown of its twigs and its marks. */
+const WILD_WOOD = { body: H('#c39a6c'), lit: H('#e3c69e'), deep: H('#8c6644') };
+const TWIG = { body: H('#8a6446'), lit: H('#b48b66') };
+const PAW_BROWN = H('#7a5236');
+
+/** A twig along points, `t` thick: brown, lit along one edge. */
+function twig(g: Ctx, pts: Pt[], t: number): void {
+  const path = (): void => {
+    g.beginPath();
+    pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  };
+  g.lineCap = 'round';
+  path();
+  g.strokeStyle = css(shade(TWIG.body, 0.45));
+  g.lineWidth = t + 1.4;
+  g.stroke();
+  path();
+  g.strokeStyle = css(TWIG.body);
+  g.lineWidth = t;
+  g.stroke();
+  g.save();
+  g.translate(-t * 0.18, -t * 0.18);
+  path();
+  g.strokeStyle = css(TWIG.lit, 0.8);
+  g.lineWidth = t * 0.3;
+  g.stroke();
+  g.restore();
+}
+
+/** The sage of the wildermon's leaves: face, lit and vein. */
+const SAGE = { body: H('#9db88a'), lit: H('#c4d8b0'), deep: H('#5f7d55') };
+
+/** A pointed leaf from (x, y) along `ang`, `s` long: sage, lit down one half, a vein along it. */
+function sageLeaf(g: Ctx, x: number, y: number, ang: number, s: number): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(ang);
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.quadraticCurveTo(s * 0.45, -s * 0.34, s, 0);
+  g.quadraticCurveTo(s * 0.45, s * 0.34, 0, 0);
+  g.closePath();
+  const f = g.createLinearGradient(0, -s * 0.2, 0, s * 0.2);
+  f.addColorStop(0, css(SAGE.lit));
+  f.addColorStop(0.5, css(SAGE.body));
+  f.addColorStop(1, css(mix(SAGE.body, SAGE.deep, 0.4)));
+  g.fillStyle = f;
+  g.fill();
+  g.strokeStyle = css(SAGE.deep);
+  g.lineWidth = 0.7;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(s * 0.08, 0);
+  g.lineTo(s * 0.82, 0);
+  g.strokeStyle = css(SAGE.deep, 0.6);
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.restore();
+}
+
+/** A twig along points with pointed leaves off it every `F` * 0.75 or so on alternate sides, and a white flower at every third. */
+function leafyTwig(g: Ctx, R: () => number, pts: Pt[], F: number, t: number): void {
+  twig(g, pts, t);
+  let run = 0, next = F * 0.4, side = 1, n = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+    run += Math.hypot(bx - ax, by - ay);
+    if (run < next) continue;
+    const ang = Math.atan2(by - ay, bx - ax);
+    sageLeaf(g, bx, by, ang + side * (0.6 + R() * 0.4), F * (0.75 + R() * 0.25));
+    if (n % 3 === 2) blossom(g, bx + Math.cos(ang + side * 1.6) * F * 0.25, by + Math.sin(ang + side * 1.6) * F * 0.25, F * 0.2);
+    side = -side;
+    n++;
+    next = run + F * (0.55 + R() * 0.3);
+  }
+}
+
+/** A clump at (x, y): pointed leaves fanned round, `r` long, white flowers among them. */
+function leafClump(g: Ctx, R: () => number, x: number, y: number, r: number, F: number, flowers: number): void {
+  for (let k = 0; k < 9; k++) {
+    const a = (k / 9) * Math.PI * 2 + R() * 0.5;
+    sageLeaf(g, x, y, a, r * (0.8 + R() * 0.4));
+  }
+  for (let k = 0; k < flowers; k++) {
+    const a = (k / flowers) * Math.PI * 2 + R();
+    blossom(g, x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45, F * 0.21);
+  }
+}
+
+/** A round of wood at (x, y), `r` across its middle: a ring of the wood, a cream face, and on it `mark` at `r` * 0.62. */
+function medallion(g: Ctx, x: number, y: number, r: number, wood: typeof WILD_WOOD, mark: (x: number, y: number, s: number) => void): void {
+  g.save();
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.shadowColor = 'rgba(40, 26, 18, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 1;
+  const f = g.createLinearGradient(x - r, y - r, x + r, y + r);
+  f.addColorStop(0, css(wood.lit));
+  f.addColorStop(0.5, css(wood.body));
+  f.addColorStop(1, css(wood.deep));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.stroke();
+  g.beginPath();
+  g.arc(x, y, r * 0.76, 0, Math.PI * 2);
+  g.fillStyle = '#f6ecd6';
+  g.fill();
+  g.strokeStyle = css(shade(wood.deep, 0.2));
+  g.lineWidth = 0.9;
+  g.stroke();
+  g.beginPath();
+  g.arc(x, y, r * 0.68, 0, Math.PI * 2);
+  g.strokeStyle = css(wood.body, 0.6);
+  g.lineWidth = 0.6;
+  g.stroke();
+  mark(x, y, r * 0.62);
+}
+
+/** A rabbit sat facing out at (x, y), `s` high: long ears, a round head, a body and a foot either side, in brown. */
+function rabbitMark(g: Ctx, x: number, y: number, s: number): void {
+  g.fillStyle = css(PAW_BROWN);
+  for (const d of [-1, 1]) {
+    g.beginPath();
+    g.ellipse(x + d * s * 0.17, y - s * 0.5, s * 0.12, s * 0.36, d * 0.18, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.beginPath();
+  g.ellipse(x, y + s * 0.42, s * 0.42, s * 0.36, 0, 0, Math.PI * 2);
+  g.fill();
+  g.beginPath();
+  g.arc(x, y - s * 0.02, s * 0.3, 0, Math.PI * 2);
+  g.fill();
+  for (const d of [-1, 1]) {
+    g.beginPath();
+    g.ellipse(x + d * s * 0.22, y + s * 0.74, s * 0.16, s * 0.08, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // The inside of the ears and the eyes, in the cream of the face.
+  g.fillStyle = 'rgba(246, 236, 214, 0.75)';
+  for (const d of [-1, 1]) {
+    g.beginPath();
+    g.ellipse(x + d * s * 0.17, y - s * 0.5, s * 0.045, s * 0.24, d * 0.18, 0, Math.PI * 2);
+    g.fill();
+    g.beginPath();
+    g.arc(x + d * s * 0.12, y - s * 0.06, s * 0.045, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+/** A paw at (x, y), `s` across: the pad and four toes round its top, in brown. */
+function pawMark(g: Ctx, x: number, y: number, s: number): void {
+  g.fillStyle = css(PAW_BROWN);
+  g.beginPath();
+  g.moveTo(x, y - s * 0.02);
+  g.bezierCurveTo(x + s * 0.32, y - s * 0.02, x + s * 0.42, y + s * 0.42, x + s * 0.2, y + s * 0.44);
+  g.quadraticCurveTo(x, y + s * 0.38, x - s * 0.2, y + s * 0.44);
+  g.bezierCurveTo(x - s * 0.42, y + s * 0.42, x - s * 0.32, y - s * 0.02, x, y - s * 0.02);
+  g.fill();
+  for (const [dx, dy, a] of [[-0.38, -0.12, -0.5], [-0.14, -0.36, -0.15], [0.14, -0.36, 0.15], [0.38, -0.12, 0.5]]) {
+    g.beginPath();
+    g.ellipse(x + dx * s, y + dy * s, s * 0.12, s * 0.16, a, 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
+/**
+ * The wildermon's badge, where another window's rune is: a paw in brown on a
+ * cream round in a ring of the pale wood. `W` by `Hh`.
+ */
+export function paintPaw(g: Ctx, W: number, Hh: number, night: boolean): void {
+  const r = W / 2 - 1;
+  medallion(g, W / 2, Hh / 2, r, WILD_WOOD, (x, y, s) => pawMark(g, x, y, s * 1.15));
+  if (night) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
+    g.fillRect(-4, -4, W + 8, Hh + 8);
+    g.restore();
+  }
+}
+
 /* ---- the event log's own kit ------------------------------------------------ */
 
 /** The event log's marble: white, clouded in patches of pale blue, the patches parted by veins of gold. */
@@ -5301,46 +5488,102 @@ const PAINTERS: Record<string, Painter> = {
     flowerClump(g, R, w - F * 1.3, ground - F * 0.2, F * 0.6, F);
   },
 
-  /* The wildermon: woven willow, rows over and under upright stakes, a coiled rim round the edge. */
+  /*
+   * The wildermon: a band of pale wood with rounded corners, a cream fillet
+   * ruled round the inside, a gold four-pointed star on a carved boss at the
+   * middle of each side, and at the middle of the foot a round of the wood
+   * with a rabbit on it, leaves and flowers off it either side and a gold
+   * star beyond each. Twigs wound with ivy and white flowers over the top
+   * corners, sprigs on the sides, and leafy clumps at the bottom corners.
+   */
   wicker(g, w, h, F, R) {
-    const straw = H(WOOD_TONE.willow), rod = shade(H(WOOD_TONE.willow), 0.15);
+    const wood = WILD_WOOD;
+    // The band, its corners rounded, lit across from its outer edge, grained along.
+    g.save();
+    g.beginPath();
+    g.roundRect(0, 0, w, h, F * 0.45);
+    g.clip();
     eachSide(g, w, h, (s) => {
-      const c = mix(shade(straw, 0.15), straw, s.lit);
       g.save();
-      mitre(g, s.len, F);
+      mitre(g, s.len, F, 2);
       g.clip();
-      g.fillStyle = css(shade(c, 0.55));
-      g.fillRect(0, 0, s.len, F);
-      // Under and over: rows of willow 3.5 px high woven through upright stakes 8 px apart, each row a stake out of step with the last.
-      const top = 5, rh = 3.5, step = 8;
-      for (let r2 = 0; top + r2 * rh < F; r2++) {
-        const y = top + r2 * rh;
-        for (let x = -step + (r2 % 2) * step; x < s.len + step; x += step * 2) {
-          // Over a stake: the willow, round, lit along its top.
-          g.beginPath();
-          g.roundRect(x + 0.4, y + 0.3, step * 2 - 0.8, rh - 0.6, rh / 2);
-          g.fillStyle = css(mix(c, light(c, 0.25), R() * 0.6));
-          g.fill();
-          g.strokeStyle = css(shade(c, 0.5));
-          g.lineWidth = 0.7;
-          g.stroke();
-          g.fillStyle = css(light(c, 0.5), 0.8);
-          g.fillRect(x + 2, y + 0.9, step * 2 - 4, 0.7);
-        }
-        // The stakes showing where the willow passes behind them.
-        for (let x = (r2 % 2 ? step : 0) + step; x < s.len; x += step * 2) {
-          g.fillStyle = css(mix(shade(rod, 0.1), rod, s.lit));
-          g.fillRect(x - 1.3, y, 2.6, rh);
-          g.strokeStyle = css(shade(rod, 0.5));
-          g.lineWidth = 0.6;
-          g.strokeRect(x - 1.3, y, 2.6, rh);
-        }
-      }
+      const f = g.createLinearGradient(0, 0, 0, F);
+      f.addColorStop(0, css(mix(wood.deep, wood.body, s.lit * 0.6)));
+      f.addColorStop(0.25, css(mix(wood.body, wood.lit, s.lit * 0.6)));
+      f.addColorStop(0.7, css(mix(shade(wood.body, 0.1), wood.body, s.lit)));
+      f.addColorStop(1, css(wood.deep));
+      g.fillStyle = f;
+      g.fillRect(-2, -2, s.len + 4, F + 2);
+      grain(g, R, 0, s.len, F * 0.08, F * 0.72, wood.body, false);
       g.restore();
-      // The rim: a thick coil of willow bound round the edge.
-      rope(g, 0, s.len, 2.4, 4, light(straw, 0.05));
     });
-    inkBand(g, w, h, F);
+    g.restore();
+    // The cream fillet round the inside, ruled either side, and a fine line of the wood down its middle.
+    band(g, w, h, F, F * 0.76);
+    g.fillStyle = '#f3e7cc';
+    g.fill('evenodd');
+    g.strokeStyle = css(shade(wood.deep, 0.25));
+    g.lineWidth = 1;
+    g.strokeRect(F * 0.76 - 0.5, F * 0.76 - 0.5, w - F * 1.52 + 1, h - F * 1.52 + 1);
+    g.strokeStyle = css(wood.body, 0.8);
+    g.lineWidth = 0.7;
+    g.strokeRect(F * 0.88, F * 0.88, w - F * 1.76, h - F * 1.76);
+    g.strokeStyle = INK;
+    g.lineWidth = 1;
+    g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
+    // The outer edge: ink, and the wood's lit lip inside it.
+    g.beginPath();
+    g.roundRect(0.5, 0.5, w - 1, h - 1, F * 0.45);
+    g.strokeStyle = INK;
+    g.lineWidth = 1;
+    g.stroke();
+    g.beginPath();
+    g.roundRect(2, 2, w - 4, h - 4, F * 0.4);
+    g.strokeStyle = css(light(wood.lit, 0.3), 0.7);
+    g.lineWidth = 0.8;
+    g.stroke();
+    // A carved boss at the middle of each side with a gold star on it, gold points above and below.
+    for (const [x, d] of [[0, -1], [w, 1]] as const) {
+      const y = h / 2;
+      g.save();
+      g.beginPath();
+      g.ellipse(x, y, F * 0.5, F * 0.85, 0, d < 0 ? Math.PI / 2 : -Math.PI / 2, d < 0 ? Math.PI * 1.5 : Math.PI / 2);
+      g.closePath();
+      g.shadowColor = 'rgba(40, 26, 18, 0.35)';
+      g.shadowBlur = 2;
+      const f = g.createLinearGradient(x + d * F * 0.5, 0, x, 0);
+      f.addColorStop(0, css(wood.deep));
+      f.addColorStop(1, css(wood.lit));
+      g.fillStyle = f;
+      g.fill();
+      g.restore();
+      g.strokeStyle = INK;
+      g.lineWidth = 0.9;
+      g.stroke();
+      goldStar4(g, x - d * F * 0.12, y, F * 0.48);
+      for (const e of [-1, 1]) goldStar4(g, x - d * F * 0.35, y + e * F * 1.25, F * 0.2);
+    }
+    // Leafy twigs over the top corners, a clump of leaves and flowers where each bends round.
+    leafyTwig(g, R, wander([F * 0.2, F * 3.6], [-F * 0.05, F * 0.3], [F * 1.2, F * 0.15], [F * 3.2, -F * 0.2], [F * 5.4, F * 0.15]), F, F * 0.2);
+    leafyTwig(g, R, wander([w - F * 4.6, F * 0.15], [w - F * 1.6, -F * 0.25], [w - F * 0.25, F * 0.5], [w + F * 0.1, F * 2], [w - F * 0.2, F * 3.8]), F, F * 0.2);
+    leafClump(g, R, F * 0.3, F * 0.3, F * 0.85, F, 3);
+    leafClump(g, R, w - F * 0.35, F * 0.35, F * 0.75, F, 2);
+    // Sprigs on the sides, a third of the way down.
+    leafyTwig(g, R, wander([F * 0.3, h * 0.36 + F * 1.5], [F * 0.05, h * 0.36], [F * 0.35, h * 0.36 - F * 1.6]), F, F * 0.14);
+    leafyTwig(g, R, wander([w - F * 0.3, h * 0.36 + F * 1.6], [w - F * 0.05, h * 0.36], [w - F * 0.35, h * 0.36 - F * 1.5]), F, F * 0.14);
+    // Leafy clumps at the bottom corners, a sprig up the side from each.
+    leafyTwig(g, R, wander([F * 0.35, h - F * 0.2], [F * 0.1, h - F * 1.6], [F * 0.4, h - F * 3]), F, F * 0.15);
+    leafyTwig(g, R, wander([w - F * 0.35, h - F * 0.2], [w - F * 0.1, h - F * 1.6], [w - F * 0.4, h - F * 3]), F, F * 0.15);
+    leafClump(g, R, F * 0.35, h - F * 0.4, F * 1.0, F, 3);
+    leafClump(g, R, w - F * 0.35, h - F * 0.4, F * 1.0, F, 3);
+    // The rabbit's round at the middle of the foot, leaves and flowers off it, a star beyond each side.
+    const cx = w / 2, cy = h - F * 0.2, r = F * 0.92;
+    for (const d of [-1, 1]) {
+      for (let k = 0; k < 3; k++) sageLeaf(g, cx + d * r * 0.7, cy - F * 0.08, (d < 0 ? Math.PI : 0) + d * (k - 1) * 0.5 - d * 0.1, F * (1.15 - k * 0.12));
+      blossom(g, cx + d * r * 1.25, cy - F * 0.3, F * 0.22);
+      goldStar4(g, cx + d * F * 3, h - F * 0.36, F * 0.32);
+    }
+    medallion(g, cx, cy, r, wood, (x, y, s) => rabbitMark(g, x, y, s));
   },
 
   /* The field guide: worn leather, scuffed, stitched, with flowers pressed flat at its corners. */
