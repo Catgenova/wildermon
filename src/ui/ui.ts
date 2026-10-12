@@ -124,7 +124,7 @@ import { uiBox } from './screen';
 import { capital } from '../game/words';
 import { applyLook, runeFor } from './theme';
 import { RunecutArt } from './runecut-dress';
-import { RIMS } from './runecut-art';
+import { FRAME_RIM, RIMS } from './runecut-art';
 
 export interface UICallbacks {
   /** Quarter-turn the camera: +1 or -1. */
@@ -323,8 +323,8 @@ export class UI {
     this.windows = new WindowManager(root);
     // Every window as it is made is dressed in Runecut's stone, its niche and its frame; menus, tooltips, notices and the palette are there for a moment and stay plain.
     this.art = new RunecutArt(root);
-    // A window's rim is narrower on a phone's screen, where every pixel across counts.
-    const rim = (): number => (root.classList.contains('narrow') ? RIMS.phone : RIMS.window);
+    // A window's rim is narrower on a phone's screen, where every pixel across counts, and wider in a bulky frame (`FRAME_RIM`).
+    const rim = (kind: string): number => (root.classList.contains('narrow') ? RIMS.phone : FRAME_RIM[kind] ?? RIMS.window);
     this.windows.onCreate = (win) => this.art.add(win.opts.id, win.el, rim, runeFor(win.opts.id));
     this.menu = new ContextMenu(root, canvas);
     this.tooltip = new Tooltip(root);

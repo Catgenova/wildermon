@@ -4692,3 +4692,132 @@ kbd {
 [data-ui='runecut'] #ui.narrow .hud-status {
   padding: calc(var(--rim) + 2px);
 }
+
+/*
+ * The pack's window in its sack (the `burlap` frame, src/ui/runecut-frames.ts).
+ * The slab stops under the stuffed roll, so round the roll's lumpy edge is
+ * the island, and the roll casts its own shadow rather than the window's
+ * square one. The title is on a linen label stitched along both edges; the
+ * buttons are leather tabs; the list's group headings are tacked with a
+ * cross-stitch and ruled across; the load is a stitched leather channel with
+ * a brass diamond where it starts to slow you.
+ */
+[data-ui='runecut'] .win[data-frame='burlap'] {
+  --sack-twine: #a7834f;
+  --sack-ink: #5b4232;
+  --sack-label: color-mix(in srgb, #f3e7cb 70%, var(--rc-stone-2));
+  --sack-label-2: color-mix(in srgb, #e3d1ac 70%, var(--rc-stone-2));
+  --sack-leather: #b48a5c;
+  --sack-leather-2: #93693f;
+  box-shadow: none;
+}
+
+[data-rc='night'][data-ui='runecut'] .win[data-frame='burlap'] {
+  --sack-twine: color-mix(in srgb, #a7834f, rgb(12 20 44) 40%);
+  --sack-ink: #1d1a26;
+  --sack-label: var(--rc-stone-2);
+  --sack-label-2: color-mix(in srgb, var(--rc-stone-2), rgb(12 20 44) 18%);
+  --sack-leather: color-mix(in srgb, #b48a5c, rgb(12 20 44) 40%);
+  --sack-leather-2: color-mix(in srgb, #93693f, rgb(12 20 44) 40%);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] > .rc-plate {
+  clip-path: inset(calc(var(--rim) - 6px));
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .win-title {
+  margin-bottom: 4px;
+  padding: 6px 6px 7px 10px;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(90deg, var(--sack-twine) 0 4px, transparent 4px 7px) left 5px top 3px / calc(100% - 10px) 1.2px no-repeat,
+    repeating-linear-gradient(90deg, var(--sack-twine) 0 4px, transparent 4px 7px) left 5px bottom 3px / calc(100% - 10px) 1.2px no-repeat,
+    repeating-linear-gradient(0deg, color-mix(in srgb, var(--sack-ink) 7%, transparent) 0 1px, transparent 1px 2.5px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--sack-ink) 6%, transparent) 0 1px, transparent 1px 2.5px),
+    linear-gradient(var(--sack-label), var(--sack-label-2));
+  box-shadow: inset 0 0 0 1px var(--sack-ink), 0 1px 2px color-mix(in srgb, var(--sack-ink) 45%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .win-title::after {
+  display: none;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .rc-niche {
+  margin: -16px 0 -12px -8px;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .win-btn {
+  clip-path: none;
+  border-radius: 3px;
+  background: linear-gradient(var(--sack-leather), var(--sack-leather-2));
+  box-shadow:
+    inset 0 0 0 1px var(--sack-ink),
+    inset 0 1px 0 color-mix(in srgb, #fff3dc 50%, transparent),
+    0 1px 1px color-mix(in srgb, var(--sack-ink) 50%, transparent);
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] :is(.win-btn:hover, .win-btn.win-btn-on) {
+  background: linear-gradient(color-mix(in srgb, var(--sack-leather) 80%, #fff3dc), var(--sack-leather));
+  box-shadow:
+    inset 0 0 0 1px var(--sack-ink),
+    inset 0 -2px 0 var(--rc-rune),
+    0 1px 1px color-mix(in srgb, var(--sack-ink) 50%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-list {
+  scrollbar-color: var(--sack-leather-2) color-mix(in srgb, var(--sack-label-2) 60%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 4px;
+  background: none;
+  box-shadow: none;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-group::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  background:
+    linear-gradient(45deg, transparent 40%, var(--sack-twine) 40% 60%, transparent 60%),
+    linear-gradient(-45deg, transparent 40%, var(--sack-twine) 40% 60%, transparent 60%);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-group::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  margin-right: 6px;
+  background: linear-gradient(90deg, var(--sack-twine), color-mix(in srgb, var(--sack-twine) 30%, transparent));
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-load {
+  height: 8px;
+  border-radius: 4px;
+  clip-path: none;
+  background:
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--sack-ink) 30%, transparent) 0 3px, transparent 3px 6px) left 2px center / calc(100% - 4px) 1px no-repeat,
+    var(--sack-label-2);
+  box-shadow: inset 0 0 0 1px var(--sack-ink), inset 0 1px 2px color-mix(in srgb, var(--sack-ink) 40%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-load-fill {
+  border-radius: 4px 0 0 4px;
+  box-shadow: inset 0 0 0 1px var(--sack-ink), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-load-mark {
+  top: 50%;
+  bottom: auto;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  background: #d4a43e;
+  box-shadow: 0 0 0 1px var(--sack-ink);
+  transform: rotate(45deg);
+}

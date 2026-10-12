@@ -87,7 +87,7 @@ class Dressed {
     readonly id: string,
     readonly el: HTMLElement,
     private readonly glyph: string | null,
-    private readonly rimOf: () => number,
+    private readonly rimOf: (kind: string) => number,
   ) {
     this.seed = seedOf(id);
     this.size = `${el.offsetWidth}x${el.offsetHeight}`;
@@ -117,19 +117,30 @@ class Dressed {
     const look = this.art.look;
     const w = this.el.offsetWidth, h = this.el.offsetHeight;
     if (!look || look.ui !== 'runecut' || this.el.hidden || !w || !h) {
+      delete this.el.dataset.frame;
       this.lay(null, null, null);
       return;
     }
     const k = (window.devicePixelRatio || 1) * this.art.scale();
     const night = look.rc === 'night';
-    const rim = this.rimOf();
+    const kind = look.frames === 'themed' ? frameFor(this.id) : 'stone';
+    // Which frame it wears, for the parts of the window itself that wear it too (src/style.css).
+    if (this.el.dataset.frame !== kind) this.el.dataset.frame = kind;
+    const rim = this.rimOf(kind);
     // The content's inset, from the same number the rim is painted at.
-    if (this.el.style.getPropertyValue('--rim') !== `${rim}px`) this.el.style.setProperty('--rim', `${rim}px`);
-    const o: ArtOpts = { seed: this.seed, night, side: sideOf(this.seed), rim };
+    if (this.el.style.getPropertyValue('--rim') !== `${rim}px`) {
+      this.el.style.setProperty('--rim', `${rim}px`);
+      // The window has just grown or shrunk by the difference, and is painted at that size once it has.
+      if (this.el.offsetWidth !== w || this.el.offsetHeight !== h) {
+        this.size = `${this.el.offsetWidth}x${this.el.offsetHeight}`;
+        this.refresh();
+        return;
+      }
+    }
+    const o: ArtOpts = { seed: this.seed, night, side: sideOf(this.seed), rim, frame: kind };
     const kk = `${k.toFixed(3)}|${rim}`;
     const plate = cachedCanvas(`plate|${this.id}|${w}x${h}|${look.rc}|${kk}`, w, h, k, 'rc-plate', (g) => paintPlate(g, w, h, o));
     const R = FRAME_REACH;
-    const kind = look.frames === 'themed' ? frameFor(this.id) : 'stone';
     // Plain stone is the slab's own rim, and wants no canvas of its own.
     const frame = kind === 'stone'
       ? null
@@ -153,8 +164,8 @@ class Dressed {
     let niche: HTMLCanvasElement | null = null;
     if (this.glyph) {
       const glyph = this.glyph;
-      niche = cachedCanvas(`niche|${glyph}|${look.rc}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k));
-      this.unlit = night ? cachedCanvas(`niche-unlit|${glyph}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k, false)) : null;
+      niche = cachedCanvas(`niche|${kind === 'burlap' ? kind : ''}|${glyph}|${look.rc}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k));
+      this.unlit = night ? cachedCanvas(`niche-unlit|${kind === 'burlap' ? kind : ''}|${glyph}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k, false)) : null;
       // The same picture serves every window with this rune, so each takes its own copy to show.
       niche = this.copyOf(niche);
     }
@@ -311,7 +322,7 @@ export class RunecutArt {
   }
 
   /** Dress something: `id` says which frame it wears (`frameFor`), `rim` how wide its rim is, `glyph` its window's rune, for its niche. */
-  add(id: string, el: HTMLElement, rim: () => number, glyph: string | null = null): void {
+  add(id: string, el: HTMLElement, rim: (kind: string) => number, glyph: string | null = null): void {
     const d = new Dressed(this, id, el, glyph, rim);
     this.all.push(d);
     d.refresh();

@@ -65,6 +65,13 @@ export const FRAMES: FrameDef[] = [
   { kind: 'toolbelt', label: 'Tool belt', for: ['toolbar'] },
 ];
 
+/**
+ * Frames whose band is wider than a window's `RIM`, in CSS px, because what
+ * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
+ * The window grows by it like any rim, so its content keeps its room.
+ */
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 30 };
+
 /** The frame a window wears, by its id: 'stone' for the plain rim. */
 export const frameFor = (id: string): string => FRAMES.find((f) => f.for.includes(id))?.kind ?? 'stone';
 
@@ -278,24 +285,6 @@ function rope(g: Ctx, x0: number, x1: number, y: number, t: number, tone: RGB): 
   }
 }
 
-/** A knot at (x, y), `r` across: the rope's turns as three lobes round a tight middle. */
-function knot(g: Ctx, x: number, y: number, r: number, tone: RGB): void {
-  for (let k = 0; k < 3; k++) {
-    const a = (k / 3) * Math.PI * 2 + 0.4;
-    g.beginPath();
-    g.ellipse(x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.4, r * 0.62, r * 0.42, a, 0, Math.PI * 2);
-    g.fillStyle = css(mix(tone, light(tone, 0.2), k / 2));
-    g.fill();
-    g.strokeStyle = INK;
-    g.lineWidth = 0.9;
-    g.stroke();
-  }
-  g.beginPath();
-  g.arc(x, y, r * 0.28, 0, Math.PI * 2);
-  g.fillStyle = css(shade(tone, 0.35));
-  g.fill();
-}
-
 /** A metal corner: a triangle over the band's corner, ruled in ink, with a rivet. */
 function cornerPlate(g: Ctx, F: number, body: RGB, ink: RGB, reach = 0.95): void {
   const s = F * reach;
@@ -355,42 +344,6 @@ function ragged(g: Ctx, R: () => number, len: number, deep: number, step = 3): P
   return pts;
 }
 
-/**
- * Sackcloth: a coarse open weave, its threads 3 px apart so the over and
- * under shows at the interface's own size -- a thread along lying over one
- * across, then under the next.
- */
-function sackcloth(g: Ctx, len: number, F: number, base: RGB): void {
-  g.fillStyle = css(shade(base, 0.42));
-  g.fillRect(0, 0, len, F);
-  const step = 3;
-  for (let y = 0; y < F; y += step) {
-    for (let x = 0; x < len; x += step) {
-      const along = ((x + y) / step) % 2 === 0;
-      g.fillStyle = css(along ? light(base, 0.12) : shade(base, 0.06));
-      if (along) g.fillRect(x, y + 0.5, step, step - 1);
-      else g.fillRect(x + 0.5, y, step - 1, step);
-    }
-  }
-}
-
-/** A cord along a path: the path stroked `t` thick in the tone over its ink, and a lit thread down it. */
-function cord(g: Ctx, path: () => void, t: number, tone: RGB): void {
-  g.lineCap = 'round';
-  path();
-  g.strokeStyle = INK;
-  g.lineWidth = t + 1.4;
-  g.stroke();
-  path();
-  g.strokeStyle = css(tone);
-  g.lineWidth = t;
-  g.stroke();
-  path();
-  g.strokeStyle = css(light(tone, 0.4), 0.8);
-  g.lineWidth = t * 0.3;
-  g.stroke();
-}
-
 /** A spray of laurel from x along y, `len` long (negative runs back): a stem, and leaves 6 px long in pairs every 6 px, smaller toward the tip. */
 function sprig(g: Ctx, x: number, len: number, y: number): void {
   const dir = Math.sign(len), n = Math.max(2, Math.floor(Math.abs(len) / 6));
@@ -444,70 +397,618 @@ function barrel(g: Ctx, x: number, y: number, r: number, tone: RGB): void {
   g.fill();
 }
 
+
+/* ---- the sack's own kit ---------------------------------------------------- */
+
+/** A wobble along a length, between about 0 and 1: two waves of the seed's own, for a stuffed thing's lumps. */
+function lumps(R: () => number, l1: number, l2: number): (s: number) => number {
+  const p1 = R() * Math.PI * 2, p2 = R() * Math.PI * 2;
+  return (s) => 0.5 + 0.3 * Math.sin((s / l1) * Math.PI * 2 + p1) + 0.2 * Math.sin((s / l2) * Math.PI * 2 + p2);
+}
+
+/**
+ * Round a rectangle `d` in from the window's edge with its corners `r` round,
+ * pushed out from it by `off(s)` at `s` along it from the top: a stuffed
+ * roll's lumpy edge, as points every 2 px.
+ */
+function lumpyRect(w: number, h: number, d: number, r: number, off: (s: number) => number): Pt[] {
+  const pts: Pt[] = [];
+  const x0 = d, y0 = d, x1 = w - d, y1 = h - d;
+  let s = 0;
+  const line = (ax: number, ay: number, bx: number, by: number, nx: number, ny: number): void => {
+    const len = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(len / 2));
+    for (let i = 0; i < n; i++) {
+      const t = i / n, o = off(s + len * t);
+      pts.push([ax + (bx - ax) * t + nx * o, ay + (by - ay) * t + ny * o]);
+    }
+    s += len;
+  };
+  const arc = (cx: number, cy: number, a0: number): void => {
+    const len = (r * Math.PI) / 2, n = Math.max(2, Math.ceil(len / 2));
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i / n) * (Math.PI / 2), o = off(s + (len * i) / n);
+      pts.push([cx + Math.cos(a) * (r + o), cy + Math.sin(a) * (r + o)]);
+    }
+    s += len;
+  };
+  line(x0 + r, y0, x1 - r, y0, 0, -1);
+  arc(x1 - r, y0 + r, -Math.PI / 2);
+  line(x1, y0 + r, x1, y1 - r, 1, 0);
+  arc(x1 - r, y1 - r, 0);
+  line(x1 - r, y1, x0 + r, y1, 0, 1);
+  arc(x0 + r, y1 - r, Math.PI / 2);
+  line(x0, y1 - r, x0, y0 + r, -1, 0);
+  arc(x0 + r, y0 + r, Math.PI);
+  return pts;
+}
+
+/** A closed outline through points, as a new path. */
+function poly(g: Ctx, pts: Pt[]): void {
+  g.beginPath();
+  polyTo(g, pts);
+}
+
+/** A closed outline through points, added to the path as it is. */
+function polyTo(g: Ctx, pts: Pt[]): void {
+  pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  g.closePath();
+}
+
+/**
+ * Burlap: a coarse plain weave. Threads 3.2 px apart run the whole way along
+ * and across, each a little thicker or thinner, lighter or darker than the
+ * next, with the dark of the gaps between; where a thread along passes over
+ * one across it is drawn again on top, and a thread across over the next,
+ * so the over-and-under shows. Here and there a slub where the jute bunched.
+ * Over the box from (x0, y0) to (x1, y1), and only the `band` along its
+ * edges, which is all of it a frame shows.
+ */
+function burlapWeave(g: Ctx, R: () => number, x0: number, y0: number, x1: number, y1: number, band: number, base: RGB): void {
+  const step = 3.6;
+  g.fillStyle = css(shade(base, 0.55));
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  const rows: Array<[number, number]> = [], cols: Array<[number, number]> = [];
+  for (let y = y0; y < y1; y += step) rows.push([(R() - 0.5) * 0.22, 0.66 + R() * 0.18]);
+  for (let x = x0; x < x1; x += step) cols.push([(R() - 0.5) * 0.22, 0.66 + R() * 0.18]);
+  const strips: Array<[number, number, number, number]> = [
+    [x0, y0, x1, y0 + band + 4], [x0, y1 - band - 4, x1, y1], [x0, y0, x0 + band + 4, y1], [x1 - band - 4, y0, x1, y1],
+  ];
+  const along = (j: number, xa: number, xb: number): void => {
+    const [t, wd] = rows[j], y = y0 + j * step + step * (1 - wd) / 2;
+    g.fillStyle = css(light(base, 0.08 + t));
+    g.fillRect(xa, y, xb - xa, step * wd);
+    g.fillStyle = css(light(base, 0.32 + t), 0.6);
+    g.fillRect(xa, y + step * wd * 0.3, xb - xa, 0.55);
+  };
+  const across = (i: number, ya: number, yb: number): void => {
+    const [t, wd] = cols[i], x = x0 + i * step + step * (1 - wd) / 2;
+    g.fillStyle = css(shade(base, 0.02 - t));
+    g.fillRect(x, ya, step * wd, yb - ya);
+    g.fillStyle = css(light(base, 0.22 + t), 0.5);
+    g.fillRect(x + step * wd * 0.3, ya, 0.55, yb - ya);
+  };
+  for (const [sx0, sy0, sx1, sy1] of strips) {
+    const j0 = Math.max(0, Math.floor((sy0 - y0) / step)), j1 = Math.min(rows.length, Math.ceil((sy1 - y0) / step));
+    const i0 = Math.max(0, Math.floor((sx0 - x0) / step)), i1 = Math.min(cols.length, Math.ceil((sx1 - x0) / step));
+    for (let j = j0; j < j1; j++) along(j, x0 + i0 * step, x0 + i1 * step);
+    for (let i = i0; i < i1; i++) across(i, y0 + j0 * step, y0 + j1 * step);
+    // Over and under: every other crossing, the thread along back on top, with the shade of the one it covers either side.
+    for (let j = j0; j < j1; j++) {
+      for (let i = i0 + (j % 2); i < i1; i += 2) {
+        const x = x0 + i * step;
+        along(j, x, x + step);
+        g.fillStyle = css(shade(base, 0.35), 0.45);
+        g.fillRect(x - 0.3, y0 + j * step, 0.6, step);
+        g.fillRect(x + step - 0.3, y0 + j * step, 0.6, step);
+      }
+    }
+  }
+  // Slubs: a thread thickened for a few weaves.
+  const inBand = (x: number, y: number): boolean => x < x0 + band + 4 || x > x1 - band - 4 || y < y0 + band + 4 || y > y1 - band - 4;
+  for (let k = 0; k < ((x1 - x0) + (y1 - y0)) / 12; k++) {
+    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0);
+    if (!inBand(x, y)) continue;
+    g.fillStyle = css(light(base, 0.2), 0.85);
+    if (R() < 0.5) g.fillRect(x, y, 6 + R() * 7, 1.4);
+    else g.fillRect(x, y, 1.4, 6 + R() * 7);
+  }
+}
+
+/** A dashed line of stitches along an outline: `on` px of thread, `off` px gap, in thread over its own shadow. */
+function dashAlong(g: Ctx, pts: Pt[], on: number, off: number, thread: RGB): void {
+  g.lineCap = 'round';
+  let acc = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length];
+    const seg = Math.hypot(bx - ax, by - ay);
+    const startOn = acc % (on + off) < on;
+    acc += seg;
+    if (!startOn) continue;
+    g.beginPath();
+    g.moveTo(ax, ay + 0.7);
+    g.lineTo(bx, by + 0.7);
+    g.strokeStyle = css(shade(thread, 0.6), 0.45);
+    g.lineWidth = 1.7;
+    g.stroke();
+    g.beginPath();
+    g.moveTo(ax, ay);
+    g.lineTo(bx, by);
+    g.strokeStyle = css(light(thread, 0.15));
+    g.lineWidth = 1.2;
+    g.stroke();
+  }
+}
+
+/** A cross-stitch at (x, y), `r` from its middle to a corner: two strokes of thread over their shadow. */
+function crossStitch(g: Ctx, x: number, y: number, r: number, thread: RGB): void {
+  g.lineCap = 'round';
+  for (const [dx, dy, c, wd] of [[0.6, 0.8, css(shade(thread, 0.65), 0.55), 2], [0, 0, css(light(thread, 0.2)), 1.3]] as Array<[number, number, string, number]>) {
+    g.beginPath();
+    g.moveTo(x - r + dx, y - r + dy);
+    g.lineTo(x + r + dx, y + r + dy);
+    g.moveTo(x + r + dx, y - r + dy);
+    g.lineTo(x - r + dx, y + r + dy);
+    g.strokeStyle = c;
+    g.lineWidth = wd;
+    g.stroke();
+  }
+}
+
+/** A patch sewn on at (x, y) in a side's frame: sage cloth `pw` by `ph`, turned `rot`, its edge whipped down in pale thread. */
+function patch(g: Ctx, R: () => number, x: number, y: number, pw: number, ph: number, rot: number, thread: RGB): void {
+  const sage = H('#8fa58c');
+  g.save();
+  g.translate(x, y);
+  g.rotate(rot);
+  const corners: Pt[] = [[-pw / 2 + R(), -ph / 2 + R()], [pw / 2 - R(), -ph / 2 + R()], [pw / 2 - R(), ph / 2 - R()], [-pw / 2 + R(), ph / 2 - R()]];
+  g.save();
+  poly(g, corners);
+  g.shadowColor = 'rgba(60, 40, 26, 0.45)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = css(sage);
+  g.fill();
+  g.restore();
+  g.save();
+  poly(g, corners);
+  g.clip();
+  // Its own finer weave, and the light across it.
+  for (let yy = -ph / 2; yy < ph / 2; yy += 2) {
+    for (let xx = -pw / 2 + (Math.round(yy / 2) % 2) * 2; xx < pw / 2; xx += 4) {
+      g.fillStyle = css(light(sage, 0.14), 0.8);
+      g.fillRect(xx, yy, 2, 1.2);
+    }
+  }
+  const lit = g.createLinearGradient(0, -ph / 2, 0, ph / 2);
+  lit.addColorStop(0, 'rgba(255, 252, 236, 0.22)');
+  lit.addColorStop(1, 'rgba(40, 52, 44, 0.25)');
+  g.fillStyle = lit;
+  g.fillRect(-pw / 2, -ph / 2, pw, ph);
+  g.restore();
+  poly(g, corners);
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.stroke();
+  // Whipped down: a stitch across the edge every 4 px.
+  for (let k = 0; k < 4; k++) {
+    const [ax, ay] = corners[k], [bx, by] = corners[(k + 1) % 4];
+    const len = Math.hypot(bx - ax, by - ay), nx = -(by - ay) / len, ny = (bx - ax) / len;
+    for (let t = 3; t < len - 2; t += 4) {
+      const px = ax + ((bx - ax) * t) / len, py = ay + ((by - ay) * t) / len;
+      g.beginPath();
+      g.moveTo(px + nx * 2.2, py + ny * 2.2);
+      g.lineTo(px - nx * 2 + (bx - ax) / len, py - ny * 2 + (by - ay) / len);
+      g.strokeStyle = css(thread);
+      g.lineWidth = 0.9;
+      g.stroke();
+    }
+  }
+  g.restore();
+}
+
+/** A quadratic curve from a through c to b, as points about 2 px apart. */
+function curve(a: Pt, c: Pt, b: Pt): Pt[] {
+  const n = Math.max(4, Math.ceil((Math.hypot(c[0] - a[0], c[1] - a[1]) + Math.hypot(b[0] - c[0], b[1] - c[1])) / 2));
+  const pts: Pt[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, u = 1 - t;
+    pts.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]);
+  }
+  return pts;
+}
+
+/** An ellipse about (x, y), turned `rot`, as points round it. */
+function ellipsePts(x: number, y: number, rx: number, ry: number, rot: number): Pt[] {
+  const pts: Pt[] = [];
+  const n = Math.max(12, Math.ceil((rx + ry) * 1.6));
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2, ex = Math.cos(a) * rx, ey = Math.sin(a) * ry;
+    pts.push([x + ex * Math.cos(rot) - ey * Math.sin(rot), y + ex * Math.sin(rot) + ey * Math.cos(rot)]);
+  }
+  return pts;
+}
+
+/**
+ * A twisted cord along points, `t` thick: its body over its ink, and the lay
+ * -- the strands crossing it on the slant every 0.85 of its thickness, each
+ * shaded on one side and lit on the other.
+ */
+function twist(g: Ctx, pts: Pt[], t: number, tone: RGB): void {
+  const path = (): void => {
+    g.beginPath();
+    pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  };
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  path();
+  g.strokeStyle = INK;
+  g.lineWidth = t + 1.6;
+  g.stroke();
+  path();
+  g.strokeStyle = css(tone);
+  g.lineWidth = t;
+  g.stroke();
+  const step = t * 0.85;
+  let next = step * 0.5;
+  let run = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+    const seg = Math.hypot(bx - ax, by - ay);
+    if (!seg) continue;
+    const ux = (bx - ax) / seg, uy = (by - ay) / seg, nx = -uy, ny = ux;
+    while (next <= run + seg) {
+      const d = next - run, x = ax + ux * d, y = ay + uy * d;
+      g.beginPath();
+      g.moveTo(x - nx * t * 0.5 - ux * t * 0.35, y - ny * t * 0.5 - uy * t * 0.35);
+      g.quadraticCurveTo(x + ux * t * 0.05, y + uy * t * 0.05, x + nx * t * 0.5 + ux * t * 0.35, y + ny * t * 0.5 + uy * t * 0.35);
+      g.strokeStyle = css(shade(tone, 0.5));
+      g.lineWidth = 0.9;
+      g.stroke();
+      g.beginPath();
+      g.moveTo(x - nx * t * 0.1 + ux * t * 0.12, y - ny * t * 0.1 + uy * t * 0.12);
+      g.lineTo(x + nx * t * 0.3 + ux * t * 0.36, y + ny * t * 0.3 + uy * t * 0.36);
+      g.strokeStyle = css(light(tone, 0.5), 0.85);
+      g.lineWidth = 0.8;
+      g.stroke();
+      next += step;
+    }
+    run += seg;
+  }
+}
+
+/** The end of a cord at (x, y): bound in a whipping, and frayed out below it. */
+function tassel(g: Ctx, x: number, y: number, tone: RGB): void {
+  g.lineCap = 'round';
+  for (let k = -3; k <= 3; k++) {
+    g.beginPath();
+    g.moveTo(x, y + 1);
+    g.quadraticCurveTo(x + k * 0.6, y + 5, x + k * 1.1, y + 9 + Math.abs(k % 2) * 1.5);
+    g.strokeStyle = css(k % 2 ? light(tone, 0.25) : tone);
+    g.lineWidth = 1;
+    g.stroke();
+  }
+  barrel(g, x, y, 2.6, shade(tone, 0.1));
+}
+
+/** A brass grommet at (x, y), `r` across: a ring of brass round a hole through the cloth. */
+function grommet(g: Ctx, x: number, y: number, r: number): void {
+  head(g, x, y, r, BRASS.body, BRASS.ink);
+  g.beginPath();
+  g.arc(x + 0.3, y + 0.3, r * 0.45, 0, Math.PI * 2);
+  g.fillStyle = css(H('#3c2a22'));
+  g.fill();
+  g.strokeStyle = css(shade(BRASS.body, 0.4));
+  g.lineWidth = 0.8;
+  g.stroke();
+}
+
+/** A sprig of lavender tied on at (x, y), hanging `len`: a few stems, narrow leaves at the tie, and the flower spikes at their ends. */
+function lavender(g: Ctx, R: () => number, x: number, y: number, len: number): void {
+  const stem = H('#6f8b5a'), bloom = H('#8f7cc4'), pale = H('#b9a9de');
+  const ends: Array<[number, number, number]> = [];
+  for (let k = 0; k < 4; k++) {
+    const ex = x + (k - 1.5) * 4 + (R() - 0.5) * 2, ey = y + len * (0.8 + R() * 0.2);
+    ends.push([ex, ey, (k - 1.5) * 0.1]);
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + (k - 1.5) * 1.6, (y + ey) / 2, ex, ey);
+    g.strokeStyle = css(shade(stem, 0.35));
+    g.lineWidth = 1.6;
+    g.stroke();
+    g.strokeStyle = css(stem);
+    g.lineWidth = 0.9;
+    g.stroke();
+  }
+  // Leaves, narrow, off the stems just under the tie.
+  for (const sg of [-1, 1]) {
+    g.save();
+    g.translate(x, y + 4);
+    g.rotate(sg * 0.55);
+    g.beginPath();
+    g.ellipse(0, 8, 1.8, 8, 0, 0, Math.PI * 2);
+    g.fillStyle = css(H('#86a36c'));
+    g.fill();
+    g.strokeStyle = css(H('#45603b'));
+    g.lineWidth = 0.7;
+    g.stroke();
+    g.restore();
+  }
+  // The spikes: whorls of buds up the last third of each stem.
+  for (const [ex, ey, lean] of ends) {
+    for (let j = 0; j < 8; j++) {
+      const t = j / 8, bx = ex - lean * j * 2, by = ey - len * 0.4 * (1 - t);
+      for (const sg of [-1, 1]) {
+        g.beginPath();
+        g.ellipse(bx + sg * 1.1, by, 1.35 - t * 0.3, 1.9 - t * 0.3, sg * 0.4, 0, Math.PI * 2);
+        g.fillStyle = css(j % 2 ? pale : bloom);
+        g.fill();
+        g.strokeStyle = css(shade(bloom, 0.5));
+        g.lineWidth = 0.6;
+        g.stroke();
+      }
+    }
+  }
+  barrel(g, x, y, 2.4, H('#a7834f'));
+}
+
+/** A few ears of wheat at (x, y), standing up `len`: their stalks, and the grains in two rows with awns off them. */
+function wheat(g: Ctx, R: () => number, x: number, y: number, len: number): void {
+  const straw = H('#c9a65a'), grain = H('#e1bf6c');
+  for (let k = 0; k < 3; k++) {
+    const lean = (k - 1) * 0.16 - 0.12, tx = x + Math.sin(lean) * len + (R() - 0.5) * 2, ty = y - Math.cos(lean) * len * (0.85 + k * 0.08);
+    g.beginPath();
+    g.moveTo(x, y + len * 0.25);
+    g.quadraticCurveTo(x + (tx - x) * 0.3, (y + ty) / 2, tx, ty);
+    g.strokeStyle = css(shade(straw, 0.45));
+    g.lineWidth = 1.6;
+    g.stroke();
+    g.strokeStyle = css(straw);
+    g.lineWidth = 0.9;
+    g.stroke();
+    const ux = (tx - x) / len, uy = (ty - y) / len;
+    for (let j = 0; j < 7; j++) {
+      const t = 0.56 + j * 0.065, gx = x + (tx - x) * t, gy = y + (ty - y) * t;
+      for (const sg of [-1, 1]) {
+        const ox = -uy * sg * 1.8, oy = ux * sg * 1.8;
+        g.beginPath();
+        g.ellipse(gx + ox, gy + oy, 1.6, 2.8, Math.atan2(uy, ux) + Math.PI / 2 + sg * 0.5, 0, Math.PI * 2);
+        g.fillStyle = css(grain);
+        g.fill();
+        g.strokeStyle = css(shade(grain, 0.55));
+        g.lineWidth = 0.6;
+        g.stroke();
+        g.beginPath();
+        g.moveTo(gx + ox, gy + oy);
+        g.lineTo(gx + ox * 3 + ux * 5, gy + oy * 3 + uy * 5);
+        g.strokeStyle = css(shade(straw, 0.2), 0.8);
+        g.lineWidth = 0.5;
+        g.stroke();
+      }
+    }
+  }
+  barrel(g, x, y + len * 0.2, 2.2, H('#a7834f'));
+}
+
+/**
+ * The pack's rune, on a linen tag hung from its drawstring -- `W` by `H` --
+ * rather than cut in a stone niche: its edge stitched, an eyelet at its top
+ * with the cord through it, and the rune painted in amber at (x, y) from the
+ * top, `s` its size, where the niche's would be.
+ */
+export function paintTag(g: Ctx, glyph: string, W: number, Hh: number, x: number, y: number, s: number, night: boolean): void {
+  const linen = H('#efe2c4'), twine = H('#a7834f');
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(5, 6);
+    g.lineTo(W - 5, 6);
+    g.quadraticCurveTo(W - 3, 6, W - 3, 8);
+    g.lineTo(W - 3, Hh - 4);
+    g.quadraticCurveTo(W - 3, Hh - 2, W - 5, Hh - 2);
+    g.lineTo(5, Hh - 2);
+    g.quadraticCurveTo(3, Hh - 2, 3, Hh - 4);
+    g.lineTo(3, 8);
+    g.quadraticCurveTo(3, 6, 5, 6);
+    g.closePath();
+  };
+  g.save();
+  g.lineJoin = 'round';
+  shape();
+  g.shadowColor = 'rgba(46, 30, 22, 0.45)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.2;
+  g.fillStyle = css(linen);
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  for (let yy = 6; yy < Hh; yy += 2) {
+    g.fillStyle = css(shade(linen, 0.06), 0.7);
+    g.fillRect(3, yy, W - 6, 0.7);
+  }
+  const lit = g.createLinearGradient(0, 6, 0, Hh);
+  lit.addColorStop(0, 'rgba(255, 252, 240, 0.35)');
+  lit.addColorStop(1, 'rgba(120, 90, 60, 0.18)');
+  g.fillStyle = lit;
+  g.fillRect(0, 0, W, Hh);
+  g.restore();
+  shape();
+  g.strokeStyle = INK;
+  g.lineWidth = 1;
+  g.stroke();
+  // Stitched round, just in from its edge.
+  g.setLineDash([2, 1.6]);
+  g.strokeStyle = css(twine);
+  g.lineWidth = 0.8;
+  g.strokeRect(5.2, 8.2, W - 10.4, Hh - 12.4);
+  g.setLineDash([]);
+  // The eyelet, and the cord through it up and away to the knot.
+  head(g, W / 2, 10.5, 2, BRASS.body, BRASS.ink);
+  g.beginPath();
+  g.arc(W / 2, 10.5, 0.9, 0, Math.PI * 2);
+  g.fillStyle = css(H('#3c2a22'));
+  g.fill();
+  twist(g, [[W / 2, 10.5], [W / 2 - 3, 4], [W / 2 - 8, 0.5], [-2, -1]], 2.2, twine);
+  // The rune, painted on in amber over a darker stroke.
+  g.save();
+  g.translate(0, Hh);
+  g.scale(1, -1);
+  glyphPath(g, glyph, x, Hh - y, s);
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+  g.strokeStyle = css(H('#7a4a1c'));
+  g.lineWidth = 2.6;
+  g.stroke();
+  g.strokeStyle = css(H('#d39a3a'));
+  g.lineWidth = 1.6;
+  g.stroke();
+  g.restore();
+  if (night) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
+    g.fillRect(-4, -4, W + 8, Hh + 8);
+    g.restore();
+  }
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
 
 const PAINTERS: Record<string, Painter> = {
-  /* The pack: sackcloth, its coarse weave, a hem stitched in twine, and the drawstring gathered in a knot at a top corner. */
+  /*
+   * The pack: a sack's mouth rolled over and stuffed, lumpy all round, its
+   * coarse weave creased where it bunches, sewn down to the cloth inside with
+   * a running stitch and tacked across, patched in sage cloth where it has
+   * worn through. Its drawstring is knotted at the top left and runs off along
+   * the top and down the side to a bound tassel, with a sprig of lavender tied
+   * into it; a brass grommet lower down that side, and a few ears of wheat
+   * caught in the roll on the right.
+   */
   burlap(g, w, h, F, R) {
-    const sack = H('#d6bf94'), twine = H('#8f6a40');
-    eachSide(g, w, h, (s) => {
+    const sack = H('#cba56d'), twine = H('#a7834f'), thread = H('#efe4c8');
+    const L1 = lumps(R, 53, 21), L2 = lumps(R, 41, 15);
+    const outer = lumpyRect(w, h, 0.6, F * 0.85, (s) => 6.2 * L1(s) - 2.8);
+    const inner = lumpyRect(w, h, F - 1.4, 6, (s) => 4 * L2(s));
+    // Its shadow on whatever is behind, as far as the reach lets it fall.
+    g.save();
+    poly(g, outer);
+    polyTo(g, inner);
+    g.shadowColor = 'rgba(46, 30, 22, 0.55)';
+    g.shadowBlur = 5;
+    g.shadowOffsetY = 2;
+    g.fillStyle = css(shade(sack, 0.3));
+    g.fill('evenodd');
+    g.restore();
+    g.save();
+    poly(g, outer);
+    polyTo(g, inner);
+    g.clip('evenodd');
+    burlapWeave(g, R, -4, -4, w + 4, h + 4, F + 2, sack);
+    eachSide(g, w, h, (sd) => {
       g.save();
-      mitre(g, s.len, F);
+      mitre(g, sd.len, F, 4);
       g.clip();
-      sackcloth(g, s.len, F, mix(shade(sack, 0.18), sack, s.lit));
-      // The hem: the cloth turned over along the inner edge.
-      g.fillStyle = css(shade(sack, 0.45), 0.75);
-      g.fillRect(0, F - 6, s.len, 1);
-      g.restore();
-      // Stitched down in twine, 3 px a stitch.
-      stitches(g, F, s.len - F, F - 3.2, twine, 3, 3);
-      // The frayed outer edge: loose threads standing off it.
-      g.strokeStyle = css(shade(sack, 0.3));
-      g.lineWidth = 0.9;
-      for (let x = 2; x < s.len - 2; x += 2.5 + R() * 3) {
-        g.beginPath();
-        g.moveTo(x, 1);
-        g.lineTo(x + (R() - 0.5) * 2.4, -0.6 - R() * 2.6);
-        g.stroke();
-      }
-      if (s.i === 0) {
-        // The mouth gathered on its drawstring: folds across the top, crowding toward the knot.
-        for (let x = F * 1.2; x < s.len - F; x += 3 + (x / s.len) * 6) {
+      // Round like a stuffed tube: in shade where it turns under at both edges, lit along its crown.
+      const lit = sd.lit;
+      const tube = g.createLinearGradient(0, -1, 0, F);
+      tube.addColorStop(0, 'rgba(62, 38, 20, 0.78)');
+      tube.addColorStop(0.2, 'rgba(62, 38, 20, 0.24)');
+      tube.addColorStop(0.4, `rgba(255, 244, 214, ${(0.36 * lit).toFixed(2)})`);
+      tube.addColorStop(0.56, `rgba(255, 244, 214, ${(0.12 * lit).toFixed(2)})`);
+      tube.addColorStop(0.76, 'rgba(62, 38, 20, 0.3)');
+      tube.addColorStop(1, 'rgba(62, 38, 20, 0.8)');
+      g.fillStyle = tube;
+      g.fillRect(-4, -4, sd.len + 8, F + 4);
+      // Stuffed in lumps: pinched every 24 to 40 px, each lump catching the light on its crown.
+      let x = F * 0.9 + R() * 10;
+      while (x < sd.len - F * 0.9) {
+        const next = Math.min(sd.len - F * 0.5, x + 24 + R() * 16), mid = (x + next) / 2;
+        const crown = g.createRadialGradient(mid - 3, F * 0.36, 1, mid, F * 0.42, (next - x) * 0.55);
+        crown.addColorStop(0, `rgba(255, 246, 220, ${(0.42 * lit).toFixed(2)})`);
+        crown.addColorStop(1, 'rgba(255, 248, 228, 0)');
+        g.fillStyle = crown;
+        g.fillRect(x - 4, -4, next - x + 8, F + 4);
+        // Where one lump meets the next the roll dents in from both edges, a little way, not across.
+        for (const [y0, y1] of [[-1, F * (0.22 + R() * 0.12)], [F, F * (0.7 - R() * 0.12)]]) {
+          const lean = (R() - 0.5) * 5;
+          g.save();
+          g.filter = 'blur(1.2px)';
           g.beginPath();
-          g.moveTo(x, 0.5);
-          g.quadraticCurveTo(x + 1.6, F * 0.45, x + 0.4, F - 6.5);
-          g.strokeStyle = css(shade(sack, 0.62));
-          g.lineWidth = 1;
-          g.stroke();
+          g.moveTo(next - 2.5, y0);
+          g.quadraticCurveTo(next + lean, (y0 + y1) / 2, next + lean * 0.5, y1);
+          g.quadraticCurveTo(next + lean, (y0 + y1) / 2, next + 2.5, y0);
+          g.fillStyle = 'rgba(62, 38, 20, 0.45)';
+          g.fill();
+          g.restore();
           g.beginPath();
-          g.moveTo(x + 1.3, 0.8);
-          g.quadraticCurveTo(x + 2.9, F * 0.45, x + 1.7, F - 7);
-          g.strokeStyle = css(light(sack, 0.4), 0.7);
+          g.moveTo(next, y0);
+          g.quadraticCurveTo(next + lean, (y0 + y1) / 2, next + lean * 0.5, y1);
+          g.strokeStyle = 'rgba(74, 48, 28, 0.6)';
+          g.lineWidth = 0.9;
           g.stroke();
         }
+        x = next;
       }
-    });
-    inkBand(g, w, h, F);
-    // The drawstring along the top, through the gathers.
-    cord(g, () => { g.beginPath(); g.moveTo(F * 0.6, F * 0.42); g.lineTo(w - F * 0.7, F * 0.42); }, 3, twine);
-    // The bow at the top left: a loop along the top, a loop down the side, two tails hanging, and the knot over them.
-    cord(g, () => { g.beginPath(); g.ellipse(F * 1.55, F * 0.42, F * 1.05, F * 0.3, 0, 0, Math.PI * 2); }, 2.6, twine);
-    cord(g, () => { g.beginPath(); g.ellipse(F * 0.42, F * 1.55, F * 0.3, F * 1.05, 0, 0, Math.PI * 2); }, 2.6, twine);
-    for (const [x, len] of [[F * 0.28, F * 3.6], [F * 0.68, F * 2.9]]) {
-      cord(g, () => { g.beginPath(); g.moveTo(F * 0.45, F * 0.5); g.quadraticCurveTo(x - 1, F * 1.6, x, len); }, 2.6, twine);
-      // The frayed end of the tail.
-      g.strokeStyle = css(light(twine, 0.25));
-      g.lineWidth = 0.8;
-      for (let k = -1; k <= 1; k++) {
+      // And creased where it bunches, short folds in from each edge.
+      for (let cx = F * 0.7 + R() * 8; cx < sd.len - F * 0.7; cx += 7 + R() * 10) {
+        const fromOut = R() < 0.55, deep = F * (0.18 + R() * 0.2), lean = (R() - 0.5) * 6;
+        const y0 = fromOut ? 1 : F - 2, y1 = fromOut ? y0 + deep : y0 - deep;
         g.beginPath();
-        g.moveTo(x, len);
-        g.lineTo(x + k * 1.2, len + 2.6);
+        g.moveTo(cx, y0);
+        g.quadraticCurveTo(cx + lean, (y0 + y1) / 2, cx + lean * 0.4, y1);
+        g.strokeStyle = 'rgba(84, 56, 34, 0.42)';
+        g.lineWidth = 1;
         g.stroke();
       }
-    }
-    knot(g, F * 0.45, F * 0.45, F * 0.52, twine);
+      g.restore();
+    });
+    g.restore();
+    poly(g, outer);
+    g.strokeStyle = css(H('#4a3424'));
+    g.lineWidth = 1.4;
+    g.stroke();
+    poly(g, inner);
+    g.lineWidth = 1.2;
+    g.stroke();
+    // Sewn down to the cloth inside: a running stitch along the roll's inner lip.
+    dashAlong(g, lumpyRect(w, h, F - 5.4, 7, (s) => 4 * L2(s)), 3.8, 2.6, twine);
+    // Tacked across the seam every so often, and here and there on the roll.
+    eachSide(g, w, h, (sd) => {
+      for (let x = F * 1.4 + R() * 30; x < sd.len - F * 1.4; x += 46 + R() * 50) crossStitch(g, x, F - 4, 3.2, twine);
+      for (let x = F * 2 + R() * 60; x < sd.len - F * 2; x += 90 + R() * 90) crossStitch(g, x, F * 0.3, 3, twine);
+    });
+    // Patches where it has worn through, in sage cloth sewn on with pale thread.
+    eachSide(g, w, h, (sd) => {
+      if (sd.len < F * 6) return;
+      const at = [0.8, 0.28, 0.8, 0.58][sd.i] + (R() - 0.5) * 0.08;
+      patch(g, R, sd.len * at, F * 0.46, F * (0.95 + R() * 0.25), F * (0.66 + R() * 0.12), (R() - 0.5) * 0.3, thread);
+    });
+    // Low on the left, the cord wound three times round the roll, and its end hanging out of the corner.
+    eachSide(g, w, h, (sd) => {
+      if (sd.i !== 3) return;
+      for (let k = 0; k < 3; k++) {
+        const x = F * 1.15 + k * 5.2;
+        twist(g, curve([x - 1, -2], [x + 3.5, F * 0.5], [x - 0.5, F - 1]), 3.4, twine);
+      }
+    });
+    twist(g, curve([F * 0.2, h - F * 1.45], [-1, h - F * 0.6], [F * 0.5, h - 1]), 3.4, twine);
+    tassel(g, F * 0.5, h - 2, twine);
+    // The drawstring: off the knot along the top and down the side.
+    const kx = F * 0.5, ky = F * 0.5;
+    twist(g, curve([kx, ky], [w * 0.15, F * 0.66], [Math.min(w * 0.32, w - F * 4), F * 0.28]), 3.6, twine);
+    const tail = Math.min(h * 0.36, h - F * 5);
+    // A sprig of lavender tied into it on the way down.
+    lavender(g, R, F * 0.52, tail * 0.55, F * 2.6);
+    twist(g, curve([kx, ky], [F * 0.78, tail * 0.5], [F * 0.4, tail]), 3.6, twine);
+    tassel(g, F * 0.4, tail, twine);
+    // A coil of the cord at the corner, turned three ways, and the knot binding it.
+    for (const [rot, rx, ry] of [[0.2, 0.62, 0.36], [1.25, 0.58, 0.34], [2.3, 0.55, 0.32]]) twist(g, ellipsePts(kx, ky, F * rx, F * ry, rot), 3.2, twine);
+    barrel(g, kx, ky, F * 0.2, twine);
+    // A brass grommet low on the left, and wheat caught in the roll on the right.
+    grommet(g, F * 0.48, h * 0.7, F * 0.24);
+    wheat(g, R, w - F * 0.48, h * 0.64, F * 2.8);
   },
 
   /* A store: a crate's planks, darker corner posts, nail heads, and a rope handle on one side. */
