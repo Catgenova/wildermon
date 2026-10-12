@@ -2,7 +2,7 @@ import {
   css, cut, cushion, drawPads, faceColour, glyphPath, grassTuft, hex, mix, roundelStrokes, STONE_INK, strokesPath, toneOf,
   type Ctx, type Pad, type Pt, type RGB,
 } from '../render/runestone';
-import { rand } from '../render/ivy';
+import { MOSS, rand } from '../render/ivy';
 import { star } from '../render/star';
 import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, LOG, MARBLE, METAL_TONE, WOOD_TONE } from '../render/materials';
 import { NIGHT_WASH } from '../render/nightwash';
@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -984,6 +984,272 @@ function bell(g: Ctx, x: number, y0: number, y1: number, twine: RGB): void {
   g.fill();
 }
 
+
+/* ---- the crate's own kit --------------------------------------------------- */
+
+/** A rounded plank from x0 to x1 between y0 and y1 in a side's frame: its face, its grain, a lit top edge, a shaded foot, and its outline. */
+function plank(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, tone: RGB): void {
+  const r = Math.min(3.5, (y1 - y0) / 3);
+  const path = (): void => {
+    g.beginPath();
+    g.moveTo(x0 + r, y0);
+    g.lineTo(x1 - r, y0);
+    g.quadraticCurveTo(x1, y0, x1, y0 + r);
+    g.lineTo(x1, y1 - r);
+    g.quadraticCurveTo(x1, y1, x1 - r, y1);
+    g.lineTo(x0 + r, y1);
+    g.quadraticCurveTo(x0, y1, x0, y1 - r);
+    g.lineTo(x0, y0 + r);
+    g.quadraticCurveTo(x0, y0, x0 + r, y0);
+    g.closePath();
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(60, 40, 24, 0.4)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 1.5;
+  g.fillStyle = css(tone);
+  g.fill();
+  g.restore();
+  g.save();
+  path();
+  g.clip();
+  grain(g, R, x0 + 1, x1 - 1, y0 + 2, y1 - 2, tone);
+  const round = g.createLinearGradient(0, y0, 0, y1);
+  round.addColorStop(0, 'rgba(255, 250, 236, 0.55)');
+  round.addColorStop(0.18, 'rgba(255, 250, 236, 0.08)');
+  round.addColorStop(0.75, 'rgba(90, 60, 34, 0)');
+  round.addColorStop(1, 'rgba(90, 60, 34, 0.32)');
+  g.fillStyle = round;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  g.restore();
+  path();
+  g.strokeStyle = css(H('#6a4a30'));
+  g.lineWidth = 1.3;
+  g.stroke();
+}
+
+/** A corner block, a size larger than the band and standing a little out past it, dovetailed to the planks either side and pinned with a brass rivet. */
+function cornerBlock(g: Ctx, R: () => number, F: number, tone: RGB): void {
+  const s = F * 1.14, o = -1.5;
+  plank(g, R, o, s, o, s, tone);
+  // The tail of the plank along it showing in the block's face, and the one down it.
+  g.strokeStyle = css(H('#6a4a30'));
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(s, F * 0.22);
+  g.lineTo(F * 0.62, F * 0.22);
+  g.lineTo(F * 0.62, F * 0.62);
+  g.lineTo(s, F * 0.62);
+  g.moveTo(F * 0.22, s);
+  g.lineTo(F * 0.22, F * 0.78);
+  g.lineTo(F * 0.6, F * 0.78);
+  g.lineTo(F * 0.6, s);
+  g.stroke();
+  g.fillStyle = css(shade(tone, 0.12), 0.6);
+  g.fillRect(F * 0.62, F * 0.22, s - F * 0.62, F * 0.4);
+  head(g, F * 0.32, F * 0.36, Math.max(1.6, F * 0.11), BRASS.body, BRASS.ink);
+}
+
+/** A brass hasp across a bar at x, its middle at y in a side's frame: a plate with rounded corners, a slot, and a screw at each end. */
+function hasp(g: Ctx, x: number, y: number, F: number): void {
+  const pw = F * 0.5, ph = F * 0.82;
+  g.save();
+  g.beginPath();
+  g.roundRect(x - pw / 2, y - ph / 2, pw, ph, 2);
+  g.shadowColor = 'rgba(50, 34, 20, 0.45)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  const b = g.createLinearGradient(x - pw / 2, 0, x + pw / 2, 0);
+  b.addColorStop(0, css(light(BRASS.body, 0.4)));
+  b.addColorStop(0.5, css(BRASS.body));
+  b.addColorStop(1, css(shade(BRASS.body, 0.3)));
+  g.fillStyle = b;
+  g.fill();
+  g.restore();
+  g.beginPath();
+  g.roundRect(x - pw / 2, y - ph / 2, pw, ph, 2);
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 1;
+  g.stroke();
+  g.beginPath();
+  g.roundRect(x - pw * 0.18, y - ph * 0.12, pw * 0.36, ph * 0.24, 1);
+  g.fillStyle = css(shade(BRASS.body, 0.6));
+  g.fill();
+  head(g, x, y - ph * 0.33, Math.max(1, F * 0.06), light(BRASS.body, 0.1), BRASS.ink);
+  head(g, x, y + ph * 0.33, Math.max(1, F * 0.06), light(BRASS.body, 0.1), BRASS.ink);
+}
+
+/** A brass bar handle on a side at x: two round mounts on the plank and the bar between them, bowed out past the window's edge. */
+function barHandle(g: Ctx, x: number, F: number): void {
+  const span = F * 1.5, out = -6;
+  const bar = (): void => {
+    g.beginPath();
+    g.moveTo(x - span, F * 0.42);
+    g.bezierCurveTo(x - span, out, x + span, out, x + span, F * 0.42);
+  };
+  g.lineCap = 'round';
+  bar();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 5.4;
+  g.stroke();
+  bar();
+  g.strokeStyle = css(BRASS.body);
+  g.lineWidth = 3.6;
+  g.stroke();
+  bar();
+  g.strokeStyle = css(light(BRASS.body, 0.55), 0.9);
+  g.lineWidth = 1.1;
+  g.stroke();
+  for (const mx of [x - span, x + span]) {
+    g.beginPath();
+    g.arc(mx, F * 0.42, F * 0.22, 0, Math.PI * 2);
+    g.fillStyle = css(BRASS.body);
+    g.fill();
+    g.strokeStyle = css(BRASS.ink);
+    g.lineWidth = 1;
+    g.stroke();
+    head(g, mx, F * 0.42, Math.max(1, F * 0.07), light(BRASS.body, 0.2), BRASS.ink);
+  }
+}
+
+/** A sprig burnt into a plank at (x, y): three leaves fanned from the middle, and a stem curling away each side with a leaf or two on it. */
+function burnt(g: Ctx, x: number, y: number, F: number, tone: RGB): void {
+  const s = F * 0.3;
+  g.save();
+  g.strokeStyle = css(tone, 0.85);
+  g.fillStyle = css(tone, 0.22);
+  g.lineWidth = 1;
+  for (const a of [-0.75, 0, 0.75]) {
+    g.save();
+    g.translate(x, y + s * 0.6);
+    g.rotate(a - Math.PI / 2);
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(s * 0.5, -s * 0.45, s * 1.2, 0);
+    g.quadraticCurveTo(s * 0.5, s * 0.45, 0, 0);
+    g.fill();
+    g.stroke();
+    g.restore();
+  }
+  for (const sg of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(x + sg * s * 0.4, y + s * 0.5);
+    g.bezierCurveTo(x + sg * s * 1.6, y + s * 0.9, x + sg * s * 2.4, y - s * 0.4, x + sg * s * 3.6, y);
+    g.stroke();
+    g.beginPath();
+    g.arc(x + sg * s * 3.9, y - s * 0.2, s * 0.35, 0, Math.PI * 1.6);
+    g.stroke();
+    for (const t of [1.6, 2.8]) {
+      g.save();
+      g.translate(x + sg * s * t, y + s * (t < 2 ? 0.55 : 0.05));
+      g.rotate(sg < 0 ? Math.PI + 0.5 : -0.5);
+      g.beginPath();
+      g.moveTo(0, 0);
+      g.quadraticCurveTo(s * 0.35, -s * 0.3, s * 0.8, 0);
+      g.quadraticCurveTo(s * 0.35, s * 0.3, 0, 0);
+      g.fill();
+      g.stroke();
+      g.restore();
+    }
+  }
+  g.restore();
+}
+
+/** A clump of moss at (x, y), `r` across: little cushions in the stones' moss greens, darker at the foot of each. */
+function mossClump(g: Ctx, R: () => number, x: number, y: number, r: number): void {
+  for (let k = 0; k < 9; k++) {
+    const a = R() * Math.PI * 2, d = R() * r, cr = r * (0.22 + R() * 0.25);
+    const cx = x + Math.cos(a) * d, cy = y + Math.sin(a) * d * 0.6;
+    g.beginPath();
+    g.arc(cx, cy, cr, 0, Math.PI * 2);
+    g.fillStyle = css(H(MOSS.under));
+    g.fill();
+    g.beginPath();
+    g.arc(cx - cr * 0.2, cy - cr * 0.25, cr * 0.75, 0, Math.PI * 2);
+    g.fillStyle = css(H(k % 3 ? MOSS.fill : MOSS.lit));
+    g.fill();
+  }
+}
+
+/** An ivy leaf at (x, y) pointing along `ang`, `s` long: heart-based and pointed, two greens, a darker edge and its veins. */
+function ivyLeaf(g: Ctx, x: number, y: number, ang: number, s: number, lit: boolean): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(ang);
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.bezierCurveTo(-s * 0.2, -s * 0.62, s * 0.55, -s * 0.72, s, 0);
+    g.bezierCurveTo(s * 0.55, s * 0.72, -s * 0.2, s * 0.62, 0, 0);
+    g.closePath();
+  };
+  shape();
+  const f = g.createLinearGradient(0, -s * 0.5, s * 0.6, s * 0.5);
+  f.addColorStop(0, css(H(lit ? MOSS.lit : MOSS.fill)));
+  f.addColorStop(1, css(H(lit ? MOSS.fill : MOSS.under)));
+  g.fillStyle = f;
+  g.fill();
+  g.strokeStyle = css(H(MOSS.dark));
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(s * 0.08, 0);
+  g.lineTo(s * 0.85, 0);
+  g.moveTo(s * 0.3, 0);
+  g.lineTo(s * 0.55, -s * 0.28);
+  g.moveTo(s * 0.3, 0);
+  g.lineTo(s * 0.55, s * 0.28);
+  g.strokeStyle = css(H(MOSS.dark), 0.55);
+  g.lineWidth = 0.6;
+  g.stroke();
+  g.restore();
+}
+
+/** A small white flower at (x, y): five petals round a yellow eye. */
+function blossom(g: Ctx, x: number, y: number, r: number): void {
+  for (let k = 0; k < 5; k++) {
+    const a = (k / 5) * Math.PI * 2 - Math.PI / 2;
+    g.beginPath();
+    g.ellipse(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6, r * 0.55, r * 0.4, a, 0, Math.PI * 2);
+    g.fillStyle = css(H('#fdf8ee'));
+    g.fill();
+    g.strokeStyle = css(H('#b9ae98'));
+    g.lineWidth = 0.6;
+    g.stroke();
+  }
+  g.beginPath();
+  g.arc(x, y, r * 0.3, 0, Math.PI * 2);
+  g.fillStyle = css(H('#e8c25a'));
+  g.fill();
+}
+
+/** A strand of ivy along points: its stem, leaves off it every 6 to 9 px on alternate sides, and now and then a flower. */
+function vine(g: Ctx, R: () => number, pts: Pt[], F: number, flowers: boolean): void {
+  g.beginPath();
+  pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+  g.strokeStyle = css(H(MOSS.dark));
+  g.lineWidth = 1.8;
+  g.lineCap = 'round';
+  g.stroke();
+  let run = 0, next = 2, side = 1, n = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
+    run += Math.hypot(bx - ax, by - ay);
+    if (run < next) continue;
+    const t = i / pts.length;
+    const ang = Math.atan2(by - ay, bx - ax) + side * (0.8 + R() * 0.6);
+    const sz = F * (0.36 + R() * 0.12) * (1 - t * 0.45);
+    ivyLeaf(g, bx, by, ang, sz, R() < 0.5);
+    // Thickest at the corner it grows from: a second leaf there, the other way.
+    if (t < 0.3) ivyLeaf(g, bx, by, ang + side * 1.9, sz * 0.8, R() < 0.5);
+    if (flowers && n % 3 === 1) blossom(g, bx + Math.cos(ang) * sz * 0.45, by + Math.sin(ang) * sz * 0.45, F * 0.15);
+    side = -side;
+    n++;
+    next = run + 5 + t * 9 + R() * (3 + t * 8);
+  }
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -1128,55 +1394,44 @@ const PAINTERS: Record<string, Painter> = {
     wheat(g, R, w - F * 0.22, h * 0.64, F * 3.2);
   },
 
-  /* A store: a crate's planks, darker corner posts, nail heads, and a rope handle on one side. */
+  /*
+   * A store: a crate of pale planed planks, one along each side with its
+   * edges rounded, butted into dovetailed corner blocks pinned with brass;
+   * brass hasps along the bars, a brass bar handle standing out on the right,
+   * a sprig burnt into the middle of the top and bottom, and ivy grown over
+   * its corners and down its sides, flowering, with moss where it is damp.
+   */
   crate(g, w, h, F, R) {
-    const pine = WOOD.pine, post = shade(WOOD.oak, 0.12);
-    const nails: Array<[number, number]> = [];
-    eachSide(g, w, h, (s) => {
-      const joints = planks(g, R, s.len, 0, F, pine, s.lit, F, s.len - F);
-      for (const j of [F + 4, ...joints.flatMap((x) => [x - 4, x + 4]), s.len - F - 4]) nails.push([s.i, j]);
+    const wood = H('#e7cc9c'), block = H('#d6b47f'), burn = H('#94643c');
+    // The planks, between the corner blocks.
+    eachSide(g, w, h, (sd) => {
+      plank(g, R, F * 0.9, sd.len - F * 0.9, 1, F - 1, mix(shade(wood, 0.12), wood, sd.lit));
+      // A sprig burnt into the middle of the top and the bottom.
+      if (sd.i % 2 === 0 && sd.len > F * 9) burnt(g, sd.len / 2, F / 2, F, burn);
     });
-    eachSide(g, w, h, (s) => {
-      for (const [i, x] of nails) if (i === s.i) { head(g, x, F * 0.3, F * 0.12, IRON.body, IRON.ink); head(g, x, F * 0.7, F * 0.12, IRON.body, IRON.ink); }
-      // The rope handle, through two holes on the right-hand side, standing out past the edge.
-      if (s.i === 1) {
-        const m = s.len / 2;
-        for (const hx of [m - F, m + F]) {
-          g.beginPath();
-          g.arc(hx, F * 0.45, F * 0.16, 0, Math.PI * 2);
-          g.fillStyle = css(LOG.under === undefined ? IRON.ink : H(LOG.line));
-          g.fill();
-        }
-        g.save();
-        g.beginPath();
-        g.moveTo(m - F, F * 0.45);
-        g.bezierCurveTo(m - F * 0.8, -FRAME_REACH * 0.8, m + F * 0.8, -FRAME_REACH * 0.8, m + F, F * 0.45);
-        g.strokeStyle = INK;
-        g.lineWidth = F * 0.3 + 1.2;
-        g.lineCap = 'round';
-        g.stroke();
-        g.strokeStyle = css(H('#c9a978'));
-        g.lineWidth = F * 0.3;
-        g.stroke();
-        g.setLineDash([2, 2.5]);
-        g.strokeStyle = css(H('#8f7048'));
-        g.lineWidth = 1;
-        g.stroke();
-        g.restore();
-      }
+    // The corner blocks, dovetailed, each pinned with a brass rivet.
+    eachCorner(g, w, h, () => cornerBlock(g, R, F, block));
+    // Brass hasps along the bars, and the handle on the right.
+    eachSide(g, w, h, (sd) => {
+      const at = sd.i === 1 ? [0.28] : sd.i === 3 ? [0.3, 0.72] : [0.24, 0.76];
+      if (sd.len > F * 7) for (const t of at) hasp(g, sd.len * t, F * 0.5, F);
+      if (sd.i === 1 && sd.len > F * 7) barHandle(g, sd.len * 0.56, F);
     });
-    eachCorner(g, w, h, () => {
-      g.fillStyle = css(post);
-      g.fillRect(0, 0, F, F);
-      grain(g, R, 1, F - 1, 1, F - 1, post, false);
-      g.fillStyle = css(light(post, 0.3));
-      g.fillRect(0, 0, F, 1.5);
-      g.strokeStyle = INK;
-      g.lineWidth = 1;
-      g.strokeRect(0.5, 0.5, F - 1, F - 1);
-      head(g, F / 2, F / 2, F * 0.14, IRON.body, IRON.ink);
-    });
-    inkBand(g, w, h, F);
+    // Moss where it is damp: the corners, under the ivy.
+    for (const [x, y] of [[F * 1.4, F * 0.55], [w - F * 1.6, F * 0.45], [F * 0.5, h - F * 1.4], [w - F * 0.5, h * 0.66], [w - F * 1.8, h - F * 0.5], [w * 0.62, F * 0.75]] as Pt[]) mossClump(g, R, x, y, F * 0.42);
+    // Ivy over the corners and down the sides.
+    // Each strand starts just past a corner block, so the dovetail and its rivet stay in sight.
+    const vines: Array<[Pt, Pt, Pt]> = [
+      [[F * 1.25, F * 0.2], [F * 2.6, F * 0.0], [Math.min(w * 0.3, F * 4.6), F * 0.25]],
+      [[F * 0.2, F * 1.25], [F * -0.15, h * 0.22], [F * 0.3, Math.min(h * 0.46, h - F * 4)]],
+      [[w - F * 0.2, F * 1.25], [w + F * 0.1, F * 3.2], [w - F * 0.25, Math.min(F * 6.5, h * 0.3)]],
+      [[w - F * 1.25, F * 0.2], [w - F * 2.4, F * 0.0], [w - F * 3.6, F * 0.3]],
+      [[w - F * 0.3, h * 0.66], [w + F * 0.1, h * 0.8], [w - F * 0.2, h - F * 1.3]],
+      [[w - F * 1.3, h - F * 0.2], [w - F * 2.4, h + F * 0.05], [w - F * 3.8, h - F * 0.3]],
+      [[F * 0.2, h - F * 1.3], [F * -0.1, h - F * 2.8], [F * 0.35, h - F * 4.6]],
+      [[F * 1.3, h - F * 0.2], [F * 2.4, h + F * 0.05], [F * 3.8, h - F * 0.35]],
+    ];
+    vines.forEach(([a, c, b], k) => vine(g, R, curve(a, c, b), F, k % 3 !== 2));
   },
 
   /* The bench: oak, a boxwood rule along the top with its ticks, nicks from the tools, and a vice at a corner. */

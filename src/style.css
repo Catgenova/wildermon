@@ -4881,3 +4881,125 @@ kbd {
   box-shadow: 0 0 0 1px var(--sack-ink);
   transform: rotate(45deg);
 }
+
+
+/*
+ * A store's window in its crate (the `crate` frame, src/ui/runecut-frames.ts):
+ * planed boards inside, a plank rail across above the buttons joined into
+ * the sides, each row a raised board, and the buttons wooden plaques pinned
+ * with a brass tack at each corner.
+ */
+[data-ui='runecut'] .win[data-frame='crate'] {
+  --crate-wood: #edd6aa;
+  --crate-wood-2: #d7b682;
+  --crate-ink: #6a4a30;
+  --crate-brass: #c99a3a;
+  --crate-row: color-mix(in srgb, #fbf3e2 85%, var(--rc-stone-2));
+  --crate-row-2: color-mix(in srgb, #f0e1c4 85%, var(--rc-stone-2));
+  box-shadow: 0 10px 22px -8px var(--rc-shadow);
+}
+
+[data-rc='night'][data-ui='runecut'] .win[data-frame='crate'] {
+  --crate-wood: color-mix(in srgb, #edd6aa, rgb(12 20 44) 42%);
+  --crate-wood-2: color-mix(in srgb, #d7b682, rgb(12 20 44) 42%);
+  --crate-ink: #1d1a26;
+  --crate-brass: color-mix(in srgb, #c99a3a, rgb(12 20 44) 30%);
+  --crate-row: var(--rc-stone-2);
+  --crate-row-2: color-mix(in srgb, var(--rc-stone-2), rgb(12 20 44) 15%);
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .inv-list {
+  gap: 3px;
+  scrollbar-color: var(--crate-wood-2) transparent;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] :is(.inv-row, .store-row) {
+  border-radius: 3px;
+  background: linear-gradient(var(--crate-row), var(--crate-row-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--crate-ink) 30%, transparent), inset 0 1px 0 color-mix(in srgb, #fff 50%, transparent), 0 1px 1px color-mix(in srgb, var(--crate-ink) 25%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .inv-head {
+  background: none;
+  box-shadow: none;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .tb-btn {
+  border: 1px solid var(--crate-ink);
+  border-radius: 4px;
+  clip-path: none;
+  color: var(--rc-ink);
+  background:
+    radial-gradient(circle, var(--crate-brass) 0 1.4px, var(--crate-ink) 1.5px 2px, transparent 2.2px) left 2px top 2px / 5px 5px no-repeat,
+    radial-gradient(circle, var(--crate-brass) 0 1.4px, var(--crate-ink) 1.5px 2px, transparent 2.2px) right 2px top 2px / 5px 5px no-repeat,
+    radial-gradient(circle, var(--crate-brass) 0 1.4px, var(--crate-ink) 1.5px 2px, transparent 2.2px) left 2px bottom 2px / 5px 5px no-repeat,
+    radial-gradient(circle, var(--crate-brass) 0 1.4px, var(--crate-ink) 1.5px 2px, transparent 2.2px) right 2px bottom 2px / 5px 5px no-repeat,
+    linear-gradient(var(--crate-wood), var(--crate-wood-2));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent), 0 1px 1px color-mix(in srgb, var(--crate-ink) 40%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .tb-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 45%, transparent), inset 0 -2px 0 var(--rc-rune), 0 1px 1px color-mix(in srgb, var(--crate-ink) 40%, transparent);
+}
+
+/* The plank rail across the crate above its buttons, running into the frame's sides. */
+[data-ui='runecut'] .win[data-frame='crate'] .win-body {
+  overflow-x: hidden;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .panel-bar {
+  position: relative;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 14px;
+  padding-top: 10px;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .panel-bar .tb-btn {
+  padding-inline: 7px;
+  font-size: 13px;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .panel-bar .panel-select {
+  flex: 1 1 58px;
+  min-width: 58px;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .panel-bar::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: calc(-1 * var(--rim) - 4px);
+  right: calc(-1 * var(--rim) - 4px);
+  height: 14px;
+  border-block: 1px solid var(--crate-ink);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 37px, color-mix(in srgb, var(--crate-ink) 14%, transparent) 37px 38px, transparent 38px 91px),
+    linear-gradient(color-mix(in srgb, var(--rc-stone-hi) 40%, var(--crate-wood)), var(--crate-wood) 40%, var(--crate-wood-2));
+  box-shadow: 0 2px 3px color-mix(in srgb, var(--crate-ink) 30%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .panel-search {
+  padding-right: 28px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M3 13C3 7 7 3 13 3c0 6-4 10-10 10z' fill='%2394b88c' stroke='%23557c61' stroke-width='1.1'/%3E%3Cpath d='M3.5 12.5L10 6' stroke='%23557c61' stroke-width='1'/%3E%3C/svg%3E") right 8px center / 14px no-repeat,
+    color-mix(in srgb, var(--crate-row) 70%, transparent);
+}
+
+/* A sprig of leaves at each end of the header and the footer, as the ivy outside has grown in. */
+[data-ui='runecut'] .win[data-frame='crate'] :is(.inv-head, .inv-footer) {
+  --sprig: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='12' viewBox='0 0 18 12'%3E%3Cpath d='M1 11C6 9 10 6 14 2' fill='none' stroke='%23557c61' stroke-width='1'/%3E%3Cpath d='M6 9C5 6 6 4 9 3C9 6 8 8 6 9z' fill='%2394b88c' stroke='%23557c61' stroke-width='.8'/%3E%3Cpath d='M11 5C12 2 14 1 17 1C16 4 14 5 11 5z' fill='%23a2cd93' stroke='%23557c61' stroke-width='.8'/%3E%3C/svg%3E");
+  background:
+    var(--sprig) left 2px center / 16px 11px no-repeat,
+    var(--sprig) right 2px center / 16px 11px no-repeat;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .inv-head {
+  padding-left: 22px;
+  padding-right: 22px;
+}
+
+[data-ui='runecut'] .win[data-frame='crate'] .inv-footer {
+  padding-left: 22px;
+}

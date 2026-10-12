@@ -270,6 +270,8 @@ export function paintPlate(g: Ctx, w: number, h: number, o: ArtOpts): void {
   g.restore();
   // In the pack's sack the field is linen: warmer, its fine weave showing, with the odd stain.
   if (o.frame === 'burlap') linen(g, w, h, R, o.rim ?? RIM);
+  // In a crate it is the planed boards of its inside.
+  if (o.frame === 'crate') planed(g, w, h, R, o.rim ?? RIM);
   if (o.night) nightOver(g, 0, 0, w, h);
 }
 
@@ -306,6 +308,40 @@ function linen(g: Ctx, w: number, h: number, R: () => number, rim: number): void
     const sh = g.createLinearGradient(x0, y0, x1, y1);
     sh.addColorStop(0, `rgba(70, 46, 26, ${deep})`);
     sh.addColorStop(1, 'rgba(70, 46, 26, 0)');
+    g.fillStyle = sh;
+    g.fillRect(0, 0, w, h);
+  }
+  g.restore();
+}
+
+/** The inside of a crate over the slab: a warm pale wash, boards running across with their joins, and long faint grain along them. */
+function planed(g: Ctx, w: number, h: number, R: () => number, rim: number): void {
+  g.save();
+  g.fillStyle = 'rgba(246, 230, 198, 0.45)';
+  g.fillRect(0, 0, w, h);
+  const board = 46;
+  for (let y = rim + board; y < h - rim; y += board) {
+    g.fillStyle = 'rgba(150, 112, 68, 0.22)';
+    g.fillRect(0, y, w, 1);
+    g.fillStyle = 'rgba(255, 252, 240, 0.5)';
+    g.fillRect(0, y + 1, w, 1);
+  }
+  for (let k = 0; k < h / 5; k++) {
+    const y = R() * h, x0 = R() * w, len = 40 + R() * 160, amp = 0.6 + R() * 1.2, ph = R() * 6;
+    g.beginPath();
+    for (let x = x0; x < x0 + len; x += 4) {
+      const yy = y + Math.sin(x * 0.03 + ph) * amp;
+      if (x === x0) g.moveTo(x, yy); else g.lineTo(x, yy);
+    }
+    g.strokeStyle = `rgba(160, 120, 74, ${(0.06 + R() * 0.06).toFixed(3)})`;
+    g.lineWidth = 0.8;
+    g.stroke();
+  }
+  // The frame's shadow on the boards inside it.
+  for (const [x0, y0, x1, y1, deep] of [[0, rim - 4, 0, rim + 9, 0.22], [rim - 4, 0, rim + 7, 0, 0.14], [w - rim + 4, 0, w - rim - 6, 0, 0.12], [0, h - rim + 4, 0, h - rim - 5, 0.1]] as Array<[number, number, number, number, number]>) {
+    const sh = g.createLinearGradient(x0, y0, x1, y1);
+    sh.addColorStop(0, `rgba(80, 54, 30, ${deep})`);
+    sh.addColorStop(1, 'rgba(80, 54, 30, 0)');
     g.fillStyle = sh;
     g.fillRect(0, 0, w, h);
   }
