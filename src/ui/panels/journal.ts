@@ -2,9 +2,10 @@ import type { Game } from '../../game/game';
 import { ALL_GOALS, JOURNAL, chapterOf, nextGoals } from '../../game/journal';
 import type { UIWindow } from '../windows';
 import { LedgerPanel } from './ledger';
+import { NewsPanel } from './news';
 
-/** The journal's tabs: what there is to do, what you have made, and how any of it works. */
-export type JournalTab = 'goals' | 'ledger' | 'help';
+/** The journal's tabs: what there is to do, what you have made, how any of it works, and what has changed. */
+export type JournalTab = 'goals' | 'ledger' | 'help' | 'news';
 
 /**
  * The journal: everything somebody thought worth doing on this island, in
@@ -14,8 +15,10 @@ export type JournalTab = 'goals' | 'ledger' | 'help';
  *
  * Its second tab is the ledger (`LedgerPanel`): what you have made, how many,
  * how many rare and the best of each. Its third is the help (`buildHelp`),
- * fetched the first time it is turned to (`onShow`). What there is to do, what
- * has been done and how any of it works are one book.
+ * fetched the first time it is turned to (`onShow`). Its fourth is what has
+ * changed on the island (`NewsPanel`), turned to by itself on coming ashore
+ * when something has changed since this browser last showed it. What there is
+ * to do, what has been done, how any of it works and what is new are one book.
  */
 export class JournalPanel {
   private readonly rows = new Map<string, HTMLDivElement>();
@@ -28,6 +31,7 @@ export class JournalPanel {
   readonly ledger: LedgerPanel;
   /** The Help tab's page, which the help is built into when it has been fetched. */
   readonly helpPage: HTMLDivElement;
+  private readonly news: NewsPanel;
   /** Told whenever a tab is shown, the window open. */
   onShow: ((tab: JournalTab) => void) | null = null;
 
@@ -39,6 +43,7 @@ export class JournalPanel {
       ['goals', 'Goals', 'Everything worth doing here, ticking itself off'],
       ['ledger', 'Ledger', 'Everything you have ever made: how many, how many rare, and the best'],
       ['help', 'Help', 'How any of this works'],
+      ['news', "What's new", 'What changed on the island, newest first, with what you had not read yet marked'],
     ] as Array<[JournalTab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -59,8 +64,13 @@ export class JournalPanel {
     this.helpPage.hidden = true;
     this.pages.set('goals', goals);
     this.pages.set('ledger', made);
+    const news = document.createElement('div');
+    news.className = 'settings-page';
+    news.hidden = true;
+    this.news = new NewsPanel(news);
     this.pages.set('help', this.helpPage);
-    win.body.append(bar, goals, made, this.helpPage);
+    this.pages.set('news', news);
+    win.body.append(bar, goals, made, this.helpPage, news);
     this.ledger = new LedgerPanel(made, game, () => win.isOpen && this.tab === 'ledger');
     this.count = document.createElement('div');
     this.count.className = 'skill-group';
@@ -102,6 +112,7 @@ export class JournalPanel {
     win.onOpen = () => {
       this.refresh();
       if (this.tab === 'ledger') this.ledger.refresh();
+      if (this.tab === 'news') this.news.draw();
       this.onShow?.(this.tab);
     };
     game.events.on('journal', () => this.refresh());
@@ -113,6 +124,7 @@ export class JournalPanel {
     for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === tab);
     for (const [id, page] of this.pages) page.hidden = id !== tab;
     if (tab === 'ledger') this.ledger.refresh();
+    if (tab === 'news' && this.win.isOpen) this.news.draw();
     if (this.win.isOpen) this.onShow?.(tab);
   }
 

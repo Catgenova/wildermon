@@ -93,7 +93,7 @@ export const BINDS: BindDef[] = [
   { id: 'win_settings', label: 'Settings', hint: 'This window.', group: 'Windows', keys: ['KeyO'] },
   { id: 'win_help', label: 'Help', hint: 'The journal open at its Help tab: how any of this works.', group: 'Windows', keys: ['F1', 'KeyH'] },
   // No key out of the box: every letter is spoken for, and it opens by itself when there is something new.
-  { id: 'win_news', label: "What's new", hint: 'What changed on the island, newest first, with what you had not read yet marked.', group: 'Windows', keys: [] },
+  { id: 'win_news', label: "What's new", hint: "The journal open at its What's new tab: what changed on the island, newest first, with what you had not read yet marked.", group: 'Windows', keys: [] },
   // Ctrl+K and ⌘K open it too, wherever they are not taken by something you are typing in.
   { id: 'palette', label: 'Find anything', hint: 'A box to type in that finds any window, recipe, setting, help page, layout or key by name, and opens it. Ctrl+K opens it as well.', group: 'Windows', keys: ['Slash'] },
   // F6 to F9: the letters are spoken for, and F1, F2 and F4 already open windows.

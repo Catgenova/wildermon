@@ -377,7 +377,7 @@ const PRESSES: Record<string, () => void> = {
   win_keeper: () => ui.toggleWindow('keeper'),
   win_settings: () => ui.toggleWindow('settings'),
   win_help: () => ui.toggleJournal('help'),
-  win_news: () => ui.toggleWindow('news'),
+  win_news: () => ui.toggleJournal('news'),
   walk_home: () => game.walkHome(),
   carry_on: () => {
     if (!game.resumeQueue()) game.logMsg('There is nothing waiting to be taken up.', 'info');

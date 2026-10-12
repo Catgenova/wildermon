@@ -55,7 +55,7 @@ export const SNAP = 10;
 /** The arrangements of windows kept, each called back with a key of its own (`layout_1`…). */
 export const LAYOUT_SLOTS = LAYOUT_NAMES.length;
 /** Windows that are never part of an arrangement, because they are opened by something happening rather than by you. */
-const NOT_LAID_OUT = new Set(['away', 'news', 'hoard']);
+const NOT_LAID_OUT = new Set(['away', 'hoard']);
 
 /** A draggable, resizable overlay window in the Wurm style. */
 export class UIWindow {

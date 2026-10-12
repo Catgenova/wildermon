@@ -56,7 +56,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'stall', label: 'Market stall', for: ['market'] },
   { kind: 'scroll', label: 'Blue marble and gold', for: ['events'] },
   { kind: 'book', label: 'Starred leather book', for: ['journal'] },
-  { kind: 'noticeboard', label: 'Notice board', for: ['news'] },
   { kind: 'letter', label: 'Sealed letter', for: ['social'] },
   { kind: 'palisade', label: 'Palisade', for: ['deed'] },
   { kind: 'wicker', label: 'Wicker basket', for: ['wildermon'] },
@@ -4682,33 +4681,6 @@ const PAINTERS: Record<string, Painter> = {
     }
     // The spine.
     spine(g, R, -F * 0.72, F * 0.92, -F * 0.28, h + F * 0.28, F);
-  },
-
-  /* The news: a notice board, pinned all round. */
-  noticeboard(g, w, h, F, R) {
-    eachSide(g, w, h, (s) => {
-      g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      planks(g, R, s.len, 0, F, WOOD.pine, s.lit);
-      g.restore();
-      // Scraps of paper pinned along it, and the pins.
-      const pins = ['#c9574a', '#4f7ab8', '#e0b23e', '#5f9a5f'];
-      for (let x = F * 2 + R() * 10; x < s.len - F * 2; x += 46 + R() * 30) {
-        g.save();
-        g.translate(x, F * 0.55);
-        g.rotate((R() - 0.5) * 0.4);
-        g.fillStyle = css(light(PARCH, 0.3));
-        g.fillRect(-F * 0.5, -F * 0.35, F, F * 0.6);
-        g.strokeStyle = css(shade(PARCH, 0.4), 0.8);
-        g.lineWidth = 0.6;
-        g.strokeRect(-F * 0.5, -F * 0.35, F, F * 0.6);
-        g.restore();
-        head(g, x, F * 0.35, F * 0.15, H(pins[Math.floor(R() * pins.length)]), STONE_INK);
-      }
-    });
-    inkBand(g, w, h, F);
-    eachCorner(g, w, h, (i) => head(g, F * 0.5, F * 0.5, F * 0.18, H(['#c9574a', '#4f7ab8', '#e0b23e', '#5f9a5f'][i]), STONE_INK));
   },
 
   /* Social: a letter's paper, tied round with twine, sealed at a corner in red wax. */

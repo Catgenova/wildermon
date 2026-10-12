@@ -73,7 +73,7 @@ import { cornerReading, groundReading } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, rankAtLeast, type Deed } from '../game/game';
 import { CRAFT_REACH, reachFor, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
-import { NewsPanel, unseenNews } from './panels/news';
+import { unseenNews } from './panels/news';
 import { CratePanel } from './panels/crate';
 import { counterEntries, counterTip, dropOnCounter, type CounterWays } from './counterMenu';
 import { lampEntries } from './lampMenu';
@@ -504,19 +504,8 @@ export class UI {
       awayWin.open();
     }
 
-    /*
-     * What's new: made always, so the UI Menu can open it, and opened here by
-     * itself when something has changed since this browser last showed it --
-     * a little lower than the away window, when that is open too, so neither
-     * hides the other.
-     */
-    const newsWin = this.windows.create({ id: 'news', title: "What's new", x: 0, y: 0, width: 440, height: 380, open: false });
-    new NewsPanel(newsWin);
-    if (unseenNews()) {
-      newsWin.el.style.left = `${Math.max(0, (uiBox().w - 440) / 2 + (away.length ? 32 : 0))}px`;
-      newsWin.el.style.top = `${Math.max(0, uiBox().h / 4 + (away.length ? 48 : 0))}px`;
-      newsWin.open();
-    }
+    // What's new, the journal's fourth tab, opened at by itself when something has changed since this browser last showed it.
+    if (unseenNews()) this.journalPanel.open('news');
 
     // Whether this body keeps the island, asked once now that it is ashore.
     const isle = this.island;
@@ -623,9 +612,9 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      if (b.id === 'win_ledger' || b.id === 'win_help') {
-        // The ledger and the help are tabs of the journal, not windows of their own.
-        const tab = b.id === 'win_ledger' ? 'ledger' : 'help';
+      if (b.id === 'win_ledger' || b.id === 'win_help' || b.id === 'win_news') {
+        // The ledger, the help and what's new are tabs of the journal, not windows of their own.
+        const tab = b.id === 'win_ledger' ? 'ledger' : b.id === 'win_help' ? 'help' : 'news';
         out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open(tab) });
       } else if (b.id.startsWith('win_')) {
         const w = this.windows.get(b.id === 'win_events' ? 'events' : b.id.slice(4));

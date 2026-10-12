@@ -116,7 +116,6 @@ import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_
 import { SEASONS } from '../../world/calendar';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
-import type { UIWindow } from '../windows';
 import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 
 /**
@@ -1946,20 +1945,21 @@ const DAY_WORDS = (day: string): string => {
 };
 
 /**
- * The window: every entry, newest first under the day it went out, the ones
- * this browser had not shown marked. Drawn each time it opens, since what it
- * marks depends on what was seen before it was opened, and then marked seen.
+ * The journal's What's new tab: every entry, newest first under the day it
+ * went out, the ones this browser had not shown marked. Drawn each time it is
+ * shown, since what it marks depends on what was seen before, and then marked
+ * seen.
  */
 export class NewsPanel {
-  constructor(private readonly win: UIWindow) {
-    win.body.classList.add('news-body');
-    win.onOpen = () => this.draw();
-    if (win.isOpen) this.draw();
+  /** Drawn into `host`, the journal's What's new tab (`JournalPanel`), each time it is shown (`draw`). */
+  constructor(private readonly host: HTMLElement) {
+    host.classList.add('news-body');
   }
 
-  private draw(): void {
+  /** Write it out afresh, the entries not read before marked, and mark them read. */
+  draw(): void {
     const was = seen();
-    const body = this.win.body;
+    const body = this.host;
     body.replaceChildren();
     let day = '';
     for (const e of [...NEWS].sort((a, b) => b.n - a.n)) {

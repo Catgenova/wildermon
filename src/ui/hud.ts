@@ -76,7 +76,6 @@ export const WINDOWS: Array<{ label: string; bind: string; id: string }> = [
   // Made, and so listed, only for somebody the island says keeps it.
   { label: 'Island keeper', bind: 'win_keeper', id: 'keeper' },
   { label: 'Settings', bind: 'win_settings', id: 'settings' },
-  { label: "What's new", bind: 'win_news', id: 'news' },
 ];
 
 /*
