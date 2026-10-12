@@ -1,5 +1,5 @@
 import {
-  css, cut, cushion, drawPads, faceColour, glyphPath, grassTuft, hex, mix, roundelStrokes, STONE_INK, strokesPath, toneOf,
+  css, cut, cushion, drawPads, faceColour, glyphPath, grassTuft, hex, mix, STONE_INK, toneOf,
   type Ctx, type Pad, type Pt, type RGB,
 } from '../render/runestone';
 import { MOSS, rand } from '../render/ivy';
@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -56,7 +56,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'stall', label: 'Market stall', for: ['market'] },
   { kind: 'scroll', label: 'Blue marble and gold', for: ['events'] },
   { kind: 'book', label: 'Starred leather book', for: ['journal'] },
-  { kind: 'letter', label: 'Sealed letter', for: ['social'] },
+  { kind: 'letter', label: 'Sketches on an oak board', for: ['social'] },
   { kind: 'palisade', label: 'Palisade', for: ['deed'] },
   { kind: 'wicker', label: 'Wicker basket', for: ['wildermon'] },
   { kind: 'fieldbook', label: 'Field-worn leather', for: ['guide'] },
@@ -75,7 +75,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -111,8 +111,6 @@ const IRON = { body: H(IRON_PAINT.body), ink: H(IRON_PAINT.ink) };
 const BRASS = { body: H(BRASS_PAINT.body), ink: H(BRASS_PAINT.ink) };
 const GOLD: RGB = METAL_TONE.gold;
 const LINEN = H(LINEN_PAINT.body);
-const PARCH: RGB = [239, 226, 192];
-const SEAL: RGB = [180, 88, 74];
 
 /**
  * A side of the band, laid along x from its corner, `len` long, the band from
@@ -313,14 +311,6 @@ function gilt(g: Ctx, path: () => void, w = 1.4): void {
   g.strokeStyle = css(light(GOLD, 0.55), 0.8);
   g.lineWidth = w * 0.35;
   g.stroke();
-}
-
-/** A ragged edge along a side, eating in from y = 0 by up to `deep`, then cleared: deckle, a tear, a burn. */
-function ragged(g: Ctx, R: () => number, len: number, deep: number, step = 3): Pt[] {
-  const pts: Pt[] = [];
-  for (let x = 0; x <= len; x += step) pts.push([x, R() * deep * (0.4 + 0.6 * Math.abs(Math.sin(x * 0.05)))]);
-  pts.push([len, 0]);
-  return pts;
 }
 
 /** A spray of laurel from x along y, `len` long (negative runs back): a stem, and leaves 6 px long in pairs every 6 px, smaller toward the tip. */
@@ -3883,6 +3873,233 @@ function ribbonMark(g: Ctx, x: number, y: number, wd: number, len: number): void
   goldStar4(g, x, y + len * 0.6, wd * 0.42);
 }
 
+/* ---- the social board's own kit ------------------------------------------ */
+
+/** The board's dark weathered oak, and the ink its sketches are drawn in. */
+const BOARD_WOOD = H('#5e4433');
+const SKETCH = H('#5d6b5a');
+
+/** A card of paper at (x, y), its middle, `wd` × `ht`, turned `rot`: cream, its edge a little ragged, a shadow under it; `draw` puts on it what is drawn there, from its top left. */
+function pinnedCard(g: Ctx, R: () => number, x: number, y: number, wd: number, ht: number, rot: number, draw: (g: Ctx) => void): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(rot);
+  const pts: Pt[] = [];
+  const step = 3;
+  for (let t = 0; t < wd; t += step) pts.push([-wd / 2 + t, -ht / 2 + R() * 1.2]);
+  for (let t = 0; t < ht; t += step) pts.push([wd / 2 - R() * 1.2, -ht / 2 + t]);
+  for (let t = 0; t < wd; t += step) pts.push([wd / 2 - t, ht / 2 - R() * 1.2]);
+  for (let t = 0; t < ht; t += step) pts.push([-wd / 2 + R() * 1.2, ht / 2 - t]);
+  g.save();
+  poly(g, pts);
+  g.shadowColor = 'rgba(25, 15, 8, 0.5)';
+  g.shadowBlur = 4;
+  g.shadowOffsetX = 1.5;
+  g.shadowOffsetY = 2.5;
+  const f = g.createLinearGradient(-wd / 2, -ht / 2, wd / 2, ht / 2);
+  f.addColorStop(0, '#f6eedb');
+  f.addColorStop(1, '#e3d4b2');
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.save();
+  poly(g, pts);
+  g.clip();
+  // Foxed a little toward its edges.
+  const fox = g.createRadialGradient(0, 0, Math.min(wd, ht) * 0.3, 0, 0, Math.max(wd, ht) * 0.7);
+  fox.addColorStop(0, 'rgba(160, 120, 70, 0)');
+  fox.addColorStop(1, 'rgba(160, 120, 70, 0.28)');
+  g.fillStyle = fox;
+  g.fillRect(-wd / 2, -ht / 2, wd, ht);
+  g.translate(-wd / 2, -ht / 2);
+  draw(g);
+  g.restore();
+  poly(g, pts);
+  g.strokeStyle = 'rgba(120, 92, 60, 0.7)';
+  g.lineWidth = 0.7;
+  g.stroke();
+  g.restore();
+}
+
+/** Ink for a sketch: grey-green, `a` strong, `wd` wide. */
+function sketchInk(g: Ctx, a: number, wd = 0.8): void {
+  g.strokeStyle = css(SKETCH, a);
+  g.lineWidth = wd;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+}
+
+/** A pine sketched with its foot at (x, y), `s` high: a trunk and three tiers of boughs, washed green. */
+function sketchPine(g: Ctx, x: number, y: number, s: number): void {
+  g.beginPath();
+  for (let k = 0; k < 3; k++) {
+    const top = y - s + k * s * 0.24, wd = s * (0.18 + k * 0.08);
+    g.moveTo(x, top);
+    g.lineTo(x + wd, top + s * 0.34);
+    g.lineTo(x - wd, top + s * 0.34);
+    g.closePath();
+  }
+  g.fillStyle = 'rgba(120, 150, 110, 0.45)';
+  g.fill();
+  sketchInk(g, 0.85, 0.7);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x, y - s * 0.3);
+  g.lineTo(x, y);
+  g.stroke();
+}
+
+/** A card of pines on a rise, `wd` × `ht`. */
+function sketchWood(g: Ctx, wd: number, ht: number): void {
+  g.beginPath();
+  g.moveTo(wd * 0.06, ht * 0.82);
+  g.quadraticCurveTo(wd * 0.5, ht * 0.66, wd * 0.94, ht * 0.8);
+  sketchInk(g, 0.6, 0.7);
+  g.stroke();
+  sketchPine(g, wd * 0.5, ht * 0.74, ht * 0.62);
+  sketchPine(g, wd * 0.28, ht * 0.8, ht * 0.42);
+  sketchPine(g, wd * 0.72, ht * 0.79, ht * 0.46);
+  sketchPine(g, wd * 0.86, ht * 0.82, ht * 0.3);
+}
+
+/** A card of handwriting, `wd` × `ht`: lines of joined-up scrawl, a signature's flourish at the foot. */
+function sketchNote(g: Ctx, R: () => number, wd: number, ht: number): void {
+  g.strokeStyle = 'rgba(70, 50, 40, 0.75)';
+  g.lineWidth = 0.6;
+  g.lineCap = 'round';
+  const lines = Math.max(3, Math.floor(ht / 6) - 1);
+  for (let l = 0; l < lines; l++) {
+    const y = ht * 0.22 + l * ((ht * 0.62) / lines);
+    let x = wd * 0.1;
+    const end = wd * (l === lines - 1 ? 0.55 : 0.88);
+    g.beginPath();
+    g.moveTo(x, y);
+    while (x < end) {
+      const hop = 1.4 + R() * 1.6;
+      g.quadraticCurveTo(x + hop / 2, y - 1.6 - R() * 1.2, x + hop, y);
+      x += hop;
+      if (R() < 0.12) {
+        x += 2.2;
+        g.moveTo(x, y);
+      }
+    }
+    g.stroke();
+  }
+}
+
+/** A card of mountains and a road winding down to pines, `wd` × `ht`. */
+function sketchVale(g: Ctx, wd: number, ht: number): void {
+  sketchInk(g, 0.7, 0.75);
+  g.beginPath();
+  g.moveTo(wd * 0.06, ht * 0.38);
+  g.lineTo(wd * 0.3, ht * 0.14);
+  g.lineTo(wd * 0.46, ht * 0.3);
+  g.lineTo(wd * 0.66, ht * 0.1);
+  g.lineTo(wd * 0.94, ht * 0.36);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(wd * 0.3, ht * 0.14);
+  g.lineTo(wd * 0.26, ht * 0.2);
+  g.moveTo(wd * 0.66, ht * 0.1);
+  g.lineTo(wd * 0.6, ht * 0.18);
+  sketchInk(g, 0.45, 0.6);
+  g.stroke();
+  // The road, winding toward the foot of the card.
+  g.beginPath();
+  g.moveTo(wd * 0.52, ht * 0.42);
+  g.bezierCurveTo(wd * 0.25, ht * 0.55, wd * 0.75, ht * 0.68, wd * 0.4, ht * 0.95);
+  g.moveTo(wd * 0.58, ht * 0.42);
+  g.bezierCurveTo(wd * 0.36, ht * 0.56, wd * 0.9, ht * 0.7, wd * 0.62, ht * 0.95);
+  sketchInk(g, 0.55, 0.6);
+  g.stroke();
+  sketchPine(g, wd * 0.18, ht * 0.7, ht * 0.26);
+  sketchPine(g, wd * 0.3, ht * 0.78, ht * 0.2);
+  sketchPine(g, wd * 0.84, ht * 0.66, ht * 0.24);
+}
+
+/** A sprig sketched on a tag, `wd` × `ht`: a stem with paired leaves, washed green. */
+function sketchSprig(g: Ctx, wd: number, ht: number): void {
+  const x = wd / 2;
+  sketchInk(g, 0.8, 0.7);
+  g.beginPath();
+  g.moveTo(x, ht * 0.86);
+  g.quadraticCurveTo(x - wd * 0.06, ht * 0.55, x + wd * 0.02, ht * 0.28);
+  g.stroke();
+  for (let k = 0; k < 4; k++) {
+    const y = ht * (0.36 + k * 0.13);
+    for (const d of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(x + d * wd * 0.14, y - 2, wd * 0.15, wd * 0.06, d * -0.6, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(120, 150, 110, 0.5)';
+      g.fill();
+      g.stroke();
+    }
+  }
+}
+
+/** A pin through a card at (x, y): a brass head, its shadow on the paper. */
+function brassPin(g: Ctx, x: number, y: number, r: number): void {
+  g.beginPath();
+  g.arc(x + 1, y + 1.4, r, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(30, 18, 10, 0.35)';
+  g.fill();
+  head(g, x, y, r, BRASS.body, BRASS.ink);
+}
+
+/** An iron clip over a card's top edge at (x, y), `s` long: a bent strip, riveted to the board above it. */
+function ironClip(g: Ctx, x: number, y: number, s: number): void {
+  g.beginPath();
+  g.roundRect(x - s * 0.18, y - s * 0.7, s * 0.36, s, s * 0.12);
+  g.fillStyle = css(IRON.body);
+  g.fill();
+  g.strokeStyle = css(IRON.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.fillStyle = 'rgba(255, 255, 255, 0.35)';
+  g.fillRect(x - s * 0.1, y - s * 0.6, 1, s * 0.8);
+  head(g, x, y - s * 0.5, s * 0.1, light(IRON.body, 0.2), IRON.ink);
+}
+
+/** A brass bracket over a corner, in the side frame with the corner at the origin: an L of two straps along the edges, rivets down each. */
+function cornerBracket(g: Ctx, F: number): void {
+  const len = F * 1.25, t = F * 0.3;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(-1, -1);
+    g.lineTo(len, -1);
+    g.lineTo(len, t);
+    g.lineTo(t, t);
+    g.lineTo(t, len);
+    g.lineTo(-1, len);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(25, 15, 8, 0.5)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetX = 1;
+  g.shadowOffsetY = 1.5;
+  g.fillStyle = goldFill(g, 0, 0, len, len);
+  g.fill();
+  g.restore();
+  // Worn dark in its hollows.
+  g.save();
+  shape();
+  g.clip();
+  g.fillStyle = 'rgba(60, 40, 20, 0.3)';
+  g.fillRect(-2, -2, len + 4, len + 4);
+  g.restore();
+  shape();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  for (const d of [0.5, 0.95]) {
+    head(g, F * d + t * 0.2, t / 2, 1.3, BRASS.body, BRASS.ink);
+    head(g, t / 2, F * d + t * 0.2, 1.3, BRASS.body, BRASS.ink);
+  }
+  head(g, t / 2, t / 2, 1.5, BRASS.body, BRASS.ink);
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -4683,39 +4900,63 @@ const PAINTERS: Record<string, Painter> = {
     spine(g, R, -F * 0.72, F * 0.92, -F * 0.28, h + F * 0.28, F);
   },
 
-  /* Social: a letter's paper, tied round with twine, sealed at a corner in red wax. */
+  /*
+   * Social: a board of dark weathered oak, a post up each side and a plank
+   * across the top and the foot, nailed, a brass bracket riveted over each
+   * corner and cord lashed round the left post. Pinned at the top right a
+   * sketch of pines and a note in a scrawling hand; a tag with a sprig on it
+   * hung from a brass ring down the right; at the bottom left a sketch of
+   * mountains and a road, and a brass compass on a chain from its pin, a
+   * blue ribbon under it, ivy round them.
+   */
   letter(g, w, h, F, R) {
-    paper(g, w, h, F, R, light(PARCH, 0.25), 1.2, false);
-    const twine = H('#a5824f');
-    eachSide(g, w, h, (s) => rope(g, F * 0.2, s.len - F * 0.2, F * 0.5, F * 0.16, twine));
-    // The seal at the top right: wax spread round a stamped ring.
-    g.save();
-    g.translate(w - F * 0.9, F * 0.9);
-    g.beginPath();
-    for (let k = 0; k <= 12; k++) {
-      const a = (k / 12) * Math.PI * 2, r = F * (0.98 + (k % 2) * 0.1);
-      if (k) g.lineTo(Math.cos(a) * r, Math.sin(a) * r); else g.moveTo(r, 0);
-    }
-    g.fillStyle = css(SEAL);
-    g.fill();
+    const wood = BOARD_WOOD;
+    post(g, R, -2, F, -2, h + 2, wood);
+    post(g, R, w - F, w + 2, -2, h + 2, wood);
+    plank(g, R, F * 0.6, w - F * 0.6, -2, F, light(wood, 0.04));
+    plank(g, R, F * 0.6, w - F * 0.6, h - F, h + 2, shade(wood, 0.04));
     g.strokeStyle = INK;
     g.lineWidth = 1;
-    g.stroke();
-    g.beginPath();
-    g.arc(0, 0, F * 0.55, 0, Math.PI * 2);
-    g.strokeStyle = css(shade(SEAL, 0.4));
-    g.lineWidth = 1.2;
-    g.stroke();
-    g.beginPath();
-    g.arc(-F * 0.2, -F * 0.25, F * 0.22, 0, Math.PI * 2);
-    g.fillStyle = css(light(SEAL, 0.4), 0.7);
-    g.fill();
-    g.scale(1, -1);
-    strokesPath(g, roundelStrokes('crown').slice(2), 0, 0, F * 0.48);
-    g.strokeStyle = css(shade(SEAL, 0.5));
-    g.lineWidth = 0.8;
-    g.stroke();
-    g.restore();
+    g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
+    // Nails along the planks and down the posts.
+    for (let x = F * 2.2; x < w - F * 2; x += F * 4.2) {
+      peg(g, x, F * 0.3);
+      peg(g, x, h - F * 0.32);
+    }
+    for (let y = F * 2.5; y < h - F * 2; y += F * 4.2) {
+      peg(g, F * 0.5, y);
+      peg(g, w - F * 0.5, y);
+    }
+    lashing(g, -2, F, F * 1.75, 3);
+    eachCorner(g, w, h, () => cornerBracket(g, F));
+    // Pinned at the top right: the pines, and the note under its clip.
+    if (w > F * 10) {
+      pinnedCard(g, R, w - F * 5.4, F * 0.35, F * 1.75, F * 1.35, -0.08, (c) => sketchWood(c, F * 1.75, F * 1.35));
+      brassPin(g, w - F * 5.45, F * 0.0, 2.2);
+      pinnedCard(g, R, w - F * 3.3, F * 0.45, F * 2, F * 1.2, 0.06, (c) => sketchNote(c, R, F * 2, F * 1.2));
+      ironClip(g, w - F * 3.3, F * 0.0, F * 0.5);
+    }
+    // Down the right, a tag hung from a brass ring.
+    if (h > F * 8) {
+      const ty = Math.max(F * 2.2, h * 0.24);
+      bail(g, w - F * 0.5, ty, 3.2);
+      twist(g, curve([w - F * 0.5, ty + 3], [w - F * 0.3, ty + F * 0.4], [w - F * 0.12, ty + F * 0.7]), 1, CORD);
+      pinnedCard(g, R, w - F * 0.02, ty + F * 1.6, F * 1.1, F * 1.75, 0.1, (c) => sketchSprig(c, F * 1.1, F * 1.75));
+    }
+    // At the bottom left: the vale, the compass hung from its pin, the ribbon, ivy.
+    if (h > F * 9) {
+      const cy = h - F * 3.3;
+      for (const [x, y, a] of [[F * 0.95, cy - F * 1.05, -0.6], [F * 0.85, h - F * 0.75, 0.4]] as Array<[number, number, number]>) {
+        for (let k = 0; k < 3; k++) ivyLeaf(g, x, y, a + (k - 1) * 0.75, F * 0.4, R() < 0.5);
+      }
+      pinnedCard(g, R, F * 0.45, cy, F * 1.35, F * 2.15, -0.06, (c) => sketchVale(c, F * 1.35, F * 2.15));
+      brassPin(g, F * 0.52, cy - F * 0.92, 2.2);
+      const px = F * 0.1, py = cy + F * 1.55;
+      twist(g, curve([F * 0.5, cy - F * 0.88], [F * 0.0, cy + F * 0.3], [px, py - F * 0.72]), 1.1, BRASS.body);
+      ribbonMark(g, px + F * 0.42, py + F * 0.35, F * 0.48, F * 1.5);
+      bail(g, px, py - F * 0.72, 2.6);
+      brassCompass(g, px, py, F * 0.68, false);
+    }
   },
 
   /* The settlement: a palisade, its stakes 8 px thick and pointed outward, lashed with rope, a post at each corner. */
@@ -5253,55 +5494,6 @@ function leatherBand(g: Ctx, w: number, h: number, F: number, hide: RGB, R: () =
 function paperBack(g: Ctx, w: number, h: number, F: number, c: RGB): void {
   fillBand(g, w, h, F, css(c));
   inkBand(g, w, h, F);
-}
-
-/**
- * Paper round the window: its face, foxed with stains, its outer edge
- * ragged by up to `deep` (a deckle, a tear), scorched dark along it when
- * `burnt`.
- */
-function paper(g: Ctx, w: number, h: number, F: number, R: () => number, p: RGB, deep: number, burnt: boolean): void {
-  eachSide(g, w, h, (s) => {
-    g.save();
-    mitre(g, s.len, F);
-    g.clip();
-    g.fillStyle = css(mix(shade(p, 0.12), p, s.lit));
-    g.fillRect(0, 0, s.len, F);
-    for (let k = 0; k < s.len / 30; k++) {
-      g.beginPath();
-      g.ellipse(R() * s.len, R() * F, 3 + R() * 7, 2 + R() * 3, 0, 0, Math.PI * 2);
-      g.fillStyle = css(shade(p, 0.18), 0.25);
-      g.fill();
-    }
-    // The ragged edge: cut away from the outside, ink round what is left, and scorch along it.
-    const edge = ragged(g, R, s.len, deep);
-    if (burnt) {
-      g.beginPath();
-      edge.forEach(([x, y], k) => (k ? g.lineTo(x, y + 3.5) : g.moveTo(x, y + 3.5)));
-      g.lineTo(s.len, -1);
-      g.lineTo(0, -1);
-      g.closePath();
-      g.fillStyle = css(H('#6b4a34'), 0.7);
-      g.fill();
-    }
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath();
-    g.moveTo(0, -1);
-    edge.forEach(([x, y]) => g.lineTo(x, y));
-    g.lineTo(s.len, -1);
-    g.closePath();
-    g.fill();
-    g.globalCompositeOperation = 'source-over';
-    g.beginPath();
-    edge.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y)));
-    g.strokeStyle = css(burnt ? H('#3f2c22') : shade(p, 0.5));
-    g.lineWidth = burnt ? 1.2 : 0.8;
-    g.stroke();
-    g.restore();
-  });
-  g.strokeStyle = INK;
-  g.lineWidth = 1;
-  g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
 }
 
 /**
