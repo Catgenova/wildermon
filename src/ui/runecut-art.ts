@@ -383,8 +383,8 @@ export function paintNiche(g: Ctx, glyph: string, o: ArtOpts, scale: number, lit
     paintTablet(g, NICHE_W, NICHE_H, o.night);
     return;
   }
-  // The map's is a compass rose in gold.
-  if (o.frame === 'parchment') {
+  // The map's and the treasure map's are a compass rose in gold.
+  if (o.frame === 'parchment' || o.frame === 'treasure') {
     paintCompass(g, NICHE_W, NICHE_H, o.night);
     return;
   }

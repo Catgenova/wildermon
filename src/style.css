@@ -5004,8 +5004,9 @@ kbd {
   padding-left: 22px;
 }
 
-/* The map's badge, the compass rose, a size larger than a stone niche. */
-[data-ui='runecut'] .win[data-frame='parchment'] .rc-niche {
+/* The maps' badge, the compass rose, a size larger than a stone niche. */
+[data-ui='runecut'] .win[data-frame='parchment'] .rc-niche,
+[data-ui='runecut'] .win[data-frame='treasure'] .rc-niche {
   margin: -12px 8px -12px -8px;
   transform: scale(1.35);
   transform-origin: 50% 50%;

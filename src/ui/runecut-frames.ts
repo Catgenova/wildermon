@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -2348,6 +2348,382 @@ export function paintCompass(g: Ctx, W: number, Hh: number, night: boolean): voi
   }
 }
 
+/* ---- the treasure map's own kit ------------------------------------------ */
+
+/** The treasure map's paper, older than the map's: its face, the light on it, the brown it ages to at the edge, and the scorch. */
+const OLD_PAPER = { body: H('#ecd5a6'), lit: H('#f7e8c6'), deep: H('#c9a167'), burn: H('#6e4a2c') };
+/** Its ink, the sea washed on it, and the woods. */
+const SEPIA = H('#7a5a3c');
+const SHALLOWS = H('#9fd3cd');
+const WOODS = H('#9cb586');
+const X_RED = H('#b4473a');
+const CORD = H('#c9a679');
+
+/** The torn outline of the paper round a w × h window, clockwise: bitten in by up to `deep`, and now and then a deeper tear. */
+function tornOutline(R: () => number, w: number, h: number, deep: number): Pt[] {
+  const pts: Pt[] = [];
+  const sides: Array<[number, number, number, number, number]> = [[0, 0, 1, 0, w], [w, 0, 0, 1, h], [w, h, -1, 0, w], [0, h, 0, -1, h]];
+  sides.forEach(([x0, y0, ux, uy, len], i) => {
+    let tear = 0, at = 0, deeper = 0;
+    for (let d = 0; d < len; d += 2.5 + R() * 2) {
+      let b = R() * deep * (0.35 + 0.65 * Math.abs(Math.sin(d * 0.045 + i)));
+      if (!tear && d > 8 && d < len - 14 && R() < 0.04) [tear, at, deeper] = [3 + Math.floor(R() * 3), 0, deep * (0.8 + R() * 0.9)];
+      if (tear) {
+        b += deeper * Math.sin((Math.PI * ++at) / (tear + 1));
+        if (at === tear) tear = 0;
+      }
+      pts.push([x0 + ux * d - uy * b, y0 + uy * d + ux * b]);
+    }
+  });
+  return pts;
+}
+
+/** Ink, as the map is drawn in: sepia at `a`, `wd` wide. */
+function sepia(g: Ctx, a: number, wd = 0.8): void {
+  g.strokeStyle = css(SEPIA, a);
+  g.lineWidth = wd;
+  g.lineCap = 'round';
+  g.lineJoin = 'round';
+}
+
+/** A ship under sail at (x, y), its waterline, `s` long: the hull inked in, two square sails bellied, a pennant, and a wave under it. */
+function inkShip(g: Ctx, x: number, y: number, s: number): void {
+  g.save();
+  g.translate(x, y);
+  g.beginPath();
+  g.moveTo(-s * 0.5, -s * 0.04);
+  g.lineTo(s * 0.5, -s * 0.08);
+  g.lineTo(s * 0.34, s * 0.16);
+  g.lineTo(-s * 0.36, s * 0.16);
+  g.closePath();
+  g.fillStyle = css(SEPIA, 0.6);
+  g.fill();
+  sepia(g, 0.8);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(0, -s * 0.04);
+  g.lineTo(0, -s * 0.86);
+  g.stroke();
+  for (const [top, bot, half] of [[-0.74, -0.46, 0.3], [-0.42, -0.1, 0.36]]) {
+    g.beginPath();
+    g.moveTo(-s * half, s * top);
+    g.quadraticCurveTo(0, s * (top + 0.06), s * half, s * top);
+    g.lineTo(s * half * 1.05, s * bot);
+    g.quadraticCurveTo(0, s * (bot + 0.1), -s * half * 1.05, s * bot);
+    g.closePath();
+    g.fillStyle = css(light(OLD_PAPER.lit, 0.4), 0.9);
+    g.fill();
+    g.stroke();
+  }
+  g.beginPath();
+  g.moveTo(0, -s * 0.86);
+  g.lineTo(s * 0.22, -s * 0.8);
+  g.lineTo(0, -s * 0.75);
+  g.fillStyle = css(X_RED, 0.75);
+  g.fill();
+  sepia(g, 0.55, 0.7);
+  for (const dx of [-0.42, 0.12]) {
+    g.beginPath();
+    g.moveTo(s * dx, s * 0.28);
+    g.quadraticCurveTo(s * (dx + 0.08), s * 0.2, s * (dx + 0.16), s * 0.28);
+    g.quadraticCurveTo(s * (dx + 0.24), s * 0.36, s * (dx + 0.32), s * 0.28);
+    g.stroke();
+  }
+  g.restore();
+}
+
+/** A stretch of shallow sea washed on at (x, y), about rx × ry: its coast inked round it, a few ripples on it. */
+function shallows(g: Ctx, R: () => number, x: number, y: number, rx: number, ry: number): void {
+  const pts: Pt[] = [];
+  const n = 18;
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * Math.PI * 2, r = 0.75 + R() * 0.4;
+    pts.push([x + Math.cos(a) * rx * r, y + Math.sin(a) * ry * r]);
+  }
+  g.beginPath();
+  pts.forEach(([px, py], k) => {
+    const [qx, qy] = pts[(k + 1) % n];
+    if (!k) g.moveTo((px + qx) / 2, (py + qy) / 2);
+    else g.quadraticCurveTo(px, py, (px + qx) / 2, (py + qy) / 2);
+  });
+  const [px, py] = pts[0], [qx, qy] = pts[1];
+  g.quadraticCurveTo(px, py, (px + qx) / 2, (py + qy) / 2);
+  g.closePath();
+  g.fillStyle = css(SHALLOWS, 0.5);
+  g.fill();
+  sepia(g, 0.45, 0.7);
+  g.stroke();
+  sepia(g, 0.3, 0.6);
+  for (let k = 0; k < 3; k++) {
+    const wx = x + (R() - 0.5) * rx, wy = y + (R() - 0.5) * ry * 0.9;
+    g.beginPath();
+    g.moveTo(wx - 2.5, wy);
+    g.quadraticCurveTo(wx - 1.2, wy - 1.2, wx, wy);
+    g.quadraticCurveTo(wx + 1.2, wy + 1.2, wx + 2.5, wy);
+    g.stroke();
+  }
+}
+
+/** A range of `n` peaks from (x, y), their feet, `s` high: each inked, hatched down its shadowed side. */
+function peaks(g: Ctx, x: number, y: number, s: number, n: number): void {
+  for (let k = 0; k < n; k++) {
+    const px = x + k * s * 0.7, ps = s * (k % 2 ? 0.75 : 1);
+    g.beginPath();
+    g.moveTo(px - ps * 0.55, y);
+    g.lineTo(px, y - ps);
+    g.lineTo(px + ps * 0.55, y);
+    g.fillStyle = css(light(OLD_PAPER.lit, 0.3), 0.8);
+    g.fill();
+    sepia(g, 0.7);
+    g.stroke();
+    sepia(g, 0.4, 0.6);
+    for (let j = 1; j <= 3; j++) {
+      const t = j / 4;
+      g.beginPath();
+      g.moveTo(px + ps * 0.55 * t, y - ps * (1 - t));
+      g.lineTo(px + ps * 0.55 * t - ps * 0.12, y);
+      g.stroke();
+    }
+  }
+}
+
+/** A wood of `n` trees from (x, y), their feet, `s` high: round crowns washed green, inked, on a trunk. */
+function woods(g: Ctx, x: number, y: number, s: number, n: number): void {
+  for (let k = 0; k < n; k++) {
+    const tx = x + k * s * 0.62, ty = y - (k % 2) * s * 0.18, r = s * 0.32;
+    sepia(g, 0.7);
+    g.beginPath();
+    g.moveTo(tx, ty);
+    g.lineTo(tx, ty - s * 0.4);
+    g.stroke();
+    g.beginPath();
+    g.arc(tx, ty - s * 0.4 - r * 0.8, r, 0, Math.PI * 2);
+    g.fillStyle = css(WOODS, 0.65);
+    g.fill();
+    g.stroke();
+  }
+}
+
+/** A trail of dashes through points. */
+function trail(g: Ctx, pts: Pt[]): void {
+  g.save();
+  sepia(g, 0.6, 0.9);
+  g.setLineDash([2.6, 2.4]);
+  g.beginPath();
+  pts.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py)));
+  g.stroke();
+  g.restore();
+}
+
+/** X marks the spot, at (x, y), `r` from its middle to an arm's end, in red ink. */
+function redX(g: Ctx, x: number, y: number, r: number): void {
+  g.lineCap = 'round';
+  for (const [wd, c, a] of [[2.6, SEPIA, 0.35], [1.7, X_RED, 0.95]] as Array<[number, RGB, number]>) {
+    g.strokeStyle = css(c, a);
+    g.lineWidth = wd;
+    g.beginPath();
+    g.moveTo(x - r, y - r);
+    g.lineTo(x + r, y + r);
+    g.moveTo(x + r, y - r);
+    g.lineTo(x - r, y + r);
+    g.stroke();
+  }
+}
+
+/** The compass rose inked at (x, y), `r` to its north point: two rings, sixteen ticks, four great points and four lesser, each half dark and half pale. */
+function inkRose(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.translate(x, y);
+  sepia(g, 0.7, 0.9);
+  for (const k of [0.78, 0.66]) {
+    g.beginPath();
+    g.arc(0, 0, r * k, 0, Math.PI * 2);
+    g.stroke();
+  }
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2;
+    g.beginPath();
+    g.moveTo(Math.cos(a) * r * 0.66, Math.sin(a) * r * 0.66);
+    g.lineTo(Math.cos(a) * r * 0.72, Math.sin(a) * r * 0.72);
+    g.stroke();
+  }
+  for (const [len, wide, turn] of [[0.62, 0.11, Math.PI / 4], [1, 0.15, 0]]) {
+    for (let k = 0; k < 4; k++) {
+      g.save();
+      g.rotate(turn + (k * Math.PI) / 2);
+      for (const side of [-1, 1]) {
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(0, -r * len);
+        g.lineTo(side * r * wide, -r * wide);
+        g.closePath();
+        g.fillStyle = side < 0 ? css(SEPIA, 0.85) : css(light(OLD_PAPER.lit, 0.5), 0.95);
+        g.fill();
+        sepia(g, 0.9, 0.7);
+        g.stroke();
+      }
+      g.restore();
+    }
+  }
+  g.restore();
+}
+
+/** A roll of the paper from x0 to x1 across y, `t` thick: a shaded cylinder, its open end at x0 showing the turns of the roll. */
+function paperRoll(g: Ctx, x0: number, x1: number, y: number, t: number): void {
+  const r = t / 2;
+  // Its shadow on the band below it.
+  g.beginPath();
+  g.ellipse((x0 + x1) / 2 + 2, y + r * 0.7, (x1 - x0) / 2, r * 0.6, 0, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(70, 45, 25, 0.22)';
+  g.fill();
+  const body = g.createLinearGradient(0, y - r, 0, y + r);
+  body.addColorStop(0, css(OLD_PAPER.deep));
+  body.addColorStop(0.3, css(OLD_PAPER.lit));
+  body.addColorStop(0.65, css(OLD_PAPER.body));
+  body.addColorStop(1, css(shade(OLD_PAPER.deep, 0.25)));
+  g.beginPath();
+  g.moveTo(x0, y - r);
+  g.lineTo(x1 - r * 0.4, y - r);
+  g.quadraticCurveTo(x1 + r * 0.25, y, x1 - r * 0.4, y + r);
+  g.lineTo(x0, y + r);
+  g.closePath();
+  g.fillStyle = body;
+  g.fill();
+  g.strokeStyle = css(OLD_PAPER.burn, 0.85);
+  g.lineWidth = 0.9;
+  g.stroke();
+  // Scorch along its outer lip.
+  g.fillStyle = css(OLD_PAPER.burn, 0.35);
+  g.fillRect(x0 + r * 0.4, y - r + 0.5, x1 - x0 - r * 1.2, 1.2);
+  // The open end: the roll seen end on, its turns spiralling in.
+  g.beginPath();
+  g.ellipse(x0, y, r * 0.42, r, 0, 0, Math.PI * 2);
+  g.fillStyle = css(OLD_PAPER.lit);
+  g.fill();
+  g.strokeStyle = css(OLD_PAPER.burn, 0.9);
+  g.stroke();
+  g.beginPath();
+  for (let k = 0; k <= 40; k++) {
+    const a = (k / 40) * Math.PI * 5, s = 1 - k / 46;
+    const px = x0 + Math.cos(a) * r * 0.36 * s, py = y + Math.sin(a) * r * 0.86 * s;
+    if (k) g.lineTo(px, py);
+    else g.moveTo(px, py);
+  }
+  g.strokeStyle = css(OLD_PAPER.deep);
+  g.lineWidth = 0.7;
+  g.stroke();
+}
+
+/** A brass compass at (x, y), `r` across: a brass ring ticked round, and on a cream face a gold rose, its north point dark. Struck in brass all over when `coin`. */
+function brassCompass(g: Ctx, x: number, y: number, r: number, coin: boolean): void {
+  g.save();
+  g.translate(x, y);
+  g.beginPath();
+  g.arc(0, 0, r, 0, Math.PI * 2);
+  g.save();
+  g.shadowColor = 'rgba(50, 30, 15, 0.45)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.2;
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  const face = r * (coin ? 0.78 : 0.72);
+  g.beginPath();
+  g.arc(0, 0, face, 0, Math.PI * 2);
+  g.fillStyle = coin ? goldFill(g, r, r, -r, -r) : '#f7efdc';
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.6;
+  g.stroke();
+  if (!coin) {
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      g.beginPath();
+      g.moveTo(Math.cos(a) * face, Math.sin(a) * face);
+      g.lineTo(Math.cos(a) * (r - 1), Math.sin(a) * (r - 1));
+      g.strokeStyle = css(BRASS.ink, 0.6);
+      g.lineWidth = 0.6;
+      g.stroke();
+    }
+  }
+  g.save();
+  g.rotate(Math.PI / 4);
+  star(g, face * 0.62, face * 0.12);
+  g.fillStyle = coin ? css(shade(BRASS.body, 0.25)) : goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.restore();
+  star(g, face * 0.92, face * 0.18);
+  g.fillStyle = coin ? css(light(BRASS.body, 0.35)) : goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.9);
+  g.lineWidth = 0.6;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(0, -face * 0.92);
+  g.lineTo(face * 0.11, -face * 0.11);
+  g.lineTo(0, 0);
+  g.closePath();
+  g.fillStyle = css(coin ? BRASS.ink : X_RED, 0.85);
+  g.fill();
+  g.restore();
+}
+
+/** A brass ring at (x, y), `r` across, that a thing hangs by. */
+function bail(g: Ctx, x: number, y: number, r: number): void {
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 2.4;
+  g.stroke();
+  g.strokeStyle = css(BRASS.body);
+  g.lineWidth = 1.4;
+  g.stroke();
+}
+
+/** A cream tag at (x, y), its top, `wd` × `ht`: its corners clipped at the top, a hole, and a compass star inked on it. */
+function starTag(g: Ctx, x: number, y: number, wd: number, ht: number): void {
+  const c = wd * 0.28;
+  g.beginPath();
+  g.moveTo(x - wd / 2 + c, y);
+  g.lineTo(x + wd / 2 - c, y);
+  g.lineTo(x + wd / 2, y + c);
+  g.lineTo(x + wd / 2, y + ht);
+  g.lineTo(x - wd / 2, y + ht);
+  g.lineTo(x - wd / 2, y + c);
+  g.closePath();
+  g.save();
+  g.shadowColor = 'rgba(50, 30, 15, 0.35)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = '#f8f0dd';
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(OLD_PAPER.burn, 0.8);
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.arc(x, y + c * 0.8, 1.2, 0, Math.PI * 2);
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.save();
+  g.translate(x, y + ht * 0.6);
+  star(g, wd * 0.36, wd * 0.08);
+  g.fillStyle = css(SEPIA, 0.85);
+  g.fill();
+  g.restore();
+}
+
+/** A knot in a cord at (x, y), `r` across: loops of the cord laid over each other. */
+function knot(g: Ctx, x: number, y: number, r: number, t: number): void {
+  twist(g, ellipsePts(x, y, r, r * 0.7, 0.5), t, CORD);
+  twist(g, ellipsePts(x + 0.5, y + 0.3, r * 0.8, r * 0.55, -0.6), t, light(CORD, 0.1));
+}
+
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -2896,24 +3272,114 @@ const PAINTERS: Record<string, Painter> = {
     starBurst(g, w - F * 0.45, h - F * 0.45, F * 0.85);
   },
 
-  /* The treasure map: older parchment, its edge torn and scorched, and the X at a corner. */
+  /*
+   * The treasure map: old paper, torn and scorched round its outer edge and
+   * browned toward it, rolled up at its top and bottom left, a cord bound
+   * round the lower roll. A brass compass hangs from the upper roll with a
+   * starred tag under it; a rope runs down the right from a brass stud to a
+   * knot with a brass compass coin on it. On the band, in faint ink: a ship
+   * on its sea, coasts, woods, peaks, dashed trails, two X's in red and a
+   * compass rose at the bottom right, pinned through its middle by a stud.
+   */
   treasure(g, w, h, F, R) {
-    paper(g, w, h, F, R, mix(PARCH, H('#c8a26a'), 0.45), 4.5, true);
-    // The X, in red ink, at the bottom right.
-    g.save();
-    g.translate(w - F * 0.9, h - F * 0.9);
-    g.lineCap = 'round';
-    for (const [w2, c] of [[3.6, '#5f3a2e'], [2.4, '#b4584a']] as Array<[number, string]>) {
-      g.strokeStyle = c;
-      g.lineWidth = w2;
+    const edge = tornOutline(R, w, h, 4.5);
+    const outline = (): void => {
       g.beginPath();
-      g.moveTo(-F * 0.42, -F * 0.42);
-      g.lineTo(F * 0.42, F * 0.42);
-      g.moveTo(F * 0.42, -F * 0.42);
-      g.lineTo(-F * 0.42, F * 0.42);
+      edge.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y)));
+      g.closePath();
+    };
+    g.save();
+    outline();
+    g.clip();
+    const face = g.createLinearGradient(0, 0, w, h);
+    face.addColorStop(0, css(OLD_PAPER.lit));
+    face.addColorStop(0.55, css(OLD_PAPER.body));
+    face.addColorStop(1, css(mix(OLD_PAPER.body, OLD_PAPER.deep, 0.45)));
+    g.fillStyle = face;
+    g.fillRect(0, 0, w, h);
+    // Foxing: soft brown stains here and there.
+    eachSide(g, w, h, (s) => {
+      for (let k = 0; k < s.len / 40; k++) {
+        const x = R() * s.len, y = R() * F, r = 3 + R() * 8;
+        const st = g.createRadialGradient(x, y, 0, x, y, r);
+        st.addColorStop(0, css(OLD_PAPER.deep, 0.35));
+        st.addColorStop(1, css(OLD_PAPER.deep, 0));
+        g.fillStyle = st;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    });
+    // Browned toward the torn edge, and scorched at it.
+    for (let k = 0; k < 10; k++) {
+      outline();
+      g.strokeStyle = css(OLD_PAPER.burn, 0.045);
+      g.lineWidth = 22 - k * 2;
       g.stroke();
     }
+    outline();
+    g.strokeStyle = css(OLD_PAPER.burn, 0.4);
+    g.lineWidth = 3;
+    g.stroke();
+    // The map, in faint ink.
+    shallows(g, R, F * 0.5, h * 0.47, F * 0.62, F * 1.6);
+    inkShip(g, F * 0.48, h * 0.47, F * 0.68);
+    woods(g, F * 0.3, h * 0.3, F * 0.5, 2);
+    peaks(g, F * 0.28, h * 0.7, F * 0.42, 2);
+    trail(g, [[F * 0.5, h * 0.33], [F * 0.7, h * 0.37], [F * 0.42, h * 0.41]]);
+    trail(g, [[F * 0.55, h * 0.56], [F * 0.3, h * 0.62], [F * 0.55, h * 0.66]]);
+    peaks(g, w * 0.24, F * 0.72, F * 0.46, 3);
+    trail(g, [[w * 0.24 + F * 1.8, F * 0.55], [w * 0.31, F * 0.28], [w * 0.36, F * 0.62], [w * 0.4 - F * 0.4, F * 0.5]]);
+    redX(g, w * 0.4, F * 0.5, F * 0.17);
+    shallows(g, R, w * 0.66, F * 0.4, F * 2, F * 0.42);
+    woods(g, w * 0.82, F * 0.78, F * 0.5, 3);
+    woods(g, w - F * 0.62, h * 0.5, F * 0.48, 2);
+    trail(g, [[w - F * 0.45, h * 0.52], [w - F * 0.7, h * 0.56], [w - F * 0.5, h * 0.6 - F * 0.35]]);
+    redX(g, w - F * 0.5, h * 0.6, F * 0.17);
+    shallows(g, R, w - F * 0.5, h * 0.74, F * 0.5, F * 1.3);
+    woods(g, w * 0.22, h - F * 0.2, F * 0.5, 2);
+    shallows(g, R, w * 0.48, h - F * 0.5, F * 2.2, F * 0.42);
+    peaks(g, w * 0.7, h - F * 0.24, F * 0.44, 3);
+    trail(g, [[w * 0.7 + F * 1.8, h - F * 0.5], [w * 0.82, h - F * 0.72], [w - F * 1.5, h - F * 0.4]]);
+    inkRose(g, w - F * 0.55, h - F * 0.55, F);
     g.restore();
+    outline();
+    g.strokeStyle = css(shade(OLD_PAPER.burn, 0.3));
+    g.lineWidth = 1.1;
+    g.stroke();
+    // The window's own edge, a line in from it.
+    g.strokeStyle = css(OLD_PAPER.deep, 0.8);
+    g.lineWidth = 0.8;
+    g.strokeRect(F - 3.5, F - 3.5, w - F * 2 + 7, h - F * 2 + 7);
+    g.strokeStyle = INK;
+    g.lineWidth = 1;
+    g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
+    // The rope down the right, from its stud to the knot, and the coin on it.
+    const sx = w - F * 0.5, ky = Math.min(h * 0.3, F * 6);
+    twist(g, curve([sx, F * 0.5], [sx - 3, (F * 0.5 + ky) / 2], [sx, ky]), 3.6, CORD);
+    const cy = ky + F * 1.15;
+    twist(g, curve([sx, ky], [sx + 1, ky + F * 0.3], [sx, cy - F * 0.42]), 1.4, CORD);
+    bail(g, sx, cy - F * 0.42, 2.2);
+    brassCompass(g, sx, cy, F * 0.4, true);
+    knot(g, sx, ky, 4.6, 2.8);
+    head(g, sx, F * 0.5, F * 0.17, BRASS.body, BRASS.ink);
+    head(g, w - F * 0.55, h - F * 0.55, F * 0.15, BRASS.body, BRASS.ink);
+    // The rolls at the left, a cord round the lower, and the compass on its cord from the upper.
+    const mx = F * 0.48, my = F * 2.5, mr = F * 0.56, ry = F * 0.24, rt = F * 0.66, x0 = -FRAME_REACHES.treasure! + 3;
+    twist(g, curve([F * 0.62, ry + rt * 0.3], [F * 0.36, F * 1.3], [mx, my - mr - 2]), 1.8, CORD);
+    paperRoll(g, x0, F * 2.6, ry, rt);
+    paperRoll(g, x0, F * 2.6, h - ry, rt);
+    const wrap = (k: number): number => F * 0.35 + k * F * 0.36;
+    for (let k = 0; k < 3; k++) twist(g, [[wrap(k) - 2.2, h - ry - rt / 2], [wrap(k) + 2.2, h - ry + rt / 2]], 2.2, CORD);
+    const end: Pt = [F * 3.3, h - ry + rt * 0.1];
+    twist(g, curve([wrap(2) + 2.2, h - ry + rt / 2], [F * 2.1, h - ry + rt * 0.75], end), 2.2, CORD);
+    g.save();
+    g.translate(end[0], end[1]);
+    g.rotate(-Math.PI / 2 - 0.25);
+    tassel(g, 0, 0, CORD);
+    g.restore();
+    bail(g, mx, my - mr - 1.5, 2.4);
+    brassCompass(g, mx, my, mr, false);
+    twist(g, [[mx, my + mr], [mx + 0.5, my + mr + F * 0.32]], 1, CORD);
+    starTag(g, mx + 0.5, my + mr + F * 0.3, F * 0.52, F * 0.68);
   },
 
   /* The market: a striped awning scalloped along the top, a plank counter round the rest. */
