@@ -2792,6 +2792,16 @@ kbd {
   color: var(--ui-accent);
 }
 
+/* The ledger, the journal's second tab: the page fills under the tabs and its list scrolls. */
+.journal-ledger {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.journal-ledger[hidden] {
+  display: none;
+}
+
 /* The ledger: what, how many, how many rare, and the best one. */
 .ledger-head,
 .ledger-row {

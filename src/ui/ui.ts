@@ -84,8 +84,8 @@ import type { DragPayload } from './dragdrop';
 import { WildermonPanel } from './panels/wildermon';
 import { StoresPanel } from './panels/stores';
 import { DeedPanel } from './panels/deed';
-import { LedgerPanel } from './panels/ledger';
-import { JournalPanel } from './panels/journal';
+import type { LedgerPanel } from './panels/ledger';
+import { JournalPanel, type JournalTab } from './panels/journal';
 import { ContextMenu, type MenuItem } from './contextmenu';
 import { frameFootprintEntries, frameHoverLines, frameJettyEntries } from './frameMenu';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
@@ -275,6 +275,7 @@ export class UI {
   private readonly stores: StoresPanel;
   private readonly craftPanel: CraftPanel;
   private readonly ledgerPanel: LedgerPanel;
+  private readonly journalPanel: JournalPanel;
   private readonly trades: TradesPanel;
   /** Your faith as the island keeps it, which the Faith window and the spell bar both draw. */
   private readonly faithBook: FaithBook;
@@ -391,7 +392,8 @@ export class UI {
     // Somebody else's shop counter: what is on it is bought, on an island.
     if (this.island) this.cratePanel.buyer = (it) => void this.buyOffCounter(it);
     const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 330, height: 420, anchor: 'tr', open: false });
-    new JournalPanel(journal, game);
+    this.journalPanel = new JournalPanel(journal, game);
+    this.ledgerPanel = this.journalPanel.ledger;
     // "The rest of it" on the first-steps card opens the whole list.
     this.hud.openJournal = () => journal.open();
     const pals = this.windows.create({ id: 'wildermon', title: 'Wildermon', x: 364, y: 330, width: 330, height: 320, anchor: 'tr', open: false });
@@ -445,8 +447,6 @@ export class UI {
      */
     const hoardWin = this.windows.create({ id: 'hoard', title: 'The map', x: 12, y: 56, width: 412, height: 520, anchor: 'tl', open: false });
     this.hoard = new HoardPanel(hoardWin, game, this.island);
-    const ledgerWin = this.windows.create({ id: 'ledger', title: 'Ledger', x: 12, y: 56, width: 340, height: 420, anchor: 'tr', open: false });
-    this.ledgerPanel = new LedgerPanel(ledgerWin, game);
     /*
      * Wider than most, because a tree is three columns of three and a node has
      * a sentence on it: at this width the grid opens in three, and narrowing
@@ -550,6 +550,11 @@ export class UI {
     this.windows.toggle(id);
   }
 
+  /** Open the journal at a tab, or put it away if it is already open there. */
+  toggleJournal(tab: JournalTab): void {
+    this.journalPanel.toggle(tab);
+  }
+
   /** The help's pages, building them into the help window the first time (it is a file of its own, fetched then). */
   private helpPages(): Promise<HelpPages> {
     if (!this.helpBuilt) {
@@ -620,7 +625,10 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      if (b.id.startsWith('win_')) {
+      if (b.id === 'win_ledger') {
+        // The ledger is the journal's second tab, not a window of its own.
+        out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open('ledger') });
+      } else if (b.id.startsWith('win_')) {
         const w = this.windows.get(b.id === 'win_events' ? 'events' : b.id.slice(4));
         if (!w) continue;
         out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => w.open() });

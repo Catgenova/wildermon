@@ -56,7 +56,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'stall', label: 'Market stall', for: ['market'] },
   { kind: 'scroll', label: 'Blue marble and gold', for: ['events'] },
   { kind: 'book', label: 'Starred leather book', for: ['journal'] },
-  { kind: 'ledger', label: 'Account book', for: ['ledger'] },
   { kind: 'clothbook', label: 'Cloth-bound book', for: ['help'] },
   { kind: 'noticeboard', label: 'Notice board', for: ['news'] },
   { kind: 'letter', label: 'Sealed letter', for: ['social'] },
@@ -300,27 +299,6 @@ function rope(g: Ctx, x0: number, x1: number, y: number, t: number, tone: RGB): 
     g.strokeStyle = css(light(tone, 0.45), 0.8);
     g.stroke();
   }
-}
-
-/** A metal corner: a triangle over the band's corner, ruled in ink, with a rivet. */
-function cornerPlate(g: Ctx, F: number, body: RGB, ink: RGB, reach = 0.95): void {
-  const s = F * reach;
-  g.beginPath();
-  g.moveTo(0, 0);
-  g.lineTo(s * 1.25, 0);
-  g.lineTo(0, s * 1.25);
-  g.closePath();
-  g.fillStyle = css(body);
-  g.fill();
-  g.strokeStyle = css(ink);
-  g.lineWidth = 1;
-  g.stroke();
-  g.beginPath();
-  g.moveTo(2, s * 1.25 - 3);
-  g.lineTo(s * 1.25 - 3, 2);
-  g.strokeStyle = css(light(body, 0.5), 0.8);
-  g.stroke();
-  head(g, s * 0.38, s * 0.38, Math.max(1.2, F * 0.1), light(body, 0.15), ink);
 }
 
 /** Small even weave in two tones, for cloth: threads along and across every `step` px. */
@@ -4719,20 +4697,6 @@ const PAINTERS: Record<string, Painter> = {
     }
     // The spine.
     spine(g, R, -F * 0.72, F * 0.92, -F * 0.28, h + F * 0.28, F);
-  },
-
-  /* The ledger: an account book in cloth, its corners in gilt. */
-  ledger(g, w, h, F, R) {
-    eachSide(g, w, h, (s) => {
-      g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      weave(g, s.len, F, mix(shade(H('#6f8f7a'), 0.2), H('#6f8f7a'), s.lit), 2, 0.1);
-      g.restore();
-    });
-    inkBand(g, w, h, F);
-    eachCorner(g, w, h, () => cornerPlate(g, F, GOLD, shade(GOLD, 0.55), 1.1));
-    void R;
   },
 
   /* The help: a book bound in blue cloth, a gilt rule round it. */

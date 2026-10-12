@@ -797,7 +797,7 @@ export class Game {
     this.note('made');
     this.note(`made:${id}`);
     const name = itemDef(id).name.toLowerCase();
-    if (!had) this.logMsg(`The first ${name} you have ever made. (Ledger, J)`, 'skill');
+    if (!had) this.logMsg(`The first ${name} you have ever made. (The journal's Ledger tab, J)`, 'skill');
     else if (rec.best > before + 0.05 && rec.n > 1) this.logMsg(`The best ${name} you have made: QL ${rec.best.toFixed(1)}, over ${before.toFixed(1)}.`, 'skill');
   }
 

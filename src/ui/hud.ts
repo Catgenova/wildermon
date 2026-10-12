@@ -69,7 +69,6 @@ export const WINDOWS: Array<{ label: string; bind: string; id: string }> = [
   { label: 'Field guide', bind: 'win_guide', id: 'guide' },
   { label: 'Market', bind: 'win_market', id: 'market' },
   { label: 'Journal', bind: 'win_journal', id: 'journal' },
-  { label: 'Ledger', bind: 'win_ledger', id: 'ledger' },
   { label: 'Stores', bind: 'win_stores', id: 'stores' },
   { label: 'Deed', bind: 'win_deed', id: 'deed' },
   { label: 'Social', bind: 'win_social', id: 'social' },

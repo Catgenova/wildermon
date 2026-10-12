@@ -1,7 +1,6 @@
 import type { Game } from '../../game/game';
 import { itemDef, ITEM_DEFS, rarityOf } from '../../game/items';
 import { Repaint } from '../repaint';
-import type { UIWindow } from '../windows';
 
 /** How the ledger may be put in order. */
 type SortKey = 'best' | 'made' | 'name' | 'rare' | 'recent';
@@ -19,7 +18,8 @@ const SORTS: Array<[SortKey, string]> = [
  * Every kind of thing that has come off a bench, an anvil or an oven, how many
  * of them, the best one you ever managed and how many came off rare. The
  * journal says what there is to do; this says what you have done, which is the
- * number a maker actually keeps.
+ * number a maker actually keeps. It is the journal's second tab (`JournalPanel`),
+ * drawn into `host`, and looks again only while `showing` says it can be seen.
  */
 export class LedgerPanel {
   private list: HTMLDivElement;
@@ -30,10 +30,11 @@ export class LedgerPanel {
   private readonly repaint = new Repaint(600);
 
   constructor(
-    private readonly win: UIWindow,
+    host: HTMLElement,
     private readonly game: Game,
+    private readonly showing: () => boolean,
   ) {
-    win.body.classList.add('inv-body');
+    host.classList.add('inv-body');
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
@@ -75,7 +76,7 @@ export class LedgerPanel {
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
     this.footer.className = 'inv-footer';
-    win.body.append(this.search, bar, head, this.list, this.footer);
+    host.append(this.search, bar, head, this.list, this.footer);
     game.events.on('inventory', () => this.repaint.ask());
     game.events.on('skill', () => this.repaint.ask());
     this.render();
@@ -83,8 +84,14 @@ export class LedgerPanel {
 
   /** Look again on a beat; a ledger only moves when something is finished. */
   update(now: number): void {
-    if (!this.win.isOpen || !this.repaint.due(now)) return;
+    if (!this.showing() || !this.repaint.due(now)) return;
     this.render(now);
+  }
+
+  /** Draw it now, whatever the beat: the tab has just been turned to. */
+  refresh(): void {
+    this.repaint.force();
+    this.render();
   }
 
   render(now = performance.now()): void {

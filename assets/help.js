@@ -321,8 +321,7 @@ import{$a as e,$i as t,Ac as n,Al as r,As as i,Ci as a,Cl as o,Cr as s,Cs as ee,
       <tr><td><kbd>M</kbd></td><td>Map</td></tr>
       <tr><td><kbd>G</kbd></td><td>Toggle the tile grid</td></tr>
       <tr><td><kbd>P</kbd></td><td>Wildermon: your tamed creatures' stats and actions</td></tr>
-      <tr><td><kbd>J</kbd></td><td>Journal: everything worth doing, ticking itself off</td></tr>
-      <tr><td><kbd>B</kbd></td><td>Ledger: everything you have ever made</td></tr>
+      <tr><td><kbd>J</kbd></td><td>Journal: everything worth doing, ticking itself off, and the ledger of what you have made</td></tr>
       <tr><td><kbd>N</kbd></td><td>Settlement: your deed at a glance</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Social: who is waiting on you, who you know, and what has been written</td></tr>
       <tr><td><kbd>O</kbd></td><td>Settings: what the island looks like, what every key does, and how you look</td></tr>
@@ -404,7 +403,7 @@ import{$a as e,$i as t,Ac as n,Al as r,As as i,Ci as a,Cl as o,Cr as s,Cs as ee,
     tells you how many matched. <kbd>Esc</kbd> in the box clears it.</p>
     <h3>The ledger</h3>
     <p>Everything that has ever come off your bench, your anvil or your oven is written down in the
-    Ledger (<kbd>B</kbd>): every kind of thing, how many of them, how many came off <b>rare</b> or
+    journal's <b>Ledger</b> tab (<kbd>J</kbd>, then <b>Ledger</b>): every kind of thing, how many of them, how many came off <b>rare</b> or
     better, and <b>the best one you ever managed</b>. It can be put in order by any of those, or by
     name, or newest first, and searched. The first of anything says so in the log, and so does every
     time you beat your own best at something.</p>

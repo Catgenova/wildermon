@@ -85,7 +85,7 @@ export const BINDS: BindDef[] = [
   { id: 'win_social', label: 'Social', hint: 'Who is waiting on you, who you know and where they are, and what has been written to you.', group: 'Windows', keys: ['KeyY'] },
   // Every letter is spoken for, and no browser takes F2 for itself.
   { id: 'win_boards', label: 'Leaderboards', hint: 'Who holds each skill highest on the island, its best-bred wildermon and its biggest settlements.', group: 'Windows', keys: ['F2'] },
-  { id: 'win_ledger', label: 'Ledger', hint: 'Everything you have ever made.', group: 'Windows', keys: ['KeyB'] },
+  { id: 'win_ledger', label: 'Ledger', hint: 'The journal open at its Ledger tab: everything you have ever made.', group: 'Windows', keys: [] },
   { id: 'win_stores', label: 'Stores', hint: 'What is in every crate and cupboard on your deed, in one list.', group: 'Windows', keys: ['KeyU'] },
   { id: 'win_journal', label: 'Journal', hint: 'Everything worth doing, ticking itself off.', group: 'Windows', keys: ['KeyJ'] },
   // No key out of the box: it is for the few who keep an island, and every letter is spoken for.
