@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -50,7 +50,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'bench', label: "Carpenter's bench", for: ['craft'] },
   { kind: 'runestone', label: 'Stone pillars and oak', for: ['skills'] },
   { kind: 'guild', label: 'Iron-bound planks', for: ['trades'] },
-  { kind: 'altar', label: 'Altar marble', for: ['faith'] },
+  { kind: 'altar', label: 'Marble, pearl and sea glass', for: ['faith'] },
   { kind: 'parchment', label: 'Parchment', for: ['map'] },
   { kind: 'treasure', label: 'Treasure map', for: ['hoard'] },
   { kind: 'stall', label: 'Market stall', for: ['market'] },
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -2036,6 +2036,168 @@ function crescentBanner(g: Ctx, R: () => number, x0: number, x1: number, y: numb
   twist(g, curve([x1 + 1, y + 2], [x1 + 5, y + 10], [x1 + 3, y + 16]), 2.2, rope);
 }
 
+/* ---- the altar frame's own kit ------------------------------------------- */
+
+/** Sea glass: the pale aqua of the waves on Faith's marble, its light and its deep. */
+const GLASS = { body: H('#a9e0df'), lit: H('#eafaf8'), deep: H('#62afb3') };
+
+/** A pearl at (x, y), `r` across, in a gold setting: the ring of gold, the pearl lit from the top left, its sheen and its glint. */
+function pearl(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.beginPath();
+  g.arc(x, y, r * 1.32, 0, Math.PI * 2);
+  g.shadowColor = 'rgba(60, 50, 40, 0.4)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = goldFill(g, x - r, y - r, x + r, y + r);
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.arc(x, y, r, 0, Math.PI * 2);
+  const p = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.08, x, y, r);
+  p.addColorStop(0, '#ffffff');
+  p.addColorStop(0.35, '#f4eef0');
+  p.addColorStop(0.8, '#ddd2d8');
+  p.addColorStop(1, '#bfb2bb');
+  g.fillStyle = p;
+  g.fill();
+  g.strokeStyle = 'rgba(120, 100, 90, 0.55)';
+  g.lineWidth = 0.6;
+  g.stroke();
+  // A warm sheen round its lower edge, and a glint.
+  g.beginPath();
+  g.arc(x, y, r * 0.78, Math.PI * 0.15, Math.PI * 0.85);
+  g.strokeStyle = 'rgba(240, 210, 200, 0.6)';
+  g.lineWidth = r * 0.22;
+  g.stroke();
+  g.beginPath();
+  g.arc(x - r * 0.38, y - r * 0.38, r * 0.16, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  g.fill();
+}
+
+/** A small four-pointed star of gold at (x, y), `r` to its points. */
+function goldStar(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.translate(x, y);
+  star(g, r, r * 0.3);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.restore();
+}
+
+/**
+ * A wave of sea glass lying on the marble in a side's frame: a ribbon from
+ * x0, `dir` along the side, `len` long, rising and falling across the band
+ * about `mid`, swelling then tapering, its end rolled over in a curl that
+ * stays on the band; a deeper layer under a lighter, lit along its crest,
+ * and lines of foam along it.
+ */
+function wave(g: Ctx, x0: number, mid: number, len: number, dir: 1 | -1, amp: number, wd: number): void {
+  const pts: Pt[] = [];
+  const n = Math.max(12, Math.ceil(len / 3));
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    pts.push([x0 + dir * len * t, mid + amp * Math.sin(t * Math.PI * 2.2 + 0.4)]);
+  }
+  // The curl: over and back on itself, its top no higher than the crest of the wave.
+  const [ex, ey] = pts[pts.length - 1], cr = wd * 0.45;
+  const cx = ex, cy = ey - cr;
+  for (let i = 1; i <= 16; i++) {
+    const a = (i / 16) * Math.PI * 1.6, rr = cr * (1 - (i / 16) * 0.5);
+    const th = Math.PI / 2 - dir * a;
+    pts.push([cx + Math.cos(th) * rr, cy + Math.sin(th) * rr]);
+  }
+  const N = pts.length, total = n + 16;
+  const ribbon = (wdk: number, dy: number): { left: Pt[]; right: Pt[] } => {
+    const left: Pt[] = [], right: Pt[] = [];
+    for (let i = 0; i < N; i++) {
+      const u = i / total;
+      const hw = (wd * wdk * (u < 0.28 ? 0.2 + (u / 0.28) * 0.8 : 1 - ((u - 0.28) / 0.72) * 0.78)) / 2;
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(N - 1, i + 1)];
+      let nx = -(b[1] - a[1]), ny = b[0] - a[0];
+      const l = Math.hypot(nx, ny) || 1;
+      nx /= l;
+      ny /= l;
+      left.push([pts[i][0] + nx * hw, pts[i][1] + ny * hw + dy]);
+      right.push([pts[i][0] - nx * hw, pts[i][1] - ny * hw + dy]);
+    }
+    return { left, right };
+  };
+  const fillRibbon = (r: { left: Pt[]; right: Pt[] }, fill: string | CanvasGradient, edge: string): void => {
+    g.beginPath();
+    r.left.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    for (let i = r.right.length - 1; i >= 0; i--) g.lineTo(r.right[i][0], r.right[i][1]);
+    g.closePath();
+    g.fillStyle = fill;
+    g.fill();
+    g.strokeStyle = edge;
+    g.lineWidth = 0.7;
+    g.stroke();
+  };
+  // The deeper glass under, a little lower and wider.
+  g.save();
+  g.shadowColor = 'rgba(40, 90, 100, 0.3)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  fillRibbon(ribbon(1.15, 1.6), css(mix(GLASS.body, GLASS.deep, 0.55)), css(shade(GLASS.deep, 0.2), 0.9));
+  g.restore();
+  // The light glass over it.
+  const f = g.createLinearGradient(0, mid - wd * 0.6, 0, mid + wd * 0.6);
+  f.addColorStop(0, css(GLASS.lit));
+  f.addColorStop(0.55, css(GLASS.body));
+  f.addColorStop(1, css(mix(GLASS.body, GLASS.deep, 0.35)));
+  const top = ribbon(0.82, -0.4);
+  fillRibbon(top, f, css(shade(GLASS.deep, 0.1), 0.7));
+  // Foam: a bright line along the crest and a fainter one inside it.
+  for (const [k, al, lw] of [[0.55, 0.85, 0.8], [0.15, 0.45, 0.6]] as Array<[number, number, number]>) {
+    g.beginPath();
+    const upTo = Math.floor(N * 0.78);
+    for (let i = 2; i < upTo; i++) {
+      const [x, y] = pts[i], [lx, ly] = top.left[i];
+      const fx = x + (lx - x) * k, fy = y - 0.4 + (ly - y + 0.4) * k;
+      if (i === 2) g.moveTo(fx, fy); else g.lineTo(fx, fy);
+    }
+    g.strokeStyle = `rgba(255, 255, 255, ${al})`;
+    g.lineWidth = lw;
+    g.stroke();
+  }
+}
+
+/** Gold scrollwork growing from a corner along one side of it, in the corner's frame: a stem with a curl at its end and two leaves off it. */
+function scroll(g: Ctx, F: number, flip: boolean): void {
+  g.save();
+  if (flip) g.transform(0, 1, 1, 0, 0, 0);
+  gilt(g, () => {
+    g.beginPath();
+    g.moveTo(F * 0.85, F * 0.3);
+    g.bezierCurveTo(F * 1.6, F * 0.05, F * 2.2, F * 0.75, F * 2.9, F * 0.45);
+    g.arc(F * 2.75, F * 0.3, F * 0.2, Math.PI * 0.25, Math.PI * 1.9, true);
+  }, 1.5);
+  for (const [x, y, a] of [[F * 1.45, F * 0.22, -0.5], [F * 2.1, F * 0.62, 0.6]] as Array<[number, number, number]>) {
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(F * 0.18, -F * 0.16, F * 0.38, 0);
+    g.quadraticCurveTo(F * 0.18, F * 0.16, 0, 0);
+    g.fillStyle = goldFill(g, 0, -F * 0.2, F * 0.4, F * 0.2);
+    g.fill();
+    g.strokeStyle = css(BRASS.ink, 0.8);
+    g.lineWidth = 0.5;
+    g.stroke();
+    g.restore();
+  }
+  g.restore();
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -2402,63 +2564,92 @@ const PAINTERS: Record<string, Painter> = {
     if (h > F * 6) crescentBanner(g, R, -10, F - 3, F * 0.3, F * 3.6);
   },
 
-  /* The faith: the altar's marble, veined, gold filigree along it, a small constellation at each corner. */
+  /*
+   * Faith: white marble veined in grey and gold, edged in gold inside and
+   * out; a pearl in a gold setting at each corner with gold scrollwork
+   * growing from it along both sides; a larger pearl at the middle of the
+   * top and the foot with a gold star either side; two small pearls along
+   * the foot; and waves of aqua sea glass lying on the marble, curling away
+   * from the middle pearls and along the sides from the corners.
+   */
   altar(g, w, h, F, R) {
-    const m = H(MARBLE.stone);
+    // The marble, side by side, mitred at the corners.
     eachSide(g, w, h, (s) => {
       g.save();
       mitre(g, s.len, F);
       g.clip();
-      g.fillStyle = css(mix(H(MARBLE.dark), m, s.lit));
+      const base = g.createLinearGradient(0, 0, 0, F);
+      // The walls' own marble (masonry.ts), warmed a touch toward the slab inside.
+      const warm = H('#f7f1e6');
+      base.addColorStop(0, css(mix(mix(H(MARBLE.shade), warm, 0.4), mix(H(MARBLE.hi), warm, 0.4), s.lit)));
+      base.addColorStop(0.5, css(mix(H(MARBLE.hi), warm, 0.5)));
+      base.addColorStop(1, css(mix(mix(H(MARBLE.dark), warm, 0.3), mix(H(MARBLE.stone), warm, 0.3), s.lit)));
+      g.fillStyle = base;
       g.fillRect(0, 0, s.len, F);
-      g.strokeStyle = css(H(MARBLE.line), 0.45);
-      g.lineWidth = 0.7;
-      for (let k = 0; k < s.len / 40; k++) {
-        const x = R() * s.len;
+      // Clouds of grey in it.
+      for (let k = 0; k < s.len / 26; k++) {
+        const x = R() * s.len, y = R() * F, r = F * (0.5 + R());
+        const c = g.createRadialGradient(x, y, 0, x, y, r);
+        c.addColorStop(0, 'rgba(170, 176, 186, 0.22)');
+        c.addColorStop(1, 'rgba(170, 176, 186, 0)');
+        g.fillStyle = c;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      // Veins, grey and a few of gold, wandering along it.
+      for (let k = 0; k < s.len / 22; k++) {
+        const gold = R() < 0.3;
+        let x = R() * s.len, y = R() * F;
         g.beginPath();
-        g.moveTo(x, 0);
-        g.bezierCurveTo(x + 8, F * 0.3, x - 6, F * 0.6, x + 10, F);
+        g.moveTo(x, y);
+        for (let j = 0; j < 6 + R() * 8; j++) {
+          x += 5 + R() * 9;
+          y = Math.max(1, Math.min(F - 1, y + (R() - 0.5) * 6));
+          g.lineTo(x, y);
+        }
+        g.strokeStyle = gold ? 'rgba(200, 160, 80, 0.5)' : css(H(MARBLE.line), 0.3);
+        g.lineWidth = gold ? 0.6 : 0.4 + R() * 0.4;
         g.stroke();
       }
       g.restore();
-      // The filigree: a running scroll of gold, a curl every 14 px.
-      gilt(g, () => {
-        g.beginPath();
-        for (let x = F; x <= s.len - F; x += 2) {
-          const y = F * 0.5 + Math.sin((x / 14) * Math.PI) * F * 0.18;
-          if (x === F) g.moveTo(x, y); else g.lineTo(x, y);
-        }
-      }, 1.1);
-      for (let x = F + 7; x < s.len - F - 4; x += 28) gilt(g, () => { g.beginPath(); g.arc(x, F * 0.32, 2, 0, Math.PI * 1.6); }, 0.9);
+      // Gold along the outer edge and the inner.
+      gilt(g, () => { g.beginPath(); g.moveTo(1.5, 1.5); g.lineTo(s.len - 1.5, 1.5); }, 1.2);
+      gilt(g, () => { g.beginPath(); g.moveTo(F - 2, F - 2); g.lineTo(s.len - F + 2, F - 2); }, 1);
     });
-    // A constellation at each corner: a bright star over the corner and two lesser along the sides, joined in gold.
-    eachCorner(g, w, h, (i) => {
-      const r2 = rand(i * 17 + 3);
-      const pts: Array<[number, number, number]> = [
-        [F * 0.5, F * 0.5, F * 0.52],
-        [F * (1.5 + r2() * 0.6), F * (0.3 + r2() * 0.4), F * 0.22],
-        [F * (0.3 + r2() * 0.4), F * (1.5 + r2() * 0.6), F * 0.22],
-      ];
-      g.strokeStyle = css(shade(GOLD, 0.2), 0.9);
-      g.lineWidth = 0.8;
-      g.beginPath();
-      g.moveTo(pts[1][0], pts[1][1]);
-      g.lineTo(pts[0][0], pts[0][1]);
-      g.lineTo(pts[2][0], pts[2][1]);
-      g.stroke();
-      for (const [x, y, r] of pts) {
-        g.save();
-        g.translate(x, y);
-        star(g, r, r * 0.42);
-        g.fillStyle = css(GOLD);
-        g.fill();
-        g.strokeStyle = css(shade(GOLD, 0.5), 0.8);
-        g.lineWidth = 0.5;
-        g.stroke();
-        g.restore();
+    const mid = F * 0.56, wd = F * 0.46;
+    // A wave and a lesser strand curling in step with it, a little inside it and behind.
+    const waves = (x0: number, len: number, dir: 1 | -1, k: number): void => {
+      wave(g, x0 + dir * F * 0.5, mid + F * 0.12, len * 0.62, dir, F * 0.13 * k, wd * 0.62 * k);
+      wave(g, x0, mid - F * 0.04, len, dir, F * 0.2 * k, wd * k);
+    };
+    eachSide(g, w, h, (s) => {
+      const top = s.i === 0 || s.i === 2;
+      if (top) {
+        // Waves curling away from the middle pearl, a lesser one under each.
+        for (const dir of [1, -1] as const) waves(s.len / 2 + dir * F * 1.2, Math.min(F * 5.5, s.len * 0.24), dir, 1);
+      }
+      // Along the side from each corner, a wave rolling toward the middle of the side.
+      if (s.len > F * 14) {
+        // Clear of the corner's scrollwork, which runs F * 3 along.
+        waves(F * 3.2, Math.min(F * 3.6, s.len * 0.14), 1, 0.85);
+        if (!top) waves(s.len - F * 3.2, Math.min(F * 3.6, s.len * 0.14), -1, 0.85);
       }
     });
-    inkBand(g, w, h, F);
+    // The corners: scrollwork along both sides, and the pearl over it.
+    eachCorner(g, w, h, () => {
+      scroll(g, F, false);
+      scroll(g, F, true);
+      pearl(g, F * 0.42, F * 0.42, F * 0.3);
+    });
+    // The middle of the top and the foot: a pearl with a gold star either side; two small pearls along the foot.
+    eachSide(g, w, h, (s) => {
+      if (s.i !== 0 && s.i !== 2) return;
+      const x = s.len / 2;
+      goldStar(g, x, F * 0.95, F * 0.32);
+      pearl(g, x, F * 0.32, F * 0.36);
+      for (const dx of [-1, 1]) goldStar(g, x + dx * F * 0.95, F * 0.36, F * 0.26);
+      // Two small pearls at the foot, where its waves end.
+      if (s.i === 2 && s.len > F * 16) for (const dx of [-1, 1]) pearl(g, x + dx * (F * 1.2 + Math.min(F * 5.5, s.len * 0.24) + F * 0.75), F * 0.5, F * 0.15);
+    });
   },
 
   /* The map: parchment with a deckled edge, an inked border, and a compass rose at a corner. */
