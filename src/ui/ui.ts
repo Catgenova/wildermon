@@ -116,7 +116,7 @@ import { HoardPanel } from './panels/hoard';
 import { KeeperPanel } from './panels/keeper';
 import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
-import { LAYOUT_SLOTS, WindowManager, type UIWindow } from './windows';
+import { LAYOUT_SLOTS, WindowManager } from './windows';
 import type { Island } from '../net/island';
 import { awayLines } from '../game/away';
 import { clearQuestion } from '../game/keeper';
@@ -304,7 +304,6 @@ export class UI {
   readonly notices: Notices;
   /** Find anything (`palette`, Ctrl+K). */
   private readonly palette: Palette;
-  private helpWin!: UIWindow;
   /** The help, built into its window the first time anything asks for it. */
   private helpBuilt: Promise<HelpPages> | null = null;
   /** The help's section headings, once it has been built. */
@@ -391,7 +390,7 @@ export class UI {
       (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));
     // Somebody else's shop counter: what is on it is bought, on an island.
     if (this.island) this.cratePanel.buyer = (it) => void this.buyOffCounter(it);
-    const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 330, height: 420, anchor: 'tr', open: false });
+    const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 440, height: 460, anchor: 'tr', open: false });
     this.journalPanel = new JournalPanel(journal, game);
     this.ledgerPanel = this.journalPanel.ledger;
     // "The rest of it" on the first-steps card opens the whole list.
@@ -466,21 +465,20 @@ export class UI {
     this.spellBar = new SpellBar(root, game, this.faithBook, (x, y, title, items) => this.menu.show(x, y, title, items),
       () => this.windows.get('faith')?.open(), () => this.windows.get('trades')?.open());
     void this.faithBook.ask();
-    const help = this.windows.create({ id: 'help', title: 'Help', x: 0, y: 0, width: 440, height: 460, open: false });
-    help.el.style.left = `${Math.max(0, (uiBox().w - 440) / 2)}px`;
-    help.el.style.top = `${Math.max(0, (uiBox().h - 460) / 2)}px`;
     /*
-     * The handbook, fetched the first time it is opened and not before.
+     * The handbook, fetched the first time the journal's Help tab is shown and
+     * not before.
      *
      * It is a hundred and thirty kilobytes of prose — the single largest thing
      * in the bundle after the drawings, and every one of them was being
-     * parsed and built into the page before the first frame, for a window that
-     * starts closed and that most sessions never open at all. It is its own
-     * file now: the island starts sooner, and the handbook costs a moment the
-     * first time somebody asks for it, by which point they are reading.
+     * parsed and built into the page before the first frame, for a page that
+     * most sessions never open at all. It is its own file: the island starts
+     * sooner, and the handbook costs a moment the first time somebody asks for
+     * it, by which point they are reading.
      */
-    help.onOpen = () => void this.helpPages();
-    this.helpWin = help;
+    this.journalPanel.onShow = (tab) => {
+      if (tab === 'help') void this.helpPages();
+    };
     // A material no recipe makes: the help, opened at what it says about it.
     this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
     this.palette = new Palette(root, () => this.findables());
@@ -555,11 +553,11 @@ export class UI {
     this.journalPanel.toggle(tab);
   }
 
-  /** The help's pages, building them into the help window the first time (it is a file of its own, fetched then). */
+  /** The help's pages, building them into the journal's Help tab the first time (it is a file of its own, fetched then). */
   private helpPages(): Promise<HelpPages> {
     if (!this.helpBuilt) {
       this.helpBuilt = import('./panels/help').then((m) => {
-        const pages = m.buildHelp(this.helpWin);
+        const pages = m.buildHelp(this.journalPanel.helpPage);
         this.helpTitles = pages.titles;
         return pages;
       });
@@ -575,7 +573,7 @@ export class UI {
   private async helpAbout(item: string): Promise<void> {
     const name = itemDef(item).name;
     const pages = await this.helpPages();
-    this.helpWin.open();
+    this.journalPanel.open('help');
     const hit = pages.search(name);
     this.game.logMsg(hit
       ? `Nothing makes ${name.toLowerCase()} at a bench. The help is open at what it says about it.`
@@ -625,9 +623,10 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      if (b.id === 'win_ledger') {
-        // The ledger is the journal's second tab, not a window of its own.
-        out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open('ledger') });
+      if (b.id === 'win_ledger' || b.id === 'win_help') {
+        // The ledger and the help are tabs of the journal, not windows of their own.
+        const tab = b.id === 'win_ledger' ? 'ledger' : 'help';
+        out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open(tab) });
       } else if (b.id.startsWith('win_')) {
         const w = this.windows.get(b.id === 'win_events' ? 'events' : b.id.slice(4));
         if (!w) continue;
@@ -659,7 +658,7 @@ export class UI {
     // Once the help has arrived: `openPalette` asks again when it does.
     for (const title of this.helpTitles) {
       out.push({ label: title, kind: 'Help', run: () => void this.helpPages().then((p) => {
-        this.helpWin.open();
+        this.journalPanel.open('help');
         p.jump(title);
       }) });
     }

@@ -376,7 +376,7 @@ const PRESSES: Record<string, () => void> = {
   // Nothing, for anybody who does not keep the island: they have no such window.
   win_keeper: () => ui.toggleWindow('keeper'),
   win_settings: () => ui.toggleWindow('settings'),
-  win_help: () => ui.toggleWindow('help'),
+  win_help: () => ui.toggleJournal('help'),
   win_news: () => ui.toggleWindow('news'),
   walk_home: () => game.walkHome(),
   carry_on: () => {

@@ -2792,13 +2792,15 @@ kbd {
   color: var(--ui-accent);
 }
 
-/* The ledger, the journal's second tab: the page fills under the tabs and its list scrolls. */
-.journal-ledger {
+/* The ledger and the help, the journal's second and third tabs: each page fills under the tabs and scrolls inside. */
+.journal-ledger,
+.journal-help {
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.journal-ledger[hidden] {
+.journal-ledger[hidden],
+.journal-help[hidden] {
   display: none;
 }
 

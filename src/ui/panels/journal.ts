@@ -3,8 +3,8 @@ import { ALL_GOALS, JOURNAL, chapterOf, nextGoals } from '../../game/journal';
 import type { UIWindow } from '../windows';
 import { LedgerPanel } from './ledger';
 
-/** The journal's tabs: what there is to do, and what you have made. */
-export type JournalTab = 'goals' | 'ledger';
+/** The journal's tabs: what there is to do, what you have made, and how any of it works. */
+export type JournalTab = 'goals' | 'ledger' | 'help';
 
 /**
  * The journal: everything somebody thought worth doing on this island, in
@@ -13,8 +13,9 @@ export type JournalTab = 'goals' | 'ledger';
  * nothing anywhere else that says so.
  *
  * Its second tab is the ledger (`LedgerPanel`): what you have made, how many,
- * how many rare and the best of each. What there is to do and what has been
- * done are one book.
+ * how many rare and the best of each. Its third is the help (`buildHelp`),
+ * fetched the first time it is turned to (`onShow`). What there is to do, what
+ * has been done and how any of it works are one book.
  */
 export class JournalPanel {
   private readonly rows = new Map<string, HTMLDivElement>();
@@ -25,6 +26,10 @@ export class JournalPanel {
   /** The tab showing. */
   tab: JournalTab = 'goals';
   readonly ledger: LedgerPanel;
+  /** The Help tab's page, which the help is built into when it has been fetched. */
+  readonly helpPage: HTMLDivElement;
+  /** Told whenever a tab is shown, the window open. */
+  onShow: ((tab: JournalTab) => void) | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     win.body.classList.add('settings-body');
@@ -33,6 +38,7 @@ export class JournalPanel {
     for (const [id, label, title] of [
       ['goals', 'Goals', 'Everything worth doing here, ticking itself off'],
       ['ledger', 'Ledger', 'Everything you have ever made: how many, how many rare, and the best'],
+      ['help', 'Help', 'How any of this works'],
     ] as Array<[JournalTab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -48,9 +54,13 @@ export class JournalPanel {
     const made = document.createElement('div');
     made.className = 'journal-ledger';
     made.hidden = true;
+    this.helpPage = document.createElement('div');
+    this.helpPage.className = 'journal-help';
+    this.helpPage.hidden = true;
     this.pages.set('goals', goals);
     this.pages.set('ledger', made);
-    win.body.append(bar, goals, made);
+    this.pages.set('help', this.helpPage);
+    win.body.append(bar, goals, made, this.helpPage);
     this.ledger = new LedgerPanel(made, game, () => win.isOpen && this.tab === 'ledger');
     this.count = document.createElement('div');
     this.count.className = 'skill-group';
@@ -92,6 +102,7 @@ export class JournalPanel {
     win.onOpen = () => {
       this.refresh();
       if (this.tab === 'ledger') this.ledger.refresh();
+      this.onShow?.(this.tab);
     };
     game.events.on('journal', () => this.refresh());
   }
@@ -102,6 +113,7 @@ export class JournalPanel {
     for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === tab);
     for (const [id, page] of this.pages) page.hidden = id !== tab;
     if (tab === 'ledger') this.ledger.refresh();
+    if (this.win.isOpen) this.onShow?.(tab);
   }
 
   /** Open at a tab. */

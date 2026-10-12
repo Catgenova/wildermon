@@ -56,7 +56,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'stall', label: 'Market stall', for: ['market'] },
   { kind: 'scroll', label: 'Blue marble and gold', for: ['events'] },
   { kind: 'book', label: 'Starred leather book', for: ['journal'] },
-  { kind: 'clothbook', label: 'Cloth-bound book', for: ['help'] },
   { kind: 'noticeboard', label: 'Notice board', for: ['news'] },
   { kind: 'letter', label: 'Sealed letter', for: ['social'] },
   { kind: 'palisade', label: 'Palisade', for: ['deed'] },
@@ -298,20 +297,6 @@ function rope(g: Ctx, x0: number, x1: number, y: number, t: number, tone: RGB): 
     g.lineTo(x + t * 0.25, y - t * 0.3);
     g.strokeStyle = css(light(tone, 0.45), 0.8);
     g.stroke();
-  }
-}
-
-/** Small even weave in two tones, for cloth: threads along and across every `step` px. */
-function weave(g: Ctx, len: number, F: number, base: RGB, step: number, contrast: number): void {
-  g.fillStyle = css(base);
-  g.fillRect(0, 0, len, F);
-  for (let y = 0; y < F; y += step) {
-    for (let x = ((y / step) % 2) * step; x < len; x += step * 2) {
-      g.fillStyle = css(light(base, contrast));
-      g.fillRect(x, y, step, step * 0.55);
-      g.fillStyle = css(shade(base, contrast * 0.9));
-      g.fillRect(x + step, y + step * 0.45, step * 0.55, step * 0.55);
-    }
   }
 }
 
@@ -4697,21 +4682,6 @@ const PAINTERS: Record<string, Painter> = {
     }
     // The spine.
     spine(g, R, -F * 0.72, F * 0.92, -F * 0.28, h + F * 0.28, F);
-  },
-
-  /* The help: a book bound in blue cloth, a gilt rule round it. */
-  clothbook(g, w, h, F, R) {
-    eachSide(g, w, h, (s) => {
-      g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      weave(g, s.len, F, mix(shade(H('#7f95b8'), 0.2), H('#7f95b8'), s.lit), 2, 0.1);
-      g.restore();
-    });
-    gilt(g, () => { g.beginPath(); g.rect(F * 0.42, F * 0.42, w - F * 0.84, h - F * 0.84); }, 1.3);
-    eachCorner(g, w, h, () => gilt(g, () => { g.beginPath(); g.moveTo(F * 0.42, F * 0.9); g.lineTo(F * 0.9, F * 0.42); }, 1));
-    inkBand(g, w, h, F);
-    void R;
   },
 
   /* The news: a notice board, pinned all round. */

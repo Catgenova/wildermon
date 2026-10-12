@@ -130,7 +130,6 @@ import { BLOOMS, BUSH_EVERGREEN, BUSH_FLOWER_FROM, evergreen, LEAF_DAYS, SHED_DA
 import { lifeSeasons } from '../../render/life';
 import { COUNTS } from '../beltmenu';
 import { DAMAGE_BREAKING } from '../itemcells';
-import type { UIWindow } from '../windows';
 import { IDLE_LOGOUT } from '../../game/keep';
 import { awayFor } from '../../game/away';
 import { BOARD_RULES, REFRESH as BOARD_REFRESH } from './boards';
@@ -861,11 +860,11 @@ export function helpText(): string {
       <tr><td><kbd>M</kbd></td><td>Map</td></tr>
       <tr><td><kbd>G</kbd></td><td>Toggle the tile grid</td></tr>
       <tr><td><kbd>P</kbd></td><td>Wildermon: your tamed creatures' stats and actions</td></tr>
-      <tr><td><kbd>J</kbd></td><td>Journal: everything worth doing, ticking itself off, and the ledger of what you have made</td></tr>
+      <tr><td><kbd>J</kbd></td><td>Journal: everything worth doing, ticking itself off; the ledger of what you have made; and this help</td></tr>
       <tr><td><kbd>N</kbd></td><td>Settlement: your deed at a glance</td></tr>
       <tr><td><kbd>Y</kbd></td><td>Social: who is waiting on you, who you know, and what has been written</td></tr>
       <tr><td><kbd>O</kbd></td><td>Settings: what the island looks like, what every key does, and how you look</td></tr>
-      <tr><td><kbd>F1</kbd></td><td>This help</td></tr>
+      <tr><td><kbd>F1</kbd> / <kbd>H</kbd></td><td>This help, the journal's Help tab</td></tr>
       <tr><td>⤢ / double-click title</td><td>Expand a window to nearly the whole screen, and back</td></tr>
     </table>
     <h3>Trades</h3>
@@ -3138,8 +3137,8 @@ export interface HelpPages {
   search(query: string): boolean;
 }
 
-export function buildHelp(win: UIWindow): HelpPages {
-  win.body.classList.add('help-body');
+export function buildHelp(host: HTMLElement): HelpPages {
+  host.classList.add('help-body');
   const holder = document.createElement('div');
   holder.innerHTML = helpText();
   // Gather the run of nodes under each heading into a section of its own.
@@ -3215,7 +3214,7 @@ export function buildHelp(win: UIWindow): HelpPages {
   });
 
   pages.append(...sections.map((s) => s.el));
-  win.body.replaceChildren(search, contents, count, pages);
+  host.replaceChildren(search, contents, count, pages);
   return {
     titles: sections.map((s) => s.title),
     jump: (title) => {

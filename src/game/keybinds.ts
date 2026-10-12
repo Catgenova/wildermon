@@ -91,7 +91,7 @@ export const BINDS: BindDef[] = [
   // No key out of the box: it is for the few who keep an island, and every letter is spoken for.
   { id: 'win_keeper', label: 'Island keeper', hint: 'Everybody with a body on the island, where they stand and whether they are muted, and a Move, Mute and Unmute for each.', group: 'Windows', keys: [], keeper: true },
   { id: 'win_settings', label: 'Settings', hint: 'This window.', group: 'Windows', keys: ['KeyO'] },
-  { id: 'win_help', label: 'Help', hint: 'How any of this works.', group: 'Windows', keys: ['F1', 'KeyH'] },
+  { id: 'win_help', label: 'Help', hint: 'The journal open at its Help tab: how any of this works.', group: 'Windows', keys: ['F1', 'KeyH'] },
   // No key out of the box: every letter is spoken for, and it opens by itself when there is something new.
   { id: 'win_news', label: "What's new", hint: 'What changed on the island, newest first, with what you had not read yet marked.', group: 'Windows', keys: [] },
   // Ctrl+K and ⌘K open it too, wherever they are not taken by something you are typing in.
