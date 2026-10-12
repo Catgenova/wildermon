@@ -726,8 +726,8 @@ export function helpText(): string {
     to your buy orders and the silver it cost; and every parcel posted to you, by who sent it. When you
     come back a window lists all of it, and the same lines go into the event log.</p>
     <h3>Leaderboards</h3>
-    <p>The <b>Leaderboards</b> window (<kbd>F2</kbd>) ranks everybody on an island, and asks the island again
-    every ${BOARD_REFRESH} seconds while it is open. <b>Skills:</b> ${BOARD_RULES.skills}
+    <p>The journal's <b>Leaderboards</b> tab (<kbd>F2</kbd> opens the journal there) ranks everybody on an island, and asks the island again
+    every ${BOARD_REFRESH} seconds while it is showing. <b>Skills:</b> ${BOARD_RULES.skills}
     <b>Wildermon:</b> ${BOARD_RULES.wildermon} <b>Settlements:</b> ${BOARD_RULES.settlements}
     In a game of your own there is nobody to rank against, so it shows your best skill (characteristics not
     counted), your best-bred wildermon and your settlement instead, each measured the way its board measures.</p>

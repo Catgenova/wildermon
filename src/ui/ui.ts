@@ -437,8 +437,7 @@ export class UI {
      * the biggest settlements. Beside the other two windows about other people,
      * and asked of the island only while it is open.
      */
-    const boardsWin = this.windows.create({ id: 'boards', title: 'Leaderboards', x: 12, y: 56, width: 340, height: 420, anchor: 'tr', open: false });
-    this.boards = new BoardsPanel(boardsWin, game, this.island);
+    this.boards = new BoardsPanel(this.journalPanel.boardsPage, game, this.island, () => journal.isOpen && this.journalPanel.tab === 'boards');
     /*
      * Not on the Menu, because it is not a window you open — it is a window a
      * particular map opens. Reading a second map while the first is up shows
@@ -478,6 +477,7 @@ export class UI {
      */
     this.journalPanel.onShow = (tab) => {
       if (tab === 'help') void this.helpPages();
+      if (tab === 'boards') this.boards.shown();
     };
     // A material no recipe makes: the help, opened at what it says about it.
     this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
@@ -612,9 +612,10 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      if (b.id === 'win_ledger' || b.id === 'win_help' || b.id === 'win_news') {
-        // The ledger, the help and what's new are tabs of the journal, not windows of their own.
-        const tab = b.id === 'win_ledger' ? 'ledger' : b.id === 'win_help' ? 'help' : 'news';
+      const journalTab = ({ win_ledger: 'ledger', win_help: 'help', win_news: 'news', win_boards: 'boards' } as const)[b.id as 'win_ledger'];
+      if (journalTab) {
+        // The ledger, the help, what's new and the leaderboards are tabs of the journal, not windows of their own.
+        const tab = journalTab;
         out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open(tab) });
       } else if (b.id.startsWith('win_')) {
         const w = this.windows.get(b.id === 'win_events' ? 'events' : b.id.slice(4));

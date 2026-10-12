@@ -372,7 +372,7 @@ const PRESSES: Record<string, () => void> = {
   win_market: () => ui.toggleWindow('market'),
   // Bound to Y and listed under Windows since the Social window came, and never pressed here.
   win_social: () => ui.toggleWindow('social'),
-  win_boards: () => ui.toggleWindow('boards'),
+  win_boards: () => ui.toggleJournal('boards'),
   // Nothing, for anybody who does not keep the island: they have no such window.
   win_keeper: () => ui.toggleWindow('keeper'),
   win_settings: () => ui.toggleWindow('settings'),

@@ -1,5 +1,5 @@
 import {
-  css, cut, cushion, drawPads, faceColour, glyphPath, grassTuft, hex, mix, STONE_INK, toneOf,
+  css, cushion, drawPads, faceColour, glyphPath, grassTuft, hex, mix, STONE_INK, toneOf,
   type Ctx, type Pad, type Pt, type RGB,
 } from '../render/runestone';
 import { MOSS, rand } from '../render/ivy';
@@ -60,7 +60,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'palisade', label: 'Palisade', for: ['deed'] },
   { kind: 'wicker', label: 'Wicker basket', for: ['wildermon'] },
   { kind: 'fieldbook', label: 'Field-worn leather', for: ['guide'] },
-  { kind: 'laurel', label: 'Carved wood and laurel', for: ['boards'] },
   { kind: 'mirror', label: 'Gilded mirror', for: ['look'] },
   { kind: 'turf', label: 'Turf', for: ['tile'] },
   { kind: 'rope', label: 'Knotted rope', for: ['tracker'] },
@@ -311,33 +310,6 @@ function gilt(g: Ctx, path: () => void, w = 1.4): void {
   g.strokeStyle = css(light(GOLD, 0.55), 0.8);
   g.lineWidth = w * 0.35;
   g.stroke();
-}
-
-/** A spray of laurel from x along y, `len` long (negative runs back): a stem, and leaves 6 px long in pairs every 6 px, smaller toward the tip. */
-function sprig(g: Ctx, x: number, len: number, y: number): void {
-  const dir = Math.sign(len), n = Math.max(2, Math.floor(Math.abs(len) / 6));
-  g.beginPath();
-  g.moveTo(x, y);
-  g.lineTo(x + len, y);
-  g.strokeStyle = css(H('#4b6c57'));
-  g.lineWidth = 1;
-  g.stroke();
-  for (let k = 0; k < n; k++) {
-    const at = x + dir * (k + 0.6) * 6, s = 1 - (k / n) * 0.45;
-    for (const sg of [-1, 1]) {
-      g.save();
-      g.translate(at, y);
-      g.rotate(dir * sg * 0.6 + (dir < 0 ? Math.PI : 0));
-      g.beginPath();
-      g.ellipse(3.2 * s, 0, 3.4 * s, 1.5 * s, 0, 0, Math.PI * 2);
-      g.fillStyle = css(sg < 0 ? H('#86ad8e') : H('#6f9a78'));
-      g.fill();
-      g.strokeStyle = css(H('#3f5c49'));
-      g.lineWidth = 0.7;
-      g.stroke();
-      g.restore();
-    }
-  }
 }
 
 /** A tally knot at (x, y) on a rope, `r` across: a barrel of turns round the rope, ruled with the wraps. */
@@ -5131,48 +5103,6 @@ const PAINTERS: Record<string, Painter> = {
     pressed(w - F * 0.5, h - F * 0.5, Math.PI + 0.15, H('#9fbadf'));
     pressed(w - F * 0.5, F * 0.5, Math.PI / 2 + 0.1, H('#eaa8b4'));
     void R;
-  },
-
-  /* The leaderboards: carved cherry, a cove and a bead along it, sprays of laurel out of each corner and a gilt rosette over it. */
-  laurel(g, w, h, F, R) {
-    const wood = WOOD.cherry;
-    eachSide(g, w, h, (s) => {
-      g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      const c = mix(shade(wood, 0.25), wood, s.lit);
-      g.fillStyle = css(c);
-      g.fillRect(0, 0, s.len, F);
-      grain(g, R, 0, s.len, 1, F - 1, c, false);
-      // Carved: a cove along the outside and a bead along the inside.
-      cut(g, c, 1.2, () => { g.beginPath(); g.moveTo(0, 3); g.lineTo(s.len, 3); });
-      cut(g, c, 1.2, () => { g.beginPath(); g.moveTo(0, F - 3); g.lineTo(s.len, F - 3); });
-      g.restore();
-      g.strokeStyle = css(shade(wood, 0.5), 0.7);
-      g.lineWidth = 0.8;
-      g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(F, F);
-      g.stroke();
-      // A spray of laurel out of each corner along the side, a third of its length or 70 px at most.
-      sprig(g, F * 0.8, Math.min(s.len * 0.3, 70), F * 0.5);
-      sprig(g, s.len - F * 0.8, -Math.min(s.len * 0.3, 70), F * 0.5);
-    });
-    inkBand(g, w, h, F);
-    // A gilt rosette over each corner where the sprays start.
-    eachCorner(g, w, h, () => {
-      for (let k = 0; k < 6; k++) {
-        const a = (k / 6) * Math.PI * 2;
-        g.beginPath();
-        g.ellipse(F * 0.5 + Math.cos(a) * 2.2, F * 0.5 + Math.sin(a) * 2.2, 2, 1.3, a, 0, Math.PI * 2);
-        g.fillStyle = css(light(GOLD, 0.15));
-        g.fill();
-        g.strokeStyle = css(shade(GOLD, 0.55));
-        g.lineWidth = 0.6;
-        g.stroke();
-      }
-      head(g, F * 0.5, F * 0.5, 1.6, GOLD, shade(GOLD, 0.55));
-    });
   },
 
   /* How you look: a gilded mirror frame, mitred, beaded inside, a shell at each corner. */

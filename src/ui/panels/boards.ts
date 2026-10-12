@@ -4,7 +4,6 @@ import { BOARD_TOP, bestSkill, bredScore } from '../../game/boards';
 import { creatureLevel, SPECIES, type Creature } from '../../game/creatures';
 import { SKILL_BY_ID, SKILL_DEFS, type SkillDef } from '../../game/skills';
 import { GRADE_STEP, TIERS, TRAIT_SLOTS } from '../../game/traits';
-import type { UIWindow } from '../windows';
 
 /** How often the window asks the island again while it is open, in seconds. */
 export const REFRESH = 30;
@@ -97,12 +96,17 @@ export class BoardsPanel {
   private asking = false;
   private lastAsk = -1e9;
 
+  /**
+   * Drawn into `host`, the journal's Leaderboards tab (`JournalPanel`), and
+   * asked again only while `showing` says that tab can be seen.
+   */
   constructor(
-    private readonly win: UIWindow,
+    host: HTMLElement,
     private readonly game: Game,
     private readonly island: Island | null,
+    private readonly showing: () => boolean,
   ) {
-    win.body.classList.add('skills-body');
+    host.classList.add('skills-body');
     this.bar = document.createElement('div');
     this.bar.className = 'log-tabs';
     for (const [id, label, title] of TABS) {
@@ -118,9 +122,13 @@ export class BoardsPanel {
     // Alone there is one page, not three boards to choose between.
     this.bar.hidden = !island;
     this.page = document.createElement('div');
-    win.body.append(this.bar, this.page);
-    win.onOpen = () => void this.refresh(performance.now() / 1000);
+    host.append(this.bar, this.page);
     this.draw();
+  }
+
+  /** The tab has just been turned to, or the journal opened at it: ask now. */
+  shown(): void {
+    void this.refresh(performance.now() / 1000);
   }
 
   private show(id: Tab): void {
@@ -129,9 +137,9 @@ export class BoardsPanel {
     this.draw();
   }
 
-  /** Asked again while the window is open, and not at all while it is shut. */
+  /** Asked again while the tab is showing, and not at all while it is not. */
   update(now: number): void {
-    if (!this.win.isOpen || now - this.lastAsk < REFRESH) return;
+    if (!this.showing() || now - this.lastAsk < REFRESH) return;
     void this.refresh(now);
   }
 

@@ -187,8 +187,8 @@ import{$a as e,$i as t,Ac as n,Al as r,As as i,Ci as a,Cl as o,Cr as s,Cs as ee,
     to your buy orders and the silver it cost; and every parcel posted to you, by who sent it. When you
     come back a window lists all of it, and the same lines go into the event log.</p>
     <h3>Leaderboards</h3>
-    <p>The <b>Leaderboards</b> window (<kbd>F2</kbd>) ranks everybody on an island, and asks the island again
-    every 30 seconds while it is open. <b>Skills:</b> ${Jo.skills}
+    <p>The journal's <b>Leaderboards</b> tab (<kbd>F2</kbd> opens the journal there) ranks everybody on an island, and asks the island again
+    every 30 seconds while it is showing. <b>Skills:</b> ${Jo.skills}
     <b>Wildermon:</b> ${Jo.wildermon} <b>Settlements:</b> ${Jo.settlements}
     In a game of your own there is nobody to rank against, so it shows your best skill (characteristics not
     counted), your best-bred wildermon and your settlement instead, each measured the way its board measures.</p>
