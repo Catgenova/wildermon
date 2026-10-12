@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -1250,6 +1250,263 @@ function vine(g: Ctx, R: () => number, pts: Pt[], F: number, flowers: boolean): 
   }
 }
 
+
+/* ---- the bench's own kit --------------------------------------------------- */
+
+/** Weathering along a beam, in its own frame (along x, its width from 0 to F): cracks with the grain and a few dents. */
+function beamWear(g: Ctx, R: () => number, len: number, F: number): void {
+  for (let x = R() * 40; x < len; x += 30 + R() * 50) {
+    const y = F * (0.25 + R() * 0.5), l = 10 + R() * 22;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + l / 2, y + (R() - 0.5) * 2, x + l, y + (R() - 0.5) * 1.5);
+    g.strokeStyle = 'rgba(40, 26, 18, 0.55)';
+    g.lineWidth = 0.9;
+    g.stroke();
+    g.beginPath();
+    g.moveTo(x + 1, y + 1);
+    g.quadraticCurveTo(x + l / 2, y + 1.6, x + l - 1, y + 1);
+    g.strokeStyle = 'rgba(255, 236, 206, 0.22)';
+    g.lineWidth = 0.7;
+    g.stroke();
+  }
+}
+
+/** An iron peg standing out of a beam at (x, y). */
+function peg(g: Ctx, x: number, y: number): void {
+  head(g, x, y, 2, IRON.body, IRON.ink);
+}
+
+/** A coil of rope hung on a peg at (x, y), its loops falling below it and a tail hanging. */
+function ropeCoil(g: Ctx, x: number, y: number, F: number): void {
+  const tone = H('#c79f68');
+  peg(g, x, y);
+  for (const [rx, ry, dy] of [[F * 0.34, F * 0.75, 0], [F * 0.3, F * 0.7, 2], [F * 0.26, F * 0.65, 4]]) twist(g, ellipsePts(x + 1, y + F * 0.62 + dy, rx, ry, 0.08), 2.4, tone);
+  twist(g, curve([x + 2, y + F * 1.2], [x + 6, y + F * 1.9], [x + 3, y + F * 2.4]), 2.4, tone);
+}
+
+/** A cloth hung over a peg at (x, y), `len` long: folds down it, and a hem at its foot. */
+function drape(g: Ctx, R: () => number, x: number, y: number, F: number, len: number): void {
+  const cloth = H('#e9dfc8'), wd = F * 0.9;
+  peg(g, x - 2, y);
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x - wd * 0.55, y + 2);
+    g.quadraticCurveTo(x, y - 3, x + wd * 0.5, y + 2);
+    g.lineTo(x + wd * 0.58, y + len);
+    for (let k = 0; k <= 4; k++) g.lineTo(x + wd * 0.58 - (k * wd * 1.16) / 4, y + len + (k % 2 ? 3 : -1) + R() * 2);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 26, 18, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = -1;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(cloth);
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  for (let k = 0; k < 4; k++) {
+    const fx = x - wd * 0.4 + k * wd * 0.27;
+    const fold = g.createLinearGradient(fx - 3, 0, fx + 3, 0);
+    fold.addColorStop(0, 'rgba(120, 100, 76, 0)');
+    fold.addColorStop(0.5, 'rgba(120, 100, 76, 0.28)');
+    fold.addColorStop(1, 'rgba(120, 100, 76, 0)');
+    g.fillStyle = fold;
+    g.fillRect(fx - 3, y, 6, len + 4);
+  }
+  g.restore();
+  shape();
+  g.strokeStyle = css(H('#7d6a52'));
+  g.lineWidth = 1;
+  g.stroke();
+}
+
+/** A saw hung by its handle from a peg at (x, y), blade down. */
+function hangSaw(g: Ctx, x: number, y: number, F: number): void {
+  peg(g, x, y);
+  const bl = F * 2.2;
+  g.beginPath();
+  g.moveTo(x - 4, y + F * 0.7);
+  g.lineTo(x + 4, y + F * 0.7);
+  g.lineTo(x + 3, y + F * 0.7 + bl);
+  g.lineTo(x - 2, y + F * 0.7 + bl);
+  g.closePath();
+  const steel = g.createLinearGradient(x - 4, 0, x + 4, 0);
+  steel.addColorStop(0, css(light(IRON.body, 0.5)));
+  steel.addColorStop(1, css(IRON.body));
+  g.fillStyle = steel;
+  g.fill();
+  g.strokeStyle = css(IRON.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  for (let t = y + F * 0.8; t < y + F * 0.7 + bl; t += 2.2) {
+    g.beginPath();
+    g.moveTo(x - 2.5, t);
+    g.lineTo(x - 4.2, t + 1.1);
+    g.stroke();
+  }
+  g.beginPath();
+  g.roundRect(x - 5, y - 1, 10, F * 0.8, 3);
+  g.fillStyle = css(WOOD.cherry);
+  g.fill();
+  g.strokeStyle = INK;
+  g.stroke();
+  g.beginPath();
+  g.roundRect(x - 2.5, y + 2, 5, F * 0.3, 2);
+  g.fillStyle = 'rgba(40, 26, 18, 0.7)';
+  g.fill();
+}
+
+/** A hatchet hung head up from a peg at (x, y). */
+function hangHatchet(g: Ctx, x: number, y: number, F: number): void {
+  peg(g, x, y);
+  g.beginPath();
+  g.roundRect(x - 1.6, y, 3.2, F * 1.7, 1.5);
+  g.fillStyle = css(WOOD.oak);
+  g.fill();
+  g.strokeStyle = INK;
+  g.lineWidth = 0.9;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x - 1, y + 1);
+  g.lineTo(x + 6, y - 2);
+  g.quadraticCurveTo(x + 9, y + 4, x + 6, y + 9);
+  g.lineTo(x - 1, y + 6);
+  g.closePath();
+  g.fillStyle = css(light(IRON.body, 0.2));
+  g.fill();
+  g.strokeStyle = css(IRON.ink);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x + 6.2, y - 1.5);
+  g.quadraticCurveTo(x + 8.5, y + 4, x + 5.8, y + 8.5);
+  g.strokeStyle = css(light(IRON.body, 0.7));
+  g.lineWidth = 0.8;
+  g.stroke();
+}
+
+/** A lantern on an iron bracket out of the beam at (x, y): the arm, a short chain, its cap, the glass lit from inside, and the light round it. */
+function lantern(g: Ctx, x: number, y: number, F: number): void {
+  const iron = H('#4b4650'), cx = x - 2, top = y + F * 0.55;
+  // The light first, under everything.
+  const glow = g.createRadialGradient(cx, top + F * 0.6, 1, cx, top + F * 0.6, F * 0.9);
+  glow.addColorStop(0, 'rgba(255, 214, 130, 0.55)');
+  glow.addColorStop(1, 'rgba(255, 214, 130, 0)');
+  g.fillStyle = glow;
+  g.fillRect(cx - F, top - F * 0.4, F * 2, F * 2);
+  g.beginPath();
+  g.moveTo(x + F * 0.5, y);
+  g.lineTo(cx, y);
+  g.lineTo(cx, y + 3);
+  g.strokeStyle = css(iron);
+  g.lineWidth = 2;
+  g.lineCap = 'round';
+  g.stroke();
+  head(g, x + F * 0.5, y, 1.8, IRON.body, IRON.ink);
+  for (let k = 0; k < 3; k++) {
+    g.beginPath();
+    g.ellipse(cx, y + 4 + k * 2.6, 1, 1.5, 0, 0, Math.PI * 2);
+    g.strokeStyle = css(iron);
+    g.lineWidth = 0.9;
+    g.stroke();
+  }
+  const bw = F * 0.42, bh = F * 1;
+  // The cap.
+  g.beginPath();
+  g.moveTo(cx - bw * 0.4, top - 3);
+  g.lineTo(cx + bw * 0.4, top - 3);
+  g.lineTo(cx + bw + 1, top + 1);
+  g.lineTo(cx - bw - 1, top + 1);
+  g.closePath();
+  g.fillStyle = css(iron);
+  g.fill();
+  // The glass, lit.
+  g.beginPath();
+  g.rect(cx - bw, top + 1, bw * 2, bh);
+  const flame = g.createRadialGradient(cx, top + bh * 0.55, 0.5, cx, top + bh * 0.55, bw * 1.4);
+  flame.addColorStop(0, '#fff6d8');
+  flame.addColorStop(0.4, '#ffd37a');
+  flame.addColorStop(1, '#d48a3a');
+  g.fillStyle = flame;
+  g.fill();
+  g.strokeStyle = css(iron);
+  g.lineWidth = 1.4;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(cx, top + 1);
+  g.lineTo(cx, top + 1 + bh);
+  g.strokeStyle = css(iron, 0.8);
+  g.lineWidth = 0.8;
+  g.stroke();
+  // Its foot.
+  g.beginPath();
+  g.moveTo(cx - bw - 1, top + 1 + bh);
+  g.lineTo(cx + bw + 1, top + 1 + bh);
+  g.lineTo(cx + bw * 0.5, top + 4 + bh);
+  g.lineTo(cx - bw * 0.5, top + 4 + bh);
+  g.closePath();
+  g.fillStyle = css(iron);
+  g.fill();
+}
+
+/**
+ * Crafting's badge, where another window's rune is: a square of cloth pinned
+ * at the top, its foot torn, with two hammers crossed on it in brown -- the
+ * workshop's sign. `W` by `Hh`.
+ */
+export function paintHammers(g: Ctx, W: number, Hh: number, night: boolean): void {
+  const cloth = H('#efe6d2');
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(1, 4);
+    g.lineTo(W - 1, 4);
+    g.lineTo(W - 1, Hh - 6);
+    for (let k = 0; k <= 5; k++) g.lineTo(W - 1 - (k * (W - 2)) / 5, Hh - 6 + (k % 2 ? 4 : 0));
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 26, 18, 0.45)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.2;
+  g.fillStyle = css(cloth);
+  g.fill();
+  g.restore();
+  shape();
+  g.strokeStyle = css(H('#8a775c'));
+  g.lineWidth = 0.9;
+  g.stroke();
+  // Pinned at both top corners.
+  head(g, 4, 6.5, 1.3, BRASS.body, BRASS.ink);
+  head(g, W - 4, 6.5, 1.3, BRASS.body, BRASS.ink);
+  // Two hammers, crossed.
+  const brown = H('#5a3c28');
+  for (const sg of [-1, 1]) {
+    g.save();
+    g.translate(W / 2, Hh / 2 + 1);
+    g.rotate(sg * 0.72);
+    g.fillStyle = css(brown);
+    g.beginPath();
+    g.roundRect(-1.1, -6, 2.2, 15, 1);
+    g.fill();
+    g.beginPath();
+    g.roundRect(-4.6, -9.5, 9.2, 4.4, 1);
+    g.fill();
+    g.restore();
+  }
+  if (night) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
+    g.fillRect(-4, -4, W + 8, Hh + 8);
+    g.restore();
+  }
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -1434,62 +1691,59 @@ const PAINTERS: Record<string, Painter> = {
     vines.forEach(([a, c, b], k) => vine(g, R, curve(a, c, b), F, k % 3 !== 2));
   },
 
-  /* The bench: oak, a boxwood rule along the top with its ticks, nicks from the tools, and a vice at a corner. */
+  /*
+   * Crafting: a carpenter's frame of dark weathered beams, the sides run
+   * full height and the top and bottom laid across them, bolted with iron
+   * where they cross and along their length. A lantern hangs on its bracket
+   * at the top left; a coil of rope, a cloth and the saw and hatchet hang on
+   * pegs down the right; ivy has grown over the corners and along the top,
+   * flowering.
+   */
   bench(g, w, h, F, R) {
-    const oak = WOOD.oak;
-    eachSide(g, w, h, (s) => {
+    const beamTone = H('#86603f'), dark = H('#6a4a32');
+    // The sides, full height.
+    for (const x of [0, w - F]) {
       g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      planks(g, R, s.len, 0, F, oak, s.lit);
-      // Nicks along the edge where the tools caught it.
-      for (let x = 12 + R() * 30; x < s.len - 12; x += 30 + R() * 60) {
-        g.beginPath();
-        g.moveTo(x, 0);
-        g.lineTo(x + 1.5, 2.5 + R() * 1.5);
-        g.lineTo(x + 3, 0);
-        g.fillStyle = css(shade(oak, 0.45));
-        g.fill();
-      }
+      g.translate(x + F, 0);
+      g.rotate(Math.PI / 2);
+      plank(g, R, -2, h + 2, 0.5, F - 0.5, mix(dark, beamTone, x === 0 ? 0.8 : 0.55));
+      beamWear(g, R, h, F);
       g.restore();
-      if (s.i === 0) {
-        // The rule: a strip of boxwood, ticks every 4 px, longer every 20.
-        const y0 = F * 0.2, y1 = F * 0.68, x0 = F * 1.6, x1 = s.len - F * 1.6;
-        g.fillStyle = css(H('#ecdcae'));
-        g.fillRect(x0, y0, x1 - x0, y1 - y0);
-        g.strokeStyle = INK;
-        g.lineWidth = 0.8;
-        g.strokeRect(x0 + 0.4, y0 + 0.4, x1 - x0 - 0.8, y1 - y0 - 0.8);
-        g.strokeStyle = css(H('#5a4636'));
-        for (let x = x0 + 4, n = 1; x < x1 - 1; x += 4, n++) {
-          g.beginPath();
-          g.moveTo(x, y1 - 0.5);
-          g.lineTo(x, y1 - 0.5 - (n % 5 === 0 ? (y1 - y0) * 0.65 : (y1 - y0) * 0.3));
-          g.lineWidth = n % 5 === 0 ? 1 : 0.6;
-          g.stroke();
-        }
-      }
-    });
-    inkBand(g, w, h, F);
-    // The vice at the bottom right: a wooden jaw and its iron screw.
-    g.save();
-    g.translate(w, h);
-    g.rotate(Math.PI);
-    const vw = F * 2.4;
-    g.fillStyle = css(shade(oak, 0.15));
-    g.fillRect(F * 0.15, F * 0.1, vw, F * 0.8);
-    grain(g, R, F * 0.2, F * 0.15 + vw, F * 0.15, F * 0.85, shade(oak, 0.15), false);
-    g.strokeStyle = INK;
-    g.lineWidth = 1;
-    g.strokeRect(F * 0.15 + 0.5, F * 0.1 + 0.5, vw - 1, F * 0.8 - 1);
-    head(g, F * 0.15 + vw / 2, F * 0.5, F * 0.2, IRON.body, IRON.ink);
-    g.beginPath();
-    g.moveTo(F * 0.15 + vw / 2 - F * 0.5, F * 0.5);
-    g.lineTo(F * 0.15 + vw / 2 + F * 0.5, F * 0.5);
-    g.strokeStyle = css(IRON.ink);
-    g.lineWidth = 1.6;
-    g.stroke();
-    g.restore();
+    }
+    // The top and bottom across them, their ends standing a little past the sides.
+    for (const y of [0, h - F]) {
+      plank(g, R, -3, w + 3, y + 0.5, y + F - 0.5, mix(dark, beamTone, y === 0 ? 1 : 0.6));
+      g.save();
+      g.translate(0, y);
+      beamWear(g, R, w, F);
+      g.restore();
+    }
+    // Bolts where they cross, and along each beam.
+    for (const [x, y] of [[F * 0.3, F * 0.3], [F * 0.7, F * 0.7], [w - F * 0.3, F * 0.3], [w - F * 0.7, F * 0.7], [F * 0.3, h - F * 0.3], [F * 0.7, h - F * 0.7], [w - F * 0.3, h - F * 0.3], [w - F * 0.7, h - F * 0.7]] as Pt[]) head(g, x, y, F * 0.1, IRON.body, IRON.ink);
+    for (let x = F * 2.4 + R() * 20; x < w - F * 2.4; x += 70 + R() * 40) for (const y of [F * 0.5, h - F * 0.5]) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
+    for (let y = F * 2.4 + R() * 20; y < h - F * 2.4; y += 80 + R() * 40) for (const x of [F * 0.5, w - F * 0.5]) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
+    // Down the right: a coil of rope on its peg, a cloth hung over another, and the saw and hatchet below.
+    const right = w - F * 0.5;
+    if (h > F * 10) {
+      ropeCoil(g, right, F * 2.6, F);
+      drape(g, R, right + 2, h * 0.38, F, h * 0.2);
+      hangSaw(g, right + 1, h * 0.62, F);
+      hangHatchet(g, right - 3, h * 0.74, F);
+    }
+    // The lantern at the top left, on its bracket, lit.
+    if (h > F * 6) lantern(g, F * 0.15, F * 1.4, F);
+    // Ivy over the corners and along the top, flowering.
+    const vines: Array<[Pt, Pt, Pt]> = [
+      [[F * 0.3, F * 0.3], [F * 2.2, F * -0.05], [Math.min(w * 0.22, F * 4.2), F * 0.3]],
+      [[F * 0.25, F * 4.2], [F * -0.1, h * 0.35], [F * 0.3, Math.min(h * 0.55, h - F * 4)]],
+      [[w * 0.6, F * 0.25], [w * 0.68, F * -0.1], [w * 0.76, F * 0.3]],
+      [[w - F * 0.3, F * 0.3], [w - F * 1.8, F * -0.05], [w - F * 3.6, F * 0.3]],
+      [[w - F * 0.3, F * 0.35], [w + F * 0.05, F * 1.6], [w - F * 0.2, F * 3]],
+      [[F * 0.3, h - F * 0.3], [F * -0.1, h - F * 2.6], [F * 0.3, h - F * 4.6]],
+      [[F * 0.35, h - F * 0.3], [F * 2.2, h + F * 0.05], [F * 4, h - F * 0.3]],
+      [[w - F * 0.35, h - F * 0.3], [w - F * 2, h + F * 0.05], [w - F * 3.6, h - F * 0.3]],
+    ];
+    vines.forEach(([a, c, b]) => vine(g, R, curve(a, c, b), F, true));
   },
 
   /* The skills: a runestone's grey margin, tally notches cut along it in fives, a rune cut at each corner, its edge chipped. */

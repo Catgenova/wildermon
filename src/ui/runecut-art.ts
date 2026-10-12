@@ -4,7 +4,7 @@ import {
 } from '../render/runestone';
 import { hashOf, PPM, rand } from '../render/ivy';
 import { NIGHT_WASH } from '../render/nightwash';
-import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameOddities, paintFrame, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
+import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameOddities, paintFrame, paintHammers, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
 
 /**
  * Runecut's art: a window as a slab of the runestones' stone, its rune cut
@@ -373,6 +373,11 @@ function glowOf(glyph: string, scale: number): Glow {
  * pixels a CSS pixel, for the light's bake.
  */
 export function paintNiche(g: Ctx, glyph: string, o: ArtOpts, scale: number, lit = true): void {
+  // Crafting's is the workshop's sign, two hammers on a cloth, and has no rune to light.
+  if (o.frame === 'bench') {
+    paintHammers(g, NICHE_W, NICHE_H, o.night);
+    return;
+  }
   if (o.frame === 'burlap') {
     // The same rune, at the same place, so its light and motes after dark land on it.
     paintTag(g, glyph, NICHE_W, NICHE_H, NICHE.mid, NICHE_H - NICHE.rune.z, NICHE.rune.s, o.night);

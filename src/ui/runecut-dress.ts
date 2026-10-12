@@ -168,8 +168,9 @@ class Dressed {
     let niche: HTMLCanvasElement | null = null;
     if (this.glyph) {
       const glyph = this.glyph;
-      niche = cachedCanvas(`niche|${kind === 'burlap' ? kind : ''}|${glyph}|${look.rc}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k));
-      this.unlit = night ? cachedCanvas(`niche-unlit|${kind === 'burlap' ? kind : ''}|${glyph}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k, false)) : null;
+      niche = cachedCanvas(`niche|${kind === 'burlap' || kind === 'bench' ? kind : ''}|${glyph}|${look.rc}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k));
+      // A badge with no rune on it (`paintHammers`) has nothing to breathe after dark.
+      this.unlit = night && kind !== 'bench' ? cachedCanvas(`niche-unlit|${kind === 'burlap' ? kind : ''}|${glyph}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k, false)) : null;
       // The same picture serves every window with this rune, so each takes its own copy to show.
       niche = this.copyOf(niche);
     }
