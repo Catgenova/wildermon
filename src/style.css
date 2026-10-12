@@ -5004,6 +5004,13 @@ kbd {
   padding-left: 22px;
 }
 
+/* Skills' badge, the lavender tablet, a size larger than a stone niche and set into the frame's top left. */
+[data-ui='runecut'] .win[data-frame='runestone'] .rc-niche {
+  margin: -16px 8px -12px -12px;
+  transform: scale(1.3);
+  transform-origin: 50% 0;
+}
+
 /* Crafting's badge, the cloth with the crossed hammers, a size larger than a stone niche and hung over the frame's top. */
 [data-ui='runecut'] .win[data-frame='bench'] .rc-niche {
   margin: -18px 6px -14px -10px;

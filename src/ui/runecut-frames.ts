@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -48,7 +48,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'burlap', label: 'Burlap sack', for: ['inventory'] },
   { kind: 'crate', label: 'Wooden crate', for: ['crate', 'stores'] },
   { kind: 'bench', label: "Carpenter's bench", for: ['craft'] },
-  { kind: 'runestone', label: 'Runestone', for: ['skills'] },
+  { kind: 'runestone', label: 'Stone pillars and oak', for: ['skills'] },
   { kind: 'guild', label: 'Guild leather', for: ['trades'] },
   { kind: 'altar', label: 'Altar marble', for: ['faith'] },
   { kind: 'parchment', label: 'Parchment', for: ['map'] },
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -1206,15 +1206,20 @@ function ivyLeaf(g: Ctx, x: number, y: number, ang: number, s: number, lit: bool
   g.restore();
 }
 
-/** A small white flower at (x, y): five petals round a yellow eye. */
-function blossom(g: Ctx, x: number, y: number, r: number): void {
+/** A flower's petals and their edge: white, or lavender. */
+type Petal = readonly [string, string];
+const WHITE_PETAL: Petal = ['#fdf8ee', '#b9ae98'];
+const LILAC_PETAL: Petal = ['#c4b3ea', '#7f6aa8'];
+
+/** A small flower at (x, y): five petals round a yellow eye, white unless told otherwise. */
+function blossom(g: Ctx, x: number, y: number, r: number, petal: Petal = WHITE_PETAL): void {
   for (let k = 0; k < 5; k++) {
     const a = (k / 5) * Math.PI * 2 - Math.PI / 2;
     g.beginPath();
     g.ellipse(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.6, r * 0.55, r * 0.4, a, 0, Math.PI * 2);
-    g.fillStyle = css(H('#fdf8ee'));
+    g.fillStyle = css(H(petal[0]));
     g.fill();
-    g.strokeStyle = css(H('#b9ae98'));
+    g.strokeStyle = css(H(petal[1]));
     g.lineWidth = 0.6;
     g.stroke();
   }
@@ -1224,8 +1229,8 @@ function blossom(g: Ctx, x: number, y: number, r: number): void {
   g.fill();
 }
 
-/** A strand of ivy along points: its stem, leaves off it every 6 to 9 px on alternate sides, and now and then a flower. */
-function vine(g: Ctx, R: () => number, pts: Pt[], F: number, flowers: boolean): void {
+/** A strand of ivy along points: its stem, leaves off it every 6 to 9 px on alternate sides, and now and then a flower, in turn from `petals`. */
+function vine(g: Ctx, R: () => number, pts: Pt[], F: number, flowers: boolean, petals: readonly Petal[] = [WHITE_PETAL]): void {
   g.beginPath();
   pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
   g.strokeStyle = css(H(MOSS.dark));
@@ -1243,7 +1248,7 @@ function vine(g: Ctx, R: () => number, pts: Pt[], F: number, flowers: boolean): 
     ivyLeaf(g, bx, by, ang, sz, R() < 0.5);
     // Thickest at the corner it grows from: a second leaf there, the other way.
     if (t < 0.3) ivyLeaf(g, bx, by, ang + side * 1.9, sz * 0.8, R() < 0.5);
-    if (flowers && n % 3 === 1) blossom(g, bx + Math.cos(ang) * sz * 0.45, by + Math.sin(ang) * sz * 0.45, F * 0.15);
+    if (flowers && n % 3 === 1) blossom(g, bx + Math.cos(ang) * sz * 0.45, by + Math.sin(ang) * sz * 0.45, F * 0.15, petals[((n - 1) / 3) % petals.length]);
     side = -side;
     n++;
     next = run + 5 + t * 9 + R() * (3 + t * 8);
@@ -1694,6 +1699,240 @@ export function paintHammers(g: Ctx, W: number, Hh: number, night: boolean): voi
   }
 }
 
+/* ---- the stone pillars' own kit ------------------------------------------ */
+
+/** The pillars' pale stone, a little lilac in its shadow, and the gems set in them. */
+const PILLAR = { body: H('#dcd7de'), lit: H('#f1eef3'), shade: H('#b3aab8'), ink: H('#776d80') };
+const GEM = { body: H('#a796cf'), lit: H('#dcd2f2'), shade: H('#6c5c99') };
+
+/** Gold, lit from the top left, across a box. */
+function goldFill(g: Ctx, x0: number, y0: number, x1: number, y1: number): CanvasGradient {
+  const f = g.createLinearGradient(x0, y0, x1, y1);
+  f.addColorStop(0, css(light(BRASS.body, 0.5)));
+  f.addColorStop(0.45, css(BRASS.body));
+  f.addColorStop(1, css(shade(BRASS.body, 0.3)));
+  return f;
+}
+
+/** A lavender stone in a gold setting at (x, y), `r` from its middle to its top: a gold diamond, the stone cut in four facets, and a glint. */
+function gem(g: Ctx, x: number, y: number, r: number): void {
+  const dia = (s: number): void => {
+    g.beginPath();
+    g.moveTo(x, y - s);
+    g.lineTo(x + s * 0.78, y);
+    g.lineTo(x, y + s);
+    g.lineTo(x - s * 0.78, y);
+    g.closePath();
+  };
+  g.save();
+  dia(r);
+  g.shadowColor = 'rgba(50, 36, 30, 0.45)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = goldFill(g, x - r, y - r, x + r, y + r);
+  g.fill();
+  g.restore();
+  dia(r);
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  const s = r * 0.6, w = s * 0.78;
+  const facets: Array<[Pt, Pt, RGB]> = [[[x, y - s], [x - w, y], GEM.lit], [[x, y - s], [x + w, y], GEM.body], [[x + w, y], [x, y + s], GEM.shade], [[x, y + s], [x - w, y], mix(GEM.body, GEM.shade, 0.4)]];
+  for (const [a, b, c] of facets) {
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(a[0], a[1]);
+    g.lineTo(b[0], b[1]);
+    g.closePath();
+    g.fillStyle = css(c);
+    g.fill();
+  }
+  dia(s);
+  g.strokeStyle = css(shade(GEM.shade, 0.25));
+  g.lineWidth = 0.7;
+  g.stroke();
+  g.beginPath();
+  g.arc(x - w * 0.3, y - s * 0.4, Math.max(0.7, r * 0.12), 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  g.fill();
+}
+
+/** Pale stone across a box, lit from the left, with grit in it and its ink round it. */
+function stone(g: Ctx, R: () => number, x0: number, y0: number, x1: number, y1: number, r: number): void {
+  const path = (): void => {
+    g.beginPath();
+    g.roundRect(x0, y0, x1 - x0, y1 - y0, r);
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(50, 40, 50, 0.35)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = 1;
+  g.shadowOffsetY = 1.5;
+  const f = g.createLinearGradient(x0, 0, x1, 0);
+  f.addColorStop(0, css(PILLAR.lit));
+  f.addColorStop(0.4, css(PILLAR.body));
+  f.addColorStop(1, css(PILLAR.shade));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.save();
+  path();
+  g.clip();
+  for (let k = 0; k < ((x1 - x0) * (y1 - y0)) / 40; k++) {
+    g.fillStyle = css(R() < 0.6 ? PILLAR.shade : PILLAR.lit, 0.55);
+    g.fillRect(x0 + R() * (x1 - x0), y0 + R() * (y1 - y0), 1, 1);
+  }
+  g.restore();
+  path();
+  g.strokeStyle = css(PILLAR.ink);
+  g.lineWidth = 1.1;
+  g.stroke();
+}
+
+/**
+ * A pillar's shaft from y0 to y1 across x0..x1: the stone, a panel sunk down
+ * the middle of it, a band carved round it at `bandAt`, and the capital and
+ * base standing out past it either side, each with a gem set in its face.
+ */
+function pillar(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, F: number, bandAt: number): void {
+  stone(g, R, x0, y0, x1, y1, 1);
+  const inset = (x1 - x0) * 0.26;
+  g.beginPath();
+  g.roundRect(x0 + inset, y0 + F * 1.4, x1 - x0 - inset * 2, y1 - y0 - F * 2.8, 2);
+  g.strokeStyle = css(PILLAR.shade);
+  g.lineWidth = 1;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x0 + inset + 1, y0 + F * 1.4 + 2);
+  g.lineTo(x0 + inset + 1, y1 - F * 1.4 - 2);
+  g.strokeStyle = css(PILLAR.lit, 0.9);
+  g.lineWidth = 0.7;
+  g.stroke();
+  stone(g, R, x0 - 2, bandAt - 3, x1 + 2, bandAt + 3, 1.5);
+  const mid = (x0 + x1) / 2, out = 3;
+  for (const top of [true, false]) {
+    // The block, and a slab a step wider across its outer end.
+    const [a, b] = top ? [y0 - 4, y0 + F * 1.2] : [y1 - F * 1.2, y1 + 4];
+    stone(g, R, x0 - out, a, x1 + out, b, 2);
+    const [sa, sb] = top ? [y0 - 8, y0 - 1] : [y1 + 1, y1 + 8];
+    stone(g, R, x0 - out - 3, sa, x1 + out + 3, sb, 2);
+    // A neck where it meets the shaft.
+    const n = top ? b : a - 4;
+    stone(g, R, x0 - 1, n, x1 + 1, n + 4, 1);
+    // The gem set in a panel sunk in its face.
+    const gy = (a + b) / 2 + (top ? 1 : -1), pw = (x1 - x0) * 0.62, ph = (b - a) * 0.66;
+    g.beginPath();
+    g.roundRect(mid - pw / 2, gy - ph / 2, pw, ph, 1.5);
+    g.fillStyle = css(PILLAR.shade, 0.35);
+    g.fill();
+    g.strokeStyle = css(PILLAR.shade);
+    g.lineWidth = 0.9;
+    g.stroke();
+    g.beginPath();
+    g.moveTo(mid - pw / 2 + 0.6, gy + ph / 2 + 0.6);
+    g.lineTo(mid + pw / 2 + 0.6, gy + ph / 2 + 0.6);
+    g.lineTo(mid + pw / 2 + 0.6, gy - ph / 2 + 0.6);
+    g.strokeStyle = css(PILLAR.lit);
+    g.lineWidth = 0.7;
+    g.stroke();
+    gem(g, mid, gy, F * 0.24);
+  }
+}
+
+/** A bunch of flowers at (x, y), `r` across each: their leaves first, then the flowers, white and lavender in turn. */
+function posy(g: Ctx, R: () => number, x: number, y: number, r: number, n: number, first: Petal = WHITE_PETAL): void {
+  for (let k = 0; k < n + 2; k++) ivyLeaf(g, x + (R() - 0.5) * r * 2, y + (R() - 0.5) * r * 1.6, R() * Math.PI * 2, r * 1.5, R() < 0.5);
+  for (let k = 0; k < n; k++) {
+    const a = (k / n) * Math.PI * 2 + R();
+    blossom(g, x + Math.cos(a) * r * 0.75, y + Math.sin(a) * r * 0.6, r * (0.9 + R() * 0.25), k % 2 ? (first === WHITE_PETAL ? LILAC_PETAL : WHITE_PETAL) : first);
+  }
+}
+
+/** A curve through its points, each pair a bend: so a strand can wander rather than make one arc. */
+function wander(...pts: Pt[]): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i + 2 < pts.length; i += 2) out.push(...curve(pts[i], pts[i + 1], pts[i + 2]).slice(i ? 1 : 0));
+  return out;
+}
+
+/**
+ * Skills' badge, where another window's rune is: a lavender tablet arched at
+ * its top in a gold setting, a gold sprig on it. `W` by `Hh`.
+ */
+export function paintTablet(g: Ctx, W: number, Hh: number, night: boolean): void {
+  const arch = (d: number): void => {
+    const x0 = 1.5 + d, x1 = W - 1.5 - d, y0 = 2 + d, y1 = Hh - 2 - d, r = (x1 - x0) / 2;
+    g.beginPath();
+    g.moveTo(x0, y1 - 2);
+    g.lineTo(x0, y0 + r);
+    g.arc((x0 + x1) / 2, y0 + r, r, Math.PI, 0);
+    g.lineTo(x1, y1 - 2);
+    g.quadraticCurveTo(x1, y1, x1 - 2, y1);
+    g.lineTo(x0 + 2, y1);
+    g.quadraticCurveTo(x0, y1, x0, y1 - 2);
+    g.closePath();
+  };
+  g.save();
+  arch(0);
+  g.shadowColor = 'rgba(40, 26, 30, 0.45)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.2;
+  g.fillStyle = goldFill(g, 0, 0, W, Hh);
+  g.fill();
+  g.restore();
+  arch(0);
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  arch(2.2);
+  const lav = g.createLinearGradient(0, 0, W, Hh);
+  lav.addColorStop(0, css(light(GEM.body, 0.25)));
+  lav.addColorStop(0.55, css(GEM.body));
+  lav.addColorStop(1, css(GEM.shade));
+  g.fillStyle = lav;
+  g.fill();
+  g.strokeStyle = css(shade(BRASS.ink, 0.1), 0.8);
+  g.lineWidth = 0.7;
+  g.stroke();
+  // The sprig: a stem, and three pairs of leaves up it, the top one alone.
+  const mid = W / 2, foot = Hh - 7, tip = 9;
+  g.beginPath();
+  g.moveTo(mid, foot);
+  g.quadraticCurveTo(mid + 0.8, (foot + tip) / 2, mid, tip);
+  g.strokeStyle = css(light(BRASS.body, 0.25));
+  g.lineWidth = 1.1;
+  g.lineCap = 'round';
+  g.stroke();
+  const leaf = (y: number, ang: number, s: number): void => {
+    g.save();
+    g.translate(mid, y);
+    g.rotate(ang);
+    g.beginPath();
+    g.moveTo(0, 0);
+    g.quadraticCurveTo(s * 0.5, -s * 0.38, s, 0);
+    g.quadraticCurveTo(s * 0.5, s * 0.38, 0, 0);
+    g.fillStyle = css(light(BRASS.body, 0.3));
+    g.fill();
+    g.strokeStyle = css(BRASS.ink);
+    g.lineWidth = 0.5;
+    g.stroke();
+    g.restore();
+  };
+  for (const [y, s] of [[foot - 4, 6.5], [foot - 10, 5.5], [foot - 16, 4.5]] as Array<[number, number]>) {
+    leaf(y, -Math.PI * 0.78, s);
+    leaf(y, -Math.PI * 0.22, s);
+  }
+  leaf(tip + 1, -Math.PI / 2, 4.5);
+  if (night) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
+    g.fillRect(-4, -4, W + 8, Hh + 8);
+    g.restore();
+  }
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -1932,58 +2171,95 @@ const PAINTERS: Record<string, Painter> = {
     vines.forEach(([a, c, b]) => vine(g, R, curve(a, c, b), F, true));
   },
 
-  /* The skills: a runestone's grey margin, tally notches cut along it in fives, a rune cut at each corner, its edge chipped. */
+  /*
+   * Skills: a doorway of pale stone and oak. A stone pillar runs down each
+   * side with a capital and a base standing out past it and a band carved
+   * round it, oak beams lie across the top and the bottom between them, and
+   * an oak moulding runs round the content inside. Gold-set lavender stones
+   * are let into the capitals, the bases, the pillars and the middle of each
+   * beam; ivy flowering white and lavender climbs the pillars, a bunch of
+   * flowers sits on the top right capital and a sprig of lavender by the
+   * bottom right base.
+   */
   runestone(g, w, h, F, R) {
-    const fill = faceColour(STONE, 0.62);
-    eachSide(g, w, h, (s) => {
-      const c = mix(faceColour(STONE, 0.5), fill, s.lit);
+    const P = F * 0.7, oak = H('#8d6142'), oakInk = H('#4f3322');
+    // The oak moulding round the content.
+    g.beginPath();
+    g.roundRect(F * 0.4, F * 0.4, w - F * 0.8, h - F * 0.8, 6);
+    g.roundRect(F - 1, F - 1, w - F * 2 + 2, h - F * 2 + 2, 5);
+    const mould = g.createLinearGradient(0, 0, w, h);
+    mould.addColorStop(0, css(light(oak, 0.12)));
+    mould.addColorStop(1, css(shade(oak, 0.12)));
+    g.fillStyle = mould;
+    g.fill('evenodd');
+    g.beginPath();
+    g.roundRect(F - 2.5, F - 2.5, w - F * 2 + 5, h - F * 2 + 5, 5.5);
+    g.strokeStyle = 'rgba(255, 232, 196, 0.45)';
+    g.lineWidth = 1;
+    g.stroke();
+    g.beginPath();
+    g.roundRect(F - 1, F - 1, w - F * 2 + 2, h - F * 2 + 2, 5);
+    g.strokeStyle = css(oakInk);
+    g.lineWidth = 1.2;
+    g.stroke();
+    // The beams across the top and the bottom, between the pillars.
+    plank(g, R, P - 4, w - P + 4, -1.5, F * 0.56, oak);
+    plank(g, R, P - 4, w - P + 4, h - F * 0.56, h + 1.5, oak);
+    // The pillars, each with its band a little below the middle.
+    pillar(g, R, -2, P, 0, h, F, h * 0.62);
+    pillar(g, R, w - P, w + 2, 0, h, F, h * 0.62);
+    // Stones let into the shafts.
+    if (h > F * 10) {
+      gem(g, P / 2 - 1, h * 0.33, F * 0.2);
+      gem(g, w - P / 2 + 1, h * 0.27, F * 0.2);
+      gem(g, w - P / 2 + 1, h * 0.47, F * 0.2);
+    }
+    // The beams' stones: a small one at the top, set on the beam; a larger at the foot, on an oak boss with a sprig either side.
+    gem(g, w / 2, F * 0.14, F * 0.42);
+    // A plaque carved on the foot beam under it, dipping below the beam.
+    g.save();
+    g.beginPath();
+    g.moveTo(w / 2 - F * 1.5, h - F * 0.56);
+    g.quadraticCurveTo(w / 2 - F * 0.9, h - F * 0.56, w / 2 - F * 0.7, h - F * 0.9);
+    g.quadraticCurveTo(w / 2, h - F * 1.15, w / 2 + F * 0.7, h - F * 0.9);
+    g.quadraticCurveTo(w / 2 + F * 0.9, h - F * 0.56, w / 2 + F * 1.5, h - F * 0.56);
+    g.lineTo(w / 2 + F * 1.2, h + 1);
+    g.quadraticCurveTo(w / 2 + F * 0.5, h + 2, w / 2, h + 8);
+    g.quadraticCurveTo(w / 2 - F * 0.5, h + 2, w / 2 - F * 1.2, h + 1);
+    g.closePath();
+    g.shadowColor = 'rgba(40, 26, 18, 0.4)';
+    g.shadowBlur = 3;
+    g.shadowOffsetY = 1.5;
+    const boss = g.createLinearGradient(0, h - F * 1.1, 0, h + 8);
+    boss.addColorStop(0, css(light(oak, 0.18)));
+    boss.addColorStop(1, css(shade(oak, 0.2)));
+    g.fillStyle = boss;
+    g.fill();
+    g.restore();
+    g.strokeStyle = css(oakInk);
+    g.lineWidth = 1.1;
+    g.stroke();
+    for (const sg of [-1, 1]) vine(g, R, curve([w / 2 + sg * F * 1.1, h - F * 0.3], [w / 2 + sg * F * 2, h - F * 0.62], [w / 2 + sg * F * 3, h - F * 0.26]), F * 0.9, true, [sg < 0 ? WHITE_PETAL : LILAC_PETAL]);
+    gem(g, w / 2, h - F * 0.4, F * 0.46);
+    // Ivy up the pillars and over the top right capital.
+    const L = P / 2, Rx = w - P / 2;
+    if (h > F * 8) {
+      const lush = F * 1.2;
+      vine(g, R, wander([L + 1, h - F * 1.2], [L - 7, h * 0.82], [L + 2, h * 0.74], [L + 8, h * 0.66], [L - 1, h * 0.56]), lush, true, [LILAC_PETAL, WHITE_PETAL]);
+      vine(g, R, wander([L + 3, F * 1.2], [L - 7, F * 2.8], [L + 1, F * 4.6]), lush * 0.9, false);
+      vine(g, R, wander([w - F * 1.1, F * 0.3], [w - F * 2.6, F * 0.95], [w - F * 4.4, F * 0.25]), lush * 0.85, true);
+      vine(g, R, wander([Rx, F * 1.1], [Rx + 7, h * 0.12], [Rx - 2, h * 0.2], [Rx - 8, h * 0.26], [Rx + 1, h * 0.32]), lush, true, [WHITE_PETAL, LILAC_PETAL]);
+      vine(g, R, wander([Rx - 1, h - F * 1.2], [Rx + 7, h * 0.86], [Rx - 1, h * 0.78], [Rx - 7, h * 0.72], [Rx + 1, h * 0.66]), lush, true);
+      posy(g, R, w - F * 0.4, F * 0.5, F * 0.3, 4, LILAC_PETAL);
+      posy(g, R, F * 0.45, h - F * 1.5, F * 0.28, 4);
+      // Lavender standing up by the bottom right base.
       g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      g.fillStyle = css(c);
-      g.fillRect(0, 0, s.len, F);
-      // Grit and a few pale flecks.
-      for (let k = 0; k < s.len / 3; k++) {
-        g.fillStyle = css(R() < 0.6 ? shade(c, 0.3) : light(c, 0.4), 0.5);
-        g.fillRect(R() * s.len, R() * F, 1, 1);
-      }
-      // The arris along the outer edge, lit.
-      g.fillStyle = css(light(c, 0.35), 0.8);
-      g.fillRect(0, 1, s.len, 1.2);
+      g.translate(w - F * 0.3, h - F * 1.2);
+      g.scale(0.8, -0.8);
+      lavender(g, R, 0, 0, F * 2.2);
       g.restore();
-      // Tallies: four strokes across the band, the fifth slashed through them.
-      for (let x = F * 1.7; x + 14 < s.len - F * 1.5; x += 24) {
-        for (let k = 0; k < 4; k++) cut(g, c, 1.4, () => { g.beginPath(); g.moveTo(x + k * 3.2, F * 0.24); g.lineTo(x + k * 3.2, F * 0.76); });
-        cut(g, c, 1.3, () => { g.beginPath(); g.moveTo(x - 2, F * 0.7); g.lineTo(x + 11.6, F * 0.3); });
-      }
-      // Chips out of the outer edge.
-      for (let k = 0; k < s.len / 70; k++) {
-        const x = F + R() * (s.len - F * 2), d = 1.5 + R() * 1.5, l = 3 + R() * 3;
-        g.beginPath();
-        g.moveTo(x - l, 0);
-        g.lineTo(x, d);
-        g.lineTo(x + l, 0);
-        g.fillStyle = css(shade(c, 0.25));
-        g.fill();
-        g.strokeStyle = INK;
-        g.lineWidth = 0.8;
-        g.stroke();
-      }
-    });
-    eachCorner(g, w, h, (i) => {
-      const c = faceColour(STONE, 0.56);
-      g.fillStyle = css(c);
-      g.fillRect(0.5, 0.5, F - 1, F - 1);
-      g.strokeStyle = css(shade(c, 0.4));
-      g.lineWidth = 0.8;
-      g.strokeRect(1.5, 1.5, F - 3, F - 3);
-      g.save();
-      g.translate(F / 2, F / 2);
-      g.scale(1, -1);
-      cut(g, c, 1.5, () => glyphPath(g, ['tiwaz', 'algiz', 'othala', 'laguz'][i], 0, 0, F * 0.4));
-      g.restore();
-    });
-    inkBand(g, w, h, F);
+      blossom(g, w - F * 0.8, h - F * 1.4, F * 0.22);
+    }
   },
 
   /* The trades: guild leather, a tooled border, brass studs, stitched along its edge. */
