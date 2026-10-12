@@ -175,9 +175,9 @@ class Dressed {
     let niche: HTMLCanvasElement | null = null;
     if (this.glyph) {
       const glyph = this.glyph;
-      niche = cachedCanvas(`niche|${kind === 'burlap' || kind === 'bench' || kind === 'runestone' || kind === 'parchment' || kind === 'treasure' || kind === 'wicker' ? kind : ''}|${glyph}|${look.rc}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k));
-      // A badge with no rune on it (`paintHammers`, `paintTablet`, `paintCompass`, `paintPaw`) has nothing to breathe after dark.
-      this.unlit = night && kind !== 'bench' && kind !== 'runestone' && kind !== 'parchment' && kind !== 'treasure' && kind !== 'wicker' ? cachedCanvas(`niche-unlit|${kind === 'burlap' ? kind : ''}|${glyph}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k, false)) : null;
+      niche = cachedCanvas(`niche|${kind === 'burlap' || kind === 'bench' || kind === 'runestone' || kind === 'parchment' || kind === 'treasure' || kind === 'wicker' || kind === 'ironbound' ? kind : ''}|${glyph}|${look.rc}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k));
+      // A badge with no rune on it (`paintHammers`, `paintTablet`, `paintCompass`, `paintPaw`, `paintGear`) has nothing to breathe after dark.
+      this.unlit = night && kind !== 'bench' && kind !== 'runestone' && kind !== 'parchment' && kind !== 'treasure' && kind !== 'wicker' && kind !== 'ironbound' ? cachedCanvas(`niche-unlit|${kind === 'burlap' ? kind : ''}|${glyph}|${kk}`, NICHE_W, NICHE_H, k, 'rc-niche', (g) => paintNiche(g, glyph, o, k, false)) : null;
       // The same picture serves every window with this rune, so each takes its own copy to show.
       niche = this.copyOf(niche);
     }

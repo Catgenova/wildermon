@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, turf: 14 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, turf: 14, ironbound: 12 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -60,7 +60,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
   { kind: 'turf', label: 'Mossy wood and stone', for: ['tile'] },
-  { kind: 'ironbound', label: 'Iron-bound oak', for: ['settings'] },
+  { kind: 'ironbound', label: 'Grey stone, iron and gold', for: ['settings'] },
   { kind: 'chain', label: 'Iron chain', for: ['keeper'] },
   { kind: 'strap', label: 'Leather strap', for: ['hud'] },
   { kind: 'toolbelt', label: 'Tool belt', for: ['toolbar'] },
@@ -71,7 +71,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26, ironbound: 22 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -227,21 +227,6 @@ function board(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: 
   g.strokeStyle = INK;
   g.lineWidth = 1;
   g.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
-}
-
-/** A run of planks along a side, butted end to end every 40 to 80 px. Returns where the joints are. */
-function planks(g: Ctx, R: () => number, len: number, y0: number, y1: number, tone: RGB, lit: number, from = 0, to = len): number[] {
-  const joints: number[] = [];
-  let x = from;
-  while (x < to) {
-    const next = Math.min(to, x + 40 + R() * 40);
-    const t = mix(tone, light(tone, 0.12), R());
-    board(g, R, x, to - next < 20 ? to : next, y0, y1, t, lit);
-    if (to - next < 20) break;
-    joints.push(next);
-    x = next;
-  }
-  return joints;
 }
 
 /** Stitches along a line from x0 to x1 at y: dashes 3 px long, 3 px apart, in thread. */
@@ -3330,6 +3315,95 @@ function cornerStone(g: Ctx, x: number, y: number, r: number): void {
   g.stroke();
 }
 
+/* ---- settings' own kit ------------------------------------------------------ */
+
+/** Settings' grey stone: its face, its light and its shadow. */
+const SLATE = { body: H('#858b94'), lit: H('#b9bec5'), deep: H('#565b64') };
+
+/** An iron hinge plate at the window's edge x, centred on y, pointing out on the side `d` (-1 left, 1 right): five-sided, edged in gold, two studs. */
+function hingePlate(g: Ctx, x: number, y: number, d: -1 | 1, F: number): void {
+  const ht = F * 1.5, out = F * 0.55, inn = F * 0.75;
+  const path = (): void => {
+    g.beginPath();
+    g.moveTo(x - d * inn, y - ht);
+    g.lineTo(x + d * out * 0.2, y - ht);
+    g.lineTo(x + d * out, y);
+    g.lineTo(x + d * out * 0.2, y + ht);
+    g.lineTo(x - d * inn, y + ht);
+    g.closePath();
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(20, 20, 30, 0.45)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1;
+  const f = g.createLinearGradient(x - inn, y - ht, x + out, y + ht);
+  f.addColorStop(0, css(light(IRON.body, 0.35)));
+  f.addColorStop(1, css(shade(IRON.body, 0.2)));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(IRON.ink);
+  g.lineWidth = 1;
+  g.stroke();
+  gilt(g, () => {
+    g.beginPath();
+    g.moveTo(x - d * inn + d * 2, y - ht + 2);
+    g.lineTo(x + d * out * 0.2 - d * 1, y - ht + 2);
+    g.lineTo(x + d * out - d * 2.5, y);
+    g.lineTo(x + d * out * 0.2 - d * 1, y + ht - 2);
+    g.lineTo(x - d * inn + d * 2, y + ht - 2);
+  }, 0.9);
+  for (const e of [-1, 1]) head(g, x - d * F * 0.15, y + e * ht * 0.5, F * 0.14, H('#d9b25c'), BRASS.ink);
+}
+
+/**
+ * Settings' badge, where another window's rune is: a cog in gold on a round
+ * of dark iron, ringed in gold. `W` by `Hh`.
+ */
+export function paintGear(g: Ctx, W: number, Hh: number, night: boolean): void {
+  const cx = W / 2, cy = Hh / 2, r = W / 2 - 1;
+  g.save();
+  g.beginPath();
+  g.arc(cx, cy, r, 0, Math.PI * 2);
+  g.shadowColor = 'rgba(30, 20, 10, 0.45)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = goldFill(g, cx - r, cy - r, cx + r, cy + r);
+  g.fill();
+  g.restore();
+  g.beginPath();
+  g.arc(cx, cy, r - 2, 0, Math.PI * 2);
+  g.fillStyle = css(shade(IRON.body, 0.35));
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.6;
+  g.stroke();
+  // The cog: eight teeth round a ring, a hole through its middle.
+  const teeth = 8, ro = r * 0.72, ri = r * 0.55;
+  g.beginPath();
+  for (let k = 0; k < teeth * 2; k++) {
+    const a0 = (k / (teeth * 2)) * Math.PI * 2, a1 = ((k + 1) / (teeth * 2)) * Math.PI * 2, rr = k % 2 ? ri : ro;
+    g.lineTo(cx + Math.cos(a0) * rr, cy + Math.sin(a0) * rr);
+    g.lineTo(cx + Math.cos(a1) * rr, cy + Math.sin(a1) * rr);
+  }
+  g.closePath();
+  g.moveTo(cx + r * 0.24, cy);
+  g.arc(cx, cy, r * 0.24, 0, Math.PI * 2, true);
+  g.fillStyle = goldFill(g, cx - r, cy - r, cx + r, cy + r);
+  g.fill('evenodd');
+  g.strokeStyle = css(BRASS.ink, 0.9);
+  g.lineWidth = 0.6;
+  g.stroke();
+  if (night) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
+    g.fillRect(-4, -4, W + 8, Hh + 8);
+    g.restore();
+  }
+}
+
 /* ---- the wildermon's own kit ---------------------------------------------- */
 
 /** The wildermon's pale wood, and the brown of its twigs and its marks. */
@@ -4392,8 +4466,11 @@ function goldStud(g: Ctx, x: number, y: number, r: number): void {
   g.stroke();
 }
 
-/** A blue gem in a gold lozenge at (x, y), `r` to its points: the setting, and the gem cut in four facets with a glint. */
-function gemLozenge(g: Ctx, x: number, y: number, r: number): void {
+/** A gem's four facets, top left round to bottom left: blue, or clear crystal. */
+const GEM_FACETS = { blue: ['#9fb6da', '#7790bb', '#4f6591', '#6a81ad'], crystal: ['#f2f6fa', '#cdd6e0', '#8f9cac', '#b4bfcc'] } as const;
+
+/** A gem in a gold lozenge at (x, y), `r` to its points: the setting, and the gem cut in four facets with a glint. */
+function gemLozenge(g: Ctx, x: number, y: number, r: number, gem: readonly string[] = GEM_FACETS.blue): void {
   const dia = (k: number): void => {
     g.beginPath();
     g.moveTo(x, y - r * k);
@@ -4415,10 +4492,10 @@ function gemLozenge(g: Ctx, x: number, y: number, r: number): void {
   g.stroke();
   const k = 0.66;
   const facets: Array<[Pt, Pt, string]> = [
-    [[x, y - r * k], [x - r * k * 0.78, y], '#9fb6da'],
-    [[x, y - r * k], [x + r * k * 0.78, y], '#7790bb'],
-    [[x, y + r * k], [x + r * k * 0.78, y], '#4f6591'],
-    [[x, y + r * k], [x - r * k * 0.78, y], '#6a81ad'],
+    [[x, y - r * k], [x - r * k * 0.78, y], gem[0]],
+    [[x, y - r * k], [x + r * k * 0.78, y], gem[1]],
+    [[x, y + r * k], [x + r * k * 0.78, y], gem[2]],
+    [[x, y + r * k], [x - r * k * 0.78, y], gem[3]],
   ];
   for (const [a, b, c] of facets) {
     g.beginPath();
@@ -5739,37 +5816,92 @@ const PAINTERS: Record<string, Painter> = {
     for (const x of [w * 0.18, w * 0.74]) pebble(g, x, -F * 0.05, F * 0.26, 0.3);
   },
 
-  /* Settings: oak bound in iron, straps across it and brackets at its corners, riveted. */
+  /*
+   * Settings: a band of grey stone, mottled, edged in gold inside and out; an
+   * iron plate over each corner with a gold stud; a gold lozenge set with a
+   * clear crystal at the middle of the top and of the foot, a stud either
+   * side; an iron hinge plate on the left near the top and on the right near
+   * the foot; small gold lozenges down the left.
+   */
   ironbound(g, w, h, F, R) {
-    const oak = shade(WOOD.oak, 0.12);
+    const slate = SLATE;
     eachSide(g, w, h, (s) => {
       g.save();
       mitre(g, s.len, F);
       g.clip();
-      planks(g, R, s.len, 0, F, oak, s.lit);
+      const f = g.createLinearGradient(0, 0, 0, F);
+      f.addColorStop(0, css(mix(slate.deep, slate.body, s.lit)));
+      f.addColorStop(0.3, css(mix(slate.body, slate.lit, s.lit * 0.7)));
+      f.addColorStop(0.8, css(mix(shade(slate.body, 0.15), slate.body, s.lit)));
+      f.addColorStop(1, css(slate.deep));
+      g.fillStyle = f;
+      g.fillRect(0, 0, s.len, F);
+      // The stone's mottle: soft patches lighter and darker, and grit.
+      for (let k = 0; k < s.len / 14; k++) {
+        g.beginPath();
+        g.ellipse(R() * s.len, F * (0.15 + R() * 0.7), 3 + R() * 7, 1.5 + R() * 3, R() * 3, 0, Math.PI * 2);
+        g.fillStyle = css(R() < 0.5 ? slate.lit : slate.deep, 0.22);
+        g.fill();
+      }
+      for (let k = 0; k < s.len / 4; k++) {
+        g.fillStyle = css(R() < 0.6 ? slate.deep : slate.lit, 0.5);
+        g.fillRect(R() * s.len, F * (0.1 + R() * 0.8), 1, 1);
+      }
       g.restore();
-      for (let x = F * 3.5; x < s.len - F * 3; x += 70) strap(g, x, F);
     });
-    eachCorner(g, w, h, () => {
-      // An L of iron over the corner.
-      g.fillStyle = css(IRON.body);
+    // Gold round the outside and the inside, the inside a fillet with a dark line beside it.
+    gilt(g, () => {
       g.beginPath();
-      g.moveTo(0, 0);
-      g.lineTo(F * 2.2, 0);
-      g.lineTo(F * 2.2, F * 0.7);
-      g.lineTo(F * 0.7, F * 0.7);
-      g.lineTo(F * 0.7, F * 2.2);
-      g.lineTo(0, F * 2.2);
+      g.rect(2.5, 2.5, w - 5, h - 5);
+    }, 1.2);
+    g.strokeStyle = css(shade(slate.deep, 0.3));
+    g.lineWidth = 1;
+    g.strokeRect(F * 0.78, F * 0.78, w - F * 1.56, h - F * 1.56);
+    gilt(g, () => {
+      g.beginPath();
+      g.rect(F - 2.5, F - 2.5, w - F * 2 + 5, h - F * 2 + 5);
+    }, 2);
+    inkBand(g, w, h, F);
+    // Iron plates over the corners, each with a gold stud.
+    eachCorner(g, w, h, () => {
+      const c = F * 1.5;
+      g.save();
+      g.beginPath();
+      g.moveTo(-1, -1);
+      g.lineTo(c, -1);
+      g.lineTo(c, F * 0.3);
+      g.lineTo(F * 0.3, c);
+      g.lineTo(-1, c);
       g.closePath();
+      g.shadowColor = 'rgba(20, 20, 30, 0.45)';
+      g.shadowBlur = 2.5;
+      g.shadowOffsetY = 1;
+      const f = g.createLinearGradient(0, 0, c, c);
+      f.addColorStop(0, css(light(IRON.body, 0.35)));
+      f.addColorStop(1, css(shade(IRON.body, 0.2)));
+      g.fillStyle = f;
       g.fill();
+      g.restore();
       g.strokeStyle = css(IRON.ink);
       g.lineWidth = 1;
       g.stroke();
-      g.fillStyle = css(light(IRON.body, 0.4), 0.7);
-      g.fillRect(1, 1, F * 2.2 - 2, 1);
-      for (const [x, y] of [[F * 0.35, F * 0.35], [F * 1.7, F * 0.35], [F * 0.35, F * 1.7]] as Pt[]) head(g, x, y, F * 0.12, light(IRON.body, 0.2), IRON.ink);
+      gilt(g, () => {
+        g.beginPath();
+        g.moveTo(c - 2, F * 0.3 + 1);
+        g.lineTo(F * 0.3 + 1, c - 2);
+      }, 0.9);
+      head(g, F * 0.48, F * 0.48, F * 0.17, H('#d9b25c'), BRASS.ink);
     });
-    inkBand(g, w, h, F);
+    // The crystal at the middle of the top and the foot, a stud either side.
+    for (const y of [F * 0.15, h - F * 0.15]) {
+      gemLozenge(g, w / 2, y, F * 0.7, GEM_FACETS.crystal);
+      for (const d of [-1, 1]) head(g, w / 2 + d * F * 1.2, y + (y < h / 2 ? F * 0.25 : -F * 0.25), F * 0.15, H('#d9b25c'), BRASS.ink);
+    }
+    // Hinge plates: the left near the top, the right near the foot.
+    hingePlate(g, 0, Math.min(h * 0.17, F * 6), -1, F);
+    hingePlate(g, w, Math.max(h * 0.83, h - F * 6), 1, F);
+    // Small gold lozenges down the left.
+    for (const t of [0.36, 0.52, 0.66, 0.9]) gemLozenge(g, F * 0.45, h * t, F * 0.38, GEM_FACETS.crystal);
   },
 
   /* The island keeper: iron chain links all round, over the stone. */
@@ -5896,19 +6028,6 @@ const PAINTERS: Record<string, Painter> = {
     });
   },
 };
-
-/** An iron strap across a side's band at x, riveted top and bottom. */
-function strap(g: Ctx, x: number, F: number): void {
-  g.fillStyle = css(IRON.body);
-  g.fillRect(x, 0, F * 0.55, F);
-  g.strokeStyle = css(IRON.ink);
-  g.lineWidth = 1;
-  g.strokeRect(x + 0.5, 0.5, F * 0.55 - 1, F - 1);
-  g.fillStyle = css(light(IRON.body, 0.4), 0.6);
-  g.fillRect(x + 1, 1, 1, F - 2);
-  head(g, x + F * 0.28, F * 0.25, F * 0.1, light(IRON.body, 0.2), IRON.ink);
-  head(g, x + F * 0.28, F * 0.75, F * 0.1, light(IRON.body, 0.2), IRON.ink);
-}
 
 /** Leather all round: its face, darker on the sides away from the light, a blind tooled line, and its ink. */
 function leatherBand(g: Ctx, w: number, h: number, F: number, hide: RGB, R: () => number): void {
