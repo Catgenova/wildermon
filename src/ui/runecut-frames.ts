@@ -59,7 +59,6 @@ export const FRAMES: FrameDef[] = [
   { kind: 'letter', label: 'Sketches on an oak board', for: ['social'] },
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
-  { kind: 'fieldbook', label: 'Field-worn leather', for: ['guide'] },
   { kind: 'mirror', label: 'Gilded mirror', for: ['look'] },
   { kind: 'turf', label: 'Turf', for: ['tile'] },
   { kind: 'rope', label: 'Knotted rope', for: ['tracker'] },
@@ -5584,65 +5583,6 @@ const PAINTERS: Record<string, Painter> = {
       goldStar4(g, cx + d * F * 3, h - F * 0.36, F * 0.32);
     }
     medallion(g, cx, cy, r, wood, (x, y, s) => rabbitMark(g, x, y, s));
-  },
-
-  /* The field guide: worn leather, scuffed, stitched, with flowers pressed flat at its corners. */
-  fieldbook(g, w, h, F, R) {
-    const hide = H('#a9805c');
-    leatherBand(g, w, h, F, hide, R);
-    eachSide(g, w, h, (s) => {
-      // Scuffs, paler where it has been handled, and a stitched edge.
-      for (let k = 0; k < s.len / 40; k++) {
-        g.beginPath();
-        g.ellipse(F + R() * (s.len - F * 2), F * (0.3 + R() * 0.4), 5 + R() * 8, 1.6 + R() * 1.6, 0, 0, Math.PI * 2);
-        g.fillStyle = css(light(hide, 0.35), 0.45);
-        g.fill();
-      }
-      stitches(g, F * 0.4, s.len - F * 0.4, 2.6, LINEN, 3, 3);
-    });
-    // Flowers pressed flat at three corners, each on its stem with two leaves: five petals round an eye, 6 px a petal.
-    const pressed = (x: number, y: number, a: number, petal: RGB): void => {
-      g.save();
-      g.translate(x, y);
-      g.rotate(a);
-      g.beginPath();
-      g.moveTo(0, 0);
-      g.quadraticCurveTo(F * 0.8, F * 0.15, F * 1.9, -F * 0.05);
-      g.strokeStyle = css(H('#4b6c57'));
-      g.lineWidth = 1.2;
-      g.stroke();
-      for (const [lx, sg] of [[F * 0.9, 1], [F * 1.45, -1]]) {
-        g.beginPath();
-        g.ellipse(lx, sg * F * 0.16, F * 0.3, F * 0.12, sg * 0.5, 0, Math.PI * 2);
-        g.fillStyle = css(H('#7fa36c'));
-        g.fill();
-        g.strokeStyle = css(H('#4b6c57'));
-        g.lineWidth = 0.7;
-        g.stroke();
-      }
-      for (let k = 0; k < 5; k++) {
-        const pa = (k / 5) * Math.PI * 2;
-        g.beginPath();
-        g.ellipse(Math.cos(pa) * 3.1, Math.sin(pa) * 3.1, 3.1, 2, pa, 0, Math.PI * 2);
-        g.fillStyle = css(petal);
-        g.fill();
-        g.strokeStyle = css(shade(petal, 0.5));
-        g.lineWidth = 0.7;
-        g.stroke();
-      }
-      g.beginPath();
-      g.arc(0, 0, 1.5, 0, Math.PI * 2);
-      g.fillStyle = css(H('#e8c25a'));
-      g.fill();
-      g.strokeStyle = css(H('#9a7a2c'));
-      g.lineWidth = 0.6;
-      g.stroke();
-      g.restore();
-    };
-    pressed(F * 0.5, F * 0.5, 0.15, H('#c9a7d8'));
-    pressed(w - F * 0.5, h - F * 0.5, Math.PI + 0.15, H('#9fbadf'));
-    pressed(w - F * 0.5, F * 0.5, Math.PI / 2 + 0.1, H('#eaa8b4'));
-    void R;
   },
 
   /* How you look: a gilded mirror frame, mitred, beaded inside, a shell at each corner. */

@@ -3,7 +3,6 @@ import { SPECIES, type SpeciesDef } from '../../game/creatures';
 import { countsLine, GUIDE_MARKS, guidePage, guidePages, keepable, MARK_NAMES, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { drawCreaturePortrait } from '../../render/sprites';
-import type { UIWindow } from '../windows';
 
 /** How big a kind is drawn on the index and on its own page, in CSS pixels. */
 const CARD = { w: 76, h: 56 };
@@ -21,15 +20,16 @@ const SHADOW = '#4f4538';
  *
  * Nothing here works anything out. The marks are the book's (`game.guide`) and
  * every line on a page is `guidePage`'s, read off the kind's definition. On an
- * island the book is the island's, asked for once each time the window opens,
- * and what comes back is added to what this side already holds.
+ * island the book is the island's, asked for once each time the journal is
+ * turned to its Field guide tab, and what comes back is added to what this
+ * side already holds.
  */
 export class GuidePanel {
   private readonly counts: HTMLDivElement;
   private readonly bar: HTMLDivElement;
   private readonly view: HTMLDivElement;
   /** The kind whose page is open, or null for the index. */
-  private shown: string | null = null;
+  private page: string | null = null;
   /** Pictures already drawn, by kind and by whether it has been seen, since a drawing does not change. */
   private readonly pictures = new Map<string, HTMLCanvasElement>();
   /** What was last drawn, so a mark that changes nothing on screen redraws nothing. */
@@ -38,37 +38,44 @@ export class GuidePanel {
   private asking = false;
   private failed = false;
 
+  /**
+   * Drawn into `host`, the journal's Field guide tab (`JournalPanel`), and
+   * redrawn only while `showing` says that tab can be seen; `turnHere` opens
+   * the journal at it.
+   */
   constructor(
-    private readonly win: UIWindow,
+    private readonly host: HTMLElement,
     private readonly game: Game,
     private readonly island: Island | null,
+    private readonly showing: () => boolean,
+    private readonly turnHere: () => void,
   ) {
-    win.body.classList.add('guide-body');
+    host.classList.add('guide-body');
     this.counts = document.createElement('div');
     this.counts.className = 'guide-counts';
     this.bar = document.createElement('div');
     this.bar.className = 'panel-bar guide-bar';
     this.view = document.createElement('div');
-    win.body.append(this.counts, this.bar, this.view);
-    win.onOpen = () => void this.refresh();
+    host.append(this.counts, this.bar, this.view);
     game.events.on('guide', () => {
-      if (this.win.isOpen) this.draw();
+      if (this.showing()) this.draw();
     });
-    // Nothing is drawn for a window that starts shut, which is forty pictures
-    // nobody may look at; one the layout left open is drawn now.
-    if (win.isOpen) void this.refresh();
+    // Nothing is drawn until the tab is turned to: forty pictures nobody may look at.
+  }
+
+  /** The tab has just been turned to, or the journal opened at it: draw, and ask the island. */
+  shown(): void {
+    void this.refresh();
   }
 
   /** Open the book at a kind's page. */
   openAt(species: string): void {
-    this.shown = SPECIES[species] ? species : null;
-    if (this.win.isOpen) {
-      this.win.focus();
-      this.draw();
-    } else this.win.open();
+    this.page = SPECIES[species] ? species : null;
+    if (this.showing()) this.draw();
+    this.turnHere();
   }
 
-  /** Asked of the island once as the window opens; alone, the book is already here. */
+  /** Asked of the island once as the tab is turned to; alone, the book is already here. */
   private async refresh(): Promise<void> {
     this.draw();
     if (!this.island || this.asking) return;
@@ -85,15 +92,15 @@ export class GuidePanel {
 
   private draw(): void {
     const g = this.game.guide;
-    const key = `${this.shown}|${this.failed}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
+    const key = `${this.page}|${this.failed}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
     if (key === this.drawn) return;
     this.drawn = key;
     this.counts.textContent = countsLine(g);
     this.counts.title = 'Kinds seen out of every kind there is; tamed and bred out of the kinds that can be, which the monsters cannot';
     this.bar.replaceChildren();
     this.view.replaceChildren();
-    if (this.failed) this.say('The island did not answer just now, so this is what it said last. It is asked again each time the window opens.');
-    const def = this.shown ? SPECIES[this.shown] : undefined;
+    if (this.failed) this.say('The island did not answer just now, so this is what it said last. It is asked again each time the Field guide tab is turned to.');
+    const def = this.page ? SPECIES[this.page] : undefined;
     if (def) this.drawPage(def);
     else this.drawIndex();
   }
@@ -207,10 +214,10 @@ export class GuidePanel {
   }
 
   private turnTo(species: string | null): void {
-    this.shown = species;
+    this.page = species;
     this.draw();
     // A new page is read from the top, and so is the index come back to.
-    this.win.body.scrollTop = 0;
+    this.host.scrollTop = 0;
   }
 
   /**

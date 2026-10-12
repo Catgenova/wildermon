@@ -403,12 +403,11 @@ export class UI {
       (x, y, title, items) => this.menu.show(x, y, title, items),
     );
     /*
-     * Every kind of creature, and which of them you have seen, tamed and bred.
-     * Beside the Wildermon window, which is the herd you have; this is the
-     * whole of what there is to have. Opened from a creature's own menu too.
+     * Every kind of creature, and which of them you have seen, tamed and bred:
+     * the journal's Field guide tab, asked of the island only while it shows.
+     * Opened from a creature's own menu too, at that kind's page.
      */
-    const guideWin = this.windows.create({ id: 'guide', title: 'Field guide', x: 364, y: 56, width: 400, height: 480, anchor: 'tr', open: false });
-    this.guide = new GuidePanel(guideWin, game, this.island);
+    this.guide = new GuidePanel(this.journalPanel.guidePage, game, this.island, () => journal.isOpen && this.journalPanel.tab === 'guide', () => this.journalPanel.open('guide'));
     const stores = this.windows.create({ id: 'stores', title: 'Stores', x: 12, y: 486, width: 360, height: 300, anchor: 'tr', open: false });
     this.stores = new StoresPanel(
       stores,
@@ -478,6 +477,7 @@ export class UI {
     this.journalPanel.onShow = (tab) => {
       if (tab === 'help') void this.helpPages();
       if (tab === 'boards') this.boards.shown();
+      if (tab === 'guide') this.guide.shown();
     };
     // A material no recipe makes: the help, opened at what it says about it.
     this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
@@ -612,9 +612,9 @@ export class UI {
       return l === 'unbound' ? undefined : l;
     };
     for (const b of BINDS) {
-      const journalTab = ({ win_ledger: 'ledger', win_help: 'help', win_news: 'news', win_boards: 'boards' } as const)[b.id as 'win_ledger'];
+      const journalTab = ({ win_ledger: 'ledger', win_help: 'help', win_news: 'news', win_boards: 'boards', win_guide: 'guide' } as const)[b.id as 'win_ledger'];
       if (journalTab) {
-        // The ledger, the help, what's new and the leaderboards are tabs of the journal, not windows of their own.
+        // The ledger, the help, what's new, the leaderboards and the field guide are tabs of the journal, not windows of their own.
         const tab = journalTab;
         out.push({ label: b.label, kind: 'Window', hint: b.hint, key: key(b.id), run: () => this.journalPanel.open(tab) });
       } else if (b.id.startsWith('win_')) {

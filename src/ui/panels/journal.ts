@@ -4,8 +4,8 @@ import type { UIWindow } from '../windows';
 import { LedgerPanel } from './ledger';
 import { NewsPanel } from './news';
 
-/** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, and who stands highest. */
-export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards';
+/** The journal's tabs: what there is to do, what you have made, how any of it works, what has changed, who stands highest, and every kind of creature. */
+export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards' | 'guide';
 
 /**
  * The journal: everything somebody thought worth doing on this island, in
@@ -19,8 +19,10 @@ export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards';
  * changed on the island (`NewsPanel`), turned to by itself on coming ashore
  * when something has changed since this browser last showed it. Its fifth is
  * the island's leaderboards (`BoardsPanel`), made into `boardsPage` by the UI,
- * which holds the island they are asked of. What there is to do, what has been
- * done, how any of it works, what is new and who stands highest are one book.
+ * which holds the island they are asked of. Its sixth is the field guide
+ * (`GuidePanel`), made into `guidePage` by the UI the same way. What there is
+ * to do, what has been done, how any of it works, what is new, who stands
+ * highest and every kind of creature there is are one book.
  */
 export class JournalPanel {
   private readonly rows = new Map<string, HTMLDivElement>();
@@ -36,6 +38,8 @@ export class JournalPanel {
   private readonly news: NewsPanel;
   /** The Leaderboards tab's page. */
   readonly boardsPage: HTMLDivElement;
+  /** The Field guide tab's page. */
+  readonly guidePage: HTMLDivElement;
   /** Told whenever a tab is shown, the window open. */
   onShow: ((tab: JournalTab) => void) | null = null;
 
@@ -49,6 +53,7 @@ export class JournalPanel {
       ['help', 'Help', 'How any of this works'],
       ['news', "What's new", 'What changed on the island, newest first, with what you had not read yet marked'],
       ['boards', 'Leaderboards', 'Who holds each skill highest on the island, its best-bred wildermon and its biggest settlements'],
+      ['guide', 'Field guide', 'A page for every kind of creature: which you have seen, tamed and bred, where each lives and what it gives'],
     ] as Array<[JournalTab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -78,8 +83,12 @@ export class JournalPanel {
     this.boardsPage.hidden = true;
     this.pages.set('help', this.helpPage);
     this.pages.set('news', news);
+    this.guidePage = document.createElement('div');
+    this.guidePage.className = 'settings-page';
+    this.guidePage.hidden = true;
     this.pages.set('boards', this.boardsPage);
-    win.body.append(bar, goals, made, this.helpPage, news, this.boardsPage);
+    this.pages.set('guide', this.guidePage);
+    win.body.append(bar, goals, made, this.helpPage, news, this.boardsPage, this.guidePage);
     this.ledger = new LedgerPanel(made, game, () => win.isOpen && this.tab === 'ledger');
     this.count = document.createElement('div');
     this.count.className = 'skill-group';
