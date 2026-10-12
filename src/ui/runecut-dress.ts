@@ -1,4 +1,4 @@
-import { frameFor, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
+import { frameFor, frameLamps, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
 import { watchLook, type Look } from './theme';
 
 /**
@@ -25,9 +25,11 @@ import { watchLook, type Look } from './theme';
  *
  * Each is painted once for a size and a light and kept; painted again only
  * when the window opens at a size it was not painted for, a resize has
- * stopped, or the look changes. The one thing that moves is the front
- * window's rune after dark, breathing, and the motes off it: one small canvas
- * a frame, and none under `prefers-reduced-motion`.
+ * stopped, or the look changes. What moves: the front window's rune after
+ * dark, breathing, and the motes off it, one small canvas a frame; and the
+ * light of a lamp on a frame (`frameLamps`), a glow over the window's edge
+ * and another under it past the edge, swelling and fading in CSS. Neither
+ * moves under `prefers-reduced-motion`.
  */
 
 /** Canvases painted, by what they are, so a window going back to a size or light it had takes the picture it had. */
@@ -82,6 +84,8 @@ class Dressed {
   private size = '';
   /** How far its frame stands past it (`reachOf`), for laying the frame's canvas under it. */
   private reach = 0;
+  /** The glow of each lamp on its frame: over the window's edge, inside it, and under it past the edge, with where each lamp is on the window. */
+  private lamps: Array<{ x: number; y: number; r: number; over: HTMLElement; under: HTMLElement }> = [];
   private readonly seed: number;
 
   constructor(
@@ -102,6 +106,7 @@ class Dressed {
       this.size = size;
       if (this.frame) this.frame.hidden = true;
       if (this.edge) this.edge.hidden = true;
+      for (const l of this.lamps) l.under.hidden = l.over.hidden = true;
       if (this.due) clearTimeout(this.due);
       this.due = setTimeout(() => {
         this.due = null;
@@ -120,6 +125,7 @@ class Dressed {
     const w = this.el.offsetWidth, h = this.el.offsetHeight;
     if (!look || look.ui !== 'runecut' || this.el.hidden || !w || !h) {
       delete this.el.dataset.frame;
+      this.lampsFor([], false);
       this.lay(null, null, null);
       return;
     }
@@ -165,6 +171,7 @@ class Dressed {
       frame.style.clipPath = `path(evenodd, 'M0 0 H${W} V${H} H0 Z M${R + bl} ${R + bt} H${R + w - bl} V${R + h - bt} H${R + bl} Z')`;
     }
     this.edge = frame ? this.edgeOf(frame, w, h, k, R) : null;
+    this.lampsFor(frame ? frameLamps(kind, w, h, rim) : [], night);
     let niche: HTMLCanvasElement | null = null;
     if (this.glyph) {
       const glyph = this.glyph;
@@ -175,6 +182,33 @@ class Dressed {
       niche = this.copyOf(niche);
     }
     this.lay(plate, frame, niche);
+  }
+
+  /** A glow for each lamp, made or kept; each swells in step with every other, on the page's own clock. */
+  private lampsFor(at: Array<{ x: number; y: number; r: number }>, night: boolean): void {
+    while (this.lamps.length > at.length) {
+      const l = this.lamps.pop();
+      l?.over.remove();
+      l?.under.remove();
+    }
+    at.forEach((p, i) => {
+      let l = this.lamps[i];
+      if (!l) {
+        const make = (): HTMLElement => {
+          const e = document.createElement('div');
+          e.className = 'rc-lamp';
+          e.style.setProperty('--lamp-t', `${-Math.round(performance.now())}ms`);
+          return e;
+        };
+        l = { ...p, over: make(), under: make() };
+        this.lamps[i] = l;
+      }
+      Object.assign(l, p);
+      for (const e of [l.over, l.under]) {
+        e.classList.toggle('rc-lamp-night', night);
+        e.style.width = e.style.height = `${p.r * 2}px`;
+      }
+    });
   }
 
   /** This window's own canvas showing a cached niche, made once and drawn into again when the picture changes. */
@@ -245,6 +279,13 @@ class Dressed {
     }
     if (niche && !niche.isConnected) this.el.querySelector('.win-head')?.prepend(niche);
     if (frame && !frame.isConnected) this.art.under(frame);
+    for (const l of this.lamps) {
+      l.over.style.left = `${l.x - l.r - this.el.clientLeft}px`;
+      l.over.style.top = `${l.y - l.r - this.el.clientTop}px`;
+      if (l.over.parentElement !== this.el) this.el.append(l.over);
+      // Just over its own frame, under every window.
+      if (frame && l.under.previousElementSibling !== frame) frame.after(l.under);
+    }
     this.place();
   }
 
@@ -253,6 +294,7 @@ class Dressed {
     if (this.el.hidden) {
       if (this.frame) this.frame.hidden = true;
       if (this.edge) this.edge.hidden = true;
+      for (const l of this.lamps) l.under.hidden = true;
       return;
     }
     const size = `${this.el.offsetWidth}x${this.el.offsetHeight}`;
@@ -271,11 +313,16 @@ class Dressed {
     if (!c) return;
     c.hidden = this.el.hidden || !!this.due;
     if (this.edge) this.edge.hidden = c.hidden;
+    for (const l of this.lamps) l.under.hidden = l.over.hidden = c.hidden;
     if (c.hidden) return;
     // Measured on the screen rather than by offsets, which leave out a transform such as the toolbar's centring.
     const at = this.art.place(this.el);
     c.style.left = `${at.x - this.reach}px`;
     c.style.top = `${at.y - this.reach}px`;
+    for (const l of this.lamps) {
+      l.under.style.left = `${at.x + l.x - l.r}px`;
+      l.under.style.top = `${at.y + l.y - l.r}px`;
+    }
   }
 
   /** The front window's rune after dark, at `t` seconds: its niche cleared to the unlit copy and lit again. */

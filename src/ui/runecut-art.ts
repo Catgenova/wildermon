@@ -4,7 +4,7 @@ import {
 } from '../render/runestone';
 import { hashOf, PPM, rand } from '../render/ivy';
 import { NIGHT_WASH } from '../render/nightwash';
-import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameOddities, paintFrame, paintHammers, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
+import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameLamps, frameOddities, paintFrame, paintHammers, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
 
 /**
  * Runecut's art: a window as a slab of the runestones' stone, its rune cut
@@ -420,5 +420,5 @@ export function paintNightGlow(g: Ctx, glyph: string, o: ArtOpts, t: number, sca
 
 /** For the proposal page: everything a caller needs, as one object. */
 export const RUNECUT_ART = { paintPlate, paintFrame, paintNiche, paintNightGlow, seedOf, sideOf, frameFor, FRAMES, FRAME_REACH, RIM, RIMS, SLAB, NICHE_W, NICHE_H, STONE, PPM };
-export { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameOddities, paintFrame, reachOf };
+export { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameLamps, frameOddities, paintFrame, reachOf };
 export type { FrameDef, FrameOpts, Pad, RGB };

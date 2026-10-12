@@ -1441,66 +1441,201 @@ function hangChisel(g: Ctx, x0: number, y0: number, F: number): void {
   g.restore();
 }
 
-/** A lantern on an iron bracket out of the beam at (x, y): the arm, a short chain, its cap, the glass lit from inside, and the light round it. */
+/** Where Crafting's lantern hangs on its frame, `F` its rim: the end of its bracket. */
+const benchLamp = (F: number): Pt => [F * 0.15, F * 1.25];
+
+/** A lantern's body hung from (x, y): the middle of its glass, where its flame is, its glass's top, half its width and its height. */
+function lanternBody(x: number, y: number, F: number): { cx: number; top: number; bw: number; bh: number; flame: Pt } {
+  const cx = x - 2, top = y + F * 0.62, bw = F * 0.46, bh = F * 1.05;
+  return { cx, top, bw, bh, flame: [cx, top + bh * 0.52] };
+}
+
+/**
+ * The lights a frame carries, in its own px from its top left, each with the
+ * reach of its light: the window lays a glow over each that breathes
+ * (src/ui/runecut-dress.ts). Crafting's lantern is the one.
+ */
+export function frameLamps(kind: string, w: number, h: number, F: number): Array<{ x: number; y: number; r: number }> {
+  if (kind !== 'bench' || h <= F * 6) return [];
+  const [x, y] = benchLamp(F), b = lanternBody(x, y, F);
+  return [{ x: b.flame[0], y: b.flame[1], r: F * 1.9 }];
+}
+
+/**
+ * A wrought-iron lantern on a bracket out of the beam at (x, y): the arm
+ * bolted to the beam with a scrolled brace under it, a ring and two links of
+ * chain, a hood with a ring on its top, two corner posts and a middle bar
+ * over glass lit from a candle inside, and a tray with a drop under it. Its
+ * light on the beam is painted faintly here; the glow that breathes over it
+ * is the window's.
+ */
 function lantern(g: Ctx, x: number, y: number, F: number): void {
-  const iron = H('#4b4650'), cx = x - 2, top = y + F * 0.55;
-  // The light first, under everything.
-  const glow = g.createRadialGradient(cx, top + F * 0.6, 1, cx, top + F * 0.6, F * 0.9);
-  glow.addColorStop(0, 'rgba(255, 214, 130, 0.55)');
-  glow.addColorStop(1, 'rgba(255, 214, 130, 0)');
-  g.fillStyle = glow;
-  g.fillRect(cx - F, top - F * 0.4, F * 2, F * 2);
-  g.beginPath();
-  g.moveTo(x + F * 0.5, y);
-  g.lineTo(cx, y);
-  g.lineTo(cx, y + 3);
-  g.strokeStyle = css(iron);
-  g.lineWidth = 2;
-  g.lineCap = 'round';
-  g.stroke();
-  head(g, x + F * 0.5, y, 1.8, IRON.body, IRON.ink);
-  for (let k = 0; k < 3; k++) {
-    g.beginPath();
-    g.ellipse(cx, y + 4 + k * 2.6, 1, 1.5, 0, 0, Math.PI * 2);
+  const iron = H('#3f3a44'), ironHi = H('#6d6672');
+  const { cx, top, bw, bh, flame } = lanternBody(x, y, F);
+  const bolt = x + F * 0.62;
+  const ironLine = (w: number): void => {
     g.strokeStyle = css(iron);
-    g.lineWidth = 0.9;
+    g.lineWidth = w;
+    g.lineCap = 'round';
+    g.lineJoin = 'round';
+  };
+  // The light on the beam, faint and still.
+  const glow = g.createRadialGradient(flame[0], flame[1], 1, flame[0], flame[1], F * 1.3);
+  glow.addColorStop(0, 'rgba(255, 206, 120, 0.42)');
+  glow.addColorStop(0.5, 'rgba(255, 190, 100, 0.14)');
+  glow.addColorStop(1, 'rgba(255, 190, 100, 0)');
+  g.fillStyle = glow;
+  g.fillRect(flame[0] - F * 1.4, flame[1] - F * 1.4, F * 2.8, F * 2.8);
+  // The bracket: an arm out of the beam, a brace under it ending in a scroll.
+  g.save();
+  g.translate(1, 1.5);
+  g.globalAlpha = 0.35;
+  g.beginPath();
+  g.moveTo(bolt, y);
+  g.lineTo(cx, y);
+  ironLine(2.4);
+  g.strokeStyle = 'rgb(30, 18, 12)';
+  g.stroke();
+  g.restore();
+  g.beginPath();
+  g.moveTo(bolt + 1, y);
+  g.lineTo(cx - 1, y);
+  ironLine(2.4);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(bolt, y + F * 0.42);
+  g.bezierCurveTo(bolt - F * 0.05, y + F * 0.1, cx + F * 0.35, y + F * 0.05, cx + F * 0.12, y + 1);
+  ironLine(1.5);
+  g.stroke();
+  g.beginPath();
+  g.arc(bolt - F * 0.2, y + F * 0.3, F * 0.1, 0.3, Math.PI * 1.7);
+  g.stroke();
+  g.beginPath();
+  g.moveTo(bolt + 1, y - 0.6);
+  g.lineTo(cx - 1, y - 0.6);
+  g.strokeStyle = css(ironHi, 0.7);
+  g.lineWidth = 0.6;
+  g.stroke();
+  head(g, bolt, y, 1.9, IRON.body, IRON.ink);
+  head(g, bolt, y + F * 0.42, 1.6, IRON.body, IRON.ink);
+  // A hook at the arm's end, and two links of chain down to the lantern's ring.
+  g.beginPath();
+  g.moveTo(cx - 1.5, y);
+  g.quadraticCurveTo(cx - 2.2, y + 3, cx, y + 3.4);
+  ironLine(1.2);
+  g.stroke();
+  const ringY = top - F * 0.3;
+  for (let k = 0; k < 2; k++) {
+    const ly = y + 4.6 + k * ((ringY - y - 6) / 2);
+    g.beginPath();
+    g.ellipse(cx, ly + 1.4, k % 2 ? 0.8 : 1.2, 1.7, 0, 0, Math.PI * 2);
+    ironLine(0.9);
     g.stroke();
   }
-  const bw = F * 0.42, bh = F * 1;
-  // The cap.
   g.beginPath();
-  g.moveTo(cx - bw * 0.4, top - 3);
-  g.lineTo(cx + bw * 0.4, top - 3);
-  g.lineTo(cx + bw + 1, top + 1);
-  g.lineTo(cx - bw - 1, top + 1);
+  g.arc(cx, ringY + 0.6, 1.7, 0, Math.PI * 2);
+  ironLine(1);
+  g.stroke();
+  // The hood: a low pyramid with a flared skirt, lit on its left.
+  const hood = (): void => {
+    g.beginPath();
+    g.moveTo(cx - 1.6, ringY + 2);
+    g.lineTo(cx + 1.6, ringY + 2);
+    g.quadraticCurveTo(cx + bw * 0.7, top - 3, cx + bw + 1.6, top + 0.5);
+    g.lineTo(cx - bw - 1.6, top + 0.5);
+    g.quadraticCurveTo(cx - bw * 0.7, top - 3, cx - 1.6, ringY + 2);
+    g.closePath();
+  };
+  hood();
+  const hoodFill = g.createLinearGradient(cx - bw, 0, cx + bw, 0);
+  hoodFill.addColorStop(0, css(ironHi));
+  hoodFill.addColorStop(0.45, css(H('#4c4652')));
+  hoodFill.addColorStop(1, css(H('#2d2932')));
+  g.fillStyle = hoodFill;
+  g.fill();
+  g.strokeStyle = 'rgb(28, 24, 30)';
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.roundRect(cx - bw - 1.8, top - 0.6, bw * 2 + 3.6, 2.2, 0.8);
+  g.fillStyle = css(iron);
+  g.fill();
+  // The glass, lit from the candle: brightest round the flame, warm to its edges.
+  g.beginPath();
+  g.rect(cx - bw, top + 1.6, bw * 2, bh - 1.6);
+  const lit = g.createRadialGradient(flame[0], flame[1], 0.5, flame[0], flame[1], bh * 0.8);
+  lit.addColorStop(0, '#fff4cf');
+  lit.addColorStop(0.35, '#ffd27a');
+  lit.addColorStop(0.75, '#eea04a');
+  lit.addColorStop(1, '#c9772f');
+  g.fillStyle = lit;
+  g.fill();
+  // The candle inside, and its flame.
+  const candleTop = flame[1] + F * 0.16;
+  g.beginPath();
+  g.roundRect(cx - F * 0.11, candleTop, F * 0.22, top + bh - candleTop, [1.2, 1.2, 0, 0]);
+  g.fillStyle = '#f6e9cc';
+  g.fill();
+  g.strokeStyle = 'rgba(150, 100, 50, 0.6)';
+  g.lineWidth = 0.6;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(flame[0], flame[1] - F * 0.26);
+  g.bezierCurveTo(flame[0] + F * 0.15, flame[1] - F * 0.04, flame[0] + F * 0.11, flame[1] + F * 0.13, flame[0], flame[1] + F * 0.14);
+  g.bezierCurveTo(flame[0] - F * 0.11, flame[1] + F * 0.13, flame[0] - F * 0.15, flame[1] - F * 0.04, flame[0], flame[1] - F * 0.26);
+  const fl = g.createRadialGradient(flame[0], flame[1] + F * 0.05, 0.2, flame[0], flame[1], F * 0.24);
+  fl.addColorStop(0, '#ffffff');
+  fl.addColorStop(0.45, '#fff2a8');
+  fl.addColorStop(1, '#ff9a2e');
+  g.fillStyle = fl;
+  g.fill();
+  // A glint down the left pane.
+  g.beginPath();
+  g.moveTo(cx - bw * 0.72, top + 4);
+  g.lineTo(cx - bw * 0.5, top + 4);
+  g.lineTo(cx - bw * 0.62, top + bh - 4);
+  g.lineTo(cx - bw * 0.8, top + bh - 4);
+  g.closePath();
+  g.fillStyle = 'rgba(255, 255, 255, 0.32)';
+  g.fill();
+  // The corner posts and the middle bar, iron, the posts lit on their left.
+  for (const px of [cx - bw, cx + bw]) {
+    g.beginPath();
+    g.roundRect(px - 1.3, top + 0.8, 2.6, bh, 0.8);
+    g.fillStyle = css(iron);
+    g.fill();
+    g.beginPath();
+    g.moveTo(px - 0.6, top + 2);
+    g.lineTo(px - 0.6, top + bh - 0.6);
+    g.strokeStyle = css(ironHi);
+    g.lineWidth = 0.6;
+    g.stroke();
+  }
+  g.beginPath();
+  g.moveTo(cx, top + 1.6);
+  g.lineTo(cx, flame[1] - F * 0.3);
+  g.moveTo(cx - bw, top + bh * 0.3);
+  g.lineTo(cx + bw, top + bh * 0.3);
+  g.strokeStyle = css(iron, 0.85);
+  g.lineWidth = 0.9;
+  g.stroke();
+  // The tray, and a drop of iron under it.
+  g.beginPath();
+  g.moveTo(cx - bw - 2, top + bh + 0.5);
+  g.lineTo(cx + bw + 2, top + bh + 0.5);
+  g.lineTo(cx + bw * 0.6, top + bh + 3.6);
+  g.lineTo(cx - bw * 0.6, top + bh + 3.6);
   g.closePath();
   g.fillStyle = css(iron);
   g.fill();
-  // The glass, lit.
   g.beginPath();
-  g.rect(cx - bw, top + 1, bw * 2, bh);
-  const flame = g.createRadialGradient(cx, top + bh * 0.55, 0.5, cx, top + bh * 0.55, bw * 1.4);
-  flame.addColorStop(0, '#fff6d8');
-  flame.addColorStop(0.4, '#ffd37a');
-  flame.addColorStop(1, '#d48a3a');
-  g.fillStyle = flame;
-  g.fill();
-  g.strokeStyle = css(iron);
-  g.lineWidth = 1.4;
+  g.moveTo(cx - bw - 1.6, top + bh + 1);
+  g.lineTo(cx + bw + 1.6, top + bh + 1);
+  g.strokeStyle = 'rgba(255, 200, 120, 0.55)';
+  g.lineWidth = 0.6;
   g.stroke();
   g.beginPath();
-  g.moveTo(cx, top + 1);
-  g.lineTo(cx, top + 1 + bh);
-  g.strokeStyle = css(iron, 0.8);
-  g.lineWidth = 0.8;
-  g.stroke();
-  // Its foot.
-  g.beginPath();
-  g.moveTo(cx - bw - 1, top + 1 + bh);
-  g.lineTo(cx + bw + 1, top + 1 + bh);
-  g.lineTo(cx + bw * 0.5, top + 4 + bh);
-  g.lineTo(cx - bw * 0.5, top + 4 + bh);
-  g.closePath();
+  g.arc(cx, top + bh + 5.2, 1.5, 0, Math.PI * 2);
   g.fillStyle = css(iron);
   g.fill();
 }
@@ -1772,17 +1907,17 @@ const PAINTERS: Record<string, Painter> = {
     // Bolts where they cross, and along each beam.
     for (const [x, y] of [[F * 0.3, F * 0.3], [F * 0.7, F * 0.7], [w - F * 0.3, F * 0.3], [w - F * 0.7, F * 0.7], [F * 0.3, h - F * 0.3], [F * 0.7, h - F * 0.7], [w - F * 0.3, h - F * 0.3], [w - F * 0.7, h - F * 0.7]] as Pt[]) head(g, x, y, F * 0.1, IRON.body, IRON.ink);
     for (let x = F * 2.4 + R() * 20; x < w - F * 2.4; x += 70 + R() * 40) for (const y of [F * 0.5, h - F * 0.5]) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
-    // Down the right: a cloth hung over a peg, and a chisel below it; no bolt goes where they hang.
+    // Down the right: a cloth hung over a peg, and a chisel below it; no bolt goes where they or the lantern hang.
     const right = w - F * 0.5, hung = h > F * 10;
     const clothAt = h * 0.34, clothLen = h * 0.2, chiselAt = h * 0.62, chiselLen = F * 4.2;
     const behind = (y: number): boolean => hung && ((y > clothAt - F && y < clothAt + clothLen + F * 0.6) || (y > chiselAt - F && y < chiselAt + chiselLen));
-    for (let y = F * 2.4 + R() * 20; y < h - F * 2.4; y += 80 + R() * 40) for (const x of [F * 0.5, w - F * 0.5]) if (x === F * 0.5 || !behind(y)) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
+    for (let y = F * 2.4 + R() * 20; y < h - F * 2.4; y += 80 + R() * 40) for (const x of [F * 0.5, w - F * 0.5]) if (x === F * 0.5 ? !(h > F * 6 && y < F * 3.5) : !behind(y)) head(g, x, y, F * 0.09, IRON.body, IRON.ink);
     if (hung) {
       drape(g, R, right + 2, clothAt, F, clothLen);
       hangChisel(g, right, chiselAt, F);
     }
     // The lantern at the top left, on its bracket, lit.
-    if (h > F * 6) lantern(g, F * 0.15, F * 1.4, F);
+    if (h > F * 6) lantern(g, ...benchLamp(F), F);
     // Ivy over the corners and along the top, flowering.
     const vines: Array<[Pt, Pt, Pt]> = [
       [[F * 0.3, F * 0.3], [F * 2.2, F * -0.05], [Math.min(w * 0.22, F * 4.2), F * 0.3]],

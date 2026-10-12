@@ -5010,3 +5010,70 @@ kbd {
   transform: scale(1.3);
   transform-origin: 50% 0;
 }
+
+/*
+ * A lamp's light on a frame (`frameLamps`, src/ui/runecut-dress.ts): a warm
+ * glow, swelling and fading over 4 s with a quicker flutter of the flame in
+ * it, laid twice -- over the window's edge, inside it, and under it for the
+ * part past the window -- both kept in step on the page's clock (`--lamp-t`).
+ */
+.rc-lamp {
+  display: none;
+  pointer-events: none !important;
+}
+
+[data-ui='runecut'] .rc-lamp {
+  display: block;
+  position: absolute;
+  z-index: 3;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+  background: radial-gradient(closest-side, rgba(255, 200, 110, 0.7), rgba(255, 178, 86, 0.28) 45%, rgba(255, 170, 80, 0) 100%);
+  animation: rc-lamp-swell 4s ease-in-out var(--lamp-t, 0ms) infinite;
+}
+
+[data-ui='runecut'] #ui > .rc-lamp {
+  z-index: 0;
+}
+
+[data-ui='runecut'] .rc-lamp::after {
+  content: '';
+  position: absolute;
+  inset: 30%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 236, 170, 0.55), rgba(255, 236, 170, 0));
+  animation: rc-lamp-flutter 1.3s ease-in-out var(--lamp-t, 0ms) infinite alternate;
+}
+
+[data-ui='runecut'] .rc-lamp-night {
+  background: radial-gradient(closest-side, rgba(255, 200, 110, 0.9), rgba(255, 178, 86, 0.42) 45%, rgba(255, 170, 80, 0) 100%);
+}
+
+@keyframes rc-lamp-swell {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes rc-lamp-flutter {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui='runecut'] .rc-lamp,
+  [data-ui='runecut'] .rc-lamp::after {
+    animation: none;
+    opacity: 0.8;
+  }
+}
