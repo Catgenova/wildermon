@@ -1458,10 +1458,10 @@ function lanternBody(x: number, y: number, F: number): { cx: number; top: number
 /**
  * The lights a frame carries, in its own px from its top left, each with the
  * reach of its light: the window lays a glow over each that breathes
- * (src/ui/runecut-dress.ts): Crafting's lantern, and the market's.
+ * (src/ui/runecut-dress.ts). Crafting's lantern is the one.
  */
 export function frameLamps(kind: string, w: number, h: number, F: number): Array<{ x: number; y: number; r: number }> {
-  const at = kind === 'bench' && h > F * 6 ? benchLamp(F) : kind === 'stall' && h > F * 7.5 ? stallLamp(F) : null;
+  const at = kind === 'bench' && h > F * 6 ? benchLamp(F) : null;
   if (!at) return [];
   const b = lanternBody(at[0], at[1], F);
   return [{ x: b.flame[0], y: b.flame[1], r: F * 1.9 }];
@@ -2733,9 +2733,6 @@ const TEAL = H('#7fb0b4');
 const TASSEL = H('#d9b25c');
 const MARK = H('#8a5a34');
 
-/** Where the market's lantern hangs on its left post, `F` its rim: the end of its bracket. */
-const stallLamp = (F: number): Pt => [F * 0.2, F * 5.3];
-
 /** An upright post from (x0, y0) to (x1, y1): a plank stood on end, lit from the left. */
 function post(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, tone: RGB): void {
   g.save();
@@ -3961,8 +3958,8 @@ const PAINTERS: Record<string, Painter> = {
    * The market: a stall of weathered timber, a post up each side capped in
    * brass and a beam across the top and the foot, lashed with cord. Under the
    * top beam a green and cream awning swagged to a gold-trimmed scallop. On
-   * the left post the market's banner, the scales, and a lantern under it
-   * (`frameLamps`), ivy flowering white down it; a barrel and a crate with a
+   * the left post the market's banner, the scales, and ivy flowering white
+   * down it; a barrel and a crate with a
    * striped cloth at its foot. A cloth hung over the right post, and crates,
    * a sack and a bottle at its foot among flowering ivy.
    */
@@ -3986,13 +3983,9 @@ const PAINTERS: Record<string, Painter> = {
     // The right post: the cloth over it, tied on.
     hungCloth(g, w - F * 0.78, w + F * 0.28, F * 0.55, Math.min(h * 0.45, F * 8));
     lashing(g, w - F * 0.82, w + F * 0.2, F * 1.6, 3);
-    // The left post: banner, lantern, ivy.
+    // The left post: banner, ivy.
     marketBanner(g, -F * 0.62, F * 0.9, F * 0.95, F * 4);
-    if (h > F * 7.5) {
-      const [lx, ly] = stallLamp(F);
-      lantern(g, lx, ly, F);
-    }
-    vine(g, R, wander([F * 0.85, h * 0.42], [F * 0.5, h * 0.55], [F * 0.8, h * 0.68], [F * 0.45, h * 0.8], [F * 0.75, h - F * 1.7]), F, true);
+    vine(g, R, wander([F * 0.85, F * 5.3], [F * 0.5, h * 0.55], [F * 0.8, h * 0.68], [F * 0.45, h * 0.8], [F * 0.75, h - F * 1.7]), F, true);
     // The foot of the left post: a barrel, and a crate with a cloth over it.
     standingBarrel(g, -F * 0.18, h + 8, F * 1.5, F * 2.0, H(WOOD_TONE.oak));
     crate(g, R, F * 0.45, h - F * 0.98, F * 2.9, h + 8, H('#a98a5c'));
