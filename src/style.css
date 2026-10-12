@@ -4738,12 +4738,47 @@ kbd {
   box-shadow: inset 0 0 0 1px var(--sack-ink), 0 1px 2px color-mix(in srgb, var(--sack-ink) 45%, transparent);
 }
 
+[data-ui='runecut'] .win[data-frame='burlap'] .win-title-text {
+  font-size: 20px;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .panel-search {
+  padding-right: 28px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='6.5' cy='6.5' r='4.6' fill='none' stroke='%235b4232' stroke-width='1.8'/%3E%3Cpath d='M10 10l4.2 4.2' stroke='%235b4232' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") right 8px center / 15px no-repeat,
+    color-mix(in srgb, var(--sack-label) 60%, transparent);
+}
+
+/* The list's scrollbar as a leather strap in a stitched slot, brass at both ends. */
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-list {
+  scrollbar-width: auto;
+  scrollbar-color: auto;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-list::-webkit-scrollbar {
+  width: 11px;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-list::-webkit-scrollbar-track {
+  margin: 3px 0;
+  background: linear-gradient(90deg, transparent 3px, var(--sack-ink) 3px 4px, var(--sack-label-2) 4px 7px, var(--sack-ink) 7px 8px, transparent 8px);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-list::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  background: linear-gradient(#d4a43e 0 4px, var(--sack-ink) 4px 5px, var(--sack-leather) 5px calc(100% - 5px), var(--sack-ink) calc(100% - 5px) calc(100% - 4px), #d4a43e calc(100% - 4px));
+  box-shadow: inset 0 0 0 1px var(--sack-ink), inset 2px 0 0 color-mix(in srgb, #fff3dc 35%, transparent);
+}
+
 [data-ui='runecut'] .win[data-frame='burlap'] .win-title::after {
   display: none;
 }
 
+/* The tag hangs from the cord at the corner, a size larger than a stone niche, over the label's end. */
 [data-ui='runecut'] .win[data-frame='burlap'] .rc-niche {
-  margin: -16px 0 -12px -8px;
+  margin: -18px 4px -14px -10px;
+  transform: scale(1.35);
+  transform-origin: 50% 0;
 }
 
 [data-ui='runecut'] .win[data-frame='burlap'] .win-btn {
@@ -4765,8 +4800,33 @@ kbd {
     0 1px 1px color-mix(in srgb, var(--sack-ink) 50%, transparent);
 }
 
+/* Rows lie on the linen itself, ruled apart by a thin line, rather than each on a step of stone. */
 [data-ui='runecut'] .win[data-frame='burlap'] .inv-list {
-  scrollbar-color: var(--sack-leather-2) color-mix(in srgb, var(--sack-label-2) 60%, transparent);
+  gap: 0;
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-row {
+  background: none;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--sack-twine) 45%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-row:hover {
+  background: linear-gradient(90deg, var(--t-wash-soft), transparent 70%);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-row.selected {
+  background: linear-gradient(90deg, var(--t-wash), color-mix(in srgb, var(--rc-rune) 9%, transparent));
+  box-shadow: inset 2px 0 0 var(--rc-rune), inset 0 -1px 0 color-mix(in srgb, var(--sack-twine) 45%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-row.picked {
+  background: linear-gradient(90deg, var(--t-info-wash), transparent 80%);
+  box-shadow: inset 2px 0 0 var(--rc-teal), inset 0 -1px 0 color-mix(in srgb, var(--sack-twine) 45%, transparent);
+}
+
+[data-ui='runecut'] .win[data-frame='burlap'] .inv-head {
+  background: none;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--sack-twine) 60%, transparent);
 }
 
 [data-ui='runecut'] .win[data-frame='burlap'] .inv-group {

@@ -1,4 +1,4 @@
-import { FRAME_REACH, frameFor, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
+import { frameFor, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
 import { watchLook, type Look } from './theme';
 
 /**
@@ -13,7 +13,7 @@ import { watchLook, type Look } from './theme';
  *     the window's content is set in from it by `--rim`, which is written on
  *     the element here, so nothing to read or press is ever on the rim.
  *   - The frame is painted on that rim. The part of it just past the
- *     window's edge -- `FRAME_REACH`, a knob, a knot, a seal -- is a canvas
+ *     window's edge -- its reach (`reachOf`), a knob, a knot, a seal -- is a canvas
  *     at the bottom of the interface, under every window, the HUD and the
  *     bars, so it never lies over another window's controls. It is not inside
  *     its window because a window clips what is in it (`overflow: hidden`,
@@ -80,6 +80,8 @@ class Dressed {
   private live: HTMLCanvasElement | null = null;
   private due: ReturnType<typeof setTimeout> | null = null;
   private size = '';
+  /** How far its frame stands past it (`reachOf`), for laying the frame's canvas under it. */
+  private reach = 0;
   private readonly seed: number;
 
   constructor(
@@ -139,8 +141,9 @@ class Dressed {
     }
     const o: ArtOpts = { seed: this.seed, night, side: sideOf(this.seed), rim, frame: kind };
     const kk = `${k.toFixed(3)}|${rim}`;
-    const plate = cachedCanvas(`plate|${this.id}|${w}x${h}|${look.rc}|${kk}`, w, h, k, 'rc-plate', (g) => paintPlate(g, w, h, o));
-    const R = FRAME_REACH;
+    const plate = cachedCanvas(`plate|${this.id}|${kind}|${w}x${h}|${look.rc}|${kk}`, w, h, k, 'rc-plate', (g) => paintPlate(g, w, h, o));
+    const R = reachOf(kind);
+    this.reach = R;
     // Plain stone is the slab's own rim, and wants no canvas of its own.
     const frame = kind === 'stone'
       ? null
@@ -157,10 +160,11 @@ class Dressed {
        * and not again under it where the slab's cut corners and a see-through
        * slab would show it twice.
        */
-      const W = w + 2 * R, H = h + 2 * R;
-      frame.style.clipPath = `path(evenodd, 'M0 0 H${W} V${H} H0 Z M${R} ${R} H${R + w} V${R + h} H${R} Z')`;
+      // The window clips what is in it at its padding edge, so the border's ring is drawn here, under it, and the hole is only the padding box.
+      const W = w + 2 * R, H = h + 2 * R, bl = this.el.clientLeft, bt = this.el.clientTop;
+      frame.style.clipPath = `path(evenodd, 'M0 0 H${W} V${H} H0 Z M${R + bl} ${R + bt} H${R + w - bl} V${R + h - bt} H${R + bl} Z')`;
     }
-    this.edge = frame ? this.edgeOf(frame, w, h, k) : null;
+    this.edge = frame ? this.edgeOf(frame, w, h, k, R) : null;
     let niche: HTMLCanvasElement | null = null;
     if (this.glyph) {
       const glyph = this.glyph;
@@ -197,7 +201,7 @@ class Dressed {
 
   /** This window's canvas of the frame's part over the window: the window's own box of the frame picture, which past its rim is empty. */
   private edgeCopy: HTMLCanvasElement | null = null;
-  private edgeOf(src: HTMLCanvasElement, w: number, h: number, k: number): HTMLCanvasElement {
+  private edgeOf(src: HTMLCanvasElement, w: number, h: number, k: number, R: number): HTMLCanvasElement {
     let c = this.edgeCopy;
     if (!c) {
       c = document.createElement('canvas');
@@ -212,7 +216,7 @@ class Dressed {
     const g = c.getContext('2d');
     if (g) {
       g.clearRect(0, 0, c.width, c.height);
-      g.drawImage(src, -FRAME_REACH * k, -FRAME_REACH * k);
+      g.drawImage(src, -R * k, -R * k);
     }
     return c;
   }
@@ -227,6 +231,17 @@ class Dressed {
     this.frame = frame;
     this.niche = niche;
     if (plate && plate.parentElement !== this.el) this.el.prepend(plate);
+    /*
+     * A canvas inside the window is laid from its padding edge, inside the
+     * window's border; everything is painted from its outer edge, as the
+     * frame under it is laid. Back out by the border, so the two halves of a
+     * frame meet on the same pixel and the slab is where its window is.
+     */
+    for (const c of [plate, this.edge]) {
+      if (!c) continue;
+      c.style.left = `${-this.el.clientLeft}px`;
+      c.style.top = `${-this.el.clientTop}px`;
+    }
     if (niche && !niche.isConnected) this.el.querySelector('.win-head')?.prepend(niche);
     if (frame && !frame.isConnected) this.art.under(frame);
     this.place();
@@ -258,8 +273,8 @@ class Dressed {
     if (c.hidden) return;
     // Measured on the screen rather than by offsets, which leave out a transform such as the toolbar's centring.
     const at = this.art.place(this.el);
-    c.style.left = `${at.x - FRAME_REACH}px`;
-    c.style.top = `${at.y - FRAME_REACH}px`;
+    c.style.left = `${at.x - this.reach}px`;
+    c.style.top = `${at.y - this.reach}px`;
   }
 
   /** The front window's rune after dark, at `t` seconds: its niche cleared to the unlit copy and lit again. */

@@ -27,6 +27,14 @@ import { NIGHT_WASH } from '../render/nightwash';
 
 /** How far past a window's edge a frame may stand, in CSS px. */
 export const FRAME_REACH = 4;
+/**
+ * Frames that stand further past a window than `FRAME_REACH`: the sack's
+ * lumps, and the lavender and wheat caught in it, hang a little out over the
+ * island. Never more than a few pixels: a frame is not to cover the game.
+ */
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10 };
+/** How far past a window's edge a frame of this kind may stand. */
+export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
 /** One frame: what it is called, and the windows (by id) it goes round. */
 export interface FrameDef {
@@ -70,7 +78,16 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 30 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34 };
+
+/**
+ * The frames that are wider or stand further out than the rest, in words for
+ * the text that states the numbers: "the burlap sack's 30 pixels" and so on,
+ * read from `FRAME_RIM` and `FRAME_REACHES` so it cannot drift from them.
+ */
+export function frameOddities(of: Partial<Record<string, number>>): string {
+  return FRAMES.filter((f) => of[f.kind] !== undefined).map((f) => `the ${f.label.toLowerCase()}'s ${of[f.kind]}`).join(', ');
+}
 
 /** The frame a window wears, by its id: 'stone' for the plain rim. */
 export const frameFor = (id: string): string => FRAMES.find((f) => f.for.includes(id))?.kind ?? 'stone';
@@ -455,62 +472,62 @@ function polyTo(g: Ctx, pts: Pt[]): void {
 }
 
 /**
- * Burlap: a coarse plain weave. Threads 3.2 px apart run the whole way along
- * and across, each a little thicker or thinner, lighter or darker than the
- * next, with the dark of the gaps between; where a thread along passes over
- * one across it is drawn again on top, and a thread across over the next,
- * so the over-and-under shows. Here and there a slub where the jute bunched.
- * Over the box from (x0, y0) to (x1, y1), and only the `band` along its
- * edges, which is all of it a frame shows.
+ * Burlap: a coarse plain weave, as it looks close to: every thread shows as a
+ * short rounded strand where it passes over the one across it, and dips out
+ * of sight under the next, so along and across alternate like a chequer with
+ * the dark of the gaps between. Each thread is a little lighter or darker,
+ * thicker or thinner than its neighbour, and here and there is a slub where
+ * the jute bunched. Over the box from (x0, y0) to (x1, y1), and only the
+ * `band` along its edges, which is all of it a frame shows.
  */
 function burlapWeave(g: Ctx, R: () => number, x0: number, y0: number, x1: number, y1: number, band: number, base: RGB): void {
-  const step = 3.6;
-  g.fillStyle = css(shade(base, 0.55));
+  const step = 3.4;
+  g.fillStyle = css(shade(base, 0.6));
   g.fillRect(x0, y0, x1 - x0, y1 - y0);
   const rows: Array<[number, number]> = [], cols: Array<[number, number]> = [];
-  for (let y = y0; y < y1; y += step) rows.push([(R() - 0.5) * 0.22, 0.66 + R() * 0.18]);
-  for (let x = x0; x < x1; x += step) cols.push([(R() - 0.5) * 0.22, 0.66 + R() * 0.18]);
-  const strips: Array<[number, number, number, number]> = [
-    [x0, y0, x1, y0 + band + 4], [x0, y1 - band - 4, x1, y1], [x0, y0, x0 + band + 4, y1], [x1 - band - 4, y0, x1, y1],
-  ];
-  const along = (j: number, xa: number, xb: number): void => {
-    const [t, wd] = rows[j], y = y0 + j * step + step * (1 - wd) / 2;
-    g.fillStyle = css(light(base, 0.08 + t));
-    g.fillRect(xa, y, xb - xa, step * wd);
-    g.fillStyle = css(light(base, 0.32 + t), 0.6);
-    g.fillRect(xa, y + step * wd * 0.3, xb - xa, 0.55);
-  };
-  const across = (i: number, ya: number, yb: number): void => {
-    const [t, wd] = cols[i], x = x0 + i * step + step * (1 - wd) / 2;
-    g.fillStyle = css(shade(base, 0.02 - t));
-    g.fillRect(x, ya, step * wd, yb - ya);
-    g.fillStyle = css(light(base, 0.22 + t), 0.5);
-    g.fillRect(x + step * wd * 0.3, ya, 0.55, yb - ya);
-  };
-  for (const [sx0, sy0, sx1, sy1] of strips) {
-    const j0 = Math.max(0, Math.floor((sy0 - y0) / step)), j1 = Math.min(rows.length, Math.ceil((sy1 - y0) / step));
-    const i0 = Math.max(0, Math.floor((sx0 - x0) / step)), i1 = Math.min(cols.length, Math.ceil((sx1 - x0) / step));
-    for (let j = j0; j < j1; j++) along(j, x0 + i0 * step, x0 + i1 * step);
-    for (let i = i0; i < i1; i++) across(i, y0 + j0 * step, y0 + j1 * step);
-    // Over and under: every other crossing, the thread along back on top, with the shade of the one it covers either side.
-    for (let j = j0; j < j1; j++) {
-      for (let i = i0 + (j % 2); i < i1; i += 2) {
-        const x = x0 + i * step;
-        along(j, x, x + step);
-        g.fillStyle = css(shade(base, 0.35), 0.45);
-        g.fillRect(x - 0.3, y0 + j * step, 0.6, step);
-        g.fillRect(x + step - 0.3, y0 + j * step, 0.6, step);
-      }
-    }
-  }
-  // Slubs: a thread thickened for a few weaves.
+  for (let y = y0; y < y1; y += step) rows.push([(R() - 0.5) * 0.26, 0.62 + R() * 0.22]);
+  for (let x = x0; x < x1; x += step) cols.push([(R() - 0.5) * 0.26, 0.62 + R() * 0.22]);
   const inBand = (x: number, y: number): boolean => x < x0 + band + 4 || x > x1 - band - 4 || y < y0 + band + 4 || y > y1 - band - 4;
+  const pill = (x: number, y: number, pw: number, ph: number): void => {
+    const r = Math.min(pw, ph) / 2;
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.lineTo(x + pw - r, y);
+    g.arc(x + pw - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+    g.lineTo(x + r, y + ph);
+    g.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5);
+    g.closePath();
+    g.fill();
+  };
+  rows.forEach(([rt, rw], j) => {
+    const y = y0 + j * step;
+    cols.forEach(([ct, cw], i) => {
+      const x = x0 + i * step;
+      if (!inBand(x, y)) return;
+      if ((i + j) % 2 === 0) {
+        // The thread along, over this one across.
+        const th = step * rw;
+        g.fillStyle = css(mix(base, light(base, 0.25), 0.4 + rt * 2));
+        pill(x - step * 0.12, y + (step - th) / 2, step * 1.24, th);
+        g.fillStyle = css(light(base, 0.34 + rt), 0.75);
+        g.fillRect(x + step * 0.2, y + (step - th) / 2 + th * 0.22, step * 0.6, th * 0.22);
+      } else {
+        // The thread across, over this one along.
+        const tw = step * cw;
+        g.fillStyle = css(mix(shade(base, 0.08), base, 0.5 + ct * 2));
+        pill(x + (step - tw) / 2, y - step * 0.12, tw, step * 1.24);
+        g.fillStyle = css(light(base, 0.22 + ct), 0.6);
+        g.fillRect(x + (step - tw) / 2 + tw * 0.22, y + step * 0.2, tw * 0.22, step * 0.6);
+      }
+    });
+  });
+  // Slubs: a thread thickened for a few weaves.
   for (let k = 0; k < ((x1 - x0) + (y1 - y0)) / 12; k++) {
     const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0);
     if (!inBand(x, y)) continue;
-    g.fillStyle = css(light(base, 0.2), 0.85);
-    if (R() < 0.5) g.fillRect(x, y, 6 + R() * 7, 1.4);
-    else g.fillRect(x, y, 1.4, 6 + R() * 7);
+    g.fillStyle = css(light(base, 0.18), 0.85);
+    if (R() < 0.5) pill(x, y, 7 + R() * 7, 1.6);
+    else pill(x, y, 1.6, 7 + R() * 7);
   }
 }
 
@@ -706,12 +723,12 @@ function grommet(g: Ctx, x: number, y: number, r: number): void {
 function lavender(g: Ctx, R: () => number, x: number, y: number, len: number): void {
   const stem = H('#6f8b5a'), bloom = H('#8f7cc4'), pale = H('#b9a9de');
   const ends: Array<[number, number, number]> = [];
-  for (let k = 0; k < 4; k++) {
-    const ex = x + (k - 1.5) * 4 + (R() - 0.5) * 2, ey = y + len * (0.8 + R() * 0.2);
-    ends.push([ex, ey, (k - 1.5) * 0.1]);
+  for (let k = 0; k < 5; k++) {
+    const ex = x - 5 + (k - 2) * 4.4 + (R() - 0.5) * 2, ey = y + len * (0.78 + R() * 0.22);
+    ends.push([ex, ey, (k - 2) * 0.1]);
     g.beginPath();
     g.moveTo(x, y);
-    g.quadraticCurveTo(x + (k - 1.5) * 1.6, (y + ey) / 2, ex, ey);
+    g.quadraticCurveTo(x + (k - 2) * 1.6, (y + ey) / 2, ex, ey);
     g.strokeStyle = css(shade(stem, 0.35));
     g.lineWidth = 1.6;
     g.stroke();
@@ -719,17 +736,17 @@ function lavender(g: Ctx, R: () => number, x: number, y: number, len: number): v
     g.lineWidth = 0.9;
     g.stroke();
   }
-  // Leaves, narrow, off the stems just under the tie.
-  for (const sg of [-1, 1]) {
+  // Leaves, narrow and grey-green, off the stems below the tie, hanging down with them.
+  for (const [dy, a] of [[3, -0.32], [5, 0.26], [9, -0.18], [12, 0.34], [16, -0.1]] as Array<[number, number]>) {
     g.save();
-    g.translate(x, y + 4);
-    g.rotate(sg * 0.55);
+    g.translate(x - dy * 0.12, y + dy);
+    g.rotate(a);
     g.beginPath();
-    g.ellipse(0, 8, 1.8, 8, 0, 0, Math.PI * 2);
-    g.fillStyle = css(H('#86a36c'));
+    g.ellipse(0, 5, 1, 5.2, 0, 0, Math.PI * 2);
+    g.fillStyle = css(H('#8aa577'));
     g.fill();
     g.strokeStyle = css(H('#45603b'));
-    g.lineWidth = 0.7;
+    g.lineWidth = 0.6;
     g.stroke();
     g.restore();
   }
@@ -739,7 +756,7 @@ function lavender(g: Ctx, R: () => number, x: number, y: number, len: number): v
       const t = j / 8, bx = ex - lean * j * 2, by = ey - len * 0.4 * (1 - t);
       for (const sg of [-1, 1]) {
         g.beginPath();
-        g.ellipse(bx + sg * 1.1, by, 1.35 - t * 0.3, 1.9 - t * 0.3, sg * 0.4, 0, Math.PI * 2);
+        g.ellipse(bx + sg * 1.3, by, 1.6 - t * 0.4, 2.2 - t * 0.4, sg * 0.4, 0, Math.PI * 2);
         g.fillStyle = css(j % 2 ? pale : bloom);
         g.fill();
         g.strokeStyle = css(shade(bloom, 0.5));
@@ -872,6 +889,101 @@ export function paintTag(g: Ctx, glyph: string, W: number, Hh: number, x: number
   }
 }
 
+
+/**
+ * A corner of the sack gathered up and tied: three or four lobes of the cloth
+ * flaring out past the corner from a neck at (x, y), in its weave, shaded
+ * into the neck and folded toward it, and a turn of twine round the neck.
+ * `ang` is the way out from the corner.
+ */
+function gather(g: Ctx, R: () => number, x: number, y: number, ang: number, F: number, sack: RGB, twine: RGB): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(ang);
+  const lobes: Array<[number, number, number]> = [[-0.75, F * 0.62, F * 0.3], [-0.05, F * 0.78, F * 0.34], [0.7, F * 0.6, F * 0.3]];
+  const shape = (): void => {
+    g.beginPath();
+    for (const [a, len, wd] of lobes) {
+      const cx = Math.cos(a) * len * 0.55, cy = Math.sin(a) * len * 0.55;
+      g.ellipse(cx, cy, len * 0.55, wd, a, 0, Math.PI * 2);
+    }
+  };
+  // The outline first, wide, so the cloth laid over it leaves only the outside of it showing.
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(46, 30, 22, 0.5)';
+  g.shadowBlur = 4;
+  g.shadowOffsetY = 2;
+  g.strokeStyle = css(H('#3d2a1c'));
+  g.lineWidth = 3.2;
+  g.stroke();
+  g.restore();
+  g.save();
+  shape();
+  g.clip('nonzero');
+  burlapWeave(g, R, -F, -F, F, F, F * 2, sack);
+  const neck = g.createRadialGradient(0, 0, 1, 0, 0, F * 0.85);
+  neck.addColorStop(0, 'rgba(62, 38, 20, 0.7)');
+  neck.addColorStop(0.35, 'rgba(62, 38, 20, 0.15)');
+  neck.addColorStop(0.62, 'rgba(255, 244, 214, 0.28)');
+  neck.addColorStop(1, 'rgba(62, 38, 20, 0.4)');
+  g.fillStyle = neck;
+  g.fillRect(-F, -F, F * 2, F * 2);
+  // Where one lobe lies over the next, a fold of shade along its edge.
+  for (const [a2, len, wd] of lobes.slice(1)) {
+    g.beginPath();
+    g.ellipse(Math.cos(a2) * len * 0.55, Math.sin(a2) * len * 0.55, len * 0.55, wd, a2, Math.PI * 0.55, Math.PI * 1.45);
+    g.strokeStyle = 'rgba(62, 38, 20, 0.5)';
+    g.lineWidth = 1.2;
+    g.stroke();
+  }
+  // Folds running in to the neck.
+  for (let k = 0; k < 7; k++) {
+    const a2 = -1.1 + (k / 6) * 2.2 + (R() - 0.5) * 0.15, r = F * (0.45 + R() * 0.3);
+    g.beginPath();
+    g.moveTo(Math.cos(a2) * 3, Math.sin(a2) * 3);
+    g.quadraticCurveTo(Math.cos(a2 + 0.12) * r * 0.5, Math.sin(a2 + 0.12) * r * 0.5, Math.cos(a2) * r, Math.sin(a2) * r);
+    g.strokeStyle = 'rgba(70, 44, 26, 0.5)';
+    g.lineWidth = 1;
+    g.stroke();
+  }
+  g.restore();
+  // Tied round the neck: three turns of twine across it.
+  for (let k = -1; k <= 1; k++) twist(g, curve([k * 2.6 - 1, -F * 0.24], [k * 2.6 - 3.5, 0], [k * 2.6 - 1, F * 0.24]), 2.4, twine);
+  g.restore();
+}
+
+
+/** A small brass bell hung from (x, y0) on a cord to its crown at y1: its body, a lit side, its mouth and the clapper showing. */
+function bell(g: Ctx, x: number, y0: number, y1: number, twine: RGB): void {
+  twist(g, [[x, y0], [x + 0.6, (y0 + y1) / 2], [x, y1 - 2]], 1.8, twine);
+  const r = 5.4;
+  g.beginPath();
+  g.moveTo(x - r * 0.45, y1 - 1);
+  g.quadraticCurveTo(x - r * 0.6, y1 + r * 0.9, x - r, y1 + r * 1.55);
+  g.lineTo(x + r, y1 + r * 1.55);
+  g.quadraticCurveTo(x + r * 0.6, y1 + r * 0.9, x + r * 0.45, y1 - 1);
+  g.closePath();
+  const body = g.createLinearGradient(x - r, 0, x + r, 0);
+  body.addColorStop(0, css(light(BRASS.body, 0.45)));
+  body.addColorStop(0.45, css(BRASS.body));
+  body.addColorStop(1, css(shade(BRASS.body, 0.35)));
+  g.fillStyle = body;
+  g.fill();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 1;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(x, y1 + r * 1.55, r, r * 0.3, 0, 0, Math.PI * 2);
+  g.fillStyle = css(shade(BRASS.body, 0.55));
+  g.fill();
+  g.stroke();
+  g.beginPath();
+  g.arc(x + 0.6, y1 + r * 1.75, 1.1, 0, Math.PI * 2);
+  g.fillStyle = css(BRASS.ink);
+  g.fill();
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -887,9 +999,9 @@ const PAINTERS: Record<string, Painter> = {
    * caught in the roll on the right.
    */
   burlap(g, w, h, F, R) {
-    const sack = H('#cba56d'), twine = H('#a7834f'), thread = H('#efe4c8');
+    const sack = H('#bf955c'), twine = H('#9c7542'), thread = H('#efe4c8');
     const L1 = lumps(R, 53, 21), L2 = lumps(R, 41, 15);
-    const outer = lumpyRect(w, h, 0.6, F * 0.85, (s) => 6.2 * L1(s) - 2.8);
+    const outer = lumpyRect(w, h, 0.6, F * 0.85, (s) => 8.6 * L1(s) - 3.2);
     const inner = lumpyRect(w, h, F - 1.4, 6, (s) => 4 * L2(s));
     // Its shadow on whatever is behind, as far as the reach lets it fall.
     g.save();
@@ -913,12 +1025,12 @@ const PAINTERS: Record<string, Painter> = {
       // Round like a stuffed tube: in shade where it turns under at both edges, lit along its crown.
       const lit = sd.lit;
       const tube = g.createLinearGradient(0, -1, 0, F);
-      tube.addColorStop(0, 'rgba(62, 38, 20, 0.78)');
-      tube.addColorStop(0.2, 'rgba(62, 38, 20, 0.24)');
-      tube.addColorStop(0.4, `rgba(255, 244, 214, ${(0.36 * lit).toFixed(2)})`);
-      tube.addColorStop(0.56, `rgba(255, 244, 214, ${(0.12 * lit).toFixed(2)})`);
-      tube.addColorStop(0.76, 'rgba(62, 38, 20, 0.3)');
-      tube.addColorStop(1, 'rgba(62, 38, 20, 0.8)');
+      tube.addColorStop(0, 'rgba(52, 32, 16, 0.85)');
+      tube.addColorStop(0.22, 'rgba(52, 32, 16, 0.3)');
+      tube.addColorStop(0.42, `rgba(255, 236, 196, ${(0.3 * lit).toFixed(2)})`);
+      tube.addColorStop(0.56, `rgba(255, 236, 196, ${(0.06 * lit).toFixed(2)})`);
+      tube.addColorStop(0.74, 'rgba(52, 32, 16, 0.38)');
+      tube.addColorStop(1, 'rgba(52, 32, 16, 0.88)');
       g.fillStyle = tube;
       g.fillRect(-4, -4, sd.len + 8, F + 4);
       // Stuffed in lumps: pinched every 24 to 40 px, each lump catching the light on its crown.
@@ -926,7 +1038,7 @@ const PAINTERS: Record<string, Painter> = {
       while (x < sd.len - F * 0.9) {
         const next = Math.min(sd.len - F * 0.5, x + 24 + R() * 16), mid = (x + next) / 2;
         const crown = g.createRadialGradient(mid - 3, F * 0.36, 1, mid, F * 0.42, (next - x) * 0.55);
-        crown.addColorStop(0, `rgba(255, 246, 220, ${(0.42 * lit).toFixed(2)})`);
+        crown.addColorStop(0, `rgba(255, 238, 200, ${(0.32 * lit).toFixed(2)})`);
         crown.addColorStop(1, 'rgba(255, 248, 228, 0)');
         g.fillStyle = crown;
         g.fillRect(x - 4, -4, next - x + 8, F + 4);
@@ -966,12 +1078,15 @@ const PAINTERS: Record<string, Painter> = {
     });
     g.restore();
     poly(g, outer);
-    g.strokeStyle = css(H('#4a3424'));
-    g.lineWidth = 1.4;
+    g.strokeStyle = css(H('#3d2a1c'));
+    g.lineWidth = 2;
     g.stroke();
     poly(g, inner);
-    g.lineWidth = 1.2;
+    g.lineWidth = 1.6;
     g.stroke();
+    // The corners on the right gathered up and tied off, as a sack's are.
+    gather(g, R, w - F * 0.42, F * 0.42, -Math.PI / 4, F, sack, twine);
+    gather(g, R, w - F * 0.42, h - F * 0.42, Math.PI / 4, F, sack, twine);
     // Sewn down to the cloth inside: a running stitch along the roll's inner lip.
     dashAlong(g, lumpyRect(w, h, F - 5.4, 7, (s) => 4 * L2(s)), 3.8, 2.6, twine);
     // Tacked across the seam every so often, and here and there on the roll.
@@ -1000,15 +1115,17 @@ const PAINTERS: Record<string, Painter> = {
     twist(g, curve([kx, ky], [w * 0.15, F * 0.66], [Math.min(w * 0.32, w - F * 4), F * 0.28]), 3.6, twine);
     const tail = Math.min(h * 0.36, h - F * 5);
     // A sprig of lavender tied into it on the way down.
-    lavender(g, R, F * 0.52, tail * 0.55, F * 2.6);
+    lavender(g, R, F * 0.28, tail * 0.5, F * 3.3);
     twist(g, curve([kx, ky], [F * 0.78, tail * 0.5], [F * 0.4, tail]), 3.6, twine);
     tassel(g, F * 0.4, tail, twine);
+    // A small brass bell on a cord off the coil.
+    bell(g, F * 0.2, F * 1.05, F * 1.95, twine);
     // A coil of the cord at the corner, turned three ways, and the knot binding it.
     for (const [rot, rx, ry] of [[0.2, 0.62, 0.36], [1.25, 0.58, 0.34], [2.3, 0.55, 0.32]]) twist(g, ellipsePts(kx, ky, F * rx, F * ry, rot), 3.2, twine);
     barrel(g, kx, ky, F * 0.2, twine);
     // A brass grommet low on the left, and wheat caught in the roll on the right.
     grommet(g, F * 0.48, h * 0.7, F * 0.24);
-    wheat(g, R, w - F * 0.48, h * 0.64, F * 2.8);
+    wheat(g, R, w - F * 0.22, h * 0.64, F * 3.2);
   },
 
   /* A store: a crate's planks, darker corner posts, nail heads, and a rope handle on one side. */
@@ -2113,9 +2230,10 @@ export function paintFrame(g: Ctx, w: number, h: number, kind: string, o: FrameO
   const F = o.rim;
   g.save();
   g.lineJoin = 'round';
-  // Nothing of a frame past `FRAME_REACH` out or past its band in, whatever a painter does.
+  // Nothing of a frame past its reach out or past its band in, whatever a painter does.
+  const out = reachOf(kind);
   g.beginPath();
-  g.rect(-FRAME_REACH, -FRAME_REACH, w + FRAME_REACH * 2, h + FRAME_REACH * 2);
+  g.rect(-out, -out, w + out * 2, h + out * 2);
   g.rect(F, F, w - F * 2, h - F * 2);
   g.clip('evenodd');
   paint(g, w, h, F, rand(o.seed * 7 + 3), o);
@@ -2124,7 +2242,7 @@ export function paintFrame(g: Ctx, w: number, h: number, kind: string, o: FrameO
     g.save();
     g.globalCompositeOperation = 'source-atop';
     g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
-    g.fillRect(-FRAME_REACH, -FRAME_REACH, w + FRAME_REACH * 2, h + FRAME_REACH * 2);
+    g.fillRect(-out, -out, w + out * 2, h + out * 2);
     g.restore();
   }
 }

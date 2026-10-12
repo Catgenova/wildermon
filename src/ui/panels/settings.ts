@@ -8,7 +8,7 @@ import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
-import { FRAME_REACH, FRAMES, frameLabel, RIM, RIMS } from '../runecut-art';
+import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
 import { listed, numberWord } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
@@ -218,10 +218,10 @@ export class SettingsPanel {
       const of = (id: string): string => frameLabel(id).toLowerCase();
       choose<UiFrames>(
         'Window frames',
-        `Runecut only. The border round each window, ${RIM} pixels wide (${RIMS.phone} on a phone, ${RIMS.hud} on the status panel, ${RIMS.toolbar} on the toolbar). `
+        `Runecut only. The border round each window, ${RIM} pixels wide (${frameOddities(FRAME_RIM)} when themed; ${RIMS.phone} on a phone, ${RIMS.hud} on the status panel, ${RIMS.toolbar} on the toolbar). `
           + `Themed: the border is drawn as the stuff of what the window holds, in ${FRAMES.length} kinds over ${framed} windows and bars: `
           + `the pack in a ${of('inventory')}, a crate or the stores in a ${of('crate')}, crafting on a ${of('craft')}, events on a ${of('events')}, the map on ${of('map')} with a compass rose; `
-          + `a knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge, and clicks go through it. Any other window has plain stone. `
+          + `a knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge (${frameOddities(FRAME_REACHES)}), and clicks go through it. Any other window has plain stone. `
           + 'Stone: every border is the plain stone rim. The room inside a window is the same either way.',
         [['themed', 'Themed'], ['stone', 'Stone']],
         () => game.settings.uiFrames,

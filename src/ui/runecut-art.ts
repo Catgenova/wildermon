@@ -4,7 +4,7 @@ import {
 } from '../render/runestone';
 import { hashOf, PPM, rand } from '../render/ivy';
 import { NIGHT_WASH } from '../render/nightwash';
-import { FRAME_REACH, FRAME_RIM, FRAMES, frameFor, frameLabel, paintFrame, paintTag, type FrameDef, type FrameOpts } from './runecut-frames';
+import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameOddities, paintFrame, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
 
 /**
  * Runecut's art: a window as a slab of the runestones' stone, its rune cut
@@ -268,7 +268,48 @@ export function paintPlate(g: Ctx, w: number, h: number, o: ArtOpts): void {
   g.lineWidth = 1;
   g.stroke();
   g.restore();
+  // In the pack's sack the field is linen: warmer, its fine weave showing, with the odd stain.
+  if (o.frame === 'burlap') linen(g, w, h, R, o.rim ?? RIM);
   if (o.night) nightOver(g, 0, 0, w, h);
+}
+
+/** A field of linen over the slab: a warm wash, threads every 2 px both ways, and a few faint stains where it has been handled. */
+function linen(g: Ctx, w: number, h: number, R: () => number, rim: number): void {
+  g.save();
+  g.fillStyle = 'rgba(238, 214, 168, 0.38)';
+  g.fillRect(0, 0, w, h);
+  for (let y = 0; y < h; y += 2) {
+    g.fillStyle = `rgba(120, 88, 50, ${(0.05 + R() * 0.04).toFixed(3)})`;
+    g.fillRect(0, y, w, 0.7);
+  }
+  for (let x = 0; x < w; x += 2) {
+    g.fillStyle = `rgba(120, 88, 50, ${(0.035 + R() * 0.03).toFixed(3)})`;
+    g.fillRect(x, 0, 0.7, h);
+  }
+  for (let k = 0; k < 3 + Math.round((w * h) / 90000); k++) {
+    const x = R() * w, y = R() * h, r = 12 + R() * 26;
+    const stain = g.createRadialGradient(x, y, r * 0.2, x, y, r);
+    stain.addColorStop(0, 'rgba(150, 108, 58, 0.07)');
+    stain.addColorStop(0.85, 'rgba(150, 108, 58, 0.05)');
+    stain.addColorStop(1, 'rgba(150, 108, 58, 0)');
+    g.fillStyle = stain;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+  // Sewn to the roll: a running stitch round the cloth, just inside it.
+  g.setLineDash([4, 3]);
+  g.strokeStyle = 'rgba(122, 86, 46, 0.7)';
+  g.lineWidth = 1.1;
+  g.strokeRect(rim + 2.5, rim + 2.5, w - rim * 2 - 5, h - rim * 2 - 5);
+  g.setLineDash([]);
+  // The roll's shadow on the cloth inside it, deepest under the top, where the light comes from.
+  for (const [x0, y0, x1, y1, deep] of [[0, rim - 6, 0, rim + 12, 0.32], [rim - 6, 0, rim + 9, 0, 0.22], [w - rim + 6, 0, w - rim - 7, 0, 0.18], [0, h - rim + 6, 0, h - rim - 6, 0.14]] as Array<[number, number, number, number, number]>) {
+    const sh = g.createLinearGradient(x0, y0, x1, y1);
+    sh.addColorStop(0, `rgba(70, 46, 26, ${deep})`);
+    sh.addColorStop(1, 'rgba(70, 46, 26, 0)');
+    g.fillStyle = sh;
+    g.fillRect(0, 0, w, h);
+  }
+  g.restore();
 }
 
 /** A niche's rune light, baked once for a glyph at a scale (`bakeRune`), kept. */
@@ -338,5 +379,5 @@ export function paintNightGlow(g: Ctx, glyph: string, o: ArtOpts, t: number, sca
 
 /** For the proposal page: everything a caller needs, as one object. */
 export const RUNECUT_ART = { paintPlate, paintFrame, paintNiche, paintNightGlow, seedOf, sideOf, frameFor, FRAMES, FRAME_REACH, RIM, RIMS, SLAB, NICHE_W, NICHE_H, STONE, PPM };
-export { FRAME_REACH, FRAME_RIM, FRAMES, frameFor, frameLabel, paintFrame };
+export { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameOddities, paintFrame, reachOf };
 export type { FrameDef, FrameOpts, Pad, RGB };
