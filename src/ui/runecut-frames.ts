@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -49,7 +49,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'crate', label: 'Wooden crate', for: ['crate', 'stores'] },
   { kind: 'bench', label: "Carpenter's bench", for: ['craft'] },
   { kind: 'runestone', label: 'Stone pillars and oak', for: ['skills'] },
-  { kind: 'guild', label: 'Guild leather', for: ['trades'] },
+  { kind: 'guild', label: 'Rough-hewn logs', for: ['trades'] },
   { kind: 'altar', label: 'Altar marble', for: ['faith'] },
   { kind: 'parchment', label: 'Parchment', for: ['map'] },
   { kind: 'treasure', label: 'Treasure map', for: ['hoard'] },
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 30 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -1448,6 +1448,8 @@ function hangChisel(g: Ctx, x0: number, y0: number, F: number): void {
 
 /** Where Crafting's lantern hangs on its frame, `F` its rim: the end of its bracket. */
 const benchLamp = (F: number): Pt => [F * 0.15, F * 1.25];
+/** Where Trades' lantern hangs, under the banner on the left post. */
+const guildLamp = (F: number): Pt => [F * 0.2, F * 4.3];
 
 /** A lantern's body hung from (x, y): the middle of its glass, where its flame is, its glass's top, half its width and its height. */
 function lanternBody(x: number, y: number, F: number): { cx: number; top: number; bw: number; bh: number; flame: Pt } {
@@ -1458,11 +1460,12 @@ function lanternBody(x: number, y: number, F: number): { cx: number; top: number
 /**
  * The lights a frame carries, in its own px from its top left, each with the
  * reach of its light: the window lays a glow over each that breathes
- * (src/ui/runecut-dress.ts). Crafting's lantern is the one.
+ * (src/ui/runecut-dress.ts): Crafting's lantern, and Trades'.
  */
 export function frameLamps(kind: string, w: number, h: number, F: number): Array<{ x: number; y: number; r: number }> {
-  if (kind !== 'bench' || h <= F * 6) return [];
-  const [x, y] = benchLamp(F), b = lanternBody(x, y, F);
+  const at = kind === 'bench' && h > F * 6 ? benchLamp(F) : kind === 'guild' && h > F * 9 ? guildLamp(F) : null;
+  if (!at) return [];
+  const b = lanternBody(at[0], at[1], F);
   return [{ x: b.flame[0], y: b.flame[1], r: F * 1.9 }];
 }
 
@@ -1933,6 +1936,373 @@ export function paintTablet(g: Ctx, W: number, Hh: number, night: boolean): void
   }
 }
 
+/* ---- the log frame's own kit ---------------------------------------------- */
+
+/** Weathered wood with the bark worn off it, the colour of an old fence. */
+const HEWN = { body: H('#9c7c5a'), end: H('#d2b083'), ink: H('#4a3424') };
+
+/**
+ * A log lying along x from x0 to x1, from y0 to y1: rounded, lit along its
+ * top, streaked along its length where the bark came off, a knot or two,
+ * a check split in it, and its end grain showing at each end in rings.
+ */
+function log(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, tone: RGB): void {
+  const t = y1 - y0, r = t * 0.42;
+  const path = (): void => {
+    g.beginPath();
+    g.roundRect(x0, y0, x1 - x0, t, r);
+  };
+  g.save();
+  path();
+  g.shadowColor = 'rgba(40, 26, 16, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 1.5;
+  const f = g.createLinearGradient(0, y0, 0, y1);
+  f.addColorStop(0, css(light(tone, 0.28)));
+  f.addColorStop(0.35, css(tone));
+  f.addColorStop(1, css(shade(tone, 0.38)));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  g.save();
+  path();
+  g.clip();
+  // Streaks along the grain, darker and paler.
+  for (let k = 0; k < (x1 - x0) / 5; k++) {
+    const x = x0 + R() * (x1 - x0), y = y0 + 2 + R() * (t - 4), l = 10 + R() * 34;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + l / 2, y + (R() - 0.5) * 2.5, x + l, y + (R() - 0.5) * 1.5);
+    g.strokeStyle = R() < 0.7 ? css(shade(tone, 0.4), 0.55) : css(light(tone, 0.35), 0.5);
+    g.lineWidth = 0.7 + R() * 0.6;
+    g.stroke();
+  }
+  // A knot now and then.
+  for (let x = x0 + 30 + R() * 60; x < x1 - 20; x += 90 + R() * 110) {
+    const y = y0 + t * (0.3 + R() * 0.4);
+    g.beginPath();
+    g.ellipse(x, y, 3.2, 2, 0, 0, Math.PI * 2);
+    g.fillStyle = css(shade(tone, 0.45));
+    g.fill();
+    g.beginPath();
+    g.ellipse(x, y, 5.5, 3.2, 0, 0, Math.PI * 2);
+    g.strokeStyle = css(shade(tone, 0.3), 0.7);
+    g.lineWidth = 0.8;
+    g.stroke();
+  }
+  // A check split along it.
+  for (let x = x0 + R() * 80; x < x1 - 30; x += 140 + R() * 120) {
+    const y = y0 + t * (0.45 + R() * 0.2), l = 20 + R() * 30;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x + l * 0.4, y + 0.8);
+    g.lineTo(x + l, y - 0.3);
+    g.strokeStyle = css(HEWN.ink, 0.7);
+    g.lineWidth = 1;
+    g.stroke();
+  }
+  // The light along its top.
+  g.beginPath();
+  g.moveTo(x0 + r, y0 + 2);
+  g.lineTo(x1 - r, y0 + 2);
+  g.strokeStyle = css(light(tone, 0.45), 0.6);
+  g.lineWidth = 1.2;
+  g.stroke();
+  // The end grain at each end.
+  for (const ex of [x0 + r * 0.55, x1 - r * 0.55]) {
+    g.beginPath();
+    g.ellipse(ex, y0 + t / 2, r * 0.5, t / 2 - 1, 0, 0, Math.PI * 2);
+    g.fillStyle = css(HEWN.end);
+    g.fill();
+    for (const k of [0.7, 0.4]) {
+      g.beginPath();
+      g.ellipse(ex, y0 + t / 2, r * 0.5 * k, (t / 2 - 1) * k, 0, 0, Math.PI * 2);
+      g.strokeStyle = css(shade(HEWN.end, 0.3));
+      g.lineWidth = 0.7;
+      g.stroke();
+    }
+  }
+  g.restore();
+  path();
+  g.strokeStyle = css(HEWN.ink);
+  g.lineWidth = 1.3;
+  g.stroke();
+}
+
+/** A log standing from y0 to y1 across x0..x1: `log`, turned upright, lit on its left. */
+function post(g: Ctx, R: () => number, x0: number, x1: number, y0: number, y1: number, tone: RGB): void {
+  g.save();
+  g.translate(x1, y0);
+  g.rotate(Math.PI / 2);
+  log(g, R, 0, y1 - y0, 0, x1 - x0, tone);
+  g.restore();
+}
+
+/** A brass diamond nailed on at (x, y), `r` to a point: the plate, a sunk diamond in it, and its nail. */
+function brassDiamond(g: Ctx, x: number, y: number, r: number): void {
+  const dia = (s: number): void => {
+    g.beginPath();
+    g.moveTo(x, y - s);
+    g.lineTo(x + s, y);
+    g.lineTo(x, y + s);
+    g.lineTo(x - s, y);
+    g.closePath();
+  };
+  g.save();
+  dia(r);
+  g.shadowColor = 'rgba(40, 26, 16, 0.45)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = goldFill(g, x - r, y - r, x + r, y + r);
+  g.fill();
+  g.restore();
+  dia(r);
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.9;
+  g.stroke();
+  dia(r * 0.5);
+  g.fillStyle = css(shade(BRASS.body, 0.2));
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.6;
+  g.stroke();
+  head(g, x, y, Math.max(1, r * 0.16), BRASS.body, BRASS.ink);
+}
+
+/** A block of wood over a corner, `s` square about (x, y), with a brass diamond on it. */
+function cornerPiece(g: Ctx, R: () => number, x: number, y: number, s: number): void {
+  plank(g, R, x - s / 2, x + s / 2, y - s / 2, y + s / 2, H('#a7845d'));
+  brassDiamond(g, x, y, s * 0.3);
+}
+
+/** A sheaf of wheat marked on cloth at (x, y), `s` tall, upright: its stem and three pairs of ears up it, one at its tip. */
+function wheatMark(g: Ctx, x: number, y: number, s: number, tone: RGB): void {
+  g.strokeStyle = css(tone);
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(x, y + s / 2);
+  g.lineTo(x, y - s / 2 + 2);
+  g.stroke();
+  g.fillStyle = css(tone);
+  for (let k = 0; k < 3; k++) {
+    const yy = y + s * 0.18 - k * s * 0.22;
+    for (const sg of [-1, 1]) {
+      g.beginPath();
+      g.ellipse(x + sg * s * 0.1, yy, s * 0.06, s * 0.13, sg * 0.55, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+  g.beginPath();
+  g.ellipse(x, y - s / 2 + 2, s * 0.06, s * 0.12, 0, 0, Math.PI * 2);
+  g.fill();
+}
+
+/** Linen hung from (x0..x1, y), `len` long, its foot fringed: a banner, its folds down it, and a wheat mark on it. */
+function banner(g: Ctx, R: () => number, x0: number, x1: number, y: number, len: number): void {
+  const cloth = H('#efe6cf'), wd = x1 - x0;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x0, y);
+    g.lineTo(x1, y);
+    g.lineTo(x1 + 1, y + len - wd * 0.3);
+    g.lineTo((x0 + x1) / 2, y + len);
+    g.lineTo(x0 - 1, y + len - wd * 0.3);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 26, 16, 0.45)';
+  g.shadowBlur = 3;
+  g.shadowOffsetX = 1;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(cloth);
+  g.fill();
+  g.restore();
+  g.save();
+  shape();
+  g.clip();
+  for (let k = 0; k < 3; k++) {
+    const fx = x0 + wd * (0.2 + k * 0.3);
+    const fold = g.createLinearGradient(fx - 3, 0, fx + 3, 0);
+    fold.addColorStop(0, 'rgba(120, 100, 76, 0)');
+    fold.addColorStop(0.5, 'rgba(120, 100, 76, 0.22)');
+    fold.addColorStop(1, 'rgba(120, 100, 76, 0)');
+    g.fillStyle = fold;
+    g.fillRect(fx - 3, y, 6, len);
+  }
+  g.restore();
+  shape();
+  g.strokeStyle = css(H('#8a775c'));
+  g.lineWidth = 1;
+  g.stroke();
+  // The fringe along its pointed foot.
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8, fx = x0 + wd * t, fy = y + len - wd * 0.3 + (1 - Math.abs(t - 0.5) * 2) * wd * 0.3;
+    g.beginPath();
+    g.moveTo(fx, fy);
+    g.lineTo(fx + (R() - 0.5), fy + 3 + R() * 1.5);
+    g.strokeStyle = css(H('#b9a98a'));
+    g.lineWidth = 0.8;
+    g.stroke();
+  }
+  wheatMark(g, (x0 + x1) / 2, y + len * 0.45, Math.min(len * 0.5, wd * 1.1), H('#b98a5c'));
+}
+
+/** A leather strap round a post, across x0..x1 at y: the band, its stitching, and a brass buckle on it. */
+function strapRound(g: Ctx, x0: number, x1: number, y: number, tone: RGB): void {
+  g.beginPath();
+  g.roundRect(x0, y - 4, x1 - x0, 8, 2);
+  g.fillStyle = css(tone);
+  g.fill();
+  g.strokeStyle = css(shade(tone, 0.45));
+  g.lineWidth = 0.9;
+  g.stroke();
+  g.setLineDash([1.8, 1.6]);
+  g.beginPath();
+  g.moveTo(x0 + 2, y - 2.4);
+  g.lineTo(x1 - 2, y - 2.4);
+  g.moveTo(x0 + 2, y + 2.4);
+  g.lineTo(x1 - 2, y + 2.4);
+  g.strokeStyle = css(light(tone, 0.4), 0.8);
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.setLineDash([]);
+  const bx = x0 + (x1 - x0) * 0.62;
+  g.beginPath();
+  g.roundRect(bx - 3.5, y - 5.5, 7, 11, 1.2);
+  g.strokeStyle = css(BRASS.body);
+  g.lineWidth = 1.6;
+  g.stroke();
+  g.strokeStyle = css(BRASS.ink);
+  g.lineWidth = 0.5;
+  g.stroke();
+}
+
+/** A mushroom growing out of the wood at (x, y), `s` across its cap. */
+function mushroom(g: Ctx, x: number, y: number, s: number): void {
+  g.beginPath();
+  g.roundRect(x - s * 0.12, y - s * 0.55, s * 0.24, s * 0.55, s * 0.08);
+  g.fillStyle = css(H('#efe4cc'));
+  g.fill();
+  g.strokeStyle = css(H('#8f7a5e'));
+  g.lineWidth = 0.8;
+  g.stroke();
+  g.beginPath();
+  g.moveTo(x - s / 2, y - s * 0.5);
+  g.quadraticCurveTo(x - s * 0.45, y - s * 1.05, x, y - s * 1.05);
+  g.quadraticCurveTo(x + s * 0.45, y - s * 1.05, x + s / 2, y - s * 0.5);
+  g.closePath();
+  const cap = g.createLinearGradient(0, y - s * 1.05, 0, y - s * 0.5);
+  cap.addColorStop(0, css(H('#d9b483')));
+  cap.addColorStop(1, css(H('#a87d52')));
+  g.fillStyle = cap;
+  g.fill();
+  g.strokeStyle = css(H('#6f4f33'));
+  g.lineWidth = 0.9;
+  g.stroke();
+  for (const [dx, dy] of [[-0.18, -0.82], [0.12, -0.9], [0.24, -0.7]]) {
+    g.beginPath();
+    g.arc(x + dx * s, y + dy * s, s * 0.05, 0, Math.PI * 2);
+    g.fillStyle = css(H('#f3e7cf'), 0.8);
+    g.fill();
+  }
+}
+
+/** Linen swagged across between x0 and x1 from the line y, sagging `sag`: its folds following the hang. */
+function swag(g: Ctx, x0: number, x1: number, y: number, sag: number): void {
+  const mid = (x0 + x1) / 2;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x0, y);
+    g.quadraticCurveTo(mid, y + sag * 0.55, x1, y);
+    g.lineTo(x1 + 3, y + sag * 0.5);
+    // The hem, ragged, along the hang.
+    const n = 12;
+    for (let i = 1; i < n; i++) {
+      const t = 1 - i / n, x = x0 - 3 + (x1 - x0 + 6) * t, u = 1 - (2 * t - 1) ** 2;
+      g.lineTo(x, y + sag * (0.5 + 0.8 * u) + (i % 2 ? 2 : -0.5));
+    }
+    g.lineTo(x0 - 3, y + sag * 0.5);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 26, 16, 0.4)';
+  g.shadowBlur = 3;
+  g.shadowOffsetY = 2;
+  g.fillStyle = css(H('#eee3c8'));
+  g.fill();
+  g.restore();
+  for (let k = 1; k <= 3; k++) {
+    g.beginPath();
+    g.moveTo(x0 + k * 2, y + sag * 0.12 * k);
+    g.quadraticCurveTo(mid, y + sag * (0.55 + k * 0.28), x1 - k * 2, y + sag * 0.12 * k);
+    g.strokeStyle = 'rgba(120, 100, 76, 0.35)';
+    g.lineWidth = 0.9;
+    g.stroke();
+  }
+  shape();
+  g.strokeStyle = css(H('#8a775c'));
+  g.lineWidth = 1;
+  g.stroke();
+  // Its two ends hanging down where it is caught over the log.
+  for (const [x, sg] of [[x0, -1], [x1, 1]] as Array<[number, number]>) {
+    g.beginPath();
+    g.moveTo(x - sg * 2, y - 1);
+    g.lineTo(x + sg * 6, y - 1);
+    g.quadraticCurveTo(x + sg * 8, y + sag * 0.9, x + sg * 4, y + sag * 1.3);
+    g.lineTo(x + sg * 1, y + sag * 1.1);
+    g.lineTo(x - sg * 1, y + sag * 1.25);
+    g.quadraticCurveTo(x, y + sag * 0.6, x - sg * 2, y - 1);
+    g.closePath();
+    g.fillStyle = css(H('#e6dabd'));
+    g.fill();
+    g.strokeStyle = css(H('#8a775c'));
+    g.lineWidth = 1;
+    g.stroke();
+  }
+}
+
+/** A ribbon tied round a post at (x, y): its knot, and two ends hanging, cut in a fork. */
+function ribbon(g: Ctx, x: number, y: number, len: number, tone: RGB): void {
+  for (const [dx, l, a] of [[-2.5, len, -0.12], [2.5, len * 0.8, 0.15]] as Array<[number, number, number]>) {
+    g.save();
+    g.translate(x + dx, y);
+    g.rotate(a);
+    g.beginPath();
+    g.moveTo(-2.2, 0);
+    g.lineTo(2.2, 0);
+    g.lineTo(2.6, l);
+    g.lineTo(0, l - 3);
+    g.lineTo(-2.6, l);
+    g.closePath();
+    g.fillStyle = css(dx < 0 ? tone : shade(tone, 0.15));
+    g.fill();
+    g.strokeStyle = css(shade(tone, 0.45));
+    g.lineWidth = 0.8;
+    g.stroke();
+    g.restore();
+  }
+  g.beginPath();
+  g.ellipse(x, y, 3.6, 2.8, 0, 0, Math.PI * 2);
+  g.fillStyle = css(light(tone, 0.1));
+  g.fill();
+  g.strokeStyle = css(shade(tone, 0.45));
+  g.lineWidth = 0.8;
+  g.stroke();
+}
+
+/** A wooden tag nailed up at (x, y), `wd` by `ht`, a little askew. */
+function woodTag(g: Ctx, R: () => number, x: number, y: number, wd: number, ht: number): void {
+  g.save();
+  g.translate(x, y);
+  g.rotate(0.06);
+  plank(g, R, -wd / 2, wd / 2, -ht / 2, ht / 2, H('#b08a5f'));
+  head(g, 0, -ht / 2 + 4, 1.4, IRON.body, IRON.ink);
+  head(g, 0, ht / 2 - 4, 1.4, IRON.body, IRON.ink);
+  g.restore();
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -2262,39 +2632,99 @@ const PAINTERS: Record<string, Painter> = {
     }
   },
 
-  /* The trades: guild leather, a tooled border, brass studs, stitched along its edge. */
+  /*
+   * Trades: a frame of rough-hewn logs, a post down each side and a log
+   * across the top and the foot laid over them, a block with a brass
+   * diamond over three corners and a brass ring at the fourth. A linen
+   * banner with a wheat mark hangs at the top left, a lantern on its bracket
+   * under it, lit, and leather straps buckled round the left post; cloths
+   * hang over pegs down the right with a red ribbon and a wooden tag nailed
+   * up; a cloth is swagged across the top, a mushroom grows from the foot
+   * log and a wheat-marked cloth lies over its right end; ivy flowering
+   * white grows over the corners.
+   */
   guild(g, w, h, F, R) {
-    const hide = H('#a67452');
-    eachSide(g, w, h, (s) => {
-      g.save();
-      mitre(g, s.len, F);
-      g.clip();
-      g.fillStyle = css(mix(shade(hide, 0.2), hide, s.lit));
-      g.fillRect(0, 0, s.len, F);
-      // The tooling: a groove each side, diamonds pressed between.
-      for (const y of [F * 0.3, F * 0.78]) {
-        g.fillStyle = css(shade(hide, 0.4));
-        g.fillRect(0, y, s.len, 1);
-        g.fillStyle = css(light(hide, 0.25), 0.7);
-        g.fillRect(0, y + 1, s.len, 0.6);
-      }
-      for (let x = 0; x < s.len; x += 9) {
-        g.beginPath();
-        g.moveTo(x, F * 0.54);
-        g.lineTo(x + 2.5, F * 0.4);
-        g.lineTo(x + 5, F * 0.54);
-        g.lineTo(x + 2.5, F * 0.68);
-        g.closePath();
-        g.fillStyle = css(shade(hide, 0.3));
-        g.fill();
-      }
-      g.restore();
-      stitches(g, 2, s.len - 2, F * 0.12, LINEN, 3, 2.5);
-      for (let x = F * 2; x < s.len - F * 1.5; x += 34) head(g, x + 2.5, F * 0.54, F * 0.15, BRASS.body, BRASS.ink);
-      void R;
-    });
-    eachCorner(g, w, h, () => head(g, F * 0.5, F * 0.5, F * 0.22, BRASS.body, BRASS.ink));
-    inkBand(g, w, h, F);
+    const wood = HEWN.body, P = F * 0.8;
+    // A board round the content inside the logs.
+    g.beginPath();
+    g.rect(P - 2, P - 2, w - (P - 2) * 2, h - (P - 2) * 2);
+    g.rect(F, F, w - F * 2, h - F * 2);
+    g.fillStyle = css(H('#6f5238'));
+    g.fill('evenodd');
+    g.strokeStyle = css(HEWN.ink);
+    g.lineWidth = 1;
+    g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
+    // The posts, the banner hung over the left one from under the top log, then the logs across them.
+    const tall = h > F * 9;
+    post(g, R, -3, P, -6, h + 6, shade(wood, 0.06));
+    post(g, R, w - P, w + 3, -6, h + 6, shade(wood, 0.06));
+    if (tall) banner(g, R, -5, F - 2, F * 0.5, F * 3.2);
+    log(g, R, -10, w + 10, -3, F * 0.8, wood);
+    log(g, R, -10, w + 10, h - F * 0.8, h + 3, wood);
+    // Corners: a brass ring at the top left, blocks with brass diamonds at the others.
+    g.beginPath();
+    g.arc(F * 0.4, F * 0.4, F * 0.3, 0, Math.PI * 2);
+    g.fillStyle = goldFill(g, 0, 0, F * 0.8, F * 0.8);
+    g.fill();
+    g.strokeStyle = css(BRASS.ink);
+    g.lineWidth = 1;
+    g.stroke();
+    g.beginPath();
+    g.arc(F * 0.4, F * 0.4, F * 0.16, 0, Math.PI * 2);
+    g.strokeStyle = css(shade(BRASS.body, 0.35));
+    g.lineWidth = 1.6;
+    g.stroke();
+    cornerPiece(g, R, w - F * 0.35, F * 0.35, F * 1.05);
+    cornerPiece(g, R, F * 0.35, h - F * 0.35, F * 1.05);
+    cornerPiece(g, R, w - F * 0.35, h - F * 0.35, F * 1.05);
+    if (tall) {
+      // Down the left: the lantern under the banner, and straps round the post below.
+      lantern(g, ...guildLamp(F), F);
+      strapRound(g, -4, P + 1, h * 0.5, H('#5f8f86'));
+      for (const t of [0.58, 0.66, 0.74]) strapRound(g, -4, P + 1, h * t, H('#6b4a30'));
+      // Down the right: two cloths over pegs, a red ribbon and a tag.
+      drape(g, R, w - F * 0.35, h * 0.24, F, F * 2.6);
+      strapRound(g, w - P - 1, w + 4, h * 0.24 + 6, H('#5f8f86'));
+      strapRound(g, w - P - 1, w + 4, h * 0.42, H('#5f8f86'));
+      ribbon(g, w - F * 0.45, h * 0.42 + 4, F * 1.3, H('#b5524a'));
+      drape(g, R, w - F * 0.3, h * 0.58, F * 0.9, F * 2.2);
+      strapRound(g, w - P - 1, w + 4, h * 0.58 + 6, H('#6b4a30'));
+      woodTag(g, R, w - F * 0.4, h * 0.82, F * 0.5, F * 0.95);
+    }
+    // Across the top, a cloth swagged over the log; on the foot log, a mushroom and a cloth over its right end.
+    swag(g, w * 0.48, w * 0.74, F * 0.06, F * 0.5);
+    mushroom(g, w * 0.34, h - F * 0.1, F * 0.8);
+    mushroom(g, w * 0.34 + F * 0.45, h - F * 0.18, F * 0.5);
+    g.save();
+    const cx0 = w - F * 3.4, cx1 = w - F * 1.5;
+    g.beginPath();
+    g.moveTo(cx0, h - F * 0.95);
+    g.lineTo(cx1, h - F * 0.95);
+    g.lineTo(cx1 + 2, h + 5);
+    g.lineTo(cx0 - 2, h + 6);
+    g.closePath();
+    g.shadowColor = 'rgba(40, 26, 16, 0.4)';
+    g.shadowBlur = 3;
+    g.shadowOffsetY = 1.5;
+    g.fillStyle = css(H('#efe6cf'));
+    g.fill();
+    g.restore();
+    g.strokeStyle = css(H('#8a775c'));
+    g.lineWidth = 1;
+    g.stroke();
+    wheatMark(g, (cx0 + cx1) / 2, h - F * 0.35, F * 0.8, H('#b98a5c'));
+    // Ivy over the corners and along the logs, flowering.
+    const vines: Array<[Pt, Pt, Pt]> = [
+      [[F * 1.2, F * 0.3], [w * 0.12, F * -0.1], [w * 0.26, F * 0.35]],
+      [[w - F * 1.1, F * 0.35], [w - F * 3, F * -0.1], [w * 0.8, F * 0.35]],
+      [[w - F * 0.4, F * 1.1], [w + F * 0.1, h * 0.1], [w - F * 0.3, h * 0.19]],
+      [[F * 0.4, h - F * 1.1], [F * -0.1, h * 0.9], [F * 0.3, h * 0.82]],
+      [[F * 1.1, h - F * 0.4], [w * 0.14, h + F * 0.1], [w * 0.28, h - F * 0.4]],
+      [[w - F * 3.7, h - F * 0.4], [w * 0.74, h + F * 0.1], [w * 0.58, h - F * 0.4]],
+      [[w - F * 0.4, h - F * 1.1], [w + F * 0.1, h * 0.92], [w - F * 0.3, h * 0.86]],
+    ];
+    if (tall) vines.push([[F * 0.4, F * 6.4], [F * -0.2, h * 0.38], [F * 0.35, h * 0.47]], [[w - F * 0.4, h * 0.66], [w + F * 0.1, h * 0.72], [w - F * 0.35, h * 0.78]]);
+    vines.forEach(([a, c, b]) => vine(g, R, curve(a, c, b), F * 1.15, true));
   },
 
   /* The faith: the altar's marble, veined, gold filigree along it, a small constellation at each corner. */
