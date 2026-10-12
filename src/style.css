@@ -5004,6 +5004,13 @@ kbd {
   padding-left: 22px;
 }
 
+/* The map's badge, the compass rose, a size larger than a stone niche. */
+[data-ui='runecut'] .win[data-frame='parchment'] .rc-niche {
+  margin: -12px 8px -12px -8px;
+  transform: scale(1.35);
+  transform-origin: 50% 50%;
+}
+
 /* Skills' badge, the lavender tablet, a size larger than a stone niche and set into the frame's top left. */
 [data-ui='runecut'] .win[data-frame='runestone'] .rc-niche {
   margin: -16px 8px -12px -12px;

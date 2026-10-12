@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -51,7 +51,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'runestone', label: 'Stone pillars and oak', for: ['skills'] },
   { kind: 'guild', label: 'Iron-bound planks', for: ['trades'] },
   { kind: 'altar', label: 'Marble, pearl and sea glass', for: ['faith'] },
-  { kind: 'parchment', label: 'Parchment', for: ['map'] },
+  { kind: 'parchment', label: 'Map stone, gold and sky', for: ['map'] },
   { kind: 'treasure', label: 'Treasure map', for: ['hoard'] },
   { kind: 'stall', label: 'Market stall', for: ['market'] },
   { kind: 'scroll', label: 'Scroll', for: ['events'] },
@@ -78,7 +78,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -2198,6 +2198,156 @@ function scroll(g: Ctx, F: number, flip: boolean): void {
   g.restore();
 }
 
+/* ---- the map frame's own kit -------------------------------------------- */
+
+/** The map's sky blue: the pennants and the marbling in the band. */
+const SKY = { body: H('#93b3d3'), lit: H('#cfe0f0'), deep: H('#5f84a8') };
+
+/** A gold four-pointed star burst on a pale lozenge at (x, y), `r` to its points: the lozenge edged in gold, a lesser star turned under the great one. */
+function starBurst(g: Ctx, x: number, y: number, r: number): void {
+  g.save();
+  g.translate(x, y);
+  // The lozenge.
+  g.beginPath();
+  g.moveTo(0, -r * 0.82);
+  g.lineTo(r * 0.82, 0);
+  g.lineTo(0, r * 0.82);
+  g.lineTo(-r * 0.82, 0);
+  g.closePath();
+  g.save();
+  g.shadowColor = 'rgba(60, 50, 40, 0.35)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  const pale = g.createLinearGradient(-r, -r, r, r);
+  pale.addColorStop(0, '#fbf7ee');
+  pale.addColorStop(1, '#e7dfcf');
+  g.fillStyle = pale;
+  g.fill();
+  g.restore();
+  g.strokeStyle = css(BRASS.body);
+  g.lineWidth = 1.4;
+  g.stroke();
+  g.strokeStyle = css(BRASS.ink, 0.7);
+  g.lineWidth = 0.5;
+  g.stroke();
+  // The lesser star, turned, then the great one over it.
+  g.save();
+  g.rotate(Math.PI / 4);
+  star(g, r * 0.78, r * 0.14);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.7);
+  g.lineWidth = 0.5;
+  g.stroke();
+  g.restore();
+  star(g, r * 1.25, r * 0.22);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.6;
+  g.stroke();
+  g.restore();
+}
+
+/** A sky-blue pennant hung on a side at (x, y), `wd` across and `len` long, its foot cut to a point: edged in gold, three small gold stars down it. */
+function pennant(g: Ctx, x: number, y: number, wd: number, len: number): void {
+  const x0 = x - wd / 2, x1 = x + wd / 2;
+  const shape = (): void => {
+    g.beginPath();
+    g.moveTo(x0, y);
+    g.lineTo(x1, y);
+    g.lineTo(x1, y + len - wd * 0.6);
+    g.lineTo(x, y + len);
+    g.lineTo(x0, y + len - wd * 0.6);
+    g.closePath();
+  };
+  g.save();
+  shape();
+  g.shadowColor = 'rgba(40, 50, 70, 0.35)';
+  g.shadowBlur = 2.5;
+  g.shadowOffsetY = 1.5;
+  const f = g.createLinearGradient(x0, 0, x1, 0);
+  f.addColorStop(0, css(SKY.lit));
+  f.addColorStop(0.5, css(SKY.body));
+  f.addColorStop(1, css(mix(SKY.body, SKY.deep, 0.5)));
+  g.fillStyle = f;
+  g.fill();
+  g.restore();
+  shape();
+  g.strokeStyle = css(BRASS.body);
+  g.lineWidth = 1.4;
+  g.stroke();
+  g.strokeStyle = css(BRASS.ink, 0.7);
+  g.lineWidth = 0.5;
+  g.stroke();
+  // Its rod across the top, gold, a knob at each end.
+  g.beginPath();
+  g.roundRect(x0 - 2, y - 2, wd + 4, 3, 1.5);
+  g.fillStyle = goldFill(g, x0, y - 2, x1, y + 1);
+  g.fill();
+  for (let k = 0; k < 3; k++) goldStar(g, x, y + len * (0.22 + k * 0.22), wd * (k === 1 ? 0.34 : 0.24));
+}
+
+/**
+ * The map's badge, where another window's rune is: a compass rose of gold
+ * on a pale disc ringed in gold, its four great points and four lesser, and
+ * the north point darkened. `W` by `Hh`.
+ */
+export function paintCompass(g: Ctx, W: number, Hh: number, night: boolean): void {
+  const cx = W / 2, cy = Hh / 2, r = W / 2 - 1;
+  g.save();
+  g.beginPath();
+  g.arc(cx, cy, r, 0, Math.PI * 2);
+  g.shadowColor = 'rgba(40, 30, 20, 0.4)';
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = goldFill(g, cx - r, cy - r, cx + r, cy + r);
+  g.fill();
+  g.restore();
+  g.beginPath();
+  g.arc(cx, cy, r - 1.8, 0, Math.PI * 2);
+  g.fillStyle = '#f8f2e4';
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.8);
+  g.lineWidth = 0.6;
+  g.stroke();
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(Math.PI / 4);
+  star(g, r * 0.62, r * 0.12);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.restore();
+  g.save();
+  g.translate(cx, cy);
+  star(g, r * 0.9, r * 0.18);
+  g.fillStyle = goldFill(g, -r, -r, r, r);
+  g.fill();
+  g.strokeStyle = css(BRASS.ink, 0.9);
+  g.lineWidth = 0.6;
+  g.stroke();
+  // The north point, darker.
+  g.beginPath();
+  g.moveTo(0, -r * 0.9);
+  g.lineTo(r * 0.18 * 0.6, -r * 0.18 * 0.6);
+  g.lineTo(0, 0);
+  g.closePath();
+  g.fillStyle = css(shade(BRASS.body, 0.45));
+  g.fill();
+  g.beginPath();
+  g.arc(0, 0, 1.3, 0, Math.PI * 2);
+  g.fillStyle = css(BRASS.ink);
+  g.fill();
+  g.restore();
+  if (night) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = `rgba(${NIGHT_WASH.colour}, ${NIGHT_WASH.alpha * NIGHT_FRAME})`;
+    g.fillRect(-4, -4, W + 8, Hh + 8);
+    g.restore();
+  }
+}
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -2652,36 +2802,98 @@ const PAINTERS: Record<string, Painter> = {
     });
   },
 
-  /* The map: parchment with a deckled edge, an inked border, and a compass rose at a corner. */
+  /*
+   * The map: a band of pale stone marbled faintly in sky blue, rounded at
+   * its corners, edged in gold outside with a finer line inside it and gold
+   * round the content; a gold star burst on a pale lozenge over three
+   * corners; a sky-blue pennant with gold stars down the right side under
+   * the top right one and a lesser one at the bottom left; small gold stars
+   * along the band; and ivy flowering white over the top left and bottom
+   * right corners.
+   */
   parchment(g, w, h, F, R) {
-    paper(g, w, h, F, R, PARCH, 2.4, false);
-    eachSide(g, w, h, (s) => {
-      g.strokeStyle = css(H('#7d6a52'), 0.85);
-      g.lineWidth = 0.8;
-      g.beginPath();
-      g.moveTo(F * 0.4, F - 3.5);
-      g.lineTo(s.len - F * 0.4, F - 3.5);
-      g.stroke();
-    });
-    // The rose, in the top right, inked.
+    const rr = 9;
+    // The band.
     g.save();
-    g.translate(w - F * 0.95, F * 0.95);
     g.beginPath();
-    g.arc(0, 0, F * 0.95, 0, Math.PI * 2);
-    g.fillStyle = css(light(PARCH, 0.3));
+    g.roundRect(0, 0, w, h, rr);
+    g.clip();
+    const base = g.createLinearGradient(0, 0, w, h);
+    base.addColorStop(0, '#f8f2e6');
+    base.addColorStop(0.5, '#f3ecdd');
+    base.addColorStop(1, '#efe6d4');
+    g.fillStyle = base;
+    g.fillRect(0, 0, w, h);
+    // Marbled faintly with sky: soft clouds and wandering veins, only in the band.
+    eachSide(g, w, h, (s) => {
+      for (let k = 0; k < s.len / 28; k++) {
+        const x = R() * s.len, y = R() * F, r = F * (0.5 + R() * 0.9);
+        const c = g.createRadialGradient(x, y, 0, x, y, r);
+        c.addColorStop(0, 'rgba(160, 186, 210, 0.32)');
+        c.addColorStop(1, 'rgba(160, 186, 210, 0)');
+        g.fillStyle = c;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+      for (let k = 0; k < s.len / 30; k++) {
+        let x = R() * s.len, y = 2 + R() * (F - 4);
+        g.beginPath();
+        g.moveTo(x, y);
+        for (let j = 0; j < 5 + R() * 6; j++) {
+          x += 6 + R() * 10;
+          y = Math.max(2, Math.min(F - 2, y + (R() - 0.5) * 7));
+          g.lineTo(x, y);
+        }
+        g.strokeStyle = css(SKY.deep, 0.3);
+        g.lineWidth = 0.6;
+        g.stroke();
+      }
+    });
+    g.restore();
+    // Gold: the outer edge, a finer line inside it, and round the content.
+    const edge = (inset: number, r: number, wd: number): void => gilt(g, () => {
+      g.beginPath();
+      g.roundRect(inset, inset, w - inset * 2, h - inset * 2, r);
+    }, wd);
+    edge(1.2, rr - 1, 1.3);
+    edge(4.5, rr - 4, 0.6);
+    edge(F - 2, 4, 1);
+    // Small gold stars along the band, and a lozenge at the middle of the foot.
+    for (const t of [0.22, 0.7]) goldStar(g, w * t, F * 0.5, F * 0.3);
+    for (const t of [0.2, 0.8]) goldStar(g, w * t, h - F * 0.5, F * 0.28);
+    if (h > F * 10) {
+      goldStar(g, F * 0.5, h * 0.42, F * 0.3);
+      goldStar(g, w - F * 0.5, h * 0.62, F * 0.3);
+    }
+    g.save();
+    g.translate(w / 2, h - F * 0.5);
+    g.beginPath();
+    g.moveTo(0, -F * 0.3);
+    g.lineTo(F * 0.22, 0);
+    g.lineTo(0, F * 0.3);
+    g.lineTo(-F * 0.22, 0);
+    g.closePath();
+    g.fillStyle = goldFill(g, -F * 0.3, -F * 0.3, F * 0.3, F * 0.3);
     g.fill();
-    g.scale(1, -1);
-    strokesPath(g, roundelStrokes('star8'), 0, 0, F * 0.95);
-    g.strokeStyle = css(H('#5a4a3a'));
-    g.lineWidth = 0.8;
+    g.strokeStyle = css(BRASS.ink, 0.8);
+    g.lineWidth = 0.5;
     g.stroke();
     g.restore();
-    g.save();
-    g.translate(w - F * 0.95, F * 0.95);
-    star(g, F * 0.8, F * 0.16);
-    g.fillStyle = css(H('#b4584a'), 0.85);
-    g.fill();
-    g.restore();
+    // Ivy over the top left and the bottom right.
+    if (h > F * 8) {
+      const lush = F * 1.3;
+      vine(g, R, curve([F * 0.3, F * 0.4], [F * 2.5, F * -0.15], [F * 5, F * 0.35]), lush, true);
+      vine(g, R, curve([F * 0.35, F * 0.5], [F * -0.15, F * 3.5], [F * 0.35, F * 7]), lush, false);
+      vine(g, R, curve([w - F * 0.4, h - F * 1.6], [w + F * 0.1, h - F * 4.5], [w - F * 0.35, h - F * 8]), lush, true);
+      vine(g, R, curve([w - F * 1.6, h - F * 0.4], [w - F * 4, h + F * 0.1], [w - F * 7, h - F * 0.35]), lush, true);
+    }
+    // The pennants, then the star bursts over the corners.
+    if (h > F * 10) {
+      pennant(g, w - F * 0.5, F * 1.9, F * 0.75, F * 3.2);
+      pennant(g, F * 0.5, h - F * 4.6, F * 0.6, F * 2.4);
+    }
+    starBurst(g, w - F * 0.45, F * 0.45, F * 0.95);
+    starBurst(g, F * 0.45, h - F * 0.45, F * 0.85);
+    starBurst(g, w - F * 0.45, h - F * 0.45, F * 0.85);
   },
 
   /* The treasure map: older parchment, its edge torn and scorched, and the X at a corner. */

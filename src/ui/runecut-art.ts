@@ -4,7 +4,7 @@ import {
 } from '../render/runestone';
 import { hashOf, PPM, rand } from '../render/ivy';
 import { NIGHT_WASH } from '../render/nightwash';
-import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameLamps, frameOddities, paintFrame, paintHammers, paintTablet, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
+import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameFor, frameLabel, frameLamps, frameOddities, paintCompass, paintFrame, paintHammers, paintTablet, paintTag, reachOf, type FrameDef, type FrameOpts } from './runecut-frames';
 
 /**
  * Runecut's art: a window as a slab of the runestones' stone, its rune cut
@@ -381,6 +381,11 @@ export function paintNiche(g: Ctx, glyph: string, o: ArtOpts, scale: number, lit
   // Skills' is a lavender tablet in gold with a sprig on it, nor has it a rune.
   if (o.frame === 'runestone') {
     paintTablet(g, NICHE_W, NICHE_H, o.night);
+    return;
+  }
+  // The map's is a compass rose in gold.
+  if (o.frame === 'parchment') {
+    paintCompass(g, NICHE_W, NICHE_H, o.night);
     return;
   }
   if (o.frame === 'burlap') {
