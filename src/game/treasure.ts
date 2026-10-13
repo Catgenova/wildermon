@@ -152,6 +152,7 @@ import type { Game } from './game';
 import type { ActionDef } from './actions';
 import { HOARD_METALS, ITEM_DEFS, rollRarity, type Item } from './items';
 import { canImprove } from './improve';
+import { HOARD_HEAD, tryGain } from './learn';
 
 /**
  * The ordinary things in a hoard, beside the lumps: a tool or a blade.
@@ -325,6 +326,8 @@ export const TREASURE_ACTIONS: ActionDef[] = [
       g.inventory.remove(map.uid, 1);
       g.hoards = g.hoards.filter((k: Hoard) => k.uid !== map.uid);
       g.note('hoard');
+      // Matching a map's picture to the ground it was drawn from is head work (`HOARD_HEAD`).
+      g.gainSkill('mind_logic', tryGain(true, HOARD_HEAD));
       g.logMsg('The spade goes through rotten board and the hoard is open — '
         + `${tier.lumps} lump${tier.lumps === 1 ? '' : 's'} and ${tier.things} `
         + `thing${tier.things === 1 ? '' : 's'} lying where they fell.`

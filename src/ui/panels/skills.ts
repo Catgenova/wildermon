@@ -2,6 +2,7 @@ import { CARRY_PER_STRENGTH, type Game } from '../../game/game';
 import { SKILL_DEFS } from '../../game/skills';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
+import { raisedBySays } from '../raisedBy';
 
 export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
@@ -95,10 +96,13 @@ export class SkillsPanel {
     }
   }
 
-  /** The note beside a skill, short, and the sentence it stands for: its knacks, and what it is worth right now. */
+  /** The note beside a skill, short, and the sentence it stands for: its knacks, what it is worth right now, and for a characteristic what raises it. */
   private note(id: string): [string, string] {
     const g = this.game;
-    const [short, long] = this.plain(id) ?? ['', ''];
+    const [short, worth] = this.plain(id) ?? ['', ''];
+    // What raises a characteristic, which no trade's name says for it (`RAISED_BY`).
+    const raised = raisedBySays(id);
+    const long = [worth, raised ? `Raised by ${raised}.` : ''].filter(Boolean).join(' ');
     // A knack is worth saying before anything else: it never wears off.
     const knacks = Math.min(KNACK_CAP, g.player.knacks[id] ?? 0);
     if (!knacks) return [short, long];

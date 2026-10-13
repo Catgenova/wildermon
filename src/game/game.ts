@@ -70,7 +70,7 @@ import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
 import { considerSays } from './consider';
-import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
+import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
@@ -2844,12 +2844,23 @@ export class Game {
   /**
    * The kilograms of armour on you, a shield in the off hand with it: each
    * piece at its make's own weight, whatever it is made of, as a dodge counts
-   * it. What a swing is slowed by (`swingBurden`); the island's `swing_burden`.
+   * it. What the weapon card says you have on.
    */
   armourKg(): number {
     const shield = this.worn('offhand');
     return this.wornArmour().reduce((n, { item }) => n + itemDef(item.id).weight, 0)
       + (shield && SHIELDS[shield.id] ? itemDef(shield.id).weight : 0);
+  }
+
+  /**
+   * The same pieces as a swing counts them: each one's weight times its
+   * family's share (`swingKgOf`, `ARMOUR_SWING_BY`). What a swing is slowed by
+   * (`swingBurden`); the island's `swing_burden`.
+   */
+  armourCounted(): number {
+    const shield = this.worn('offhand');
+    return this.wornArmour().reduce((n, { item }) => n + swingKgOf(item.id), 0)
+      + (shield && SHIELDS[shield.id] ? swingKgOf(shield.id) : 0);
   }
 
   /**
@@ -2860,7 +2871,7 @@ export class Game {
    * is not on your back. The island's `swing_burden`.
    */
   swingBurden(): { armour: number; over: number } {
-    return { armour: armourSwing(this.armourKg()), over: overburdenSwing(this.overloaded() > 0) };
+    return { armour: armourSwing(this.armourCounted()), over: overburdenSwing(this.overloaded() > 0) };
   }
 
   /** Your chance of dodging a creature's blow just now (`dodgeChance`): body control past where it starts, less the kilograms of armour on you. */
@@ -5536,7 +5547,7 @@ export class Game {
         { what: 'a bauble on the settlement', by: bauble },
         { what: 'your perks', by: perk },
         { what: 'a piece standing near', by: piece },
-        { what: `armour ${this.armourKg().toFixed(1)} kg`, by: armour },
+        { what: `armour ${this.armourKg().toFixed(1)} kg, counting ${this.armourCounted().toFixed(1)} kg`, by: armour },
         { what: 'overburdened', by: over },
       ].filter((p) => Math.abs(p.by - 1) > 1e-9),
     };

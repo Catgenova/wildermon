@@ -29,6 +29,7 @@ import {
   type EnchantEffect, type EnchantHeld, type EnchantmentDef, type EnchantOn,
 } from './enchant';
 import { listed } from './words';
+import { ENCHANT_HEAD, tryGain } from './learn';
 
 /** The job: a scroll in the pack put into a melee weapon in the pack. The weapon is the target, the scroll `Target.scroll`. */
 export const ENCHANT = 'enchant';
@@ -354,6 +355,8 @@ export const ENCHANT_ACTIONS: ActionDef[] = [
       const r1 = g.rand();
       const r = g.rand();
       g.inventory.remove(scroll.uid, 1);
+      // Head work as well as the trade's, into whatever it was set, taken or not (`ENCHANT_HEAD`).
+      g.gainSkill('mind_logic', tryGain(r1 < enchantChance(skill, scroll.ql), ENCHANT_HEAD));
       if ('placed' in into) {
         const { thing, def, name } = into.placed;
         const said = name.toLowerCase();

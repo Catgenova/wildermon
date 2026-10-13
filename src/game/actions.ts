@@ -1,4 +1,5 @@
 export { TRY_LEARN, tryGain } from './learn';
+import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS } from './motes';
@@ -1544,6 +1545,8 @@ export const ACTIONS: ActionDef[] = [
         }
       }
       g.markProspected(tiles);
+      // Reading a seam out of the ground is head work as well as the trade's (`PROSPECT_HEAD`); a go always reads it.
+      g.gainSkill('mind_logic', tryGain(true, PROSPECT_HEAD));
       // Sampling where you stand tells you what that particular rock holds.
       const here = bedrockAt(w, t.x, t.y);
       const buried = w.getTile(t.x, t.y) === TileType.Rock ? '' : ` It lies under ${Math.max(1, w.getDirt(t.x, t.y))} of ground.`;

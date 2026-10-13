@@ -14,10 +14,16 @@
  *     1, 20, 47 and 70, swings every 2 seconds less a part in 140 a point of
  *     fighting, never under the floor, the next go timed by `settle` as the
  *     browser times it and as the card says;
- *   * full plate makes it longer by its kilograms' share
- *     (`armourSwingKg`), no more than `ARMOUR_SWING_FULL`; a part of a set
- *     by its own kilograms' share, in proportion; plate and a metal shield,
- *     the heaviest set there is, by exactly `ARMOUR_SWING_FULL`;
+ *   * full plate makes it longer by its kilograms' share as they count,
+ *     each piece's weight times its family's (`ARMOUR_SWING_BY`) at
+ *     `armourSwingKg` a counted kilogram, no more than `ARMOUR_SWING_FULL`;
+ *     a part of a set by its own counted kilograms' share, in proportion;
+ *     plate and a metal shield, the heaviest set there is as it counts, by
+ *     exactly `ARMOUR_SWING_FULL`;
+ *   * a full set of leather (8.2 kg, counting half) and of plate (31 kg,
+ *     counting a quarter again) make it longer by what they count for, on
+ *     both sides and in `swing_burden` itself, so leather slows a swing
+ *     less a kilogram than plate by exactly the ratio of their shares;
  *   * a pack over what the back takes makes it `OVERBURDEN_SWING` longer,
  *     and plate with it the two together;
  *   * a wagon driven with a load in it, and a pack under the limit, change
@@ -28,16 +34,18 @@
  *   * a fight asked for (`rpc_act`) and a bite turned on (`fight_back`) are
  *     timed the same as the go after, armour and pack included;
  *   * mining is timed as it was, in plate and over the limit;
- *   * the card a weapon shows says the seconds and names armour and being
- *     overburdened with their shares.
+ *   * the card a weapon shows says the seconds and names armour, its
+ *     kilograms as they weigh and as they count, and being overburdened,
+ *     with their shares; and the card a piece of armour shows says what it
+ *     adds to every swing.
  *
  * Runs against the database the suite leaves behind.
  */
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
-import { ARMOUR_SWING_FULL, armourSwingKg, heaviestSet, OVERBURDEN_SWING, SWING_FLOOR, swingSeconds } from '../../src/game/fight';
+import { ARMOUR_SWING_BY, ARMOUR_SWING_FULL, armourSwingKg, heaviestSet, OVERBURDEN_SWING, SHIELD_SWING_BY, SWING_FLOOR, swingSeconds } from '../../src/game/fight';
 import { CHAR_START, Game, goSeconds } from '../../src/game/game';
-import { WEAPON_BY_ID, WEAPONS, type Slot } from '../../src/game/gear';
+import { ARMOUR_BY_ID, SHIELDS, WEAPON_BY_ID, WEAPONS, type Slot } from '../../src/game/gear';
 import { itemDef } from '../../src/game/items';
 import { finePercent, percent } from '../../src/game/words';
 import type { Wound } from '../../src/game/wounds';
@@ -72,6 +80,10 @@ if (!SWORD) throw new Error('no short sword');
 const SKILLS = [1, 20, 47, 70];
 const PLATE: Array<[string, Slot]> = [['helm', 'head'], ['plate_breastplate', 'chest'], ['plate_arms', 'arms'], ['plate_legs', 'legs'], ['plate_boots', 'feet']];
 const PART = PLATE.slice(0, 2);
+const LEATHER: Array<[string, Slot]> = [['leather_cap', 'head'], ['leather_jerkin', 'chest'], ['leather_sleeves', 'arms'], ['leather_trousers', 'legs'], ['leather_boots', 'feet']];
+/** What the two sets weigh, written down here so that a piece made heavier or lighter is caught rather than followed. */
+const LEATHER_KG = 8.2;
+const PLATE_KG = 31;
 const SHIELD = 'metal_shield';
 /** Enough logs to be over the limit on a starting back, and a wagon's load of them. */
 const LOGS = 10;
@@ -81,8 +93,13 @@ const ARM_WOUNDS: Wound[] = [{ id: 1, kind: 'cut', part: 'arms', severity: 0.08,
 
 /** The kilograms of a set, at each piece's make weight. */
 const kgOf = (ids: string[]): number => ids.reduce((n, id) => n + itemDef(id).weight, 0);
+/** The kilograms a set counts for against a swing: each piece's weight times its family's share, or a shield's. */
+const countedOf = (ids: string[]): number => ids.reduce((n, id) => {
+  const a = ARMOUR_BY_ID.get(id);
+  return n + itemDef(id).weight * (a ? ARMOUR_SWING_BY[a.cls] : SHIELDS[id] ? SHIELD_SWING_BY : NaN);
+}, 0);
 /** What armour of these pieces makes of a swing, worked out here rather than asked of the rule. */
-const armourBy = (ids: string[]): number => 1 + kgOf(ids) * (ARMOUR_SWING_FULL / heaviestSet().kg);
+const armourBy = (ids: string[]): number => 1 + countedOf(ids) * (ARMOUR_SWING_FULL / heaviestSet().counted);
 
 /* ---- The island's half -------------------------------------------------- */
 
@@ -128,7 +145,7 @@ $f$;
 do $b$
 declare w record; v_px double precision; v_py double precision; v_ogre int; v_sword bigint; v_eq jsonb; v_plated jsonb;
         v_part jsonb; v_shielded jsonb; v_logs bigint; f int; v_item bigint; s text[]; r record; v_cart placed;
-        v_ctl double precision; v_act text;
+        v_ctl double precision; v_act text; v_leather jsonb;
 begin
   -- Off the beach of the biggest island there is, with land under it (\`at_peace\`).
   select p.world_id, p.uid, wd.size, wd.spawn_x, wd.spawn_y into w
@@ -168,6 +185,10 @@ begin
     if s[1] in (${PART.map(([id]) => `'${id}'`).join(', ')}) then v_part := v_part || jsonb_build_object(s[2], v_item); end if;
   end loop;
   v_shielded := v_plated || jsonb_build_object('offhand', give(w.world_id, w.uid, '${SHIELD}', 1, 40, 'iron'));
+  v_leather := v_eq;
+  foreach s slice 1 in array array[${LEATHER.map(([id, slot]) => `['${id}', '${slot}']`).join(', ')}] loop
+    v_leather := v_leather || jsonb_build_object(s[2], give(w.world_id, w.uid, s[1], 1, 40));
+  end loop;
   insert into said values ('UNDER', pg_temp.laden(w.world_id, w.uid));
   foreach f in array array[${SKILLS.join(', ')}] loop
     perform pg_temp.fresh(w.world_id, w.uid, f, 1, v_plated);
@@ -177,6 +198,12 @@ begin
   insert into said values ('PART', pg_temp.next_go(w.world_id, w.uid, v_ogre));
   perform pg_temp.fresh(w.world_id, w.uid, 20, 1, v_shielded);
   insert into said values ('SHIELD', pg_temp.next_go(w.world_id, w.uid, v_ogre));
+  -- A full set of leather and one of plate, timed and asked of \`swing_burden\` itself.
+  perform pg_temp.fresh(w.world_id, w.uid, 20, 1, v_leather);
+  insert into said values ('LEATHER', pg_temp.next_go(w.world_id, w.uid, v_ogre));
+  insert into said values ('BURDEN:LEATHER', swing_burden(w.world_id, w.uid, 'attack_creature')::text);
+  perform pg_temp.fresh(w.world_id, w.uid, 20, 1, v_plated);
+  insert into said values ('BURDEN:PLATE', swing_burden(w.world_id, w.uid, 'attack_creature')::text);
 
   -- A wagon driven, with a load in it far over what a back takes, and the pack under it.
   v_item := give(w.world_id, w.uid, 'wagon', 1, 50, 'Pine');
@@ -274,6 +301,7 @@ g.equip('weapon', sword.uid);
 const pieces = new Map<string, number>();
 for (const [id] of PLATE) pieces.set(id, g.inventory.add(id, { ql: 40, extra: 'Iron' }).uid);
 pieces.set(SHIELD, g.inventory.add(SHIELD, { ql: 40, extra: 'Iron' }).uid);
+for (const [id] of LEATHER) pieces.set(id, g.inventory.add(id, { ql: 40 }).uid);
 let logs: number | null = null;
 const laden = (over: boolean): void => {
   if (over && logs === null) logs = g.inventory.add('log', { ql: 30, count: LOGS }).uid;
@@ -282,7 +310,7 @@ const laden = (over: boolean): void => {
 /** Put on these pieces and take off every other. */
 const wear = (ids: string[]): void => {
   for (const slot of ['head', 'chest', 'arms', 'legs', 'feet', 'offhand'] as Slot[]) g.equip(slot, null);
-  for (const id of ids) g.equip(id === SHIELD ? 'offhand' : (PLATE.find(([p]) => p === id)?.[1] as Slot), pieces.get(id) ?? null);
+  for (const id of ids) g.equip(id === SHIELD ? 'offhand' : ([...PLATE, ...LEATHER].find(([p]) => p === id)?.[1] as Slot), pieces.get(id) ?? null);
 };
 /** That body as the island had it when it timed the go. */
 const asTimed = (t: Timed): Game => {
@@ -297,15 +325,22 @@ const fresh = (t: Timed): number => swingSeconds(SWORD.swing, t.fighting, g.cont
 
 const PLATE_IDS = PLATE.map(([id]) => id);
 const PART_IDS = PART.map(([id]) => id);
+const LEATHER_IDS = LEATHER.map(([id]) => id);
+const leather = armourBy(LEATHER_IDS);
 const full = armourBy(PLATE_IDS);
 const part = armourBy(PART_IDS);
 const over = 1 + OVERBURDEN_SWING;
 
 {
   const set = heaviestSet();
-  check(`the heaviest set is plate and a metal shield, ${set.kg} kg, and a kilogram of it is ${finePercent(armourSwingKg())} of a swing`,
-    set.pieces.join() === [...PLATE_IDS, SHIELD].join() && near(armourSwingKg() * set.kg, ARMOUR_SWING_FULL),
-    `${set.pieces.join(', ')}: ${set.kg} kg`);
+  check(`the heaviest set as it counts is plate and a metal shield, ${set.kg} kg counting ${set.counted} kg, and a counted kilogram of it is ${finePercent(armourSwingKg())} of a swing`,
+    set.pieces.join() === [...PLATE_IDS, SHIELD].join() && near(set.kg, kgOf(set.pieces)) && near(set.counted, countedOf(set.pieces))
+      && near(armourSwingKg() * set.counted, ARMOUR_SWING_FULL),
+    `${set.pieces.join(', ')}: ${set.kg} kg, counting ${set.counted} kg`);
+  check(`leather weighs ${LEATHER_KG} kg and counts for ${ARMOUR_SWING_BY.leather} of it, plate ${PLATE_KG} kg and ${ARMOUR_SWING_BY.plate} of it`,
+    near(kgOf(LEATHER_IDS), LEATHER_KG) && near(kgOf(PLATE_IDS), PLATE_KG)
+      && near(countedOf(LEATHER_IDS), LEATHER_KG * ARMOUR_SWING_BY.leather) && near(countedOf(PLATE_IDS), PLATE_KG * ARMOUR_SWING_BY.plate),
+    `leather ${kgOf(LEATHER_IDS)} kg counting ${countedOf(LEATHER_IDS)}, plate ${kgOf(PLATE_IDS)} kg counting ${countedOf(PLATE_IDS)}`);
   check(`full plate adds its ${kgOf(PLATE_IDS)} kg's share, ${percent(full - 1)}, no more than ${percent(ARMOUR_SWING_FULL)}`,
     full > 1 && full - 1 <= ARMOUR_SWING_FULL + 1e-12, `${full}`);
 }
@@ -359,7 +394,7 @@ laden(false);
   asTimed(t);
   check(`a helm and a breastplate, ${kgOf(PART_IDS)} kg: ${percent(part - 1)} longer, in proportion to full plate's ${percent(full - 1)}`,
     near(t.secs, g.duration(ATTACK)) && near(t.secs, fresh(t) * part)
-      && near((part - 1) / (full - 1), kgOf(PART_IDS) / kgOf(PLATE_IDS)),
+      && near((part - 1) / (full - 1), countedOf(PART_IDS) / countedOf(PLATE_IDS)),
     `island ${t.secs}, browser ${g.duration(ATTACK)}, fresh ${fresh(t)}`);
 }
 {
@@ -369,6 +404,28 @@ laden(false);
   check(`plate and a metal shield, the heaviest set: exactly ${percent(ARMOUR_SWING_FULL)} longer`,
     near(t.secs, g.duration(ATTACK)) && near(t.secs, fresh(t) * (1 + ARMOUR_SWING_FULL)),
     `island ${t.secs}, browser ${g.duration(ATTACK)}, fresh ${fresh(t)}`);
+}
+{
+  const t = timed('LEATHER');
+  wear(LEATHER_IDS);
+  asTimed(t);
+  const browser = g.swingBurden().armour;
+  const islandLeather = Number(said.get('BURDEN:LEATHER'));
+  check(`a full set of leather, ${LEATHER_KG} kg counting ${LEATHER_KG * ARMOUR_SWING_BY.leather} kg: ${finePercent(leather - 1)} longer, on both sides, on the card and in swing_burden`,
+    near(t.secs, g.duration(ATTACK)) && near(t.secs, card()) && near(t.secs, fresh(t) * leather) && near(browser, leather) && near(islandLeather, leather),
+    `island ${t.secs} (burden ${islandLeather}), browser ${g.duration(ATTACK)} (burden ${browser}), card ${card()}, fresh ${fresh(t)}`);
+  wear(PLATE_IDS);
+  const plate = g.swingBurden().armour;
+  const islandPlate = Number(said.get('BURDEN:PLATE'));
+  check(`a full set of plate, ${PLATE_KG} kg counting ${PLATE_KG * ARMOUR_SWING_BY.plate} kg: ${finePercent(full - 1)} longer in swing_burden, on both sides`,
+    near(plate, full) && near(islandPlate, full), `island ${islandPlate}, browser ${plate}, worked out ${full}`);
+  check(`so a kilogram of leather slows a swing ${+(ARMOUR_SWING_BY.leather / ARMOUR_SWING_BY.plate).toFixed(4)} times what a kilogram of plate does, on the island`,
+    near(((islandLeather - 1) / LEATHER_KG) / ((islandPlate - 1) / PLATE_KG), ARMOUR_SWING_BY.leather / ARMOUR_SWING_BY.plate),
+    `${(islandLeather - 1) / LEATHER_KG} against ${(islandPlate - 1) / PLATE_KG} a kilogram`);
+  const piece = (compareLines(g, g.inventory.get(pieces.get('plate_breastplate') as number)!) ?? [])
+    .map((l) => (typeof l === 'string' ? l : l.text)).find((l) => l.startsWith('Each swing or draw'));
+  check('the card a breastplate shows says what it adds to every swing, at its counted kilograms',
+    piece === `Each swing or draw ${finePercent(countedOf(['plate_breastplate']) * armourSwingKg())} longer`, piece ?? 'no line');
 }
 {
   const t = timed('WAGON');
@@ -408,7 +465,8 @@ for (const k of ['ASKED', 'TURNED']) {
   const line = (compareLines(g, sword) ?? []).map((l) => (typeof l === 'string' ? l : l.text)).find((l) => l.startsWith('A swing every'));
   check('the card says the seconds and names armour and being overburdened with their shares',
     (line?.startsWith(`A swing every ${g.duration(ATTACK).toFixed(2)} s`) ?? false)
-      && note.includes(`armour ${kgOf(PLATE_IDS).toFixed(1)} kg +${percent(full - 1)}`) && note.includes(`overburdened +${percent(OVERBURDEN_SWING)}`),
+      && note.includes(`armour ${kgOf(PLATE_IDS).toFixed(1)} kg, counting ${countedOf(PLATE_IDS).toFixed(1)} kg +${percent(full - 1)}`)
+      && note.includes(`overburdened +${percent(OVERBURDEN_SWING)}`),
     `${line ?? 'no line'} / ${note}`);
 }
 

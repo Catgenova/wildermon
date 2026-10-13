@@ -651,6 +651,15 @@ jobs:
           npx esbuild supabase/test/taught.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/taught.mjs --log-level=error
           node node_modules/.cache/taught.mjs
+      - name: Head work raises mind logic
+        run: |
+          # Mind logic rose from crafts, restoring and books and nothing else,
+          # so its knacks came to crafters alone. A go of prospecting, an
+          # offering to a wild creature, a scroll set and a hoard dug up raise
+          # it now, on both sides, each by its base under the same name.
+          npx esbuild supabase/test/head.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/head.mjs --log-level=error
+          node node_modules/.cache/head.mjs
       - name: Knacks on the move roll at the share of a go they teach
         run: |
           # Asked for: less knack gain for driving, swimming and the like,
@@ -1608,7 +1617,9 @@ jobs:
         run: |
           # A short sword at fighting 1, 20, 47 and 70 swings every two seconds
           # less skill, never under the floor, timed by `settle` as the browser
-          # times it and as the weapon's card says; plate, a pack over what the
+          # times it and as the weapon's card says; armour counted by its
+          # family, a full set of leather and of plate each by what it counts
+          # for, in swing_burden itself and on the cards; a pack over what the
           # back takes and a wagon driven leave it as it was; tired and wounded
           # arms slow it the same on both sides; every weapon at its own pace;
           # a fight asked for and a bite turned on timed the same; and every

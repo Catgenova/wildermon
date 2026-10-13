@@ -1,4 +1,4 @@
-import { DARK_SHOT, DARK_SWING, tryGain } from './learn';
+import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
@@ -297,6 +297,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.guideMark(c.species, 'tamed');
         g.gainSkill('taming', tryGain(true, TAME_GAIN));
         g.gainSkill('soul_strength', tryGain(true, TAME_NERVE));
+        g.gainSkill('mind_logic', tryGain(true, TAME_HEAD));
       } else {
         // It refused, but it stayed for the offering, and that is worth
         // something to the next one.
@@ -307,6 +308,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.logMsg(`The ${def.name.toLowerCase()} ${def.tameFail.replace('{food}', foodName)}.${warming}`, 'event');
         g.gainSkill('taming', tryGain(false, TAME_GAIN));
         g.gainSkill('soul_strength', tryGain(false, TAME_NERVE));
+        g.gainSkill('mind_logic', tryGain(false, TAME_HEAD));
         c.state = 'idle';
         c.until = g.time;
       }

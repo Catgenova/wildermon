@@ -54,7 +54,7 @@ import { BUTCHER_PARTS, HOARD_METALS } from '../src/game/butcher';
 import { CRATE_DEFS } from '../src/game/crates';
 import { ARROWS, BODKIN_HIDE, BURN_WEAR, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_GAIN, DODGE_MOST, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS } from '../src/game/fight';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_CLOSEST, FALL_BACK, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../src/game/fight';
-import { ARM_SLOW, ARM_SLOW_MOST, ARMOUR_VS, armourSwingKg, OVERBURDEN_SWING, BLINDSIDE, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_KINDS, BLOW_PREY, CROWD_BLOCK, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCES, FIST, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_TAKES, HIDES, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, STAGGER_POLE, STANCE_DEALT, STANCE_TAKEN, SWING_WIND, SWING_WIND_KG, TIRED_AT, TIRED_SLOW, WIND_UP } from '../src/game/fight';
+import { ARM_SLOW, ARM_SLOW_MOST, ARMOUR_SWING_BY, ARMOUR_VS, armourSwingKg, OVERBURDEN_SWING, SHIELD_SWING_BY, BLINDSIDE, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_KINDS, BLOW_PREY, CROWD_BLOCK, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCES, FIST, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_TAKES, HIDES, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, STAGGER_POLE, STANCE_DEALT, STANCE_TAKEN, SWING_WIND, SWING_WIND_KG, TIRED_AT, TIRED_SLOW, WIND_UP } from '../src/game/fight';
 import { METALS, MOULDS, ORE_PER_LUMP, RARE_LUMP_FACTOR, RARE_METALS } from '../src/game/metal';
 import { POTTERY } from '../src/game/kiln';
 import { MATERIALS as IMPROVE_MATERIALS, improvable, canImprove } from '../src/game/improve';
@@ -132,7 +132,7 @@ import { REGIONS } from '../src/world/regions';
 import { FUELS, FUEL_SAID } from '../src/game/campfire';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../src/game/graves';
 import { spanWords } from '../src/game/words';
-import { DARK_HIT, DARK_SHOT, DARK_SWING, HEAVY_SKILLS, NIGHT_EYES_FROM, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT } from '../src/game/learn';
+import { DARK_HIT, DARK_SHOT, DARK_SWING, ENCHANT_HEAD, HEAVY_SKILLS, HOARD_HEAD, NIGHT_EYES_FROM, PROSPECT_HEAD, TAME_HEAD, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT } from '../src/game/learn';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../src/game/baubles';
 import { MOTE_CHANCE } from '../src/game/sacrifice';
 import { GLASSHOUSE_GROWTH, HAND_WINTER, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_GROWTH, YEAR_SECONDS, YEARLESS_GROWTH } from '../src/game/growth';
@@ -1421,6 +1421,10 @@ out.push(`create or replace function hide_takes(p_hide text, p_blow text) return
 ${HIDES.map((h) => `    when ${q(h)} then case p_blow ${BLOW_KINDS.map((b) => `when ${q(b)} then ${q(HIDE_TAKES[h][b])}`).join(' ')} end`).join('\n')}
   end, 1)::double precision
 $fn$;`);
+/* How much of a piece's weight counts against a swing, by its family (`ARMOUR_SWING_BY`). */
+out.push(`create or replace function armour_swing_by(p_cls text) returns double precision language sql immutable as $fn$
+  select coalesce(case p_cls ${Object.entries(ARMOUR_SWING_BY).map(([cls, v]) => `when ${q(cls)} then ${q(v)}`).join(' ')} end, 1)::double precision
+$fn$;`);
 out.push(`create or replace function armour_vs(p_cls text, p_kind text) returns double precision language sql immutable as $fn$
   select coalesce(case p_cls
 ${Object.entries(ARMOUR_VS).map(([cls, t]) => `    when ${q(cls)} then case p_kind ${Object.entries(t).map(([k, v]) => `when ${q(k)} then ${q(v)}`).join(' ')} end`).join('\n')}
@@ -1505,10 +1509,11 @@ for (const [fn, v] of [
      wind for the arm and this much more for every kilogram in the hand. */
   ['tired_at', TIRED_AT], ['tired_slow', TIRED_SLOW], ['swing_wind', SWING_WIND], ['swing_wind_kg', SWING_WIND_KG],
   /* And what you wear and carry make of a swing: this share longer for every
-     kilogram of armour and shield on you (`ARMOUR_SWING_FULL` over the
-     heaviest set there is), and this share longer while over what your back
-     takes. */
-  ['armour_swing_kg', armourSwingKg()], ['overburden_swing', OVERBURDEN_SWING],
+     kilogram of armour and shield on you as it counts (`ARMOUR_SWING_FULL`
+     over the heaviest set there is, counted; `armour_swing_by`), and this
+     share longer while over what your back takes. A shield counts at this
+     share of its weight. */
+  ['armour_swing_kg', armourSwingKg()], ['overburden_swing', OVERBURDEN_SWING], ['shield_swing_by', SHIELD_SWING_BY],
   /* A heavy blow: every how many a kind that hits heavy draws one back, how
      long it stands drawing back, what it lands for, and how near a blow
      reaches (which the hand-written hunt_reach said the same of). */
@@ -1738,6 +1743,9 @@ for (const [fn, v] of [
   ['swing_fight', SWING_FIGHT], ['swing_arm', SWING_ARM], ['swing_body', SWING_BODY],
   ['shot_fight', SHOT_FIGHT], ['shot_archery', SHOT_ARCHERY],
   ['rod_gain', ROD_GAIN], ['net_gain', NET_GAIN], ['breed_gain', BREED_GAIN],
+  /* And what the head work beside a trade teaches mind logic: a go of
+     prospecting, an offering, a scroll set, a hoard dug up. */
+  ['prospect_head', PROSPECT_HEAD], ['tame_head', TAME_HEAD], ['enchant_head', ENCHANT_HEAD], ['hoard_head', HOARD_HEAD],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }

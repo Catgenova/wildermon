@@ -1,6 +1,6 @@
 import type { ActionDef } from './actions';
 import type { Game } from './game';
-import { ARMOUR, bowRange, SHIELDS, slotOf, WEAPON_BY_ID, type ArmourClass, type Slot, type WeaponDef } from './gear';
+import { ARMOUR, ARMOUR_BY_ID, bowRange, SHIELDS, slotOf, WEAPON_BY_ID, type ArmourClass, type Slot, type WeaponDef } from './gear';
 import { swingEnchant } from './enchant';
 import { describeWith, itemDef, type Item } from './items';
 import type { SpeciesDef } from './creatures';
@@ -109,12 +109,22 @@ export const swingSeconds = (base: number, skill: number, control = 1, burden = 
  * only when overburdened affect by 20%."
  *
  * A swing or a draw takes `ARMOUR_SWING_FULL` longer in the heaviest set of
- * armour there is (`heaviestSet`: the heaviest make for every place armour or
- * a shield is worn), and less in proportion to the kilograms worn, kilogram
- * for kilogram (`armourSwingKg`). Each piece counts at its make's own weight,
- * whatever it is made of, as a dodge counts it.
+ * armour there is (`heaviestSet`: the piece that counts most for every place
+ * armour or a shield is worn), and less in proportion to the kilograms worn
+ * as they count (`armourSwingKg`). Each piece counts its make's own weight,
+ * whatever it is made of, times what its family makes of it
+ * (`ARMOUR_SWING_BY`): plate, stiff at every joint, for more than it weighs,
+ * and cloth and leather, which move with the arm, for less.
  */
 export const ARMOUR_SWING_FULL = 0.1;
+/**
+ * How much of a piece's weight counts against a swing, by its family. Asked
+ * for: cloth and leather at half their weight, chain and scale at their
+ * weight, plate at a quarter again. The island's `armour_swing_by`.
+ */
+export const ARMOUR_SWING_BY: Record<ArmourClass, number> = { cloth: 0.5, leather: 0.5, chain: 1, scale: 1, plate: 1.25 };
+/** And a shield in the off hand, which is no family of armour: at its own weight, as it always counted. The island's `shield_swing_by`. */
+export const SHIELD_SWING_BY = 1;
 /**
  * And `OVERBURDEN_SWING` longer while what you carry is over what your back
  * takes (`Game.overloaded`, the status panel's red "Overloaded"). Nothing for
@@ -122,47 +132,74 @@ export const ARMOUR_SWING_FULL = 0.1;
  */
 export const OVERBURDEN_SWING = 0.2;
 
+/** What a piece of armour or a shield counts for against a swing, by its id: its family's share of its weight (`ARMOUR_SWING_BY`); 1 for anything else. */
+export const swingByOf = (id: string): number => {
+  const a = ARMOUR_BY_ID.get(id);
+  return a ? ARMOUR_SWING_BY[a.cls] : SHIELDS[id] ? SHIELD_SWING_BY : 1;
+};
+/** The kilograms a piece counts for against a swing: its make's weight times `swingByOf`. */
+export const swingKgOf = (id: string): number => (itemDef(id)?.weight ?? 0) * swingByOf(id);
+
 /** The places a piece of armour or a shield is worn in, in the order a set is told. */
 const ARMOUR_PLACES: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet', 'offhand'];
-let heaviest: { kg: number; pieces: string[] } | null = null;
+let heaviest: { kg: number; counted: number; pieces: string[] } | null = null;
 /**
- * The heaviest set of armour there is: for each place, the piece or shield
- * worn there that weighs most, and their kilograms together. Off the item
- * definitions, so a heavier piece moves it.
+ * The heaviest set of armour there is, as a swing counts it: for each place,
+ * the piece or shield worn there that counts for most (`swingKgOf`), with
+ * their kilograms together as they weigh (`kg`) and as they count
+ * (`counted`). Off the item definitions, so a heavier piece moves it.
  */
-export function heaviestSet(): { kg: number; pieces: string[] } {
+export function heaviestSet(): { kg: number; counted: number; pieces: string[] } {
   if (heaviest) return heaviest;
-  const most = new Map<Slot, { id: string; kg: number }>();
+  const most = new Map<Slot, { id: string; counted: number }>();
   for (const id of [...ARMOUR.map((a) => a.id), ...Object.keys(SHIELDS)]) {
     const slot = slotOf(id);
-    const kg = itemDef(id)?.weight ?? 0;
-    if (slot && kg > (most.get(slot)?.kg ?? -1)) most.set(slot, { id, kg });
+    const counted = swingKgOf(id);
+    if (slot && counted > (most.get(slot)?.counted ?? -1)) most.set(slot, { id, counted });
   }
-  const set = ARMOUR_PLACES.map((s) => most.get(s)).filter((p): p is { id: string; kg: number } => !!p);
-  heaviest = { kg: set.reduce((n, p) => n + p.kg, 0), pieces: set.map((p) => p.id) };
+  const set = ARMOUR_PLACES.map((s) => most.get(s)).filter((p): p is { id: string; counted: number } => !!p);
+  heaviest = {
+    kg: set.reduce((n, p) => n + (itemDef(p.id)?.weight ?? 0), 0),
+    counted: set.reduce((n, p) => n + p.counted, 0),
+    pieces: set.map((p) => p.id),
+  };
   return heaviest;
 }
-/** What each kilogram of armour worn adds to a swing's time, as a share: the island's `armour_swing_kg`. */
-export const armourSwingKg = (): number => ARMOUR_SWING_FULL / heaviestSet().kg;
-/** What this many kilograms of armour make of a swing's time: 1.08 is 8% longer. */
-export const armourSwing = (kg: number): number => 1 + kg * armourSwingKg();
+/** What each kilogram of armour worn, as it counts, adds to a swing's time, as a share: the island's `armour_swing_kg`. */
+export const armourSwingKg = (): number => ARMOUR_SWING_FULL / heaviestSet().counted;
+/** What this many counted kilograms of armour make of a swing's time: 1.08 is 8% longer. */
+export const armourSwing = (counted: number): number => 1 + counted * armourSwingKg();
 /** What carrying over your limit makes of it: `OVERBURDEN_SWING` longer when over, as it is. */
 export const overburdenSwing = (over: boolean): number => (over ? 1 + OVERBURDEN_SWING : 1);
 
 /** Kilograms as they read: 31, 7.5. */
 const kgSaid = (kg: number): string => `${+kg.toFixed(1)} kg`;
+/** A family's whole set, the five places: its kilograms as they weigh and as a swing counts them. */
+const setOf = (cls: ArmourClass): { kg: number; counted: number } => {
+  const ids = ARMOUR.filter((a) => a.cls === cls).map((a) => a.id);
+  return { kg: ids.reduce((n, id) => n + (itemDef(id)?.weight ?? 0), 0), counted: ids.reduce((n, id) => n + swingKgOf(id), 0) };
+};
+/** The families in the order they are told, lightest share first. */
+const SWING_FAMILIES: ArmourClass[] = ['cloth', 'leather', 'chain', 'scale', 'plate'];
+/** "×0.5", "×1.25". */
+const timesSaid = (m: number): string => `×${+m.toFixed(2)}`;
 /**
- * The armour rule in the game's own terms, off the numbers: a kilogram's
- * share, a full set of plate's, and the heaviest set's, which is the most it
- * comes to. For Help and What's new.
+ * The armour rule in the game's own terms, off the numbers: what a counted
+ * kilogram adds, what each family counts its weight at, what each family's
+ * full set comes to, and the heaviest set's, which is the most it comes to.
+ * For Help and What's new.
  */
 export function armourSwingSays(): string {
   const set = heaviestSet();
-  const plateKg = ARMOUR.filter((a) => a.cls === 'plate').reduce((n, a) => n + (itemDef(a.id)?.weight ?? 0), 0);
-  return `Armour makes every swing or draw ${finePercent(armourSwingKg())} longer for each kilogram you wear, a shield in the off hand included, `
-    + `each piece counted at its make's own weight whatever it is made of: `
-    + `a full set of plate (${kgSaid(plateKg)}) ${percent(plateKg * armourSwingKg())} longer, and the heaviest set there is, `
-    + `${listed(set.pieces.map((id) => itemDef(id)?.name.toLowerCase() ?? id))} (${kgSaid(set.kg)}), ${percent(ARMOUR_SWING_FULL)} longer.`;
+  const families = SWING_FAMILIES.map((c) => `${c} ${timesSaid(ARMOUR_SWING_BY[c])}`);
+  const sets = SWING_FAMILIES.map((c) => {
+    const s = setOf(c);
+    return `${c} (${kgSaid(s.kg)}, counting ${kgSaid(s.counted)}) ${percent(s.counted * armourSwingKg())}`;
+  });
+  return `Armour makes every swing or draw ${finePercent(armourSwingKg())} longer for each kilogram it counts for, a shield in the off hand included. `
+    + `Each piece counts its make's own weight, whatever it is made of, times its family's share: ${listed(families)}, and a shield ${timesSaid(SHIELD_SWING_BY)}. `
+    + `A full set of ${listed(sets)} longer, and the heaviest set there is, `
+    + `${listed(set.pieces.map((id) => itemDef(id)?.name.toLowerCase() ?? id))} (${kgSaid(set.kg)}, counting ${kgSaid(set.counted)}), ${percent(ARMOUR_SWING_FULL)} longer.`;
 }
 /** And the pack's, which is all or nothing at the limit. */
 export const overburdenSwingSays = (): string =>

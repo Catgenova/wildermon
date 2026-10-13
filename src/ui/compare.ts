@@ -1,8 +1,8 @@
 import type { Game } from '../game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
-import { blockChance, SWING_FLOOR } from '../game/fight';
+import { armourSwingKg, blockChance, SWING_FLOOR, swingByOf, swingKgOf } from '../game/fight';
 import { bagRoom, bagUnits, isBag, itemDef, itemName, itemWeight, unitWeight, type Item } from '../game/items';
-import { listed, percent, share as shareWords } from '../game/words';
+import { finePercent, listed, percent, share as shareWords } from '../game/words';
 import { ACTIONS, tasteSays } from '../game/actions';
 import { RECIPES } from '../game/recipes';
 import { MATERIALS } from '../game/improve';
@@ -47,6 +47,20 @@ export function swingNote(t: ReturnType<Game['swingTime']>): string {
   return `Its own ${t.own.toFixed(2)} s${parts.length ? `; ${parts.join(', ')}` : ''}${t.floored ? `; never under ${SWING_FLOOR.toFixed(1)} s` : ''}.`;
 }
 
+/**
+ * What a piece of armour or a shield adds to every swing or draw while it is
+ * on (`swingKgOf` at `armourSwingKg`), and how: its weight, its family's share
+ * of it (`ARMOUR_SWING_BY`) and the rate a counted kilogram goes at.
+ */
+function swingStat(id: string, family: string): Stat {
+  const kg = itemDef(id).weight;
+  return {
+    label: 'Each swing or draw', value: swingKgOf(id) * armourSwingKg(), say: (v) => `${finePercent(v)} longer`,
+    diff: (d) => `${d > 0 ? '+' : '−'}${finePercent(Math.abs(d))}`, more: false,
+    note: `Its ${kg.toFixed(1)} kg counts ×${+swingByOf(id).toFixed(2)} for ${family}, ${swingKgOf(id).toFixed(2)} kg at ${finePercent(armourSwingKg())} a kilogram.`,
+  };
+}
+
 const signed = (d: number, fixed: number, unit = ''): string => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d).toFixed(fixed)}${unit}`;
 const points = (d: number): string => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(Math.round(d * 100))} points`;
 
@@ -69,6 +83,7 @@ function statsOf(g: Game, item: Item): Stat[] | null {
       { label: 'Turns aside', value: pieceSoak(armour, item, skill), say: (v) => `${percent(v)} of a blow there`, diff: points, more: true },
       { label: 'Slows you by', value: pieceBurden(armour, item), say: (v) => percent(v), diff: points, more: false },
       { label: 'Weighs', value: itemWeight(item), say: (v) => `${v.toFixed(1)} kg`, diff: (d) => signed(d, 1, ' kg'), more: false },
+      swingStat(item.id, ARMOUR_CLASSES[armour.cls].name.toLowerCase()),
     ];
   }
   const shield = SHIELDS[item.id];
@@ -77,6 +92,7 @@ function statsOf(g: Game, item: Item): Stat[] | null {
     return [
       { label: 'Blocks', value: blockChance(shield.block, item.ql, g.skills.get('shields'), perk), say: (v) => `${percent(v)} of blows`, diff: points, more: true },
       { label: 'Slows you by', value: shield.burden, say: (v) => percent(v), diff: points, more: false },
+      swingStat(item.id, 'a shield'),
     ];
   }
   return null;

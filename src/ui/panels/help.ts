@@ -152,6 +152,7 @@ import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } 
 import { STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
+import { raisedBySays } from '../raisedBy';
 import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 import { keepControlKeys } from '../controlkeys';
 
@@ -833,14 +834,17 @@ export function helpText(): string {
     <p><b>Work, and only work.</b> Eating, drinking, and carrying things in and out of crates, bags and
     barrels teach the body nothing: they cost what wind they cost and leave every characteristic where
     it was. Swinging, building, digging and hauling are what the body learns from.</p>
-    <p>The characteristics start at ${CHAR_START} and rise slowly from the work that uses them, and each one
-    does something plain:</p>
+    <p>The characteristics start at ${CHAR_START} and rise slowly from the work that uses them. Each one
+    does something plain, and is raised by exactly the things beside it and nothing else. A go there is
+    what one go at a trade that comes off teaches that trade, before the curve and everything that
+    multiplies it. Every raise, however small, has the same one in ${numberWord(KNACK_ODDS)} chance of leaving
+    a knack as a go at a trade, and a characteristic's knack lands on itself.</p>
     <table>
-      <tr><td><b>Body strength</b></td><td>How hard you hit. Earned by fighting.</td></tr>
-      <tr><td><b>Body stamina</b></td><td>Less wind spent per action and quicker to get it back. Earned by spending it.</td></tr>
-      <tr><td><b>Body control</b></td><td>Everything takes less time. Earned by doing any <i>work</i> at all.</td></tr>
-      <tr><td><b>Mind logic</b></td><td>Jobs you can line up, and difficult crafts come out right more often. Earned by crafting.</td></tr>
-      <tr><td><b>Soul strength</b></td><td>A wild animal is readier to trust you. Earned by taming, success or not.</td></tr>
+      <tr><td><b>Body strength</b></td><td>How hard you hit. Raised by ${raisedBySays('body_strength')}.</td></tr>
+      <tr><td><b>Body stamina</b></td><td>Less wind spent per action and quicker to get it back. Raised by ${raisedBySays('body_stamina')}.</td></tr>
+      <tr><td><b>Body control</b></td><td>Everything takes less time. Raised by ${raisedBySays('body_control')}.</td></tr>
+      <tr><td><b>Mind logic</b></td><td>Jobs you can line up, and difficult crafts come out right more often. Raised by ${raisedBySays('mind_logic')}.</td></tr>
+      <tr><td><b>Soul strength</b></td><td>A wild animal is readier to trust you. Raised by ${raisedBySays('soul_strength')}.</td></tr>
     </table>
     <p><b>Climbing</b> raises the step you can take between tiles from ${MAX_STEP} and the slope of a tile
     you can stand on from ${MAX_STAND}, both by ${CLIMB_PER_LEVEL} a level &mdash; ground that turns you back
@@ -2516,7 +2520,7 @@ export function helpText(): string {
     swings every ${HELP_SWING_AT.map((f) => `${fixed2(swingSeconds(HELP_SWORD.swing, f))} seconds at fighting ${f}`).join(', ')},
     and nothing swings quicker than every ${SWING_FLOOR.toFixed(1)} seconds. ${armourSwingSays()} ${overburdenSwingSays()}
     Your back takes ${CARRY_BASE} kilos and ${numberWord(CARRY_PER_STRENGTH)} more for every point of body strength, with what a trade's
-    perk, Power's Pack Mule and a Packmule on a pack add (What your back will take). Both come after the ${SWING_FLOOR.toFixed(1)}-second floor, so a swing already on it is slowed by the same share. Hover a weapon in your pack for what a swing of it takes in your hands now, and what made it so. Every swing or draw costs
+    perk, Power's Pack Mule and a Packmule on a pack add (What your back will take). Both come after the ${SWING_FLOOR.toFixed(1)}-second floor, so a swing already on it is slowed by the same share. Hover a weapon in your pack for what a swing of it takes in your hands now, and what made it so, and a piece of armour or a shield for what it adds to every swing or draw. Every swing or draw costs
     ${percent(SWING_WIND)} of your stamina and ${percent(SWING_WIND_KG)} more for every kilogram in your hand, before body stamina
     and armour have their say; below ${percent(TIRED_AT)} stamina every swing is slower, up to ${percent(TIRED_SLOW)} slower with none left.</p>
     <p>${capital(listed(Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`)))} <b>draw back for a heavy blow</b>
