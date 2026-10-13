@@ -56,7 +56,8 @@ import {
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
-import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
+import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay, STORE_LOG_CAP } from '../../game/ranks';
+import { storeMarkable } from '../../game/stores';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
   PRIMARIES, pureDye, type DyeLiquid, type Primary,
@@ -178,6 +179,9 @@ const AGEING = BREWS.filter((b) => b.ages);
 /** A vine job's label, as the menu says it. */
 const VINE_ACTION = (id: string): string => VINEYARD_ACTIONS.find((a) => a.id === id)?.label ?? id;
 const CELLAR_NOT_DOWN = FURNITURE.filter((d) => cellarOutdoor().includes(d.id) && d.bill.length).map((d) => article(d.name) + ' ' + d.name.toLowerCase());
+/** The pieces that hold things and still cannot be a settlement store (`storeMarkable`), by name. */
+const NOT_A_STORE = FURNITURE.filter((d) => ((d.capacity ?? 0) > 0 || (d.heft ?? 0) > 0) && !storeMarkable(d.id, d))
+  .map((d) => article(d.name) + ' ' + d.name.toLowerCase());
 
 /** The Farmer's perk that holds an effect, by name. */
 /** The frames a seam is stitched between, by name (`SOFT`): "the burlap sack, the starred leather book or the treasure map". */
@@ -2159,6 +2163,25 @@ export function helpText(): string {
     you may walk it and shape nothing.</p>
     <p>And a building on a settlement is the work of every rank holding ${POWER.shape.label}, not only its
     planner's, so several people can fill one wall's bill between them.</p>
+    <p><b>Settlement stores.</b> The founder, and any rank holding <b>${POWER.keep_stores.label}</b>, may make one of
+    the settlement's stores of any crate standing on it, and of any piece of furniture standing on it that holds things,
+    other than ${listedOr(NOT_A_STORE)}: open it and press <b>Make it a settlement store</b> in its Storage window, and
+    <b>Stop it being a settlement store</b> to undo it. A settlement store:</p>
+    <ul>
+      <li>opens &mdash; to take from and to put into &mdash; for the founder and for every citizen whose rank holds
+      <b>${POWER.use_stores.label}</b>, padlocked or not and whoever made it, in place of <b>${POWER.stores.label}</b>
+      and the padlock;</li>
+      <li>opens for nobody else, key or not: a citizen whose rank lacks ${POWER.use_stores.label} is told so, anybody
+      else whose store it is;</li>
+      <li>is moved, turned and picked up only by whoever set it down and the founder, and its padlock still holds
+      them as on any store;</li>
+      <li>is never drawn on by a craft, a build or a drop of dirt, for anybody: take out what the job wants first;</li>
+      <li>logs every take and every put &mdash; who, what, how many and when &mdash; in the settlement's
+      <b>store log</b>, which keeps its last ${STORE_LOG_CAP} and is read in the Settlement window by the founder and
+      the ranks holding ${POWER.keep_stores.label}.</li>
+    </ul>
+    <p>No starting rank holds ${POWER.keep_stores.label} or ${POWER.use_stores.label}: the founder gives them.
+    Disbanding the settlement unmarks its stores.</p>
     <h3>Padlocks and keys</h3>
     <p>Everything anybody built has been open to everybody who could walk to it. A crate on your own
     deed was safe because the <i>ground</i> was yours; a crate anywhere else, a cart at a work post,
@@ -2174,6 +2197,12 @@ export function helpText(): string {
     <b>founder</b> of the settlement a store stands on may open anything on their own land, and so may
     every rank there the founder gave <b>${POWER.locks.label}</b> (none of the starting ranks holds it). So a
     padlock is worth a great deal on somebody else's deed and rather less on your own.</p>
+    <p>A padlock shuts a store against taking one thing out of it as it does against emptying it or putting
+    anything in, on a crate and on a piece of furniture alike.</p>
+    <p>A <b>settlement store</b> (see <i>Who may do what on a settlement</i>) is not opened by its padlock at all.
+    Its founder and every citizen whose rank holds <b>${POWER.use_stores.label}</b> take from it and put into it
+    without the key; everybody else is refused, the key in their pack or not. Fitting a padlock to one, taking it
+    off and picking the store up go by the padlock's rules as on any store.</p>
     <h3>Where the animals live</h3>
     <p>Everything wild has <b>a home</b>: a patch of country it keeps to, set where it was first
     put down. It wanders about that ground and turns back when it strays too far, so the places you

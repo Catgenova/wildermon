@@ -426,6 +426,8 @@ export class UI {
       (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));
     // Somebody else's shop counter: what is on it is bought, on an island.
     if (this.island) this.cratePanel.buyer = (it) => void this.buyOffCounter(it);
+    // Marking a store as one of its settlement's (`stores.ts`), on an island.
+    if (this.island) this.cratePanel.mark = (kind, id, on) => this.island?.markStore(kind, id, on) ?? Promise.resolve({ why: 'You are not on an island.' });
     const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 440, height: 460, anchor: 'tr', open: false });
     this.journalPanel = new JournalPanel(journal, game);
     // The trades you are watching: the journal's Tracker tab, redrawn as skills move only while it shows.
@@ -470,6 +472,7 @@ export class UI {
       drop: (id) => this.island?.rankDrop(id) ?? Promise.resolve('You are not on an island.'),
       allow: (id, power, on) => this.island?.rankAllow(id, power, on) ?? Promise.resolve('You are not on an island.'),
       newcomers: (id) => this.island?.rankNewcomers(id) ?? Promise.resolve('You are not on an island.'),
+      storeLog: (founder) => this.island?.storeLog(founder) ?? Promise.resolve({ why: 'You are not on an island.' }),
     } : undefined);
     // Everybody, and what they are to you: who is waiting on an answer, who
     // you know and where they are, and what has been written.

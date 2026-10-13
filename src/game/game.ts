@@ -28,7 +28,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { emptyCrate, occupiedRefusal, shutIn } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
@@ -6685,12 +6685,13 @@ export class Game {
     const found: Array<{ items: Item[]; name: string; d: number; order: number }> = [];
     const far = (cx: number, cy: number): number => Math.hypot(cx - this.player.x, cy - this.player.y);
     this.placed.crates.around(tx + 0.5, ty + 0.5, reach, (c) => {
-      if (!c.items.length || !within(c.x, c.y) || c.mine === false || this.lockRefusal(c)) return;
+      // Never a settlement store: everything that leaves one goes through its log (`stores.ts`).
+      if (!c.items.length || !within(c.x, c.y) || c.storeOf || c.mine === false || this.lockRefusal(c)) return;
       const [cx, cy] = crateCentre(c);
       found.push({ items: c.items, name: crateName(c), d: far(cx, cy), order: c.id });
     }, this.player.level);
     this.placed.furniture.around(tx + 0.5, ty + 0.5, reach, (f) => {
-      if (!f.items.length || !within(f.x, f.y)) return;
+      if (!f.items.length || !within(f.x, f.y) || f.storeOf) return;
       const def = furnitureDef(f.kind);
       if (!furnitureHolds(f) || def.trash || def.stall) return;
       const anybodys = !!(def.cart || def.vehicle || def.boat);
@@ -7970,6 +7971,8 @@ export class Game {
           pickedAt: r.picked_at ?? undefined,
           facing: (r.facing ?? 's') as Side,
           lock: r.lock ?? undefined,
+          // The settlement it is a store of, when it is marked one (`stores.ts`).
+          ...(r.store_of ? { storeOf: r.store_of } : {}),
           creature: r.creature ?? undefined,
           // A planter's last crop, which Crop Rotation reads as it reads a field's.
           ...(typeof r.state?.sown === 'string' ? { sown: r.state.sown } : {}),
@@ -8109,6 +8112,8 @@ export class Game {
          * same two questions the island asks.
          */
         lock: c.lock ?? undefined, mine: c.mine,
+        // The settlement it is a store of, when it is marked one (`stores.ts`).
+        ...(c.store_of ? { storeOf: c.store_of } : {}),
         ...((c.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : {}),
       });
     }
@@ -8283,6 +8288,8 @@ export class Game {
         rare: rarityStep(c.rare), ql: c.ql ?? 20,
         ...(c.enchant ? { enchant: c.enchant } : {}), ...(c.dmg ? { dmg: c.dmg } : {}),
         lock: c.lock ?? undefined, mine: c.mine,
+        // The settlement it is a store of, when it is marked one (`stores.ts`).
+        ...(c.store_of ? { storeOf: c.store_of } : {}),
         ...((c.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : {}),
       });
     }
@@ -8551,6 +8558,8 @@ export class Game {
       if (item && furnitureRefuses(f, item)) continue;
       // Nothing goes in the trash by accident: that one has to be asked for.
       if (furnitureDef(f.kind).trash) continue;
+      // Nor into a store shut to you: a settlement store you may not use, or a padlock you have no key to.
+      if (pieceShut(this, f)) continue;
       const [cx, cy] = furnitureCentre(f);
       const d = Math.hypot(cx - this.player.x, cy - this.player.y);
       if (d < bestD) {
@@ -9658,6 +9667,8 @@ export interface IslandPlaced {
   mine: boolean;
   /** The padlock fitted to it, by the number it shares with its key. */
   lock?: number | null;
+  /** The founder of the settlement it is a store of, when it is marked one (`stores.ts`). */
+  store_of?: string | null;
   /** Whoever has the reins of it or is sitting in it, by uid. */
   driver?: string | null;
   /** Whether that helm is as good as empty, its holder having gone away; only sent when there is a holder. */
@@ -9718,6 +9729,8 @@ export interface IslandCrate {
   level?: number | null;
   /** The padlock fitted to it, by the number it shares with its key. */
   lock?: number | null;
+  /** The founder of the settlement it is a store of, when it is marked one (`stores.ts`). */
+  store_of?: string | null;
   /** Whether it is yours: the island's `crate_yours`. */
   mine?: boolean;
   x: number;

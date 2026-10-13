@@ -1504,6 +1504,29 @@ jobs:
             --outfile=node_modules/.cache/customranks.mjs --log-level=error
           node node_modules/.cache/customranks.mjs
 
+      - name: Shared settlement stores
+        run: |
+          # A crate or a piece of storage furniture on a settlement, marked one
+          # of its stores by its founder or a rank holding Keep the stores,
+          # opens for the founder and the ranks holding Use the stores,
+          # padlock or not, and for nobody else, key or not. This asks that
+          # the log's cap and which pieces may be a store are the same on both
+          # sides; that marking and unmarking are refused to a rank without
+          # the power, a stranger, a store on no settlement, a stall, and
+          # twice, and allowed to the rank and the founder; that a rank with
+          # Use the stores takes from and puts into a padlocked crate and
+          # chest without the key, on the island and in the browser; that a
+          # rank without it and a stranger holding the key are refused in the
+          # same words on both sides, and a take-all that lands after is
+          # refused too; that every take and put is logged -- who, what, how
+          # many, which way -- read by the founder and Keep the stores only,
+          # and never longer than the cap; that only whoever set a store down
+          # and the founder pick it up or turn it; that a craft never draws
+          # on one; and that disbanding unmarks them.
+          npx esbuild supabase/test/stores.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/stores.mjs --log-level=error
+          node node_modules/.cache/stores.mjs
+
       - name: Leaving a settlement you were asked onto
         run: |
           # "add a leave settlement option so citizens can quit oceanport".

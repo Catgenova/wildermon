@@ -3,9 +3,10 @@ import type { Game } from './game';
 import { roomMul, type Enchant } from './enchant';
 import { describeFrom, itemName, rarityOf, roomFor, storedLine, type Item } from './items';
 import { matOf } from './materials';
-import { furnitureDef } from './furniture';
+import { furnitureDef, pieceShut } from './furniture';
 import { CELLAR_FLOOR, floorOf } from './building';
 import { lacks } from './ranks';
+import { storeMoveRefusal, storeUse } from './stores';
 
 /**
  * Crates are the first placeable objects. Each tile is a 4 by 4 grid of
@@ -66,6 +67,24 @@ export interface PlacedCrate {
    * is, and a lock is for a crate standing anywhere else.
    */
   lock?: number;
+  /**
+   * The founder of the settlement it is a store of, when it is marked one
+   * (`stores.ts`): it opens for that settlement's founder and the ranks
+   * holding Use the stores, padlock or not, and every take and put is logged.
+   */
+  storeOf?: string;
+}
+
+/**
+ * Why a crate shuts against you when you reach into it, or null: a
+ * settlement store by its own rule (`storeUse`), in place of whose it is and
+ * its padlock; anything else by those two. `tail` is what `crate_refusal`
+ * adds to "not yours" for putting things in.
+ */
+export function crateShut(g: Game, c: PlacedCrate, tail = ''): string | null {
+  const use = storeUse(g, c, crateName(c).toLowerCase());
+  if (use) return use === 'open' ? null : use;
+  return crateNotYours(g, c, tail) ?? g.lockRefusal(c);
 }
 
 export interface CrateDef {
@@ -225,6 +244,9 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateOf(g, t);
       if (!c) return 'It is gone.';
+      // A settlement store is picked up by whoever set it down and its founder (`storeMoveRefusal`).
+      const kept = storeMoveRefusal(g, c, crateName(c).toLowerCase());
+      if (kept) return kept;
       const theirs = crateNotYours(g, c);
       if (theirs) return theirs;
       // A crate with a lock on it is not carried off with the lock: a locked
@@ -256,9 +278,8 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateOf(g, t);
       if (!c) return 'The crate is empty.';
-      const theirs = crateNotYours(g, c);
-      if (theirs) return theirs;
-      const shut = g.lockRefusal(c);
+      // A settlement store by its rule, anything else by whose it is and its padlock.
+      const shut = crateShut(g, c);
       if (shut) return shut;
       return c.items.length ? null : 'The crate is empty.';
     },
@@ -284,9 +305,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateInto(g, t);
       if (!c || !nearCrate(g, c)) return 'Stand next to a crate.';
-      const theirs = crateNotYours(g, c, ' to put anything in');
-      if (theirs) return theirs;
-      const shut = g.lockRefusal(c);
+      const shut = crateShut(g, c, ' to put anything in');
       if (shut) return shut;
       // Room for some of it is enough: what fits goes in and the rest stays in
       // the pack. Only a crate with no room at all has anything to refuse, and
@@ -341,12 +360,13 @@ CRATE_ACTIONS.push({
     const dx = where.at[0] - g.player.x;
     const dy = where.at[1] - g.player.y;
     if (Math.hypot(dx, dy) > STORE_REACH) return `Stand next to the ${where.what} to take things out of it.`;
-    const theirs = where.crate ? crateNotYours(g, where.crate) : null;
-    if (theirs) return theirs;
+    // One thing out of a padlocked crate is as shut as everything out of it, and a settlement store opens by its rule.
+    if (where.crate) return crateShut(g, where.crate);
     // A counter is not a chest: what is on somebody else's stall is bought, not taken.
     if (where.piece && furnitureDef(where.piece.kind).stall && where.piece.mine === false) {
       return "That is on somebody else's stall. Buy it at the counter.";
     }
+    if (where.piece) return pieceShut(g, where.piece);
     return null;
   },
   perform: (t, g) => {

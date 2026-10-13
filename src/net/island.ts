@@ -14,6 +14,7 @@ import type { IslandSpring } from '../game/springs';
 import { cleanLook, type Look } from '../game/look';
 import type { IslandCrate, IslandGround } from '../game/game';
 import type { DeedRole, PowerId, RankDef } from '../game/ranks';
+import type { StoreLogEntry } from '../game/stores';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
 import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
@@ -3330,6 +3331,32 @@ export class Island {
 
   async rankNewcomers(id: number): Promise<string | null> {
     return this.door('rpc_rank_newcomers', { p_id: id });
+  }
+
+  /**
+   * Mark a crate or a piece of storage furniture as a store of the settlement
+   * it stands on, or unmark it (`rpc_store_mark`): its founder, or a rank
+   * holding Keep the stores. The answer names the settlement, and who
+   * founded it, so the store can be marked here before the next ground read.
+   */
+  async markStore(kind: 'crate' | 'furniture', id: number, on: boolean): Promise<{ why?: string; deed?: string; storeOf?: string | null }> {
+    if (!this.info) return { why: 'You are not on an island.' };
+    const { data, error } = await supabase().rpc('rpc_store_mark', { p_world: this.info.id, p_kind: kind, p_id: id, p_on: on });
+    if (error) return { why: error.message };
+    const said = data as { why?: string; deed?: string; store_of?: string | null } | null;
+    return said?.why ? { why: said.why } : { deed: said?.deed, storeOf: said?.store_of ?? null };
+  }
+
+  /**
+   * A settlement's store log, newest first (`rpc_store_log`): for its founder
+   * and ranks holding Keep the stores, named by its founder.
+   */
+  async storeLog(founder: string): Promise<{ why?: string; log?: StoreLogEntry[] }> {
+    if (!this.info) return { why: 'You are not on an island.' };
+    const { data, error } = await supabase().rpc('rpc_store_log', { p_world: this.info.id, p_founder: founder });
+    if (error) return { why: error.message };
+    const said = data as { why?: string; log?: StoreLogEntry[] } | null;
+    return said?.why ? { why: said.why } : { log: said?.log ?? [] };
   }
 
   /** Yes or no to an invitation of your own. */

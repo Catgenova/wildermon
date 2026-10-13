@@ -10,10 +10,11 @@ import { postName } from '../../game/posts';
 import { BAUBLE_TIERS, baubleSummary, socketsOf } from '../../game/baubles';
 import type { UIWindow } from '../windows';
 import {
-  andList, isFounder, lacks, POWER, powerBit, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankAddRefusal, rankDropRefusal, rankMay,
+  andList, deedMay, isFounder, lacks, POWER, powerBit, RANK_CAP, STORE_LOG_CAP, RANK_NAME_MAX, RANK_POWERS, rankAddRefusal, rankDropRefusal, rankMay,
   rankMoveRefusal, rankName, rankNameRefusal, type PowerId, type RankDef,
 } from '../../game/ranks';
 import type { MyDeed, Social } from '../../net/island';
+import { storeLogLine, type StoreLogEntry } from '../../game/stores';
 import { asRanked, defOf, defsOf, ranksToGive } from './social';
 
 /**
@@ -34,7 +35,21 @@ export interface DeedRoll {
   drop(id: number): Promise<string | null>;
   allow(id: number, power: PowerId, on: boolean): Promise<string | null>;
   newcomers(id: number): Promise<string | null>;
+  /** A settlement's store log, newest first, by its founder (`rpc_store_log`). */
+  storeLog(founder: string): Promise<{ why?: string; log?: StoreLogEntry[] }>;
 }
+
+/** How long ago something was, in the largest whole unit: "40 s", "12 min", "3 h", "2 d". */
+const agoWords = (at: number): string => {
+  const s = Math.max(0, Math.floor(Date.now() / 1000 - at));
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.floor(s / 60)} min`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h`;
+  return `${Math.floor(s / 86400)} d`;
+};
+
+/** How often the Settlement window asks the island for the store log again, in seconds, while it is open. */
+const STORE_LOG_EVERY = 10;
 
 /**
  * Who a settlement's baubles work for, from its ranks: its founder, and
@@ -61,6 +76,10 @@ export class DeedPanel {
   private lastRender = 0;
   /** The rank whose permissions are shown, by id. */
   private openRank: number | null = null;
+  /** The store log last read, by the founder of the settlement it is of, and when it was asked. */
+  private storeLogSeen: { founder: string; log: StoreLogEntry[]; why?: string } | null = null;
+  private storeLogAsked = -1e12;
+  private storeLogAsking = false;
 
   constructor(
     private readonly win: UIWindow,
@@ -310,6 +329,48 @@ export class DeedPanel {
     this.body.append(add);
   }
 
+  /**
+   * Every take and every put out of the settlement's stores, newest first, as
+   * far back as the island keeps (`STORE_LOG_CAP`): for its founder and for
+   * ranks holding Keep the stores, and not drawn for anybody else.
+   */
+  private drawStoreLog(here: MyDeed): void {
+    const roll = this.roll;
+    if (!roll || !deedMay(asRanked(here), 'keep_stores')) return;
+    const now = Date.now() / 1000;
+    if (this.win.isOpen && !this.storeLogAsking
+        && (this.storeLogSeen?.founder !== here.founder || now - this.storeLogAsked >= STORE_LOG_EVERY)) {
+      this.storeLogAsking = true;
+      this.storeLogAsked = now;
+      void roll.storeLog(here.founder).then((said) => {
+        this.storeLogAsking = false;
+        this.storeLogSeen = { founder: here.founder, log: said.log ?? [], why: said.why };
+        this.render();
+      });
+    }
+    const seen = this.storeLogSeen?.founder === here.founder ? this.storeLogSeen : null;
+    this.body.append(this.head(`Store log${seen && !seen.why ? ` (${seen.log.length} of the last ${STORE_LOG_CAP})` : ''}`));
+    const note = (text: string): void => {
+      const el = document.createElement('div');
+      el.className = 'deed-note';
+      el.textContent = text;
+      this.body.append(el);
+    };
+    if (!seen) {
+      note('Asking the island what went in and out…');
+      return;
+    }
+    if (seen.why) {
+      note(seen.why);
+      return;
+    }
+    if (!seen.log.length) {
+      note(`Nothing has been taken from or put into a store of ${here.name} yet. Open a crate or a piece of storage furniture on it and press Make it a settlement store.`);
+      return;
+    }
+    for (const e of seen.log) this.body.append(this.row(storeLogLine(e), agoWords(e.at), new Date(e.at * 1000).toLocaleString()));
+  }
+
   /** What one rank may do: a box a power, each with its exact rule, ticked where the rank holds it. */
   private permGrid(r: RankDef, edits: boolean, roll: DeedRoll): HTMLDivElement {
     const grid = document.createElement('div');
@@ -378,6 +439,7 @@ export class DeedPanel {
     } else if (here) {
       this.drawRoll(here);
       this.drawRanks(here);
+      this.drawStoreLog(here);
     }
 
     // What the next level wants, and the button that buys it.

@@ -57,7 +57,14 @@ export interface RankPower {
 }
 
 export type PowerId = 'shape' | 'stores' | 'locks' | 'gate' | 'served' | 'set_bauble' | 'replace_bauble'
-  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename';
+  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename' | 'keep_stores' | 'use_stores';
+
+/**
+ * How many takes and puts a settlement's store log keeps, newest first; an
+ * older one goes as a new one comes. The island's `store_log_cap`
+ * (`stores.ts`).
+ */
+export const STORE_LOG_CAP = 50;
 
 /**
  * Every power a rank can be given, in the order the Ranks section lists them.
@@ -128,6 +135,16 @@ export const RANK_POWERS: readonly RankPower[] = [
     id: 'rename', bit: 11, label: 'Rename',
     may: 'rename it', mayNot: 'rename it',
     rule: 'Give it a new name.',
+  },
+  {
+    id: 'keep_stores', bit: 12, label: 'Keep the stores',
+    may: 'mark its settlement stores and read their log', mayNot: 'mark its settlement stores or read their log',
+    rule: `Mark a crate or a piece of storage furniture on it as a settlement store, or unmark one, from its Storage window; and read the store log, its last ${STORE_LOG_CAP} takes and puts, in the Settlement window.`,
+  },
+  {
+    id: 'use_stores', bit: 13, label: 'Use the stores',
+    may: 'take from and put into its settlement stores', mayNot: 'use its settlement stores',
+    rule: 'Take from and put into every settlement store on it, padlocked or not, without the key. Nobody but its founder and the ranks holding this opens one, key or not.',
   },
 ];
 
