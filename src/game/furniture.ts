@@ -13,6 +13,7 @@ import type { Lamp } from './lamps';
 import { colourWord, dyeHex, readDye } from './dyestuffs';
 import { ENCHANTERS_PLINTH } from './enchant';
 import { lanternReach } from './light';
+import { storeMoveRefusal, storeUse } from './stores';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -669,6 +670,12 @@ export interface PlacedFurniture {
    */
   lock?: number;
   /**
+   * The founder of the settlement it is a store of, when it is marked one
+   * (`stores.ts`): it opens for that settlement's founder and the ranks
+   * holding Use the stores, padlock or not, and every take and put is logged.
+   */
+  storeOf?: string;
+  /**
    * What a stall has taken, in silver, waiting for whoever set it up.
    *
    * It goes into the till rather than into a pocket because the pocket is
@@ -1077,6 +1084,17 @@ const nearPiece = (g: Game, f: PlacedFurniture): boolean => {
  * chests side by side took what you gave either of them into whichever stood
  * closer, the same way a rack of crates did.
  */
+/**
+ * Why a piece of furniture shuts against you when you reach into it, or
+ * null: a settlement store by its own rule (`storeUse`), in place of its
+ * padlock; anything else by its padlock. The island's `store_shut_piece`.
+ */
+export function pieceShut(g: Game, f: PlacedFurniture): string | null {
+  const use = storeUse(g, f, furnitureName(f).toLowerCase());
+  if (use) return use === 'open' ? null : use;
+  return g.lockRefusal(f);
+}
+
 const storeInto = (g: Game, t: Target, item: Item): PlacedFurniture | undefined => {
   if (t.kind === 'item' && t.into !== undefined) {
     const named = g.furniture.get(t.into);
@@ -1145,6 +1163,9 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
+      // A settlement store is turned by whoever set it down and its founder (`storeMoveRefusal`).
+      const kept = storeMoveRefusal(g, f, furnitureName(f).toLowerCase());
+      if (kept) return kept;
       if (f.lit) return 'Put it out first.';
       if (f.hitched) return 'Let go of it first.';
       if (teamOf(f).length) return 'Unhitch the team first.';
@@ -1180,6 +1201,9 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
+      // A settlement store is picked up by whoever set it down and its founder (`storeMoveRefusal`).
+      const kept = storeMoveRefusal(g, f, furnitureName(f).toLowerCase());
+      if (kept) return kept;
       // Locked, it stays where it is: lifting a ship or a cart and setting it
       // down somewhere else is taking it, padlock and all.
       const shut = g.lockRefusal(f);
@@ -1244,7 +1268,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      const shut = g.lockRefusal(f);
+      // A settlement store by its rule, anything else by its padlock.
+      const shut = pieceShut(g, f);
       if (shut) return shut;
       return f.items.length ? null : 'It is empty.';
     },
@@ -1282,12 +1307,13 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
         const beside = [...g.furniture.values()].filter((o) => nearPiece(g, o));
         beside.sort((a, b) => furnitureSize(b, item) - furnitureSize(a, item));
         for (const other of beside) {
-          const why = furnitureRefuses(other, item);
+          const why = pieceShut(g, other) ?? furnitureRefuses(other, item);
           if (why) return why;
         }
         return 'Stand next to something that will take it.';
       }
-      const shut = g.lockRefusal(f);
+      // A settlement store by its rule, anything else by its padlock.
+      const shut = pieceShut(g, f);
       if (shut) return shut;
       const refused = furnitureRefuses(f, item);
       if (refused) return refused;

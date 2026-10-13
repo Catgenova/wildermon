@@ -1,5 +1,5 @@
 import { crateCentre, crateName, crateCapacity, crateSpare, STORE_REACH } from '../../game/crates';
-import { furnitureCapacity, furnitureCentre, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits } from '../../game/furniture';
+import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits } from '../../game/furniture';
 import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
 import { bloodMul } from '../../game/creatures';
 import { ACTION_BY_ID, type ActionDef } from '../../game/actions';
@@ -14,6 +14,7 @@ import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import { priceWords } from '../../game/money';
 import { counterStore } from '../counterMenu';
+import { deedAt, isSettlementStore, storeMarkable, storeMarkedLine, storeMarkRefusal, storeUse, type Keepable } from '../../game/stores';
 
 /** A crate or a piece of storage furniture, seen through the same window. */
 export interface Store {
@@ -84,6 +85,12 @@ export interface Store {
    * it crumbles. Nothing is put into a grave, so its window offers no way in.
    */
   grave?: string;
+  /**
+   * The crate or piece of furniture itself, where it could be a settlement
+   * store (`stores.ts`), and whether it may be one at all: any crate, and a
+   * piece that holds things and is no stall, trash crate, mailbox or vehicle.
+   */
+  kept?: { thing: Keepable; markable: boolean };
 }
 
 /** Contents of one placed container, with a Take button per item. */
@@ -103,6 +110,13 @@ export class CratePanel {
   private counterId: number | null = null;
   /** How a thing on somebody else's counter is bought, on an island. */
   buyer?: (item: Item) => void;
+  /**
+   * Marking the open store as one of its settlement's stores, or unmarking
+   * it (`rpc_store_mark`), on an island. Unset, there is no button for it.
+   */
+  mark?: (kind: 'crate' | 'furniture', id: number, on: boolean) => Promise<{ why?: string; deed?: string; storeOf?: string | null }>;
+  /** Mark it, or unmark it: shown only where the island would agree. */
+  private markBtn: HTMLButtonElement;
   private search: HTMLInputElement;
   /** The search box and the order, in one row over the list. */
   private find: HTMLDivElement;
@@ -160,7 +174,12 @@ export class CratePanel {
     putKind.addEventListener('click', () => this.putAll(true));
     this.waysIn = [putAll, putKind];
     this.wayOut = takeAll;
-    this.bar.append(takeAll, putAll, putKind);
+    const markBtn = this.markBtn = document.createElement('button');
+    markBtn.type = 'button';
+    markBtn.className = 'tb-btn tb-small';
+    markBtn.hidden = true;
+    markBtn.addEventListener('click', () => this.toggleMark());
+    this.bar.append(takeAll, putAll, putKind, markBtn);
     /*
      * And a box to search it.
      *
@@ -236,6 +255,7 @@ export class CratePanel {
         what: 'crate',
         kind: 'crate',
         lock: crate,
+        kept: { thing: crate, markable: true },
         take: (uid) => this.game.crateTake(crate, uid),
         refuses: (item) => (crateSpare(crate) <= 0 ? `The ${crateName(crate).toLowerCase()} is full.` : null),
         fits: (item) => Math.min(item.count, crateSpare(crate)),
@@ -317,6 +337,7 @@ export class CratePanel {
         what: furnitureName(piece).toLowerCase(),
         kind: 'furniture',
         lock: piece,
+        kept: { thing: piece, markable: storeMarkable(piece.kind, furnitureDef(piece.kind)) },
         take: (uid) => this.game.furnitureTake(piece, uid),
         refuses: (item) => furnitureRefuses(piece, item) ?? (furnitureRoom(piece, item) <= 0 ? `The ${furnitureName(piece).toLowerCase()} is full.` : null),
         fits: (item) => (furnitureRefuses(piece, item) ? 0 : Math.min(item.count, furnitureRoom(piece, item))),
@@ -343,6 +364,43 @@ export class CratePanel {
       ? store.kind === 'crate' ? 'crate_take_all' : store.kind === 'bag' ? 'empty_bag' : 'furniture_take_all'
       : store.kind === 'crate' ? 'store_in_crate' : store.kind === 'bag' ? 'stow_item' : 'store_in_furniture';
     return ACTION_BY_ID.get(id);
+  }
+
+  /**
+   * The button that marks the open store as one of its settlement's stores,
+   * or unmarks it: shown only where the island would agree
+   * (`storeMarkRefusal`), so it is there for the founder and for ranks
+   * holding Keep the stores, and for nobody else.
+   */
+  private drawMark(store: Store): void {
+    const kept = store.kept;
+    const on = !!kept && !isSettlementStore(kept.thing);
+    const why = kept && this.mark && (store.kind === 'crate' || store.kind === 'furniture')
+      ? storeMarkRefusal(this.game, kept.thing, store.what, kept.markable, on) : 'no';
+    this.markBtn.hidden = why !== null;
+    if (why !== null || !kept) return;
+    const deed = deedAt(this.game, kept.thing.x, kept.thing.y)?.name ?? 'the settlement';
+    this.markBtn.textContent = on ? 'Make it a settlement store' : 'Stop it being a settlement store';
+    this.markBtn.title = on
+      ? `Its founder and the ranks of ${deed} holding Use the stores take from it and put into it, padlocked or not; nobody else opens it; every take and put is logged`
+      : 'Its padlock and whose it is decide again who opens it';
+  }
+
+  private toggleMark(): void {
+    const store = this.store();
+    const mark = this.mark;
+    if (!store?.kept || !mark || (store.kind !== 'crate' && store.kind !== 'furniture')) return;
+    const thing = store.kept.thing;
+    const on = !isSettlementStore(thing);
+    void mark(store.kind, store.id, on).then((said) => {
+      if (said.why) {
+        this.game.logMsg(said.why, 'error');
+        return;
+      }
+      thing.storeOf = said.storeOf ?? undefined;
+      this.game.logMsg(storeMarkedLine(store.what, said.deed ?? 'the settlement', on), 'event');
+      this.game.events.emit('crate');
+    });
   }
 
   /** "3 picked", and Take them out, when more than none are picked. */
@@ -574,8 +632,12 @@ export class CratePanel {
      * is a window somebody presses four times before reading the log.
      */
     const shut = store.lock ? this.game.lockRefusal(store.lock) : null;
-    this.win.titleText.textContent = store.title + (!store.lock?.lock ? ''
-      : shut ? ' \u2014 locked' : ' \u2014 unlocked');
+    // A settlement store says whose it is, and whether it is shut to you, in place of its padlock.
+    const use = store.kept ? storeUse(this.game, store.kept.thing, store.what) : null;
+    this.win.titleText.textContent = store.title + (use
+      ? ` \u2014 store of ${deedAt(this.game, store.kept?.thing.x ?? 0, store.kept?.thing.y ?? 0)?.name ?? 'a settlement'}${use === 'open' ? '' : ', shut to you'}`
+      : !store.lock?.lock ? '' : shut ? ' \u2014 locked' : ' \u2014 unlocked');
+    this.drawMark(store);
     this.bar.hidden = false;
     this.find.hidden = false;
     this.head.hidden = false;
