@@ -23,7 +23,7 @@ import { WILD_REST, WILD_REST_SPREAD } from '../../src/game/creatures';
 import { pathOptions } from '../../src/game/player';
 import { TRIAL_ISLAND_LASTS } from '../../src/game/keep';
 import { LIQUID_NAME, type LiquidKind } from '../../src/game/furniture';
-import { drinkable } from '../../src/game/brewing';
+import { BREWS, drinkable } from '../../src/game/brewing';
 import { BRIDGES } from '../../src/game/bridges';
 import { numberWord } from '../../src/game/words';
 import { PATH_LIST } from '../../src/game/meditation';
@@ -533,7 +533,9 @@ async function main(): Promise<void> {
       deckErr ? deckErr.message
         : spans.map((b) => `${b.name.toLowerCase()} spans ${b.span}${b.carts ? ', carts cross' : ', foot only'}`).join(', '));
     const { data: brews, error: brewErr } = await supabase().from('brew_def').select('id,name,input,seconds');
-    check('and what a barrel of water becomes', !brewErr && (brews ?? []).length === 4,
+    // Every brew the browser has, and no other: the count went stale the day grape wine was added.
+    check('and what a barrel of water becomes', !brewErr && (brews ?? []).length === BREWS.length
+      && BREWS.every((b) => (brews ?? []).some((r) => (r as { id: string }).id === b.id)),
       brewErr ? brewErr.message
         : ((brews ?? []) as Array<{ name: string; input: string; seconds: number }>)
             .map((b) => `${b.name.toLowerCase()} out of ${b.input} in ${Math.round(b.seconds / 60)}m`).join(', '));
