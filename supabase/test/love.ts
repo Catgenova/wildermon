@@ -38,6 +38,7 @@ import { seasonAt, YEAR_FROM, SEASON_DAYS } from '../../src/world/calendar';
 import { boonTime } from '../../src/game/boons';
 import { packTreeData, TileType, TREE_DEFS, treeVariant } from '../../src/world/tiles';
 import { mulberry32 } from '../../src/world/noise';
+import { FRUITING } from '../../src/game/fruiting';
 import { DAY_SECONDS } from '../../src/game/pace';
 
 const psql = (sql: string): string =>
@@ -329,6 +330,8 @@ begin
   perform land_set_tile(w, tx + 1, ty, tile_id('Tree'));
   perform land_set_data(w, tx + 1, ty, ${packTreeData(FRUIT_TREE, 2)});
   v_a := 0; v_b := 0;
+  -- In a season the tree bears in, whatever day this is run on (fruiting.ts).
+  perform set_config('wurm.season', ${q(FRUITING[TREE_DEFS[FRUIT_TREE].fruit ?? '']?.[0] ?? '')}, true);
   for i in 1..20 loop
     perform pg_temp.hold(w, u, '{}');
     perform setseed(0.001 * i);
@@ -344,6 +347,7 @@ begin
     delete from item where world_id = w and holder = 'player' and holder_uid = u;
   end loop;
   insert into said values ('FRUIT', v_a || '|' || v_b);
+  perform set_config('wurm.season', '', true);
   perform land_set_tile(w, tx + 1, ty, tile_id('Grass')); perform land_set_data(w, tx + 1, ty, 0);
 
   -- Steady Herd: a fight far past the leash, given up without it and kept with it.

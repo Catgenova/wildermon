@@ -32,6 +32,10 @@ import { perksOf, STRIDE, type PerkDef } from '../../src/game/perks';
 import { pathOptions } from '../../src/game/player';
 import { packTreeData, TILE_DEFS, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
 import { numberWord } from '../../src/game/words';
+import { FRUITING } from '../../src/game/fruiting';
+
+/** Hold the island in a season the thing is picked in for the rest of the transaction (`fruiting.ts`), whatever day it is run on. */
+const inSeasonFor = (item: string): string => `perform set_config('wurm.season', '${FRUITING[item]?.[0] ?? ''}', true)`;
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -263,7 +267,8 @@ begin
   insert into said values ('GRAFT', v_t || '|' || (select name from tree_def where id = tree_species(land_data(w, 10, 9))));
   ${checks(true)};
 
-  /* ---- Fruitful and Hedge Harvest: the same roll twice, and one more with the perk. ---- */
+  /* ---- Fruitful and Hedge Harvest: the same roll twice, and one more with the perk, in season. ---- */
+  ${inSeasonFor('apple')};
   perform pg_temp.hold(w, u, '{}');
   ${clear('apple')};
   ${tree(10, 9, APPLE, MATURE)};
@@ -277,6 +282,7 @@ begin
   perform setseed(0.25);
   ${act('pick_fruit', 10, 9)};
   insert into said values ('FRUIT', v_t || '|' || ${count('apple')});
+  ${inSeasonFor('rose_petals')};
   perform pg_temp.hold(w, u, '{}');
   ${clear('rose_petals')};
   ${ground(10, 9, 'Bush')};
@@ -290,6 +296,7 @@ begin
   perform setseed(0.25);
   ${act('harvest_bush', 10, 9)};
   insert into said values ('HEDGE', v_t || '|' || ${count('rose_petals')});
+  perform set_config('wurm.season', '', true);
 
   /* ---- Coppice: every refusal, and a mature pine back to young for its logs, standing. ---- */
   perform pg_temp.hold(w, u, '{}');

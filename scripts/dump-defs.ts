@@ -138,6 +138,7 @@ import { MOTE_CHANCE } from '../src/game/sacrifice';
 import { GLASSHOUSE_GROWTH, HAND_WINTER, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_GROWTH, YEAR_SECONDS, YEARLESS_GROWTH } from '../src/game/growth';
 import { SEASON_DAYS, SEASONS, YEAR_DAYS, YEAR_FROM } from '../src/world/calendar';
 import { PLANTER_GROWING } from '../src/game/furniture';
+import { FRUITING, fruitingSays, fruitingSeasons, outOfSeasonSaid } from '../src/game/fruiting';
 import { FIELD_GLASS_ONLY, FIELD_NO_STOREY, FIELD_PACKED, GLASS, GLASS_FLOORED, GLASS_PITCHED, GLASS_ROOF_ONLY, GLASS_SLAB, FIELD_UNFLOORED, NOT_A_GLASSHOUSE, NOT_TILLABLE } from '../src/game/glasshouse';
 import {
   COUNTER_BOUGHT_NOT_TAKEN, COUNTER_EMPTY_FIRST, COUNTER_FROM_STREET, COUNTER_FULL, COUNTER_GROUND, COUNTER_HOLDS, COUNTER_NO_PIECES,
@@ -2256,6 +2257,25 @@ for (const [fn, v] of [
   ['year_from', YEAR_FROM], ['season_seconds', SEASON_SECONDS], ['year_seconds', YEAR_SECONDS], ['year_growth', YEAR_GROWTH],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+/*
+ * Fruiting seasons (`src/game/fruiting.ts`): the seasons each thing a tree
+ * bears, a bush is cut for or the ground gives up is had in, null for one had
+ * all year; and, for everything a tree or a bush gives, what a refusal out of
+ * season says in each season and what Examine says of it in each season and
+ * before the first spring (a null season), so that the island says them in
+ * the browser's words. `fruiting.ts` in the tests holds the two sides to each
+ * other.
+ */
+{
+  const seasonal = Object.entries(FRUITING);
+  out.push(`create or replace function fruiting_seasons(p_item text) returns text[] language sql immutable as $fn$ select case p_item ${
+    seasonal.map(([id, ss]) => `when ${q(id)} then array[${ss.map(q).join(', ')}]::text[] `).join('')}end $fn$;`);
+  const borne = [...new Set([...TREE_DEFS.map((t) => t.fruit), ...BUSH_DEFS.map((b) => b.yields)].filter((id): id is string => !!id))];
+  out.push(`create or replace function fruit_out_said(p_item text, p_season text) returns text language sql immutable as $fn$ select case p_item || ':' || p_season ${
+    borne.flatMap((id) => SEASONS.filter((s) => !fruitingSeasons(id).includes(s)).map((s) => `when ${q(`${id}:${s}`)} then ${q(outOfSeasonSaid(id, s))} `)).join('')}end $fn$;`);
+  out.push(`create or replace function fruit_says(p_item text, p_season text) returns text language sql immutable as $fn$ select case p_item || ':' || coalesce(p_season, '') ${
+    borne.flatMap((id) => [...SEASONS, null].map((s) => `when ${q(`${id}:${s ?? ''}`)} then ${q(fruitingSays(id, s))} `)).join('')}end $fn$;`);
 }
 /* The pieces a crop is sown in, and what one says to being picked up with a crop in it. */
 out.push(`create or replace function is_planter(p_sub text) returns boolean language sql immutable as $fn$ select coalesce(p_sub = any(array[${FURNITURE.filter((f) => f.planter).map((f) => q(f.id)).join(', ')}]::text[]), false) $fn$;`);
