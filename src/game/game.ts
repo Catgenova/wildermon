@@ -70,7 +70,7 @@ import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
 import { considerSays } from './consider';
-import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
+import { ARMOUR_VS, armsRefusal, blockChance, BLOCKED_SAID, SHIELD_WEAR, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingKgOf, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
@@ -2806,7 +2806,7 @@ export class Game {
       this.gainSkill('shields', 0.12);
       if (this.rand() < chance) {
         // Less for a Mender's Armour Care, as `hurt_player` has it.
-        shield.dmg = Math.min(100, shield.dmg + raw * 3 * this.perk('worn:shield', 1));
+        shield.dmg = Math.min(100, shield.dmg + raw * SHIELD_WEAR * this.perk('worn:shield', 1));
         this.gainSkill('shields', 0.5);
         this.events.emit('inventory');
         return { taken: 0, part: 'offhand', worn: shield, blocked: true };
@@ -2966,7 +2966,7 @@ export class Game {
     if (hit.blocked) {
       this.player.attackedAt = this.time;
       this.events.emit('hit', this.player.x, this.player.y, 0, 'taken');
-      this.logMsg(`You take ${what} on your ${itemName(hit.worn as Item).toLowerCase()}.`, 'fight');
+      this.logMsg(BLOCKED_SAID, 'fight');
       this.fightBack();
       return;
     }

@@ -1,6 +1,6 @@
 import type { Game } from '../game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
-import { armourSwingKg, blockChance, SWING_FLOOR, swingByOf, swingKgOf } from '../game/fight';
+import { armourSwingKg, blockChance, blockNote, reachOf, SWING_FLOOR, swingByOf, swingKgOf, THROWN_PAST } from '../game/fight';
 import { bagRoom, bagUnits, isBag, itemDef, itemName, itemWeight, unitWeight, type Item } from '../game/items';
 import { finePercent, listed, percent, share as shareWords } from '../game/words';
 import { ACTIONS, tasteSays } from '../game/actions';
@@ -61,6 +61,21 @@ function swingStat(id: string, family: string): Stat {
   };
 }
 
+/**
+ * How far a swing of it reaches in your hands (`meleeReach`): its family's
+ * reach (`WEAPON_REACH`), or a thrown one's range and `THROWN_PAST`, and what
+ * a perk adds (a Pikeman's Long Reach, a Skirmisher's Long Throw).
+ */
+function reachStat(g: Game, weapon: NonNullable<ReturnType<typeof WEAPON_BY_ID.get>>): Stat {
+  const own = reachOf(weapon);
+  const more = g.perk(`length:${weapon.kind}`, 0);
+  const why = weapon.thrown ? `Its range ${weapon.range ?? 0} and ${THROWN_PAST} past it` : `All ${weapon.kind} reach ${+own.toFixed(1)} tiles`;
+  return {
+    label: 'Reaches', value: own + more, say: (v) => `${+v.toFixed(1)} tiles`, diff: (d) => signed(d, 1, ' tiles'), more: true,
+    note: `${why}${more ? `, + ${+more.toFixed(1)} for your perks` : ''}.`,
+  };
+}
+
 const signed = (d: number, fixed: number, unit = ''): string => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d).toFixed(fixed)}${unit}`;
 const points = (d: number): string => `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(Math.round(d * 100))} points`;
 
@@ -74,6 +89,7 @@ function statsOf(g: Game, item: Item): Stat[] | null {
       { label: weapon.ammo ? 'A shot every' : 'A swing every', value: t.secs, say: (v) => `${v.toFixed(2)} s`, diff: (d) => signed(d, 2, ' s'), more: false,
         note: swingNote(t) },
       { label: 'Lands', value: hitChance(g, weapon, item), say: (v) => `${percent(v)} of ${weapon.ammo ? 'shots' : 'swings'}`, diff: points, more: true },
+      ...(weapon.ammo ? [] : [reachStat(g, weapon)]),
     ];
   }
   const armour = ARMOUR_BY_ID.get(item.id);
@@ -90,7 +106,8 @@ function statsOf(g: Game, item: Item): Stat[] | null {
   if (shield) {
     const perk = (k: string, d: number): number => g.perk(k, d);
     return [
-      { label: 'Blocks', value: blockChance(shield.block, item.ql, g.skills.get('shields'), perk), say: (v) => `${percent(v)} of blows`, diff: points, more: true },
+      { label: 'Blocks', value: blockChance(shield.block, item.ql, g.skills.get('shields'), perk), say: (v) => `${finePercent(v)} of blows`, diff: points, more: true,
+        note: blockNote(shield.block, item.ql, g.skills.get('shields'), perk) },
       { label: 'Slows you by', value: shield.burden, say: (v) => percent(v), diff: points, more: false },
       swingStat(item.id, 'a shield'),
     ];

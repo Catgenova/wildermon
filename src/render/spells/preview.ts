@@ -10,7 +10,7 @@
  */
 import { Camera } from '../../engine/camera';
 import { SPECIES } from '../../game/creatures';
-import { beastReach, COMPANION_REACH, HUNT_REACH, reachOf } from '../../game/fight';
+import { beastReach, COMPANION_REACH, FIST_REACH, HUNT_REACH, reachOf } from '../../game/fight';
 import { WEAPON_BY_ID } from '../../game/gear';
 import { DEFAULT_LOOK } from '../../game/look';
 import { drawFigure, FIGURE_TOP, type FigurePose, type GearLook } from '../figure';
@@ -32,7 +32,7 @@ export interface SheetOpts {
   target?: 'creature' | 'player' | 'tile' | 'self';
   /**
    * Tiles to the target along the ground; by default where the island has it (see `distFor`). `'reach'` is as far as
-   * the weapon in hand reaches (`meleeReach`: 2.2 tiles, more for a spear), `'hunt'` as near as a creature comes to
+   * the weapon in hand reaches (`meleeReach`: its family's `WEAPON_REACH`), `'hunt'` as near as a creature comes to
    * strike (`HUNT_REACH`, 1.1). On a diagonal facing a tile's step crosses more of the drawn grid than side on.
    */
   dist?: number | 'reach' | 'hunt';
@@ -141,12 +141,12 @@ function gearFor(spell: string, weapon?: string, offhand?: string): GearLook {
 /** How far the weapon in hand reaches, in tiles, as the island has it (`melee_reach`, before anybody's perks). */
 function meleeReachOf(weapon: string | undefined): number {
   const w = weapon ? WEAPON_BY_ID.get(weapon) : undefined;
-  return w && !w.ammo ? reachOf(w) : reachOf({ range: undefined });
+  return w && !w.ammo ? reachOf(w) : FIST_REACH;
 }
 
 /**
  * Where the target stands by default, and where the caster stood before the island moved them: as the island has
- * it. A blow or a thrust as far as the weapon reaches (2.2 tiles, a spear's 3.2), which is where the island lets one
+ * it. A blow or a thrust as far as the weapon reaches (`reachOf`, `WEAPON_REACH`), which is where the island lets one
  * be struck from; a stride (a Lunge) ends 0.4 inside that reach, from as far back as its stride; a leap away (a
  * Parting Throw) starts that far nearer (a negative `from`); a spell on somebody else inside its own reach; the rest
  * at a middling throw.

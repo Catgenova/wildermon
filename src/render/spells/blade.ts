@@ -64,7 +64,7 @@ const tipOf = (k: FxScene): P3 => k.joint(k.caster, 'tip');
 /* ---- closing in ---------------------------------------------------------------------------- */
 
 /*
- * The island lets a sword strike from as far as it reaches -- 2.2 tiles -- and a blade is a quarter of a tile, so a
+ * The island lets a sword strike from as far as it reaches -- `WEAPON_REACH.swords` tiles -- and a blade is a quarter of a tile, so a
  * Blade standing where the island has it never touches what it strikes. Each strike closes in (`cast.close`): the
  * body is carried in over the wind-up so the blade passes through the creature on the blow, and back after the
  * follow-through. The stage steps the legs, running in and bounding back, and the effects stream off the run in

@@ -1,13 +1,14 @@
 import type { ActionDef } from './actions';
 import type { Game } from './game';
-import { ARMOUR, ARMOUR_BY_ID, bowRange, SHIELDS, slotOf, WEAPON_BY_ID, type ArmourClass, type Slot, type WeaponDef } from './gear';
+import { ARMOUR, ARMOUR_BY_ID, bowRange, FIST_REACH, reachOf, SHIELDS, slotOf, THROWN_PAST, WEAPON_BY_ID, WEAPON_REACH, WEAPONS, type ArmourClass, type HeldKind, type Slot, type WeaponDef } from './gear';
 import { swingEnchant } from './enchant';
-import { describeWith, itemDef, type Item } from './items';
+import { describeFrom, describeWith, itemDef, type Item } from './items';
 import type { SpeciesDef } from './creatures';
 import { SKILL_BY_ID } from './skills';
 import { finePercent, listed, percent } from './words';
 import { WOUND_BY_WEAPON, type Wound, type WoundKind } from './wounds';
 import { ACTION_FLOOR, ACTION_PACE } from './pace';
+import { QL_TOP } from './limits';
 
 /**
  * The fight itself: how long a swing takes and what it costs, which way you
@@ -284,10 +285,30 @@ export const meleeReach = (g: Game): number => {
   return w && !w.ammo ? reachOf(w) + g.perk(`length:${w.kind}`, 0) : FIST_REACH;
 };
 
-/** How far a pace and a bit reaches: bare hands, a bow, or anything shorter than a spear. */
-export const FIST_REACH = 2.2;
-/** How far a weapon reaches before anybody's perks: a pace and a bit, or its own length past that. */
-export const reachOf = (w: Pick<WeaponDef, 'range'>): number => Math.max(FIST_REACH, (w.range ?? 1) + 1.2);
+/* How far bare hands and each family of weapon reach live with the weapons (`gear.ts`), and are said again here for the fight's readers. */
+export { FIST_REACH, reachOf, THROWN_PAST, WEAPON_REACH };
+
+/** The families a swing's reach is told for, nearest first. */
+const REACH_FAMILIES: HeldKind[] = ['knives', 'axes', 'mauls', 'swords', 'polearms'];
+const tilesSaid = (t: number): string => `${+t.toFixed(1)}`;
+/**
+ * The reach rule in the game's own terms, off the table: what each family
+ * reaches, bare hands with the knives, and what each thrown weapon does. For
+ * Help.
+ */
+export function reachSays(): string {
+  const byReach = new Map<number, string[]>();
+  for (const k of REACH_FAMILIES) byReach.set(WEAPON_REACH[k], [...(byReach.get(WEAPON_REACH[k]) ?? []), k]);
+  const families = [...byReach.entries()].sort((a, b) => a[0] - b[0])
+    .map(([t, ks]) => `${listed(ks.map((k) => (k === 'knives' && t === FIST_REACH ? 'knives and bare hands' : k)))} ${tilesSaid(t)} tiles`);
+  const thrown = WEAPONS.filter((w) => w.thrown).sort((a, b) => reachOf(a) - reachOf(b))
+    .map((w) => `a ${itemDef(w.id).name.toLowerCase()} ${tilesSaid(reachOf(w))}`);
+  const past = +(WEAPON_REACH.polearms - WEAPON_REACH.swords).toFixed(1);
+  return `A swing reaches as far as its weapon's family: ${listed(families)}, so a polearm reaches ${tilesSaid(past)} `
+    + `tile${past === 1 ? '' : 's'} further than a sword, and a bow in the hand is swung with the fists. `
+    + `A thrown weapon reaches its own range and ${tilesSaid(THROWN_PAST)} tiles past it: ${listed(thrown)}. `
+    + 'Anything further off is out of reach, and you walk in until it is not.';
+}
 
 /** Nearer than this, a bow cannot be drawn on it. */
 export const DRAW_CLOSEST = 1.2;
@@ -416,12 +437,68 @@ export const CROWD_BLOCK = 0.25;
 /** The most a shield blocks, however good it and the arm behind it are. A Sworn Blade's Shield Mastery raises it. The island's `block_most`. */
 export const BLOCK_MOST = 0.6;
 /**
+ * A shield in the off hand blocks a blow outright: after the dodge, which is
+ * rolled first, and before the armour. Its chance is its make's own share
+ * (`ShieldDef.block`, more for the heavier metal shield), times
+ * `BLOCK_QL_FROM` and a part in `BLOCK_QL_SPAN` for every point of its
+ * quality, and `BLOCK_PER_SKILL` more for every point of the shields skill.
+ * The island's `block_ql_from`, `block_ql_span` and `block_per_skill`.
+ */
+export const BLOCK_QL_FROM = 0.6;
+export const BLOCK_QL_SPAN = 160;
+export const BLOCK_PER_SKILL = 0.0025;
+/**
+ * A blocked blow takes nothing off you and wears the shield instead: this many
+ * points of damage (of 100) for every whole health the blow would have taken,
+ * less for a Mender's Armour Care. The island's `shield_wear`.
+ */
+export const SHIELD_WEAR = 3;
+/** What the fight log says of a blocked blow, on both sides. */
+export const BLOCKED_SAID = 'You block the blow with your shield.';
+/** What a shield's quality makes of its own share: ×0.6 at QL 0, ×1 at QL 64. */
+export const blockQl = (ql: number): number => BLOCK_QL_FROM + ql / BLOCK_QL_SPAN;
+/**
  * A shield's chance of turning a blow aside, before a crowd takes its share:
  * the shield's own, better for its quality, and the skill behind it, with what
- * a perk adds and the ceiling a perk raises.
+ * a perk adds and the ceiling a perk raises. The island's `shield_block`.
  */
 export const blockChance = (block: number, ql: number, shields: number, perk: PerkOf): number =>
-  Math.min(perk('blockcap:shield', BLOCK_MOST), block * (0.6 + ql / 160) + shields / 400 + perk('block:shield', 0));
+  Math.min(perk('blockcap:shield', BLOCK_MOST), block * blockQl(ql) + shields * BLOCK_PER_SKILL + perk('block:shield', 0));
+/** The ends a shield's chance is told at: the least QL a thing is made at, and a skill at its top. */
+const SAID_QL_LOW = 1;
+const SAID_SKILL_TOP = 100;
+/** No perks: the rule as it stands for anybody. */
+const NO_PERK: PerkOf = (_k, o) => o;
+/** The shields in the order they are told, lightest first. */
+const shieldsByWeight = (): string[] => Object.keys(SHIELDS).sort((a, b) => (itemDef(a)?.weight ?? 0) - (itemDef(b)?.weight ?? 0));
+/**
+ * The block rule in the game's own terms, off the numbers: each shield's own
+ * share and what it comes to at the ends of quality and skill, the ceiling,
+ * the crowd and the wear. For Help.
+ */
+export function blockSays(): string {
+  const each = shieldsByWeight().map((id) => {
+    const sh = SHIELDS[id];
+    return `a ${itemDef(id)?.name.toLowerCase() ?? id} (${+(itemDef(id)?.weight ?? 0).toFixed(1)} kg) ${percent(sh.block)}: `
+      + `${percent(blockChance(sh.block, SAID_QL_LOW, 0, NO_PERK))} at QL ${SAID_QL_LOW} and ${percent(blockChance(sh.block, QL_TOP, 0, NO_PERK))} at QL ${QL_TOP} with no shields skill, `
+      + `${percent(blockChance(sh.block, QL_TOP, SAID_SKILL_TOP, NO_PERK))} at QL ${QL_TOP} and shields ${SAID_SKILL_TOP}`;
+  });
+  return `A shield in the off hand blocks a blow outright, rolled after your dodge and before your armour. `
+    + `Its chance is its own share × (${BLOCK_QL_FROM} + its QL ÷ ${BLOCK_QL_SPAN}), and ${finePercent(BLOCK_PER_SKILL)} more for every point of shields skill, `
+    + `never over ${percent(BLOCK_MOST)}: ${each.join('; ')}. `
+    + `Every other thing on you takes ${percent(CROWD_BLOCK)} off it. A blocked blow takes nothing off you, trains shields, `
+    + `and wears the shield ${SHIELD_WEAR} damage for every whole health it would have taken (${+(SHIELD_WEAR / 10).toFixed(2)} for a blow of a tenth of your health). `
+    + `It stops a thrown stone the same way.`;
+}
+/** One shield's chance in your hands, and how it came to that, for its card: "16% × 0.85 for QL 40, + 12.5% for shields 50". */
+export function blockNote(block: number, ql: number, shields: number, perk: PerkOf): string {
+  const plain = block * blockQl(ql) + shields * BLOCK_PER_SKILL;
+  const extra = perk('block:shield', 0);
+  const cap = perk('blockcap:shield', BLOCK_MOST);
+  return `Its own ${percent(block)} × ${+blockQl(ql).toFixed(3)} for QL ${+ql.toFixed(1)}, + ${finePercent(shields * BLOCK_PER_SKILL)} for shields ${+shields.toFixed(1)}`
+    + `${extra ? `, + ${finePercent(extra)} for your perks` : ''}, never over ${percent(cap)}`
+    + `${plain + extra > cap ? ' (held there)' : ''}. Rolled after your dodge. A block takes nothing off you, and wears the shield ${SHIELD_WEAR} damage for every whole health the blow would have taken.`;
+}
 /** A blow at something whose mind is on another fight lands this much harder. */
 export const BLINDSIDE = 1.25;
 
@@ -614,6 +691,13 @@ export function nockedArrow(g: Game, want?: string | null): Item | undefined {
   return (want && isArrow(want) ? of(want) : undefined) ?? of('arrow') ?? ARROW_IDS.map(of).find((it) => it !== undefined);
 }
 describeWith({ arrowHead: { bleed: KNIFE_BLEED, bleedSecs: KNIFE_BLEED_SECS, hide: BODKIN_HIDE - 1, stagger: STAGGER_MAUL } });
+// A shield says how often it blocks, off the rule that blocks (`blockChance`).
+for (const [id, sh] of Object.entries(SHIELDS)) {
+  describeFrom(id, {
+    blockLow: blockChance(sh.block, SAID_QL_LOW, 0, NO_PERK), blockHigh: blockChance(sh.block, QL_TOP, 0, NO_PERK),
+    blockSkilled: blockChance(sh.block, QL_TOP, SAID_SKILL_TOP, NO_PERK), qlLow: SAID_QL_LOW, qlTop: QL_TOP, skillTop: SAID_SKILL_TOP, wear: SHIELD_WEAR,
+  });
+}
 
 /* ---- Venom and burns ---------------------------------------------------------- */
 

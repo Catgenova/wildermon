@@ -85,7 +85,7 @@
  * and `held`; `cast.mirror` (a shouldered weapon swung left-handed from the
  * left shoulder, rather than changed into the right hand in a frame),
  * `cast.close` (the body carried in to what it strikes for the blow, the
- * island's blows being struck from up to 2.2 tiles, the legs running in and
+ * island's blows being struck from as far as the weapon reaches (`WEAPON_REACH`), the legs running in and
  * bounding back past the cast's end; `when` a weapon, `steps` off), `cast.pull` and
  * `cast.companion` (a target or a companion the island moved, carried from
  * where it stood); the cue's `aim` (where the target stands and how tall it

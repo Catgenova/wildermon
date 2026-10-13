@@ -29,7 +29,7 @@
  * `Held` below is when each spell has what in the hand, read by the pose and
  * the effects alike so that the two never disagree.
  */
-import { KNIFE_BLEED_SECS, reachOf, STAGGER_MAUL } from '../../game/fight';
+import { FIST_REACH, KNIFE_BLEED_SECS, reachOf, STAGGER_MAUL } from '../../game/fight';
 import { WEAPON_BY_ID } from '../../game/gear';
 import { figureStance, standFeet, weaponCarry, weaponSpan, type Euler, type Rig } from '../figure';
 import { HALF_W, UNITS_PER_TILE } from '../iso';
@@ -1343,7 +1343,7 @@ const footOf = (b: Body): number => Math.max(0.22, (b.wide / 40) * 2.6);
 /** How far the weapon in the caster's hand reaches, in tiles, as the island has it (`melee_reach`, before perks): what a Long Throw goes past. */
 function reachOfHand(k: FxScene): number {
   const id = k.caster.figure?.gear?.weapon?.id, w = id ? WEAPON_BY_ID.get(id) : undefined;
-  return w && !w.ammo ? reachOf(w) : reachOf({ range: undefined });
+  return w && !w.ammo ? reachOf(w) : FIST_REACH;
 }
 
 /** The nearest creature hunting or fighting within `r` tiles of the caster that is not somebody's: who a Fade loses, or an Opportunist watches. */
