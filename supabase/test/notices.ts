@@ -22,6 +22,10 @@
  *   * taking down, by a rank that may, and refused to one that may not;
  *   * a citizen ashore hears a new notice in the log and is not shown it again;
  *     one away is shown every unseen one coming ashore, and only once;
+ *   * a citizen away longer than `NOTICE_MAIL_DAYS` is sent each new notice
+ *     as a letter from whoever posted it, once -- as it is posted, or by the
+ *     hourly sweep once they have been away that long -- and is not shown it
+ *     again coming ashore; one away less long is sent nothing;
  *   * the board lists author and date, newest first;
  *   * nobody signed in is let in, and no browser can read the tables.
  *
@@ -30,7 +34,7 @@
 import { execFileSync } from 'node:child_process';
 import '../../src/game/game';
 import { lacksSaid, POWER } from '../../src/game/ranks';
-import { cleanNotice, NOTICE_KEEP, NOTICE_MAX, noticeRefusal, SETTLE_SAID, settleLine, type SettleBoard } from '../../src/game/noticeboard';
+import { cleanNotice, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, noticeRefusal, SETTLE_SAID, settleLine, type SettleBoard } from '../../src/game/noticeboard';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -61,13 +65,15 @@ check('every sentence of the notices and the work is the island\'s word for word
 check('Post notices is a power on the island, at its bit, in the same words',
   psql(`select bit || '|' || may || '|' || may_not || '|' || power_bit('notices') from rank_power where id = 'notices'`)
     === `${POWER.notices.bit}|${POWER.notices.may}|${POWER.notices.mayNot}|${1 << POWER.notices.bit}`);
+check('how long a citizen is away before a notice comes by letter is the same on both sides',
+  psql('select notice_mail_days()') === String(NOTICE_MAIL_DAYS), psql('select notice_mail_days()'));
 check('the browser cleans a notice as the island keeps it', cleanNotice('  two \n\n  words\t ') === 'two words');
 
 const out = psql(`
 begin;
 create temp table said (k text);
 do $$
-declare w uuid; boss uuid; f uuid[]; may uuid; bld uuid; far uuid; stranger uuid; dname text;
+declare w uuid; boss uuid; f uuid[]; may uuid; bld uuid; far uuid; stranger uuid; gone uuid; lag uuid; dname text;
         r_builder bigint; v_n bigint; i int; v_first bigint;
 begin
   select id into w from world where name = 'Hoarding';
@@ -75,18 +81,23 @@ begin
   select array_agg(q.uid order by q.uid) into f from (
     select p.uid from player p where p.world_id = w and p.uid <> boss
        and not exists (select 1 from deed d where d.world_id = w and d.founded_by = p.uid)
-     order by p.uid limit 4) q;
-  may := f[1]; bld := f[2]; far := f[3]; stranger := f[4];
+     order by p.uid limit 6) q;
+  may := f[1]; bld := f[2]; far := f[3]; stranger := f[4]; gone := f[5]; lag := f[6];
   delete from deed_member where world_id = w and uid = any(f);
   delete from deed_member where world_id = w and founder = boss;
   delete from deed_notice where world_id = w;
   delete from deed_notice_seen where world_id = w;
   delete from caller;
-  insert into deed_member (world_id, founder, uid, role) values (w, boss, may, 'mayor'), (w, boss, bld, 'builder'), (w, boss, far, 'guest');
+  insert into deed_member (world_id, founder, uid, role) values (w, boss, may, 'mayor'), (w, boss, bld, 'builder'), (w, boss, far, 'guest'),
+    (w, boss, gone, 'guest'), (w, boss, lag, 'guest');
+  delete from letter where world_id = w and reader = any(f || boss);
   select id into r_builder from deed_rank_def where world_id = w and founder = boss and name = 'Builder';
-  -- The mayor and the founder are ashore; the guest is away.
-  update player set away = false where world_id = w and uid in (boss, may, bld, stranger);
-  update player set away = true where world_id = w and uid = far;
+  -- The founder, the mayor and the builder are ashore. One guest went home an
+  -- hour ago, one a day short of the time a notice comes by letter, one a day past it.
+  update player set away = false, seen_at = now(), left_at = null where world_id = w and uid in (boss, may, bld, stranger);
+  update player set away = true, left_at = now() - interval '1 hour' where world_id = w and uid = far;
+  update player set away = true, left_at = now() - make_interval(days => notice_mail_days() - 1) where world_id = w and uid = lag;
+  update player set away = true, left_at = now() - make_interval(days => notice_mail_days() + 1) where world_id = w and uid = gone;
   insert into said values ('DEED|' || dname), ('N_BOSS|' || folk_name(w, boss)), ('N_MAY|' || folk_name(w, may));
 
   -- Nobody signed in.
@@ -114,6 +125,26 @@ begin
   -- Heard by the founder and the builder, who are ashore; not by the guest, who is away.
   insert into said values ('HEARD_BOSS|' || (select text from event where world_id = w and uid = boss order by n desc limit 1));
   insert into said values ('HEARD_FAR|' || (select count(*) from event where world_id = w and uid = far and text like '%Bring wood%'));
+
+  -- By letter: to the guest away past the time, both notices, from the mayor; to nobody else.
+  insert into said values ('GONE_LETTERS|' || (select count(*) || ',' || count(*) filter (where sender = may)
+    from letter where world_id = w and reader = gone));
+  insert into said values ('GONE_TEXT|' || (select text from letter where world_id = w and reader = gone order by n desc limit 1));
+  insert into said values ('OTHERS_LETTERS|' || (select count(*) from letter where world_id = w and reader in (far, lag, bld, boss)));
+  -- Looked at again, nothing goes twice.
+  insert into said values ('SWEEP_NONE|' || notice_mail_sweep());
+  -- The guest a day short, a day older: the hourly sweep sends both, once.
+  update player set left_at = now() - make_interval(days => notice_mail_days() + 1) where world_id = w and uid = lag;
+  insert into said values ('SWEEP|' || notice_mail_sweep());
+  insert into said values ('SWEEP_AGAIN|' || notice_mail_sweep());
+  insert into said values ('LAG_LETTERS|' || (select count(*) from letter where world_id = w and reader = lag));
+  -- Coming ashore, neither is shown what came by letter.
+  perform set_config('request.jwt.claims', json_build_object('sub', gone)::text, true);
+  insert into said values ('GONE_ASHORE|' || jsonb_array_length(rpc_notices_ashore(w)->'notices'));
+  perform set_config('request.jwt.claims', json_build_object('sub', lag)::text, true);
+  insert into said values ('LAG_ASHORE|' || jsonb_array_length(rpc_notices_ashore(w)->'notices'));
+  -- And the letters are in their mail, under the mayor's name.
+  insert into said values ('LAG_UNREAD|' || (rpc_social(w)->'unread')::text);
 
   -- The stranger, coming ashore, is handed nothing of it; the stranger still may not take it down.
   perform set_config('request.jwt.claims', json_build_object('sub', stranger)::text, true);
@@ -203,6 +234,19 @@ check('a stranger coming ashore is shown nothing of it', got('STR_ASHORE') === '
 const farBoard = JSON.parse(got('FAR_BOARD')) as SettleBoard;
 check('a guest reads the board, and may not post to it', farBoard.notices.length === 2 && farBoard.post === false && farBoard.deed === deed,
   `${farBoard.notices.length}, ${farBoard.post}`);
+
+console.log('--- by letter, to whoever has been away');
+check(`the guest away more than ${NOTICE_MAIL_DAYS} days is sent both notices as letters from whoever posted them`,
+  got('GONE_LETTERS') === '2,2', got('GONE_LETTERS'));
+check('a letter reads as the log line does', got('GONE_TEXT') === `${settleLine('heard', { deed, who: got('N_MAY') })} Bring wood to the token`, got('GONE_TEXT'));
+check('nobody ashore, nor away less long, is sent one', got('OTHERS_LETTERS') === '0', got('OTHERS_LETTERS'));
+check('looked at again, nothing is sent twice', got('SWEEP_NONE') === '0', got('SWEEP_NONE'));
+check('a guest away long enough since is sent both by the hourly sweep, once', got('SWEEP') === '2' && got('SWEEP_AGAIN') === '0' && got('LAG_LETTERS') === '2',
+  `${got('SWEEP')}, ${got('SWEEP_AGAIN')}, ${got('LAG_LETTERS')}`);
+check('coming ashore, neither is shown again what came by letter', got('GONE_ASHORE') === '0' && got('LAG_ASHORE') === '0',
+  `${got('GONE_ASHORE')}, ${got('LAG_ASHORE')}`);
+const unread = JSON.parse(got('LAG_UNREAD')) as Array<{ name: string; n: number }>;
+check('and they are waiting in the Social window\'s letters, by whoever posted them', unread.some((u) => u.name === got('N_MAY') && u.n === 2), got('LAG_UNREAD'));
 
 console.log('--- how many are kept');
 check(`the board keeps the newest ${NOTICE_KEEP}`, got('KEPT_N') === String(NOTICE_KEEP), got('KEPT_N'));

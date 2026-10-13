@@ -8,8 +8,10 @@
  *     characters to the settlement (`rpc_notice_post`) and takes any notice
  *     down (`rpc_notice_drop`). It keeps the newest `NOTICE_KEEP`; posting one
  *     more drops the oldest. Whoever is ashore hears a new one in the log at
- *     once; everybody else is shown what they have not seen when they next
- *     come ashore (`rpc_notices_ashore`), once.
+ *     once; whoever has been away longer than `NOTICE_MAIL_DAYS` is sent it
+ *     as a letter (`notice_mail`, as it is posted and every hour after);
+ *     everybody else is shown what they have not seen when they next come
+ *     ashore (`rpc_notices_ashore`). Each notice reaches each citizen once.
  *   * **Work.** A rank holding Set work lists what the settlement wants: a
  *     kind of thing, how many, and a lowest quality if it matters
  *     (`rpc_work_set`), up to `WORK_OPEN_MAX` open at once, and takes any of
@@ -61,6 +63,14 @@ export const WORK_DONE_KEEP = 10;
 
 /** How many lines a settlement's ledger keeps. A new line past that drops the oldest. */
 export const LEDGER_KEEP = 100;
+
+/**
+ * How long a citizen has been away, in days, before a new notice is sent to
+ * them as a letter rather than kept for when they come ashore. The letter is
+ * from whoever posted it and reads as the log line does; it counts as seen,
+ * so coming ashore does not show it again.
+ */
+export const NOTICE_MAIL_DAYS: number = 3;
 
 /** How often the Settlement window's Notices and Work tabs ask the island again while one is showing, in seconds. */
 export const SETTLE_REFRESH = 10;

@@ -58,7 +58,7 @@ import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import {
-  DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAX, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
+  DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
 } from '../../game/noticeboard';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
@@ -852,8 +852,11 @@ export function helpText(): string {
     and every rank holding <b>${POWER.notices.label}</b> write one of at most ${NOTICE_MAX} characters &mdash; runs of
     spaces and line breaks count as one space &mdash; and press <b>Post</b>, and may <b>Take down</b> any notice.
     A settlement keeps its newest ${NOTICE_KEEP}: posting another drops the oldest. Citizens ashore see a new
-    notice in the event log the moment it is posted. Everybody else is shown the ones they have not seen,
-    in a window and in the log, the next time they come ashore, and only that once.</p>
+    notice in the event log the moment it is posted. A citizen who has not been ashore for more than
+    ${NOTICE_MAIL_DAYS} day${NOTICE_MAIL_DAYS === 1 ? '' : 's'} is sent it as a <b>letter</b> instead, from whoever posted it, waiting in the Social
+    window: the island looks as a notice goes up and every hour after. Everybody else is shown the ones they
+    have not seen, in a window and in the log, the next time they come ashore. Each notice reaches each
+    citizen once: in the log, by letter, or coming ashore.</p>
     <p><b>Work</b> lists what the settlement wants. The founder and every rank holding <b>${POWER.work.label}</b> name
     a thing &mdash; anything a deed crate takes, which is everything but coins and crates &mdash; how many, at least
     one and at most ${WORK_COUNT_MAX}, and if they like a lowest quality, a whole number up to ${WORK_QL_TOP}. Up to

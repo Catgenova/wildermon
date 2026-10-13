@@ -18,7 +18,7 @@ import { asRanked, defOf, defsOf, ranksToGive } from './social';
 import { crateKindOfItem } from '../../game/crates';
 import { itemDef, ITEM_DEFS } from '../../game/items';
 import {
-  cleanNotice, deliveredBy, deliverRefusal, DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAX, noticeRefusal, SETTLE_REFRESH,
+  cleanNotice, deliveredBy, deliverRefusal, DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, noticeRefusal, SETTLE_REFRESH,
   WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP, workSetRefusal, type LedgerLine, type SettleBoard, type Work,
 } from '../../game/noticeboard';
 
@@ -767,7 +767,7 @@ export class DeedPanel {
     post.type = 'button';
     post.className = 'tb-btn tb-small';
     post.textContent = 'Post';
-    post.title = `Posted to every citizen. Those ashore see it in the log now; everybody else when they next come ashore. ${NOTICE_KEEP} are kept; one more drops the oldest.`;
+    post.title = `Posted to every citizen. Those ashore see it in the log now; those away more than ${NOTICE_MAIL_DAYS} day${NOTICE_MAIL_DAYS === 1 ? '' : 's'} are sent it as a letter; everybody else sees it when they next come ashore. ${NOTICE_KEEP} are kept; one more drops the oldest.`;
     const count = (): void => {
       left.textContent = `${[...cleanNotice(text.value)].length} of ${NOTICE_MAX} characters`;
     };

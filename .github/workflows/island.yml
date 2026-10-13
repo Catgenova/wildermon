@@ -1516,7 +1516,10 @@ jobs:
           # longest are refused and runs of spaces become one; that the board
           # keeps the newest and drops the oldest; that a citizen ashore hears
           # a new notice in the log and one away is shown every unseen one
-          # coming ashore, once; and that no browser reads the tables.
+          # coming ashore, once; that one away longer than NOTICE_MAIL_DAYS is
+          # sent each as a letter from whoever posted it, as it goes up or by
+          # the hourly sweep, once, and is not shown it again coming ashore;
+          # and that no browser reads the tables.
           npx esbuild supabase/test/notices.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/notices.mjs --log-level=error
           node node_modules/.cache/notices.mjs
