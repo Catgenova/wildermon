@@ -39,6 +39,8 @@ import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, FIGHT_SHARE, GRADE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
+import { MILK_LITRES, MILK_READY } from '../src/game/dairy';
+import { BUCKET_LITRES } from '../src/game/furniture';
 import { SMITH_GAIN } from '../src/game/anvil';
 import { BREW_GAIN } from '../src/game/brewing';
 import { IMPROVE_FLOOR, IMPROVE_GAIN } from '../src/game/improve';
@@ -1796,6 +1798,13 @@ for (const [fn, v] of [
  * it, so the two cannot disagree about which crate a plank comes out of.
  */
 out.push(`create or replace function craft_reach() returns int language sql immutable as $fn$ select ${q(CRAFT_REACH)}::int $fn$;`);
+/*
+ * Milk (`dairy.ts`): litres a milking gives by species -- a full bucket off a
+ * Cudda, less off a Gorral (`bucket_litres` holds what a bucket does) -- and
+ * how much of its milk has to have come back on a beast before it is milked again.
+ */
+out.push(`create or replace function milk_litres(p_species text) returns int language sql immutable as $fn$ select case p_species ${Object.entries(MILK_LITRES).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}else ${q(BUCKET_LITRES)} end $fn$;`);
+out.push(`create or replace function milk_ready() returns double precision language sql immutable as $fn$ select ${q(MILK_READY)}::double precision $fn$;`);
 /* The tile a flight of garden steps is, and the bit in its data byte that says it is timber. */
 out.push(`create or replace function steps_tile() returns int language sql immutable as $fn$ select ${q(TileType.Steps)}::int $fn$;`);
 out.push(`create or replace function steps_timber_bit() returns int language sql immutable as $fn$ select ${q(STEPS_TIMBER)}::int $fn$;`);

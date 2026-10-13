@@ -2722,6 +2722,19 @@ jobs:
             --outfile=node_modules/.cache/maps.mjs --log-level=error
           node node_modules/.cache/maps.mjs
 
+      - name: Milk, butter and cheese, the same on both sides
+        run: |
+          # A butter churn built with carpentry and set down; a bucket of milk
+          # churned at it into the pats of butter the browser says, the bucket
+          # back; a pastry baked with butter and cheese pressed, their counts;
+          # butter and cheese keeping longer than milk by their decay, every row
+          # the same on both sides. And a Gorral milked as a Cudda is, for the
+          # litres the browser names a milking into a part bucket of milk, until
+          # it is a full bucket, at the quality and in the words of the browser.
+          npx esbuild supabase/test/dairy.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/dairy.mjs --log-level=error
+          node node_modules/.cache/dairy.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

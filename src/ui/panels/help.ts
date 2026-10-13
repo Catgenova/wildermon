@@ -74,6 +74,7 @@ import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
 import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUTTER_CHURN, CHURN_BUTTER, MILK_READY, milkLitres } from '../../game/dairy';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
@@ -357,6 +358,41 @@ function enchantingHelp(): string {
     pack counted; and a mount wearing it goes on with a fight however far from you it leads, as Love's Steady Herd has every one of yours do.
     Both go into the saddle or the bridle in the pack, ride on the mount when it is saddled, and come back into the pack with the tack. An
     enchanted saddle or bridle is a pile of its own, never folded into a plain one.</p>`;
+}
+
+/**
+ * Milk, butter and cheese (`dairy.ts`): who is milked and for how much, what
+ * a bucket of milk becomes, what each feeds, and how much longer each keeps
+ * than the milk, every number off the rule.
+ */
+function dairyHelp(): string {
+  const milkers = Object.values(SPECIES).filter((d) => d.milk);
+  const fills = milkers.filter((d) => milkLitres(d.id) >= BUCKET_LITRES).map((d) => d.name);
+  const short = milkers.filter((d) => milkLitres(d.id) < BUCKET_LITRES);
+  const milk = itemDef('milk_bucket');
+  const fed = (id: string): string => {
+    const d = itemDef(id);
+    const parts = NUTRIENTS.filter((n) => feeds(id, n) > 0).map((n) => `${percent(feeds(id, n))} ${NUTRIENT_NAMES[n].toLowerCase()}`);
+    return `${d.drink ? `${percent(d.drink)} of thirst` : `${percent(d.food ?? 0)} of the food bar`}, ${listed(parts)}`;
+  };
+  const keeps = (id: string): string => share((itemDef(id).decay ?? 1) / (milk.decay ?? 1));
+  return `
+    <h3>Milk, butter and cheese</h3>
+    <p>A tamed female ${listedOr(milkers.map((d) => d.name))}, grown, is <b>milked</b> with Milk it once
+    ${percent(MILK_READY)} of its milk has come back, and a milking takes all of it.
+    ${milkers.map((d) => `A ${d.name}'s milk comes back in full in ${spanWords(1 / (d.fleece ?? 1))}.`).join(' ')}
+    ${fills.length ? `A ${listedOr(fills)} fills an empty bucket at a milking: a <b>bucket of milk</b>, ${numberWord(BUCKET_LITRES)} litres.` : ''}
+    ${short.map((d) => `A ${d.name} gives ${numberWord(milkLitres(d.id))} litres a milking, into an empty bucket or the
+    <b>part bucket of milk</b> it has started, which is a bucket of milk once it holds ${numberWord(BUCKET_LITRES)} litres; what is
+    over that is lost, and the quality is the average of the two by the litres of each.`).join(' ')}</p>
+    <p>A bucket of milk is drunk ${numberWord(milk.charges ?? 0)} times, each drink worth ${fed('milk_bucket')}.
+    Pressed in a clay bowl (${workedAt('make_cheese')}) it makes ${numberWord(made('make_cheese'))} <b>cheeses</b>.
+    Churned standing within ${STATION_REACH} tiles of a <b>butter churn</b> set down on the ground (${workedAt(CHURN_BUTTER)})
+    it makes ${numberWord(made(CHURN_BUTTER))} pats of <b>butter</b>. The churn is built with ${(SKILL_BY_ID.get(recipe(`make_${BUTTER_CHURN}`).skill)?.name ?? '').toLowerCase()}
+    from ${bill(`make_${BUTTER_CHURN}`)}. Either way the bucket comes back empty, and a failure loses the milk and keeps the bucket.
+    ${NumberWord(need('bake_pastry', 'butter'))} pats of butter and ${numberWord(need('bake_pastry', 'dough'))} round of dough bake into ${numberWord(made('bake_pastry'))} <b>pastries</b> at a lit fire or oven (${workedAt('bake_pastry')}).</p>
+    <p>A cheese is worth ${fed('cheese')}; a pat of butter ${fed('butter')}; a pastry ${fed('pastry')}.
+    Left lying, cheese rots at ${keeps('cheese')} the pace of a bucket of milk and butter at ${keeps('butter')}.</p>`;
 }
 
 const bill = (id: string, figures = false): string =>
@@ -1292,6 +1328,7 @@ export function helpText(): string {
     is there, and anything that would have burnt over an open flame comes out right, and better, because
     the bricks hold their heat evenly. It leaves ashes like any other fire, and they rake out the same
     way.</p>
+    ${dairyHelp()}
     <h3>Metal</h3>
     <p>Mining a seam brings up <b>ore</b>, not finished metal. A <b>stone smelter</b> is laid up by a
     mason from ${bill('make_smelter', true)} with a trowel &mdash; it is built in the crafting window like
@@ -1995,7 +2032,7 @@ export function helpText(): string {
     <table>
       <tr><td><b>Starch</b></td><td>bread, porridge, roots and grain</td></tr>
       <tr><td><b>Flesh</b></td><td>meat and fish &mdash; cooked, meat is worth ${times(feeds('cooked_meat', 'flesh') / feeds('meat', 'flesh'))} raw</td></tr>
-      <tr><td><b>Fat</b></td><td>oil, nuts, cheese and what is fried in them</td></tr>
+      <tr><td><b>Fat</b></td><td>oil, nuts, cheese, butter and what is fried in them</td></tr>
       <tr><td><b>Greens</b></td><td>vegetables, fruit and berries</td></tr>
     </table>
     <p>Raw food feeds one of them a little: a potato is ${percent(feeds('potato', 'starch'))} starch, a piece of

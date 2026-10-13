@@ -59,6 +59,12 @@ export interface ItemDef {
   /** Container capacity in drinks; the item carries `charges` of them. */
   charges?: number;
   /**
+   * Litres it holds when it is full, for a vessel that fills a little at a
+   * time and is not drunk from: a part bucket of milk (`dairy.ts`). The item
+   * carries the litres in it as `charges`, and its name says them.
+   */
+  fills?: number;
+  /**
    * How many times as long the knack it gives lasts as its food and drink
    * alone would make it, past the ceiling they have: a Cook's spirit, distilled
    * down from a brew.
@@ -343,8 +349,10 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   big_axle: { name: 'Big axle', category: 'material', weight: 8, stackable: true, decay: 1, description: 'A cast axle as long as a cart is wide. A large cart takes {recipe.make_large_cart.big_axle:w} and a wagon {recipe.make_wagon.big_axle:w}.' },
   large_wheel: { name: 'Large wheel', category: 'material', weight: 12, stackable: true, decay: 10, description: 'Spokes, felloes and a metal tyre shrunk on hot. A large cart takes {recipe.make_large_cart.large_wheel:w} and a wagon {recipe.make_wagon.large_wheel:w}.' },
   yoke: { name: 'Yoke', category: 'material', weight: 4, stackable: true, decay: 10, description: 'A shaped bar and a leather harness. A wildermon is hitched into one to pull.' },
-  milk_bucket: { name: 'Bucket of milk', category: 'food', weight: 6, decay: 30, drink: 0.3, charges: 5, description: '{bucketLitres:W} litres of milk, still warm. Drink it, or work it into cheese while it is fresh.', feeds: { fat: 0.1, flesh: 0.08 } },
-  cheese: { name: 'Cheese', category: 'food', weight: 0.4, stackable: true, food: 0.3, decay: 4, description: 'Milk pressed and left to itself for a while. It keeps far better than what it was made of.', feeds: { fat: 0.12, flesh: 0.1 } },
+  milk_bucket: { name: 'Bucket of milk', category: 'food', weight: 6, decay: 30, drink: 0.3, charges: 5, description: '{bucketLitres:W} litres of milk. Drink it, press it into {recipe.make_cheese.count:w} cheeses in a clay bowl, or churn it into {recipe.churn_butter.count:w} pats of butter at a butter churn; the bucket comes back from both.', feeds: { fat: 0.1, flesh: 0.08 } },
+  cheese: { name: 'Cheese', category: 'food', weight: 0.4, stackable: true, food: 0.3, decay: 3, description: 'A bucket of milk pressed in a clay bowl makes {recipe.make_cheese.count:w}. Left lying it rots at {keep:share} the pace of a bucket of milk.', feeds: { fat: 0.12, flesh: 0.1 } },
+  butter: { name: 'Butter', category: 'food', weight: 0.1, stackable: true, food: 0.1, decay: 6, description: 'A bucket of milk churned at a butter churn makes {recipe.churn_butter.count:w} pats. Left lying it rots at {keep:share} the pace of a bucket of milk. {recipe.bake_pastry.butter:W} pats and {recipe.bake_pastry.dough:w} round of dough bake into {recipe.bake_pastry.count:w} pastries at a lit fire or oven.', feeds: { fat: 0.16 } },
+  pastry: { name: 'Pastry', category: 'food', weight: 0.2, stackable: true, food: 0.38, decay: 40, description: 'Dough and butter baked at a lit fire or oven, {recipe.bake_pastry.count:w} to a bake.', feeds: { starch: 0.2, fat: 0.16 } },
   honey: { name: 'Honey', category: 'food', weight: 0.3, stackable: true, food: 0.22, decay: 0.4, description: 'Comb honey out of a hive. It keeps almost forever and everything on the island wants it.', feeds: { starch: 0.1, fat: 0.03 } },
   wax: { name: 'Beeswax', category: 'material', weight: 0.2, stackable: true, decay: 1, description: 'Comb rendered down. It is what a candle is, and what a waxed thread is drawn through.' },
   lantern: { name: 'Lantern', category: 'tool', weight: 1.4, decay: 3, description: 'Ribbons of metal, oiled cloth and a handle. With a candle in it and lit at a fire it throws {light.lanternNear:w} tiles of light at the roughest and {light.lanternFar:w} at the best, and a candle lasts {light.candleShort:span} in a rough one and {light.candleLong:span} in a fine one.' },
@@ -538,6 +546,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   enchanters_plinth: { name: 'Enchanter\'s plinth', category: 'misc', weight: 60, decay: 3, description: 'A carved stone table, runes round its rim and its top dished. Enchant, putting a scroll into a thing, is done standing within {reach} tiles of the middle of one set down on the ground, and nowhere else; writing a scroll needs none.' },
   // A mason's stone with a line of somebody's own words cut into it (`memorial.ts`).
   memorial_stone: { name: 'Memorial stone', category: 'misc', weight: 40, decay: 0, description: 'A carved stone on a plinth. Set it down, and Engrave it with a {chisel}: a line of up to {max} characters, cut with masonry. Whoever set it down may cut a new line over the old one, and so may anybody of the settlement it stands on. Examine reads it back. Picked up and set down again it keeps its line. It does not decay.' },
+  butter_churn: { name: 'Butter churn', category: 'misc', weight: 14, decay: 4, description: 'A hooped tub with a dasher through its lid. A bucket of milk is churned into {recipe.churn_butter.count:w} pats of butter with cooking, standing within {reach} tiles of one set down on the ground, and nowhere else; the bucket comes back empty.' },
   paper_press: { name: 'Paper press', category: 'misc', weight: 24, decay: 4, description: 'A wooden screw press. Reed is pressed into papyrus standing at one set down on the ground, and nowhere else.' },
   // Brick and mortar, carried flat-packed like everything else until it is set down.
   smelter: { name: 'Smelter', category: 'misc', weight: 52, decay: 3, description: 'A stone smelter, built flat-packed and bedded in where you set it down. Turns ore into lumps, and mixes alloys. It stands on your own deed.' },
@@ -1316,6 +1325,7 @@ export function itemName(item: Item): string {
   let name = item.extra ? `${base} (${item.extra.toLowerCase()})` : base;
   if (held) name += ` (${held.litres} ${held.litres === 1 ? 'litre' : 'litres'})`;
   if (def.charges) name += ` (${item.charges ?? 0}/${def.charges})`;
+  else if (def.fills) name += ` (${item.charges ?? 0} of ${def.fills} litres)`;
   // And what is enchanted into it: a Sword (iron) (Emberbrand).
   return name + enchantMarker(item.enchant);
 }

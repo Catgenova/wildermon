@@ -365,6 +365,14 @@ export const FURNITURE: FurnitureDef[] = [
   piece('paper_press', 'Paper press', 1, 1, [['plank', 24], ['timber', 12], ['shaft', 4], ['nail', 36]], 20, 16,
     'You raise the frame, thread the screw through its head beam and hang the platen under it. Stand at it to press reed into papyrus.', undefined,
     { skill: 'carpentry' }),
+  /*
+   * Where a bucket of milk is churned into butter, and nowhere else
+   * (`dairy.ts`): a hooped staved tub on its own foot with a dasher through
+   * the lid. A bucket's staves and hoops, more of them, on a spindle's footing.
+   */
+  piece('butter_churn', 'Butter churn', 1, 1, [['plank', 12], ['shaft', 2], ['ribbon', 2], ['nail', 12]], 16, 10,
+    'You raise the staves, hoop the tub and fit the dasher through its lid. Stand at it to churn a bucket of milk into butter.', undefined,
+    { skill: 'carpentry' }),
   // Masonry, not carpentry: these two are laid in brick and mortar.
   piece('oven', 'Oven', 2, 2, [['stone_brick', 40], ['mortar', 16]], 24, 18, 'You lay the courses, turn an arch over the mouth and leave it to set. An oven.', undefined, { skill: 'masonry', tool: 'trowel', hearth: true }),
   /*
@@ -748,6 +756,7 @@ describeWith({ bucketLitres: BUCKET_LITRES });
  */
 export const STATION_REACH = 2.4;
 describeFrom(ENCHANTERS_PLINTH, { reach: STATION_REACH });
+describeFrom('butter_churn', { reach: STATION_REACH });
 // What a fountain draws, off the well's own rate: litres a minute at the least, and at quality 100.
 describeFrom('fountain', { least: (WELL_TRICKLE * 60).toFixed(1), most: ((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1), top: WELL_TRICKLE_AT });
 // A tent's night measured against a bed's, off the two pieces.

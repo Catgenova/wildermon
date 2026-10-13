@@ -1093,6 +1093,9 @@ export const SPECIES: Record<string, SpeciesDef> = {
     draught: true,
     mount: 15,
     pitch: 2,
+    // A female is milked too, for less than a Cudda gives (`GORRAL_MILK`), and what comes back on it comes back slowly.
+    fleece: 1 / 1200,
+    milk: true,
   },
   wadd: {
     id: 'wadd',

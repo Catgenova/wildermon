@@ -31,6 +31,8 @@
 import { TILE_DEFS, TileType } from '../world/tiles';
 import { BUTCHER_PARTS, HOARD_LUMPS, HOARD_MORE } from './butcher';
 import { TACK } from './creatureActions';
+import { MILK_PART, milkLitres } from './dairy';
+import { BUCKET_LITRES } from './furniture';
 import {
   GATHER_DO, GATHER_SKILL, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
   PULL_DEFAULT, RANGE_PER_STEP, SKILL_STEP, SPECIES, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
@@ -259,7 +261,12 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
     const yields = def.shearYield ?? 'wool';
     lines.push(`${yields === 'feather' ? 'Plucked' : 'Shorn'} with a ${itemName('carving_knife')} for ${itemName(yields)}`);
   }
-  if (def.milk) lines.push(`A female is milked into an empty ${itemName('bucket')}, for a ${itemName('milk_bucket')}`);
+  if (def.milk) {
+    const litres = milkLitres(def.id);
+    lines.push(litres >= BUCKET_LITRES ? `A female is milked into an empty ${itemName('bucket')}, for a ${itemName('milk_bucket')}`
+      : `A female is milked into an empty ${itemName('bucket')} or a ${itemName(MILK_PART)}, ${numberWord(litres)} litres a milking; `
+        + `at ${numberWord(BUCKET_LITRES)} litres it is a ${itemName('milk_bucket')}`);
+  }
   if (def.fleece) {
     const grown = itemName(def.shearYield ?? 'wool');
     const what = def.milk ? `${capital(grown)} and milk come` : `Its ${grown} ${grown.endsWith('s') ? 'come' : 'comes'}`;

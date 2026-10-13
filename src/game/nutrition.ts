@@ -27,7 +27,7 @@ export const NUTRIENT_NAMES: Record<Nutrient, string> = {
 export const NUTRIENT_NOTES: Record<Nutrient, string> = {
   starch: 'bread, porridge, roots and grain',
   flesh: 'meat and fish, cooked for twice the good',
-  fat: 'oil, nuts, cheese and what is fried in them',
+  fat: 'oil, nuts, cheese, butter and what is fried in them',
   greens: 'vegetables, fruit and berries',
 };
 

@@ -3790,6 +3790,22 @@ const MODELS: Record<string, Model> = {
   },
 
   /*
+   * The butter churn (`dairy.ts`): a tall staved tub, wider at the foot than
+   * the mouth, hooped in iron, with a lid on it and the dasher's staff up
+   * through the middle of the lid and a crossbar on the top to work it by.
+   */
+  butter_churn: ({ sc, wood }) => {
+    const H = 10, R0 = 3.4, R1 = 2.5;
+    sc.shadows = [[-3.6, 3.6, -3.6, 3.6]];
+    sc.lathe(0, 0, [[0, R0], [H * 0.5, (R0 + R1) / 2], [H, R1]], wood, 18, {
+      staves: 12,
+      bands: [[H * 0.12, IRON, 0.5], [H * 0.55, IRON, 0.5], [H * 0.9, IRON, 0.5]],
+      cap: paintOf(mix(wood.body, [70, 50, 40], 0.18)),
+    });
+    sc.rod([0, 0, H], [0, 0, H + 5.2], 0.35, wood);
+    sc.rod([-1.6, 0, H + 5.2], [1.6, 0, H + 5.2], 0.3, wood);
+  },
+  /*
    * Masonry. The oven is a dome of stone brick on a plinth, a chimney at the
    * back and an arched mouth at the front with a niche for the wood under
    * it; lit, the mouth is full of fire. The brazier is a shallow bowl of

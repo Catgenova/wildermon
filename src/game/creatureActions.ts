@@ -7,7 +7,9 @@ import { studBook } from './husbandry';
 import { numberWord } from './words';
 import { bestTier, traitList } from './traits';
 import type { Game } from './game';
-import { furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
+import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
+import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl } from './dairy';
+import { vesselBecame } from './placeables';
 import { deedJobLine, emptyCrate, letOut, shutIn } from './creaturecrate';
 import { itemDef, itemName, rarityOf, type Mark } from './items';
 import { BANE_BONUS, banes, hitChance, isBow, WEAPON_BY_ID, weaponDamage } from './gear';
@@ -749,18 +751,47 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return 'It is gone.';
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
-      if (!g.inventory.has('bucket')) return 'You need an empty bucket.';
+      // Less than a bucket a milking goes on into a part bucket of milk, if there is one (`dairy.ts`).
+      const part = milkLitres(c.species) < BUCKET_LITRES && g.inventory.has(MILK_PART);
+      if (!part && !g.inventory.has('bucket')) return 'You need an empty bucket.';
       if (c.sex !== 'female') return `${c.name} is male. Nothing is coming out of him.`;
-      if (c.fleece < 0.4) return `${c.name} has nothing to give yet.`;
+      if (c.fleece < MILK_READY) return `${c.name} has nothing to give yet.`;
       return null;
     },
     perform: (t, g) => {
       const c = creatureOf(g, t);
-      const bucket = g.inventory.find('bucket');
-      if (!c || !bucket || c.fleece < 0.4) return;
-      g.inventory.remove(bucket.uid, 1);
+      if (!c || c.fleece < MILK_READY) return;
       // What it has been fed on is what comes out of it.
       const ql = Math.max(1, Math.min(100, 20 + c.fleece * 40 + c.hunger * 30));
+      const litres = milkLitres(c.species);
+      if (litres < BUCKET_LITRES) {
+        // A Gorral: its litres into the part bucket it started, or into an empty one.
+        const part = g.inventory.find(MILK_PART);
+        const bucket = part ? undefined : g.inventory.find('bucket');
+        if (!part && !bucket) return;
+        const had = part?.charges ?? 0;
+        const now = Math.min(BUCKET_LITRES, had + litres);
+        const made = part ? toppedQl(had, part.ql, litres, ql) : ql;
+        if (part && now >= BUCKET_LITRES) {
+          const full = vesselBecame(g, part, 'milk_bucket');
+          if (full) full.ql = made;
+        } else if (part) {
+          part.charges = now;
+          part.ql = made;
+          g.inventory.onChange?.();
+          g.events.emit('inventory');
+        } else if (bucket) {
+          g.inventory.remove(bucket.uid, 1);
+          g.inventory.add(MILK_PART, { ql: made }).charges = now;
+        }
+        c.fleece = 0;
+        g.gainSkill('farming', 0.3);
+        g.logMsg(milkedSays(c.name, now, made), 'event');
+        return;
+      }
+      const bucket = g.inventory.find('bucket');
+      if (!bucket) return;
+      g.inventory.remove(bucket.uid, 1);
       g.inventory.add('milk_bucket', { ql });
       // A Farmer's Milkmaid fills a second bucket now and then, if there is one.
       const spare = g.rand() < g.perk('more:milk_creature', 0) ? g.inventory.find('bucket') : undefined;
@@ -770,7 +801,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       }
       c.fleece = 0;
       g.gainSkill('farming', 0.3);
-      g.logMsg(`You milk ${c.name} into the bucket${spare ? ' and fill another' : ''}. (QL ${ql.toFixed(1)})`, 'event');
+      g.logMsg(milkedSays(c.name, litres, ql, !!spare), 'event');
     },
   },
   // ---- The saddle: tack fitted, and a rider up. ----
