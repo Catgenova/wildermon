@@ -116,7 +116,13 @@ create temp table said (k text, v text);
 do $b$
 declare w record; r jsonb;
 begin
-  select p.world_id, p.uid into w from player p order by p.world_id, p.uid limit 1;
+  -- The largest island with land, and somebody stood on it at its spawn: what the suite leaves behind can be anywhere,
+  -- off the edge of a sixteen-tile island included, and a settle there faults before it reaches the queue.
+  select p.world_id, p.uid, wd.spawn_x, wd.spawn_y into w from player p join world wd on wd.id = p.world_id
+   where exists (select 1 from land_tile lt where lt.world_id = wd.id)
+   order by wd.size desc, p.world_id, p.uid limit 1;
+  update player set x = w.spawn_x + 0.5, y = w.spawn_y + 0.5, level = 0, aboard = null, away = false
+    where world_id = w.world_id and uid = w.uid;
   update player set act = ${lit(IN_HAND)}, act_target = '{"kind":"item","id":1}'::jsonb, act_started = now(),
          act_ends = now() + interval '1 hour', act_left = 3, act_goes = 3,
          act_queue = ${lit(queueJson)}::jsonb
