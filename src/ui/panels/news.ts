@@ -51,6 +51,14 @@ import { GRAPE_SEASON, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
+import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
+import { WHEY_FEED } from '../../game/dairy';
+import { GRAZE_FILL } from '../../game/creatures';
+import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
+import { STORE_LOG_CAP } from '../../game/ranks';
+import { SIGN_MAX, SIGN_QL } from '../../game/signing';
+import { DYE_PANE_LITRES } from '../../game/dyestuffs';
+import { blockSays, reachSays } from '../../game/fight';
 import { BLOOMS, BUSH_FLOWER_FROM, evergreen, LEAF_DAYS, SHED_DAYS, TURN_DAYS } from '../../render/foliage';
 import { lifeSeasons } from '../../render/life';
 import { LAYERS, TRIAL_SECONDS } from '../../render/timings';
@@ -2072,6 +2080,28 @@ export const NEWS: News[] = [
         + `once they finish, ${times(CELLAR_AGEING)} that in a cellar, up to ${WINE_AGE_CAP} QL more; a drink straight from the barrel is at the aged QL. Help: Vineyards.`,
       `Maps: Draw a map, on a sheet of papyrus, records the tiles round where you stand, ${numberWord(CHART_LEAST)} each way and one more for every ${CHART_QL_PER_TILE} QL. `
         + 'Study map puts that square on your own map for good, and Copy map makes another, no better than the map or the sheet. Help: Maps.',
+    ],
+  },
+  {
+    n: 151,
+    day: '2026-10-13',
+    lines: () => [
+      'A bucket drawn off a barrel of anything but water is at the barrel\'s QL, an ageing brew\'s gain included, so aged wine sells and trades at its aged QL. '
+        + 'A bucket poured into an empty barrel sets the barrel to its QL, and into a barrel of the same thing to the average of the two by litres; a brew poured into stops ageing.',
+      `Mead ages in its barrel too: ${MEAD_AGE_RATE} QL a day, ${times(CELLAR_AGEING)} that in a cellar, up to ${MEAD_AGE_CAP} QL more.`,
+      `Pressing a bucket of milk into cheese leaves the bucket full of whey. A bucket of whey fed to a creature you keep fills ${percent(WHEY_FEED)} of its hunger `
+        + `(one thing of its own diet fills ${percent(GRAZE_FILL)}) and comes back empty, and the feed button offers whey first so your better food is kept.`,
+      'Digging up a treasure map\'s hoard raises digging and wears your shovel on the island, as it did offline.',
+      `The Settlement window has Notices and Work tabs. The founder and any rank with Post notices post notices of up to ${NOTICE_MAX} characters; the newest ${NOTICE_KEEP} are kept, `
+        + `a citizen away sees the new ones once coming ashore, and one away more than ${numberWord(NOTICE_MAIL_DAYS)} days is sent each as a letter. `
+        + `The founder and any rank with Set work list up to ${numberWord(WORK_OPEN_MAX)} works wanted, a kind, how many and a lowest QL if they like; a citizen within ${numberWord(DELIVER_REACH)} tiles `
+        + 'of the token presses Deliver to move what matches from their pack into the deed crate, and every delivery goes in the settlement\'s ledger.',
+      'The founder or a rank with Keep the stores can make a crate or a storage piece on the settlement a settlement store from its Storage window. It opens for the founder and every rank '
+        + `with Use the stores, padlocked or not, and for nobody else, key or not; every take and put is logged, and the last ${STORE_LOG_CAP} are in the Settlement window.`,
+      `A thing you make at a bench or an anvil at QL ${SIGN_QL} or better carries your name, and you can Sign it once with a line of up to ${SIGN_MAX} characters, which Examine shows whoever has it. `
+        + `A glass panel takes dye at ${numberWord(DYE_PANE_LITRES)} litre a panel, and a window or bay window is tinted the colour of the last panel fitted, outside and in.`,
+      blockSays(),
+      reachSays(),
     ],
   },
 ];
