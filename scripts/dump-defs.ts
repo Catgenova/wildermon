@@ -163,6 +163,7 @@ import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
+import { CHART_ITEM, CHART_LEAST, CHART_QL_PER_TILE, CHART_SAID, CHART_SHEET, CHART_SKILL, COPY_MAP, DRAW_MAP, STUDY_MAP } from '../src/game/cartography';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 
 const q = (v: unknown): string => {
@@ -2329,4 +2330,16 @@ out.push(`create or replace function memorial_said(p_key text) returns text lang
   const [ih, it] = engravedItemSays({ engraving: '\u0000' }).split('\u0000');
   out.push(`create or replace function engraved_item_says(p_text text) returns text language sql immutable as $fn$ select case when coalesce(p_text, '') = '' then '' else ${q(ih)} || p_text || ${q(it)} end $fn$;`);
 }
+/*
+ * Maps (`cartography.ts`): the three jobs, the map and the sheet it is drawn
+ * on, the trade, how far a map reaches by its quality, and why a job will not
+ * go. What a map holds is written on its `extra`, read back by `chart_of`.
+ */
+out.push(`create or replace function chart_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(DRAW_MAP)}, ${q(STUDY_MAP)}, ${q(COPY_MAP)}) $fn$;`);
+for (const [fn, v] of [['chart_item', CHART_ITEM], ['chart_sheet', CHART_SHEET], ['chart_skill', CHART_SKILL]] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+out.push(`create or replace function chart_reach(p_ql double precision) returns int language sql immutable as $fn$ select ${CHART_LEAST} + floor(greatest(0, p_ql) / ${CHART_QL_PER_TILE})::int $fn$;`);
+out.push(`create or replace function chart_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(CHART_SAID) as Array<keyof typeof CHART_SAID>).map((k) => `when ${q(k)} then ${q(CHART_SAID[k])} `).join('')}end $fn$;`);
 console.log(out.join('\n'));

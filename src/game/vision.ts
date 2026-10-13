@@ -365,6 +365,30 @@ export class Vision {
   }
 
   /**
+   * Put a square of ground on the map without walking it: a map studied
+   * (`cartography.ts`). Every tile of it inside the island is remembered as it
+   * stands now, and the map window repaints the box (`charted`). Says how
+   * many were new.
+   */
+  learnSquare(cx: number, cy: number, r: number): number {
+    const g = this.game;
+    const x0 = Math.max(0, cx - r);
+    const y0 = Math.max(0, cy - r);
+    const x1 = Math.min(this.w - 1, cx + r);
+    const y1 = Math.min(this.h - 1, cy + r);
+    if (x1 < x0 || y1 < y0) return 0;
+    let fresh = 0;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        if (!g.world.seen[y * this.w + x]) fresh++;
+        g.world.remember(x, y);
+      }
+    }
+    g.events.emit('charted', x0, y0, x1, y1);
+    return fresh;
+  }
+
+  /**
    * What an eye down in a cellar sees: every tile of the same cellar within
    * `range` along a line that stays in the cellar -- the ground round it stops
    * the eye as a wall does -- and, by day, the ground round the foot of every

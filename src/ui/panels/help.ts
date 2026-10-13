@@ -9,6 +9,8 @@ import {
 } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from '../../game/gems';
 import { ANVIL_SUBTILES } from '../../game/anvil';
+import { SKILL_DEFS } from '../../game/skills';
+import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SKILL, chartReach, chartSide, COPY_TIME, DRAW_TIME, STUDY_MAP_TIME } from '../../game/cartography';
 import { ARCHAEOLOGY_ACTION_BY_ID, FIND_DAMAGE, FIND_DAMAGE_SPREAD, LECTERN_GAIN, RELICS, RESTORE_AGE, RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { BELT_MAX, QL_PER_LOOP } from '../../game/belt';
 import { HUNGER_RATE, SWIM_LEARN } from '../../game/body';
@@ -445,6 +447,9 @@ const columnBills = (): string => ['log', 'marble'].map((m) => `${billWords(Obje
 const RARE_STEPS = RARITIES.map((_, i) => i).slice(1);
 /** How long a go at a book is, as the action has it. */
 const STUDY_TIME = ARCHAEOLOGY_ACTION_BY_ID.get('study_book')?.baseTime ?? 0;
+/** The trade a map is drawn with, by name, and the level the help times its jobs at. */
+const CHART_SKILL_NAME = (SKILL_DEFS.find((d) => d.id === CHART_SKILL)?.name ?? CHART_SKILL).toLowerCase();
+const HELP_SKILL = 50;
 
 /** Stone that ages: the two clearings, and the day a thing at a pace is covered on. */
 const [CLEAR_IVY, SCRUB_MOSS] = GREEN_ACTIONS;
@@ -2398,6 +2403,19 @@ export function helpText(): string {
     <p>An Artisan who has learned it writes a <b>trade book</b> (${bill(`write_trade_book_${TRADE_BOOK_SKILLS[0]}`)}, with a needle) on any
     craft trade they have ${TRADE_BOOK_AT} of, and studying it raises that trade where a plain book raises mind logic, as much a go.
     Anybody may read one. A book an Artisan binds may teach more from a go or wear less for their perks, and its examine line says by how much.</p>
+    <h3>Maps</h3>
+    <p>Your map (<kbd>M</kbd>) shows only ground you have seen. Studying a <b>map</b> adds a square of ground to it without walking it.
+    Right-click a sheet of papyrus and <b>Draw a map</b>: it takes ${spanWords(goSeconds(DRAW_TIME, HELP_SKILL))} at ${CHART_SKILL_NAME} ${HELP_SKILL}, uses
+    the sheet up, and the map holds the square of tiles round the tile you are standing on. Its QL is what any
+    work with no tool comes out at, from ${percent(QL_LOW)} to ${percent(QL_LOW + QL_SPAN)} of your ${CHART_SKILL_NAME} plus ${numberWord(QL_BARE)},
+    and never above the sheet's QL. That QL sets how far it reaches: ${numberWord(CHART_LEAST)} tiles each way, and one further for every
+    ${numberWord(CHART_QL_PER_TILE)} QL &mdash; ${chartReach(HELP_SKILL)} each way (a ${chartSide(chartReach(HELP_SKILL))} by ${chartSide(chartReach(HELP_SKILL))} square) at QL ${HELP_SKILL},
+    and ${chartReach(QL_TOP)} (${chartSide(chartReach(QL_TOP))} by ${chartSide(chartReach(QL_TOP))}) at QL ${QL_TOP}. The map's name says where it was drawn and how far it reaches,
+    and Examine says the square and how many tiles it adds.</p>
+    <p><b>Study map</b> (${spanWords(goSeconds(STUDY_MAP_TIME))}) puts every tile of that square on your own map, as it stands now. The map is
+    not used up, and on an island the square stays on your map in every sitting. <b>Copy map</b> (${spanWords(goSeconds(COPY_TIME, HELP_SKILL))} at ${CHART_SKILL_NAME} ${HELP_SKILL}) uses your best
+    sheet of papyrus and makes a second map of the same spot, at your ${CHART_SKILL_NAME}'s roll but no higher than the original's QL or the sheet's;
+    a lower QL copy reaches only as far as its own QL does. Maps trade, drop and go into crates like anything else.</p>
     <h3>Titles and knacks</h3>
     <p>A long climb leaves titles and knacks behind it, and neither is asked for. Every trade hands out a
     <b>title</b> at ${listed(TITLE_STEPS.map(String))} &mdash; ${titlesFor('carpentry').map((t) => t.name).join(', ')}

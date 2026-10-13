@@ -19,6 +19,7 @@ import type { PathBeat, PathSaid } from '../game/meditation';
 import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
+import { chartedSquare } from '../game/cartography';
 import type { Away } from '../game/away';
 import type { Kept, KeptBody } from '../game/keeper';
 
@@ -928,6 +929,12 @@ export interface IslandHooks {
   moved?: (x: number, y: number, level: number, letGo?: boolean) => void;
   /** A journey by Telestone made, and the wall-clock second the traveller may make another (`runestones.ts`). */
   travelled?: (until: number) => void;
+  /**
+   * A square to put on the map without walking it: a map studied
+   * (`cartography.ts`), said live as a `charted` line. Every square ever
+   * studied is put back straight onto the world when the fog is restored.
+   */
+  charted?: (x: number, y: number, r: number) => void;
   /** A spell made your walk on foot this many times as quick for so many seconds. */
   paced?: (mul: number, secs: number) => void;
   /**
@@ -1477,6 +1484,7 @@ export class Island {
     const w = this.world;
     if (!this.info || !w) return;
     try {
+      await this.restoreCharted();
       const { data } = await supabase().from('fog').select('seen')
         .eq('world_id', this.info.id).eq('uid', this.uid).maybeSingle();
       const packed = (data as { seen?: string } | null)?.seen;
@@ -1492,6 +1500,24 @@ export class Island {
     } catch {
       // Offline, or a keeper that has never heard of fog. The map starts dark,
       // which is what it did before any of this and is survivable.
+    }
+  }
+
+  /**
+   * Every square a map you studied holds (`charted`), put back on the map.
+   *
+   * Kept apart from the fog because the island wrote them rather than the
+   * browser: a map studied is on the map of every sitting, whether or not the
+   * tab that studied it lived long enough to hand its fog over.
+   */
+  private async restoreCharted(): Promise<void> {
+    const w = this.world;
+    if (!this.info || !w) return;
+    const { data } = await supabase().from('charted').select('x, y, r')
+      .eq('world_id', this.info.id).eq('uid', this.uid);
+    // Straight onto the world, as the fog is: this runs while the join is still under way, before there is a game to tell.
+    for (const c of (data as Array<{ x: number; y: number; r: number }> | null) ?? []) {
+      for (let y = c.y - c.r; y <= c.y + c.r; y++) for (let x = c.x - c.r; x <= c.x + c.r; x++) w.markSeen(x, y);
     }
   }
 
@@ -2383,6 +2409,12 @@ export class Island {
     if (typeof e.n === 'number') {
       if (e.n <= this.said) return;
       this.said = e.n;
+    }
+    // A map studied (`cartography.ts`): a square for the map, not a line for the log.
+    if (e.kind === 'charted') {
+      const c = chartedSquare(e.text);
+      if (c) this.hooks.charted?.(c.x, c.y, c.r);
+      return;
     }
     this.hooks.say(e.text, e.kind, whenSaid(e.at));
     // And over the speaker's head, which only a line arriving live gets.

@@ -138,6 +138,11 @@ export class MinimapPanel {
       for (let yy = y - 1; yy <= y + 1; yy++) for (let xx = x - 1; xx <= x + 1; xx++) if (w.inBounds(xx, yy)) this.paint(xx, yy);
       this.dirty = true;
     });
+    // A map studied: its whole square, strided as the picture is sampled.
+    game.events.on('charted', (x0, y0, x1, y1) => {
+      for (let y = y0; y <= y1; y += this.step) for (let x = x0; x <= x1; x += this.step) this.paint(x, y);
+      this.dirty = true;
+    });
     this.view.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       const [x, y] = this.tileAt(e.clientX, e.clientY);
