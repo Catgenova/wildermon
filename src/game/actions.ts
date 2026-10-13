@@ -54,6 +54,7 @@ import { FAITH_ACTIONS } from './faith';
 import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { VINEYARD_ACTIONS } from './vineyard';
+import { CHART_ACTIONS, chartItemSays } from './cartography';
 import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
@@ -2296,7 +2297,8 @@ export const ACTIONS: ActionDef[] = [
       // Rare work is signed, and what a maker's perks put into it is said.
       // And what is enchanted into it, at its quality (`enchanting.ts`): the island's `enchant_says`.
       // And the line cut into a memorial stone (`memorial.ts`): the island's `engraved_item_says`.
-      const by = `${item.maker ? ` Made by ${item.maker}.` : ''}${markSays(item.mark)}${enchantSays(item)}${engravedItemSays(item)}`;
+      // And the square a map holds (`cartography.ts`): the island's `chart_item_says`.
+      const by = `${item.maker ? ` Made by ${item.maker}.` : ''}${markSays(item.mark)}${enchantSays(item)}${engravedItemSays(item)}${chartItemSays(item)}`;
       // A knack comes off something somebody made, so the examine line says so
       // for the same things the eating does.
       const skill = knackable(item.id) ? boonOf(g.seed, item.id) : null;
@@ -3169,6 +3171,8 @@ export const ACTIONS: ActionDef[] = [
   ...MEDITATION_ACTIONS,
   ...ARCHAEOLOGY_ACTIONS,
   ...TREASURE_ACTIONS,
+  // Drawing, studying and copying a map (`cartography.ts`).
+  ...CHART_ACTIONS,
   ...FIRST_AID_ACTIONS,
   ...REMEDY_ACTIONS,
   ...PLACEABLE_ACTIONS,

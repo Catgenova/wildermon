@@ -165,6 +165,7 @@ import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID } from '../src/game/barter';
+import { CHART_ITEM, CHART_LEAST, CHART_QL_PER_TILE, CHART_SAID, CHART_SHEET, CHART_SKILL, COPY_MAP, DRAW_MAP, STUDY_MAP } from '../src/game/cartography';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, PICK_GRAPES, PLANT_VINE, TRELLIS,
@@ -2403,4 +2404,16 @@ out.push(`create or replace function vine_said(p_key text) returns text language
   const [a, b, c] = vineSeasonWords('\u0000', '\u0001').split(/[\u0000\u0001]/);
   out.push(`create or replace function vine_season_words(p_season text, p_wait text) returns text language sql immutable as $fn$ select ${q(a)} || p_season || ${q(b)} || p_wait || ${q(c)} $fn$;`);
 }
+/*
+ * Maps (`cartography.ts`): the three jobs, the map and the sheet it is drawn
+ * on, the trade, how far a map reaches by its quality, and why a job will not
+ * go. What a map holds is written on its `extra`, read back by `chart_of`.
+ */
+out.push(`create or replace function chart_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(DRAW_MAP)}, ${q(STUDY_MAP)}, ${q(COPY_MAP)}) $fn$;`);
+for (const [fn, v] of [['chart_item', CHART_ITEM], ['chart_sheet', CHART_SHEET], ['chart_skill', CHART_SKILL]] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+out.push(`create or replace function chart_reach(p_ql double precision) returns int language sql immutable as $fn$ select ${CHART_LEAST} + floor(greatest(0, p_ql) / ${CHART_QL_PER_TILE})::int $fn$;`);
+out.push(`create or replace function chart_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(CHART_SAID) as Array<keyof typeof CHART_SAID>).map((k) => `when ${q(k)} then ${q(CHART_SAID[k])} `).join('')}end $fn$;`);
 console.log(out.join('\n'));

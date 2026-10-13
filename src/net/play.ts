@@ -20,6 +20,7 @@ import { saidWords } from '../game/roster';
 import { skillRises, tookOff } from './felt';
 import { packAll } from './packed';
 import { reportErrorsTo } from './errors';
+import { learnChart } from '../game/cartography';
 
 /**
  * Starting on an island that lives in Postgres rather than in this tab.
@@ -345,6 +346,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   // And a journey by Telestone, which says when the next may be made (`runestones.ts`).
   island.hooks.travelled = (until) => {
     game.player.usedAt[TELESTONE_KEY] = until;
+  };
+  // And a map studied, which puts its square on your map (`cartography.ts`).
+  island.hooks.charted = (x, y, r) => {
+    learnChart(game, { x, y, r });
   };
   /*
    * And the crates our own ask touched, which come back with the answer to it.

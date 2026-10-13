@@ -2710,6 +2710,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/vineyard.mjs --log-level=error
           node node_modules/.cache/vineyard.mjs
 
+      - name: Maps drawn, studied and copied, the same on both sides
+        run: |
+          # Draw a map on a sheet of papyrus: the square round the tile you
+          # stand on, as far each way as its QL reaches, written on the map.
+          # Study it and the square is on the reader's map (`charted`, and a
+          # `charted` line the browser puts on its fog); Copy it and the copy
+          # is no better than the map or the sheet. Every refusal in the same
+          # words, and Examine says what it holds.
+          npx esbuild supabase/test/maps.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/maps.mjs --log-level=error
+          node node_modules/.cache/maps.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

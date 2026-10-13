@@ -90,6 +90,8 @@ export type GameEvents = {
   action: [];
   stats: [];
   world: [x: number, y: number];
+  /** A square went on the map without being walked: a map studied (`cartography.ts`). */
+  charted: [x0: number, y0: number, x1: number, y1: number];
   crate: [];
   smelter: [];
   creature: [];
