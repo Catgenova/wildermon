@@ -23,6 +23,7 @@ import { chartedSquare } from '../game/cartography';
 import type { Away } from '../game/away';
 import type { Kept, KeptBody } from '../game/keeper';
 import type { Barter } from '../game/barter';
+import type { Notice, SettleBoard } from '../game/noticeboard';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -3330,6 +3331,53 @@ export class Island {
 
   async rankNewcomers(id: number): Promise<string | null> {
     return this.door('rpc_rank_newcomers', { p_id: id });
+  }
+
+  /**
+   * A settlement's notices, work and ledger (`rpc_settlement`), for its
+   * founder and its citizens: the board, or the sentence the island refused
+   * in. `seen` says the Notices tab is showing them, which marks them seen.
+   */
+  async settlement(founder: string, seen = false): Promise<SettleBoard | string> {
+    if (!this.info) return 'You are not on an island.';
+    const { data, error } = await supabase().rpc('rpc_settlement', { p_world: this.info.id, p_founder: founder, p_seen: seen });
+    if (error) return error.message;
+    const why = (data as { why?: string } | null)?.why;
+    return why ?? (data as SettleBoard);
+  }
+
+  /** A notice posted to a settlement, or one taken down (`rpc_notice_post`, `rpc_notice_drop`). */
+  async noticePost(founder: string, text: string): Promise<string | null> {
+    return this.door('rpc_notice_post', { p_founder: founder, p_text: text });
+  }
+
+  async noticeDrop(founder: string, n: number): Promise<string | null> {
+    return this.door('rpc_notice_drop', { p_founder: founder, p_n: n });
+  }
+
+  /** Work a settlement wants, set, taken down, or delivered toward (`rpc_work_set` and the rest). */
+  async workSet(founder: string, def: string, count: number, minQl: number | null): Promise<string | null> {
+    return this.door('rpc_work_set', { p_founder: founder, p_def: def, p_count: count, p_min_ql: minQl });
+  }
+
+  async workDrop(founder: string, id: number): Promise<string | null> {
+    return this.door('rpc_work_drop', { p_founder: founder, p_id: id });
+  }
+
+  async workDeliver(founder: string, id: number): Promise<string | null> {
+    return this.door('rpc_work_deliver', { p_founder: founder, p_id: id });
+  }
+
+  /**
+   * Coming ashore: the notices of every settlement of yours you have not been
+   * shown, oldest first, each with its settlement's name. Asked once; the
+   * island counts them seen as it answers. Nothing, when it does not answer.
+   */
+  async noticesAshore(): Promise<Array<Notice & { deed: string; founder: string }>> {
+    if (!this.info) return [];
+    const { data, error } = await supabase().rpc('rpc_notices_ashore', { p_world: this.info.id });
+    if (error) return [];
+    return (data as { notices?: Array<Notice & { deed: string; founder: string }> } | null)?.notices ?? [];
   }
 
   /** Yes or no to an invitation of your own. */

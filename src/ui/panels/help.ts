@@ -58,6 +58,9 @@ import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import {
+  DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAX, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
+} from '../../game/noticeboard';
+import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
   PRIMARIES, pureDye, type DyeLiquid, type Primary,
 } from '../../game/dyestuffs';
@@ -842,6 +845,30 @@ export function helpText(): string {
     wildermon are working of how many it can take, what the next upgrade still wants and the button
     that buys it, everything standing inside the border, and the standing orders for everything kept
     there. Each thing listed has a button that walks you to it.</p>
+    <p>On an island it has tabs: <b>Settlement</b>, which is all of the above with the settlement's citizens and
+    ranks, <b>Notices</b> and <b>Work</b>. Only its founder and its citizens can open Notices and Work; the island
+    tells anybody else that they are not a citizen of it, and nothing more.</p>
+    <p><b>Notices</b> lists the settlement's notices, newest first, each with who posted it and when. The founder
+    and every rank holding <b>${POWER.notices.label}</b> write one of at most ${NOTICE_MAX} characters &mdash; runs of
+    spaces and line breaks count as one space &mdash; and press <b>Post</b>, and may <b>Take down</b> any notice.
+    A settlement keeps its newest ${NOTICE_KEEP}: posting another drops the oldest. Citizens ashore see a new
+    notice in the event log the moment it is posted. Everybody else is shown the ones they have not seen,
+    in a window and in the log, the next time they come ashore, and only that once.</p>
+    <p><b>Work</b> lists what the settlement wants. The founder and every rank holding <b>${POWER.work.label}</b> name
+    a thing &mdash; anything a deed crate takes, which is everything but coins and crates &mdash; how many, at least
+    one and at most ${WORK_COUNT_MAX}, and if they like a lowest quality, a whole number up to ${WORK_QL_TOP}. Up to
+    ${WORK_OPEN_MAX} works stand open at once, and they may <b>Take down</b> any of them. Every citizen, whatever
+    their rank, delivers: stand within ${DELIVER_REACH} tiles of the settlement token and press <b>Deliver</b> on a
+    work (or choose <b>Deliver work</b> from the settlement's menu, which opens this tab). Everything in your pack
+    that matches &mdash; that thing, at the work's quality or better, not worn or held, not kept back, not in a bag
+    and with nothing inside it &mdash; goes into the founder's <b>deed crate</b>, lowest quality first, until the work
+    has all it wants or the crate is full. The things themselves move out of your pack; nothing is copied. The
+    founder takes them out of the deed crate as out of any crate.</p>
+    <p>Every work set, every delivery &mdash; who, how many of what, at what average quality, toward which work by its
+    number &mdash; every work done and every work taken down is a line in the settlement's <b>ledger</b>, under the
+    list. A work is done the moment a delivery brings it all it wants: it closes, and whoever delivered, the
+    founder and whoever set it are told. Taking a work down leaves what was delivered in the crate. The ledger
+    keeps its newest ${LEDGER_KEEP} lines, and the list its newest ${WORK_DONE_KEEP} finished or taken-down works.</p>
     <p>Walk ${numberWord(BANNER_DEPTH)} tile${BANNER_DEPTH === 1 ? '' : 's'} inside any settlement's border and its name comes up near the top of the
     screen for ${BANNER_MS / 1000} seconds, with <b>your rank</b> under it where you are a citizen and <b>its founder</b> where you are
     not; ${numberWord(BANNER_DEPTH)} tile${BANNER_DEPTH === 1 ? '' : 's'} back out, <i>Leaving</i> and its name for ${LEAVING_MS / 1000} seconds. Walking back in within
@@ -2147,8 +2174,10 @@ export function helpText(): string {
     <p>Disbanding is no permission. It frees the founder's wildermon and tips out the founder's deed crate,
     which are the founder's and not the settlement's, so only the founder disbands a settlement. Setting
     wildermon to work on it and its standing orders are the founder's too.</p>
+    <p>Delivering toward a settlement's work wants no permission: every citizen may (<b>The settlement window</b>).</p>
     <p>Every settlement starts with these, which are what its mayors, builders and guests could do before
-    the founder could change them:</p>
+    the founder could change them, and Mayor holds <b>${POWER.notices.label}</b> and <b>${POWER.work.label}</b> besides,
+    on every settlement:</p>
     <table>
       ${DEFAULT_RANKS.map((r) => `<tr><td><b>${r.name}</b>${r.name === NEWCOMER_RANK ? ' (newcomers)' : ''}</td><td>May ${rankMay(permsOf(r.powers))}.</td></tr>`).join('\n      ')}
     </table>

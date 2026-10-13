@@ -15,6 +15,12 @@ import {
 } from '../../game/ranks';
 import type { MyDeed, Social } from '../../net/island';
 import { asRanked, defOf, defsOf, ranksToGive } from './social';
+import { crateKindOfItem } from '../../game/crates';
+import { itemDef, ITEM_DEFS } from '../../game/items';
+import {
+  cleanNotice, deliveredBy, deliverRefusal, DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAX, noticeRefusal, SETTLE_REFRESH,
+  WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP, workSetRefusal, type LedgerLine, type SettleBoard, type Work,
+} from '../../game/noticeboard';
 
 /**
  * The roll of a settlement and the way to set ranks on it, which only an
@@ -34,7 +40,55 @@ export interface DeedRoll {
   drop(id: number): Promise<string | null>;
   allow(id: number, power: PowerId, on: boolean): Promise<string | null>;
   newcomers(id: number): Promise<string | null>;
+  /** A settlement's notices, work and ledger, or the island's refusal; `seen` marks its notices seen. */
+  board(founder: string, seen: boolean): Promise<SettleBoard | string>;
+  post(founder: string, text: string): Promise<string | null>;
+  unpost(founder: string, n: number): Promise<string | null>;
+  setWork(founder: string, def: string, count: number, minQl: number | null): Promise<string | null>;
+  dropWork(founder: string, id: number): Promise<string | null>;
+  deliver(founder: string, id: number): Promise<string | null>;
 }
+
+/** The Settlement window's tabs: the settlement at a glance, its notices, and the work it wants with its ledger. */
+export type DeedTab = 'overview' | 'notices' | 'work';
+const DEED_TABS: ReadonlyArray<[DeedTab, string, string]> = [
+  ['overview', 'Settlement', 'Its level, border, citizens and ranks, and everything standing on it.'],
+  ['notices', 'Notices', `What its people have posted, newest first. It keeps the newest ${NOTICE_KEEP}.`],
+  ['work', 'Work', `The work it wants, who has delivered toward it, and its ledger of the newest ${LEDGER_KEEP} lines.`],
+];
+
+/** Every thing a deed crate takes, by its name in lower case: what a work may ask for. */
+let thingsByName: Map<string, string> | null = null;
+function workThings(): Map<string, string> {
+  if (thingsByName) return thingsByName;
+  thingsByName = new Map();
+  for (const [id, def] of Object.entries(ITEM_DEFS)) {
+    if (id === 'coin' || crateKindOfItem(id)) continue;
+    const key = def.name.toLowerCase();
+    if (!thingsByName.has(key)) thingsByName.set(key, id);
+  }
+  return thingsByName;
+}
+
+/** A thing's name, in lower case, as the island says it. */
+const thingName = (def: string): string => (itemDef(def)?.name ?? def).toLowerCase();
+
+/** A work as the lists name it: its number, how many of what, and how good. */
+export const workLabel = (w: Pick<Work, 'id' | 'def' | 'want' | 'minQl'>): string =>
+  `#${w.id} · ${w.want} × ${thingName(w.def)}${w.minQl === null ? '' : `, QL ${w.minQl}+`}`;
+
+/** One ledger line in words. */
+export function ledgerWords(l: LedgerLine): string {
+  const what = thingName(l.def);
+  if (l.what === 'set') return `${l.by} set #${l.work}: ${l.count} × ${what}.`;
+  if (l.what === 'delivered') return `${l.by} delivered ${l.count} × ${what}${l.ql === null ? '' : ` at QL ${l.ql.toFixed(1)}`} toward #${l.work}.`;
+  if (l.what === 'done') return `#${l.work} done: all ${l.count} × ${what} delivered.`;
+  return `${l.by} took #${l.work} down with ${l.count} × ${what} delivered.`;
+}
+
+/** When, as the notices and the ledger say it. */
+const when = (at: number): string =>
+  new Date(at * 1000).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 /**
  * Who a settlement's baubles work for, from its ranks: its founder, and
@@ -61,6 +115,21 @@ export class DeedPanel {
   private lastRender = 0;
   /** The rank whose permissions are shown, by id. */
   private openRank: number | null = null;
+  private tab: DeedTab = 'overview';
+  private readonly tabs = new Map<DeedTab, HTMLButtonElement>();
+  /** The last board the island gave, the refusal it gave instead, and which settlement it was for. */
+  private board: SettleBoard | null = null;
+  private boardWhy: string | null = null;
+  private boardFor = '';
+  private asking = false;
+  private lastAsk = -1e9;
+  /** What the board's list was drawn from, so it is drawn again only when that changes. */
+  private listKey = '';
+  /** The forms, made once and kept, so a redraw never takes away what is half typed. */
+  private noticeForm: HTMLDivElement | null = null;
+  private workForm: HTMLDivElement | null = null;
+  private readonly boardHead = document.createElement('div');
+  private readonly listHost = document.createElement('div');
 
   constructor(
     private readonly win: UIWindow,
@@ -72,8 +141,25 @@ export class DeedPanel {
     private readonly roll?: DeedRoll,
   ) {
     win.body.classList.add('deed-body');
+    // Notices and work are the island's: alone there is one page and no tabs.
+    if (roll) {
+      const bar = document.createElement('div');
+      bar.className = 'log-tabs deed-tabs';
+      for (const [id, label, title] of DEED_TABS) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = `tb-btn tb-small log-tab${id === this.tab ? ' tb-on' : ''}`;
+        b.textContent = label;
+        b.title = title;
+        b.addEventListener('click', () => this.show(id));
+        this.tabs.set(id, b);
+        bar.append(b);
+      }
+      win.body.append(bar);
+    }
     this.body = document.createElement('div');
     this.body.className = 'deed-list';
+    this.boardHead.className = 'deed-head';
     win.body.append(this.body);
     game.events.on('world', () => this.render());
     game.events.on('inventory', () => this.render());
@@ -87,10 +173,67 @@ export class DeedPanel {
    */
   update(now: number): void {
     if (!this.win.isOpen || now - this.lastRender < 900) return;
+    if (this.tab !== 'overview' && this.roll) {
+      // The board asked again now and then; its list drawn again only when what it shows has changed.
+      this.lastRender = now;
+      if (now - this.lastAsk >= SETTLE_REFRESH * 1000) void this.fetchBoard();
+      this.render();
+      return;
+    }
     const at = document.activeElement;
     if (at instanceof HTMLSelectElement && this.body.contains(at)) return;
     this.lastRender = now;
     this.render();
+  }
+
+  /** Turn to a tab, and open the window at it. */
+  open(tab: DeedTab): void {
+    this.show(tab);
+    this.win.open();
+  }
+
+  private show(tab: DeedTab): void {
+    if (!this.roll) tab = 'overview';
+    this.tab = tab;
+    for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === tab);
+    this.listKey = '';
+    this.body.replaceChildren();
+    if (tab !== 'overview') void this.fetchBoard();
+    this.render();
+  }
+
+  /** The settlement this window is about, as the island's social answer has it. */
+  private hereDeed(): MyDeed | undefined {
+    const d = this.game.deed;
+    return d ? this.roll?.known()?.deeds.find((e) => e.x === d.x && e.y === d.y) : undefined;
+  }
+
+  /** Ask the island for the board of the settlement this window is about. */
+  private async fetchBoard(): Promise<void> {
+    const roll = this.roll;
+    const here = this.hereDeed();
+    if (!roll || !here || this.asking) return;
+    this.asking = true;
+    this.lastAsk = performance.now();
+    try {
+      const got = await roll.board(here.founder, this.tab === 'notices');
+      this.board = typeof got === 'string' ? null : got;
+      this.boardWhy = typeof got === 'string' ? got : null;
+      this.boardFor = here.founder;
+    } finally {
+      this.asking = false;
+    }
+    this.render();
+  }
+
+  /** Ask the island to do something to the board, say a refusal in the log, and look again. */
+  private boardDo(door: Promise<string | null>, after?: () => void): void {
+    void door.then(async (why) => {
+      if (why) this.game.logMsg(why, 'error');
+      else after?.();
+      this.lastAsk = -1e9;
+      await this.fetchBoard();
+    });
   }
 
   /** Ask the island, say a refusal in the log, and draw what the island says now. */
@@ -332,6 +475,11 @@ export class DeedPanel {
   }
 
   render(): void {
+    if (this.tab !== 'overview' && this.roll) this.renderBoard();
+    else this.renderOverview();
+  }
+
+  private renderOverview(): void {
     const g = this.game;
     const d = g.deed;
     this.body.replaceChildren();
@@ -529,5 +677,295 @@ export class DeedPanel {
     }
     this.body.append(row);
     this.body.append(tail);
+  }
+
+  /* ---- the Notices and Work tabs ------------------------------------------- */
+
+  /**
+   * The Notices tab or the Work tab: its head, its form (for a rank that may
+   * use it) and its list. The form is made once and put back, never made
+   * again, so the list can be drawn again under somebody typing.
+   */
+  private renderBoard(): void {
+    const g = this.game;
+    const d = g.deed;
+    const roll = this.roll!;
+    if (!d) {
+      const none = document.createElement('div');
+      none.className = 'deed-none';
+      none.textContent = 'You have founded no settlement and are a citizen of none. Plant a settlement token, or say yes to an invitation, and this window fills.';
+      this.body.replaceChildren(none);
+      this.listKey = '';
+      return;
+    }
+    roll.prime();
+    const here = this.hereDeed();
+    const b = here && this.boardFor === here.founder ? this.board : null;
+    const why = here && this.boardFor === here.founder ? this.boardWhy : null;
+    if (here && !b && !why && !this.asking && performance.now() - this.lastAsk > 1000) void this.fetchBoard();
+    const form = this.tab === 'notices' ? this.makeNoticeForm() : this.makeWorkForm();
+    if (this.body.children[0] !== this.boardHead || this.body.children[1] !== form || this.body.children[2] !== this.listHost) {
+      this.body.replaceChildren(this.boardHead, form, this.listHost);
+      this.listKey = '';
+    }
+    form.hidden = !b || (this.tab === 'notices' ? !b.post : !b.set);
+    if (this.tab === 'notices') {
+      this.boardHead.textContent = b ? `Notices at ${b.deed} (${b.notices.length} of ${NOTICE_KEEP})` : `Notices at ${d.name}`;
+    } else {
+      const open = b ? b.work.filter((w) => w.closed === null).length : 0;
+      this.boardHead.textContent = b ? `Work at ${b.deed} (${open} of ${WORK_OPEN_MAX} open)` : `Work at ${d.name}`;
+    }
+    // What the list shows: the board, and for work, what you carry and where you stand.
+    const held = b && this.tab === 'work' ? b.work.map((w) => this.heldFor(w)) : [];
+    const reasons = b && this.tab === 'work'
+      ? b.work.map((w, i) => deliverRefusal(b, w, thingName(w.def), held[i], g.player.x, g.player.y)) : [];
+    const key = JSON.stringify([this.tab, why, b, held, reasons, here ? 1 : 0]);
+    if (key === this.listKey) return;
+    this.listKey = key;
+    this.listHost.replaceChildren();
+    if (!here || (!b && !why)) {
+      this.listHost.append(this.note('Asking the island…'));
+      return;
+    }
+    if (!b) {
+      this.listHost.append(this.note(why ?? ''));
+      return;
+    }
+    if (this.tab === 'notices') this.drawNotices(b);
+    else this.drawWork(b, held, reasons);
+  }
+
+  private note(text: string): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'deed-note';
+    el.textContent = text;
+    return el;
+  }
+
+  /** How many of a work's thing you carry at its quality or better. */
+  private heldFor(w: Work): number {
+    return this.game.inventory.items
+      .filter((it) => it.id === w.def && (w.minQl === null || it.ql >= w.minQl))
+      .reduce((n, it) => n + it.count, 0);
+  }
+
+  /** The box a notice is written in, with how many characters it has, and Post. */
+  private makeNoticeForm(): HTMLDivElement {
+    if (this.noticeForm) return this.noticeForm;
+    const form = document.createElement('div');
+    form.className = 'deed-form';
+    const text = document.createElement('textarea');
+    text.className = 'panel-select deed-text';
+    text.rows = 3;
+    text.maxLength = NOTICE_MAX;
+    text.placeholder = `A notice to every citizen, at most ${NOTICE_MAX} characters.`;
+    const row = document.createElement('div');
+    row.className = 'deed-row';
+    const left = document.createElement('span');
+    left.className = 'deed-note';
+    const post = document.createElement('button');
+    post.type = 'button';
+    post.className = 'tb-btn tb-small';
+    post.textContent = 'Post';
+    post.title = `Posted to every citizen. Those ashore see it in the log now; everybody else when they next come ashore. ${NOTICE_KEEP} are kept; one more drops the oldest.`;
+    const count = (): void => {
+      left.textContent = `${[...cleanNotice(text.value)].length} of ${NOTICE_MAX} characters`;
+    };
+    text.addEventListener('input', count);
+    // Keys typed here are the notice's, not the game's.
+    text.addEventListener('keydown', (e) => e.stopPropagation());
+    post.addEventListener('click', () => {
+      const b = this.board;
+      if (!b || !this.roll) return;
+      const why = noticeRefusal(text.value);
+      if (why) {
+        this.game.logMsg(why, 'error');
+        return;
+      }
+      this.boardDo(this.roll.post(b.founder, cleanNotice(text.value)), () => {
+        text.value = '';
+        count();
+      });
+    });
+    count();
+    row.append(left, post);
+    form.append(text, row);
+    this.noticeForm = form;
+    return form;
+  }
+
+  private drawNotices(b: SettleBoard): void {
+    if (!b.notices.length) {
+      this.listHost.append(this.note(b.post ? 'No notices yet. Write one above.' : 'No notices yet.'));
+      return;
+    }
+    for (const n of b.notices) {
+      const el = document.createElement('div');
+      el.className = 'deed-notice';
+      const head = document.createElement('div');
+      head.className = 'deed-row';
+      const who = document.createElement('span');
+      who.className = 'deed-notice-by';
+      who.textContent = `${n.by} · ${when(n.at)}`;
+      who.title = new Date(n.at * 1000).toLocaleString();
+      head.append(who);
+      if (b.post) {
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.className = 'tb-btn tb-small deed-tool tb-danger';
+        down.textContent = 'Take down';
+        down.title = 'Takes it off the board for everybody.';
+        down.addEventListener('click', () => this.boardDo(this.roll!.unpost(b.founder, n.n)));
+        head.append(down);
+      }
+      const text = document.createElement('div');
+      text.className = 'deed-notice-text';
+      text.textContent = n.text;
+      el.append(head, text);
+      this.listHost.append(el);
+    }
+  }
+
+  /** What is wanted: a thing by its name, how many and how good, and Set work. */
+  private makeWorkForm(): HTMLDivElement {
+    if (this.workForm) return this.workForm;
+    const form = document.createElement('div');
+    form.className = 'deed-form';
+    const list = document.createElement('datalist');
+    list.id = 'deed-work-things';
+    for (const id of [...workThings().values()].sort((a, c) => thingName(a).localeCompare(thingName(c)))) {
+      const o = document.createElement('option');
+      o.value = itemDef(id).name;
+      list.append(o);
+    }
+    const thing = document.createElement('input');
+    thing.className = 'panel-select deed-input';
+    thing.setAttribute('list', list.id);
+    thing.placeholder = 'What is wanted';
+    thing.title = 'Any thing a deed crate takes: everything but coins and crates.';
+    const count = document.createElement('input');
+    count.className = 'panel-select deed-input deed-num';
+    count.type = 'number';
+    count.min = '1';
+    count.max = String(WORK_COUNT_MAX);
+    count.placeholder = 'How many';
+    count.title = `At least one and at most ${WORK_COUNT_MAX}.`;
+    const ql = document.createElement('input');
+    ql.className = 'panel-select deed-input deed-num';
+    ql.type = 'number';
+    ql.min = '0';
+    ql.max = String(WORK_QL_TOP);
+    ql.placeholder = 'Least QL';
+    ql.title = `The lowest quality it takes, a whole number up to ${WORK_QL_TOP}. Empty or nought takes any.`;
+    for (const el of [thing, count, ql]) el.addEventListener('keydown', (e) => e.stopPropagation());
+    const set = document.createElement('button');
+    set.type = 'button';
+    set.className = 'tb-btn tb-small';
+    set.textContent = 'Set work';
+    set.title = `Lists it for every citizen to deliver toward. Up to ${WORK_OPEN_MAX} open at once.`;
+    set.addEventListener('click', () => {
+      const b = this.board;
+      if (!b || !this.roll) return;
+      const asked = thing.value.trim().toLowerCase();
+      const def = workThings().get(asked) ?? null;
+      const known = def ?? Object.keys(ITEM_DEFS).find((id) => itemDef(id).name.toLowerCase() === asked) ?? null;
+      const n = Number(count.value);
+      const least = ql.value.trim() === '' || Number(ql.value) <= 0 ? null : Number(ql.value);
+      const open = b.work.filter((w) => w.closed === null).length;
+      const why = workSetRefusal(b.deed, known ? itemDef(known).name : null, !!def, n, least, open);
+      if (why || !def) {
+        this.game.logMsg(why ?? 'There is no such thing to ask for.', 'error');
+        return;
+      }
+      this.boardDo(this.roll.setWork(b.founder, def, n, least), () => {
+        thing.value = '';
+        count.value = '';
+        ql.value = '';
+      });
+    });
+    const row = document.createElement('div');
+    row.className = 'deed-buttons';
+    row.append(count, ql, set);
+    form.append(list, thing, row);
+    this.workForm = form;
+    return form;
+  }
+
+  private drawWork(b: SettleBoard, held: number[], reasons: Array<string | null>): void {
+    const open = b.work.filter((w) => w.closed === null);
+    const closed = b.work.filter((w) => w.closed !== null);
+    this.listHost.append(this.note(
+      `Deliver standing within ${DELIVER_REACH} tiles of the token: what matches in your pack goes into the deed crate, lowest quality first, until the work has all it wants or the crate is full.`
+      + (b.room === null ? ' No deed crate stands here now.' : ` The deed crate has room for ${b.room} more.`)));
+    if (!open.length) this.listHost.append(this.note(b.set ? 'No work is wanted. Set some above.' : 'No work is wanted.'));
+    for (const w of open) {
+      const i = b.work.indexOf(w);
+      const el = document.createElement('div');
+      el.className = 'deed-work';
+      const head = document.createElement('div');
+      head.className = 'deed-row';
+      const label = document.createElement('span');
+      label.className = 'deed-who';
+      label.textContent = workLabel(w);
+      label.title = `Set by ${w.by}, ${when(w.at)}.`;
+      const got = document.createElement('span');
+      got.className = 'deed-value';
+      got.textContent = `${w.got} of ${w.want}`;
+      head.append(label, got);
+      const bar = document.createElement('div');
+      bar.className = 'deed-work-bar';
+      const fill = document.createElement('div');
+      fill.style.width = `${Math.min(100, (w.got / w.want) * 100)}%`;
+      bar.append(fill);
+      const tools = document.createElement('div');
+      tools.className = 'deed-buttons';
+      const going = Math.min(held[i], w.want - w.got, b.room ?? 0);
+      const give = document.createElement('button');
+      give.type = 'button';
+      give.className = 'tb-btn tb-small';
+      give.textContent = reasons[i] ? 'Deliver' : `Deliver ${going}`;
+      give.disabled = !!reasons[i];
+      give.title = reasons[i] ?? `Puts ${going} × ${thingName(w.def)} from your pack into the deed crate, lowest quality first.`;
+      give.addEventListener('click', () => this.boardDo(this.roll!.deliver(b.founder, w.id)));
+      tools.append(give);
+      if (b.set) {
+        const down = document.createElement('button');
+        down.type = 'button';
+        down.className = 'tb-btn tb-small tb-danger';
+        down.textContent = 'Take down';
+        down.title = 'Closes it. What was delivered stays in the deed crate.';
+        down.addEventListener('click', () => {
+          void this.game.hooks.confirm(`Take down ${workLabel(w)}? The ${w.got} delivered stay in the deed crate.`).then((yes) => {
+            if (yes) this.boardDo(this.roll!.dropWork(b.founder, w.id));
+          });
+        });
+        tools.append(down);
+      }
+      el.append(head, bar, tools);
+      const who = deliveredBy(b.ledger, w.id);
+      if (who.length) el.append(this.note(`Delivered by ${who.map((x) => `${x.by} ${x.count}`).join(', ')}.`));
+      this.listHost.append(el);
+    }
+    if (closed.length) {
+      this.listHost.append(this.head(`Finished and taken down (newest ${WORK_DONE_KEEP} kept)`));
+      for (const w of closed) {
+        const el = this.row(workLabel(w), w.how === 'done' ? 'done' : `taken down at ${w.got}`, w.closed ? when(w.closed) : undefined);
+        el.classList.add(w.how === 'done' ? 'deed-met' : 'deed-unmet');
+        this.listHost.append(el);
+      }
+    }
+    this.listHost.append(this.head(`Ledger (${b.ledger.length} of ${LEDGER_KEEP} kept)`));
+    if (!b.ledger.length) this.listHost.append(this.note('Nothing yet. Every work set, delivery, work done and work taken down is written here.'));
+    for (const l of b.ledger) {
+      const el = document.createElement('div');
+      el.className = 'deed-ledger';
+      const at = document.createElement('span');
+      at.className = 'deed-ledger-at';
+      at.textContent = when(l.at);
+      const text = document.createElement('span');
+      text.textContent = ledgerWords(l);
+      el.append(at, text);
+      this.listHost.append(el);
+    }
   }
 }

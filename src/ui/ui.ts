@@ -86,6 +86,7 @@ import type { DragPayload } from './dragdrop';
 import { WildermonPanel } from './panels/wildermon';
 import { StoresPanel } from './panels/stores';
 import { DeedPanel } from './panels/deed';
+import { DELIVER_REACH, settleLine } from '../game/noticeboard';
 import type { LedgerPanel } from './panels/ledger';
 import { JournalPanel, type JournalTab } from './panels/journal';
 import { ContextMenu, type MenuItem } from './contextmenu';
@@ -470,6 +471,13 @@ export class UI {
       drop: (id) => this.island?.rankDrop(id) ?? Promise.resolve('You are not on an island.'),
       allow: (id, power, on) => this.island?.rankAllow(id, power, on) ?? Promise.resolve('You are not on an island.'),
       newcomers: (id) => this.island?.rankNewcomers(id) ?? Promise.resolve('You are not on an island.'),
+      // Its notices, the work it wants and its ledger (`noticeboard.ts`).
+      board: (founder, seen) => this.island?.settlement(founder, seen) ?? Promise.resolve('You are not on an island.'),
+      post: (founder, text) => this.island?.noticePost(founder, text) ?? Promise.resolve('You are not on an island.'),
+      unpost: (founder, n) => this.island?.noticeDrop(founder, n) ?? Promise.resolve('You are not on an island.'),
+      setWork: (founder, def, count, minQl) => this.island?.workSet(founder, def, count, minQl) ?? Promise.resolve('You are not on an island.'),
+      dropWork: (founder, id) => this.island?.workDrop(founder, id) ?? Promise.resolve('You are not on an island.'),
+      deliver: (founder, id) => this.island?.workDeliver(founder, id) ?? Promise.resolve('You are not on an island.'),
     } : undefined);
     // Everybody, and what they are to you: who is waiting on an answer, who
     // you know and where they are, and what has been written.
@@ -564,6 +572,29 @@ export class UI {
       }
       awayWin.open();
     }
+
+    /*
+     * The notices of your settlements you have not been shown, once, as you
+     * come ashore: in a small window and in the event log, like the tally
+     * above. The island counts them seen as it answers.
+     */
+    if (this.island) void this.island.noticesAshore().then((list) => {
+      if (!list.length) return;
+      const win = this.windows.create({ id: 'notices-ashore', title: 'Notices', x: 0, y: 0, width: 380, height: 260, open: true });
+      win.el.style.left = `${Math.max(0, (uiBox().w - 380) / 2)}px`;
+      win.el.style.top = `${Math.max(0, uiBox().h / 3)}px`;
+      for (const n of list) {
+        const head = document.createElement('p');
+        head.className = 'away-line deed-notice-by';
+        head.textContent = `${n.deed} · ${n.by} · ${new Date(n.at * 1000).toLocaleString()}`;
+        const text = document.createElement('p');
+        text.className = 'away-line';
+        text.textContent = n.text;
+        win.body.append(head, text);
+        game.write(`${settleLine('heard', { deed: n.deed, who: n.by })} ${n.text}`, 'system');
+      }
+      win.open();
+    });
 
     // What's new, the journal's fourth tab, opened at by itself when something has changed since this browser last showed it.
     if (unseenNews()) this.journalPanel.open('news');
@@ -2581,6 +2612,7 @@ export class UI {
         { label: standingWord(d), disabled: true },
         // Upgrading and renaming, for a rank its founder let do them (`settlement_refusal`).
         ...this.citizenDeedJobs(d),
+        ...this.deliverEntry(),
         {
           label: `Leave ${d.name}`,
           note: 'Takes you off its roll',
@@ -2667,6 +2699,7 @@ export class UI {
         onSelect: () => g.setDeedStance(st),
       })),
     });
+    children.push(...this.deliverEntry());
     for (const id of ['rename_deed', 'disband_deed']) {
       const def = ACTION_BY_ID.get(id);
       if (!def) continue;
@@ -2674,6 +2707,19 @@ export class UI {
       children.push({ label: def.label, onSelect: () => g.requestAction(def, t) });
     }
     return { label: `${d.name} · level ${level}`, children };
+  }
+
+  /**
+   * Notices and work, from the settlement's own menu: the Settlement window
+   * opened at its Notices or its Work tab, where a citizen delivers at the
+   * token. Only on an island, which is the only place either is.
+   */
+  private deliverEntry(): MenuItem[] {
+    if (!this.island) return [];
+    return [
+      { label: 'Deliver work', note: `At the token, within ${DELIVER_REACH} tiles`, onSelect: () => this.deedPanel.open('work') },
+      { label: 'Notices', onSelect: () => this.deedPanel.open('notices') },
+    ];
   }
 
   /** Actions for a wildermon: taming and feeding, or for a tamed one its stance, job and home. */

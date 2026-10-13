@@ -3903,6 +3903,88 @@ kbd {
   cursor: default;
 }
 
+/* Its Notices and Work tabs: a form at the head, then the list. */
+.deed-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 2px 0 6px;
+}
+
+.deed-form[hidden] {
+  display: none;
+}
+
+.deed-text,
+.deed-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 12px;
+}
+
+.deed-text {
+  resize: vertical;
+  min-height: 48px;
+  line-height: 1.35;
+}
+
+.deed-form .deed-buttons {
+  flex-wrap: nowrap;
+  align-items: center;
+  margin-top: 0;
+}
+
+.deed-input.deed-num {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.deed-notice,
+.deed-work {
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.06));
+}
+
+.deed-notice-by {
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+.deed-notice-text {
+  color: var(--t-text, #eadfbf);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.deed-work-bar {
+  height: 4px;
+  margin: 2px 0 4px;
+  background: var(--t-card, rgba(0, 0, 0, 0.3));
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.deed-work-bar > div {
+  height: 100%;
+  background: var(--t-good, #9fd06c);
+}
+
+.deed-ledger {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--t-text, #c9c1ad);
+}
+
+.deed-ledger-at {
+  color: var(--ui-dim);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Marks on the map, and the list of them under it. */
 /* Three buttons across the map, each as wide as its word, and on two rows in a window shrunk past them. */
 .map-bar {
