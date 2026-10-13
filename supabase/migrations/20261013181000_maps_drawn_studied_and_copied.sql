@@ -261,6 +261,8 @@ begin
 
   perform consume(p_world, p_uid, 'treasure_map', 1, v_map.id);
   perform journal_note(p_world, p_uid, 'hoard');
+  -- Matching a map's picture to the ground it was drawn from is head work (`HOARD_HEAD`).
+  perform skill_raise(p_world, p_uid, 'mind_logic', try_gain(true, hoard_head()));
   perform tell(p_world, p_uid, 'The spade goes through rotten board and the hoard is open — '
     || v_tier.lumps || ' lump' || case when v_tier.lumps = 1 then '' else 's' end
     || ' and ' || v_tier.things || ' thing' || case when v_tier.things = 1 then '' else 's' end
