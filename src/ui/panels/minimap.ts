@@ -36,8 +36,11 @@ const MAX_BASE = 1024;
  * half a tile of rise — says it exactly, and every fifth line is drawn harder,
  * which is how a walker reads a hill off a map without measuring anything.
  */
-const CONTOUR_STEP = 20;
-const CONTOUR_INDEX = 5;
+export const CONTOUR_STEP = 20;
+export const CONTOUR_INDEX = 5;
+
+/** How high a name written on the map comes out on screen, in CSS pixels, whatever size the map is shown at. */
+const LABEL_PX = 11;
 
 /** A small overview map, re-painted per tile as the world changes. */
 /** How often the minimap redraws itself, in milliseconds. */
@@ -67,6 +70,8 @@ export class MinimapPanel {
   /** The list of marks under the map, and whether names are drawn on it. */
   private marksEl: HTMLDivElement;
   private names = true;
+  /** How big the map is on screen, in CSS pixels: the smaller side, as it is drawn square. Kept by a watcher rather than measured each frame. */
+  private shown = 0;
 
   constructor(
     win: UIWindow,
@@ -119,6 +124,9 @@ export class MinimapPanel {
     this.marksEl = document.createElement('div');
     this.marksEl.className = 'map-marks';
     win.body.append(bar, this.view, this.marksEl);
+    new ResizeObserver(() => {
+      this.shown = Math.min(this.view.clientWidth, this.view.clientHeight);
+    }).observe(this.view);
     game.events.on('world', () => this.listMarks());
     this.listMarks();
     // Unexplored to start with, which is a fill rather than a million lookups.
@@ -173,16 +181,20 @@ export class MinimapPanel {
     for (const m of near) {
       const row = document.createElement('div');
       row.className = 'map-mark';
-      const pip = document.createElement('span');
+      // Buttons, so a keyboard can reach them as well as a pointer.
+      const pip = document.createElement('button');
+      pip.type = 'button';
       pip.className = 'map-pip';
       pip.style.background = MARK_CSS(m.colour);
       pip.title = 'Click for another colour';
+      pip.setAttribute('aria-label', `Colour of ${m.name}: click for the next one`);
       pip.addEventListener('click', () => {
         const i = MARK_COLOURS.findIndex((c) => c.id === m.colour);
         m.colour = MARK_COLOURS[(i + 1) % MARK_COLOURS.length].id;
         this.listMarks();
       });
-      const name = document.createElement('span');
+      const name = document.createElement('button');
+      name.type = 'button';
       name.className = 'map-mark-name';
       const away = Math.round(Math.hypot(m.x - g.player.x, m.y - g.player.y));
       name.textContent = m.name;
@@ -196,6 +208,7 @@ export class MinimapPanel {
       const dist = document.createElement('span');
       dist.className = 'map-mark-away';
       dist.textContent = `${away}`;
+      dist.title = `${away} tiles from you`;
       const go = document.createElement('button');
       go.type = 'button';
       go.className = 'tb-btn tb-small';
@@ -210,10 +223,12 @@ export class MinimapPanel {
       off.className = 'tb-btn tb-small tb-danger';
       off.textContent = '×';
       off.title = 'Rub this mark off the map';
-      off.addEventListener('click', () => {
+      // Asked first: a mark is a place you found and named, and nothing brings it back.
+      off.addEventListener('click', () => void g.hooks.confirm(`Rub “${m.name}” off the map?`).then((yes) => {
+        if (!yes) return;
         g.removeMark(m.id);
         this.listMarks();
-      });
+      }));
       row.append(pip, name, dist, go, off);
       this.marksEl.append(row);
     }
@@ -454,41 +469,39 @@ export class MinimapPanel {
       ctx.strokeRect((deed.x - deed.radius - ox) * scale, (deed.y - deed.radius - oy) * scale, (deed.radius * 2 + 1) * scale, (deed.radius * 2 + 1) * scale);
       ctx.lineWidth = 1;
     }
-    // The marks, each a pin with its name written beside it. The map is drawn
-    // at a fixed 512 and scaled down with nearest-neighbour, so the writing has
-    // to start larger than it will end up.
+    /*
+     * The marks, each a pin with its name written beside it. The map is drawn
+     * at a fixed 512 and shown at whatever the window allows -- under two
+     * hundred pixels in a window of its default size -- so everything drawn on
+     * it is drawn at `k`, the size that comes out at `LABEL_PX` on screen.
+     * Drawn at one fixed size, a name came out at six pixels high.
+     */
+    const k = Math.max(0.5, Math.min(4, this.view.width / (this.shown || this.view.width))) * (LABEL_PX / 15);
     ctx.font = '15px system-ui, sans-serif';
     ctx.textBaseline = 'middle';
     for (const m of this.game.marks) {
       const mx = (m.x + 0.5 - ox) * scale;
       const my = (m.y + 0.5 - oy) * scale;
-      if (mx < -20 || my < -20 || mx > this.view.width + 20 || my > this.view.height + 20) continue;
+      if (mx < -20 * k || my < -20 * k || mx > this.view.width + 20 * k || my > this.view.height + 20 * k) continue;
       const css = MARK_CSS(m.colour);
-      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(mx, my);
-      ctx.lineTo(mx, my - 9);
-      ctx.stroke();
-      ctx.strokeStyle = css;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.fillStyle = css;
-      ctx.beginPath();
-      ctx.arc(mx, my - 10, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-      ctx.stroke();
-      if (!this.names) continue;
-      // The name sits to the right of its pin, and swaps to the left rather
-      // than running off the edge of the map.
-      const w = ctx.measureText(m.name).width;
-      const right = mx + 6 + w + 6 <= this.view.width;
-      const bx = right ? mx + 6 : Math.max(0, mx - 6 - w - 6);
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(bx, my - 20, w + 6, 17);
-      ctx.fillStyle = css;
-      ctx.fillText(m.name, bx + 3, my - 11);
+      this.at(mx, my, k, () => {
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -9);
+        ctx.stroke();
+        ctx.strokeStyle = css;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = css;
+        ctx.beginPath();
+        ctx.arc(0, -10, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.stroke();
+      });
+      if (this.names) this.tag(mx, my, k, 6, -11, m.name, css);
     }
     /*
      * What a path's technique found (`Game.marksNow`): the swirl a Seek found
@@ -500,27 +513,22 @@ export class MinimapPanel {
     for (const m of this.game.marksNow()) {
       const tx = (m.x + 0.5 - ox) * scale;
       const ty = (m.y + 0.5 - oy) * scale;
-      const off = tx < 6 || ty < 6 || tx > this.view.width - 6 || ty > this.view.height - 6;
-      const kx = Math.max(7, Math.min(this.view.width - 7, tx));
-      const ky = Math.max(7, Math.min(this.view.height - 7, ty));
-      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(kx, ky, off ? 4 : 6, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.strokeStyle = m.kind === 'seek' ? '#f2d79a' : '#ffb35c';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.lineWidth = 1;
-      if (!this.names) continue;
-      const label = m.kind === 'seek' ? 'Seek: a mote swirl' : 'Trace: a hoard';
-      const w = ctx.measureText(label).width;
-      const right = kx + 9 + w + 6 <= this.view.width;
-      const bx = right ? kx + 9 : Math.max(0, kx - 9 - w - 6);
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(bx, ky - 9, w + 6, 17);
-      ctx.fillStyle = m.kind === 'seek' ? '#f2d79a' : '#ffb35c';
-      ctx.fillText(label, bx + 3, ky);
+      const edge = 7 * k;
+      const off = tx < edge || ty < edge || tx > this.view.width - edge || ty > this.view.height - edge;
+      const kx = Math.max(edge, Math.min(this.view.width - edge, tx));
+      const ky = Math.max(edge, Math.min(this.view.height - edge, ty));
+      const ink = m.kind === 'seek' ? '#f2d79a' : '#ffb35c';
+      this.at(kx, ky, k, () => {
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(0, 0, off ? 4 : 6, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+      if (this.names) this.tag(kx, ky, k, 9, 0, m.kind === 'seek' ? 'Seek: a mote swirl' : 'Trace: a hoard', ink);
     }
     // Landmarks: a statue is on the map from the day it is set up, a stone
     // diamond with its name, drawn under the people and over the marks.
@@ -533,27 +541,21 @@ export class MinimapPanel {
     for (const f of marks) {
       const lx = (f.x + 0.5 - ox) * scale;
       const ly = (f.y + 0.5 - oy) * scale;
-      if (lx < -20 || ly < -20 || lx > this.view.width + 20 || ly > this.view.height + 20) continue;
-      ctx.fillStyle = '#e8dcc0';
-      ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(lx, ly - 6);
-      ctx.lineTo(lx + 5, ly);
-      ctx.lineTo(lx, ly + 6);
-      ctx.lineTo(lx - 5, ly);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      if (!this.names) continue;
-      const label = f.label;
-      const w = ctx.measureText(label).width;
-      const right = lx + 8 + w + 6 <= this.view.width;
-      const bx = right ? lx + 8 : Math.max(0, lx - 8 - w - 6);
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(bx, ly - 9, w + 6, 17);
-      ctx.fillStyle = '#e8dcc0';
-      ctx.fillText(label, bx + 3, ly);
+      if (lx < -20 * k || ly < -20 * k || lx > this.view.width + 20 * k || ly > this.view.height + 20 * k) continue;
+      this.at(lx, ly, k, () => {
+        ctx.fillStyle = '#e8dcc0';
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.lineTo(5, 0);
+        ctx.lineTo(0, 6);
+        ctx.lineTo(-5, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+      if (this.names) this.tag(lx, ly, k, 8, 0, f.label, '#e8dcc0');
     }
     /*
      * Everybody else, while the island is quiet enough to say where they are.
@@ -568,35 +570,59 @@ export class MinimapPanel {
       if (!f.online || f.x === undefined || f.y === undefined) continue;
       const fx = (f.x + 0.5 - ox) * scale;
       const fy = (f.y + 0.5 - oy) * scale;
-      const off = fx < 4 || fy < 4 || fx > this.view.width - 4 || fy > this.view.height - 4;
-      const px2 = Math.max(5, Math.min(this.view.width - 5, fx));
-      const py2 = Math.max(5, Math.min(this.view.height - 5, fy));
-      ctx.beginPath();
-      ctx.arc(px2, py2, off ? 3 : 4, 0, Math.PI * 2);
-      ctx.fillStyle = off ? 'rgba(126,190,255,0.75)' : '#7ebeff';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.lineWidth = 1;
-      if (!this.names) continue;
-      // Their name to the right, and to the left rather than off the edge —
+      const edge = 5 * k;
+      const off = fx < edge || fy < edge || fx > this.view.width - edge || fy > this.view.height - edge;
+      const px2 = Math.max(edge, Math.min(this.view.width - edge, fx));
+      const py2 = Math.max(edge, Math.min(this.view.height - edge, fy));
+      this.at(px2, py2, k, () => {
+        ctx.beginPath();
+        ctx.arc(0, 0, off ? 3 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = off ? 'rgba(126,190,255,0.75)' : '#7ebeff';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      });
+      // Their name to the right, and to the left rather than off the edge --
       // the same rule the marks follow, because they are read the same way.
-      const w = ctx.measureText(f.name).width;
-      const right = px2 + 7 + w + 6 <= this.view.width;
-      const bx = right ? px2 + 7 : Math.max(0, px2 - 7 - w - 6);
-      ctx.fillStyle = 'rgba(0,0,0,0.65)';
-      ctx.fillRect(bx, py2 - 9, w + 6, 17);
-      ctx.fillStyle = off ? 'rgba(200,224,255,0.85)' : '#cfe6ff';
-      ctx.fillText(f.name, bx + 3, py2);
+      if (this.names) this.tag(px2, py2, k, 7, 0, f.name, off ? 'rgba(200,224,255,0.85)' : '#cfe6ff');
     }
     const p = this.game.player;
-    ctx.fillStyle = '#ffe36e';
-    ctx.beginPath();
-    ctx.arc((p.x - ox) * scale, (p.y - oy) * scale, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    this.at((p.x - ox) * scale, (p.y - oy) * scale, k, () => {
+      ctx.fillStyle = '#ffe36e';
+      ctx.beginPath();
+      ctx.arc(0, 0, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+  }
+
+  /** Draw something about a point on the map, in units `k` canvas pixels across. */
+  private at(x: number, y: number, k: number, draw: () => void): void {
+    const ctx = this.viewCtx;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(k, k);
+    draw();
+    ctx.restore();
+  }
+
+  /**
+   * A name on a dark backing, `gap` units to the right of a point and `dy`
+   * units below it, or to its left rather than running off the map's edge.
+   */
+  private tag(x: number, y: number, k: number, gap: number, dy: number, text: string, ink: string): void {
+    const ctx = this.viewCtx;
+    const w = ctx.measureText(text).width;
+    const right = x + (gap + w + 6) * k <= this.view.width;
+    const lx = Math.max(-x / k, right ? gap : -gap - w - 6);
+    this.at(x, y, k, () => {
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(lx, dy - 8.5, w + 6, 17);
+      ctx.fillStyle = ink;
+      ctx.fillText(text, lx + 3, dy);
+    });
   }
 }

@@ -91,7 +91,8 @@ export class TilePanel {
     this.factsEl.hidden = true;
     this.head.append(this.titleEl, this.info, this.factsEl);
     this.list = document.createElement('div');
-    this.list.className = 'inv-list';
+    // `tile-list`: every label on one edge whether or not its row has a key, and every reason read in full.
+    this.list.className = 'inv-list tile-list';
     win.body.append(this.head, this.list);
     // The list is only as good as the world it was built from, so rebuild it
     // whenever the world, the pack or the job in hand changes.

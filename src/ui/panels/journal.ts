@@ -48,7 +48,7 @@ export class JournalPanel {
   onShow: ((tab: JournalTab) => void) | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('settings-body');
+    win.body.classList.add('settings-body', 'journal-body');
     const bar = document.createElement('div');
     bar.className = 'log-tabs journal-tabs';
     for (const [id, label, title] of [

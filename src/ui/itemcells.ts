@@ -2,8 +2,9 @@ import { DAMAGE_WARN, type Game } from '../game/game';
 
 /** Damage past which the pack calls a thing about to go to pieces. */
 export const DAMAGE_BREAKING = 90;
-import { itemDef, itemName, type Item, rarityOf } from '../game/items';
+import { itemName, type Item, rarityOf } from '../game/items';
 import { dyeHexOf } from '../game/dyestuffs';
+import { isJobTool } from './compare';
 
 /**
  * The three cells a list of things is made of.
@@ -67,10 +68,17 @@ export function nameCell(item: Item, opts: { worn?: boolean; occupant?: string }
  */
 export function qualityCell(game: Game, item: Item): HTMLSpanElement {
   const ql = document.createElement('span');
+  ql.className = 'inv-ql';
   ql.textContent = item.ql.toFixed(1);
-  if (itemDef(item.id).category !== 'tool') return ql;
+  /*
+   * Only for what a job works with. Armour, a shield and a weapon nobody works
+   * with are read at the QL they were made at, through rules of their own
+   * (`pieceSoak`, `blockChance`, `weaponDamage`), so a working QL on them
+   * would be a number nothing uses.
+   */
+  if (!isJobTool(item.id)) return ql;
   const worth = game.toolWorth(item);
-  ql.title = `Made at ${item.ql.toFixed(1)}; it works as a ${worth.toFixed(1)} today.`;
+  ql.title = `Made at QL ${item.ql.toFixed(1)}; with its damage, metal, rarity and blessing counted it works as QL ${worth.toFixed(1)} today.`;
   if (worth < item.ql - 0.05) {
     ql.classList.add('inv-blunt');
     ql.textContent = `${item.ql.toFixed(1)}→${worth.toFixed(0)}`;
@@ -81,10 +89,37 @@ export function qualityCell(game: Game, item: Item): HTMLSpanElement {
   return ql;
 }
 
+/**
+ * The row of column names over a list of things: Item, QL, Dmg, and the last
+ * column's own name (`last`, Wt in the pack and nothing over a store's Take
+ * buttons). Each says on hover what its number is.
+ */
+export function headRow(last: { label: string; title?: string; className?: string }): HTMLDivElement {
+  const head = document.createElement('div');
+  head.className = 'inv-head';
+  const cols: Array<[string, string, string]> = [
+    ['Item', '', 'Name, and how many there are in the stack'],
+    ['QL', 'inv-ql', 'Quality, out of 100. A tool shows after the arrow what it works as today.'],
+    ['Dmg', 'inv-dmg', 'Damage, out of 100. A repair takes it off; at 100 the thing is gone.'],
+    [last.label, last.className ?? '', last.title ?? ''],
+  ];
+  for (const [label, cls, title] of cols) {
+    const span = document.createElement('span');
+    span.textContent = label;
+    if (cls) span.className = cls;
+    if (title) span.title = title;
+    head.append(span);
+  }
+  return head;
+}
+
 /** Its damage, and a word about it where it is close to going to pieces. */
 export function damageCell(item: Item): HTMLSpanElement {
   const dmg = document.createElement('span');
+  dmg.className = 'inv-dmg';
   dmg.textContent = item.dmg.toFixed(1);
+  // None at all is the usual case, and is written faint so the worn ones stand out.
+  if (item.dmg <= 0) dmg.classList.add('inv-nil');
   if (item.dmg >= DAMAGE_BREAKING) {
     dmg.classList.add('inv-breaking');
     dmg.title = 'About to go to pieces. Repair it now.';

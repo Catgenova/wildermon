@@ -1,7 +1,7 @@
 import { isArrow } from '../../game/fight';
 import { CARRY_STOP, type Game } from '../../game/game';
 import { itemDef, itemName, type Item, type ItemCategory, itemWeight, bagRoom, bagUnits, isBag, RARITIES } from '../../game/items';
-import { damageCell, nameCell, qualityCell } from '../itemcells';
+import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import type { ContextMenu, MenuItem } from '../contextmenu';
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
@@ -87,17 +87,17 @@ export class InventoryPanel {
     groupBtn.className = 'tb-btn tb-small';
     groupBtn.textContent = 'Grouped';
     groupBtn.title = 'Group by kind, or run everything together in one list';
+    groupBtn.setAttribute('aria-pressed', 'true');
     groupBtn.addEventListener('click', () => {
       this.grouped = !this.grouped;
       groupBtn.textContent = this.grouped ? 'Grouped' : 'Flat';
       groupBtn.classList.toggle('tb-on', this.grouped);
+      groupBtn.setAttribute('aria-pressed', String(this.grouped));
       this.render();
     });
     groupBtn.classList.add('tb-on');
     bar.append(sortSel, groupBtn);
-    const head = document.createElement('div');
-    head.className = 'inv-head';
-    head.innerHTML = '<span>Item</span><span>QL</span><span>Dmg</span><span>Wt</span>';
+    const head = headRow({ label: 'Wt', className: 'inv-wt', title: 'Weight of the whole stack, in kg' });
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
@@ -120,7 +120,7 @@ export class InventoryPanel {
     this.pickBar.className = 'pick-bar';
     this.pickBar.hidden = true;
     win.body.append(this.search, bar, head, this.list, this.pickBar, this.load, this.footer);
-    win.body.classList.add('inv-body');
+    win.body.classList.add('inv-body', 'items-body', 'pack-body');
     makeDropZone(
       this.list,
       (p) => p.from === 'store',
@@ -163,7 +163,9 @@ export class InventoryPanel {
     if (!shown.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = items.length ? `Nothing you are carrying answers to “${this.search.value.trim()}”.` : 'Your inventory is empty.';
+      empty.textContent = items.length
+        ? `Nothing you are carrying answers to “${this.search.value.trim()}”. Press Escape in the box to clear it.`
+        : 'Your pack is empty. What you pick up, make, or take out of a store comes here.';
       this.list.append(empty);
     }
     this.drawPickBar();
@@ -233,6 +235,7 @@ export class InventoryPanel {
     const ql = qualityCell(this.game, item);
     const dmg = damageCell(item);
     const wt = document.createElement('span');
+    wt.className = 'inv-wt';
     wt.textContent = itemWeight(item).toFixed(1);
     row.append(name, ql, dmg, wt);
     const open = (e: MouseEvent): void => {

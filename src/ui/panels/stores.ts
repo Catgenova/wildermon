@@ -118,7 +118,7 @@ export class StoresPanel {
     if (!all.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'You have put nothing down yet. Build a crate and set it somewhere.';
+      empty.textContent = 'You have no crate, chest or cart set down. Build one and set it down, and it is listed here with what it holds and how far off it is.';
       this.list.append(empty);
       this.footer.textContent = '';
       return;
@@ -126,7 +126,7 @@ export class StoresPanel {
     if (!shown.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = `Nothing in any of your ${all.length} stores answers to “${this.search.value.trim()}”.`;
+      empty.textContent = `Nothing in any of your ${all.length} stores answers to “${this.search.value.trim()}”. Press Escape in the box to clear it.`;
       this.list.append(empty);
     }
     for (const h of shown.slice(0, 60)) this.list.append(this.row(h));
@@ -146,7 +146,8 @@ export class StoresPanel {
     name.textContent = `${h.name} · ${d < 1.5 ? 'here' : `${Math.round(d)} tiles`}`;
     const fill = document.createElement('span');
     fill.className = 'store-fill';
-    fill.textContent = h.heft ? `${(h.kg ?? 0).toFixed(0)}/${h.heft} kg` : `${h.units}/${h.capacity}`;
+    fill.textContent = h.heft ? `${(h.kg ?? 0).toFixed(0)} / ${h.heft} kg` : `${h.units} / ${h.capacity}`;
+    fill.title = h.heft ? `${(h.kg ?? 0).toFixed(1)} kg in it of the ${h.heft} kg it holds` : `${h.units} things in it of the ${h.capacity} it holds`;
     if (brimming(h)) fill.classList.add('store-full');
     name.append(fill);
     const what = document.createElement('div');
@@ -155,12 +156,13 @@ export class StoresPanel {
     const list = (hits.length ? hits : h.items).slice(0, 6);
     what.textContent = list.length
       ? `${hits.length ? '' : 'holds '}${list.map((it) => `${it.count} × ${itemName(it).toLowerCase()}`).join(', ')}${(hits.length ? hits : h.items).length > 6 ? ' …' : ''}`
-      : 'empty';
+      : 'Empty';
     if (hits.length) what.classList.add('store-hit');
     const go = document.createElement('button');
     go.type = 'button';
     go.className = 'tb-btn tb-small';
     go.textContent = d < 2.4 ? 'Open' : 'Walk there';
+    go.title = d < 2.4 ? `Open the ${h.name.toLowerCase()}` : `Walk to the ${h.name.toLowerCase()}, ${Math.round(d)} tiles off`;
     go.addEventListener('click', (e) => {
       e.stopPropagation();
       if (d < 2.4) {

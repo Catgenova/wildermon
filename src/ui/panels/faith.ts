@@ -8,6 +8,7 @@ import {
 } from '../../game/meditation';
 import { listed, NumberWord, numberWord, spanWords } from '../../game/words';
 import type { FaithBook } from '../faithbook';
+import { reveal, sharedWhy } from './trades';
 import type { UIWindow } from '../windows';
 
 /**
@@ -58,14 +59,17 @@ export class FaithPanel {
   ) {
     win.body.classList.add('trade-body');
     const bar = document.createElement('div');
-    bar.className = 'trade-tabs';
+    bar.className = 'trade-tabs log-tabs';
     for (const t of [...PATRONS.map((p): [Tab, string] => [p.id, p.name]), ['path', 'Path'] as [Tab, string]]) {
-      const b = button(t[1]);
+      const b = button(t[1], 'log-tab');
       b.addEventListener('click', () => {
+        const moved = this.viewing !== t[0];
         this.viewing = t[0];
         this.chose = true;
         this.confirming = null;
         this.draw();
+        // Another tab is another page, read from its top.
+        if (moved) this.page.scrollTop = 0;
       });
       this.tabs.set(t[0], b);
       bar.append(b);
@@ -103,11 +107,17 @@ export class FaithPanel {
     const key = JSON.stringify([s, this.book.island ? null : this.path(), this.viewing, this.confirming, this.why]);
     if (key === this.seen) return;
     this.seen = key;
-    for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === this.viewing);
+    for (const [id, b] of this.tabs) {
+      b.classList.toggle('tb-on', id === this.viewing);
+      b.setAttribute('aria-pressed', String(id === this.viewing));
+    }
     const top = this.page.scrollTop;
     this.page.replaceChildren();
     this.drawPage();
     this.page.scrollTop = top;
+    // A second press is drawn where its card was, which may be below the fold.
+    const asked = this.confirming ? this.page.querySelector<HTMLElement>('.trade-confirm') : null;
+    if (asked) reveal(this.page, asked);
   }
 
   private drawPage(): void {
@@ -121,15 +131,30 @@ export class FaithPanel {
     } else if (!s) {
       this.page.append(note('Asking the island about your faith…'));
     } else {
-      const mine = s.patron ? PATRON_BY_ID.get(s.patron as PatronId)?.name ?? s.patron : null;
-      const calm = s.path ? ` · Calm ${s.path.calm} of ${s.path.cap}` : '';
-      this.page.append(note(`Faith ${s.faith.toFixed(1)} · favour ${s.favour} of ${s.cap}${calm} · ${mine ? `your patron is ${mine}` : `a patron is taken at ${PATRON_AT} faith`}`));
+      this.page.append(this.standing(s));
     }
     if (this.why) this.page.append(whyEl(this.why));
     const p = PATRON_BY_ID.get(this.viewing);
     if (!p) return;
     this.page.append(this.patronCard(p));
     FAITH_TIER_AT.forEach((at, i) => this.page.append(this.tierBlock(p, i + 1, at)));
+  }
+
+  /**
+   * Where you stand, at the head of a patron's tab: favour against what it
+   * holds, which is what every spell here is paid from, then your faith and
+   * the tier it opens next, and your patron.
+   */
+  private standing(s: NonNullable<FaithBook['said']>): HTMLDivElement {
+    const box = document.createElement('div');
+    box.className = 'faith-stand';
+    box.append(meter('Favour', s.favour, s.cap, 'What spells and rites are paid from, and the most it holds at your faith.'));
+    if (s.path) box.append(meter('Calm', s.path.calm, s.path.cap, 'What a path’s techniques are paid from, banked by sitting on a rug.'));
+    const mine = s.patron ? PATRON_BY_ID.get(s.patron as PatronId)?.name ?? s.patron : null;
+    const next = FAITH_TIER_AT.find((at) => at > s.faith);
+    const tier = next === undefined ? 'every tier open' : `tier ${FAITH_TIER_AT.indexOf(next) + 1} opens at ${next}`;
+    box.append(note(`Faith ${s.faith.toFixed(1)} · ${tier} · ${mine ? `your patron is ${mine}` : `a patron is taken at ${PATRON_AT} faith`}`));
+    return box;
   }
 
   private patronCard(p: PatronDef): HTMLDivElement {
@@ -193,11 +218,15 @@ export class FaithPanel {
       block.append(note(`No spells are written for this tier yet: ${numberWord(SPELLS_PER_TIER)} will be, and one of them taken.`));
       return block;
     }
-    for (const sp of spells) block.append(this.spellCard(p, sp));
+    // The island's reason, said once under the tier when every spell still to take shares it.
+    const shared = s && s.patron === p.id ? sharedWhy(spells.map((sp) => ({ taken: s.taken.includes(sp.id), why: s.spells[sp.id] ?? null }))) : null;
+    if (shared) block.append(whyEl(shared));
+    for (const sp of spells) block.append(this.spellCard(p, sp, !!shared));
     return block;
   }
 
-  private spellCard(p: PatronDef, sp: FaithSpellDef): HTMLDivElement {
+  /** One spell. `quiet`: its tier already says why it cannot be taken. */
+  private spellCard(p: PatronDef, sp: FaithSpellDef, quiet = false): HTMLDivElement {
     const s = this.book.said;
     const card = document.createElement('div');
     card.className = 'trade-node';
@@ -235,19 +264,14 @@ export class FaithPanel {
       ], `Take ${sp.name}`, () => this.book.takeSpell(sp.id)));
       return card;
     }
+    // One that cannot be taken has the island's reason rather than a button, here or on its tier.
     const why = s.spells[sp.id] ?? null;
-    const acts = document.createElement('div');
-    acts.className = 'trade-acts';
-    const take = button('Take', 'trade-take');
-    take.disabled = !!why;
-    take.addEventListener('click', () => {
-      this.confirming = ask;
-      this.why = null;
-      this.draw();
-    });
-    acts.append(take);
-    card.append(acts);
-    if (why) card.append(whyEl(why));
+    if (why) {
+      card.classList.add('trade-node-shut');
+      if (!quiet) card.append(whyEl(why));
+      return card;
+    }
+    card.append(this.takeActs(ask));
     return card;
   }
 
@@ -268,8 +292,13 @@ export class FaithPanel {
       this.page.append(note(this.book.said ? 'The island said nothing of your path.' : 'Asking the island about your path…'));
     } else if (ps) {
       const mine = ps.way ? PATHS[ps.way]?.name ?? ps.way : null;
-      this.page.append(note(`Meditation ${ps.meditation.toFixed(1)} · Calm ${ps.calm} of ${ps.cap} · ${mine
-        ? `your path is ${mine}` : `a path is chosen at ${CHOOSE_AT} meditation, at the rug`}`));
+      const box = document.createElement('div');
+      box.className = 'faith-stand';
+      box.append(
+        meter('Calm', ps.calm, ps.cap, 'What a path’s techniques are paid from, banked by sitting on a rug.'),
+        note(`Meditation ${ps.meditation.toFixed(1)} · ${mine ? `your path is ${mine}` : `a path is chosen at ${CHOOSE_AT} meditation, at the rug`}`),
+      );
+      this.page.append(box);
     }
     if (this.why) this.page.append(whyEl(this.why));
     this.page.append(note(`Calm is banked by sitting on a rug, and spent on a path’s techniques. It holds as much as favour does at the same level: `
@@ -328,11 +357,16 @@ export class FaithPanel {
     head.className = 'trade-col-head';
     head.textContent = `Tier ${tier} · ${at} meditation${open ? ' · open' : ''}`;
     block.append(head);
-    for (const k of picksOf(path.id as PathId, tier)) block.append(this.pickCard(k, ps));
+    const picks = picksOf(path.id as PathId, tier);
+    // As with spells: the island's reason once under the tier, when every pick still to take shares it.
+    const shared = ps && ps.way === path.id ? sharedWhy(picks.map((k) => ({ taken: ps.taken.includes(k.id), why: ps.picks[k.id] ?? null }))) : null;
+    if (shared) block.append(whyEl(shared));
+    for (const k of picks) block.append(this.pickCard(k, ps, !!shared));
     return block;
   }
 
-  private pickCard(k: PathPickDef, ps: PathSaid | null): HTMLDivElement {
+  /** One pick of a path's tier. `quiet`: its tier already says why it cannot be taken. */
+  private pickCard(k: PathPickDef, ps: PathSaid | null, quiet = false): HTMLDivElement {
     const card = document.createElement('div');
     card.className = 'trade-node';
     const taken = !!ps?.taken.includes(k.id);
@@ -360,19 +394,27 @@ export class FaithPanel {
       return card;
     }
     const why = ps.picks[k.id] ?? null;
+    if (why) {
+      card.classList.add('trade-node-shut');
+      if (!quiet) card.append(whyEl(why));
+      return card;
+    }
+    card.append(this.takeActs(ask));
+    return card;
+  }
+
+  /** The first press of a spell or a pick: it asks, and the second press does it. */
+  private takeActs(ask: string): HTMLDivElement {
     const acts = document.createElement('div');
     acts.className = 'trade-acts';
     const take = button('Take', 'trade-take');
-    take.disabled = !!why;
     take.addEventListener('click', () => {
       this.confirming = ask;
       this.why = null;
       this.draw();
     });
     acts.append(take);
-    card.append(acts);
-    if (why) card.append(whyEl(why));
-    return card;
+    return acts;
   }
 
   /** A technique you hold: where it is on the bar, or a way onto it; and playing by yourself, a way to call it. */
@@ -452,6 +494,33 @@ function button(label: string, extra = ''): HTMLButtonElement {
   b.className = `tb-btn tb-small${extra ? ` ${extra}` : ''}`;
   b.textContent = label;
   return b;
+}
+
+/** A store of something spent, as a bar part-filled and its numbers. */
+function meter(label: string, held: number, cap: number, title: string): HTMLDivElement {
+  const row = document.createElement('div');
+  row.className = 'faith-meter-row';
+  row.title = title;
+  const name = document.createElement('span');
+  name.className = 'faith-meter-label';
+  name.textContent = label;
+  // The status panel's bar, so a store of favour reads like a store of stamina.
+  const bar = document.createElement('span');
+  bar.className = 'hud-bar faith-meter';
+  bar.setAttribute('role', 'meter');
+  bar.setAttribute('aria-label', label);
+  bar.setAttribute('aria-valuemin', '0');
+  bar.setAttribute('aria-valuemax', String(cap));
+  bar.setAttribute('aria-valuenow', String(held));
+  const fill = document.createElement('span');
+  fill.className = 'hud-bar-fill faith-meter-fill';
+  fill.style.width = `${cap > 0 ? Math.min(100, (held / cap) * 100) : 0}%`;
+  bar.append(fill);
+  const num = document.createElement('span');
+  num.className = 'trade-points';
+  num.textContent = `${Math.floor(held)} of ${Math.floor(cap)}`;
+  row.append(name, bar, num);
+  return row;
 }
 
 function note(text: string): HTMLDivElement {

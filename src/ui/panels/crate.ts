@@ -10,7 +10,7 @@ import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
 import { Picking } from '../picking';
 import type { UIWindow } from '../windows';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
-import { damageCell, nameCell, qualityCell } from '../itemcells';
+import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import { priceWords } from '../../game/money';
 import { counterStore } from '../counterMenu';
@@ -91,6 +91,10 @@ export class CratePanel {
   private list: HTMLDivElement;
   private footer: HTMLDivElement;
   private bar: HTMLDivElement;
+  /** The column names, shown only while something is open. */
+  private head: HTMLDivElement;
+  /** Put in what it holds, which has nothing to go by in an empty store. */
+  private putKind: HTMLButtonElement;
   private crateId: number | null = null;
   private furnitureId: number | null = null;
   private creatureId: number | null = null;
@@ -100,6 +104,8 @@ export class CratePanel {
   /** How a thing on somebody else's counter is bought, on an island. */
   buyer?: (item: Item) => void;
   private search: HTMLInputElement;
+  /** The search box and the order, in one row over the list. */
+  private find: HTMLDivElement;
   private query = '';
   private sort: SortKey = 'name';
   /** The two buttons that put things in, which a grave does not offer. */
@@ -125,10 +131,8 @@ export class CratePanel {
     /** A card for what is under the pointer: a weapon or armour set against what you have on (`compareLines`). */
     private readonly hover?: (item: Item | null, x: number, y: number) => void,
   ) {
-    win.body.classList.add('inv-body');
-    const head = document.createElement('div');
-    head.className = 'inv-head';
-    head.innerHTML = '<span>Item</span><span>QL</span><span>Dmg</span><span></span>';
+    win.body.classList.add('inv-body', 'items-body');
+    this.head = headRow({ label: '' });
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
@@ -148,7 +152,7 @@ export class CratePanel {
     putAll.textContent = 'Put all in';
     putAll.title = 'Put everything loose in your pack into it';
     putAll.addEventListener('click', () => this.putAll());
-    const putKind = document.createElement('button');
+    const putKind = this.putKind = document.createElement('button');
     putKind.type = 'button';
     putKind.className = 'tb-btn tb-small';
     putKind.textContent = 'Put in what it holds';
@@ -156,10 +160,7 @@ export class CratePanel {
     putKind.addEventListener('click', () => this.putAll(true));
     this.waysIn = [putAll, putKind];
     this.wayOut = takeAll;
-    this.bar.append(takeAll, putAll, putKind, sortSelect('How to order what is inside', (key) => {
-      this.sort = key;
-      this.render();
-    }));
+    this.bar.append(takeAll, putAll, putKind);
     /*
      * And a box to search it.
      *
@@ -183,10 +184,17 @@ export class CratePanel {
       this.query = '';
       this.render();
     });
+    // The order beside the box, as both are about which rows show where; the bar below is for moving them.
+    this.find = document.createElement('div');
+    this.find.className = 'items-find';
+    this.find.append(this.search, sortSelect('How to order what is inside', (key) => {
+      this.sort = key;
+      this.render();
+    }));
     this.pickBar = document.createElement('div');
     this.pickBar.className = 'pick-bar';
     this.pickBar.hidden = true;
-    win.body.append(this.search, head, this.list, this.pickBar, this.bar, this.footer);
+    win.body.append(this.find, this.head, this.list, this.pickBar, this.bar, this.footer);
     makeDropZone(
       this.list,
       (p) => p.from === 'inventory' && this.store() !== undefined,
@@ -337,7 +345,6 @@ export class CratePanel {
     return ACTION_BY_ID.get(id);
   }
 
-  /** Empty the open store into the pack, as far as it will go. */
   /** "3 picked", and Take them out, when more than none are picked. */
   private drawPickBar(store: Store): void {
     const n = this.picking.size;
@@ -436,6 +443,7 @@ export class CratePanel {
     };
   }
 
+  /** Empty the open store into the pack, as far as it will go. */
   private takeAll(): void {
     const store = this.store();
     if (!store) return;
@@ -549,10 +557,14 @@ export class CratePanel {
     if (!store) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'Open a crate or a cupboard to see what is inside.';
+      empty.textContent = 'Nothing is open. Right-click a crate, chest or cart and choose Open, or open a bag from your pack.';
       this.list.append(empty);
       this.footer.textContent = '';
+      this.footer.classList.remove('inv-full');
       this.bar.hidden = true;
+      // Nothing to search and no columns to name until something is open.
+      this.find.hidden = true;
+      this.head.hidden = true;
       this.win.titleText.textContent = 'Storage';
       return;
     }
@@ -565,6 +577,18 @@ export class CratePanel {
     this.win.titleText.textContent = store.title + (!store.lock?.lock ? ''
       : shut ? ' \u2014 locked' : ' \u2014 unlocked');
     this.bar.hidden = false;
+    this.find.hidden = false;
+    this.head.hidden = false;
+    // Nothing to take, and no kinds to top up, in an empty store: said on the buttons rather than in the log after a press.
+    const bare = !store.items.length;
+    if (this.wayOut) {
+      this.wayOut.disabled = bare;
+      this.wayOut.title = bare ? `The ${store.what} is empty` : 'Empty it into your pack, as far as your back will take';
+    }
+    this.putKind.disabled = bare;
+    this.putKind.title = bare
+      ? `The ${store.what} is empty, so there are no kinds in it to match: use Put all in`
+      : 'Put in only the kinds already in it — top the store up without emptying your pack';
     for (const b of this.waysIn) b.hidden = store.grave !== undefined || !!store.sell;
     if (this.wayOut) this.wayOut.hidden = !!store.sell;
     if (!store.items.length || !store.items.some((it) => this.matches(it))) {
@@ -573,8 +597,10 @@ export class CratePanel {
       // Two different emptinesses, and saying the wrong one is how somebody
       // comes to believe a full crate has been robbed.
       empty.textContent = store.items.length
-        ? `Nothing in the ${store.what} answers to that.`
-        : `The ${store.what} is empty.`;
+        ? `Nothing in the ${store.what} answers to “${this.search.value.trim()}”. Press Escape in the box to clear it.`
+        : store.grave !== undefined || store.sell
+          ? `The ${store.what} is empty.`
+          : `The ${store.what} is empty. Drag things here from your pack, or press Put all in.`;
       this.list.append(empty);
     }
     const listed = orderBy(store.items.filter((it) => this.matches(it)), this.sort);
@@ -602,7 +628,7 @@ export class CratePanel {
       const dmg = damageCell(item);
       const take = document.createElement('button');
       take.type = 'button';
-      take.className = 'tb-btn tb-small';
+      take.className = 'tb-btn tb-small inv-take';
       take.textContent = store.sell ? 'Buy' : 'Take';
       const sell = store.sell;
       if (sell) take.title = sell.why(item) ?? `For ${item.price !== undefined ? priceWords(item.price) : 'nothing'}, the lot`;
@@ -654,6 +680,8 @@ export class CratePanel {
       : store.heft
         ? `${weight.toFixed(1)} / ${store.heft} kg · ${used} things`
         : `${used} / ${store.capacity} things · ${weight.toFixed(1)} kg`;
+    // Full, in the colour the Stores window gives a full store, so the next drag's refusal is seen coming.
+    this.footer.classList.toggle('inv-full', store.grave === undefined && (store.heft ? weight >= store.heft : used >= store.capacity));
   }
 
   /**
@@ -738,7 +766,6 @@ export class CratePanel {
     this.win.open();
   }
 
-  /** The panniers on a pack beast's back, seen through the same window. */
   /** Open a bag carried in the pack. */
   openBag(uid: number): void {
     this.bagUid = uid;
@@ -750,6 +777,7 @@ export class CratePanel {
     this.win.open();
   }
 
+  /** The panniers on a pack beast's back, seen through the same window. */
   openPannier(id: number): void {
     this.creatureId = id;
     this.counterId = null;

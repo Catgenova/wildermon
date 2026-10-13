@@ -22,6 +22,9 @@
  * everything else.
  */
 
+/** How many questions have been asked, so each one's words have an id of their own to be named by. */
+let asked = 0;
+
 /** A question on the screen, and the promise waiting on its answer. */
 interface Open {
   el: HTMLElement;
@@ -85,10 +88,14 @@ export class Asker {
       el.className = 'ask';
       const box = document.createElement('div');
       box.className = 'ask-box';
+      box.setAttribute('role', 'dialog');
+      box.setAttribute('aria-modal', 'true');
 
       const said = document.createElement('div');
       said.className = 'ask-question';
+      said.id = `ask-${++asked}`;
       said.textContent = question;
+      box.setAttribute('aria-labelledby', said.id);
       box.append(said);
 
       let input: HTMLInputElement | null = null;
@@ -101,6 +108,7 @@ export class Asker {
           input.inputMode = 'numeric';
         }
         input.className = 'ask-input';
+        input.setAttribute('aria-labelledby', said.id);
         input.value = field.text;
         input.maxLength = field.max;
         // A phone keyboard that offers to capitalise a name is being helpful;
@@ -158,17 +166,24 @@ export class Asker {
         if (e.target === el) done(null);
       });
       el.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
+        // Tab goes round the box and never out of it, to the game behind it.
+        if (e.key === 'Tab') {
+          const stops = [...box.querySelectorAll<HTMLElement>('input, button')];
+          const at = stops.indexOf(document.activeElement as HTMLElement);
+          const next = stops[(at + (e.shiftKey ? -1 : 1) + stops.length) % stops.length];
+          e.preventDefault();
+          e.stopPropagation();
+          next?.focus();
+        } else if (e.key === 'Escape') {
           e.stopPropagation();
           done(null);
         } else if (e.key === 'Enter') {
           e.preventDefault();
           e.stopPropagation();
-          // On a list of choices, Enter presses the one with the focus.
-          const at = picks.find((b) => b === document.activeElement);
-          if (picks.length) {
-            if (at) at.click();
-          } else done(input ? input.value : '');
+          // Enter presses the button with the focus -- Cancel says no, a choice is chosen -- and from the box it is a yes.
+          const at = document.activeElement;
+          if (at instanceof HTMLButtonElement && box.contains(at)) at.click();
+          else if (!picks.length) done(input ? input.value : '');
         }
       });
       // Typing a name must not also walk the body across the island.

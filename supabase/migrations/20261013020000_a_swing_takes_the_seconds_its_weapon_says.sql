@@ -1,0 +1,387 @@
+/*
+ * A swing takes the seconds its weapon says.
+ *
+ * Reported: "i've got a short sword that says it should be 2 seconds per
+ * attack but in combat it takes me 5 seconds per attack". The card had the
+ * rule right and the clock did not keep it. A weapon's `swing` is seconds --
+ * a short sword 2, a maul 3.4, bare hands 1.8, set against a hunter's blow
+ * every `blow_hunter()` seconds -- but a go of a fight went through
+ * `act_duration` like any job, which reads its base as a job weight: times
+ * `action_pace()` (3.75 seconds to the unit) and never under `action_floor()`
+ * (4.5 seconds). So a short sword swung every 7.5 seconds before skill, 5 at
+ * fighting 47, and from fighting 56 up every 4.5 seconds, no quicker than a
+ * knife (a sword from 70, a maul from 91).
+ *
+ *   * `go_secs`: a fight's go is its base (`act_base`, the weapon's seconds)
+ *     less a part in 140 for each point of the skill, times the body's
+ *     control, as every job's is, but counted in seconds and never under
+ *     `action_floor() / action_pace()` (1.2 seconds: the job floor counted the
+ *     same way). Every other job goes through `act_duration` as before.
+ *   * `settle`, `rpc_act` and `fight_back` time a go by it.
+ *
+ * Armour, what you carry and a wagon have no say in a swing's time, here or
+ * in the browser (`swingSeconds`, `Game.duration`).
+ *
+ * settle     -- from 20261010050222_the_reader_moves_onto_tiers.sql, the newest that defines it.
+ * rpc_act    -- from 20261004175838_the_blessings_spells.sql, the newest that defines it.
+ * fight_back -- from 20261003030438_a_fight_on_its_own_clock.sql, the newest that defines it.
+ */
+set local lock_timeout = '3s';
+
+/*
+ * How long a go takes, in seconds, for the job it is: a fight's base is the
+ * weapon's own seconds (the browser's `swingSeconds`), every other job's a
+ * weight at the pace (`act_duration`, the browser's `goSeconds`). A fight has
+ * no tool, so `p_tool_ql` tells only on a job.
+ */
+create or replace function go_secs(p_action text, p_base double precision, p_skill double precision,
+                                   p_tool_ql double precision, p_control double precision default 1)
+  returns double precision language sql immutable as $$
+  select case when is_fight(p_action)
+              then greatest(action_floor() / action_pace(), p_base * (1 - p_skill / 140) * p_control)
+              else act_duration(p_base, p_skill, p_tool_ql, p_control) end
+$$;
+
+-- The clock, which times a fight in seconds.
+CREATE OR REPLACE FUNCTION public.settle(p_world uuid, p_uid uuid)
+ RETURNS integer
+ LANGUAGE plpgsql
+AS $function$
+declare p player; d action_def; done int := 0; guard int := 0; nxt jsonb; ended timestamptz;
+        v_err text; v_state text; v_where text;
+begin
+  /*
+   * One body's work, and nobody else's.
+   *
+   * Everything below used to run bare, and `world_tick` settles every body on
+   * every island in one transaction: one go that raised an error took the
+   * whole round down with it, every second, for as long as that job was
+   * still due. Reported as "something just broke, no actions are working":
+   * `take_spoil` set the last spadeful in a cart to a count of 0, which the
+   * item table refuses, and for a quarter of an hour nothing anybody did on
+   * the island finished.
+   *
+   * So the goes run in a block of their own. A fault undoes what the block
+   * had done -- the goes that had come due in this call, and nothing else --
+   * stops that job and the queue behind it, tells its owner what the island
+   * said, and is kept in `private.tick_fault` for the deploy to report. A
+   * deadlock, a lock that timed out or a serialization failure is not a
+   * fault in the job: those are raised as before, and the job is tried again
+   * next round. A statement timeout is not caught by `others` at all.
+   */
+  begin
+    perform wounds_settle(p_world, p_uid);
+    perform body_settle(p_world, p_uid);
+    select * into p from player where world_id = p_world and uid = p_uid for update;
+    if not found or p.act is null then return 0; end if;
+    /*
+     * Twenty-five goes to a call, not two hundred.
+     *
+     * This is the one way a round of the clock can run long: somebody back from
+     * an hour away is owed hundreds of goes, and at two hundred apiece — inside
+     * `tick_players` inside `tick_worlds` — one person's backlog is the whole
+     * tick. It mattered less at five seconds. It matters at one.
+     *
+     * Nothing is lost by taking less at a time: what is still due is still due,
+     * and there is another round a second from now, plus the browser's own beat
+     * the moment its job comes up. A backlog drains in seconds either way; the
+     * difference is whether everybody else waits while it does.
+     */
+    while p.act is not null and p.act_ends <= now() and guard < 25 loop
+      guard := guard + 1;
+      -- A go, for what the baubles make of its yield (`bauble_yield`), and
+      -- what they made of it said after the go has said its own piece.
+      perform set_config('wurm.bauble_go', 'go', true);
+      perform set_config('wurm.bauble_made', '', true);
+      -- And the perks, for the rules too deep to be handed the body: for
+      -- this go and no other (`pkx`), cleared the moment it is done.
+      perform set_config('wurm.pk', coalesce(p.class_mul->'fx', '{}'::jsonb)::text, true);
+      perform set_config('wurm.pk_act', p.act, true);
+      perform set_config('wurm.floor', floor_said(p_world, p.level, p.x, p.y), true); -- cellar: the side the go is taken on
+      -- And a Foreknow's goes, which no roll in this go can fail (`skill_check`); one is spent if a roll was taken.
+      perform set_config('wurm.foreknow', case when coalesce((select foreknow from player
+        where world_id = p_world and uid = p_uid), 0) > 0 then 'on' else '' end, true);
+      perform set_config('wurm.foreknown', '', true);
+      perform act_perform(p_world, p_uid, p.act, p.act_target);
+      if current_setting('wurm.foreknown', true) = 'on' then
+        update player set foreknow = greatest(0, foreknow - 1) where world_id = p_world and uid = p_uid;
+      end if;
+      perform set_config('wurm.foreknow', '', true);
+      perform set_config('wurm.foreknown', '', true);
+      perform set_config('wurm.pk', '', true);
+      perform set_config('wurm.pk_act', '', true);
+      perform set_config('wurm.floor', '', true); -- cellar
+      perform bauble_said(p_world, p_uid);
+      -- And what the go took out of you, which nothing over here had ever
+      -- charged: `action_def.stamina` was a column no function read.
+      perform spend_wind(p_world, p_uid, p.act);
+      done := done + 1;
+      select * into d from action_def where id = p.act;
+      ended := p.act_ends;
+      if p.act_left > 1 and act_refusal(p_world, p_uid, p.act, p.act_target) is null then
+        update player set act_left = act_left - 1, act_started = ended,
+               -- A fight's go in seconds, every other job's at the pace (`go_secs`).
+               act_ends = ended + make_interval(secs => go_secs(d.id,
+                 act_base(p_world, p_uid, d.id, d.base_time),
+                 case when d.skill is null then 50 else skill_of(p_world, p_uid, d.skill) end,
+                 job_tool_ql(coalesce(p.class_mul, '{}'::jsonb), p_world, p_uid, d.id, d.tool),
+                 -- The body's own pace, and then the trade's, which tells only
+                 -- on the skill this job is done with.
+                 control_speed(p_world, p_uid)
+                   * class_mul(coalesce(p.class_mul, '{}'::jsonb), 'hands',
+                               act_scope(p_world, p_uid, d.skill)) * bauble_pace(p_world, p_uid, d.skill))
+                 -- And a perk on the job's time, after the floor.
+                 * perk_time(coalesce(p.class_mul, '{}'::jsonb), p_world, d.id, p.act_target)
+                 * piece_pace(p_world, p_uid, d.skill) * faith_steady(p_world, p_uid, d.tool))
+          where world_id = p_world and uid = p_uid returning * into p;
+      else
+        -- A fight was never a count: it ends when it is over or out of reach, and says nothing of goes.
+        if p.act_left > 1 and not is_fight(p.act) then
+          -- Why, when there is a why. A run of goes that stops because the wind
+          -- gave out should say so rather than leave somebody wondering what
+          -- they did wrong, which is what the browser has always said.
+          perform tell(p_world, p_uid,
+            coalesce(act_refusal(p_world, p_uid, p.act, p.act_target) || ' That was '
+                     || (coalesce(p.act_left, 1)) || ' to go.',
+                     'You stop ' || d.verb || '.'), 'info');
+        end if;
+        /*
+         * The next job in the line, or the first one behind it that can be done.
+         *
+         * Reported: "queued up multiple chopping actions, then after the tree
+         * was felled and no actions were running I'd dig up the stump and it
+         * would show a cutting action following that I didn't queue." The
+         * second chop, popped once the tree was down, was refused and put out of
+         * the line — and the third stayed in it, behind an empty hand, until the
+         * next thing asked for was done and it came up as "then". A refusal puts
+         * that job out of the line and asks the next, as the browser's
+         * `nextInQueue` has always done, until one starts or the line is empty.
+         */
+        loop
+          nxt := p.act_queue -> 0;
+          -- Another onion will do. See `act_retarget`: only when the row it named
+          -- has gone, and only to another of what it was.
+          nxt := act_retarget(p_world, p_uid, nxt);
+          if nxt is null then
+            update player set act = null, act_target = null, act_started = null, act_ends = null,
+                   act_left = null, act_goes = null
+              where world_id = p_world and uid = p_uid returning * into p;
+            exit;
+          end if;
+          select * into d from action_def where id = nxt->>'action';
+          if d is null or act_refusal(p_world, p_uid, nxt->>'action', nxt->'target') is not null then
+            perform tell(p_world, p_uid,
+              coalesce(act_refusal(p_world, p_uid, nxt->>'action', nxt->'target'), 'That cannot be done now.'), 'error');
+            update player set act = null, act_target = null, act_started = null, act_ends = null,
+                   act_left = null, act_goes = null, act_queue = act_queue - 0
+              where world_id = p_world and uid = p_uid returning * into p;
+            -- And the one behind it.
+          else
+            update player set act = nxt->>'action', act_target = nxt->'target',
+                   act_left = greatest(1, coalesce((nxt->>'goes')::int, 1)),
+                   -- What was asked for, carried out of the queue with the job.
+                   -- Without it the browser was left holding the count of
+                   -- whatever ran *before* this one, and the bar drew "3 of 10"
+                   -- off two numbers from different jobs.
+                   act_goes = greatest(1, coalesce((nxt->>'goes')::int, 1)),
+                   act_started = ended,
+                   act_ends = ended + make_interval(secs => go_secs(d.id,
+                     act_base(p_world, p_uid, d.id, d.base_time),
+                     case when d.skill is null then 50 else skill_of(p_world, p_uid, d.skill) end,
+                     job_tool_ql(coalesce(p.class_mul, '{}'::jsonb), p_world, p_uid, d.id, d.tool),
+                     control_speed(p_world, p_uid)
+                       * class_mul(coalesce(p.class_mul, '{}'::jsonb), 'hands',
+                                   act_scope(p_world, p_uid, d.skill)) * bauble_pace(p_world, p_uid, d.skill))
+                     * perk_time(coalesce(p.class_mul, '{}'::jsonb), p_world, d.id, nxt->'target')
+                     * piece_pace(p_world, p_uid, d.skill) * faith_steady(p_world, p_uid, d.tool)),
+                   act_queue = act_queue - 0
+              where world_id = p_world and uid = p_uid returning * into p;
+            perform tell(p_world, p_uid, 'You start ' || d.verb || '.', 'info');
+            exit;
+          end if;
+        end loop;
+      end if;
+    end loop;
+    return done;
+  exception
+    when deadlock_detected or lock_not_available or serialization_failure then raise;
+    when others then
+      get stacked diagnostics v_err = message_text, v_state = returned_sqlstate, v_where = pg_exception_context;
+      perform settle_fault(p_world, p_uid, v_err, v_state, v_where);
+      return 0;
+  end;
+end $function$;
+
+-- A job asked for, timed the same way.
+CREATE OR REPLACE FUNCTION public.rpc_act(p_world uuid, p_action text, p_target jsonb, p_times integer DEFAULT 1)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+declare me uuid := auth.uid(); d action_def; p player; why text; secs double precision;
+        s double precision; tq double precision; cap int; room int;
+begin
+  if me is null then raise exception 'not signed in'; end if;
+  if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
+  perform settle(p_world, me);
+  why := act_refusal(p_world, me, p_action, p_target);
+  if why is not null then
+    perform tell(p_world, me, why, 'error');
+    return jsonb_build_object('started', false, 'why', why);
+  end if;
+  select * into d from action_def where id = p_action;
+  select * into p from player where world_id = p_world and uid = me for update;
+
+  /*
+   * A fight never waits behind work: what is in hand goes to the front of the
+   * line to be picked up after, as `fight_back` puts it, and a fight already
+   * in hand gives way to this one. The browser does the same in `requestAction`.
+   */
+  if p.act is not null and is_fight(p_action) then
+    update player set
+        act_queue = case when is_fight(p.act) then act_queue
+                         else jsonb_build_array(jsonb_build_object('action', p.act, 'target', p.act_target,
+                                                                   'goes', greatest(1, coalesce(p.act_left, 1)))) || act_queue end,
+        act = null, act_target = null, act_started = null, act_ends = null, act_left = null, act_goes = null
+      where world_id = p_world and uid = me returning * into p;
+  end if;
+
+  -- Something already in hand: line this one up behind it rather than drop it.
+  if p.act is not null then
+    cap := queue_capacity(p_world, me);
+    room := cap - 1 - jsonb_array_length(p.act_queue);
+    if room <= 0 then
+      why := 'You can only keep ' || cap || ' jobs in your head at once. Mind logic is what widens that.';
+      perform tell(p_world, me, why, 'error');
+      return jsonb_build_object('started', false, 'queued', false, 'why', why);
+    end if;
+    /*
+     * And what the thing *was*, for a job that may outlive the row it names.
+     *
+     * Stamped now rather than worked out later, because later is exactly when
+     * it cannot be: once `consume` has deleted the last of a stack there is
+     * nothing left to ask what kind of thing it had been.
+     */
+    update player set act_queue = act_queue || (jsonb_build_object(
+        'action', p_action, 'target', p_target, 'goes', greatest(1, least(100, coalesce(p_times, 1))))
+        || coalesce((select jsonb_build_object('was', i.def) from item i
+                      where i.id = target_item(p_target) and i.world_id = p_world), '{}'::jsonb))
+      where world_id = p_world and uid = me returning * into p;
+    perform tell(p_world, me, d.label || ' is next, ' || jsonb_array_length(p.act_queue) + 1 || ' of ' || cap || ' in hand.', 'info');
+    /*
+     * And what is in the head now, not just how much of it.
+     *
+     * The bar drew its queue from `rpc_settle` and nothing else, and
+     * `rpc_settle` runs on the heartbeat and when a job comes due — never when
+     * one is *added*. So asking for a third job while two were running left the
+     * bar saying "2 of 3" until the job in hand finished, at which point one
+     * came off the queue and it said "2 of 3" again. Reported as never changing
+     * from 2/3 to 3/3, which is exactly what it did: it was always one behind,
+     * and topping the queue up kept it there.
+     *
+     * The answer to the ask is where the browser should hear about what the ask
+     * did, so it says so here rather than waiting to be asked again.
+     */
+    return held_now(p_world, me) || jsonb_build_object('started', false, 'queued', true,
+      'inHand', jsonb_array_length(p.act_queue) + 1, 'capacity', cap,
+      'queue', coalesce((select jsonb_agg(jsonb_build_object(
+                           'action', q->>'action',
+                           'goes', greatest(1, coalesce((q->>'goes')::int, 1))) order by o)
+                         from jsonb_array_elements(p.act_queue) with ordinality t(q, o)), '[]'::jsonb));
+  end if;
+
+  s := case when d.skill is null then 50 else skill_of(p_world, me, d.skill) end;
+  -- The tool at what it counts at: a Farmer's Worn-in Rake counts the rake better.
+  tq := job_tool_ql(coalesce(p.class_mul, '{}'::jsonb), p_world, me, p_action, d.tool);
+  -- Every other job has a floor of a second or so under it; an instant one has
+  -- no duration to put a floor under, and go_secs would give it one.
+  secs := case when d.instant then 0
+               -- A fight's go in seconds, every other job's at the pace (`go_secs`).
+               else go_secs(p_action, act_base(p_world, me, p_action, d.base_time), s, tq, control_speed(p_world, me)
+                 * class_mul(coalesce(p.class_mul, '{}'::jsonb), 'hands',
+                             act_scope(p_world, me, d.skill)) * bauble_pace(p_world, me, d.skill))
+                 -- And what a perk makes of this job's time: a Terraformer's Quick Level,
+                 -- a Mason's Quick Mason on stone. After the floor, so that it says
+                 -- what it does of a job already down on it (a Mender's Quick Hands).
+                 * perk_time(coalesce(p.class_mul, '{}'::jsonb), p_world, p_action, p_target)
+                 -- And a piece standing near that speeds the trade: an Artisan's potter's wheel.
+                 * piece_pace(p_world, me, d.skill) * faith_steady(p_world, me, d.tool) end;
+  update player set
+      act = p_action, act_target = p_target, act_started = now(),
+      act_ends = now() + make_interval(secs => secs),
+      act_left = greatest(1, least(100, coalesce(p_times, 1))),
+      act_goes = greatest(1, least(100, coalesce(p_times, 1))), seen_at = now(), away = false
+    where world_id = p_world and uid = me;
+  /*
+   * And what the ask left you holding, said in the answer to the ask.
+   *
+   * Reported as inventory rubberbanding: a thing put in a crate turns up in
+   * the crate and stays in the pack as well, for up to the twenty seconds
+   * until the next reconcile, and then goes. Two causes with one shape —
+   * nothing ever tells a browser that a thing has *left* its hands.
+   *
+   * `item` is published with the default replica identity, so a DELETE carries
+   * the primary key and nothing else, and the browser's Realtime filter is
+   * `holder_uid = me`: a row carrying only an `id` cannot match it. Putting a
+   * whole stack in a crate deletes the row, so nothing is said. And a thing
+   * that goes to the ground, or to somebody else, has `holder_uid` set to
+   * null, so the *new* row does not match the filter either. Realtime carries
+   * every arrival and no departure, and `refresh_pack` on the twenty-second
+   * reconcile was the only thing that ever noticed.
+   *
+   * Said at each return rather than worked out once at the top, because for an
+   * instant ask the work happens in the `settle` three lines below this — a
+   * value built any earlier is the pack as it was before the thing moved,
+   * which is the very answer that was wrong.
+   */
+  if d.instant then
+    perform settle(p_world, me);
+    return held_now(p_world, me) || jsonb_build_object('started', true, 'done', true, 'seconds', 0);
+  end if;
+  perform tell(p_world, me, 'You start ' || d.verb || '.', 'info');
+  return held_now(p_world, me)
+      || jsonb_build_object('started', true, 'ends', now() + make_interval(secs => secs), 'seconds', secs);
+end $function$;
+
+-- A bite turned on, timed the same way.
+CREATE OR REPLACE FUNCTION public.fight_back(p_world uuid, p_uid uuid, p_id integer)
+ RETURNS boolean
+ LANGUAGE plpgsql
+AS $function$
+declare p player; c creature; d action_def; v_target jsonb; secs double precision; s double precision;
+        tq double precision; v_species text;
+begin
+  if p_id is null then return false; end if;
+  select * into p from player where world_id = p_world and uid = p_uid for update;
+  if not found or coalesce((p.stats->>'health')::double precision, 1) <= 0 then return false; end if;
+  if coalesce((p.stats->>'stamina')::double precision, 1) < exhausted() then return false; end if;
+  -- Not with the setting off, and not while walking: walking is how you leave a fight (`fightBack`).
+  if not coalesce(p.fight_back, true) or p.moved_at > now() - make_interval(secs => fight_back_still()) then return false; end if;
+  select * into c from creature where world_id = p_world and id = p_id;
+  if not found or c.mode <> 'wild' or c.health <= 0 then return false; end if;
+  v_target := jsonb_build_object('kind', 'creature', 'id', p_id);
+  -- Already at it: nothing to change.
+  if p.act = 'attack_creature' and (p.act_target->>'id')::int = p_id then return false; end if;
+  select * into d from action_def where id = 'attack_creature';
+  s := case when d.skill is null then 50 else skill_of(p_world, p_uid, d.skill) end;
+  tq := case when d.tool is null then 0 else tool_ql(p_world, p_uid, d.tool) end;
+  -- In seconds, as every swing is (`go_secs`).
+  secs := go_secs(d.id, act_base(p_world, p_uid, d.id, d.base_time), s, tq, control_speed(p_world, p_uid));
+  update player set
+      -- What was in hand goes to the front of the line, to be picked up again after.
+      act_queue = case when p.act is null or is_fight(p.act) then p.act_queue
+                       else jsonb_build_array(jsonb_build_object('action', p.act, 'target', p.act_target,
+                                                                 'goes', greatest(1, coalesce(p.act_left, 1)))) || p.act_queue end,
+      act = 'attack_creature', act_target = v_target, act_started = now(),
+      act_ends = now() + make_interval(secs => secs),
+      act_left = fight_back_goes()::int, act_goes = fight_back_goes()::int
+    where world_id = p_world and uid = p_uid;
+  select lower(sd.name) into v_species from species_def sd where sd.id = c.species;
+  perform tell(p_world, p_uid, 'You turn on the ' || coalesce(v_species, 'thing') || '.', 'fight');
+  return true;
+end $function$;
+
+select private.lock_doors();
+
+notify pgrst, 'reload schema';

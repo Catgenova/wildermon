@@ -28,6 +28,33 @@ export const DONE_AFTER = 8;
 /** How often the skill book is looked over for a new whole number, in milliseconds. */
 const LOOK_EVERY = 400;
 
+/** The bars a line across the top of the screen keeps clear of. */
+const TOP_BARS = '.toolbar, .hud-status, .saving-banner';
+/** Interface pixels from the top of the screen with no bar there, and the gap left under a bar. */
+const EDGE = 12;
+const GAP = 8;
+/** A bar counts as along the top while its top is no further down than this, in interface pixels. */
+const TOP_BAND = 160;
+/** Half the width of the column down the middle of the screen the lines stand in, in interface pixels. */
+const REACH = 180;
+
+/**
+ * How far down the screen a line across the top can stand without covering a
+ * bar: under the lowest of the toolbar, the status panel and the saving banner
+ * that crosses the middle of the screen near its top. Measured each time,
+ * since every one of those can be moved or can grow.
+ */
+export function underTopBars(root: HTMLElement, skip?: Element): number {
+  const mid = root.offsetWidth / 2;
+  let y = EDGE;
+  for (const el of root.querySelectorAll<HTMLElement>(TOP_BARS)) {
+    if (el === skip || el.hidden || !el.offsetWidth || el.offsetTop > TOP_BAND) continue;
+    if (el.offsetLeft > mid + REACH || el.offsetLeft + el.offsetWidth < mid - REACH) continue;
+    y = Math.max(y, el.offsetTop + el.offsetHeight + GAP);
+  }
+  return y;
+}
+
 const SETTING: Record<NoticeKind, 'noticeLevel' | 'noticeKnack' | 'noticeDone' | 'noticeBirth'> = {
   level: 'noticeLevel',
   knack: 'noticeKnack',
@@ -51,7 +78,7 @@ export class Notices {
    */
   private readonly settledAt = performance.now() + 6000;
 
-  constructor(root: HTMLElement, private readonly game: Game) {
+  constructor(private readonly root: HTMLElement, private readonly game: Game) {
     this.el = document.createElement('div');
     this.el.className = 'notices';
     root.append(this.el);
@@ -71,6 +98,7 @@ export class Notices {
     const n = document.createElement('div');
     n.className = `notice notice-${kind}`;
     n.textContent = text;
+    if (!this.el.childElementCount) this.el.style.top = `${underTopBars(this.root)}px`;
     this.el.append(n);
     while (this.el.children.length > MOST) this.el.firstElementChild?.remove();
     setTimeout(() => n.classList.add('notice-going'), NOTICE_MS);
@@ -81,12 +109,13 @@ export class Notices {
   update(now: number): void {
     if (now - this.lookedAt >= LOOK_EVERY) {
       this.lookedAt = now;
+      if (this.el.childElementCount) this.el.style.top = `${underTopBars(this.root)}px`;
       for (const def of SKILL_DEFS) {
         const whole = Math.floor(this.game.skills.get(def.id) + 1e-9);
         const was = this.floors.get(def.id);
         this.floors.set(def.id, whole);
         // One whole number up and no more: a jump of several is the book arriving from the island, not a go.
-        if (was !== undefined && whole === was + 1 && now > this.settledAt) this.show('level', `${def.name} ${whole}`);
+        if (was !== undefined && whole === was + 1 && now > this.settledAt) this.show('level', `${def.name} is now ${whole}`);
       }
     }
     const busy = this.game.action;

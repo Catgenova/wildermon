@@ -1,5 +1,5 @@
 import { keyName, type Keybinds } from '../game/keybinds';
-import { clockLeft } from '../game/boons';
+import { clockLeft, REST_MULT } from '../game/boons';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
 import { share } from '../game/words';
 import { SKILL_DEFS } from '../game/skills';
@@ -107,6 +107,22 @@ function ordinal(n: number): string {
  */
 const HUD_EVERY = 100;
 
+/** Where the target panel sits from the top when nothing is in its way, and how far under whatever is. */
+const TARGET_TOP = 24;
+const TARGET_GAP = 8;
+
+/**
+ * Enter and Space on one of the hud's buttons press that button and nothing
+ * else. Left to reach the window they would also do what the island binds
+ * them to -- Enter opens the chat -- and the focus went there before the
+ * button was ever pressed, so none of these could be worked from a keyboard.
+ */
+function keepKeys(el: HTMLElement): void {
+  el.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target instanceof HTMLButtonElement) e.stopPropagation();
+  });
+}
+
 export class Hud {
   /** When the hud last drew itself, so it does so a few times a second. */
   private lastAt = -1e9;
@@ -117,6 +133,11 @@ export class Hud {
   private keyed: Array<{ btn: HTMLButtonElement; label: string; bind: string }> = [];
   private binds!: Keybinds;
   private nameEl: HTMLDivElement;
+  /** The status panel and the toolbar, which the target panel keeps out from under. */
+  private statusEl: HTMLDivElement;
+  private toolbarEl: HTMLDivElement;
+  /** Bottom and middle: the first-steps card over the action bar, stacked so neither can lie across the other. */
+  private stackEl = document.createElement('div');
   private posEl: HTMLDivElement;
   private fpsEl: HTMLDivElement;
   private actionEl: HTMLDivElement;
@@ -161,6 +182,8 @@ export class Hud {
   private beltEl: HTMLDivElement;
   private loopEls: HTMLButtonElement[] = [];
   private stopBtn: HTMLButtonElement;
+  /** The first-steps card's "Put it away", whose tooltip names the journal's key. */
+  private hushBtn: HTMLButtonElement | null = null;
   private beltDue = 0;
   private foodEl: HTMLDivElement;
   private foodBars = new Map<string, HTMLDivElement>();
@@ -173,6 +196,7 @@ export class Hud {
   ) {
     const status = document.createElement('div');
     status.className = 'hud-status';
+    this.statusEl = status;
     this.nameEl = document.createElement('div');
     this.nameEl.className = 'hud-name';
     status.append(this.nameEl);
@@ -195,26 +219,53 @@ export class Hud {
       const value = document.createElement('span');
       value.className = 'hud-bar-value';
       row.append(name, track, value);
-      // The way you stand in a fight, beside what it is spending: a click changes it, as the key does.
-      if (id === 'health') {
-        this.stanceBtn = document.createElement('button');
-        this.stanceBtn.type = 'button';
-        this.stanceBtn.className = 'hud-mini hud-stance';
-        this.stanceBtn.addEventListener('click', () => this.game.cycleStance());
-        row.append(this.stanceBtn);
-      }
-      if (id === 'hunger') {
-        this.eatBtn = document.createElement('button');
-        this.eatBtn.type = 'button';
-        this.eatBtn.className = 'hud-mini';
-        this.eatBtn.textContent = 'Eat';
-        this.eatBtn.title = 'Eat the best food you are carrying';
-        this.eatBtn.addEventListener('click', () => this.eatBest());
-        row.append(this.eatBtn);
-      }
       status.append(row);
       this.bars[id] = { fill, value };
     }
+    /*
+     * What is actually in you: four thin bars under the food bar. Eating well
+     * holds hunger and thirst off; eating well in all four teaches you more,
+     * and that reads off the shortest of them, so the short one is the one to
+     * look at. Each is named in full over its bar.
+     */
+    this.foodEl = document.createElement('div');
+    this.foodEl.className = 'hud-food';
+    for (const k of NUTRIENTS) {
+      const cell = document.createElement('div');
+      cell.className = 'hud-food-cell';
+      const label = document.createElement('span');
+      label.className = 'hud-food-label';
+      label.textContent = NUTRIENT_NAMES[k];
+      const track = document.createElement('div');
+      track.className = 'hud-food-track';
+      const fill = document.createElement('div');
+      fill.className = `hud-food-fill food-${k}`;
+      track.append(fill);
+      cell.append(label, track);
+      cell.title = `${NUTRIENT_NAMES[k]} — ${NUTRIENT_NOTES[k]}`;
+      this.foodBars.set(k, fill);
+      this.foodEl.append(cell);
+    }
+    status.append(this.foodEl);
+    /*
+     * The two things the bars ask of you, on a row of their own under them:
+     * the way you stand in a fight (a click changes it, as the key does) and
+     * eating. Beside their bars they cut those two bars short, and four bars
+     * of four lengths cannot be read against each other.
+     */
+    const acts = document.createElement('div');
+    acts.className = 'hud-acts';
+    this.stanceBtn = document.createElement('button');
+    this.stanceBtn.type = 'button';
+    this.stanceBtn.className = 'hud-mini hud-stance';
+    this.stanceBtn.addEventListener('click', () => this.game.cycleStance());
+    this.eatBtn = document.createElement('button');
+    this.eatBtn.type = 'button';
+    this.eatBtn.className = 'hud-mini';
+    this.eatBtn.textContent = 'Eat';
+    this.eatBtn.addEventListener('click', () => this.eatBest());
+    acts.append(this.stanceBtn, this.eatBtn);
+    status.append(acts);
     const footer = document.createElement('div');
     footer.className = 'hud-footer';
     this.posEl = document.createElement('div');
@@ -241,31 +292,6 @@ export class Hud {
     this.woundEl.className = 'hud-companion hud-wounds';
     this.woundEl.hidden = true;
     status.append(this.woundEl);
-    /*
-     * What is actually in you: four thin bars under the food bar. Eating well
-     * holds hunger and thirst off; eating well in all four teaches you more,
-     * and that reads off the shortest of them, so the short one is the one to
-     * look at.
-     */
-    this.foodEl = document.createElement('div');
-    this.foodEl.className = 'hud-food';
-    for (const k of NUTRIENTS) {
-      const cell = document.createElement('div');
-      cell.className = 'hud-food-cell';
-      const label = document.createElement('span');
-      label.className = 'hud-food-label';
-      label.textContent = NUTRIENT_NAMES[k].slice(0, 2);
-      const track = document.createElement('div');
-      track.className = 'hud-food-track';
-      const fill = document.createElement('div');
-      fill.className = `hud-food-fill food-${k}`;
-      track.append(fill);
-      cell.append(label, track);
-      cell.title = `${NUTRIENT_NAMES[k]} — ${NUTRIENT_NOTES[k]}`;
-      this.foodBars.set(k, fill);
-      this.foodEl.append(cell);
-    }
-    status.append(this.foodEl);
     this.gearEl = document.createElement('div');
     this.gearEl.className = 'hud-companion hud-gear';
     this.gearEl.hidden = true;
@@ -277,7 +303,6 @@ export class Hud {
     this.feedBtn.type = 'button';
     this.feedBtn.className = 'hud-mini';
     this.feedBtn.textContent = 'Feed';
-    this.feedBtn.title = 'Feed your companion the poorest thing it will eat';
     this.feedBtn.addEventListener('click', () => this.feedCompanion());
     this.companionEl.append(this.feedBtn);
     status.append(this.companionEl);
@@ -285,6 +310,7 @@ export class Hud {
 
     const toolbar = document.createElement('div');
     toolbar.className = 'toolbar';
+    this.toolbarEl = toolbar;
     /*
      * One button for all thirteen windows.
      *
@@ -339,12 +365,10 @@ export class Hud {
     this.queueEl.hidden = true;
     this.hintEl = document.createElement('div');
     this.hintEl.className = 'action-hint';
-    this.hintEl.textContent = 'Esc to stop · moving puts it down';
     this.stopBtn = document.createElement('button');
     this.stopBtn.type = 'button';
     this.stopBtn.className = 'tb-btn tb-small action-stop';
     this.stopBtn.textContent = 'Stop';
-    this.stopBtn.title = 'Put the job down and forget what is lined up (Esc)';
     this.stopBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.game.cancelAction();
@@ -367,10 +391,11 @@ export class Hud {
       e.stopPropagation();
       this.game.resumeQueue();
     });
-    this.actionEl.append(this.actionLabel, track, this.queueEl, this.goBtn, this.stopBtn, this.hintEl);
-    root.append(this.actionEl);
+    this.actionEl.append(this.actionLabel, this.goBtn, this.stopBtn, track, this.queueEl, this.hintEl);
+    this.stackEl.className = 'hud-stack';
+    root.append(this.stackEl);
 
-    // The target panel, top and middle, for what you are fighting or have marked.
+    // The target panel, top and middle, for what you are fighting or have marked; over the action bar on a phone (`placeTarget`).
     this.targetEl.className = 'hud-target';
     this.targetEl.hidden = true;
     this.targetName.className = 'hud-target-name';
@@ -386,7 +411,6 @@ export class Hud {
     this.targetNote.className = 'hud-target-note';
     this.targetConsider.className = 'hud-target-consider';
     this.targetEl.append(this.targetName, targetRow, this.targetIntent, this.targetConsider, this.targetNote);
-    root.append(this.targetEl);
 
     /*
      * What to do next, for somebody who came ashore ninety seconds ago.
@@ -407,11 +431,11 @@ export class Hud {
     this.guideEl.className = 'guide';
     this.guideEl.hidden = true;
     this.guideTitle = document.createElement('div');
-    this.guideTitle.className = 'guide-title';
+    this.guideTitle.className = 'steps-title';
     this.guideBody = document.createElement('div');
-    this.guideBody.className = 'guide-body';
+    this.guideBody.className = 'steps-body';
     const guideBar = document.createElement('div');
-    guideBar.className = 'guide-bar';
+    guideBar.className = 'steps-bar';
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'tb-btn tb-small';
@@ -425,7 +449,7 @@ export class Hud {
     hush.type = 'button';
     hush.className = 'tb-btn tb-small';
     hush.textContent = 'Put it away';
-    hush.title = 'Stop showing this. The journal (J) has all of it whenever you want it.';
+    this.hushBtn = hush;
     hush.addEventListener('click', (e) => {
       e.stopPropagation();
       this.game.settings.guide = false;
@@ -433,7 +457,8 @@ export class Hud {
     });
     guideBar.append(more, hush);
     this.guideEl.append(this.guideTitle, this.guideBody, guideBar);
-    root.append(this.guideEl);
+    this.stackEl.append(this.targetEl, this.guideEl, this.actionEl);
+    this.drawKeys();
 
     /*
      * The belt: the jobs you do most, hung on a worn toolbelt's loops and
@@ -500,6 +525,7 @@ export class Hud {
     });
     this.storeyEl.append(this.storeyUp, this.storeyLabel, this.storeyDown, this.cutBtn);
     root.append(this.storeyEl);
+    for (const el of [status, toolbar, this.stackEl, this.beltEl, this.storeyEl]) keepKeys(el);
   }
 
   /**
@@ -551,7 +577,12 @@ export class Hud {
       this.targetEl.hidden = true;
       return;
     }
-    this.targetEl.hidden = false;
+    // Placed as it comes up, and looked over once a second after, since the bars it keeps clear of can be dragged.
+    if (this.targetEl.hidden || --this.targetDue <= 0) {
+      this.targetEl.hidden = false;
+      this.targetDue = 10;
+      this.placeTarget();
+    }
     const def = g.creatures.species(c);
     const top = maxHealth(c, def);
     this.targetFill.style.width = `${Math.max(0, Math.min(1, c.health / top)) * 100}%`;
@@ -589,6 +620,28 @@ export class Hud {
     this.targetNote.textContent = note;
   }
 
+  /** Updates until the target panel is placed again. */
+  private targetDue = 0;
+
+  /**
+   * Put the target panel top and middle, under the status panel or the
+   * toolbar where either is in the way: the toolbar starts there. On a phone
+   * it sits in the stack over the action bar instead, where the CSS puts it.
+   */
+  private placeTarget(): void {
+    const t = this.targetEl;
+    if (t.parentElement?.parentElement?.classList.contains('narrow')) {
+      t.style.top = '';
+      return;
+    }
+    let top = TARGET_TOP;
+    // Measured against the interface, which the panel is centred in: a fixed box has no offset parent to measure from.
+    const w = t.offsetWidth, left = ((this.statusEl.parentElement?.clientWidth ?? 0) - w) / 2, right = left + w, h = t.offsetHeight;
+    const bars = [this.statusEl, this.toolbarEl].filter((b) => b.offsetLeft < right && b.offsetLeft + b.offsetWidth > left).sort((a, b) => a.offsetTop - b.offsetTop);
+    for (const b of bars) if (b.offsetTop < top + h && b.offsetTop + b.offsetHeight > top) top = b.offsetTop + b.offsetHeight + TARGET_GAP;
+    t.style.top = `${top}px`;
+  }
+
   /**
    * Put the current key on every button that names one.
    *
@@ -601,6 +654,16 @@ export class Hud {
       const codes = this.binds.codes(k.bind);
       k.btn.innerHTML = codes.length ? `${k.label} <kbd>${keyName(codes[0])}</kbd>` : k.label;
     }
+    const stop = this.keyWord('stop');
+    const journal = this.keyWord('win_journal');
+    if (this.stopBtn) this.stopBtn.title = `Put the job down and forget what is lined up${stop ? ` (${stop})` : ''}`;
+    if (this.hushBtn) this.hushBtn.title = `Stop showing this. The journal${journal ? ` (${journal})` : ''} has all of it whenever you want it.`;
+  }
+
+  /** The key a binding answers to just now, by name, or null when it is left unbound. */
+  private keyWord(bind: string): string | null {
+    const codes = this.binds.codes(bind);
+    return codes.length ? keyName(codes[0]) : null;
   }
 
   /** Move the view a storey up or down, starting from where the player stands: down to a cellar, where there is one. */
@@ -656,6 +719,14 @@ export class Hud {
     this.cutBtn.classList.toggle('active', s.cutaway);
   }
 
+  /** A node's tooltip, written only when it has changed. */
+  private readonly tips = new WeakMap<HTMLElement, string>();
+  private tip(el: HTMLElement, text: string): void {
+    if (this.tips.get(el) === text) return;
+    this.tips.set(el, text);
+    el.title = text;
+  }
+
   /** Write to a node only when what it would say has changed. */
   private say(el: HTMLElement, text: string): void {
     if (this.said.get(el) === text) return;
@@ -701,13 +772,17 @@ export class Hud {
     this.say(this.posEl, `${p.tileX}, ${p.tileY}  ·  h ${h.toFixed(0)}  ·  ${this.game.clock()}  ·  ${seasonLine(this.game.wallNow())}${p.swimming ? '  ·  swimming' : ''}${deed}${title ? `  ·  ${title}` : ''}`);
     // Rest and the knacks running off what you have eaten, when there are any.
     const rested = this.game.player.rested;
-    const boons = this.game.activeBoons();
-    const parts: string[] = [];
-    if (rested > 0) parts.push(`Rested ${clockLeft(rested)} · everything ×2`);
+    const knacks = this.game.activeBoons();
+    // Each a span that keeps itself on one line; being overloaded is said as a warning, since it slows you.
+    const parts: Array<{ text: string; warn?: boolean }> = [];
+    const push = (text: string, warn = false): void => {
+      parts.push({ text, warn });
+    };
+    if (rested > 0) push(`Rested ${clockLeft(rested)} · skill gain ×${REST_MULT}`);
     const favour = this.game.player.favour;
-    if (favour >= 1) parts.push(`Favour ${Math.floor(favour)} of ${Math.floor(favourCap(this.game.skills.get(FAITH)))}`);
+    if (favour >= 1) push(`Favour ${Math.floor(favour)} of ${Math.floor(favourCap(this.game.skills.get(FAITH)))}`);
     const over = this.game.overloaded();
-    if (over > 0) parts.push(`Overloaded by ${over.toFixed(0)} kg`);
+    if (over > 0) push(`Overloaded by ${over.toFixed(0)} kg`, true);
     /*
      * A light in your hand is a thing with a clock on it, so the clock is
      * shown — and so is what it is buying you, because the whole reason to
@@ -715,23 +790,32 @@ export class Hud {
      */
     const lamp = this.game.heldLight();
     if (lamp) {
-      parts.push(`${itemName(lamp)} lit · ${clockLeft(lamp.charges ?? 0)} left · sees ${Math.round(this.game.vision.sightRange())} tiles`);
+      push(`${itemName(lamp)} lit · ${clockLeft(lamp.charges ?? 0)} left · sees ${Math.round(this.game.vision.sightRange())} tiles`);
     } else if (this.game.darkness() > 0.45) {
-      parts.push(`Dark · you see ${Math.round(this.game.vision.sightRange())} tiles`);
+      push(`Dark · you see ${Math.round(this.game.vision.sightRange())} tiles`);
     }
     // What the ground under a loaded wheel is costing, when it is costing anything.
     const cart = this.game.driving();
     if (cart) {
       const def = TILE_DEFS[this.game.world.getTile(p.tileX, p.tileY)];
       const roll = groundRoll(def.roll, this.game.vehicleLoad(cart));
-      if (roll < 0.985) parts.push(`${def.name} underfoot · ${Math.round(roll * 100)}% of your pace`);
+      if (roll < 0.985) push(`${def.name} underfoot · ${Math.round(roll * 100)}% of your pace`);
     }
-    for (const b of boons) {
+    for (const b of knacks) {
       const name = SKILL_DEFS.find((d) => d.id === b.skill)?.name ?? b.skill;
-      parts.push(`${name} +${Math.round(b.bonus * 100)}% · ${clockLeft(b.until - this.game.time)}`);
+      push(`${name} skill gain +${Math.round(b.bonus * 100)}% · ${clockLeft(b.until - this.game.time)}`);
     }
     this.boonEl.hidden = !parts.length;
-    if (parts.length) this.say(this.boonEl, parts.join('  ·  '));
+    const boons = parts.map((p) => `${p.warn ? '!' : ''}${p.text}`).join('|');
+    if (parts.length && this.said.get(this.boonEl) !== boons) {
+      this.said.set(this.boonEl, boons);
+      this.boonEl.replaceChildren(...parts.map((p) => {
+        const span = document.createElement('span');
+        span.className = p.warn ? 'hud-boon hud-warn' : 'hud-boon';
+        span.textContent = p.text;
+        return span;
+      }));
+    }
     // The wind, which only matters when there is a sail over you.
     const boat = this.game.afloat();
     const sailing = boat && FURNITURE_BY_ID.get(boat.kind)?.boat?.sail;
@@ -805,7 +889,7 @@ export class Hud {
     // What a full table is worth to you: a fifth, or more for a Cook's Balanced Diet.
     const best = this.game.tableBest();
     const worth = Math.round((tableMul(n, best) - 1) * 100);
-    this.foodEl.title = `${fedWord(n)} — everything you do goes in ${worth}% faster. It reads off whichever of the four is shortest (${Math.round(balance(n) * 100)}%), so a full board is worth ${share(best)} and bread alone is worth nothing.`;
+    this.foodEl.title = `${fedWord(n)} — skill gain +${worth}%. It reads off whichever of the four is shortest (${Math.round(balance(n) * 100)}%), so a full board is worth ${share(best)} and bread alone is worth nothing.`;
     this.foodEl.classList.toggle('hud-food-full', balance(n) >= 0.999);
 
     const companion = this.game.creatures.active();
@@ -813,15 +897,19 @@ export class Hud {
       const hunger = companion.hunger < 0.3 ? 'hungry' : companion.hunger < 0.6 ? 'peckish' : 'fed';
       this.companionText.textContent = `${companion.name} · ♥ ${Math.ceil(companion.health)} · ${hunger} · ${companion.stance} `;
       if (!this.companionText.parentElement) this.companionEl.prepend(this.companionText);
-      this.feedBtn.disabled = !this.game.worstFoodFor(companion);
+      const feed = this.game.worstFoodFor(companion);
+      this.feedBtn.disabled = !feed;
+      this.tip(this.feedBtn, feed ? `Feed ${companion.name} ${itemName(feed).toLowerCase()}, the poorest thing it will eat` : `You carry nothing ${companion.name} will eat`);
       this.companionEl.hidden = false;
     } else this.companionEl.hidden = true;
-    this.eatBtn.disabled = !this.game.bestFood();
+    const food = this.game.bestFood();
+    this.eatBtn.disabled = !food;
+    this.tip(this.eatBtn, food ? `Eat ${itemName(food).toLowerCase()}, the best food you are carrying` : 'You are carrying nothing to eat');
     this.drawTarget();
     const stance = this.game.settings.fightStance;
     if (this.stanceBtn.dataset.stance !== stance) {
       this.stanceBtn.dataset.stance = stance;
-      this.stanceBtn.textContent = FIGHT_STANCE_NAMES[stance];
+      this.stanceBtn.textContent = `${FIGHT_STANCE_NAMES[stance]} stance`;
       this.stanceBtn.title = `${FIGHT_STANCE_NAMES[stance]} stance: ${stanceSays(stance)} Click to change it.`;
     }
     if (this.gridBtn) this.gridBtn.classList.toggle('active', this.game.settings.grid);
@@ -858,12 +946,15 @@ export class Hud {
       this.actionFill.style.width = '0%';
       this.queueEl.hidden = false;
       this.queueEl.textContent = `Waiting: ${this.queueWords(waiting)}`;
-      this.hintEl.textContent = 'Carry on to take them up · Esc to forget them';
+      const stop = this.keyWord('stop');
+      const on = this.keyWord('carry_on');
+      this.say(this.hintEl, `Carry on${on ? ` (${on})` : ''} to take them up${stop ? ` · ${stop} to forget them` : ''}`);
       return;
     }
     this.actionEl.hidden = false;
     this.goBtn.hidden = true;
-    this.hintEl.textContent = 'Esc to stop · moving puts it down';
+    const stop = this.keyWord('stop');
+    this.say(this.hintEl, `${stop ? `${stop} to stop · ` : ''}moving puts it down`);
     // A counted job says how far through the count it is: "3 of 10". Coming
     // back to an island mid-job, the island knows what is left and nobody
     // knows what was asked for, so it says that instead.
@@ -886,7 +977,7 @@ export class Hud {
     // What is lined up behind it, and how much room is left in your head.
     if (waiting.length) {
       this.queueEl.hidden = false;
-      this.queueEl.textContent = `Then: ${this.queueWords(waiting)} · ${waiting.length + 1}/${this.game.queueCapacity()}`;
+      this.queueEl.textContent = `Then: ${this.queueWords(waiting)} (${waiting.length + 1} of ${this.game.queueCapacity()} jobs held)`;
     } else this.queueEl.hidden = true;
   }
 

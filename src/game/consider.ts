@@ -1,7 +1,7 @@
 import { ACTION_BY_ID } from './actions';
 import { attackOf, BLOW_SHARE, bloodMul, type Creature } from './creatures';
 import {
-  ARROWS, blowEvery, blowOf, CONSIDER_EASY, CONSIDER_HARD, critMul, fightBase, myCritChance, headBlow, headHide, hideTakes, nockedArrow,
+  ARROWS, blowEvery, blowOf, CONSIDER_EASY, CONSIDER_HARD, critMul, myCritChance, headBlow, headHide, hideTakes, nockedArrow,
   stanceDealt, swungWith,
 } from './fight';
 import type { Game } from './game';
@@ -43,14 +43,16 @@ export function consider(g: Game, c: Creature): Consider {
       * hideTakes(def.hide, headBlow(head, bow)) * headHide(head, def.hide) * (1 + myCritChance(g, bow) * (critMul(g, bow) - 1));
     hit = hitChance(g, bow, held);
     const shoot = ACTION_BY_ID.get('shoot_creature');
-    secs = (shoot && fightBase(g, shoot)) || bow.swing;
+    // A draw as long as it takes in these hands (`Game.duration`), skill and all.
+    secs = shoot ? g.duration(shoot) : bow.swing;
   } else {
     const { def: w, item } = swungWith(g);
     blow = weaponDamage(g, w, item) * stanceDealt(g.settings.fightStance, (k, o) => g.perk(k, o)) * hideTakes(def.hide, blowOf(w))
       * (1 + myCritChance(g, w) * (critMul(g, w) - 1));
     hit = hitChance(g, w, item);
     const attack = ACTION_BY_ID.get('attack_creature');
-    secs = (attack && fightBase(g, attack)) || w.swing;
+    // A swing as long as it takes in these hands (`Game.duration`), skill and all.
+    secs = attack ? g.duration(attack) : w.swing;
   }
   hit *= bloodMul(c, 'evade');
   const mine = Math.max(1, Math.ceil(Math.max(0, c.health) / Math.max(1e-6, blow)));

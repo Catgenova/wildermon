@@ -111,6 +111,13 @@ export class GuidePanel {
     const grid = document.createElement('div');
     grid.className = 'guide-grid';
     const g = this.game.guide;
+    // How a shadow becomes a page, while there are shadows left.
+    if (guidePages().some((def) => !g.seen.has(def.id))) {
+      const how = document.createElement('div');
+      how.className = 'guide-how';
+      how.textContent = 'A kind is drawn and named the first time one is in sight. Click a card for its page.';
+      this.view.append(how);
+    }
     guidePages().forEach((def, i) => {
       const seen = g.seen.has(def.id);
       const card = document.createElement('button');

@@ -1,3 +1,5 @@
+import { keepControlKeys } from './controlkeys';
+
 /**
  * Find anything: a box to type in that finds a window, a recipe, a setting, a
  * page of the help, a window layout or a key by its name, and opens it.
@@ -5,7 +7,8 @@
  * Opened with its own key (`palette`, `/` out of the box) or Ctrl+K. Every
  * word typed has to be in what a row is called, or in the line under it; rows
  * whose name starts with what was typed come first, then rows whose name has
- * all of it, then the rest. Up and down choose, Enter opens, Esc shuts it.
+ * all of it, then the rest; with nothing typed, windows come first and recipes
+ * last (`KIND_ORDER`). Up and down choose, Enter opens, Esc shuts it.
  */
 
 export interface PaletteEntry {
@@ -22,6 +25,13 @@ export interface PaletteEntry {
 
 /** The most rows shown at once: enough to scroll a short word's worth, few enough to draw on every key. */
 const SHOWN = 60;
+
+/** With nothing typed, the order the sorts come in: what is opened most first, recipes and help last. */
+const KIND_ORDER = ['Window', 'Do', 'Layout', 'Setting', 'Help', 'Recipe'];
+const kindRank = (kind: string): number => {
+  const i = KIND_ORDER.indexOf(kind);
+  return i < 0 ? KIND_ORDER.length : i;
+};
 
 export class Palette {
   private readonly el: HTMLDivElement;
@@ -42,7 +52,8 @@ export class Palette {
     this.input.type = 'search';
     this.input.className = 'palette-input';
     this.input.id = 'palette-input';
-    this.input.placeholder = 'Find a window, recipe, setting, help page, layout or key…';
+    this.input.placeholder = 'Find a window, recipe, setting or help page…';
+    this.input.setAttribute('aria-label', 'Find a window, recipe, setting, help page, layout or key');
     this.input.autocomplete = 'off';
     this.input.spellcheck = false;
     this.list = document.createElement('div');
@@ -74,6 +85,7 @@ export class Palette {
         this.choose(this.shown[this.at]);
       }
     });
+    keepControlKeys(this.list);
     // A click anywhere outside the box puts it away.
     this.el.addEventListener('pointerdown', (e) => {
       if (e.target === this.el) this.close();
@@ -124,7 +136,7 @@ export class Palette {
 
   /** How well a row answers what was typed, lower first, or null for not at all. */
   private static rank(e: PaletteEntry, q: string, words: string[]): number | null {
-    if (!q) return 3;
+    if (!q) return kindRank(e.kind);
     const name = e.label.toLowerCase();
     const all = `${name} ${e.kind.toLowerCase()} ${(e.hint ?? '').toLowerCase()}`;
     if (!words.every((w) => all.includes(w))) return null;

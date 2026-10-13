@@ -15,6 +15,7 @@ import { listed, numberWord } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
 import { RING_REACH } from '../../render/renderer';
 import { FIRE_CAPACITY, fireBurnsFor, type PlacedCampfire } from '../../game/campfire';
+import { keepControlKeys } from '../controlkeys';
 
 interface Toggle {
   input: HTMLInputElement;
@@ -53,6 +54,8 @@ export class SettingsPanel {
     private readonly windows: WindowManager,
   ) {
     win.body.classList.add('settings-body');
+    // A slot waiting for a key takes Tab, Enter and Space as keys to bind.
+    keepControlKeys(win.body, 'button, select, summary, input[type="checkbox"]', () => this.grabbing !== null);
     const bar = document.createElement('div');
     bar.className = 'log-tabs';
     for (const [id, label, title] of [
@@ -98,6 +101,14 @@ export class SettingsPanel {
       display.append(row);
       this.toggles.push({ input, read });
     };
+    /** A heading over the run of rows after it on the Display tab. */
+    const head = (text: string): void => {
+      const h = document.createElement('h4');
+      h.className = 'keys-group';
+      h.textContent = text;
+      display.append(h);
+    };
+    head('Sound');
     /**
      * The one setting here that is not a yes or a no.
      *
@@ -108,7 +119,7 @@ export class SettingsPanel {
      */
     {
       const row = document.createElement('label');
-      row.className = 'setting-row';
+      row.className = 'setting-row setting-pick';
       const input = document.createElement('input');
       input.type = 'range';
       input.min = '0';
@@ -118,7 +129,7 @@ export class SettingsPanel {
       const text = document.createElement('span');
       const say = (): void => {
         const pc = Math.round(game.settings.volume * 100);
-        text.innerHTML = `<b>Volume &mdash; ${pc === 0 ? 'silent' : `${pc}%`}</b><small>Footfalls, tools and blows, placed where they are happening. Nothing is recorded: every sound is made out of noise and a few oscillators as it is wanted.</small>`;
+        text.innerHTML = `<b>Volume &mdash; ${pc === 0 ? 'silent' : `${pc}%`}</b><small>How loud footfalls, tools and blows are. Each one comes from its side of the screen, quieter the farther it is from the middle.</small>`;
       };
       say();
       input.addEventListener('input', () => {
@@ -137,9 +148,10 @@ export class SettingsPanel {
      * slider would slide out from under the drag that is setting it. The
      * number in the caption follows the drag, so you can see where you are.
      */
+    head('Interface');
     {
       const row = document.createElement('label');
-      row.className = 'setting-row';
+      row.className = 'setting-row setting-pick';
       const input = document.createElement('input');
       input.type = 'range';
       input.min = String(Math.round(UI_SIZE_MIN * 100));
@@ -172,7 +184,7 @@ export class SettingsPanel {
      */
     const choose = <T extends string | number>(label: string, hint: string, options: Array<[T, string]>, read: () => T, write: (v: T) => void): void => {
       const row = document.createElement('label');
-      row.className = 'setting-row';
+      row.className = 'setting-row setting-pick';
       const select = document.createElement('select');
       for (const [value, name] of options) {
         const o = document.createElement('option');
@@ -219,11 +231,12 @@ export class SettingsPanel {
       const of = (id: string): string => frameLabel(id).toLowerCase();
       choose<UiFrames>(
         'Window frames',
-        `Runecut only. The border round each window, ${RIM} pixels wide (${frameOddities(FRAME_RIM)} when themed; ${RIMS.phone} on a phone, ${RIMS.hud} on the status panel, ${RIMS.toolbar} on the toolbar). `
-          + `Themed: the border is drawn as the stuff of what the window holds, in ${FRAMES.length} kinds over ${framed} windows and bars: `
-          + `the pack in a ${of('inventory')}, a crate or the stores in a ${of('crate')}, crafting on a ${of('craft')}, events on a ${of('events')}, the map on ${of('map')} with a compass rose; `
-          + `a knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge (${frameOddities(FRAME_REACHES)}), and clicks go through it. Any other window has plain stone. `
-          + 'Stone: every border is the plain stone rim. The room inside a window is the same either way.',
+        `Runecut only. Themed: the border is drawn as the stuff of what the window holds, in ${FRAMES.length} kinds over ${framed} windows and bars: `
+          + `the pack in a ${of('inventory')}, a crate or the stores in a ${of('crate')}, crafting on a ${of('craft')}, events on a ${of('events')}, the map on ${of('map')} with a compass rose. `
+          + 'Any other window has plain stone. Stone: every border is the plain stone rim. The room inside a window is the same either way.'
+          + '<details class="setting-more"><summary>Border widths, and what stands past them</summary>'
+          + `The border round each window is ${RIM} pixels wide (${frameOddities(FRAME_RIM)} when themed; ${RIMS.phone} on a phone, ${RIMS.hud} on the status panel, ${RIMS.toolbar} on the toolbar). `
+          + `A knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge (${frameOddities(FRAME_REACHES)}), and clicks go through it.</details>`,
         [['themed', 'Themed'], ['stone', 'Stone']],
         () => game.settings.uiFrames,
         (v) => {
@@ -234,11 +247,13 @@ export class SettingsPanel {
     }
     add(
       'Frame life',
-      `Runecut, with themed frames, not on a phone's screen and not with Fast graphics. Small animals and lights on the window frames: ${lifeWords()}. `
-        + 'They keep to the frame and what stands past it, never over what is inside a window, and take no clicks. Not shown when your system asks for less motion.',
+      'Small animals and lights on the window frames. They keep to the frame and what stands past it, never over what is inside a window, and take no clicks. '
+        + 'Runecut with themed frames only; not on a phone\'s screen, with Fast graphics, or when your system asks for less motion.'
+        + `<details class="setting-more"><summary>What lives on which frame</summary><ul>${lifeWords().split('; ').map((w) => `<li>${w}</li>`).join('')}</ul></details>`,
       () => game.settings.uiLife,
       (v) => (game.settings.uiLife = v),
     );
+    head('Performance');
     choose<'full' | 'fast'>(
       'Graphics',
       `Fast draws ${FAST_DPR} pixel for each screen pixel on a high-density screen instead of up to ${FULL_DPR}, `
@@ -281,24 +296,7 @@ export class SettingsPanel {
       row.append(text, go);
       display.append(row);
     }
-    /*
-     * How you look, chosen on the account page as an account is made: this
-     * goes back there, to the same creator, on the look you have on. Only on
-     * an island, where there is an account to keep it with.
-     */
-    if (openLook) {
-      const row = document.createElement('div');
-      row.className = 'setting-row setting-look';
-      const text = document.createElement('span');
-      text.innerHTML = '<b>How you look</b><small>Leaves the island for the character creator you started in: build, skin, hair, hair colour, eyes, beard, shirt and trousers. <i>Step ashore</i> there wears the new look and brings you back; leaving by <i>On to the island</i> changes nothing.</small>';
-      const open = document.createElement('button');
-      open.type = 'button';
-      open.className = 'tb-btn tb-small';
-      open.textContent = 'Customize character';
-      open.addEventListener('click', openLook);
-      row.append(text, open);
-      display.append(row);
-    }
+    head('The island view');
     add('Show tile grid', 'Outline every tile. Also toggled with G.', () => game.settings.grid, (v) => (game.settings.grid = v));
     add(
       'Show the first-steps card',
@@ -345,6 +343,8 @@ export class SettingsPanel {
       () => game.settings.deedBorder,
       (v) => (game.settings.deedBorder = v),
     );
+    add('Rings over fires, smelters and kilns', `Over each one within ${RING_REACH} tiles: an outer ring of its fuel, full at ${fireBurnsFor({ fuel: FIRE_CAPACITY } as PlacedCampfire)} of burning, orange while it burns and grey while it is cold; an inner ring of how far the piece at the front of it has come; and a gold dot when something is finished and waiting to be taken out.`,
+      () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
 
     /*
      * What a craft may take. "A toggle in settings for allowing or
@@ -353,10 +353,7 @@ export class SettingsPanel {
      * reach the island as well (`craftPrefsChanged`), which is where a job's
      * stock is spent.
      */
-    const craftHead = document.createElement('h4');
-    craftHead.className = 'keys-group';
-    craftHead.textContent = 'Crafting';
-    display.append(craftHead);
+    head('Crafting');
     const rareNames = RARITIES.slice(1).map((r) => r.name);
     const rareWords = `${rareNames.slice(0, -1).join(', ')} or ${rareNames[rareNames.length - 1]}`;
     add(
@@ -382,10 +379,7 @@ export class SettingsPanel {
      * Fighting: whether a bite turns you on what bit you. Kept on the island as
      * well (`fightPrefsChanged`), which is where the bite lands.
      */
-    const fightHead = document.createElement('h4');
-    fightHead.className = 'keys-group';
-    fightHead.textContent = 'Fighting';
-    display.append(fightHead);
+    head('Fighting');
     add(
       'Turn on what bites you',
       `When something wild bites you and your feet have been still for ${FIGHT_BACK_STILL} seconds, you swing back at it until it is dead or out of reach, and the job in hand waits at the front of the line. A bite while you walk never turns you round. Untick to fight only what you attack yourself.`,
@@ -402,22 +396,20 @@ export class SettingsPanel {
       (v) => (game.settings.compactFight = v),
     );
 
-    add('Rings over fires, smelters and kilns', `Over each one within ${RING_REACH} tiles: an outer ring of its fuel, full at ${fireBurnsFor({ fuel: FIRE_CAPACITY } as PlacedCampfire)} of burning, orange while it burns and grey while it is cold; an inner ring of how far the piece at the front of it has come; and a gold dot when something is finished and waiting to be taken out.`,
-      () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
-
     // Notices (src/ui/notices.ts): a line near the top of the screen, gone after a few seconds; the event log says the same either way.
-    const noticeHead = document.createElement('h4');
-    noticeHead.className = 'keys-group';
-    noticeHead.textContent = 'Notices';
-    display.append(noticeHead);
+    head('Notices');
     const seconds = Math.round(NOTICE_MS / 1000 * 10) / 10;
-    add('A skill at a new whole number', `A line at the top of the screen for ${seconds} seconds when a skill reaches its next whole number, naming the skill and the number.`,
+    const noticeLead = document.createElement('p');
+    noticeLead.className = 'keys-lead';
+    noticeLead.textContent = `Each is a line at the top of the screen for ${seconds} seconds. The event log says the same whether they are on or off.`;
+    display.append(noticeLead);
+    add('A skill at a new whole number', `A line for ${seconds} seconds when a skill reaches its next whole number, naming the skill and the number.`,
       () => game.settings.noticeLevel, (v) => (game.settings.noticeLevel = v));
-    add('A knack', `A line at the top of the screen for ${seconds} seconds when a go leaves a knack behind.`,
+    add('A knack', `A line for ${seconds} seconds when a go leaves a knack behind.`,
       () => game.settings.noticeKnack, (v) => (game.settings.noticeKnack = v));
-    add('Work done', `A line at the top of the screen for ${seconds} seconds when a job and everything queued behind it is finished, after ${DONE_AFTER} seconds or more of work. Not when you stop it yourself.`,
+    add('Work done', `A line for ${seconds} seconds when a job and everything queued behind it is finished, after ${DONE_AFTER} seconds or more of work. Not when you stop it yourself.`,
       () => game.settings.noticeDone, (v) => (game.settings.noticeDone = v));
-    add('A birth', `A line at the top of the screen for ${seconds} seconds when one of your wildermon gives birth.`,
+    add('A birth', `A line for ${seconds} seconds when one of your wildermon gives birth.`,
       () => game.settings.noticeBirth, (v) => (game.settings.noticeBirth = v));
 
     /**
@@ -433,6 +425,7 @@ export class SettingsPanel {
      * session never asks anybody anything, and a browser that cannot reach the
      * keeper is told the truth about what it can prove, which is nothing.
      */
+    head('Account');
     const who = document.createElement('p');
     who.className = 'setting-note';
     display.append(who);
@@ -448,16 +441,32 @@ export class SettingsPanel {
       (name) => { if (name) sayWho(`Signed in as ${name}.`, 'Change account'); },
       () => {},
     );
+    /*
+     * How you look, chosen on the account page as an account is made: this
+     * goes back there, to the same creator, on the look you have on. Only on
+     * an island, where there is an account to keep it with.
+     */
+    if (openLook) {
+      const row = document.createElement('div');
+      row.className = 'setting-row setting-look';
+      const text = document.createElement('span');
+      text.innerHTML = '<b>How you look</b><small>Leaves the island for the character creator you started in: build, skin, hair, hair colour, eyes, beard, shirt and trousers. <i>Step ashore</i> there wears the new look and brings you back; leaving by <i>On to the island</i> changes nothing.</small>';
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'tb-btn tb-small';
+      open.textContent = 'Customize character';
+      open.addEventListener('click', openLook);
+      row.append(text, open);
+      display.append(row);
+    }
 
     // ---- The keys ----
     const lead = document.createElement('p');
     lead.className = 'keys-lead';
     lead.innerHTML =
-      '<b>Click to walk.</b> A left click sets off for a tile and a right click asks what can be done to it; ' +
-      'the keys below move the <i>view</i> and open things, and never move you. ' +
-      'Click a key to set it, then press the one you want — <kbd>Esc</kbd> to think better of it, ' +
-      '<kbd>Backspace</kbd> to leave it unbound. The number keys <kbd>1</kbd>–<kbd>0</kbd> are not here: ' +
-      'they always answer to whatever the Tile window or the toolbelt is offering.';
+      '<b>Click a key to set it</b>, then press the one you want: <kbd>Esc</kbd> leaves it as it was, <kbd>Backspace</kbd> leaves it unbound. ' +
+      'These keys move the <i>view</i> and open things, and never move you: a left click walks to a tile and a right click asks what can be done to it. ' +
+      'The number keys <kbd>1</kbd>–<kbd>0</kbd> are not listed: they always answer to whatever the Tile window or the toolbelt is offering.';
     keyPage.append(lead);
 
     this.note = document.createElement('p');
@@ -509,10 +518,14 @@ export class SettingsPanel {
     reset.className = 'tb-btn tb-small';
     reset.textContent = 'Put the keys back';
     reset.title = 'Every key back to what it was out of the box';
+    // Every key you have set goes at once, so it is asked first.
     reset.addEventListener('click', () => {
       this.stopListening();
-      this.keys.reset();
-      this.say('Back to the keys it came with.');
+      void game.hooks.confirm('Put every key back to how it came? Every key you have set is lost.').then((yes) => {
+        if (!yes) return;
+        this.keys.reset();
+        this.say('Back to the keys it came with.');
+      });
     });
     foot.append(reset);
     keyPage.append(foot);

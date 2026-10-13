@@ -224,7 +224,8 @@ body {
   align-items: center;
   justify-content: center;
   background: #12395f;
-  color: var(--ui-text);
+  /* Its own light ink, not the interface's: Runecut's by day is dark, and the sea under it is darker. */
+  color: #e9e1cf;
   font: var(--ui-font);
   letter-spacing: 0.04em;
   z-index: 50;
@@ -255,7 +256,7 @@ body {
 }
 
 .boot-bar {
-  height: 3px;
+  height: 4px;
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.14);
   overflow: hidden;
@@ -283,7 +284,7 @@ body {
 /* The seconds, which only appear once a step has taken long enough to wonder. */
 .boot-now b {
   font-weight: normal;
-  opacity: 0.5;
+  opacity: 0.7;
   font-variant-numeric: tabular-nums;
 }
 
@@ -291,7 +292,8 @@ body {
   margin: 0;
   padding: 0;
   list-style: none;
-  opacity: 0.4;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
   font-size: 0.85em;
   display: flex;
   flex-direction: column;
@@ -299,7 +301,7 @@ body {
 }
 
 @keyframes boot-pulse {
-  0%, 100% { opacity: 0.55; }
+  0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
 }
 
@@ -401,6 +403,12 @@ body {
   display: none !important;
 }
 
+/* Focus that can be seen, in Classic: two pixels of its accent rather than the browser's ring. Runecut's is the rune's amber (below). */
+[data-ui='classic'] :focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 1px;
+}
+
 kbd {
   display: inline-block;
   padding: 0 4px;
@@ -450,6 +458,13 @@ kbd {
   touch-action: none;
 }
 
+/* A title longer than a narrow window has room for ends in an ellipsis rather than running under its buttons. */
+.win-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .win-buttons {
   display: inline-flex;
   gap: 2px;
@@ -464,7 +479,8 @@ kbd {
   border-radius: 3px;
   background: transparent;
   color: var(--ui-dim);
-  font: 16px/1 inherit;
+  /* A face that has the signs: `inherit` cannot stand in a `font` shorthand, which left these in the browser's own Arial, whose ◐ is a sliver. */
+  font: 16px/1 'Segoe UI', system-ui, sans-serif;
   cursor: pointer;
 }
 
@@ -537,11 +553,13 @@ kbd {
 
 /* What's new: a heading a day, a list a deploy, and what this browser had not shown ruled in the accent. */
 .news-day {
-  margin: 10px 0 6px;
-  color: var(--ui-dim);
-  font-size: 11px;
+  margin: 14px 0 6px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-accent);
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -562,6 +580,27 @@ kbd {
 
 .news-new {
   border-left-color: var(--ui-accent);
+}
+
+/* Each deploy apart from the one before it on the same day. */
+.news-entry + .news-entry {
+  padding-top: 8px;
+  border-top: 1px dashed var(--t-rule, rgba(107, 88, 54, 0.4));
+}
+
+/* An entry this browser had not shown, tagged as new over its first line. */
+.news-new::before {
+  content: 'New';
+  display: inline-block;
+  margin: 0 0 4px -12px;
+  padding: 0 5px;
+  border: 1px solid var(--ui-accent);
+  border-radius: 2px;
+  color: var(--ui-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* HUD ------------------------------------------------------------------ */
@@ -592,9 +631,23 @@ kbd {
   font-size: 11px;
 }
 
-/* The food row carries an Eat button, so it gets a fourth column. */
-.hud-bar-row:has(.hud-mini) {
-  grid-template-columns: 52px 1fr 36px auto;
+/* Under the bars: the stance and Eat, the two things the bars ask of you. */
+.hud-acts {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+
+.hud-acts .hud-mini {
+  flex: 1 1 auto;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.hud-acts .hud-mini:not(.hud-stance) {
+  flex: 0 0 auto;
+  min-width: 56px;
 }
 
 .hud-bar-label {
@@ -659,16 +712,25 @@ kbd {
   transition: transform 0.25s ease;
 }
 
-/* Rest and affinities: the same row as a companion, in a quieter colour. */
-.hud-boons {
+/* Rest and affinities: the same row as a companion, in a quieter colour; one to a line, so each reads whole. */
+.hud-companion.hud-boons {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
   color: var(--t-good, #9ec27a);
-  flex-wrap: wrap;
+}
+
+/* Being overloaded slows you, so it is said as a warning. */
+.hud-boon.hud-warn {
+  color: var(--t-bad, #e08a72);
+  font-weight: 600;
 }
 
 /* The journal: a tick, the goal, and a quiet hint after it. */
 .goal-row {
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 7px;
+  gap: 0 7px;
 }
 
 .goal-tick {
@@ -709,6 +771,29 @@ kbd {
   padding: 2px 8px 6px;
 }
 
+/* Down to the narrowest the window goes: the controls wrap, and so do a chip's figures, rather than run off the side. */
+.pals-body .panel-bar {
+  flex-wrap: wrap;
+}
+
+.pals-list :is(.trait-chip, .worth-tag) {
+  max-width: 100%;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+/* In a narrow window the name keeps a line of its own, and the flags, level and ⋯ go under it. */
+.pal-head {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+.pal-name {
+  flex-basis: 8em;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
 .pal-card {
   margin: 4px 0 8px;
   padding: 6px 8px;
@@ -737,11 +822,6 @@ kbd {
 .pal-info {
   margin-top: 4px;
   color: var(--ui-dim);
-  font-size: 11px;
-}
-
-.tb-small {
-  padding: 1px 7px;
   font-size: 11px;
 }
 
@@ -848,7 +928,7 @@ kbd {
 #ui.narrow .win {
   left: 12px !important;
   width: calc(100% - 24px) !important;
-  max-height: calc(100% - 300px);
+  /* How tall: between the bars and the event log, the first-steps card or the spell bar, measured (`WindowManager.footFor`). */
   resize: none;
 }
 
@@ -862,19 +942,20 @@ kbd {
   width: 100%;
 }
 
-/*
- * The Eat button sits beside the reading, not under it.
- *
- * The row is a three-column grid and the button is a fourth child, so it wrapped
- * onto a line of its own and pushed Water out of step with Food.
- */
-#ui.narrow .hud-bar-row:has(button) {
-  grid-template-columns: 46px 1fr 30px auto;
+#ui.narrow .hud-acts {
+  grid-column: 1 / -1;
+  margin: 3px 0 1px;
 }
 
-#ui.narrow .hud-bar-row button {
-  padding: 0 5px;
-  font-size: 10px;
+/* Height is what a phone is short of: rest and the rest go side by side, each still whole. */
+#ui.narrow .hud-companion.hud-boons {
+  flex-direction: row;
+  flex-wrap: wrap;
+  column-gap: 14px;
+}
+
+#ui.narrow .hud-boon {
+  white-space: nowrap;
 }
 
 #ui.narrow .toolbar {
@@ -909,24 +990,88 @@ kbd {
   color: var(--ui-accent);
 }
 
+/* Open or on, in Classic: filled with the accent as well as edged in it, so an open tab is told from one that only has news waiting (`.log-waiting`). Runecut warms its tile instead. */
+[data-ui='classic'] .tb-btn:is(.active, .tb-on) {
+  background: linear-gradient(rgba(227, 182, 87, 0.32), rgba(227, 182, 87, 0.12)), linear-gradient(#3a3128, #241f19);
+}
 
-.action-bar {
+/*
+ * A small button, for an action on a row or beside a field: one size down from
+ * the look's own writing and a little less padding. After `.tb-btn` and as
+ * plain a selector, so it wins over the full size and a screen's own size for
+ * one of its buttons (`.deed-tool`, `.social-do`) still wins over it.
+ */
+.tb-small {
+  padding: 2px 7px;
+  font-size: calc(1rem - 1px);
+}
+
+@media (pointer: coarse) {
+  .tb-small {
+    padding: 5px 9px;
+  }
+}
+
+/* Can't be pressed just now: faded, and pointing at it lights nothing. */
+.tb-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+[data-ui='classic'] .tb-btn:disabled:not(.active, .tb-on):hover {
+  border-color: #3f3428;
+  color: var(--ui-text);
+}
+
+
+/*
+ * Bottom and middle, one over another: the target panel (on a phone), the
+ * first-steps card and the action bar. A column rather than three guesses at
+ * each other's heights, which is how the card came to lie across the bar's
+ * Stop button. No transform and no z-index of its own, so it makes no
+ * stacking context and the action bar can stand over the windows by itself.
+ */
+.hud-stack {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none !important;
+}
+
+/* Its Stop is the one thing you reach for in a hurry, so no window covers it. */
+.action-bar {
+  position: relative;
+  z-index: 5100;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  column-gap: 6px;
   width: 300px;
-  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
   padding: 8px 10px;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
   box-shadow: 0 0 0 1px var(--t-ring, rgba(0, 0, 0, 0.6));
-  text-align: center;
+  text-align: left;
   pointer-events: none !important;
+}
+
+.action-bar > :is(.action-track, .action-queue, .action-hint) {
+  grid-column: 1 / -1;
 }
 
 .action-label {
   margin-bottom: 5px;
+  overflow: hidden;
   color: var(--ui-accent);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
 }
 
 .action-track {
@@ -959,32 +1104,35 @@ kbd {
  * takes itself away once the first chapter of the journal is done.
  */
 .guide {
-  position: absolute;
-  left: 50%;
-  bottom: 118px;
-  width: min(430px, calc(100vw - 32px));
+  width: min(430px, calc(100% - 32px));
   padding: 9px 11px 8px;
   border: 1px solid var(--t-line-2, #5e4a2c);
   border-radius: 4px;
   background: var(--t-panel, rgba(26, 22, 18, 0.94));
-  transform: translateX(-50%);
   pointer-events: auto;
 }
 
-.guide-title {
+/* Its own names, apart from the Field guide's (`.guide-title` and the rest, src/ui/panels/guide.ts). */
+.steps-title {
   color: var(--ui-accent);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 
-.guide-body {
+[data-ui='runecut'] .steps-title {
+  font-family: var(--rc-title-font);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.steps-body {
   margin-top: 4px;
   color: var(--ui-text);
   font-size: 12px;
   line-height: 1.45;
 }
 
-.guide-bar {
+.steps-bar {
   display: flex;
   gap: 6px;
   margin-top: 7px;
@@ -1068,6 +1216,100 @@ kbd {
   width: 52px;
 }
 
+/* The market's six tabs wrap rather than run past a narrow window's edge. */
+.market-tabs {
+  flex-wrap: wrap;
+}
+
+/* A row's words: what it is, and under it, smaller, anything more. */
+.market-what {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.market-what small,
+.market-where {
+  display: block;
+  color: var(--ui-dim);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.market-where {
+  margin: -2px 0 2px;
+}
+
+.log-tabs.market-tabs .log-tab {
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+/* A thing for sale: its name, its price in a column of its own, and the button, which never moves. */
+.market-good {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.market-cost {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.market-acts {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+/* The boxes and the button under an offer or a parcel: they wrap rather than run off the window. */
+.market-bar {
+  flex-wrap: wrap;
+}
+
+.market-bar .market-field {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.market-who {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 160px;
+}
+
+.market-page {
+  container-type: inline-size;
+}
+
+/* A window made narrow from its grip: the price boxes give up some of their width. */
+@container (max-width: 240px) {
+  .market-price {
+    width: 52px;
+  }
+
+  .market-good {
+    gap: 4px;
+  }
+
+  /* An offer, an order or a parcel takes the whole line, and its buttons the next. */
+  .market-row {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .market-row > .market-what {
+    flex-basis: 100%;
+  }
+}
+
+.market-note-input {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
 /* A place on a leaderboard: its number in a column of its own, and yours picked out. */
 .board-rank {
   min-width: 2.2em;
@@ -1079,6 +1321,56 @@ kbd {
   color: var(--ui-accent);
 }
 
+/* The skill a board is shown for: no wider than the page. */
+.board-pick {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* What each column of a board is. */
+.board-cols {
+  border-bottom: 1px solid var(--ui-border);
+  color: var(--ui-dim);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.board-cols .skill-note {
+  opacity: 1;
+  font-size: inherit;
+}
+
+.board-cols span:not(.board-rank) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-who {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Your own place on a board, said as well as coloured. */
+.board-you {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-size: 10px;
+  vertical-align: 1px;
+}
+
+/* What a board ranks by: read before the board, so it is not faint. */
+.board-note,
+.win:is([data-id='market'], [data-id='keeper']) .market-note {
+  opacity: 1;
+}
+
 /*
  * The field guide: a card a kind on the index, drawn and named once it has
  * been seen and a shadow until then, and a page for each.
@@ -1087,6 +1379,12 @@ kbd {
   padding: 0 2px 6px;
   color: var(--ui-accent);
   font-size: 12px;
+}
+
+.guide-how {
+  margin: 0 2px 6px;
+  color: var(--ui-dim);
+  font-size: 11px;
 }
 
 .guide-grid {
@@ -1130,7 +1428,7 @@ kbd {
 .guide-tags {
   display: flex;
   gap: 3px;
-  min-height: 13px;
+  min-height: 14px;
 }
 
 .guide-tag {
@@ -1138,8 +1436,8 @@ kbd {
   border: 1px solid var(--t-good-line, #6f9a6a);
   border-radius: 2px;
   color: var(--t-good, #a8d08a);
-  font-size: 9px;
-  line-height: 11px;
+  font-size: 10px;
+  line-height: 12px;
 }
 
 .guide-picture {
@@ -1214,9 +1512,9 @@ kbd {
   line-height: 1.4;
 }
 
-/* The one control on the action bar that can be clicked. */
+/* The controls on the action bar that can be clicked, on its first line beside what it is doing. */
 .action-stop {
-  margin-top: 5px;
+  margin-bottom: 5px;
   pointer-events: auto !important;
 }
 
@@ -1276,9 +1574,19 @@ kbd {
   text-overflow: ellipsis;
 }
 
-/* Nothing hung on it yet, or nothing it can do just now. */
+/* Nothing hung on it yet: a dashed loop and a quiet word, still readable against the night. */
 .belt-loop.belt-empty {
-  opacity: 0.45;
+  border-style: dashed;
+}
+
+.belt-loop.belt-empty .belt-what {
+  color: var(--ui-dim);
+  font-style: italic;
+}
+
+.belt-loop:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 1px;
 }
 
 .belt-loop.belt-barred .belt-what,
@@ -1309,15 +1617,21 @@ kbd {
   position: relative;
   display: flex;
   gap: 3px;
-  padding-top: 12px;
+  padding-top: 14px;
 }
 
+/* The school over each group, on a plate of its own so it reads over any ground. */
 .spell-cap {
   position: absolute;
   top: 0;
-  left: 1px;
-  color: var(--ui-dim);
-  font-size: 9px;
+  left: 0;
+  padding: 0 5px;
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-bottom: 0;
+  font-size: 10px;
+  line-height: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1328,8 +1642,8 @@ kbd {
   flex-direction: column;
   align-items: flex-start;
   justify-content: space-between;
-  width: 66px;
-  height: 38px;
+  width: 76px;
+  height: 44px;
   padding: 3px 5px;
   overflow: hidden;
   font: inherit;
@@ -1357,17 +1671,60 @@ kbd {
   font-weight: bold;
 }
 
+/* Two lines of name before it is cut, which most names fit whole. */
 .spell-name {
   position: relative;
+  display: -webkit-box;
   max-width: 100%;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  line-height: 1.15;
+  text-align: left;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
-/* Nothing in it yet. */
+/* Nothing in it yet: a socket rather than a faded button, and it says so. */
 .spell-slot.spell-empty {
-  opacity: 0.45;
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.spell-slot.spell-empty .spell-name {
+  color: var(--ui-dim);
+  font-style: italic;
+}
+
+/* The seconds of rest left, beside the key. */
+.spell-left {
+  margin-left: 5px;
+  color: var(--ui-text);
+  font-weight: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+/* On a phone the bar is stretched across the foot of the screen, each slot a share of it. */
+#ui.narrow .spell-bar {
+  left: 8px;
+  right: 8px;
+  gap: 5px;
+  transform: none;
+}
+
+/* And without the school over each group, which a phone has no height for under its windows: the gaps still group them. */
+#ui.narrow .spell-group {
+  flex-basis: 0;
+  min-width: 0;
+  padding-top: 0;
+}
+
+#ui.narrow .spell-cap {
+  display: none;
+}
+
+#ui.narrow .spell-slot {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
 }
 
 /* How much of a spell's rest is left, drawn down from the top as it runs out. */
@@ -1383,6 +1740,42 @@ kbd {
 
 .spell-slot.spell-resting .spell-name {
   color: var(--ui-dim);
+}
+
+/* Favour and Calm at the head of the Faith window: a bar like the status panel's, and its numbers. */
+.faith-stand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 2px;
+}
+
+.faith-meter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  font-size: 12px;
+}
+
+.faith-meter-label {
+  min-width: 4.2em;
+  color: var(--ui-text);
+}
+
+.faith-meter {
+  flex: 1 1 60px;
+}
+
+.faith-meter-fill {
+  display: block;
+  background: linear-gradient(color-mix(in srgb, var(--ui-accent) 65%, #fff), var(--ui-accent));
+}
+
+/* A tier's one reason, under its head, said quietly: it is about the tier, not an error. */
+.trade-tier > .trade-why {
+  color: var(--ui-dim);
+  font-style: italic;
 }
 
 /* A patron's alignment, on its card in the Faith window. */
@@ -1410,9 +1803,15 @@ kbd {
 
 /* Context menu & tooltip ------------------------------------------------ */
 
+/* Never wider or taller than the screen: a long list scrolls inside itself rather than running off the bottom. */
 .ctx-menu {
   position: absolute;
   min-width: 170px;
+  max-width: calc(100% - 8px);
+  max-height: calc(100% - 8px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
   padding: 3px;
   background: var(--ui-bg-2);
   border: 1px solid var(--ui-border-light);
@@ -1427,6 +1826,8 @@ kbd {
   color: var(--ui-accent);
   font-weight: 600;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* What a prospector read here, under the name and above the jobs. */
@@ -1468,6 +1869,68 @@ kbd {
   text-overflow: ellipsis;
   color: var(--ui-dim);
   font-size: 11px;
+}
+
+/* The label takes the room, so whatever follows it sits at the row's end. */
+.ctx-item > .ctx-label {
+  flex: 1 1 auto;
+}
+
+/* The keyboard's place in the menu, as plain to see as the pointer's. */
+.ctx-item:focus {
+  outline: none;
+}
+
+.ctx-item:focus-visible {
+  background: var(--t-wash, rgba(227, 182, 87, 0.18));
+  box-shadow: inset 2px 0 0 var(--ui-accent);
+}
+
+/* A line of information in the list: not a job, so neither greyed as refused nor lit under the pointer. */
+#ui .ctx-item.ctx-info,
+#ui .ctx-item.ctx-info:hover {
+  background: transparent;
+  box-shadow: none;
+  color: var(--ui-dim);
+  font-style: italic;
+  white-space: normal;
+  cursor: default;
+}
+
+/* A toggle's tick, in a column of its own so the labels stay in line whether it is on or off. */
+.ctx-tick {
+  flex: 0 0 auto;
+  width: 12px;
+  margin-right: -8px;
+  color: var(--ui-accent);
+  font-weight: 700;
+}
+
+/* The key that does the same, at the row's end. */
+.ctx-shortcut {
+  flex: 0 0 auto;
+  min-width: 18px;
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+/*
+ * On a phone a row may wrap: a note or a reason cut off with an ellipsis
+ * says nothing to a finger, which cannot hover for the rest of it. So the
+ * label keeps its line and what follows goes under it, in full.
+ */
+#ui.narrow .ctx-item {
+  flex-wrap: wrap;
+  row-gap: 1px;
+  white-space: normal;
+}
+
+#ui.narrow .ctx-item > :is(.ctx-hint, .ctx-note) {
+  order: 1;
+  flex: 1 0 100%;
+  max-width: none;
+  overflow: visible;
 }
 
 /*
@@ -1529,8 +1992,9 @@ kbd {
 
 .keys-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px 8px;
   padding: 4px 2px;
 }
 
@@ -1538,8 +2002,9 @@ kbd {
   border-top: 1px solid var(--t-rule, rgba(107, 88, 54, 0.35));
 }
 
+/* What a key does, with its two keys beside it; under it when the window is too narrow for both. */
 .keys-what {
-  flex: 1 1 auto;
+  flex: 1 1 120px;
   min-width: 0;
 }
 
@@ -1557,6 +2022,7 @@ kbd {
   display: flex;
   flex: 0 0 auto;
   gap: 4px;
+  margin-left: auto;
 }
 
 .keys-key {
@@ -1624,6 +2090,42 @@ kbd {
 
 .setting-look > span { flex: 1 1 auto; }
 .setting-look > .tb-btn { flex: 0 0 auto; }
+
+/*
+ * A row with a slider or a list: its name and the control on one line, what
+ * it does under both at the full width. The control drops under the name when
+ * the window is too narrow for the two side by side.
+ */
+.setting-pick {
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 3px;
+}
+
+.setting-pick > span { display: contents; }
+.setting-pick b { flex: 1 1 110px; order: 0; }
+.setting-pick > :is(input, select) { flex: 0 0 auto; order: 1; margin: 0; }
+.setting-pick > input[type='range'] { width: 120px; max-width: 100%; }
+.setting-pick > select { min-width: 96px; max-width: 100%; }
+.setting-pick small { flex: 1 1 100%; order: 2; }
+
+/* More of a description than most want, folded under a line to open it. */
+.setting-more { margin-top: 3px; }
+.setting-more summary { width: fit-content; cursor: pointer; color: var(--ui-accent); }
+.setting-more ul { margin: 3px 0 0; padding-left: 16px; }
+
+/* The first heading or note on a settings page needs no rule above it. */
+.settings-page > :is(.keys-group, .setting-note):first-child { margin-top: 2px; }
+.settings-page > .setting-note:first-child,
+.settings-page > .keys-group + .setting-note { padding-top: 0; border-top: 0; }
+.settings-page > .keys-group + .setting-note { margin-top: 4px; }
+
+/* A layout with nothing kept in it yet: Use is there, and plainly cannot be pressed. */
+.layout-row .tb-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
 
 /* The number key that does a row, written at the head of it. */
 .ctx-key {
@@ -1698,6 +2200,25 @@ kbd {
   font-size: 11px;
 }
 
+/* A figure on a compare card, in full ink, and how it stands against what you have on. */
+.tooltip-stat {
+  color: var(--ui-text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-good {
+  color: var(--t-good, #9fd06c);
+}
+
+.tip-bad {
+  color: var(--t-bad, #e0574d);
+}
+
+.tip-same {
+  color: var(--ui-dim);
+}
+
 /* Inventory ------------------------------------------------------------- */
 
 .inv-body {
@@ -1731,11 +2252,23 @@ kbd {
   letter-spacing: 0.06em;
 }
 
+/*
+ * A list's columns stay under its header's whether or not it has a scrollbar
+ * to show: the list keeps the scrollbar's room always, and the header keeps
+ * the same room at its end. Where scrollbars lie over the content (a phone,
+ * a Mac) there is no room to keep, and nothing moves.
+ */
 .inv-list {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
   padding: 4px 0;
+}
+
+.inv-head {
+  overflow: hidden;
+  scrollbar-gutter: stable;
 }
 
 .inv-group {
@@ -1787,6 +2320,125 @@ kbd {
   border-top: 1px solid var(--ui-border);
   color: var(--ui-dim);
   font-size: 11px;
+}
+
+/*
+ * The pack and an open store write their rows in the same four columns
+ * (src/ui/itemcells.ts). QL is wide enough for a tool's "52.5→22". A window
+ * narrowed until the name would vanish drops Dmg, and the pack then Wt,
+ * rather than squeezing the name to nothing; and the list always keeps room
+ * for three rows, the window scrolling as a whole below that.
+ */
+.items-body {
+  container-type: inline-size;
+}
+
+.items-body :is(.inv-head, .inv-row) {
+  grid-template-columns: minmax(0, 1fr) 62px 38px 46px;
+  align-items: center;
+}
+
+.items-body > .inv-list {
+  min-height: 78px;
+}
+
+/* No damage at all, which is most things, written faint so the worn ones stand out. */
+.inv-dmg.inv-nil {
+  opacity: 0.45;
+}
+
+/* Take and Buy on a store's rows: a row's height, not a toolbar's. */
+.items-body .inv-row .inv-take {
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 18px;
+}
+
+.inv-footer.inv-full {
+  color: var(--t-accent-ink, #e3b657);
+}
+
+.items-body .tb-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* A store's search box with its order beside it, and its buttons wrapping rather than running off the side. */
+.items-find {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--t-field, #17140f);
+}
+
+.items-find .panel-search {
+  flex: 1 1 120px;
+  min-width: 0;
+  border-bottom: 0;
+}
+
+.items-find .panel-select {
+  flex: 0 0 auto;
+  margin: 2px 6px;
+}
+
+[data-ui='runecut'] .items-find {
+  border-bottom: 0;
+  background: none;
+}
+
+.items-body .panel-bar {
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.items-body .panel-bar .tb-btn {
+  padding-inline: 7px;
+}
+
+/* On a phone a row is tall enough for a thumb, and so is its Take. */
+#ui.narrow .items-body .inv-row {
+  padding-block: 5px;
+}
+
+#ui.narrow .items-body .inv-row .inv-take {
+  line-height: 24px;
+}
+
+@container (max-width: 300px) {
+  .items-body .inv-dmg {
+    display: none;
+  }
+
+  .items-body :is(.inv-head, .inv-row) {
+    grid-template-columns: minmax(0, 1fr) 62px 46px;
+  }
+}
+
+@container (max-width: 220px) {
+  .pack-body .inv-wt {
+    display: none;
+  }
+
+  .pack-body :is(.inv-head, .inv-row) {
+    grid-template-columns: minmax(0, 1fr) 62px;
+  }
+
+  /* A store keeps its Take: the name and the button are what a row is for there. */
+  .items-body:not(.pack-body) .inv-ql {
+    display: none;
+  }
+
+  .items-body:not(.pack-body) :is(.inv-head, .inv-row) {
+    grid-template-columns: minmax(0, 1fr) 46px;
+  }
+}
+
+/* The crate's header ends where its rows do; the leaves at its right sit over the blank Take column. */
+[data-ui='runecut'] .win[data-frame='crate'] .items-body .inv-head {
+  padding-right: 12px;
 }
 
 /* Storey view ------------------------------------------------------------ */
@@ -1903,9 +2555,10 @@ kbd {
 .craft-head {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 4px 8px;
   padding: 5px 8px;
   border-bottom: 1px solid var(--ui-border);
   color: var(--ui-dim);
@@ -1918,14 +2571,13 @@ kbd {
   gap: 5px;
   color: var(--ui-text);
   cursor: pointer;
-  white-space: nowrap;
 }
 
 .craft-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1px 8px;
-  align-items: center;
+  gap: 2px 8px;
+  align-items: start;
   padding: 5px 8px;
   border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.05));
 }
@@ -1935,15 +2587,18 @@ kbd {
 }
 
 .craft-name {
-  overflow: hidden;
+  min-width: 0;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
-.craft-name small {
+/* The trade and the time, after the name: onto the next line whole when the name is long. */
+.craft-meta {
+  display: inline-block;
+  max-width: calc(100% - 6px);
   margin-left: 6px;
   color: var(--ui-dim);
+  font-size: 11px;
   font-weight: 400;
 }
 
@@ -1972,10 +2627,16 @@ kbd {
   color: var(--t-warn, #d8a54b);
 }
 
+/* What it takes, across the whole row under the name and the buttons; a part never breaks across a line. */
 .craft-needs {
-  grid-column: 1;
+  grid-column: 1 / -1;
   color: var(--ui-dim);
   font-size: 11px;
+  line-height: 1.6;
+}
+
+.craft-needs > * {
+  white-space: nowrap;
 }
 
 .craft-needs .have {
@@ -2004,7 +2665,7 @@ kbd {
 
 .craft-btns {
   display: flex;
-  grid-row: 1 / span 2;
+  grid-row: 1;
   grid-column: 2;
   gap: 4px;
 }
@@ -2012,6 +2673,22 @@ kbd {
 .craft-btns .tb-btn:disabled {
   opacity: 0.45;
   cursor: default;
+}
+
+.craft-body {
+  container-type: inline-size;
+}
+
+/* Narrow, the buttons go under what it takes, so the name keeps the width. */
+@container (max-width: 280px) {
+  .craft-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .craft-btns {
+    grid-row: auto;
+    grid-column: 1;
+  }
 }
 
 /* Skills ----------------------------------------------------------------- */
@@ -2048,10 +2725,15 @@ kbd {
   background: var(--t-btn-flat-hover, #3a3024);
 }
 
-/* What you are fighting or have marked, top and middle, out of the way of the status and the windows. */
+/*
+ * What you are fighting or have marked, top and middle, out of the way of the
+ * status and the windows; `placeTarget` (src/ui/hud.ts) puts it under the
+ * toolbar when that is there. It lives in the bottom stack, so it is fixed
+ * here, which inside the transformed interface is the interface's own box.
+ */
 .hud-target {
-  position: absolute;
-  top: 62px;
+  position: fixed;
+  top: 24px;
   left: 50%;
   width: 280px;
   transform: translateX(-50%);
@@ -2100,11 +2782,26 @@ kbd {
   line-height: 1.35;
 }
 
-/* On a narrow screen the toolbar and the status take the top, so it sits over the action bar instead. */
+/* On a narrow screen the toolbar and the status take the top, so it sits in the stack over the action bar instead, and above the windows. */
 #ui.narrow .hud-target {
+  position: relative;
+  z-index: 5100;
   top: auto;
-  bottom: 150px;
-  width: 240px;
+  left: auto;
+  width: 300px;
+  max-width: calc(100% - 24px);
+  transform: none;
+}
+
+/* The first-steps card stands over the windows with the rest of the stack, rather than half under the event log. */
+#ui.narrow .guide {
+  position: relative;
+  z-index: 5100;
+}
+
+/* Its long note is for a desk; a phone keeps the name, the health, what it is doing and how a fight would go. */
+#ui.narrow .hud-target-note {
+  display: none;
 }
 
 /* The stance beside the health bar keeps one width whichever of the three it says. */
@@ -2122,7 +2819,7 @@ kbd {
 }
 
 .hud-mini:disabled {
-  opacity: 0.4;
+  opacity: 0.55;
   cursor: default;
 }
 
@@ -2136,6 +2833,34 @@ kbd {
   color: var(--ui-dim);
   font-size: 11px;
   opacity: 0.8;
+}
+
+/* The Skills window's notes: at full strength, since each is a number to read, and wrapped to the right of the name. */
+.skill-book .skill-row {
+  align-items: baseline;
+  gap: 8px;
+}
+
+.skill-book .skill-note {
+  margin-right: 2px;
+  text-align: right;
+  opacity: 1;
+}
+
+/* Too narrow for a note beside the name: it is on the row's tooltip still. */
+.skill-book {
+  container-type: inline-size;
+}
+
+@container (max-width: 200px) {
+  .skill-book .skill-note {
+    display: none;
+  }
+}
+
+/* A skill never raised: still there to read, and quieter than the ones you have worked. */
+.skill-book .skill-raw > :first-child {
+  color: var(--ui-dim);
 }
 
 .skill-value {
@@ -2172,11 +2897,12 @@ kbd {
  * Two lines to a trade: what it is called and what it stands at, then how far
  * it has come toward the next level. The name may run long — "Weaponsmithing"
  * against a two hundred and sixty pixel window — so it is the column that
- * gives, and the number beside it never moves.
+ * gives, and the number beside it never moves. The "% to" note sits under the
+ * number and the drop button together, so it never takes the name's room.
  */
 .track-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 6px;
   row-gap: 3px;
@@ -2194,25 +2920,13 @@ kbd {
 }
 
 .track-drop {
-  width: 16px;
-  height: 16px;
-  padding: 0;
-  border: 1px solid var(--t-line-2, #5a4c38);
-  border-radius: 2px;
-  background: var(--t-btn-flat, #2a231b);
-  color: var(--ui-dim);
-  font: inherit;
+  min-width: 24px;
+  padding: 2px 0;
   line-height: 1;
-  cursor: pointer;
-}
-
-.track-drop:hover {
-  color: var(--ui-accent);
-  border-color: var(--ui-accent);
 }
 
 .track-bar {
-  grid-column: 1 / 3;
+  grid-column: 1;
 }
 
 .track-fill {
@@ -2220,26 +2934,17 @@ kbd {
 }
 
 .track-next {
-  grid-column: 3;
+  grid-column: 2 / 4;
   color: var(--ui-dim);
-  font-size: 10px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
   white-space: nowrap;
 }
 
 .track-add {
   width: 100%;
-  margin-top: 8px;
-  padding: 4px;
-  border: 1px solid var(--t-line-2, #5a4c38);
-  border-radius: 2px;
-  background: var(--t-btn-flat, #2a231b);
-  color: var(--ui-accent);
-  font: inherit;
-  cursor: pointer;
-}
-
-.track-add:hover {
-  border-color: var(--ui-accent);
+  margin-top: 10px;
 }
 
 /* Event log --------------------------------------------------------------- */
@@ -2254,10 +2959,17 @@ kbd {
 .log-tabs {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   align-items: center;
   gap: 3px;
+  row-gap: 2px;
   padding: 4px 5px;
   border-bottom: 1px solid var(--ui-border);
+}
+
+/* A find box in a row of tabs takes the room the tabs leave, and where that is too little, a line of its own under them, rather than pushing them off the edge. */
+.log-tabs .log-search {
+  flex-basis: 50px;
 }
 
 .log-tab {
@@ -2268,6 +2980,48 @@ kbd {
 .log-tab.log-waiting {
   color: var(--ui-accent);
   border-color: var(--ui-accent);
+}
+
+/*
+ * The count sits on the tab's top corner, so a tab is as wide with lines
+ * waiting as without and nothing beside it moves.
+ */
+.log-body > .log-tabs > .log-tab {
+  position: relative;
+}
+
+.log-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 1;
+  min-width: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--ui-accent);
+  color: var(--ui-bg-2, #1a1713);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 14px;
+  text-align: center;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+/* In the event log the tabs wrap, and the find box drops to a row of its own, rather than either running off the side. */
+.log-body > .log-tabs {
+  flex-wrap: wrap;
+}
+
+.log-body > .log-tabs .log-search {
+  flex-basis: 64px;
+  min-width: 56px;
+}
+
+#ui.narrow .log-body > .log-tabs > .log-tab {
+  padding-inline: 5px;
 }
 
 .log-search {
@@ -2347,7 +3101,8 @@ kbd {
 
 .minimap {
   flex: 1 1 auto;
-  min-height: 0;
+  /* The map is what the window is for: the list of marks under it gives way first. */
+  min-height: 144px;
   width: 100%;
   object-fit: contain;
   image-rendering: pixelated;
@@ -2370,7 +3125,7 @@ kbd {
   flex: 0 0 auto;
   flex-wrap: wrap;
   gap: 3px;
-  max-height: 96px;
+  max-height: 168px;
   overflow-y: auto;
   padding: 5px 6px;
   border-bottom: 1px solid var(--ui-border);
@@ -2392,8 +3147,49 @@ kbd {
   border-color: var(--ui-accent);
 }
 
-.help-link[hidden] {
+.help-link[hidden],
+.help-contents[hidden],
+.help-toc[hidden] {
   display: none;
+}
+
+/* The line that opens and folds the contents, with how many sections there are or how many a search kept. */
+.help-toc {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  background: transparent;
+  color: var(--ui-accent);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.help-toc::before {
+  content: '▸';
+  width: 10px;
+}
+
+.help-toc[aria-expanded='true']::before {
+  content: '▾';
+}
+
+.help-toc:hover {
+  background: var(--t-hover, rgba(255, 255, 255, 0.05));
+}
+
+/* Where a search is found in the pages. */
+.help-mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--t-wash-strong, rgba(227, 182, 87, 0.35));
+  color: inherit;
 }
 
 .help-count {
@@ -2441,6 +3237,18 @@ kbd {
   white-space: nowrap;
 }
 
+/* In a narrow journal a long run of keys wraps, so the column that says what they do keeps its room. */
+@container (max-width: 380px) {
+  .help-body td:first-child {
+    width: 38%;
+    white-space: normal;
+  }
+
+  .help-body td {
+    overflow-wrap: anywhere;
+  }
+}
+
 .help-body p {
   margin: 6px 0;
   color: var(--t-text, #c9c1ad);
@@ -2462,7 +3270,8 @@ kbd {
 .trait-chip.trait-unread { color: var(--t-dim, #6d7a72); border-style: dashed; font-style: italic; }
 /* A bred one's dam and sire, over the traits, and on each trait where it came from. */
 .pal-pedigree { margin: 4px 0 0; color: var(--ui-dim); font-size: 11px; }
-.pal-rarity { margin: 2px 0 4px; font-size: 11px; font-weight: 600; }
+.pal-rarity { margin: 2px 0 4px; font-size: 11px; color: var(--ui-dim); }
+.pal-rarity-name { font-weight: 700; }
 .trait-from { font-size: 10px; color: var(--t-dim, #b8b09a); font-style: italic; }
 
 /* What a trait is worth, printed beside its name rather than hidden in a hover. */
@@ -2501,7 +3310,7 @@ kbd {
 .title-chip.title-worn { color: var(--t-gold, #f0c060); border-color: var(--t-gold, #f0c060); background: var(--t-wash-soft, rgba(240, 192, 96, 0.1)); }
 
 /* What is open on you, under the bars. */
-.hud-wounds { display: flex; flex-direction: column; gap: 1px; }
+.hud-wounds { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .wound-row { font-size: 11px; color: var(--t-dim, #b9a99c); line-height: 1.35; }
 .wound-row.wound-open { color: var(--t-bad, #e08a72); }
 .wound-row.wound-bad { color: var(--t-bad, #d05a4a); font-weight: 600; }
@@ -2552,7 +3361,7 @@ kbd {
   border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.05));
 }
 .store-name { grid-area: name; font-size: 12px; color: var(--t-text, #d6ded6); display: flex; gap: 6px; align-items: baseline; }
-.store-fill { font-size: 10px; color: var(--t-dim, #8b978d); }
+.store-fill { margin-left: auto; font-size: 11px; font-variant-numeric: tabular-nums; color: var(--t-dim, #8b978d); white-space: nowrap; }
 .store-fill.store-full { color: var(--t-accent-ink, #e3b657); }
 .store-what { grid-area: what; font-size: 11px; color: var(--t-dim, #8b978d); line-height: 1.35; }
 .store-what.store-hit { color: var(--t-good, #a8d08a); }
@@ -2640,6 +3449,12 @@ kbd {
   margin-top: 4px;
 }
 
+/* A button's words wrap rather than run past a window narrowed from its grip. */
+.deed-buttons .tb-btn {
+  max-width: 100%;
+  white-space: normal;
+}
+
 /* A citizen and their rank: the name gives, the rank buttons never move. */
 .deed-who {
   flex: 1 1 auto;
@@ -2655,6 +3470,11 @@ kbd {
   gap: 3px;
 }
 
+/* In a window narrowed from its grip a citizen keeps enough of their name to be told apart. */
+.deed-citizen .deed-who {
+  min-width: 40%;
+}
+
 /* A citizen's rank, picked from the settlement's own: never wider than the row leaves it. */
 .deed-pick {
   flex: 0 1 auto;
@@ -2668,12 +3488,19 @@ kbd {
  * open one a grid of its permissions, two to a line.
  */
 .deed-rank {
+  flex-wrap: wrap;
+  row-gap: 2px;
   padding: 1px 0;
   border-top: 1px solid color-mix(in srgb, var(--ui-border) 45%, transparent);
 }
 
+/* The founder's tools keep to the right, and drop under the name when the window is too narrow for both. */
+.deed-rank .deed-ranks {
+  margin-left: auto;
+}
+
 .deed-rank-name {
-  flex: 1 1 auto;
+  flex: 1 1 7em;
   min-width: 0;
   padding: 2px 0;
   overflow: hidden;
@@ -2701,17 +3528,33 @@ kbd {
 
 .deed-tool {
   min-width: 22px;
-  padding-left: 4px;
-  padding-right: 4px;
+  padding: 1px 5px;
+  font-size: 11px;
+}
+
+.deed-tool.deed-glyph {
+  font-size: 13px;
+  line-height: 1.15;
 }
 
 .deed-tool:disabled {
   opacity: 0.35;
 }
 
+/* The rank newcomers join at, said beside its name. */
+.deed-rank-tag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  color: var(--ui-dim);
+  font-size: 10px;
+  vertical-align: 1px;
+}
+
 .deed-perms {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
   gap: 1px 8px;
   margin: 2px 0 6px 12px;
   padding: 4px 6px;
@@ -2745,13 +3588,23 @@ kbd {
 }
 
 /* Marks on the map, and the list of them under it. */
+/* Three buttons across the map, each as wide as its word, and on two rows in a window shrunk past them. */
 .map-bar {
   flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+
+.map-bar .tb-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+  white-space: nowrap;
 }
 
 .map-marks {
   flex: 0 0 auto;
-  max-height: 132px;
+  max-height: 104px;
   overflow-y: auto;
   padding: 2px 6px 6px;
   border-top: 1px solid var(--ui-border);
@@ -2766,15 +3619,26 @@ kbd {
 
 .map-pip {
   flex: 0 0 auto;
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
+  padding: 0;
   border: 1px solid rgba(0, 0, 0, 0.7);
   border-radius: 50%;
   cursor: pointer;
 }
 
+.map-pip:hover {
+  box-shadow: 0 0 0 2px var(--ui-accent);
+}
+
 .map-mark-name {
   flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -2803,28 +3667,31 @@ kbd {
 /* What is actually in you: four thin bars under the food bar. */
 .hud-food {
   display: flex;
-  gap: 5px;
-  margin: 2px 0 1px;
+  gap: 8px;
+  margin: 4px 0 1px;
 }
 
+/* Each named in full over its bar, which is as wide as the cell. */
 .hud-food-cell {
   display: flex;
   flex: 1 1 0;
-  align-items: center;
-  gap: 3px;
+  flex-direction: column;
+  gap: 1px;
   min-width: 0;
 }
 
 .hud-food-label {
-  flex: 0 0 auto;
+  overflow: hidden;
   color: var(--ui-dim);
   font-size: 10px;
+  line-height: 13px;
   letter-spacing: 0.04em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .hud-food-track {
-  flex: 1 1 auto;
-  height: 4px;
+  height: 5px;
   min-width: 0;
   background: var(--t-track, #1a1612);
   border: 1px solid var(--t-groove-edge, #000);
@@ -2852,6 +3719,31 @@ kbd {
   row-gap: 2px;
 }
 
+.journal-body {
+  container-type: inline-size;
+}
+
+/* Narrow, the tabs pack closer so they take two or three rows and not one apiece. */
+@container (max-width: 300px) {
+  .journal-body .journal-tabs {
+    padding: 2px 4px;
+  }
+
+  .journal-body .journal-tabs .log-tab {
+    padding: 3px 5px 4px;
+    font-size: 11px;
+  }
+
+  /* And the ledger keeps the thing, how many and the best; how many rare is in each row's hover and the foot. */
+  .journal-body :is(.ledger-head, .ledger-row) {
+    grid-template-columns: minmax(0, 1fr) 34px 38px;
+  }
+
+  .journal-body :is(.ledger-head, .ledger-row) > :nth-child(3) {
+    display: none;
+  }
+}
+
 /* The ledger and the help, the journal's second and third tabs: each page fills under the tabs and scrolls inside. */
 .journal-ledger,
 .journal-help {
@@ -2864,10 +3756,22 @@ kbd {
   display: none;
 }
 
-/* The ledger: what, how many, how many rare, and the best one. */
+/* The ledger: what, how many, how many rare, and the best one. A row is read, not clicked. */
 .ledger-head,
 .ledger-row {
-  grid-template-columns: 1fr 46px 46px 52px;
+  grid-template-columns: minmax(0, 1fr) 46px 46px 52px;
+}
+
+.ledger-row {
+  cursor: default;
+}
+
+.ledger-order {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--ui-dim);
+  font-size: 11px;
 }
 
 /* The little i, and the note behind it ------------------------------------ */
@@ -2891,9 +3795,12 @@ kbd {
   flex: 1 0 100%;
   margin-top: 1px;
   color: var(--ui-dim);
+  /* The body face, not the head's small capitals, which every look sets on the head and this would inherit. */
+  font: var(--ui-font);
+  font-size: 12px;
+  font-weight: 400;
   text-transform: none;
   letter-spacing: normal;
-  font-size: 11px;
 }
 
 .tile-head-name {
@@ -2905,8 +3812,8 @@ kbd {
 
 .tile-info {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   border: 1px solid var(--ui-border);
   border-radius: 50%;
@@ -2921,6 +3828,51 @@ kbd {
 .tile-info:focus-visible {
   border-color: var(--ui-accent);
   color: var(--ui-accent);
+}
+
+#ui.narrow .tile-info {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+
+/*
+ * The tile window's rows. Every label starts on one edge, keyed or not: a row
+ * with no key keeps the key's room empty. And a reason or a note is read in
+ * full on a line of its own under the label, rather than cut to "You already
+ * hold a settleme…" with the rest behind a hover a finger cannot make.
+ */
+.tile-list .ctx-item {
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-start;
+  column-gap: 8px;
+  row-gap: 1px;
+  white-space: normal;
+}
+
+.tile-list .ctx-key {
+  box-sizing: border-box;
+  width: 20px;
+  margin-right: 0;
+}
+
+.tile-list .ctx-item:not(.ctx-keyed)::before {
+  content: '';
+  flex: 0 0 20px;
+}
+
+.tile-list .ctx-item > span:first-of-type {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tile-list :is(.ctx-hint, .ctx-note) {
+  flex: 1 0 100%;
+  max-width: none;
+  padding-left: 28px;
+  overflow: visible;
+  line-height: 1.3;
 }
 
 .tooltip-wide {
@@ -3033,6 +3985,35 @@ kbd {
   border-color: var(--ui-accent);
   color: var(--ui-accent);
 }
+
+/* A question stops the game until it is answered, so the island behind it is dimmed enough to say so, by day as well as by night. */
+[data-ui='runecut']:not([data-rc='night']) .ask {
+  background: rgba(40, 34, 48, 0.3);
+}
+
+/* The yes is marked as the way on in Runecut too, as the toolbar marks its way in. */
+[data-ui='runecut'] .ask-ok {
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune-gold) 30%, var(--rc-stone-2)) 80%);
+  box-shadow: inset 0 0 0 1px var(--rc-shade), inset 0 -2px 0 var(--rc-rune);
+  color: var(--rc-ink);
+  font-weight: 700;
+}
+
+[data-rc='night'][data-ui='runecut'] .ask-ok {
+  background: linear-gradient(var(--rc-stone-hi), color-mix(in srgb, var(--rc-rune) 22%, var(--rc-stone-2)) 80%);
+}
+
+/* A count is typed: the browser's own spinner is a white box on the stone, and steps one at a time out of hundreds. */
+.ask-input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.ask-input[type='number']::-webkit-inner-spin-button,
+.ask-input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
 /* Which of several: one button a line, its swatch first. */
 .ask-choices {
   display: flex;
@@ -3068,6 +4049,7 @@ kbd {
   min-height: 0;
   overflow-y: auto;
   padding: 2px 8px 8px;
+  container-type: inline-size;
 }
 
 /*
@@ -3125,10 +4107,27 @@ kbd {
   gap: 3px;
 }
 
-.social-do {
+.social-do,
+.market-do {
   padding: 1px 6px;
   font-size: 11px;
   white-space: nowrap;
+}
+
+/* A button that cannot be pressed now looks it, in the people and trade windows. */
+:is(.social-body, .deed-body, .win[data-id='market']) .tb-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* What cannot be undone with a click -- leave, disband, delete a rank -- is red before it is pressed. */
+:is(.social-body, .deed-body) .tb-btn.tb-danger:not(:disabled) {
+  color: var(--t-bad, #e0574d);
+}
+
+/* On a phone a row's buttons are big enough for a thumb. */
+#ui.narrow :is(.social-do, .market-do, .deed-tool) {
+  padding: 4px 8px;
 }
 
 /*
@@ -3186,8 +4185,47 @@ kbd {
   white-space: normal;
 }
 
-.keeper-muted {
+.keeper-muted,
+.keeper-stale {
   color: var(--t-bad, #ef8a7a);
+}
+
+/* Mute and Mute again are one width, and Unmute keeps its place where there is no mute, so a column of buttons stays a column. */
+.keeper-mute {
+  min-width: 6em;
+}
+
+.keeper-gap {
+  visibility: hidden;
+}
+
+/*
+ * A window made narrow from its grip: a row's buttons go to a line of their
+ * own under the name, still in one place on every row, rather than past the edge.
+ */
+@container (max-width: 270px) {
+  .social-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    row-gap: 2px;
+  }
+
+  .social-ask {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .social-ask .social-where {
+    text-align: right;
+  }
+
+  .social-acts {
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .social-where {
+    white-space: normal;
+  }
 }
 
 /*
@@ -3201,20 +4239,26 @@ kbd {
   overflow: hidden;
 }
 
+/* A conversation: who said it in one column, what they said in the next, every line on the same two. */
 .social-thread {
-  display: flex;
+  display: grid;
   flex: 1 1 auto;
-  flex-direction: column;
-  gap: 4px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  gap: 4px 6px;
   min-height: 60px;
   overflow-y: auto;
   padding: 6px 0;
 }
 
+.social-thread > .inv-empty {
+  grid-column: 1 / -1;
+}
+
 .social-said {
   display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: 6px;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: baseline;
 }
 
@@ -3257,14 +4301,21 @@ kbd {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-sizing: border-box;
+  height: 100%;
   padding: 8px;
   min-height: 0;
 }
 
+/* It takes what the words and Dig it up leave, so the button is never scrolled out of sight under it. */
 .hoard-view {
-  width: 100%;
+  flex: 1 1 0;
+  min-height: 120px;
+  width: auto;
+  max-width: 100%;
   height: auto;
   aspect-ratio: 1;
+  object-fit: contain;
   align-self: center;
   border: 2px solid var(--t-edge, rgba(70, 54, 32, 0.9));
   border-radius: 2px;
@@ -3297,6 +4348,11 @@ kbd {
   align-self: flex-start;
 }
 
+.hoard-dig:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 /* The trades: the one you took, its nine nodes, and its rite -------------- */
 
 .trade-body {
@@ -3308,6 +4364,7 @@ kbd {
 .trade-tabs {
   display: flex;
   flex: 0 0 auto;
+  flex-wrap: wrap;
   gap: 3px;
   padding: 4px 5px;
   border-bottom: 1px solid var(--ui-border);
@@ -3351,9 +4408,10 @@ kbd {
 
 .trade-card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 0 8px;
 }
 
 .trade-name {
@@ -3365,7 +4423,6 @@ kbd {
   color: var(--ui-dim);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 /* Points going spare are the reason to have opened this window. */
@@ -3429,6 +4486,12 @@ kbd {
   gap: 4px;
 }
 
+/* A long label wraps in a window made narrow, rather than running out of it. */
+.trade-page .tb-btn {
+  max-width: 100%;
+  white-space: normal;
+}
+
 .trade-page .tb-btn:disabled {
   opacity: 0.45;
   cursor: default;
@@ -3442,6 +4505,7 @@ kbd {
 
 .trade-tree-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
@@ -3515,7 +4579,7 @@ kbd {
 }
 
 .trade-node-shut {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 /* A perk trade's tier: its head, then its three perks side by side. */
@@ -3726,6 +4790,12 @@ kbd {
   text-overflow: ellipsis;
 }
 
+/* A key that does the same, kept on one line at the end of its row. */
+.palette-row kbd {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .palette-count {
   padding: 5px 10px 7px;
   border-top: 1px solid var(--ui-border);
@@ -3754,6 +4824,11 @@ kbd {
   color: var(--t-strong, #fff);
 }
 
+.craft-needs .craft-find:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 1px;
+}
+
 .craft-pin {
   min-width: 24px;
 }
@@ -3772,14 +4847,16 @@ kbd {
   display: block;
 }
 
-/* A window layout: its name, Keep, Use, and its key. */
+/* A window layout: its name, Keep, Use, and its key; the buttons drop under the name when the window is narrow. */
 .layout-row {
+  flex-wrap: wrap;
   align-items: center;
+  gap: 6px 10px;
   cursor: default;
 }
 
 .layout-name {
-  flex: 1 1 auto;
+  flex: 1 1 110px;
   min-width: 0;
   padding: 3px 6px;
   border: 1px solid var(--ui-border);
@@ -4145,12 +5222,6 @@ kbd {
   background: linear-gradient(var(--rc-shade) 0 1px, var(--rc-stone-hi) 1px 2px, transparent 2px 3px, color-mix(in srgb, var(--rc-rune) 70%, var(--rc-shade)) 3px 4px, var(--rc-stone-hi) 4px 5px);
 }
 
-[data-ui='runecut'] .win-title-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 [data-ui='runecut'] .win-rune {
   display: block;
   flex: 0 0 auto;
@@ -4428,9 +5499,10 @@ kbd {
   box-shadow: inset 2px 0 0 var(--rc-rune), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
 }
 
+/* Picked rows keep their wash the width of the row, so a pick reads across to the weight as well as at the name. */
 [data-ui='runecut'] .inv-row.picked {
-  background: linear-gradient(90deg, var(--t-info-wash), transparent 80%), var(--rc-stone-2);
-  box-shadow: inset 2px 0 0 var(--rc-teal), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc-teal) 28%, transparent), color-mix(in srgb, var(--rc-teal) 12%, transparent)), var(--rc-stone-2);
+  box-shadow: inset 3px 0 0 var(--rc-teal), inset 0 1px 0 color-mix(in srgb, var(--rc-shade) 55%, transparent);
 }
 
 [data-ui='runecut'] .inv-group {
@@ -4524,6 +5596,26 @@ kbd {
   color: var(--rc-rune-ink);
 }
 
+/* The event log's six tabs and its find box share one row at the window's usual width. */
+[data-ui='runecut'] .log-body > .log-tabs > .log-tab {
+  padding-inline: 6px;
+  letter-spacing: 0.01em;
+}
+
+/* On a phone they pack closer still, so the find box stays on their row and the lines keep the room. */
+[data-ui='runecut'] #ui.narrow .log-body > .log-tabs > .log-tab {
+  padding-inline: 4px;
+  font-size: 12px;
+}
+
+/* Out in the gap between tabs, clear of the writing on either side. */
+[data-ui='runecut'] .log-count {
+  top: 0;
+  right: -7px;
+  background: var(--rc-rune-deep, var(--ui-accent));
+  color: var(--rc-stone);
+}
+
 [data-ui='runecut'] .log-tabs .log-search {
   margin: 3px 0;
   padding: 4px 6px;
@@ -4594,6 +5686,11 @@ kbd {
   font-size: 13px;
 }
 
+[data-ui='runecut'] .tooltip-stat {
+  color: var(--rc-ink);
+  font-size: 13px;
+}
+
 /*
  * Notices: small plaques pointed at both ends. The outline is the drop
  * shadow of the column they stand in, which is cast from the shapes after
@@ -4660,7 +5757,7 @@ kbd {
   box-shadow: inset 0 1px 2px color-mix(in srgb, var(--rc-edge-ink) 14%, transparent);
 }
 
-[data-ui='runecut'] :is(.trade-mine, .trade-node-taken, .trade-rite-ready, .trade-confirm) {
+[data-ui='runecut'] :is(.trade-mine, .trade-node-taken, .trade-node-asked, .trade-rite-ready, .trade-confirm) {
   border-color: var(--rc-rune-deep);
 }
 
@@ -4703,6 +5800,16 @@ kbd {
 }
 
 [data-ui='runecut'] :is(.trade-shut .trade-name, .craft-row.locked .craft-name) {
+  color: var(--rc-carve);
+}
+
+/* A perk or spell that cannot be taken, said the same way: whole writing, a dashed edge, a grey name. */
+[data-ui='runecut'] .trade-node-shut {
+  border-style: dashed;
+  opacity: 1;
+}
+
+[data-ui='runecut'] .trade-node-shut .trade-node-name {
   color: var(--rc-carve);
 }
 
@@ -4849,12 +5956,13 @@ kbd {
 }
 
 /* The list's scrollbar as a leather strap in a stitched slot, brass at both ends. */
-[data-ui='runecut'] .win[data-frame='burlap'] .inv-list {
+[data-ui='runecut'] .win[data-frame='burlap'] :is(.inv-list, .inv-head) {
   scrollbar-width: auto;
   scrollbar-color: auto;
 }
 
-[data-ui='runecut'] .win[data-frame='burlap'] .inv-list::-webkit-scrollbar {
+/* The header keeps the strap's room too (`scrollbar-gutter` on `.inv-head`), so its room is the strap's width. */
+[data-ui='runecut'] .win[data-frame='burlap'] :is(.inv-list, .inv-head)::-webkit-scrollbar {
   width: 11px;
 }
 
@@ -4919,8 +6027,8 @@ kbd {
 }
 
 [data-ui='runecut'] .win[data-frame='burlap'] .inv-row.picked {
-  background: linear-gradient(90deg, var(--t-info-wash), transparent 80%);
-  box-shadow: inset 2px 0 0 var(--rc-teal), inset 0 -1px 0 color-mix(in srgb, var(--sack-twine) 45%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rc-teal) 28%, transparent), color-mix(in srgb, var(--rc-teal) 12%, transparent));
+  box-shadow: inset 3px 0 0 var(--rc-teal), inset 0 -1px 0 color-mix(in srgb, var(--sack-twine) 45%, transparent);
 }
 
 [data-ui='runecut'] .win[data-frame='burlap'] .inv-head {
@@ -5252,6 +6360,32 @@ kbd {
 }
 
 #ui.snapgrid .win-grip:hover {
+  opacity: 1;
+}
+
+/*
+ * Runecut's grip: three short ridges cut across the frame's corner, inside the
+ * plate's cut corner, each a line of shade with the light under it, so it
+ * reads on ice, iron, wood and sacking alike instead of two broad strokes
+ * laid over the frame's picture.
+ */
+[data-ui='runecut'] #ui.snapgrid .win-grip {
+  --ridge-dark: rgba(28, 22, 18, 0.7);
+  --ridge-lit: rgba(255, 248, 230, 0.85);
+  background: linear-gradient(135deg,
+    transparent calc(100% - 18px), var(--ridge-dark) 0 calc(100% - 16.5px), var(--ridge-lit) 0 calc(100% - 15.5px),
+    transparent 0 calc(100% - 13px), var(--ridge-dark) 0 calc(100% - 11.5px), var(--ridge-lit) 0 calc(100% - 10.5px),
+    transparent 0 calc(100% - 8px), var(--ridge-dark) 0 calc(100% - 6.5px), var(--ridge-lit) 0 calc(100% - 5.5px),
+    transparent 0);
+  opacity: 0.8;
+}
+
+[data-rc='night'][data-ui='runecut'] #ui.snapgrid .win-grip {
+  --ridge-lit: rgba(214, 204, 186, 0.55);
+}
+
+[data-ui='runecut'] #ui.snapgrid .win-grip:hover {
+  --ridge-lit: var(--rc-rune-gold);
   opacity: 1;
 }
 

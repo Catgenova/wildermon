@@ -214,7 +214,7 @@ export class BoardsPanel {
     const shown = has(this.skill) ? this.skill : has(own) ? own : known[0][1][0].id;
     this.skill = shown;
     const pick = document.createElement('select');
-    pick.className = 'panel-select';
+    pick.className = 'panel-select board-pick';
     pick.title = 'Which skill to show, with who holds it highest';
     for (const [group, defs] of known) {
       const og = document.createElement('optgroup');
@@ -237,6 +237,7 @@ export class BoardsPanel {
     bar.className = 'panel-bar';
     bar.append(pick);
     this.page.append(bar);
+    this.columns('Who', '', 'Skill level');
     b.skills[shown].forEach((p, i) => this.place(i + 1, p.name, '', p.value.toFixed(2), p.mine));
   }
 
@@ -245,6 +246,7 @@ export class BoardsPanel {
       this.say('Nobody on this island has a tamed wildermon yet.');
       return;
     }
+    this.columns('Wildermon', 'Keeper', 'Traits');
     b.wildermon.forEach((w, i) => this.place(i + 1, `${w.name}, ${SPECIES[w.species]?.name ?? w.species}`,
       w.keeper, figure(w.score), w.mine, `Its traits add up to ${figure(w.score)} of ${figure(BRED_MAX)}`));
   }
@@ -254,11 +256,25 @@ export class BoardsPanel {
       this.say('Nobody on this island has founded a settlement yet.');
       return;
     }
+    this.columns('Settlement', 'Founder · citizens', 'Level');
     b.settlements.forEach((s, i) => this.place(i + 1, s.name, `${s.founder}'s · ${citizens(s.citizens)}`,
-      `level ${s.level}`, s.mine));
+      String(s.level), s.mine, `Level ${s.level} of ${MAX_DEED_LEVEL}`));
   }
 
-  /** One place on a board: its number, who or what, a note, and the figure it is ranked by. */
+  /** What each column of a board is, over its first place. */
+  private columns(who: string, note: string, fig: string): void {
+    const row = document.createElement('div');
+    row.className = 'skill-row board-row board-cols';
+    for (const [text, cls] of [['#', 'board-rank'], [who, ''], [note, 'skill-note'], [fig, 'skill-value']]) {
+      const el = document.createElement('span');
+      el.className = cls;
+      el.textContent = text;
+      row.append(el);
+    }
+    this.page.append(row);
+  }
+
+  /** One place on a board: its number, who or what, a note, and the figure it is ranked by. Yours says so. */
   private place(n: number, who: string, note: string, fig: string, mine: boolean, title = ''): void {
     const row = document.createElement('div');
     row.className = `skill-row board-row${mine ? ' board-mine' : ''}`;
@@ -266,7 +282,14 @@ export class BoardsPanel {
     rank.className = 'board-rank';
     rank.textContent = `${n}.`;
     const name = document.createElement('span');
+    name.className = 'board-who';
     name.textContent = who;
+    if (mine) {
+      const you = document.createElement('span');
+      you.className = 'board-you';
+      you.textContent = 'you';
+      name.append(you);
+    }
     const aside = document.createElement('span');
     aside.className = 'skill-note';
     aside.textContent = note;
@@ -280,7 +303,7 @@ export class BoardsPanel {
 
   private say(text: string): void {
     const el = document.createElement('div');
-    el.className = 'skill-note market-note';
+    el.className = 'skill-note market-note board-note';
     el.textContent = text;
     this.page.append(el);
   }

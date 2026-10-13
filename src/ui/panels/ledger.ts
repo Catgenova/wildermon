@@ -68,10 +68,24 @@ export class LedgerPanel {
       this.repaint.force();
       this.render();
     });
-    bar.append(sel);
+    // Named, so the box says what it changes rather than only what it is set to.
+    const order = document.createElement('label');
+    order.className = 'ledger-order';
+    order.append('Order by', sel);
+    bar.append(order);
     const head = document.createElement('div');
     head.className = 'inv-head ledger-head';
-    head.innerHTML = '<span>Thing</span><span>Made</span><span>Rare</span><span>Best</span>';
+    for (const [label, title] of [
+      ['Thing', 'What was made'],
+      ['Made', 'How many you have made'],
+      ['Rare', 'How many came out rare or better'],
+      ['Best', 'The best quality (QL) you have made it at'],
+    ]) {
+      const cell = document.createElement('span');
+      cell.textContent = label;
+      cell.title = title;
+      head.append(cell);
+    }
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
@@ -125,7 +139,7 @@ export class LedgerPanel {
     if (!ids.length) {
       const none = document.createElement('div');
       none.className = 'inv-empty';
-      none.textContent = `You have made nothing answering to “${this.search.value.trim()}”.`;
+      none.textContent = `You have made nothing answering to “${this.search.value.trim()}”. Esc in the search box clears it.`;
       this.list.append(none);
     }
     this.footer.textContent = `${totals.kinds} kinds · ${totals.made} things · ${totals.rare} rare · best ever QL ${totals.best.toFixed(1)}`;

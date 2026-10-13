@@ -57,8 +57,10 @@ let chosen = 1;
  * A window is at least a hundred and sixty wide and the status panel wants two
  * columns of bars; past this, a bigger size stops making anything easier to
  * read and starts putting windows on top of each other with nowhere to go.
+ * Measured on a phone's layout: at 280 the status panel's bars and its name
+ * ran off its right edge, in both looks; from 300 they fit.
  */
-const MIN_UI_SIDE = 280;
+const MIN_UI_SIDE = 300;
 
 /** The fit `followScreen` keeps running, so that a new size is put on at once. */
 let refit: (() => void) | null = null;

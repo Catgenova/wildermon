@@ -7,6 +7,10 @@ export interface MenuItem {
   /** Neutral extra text such as a materials list. */
   note?: string;
   disabled?: boolean;
+  /** Whether the thing the entry toggles is on; set, the row keeps a column for a tick so the labels stay in line. */
+  checked?: boolean;
+  /** The key that does the same, written at the row's end. */
+  keys?: string;
   onSelect?: () => void;
   /** A submenu; the row expands in place so it works with a mouse or a finger. */
   children?: MenuItem[];
@@ -38,8 +42,24 @@ export function buildMenuRows(items: MenuItem[], depth: number, hooks: RowHooks 
 
 function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: string): HTMLElement[] {
   const row = document.createElement('div');
-  row.className = 'ctx-item' + (item.disabled ? ' disabled' : '') + (depth ? ' ctx-child' : '');
+  // A row that does nothing and opens nothing is a line of information, not a refused job, and is drawn as one.
+  const info = !item.onSelect && !item.children;
+  row.className = 'ctx-item' + (item.disabled ? ' disabled' : '') + (depth ? ' ctx-child' : '') + (info ? ' ctx-info' : '');
   row.style.paddingLeft = `${8 + depth * 14}px`;
+  // Reachable from the keyboard (`ContextMenu`'s arrows) without being a stop for Tab.
+  if (!info) {
+    row.tabIndex = -1;
+    row.setAttribute('role', 'menuitem');
+    if (item.disabled) row.setAttribute('aria-disabled', 'true');
+  }
+  if (item.checked !== undefined) {
+    const tick = document.createElement('span');
+    tick.className = 'ctx-tick';
+    tick.textContent = item.checked ? '\u2713' : '';
+    row.append(tick);
+    row.setAttribute('role', 'menuitemcheckbox');
+    row.setAttribute('aria-checked', String(item.checked));
+  }
   // A key that does this entry, written where it can be seen.
   const key = hooks.keyOf?.(item);
   if (key !== undefined) {
@@ -50,12 +70,28 @@ function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: stri
     row.classList.add('ctx-keyed');
   }
   const label = document.createElement('span');
+  label.className = 'ctx-label';
   label.textContent = item.label;
   row.append(label);
+  if (item.keys) {
+    const kbd = document.createElement('kbd');
+    kbd.className = 'ctx-shortcut';
+    kbd.textContent = item.keys;
+    row.append(kbd);
+  }
   if (item.children) {
+    // A fold that is refused says why, as any refused row does.
+    if (item.disabled && item.hint) {
+      const hint = document.createElement('span');
+      hint.className = 'ctx-hint';
+      hint.textContent = item.hint;
+      row.append(hint);
+      row.title = item.hint;
+    }
     const chevron = document.createElement('span');
     chevron.className = 'ctx-chevron';
     chevron.textContent = '\u25b8';
+    row.setAttribute('aria-expanded', 'false');
     // A row that is both a job and a fold: the label does it, the arrow opens
     // the choices. A row that is only a fold opens wherever it is clicked.
     if (item.onSelect) chevron.title = 'More ways to do this';
@@ -66,11 +102,13 @@ function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: stri
         for (const el of open) el.remove();
         open = null;
         chevron.textContent = '\u25b8';
+        row.setAttribute('aria-expanded', 'false');
         if (remember) hooks.folds?.delete(path);
       } else {
         open = buildMenuRows(item.children ?? [], depth + 1, hooks, path);
         row.after(...open);
         chevron.textContent = '\u25be';
+        row.setAttribute('aria-expanded', 'true');
         if (remember) hooks.folds?.add(path);
       }
       hooks.changed?.();
@@ -127,7 +165,9 @@ export class ContextMenu {
   constructor(root: HTMLElement, private readonly canvas: HTMLElement) {
     this.el = document.createElement('div');
     this.el.className = 'ctx-menu';
+    this.el.setAttribute('role', 'menu');
     this.el.hidden = true;
+    this.el.addEventListener('keydown', (e) => this.key(e));
     root.append(this.el);
     const outside = (e: Event): void => {
       if (this.el.hidden) return;
@@ -156,6 +196,7 @@ export class ContextMenu {
    * anything but one.
    */
   show(x: number, y: number, title: string, items: MenuItem[], facts?: string[]): void {
+    if (this.el.hidden) this.before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this.el.replaceChildren();
     const head = document.createElement('div');
     head.className = 'ctx-title';
@@ -178,8 +219,54 @@ export class ContextMenu {
     }
     this.el.append(...buildMenuRows(items, 0, { changed: () => this.fit(), chose: () => this.hide() }));
     this.el.hidden = false;
+    this.el.setAttribute('aria-label', title);
     this.anchor = uiPoint({ clientX: x, clientY: y });
     this.fit();
+    // The first thing that can be done has the keyboard, so the arrows and Enter work at once; a pointer sees no ring for it.
+    this.rows().find((r) => !r.classList.contains('disabled'))?.focus({ preventScroll: true });
+  }
+
+  /** The rows the arrows walk, in the order they are drawn: open folds' rows among them. */
+  private rows(): HTMLElement[] {
+    return [...this.el.querySelectorAll<HTMLElement>('.ctx-item[tabindex]')];
+  }
+
+  /**
+   * The menu from the keyboard: up and down walk the rows, Home and End go
+   * to the ends, right opens a fold and left shuts it, Enter or Space does
+   * the row, and Escape puts the menu away. Each is kept from the island, so
+   * an arrow here does not also push the view about.
+   */
+  private key(e: KeyboardEvent): void {
+    const rows = this.rows();
+    const at = rows.indexOf(document.activeElement as HTMLElement);
+    const go = (i: number): void => {
+      const r = rows[(i + rows.length) % rows.length];
+      r?.focus();
+      r?.scrollIntoView({ block: 'nearest' });
+    };
+    const row = rows[at];
+    const chevron = row?.querySelector<HTMLElement>('.ctx-chevron');
+    switch (e.key) {
+      case 'ArrowDown': go(at + 1); break;
+      case 'ArrowUp': go(at < 0 ? rows.length - 1 : at - 1); break;
+      case 'Home': go(0); break;
+      case 'End': go(rows.length - 1); break;
+      case 'ArrowRight':
+        if (chevron && row?.getAttribute('aria-expanded') === 'false') chevron.click();
+        break;
+      case 'ArrowLeft':
+        if (chevron && row?.getAttribute('aria-expanded') === 'true') chevron.click();
+        break;
+      case 'Enter':
+      case ' ':
+        row?.click();
+        break;
+      case 'Escape': this.hide(); break;
+      default: return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
   }
 
   private anchor = { x: 0, y: 0 };
@@ -196,8 +283,15 @@ export class ContextMenu {
     this.el.style.top = `${Math.max(0, top)}px`;
   }
 
+  /** What had the keyboard before the menu took it, to be given it back. */
+  private before: HTMLElement | null = null;
+
   hide(): void {
+    if (this.el.hidden) return;
+    const had = this.el.contains(document.activeElement);
     this.el.hidden = true;
+    if (had && this.before?.isConnected) this.before.focus({ preventScroll: true });
+    this.before = null;
   }
 
   /** True once when the menu was just closed by a press on the canvas, so a plain click there does nothing else. */

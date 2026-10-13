@@ -153,4 +153,6 @@
 @container (max-width: 560px) {
   .cr-in { flex-direction: column; align-items: stretch; }
   .cr-mirror { position: static; width: 100%; }
+  /* Over the choices, the mirror is cut down so the first rows of them are on the screen with it. */
+  .cr-me { height: min(var(--cr-h), 340px); }
 }

@@ -1,5 +1,12 @@
 import { uiBox, uiPoint } from './screen';
 
+/**
+ * One line of a tooltip: plain text, said faint under the title; or a figure,
+ * said in full ink, with a `tail` after it in the colour of its `tone` -- the
+ * "(+3.7 better)" on a compare card, green when better and red when worse.
+ */
+export type TipLine = string | { text: string; tail?: string; tone?: 'good' | 'bad' | 'same' };
+
 export class Tooltip {
   readonly el: HTMLDivElement;
   /**
@@ -24,7 +31,7 @@ export class Tooltip {
    * about what a thing is *for* is a sentence, and a sentence six hundred
    * pixels long is not a tooltip.
    */
-  show(x: number, y: number, lines: string[], holder: unknown = null, wide = false): void {
+  show(x: number, y: number, lines: readonly TipLine[], holder: unknown = null, wide = false): void {
     if (this.holder && this.holder !== holder) return;
     this.holder = holder;
     /*
@@ -33,14 +40,25 @@ export class Tooltip {
      * meant new elements and a forced layout to measure them sixty times a
      * second for a note that had not changed a word.
      */
-    const said = (wide ? '1' : '0') + lines.join('\n');
+    const said = (wide ? '1' : '0') + lines.map((l) => (typeof l === 'string' ? l : `${l.text}\t${l.tail ?? ''}\t${l.tone ?? ''}`)).join('\n');
     if (said !== this.said || this.el.hidden) {
       if (said !== this.said) {
         this.el.classList.toggle('tooltip-wide', wide);
-        this.el.replaceChildren(...lines.map((text, i) => {
+        this.el.replaceChildren(...lines.map((line, i) => {
           const div = document.createElement('div');
-          div.className = i === 0 ? 'tooltip-title' : 'tooltip-line';
-          div.textContent = text;
+          if (typeof line === 'string') {
+            div.className = i === 0 ? 'tooltip-title' : 'tooltip-line';
+            div.textContent = line;
+            return div;
+          }
+          div.className = 'tooltip-stat';
+          div.textContent = line.text;
+          if (line.tail) {
+            const tail = document.createElement('span');
+            tail.className = `tooltip-tail${line.tone ? ` tip-${line.tone}` : ''}`;
+            tail.textContent = ` ${line.tail}`;
+            div.append(tail);
+          }
           return div;
         }));
       }

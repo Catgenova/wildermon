@@ -7,6 +7,7 @@ import { TIER_LEVEL } from '../../game/husbandry';
 import type { Game } from '../../game/game';
 import { itemDef, rarityOf } from '../../game/items';
 import { furnitureDef } from '../../game/furniture';
+import { SKILL_BY_ID } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
 
@@ -33,14 +34,15 @@ const GROUPS: Array<[Place, string]> = [
 
 /** How a herd may be put in order. */
 type SortKey = 'name' | 'level' | 'species' | 'health' | 'hunger' | 'care' | 'age' | 'traits';
+/** Each says which end comes first, since half of them climb and half fall (`ordered`). */
 const SORTS: Array<[SortKey, string]> = [
-  ['name', 'Name'],
-  ['level', 'Level'],
-  ['species', 'Kind'],
-  ['health', 'Health'],
-  ['hunger', 'Hunger'],
-  ['care', 'Care'],
-  ['age', 'Age'],
+  ['name', 'Name, A–Z'],
+  ['level', 'Highest level'],
+  ['species', 'Kind, A–Z'],
+  ['health', 'Most hurt'],
+  ['hunger', 'Hungriest'],
+  ['care', 'Best cared for'],
+  ['age', 'Oldest'],
   ['traits', 'Best trait'],
 ];
 
@@ -348,9 +350,15 @@ export class WildermonPanel {
     const flags = document.createElement('span');
     flags.className = 'pal-flags';
     head.append(name, flags, level, menu);
-    // How rare it came into the world, in its rarity's colour, and what that makes of it.
+    // How rare it came into the world, in its rarity's colour, and what that makes of it:
+    // the rarity and its size first, the figures after it in plain ink.
     const rarity = document.createElement('div');
     rarity.className = 'pal-rarity';
+    const rarityName = document.createElement('span');
+    rarityName.className = 'pal-rarity-name';
+    const rarityGives = document.createElement('span');
+    rarityGives.className = 'pal-rarity-gives';
+    rarity.append(rarityName, rarityGives);
     card.append(head, rarity);
 
     const bar = (label: string, cls: string): { row: HTMLDivElement; fill: HTMLDivElement; value: HTMLSpanElement } => {
@@ -370,7 +378,8 @@ export class WildermonPanel {
       return { row, fill, value };
     };
     const health = bar('Health', 'bar-health');
-    const hunger = bar('Hunger', 'bar-hunger');
+    // Full is good, as on the status panel: the bar is how fed it is, and says so.
+    const hunger = bar('Fed', 'bar-hunger');
     const care = bar('Care', 'bar-care');
     const pedigree = document.createElement('div');
     pedigree.className = 'pal-pedigree';
@@ -392,14 +401,19 @@ export class WildermonPanel {
       const def = SPECIES[c.species] ?? SPECIES.rabba;
       set(name, `${SEX_MARK[c.sex]} ${c.name}${c.name !== def.name ? ` · ${def.name}` : ''}`,
         `${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}`);
-      const rare = rarityLine(c);
-      if (rarity.textContent !== rare) rarity.textContent = rare;
-      rarity.hidden = !rare;
+      // "Rare · half again the size of its kind · +20% speed, …": the first two parts are what it is.
+      const [what = '', size = '', ...gives] = rarityLine(c).split(' · ');
+      const named = size ? `${what} · ${size}` : what;
+      if (rarityName.textContent !== named) rarityName.textContent = named;
+      const figures = gives.length ? ` · ${gives.join(' · ')}` : '';
+      if (rarityGives.textContent !== figures) rarityGives.textContent = figures;
+      rarity.hidden = !what;
       const hue = c.rare ? rarityOf(c).css : '';
-      if (rarity.style.color !== hue) rarity.style.color = hue;
+      if (rarityName.style.color !== hue) rarityName.style.color = hue;
       // Age reads before anything else: a yearling cannot be worked at all.
       const age = ageOf(c, this.game.time);
-      const growing = growsAt(c, this.game.time);
+      // Only the young are growing: what was walking about before the clock started is grown however the sum comes out.
+      const growing = age === 'young' ? growsAt(c, this.game.time) : 0;
       set(level, `${age === 'grown' ? '' : `${age} · `}Lv ${creatureLevel(c)}`,
         growing > 0 ? `Grown in ${clockLeft(growing)}` : age === 'old' ? 'Slower, but a better carcass' : 'Grown');
       // Which one it is, not just that one of them is: the card is marked and
@@ -466,7 +480,8 @@ export class WildermonPanel {
         parts.push(`Range ${workRangeOf(c, def)} tiles (+${def.rangePerStep ?? RANGE_PER_STEP} in ${toNext.toFixed(1)} skill)`);
       }
       parts.push(`Attack ${attackOf(c, def).toFixed(attackOf(c, def) % 1 ? 1 : 0)}`);
-      const skills = Object.entries(c.skills).map(([id, v]) => `${id[0].toUpperCase()}${id.slice(1)} ${v.toFixed(2)}`);
+      // By the skill's own name, as the creature's note and your skills window say it, not its id.
+      const skills = Object.entries(c.skills).map(([id, v]) => `${SKILL_BY_ID.get(id)?.name ?? id} ${v.toFixed(2)}`);
       parts.push(...skills);
       parts.push(`Experience ${c.xp.toFixed(1)}`);
       const said = parts.join(' · ');

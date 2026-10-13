@@ -1,7 +1,7 @@
 import { uiBox, uiFloor, uiPoint } from './screen';
 import { LAYOUT_NAMES } from '../game/keybinds';
 import { runeFor, runeSvg } from './theme';
-import { CELL, CELL_MAJOR, cells, clearPatch, fits, joinsOf, onScreen, placeFor, seamKey, seamsOf, sizeFor, snap, snapAt, type Box, type Join, type Seam } from './snapgrid';
+import { CELL, CELL_MAJOR, cells, clearPatch, fits, joinsOf, onScreen, placeFor, seamKey, seamsOf, sizeFor, snap, snapAt, squeezeFor, type Box, type Join, type Seam } from './snapgrid';
 
 export type Anchor = 'tl' | 'tr' | 'bl' | 'br';
 
@@ -58,6 +58,12 @@ const SEE_ICON = '◐';
 export const SNAP = 10;
 /** How far, in interface pixels, a press on the status panel or the toolbar has to travel before it is a drag rather than a click. */
 const BAR_DRAG = 6;
+/** On a phone, the least room between the toolbar and the status panel under it (`WindowManager.stackBars`). */
+const BAR_GAP = 4;
+/** On a phone, the room left between a window's foot and the event log, the first-steps card or the spell bar under it. */
+const FOOT_GAP = 8;
+/** On a phone, the least height worth keeping windows to between the bars and the foot (a title and four rows); with less, they may lie over the foot's things. */
+const MIN_BAND = 160;
 /** Windows are raised by z-index from here; past `Z_TOP` they are counted down again, keeping them under the seams (`.rc-seams`, src/style.css). */
 const Z_FLOOR = 100;
 const Z_TOP = 5000;
@@ -76,8 +82,13 @@ interface Piece {
   readonly placed: boolean;
   /** Its box, rim and all, in interface pixels. */
   box(): Box;
-  /** Put it on a box: a window takes the place and the size, a bar only the place. `kept`: a size chosen, by a resize or a layout, rather than rounded to the grid. */
-  put(b: Box, kept?: boolean): void;
+  /**
+   * Put it on a box: a window takes the place and the size, a bar only the
+   * place. `kept`: a size chosen, by a resize or a layout, rather than rounded
+   * to the grid. `own`: the size it is meant to be, kept for later when it is
+   * put on a smaller box for want of room.
+   */
+  put(b: Box, kept?: boolean, own?: { w: number; h: number }): void;
   /** The size it is meant to be on the grid, if one was chosen (`UIWindow.want`). */
   readonly wanted?: { w: number; h: number } | null;
   /** The smallest it may be made, in whole cells. */
@@ -125,12 +136,15 @@ export class UIWindow implements Piece {
     this.expandBtn.className = 'win-btn win-expand';
     this.expandBtn.type = 'button';
     this.expandBtn.title = 'Expand';
+    this.expandBtn.setAttribute('aria-label', 'Expand');
     this.expandBtn.textContent = EXPAND_ICON;
     this.expandBtn.addEventListener('click', () => this.toggleMaximized());
     const close = document.createElement('button');
     close.className = 'win-btn win-close';
     close.type = 'button';
     close.title = 'Close';
+    // The buttons are drawn as signs; a screen reader says what they do instead.
+    close.setAttribute('aria-label', 'Close');
     close.textContent = '×';
     close.addEventListener('click', () => this.close());
     if (opts.seeThrough) {
@@ -138,6 +152,7 @@ export class UIWindow implements Piece {
       see.className = 'win-btn win-see-btn';
       see.type = 'button';
       see.textContent = SEE_ICON;
+      see.setAttribute('aria-label', 'See-through');
       see.addEventListener('click', () => this.setSeeThrough(!this.see));
       this.seeBtn = see;
       buttons.append(see);
@@ -239,6 +254,11 @@ export class UIWindow implements Piece {
     return this.isOpen && !this.maximized;
   }
 
+  /** Kept to the foot of the screen (anchored at a bottom corner): the event log. On a phone the other windows stay above it (`WindowManager.footFor`). */
+  get atFoot(): boolean {
+    return this.opts.anchor === 'bl' || this.opts.anchor === 'br';
+  }
+
   box(): Box {
     return { x: this.el.offsetLeft, y: this.el.offsetTop, w: this.el.offsetWidth, h: this.el.offsetHeight };
   }
@@ -248,10 +268,11 @@ export class UIWindow implements Piece {
   }
 
   /** Its place and its box's size; the size it is given is the box less its rim (`frame`). */
-  put(b: Box, kept = false): void {
+  put(b: Box, kept = false, own?: { w: number; h: number }): void {
     const [fw, fh] = this.frame();
     this.applyGeometry({ x: b.x, y: b.y, w: b.w - fw, h: b.h - fh });
-    if (kept || this.want) this.want = { w: b.w, h: b.h };
+    if (own) this.want = { w: own.w, h: own.h };
+    else if (kept || this.want) this.want = { w: b.w, h: b.h };
   }
 
   /** The least a window may be (`.win` in src/style.css), rim and all, in whole cells. */
@@ -272,6 +293,7 @@ export class UIWindow implements Piece {
     this.el.classList.toggle('win-see', on);
     if (this.seeBtn) {
       this.seeBtn.classList.toggle('win-btn-on', on);
+      this.seeBtn.setAttribute('aria-pressed', String(on));
       this.seeBtn.title = on
         ? 'Solid again. While it is see-through, hold Alt to click in it.'
         : 'See-through: dimmed, and clicks on it go to the island. Hold Alt to click in it.';
@@ -316,12 +338,14 @@ export class UIWindow implements Piece {
       this.applyMaximized();
       this.expandBtn.textContent = RESTORE_ICON;
       this.expandBtn.title = 'Restore';
+      this.expandBtn.setAttribute('aria-label', 'Restore');
       this.mgr.bringToFront(this);
     } else {
       this.el.classList.remove('maximized');
       if (this.normal) this.applyGeometry(this.normal);
       this.expandBtn.textContent = EXPAND_ICON;
       this.expandBtn.title = 'Expand';
+      this.expandBtn.setAttribute('aria-label', 'Expand');
       this.clamp();
     }
     if (persist) {
@@ -333,6 +357,7 @@ export class UIWindow implements Piece {
   }
 
   private applyMaximized(): void {
+    this.el.style.maxHeight = '';
     const margin = Math.max(8, Math.round(Math.min(uiBox().w, uiBox().h) * 0.04));
     const [fw, fh] = this.frame();
     this.applyGeometry({
@@ -378,7 +403,9 @@ export class UIWindow implements Piece {
   open(): void {
     this.el.hidden = false;
     this.mgr.bringToFront(this);
-    this.clamp();
+    // On a phone a window at the foot opening moves the others' foot up, so all are laid again.
+    if (this.mgr.grid) this.clamp();
+    else this.mgr.clampAll();
     // Where it was, unless something has taken that room since: then the nearest free room of its size.
     this.mgr.settle(this);
     this.mgr.rejoin(false);
@@ -388,6 +415,7 @@ export class UIWindow implements Piece {
 
   close(): void {
     this.el.hidden = true;
+    if (!this.mgr.grid && this.atFoot) this.mgr.clampAll();
     this.mgr.rejoin(false);
     this.mgr.persist();
   }
@@ -425,14 +453,22 @@ export class UIWindow implements Piece {
      * and every turn of the phone, so a window saved from a wide screen and
      * opened on a narrow one comes back in rather than off the side.
      */
-    const room = Math.max(70, box.h - floor - 12);
+    /*
+     * On a phone, as high as the room between the bars and whatever holds the
+     * foot of the screen (`WindowManager.footFor`), given as a most rather
+     * than written over its height, so the size it was given comes back on a
+     * wider screen or once that room grows.
+     */
+    const foot = this.mgr.grid ? box.h : this.mgr.footFor(this);
+    const room = Math.max(70, foot - floor - (foot === box.h ? 12 : 0));
+    this.el.style.maxHeight = this.mgr.grid ? '' : `${room}px`;
     const [fw, fh] = this.frame();
     if (this.el.offsetHeight > room) this.el.style.height = `${room - fh}px`;
     const wide = Math.max(160, box.w - 12);
     if (this.el.offsetWidth > wide) this.el.style.width = `${wide - fw}px`;
 
     const maxLeft = Math.max(0, box.w - this.el.offsetWidth);
-    const maxTop = Math.max(floor, box.h - this.el.offsetHeight);
+    const maxTop = Math.max(floor, foot - this.el.offsetHeight);
     this.el.style.left = `${Math.min(maxLeft, Math.max(0, this.el.offsetLeft))}px`;
     this.el.style.top = `${Math.min(maxTop, Math.max(floor, this.el.offsetTop))}px`;
   }
@@ -502,6 +538,8 @@ export class Bar implements Piece {
     // What is in it grows and shrinks (a companion, a wound, a key rebound): it is made whole cells again, and windows it now covers move off it.
     new ResizeObserver(() => {
       if (this.mgr.grid && !this.fitting && this.el.offsetWidth % CELL + this.el.offsetHeight % CELL !== 0) this.mgr.settleAll();
+      // On a phone, a bar grown taller (the toolbar onto a second row) moves the ones under it down, and the windows under them.
+      else if (!this.mgr.grid) this.mgr.clampAll();
     }).observe(el);
   }
 
@@ -647,7 +685,15 @@ export class WindowManager {
       b = { ...b, w: Math.max(m.w, size(want.w, b.x, sw)), h: Math.max(m.h, size(want.h, b.y, sh)) };
     }
     b = onScreen({ ...b, x: snapAt(b.x, b.w, sw), y: snapAt(b.y, b.h, sh) }, sw, sh);
-    p.put(placeFor(b, walls, sw, sh)?.r ?? b);
+    const room = placeFor(b, walls, sw, sh)?.r;
+    if (room || p.fixed) {
+      p.put(room ?? b);
+      return;
+    }
+    // No room its size anywhere: as big as the room there is, its own size kept for when room comes back.
+    const less = squeezeFor(b, p.least(), walls, sw, sh);
+    if (less) p.put(less, false, { w: b.w, h: b.h });
+    else p.put(b);
   }
 
   /**
@@ -659,7 +705,7 @@ export class WindowManager {
     if (this.drag) return;
     this.root.classList.toggle('snapgrid', this.grid);
     if (!this.grid) {
-      for (const b of this.bars.values()) b.loose();
+      this.stackBars();
       this.rejoin(false);
       return;
     }
@@ -896,8 +942,71 @@ export class WindowManager {
    * given against a viewport that was never the screen.
    */
   clampAll(): void {
-    for (const w of this.windows.values()) w.clamp();
+    // On a phone the windows' floor is the foot of the bars, so the bars are laid first, and the windows at the foot before those kept above them.
+    if (!this.grid) this.stackBars();
+    const all = [...this.windows.values()];
+    for (const w of [...all.filter((w) => w.atFoot), ...all.filter((w) => !w.atFoot)]) w.clamp();
     this.settleAll();
+  }
+
+  /** Things laid along the foot of a phone's screen that are not windows: the first-steps card and the spell bar. */
+  private static readonly FOOT = '.hud-stack .guide, .spell-bar';
+  /** Those already watched for showing, hiding or changing height. */
+  private readonly footWatched = new WeakSet<HTMLElement>();
+
+  /**
+   * On a phone, how far down a window may reach, in interface pixels. A window
+   * at the foot (the event log) may reach the bottom of the screen; any other
+   * stops `FOOT_GAP` above the highest of that window, the first-steps card
+   * and the spell bar, so it neither lies partly over the log nor goes under
+   * the card. Where that leaves less than `MIN_BAND` under the bars (a small
+   * phone, a large text size), it lies over the log but stops above the card
+   * and the spell bar; and where even that is too little, it reaches the
+   * bottom of the screen.
+   */
+  footFor(win: UIWindow): number {
+    const { h } = uiBox();
+    if (win.atFoot) return h;
+    const floor = uiFloor();
+    const logs = [...this.windows.values()].filter((w) => w !== win && w.atFoot && w.placed).map((w) => w.el.offsetTop);
+    const rest: number[] = [];
+    const k = this.root.offsetWidth ? this.root.getBoundingClientRect().width / this.root.offsetWidth : 1;
+    const rootTop = this.root.getBoundingClientRect().top;
+    for (const el of this.root.querySelectorAll<HTMLElement>(WindowManager.FOOT)) {
+      if (!this.footWatched.has(el)) {
+        this.footWatched.add(el);
+        new ResizeObserver(() => {
+          if (!this.grid) this.clampAll();
+        }).observe(el);
+      }
+      if (el.offsetParent) rest.push((el.getBoundingClientRect().top - rootTop) / k);
+    }
+    for (const tops of [[...logs, ...rest], rest]) {
+      const top = Math.min(h, ...tops) - FOOT_GAP;
+      if (top - floor >= MIN_BAND) return top;
+    }
+    return h;
+  }
+
+  /**
+   * Off the grid, on a phone: each bar back in its own place (`#ui.narrow` in
+   * src/style.css), and moved down clear of any bar above it that has grown
+   * over it. The toolbar wraps onto a second row at a large text size, and its
+   * frame is taller in Runecut; either way the status panel under it would lie
+   * across its foot, name row and all.
+   */
+  private stackBars(): void {
+    const bars = [...this.bars.values()];
+    for (const b of bars) b.loose();
+    bars.sort((a, b) => a.el.offsetTop - b.el.offsetTop);
+    const laid: Box[] = [];
+    for (const b of bars) {
+      const at = b.box();
+      const above = laid.filter((q) => q.x < at.x + at.w && at.x < q.x + q.w && q.y <= at.y);
+      const foot = Math.max(at.y, ...above.map((q) => q.y + q.h + BAR_GAP));
+      if (foot > at.y) b.el.style.top = `${foot}px`;
+      laid.push(b.box());
+    }
   }
 
   /** Told of every window as it is made, after it is placed: Runecut's stone and frame are added here (`src/ui/runecut-dress.ts`). */
@@ -945,6 +1054,8 @@ export class WindowManager {
     this.front?.el.classList.remove('win-front');
     win.el.classList.add('win-front');
     this.front = win;
+    // The seams are drawn over the windows, so they are laid again for the new order: none over a window now in front of them.
+    this.rejoin(false);
   }
 
   persist(): void {

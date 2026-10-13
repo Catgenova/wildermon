@@ -21,7 +21,10 @@ const button = (className: string, text: string, label?: string): HTMLButtonElem
   b.type = 'button';
   b.className = className;
   b.textContent = text;
-  if (label) b.setAttribute('aria-label', label);
+  if (label) {
+    b.setAttribute('aria-label', label);
+    b.title = label;
+  }
   return b;
 };
 
@@ -87,6 +90,7 @@ export class Creator {
     turn.className = 'cr-turn';
     const left = button('', '◀', 'Turn left');
     this.closeUp = button('cr-close', 'Face');
+    this.closeUp.title = 'Bring the head up to fill the mirror';
     this.closeUp.setAttribute('aria-pressed', 'false');
     const right = button('', '▶', 'Turn right');
     left.addEventListener('click', () => this.turn(-1));

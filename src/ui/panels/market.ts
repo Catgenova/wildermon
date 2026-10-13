@@ -123,7 +123,7 @@ export class MarketPanel {
   ) {
     win.body.classList.add('skills-body');
     this.bar = document.createElement('div');
-    this.bar.className = 'log-tabs';
+    this.bar.className = 'log-tabs market-tabs';
     for (const [id, label, title] of [
       ['board', 'Board', 'Every stall and buy order on the island, read at a settlement token or a mailbox'],
       ['prices', 'Prices', `What everything has sold for on the island in the last ${SALE_DAYS} days`],
@@ -142,6 +142,7 @@ export class MarketPanel {
       this.bar.append(b);
     }
     this.page = document.createElement('div');
+    this.page.className = 'market-page';
     win.body.append(this.bar, this.page);
     win.onOpen = () => void this.refresh();
     this.draw();
@@ -159,6 +160,7 @@ export class MarketPanel {
     this.tab = id;
     for (const [key, el] of this.tabs) el.classList.toggle('tb-on', key === id);
     this.draw();
+    this.win.body.scrollTop = 0;
   }
 
   /** Asked again while the window is open, and not at all while it is shut. */
@@ -243,7 +245,7 @@ export class MarketPanel {
       name.className = 'price-name';
       name.textContent = itemDef(def).name;
       const said = document.createElement('small');
-      said.textContent = `${s.n} sold · ${s.lo === s.hi ? `${silverEach(s.lo)} each` : `${silverEach(s.lo)}–${silverEach(s.hi)} each, ${silverEach(s.each)} on average`}`
+      said.textContent = `${s.n} sold · ${s.lo === s.hi ? `${silverEach(s.lo)} silver each` : `${silverEach(s.lo)}–${silverEach(s.hi)} silver each, ${silverEach(s.each)} on average`}`
         + ` · last ${s.last === 0 ? 'today' : s.last === 1 ? 'yesterday' : `${s.last} days ago`}`;
       name.append(said);
       row.append(name, priceChart(days));
@@ -269,11 +271,46 @@ export class MarketPanel {
   private button(label: string, title: string, go: () => void): HTMLButtonElement {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'tb-btn tb-small';
+    b.className = 'tb-btn tb-small market-do';
     b.textContent = label;
     b.title = title;
     b.addEventListener('click', go);
     return b;
+  }
+
+  /** A row's words: what it is, and smaller under it, anything more. */
+  private lines(main: string, more = ''): HTMLSpanElement {
+    const el = document.createElement('span');
+    el.className = 'market-what';
+    el.textContent = main;
+    if (more) {
+      const small = document.createElement('small');
+      small.textContent = more;
+      el.append(small);
+    }
+    return el;
+  }
+
+  /** A row of the board or a stall: what, its price in a column of its own, and what to do. */
+  private good(what: HTMLElement, cost: HTMLElement | string, ...acts: HTMLElement[]): HTMLDivElement {
+    const row = document.createElement('div');
+    row.className = 'skill-row market-good';
+    const price = typeof cost === 'string' ? Object.assign(document.createElement('span'), { textContent: cost }) : cost;
+    price.classList.add('market-cost');
+    const doing = document.createElement('span');
+    doing.className = 'market-acts';
+    doing.append(...acts);
+    row.append(what, price, doing);
+    return row;
+  }
+
+  /** A stall's heading: whose and what, and under it, smaller, where and how far. */
+  private place(title: string, where: string): void {
+    this.head(title);
+    const el = document.createElement('div');
+    el.className = 'market-where';
+    el.textContent = where;
+    this.page.append(el);
   }
 
   /** What a deal is, in one line: the goods, and the coins one way or the other. */
@@ -291,10 +328,8 @@ export class MarketPanel {
     if (!theirs.length) this.say('Nothing. An offer stands until it is taken or turned down.');
     for (const d of theirs) {
       const row = document.createElement('div');
-      row.className = 'skill-row';
-      const text = document.createElement('span');
-      text.textContent = `${d.who}: ${this.terms(d)}`;
-      row.append(text,
+      row.className = 'skill-row market-row';
+      row.append(this.lines(this.terms(d), `from ${d.who}`),
         this.button('Take it', 'You both have to be standing together', () => void this.act(this.island!.answerDeal(d.n, true))),
         this.button('No', 'Turn it down; everything goes back', () => void this.act(this.island!.answerDeal(d.n, false))));
       this.page.append(row);
@@ -304,10 +339,8 @@ export class MarketPanel {
     if (!mine.length) this.say('Nothing out.');
     for (const d of mine) {
       const row = document.createElement('div');
-      row.className = 'skill-row';
-      const text = document.createElement('span');
-      text.textContent = `${d.who}: ${this.terms(d)}`;
-      row.append(text, this.button('Take it back', 'Everything held comes home', () => void this.act(this.island!.answerDeal(d.n, false))));
+      row.className = 'skill-row market-row';
+      row.append(this.lines(this.terms(d), `to ${d.who}`), this.button('Take it back', 'Everything held comes home', () => void this.act(this.island!.answerDeal(d.n, false))));
       this.page.append(row);
     }
 
@@ -325,7 +358,7 @@ export class MarketPanel {
     this.pick(this.picked, 'Offer');
 
     const bar = document.createElement('div');
-    bar.className = 'panel-bar';
+    bar.className = 'panel-bar market-bar';
     const price = document.createElement('input');
     price.type = 'number';
     price.min = '0';
@@ -334,14 +367,15 @@ export class MarketPanel {
     price.title = 'Silver you want for it. Nought gives it away.';
     price.addEventListener('input', () => (this.want = Math.max(0, Number(price.value) || 0)));
     const who = document.createElement('select');
-    who.className = 'panel-select';
+    who.className = 'panel-select market-who';
+    who.title = 'Who it is offered to';
     for (const f of people) {
       const o = document.createElement('option');
       o.value = f.uid;
       o.textContent = f.name;
       who.append(o);
     }
-    bar.append(price, who, this.button('Offer', 'The terms are fixed once it is out', () => {
+    bar.append(field('silver wanted', price), field('to', who), this.button('Offer', 'The terms are fixed once it is out', () => {
       const items = [...this.picked];
       this.picked.clear();
       void this.act(this.island!.offer(who.value, items, this.want, 0));
@@ -368,26 +402,27 @@ export class MarketPanel {
       this.head(`${st.what === 'counter' ? 'Shop counter' : 'Stall'} at ${st.x},${st.y}${st.deed ? ` on ${st.deed}` : ''}`);
       const till = st.till ?? 0;
       const row = document.createElement('div');
-      row.className = 'skill-row';
+      row.className = 'skill-row market-row';
       const text = document.createElement('span');
+      text.className = 'market-what';
       text.textContent = till > 0 ? `The till holds ${priceWords(till)}.` : 'The till is empty.';
       row.append(text);
       if (till > 0) row.append(this.button('Take the takings', sellsTooFar(st.what === 'counter' ? 'counter' : 'stall'), () => void this.act(this.island!.takings(st.id))));
       this.page.append(row);
       if (!st.goods.length) this.say('Nothing on the counter. Put something in it, then set a price.');
       for (const good of st.goods) {
-        const line = document.createElement('div');
-        line.className = 'skill-row';
-        const name = document.createElement('span');
-        name.textContent = `${goodName(good)}${good.price ? ` — ${priceWords(good.price)}` : ' — not for sale'}`;
         const box = document.createElement('input');
         box.type = 'number';
         box.min = '0';
         box.className = 'panel-select market-price';
         box.value = String(good.price ?? 0);
-        line.append(name, box, this.button('Set', 'Nought takes it off sale', () =>
-          void this.act(this.island!.setPrice(good.id, Math.max(0, Number(box.value) || 0)))));
-        this.page.append(line);
+        box.title = 'Silver for it. Nought takes it off sale.';
+        box.setAttribute('aria-label', `Silver for ${goodName(good)}`);
+        const unit = document.createElement('label');
+        unit.className = 'market-field';
+        unit.append(box, 'silver');
+        this.page.append(this.good(this.lines(goodName(good), good.price ? `on sale at ${priceWords(good.price)}` : 'not for sale'), unit,
+          this.button('Set', 'Nought takes it off sale', () => void this.act(this.island!.setPrice(good.id, Math.max(0, Number(box.value) || 0))))));
       }
     }
   }
@@ -412,15 +447,11 @@ export class MarketPanel {
     if (!theirs.length) this.say('Nobody has anything for sale.');
     for (const st of theirs) {
       const far = Math.round(Math.hypot(st.x + 0.5 - me.x, st.y + 0.5 - me.y));
-      this.head(`${st.owner}'s ${st.what === 'counter' ? 'shop counter' : 'stall'} at ${st.x},${st.y}${st.deed ? ` on ${st.deed}` : ''} — ${far} ${far === 1 ? 'tile' : 'tiles'} away`);
+      this.place(`${st.owner}'s ${st.what === 'counter' ? 'shop counter' : 'stall'}`,
+        `${st.x},${st.y}${st.deed ? ` on ${st.deed}` : ''} · ${far} ${far === 1 ? 'tile' : 'tiles'} away`);
       for (const good of st.goods) {
-        const row = document.createElement('div');
-        row.className = 'skill-row';
-        const text = document.createElement('span');
-        text.textContent = `${goodName(good)} — ${priceWords(good.price ?? 0)}`;
-        row.append(text, this.button('Buy', st.what === 'counter' ? COUNTER_BUY_FROM : sellsTooFar('stall'),
-          () => void this.act(this.island!.buy(good.id))));
-        this.page.append(row);
+        this.page.append(this.good(this.lines(goodName(good)), priceWords(good.price ?? 0),
+          this.button('Buy', st.what === 'counter' ? COUNTER_BUY_FROM : sellsTooFar('stall'), () => void this.act(this.island!.buy(good.id)))));
       }
     }
     this.drawWanted();
@@ -442,11 +473,9 @@ export class MarketPanel {
       const have = couldBring(this.game.inventory.items, o, (uid) => this.game.isEquipped(uid));
       const row = document.createElement('div');
       row.className = 'skill-row market-row';
-      const text = document.createElement('span');
-      text.textContent = `${o.who} wants ${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each, `
-        + `put up at ${o.x},${o.y}${o.deed ? ` on ${o.deed}` : ''}. `
-        + (have ? `You have ${have} that will do.` : 'You have none that will do.');
-      row.append(text);
+      row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
+        `${o.who}'s order, put up at ${o.x},${o.y}${o.deed ? ` on ${o.deed}` : ''}. `
+        + (have ? `You have ${have} that will do.` : 'You have none that will do.')));
       if (have) {
         const most = Math.min(have, left);
         const box = document.createElement('input');
@@ -456,6 +485,7 @@ export class MarketPanel {
         box.className = 'panel-select market-count';
         box.value = String(Math.min(this.bringing.get(o.n) ?? most, most));
         box.title = 'How many to bring';
+        box.setAttribute('aria-label', 'How many to bring');
         box.addEventListener('input', () => this.bringing.set(o.n, Math.max(1, Math.floor(Number(box.value) || 1))));
         row.append(box, this.button('Fill',
           `Paid ${priceWords(o.price)} for each out of what it holds, at once; what you bring goes to ${o.who} by the post`,
@@ -482,11 +512,8 @@ export class MarketPanel {
       const left = o.want - o.got;
       const row = document.createElement('div');
       row.className = 'skill-row market-row';
-      const text = document.createElement('span');
-      text.textContent = `${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`
-        + `${o.got ? `, ${o.got} of ${o.want} brought` : ''}: ${priceWords(left * o.price)} held, `
-        + `lapses in ${awayFor(o.left)}.`;
-      row.append(text, this.button('Take it back', `${priceWords(left * o.price)} comes back to your purse`,
+      row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
+        `${o.got ? `${o.got} of ${o.want} brought. ` : ''}${priceWords(left * o.price)} held, lapses in ${awayFor(o.left)}.`), this.button('Take it back', `${priceWords(left * o.price)} comes back to your purse`,
         () => void this.act(this.island!.cancelOrder(o.n))));
       this.page.append(row);
     }
@@ -588,10 +615,8 @@ export class MarketPanel {
     }
     for (const t of this.waiting.things) {
       const row = document.createElement('div');
-      row.className = 'skill-row';
-      const text = document.createElement('span');
-      text.textContent = `${t.count > 1 ? `${t.count} × ` : ''}${nameOf(t)}${t.from ? ` — from ${t.from}` : ''}`;
-      row.append(text);
+      row.className = 'skill-row market-row';
+      row.append(this.lines(`${t.count > 1 ? `${t.count} × ` : ''}${nameOf(t)}`, t.from ? `from ${t.from}` : ''));
       this.page.append(row);
     }
     if (this.waiting.things.length) {
@@ -620,7 +645,7 @@ export class MarketPanel {
     }
     this.pick(this.posting, 'Send');
     const bar = document.createElement('div');
-    bar.className = 'panel-bar';
+    bar.className = 'panel-bar market-bar';
     const note = document.createElement('input');
     note.type = 'text';
     note.maxLength = LETTER_MAX;
@@ -629,14 +654,15 @@ export class MarketPanel {
     note.value = this.note;
     note.addEventListener('input', () => (this.note = note.value));
     const who = document.createElement('select');
-    who.className = 'panel-select';
+    who.className = 'panel-select market-who';
+    who.title = 'Who it goes to';
     for (const f of people) {
       const o = document.createElement('option');
       o.value = f.uid;
       o.textContent = f.name;
       who.append(o);
     }
-    bar.append(note, who, this.button('Send', 'It is theirs from the moment it goes in', () => {
+    bar.append(note, field('to', who), this.button('Send', 'It is theirs from the moment it goes in', () => {
       const items = [...this.posting];
       this.posting.clear();
       const text = this.note;
@@ -688,7 +714,7 @@ const kindList = (): HTMLDataListElement => {
 };
 
 /** A box with what it is for written in front of it. */
-const field = (label: string, input: HTMLInputElement): HTMLLabelElement => {
+const field = (label: string, input: HTMLInputElement | HTMLSelectElement): HTMLLabelElement => {
   const el = document.createElement('label');
   el.className = 'market-field';
   el.append(label, input);

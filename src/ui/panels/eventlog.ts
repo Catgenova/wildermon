@@ -2,6 +2,7 @@ import { SAY_MAX } from '../../game/chat';
 import type { LogEntry, LogKind } from '../../game/events';
 import type { Game } from '../../game/game';
 import type { UIWindow } from '../windows';
+import { keepControlKeys } from '../controlkeys';
 
 /**
  * When a line was said.
@@ -68,6 +69,7 @@ export class EventLogPanel {
     this.search.type = 'search';
     this.search.className = 'panel-search log-search';
     this.search.placeholder = 'Find…';
+    this.search.title = 'Show only the lines on this tab that contain what is typed here; Esc clears it';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -100,6 +102,7 @@ export class EventLogPanel {
         this.input.blur();
       }
     });
+    keepControlKeys(bar);
     win.body.append(bar, this.list, this.input);
     this.render();
     game.events.on('log', (entry) => this.arrived(entry));
@@ -134,7 +137,10 @@ export class EventLogPanel {
     if (!shown) {
       const empty = document.createElement('div');
       empty.className = 'log-line log-info';
-      empty.textContent = this.query ? `Nothing in the log answers to “${this.search.value.trim()}”.` : 'Nothing of that sort yet.';
+      const where = this.tab.kinds ? `on the ${this.tab.label} tab` : 'in the log';
+      empty.textContent = this.query
+        ? `Nothing ${where} answers to “${this.search.value.trim()}”. Esc in the box clears it.`
+        : `Nothing ${where} yet.`;
       this.list.append(empty);
     }
     this.marks();
@@ -162,7 +168,14 @@ export class EventLogPanel {
       const el = this.tabEls.get(t.id);
       if (!el) continue;
       const n = t === this.tab ? 0 : (this.unread.get(t.id) ?? 0);
-      el.textContent = n ? `${t.label} ${n > 99 ? '99+' : n}` : t.label;
+      el.textContent = t.label;
+      if (n) {
+        const count = document.createElement('span');
+        count.className = 'log-count';
+        count.textContent = n > 99 ? '99+' : String(n);
+        el.append(count);
+      }
+      el.title = n ? `${t.title} — ${n} new` : t.title;
       el.classList.toggle('log-waiting', n > 0);
     }
   }

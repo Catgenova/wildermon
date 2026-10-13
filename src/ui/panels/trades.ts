@@ -101,9 +101,9 @@ export class TradesPanel {
   ) {
     win.body.classList.add('trade-body');
     const bar = document.createElement('div');
-    bar.className = 'trade-tabs';
+    bar.className = 'trade-tabs log-tabs';
     for (const [id, label] of [['trades', 'Trades'], ['tree', 'Tree']] as Array<[Tab, string]>) {
-      const b = button(label);
+      const b = button(label, 'log-tab');
       b.addEventListener('click', () => this.show(id));
       this.tabs.set(id, b);
       bar.append(b);
@@ -172,13 +172,22 @@ export class TradesPanel {
   }
 
   private show(tab: Tab): void {
+    const moved = tab !== this.tab;
     this.tab = tab;
     this.confirming = null;
     this.draw();
+    // Another tab is another page, read from its top.
+    if (moved) this.page.scrollTop = 0;
   }
 
   private draw(): void {
-    for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === this.tab);
+    for (const [id, b] of this.tabs) {
+      b.classList.toggle('tb-on', id === this.tab);
+      b.setAttribute('aria-pressed', String(id === this.tab));
+    }
+    // The Tree tab says when it has perks waiting to be chosen, from whichever tab you are on.
+    const waiting = (this.tree?.trades ?? []).reduce((n, t) => n + (t.tiers ?? []).filter((x) => x.open && !x.perks.some((p) => p.taken)).length, 0);
+    this.tabs.get('tree')!.textContent = waiting ? `Tree · ${waiting} to choose` : 'Tree';
     // Redrawn on the clock, so it must not throw the reader back to the top.
     const top = this.page.scrollTop;
     this.page.replaceChildren();
@@ -235,20 +244,37 @@ export class TradesPanel {
     this.page.append(head);
 
     for (const [kind, title] of GROUPS) {
-      this.page.append(this.group(title));
       const mine = kind === 'craft' ? said.taken.craft : said.taken.combat;
-      for (const c of said.classes.filter((x) => x.kind === kind)) {
-        this.page.append(this.card(c, c.id === mine, said));
-      }
+      // Your own first, since it is the one you came for; the rest as the island lists them.
+      const cards = said.classes.filter((x) => x.kind === kind).sort((a, b) => Number(b.id === mine) - Number(a.id === mine));
+      const lever = this.groupHead(title, cards);
+      for (const c of cards) this.page.append(this.card(c, c.id === mine, said, lever));
     }
+  }
+
+  /**
+   * A group's heading, and the line every card in it would otherwise repeat:
+   * when all of them work the same way, it is said once here. Returns that
+   * line, for the cards to leave out.
+   */
+  private groupHead(title: string, cards: readonly ClassCard[]): string | null {
+    this.page.append(this.group(title));
+    const lever = cards.length > 1 && cards.every((c) => c.lever === cards[0].lever) ? cards[0].lever : null;
+    if (lever) {
+      const said = document.createElement('div');
+      said.className = 'trade-lever';
+      said.textContent = lever;
+      this.page.append(said);
+    }
+    return lever;
   }
 
   /** Every trade as the rulebook has it, with nothing to take: alone in the browser, or not on this island. */
   private drawBook(): void {
     for (const [kind, title] of GROUPS) {
-      this.page.append(this.group(title));
-      const book = CLASSES.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name));
-      for (const c of book) this.page.append(this.card(this.read(c), false, null));
+      const book = CLASSES.filter((c) => c.kind === kind).sort((a, b) => a.name.localeCompare(b.name)).map((c) => this.read(c));
+      const lever = this.groupHead(title, book);
+      for (const c of book) this.page.append(this.card(c, false, null, lever));
     }
   }
 
@@ -265,7 +291,7 @@ export class TradesPanel {
    * One trade's card. `said` is the island's answer, and without it the card
    * is only read: what the trade offers can be laid open, but nothing taken.
    */
-  private card(c: ClassCard, mine: boolean, said: ClassesSaid | null): HTMLDivElement {
+  private card(c: ClassCard, mine: boolean, said: ClassesSaid | null, shared: string | null = null): HTMLDivElement {
     const row = document.createElement('div');
     row.className = `trade-card${mine ? ' trade-mine' : ''}${c.open || mine ? '' : ' trade-shut'}`;
 
@@ -293,7 +319,9 @@ export class TradesPanel {
 
     const acts = document.createElement('div');
     acts.className = 'trade-acts';
-    row.append(top, note, covers, lever, acts);
+    row.append(top, note, covers);
+    if (c.lever !== shared) row.append(lever);
+    row.append(acts);
 
     if (mine) {
       const worn = document.createElement('span');
@@ -381,6 +409,9 @@ export class TradesPanel {
   private ask2(what: string): void {
     this.confirming = what;
     this.draw();
+    // The second press is drawn under all three perks, which may be below the fold.
+    const box = this.page.querySelector<HTMLElement>('.trade-confirm');
+    if (box) reveal(this.page, box);
   }
 
   /** What taking up a trade will do, before it is done. */
@@ -623,18 +654,25 @@ export class TradesPanel {
     box.className = `trade-tier${tier.open ? '' : ' trade-tier-shut'}`;
     const cap = document.createElement('div');
     cap.className = 'trade-col-head';
+    const main = classDef(t.class)?.main;
     cap.textContent = tier.tier === 1 ? `Tier ${tier.tier} · with the trade`
-      : t.kind === 'combat' ? `Tier ${tier.tier} · at class level ${tier.at}` : `Tier ${tier.tier} · at ${tier.at}`;
+      : t.kind === 'combat' ? `Tier ${tier.tier} · at class level ${tier.at}`
+        : `Tier ${tier.tier} · at ${tier.at}${main ? ` in ${skillName(main).toLowerCase()}` : ''}`;
+    box.append(cap);
+    // The island's reason, said once under the tier when it is the same for every perk still to take.
+    const shared = sharedWhy(tier.perks);
+    if (shared) box.append(this.why(shared));
     const row = document.createElement('div');
     row.className = 'trade-grid';
-    for (const p of tier.perks) row.append(this.perk(p));
-    box.append(cap, row);
+    for (const p of tier.perks) row.append(this.perk(p, !!shared));
+    box.append(row);
     const asked = tier.perks.find((p) => this.confirming === `perk:${p.id}` && !p.taken && !p.why);
     if (asked) box.append(this.confirmPerk(asked, tier, t));
     return box;
   }
 
-  private perk(p: TreePerk): HTMLDivElement {
+  /** One perk. `quiet`: its tier already says why it cannot be taken, so it does not say it again. */
+  private perk(p: TreePerk, quiet = false): HTMLDivElement {
     const asked = this.confirming === `perk:${p.id}` && !p.taken && !p.why;
     const box = document.createElement('div');
     box.className = `trade-node${p.taken ? ' trade-node-taken' : ''}${!p.taken && p.why ? ' trade-node-shut' : ''}${asked ? ' trade-node-asked' : ''}`;
@@ -646,8 +684,8 @@ export class TradesPanel {
     top.append(name);
     if (p.taken) {
       const mark = document.createElement('span');
-      mark.className = 'trade-points';
-      mark.textContent = 'taken';
+      mark.className = 'trade-points trade-spare';
+      mark.textContent = '✓ taken';
       top.append(mark);
     }
     // The exact benefit, as the island has it from the same rulebook.
@@ -655,13 +693,13 @@ export class TradesPanel {
     note.className = 'trade-worth';
     note.textContent = p.note;
     box.append(top, note);
-    if (!p.taken && !asked) {
+    // Only a perk that can be taken has a button: one that cannot has the island's reason instead, here or on its tier.
+    if (!p.taken && !asked && !p.why) {
       const take = button('Take this one', 'trade-buy');
-      take.disabled = !!p.why;
       take.addEventListener('click', () => this.ask2(`perk:${p.id}`));
       box.append(take);
     }
-    if (!p.taken && p.why) box.append(this.why(p.why));
+    if (!p.taken && p.why && !quiet) box.append(this.why(p.why));
     return box;
   }
 
@@ -793,6 +831,20 @@ function button(label: string, extra = ''): HTMLButtonElement {
   b.className = `tb-btn tb-small${extra ? ` ${extra}` : ''}`;
   b.textContent = label;
   return b;
+}
+
+/** The reason every perk or spell still to take shares, when there is one and they all share it. */
+export function sharedWhy(xs: ReadonlyArray<{ taken: boolean; why: string | null }>): string | null {
+  const whys = xs.filter((x) => !x.taken).map((x) => x.why);
+  return whys.length > 1 && whys[0] && whys.every((w) => w === whys[0]) ? whys[0] : null;
+}
+
+/** Scroll a page just far enough that this, inside it, is in view. */
+export function reveal(page: HTMLElement, el: HTMLElement): void {
+  const r = el.getBoundingClientRect();
+  const box = page.getBoundingClientRect();
+  if (r.bottom > box.bottom) page.scrollTop += Math.min(r.bottom - box.bottom + 6, r.top - box.top);
+  else if (r.top < box.top) page.scrollTop -= box.top - r.top + 6;
 }
 
 /** "a, b or c": one of them, not all. */

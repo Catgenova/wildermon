@@ -47,7 +47,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { findPath } from '../world/pathfinding';
 import { randomLook, type Look } from './look';
 import { ACTION_FLOOR, ACTION_PACE, DAY_SECONDS, world } from './pace';
-import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS } from './gear';
+import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceBurden, pieceSoak, SHIELDS, WEAPON_BY_ID, type Slot, SLOTS, type WeaponDef } from './gear';
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { ALL_GOALS } from './journal';
@@ -70,8 +70,8 @@ import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
 import { considerSays } from './consider';
-import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
-import { Skills, SKILL_DEFS, isQuiet } from './skills';
+import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
+import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
@@ -5443,8 +5443,46 @@ export class Game {
     // And less of it on a settlement whose altar has a bauble for the trade.
     // A fight goes at the weapon's own swing, and slower on tired arms (`fight.ts`).
     // And a Swiftwork on the tool takes its share off after the floor, as the island's `faith_steady` does.
-    return goSeconds(fightBase(this, def) ?? def.baseTime, skill, toolQl, this.controlSpeed() * baublePace(this.baubleHere(), def.skill))
-      * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
+    const control = this.controlSpeed() * baublePace(this.baubleHere(), def.skill);
+    // A fight's go is the weapon's own seconds (`swingSeconds`); every other job's is a weight at the pace (`goSeconds`).
+    const fight = fightBase(this, def);
+    const go = fight === null ? goSeconds(def.baseTime, skill, toolQl, control) : swingSeconds(fight, skill, control);
+    return go * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
+  }
+
+  /**
+   * A swing of this weapon, or a draw of this bow, in your hands as they are
+   * now: what `duration` makes of a go of the fight with it in hand, the
+   * weapon's own seconds (with what a perk or an enchantment on it makes of
+   * them) and each thing that moves it from there, as a share of the time:
+   * 1.12 is 12% longer. For the card a weapon shows (`compareLines`).
+   */
+  swingTime(w: WeaponDef, item: Item | null): { own: number; secs: number; parts: Array<{ what: string; by: number }>; floored: boolean } {
+    const def = ACTION_BY_ID.get(w.ammo ? 'shoot_creature' : 'attack_creature');
+    const skillId = def?.skill ?? 'fighting';
+    const skill = this.skills.get(skillId);
+    const tired = tiredPace(this.player.stats.stamina);
+    const arms = armPace(this.player.wounds);
+    const base = swingBase(this, w, item);
+    const control = this.controlSpeed();
+    const bauble = baublePace(this.baubleHere(), skillId);
+    const perk = this.perk(`time:${def?.id ?? 'attack_creature'}`, 1);
+    const piece = this.pieceSpeed(skillId);
+    const secs = swingSeconds(base, skill, control * bauble) * perk * piece;
+    return {
+      own: base / (tired * arms),
+      secs,
+      floored: base * (1 - skill / 140) * control * bauble < SWING_FLOOR,
+      parts: [
+        { what: 'tired arms', by: tired },
+        { what: 'wounded arms', by: arms },
+        { what: `${(SKILL_BY_ID.get(skillId)?.name ?? skillId).toLowerCase()} ${Math.floor(skill)}`, by: 1 - skill / 140 },
+        { what: `body control ${Math.floor(this.skills.get('body_control'))}`, by: control },
+        { what: 'a bauble on the settlement', by: bauble },
+        { what: 'your perks', by: perk },
+        { what: 'a piece standing near', by: piece },
+      ].filter((p) => Math.abs(p.by - 1) > 1e-9),
+    };
   }
 
   /**

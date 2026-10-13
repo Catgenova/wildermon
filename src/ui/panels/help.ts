@@ -72,7 +72,7 @@ import {
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, WAKE_AFTER_DAWN, wearPerUse,
   QL_TOP,
 } from '../../game/game';
-import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, WEAPONS, type ArmourClass } from '../../game/gear';
+import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
 import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, RARITIES, RARITY_ROOM, rarityChance, roomFor } from '../../game/items';
@@ -107,7 +107,7 @@ import { AWARENESS, awarenessReach, BASE_SIGHT, LIGHT_GIVES_BACK, NIGHT_LOSS, TR
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, timeWords, times } from '../../game/words';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../../game/fight';
-import { FIGHT_QUIET, ARM_SLOW, ARM_SLOW_MOST, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_WIND, SWING_WIND_KG, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
+import { FIGHT_QUIET, ARM_SLOW, ARM_SLOW_MOST, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
 import {
   ARROW_IDS, BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
@@ -149,6 +149,7 @@ import { STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
 import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
+import { keepControlKeys } from '../controlkeys';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -216,6 +217,10 @@ const prayerTrains = (v: number, base: number): string => `+${skillGain(v, base,
 const MOTE_COUNTS = Array.from({ length: MOTES_MOST - MOTES_LEAST + 1 }, (_, i) => MOTES_LEAST + i);
 /** Where the help reads a prayer off: the skill levels, and the altar's quality at either end and in the middle. */
 const PRAYER_SHOWN = [1, 50, 100];
+/* The weapon and the fighting skills Help times a swing at, off the rule the fight times it by (`swingSeconds`). */
+const HELP_SWORD = WEAPON_BY_ID.get('short_sword') as WeaponDef;
+const HELP_SWING_AT = [1, 30, 50];
+const fixed2 = (n: number): string => String(+n.toFixed(2));
 const ALTAR_QL = [0, 50, 100] as const;
 /** What one prayer banks at Prayer `v`, at an altar of the middling quality, at the better hour. */
 const prayerBanks = (v: number): number => Math.round(prayerWorth(ALTAR_QL[1], PRAYER_PEAKS[0], v));
@@ -2476,7 +2481,11 @@ export function helpText(): string {
     <p>Your <b>stance</b> is on the button beside your health bar; click it or press
     <b>${keyName(BIND_BY_ID.get('fight_stance')?.keys[0] ?? '')}</b> for the next. ${FIGHT_STANCES.map((st) => `<b>${FIGHT_STANCE_NAMES[st]}</b>: ${stanceSays(st)}`).join(' ')}</p>
     <p>A swing takes its weapon's own time before skill: ${listed([...WEAPONS].filter((w) => !w.ammo).sort((a, b) => a.swing - b.swing).map((w) => `${itemDef(w.id).name.toLowerCase()} ${w.swing}`))}
-    seconds, and bare hands ${FIST.swing}. A bow's draw is its own the same way. Every swing or draw costs
+    seconds, and bare hands ${FIST.swing}. A bow's draw is its own the same way. Skill takes its share off as it does off
+    every job, fighting for a swing and archery for a draw, and body control its own: a ${itemDef(HELP_SWORD.id).name.toLowerCase()}
+    swings every ${HELP_SWING_AT.map((f) => `${fixed2(swingSeconds(HELP_SWORD.swing, f))} seconds at fighting ${f}`).join(', ')},
+    and nothing swings quicker than every ${SWING_FLOOR.toFixed(1)} seconds. Armour, what you carry and a wagon, driven or
+    not, do not change it. Hover a weapon in your pack for what a swing of it takes in your hands now, and what made it so. Every swing or draw costs
     ${percent(SWING_WIND)} of your stamina and ${percent(SWING_WIND_KG)} more for every kilogram in your hand, before body stamina
     and armour have their say; below ${percent(TIRED_AT)} stamina every swing is slower, up to ${percent(TIRED_SLOW)} slower with none left.</p>
     <p>${capital(listed(Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`)))} <b>draw back for a heavy blow</b>
@@ -3183,9 +3192,10 @@ function waterGarden(): string {
 }
 
 /**
- * The help, cut into sections at every heading, with a list of contents at the
- * top and a box to search the lot. Searching keeps whole sections rather than
- * single lines, because half an explanation is worse than none.
+ * The help, cut into sections at every heading, with a list of contents folded
+ * at the top and a box to search the lot. Searching keeps whole sections rather
+ * than single lines, because half an explanation is worse than none, and marks
+ * where in them it was found.
  */
 /** What the help can be asked to do once it is built: open at a section. */
 export interface HelpPages {
@@ -3221,13 +3231,27 @@ export function buildHelp(host: HTMLElement): HelpPages {
   search.type = 'search';
   search.className = 'panel-search help-search';
   search.placeholder = 'Search the help…';
+  search.setAttribute('aria-label', 'Search the help');
+  // The contents fold away under a line that opens them, so the pages have the room.
+  const toc = document.createElement('button');
+  toc.type = 'button';
+  toc.className = 'help-toc';
+  toc.setAttribute('aria-controls', 'help-contents');
   const contents = document.createElement('nav');
   contents.className = 'help-contents';
+  contents.id = 'help-contents';
   const pages = document.createElement('div');
   pages.className = 'help-pages';
   const count = document.createElement('div');
   count.className = 'help-count';
   count.hidden = true;
+
+  const fold = (open: boolean): void => {
+    contents.hidden = !open;
+    toc.setAttribute('aria-expanded', String(open));
+  };
+  toc.addEventListener('click', () => fold(toc.getAttribute('aria-expanded') !== 'true'));
+  fold(false);
 
   const links = sections.map(({ title, el }, i) => {
     const a = document.createElement('button');
@@ -3240,6 +3264,7 @@ export function buildHelp(host: HTMLElement): HelpPages {
         search.value = '';
         show('');
       }
+      fold(false);
       el.scrollIntoView({ block: 'start' });
       el.classList.add('help-found');
       setTimeout(() => el.classList.remove('help-found'), 1200);
@@ -3249,7 +3274,35 @@ export function buildHelp(host: HTMLElement): HelpPages {
   });
   contents.append(...links);
 
-  /** Keep only the sections that answer to what has been typed, and say how many did. */
+  /** Take out the marks of the last search, then mark every place this one is found in the sections still shown. */
+  const mark = (q: string): HTMLElement | null => {
+    const was = new Set<Node>();
+    for (const m of pages.querySelectorAll('mark.help-mark')) {
+      if (m.parentNode) was.add(m.parentNode);
+      m.replaceWith(...m.childNodes);
+    }
+    for (const parent of was) parent.normalize();
+    if (q.length < 2) return null;
+    for (const { el } of sections) {
+      if (el.hidden) continue;
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const found: Text[] = [];
+      for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n.nodeValue?.toLowerCase().includes(q)) found.push(n as Text);
+      for (let text of found) {
+        for (let at = text.data.toLowerCase().indexOf(q); at >= 0; at = text.data.toLowerCase().indexOf(q)) {
+          const hit = text.splitText(at);
+          text = hit.splitText(q.length);
+          const m = document.createElement('mark');
+          m.className = 'help-mark';
+          hit.replaceWith(m);
+          m.append(hit);
+        }
+      }
+    }
+    return pages.querySelector<HTMLElement>('mark.help-mark');
+  };
+
+  /** Keep only the sections that answer to what has been typed, mark where, and say how many did. */
   const show = (query: string): number => {
     const q = query.trim().toLowerCase();
     let kept = 0;
@@ -3260,9 +3313,21 @@ export function buildHelp(host: HTMLElement): HelpPages {
       links[i].hidden = !hit;
       if (hit) kept += 1;
     }
-    count.hidden = !q;
-    count.textContent = kept ? `${kept} of ${sections.length} sections` : `Nothing in the help answers to “${query.trim()}”.`;
+    toc.textContent = q ? `Contents: ${kept} of ${sections.length} sections` : `Contents: ${sections.length} sections`;
+    toc.hidden = q !== '' && !kept;
+    count.hidden = !q || kept > 0;
+    count.textContent = `Nothing in the help answers to “${query.trim()}”. Esc in the box clears the search.`;
     pages.scrollTop = 0;
+    // The first place it is found: its section from the heading when it is near the top of it, or else the line before it on.
+    const first = mark(q);
+    const sec = first?.closest<HTMLElement>('.help-sec');
+    if (first && sec) {
+      const top = pages.getBoundingClientRect().top;
+      const k = pages.offsetHeight / (pages.getBoundingClientRect().height || 1);
+      const into = (first.getBoundingClientRect().top - sec.getBoundingClientRect().top) * k;
+      const from = into < pages.clientHeight * 0.6 ? sec : first;
+      pages.scrollTop = Math.max(0, (from.getBoundingClientRect().top - top) * k - (from === sec ? 0 : 40));
+    }
     return kept;
   };
   search.addEventListener('input', () => show(search.value));
@@ -3272,9 +3337,11 @@ export function buildHelp(host: HTMLElement): HelpPages {
     search.value = '';
     show('');
   });
+  keepControlKeys(host);
 
   pages.append(...sections.map((s) => s.el));
-  host.replaceChildren(search, contents, count, pages);
+  show('');
+  host.replaceChildren(search, toc, contents, count, pages);
   return {
     titles: sections.map((s) => s.title),
     jump: (title) => {

@@ -18,7 +18,7 @@ export function pinEntry(g: Game, pin: BeltPin): MenuItem {
       const there = g.player.belt[i];
       return {
         label: `Loop ${i + 1}`,
-        note: there ? `over ${pinLabel(there, ACTION_BY_ID.get(there.action))}` : i === free ? 'empty — the first free one' : 'empty',
+        note: there ? `replaces ${pinLabel(there, ACTION_BY_ID.get(there.action))}` : i === free ? 'empty — the first free one' : 'empty',
         onSelect: () => g.pinToBelt(i, pin),
       };
     }),
@@ -53,7 +53,7 @@ export function jobEntry(g: Game, def: ActionDef, target: Target, reason: string
     children: [
       { label: 'Once', onSelect: () => go(1) },
       ...COUNTS.map((n) => ({ label: `${n} times`, onSelect: () => go(n) })),
-      ...(def.repeat ? [{ label: 'Until you stop', note: 'or until your wind gives out', onSelect: () => go() }] : []),
+      ...(def.repeat ? [{ label: 'Until you stop', note: 'or until your stamina runs out', onSelect: () => go() }] : []),
     ],
   };
 }

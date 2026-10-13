@@ -574,90 +574,120 @@ export class RunecutArt {
     if (!g) return;
     const night = this.look?.rc === 'night';
     for (const sm of this.seamList) {
-      const soft = [this.kindOf(sm.a), this.kindOf(sm.b)].filter((k) => SOFT.has(k)).length;
-      const pt = (t: number, d = 0): [number, number] => (sm.vertical ? [sm.at + d, t] : [t, sm.at + d]);
-      const line = (d: number, wd: number, col: string): void => {
+      g.save();
+      this.clipCovers(g, sm);
+      this.paintSeam(g, sm, night);
+      g.restore();
+    }
+  }
+
+  /**
+   * Leave out of what is drawn next every piece stacked over either of the two
+   * a seam joins: the seams are one canvas over all the windows, and a window
+   * opened or raised over a join would otherwise wear its pins and lozenges
+   * across its own writing.
+   */
+  private clipCovers(g: CanvasRenderingContext2D, sm: Seam): void {
+    const z = (el: HTMLElement): number => Number(getComputedStyle(el).zIndex) || 0;
+    const a = this.all.find((d) => d.id === sm.a)?.el, b = this.all.find((d) => d.id === sm.b)?.el;
+    if (!a || !b) return;
+    const low = Math.min(z(a), z(b));
+    const over = this.all.filter((d) => d.el !== a && d.el !== b && !d.el.hidden && z(d.el) > low);
+    if (!over.length) return;
+    g.beginPath();
+    g.rect(0, 0, this.root.offsetWidth, this.root.offsetHeight);
+    for (const d of over) {
+      const at = this.place(d.el);
+      g.rect(at.x, at.y, d.el.offsetWidth, d.el.offsetHeight);
+    }
+    g.clip('evenodd');
+  }
+
+  /** One seam, as `paintSeams` says. */
+  private paintSeam(g: CanvasRenderingContext2D, sm: Seam, night: boolean): void {
+    const soft = [this.kindOf(sm.a), this.kindOf(sm.b)].filter((k) => SOFT.has(k)).length;
+    const pt = (t: number, d = 0): [number, number] => (sm.vertical ? [sm.at + d, t] : [t, sm.at + d]);
+    const line = (d: number, wd: number, col: string): void => {
+      g.beginPath();
+      g.moveTo(...pt(sm.s0 + 6, d));
+      g.lineTo(...pt(sm.s1 - 6, d));
+      g.strokeStyle = col;
+      g.lineWidth = wd;
+      g.lineCap = 'round';
+      g.stroke();
+    };
+    line(0, 5, 'rgba(38, 30, 26, 0.55)');
+    line(-1.5, 1, night ? 'rgba(200, 210, 230, 0.35)' : 'rgba(255, 244, 220, 0.55)');
+    if (soft === 0) {
+      line(0, 2.2, night ? '#8f8a82' : '#cfc6b6');
+      for (let t = sm.s0 + JOINT_EVERY / 2; t < sm.s1 - 12; t += JOINT_EVERY) {
         g.beginPath();
-        g.moveTo(...pt(sm.s0 + 6, d));
-        g.lineTo(...pt(sm.s1 - 6, d));
-        g.strokeStyle = col;
-        g.lineWidth = wd;
-        g.lineCap = 'round';
+        g.moveTo(...pt(t, -6));
+        g.lineTo(...pt(t, 6));
+        g.strokeStyle = 'rgba(60, 52, 46, 0.7)';
+        g.lineWidth = 1.4;
         g.stroke();
-      };
-      line(0, 5, 'rgba(38, 30, 26, 0.55)');
-      line(-1.5, 1, night ? 'rgba(200, 210, 230, 0.35)' : 'rgba(255, 244, 220, 0.55)');
-      if (soft === 0) {
-        line(0, 2.2, night ? '#8f8a82' : '#cfc6b6');
-        for (let t = sm.s0 + JOINT_EVERY / 2; t < sm.s1 - 12; t += JOINT_EVERY) {
-          g.beginPath();
-          g.moveTo(...pt(t, -6));
-          g.lineTo(...pt(t, 6));
-          g.strokeStyle = 'rgba(60, 52, 46, 0.7)';
-          g.lineWidth = 1.4;
-          g.stroke();
-        }
-      } else if (soft === 2) {
-        for (let t = sm.s0 + 14; t < sm.s1 - 10; t += STITCH_EVERY) {
-          for (const [a, b] of [[-5, 5], [5, -5]]) {
-            for (const [col, wd] of [['rgba(40, 28, 20, 0.45)', 2.6], [night ? '#b9ad94' : '#efe2c4', 1.4]] as const) {
-              g.beginPath();
-              g.moveTo(...pt(t - 4, a));
-              g.lineTo(...pt(t + 4, b));
-              g.strokeStyle = col;
-              g.lineWidth = wd;
-              g.stroke();
-            }
+      }
+    } else if (soft === 2) {
+      for (let t = sm.s0 + 14; t < sm.s1 - 10; t += STITCH_EVERY) {
+        for (const [a, b] of [[-5, 5], [5, -5]]) {
+          for (const [col, wd] of [['rgba(40, 28, 20, 0.45)', 2.6], [night ? '#b9ad94' : '#efe2c4', 1.4]] as const) {
+            g.beginPath();
+            g.moveTo(...pt(t - 4, a));
+            g.lineTo(...pt(t + 4, b));
+            g.strokeStyle = col;
+            g.lineWidth = wd;
+            g.stroke();
           }
         }
-      } else {
-        for (let t = sm.s0 + PIN_EVERY / 2; t < sm.s1 - 14; t += PIN_EVERY) {
-          const [x, y] = pt(t);
-          g.save();
-          g.shadowColor = 'rgba(20, 14, 10, 0.5)';
-          g.shadowBlur = 2;
-          g.shadowOffsetY = 1;
-          g.beginPath();
-          g.arc(x, y, 4.2, 0, Math.PI * 2);
-          g.fillStyle = gold(g, x - 4, y - 4, x + 4, y + 4, night);
-          g.fill();
-          g.restore();
-          g.beginPath();
-          g.arc(x, y, 4.2, 0, Math.PI * 2);
-          g.strokeStyle = '#5b4220';
-          g.lineWidth = 0.8;
-          g.stroke();
-          g.beginPath();
-          g.arc(x - 1.2, y - 1.3, 1.2, 0, Math.PI * 2);
-          g.fillStyle = 'rgba(255, 250, 225, 0.9)';
-          g.fill();
-        }
       }
-      for (const t of [sm.s0, sm.s1]) {
-        const [x, y] = pt(t), r = 9;
-        const lozenge = (s: number): void => {
-          g.beginPath();
-          g.moveTo(x, y - r * s);
-          g.lineTo(x + r * 0.8 * s, y);
-          g.lineTo(x, y + r * s);
-          g.lineTo(x - r * 0.8 * s, y);
-          g.closePath();
-        };
+    } else {
+      for (let t = sm.s0 + PIN_EVERY / 2; t < sm.s1 - 14; t += PIN_EVERY) {
+        const [x, y] = pt(t);
         g.save();
         g.shadowColor = 'rgba(20, 14, 10, 0.5)';
-        g.shadowBlur = 3;
+        g.shadowBlur = 2;
         g.shadowOffsetY = 1;
-        lozenge(1);
-        g.fillStyle = gold(g, x - r, y - r, x + r, y + r, night);
+        g.beginPath();
+        g.arc(x, y, 4.2, 0, Math.PI * 2);
+        g.fillStyle = gold(g, x - 4, y - 4, x + 4, y + 4, night);
         g.fill();
         g.restore();
+        g.beginPath();
+        g.arc(x, y, 4.2, 0, Math.PI * 2);
         g.strokeStyle = '#5b4220';
-        g.lineWidth = 0.9;
+        g.lineWidth = 0.8;
         g.stroke();
-        lozenge(0.5);
-        g.fillStyle = sm.vertical ? '#8fa6c4' : '#a7bcd6';
+        g.beginPath();
+        g.arc(x - 1.2, y - 1.3, 1.2, 0, Math.PI * 2);
+        g.fillStyle = 'rgba(255, 250, 225, 0.9)';
         g.fill();
       }
+    }
+    for (const t of [sm.s0, sm.s1]) {
+      const [x, y] = pt(t), r = 9;
+      const lozenge = (s: number): void => {
+        g.beginPath();
+        g.moveTo(x, y - r * s);
+        g.lineTo(x + r * 0.8 * s, y);
+        g.lineTo(x, y + r * s);
+        g.lineTo(x - r * 0.8 * s, y);
+        g.closePath();
+      };
+      g.save();
+      g.shadowColor = 'rgba(20, 14, 10, 0.5)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 1;
+      lozenge(1);
+      g.fillStyle = gold(g, x - r, y - r, x + r, y + r, night);
+      g.fill();
+      g.restore();
+      g.strokeStyle = '#5b4220';
+      g.lineWidth = 0.9;
+      g.stroke();
+      lozenge(0.5);
+      g.fillStyle = sm.vertical ? '#8fa6c4' : '#a7bcd6';
+      g.fill();
     }
   }
 
@@ -680,8 +710,11 @@ export class RunecutArt {
         f.addColorStop(0, `rgba(255, 246, 210, ${0.95 * fade})`);
         f.addColorStop(0.4, `rgba(255, 220, 140, ${0.45 * fade})`);
         f.addColorStop(1, 'rgba(255, 220, 140, 0)');
+        g.save();
+        this.clipCovers(g, sm);
         g.fillStyle = f;
         g.fillRect(x - r, y - r, r * 2, r * 2);
+        g.restore();
       }
       if (u < 1) this.glintFrame = requestAnimationFrame(frame);
       else c.hidden = true;

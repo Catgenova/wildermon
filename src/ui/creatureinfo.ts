@@ -18,7 +18,7 @@ import {
   workSkill,
   type Creature,
 } from '../game/creatures';
-import { baitHint, tameChance } from '../game/creatureActions';
+import { baitHint, coaxStep, tameChance } from '../game/creatureActions';
 import { crateOf } from '../game/creaturecrate';
 import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
@@ -35,6 +35,32 @@ const bar = (v: number, width = 8): string => {
 };
 
 /**
+ * A long list of figures, broken after a comma into lines of about `width`
+ * characters, so a rare one's dozen figures make a tooltip of a sensible width
+ * rather than one line across the screen. Lines after the first are indented.
+ */
+const wrapList = (text: string, width = 64): string[] => {
+  const lines: string[] = [];
+  let line = '';
+  for (const part of text.split(/(?<=,) /)) {
+    if (line && line.length + part.length + 1 > width) {
+      lines.push(line);
+      // En spaces, which a tooltip's collapsing white space keeps.
+      line = `\u2002\u2002${part}`;
+    } else line = line ? `${line} ${part}` : part;
+  }
+  if (line) lines.push(line);
+  return lines;
+};
+
+/** How rare it is and how big that made it, then what that is worth, a line or two of figures. */
+const rarityLines = (c: Creature): string[] => {
+  const [what = '', size = '', ...gives] = rarityLine(c).split(' · ');
+  if (!what) return [];
+  return [size ? `${what} · ${size}` : what, ...wrapList(gives.join(' · '))];
+};
+
+/**
  * Everything worth knowing about a creature at a glance, as lines for a
  * tooltip. What it says depends on what the creature is to you: a wild one
  * tells you only what you could learn by looking at it and what it would take
@@ -46,7 +72,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
   const def = SPECIES[c.species] ?? SPECIES.rabba;
   const lines: string[] = [];
   const age = ageOf(c, g.time);
-  const growing = growsAt(c, g.time);
+  // Only the young are growing: what was walking about before the clock started is grown however the sum comes out.
+  const growing = age === 'young' ? growsAt(c, g.time) : 0;
 
   // A monster is not a wildermon and nothing about it is negotiable.
   if (def.monster) {
@@ -58,20 +85,21 @@ export function creatureLines(g: Game, c: Creature): string[] {
 
   if (c.mode === 'wild') {
     lines.push(`Wild ${def.name} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''}`);
-    if (c.rare) lines.push(rarityLine(c));
+    if (c.rare) lines.push(...rarityLines(c));
     lines.push(`Eats ${baitHint(c)}`);
     const taming = g.skills.get('taming');
     if (taming < def.tameLevel) lines.push(`Taming ${def.tameLevel} to try · you have ${taming.toFixed(1)}`);
-    else lines.push(`Taming ${def.tameLevel} to try · you have ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% an offering`);
-    const warm = coaxBonus(c, g.time);
-    if (warm > 0) lines.push(`It has taken ${c.coaxed} offering${c.coaxed === 1 ? '' : 's'} from your hand · ${pct(warm)} of those points are the run`);
+    else lines.push(`Taming ${def.tameLevel} to try · you have ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% chance per offering`);
+    // At the step the chance itself is worked out with, a Herdsman's Patient Coax and all.
+    const warm = coaxBonus(c, g.time, coaxStep(g));
+    if (warm > 0) lines.push(`It has taken ${c.coaxed} offering${c.coaxed === 1 ? '' : 's'} from your hand · +${pct(warm)} points of that chance`);
     if (c.trapped !== null) lines.push('Held in a trap. Take it out, or let it go.');
     return lines;
   }
 
   // One of your own: name, what it is, and how far along it is.
   lines.push(`${c.name} · ${SEX_NAMES[c.sex]} ${def.name} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''} · Lv ${creatureLevel(c)}`);
-  if (c.rare) lines.push(rarityLine(c));
+  if (c.rare) lines.push(...rarityLines(c));
   const max = maxHealth(c, def);
   lines.push(`Health ${Math.ceil(c.health)}/${max} ${bar(c.health / max)}`);
   lines.push(`Fed ${pct(c.hunger)}% ${bar(c.hunger)} · care ${pct(c.care)}%, ${careWord(c.care)}`);
@@ -104,7 +132,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
   if (traits.length) lines.push(`Traits: ${traits.join(', ')}`);
   // Who it was bred from; anything not bred says nothing about it.
   if (c.pedigree) lines.push(pedigreeLine(c.pedigree));
-  if (c.due > 0) lines.push(`In calf · due in ${clockLeft(c.due - g.time)}`);
+  // "In young", as the Wildermon card says it: a vola does not carry a calf.
+  if (c.due > 0) lines.push(`In young · due in ${clockLeft(c.due - g.time)}`);
   return lines;
 }
 

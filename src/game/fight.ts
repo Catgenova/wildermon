@@ -7,6 +7,7 @@ import type { SpeciesDef } from './creatures';
 import { SKILL_BY_ID } from './skills';
 import { listed, percent } from './words';
 import { WOUND_BY_WEAPON, type Wound, type WoundKind } from './wounds';
+import { ACTION_FLOOR, ACTION_PACE } from './pace';
 
 /**
  * The fight itself: how long a swing takes and what it costs, which way you
@@ -50,25 +51,54 @@ function heftOf(g: Game, def: Pick<ActionDef, 'id'>): number {
 }
 
 /**
- * The seconds a go of a fight takes before skill and tools: the weapon's own
- * swing, or the bow's draw, and longer for tired arms. Null for every job that
- * is not a fight, which keeps its own base time.
+ * The seconds a swing of this weapon, or a draw of this bow, takes in your
+ * hands before skill: its own swing, longer for tired arms and wounded ones,
+ * and quicker with both hands on it for a Berserker's Wild Strength, as
+ * `act_base` has it, and for a Gale in it (`swingEnchant`).
  */
-export function fightBase(g: Game, def: Pick<ActionDef, 'id' | 'baseTime'>): number | null {
+export function swingBase(g: Game, w: WeaponDef, item: Item | null): number {
   // Tired arms, and wounded ones (`armPace`).
   const pace = tiredPace(g.player.stats.stamina) * armPace(g.player.wounds);
+  if (w.ammo) return w.swing * pace;
+  return w.swing * pace * (w.twoHanded ? g.perk('swing:two_handed', 1) : 1) * (1 - swingEnchant(item, 'swing'));
+}
+
+/**
+ * The seconds a go of a fight takes before skill: the weapon's own swing, or
+ * the bow's draw (`swingBase`). Null for every job that is not a fight, which
+ * keeps its own base time.
+ */
+export function fightBase(g: Game, def: Pick<ActionDef, 'id' | 'baseTime'>): number | null {
   if (def.id === 'attack_creature') {
-    const w = swungWith(g).def;
-    // Quicker with both hands on it for a Berserker's Wild Strength, as `act_base` has it, and for a Gale in it (`swingEnchant`).
-    return w.swing * pace * (w.twoHanded ? g.perk('swing:two_handed', 1) : 1) * (1 - swingEnchant(swungWith(g).item, 'swing'));
+    const { def: w, item } = swungWith(g);
+    return swingBase(g, w, item);
   }
   if (def.id === 'shoot_creature') {
     const held = g.worn('weapon');
     const bow = held && WEAPON_BY_ID.get(held.id);
-    return (bow?.ammo ? bow.swing : def.baseTime) * pace;
+    return bow?.ammo ? swingBase(g, bow, held ?? null) : def.baseTime * tiredPace(g.player.stats.stamina) * armPace(g.player.wounds);
   }
   return null;
 }
+
+/**
+ * The shortest a swing or a draw can be, in seconds, however quick the hands.
+ *
+ * A weapon's `swing` is seconds, as every job's weight was once a second: a
+ * fight's go is not priced at `ACTION_PACE` the way a job's weight is, and its
+ * floor is the job floor counted the same way (1.2 of them). The island's
+ * `go_secs` reads `action_floor() / action_pace()`.
+ */
+export const SWING_FLOOR = ACTION_FLOOR / ACTION_PACE;
+
+/**
+ * A go of a fight in seconds, off its base (`fightBase`): each point of the
+ * skill it is done with takes a part in 140 off it, as it does off every job
+ * (`goSeconds`), and the body's control and a bauble theirs, never below
+ * `SWING_FLOOR`. The island's `go_secs`.
+ */
+export const swingSeconds = (base: number, skill: number, control = 1): number =>
+  Math.max(SWING_FLOOR, base * (1 - skill / 140) * control);
 
 /** What a go of a fight costs in stamina, before the body's own share; null for every other job. */
 export function fightWind(g: Game, def: Pick<ActionDef, 'id'>): number | null {

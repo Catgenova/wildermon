@@ -2,9 +2,11 @@ import type { Game } from '../../game/game';
 import type { Island, TreasureMap } from '../../net/island';
 import { TILE_DEFS, TileType, type TileDef } from '../../world/tiles';
 import { waterRgb } from '../../render/water';
-import { MAP_SNIPPET, TREASURE_TIERS, hoardOf, warmthOf } from '../../game/treasure';
+import { MAP_SNIPPET, TREASURE_TIERS, UNEARTH_REACH, hoardOf, warmthOf } from '../../game/treasure';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { UIWindow } from '../windows';
+import { CONTOUR_INDEX, CONTOUR_STEP } from './minimap';
+import { article, capital } from '../../game/words';
 
 /** How often the warm line asks again while the map is open. */
 const REFRESH = 1.5;
@@ -53,7 +55,8 @@ export class HoardPanel {
     this.warm = document.createElement('div');
     this.warm.className = 'hoard-warm';
     this.dig = document.createElement('button');
-    this.dig.className = 'hoard-dig';
+    this.dig.type = 'button';
+    this.dig.className = 'tb-btn hoard-dig';
     this.dig.textContent = 'Dig it up';
     this.dig.addEventListener('click', () => {
       const def = ACTION_BY_ID.get('unearth');
@@ -146,7 +149,10 @@ export class HoardPanel {
     if (!ctx) return;
     ctx.clearRect(0, 0, VIEW, VIEW);
     if (!m) {
-      this.caption.textContent = 'The hide is worn blank.';
+      // Said as what happened and what comes next, not as a riddle about the hide.
+      this.caption.textContent = this.island
+        ? `No picture yet: the island has not answered for this map. It is asked again every ${REFRESH} seconds while the map is open.`
+        : 'No picture: this map no longer leads anywhere.';
       this.dig.style.display = 'none';
       return;
     }
@@ -177,9 +183,9 @@ export class HoardPanel {
           r *= shade; g *= shade; b *= shade;
           // The same contour banding the minimap draws, at the same step, so
           // the two pictures can be held up against one another.
-          const band = Math.floor(h / 20);
-          if (band !== Math.floor(centre(i + 1, j) / 20) || band !== Math.floor(centre(i, j + 1) / 20)) {
-            const hard = band % 5 === 0 ? 0.55 : 0.74;
+          const band = Math.floor(h / CONTOUR_STEP);
+          if (band !== Math.floor(centre(i + 1, j) / CONTOUR_STEP) || band !== Math.floor(centre(i, j + 1) / CONTOUR_STEP)) {
+            const hard = band % CONTOUR_INDEX === 0 ? 0.55 : 0.74;
             r *= hard; g *= hard; b *= hard;
           }
         }
@@ -201,9 +207,14 @@ export class HoardPanel {
     ctx.stroke();
 
     const tier = TREASURE_TIERS.find((k) => k.id === m.tier);
-    this.caption.textContent = `A ${tier?.name ?? 'map'}, quality ${m.ql.toFixed(0)} — `
-      + `${n} tiles of country with the hoard at the cross.`
-      + (tier ? ` Something like ${tier.guards > 1 ? `${tier.guards} ` : 'a '}${tier.guard} will be over it.` : '');
-    this.dig.style.display = this.here ? '' : 'none';
+    const name = tier?.name ?? 'map';
+    this.caption.textContent = `${capital(article(name))} ${name}, QL ${m.ql.toFixed(0)}: `
+      + `${n} by ${n} tiles of country with the hoard at the cross.`
+      + (tier ? ` In it: ${tier.lumps} ${tier.lumps === 1 ? 'lump' : 'lumps'} of deep or precious metal and ${tier.things} other ${tier.things === 1 ? 'thing' : 'things'}.`
+        + ` Guarding it: ${tier.guards > 1 ? `${tier.guards} ${tier.guard}s` : `${article(tier.guard)} ${tier.guard}`}.` : '');
+    // Always there, so the map says how it ends; it can be pressed once you stand on the cross.
+    this.dig.style.display = '';
+    this.dig.disabled = !this.here;
+    this.dig.title = this.here ? 'Dig up the hoard under your feet' : `Stand within ${UNEARTH_REACH} tiles of the cross to dig`;
   }
 }

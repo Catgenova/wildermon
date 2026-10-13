@@ -1,6 +1,7 @@
 import { LETTER_MAX, type Folk, type Island, type Letter, type MyDeed, type Social } from '../../net/island';
 import { DEEDS_JOINED, type DeedRole, type Game } from '../../game/game';
 import { DEFAULT_RANKS, deedMay, FOUNDER, lacks, NEWCOMER_RANK, permsOf, rankMay, rankName, type RankDef, type Ranked } from '../../game/ranks';
+import { leaveQuestion } from '../../game/deed';
 import type { UIWindow } from '../windows';
 
 /** How often the window asks again while it is open. */
@@ -270,6 +271,7 @@ export class SocialPanel {
         this.tab = id;
         this.talkingTo = null;
         this.draw();
+        this.page.scrollTop = 0;
       });
       this.tabs.set(id, b);
       this.bar.append(b);
@@ -351,6 +353,11 @@ export class SocialPanel {
     this.draw();
   }
 
+  /** Ask first, then do it: for what cannot be taken back with one click. */
+  private async sure(question: string, go: () => Promise<string | null>): Promise<void> {
+    if (await this.game.hooks.confirm(question)) await this.did(go());
+  }
+
   /** Do a thing, say why it would not, and look again either way. */
   private async did(what: Promise<string | null>): Promise<void> {
     const why = await what;
@@ -411,6 +418,7 @@ export class SocialPanel {
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = who.name;
+    name.title = who.name;
     if (rank) {
       const r = document.createElement('span');
       r.className = 'social-rank';
@@ -547,41 +555,22 @@ export class SocialPanel {
       const full = moveInRefusal(s);
       if (full) this.page.append(this.empty(full));
       for (const inv of s.invites) {
-        const el = document.createElement('div');
-        el.className = 'social-row social-ask';
-        const text = document.createElement('span');
-        text.className = 'social-name';
-        text.textContent = `${inv.by} · ${inv.deed}`;
-        const acts = document.createElement('span');
-        acts.className = 'social-acts';
         const moveIn = this.button('Move in', full ?? `Become a citizen of ${inv.deed}`,
           () => void this.did(isle.answerInvite(inv.founder, true)));
         moveIn.disabled = !!full;
-        acts.append(
+        this.page.append(this.plain(inv.deed, `from ${inv.by}`, [
           moveIn,
-          this.button('No', `Turn ${inv.by} down`,
-            () => void this.did(isle.answerInvite(inv.founder, false))),
-        );
-        el.append(text, acts);
-        this.page.append(el);
+          this.button('No', `Turn ${inv.by} down`, () => void this.did(isle.answerInvite(inv.founder, false))),
+        ]));
       }
     }
     if (s.asked.length) {
       this.page.append(this.head('Would like to be your friend'));
       for (const who of s.asked) {
-        const el = document.createElement('div');
-        el.className = 'social-row social-ask';
-        const text = document.createElement('span');
-        text.className = 'social-name';
-        text.textContent = who.name;
-        const acts = document.createElement('span');
-        acts.className = 'social-acts';
-        acts.append(
+        this.page.append(this.plain(who.name, '', [
           this.button('Yes', `${who.name} becomes a friend`, () => void this.did(isle.befriend(who.uid))),
           this.button('No', `Turn ${who.name} down`, () => void this.did(isle.unfriend(who.uid))),
-        );
-        el.append(text, acts);
-        this.page.append(el);
+        ]));
       }
     }
     if (s.sent.length) {
@@ -612,7 +601,8 @@ export class SocialPanel {
     for (const who of s.friends) {
       const acts = [
         this.button('Write', `Write to ${who.name}`, () => void this.openThread(who)),
-        this.button('Drop', `Take ${who.name} off the list`, () => void this.did(isle.unfriend(who.uid))),
+        this.button('Drop', `Take ${who.name} off your friends. You are asked first.`,
+          () => void this.sure(`Drop ${who.name} from your friends? To be friends again, one of you asks and the other says yes.`, () => isle.unfriend(who.uid))),
       ];
       const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
@@ -679,15 +669,19 @@ export class SocialPanel {
       const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
       if (!sendAwayRefusal(d, this.me(), who.uid)) {
-        acts.push(this.button('Send away', `Take ${who.name} off the roll of ${d.name}`,
-          () => void this.did(isle.leaveDeed(d.founder, who.uid))));
+        const away = this.button('Send away', `Take ${who.name} off the roll of ${d.name}. You are asked first.`,
+          () => void this.sure(`Send ${who.name} away from ${d.name}? They come off its roll at once, and only an invitation puts them back on it.`,
+            () => isle.leaveDeed(d.founder, who.uid)));
+        away.classList.add('tb-danger');
+        acts.push(away);
       }
       this.page.append(this.row(who, this.whereabouts(who), acts, who.uid === d.founder ? 'Founder' : defOf(d, who.uid)?.name));
     }
     if (!d.mine) {
-      this.page.append(this.plain(`You hold ${rankName(asRanked(d))} at ${d.name}.`, '',
-        [this.button('Leave', `Stop being a citizen of ${d.name}`,
-          () => void this.did(isle.leaveDeed(d.founder)))]));
+      const leave = this.button('Leave', `Stop being a citizen of ${d.name}. You are asked first.`,
+        () => void this.sure(leaveQuestion({ name: d.name, x: d.x, y: d.y, radius: d.radius }, d.by), () => isle.leaveDeed(d.founder)));
+      leave.classList.add('tb-danger');
+      this.page.append(this.plain(`You hold ${rankName(asRanked(d))} at ${d.name}.`, '', [leave]));
     }
   }
 
@@ -700,7 +694,9 @@ export class SocialPanel {
       return;
     }
     const unread = new Map(s.unread.map((u) => [u.uid, u.n]));
-    const people = writeTo(s);
+    // Whoever has written and not been read first, in the order the roll gives them.
+    const all = writeTo(s);
+    const people = [...all.filter((f) => unread.has(f.uid)), ...all.filter((f) => !unread.has(f.uid))];
     this.page.append(this.head('Write to'));
     if (!people.length) {
       this.page.append(this.empty('Make a friend or move onto somebody’s land, and this is where you can write to them. Anybody ashore can be written to from the Friends tab.'));

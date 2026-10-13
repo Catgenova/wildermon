@@ -94,7 +94,7 @@ import { creatureLines } from './creatureinfo';
 import { MARK_COLOURS } from '../game/marks';
 import { SettingsPanel } from './panels/settings';
 import { Palette, type PaletteEntry } from './palette';
-import { compareLines } from './compare';
+import { compareLines, itemCard } from './compare';
 import { priceLine } from '../game/prices';
 import { Notices } from './notices';
 import type { HelpPages } from './panels/help';
@@ -385,7 +385,7 @@ export class UI {
 
     const events = this.windows.create({ id: 'events', title: 'Event', x: 12, y: 12, width: 420, height: 210, anchor: 'bl', seeThrough: true });
     this.eventLog = new EventLogPanel(events, game);
-    const inventory = this.windows.create({ id: 'inventory', title: 'Inventory', x: 12, y: 56, width: 340, height: 300, anchor: 'tr' });
+    const inventory = this.windows.create({ id: 'inventory', title: 'Inventory', x: 12, y: 56, width: 340, height: 396, anchor: 'tr' });
     new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
       (uid) => this.spellBar?.entriesFor({ kind: 'item', id: uid }) ?? [],
       (item) => {
@@ -404,13 +404,13 @@ export class UI {
     this.craftPanel = new CraftPanel(craft, game);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick), this.tooltip);
-    const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 262, anchor: 'tr', open: false, seeThrough: true });
+    const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
     this.minimap = new MinimapPanel(map, game, renderer);
     const settings = this.windows.create({ id: 'settings', title: 'Settings', x: 12, y: 56, width: 380, height: 520, anchor: 'tr', open: false });
     // How you look: back to the character creator on the account page, for
     // somebody on an island, who has an account to keep a look with.
     this.settings = new SettingsPanel(settings, game, cb.keys, this.island ? () => location.assign(creatorPage()) : null, this.windows);
-    const crate = this.windows.create({ id: 'crate', title: 'Deed crate', x: 364, y: 56, width: 320, height: 260, anchor: 'tr', open: false });
+    const crate = this.windows.create({ id: 'crate', title: 'Deed crate', x: 364, y: 56, width: 320, height: 348, anchor: 'tr', open: false });
     this.cratePanel = new CratePanel(crate, game, (p) => this.moveDragged(p, 'store'),
       (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));
     // Somebody else's shop counter: what is on it is bought, on an island.
@@ -422,7 +422,7 @@ export class UI {
     this.ledgerPanel = this.journalPanel.ledger;
     // "The rest of it" on the first-steps card opens the whole list.
     this.hud.openJournal = () => journal.open();
-    const pals = this.windows.create({ id: 'wildermon', title: 'Wildermon', x: 364, y: 330, width: 330, height: 320, anchor: 'tr', open: false });
+    const pals = this.windows.create({ id: 'wildermon', title: 'Wildermon', x: 364, y: 330, width: 330, height: 416, anchor: 'tr', open: false });
     this.wildermon = new WildermonPanel(
       pals,
       game,
@@ -610,11 +610,11 @@ export class UI {
       : `Nothing makes ${name.toLowerCase()} at a bench, and the help says nothing about it by that name.`, 'info');
   }
 
-  /** A weapon or armour under the pointer in the pack or a store, set against what you have on; nothing for anything else. */
+  /** A weapon or armour under the pointer in the pack or a store, set against what you have on; anything else, what it is and is for (`itemCard`). */
   private compareCard(item: Item | null, x: number, y: number): void {
     // And for anything, what its like has sold for on the island this month (`priceLine`).
     const sold = item ? priceLine(this.market.prices[item.id]) : null;
-    const lines = item ? compareLines(this.game, item) ?? (sold ? [itemName(item)] : null) : null;
+    const lines = item ? compareLines(this.game, item) ?? itemCard(this.game, item) : null;
     if (lines && sold) lines.push(sold);
     if (lines) this.tooltip.show(x, y, lines, this.compareHolder);
     else this.tooltip.hide(this.compareHolder);
@@ -1234,8 +1234,9 @@ export class UI {
       const open = this.windows.get(wdw.id)?.isOpen ?? false;
       const codes = this.keys.codes(wdw.bind);
       return {
-        label: `${open ? '✓ ' : ''}${wdw.label}`,
-        note: codes.length ? keyName(codes[0]) : undefined,
+        label: wdw.label,
+        checked: open,
+        keys: codes.length ? keyName(codes[0]) : undefined,
         onSelect: () => this.toggleWindow(wdw.id),
       };
     });

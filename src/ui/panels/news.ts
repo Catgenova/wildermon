@@ -16,7 +16,7 @@ import { SALE_DAYS } from '../../game/prices';
 import { RECENT } from './craft';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
-import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_WIND, SWING_WIND_KG, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
+import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
@@ -26,7 +26,7 @@ import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
-import { WORLD_PACE } from '../../game/pace';
+import { ACTION_FLOOR, ACTION_PACE, WORLD_PACE } from '../../game/pace';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
 import { favourCap, PRAYER_GAIN, PRAYER_PEAKS, PRAYER_REST, prayerWorth } from '../../game/faith';
 import {
@@ -1972,6 +1972,41 @@ export const NEWS: News[] = [
         + 'Upgrading and renaming may be given to a rank; disbanding may not, because it frees the founder\'s wildermon and tips out the founder\'s deed crate. '
         + 'A rank somebody holds is not deleted until they hold another.',
       `Refused for your rank, you are told the rank and what it may not do, in the same words wherever it is checked: "${lacksSaid('Hearth', 'Guest', 'locks')}"`,
+    ],
+  },
+  {
+    n: 146,
+    day: '2026-10-13',
+    lines: () => {
+      const sword = WEAPON_BY_ID.get('short_sword');
+      if (!sword) return [];
+      const name = itemDef(sword.id).name.toLowerCase();
+      const s = (n: number): string => String(+n.toFixed(2));
+      // The fighting from which the old clock (a job's, `goSeconds`) held a short sword on the job floor.
+      const flat = Array.from({ length: 100 }, (_, i) => i + 1).find((f) => goSeconds(sword.swing, f) <= ACTION_FLOOR + 1e-9) ?? 100;
+      return [
+        `A swing or a draw takes the seconds its weapon says, less skill: a ${name} ${sword.swing} seconds before skill, ${s(swingSeconds(sword.swing, 1))} at fighting 1 `
+          + `and ${s(swingSeconds(sword.swing, 30))} at fighting 30. A swing was timed as a job's weight, at ${s(ACTION_PACE)} seconds to the unit and never under `
+          + `${s(ACTION_FLOOR)} seconds: a ${name} took ${s(goSeconds(sword.swing, 1))} seconds at fighting 1 and ${s(goSeconds(sword.swing, 30))} at fighting 30, `
+          + `and from fighting ${flat} up it swung no quicker than a knife.`,
+        `Nothing swings or draws quicker than every ${SWING_FLOOR.toFixed(1)} seconds. Fighting (archery for a draw) and body control take the same share off as before, `
+          + 'and tired or wounded arms add the same.',
+        'Armour, what you carry and a wagon, driven or not, do not change how long a swing takes, and never did.',
+        'Hovering a weapon shows A swing every as the seconds a swing of it takes in your hands now, with its own seconds and each thing that changes them on the line under it. '
+          + 'Examine and the target panel weigh a fight up at that time.',
+      ];
+    },
+  },
+  {
+    n: 147,
+    day: '2026-10-13',
+    lines: () => [
+      'Every window, menu and bar was gone over for layout and wording, in Runecut by day and night, in Classic and on a phone. Among what changed: '
+        + 'the right-click menu, the toolbar list and every question box work from the keyboard (arrows, Enter, Esc); Drop, Send away, Leave, removing a map mark '
+        + 'and putting the keys back ask first; empty lists say what to do; and nothing is cut short with no way to read the rest on a phone.',
+      'Hovering anything in your pack or a store shows a card with its weight, its damage, what work it is a tool for, what it holds or what it feeds. '
+        + 'Armour, shields and weapons show their quality as it is, without the working-quality arrow, which only work tools have.',
+      'When there is no free room the size of a window you open, it opens as big as the room there is, and grows back once there is room, rather than lying over another window or a bar.',
     ],
   },
 ];

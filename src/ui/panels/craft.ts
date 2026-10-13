@@ -70,7 +70,7 @@ export class CraftPanel {
   onNoRecipe: ((item: string) => void) | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('inv-body');
+    win.body.classList.add('inv-body', 'craft-body');
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
@@ -90,8 +90,9 @@ export class CraftPanel {
     });
     const head = document.createElement('div');
     head.className = 'craft-head';
+    // What the counts count, set with each draw since Settings can change it.
     const hint = document.createElement('span');
-    hint.textContent = 'Tool, place and materials each recipe needs';
+    hint.className = 'craft-hint';
     this.hint = hint;
     const toggle = document.createElement('label');
     const box = document.createElement('input');
@@ -234,6 +235,7 @@ export class CraftPanel {
     if (!this.repaint.changed(now, sig) && !force) return;
     // What the counts count, which Settings decides.
     const atHand = fromStores ? `what you carry and what is in your stores within ${CRAFT_REACH} tiles` : 'what you carry';
+    this.hint.textContent = fromStores ? `At hand: pack, bags, stores within ${CRAFT_REACH} tiles` : 'At hand: pack and bags';
     this.hint.title = `Materials count ${fromStores
       ? `what you carry, in your pack and your bags, and what is in your stores within ${CRAFT_REACH} tiles. The pack is used first, then the bags, then the nearest store.`
       : 'what you carry, in your pack and your bags: Settings keeps your stores out. The pack is used first, then the bags.'}${spareRare
@@ -281,16 +283,16 @@ export class CraftPanel {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
       empty.textContent = this.query || this.only
-        ? `No recipe answers to “${this.search.value.trim()}”${this.readyOnly ? ' that you can make right now' : ''}.`
+        ? `No recipe answers to “${this.search.value.trim()}”${this.readyOnly ? ' that you can make right now' : ''}. Esc in the search box clears it.`
         : `Nothing can be made with ${atHand}. Untick "Only what I can make" to see what each thing needs.`;
       this.list.append(empty);
     }
-    const within = `with ${atHand}`;
+    // What is at hand is said in the head; the foot only counts.
     this.footer.textContent = this.only
-      ? `${shown === 1 ? 'One recipe makes' : `${shown} recipes make`} this, ${ready} of them possible ${within}`
+      ? `${shown === 1 ? 'One recipe makes' : `${shown} recipes make`} this · ${ready} you can make now`
       : this.query
-        ? `${shown} recipes match, ${ready} of them possible ${within}`
-        : `${ready} of ${RECIPES.length} recipes possible ${within}`;
+        ? `${shown} ${shown === 1 ? 'recipe matches' : 'recipes match'} · ${ready} you can make now`
+        : `${ready} of ${RECIPES.length} recipes you can make now`;
     // Opened onto one recipe: the last row of it drawn (the one in the book, under its craft) is brought into view and lit.
     if (this.reveal) {
       const rows = this.list.querySelectorAll<HTMLElement>(`.craft-row[data-recipe="${this.reveal}"]`);
@@ -314,6 +316,7 @@ export class CraftPanel {
     const count = this.game.madeAGo(r);
     name.textContent = count > 1 ? `${itemDef(r.result).name} × ${count}` : itemDef(r.result).name;
     const meta = document.createElement('small');
+    meta.className = 'craft-meta';
     meta.textContent = `${skillName(r.skill)} · ${this.game.duration(ACTION_BY_ID.get(r.id)!).toFixed(0)} s`;
     name.append(meta);
     /*
@@ -341,7 +344,8 @@ export class CraftPanel {
         : `${Math.round(pr.keep * 100)}% of what the parts are worth`
       : !pr.tooled
         ? `up to QL ${pr.ceiling.toFixed(0)}`
-        : pr.reach >= 0.9
+        // A miss that comes out at the same whole QL as a hit is no miss worth naming.
+        : pr.reach >= 0.9 || pr.short.toFixed(0) === pr.ceiling.toFixed(0)
           ? `QL ${pr.ceiling.toFixed(0)}, near enough every time`
           : `up to QL ${pr.ceiling.toFixed(0)}, about ${Math.round(pr.reach * 100)}% of goes; the rest near QL ${pr.short.toFixed(0)}`;
     worth.title = pr.fromInputs
@@ -402,6 +406,7 @@ export class CraftPanel {
       tool.className = st.tool ? 'have' : 'lack';
       tool.textContent = lower(r.tool);
       tool.title = st.tool ? 'Carried' : 'Not carried';
+      if (!st.tool) this.findable(tool, r.tool);
       parts.push(tool);
     }
     for (const i of st.inputs) {
@@ -414,8 +419,9 @@ export class CraftPanel {
       span.title = stored > 0
         ? `Have ${i.have}: ${i.carried} carried, ${stored} in your stores within ${reachFor(this.game, r)} tiles. What you carry is used first.`
         : `Have ${i.have}, carried`;
+      // How many, and how many of those are in a store rather than on you.
       const have = document.createElement('em');
-      have.textContent = ` (${i.have})`;
+      have.textContent = stored <= 0 ? ` (${i.have})` : i.carried ? ` (${i.carried} + ${stored} stored)` : ` (${stored} stored)`;
       span.append(have);
       /*
        * Short of something: click it to see what makes it. Asked for as "click
@@ -424,16 +430,7 @@ export class CraftPanel {
        * search away that nothing pointed at. What no recipe makes is gathered,
        * and the help is opened at what it says about it instead.
        */
-      if (i.have < i.need) {
-        const makes = recipesMaking(i.item).length;
-        span.classList.add('craft-find');
-        span.title += makes
-          ? `. Click for ${makes === 1 ? 'the recipe that makes it' : `the ${makes} recipes that make it`}.`
-          : '. Nothing makes it at a bench: click to see what the help says about where it comes from.';
-        span.addEventListener('click', () => {
-          if (!this.showMaking(i.item)) this.onNoRecipe?.(i.item);
-        });
-      }
+      if (i.have < i.need) this.findable(span, i.item);
       parts.push(span);
     }
     // What it would come out made of, since the same bill in two woods makes
@@ -475,6 +472,7 @@ export class CraftPanel {
     pin.className = 'tb-btn tb-small craft-pin' + (pinned ? ' tb-on' : '');
     pin.textContent = pinned ? '★' : '☆';
     pin.title = pinned ? 'Unpin: take it out of Pinned at the top of the book' : 'Pin: keep it at the top of the book, under Pinned';
+    pin.setAttribute('aria-pressed', String(pinned));
     pin.addEventListener('click', () => this.togglePin(r.id));
     buttons.append(pin);
     const craft = document.createElement('button');
@@ -497,6 +495,31 @@ export class CraftPanel {
     }
     row.append(name, buttons, needs);
     return row;
+  }
+
+  /**
+   * Make something on a row that you are short of lead to what makes it: by
+   * click, or Enter or Space once tabbed to. What no recipe makes opens the
+   * help at where it comes from instead.
+   */
+  private findable(el: HTMLElement, item: string): void {
+    const makes = recipesMaking(item).length;
+    el.classList.add('craft-find');
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.title += makes
+      ? `. Click for ${makes === 1 ? 'the recipe that makes it' : `the ${makes} recipes that make it`}.`
+      : '. Nothing makes it at a bench: click to see what the help says about where it comes from.';
+    const go = (): void => {
+      if (!this.showMaking(item)) this.onNoRecipe?.(item);
+    };
+    el.addEventListener('click', go);
+    el.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      go();
+    });
   }
 
   private craft(r: Recipe, times: number): void {

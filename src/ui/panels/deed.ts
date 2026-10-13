@@ -217,6 +217,15 @@ export class DeedPanel {
       name.className = 'deed-rank-name';
       name.textContent = `${this.openRank === r.id ? '▾' : '▸'} ${r.name}`;
       name.title = `${r.name} may ${rankMay(r.perms)}.`;
+      name.setAttribute('aria-expanded', String(this.openRank === r.id));
+      // The one an invitation puts newcomers on, marked where the list is read.
+      if (r.newcomer) {
+        const tag = document.createElement('span');
+        tag.className = 'deed-rank-tag';
+        tag.textContent = 'newcomers';
+        tag.title = 'Newcomers join at this rank.';
+        name.append(tag);
+      }
       name.addEventListener('click', () => {
         this.openRank = this.openRank === r.id ? null : r.id;
         this.render();
@@ -232,9 +241,11 @@ export class DeedPanel {
         const tool = (text: string, tip: string, why: string | null, act: () => void, danger = false): void => {
           const b = document.createElement('button');
           b.type = 'button';
-          b.className = 'tb-btn tb-small deed-tool' + (danger ? ' tb-danger' : '');
+          // An arrow or a cross is drawn larger than a word, so it reads at the same size.
+          b.className = 'tb-btn tb-small deed-tool' + ([...text].length === 1 ? ' deed-glyph' : '') + (danger ? ' tb-danger' : '');
           b.textContent = text;
           b.title = why ?? tip;
+          b.setAttribute('aria-label', tip);
           b.disabled = !!why;
           b.addEventListener('click', act);
           tools.append(b);
@@ -348,16 +359,6 @@ export class DeedPanel {
       standing.className = 'deed-note';
       standing.textContent = standingWord(d);
       this.body.append(standing);
-      if (this.leave) {
-        const leave = this.leave;
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'tb-btn deed-leave';
-        btn.textContent = `Leave ${d.name}`;
-        btn.title = 'Takes you off its roll. You are asked first.';
-        btn.addEventListener('click', () => leave(d));
-        this.body.append(btn);
-      }
     }
     this.body.append(this.row('Level', `${level} of ${MAX_DEED_LEVEL}`));
     this.body.append(this.row('Border', `${d.radius} tiles out · ${side} × ${side}`, `From the token at (${d.x}, ${d.y}).`));
@@ -496,6 +497,17 @@ export class DeedPanel {
       tail.append(b);
     }
     if (!isFounder(d)) {
+      // The way off it, at the foot with the other things done to the settlement as a whole, not over what it is.
+      if (this.leave) {
+        const leave = this.leave;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tb-btn tb-small tb-danger';
+        btn.textContent = `Leave ${d.name}`;
+        btn.title = 'Takes you off its roll. You are asked first.';
+        btn.addEventListener('click', () => leave(d));
+        tail.append(btn);
+      }
       if (tail.childElementCount) this.body.append(this.head('The settlement itself'), tail);
       return;
     }

@@ -3,7 +3,7 @@ import type { CastAt } from '../game/events';
 import { furnitureCentre } from '../game/furniture';
 import type { Game } from '../game/game';
 import {
-  FAITH_SPELL_BY_ID, PATRON_AT, SCHOOL_NAMES, SPELL_BAR, SPELL_REACH, spellOnText, type SpellOn, type SpellSchool,
+  FAITH_SPELL_BY_ID, PATRON_AT, SCHOOL_NAMES, SPELL_BAR, SPELL_REACH, slotsFor, spellOnText, type SpellOn, type SpellSchool,
 } from '../game/patrons';
 import { CLASS_SPELL_BY_ID } from '../game/talents';
 import { CHOOSE_AT, PATH_PICK_BY_ID } from '../game/meditation';
@@ -121,8 +121,8 @@ const takes = (def: BarSpell, aim: SpellAim): boolean => {
  */
 export class SpellBar {
   private readonly el: HTMLDivElement;
-  private readonly slots: Array<{ btn: HTMLButtonElement; name: HTMLSpanElement; shade: HTMLSpanElement }> = [];
-  /** What each slot's shade was last set to, so a frame that changes nothing writes nothing. */
+  private readonly slots: Array<{ btn: HTMLButtonElement; name: HTMLSpanElement; shade: HTMLSpanElement; left: HTMLSpanElement }> = [];
+  /** What each slot's shade and count were last set to, so a frame that changes nothing writes nothing. */
   private readonly shaded: string[] = [];
 
   constructor(
@@ -143,6 +143,8 @@ export class SpellBar {
         school = s;
         group = document.createElement('div');
         group.className = `spell-group spell-${s}`;
+        // As wide as its share of the slots, where the bar is stretched across a phone.
+        group.style.flexGrow = String(slotsFor(s));
         const cap = document.createElement('span');
         cap.className = 'spell-cap';
         cap.textContent = SCHOOL_NAMES[s];
@@ -155,6 +157,10 @@ export class SpellBar {
       const key = document.createElement('span');
       key.className = 'spell-key';
       key.textContent = `⇧${i + 1}`;
+      // The seconds of rest left, beside the key while it rests.
+      const left = document.createElement('span');
+      left.className = 'spell-left';
+      key.append(left);
       const name = document.createElement('span');
       name.className = 'spell-name';
       const shade = document.createElement('span');
@@ -170,7 +176,7 @@ export class SpellBar {
         this.choose(i, e.clientX, e.clientY);
       });
       group?.append(btn);
-      this.slots.push({ btn, name, shade });
+      this.slots.push({ btn, name, shade, left });
       this.shaded.push('');
     });
     root.append(this.el);
@@ -301,9 +307,11 @@ export class SpellBar {
       const left = def ? this.book.restLeft(def.id) : 0;
       const frac = def && def.rest > 0 ? Math.min(1, left / def.rest) : 0;
       const h = `${Math.round(frac * 100)}%`;
-      if (this.shaded[i] === h) return;
-      this.shaded[i] = h;
+      const secs = left > 0 ? `${Math.ceil(left)} s` : '';
+      if (this.shaded[i] === h + secs) return;
+      this.shaded[i] = h + secs;
       slot.shade.style.height = h;
+      slot.left.textContent = secs;
       slot.btn.classList.toggle('spell-resting', frac > 0);
     });
   }
@@ -315,7 +323,7 @@ export class SpellBar {
       const { btn, name } = this.slots[i];
       const id = s?.bar[i] ?? null;
       const def = barSpell(id);
-      name.textContent = def?.name ?? id ?? '—';
+      name.textContent = def?.name ?? id ?? 'Empty';
       btn.classList.toggle('spell-empty', !id);
       btn.title = def
         ? `${def.name}: ${def.note} Cast on ${spellOnText(def)}. ${capitalFirst(def.costs)}, rests ${def.rest} s. Shift+${i + 1}; right-click to change.`

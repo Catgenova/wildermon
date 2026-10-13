@@ -78,7 +78,7 @@ export class TrackerPanel {
     this.list.className = 'track-list';
     this.addBtn = document.createElement('button');
     this.addBtn.type = 'button';
-    this.addBtn.className = 'track-add';
+    this.addBtn.className = 'tb-btn track-add';
     this.addBtn.addEventListener('click', () => {
       const r = this.addBtn.getBoundingClientRect();
       this.showMenu(r.left, r.bottom, 'Track a trade', this.choices());
@@ -156,6 +156,7 @@ export class TrackerPanel {
       const name = document.createElement('span');
       name.className = 'track-name';
       name.textContent = def.name;
+      name.title = def.name;
 
       const shown = document.createElement('span');
       shown.className = 'track-value';
@@ -163,9 +164,10 @@ export class TrackerPanel {
 
       const drop = document.createElement('button');
       drop.type = 'button';
-      drop.className = 'track-drop';
+      drop.className = 'tb-btn tb-small track-drop';
       drop.textContent = '✕';
       drop.title = `Stop watching ${def.name.toLowerCase()}`;
+      drop.setAttribute('aria-label', drop.title);
       drop.addEventListener('click', () => void this.toggle(id));
 
       const track = document.createElement('div');

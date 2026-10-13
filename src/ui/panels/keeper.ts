@@ -68,26 +68,30 @@ export class KeeperPanel {
   }
 
   private draw(): void {
+    const top = this.page.scrollTop;
     this.page.replaceChildren();
-    this.say('Everybody with a body on this island, ashore first. Move puts somebody on the token of the settlement '
-      + 'they founded, or where newcomers come ashore; it stops what they are doing, empties their queue and takes '
-      + `them off anything they ride, drive, pull or are aboard. A mute refuses ${MUTE_SHUTS}. `
-      + 'To clear a pile off the ground, right-click its tile.');
     const kept = this.seen;
     if (!kept) {
       this.say(this.failed ? `The island did not answer. It is asked again every ${KEEPER_REFRESH} seconds while this window is open.`
-        : 'Asking the island…');
-      return;
+        : 'Asking the island…', this.failed);
+    } else {
+      if (this.failed) this.say(`The island did not answer just now, so this is its last answer. It is asked again every ${KEEPER_REFRESH} seconds.`, true);
+      const ashore = kept.people.filter((b) => !b.away);
+      const away = kept.people.filter((b) => b.away);
+      this.head(`Ashore (${ashore.length})`);
+      if (!ashore.length) this.empty('Nobody is ashore.');
+      for (const b of ashore) this.page.append(this.row(b, kept));
+      this.head(`Away (${away.length})`);
+      if (!away.length) this.empty('Nobody with a body here is away.');
+      for (const b of away) this.page.append(this.row(b, kept));
     }
-    if (this.failed) this.say(`The island did not answer just now, so this is its last answer. It is asked again every ${KEEPER_REFRESH} seconds.`);
-    const ashore = kept.people.filter((b) => !b.away);
-    const away = kept.people.filter((b) => b.away);
-    this.head(`Ashore (${ashore.length})`);
-    if (!ashore.length) this.empty('Nobody is ashore.');
-    for (const b of ashore) this.page.append(this.row(b, kept));
-    this.head(`Away (${away.length})`);
-    if (!away.length) this.empty('Nobody with a body here is away.');
-    for (const b of away) this.page.append(this.row(b, kept));
+    // What the three buttons do, under the list they act on rather than over it.
+    this.head('What each does');
+    this.say('Move puts somebody on the token of the settlement they founded, or where newcomers come ashore; '
+      + 'it stops what they are doing, empties their queue and takes them off anything they ride, drive, pull or are aboard. '
+      + `A mute refuses ${MUTE_SHUTS}. To clear a pile off the ground, right-click its tile.`);
+    // Asked again every so often: the list stays where it was being read.
+    this.page.scrollTop = top;
   }
 
   /** One body: whether they are ashore, who, where and how lately heard from, and the three things to do. */
@@ -102,13 +106,18 @@ export class KeeperPanel {
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = b.you ? `${b.name} (you)` : b.keeper ? `${b.name} (keeper)` : b.name;
+    name.title = b.name;
     const facts = document.createElement('span');
     facts.className = `social-where keeper-facts${b.muted ? ' keeper-muted' : ''}`;
     facts.textContent = [`${b.x}, ${b.y}`, heardLine(b.heard), muteLine(b, clockIn)].filter((s) => s).join(' · ');
     who.append(name, facts);
     const acts = document.createElement('span');
     acts.className = 'social-acts';
-    acts.append(this.button('Move', moveHint(b, kept.spawn), () => void this.did(this.island.keeperMove(b.uid))));
+    acts.append(this.button('Move', `${moveHint(b, kept.spawn)} You are asked first.`, () => {
+      void this.game.hooks.confirm(`${moveHint(b, kept.spawn).replace(/\.$/, '')}?`).then((yes) => {
+        if (yes) void this.did(this.island.keeperMove(b.uid));
+      });
+    }));
     const mute = this.button(b.muted ? 'Mute again' : 'Mute',
       `Choose how long. Until then the island refuses ${MUTE_SHUTS}; muting again replaces the time left.`, () => {
         const r = mute.getBoundingClientRect();
@@ -118,11 +127,18 @@ export class KeeperPanel {
           onSelect: () => void this.did(this.island.keeperMute(b.uid, secs)),
         })));
       });
+    mute.classList.add('keeper-mute');
     acts.append(mute);
-    if (b.muted) {
-      acts.append(this.button('Unmute', `Lift the mute: ${MUTE_SHUTS} is sent again`,
-        () => void this.did(this.island.keeperUnmute(b.uid))));
+    // Unmute keeps its place, hidden, on a row with no mute, so Move and Mute stand in one column down the list.
+    const unmute = this.button('Unmute', `Lift the mute: ${MUTE_SHUTS} is sent again`,
+      () => void this.did(this.island.keeperUnmute(b.uid)));
+    if (!b.muted) {
+      unmute.classList.add('keeper-gap');
+      unmute.disabled = true;
+      unmute.tabIndex = -1;
+      unmute.setAttribute('aria-hidden', 'true');
     }
+    acts.append(unmute);
     el.title = `Move puts ${b.you ? 'you' : 'them'} on ${moveTarget(b, kept.spawn)}.`;
     el.append(dot, who, acts);
     return el;
@@ -138,9 +154,9 @@ export class KeeperPanel {
     return b;
   }
 
-  private say(text: string): void {
+  private say(text: string, bad = false): void {
     const el = document.createElement('div');
-    el.className = 'skill-note market-note';
+    el.className = `skill-note market-note${bad ? ' keeper-stale' : ''}`;
     el.textContent = text;
     this.page.append(el);
   }

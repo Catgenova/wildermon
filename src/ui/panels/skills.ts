@@ -1,4 +1,4 @@
-import type { Game } from '../../game/game';
+import { CARRY_PER_STRENGTH, type Game } from '../../game/game';
 import { SKILL_DEFS } from '../../game/skills';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
@@ -11,7 +11,7 @@ export class SkillsPanel {
   private titleBox: HTMLDivElement;
 
   constructor(win: UIWindow, private readonly game: Game) {
-    win.body.classList.add('skills-body');
+    win.body.classList.add('skills-body', 'skill-book');
     // What the trades have earned you the right to be called.
     const head = document.createElement('div');
     head.className = 'skill-group';
@@ -55,7 +55,14 @@ export class SkillsPanel {
 
   refresh(): void {
     for (const [id, el] of this.values) el.textContent = this.game.skills.get(id).toFixed(2);
-    for (const [id, el] of this.notes) el.textContent = this.note(id);
+    for (const [id, el] of this.notes) {
+      const [short, long] = this.note(id);
+      el.textContent = short;
+      // The short note's whole sentence, on the row, for whoever wants to know what "wind" is.
+      this.rows.get(id)!.title = long;
+    }
+    // A skill never raised is drawn quieter, so the ones you have worked stand out.
+    for (const def of SKILL_DEFS) this.rows.get(def.id)?.classList.toggle('skill-raw', this.game.skills.get(def.id) <= def.start);
     this.drawTitles();
   }
 
@@ -77,6 +84,7 @@ export class SkillsPanel {
       const chip = document.createElement('button');
       chip.type = 'button';
       chip.className = `title-chip${id === worn ? ' title-worn' : ''}`;
+      chip.setAttribute('aria-pressed', String(id === worn));
       chip.textContent = t.name;
       chip.title = id === worn ? 'Worn. Click to take it off.' : `Earned at ${t.at} ${SKILL_DEFS.find((d) => d.id === t.skill)?.name.toLowerCase() ?? t.skill}. Click to wear it.`;
       chip.addEventListener('click', () => {
@@ -87,36 +95,59 @@ export class SkillsPanel {
     }
   }
 
-  /** The note beside a skill: its knacks, and what it is worth right now. */
-  private note(id: string): string {
+  /** The note beside a skill, short, and the sentence it stands for: its knacks, and what it is worth right now. */
+  private note(id: string): [string, string] {
     const g = this.game;
+    const [short, long] = this.plain(id) ?? ['', ''];
     // A knack is worth saying before anything else: it never wears off.
     const knacks = Math.min(KNACK_CAP, g.player.knacks[id] ?? 0);
-    if (knacks) return `knack ×${knacks} · +${Math.round(knackBonus(knacks) * 100)}%${this.plain(id) ? ` · ${this.plain(id)}` : ''}`;
-    return this.plain(id);
+    if (!knacks) return [short, long];
+    const bonus = Math.round(knackBonus(knacks) * 100);
+    return [
+      `knack ×${knacks} · +${bonus}%${short ? ` · ${short}` : ''}`,
+      `${knacks} of at most ${KNACK_CAP} knacks: +${bonus}% to what every go in this skill raises it.${long ? ` ${long}` : ''}`,
+    ];
   }
 
-  /** What a characteristic is worth right now, in the plainest terms. */
-  private plain(id: string): string {
+  /**
+   * What a characteristic is worth right now, in the plainest terms, short and
+   * as a sentence; nothing while it is worth nothing yet, since "−0%" says less
+   * than leaving it out.
+   */
+  private plain(id: string): [string, string] | null {
     const g = this.game;
     const v = g.skills.get(id);
     switch (id) {
-      case 'body_strength':
-        return `hits for ${(2 + v / 12).toFixed(1)}`;
-      case 'body_stamina':
-        return `−${Math.round((1 - g.staminaCost(1)) * 100)}% wind`;
-      case 'body_control':
-        return `−${Math.round((1 - g.controlSpeed()) * 100)}% time`;
-      case 'mind_logic':
-        return `${g.queueCapacity()} jobs in hand`;
-      case 'soul_strength':
-        return `+${(g.soulBonus() * 100).toFixed(1)}% tame`;
-      case 'climbing':
-        return `slopes to ${Math.round(g.climbStep())}`;
-      case 'swimming':
-        return `${Math.round(g.player.swimSpeed * 100)}% swim speed`;
+      case 'body_strength': {
+        const kg = Math.round(v * CARRY_PER_STRENGTH);
+        return [`+${kg} kg carried`, `You carry ${kg} kg more before the weight tells on you: ${CARRY_PER_STRENGTH} kg a point.`];
+      }
+      case 'body_stamina': {
+        const off = Math.round((1 - g.staminaCost(1)) * 100);
+        return off > 0 ? [`−${off}% wind`, `Every job and every swing costs ${off}% less stamina.`] : null;
+      }
+      case 'body_control': {
+        const off = Math.round((1 - g.controlSpeed()) * 100);
+        return off > 0 ? [`−${off}% time`, `Every job takes ${off}% less time.`] : null;
+      }
+      case 'mind_logic': {
+        const n = g.queueCapacity();
+        return [`${n} jobs lined up`, `You can line up ${n} jobs at once.`];
+      }
+      case 'soul_strength': {
+        const up = g.soulBonus() * 100;
+        return up > 0 ? [`+${up.toFixed(1)}% tame`, `Taming a creature succeeds ${up.toFixed(1)} percentage points more often.`] : null;
+      }
+      case 'climbing': {
+        const step = Math.round(g.climbStep());
+        return [`slopes to ${step}`, `You can walk up a step of ${step} height units.`];
+      }
+      case 'swimming': {
+        const pace = Math.round(g.player.swimSpeed * 100);
+        return [`${pace}% swim speed`, `In deep water you move at ${pace}% of your walking pace.`];
+      }
       default:
-        return '';
+        return null;
     }
   }
 }

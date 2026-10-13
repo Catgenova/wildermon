@@ -99,6 +99,28 @@ export function placeFor(r: Box, walls: Box[], w: number, h: number): { r: Box; 
 }
 
 /**
+ * Where a box asked to go at `r` lands when there is no free room its size
+ * anywhere: the biggest box, no smaller than `least` and no bigger than `r`,
+ * that has free room somewhere, in that room. Null when not even `least` fits.
+ * A screen with more open than it can hold shrinks what is opened last
+ * rather than laying it over another piece or a bar.
+ */
+export function squeezeFor(r: Box, least: { w: number; h: number }, walls: Box[], w: number, h: number): Box | null {
+  const lengths = (from: number, to: number): number[] => {
+    const out = [from];
+    for (let v = Math.floor((from - 1) / CELL) * CELL; v >= to; v -= CELL) out.push(v);
+    return out;
+  };
+  const sizes = lengths(r.w, least.w).flatMap((cw) => lengths(r.h, least.h).map((ch) => ({ cw, ch })));
+  sizes.sort((a, b) => b.cw * b.ch - a.cw * a.ch);
+  for (const { cw, ch } of sizes) {
+    const got = placeFor({ ...r, w: cw, h: ch }, walls, w, h);
+    if (got) return got.r;
+  }
+  return null;
+}
+
+/**
  * A new size for a box at `at`, asked to be `w` by `h`: snapped, no smaller
  * than `min`, on the screen; and if it would cover one of `walls`, stopped at
  * that edge: the biggest it can be, no wider or taller than asked. Its top
