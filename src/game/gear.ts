@@ -118,7 +118,7 @@ export interface WeaponDef {
   damage: number;
   /** Seconds between blows. */
   swing: number;
-  /** Tiles it reaches; bows reach much further. */
+  /** Tiles a bow shoots or a thrown weapon flies. A weapon held to the end reaches as its family does (`WEAPON_REACH`). */
   range?: number;
   /** Arrows a bow spends per shot. */
   ammo?: string;
@@ -147,7 +147,7 @@ export const WEAPONS: WeaponDef[] = [
   weapon('battle_axe', 'axes', 15, 3.3, { twoHanded: true }),
   weapon('club', 'mauls', 6, 2.2),
   weapon('maul', 'mauls', 14, 3.4, { twoHanded: true }),
-  weapon('spear', 'polearms', 10, 2.6, { range: 2 }),
+  weapon('spear', 'polearms', 10, 2.6),
   weapon('short_bow', 'archery', 8, 2, { range: 6, ammo: 'arrow', twoHanded: true }),
   weapon('medium_bow', 'archery', 11, 2.6, { range: 9, ammo: 'arrow', twoHanded: true }),
   weapon('long_bow', 'archery', 15, 3.4, { range: 13, ammo: 'arrow', twoHanded: true }),
@@ -157,9 +157,9 @@ export const WEAPONS: WeaponDef[] = [
   /*
    * Thrown, and reaching further than anything held.
    *
-   * `range` already existed for the spear and `melee_reach` already reads it
-   * on both sides, so a javelin fights at five tiles today with nothing new
-   * written. It hits harder than a bow of comparable reach and costs no
+   * A thrown weapon reaches its own `range` and `THROWN_PAST` beyond it
+   * (`reachOf`), on both sides, so a javelin fights at five tiles today with
+   * nothing new written. It hits harder than a bow of comparable reach and costs no
    * arrows; a bow buys the distance back and then some. What is still to come
    * is the thing actually leaving your hand and landing on the ground, which
    * wants a throw of its own.
@@ -169,15 +169,34 @@ export const WEAPONS: WeaponDef[] = [
 ];
 
 export const WEAPON_BY_ID = new Map(WEAPONS.map((w) => [w.id, w]));
-// A bow says how far it reaches, what it hits for and how often, off the bow.
-for (const w of WEAPONS) describeFrom(w.id, w);
+
+/** A kind of weapon swung from the hand, as against a bow, a thrown weapon or a shield. */
+export type HeldKind = 'knives' | 'swords' | 'axes' | 'mauls' | 'polearms';
+/** Bare hands reach this many tiles: a bow in the hand too, which is swung with the fists. The island's `fist_reach`. */
+export const FIST_REACH = 2.2;
+/**
+ * How far each family of weapon swung from the hand reaches, in tiles, before
+ * anybody's perks: a knife no further than bare hands, an axe or a maul on its
+ * haft further, a sword further again, and a polearm a tile past a sword. A
+ * swing is allowed from anywhere inside it (`meleeReach`); the island's
+ * `weapon_reach` says the same for every weapon.
+ */
+export const WEAPON_REACH: Record<HeldKind, number> = { knives: FIST_REACH, axes: 2.4, mauls: 2.4, swords: 2.6, polearms: 3.6 };
+/** A thrown weapon reaches its own `range` and this many tiles past it. */
+export const THROWN_PAST = 1.2;
+/** How far a weapon reaches before anybody's perks: its family's reach (`WEAPON_REACH`), or a thrown one's range and `THROWN_PAST`. */
+export const reachOf = (w: Pick<WeaponDef, 'kind' | 'range' | 'thrown'>): number =>
+  w.thrown ? (w.range ?? 0) + THROWN_PAST : WEAPON_REACH[w.kind as HeldKind] ?? FIST_REACH;
+// A bow says how far it reaches, what it hits for and how often, off the bow;
+// a weapon held to the end how far it reaches, and how much past a sword.
+for (const w of WEAPONS) describeFrom(w.id, { ...w, reach: reachOf(w), past: +(reachOf(w) - WEAPON_REACH.swords).toFixed(1) });
 export const isWeapon = (id: string): boolean => WEAPON_BY_ID.has(id);
 export const isBow = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.ammo;
 export const isThrown = (id: string): boolean => !!WEAPON_BY_ID.get(id)?.thrown;
 
 export interface ShieldDef {
   id: string;
-  /** Chance it turns a blow aside entirely, before skill. */
+  /** Its own share of blows blocked outright, before quality and skill (`blockChance`): the heavier shield blocks more. */
   block: number;
   burden: number;
 }

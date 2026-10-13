@@ -159,7 +159,7 @@ import {
   ENCHANT_BREAK, ENCHANT_HARM, ENCHANT_LEAST, ENCHANT_MOST, ENCHANTERS_PLINTH, enchantChance, ENCHANTMENT_LIST, enchantPct, FROST_PACE, FROST_SECS, GRACE_TILES, NETMENDER_WEAR, ON_WORDS, ROLLED_EFFECTS, SCROLL_HARM, SHOT_EFFECTS, WORN_CAP,
 } from '../../game/enchant';
 import { BOWS, BRAND_SPELL, enchantLineAt, jobTools, meleeNames, monsterNames } from '../../game/enchanting';
-import { STUN_SECS } from '../../game/fight';
+import { blockSays, reachSays, STUN_SECS } from '../../game/fight';
 import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '../../game/limits';
 import { TRY_LEARN } from '../../game/learn';
 import { raisedBySays } from '../raisedBy';
@@ -2626,8 +2626,8 @@ export function helpText(): string {
     suit of iron plate slows you by ${percent(PLATE_SUIT / (1 + PLATE_SUIT))} and makes every action cost ${percent(PLATE_SUIT)} more
     wind, where cloth costs ${percent(ARMOUR_CLASSES.cloth.burden)}.</p>
     <p>A <b>shield</b> in the off hand is different: it does not soften a blow, it stops the whole of
-    one outright, and the shields skill and its quality decide how often. A weapon that takes both
-    hands leaves none for one.</p>
+    one outright. ${blockSays()} A weapon that takes both hands leaves none for one. Hover a shield in your
+    pack for its chance in your hands now, and how it came to that.</p>
     <h3>Weapons and the bow</h3>
     <p>A <b>left click</b> on anything wild that is after you, or of a kind that hunts on sight, fights it:
     you go to it and swing, or shoot with a bow in hand, and when it steps out of reach you go after it,
@@ -2717,9 +2717,9 @@ export function helpText(): string {
     <b>Hard</b> when less than ${percent(CONSIDER_HARD)} as long, and <b>Even</b> between.</p>
     <p>Every weapon belongs to a kind, and each kind is its own subskill: ${listed(WEAPON_KINDS.map((k) => `<b>${k}</b>`))}.
     Swinging trains the weapon's own subskill and the <b>fighting</b> skill behind it, and both decide
-    whether a blow lands and how hard. A weapon's own numbers matter as much: a hunting knife is quick
-    and light, a maul or a battle axe is slow and ends things, a spear reaches further than anything
-    else held in the hand, and the ones that take both hands take the shield off your arm.</p>
+    whether a blow lands and how hard. A weapon's own numbers matter as much: its damage, its seconds
+    a swing (above), and its reach. ${reachSays()} Hover a weapon in your pack for its reach in your hands now.
+    The ones that take both hands take the shield off your arm.</p>
     <p>Heads are poured from <b>moulds</b> at the smelter, beaten true at an anvil and fitted to shafts: short and long sword blades,
     axe and maul heads, spear heads, and a gang mould that turns one lump of metal into
     ${numberWord(MOULDS.find((m) => m.id === 'arrow_head_mould')?.per ?? 0)} <b>arrow heads</b>. A club is simply carved from a log, which is what most people start with.</p>

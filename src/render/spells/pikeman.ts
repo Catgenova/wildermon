@@ -31,7 +31,7 @@
  * long as they last (`cast.hold`).
  */
 import { WEAPON_BY_ID } from '../../game/gear';
-import { HUNT_REACH, reachOf } from '../../game/fight';
+import { HUNT_REACH, reachOf, WEAPON_REACH } from '../../game/fight';
 import { weaponSpan, type Rig, type V3 } from '../figure';
 import { UNITS_PER_TILE } from '../iso';
 import type { CastPose, PoseCue, SpellVisual } from './index';
@@ -57,7 +57,7 @@ export const PALETTE: SpellPalette = {
 /** A spell's own numbers, for a pose or a timing that has no `k` to read them from. */
 const FX_OF = (id: string): Readonly<Record<string, number>> => spellInfo(id)?.fx ?? {};
 /** The spear's reach, in tiles: what a Pikeman's weapon reaches when nothing better is known of it. */
-const SPEAR_REACH = reachOf(WEAPON_BY_ID.get('spear') ?? { range: 2 });
+const SPEAR_REACH = WEAPON_REACH.polearms;
 
 /** A spear's length, butt to point, height units: what a whirl or a shove of it is as long as. */
 const SPEAR_LONG = ((s) => (s ? s.to - s.from : 18.8))(weaponSpan('spear'));

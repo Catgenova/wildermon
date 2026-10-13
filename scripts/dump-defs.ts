@@ -56,6 +56,7 @@ import { BUTCHER_PARTS, HOARD_METALS } from '../src/game/butcher';
 import { CRATE_DEFS } from '../src/game/crates';
 import { ARROWS, BODKIN_HIDE, BURN_WEAR, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_GAIN, DODGE_MOST, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS } from '../src/game/fight';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_CLOSEST, FALL_BACK, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../src/game/fight';
+import { BLOCK_PER_SKILL, BLOCK_QL_FROM, BLOCK_QL_SPAN, FIST_REACH, reachOf, SHIELD_WEAR, THROWN_PAST } from '../src/game/fight';
 import { ARM_SLOW, ARM_SLOW_MOST, ARMOUR_SWING_BY, ARMOUR_VS, armourSwingKg, OVERBURDEN_SWING, SHIELD_SWING_BY, BLINDSIDE, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_KINDS, BLOW_PREY, CROWD_BLOCK, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCES, FIST, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_TAKES, HIDES, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, STAGGER_POLE, STANCE_DEALT, STANCE_TAKEN, SWING_WIND, SWING_WIND_KG, TIRED_AT, TIRED_SLOW, WIND_UP } from '../src/game/fight';
 import { METALS, MOULDS, ORE_PER_LUMP, RARE_LUMP_FACTOR, RARE_METALS } from '../src/game/metal';
 import { POTTERY } from '../src/game/kiln';
@@ -1346,6 +1347,23 @@ for (const c of Object.values(ARMOUR_CLASSES)) {
 }
 for (const a of ARMOUR) out.push(`insert into armour_def values (${q(a.id)}, ${q(a.slot)}, ${q(a.cls)});`);
 for (const sh of Object.values(SHIELDS)) out.push(`insert into shield_def values (${q(sh.id)}, ${q(sh.block)}, ${q(sh.burden)});`);
+/*
+ * A shield's block (`blockChance`): what its quality makes of its own share,
+ * from this and a part in this for every point, what each point of shields
+ * adds, and the damage a blocked blow does it for every whole health of the
+ * blow. And how far a swing reaches (`reachOf`): bare hands, a thrown
+ * weapon's tiles past its range, and every weapon held in the hand, off its
+ * family's reach (`WEAPON_REACH`) -- null for a bow, which is swung with the
+ * fists.
+ */
+for (const [fn, v] of [
+  ['block_ql_from', BLOCK_QL_FROM], ['block_ql_span', BLOCK_QL_SPAN], ['block_per_skill', BLOCK_PER_SKILL], ['shield_wear', SHIELD_WEAR],
+  ['fist_reach', FIST_REACH], ['thrown_past', THROWN_PAST],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function weapon_reach(p_def text) returns double precision language sql immutable as $fn$ select case p_def ${
+  WEAPONS.filter((w) => !w.ammo).map((w) => `when ${q(w.id)} then ${q(reachOf(w))}`).join(' ')} end::double precision $fn$;`);
 HIT_LOCATIONS.forEach(([slot, share], ord) => out.push(`insert into hit_location values (${q(slot)}, ${q(ord)}, ${q(share)});`));
 for (const k of Object.values(WOUND_KINDS)) {
   out.push(`insert into wound_kind_def values (${q(k.id)}, ${q(k.name)}, ${q(k.bleed)}, ${q(k.fester)}, ${q(k.herb)}, ${q(k.note)});`);

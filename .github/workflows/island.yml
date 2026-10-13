@@ -1694,6 +1694,26 @@ jobs:
             --outfile=node_modules/.cache/dodge.mjs --log-level=error
           node node_modules/.cache/dodge.mjs
 
+      - name: A shield blocks
+        run: |
+          # Each shield's chance, off its own share, its quality and the
+          # shields skill, the same on both sides; a blocked blow takes nothing,
+          # wears the shield by shield_wear and says so in the same words; the
+          # dodge is rolled first; and the card and the description say it.
+          npx esbuild supabase/test/block.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/block.mjs --log-level=error
+          node node_modules/.cache/block.mjs
+
+      - name: A weapon reaches as far as its family
+        run: |
+          # Every weapon's reach the same on both sides, a polearm a tile past
+          # a sword; a goblin out of a sword's reach refused in the same words
+          # and struck by a spear from the same spot; and the card and the
+          # help say it.
+          npx esbuild supabase/test/reach.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/reach.mjs --log-level=error
+          node node_modules/.cache/reach.mjs
+
       - name: Patrons, faith spells and the spell bar
         run: |
           # A patron is refused below its faith, taken at it and never twice; a
