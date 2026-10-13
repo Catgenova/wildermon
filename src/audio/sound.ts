@@ -130,14 +130,15 @@ export const HUSHED: ReadonlySet<string> = new Set([
   // swing twice.
   'attack_creature', 'shoot_creature',
   // Eating, drinking and sleeping. A body doing something to itself.
-  'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'drink_tea', 'take_tincture',
+  'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'drink_tea', 'take_tincture',
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
   'pray', 'cast', 'meditate', 'sacrifice', 'absorb_mote',
   // Getting on and off things, and being pulled along by one.
   'board_vehicle', 'board_passenger', 'mount_creature', 'dismount_creature', 'pull_cart', 'unhitch_team',
-  // Winning an animal over, which is done by standing very quietly.
-  'tame', 'take_catch', 'pair_creature',
+  // Winning an animal over, which is done by standing very quietly; and a
+  // skep's honey, which is taken the same way (`bees.ts`).
+  'tame', 'take_catch', 'pair_creature', 'take_honey',
   // Ceremony. A stake going in has already made the noise of a stake going in.
   'found_settlement', 'upgrade_deed',
   // A lantern post's wick pinched out between finger and thumb (`lamps.ts`).
