@@ -2,6 +2,7 @@ import { LETTER_MAX, type Folk, type Island, type Letter, type MyDeed, type Soci
 import { DEEDS_JOINED, type DeedRole, type Game } from '../../game/game';
 import { DEFAULT_RANKS, deedMay, FOUNDER, lacks, NEWCOMER_RANK, permsOf, rankMay, rankName, type RankDef, type Ranked } from '../../game/ranks';
 import { leaveQuestion } from '../../game/deed';
+import { BARTER_REACH } from '../../game/barter';
 import type { UIWindow } from '../windows';
 
 /** How often the window asks again while it is open. */
@@ -230,6 +231,8 @@ export class SocialPanel {
    * one you may no longer invite to, is the first of them -- your own.
    */
   private inviteFrom: string | null = null;
+  /** Ask somebody to trade (the Trade window's `ask`), beside everybody ashore; unset, there is no Trade button. */
+  trade: ((uid: string) => void) | null = null;
 
   /**
    * Everybody this body could reasonably deal with, which is the same roll it
@@ -458,6 +461,13 @@ export class SocialPanel {
     return can.find((d) => d.founder === this.inviteFrom) ?? can[0];
   }
 
+  /** Trade, beside anybody ashore: the island says whether they are near enough. */
+  private tradeButton(who: Folk): HTMLButtonElement | null {
+    const go = this.trade;
+    if (!go || !who.online || who.uid === this.me()) return null;
+    return this.button('Trade', `Ask ${who.name} to trade. You both stand within ${BARTER_REACH} tiles of each other.`, () => go(who.uid));
+  }
+
   /**
    * Invite, beside anybody not already on the roll of the settlement Invite
    * asks onto (`inviteTarget`), wherever the window lists them. Greyed with
@@ -606,6 +616,8 @@ export class SocialPanel {
       ];
       const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
+      const trade = this.tradeButton(who);
+      if (trade) acts.unshift(trade);
       this.page.append(this.row(who, this.whereabouts(who), acts));
     }
 
@@ -630,6 +642,8 @@ export class SocialPanel {
       ];
       const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
+      const trade = this.tradeButton(who);
+      if (trade) acts.unshift(trade);
       this.page.append(this.row(who, this.whereabouts(who), acts));
     }
     /*
@@ -668,6 +682,8 @@ export class SocialPanel {
       // Somebody off one settlement of yours may be asked onto another.
       const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
+      const trade = this.tradeButton(who);
+      if (trade) acts.unshift(trade);
       if (!sendAwayRefusal(d, this.me(), who.uid)) {
         const away = this.button('Send away', `Take ${who.name} off the roll of ${d.name}. You are asked first.`,
           () => void this.sure(`Send ${who.name} away from ${d.name}? They come off its roll at once, and only an invitation puts them back on it.`,

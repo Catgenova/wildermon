@@ -29,6 +29,7 @@ import {
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_SEEN, COUNTER_WALL } from '../../game/counters';
+import { BARTER_IDLE, BARTER_MOST, BARTER_REACH } from '../../game/barter';
 import { flameSources } from '../../game/lantern';
 import { LAMP_INTO_WALL } from '../../game/lamps';
 import { STORE_REACH } from '../../game/crates';
@@ -2011,6 +2012,19 @@ export function helpText(): string {
     and on a stall in no other store. Whoever the crate goes to keeps the wildermon in it. While the
     crate is on offer, on a stall or in the post it cannot be opened, and what is in it cannot be let
     go or culled.</p>
+    <h3>Trading face to face</h3>
+    <p><b>A trade</b> swaps things and silver between you and somebody standing with you. Right-click them, or press <b>Trade</b>
+    beside their name in the Social window, and they say yes or no; you have to stand within
+    ${BARTER_REACH} tiles of each other. The <b>Trade</b> window shows what you give and what they give.
+    Drag things onto your side from the Inventory window, or pick one under your side, all of a stack or
+    part of it, and type a sum of silver; a side holds ${numberWord(BARTER_MOST)} things at most. Each of you
+    presses <b>Accept</b>, and any change to either side takes both Accepts back. When both have accepted,
+    everything on both sides changes hands at once, or nothing does: it is refused, in the same words to
+    both of you, when a thing has left its owner's pack (or is held out in a deal), is worn or held, or is
+    kept back, or when somebody does not carry the silver they put in. Nothing is held out of your pack
+    while you trade. Either of you may cancel; standing more than ${BARTER_REACH} tiles apart, or leaving,
+    calls it off, and a trade left ${spanWords(BARTER_IDLE)} with no change to either side lapses. What you are given
+    is never refused for its weight: a heavy pack slows you, as it does when you pick something up.</p>
     <h3>Who may do what on a settlement</h3>
     <p>Every settlement has its own <b>ranks</b>: up to ${numberWord(RANK_CAP)} besides its founder, each with a
     name of up to ${RANK_NAME_MAX} characters that no other rank of that settlement has, a place in the

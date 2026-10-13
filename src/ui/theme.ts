@@ -109,6 +109,7 @@ export const WINDOW_RUNES: Record<string, string> = {
   hoard: 'star8',
   events: 'laguz',
   market: 'diamondDot',
+  barter: 'diamondDot',
   settings: 'key',
   help: 'eye',
   crate: 'diamond',

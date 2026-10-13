@@ -3,6 +3,7 @@ import { EMOTES } from '../game/emotes';
 import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
 import { ACTION_BY_ID, type ActionDef, type Target, fruitSprout, SPOIL_TILE } from '../game/actions';
+import { BARTER_REACH, BARTER_SAID } from '../game/barter';
 import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
 import {
   describeNeeds,
@@ -115,6 +116,7 @@ import { MarketPanel } from './panels/market';
 import { BoardsPanel } from './panels/boards';
 import { GuidePanel } from './panels/guide';
 import { HoardPanel } from './panels/hoard';
+import { BarterPanel } from './panels/barter';
 import { KeeperPanel } from './panels/keeper';
 import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
@@ -304,6 +306,8 @@ export class UI {
   private readonly guide: GuidePanel;
   private readonly tracker: TrackerPanel;
   private readonly hoard: HoardPanel;
+  /** A trade between you and one other person, opened when one is asked for or stands. */
+  private readonly barter: BarterPanel;
   /**
    * The Island keeper window, made only once the island has said this body
    * keeps it. Null for everybody else, and in the game played alone, and then
@@ -491,6 +495,13 @@ export class UI {
      */
     const hoardWin = this.windows.create({ id: 'hoard', title: 'The map', x: 12, y: 56, width: 412, height: 520, anchor: 'tl', open: false });
     this.hoard = new HoardPanel(hoardWin, game, this.island);
+    /*
+     * A trade with one other person: opened by asking or being asked, not off
+     * the Menu, and shut again by its close button when it is over.
+     */
+    const barterWin = this.windows.create({ id: 'barter', title: 'Trade', x: 12, y: 56, width: 440, height: 420, anchor: 'tl', open: false });
+    this.barter = new BarterPanel(barterWin, game, this.island);
+    if (this.island) this.social.trade = (uid) => void this.barter.ask(uid);
     /*
      * Wider than most, because a tree is three columns of three and a node has
      * a sentence on it: at this width the grid opens in three, and narrowing
@@ -904,6 +915,7 @@ export class UI {
     this.boards.update(performance.now() / 1000);
     this.keeper?.update(performance.now() / 1000);
     this.hoard.update(performance.now() / 1000);
+    this.barter.update(performance.now() / 1000);
     this.tilePanel.update(performance.now());
     this.craftPanel.update(performance.now());
     this.ledgerPanel.update(performance.now());
@@ -2905,6 +2917,20 @@ export class UI {
         onSelect: () => said(isle.inviteAt(uid, deed.x, deed.y)),
       });
     }
+    /*
+     * A trade: both standing within reach of each other, which the island
+     * holds to; greyed here only when the roster already says they are too
+     * far off.
+     */
+    const apart = who ? Math.max(Math.abs(who.x - this.game.player.x), Math.abs(who.y - this.game.player.y)) : 0;
+    const far = apart > BARTER_REACH ? BARTER_SAID.far : null;
+    entries.push({
+      label: `Trade with ${name}`,
+      note: far ? undefined : 'Each puts in things and silver; both accept, then everything changes hands',
+      hint: far ?? undefined,
+      disabled: !!far,
+      onSelect: () => void this.barter.ask(uid),
+    });
     entries.push({
       label: `Ask ${name} to be a friend`,
       note: 'You will see where each other are',
