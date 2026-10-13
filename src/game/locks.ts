@@ -48,13 +48,17 @@ export const keyFor = (items: readonly Item[], store: Lockable | undefined): Ite
 /**
  * Why this store will not open, or null.
  *
- * `founder` is whether the person asking is the founder of the settlement the
- * store is standing on — the master key, which belongs to the ground.
+ * `founder` is whether the person asking holds the master key of the
+ * settlement the store is standing on, which belongs to the ground: its
+ * founder, and any rank the founder gave Open its locks. `lacking` is what to
+ * say instead of "no key" when the store stands on a settlement of yours
+ * whose rank does not hold it.
  */
-export function lockRefusal(items: readonly Item[], store: Lockable | undefined, founder: boolean): string | null {
+export function lockRefusal(items: readonly Item[], store: Lockable | undefined, founder: boolean, lacking?: string | null): string | null {
   if (!isLocked(store)) return null;
   if (founder || keyFor(items, store)) return null;
-  return 'It is locked, and you have no key to it.';
+  // On a settlement of yours whose locks your rank may not open, that is the reason given (`lock_refusal`).
+  return lacking ?? 'It is locked, and you have no key to it.';
 }
 
 /** What a locked store says about itself, for a window title or a tooltip. */

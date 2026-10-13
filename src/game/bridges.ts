@@ -2,7 +2,7 @@ import type { ActionDef, Target } from './actions';
 import { isDone, progressOf, type Bill } from './building';
 import type { Game } from './game';
 import { greenNow } from './greening';
-import { rankAtLeast } from './ranks';
+import { lacks } from './ranks';
 import { itemDef } from './items';
 import { fill } from './words';
 import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
@@ -260,7 +260,10 @@ export function pullDownRefusal(g: Game, b: Bridge, job = BRIDGE_ACTIONS.find((a
   const label = job?.toLowerCase();
   for (const [x, y] of [[b.ax, b.ay], [b.bx, b.by]] as Array<[number, number]>) {
     const mine = g.deedOfMineAt(x, y);
-    const d = mine ? (rankAtLeast(mine.role, 'builder') ? null : mine) : g.deedAt(x, y);
+    // On a settlement of yours, your rank (`lacks`); on anybody else's, whose it is.
+    const rank = mine ? lacks(mine, 'shape') : null;
+    if (rank) return rank;
+    const d = mine ? null : g.deedAt(x, y);
     if (d) return `That is part of ${d.name}. Only its builders may ${label} there.`;
   }
   return null;

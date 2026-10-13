@@ -13,8 +13,8 @@
  * through, and nothing rests on its lintel.
  *
  * What it does is light. While a citizen of a settlement whose border takes
- * in the tile on either side of it -- its founder, a mayor or a builder; not
- * a guest, not a stranger -- stands within `RUNE_GATE_REACH` of the middle
+ * in the tile on either side of it -- its founder, or a citizen whose rank
+ * holds Rune gate (`RUNE_GATE_POWER`); not a stranger -- stands within `RUNE_GATE_REACH` of the middle
  * of its opening, both pillars' runes and the roundel on the lintel light,
  * one after the other up from the foot over `RUNE_GATE_RISE`; and once nobody
  * of the settlement is in the opening they go out over `RUNE_GATE_FADE`.
@@ -23,7 +23,7 @@
  *
  * It is the browser's own doing from what it already holds: where every body
  * is drawn, and who is a citizen. For the body playing that is the
- * settlements it is on and its rank on each (`myDeeds`). For anybody else on
+ * settlements it is on and what its rank holds on each (`myDeeds`). For anybody else on
  * an island it is the roll of each settlement a rune gate stands on, which
  * the island sends to whoever is ashore (`rpc_rune_gate_folk`, the one rule
  * this needs) and this keeps (`sawGateFolk`).
@@ -31,7 +31,7 @@
 import { isDone, WALL_TYPE_BY_ID, type Border, type Wall } from './building';
 import type { Game } from './game';
 import type { LightSource } from './light';
-import { rankAtLeast } from './ranks';
+import { deedMay, type PowerId } from './ranks';
 
 /** The wall type a rune gate is. */
 export const RUNE_GATE = 'rune_gate';
@@ -41,8 +41,8 @@ export const RUNE_GATE_REACH = 0.75;
 export const RUNE_GATE_RISE = 0.4;
 /** Seconds they take to go out once no citizen is in the opening. */
 export const RUNE_GATE_FADE = 1.5;
-/** The rank a citizen holds at least: a builder (a guest walks a settlement and is not of it). */
-export const RUNE_GATE_RANK = 'builder';
+/** The power a citizen's rank holds for its rune gates to light for them (`RANK_POWERS`). */
+export const RUNE_GATE_POWER: PowerId = 'gate';
 
 /**
  * And its light after dark, while lit: a pool of pale gold out to this many
@@ -74,7 +74,8 @@ const keyOf = (b: Border): string => `${b.dir}${b.x},${b.y}`;
 
 /**
  * The rolls the island sent: for each settlement a rune gate stands on, by
- * where its token is ("12,40"), the uids of its founder, mayors and builders.
+ * where its token is ("12,40"), the uids of its founder and of every citizen
+ * whose rank holds Rune gate.
  */
 const folkOf = new WeakMap<object, Map<string, Set<string>>>();
 
@@ -107,7 +108,7 @@ const covers = (d: { x: number; y: number; radius: number }, x: number, y: numbe
 /** Whether the body playing is a citizen of a settlement that takes in either side of this border. */
 function selfCitizen(g: Game, b: Border): boolean {
   const tiles = gateTiles(b);
-  return g.myDeeds().some((d) => rankAtLeast(d.role, RUNE_GATE_RANK) && tiles.some(([x, y]) => covers(d, x, y)));
+  return g.myDeeds().some((d) => deedMay(d, RUNE_GATE_POWER) && tiles.some(([x, y]) => covers(d, x, y)));
 }
 
 /** Whether somebody else, by their uid, is on the roll the island sent of a settlement that takes in either side of this border. */

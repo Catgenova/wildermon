@@ -29,6 +29,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { leaveQuestion, standingWord, upgradeReason } from '../../src/game/deed';
 import { rollAt, type MyDeed } from '../../src/net/island';
+import { DEFAULT_RANKS, lacksSaid, permsOf, rankMay } from '../../src/game/ranks';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -103,10 +104,11 @@ console.log('--- what the settlement says to a citizen');
 const game = Game.create(4242);
 const oceanport = { name: 'Oceanport', x: game.spawn.x + 20, y: game.spawn.y, radius: 5, level: 1 };
 game.deed = { ...oceanport, mine: true, role: 'builder' };
-check('a citizen is told the upgrade is the founder\'s', upgradeReason(game) === 'Only whoever founded Oceanport can upgrade it.', upgradeReason(game) ?? 'none');
+// Ranks of your own (145): a Builder holds no Upgrade, and is told so by rank.
+check('a citizen is told their rank may not upgrade it', upgradeReason(game) === lacksSaid('Oceanport', 'Builder', 'upgrade'), upgradeReason(game) ?? 'none');
 game.deed = { ...oceanport, name: 'Hearth', mine: true, role: 'founder' };
-check('and the founder is not', !(upgradeReason(game) ?? '').startsWith('Only whoever founded'), upgradeReason(game) ?? 'none');
-check('what a builder is on it', standingWord('builder') === 'You are a citizen here: you may shape the ground and build on it.', standingWord('builder'));
+check('and the founder is not', !(upgradeReason(game) ?? '').startsWith('Your rank at'), upgradeReason(game) ?? 'none');
+check('what a builder is on it', standingWord({ role: 'builder' }) === `You are a Builder here: you may ${rankMay(permsOf(DEFAULT_RANKS[1].powers))}.`, standingWord({ role: 'builder' }));
 const q = leaveQuestion({ ...oceanport, role: 'builder' }, 'Somebody');
 check('leaving asks first, naming the settlement and who is told',
   q.startsWith('Leave Oceanport? ') && q.includes('Somebody is told') && q.includes('only an invitation puts you back'), q);

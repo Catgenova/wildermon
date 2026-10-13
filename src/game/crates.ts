@@ -5,6 +5,7 @@ import { describeFrom, itemName, rarityOf, roomFor, storedLine, type Item } from
 import { matOf } from './materials';
 import { furnitureDef } from './furniture';
 import { CELLAR_FLOOR, floorOf } from './building';
+import { lacks } from './ranks';
 
 /**
  * Crates are the first placeable objects. Each tile is a 4 by 4 grid of
@@ -139,6 +140,18 @@ const nearCrate = (g: Game, c: PlacedCrate): boolean => {
  * maple was full every one of them was refused in the maple's name. A crate
  * window that says which crate it is has to be able to say so in the ask.
  */
+/**
+ * Why a crate somebody else made is not yours to use, or null: the island's
+ * `crate_yours`, which it sends as `mine`. On a settlement of yours it is your
+ * rank that says no (Crates and stores), and is named; anywhere else the
+ * crate is simply somebody else's. `tail` is what `crate_refusal` adds for
+ * putting things in.
+ */
+export function crateNotYours(g: Game, c: PlacedCrate, tail = ''): string | null {
+  if (c.mine !== false) return null;
+  return lacks(g.deedOfMineAt(c.x, c.y), 'stores') ?? `The ${crateName(c).toLowerCase()} is not yours${tail}.`;
+}
+
 const crateInto = (g: Game, t: Target): PlacedCrate | undefined => {
   if (t.kind === 'item' && t.into !== undefined) {
     const named = g.crates.get(t.into);
@@ -212,6 +225,8 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateOf(g, t);
       if (!c) return 'It is gone.';
+      const theirs = crateNotYours(g, c);
+      if (theirs) return theirs;
       // A crate with a lock on it is not carried off with the lock: a locked
       // thing that could simply be picked up is not locked at all.
       const shut = g.lockRefusal(c);
@@ -241,6 +256,8 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateOf(g, t);
       if (!c) return 'The crate is empty.';
+      const theirs = crateNotYours(g, c);
+      if (theirs) return theirs;
       const shut = g.lockRefusal(c);
       if (shut) return shut;
       return c.items.length ? null : 'The crate is empty.';
@@ -267,6 +284,8 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateInto(g, t);
       if (!c || !nearCrate(g, c)) return 'Stand next to a crate.';
+      const theirs = crateNotYours(g, c, ' to put anything in');
+      if (theirs) return theirs;
       const shut = g.lockRefusal(c);
       if (shut) return shut;
       // Room for some of it is enough: what fits goes in and the rest stays in
@@ -322,6 +341,8 @@ CRATE_ACTIONS.push({
     const dx = where.at[0] - g.player.x;
     const dy = where.at[1] - g.player.y;
     if (Math.hypot(dx, dy) > STORE_REACH) return `Stand next to the ${where.what} to take things out of it.`;
+    const theirs = where.crate ? crateNotYours(g, where.crate) : null;
+    if (theirs) return theirs;
     // A counter is not a chest: what is on somebody else's stall is bought, not taken.
     if (where.piece && furnitureDef(where.piece.kind).stall && where.piece.mine === false) {
       return "That is on somebody else's stall. Buy it at the counter.";

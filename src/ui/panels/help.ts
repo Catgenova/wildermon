@@ -45,7 +45,7 @@ import {
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
-import { MAYOR_SETS, RANK_MAY, SETTABLE_SAID } from '../../game/ranks';
+import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
   PRIMARIES, pureDye, type DyeLiquid, type Primary,
@@ -67,7 +67,7 @@ import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_R
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import {
   ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
-  DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEED_RANKS, DEEDS_JOINED, deedWorkersAt, DUSK,
+  DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
   footing, Game, goSeconds, hullSpeed, kitQl, MAX_DEED_LEVEL, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, WAKE_AFTER_DAWN, wearPerUse,
   QL_TOP,
@@ -178,9 +178,9 @@ const runeGateHelp = (): string => {
     the ground and choose <b>Plan fence</b>, <b>${def?.name}</b>: it is laid in ${mat} and nothing else, ${billWords(Object.entries(wallBill(def?.laidIn ?? '', RUNE_GATE).total))},
     and fed with <b>Build fence</b> as a fence is. Nothing hangs in it and nothing locks it: people, carts and wildermon all pass it, and it is
     seen through. Nothing rests on its lintel. While a citizen of a settlement whose border takes in the tile on either side of it &mdash; its
-    founder, a mayor or a builder, not a guest &mdash; stands within ${RUNE_GATE_REACH} of a tile of the middle of its opening, the runes on both
+    founder, or a citizen whose rank there holds <b>${POWER.gate.label}</b> &mdash; stands within ${RUNE_GATE_REACH} of a tile of the middle of its opening, the runes on both
     pillars and the roundel on the lintel light, the lowest first, over ${RUNE_GATE_RISE} seconds; once no citizen is there they go out over
-    ${RUNE_GATE_FADE} seconds. Strangers, guests and wildermon do not light it. While it is lit after dark it throws pale gold
+    ${RUNE_GATE_FADE} seconds. Strangers, ranks without ${POWER.gate.label} and wildermon do not light it. While it is lit after dark it throws pale gold
     ${RUNE_GATE_GLOW_REACH} tiles round its opening. The light is all it does. On an island the rolls of the settlements rune gates stand on are
     sent to everybody ashore, which is how your browser knows who lights one.</p>`;
 };
@@ -709,33 +709,35 @@ export function helpText(): string {
     buttons &mdash; click one and the herd is laid out flat, worst first, with nothing filtered out,
     so a count of what is wrong takes you to it.</p>
     <h3>Other people</h3>
-    <p>Right-click somebody standing on the island and you can <b>invite them to a settlement</b> you founded or are a mayor of,
+    <p>Right-click somebody standing on the island and you can <b>invite them to a settlement</b> you founded or whose rank of yours holds ${POWER.invite.label},
     <b>ask them to be a friend</b>, or <b>write to them</b>. All of them live in the <b>Social</b> window
     (<kbd>Y</kbd>) as well, under its tabs: <b>Waiting</b> is everything that wants a yes or a no
     from you, <b>Friends</b> is everybody you know and where they are, and <b>Letters</b> is what has
     been written.</p>
-    <p>A <b>builder</b> of a settlement, which is what an invitation makes you, may build on its land, use
-    its crates and stores, and draw from its water, exactly as the founder does. Disbanding, upgrading,
-    renaming and setting wildermon to work stay with whoever planted the stake, and no mayor may do them.</p>
+    <p>An invitation puts you on the settlement's <b>rank for newcomers</b>, which is ${NEWCOMER_RANK} until its
+    founder chooses another, and what you may do there is what that rank holds (<b>Who may do what on a
+    settlement</b>, below). Disbanding and setting wildermon to work stay with whoever planted the stake: no
+    rank may be given them.</p>
     <p>You may found <b>one</b> settlement of your own and be a citizen of <b>${numberWord(DEEDS_JOINED)}</b> others, whether
     or not you hold one. A border you may work inside is drawn at the same weight as your own, so land
     you were asked onto does not look like a stranger's. Leaving a roll frees the place at once, and an
     invitation you had no room for is left standing until you do.</p>
-    <p>A settlement's founder and its mayors may invite anybody to it. Living on another settlement is no bar: the
+    <p>A settlement's founder, and anybody whose rank there holds <b>${POWER.invite.label}</b>, may invite anybody to it. Living on another settlement is no bar: the
     Social window's Friends tab has <b>Invite</b> beside everybody not already on its roll &mdash; friends,
     people you share another settlement with, and everybody else ashore. It reads <b>Citizen of ${DEEDS_JOINED}</b>
     and cannot be pressed for somebody already a citizen of ${numberWord(DEEDS_JOINED)} other people's settlements,
     and <b>Asked</b> for somebody who has not answered yet. Once you are a citizen of ${numberWord(DEEDS_JOINED)}
-    yourself, <b>Move in</b> on an invitation cannot be pressed until you leave one. Founder or mayor of more
+    yourself, <b>Move in</b> on an invitation cannot be pressed until you leave one. Able to invite to more
     than one settlement, you choose at the top of the Friends tab which one Invite asks people onto, and the
     right-click menu has an Invite for each.</p>
-    <p><b>Ranks</b> are set in the Settlement window, under <b>Citizens</b>. The founder may make anybody
-    else on the roll a ${SETTABLE_SAID}. A mayor may move a citizen between ${listed(MAYOR_SETS)} and
-    nothing more: only the founder makes or unmakes a mayor. Nobody changes the founder's rank
-    or their own. Whoever is ranked is told what the new rank lets them do.</p>
+    <p>A citizen's <b>rank</b> is set in the Settlement window, under <b>Citizens</b>, from a list of the
+    ranks you may give them. The founder gives anybody else on the roll any rank. A rank holding
+    <b>${POWER.set_ranks.label}</b> gives somebody whose rank is below its own in the settlement's list a rank
+    below its own. Nobody changes the founder's rank or their own. Whoever is ranked is told what the new
+    rank lets them do.</p>
     <p><b>Send away</b>, beside a name under a settlement in the Social window, takes somebody off its roll.
-    The founder may send away anybody; a mayor may send away ${listed(MAYOR_SETS.map((r) => `${r}s`))}, not
-    another mayor.</p>
+    The founder may send away anybody; a rank holding <b>${POWER.send_away.label}</b> may send away anybody
+    whose rank is below its own in the list.</p>
     <p>To <b>leave</b> a settlement you were asked onto, right-click its land and choose <b>Leave</b> under
     its name, or use the button in the Settlement window or the People window. You come off its roll at
     once and are a stranger there: you may walk it and shape nothing, and of the stores on it only the ones
@@ -1624,7 +1626,7 @@ export function helpText(): string {
     <p>A planned bridge is built a span at a time, exactly as a wall is: stand by the open part and feed
     it what it wants, one unit a go. Until the last span is decked nothing crosses. Pulling one down
     again gives you half of what went into it. <b>${BRIDGE_PULL?.label}</b> is done within ${PULL_REACH} tiles of the middle of either end. Where either end stands on a
-    settlement only its builders may do it, as only they may take down a building's wall there, and a guest may not; anywhere
+    settlement only its founder and the ranks holding ${POWER.shape.label} may do it, as only they may take down a building's wall there; anywhere
     else, anybody may. A boat passes underneath.</p>
     <p>A <b>drawbridge</b> goes from open ground to open ground, neither end inside a building, with at most
     ${numberWord(BRIDGES.draw.span)} tiles of deck, and its first span also takes ${billWords(BRIDGES.draw.winch ?? [])} for its hinge,
@@ -1707,7 +1709,7 @@ export function helpText(): string {
     the paving or the foundation (both, where one tile has both), the statue, the arch or the aqueduct. Either takes
     ${spanWords(goSeconds(CLEAR_IVY.baseTime))} a go with a tool of no quality, less with a better one, and ${percent(CLEAR_IVY.stamina)} of your
     stamina, and leaves bare stone that starts greening again from then. Nothing is cleared that has not
-    grown a day yet. On a settlement only its builders may do it, and a guest may not; anywhere else,
+    grown a day yet. On a settlement only its founder and the ranks holding ${POWER.shape.label} may do it; anywhere else,
     anybody may.</p>
     <h3>Boats</h3>
     <p>${NumberWord(BOATS.length)} hulls, all of them a carpenter's work. A <b>rowing boat</b> is ${bill('make_rowing_boat', true)};
@@ -1971,20 +1973,34 @@ export function helpText(): string {
     crate is on offer, on a stall or in the post it cannot be opened, and what is in it cannot be let
     go or culled.</p>
     <h3>Who may do what on a settlement</h3>
-    <p>Being asked onto somebody's land used to be all or nothing: everybody on the roll could dig
-    up the gardens, empty the stores and pull the walls down. There are ${numberWord(DEED_RANKS.length)} standings now.</p>
+    <p>Every settlement has its own <b>ranks</b>: up to ${numberWord(RANK_CAP)} besides its founder, each with a
+    name of up to ${RANK_NAME_MAX} characters that no other rank of that settlement has, a place in the
+    settlement's list, and the permissions its founder has ticked for it. The founder is no rank: the
+    founder holds every permission and cannot be demoted. The ranks are in the Settlement window under
+    <b>Ranks</b>, highest first; click one for its permissions.</p>
+    <p>Only the founder changes them: <b>New rank</b> adds one at the foot of the list with no permissions,
+    ▲ and ▼ move one a place, <b>Rename</b> renames it, ✕ deletes it, and <b>Newcomers join as</b> chooses
+    the rank an invitation puts people on. A rank somebody holds is not deleted &mdash; give them another
+    rank first &mdash; and neither is the rank for newcomers. A rank's place in the list is what
+    <b>${POWER.send_away.label}</b> and <b>${POWER.set_ranks.label}</b> ask: a rank acts only on those below it.</p>
     <table>
-      <tr><td><b>Founder</b></td><td>Planted the stake. Everything, and the master key to every lock on their own land.</td></tr>
-      <tr><td><b>Mayor</b></td><td>May ${RANK_MAY.mayor}. Not upgrading, renaming or disbanding, and not ranking or sending away another mayor.</td></tr>
-      <tr><td><b>Builder</b></td><td>The ordinary citizen, and what an invitation makes you: shapes the ground, builds, takes from the stores.</td></tr>
-      <tr><td><b>Guest</b></td><td>Walks the land and shapes nothing. What you offer somebody you want to show round.</td></tr>
+      ${RANK_POWERS.map((p) => `<tr><td><b>${p.label}</b></td><td>${p.rule}</td></tr>`).join('\n      ')}
     </table>
-    <p>A guest still belongs to the settlement — they may walk it, and their wildermon still work
-    there — they simply may not dig it up. Pointing at any ground says whose it is and what you are
-    on it, which is also how you read a <b>stranger's</b> settlement from outside: its name, who
-    founded it, and that you may walk it and shape nothing.</p>
-    <p>And a building on a settlement is every builder's to work on, not only its planner's, so
-    several people can fill one wall's bill between them.</p>
+    <p>Disbanding is no permission. It frees the founder's wildermon and tips out the founder's deed crate,
+    which are the founder's and not the settlement's, so only the founder disbands a settlement. Setting
+    wildermon to work on it and its standing orders are the founder's too.</p>
+    <p>Every settlement starts with these, which are what its mayors, builders and guests could do before
+    the founder could change them:</p>
+    <table>
+      ${DEFAULT_RANKS.map((r) => `<tr><td><b>${r.name}</b>${r.name === NEWCOMER_RANK ? ' (newcomers)' : ''}</td><td>May ${rankMay(permsOf(r.powers))}.</td></tr>`).join('\n      ')}
+    </table>
+    <p>A rank without <b>${POWER.shape.label}</b> still belongs to the settlement &mdash; its citizens walk it,
+    and their wildermon still work there &mdash; it simply may not dig it up. Refused anything, you are told
+    your rank and what it may not do. Pointing at any ground says whose it is and what you may do on it,
+    which is also how you read a <b>stranger's</b> settlement from outside: its name, who founded it, and that
+    you may walk it and shape nothing.</p>
+    <p>And a building on a settlement is the work of every rank holding ${POWER.shape.label}, not only its
+    planner's, so several people can fill one wall's bill between them.</p>
     <h3>Padlocks and keys</h3>
     <p>Everything anybody built has been open to everybody who could walk to it. A crate on your own
     deed was safe because the <i>ground</i> was yours; a crate anywhere else, a cart at a work post,
@@ -1997,7 +2013,8 @@ export function helpText(): string {
     nobody takes the helm or the reins, takes hold of the shafts, comes aboard as a passenger or
     picks it up to carry it off. Stepping ashore and getting down are never refused.</p>
     <p>One way back in, because losing a small item should not cost you a building: the
-    <b>founder</b> of the settlement a store stands on may open anything on their own land. So a
+    <b>founder</b> of the settlement a store stands on may open anything on their own land, and so may
+    every rank there the founder gave <b>${POWER.locks.label}</b> (none of the starting ranks holds it). So a
     padlock is worth a great deal on somebody else's deed and rather less on your own.</p>
     <h3>Where the animals live</h3>
     <p>Everything wild has <b>a home</b>: a patch of country it keeps to, set where it was first
@@ -2611,10 +2628,12 @@ export function helpText(): string {
     </table>
     <p>Set one at the altar of a settlement of yours: <b>Baubles</b> on the altar's menu. Its ${numberWord(BAUBLE_TIERS.reduce((n, t) => n + t.slots, 0))} sockets
     are the settlement's rather than the stone's &mdash; pick the altar up and set it down again and they are
-    still filled &mdash; and its founder, a mayor or a builder may set a bauble into an empty one. Only the founder or a mayor may set one in place
-    of another, and the one it replaces is destroyed; nothing set can be taken out again. What is set works
-    for the settlement's citizens &mdash; its founder, mayors and builders, not its guests &mdash; on every action
-    they do standing on its land. The same kind for the same skill adds up, to at most ${percent(BAUBLE_KINDS.time.cap / 100)} less time,
+    still filled &mdash; and its founder, and a rank holding <b>${POWER.set_bauble.label}</b>, may set a bauble into an empty one. Setting one in place
+    of another wants <b>${POWER.replace_bauble.label}</b> as well, and the one it replaces is destroyed; nothing set can be taken out again. What is set works
+    for its founder and for every rank holding <b>${POWER.served.label}</b> on every action they do standing on its land.
+    Of the ranks a settlement starts with, ${listed(DEFAULT_RANKS.filter((r) => r.powers.includes('set_bauble')).map((r) => r.name))} set,
+    ${listed(DEFAULT_RANKS.filter((r) => r.powers.includes('replace_bauble')).map((r) => r.name))} replace, and
+    ${listed(DEFAULT_RANKS.filter((r) => r.powers.includes('served')).map((r) => r.name))} are worked for. The same kind for the same skill adds up, to at most ${percent(BAUBLE_KINDS.time.cap / 100)} less time,
     ${times(1 + BAUBLE_KINDS.learn.cap / 100)} the skill gain, and a ${percent(BAUBLE_KINDS.double.cap / 100)} chance of ${times(YIELD_TIMES)} the yield, which a go gets
     all of or none of. The Settlement window adds up what yours give.</p>
     <h3>Wildermon</h3>
@@ -3073,7 +3092,7 @@ export function helpText(): string {
     side. <b>Lay stone steps</b> with a trowel, masonry ${STONE_DIFFICULTY}: ${STONE_STEPS_BILL}, in
     ${listed(SLAB_VARIANTS.map((v) => v.name.replace(/ slabs$/, '').toLowerCase()))}. <b>Lay timber steps</b> with a mallet, carpentry
     ${TIMBER_DIFFICULTY}: ${TIMBER_STEPS_BILL}, and the flight is of that wood. Carrying more than one stone
-    or wood, the menu asks which. On a settlement it is shaping the ground, which a guest may not do.</p>
+    or wood, the menu asks which. On a settlement it is shaping the ground, which wants ${POWER.shape.label} of a citizen's rank.</p>
     <p>A tile of steps is stood on at any slope up to <b>${STEPS_MOST}</b>, where bare ground stops at
     ${MAX_STAND} and ${CLIMB_PER_LEVEL} more a level of climbing, and a step onto one or off one is not held
     to the ${MAX_STEP} between tile centres that a step over bare ground is: only the tile stepped onto has

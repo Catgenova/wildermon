@@ -1,6 +1,6 @@
 import { LETTER_MAX, type Folk, type Island, type Letter, type MyDeed, type Social } from '../../net/island';
-import { DEEDS_JOINED, rankAtLeast, type DeedRole, type Game } from '../../game/game';
-import { RANK_MAY, SETTABLE_RANKS, SETTABLE_SAID } from '../../game/ranks';
+import { DEEDS_JOINED, type DeedRole, type Game } from '../../game/game';
+import { DEFAULT_RANKS, deedMay, FOUNDER, lacks, NEWCOMER_RANK, permsOf, rankMay, rankName, type RankDef, type Ranked } from '../../game/ranks';
 import type { UIWindow } from '../windows';
 
 /** How often the window asks again while it is open. */
@@ -62,20 +62,46 @@ export function writeTo(s: Social): Folk[] {
 export const rollFull = (s: Social, uid: string): boolean => (s.joined?.[uid] ?? 0) >= DEEDS_JOINED;
 
 /**
- * Your rank on one of your settlements: the island's word for it, or, from an
- * island that predates mayors and does not say, founder where you planted the
- * stake and builder anywhere else.
+ * Your rank on one of your settlements, in lower case: the island's word for
+ * it, or, from an island that predates mayors and does not say, founder where
+ * you planted the stake and builder anywhere else.
  */
-export const myRank = (d: MyDeed): DeedRole => d.role ?? (d.mine ? 'founder' : 'builder');
+export const myRank = (d: MyDeed): DeedRole => d.role ?? (d.mine ? FOUNDER : 'builder');
 
-/** Somebody's rank on a settlement of yours, or undefined when they are not on its roll. */
+/** One of your settlements as the rules in `ranks.ts` ask about it: what you are there and what your rank may do. */
+export const asRanked = (d: MyDeed): Ranked => ({ name: d.name, role: myRank(d), rank: d.rank, perms: d.perms });
+
+/** Somebody's rank on a settlement of yours, in lower case, or undefined when they are not on its roll. */
 export function rankOf(d: MyDeed, uid: string): DeedRole | undefined {
-  if (uid === d.founder) return 'founder';
+  if (uid === d.founder) return FOUNDER;
   return d.ranks?.[uid] ?? (d.folk.some((f) => f.uid === uid) ? 'builder' : undefined);
 }
 
-/** The settlements you may ask people onto: the one you founded, and every one you are a mayor of. */
-export const inviteDeeds = (s: Social): MyDeed[] => s.deeds.filter((d) => rankAtLeast(myRank(d), 'mayor'));
+/**
+ * A settlement's ranks, highest first. From an island from before custom
+ * ranks, the three every settlement had, counted off `ranks`.
+ */
+export function defsOf(d: MyDeed): RankDef[] {
+  if (d.defs) return [...d.defs].sort((a, b) => a.ord - b.ord || a.id - b.id);
+  return DEFAULT_RANKS.map((r, i) => ({
+    id: -(i + 1), name: r.name, ord: i + 1, perms: permsOf(r.powers), newcomer: r.name === NEWCOMER_RANK,
+    held: Object.values(d.ranks ?? {}).filter((x) => x === r.name.toLowerCase()).length,
+  }));
+}
+
+/** Somebody's rank on a settlement of yours as the settlement lists it, or undefined for its founder and a stranger. */
+export function defOf(d: MyDeed, uid: string): RankDef | undefined {
+  const id = d.held?.[uid];
+  const role = rankOf(d, uid);
+  return defsOf(d).find((r) => (id !== undefined ? r.id === id : r.name.toLowerCase() === role));
+}
+
+/** Your own place in a settlement's list: 0 for its founder, above everybody; your rank's place otherwise. */
+const myPlace = (d: MyDeed): number =>
+  (myRank(d) === FOUNDER ? 0 : defsOf(d).find((r) => r.name.toLowerCase() === myRank(d))?.ord ?? Infinity);
+
+/** The settlements you may ask people onto: the one you founded, and every one your rank on holds Invite. */
+export const inviteDeeds = (s: Social): MyDeed[] => s.deeds.filter((d) => deedMay(asRanked(d), 'invite'));
 
 /**
  * Whether you may ask somebody onto a settlement, and if not, why: the same
@@ -83,19 +109,18 @@ export const inviteDeeds = (s: Social): MyDeed[] => s.deeds.filter((d) => rankAt
  * by its founder; left out, it is the one you founded, which is what the
  * island takes when a browser does not say.
  *
- * Its founder or a mayor of it may ask. Living somewhere already is no bar.
- * One settlement is yours and `DEEDS_JOINED` more may be other people's,
- * whether or not you hold one, and only somebody already on that many rolls
- * is refused. The island has kept that rule since citizens landed; it was
- * this window that withheld it, offering Invite only under "Everybody else
- * ashore" -- so a friend, or anybody you share a settlement with, could not
- * be asked at all. Reported from the island: "I don't have an invite option
- * for you and [another player] since we're already in a deed."
+ * Its founder, or a citizen whose rank holds Invite, may ask. Living
+ * somewhere already is no bar. One settlement is yours and `DEEDS_JOINED`
+ * more may be other people's, whether or not you hold one, and only somebody
+ * already on that many rolls is refused. Reported from the island: "I don't
+ * have an invite option for you and [another player] since we're already in a
+ * deed."
  */
 export function inviteRefusal(s: Social, uid: string, name: string, founder?: string): string | null {
   const d = founder === undefined ? s.deeds.find((e) => e.mine) : s.deeds.find((e) => e.founder === founder);
   if (!d) return founder === undefined ? 'You hold no settlement to invite anybody to.' : 'That settlement is gone.';
-  if (!rankAtLeast(myRank(d), 'mayor')) return `Only the founder or a mayor of ${d.name} may invite anybody to it.`;
+  const no = lacks(asRanked(d), 'invite');
+  if (no) return no;
   if (rankOf(d, uid)) return `${name} already lives here.`;
   if (rollFull(s, uid)) {
     return `${name} is a citizen of ${DEEDS_JOINED} settlements already, which is as many as anybody may be.`;
@@ -109,50 +134,74 @@ export function inviteRefusal(s: Social, uid: string, name: string, founder?: st
 }
 
 /**
- * Whether you may set somebody's rank on a settlement of yours, and if not,
- * why: `rpc_rank`'s checks, in its order and its words.
+ * Whether you may give somebody a rank of a settlement of yours, by the
+ * rank's name, and if not, why: `rpc_rank`'s checks, in its order and its
+ * words.
  *
- * The founder sets anybody else on the roll to any rank but founder. A mayor
- * sets a citizen below mayor to a rank below mayor. Nobody changes the
- * founder's rank or their own.
+ * Its founder gives anybody else on the roll any of its ranks. A citizen
+ * whose rank holds Set ranks gives somebody ranked below them a rank below
+ * their own. Nobody changes the founder's rank or their own.
  */
-export function rankRefusal(d: MyDeed, me: string, uid: string, name: string, role: string): string | null {
-  if (!(SETTABLE_RANKS as string[]).includes(role)) return `A rank is ${SETTABLE_SAID}.`;
-  const mine = myRank(d);
-  if (!rankAtLeast(mine, 'mayor')) return `Only the founder or a mayor of ${d.name} may change anybody's rank.`;
+export function rankRefusal(d: MyDeed, me: string, uid: string, name: string, rank: string): string | null {
+  const no = lacks(asRanked(d), 'set_ranks');
+  if (no) return no;
   if (uid === me) return 'Nobody may change their own rank.';
   if (uid === d.founder) return `Nobody may change the rank of whoever founded ${d.name}.`;
-  const theirs = rankOf(d, uid);
+  const theirs = defOf(d, uid);
   if (!theirs) return `${name} is not a citizen of ${d.name}.`;
-  if (!rankAtLeast(mine, 'founder') && (rankAtLeast(theirs, 'mayor') || rankAtLeast(role as DeedRole, 'mayor'))) {
-    return `Only whoever founded ${d.name} may make or unmake a mayor.`;
+  const to = defsOf(d).find((r) => r.name.toLowerCase() === rank.trim().toLowerCase());
+  if (!to) return `${d.name} has no rank called ${rank.trim()}.`;
+  if (myRank(d) !== FOUNDER) {
+    const mine = myPlace(d);
+    const mineName = rankName(asRanked(d));
+    if (theirs.ord <= mine) return `${name} holds ${theirs.name} at ${d.name}. Your rank, ${mineName}, may set the rank only of those ranked below it.`;
+    if (to.ord <= mine) return `Your rank at ${d.name}, ${mineName}, may give only ranks below it.`;
   }
-  if (theirs === role) return `${name} is already a ${role} of ${d.name}.`;
+  if (theirs.id === to.id) return `${name} already holds ${to.name} at ${d.name}.`;
   return null;
 }
 
-/** What somebody is told when they are ranked: `rpc_rank`'s line, word for word. */
-export const rankedLine = (by: string, role: Exclude<DeedRole, 'founder'>, deed: string): string =>
-  `${by} makes you a ${role} of ${deed}: you may ${RANK_MAY[role]}.`;
+/** What somebody is told when they are given a rank: `rpc_rank`'s line, word for word. */
+export const rankedLine = (by: string, rank: string, deed: string, perms: number): string =>
+  `${by} gives you the rank of ${rank} at ${deed}: you may ${rankMay(perms)}.`;
+
+/** What somebody is told when they say yes to an invitation: `rpc_invite_answer`'s line, word for word. */
+export const joinedLine = (deed: string, rank: string, perms: number): string =>
+  `You are a citizen of ${deed}, at the rank of ${rank}: you may ${rankMay(perms)}.`;
 
 /**
  * Whether you may take somebody off the roll of a settlement of yours -- or
  * yourself, with your own uid -- and if not, why: `rpc_leave_deed`'s checks,
- * in its order and its words. The founder sends away anybody; a mayor sends
- * away builders and guests.
+ * in its order and its words. Its founder sends away anybody; a citizen whose
+ * rank holds Send away sends away anybody ranked below them.
  */
 export function sendAwayRefusal(d: MyDeed, me: string, uid: string): string | null {
   if (uid !== me && uid === d.founder) return `Nobody may send away whoever founded ${d.name}.`;
   const onRoll = uid === me ? !d.mine : !!rankOf(d, uid);
   if (!onRoll) return 'Nobody there to send away.';
   if (uid !== me) {
-    const mine = myRank(d);
-    if (!rankAtLeast(mine, 'mayor')) return `Only the founder or a mayor of ${d.name} may send anybody away.`;
-    if (!rankAtLeast(mine, 'founder') && rankAtLeast(rankOf(d, uid), 'mayor')) {
-      return `Only whoever founded ${d.name} may send a mayor away.`;
+    const no = lacks(asRanked(d), 'send_away');
+    if (no) return no;
+    if (myRank(d) !== FOUNDER) {
+      const theirs = defOf(d, uid);
+      const name = d.folk.find((f) => f.uid === uid)?.name ?? 'somebody';
+      if (theirs && theirs.ord <= myPlace(d)) {
+        return `${name} holds ${theirs.name} at ${d.name}. Your rank, ${rankName(asRanked(d))}, may send away only those ranked below it.`;
+      }
     }
   }
   return null;
+}
+
+/**
+ * The ranks you may give somebody on a settlement of yours, highest first:
+ * every one, for its founder; for a rank holding Set ranks, those below it,
+ * and only to somebody ranked below it. Empty where you may give none.
+ */
+export function ranksToGive(d: MyDeed, me: string, uid: string, name: string): RankDef[] {
+  const now = defOf(d, uid)?.id;
+  const open = defsOf(d).filter((r) => !rankRefusal(d, me, uid, name, r.name));
+  return open.length ? defsOf(d).filter((r) => r.id === now || open.includes(r)) : [];
 }
 
 /**
@@ -422,8 +471,8 @@ export class SocialPanel {
   }
 
   /**
-   * Which settlement Invite asks onto, when you are the founder or a mayor of
-   * more than one: a button for each, the one in use lit. Nothing when there
+   * Which settlement Invite asks onto, when you may invite to more than one
+   * (its founder, or a rank there holding Invite): a button for each, the one in use lit. Nothing when there
    * is one or none, because then there is nothing to choose.
    */
   private invitePicker(s: Social): HTMLDivElement | null {
@@ -438,7 +487,7 @@ export class SocialPanel {
     const acts = document.createElement('span');
     acts.className = 'social-acts';
     for (const d of can) {
-      const b = this.button(d.name, `Invite asks people onto ${d.name}, where you are ${d.mine ? 'the founder' : 'a mayor'}`, () => {
+      const b = this.button(d.name, `Invite asks people onto ${d.name}, where you hold ${rankName(asRanked(d))}`, () => {
         this.inviteFrom = d.founder;
         this.draw();
       });
@@ -612,16 +661,15 @@ export class SocialPanel {
    *
    * The same block whether you planted the stake or were asked on. Send away
    * sits beside whoever you may take off the roll -- anybody, for the
-   * founder; builders and guests, for a mayor -- and everybody but the
-   * founder gets a way to take themselves off it.
+   * founder; anybody ranked below you, for a rank holding Send away -- and
+   * everybody but the founder gets a way to take themselves off it.
    */
   private drawDeed(s: Social, d: MyDeed): void {
     const isle = this.island;
     if (!isle) return;
-    const mine = myRank(d);
     this.page.append(this.head(`${d.name} · ${d.mine ? 'yours' : `${d.by}'s`} · ${d.x}, ${d.y}`));
     if (!d.folk.length) {
-      this.page.append(this.empty(rankAtLeast(mine, 'mayor')
+      this.page.append(this.empty(deedMay(asRanked(d), 'invite')
         ? 'Nobody else lives here yet. Right-click somebody and invite them.'
         : 'Nobody else lives here yet.'));
     }
@@ -634,10 +682,10 @@ export class SocialPanel {
         acts.push(this.button('Send away', `Take ${who.name} off the roll of ${d.name}`,
           () => void this.did(isle.leaveDeed(d.founder, who.uid))));
       }
-      this.page.append(this.row(who, this.whereabouts(who), acts, rankOf(d, who.uid) ?? 'builder'));
+      this.page.append(this.row(who, this.whereabouts(who), acts, who.uid === d.founder ? 'Founder' : defOf(d, who.uid)?.name));
     }
     if (!d.mine) {
-      this.page.append(this.plain(`You are a ${mine} of ${d.name}.`, '',
+      this.page.append(this.plain(`You hold ${rankName(asRanked(d))} at ${d.name}.`, '',
         [this.button('Leave', `Stop being a citizen of ${d.name}`,
           () => void this.did(isle.leaveDeed(d.founder)))]));
     }

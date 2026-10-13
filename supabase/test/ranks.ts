@@ -27,7 +27,7 @@
 import { Game } from '../../src/game/game';
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
-import { DEED_RANKS, rankAtLeast, type DeedRole } from '../../src/game/game';
+import { deedMay, DEFAULT_RANKS } from '../../src/game/ranks';
 import { isLocked, keyFor, lockRefusal } from '../../src/game/locks';
 import { ITEM_DEFS } from '../../src/game/items';
 import { RECIPES } from '../../src/game/recipes';
@@ -55,19 +55,24 @@ const saidBy = (out: string) => (key: string): string =>
 
 /* ---- the ranks ------------------------------------------------------------ */
 
-check('there are four ranks, from a guest up to whoever planted the stake',
-  DEED_RANKS.join(' < ') === 'guest < builder < mayor < founder', DEED_RANKS.join(' < '));
+/*
+ * Ranks are the founder's own now (`customranks.ts`); every settlement
+ * starts with the three below its founder, and they do what they did.
+ */
+const as = (role: string) => ({ name: 'Here', role });
+check('a settlement starts with three ranks below whoever planted the stake',
+  DEFAULT_RANKS.map((r) => r.name).join(' > ') === 'Mayor > Builder > Guest', DEFAULT_RANKS.map((r) => r.name).join(' > '));
 check('a builder may shape the ground and a guest may not',
-  rankAtLeast('builder', 'builder') && !rankAtLeast('guest', 'builder'), 'the line is drawn between them');
+  deedMay(as('builder'), 'shape') && !deedMay(as('guest'), 'shape'), 'the line is drawn between them');
 check('and a mayor may do everything a builder may',
-  (['guest', 'builder', 'mayor', 'founder'] as DeedRole[]).filter((r) => rankAtLeast(r, 'builder')).join(', ') === 'builder, mayor, founder',
+  ['guest', 'builder', 'mayor', 'founder'].filter((r) => deedMay(as(r), 'shape')).join(', ') === 'builder, mayor, founder',
   'three of the four');
 /*
  * The solo game has one person who founded everything, and every rule that
  * asks a rank must read that as the top one rather than as nobody.
  */
 check('and the game you play by yourself is played by a founder',
-  rankAtLeast(undefined, 'founder'), 'no rank means the whole of it');
+  deedMay({ name: 'Here' }, 'locks') && deedMay({ name: 'Here' }, 'rename'), 'no rank means the whole of it');
 
 /* ---- a padlock, and the one key cut to it --------------------------------- */
 

@@ -38,6 +38,7 @@ import {
   REGRET, TARNISHED, YIELD_TIMES, type BaubleKind, type BaubleTier,
 } from '../../src/game/baubles';
 import { rarityStep } from '../../src/game/items';
+import { lacksSaid } from '../../src/game/ranks';
 import { TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -297,6 +298,7 @@ begin
   b := give(w, other, 'bauble_minor', 1, 40, 'cooking: +2.1% skill gain');
   j := jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', b);
   insert into said values ('GUEST', coalesce(act_refusal(w, other, 'set_bauble', j), 'null'));
+  insert into said select 'DNAME', d.name from deed d where d.world_id = w and d.founded_by = u;
   update deed_member set role = 'builder' where world_id = w and founder = u and uid = other;
   insert into said values ('BUILDER', coalesce(act_refusal(w, other, 'set_bauble', j), 'null'));
   perform act_perform(w, other, 'set_bauble', j);
@@ -431,9 +433,9 @@ check('and it is used up doing it', say('USED') === '0', say('USED'));
 check('a tarnished one is refused until it is restored', say('TARNISHED') === BAUBLE_SAID.tarnished, say('TARNISHED'));
 check('a plank is not a bauble', say('PLANK') === BAUBLE_SAID.notBauble, say('PLANK'));
 check('nor one whose words say nothing', say('GARBLED') === BAUBLE_SAID.notBauble, say('GARBLED'));
-check('a guest may not set one', say('GUEST') === BAUBLE_SAID.guest, say('GUEST'));
+check('a guest may not set one, and is told the rank and what it lacks', say('GUEST') === lacksSaid(say('DNAME'), 'Guest', 'set_bauble'), say('GUEST'));
 check('a builder may', say('BUILDER') === 'null', say('BUILDER'));
-check('but not over one already set', say('BUILDEROVER') === BAUBLE_SAID.replace, say('BUILDEROVER'));
+check('but not over one already set', say('BUILDEROVER') === lacksSaid(say('DNAME'), 'Builder', 'replace_bauble'), say('BUILDEROVER'));
 check('the founder may', say('FOUNDEROVER') === 'null', say('FOUNDEROVER'));
 check('the sockets hold what was set, where it was set', say('SOCKETS') === 'minor:0:time:masonry:2,minor:1:learn:cooking:2.1', say('SOCKETS'));
 check('every socket filled, it asks which to replace', say('FULL') === fullSaid(BAUBLE_TIER_BY_ID.get('minor')!), say('FULL'));
@@ -521,9 +523,9 @@ const b2 = game.inventory.add(TARNISHED, { ql: 40, extra: 'minor' });
 check('a tarnished one is refused', setDef.check?.(aim(altar.id, b2.uid), game) === BAUBLE_SAID.tarnished);
 const b3 = game.inventory.add('bauble_minor', { ql: 40, extra: 'masonry: 2.0% less time' });
 home.role = 'builder';
-check('a builder may not set one over another', setDef.check?.(aim(altar.id, b3.uid, 0), game) === BAUBLE_SAID.replace);
+check('a builder may not set one over another', setDef.check?.(aim(altar.id, b3.uid, 0), game) === lacksSaid(home.name, 'Builder', 'replace_bauble'));
 home.role = 'guest';
-check('a guest may not set one at all', setDef.check?.(aim(altar.id, b3.uid), game) === BAUBLE_SAID.guest);
+check('a guest may not set one at all', setDef.check?.(aim(altar.id, b3.uid), game) === lacksSaid(home.name, 'Guest', 'set_bauble'));
 home.role = undefined;
 setDef.perform(aim(altar.id, b3.uid, 0), game);
 check('the founder may, and what was there is lost, said as the island says it',

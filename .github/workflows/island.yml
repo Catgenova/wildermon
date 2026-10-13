@@ -1445,6 +1445,27 @@ jobs:
             --outfile=node_modules/.cache/mayors.mjs --log-level=error
           node node_modules/.cache/mayors.mjs
 
+      - name: Ranks of your own, the founder's to make, in the same words on both sides
+        run: |
+          # "Allow the founder to establish ranks and advanced permissions for
+          # all citizen ranks." Every settlement has its own ranks now, up to
+          # the cap besides its founder, each named, ordered and given any of
+          # the powers in `RANK_POWERS`, with Mayor, Builder and Guest to start
+          # with doing exactly what they did. This asks that the island's list
+          # of powers, cap, name limit and "you may" words are the browser's;
+          # that every settlement, a new one too, starts with the three and
+          # newcomers join as Builder; that only the founder makes, renames,
+          # moves and deletes ranks, with each refusal; that taking a power
+          # away really stops its action and giving it really allows it --
+          # digging, a crate, a lock, inviting, sending away, setting a rank,
+          # renaming and upgrading -- and that disbanding stays the
+          # founder's; that a rank acts only on those below it; that every
+          # refusal is the browser's word for word over the island's own
+          # `rpc_social`; and that only a settlement's citizens read its ranks.
+          npx esbuild supabase/test/customranks.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/customranks.mjs --log-level=error
+          node node_modules/.cache/customranks.mjs
+
       - name: Leaving a settlement you were asked onto
         run: |
           # "add a leave settlement option so citizens can quit oceanport".

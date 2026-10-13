@@ -5,7 +5,7 @@ import { foundationDone, type Foundation } from './foundations';
 import { furnitureDef, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { itemDef } from './items';
-import { rankAtLeast } from './ranks';
+import { lacks } from './ranks';
 import { PAVED } from '../world/tiles';
 
 /**
@@ -180,7 +180,9 @@ export const NOTHING_YET = `Nothing has grown on it yet. It greens a day at a ti
  */
 function notYours(g: Game, def: ActionDef, x: number, y: number): string | null {
   const mine = g.deedOfMineAt(x, y);
-  const d = mine ? (rankAtLeast(mine.role, 'builder') ? null : mine) : g.deedAt(x, y);
+  // A settlement of yours whose rank of yours lacks Shape and build says so (`lacks`); anybody else's, whose it is.
+  if (mine) return lacks(mine, 'shape');
+  const d = g.deedAt(x, y);
   return d ? `That is part of ${d.name}. Only its builders may ${def.label.toLowerCase()} there.` : null;
 }
 

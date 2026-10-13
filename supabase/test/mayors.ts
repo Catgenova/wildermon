@@ -21,10 +21,22 @@
  */
 import { execFileSync } from 'node:child_process';
 import type { Social } from '../../src/net/island';
-import { DEED_RANKS } from '../../src/game/game';
-import { MAYOR_SETS, RANK_MAY, SETTABLE_RANKS } from '../../src/game/ranks';
+// The game first: `deed.ts` and `actions.ts` import each other through it, and the game is what loads them in order.
+import '../../src/game/game';
+import { DEFAULT_RANKS, permsOf, rankMay } from '../../src/game/ranks';
 import { standingWord } from '../../src/game/deed';
-import { inviteDeeds, inviteRefusal, myRank, rankedLine, rankOf, rankRefusal, sendAwayRefusal } from '../../src/ui/panels/social';
+import { defsOf, inviteDeeds, inviteRefusal, myRank, rankedLine, rankOf, rankRefusal, sendAwayRefusal } from '../../src/ui/panels/social';
+
+/*
+ * Since ranks became the founder's own (145, `customranks.ts`), Mayor,
+ * Builder and Guest are the ranks every settlement starts with, and this
+ * holds them to doing exactly what they did. What changed here is the
+ * wording -- a refusal names the rank and what it lacks, and somebody ranked
+ * is "given the rank of" it -- and the browser's list of ranks, which is now
+ * the settlement's own.
+ */
+const SETTABLE = DEFAULT_RANKS.map((r) => r.name.toLowerCase());
+const permsNamed = (name: string): number => permsOf(DEFAULT_RANKS.find((r) => r.name.toLowerCase() === name)!.powers);
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -48,11 +60,10 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 /* ---- the rule, in the browser alone --------------------------------------- */
 
 console.log('--- the browser');
-check('a citizen can be given every rank but founder, highest first',
-  SETTABLE_RANKS.join(',') === 'mayor,builder,guest', SETTABLE_RANKS.join(','));
-check('a mayor gives the ranks below mayor', MAYOR_SETS.join(',') === 'builder,guest', MAYOR_SETS.join(','));
-check('and there are still four ranks', DEED_RANKS.length === 4);
-check('a mayor is told what a mayor may do', standingWord('mayor') === `You are a mayor here: you may ${RANK_MAY.mayor}.`, standingWord('mayor'));
+check('a settlement starts with three ranks besides its founder, highest first',
+  SETTABLE.join(',') === 'mayor,builder,guest', SETTABLE.join(','));
+check('a mayor is told what a mayor may do', standingWord({ role: 'mayor' }) === `You are a Mayor here: you may ${rankMay(permsNamed('mayor'))}.`,
+  standingWord({ role: 'mayor' }));
 
 /* ---- the island, and the browser over its answers -------------------------- */
 
@@ -166,14 +177,14 @@ check('the founder makes a mayor', got('MADE') === 'mayor' && got('MADE2') === '
   `${got('MADE')}, ${got('MADE2')}, ${got('GUEST')}`);
 check('and the roll says so', got('ROLE_NOW') === 'mayor,mayor,builder,guest', got('ROLE_NOW'));
 check('the mayor is told what a mayor may do, in the browser\'s words',
-  got('MADE_TOLD') === rankedLine(nBoss, 'mayor', deed), `${got('MADE_TOLD')} / ${rankedLine(nBoss, 'mayor', deed)}`);
+  got('MADE_TOLD') === rankedLine(nBoss, 'Mayor', deed, permsNamed('mayor')), `${got('MADE_TOLD')} / ${rankedLine(nBoss, 'Mayor', deed, permsNamed('mayor'))}`);
 const sBoss = answer('S_BOSS');
 check('the island hands the founder everybody\'s rank',
   rankOf(on(sBoss), may) === 'mayor' && rankOf(on(sBoss), gst) === 'guest' && rankOf(on(sBoss), bld) === 'builder',
   JSON.stringify(on(sBoss).ranks));
 check('the founder may give a builder any of the three ranks it does not hold',
-  SETTABLE_RANKS.filter((r) => !rankRefusal(on(sBoss), boss, bld, nBld, r)).join(',') === 'mayor,guest',
-  SETTABLE_RANKS.filter((r) => !rankRefusal(on(sBoss), boss, bld, nBld, r)).join(','));
+  defsOf(on(sBoss)).filter((r) => !rankRefusal(on(sBoss), boss, bld, nBld, r.name)).map((r) => r.name).join(',') === 'Mayor,Guest',
+  defsOf(on(sBoss)).filter((r) => !rankRefusal(on(sBoss), boss, bld, nBld, r.name)).map((r) => r.name).join(','));
 same('the founder cannot change their own rank', rankRefusal(on(sBoss), boss, boss, nBoss, 'builder'), got('BOSS_SELF'));
 same('nobody is made a founder', rankRefusal(on(sBoss), boss, bld, nBld, 'founder'), got('BOSS_BADROLE'));
 same('a mayor already a mayor', rankRefusal(on(sBoss), boss, may, nMay, 'mayor'), got('BOSS_SAME'));
@@ -191,7 +202,7 @@ same('a mayor cannot change their own rank', rankRefusal(on(sMay), may, may, nMa
 check('a mayor may move a builder to guest and back, and the browser agrees',
   got('MAY_SETS') === 'guest' && got('MAY_SETS_BACK') === 'builder' && rankRefusal(on(sMay), may, bld, nBld, 'guest') === null,
   `${got('MAY_SETS')}, ${got('MAY_SETS_BACK')}, ${rankRefusal(on(sMay), may, bld, nBld, 'guest')}`);
-check('and the founder hears it', got('MAY_SETS_TOLD') === `${nMay} makes ${nBld} a builder of ${deed}.`, got('MAY_SETS_TOLD'));
+check('and the founder hears it', got('MAY_SETS_TOLD') === `${nMay} gives ${nBld} the rank of Builder at ${deed}.`, got('MAY_SETS_TOLD'));
 check('the browser lets a mayor ask somebody new', inviteRefusal(sMay, nu, nNu, boss) === null, String(inviteRefusal(sMay, nu, nNu, boss)));
 check('a mayor invites', got('MAY_INVITES') === nNu, got('MAY_INVITES'));
 check('and the invitation is the settlement\'s, sent by the mayor', got('MAY_INVITE_ROW') === may, got('MAY_INVITE_ROW'));

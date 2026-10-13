@@ -1,4 +1,4 @@
-import { DEED_RADIUS_PER_LEVEL, MAX_DEED_LEVEL, deedWorkersAt, rankAtLeast, type Deed, type Game } from '../../game/game';
+import { DEED_RADIUS_PER_LEVEL, MAX_DEED_LEVEL, deedWorkersAt, type Deed, type Game } from '../../game/game';
 import { DEED_ACTION_BY_ID, standingWord, upgradeProgress, upgradeReason } from '../../game/deed';
 import { furnitureDef, furnitureName } from '../../game/furniture';
 import { STANCES, STANCE_NAMES } from '../../game/creatures';
@@ -9,24 +9,43 @@ import { bridgeName } from '../../game/bridges';
 import { postName } from '../../game/posts';
 import { BAUBLE_TIERS, baubleSummary, socketsOf } from '../../game/baubles';
 import type { UIWindow } from '../windows';
-import { RANK_MAY, SETTABLE_RANKS, type DeedRole } from '../../game/ranks';
+import {
+  andList, isFounder, lacks, POWER, powerBit, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankAddRefusal, rankDropRefusal, rankMay,
+  rankMoveRefusal, rankName, rankNameRefusal, type PowerId, type RankDef,
+} from '../../game/ranks';
 import type { MyDeed, Social } from '../../net/island';
-import { myRank, rankOf, rankRefusal } from './social';
+import { asRanked, defOf, defsOf, ranksToGive } from './social';
 
 /**
  * The roll of a settlement and the way to set ranks on it, which only an
  * island has: the Social window's last answer, asked again when it is old,
- * and `rpc_rank`.
+ * `rpc_rank`, and the founder's own doors for its ranks (`rpc_rank_add` and
+ * the rest), each answering with a refusal or nothing.
  */
 export interface DeedRoll {
   known(): Social | null;
   prime(): void;
   again(): Promise<void>;
   me(): string;
-  rank(founder: string, uid: string, role: DeedRole): Promise<string | null>;
+  rank(founder: string, uid: string, rank: string): Promise<string | null>;
+  add(name: string): Promise<string | null>;
+  rename(id: number, name: string): Promise<string | null>;
+  move(id: number, dir: -1 | 1): Promise<string | null>;
+  drop(id: number): Promise<string | null>;
+  allow(id: number, power: PowerId, on: boolean): Promise<string | null>;
+  newcomers(id: number): Promise<string | null>;
 }
 
-const title = (r: string): string => r.charAt(0).toUpperCase() + r.slice(1);
+/**
+ * Who a settlement's baubles work for, from its ranks: its founder, and
+ * every rank holding Bauble effects (`bauble_here`).
+ */
+function baublesFor(here: MyDeed | undefined): string {
+  const who = here ? defsOf(here).filter((r) => (r.perms & powerBit('served')) !== 0).map((r) => r.name) : [];
+  return who.length
+    ? `Applied to every action done on its land by its founder and by every ${andList(who)}: the ranks holding ${POWER.served.label}.`
+    : `Applied to every action its founder does on its land. No rank holds ${POWER.served.label}.`;
+}
 
 /**
  * The settlement at a glance.
@@ -40,6 +59,8 @@ const title = (r: string): string => r.charAt(0).toUpperCase() + r.slice(1);
 export class DeedPanel {
   private body: HTMLDivElement;
   private lastRender = 0;
+  /** The rank whose permissions are shown, by id. */
+  private openRank: number | null = null;
 
   constructor(
     private readonly win: UIWindow,
@@ -59,11 +80,27 @@ export class DeedPanel {
     this.render();
   }
 
-  /** Workers and building go on while this is open; look again now and then. */
+  /**
+   * Workers and building go on while this is open; look again now and then --
+   * but not while one of its lists is dropped down, which a redraw would shut
+   * under the pointer.
+   */
   update(now: number): void {
     if (!this.win.isOpen || now - this.lastRender < 900) return;
+    const at = document.activeElement;
+    if (at instanceof HTMLSelectElement && this.body.contains(at)) return;
     this.lastRender = now;
     this.render();
+  }
+
+  /** Ask the island, say a refusal in the log, and draw what the island says now. */
+  private ask(door: Promise<string | null>): void {
+    const roll = this.roll;
+    void door.then(async (why) => {
+      if (why) this.game.logMsg(why, 'error');
+      await roll?.again();
+      this.render();
+    });
   }
 
   private head(text: string): HTMLDivElement {
@@ -105,67 +142,182 @@ export class DeedPanel {
   }
 
   /**
-   * Who lives here, at what rank, and -- for the founder, or a mayor within
-   * what a mayor may do -- a button for each rank they could be set to, the
-   * one they hold lit. The rule is `rankRefusal`, the island's own, so a
-   * button is offered exactly where `rpc_rank` would agree.
+   * Who lives here and at what rank, and -- where you may give them another
+   * -- a list of the ranks you may give them, the one they hold chosen. The
+   * rule is `rankRefusal`, the island's own, so a rank is offered exactly
+   * where `rpc_rank` would agree.
    */
-  private drawRoll(d: Deed): void {
+  private drawRoll(here: MyDeed): void {
     const roll = this.roll;
     if (!roll) return;
-    roll.prime();
-    const s = roll.known();
-    const here: MyDeed | undefined = s?.deeds.find((e) => e.x === d.x && e.y === d.y);
-    if (!here) {
-      this.body.append(this.head('Citizens'));
-      const wait = document.createElement('div');
-      wait.className = 'deed-note';
-      wait.textContent = 'Asking the island who lives here…';
-      this.body.append(wait);
-      return;
-    }
     const me = roll.me();
     this.body.append(this.head(`Citizens (${here.folk.length + 1})`));
-    this.body.append(this.row('You', title(myRank(here))));
+    this.body.append(this.row('You', rankName(asRanked(here))));
     for (const who of here.folk) {
-      const now = rankOf(here, who.uid) ?? 'builder';
-      const may = SETTABLE_RANKS.filter((r) => r === now || !rankRefusal(here, me, who.uid, who.name, r));
       const el = document.createElement('div');
       el.className = 'deed-row deed-citizen';
       const name = document.createElement('span');
       name.className = 'deed-who';
       name.textContent = who.name;
       el.append(name);
-      if (may.length < 2) {
+      const now = who.uid === here.founder ? undefined : defOf(here, who.uid);
+      const give = ranksToGive(here, me, who.uid, who.name);
+      if (give.length < 2) {
         const v = document.createElement('span');
         v.className = 'deed-value';
-        v.textContent = title(now);
-        el.title = rankRefusal(here, me, who.uid, who.name, now === 'mayor' ? 'builder' : 'mayor') ?? '';
+        v.textContent = now?.name ?? 'Founder';
+        el.title = now ? `${who.name} may ${rankMay(now.perms)}.` : `${who.name} founded ${here.name}.`;
         el.append(v);
       } else {
-        const set = document.createElement('span');
-        set.className = 'deed-ranks';
-        for (const r of may) {
-          const b = document.createElement('button');
-          b.type = 'button';
-          b.className = 'tb-btn tb-small' + (r === now ? ' tb-on' : '');
-          b.textContent = title(r);
-          const said = r === 'founder' ? '' : RANK_MAY[r];
-          b.title = r === now ? `${who.name} is a ${r}: they may ${said}.` : `Make ${who.name} a ${r}: they may ${said}.`;
-          b.addEventListener('click', () => {
-            if (r === now) return;
-            void roll.rank(here.founder, who.uid, r).then(async (why) => {
-              if (why) this.game.logMsg(why, 'error');
-              await roll.again();
-              this.render();
-            });
-          });
-          set.append(b);
+        const pick = document.createElement('select');
+        pick.className = 'panel-select deed-pick';
+        pick.title = `The rank ${who.name} holds at ${here.name}. Only ranks you may give are listed.`;
+        for (const r of give) {
+          const o = document.createElement('option');
+          o.value = r.name;
+          o.textContent = r.name;
+          o.selected = r.id === now?.id;
+          o.title = `${r.name} may ${rankMay(r.perms)}.`;
+          pick.append(o);
         }
-        el.append(set);
+        pick.addEventListener('change', () => {
+          pick.blur();
+          this.ask(roll.rank(here.founder, who.uid, pick.value));
+        });
+        el.append(pick);
       }
       this.body.append(el);
     }
+  }
+
+  /**
+   * The settlement's ranks, highest first. Its founder orders, renames,
+   * deletes and makes them, ticks what each may do, and chooses the one
+   * newcomers join at; everybody else sees the same list and cannot change
+   * it. Every refusal is the island's, said before it is asked.
+   */
+  private drawRanks(here: MyDeed): void {
+    const roll = this.roll;
+    if (!roll) return;
+    const g = this.game;
+    const defs = defsOf(here);
+    const edits = here.mine && !!here.defs;
+    this.body.append(this.head(`Ranks (${defs.length} of ${RANK_CAP})`));
+    const note = document.createElement('div');
+    note.className = 'deed-note';
+    note.textContent = edits
+      ? `Highest first. You, the founder, hold every permission. A rank may send away and set the rank only of those below it in this list. Click a rank for its permissions.`
+      : `Highest first. Its founder sets these. Click a rank for its permissions.`;
+    this.body.append(note);
+    for (const [i, r] of defs.entries()) {
+      const row = document.createElement('div');
+      row.className = 'deed-row deed-rank' + (this.openRank === r.id ? ' deed-rank-open' : '');
+      const name = document.createElement('button');
+      name.type = 'button';
+      name.className = 'deed-rank-name';
+      name.textContent = `${this.openRank === r.id ? '▾' : '▸'} ${r.name}`;
+      name.title = `${r.name} may ${rankMay(r.perms)}.`;
+      name.addEventListener('click', () => {
+        this.openRank = this.openRank === r.id ? null : r.id;
+        this.render();
+      });
+      const held = document.createElement('span');
+      held.className = 'deed-rank-held';
+      held.textContent = `${r.held} held`;
+      held.title = `${r.held === 1 ? '1 citizen holds' : `${r.held} citizens hold`} it.${r.newcomer ? ' Newcomers join at it.' : ''}`;
+      row.append(name, held);
+      if (edits) {
+        const tools = document.createElement('span');
+        tools.className = 'deed-ranks';
+        const tool = (text: string, tip: string, why: string | null, act: () => void, danger = false): void => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'tb-btn tb-small deed-tool' + (danger ? ' tb-danger' : '');
+          b.textContent = text;
+          b.title = why ?? tip;
+          b.disabled = !!why;
+          b.addEventListener('click', act);
+          tools.append(b);
+        };
+        tool('▲', `Move ${r.name} above ${defs[i - 1]?.name ?? ''}`, rankMoveRefusal(defs, r.id, -1), () => this.ask(roll.move(r.id, -1)));
+        tool('▼', `Move ${r.name} below ${defs[i + 1]?.name ?? ''}`, rankMoveRefusal(defs, r.id, 1), () => this.ask(roll.move(r.id, 1)));
+        tool('Rename', `Rename ${r.name}`, null, () => {
+          void g.hooks.prompt(`What should ${r.name} be called? At most ${RANK_NAME_MAX} characters.`, r.name).then((to) => {
+            if (to === null || to.trim() === r.name) return;
+            const why = rankNameRefusal(here.name, defs, to, r.id);
+            if (why) g.logMsg(why, 'error');
+            else this.ask(roll.rename(r.id, to.trim()));
+          });
+        });
+        tool('✕', `Delete ${r.name}`, rankDropRefusal(defs, r.id), () => {
+          void g.hooks.confirm(`Delete the rank ${r.name}? Nobody holds it.`).then((yes) => {
+            if (yes) this.ask(roll.drop(r.id));
+          });
+        }, true);
+        row.append(tools);
+      }
+      this.body.append(row);
+      if (this.openRank === r.id) this.body.append(this.permGrid(r, edits, roll));
+    }
+    if (!edits) return;
+    // Newcomers, and a new rank.
+    const join = document.createElement('div');
+    join.className = 'deed-row';
+    const label = document.createElement('span');
+    label.textContent = 'Newcomers join as';
+    const pick = document.createElement('select');
+    pick.className = 'panel-select deed-pick';
+    pick.title = 'The rank an invitation puts somebody on when they say yes.';
+    for (const r of defs) {
+      const o = document.createElement('option');
+      o.value = String(r.id);
+      o.textContent = r.name;
+      o.selected = r.newcomer;
+      pick.append(o);
+    }
+    pick.addEventListener('change', () => {
+      pick.blur();
+      this.ask(roll.newcomers(Number(pick.value)));
+    });
+    join.append(label, pick);
+    this.body.append(join);
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'tb-btn deed-leave';
+    add.textContent = 'New rank';
+    const full = rankAddRefusal(here.name, defs, 'x');
+    add.disabled = !!full;
+    add.title = full ?? `Added at the foot of the list with no permissions. At most ${RANK_CAP} ranks besides the founder.`;
+    add.addEventListener('click', () => {
+      void g.hooks.prompt(`What should the new rank be called? At most ${RANK_NAME_MAX} characters.`, '').then((name) => {
+        if (name === null) return;
+        const why = rankAddRefusal(here.name, defs, name);
+        if (why) g.logMsg(why, 'error');
+        else this.ask(roll.add(name.trim()));
+      });
+    });
+    this.body.append(add);
+  }
+
+  /** What one rank may do: a box a power, each with its exact rule, ticked where the rank holds it. */
+  private permGrid(r: RankDef, edits: boolean, roll: DeedRoll): HTMLDivElement {
+    const grid = document.createElement('div');
+    grid.className = 'deed-perms';
+    for (const p of RANK_POWERS) {
+      const cell = document.createElement('label');
+      cell.className = 'deed-perm';
+      cell.title = p.rule;
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = (r.perms & powerBit(p.id)) !== 0;
+      box.disabled = !edits;
+      box.addEventListener('change', () => this.ask(roll.allow(r.id, p.id, box.checked)));
+      const text = document.createElement('span');
+      text.textContent = p.label;
+      cell.append(box, text);
+      grid.append(cell);
+    }
+    return grid;
   }
 
   render(): void {
@@ -189,12 +341,12 @@ export class DeedPanel {
      * off it -- which used to be a line at the foot of the People window's
      * settlement page and nowhere else.
      */
-    if (!rankAtLeast(d.role, 'founder')) {
+    if (!isFounder(d)) {
       const holder = g.neighbourDeeds.find((n) => n.x === d.x && n.y === d.y)?.holder;
       if (holder) this.body.append(this.row('Founded by', holder));
       const standing = document.createElement('div');
       standing.className = 'deed-note';
-      standing.textContent = standingWord(d.role);
+      standing.textContent = standingWord(d);
       this.body.append(standing);
       if (this.leave) {
         const leave = this.leave;
@@ -213,18 +365,30 @@ export class DeedPanel {
     this.body.append(this.row('In creature crates', String(crated), 'Yours, shut in creature crates: neither working nor following you.'));
     this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'What every wildermon on the deed does when something walks in.'));
     this.body.append(this.place('The token', d.x, d.y));
-    this.drawRoll(d);
+    // Who lives here and the settlement's ranks, from the island's social answer.
+    this.roll?.prime();
+    const here: MyDeed | undefined = this.roll?.known()?.deeds.find((e) => e.x === d.x && e.y === d.y);
+    if (this.roll && !here) {
+      this.body.append(this.head('Citizens'));
+      const wait = document.createElement('div');
+      wait.className = 'deed-note';
+      wait.textContent = 'Asking the island who lives here…';
+      this.body.append(wait);
+    } else if (here) {
+      this.drawRoll(here);
+      this.drawRanks(here);
+    }
 
     // What the next level wants, and the button that buys it.
     this.body.append(this.head(level < MAX_DEED_LEVEL ? `Growing to level ${level + 1}` : 'Fully grown'));
     if (level < MAX_DEED_LEVEL) {
-      const done = upgradeProgress(g);
+      const done = upgradeProgress(g, d);
       for (const r of done) {
         const el = this.row(`${r.met ? '✓' : '✗'} ${r.label}`, '');
         el.classList.add(r.met ? 'deed-met' : 'deed-unmet');
         this.body.append(el);
       }
-      const why = upgradeReason(g);
+      const why = upgradeReason(g, d);
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tb-btn deed-upgrade';
@@ -292,7 +456,7 @@ export class DeedPanel {
       const who = document.createElement('div');
       who.className = 'deed-note';
       who.textContent = set.length
-        ? 'Given to its founder, mayors and builders on every action they do on its land. Guests get none of it.'
+        ? baublesFor(here)
         : 'No bauble is set yet. Restore one and set it at the altar.';
       this.body.append(who);
     }
@@ -317,9 +481,24 @@ export class DeedPanel {
       for (const m of marks.slice(0, 40)) this.body.append(this.place(m.name, m.x, m.y));
     }
 
-    // Standing orders, and the two things done to the deed itself: the
-    // founder's, which the island refuses anybody else.
-    if (!rankAtLeast(d.role, 'founder')) return;
+    // Renaming, for its founder and a rank allowed it; standing orders and
+    // disbanding, its founder's alone, which the island refuses anybody else.
+    const tail = document.createElement('div');
+    tail.className = 'deed-buttons';
+    for (const id of ['rename_deed', 'disband_deed']) {
+      const def = ACTION_BY_ID.get(id);
+      if (!def || (id === 'rename_deed' ? lacks(d, 'rename') : !isFounder(d))) continue;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tb-btn tb-small' + (id === 'disband_deed' ? ' tb-danger' : '');
+      b.textContent = def.label;
+      b.addEventListener('click', () => g.requestAction(def, { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y }));
+      tail.append(b);
+    }
+    if (!isFounder(d)) {
+      if (tail.childElementCount) this.body.append(this.head('The settlement itself'), tail);
+      return;
+    }
     this.body.append(this.head('Orders for everything kept here'));
     const stance = g.deedStance();
     const row = document.createElement('div');
@@ -337,18 +516,6 @@ export class DeedPanel {
       row.append(b);
     }
     this.body.append(row);
-    const tail = document.createElement('div');
-    tail.className = 'deed-buttons';
-    for (const id of ['rename_deed', 'disband_deed']) {
-      const def = ACTION_BY_ID.get(id);
-      if (!def) continue;
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'tb-btn tb-small' + (id === 'disband_deed' ? ' tb-danger' : '');
-      b.textContent = def.label;
-      b.addEventListener('click', () => g.requestAction(def, { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y }));
-      tail.append(b);
-    }
     this.body.append(tail);
   }
 }

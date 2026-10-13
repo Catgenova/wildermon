@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import type { Deed, Game } from './game';
 // From `ranks.ts` and not `game.ts`: `game.ts` imports the actions list, which spreads ours.
-import { rankAtLeast } from './ranks';
+import { deedMay, lacks } from './ranks';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import { describeWith, itemName, rarityOf, rarityStep, type Item } from './items';
 import { times } from './words';
@@ -36,7 +36,8 @@ import { CLASS_CHANGE_COST } from './classes';
  *     where they were. A socket is filled for good -- another bauble can
  *     take its place, and the one in it is lost.
  *   * What the baubles in a settlement's sockets give, they give to its
- *     citizens -- not its guests -- while they stand on it (`baubleHere`).
+ *     founder and to every citizen whose rank holds Bauble effects, while
+ *     they stand on it (`baubleHere`).
  *     Each kind adds up across sockets for the same skill, to `BAUBLE_CAP`.
  *
  * The island holds the same numbers (crossed in the defs) and the same rules
@@ -324,8 +325,8 @@ export function socketsOf(deed: Pick<Deed, 'baubles'> | null | undefined, tier: 
   return out;
 }
 
-/** Why a guest's work on a settlement gets nothing from its baubles: only its citizens do. */
-export const baublesServe = (deed: Pick<Deed, 'role'> | null | undefined): boolean => !!deed && rankAtLeast(deed.role, 'builder');
+/** Whether a settlement's baubles work for you: its founder, and a rank holding Bauble effects (`bauble_here`). */
+export const baublesServe = (deed: Pick<Deed, 'name' | 'role' | 'perms'> | null | undefined): boolean => deedMay(deed, 'served');
 
 /* ---- setting one into the altar ---------------------------------------- */
 
@@ -334,10 +335,8 @@ export const BAUBLE_SAID = {
   notAltar: 'That is not an altar.',
   reach: 'Stand at the altar.',
   notOurs: 'This altar does not stand on a settlement of yours.',
-  guest: 'A guest of this settlement may not set baubles into its altar.',
   notBauble: 'That is not a bauble you can set.',
   tarnished: 'Restore it first: tarnished, it does nothing.',
-  replace: 'Only its founder or a mayor may replace a bauble already set.',
 } as const;
 export const fullSaid = (tier: BaubleTierDef): string =>
   `All ${tier.slots} ${tier.name.toLowerCase()} sockets are filled. Choose one to replace.`;
@@ -360,7 +359,9 @@ export function baubleSetting(g: Game, t: Target): { why: string } | { deed: Dee
   if (!atPiece(g, f)) return { why: BAUBLE_SAID.reach };
   const deed = g.deedOfMineAt(f.x, f.y);
   if (!deed) return { why: BAUBLE_SAID.notOurs };
-  if (!rankAtLeast(deed.role, 'builder')) return { why: BAUBLE_SAID.guest };
+  // What your rank holds there, in `lacks`'s words: the island's `bauble_setting`.
+  const may = lacks(deed, 'set_bauble');
+  if (may) return { why: may };
   const item = t.kind === 'furniture' && t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
   if (item?.id === TARNISHED) return { why: BAUBLE_SAID.tarnished };
   const bauble = item ? readBauble(item) : null;
@@ -370,7 +371,8 @@ export function baubleSetting(g: Game, t: Target): { why: string } | { deed: Dee
   const asked = slotOf(t);
   if (asked !== undefined) {
     if (asked < 0 || asked >= tier.slots) return { why: BAUBLE_SAID.notBauble };
-    if (sockets[asked] && !rankAtLeast(deed.role, 'mayor')) return { why: BAUBLE_SAID.replace };
+    const over = sockets[asked] ? lacks(deed, 'replace_bauble') : null;
+    if (over) return { why: over };
     return { deed, bauble, item, slot: asked };
   }
   const free = sockets.findIndex((s) => !s);

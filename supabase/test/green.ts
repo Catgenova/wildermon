@@ -32,6 +32,7 @@ import {
   GREEN_ACTIONS, GREEN_AGAIN, GREEN_DAY, GREEN_DAYS, NOTHING_YET,
 } from '../../src/game/greening';
 import { TileType } from '../../src/world/tiles';
+import { lacksSaid } from '../../src/game/ranks';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -571,9 +572,10 @@ const said = (k: string): string => scene.get(`R_${k}`) ?? 'MISSING';
 check('whatever has grown, its settlement\'s builders may clear it', ['w1', 'w1s', 'old', 'p1', 'pold', 'pslab', 's1', 'statue', 'arch'].every((k) => said(k) === 'ALLOWED'),
   ['w1', 'w1s', 'old', 'p1', 'pold', 'pslab', 's1', 'statue', 'arch'].map((k) => `${k}: ${said(k)}`).join(' / '));
 check('and anybody may on land nobody holds', said('rook_wild') === 'ALLOWED', said('rook_wild'));
-check('a stranger or a guest is told whose it is',
+// Since ranks are the founder's own (145), a citizen whose rank lacks Shape and build is told that instead.
+check('a stranger is told whose it is, and a guest what the rank lacks',
   said('rook_w1') === `That is part of ${DEED.name}. Only its builders may clear the ivy there.`
-    && said('wren_p1') === `That is part of ${DEED.name}. Only its builders may scrub the moss there.`,
+    && said('wren_p1') === lacksSaid(DEED.name, 'Guest', 'shape'),
   `${said('rook_w1')} / ${said('wren_p1')}`);
 check('a wall of timber, or one still going up, has no ivy to clear',
   said('wood') === 'There is no finished wall of stone or brick there.' && said('half') === said('wood') && said('nowall') === said('wood'),

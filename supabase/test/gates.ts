@@ -64,6 +64,7 @@ import type { MenuItem } from '../../src/ui/contextmenu';
 import type { Pick } from '../../src/render/renderer';
 import { TileType } from '../../src/world/tiles';
 import { numberWord, spanWords } from '../../src/game/words';
+import { lacksSaid } from '../../src/game/ranks';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -381,16 +382,18 @@ const both = (what: string, who: Who, action: string, t: Target, want: string | 
   check(what, mine === theirs && (want === null ? mine === 'ALLOWED' : mine === want), `browser "${mine}", island "${theirs}"`);
 };
 const LOCKED = 'It is locked, and you have no key to it.';
+// Ben is a Builder of Gil's settlement, and since ranks are the founder's own (145) a citizen is told what his rank lacks.
+const BEN_LOCKED = lacksSaid('Gatehold', 'Builder', 'locks');
 both('raising a portcullis that is up is refused in the same words', 'gil', 'raise_portcullis', PT, 'The portcullis is up already.');
 // Taking it down: a builder of the settlement may take its walls down, but not a padlocked portcullis he has no key to.
 both('Ben, who builds on Gil\'s settlement but holds no key, may not take the locked portcullis down, in the lock\'s words',
-  'ben', 'remove_wall', PT, LOCKED);
+  'ben', 'remove_wall', PT, BEN_LOCKED);
 both('and Gil, whose ground it is, may', 'gil', 'remove_wall', PT, null);
 both('while the hidden door Ben holds no key to answers him as the solid wall it looks like, and says nothing of its lock',
   'ben', 'remove_wall', tileT(HIDDEN.x, HIDDEN.y, HIDDEN.side), null, [11.5, 10.5]);
 for (const who of WHOS) {
   both(`${NAME[who]} ${ADMITTED[who] ? 'may' : 'may not'} let the locked portcullis down${ADMITTED[who] ? '' : ', in the same words'}`,
-    who, 'lower_portcullis', PT, ADMITTED[who] ? null : LOCKED);
+    who, 'lower_portcullis', PT, ADMITTED[who] ? null : who === 'ben' ? BEN_LOCKED : LOCKED);
 }
 both('and the same from inside the gatehouse', 'kay', 'lower_portcullis', tileT(10, 11, 's'), null, [10.5, 11.5]);
 check('the island measures the reach from either side and no further',
@@ -641,7 +644,7 @@ setDrawbridge(true);
 both('nor from the far bank with the deck drawn up', 'sim', 'demolish_bridge', BT, PULL('Gatehold'), [10.5, 15.5]);
 setDrawbridge(false);
 both('Ben, who may take a wall down there, may pull a bridge down there too, but the padlock stops him, in the lock\'s words',
-  'ben', 'demolish_bridge', BT, LOCKED);
+  'ben', 'demolish_bridge', BT, BEN_LOCKED);
 both('and Gil, whose key and ground it is, may pull it down', 'gil', 'demolish_bridge', BT, null);
 
 /** A plank bridge from (x, 12) over the moat to (x, 15), decked, as somebody set it out. */

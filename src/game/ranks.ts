@@ -1,8 +1,9 @@
 /**
- * A settlement's ranks, and the one comparison everybody asks of them.
+ * A settlement's ranks, and the one question everybody asks of them: may this
+ * rank do this here?
  *
  * Here, in a module that imports nothing, rather than in `game.ts`, where they
- * were. The baubles needed the comparison, and taking it from `game.ts` closed
+ * were. The baubles needed the question, and taking it from `game.ts` closed
  * a ring -- baubles → game → actions → baubles -- so the bundle could run
  * `actions.ts` before `baubles.ts` had finished, and `ACTIONS` spread a
  * `BAUBLE_ACTIONS` that was not there yet. The page stopped on "Raising an
@@ -10,60 +11,259 @@
  * in the suite noticed, because no test loads the built page. It is the same
  * race `items.ts` tells of for `TREASURE_ACTIONS`.
  *
- * `game.ts` passes these on, so what imported them from there still does.
+ * Ranks were a fixed ladder -- founder, mayor, builder, guest -- and each rule
+ * asked "at least a builder?". They are the founder's own now: every
+ * settlement has up to `RANK_CAP` of them besides its founder, named, in an
+ * order the founder sets, and each a set of the powers in `RANK_POWERS`. A
+ * rule asks for a power (`deedMay`), never for a name. Mayor, Builder and
+ * Guest are what every settlement starts with (`DEFAULT_RANKS`), and are
+ * edited like any other.
+ *
+ * The island keeps the same list in `rank_power` and `power_bit`, the same cap
+ * in `rank_cap`, and the same three in `deed_ranks_seed`
+ * (`20261013003000_ranks_of_your_own.sql`); `supabase/test/customranks.ts`
+ * holds the two to each other.
  */
 
 /**
- * What somebody is on a settlement.
- *
- * `deed_member` was a flat list: in or out, and everybody in it could dig up
- * the gardens, empty the stores and pull the walls down. Inviting anybody to
- * anything was therefore a decision nobody could take back short of throwing
- * them out, which is not a thing you want to have to do to somebody you are
- * merely unsure about.
- *
- *   founder   planted the stake. Cannot be demoted, may do everything, and
- *             holds the master key to every lock on their own land. The only
- *             one who upgrades, renames or disbands it, and who makes or
- *             unmakes a mayor or sends one away.
- *   mayor     builds, invites people, sends away builders and guests, and
- *             sets either to builder or guest (`rpc_invite`, `rpc_leave_deed`,
- *             `rpc_rank`). Not another mayor, and not the founder.
- *   builder   the ordinary citizen, and what an invitation makes you: shapes
- *             the ground, builds, takes from the stores.
- *   guest     walks the land and opens nothing. What you offer somebody you
- *             want to show round rather than hand the keys to.
- *
- * Nobody changes the founder's rank or their own.
+ * What somebody is on a settlement: `founder` for whoever planted the stake,
+ * or the name of their rank folded to lower case (`deed_member.role`).
+ * Absent, in the game you play by yourself, means the founder.
  */
-export type DeedRole = 'founder' | 'mayor' | 'builder' | 'guest';
+export type DeedRole = string;
 
-/** The ranks in order, so "at least a builder" is one comparison. */
-export const DEED_RANKS: DeedRole[] = ['guest', 'builder', 'mayor', 'founder'];
+/** The word for whoever planted the stake: never a rank, and the one name a rank may not have. */
+export const FOUNDER = 'founder';
 
-/** Whether a rank is at least another. Absent means the solo game: founder. */
-export const rankAtLeast = (have: DeedRole | undefined, want: DeedRole): boolean =>
-  DEED_RANKS.indexOf(have ?? 'founder') >= DEED_RANKS.indexOf(want);
+/** How many ranks a settlement may have besides its founder. The island's `rank_cap`. */
+export const RANK_CAP = 8;
 
-/** The ranks a citizen can be given, highest first: everything but founder. */
-export const SETTABLE_RANKS: DeedRole[] = DEED_RANKS.filter((r) => r !== 'founder').reverse();
+/** The longest a rank's name may be, in characters. The island's `rank_name_max`. */
+export const RANK_NAME_MAX = 20;
 
-/** The ranks a mayor may give, and take a citizen from: those below mayor, highest first. */
-export const MAYOR_SETS: DeedRole[] = SETTABLE_RANKS.filter((r) => DEED_RANKS.indexOf(r) < DEED_RANKS.indexOf('mayor'));
+/** One thing a rank may be allowed to do on its settlement. */
+export interface RankPower {
+  id: PowerId;
+  /** Its bit in a rank's `perms`. Fixed for good: it is what the island has stored. */
+  bit: number;
+  /** What the Ranks section calls it. */
+  label: string;
+  /** After "you may": what holding it allows. */
+  may: string;
+  /** After "may not": what a refusal says is missing. */
+  mayNot: string;
+  /** The exact rule, for the toggle's tooltip and for Help. */
+  rule: string;
+}
 
-const plural = (r: DeedRole): string => `${r}s`;
-const orList = (xs: string[]): string => (xs.length < 2 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} or ${xs[xs.length - 1]}`);
-const andList = (xs: string[]): string => (xs.length < 2 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+export type PowerId = 'shape' | 'stores' | 'locks' | 'gate' | 'served' | 'set_bauble' | 'replace_bauble'
+  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename';
 
 /**
- * What a rank lets you do on a settlement, after "you may". The island's
- * `rank_may`, word for word: it is what somebody is told when they are ranked.
+ * Every power a rank can be given, in the order the Ranks section lists them.
+ *
+ * Only what a rule on both sides now asks. Disbanding is not here: it frees
+ * the founder's wildermon and tips out the founder's deed crate, which is
+ * theirs and not the settlement's, so only the founder disbands. Planting and
+ * harvesting are not either: nobody's rank was ever asked for those, and
+ * tilling is shaping the ground.
  */
-export const RANK_MAY: Record<Exclude<DeedRole, 'founder'>, string> = {
-  mayor: `build, invite people, send away its ${andList(MAYOR_SETS.map(plural))}, and make them ${orList(MAYOR_SETS.map(plural))}`,
-  builder: 'shape its ground, build on it and take from its stores',
-  guest: 'walk it and shape nothing',
+export const RANK_POWERS: readonly RankPower[] = [
+  {
+    id: 'shape', bit: 0, label: 'Shape and build',
+    may: 'shape its ground and build on it', mayNot: 'shape its ground or build on it',
+    rule: 'Dig, level, mine, till, pave, lay steps and dig springs and pools on its tiles; build and work on its buildings, bridges and aqueducts; clear its moss and ivy.',
+  },
+  {
+    id: 'stores', bit: 1, label: 'Crates and stores',
+    may: 'use the crates on it and craft from its stores', mayNot: 'use the crates on it that somebody else made',
+    rule: 'Take from, put into and pick up the crates on it that somebody else made, and craft from them and from the chests and barrels on it. Crates you made are yours anywhere.',
+  },
+  {
+    id: 'locks', bit: 2, label: 'Open its locks',
+    may: 'open every lock on it without the key', mayNot: 'open its locks without the key',
+    rule: 'Open every padlocked crate, chest, door, portcullis and drawbridge on it without holding the key, as its founder does.',
+  },
+  {
+    id: 'gate', bit: 3, label: 'Rune gate',
+    may: 'light its rune gates', mayNot: 'light its rune gates',
+    rule: 'Its rune gates light when you stand in their opening. Lighting is all a rune gate does: anybody may walk through one.',
+  },
+  {
+    id: 'served', bit: 4, label: 'Bauble effects',
+    may: 'have its baubles work for you on it', mayNot: 'have its baubles work for them',
+    rule: 'The baubles set in its altar apply to every action you do standing on it.',
+  },
+  {
+    id: 'set_bauble', bit: 5, label: 'Set baubles',
+    may: 'set baubles into its altar', mayNot: 'set baubles into its altar',
+    rule: 'Set a restored bauble into an empty socket of its altar.',
+  },
+  {
+    id: 'replace_bauble', bit: 6, label: 'Replace baubles',
+    may: 'replace a bauble set in its altar', mayNot: 'replace a bauble already set in its altar',
+    rule: 'Set a bauble into a socket that already holds one; the one it replaces is lost. Needs Set baubles as well.',
+  },
+  {
+    id: 'invite', bit: 7, label: 'Invite',
+    may: 'invite people to it', mayNot: 'invite anybody to it',
+    rule: 'Ask anybody onto its roll, from the Social window or the right-click menu. They join at the rank for newcomers.',
+  },
+  {
+    id: 'send_away', bit: 8, label: 'Send away',
+    may: 'send away citizens of lower rank', mayNot: 'send anybody away',
+    rule: 'Take a citizen off its roll, if their rank is below yours in the list.',
+  },
+  {
+    id: 'set_ranks', bit: 9, label: 'Set ranks',
+    may: 'give citizens of lower rank any lower rank', mayNot: "set anybody's rank",
+    rule: 'Change the rank of a citizen whose rank is below yours, to a rank below yours.',
+  },
+  {
+    id: 'upgrade', bit: 10, label: 'Upgrade',
+    may: 'upgrade it', mayNot: 'upgrade it',
+    rule: 'Take it up a level once everything the next level wants stands on it.',
+  },
+  {
+    id: 'rename', bit: 11, label: 'Rename',
+    may: 'rename it', mayNot: 'rename it',
+    rule: 'Give it a new name.',
+  },
+];
+
+export const POWER: Record<PowerId, RankPower> = Object.fromEntries(RANK_POWERS.map((p) => [p.id, p])) as Record<PowerId, RankPower>;
+
+/** A power's bit in a rank's `perms`: the island's `power_bit`. */
+export const powerBit = (id: PowerId): number => 1 << POWER[id].bit;
+
+/** A rank's `perms` for a list of powers. */
+export const permsOf = (ids: readonly PowerId[]): number => ids.reduce((m, id) => m | powerBit(id), 0);
+
+/** Every power at once: what the founder holds. */
+export const ALL_PERMS = permsOf(RANK_POWERS.map((p) => p.id));
+
+/**
+ * What every settlement starts with, highest first, and what each may do:
+ * exactly what mayors, builders and guests could do before ranks were the
+ * founder's to make, so nothing changed for anybody the day they were.
+ * The island's `deed_ranks_seed`.
+ */
+export const DEFAULT_RANKS: ReadonlyArray<{ name: string; powers: readonly PowerId[] }> = [
+  { name: 'Mayor', powers: ['shape', 'stores', 'gate', 'served', 'set_bauble', 'replace_bauble', 'invite', 'send_away', 'set_ranks'] },
+  { name: 'Builder', powers: ['shape', 'stores', 'gate', 'served', 'set_bauble'] },
+  { name: 'Guest', powers: ['stores'] },
+];
+
+/** The rank an invitation puts a newcomer on, until the founder chooses another. */
+export const NEWCOMER_RANK = 'Builder';
+
+/** One rank of a settlement, as the island lists them (`rpc_social`'s `defs`). */
+export interface RankDef {
+  id: number;
+  name: string;
+  /** Its place in the list: 1 is the highest. The founder is above them all. */
+  ord: number;
+  perms: number;
+  /** Whether an invitation puts newcomers on it. One rank of each settlement is. */
+  newcomer: boolean;
+  /** How many citizens hold it. */
+  held: number;
+}
+
+/** A settlement, as far as what you may do on it goes. */
+export interface Ranked {
+  name: string;
+  /** `founder`, or your rank's name in lower case; absent in the game you play alone, where it is the founder. */
+  role?: DeedRole | null;
+  /** Your rank's name as the founder wrote it. */
+  rank?: string | null;
+  /** What your rank may do, as `perms`. Absent from an island from before custom ranks. */
+  perms?: number | null;
+}
+
+/** Whether you planted the stake. Absent is the solo game, where you did. */
+export const isFounder = (d: Pick<Ranked, 'role'>): boolean => (d.role ?? FOUNDER) === FOUNDER;
+
+/**
+ * What you may do on a settlement, as `perms`: everything for its founder,
+ * what your rank holds otherwise. An island from before custom ranks sends
+ * only the rank's name, and then it is what that name meant by default.
+ */
+export function permsHeld(d: Ranked): number {
+  if (isFounder(d)) return ALL_PERMS;
+  if (typeof d.perms === 'number') return d.perms;
+  const was = DEFAULT_RANKS.find((r) => r.name.toLowerCase() === (d.role ?? '').toLowerCase());
+  return was ? permsOf(was.powers) : 0;
+}
+
+/** Whether you may do this on a settlement of yours. No settlement, no. */
+export const deedMay = (d: Ranked | null | undefined, p: PowerId): boolean => !!d && (permsHeld(d) & powerBit(p)) !== 0;
+
+/** Your rank's name on a settlement, as the founder wrote it. */
+export const rankName = (d: Ranked): string => (isFounder(d) ? 'Founder' : d.rank ?? title(d.role ?? ''));
+
+const title = (r: string): string => r.charAt(0).toUpperCase() + r.slice(1);
+
+export const andList = (xs: readonly string[]): string =>
+  (xs.length < 2 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
+
+/**
+ * What a rank lets you do, after "you may": every power it holds, in the list's
+ * order. The island's `rank_may`, word for word.
+ */
+export const rankMay = (perms: number): string => {
+  const held = RANK_POWERS.filter((p) => (perms & powerBit(p.id)) !== 0).map((p) => p.may);
+  return held.length ? andList(held) : 'walk it and do nothing else there';
 };
 
-/** The ranks a citizen can be given, as a sentence: "mayor, builder or guest". */
-export const SETTABLE_SAID = orList(SETTABLE_RANKS);
+/**
+ * Why your rank stops you: the one sentence every refusal of a power says,
+ * on both sides. The island's `rank_lacks`.
+ */
+export const lacksSaid = (deed: string, rank: string, p: PowerId): string =>
+  `Your rank at ${deed}, ${rank}, may not ${POWER[p].mayNot}.`;
+
+/** The refusal for this power on this settlement of yours, or null when your rank holds it. */
+export const lacks = (d: Ranked | null | undefined, p: PowerId): string | null =>
+  !d || deedMay(d, p) ? null : lacksSaid(d.name, rankName(d), p);
+
+/* ---- naming, ordering and deleting a rank: the founder's -------------------- */
+
+/** Why a name will not do for a rank of this settlement, or null. `except` is the rank being renamed. */
+export function rankNameRefusal(deed: string, defs: readonly RankDef[], name: string, except?: number): string | null {
+  const n = name.trim();
+  if (!n) return 'Name the rank.';
+  if (n.length > RANK_NAME_MAX) return `A rank's name is at most ${RANK_NAME_MAX} characters.`;
+  if (n.toLowerCase() === FOUNDER) return 'Founder is whoever founded the settlement, not a rank.';
+  if (defs.some((r) => r.id !== except && r.name.toLowerCase() === n.toLowerCase())) return `${deed} already has a rank called ${n}.`;
+  return null;
+}
+
+/** Why a new rank will not be made, or null. The island's `rpc_rank_add`. */
+export function rankAddRefusal(deed: string, defs: readonly RankDef[], name: string): string | null {
+  if (defs.length >= RANK_CAP) return `${deed} has ${RANK_CAP} ranks besides its founder, which is as many as a settlement may have.`;
+  return rankNameRefusal(deed, defs, name);
+}
+
+/** Why a rank will not move a place up (-1) or down (1) the list, or null. `rpc_rank_move`. */
+export function rankMoveRefusal(defs: readonly RankDef[], id: number, dir: number): string | null {
+  const sorted = [...defs].sort((a, b) => a.ord - b.ord);
+  const at = sorted.findIndex((r) => r.id === id);
+  if (at < 0) return 'That rank is gone.';
+  if (dir < 0 && at === 0) return `${sorted[at].name} is already the highest rank.`;
+  if (dir > 0 && at === sorted.length - 1) return `${sorted[at].name} is already the lowest rank.`;
+  return null;
+}
+
+/**
+ * Why a rank will not be deleted, or null. `rpc_rank_drop`. Nobody is moved
+ * to another rank behind the founder's back: a rank somebody holds stays
+ * until they hold another.
+ */
+export function rankDropRefusal(defs: readonly RankDef[], id: number): string | null {
+  const r = defs.find((e) => e.id === id);
+  if (!r) return 'That rank is gone.';
+  if (r.newcomer) return `${r.name} is the rank newcomers are given. Choose another for them first.`;
+  if (r.held > 0) return `${r.held} ${r.held === 1 ? 'citizen holds' : 'citizens hold'} ${r.name}. Give them another rank first.`;
+  return null;
+}

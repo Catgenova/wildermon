@@ -32,7 +32,7 @@ import { FIRST_AID_ACTIONS } from './firstaid';
 import { REMEDY_ACTIONS } from './remedies';
 import { drawDye, dyeSourceFor, fillFromSource, PLACEABLE_ACTIONS, sourceFor, vesselBecomes, waterNear } from './placeables';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeHexOf } from './dyestuffs';
-import { DEED_ACTIONS } from './deed';
+import { DEED_ACTIONS, deedAimed } from './deed';
 import { CRATE_ACTIONS } from './crates';
 import { CREATURE_ACTIONS } from './creatureActions';
 import { CREATURE_CRATE_ACTIONS } from './creaturecrate';
@@ -59,7 +59,8 @@ import { SPECIES, type Stance } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollsAt, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
-import { DEED_RADIUS, rankAtLeast, type Game } from './game';
+import { DEED_RADIUS, type Game } from './game';
+import { isFounder, lacks } from './ranks';
 import { materialOfItem } from './materials';
 import { boonOf, boonTime, clockLeft } from './boons';
 import { helpingOf, NUTRIENTS } from './nutrition';
@@ -719,15 +720,20 @@ export function slopeRefusal(g: Game, skill: 'digging' | 'masonry', cx: number, 
   return `That would leave a slope of ${would}. Your ${skill} allows ${cap}; it would take ${skill} ${slopeNeeds(would, per).toFixed(1)}.`;
 }
 
+/** Why a rank may not disband: only its founder does. The island says the same. */
+export const disbandSaid = (deed: string): string => `Only whoever founded ${deed} may disband it.`;
+
 /**
- * Ground inside a settlement that is not yours.
+ * Ground inside a settlement that is not yours to shape.
  *
  * Nothing stopped a visitor cutting a trench through somebody's token: the
  * doors asked what the ground was made of and never whose it was. A corner is
  * shared by as many as four tiles and is refused if any of them is on a
- * settlement you are not of; a tile action asks about its own tile alone; and
- * a spadeful dropped at your feet asks about the tile you stand on. The island
- * reads the same rule off the same `corner` column, in the same words.
+ * settlement you may not shape; a tile action asks about its own tile alone;
+ * and a spadeful dropped at your feet asks about the tile you stand on. On a
+ * settlement of yours it is your rank that is asked (Shape and build), and a
+ * rank without it is named. The island reads the same rule off the same
+ * `corner` column, in the same words (`ground_deed_refusal`).
  */
 export function foreignGround(g: Game, def: ActionDef, t: Target): string | null {
   const tiles: Array<[number, number]> = t.kind !== 'tile'
@@ -736,8 +742,14 @@ export function foreignGround(g: Game, def: ActionDef, t: Target): string | null
       ? [[t.cx - 1, t.cy - 1], [t.cx, t.cy - 1], [t.cx - 1, t.cy], [t.cx, t.cy]]
       : [[t.x, t.y]];
   for (const [x, y] of tiles) {
+    const mine = g.deedOfMineAt(x, y);
+    if (mine) {
+      const no = lacks(mine, 'shape');
+      if (no) return no;
+      continue;
+    }
     const d = g.deedAt(x, y);
-    if (d && !g.onDeed(x, y)) return `That ground is part of ${d.name}. Only its citizens may shape it.`;
+    if (d) return `That ground is part of ${d.name}. Only its citizens may shape it.`;
   }
   return null;
 }
@@ -2926,7 +2938,7 @@ export const ACTIONS: ActionDef[] = [
        * have a deed ... i think it must be because i'm a citizen of
        * oceanport". No rank at all is the solo game, where the deed is yours.
        */
-      if (g.deed && rankAtLeast(g.deed.role, 'founder')) return 'You already hold a settlement. Disband it first.';
+      if (g.deed && isFounder(g.deed)) return 'You already hold a settlement. Disband it first.';
       const w = g.world;
       if (x - DEED_RADIUS < 0 || y - DEED_RADIUS < 0 || x + DEED_RADIUS >= w.w || y + DEED_RADIUS >= w.h) return 'Too close to the edge of the world.';
       // A poured slab is dry, level ground standing above whatever is under
@@ -2967,12 +2979,18 @@ export const ACTIONS: ActionDef[] = [
     stamina: 0,
     baseTime: 0,
     applies: (t, g) => t.kind === 'tile' && g.isToken(t.x, t.y),
+    // Its founder's, and a rank's its founder let rename it: the island's `settlement_refusal`.
+    check: (t, g) => {
+      const d = deedAimed(g, t);
+      return d ? lacks(d, 'rename') : 'You have no settlement.';
+    },
     perform: (t, g) => {
-      if (!g.deed) return;
+      const d = deedAimed(g, t);
+      if (!d) return;
       const name = ((t as { name?: string }).name ?? '').trim();
       if (!name) return;
-      g.deed.name = name.slice(0, 32);
-      g.logMsg(`The settlement is now called ${g.deed.name}.`, 'system');
+      d.name = name.slice(0, 32);
+      g.logMsg(`The settlement is now called ${d.name}.`, 'system');
     },
   },
   {
@@ -2986,6 +3004,16 @@ export const ACTIONS: ActionDef[] = [
     stamina: 0,
     baseTime: 0,
     applies: (t, g) => t.kind === 'tile' && g.isToken(t.x, t.y),
+    /*
+     * Its founder's alone, and no rank may be given it: disbanding frees the
+     * founder's wildermon and tips out the founder's deed crate, which are
+     * theirs and not the settlement's. The island's `settlement_refusal`.
+     */
+    check: (t, g) => {
+      const d = deedAimed(g, t);
+      if (!d) return 'You have no settlement.';
+      return isFounder(d) ? null : disbandSaid(d.name);
+    },
     perform: (_t, g) => {
       if (!g.deed) return;
       const name = g.deed.name;

@@ -64,7 +64,7 @@ import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } f
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
-import { MAYOR_SETS, RANK_MAY, SETTABLE_SAID } from '../../game/ranks';
+import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { CLASS_AT, CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
@@ -1949,12 +1949,29 @@ export const NEWS: News[] = [
     n: 144,
     day: '2026-10-12',
     lines: () => [
-      `Ranks can be set, in the Settlement window under Citizens. The founder may make anybody else on the roll a ${SETTABLE_SAID}; `
-        + `a mayor may move a citizen between ${listed(MAYOR_SETS)}. Only the founder makes or unmakes a mayor, and nobody changes the founder's rank or their own.`,
-      `A mayor may ${RANK_MAY.mayor}. Mayors invite from the Social window and the right-click menu, as the founder does; `
+      // As it was that day: the fixed ranks this describes are gone (145), so nothing here is read from them.
+      'Ranks can be set, in the Settlement window under Citizens. The founder may make anybody else on the roll a mayor, builder or guest; '
+        + 'a mayor may move a citizen between builder and guest. Only the founder makes or unmakes a mayor, and nobody changes the founder\'s rank or their own.',
+      'A mayor may build, invite people, send away its builders and guests, and make them builders or guests. Mayors invite from the Social window and the right-click menu, as the founder does; '
         + 'founder or mayor of more than one settlement, you choose which one Invite asks people onto.',
-      `The founder may send anybody away; a mayor may send away ${listed(MAYOR_SETS.map((r) => `${r}s`))}, not another mayor. `
+      'The founder may send anybody away; a mayor may send away builders and guests, not another mayor. '
         + 'Upgrading, renaming and disbanding stay with the founder.',
+    ],
+  },
+  {
+    n: 145,
+    day: '2026-10-13',
+    lines: () => [
+      `A settlement's ranks are its founder's to make: up to ${numberWord(RANK_CAP)} besides the founder, each with a name of up to ${RANK_NAME_MAX} characters, `
+        + `a place in the settlement's list and any of ${numberWord(RANK_POWERS.length)} permissions: ${listed(RANK_POWERS.map((p) => p.label))}. `
+        + 'The Settlement window\'s Ranks section adds, renames, moves and deletes them and ticks what each may do; each permission\'s tooltip says its exact rule.',
+      `Every settlement, existing ones included, starts with ${listed(DEFAULT_RANKS.map((r) => r.name))}, holding exactly what each could do before: `
+        + `${DEFAULT_RANKS.map((r) => `${r.name} may ${rankMay(permsOf(r.powers))}`).join('; ')}. `
+        + `Newcomers join as ${NEWCOMER_RANK} until the founder chooses another rank for them.`,
+      `${POWER.send_away.label} and ${POWER.set_ranks.label} act only on citizens whose rank is below yours in the list, and ${POWER.set_ranks.label} gives only ranks below yours. `
+        + 'Upgrading and renaming may be given to a rank; disbanding may not, because it frees the founder\'s wildermon and tips out the founder\'s deed crate. '
+        + 'A rank somebody holds is not deleted until they hold another.',
+      `Refused for your rank, you are told the rank and what it may not do, in the same words wherever it is checked: "${lacksSaid('Hearth', 'Guest', 'locks')}"`,
     ],
   },
 ];

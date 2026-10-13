@@ -1,49 +1,60 @@
 import type { ActionDef } from './actions';
-import { deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL, rankAtLeast, type Deed, type DeedRole, type Game } from './game';
-import { RANK_MAY } from './ranks';
+import { deedLevel, deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL, type Deed, type Game } from './game';
+import { isFounder, lacks, permsHeld, rankMay, rankName } from './ranks';
 
 /**
  * Settlement upgrades. Each one pushes the border out two tiles and lets one
  * more wildermon work the deed, and each has to be earned by building the
  * settlement up first.
+ *
+ * Counted on the settlement being upgraded, which is your own or, for a rank
+ * its founder let upgrade, one you are a citizen of.
  */
 export interface DeedRequirement {
   label: string;
-  met(g: Game): boolean;
+  met(g: Game, d: Deed): boolean;
 }
+
+const inside = (d: Deed, x: number, y: number): boolean => Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius;
 
 const crates = (n: number): DeedRequirement => ({
   label: n === 1 ? 'A crate on the deed' : `${n} crates on the deed`,
-  met: (g) => [...g.crates.values()].filter((c) => g.onOwnDeed(c.x, c.y)).length >= n,
+  met: (g, d) => [...g.crates.values()].filter((c) => inside(d, c.x, c.y)).length >= n,
 });
 
 const campfires = (n: number): DeedRequirement => ({
   label: n === 1 ? 'A campfire on the deed' : `${n} campfires on the deed`,
-  met: (g) => [...g.campfires.values()].filter((f) => g.onOwnDeed(f.x, f.y)).length >= n,
+  met: (g, d) => [...g.campfires.values()].filter((f) => inside(d, f.x, f.y)).length >= n,
 });
 
 const buildings = (n: number): DeedRequirement => ({
   label: n === 1 ? 'A building with every ground-floor wall up' : `${n} buildings with every ground-floor wall up`,
-  met: (g) =>
+  met: (g, d) =>
     [...g.buildings.list.values()].filter((b) => {
       const [bx, by] = (b.tiles[0] ?? '').split(',').map(Number);
-      return Number.isFinite(bx) && g.onOwnDeed(bx, by) && g.buildings.levelComplete(b, 0);
+      return Number.isFinite(bx) && inside(d, bx, by) && g.buildings.levelComplete(b, 0);
     }).length >= n,
 });
 
 const smelters = (n: number): DeedRequirement => ({
   label: n === 1 ? 'A stone smelter on the deed' : `${n} stone smelters on the deed`,
-  met: (g) => [...g.smelters.values()].filter((s) => g.onOwnDeed(s.x, s.y)).length >= n,
+  met: (g, d) => [...g.smelters.values()].filter((s) => inside(d, s.x, s.y)).length >= n,
 });
 
 const anvils = (n: number): DeedRequirement => ({
   label: n === 1 ? 'An anvil set down on the deed' : `${n} anvils set down on the deed`,
-  met: (g) => [...g.anvils.values()].filter((a) => g.onOwnDeed(a.x, a.y)).length >= n,
+  met: (g, d) => [...g.anvils.values()].filter((a) => inside(d, a.x, a.y)).length >= n,
 });
 
+/**
+ * Its founder's wildermon at work on it. Your own, when it is yours; for one
+ * you are a citizen of, the ones you can see working inside its border, and
+ * the island counts the founder's and has the last word.
+ */
 const workers = (n: number): DeedRequirement => ({
   label: n === 1 ? 'A wildermon working the deed' : `${n} wildermon working the deed`,
-  met: (g) => g.creatures.workers().length >= n,
+  met: (g, d) => (isFounder(d) ? g.creatures.workers()
+    : [...g.creatures.list.values()].filter((c) => c.mode === 'deed' && c.post === null && inside(d, Math.floor(c.x), Math.floor(c.y)))).length >= n,
 });
 
 /**
@@ -58,36 +69,38 @@ export const DEED_UPGRADES: Record<number, DeedRequirement[]> = {
   5: [buildings(1), workers(3)],
 };
 
-export const nextDeedLevel = (g: Game): number | null => (g.deed && g.deedLevel < MAX_DEED_LEVEL ? g.deedLevel + 1 : null);
+export const nextDeedLevel = (d: Deed | null): number | null => (d && deedLevel(d) < MAX_DEED_LEVEL ? deedLevel(d) + 1 : null);
 
-/** Requirements for the next upgrade, each marked met or not. */
-export function upgradeProgress(g: Game): Array<{ label: string; met: boolean }> {
-  const next = nextDeedLevel(g);
-  if (!next) return [];
-  return (DEED_UPGRADES[next] ?? []).map((r) => ({ label: r.label, met: r.met(g) }));
+/** Requirements for the next upgrade of a settlement (yours, by default), each marked met or not. */
+export function upgradeProgress(g: Game, d: Deed | null = g.deed): Array<{ label: string; met: boolean }> {
+  const next = nextDeedLevel(d);
+  if (!d || !next) return [];
+  return (DEED_UPGRADES[next] ?? []).map((r) => ({ label: r.label, met: r.met(g, d) }));
 }
 
-/** Why the settlement cannot be upgraded right now, or null. */
-export function upgradeReason(g: Game): string | null {
-  if (!g.deed) return 'You have no settlement.';
-  // One you were asked onto is shown to you and is not yours to grow: the
-  // island refuses anybody but the founder, and said "You have no settlement."
-  if (!rankAtLeast(g.deed.role, 'founder')) return `Only whoever founded ${g.deed.name} can upgrade it.`;
-  const next = nextDeedLevel(g);
-  if (!next) return `${g.deed.name} is as grand as a settlement gets.`;
-  const missing = upgradeProgress(g).filter((r) => !r.met);
+/**
+ * Why a settlement (yours, by default) cannot be upgraded right now, or null.
+ * The island's `settlement_refusal`, in its order and its words: the rank
+ * first, for a citizen whose rank its founder did not let upgrade.
+ */
+export function upgradeReason(g: Game, d: Deed | null = g.deed): string | null {
+  if (!d) return 'You have no settlement.';
+  const rank = lacks(d, 'upgrade');
+  if (rank) return rank;
+  const next = nextDeedLevel(d);
+  if (!next) return `${d.name} is as grand as a settlement gets.`;
+  const missing = upgradeProgress(g, d).filter((r) => !r.met);
   if (missing.length) return `Still wanted: ${missing.map((r) => r.label.toLowerCase()).join(', ')}.`;
   return null;
 }
 
-/** What your rank on a settlement lets you do, in one line. */
-export function standingWord(role: DeedRole | undefined): string {
-  switch (role ?? 'founder') {
-    case 'founder': return 'You founded this one: everything here is yours, locks included.';
-    case 'mayor': return `You are a mayor here: you may ${RANK_MAY.mayor}.`;
-    case 'guest': return 'You are a guest here: you may walk it and shape nothing.';
-    default: return 'You are a citizen here: you may shape the ground and build on it.';
-  }
+/**
+ * What you are on a settlement and what that lets you do, in one line: the
+ * powers your rank holds, said as the island says them when you are ranked.
+ */
+export function standingWord(d: Pick<Deed, 'role' | 'rank' | 'perms'> & { name?: string }): string {
+  if (isFounder(d)) return 'You founded this one: everything here is yours, locks included.';
+  return `You are a ${rankName({ name: d.name ?? '', ...d })} here: you may ${rankMay(permsHeld({ name: d.name ?? '', ...d }))}.`;
 }
 
 /**
@@ -100,6 +113,19 @@ export const leaveQuestion = (d: Deed, holder?: string | null): string =>
   + `shape nothing, and of the stores on it only the ones you made yourself still open for you. `
   + `${holder ? `${holder} is` : 'Its founder is'} told, and only an invitation puts you back on it.`;
 
+/**
+ * The settlement a settlement job is aimed at: the one of yours whose token
+ * stands on the tile picked, or your own when the tile is not a token of
+ * yours -- which is what the island takes (`settlement_aimed`).
+ */
+export function deedAimed(g: Game, t: { kind: string; x?: number; y?: number }): Deed | null {
+  if (t.kind === 'tile') {
+    const at = g.myDeeds().find((d) => d.x === t.x && d.y === t.y);
+    if (at) return at;
+  }
+  return g.myDeeds().find((d) => isFounder(d)) ?? null;
+}
+
 export const DEED_ACTIONS: ActionDef[] = [
   {
     id: 'upgrade_deed',
@@ -107,13 +133,13 @@ export const DEED_ACTIONS: ActionDef[] = [
     verb: 'marking out the new boundary',
     stamina: 0.05,
     baseTime: 8,
-    // The founder's to do, so only a founder is offered it on every tile.
-    applies: (_t, g) => !!g.deed && rankAtLeast(g.deed.role, 'founder'),
-    check: (_t, g) => upgradeReason(g),
-    perform: (_t, g) => {
-      const d = g.deed;
-      if (!d || upgradeReason(g) !== null) return;
-      const level = g.deedLevel + 1;
+    // Offered on every tile to whoever founded one; to a rank allowed it, on its token.
+    applies: (t, g) => !lacks(deedAimed(g, t), 'upgrade') && !!deedAimed(g, t),
+    check: (t, g) => upgradeReason(g, deedAimed(g, t)),
+    perform: (t, g) => {
+      const d = deedAimed(g, t);
+      if (!d || upgradeReason(g, d) !== null) return;
+      const level = deedLevel(d) + 1;
       d.level = level;
       d.radius = deedRadiusAt(level);
       g.logMsg(

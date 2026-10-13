@@ -4,7 +4,7 @@ import { BRIDGES, bridgeDone, CLEARANCE, PULL_REACH, pullDownRefusal, spanTiles,
 import type { Game } from './game';
 import { greenNow } from './greening';
 import { itemDef } from './items';
-import { rankAtLeast } from './ranks';
+import { lacks } from './ranks';
 import { POND_MOST, pondFull, poolLevel, settleChain, springCorner, SPRING_DEPTH, type Chain, type Stream } from '../world/springs';
 import { AQUEDUCT_FLOW, CHANNEL_DEEP, fillSeconds, FOUNTAIN_RIM, pondRate, type Channel } from '../world/aqueducts';
 import { TileType } from '../world/tiles';
@@ -84,11 +84,16 @@ export function fillWords(secs: number): string {
   return h ? (mi ? `${unit(h, 'hour')} and ${unit(mi, 'minute')}` : unit(h, 'hour')) : unit(mi, 'minute');
 }
 
-/** Whose settlement a tile is, where the one asking may not shape it: the island's `may_shape`. */
+/**
+ * Why the one asking may not lead water from or to this tile, or null: on a
+ * settlement of theirs, their rank, where it lacks Shape and build (`lacks`);
+ * on anybody else's, whose it is (`aqDeed`). The island's `may_shape`.
+ */
 function notYours(g: Game, x: number, y: number): string | null {
   const mine = g.deedOfMineAt(x, y);
-  const d = mine ? (rankAtLeast(mine.role, 'builder') ? null : mine) : g.deedAt(x, y);
-  return d ? d.name : null;
+  if (mine) return lacks(mine, 'shape');
+  const d = g.deedAt(x, y);
+  return d ? aqDeed(d.name) : null;
 }
 
 /**
@@ -104,8 +109,8 @@ export function aqueductPlan(g: Game, sx: number, sy: number, tx: number, ty: nu
   if (!span.length) return AQ_BESIDE;
   if (span.length > AQUEDUCT.span) return aqSpan(span.length);
   for (const [x, y] of [[sx, sy], [tx, ty]]) {
-    const name = notYours(g, x, y);
-    if (name) return aqDeed(name);
+    const why = notYours(g, x, y);
+    if (why) return why;
   }
   const water = w.water;
   const height = (x: number, y: number): number | null => (w.cornerInBounds(x, y) ? w.getHeight(x, y) : null);

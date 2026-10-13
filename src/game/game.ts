@@ -2,7 +2,7 @@ import { Springs, type SpringSave } from './springs';
 import { DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
-import { rankAtLeast, type DeedRole } from './ranks';
+import { deedMay, lacks, type DeedRole } from './ranks';
 import { defaultKey } from './keybinds';
 import { listed, percent, share } from './words';
 import { brazierBurn, shoreNear } from './placeables';
@@ -162,15 +162,22 @@ export interface Deed {
    */
   mine?: boolean;
   /**
-   * What you are here: the person who planted the stake, somebody they have
-   * made a mayor, an ordinary builder, or a guest who may walk about and
-   * touch nothing.
+   * What you are here: `founder` for the person who planted the stake, or
+   * the name of the rank the founder gave you, in lower case.
    *
    * Absent in the game you play by yourself, where there is one person and
    * they founded everything, so absent reads as `founder` everywhere it is
    * asked. On an island it comes down with the settlement.
    */
   role?: DeedRole;
+  /** Your rank's name as its founder wrote it; absent for the founder. */
+  rank?: string;
+  /**
+   * What your rank may do here (`ranks.ts`, `RANK_POWERS`), as bits. Absent
+   * for the founder, in the solo game, and from an island from before custom
+   * ranks, where `role` alone says (`permsHeld`).
+   */
+  perms?: number;
   /**
    * What is set into its altar's sockets (`baubles.ts`): the settlement's,
    * whichever altar on it they were set at. Absent or empty when none is.
@@ -179,7 +186,7 @@ export interface Deed {
 }
 
 // The ranks live in `ranks.ts`, which imports nothing; see there for why.
-export { DEED_RANKS, rankAtLeast, type DeedRole } from './ranks';
+export { deedMay, type DeedRole } from './ranks';
 
 /**
  * How far a go's quality is spread when it is not simply your skill: from
@@ -1969,7 +1976,7 @@ export class Game {
    * Drawn, and used to say why the ground will not take a building — never to
    * light anything, which is the whole distinction this pair exists for.
    */
-  neighbourDeeds: Array<{ name: string; x: number; y: number; radius: number; level: number; holder: string | null; mine?: boolean; role?: DeedRole }> = [];
+  neighbourDeeds: Array<{ name: string; x: number; y: number; radius: number; level: number; holder: string | null; mine?: boolean; role?: DeedRole; rank?: string; perms?: number }> = [];
 
   /**
    * Everybody else ashore, as of the last slow read.
@@ -2031,6 +2038,15 @@ export class Game {
   }
 
   /**
+   * Whether the stores standing on this tile that somebody else made are
+   * yours to use: on a settlement you founded, or one your rank on holds
+   * Crates and stores. The island's `crate_yours` and `craft_stock`.
+   */
+  storesOpenAt(x: number, y: number): boolean {
+    return deedMay(this.deedOfMineAt(x, y), 'stores');
+  }
+
+  /**
    * The altar standing on the settlement of yours that covers this tile, when
    * one does -- other than `except`, a piece being turned where it stands. A
    * settlement has one altar and no more (`ONE_ALTAR`).
@@ -2052,6 +2068,8 @@ export class Game {
    * their own land, because a game where losing a small item costs you a
    * building is a game nobody enjoys, and because that is what makes a lock
    * worth fitting on somebody else's deed and only worth so much on your own.
+   * The founder may hand that master key to a rank (Open its locks); a
+   * citizen whose rank lacks it is told so, in `lacks`'s words.
    *
    * In the game you play by yourself the second answer is always yes on your
    * own deed and always no off it, which is exactly right: a lock out in the
@@ -2060,7 +2078,7 @@ export class Game {
    */
   lockRefusal(store: Lockable & { x: number; y: number }): string | null {
     const mine = this.deedOfMineAt(Math.floor(store.x), Math.floor(store.y));
-    return lockRefusal(this.inventory.items, store, !!mine && rankAtLeast(mine.role, 'founder'));
+    return lockRefusal(this.inventory.items, store, deedMay(mine, 'locks'), lacks(mine, 'locks'));
   }
 
   /**
@@ -5481,8 +5499,8 @@ export class Game {
 
   /**
    * The baubles working for you where you stand: those of the settlement of
-   * yours under your feet, while you are one of its citizens rather than a
-   * guest; nothing anywhere else.
+   * yours under your feet, while you founded it or your rank on it holds
+   * Bauble effects; nothing anywhere else.
    */
   baubleHere(): readonly DeedBauble[] {
     const deed = this.deedOfMineAt(this.player.tileX, this.player.tileY);
@@ -6408,7 +6426,7 @@ export class Game {
    * Crates and the chests and barrels that hold things are shown through the
    * same window, and had the same hole in them, so both are looked in.
    */
-  storeWith(uid: number): { what: string; at: [number, number]; take: (id: number) => Item | null; piece?: PlacedFurniture; level?: number } | null {
+  storeWith(uid: number): { what: string; at: [number, number]; take: (id: number) => Item | null; piece?: PlacedFurniture; crate?: PlacedCrate; level?: number } | null {
     /*
      * A bag on your back is the third of these, and was missing.
      *
@@ -6432,7 +6450,7 @@ export class Game {
     }
     for (const c of this.crates.values()) {
       if (!c.items.some((it) => it.uid === uid)) continue;
-      return { what: crateName(c).toLowerCase(), at: crateCentre(c), take: (id) => this.crateTake(c, id), level: c.level ?? 0 };
+      return { what: crateName(c).toLowerCase(), at: crateCentre(c), take: (id) => this.crateTake(c, id), crate: c, level: c.level ?? 0 };
     }
     for (const f of this.furniture.values()) {
       if (!f.items.some((it) => it.uid === uid)) continue;
@@ -6570,7 +6588,7 @@ export class Game {
       const def = furnitureDef(f.kind);
       if (!furnitureHolds(f) || def.trash || def.stall) return;
       const anybodys = !!(def.cart || def.vehicle || def.boat);
-      if (f.mine === false && !anybodys && !this.onDeed(f.x, f.y)) return;
+      if (f.mine === false && !anybodys && !this.storesOpenAt(f.x, f.y)) return;
       if (this.lockRefusal(f)) return;
       const [cx, cy] = furnitureCentre(f);
       // After the crates at the same distance, to the same rule as the island.
@@ -6593,7 +6611,7 @@ export class Game {
     const out: PlacedFurniture[] = [];
     this.placed.furniture.around(tx + 0.5, ty + 0.5, reach, (f) => {
       if (Math.max(Math.abs(f.x - tx), Math.abs(f.y - ty)) > reach || !holdsLiquid(f)) return;
-      if (f.mine === false && !this.onDeed(f.x, f.y)) return;
+      if (f.mine === false && !this.storesOpenAt(f.x, f.y)) return;
       if (this.lockRefusal(f)) return;
       out.push(f);
     }, this.player.level);
@@ -7999,14 +8017,14 @@ export class Game {
      */
     // `null` from the island means you are nothing on it, which here is the
     // same as saying nothing: a deed you do not belong to is not in `myDeeds`.
-    if (ground.deeds !== undefined) this.neighbourDeeds = ground.deeds.map((d) => ({ ...d, role: d.role ?? undefined, baubles: baublesFrom(d.baubles) }));
+    if (ground.deeds !== undefined) this.neighbourDeeds = ground.deeds.map((d) => ({ ...d, role: d.role ?? undefined, rank: d.rank ?? undefined, perms: d.perms ?? undefined, baubles: baublesFrom(d.baubles) }));
     if (ground.folk !== undefined) this.folkAshore = ground.folk;
     // Your graves wherever they are, on the slow half, for the marks on your map.
     if (ground.graves !== undefined) this.markGraves(ground.graves);
     if (ground.deed !== undefined) {
       const d = ground.deed;
       const was = this.deed;
-      this.deed = d ? { name: d.name, x: d.x, y: d.y, radius: d.radius, level: d.level, mine: d.mine, role: d.role ?? undefined, baubles: baublesFrom(d.baubles) } : null;
+      this.deed = d ? { name: d.name, x: d.x, y: d.y, radius: d.radius, level: d.level, mine: d.mine, role: d.role ?? undefined, rank: d.rank ?? undefined, perms: d.perms ?? undefined, baubles: baublesFrom(d.baubles) } : null;
       // Only when it is actually different: this runs every few seconds, and a
       // settlement that has not moved is not news to anybody.
       if ((was?.name ?? null) !== (d?.name ?? null) || was?.x !== d?.x || was?.y !== d?.y
@@ -9705,7 +9723,7 @@ export interface IslandGround {
    * fast read carries none of the three, which is why `sawGround` applies it
    * only when it was sent, and why this was wrong to type as always present.
    */
-  deed?: { name: string; x: number; y: number; radius: number; level: number; mine: boolean; role?: DeedRole | null; baubles?: IslandBauble[] | null } | null;
+  deed?: { name: string; x: number; y: number; radius: number; level: number; mine: boolean; role?: DeedRole | null; rank?: string | null; perms?: number | null; baubles?: IslandBauble[] | null } | null;
   /**
    * Other people's settlements, and only those near enough to be standing in.
    *
@@ -9717,7 +9735,7 @@ export interface IslandGround {
    * settlement in it did — lit their homestead in your fog and ticked their
    * work off in your journal.
    */
-  deeds?: Array<{ name: string; x: number; y: number; radius: number; level: number; holder: string | null; mine?: boolean; role?: DeedRole | null; baubles?: IslandBauble[] | null }>;
+  deeds?: Array<{ name: string; x: number; y: number; radius: number; level: number; holder: string | null; mine?: boolean; role?: DeedRole | null; rank?: string | null; perms?: number | null; baubles?: IslandBauble[] | null }>;
   /**
    * Everybody else ashore, with whereabouts while the island is quiet.
    *

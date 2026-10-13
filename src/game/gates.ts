@@ -2,7 +2,7 @@ import type { ActionDef, Target } from './actions';
 import { BRIDGES, bridgeDone, type Bridge, type BridgeKind } from './bridges';
 import { borderOf, isDone, MATERIALS, onlyRefusal, progressOf, WALL_TYPE_BY_ID, type Border, type MaterialDef, type Side, type Wall, type WallType } from './building';
 import type { Game } from './game';
-import { rankAtLeast } from './ranks';
+import { isFounder } from './ranks';
 import type { Lockable } from './locks';
 import { billWords, keyFromPadlock, padlockToFit } from './items';
 import { article, capital, numberWord, percent, spanWords } from './words';
@@ -220,7 +220,7 @@ export function planGate(g: Game, wall: Wall): string | null {
  */
 export function founderWord(g: Game, x: number, y: number): { own: boolean; deed: string | null } {
   const mine = g.deedOfMineAt(x, y);
-  if (mine && rankAtLeast(mine.role, 'founder')) return { own: true, deed: mine.name };
+  if (mine && isFounder(mine)) return { own: true, deed: mine.name };
   const d = mine ?? g.deedAt(x, y);
   return { own: false, deed: d ? d.name : null };
 }

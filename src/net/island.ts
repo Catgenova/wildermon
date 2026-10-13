@@ -13,7 +13,7 @@ import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import { cleanLook, type Look } from '../game/look';
 import type { IslandCrate, IslandGround } from '../game/game';
-import type { DeedRole } from '../game/ranks';
+import type { DeedRole, PowerId, RankDef } from '../game/ranks';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
 import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
@@ -357,13 +357,21 @@ export interface MyDeed {
   /** Whether you planted the stake, which is what disbanding and upgrading ask. */
   mine: boolean;
   /**
-   * Your rank on it, which says whether you may invite, send away and set
-   * ranks there. Optional because an island from before mayors answers
-   * without it: then `mine` is the founder and anybody else a builder.
+   * What you are on it: `founder`, or your rank's name in lower case.
+   * Optional because an island from before mayors answers without it: then
+   * `mine` is the founder and anybody else a builder.
    */
   role?: DeedRole;
-  /** Everybody's rank on its roll, by uid, the founder left out. */
+  /** Your rank's name as its founder wrote it; absent for the founder. */
+  rank?: string | null;
+  /** What your rank may do (`RANK_POWERS`), as bits; absent for the founder and from an island from before custom ranks. */
+  perms?: number | null;
+  /** Everybody's rank on its roll by its name in lower case, by uid, the founder left out. */
   ranks?: Record<string, DeedRole>;
+  /** Everybody's rank on its roll by its id, by uid; absent from an island from before custom ranks. */
+  held?: Record<string, number>;
+  /** Its ranks, highest first, with how many hold each; absent from an island from before custom ranks. */
+  defs?: RankDef[];
   /** Its roll, founder included, you left off it. */
   folk: Folk[];
 }
@@ -410,7 +418,7 @@ export interface Social {
   invites: Array<{ founder: string; by: string; deed: string; at: number }>;
   /**
    * And the ones out from every settlement you may invite to, whoever of its
-   * founder and mayors sent them. `founder` and `deed` say which settlement;
+   * people sent them. `founder` and `deed` say which settlement;
    * an island from before mayors leaves them off, and then every one is from
    * the settlement you founded.
    */
@@ -3191,8 +3199,8 @@ export class Island {
   }
 
   /**
-   * Ask somebody to come and live on a settlement you founded or are a mayor
-   * of, named by its founder; left out, the one you founded.
+   * Ask somebody to come and live on a settlement you founded or whose rank
+   * of yours holds Invite, named by its founder; left out, the one you founded.
    */
   async invite(uid: string, founder?: string): Promise<string | null> {
     return this.door('rpc_invite', founder ? { p_uid: uid, p_founder: founder } : { p_uid: uid });
@@ -3210,9 +3218,38 @@ export class Island {
     return this.invite(uid, d?.founder);
   }
 
-  /** Set somebody's rank on a settlement of yours: mayor, builder or guest (`rpc_rank`). */
-  async rank(founder: string, uid: string, role: DeedRole): Promise<string | null> {
-    return this.door('rpc_rank', { p_founder: founder, p_uid: uid, p_role: role });
+  /** Set somebody's rank on a settlement of yours, by the rank's name (`rpc_rank`). */
+  async rank(founder: string, uid: string, rank: string): Promise<string | null> {
+    return this.door('rpc_rank', { p_founder: founder, p_uid: uid, p_role: rank });
+  }
+
+  /**
+   * The founder's own settlement's ranks: a new one at the foot of the list,
+   * a new name, a place up (-1) or down (1), gone, a power given or taken,
+   * and the rank newcomers are put on (`rpc_rank_add` and the rest).
+   */
+  async rankAdd(name: string): Promise<string | null> {
+    return this.door('rpc_rank_add', { p_name: name });
+  }
+
+  async rankRename(id: number, name: string): Promise<string | null> {
+    return this.door('rpc_rank_rename', { p_id: id, p_name: name });
+  }
+
+  async rankMove(id: number, dir: -1 | 1): Promise<string | null> {
+    return this.door('rpc_rank_move', { p_id: id, p_dir: dir });
+  }
+
+  async rankDrop(id: number): Promise<string | null> {
+    return this.door('rpc_rank_drop', { p_id: id });
+  }
+
+  async rankAllow(id: number, power: PowerId, on: boolean): Promise<string | null> {
+    return this.door('rpc_rank_allow', { p_id: id, p_power: power, p_on: on });
+  }
+
+  async rankNewcomers(id: number): Promise<string | null> {
+    return this.door('rpc_rank_newcomers', { p_id: id });
   }
 
   /** Yes or no to an invitation of your own. */

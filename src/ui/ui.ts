@@ -70,7 +70,8 @@ import { describeWaterPlant } from '../game/watergarden';
 import { swirlName } from '../game/motes';
 import { runestoneAt } from '../game/runestones';
 import { cornerReading, groundReading } from './tileinfo';
-import { deedWorkersAt, MAX_DEED_LEVEL, rankAtLeast, type Deed } from '../game/game';
+import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
+import { isFounder, lacks } from '../game/ranks';
 import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
@@ -107,7 +108,7 @@ import { TradesPanel } from './panels/trades';
 import { FaithPanel } from './panels/faith';
 import { FaithBook } from './faithbook';
 import { SpellBar, type SpellAim } from './spellbar';
-import { inviteDeeds, inviteRefusal, SocialPanel } from './panels/social';
+import { defsOf, inviteDeeds, inviteRefusal, SocialPanel } from './panels/social';
 import { MarketPanel } from './panels/market';
 import { BoardsPanel } from './panels/boards';
 import { GuidePanel } from './panels/guide';
@@ -451,7 +452,13 @@ export class UI {
       prime: () => this.social.prime(),
       again: () => this.social.again(),
       me: () => this.island?.uid ?? '',
-      rank: (founder, uid, role) => this.island?.rank(founder, uid, role) ?? Promise.resolve('You are not on an island.'),
+      rank: (founder, uid, rank) => this.island?.rank(founder, uid, rank) ?? Promise.resolve('You are not on an island.'),
+      add: (name) => this.island?.rankAdd(name) ?? Promise.resolve('You are not on an island.'),
+      rename: (id, name) => this.island?.rankRename(id, name) ?? Promise.resolve('You are not on an island.'),
+      move: (id, dir) => this.island?.rankMove(id, dir) ?? Promise.resolve('You are not on an island.'),
+      drop: (id) => this.island?.rankDrop(id) ?? Promise.resolve('You are not on an island.'),
+      allow: (id, power, on) => this.island?.rankAllow(id, power, on) ?? Promise.resolve('You are not on an island.'),
+      newcomers: (id) => this.island?.rankNewcomers(id) ?? Promise.resolve('You are not on an island.'),
     } : undefined);
     // Everybody, and what they are to you: who is waiting on an answer, who
     // you know and where they are, and what has been written.
@@ -1159,7 +1166,7 @@ export class UI {
       const who = 'holder' in here && here.holder ? `, ${here.holder}\u2019s` : '';
       const level = here.level && here.level > 1 ? ` \u00b7 level ${here.level}` : '';
       lines.push(`${token ? 'Settlement token of' : 'Part of'} ${here.name}${who}${level}`);
-      lines.push(mine ? standingWord(mine.role) : 'You are a stranger here: you may walk it and shape nothing.');
+      lines.push(mine ? standingWord(mine) : 'You are a stranger here: you may walk it and shape nothing.');
     }
     // A drawbridge says whether it is up (`gates.ts`).
     const span = pick.bridge !== undefined ? this.game.bridges.get(pick.bridge) : undefined;
@@ -1345,7 +1352,7 @@ export class UI {
     // for one you founded, and what you are and the way off it for one you
     // were asked onto.
     const settled = this.game.deedOfMineAt(pick.x, pick.y);
-    if (settled) entries.push(rankAtLeast(settled.role, 'founder') ? this.deedEntry() : this.citizenEntry(settled));
+    if (settled) entries.push(isFounder(settled) ? this.deedEntry() : this.citizenEntry(settled));
     // Laying a campfire on the block of subtiles under the cursor.
     const fireDef = ACTION_BY_ID.get('build_campfire');
     if (fireDef && this.game.inventory.count('shaft') >= FIRE_COST) {
@@ -2547,7 +2554,9 @@ export class UI {
     return {
       label: `${d.name}${holder ? ` \u00b7 ${holder}\u2019s` : ''}`,
       children: [
-        { label: standingWord(d.role), disabled: true },
+        { label: standingWord(d), disabled: true },
+        // Upgrading and renaming, for a rank its founder let do them (`settlement_refusal`).
+        ...this.citizenDeedJobs(d),
         {
           label: `Leave ${d.name}`,
           note: 'Takes you off its roll',
@@ -2557,6 +2566,26 @@ export class UI {
         },
       ],
     };
+  }
+
+  /** Upgrade and Rename on a settlement you are a citizen of, where your rank holds them. */
+  private citizenDeedJobs(d: Deed): MenuItem[] {
+    const g = this.game;
+    const t: Target = { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y };
+    const out: MenuItem[] = [];
+    const upgrade = DEED_ACTION_BY_ID.get('upgrade_deed');
+    if (upgrade && !lacks(d, 'upgrade')) {
+      const reason = upgradeReason(g, d);
+      out.push({
+        label: (d.level ?? 1) < MAX_DEED_LEVEL ? `Upgrade to level ${(d.level ?? 1) + 1}` : `Level ${d.level ?? 1}, fully grown`,
+        hint: reason ?? undefined,
+        disabled: !!reason,
+        onSelect: () => g.requestAction(upgrade, t),
+      });
+    }
+    const rename = ACTION_BY_ID.get('rename_deed');
+    if (rename && !lacks(d, 'rename')) out.push({ label: rename.label, onSelect: () => g.requestAction(rename, t) });
+    return out;
   }
 
   /** Who founded a settlement you belong to, as the island names them. */
@@ -2836,9 +2865,9 @@ export class UI {
      * is no bar short of the cap, so this is offered beside anybody, and
      * greyed with the island's own reason (`inviteRefusal`) when the Social
      * window's answer is recent enough to know one; otherwise the island
-     * says. One entry for each settlement you founded or are a mayor of,
-     * since its founder and its mayors may ask anybody onto it; with none, the
-     * settlement you are handed, greyed with the rule.
+     * says. One entry for each settlement whose founder you are or whose
+     * rank of yours holds Invite; with none, the settlement you are handed,
+     * greyed with your rank's refusal.
      */
     const deed = this.game.deed;
     this.social.prime();
@@ -2848,19 +2877,17 @@ export class UI {
       const why = inviteRefusal(known!, uid, name, d.founder);
       entries.push({
         label: `Invite ${name} to ${d.name}`,
-        note: why ? undefined : 'They may build and store here',
+        note: why ? undefined : `They join as ${defsOf(d).find((r) => r.newcomer)?.name ?? 'its rank for newcomers'}`,
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => said(isle.invite(uid, d.founder)),
       });
     }
     if (!places.length && deed) {
-      const why = !rankAtLeast(deed.role, 'mayor')
-        ? `Only the founder or a mayor of ${deed.name} may invite anybody to it.`
-        : null;
+      const why = lacks(deed, 'invite');
       entries.push({
         label: `Invite ${name} to ${deed.name}`,
-        note: why ? undefined : 'They may build and store here',
+        note: why ? undefined : 'They join at its rank for newcomers',
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => said(isle.inviteAt(uid, deed.x, deed.y)),

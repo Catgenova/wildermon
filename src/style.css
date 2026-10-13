@@ -2655,6 +2655,95 @@ kbd {
   gap: 3px;
 }
 
+/* A citizen's rank, picked from the settlement's own: never wider than the row leaves it. */
+.deed-pick {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 150px;
+}
+
+/*
+ * The settlement's ranks: a row a rank -- its name, which opens its
+ * permissions; how many hold it; and the founder's tools -- and under the
+ * open one a grid of its permissions, two to a line.
+ */
+.deed-rank {
+  padding: 1px 0;
+  border-top: 1px solid color-mix(in srgb, var(--ui-border) 45%, transparent);
+}
+
+.deed-rank-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 0;
+  overflow: hidden;
+  font: inherit;
+  color: var(--t-text, #eadfbf);
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.deed-rank-name:hover,
+.deed-rank-open .deed-rank-name {
+  color: var(--ui-accent);
+}
+
+.deed-rank-held {
+  flex: 0 0 auto;
+  color: var(--ui-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.deed-tool {
+  min-width: 22px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.deed-tool:disabled {
+  opacity: 0.35;
+}
+
+.deed-perms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px 8px;
+  margin: 2px 0 6px 12px;
+  padding: 4px 6px;
+  background: var(--t-card, rgba(0, 0, 0, 0.2));
+  border-left: 2px solid var(--ui-accent);
+}
+
+.deed-perm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--t-text, #c9c1ad);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.deed-perm span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.deed-perm input {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.deed-perm:has(input:disabled) {
+  cursor: default;
+}
+
 /* Marks on the map, and the list of them under it. */
 .map-bar {
   flex: 0 0 auto;
