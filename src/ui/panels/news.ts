@@ -47,7 +47,7 @@ import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
 import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
 import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
-import { GRAPE_SEASON, VINE_BEARS } from '../../game/vineyard';
+import { GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
@@ -2102,6 +2102,15 @@ export const NEWS: News[] = [
         + `A glass panel takes dye at ${numberWord(DYE_PANE_LITRES)} litre a panel, and a window or bay window is tinted the colour of the last panel fitted, outside and in.`,
       blockSays(),
       reachSays(),
+    ],
+  },
+  {
+    n: 152,
+    day: '2026-10-13',
+    lines: () => [
+      `Trellises stand against the outside of a wall now, and run its whole width. ${TRELLIS_RULE()}`,
+      'Trellises side by side along the same wall join into one lattice. A trellis already standing keeps its vine; where two or more stood in one row, '
+        + 'the one with a vine (or else the oldest) stays and the rest are back in their owner\'s pack, a planted vine as a grape cutting.',
     ],
   },
 ];
