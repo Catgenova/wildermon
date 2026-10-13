@@ -1,5 +1,6 @@
 import { hash2, mulberry32 } from '../world/noise';
 import { cushions, hashOf, type Cushion } from './ivy';
+import { inkOr } from './inks';
 import type { Look } from '../game/look';
 import { EMOTE_BY_ID, HOPS, emotePose } from '../game/emotes';
 import { drawBust, drawFigure, figureJoints, figureStance, shineOver, viewOf, type FigurePose } from './figure';
@@ -4897,7 +4898,7 @@ function drawCreatureOverlay(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     const w = 18 * zoom;
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
     ctx.fillRect(sx - w / 2, bar, w, 3 * zoom);
-    ctx.fillStyle = pose.health > 0.5 ? '#7ccf5a' : pose.health > 0.25 ? '#e3b657' : '#e0574d';
+    ctx.fillStyle = pose.health > 0.5 ? inkOr('good', '#7ccf5a') : pose.health > 0.25 ? inkOr('warn', '#e3b657') : inkOr('bad', '#e0574d');
     ctx.fillRect(sx - w / 2, bar, w * Math.max(0, pose.health), 3 * zoom);
   }
   if (pose.label) {

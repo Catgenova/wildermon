@@ -1,12 +1,14 @@
 import { GLYPHS } from '../render/runestone';
-import type { Settings, UiFrames, UiLight, UiStyle } from '../game/settings';
+import { WORLD_INK } from '../render/inks';
+import type { Settings, UiColours, UiFrames, UiLight, UiStyle } from '../game/settings';
 
 /**
  * The interface's look: Runecut or Classic, and Runecut's stone by day or
  * after dark.
  *
- * Everything that changes is in `src/style.css`, keyed on two attributes on
- * <html>: `data-ui` (`runecut` or `classic`) and `data-rc` (`day` or `night`).
+ * Everything that changes is in `src/style.css`, keyed on attributes on
+ * <html>: `data-ui` (`runecut` or `classic`), `data-rc` (`day` or `night`),
+ * and `data-cb` (`rg` or `by`, absent for standard colours).
  * This only decides which, so a look is one attribute write and the browser's
  * own restyle rather than anything walking the windows.
  */
@@ -19,6 +21,7 @@ export interface Look {
   ui: UiStyle;
   rc: 'day' | 'night';
   frames: UiFrames;
+  cb: UiColours;
 }
 
 let current: Look | null = null;
@@ -36,25 +39,59 @@ export function islandTime(h: number): string {
   return `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 }
 
-/** Which stone Runecut shows for a setting: by day, after dark, or as the island's clock says (`Game.isNight`). */
-export function lightFor(light: UiLight, night: boolean): 'day' | 'night' {
-  return light === 'clock' ? (night ? 'night' : 'day') : light;
+/** The hour on this computer's clock from which, and the hour until which, `local` shows Runecut's night stone. */
+export const LOCAL_NIGHT_STARTS = 20;
+export const LOCAL_NIGHT_ENDS = 7;
+
+/** Whether an hour of this computer's clock falls in its night, `LOCAL_NIGHT_STARTS` to `LOCAL_NIGHT_ENDS`. */
+export function localNight(hour: number): boolean {
+  return LOCAL_NIGHT_STARTS > LOCAL_NIGHT_ENDS
+    ? hour >= LOCAL_NIGHT_STARTS || hour < LOCAL_NIGHT_ENDS
+    : hour >= LOCAL_NIGHT_STARTS && hour < LOCAL_NIGHT_ENDS;
+}
+
+/** This computer's clock, read at most once a second: `applyLook` asks every frame and the hour does not turn that often. */
+let localAt = -Infinity;
+let localWas = false;
+function localNightNow(): boolean {
+  const now = performance.now();
+  if (now - localAt >= 1000) {
+    localAt = now;
+    localWas = localNight(new Date().getHours());
+  }
+  return localWas;
+}
+
+/**
+ * Which stone Runecut shows for a setting: as the island's clock says
+ * (`Game.isNight`), as this computer's says (`localNight`), or always by day
+ * or always after dark.
+ */
+export function lightFor(light: UiLight, night: boolean, local = false): 'day' | 'night' {
+  return light === 'clock' ? (night ? 'night' : 'day') : light === 'local' ? (local ? 'night' : 'day') : light;
 }
 
 /**
  * Put the look the settings ask for on the page. Cheap enough to call every
- * frame, which is how `clock` follows the island across dusk and dawn.
+ * frame, which is how `clock` follows the island across dusk and dawn, and
+ * `local` this computer across 20:00 and 07:00.
  */
-export function applyLook(settings: Pick<Settings, 'uiStyle' | 'uiLight' | 'uiFrames'>, night: boolean): void {
+export function applyLook(settings: Pick<Settings, 'uiStyle' | 'uiLight' | 'uiFrames' | 'uiColours'>, night: boolean): void {
   const ui: UiStyle = settings.uiStyle;
-  const rc = lightFor(settings.uiLight, night);
-  const key = `${ui}/${rc}/${settings.uiFrames}`;
+  const rc = lightFor(settings.uiLight, night, settings.uiLight === 'local' && localNightNow());
+  const cb = settings.uiColours;
+  const key = `${ui}/${rc}/${settings.uiFrames}/${cb}`;
   if (key === shown) return;
   shown = key;
   const root = document.documentElement;
   root.dataset.ui = ui;
   root.dataset.rc = rc;
-  current = { ui, rc, frames: settings.uiFrames };
+  if (cb === 'standard') delete root.dataset.cb;
+  else root.dataset.cb = cb;
+  // The canvas's meaning colours from the same tokens the windows use (`--cb-world-*`), read once a change.
+  const css = cb === 'standard' ? null : getComputedStyle(root);
+  for (const role of ['good', 'warn', 'bad'] as const) WORLD_INK[role] = css?.getPropertyValue(`--cb-world-${role}`).trim() || null;
+  current = { ui, rc, frames: settings.uiFrames, cb };
   for (const fn of watchers) fn(current);
 }
 

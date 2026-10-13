@@ -2011,6 +2011,19 @@ jobs:
             --outfile=node_modules/.cache/stir.mjs --log-level=error
           node node_modules/.cache/stir.mjs
 
+      - name: A queue put in order
+        run: |
+          # Asked for: the jobs queued listed in the crafting window, dragged
+          # into another order and taken out with a cross. The jobs waiting go
+          # into the order asked and the job in hand stays in hand; a job left
+          # out is put out of mind and said so; a list that changed since it
+          # was seen, or an order that is not one, is refused and nothing
+          # moves; a job put down by a walk moves like any other. Both sides,
+          # in the same words.
+          npx esbuild supabase/test/queue.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/queue.mjs --log-level=error
+          node node_modules/.cache/queue.mjs
+
       - name: Goods that change hands
         run: |
           # The stalls had never sold anything: a price and a mailbox were

@@ -2,6 +2,7 @@ import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { JOINT_EVERY, PIN_EVERY, SOFT, STITCH_EVERY } from '../runecut-dress';
 import { FRAMES } from '../runecut-frames';
 import { lifeWords } from '../runecut-life';
+import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import {
   ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
   PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE,
@@ -11,6 +12,7 @@ import { ANVIL_SUBTILES } from '../../game/anvil';
 import { ARCHAEOLOGY_ACTION_BY_ID, FIND_DAMAGE, FIND_DAMAGE_SPREAD, LECTERN_GAIN, RELICS, RESTORE_AGE, RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { BELT_MAX, QL_PER_LOOP } from '../../game/belt';
 import { HUNGER_RATE, SWIM_LEARN } from '../../game/body';
+import { HEAL_FED } from '../../game/body';
 import { BOON_BONUS, BOON_FOODS, boonTime, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { BREW_BY_ID, BREWS } from '../../game/brewing';
@@ -45,6 +47,7 @@ import {
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
+import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
@@ -93,6 +96,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { deckBill, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { TREE_DEPTH } from '../recipetree';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
 import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
@@ -107,7 +111,7 @@ import { AWARENESS, awarenessReach, BASE_SIGHT, LIGHT_GIVES_BACK, NIGHT_LOSS, TR
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, timeWords, times } from '../../game/words';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../../game/fight';
-import { FIGHT_QUIET, ARM_SLOW, ARM_SLOW_MOST, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
+import { FIGHT_QUIET, ARM_SLOW, ARM_SLOW_MOST, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, OVERBURDEN_SWING, overburdenSwingSays } from '../../game/fight';
 import {
   ARROW_IDS, BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
@@ -770,6 +774,10 @@ export function helpText(): string {
     wildermon are working of how many it can take, what the next upgrade still wants and the button
     that buys it, everything standing inside the border, and the standing orders for everything kept
     there. Each thing listed has a button that walks you to it.</p>
+    <p>Walk ${numberWord(BANNER_DEPTH)} tile${BANNER_DEPTH === 1 ? '' : 's'} inside any settlement's border and its name comes up near the top of the
+    screen for ${BANNER_MS / 1000} seconds, with <b>your rank</b> under it where you are a citizen and <b>its founder</b> where you are
+    not; ${numberWord(BANNER_DEPTH)} tile${BANNER_DEPTH === 1 ? '' : 's'} back out, <i>Leaving</i> and its name for ${LEAVING_MS / 1000} seconds. Walking back in within
+    ${BANNER_AGAIN} seconds of leaving shows nothing. Settings, under Interface, turns it off.</p>
     <h3>What a tool is worth</h3>
     <p>A tool is rarely worth the number stamped on it. Damage drags it down, the metal of its head
     lifts or lowers it, and rarity and a blessing lift it further &mdash; and it is that figure, not
@@ -801,6 +809,8 @@ export function helpText(): string {
     stop</b>. Pick a number and it counts itself down and puts the work away when it is done, and the
     action bar says how far through it is, so a run of bricks is one right-click rather than one
     each.</p>
+    <p>With a mouse, a ring round the pointer fills with the same progress while the pointer is over the
+    island, and in a fight fills once for every swing or draw. Settings, under Interface, turns it off.</p>
     <p>Stitch a <b>toolbelt</b> (${bill('make_toolbelt')}, on an awl) and wear it, and it carries the
     jobs you do most. It has <b>one loop for every ${numberWord(QL_PER_LOOP)} points</b> of how well it was made, to a full ${numberWord(BELT_MAX)}
     loops on a perfect one, and every loop answers to a number key &mdash; <kbd>1</kbd> to <kbd>9</kbd>,
@@ -814,7 +824,11 @@ export function helpText(): string {
     pushing it aside: it starts the moment the one in hand is done, walking you over if it needs to. The
     bar above the action shows what is waiting. You can keep <b>${numberWord(BASE_QUEUE)}</b> jobs in your head to begin
     with, and one more for every ${numberWord(QUEUE_PER_MIND)} points of <b>mind logic</b>, which is earned by crafting. Walking
-    off, stopping with <kbd>Esc</kbd> or clicking somewhere else forgets the lot.</p>
+    off puts them down until you carry on (below); stopping with <kbd>Esc</kbd> forgets the lot. The foot of the crafting window
+    lists them all, the job in hand first, each with its goes, its time at your pace now and, for a craft, what it
+    will use up and from where &mdash; pack, bags or a store by name &mdash; once the jobs ahead of it have had
+    theirs. Drag a waiting job by its grip, or press its <b>&uarr;</b> or <b>&darr;</b>, to change the order,
+    and <b>&times;</b> forgets it; the job in hand never moves.</p>
     <h3>What the characteristics are for</h3>
     <p><b>Work, and only work.</b> Eating, drinking, and carrying things in and out of crates, bags and
     barrels teach the body nothing: they cost what wind they cost and leave every characteristic where
@@ -900,6 +914,13 @@ export function helpText(): string {
       <tr><td><kbd>F1</kbd> / <kbd>H</kbd></td><td>This help, the journal's Help tab</td></tr>
       <tr><td>⤢ / double-click title</td><td>Expand a window to nearly the whole screen, and back</td></tr>
     </table>
+    <p><b>What is on you</b> is the row of marks along the foot of the status panel. Round marks on the left are
+    working for you: rest, a meal's or a tincture's knack, favour, Calm, a spell or a technique, a light, a worn
+    enchantment, your settlement's baubles. Square red marks on the right are working against you: wounds,
+    bleeding, venom, a burn, hunger and thirst, a load past your limit, being winded, tired arms, the dark. Under
+    each is the time it has left, or how many; point at one, or tap it, for its exact effect and where it came
+    from. Tired arms begin under ${percent(TIRED_AT)} stamina and make a swing up to ${percent(TIRED_SLOW)} longer, and health
+    stops mending while food or water is at or under ${percent(HEAL_FED)}.</p>
     <h3>Trades</h3>
     <p>A trade is the thing you are, on top of the things you know. A craft trade opens once you have <b>${CLASS_AT}</b>
     in any skill it covers; a <b>fighting trade</b> asks for no skill and can be taken from the start. You may hold <b>one craft trade and one fighting trade</b> at once, and the
@@ -957,6 +978,11 @@ export function helpText(): string {
     <p>With <i>Frame life</i> on in Settings (<kbd>O</kbd>), Display, Runecut's themed frames have small animals and
     lights going about them: ${lifeWords()}. They keep to the frame and never cross what is inside a window.
     They are not shown on a phone's screen, with Fast graphics, or when your system asks for less motion.</p>
+    <p><b>Runecut light</b> in Settings, Display, puts the dark stone on with the island's night, with your computer's
+    (${islandTime(LOCAL_NIGHT_STARTS)} to ${islandTime(LOCAL_NIGHT_ENDS)}), or always or never; the frame life keeps the same night.
+    <b>Colours</b> there swaps every colour that means something for a red-green safe pair (blue and vermilion) or a
+    blue-yellow safe one (teal and crimson). Either way each also has a mark: &#9650; and &#9660; for better and worse,
+    &#10003; and &#10007; in Crafting, Easy, Even or Hard on the target, &#9888;&#xFE0E; when overloaded.</p>
     <p><b>How you look</b> can be changed at any time on an island: <i>Customize character</i> under
     <b>How you look</b> in Settings (<kbd>O</kbd>) takes you back to the character creator on the account
     page, on the look you have on. Nothing changes until you press <i>Step ashore</i> there, which keeps the
@@ -1007,7 +1033,11 @@ export function helpText(): string {
     turns shards into bricks, and so on. Each recipe lists its tool and materials, green when you have
     them at hand and red when you do not, and whatever you can make right now sits at the top of its group. Tick
     <i>Only what I can make</i> to hide the rest. The same recipes are on each material's own menu,
-    where <i>All</i> keeps going until the materials run out.</p>
+    where <i>All</i> keeps going until the materials run out. Point at a red tool or material, tab to it,
+    or long-press it on a touch screen, and a tree shows how it is made, down to what is gathered: how many
+    of each part and how many you have at hand, up to ${numberWord(TREE_DEPTH)} recipes deep. A part you
+    have enough of is not followed further, and where several recipes make a thing the first you can make
+    now is shown. Click any line of it for that thing's recipes.</p>
     <p><b>What is at hand.</b> A craft, and any work at a station that uses something up, takes it from
     your pack, then the bags on your back, then your stores within <b>${CRAFT_REACH} tiles</b> of where you
     stand, nearest first. At a station that means the metal for a mould or an anvil, ore and scrap for
@@ -2200,7 +2230,7 @@ export function helpText(): string {
     the cost climbs with how far over you are: everything past the mark slows you and every action
     takes more wind, as armour does &mdash; ${numberWord(OVER_EXAMPLE)} kilos past a starting back drags on you like about
     ${numberWord(Math.round(overDrag(OVER_EXAMPLE, CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH) / PLATE_SUIT))} full suits of iron plate. Past <b>${times(CARRY_STOP)}</b> your limit you are down to
-    <b>${share(CARRY_CRAWL)} of your pace</b>. The inventory footer turns red and says by how much, and the bars
+    <b>${share(CARRY_CRAWL)} of your pace</b>, and any amount over it makes every swing or draw <b>${percent(OVERBURDEN_SWING)} longer</b>. The inventory footer turns red and says by how much, and the bars
     say so too.</p>
     <p>The damage column turns <b>amber past ${DAMAGE_WARN}</b> and <b>red past ${DAMAGE_BREAKING}</b>, so a tool about to go to
     pieces says so where you are looking rather than only in the log.</p>
@@ -2484,8 +2514,9 @@ export function helpText(): string {
     seconds, and bare hands ${FIST.swing}. A bow's draw is its own the same way. Skill takes its share off as it does off
     every job, fighting for a swing and archery for a draw, and body control its own: a ${itemDef(HELP_SWORD.id).name.toLowerCase()}
     swings every ${HELP_SWING_AT.map((f) => `${fixed2(swingSeconds(HELP_SWORD.swing, f))} seconds at fighting ${f}`).join(', ')},
-    and nothing swings quicker than every ${SWING_FLOOR.toFixed(1)} seconds. Armour, what you carry and a wagon, driven or
-    not, do not change it. Hover a weapon in your pack for what a swing of it takes in your hands now, and what made it so. Every swing or draw costs
+    and nothing swings quicker than every ${SWING_FLOOR.toFixed(1)} seconds. ${armourSwingSays()} ${overburdenSwingSays()}
+    Your back takes ${CARRY_BASE} kilos and ${numberWord(CARRY_PER_STRENGTH)} more for every point of body strength, with what a trade's
+    perk, Power's Pack Mule and a Packmule on a pack add (What your back will take). Both come after the ${SWING_FLOOR.toFixed(1)}-second floor, so a swing already on it is slowed by the same share. Hover a weapon in your pack for what a swing of it takes in your hands now, and what made it so. Every swing or draw costs
     ${percent(SWING_WIND)} of your stamina and ${percent(SWING_WIND_KG)} more for every kilogram in your hand, before body stamina
     and armour have their say; below ${percent(TIRED_AT)} stamina every swing is slower, up to ${percent(TIRED_SLOW)} slower with none left.</p>
     <p>${capital(listed(Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`)))} <b>draw back for a heavy blow</b>

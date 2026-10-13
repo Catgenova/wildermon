@@ -10,13 +10,13 @@ import { SNAP } from '../windows';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { JOINT_EVERY, PIN_EVERY, STITCH_EVERY } from '../runecut-dress';
 import { lifeWords } from '../runecut-life';
-import { islandTime } from '../theme';
+import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS } from '../../game/prices';
 import { RECENT } from './craft';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
-import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW } from '../../game/fight';
+import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
@@ -77,7 +77,7 @@ import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, MOTE_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
-import { DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
+import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
 import { defaultKey } from '../../game/keybinds';
 import { guidePages } from '../../game/guide';
@@ -2007,6 +2007,35 @@ export const NEWS: News[] = [
       'Hovering anything in your pack or a store shows a card with its weight, its damage, what work it is a tool for, what it holds or what it feeds. '
         + 'Armour, shields and weapons show their quality as it is, without the working-quality arrow, which only work tools have.',
       'When there is no free room the size of a window you open, it opens as big as the room there is, and grows back once there is room, rather than lying over another window or a bar.',
+    ],
+  },
+  {
+    n: 148,
+    day: '2026-10-13',
+    lines: () => [
+      armourSwingSays(),
+      `${overburdenSwingSays()} Your back takes ${CARRY_BASE} kilos and ${CARRY_PER_STRENGTH} more for every point of body strength, with what a trade's perk, Power's Pack Mule and a Packmule on a pack add.`,
+      `Both come after the ${SWING_FLOOR.toFixed(1)}-second floor, on the island and in the browser alike, and multiply with tired and wounded arms. `
+        + 'Hovering a weapon names each on the line under A swing every, with its share.',
+    ],
+  },
+  {
+    n: 149,
+    day: '2026-10-13',
+    lines: () => [
+      'The status panel has a row for everything on you: round marks on the left for what helps (rest, a meal\'s or a tincture\'s knack, favour, Calm, a spell or a technique, a lit light, a worn enchantment, your settlement\'s baubles), '
+        + 'square red marks on the right for what harms (wounds, bleeding, venom, a burn, hunger and thirst, being overloaded, winded or tired arms, the dark). '
+        + 'Under each is the time it has left; point at one, or tap it, for its exact effect and where it came from. It replaces the rest, meal, favour, light and Overloaded lines and the list of wounds.',
+      'A ring round the mouse pointer fills with the job in hand, as the action bar does; in a fight it fills once for every swing or draw. It shows only over the island, not over a window, a bar or a menu, and not on a touch screen. '
+        + 'Settings, Display, Interface: Progress ring at the pointer.',
+      'Walking a tile inside a settlement\'s border brings its name up near the top of the screen, with your rank there or its founder under it; a tile back out says you are leaving it. '
+        + 'Settings, Display, Interface: Settlement names at the border.',
+      'The Crafting window lists every job you have lined up, the one in hand first: its goes left, its time at your pace, and for a craft what it will use up and whether from your pack, your bags or a named store, '
+        + 'once the jobs ahead have had theirs. Drag a waiting job by its grip, or use the up and down buttons, to change the order, and the cross to forget it; the job in hand never moves.',
+      'Point at a red tool or material in a recipe, tab to it, or long-press it, and a tree shows how to make it, down to what is gathered, with how many of each part and how many you have at hand. Click any line for that recipe.',
+      'Settings, Display, Interface: Colours switches every colour that means something to a red–green safe set or a blue–yellow safe one, in the windows and on the island. '
+        + 'Whatever the colours, better and worse, what you have and lack, a fight\'s odds, being overloaded and buttons that cannot be undone each carry a mark as well.',
+      `Runecut light offers Island clock, My computer's clock (dark stone from ${islandTime(LOCAL_NIGHT_STARTS)} to ${islandTime(LOCAL_NIGHT_ENDS)} by your computer's clock), Always day and Always night.`,
     ],
   },
 ];

@@ -3611,6 +3611,19 @@ export class Island {
   }
 
   /**
+   * The jobs waiting put in another order, or some taken out (`jobqueue.ts`).
+   * The island checks the list it was seen as and says the list back either
+   * way, so a refusal puts the browser's list back to what is really there.
+   */
+  async queueOrder(seen: Lined[], order: number[]): Promise<void> {
+    if (!this.info) return;
+    const { data, error } = await supabase().rpc('rpc_queue_order', { p_world: this.info.id, p_seen: seen, p_order: order });
+    if (error) return;
+    const said = (data ?? {}) as { queue?: unknown; capacity?: number | null };
+    this.hooks.mine?.({ queue: lineUp(said.queue), cap: said.capacity ?? null });
+  }
+
+  /**
    * Say something to everybody on the island.
    *
    * Nothing is drawn here. The line goes over, the island writes it into

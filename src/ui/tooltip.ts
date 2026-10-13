@@ -74,6 +74,9 @@ export class Tooltip {
     let top = at.y + 20;
     if (left + this.w > uiBox().w - 4) left = at.x - this.w - 8;
     if (top + this.h > uiBox().h - 4) top = at.y - this.h - 8;
+    // And on the screen whichever way it went: a phone is narrower than a wide note and either side of a point near its middle.
+    left = Math.max(4, Math.min(left, uiBox().w - 4 - this.w));
+    top = Math.max(4, top);
     if (left !== this.left) this.el.style.left = `${(this.left = left)}px`;
     if (top !== this.top) this.el.style.top = `${(this.top = top)}px`;
   }

@@ -1,5 +1,5 @@
 import { NIGHT_ENDS, NIGHT_STARTS, type Game } from '../../game/game';
-import { applyLook, islandTime } from '../theme';
+import { applyLook, islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { BINDS, BIND_GROUPS, keyName, keyReserved, MAX_KEYS, type Keybinds } from '../../game/keybinds';
 import { whoAmI } from '../../net/accounts';
 import { RARITIES } from '../../game/items';
@@ -7,12 +7,14 @@ import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
 import { listed, numberWord } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
+import { RING_FADE_MS } from '../pointerring';
+import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { RING_REACH } from '../../render/renderer';
 import { FIRE_CAPACITY, fireBurnsFor, type PlacedCampfire } from '../../game/campfire';
 import { keepControlKeys } from '../controlkeys';
@@ -218,11 +220,41 @@ export class SettingsPanel {
     choose<UiLight>(
       'Runecut light',
       'Day is pale stone with dark writing. Night is dark stone with pale writing, and the rune of the window in front glows. '
-        + `Island clock shows Night from ${islandTime(NIGHT_STARTS)} to ${islandTime(NIGHT_ENDS)} island time and Day the rest of the day. No effect in Classic.`,
-      [['day', 'Day'], ['night', 'Night'], ['clock', 'Island clock']],
+        + `Island clock: Night from ${islandTime(NIGHT_STARTS)} to ${islandTime(NIGHT_ENDS)} island time, Day the rest of the island's day. `
+        + `My computer's clock: Night from ${islandTime(LOCAL_NIGHT_STARTS)} to ${islandTime(LOCAL_NIGHT_ENDS)} by this computer's clock, Day the rest. `
+        + 'Always day and Always night never change. The life on the frames keeps the same night. No effect in Classic.',
+      [['clock', 'Island clock'], ['local', "My computer's clock"], ['day', 'Always day'], ['night', 'Always night']],
       () => game.settings.uiLight,
       (v) => {
         game.settings.uiLight = v;
+        relook();
+      },
+    );
+    // The colours that carry a meaning (`data-cb` in src/style.css); every place also has a mark that is not a colour, whichever is chosen.
+    choose<UiColours>(
+      'Colours',
+      'Changes only the colours that mean something, in Runecut, in Classic and on the island. '
+        + 'Red-green safe, for deuteranopia and protanopia: good is blue instead of green, bad vermilion instead of red, a warning yellow. '
+        + 'Blue-yellow safe, for tritanopia: good is teal, bad crimson, a warning amber. '
+        + 'Whichever you choose, each of these also has a mark that is not a colour.'
+        + '<details class="setting-more"><summary>Where, and the mark each has</summary><ul>'
+        + '<li>Better and worse on a compare card: ▲ and ▼ before the difference.</li>'
+        + '<li>A wildermon\'s trait figures: ▲ a gain, ▼ a loss.</li>'
+        + '<li>Crafting: ✓ before what you have, ✗ before what you lack.</li>'
+        + '<li>The target panel: Easy, Even or Hard before the blows each way, and ⚠︎ when it draws back for a heavy blow.</li>'
+        + '<li>What is on you, on the status panel: what helps in a round mark on the left, what harms (a wound, a load) in a square one on the right.</li>'
+        + '<li>Overloaded: ⚠︎ on the pack\'s weight line, and its load bar striped past the mark and cross-hatched past the end.</li>'
+        + '<li>Leave, disband and the other buttons that cannot be undone: a striped foot.</li>'
+        + '<li>The four bars, each named: red-green safe, Health vermilion, Stamina yellow, Food purple, Water blue; '
+        + 'blue-yellow safe, Health crimson, Stamina amber, Food green, Water dark blue.</li>'
+        + '<li>On the island: the health bar over a beast (also its length), the ring and ! of a heavy blow coming, '
+        + 'the arrows at the edge of the view for what is after you (also their shape), the edge of the view when you are struck, '
+        + 'and the health you lose (also its −).</li>'
+        + '</ul></details>',
+      [['standard', 'Standard'], ['rg', 'Red–green safe'], ['by', 'Blue–yellow safe']],
+      () => game.settings.uiColours,
+      (v) => {
+        game.settings.uiColours = v;
         relook();
       },
     );
@@ -252,6 +284,24 @@ export class SettingsPanel {
         + `<details class="setting-more"><summary>What lives on which frame</summary><ul>${lifeWords().split('; ').map((w) => `<li>${w}</li>`).join('')}</ul></details>`,
       () => game.settings.uiLife,
       (v) => (game.settings.uiLife = v),
+    );
+    // The job in hand at the pointer (src/ui/pointerring.ts), and a settlement's name at its border (src/ui/deedbanner.ts).
+    add(
+      'Progress ring at the pointer',
+      'A ring round the mouse pointer fills clockwise from the top as the job in hand goes, reading what the action bar reads; '
+        + `in a fight it fills once for every swing or draw. Drawn full and faded over ${RING_FADE_MS / 1000} seconds when the job ends. `
+        + 'Only while the pointer is over the island: not over a window, a bar or a menu, and not on a touch screen.',
+      () => game.settings.pointerRing,
+      (v) => (game.settings.pointerRing = v),
+    );
+    add(
+      'Settlement names at the border',
+      `A settlement's name near the top of the screen for ${BANNER_MS / 1000} seconds once you are ${numberWord(BANNER_DEPTH)} tile${BANNER_DEPTH === 1 ? '' : 's'} inside its border, `
+        + "with your rank under it where you are a citizen and its founder's name where you are not; "
+        + `and "Leaving" with its name for ${LEAVING_MS / 1000} seconds once you are ${numberWord(BANNER_DEPTH)} tile${BANNER_DEPTH === 1 ? '' : 's'} outside. `
+        + `Walking back in within ${BANNER_AGAIN} seconds of leaving shows nothing.`,
+      () => game.settings.deedBanner,
+      (v) => (game.settings.deedBanner = v),
     );
     head('Performance');
     choose<'full' | 'fast'>(

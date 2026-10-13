@@ -4415,6 +4415,8 @@ create or replace function tired_at() returns double precision language sql immu
 create or replace function tired_slow() returns double precision language sql immutable as $fn$ select 0.6::double precision $fn$;
 create or replace function swing_wind() returns double precision language sql immutable as $fn$ select 0.03::double precision $fn$;
 create or replace function swing_wind_kg() returns double precision language sql immutable as $fn$ select 0.02::double precision $fn$;
+create or replace function armour_swing_kg() returns double precision language sql immutable as $fn$ select 0.002702702702702703::double precision $fn$;
+create or replace function overburden_swing() returns double precision language sql immutable as $fn$ select 0.2::double precision $fn$;
 create or replace function heavy_every() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
 create or replace function wind_up() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function heavy_hit() returns double precision language sql immutable as $fn$ select 2.5::double precision $fn$;

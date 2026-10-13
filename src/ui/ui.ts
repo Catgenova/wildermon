@@ -97,6 +97,8 @@ import { Palette, type PaletteEntry } from './palette';
 import { compareLines, itemCard } from './compare';
 import { priceLine } from '../game/prices';
 import { Notices } from './notices';
+import { PointerRing } from './pointerring';
+import { DeedBanner } from './deedbanner';
 import type { HelpPages } from './panels/help';
 import { BINDS, keyName, type Keybinds } from '../game/keybinds';
 import { Hud, WINDOWS } from './hud';
@@ -316,6 +318,10 @@ export class UI {
   placing: Placing | null = null;
   /** Lines near the top of the screen for a new whole number, a knack, work done or a birth. */
   readonly notices: Notices;
+  /** The job in hand as a ring round the mouse pointer (`pointerring.ts`). */
+  private readonly pointerRing: PointerRing;
+  /** A settlement's name as you cross into it (`deedbanner.ts`). */
+  private readonly deedBanner: DeedBanner;
   /** Find anything (`palette`, Ctrl+K). */
   private readonly palette: Palette;
   /** The help, built into its window the first time anything asks for it. */
@@ -351,6 +357,7 @@ export class UI {
       useLoop: (loop) => this.useLoop(loop),
       numbersTaken: () => this.numbersTaken,
       keys: cb.keys,
+      tooltip: this.tooltip,
     });
     /*
      * One place hears about a rebinding and tells the rest. The Keys tab redraws
@@ -524,6 +531,8 @@ export class UI {
     this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
     this.palette = new Palette(root, () => this.findables());
     this.notices = new Notices(root, game);
+    this.pointerRing = new PointerRing(root, game, canvas);
+    this.deedBanner = new DeedBanner(root, game);
 
     /*
      * While you were away: what the island counted for you, shown once as you
@@ -881,6 +890,8 @@ export class UI {
     // Runecut's light on the island clock turns at dusk and dawn; set to Day or Night this writes nothing.
     applyLook(this.game.settings, this.game.isNight());
     this.notices.update(performance.now());
+    this.pointerRing.update(performance.now());
+    this.deedBanner.update(performance.now());
     this.hud.update(this.renderer, fps);
     this.renderer.selected = this.tilePanel.target ? { x: this.tilePanel.target.x, y: this.tilePanel.target.y, down: this.tilePanel.target.down } : null;
     this.minimap.update();

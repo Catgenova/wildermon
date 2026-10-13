@@ -201,6 +201,98 @@
   color-scheme: dark;
 }
 
+/*
+ * Colour-blind palettes (Settings, Colours): `data-cb` on <html>, put there by
+ * `applyLook` in src/ui/theme.ts. Every colour that carries a meaning is one
+ * of the good, bad and warn tokens or a bar's fill, so this swaps those and
+ * nothing else, in Classic as well as Runecut by day and by night.
+ *
+ * `rg`, red-green safe (deuteranopia, protanopia): good is blue, bad is
+ * vermilion and warn yellow, the Okabe-Ito pair. `by`, blue-yellow safe
+ * (tritanopia): good is teal, bad crimson and warn amber. Checked by
+ * simulating each kind of colour blindness (Machado 2009, full strength):
+ * good and bad stand at least 34 apart (CIEDE2000) for the kinds their mode
+ * is for, where Runecut's standard moss and ember stand 4 to 10 apart for
+ * red-green; every ink is at least 4.5:1 on a window's face and its recessed
+ * rows (`--rc-stone`, `--rc-stone-2`, Classic's panel). Warn sits on bad's side of the pair and
+ * further from good, so it is told from bad by its lightness and its own
+ * mark: every meaning here has a second cue that is not colour (below, at
+ * each place).
+ *
+ * `--cb-world-*` are the same colours for the canvas (src/render/inks.ts):
+ * a beast's health bar, a heavy blow's ring and mark, the arrows at the edge
+ * of the view, the edge when you are struck, and the blood you lose.
+ */
+:root[data-cb='rg'] {
+  --cb-good: #5fb4f2;
+  --cb-bad: #f2873a;
+  --cb-warn: #f2e266;
+  --cb-good-fill: #3a8fd6;
+  --cb-bad-fill: #d55e00;
+  --cb-warn-fill: #e6c300;
+  --cb-health: #d55e00;
+  --cb-stamina: #f0e442;
+  --cb-food: #cc79a7;
+  --cb-water: #0072b2;
+  --cb-world-good: 86, 180, 233;
+  --cb-world-warn: 240, 228, 66;
+  --cb-world-bad: 240, 110, 20;
+}
+:root[data-cb='rg']:not([data-ui='classic']) {
+  --cb-good: #1d5a96;
+  --cb-bad: #8a2e00;
+  --cb-warn: #735a00;
+}
+:root[data-cb='rg'][data-rc='night']:not([data-ui='classic']) {
+  --cb-good: #b5dcff;
+  --cb-bad: #ffc594;
+  --cb-warn: #f2ec9a;
+}
+:root[data-cb='by'] {
+  --cb-good: #40d0d0;
+  --cb-bad: #ff6680;
+  --cb-warn: #f0c070;
+  --cb-good-fill: #1fa5a5;
+  --cb-bad-fill: #c8203c;
+  --cb-warn-fill: #e8a33a;
+  --cb-health: #c8203c;
+  --cb-stamina: #f2c35a;
+  --cb-food: #8fd06c;
+  --cb-water: #1d4f9a;
+  --cb-world-good: 64, 208, 208;
+  --cb-world-warn: 240, 192, 112;
+  --cb-world-bad: 232, 32, 80;
+}
+:root[data-cb='by']:not([data-ui='classic']) {
+  --cb-good: #00686e;
+  --cb-bad: #b0173c;
+  --cb-warn: #6e4a00;
+}
+:root[data-cb='by'][data-rc='night']:not([data-ui='classic']) {
+  --cb-good: #8fe6ea;
+  --cb-bad: #ffbccb;
+  --cb-warn: #fbe7a8;
+}
+/* The tokens the rules below read, from the palette: in Classic these are otherwise unset and fall through to each rule's own literal. */
+:root[data-cb] {
+  --t-good: var(--cb-good);
+  --t-bad: var(--cb-bad);
+  --t-warn: var(--cb-warn);
+  --t-good-line: var(--cb-good-fill);
+  --t-good-fill: var(--cb-good-fill);
+  --t-good-glow: color-mix(in srgb, var(--cb-good-fill) 70%, transparent);
+  --t-good-wash: color-mix(in srgb, var(--cb-good-fill) 42%, transparent);
+  --t-bad-line: var(--cb-bad-fill);
+  --t-bad-fill: var(--cb-bad-fill);
+  --t-bad-wash: color-mix(in srgb, var(--cb-bad-fill) 18%, transparent);
+  --t-warn-fill: var(--cb-warn-fill);
+  --t-warn-wash: color-mix(in srgb, var(--cb-warn-fill) 20%, transparent);
+  --t-fill-health: linear-gradient(color-mix(in srgb, var(--cb-health) 75%, #fff), var(--cb-health));
+  --t-fill-stamina: linear-gradient(color-mix(in srgb, var(--cb-stamina) 75%, #fff), var(--cb-stamina));
+  --t-fill-food: linear-gradient(color-mix(in srgb, var(--cb-food) 75%, #fff), var(--cb-food));
+  --t-fill-water: linear-gradient(color-mix(in srgb, var(--cb-water) 75%, #fff), var(--cb-water));
+}
+
 * {
   box-sizing: border-box;
 }
@@ -712,18 +804,10 @@ kbd {
   transition: transform 0.25s ease;
 }
 
-/* Rest and affinities: the same row as a companion, in a quieter colour; one to a line, so each reads whole. */
-.hud-companion.hud-boons {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  color: var(--t-good, #9ec27a);
-}
-
-/* Being overloaded slows you, so it is said as a warning. */
-.hud-boon.hud-warn {
-  color: var(--t-bad, #e08a72);
-  font-weight: 600;
+/* A warning by a sign as well as a colour, for whoever cannot see the colour. */
+.inv-footer.inv-over::before,
+.hud-target-intent.hud-target-warn::before {
+  content: '\26A0\FE0E\00a0';
 }
 
 /* The journal: a tick, the goal, and a quiet hint after it. */
@@ -889,7 +973,6 @@ kbd {
 
 #ui.narrow .hud-name,
 #ui.narrow .hud-footer,
-#ui.narrow .hud-boons,
 #ui.narrow .hud-companion,
 #ui.narrow .hud-light {
   grid-column: 1 / -1;
@@ -945,17 +1028,6 @@ kbd {
 #ui.narrow .hud-acts {
   grid-column: 1 / -1;
   margin: 3px 0 1px;
-}
-
-/* Height is what a phone is short of: rest and the rest go side by side, each still whole. */
-#ui.narrow .hud-companion.hud-boons {
-  flex-direction: row;
-  flex-wrap: wrap;
-  column-gap: 14px;
-}
-
-#ui.narrow .hud-boon {
-  white-space: nowrap;
 }
 
 #ui.narrow .toolbar {
@@ -2215,6 +2287,10 @@ kbd {
   color: var(--t-bad, #e0574d);
 }
 
+/* Better and worse said by a mark as well as a colour, for whoever cannot tell the two colours apart. */
+.tip-good::before { content: ' \25B2'; }
+.tip-bad::before { content: ' \25BC'; }
+
 .tip-same {
   color: var(--ui-dim);
 }
@@ -2647,6 +2723,10 @@ kbd {
   color: var(--t-bad, #e0866f);
 }
 
+/* Had and lacking by a mark as well as a colour, as the settlement's next level writes them. */
+.craft-needs .have::before { content: '\2713\00a0'; }
+.craft-needs .lack::before { content: '\2717\00a0'; }
+
 .craft-needs em {
   font-style: normal;
   opacity: 0.7;
@@ -2776,6 +2856,11 @@ kbd {
 .hud-target-consider[data-rating="easy"] { color: var(--t-good, #8fd37a); }
 .hud-target-consider[data-rating="even"] { color: var(--t-warn, #e8c45a); }
 .hud-target-consider[data-rating="hard"] { color: var(--t-bad, #f07a62); }
+/* Which way it leans in a word as well as a colour (`consider`'s own words). */
+.hud-target-consider[data-rating]::before { font-weight: 700; }
+.hud-target-consider[data-rating="easy"]::before { content: 'Easy: '; }
+.hud-target-consider[data-rating="even"]::before { content: 'Even: '; }
+.hud-target-consider[data-rating="hard"]::before { content: 'Hard: '; }
 .hud-target-note {
   margin-top: 2px;
   color: var(--ui-dim);
@@ -3279,6 +3364,9 @@ kbd {
 .trait-fig + .trait-fig::before { content: ' '; }
 .trait-up { color: var(--t-good, #8fd49a); }
 .trait-down { color: var(--t-warn, #e0a06a); }
+/* A gain or a loss by a mark as well, since a figure's sign is not which way is better: less appetite is a gain. */
+.trait-up::before { content: '\25B2\00a0'; }
+.trait-down::before { content: '\25BC\00a0'; }
 /* And what the three of them come to once the herd and the brush are in. */
 .pal-worth { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 3px; }
 .worth-label { font-size: 10px; line-height: 1; padding: 3px 0; color: var(--t-dim, #7c8a80); text-transform: uppercase; letter-spacing: 0.04em; }
@@ -3309,11 +3397,103 @@ kbd {
 .title-chip:hover { border-color: var(--t-line-hi, #7d8d84); color: var(--t-strong, #e2e9e2); }
 .title-chip.title-worn { color: var(--t-gold, #f0c060); border-color: var(--t-gold, #f0c060); background: var(--t-wash-soft, rgba(240, 192, 96, 0.1)); }
 
+/*
+ * What is on you, a mark each, under the clock (`EffectRow`, src/ui/effects.ts):
+ * for you on the left in round marks, against you on the right in square
+ * ones in the colour of harm, the time left under each.
+ * `EffectRow` counts the marks to the row's width (22px and a 3px gap each):
+ * one line while both halves fit, two at most, and what does not fit behind a
+ * "+N".
+ */
+.hud-fx {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--t-line-2, #3a3128);
+}
+.hud-fx[hidden] { display: none; }
+.hud-fx-side { display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; }
+.hud-fx-bad { margin-left: auto; flex-direction: row-reverse; }
+.hud-fx-mark {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  cursor: help;
+}
+.hud-fx-icon {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid currentColor;
+}
+.hud-fx-icon svg { display: block; width: 14px; height: 14px; }
+.hud-fx-buff .hud-fx-icon {
+  border-radius: 50%;
+  color: var(--t-good, #9ec27a);
+  background: color-mix(in srgb, var(--t-good, #9ec27a) 13%, transparent);
+}
+.hud-fx-debuff .hud-fx-icon {
+  border-radius: 1px;
+  color: var(--t-bad, #e08a72);
+  background: color-mix(in srgb, var(--t-bad, #e08a72) 15%, transparent);
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--t-bad, #e08a72) 55%, transparent);
+}
+.hud-fx-mark:hover .hud-fx-icon,
+.hud-fx-mark:focus-visible .hud-fx-icon {
+  background: color-mix(in srgb, currentColor 26%, transparent);
+}
+.hud-fx-mark:focus-visible { outline: none; }
+.hud-fx-mark:focus-visible .hud-fx-icon { outline: 1px solid var(--ui-accent); outline-offset: 1px; }
+.hud-fx-cap {
+  height: 10px;
+  margin-top: 1px;
+  font-size: 9px;
+  line-height: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  color: var(--ui-dim);
+}
+.hud-fx-debuff .hud-fx-cap { color: var(--t-bad, #e08a72); }
+/* What does not fit: a count in a ring of dashes, and the list in its note. */
+.hud-fx .hud-fx-more {
+  justify-content: center;
+  height: 20px;
+  box-sizing: border-box;
+  border: 1px dashed var(--ui-border-light, #9a7f4c);
+  border-radius: 10px;
+  color: var(--ui-dim);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.hud-fx .hud-fx-more:hover,
+.hud-fx .hud-fx-more:focus-visible { color: var(--ui-accent); border-color: var(--ui-accent); }
+/* Past one line: what is for you on a line of its own above, what is against you below it, from the right. */
+.hud-fx.hud-fx-two { flex-direction: column; align-items: stretch; gap: 3px; }
+.hud-fx.hud-fx-two .hud-fx-bad { margin-left: 0; }
+#ui.narrow .hud-fx { grid-column: 1 / -1; margin-top: 3px; padding-top: 3px; }
+[data-ui='runecut'] .hud-fx {
+  border-top-color: var(--rc-shade);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi);
+}
+
 /* What is open on you, under the bars. */
 .hud-wounds { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
-.wound-row { font-size: 11px; color: var(--t-dim, #b9a99c); line-height: 1.35; }
-.wound-row.wound-open { color: var(--t-bad, #e08a72); }
-.wound-row.wound-bad { color: var(--t-bad, #d05a4a); font-weight: 600; }
 
 /* The wind, when there is a sail over you. */
 .hud-wind { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--t-info, #a8bcc4); }
@@ -4120,9 +4300,13 @@ kbd {
   cursor: default;
 }
 
-/* What cannot be undone with a click -- leave, disband, delete a rank -- is red before it is pressed. */
+/* What cannot be undone with a click -- leave, disband, delete a rank -- is red before it is pressed, with a hazard stripe along its foot for whoever cannot see red. */
 :is(.social-body, .deed-body) .tb-btn.tb-danger:not(:disabled) {
   color: var(--t-bad, #e0574d);
+  background-image: repeating-linear-gradient(135deg, var(--t-bad, #e0574d) 0 3px, transparent 3px 6px), var(--t-btn, linear-gradient(#3a3128, #241f19));
+  background-size: 100% 3px, 100% 100%;
+  background-position: left bottom, 0 0;
+  background-repeat: no-repeat;
 }
 
 /* On a phone a row's buttons are big enough for a thumb. */
@@ -4837,6 +5021,274 @@ kbd {
   color: var(--ui-accent);
 }
 
+/*
+ * Crafting: everything queued, the job in hand first, at the foot of the
+ * book; never more than two fifths of the window, and the book keeps room for
+ * a recipe above it, the window scrolling as a whole below that.
+ */
+.craft-queue {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  max-height: 40%;
+  border-top: 1px solid var(--ui-border);
+}
+
+.craft-body:has(> .craft-queue:not([hidden])) > .inv-list {
+  min-height: 96px;
+}
+
+.cq-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 2px 0;
+}
+
+/* A group heading like the book's own (`.inv-group`), that folds the list. */
+.cq-fold {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cq-fold:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: 1px;
+}
+
+.cq-list {
+  min-height: 0;
+  margin: 0;
+  padding: 0 0 4px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.cq-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 2px 6px;
+  align-items: start;
+  padding: 4px 8px 4px 4px;
+  border-bottom: 1px solid var(--t-rule, rgba(255, 255, 255, 0.05));
+}
+
+.cq-anim .cq-row {
+  transition: transform 120ms ease-out;
+}
+
+.cq-anim .cq-row.cq-lifted {
+  transition: none;
+}
+
+.cq-row.cq-lifted {
+  z-index: 1;
+  background: var(--ui-bg-2);
+  box-shadow: 0 6px 14px -6px rgba(0, 0, 0, 0.6);
+}
+
+.cq-now {
+  background: var(--t-wash, rgba(227, 182, 87, 0.16));
+}
+
+.cq-grip {
+  color: var(--ui-dim);
+  line-height: 18px;
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+}
+
+.cq-row:not(.cq-now) .cq-grip {
+  cursor: grab;
+}
+
+.cq-row.cq-lifted .cq-grip {
+  cursor: grabbing;
+}
+
+.cq-now .cq-grip {
+  color: var(--ui-accent);
+  font-size: 9px;
+}
+
+.cq-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cq-meta {
+  margin-left: 6px;
+  color: var(--ui-dim);
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.cq-uses {
+  color: var(--ui-dim);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.cq-uses .have {
+  color: var(--t-good, #9fcf7c);
+}
+
+.cq-uses .lack {
+  color: var(--t-bad, #e0866f);
+}
+
+.cq-uses em {
+  font-style: normal;
+  opacity: 0.75;
+}
+
+.cq-btns {
+  display: flex;
+  gap: 3px;
+}
+
+.cq-btns .tb-btn {
+  min-width: 24px;
+  padding-inline: 4px;
+}
+
+.cq-btns .tb-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* A phone's thumb: a grip as wide as a button. */
+#ui.narrow .cq-row {
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+}
+
+#ui.narrow .cq-grip {
+  font-size: 16px;
+  line-height: 26px;
+}
+
+[data-ui='runecut'] .craft-queue {
+  border-color: var(--rc-shade);
+  box-shadow: inset 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .cq-row {
+  border-bottom-color: var(--rc-shade);
+  box-shadow: 0 1px 0 var(--rc-stone-hi);
+}
+
+[data-ui='runecut'] .cq-now {
+  box-shadow: inset 3px 0 0 var(--rc-teal), 0 1px 0 var(--rc-stone-hi);
+}
+
+/* Crafting: how a missing part is made, popped out of it. A tooltip's plate, but one you can point into and click. */
+.tooltip.rtree {
+  max-width: min(360px, calc(100% - 8px));
+  overflow-y: auto;
+  pointer-events: auto !important;
+  white-space: normal;
+}
+
+.rtree-parts {
+  margin: 0 0 0 7px;
+  padding: 0 0 0 9px;
+  border-left: 1px solid var(--ui-border);
+  list-style: none;
+}
+
+.rtree-node {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 1px 3px;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: var(--ui-text);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rtree-node:hover {
+  background: var(--t-hover, rgba(255, 255, 255, 0.06));
+}
+
+.rtree-node:focus-visible {
+  outline: 2px solid var(--ui-accent);
+  outline-offset: -1px;
+}
+
+.rtree-root > .rtree-node {
+  font-weight: 600;
+}
+
+.rtree-mark {
+  flex: 0 0 auto;
+  width: 1em;
+  text-align: center;
+}
+
+.rtree-mark.have {
+  color: var(--t-good, #9fcf7c);
+}
+
+.rtree-mark.lack {
+  color: var(--t-bad, #e0866f);
+}
+
+.rtree-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.rtree-have {
+  flex: 0 0 auto;
+  color: var(--ui-dim);
+  font-size: 11px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.rtree-how {
+  margin: 0 0 1px calc(1em + 9px);
+  color: var(--ui-dim);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.rtree-foot {
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid var(--ui-border);
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+[data-ui='runecut'] :is(.rtree-parts, .rtree-foot) {
+  border-color: var(--rc-shade);
+}
+
+[data-ui='runecut'] .rtree-node {
+  color: var(--rc-ink);
+  font-size: 13px;
+}
+
+[data-ui='runecut'] :is(.rtree-how, .rtree-have, .rtree-foot) {
+  color: var(--rc-carve);
+}
+
 .setting-note > b {
   display: block;
   color: var(--ui-text);
@@ -4883,11 +5335,12 @@ kbd {
 }
 
 .inv-load.inv-over .inv-load-fill {
-  background: var(--t-warn-fill, #c9933a);
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0 2px, transparent 2px 6px), var(--t-warn-fill, #c9933a);
 }
 
+/* Over the mark it is striped, and past the end cross-hatched, so the load reads without its colour. */
 .inv-load.inv-stuck .inv-load-fill {
-  background: var(--t-bad-fill, #c0503a);
+  background: repeating-linear-gradient(135deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px), repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.35) 0 2px, transparent 2px 4px), var(--t-bad-fill, #c0503a);
 }
 
 .inv-load-mark {
@@ -4952,6 +5405,131 @@ kbd {
 
 @media (prefers-reduced-motion: reduce) {
   .notice { animation: none; transition: none; }
+}
+
+/*
+ * The job in hand as a ring round the mouse pointer (src/ui/pointerring.ts).
+ * Under every window (they start at z-index 100), never in the way of a click,
+ * and moved by a transform the script writes on every pointermove.
+ */
+.pointer-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: 99;
+  pointer-events: none !important;
+  will-change: transform;
+}
+
+.pointer-ring[hidden] {
+  display: none;
+}
+
+.pointer-ring svg {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.pointer-ring circle {
+  fill: none;
+}
+
+.pointer-ring-track {
+  stroke: rgba(12, 10, 8, 0.5);
+  stroke-width: 5px;
+}
+
+.pointer-ring-arc {
+  stroke: var(--ui-accent);
+  stroke-width: 3px;
+  stroke-linecap: round;
+}
+
+.pointer-ring-swing .pointer-ring-arc {
+  stroke: var(--t-bad, #f07a62);
+}
+
+/* Over: drawn full, then faded. The fade is on this class alone, so a new job puts the ring back at once. */
+.pointer-ring-done {
+  opacity: 0;
+  transition: opacity 0.35s ease-out;
+}
+
+/* A settlement's name as you cross into it, and "Leaving" as you go (src/ui/deedbanner.ts). Under every window. */
+.deed-banner {
+  position: absolute;
+  top: 54px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 90;
+  pointer-events: none !important;
+}
+
+.deed-banner[hidden] {
+  display: none;
+}
+
+.deed-banner-plate {
+  max-width: calc(100% - 32px);
+  padding: 7px 22px 8px;
+  border: 1px solid var(--ui-border);
+  border-radius: 3px;
+  background: var(--ui-bg-2);
+  box-shadow: 0 4px 14px var(--t-shadow, rgba(0, 0, 0, 0.5));
+  color: var(--ui-text);
+  text-align: center;
+  animation: deed-banner-in 0.5s ease-out;
+  transition: opacity 0.6s;
+}
+
+.deed-banner-name {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.deed-banner-sub {
+  margin-top: 2px;
+  color: var(--ui-dim);
+  font-size: 12px;
+}
+
+.deed-banner-sub[hidden] {
+  display: none;
+}
+
+.deed-banner-leaving .deed-banner-plate {
+  padding: 4px 14px;
+}
+
+.deed-banner-leaving .deed-banner-name {
+  font-size: 14px;
+}
+
+.deed-banner-going .deed-banner-plate {
+  opacity: 0;
+}
+
+@keyframes deed-banner-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Fast graphics, or less motion asked for: up and gone with no fade. */
+.deed-banner-still .deed-banner-plate {
+  animation: none;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deed-banner-plate { animation: none; transition: none; }
+  .pointer-ring-done { transition: none; }
 }
 
 /* Market prices: a row a thing, its month of sales as a bar a day. */
@@ -5712,6 +6290,118 @@ kbd {
 
 [data-ui='runecut'] .notice::before {
   text-shadow: var(--rc-glow);
+}
+
+/* The ring at the pointer: the light in a groove, round a dark rim that reads on any ground. */
+[data-ui='runecut'] .pointer-ring-track {
+  stroke: color-mix(in srgb, var(--rc-edge-ink) 60%, transparent);
+}
+
+[data-ui='runecut'] .pointer-ring-arc {
+  stroke: var(--rc-rune);
+}
+
+[data-ui='runecut'] .pointer-ring-swing .pointer-ring-arc {
+  stroke: var(--rc-ember-fill);
+}
+
+/*
+ * A settlement's name: a plaque of the stone with its corners cut and a
+ * groove cut round it a little in. The groove is `::before`, dark where the
+ * light cannot reach and lit along its lower lip; `::after` is the face again
+ * inside it. Each inset's corner is the plaque's cut less what the inset
+ * takes off a forty-five-degree corner (2 - sqrt 2 of it).
+ */
+[data-ui='runecut'] .deed-banner {
+  filter: drop-shadow(0 0 0.6px var(--rc-edge-ink)) drop-shadow(0 8px 10px var(--rc-shadow));
+}
+
+[data-ui='runecut'] .deed-banner-plate {
+  --cut: 13px;
+  --face: var(--rc-tex), linear-gradient(var(--rc-stone-hi), var(--rc-stone) 45%, color-mix(in srgb, var(--rc-stone) 86%, var(--rc-shade)));
+  position: relative;
+  isolation: isolate;
+  padding: 12px 42px 13px;
+  border: 0;
+  border-radius: 0;
+  background: var(--face);
+  box-shadow: none;
+  clip-path: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  color: var(--rc-ink);
+}
+
+[data-ui='runecut'] .deed-banner-plate::before,
+[data-ui='runecut'] .deed-banner-plate::after {
+  --in: 5px;
+  --c: calc(var(--cut) - var(--in) * 0.586);
+  content: '';
+  position: absolute;
+  inset: var(--in);
+  z-index: -1;
+  clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
+}
+
+[data-ui='runecut'] .deed-banner-plate::before {
+  background: linear-gradient(var(--rc-shade-2), var(--rc-shade) 50%, var(--rc-stone-hi));
+}
+
+[data-ui='runecut'] .deed-banner-plate::after {
+  --in: 6.5px;
+  background: var(--face);
+}
+
+[data-ui='runecut'] .deed-banner-name {
+  color: var(--rc-ink);
+  font: 600 26px/1.15 var(--rc-title-font);
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 0 var(--rc-stone-hi), var(--rc-glow);
+}
+
+[data-ui='runecut'] .deed-banner-sub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 3px;
+  color: var(--rc-carve);
+  font: 700 13px/1.2 var(--rc-label-font);
+  letter-spacing: 0.04em;
+}
+
+[data-ui='runecut'] .deed-banner-sub[hidden] {
+  display: none;
+}
+
+/* A rune-lit rule either side of the line under the name. */
+[data-ui='runecut'] .deed-banner-sub::before,
+[data-ui='runecut'] .deed-banner-sub::after {
+  content: '';
+  flex: none;
+  width: 18px;
+  height: 2px;
+  background: var(--rc-rune);
+  box-shadow: 0 1px 0 var(--rc-stone-hi), var(--rc-glow);
+}
+
+[data-ui='runecut'] .deed-banner-leaving .deed-banner-plate {
+  --cut: 9px;
+  padding: 7px 26px 8px;
+}
+
+[data-ui='runecut'] .deed-banner-leaving .deed-banner-name {
+  font-size: 17px;
+}
+
+#ui.narrow .deed-banner:not(.deed-banner-leaving) .deed-banner-name {
+  font-size: 18px;
+}
+
+[data-ui='runecut'] #ui.narrow .deed-banner:not(.deed-banner-leaving) .deed-banner-plate {
+  padding-inline: 28px;
+}
+
+[data-ui='runecut'] #ui.narrow .deed-banner:not(.deed-banner-leaving) .deed-banner-name {
+  font-size: 22px;
 }
 
 /* The command palette and the questions ------------------------------------ */

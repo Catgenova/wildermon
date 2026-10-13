@@ -1,11 +1,11 @@
 import type { ActionDef } from './actions';
 import type { Game } from './game';
-import { bowRange, WEAPON_BY_ID, type ArmourClass, type WeaponDef } from './gear';
+import { ARMOUR, bowRange, SHIELDS, slotOf, WEAPON_BY_ID, type ArmourClass, type Slot, type WeaponDef } from './gear';
 import { swingEnchant } from './enchant';
 import { describeWith, itemDef, type Item } from './items';
 import type { SpeciesDef } from './creatures';
 import { SKILL_BY_ID } from './skills';
-import { listed, percent } from './words';
+import { finePercent, listed, percent } from './words';
 import { WOUND_BY_WEAPON, type Wound, type WoundKind } from './wounds';
 import { ACTION_FLOOR, ACTION_PACE } from './pace';
 
@@ -95,10 +95,79 @@ export const SWING_FLOOR = ACTION_FLOOR / ACTION_PACE;
  * A go of a fight in seconds, off its base (`fightBase`): each point of the
  * skill it is done with takes a part in 140 off it, as it does off every job
  * (`goSeconds`), and the body's control and a bauble theirs, never below
- * `SWING_FLOOR`. The island's `go_secs`.
+ * `SWING_FLOOR`; and then what you wear and carry (`burden`, `Game.swingBurden`),
+ * after the floor, so a swing already on it is slowed by the same share. The
+ * island's `go_secs`.
  */
-export const swingSeconds = (base: number, skill: number, control = 1): number =>
-  Math.max(SWING_FLOOR, base * (1 - skill / 140) * control);
+export const swingSeconds = (base: number, skill: number, control = 1, burden = 1): number =>
+  Math.max(SWING_FLOOR, base * (1 - skill / 140) * control) * burden;
+
+/* ---- What you wear and carry, on a swing ------------------------------------ */
+
+/**
+ * Asked for: "Have armor weight affect attack speed minimally, and pack weight
+ * only when overburdened affect by 20%."
+ *
+ * A swing or a draw takes `ARMOUR_SWING_FULL` longer in the heaviest set of
+ * armour there is (`heaviestSet`: the heaviest make for every place armour or
+ * a shield is worn), and less in proportion to the kilograms worn, kilogram
+ * for kilogram (`armourSwingKg`). Each piece counts at its make's own weight,
+ * whatever it is made of, as a dodge counts it.
+ */
+export const ARMOUR_SWING_FULL = 0.1;
+/**
+ * And `OVERBURDEN_SWING` longer while what you carry is over what your back
+ * takes (`Game.overloaded`, the status panel's red "Overloaded"). Nothing for
+ * being under it, however close, and nothing for a cart's or a wagon's load.
+ */
+export const OVERBURDEN_SWING = 0.2;
+
+/** The places a piece of armour or a shield is worn in, in the order a set is told. */
+const ARMOUR_PLACES: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet', 'offhand'];
+let heaviest: { kg: number; pieces: string[] } | null = null;
+/**
+ * The heaviest set of armour there is: for each place, the piece or shield
+ * worn there that weighs most, and their kilograms together. Off the item
+ * definitions, so a heavier piece moves it.
+ */
+export function heaviestSet(): { kg: number; pieces: string[] } {
+  if (heaviest) return heaviest;
+  const most = new Map<Slot, { id: string; kg: number }>();
+  for (const id of [...ARMOUR.map((a) => a.id), ...Object.keys(SHIELDS)]) {
+    const slot = slotOf(id);
+    const kg = itemDef(id)?.weight ?? 0;
+    if (slot && kg > (most.get(slot)?.kg ?? -1)) most.set(slot, { id, kg });
+  }
+  const set = ARMOUR_PLACES.map((s) => most.get(s)).filter((p): p is { id: string; kg: number } => !!p);
+  heaviest = { kg: set.reduce((n, p) => n + p.kg, 0), pieces: set.map((p) => p.id) };
+  return heaviest;
+}
+/** What each kilogram of armour worn adds to a swing's time, as a share: the island's `armour_swing_kg`. */
+export const armourSwingKg = (): number => ARMOUR_SWING_FULL / heaviestSet().kg;
+/** What this many kilograms of armour make of a swing's time: 1.08 is 8% longer. */
+export const armourSwing = (kg: number): number => 1 + kg * armourSwingKg();
+/** What carrying over your limit makes of it: `OVERBURDEN_SWING` longer when over, as it is. */
+export const overburdenSwing = (over: boolean): number => (over ? 1 + OVERBURDEN_SWING : 1);
+
+/** Kilograms as they read: 31, 7.5. */
+const kgSaid = (kg: number): string => `${+kg.toFixed(1)} kg`;
+/**
+ * The armour rule in the game's own terms, off the numbers: a kilogram's
+ * share, a full set of plate's, and the heaviest set's, which is the most it
+ * comes to. For Help and What's new.
+ */
+export function armourSwingSays(): string {
+  const set = heaviestSet();
+  const plateKg = ARMOUR.filter((a) => a.cls === 'plate').reduce((n, a) => n + (itemDef(a.id)?.weight ?? 0), 0);
+  return `Armour makes every swing or draw ${finePercent(armourSwingKg())} longer for each kilogram you wear, a shield in the off hand included, `
+    + `each piece counted at its make's own weight whatever it is made of: `
+    + `a full set of plate (${kgSaid(plateKg)}) ${percent(plateKg * armourSwingKg())} longer, and the heaviest set there is, `
+    + `${listed(set.pieces.map((id) => itemDef(id)?.name.toLowerCase() ?? id))} (${kgSaid(set.kg)}), ${percent(ARMOUR_SWING_FULL)} longer.`;
+}
+/** And the pack's, which is all or nothing at the limit. */
+export const overburdenSwingSays = (): string =>
+  `Carrying more than your back takes (Overloaded on the status panel) makes every swing or draw ${percent(OVERBURDEN_SWING)} longer; `
+  + 'at or under it, what you carry changes nothing, and a cart\'s or a wagon\'s load, hitched or driven, is not carried.';
 
 /** What a go of a fight costs in stamina, before the body's own share; null for every other job. */
 export function fightWind(g: Game, def: Pick<ActionDef, 'id'>): number | null {

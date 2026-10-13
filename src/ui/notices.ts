@@ -28,8 +28,8 @@ export const DONE_AFTER = 8;
 /** How often the skill book is looked over for a new whole number, in milliseconds. */
 const LOOK_EVERY = 400;
 
-/** The bars a line across the top of the screen keeps clear of. */
-const TOP_BARS = '.toolbar, .hud-status, .saving-banner';
+/** The bars a line across the top of the screen keeps clear of, and a settlement's name while it is up (`deedbanner.ts`). */
+const TOP_BARS = '.toolbar, .hud-status, .saving-banner, .deed-banner';
 /** Interface pixels from the top of the screen with no bar there, and the gap left under a bar. */
 const EDGE = 12;
 const GAP = 8;

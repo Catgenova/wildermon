@@ -255,6 +255,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
     lastTarget = null;
     void island.hold();
   };
+  game.reorder = (seen, order) => void island.queueOrder(seen, order);
 
   /*
    * The clock on what the island is doing.

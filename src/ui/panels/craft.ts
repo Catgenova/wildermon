@@ -6,6 +6,8 @@ import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { UIWindow } from '../windows';
 import { Repaint } from '../repaint';
+import { RecipeTree } from '../recipetree';
+import { QueueView } from './craftqueue';
 
 const skillName = (id: string): string => SKILL_DEFS.find((s) => s.id === id)?.name ?? id;
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
@@ -68,6 +70,10 @@ export class CraftPanel {
   private counted: unknown = null;
   /** Told when a missing material is clicked that no recipe makes: the help is asked instead. */
   onNoRecipe: ((item: string) => void) | null = null;
+  /** How a missing part is made, popped out of it on hover or focus (`recipetree.ts`). */
+  private readonly tree: RecipeTree;
+  /** Everything queued, the job in hand first, at the foot of the book (`craftqueue.ts`). */
+  private readonly queue: QueueView;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     win.body.classList.add('inv-body', 'craft-body');
@@ -109,7 +115,11 @@ export class CraftPanel {
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
     this.footer.className = 'inv-footer';
-    win.body.append(this.search, head, this.list, this.footer);
+    this.tree = new RecipeTree(game, recipesMaking, (item) => this.jump(item));
+    this.queue = new QueueView(game);
+    win.body.append(this.search, head, this.list, this.queue.el, this.footer);
+    // Scrolled out from under it, or the window shut, a part's tree goes with it.
+    this.list.addEventListener('scroll', () => this.tree.hide(), { passive: true });
     // Every action gains a skill, so this fires several times a second while
     // you work. The book is looked at on a beat and redrawn only when what it
     // would say has actually changed.
@@ -203,7 +213,11 @@ export class CraftPanel {
 
   /** Look again, on a beat, and redraw only if the book has changed. */
   update(now: number): void {
-    if (!this.win.isOpen) return;
+    if (!this.win.isOpen) {
+      this.tree.hide();
+      return;
+    }
+    this.queue.update(now);
     const tile = `${this.game.player.tileX},${this.game.player.tileY}`;
     if (tile !== this.tile) {
       this.tile = tile;
@@ -242,6 +256,8 @@ export class CraftPanel {
       ? ' Rare stock is left out of the counts, as Settings asks; right-click a rare stack to make something from it.'
       : ''}`;
     this.list.replaceChildren();
+    // The part a tree was popped out of is gone with the old rows.
+    this.tree.hide();
     let shown = 0;
     let ready = 0;
     const wanted = (r: Recipe): boolean => (this.only ? this.only.has(r.id) : this.matches(r)) && (!this.readyOnly || !!statuses.get(r)?.ready);
@@ -406,7 +422,7 @@ export class CraftPanel {
       tool.className = st.tool ? 'have' : 'lack';
       tool.textContent = lower(r.tool);
       tool.title = st.tool ? 'Carried' : 'Not carried';
-      if (!st.tool) this.findable(tool, r.tool);
+      if (!st.tool) this.findable(tool, r.tool, { need: 1, tool: true, r });
       parts.push(tool);
     }
     for (const i of st.inputs) {
@@ -430,7 +446,7 @@ export class CraftPanel {
        * search away that nothing pointed at. What no recipe makes is gathered,
        * and the help is opened at what it says about it instead.
        */
-      if (i.have < i.need) this.findable(span, i.item);
+      if (i.have < i.need) this.findable(span, i.item, { need: i.need, tool: false, r });
       parts.push(span);
     }
     // What it would come out made of, since the same bill in two woods makes
@@ -502,7 +518,7 @@ export class CraftPanel {
    * click, or Enter or Space once tabbed to. What no recipe makes opens the
    * help at where it comes from instead.
    */
-  private findable(el: HTMLElement, item: string): void {
+  private findable(el: HTMLElement, item: string, part?: { need: number; tool: boolean; r: Recipe }): void {
     const makes = recipesMaking(item).length;
     el.classList.add('craft-find');
     el.tabIndex = 0;
@@ -510,9 +526,15 @@ export class CraftPanel {
     el.title += makes
       ? `. Click for ${makes === 1 ? 'the recipe that makes it' : `the ${makes} recipes that make it`}.`
       : '. Nothing makes it at a bench: click to see what the help says about where it comes from.';
-    const go = (): void => {
-      if (!this.showMaking(item)) this.onNoRecipe?.(item);
-    };
+    const go = (): void => this.jump(item);
+    // And how it is made, down to what is gathered, on hover or focus. The
+    // tree says what the hover note said, so the note is read out instead of
+    // shown, rather than come up over the tree a second later.
+    if (part) {
+      this.tree.attach(el, item, part.need, part.tool, part.r);
+      el.setAttribute('aria-label', `${el.textContent ?? ''}: ${el.title}`);
+      el.removeAttribute('title');
+    }
     el.addEventListener('click', go);
     el.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -520,6 +542,11 @@ export class CraftPanel {
       e.stopPropagation();
       go();
     });
+  }
+
+  /** What a click on a missing part does: the recipes that make it, or the help on where it comes from. */
+  private jump(item: string): void {
+    if (!this.showMaking(item)) this.onNoRecipe?.(item);
   }
 
   private craft(r: Recipe, times: number): void {

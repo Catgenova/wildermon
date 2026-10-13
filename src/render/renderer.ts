@@ -169,6 +169,7 @@ const CRATE_FLOOR = 0.7 * HEIGHT_SCALE;
 /** How big a wildermon is drawn in a crate against out in the world, so a grown one stands inside it. */
 const CRATE_SCALE = 0.8;
 import { FLOAT_COLOURS, Floaters } from './floaters';
+import { inkOr, WORLD_INK } from './inks';
 import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
@@ -4025,7 +4026,7 @@ export class Renderer {
       const by = hit.top - bh - 3 * zoom;
       ctx.fillStyle = 'rgba(12, 8, 6, 0.75)';
       ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
-      ctx.fillStyle = k > 0.5 ? '#7cc46a' : k > 0.25 ? '#e0b44a' : '#e2553c';
+      ctx.fillStyle = k > 0.5 ? inkOr('good', '#7cc46a') : k > 0.25 ? inkOr('warn', '#e0b44a') : inkOr('bad', '#e2553c');
       ctx.fillRect(bx, by, bw * k, bh);
       if (c.id === marked) {
         ctx.strokeStyle = 'rgba(255, 220, 140, 0.9)';
@@ -4126,7 +4127,7 @@ export class Renderer {
       ctx.save();
       ctx.translate(ax, ay);
       ctx.rotate(ang);
-      ctx.fillStyle = 'rgba(226, 70, 50, 0.92)';
+      ctx.fillStyle = inkOr('bad', 'rgba(226, 70, 50, 0.92)', 0.92);
       ctx.strokeStyle = 'rgba(20, 8, 6, 0.8)';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -4143,8 +4144,8 @@ export class Renderer {
     const struck = this.flashOf(game.player.attackedAt);
     if (struck > 0) {
       const glow = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.32, W / 2, H / 2, Math.max(W, H) * 0.72);
-      glow.addColorStop(0, 'rgba(190, 28, 18, 0)');
-      glow.addColorStop(1, `rgba(190, 28, 18, ${(0.42 * struck).toFixed(3)})`);
+      glow.addColorStop(0, inkOr('bad', 'rgba(190, 28, 18, 0)', 0));
+      glow.addColorStop(1, inkOr('bad', `rgba(190, 28, 18, ${(0.42 * struck).toFixed(3)})`, 0.42 * struck));
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, W, H);
     }
@@ -12928,7 +12929,7 @@ export class Renderer {
       ctx.strokeStyle = `rgba(12,12,14,${(alpha * 0.85).toFixed(3)})`;
       ctx.lineWidth = 3.4;
       ctx.strokeText(f.text, sx, sy);
-      ctx.fillStyle = `rgba(${FLOAT_COLOURS[f.kind]},${alpha.toFixed(3)})`;
+      ctx.fillStyle = `rgba(${(f.kind === 'taken' && WORLD_INK.bad) || FLOAT_COLOURS[f.kind]},${alpha.toFixed(3)})`;
       ctx.fillText(f.text, sx, sy);
     }
     ctx.lineWidth = 1;
@@ -12950,11 +12951,11 @@ export class Renderer {
     const rx = HUNT_REACH * Math.SQRT2 * HALF_W * zoom;
     const ry = HUNT_REACH * Math.SQRT2 * HALF_H * zoom;
     ctx.save();
-    ctx.fillStyle = `rgba(214, 62, 44, ${0.1 + 0.2 * k})`;
+    ctx.fillStyle = inkOr('bad', `rgba(214, 62, 44, ${0.1 + 0.2 * k})`, 0.1 + 0.2 * k);
     ctx.beginPath();
     ctx.ellipse(sx, sy, Math.max(1, rx * k), Math.max(1, ry * k), 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = `rgba(232, 74, 52, ${0.55 + 0.4 * k})`;
+    ctx.strokeStyle = inkOr('bad', `rgba(232, 74, 52, ${0.55 + 0.4 * k})`, 0.55 + 0.4 * k);
     ctx.lineWidth = Math.max(1.5, 2.2 * zoom);
     ctx.beginPath();
     ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
@@ -12972,7 +12973,7 @@ export class Renderer {
     ctx.lineWidth = Math.max(2, 3 * zoom);
     ctx.strokeStyle = 'rgba(20, 10, 8, 0.75)';
     ctx.strokeText('!', sx, sy);
-    ctx.fillStyle = '#ff5a3c';
+    ctx.fillStyle = inkOr('bad', '#ff5a3c');
     ctx.fillText('!', sx, sy);
     ctx.restore();
   }

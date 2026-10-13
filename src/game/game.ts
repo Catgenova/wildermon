@@ -70,7 +70,7 @@ import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
 import { considerSays } from './consider';
-import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
+import { ARMOUR_VS, armsRefusal, blockChance, BURN_WEAR, CROWD_BLOCK, DODGE_GAIN, dodgeChance, DRAW_WALK, FIGHT_QUIET, VENOM_DRAIN, VENOM_SECS, skillLine, type FightRecord, FIGHT_BACK_STILL, FIGHT_STANCE_NAMES, FLANK_HIT, legPace, FIGHT_TRIES, fightBase, fightWind, armPace, armourSwing, overburdenSwing, swingBase, swingSeconds, SWING_FLOOR, tiredPace, FOLLOW_RANGE, inFightReach, isFightJob, nextStance, stanceSays, stanceTaken, TARGET_RANGE } from './fight';
 import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
@@ -99,6 +99,7 @@ import { lockRefusal, type Lockable } from './locks';
 import { sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
 import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble, type IslandBauble } from './baubles';
+import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
 
 export type { ActiveAction } from './actor';
 
@@ -2840,6 +2841,28 @@ export class Game {
     this.paceUntil = this.time + secs;
   }
 
+  /**
+   * The kilograms of armour on you, a shield in the off hand with it: each
+   * piece at its make's own weight, whatever it is made of, as a dodge counts
+   * it. What a swing is slowed by (`swingBurden`); the island's `swing_burden`.
+   */
+  armourKg(): number {
+    const shield = this.worn('offhand');
+    return this.wornArmour().reduce((n, { item }) => n + itemDef(item.id).weight, 0)
+      + (shield && SHIELDS[shield.id] ? itemDef(shield.id).weight : 0);
+  }
+
+  /**
+   * What you wear and carry make of a swing or a draw, each as a share of its
+   * time (1.2 is 20% longer): the armour on you (`armourSwing`), and being
+   * over what your back takes (`overburdenSwing`), which is the status
+   * panel's "Overloaded" and nothing short of it. A cart's or a wagon's load
+   * is not on your back. The island's `swing_burden`.
+   */
+  swingBurden(): { armour: number; over: number } {
+    return { armour: armourSwing(this.armourKg()), over: overburdenSwing(this.overloaded() > 0) };
+  }
+
   /** Your chance of dodging a creature's blow just now (`dodgeChance`): body control past where it starts, less the kilograms of armour on you. */
   dodge(): number {
     const kg = this.wornArmour().reduce((n, { item }) => n + itemDef(item.id).weight, 0);
@@ -4715,6 +4738,31 @@ export class Game {
     return went;
   }
 
+  /**
+   * Put the jobs waiting in another order, or take some out (`jobqueue.ts`).
+   * The job in hand is not in the list, so it is never moved. On an island the
+   * island does it (`rpc_queue_order`) and says the list back; here it is
+   * done at once. Returns the refusal, in the island's words, or null.
+   */
+  putQueueInOrder(seen: SeenJob[], order: number[]): string | null {
+    const why = orderRefusal(seen, seenOf(this.queue), order);
+    if (why) {
+      this.logMsg(why, 'error');
+      return why;
+    }
+    const was = this.queue.slice();
+    const dropped = was.filter((_, i) => !order.includes(i)).map((q) => q.def.label);
+    this.queue.splice(0, this.queue.length, ...order.map((i) => was[i]));
+    if (!this.queue.length) this.held = false;
+    if (this.reorder) this.reorder(seen, order);
+    else if (dropped.length) this.logMsg(queueDropped(dropped), 'info');
+    this.events.emit('action');
+    return null;
+  }
+
+  /** Said to the island when the list is put in order (`rpc_queue_order`); null in the game you play by yourself. */
+  reorder: ((seen: SeenJob[], order: number[]) => void) | null = null;
+
   /** Whether the jobs in the queue are waiting on you rather than on the job in hand. */
   held = false;
 
@@ -5445,8 +5493,14 @@ export class Game {
     // And a Swiftwork on the tool takes its share off after the floor, as the island's `faith_steady` does.
     const control = this.controlSpeed() * baublePace(this.baubleHere(), def.skill);
     // A fight's go is the weapon's own seconds (`swingSeconds`); every other job's is a weight at the pace (`goSeconds`).
+    // And slower for the armour on you and for being over what your back takes, after the floor (`swingBurden`).
     const fight = fightBase(this, def);
-    const go = fight === null ? goSeconds(def.baseTime, skill, toolQl, control) : swingSeconds(fight, skill, control);
+    let go: number;
+    if (fight === null) go = goSeconds(def.baseTime, skill, toolQl, control);
+    else {
+      const { armour, over } = this.swingBurden();
+      go = swingSeconds(fight, skill, control, armour * over);
+    }
     return go * this.perk(`time:${def.id}`, 1) * this.pieceSpeed(def.skill) * (def.tool ? 1 - this.toolEnchant(def.tool, 'work') : 1);
   }
 
@@ -5468,7 +5522,8 @@ export class Game {
     const bauble = baublePace(this.baubleHere(), skillId);
     const perk = this.perk(`time:${def?.id ?? 'attack_creature'}`, 1);
     const piece = this.pieceSpeed(skillId);
-    const secs = swingSeconds(base, skill, control * bauble) * perk * piece;
+    const { armour, over } = this.swingBurden();
+    const secs = swingSeconds(base, skill, control * bauble, armour * over) * perk * piece;
     return {
       own: base / (tired * arms),
       secs,
@@ -5481,6 +5536,8 @@ export class Game {
         { what: 'a bauble on the settlement', by: bauble },
         { what: 'your perks', by: perk },
         { what: 'a piece standing near', by: piece },
+        { what: `armour ${this.armourKg().toFixed(1)} kg`, by: armour },
+        { what: 'overburdened', by: over },
       ].filter((p) => Math.abs(p.by - 1) > 1e-9),
     };
   }

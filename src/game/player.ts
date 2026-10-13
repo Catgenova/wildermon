@@ -139,6 +139,9 @@ export const RIDE_PHASE = RIDE_CADENCE / 2.4;
  * pinned to. The island reads the same number.
  */
 export const CARRY_CRAWL = 0.05;
+/** Under this much stamina you are winded, and walk at `WINDED_PACE` of your pace on your own feet (the status panel's Winded). */
+export const WINDED_AT = 0.1;
+export const WINDED_PACE = 0.5;
 const ARRIVE = 0.06;
 
 export class Player {
@@ -403,7 +406,7 @@ export class Player {
       speed *= (free ? Math.max(1, this.tilePace[under] ?? 1) : (this.tilePace[under] ?? 1) * this.legPace) * this.drawPace * this.spellPace * this.pathPace;
     }
     if (this.swimming) speed *= this.swimSpeed;
-    if (this.stats.stamina < 0.1 && !free) speed *= 0.5;
+    if (this.stats.stamina < WINDED_AT && !free) speed *= WINDED_PACE;
     if (this.burden > 0 && !free) speed /= 1 + this.burden;
     /*
      * And a load half again over the limit leaves you a twentieth of your

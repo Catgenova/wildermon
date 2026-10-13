@@ -130,18 +130,37 @@ export const SETTING_DEFAULTS = {
    * was before Runecut.
    */
   uiStyle: 'runecut' as UiStyle,
-  /** Runecut's stone by day, after dark, or following the island's own clock (`Game.isNight`). */
+  /**
+   * Runecut's stone: following the island's own clock (`Game.isNight`), this
+   * computer's (`LOCAL_NIGHT_STARTS` to `LOCAL_NIGHT_ENDS` in src/ui/theme.ts),
+   * or always by day or always after dark. The saved words are the ones from
+   * before the computer's clock was a choice: `clock` is the island's.
+   */
   uiLight: 'day' as UiLight,
+  /**
+   * The colours that carry a meaning -- better and worse, have and lack, the
+   * bars, danger -- as they are, or swapped for a pair that reads apart with
+   * red-green or blue-yellow colour blindness (`data-cb` in src/style.css).
+   */
+  uiColours: 'standard' as UiColours,
   /** Runecut's window borders: each drawn as the stuff of what its window holds, or all plain stone (`src/ui/runecut-frames.ts`); nothing in Classic. */
   uiFrames: 'themed' as UiFrames,
   /** Runecut's themed frames have small animals and lights going about them (`src/ui/runecut-life.ts`). */
   uiLife: true,
+  /** A ring round the mouse pointer that fills with the job in hand, as the action bar does (`src/ui/pointerring.ts`). */
+  pointerRing: true,
+  /** A settlement's name near the top of the screen as you cross into its border, and a line as you leave (`src/ui/deedbanner.ts`). */
+  deedBanner: true,
 };
 
 export const UI_STYLES = ['runecut', 'classic'] as const;
 export type UiStyle = (typeof UI_STYLES)[number];
-export const UI_LIGHTS = ['day', 'night', 'clock'] as const;
+/** `clock` is the island's clock and `local` this computer's; listed in the order Settings offers them. */
+export const UI_LIGHTS = ['clock', 'local', 'day', 'night'] as const;
 export type UiLight = (typeof UI_LIGHTS)[number];
+/** Standard, red-green safe (deuteranopia and protanopia) and blue-yellow safe (tritanopia). */
+export const UI_COLOURS = ['standard', 'rg', 'by'] as const;
+export type UiColours = (typeof UI_COLOURS)[number];
 export const UI_FRAMES = ['themed', 'stone'] as const;
 export type UiFrames = (typeof UI_FRAMES)[number];
 
@@ -183,6 +202,7 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     if (!(FRAME_CAPS as readonly number[]).includes(out.frameCap as number)) delete out.frameCap;
     if (!(UI_STYLES as readonly string[]).includes(out.uiStyle as string)) delete out.uiStyle;
     if (!(UI_LIGHTS as readonly string[]).includes(out.uiLight as string)) delete out.uiLight;
+    if (!(UI_COLOURS as readonly string[]).includes(out.uiColours as string)) delete out.uiColours;
     if (!(UI_FRAMES as readonly string[]).includes(out.uiFrames as string)) delete out.uiFrames;
     return out as Partial<typeof SETTING_DEFAULTS>;
   } catch {

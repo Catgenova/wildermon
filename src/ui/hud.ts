@@ -1,14 +1,9 @@
 import { keyName, type Keybinds } from '../game/keybinds';
-import { clockLeft, REST_MULT } from '../game/boons';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
 import { share } from '../game/words';
-import { SKILL_DEFS } from '../game/skills';
-import { WOUND_KINDS, woundText } from '../game/wounds';
 import { sailWord, windFrom, windWord } from '../game/wind';
-import { FAITH, favourCap } from '../game/faith';
 import { FURNITURE_BY_ID } from '../game/furniture';
 import { CELLAR_LEVEL, TOP_LEVELS } from '../game/building';
-import { groundRoll, TILE_DEFS } from '../world/tiles';
 import { seasonLine } from '../world/calendar';
 import type { Game } from '../game/game';
 import { itemName } from '../game/items';
@@ -21,6 +16,8 @@ import { BACK_SLACK, blowOf, blowWords, COWARD_DRAG, FIGHT_STANCE_NAMES, HEAVY_E
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
 import { consider } from '../game/consider';
 import { percent } from '../game/words';
+import { EffectRow } from './effects';
+import type { Tooltip } from './tooltip';
 
 export interface HudCallbacks {
   toggle: (id: string) => void;
@@ -35,6 +32,8 @@ export interface HudCallbacks {
   numbersTaken: () => boolean;
   /** What every key does, so the toolbar can say so and keep saying so. */
   keys: Keybinds;
+  /** The one tooltip, for the notes of the row of what is on you (`EffectRow`). */
+  tooltip?: Tooltip;
 }
 
 interface Bar {
@@ -171,8 +170,8 @@ export class Hud {
   private targetSaid = '';
   private feedBtn!: HTMLButtonElement;
   private companionText = document.createElement('span');
-  private boonEl: HTMLDivElement;
-  private woundEl: HTMLDivElement;
+  /** What is on you, for you and against you: rest, meals, spells, wounds, a load (`effects.ts`). */
+  private effects: EffectRow;
   private windEl: HTMLDivElement;
   private storeyEl: HTMLDivElement;
   private storeyLabel: HTMLButtonElement;
@@ -277,21 +276,21 @@ export class Hud {
       '<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><polygon points="10,1 14,15 10,11.5 6,15" style="fill: var(--ui-accent)"/><polygon points="10,11.5 14,15 10,19 6,15" style="fill: var(--ui-border)"/></svg><b>N</b>';
     footer.append(this.posEl, this.compass);
     status.append(footer);
-    // Rest banked and whatever the last meal favours.
-    this.boonEl = document.createElement('div');
-    this.boonEl.className = 'hud-companion hud-boons';
-    this.boonEl.hidden = true;
-    status.append(this.boonEl);
+    /*
+     * Everything on you, a mark each, under the clock: rest, a meal's knack,
+     * favour and Calm, a spell, a light, a worn enchantment and a settlement's
+     * baubles on the left; wounds, blood, venom, hunger, a load, tired arms
+     * and the dark on the right. It took over the lines that said rest, a
+     * meal, favour, a light and being overloaded, and the list of wounds,
+     * so none of them is said twice.
+     */
+    this.effects = new EffectRow(game, cb.tooltip ?? null);
+    status.append(this.effects.el);
     // The wind, when you are in something that cares about it.
     this.windEl = document.createElement('div');
     this.windEl.className = 'hud-companion hud-wind';
     this.windEl.hidden = true;
     status.append(this.windEl);
-    // Anything open on you, which is the first thing you want to know.
-    this.woundEl = document.createElement('div');
-    this.woundEl.className = 'hud-companion hud-wounds';
-    this.woundEl.hidden = true;
-    status.append(this.woundEl);
     this.gearEl = document.createElement('div');
     this.gearEl.className = 'hud-companion hud-gear';
     this.gearEl.hidden = true;
@@ -770,52 +769,8 @@ export class Hud {
     const deed = standing ? `  ·  ${standing.name}` : '';
     const title = this.game.titleName();
     this.say(this.posEl, `${p.tileX}, ${p.tileY}  ·  h ${h.toFixed(0)}  ·  ${this.game.clock()}  ·  ${seasonLine(this.game.wallNow())}${p.swimming ? '  ·  swimming' : ''}${deed}${title ? `  ·  ${title}` : ''}`);
-    // Rest and the knacks running off what you have eaten, when there are any.
-    const rested = this.game.player.rested;
-    const knacks = this.game.activeBoons();
-    // Each a span that keeps itself on one line; being overloaded is said as a warning, since it slows you.
-    const parts: Array<{ text: string; warn?: boolean }> = [];
-    const push = (text: string, warn = false): void => {
-      parts.push({ text, warn });
-    };
-    if (rested > 0) push(`Rested ${clockLeft(rested)} · skill gain ×${REST_MULT}`);
-    const favour = this.game.player.favour;
-    if (favour >= 1) push(`Favour ${Math.floor(favour)} of ${Math.floor(favourCap(this.game.skills.get(FAITH)))}`);
-    const over = this.game.overloaded();
-    if (over > 0) push(`Overloaded by ${over.toFixed(0)} kg`, true);
-    /*
-     * A light in your hand is a thing with a clock on it, so the clock is
-     * shown — and so is what it is buying you, because the whole reason to
-     * carry one is the ground it puts back in front of you.
-     */
-    const lamp = this.game.heldLight();
-    if (lamp) {
-      push(`${itemName(lamp)} lit · ${clockLeft(lamp.charges ?? 0)} left · sees ${Math.round(this.game.vision.sightRange())} tiles`);
-    } else if (this.game.darkness() > 0.45) {
-      push(`Dark · you see ${Math.round(this.game.vision.sightRange())} tiles`);
-    }
-    // What the ground under a loaded wheel is costing, when it is costing anything.
-    const cart = this.game.driving();
-    if (cart) {
-      const def = TILE_DEFS[this.game.world.getTile(p.tileX, p.tileY)];
-      const roll = groundRoll(def.roll, this.game.vehicleLoad(cart));
-      if (roll < 0.985) push(`${def.name} underfoot · ${Math.round(roll * 100)}% of your pace`);
-    }
-    for (const b of knacks) {
-      const name = SKILL_DEFS.find((d) => d.id === b.skill)?.name ?? b.skill;
-      push(`${name} skill gain +${Math.round(b.bonus * 100)}% · ${clockLeft(b.until - this.game.time)}`);
-    }
-    this.boonEl.hidden = !parts.length;
-    const boons = parts.map((p) => `${p.warn ? '!' : ''}${p.text}`).join('|');
-    if (parts.length && this.said.get(this.boonEl) !== boons) {
-      this.said.set(this.boonEl, boons);
-      this.boonEl.replaceChildren(...parts.map((p) => {
-        const span = document.createElement('span');
-        span.className = p.warn ? 'hud-boon hud-warn' : 'hud-boon';
-        span.textContent = p.text;
-        return span;
-      }));
-    }
+    // What is on you: a mark each, written only where a mark has changed.
+    this.effects.update();
     // The wind, which only matters when there is a sail over you.
     const boat = this.game.afloat();
     const sailing = boat && FURNITURE_BY_ID.get(boat.kind)?.boat?.sail;
@@ -834,30 +789,6 @@ export class Hud {
       text.textContent = `${windWord(w.force)} out of the ${windFrom(w)} · ${point}`;
       this.windEl.append(arrow, text);
       this.windEl.title = point === 'in irons' ? 'You are pointed into the wind and she will not go. Bear away and tack up.' : 'Across the wind is fastest; straight into it, she stops.';
-    }
-    // What is open on you, worst first, with the herb each one wants.
-    const wounds = this.game.player.wounds;
-    this.woundEl.hidden = !wounds.length;
-    const hurts = wounds.map((w) => `${w.kind}${w.severity.toFixed(1)}${w.infected ? 'i' : ''}${w.bleeding ? 'b' : ''}`).join('|');
-    if (wounds.length && this.said.get(this.woundEl) !== hurts) {
-      this.said.set(this.woundEl, hurts);
-      const sorted = [...wounds].sort((a, b) => (b.infected ? 1 : 0) - (a.infected ? 1 : 0) || b.severity - a.severity);
-      this.woundEl.replaceChildren();
-      for (const w of sorted.slice(0, 4)) {
-        const row = document.createElement('div');
-        row.className = `wound-row${w.infected ? ' wound-bad' : w.bleeding ? ' wound-open' : ''}`;
-        row.textContent = `${woundText(w).replace(/^a /, '')}`;
-        row.title = w.infected
-          ? `Gone bad. Clean it out with lye before anything will hold on it.`
-          : `${WOUND_KINDS[w.kind].note} It wants a ${WOUND_KINDS[w.kind].herb} cover.`;
-        this.woundEl.append(row);
-      }
-      if (sorted.length > 4) {
-        const more = document.createElement('div');
-        more.className = 'wound-row';
-        more.textContent = `and ${sorted.length - 4} more`;
-        this.woundEl.append(more);
-      }
     }
     const mobs = this.game.creatures.ticked;
     const watched = this.game.settings.fog ? ` · ${mobs.thought}/${mobs.near + mobs.far + mobs.asleep} mobs` : '';

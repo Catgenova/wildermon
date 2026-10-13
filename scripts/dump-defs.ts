@@ -54,7 +54,7 @@ import { BUTCHER_PARTS, HOARD_METALS } from '../src/game/butcher';
 import { CRATE_DEFS } from '../src/game/crates';
 import { ARROWS, BODKIN_HIDE, BURN_WEAR, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_GAIN, DODGE_MOST, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS } from '../src/game/fight';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_CLOSEST, FALL_BACK, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../src/game/fight';
-import { ARM_SLOW, ARM_SLOW_MOST, ARMOUR_VS, BLINDSIDE, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_KINDS, BLOW_PREY, CROWD_BLOCK, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCES, FIST, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_TAKES, HIDES, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, STAGGER_POLE, STANCE_DEALT, STANCE_TAKEN, SWING_WIND, SWING_WIND_KG, TIRED_AT, TIRED_SLOW, WIND_UP } from '../src/game/fight';
+import { ARM_SLOW, ARM_SLOW_MOST, ARMOUR_VS, armourSwingKg, OVERBURDEN_SWING, BLINDSIDE, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_KINDS, BLOW_PREY, CROWD_BLOCK, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCES, FIST, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_TAKES, HIDES, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, STAGGER_POLE, STANCE_DEALT, STANCE_TAKEN, SWING_WIND, SWING_WIND_KG, TIRED_AT, TIRED_SLOW, WIND_UP } from '../src/game/fight';
 import { METALS, MOULDS, ORE_PER_LUMP, RARE_LUMP_FACTOR, RARE_METALS } from '../src/game/metal';
 import { POTTERY } from '../src/game/kiln';
 import { MATERIALS as IMPROVE_MATERIALS, improvable, canImprove } from '../src/game/improve';
@@ -1504,6 +1504,11 @@ for (const [fn, v] of [
      this much slower with none left, and each swing or draw takes this much
      wind for the arm and this much more for every kilogram in the hand. */
   ['tired_at', TIRED_AT], ['tired_slow', TIRED_SLOW], ['swing_wind', SWING_WIND], ['swing_wind_kg', SWING_WIND_KG],
+  /* And what you wear and carry make of a swing: this share longer for every
+     kilogram of armour and shield on you (`ARMOUR_SWING_FULL` over the
+     heaviest set there is), and this share longer while over what your back
+     takes. */
+  ['armour_swing_kg', armourSwingKg()], ['overburden_swing', OVERBURDEN_SWING],
   /* A heavy blow: every how many a kind that hits heavy draws one back, how
      long it stands drawing back, what it lands for, and how near a blow
      reaches (which the hand-written hunt_reach said the same of). */
