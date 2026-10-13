@@ -2737,7 +2737,7 @@ export const ACTIONS: ActionDef[] = [
       }
       const got = fillFromSource(g, item);
       if (!got) return;
-      g.logMsg(source?.from ? `You draw a bucket of ${got} out of the ${itemDef(source.from.kind).name.toLowerCase()}.` : 'You dip the bucket full of water.', 'event');
+      g.logMsg(source?.from ? `You draw a bucket of ${LIQUID_NAME[got]} out of the ${itemDef(source.from.kind).name.toLowerCase()}.` : 'You dip the bucket full of water.', 'event');
     },
   },
   {

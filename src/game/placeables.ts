@@ -1,5 +1,5 @@
 import { INDOORS_REST } from './building';
-import { brewQl, wineAgeSays } from './ageing';
+import { brewQl, drawnQl, pouredQl, wineAgeSays } from './ageing';
 import { drinkable, isBrew, isWorking } from './brewing';
 import type { ActionDef, Target } from './actions';
 import { FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
@@ -742,9 +742,12 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // What is poured in is only as good as the worst of what it goes into
       // (a Cook's Strong Brew): nothing plain is made better by the barrel.
       const knack = litresIn(barrel) > 0 ? Math.min(barrel.knack ?? 1, markOf(item, 'knack')) : markOf(item, 'knack');
+      // A brew keeps its QL poured: the bucket's into an empty barrel, the average by litres into one of the same (`pouredQl`).
+      const ql = isBrew(vessel.liquid) ? pouredQl(barrel, g.wallNow(), poured, item.ql) : undefined;
       if (poured <= 0 || !vesselBecomes(g, item, vessel.empty)) return;
-      // Wine poured into a barrel that held something else was brewed elsewhere, and does not age in it (`ageing.ts`).
-      if (barrel.liquid !== vessel.liquid) delete barrel.agedFrom;
+      // And a barrel poured into does not age: what went in was kept somewhere else (`ageing.ts`).
+      delete barrel.agedFrom;
+      if (ql !== undefined) barrel.ql = ql;
       barrel.litres = litresIn(barrel) + poured;
       barrel.liquid = vessel.liquid;
       if (knack !== 1) barrel.knack = knack;
@@ -929,10 +932,12 @@ export function fillFromSource(g: Game, item: Item): LiquidKind | null {
   const source = sourceFor(g);
   if (!source) return null;
   if (source.liquid === 'dye') return source.from && drawDye(g, source.from, item) ? 'dye' : null;
-  // What the barrel's brewer put into it goes into the bucket (a Cook's Strong Brew).
+  // What the barrel's brewer put into it goes into the bucket (a Cook's Strong Brew),
+  // and a brew's QL, aged as it is now, asked before the draw can empty it (`drawnQl`).
   const knack = source.from?.knack;
+  const ql = source.from ? drawnQl(source.from, g.wallNow()) : undefined;
   if (source.from && !drawFrom(g, source.from, BUCKET_LITRES)) return null;
-  if (!vesselBecomes(g, item, BUCKET_OF[source.liquid], knack)) return null;
+  if (!vesselBecomes(g, item, BUCKET_OF[source.liquid], knack, ql)) return null;
   return source.liquid;
 }
 
@@ -952,12 +957,16 @@ export function fillFromSource(g: Game, item: Item): LiquidKind | null {
  * had been drawn. The one that changes comes off the pile, beside it in the pack
  * or the same bag, as the island does it (`vessel_becomes`).
  */
-export function vesselBecomes(g: Game, item: Item, id: string, knack?: number): boolean {
-  return vesselBecame(g, item, id, knack) !== null;
+export function vesselBecomes(g: Game, item: Item, id: string, knack?: number, ql?: number): boolean {
+  return vesselBecame(g, item, id, knack, ql) !== null;
 }
 
-/** The same, handing back the one that changed: the item itself, or the one taken off the top of its pile. */
-export function vesselBecame(g: Game, item: Item, id: string, knack?: number): Item | null {
+/**
+ * The same, handing back the one that changed: the item itself, or the one
+ * taken off the top of its pile. With a `ql`, the one that changed is at it:
+ * a bucket drawn off a barrel of brew holds the brew's QL.
+ */
+export function vesselBecame(g: Game, item: Item, id: string, knack?: number, ql?: number): Item | null {
   if (item.count < 1) return null;
   let one = item;
   if (item.count > 1) {
@@ -968,6 +977,7 @@ export function vesselBecame(g: Game, item: Item, id: string, knack?: number): I
     else g.inventory.items.push(one);
   }
   one.id = id;
+  if (ql !== undefined) one.ql = ql;
   const charges = itemDef(id).charges;
   if (charges) one.charges = charges;
   else delete one.charges;

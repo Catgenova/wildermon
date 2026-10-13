@@ -18,7 +18,7 @@ import { HEAL_FED } from '../../game/body';
 import { BOON_BONUS, BOON_FOODS, boonTime, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { BREW_BY_ID, BREWS } from '../../game/brewing';
-import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
+import { AGEING_GROUPS, CELLAR_AGEING } from '../../game/ageing';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
   VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
@@ -175,6 +175,8 @@ const ORE_SENSE = PERKS.find((p) => 'ore:below' in p.fx);
 const CELLAR_BURNS = FURNITURE.filter((d) => d.hearth).map((d) => article(d.name) + ' ' + d.name.toLowerCase());
 /** The brews that age in their barrel (`ageing.ts`). */
 const AGEING = BREWS.filter((b) => b.ages);
+/** How grape wine ages, for the vineyard's own paragraph. */
+const GRAPE_AGEING = BREW_BY_ID.get('grape_wine')?.ages;
 /** A vine job's label, as the menu says it. */
 const VINE_ACTION = (id: string): string => VINEYARD_ACTIONS.find((a) => a.id === id)?.label ?? id;
 const CELLAR_NOT_DOWN = FURNITURE.filter((d) => cellarOutdoor().includes(d.id) && d.bill.length).map((d) => article(d.name) + ' ' + d.name.toLowerCase());
@@ -1165,20 +1167,24 @@ export function helpText(): string {
     ${listed(BREWS.map((b) => `<b>${b.name.toLowerCase()}</b> from ${countOf(b.input, b.count, true)} and ${b.litres} litres of water in ${spanWords(b.time)}`))}.
     Each gives back as many litres of drink as it took of water.</p>
     <p>${listed(AGEING.map((b, i) => `<b>${i ? b.name.toLowerCase() : b.name}</b>`))} get better kept. From the moment it stops working, a barrel of
-    ${AGEING.length > 1 ? 'either' : 'it'} gains ${WINE_AGE_RATE} QL for every day of the island's year (${spanWords(DAY_SECONDS)}) it is kept, and ${numberWord(CELLAR_AGEING)} times
-    that &mdash; ${WINE_AGE_RATE * CELLAR_AGEING} a day &mdash; in a barrel standing in a <b>cellar</b>; it gains no more than ${WINE_AGE_CAP} QL over what it
-    was brewed at, which it reaches in ${numberWord(WINE_AGE_CAP / WINE_AGE_RATE)} days out of a cellar and ${numberWord(WINE_AGE_CAP / (WINE_AGE_RATE * CELLAR_AGEING))} in one, and
-    never goes past QL ${QL_TOP}. It ages until the barrel is empty; wine poured in from a bucket was brewed somewhere else and does not
-    age in it. Examine the barrel for how long it has been kept, what it has gained and the QL it is at now. A drink straight
-    from the barrel is at that QL, and so is the knack it leaves; a bucket drawn off it keeps the bucket's own.</p>
+    one gains QL for every day of the island's year (${spanWords(DAY_SECONDS)}) it is kept, ${numberWord(CELLAR_AGEING)} times as much in a barrel standing in a
+    <b>cellar</b>, up to a cap over what it was brewed at, and never past QL ${QL_TOP}:
+    ${AGEING_GROUPS.map(({ ageing: a, brews }) => `${listed(brews.map((b) => b.name.toLowerCase()))} ${a.rate} QL a day (${a.rate * CELLAR_AGEING} in a cellar)
+    up to ${a.cap} QL more, reached in ${numberWord(a.cap / a.rate)} days out of a cellar and ${numberWord(a.cap / (a.rate * CELLAR_AGEING))} in one`).join('; ')}.
+    It ages until the barrel is empty. Examine the barrel for how long it has been kept, what it has gained and the QL it is at now.
+    A drink straight from the barrel is at that QL, and so is the knack it leaves.</p>
     <p>A <b>quern</b> presses fruit too: ${numberWord(need('press_apple_juice', 'apple'))} of any fruit into a <b>bucket of juice</b>, sweet and with
     nothing dangerous in it, and ${numberWord(need('press_apple_cider', 'apple'))} apples or pears straight into a <b>bucket of cider</b> with no
     barrel and no waiting &mdash; one bucket, where the barrel would have made ${numberWord(CIDER.litres / BUCKET_LITRES)} from ${countOf(CIDER.input, CIDER.count)}
     and ${numberWord(CIDER.litres)} litres of water.</p>
     <p>While it is working the barrel says so and nothing can be drawn off it &mdash; and nothing hurries
-    it. When it stops, draw it into a bucket like any other liquid and drink from that. The quality of
-    what comes out is half what went in and half your <b>brewing</b>, and a brew that will not take
+    it. When it stops, draw it into a bucket like any other liquid and drink from that. A brew's QL is
+    half the QL of what went in plus half your <b>brewing</b>, and a brew that will not take
     sours the whole barrel.</p>
+    <p>A bucket drawn off a barrel of a brew or of spirit is at the QL the barrel is at as it is drawn &mdash; with what it has gained, for
+    one that ages &mdash; and keeps it: it is drunk, sold and traded at that QL. A bucket of brew or spirit poured into an empty barrel puts
+    the barrel at the bucket's QL, and poured into a barrel of the same, at the average of the barrel's QL and the bucket's, weighted by litres. A barrel poured into does not
+    age from then on, so drawing a brew off and pouring it back cannot take it past its cap.</p>
     <p>What brewing is <i>for</i> is the knack. Anything drunk leaves one the way a cooked dish does,
     and a brew carries it far longer than food &mdash; at quality ${BOON_QL}, a baked potato's lasts
     ${spanWords(boonTime('baked_potato', BOON_QL))} and a bucket of wine's ${spanWords(boonTime('wine_bucket', BOON_QL))}. A barrel of the right thing
@@ -1270,7 +1276,7 @@ export function helpText(): string {
     grapes to the nearest whole one: ${grapesFor(1)} at the start, ${grapesFor(QL_TOP / 2)} at ${VINE_SKILL} ${QL_TOP / 2} and ${grapesFor(QL_TOP)} at ${QL_TOP}. Cutting, planting and
     picking all train ${VINE_SKILL}. Picking a trellis up loses its vine.</p>
     <p>${capital(countOf(GRAPE, BREW_BY_ID.get('grape_wine')?.count ?? 0))} and ${BREW_BY_ID.get('grape_wine')?.litres} litres of water set going in a barrel make
-    <b>grape wine</b> in ${spanWords(BREW_BY_ID.get('grape_wine')?.time ?? 0)}, which ages in its barrel as cherry wine does (see Brewing).</p>
+    <b>grape wine</b> in ${spanWords(BREW_BY_ID.get('grape_wine')?.time ?? 0)}, which ages in its barrel${GRAPE_AGEING === BREW_BY_ID.get('wine')?.ages ? ' as cherry wine does' : ''}: ${GRAPE_AGEING?.rate} QL a day, ${(GRAPE_AGEING?.rate ?? 0) * CELLAR_AGEING} in a cellar, up to ${GRAPE_AGEING?.cap} QL more (see Brewing).</p>
     <h3>Farming</h3>
     <p>With a <b>rake</b> in your pack, <b>Till</b> any grass or dirt to rake it into a field. Seeds turn
     up while foraging and botanizing${SEEDS_ALL_YEAR ? ', in every season' : ''} &mdash; vegetables and starches in the one, spices and fibres in the

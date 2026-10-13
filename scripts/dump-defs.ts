@@ -173,7 +173,7 @@ import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, PICK_GRAPES, PLANT_VINE, TRELLIS,
   VINE_BEARS, VINE_GAIN, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonWords, WILD_VINE,
 } from '../src/game/vineyard';
-import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../src/game/ageing';
+import { CELLAR_AGEING } from '../src/game/ageing';
 import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY } from '../src/game/bees';
 
 const q = (v: unknown): string => {
@@ -2402,9 +2402,14 @@ for (const [fn, v] of [
 for (const [fn, v] of [
   ['vine_bears', VINE_BEARS], ['vine_rest', VINE_REST], ['grapes_a_pick', GRAPES_A_PICK], ['grapes_base', GRAPES_BASE],
   ['grapes_span', GRAPES_SPAN], ['vine_gain', VINE_GAIN],
-  ['wine_age_rate', WINE_AGE_RATE], ['wine_age_cap', WINE_AGE_CAP], ['cellar_ageing', CELLAR_AGEING],
+  ['cellar_ageing', CELLAR_AGEING],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+// Each brew that ages, its own rate (QL a day out of a cellar) and cap (`BrewDef.ages`); null for anything else.
+for (const key of ['rate', 'cap'] as const) {
+  out.push(`create or replace function age_${key}(p_liquid text) returns double precision language sql immutable as $fn$ select case p_liquid ${
+    BREWS.filter((b) => b.ages).map((b) => `when ${q(b.id)} then ${q(b.ages?.[key])}::double precision `).join('')}end $fn$;`);
 }
 out.push(`create or replace function vine_soil(p_tile int) returns boolean language sql immutable as $fn$ select coalesce(p_tile = any(array[${VINE_SOIL.join(', ')}]::int[]), false) $fn$;`);
 out.push(`create or replace function brew_ages(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${BREWS.filter((b) => b.ages).map((b) => q(b.id)).join(', ')}]::text[]), false) $fn$;`);

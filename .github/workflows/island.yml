@@ -2724,6 +2724,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/vineyard.mjs --log-level=error
           node node_modules/.cache/vineyard.mjs
 
+      - name: A bucket keeps its brew's QL, and mead ages, the same on both sides
+        run: |
+          # Each brew's rate and cap the same on both sides; a bucket drawn off
+          # grape wine kept thirteen days at the barrel's aged QL, off the top
+          # of a pile; one off ale at the ale's QL and one off water at its
+          # own; the aged bucket poured back into an empty barrel at its QL,
+          # not ageing there, and one poured into a barrel of the same at the
+          # average by litres; mead set going stamped, and its QL so many days
+          # in a cellar and out to the last bit, capped, said on Examine.
+          npx esbuild supabase/test/aged.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/aged.mjs --log-level=error
+          node node_modules/.cache/aged.mjs
+
       - name: Maps drawn, studied and copied, the same on both sides
         run: |
           # Draw a map on a sheet of papyrus: the square round the tile you
