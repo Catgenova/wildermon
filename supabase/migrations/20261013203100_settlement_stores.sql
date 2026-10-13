@@ -33,7 +33,7 @@
  * crate, a mailbox, a cart, a wagon or a boat, which are bought from, rot,
  * carry the post or are driven off the land. The browser's `storeMarkable`.
  *
- * The two powers are bits 12 and 13 of a rank's `perms`, the browser's
+ * The two powers are bits 14 and 15 of a rank's `perms`, the browser's
  * `RANK_POWERS`. No starting rank holds them: a founder gives them out.
  */
 set local lock_timeout = '3s';
@@ -42,8 +42,8 @@ set check_function_bodies = off;
 -- ---------------------------------------------------------------- the powers
 
 insert into rank_power (id, bit, may, may_not) values
-  ('keep_stores', 12, 'mark its settlement stores and read their log', 'mark its settlement stores or read their log'),
-  ('use_stores', 13, 'take from and put into its settlement stores', 'use its settlement stores')
+  ('keep_stores', 14, 'mark its settlement stores and read their log', 'mark its settlement stores or read their log'),
+  ('use_stores', 15, 'take from and put into its settlement stores', 'use its settlement stores')
 on conflict (id) do update set bit = excluded.bit, may = excluded.may, may_not = excluded.may_not;
 
 /** A power's bit, written out so a check on every dig is a constant: `rank_power.bit`, and the browser's `powerBit`. */
@@ -52,8 +52,8 @@ create or replace function power_bit(p_id text) returns int language sql immutab
     when 'shape' then 1 when 'stores' then 2 when 'locks' then 4 when 'gate' then 8
     when 'served' then 16 when 'set_bauble' then 32 when 'replace_bauble' then 64
     when 'invite' then 128 when 'send_away' then 256 when 'set_ranks' then 512
-    when 'upgrade' then 1024 when 'rename' then 2048
-    when 'keep_stores' then 4096 when 'use_stores' then 8192 else 0 end
+    when 'upgrade' then 1024 when 'rename' then 2048 when 'notices' then 4096 when 'work' then 8192
+    when 'keep_stores' then 16384 when 'use_stores' then 32768 else 0 end
 $fn$;
 
 -- ---------------------------------------------------------------- the mark
