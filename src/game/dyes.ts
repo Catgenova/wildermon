@@ -5,8 +5,8 @@ import { describeWith, ITEM_DEFS, itemDef, type Item } from './items';
 import { BUCKET_LITRES, furnitureName, holdsLiquid, isWell, litresIn, type PlacedFurniture } from './furniture';
 import { drawFrom, dyeInPiece, vesselBecomes } from './placeables';
 import {
-  colourWord, DYE_BUCKET, DYE_LITRES, DYE_LITRES_PER_KG, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, dyeHex, dyeIn, dyeLitresFor,
-  dyeRecipeId, dyeSays, DYESTUFF_OF, DYESTUFFS, dyeText, kgSaid, pureDye, type DyeLiquid, type Dyestuff,
+  colourWord, DYE_BUCKET, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, dyeHex, dyeIn, dyeLitresFor,
+  dyeRecipeId, dyeSays, DYESTUFF_OF, DYESTUFFS, dyeText, isHex, kgSaid, pureDye, type DyeLiquid, type Dyestuff,
 } from './dyestuffs';
 
 /**
@@ -27,10 +27,27 @@ import {
 
 /**
  * What will take a dye: anything woven or tanned, and the things made out of
- * them. Metal will not, and neither will a tool you are going to get dirty.
+ * them; and a glass panel, stained through. Metal will not, and neither will a
+ * tool you are going to get dirty.
  */
 const DYEABLE_ARMOUR = new Set(['cloth', 'leather']);
-export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel']);
+export const DYEABLE_ITEMS = new Set(['cloth', 'sack', 'satchel', 'backpack', 'saddle', 'bridle', 'banner', 'flagpole', 'sailing_boat', 'caravel', 'glass']);
+
+/**
+ * The pane a window and a bay window are glazed with, which takes a dye.
+ *
+ * A dyed panel keeps its colour as any dyed thing does (`Item.dye`), and a
+ * pile of one colour is a pile of its own. Fitted into a window or a bay
+ * window (`build_wall`), it gives the glass its colour: each pane fitted sets
+ * the window's `glass` to its own colour, or clears it for a clear one, so a
+ * window glazed in panes of one colour is that colour and the pane fitted
+ * last decides a mixed one. The island keeps the same on `wall.glass`
+ * (`take_material`, `wall_glass_tint`).
+ */
+export const TINTED_PANE = 'glass';
+/** The colour a pane gives the glass it is fitted into: its dye's hex, or none for a clear one. */
+export const paneTint = (pane: { dye?: string | null } | undefined): string | undefined =>
+  isHex(pane?.dye) ? pane.dye : undefined;
 export function takesDye(id: string): boolean {
   const a = ARMOUR_BY_ID.get(id);
   if (a) return DYEABLE_ARMOUR.has(a.cls);
@@ -316,4 +333,4 @@ for (const s of DYESTUFFS) {
 }
 
 // The litres a dyeing takes and a boil makes, into the text of a bucket of dye.
-describeWith({ dye: DYE_LITRES, dyeBoil: BOIL_LITRES, perKg: DYE_LITRES_PER_KG, qlBlack: DYE_QL_BLACK, qlPure: DYE_QL_PURE, qlWhite: DYE_QL_WHITE });
+describeWith({ dye: DYE_LITRES, paneDye: DYE_PANE_LITRES, dyeBoil: BOIL_LITRES, perKg: DYE_LITRES_PER_KG, qlBlack: DYE_QL_BLACK, qlPure: DYE_QL_PURE, qlWhite: DYE_QL_WHITE });

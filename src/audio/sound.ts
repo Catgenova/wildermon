@@ -143,6 +143,8 @@ export const HUSHED: ReadonlySet<string> = new Set([
   'found_settlement', 'upgrade_deed',
   // A lantern post's wick pinched out between finger and thumb (`lamps.ts`).
   'douse_lamp',
+  // A name and a line scratched into a masterwork (`signing.ts`).
+  'sign_item',
 ]);
 
 export const STROKE_BY_ID: Record<string, Stroke> = {

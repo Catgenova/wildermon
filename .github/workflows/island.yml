@@ -2833,6 +2833,31 @@ jobs:
             --outfile=node_modules/.cache/bees.mjs --log-level=error
           node node_modules/.cache/bees.mjs
 
+      - name: A masterwork signed by its maker, once, the same on both sides
+        run: |
+          # One thing made at the signing QL or better carries its maker's
+          # name, and one made under it does not: a mallet carved at the bench
+          # on both sides, and rare work as ever. Sign refused under the QL,
+          # for rare work under it, for a pile and a piece of furniture, for
+          # anybody but its maker, for blank words and for somebody a keeper
+          # has muted, in the same words; the line cleaned as talk is and cut
+          # at the longest; signed once and refused after; and Examine saying
+          # the maker and the line on both sides, through the row and a save.
+          npx esbuild supabase/test/signed.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/signed.mjs --log-level=error
+          node node_modules/.cache/signed.mjs
+
+      - name: Dyed glass, and a window the colour of its panes, the same on both sides
+        run: |
+          # A glass panel takes a dye at its own litres; one of a pile is dyed
+          # and the rest stay clear, in the same words. A window glazed with
+          # red panels is red and a bay with blue ones blue on the wall row on
+          # both sides, one glazed clear stays clear, and the ground read
+          # brings each window's colour to every browser that sees it.
+          npx esbuild supabase/test/dyedglass.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/dyedglass.mjs --log-level=error
+          node node_modules/.cache/dyedglass.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

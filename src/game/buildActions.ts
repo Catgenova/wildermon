@@ -27,7 +27,7 @@ import {
   jobLevel,
 } from './building';
 import type { PlacedCrate } from './crates';
-import { dyeChoice, dyeEnough, dyeReason, litresWord, pickDye, spendDye } from './dyes';
+import { dyeChoice, dyeEnough, dyeReason, litresWord, paneTint, pickDye, spendDye, TINTED_PANE } from './dyes';
 import { colourWord, DYE_LITRES } from './dyestuffs';
 import type { Game } from './game';
 import { gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
@@ -100,9 +100,17 @@ export function nextAvailable(g: Game, bill: Bill & { material: string }, at?: {
   return null;
 }
 
-/** One unit of `id` out of the pack, then a crate on the tile, then a Hod Carrier's stores. */
-function takeUnit(g: Game, id: string, mat: MaterialDef | undefined, at?: { x: number; y: number }): boolean {
-  if (g.inventory.has(id)) return g.inventory.consume(id);
+/**
+ * One unit of `id` out of the pack, then a crate on the tile, then a Hod
+ * Carrier's stores: the thing it was taken off, for what it carries with it
+ * (a pane's colour, `TINTED_PANE`), or null when there was none to take.
+ */
+function takeUnit(g: Game, id: string, mat: MaterialDef | undefined, at?: { x: number; y: number }): Item | null {
+  if (g.inventory.has(id)) {
+    // The pile `consume` takes it off: the first loose one, as the island takes the lowest numbered.
+    const from = g.inventory.find(id);
+    return from && g.inventory.consume(id) ? from : null;
+  }
   // Out of the crate on the site, a unit at a time, and the row goes when
   // the last of it does.
   for (const c of siteCrates(g, at?.x ?? 0, at?.y ?? 0)) {
@@ -111,22 +119,29 @@ function takeUnit(g: Game, id: string, mat: MaterialDef | undefined, at?: { x: n
     const it = c.items[i];
     it.count -= 1;
     if (it.count <= 0) c.items.splice(i, 1);
-    return true;
+    return it;
   }
   for (const st of hodStores(g, mat)) {
     const it = st.items.find((x) => takeable(x, id));
     if (it && spendOut(st.items, it.uid, 1)) {
       g.events.emit('crate');
-      return true;
+      return it;
     }
   }
-  return false;
+  return null;
 }
 
-export function consumeUnit(g: Game, bill: Bill & { material: string }, at?: { x: number; y: number }): string | null {
+/**
+ * One unit off a bill, of whatever is next and to hand: what it was, or null.
+ * `took` is told the thing it came off, for what that carries with it.
+ */
+export function consumeUnit(g: Game, bill: Bill & { material: string }, at?: { x: number; y: number },
+  took?: (from: Item) => void): string | null {
   const id = nextAvailable(g, bill, at);
-  if (!id || !takeUnit(g, id, material(bill.material), at)) return null;
+  const from = id ? takeUnit(g, id, material(bill.material), at) : null;
+  if (!id || !from) return null;
   bill.needed[id] -= 1;
+  took?.(from);
   return id;
 }
 
@@ -506,7 +521,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const wall = wallAt(g, t);
       if (!wall || isDone(wall)) return false;
       const mat = material(wall.material);
-      const used = consumeUnit(g, wall, t);
+      // A pane fitted into a window or a bay window gives its glass the pane's colour (`TINTED_PANE`).
+      const used = consumeUnit(g, wall, t, (from) => {
+        if (from.id !== TINTED_PANE) return;
+        const tint = paneTint(from);
+        if (tint) wall.glass = tint;
+        else delete wall.glass;
+      });
       if (!used || !mat) return false;
       g.gainSkill(mat.skill, 0.4);
       g.events.emit('world', t.x, t.y);

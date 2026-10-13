@@ -62,10 +62,11 @@ import {
   DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
 } from '../../game/noticeboard';
 import {
-  colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
+  colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
   PRIMARIES, pureDye, type DyeLiquid, type Primary,
 } from '../../game/dyestuffs';
-import { BOIL_LITRES, boilCountPlain, gramsOf } from '../../game/dyes';
+import { BOIL_LITRES, boilCountPlain, gramsOf, litresWord, TINTED_PANE } from '../../game/dyes';
+import { SIGN_MAX, SIGN_QL } from '../../game/signing';
 import { CROP_BY_SEED, CROPS, cropYield, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../game/growth';
 import { CASTS, FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
@@ -1409,6 +1410,10 @@ export function helpText(): string {
     <p>A <b>bottle</b> holds ${numberWord(itemDef('bottle').holds ?? 0)} of one food or drink, and what is in it rots at ${share(itemDef('bottle').shelter ?? 1)}
     the rate left lying about. A solid <b>stained glass</b> wall takes ${billWords(WALL_MATERIALS.find((m) => m.id === 'stained_glass')?.bill ?? [])}: the panes
     leaded in a frame of stone brick, laid with a trowel and trained as masonry, so one firing of stained glass glazes one solid wall. ${stainedOnly()}</p>
+    <p>A <b>${itemDef(TINTED_PANE).name.toLowerCase()}</b> takes a dye (<b>Dye it</b>, ${litresWord(DYE_PANE_LITRES)} of dye a panel, one panel a go) and keeps the colour, a pile
+    of its own beside the clear ones. A window or a bay window is the colour of the <b>last panel fitted into it</b>: glazed with
+    ${numberWord(glazing('window'))} (or ${numberWord(glazing('bay'))}) red panels it is red glass, and a clear panel fitted last leaves it clear. Everybody sees the colour,
+    outside and looking in. A stained glass wall keeps the colours of the gems in its panes and does not take a dyed panel.</p>
 
     <h3>Hunting and butchering</h3>
     <p>Wild wildermon can be <b>attacked</b> from their menu; an edged tool in your pack hits far harder
@@ -2530,6 +2535,12 @@ export function helpText(): string {
     <p>They are written in their own colour in your pack, and on the ground they <b>shine</b> in it:
     a few slow motes for a rare thing, more over a bloom for a supreme one, and a gold bloom under a
     turning star for a fantastic one, which you can pick out across a field.</p>
+    <h3>Signed masterworks</h3>
+    <p>One thing (not a pile, and not a piece of furniture) that comes off the bench or the anvil at <b>QL ${SIGN_QL} or better</b>
+    carries its maker's name, as rare work always does. While it is QL ${SIGN_QL} or better its maker, and nobody else, may
+    <b>Sign</b> it from its menu: one line of up to <b>${SIGN_MAX} characters</b>, cleaned as talk is, with no tool and no trade to it.
+    It is signed <b>once</b> and never again, and the line goes wherever the thing goes, whoever has it. <b>Examine</b> says who made it
+    and what they signed it with: <i>Made and signed by Mira: “For Otto”.</i> Signing changes nothing else about it.</p>
     <h3>Improving</h3>
     <p>A finished thing can be made better than it was made. Right-click it and choose <b>Improve</b>:
     each pass eats a little stock, and a success raises the quality &mdash; a great deal at first and
@@ -2650,8 +2661,8 @@ export function helpText(): string {
     <b>Examine</b> a bucket or a barrel of dye and it says its colour as a hex code, its QL, its litres and its mix.</p>
     <p>A dyeing takes dye by the size of the thing, in litres, a litre being a kilo of it: <b>${DYE_LITRES.garment}</b> for a garment, cloth, a bag,
     a saddle or a bridle; <b>${DYE_LITRES.banner}</b> for a banner or a flag; <b>${DYE_LITRES.sail}</b> for a sailing
-    boat; <b>${DYE_LITRES.ship}</b> for a caravel; and <b>${DYE_LITRES.wall}</b> for a side of a wall or a tile of
-    floor. It comes out of <b>one</b> bucket of dye loose in your pack (not in a bag, and not kept back) or one barrel of dye
+    boat; <b>${DYE_LITRES.ship}</b> for a caravel; <b>${DYE_LITRES.wall}</b> for a side of a wall or a tile of
+    floor; and <b>${DYE_PANE_LITRES}</b> for a ${itemDef(TINTED_PANE).name.toLowerCase()}. It comes out of <b>one</b> bucket of dye loose in your pack (not in a bag, and not kept back) or one barrel of dye
     within <b>${CRAFT_REACH} tiles</b> that is yours or on a settlement of yours, and never from several at once. A bucket holds
     ${numberWord(BUCKET_LITRES)} litres, so ${listed((Object.keys(DYE_LITRES) as Array<keyof typeof DYE_LITRES>).filter((k) => DYE_LITRES[k] > BUCKET_LITRES)
       .map((k) => DYE_SIZE_SAID[k]))} ${(Object.keys(DYE_LITRES) as Array<keyof typeof DYE_LITRES>).filter((k) => DYE_LITRES[k] > BUCKET_LITRES).length === 1 ? 'is' : 'are'} dyed from a barrel. Where more than one holds
@@ -2659,7 +2670,8 @@ export function helpText(): string {
     dye, it says how many litres it takes and the most any one of them holds. The thing takes exactly the dye's colour and
     is called by the plain colour word nearest it; Examine says the hex. Cloth and leather take dye and metal does not, so that is cloth and
     leather armour, cloth itself, sacks, satchels, backpacks, a saddle, a bridle, a <b>banner</b>, a
-    <b>flagpole</b>'s flag and a <b>sailing boat</b>'s or a <b>caravel</b>'s sail. A dyed chest or leg piece is worn where it shows: your own figure walks
+    <b>flagpole</b>'s flag and a <b>sailing boat</b>'s or a <b>caravel</b>'s sail; and a <b>${itemDef(TINTED_PANE).name.toLowerCase()}</b>, which
+    gives a window or a bay window glazed with it its colour (see Glass). A dyed chest or leg piece is worn where it shows: your own figure walks
     about in it. A banner is cloth on a staff &mdash; ${bill('make_banner')} &mdash; planted
     anywhere, and it flies whatever colour you dyed it. Boil it out again in lye if you change your
     mind.</p>

@@ -9656,7 +9656,7 @@ export class Renderer {
       if (alpha >= 1) this.occludeLine([x0, y0, x1, y1], () => this.drawWallNow(wall, border, base, alpha));
       return;
     }
-    const key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.building}|${base}`;
+    const key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}`;
     this.baked(key, cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, base), [x0, y0, x1, y1],
       () => this.drawWallNow(wall, border, base, alpha));
   }
@@ -9778,7 +9778,25 @@ export class Renderer {
     return null;
   }
 
+  /**
+   * The colour of the glass in the window or bay being drawn, if it was
+   * glazed with dyed panes (`Wall.glass`): set for the length of one wall, so
+   * every pane drawn in it, outside or in, is tinted (`pane`).
+   */
+  private paneTint: [number, number, number] | null = null;
+
   private drawWallNow(wall: Wall, border: Border, base: number, alpha: number): void {
+    const was = this.paneTint;
+    this.paneTint = wall.glass && /^#[0-9a-f]{6}$/i.test(wall.glass)
+      ? [parseInt(wall.glass.slice(1, 3), 16), parseInt(wall.glass.slice(3, 5), 16), parseInt(wall.glass.slice(5, 7), 16)] : null;
+    try {
+      this.drawWallBody(wall, border, base, alpha);
+    } finally {
+      this.paneTint = was;
+    }
+  }
+
+  private drawWallBody(wall: Wall, border: Border, base: number, alpha: number): void {
     const ctx = this.canvas.ctx;
     const cam = this.camera;
     const bare = MATERIAL_BY_ID.get(wall.material);
@@ -12067,6 +12085,23 @@ export class Renderer {
     const ctx = this.canvas.ctx;
     const { px, py } = g;
     const gr = ctx.createLinearGradient(px(t0, k1, -1), py(t0, k1, -1), px(t1, k0, -1), py(t1, k0, -1));
+    /*
+     * Glass stained through with a dye (`Wall.glass`): the dye's own colour
+     * with the sky's glint along the top of it, warmed toward the light when
+     * something burns behind it, and a touch more solid than clear glass.
+     */
+    const tint = this.paneTint;
+    if (tint) {
+      const k = Math.min(1, Math.max(0, alight));
+      const at = (lift: number, warm: number, a: number): string => {
+        const ch = (v: number, glow: number): number => Math.round(Math.min(255, v + (255 - v) * lift + glow * k * warm));
+        return `rgba(${ch(tint[0], 70)}, ${ch(tint[1], 40)}, ${ch(tint[2], 0)}, ${a})`;
+      };
+      gr.addColorStop(0, at(0.45, 1, 0.88));
+      gr.addColorStop(0.55, at(0.05, 1.2, 0.86));
+      gr.addColorStop(1, at(0.25, 1, 0.88));
+      return gr;
+    }
     if (alight > 0) {
       const k = Math.min(1, alight);
       gr.addColorStop(0, `rgba(${(198 + 52 * k) | 0}, ${(226 - 26 * k) | 0}, ${(244 - 110 * k) | 0}, 0.9)`);

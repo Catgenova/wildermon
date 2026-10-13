@@ -215,7 +215,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   glass_lump: { name: 'Glass lump', category: 'material', weight: 1, stackable: true, decay: 0,
     description: 'Sand melted down at a hot smelter. Glassblowing works one into a glass panel.' },
   glass: { name: 'Glass panel', category: 'material', weight: 2, stackable: true, decay: 0,
-    description: 'A flat panel of clear glass. A window takes {wall.window.glass}, a bay window {wall.bay.glass}, and a glasshouse roof is laid in them.' },
+    description: 'A flat panel of clear glass. A window takes {wall.window.glass}, a bay window {wall.bay.glass}, and a glasshouse roof is laid in them. '
+      + 'Dyed, {paneDye} litre of dye to a panel, it keeps the colour, and a window or a bay window is the colour of the last panel fitted into it.' },
   bottle: { name: 'Bottle', category: 'misc', weight: 0.5, decay: 1, holds: 4, shelter: 0.25, oneKind: true,
     description: 'A blown glass bottle with a stopper. It holds {holds} of one food or drink at a time, and what is in it rots at {shelter:share} the rate if it is left lying about.' },
   stained_glass_pane: { name: 'Stained glass pane', category: 'material', weight: 0.1, stackable: true, decay: 0,

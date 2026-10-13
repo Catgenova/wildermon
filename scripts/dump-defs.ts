@@ -68,7 +68,7 @@ import { CROWD_HIDES, DEEDS_JOINED, PLANTABLE } from '../src/game/game';
 import { FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SPELL_BAR, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../src/game/patrons';
 import { RARITIES, RARITY_LIFT, RARITY_ODDS, RARITY_WORD } from '../src/game/items';
 import {
-  DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, DYE_SIZE_OF, DYE_WORDS, DYESTUFFS, dyeRecipeId, dyeText,
+  DYE_SIZES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, DYE_SIZE_OF, DYE_WORDS, DYESTUFFS, dyeRecipeId, dyeText,
   LEGACY_DYES, LEGACY_POT_LITRES, legacyLiquid, RYB_CUBE,
 } from '../src/game/dyestuffs';
 import { SLAB_VARIANTS } from '../src/world/tiles';
@@ -171,6 +171,8 @@ import {
   DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, SETTLE_SAID, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
 } from '../src/game/noticeboard';
 import { CHART_ITEM, CHART_LEAST, CHART_QL_PER_TILE, CHART_SAID, CHART_SHEET, CHART_SKILL, COPY_MAP, DRAW_MAP, STUDY_MAP } from '../src/game/cartography';
+import { makerLine, SIGN, SIGN_MAX, SIGN_QL, SIGN_SAID, signedSaid, signNotYours } from '../src/game/signing';
+import { TINTED_PANE } from '../src/game/dyes';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, PICK_GRAPES, PLANT_VINE, TRELLIS,
@@ -2133,7 +2135,7 @@ LEGACY_DYES.forEach((d, ord) => {
 });
 for (const d of DYESTUFFS) out.push(`insert into dyestuff_def values (${q(dyeRecipeId(d.from))}, ${q(d.from)}, ${q(d.primary)});`);
 DYE_WORDS.forEach(([word, hex], ord) => out.push(`insert into dye_word_def values (${q(ord)}, ${q(word)}, ${q(hex)});`));
-for (const [size, litres] of Object.entries(DYE_LITRES)) out.push(`insert into dye_litres_def values (${q(size)}, ${q(litres)});`);
+for (const [size, litres] of Object.entries(DYE_SIZES)) out.push(`insert into dye_litres_def values (${q(size)}, ${q(litres)});`);
 for (const [id, size] of Object.entries(DYE_SIZE_OF).sort()) out.push(`insert into dye_size_def values (${q(id)}, ${q(size)});`);
 for (const cls of ['cloth', 'leather']) out.push(`insert into dyeable_class values (${q(cls)});`);
 for (const [tier, level] of Object.entries(TIER_LEVEL)) {
@@ -2367,7 +2369,8 @@ for (const [fn, v] of [
  * takes, what its cutting is done with, and every sentence it says -- the
  * three with the words in them round the words the island puts in.
  */
-out.push(`create or replace function memorial_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(ENGRAVE)}, ${q(READ_MEMORIAL)}) $fn$;`);
+// And signing a masterwork, which cuts a line into a thing as Engrave does into a stone, and goes with it (`signing.ts`).
+out.push(`create or replace function memorial_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(ENGRAVE)}, ${q(READ_MEMORIAL)}, ${q(SIGN)}) $fn$;`);
 out.push(`create or replace function memorial_kind() returns text language sql immutable as $fn$ select ${q(MEMORIAL)} $fn$;`);
 out.push(`create or replace function engrave_max() returns int language sql immutable as $fn$ select ${ENGRAVE_MAX} $fn$;`);
 out.push(`create or replace function engrave_tool() returns text language sql immutable as $fn$ select ${q(ENGRAVE_TOOL)} $fn$;`);
@@ -2383,6 +2386,28 @@ out.push(`create or replace function memorial_said(p_key text) returns text lang
   const [ih, it] = engravedItemSays({ engraving: '\u0000' }).split('\u0000');
   out.push(`create or replace function engraved_item_says(p_text text) returns text language sql immutable as $fn$ select case when coalesce(p_text, '') = '' then '' else ${q(ih)} || p_text || ${q(it)} end $fn$;`);
 }
+/*
+ * Signed masterworks (`signing.ts`): the job, the QL a thing is made at to
+ * carry its maker's name, the longest line, and every sentence it says -- the
+ * ones with a name or the words in them round what the island puts in.
+ */
+out.push(`create or replace function sign_action() returns text language sql immutable as $fn$ select ${q(SIGN)} $fn$;`);
+out.push(`create or replace function sign_ql() returns double precision language sql immutable as $fn$ select ${q(SIGN_QL)}::double precision $fn$;`);
+out.push(`create or replace function sign_max() returns int language sql immutable as $fn$ select ${SIGN_MAX} $fn$;`);
+out.push(`create or replace function sign_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (Object.keys(SIGN_SAID) as Array<keyof typeof SIGN_SAID>).map((k) => `when ${q(k)} then ${q(SIGN_SAID[k])} `).join('')}end $fn$;`);
+{
+  const [a, b, c] = signNotYours('\u0000').split('\u0000');
+  out.push(`create or replace function sign_not_yours_said(p_who text) returns text language sql immutable as $fn$ select ${q(a)} || p_who || ${q(b)} || p_who || ${q(c)} $fn$;`);
+  const [sh, st] = signedSaid('\u0000').split('\u0000');
+  out.push(`create or replace function signed_said(p_text text) returns text language sql immutable as $fn$ select ${q(sh)} || p_text || ${q(st)} $fn$;`);
+  const [mh, mt] = makerLine('\u0000', undefined).split('\u0000');
+  const [gh, gm, gt] = makerLine('\u0000', '\u0001').split(/[\u0000\u0001]/);
+  out.push(`create or replace function maker_says(p_maker text, p_signed text) returns text language sql immutable as $fn$ select case when coalesce(p_maker, '') = '' then '' `
+    + `when coalesce(p_signed, '') = '' then ${q(mh)} || p_maker || ${q(mt)} else ${q(gh)} || p_maker || ${q(gm)} || p_signed || ${q(gt)} end $fn$;`);
+}
+/* Dyed glass (`dyes.ts`): the pane a window takes the colour of. */
+out.push(`create or replace function tinted_pane() returns text language sql immutable as $fn$ select ${q(TINTED_PANE)} $fn$;`);
 /*
  * A trade between two people (`barter.ts`): how near they stand, how long it
  * sits unchanged before it lapses, how many things a side holds, and every
