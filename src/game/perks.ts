@@ -61,6 +61,7 @@ import { BRIDGES } from './bridges';
 import { BUILD_ACTION_BY_ID, REPOINT_BACK } from './buildActions';
 import { FENCE_TYPES, MATERIAL_BY_ID, MATERIALS, MAX_LEVELS, storeySkill, TALL_STOREYS, wallBill } from './building';
 import { BUCKET_LITRES, FURNITURE, furnitureDef } from './furniture';
+import { GORRAL_MILK } from './dairy';
 import { ARMOUR, ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_CAP, SOAK_CAP, WEAPON_BY_ID, WEAPONS } from './gear';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from './gems';
 import {
@@ -1121,7 +1122,8 @@ const FARMER: Seed[] = [
     num: 25, name: 'Milkmaid',
     fx: { 'time:milk_creature': 0.6, 'more:milk_creature': 0.5 },
     note: (fx) => `${capital(ACTION_BY_ID.get('milk_creature')?.verb ?? 'milking')} takes ${less(fx['time:milk_creature'])} less time (${secs(base('milk_creature'))} base), `
-      + `and ${oneIn(fx['more:milk_creature'])} goes fill a second bucket of milk, if you carry another empty bucket.`,
+      + `and ${oneIn(fx['more:milk_creature'])} goes fill a second bucket of milk off a Cudda, if you carry another empty bucket. `
+      + `A Gorral gives its ${GORRAL_MILK} litres a milking with or without it.`,
   },
   {
     num: 28, name: 'Sack Porter',
