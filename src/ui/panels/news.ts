@@ -2111,6 +2111,8 @@ export const NEWS: News[] = [
       `Trellises stand against the outside of a wall now, and run its whole width. ${TRELLIS_RULE()}`,
       'Trellises side by side along the same wall join into one lattice. A trellis already standing keeps its vine; where two or more stood in one row, '
         + 'the one with a vine (or else the oldest) stays and the rest are back in their owner\'s pack, a planted vine as a grape cutting.',
+      'Things of one kind keep one place in every list, the best first, instead of moving as you work with them; and the pour, smelt, melt-down and '
+        + 'cast menus give each thing its QL, a mould its damage too, so two nail moulds can be told apart.',
     ],
   },
 ];
