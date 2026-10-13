@@ -164,6 +164,7 @@ import { DAMAGE_MAX as BROKEN_AT, PLACED_REACH, QL_TOP as ENCHANT_TOP } from '..
 import { TRY_LEARN } from '../../game/learn';
 import { raisedBySays } from '../raisedBy';
 import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
+import { HOUR as SKEP_HOUR, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SKILL, SKEP_WAX_EVERY, skepRate, skepRateSaid, skepWax } from '../../game/bees';
 import { keepControlKeys } from '../controlkeys';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
@@ -395,6 +396,8 @@ function dairyHelp(): string {
     Left lying, cheese rots at ${keeps('cheese')} the pace of a bucket of milk and butter at ${keeps('butter')}.</p>`;
 }
 
+/** The clumps of wildflowers in reach the help works a skep's rate out for. */
+const BEE_CLUMPS = [25, 50, 100];
 const bill = (id: string, figures = false): string =>
   billWords(recipe(id).inputs.map((i) => [i.item, i.count ?? 1] as const), figures);
 /** How many of one thing a recipe takes. */
@@ -1924,6 +1927,22 @@ export function helpText(): string {
     <p>Wildflowers are for <b>${DYESTUFF_OF.get('wildflowers')?.primary} dye</b>: ${bill(dyeRecipeId('wildflowers'))} boil into
     ${numberWord(BOIL_LITRES)} litres of it, at ${workedAt(dyeRecipeId('wildflowers'))} &mdash; ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG))} kg
     of them, ${kgSaid(dyeGrams(1, DYE_LITRES_PER_KG))} kg to every litre of lye.</p>
+    <h3>Bees</h3>
+    <p>A <b>skep</b> (${bill(`make_${SKEP}`)} &mdash; ${workedAt(`make_${SKEP}`)}, with a ${itemDef(recipe(`make_${SKEP}`).tool ?? '').name.toLowerCase()}) is set down
+    like furniture. Its bees work every tile within
+    <b>${SKEP_REACH} tiles</b> each way of the tile it stands on, a square ${2 * SKEP_REACH + 1} tiles across, and it makes
+    <b>a honey every ${SKEP_CLUMP_HOURS} hours for each clump of wildflowers</b> in flower there, and <b>a beeswax for every
+    ${SKEP_WAX_EVERY} honey</b>: ${listed(BEE_CLUMPS.map((n) => `${n} clumps make ${skepRateSaid(n, 'summer')} honey an hour (full in ${spanWords((SKEP_HOLDS / skepRate(n, 'summer')) * SKEP_HOUR)})`))}.
+    It holds <b>${SKEP_HOLDS} honey</b> (and ${skepWax(SKEP_HOLDS)} beeswax with it) and makes nothing more until it is emptied.
+    The flowers are counted as each season has them, as Pick flowers finds them: a picked tile or one under a building counts none,
+    so a skep makes nothing in ${listed(SEASONS.filter((x) => !FLOWER_SEASONS.includes(x) && x !== SKEP_IDLE))}, when nothing flowers,
+    and nothing in ${SKEP_IDLE} whatever is in flower. It fills on the wall clock, while you are away as well.</p>
+    <p>Within ${STORE_REACH} tiles of it, <b>Take honey</b> empties it: every whole honey in it and the beeswax that goes with them,
+    at your ${(SKILL_BY_ID.get(SKEP_SKILL)?.name ?? SKEP_SKILL).toLowerCase()} with the skep counted as the tool, its QL as a tool's QL counts on any job, and it trains
+    ${(SKILL_BY_ID.get(SKEP_SKILL)?.name ?? SKEP_SKILL).toLowerCase()}. The skep starts again from empty, and a part honey in it is lost.
+    Whoever set it down may take from it, and anybody of the settlement it stands on. <b>Examine</b> says the clumps in reach this season,
+    the honey an hour they make, what is in it and what it holds. Picked up and set down again, it starts from empty. It does not go
+    down into a cellar.</p>
     <h3>Mote swirls and elementalism</h3>
     <p>At each turn of the woods, at dawn, the day's <b>mote swirls</b> go and ${numberWord(SWIRLS_A_DAY)} new ones are put down,
     each on a tile drawn anywhere on the map, land or water &mdash; never where a tree stands, never inside a building, and

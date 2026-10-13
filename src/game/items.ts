@@ -538,6 +538,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   // A Mender's two: a kit that mends anything anywhere, and a seal against decay.
   repair_kit: { name: 'Repair kit', category: 'misc', weight: 1.5, stackable: true, decay: 3, description: 'Cloth, nails and a plank, made up to put things right away from the bench. Used on anything damaged, it takes {mend} damage off it and none of its quality, and is used up.' },
   sealant: { name: 'Sealant', category: 'material', weight: 0.3, stackable: true, decay: 1, description: 'Tar and beeswax worked together. Worked over a thing it seals it, and a sealed thing never decays wherever it is left. A thing takes one sealant, and a pile one for each thing in it.' },
+  skep: { name: 'Skep', category: 'misc', weight: 3, decay: 4, description: 'Set down, it makes a honey every {hours} hours for each clump of wildflowers within {reach} tiles of it, and a beeswax for every {wax} honey, up to {holds} honey; nothing in {idle}. Take honey empties it.' },
   hive: { name: 'Hive', category: 'misc', weight: 10, decay: 4, description: 'A stack of shallow boxes for a swarm to live in. Set it down on your deed and keep a Vesp there, and it fills itself with honey and beeswax. Holds {hive} of them.' },
   rope_tool: { name: 'Rope tool', category: 'tool', weight: 1.2, description: 'A grooved block the strands are laid round and twisted against. Nothing is roped without one.' },
   spindle: { name: 'Spindle', category: 'misc', weight: 5, decay: 4, description: 'Spins wool, cotton and wemp into yarn. Stand at it to work.' },

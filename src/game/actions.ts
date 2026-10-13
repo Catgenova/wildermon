@@ -55,6 +55,7 @@ import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
 import { VINEYARD_ACTIONS } from './vineyard';
 import { CHART_ACTIONS, chartItemSays } from './cartography';
+import { BEE_ACTIONS } from './bees';
 import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
@@ -3166,6 +3167,8 @@ export const ACTIONS: ActionDef[] = [
   ...MEMORIAL_ACTIONS,
   // A trellis's vine, and a cutting off a wild one (`vineyard.ts`).
   ...VINEYARD_ACTIONS,
+  // A skep's honey, taken and looked at (`bees.ts`).
+  ...BEE_ACTIONS,
   ...SACRIFICE_ACTIONS,
   ...ENCHANT_ACTIONS,
   ...MEDITATION_ACTIONS,
