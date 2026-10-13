@@ -2656,6 +2656,18 @@ jobs:
             --outfile=node_modules/.cache/memorial.mjs --log-level=error
           node node_modules/.cache/memorial.mjs
 
+      - name: A skep, filling with honey and beeswax off the wildflowers in reach, the same on both sides
+        run: |
+          # Woven by ropemaking with a carving knife and set down like any
+          # piece. What it has made is worked out from the moment it was set
+          # down or emptied: a honey every so many hours for each clump of
+          # wildflowers in reach, each season at its own flowers, nothing in
+          # winter, nothing with none in reach, up to what it holds. Take
+          # honey and Examine, their words and refusals, on both sides.
+          npx esbuild supabase/test/bees.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/bees.mjs --log-level=error
+          node node_modules/.cache/bees.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

@@ -138,6 +138,12 @@ export interface FurnitureDef {
    */
   pond?: number;
   /**
+   * A skep (`bees.ts`): nothing is put into it either. It fills itself with
+   * honey and beeswax off the wildflowers in reach of it, worked out from
+   * `PlacedFurniture.skepAt` whenever it is looked at or emptied.
+   */
+  skep?: boolean;
+  /**
    * Crate spots on its deck: one to a subtile, so a rack of `w` by `h` holds
    * `w * h` of them.
    *
@@ -339,6 +345,14 @@ export const FURNITURE: FurnitureDef[] = [
   piece('bell', 'Bell', 1, 1, [['bell_casting', 1], ['timber', 8], ['thick_rope', 1], ['nail', 16]], 22, 18, 'You hang the bell in its frame and knot the rope to the tongue. Rung on your settlement, every wildermon of the deed comes and every citizen hears where it hangs.', undefined, { bell: true, material: 'metal' }),
   piece('statue', 'Statue', 1, 1, [['statue_casting', 1], ['stone_slab', 1]], 24, 20, 'You set the casting on its slab and it stands, and will go on standing. It is on the map from here on.', undefined, { landmark: true, material: 'metal', skill: 'masonry', tool: 'trowel', mossy: true }),
   piece('hive', 'Hive', 2, 1, [['plank', 24], ['shaft', 2], ['cloth', 4], ['nail', 24]], 18, 13, 'You nail up a hive of shallow boxes and turn the mouth of it south. Now it wants a swarm.', undefined, { hive: 40 }),
+  /*
+   * A skep (`bees.ts`): coils of thatch bound into a dome with split reed, a
+   * mouth cut at its foot. Woven with a carving knife as a creel is, by
+   * ropemaking.
+   */
+  piece('skep', 'Skep', 1, 1, [['thatch', 6], ['reed', 4]], 12, 10,
+    'You coil the thatch up into a dome, bind each coil to the one under it with split reed and cut a mouth at its foot.',
+    undefined, { skill: 'ropemaking', tool: 'carving_knife', skep: true }),
   // A Fisher's pond: dug and puddled with clay, a ring of stones round it and reeds at the edge. It stocks itself.
   piece('fish_pond', 'Fish pond', 2, 2, [['clay', 20], ['rock_shards', 12], ['reed', 8]], 20, 20, 'You dig the pond out, puddle the floor of it with clay, set stones round the rim and plant the reeds at its edge.', undefined, { pond: 10, skill: 'fishing', tool: 'shovel', perk: 'fish_pond', deed: true }),
   // An Artisan's potter's wheel: a stone flywheel on a spindle in a plank frame, and anybody's pottery near it goes quicker.
@@ -660,6 +674,12 @@ export interface PlacedFurniture {
   lamp?: Lamp;
   /** The line cut into a memorial stone (`memorial.ts`); on the island the placed row's `engraving`. */
   engraving?: string;
+  /**
+   * For a skep: when it was set down or last emptied, in epoch seconds, which
+   * what it has made is worked out from (`bees.ts`); on the island
+   * `state -> skep_at`.
+   */
+  skepAt?: number;
 }
 
 /** Whether a piece is a planter: a box of earth a crop is sown in (`FurnitureDef.planter`). */
@@ -1055,6 +1075,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (item.dye) f.dye = item.dye;
       // Roses planted at its feet grow from now, on the wall clock (`roses.ts`).
       if (furnitureDef(item.id).roses) f.setAt = Date.now() / 1000;
+      // A skep starts filling from now, on the wall clock (`bees.ts`).
+      if (furnitureDef(item.id).skep) f.skepAt = g.wallNow();
       // Everything the thing was keeps standing when the thing is standing.
       if (item.rare) f.rare = item.rare;
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).

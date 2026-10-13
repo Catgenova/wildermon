@@ -7960,6 +7960,8 @@ export class Game {
           ...lampFrom(r.state),
           // A memorial stone's line (`memorial.ts`).
           ...(typeof r.engraving === 'string' && r.engraving ? { engraving: r.engraving } : {}),
+          // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
+          ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
           /*
            * The reins and the shafts, which the island has always sent and
            * this dropped: somebody who took the reins on an island walked
@@ -9630,7 +9632,7 @@ export interface IslandPlaced {
   bait_ql: number | null;
   caught: number | null;
   /** A furnace's queue and what it has made; a planter's last crop (`sown`), for a Farmer's Crop Rotation. */
-  state: { jobs?: unknown[]; output?: unknown[]; sown?: string } | null;
+  state: { jobs?: unknown[]; output?: unknown[]; sown?: string; skep_at?: number } | null;
   mine: boolean;
   /** The padlock fitted to it, by the number it shares with its key. */
   lock?: number | null;

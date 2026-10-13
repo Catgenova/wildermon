@@ -506,7 +506,7 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave).map((f) =>
   tool: f.tool ?? 'mallet',
   skill: f.skill ?? 'fine_carpentry',
   // A carpenter's piece is of the wood it is built from; a mason's is brick, and a tailor's cloth.
-  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' ? undefined : ('wood' as const)),
+  material: f.material ?? (f.skill === 'masonry' || f.skill === 'tailoring' || f.skill === 'fishing' || f.skill === 'ropemaking' ? undefined : ('wood' as const)),
   ...(f.deed ? { deed: true } : {}),
   ...(f.perk ? { perk: f.perk } : {}),
   label: `Build ${f.name.toLowerCase()}`,
@@ -518,6 +518,7 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave).map((f) =>
   fail: f.skill === 'masonry' ? `The courses will not run true and you knock the ${f.name.toLowerCase()} down again.`
     : f.skill === 'tailoring' ? `The seams will not lie flat and you unpick the ${f.name.toLowerCase()} again.`
       : f.skill === 'fishing' ? `The clay will not hold water and you dig the ${f.name.toLowerCase()} out again.`
+        : f.skill === 'ropemaking' ? `The coils will not hold their shape and you unpick the ${f.name.toLowerCase()} again.`
         : `The joints will not pull up square and you pull the ${f.name.toLowerCase()} apart again.`,
 }));
 

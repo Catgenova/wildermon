@@ -52,6 +52,7 @@ import { LAMP_ACTIONS } from './lamps';
 import { FAITH_ACTIONS } from './faith';
 import { BAUBLE_ACTIONS } from './baubles';
 import { engravedItemSays, MEMORIAL_ACTIONS } from './memorial';
+import { BEE_ACTIONS } from './bees';
 import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
@@ -3144,6 +3145,8 @@ export const ACTIONS: ActionDef[] = [
   ...BAUBLE_ACTIONS,
   // A memorial stone's line, cut and read (`memorial.ts`).
   ...MEMORIAL_ACTIONS,
+  // A skep's honey, taken and looked at (`bees.ts`).
+  ...BEE_ACTIONS,
   ...SACRIFICE_ACTIONS,
   ...ENCHANT_ACTIONS,
   ...MEDITATION_ACTIONS,

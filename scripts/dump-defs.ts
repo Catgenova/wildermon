@@ -164,6 +164,7 @@ import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
+import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY } from '../src/game/bees';
 
 const q = (v: unknown): string => {
   if (v === undefined || v === null) return 'null';
@@ -2329,4 +2330,21 @@ out.push(`create or replace function memorial_said(p_key text) returns text lang
   const [ih, it] = engravedItemSays({ engraving: '\u0000' }).split('\u0000');
   out.push(`create or replace function engraved_item_says(p_text text) returns text language sql immutable as $fn$ select case when coalesce(p_text, '') = '' then '' else ${q(ih)} || p_text || ${q(it)} end $fn$;`);
 }
+/*
+ * A skep (`bees.ts`): its two jobs, its reach, its rate, what it holds, the
+ * beeswax that goes with its honey, the season it makes nothing in, the
+ * trade that takes it, and what a refused Take honey says.
+ */
+out.push(`create or replace function bee_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(TAKE_HONEY)}, ${q(LOOK_SKEP)}) $fn$;`);
+out.push(`create or replace function take_honey_action() returns text language sql immutable as $fn$ select ${q(TAKE_HONEY)} $fn$;`);
+out.push(`create or replace function skep_kind() returns text language sql immutable as $fn$ select ${q(SKEP)} $fn$;`);
+out.push(`create or replace function skep_reach() returns int language sql immutable as $fn$ select ${SKEP_REACH} $fn$;`);
+out.push(`create or replace function skep_clump_hours() returns double precision language sql immutable as $fn$ select ${SKEP_CLUMP_HOURS}::double precision $fn$;`);
+out.push(`create or replace function skep_hour() returns double precision language sql immutable as $fn$ select ${HOUR}::double precision $fn$;`);
+out.push(`create or replace function skep_holds() returns int language sql immutable as $fn$ select ${SKEP_HOLDS} $fn$;`);
+out.push(`create or replace function skep_wax_every() returns int language sql immutable as $fn$ select ${SKEP_WAX_EVERY} $fn$;`);
+out.push(`create or replace function skep_idle() returns text language sql immutable as $fn$ select ${q(SKEP_IDLE)} $fn$;`);
+out.push(`create or replace function skep_skill() returns text language sql immutable as $fn$ select ${q(SKEP_SKILL)} $fn$;`);
+out.push(`create or replace function skep_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (['notYours', 'empty'] as const).map((k) => `when ${q(k)} then ${q(SKEP_SAID[k])} `).join('')}end $fn$;`);
 console.log(out.join('\n'));

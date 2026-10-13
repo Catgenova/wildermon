@@ -3367,6 +3367,33 @@ const MODELS: Record<string, Model> = {
   },
 
   /*
+   * A skep (`bees.ts`): a dome of coiled straw on a low plank stand, a ring
+   * bound round each coil, the mouth a dark notch at the foot of its front,
+   * and a few of its bees about it.
+   */
+  skep: ({ sc, wood }) => {
+    sc.shadows = [[-4, 4, -4, 4]];
+    const STRAW = paintOf(hex('#c9a55a')), BIND = paintOf(hex('#9c7a3a'));
+    for (const x of [-2.6, 2.6]) sc.box(x - 0.5, x + 0.5, -2.6, 2.6, 0, 1.6, wood);
+    sc.box(-3.8, 3.8, -3.8, 3.8, 1.6, 2.2, wood, { top: grain(sc, wood, 3) });
+    sc.lathe(0, 0, [[2.2, 3.2], [3.4, 3.45], [4.8, 3.35], [6, 2.95], [7, 2.3], [7.7, 1.45], [8.1, 0.6], [8.25, 0]], STRAW, 20, {
+      bands: [3.1, 4.1, 5.1, 6.1, 7].map((z) => [z, BIND, 0.22] as [number, Paint, number]),
+    });
+    sc.box(-0.8, 0.8, 2.75, 3.5, 2.2, 3, paintOf(hex('#2b221c')));
+    for (const at of [[-1.6, 4.4, 4.6], [1.2, 4.8, 3.6], [2.4, 3.6, 6]] as V3[]) {
+      sc.sprite(at, 0.4, (px, py) => {
+        const g = sc.g;
+        g.fillStyle = 'rgba(240, 246, 252, 0.8)';
+        g.beginPath(); g.ellipse(px - 0.5, py - 0.7, 0.6, 0.35, -0.5, 0, TAU); g.ellipse(px + 0.5, py - 0.7, 0.6, 0.35, 0.5, 0, TAU); g.fill();
+        g.fillStyle = '#e2b53e';
+        g.beginPath(); g.ellipse(px, py, 0.85, 0.55, 0, 0, TAU); g.fill();
+        g.fillStyle = '#3a2e26';
+        g.fillRect(px - 0.15, py - 0.55, 0.3, 1.1);
+      });
+    }
+  },
+
+  /*
    * An Artisan's potter's wheel: a stone kick wheel on the floor, the spindle
    * up out of it through a plank frame to the wheel head, a lump of clay on
    * the head half drawn up, and the seat behind it the potter kicks from.
