@@ -15,7 +15,11 @@
  *     (`perform_ground`, `perform_creature`, `perform_treasure`) raise it;
  *   * and every way a scroll is set on the island -- into a weapon, a crate
  *     or a placed thing -- raises it by `enchant_head()`, `try_gain` of it by
- *     whether it took, as each of the three performers reads.
+ *     whether it took, as each of the three performers reads;
+ *   * and a hoard dug up raises digging, the job's own skill, by a full go on
+ *     both sides (the browser's job settle; `perform_treasure` on the island),
+ *     and the island's settle (`spend_wind`) teaches the body for it what the
+ *     browser's does: body control, and the back for a heavy trade.
  *
  * Runs against the database the suite leaves behind: Hoarding, and Dane on
  * it. The island's half is rolled back.
@@ -23,10 +27,11 @@
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { CHAR_START, Game } from '../../src/game/game';
-import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD } from '../../src/game/learn';
+import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD, TRY_LEARN } from '../../src/game/learn';
 import { ENCHANTMENT_LIST } from '../../src/game/enchant';
 import { enchantable } from '../../src/game/enchanting';
 import { buryTreasure } from '../../src/game/treasure';
+import { skillGain } from '../../src/game/skills';
 import type { Creature } from '../../src/game/creatures';
 
 const psql = (sql: string): string =>
@@ -47,6 +52,9 @@ const bad: string[] = [];
 const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
+
+/** Digging, where the hoard is dug from: low enough that a full go and a missed one cannot be mistaken. */
+const DIG_AT = 20;
 
 const HEADS: Array<[string, number]> = [['prospect_head', PROSPECT_HEAD], ['tame_head', TAME_HEAD], ['enchant_head', ENCHANT_HEAD], ['hoard_head', HOARD_HEAD]];
 
@@ -84,14 +92,28 @@ begin
   perform act_perform(w, me, 'tame', jsonb_build_object('kind', 'creature', 'id', v_c));
   insert into said values ('TAME', skill_of(w, me, 'mind_logic')::text);
 
-  -- A worn map's hoard under Dane's feet, dug up.
+  -- A worn map's hoard under Dane's feet, dug up, with a shovel, at digging ${DIG_AT}.
   insert into skill (world_id, uid, id, value) values (w, me, 'mind_logic', char_start())
     on conflict (world_id, uid, id) do update set value = excluded.value;
+  insert into skill (world_id, uid, id, value) values (w, me, 'digging', ${DIG_AT}), (w, me, 'body_control', char_start()),
+    (w, me, 'body_strength', char_start())
+    on conflict (world_id, uid, id) do update set value = excluded.value;
+  perform give(w, me, 'shovel', 1, 30);
+  update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'::jsonb) where world_id = w and uid = me;
+  -- What a full go and a missed one could each come to, at the ends of the roll.
+  insert into said values ('DIGBOUNDS', skill_gain_of(${DIG_AT}, skill_mult(w, me, 'digging'), 0.6)::text || '|'
+    || skill_gain_of(${DIG_AT}, skill_mult(w, me, 'digging'), 1.4)::text || '|'
+    || skill_gain_of(${DIG_AT}, try_learn() * skill_mult(w, me, 'digging'), 1.4)::text);
   insert into item (world_id, holder, holder_uid, def, ql) values (w, 'player', me, 'treasure_map', 50) returning id into v_map;
   insert into treasure (item_id, world_id, x, y, tier) values (v_map, w, floor(v_x)::int, floor(v_y)::int, 'worn');
   perform act_perform(w, me, 'unearth', jsonb_build_object('kind', 'item', 'uid', v_map));
   insert into said values ('HOARD', skill_of(w, me, 'mind_logic')::text || '|'
     || (not exists (select 1 from item where id = v_map))::text);
+  insert into said values ('HOARDDIG', (skill_of(w, me, 'digging') - ${DIG_AT})::text);
+  -- And what the settle takes out of the body for the go, after it.
+  perform spend_wind(w, me, 'unearth');
+  insert into said values ('HOARDBODY', (skill_of(w, me, 'body_control') - char_start())::text || '|'
+    || (skill_of(w, me, 'body_strength') - char_start())::text);
 end $b$;
 ${['perform_enchant', 'perform_enchant_crate', 'perform_enchant_placed'].map((fn) => `insert into said values ('F:${fn}', pg_get_functiondef('${fn}'::regproc));`).join('\n')}
 select k || '=' || replace(v, E'\\n', ' ') from said order by k;
@@ -111,6 +133,12 @@ check('on the island, an offering to a wild creature raises mind logic', Number(
 {
   const [ml, dug] = island('HOARD').split('|');
   check('on the island, a hoard dug up raises mind logic', dug === 'true' && Number(ml) > CHAR_START, island('HOARD'));
+  const [least, most, missed] = island('DIGBOUNDS').split('|').map(Number);
+  const dig = Number(island('HOARDDIG'));
+  check('on the island, a hoard dug up raises digging by a full go, not a missed one',
+    dig >= least - 1e-9 && dig <= most + 1e-9 && dig > missed, `${dig} in ${least}..${most}, a miss at most ${missed}`);
+  const [hand, back] = island('HOARDBODY').split('|').map(Number);
+  check('on the island, the settle after it teaches body control and the back', hand > 0 && back > 0, island('HOARDBODY'));
 }
 for (const fn of ['perform_enchant', 'perform_enchant_crate', 'perform_enchant_placed']) {
   const def = island(`F:${fn}`);
@@ -166,6 +194,27 @@ const raised = (g: Game): number => g.skills.get('mind_logic') - CHAR_START;
   if (!map) throw new Error('nowhere to bury a hoard');
   act('unearth').perform({ kind: 'item', uid: map.uid }, g);
   check('in the browser, a hoard dug up raises mind logic', raised(g) > 0 && !g.inventory.get(map.uid), `${raised(g)}`);
+}
+{
+  // The whole go, through the job settle, as a player digs it: the skill and the body are raised there.
+  const g = fresh();
+  g.skills.values.set('digging', DIG_AT);
+  g.skills.values.set('body_control', CHAR_START);
+  g.skills.values.set('body_strength', CHAR_START);
+  g.inventory.add('shovel', { ql: 30 });
+  const map = buryTreasure(g, 50, g.player.x, g.player.y);
+  if (!map) throw new Error('nowhere to bury a hoard');
+  const mult = g.skillMult('digging');
+  g.requestAction(act('unearth'), { kind: 'item', uid: map.uid });
+  for (let i = 0; i < 4000 && g.action; i++) g.update(0.05);
+  const dig = g.skills.get('digging') - DIG_AT;
+  // `fresh` rolls 0, the bottom of the roll.
+  const full = skillGain(DIG_AT, mult, 0.6);
+  check('in the browser, a hoard dug up through the job settle raises digging by a full go',
+    !g.inventory.get(map.uid) && Math.abs(dig - full) < 1e-9 && dig > skillGain(DIG_AT, TRY_LEARN * mult, 1.4), `${dig}, a full go ${full}`);
+  check('in the browser, and teaches body control and the back',
+    g.skills.get('body_control') > CHAR_START && g.skills.get('body_strength') > CHAR_START,
+    `${g.skills.get('body_control') - CHAR_START} ${g.skills.get('body_strength') - CHAR_START}`);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

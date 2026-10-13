@@ -51,7 +51,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, GESTATION, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -74,7 +74,7 @@ import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
 import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
-import { BUTTER_CHURN, CHURN_BUTTER, MILK_READY, milkLitres } from '../../game/dairy';
+import { BUTTER_CHURN, CHURN_BUTTER, MILK_READY, milkLitres, WHEY_FEED } from '../../game/dairy';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
@@ -390,10 +390,14 @@ function dairyHelp(): string {
     Pressed in a clay bowl (${workedAt('make_cheese')}) it makes ${numberWord(made('make_cheese'))} <b>cheeses</b>.
     Churned standing within ${STATION_REACH} tiles of a <b>butter churn</b> set down on the ground (${workedAt(CHURN_BUTTER)})
     it makes ${numberWord(made(CHURN_BUTTER))} pats of <b>butter</b>. The churn is built with ${(SKILL_BY_ID.get(recipe(`make_${BUTTER_CHURN}`).skill)?.name ?? '').toLowerCase()}
-    from ${bill(`make_${BUTTER_CHURN}`)}. Either way the bucket comes back empty, and a failure loses the milk and keeps the bucket.
+    from ${bill(`make_${BUTTER_CHURN}`)}. Cheese hands the bucket back full of the ${numberWord(BUCKET_LITRES)} litres of whey
+    left over, a <b>bucket of whey</b>; butter hands it back empty; and a failure of either loses the milk and hands the bucket back empty.
     ${NumberWord(need('bake_pastry', 'butter'))} pats of butter and ${numberWord(need('bake_pastry', 'dough'))} round of dough bake into ${numberWord(made('bake_pastry'))} <b>pastries</b> at a lit fire or oven (${workedAt('bake_pastry')}).</p>
     <p>A cheese is worth ${fed('cheese')}; a pat of butter ${fed('butter')}; a pastry ${fed('pastry')}.
-    Left lying, cheese rots at ${keeps('cheese')} the pace of a bucket of milk and butter at ${keeps('butter')}.</p>`;
+    Left lying, cheese rots at ${keeps('cheese')} the pace of a bucket of milk and butter at ${keeps('butter')}.</p>
+    <p>A bucket of whey is for feeding: Feed it to a creature you keep, of any kind, and it fills ${percent(WHEY_FEED)} of the
+    creature's hunger, where one thing of its own diet fills ${percent(GRAZE_FILL)}. The bucket comes back empty. Whey is not drunk
+    by you; it can be poured into a barrel or tipped out, and it rots as fast as a bucket of milk.</p>`;
 }
 
 /** The clumps of wildflowers in reach the help works a skep's rate out for. */

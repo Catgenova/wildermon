@@ -7,7 +7,8 @@
  * for `GORRAL_MILK` litres a milking into a part bucket of milk that becomes a
  * bucket of milk at `BUCKET_LITRES`; and churning, pressing and baking giving
  * the counts the browser says, the bucket back, on the island and in the
- * browser alike.
+ * browser alike; pressing cheese hands the bucket back full of whey, which
+ * `whey.ts` follows further.
  *
  * Every roll is set. Runs against the database the suite leaves behind; the
  * island half is rolled back.
@@ -21,7 +22,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/action
 import type { Creature } from '../../src/game/creatures';
 import { SPECIES } from '../../src/game/creatures';
 import {
-  BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, GORRAL_MILK, MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl,
+  BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, GORRAL_MILK, MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET,
 } from '../../src/game/dairy';
 import { BUCKET_LITRES, FURNITURE_BY_ID } from '../../src/game/furniture';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
@@ -203,7 +204,7 @@ begin
   perform give(w, u, 'milk_bucket', 1, 40);
   perform give(w, u, 'clay_bowl', 1, 40);
   ${craft('make_cheese')}
-  insert into said values ('CHEESE', ${count('cheese')} || '|' || ${count('bucket')} || '|' || ${count('milk_bucket')});
+  insert into said values ('CHEESE', ${count('cheese')} || '|' || ${count('bucket')} || '|' || ${count('milk_bucket')} || '|' || ${count(WHEY_BUCKET)});
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -332,8 +333,8 @@ check(`a bucket of milk churns into ${BUTTER_PATS} pats of butter and the bucket
 /* 4. Pastry and cheese. */
 const pastry = RECIPE_BY_ID.get('bake_pastry');
 const butterIn = pastry?.inputs.find((i) => i.item === 'butter')?.count ?? 0;
-check(`pastry and cheese give what they say on the island: ${pastry?.count} pastries for ${butterIn} pats, ${RECIPE_BY_ID.get('make_cheese')?.count} cheeses and the bucket back`,
-  isle.get('PA') === `${pastry?.count}|${BUTTER_PATS - butterIn}|0` && isle.get('CHEESE') === `${RECIPE_BY_ID.get('make_cheese')?.count}|1|0`,
+check(`pastry and cheese give what they say on the island: ${pastry?.count} pastries for ${butterIn} pats, ${RECIPE_BY_ID.get('make_cheese')?.count} cheeses and the bucket back full of whey`,
+  isle.get('PA') === `${pastry?.count}|${BUTTER_PATS - butterIn}|0` && isle.get('CHEESE') === `${RECIPE_BY_ID.get('make_cheese')?.count}|0|0|1`,
   `${isle.get('PA')} ${isle.get('CHEESE')}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
