@@ -171,7 +171,10 @@ export interface FurnitureDef {
   roses?: boolean;
   /**
    * A grapevine is planted at its foot and grows up it (`vineyard.ts`): a
-   * trellis. It stands out of doors, on the ground.
+   * trellis. It is set down on the ground outside a building, against the
+   * outer face of a wall on the side of the tile it faces, and runs the whole
+   * of that side: a footprint a row of subtiles long, standing in the row
+   * along that side (`furnitureAnchor`).
    */
   vine?: boolean;
   /**
@@ -334,7 +337,7 @@ export const FURNITURE: FurnitureDef[] = [
   piece('coat_rack', 'Coat rack', 1, 1, [['plank', 4], ['shaft', 4], ['nail', 12]], 10, 6, 'You nail up a rack of pegs for the door.'),
   piece('planter', 'Planter', 2, 1, [['plank', 24], ['nail', 20]], 10, 7, 'You nail up a planter and fill it with earth.', undefined, { planter: true }),
   // A grapevine climbs it, planted at its foot: see `vineyard.ts`.
-  piece('trellis', 'Trellis', 1, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 8, 'You nail {bill.plank:w} laths across {bill.shaft:w} uprights: a trellis for a vine.', undefined, { vine: true }),
+  piece('trellis', 'Trellis', SUBTILES, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 8, 'You nail {bill.plank:w} laths across {bill.shaft:w} uprights: a trellis for a vine.', undefined, { vine: true }),
   piece('firewood_rack', 'Firewood rack', 2, 1, [['plank', 8], ['shaft', 6], ['nail', 20]], 12, 8, 'You nail up a rack to keep firewood off the wet.', 40),
   /*
    * The biggest thing a carpenter builds, and the only one whose footprint is
@@ -897,10 +900,17 @@ export function rackDeck(f: { kind: string; sx: number; sy: number; facing?: Sid
   return out;
 }
 
-/** Top-left subtile of the block a piece would take, kept inside the tile. */
+/**
+ * Top-left subtile of the block a piece would take, kept inside the tile. A
+ * piece that stands against a wall (`FurnitureDef.vine`) goes into the row of
+ * subtiles along the side it faces, wherever on the tile it was asked for.
+ * The island's `piece_anchor`.
+ */
 export function furnitureAnchor(kind: string, sx: number, sy: number, facing: Side = 's'): [number, number] {
   const [w, h] = furnitureFootprint(kind, facing);
-  return [Math.max(0, Math.min(SUBTILES - w, sx)), Math.max(0, Math.min(SUBTILES - h, sy))];
+  const ax = Math.max(0, Math.min(SUBTILES - w, sx)), ay = Math.max(0, Math.min(SUBTILES - h, sy));
+  if (!furnitureDef(kind).vine) return [ax, ay];
+  return [facing === 'w' ? 0 : facing === 'e' ? SUBTILES - w : ax, facing === 'n' ? 0 : facing === 's' ? SUBTILES - h : ay];
 }
 
 /** The vehicle a piece is, if it is one. */
@@ -1172,6 +1182,9 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.driven) return 'Get down off it first.';
       if (ridersOf(f).length) return 'There are people aboard her.';
       if (rackSpots(f) && g.cratesOn(f).length) return 'Take the crates off it first.';
+      // A trellis goes round to the next side of its tile with a wall it stands against, and stays put with none (`vineyard.ts`).
+      const stuck = g.trellisTurnRefusal(f);
+      if (stuck) return stuck;
       // A quarter turn, or on round past a facing a lantern post's arm would go into a wall (`lamps.ts`).
       const facing = g.pieceTurnsTo(f);
       const [ax, ay] = furnitureAnchor(f.kind, f.sx, f.sy, facing);

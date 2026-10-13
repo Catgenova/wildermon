@@ -21,7 +21,7 @@ import { BREW_BY_ID, BREWS, isBrew } from '../../game/brewing';
 import { AGEING_GROUPS, CELLAR_AGEING, keepsQl } from '../../game/ageing';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
-  VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
+  trellisRefusedSaid, trellisWallWords, VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
 } from '../../game/vineyard';
 import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
@@ -1313,7 +1313,11 @@ export function helpText(): string {
     <h3>Vineyards</h3>
     <p>Wild vines grow through the ${WILD_VINE.toLowerCase()}es. With a ${itemDef(CUTTING_TOOL).name.toLowerCase()} in your pack, <b>${VINE_ACTION(CUT_VINE)}</b> off one
     for ${countOf(GRAPE_CUTTING, 1)}; a bush gives another once it has grown back, as it does after a harvest. Build a <b>trellis</b> from ${bill('make_trellis')}
-    (${workedAt('make_trellis')}, with a ${itemDef(recipe('make_trellis').tool ?? '').name.toLowerCase()}) and set it down out of doors, then <b>${VINE_ACTION(PLANT_VINE)}</b> at its foot: a vine roots only where the
+    (${workedAt('make_trellis')}, with a ${itemDef(recipe('make_trellis').tool ?? '').name.toLowerCase()}). It is set down only on the ground outside a building,
+    against the outer face of a finished ${trellisWallWords()}, and stands along the whole of that side of its tile, facing the wall;
+    on a tile with such walls on more than one side it goes against the one nearest where you set it down. ${trellisRefusedSaid()}
+    Turned, it goes round to the next side of its tile with such a wall, and is refused where there is none.
+    It stays standing, vine and all, if its wall comes down. Then <b>${VINE_ACTION(PLANT_VINE)}</b> at its foot: a vine roots only where the
     trellis stands on ${vineSoilWords()}. The vine bears from ${numberWord(VINE_BEARS)} days after it is planted, and only in
     <b>${GRAPE_SEASON}</b>: <b>${VINE_ACTION(PICK_GRAPES)}</b> in any other season gives nothing and says how long until it fruits. In
     ${GRAPE_SEASON} a vine is picked ${onceEvery(VINE_REST)}, for ${GRAPES_A_PICK} &times; (${GRAPES_BASE} + ${VINE_SKILL} &divide; ${GRAPES_SPAN})

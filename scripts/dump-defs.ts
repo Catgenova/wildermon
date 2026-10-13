@@ -246,6 +246,8 @@ out.push(`alter table wall_type_def add column if not exists stone boolean not n
 out.push(`alter table wall_type_def add column if not exists ground boolean not null default false;`);
 /* Laid in one material and no other: a rune gate in stone brick (`runegate.ts`, `material_only_refusal`). */
 out.push(`alter table wall_type_def add column if not exists laid_in text;`);
+/* A face a trellis is set against from outside: a solid wall and a window (`vineyard.ts`, `trellis_wall_refusal`). */
+out.push(`alter table wall_type_def add column if not exists trellis boolean not null default false;`);
 out.push(`create table if not exists build_material_def (
   id text primary key, name text not null, kind text not null, tool text not null, skill text not null
 );`);
@@ -2034,6 +2036,7 @@ for (const w of WALL_TYPES) {
   if (w.stone) out.push(`update wall_type_def set stone = true where id = ${q(w.id)};`);
   if (w.ground) out.push(`update wall_type_def set ground = true where id = ${q(w.id)};`);
   if (w.laidIn) out.push(`update wall_type_def set laid_in = ${q(w.laidIn)} where id = ${q(w.id)};`);
+  if (w.trellis) out.push(`update wall_type_def set trellis = true where id = ${q(w.id)};`);
   for (const [item, n] of w.fittings ?? []) out.push(`insert into wall_fitting values (${q(w.id)}, ${q(item)}, ${q(n)});`);
 }
 for (const r of ROOF_SHAPES) {
@@ -2469,7 +2472,7 @@ out.push(`create or replace function brew_ages(p_liquid text) returns boolean la
 out.push(`create or replace function keeps_ql(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${
   (Object.keys(LIQUID_NAME) as LiquidKind[]).filter(keepsQl).map((l) => q(l)).join(', ')}]::text[]), false) $fn$;`);
 out.push(`create or replace function vine_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
-  (['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool'] as const).map((k) => `when ${q(k)} then ${q(VINE_SAID[k])} `).join('')}end $fn$;`);
+  (['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool', 'wall', 'turn'] as const).map((k) => `when ${q(k)} then ${q(VINE_SAID[k])} `).join('')}end $fn$;`);
 {
   const [a, b, c] = vineSeasonWords('\u0000', '\u0001').split(/[\u0000\u0001]/);
   out.push(`create or replace function vine_season_words(p_season text, p_wait text) returns text language sql immutable as $fn$ select ${q(a)} || p_season || ${q(b)} || p_wait || ${q(c)} $fn$;`);

@@ -66,11 +66,20 @@ export interface WallTypeDef {
    * (`runegate.ts`). Asked where a material's `only` is (`onlyRefusal`).
    */
   laidIn?: string;
+  /**
+   * A face a trellis is set against, from outside (`vineyard.ts`): a solid
+   * wall and a window. Not an opening -- a door, a double door, an arch, a
+   * gate, a portcullis or a hidden door to whoever it opens for -- which a
+   * trellis would stand across; not a waist-high wall or a fence; not a bay,
+   * which stands out in front of the face; and not a shop counter, whose
+   * awning swings out over the ground a trellis would stand on.
+   */
+  trellis?: boolean;
 }
 
 export const WALL_TYPES: WallTypeDef[] = [
-  { id: 'solid', name: 'Solid', factor: 1, passable: false, opaque: true },
-  { id: 'window', name: 'Window', factor: 0.75, passable: false, fittings: [['glass', 6]] },
+  { id: 'solid', name: 'Solid', factor: 1, passable: false, opaque: true, trellis: true },
+  { id: 'window', name: 'Window', factor: 0.75, passable: false, fittings: [['glass', 6]], trellis: true },
   /*
    * No `thick`. It used to carry 1.7 of it, which moved the whole section
    * that much nearer the camera and left a slice of ground showing at the

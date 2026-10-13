@@ -7,7 +7,13 @@
  * off it; the vine too young to bear, then picked in autumn for the grapes
  * its picker's forestry gives, resting a day and picked again, and refused
  * in every other season with when it fruits -- at the same moments, in the
- * same words; grape wine set going from its grapes, its ageing stamped as it
+ * same words; a trellis set down only on the ground outside a building
+ * against the outer face of a finished solid wall or window, facing it, in
+ * the row of subtiles along that side -- refused with no wall, on a wall's
+ * inside, on another building's tile, upstairs, against an unfinished wall,
+ * a door, a bay or a hidden door its padlock admits you through, in the
+ * same words -- turned round to its tile's next such wall or refused, and
+ * left standing, vine and all, when its wall is taken down; grape wine set going from its grapes, its ageing stamped as it
  * goes; and the QL a barrel of it is at after so many days in a cellar and
  * out of one, worked out on both sides to the last bit, capped at what it
  * gains and at 100, said on Examine and drunk at.
@@ -33,8 +39,10 @@ import { vesselSays } from '../../src/game/placeables';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
 import {
   CUT_VINE, cutVineSaid, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, grapesSaid, PICK_GRAPES, PLANT_VINE,
-  TRELLIS, untilGrapes, VINE_BEARS, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonSaid, vineStage, WILD_VINE,
+  TRELLIS, TRELLIS_WALLS, trellisFacing, untilGrapes, VINE_BEARS, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonSaid, vineStage, WILD_VINE,
 } from '../../src/game/vineyard';
+import { SUBTILES } from '../../src/game/crates';
+import { WALL_TYPES, type Building, type Side, type WallType } from '../../src/game/building';
 import { SEASON_DAYS, seasonAt, YEAR_DAYS, YEAR_FROM } from '../../src/world/calendar';
 import { BUSH_DEFS, TileType } from '../../src/world/tiles';
 
@@ -103,6 +111,12 @@ const recipeIsle = psql(`select r.tool || '|' || r.skill || '|' || r.base_time |
 check(`a trellis is built the same on both sides: ${recipeIsle}`, !!recipe && !!FURNITURE_BY_ID.get(TRELLIS)?.vine
   && recipeIsle === `${recipe.tool}|${recipe.skill}|${recipe.baseTime}|${recipe.difficulty}|${recipe.inputs.map((i) => `${i.item}:${i.count}`).sort().join(',')}`);
 check('and it stays out of a cellar on both sides', cellarOutdoor().includes(TRELLIS) && psql(`select cellar_outdoor('${TRELLIS}')`) === 't');
+const trellisDef = FURNITURE_BY_ID.get(TRELLIS);
+check(`it runs the width of its tile on both sides: ${trellisDef?.w} subtiles by ${trellisDef?.h}`,
+  trellisDef?.w === SUBTILES && trellisDef.h === 1 && psql(`select w || 'x' || h from furniture_def where id = '${TRELLIS}'`) === `${SUBTILES}x1`);
+check(`it is set against the same wall types on both sides, off their table: ${TRELLIS_WALLS.join(', ')}`,
+  psql(`select string_agg(id, ',' order by id) from wall_type_def where trellis`) === [...TRELLIS_WALLS].sort().join(',')
+    && [...TRELLIS_WALLS].sort().join(',') === 'solid,window' && WALL_TYPES.filter((t) => t.trellis).every((t) => !t.passable && !t.low));
 const itemsIsle = psql(`select string_agg(d.id || ':' || d.name || ':' || d.description, '#' order by d.id) from item_def d
   where d.id in ('${GRAPE}', '${GRAPE_CUTTING}', '${TRELLIS}', 'grape_wine_bucket')`);
 check('the grape, the cutting, the trellis and the bucket of grape wine are the same things on both sides, with nothing left to fill in',
@@ -123,7 +137,7 @@ const actsHere = [CUT_VINE, PICK_GRAPES, PLANT_VINE].map((id) => {
   return `${a.id}:${a.label}:${a.skill ?? '-'}:${a.baseTime}`;
 }).join('|');
 check(`the three jobs are the same rows on both sides: ${actsHere}`, actsIsle === actsHere, actsIsle);
-const KEYS = ['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool'] as const;
+const KEYS = ['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool', 'wall', 'turn'] as const;
 const wordsIsle = psql(`select concat_ws('#', ${KEYS.map((k) => `vine_said('${k}')`).join(', ')}, vine_planted_said(),
   grapes_said(1, 31.25), grapes_said(5, 42.25), grapes_said(8, 99.95), cut_vine_said(33.35), cut_vine_said(7))`);
 const wordsHere = [...KEYS.map((k) => VINE_SAID[k]), vinePlantedSaid(), grapesSaid(1, 31.25), grapesSaid(5, 42.25), grapesSaid(8, 99.95),
@@ -167,6 +181,41 @@ const ROSE = BUSH_DEFS.findIndex((b) => b.name !== WILD_VINE);
 const BASE = 40.5;
 const TOP = 95.25;
 
+/*
+ * Where a trellis stands. An L-shaped house of three tiles -- (21, 21), (22, 21)
+ * and (21, 22) -- with a house of one on the foot of the L at (21, 23), and a
+ * house of one at (26, 21) whose way in is a hidden door. Its walls, by the
+ * border they stand on (`h`: a tile's north border, `v` its west):
+ */
+const HIDDEN_LOCK = 4242;
+const WALLS: Array<{ dir: 'h' | 'v'; x: number; y: number; b: number; type: WallType; done: boolean; lock?: number }> = [
+  { dir: 'h', x: 21, y: 21, b: 96, type: 'solid', done: true }, // the L's north wall: outside it (21, 20), inside it (21, 21)
+  { dir: 'h', x: 22, y: 21, b: 96, type: 'door', done: true }, // a door, outside it (22, 20)
+  { dir: 'v', x: 23, y: 21, b: 96, type: 'solid', done: false }, // the east wall, still going up: outside it (23, 21)
+  { dir: 'v', x: 21, y: 21, b: 96, type: 'window', done: true }, // a window on the west: outside it (20, 21)
+  { dir: 'h', x: 22, y: 22, b: 96, type: 'solid', done: true }, // the inner corner of the L, (22, 22): a wall north
+  { dir: 'v', x: 22, y: 22, b: 96, type: 'solid', done: true }, // and a wall west
+  { dir: 'v', x: 21, y: 22, b: 96, type: 'bay', done: true }, // a bay window on the west of the foot: outside it (20, 22)
+  { dir: 'h', x: 21, y: 23, b: 96, type: 'solid', done: true }, // the L's south wall, whose other face is the house next door's inside
+  { dir: 'h', x: 26, y: 21, b: 98, type: 'hidden_door', done: true, lock: HIDDEN_LOCK }, // a hidden door, outside it (26, 20)
+];
+/** What each place says, asked from the tile it is asked of, on the ground but where `level` says. */
+const ASKS: Array<{ k: string; x: number; y: number; f: Side; level?: number; want: 'ok' | 'wall' }> = [
+  { k: 'out', x: 21, y: 20, f: 's', want: 'ok' },
+  { k: 'inside', x: 21, y: 21, f: 'n', want: 'wall' },
+  { k: 'nowall', x: 24, y: 20, f: 's', want: 'wall' },
+  { k: 'door', x: 22, y: 20, f: 's', want: 'wall' },
+  { k: 'bay', x: 20, y: 22, f: 'e', want: 'wall' },
+  { k: 'unfinished', x: 23, y: 21, f: 'w', want: 'wall' },
+  { k: 'window', x: 20, y: 21, f: 'e', want: 'ok' },
+  { k: 'nextdoor', x: 21, y: 23, f: 'n', want: 'wall' },
+  { k: 'cornerN', x: 22, y: 22, f: 'n', want: 'ok' },
+  { k: 'cornerW', x: 22, y: 22, f: 'w', want: 'ok' },
+  { k: 'cornerS', x: 22, y: 22, f: 's', want: 'wall' },
+  { k: 'hidden', x: 26, y: 20, f: 's', want: 'ok' },
+  { k: 'upstairs', x: 21, y: 20, f: 's', level: 1, want: 'wall' },
+];
+
 const out = psql(`
 set wurm.season = '';
 discard temp;
@@ -190,6 +239,9 @@ create function pg_temp.nodice() returns void language plpgsql as $f$
 begin
   perform set_config('search_path', '"$user", public', true);
 end $f$;
+create function pg_temp.stand(p_w uuid, p_u uuid, p_x int, p_y int, p_lv int) returns void language sql as $f$
+  update player set x = p_x + 0.5, y = p_y + 0.5, level = p_lv where world_id = p_w and uid = p_u
+$f$;
 create or replace function perk_rare(p_chance double precision) returns text language sql as 'select null::text';
 create or replace function rarity_roll() returns text language sql as 'select null::text';
 do $t$
@@ -225,7 +277,11 @@ begin
   insert into said values ('C:cut', ${count(GRAPE_CUTTING)} || '|' || ${lastSaid});
   ${askIsle('C:again', CUT_VINE, TILE(11, 10))}
 
-  -- 2. A trellis built and set down on grass, and another on sand.
+  -- 2. A trellis built and set down on grass, and another on sand, against the north wall of a house to the south.
+  insert into building (world_id, id, name, levels, work_level, planned_by) values (w, 95, 'Press house', 1, 0, u);
+  insert into building_tile (world_id, building, x, y) values (w, 95, 9, 12), (w, 95, 10, 12);
+  insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
+    values (w, 0, 'h', 9, 12, 95, 'solid', 'plank', '{"plank":0}', '{"plank":24}', u), (w, 0, 'h', 10, 12, 95, 'solid', 'plank', '{"plank":0}', '{"plank":24}', u);
   perform give(w, u, 'mallet', 1, 50);
   v_it := give(w, u, 'plank', 8, 40);
   perform give(w, u, 'shaft', 12, 40);
@@ -236,6 +292,7 @@ begin
   perform pg_temp.nodice();
   insert into said values ('BUILT', ${count(TRELLIS)}::text);
   select id into v_it from item where world_id = w and holder_uid = u and def = '${TRELLIS}' order by id limit 1;
+  ${askIsle('PLACE:ok', 'place_furniture', `jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', 10, 'y', 11, 'sx', 1, 'sy', 1, 'facing', 's')`)}
   perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', 10, 'y', 11, 'sx', 1, 'sy', 1, 'facing', 's'));
   select id into v_tr from placed where world_id = w and kind = 'furniture' and sub = '${TRELLIS}' order by id desc limit 1;
   select id into v_it from item where world_id = w and holder_uid = u and def = '${TRELLIS}' order by id limit 1;
@@ -334,6 +391,51 @@ begin
   insert into said select 'E:water', coalesce(pl.aged_from::text, '-') from placed pl where pl.id = v_bar;
   update placed set liquid = 'ale', litres = 15, ferment = 900, since = now() where id = v_bar;
   insert into said select 'E:ale', coalesce(pl.aged_from::text, '-') from placed pl where pl.id = v_bar;
+
+  -- 9. Where a trellis stands: an L-shaped house of three tiles, a house of one on the foot of the L, and a house behind a hidden door.
+  insert into building (world_id, id, name, levels, work_level, planned_by)
+    values (w, 96, 'Wine house', 1, 0, u), (w, 97, 'Next door', 1, 0, u), (w, 98, 'Hidden house', 1, 0, u);
+  insert into building_tile (world_id, building, x, y) values (w, 96, 21, 21), (w, 96, 22, 21), (w, 96, 21, 22), (w, 97, 21, 23), (w, 98, 26, 21);
+  insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by, lock)
+    select w, 0, d, wx, wy, b, t, 'plank', case when done then '{"plank":0}' else '{"plank":24}' end::jsonb, '{"plank":24}'::jsonb, u, k
+      from (values ${WALLS.map((x) => `('${x.dir}', ${x.x}, ${x.y}, ${x.b}, '${x.type}', ${x.done}, ${x.lock ?? 'null'}::bigint)`).join(', ')}) v(d, wx, wy, b, t, done, k);
+  v_it := give(w, u, '${TRELLIS}', 1, 40);
+  ${ASKS.map((a) => `perform pg_temp.stand(w, u, ${a.x}, ${a.y}, ${a.level ?? 0});
+  ${askIsle(`W:${a.k}`, 'place_furniture', `jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', ${a.x}, 'y', ${a.y}, 'sx', 1, 'sy', 1, 'facing', '${a.f}')`)}`).join('\n  ')}
+  -- With the key to the hidden door it is a door to her, and refused.
+  insert into item (world_id, holder, holder_uid, def, ql, count, keyed) values (w, 'player', u, 'key', 30, 1, ${HIDDEN_LOCK});
+  perform pg_temp.stand(w, u, 26, 20, 0);
+  ${askIsle('W:hiddenKey', 'place_furniture', `jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', 26, 'y', 20, 'sx', 1, 'sy', 1, 'facing', 's')`)}
+  delete from item where world_id = w and holder_uid = u and def = 'key';
+  -- The unfinished wall finished.
+  update wall set needed = '{"plank":0}' where world_id = w and dir = 'v' and x = 23 and y = 21;
+  perform pg_temp.stand(w, u, 23, 21, 0);
+  ${askIsle('W:finished', 'place_furniture', `jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', 23, 'y', 21, 'sx', 1, 'sy', 1, 'facing', 'w')`)}
+  -- Set down outside the north wall, asked for in the middle of the tile: facing it, in the row along it.
+  perform pg_temp.stand(w, u, 21, 20, 0);
+  perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', 21, 'y', 20, 'sx', 2, 'sy', 1, 'facing', 's'));
+  select id into v_tr from placed where world_id = w and kind = 'furniture' and sub = '${TRELLIS}' and x = 21 and y = 20;
+  insert into said select 'W:placed', pl.facing || '|' || pl.sx || '|' || pl.sy || '|' || pl.cx || '|' || pl.cy from placed pl where pl.id = v_tr;
+  -- And in the inner corner of the L, facing north; turned, it goes round past east and south to the west wall.
+  v_it := give(w, u, '${TRELLIS}', 1, 40);
+  perform pg_temp.stand(w, u, 22, 22, 0);
+  perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', 22, 'y', 22, 'sx', 3, 'sy', 2, 'facing', 'n'));
+  select id into v_tr2 from placed where world_id = w and kind = 'furniture' and sub = '${TRELLIS}' and x = 22 and y = 22;
+  insert into said select 'W:corner', pl.facing || '|' || pl.sx || '|' || pl.sy from placed pl where pl.id = v_tr2;
+  ${askIsle('W:turnOk', 'turn_furniture', T('v_tr2'))}
+  perform act_perform(w, u, 'turn_furniture', ${T('v_tr2')});
+  insert into said select 'W:turned', pl.facing || '|' || pl.sx || '|' || pl.sy || '|' || ${lastSaid} from placed pl where pl.id = v_tr2;
+  -- The one against the north wall has no other wall on its tile to turn to.
+  perform pg_temp.stand(w, u, 21, 20, 0);
+  ${askIsle('W:turnNone', 'turn_furniture', T('v_tr'))}
+  -- Its wall taken down: that is not refused, and the trellis stays, a vine planted on it and picked as anywhere.
+  ${askIsle('W:remove', 'remove_wall', `jsonb_build_object('kind', 'tile', 'x', 21, 'y', 20, 'side', 's')`)}
+  perform act_perform(w, u, 'remove_wall', jsonb_build_object('kind', 'tile', 'x', 21, 'y', 20, 'side', 's'));
+  insert into said select 'W:gone', count(*)::text || '|' || (select count(*) from placed pl where pl.id = v_tr)::text
+    from wall where world_id = w and level = 0 and dir = 'h' and x = 21 and y = 21;
+  perform give(w, u, '${GRAPE_CUTTING}', 1, 40);
+  ${askIsle('W:plant', PLANT_VINE, T('v_tr'))}
+  ${askIsle('W:turnGone', 'turn_furniture', T('v_tr'))}
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -400,6 +502,16 @@ dice(0.01);
 act(`make_${TRELLIS}`).perform({ kind: 'item', uid: planks.uid }, g);
 act(`make_${TRELLIS}`).perform({ kind: 'item', uid: (g.inventory.items.find((it) => it.id === 'plank') as Item).uid }, g);
 check('two trellises are built on both sides', isle.get('BUILT') === '2' && held(TRELLIS) === 2, `${isle.get('BUILT')} / ${held(TRELLIS)}`);
+/** A wall raised whole: planned on a side of a tile, and its bill paid. */
+const raise = (b: Building | null, x: number, y: number, side: Side, type: WallType, done = true): void => {
+  const wall = b ? g.buildings.setWall(b, 0, x, y, side, type, 'plank') : g.buildings.setFence(x, y, side, type, 'plank');
+  if (done) for (const k of Object.keys(wall.needed)) wall.needed[k] = 0;
+};
+const press = g.buildings.create('Press house', 9, 12);
+g.buildings.addTile(press, 10, 12);
+raise(press, 9, 12, 'n', 'solid');
+raise(press, 10, 12, 'n', 'solid');
+same('PLACE:ok', act('place_furniture').check?.({ kind: 'tile', x: 10, y: 11, sx: 1, sy: 1, itemUid: (g.inventory.items.find((i) => i.id === TRELLIS) as Item).uid, facing: 's' } as Target, g) ?? 'none', 'none');
 const setDown = (x: number, y: number): PlacedFurniture => {
   const it = g.inventory.items.find((i) => i.id === TRELLIS) as Item;
   act('place_furniture').perform({ kind: 'tile', x, y, sx: 1, sy: 1, itemUid: it.uid, facing: 's' } as Target, g);
@@ -532,6 +644,83 @@ check(`and the same in the browser: ${Math.round(boonHere)} seconds`, Math.abs(b
 /* 8. Drawn dry and set going again. */
 check('drawn dry it forgets its age; water poured in has none; a brew that does not age is stamped with none',
   isle.get('E:dry') === '-|-' && isle.get('E:water') === '-' && isle.get('E:ale') === '-', `${isle.get('E:dry')} ${isle.get('E:water')} ${isle.get('E:ale')}`);
+
+/* 9. Where a trellis stands. */
+{
+  g.wallClock = null;
+  const houses = new Map<number, Building>();
+  const houseOf = (id: number, x: number, y: number): Building => {
+    const had = houses.get(id);
+    if (had) {
+      g.buildings.addTile(had, x, y);
+      return had;
+    }
+    const b = g.buildings.create(`House ${id}`, x, y);
+    houses.set(id, b);
+    return b;
+  };
+  for (const [id, x, y] of [[96, 21, 21], [96, 22, 21], [96, 21, 22], [97, 21, 23], [98, 26, 21]] as Array<[number, number, number]>) houseOf(id, x, y);
+  for (const wl of WALLS) {
+    // A border by the tile it is the north or the west side of.
+    const wall = g.buildings.setWall(houses.get(wl.b) as Building, 0, wl.x, wl.y, wl.dir === 'h' ? 'n' : 'w', wl.type, 'plank');
+    if (wl.done) for (const k of Object.keys(wall.needed)) wall.needed[k] = 0;
+    if (wl.lock) wall.lock = wl.lock;
+  }
+  const item = thing(TRELLIS, 40);
+  const stand = (x: number, y: number, level = 0): void => {
+    g.putBody(x + 0.5, y + 0.5, 0);
+    g.player.level = level;
+  };
+  const askPlace = (x: number, y: number, facing: Side, sx = 1, sy = 1): string =>
+    act('place_furniture').check?.({ kind: 'tile', x, y, sx, sy, itemUid: item.uid, facing } as Target, g) ?? 'none';
+  for (const a of ASKS) {
+    stand(a.x, a.y, a.level ?? 0);
+    same(`W:${a.k}`, askPlace(a.x, a.y, a.f), a.want === 'ok' ? 'none' : VINE_SAID.wall);
+  }
+  stand(21, 20);
+  const key = g.inventory.add('key', { ql: 30 });
+  key.keyed = HIDDEN_LOCK;
+  stand(26, 20);
+  same('W:hiddenKey', askPlace(26, 20, 's'), VINE_SAID.wall);
+  g.inventory.remove(key.uid, 1);
+  const unfinished = g.buildings.wall(0, 23, 21, 'w');
+  for (const k of Object.keys(unfinished?.needed ?? {})) if (unfinished) unfinished.needed[k] = 0;
+  stand(23, 21);
+  same('W:finished', askPlace(23, 21, 'w'), 'none');
+
+  // Which side a trellis goes against, set down at a point of a tile with two: the nearer, and north where they are as near;
+  // on a tile with one, that one wherever on the tile; with none, the nearest side, shown refused.
+  const fac = (fx: number, fy: number): Side => trellisFacing(g, 22, 22, fx, fy, 0);
+  check(`in the inner corner of the L it goes against the wall nearer where it is set down: ${fac(0.5, 0.1)}, ${fac(0.1, 0.5)}, ${fac(0.5, 0.5)}, ${fac(0.9, 0.9)}`,
+    fac(0.5, 0.1) === 'n' && fac(0.1, 0.5) === 'w' && fac(0.5, 0.5) === 'n' && fac(0.2, 0.3) === 'w' && fac(0.3, 0.2) === 'n' && fac(0.9, 0.9) === 'n'
+      && trellisFacing(g, 24, 20, 0.9, 0.6, 0) === 'e' && trellisFacing(g, 21, 20, 0.1, 0.1, 0) === 's');
+
+  stand(21, 20);
+  act('place_furniture').perform({ kind: 'tile', x: 21, y: 20, sx: 2, sy: 1, itemUid: item.uid, facing: 's' } as Target, g);
+  const out = [...g.furniture.values()].find((f) => f.kind === TRELLIS && f.x === 21 && f.y === 20) as PlacedFurniture;
+  const [ocx, ocy] = [21 + 0.5, 20 + (SUBTILES - 0.5) / SUBTILES];
+  check(`set down outside the north wall it faces it, in the row of subtiles along it, on both sides: ${out?.facing} at ${out?.sx}, ${out?.sy}`,
+    out?.facing === 's' && out.sx === 0 && out.sy === SUBTILES - 1 && isle.get('W:placed') === `s|0|${SUBTILES - 1}|${ocx}|${ocy}`, isle.get('W:placed'));
+  const item2 = thing(TRELLIS, 40);
+  stand(22, 22);
+  act('place_furniture').perform({ kind: 'tile', x: 22, y: 22, sx: 3, sy: 2, itemUid: item2.uid, facing: 'n' } as Target, g);
+  const corner = [...g.furniture.values()].find((f) => f.kind === TRELLIS && f.x === 22 && f.y === 22) as PlacedFurniture;
+  check(`and in the inner corner facing north, along its north side: ${corner?.facing} at ${corner?.sx}, ${corner?.sy}`,
+    corner?.facing === 'n' && corner.sx === 0 && corner.sy === 0 && isle.get('W:corner') === 'n|0|0', isle.get('W:corner'));
+  same('W:turnOk', act('turn_furniture').check?.(piece(corner.id), g) ?? 'none', 'none');
+  act('turn_furniture').perform(piece(corner.id), g);
+  check(`turned, it goes round past east and south, which have no wall, to the west wall, along it: ${corner.facing} at ${corner.sx}, ${corner.sy}, “${lastHere()}”`,
+    corner.facing === 'w' && corner.sx === 0 && corner.sy === 0 && isle.get('W:turned') === `w|0|0|${lastHere()}`, isle.get('W:turned'));
+  stand(21, 20);
+  same('W:turnNone', act('turn_furniture').check?.(piece(out.id), g) ?? 'none', VINE_SAID.turn);
+  const down = { kind: 'tile', x: 21, y: 20, side: 's' } as Target;
+  same('W:remove', act('remove_wall').check?.(down, g) ?? 'none', 'none');
+  act('remove_wall').perform(down, g);
+  check('its wall taken down, the trellis stays standing, on both sides', !g.buildings.wall(0, 21, 20, 's') && g.furniture.has(out.id) && isle.get('W:gone') === '0|1', isle.get('W:gone'));
+  thing(GRAPE_CUTTING, 40);
+  same('W:plant', ask(PLANT_VINE, piece(out.id)), 'none');
+  same('W:turnGone', act('turn_furniture').check?.(piece(out.id), g) ?? 'none', VINE_SAID.turn);
+}
 
 /* ---- what was found ------------------------------------------------------------------------------- */
 

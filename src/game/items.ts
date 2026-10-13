@@ -483,7 +483,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   bookshelf: { name: 'Bookshelf', category: 'misc', weight: 30, decay: 4, description: 'Shelves with a back and a cornice. Holds {capacity} things.' },
   larder: { name: 'Larder', category: 'misc', weight: 48, decay: 4, description: 'A deep cool cupboard for a kitchen. Holds {capacity} things: food, drink, and the flour, dough and cornmeal a kitchen bakes from.' },
   crate_shelf: { name: 'Crate shelf', category: 'misc', weight: 64, decay: 4, description: 'A decked rack {w:w} spots across and {h:w} deep. It holds nothing itself: {crates:w} plank crates stand on it, each its own crate, and you can see across a warehouse how many are full.' },
-  trellis: { name: 'Trellis', category: 'misc', weight: 8, decay: 4, description: 'Laths nailed across uprights, for a grapevine to climb. {rule}' },
+  trellis: { name: 'Trellis', category: 'misc', weight: 8, decay: 4, description: 'A lattice for a grapevine, as wide as the wall it stands against. {rule} {refused}' },
   barrel: { name: 'Barrel', category: 'misc', weight: 14, decay: 4, description: 'Staves and hoops. Holds {liquid} litres of one liquid, and nothing solid.' },
   creature_crate: {
     name: 'Creature crate', category: 'misc', weight: 10, decay: 0,

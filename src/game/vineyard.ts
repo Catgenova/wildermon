@@ -1,20 +1,27 @@
 import type { ActionDef, Target } from './actions';
 import { fixedTo } from './ageing';
 import { FRUITING } from './fruiting';
-import type { PlacedFurniture } from './furniture';
+import { isDone, WALL_TYPES, WALL_TYPE_BY_ID, type Side } from './building';
+import { facingOf, FACINGS, turnedFacing, type PlacedFurniture } from './furniture';
 import { STATE_TAILS } from './pieceTails';
 import type { Game } from './game';
 import { describeFrom, itemDef } from './items';
 import { lampTooFar } from './lamps';
 import { DAY_SECONDS } from './pace';
-import { listedOr, numberWord, timeWords } from './words';
+import { article, listedOr, numberWord, timeWords } from './words';
 import { SEASONS, SEASON_DAYS, seasonAt, seasonBegan, type Season } from '../world/calendar';
 import { BUSH_DEFS, TILE_DEFS, TileType, bushSpecies } from '../world/tiles';
 
 /**
  * Vineyards: a grapevine grown up a trellis, and the grapes off it.
  *
- * A trellis is a carpenter's piece, set down like any other. A grape cutting
+ * A trellis is a carpenter's piece, set down on the ground outside a
+ * building against the outer face of a finished wall of a type that takes
+ * one (`WallTypeDef.trellis`: a solid wall and a window), facing it, along
+ * the whole of that side of its tile (`trellisWallRefusal`, `trellisFacing`).
+ * The wall is asked for when it is set down and when it is turned, and at no
+ * other time: one standing where its wall has come down since, or set down
+ * before the rule was, stays and grows as it did. A grape cutting
  * planted at its foot (`plant_vine`) takes if the trellis stands on soil
  * (`VINE_SOIL`), and the vine is the trellis's from then on: the moment it
  * was planted is kept on the piece (`vineAt`; on the island the placed row's
@@ -77,6 +84,18 @@ export const VINE_SOIL: readonly TileType[] = [TileType.Grass, TileType.Dirt, Ti
 /** Grapes a pick gives at this forestry. The island's `grapes_for`. */
 export const grapesFor = (skill: number): number => Math.max(1, Math.floor(GRAPES_A_PICK * (GRAPES_BASE + skill / GRAPES_SPAN) + 0.5));
 
+/** The wall types a trellis is set against, from their own table: a solid wall and a window. */
+export const TRELLIS_WALLS = WALL_TYPES.filter((w) => w.trellis).map((w) => w.id);
+/** Those, as they are said: "solid or window wall". */
+export const trellisWallWords = (): string => `${listedOr(WALL_TYPES.filter((w) => w.trellis).map((w) => w.name.toLowerCase()))} wall`;
+/** The wall types a trellis is not set against, from the same table: "a door, a double door, ... or a rune gate". */
+export const trellisRefusedWords = (): string =>
+  listedOr(WALL_TYPES.filter((w) => !w.trellis).map((w) => w.name.toLowerCase()).map((n) => `${article(n)} ${n}`));
+/** Every way a trellis is refused, said once for its text and the help. */
+export const trellisRefusedSaid = (): string =>
+  `A ${trellisWord()} is refused on a tile of a building, upstairs, on a side with no wall or an unfinished one, and against ${trellisRefusedWords()}; `
+  + `a hidden door is refused only to whoever its padlock admits, and is a solid wall to anybody else.`;
+
 /** The soils, as they are said: "grass, dirt, field, lawn or steppe". */
 export const vineSoilWords = (): string => listedOr(VINE_SOIL.map((t) => TILE_DEFS[t].name.toLowerCase()));
 
@@ -126,7 +145,56 @@ export const VINE_SAID = {
   noWild: 'There is no wild vine in this.',
   get cut(): string { return `You have taken the cutting this ${WILD_VINE.toLowerCase()} has. Come back later.`; },
   get noTool(): string { return `You need a ${itemDef(CUTTING_TOOL).name.toLowerCase()} to cut a vine.`; },
+  /** Set down anywhere but against the outside of a wall that takes one (`trellisWallRefusal`). */
+  get wall(): string { return `A ${trellisWord()} is set down only on the ground outside a building, against the outer face of a finished ${trellisWallWords()}.`; },
+  /** Turned, with no other side of its tile against such a wall (`trellisTurnsTo`). */
+  get turn(): string { return `No other side of this tile has the outer face of a finished ${trellisWallWords()} for the ${trellisWord()} to stand against.`; },
 };
+
+/**
+ * Why a trellis will not stand on tile (x, y) against its side `facing`, or
+ * null: it is set down from the ground (`level` is the storey of whoever
+ * sets it down, or of the trellis being turned), on a tile that is no
+ * building's -- so the wall's other face is a building's inside and this one
+ * its outside -- against a finished wall on that side whose type takes a
+ * trellis (`WallTypeDef.trellis`). A hidden door is the type it is seen as
+ * (`Buildings.seenType`): a solid wall to all but whoever its padlock admits.
+ * One sentence for every way of missing it (`VINE_SAID.wall`). The island's
+ * `trellis_wall_refusal`, asked at the same points.
+ */
+export function trellisWallRefusal(g: Game, x: number, y: number, facing: Side, level: number): string | null {
+  if (level !== 0 || g.buildings.buildingAt(x, y)) return VINE_SAID.wall;
+  const w = g.buildings.wall(0, x, y, facing);
+  return w && isDone(w) && WALL_TYPE_BY_ID.get(g.buildings.seenType(w))?.trellis ? null : VINE_SAID.wall;
+}
+
+/**
+ * The side of tile (x, y) a trellis set down at the point (fx, fy) in it --
+ * each nought to one across the tile -- goes against: of the sides it may
+ * stand against (`trellisWallRefusal`), the nearest the point, the first of
+ * north, east, south and west where two are as near. Where there is none,
+ * the side nearest the point all the same, for it to be shown and refused
+ * against.
+ */
+export function trellisFacing(g: Game, x: number, y: number, fx: number, fy: number, level: number): Side {
+  const off: Record<Side, number> = { n: fy, e: 1 - fx, s: 1 - fy, w: fx };
+  const sides = (['n', 'e', 's', 'w'] as Side[]).sort((a, b) => off[a] - off[b]);
+  return sides.find((side) => !trellisWallRefusal(g, x, y, side, level)) ?? sides[0];
+}
+
+/**
+ * Which way a trellis faces after a turn: the next side round to the right
+ * of the way it faces that it may stand against, or null where no other
+ * side may (`VINE_SAID.turn`). The island's `trellis_turns_to`.
+ */
+export function trellisTurnsTo(g: Game, f: PlacedFurniture): Side | null {
+  let facing = facingOf(f);
+  for (let i = 0; i < FACINGS.length - 1; i++) {
+    facing = turnedFacing(facing, 1);
+    if (!trellisWallRefusal(g, f.x, f.y, facing, f.level ?? 0)) return facing;
+  }
+  return null;
+}
 
 /**
  * Why a vine gives nothing out of season, and when it fruits: the island's
@@ -264,8 +332,17 @@ export const VINEYARD_ACTIONS: ActionDef[] = [
   },
 ];
 
+/**
+ * Where a trellis stands, said once: for its text, the cutting's and the help.
+ * What it is set down against, and which wall where a tile has two
+ * (`trellisFacing`); and that it stays when the wall goes.
+ */
+export const TRELLIS_RULE = (): string => `${VINE_SAID.wall} It stands along the whole of that side of its tile; `
+  + `on a tile with such walls on more than one side, it goes against the one nearest where it is set down. `
+  + `It stays standing, with its vine, if the wall comes down.`;
+
 /** The rule, said once: for the trellis's and the cutting's text and the help. */
-export const VINE_RULE = (): string => `Plant a ${cuttingWord()} at the foot of a ${trellisWord()} standing on ${vineSoilWords()}. `
+export const VINE_RULE = (): string => `${TRELLIS_RULE()} Plant a ${cuttingWord()} at the foot of a ${trellisWord()} standing on ${vineSoilWords()}. `
   + `The vine bears from ${days(VINE_BEARS)} after it is planted, in ${GRAPE_SEASON} only, and ${onceEvery(VINE_REST)}: `
   + `a pick gives ${GRAPES_A_PICK} × (${GRAPES_BASE} + ${VINE_SKILL} ÷ ${GRAPES_SPAN}) grapes to the nearest whole one, `
   + `${grapesFor(SKILL_FLOOR)} at ${VINE_SKILL} ${SKILL_FLOOR} and ${grapesFor(SKILL_TOP)} at ${SKILL_TOP}. Picking the ${trellisWord()} up loses its vine.`;
@@ -274,5 +351,5 @@ export const VINE_RULE = (): string => `Plant a ${cuttingWord()} at the foot of 
 STATE_TAILS.push((f) => (isTrellis(f) ? ` · ${vineSays(f, Date.now() / 1000)}` : ''));
 
 describeFrom(GRAPE, { grapeSeason: GRAPE_SEASON });
-describeFrom(TRELLIS, { rule: VINE_RULE() });
+describeFrom(TRELLIS, { rule: VINE_RULE(), refused: trellisRefusedSaid() });
 describeFrom(GRAPE_CUTTING, { rule: VINE_RULE(), wild: WILD_VINE.toLowerCase(), tool: itemDef(CUTTING_TOOL).name.toLowerCase() });

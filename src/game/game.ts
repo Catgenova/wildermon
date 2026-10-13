@@ -28,7 +28,7 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { emptyCrate, occupiedRefusal, shutIn } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
@@ -92,6 +92,7 @@ import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
+import { trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
 import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/sound';
@@ -1183,6 +1184,8 @@ export class Game {
       if (k.id >= this.nextKilnId) this.nextKilnId = k.id + 1;
     }
     for (const f of init.furniture ?? []) {
+      // A trellis kept from before it stood along a side of its tile is put into the row along the side it faces (`furnitureAnchor`).
+      if (furnitureDef(f.kind).vine) [f.sx, f.sy] = furnitureAnchor(f.kind, f.sx, f.sy, facingOf(f));
       this.furniture.set(f.id, f);
       if (f.id >= this.nextFurnitureId) this.nextFurnitureId = f.id + 1;
     }
@@ -8540,6 +8543,11 @@ export class Game {
     // An altar goes down on a settlement of yours, and on one that has none yet; one already standing may still be turned where it is.
     if (def.deed && except === undefined && !this.onDeed(x, y)) return DEED_PLACE;
     if (def.altar && except === undefined && this.altarOfDeedAt(x, y)) return ONE_ALTAR;
+    // A trellis against the outside of a wall, from the ground: the storey of whoever sets it down, or of the one turned (`vineyard.ts`).
+    if (def.vine) {
+      const why = trellisWallRefusal(this, x, y, facing, except === undefined ? this.player.level : (this.furniture.get(except)?.level ?? 0));
+      if (why) return why;
+    }
     for (let dy = 0; dy < fh; dy++) {
       for (let dx = 0; dx < fw; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something is already standing there.';
@@ -8551,9 +8559,20 @@ export class Game {
     return lampArmRefusal(this, kind, x, y, ax, ay, facing);
   }
 
-  /** Which way a piece faces after a quarter turn to the right: on round past a facing a lantern post's arm would go into a wall (`lampTurnsTo`). */
+  /**
+   * Which way a piece faces after a quarter turn to the right: on round past a
+   * facing a lantern post's arm would go into a wall (`lampTurnsTo`), and a
+   * trellis on round to the next side it may stand against (`trellisTurnsTo`;
+   * where there is none it is refused before it is turned).
+   */
   pieceTurnsTo(f: PlacedFurniture): Side {
+    if (furnitureDef(f.kind).vine) return trellisTurnsTo(this, f) ?? facingOf(f);
     return lampTurnsTo(this, f);
+  }
+
+  /** Why a trellis will not turn, or null: no other side of its tile has a wall it stands against (`VINE_SAID.turn`). */
+  trellisTurnRefusal(f: PlacedFurniture): string | null {
+    return furnitureDef(f.kind).vine && !trellisTurnsTo(this, f) ? VINE_SAID.turn : null;
   }
 
   /** The piece of storage furniture closest to the player. */
