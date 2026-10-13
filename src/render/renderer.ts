@@ -13764,8 +13764,15 @@ export class Renderer {
     if (rowedPiece(f.kind)) return f.driven || f.helm ? 1 : 0;
     // A lantern post or pillar, with its lantern in it or without (`lamps.ts`).
     if (isLampPiece(f)) return f.lamp ? 1 : 0;
-    // A trellis's vine, as far as it has grown, and its grapes when they are ripe (`vineyard.ts`); grown its own way, by where it stands.
-    if (isTrellis(f)) return vineTrim(vineStage(f, this.game.wallNow()), Math.floor(hash2(f.x, f.y, 53) * VINE_VARIANTS));
+    // A trellis's vine, as far as it has grown, and its grapes when they are ripe (`vineyard.ts`); grown its own way, by where it stands;
+    // and run on into a trellis on the tile beside it along the same wall, either hand (`VINE_JOIN`).
+    if (isTrellis(f)) {
+      const facing = pieceFacing(f);
+      const [ax, ay] = ACROSS_OF[facing];
+      const joins = (k: number): boolean => this.game.furnitureOnTile(f.x + k * ax, f.y + k * ay)
+        .some((o) => isTrellis(o) && pieceFacing(o) === facing && (o.level ?? 0) === (f.level ?? 0));
+      return vineTrim(vineStage(f, this.game.wallNow()), Math.floor(hash2(f.x, f.y, 53) * VINE_VARIANTS), joins(-1), joins(1));
+    }
     // An arch's roses: their variety, which is its place's, and how far they have grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.roses) {
       const r = roseStage(f.setAt, this.game.wallNow());

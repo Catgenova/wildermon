@@ -149,6 +149,10 @@ export const WALL_TYPES: WallTypeDef[] = [
   { id: 'rune_gate', name: 'Rune gate', factor: 0.75, passable: true, wide: true, height: 1.1, low: true, standalone: true, ground: true, laidIn: 'stone_brick', fittings: [['light_mote', 2]] },
 ];
 export const WALL_TYPE_BY_ID = new Map(WALL_TYPES.map((w) => [w.id, w]));
+/** A wall type as it is said: "solid wall", "window", "hidden door" -- the solid one named for what it is. */
+export const wallWord = (w: WallTypeDef): string => (w.id === 'solid' ? 'solid wall' : w.name.toLowerCase());
+/** The types a trellis goes against, as they are said: "solid wall or window" (`WallTypeDef.trellis`). */
+export const trellisWallWords = (): string => listedOr(WALL_TYPES.filter((w) => w.trellis).map(wallWord));
 /** Whether a wall type is waist-high work that nothing can be built over. */
 export const isLowWall = (type: WallType): boolean => !!WALL_TYPE_BY_ID.get(type)?.low;
 /** Whether a cart, a wagon or anything else on wheels fits through it. */

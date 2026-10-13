@@ -177,7 +177,7 @@ import { TINTED_PANE } from '../src/game/dyes';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, PICK_GRAPES, PLANT_VINE, TRELLIS,
-  VINE_BEARS, VINE_GAIN, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonWords, WILD_VINE,
+  trellisAgainstSaid, trellisReturnedSaid, VINE_BEARS, VINE_GAIN, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonWords, WILD_VINE,
 } from '../src/game/vineyard';
 import { CELLAR_AGEING, keepsQl } from '../src/game/ageing';
 import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY } from '../src/game/bees';
@@ -2472,7 +2472,17 @@ out.push(`create or replace function brew_ages(p_liquid text) returns boolean la
 out.push(`create or replace function keeps_ql(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${
   (Object.keys(LIQUID_NAME) as LiquidKind[]).filter(keepsQl).map((l) => q(l)).join(', ')}]::text[]), false) $fn$;`);
 out.push(`create or replace function vine_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
-  (['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool', 'wall', 'turn'] as const).map((k) => `when ${q(k)} then ${q(VINE_SAID[k])} `).join('')}end $fn$;`);
+  (['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool', 'wall', 'turn', 'upstairs', 'inside', 'noWall', 'unfinished'] as const).map((k) => `when ${q(k)} then ${q(VINE_SAID[k])} `).join('')}end $fn$;`);
+/* A trellis against a wall of a type that takes none, by its type (`trellisAgainstSaid`); and one handed back to its owner (`trellisReturnedSaid`). */
+out.push(`create or replace function trellis_against_said(p_type text) returns text language sql immutable as $fn$ select case p_type ${
+  WALL_TYPES.map((w) => `when ${q(w.id)} then ${q(trellisAgainstSaid(w.id))} `).join('')}end $fn$;`);
+{
+  const said = (vine: boolean): string => {
+    const [a, b, c] = trellisReturnedSaid(-1e9 + 1, -1e9 + 2, vine).split(/-999999999|-999999998/);
+    return `${q(a)} || p_x || ${q(b)} || p_y || ${q(c)}`;
+  };
+  out.push(`create or replace function trellis_returned_said(p_x int, p_y int, p_vine boolean) returns text language sql immutable as $fn$ select case when p_vine then ${said(true)} else ${said(false)} end $fn$;`);
+}
 {
   const [a, b, c] = vineSeasonWords('\u0000', '\u0001').split(/[\u0000\u0001]/);
   out.push(`create or replace function vine_season_words(p_season text, p_wait text) returns text language sql immutable as $fn$ select ${q(a)} || p_season || ${q(b)} || p_wait || ${q(c)} $fn$;`);

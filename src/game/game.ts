@@ -92,7 +92,7 @@ import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
 import { burnLamps, isLampPiece, lampArmRefusal, lampBurning, lampFrom, lampLight, lampTurnsTo } from './lamps';
-import { trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
+import { settleTrellises, trellisShares, trellisTurnsTo, trellisWallRefusal, VINE_SAID } from './vineyard';
 import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/sound';
@@ -1184,8 +1184,6 @@ export class Game {
       if (k.id >= this.nextKilnId) this.nextKilnId = k.id + 1;
     }
     for (const f of init.furniture ?? []) {
-      // A trellis kept from before it stood along a side of its tile is put into the row along the side it faces (`furnitureAnchor`).
-      if (furnitureDef(f.kind).vine) [f.sx, f.sy] = furnitureAnchor(f.kind, f.sx, f.sy, facingOf(f));
       this.furniture.set(f.id, f);
       if (f.id >= this.nextFurnitureId) this.nextFurnitureId = f.id + 1;
     }
@@ -1255,6 +1253,8 @@ export class Game {
     // Whose piers are walls to a pool's water, set out or built.
     this.springs.shut = () => aqueductShut([...this.bridges.values()].filter((b) => b.kind === 'aqueduct'));
     this.springs.load(init.springs);
+    // Trellises kept from before one took the whole of a side of its tile, one to a row and the rest back in the pack (`vineyard.ts`).
+    settleTrellises(this);
     this.vision = new Vision(this);
     this.world.onChange((x, y) => {
       // Felling a tree or raising a wall changes what can be seen past it.
@@ -8548,9 +8548,11 @@ export class Game {
       const why = trellisWallRefusal(this, x, y, facing, except === undefined ? this.player.level : (this.furniture.get(except)?.level ?? 0));
       if (why) return why;
     }
+    // A trellis shares the corner spot of its row with one at right angles to it (`trellisShares`).
+    const shares = def.vine ? (f: PlacedFurniture): boolean => trellisShares(kind, facing, f) : undefined;
     for (let dy = 0; dy < fh; dy++) {
       for (let dx = 0; dx < fw; dx++) {
-        if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something is already standing there.';
+        if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except, 0, shares)) return 'Something is already standing there.';
       }
     }
     // Nor in the corner a column stands in (`columnInBlock`).
@@ -8824,7 +8826,13 @@ export class Game {
   }
 
   /** Whether a spot is taken, leaving out one piece of furniture when it is that piece asking about its own turn. */
-  occupiedSubtile(x: number, y: number, sx: number, sy: number, exceptFurniture?: number, level = 0): boolean {
+  /**
+   * Whether anything takes up a spot of a tile. `shares`, when it is given,
+   * names pieces that may stand on the same spot as the one being asked for:
+   * a trellis and another at right angles to it, in the corner they share
+   * (`trellisShares`).
+   */
+  occupiedSubtile(x: number, y: number, sx: number, sy: number, exceptFurniture?: number, level = 0, shares?: (f: PlacedFurniture) => boolean): boolean {
     // Down in a cellar only what is down there takes up room: crates and furniture, the two that go down.
     if (level < 0) {
       if (this.crateAt(x, y, sx, sy, level)) return true;
@@ -8835,7 +8843,7 @@ export class Game {
     if (this.campfireAt(x, y, sx, sy)) return true;
     for (const s of this.placed.smelters.at(x, y)) if (smelterCovers(s, sx, sy)) return true;
     for (const k of this.placed.kilns.at(x, y)) if (kilnCovers(k, sx, sy)) return true;
-    for (const f of this.placed.furniture.at(x, y)) if ((f.level ?? 0) >= 0 && f.id !== exceptFurniture && furnitureCovers(f, sx, sy)) return true;
+    for (const f of this.placed.furniture.at(x, y)) if ((f.level ?? 0) >= 0 && f.id !== exceptFurniture && furnitureCovers(f, sx, sy) && !shares?.(f)) return true;
     for (const a of this.placed.anvils.at(x, y)) if (anvilCovers(a, sx, sy)) return true;
     for (const p of this.placed.posts.at(x, y)) if (p.sx === sx && p.sy === sy) return true;
     return false;
