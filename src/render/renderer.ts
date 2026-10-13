@@ -13765,12 +13765,22 @@ export class Renderer {
     // A lantern post or pillar, with its lantern in it or without (`lamps.ts`).
     if (isLampPiece(f)) return f.lamp ? 1 : 0;
     // A trellis's vine, as far as it has grown, and its grapes when they are ripe (`vineyard.ts`); grown its own way, by where it stands;
-    // and run on into a trellis on the tile beside it along the same wall, either hand (`VINE_JOIN`).
+    // and run on into a trellis on the tile beside it along the same wall, either hand (`VINE_JOIN`): where the wall runs on
+    // behind both, with no column standing in the corner between them.
     if (isTrellis(f)) {
       const facing = pieceFacing(f);
       const [ax, ay] = ACROSS_OF[facing];
-      const joins = (k: number): boolean => this.game.furnitureOnTile(f.x + k * ax, f.y + k * ay)
-        .some((o) => isTrellis(o) && pieceFacing(o) === facing && (o.level ?? 0) === (f.level ?? 0));
+      const bld = this.game.buildings;
+      const mine = borderPoints(borderOf(f.x, f.y, facing));
+      const joins = (k: number): boolean => {
+        const nx = f.x + k * ax, ny = f.y + k * ay;
+        if (!bld.wall(0, f.x, f.y, facing) || !bld.wall(0, nx, ny, facing)) return false;
+        const theirs = borderPoints(borderOf(nx, ny, facing));
+        // The corner the two sides share, where a column would part them.
+        const [cx, cy] = mine[0] === theirs[2] && mine[1] === theirs[3] ? [mine[0], mine[1]] : [mine[2], mine[3]];
+        if (bld.column(0, cx, cy)) return false;
+        return this.game.furnitureOnTile(nx, ny).some((o) => isTrellis(o) && pieceFacing(o) === facing && (o.level ?? 0) === (f.level ?? 0));
+      };
       return vineTrim(vineStage(f, this.game.wallNow()), Math.floor(hash2(f.x, f.y, 53) * VINE_VARIANTS), joins(-1), joins(1));
     }
     // An arch's roses: their variety, which is its place's, and how far they have grown (`roses.ts`).

@@ -31,7 +31,7 @@ import { ageGain, ageingRule, brewQl, CELLAR_AGEING, fixedTo, WINE_AGE_CAP, WINE
 import { boonTime } from '../../src/game/boons';
 import { BREW_BY_ID, BREWS, GRAPE_WINE_GRAPES, WINE_AGEING } from '../../src/game/brewing';
 import { cellarOutdoor } from '../../src/game/cellar';
-import { FURNITURE_BY_ID, type PlacedFurniture } from '../../src/game/furniture';
+import { FURNITURE_BY_ID, furnitureCentre, type PlacedFurniture } from '../../src/game/furniture';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
 import { lampTooFar } from '../../src/game/lamps';
 import { DAY_SECONDS } from '../../src/game/pace';
@@ -215,6 +215,19 @@ const SETTLE: Array<{ kind: string; x: number; y: number; sx: number; sy: number
   { kind: TRELLIS, x: 42, y: 40, sx: 1, sy: 1, f: 'n', ql: 36, owner: true },
   { kind: TRELLIS, x: 44, y: 40, sx: 2, sy: 2, f: 'w', ql: 37, owner: true },
   { kind: TRELLIS, x: 44, y: 40, sx: 1, sy: 3, f: 'w', ql: 38, owner: false },
+];
+/**
+ * And settled with the definitions still a spot across: at (50, 40) a trellis
+ * facing south with a chest at the far end of its row, which goes back; and
+ * one alone facing south, east and west, each kept with its centre in the
+ * middle of its row.
+ */
+const FOOT: Array<{ kind: string; x: number; y: number; sx: number; sy: number; f: Side }> = [
+  { kind: TRELLIS, x: 50, y: 40, sx: 0, sy: 1, f: 's' },
+  { kind: 'chest', x: 50, y: 40, sx: 2, sy: 3, f: 's' },
+  { kind: TRELLIS, x: 52, y: 40, sx: 1, sy: 1, f: 's' },
+  { kind: TRELLIS, x: 54, y: 40, sx: 1, sy: 1, f: 'e' },
+  { kind: TRELLIS, x: 56, y: 40, sx: 1, sy: 1, f: 'w' },
 ];
 /** What each place says, asked from the tile it is asked of, on the ground but where `level` says. */
 type Want = 'ok' | 'upstairs' | 'inside' | 'noWall' | 'unfinished' | WallType;
@@ -470,14 +483,25 @@ begin
   -- 10. Trellises from before a trellis took a whole row, several to a tile, settled one to a row (\`trellis_settle\`).
   delete from item where world_id = w and holder_uid = u and def in ('${TRELLIS}', '${GRAPE_CUTTING}');
   delete from event where world_id = w and uid = u;
-  ${SETTLE.map((r) => `insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material, vine_at)
-    values (w, 'furniture', '${r.kind}', ${r.x}, ${r.y}, ${r.sx}, ${r.sy}, ${r.x} + 0.5, ${r.y} + 0.5, ${r.ql}, ${r.owner ? 'u' : 'null'}, '${r.f}', 'Oak', ${r.vine ? T_PLANT : 'null'});`).join('\n  ')}
+  ${SETTLE.map((r) => `insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material, vine_at, rare)
+    values (w, 'furniture', '${r.kind}', ${r.x}, ${r.y}, ${r.sx}, ${r.sy}, ${r.x} + 0.5, ${r.y} + 0.5, ${r.ql}, ${r.owner ? 'u' : 'null'}, '${r.f}', 'Oak', ${r.vine ? T_PLANT : 'null'}, ${r.owner ? 'null' : "'rare'"});`).join('\n  ')}
   insert into said values ('S:n', trellis_settle(w)::text);
   insert into said select 'S:left', string_agg(pl.x || ',' || pl.y || ',' || pl.facing || ',' || pl.sx || ',' || pl.sy || ',' || pl.ql || ',' || (pl.vine_at is not null), ' ' order by pl.x, pl.y, pl.facing)
     from placed pl where pl.world_id = w and pl.kind = 'furniture' and pl.sub = '${TRELLIS}' and pl.x >= 40;
   insert into said values ('S:pack', ${count(TRELLIS)} || '|' || ${count(GRAPE_CUTTING)});
-  insert into said select 'S:ground', coalesce(string_agg(i.def || '@' || i.gx || ',' || i.gy, ' ' order by i.def), '') from item i where i.world_id = w and i.holder = 'ground' and i.gx >= 40;
+  insert into said select 'S:ground', coalesce(string_agg(i.def || '@' || i.gx || ',' || i.gy || ':' || coalesce(i.rare, '-'), ' ' order by i.def), '') from item i where i.world_id = w and i.holder = 'ground' and i.gx >= 40;
   insert into said select 'S:told', string_agg(e.text, '#' order by e.n) from event e where e.world_id = w and e.uid = u and e.kind = 'event';
+
+  -- 11. Settled while the definitions still have a trellis a single spot across, as on a deploy where they land after.
+  update furniture_def set w = 1, h = 1 where id = '${TRELLIS}';
+  delete from item where world_id = w and holder_uid = u and def = '${TRELLIS}';
+  ${FOOT.map((r) => `insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, facing, material)
+    values (w, 'furniture', '${r.kind}', ${r.x}, ${r.y}, ${r.sx}, ${r.sy}, ${r.x} + 0.125, ${r.y} + 0.125, 40, u, '${r.f}', 'Oak');`).join('\n  ')}
+  perform trellis_settle(w);
+  insert into said select 'F:left', string_agg(pl.x || ',' || pl.y || ',' || pl.facing || ',' || pl.sx || ',' || pl.sy || ',' || pl.cx || ',' || pl.cy, ' ' order by pl.x)
+    from placed pl where pl.world_id = w and pl.kind = 'furniture' and pl.sub = '${TRELLIS}' and pl.x >= 50;
+  insert into said values ('F:back', ${count(TRELLIS)}::text);
+  update furniture_def set w = ${SUBTILES}, h = 1 where id = '${TRELLIS}';
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -799,14 +823,30 @@ check('drawn dry it forgets its age; water poured in has none; a brew that does 
   check(`one trellis is kept to a row, the one with a vine first, and none where a chest stands in its row, on both sides: ${left}`,
     left === isle.get('S:left') && left === `40,40,e,${SUBTILES - 1},0,34,false 40,40,s,0,${SUBTILES - 1},32,true 44,40,w,0,0,37,false`, isle.get('S:left'));
   // In the browser a game has one owner, so the one the island leaves on the ground goes to the pack here.
-  check(`the rest go back to whoever set them down, a vine as a cutting -- ${isle.get('S:n')} on the island, one of them left on the ground of its tile by one who has left`,
-    isle.get('S:n') === '5' && isle.get('S:pack') === '4|1' && isle.get('S:ground') === `${TRELLIS}@44,40`
+  check(`the rest go back to whoever set them down, a vine as a cutting -- ${isle.get('S:n')} on the island, one of them left on the ground of its tile, rare as it was, by one who has left`,
+    isle.get('S:n') === '5' && isle.get('S:pack') === '4|1' && isle.get('S:ground') === `${TRELLIS}@44,40:rare`
       && held(TRELLIS) === 5 && held(GRAPE_CUTTING) === 1, `${isle.get('S:pack')} ${isle.get('S:ground')} / ${held(TRELLIS)} ${held(GRAPE_CUTTING)}`);
   const toldHere = said.filter((m) => m.startsWith('Your ') && !m.includes(' at 44, 40 ')).join('#');
   check(`and are told why, in the same words: “${trellisReturnedSaid(42, 40, true)}”`,
     toldHere === isle.get('S:told') && toldHere.split('#').length === 4 && toldHere.includes(trellisReturnedSaid(42, 40, true)), `${isle.get('S:told')} / ${toldHere}`);
 }
 
+{
+  // 11. And with the definitions a spot across: the island's settling goes by the trellis's own footprint.
+  g.inventory.items = g.inventory.items.filter((it) => it.id !== TRELLIS);
+  for (const r of FOOT) {
+    const f = g.addFurniture(r.kind, r.x, r.y, 0, 0, 40, [], 'Oak', r.f);
+    f.sx = r.sx;
+    f.sy = r.sy;
+  }
+  settleTrellises(g);
+  const footHere = [...g.furniture.values()].filter((f) => f.kind === TRELLIS && f.x >= 50).sort((a, b) => a.x - b.x)
+    .map((f) => `${f.x},${f.y},${f.facing},${f.sx},${f.sy},${furnitureCentre(f).join(',')}`).join(' ');
+  const end = (SUBTILES - 0.5) / SUBTILES, start = 0.5 / SUBTILES;
+  check(`settled before the definitions land, each kept trellis's centre is the middle of its row and a row taken at its far end goes back, on both sides: ${footHere}`,
+    footHere === isle.get('F:left') && footHere === `52,40,s,0,${SUBTILES - 1},52.5,${40 + end} 54,40,e,${SUBTILES - 1},0,${54 + end},40.5 56,40,w,0,0,${56 + start},40.5`
+      && isle.get('F:back') === '1' && held(TRELLIS) === 1, `${isle.get('F:left')} ${isle.get('F:back')} / ${footHere} ${held(TRELLIS)}`);
+}
 {
   // And a single-player save from before, loaded: settled as it comes in (`Game`'s constructor).
   const kept = (sx: number, sy: number, id: number, vine?: number): PlacedFurniture =>

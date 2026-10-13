@@ -99,8 +99,8 @@ export { trellisWallWords };
 export const trellisRefusedWords = (): string => listedOr(WALL_TYPES.filter((w) => !w.trellis && w.id !== 'hidden_door').map(aWall));
 /** Every way a trellis is refused, said once for its text and the help. */
 export const trellisRefusedSaid = (): string =>
-  `A ${trellisWord()} is refused on a tile of a building, upstairs, on a side with no wall or an unfinished one, and against ${trellisRefusedWords()}; `
-  + `and against a hidden door by whoever its padlock admits, since to anybody else it is a solid wall.`;
+  `A ${trellisWord()} is refused on a tile of a building, upstairs, on a side with no wall or an unfinished one, and against ${trellisRefusedWords()}. `
+  + `A hidden door is refused only to whoever its padlock admits; to anybody else it is a solid wall.`;
 /** What setting a trellis down against a wall of a type that takes none says: "A trellis cannot stand against a door." The island's `trellis_against_said`. */
 export const trellisAgainstSaid = (type: WallType): string => {
   const w = WALL_TYPE_BY_ID.get(type);
