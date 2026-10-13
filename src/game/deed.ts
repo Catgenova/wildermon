@@ -1,5 +1,6 @@
 import type { ActionDef } from './actions';
 import { deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL, rankAtLeast, type Deed, type DeedRole, type Game } from './game';
+import { RANK_MAY } from './ranks';
 
 /**
  * Settlement upgrades. Each one pushes the border out two tiles and lets one
@@ -83,7 +84,7 @@ export function upgradeReason(g: Game): string | null {
 export function standingWord(role: DeedRole | undefined): string {
   switch (role ?? 'founder') {
     case 'founder': return 'You founded this one: everything here is yours, locks included.';
-    case 'mayor': return 'You are a mayor here: you may build, and ask others in or out.';
+    case 'mayor': return `You are a mayor here: you may ${RANK_MAY.mayor}.`;
     case 'guest': return 'You are a guest here: you may walk it and shape nothing.';
     default: return 'You are a citizen here: you may shape the ground and build on it.';
   }

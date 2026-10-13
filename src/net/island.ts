@@ -13,6 +13,7 @@ import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
 import { cleanLook, type Look } from '../game/look';
 import type { IslandCrate, IslandGround } from '../game/game';
+import type { DeedRole } from '../game/ranks';
 import type { Mark } from '../game/items';
 import type { PathBeat, PathSaid } from '../game/meditation';
 import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_ASK, LAND_NEAR, MOBS_EVERY, MOBS_RANGE, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
@@ -355,6 +356,14 @@ export interface MyDeed {
   by: string;
   /** Whether you planted the stake, which is what disbanding and upgrading ask. */
   mine: boolean;
+  /**
+   * Your rank on it, which says whether you may invite, send away and set
+   * ranks there. Optional because an island from before mayors answers
+   * without it: then `mine` is the founder and anybody else a builder.
+   */
+  role?: DeedRole;
+  /** Everybody's rank on its roll, by uid, the founder left out. */
+  ranks?: Record<string, DeedRole>;
   /** Its roll, founder included, you left off it. */
   folk: Folk[];
 }
@@ -399,8 +408,13 @@ export interface Social {
   joined?: Record<string, number>;
   /** Somewhere asking you to come and live there. */
   invites: Array<{ founder: string; by: string; deed: string; at: number }>;
-  /** And the ones you have out, which only a founder ever has. */
-  sent: Array<{ uid: string; name: string; at: number }>;
+  /**
+   * And the ones out from every settlement you may invite to, whoever of its
+   * founder and mayors sent them. `founder` and `deed` say which settlement;
+   * an island from before mayors leaves them off, and then every one is from
+   * the settlement you founded.
+   */
+  sent: Array<{ uid: string; name: string; at: number; founder?: string; deed?: string; by?: string }>;
   /**
    * Whether the island is quiet enough to be saying where everybody is.
    *
@@ -3176,9 +3190,29 @@ export class Island {
     if (error && !quiet) this.hooks.say(`The island did not hear that (${error.message}).`, 'error');
   }
 
-  /** Ask somebody to come and live on your land. */
-  async invite(uid: string): Promise<string | null> {
-    return this.door('rpc_invite', { p_uid: uid });
+  /**
+   * Ask somebody to come and live on a settlement you founded or are a mayor
+   * of, named by its founder; left out, the one you founded.
+   */
+  async invite(uid: string, founder?: string): Promise<string | null> {
+    return this.door('rpc_invite', founder ? { p_uid: uid, p_founder: founder } : { p_uid: uid });
+  }
+
+  /**
+   * Ask somebody onto the settlement whose token stands at (x, y): the
+   * right-click menu knows a settlement by its place and the island by who
+   * founded it, as with `leaveDeedAt`.
+   */
+  async inviteAt(uid: string, x: number, y: number): Promise<string | null> {
+    const s = await this.social();
+    if (!s) return 'The island did not answer. Try again in a moment.';
+    const d = s.deeds.find((e) => e.x === x && e.y === y);
+    return this.invite(uid, d?.founder);
+  }
+
+  /** Set somebody's rank on a settlement of yours: mayor, builder or guest (`rpc_rank`). */
+  async rank(founder: string, uid: string, role: DeedRole): Promise<string | null> {
+    return this.door('rpc_rank', { p_founder: founder, p_uid: uid, p_role: role });
   }
 
   /** Yes or no to an invitation of your own. */

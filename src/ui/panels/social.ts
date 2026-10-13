@@ -1,5 +1,6 @@
 import { LETTER_MAX, type Folk, type Island, type Letter, type MyDeed, type Social } from '../../net/island';
-import { DEEDS_JOINED, type Game } from '../../game/game';
+import { DEEDS_JOINED, rankAtLeast, type DeedRole, type Game } from '../../game/game';
+import { RANK_MAY, SETTABLE_RANKS, SETTABLE_SAID } from '../../game/ranks';
 import type { UIWindow } from '../windows';
 
 /** How often the window asks again while it is open. */
@@ -61,26 +62,96 @@ export function writeTo(s: Social): Folk[] {
 export const rollFull = (s: Social, uid: string): boolean => (s.joined?.[uid] ?? 0) >= DEEDS_JOINED;
 
 /**
- * Whether you may ask somebody onto the settlement you founded, and if not,
- * why: the same checks as `rpc_invite`, in its order and its words.
- *
- * Living somewhere already is no bar. One settlement is yours and
- * `DEEDS_JOINED` more may be other people's, whether or not you hold one, and
- * only somebody already on that many rolls is refused. The island has kept
- * that rule since citizens landed; it was this window that withheld it,
- * offering Invite only under "Everybody else ashore" -- so a friend, or
- * anybody you share a settlement with, could not be asked at all. Reported
- * from the island: "I don't have an invite option for you and [another
- * player] since we're already in a deed."
+ * Your rank on one of your settlements: the island's word for it, or, from an
+ * island that predates mayors and does not say, founder where you planted the
+ * stake and builder anywhere else.
  */
-export function inviteRefusal(s: Social, uid: string, name: string): string | null {
-  const own = s.deeds.find((d) => d.mine);
-  if (!own) return 'You hold no settlement to invite anybody to.';
-  if (own.folk.some((f) => f.uid === uid)) return `${name} already lives here.`;
+export const myRank = (d: MyDeed): DeedRole => d.role ?? (d.mine ? 'founder' : 'builder');
+
+/** Somebody's rank on a settlement of yours, or undefined when they are not on its roll. */
+export function rankOf(d: MyDeed, uid: string): DeedRole | undefined {
+  if (uid === d.founder) return 'founder';
+  return d.ranks?.[uid] ?? (d.folk.some((f) => f.uid === uid) ? 'builder' : undefined);
+}
+
+/** The settlements you may ask people onto: the one you founded, and every one you are a mayor of. */
+export const inviteDeeds = (s: Social): MyDeed[] => s.deeds.filter((d) => rankAtLeast(myRank(d), 'mayor'));
+
+/**
+ * Whether you may ask somebody onto a settlement, and if not, why: the same
+ * checks as `rpc_invite`, in its order and its words. The settlement is named
+ * by its founder; left out, it is the one you founded, which is what the
+ * island takes when a browser does not say.
+ *
+ * Its founder or a mayor of it may ask. Living somewhere already is no bar.
+ * One settlement is yours and `DEEDS_JOINED` more may be other people's,
+ * whether or not you hold one, and only somebody already on that many rolls
+ * is refused. The island has kept that rule since citizens landed; it was
+ * this window that withheld it, offering Invite only under "Everybody else
+ * ashore" -- so a friend, or anybody you share a settlement with, could not
+ * be asked at all. Reported from the island: "I don't have an invite option
+ * for you and [another player] since we're already in a deed."
+ */
+export function inviteRefusal(s: Social, uid: string, name: string, founder?: string): string | null {
+  const d = founder === undefined ? s.deeds.find((e) => e.mine) : s.deeds.find((e) => e.founder === founder);
+  if (!d) return founder === undefined ? 'You hold no settlement to invite anybody to.' : 'That settlement is gone.';
+  if (!rankAtLeast(myRank(d), 'mayor')) return `Only the founder or a mayor of ${d.name} may invite anybody to it.`;
+  if (rankOf(d, uid)) return `${name} already lives here.`;
   if (rollFull(s, uid)) {
     return `${name} is a citizen of ${DEEDS_JOINED} settlements already, which is as many as anybody may be.`;
   }
-  if (s.sent.some((w) => w.uid === uid)) return `${name} has already been asked, and has not answered.`;
+  // An island from before mayors lists only the founder's own, without saying whose.
+  const own = s.deeds.find((e) => e.mine)?.founder;
+  if (s.sent.some((w) => w.uid === uid && (w.founder ?? own) === d.founder)) {
+    return `${name} has already been asked, and has not answered.`;
+  }
+  return null;
+}
+
+/**
+ * Whether you may set somebody's rank on a settlement of yours, and if not,
+ * why: `rpc_rank`'s checks, in its order and its words.
+ *
+ * The founder sets anybody else on the roll to any rank but founder. A mayor
+ * sets a citizen below mayor to a rank below mayor. Nobody changes the
+ * founder's rank or their own.
+ */
+export function rankRefusal(d: MyDeed, me: string, uid: string, name: string, role: string): string | null {
+  if (!(SETTABLE_RANKS as string[]).includes(role)) return `A rank is ${SETTABLE_SAID}.`;
+  const mine = myRank(d);
+  if (!rankAtLeast(mine, 'mayor')) return `Only the founder or a mayor of ${d.name} may change anybody's rank.`;
+  if (uid === me) return 'Nobody may change their own rank.';
+  if (uid === d.founder) return `Nobody may change the rank of whoever founded ${d.name}.`;
+  const theirs = rankOf(d, uid);
+  if (!theirs) return `${name} is not a citizen of ${d.name}.`;
+  if (!rankAtLeast(mine, 'founder') && (rankAtLeast(theirs, 'mayor') || rankAtLeast(role as DeedRole, 'mayor'))) {
+    return `Only whoever founded ${d.name} may make or unmake a mayor.`;
+  }
+  if (theirs === role) return `${name} is already a ${role} of ${d.name}.`;
+  return null;
+}
+
+/** What somebody is told when they are ranked: `rpc_rank`'s line, word for word. */
+export const rankedLine = (by: string, role: Exclude<DeedRole, 'founder'>, deed: string): string =>
+  `${by} makes you a ${role} of ${deed}: you may ${RANK_MAY[role]}.`;
+
+/**
+ * Whether you may take somebody off the roll of a settlement of yours -- or
+ * yourself, with your own uid -- and if not, why: `rpc_leave_deed`'s checks,
+ * in its order and its words. The founder sends away anybody; a mayor sends
+ * away builders and guests.
+ */
+export function sendAwayRefusal(d: MyDeed, me: string, uid: string): string | null {
+  if (uid !== me && uid === d.founder) return `Nobody may send away whoever founded ${d.name}.`;
+  const onRoll = uid === me ? !d.mine : !!rankOf(d, uid);
+  if (!onRoll) return 'Nobody there to send away.';
+  if (uid !== me) {
+    const mine = myRank(d);
+    if (!rankAtLeast(mine, 'mayor')) return `Only the founder or a mayor of ${d.name} may send anybody away.`;
+    if (!rankAtLeast(mine, 'founder') && rankAtLeast(rankOf(d, uid), 'mayor')) {
+      return `Only whoever founded ${d.name} may send a mayor away.`;
+    }
+  }
   return null;
 }
 
@@ -103,6 +174,12 @@ export class SocialPanel {
   private readonly tabs = new Map<string, HTMLButtonElement>();
   private tab: 'waiting' | 'friends' | 'letters' = 'waiting';
   private seen: Social | null = null;
+  /**
+   * Which settlement Invite asks people onto, by its founder, when you may
+   * invite to more than one: chosen at the top of the Friends tab. Null, or
+   * one you may no longer invite to, is the first of them -- your own.
+   */
+  private inviteFrom: string | null = null;
 
   /**
    * Everybody this body could reasonably deal with, which is the same roll it
@@ -175,6 +252,16 @@ export class SocialPanel {
   /** Ask the island again if the last answer is older than the window's own beat. */
   prime(): void {
     if (Date.now() - this.seenAt >= REFRESH * 1000) void this.refresh(true);
+  }
+
+  /** Ask the island again now, after something changed what it would say. */
+  again(): Promise<void> {
+    return this.refresh(true);
+  }
+
+  /** Your own uid on the island, which the rank and send-away rules ask after; empty off one. */
+  private me(): string {
+    return this.island?.uid ?? '';
   }
 
   /** Open on somebody, from wherever they were picked. */
@@ -261,8 +348,12 @@ export class SocialPanel {
     return b;
   }
 
-  /** One person: a light for whether they are about, a name, and what you can do. */
-  private row(who: Folk, note: string, acts: HTMLButtonElement[]): HTMLDivElement {
+  /**
+   * One person: a light for whether they are about, a name, and what you can
+   * do. `rank`, under a settlement, goes small beneath the name, so the
+   * buttons beside it leave the name room.
+   */
+  private row(who: Folk, note: string, acts: HTMLButtonElement[], rank?: string): HTMLDivElement {
     const el = document.createElement('div');
     el.className = 'social-row';
     const dot = document.createElement('span');
@@ -271,6 +362,12 @@ export class SocialPanel {
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = who.name;
+    if (rank) {
+      const r = document.createElement('span');
+      r.className = 'social-rank';
+      r.textContent = rank;
+      name.append(r);
+    }
     const where = document.createElement('span');
     where.className = 'social-where';
     where.textContent = note;
@@ -298,23 +395,58 @@ export class SocialPanel {
     return el;
   }
 
+  /** The settlement Invite asks onto: the one chosen, or the first you may invite to. */
+  private inviteTarget(s: Social): MyDeed | undefined {
+    const can = inviteDeeds(s);
+    return can.find((d) => d.founder === this.inviteFrom) ?? can[0];
+  }
+
   /**
-   * Invite, beside anybody not already on the roll of the settlement you
-   * founded, wherever the window lists them. Greyed with the island's reason
-   * when there is one, and labelled with it: "Citizen of 3" when they are on
-   * as many rolls as anybody may be, "Asked" when they have not answered.
-   * Nothing for somebody who holds none, or somebody already on yours.
+   * Invite, beside anybody not already on the roll of the settlement Invite
+   * asks onto (`inviteTarget`), wherever the window lists them. Greyed with
+   * the island's reason when there is one, and labelled with it: "Citizen of
+   * 3" when they are on as many rolls as anybody may be, "Asked" when they
+   * have not answered. Nothing for somebody who may invite nobody anywhere,
+   * or somebody already on that settlement.
    */
   private inviteButton(s: Social, who: Folk): HTMLButtonElement | null {
     const isle = this.island;
-    const own = s.deeds.find((d) => d.mine);
-    if (!isle || !own || own.folk.some((f) => f.uid === who.uid)) return null;
-    const why = inviteRefusal(s, who.uid, who.name);
+    const d = this.inviteTarget(s);
+    if (!isle || !d || rankOf(d, who.uid)) return null;
+    const why = inviteRefusal(s, who.uid, who.name, d.founder);
     const label = !why ? 'Invite' : rollFull(s, who.uid) ? `Citizen of ${DEEDS_JOINED}` : 'Asked';
-    const b = this.button(label, why ?? `Ask ${who.name} to live at ${own.name}`,
-      () => void this.did(isle.invite(who.uid)));
+    const b = this.button(label, why ?? `Ask ${who.name} to live at ${d.name}`,
+      () => void this.did(isle.invite(who.uid, d.founder)));
     b.disabled = !!why;
     return b;
+  }
+
+  /**
+   * Which settlement Invite asks onto, when you are the founder or a mayor of
+   * more than one: a button for each, the one in use lit. Nothing when there
+   * is one or none, because then there is nothing to choose.
+   */
+  private invitePicker(s: Social): HTMLDivElement | null {
+    const can = inviteDeeds(s);
+    if (can.length < 2) return null;
+    const at = this.inviteTarget(s);
+    const el = document.createElement('div');
+    el.className = 'social-row social-ask social-pick';
+    const text = document.createElement('span');
+    text.className = 'social-name';
+    text.textContent = 'Invite to';
+    const acts = document.createElement('span');
+    acts.className = 'social-acts';
+    for (const d of can) {
+      const b = this.button(d.name, `Invite asks people onto ${d.name}, where you are ${d.mine ? 'the founder' : 'a mayor'}`, () => {
+        this.inviteFrom = d.founder;
+        this.draw();
+      });
+      b.classList.toggle('tb-on', d === at);
+      acts.append(b);
+    }
+    el.append(text, acts);
+    return el;
   }
 
   /** Where somebody is, when the island is willing to say. */
@@ -404,8 +536,10 @@ export class SocialPanel {
       }
     }
     if (s.sent.length) {
-      this.page.append(this.head('Invitations you have out'));
-      for (const who of s.sent) this.page.append(this.plain(who.name, 'not answered', []));
+      this.page.append(this.head('Invitations out'));
+      for (const who of s.sent) {
+        this.page.append(this.plain(who.name, who.deed ? `to ${who.deed}, not answered` : 'not answered', []));
+      }
     }
     if (s.asking.length) {
       this.page.append(this.head('Friends you have asked'));
@@ -420,6 +554,8 @@ export class SocialPanel {
   private drawFriends(s: Social): void {
     const isle = this.island;
     if (!isle) return;
+    const pick = this.invitePicker(s);
+    if (pick) this.page.append(pick);
     this.page.append(this.head(`Friends (${s.friends.length})`));
     if (!s.friends.length) {
       this.page.append(this.empty('Nobody yet. Right-click somebody on the island, or pick a name below.'));
@@ -472,34 +608,36 @@ export class SocialPanel {
 
 
   /**
-   * One settlement of yours: who lives on it, and the way off it.
+   * One settlement of yours: who lives on it and at what rank, and the way off it.
    *
-   * The same block whether you planted the stake or were asked on. A founder
-   * gets a way to take somebody off the roll; everybody else gets a way to
-   * take themselves off it.
+   * The same block whether you planted the stake or were asked on. Send away
+   * sits beside whoever you may take off the roll -- anybody, for the
+   * founder; builders and guests, for a mayor -- and everybody but the
+   * founder gets a way to take themselves off it.
    */
   private drawDeed(s: Social, d: MyDeed): void {
     const isle = this.island;
     if (!isle) return;
+    const mine = myRank(d);
     this.page.append(this.head(`${d.name} · ${d.mine ? 'yours' : `${d.by}'s`} · ${d.x}, ${d.y}`));
     if (!d.folk.length) {
-      this.page.append(this.empty(d.mine
+      this.page.append(this.empty(rankAtLeast(mine, 'mayor')
         ? 'Nobody else lives here yet. Right-click somebody and invite them.'
         : 'Nobody else lives here yet.'));
     }
     for (const who of d.folk) {
       const acts = [this.button('Write', `Write to ${who.name}`, () => void this.openThread(who))];
-      // Somebody off a settlement you were asked onto may be asked onto yours.
-      const ask = d.mine ? null : this.inviteButton(s, who);
+      // Somebody off one settlement of yours may be asked onto another.
+      const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
-      if (d.mine && who.uid !== d.founder) {
+      if (!sendAwayRefusal(d, this.me(), who.uid)) {
         acts.push(this.button('Send away', `Take ${who.name} off the roll of ${d.name}`,
           () => void this.did(isle.leaveDeed(d.founder, who.uid))));
       }
-      this.page.append(this.row(who, this.whereabouts(who), acts));
+      this.page.append(this.row(who, this.whereabouts(who), acts, rankOf(d, who.uid) ?? 'builder'));
     }
     if (!d.mine) {
-      this.page.append(this.plain(`You are a citizen of ${d.name}.`, '',
+      this.page.append(this.plain(`You are a ${mine} of ${d.name}.`, '',
         [this.button('Leave', `Stop being a citizen of ${d.name}`,
           () => void this.did(isle.leaveDeed(d.founder)))]));
     }

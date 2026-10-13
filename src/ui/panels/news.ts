@@ -64,6 +64,7 @@ import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } f
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
+import { MAYOR_SETS, RANK_MAY, SETTABLE_SAID } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { CLASS_AT, CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from '../../game/classes';
@@ -1942,6 +1943,18 @@ export const NEWS: News[] = [
       'A window can be moved and resized flush against the right and bottom edges of the screen, which are seldom on a whole cell; before, the last strip of the screen could not be reached.',
       'Every animal and light on Runecut\'s frames is redrawn and moves for itself: they land, look about, rest and go again, each frame its own way. '
         + 'The mouse, ladybird, spider, snail and snow take the night\'s light after dark, as their frames do.',
+    ],
+  },
+  {
+    n: 144,
+    day: '2026-10-12',
+    lines: () => [
+      `Ranks can be set, in the Settlement window under Citizens. The founder may make anybody else on the roll a ${SETTABLE_SAID}; `
+        + `a mayor may move a citizen between ${listed(MAYOR_SETS)}. Only the founder makes or unmakes a mayor, and nobody changes the founder's rank or their own.`,
+      `A mayor may ${RANK_MAY.mayor}. Mayors invite from the Social window and the right-click menu, as the founder does; `
+        + 'founder or mayor of more than one settlement, you choose which one Invite asks people onto.',
+      `The founder may send anybody away; a mayor may send away ${listed(MAYOR_SETS.map((r) => `${r}s`))}, not another mayor. `
+        + 'Upgrading, renaming and disbanding stay with the founder.',
     ],
   },
 ];

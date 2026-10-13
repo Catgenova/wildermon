@@ -45,6 +45,7 @@ import {
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
+import { MAYOR_SETS, RANK_MAY, SETTABLE_SAID } from '../../game/ranks';
 import {
   colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, DYESTUFF_OF, DYESTUFFS, dyeHex, dyeRecipeId, kgSaid, mixDye,
   PRIMARIES, pureDye, type DyeLiquid, type Primary,
@@ -708,24 +709,33 @@ export function helpText(): string {
     buttons &mdash; click one and the herd is laid out flat, worst first, with nothing filtered out,
     so a count of what is wrong takes you to it.</p>
     <h3>Other people</h3>
-    <p>Right-click somebody standing on the island and you can <b>invite them to your settlement</b>,
+    <p>Right-click somebody standing on the island and you can <b>invite them to a settlement</b> you founded or are a mayor of,
     <b>ask them to be a friend</b>, or <b>write to them</b>. All of them live in the <b>Social</b> window
     (<kbd>Y</kbd>) as well, under its tabs: <b>Waiting</b> is everything that wants a yes or a no
     from you, <b>Friends</b> is everybody you know and where they are, and <b>Letters</b> is what has
     been written.</p>
-    <p>A <b>citizen</b> of a settlement may build on its land, use its crates and stores, and draw from
-    its water, exactly as the founder does. Disbanding, upgrading, renaming and setting wildermon to
-    work stay with whoever planted the stake.</p>
+    <p>A <b>builder</b> of a settlement, which is what an invitation makes you, may build on its land, use
+    its crates and stores, and draw from its water, exactly as the founder does. Disbanding, upgrading,
+    renaming and setting wildermon to work stay with whoever planted the stake, and no mayor may do them.</p>
     <p>You may found <b>one</b> settlement of your own and be a citizen of <b>${numberWord(DEEDS_JOINED)}</b> others, whether
     or not you hold one. A border you may work inside is drawn at the same weight as your own, so land
     you were asked onto does not look like a stranger's. Leaving a roll frees the place at once, and an
     invitation you had no room for is left standing until you do.</p>
-    <p>Only a settlement's founder may invite anybody to it. Living on another settlement is no bar: the
-    Social window's Friends tab has <b>Invite</b> beside everybody not already on your roll &mdash; friends,
+    <p>A settlement's founder and its mayors may invite anybody to it. Living on another settlement is no bar: the
+    Social window's Friends tab has <b>Invite</b> beside everybody not already on its roll &mdash; friends,
     people you share another settlement with, and everybody else ashore. It reads <b>Citizen of ${DEEDS_JOINED}</b>
     and cannot be pressed for somebody already a citizen of ${numberWord(DEEDS_JOINED)} other people's settlements,
     and <b>Asked</b> for somebody who has not answered yet. Once you are a citizen of ${numberWord(DEEDS_JOINED)}
-    yourself, <b>Move in</b> on an invitation cannot be pressed until you leave one.</p>
+    yourself, <b>Move in</b> on an invitation cannot be pressed until you leave one. Founder or mayor of more
+    than one settlement, you choose at the top of the Friends tab which one Invite asks people onto, and the
+    right-click menu has an Invite for each.</p>
+    <p><b>Ranks</b> are set in the Settlement window, under <b>Citizens</b>. The founder may make anybody
+    else on the roll a ${SETTABLE_SAID}. A mayor may move a citizen between ${listed(MAYOR_SETS)} and
+    nothing more: only the founder makes or unmakes a mayor. Nobody changes the founder's rank
+    or their own. Whoever is ranked is told what the new rank lets them do.</p>
+    <p><b>Send away</b>, beside a name under a settlement in the Social window, takes somebody off its roll.
+    The founder may send away anybody; a mayor may send away ${listed(MAYOR_SETS.map((r) => `${r}s`))}, not
+    another mayor.</p>
     <p>To <b>leave</b> a settlement you were asked onto, right-click its land and choose <b>Leave</b> under
     its name, or use the button in the Settlement window or the People window. You come off its roll at
     once and are a stranger there: you may walk it and shape nothing, and of the stores on it only the ones
@@ -1965,7 +1975,7 @@ export function helpText(): string {
     up the gardens, empty the stores and pull the walls down. There are ${numberWord(DEED_RANKS.length)} standings now.</p>
     <table>
       <tr><td><b>Founder</b></td><td>Planted the stake. Everything, and the master key to every lock on their own land.</td></tr>
-      <tr><td><b>Mayor</b></td><td>Everything but founding: builds, and asks people in and out.</td></tr>
+      <tr><td><b>Mayor</b></td><td>May ${RANK_MAY.mayor}. Not upgrading, renaming or disbanding, and not ranking or sending away another mayor.</td></tr>
       <tr><td><b>Builder</b></td><td>The ordinary citizen, and what an invitation makes you: shapes the ground, builds, takes from the stores.</td></tr>
       <tr><td><b>Guest</b></td><td>Walks the land and shapes nothing. What you offer somebody you want to show round.</td></tr>
     </table>

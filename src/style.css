@@ -2640,6 +2640,21 @@ kbd {
   margin-top: 4px;
 }
 
+/* A citizen and their rank: the name gives, the rank buttons never move. */
+.deed-who {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.deed-ranks {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 3px;
+}
+
 /* Marks on the map, and the list of them under it. */
 .map-bar {
   flex: 0 0 auto;
@@ -3025,6 +3040,33 @@ kbd {
   padding: 1px 6px;
   font-size: 11px;
   white-space: nowrap;
+}
+
+/*
+ * Which settlement Invite asks onto, for somebody who may invite to more than
+ * one: a label and a button per settlement, wrapping rather than overflowing.
+ */
+.social-pick {
+  grid-template-columns: auto 1fr;
+}
+
+.social-pick .social-acts {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.social-pick .social-do {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Somebody's rank on a settlement, small under their name. */
+.social-rank {
+  display: block;
+  color: var(--ui-dim);
+  font-size: 10px;
+  line-height: 1.1;
 }
 
 /* Somebody with something waiting says so without being opened. */

@@ -107,7 +107,7 @@ import { TradesPanel } from './panels/trades';
 import { FaithPanel } from './panels/faith';
 import { FaithBook } from './faithbook';
 import { SpellBar, type SpellAim } from './spellbar';
-import { inviteRefusal, SocialPanel } from './panels/social';
+import { inviteDeeds, inviteRefusal, SocialPanel } from './panels/social';
 import { MarketPanel } from './panels/market';
 import { BoardsPanel } from './panels/boards';
 import { GuidePanel } from './panels/guide';
@@ -445,7 +445,14 @@ export class UI {
     this.deedPanel = new DeedPanel(deedWin, game, (x, y) => {
       game.moveTo(x, y);
       game.logMsg(`Walking to (${x}, ${y}).`, 'info');
-    }, this.island ? (d) => void this.leaveSettlement(d) : undefined);
+    }, this.island ? (d) => void this.leaveSettlement(d) : undefined, this.island ? {
+      // The Social window's answer, so the two windows cannot disagree about who lives where.
+      known: () => this.social.known(),
+      prime: () => this.social.prime(),
+      again: () => this.social.again(),
+      me: () => this.island?.uid ?? '',
+      rank: (founder, uid, role) => this.island?.rank(founder, uid, role) ?? Promise.resolve('You are not on an island.'),
+    } : undefined);
     // Everybody, and what they are to you: who is waiting on an answer, who
     // you know and where they are, and what has been written.
     const socialWin = this.windows.create({ id: 'social', title: 'Social', x: 12, y: 56, width: 340, height: 420, anchor: 'tr', open: false });
@@ -2825,26 +2832,38 @@ export class UI {
       });
     }
     /*
-     * Asking them onto your settlement. Whatever they already belong to is
-     * no bar short of the cap, so this is offered beside anybody, and greyed
-     * with the island's own reason (`inviteRefusal`) when the Social window's
-     * answer is recent enough to know one; otherwise the island says. The
-     * settlement handed over as yours is the one you founded when you hold
-     * one, and only its founder may ask anybody onto it.
+     * Asking them onto a settlement of yours. Whatever they already belong to
+     * is no bar short of the cap, so this is offered beside anybody, and
+     * greyed with the island's own reason (`inviteRefusal`) when the Social
+     * window's answer is recent enough to know one; otherwise the island
+     * says. One entry for each settlement you founded or are a mayor of,
+     * since its founder and its mayors may ask anybody onto it; with none, the
+     * settlement you are handed, greyed with the rule.
      */
     const deed = this.game.deed;
-    if (deed) {
-      this.social.prime();
-      const known = this.social.known();
-      const why = !rankAtLeast(deed.role, 'founder')
-        ? `Only whoever founded ${deed.name} can invite anybody to it.`
-        : known ? inviteRefusal(known, uid, name) : null;
+    this.social.prime();
+    const known = this.social.known();
+    const places = known ? inviteDeeds(known) : [];
+    for (const d of places) {
+      const why = inviteRefusal(known!, uid, name, d.founder);
+      entries.push({
+        label: `Invite ${name} to ${d.name}`,
+        note: why ? undefined : 'They may build and store here',
+        hint: why ?? undefined,
+        disabled: !!why,
+        onSelect: () => said(isle.invite(uid, d.founder)),
+      });
+    }
+    if (!places.length && deed) {
+      const why = !rankAtLeast(deed.role, 'mayor')
+        ? `Only the founder or a mayor of ${deed.name} may invite anybody to it.`
+        : null;
       entries.push({
         label: `Invite ${name} to ${deed.name}`,
         note: why ? undefined : 'They may build and store here',
         hint: why ?? undefined,
         disabled: !!why,
-        onSelect: () => said(isle.invite(uid)),
+        onSelect: () => said(isle.inviteAt(uid, deed.x, deed.y)),
       });
     }
     entries.push({

@@ -1428,6 +1428,23 @@ jobs:
             --outfile=node_modules/.cache/citizen.mjs --log-level=error
           node node_modules/.cache/citizen.mjs
 
+      - name: Mayors invite, and ranks are set
+        run: |
+          # `deed_member.role` held mayor, builder or guest and nothing ever
+          # wrote it, so nobody could be made a mayor, and inviting and sending
+          # away were the founder's alone. This asks that the founder makes a
+          # mayor, a builder and a guest; that a mayor ranks builders and
+          # guests and cannot make, unmake or send away a mayor or touch the
+          # founder; that nobody changes their own rank; that a mayor invites
+          # and a builder does not; that the one asked sees who asked and both
+          # the mayor and the founder hear the answer; and that the old
+          # two-argument `rpc_invite` still asks onto the caller's own. Every
+          # refusal is compared word for word with the browser's rule reading
+          # the island's own `rpc_social`.
+          npx esbuild supabase/test/mayors.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/mayors.mjs --log-level=error
+          node node_modules/.cache/mayors.mjs
+
       - name: Leaving a settlement you were asked onto
         run: |
           # "add a leave settlement option so citizens can quit oceanport".

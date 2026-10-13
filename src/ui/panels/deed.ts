@@ -9,6 +9,24 @@ import { bridgeName } from '../../game/bridges';
 import { postName } from '../../game/posts';
 import { BAUBLE_TIERS, baubleSummary, socketsOf } from '../../game/baubles';
 import type { UIWindow } from '../windows';
+import { RANK_MAY, SETTABLE_RANKS, type DeedRole } from '../../game/ranks';
+import type { MyDeed, Social } from '../../net/island';
+import { myRank, rankOf, rankRefusal } from './social';
+
+/**
+ * The roll of a settlement and the way to set ranks on it, which only an
+ * island has: the Social window's last answer, asked again when it is old,
+ * and `rpc_rank`.
+ */
+export interface DeedRoll {
+  known(): Social | null;
+  prime(): void;
+  again(): Promise<void>;
+  me(): string;
+  rank(founder: string, uid: string, role: DeedRole): Promise<string | null>;
+}
+
+const title = (r: string): string => r.charAt(0).toUpperCase() + r.slice(1);
 
 /**
  * The settlement at a glance.
@@ -29,6 +47,8 @@ export class DeedPanel {
     private readonly walkTo: (x: number, y: number) => void,
     /** Off the roll of a settlement you were asked onto; absent off an island. */
     private readonly leave?: (d: Deed) => void,
+    /** Who lives on it and at what rank; absent off an island. */
+    private readonly roll?: DeedRoll,
   ) {
     win.body.classList.add('deed-body');
     this.body = document.createElement('div');
@@ -84,6 +104,70 @@ export class DeedPanel {
     return el;
   }
 
+  /**
+   * Who lives here, at what rank, and -- for the founder, or a mayor within
+   * what a mayor may do -- a button for each rank they could be set to, the
+   * one they hold lit. The rule is `rankRefusal`, the island's own, so a
+   * button is offered exactly where `rpc_rank` would agree.
+   */
+  private drawRoll(d: Deed): void {
+    const roll = this.roll;
+    if (!roll) return;
+    roll.prime();
+    const s = roll.known();
+    const here: MyDeed | undefined = s?.deeds.find((e) => e.x === d.x && e.y === d.y);
+    if (!here) {
+      this.body.append(this.head('Citizens'));
+      const wait = document.createElement('div');
+      wait.className = 'deed-note';
+      wait.textContent = 'Asking the island who lives here…';
+      this.body.append(wait);
+      return;
+    }
+    const me = roll.me();
+    this.body.append(this.head(`Citizens (${here.folk.length + 1})`));
+    this.body.append(this.row('You', title(myRank(here))));
+    for (const who of here.folk) {
+      const now = rankOf(here, who.uid) ?? 'builder';
+      const may = SETTABLE_RANKS.filter((r) => r === now || !rankRefusal(here, me, who.uid, who.name, r));
+      const el = document.createElement('div');
+      el.className = 'deed-row deed-citizen';
+      const name = document.createElement('span');
+      name.className = 'deed-who';
+      name.textContent = who.name;
+      el.append(name);
+      if (may.length < 2) {
+        const v = document.createElement('span');
+        v.className = 'deed-value';
+        v.textContent = title(now);
+        el.title = rankRefusal(here, me, who.uid, who.name, now === 'mayor' ? 'builder' : 'mayor') ?? '';
+        el.append(v);
+      } else {
+        const set = document.createElement('span');
+        set.className = 'deed-ranks';
+        for (const r of may) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'tb-btn tb-small' + (r === now ? ' tb-on' : '');
+          b.textContent = title(r);
+          const said = r === 'founder' ? '' : RANK_MAY[r];
+          b.title = r === now ? `${who.name} is a ${r}: they may ${said}.` : `Make ${who.name} a ${r}: they may ${said}.`;
+          b.addEventListener('click', () => {
+            if (r === now) return;
+            void roll.rank(here.founder, who.uid, r).then(async (why) => {
+              if (why) this.game.logMsg(why, 'error');
+              await roll.again();
+              this.render();
+            });
+          });
+          set.append(b);
+        }
+        el.append(set);
+      }
+      this.body.append(el);
+    }
+  }
+
   render(): void {
     const g = this.game;
     const d = g.deed;
@@ -129,6 +213,7 @@ export class DeedPanel {
     this.body.append(this.row('In creature crates', String(crated), 'Yours, shut in creature crates: neither working nor following you.'));
     this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'What every wildermon on the deed does when something walks in.'));
     this.body.append(this.place('The token', d.x, d.y));
+    this.drawRoll(d);
 
     // What the next level wants, and the button that buys it.
     this.body.append(this.head(level < MAX_DEED_LEVEL ? `Growing to level ${level + 1}` : 'Fully grown'));
