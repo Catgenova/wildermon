@@ -1,5 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { fixedTo } from './ageing';
+import { FRUITING } from './fruiting';
 import type { PlacedFurniture } from './furniture';
 import { STATE_TAILS } from './pieceTails';
 import type { Game } from './game';
@@ -31,7 +32,8 @@ import { BUSH_DEFS, TILE_DEFS, TileType, bushSpecies } from '../world/tiles';
  * bushes (`WILD_VINE`), and one is cut off a thorn bush with a sickle, once
  * in a while (`cut_vine`, marked foraged as a bush's harvest is).
  *
- * The season is this file's own, in `GRAPE_SEASON`. Every rule here is the
+ * The season is the fruiting table's (`FRUITING` in `fruiting.ts`), read
+ * into `GRAPE_SEASON`, so grapes keep the calendar every other fruit keeps. Every rule here is the
  * island's too (`supabase/migrations/*_vineyards_and_wine_that_ages.sql`), in
  * the same words and the same order; `supabase/test/vineyard.ts` holds the
  * two sides to each other.
@@ -47,8 +49,8 @@ export const PLANT_VINE = 'plant_vine';
 /** Picking the grapes off a trellis's vine. */
 export const PICK_GRAPES = 'pick_grapes';
 
-/** The season grapes ripen in, and the only one a vine is picked in. */
-export const GRAPE_SEASON: Season = 'autumn';
+/** The season grapes ripen in, and the only one a vine is picked in: the fruiting table's. */
+export const GRAPE_SEASON: Season = FRUITING[GRAPE][0];
 /** Days of the island's year after it is planted before a vine bears. */
 export const VINE_BEARS = 3;
 /** Days of the island's year after a vine is picked before it bears again. */

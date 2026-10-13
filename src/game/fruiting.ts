@@ -45,6 +45,8 @@ export const FRUITING: Record<string, readonly Season[]> = {
   pomegranate: ['autumn'],
   olive: ['autumn', 'winter'],
   lemon: ['spring', 'winter'],
+  // A vine on a trellis (`vineyard.ts`), picked only in its one season.
+  grape: ['autumn'],
   // Bushes, by what a sickle cuts off them.
   rose_petals: ['spring', 'summer'],
   lavender: ['spring', 'summer'],
