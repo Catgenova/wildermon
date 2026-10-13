@@ -443,6 +443,8 @@ AS $function$
       or memorial_action(p_action)
       -- A vine's three: a cutting off a thorn bush, planting it on a trellis, and picking it (`vineyard.ts`).
       or vine_action(p_action)
+      -- A skep's two: emptying it of its honey, and looking into it (`bees.ts`).
+      or bee_action(p_action)
 $function$;
 
 /* ---- last_refusal: from 20261013003000_ranks_of_your_own.sql, the newest that defines it. With a vine's jobs. ---- */
@@ -473,6 +475,10 @@ begin
   end if;
   if vine_action(p_action) then
     return vine_refusal(p_world, p_uid, p_action, p_target);
+  end if;
+  -- A skep's two: emptying it of its honey, and looking into it (`bees.ts`).
+  if bee_action(p_action) then
+    return skep_refusal(p_world, p_uid, p_action, p_target);
   end if;
 
   if p_action = 'plan_bridge' then
@@ -631,6 +637,11 @@ begin
   end if;
   if vine_action(p_action) then
     perform perform_vine(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
+  -- A skep's two: emptying it of its honey, and looking into it (`bees.ts`).
+  if bee_action(p_action) then
+    perform perform_skep(p_world, p_uid, p_action, p_target);
     return;
   end if;
 
