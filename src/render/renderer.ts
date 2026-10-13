@@ -73,8 +73,9 @@ import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
 import { DAWN, DUSK } from '../game/game';
-import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, type Air, type Crew, type PieceView } from './furniture';
+import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, type Air, type Crew, type PieceView } from './furniture';
 import { roseStage } from '../game/roses';
+import { isTrellis, vineStage } from '../game/vineyard';
 import { fieldRate } from '../game/growth';
 import { dyeOf, dyeTint } from '../game/dyestuffs';
 import { sailTrim } from '../game/wind';
@@ -13728,6 +13729,8 @@ export class Renderer {
     if (rowedPiece(f.kind)) return f.driven || f.helm ? 1 : 0;
     // A lantern post or pillar, with its lantern in it or without (`lamps.ts`).
     if (isLampPiece(f)) return f.lamp ? 1 : 0;
+    // A trellis's vine, as far as it has grown, and its grapes when they are ripe (`vineyard.ts`).
+    if (isTrellis(f)) return vineTrim(vineStage(f, this.game.wallNow()));
     // An arch's roses: their variety, which is its place's, and how far they have grown (`roses.ts`).
     if (FURNITURE_BY_ID.get(f.kind)?.roses) {
       const r = roseStage(f.setAt, this.game.wallNow());

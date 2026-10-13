@@ -117,7 +117,7 @@ const SHAPE_OF: Record<string, Shape> = Object.fromEntries(([
   ['crock', 'jar pot bowl amphora urn jug cup mug flask bucket oil honey tincture potion wine mead ale cider juice milk preserves compote stew broth'],
   ['jar', 'bottle vial lantern lamp'],
   ['candles', 'candle wax'],
-  ['bundle', 'flowers wildflowers petals lavender sage basil thyme mint rosemary reed thatch sprout lily papyrus'],
+  ['bundle', 'flowers wildflowers petals lavender sage basil thyme mint rosemary reed thatch sprout cutting lily papyrus'],
   ['ingots', 'lump ingot nail ribbon ore'],
   ['stack', 'brick slab shards stone mortar adobe concrete clay'],
   ['planks', 'plank timber'],
@@ -127,7 +127,7 @@ const SHAPE_OF: Record<string, Shape> = Object.fromEntries(([
   ['loaf', 'bread loaf pie cake cheese dough'],
   ['sack', 'flour cornmeal wheat corn seed sand dirt ash coal peat salt sugar compost'],
   ['trinkets', 'gem ring pendant circlet bauble mirror comb statuette coin fragment'],
-  ['basket', 'apple cherry plum peach pear fig lemon quince apricot pomegranate olive blueberry raspberry strawberry lingonberry carrot cabbage onion potato fish trout perch pike minnow sturgeon meat egg nuts acorn'],
+  ['basket', 'grape apple cherry plum peach pear fig lemon quince apricot pomegranate olive blueberry raspberry strawberry lingonberry carrot cabbage onion potato fish trout perch pike minnow sturgeon meat egg nuts acorn'],
   ['crate', 'crate chest box coffer'],
 ] as Array<[Shape, string]>).flatMap(([shape, words]) => words.split(' ').map((w) => [w, shape])));
 
@@ -141,7 +141,7 @@ const COLOUR_OF: Record<string, string> = Object.fromEntries(([
   ['#eee6d4', 'flour cornmeal'], ['#e0c068', 'wheat corn'], ['#b89a68', 'seed'], ['#4a4a50', 'coal ash'], ['#e0cf9a', 'sand'],
   ['#7a5c40', 'dirt compost peat'], ['#6fb8c8', 'gem'], ['#f3ead0', 'candle wax'], ['#d9b460', 'lantern lamp'], ['#9c7a52', 'torch'],
   ['#9a3a4a', 'wine'], ['#e0a040', 'mead honey cider juice ale preserves'], ['#a8a040', 'oil olive'], ['#f5f2ea', 'milk'],
-  ['#d6574a', 'apple cherry raspberry strawberry pomegranate'], ['#6a4a8a', 'plum blueberry lingonberry'],
+  ['#d6574a', 'apple cherry raspberry strawberry pomegranate'], ['#6a4a8a', 'plum blueberry lingonberry grape'],
   ['#e8b040', 'pear quince fig lemon apricot peach'], ['#e88a3a', 'carrot'], ['#8fb84a', 'cabbage basil mint sage thyme rosemary'],
   ['#d8c098', 'onion potato egg nuts acorn'], ['#8fa8b8', 'fish trout perch pike minnow sturgeon'], ['#b8504a', 'meat'],
   ['#a890c8', 'lavender'], ['#e08aa0', 'rose petals'], ['#e6c75a', 'wildflowers flowers'], ['#c8b070', 'reed thatch papyrus'],

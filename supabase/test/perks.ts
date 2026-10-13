@@ -509,7 +509,7 @@ const OTHERS = new Set([
   'stump:clear', 'nest:chance', 'nest:feathers', 'honey:chance', 'honey:count', 'bush:shaft', 'coppice', 'tap_resin', 'clear_brush',
   'sow_patch', 'tend_patch', 'harvest_patch',
   'table:best', 'share:butcher', 'reach:cook', 'bait:butcher', 'cool:food', 'broth', 'distil', 'taste',
-  'brewed:ale', 'brewed:cider', 'brewed:mead', 'brewed:wine',
+  'brewed:ale', 'brewed:cider', 'brewed:mead', 'brewed:wine', 'brewed:grape_wine',
   'lye:tan_hide', 'reach:tailor', 'patch_item', 'tent',
   'tame:offer', 'coax:step', 'tame:young', 'bait:any', 'groom:care', 'groom:heal',
   'kept:care_hours', 'kept:care_bonus', 'kept:hunger', 'kept:old_at',

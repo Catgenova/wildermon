@@ -8,6 +8,7 @@ import { describeFrom, describeWith, isWorked, ITEM_DEFS, itemDef, itemName, mar
 import { fill, numberWord } from './words';
 import { matOf } from './materials';
 import { roseSays, ROSES_RULE } from './roses';
+import { STATE_TAILS } from './pieceTails';
 import type { Lamp } from './lamps';
 import { colourWord, dyeHex, readDye } from './dyestuffs';
 import { ENCHANTERS_PLINTH } from './enchant';
@@ -161,6 +162,11 @@ export interface FurnitureDef {
    * other (`rpc_ground`, `furniture_def.roses`).
    */
   roses?: boolean;
+  /**
+   * A grapevine is planted at its foot and grows up it (`vineyard.ts`): a
+   * trellis. It stands out of doors, on the ground.
+   */
+  vine?: boolean;
   /**
    * A box of earth that one crop is sown in, tended and harvested like a
    * field, growing at `PLANTER_GROWTH` of its pace in every season wherever
@@ -320,6 +326,8 @@ export const FURNITURE: FurnitureDef[] = [
   piece('lectern', 'Lectern', 1, 1, [['plank', 16], ['shaft', 2], ['nail', 16]], 16, 9, 'You nail up a lectern with a good slant on it.'),
   piece('coat_rack', 'Coat rack', 1, 1, [['plank', 4], ['shaft', 4], ['nail', 12]], 10, 6, 'You nail up a rack of pegs for the door.'),
   piece('planter', 'Planter', 2, 1, [['plank', 24], ['nail', 20]], 10, 7, 'You nail up a planter and fill it with earth.', undefined, { planter: true }),
+  // A grapevine climbs it, planted at its foot: see `vineyard.ts`.
+  piece('trellis', 'Trellis', 1, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 8, 'You nail {bill.plank:w} laths across {bill.shaft:w} uprights: a trellis for a vine.', undefined, { vine: true }),
   piece('firewood_rack', 'Firewood rack', 2, 1, [['plank', 8], ['shaft', 6], ['nail', 20]], 12, 8, 'You nail up a rack to keep firewood off the wet.', 40),
   /*
    * The biggest thing a carpenter builds, and the only one whose footprint is
@@ -602,6 +610,19 @@ export interface PlacedFurniture {
   /** Seconds a brew still has to work before it can be drawn off. */
   ferment?: number;
   /**
+   * For a barrel of a brew that ages, the moment it stops (or stopped)
+   * working, in epoch seconds: what its age is counted from (`ageing.ts`; the
+   * island's `placed.aged_from`). Gone when the barrel is emptied.
+   */
+  agedFrom?: number;
+  /**
+   * For a trellis, the moment a vine was planted at its foot and the moment
+   * it was last picked, in epoch seconds (`vineyard.ts`; the island's
+   * `placed.vine_at` and `placed.picked_at`).
+   */
+  vineAt?: number;
+  pickedAt?: number;
+  /**
    * How much longer the knack of what is in it lasts, for its brewer's hand
    * in it (a Cook's Strong Brew): stamped when the brew is set going, drawn
    * off into every bucket filled from it, and gone when it is empty.
@@ -676,8 +697,8 @@ export const PLANTER_GROWING = 'Something is growing in it. Harvest it, or pull 
 export const LAMP_TAKE_FIRST = 'Take the lantern down first.';
 
 /** The two liquids worth keeping a barrel for. */
-export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | 'wine' | 'juice' | 'spirit' | 'dye';
-export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', juice: 'juice', spirit: 'spirit', dye: 'dye' };
+export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | 'wine' | 'grape_wine' | 'juice' | 'spirit' | 'dye';
+export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', grape_wine: 'grape wine', juice: 'juice', spirit: 'spirit', dye: 'dye' };
 /** A bucket holds five litres, whichever way it is going. */
 export const BUCKET_LITRES = 5;
 /** Which liquid a full vessel is carrying, and which empty vessel it leaves. */
@@ -689,13 +710,14 @@ export const VESSELS: Record<string, { liquid: LiquidKind; empty: string }> = {
   cider_bucket: { liquid: 'cider', empty: 'bucket' },
   mead_bucket: { liquid: 'mead', empty: 'bucket' },
   wine_bucket: { liquid: 'wine', empty: 'bucket' },
+  grape_wine_bucket: { liquid: 'grape_wine', empty: 'bucket' },
   juice_bucket: { liquid: 'juice', empty: 'bucket' },
   spirit_bucket: { liquid: 'spirit', empty: 'bucket' },
   // Dye, which says what is in it on the bucket itself (`dyestuffs.ts`).
   dye_bucket: { liquid: 'dye', empty: 'bucket' },
 };
 /** Which full vessel a litre of each liquid fills an empty bucket into. */
-export const BUCKET_OF: Record<LiquidKind, string> = { water: 'water_bucket', lye: 'lye_bucket', milk: 'milk_bucket', ale: 'ale_bucket', cider: 'cider_bucket', mead: 'mead_bucket', wine: 'wine_bucket', juice: 'juice_bucket', spirit: 'spirit_bucket', dye: 'dye_bucket' };
+export const BUCKET_OF: Record<LiquidKind, string> = { water: 'water_bucket', lye: 'lye_bucket', milk: 'milk_bucket', ale: 'ale_bucket', cider: 'cider_bucket', mead: 'mead_bucket', wine: 'wine_bucket', grape_wine: 'grape_wine_bucket', juice: 'juice_bucket', spirit: 'spirit_bucket', dye: 'dye_bucket' };
 
 /*
  * What a piece says about itself, off the piece: what it holds and how much,
@@ -976,7 +998,7 @@ export function furnitureRefuses(f: PlacedFurniture, item: Item): string | null 
 }
 
 /** A piece's status line, and the enchantment set into it where it stands (`enchantTail`). */
-export const furnitureState = (f: PlacedFurniture): string => stateOf(f) + enchantTail(f);
+export const furnitureState = (f: PlacedFurniture): string => stateOf(f) + STATE_TAILS.map((tail) => tail(f)).join('') + enchantTail(f);
 function stateOf(f: PlacedFurniture): string {
   const def = furnitureDef(f.kind);
   const ql = `QL ${f.ql.toFixed(0)}`;

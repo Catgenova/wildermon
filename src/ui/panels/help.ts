@@ -16,6 +16,11 @@ import { HEAL_FED } from '../../game/body';
 import { BOON_BONUS, BOON_FOODS, boonTime, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { BREW_BY_ID, BREWS } from '../../game/brewing';
+import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
+import {
+  CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
+  VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
+} from '../../game/vineyard';
 import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, TILE_METRES } from '../../world/aqueducts';
@@ -161,6 +166,10 @@ const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_sha
 const ORE_SENSE = PERKS.find((p) => 'ore:below' in p.fx);
 /** The pieces that do not go down into a cellar, by name: what burns an open fire, and `cellarOutdoor` but the grave nobody makes. */
 const CELLAR_BURNS = FURNITURE.filter((d) => d.hearth).map((d) => article(d.name) + ' ' + d.name.toLowerCase());
+/** The brews that age in their barrel (`ageing.ts`). */
+const AGEING = BREWS.filter((b) => b.ages);
+/** A vine job's label, as the menu says it. */
+const VINE_ACTION = (id: string): string => VINEYARD_ACTIONS.find((a) => a.id === id)?.label ?? id;
 const CELLAR_NOT_DOWN = FURNITURE.filter((d) => cellarOutdoor().includes(d.id) && d.bill.length).map((d) => article(d.name) + ' ' + d.name.toLowerCase());
 
 /** The Farmer's perk that holds an effect, by name. */
@@ -1093,6 +1102,13 @@ export function helpText(): string {
     <p>Fill a barrel from a well or the shore, stand at it and <b>set a brew going</b>. ${NumberWord(BREWS.length)} of them:
     ${listed(BREWS.map((b) => `<b>${b.name.toLowerCase()}</b> from ${countOf(b.input, b.count, true)} and ${b.litres} litres of water in ${spanWords(b.time)}`))}.
     Each gives back as many litres of drink as it took of water.</p>
+    <p>${listed(AGEING.map((b, i) => `<b>${i ? b.name.toLowerCase() : b.name}</b>`))} get better kept. From the moment it stops working, a barrel of
+    ${AGEING.length > 1 ? 'either' : 'it'} gains ${WINE_AGE_RATE} QL for every day of the island's year (${spanWords(DAY_SECONDS)}) it is kept, and ${numberWord(CELLAR_AGEING)} times
+    that &mdash; ${WINE_AGE_RATE * CELLAR_AGEING} a day &mdash; in a barrel standing in a <b>cellar</b>; it gains no more than ${WINE_AGE_CAP} QL over what it
+    was brewed at, which it reaches in ${numberWord(WINE_AGE_CAP / WINE_AGE_RATE)} days out of a cellar and ${numberWord(WINE_AGE_CAP / (WINE_AGE_RATE * CELLAR_AGEING))} in one, and
+    never goes past QL ${QL_TOP}. It ages until the barrel is empty; wine poured in from a bucket was brewed somewhere else and does not
+    age in it. Examine the barrel for how long it has been kept, what it has gained and the QL it is at now. A drink straight
+    from the barrel is at that QL, and so is the knack it leaves; a bucket drawn off it keeps the bucket's own.</p>
     <p>A <b>quern</b> presses fruit too: ${numberWord(need('press_apple_juice', 'apple'))} of any fruit into a <b>bucket of juice</b>, sweet and with
     nothing dangerous in it, and ${numberWord(need('press_apple_cider', 'apple'))} apples or pears straight into a <b>bucket of cider</b> with no
     barrel and no waiting &mdash; one bucket, where the barrel would have made ${numberWord(CIDER.litres / BUCKET_LITRES)} from ${countOf(CIDER.input, CIDER.count)}
@@ -1178,6 +1194,17 @@ export function helpText(): string {
     with a sickle, clears every bush and reed in the ${BRUSH_SIDE}&times;${BRUSH_SIDE} tiles around the one you choose
     in one go, and leaves ${TILE_DEFS[CLEARED_TO[TileType.Bush] as TileType].name.toLowerCase()} where the bushes were and
     ${TILE_DEFS[CLEARED_TO[TileType.Reed] as TileType].name.toLowerCase()} where the reeds were.</p>
+    <h3>Vineyards</h3>
+    <p>Wild vines grow through the ${WILD_VINE.toLowerCase()}es. With a ${itemDef(CUTTING_TOOL).name.toLowerCase()} in your pack, <b>${VINE_ACTION(CUT_VINE)}</b> off one
+    for ${countOf(GRAPE_CUTTING, 1)}; a bush gives another once it has grown back, as it does after a harvest. Build a <b>trellis</b> from ${bill('make_trellis')}
+    (${workedAt('make_trellis')}, with a ${itemDef(recipe('make_trellis').tool ?? '').name.toLowerCase()}) and set it down out of doors, then <b>${VINE_ACTION(PLANT_VINE)}</b> at its foot: a vine roots only where the
+    trellis stands on ${vineSoilWords()}. The vine bears from ${numberWord(VINE_BEARS)} days after it is planted, and only in
+    <b>${GRAPE_SEASON}</b>: <b>${VINE_ACTION(PICK_GRAPES)}</b> in any other season gives nothing and says how long until it fruits. In
+    ${GRAPE_SEASON} a vine is picked ${onceEvery(VINE_REST)}, for ${GRAPES_A_PICK} &times; (${GRAPES_BASE} + ${VINE_SKILL} &divide; ${GRAPES_SPAN})
+    grapes to the nearest whole one: ${grapesFor(1)} at the start, ${grapesFor(QL_TOP / 2)} at ${VINE_SKILL} ${QL_TOP / 2} and ${grapesFor(QL_TOP)} at ${QL_TOP}. Cutting, planting and
+    picking all train ${VINE_SKILL}. Picking a trellis up loses its vine.</p>
+    <p>${capital(countOf(GRAPE, BREW_BY_ID.get('grape_wine')?.count ?? 0))} and ${BREW_BY_ID.get('grape_wine')?.litres} litres of water set going in a barrel make
+    <b>grape wine</b> in ${spanWords(BREW_BY_ID.get('grape_wine')?.time ?? 0)}, which ages in its barrel as cherry wine does (see Brewing).</p>
     <h3>Farming</h3>
     <p>With a <b>rake</b> in your pack, <b>Till</b> any grass or dirt to rake it into a field. Seeds turn
     up while foraging and botanizing &mdash; vegetables and starches in the one, spices and fibres in the

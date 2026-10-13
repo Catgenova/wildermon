@@ -1,4 +1,5 @@
 import { INDOORS_REST } from './building';
+import { brewQl, wineAgeSays } from './ageing';
 import { drinkable, isBrew, isWorking } from './brewing';
 import type { ActionDef, Target } from './actions';
 import { FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
@@ -203,13 +204,14 @@ export function drawDye(g: Game, f: PlacedFurniture, bucket: Item): { n: number;
  * it -- for dye, its colour, hex, QL and mix (`dyeSays`). The island says the
  * same (`vessel_says`).
  */
-export function vesselSays(f: PlacedFurniture): string {
+export function vesselSays(f: PlacedFurniture, now = Date.now() / 1000): string {
   const litres = litresIn(f);
   const dye = dyeInPiece(f);
   const held = litres <= 0 || !f.liquid ? 'It is empty.'
     : dye ? `It holds ${dyeSays(dye, litres)}`
       : `It holds ${litres.toFixed(0)} litres of ${LIQUID_NAME[f.liquid]}.`;
-  return `${furnitureName(f)}: QL ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}`;
+  // And a wine kept in it, how long and what it has gained (`ageing.ts`).
+  return `${furnitureName(f)}: QL ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}${wineAgeSays(f, now)}`;
 }
 
 /** Whether there is water at hand at all: a shore, a well or a barrel of it. */
@@ -234,6 +236,7 @@ export function drawFrom(g: Game, f: PlacedFurniture, litres: number): boolean {
     f.liquid = undefined;
     delete f.knack;
     delete f.dye;
+    delete f.agedFrom;
   }
   g.events.emit('crate');
   g.events.emit('world', f.x, f.y);
@@ -609,13 +612,15 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // and the last of a brew is as much a brew as the first.
       const liquid = f.liquid;
       const knack = f.knack ?? 1;
+      // A wine at the QL its keeping has brought it to (`ageing.ts`).
+      const ql = brewQl(f, g.wallNow());
       if (!drawFrom(g, f, 1)) return;
       g.player.stats.thirst = Math.min(1, g.player.stats.thirst + 0.5);
       // A brew straight out of the barrel favours a trade like any other.
       const brew = isBrew(liquid) ? BUCKET_OF[liquid as LiquidKind] : null;
       // And for longer for its brewer's hand in it (a Cook's Strong Brew).
-      const favour = brew ? g.grantBoon(brew, f.ql, knack) : null;
-      const full = brew ? g.nourish(brew, f.ql) : null;
+      const favour = brew ? g.grantBoon(brew, ql, knack) : null;
+      const full = brew ? g.nourish(brew, ql) : null;
       g.logMsg(`You drink your fill from the ${furnitureName(f).toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');
     },
   },
@@ -637,7 +642,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
-      if (f) g.logMsg(vesselSays(f), 'event');
+      if (f) g.logMsg(vesselSays(f, g.wallNow()), 'event');
     },
   },
   {
@@ -664,6 +669,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       f.liquid = undefined;
       delete f.knack;
       delete f.dye;
+      delete f.agedFrom;
       g.events.emit('crate');
       g.events.emit('world', f.x, f.y);
       g.logMsg(`You tip the ${what} out of the ${furnitureName(f).toLowerCase()}.`, 'event');
@@ -720,6 +726,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
           g.inventory.onChange?.();
           g.events.emit('inventory');
         }
+        if (barrel.liquid !== 'dye') delete barrel.agedFrom;
         barrel.litres = had + poured;
         barrel.liquid = 'dye';
         barrel.dye = dyeText(mixed);
@@ -736,6 +743,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // (a Cook's Strong Brew): nothing plain is made better by the barrel.
       const knack = litresIn(barrel) > 0 ? Math.min(barrel.knack ?? 1, markOf(item, 'knack')) : markOf(item, 'knack');
       if (poured <= 0 || !vesselBecomes(g, item, vessel.empty)) return;
+      // Wine poured into a barrel that held something else was brewed elsewhere, and does not age in it (`ageing.ts`).
+      if (barrel.liquid !== vessel.liquid) delete barrel.agedFrom;
       barrel.litres = litresIn(barrel) + poured;
       barrel.liquid = vessel.liquid;
       if (knack !== 1) barrel.knack = knack;

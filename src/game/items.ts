@@ -472,6 +472,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   bookshelf: { name: 'Bookshelf', category: 'misc', weight: 30, decay: 4, description: 'Shelves with a back and a cornice. Holds {capacity} things.' },
   larder: { name: 'Larder', category: 'misc', weight: 48, decay: 4, description: 'A deep cool cupboard for a kitchen. Holds {capacity} things: food, drink, and the flour, dough and cornmeal a kitchen bakes from.' },
   crate_shelf: { name: 'Crate shelf', category: 'misc', weight: 64, decay: 4, description: 'A decked rack {w:w} spots across and {h:w} deep. It holds nothing itself: {crates:w} plank crates stand on it, each its own crate, and you can see across a warehouse how many are full.' },
+  trellis: { name: 'Trellis', category: 'misc', weight: 8, decay: 4, description: 'Laths nailed across uprights, for a grapevine to climb. {rule}' },
   barrel: { name: 'Barrel', category: 'misc', weight: 14, decay: 4, description: 'Staves and hoops. Holds {liquid} litres of one liquid, and nothing solid.' },
   creature_crate: {
     name: 'Creature crate', category: 'misc', weight: 10, decay: 0,
@@ -490,7 +491,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   cider_bucket: { name: 'Bucket of cider', category: 'food', weight: 6, decay: 2, drink: 0.45, charges: 5, description: 'Pressed apples gone dangerous. A trade comes easier after it.', feeds: { greens: 0.1 } },
   juice_bucket: { name: 'Bucket of juice', category: 'food', weight: 6, decay: 6, drink: 0.5, charges: 5, description: 'Fruit pressed under a quern, sweet and cloudy, with nothing dangerous in it. Drink it while it is fresh.', feeds: { greens: 0.1 } },
   mead_bucket: { name: 'Bucket of mead', category: 'food', weight: 6, decay: 1.5, drink: 0.5, charges: 5, description: 'Honey and time. The best thing to come out of a hive after the honey itself.', feeds: { starch: 0.12, greens: 0.04 } },
-  wine_bucket: { name: 'Bucket of wine', category: 'food', weight: 6, decay: 1, drink: 0.5, charges: 5, description: 'Cherries, water and {brew.wine.time:span} of patience.', feeds: { greens: 0.1 } },
+  wine_bucket: { name: 'Bucket of wine', category: 'food', weight: 6, decay: 1, drink: 0.5, charges: 5, description: 'Cherries, water and {brew.wine.time:span} of patience. Kept in its barrel it ages: {ageing}', feeds: { greens: 0.1 } },
+  grape_wine_bucket: { name: 'Bucket of grape wine', category: 'food', weight: 6, decay: 1, drink: 0.5, charges: 5, description: 'Grapes, water and {brew.grape_wine.time:span} of patience. Kept in its barrel it ages: {ageing}', feeds: { greens: 0.1 } },
   spirit_bucket: { name: 'Bucket of spirit', category: 'food', weight: 6, decay: 0.5, drink: 0.5, charges: 5, knack: 3, description: 'A brew boiled off and caught again. A drink of it gives a knack that lasts {knack:times} as long as a drink of {spirit.asStrong} at the same QL.', feeds: { starch: 0.06 } },
   fishing_rod: { name: 'Fishing rod', category: 'tool', weight: 1.4, decay: 3, description: '{recipe.make_fishing_rod.shaft:W} shafts spliced, a waxed line and a strip of metal bent into a hook. Stand at water and fish.' },
   minnow: { name: 'Minnow', category: 'food', weight: 0.1, stackable: true, food: 0.06, decay: 9, description: 'A finger of silver. Bait, if you are honest about it.', feeds: { flesh: 0.04 } },
@@ -500,6 +502,9 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   sturgeon: { name: 'Sturgeon', category: 'food', weight: 9, stackable: true, food: 0.85, decay: 6, description: 'The deep water fish. Most people fish for a lifetime and never see one.', feeds: { flesh: 0.24 } },
   cooked_fish: { name: 'Cooked fish', category: 'food', weight: 0.6, stackable: true, food: 0.52, decay: 4, description: 'Fish over a fire, which is what fish is for.', feeds: { flesh: 0.28, fat: 0.1 } },
   apple: { name: 'Apple', category: 'food', weight: 0.2, stackable: true, food: 0.16, decay: 2, description: 'Picked off the tree. Keeps a while, bakes into a pie, and presses into cider.', feeds: { greens: 0.07 } },
+  // Off a vine on a trellis, in its season (`vineyard.ts`).
+  grape: { name: 'Grape', category: 'food', weight: 0.05, stackable: true, food: 0.07, decay: 5, description: 'Picked off a vine on a trellis, in {grapeSeason} only. {brew.grape_wine.count:W} of them and {brew.grape_wine.litres} litres of water brew a barrel of grape wine.', feeds: { greens: 0.04 } },
+  grape_cutting: { name: 'Grape cutting', category: 'plant', weight: 0.1, stackable: true, decay: 160, description: 'A length of vine cut off the wild vines in a {wild} with a {tool}. {rule}' },
   cherry: { name: 'Cherry', category: 'food', weight: 0.05, stackable: true, food: 0.07, decay: 5, description: 'Sweet and gone in a moment. Better preserved than eaten by the handful.', feeds: { greens: 0.04 } },
   olive: { name: 'Olive', category: 'food', weight: 0.06, stackable: true, food: 0.09, decay: 1.5, description: 'Bitter off the branch and worth a great deal pressed.', feeds: { fat: 0.05 } },
   // The eight the chart holds to an island each. Where each grows is in its line.

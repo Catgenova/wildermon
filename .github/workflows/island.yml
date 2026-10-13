@@ -2656,6 +2656,20 @@ jobs:
             --outfile=node_modules/.cache/memorial.mjs --log-level=error
           node node_modules/.cache/memorial.mjs
 
+      - name: Vineyards and wine that ages, the same on both sides
+        run: |
+          # A cutting off a thorn bush with a sickle, planted on a trellis on
+          # soil and refused off it; the vine too young, then picked in autumn
+          # for the grapes its picker's forestry gives and refused in every
+          # other season with when it fruits, at the same held moments in the
+          # same words; grape wine brewed from its grapes, its ageing stamped
+          # as it is set going; and the QL a barrel of it is at after so many
+          # days in a cellar and out, to the last bit on both sides, capped,
+          # said on Examine and drunk at.
+          npx esbuild supabase/test/vineyard.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/vineyard.mjs --log-level=error
+          node node_modules/.cache/vineyard.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

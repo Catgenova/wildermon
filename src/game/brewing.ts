@@ -26,16 +26,22 @@ export interface BrewDef {
   /** How hard it is to set going right. */
   difficulty: number;
   done: string;
+  /** It gets better kept in its barrel after it stops working (`ageing.ts`). */
+  ages?: boolean;
 }
 
 /** What one go at a brew teaches, whichever way it comes out. */
 export const BREW_GAIN = 0.6;
 
+/** Grapes off a vine (`vineyard.ts`) a barrel of grape wine takes. */
+export const GRAPE_WINE_GRAPES = 24;
+
 export const BREWS: BrewDef[] = [
   { id: 'ale', name: 'Ale', input: 'wheat', count: 12, litres: 15, time: world(15 * 60), difficulty: 12, done: 'You mash the wheat into the water and leave it to work. It will be ale.' },
   { id: 'cider', name: 'Cider', input: 'apple', count: 20, litres: 15, time: world(30 * 60), difficulty: 18, done: 'You break the apples into the water and bung the barrel. It will be cider.' },
   { id: 'mead', name: 'Mead', input: 'honey', count: 12, litres: 15, time: world(40 * 60), difficulty: 24, done: 'You stir the honey through until it goes. It will be mead, in its own time.' },
-  { id: 'wine', name: 'Wine', input: 'cherry', count: 30, litres: 15, time: world(45 * 60), difficulty: 30, done: 'You crush the cherries into the water and seal it. It will be wine.' },
+  { id: 'wine', name: 'Wine', input: 'cherry', count: 30, litres: 15, time: world(45 * 60), difficulty: 30, done: 'You crush the cherries into the water and seal it. It will be wine.', ages: true },
+  { id: 'grape_wine', name: 'Grape wine', input: 'grape', count: GRAPE_WINE_GRAPES, litres: 15, time: world(45 * 60), difficulty: 30, done: 'You tread the grapes into the water and seal it. It will be grape wine.', ages: true },
 ];
 
 export const BREW_BY_ID = new Map(BREWS.map((b) => [b.id, b]));
@@ -108,6 +114,7 @@ export const BREWING_ACTIONS: ActionDef[] = [
         f.litres = Math.max(0, litresIn(f) - brew.litres);
         if (f.litres <= 0) f.liquid = undefined;
         delete f.knack;
+        delete f.agedFrom;
         g.gainSkill('brewing', tryGain(false, BREW_GAIN));
         g.logMsg(`It will not take. You tip the whole soured lot out of the ${furnitureName(f).toLowerCase()}.`, 'event');
         g.events.emit('crate');
@@ -116,6 +123,9 @@ export const BREWING_ACTIONS: ActionDef[] = [
       f.litres = brew.litres;
       f.liquid = brew.id;
       f.ferment = brew.time;
+      // A wine ages from the moment it stops working, which is now and its working (`ageing.ts`).
+      if (brew.ages) f.agedFrom = g.wallNow() + brew.time;
+      else delete f.agedFrom;
       // Its brewer's hand in it, which goes into every bucket drawn off it (a Cook's Strong Brew).
       const knack = g.perk(`brewed:${brew.id}`, 1);
       if (knack !== 1) f.knack = knack;
