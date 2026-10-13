@@ -364,11 +364,12 @@ check('and none left in the journal', goalsLeft.length === 0, goalsLeft.join(' '
  * `item_def`, and a placeholder a module never filled would reach every
  * examine line on every island. `{n}` and `{t}` are the spell lines' own,
  * `{food}` a refused taming's, `{v}` an enchantment's figure at its quality
- * and `{w}` its second figure (`enchant_line`, `enchant_second`), filled by
- * the island when it says them.
+ * and `{w}` its second figure (`enchant_line`, `enchant_second`), and `{who}`
+ * and `{what}` a trade's other party and the thing it is about (`barter_said`),
+ * filled by the island when it says them.
  */
 const state = readFileSync('supabase/defs-state.sql', 'utf8');
-const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}', '{w}']);
+const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}', '{w}', '{who}', '{what}']);
 const unfilled = [...state.matchAll(PLACEHOLDER)].map((m) => m[0]).filter((p) => !ISLANDS_OWN.has(p));
 check('the definitions the island reads have no placeholder in them', unfilled.length === 0, [...new Set(unfilled)].join(' '));
 
