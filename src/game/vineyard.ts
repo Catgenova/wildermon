@@ -1,20 +1,28 @@
 import type { ActionDef, Target } from './actions';
 import { fixedTo } from './ageing';
 import { FRUITING } from './fruiting';
-import type { PlacedFurniture } from './furniture';
+import { isDone, trellisWallWords, wallWord, WALL_TYPES, WALL_TYPE_BY_ID, type Side, type WallType, type WallTypeDef } from './building';
+import { SUBTILES } from './crates';
+import { facingOf, FACINGS, furnitureAnchor, furnitureDef, furnitureFootprint, turnedFacing, type PlacedFurniture } from './furniture';
 import { STATE_TAILS } from './pieceTails';
 import type { Game } from './game';
 import { describeFrom, itemDef } from './items';
 import { lampTooFar } from './lamps';
 import { DAY_SECONDS } from './pace';
-import { listedOr, numberWord, timeWords } from './words';
+import { article, listedOr, numberWord, timeWords } from './words';
 import { SEASONS, SEASON_DAYS, seasonAt, seasonBegan, type Season } from '../world/calendar';
 import { BUSH_DEFS, TILE_DEFS, TileType, bushSpecies } from '../world/tiles';
 
 /**
  * Vineyards: a grapevine grown up a trellis, and the grapes off it.
  *
- * A trellis is a carpenter's piece, set down like any other. A grape cutting
+ * A trellis is a carpenter's piece, set down on the ground outside a
+ * building against the outer face of a finished wall of a type that takes
+ * one (`WallTypeDef.trellis`: a solid wall and a window), facing it, along
+ * the whole of that side of its tile (`trellisWallRefusal`, `trellisFacing`).
+ * The wall is asked for when it is set down and when it is turned, and at no
+ * other time: one standing where its wall has come down since, or set down
+ * before the rule was, stays and grows as it did. A grape cutting
  * planted at its foot (`plant_vine`) takes if the trellis stands on soil
  * (`VINE_SOIL`), and the vine is the trellis's from then on: the moment it
  * was planted is kept on the piece (`vineAt`; on the island the placed row's
@@ -77,6 +85,37 @@ export const VINE_SOIL: readonly TileType[] = [TileType.Grass, TileType.Dirt, Ti
 /** Grapes a pick gives at this forestry. The island's `grapes_for`. */
 export const grapesFor = (skill: number): number => Math.max(1, Math.floor(GRAPES_A_PICK * (GRAPES_BASE + skill / GRAPES_SPAN) + 0.5));
 
+/** The wall types a trellis is set against, from their own table: a solid wall and a window. */
+export const TRELLIS_WALLS = WALL_TYPES.filter((w) => w.trellis).map((w) => w.id);
+/** A wall type with its article: "a door", "an arch" (`wallWord`). */
+const aWall = (w: WallTypeDef): string => `${article(wallWord(w))} ${wallWord(w)}`;
+/** The ones a trellis goes against, as they are said: "solid wall or window". */
+export { trellisWallWords };
+/**
+ * The ones it does not, from the same table: "a bay window, a door, ... or a
+ * rune gate". A hidden door is not among them: it is refused only to whoever
+ * its padlock admits (`trellisRefusedSaid`).
+ */
+export const trellisRefusedWords = (): string => listedOr(WALL_TYPES.filter((w) => !w.trellis && w.id !== 'hidden_door').map(aWall));
+/** Every way a trellis is refused, said once for its text and the help. */
+export const trellisRefusedSaid = (): string =>
+  `A ${trellisWord()} is refused on a tile of a building, upstairs, on a side with no wall or an unfinished one, and against ${trellisRefusedWords()}. `
+  + `A hidden door is refused only to whoever its padlock admits; to anybody else it is a solid wall.`;
+/** What setting a trellis down against a wall of a type that takes none says: "A trellis cannot stand against a door." The island's `trellis_against_said`. */
+export const trellisAgainstSaid = (type: WallType): string => {
+  const w = WALL_TYPE_BY_ID.get(type);
+  return `A ${trellisWord()} cannot stand against ${w ? aWall(w) : `a ${type}`}.`;
+};
+/**
+ * What the owner of a trellis is told when it is handed back because another
+ * trellis or another piece took the row along its side of its tile
+ * (`settleTrellises`): where it stood, and its vine as a cutting where it had
+ * one. The island's `trellis_returned_said`.
+ */
+export const trellisReturnedSaid = (x: number, y: number, vine: boolean): string =>
+  `Your ${trellisWord()} at ${x}, ${y} is back in your pack${vine ? `, and its vine with it as a ${cuttingWord()}` : ''}: `
+  + `a ${trellisWord()} takes the whole row of spots along its side of a tile now, and another ${trellisWord()} or another piece stands in that row.`;
+
 /** The soils, as they are said: "grass, dirt, field, lawn or steppe". */
 export const vineSoilWords = (): string => listedOr(VINE_SOIL.map((t) => TILE_DEFS[t].name.toLowerCase()));
 
@@ -126,7 +165,113 @@ export const VINE_SAID = {
   noWild: 'There is no wild vine in this.',
   get cut(): string { return `You have taken the cutting this ${WILD_VINE.toLowerCase()} has. Come back later.`; },
   get noTool(): string { return `You need a ${itemDef(CUTTING_TOOL).name.toLowerCase()} to cut a vine.`; },
+  /** Where a trellis is set down, said once for its rule (`TRELLIS_RULE`). */
+  get wall(): string { return `A ${trellisWord()} is set down only on the ground outside a building, against the outer face of a finished ${trellisWallWords()}.`; },
+  /** And why not here, each way of missing it (`trellisWallRefusal`); a wall of a type that takes none is `trellisAgainstSaid`. */
+  get upstairs(): string { return `A ${trellisWord()} is set down only on the ground, not upstairs.`; },
+  inside: 'That is the inside of a building.',
+  noWall: 'There is no wall on that side of this tile.',
+  unfinished: 'That wall is not finished.',
+  /** Turned, with no other side of its tile against such a wall (`trellisTurnsTo`). */
+  get turn(): string { return `No other side of this tile has the outer face of a finished ${trellisWallWords()} for the ${trellisWord()} to stand against.`; },
 };
+
+/**
+ * Why a trellis will not stand on tile (x, y) against its side `facing`, or
+ * null: it is set down from the ground (`level` is the storey of whoever
+ * sets it down, or of the trellis being turned), on a tile that is no
+ * building's -- so the wall's other face is a building's inside and this one
+ * its outside -- against a wall on that side whose type takes a trellis
+ * (`WallTypeDef.trellis`), finished. A hidden door is the type it is seen as
+ * (`Buildings.seenType`): a solid wall to all but whoever its padlock admits.
+ * Each way of missing it says which (`VINE_SAID`, `trellisAgainstSaid`). The
+ * island's `trellis_wall_refusal`, question for question.
+ */
+export function trellisWallRefusal(g: Game, x: number, y: number, facing: Side, level: number): string | null {
+  if (level !== 0) return VINE_SAID.upstairs;
+  if (g.buildings.buildingAt(x, y)) return VINE_SAID.inside;
+  const w = g.buildings.wall(0, x, y, facing);
+  if (!w) return VINE_SAID.noWall;
+  const seen = g.buildings.seenType(w);
+  if (!WALL_TYPE_BY_ID.get(seen)?.trellis) return trellisAgainstSaid(seen);
+  return isDone(w) ? null : VINE_SAID.unfinished;
+}
+
+/**
+ * Whether a trellis of `kind` set down facing `facing` may share a spot with
+ * the piece `f`: in the corner of a tile, where the row along one side
+ * meets the row along the next, a trellis shares it with one at right angles
+ * to it. The island's `piece_block_taken` says the same.
+ */
+export function trellisShares(kind: string, facing: Side, f: PlacedFurniture): boolean {
+  const across = (side: Side): boolean => side === 'e' || side === 'w';
+  return !!furnitureDef(kind).vine && !!furnitureDef(f.kind).vine && across(facing) !== across(facingOf(f));
+}
+
+/**
+ * Trellises kept from before one took the whole row of spots along a side of
+ * its tile, when there were often several to a tile: one to a row. Of those
+ * on a tile facing one way, the one with a vine is kept before one without,
+ * and the oldest before a newer; it goes into the row along the side it faces
+ * (`furnitureAnchor`) if nothing but another trellis stands there. The rest,
+ * and that one too where another piece takes the row, go back to the pack,
+ * a vine as a cutting, and the owner is told why (`trellisReturnedSaid`).
+ * Asked when a game is loaded; the island's `trellis_settle`, asked once of
+ * every island, does the same.
+ */
+export function settleTrellises(g: Game): void {
+  const rows = new Map<string, PlacedFurniture[]>();
+  for (const f of g.furniture.values()) {
+    if (!isTrellis(f) || (f.level ?? 0) < 0) continue;
+    const key = `${f.x},${f.y},${facingOf(f)}`;
+    rows.set(key, [...(rows.get(key) ?? []), f]);
+  }
+  for (const row of rows.values()) {
+    row.sort((a, b) => Number(a.vineAt === undefined) - Number(b.vineAt === undefined) || a.id - b.id);
+    for (const f of row) [f.sx, f.sy] = furnitureAnchor(f.kind, f.sx, f.sy, facingOf(f));
+    const keep = row[0];
+    const [w, h] = furnitureFootprint(keep.kind, facingOf(keep));
+    let taken = g.columnInBlock(keep.x, keep.y, keep.sx, keep.sy, w, h);
+    for (let dy = 0; dy < h && !taken; dy++) {
+      for (let dx = 0; dx < w && !taken; dx++) taken = g.occupiedSubtile(keep.x, keep.y, keep.sx + dx, keep.sy + dy, keep.id, 0, isTrellis);
+    }
+    const back = taken ? row : row.slice(1);
+    for (const f of back) {
+      g.removeFurniture(f.id);
+      g.inventory.add(TRELLIS, { ql: f.ql, extra: f.material, rare: f.rare });
+      if (f.vineAt !== undefined) g.inventory.add(GRAPE_CUTTING, { ql: f.ql });
+      g.logMsg(trellisReturnedSaid(f.x, f.y, f.vineAt !== undefined), 'event');
+    }
+  }
+}
+
+/**
+ * The side of tile (x, y) a trellis set down at the point (fx, fy) in it --
+ * each nought to one across the tile -- goes against: of the sides it may
+ * stand against (`trellisWallRefusal`), the nearest the point, the first of
+ * north, east, south and west where two are as near. Where there is none,
+ * the side nearest the point all the same, for it to be shown and refused
+ * against.
+ */
+export function trellisFacing(g: Game, x: number, y: number, fx: number, fy: number, level: number): Side {
+  const off: Record<Side, number> = { n: fy, e: 1 - fx, s: 1 - fy, w: fx };
+  const sides = (['n', 'e', 's', 'w'] as Side[]).sort((a, b) => off[a] - off[b]);
+  return sides.find((side) => !trellisWallRefusal(g, x, y, side, level)) ?? sides[0];
+}
+
+/**
+ * Which way a trellis faces after a turn: the next side round to the right
+ * of the way it faces that it may stand against, or null where no other
+ * side may (`VINE_SAID.turn`). The island's `trellis_turns_to`.
+ */
+export function trellisTurnsTo(g: Game, f: PlacedFurniture): Side | null {
+  let facing = facingOf(f);
+  for (let i = 0; i < FACINGS.length - 1; i++) {
+    facing = turnedFacing(facing, 1);
+    if (!trellisWallRefusal(g, f.x, f.y, facing, f.level ?? 0)) return facing;
+  }
+  return null;
+}
 
 /**
  * Why a vine gives nothing out of season, and when it fruits: the island's
@@ -264,7 +409,20 @@ export const VINEYARD_ACTIONS: ActionDef[] = [
   },
 ];
 
-/** The rule, said once: for the trellis's and the cutting's text and the help. */
+/**
+ * Where a trellis stands, said once: for its text and the help. What it is
+ * set down against and how much ground it takes -- the row of `SUBTILES`
+ * spots along that side of its tile, one deep, shared at the corner with a
+ * trellis on the next side (`furnitureAnchor`, `Game.furniturePlaceReason`)
+ * -- which wall where a tile has two (`trellisFacing`), and that the wall is
+ * asked of only then.
+ */
+export const TRELLIS_RULE = (): string => `${VINE_SAID.wall} It faces the wall and takes the ${numberWord(SUBTILES)} spots along that side of its tile, one deep, `
+  + `where nothing else stands but a ${trellisWord()} on the next side of the tile, which shares the corner spot with it. `
+  + `On a tile with such walls on more than one side, it goes against the one nearest where it is set down. `
+  + `The wall is asked of only when the ${trellisWord()} is set down or turned: it stays standing, vine and all, if the wall is changed or taken down after.`;
+
+/** The vine's rule, said once: for the cutting's text and the help. */
 export const VINE_RULE = (): string => `Plant a ${cuttingWord()} at the foot of a ${trellisWord()} standing on ${vineSoilWords()}. `
   + `The vine bears from ${days(VINE_BEARS)} after it is planted, in ${GRAPE_SEASON} only, and ${onceEvery(VINE_REST)}: `
   + `a pick gives ${GRAPES_A_PICK} × (${GRAPES_BASE} + ${VINE_SKILL} ÷ ${GRAPES_SPAN}) grapes to the nearest whole one, `
@@ -274,5 +432,5 @@ export const VINE_RULE = (): string => `Plant a ${cuttingWord()} at the foot of 
 STATE_TAILS.push((f) => (isTrellis(f) ? ` · ${vineSays(f, Date.now() / 1000)}` : ''));
 
 describeFrom(GRAPE, { grapeSeason: GRAPE_SEASON });
-describeFrom(TRELLIS, { rule: VINE_RULE() });
+describeFrom(TRELLIS, { rule: TRELLIS_RULE(), refused: trellisRefusedSaid() });
 describeFrom(GRAPE_CUTTING, { rule: VINE_RULE(), wild: WILD_VINE.toLowerCase(), tool: itemDef(CUTTING_TOOL).name.toLowerCase() });

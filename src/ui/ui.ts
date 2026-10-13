@@ -43,6 +43,7 @@ import { COMPANION_STANCES, isBaitFor, SPECIES, STANCE_HINTS, STANCE_NAMES, STAN
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { nearestSide } from '../render/renderer';
 import { crateKindOfItem, crateName, crateCapacity, crateUnits, subtileOf } from '../game/crates';
+import { trellisFacing } from '../game/vineyard';
 import { butcherPreview } from '../game/butcher';
 import { anvilAnchor, anvilName, type PlacedAnvil } from '../game/anvil';
 import { postCandidates, postKeep, postLife, postName, postRadius, postState, type PlacedPost } from '../game/posts';
@@ -1025,7 +1026,21 @@ export class UI {
   /** Pick up a piece to set down: it follows the cursor from here, and Q and E turn it. */
   startPlacing(item: Item): void {
     this.placing = { kind: 'furniture', itemUid: item.uid, piece: item.id, material: item.extra, facing: 's' };
-    this.game.logMsg(`The ${itemName(item).toLowerCase()} follows the cursor: Q and E turn it, a click sets it down, Escape keeps it.`, 'info');
+    // A trellis turns itself to the wall it goes against (`placingFacing`).
+    this.game.logMsg(furnitureDef(item.id).vine
+      ? `The ${itemName(item).toLowerCase()} follows the cursor and stands against the wall on the side of the tile nearest it: a click sets it down, Escape keeps it.`
+      : `The ${itemName(item).toLowerCase()} follows the cursor: Q and E turn it, a click sets it down, Escape keeps it.`, 'info');
+  }
+
+  /**
+   * Which way a piece being placed faces: the way Q and E have turned it, or
+   * for a trellis the side of the tile under the cursor it would stand
+   * against nearest the cursor, and with none the nearest side, to be shown
+   * refused there (`trellisFacing`).
+   */
+  private placingFacing(p: Extract<Placing, { kind: 'furniture' }>, pick: Pick): Side {
+    if (!furnitureDef(p.piece).vine) return p.facing;
+    return trellisFacing(this.game, pick.x, pick.y, pick.wx - pick.x, pick.wy - pick.y, this.game.player.level);
   }
 
   /**
@@ -1079,8 +1094,9 @@ export class UI {
       return;
     }
     const [s0, t0] = subtileOf(pick.x, pick.y, pick.wx, pick.wy);
-    const [ax, ay] = furnitureAnchor(p.piece, s0, t0, p.facing);
-    this.renderer.ghost = { kind: 'furniture', piece: p.piece, material: p.material, x: pick.x, y: pick.y, sx: ax, sy: ay, facing: p.facing, ok: !this.game.furniturePlaceReason(p.piece, pick.x, pick.y, ax, ay, p.facing) };
+    const facing = this.placingFacing(p, pick);
+    const [ax, ay] = furnitureAnchor(p.piece, s0, t0, facing);
+    this.renderer.ghost = { kind: 'furniture', piece: p.piece, material: p.material, x: pick.x, y: pick.y, sx: ax, sy: ay, facing, ok: !this.game.furniturePlaceReason(p.piece, pick.x, pick.y, ax, ay, facing) };
   }
 
   /** A click while something is being placed: the left button sets it down where the cursor is, any other keeps it. */
@@ -1106,8 +1122,9 @@ export class UI {
     if (!pick) return;
     const def = ACTION_BY_ID.get('place_furniture');
     const [s0, t0] = subtileOf(pick.x, pick.y, pick.wx, pick.wy);
-    const [ax, ay] = furnitureAnchor(p.piece, s0, t0, p.facing);
-    const target: Target = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, sx: ax, sy: ay, itemUid: p.itemUid, facing: p.facing };
+    const facing = this.placingFacing(p, pick);
+    const [ax, ay] = furnitureAnchor(p.piece, s0, t0, facing);
+    const target: Target = { kind: 'tile', x: pick.x, y: pick.y, cx: pick.cx, cy: pick.cy, sx: ax, sy: ay, itemUid: p.itemUid, facing };
     const reason = def?.check?.(target, this.game) ?? null;
     if (reason) {
       this.game.logMsg(reason, 'error');

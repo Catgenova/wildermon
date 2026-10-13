@@ -9,6 +9,8 @@ import { QL_PER_LOOP } from './belt';
 import { describeGoals } from './journal';
 import { countSaid, fill, listed, numberWord } from './words';
 import { FURNITURE, ONE_ALTAR, VESSELS } from './furniture';
+import { trellisWallWords } from './building';
+import { SUBTILES } from './crates';
 import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULDS } from './metal';
 import { FISH } from './fishing';
 import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, isBoilStuff } from './dyes';
@@ -519,7 +521,10 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave).map((f) =>
   baseTime: f.time,
   stamina: 0.05,
   difficulty: f.difficulty,
-  done: `${f.done} Set it down on any spot of a tile.`,
+  // A trellis goes against a wall, along the whole of a side of its tile (`vineyard.ts`); everything else anywhere on a tile.
+  done: f.vine
+    ? `${f.done} Set it down on the ground outside a building, against the outer face of a finished ${trellisWallWords()}: it takes the ${numberWord(SUBTILES)} spots along that side of its tile.`
+    : `${f.done} Set it down on any spot of a tile.`,
   fail: f.skill === 'masonry' ? `The courses will not run true and you knock the ${f.name.toLowerCase()} down again.`
     : f.skill === 'tailoring' ? `The seams will not lie flat and you unpick the ${f.name.toLowerCase()} again.`
       : f.skill === 'fishing' ? `The clay will not hold water and you dig the ${f.name.toLowerCase()} out again.`

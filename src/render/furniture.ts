@@ -3,7 +3,8 @@ import type { Seat } from './figure';
 import { CROP_LIST, CROP_STAGES, type CropDef } from '../game/farming';
 import { cropPlant } from './crops';
 import { materialOf } from '../game/materials';
-import type { Side } from '../game/building';
+import { WALL_HEIGHT, WALL_THICK, type Side } from '../game/building';
+import { SUBTILES } from '../game/crates';
 import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { FOUNT, FOUNT_RIM } from './fountain';
 import { star } from './shine';
@@ -1550,19 +1551,48 @@ const CLOTH: Record<string, (g: CanvasRenderingContext2D, sx: number, sy: number
 
 /* ---- the roses on an arch ------------------------------------------------------ */
 
+/**
+ * A trellis's lattice: half its span, from the middle to the middle of an end
+ * post, in units -- the tile's half less the half thickness of a wall turning
+ * the corner at either end and a hand to spare, so it runs the width of the
+ * wall and stops at its corners; how high its head is, two-thirds of a storey;
+ * and how far toward its front, the wall, the lattice stands from its middle,
+ * which is half a subtile off the wall's middle line.
+ */
+const TRELLIS_SPAN = UNITS_PER_TILE / 2 - WALL_THICK * UNITS_PER_TILE - 0.5;
+const TRELLIS_HEIGHT = (WALL_HEIGHT * 2) / 3;
+const TRELLIS_LY = UNITS_PER_TILE / SUBTILES / 2 - WALL_THICK * UNITS_PER_TILE - 0.9;
 /** The arch of a timber rose arch: its posts' half span, their height, and how far the arch rises over them. */
 const ARCH_X = 17.4;
 const ARCH_H = 21.5;
 const ARCH_RISE = 8;
 /** The leaves of a climbing rose, lit, mid and deep; its canes; and what it flowers in, by variety: the petals, their shade and the bud. */
 const ROSE_LEAF: RGB[] = [hex('#a6d49a'), hex('#6aa66e'), hex('#3d7250')];
-/** A grapevine's leaves, its stem and its grapes (`trellis`). */
-const VINE_LEAF: RGB[] = [hex('#8fbf6a'), hex('#5f9a52'), hex('#3f6e3c')];
+/** A grapevine's leaves, lit, mid and deep; its wood; its grapes, and the bloom on them (`trellis`). */
+const VINE_LEAF: RGB[] = [hex('#a3cf73'), hex('#679f4f'), hex('#3c6a38')];
 const VINE_STEM: Paint = paintOf(hex('#6b5238'), 0.5);
 const GRAPE_BLUE: RGB = hex('#5a3d6e');
-/** How a trellis's vine is drawn: none, young, grown, and grown with its grapes ripe (`vineyard.ts`). */
-export const vineTrim = (stage: 'none' | 'young' | 'waiting' | 'picked' | 'ripe'): number =>
-  stage === 'none' ? 0 : stage === 'young' ? 1 : stage === 'ripe' ? 3 : 2;
+const GRAPE_BLOOM: RGB = hex('#9b86b8');
+/** How many ways a vine is grown, one picked for each trellis by where it stands, so a row of them is not one vine over and over. */
+export const VINE_VARIANTS = 6;
+/**
+ * The one number a trellis is baked by: how its vine is drawn -- none, young,
+ * grown, and grown with its grapes ripe (`vineyard.ts`) -- which of
+ * `VINE_VARIANTS` ways it has grown, and which neighbours it joins
+ * (`VINE_JOIN`).
+ */
+export const vineTrim = (stage: 'none' | 'young' | 'waiting' | 'picked' | 'ripe', variant = 0, left = false, right = false): number =>
+  (stage === 'none' ? 0 : stage === 'young' ? 1 : stage === 'ripe' ? 3 : 2) + 4 * (((variant % VINE_VARIANTS) + VINE_VARIANTS) % VINE_VARIANTS)
+  + VINE_JOIN * ((left ? 1 : 0) + (right ? 2 : 0));
+/**
+ * Where in a trellis's trim it says it runs on into a trellis on the next
+ * tile along the same wall, facing the same way: on its left (one of these)
+ * and on its right (two) as you face its front. Joined, its lattice and its
+ * rails run on to the edge of its tile on that side, the post there is the
+ * one on its left only, and its vine leafs out to it, so a run of them reads
+ * as one (`trellis`).
+ */
+const VINE_JOIN = 4 * VINE_VARIANTS;
 const ROSE_CANE: Paint = paintOf(hex('#7a8a52'), 0.5);
 const ROSE_BLOOMS: Array<[RGB, RGB, RGB]> = [
   [hex('#f4a3b8'), hex('#c8607c'), hex('#d4557a')],
@@ -1750,6 +1780,201 @@ function climbingRoses(sc: Scene, side: (q: number) => V3, face: number, trim: n
       }
     }
   }
+}
+
+/* ---- the vine on a trellis ---------------------------------------------------- */
+
+/**
+ * A grapevine trained along a trellis, in the piece's frame: across it from
+ * `X0` to `X1`, in front of a lattice standing at `ly` toward its front, `H`
+ * high.
+ *
+ * Trained the way a vine on a wall is: one stem up from the foot to a little
+ * under the middle rail, then an arm along the lattice each way to its ends,
+ * with canes standing up off the arms to its head. A young vine is the stem
+ * and its first few leaves; a grown one is leaf over the whole lattice, end to
+ * end and foot to head; ripe, its bunches hang along both arms and off the
+ * canes, the whole width of it. Which of `VINE_VARIANTS` ways it grew moves
+ * the stem off the middle and the leaves and bunches about.
+ */
+function grapevine(sc: Scene, trim: number, X0: number, X1: number, ly: number, H: number): void {
+  const stage = trim % 4;
+  if (stage <= 0) return;
+  const variant = Math.floor(trim / 4) % VINE_VARIANTS;
+  // As many across as it is long, so a run of them is leafed as thickly as one.
+  const ACROSS = Math.max(3, Math.round(9 * (X1 - X0) / (2 * TRELLIS_SPAN)));
+  const unit = Math.hypot(sc.v.ux, sc.v.vx);
+  /** A number in 0..1 for a place on the vine, the same every time it is baked. */
+  const jit = (i: number, k: number): number => {
+    const v = Math.sin(i * 12.9898 + k * 78.233 + variant * 4.123) * 43758.5453;
+    return v - Math.floor(v);
+  };
+  /** In front of the lattice, by so much. */
+  const fy = (d: number): number => ly - d;
+  const ARM = H * 0.36;
+  const mid = (X0 + X1) / 2, half = (X1 - X0) / 2;
+  const foot = mid + (jit(1, 1) - 0.5) * half * 0.5;
+  /** A vine leaf at (x, y), turned to `a`, `L` across: five lobes round the notch its stalk goes into. */
+  const vineLeaf = (g: CanvasRenderingContext2D, x: number, y: number, a: number, L: number, c: RGB, veins: boolean): void => {
+    g.save();
+    g.translate(x, y);
+    g.rotate(a);
+    const R = L / 2;
+    g.beginPath();
+    g.moveTo(0, R * 0.55);
+    g.quadraticCurveTo(-R * 0.55, R * 0.62, -R * 0.78, R * 0.18);
+    g.quadraticCurveTo(-R * 1.08, -R * 0.12, -R * 0.62, -R * 0.42);
+    g.quadraticCurveTo(-R * 0.42, -R * 0.98, 0, -R * 0.96);
+    g.quadraticCurveTo(R * 0.42, -R * 0.98, R * 0.62, -R * 0.42);
+    g.quadraticCurveTo(R * 1.08, -R * 0.12, R * 0.78, R * 0.18);
+    g.quadraticCurveTo(R * 0.55, R * 0.62, 0, R * 0.55);
+    g.closePath();
+    g.fillStyle = rgb(c);
+    g.fill();
+    g.strokeStyle = rgb(VINE_LEAF[2], 0.85, 0.9);
+    g.lineWidth = sc.ink * 0.55;
+    g.stroke();
+    if (veins && L > 3) {
+      g.beginPath();
+      for (const t of [-0.75, -0.3, 0.3, 0.75]) {
+        g.moveTo(0, R * 0.4);
+        g.lineTo(Math.sin(t * 1.6) * R * 0.66, R * 0.4 - Math.cos(t * 1.6) * R * 0.9);
+      }
+      g.strokeStyle = rgb(VINE_LEAF[2], 1, 0.55);
+      g.lineWidth = sc.ink * 0.4;
+      g.stroke();
+    }
+    g.restore();
+  };
+  /** A bunch of grapes hanging from (x, y): berries in narrowing rows, `B` across a berry, inked, with the bloom on the lit side. */
+  const bunch = (g: CanvasRenderingContext2D, x: number, y: number, B: number, rows: number, lean: number): void => {
+    g.beginPath();
+    g.moveTo(x, y - B * 0.6);
+    g.lineTo(x + lean * B, y + B * 0.2);
+    g.strokeStyle = rgb(VINE_STEM.body, 0.8);
+    g.lineWidth = sc.ink * 0.7;
+    g.stroke();
+    const berries: Array<[number, number]> = [];
+    for (let row = 0; row < rows; row++) {
+      const n = Math.max(1, Math.round((rows - row) * 0.8 + (row === 0 ? 0.6 : 0)));
+      for (let c = 0; c < n; c++) berries.push([x + lean * B * (1 + row * 0.25) + (c - (n - 1) / 2) * B * 0.92, y + B * (0.55 + row * 0.8)]);
+    }
+    g.beginPath();
+    for (const [bx, by] of berries) {
+      g.moveTo(bx + B * 0.62, by);
+      g.arc(bx, by, B * 0.62, 0, TAU);
+    }
+    g.strokeStyle = rgb(mix(GRAPE_BLUE, INK_WARM, 0.55));
+    g.lineWidth = sc.ink * 1.2;
+    g.stroke();
+    berries.forEach(([bx, by], k) => {
+      g.beginPath();
+      g.arc(bx, by, B * 0.52, 0, TAU);
+      g.fillStyle = rgb(GRAPE_BLUE, k % 3 === 1 ? 1.14 : k % 3 === 2 ? 0.9 : 1);
+      g.fill();
+    });
+    for (const [bx, by] of berries) {
+      g.beginPath();
+      g.arc(bx - B * 0.18, by - B * 0.2, B * 0.17, 0, TAU);
+      g.fillStyle = rgb(GRAPE_BLOOM, 1, 0.85);
+      g.fill();
+    }
+  };
+  /** A mass of leaf at `at`, `r` across, with `grapes` bunches hanging under it, `seed` for where its leaves stand; or, `single`, a young vine's leaf or two. */
+  const mass = (at: V3, r: number, seed: number, grapes: number, single = false): void => {
+    sc.sprite(at, r, (px, py) => {
+      const g = sc.g;
+      const R = r * unit;
+      if (single) {
+        // A leaf or two of a young vine, on their stalks, lit on top.
+        vineLeaf(g, px, py, (jit(seed, 30) - 0.5) * 1.4, R * 1.5, VINE_LEAF[1], true);
+        if (jit(seed, 31) < 0.6) vineLeaf(g, px + (jit(seed, 32) - 0.5) * R * 1.2, py - R * 0.5, (jit(seed, 33) - 0.5) * 1.6, R * 1.05, VINE_LEAF[0], true);
+        return;
+      }
+      // The mass behind: overlapping lobes, wider than high, inked round the outside.
+      const lobes: Array<[number, number, number]> = [[-0.58, 0.12, 0.46], [0.56, 0.08, 0.44], [-0.12, -0.34, 0.48], [0.3, -0.3, 0.42], [-0.22, 0.36, 0.4], [0.24, 0.34, 0.4], [0, 0, 0.56]];
+      g.beginPath();
+      for (const [lx, lz, lr] of lobes) {
+        g.moveTo(px + lx * R + lr * R, py + lz * R * 0.86);
+        g.ellipse(px + lx * R, py + lz * R * 0.86, lr * R, lr * R * 0.86, 0, 0, TAU);
+      }
+      g.strokeStyle = rgb(VINE_LEAF[2], 0.8, 0.95);
+      g.lineWidth = sc.ink * 1.4;
+      g.stroke();
+      g.fillStyle = rgb(VINE_LEAF[2], 1.08);
+      g.fill();
+      // The leaves out of it, each pointing out from its middle: the deep ones low, the mid ones round the top.
+      const N = 7;
+      for (let k = 0; k < N; k++) {
+        const a = (k / N) * TAU + jit(seed, 40 + k) * 0.7;
+        const deep = Math.sin(a) > 0.35;
+        const d = 0.5 + 0.18 * jit(seed, 45 + k);
+        vineLeaf(g, px + Math.cos(a) * R * d * 1.1, py + Math.sin(a) * R * d * 0.85, a + Math.PI / 2 + (jit(seed, 50 + k) - 0.5) * 0.6,
+          R * (0.66 + 0.2 * jit(seed, 60 + k)), deep ? VINE_LEAF[2] : VINE_LEAF[1], !deep);
+      }
+      // And one in the light, off the top of it.
+      vineLeaf(g, px + (jit(seed, 70) - 0.6) * R * 0.6, py - R * (0.18 + 0.14 * jit(seed, 71)), (jit(seed, 72) - 0.5) * 0.9, R * (0.62 + 0.14 * jit(seed, 73)), VINE_LEAF[0], true);
+      for (let b = 0; b < grapes; b++) {
+        const bx = px + (grapes === 1 ? (jit(seed, 80) - 0.5) * 0.6 : b === 0 ? -0.42 : 0.4) * R;
+        bunch(g, bx, py + R * (0.42 + 0.12 * jit(seed, 81 + b)), Math.max(1, R * 0.21), 4 + Math.round(jit(seed, 83 + b) * 1.6), (jit(seed, 85 + b) - 0.5) * 0.5);
+      }
+    }, r * 1.6);
+  };
+
+  // The stem, up from the foot: a young one only so far.
+  const stemTop = stage === 1 ? H * 0.52 : ARM;
+  const stem: V3[] = [];
+  for (let k = 0; k <= 6; k++) {
+    const q = k / 6;
+    stem.push([foot + Math.sin(q * 5 + variant) * 0.7 * (1 - q * 0.5), fy(0.5), 0.2 + (stemTop - 0.2) * q]);
+  }
+  for (let k = 1; k < stem.length; k++) sc.rod(stem[k - 1], stem[k], stage === 1 ? 0.22 : 0.42 - 0.12 * (k / stem.length), VINE_STEM);
+  if (stage === 1) {
+    // A young vine: a shoot off the stem, and its first few leaves up it, small, the topmost still opening.
+    sc.rod(stem[3], [stem[3][0] + (jit(2, 2) < 0.5 ? -3.2 : 3.2), fy(0.5), stem[3][2] + 2.2], 0.14, VINE_STEM);
+    for (let i = 0; i < 5; i++) {
+      const q = 0.25 + i * 0.17;
+      const x = foot + (i % 2 ? 1 : -1) * (1 + 1.4 * jit(i, 3));
+      mass([x, fy(0.9), 0.4 + stemTop * q], 1.9 + 0.7 * jit(i, 4) * (1 - q * 0.4), i + 11, 0, true);
+    }
+    const top = stem[stem.length - 1];
+    mass([top[0], fy(0.9), top[2] + 0.6], 1.4, 19, 0, true);
+    return;
+  }
+  // The two arms, along the lattice to its ends, and the canes off them up to the head.
+  const armAt = (x: number): number => ARM + Math.sin(x * 0.45 + variant * 1.7) * 0.5;
+  for (const m of [-1, 1]) {
+    let prev: V3 = [foot, fy(0.4), ARM];
+    for (let k = 1; k <= 8; k++) {
+      const x = foot + (((m < 0 ? X0 + 0.8 : X1 - 0.8)) - foot) * k / 8;
+      const pt: V3 = [x, fy(0.4), armAt(x)];
+      sc.rod(prev, pt, 0.3 - 0.015 * k, VINE_STEM);
+      prev = pt;
+    }
+  }
+  const CANES = 9;
+  for (let c = 0; c < CANES; c++) {
+    const x = X0 + 1.6 + ((X1 - X0 - 3.2) * (c + 0.2 + 0.6 * jit(c, 5))) / CANES;
+    sc.rod([x, fy(0.4), armAt(x)], [x + (jit(c, 6) - 0.5) * 2.4, fy(0.5), H - 0.6 - 1.4 * jit(c, 7)], 0.16, VINE_STEM);
+  }
+  // Leaf over the whole of it: in rows from just under the arms to the head, end to end.
+  const ripe = stage === 3;
+  const ROWS = [ARM - 2.6, ARM + 2.4, ARM + (H - ARM) * 0.55, H - 2.2];
+  let n = 0;
+  ROWS.forEach((z0, row) => {
+    const across = row === 0 ? ACROSS - 2 : ACROSS;
+    for (let i = 0; i < across; i++) {
+      const seed = row * 31 + i;
+      const x = X0 + 1.5 + ((X1 - X0 - 3) * (i + 0.5 + (jit(seed, 8) - 0.5) * 0.55)) / across;
+      const z = z0 + (jit(seed, 9) - 0.5) * 1.6;
+      const r = row === 0 ? 1.8 + 0.6 * jit(seed, 10) : 2.3 + 0.8 * jit(seed, 10);
+      // Kept on the lattice: none hangs out past an end post and round the corner of the wall.
+      const xs = Math.max(X0 + r * 0.75, Math.min(X1 - r * 0.75, x));
+      // Ripe, the bunches hang off the arms all along, and off a cane here and there higher up.
+      const grapes = !ripe ? 0 : row === 1 ? (jit(seed, 11) < 0.25 ? 1 : 2) : row === 2 ? (jit(seed, 12) < 0.7 ? 1 : 0) : 0;
+      mass([xs, fy(0.9 + 0.5 * jit(seed, 13)), z], r, seed + 100 + n++, grapes);
+    }
+  });
 }
 
 /** A hull's sheer, `S` high amidships: rising to both ends, and most to the bow, `t` running from stern to stem. */
@@ -3592,54 +3817,58 @@ const MODELS: Record<string, Model> = {
    * roses climb both from the foot of each side (`climbingRoses`).
    */
   /*
-   * A trellis: two posts with laths across them and two up, and the vine on
-   * it as far as it has grown (`vineTrim`): none, a young one low on it, a
-   * grown one over the whole of it, and that with its grapes hanging.
+   * A trellis, set against the outer face of a wall and running its width
+   * (`vineyard.ts`): its front is toward the wall, and it stands just clear
+   * of the face (`TRELLIS_LY`). Three posts, two-thirds of a storey high and
+   * capped, a rail along the foot, the middle and the head, and between them
+   * laths crossed corner to corner in a diamond lattice from end to end; and
+   * the vine on it as far as it has grown (`grapevine`). Beside another along
+   * the same wall it runs on to the edge of its tile and the two share a post
+   * (`VINE_JOIN`).
    */
   trellis: ({ sc, wood, trim }) => {
-    sc.shadows = [[-4.6, 4.6, -1.2, 1.2]];
-    const X = 3.8, H = 15;
-    for (const x of [-X, X]) sc.box(x - 0.45, x + 0.45, -0.45, 0.45, 0, H, wood);
-    for (let k = 0; k < 5; k++) sc.rod([-X, 0, 2.5 + k * 3], [X, 0, 2.5 + k * 3], k === 4 ? 0.24 : 0.15, wood);
-    for (const x of [-X / 3, X / 3]) sc.rod([x, 0, 1], [x, 0, H - 0.5], 0.15, wood);
-    const stage = trim ?? 0;
-    if (stage <= 0) return;
-    const unit = Math.hypot(sc.v.ux, sc.v.vx);
-    const jit = (i: number, k: number): number => {
-      const v = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-      return v - Math.floor(v);
-    };
-    // The stem up the middle, and the leaf masses off it: a few low down on a young vine, the whole frame on a grown one.
-    const top = stage === 1 ? H * 0.45 : H;
-    sc.rod([0.3, 0.6, 0], [-0.4, 0.6, top * 0.9], 0.3, VINE_STEM);
-    const N = stage === 1 ? 4 : 12;
-    for (let i = 0; i < N; i++) {
-      const q = (i + 0.5) / N;
-      const at: V3 = [(jit(i, 1) - 0.5) * 2 * X * (stage === 1 ? 0.5 : 1), 0.6 + (jit(i, 2) - 0.3) * 0.6, 1.5 + q * (top - 2)];
-      const r = (1.6 + jit(i, 3)) * (stage === 1 ? 0.8 : 1.2);
-      const grapes = stage === 3 && jit(i, 4) < 0.6;
-      sc.sprite(at, r, (px, py) => {
-        const g = sc.g;
-        const R = r * unit;
-        for (let k = 0; k < 4; k++) {
-          const a = (k / 4) * TAU + jit(i, 5);
-          g.beginPath();
-          g.arc(px + Math.cos(a) * R * 0.45, py + Math.sin(a) * R * 0.35, R * 0.55, 0, TAU);
-          g.fillStyle = rgb(VINE_LEAF[(i + k) % VINE_LEAF.length]);
-          g.fill();
-        }
-        if (!grapes) return;
-        // A bunch hanging under the leaves: berries in a narrowing heap.
-        for (let row = 0; row < 4; row++) {
-          for (let c = 0; c <= 3 - row; c++) {
-            g.beginPath();
-            g.arc(px + (c - (3 - row) / 2) * R * 0.3, py + R * (0.5 + row * 0.26), R * 0.17, 0, TAU);
-            g.fillStyle = rgb(GRAPE_BLUE, c % 2 ? 1.12 : 1);
-            g.fill();
-          }
-        }
-      });
+    const t = trim ?? 0, join = Math.floor(t / VINE_JOIN);
+    const left = (join & 1) !== 0, right = (join & 2) !== 0;
+    const EDGE = UNITS_PER_TILE / 2, H = TRELLIS_HEIGHT, LY = TRELLIS_LY;
+    // From end post to end post, or on to the edge of the tile on a side it joins another.
+    const X0 = left ? -EDGE : -TRELLIS_SPAN, X1 = right ? EDGE : TRELLIS_SPAN;
+    sc.shadows = [[X0 - 0.6, X1 + 0.6, LY - 1.6, LY + 0.6]];
+    const lath: Paint = { body: mix(wood.body, [236, 226, 204], 0.12), ink: wood.ink };
+    // The posts: one at each end, but the right-hand one where it runs on into a neighbour, whose left-hand post that is.
+    const posts = [X0, (X0 + X1) / 2, ...(right ? [] : [X1])];
+    for (const x of posts) {
+      sc.box(x - 0.55, x + 0.55, LY - 0.5, LY + 0.5, 0, H + 0.6, wood);
+      sc.box(x - 0.8, x + 0.8, LY - 0.75, LY + 0.75, H + 0.6, H + 1.1, wood);
     }
+    /*
+     * The laths, crossed: each runs at a slope of one up the lattice from rail
+     * to rail, cut off at the ends. They are laid on a pitch that goes into a
+     * tile a whole number of times from its edge, so a run of trellises along
+     * a wall is one lattice. One part, drawn a layer at a time -- the layer
+     * against the wall, then the one nailed over it -- so the lattice weaves
+     * the same from wherever it is seen.
+     */
+    const Z0 = 1.4, Z1 = H - 0.4, STEP = UNITS_PER_TILE / 12;
+    const laths: Array<[V3, V3]> = [];
+    for (const dir of [1, -1]) {
+      for (let k = -12; k <= 24; k++) {
+        const c = -EDGE + k * STEP;
+        // Rising, x = c + (z - Z0); falling, its mirror about the middle of the tile.
+        const xAt = (z: number): number => dir * (c + (z - Z0));
+        const zAt = (x: number): number => dir * x - c + Z0;
+        const za = Math.max(Z0, zAt(dir > 0 ? X0 : X1)), zb = Math.min(Z1, zAt(dir > 0 ? X1 : X0));
+        if (zb - za < 0.6) continue;
+        const y = LY + dir * 0.16;
+        laths.push([[xAt(za), y, za], [xAt(zb), y, zb]]);
+      }
+    }
+    // The layer nearer you goes on last: the one toward the wall, seen from the wall's side, and the other otherwise.
+    const near = sc.sees(0, 1) ? 1 : -1;
+    sc.part(X0, X1, LY - 0.4, LY + 0.4, Z0, Z1, () => {
+      for (const layer of [-near, near]) for (const [a, b] of laths) if (Math.sign(a[1] - LY) === layer) sc.drawRod(a, b, 0.36, lath);
+    });
+    for (const z of [0.9, H * 0.5, H - 0.1]) sc.box(X0, X1, LY - 0.38, LY + 0.38, z - 0.4, z + 0.4, wood);
+    grapevine(sc, t % VINE_JOIN, X0, X1, LY - 0.5, H);
   },
   rose_arch: ({ sc, wood, trim }) => {
     sc.shadows = [[-18.6, 18.6, -3.8, 3.8]];
