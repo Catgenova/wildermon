@@ -34,7 +34,7 @@ import {
 } from '../game/building';
 import { deckBill, metres, pierDrop } from '../game/piers';
 import { cellarGate, targetFloor } from '../game/cellar';
-import { baitHint, CREATURE_ACTION_BY_ID } from '../game/creatureActions';
+import { baitHint, CREATURE_ACTION_BY_ID, feedable } from '../game/creatureActions';
 import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '../game/glasshouse';
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
@@ -2726,7 +2726,7 @@ export class UI {
     }
     if (c.mode === 'active' || c.mode === 'deed') {
       const def = SPECIES[c.species];
-      const food = g.inventory.items.filter((it) => isBaitFor(def, it.id));
+      const food = g.inventory.items.filter((it) => feedable(def, it.id));
       if (food.length) {
         entries.push({
           label: 'Feed',

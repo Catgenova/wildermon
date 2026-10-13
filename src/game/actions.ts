@@ -33,6 +33,7 @@ import { FIRST_AID_ACTIONS } from './firstaid';
 import { REMEDY_ACTIONS } from './remedies';
 import { drawDye, dyeSourceFor, fillFromSource, PLACEABLE_ACTIONS, sourceFor, vesselBecomes, waterNear } from './placeables';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeHexOf } from './dyestuffs';
+import { WHEY_BUCKET } from './dairy';
 import { DEED_ACTIONS, deedAimed } from './deed';
 import { CRATE_ACTIONS } from './crates';
 import { CREATURE_ACTIONS } from './creatureActions';
@@ -2750,7 +2751,7 @@ export const ACTIONS: ActionDef[] = [
     applies: (t, g) => {
       if (t.kind !== 'item') return false;
       const id = g.inventory.held(t.uid)?.id;
-      return id === 'water_bucket' || id === 'lye_bucket' || id === DYE_BUCKET;
+      return id === 'water_bucket' || id === 'lye_bucket' || id === DYE_BUCKET || id === WHEY_BUCKET;
     },
     perform: (t, g) => {
       if (t.kind !== 'item') return;

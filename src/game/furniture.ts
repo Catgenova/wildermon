@@ -725,8 +725,8 @@ export const PLANTER_GROWING = 'Something is growing in it. Harvest it, or pull 
 export const LAMP_TAKE_FIRST = 'Take the lantern down first.';
 
 /** The two liquids worth keeping a barrel for. */
-export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | 'wine' | 'grape_wine' | 'juice' | 'spirit' | 'dye';
-export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', grape_wine: 'grape wine', juice: 'juice', spirit: 'spirit', dye: 'dye' };
+export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | 'wine' | 'grape_wine' | 'juice' | 'spirit' | 'dye' | 'whey';
+export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', grape_wine: 'grape wine', juice: 'juice', spirit: 'spirit', dye: 'dye', whey: 'whey' };
 /** A bucket holds five litres, whichever way it is going. */
 export const BUCKET_LITRES = 5;
 /** Which liquid a full vessel is carrying, and which empty vessel it leaves. */
@@ -743,9 +743,11 @@ export const VESSELS: Record<string, { liquid: LiquidKind; empty: string }> = {
   spirit_bucket: { liquid: 'spirit', empty: 'bucket' },
   // Dye, which says what is in it on the bucket itself (`dyestuffs.ts`).
   dye_bucket: { liquid: 'dye', empty: 'bucket' },
+  // Whey, which a bucket of milk pressed into cheese leaves in the bucket (`dairy.ts`).
+  whey_bucket: { liquid: 'whey', empty: 'bucket' },
 };
 /** Which full vessel a litre of each liquid fills an empty bucket into. */
-export const BUCKET_OF: Record<LiquidKind, string> = { water: 'water_bucket', lye: 'lye_bucket', milk: 'milk_bucket', ale: 'ale_bucket', cider: 'cider_bucket', mead: 'mead_bucket', wine: 'wine_bucket', grape_wine: 'grape_wine_bucket', juice: 'juice_bucket', spirit: 'spirit_bucket', dye: 'dye_bucket' };
+export const BUCKET_OF: Record<LiquidKind, string> = { water: 'water_bucket', lye: 'lye_bucket', milk: 'milk_bucket', ale: 'ale_bucket', cider: 'cider_bucket', mead: 'mead_bucket', wine: 'wine_bucket', grape_wine: 'grape_wine_bucket', juice: 'juice_bucket', spirit: 'spirit_bucket', dye: 'dye_bucket', whey: 'whey_bucket' };
 
 /*
  * What a piece says about itself, off the piece: what it holds and how much,

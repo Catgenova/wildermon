@@ -39,7 +39,7 @@ import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
 import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, FIGHT_SHARE, GRADE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
-import { MILK_LITRES, MILK_READY } from '../src/game/dairy';
+import { MILK_LITRES, MILK_READY, WHEY_BUCKET, WHEY_FEED } from '../src/game/dairy';
 import { BUCKET_LITRES } from '../src/game/furniture';
 import { SMITH_GAIN } from '../src/game/anvil';
 import { BREW_GAIN } from '../src/game/brewing';
@@ -1806,6 +1806,12 @@ out.push(`create or replace function craft_reach() returns int language sql immu
  */
 out.push(`create or replace function milk_litres(p_species text) returns int language sql immutable as $fn$ select case p_species ${Object.entries(MILK_LITRES).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}else ${q(BUCKET_LITRES)} end $fn$;`);
 out.push(`create or replace function milk_ready() returns double precision language sql immutable as $fn$ select ${q(MILK_READY)}::double precision $fn$;`);
+/*
+ * Whey (`dairy.ts`): the bucket a bucket of milk pressed into cheese comes back
+ * as, and how much of a kept creature's hunger one bucket of it fills.
+ */
+out.push(`create or replace function whey_bucket() returns text language sql immutable as $fn$ select ${q(WHEY_BUCKET)}::text $fn$;`);
+out.push(`create or replace function whey_feed() returns double precision language sql immutable as $fn$ select ${q(WHEY_FEED)}::double precision $fn$;`);
 /* The tile a flight of garden steps is, and the bit in its data byte that says it is timber. */
 out.push(`create or replace function steps_tile() returns int language sql immutable as $fn$ select ${q(TileType.Steps)}::int $fn$;`);
 out.push(`create or replace function steps_timber_bit() returns int language sql immutable as $fn$ select ${q(STEPS_TIMBER)}::int $fn$;`);

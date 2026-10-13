@@ -2749,6 +2749,17 @@ jobs:
             --outfile=node_modules/.cache/dairy.mjs --log-level=error
           node node_modules/.cache/dairy.mjs
 
+      - name: Whey from cheese, fed to a creature, the same on both sides
+        run: |
+          # Cheese pressed hands the bucket back full of whey, and a failure
+          # hands it back empty. A bucket of whey is fed to a kept creature of
+          # any kind for the share of its hunger the browser names, the bucket
+          # back empty at its quality; its own diet still fills a meal, Feed
+          # takes the thing it is asked to, and the refusal is in the same words.
+          npx esbuild supabase/test/whey.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/whey.mjs --log-level=error
+          node node_modules/.cache/whey.mjs
+
       - name: A skep, filling with honey and beeswax off the wildflowers in reach, the same on both sides
         run: |
           # Woven by ropemaking with a carving knife and set down like any

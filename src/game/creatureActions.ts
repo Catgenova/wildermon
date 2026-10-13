@@ -2,13 +2,13 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type Stance, type GatherKind } from './creatures';
+import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
 import { numberWord } from './words';
 import { bestTier, traitList } from './traits';
 import type { Game } from './game';
 import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
-import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl } from './dairy';
+import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET, WHEY_FEED, wheyFedSays } from './dairy';
 import { vesselBecame } from './placeables';
 import { deedJobLine, emptyCrate, letOut, shutIn } from './creaturecrate';
 import { itemDef, itemName, rarityOf, type Mark } from './items';
@@ -39,8 +39,8 @@ const creatureOf = (g: Game, t: Target): Creature | undefined => (isCreature(t) 
 /**
  * The first item in the inventory that a species will eat; a specific one when
  * asked for. An offering to tame one may be any food at all for a Herdsman's
- * Any Offering, as the island's `bait_in_pack` has it; feeding one kept is its own
- * diet whoever feeds it.
+ * Any Offering, as the island's `bait_in_pack` has it; feeding one kept is
+ * `feedOf`, below.
  */
 function bait(g: Game, c: Creature, uid?: number, any = false) {
   const def = SPECIES[c.species];
@@ -51,6 +51,25 @@ function bait(g: Game, c: Creature, uid?: number, any = false) {
   }
   return g.inventory.items.find((it) => takes(it.id));
 }
+/**
+ * What a creature you keep is fed: its own diet, or a bucket of whey, which
+ * every kind takes. The island's `feed_in_pack`.
+ */
+export const feedable = (def: SpeciesDef, id: string): boolean => isBaitFor(def, id) || id === WHEY_BUCKET;
+/** How much of its hunger a feeding fills: `WHEY_FEED` for a bucket of whey, a meal (`GRAZE_FILL`) for anything else. */
+export const feedFill = (id: string): number => (id === WHEY_BUCKET ? WHEY_FEED : GRAZE_FILL);
+/** The first thing in the pack a kept creature is fed; a specific one when asked for. */
+function feedOf(g: Game, c: Creature, uid?: number) {
+  const def = SPECIES[c.species];
+  if (uid !== undefined) {
+    const it = g.inventory.get(uid);
+    return it && feedable(def, it.id) ? it : undefined;
+  }
+  return g.inventory.items.find((it) => feedable(def, it.id));
+}
+/** Why a kept creature has nothing to be fed. The island's `creature_refusal` says the same. */
+export const feedRefusal = (c: Creature): string => `It eats ${dietText(c)}, or drinks a bucket of whey.`;
+
 /** An offering to tame one: its own diet, or any food for a Herdsman's Any Offering. */
 const offering = (g: Game, c: Creature, uid?: number) => bait(g, c, uid, g.perk('bait:any', 0) > 0);
 /** What each offering in a run is worth to the next: more for a Herdsman's Patient Coax. */
@@ -58,7 +77,8 @@ export const coaxStep = (g: Game): number => g.perk('coax:step', COAX_STEP);
 
 /** "blueberries, raspberries or potatoes" — everything this one will take. */
 export const dietText = (c: Creature): string => {
-  const names = SPECIES[c.species].diet.map((id) => itemDef(id).name.toLowerCase());
+  // In the order of their names, as the island's `diet_text` says them.
+  const names = SPECIES[c.species].diet.map((id) => itemDef(id).name.toLowerCase()).sort();
   return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
 };
 
@@ -373,16 +393,23 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'It is gone.';
-      return bait(g, c, isCreature(t) ? t.itemUid : undefined) ? null : `It eats ${dietText(c)}.`;
+      return feedOf(g, c, isCreature(t) ? t.itemUid : undefined) ? null : feedRefusal(c);
     },
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return;
-      const food = bait(g, c, isCreature(t) ? t.itemUid : undefined);
+      const food = feedOf(g, c, isCreature(t) ? t.itemUid : undefined);
       if (!food || !nearPlayer(g, c)) return;
-      g.inventory.remove(food.uid, 1);
-      c.hunger = Math.min(1, c.hunger + 0.5);
-      g.logMsg(`${c.name} gobbles up the ${itemDef(food.id).name.toLowerCase()}.`, 'event');
+      // Read before it is drunk: a bucket of whey becomes the bucket in place.
+      const whey = food.id === WHEY_BUCKET;
+      const said = whey ? wheyFedSays(c.name) : `${c.name} gobbles up the ${itemDef(food.id).name.toLowerCase()}.`;
+      const fill = feedFill(food.id);
+      // A bucket of whey is drunk out of the bucket, and the bucket is kept.
+      if (whey) {
+        if (!vesselBecame(g, food, 'bucket')) return;
+      } else g.inventory.remove(food.uid, 1);
+      c.hunger = Math.min(1, c.hunger + fill);
+      g.logMsg(said, 'event');
     },
   },
   {

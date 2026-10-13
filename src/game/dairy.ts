@@ -1,6 +1,6 @@
-import { BUCKET_LITRES } from './furniture';
+import { BUCKET_LITRES, BUCKET_OF } from './furniture';
 import { describeFrom, ITEM_DEFS, itemDef } from './items';
-import { numberWord } from './words';
+import { numberWord, NumberWord, percent } from './words';
 
 /**
  * Milk, butter and cheese.
@@ -16,6 +16,10 @@ import { numberWord } from './words';
  * into butter standing at a butter churn (`BUTTER_CHURN`), which hands the
  * bucket back. Cheese and butter keep far longer than the milk they came out
  * of, by their own `decay`, and each says how much longer off the numbers.
+ *
+ * Pressing cheese hands the bucket back full of whey (`WHEY_BUCKET`), which a
+ * kept creature of any kind is fed: a bucket of it fills `WHEY_FEED` of its
+ * hunger and the bucket comes back empty. The island's `whey_feed`.
  */
 
 /** The piece butter is churned at, set down like a spindle and stood at. */
@@ -59,6 +63,27 @@ export function milkedSays(name: string, litres: number, ql: number, another = f
   if (litres >= BUCKET_LITRES) return `You milk ${name} into the bucket${another ? ' and fill another' : ''}. ${q}`;
   return `You milk ${name} into the bucket. It holds ${litres} of ${BUCKET_LITRES} litres. ${q}`;
 }
+
+/** The bucket a bucket of milk pressed into cheese comes back as. */
+export const WHEY_BUCKET = BUCKET_OF.whey;
+/**
+ * How much of a kept creature's hunger one bucket of whey fills, of the whole
+ * of it (1). The island's `whey_feed`.
+ */
+export const WHEY_FEED = 0.4;
+
+/** What feeding a creature a bucket of whey says. The island's `perform_creature` says the same. */
+export const wheyFedSays = (name: string): string => `${name} drinks the bucket of whey. The bucket comes back empty.`;
+
+ITEM_DEFS[WHEY_BUCKET] ??= {
+  name: 'Bucket of whey',
+  category: 'food',
+  weight: 6,
+  decay: itemDef('milk_bucket').decay,
+  description: `${NumberWord(BUCKET_LITRES)} litres of whey, what is left in the bucket when a bucket of milk is pressed into cheese. `
+    + `Feed it to a creature you keep, of any kind: it fills ${percent(WHEY_FEED)} of its hunger and the bucket comes back empty. `
+    + 'It can be poured into a barrel or tipped out.',
+};
 
 ITEM_DEFS[MILK_PART] ??= {
   name: 'Part bucket of milk',
