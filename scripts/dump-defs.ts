@@ -167,6 +167,9 @@ import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID } from '../src/game/barter';
+import {
+  DELIVER_REACH, LEDGER_KEEP, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, SETTLE_SAID, WORK_COUNT_MAX, WORK_DONE_KEEP, WORK_OPEN_MAX, WORK_QL_TOP,
+} from '../src/game/noticeboard';
 import { CHART_ITEM, CHART_LEAST, CHART_QL_PER_TILE, CHART_SAID, CHART_SHEET, CHART_SKILL, COPY_MAP, DRAW_MAP, STUDY_MAP } from '../src/game/cartography';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 import {
@@ -2449,4 +2452,20 @@ out.push(`create or replace function skep_idle() returns text language sql immut
 out.push(`create or replace function skep_skill() returns text language sql immutable as $fn$ select ${q(SKEP_SKILL)} $fn$;`);
 out.push(`create or replace function skep_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   (['notYours', 'empty'] as const).map((k) => `when ${q(k)} then ${q(SKEP_SAID[k])} `).join('')}end $fn$;`);
+/*
+ * A settlement's notices, work and ledger (`noticeboard.ts`): how long a
+ * notice is and how many are kept, how long a citizen is away before one is
+ * sent as a letter, how many works stand open, how many of a
+ * thing one asks for and how good, how near the token a delivery is made, how
+ * many finished works and ledger lines are kept, and every sentence they say,
+ * with `{deed}`, `{who}`, `{what}` and `{n}` for the island to fill.
+ */
+for (const [fn, v] of [
+  ['notice_max', NOTICE_MAX], ['notice_keep', NOTICE_KEEP], ['notice_mail_days', NOTICE_MAIL_DAYS], ['work_open_max', WORK_OPEN_MAX], ['work_count_max', WORK_COUNT_MAX],
+  ['work_ql_top', WORK_QL_TOP], ['deliver_reach', DELIVER_REACH], ['work_done_keep', WORK_DONE_KEEP], ['ledger_keep', LEDGER_KEEP],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns int language sql immutable as $fn$ select ${q(v)}::int $fn$;`);
+}
+out.push(`create or replace function settle_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  Object.entries(SETTLE_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 console.log(out.join('\n'));

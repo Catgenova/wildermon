@@ -1504,6 +1504,44 @@ jobs:
             --outfile=node_modules/.cache/customranks.mjs --log-level=error
           node node_modules/.cache/customranks.mjs
 
+      - name: A settlement's notices, posted by a rank that may and read by its citizens alone
+        run: |
+          # "Citizens holding a rank power can post short notices to their
+          # settlement, and every citizen sees new ones when they come
+          # ashore." This asks that the limits and every sentence are the
+          # browser's; that a Mayor posts, a Builder does not until the founder
+          # ticks Post notices and not again once it is unticked; that a
+          # stranger can neither post, take down nor read, and is handed
+          # nothing coming ashore; that an empty notice and one past the
+          # longest are refused and runs of spaces become one; that the board
+          # keeps the newest and drops the oldest; that a citizen ashore hears
+          # a new notice in the log and one away is shown every unseen one
+          # coming ashore, once; that one away longer than NOTICE_MAIL_DAYS is
+          # sent each as a letter from whoever posted it, as it goes up or by
+          # the hourly sweep, once, and is not shown it again coming ashore;
+          # and that no browser reads the tables.
+          npx esbuild supabase/test/notices.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/notices.mjs --log-level=error
+          node node_modules/.cache/notices.mjs
+
+      - name: Work a settlement wants, delivered at its token, and its ledger
+        run: |
+          # "The founder, or a rank with Set work, lists work wanted; citizens
+          # deliver toward it, credited in a settlement ledger." This asks
+          # that only a rank holding Set work sets and takes down work, with
+          # every refusal of a work the browser's word for word; that a
+          # stranger can neither set, deliver nor read; that delivering takes
+          # the lowest quality at the work's least or better, splits a stack
+          # for the last few, and refuses too far, too poor, a full deed crate
+          # and none; that the rows are moved into the deed crate and not
+          # copied, and nothing worn, kept back or holding something goes;
+          # that each delivery is credited to whoever made it and a work with
+          # all it wants is closed and written in the ledger; and that no
+          # browser reads the tables.
+          npx esbuild supabase/test/settlework.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/settlework.mjs --log-level=error
+          node node_modules/.cache/settlework.mjs
+
       - name: Leaving a settlement you were asked onto
         run: |
           # "add a leave settlement option so citizens can quit oceanport".

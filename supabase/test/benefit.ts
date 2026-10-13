@@ -366,10 +366,12 @@ check('and none left in the journal', goalsLeft.length === 0, goalsLeft.join(' '
  * `{food}` a refused taming's, `{v}` an enchantment's figure at its quality
  * and `{w}` its second figure (`enchant_line`, `enchant_second`), and `{who}`
  * and `{what}` a trade's other party and the thing it is about (`barter_said`),
- * filled by the island when it says them.
+ * filled by the island when it says them. `{deed}` is the settlement a
+ * notice, a work or a delivery is at (`settle_said`, filled by `settle_line`),
+ * which uses `{who}`, `{what}` and `{n}` the same way.
  */
 const state = readFileSync('supabase/defs-state.sql', 'utf8');
-const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}', '{w}', '{who}', '{what}']);
+const ISLANDS_OWN = new Set(['{n}', '{t}', '{food}', '{v}', '{w}', '{who}', '{what}', '{deed}']);
 const unfilled = [...state.matchAll(PLACEHOLDER)].map((m) => m[0]).filter((p) => !ISLANDS_OWN.has(p));
 check('the definitions the island reads have no placeholder in them', unfilled.length === 0, [...new Set(unfilled)].join(' '));
 

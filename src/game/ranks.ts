@@ -9,7 +9,9 @@
  * `BAUBLE_ACTIONS` that was not there yet. The page stopped on "Raising an
  * island…" with "is not iterable" in the console, for everybody, and nothing
  * in the suite noticed, because no test loads the built page. It is the same
- * race `items.ts` tells of for `TREASURE_ACTIONS`.
+ * race `items.ts` tells of for `TREASURE_ACTIONS`. (It imports the limits of
+ * a settlement's notices and work from `noticeboard.ts`, which imports
+ * nothing either, so no ring can close through it.)
  *
  * Ranks were a fixed ladder -- founder, mayor, builder, guest -- and each rule
  * asked "at least a builder?". They are the founder's own now: every
@@ -24,6 +26,7 @@
  * (`20261013003000_ranks_of_your_own.sql`); `supabase/test/customranks.ts`
  * holds the two to each other.
  */
+import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAX, WORK_COUNT_MAX, WORK_OPEN_MAX } from './noticeboard';
 
 /**
  * What somebody is on a settlement: `founder` for whoever planted the stake,
@@ -57,7 +60,7 @@ export interface RankPower {
 }
 
 export type PowerId = 'shape' | 'stores' | 'locks' | 'gate' | 'served' | 'set_bauble' | 'replace_bauble'
-  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename';
+  | 'invite' | 'send_away' | 'set_ranks' | 'upgrade' | 'rename' | 'notices' | 'work';
 
 /**
  * Every power a rank can be given, in the order the Ranks section lists them.
@@ -129,6 +132,16 @@ export const RANK_POWERS: readonly RankPower[] = [
     may: 'rename it', mayNot: 'rename it',
     rule: 'Give it a new name.',
   },
+  {
+    id: 'notices', bit: 12, label: 'Post notices',
+    may: 'post and take down its notices', mayNot: 'post or take down its notices',
+    rule: `Post a notice of at most ${NOTICE_MAX} characters to its citizens, and take down any of its notices. It keeps the newest ${NOTICE_KEEP}; one more drops the oldest.`,
+  },
+  {
+    id: 'work', bit: 13, label: 'Set work',
+    may: 'set and take down the work it wants', mayNot: 'set or take down the work it wants',
+    rule: `List work it wants: a kind of thing, how many (at most ${WORK_COUNT_MAX}) and a lowest quality if you like, up to ${WORK_OPEN_MAX} open at once; and take any of it down. Any citizen delivers toward it within ${DELIVER_REACH} tiles of its token.`,
+  },
 ];
 
 export const POWER: Record<PowerId, RankPower> = Object.fromEntries(RANK_POWERS.map((p) => [p.id, p])) as Record<PowerId, RankPower>;
@@ -145,11 +158,13 @@ export const ALL_PERMS = permsOf(RANK_POWERS.map((p) => p.id));
 /**
  * What every settlement starts with, highest first, and what each may do:
  * exactly what mayors, builders and guests could do before ranks were the
- * founder's to make, so nothing changed for anybody the day they were.
+ * founder's to make, so nothing changed for anybody the day they were --
+ * and, since a settlement has notices and work, a Mayor posts the one and
+ * sets the other, as the founder does.
  * The island's `deed_ranks_seed`.
  */
 export const DEFAULT_RANKS: ReadonlyArray<{ name: string; powers: readonly PowerId[] }> = [
-  { name: 'Mayor', powers: ['shape', 'stores', 'gate', 'served', 'set_bauble', 'replace_bauble', 'invite', 'send_away', 'set_ranks'] },
+  { name: 'Mayor', powers: ['shape', 'stores', 'gate', 'served', 'set_bauble', 'replace_bauble', 'invite', 'send_away', 'set_ranks', 'notices', 'work'] },
   { name: 'Builder', powers: ['shape', 'stores', 'gate', 'served', 'set_bauble'] },
   { name: 'Guest', powers: ['stores'] },
 ];
