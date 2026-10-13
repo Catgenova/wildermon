@@ -197,7 +197,6 @@ begin
   ${CLEAR}
   ${SPAWN('a', MONSTER, 'v_px + 1.5', 'v_py')}
   ${SPAWN('b', ANIMAL, 'v_px', 'v_py + 1.5')}
-  ${IDS('CRACK:IDS', 'a, b')}
   for i in 1 .. 12 loop
     ${CAST('CRACK:MONSTER', 'berserker_skull_crack', AT('a'))}
     exit when r ? 'held';
@@ -208,8 +207,11 @@ begin
     ${CAST('CRACK:ANIMAL', 'berserker_skull_crack', AT('b'))}
     exit when r ? 'held';
     delete from said where k = 'CRACK:ANIMAL';
-    update creature set health = max_health(creature) where world_id = w.world_id and id = b;
+    -- A maul's blow can kill the ulva outright, and a dead creature is not held: put down afresh each try.
+    delete from creature where world_id = w.world_id and id = b;
+    ${SPAWN('b', ANIMAL, 'v_px', 'v_py + 1.5')}
   end loop;
+  ${IDS('CRACK:IDS', 'a, b')}
 
   /* ---- An Execute: said to be on one below its line, and not on one above it ---- */
   ${CLEAR}
@@ -384,10 +386,17 @@ check('the telling ends with the cast', island('AFTER') === '-', island('AFTER')
     secs: t.hit.map((h) => h.secs ?? null),
     held: t.hit.filter((h) => h.held).map((h) => (h.who.kind === 'creature' ? h.who.id : -1)),
   } : null);
+  /** Whom the cast reached, each with its seconds, in the order it reached them — or by id, where nothing sets that order. */
+  const reached = (hit: ReadonlyArray<unknown>, secs: ReadonlyArray<number | null> | undefined, sorted: boolean): Array<[unknown, number | null]> => {
+    const pairs = hit.map((h, i): [unknown, number | null] => [h, secs?.[i] ?? null]);
+    return sorted ? pairs.sort((x, y) => String(x[0]).localeCompare(String(y[0]))) : pairs;
+  };
   const agree = (what: string, guess: ReturnType<typeof wire>, t: Told, sorted = false): void => {
     const order = (xs: ReadonlyArray<unknown>): unknown[] => (sorted ? [...xs].sort() : [...xs]);
-    check(`the browser works out what the island said of ${what}`, !!guess && same(order(guess.hit), order(t.hit ?? []))
-      && guess.secs.every((s, i) => s === null ? (t.secs?.[i] ?? null) === null : near(s, t.secs?.[i] ?? -1))
+    const g = guess ? reached(guess.hit, guess.secs, sorted) : [];
+    const said = reached(t.hit ?? [], t.secs, sorted);
+    check(`the browser works out what the island said of ${what}`, !!guess && same(g.map((p) => p[0]), said.map((p) => p[0]))
+      && g.every(([, s], i) => s === null ? said[i][1] === null : near(s, said[i][1] ?? -1))
       && same(order(guess.held), order(t.held ?? [])), `${JSON.stringify(guess)} / ${brief(t)}`);
   };
   {
@@ -423,7 +432,8 @@ check('the telling ends with the cast', island('AFTER') === '-', island('AFTER')
   }
   {
     const [a, b] = ids('PANIC:IDS');
-    agree('a Panic', wire(guessTold('chaos_panic', me, { x: 0, y: 0 }, [me, beast(a, MONSTER, 1.5, 0), beast(b, ANIMAL, 0, 1.5)])), told('PANIC'));
+    // The two stand at the same distance, and the island walks them in no set order.
+    agree('a Panic', wire(guessTold('chaos_panic', me, { x: 0, y: 0 }, [me, beast(a, MONSTER, 1.5, 0), beast(b, ANIMAL, 0, 1.5)])), told('PANIC'), true);
   }
 }
 check('and none of it is a door anybody may knock on', island('OPEN') === '0', island('OPEN'));
