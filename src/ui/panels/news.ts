@@ -41,6 +41,16 @@ import { REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
+import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD } from '../../game/learn';
+import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
+import { FRUITING } from '../../game/fruiting';
+import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
+import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
+import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
+import { GRAPE_SEASON, VINE_BEARS } from '../../game/vineyard';
+import { SEASONS } from '../../world/calendar';
+import { GRAPE_WINE_GRAPES } from '../../game/brewing';
+import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { BLOOMS, BUSH_FLOWER_FROM, evergreen, LEAF_DAYS, SHED_DAYS, TURN_DAYS } from '../../render/foliage';
 import { lifeSeasons } from '../../render/life';
 import { LAYERS, TRIAL_SECONDS } from '../../render/timings';
@@ -118,7 +128,6 @@ import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } 
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
 import { CROPS, growthWords } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS } from '../../game/growth';
-import { SEASONS } from '../../world/calendar';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { ENGRAVE_MAX, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
@@ -2036,6 +2045,33 @@ export const NEWS: News[] = [
       'Settings, Display, Interface: Colours switches every colour that means something to a red–green safe set or a blue–yellow safe one, in the windows and on the island. '
         + 'Whatever the colours, better and worse, what you have and lack, a fight\'s odds, being overloaded and buttons that cannot be undone each carry a mark as well.',
       `Runecut light offers Island clock, My computer's clock (dark stone from ${islandTime(LOCAL_NIGHT_STARTS)} to ${islandTime(LOCAL_NIGHT_ENDS)} by your computer's clock), Always day and Always night.`,
+    ],
+  },
+  {
+    n: 150,
+    day: '2026-10-13',
+    lines: () => [
+      `Prospecting, taming, setting an enchantment scroll and digging up a treasure map's hoard now raise Mind logic: ${percent(PROSPECT_HEAD)} of a go for a prospect, `
+        + `${percent(TAME_HEAD)} for an offering to a wild creature, ${percent(ENCHANT_HEAD)} for a scroll and ${percent(HOARD_HEAD)} for a hoard, and ${percent(TRY_LEARN)} of that `
+        + 'when the offering is refused or the scroll does not take. The Skills window and Help (What the characteristics are for) say what raises every characteristic.',
+      armourSwingSays(),
+      'Spells on you keep their time left through a reload, and stay right on every beat. A Warder\'s skin over you has its own mark on the status panel, '
+        + 'with its size as a share of your health and who laid it; a waiting Thicken, Ward Link, Stoneskin and Bastion of Stone each have one too.',
+      `Trade with somebody within ${numberWord(BARTER_REACH)} tiles of you: right-click them, or press Trade beside their name in the Social window. Once they say yes, `
+        + 'each of you puts in things from your pack (part of a stack if you like) and silver, and both press Accept. Any change to either side takes both Accepts back, '
+        + `and then everything changes hands at once or nothing does. Walking more than ${numberWord(BARTER_REACH)} tiles apart, leaving, or ${spanWords(BARTER_IDLE)} with no change calls it off.`,
+      `Fruit, bushes and what foraging and botanizing find keep the island's seasons: ${SEASONS.map((season) => `in ${season}, ${listed(Object.entries(FRUITING)
+        .filter(([, in_]) => in_.includes(season)).map(([id]) => itemDef(id).name.toLowerCase()))}`).join('; ')}. `
+        + 'Out of season, Pick fruit and Harvest say when it bears next; Examine and the tile window give its seasons, and everything else turns up all year.',
+      `A skep, woven with ropemaking and set down among wildflowers, makes a honey every ${SKEP_CLUMP_HOURS} hours for each clump in flower within ${numberWord(SKEP_REACH)} tiles of it `
+        + `and a beeswax for every ${numberWord(SKEP_WAX_EVERY)} honey, up to ${SKEP_HOLDS} honey, and nothing in ${SKEP_IDLE}. Take honey empties it and trains animal husbandry; Help: Bees.`,
+      `A butter churn, built with carpentry, churns a bucket of milk into ${numberWord(BUTTER_PATS)} pats of butter and gives the bucket back, and butter and dough bake into pastries. `
+        + `A female Gorral can be milked: ${numberWord(GORRAL_MILK)} litres a milking, into a part bucket that is a bucket of milk at ${numberWord(BUCKET_LITRES)}. Help: Milk, butter and cheese.`,
+      `Vineyards: build a trellis, cut a grape cutting off a thorn bush with a sickle and plant it at the trellis's foot. It bears from ${numberWord(VINE_BEARS)} days after planting, `
+        + `in ${GRAPE_SEASON} only, and ${numberWord(GRAPE_WINE_GRAPES)} grapes brew a barrel of grape wine. Wine and grape wine gain ${WINE_AGE_RATE} QL a day kept in their barrel `
+        + `once they finish, ${times(CELLAR_AGEING)} that in a cellar, up to ${WINE_AGE_CAP} QL more; a drink straight from the barrel is at the aged QL. Help: Vineyards.`,
+      `Maps: Draw a map, on a sheet of papyrus, records the tiles round where you stand, ${numberWord(CHART_LEAST)} each way and one more for every ${CHART_QL_PER_TILE} QL. `
+        + 'Study map puts that square on your own map for good, and Copy map makes another, no better than the map or the sheet. Help: Maps.',
     ],
   },
 ];
