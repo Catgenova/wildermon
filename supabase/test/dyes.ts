@@ -45,7 +45,7 @@ import { ARMOUR } from '../../src/game/gear';
 import { itemName, ITEM_DEFS, type Item } from '../../src/game/items';
 import { RECIPES, RECIPE_BY_ID } from '../../src/game/recipes';
 import {
-  colourWord, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_WHITE, DYE_WORDS, dyeGrams, dyeHex, dyeIn, dyeLitresFor, dyeRecipeId, dyeSays,
+  colourWord, DYE_LITRES, DYE_SIZES, DYE_LITRES_PER_KG, DYE_PARTS, DYE_QL_BLACK, DYE_QL_WHITE, DYE_WORDS, dyeGrams, dyeHex, dyeIn, dyeLitresFor, dyeRecipeId, dyeSays,
   DYESTUFFS, dyeText, kgSaid, LEGACY_DYES, LEGACY_POT_LITRES, legacyLiquid, mixDye, pureDye, readDye, upgradeDyes, type DyeLiquid,
 } from '../../src/game/dyestuffs';
 import {
@@ -176,9 +176,10 @@ const mixOf = 'row(u.r, u.y, u.b, u.ql, null)::dye_mix';
   const isle = psql(`select string_agg(id || ':' || dye_litres_for(id), ' ' order by id collate "C") from unnest(array[${ids.map(q).join(',')}]::text[]) id`);
   const here = [...ids].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)).map((id) => `${id}:${dyeLitresFor(id)}`).join(' ');
   const isleSizes = psql(`select string_agg(size || ':' || litres, ' ' order by size) from dye_litres_def`);
-  const hereSizes = Object.entries(DYE_LITRES).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}:${v}`).join(' ');
-  check('each size takes, in litres: a garment 3, a banner 6, a sail 30, a ship 100, a wall 3 and a floor 3, the same table on both sides',
-    hereSizes === 'banner:6 floor:3 garment:3 sail:30 ship:100 wall:3' && isleSizes === hereSizes, `island ${isleSizes}, browser ${hereSizes}`);
+  const hereSizes = Object.entries(DYE_SIZES).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${k}:${v}`).join(' ');
+  check('each size takes, in litres: a garment 3, a banner 6, a sail 30, a ship 100, a wall 3, a floor 3 and a glass panel 1, the same table on both sides',
+    hereSizes === 'banner:6 floor:3 garment:3 pane:1 sail:30 ship:100 wall:3' && isleSizes === hereSizes && dyeLitresFor('glass') === DYE_SIZES.pane,
+    `island ${isleSizes}, browser ${hereSizes}`);
   check(`a dyeing takes the same litres on both sides: ${DYE_LITRES.garment} for a garment, ${DYE_LITRES.banner} for a banner or a flag, ${DYE_LITRES.sail} a sail, ${DYE_LITRES.ship} a caravel`,
     isle === here && dyeLitresFor('cloth_tunic') === DYE_LITRES.garment && dyeLitresFor('banner') === DYE_LITRES.banner
       && dyeLitresFor('sailing_boat') === DYE_LITRES.sail && dyeLitresFor('caravel') === DYE_LITRES.ship

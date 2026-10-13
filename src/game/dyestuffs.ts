@@ -75,14 +75,20 @@ export const kgSaid = (grams: number): string => (grams / 1000).toFixed(3).repla
  * wall and a floor one tile of it. A litre of dye weighs a kilo.
  */
 export const DYE_LITRES = { garment: 3, banner: 6, sail: 30, ship: 100, wall: 3, floor: 3 } as const;
-export type DyeSize = keyof typeof DYE_LITRES;
+/** And one glass panel, which a window takes the colour of (`TINTED_PANE`). */
+export const DYE_PANE_LITRES = 1;
+/** Every size a dyeing is by, with its litres: the island's `dye_litres_def`. */
+export const DYE_SIZES = { ...DYE_LITRES, pane: DYE_PANE_LITRES } as const;
+export type DyeSize = keyof typeof DYE_SIZES;
 /** The things that are not a garment, by size. Every piece of cloth or leather armour is a garment. */
 export const DYE_SIZE_OF: Record<string, DyeSize> = {
   cloth: 'garment', sack: 'garment', satchel: 'garment', backpack: 'garment', saddle: 'garment', bridle: 'garment',
   banner: 'banner', flagpole: 'banner', sailing_boat: 'sail', caravel: 'ship',
+  // A glass panel, which a window takes the colour of (`dyes.ts`, `TINTED_PANE`).
+  glass: 'pane',
 };
 /** Litres it takes to dye one of these. */
-export const dyeLitresFor = (id: string): number => DYE_LITRES[DYE_SIZE_OF[id] ?? 'garment'];
+export const dyeLitresFor = (id: string): number => DYE_SIZES[DYE_SIZE_OF[id] ?? 'garment'];
 
 /**
  * What is boiled for a primary: the dyestuff and how hard the boil is. How

@@ -1,4 +1,5 @@
 import { tryGain } from './learn';
+import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import {
@@ -1317,7 +1318,9 @@ export function recipeAction(r: Recipe): ActionDef {
       // of its own: set after, it made the whole pile it went onto rare.
       const rare = rollRarity(g.rand, g.perk(`rare:${r.id}`, RARITY_ODDS[0]));
       const item = g.inventory.add(r.result, {
-        count, ql, extra: r.extra ?? mat, ...(stackable && marked ? { mark: marked } : {}), ...(rare ? { rare, maker: g.player.name } : {}),
+        count, ql, extra: r.extra ?? mat, ...(stackable && marked ? { mark: marked } : {}), ...(rare ? { rare } : {}),
+        // Rare work, and one thing made at the signing QL, carries its maker's name (`signing.ts`).
+        maker: madeBy(g.player.name, r.result, ql, rare),
       });
       if (!stackable && marked) item.mark = marked;
       // A boil leaves its dye in the bucket it was boiled in (`dyes.ts`).

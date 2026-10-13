@@ -3,6 +3,7 @@ import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
+import { madeBy } from './signing';
 import { itemDef, makersMark, rarityOf, rollRarity, RARITY_ODDS, RARITY_WORD } from './items';
 import { matOf, matOfItem, workingQl } from './materials';
 import { metalOfItem } from './melt';
@@ -279,6 +280,9 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const made = g.inventory.add(def.makes, { ql, extra: casting.extra, count: per, mark });
       // Rarer odds for a Smith's Master's Mark, as `rare:smith` has it on the island.
       const rare = rollRarity(g.rand, g.perk('rare:smith', RARITY_ODDS[0]));
+      // One thing beaten out at the signing QL carries its maker's name as rare work does (`signing.ts`).
+      const by = madeBy(g.player.name, def.makes, made.ql);
+      if (by) made.maker = by;
       if (rare) {
         made.rare = rare;
         made.maker = g.player.name;
