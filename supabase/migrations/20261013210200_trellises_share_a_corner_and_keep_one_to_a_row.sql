@@ -281,7 +281,10 @@ begin
   end if;
 end $said$;
 
-/* Every island, one trellis to a row (`trellis_settle`). */
-select trellis_settle(id) from world;
+/*
+ * The settle itself runs once, in `20261013210300_trellises_settled_by_their_own_footprint`,
+ * with the trellis's own footprint and a return that keeps a trellis's rarity: run here
+ * too, before either existed, it handed back what it found with the old ones first.
+ */
 
 select private.lock_doors();
