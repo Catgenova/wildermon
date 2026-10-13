@@ -16,6 +16,7 @@ import { BACK_SLACK, blowOf, blowWords, COWARD_DRAG, FIGHT_STANCE_NAMES, HEAVY_E
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
 import { consider } from '../game/consider';
 import { percent } from '../game/words';
+import { feedFill } from '../game/creatureActions';
 import { EffectRow } from './effects';
 import type { Tooltip } from './tooltip';
 
@@ -698,7 +699,7 @@ export class Hud {
     if (!c) return;
     const food = this.game.worstFoodFor(c);
     if (!food) {
-      this.game.logMsg(`You have nothing ${c.name} will eat.`, 'error');
+      this.game.logMsg(`You have nothing ${c.name} will eat, and no bucket of whey.`, 'error');
       return;
     }
     const def = ACTION_BY_ID.get('feed');
@@ -830,7 +831,10 @@ export class Hud {
       if (!this.companionText.parentElement) this.companionEl.prepend(this.companionText);
       const feed = this.game.worstFoodFor(companion);
       this.feedBtn.disabled = !feed;
-      this.tip(this.feedBtn, feed ? `Feed ${companion.name} ${itemName(feed).toLowerCase()}, the poorest thing it will eat` : `You carry nothing ${companion.name} will eat`);
+      this.tip(this.feedBtn, feed
+        ? `Feed ${companion.name} ${itemName(feed).toLowerCase()}: it fills ${percent(feedFill(feed.id))} of its hunger. `
+          + 'Of what it is fed, the thing that fills least, and of those the lowest quality, so the rest is kept.'
+        : `You carry nothing ${companion.name} will eat, and no bucket of whey`);
       this.companionEl.hidden = false;
     } else this.companionEl.hidden = true;
     const food = this.game.bestFood();

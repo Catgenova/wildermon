@@ -13,7 +13,7 @@ import { yearOf } from '../world/calendar';
 import { oreAt } from '../world/ore';
 import { World } from '../world/world';
 import { ACTIONS, ACTION_BY_ID, SPOIL_ORDER, spoilFrom, TEACHES_NOTHING, TRY_LEARN, type ActionDef, type Target } from './actions';
-import { riposte } from './creatureActions';
+import { feedable, feedFill, riposte } from './creatureActions';
 import { aimPin, BELT_MAX, loopsFor, pinLabel, type BeltPin } from './belt';
 import { bodyForward } from '../net/felt';
 import type { ItemRow } from '../net/island';
@@ -2376,13 +2376,21 @@ export class Game {
     return best;
   }
 
-  /** The poorest thing your companion will eat, for the feed button: keep the good stuff. */
+  /**
+   * The poorest thing your companion is fed, for the feed button: keep the good stuff.
+   *
+   * What it is fed is its own diet or a bucket of whey (`feedable`). The one
+   * that fills least of its hunger goes first (`feedFill`: a bucket of whey
+   * fills `WHEY_FEED`, a thing of its diet `GRAZE_FILL`), and of those the
+   * lowest quality, so the food that fills it most is kept for later.
+   */
   worstFoodFor(c: Creature): Item | undefined {
     const def = this.creatures.species(c);
     let worst: Item | undefined;
     for (const it of this.inventory.items) {
-      if (!def.diet.includes(it.id)) continue;
-      if (!worst || it.ql < worst.ql) worst = it;
+      if (!feedable(def, it.id)) continue;
+      const fill = feedFill(it.id);
+      if (!worst || fill < feedFill(worst.id) || (fill === feedFill(worst.id) && it.ql < worst.ql)) worst = it;
     }
     return worst;
   }

@@ -15,7 +15,9 @@
  *     an empty bucket, on the island and in the browser alike;
  *   * Feed with whey, with the creature's diet, with whey asked for over the
  *     diet, and with nothing it takes, comes to the same hunger, the same
- *     pack and the same words on both sides.
+ *     pack and the same words on both sides;
+ *   * and the feed button (`worstFoodFor`) offers what fills least, a bucket
+ *     of whey before the diet, and of the same fill the lowest quality.
  *
  * Every roll is set. Runs against the database the suite leaves behind; the
  * island half is rolled back.
@@ -246,6 +248,27 @@ feed(target({ itemUid: asked.uid }));
 check('Feed takes the bucket of whey it is asked to over the diet before it in the pack, on both sides',
   near(c.hunger, wheyHunger) && near(part('ASKED', 0), wheyHunger) && pack() === '1|0|1' && `${part('ASKED', 1)}|${part('ASKED', 2)}|${part('ASKED', 3)}` === pack(),
   `${isle.get('ASKED')} / ${c.hunger}|${pack()}`);
+
+/*
+ * 7. The feed button (`worstFoodFor`): what fills least first, so a bucket of
+ * whey before its diet, and of the same fill the lowest quality. It asks for
+ * that thing by `itemUid`, which the island honours as in 6.
+ */
+g.inventory.items.length = 0;
+thing(DIET, 50);
+const poorer = thing(DIET === 'carrot' ? 'wheat' : 'carrot', 20);
+const quick = (): string => {
+  const it = g.worstFoodFor(c);
+  return it ? `${it.id}:${it.ql}` : 'none';
+};
+const dietOnly = quick();
+const quickWhey = thing(WHEY_BUCKET, 60);
+const withWhey = quick();
+check(`the feed button offers the bucket of whey (fills ${WHEY_FEED}) over the diet (fills ${GRAZE_FILL}), and of the diet alone the poorest`,
+  WHEY_FEED < GRAZE_FILL && SPECIES[BEAST].diet.includes(poorer.id) && dietOnly === `${poorer.id}:${poorer.ql}` && withWhey === `${WHEY_BUCKET}:${quickWhey.ql}`,
+  `${dietOnly} then ${withWhey}`);
+g.inventory.items.length = 0;
+check('and offers nothing when nothing it is fed is carried', quick() === 'none', quick());
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

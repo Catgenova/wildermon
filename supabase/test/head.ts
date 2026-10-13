@@ -19,14 +19,16 @@
  *   * and a hoard dug up raises digging, the job's own skill, by a full go on
  *     both sides (the browser's job settle; `perform_treasure` on the island),
  *     and the island's settle (`spend_wind`) teaches the body for it what the
- *     browser's does: body control, and the back for a heavy trade.
+ *     browser's does: body control, and the back for a heavy trade;
+ *   * and it wears the shovel once, by the same amount on both sides
+ *     (`wearTool`, and `wear_tool` in `perform_treasure`).
  *
  * Runs against the database the suite leaves behind: Hoarding, and Dane on
  * it. The island's half is rolled back.
  */
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
-import { CHAR_START, Game } from '../../src/game/game';
+import { CHAR_START, Game, wearPerUse } from '../../src/game/game';
 import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD, TRY_LEARN } from '../../src/game/learn';
 import { ENCHANTMENT_LIST } from '../../src/game/enchant';
 import { enchantable } from '../../src/game/enchanting';
@@ -55,6 +57,8 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 
 /** Digging, where the hoard is dug from: low enough that a full go and a missed one cannot be mistaken. */
 const DIG_AT = 20;
+/** The shovel it is dug with, whose wear is held against the browser's. */
+const SHOVEL_QL = 30;
 
 const HEADS: Array<[string, number]> = [['prospect_head', PROSPECT_HEAD], ['tame_head', TAME_HEAD], ['enchant_head', ENCHANT_HEAD], ['hoard_head', HOARD_HEAD]];
 
@@ -98,7 +102,9 @@ begin
   insert into skill (world_id, uid, id, value) values (w, me, 'digging', ${DIG_AT}), (w, me, 'body_control', char_start()),
     (w, me, 'body_strength', char_start())
     on conflict (world_id, uid, id) do update set value = excluded.value;
-  perform give(w, me, 'shovel', 1, 30);
+  -- The one shovel carried, fresh, so the wear on it is all this go's.
+  delete from item where world_id = w and holder = 'player' and holder_uid = me and def = 'shovel';
+  perform give(w, me, 'shovel', 1, ${SHOVEL_QL});
   update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'::jsonb) where world_id = w and uid = me;
   -- What a full go and a missed one could each come to, at the ends of the roll.
   insert into said values ('DIGBOUNDS', skill_gain_of(${DIG_AT}, skill_mult(w, me, 'digging'), 0.6)::text || '|'
@@ -110,6 +116,8 @@ begin
   insert into said values ('HOARD', skill_of(w, me, 'mind_logic')::text || '|'
     || (not exists (select 1 from item where id = v_map))::text);
   insert into said values ('HOARDDIG', (skill_of(w, me, 'digging') - ${DIG_AT})::text);
+  insert into said values ('HOARDWEAR', (select string_agg(dmg::text, ',') from item
+    where world_id = w and holder = 'player' and holder_uid = me and def = 'shovel'));
   -- And what the settle takes out of the body for the go, after it.
   perform spend_wind(w, me, 'unearth');
   insert into said values ('HOARDBODY', (skill_of(w, me, 'body_control') - char_start())::text || '|'
@@ -201,7 +209,7 @@ const raised = (g: Game): number => g.skills.get('mind_logic') - CHAR_START;
   g.skills.values.set('digging', DIG_AT);
   g.skills.values.set('body_control', CHAR_START);
   g.skills.values.set('body_strength', CHAR_START);
-  g.inventory.add('shovel', { ql: 30 });
+  const shovel = g.inventory.add('shovel', { ql: SHOVEL_QL });
   const map = buryTreasure(g, 50, g.player.x, g.player.y);
   if (!map) throw new Error('nowhere to bury a hoard');
   const mult = g.skillMult('digging');
@@ -212,6 +220,11 @@ const raised = (g: Game): number => g.skills.get('mind_logic') - CHAR_START;
   const full = skillGain(DIG_AT, mult, 0.6);
   check('in the browser, a hoard dug up through the job settle raises digging by a full go',
     !g.inventory.get(map.uid) && Math.abs(dig - full) < 1e-9 && dig > skillGain(DIG_AT, TRY_LEARN * mult, 1.4), `${dig}, a full go ${full}`);
+  // The shovel worn once by the settle (`wearTool`), and by as much on the island (`wear_tool`).
+  const wearIsle = Number(island('HOARDWEAR'));
+  check(`a hoard dug up wears the shovel the same on both sides: ${shovel.dmg.toFixed(4)} on a QL ${SHOVEL_QL} shovel, wearPerUse ${wearPerUse(SHOVEL_QL).toFixed(4)}`,
+    shovel.dmg > 0 && Math.abs(shovel.dmg - wearIsle) < 1e-4 && Math.abs(shovel.dmg - wearPerUse(SHOVEL_QL)) < 1e-9,
+    `island ${island('HOARDWEAR')} / browser ${shovel.dmg}`);
   check('in the browser, and teaches body control and the back',
     g.skills.get('body_control') > CHAR_START && g.skills.get('body_strength') > CHAR_START,
     `${g.skills.get('body_control') - CHAR_START} ${g.skills.get('body_strength') - CHAR_START}`);
