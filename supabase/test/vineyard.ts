@@ -21,9 +21,9 @@
 import { execFileSync } from 'node:child_process';
 import { Game, type IslandGround } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
-import { AGEING_RULE, brewQl, CELLAR_AGEING, fixedTo, WINE_AGE_CAP, WINE_AGE_RATE, wineAgeSays, wineGain } from '../../src/game/ageing';
+import { ageGain, ageingRule, brewQl, CELLAR_AGEING, fixedTo, WINE_AGE_CAP, WINE_AGE_RATE, wineAgeSays } from '../../src/game/ageing';
 import { boonTime } from '../../src/game/boons';
-import { BREW_BY_ID, BREWS, GRAPE_WINE_GRAPES } from '../../src/game/brewing';
+import { BREW_BY_ID, BREWS, GRAPE_WINE_GRAPES, WINE_AGEING } from '../../src/game/brewing';
 import { cellarOutdoor } from '../../src/game/cellar';
 import { FURNITURE_BY_ID, type PlacedFurniture } from '../../src/game/furniture';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
@@ -108,10 +108,10 @@ const itemsIsle = psql(`select string_agg(d.id || ':' || d.name || ':' || d.desc
 check('the grape, the cutting, the trellis and the bucket of grape wine are the same things on both sides, with nothing left to fill in',
   itemsIsle === [GRAPE, GRAPE_CUTTING, 'grape_wine_bucket', TRELLIS].sort().map((id) => `${id}:${ITEM_DEFS[id].name}:${ITEM_DEFS[id].description}`).join('#')
     && !itemsIsle.includes('{'), itemsIsle.slice(0, 200));
-check('the bucket of wine says how it ages, off the rule', ITEM_DEFS.wine_bucket.description?.includes(AGEING_RULE()) === true
+check('the bucket of wine says how it ages, off the rule', ITEM_DEFS.wine_bucket.description?.includes(ageingRule(WINE_AGEING)) === true
   && ITEM_DEFS.grape_wine_bucket.description?.includes(`${WINE_AGE_RATE} QL a day`) === true);
 const numbersIsle = psql(`select concat_ws('|', grape_season(), vine_bears(), vine_rest(), grapes_a_pick(), grapes_base(), grapes_span(), vine_skill(),
-  wild_vine(), wine_age_rate(), wine_age_cap(), cellar_ageing(), day_seconds(),
+  wild_vine(), age_rate('grape_wine'), age_cap('grape_wine'), cellar_ageing(), day_seconds(),
   (select string_agg(t::text, ',' order by t) from generate_series(0, 30) t where vine_soil(t)))`);
 const numbersHere = [GRAPE_SEASON, VINE_BEARS, VINE_REST, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, VINE_SKILL, WILD_VINE, WINE_AGE_RATE, WINE_AGE_CAP,
   CELLAR_AGEING, DAY_SECONDS, [...VINE_SOIL].sort((a, b) => a - b).join(',')].join('|');
@@ -140,8 +140,9 @@ check(`out of season, when it fruits is worked out and said the same on both sid
 /* ---- the ageing, as numbers: so many days, in a cellar and out ------------------------------------- */
 
 const AGES = [0, 0.25, 0.5, 1, 2.5, 3, 7.3, 10, 13.7, 39.99, 40, 41, 100, 1000].map((d) => d * DAY);
-const gainIsle = psql(`select string_agg(wine_gain(a, false)::text || '/' || wine_gain(a, true)::text, ',' order by o)
+const gainIsle = psql(`select string_agg(age_gain('grape_wine', a, false)::text || '/' || age_gain('grape_wine', a, true)::text, ',' order by o)
   from unnest(array[${AGES.join(', ')}]::double precision[]) with ordinality u(a, o)`);
+const wineGain = (age: number, cellar: boolean): number => ageGain('grape_wine', age, cellar);
 const gainHere = AGES.map((a) => `${wineGain(a, false)}/${wineGain(a, true)}`).join(',');
 check(`a wine gains the same QL to the last bit on both sides, so many days in a cellar and out: ${gainHere}`, gainIsle === gainHere, gainIsle);
 check(`${WINE_AGE_RATE} a day out of a cellar and ${WINE_AGE_RATE * CELLAR_AGEING} in one, and never more than ${WINE_AGE_CAP}`,
