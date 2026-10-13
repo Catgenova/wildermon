@@ -2434,6 +2434,8 @@ delete from event where uid = :'ivar';
 select act_perform(:'world2', :'ivar', 'cut_reeds', '{"kind":"tile","x":8,"y":9}'::jsonb) \g /dev/null
 select '336. ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1);
 
+-- Apples, pears and figs bear in autumn (`fruiting.ts`): held there for the picking, and back to spring after.
+set wurm.season = 'autumn';
 -- An apple tree, young and then old, which is the whole of what bearing means.
 select land_set_tile(:'world2', 10, 10, 16), land_set_data(:'world2', 10, 10, 6) \g /dev/null
 update player set x = 10.5, y = 9.5 where world_id = :'world2' and uid = :'ivar';
@@ -2445,6 +2447,7 @@ select act_perform(:'world2', :'ivar', 'pick_fruit', '{"kind":"tile","x":10,"y":
 select '338. an old one: ' || (select text from event where uid = :'ivar' and kind = 'event' order by n desc limit 1)
      || ' — and again straight away: ' || coalesce(act_refusal(:'world2', :'ivar', 'pick_fruit',
         '{"kind":"tile","x":10,"y":10}'::jsonb), 'allowed');
+set wurm.season = 'spring';
 
 -- A sprout off it, planted somewhere else, which is how an orchard happens.
 insert into skill (world_id, uid, id, value) values (:'world2', :'ivar', 'forestry', 60)
@@ -8631,6 +8634,8 @@ select '916. a shrivelled oak: pruning "'
      || '", felling "'
      || coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'cut_down', '{"kind":"tile","x":52,"y":54}'::jsonb), 'ALLOWED')
      || '"';
+-- Apples, pears and figs bear in autumn (`fruiting.ts`): held there for the picking, and back to spring after.
+set wurm.season = 'autumn';
 update player set x = 53.5, y = 53.5 where world_id = :'world6' and uid = '77777777-7777-7777-7777-777777777777' \g /dev/null
 select coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'pick_fruit', '{"kind":"tile","x":53,"y":54}'::jsonb), 'ALLOWED') as dead_fruit \gset
 update player set x = 54.5, y = 53.5 where world_id = :'world6' and uid = '77777777-7777-7777-7777-777777777777' \g /dev/null
@@ -8638,6 +8643,7 @@ select '917. and a shrivelled apple beside a very old one: fruit off the dead on
      || '", and off the very old one "'
      || coalesce(act_refusal(:'world6', '77777777-7777-7777-7777-777777777777', 'pick_fruit', '{"kind":"tile","x":54,"y":54}'::jsonb), 'ALLOWED')
      || '"';
+set wurm.season = 'spring';
 -- Felling the dead oak: dead wood, still timber.
 do $$
 declare w uuid; me uuid := '77777777-7777-7777-7777-777777777777'; i int;
@@ -9857,6 +9863,8 @@ select '995. the plucka: ' || (select name || ' gathers ' || gathers || ', near 
      || ' — wild: ' || (select species || ' ' || weight from wild_table where species = 'plucka')
      || ' — and it eats ' || (select count(*) from species_diet where species = 'plucka') || ' things, every fruit among them: '
      || (select bool_and(exists (select 1 from species_diet sd where sd.species = 'plucka' and sd.item = t.fruit)) from tree_def t where t.fruit is not null);
+-- Apples, pears and figs bear in autumn (`fruiting.ts`): held there for the picking, and back to spring after.
+set wurm.season = 'autumn';
 -- Room on the deed, and a pear and a fig in bearing beside the token where the snedda's oaks stood.
 update creature set mode = 'stored', job = null where world_id = :'world2' and keeper = :'ivar' and mode = 'deed' \g /dev/null
 select x as tok_x, y as tok_y from deed where world_id = :'world2' and founded_by = :'ivar' \gset
@@ -9884,6 +9892,7 @@ select '996. ' || :'stand' || ' beside the token: setting the plucka to fruit ('
      || ', the pear tree picked for the day: ' || is_foraged(:'world2', :tok_x + 3, :tok_y, 'forage') || ' and still a ' || lower((select name from tree_def where id = tree_species(land_data(:'world2', :tok_x + 3, :tok_y))))
      || ', and the plucka told of nothing but its work: ' || coalesce((select string_agg(distinct left(text, 40), ' | ') from event where uid = :'ivar' and text ilike '%plucka%'), 'nothing');
 update creature set mode = 'stored', job = null where world_id = :'world2' and id = :'picker' \g /dev/null
+set wurm.season = 'spring';
 
 /*
  * A quern presses fruit into juice and cider.

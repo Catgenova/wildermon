@@ -1282,6 +1282,23 @@ jobs:
             --outfile=node_modules/.cache/seasons.mjs --log-level=error
           node node_modules/.cache/seasons.mjs
 
+      - name: Fruit, bushes and forage keep their seasons, the same on both sides
+        run: |
+          # Every fruit tree, every bush a sickle cuts and the seasonal wild
+          # forage has its seasons in one table (`src/game/fruiting.ts`), which
+          # the island reads off the definitions. This holds the island's
+          # table and every sentence to the browser's; counts the season the
+          # same way at moments round the turns and before the first spring,
+          # when everything bears; and in each of the four seasons, held on
+          # the island and stood still in the browser, picks four trees and
+          # cuts two bushes on both sides -- the same refusal out of season,
+          # the same fruit and words in it, the same Examine -- rolls the
+          # forage tables on both and finds only what is in season, and asks
+          # whether a plucka would climb the tree.
+          npx esbuild supabase/test/fruiting.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/fruiting.mjs --log-level=error
+          node node_modules/.cache/fruiting.mjs
+
       - name: A glasshouse grows its crops the year round, the same on both sides
         run: |
           # A roof laid in glass, on a pitched roof and nowhere else; a building

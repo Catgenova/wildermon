@@ -70,6 +70,7 @@ import {
   NOT_RESTORED, unrestored, type Item,
 } from './items';
 import { listed, numberWord } from './words';
+import { fruitRefusal, fruitSeason, fruitingSays, inSeason } from './fruiting';
 import { knackable, RECIPE_ACTIONS } from './recipes';
 
 /**
@@ -542,8 +543,10 @@ const searches = (g: Game, job: 'forage' | 'botanize', skill: string): number =>
  * of them (none at all for a Naturalist's Sure Find), then the skill, then the
  * table; and now and then a rare one for their Rare Find.
  */
-function lookOver(g: Game, job: 'forage' | 'botanize', skill: string, table: Array<[string, number]>, rolls: number): string[] {
+function lookOver(g: Game, job: 'forage' | 'botanize', skill: string, all: Array<[string, number]>, rolls: number): string[] {
   const found: string[] = [];
+  // Only what is in season is there to find (`fruiting.ts`), the rest at the weights they had.
+  const table = inSeason(all, g.wallNow());
   for (let i = 0; i < rolls; i++) {
     if (g.rand() < EMPTY_CHANCE * g.perk(`empty:${job}`, 1) || !g.skillCheck(skill, FIND_CHECK)) continue;
     const id = rollTable(table, g.rand());
@@ -879,13 +882,18 @@ export const ACTIONS: ActionDef[] = [
         const cuts = w.notchAt(t.x, t.y);
         if (cuts) text += ` It has ${cuts} of ${age.hits} strokes in it.`;
         text += treeOutlook(age, g.treesAt);
+        // And when a fruit tree bears, and whether it is bearing now (`fruiting.ts`).
+        const fruit = TREE_DEFS[treeSpecies(data)].fruit;
+        if (fruit) text += fruitingSays(fruit, fruitSeason(g.wallNow()));
       } else if (type === TileType.Stump) {
         text = `You see the stump of ${an(TREE_DEFS[treeSpecies(w.getData(t.x, t.y))].name.toLowerCase())} at (${t.x}, ${t.y}). Dig it out, or leave it a day.`;
       } else if (type === TileType.Grass && (w.getData(t.x, t.y) & MOWING)) {
         const d = w.getData(t.x, t.y);
         text += ` Kept cut: ${mownDays(d) + (mownToday(d) ? 1 : 0)} of ${LAWN_AFTER} days towards lawn.`;
       } else if (type === TileType.Bush) {
-        text = `You see a ${BUSH_DEFS[bushSpecies(w.getData(t.x, t.y))].name.toLowerCase()} at (${t.x}, ${t.y}).`;
+        const bush = BUSH_DEFS[bushSpecies(w.getData(t.x, t.y))];
+        text = `You see a ${bush.name.toLowerCase()} at (${t.x}, ${t.y}).`;
+        if (bush.yields) text += fruitingSays(bush.yields, fruitSeason(g.wallNow()));
       }
       // What feet have done to it, and what is in flower on it: the island's words (`ground_says`).
       text += groundSays(g, t.x, t.y);
@@ -1785,6 +1793,9 @@ export const ACTIONS: ActionDef[] = [
       if (g.world.getTile(t.x, t.y) !== TileType.Bush) return 'There is no bush here.';
       const def = BUSH_DEFS[bushSpecies(g.world.getData(t.x, t.y))];
       if (!def.yields) return `Nothing on a ${def.name.toLowerCase()} is worth a sickle.`;
+      // Nothing to cut out of its season (`fruiting.ts`).
+      const out = fruitRefusal(def.yields, g.wallNow());
+      if (out) return out;
       if (g.isForaged(t.x, t.y, 'forage')) return `You have had what this ${def.name.toLowerCase()} has on it. Come back later.`;
       return g.inventory.has('sickle') ? null : 'You need a sickle to harvest a bush.';
     },
@@ -1827,6 +1838,9 @@ export const ACTIONS: ActionDef[] = [
       if (!treeAge(data).alive) return 'Nothing hangs on a dead tree.';
       // A sapling bears nothing; it has to have some years in it first.
       if (!treeAge(data).bears) return `The ${def.name.toLowerCase()} is too young to bear. Leave it to grow.`;
+      // Nothing hangs on it out of its season (`fruiting.ts`).
+      const out = fruitRefusal(def.fruit, g.wallNow());
+      if (out) return out;
       if (g.isForaged(t.x, t.y, 'forage')) return `You have had what this ${def.name.toLowerCase()} has on it. Come back later.`;
       return null;
     },

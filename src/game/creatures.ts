@@ -2,6 +2,7 @@ import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TRE
 import { isSeam } from '../world/tiles';
 import { mapFromBeast } from './treasure';
 import { BOTANIZE_TABLE, FORAGE_TABLE, rollTable } from './forage';
+import { fruitsAt, inSeason } from './fruiting';
 import type { DeedStore, Game } from './game';
 import { DAY_SECONDS } from './game';
 import { CROP_BY_SEED, cropDef, cropReady, cropYield } from './farming';
@@ -3497,7 +3498,9 @@ export class Creatures {
       if (game.world.getTile(x, y) !== TileType.Tree || !this.beside(game, x, y)) return false;
       const data = game.world.getData(x, y);
       const age = treeAge(data);
-      return !!TREE_DEFS[treeSpecies(data)].fruit && age.bears && age.alive && !game.isForaged(x, y, 'forage') && !this.claimed(x, y, c);
+      // And in its season (`fruiting.ts`): out of it there is nothing to climb for.
+      const fruit = TREE_DEFS[treeSpecies(data)].fruit;
+      return !!fruit && fruitsAt(fruit, game.wallNow()) && age.bears && age.alive && !game.isForaged(x, y, 'forage') && !this.claimed(x, y, c);
     }
     if (kind === 'stump') return game.world.getTile(x, y) === TileType.Stump && this.tileOk(game, x, y);
     const def = TILE_DEFS[game.world.getTile(x, y)];
@@ -3626,7 +3629,8 @@ export class Creatures {
     if (kind === 'seek') return this.finishSeek(game, c);
     if (kind === 'fetch') return this.finishFetch(game, c);
     game.markForaged(x, y, kind);
-    const table = GATHER_TABLE[kind];
+    // Only what is in season is there to find (`fruiting.ts`), the rest at the weights they had.
+    const table = inSeason(GATHER_TABLE[kind], game.wallNow());
     // An errand has no table to roll on: it is done where it is done, and
     // whatever it produced was handed over there.
     if (!table.length) return null;

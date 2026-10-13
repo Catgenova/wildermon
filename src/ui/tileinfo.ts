@@ -5,10 +5,11 @@ import { itemDef } from '../game/items';
 import { bedrockAt } from '../world/ore';
 import {
   groundRoll, TILE_DEFS, TileType, dustiness, standCap, stepsGroundRefusal, stepsTimber, STEPS_BRICKS, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS,
-  trailGround, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
+  trailGround, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS, BUSH_DEFS, bushSpecies, TREE_DEFS, treeSpecies,
 } from '../world/tiles';
+import { fruitingSeasons, fruitSeason, fruitsIn, nextFruiting } from '../game/fruiting';
 import { STONE_STEPS_BILL, TIMBER_STEPS_BILL, stepsBack } from '../game/steps';
-import { numberWord } from '../game/words';
+import { listed, numberWord } from '../game/words';
 import { flowersHere } from '../game/wildflowers';
 import { SLOW_SLOPE } from '../game/player';
 
@@ -130,6 +131,13 @@ export function tileUses(g: Game, x: number, y: number): string[] {
   }
   const blooms = type === TileType.Grass ? flowersHere(g, x, y) : 0;
   if (blooms) lines.push(`In flower: Pick flowers for ${blooms === 1 ? 'a wildflower' : `${blooms} wildflowers`}`);
+  // What a fruit tree bears or a bush is cut for, in which seasons, and whether now (`fruiting.ts`).
+  const borne = type === TileType.Tree ? TREE_DEFS[treeSpecies(w.getData(x, y))].fruit
+    : type === TileType.Bush ? BUSH_DEFS[bushSpecies(w.getData(x, y))].yields : undefined;
+  if (borne) {
+    const season = fruitSeason(g.wallNow());
+    lines.push(`${itemDef(borne).name} in ${listed(fruitingSeasons(borne))} · ${fruitsIn(borne, season) ? 'in season now' : `out of season until ${nextFruiting(borne, season ?? 'spring')}`}`);
+  }
   if (TILLABLE.has(type)) lines.push('Rake: turns into a field, ready for sowing');
   if (type === TileType.Field) lines.push('Sow it, tend it and reap it. An untended field gives back only its seed.');
 

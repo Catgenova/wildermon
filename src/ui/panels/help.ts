@@ -63,7 +63,8 @@ import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, B
 import { MOTE_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
-import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
+import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
+import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
 import { BUCKET_LITRES, FURNITURE, furnitureDef, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
@@ -608,6 +609,18 @@ const BOON_QL = 70;
 const CIDER = BREW_BY_ID.get('cider') ?? BREWS[0];
 /** The trees that bear. */
 const FRUIT_TREES = TREE_DEFS.filter((t) => t.fruit);
+/** An item's name as a sentence carries it. */
+const lowName = (id: string): string => itemDef(id).name.toLowerCase();
+/** The bushes a sickle cuts something off. */
+const CUT_BUSHES = BUSH_DEFS.filter((b) => b.yields);
+/** Each season and the trees in fruit in it: "in summer cherry, peach and fig". */
+const TREES_BY_SEASON = SEASONS.map((s) => `in ${s} <b>${listed(FRUIT_TREES.filter((t) => fruitsIn(t.fruit ?? '', s)).map((t) => t.name.toLowerCase()))}</b>`);
+/** A loot table's finds that keep a season, each with its seasons, and the ones had all year. */
+const seasonalFinds = (table: Array<[string, number]>): string =>
+  table.filter(([id]) => FRUITING[id]).map(([id]) => `<b>${lowName(id)}</b> in ${listed(fruitingSeasons(id))}`).join('; ');
+const yearRoundFinds = (table: Array<[string, number]>): string => listed(table.filter(([id]) => !FRUITING[id]).map(([id]) => lowName(id)));
+/** Whether every seed foraging and botanizing turn up is had all year. */
+const SEEDS_ALL_YEAR = BOTANIZE_WATER_TABLE.concat(FORAGE_TABLE).filter(([id]) => id.endsWith('_seed')).every(([id]) => !FRUITING[id]);
 /** An island of the chart by name, as a sentence carries it. */
 const islandName = (name: string): string => name.replace(/^The /, 'the ');
 /** A rock or seam by what it yields, as a prospector names it. */
@@ -1162,6 +1175,10 @@ export function helpText(): string {
     with forestry and plant it, and you have the beginnings of an orchard, wherever the sprout came
     from. A <b>plucka</b> set to work on a deed picks what the bearing trees have on them and carries
     it to the crate.</p>
+    <p><b>Each tree bears in its own seasons</b>: ${TREES_BY_SEASON.join('; ')}. Out of its seasons <b>Pick fruit</b>
+    gives nothing and says which season it bears in next, a plucka passes the tree by, and <b>Examine</b> on the tree
+    says its seasons and whether it is in season now. The same holds for a bush: <b>Harvest</b> with a sickle cuts
+    ${CUT_BUSHES.map((b) => `${lowName(b.yields ?? '')} off a ${b.name.toLowerCase()} only in ${listed(fruitingSeasons(b.yields ?? ''))}`).join('; ')}.</p>
     <p>A sapling bears nothing; leave it to grow. A mature tree gives about ${numberWord(FRUIT_MATURE)} of its fruit to a
     picking and an old one about ${numberWord(FRUIT_OLD)}, more as your forestry rises, and a picked tree needs a few
     minutes before there is anything on it again. ${capital(countOf('apple', need('make_apple_pie', 'apple')))} and a dough bake into ${numberWord(made('make_apple_pie'))} <b>apple
@@ -1180,7 +1197,7 @@ export function helpText(): string {
     ${TILE_DEFS[CLEARED_TO[TileType.Reed] as TileType].name.toLowerCase()} where the reeds were.</p>
     <h3>Farming</h3>
     <p>With a <b>rake</b> in your pack, <b>Till</b> any grass or dirt to rake it into a field. Seeds turn
-    up while foraging and botanizing &mdash; vegetables and starches in the one, spices and fibres in the
+    up while foraging and botanizing${SEEDS_ALL_YEAR ? ', in every season' : ''} &mdash; vegetables and starches in the one, spices and fibres in the
     other &mdash; and a field's menu offers to <b>Sow</b> whichever you carry. A crop goes through ${numberWord(STAGE_NAMES.length)}
     stages: ${listed(STAGE_NAMES)}, each drawn differently, and every crop takes its own time
     per stage, from quick mint to slow corn.</p>
@@ -2186,11 +2203,11 @@ export function helpText(): string {
     their leaves all year, a shade darker in winter. Every other tree comes into leaf over the first
     <b>${numberWord(LEAF_DAYS)} days of spring</b>, is in full leaf through summer, turns its own autumn colour over the
     first ${numberWord(TURN_DAYS)} days of autumn, drops its leaves over the last ${numberWord(SHED_DAYS)}, and stands <b>bare through winter</b>.
-    Every tree old enough to fruit is <b>in flower for all ${numberWord(SEASON_DAYS)} days of spring</b>, and fruits as before.
+    Every tree old enough to fruit is <b>in flower for all ${numberWord(SEASON_DAYS)} days of spring</b>, and bears in its own seasons (<i>Fruit trees</i>).
     ${capital(listed(BUSH_DEFS.filter((b) => !BUSH_EVERGREEN.has(b.name)).map((b) => b.name.toLowerCase().replace(' bush', 's'))))} go bare in winter
     too and ${listed(BUSH_DEFS.filter((b) => BUSH_EVERGREEN.has(b.name)).map((b) => b.name.toLowerCase().replace(' bush', '')))} keeps its leaves;
     roses and lavender flower from day ${BUSH_FLOWER_FROM} of spring to the end of summer, the thorn through spring.
-    None of it changes what a tree or a bush gives: that is only the look of the thing.</p>
+    The leaves and the flowers are only the look of the thing; what a tree or a bush gives, and in which seasons, is in <i>Fruit trees</i>.</p>
     <p>And there is small life about, only to look at: <b>butterflies</b> at whatever is in flower by day,
     <b>dragonflies</b> over ponds, pools and streams from morning to dusk, <b>fireflies</b> over the grass by
     trees and water at night: ${lifeSeasons()}.</p>
@@ -2850,6 +2867,11 @@ export function helpText(): string {
     tile with an armful where a beginner comes off it with a berry &mdash; and the menu says how many
     passes you are good for before you start. The tile is still picked clean for the same while
     afterwards, so every pass is a tile you did not have to walk to.</p>
+    <p><b>What the ground gives goes by the season.</b> Foraging finds each of these only in its seasons:
+    ${seasonalFinds(FORAGE_TABLE)}. It finds ${yearRoundFinds(FORAGE_TABLE)} in every season. Botanizing finds each of these
+    only in its seasons: ${seasonalFinds(BOTANIZE_WATER_TABLE)}. It finds ${yearRoundFinds(BOTANIZE_WATER_TABLE)} in every season. A pass rolls only on what is in
+    season, each at the weight it always had, so a pass finds something as often in winter as in summer.
+    A worker or a creature foraging or botanizing goes by the same seasons.</p>
     <h3>Meditation, and the three paths</h3>
     <p>Sitting still on a rug thinking about nothing is not obviously work, and it is the slowest thing
     anybody does here. Make a <b>rug</b> (${bill('make_rug')}, with a needle), stand where you mean to
