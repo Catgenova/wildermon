@@ -8,7 +8,9 @@
  * off `REST_MULT`, tired arms off `tiredPace`, a wound's blood off
  * `woundDrain`, a worn enchantment off its own Examine line, a spell off its
  * own note. A spell cast on you is known by the island's answer to the cast
- * (`CastSeen.told`, the seconds it lasts on you), which is also what draws it.
+ * (`CastSeen.told`, the seconds it lasts on you), which is also what draws it,
+ * and by what the island keeps of it on your row (`Player.held`), which the
+ * join and every beat hand over, so a reload keeps it.
  *
  * What is working for you sits on the left in round marks; what is working
  * against you on the right in square ones, in the colour of harm. Position,
@@ -27,6 +29,8 @@ import { CARRY_CRAWL, WINDED_AT, WINDED_PACE } from '../game/player';
 import { LIGHT_GIVES_BACK, NIGHT_LOSS } from '../game/vision';
 import { foreknowSaid, PATH_PICK_BY_ID, PATHS, type PathId } from '../game/meditation';
 import { CLASS_SPELL_BY_ID } from '../game/talents';
+import { PERK_BY_ID } from '../game/perks';
+import type { Held } from '../game/player';
 import { FAITH_SPELL_BY_ID, PATRON_BY_ID } from '../game/patrons';
 import { spellDef } from '../game/arcane';
 import { classDef } from '../game/classes';
@@ -45,7 +49,8 @@ import type { TipLine, Tooltip } from './tooltip';
 /** The marks a row draws with: small line drawings in the panel's own ink. */
 type Glyph = 'rest' | 'meal' | 'flask' | 'sun' | 'enso' | 'eye' | 'leaf' | 'bolt' | 'shield' | 'cross' | 'paw' | 'flame' | 'chain'
   | 'sword' | 'spear' | 'dash' | 'scales' | 'spiral' | 'lamp' | 'gem' | 'star' | 'hourglass' | 'wind' | 'claw' | 'drop'
-  | 'blister' | 'fang' | 'weight' | 'bowl' | 'cup' | 'moon' | 'waves' | 'wheel' | 'bow' | 'tick';
+  | 'blister' | 'fang' | 'weight' | 'bowl' | 'cup' | 'moon' | 'waves' | 'wheel' | 'bow' | 'tick'
+  | 'skin' | 'layers' | 'link' | 'stone' | 'wall';
 
 export interface Effect {
   /** Stable across looks, so a mark is kept rather than drawn again. */
@@ -78,17 +83,91 @@ const longLeft = (secs: number): string => {
 /** A share of health a second, as a minute of it. */
 const perMinute = (perSecond: number): string => percent(perSecond * 60);
 
+/** A skin's size as the island says it when one is laid ("a skin of 24%", `faith_pct`), finer only under a whole one, so a last sliver never reads as nothing. */
+export const skinSaid = (size: number): string => (size < 0.01 ? percent(size) : `${Math.round(size * 100)}%`);
+
 /** Kilograms as they read. */
 const kg = (n: number): string => `${Math.round(n)} kg`;
 
 /**
- * Spells cast on you, kept from the island's word on the cast: what it was,
- * who cast it, and when what it left runs out. The island keeps the same on
- * your row (`player.blessings`) and never sends it, so this is what the
- * browser was told at the moment of the cast, and a reload forgets it.
+ * What the island keeps on your row (`player.blessings`) from a spell or a
+ * passive, by the key it is kept under (`blessing_put`), and the spell or
+ * passive that put it there. What else it keeps there has a mark of its own
+ * (`KEPT_ELSEWHERE`).
+ */
+export const KEPT_AS: Readonly<Record<string, string>> = {
+  // The Sworn Blade.
+  breathing: 'blade_measured_breathing', deflect: 'blade_deflect', hold_line: 'blade_hold_the_line', last_stand: 'blade_last_stand',
+  // The Berserker.
+  adrenaline: 'berserker_adrenaline', battle_rage: 'berserker_battle_rage', last_rage: 'berserker_last_rage',
+  // The Pikeman.
+  brace: 'pikeman_brace_for_the_charge', fend_off: 'pikeman_fend_off', keep_away: 'pikeman_keep_away',
+  // The Archer.
+  deadeye: 'archer_deadeye', decoy: 'archer_decoy', read_wind: 'archer_read_the_wind',
+  // The Skirmisher.
+  hit_and_run: 'skirmisher_hit_and_run', opportunist: 'skirmisher_opportunist',
+  // The Chirurgeon.
+  regenerate: 'chirurgeon_regenerate', surgeons_hands: 'chirurgeon_surgeons_hands',
+  // The Beastmaster.
+  bloodlust: 'beastmaster_bloodlust', feral_bond: 'beastmaster_feral_bond', primal_fury: 'beastmaster_primal_fury',
+  vengeance: 'beastmaster_vengeance',
+  // The Kindler, and its Blaze Momentum: a passive whose share grows with every spell.
+  blaze_aura: 'kindler_blaze_aura', firebrand: 'kindler_firebrand', stoke: 'kindler_stoke', momentum: 'kindler_blaze_momentum',
+  // The Binder.
+  still_skin: 'binder_still_skin',
+  // The Warder.
+  bastion_stone: 'warder_bastion_of_stone', stoneskin: 'warder_stoneskin', thicken: 'warder_thicken', unbreakable: 'warder_unbreakable',
+  ward_link: 'warder_ward_link',
+  // The three patrons.
+  arms: 'blessing_arms', kinship: 'blessing_kinship', renewal: 'blessing_renewal', second_life: 'blessing_second_life',
+  shield: 'blessing_shield', steady: 'blessing_steady', ward: 'blessing_ward',
+  oath: 'justice_oath', retribution: 'justice_retribution', reward: 'justice_reward', temper: 'justice_temper',
+  shroud: 'chaos_shroud',
+};
+/** What else the island keeps on your row: a path's techniques, which `Player.pathTimes` has and `HELD_TECHNIQUES` marks. */
+export const KEPT_ELSEWHERE = /^path_/;
+/** Every spell the island keeps on your row, so that one it no longer keeps is known to have run out or been spent. */
+const KEPT_SPELLS = new Set(Object.values(KEPT_AS));
+/** Seconds the island's word on what you hold has to be newer than a cast to say that spell is gone: a beat asked before the cast can answer after it. */
+const HELD_SLACK = 2;
+
+/**
+ * What the island says is held on you (`Island.held`: seconds left and the
+ * numbers it keeps), as `Player.held` keeps it: when each runs out on the
+ * game's clock, and its numbers, a list as how many are in it.
+ */
+export function heldFrom(said: Readonly<Record<string, Readonly<Record<string, unknown>>>>, now: number): Record<string, Held> {
+  const out: Record<string, Held> = {};
+  for (const [key, o] of Object.entries(said)) {
+    const secs = o.secs;
+    if (typeof secs !== 'number' || !(secs > 0)) continue;
+    const fx: Record<string, number> = {};
+    for (const [k, v] of Object.entries(o)) {
+      if (k === 'secs') continue;
+      if (typeof v === 'number' && Number.isFinite(v)) fx[k] = v;
+      else if (Array.isArray(v)) fx[k] = v.length;
+    }
+    out[key] = { until: now + secs, fx };
+  }
+  return out;
+}
+
+/** One spell on you, as `SpellsOnYou.list` says it: its seconds left, who cast it (null you, undefined not known), and the numbers the island keeps of it. */
+export interface SpellOn {
+  spell: string;
+  left: number;
+  by: number | null | undefined;
+  fx?: Readonly<Record<string, number>>;
+}
+
+/**
+ * Spells cast on you: what the island keeps of each on your row
+ * (`Player.held`, handed over at the join and on every beat, so a reload
+ * keeps it), and what it said at the moment of a cast (`CastSeen.told`),
+ * which says who cast it and holds a spell until the next beat.
  */
 export class SpellsOnYou {
-  private readonly on = new Map<string, { spell: string; until: number; by: number | null }>();
+  private readonly on = new Map<string, { spell: string; until: number; by: number | null; at: number }>();
 
   constructor(private readonly game: Game) {
     game.events.on('cast', (c) => this.saw(c));
@@ -97,6 +176,13 @@ export class SpellsOnYou {
 
   private saw(c: CastSeen): void {
     const mine = c.by === null;
+    // A Thicken or a Stoke the cast spent is gone at once, not at the next beat.
+    if (mine) {
+      for (const used of c.told?.used ?? []) {
+        this.on.delete(used);
+        for (const [key, spell] of Object.entries(KEPT_AS)) if (spell === used) delete this.game.player.held[key];
+      }
+    }
     const info = spellInfo(c.spell);
     if (!info) return;
     // You, by the island's own list of who the cast reached and for how long.
@@ -107,39 +193,81 @@ export class SpellsOnYou {
     // A cast on a creature that quickens your own walk for a while (a Skirmisher's Hit and Run).
     if (secs === undefined && mine && info.fx.pace && info.fx.secs) secs = info.fx.secs;
     if (!secs || secs <= 0) return;
-    this.on.set(c.spell, { spell: c.spell, until: this.game.time + secs, by: c.by });
+    this.on.set(c.spell, { spell: c.spell, until: this.game.time + secs, by: c.by, at: this.game.time });
   }
 
-  /** What still holds, soonest out first. */
-  list(): Array<{ spell: string; left: number; by: number | null }> {
+  /**
+   * What still holds: everything the island keeps on you, with who cast it
+   * where a cast said so, and then what a cast said that the island has not
+   * been asked about since.
+   */
+  list(): SpellOn[] {
     const now = this.game.time;
-    const out: Array<{ spell: string; left: number; by: number | null }> = [];
+    const p = this.game.player;
+    const out = new Map<string, SpellOn>();
+    for (const [key, h] of Object.entries(p.held)) {
+      const spell = KEPT_AS[key];
+      if (!spell || h.until <= now) continue;
+      out.set(spell, { spell, left: h.until - now, by: this.on.get(spell)?.by, fx: h.fx });
+    }
     for (const [id, s] of this.on) {
       if (s.until <= now) this.on.delete(id);
-      else out.push({ spell: s.spell, left: s.until - now, by: s.by });
+      else if (out.has(id)) continue;
+      // Kept on your row, and the island has said since that it is not there: run out, spent or taken off.
+      else if (KEPT_SPELLS.has(id) && p.heldAt - s.at > HELD_SLACK) this.on.delete(id);
+      else out.set(id, { spell: s.spell, left: s.until - now, by: s.by });
     }
-    return out;
+    return [...out.values()];
   }
 
   holds(spell: string): boolean {
-    return (this.on.get(spell)?.until ?? -Infinity) > this.game.time;
+    return this.list().some((s) => s.spell === spell);
   }
 }
 
 /** A spell's name, what it does, and what kind of spell it is, by its id. */
 function spellCard(id: string): { name: string; note: string; kind: string; glyph: Glyph } | null {
   const cls = CLASS_SPELL_BY_ID.get(id);
-  if (cls) return { name: cls.name, note: cls.note, kind: `${classDef(cls.class)?.name ?? capital(cls.class)} spell`, glyph: CLASS_GLYPH[cls.class] ?? 'star' };
+  if (cls) {
+    return { name: cls.name, note: cls.note, kind: `${classDef(cls.class)?.name ?? capital(cls.class)} spell`, glyph: SPELL_GLYPH[id] ?? CLASS_GLYPH[cls.class] ?? 'star' };
+  }
   const faith = FAITH_SPELL_BY_ID.get(id);
   if (faith) return { name: faith.name, note: faith.note, kind: `${PATRON_BY_ID.get(faith.patron)?.name ?? capital(faith.patron)} spell`, glyph: FAITH_GLYPH[faith.patron] ?? 'sun' };
   const arc = spellDef(id);
   if (arc) return { name: arc.name, note: arc.note, kind: `${capital(SKILL_BY_ID.get(arc.school)?.name ?? arc.school)} spell`, glyph: 'star' };
+  // A passive whose share the island keeps on you while it holds (a Kindler's Blaze Momentum).
+  const perk = PERK_BY_ID.get(id);
+  if (perk) return { name: perk.name, note: perk.note, kind: `${classDef(perk.class)?.name ?? capital(perk.class)} passive`, glyph: CLASS_GLYPH[perk.class] ?? 'star' };
   return null;
+}
+
+/**
+ * What a spell's numbers come to just now, where the island keeps more of it
+ * than its seconds: the multiplier a Thicken has waiting, how many a Ward Link
+ * has laid a skin back over, how large a Blaze Momentum has grown.
+ */
+function heldLines(spell: string, fx: Readonly<Record<string, number>> | undefined): string[] {
+  switch (spell) {
+    case 'warder_thicken': {
+      const more = fx?.more ?? CLASS_SPELL_BY_ID.get(spell)?.fx.more ?? 1;
+      return [`Waiting: ×${Number(more.toFixed(2))} on the next skin you lay, ${percent(more - 1)} larger; laying it spends this.`];
+    }
+    case 'warder_ward_link':
+      return !fx?.done ? [] : [`A skin has gone back over ${fx.done === 1 ? 'one person' : `${fx.done} people`} so far.`];
+    case 'kindler_blaze_momentum':
+      return fx?.more === undefined ? [] : [`Your fire is ${percent(fx.more)} larger just now.`];
+    default:
+      return [];
+  }
 }
 
 const CLASS_GLYPH: Record<string, Glyph> = {
   blade: 'shield', berserker: 'bolt', pikeman: 'spear', archer: 'bow', skirmisher: 'dash', chirurgeon: 'cross',
   beastmaster: 'paw', kindler: 'flame', binder: 'chain', warder: 'shield',
+};
+/** The Warder's that hold on you, each its own mark, so none is taken for another or for the skin over you (`skin`). */
+const SPELL_GLYPH: Record<string, Glyph> = {
+  warder_thicken: 'layers', warder_ward_link: 'link', warder_stoneskin: 'stone', warder_bastion_of_stone: 'wall',
 };
 const FAITH_GLYPH: Record<string, Glyph> = { blessing: 'sun', justice: 'scales', chaos: 'spiral' };
 const PATH_GLYPH: Partial<Record<PathId, Glyph>> = { knowledge: 'eye', love: 'leaf', power: 'bolt' };
@@ -182,14 +310,29 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
 
   /* -- For you --------------------------------------------------------------- */
 
-  // Spells cast on you, yours or anybody's.
+  // The skin over you, which every blow takes what it can out of first, and which lasts until blows use it up.
+  if (p.skin.size > 0) {
+    const size = skinSaid(p.skin.size);
+    add({
+      id: 'skin', good: true, glyph: 'skin', name: `Skin of ${size}`, caption: size,
+      does: [`Every blow on you takes what it can out of it before your shield and armour do: ${size} of your full health is left in it.`,
+        'It lasts until blows use it up.'],
+      from: p.skin.mine ? 'Laid by you.' : p.skin.by ? `Laid by ${p.skin.by}.` : 'A Warder\'s spell, an Aegis or a Bulwark.',
+    });
+  }
+  // Spells cast on you, yours or anybody's, and a passive the island keeps a share of.
   for (const on of spells.list()) {
     const card = spellCard(on.spell);
     if (!card) continue;
-    const who = on.by === null ? 'you' : g.roster.get(on.by)?.name ?? 'somebody';
+    // Not said by the island, which keeps no caster: you, for a spell cast only on yourself that reaches nobody else.
+    const info = spellInfo(on.spell);
+    const by = on.by === undefined && info?.on.length === 1 && info.on[0] === 'self' && !info.fx.reach ? null : on.by;
+    const who = by === null ? 'you' : by === undefined ? null : g.roster.get(by)?.name ?? 'somebody';
+    const passive = PERK_BY_ID.has(on.spell) && !CLASS_SPELL_BY_ID.has(on.spell);
     add({
       id: `spell:${on.spell}`, good: true, glyph: card.glyph, name: card.name, caption: shortLeft(on.left),
-      does: [card.note, `${longLeft(on.left)} left.`], from: `Cast by ${who}: ${withArticle(card.kind)}.`,
+      does: [card.note, ...heldLines(on.spell, on.fx), `${longLeft(on.left)} left.`],
+      from: passive ? `Your ${card.kind}.` : who ? `Cast by ${who}: ${withArticle(card.kind)}.` : `${capital(withArticle(card.kind))}.`,
     });
   }
   // A path's techniques that hold a while.
@@ -456,6 +599,11 @@ const GLYPHS: Record<Glyph, string> = {
   waves: '<path d="M1.5 5.5c1.6-1.6 3.3-1.6 4.9 0s3.3 1.6 4.9 0 2.4-1.2 3.2-.4M1.5 10.5c1.6-1.6 3.3-1.6 4.9 0s3.3 1.6 4.9 0 2.4-1.2 3.2-.4"/>',
   bow: '<path d="M4.5 1.8c5.6 2.4 5.6 10 0 12.4"/><path d="M4.5 1.8v12.4M1.8 8h11.4M11.2 6l2 2-2 2"/>',
   tick: '<circle cx="8" cy="8" r="6"/><path d="M5 8.2l2.1 2.1L11 6.2"/>',
+  skin: '<path d="M8 1.8l5.4 2v4.1c0 3.4-2.4 5.4-5.4 6.4-3-1-5.4-3-5.4-6.4V3.8z"/><path d="M8 4.6l2.8 1v2.3c0 1.8-1.2 2.9-2.8 3.5-1.6-.6-2.8-1.7-2.8-3.5V5.6z"/>',
+  layers: '<path d="M8 2.4l5.6 2.8L8 8 2.4 5.2z"/><path d="M2.4 8.2L8 11l5.6-2.8M2.4 11L8 13.8l5.6-2.8"/>',
+  link: '<circle cx="5.8" cy="8" r="3.5"/><circle cx="10.2" cy="8" r="3.5"/>',
+  stone: '<path d="M2.8 12.6l1.3-5.4 3.5-3.8 4.4 1.7 1.6 5.1-2.3 2.4z"/><path d="M7.6 3.4l.7 4.4 4.6 2.2M8.3 7.8l-4.2-.6"/>',
+  wall: '<path d="M3 14V4.5h2.2v2h1.7v-2h2.2v2h1.7v-2H13V14z"/><path d="M6.8 14v-3.2h2.4V14"/>',
   wheel: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="1.4"/><path d="M8 2v4.6M8 9.4V14M2 8h4.6M9.4 8H14"/>',
 };
 

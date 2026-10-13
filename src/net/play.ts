@@ -5,7 +5,8 @@ import { cleanLook } from '../game/look';
 import { whoAmI } from './accounts';
 import { supabase } from './supabase';
 import { toldOf, toldWire } from './told';
-import { Island, type CastMore, type CastWire, type ItemRow, type PlayerRow } from './island';
+import { Island, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
+import { heldFrom } from '../ui/effects';
 import { isSpell } from '../render/spells/info';
 import type { CastAt } from '../game/events';
 import { generateAtlasWorld, loadAtlas } from '../world/atlas-world';
@@ -356,6 +357,36 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   island.hooks.stored = (crates) => game.sawCrates(crates);
 
   /*
+   * And what spells have left on you, and the skin over you.
+   *
+   * Both kept on your row (`blessings`, `stats.aegis`) and only ever heard
+   * here at the moment of a cast, so a reload emptied the effects row of every
+   * timer while the island went on counting them. The join hands the row over
+   * and every beat says them again.
+   */
+  const sawHeld = (said: Record<string, HeldSaid>): void => {
+    game.player.held = heldFrom(said, game.time);
+    game.player.heldAt = game.time;
+  };
+  /** Whose uid laid the skin over you, so a skin said again without a name keeps the one it had. */
+  let skinBy: string | null = null;
+  const sawSkin = (s: SkinSaid): void => {
+    const size = typeof s.size === 'number' && s.size > 0 ? s.size : 0;
+    const by = typeof s.by === 'string' ? s.by : size > 0 ? skinBy : null;
+    const name = typeof s.name === 'string' ? s.name
+      : by !== null && by === skinBy ? game.player.skin.by
+        : by !== null ? game.roster.list().find((q) => q.uid === by)?.name ?? null : null;
+    skinBy = by;
+    game.player.skin = { size, mine: by !== null && by === island.uid, by: name };
+  };
+  const skinOfStats = (stats: Record<string, unknown>): SkinSaid => ({
+    size: typeof stats.aegis === 'number' ? stats.aegis : 0,
+    by: typeof stats.aegisBy === 'string' ? stats.aegisBy : undefined,
+  });
+  sawHeld(island.held(me.blessings));
+  if (me.stats && typeof me.stats === 'object') sawSkin(skinOfStats(me.stats as Record<string, unknown>));
+
+  /*
    * The rest of you, which the browser had no way of hearing about.
    *
    * Each of these was a separate-looking bug with one cause: the island owns
@@ -447,6 +478,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
      * off` on anything: "there's no option to unequip gear."
      */
     if (what.equipped) game.sawEquipped(what.equipped as Record<string, number | null>);
+    // And what spells have left on you and the skin over you, which the effects row draws (`SpellsOnYou`).
+    if (what.held) sawHeld(what.held);
+    if (what.skin) sawSkin(what.skin);
+    else if (what.stats && typeof what.stats.aegis === 'number') sawSkin(skinOfStats(what.stats));
     if (what.boons) game.player.boons = what.boons as typeof game.player.boons;
     if (what.knacks) game.player.knacks = what.knacks;
     if (what.titles) game.player.titles = what.titles;

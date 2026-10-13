@@ -268,6 +268,36 @@ export interface WorldRow {
   changes_from?: number;
 }
 
+/** One thing a spell left on you, as the beat says it (`blessings_said`): its seconds left and the numbers the island keeps of it. */
+export type HeldSaid = { secs: number } & Record<string, unknown>;
+
+/** The skin over you, as the beat says it (`skin_said`): its size as a share of full health, and who laid it, by uid and name. */
+export interface SkinSaid {
+  size?: number;
+  by?: string;
+  name?: string;
+}
+
+/**
+ * What spells have left on you, each as seconds left: as the beat says them
+ * (`secs`), or as the row keeps them (`until`, an instant of the island's,
+ * which `left` turns into seconds). What has run out is left out.
+ */
+export function heldOf(raw: unknown, left: (until: string) => number): Record<string, HeldSaid> {
+  const out: Record<string, HeldSaid> = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  for (const [key, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!v || typeof v !== 'object' || Array.isArray(v)) continue;
+    const o = v as Record<string, unknown>;
+    const secs = typeof o.secs === 'number' ? o.secs : typeof o.until === 'string' ? left(o.until) : NaN;
+    if (!Number.isFinite(secs) || secs <= 0) continue;
+    const kept: HeldSaid = { ...o, secs };
+    delete kept.until;
+    out[key] = kept;
+  }
+  return out;
+}
+
 export interface PlayerRow {
   world_id: string;
   uid: string;
@@ -849,6 +879,13 @@ export interface IslandHooks {
     nutrition?: Record<string, number>;
     /** And what you have on, which the island writes on every equip and never said. */
     equipped?: Record<string, number | null>;
+    /**
+     * And what spells have left on you (`player.blessings`), as seconds left
+     * and the numbers kept (`Island.held`), and the skin over you and who laid
+     * it: both kept on your row and never sent, so a reload lost every timer.
+     */
+    held?: Record<string, HeldSaid>;
+    skin?: SkinSaid;
     /**
      * And the journal, which on an island could not tick a single one of its
      * eighty-five goals: forty-six of them count things done, the counting was
@@ -1870,6 +1907,7 @@ export class Island {
         rested?: number; boons?: unknown[]; knacks?: Record<string, number>;
         titles?: string[]; title?: string | null; nutrition?: Record<string, number>;
         equipped?: Record<string, number | null>;
+        blessings?: unknown; skin?: SkinSaid | null;
         tally?: Record<string, number>; ledger?: Record<string, unknown>; ticked?: string[];
         goes?: number | null; time?: number | null; night?: boolean | null;
         said?: Array<{ n: number; text: string; kind: string; at?: string }> | null;
@@ -1916,6 +1954,9 @@ export class Island {
         rested: said.rested, boons: said.boons, knacks: said.knacks,
         titles: said.titles, title: said.title, nutrition: said.nutrition,
         equipped: said.equipped,
+        // An island from before these says neither, and what is held stands.
+        held: said.blessings && typeof said.blessings === 'object' ? this.held(said.blessings) : undefined,
+        skin: said.skin && typeof said.skin === 'object' ? said.skin : undefined,
         tally: said.tally, ledger: said.ledger, ticked: said.ticked,
       });
       /*
@@ -3044,6 +3085,8 @@ export class Island {
     if (said && !said.why && said.pace && typeof said.pace.mul === 'number' && typeof said.pace.secs === 'number') {
       this.hooks.paced?.(said.pace.mul, said.pace.secs);
     }
+    // And a beat straight after, which says what the cast left on you and the skin over you.
+    if (said && !said.why) this.armBeat(0.5);
     return said;
   }
 
@@ -3690,6 +3733,18 @@ export class Island {
     const at = (Date.parse(stamp) - Date.parse(this.info.epoch)) / 1000;
     if (!Number.isFinite(at)) return 0;
     return Math.max(0, this.time() - at);
+  }
+
+  /**
+   * What spells have left on you, as seconds left: from the beat, which says
+   * them (`blessings_said`), or from your row as the join hands it over
+   * (`player.blessings`), whose `until` is an instant of the island's and is
+   * read on its clock, as `since` reads one, so a machine whose own clock is
+   * out still counts the right seconds. What has run out is left out.
+   */
+  held(raw: unknown): Record<string, HeldSaid> {
+    const epoch = this.info ? Date.parse(this.info.epoch) : NaN;
+    return heldOf(raw, (until) => (Date.parse(until) - epoch) / 1000 - this.time());
   }
 
   /** The island's last word on its own clock, and when this machine heard it. */

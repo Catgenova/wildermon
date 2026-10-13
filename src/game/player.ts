@@ -17,6 +17,19 @@ export interface Stats {
   thirst: number;
 }
 
+/** One thing a spell left on you, as the island keeps it: when it runs out, in game seconds, and its numbers, a list as how many are in it. */
+export interface Held {
+  until: number;
+  fx: Record<string, number>;
+}
+
+/** The skin over you: a share of full health, and who laid it: you, or somebody by name, or nobody known. */
+export interface Skin {
+  size: number;
+  mine: boolean;
+  by: string | null;
+}
+
 /** Steepest climb allowed between two adjacent tile centres, in height units. */
 export const MAX_STEP = 32;
 
@@ -202,6 +215,21 @@ export class Player {
    * Bloom last grew the trees round a sitting.
    */
   pathTimes: Record<string, number> = {};
+  /**
+   * What spells have left on you, as the island keeps it on your row
+   * (`player.blessings`), by the key it is kept under: when each runs out, in
+   * game seconds, and its numbers (`Held`). An island's alone; the effects row
+   * reads it (`SpellsOnYou`). `heldAt` is when the island last said, in game
+   * seconds.
+   */
+  held: Record<string, Held> = {};
+  heldAt = -1e9;
+  /**
+   * The skin over you (a Warder's, an Aegis's, a Bulwark's), as a share of
+   * your full health, and who laid it: you, or somebody by name where the
+   * island said. Kept by the island in `stats.aegis` and `stats.aegisBy`.
+   */
+  skin: Skin = { size: 0, mine: false, by: null };
   /** Game time each path ability was last called on. */
   usedAt: Record<string, number> = {};
   /** Banked favour, and the hour you last had anything to say. */

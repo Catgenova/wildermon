@@ -1924,6 +1924,20 @@ jobs:
             --outfile=node_modules/.cache/did.mjs --log-level=error
           node node_modules/.cache/did.mjs
 
+      - name: Spell timers and the skin over you survive a reload
+        run: |
+          # What spells leave on you is kept on your row and was only heard at
+          # the cast, so a reload emptied the effects row. A Thicken, a Ward
+          # Link and a Stoneskin cast for real and a skin laid by somebody else,
+          # read back off the join's row and off the beat, are listed by the
+          # effects row with their seconds left, the Thicken's multiplier and
+          # who laid the skin; nobody else's blessings and nothing run out ride
+          # along; and every key the island keeps a blessing under is one the
+          # row knows.
+          npx esbuild supabase/test/blessings.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/blessings.mjs --log-level=error
+          node node_modules/.cache/blessings.mjs
+
       - name: The single staircase, and wagons up wide ones
         run: |
           # The second model of every flight, half the tile wide, up the half
