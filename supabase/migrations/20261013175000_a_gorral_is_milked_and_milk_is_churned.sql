@@ -342,6 +342,7 @@ begin
       perform guide_mark(p_world, p_uid, c.species, 'tamed');
       perform skill_told(p_world, p_uid, 'taming', try_gain(true, tame_gain()));
       perform skill_told(p_world, p_uid, 'soul_strength', try_gain(true, tame_nerve()));
+      perform skill_told(p_world, p_uid, 'mind_logic', try_gain(true, tame_head()));
     else
       -- It refused, but it stayed for the offering, and that is worth
       -- something to the next one.
@@ -358,6 +359,7 @@ begin
            else '' end, 'event');
       perform skill_told(p_world, p_uid, 'taming', try_gain(false, tame_gain()));
       perform skill_told(p_world, p_uid, 'soul_strength', try_gain(false, tame_nerve()));
+      perform skill_told(p_world, p_uid, 'mind_logic', try_gain(false, tame_head()));
     end if;
 
   elsif p_action = 'feed' then
