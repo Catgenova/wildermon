@@ -34,12 +34,13 @@ const BY: Record<SortKey, (a: Item, b: Item) => number> = {
 };
 
 /**
- * The list in that order, as a copy. Ties fall back to the name, so a crate
- * of two hundred identical planks does not shuffle itself every time
- * something else in it changes.
+ * The list in that order, as a copy. Ties fall back to the name, then the
+ * best first, then the thing itself (`uid`, which never changes), so a crate
+ * of two hundred identical planks -- or three nail moulds -- keeps one order
+ * however the pack underneath it is rearranged by what is being done with it.
  */
 export const orderBy = (items: readonly Item[], key: SortKey): Item[] =>
-  [...items].sort((a, b) => BY[key](a, b) || itemName(a).localeCompare(itemName(b)));
+  [...items].sort((a, b) => BY[key](a, b) || itemName(a).localeCompare(itemName(b)) || b.ql - a.ql || a.uid - b.uid);
 
 /** The select itself, since both windows want the same one. */
 export function sortSelect(title: string, onPick: (key: SortKey) => void): HTMLSelectElement {

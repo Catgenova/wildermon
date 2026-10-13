@@ -98,6 +98,7 @@ import { MARK_COLOURS } from '../game/marks';
 import { SettingsPanel } from './panels/settings';
 import { Palette, type PaletteEntry } from './palette';
 import { compareLines, itemCard } from './compare';
+import { orderBy } from './sorting';
 import { priceLine } from '../game/prices';
 import { Notices } from './notices';
 import { PointerRing } from './pointerring';
@@ -261,9 +262,9 @@ const storedIn = (s: CraftStock): string | undefined =>
  * of it, and for ingots how many lumps they count as (a Smith's Ingots).
  */
 const metalLabel = (it: Item): string =>
-  isIngot(it.id)
+  (isIngot(it.id)
     ? `${itemName(it)} (${it.count}, ${lumpsIn(it)} lumps)`
-    : `${metalOfBar(it.id)?.name ?? itemName(it)} (${it.count})`;
+    : `${metalOfBar(it.id)?.name ?? itemName(it)} (${it.count})`) + ` · QL ${it.ql.toFixed(1)}`;
 /**
  * The account page opened at its character creator, carrying the island this
  * page is on so that stepping ashore there comes back to it.
@@ -1976,7 +1977,7 @@ export class UI {
     const it = stack.item;
     const put = (count: number) => (): void => g.requestAction(def, { ...target, itemUid: it.uid, count } as Target);
     return {
-      label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
+      label: `${it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it)} · QL ${it.ql.toFixed(1)}`,
       note: storedIn(stack),
       children: it.count > 1 ? [{ label: 'One', onSelect: put(1) }, { label: `All (${it.count})`, onSelect: put(it.count) }] : undefined,
       onSelect: it.count > 1 ? undefined : put(1),
@@ -2040,7 +2041,8 @@ export class UI {
     }
     // Every other mould is poured here too, and cools into a casting for the anvil.
     const pourDef = ACTION_BY_ID.get('pour_mould');
-    const moulds = g.inventory.items.filter((it) => isMould(it.id) && MOULD_BY_ID.get(it.id)?.makes !== 'anvil');
+    // In one order however the pack shifts as they are filled, and each with its QL, which is how two of a kind are told apart.
+    const moulds = orderBy(g.inventory.items.filter((it) => isMould(it.id) && MOULD_BY_ID.get(it.id)?.makes !== 'anvil'), 'name');
     if (pourDef) {
       entries.push({
         label: 'Pour a mould',
@@ -2051,8 +2053,8 @@ export class UI {
             ? moulds.map((mould) => {
                 const def = MOULD_BY_ID.get(mould.id)!;
                 return {
-                  label: itemName(mould),
-                  note: `${itemDef(def.makes).name.toLowerCase()} · ${def.lumps} lump${def.lumps > 1 ? 's' : ''} · ${mouldUsesLeft(mould.ql, mould.dmg, markOf(mould, 'last'))} fillings left`,
+                  label: `${itemName(mould)} · QL ${mould.ql.toFixed(1)}`,
+                  note: `${itemDef(def.makes).name.toLowerCase()} · ${def.lumps} lump${def.lumps > 1 ? 's' : ''} · damage ${mould.dmg.toFixed(1)} · ${mouldUsesLeft(mould.ql, mould.dmg, markOf(mould, 'last'))} fillings left`,
                   children: lumps.map((k) => {
                     const lump = k.item;
                     const t: Target = { ...st, mouldUid: mould.uid, itemUid: lump.uid };

@@ -570,7 +570,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   });
   island.hooks.ground = (x, y) => game.events.emit('world', x, y);
   island.hooks.pack = (items: ItemRow[]) => {
-    game.inventory.items = packAll(items, island);
+    // In the order the island made them, whatever order they last changed in:
+    // a mould filled and emptied is the same mould in the same place in every
+    // list that walks the pack.
+    game.inventory.items = packAll([...items].sort((a, b) => a.id - b.id), island);
     game.events.emit('inventory');
   };
   /*
