@@ -70,7 +70,7 @@ const Z_TOP = 5000;
 /** The arrangements of windows kept, each called back with a key of its own (`layout_1`…). */
 export const LAYOUT_SLOTS = LAYOUT_NAMES.length;
 /** Windows that are never part of an arrangement, because they are opened by something happening rather than by you. */
-const NOT_LAID_OUT = new Set(['away', 'hoard']);
+const NOT_LAID_OUT = new Set(['away', 'hoard', 'barter']);
 
 /** Something laid on the grid: a window, or the status panel or toolbar, which are always on screen. */
 interface Piece {

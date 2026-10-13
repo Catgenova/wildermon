@@ -977,6 +977,18 @@ jobs:
           npx esbuild supabase/test/trade.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/trade.mjs --log-level=error
           node node_modules/.cache/trade.mjs
+      - name: A trade window between two people
+        run: |
+          # Two people standing together ask, say yes, put things and silver
+          # on their sides and both accept; then everything changes hands in
+          # one transaction or nothing does. Every refusal -- a thing gone from
+          # the pack, worn, kept back, short of silver, too far apart, gone --
+          # is held to the browser's words and told to both. A change takes
+          # both Accepts back, an Accept sent twice or four at once moves
+          # nothing twice, and nobody outside a trade can read or touch it.
+          npx esbuild supabase/test/tradewindow.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/tradewindow.mjs --log-level=error
+          node node_modules/.cache/tradewindow.mjs
       - name: Everybody you may write to, each of them once
         run: |
           # Friends, the people off your own land, and anybody who has written

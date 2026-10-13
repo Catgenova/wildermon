@@ -21,6 +21,7 @@ import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import type { Away } from '../game/away';
 import type { Kept, KeptBody } from '../game/keeper';
+import type { Barter } from '../game/barter';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -928,6 +929,8 @@ export interface IslandHooks {
   moved?: (x: number, y: number, level: number, letGo?: boolean) => void;
   /** A journey by Telestone made, and the wall-clock second the traveller may make another (`runestones.ts`). */
   travelled?: (until: number) => void;
+  /** A trade you are in changed, or was asked of you (`barter_send`, Broadcast `barter`): look again with `barter()`. */
+  barter?: () => void;
   /** A spell made your walk on foot this many times as quick for so many seconds. */
   paced?: (mul: number, secs: number) => void;
   /**
@@ -2223,6 +2226,8 @@ export class Island {
         .on('broadcast', { event: 'said' }, (m) => this.heardLines(heardBody(m)))
         .on('broadcast', { event: 'pack' }, (m) => this.heardPack(heardBody(m)))
         .on('broadcast', { event: 'moved' }, (m) => this.heardMoved(heardBody(m)))
+        // A trade we are in changed, on either side: the window asks again (`barter_send`).
+        .on('broadcast', { event: 'barter' }, () => this.hooks.barter?.())
         // Something of one of our spells fired after its cast (`fx_fired`): drawn here, and passed on for everybody watching.
         .on('broadcast', { event: 'fx' }, (m) => {
           const f = firedIn((m as { payload?: unknown }).payload);
@@ -3365,6 +3370,42 @@ export class Island {
 
   async answerDeal(n: number, yes: boolean): Promise<string | null> {
     return this.asked('rpc_deal_answer', { p_n: n, p_yes: yes });
+  }
+
+  /**
+   * A trade between two people standing together (`barter.ts`). Each door
+   * answers with the trade as you now see it, or with the refusal.
+   */
+  async barterAsk(uid: string): Promise<string | null> {
+    return this.asked('rpc_barter_ask', { p_uid: uid });
+  }
+
+  async barterAnswer(n: number, yes: boolean): Promise<string | null> {
+    return this.asked('rpc_barter_answer', { p_n: n, p_yes: yes });
+  }
+
+  /** The trade you are in, or null; and why one you were in has just ended, when it has. */
+  async barter(): Promise<{ barter: Barter | null; why?: string } | null> {
+    if (!this.info) return null;
+    const { data, error } = await supabase().rpc('rpc_barter', { p_world: this.info.id });
+    if (error || !data || typeof data !== 'object') return null;
+    const got = data as { barter?: Barter | null; why?: string };
+    return { barter: got.barter ?? null, ...(typeof got.why === 'string' ? { why: got.why } : {}) };
+  }
+
+  /** Your whole side as it is to be: these things, these many of each, and this much silver. */
+  async barterOffer(n: number, things: Array<{ id: number; count: number }>, coins: number): Promise<string | null> {
+    return this.asked('rpc_barter_offer', {
+      p_n: n, p_items: things.map((t) => t.id), p_counts: things.map((t) => t.count), p_coins: Math.max(0, Math.floor(coins)),
+    });
+  }
+
+  async barterAccept(n: number, rev: number): Promise<string | null> {
+    return this.asked('rpc_barter_accept', { p_n: n, p_rev: rev });
+  }
+
+  async barterCancel(n: number): Promise<string | null> {
+    return this.asked('rpc_barter_cancel', { p_n: n });
   }
 
   async setPrice(item: number, silver: number): Promise<string | null> {

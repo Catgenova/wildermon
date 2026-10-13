@@ -163,6 +163,7 @@ import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
+import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID } from '../src/game/barter';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
 
 const q = (v: unknown): string => {
@@ -2329,4 +2330,14 @@ out.push(`create or replace function memorial_said(p_key text) returns text lang
   const [ih, it] = engravedItemSays({ engraving: '\u0000' }).split('\u0000');
   out.push(`create or replace function engraved_item_says(p_text text) returns text language sql immutable as $fn$ select case when coalesce(p_text, '') = '' then '' else ${q(ih)} || p_text || ${q(it)} end $fn$;`);
 }
+/*
+ * A trade between two people (`barter.ts`): how near they stand, how long it
+ * sits unchanged before it lapses, how many things a side holds, and every
+ * sentence it says, with `{who}`, `{what}` and `{n}` for the island to fill.
+ */
+out.push(`create or replace function barter_reach() returns double precision language sql immutable as $fn$ select ${q(BARTER_REACH)}::double precision $fn$;`);
+out.push(`create or replace function barter_idle() returns int language sql immutable as $fn$ select ${q(BARTER_IDLE)}::int $fn$;`);
+out.push(`create or replace function barter_most() returns int language sql immutable as $fn$ select ${q(BARTER_MOST)}::int $fn$;`);
+out.push(`create or replace function barter_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  Object.entries(BARTER_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
 console.log(out.join('\n'));
