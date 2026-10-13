@@ -7007,6 +7007,8 @@ export class Game {
       if (f.ferment !== undefined && f.ferment > 0) {
         f.ferment = Math.max(0, f.ferment - dt);
         if (f.ferment === 0) {
+          // By yourself, a wine ages from the moment it is done here, whatever the clock said when it was set going (`ageing.ts`).
+          if (!this.islandClock && f.agedFrom !== undefined) f.agedFrom = this.wallNow();
           this.logMsg(`The ${furnitureName(f).toLowerCase()} has stopped working. There is ${LIQUID_NAME[f.liquid ?? 'water']} in it.`, 'event');
           this.events.emit('crate');
         }
@@ -7962,6 +7964,10 @@ export class Game {
           fuel: r.fuel ?? undefined, lit: r.lit ?? undefined, ash: r.ash ?? undefined,
           litres: r.litres ?? undefined, liquid: (r.liquid ?? undefined) as PlacedFurniture['liquid'],
           ferment: r.ferment ?? undefined,
+          // When a wine in it stops working, and a trellis's vine (`ageing.ts`, `vineyard.ts`).
+          agedFrom: r.aged_from ?? undefined,
+          vineAt: r.vine_at ?? undefined,
+          pickedAt: r.picked_at ?? undefined,
           facing: (r.facing ?? 's') as Side,
           lock: r.lock ?? undefined,
           creature: r.creature ?? undefined,
@@ -9637,6 +9643,11 @@ export interface IslandPlaced {
   litres: number | null;
   liquid: string | null;
   ferment: number | null;
+  /** For a barrel of wine, when it stops working, in epoch seconds (`ageing.ts`); absent from older islands. */
+  aged_from?: number | null;
+  /** For a trellis, when its vine was planted and last picked, in epoch seconds (`vineyard.ts`); absent from older islands. */
+  vine_at?: number | null;
+  picked_at?: number | null;
   bait: string | null;
   bait_ql: number | null;
   caught: number | null;

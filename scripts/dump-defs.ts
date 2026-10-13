@@ -166,6 +166,11 @@ import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID } from '../src/game/barter';
 import { ENGRAVE, ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, engravedItemSays, engravedSaid, MEMORIAL, MEMORIAL_SAID, memorialSays, READ_MEMORIAL } from '../src/game/memorial';
+import {
+  CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, PICK_GRAPES, PLANT_VINE, TRELLIS,
+  VINE_BEARS, VINE_GAIN, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonWords, WILD_VINE,
+} from '../src/game/vineyard';
+import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../src/game/ageing';
 
 const q = (v: unknown): string => {
   if (v === undefined || v === null) return 'null';
@@ -2368,4 +2373,34 @@ out.push(`create or replace function barter_idle() returns int language sql immu
 out.push(`create or replace function barter_most() returns int language sql immutable as $fn$ select ${q(BARTER_MOST)}::int $fn$;`);
 out.push(`create or replace function barter_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   Object.entries(BARTER_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+/*
+ * Vineyards and wine that ages (`vineyard.ts`, `ageing.ts`): the jobs at a
+ * trellis and a thorn bush, the pieces and things they are done with, the
+ * season grapes ripen in, the days a vine waits, what a pick gives, the soil
+ * a vine roots in, which brews age and how fast, and every sentence a
+ * refused go says -- the season's round the season and the wait the island
+ * puts in.
+ */
+out.push(`create or replace function vine_action(p_action text) returns boolean language sql immutable as $fn$ select p_action in (${q(CUT_VINE)}, ${q(PLANT_VINE)}, ${q(PICK_GRAPES)}) $fn$;`);
+for (const [fn, v] of [
+  ['vine_kind', TRELLIS], ['grape_item', GRAPE], ['grape_cutting_item', GRAPE_CUTTING], ['grape_season', GRAPE_SEASON],
+  ['vine_skill', VINE_SKILL], ['cutting_tool', CUTTING_TOOL], ['wild_vine', WILD_VINE], ['vine_planted_said', vinePlantedSaid()],
+] as Array<[string, string]>) {
+  out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
+}
+for (const [fn, v] of [
+  ['vine_bears', VINE_BEARS], ['vine_rest', VINE_REST], ['grapes_a_pick', GRAPES_A_PICK], ['grapes_base', GRAPES_BASE],
+  ['grapes_span', GRAPES_SPAN], ['vine_gain', VINE_GAIN],
+  ['wine_age_rate', WINE_AGE_RATE], ['wine_age_cap', WINE_AGE_CAP], ['cellar_ageing', CELLAR_AGEING],
+] as Array<[string, number]>) {
+  out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
+}
+out.push(`create or replace function vine_soil(p_tile int) returns boolean language sql immutable as $fn$ select coalesce(p_tile = any(array[${VINE_SOIL.join(', ')}]::int[]), false) $fn$;`);
+out.push(`create or replace function brew_ages(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${BREWS.filter((b) => b.ages).map((b) => q(b.id)).join(', ')}]::text[]), false) $fn$;`);
+out.push(`create or replace function vine_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
+  (['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool'] as const).map((k) => `when ${q(k)} then ${q(VINE_SAID[k])} `).join('')}end $fn$;`);
+{
+  const [a, b, c] = vineSeasonWords('\u0000', '\u0001').split(/[\u0000\u0001]/);
+  out.push(`create or replace function vine_season_words(p_season text, p_wait text) returns text language sql immutable as $fn$ select ${q(a)} || p_season || ${q(b)} || p_wait || ${q(c)} $fn$;`);
+}
 console.log(out.join('\n'));
