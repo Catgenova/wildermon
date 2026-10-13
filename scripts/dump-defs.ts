@@ -173,7 +173,7 @@ import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, PICK_GRAPES, PLANT_VINE, TRELLIS,
   VINE_BEARS, VINE_GAIN, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonWords, WILD_VINE,
 } from '../src/game/vineyard';
-import { CELLAR_AGEING } from '../src/game/ageing';
+import { CELLAR_AGEING, keepsQl } from '../src/game/ageing';
 import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY } from '../src/game/bees';
 
 const q = (v: unknown): string => {
@@ -2413,6 +2413,9 @@ for (const key of ['rate', 'cap'] as const) {
 }
 out.push(`create or replace function vine_soil(p_tile int) returns boolean language sql immutable as $fn$ select coalesce(p_tile = any(array[${VINE_SOIL.join(', ')}]::int[]), false) $fn$;`);
 out.push(`create or replace function brew_ages(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${BREWS.filter((b) => b.ages).map((b) => q(b.id)).join(', ')}]::text[]), false) $fn$;`);
+// The liquids that carry their own QL in and out of a barrel (`keepsQl`): every one but water.
+out.push(`create or replace function keeps_ql(p_liquid text) returns boolean language sql immutable as $fn$ select coalesce(p_liquid = any(array[${
+  (Object.keys(LIQUID_NAME) as LiquidKind[]).filter(keepsQl).map((l) => q(l)).join(', ')}]::text[]), false) $fn$;`);
 out.push(`create or replace function vine_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   (['none', 'young', 'picked', 'has', 'soil', 'noCutting', 'noWild', 'cut', 'noTool'] as const).map((k) => `when ${q(k)} then ${q(VINE_SAID[k])} `).join('')}end $fn$;`);
 {

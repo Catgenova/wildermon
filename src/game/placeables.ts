@@ -1,5 +1,5 @@
 import { INDOORS_REST } from './building';
-import { brewQl, drawnQl, pouredQl, wineAgeSays } from './ageing';
+import { brewQl, drawnQl, keepsQl, pouredQl, wineAgeSays } from './ageing';
 import { drinkable, isBrew, isWorking } from './brewing';
 import type { ActionDef, Target } from './actions';
 import { FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
@@ -742,8 +742,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // What is poured in is only as good as the worst of what it goes into
       // (a Cook's Strong Brew): nothing plain is made better by the barrel.
       const knack = litresIn(barrel) > 0 ? Math.min(barrel.knack ?? 1, markOf(item, 'knack')) : markOf(item, 'knack');
-      // A brew keeps its QL poured: the bucket's into an empty barrel, the average by litres into one of the same (`pouredQl`).
-      const ql = isBrew(vessel.liquid) ? pouredQl(barrel, g.wallNow(), poured, item.ql) : undefined;
+      // Every liquid but water keeps its QL poured: the bucket's into an empty barrel, the average by litres into one of the same (`pouredQl`).
+      const ql = keepsQl(vessel.liquid) ? pouredQl(barrel, g.wallNow(), poured, item.ql) : undefined;
       if (poured <= 0 || !vesselBecomes(g, item, vessel.empty)) return;
       // And a barrel poured into does not age: what went in was kept somewhere else (`ageing.ts`).
       delete barrel.agedFrom;
@@ -933,7 +933,7 @@ export function fillFromSource(g: Game, item: Item): LiquidKind | null {
   if (!source) return null;
   if (source.liquid === 'dye') return source.from && drawDye(g, source.from, item) ? 'dye' : null;
   // What the barrel's brewer put into it goes into the bucket (a Cook's Strong Brew),
-  // and a brew's QL, aged as it is now, asked before the draw can empty it (`drawnQl`).
+  // and the QL of anything but water, aged as it is now, asked before the draw can empty it (`drawnQl`).
   const knack = source.from?.knack;
   const ql = source.from ? drawnQl(source.from, g.wallNow()) : undefined;
   if (source.from && !drawFrom(g, source.from, BUCKET_LITRES)) return null;
@@ -964,7 +964,7 @@ export function vesselBecomes(g: Game, item: Item, id: string, knack?: number, q
 /**
  * The same, handing back the one that changed: the item itself, or the one
  * taken off the top of its pile. With a `ql`, the one that changed is at it:
- * a bucket drawn off a barrel of brew holds the brew's QL.
+ * a bucket drawn off a barrel of anything but water holds what it holds at its QL.
  */
 export function vesselBecame(g: Game, item: Item, id: string, knack?: number, ql?: number): Item | null {
   if (item.count < 1) return null;

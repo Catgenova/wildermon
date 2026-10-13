@@ -2731,7 +2731,9 @@ jobs:
           # of a pile; one off ale at the ale's QL and one off water at its
           # own; the aged bucket poured back into an empty barrel at its QL,
           # not ageing there, and one poured into a barrel of the same at the
-          # average by litres; mead set going stamped, and its QL so many days
+          # average by litres; milk at two QLs poured in and drawn back out at
+          # the average by litres, as every liquid but water keeps its QL on
+          # both sides; mead set going stamped, and its QL so many days
           # in a cellar and out to the last bit, capped, said on Examine.
           npx esbuild supabase/test/aged.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/aged.mjs --log-level=error

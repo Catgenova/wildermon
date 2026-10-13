@@ -8,7 +8,10 @@
  * a barrel of water keeps the bucket's own; the aged bucket poured back into
  * an empty barrel puts the barrel at its QL and the barrel does not age, and
  * a bucket poured into a barrel of the same wine puts it at the average by
- * litres; mead set going stamps its ageing, and the QL a barrel of it is at
+ * litres; milk at two QLs poured into an empty barrel comes out at the
+ * average by litres, the same for every liquid but water, and the liquids
+ * that keep their QL are the same on both sides; mead set going stamps its
+ * ageing, and the QL a barrel of it is at
  * after so many days in a cellar and out, to the last bit, capped at its own
  * cap and at 100, said on Examine.
  *
@@ -23,9 +26,9 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
-import { ageGain, ageingRule, brewQl, CELLAR_AGEING, MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../src/game/ageing';
+import { ageGain, ageingRule, brewQl, CELLAR_AGEING, keepsQl, MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../src/game/ageing';
 import { BREW_BY_ID, BREWS, MEAD_AGEING } from '../../src/game/brewing';
-import type { PlacedFurniture } from '../../src/game/furniture';
+import { LIQUID_NAME, type LiquidKind, type PlacedFurniture } from '../../src/game/furniture';
 import { ITEM_DEFS, type Item } from '../../src/game/items';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { vesselSays } from '../../src/game/placeables';
@@ -65,6 +68,9 @@ const PAIL = 20;
 /** A bucket of grape wine poured into a barrel of it. */
 const POURED = 47.25;
 const TOP = 95.25;
+/** Two buckets of milk poured into an empty barrel, one after the other. */
+const MILK_A = 62.5;
+const MILK_B = 30.25;
 
 /* ---- the definitions, on both sides ---------------------------------------------------------------- */
 
@@ -79,6 +85,12 @@ check(`mead ages, at ${MEAD_AGE_RATE} QL a day up to ${MEAD_AGE_CAP}, and so do 
 const meadIsle = psql(`select description from item_def where id = 'mead_bucket'`);
 check(`the bucket of mead says how it ages, off its own rule, the same on both sides: “${ITEM_DEFS.mead_bucket.description}”`,
   meadIsle === ITEM_DEFS.mead_bucket.description && meadIsle.includes(ageingRule(MEAD_AGEING)) && !meadIsle.includes('{'), meadIsle);
+
+const keepsHere = (Object.keys(LIQUID_NAME) as LiquidKind[]).filter(keepsQl).sort().join(',');
+const keepsIsle = psql(`select string_agg(id, ',' order by id) from liquid_def where keeps_ql(id)`);
+check(`every liquid but water carries its QL in and out of a barrel, the same on both sides: ${keepsHere}`,
+  keepsIsle === keepsHere && !keepsHere.split(',').includes('water') && keepsHere.split(',').includes('milk') && keepsHere.split(',').includes('juice')
+    && keepsHere.split(',').length === Object.keys(LIQUID_NAME).length - 1, keepsIsle);
 
 const AGES = [0, 0.5, 1, 7.3, 14.99, 15, 16, 59.99, 60, 61, 1000].map((d) => d * DAY);
 const gainIsle = psql(`select string_agg(age_gain('mead', a, false)::text || '/' || age_gain('mead', a, true)::text, ',' order by o)
@@ -184,6 +196,19 @@ begin
   v_b := give(w, u, 'grape_wine_bucket', 1, ${POURED});
   ${item('pour_into_barrel', 'v_b')}
   ${barrel('P:same')}
+
+  -- 5b. Milk at two QLs poured into the barrel emptied, and a bucket of it drawn back out.
+  update placed set litres = 0, liquid = null, ql = ${WATER} where id = v_bar;
+  v_b := give(w, u, 'milk_bucket', 1, ${MILK_A});
+  ${item('pour_into_barrel', 'v_b')}
+  ${barrel('K:one')}
+  v_b := give(w, u, 'milk_bucket', 1, ${MILK_B});
+  ${item('pour_into_barrel', 'v_b')}
+  ${barrel('K:two')}
+  v_b := give(w, u, 'bucket', 1, ${PAIL});
+  ${item('fill_bucket', 'v_b')}
+  insert into said values ('K:drawn', ${qls(['milk_bucket'])} || '#' || ${lastSaid});
+  ${barrel('K:left')}
 
   -- 6. Mead set going: its ageing stamped as it goes.
   update placed set liquid = 'water', litres = 80, ql = 40, knack = null where id = v_bar;
@@ -291,6 +316,19 @@ use('pour_into_barrel', thing('grape_wine_bucket', POURED));
 const mixed = (30 * before + 5 * Math.fround(POURED)) / 35;
 same('P:same', barrelHere(), `a bucket at QL ${POURED} poured into it puts it at the average by litres, ${mixed.toFixed(4)}, and it stops ageing`);
 check('which is the rule', bar.ql === mixed && bar.agedFrom === undefined);
+
+/* 5b. Milk in and out. */
+Object.assign(bar, { litres: 0, liquid: undefined, ql: WATER });
+delete bar.agedFrom;
+use('pour_into_barrel', thing('milk_bucket', MILK_A));
+same('K:one', barrelHere(), `a bucket of milk at QL ${MILK_A} poured into an empty barrel puts the barrel at its QL`);
+use('pour_into_barrel', thing('milk_bucket', MILK_B));
+const milkMixed = (5 * MILK_A + 5 * MILK_B) / 10;
+same('K:two', barrelHere(), `and one at QL ${MILK_B} poured in after it puts the barrel at the average by litres, ${milkMixed}`);
+use('fill_bucket', thing('bucket', PAIL));
+same('K:drawn', `${qlsHere(['milk_bucket'])}#${lastHere()}`, `a bucket of milk drawn back out is at that QL, not the bucket's ${PAIL}`);
+same('K:left', barrelHere(), 'and the barrel holds the rest of it at the same QL');
+check(`which is the rule: ${milkMixed}`, bar.ql === milkMixed && qlsHere(['milk_bucket']) === `milk_bucket:1:${real(milkMixed)}`);
 
 /* 6. Mead set going. */
 Object.assign(bar, { liquid: 'water', litres: 80, ql: 40 });

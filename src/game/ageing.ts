@@ -1,4 +1,4 @@
-import { BREW_BY_ID, BREWS, isBrew, MEAD_AGEING, WINE_AGEING, type Ageing, type BrewDef } from './brewing';
+import { BREW_BY_ID, BREWS, MEAD_AGEING, WINE_AGEING, type Ageing, type BrewDef } from './brewing';
 import { LIQUID_NAME, type LiquidKind, type PlacedFurniture } from './furniture';
 import { describeFrom } from './items';
 import { QL_TOP } from './limits';
@@ -24,11 +24,12 @@ import { STATE_TAILS } from './pieceTails';
  * it is wanted -- Examine, the line under its name, a drink from it, a bucket
  * drawn off it -- the same on both sides (`age_gain`, `brew_ql`).
  *
- * A bucket drawn off any brew is at the QL the barrel is at as it is drawn
- * (`drawnQl`), aged or not, and keeps it: it is drunk, sold and traded at it.
- * Poured back into a barrel it keeps it too -- an empty barrel takes the
- * bucket's QL, a barrel of the same brew the average of the two by litres
- * (`pouredQl`) -- and a barrel poured into does not age: what was poured was
+ * Every liquid but water carries its QL in and out of a barrel (`keepsQl`):
+ * a bucket drawn off milk, juice, lye or a brew is at the QL the barrel is at
+ * as it is drawn (`drawnQl`), aged or not, and keeps it: it is drunk, sold
+ * and traded at it. Poured back into a barrel it keeps it too -- an empty
+ * barrel takes the bucket's QL, a barrel of the same the average of the two
+ * by litres (`pouredQl`) -- and a barrel poured into does not age: what was poured was
  * aged somewhere else, and drawing off and pouring back would otherwise take
  * a brew past its cap a cap at a time. `supabase/test/vineyard.ts` and
  * `supabase/test/aged.ts` hold the two sides to each other.
@@ -87,14 +88,22 @@ export function brewQl(f: PlacedFurniture, now: number): number {
 }
 
 /**
- * The QL a bucket drawn off a barrel holds at `now`: a brew's, aged or not,
- * which goes with it; nothing for anything else, which leaves the bucket its
- * own. The island's `drawn_ql`.
+ * Whether a liquid carries its own QL in and out of a barrel: every one but
+ * water, which takes the QL of whatever it is in. Dye carries its QL in its
+ * mix (`dyestuffs.ts`), by its own pouring and drawing. The island's
+ * `keeps_ql`.
  */
-export const drawnQl = (f: PlacedFurniture, now: number): number | undefined => (isBrew(f.liquid) ? brewQl(f, now) : undefined);
+export const keepsQl = (liquid: LiquidKind | undefined): boolean => !!liquid && liquid !== 'water';
 
 /**
- * The QL of a barrel of brew a bucket of it is poured into at `now`: the
+ * The QL a bucket drawn off a barrel holds at `now`: what the barrel holds,
+ * aged as it is now for a brew that ages, which goes with it; nothing for
+ * water, which leaves the bucket its own. The island's `drawn_ql`.
+ */
+export const drawnQl = (f: PlacedFurniture, now: number): number | undefined => (keepsQl(f.liquid) ? brewQl(f, now) : undefined);
+
+/**
+ * The QL of a barrel a bucket of what it holds is poured into at `now`: the
  * bucket's, into an empty barrel, and the average of the barrel's (aged, as
  * it is now) and the bucket's by litres, into one that holds some. The
  * island's `poured_ql`.
