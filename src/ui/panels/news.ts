@@ -2124,6 +2124,14 @@ export const NEWS: News[] = [
         + `for ${numberWord(SHEAR_WOOL)} wool from a full one. It was written and never put on the menu.`,
     ],
   },
+  {
+    n: 154,
+    day: '2026-10-14',
+    lines: () => [
+      'Favour no longer shows nought after logging out or reloading. The island always kept it; the status panel and the Faith window now read it '
+        + 'from the island when you come ashore and on every beat, with what has trickled in since.',
+    ],
+  },
 ];
 
 

@@ -304,6 +304,8 @@ export function heldOf(raw: unknown, left: (until: string) => number): Record<st
 
 export interface PlayerRow {
   world_id: string;
+  /** Favour banked, as it stood when last settled; your own row only. */
+  favour?: number;
   uid: string;
   name: string;
   x: number;
@@ -876,6 +878,8 @@ export interface IslandHooks {
      * titles and what is on your table.
      */
     rested?: number;
+    /** Your favour as it stands, trickle included (`rpc_settle`). */
+    favour?: number;
     boons?: unknown[];
     knacks?: Record<string, number>;
     titles?: string[];
@@ -1935,7 +1939,7 @@ export class Island {
         wounds?: unknown[] | null;
         marks?: { tiles?: number[]; secs?: number } | null;
         path?: PathBeat | null;
-        rested?: number; boons?: unknown[]; knacks?: Record<string, number>;
+        rested?: number; favour?: number; boons?: unknown[]; knacks?: Record<string, number>;
         titles?: string[]; title?: string | null; nutrition?: Record<string, number>;
         equipped?: Record<string, number | null>;
         blessings?: unknown; skin?: SkinSaid | null;
@@ -1982,7 +1986,7 @@ export class Island {
         wounds: Array.isArray(said.wounds) ? said.wounds : undefined,
         marks: said.marks?.tiles ? { tiles: rowsIn<number>(said.marks.tiles), secs: said.marks.secs ?? 0 } : null,
         path: said.path && typeof said.path === 'object' ? said.path : undefined,
-        rested: said.rested, boons: said.boons, knacks: said.knacks,
+        rested: said.rested, favour: said.favour, boons: said.boons, knacks: said.knacks,
         titles: said.titles, title: said.title, nutrition: said.nutrition,
         equipped: said.equipped,
         // An island from before these says neither, and what is held stands.

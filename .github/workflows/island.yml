@@ -2904,6 +2904,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/shear.mjs --log-level=error
           node node_modules/.cache/shear.mjs
 
+      - name: Your favour is the island's, on coming ashore and on every beat
+        run: |
+          # The island kept favour and never sent it, so a reload showed the
+          # browser's own nought. This asks that coming ashore hands it over,
+          # that every beat says it with its trickle, capped, and that the
+          # browser reads both.
+          npx esbuild supabase/test/favour.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/favour.mjs --log-level=error
+          node node_modules/.cache/favour.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last

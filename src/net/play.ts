@@ -389,6 +389,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
     by: typeof stats.aegisBy === 'string' ? stats.aegisBy : undefined,
   });
   sawHeld(island.held(me.blessings));
+  // Your favour as the island keeps it, until the first beat says it with what has trickled in since.
+  if (typeof me.favour === 'number') game.player.favour = me.favour;
   if (me.stats && typeof me.stats === 'object') sawSkin(skinOfStats(me.stats as Record<string, unknown>));
 
   /*
@@ -473,6 +475,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
      * meal's favour showed for a browser that had granted it to itself.
      */
     if (typeof what.rested === 'number') game.player.rested = what.rested;
+    // And your favour, which the island keeps and spends: the browser's own was its save's, nought after a reload.
+    if (typeof what.favour === 'number') game.player.favour = what.favour;
     /*
      * And what you have on, which is the same story one column over. The
      * island has dispatched `equip` and `unequip` and kept the answer in
