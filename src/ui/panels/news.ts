@@ -49,6 +49,7 @@ import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
 import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
+import { SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
 import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
@@ -2113,6 +2114,14 @@ export const NEWS: News[] = [
         + 'the one with a vine (or else the oldest) stays and the rest are back in their owner\'s pack, a planted vine as a grape cutting.',
       'Things of one kind keep one place in every list, the best first, instead of moving as you work with them; and the pour, smelt, melt-down and '
         + 'cast menus give each thing its QL, a mould its damage too, so two nail moulds can be told apart.',
+    ],
+  },
+  {
+    n: 153,
+    day: '2026-10-14',
+    lines: () => [
+      `Shear is on a tame creature's menu at last, beside Milk: with a carving knife, once its fleece is ${percent(SHEAR_FROM)} grown back, `
+        + `for ${numberWord(SHEAR_WOOL)} wool from a full one. It was written and never put on the menu.`,
     ],
   },
 ];

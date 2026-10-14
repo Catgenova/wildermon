@@ -2893,6 +2893,17 @@ jobs:
             --outfile=node_modules/.cache/dyedglass.mjs --log-level=error
           node node_modules/.cache/dyedglass.mjs
 
+      - name: A tame woola is sheared from its menu, the same on both sides
+        run: |
+          # Shear was never on a creature's menu, and the island never sent a
+          # keeper how much fleece had grown back. This asks that it sends it,
+          # to the keeper only; that the browser takes it off the row; that no
+          # knife and too little fleece are refused in the same words on both
+          # sides; and that a full fleece gives its wool and starts again.
+          npx esbuild supabase/test/shear.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/shear.mjs --log-level=error
+          node node_modules/.cache/shear.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last

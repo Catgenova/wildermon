@@ -1876,6 +1876,8 @@ export interface IslandCreature {
   legLeft?: number | null;
   health: number;
   max?: number;
+  /** How much fleece has grown back, 0..1: sent for your own only. */
+  fleece?: number;
   hunger?: number;
   sex?: string;
   traits?: string[];
@@ -2585,6 +2587,8 @@ export class Creatures {
         hurt.push({ x: r.x, y: r.y, taken: was - r.health });
       }
       c.hunger = r.hunger ?? c.hunger;
+      // How much fleece has grown back, sent for your own (`rpc_creatures`), which Shear and Milk read.
+      c.fleece = r.fleece ?? c.fleece;
       c.sex = (r.sex as Sex) ?? c.sex;
       c.traits = r.traits ?? c.traits;
       // How rare it is, which the island rolled when it came into the world; nothing said is an ordinary one.

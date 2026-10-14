@@ -2820,6 +2820,7 @@ export class UI {
       });
     } else push(pairing);
     push(item('read_blood'));
+    push(item('shear'));
     push(item('milk_creature'));
     push(item('tack_creature'));
     push(item('mount_creature'));
