@@ -105,6 +105,7 @@ import { awayFor } from '../../game/away';
 import { ARMOUR, SHIELDS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { itemDef, RARITIES, rarityChance } from '../../game/items';
+import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
@@ -2130,6 +2131,19 @@ export const NEWS: News[] = [
     lines: () => [
       'Favour no longer shows nought after logging out or reloading. The island always kept it; the status panel and the Faith window now read it '
         + 'from the island when you come ashore and on every beat, with what has trickled in since.',
+    ],
+  },
+  {
+    n: 155,
+    day: '2026-10-14',
+    lines: () => [
+      'A corner lowered by a slab breaking away while mining, a corner chipped back and dirt dropped at your feet show at their new height at once, to you and anyone watching, instead of after a reload.',
+      `These can be improved now: ${['brush', 'hammer', 'fishing_rod', 'rope_tool'].map((id) => {
+        const how = improvable(id);
+        return `${itemDef(id).name.toLowerCase()} (${how?.material.name}, ${(SKILL_BY_ID.get(how?.skill ?? '')?.name ?? how?.skill ?? '').toLowerCase()})`;
+      }).join(', ')}. A brush's QL adds to the care each grooming gives.`,
+      'Sacrifice, melt-down and the Bauble of Regret refuse a thing marked Keep this back with "It is kept back. Put it back in the pack first.", '
+        + 'the words the pack menu uses for it.',
     ],
   },
 ];

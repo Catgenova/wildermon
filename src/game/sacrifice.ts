@@ -53,7 +53,7 @@ export const SACRIFICE_SAID = {
   pick: `Choose a ${anyRare} thing to give up.`,
   mote: 'A mote is not given up. Absorb it into something instead.',
   notRare: `Only a ${anyRare} thing may be given up.`,
-  locked: 'It is put by. Unlock it first.',
+  locked: 'It is kept back. Put it back in the pack first.',
   worn: 'Take it off first.',
   full: 'Empty it first.',
   creature: 'Let the wildermon out first.',

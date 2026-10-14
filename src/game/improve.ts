@@ -62,8 +62,9 @@ const METAL_TOOLS = new Set([
   'needle',
   'awl',
   'anvil',
+  'hammer',
 ]);
-const WOOD_TOOLS = new Set(['mallet', 'short_bow', 'medium_bow', 'long_bow', 'club', 'wooden_shield', 'lectern']);
+const WOOD_TOOLS = new Set(['mallet', 'short_bow', 'medium_bow', 'long_bow', 'club', 'wooden_shield', 'lectern', 'fishing_rod', 'rope_tool']);
 
 /** What a thing is made of, and which skill judges work on it. */
 export function improvable(id: string): { material: MaterialDef; skill: string } | null {
@@ -74,6 +75,8 @@ export function improvable(id: string): { material: MaterialDef; skill: string }
     return { material: MATERIALS.metal, skill: armour.cls === 'chain' ? 'chainsmithing' : 'platesmithing' };
   }
   if (id === 'wooden_shield') return { material: MATERIALS.wood, skill: 'carpentry' };
+  // A brush is a block of wood, judged by whoever knows what a coat wants: the husbandry it is set with.
+  if (id === 'brush') return { material: MATERIALS.wood, skill: 'animal_husbandry' };
   if (id === 'metal_shield' || isShield(id)) return { material: MATERIALS.metal, skill: 'armorsmithing' };
   // A hatchet or a carving knife is a tool that can fight, so a smith keeps it.
   if (METAL_TOOLS.has(id)) return { material: MATERIALS.metal, skill: 'blacksmithing' };

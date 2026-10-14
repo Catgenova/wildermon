@@ -2914,6 +2914,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/favour.mjs --log-level=error
           node node_modules/.cache/favour.mjs
 
+      - name: A corner the island moves is said to the browsers watching
+        run: |
+          # A slab breaking away while mining, a chipped corner and dirt dropped
+          # at your feet moved a corner and told nobody until a refresh. This
+          # asks that each announces the four tiles that share the corner.
+          npx esbuild supabase/test/corner.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/corner.mjs --log-level=error
+          node node_modules/.cache/corner.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last

@@ -76,7 +76,7 @@ export const findKind = (roll: number, baubles = BAUBLE_SHARE): 'regret' | 'baub
 /** What the island says when a trade cannot be undone: `rpc_regret_class`. */
 export const REGRET_SAID = {
   none: 'You need a Bauble of Regret to undo a trade.',
-  locked: 'Your Bauble of Regret is put by. Unlock it first.',
+  locked: 'Your Bauble of Regret is kept back. Put it back in the pack first.',
   kind: 'There is no such trade.',
 } as const;
 const slotWord = (kind: 'craft' | 'combat'): string => (kind === 'craft' ? 'crafting' : 'fighting');

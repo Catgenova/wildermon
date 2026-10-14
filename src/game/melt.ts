@@ -44,7 +44,7 @@ export const metalContent = (item: Item): number | undefined =>
 export const meltable = (item: Item): boolean => !!metalOfItem(item) && metalContent(item) !== undefined;
 
 export function meltRefusal(item: Item): string | null {
-  if (item.locked) return 'It is put by. Unlock it first.';
+  if (item.locked) return 'It is kept back. Put it back in the pack first.';
   if (!meltable(item)) return 'That is not made of metal the fire would give back.';
   return null;
 }

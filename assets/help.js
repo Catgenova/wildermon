@@ -1803,7 +1803,8 @@ import{$a as e,$i as t,$o as n,$r as r,Ac as i,Ai as a,Al as o,An as s,Bc as ee,
     one go, nearest pile first, rather than one entry per pile.</p>
     <h3>Keeping something back</h3>
     <p>Right-click anything in the pack and choose <b>Keep this back</b>. A kept thing is never spent: no
-    recipe takes it, no hook baits with it, nothing is fed it, and it cannot be dropped. It can still be
+    recipe takes it, no hook baits with it, nothing is fed it, and it cannot be dropped, sacrificed, melted down, traded
+    or moved with everything else in one go. It can still be
     <b>worked with</b> &mdash; that is the point, so your best hatchet can chop all day without a craft
     quietly eating it &mdash; and <b>Put it back in the pack</b> undoes it. Kept things read
     <i>kept back</i> in the list.</p>
