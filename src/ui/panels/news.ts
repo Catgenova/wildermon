@@ -2146,6 +2146,14 @@ export const NEWS: News[] = [
         + 'the words the pack menu uses for it.',
     ],
   },
+  {
+    n: 156,
+    day: '2026-10-14',
+    lines: () => [
+      'A cart or wagon with a yoke free has Hitch to the traces on its own menu, listing each of your wildermon that would go into it. '
+        + 'One standing under the vehicle could not be clicked, so it could not be hitched.',
+    ],
+  },
 ];
 
 

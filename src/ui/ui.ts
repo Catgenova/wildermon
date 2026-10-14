@@ -64,7 +64,7 @@ import { COIN_METALS, COIN_REFUSAL, DIE_WEAR, INGOT_LUMPS, MOULD_BY_ID, MOULD_BY
 import { meltable } from '../game/melt';
 import { jobName, smelterAnchor, smelterState, type PlacedSmelter } from '../game/smelter';
 import { isGreenware, kilnAnchor, kilnState, type PlacedKiln } from '../game/kiln';
-import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, turnedFacing } from '../game/furniture';
+import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
 import { DEED_ACTION_BY_ID, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
 import { CROP_BY_SEED, cropDef, describeCrop, emptyFields, growthWords, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { PLANTER_GROWTH } from '../game/growth';
@@ -2393,6 +2393,32 @@ export class UI {
           };
         }),
       });
+    }
+    /*
+     * Into the traces from the vehicle's own menu as well.
+     *
+     * Hitching was only ever on the beast's menu, and a beast standing at a
+     * wagon is drawn under it, so every click on it found the wagon instead:
+     * reported as four wildermon piled under a wagon with no way to put them
+     * back in. Listed here are the ones the beast's own entry would put into
+     * this vehicle's traces and no other, refused in the same words.
+     */
+    const hitchDef = ACTION_BY_ID.get('hitch_creature');
+    const rig = vehicleOf(f);
+    if (hitchDef && rig && teamOf(f).length < rig.yokes) {
+      const near = [...g.creatures.list.values()]
+        .filter((c) => c.mine !== false && hitchDef.applies({ kind: 'creature', id: c.id }, g) && g.vehicleNear(c.x, c.y, 5) === f)
+        .sort((a, b) => a.name.localeCompare(b.name) || a.id - b.id);
+      if (near.length) {
+        entries.push({
+          label: hitchDef.label,
+          children: near.map((c) => {
+            const ct: Target = { kind: 'creature', id: c.id };
+            const reason = hitchDef.check?.(ct, g) ?? null;
+            return { label: c.name, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(hitchDef, ct) };
+          }),
+        });
+      }
     }
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));

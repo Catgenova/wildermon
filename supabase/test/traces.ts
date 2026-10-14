@@ -34,7 +34,8 @@ import { execFileSync } from 'node:child_process';
 import { Game, type IslandGround, type IslandPlaced } from '../../src/game/game';
 import { CREATURE_ACTION_BY_ID } from '../../src/game/creatureActions';
 import { quarry, type IslandCreature } from '../../src/game/creatures';
-import { teamOf } from '../../src/game/furniture';
+import { furnitureCentre, teamOf } from '../../src/game/furniture';
+import { readFileSync } from 'node:fs';
 import { PLACEABLE_ACTION_BY_ID } from '../../src/game/placeables';
 import type { Side, WallType } from '../../src/game/building';
 
@@ -180,6 +181,24 @@ check('while one that is wild and loose still is', quarry(loose));
 
 unhitch.perform(beast, game);
 check('taking it out is what ends it', orse.hitchedTo === null && !teamOf(cart).includes(orse.id));
+
+/*
+ * And one standing under the vehicle can be put back in from the vehicle.
+ *
+ * Reported: four wildermon piled under a wagon, none of them in its traces and
+ * no way to hitch them, because a beast drawn under a wagon is behind it and
+ * every click found the wagon. The wagon's menu lists them now.
+ */
+{
+  const [ccx, ccy] = furnitureCentre(cart);
+  orse.x = ccx;
+  orse.y = ccy;
+  check('a beast standing under the vehicle can still be hitched to it', !!hitch?.applies(beast, game) && game.vehicleNear(orse.x, orse.y, 5) === cart);
+  const ui = readFileSync('src/ui/ui.ts', 'utf8');
+  const menu = ui.slice(ui.indexOf("const hitchDef = ACTION_BY_ID.get('hitch_creature');"), ui.indexOf('entries.push(...lampEntries(g, f));'));
+  check('and the vehicle\'s own menu offers it, for the beasts that would go into its traces',
+    menu.length > 0 && menu.includes('g.vehicleNear(c.x, c.y, 5) === f') && menu.includes('g.requestAction(hitchDef, ct)'));
+}
 
 /* ---- the browser on an island -------------------------------------------- */
 
