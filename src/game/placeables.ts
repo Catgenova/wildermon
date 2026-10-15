@@ -575,13 +575,13 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearPiece(g, f)) return 'Stand beside it first.';
-      return tracesStoreyRefusal(f);
+      return tracesStoreyRefusal(f) ?? g.teamOutRefusal(f);
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
-      if (!f) return;
-      const n = g.unhitchAll(f);
-      g.logMsg(`You let ${n === 1 ? 'it' : 'them'} out of the traces of the ${furnitureName(f).toLowerCase()}.`, 'event');
+      if (!f || g.teamOutRefusal(f)) return;
+      const { n, said } = g.teamOut(f);
+      g.logMsg(`You let ${n === 1 ? 'it' : 'them'} out of the traces of the ${furnitureName(f).toLowerCase()}.${said}`, 'event');
     },
   },
   // ---- Wells and barrels. ----

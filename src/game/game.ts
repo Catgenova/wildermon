@@ -29,7 +29,7 @@ import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire 
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_W, type PlacedSmelter, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
-import { emptyCrate, occupiedRefusal, shutIn } from './creaturecrate';
+import { crateTheRest, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
@@ -1748,7 +1748,7 @@ export class Game {
         p.stats.thirst = 1;
         return { said: REFRESH_SAID };
       case 'love_bond': {
-        const c = this.creatures.yours().find((k) => k.mode === 'active');
+        const c = this.creatures.active();
         if (!c || Math.hypot(c.x - p.x, c.y - p.y) > fx.reach) return { why: bondNone(fx.reach) };
         const most = maxHealth(c, this.creatures.species(c));
         if (c.health >= most) return { why: bondWhole(c.name) };
@@ -1790,7 +1790,7 @@ export class Game {
         return { said: lullSaid(on.length, fx.secs) };
       }
       case 'love_herd_heart': {
-        const c = this.creatures.yours().find((k) => k.mode === 'active');
+        const c = this.creatures.active();
         if (!c) return { why: HERD_NONE };
         p.pathTimes.herd = this.time + fx.secs;
         return { said: herdSaid(c.name, fx.secs, fx.cut, fx.more, fx.reach) };
@@ -3794,8 +3794,7 @@ export class Game {
 
   /** What follows you, when anything does: on an island, only one the island says is yours. */
   companion(): Creature | null {
-    for (const c of this.creatures.list.values()) if (c.mode === 'active' && c.mine !== false) return c;
-    return null;
+    return this.creatures.active() ?? null;
   }
 
   /** Send your companion at what you are fighting, or have marked, or else the nearest foe (`order_attack`). */
@@ -7607,6 +7606,18 @@ export class Game {
     if (!f.team.length && f.driven) this.leaveVehicle(f);
     this.events.emit('world', f.x, f.y);
     this.events.emit('creature');
+  }
+
+  /** Why a vehicle's whole team cannot come out of the traces, or null: more of yours than can follow you, and too few empty crates (`teamOutRefusal`). */
+  teamOutRefusal(f: PlacedFurniture): string | null {
+    return teamOutRefusal(this, this.team(f));
+  }
+
+  /** The whole team out of the traces, the rest of yours into crates; how many came out, and what to say of the crates. */
+  teamOut(f: PlacedFurniture): { n: number; said: string } {
+    const out = teamOut(this, this.team(f));
+    const n = this.unhitchAll(f);
+    return { n, said: crateTheRest(this, out) };
   }
 
   /** Everything out of the traces at once, when the driver is done with it. */

@@ -34,7 +34,7 @@ import {
 } from '../game/building';
 import { deckBill, metres, pierDrop } from '../game/piers';
 import { cellarGate, targetFloor } from '../game/cellar';
-import { baitHint, CREATURE_ACTION_BY_ID, feedable } from '../game/creatureActions';
+import { baitHint, CREATURE_ACTION_BY_ID, feedable, vehicleFor } from '../game/creatureActions';
 import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '../game/glasshouse';
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
@@ -2401,21 +2401,24 @@ export class UI {
      * wagon is drawn under it, so every click on it found the wagon instead:
      * reported as four wildermon piled under a wagon with no way to put them
      * back in. Listed here are the ones the beast's own entry would put into
-     * this vehicle's traces and no other, refused in the same words.
+     * this vehicle's traces and no other, refused in the same words -- and the
+     * ones in a crate you carry or stand beside, which come out of it straight
+     * into a yoke, so a team is put together without each in turn having to
+     * be the one that follows you.
      */
     const hitchDef = ACTION_BY_ID.get('hitch_creature');
     const rig = vehicleOf(f);
     if (hitchDef && rig && teamOf(f).length < rig.yokes) {
       const near = [...g.creatures.list.values()]
-        .filter((c) => c.mine !== false && hitchDef.applies({ kind: 'creature', id: c.id }, g) && g.vehicleNear(c.x, c.y, 5) === f)
-        .sort((a, b) => a.name.localeCompare(b.name) || a.id - b.id);
+        .filter((c) => c.mine !== false && hitchDef.applies({ kind: 'creature', id: c.id }, g) && vehicleFor(g, c) === f)
+        .sort((a, b) => Number(a.mode === 'stored') - Number(b.mode === 'stored') || a.name.localeCompare(b.name) || a.id - b.id);
       if (near.length) {
         entries.push({
           label: hitchDef.label,
           children: near.map((c) => {
             const ct: Target = { kind: 'creature', id: c.id };
             const reason = hitchDef.check?.(ct, g) ?? null;
-            return { label: c.name, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(hitchDef, ct) };
+            return { label: c.name, note: c.mode === 'stored' ? 'in a crate' : undefined, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(hitchDef, ct) };
           }),
         });
       }

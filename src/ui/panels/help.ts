@@ -2068,6 +2068,11 @@ export function helpText(): string {
     where the vehicle goes. It does not follow you, work, answer the bell or wander; it cannot be put
     in a crate, set to a post, released or culled; <b>it does not get hungry</b>, though feeding it
     still fills it; and <b>nothing picks it as a target</b>.</p>
+    <p>A companion in the traces <b>no longer counts as the one following you</b>, so the next can be let out of
+    its crate while it is hitched. <b>Hitch to the traces</b> on a cart's or wagon's menu lists your wildermon that
+    would go into it, and those in a creature crate in your pack or standing within reach, which come out of the
+    crate straight into a yoke. Taken out of the traces, one of yours follows you only if nothing else does: the
+    rest go into the empty creature crates in your pack, and with too few there they stay in.</p>
     <p>A vehicle is <b>anybody's to use</b>. Whoever built it and whosever ground it stands on, anyone
     standing at it may take the reins, take hold of a cart, hitch to it, take a beast out of it, load it,
     empty it or pick it up.</p>

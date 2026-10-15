@@ -5,6 +5,7 @@ import { facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from '.
 import type { Side } from './building';
 import type { Game } from './game';
 import type { Item } from './items';
+import { numberWord } from './words';
 
 /**
  * A creature crate: the one place a wildermon goes when it is neither
@@ -101,6 +102,66 @@ export function crateOf(g: Game, id: number): Holding | null {
   return null;
 }
 
+/**
+ * The crate a wildermon of yours is shut in, when it can be opened where you
+ * stand: in your pack, or standing within reach. What Hitch to the traces
+ * takes one out of, straight into a yoke.
+ */
+export function crateToHand(g: Game, c: Creature): Holding | null {
+  if (c.mode !== 'stored' || c.mine === false) return null;
+  const h = crateOf(g, c.id);
+  if (!h) return null;
+  if ('piece' in h) {
+    const [cx, cy] = furnitureCentre(h.piece);
+    return Math.hypot(cx - g.player.x, cy - g.player.y) <= STORE_REACH ? h : null;
+  }
+  return h.carried ? h : null;
+}
+
+/** The empty creature crates in your pack, in the order the island takes them. */
+const emptyCrates = (g: Game): Item[] => g.inventory.items.filter((it) => it.id === CREATURE_CRATE && it.creature === undefined);
+
+/**
+ * Who of yours a team coming out of the traces leaves following you, and who
+ * goes into the empty crates in your pack.
+ *
+ * One wildermon follows you. A companion in the traces is not it
+ * (`Creatures.active`), so when it comes out it follows you only if nothing
+ * else does; the lowest-numbered of yours does when none of them was
+ * following you, and the rest go into crates -- the way a second one tamed
+ * does. Somebody else's beast comes out as it went in.
+ */
+export function teamOut(g: Game, team: Creature[]): { follows: Creature | undefined; crated: Creature[]; short: number } {
+  const yours = team.filter((c) => c.mode === 'active' && c.mine !== false).sort((a, b) => a.id - b.id);
+  const already = g.creatures.active();
+  const follows = already ?? yours[0];
+  const crated = yours.filter((c) => c !== follows);
+  return { follows, crated, short: Math.max(0, crated.length - emptyCrates(g).length) };
+}
+
+/** Why this team cannot come out of the traces, or null: one more of yours than can follow you, and no empty crate to put it in. */
+export function teamOutRefusal(g: Game, team: Creature[]): string | null {
+  const { follows, crated, short } = teamOut(g, team);
+  if (!short || !follows) return null;
+  if (team.length === 1) return `${follows.name} already follows you. Carry an empty creature crate to take ${crated[0].name} out of the traces: it goes into the crate.`;
+  return `Only one wildermon follows you. Carry ${crated.length === 1 ? 'an empty creature crate' : `${numberWord(crated.length)} empty creature crates`} to take this team out of the traces: `
+    + `${follows.name} follows you and the rest go into them.`;
+}
+
+/** Put those of yours a team leaves behind into the empty crates in your pack, once it is out of the traces; what to say of it, or ''. */
+export function crateTheRest(g: Game, out: { follows: Creature | undefined; crated: Creature[] }): string {
+  const crates = emptyCrates(g);
+  const put = out.crated.filter((c, i) => {
+    if (!crates[i]) return false;
+    shutIn(g, c, crates[i]);
+    return true;
+  });
+  if (!put.length || !out.follows) return '';
+  const names = put.map((c) => c.name);
+  const who = names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  return ` ${who} ${put.length === 1 ? 'goes into a creature crate' : 'go into creature crates'} in your pack: ${out.follows.name} follows you.`;
+}
+
 /** Out through a crate's door, which is on the side it faces: the way the one inside faces, and the way it comes out. */
 export const CRATE_DOOR: Record<Side, [number, number]> = { s: [0, 1], e: [1, 0], n: [0, -1], w: [-1, 0] };
 /** How far in front of a standing crate's middle one comes out, in tiles. */
@@ -192,7 +253,6 @@ function openRefusal(g: Game, at: NonNullable<ReturnType<typeof crateAt>>): stri
 function swapRefusal(g: Game): string | null {
   const current = g.creatures.active();
   if (!current) return null;
-  if (current.hitchedTo !== null) return `${current.name} is in the traces, and would have to go into the crate in its place. Take it out first.`;
   if (current.ridden) return `Get down off ${current.name} first: it goes into the crate in its place.`;
   return null;
 }

@@ -197,7 +197,7 @@ check('taking it out is what ends it', orse.hitchedTo === null && !teamOf(cart).
   const ui = readFileSync('src/ui/ui.ts', 'utf8');
   const menu = ui.slice(ui.indexOf("const hitchDef = ACTION_BY_ID.get('hitch_creature');"), ui.indexOf('entries.push(...lampEntries(g, f));'));
   check('and the vehicle\'s own menu offers it, for the beasts that would go into its traces',
-    menu.length > 0 && menu.includes('g.vehicleNear(c.x, c.y, 5) === f') && menu.includes('g.requestAction(hitchDef, ct)'));
+    menu.length > 0 && menu.includes('vehicleFor(g, c) === f') && menu.includes('g.requestAction(hitchDef, ct)'));
 }
 
 /* ---- the browser on an island -------------------------------------------- */

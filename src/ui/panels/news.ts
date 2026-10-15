@@ -2154,6 +2154,15 @@ export const NEWS: News[] = [
         + 'One standing under the vehicle could not be clicked, so it could not be hitched.',
     ],
   },
+  {
+    n: 157,
+    day: '2026-10-15',
+    lines: () => [
+      'A companion in the traces no longer counts as the one following you, so the next can be let out of its crate while it is hitched.',
+      'Hitch to the traces on a cart\'s or wagon\'s menu also lists your wildermon in a creature crate in your pack or standing within reach; each comes out of the crate straight into a yoke.',
+      'Taken out of the traces, one of yours follows you only if nothing else does. The rest go into the empty creature crates in your pack, and with too few there they stay in, and it says how many crates it needs.',
+    ],
+  },
 ];
 
 

@@ -2923,6 +2923,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/corner.mjs --log-level=error
           node node_modules/.cache/corner.mjs
 
+      - name: A team is not your companion, and is put together out of its crates
+        run: |
+          # Reported: once a mon is hitched it still counts as following you, so
+          # the next cannot come out of its crate. This asks, on both sides and
+          # in the same words, that one in the traces is not your companion, that
+          # one in a crate goes straight into a yoke, and that a team comes out
+          # with one following you and the rest into empty crates in the pack.
+          npx esbuild supabase/test/team.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/team.mjs --log-level=error
+          node node_modules/.cache/team.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last

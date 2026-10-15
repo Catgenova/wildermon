@@ -2771,9 +2771,18 @@ export class Creatures {
     return bloodMul(c, channel) * this.aura(c, channel) * companionMul(c, channel);
   }
 
-  /** The player's companion. */
+  /**
+   * The player's companion: the one of yours following you.
+   *
+   * Not one in the traces. It was, so a beast backed into a wagon went on
+   * counting as the one that follows you, and the next could not be let out of
+   * its crate to be hitched beside it -- reported as "once it's hitched it
+   * still counts as following me and i can't bring out the next mon". A
+   * companion put in the traces is the wagon's until it comes out again
+   * (`teamOutRefusal`).
+   */
   active(): Creature | undefined {
-    for (const c of this.list.values()) if (c.mode === 'active') return c;
+    for (const c of this.list.values()) if (c.mode === 'active' && c.mine !== false && c.hitchedTo === null) return c;
     return undefined;
   }
 

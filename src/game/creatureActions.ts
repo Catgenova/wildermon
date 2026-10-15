@@ -10,7 +10,7 @@ import type { Game } from './game';
 import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
 import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET, WHEY_FEED, wheyFedSays } from './dairy';
 import { vesselBecame } from './placeables';
-import { deedJobLine, emptyCrate, letOut, shutIn } from './creaturecrate';
+import { crateTheRest, crateToHand, deedJobLine, emptyCrate, letOut, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { itemDef, itemName, rarityOf, type Mark } from './items';
 import { BANE_BONUS, banes, hitChance, isBow, WEAPON_BY_ID, weaponDamage } from './gear';
 import { ARROWS, armsRefusal, beastReach, BLINDSIDE, blowOf, bowReach, critMul, drawClosest, FALL_BACK, FIST, headBlow, headHide, headSide, hideTakes, nockedArrow, KNIFE_BLEED, KNIFE_BLEED_SECS, meleeReach, myCritChance, STAGGER_MAUL, STAGGER_POLE, stanceDealt, swungWith } from './fight';
@@ -115,8 +115,9 @@ function nearPlayer(g: Game, c: Creature): boolean {
 }
 
 /** The vehicle this one would be hitched to: the nearest with a yoke free, looked for where it stands. */
-function vehicleFor(g: Game, c: Creature) {
-  return g.vehicleNear(c.x, c.y, 5);
+/** The vehicle a wildermon would go into the traces of: the nearest to it with a yoke free, or for one in a crate, the nearest to you. */
+export function vehicleFor(g: Game, c: Creature) {
+  return c.mode === 'stored' ? g.vehicleNear(g.player.x, g.player.y, 5) : g.vehicleNear(c.x, c.y, 5);
 }
 
 /**
@@ -138,7 +139,6 @@ export function tameRoomRefusal(g: Game): string | null {
 export function companionSwap(g: Game, taking: Creature): { current: Creature; to: 'deed' | 'crate' } | { current: Creature; refused: string } | null {
   const current = g.creatures.active();
   if (!current || current === taking) return null;
-  if (current.hitchedTo !== null) return { current, refused: `${current.name} is in the traces. Take it out first.` };
   if (current.ridden) return { current, refused: `Get down off ${current.name} first.` };
   // What the deed counts once the one being taken is off it and this one is on it.
   const freed = taking.mode === 'deed' && taking.post === null ? 1 : 0;
@@ -977,21 +977,22 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     verb: 'hitching it up',
     stamina: 0.02,
     baseTime: 2.5,
+    // And one in a crate you carry or stand beside, which comes out of it straight into a yoke.
     applies: (t, g) => {
       const c = creatureOf(g, t);
-      return !!c && c.mode !== 'wild' && c.mode !== 'stored' && c.hitchedTo === null && !c.ridden && !!vehicleFor(g, c);
+      return !!c && c.mode !== 'wild' && (c.mode !== 'stored' || !!crateToHand(g, c)) && c.hitchedTo === null && !c.ridden && !!vehicleFor(g, c);
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'It is gone.';
+      if (c.mode === 'stored' && !crateToHand(g, c)) return `${c.name} is in a creature crate. Let it out first.`;
       const f = vehicleFor(g, c);
       if (!f) return 'There is no cart or wagon here with an empty yoke.';
       const storey = tracesStoreyRefusal(f);
       if (storey) return storey;
       const [cx, cy] = furnitureCentre(f);
       if (Math.hypot(cx - g.player.x, cy - g.player.y) > 2.4) return `Stand by the ${furnitureName(f).toLowerCase()}.`;
-      if (c.mode === 'stored') return `${c.name} is in a creature crate. Let it out first.`;
-      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > 4) return `${c.name} is too far off. Call it over first.`;
+      if (c.mode !== 'stored' && Math.hypot(c.x - g.player.x, c.y - g.player.y) > 4) return `${c.name} is too far off. Call it over first.`;
       if (!ageDef(c, g.time).works) return `${c.name} is not grown. A yearling is no use in the traces.`;
       if (c.hunger < 0.15) return `${c.name} is too hungry to pull anything. Feed it first.`;
       return null;
@@ -1000,6 +1001,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return;
       const f = vehicleFor(g, c);
+      // Out of its crate first, as a companion of yours -- one that does not count as following you while it is in the traces.
+      const crated = c.mode === 'stored' && !!f && !!crateToHand(g, c);
+      if (crated) {
+        letOut(g, c);
+        c.mode = 'active';
+        c.enemy = null;
+      }
       if (!f || !g.hitch(c, f)) {
         // Never in silence: whatever stopped it, in the words the island uses.
         g.logMsg(
@@ -1014,7 +1022,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const filled = (f.team ?? []).length;
       const short = v && filled < v.needs ? ` It needs ${v.needs - filled} more before it will move.` : '';
       g.note('hitched');
-      g.logMsg(`You back ${c.name} into a yoke of the ${furnitureName(f).toLowerCase()}. ${filled} of ${v?.yokes ?? 0} filled.${short}`, 'event');
+      g.logMsg(`${crated ? `${c.name} comes out of the crate. ` : ''}You back ${c.name} into a yoke of the ${furnitureName(f).toLowerCase()}. ${filled} of ${v?.yokes ?? 0} filled.${short}`, 'event');
     },
   },
   {
@@ -1028,14 +1036,15 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = creatureOf(g, t);
       const f = c && g.vehicleOfCreature(c);
-      return f ? tracesStoreyRefusal(f) : null;
+      return (f ? tracesStoreyRefusal(f) : null) ?? (c ? teamOutRefusal(g, [c]) : null);
     },
     perform: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return;
+      if (!c || teamOutRefusal(g, [c])) return;
       const f = g.vehicleOfCreature(c);
+      const out = teamOut(g, [c]);
       g.unhitch(c);
-      g.logMsg(`You unbuckle ${c.name} from the ${f ? furnitureName(f).toLowerCase() : 'traces'}.`, 'event');
+      g.logMsg(`You unbuckle ${c.name} from the ${f ? furnitureName(f).toLowerCase() : 'traces'}.${crateTheRest(g, out)}`, 'event');
     },
   },
   {
