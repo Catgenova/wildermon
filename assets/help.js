@@ -1286,13 +1286,15 @@ import{$a as e,$i as t,$o as n,$r as r,Ac as i,Ai as a,Al as o,An as s,Bc as ee,
     ${p(Ar(50)-1)} faster at sailing 50 and ${p(dr)} faster at 100. Every tile she goes into with you at
     her helm trains it.</p>
     <p><b>Launch</b> her by setting her down on water deep enough while you stand on the bank &mdash; she
-    will not go on land and will not go in a puddle. <b>Climb aboard</b> from the shore and she moves
-    with you, over any water with depth enough and over nothing else: no beaching, no dragging her over
-    a sandbar. <b>Step ashore</b> puts you on the nearest dry ground, and refuses if there is none within
-    reach, so bring her in before you get out.</p>
+    will not go on land and will not go in a puddle. <b>Climb aboard</b> from the shore, or swimming beside
+    her, and she moves with you, over any water with depth enough and over nothing else: no beaching, no
+    dragging her over a sandbar. <b>Step ashore</b> puts you on the nearest dry ground within ${b(2)} tiles of
+    you; with none, it is <b>Go over the side</b>, which puts you in the water where she is, to swim, and
+    leaves her there.</p>
     <p><b>Passengers.</b> Stand beside a caravel and <b>Come aboard as a passenger</b>: you take the first of her
     ${b(hd.boat?.passengers??0)} places on deck that is free, and from then on you go where she goes and your own
-    feet go nowhere. <b>Step ashore</b> works for a passenger as it does for the helm. Anybody on her deck may
+    feet go nowhere. You come aboard from the water as from the shore, and <b>Step ashore</b> and <b>Go over
+    the side</b> work for a passenger as they do for the helm. Anybody on her deck may
     <b>Take the helm</b> when nobody holds it, or when whoever held it has gone away and left her at sea; nobody
     takes it out of the hands of somebody who is here. She is not picked up or turned with anybody aboard.</p>
     <p>What a boat is really for, besides the coast itself, is the water under it. A line cast over the

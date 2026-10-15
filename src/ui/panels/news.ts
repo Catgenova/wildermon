@@ -83,6 +83,7 @@ import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } f
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
+import { SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
@@ -2161,6 +2162,15 @@ export const NEWS: News[] = [
       'A companion in the traces no longer counts as the one following you, so the next can be let out of its crate while it is hitched.',
       'Hitch to the traces on a cart\'s or wagon\'s menu also lists your wildermon in a creature crate in your pack or standing within reach; each comes out of the crate straight into a yoke.',
       'Taken out of the traces, one of yours follows you only if nothing else does. The rest go into the empty creature crates in your pack, and with too few there they stay in, and it says how many crates it needs.',
+    ],
+  },
+  {
+    n: 158,
+    day: '2026-10-15',
+    lines: () => [
+      'A boat or a ship can be left with no land in reach: Step ashore becomes Go over the side, which puts you in the water where she is, to swim, and leaves her there. '
+        + `With dry ground within ${numberWord(SHORE_REACH)} tiles you still step onto it.`,
+      'Swimming beside her, you can climb aboard, come aboard as a passenger or take her empty helm, as from the shore.',
     ],
   },
 ];

@@ -463,25 +463,23 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     instant: true,
     stamina: 0,
     baseTime: 0,
-    labelFor: (t, g) => (isBoat(pieceOf(g, t) ?? { kind: '' }) ? 'Step ashore' : 'Get down'),
+    // Ashore with land in reach; with none, over the side into the water, to swim (`overTheSide`).
+    labelFor: (t, g) => (isBoat(pieceOf(g, t) ?? { kind: '' }) ? (shoreNear(g) ? 'Step ashore' : OVER_THE_SIDE) : 'Get down'),
     applies: (t, g) => !!pieceOf(g, t)?.driven,
-    check: (t, g) => {
-      const f = pieceOf(g, t);
-      if (!f) return 'It is gone.';
-      if (isBoat(f) && !shoreNear(g)) return 'There is no shore within reach. Bring her in first, or swim for it.';
-      return null;
-    },
+    check: (t, g) => (pieceOf(g, t) ? null : 'It is gone.'),
     perform: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return;
       if (isBoat(f)) {
         const shore = shoreNear(g);
         g.leaveVehicle(f);
-        if (shore) {
-          g.player.x = shore.x + 0.5;
-          g.player.y = shore.y + 0.5;
-          g.player.stop();
+        if (!shore) {
+          g.logMsg(overTheSide(f), 'event');
+          return;
         }
+        g.player.x = shore.x + 0.5;
+        g.player.y = shore.y + 0.5;
+        g.player.stop();
         g.logMsg(`You bring the ${furnitureName(f).toLowerCase()} alongside and step ashore.`, 'event');
         return;
       }
@@ -492,9 +490,11 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
   /*
    * Passengers: a place on deck in a hull that has them.
    *
-   * A passenger comes aboard from beside her, goes wherever whoever has the
-   * helm takes her, and steps ashore when there is land within reach. Nothing
-   * a passenger asks of their own feet moves them while they are aboard.
+   * A passenger comes aboard from beside her, from the shore or out of the
+   * water, goes wherever whoever has the helm takes her, and steps ashore when
+   * there is land within reach -- or with none, goes over the side into the
+   * water. Nothing a passenger asks of their own feet moves them while they
+   * are aboard.
    */
   {
     id: 'board_passenger',
@@ -536,6 +536,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
   {
     id: 'leave_passenger',
     label: 'Step ashore',
+    labelFor: (_t, g) => (shoreNear(g) ? 'Step ashore' : OVER_THE_SIDE),
     verb: 'stepping ashore',
     instant: true,
     stamina: 0,
@@ -548,16 +549,22 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (g.player.aboard !== f.id) return 'You are not aboard her.';
-      if (!shoreNear(g)) return 'There is no shore within reach. Wait until she comes in close.';
       return null;
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
+      if (!f) return;
       const shore = shoreNear(g);
-      if (!f || !shore) return;
       f.riders = ridersOf(f).filter((r) => r.who !== g.riderId());
-      g.leaveAsPassenger(shore.x + 0.5, shore.y + 0.5);
-      g.logMsg(`You step ashore from the ${furnitureName(f).toLowerCase()}.`, 'event');
+      if (shore) {
+        g.leaveAsPassenger(shore.x + 0.5, shore.y + 0.5);
+        g.logMsg(`You step ashore from the ${furnitureName(f).toLowerCase()}.`, 'event');
+      } else {
+        // Where she is, which is where the island keeps everybody aboard her.
+        const [cx, cy] = furnitureCentre(f);
+        g.leaveAsPassenger(cx, cy);
+        g.logMsg(overTheSide(f), 'event');
+      }
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -894,8 +901,17 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
 
 export const PLACEABLE_ACTION_BY_ID = new Map(PLACEABLE_ACTIONS.map((a) => [a.id, a]));
 
+/** What leaving a hull is called with no land in reach. */
+export const OVER_THE_SIDE = 'Go over the side';
+/** Leaving a hull with no land in reach: into the water where she is, to swim. She stays where she is. The island's words too. */
+export const overTheSide = (f: PlacedFurniture): string =>
+  `You go over the side of the ${furnitureName(f).toLowerCase()} into the water. She stays where she is.`;
+
+/** How far off, in tiles each way, dry ground is stepped onto from a hull (`shore_near`'s own default). */
+export const SHORE_REACH = 2;
+
 /** Dry land within stepping distance of the boat, if there is any. */
-export function shoreNear(g: Game, range = 2, from?: [number, number]): { x: number; y: number } | null {
+export function shoreNear(g: Game, range = SHORE_REACH, from?: [number, number]): { x: number; y: number } | null {
   // From where the body is, or from a hull's middle: the island asks it of the body, and a body aboard is there.
   const px = from ? Math.floor(from[0]) : g.player.tileX;
   const py = from ? Math.floor(from[1]) : g.player.tileY;

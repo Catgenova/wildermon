@@ -12,7 +12,10 @@
  *     three places for passengers;
  *   * a passenger comes aboard from beside her into the first free place,
  *     goes where she goes whatever their own feet are asked, is not in the
- *     water, and steps ashore only with land in reach;
+ *     water, and steps ashore with land in reach;
+ *   * with no land in reach, a passenger or whoever has her helm goes over
+ *     the side into the water where she is, and she stays where she is; and
+ *     somebody swimming beside her comes aboard, to her deck or her helm;
  *   * the fourth to ask is told every place is taken;
  *   * a helm somebody present holds is not taken out of their hands, and one
  *     whose holder has gone away is taken over from her deck, the one who went
@@ -159,6 +162,43 @@ check('and the place on deck is given up for it', !!ship.driven && game.player.a
   `driven ${ship.driven}, aboard ${game.player.aboard}`);
 
 /*
+ * Out at sea, with no land in reach: over the side, and aboard again out of the water.
+ */
+game.leaveVehicle(ship);
+const SEA = game.addFurniture('caravel', W0 + 6, WY, 0, 0, 50);
+const sea = { kind: 'furniture', id: SEA.id } as Target;
+const [scx, scy] = furnitureCentre(SEA);
+check('far enough out that no land is in reach', game.launchSpot('caravel', W0 + 6, WY) && !game.world.hasWater(W0 - 1, WY) && game.world.hasWater(W0 + 4, WY));
+const swimBeside = (): void => {
+  game.player.x = scx + 1.5;
+  game.player.y = scy;
+  game.update(0.1);
+};
+swimBeside();
+check('somebody swimming beside her may come aboard her deck', game.player.swimming && say('board_passenger', sea) === 'ALLOWED', `${game.player.swimming} ${say('board_passenger', sea)}`);
+act('board_passenger', sea);
+check('and is aboard her', game.player.aboard === SEA.id);
+const overLabel = ACTION_BY_ID.get('leave_passenger')?.labelFor?.(sea, game);
+check('with no land in reach, leaving her is going over the side, and it is allowed', overLabel === 'Go over the side' && say('leave_passenger', sea) === 'ALLOWED',
+  `${overLabel} | ${say('leave_passenger', sea)}`);
+act('leave_passenger', sea);
+game.update(0.1);
+check('into the water where she is, off her list, and said so', game.player.aboard === null && !ridersOf(SEA).length && game.player.swimming
+  && game.log.at(-1)?.text === 'You go over the side of the caravel into the water. She stays where she is.', `${game.player.swimming} ${game.log.at(-1)?.text}`);
+swimBeside();
+check('somebody swimming beside her may take her empty helm', say('board_vehicle', sea) === 'ALLOWED', say('board_vehicle', sea));
+act('board_vehicle', sea);
+const helmLabel = ACTION_BY_ID.get('leave_vehicle')?.labelFor?.(sea, game);
+check('and leave it over the side, with no land in reach', !!SEA.driven && helmLabel === 'Go over the side' && say('leave_vehicle', sea) === 'ALLOWED',
+  `${SEA.driven} ${helmLabel} | ${say('leave_vehicle', sea)}`);
+act('leave_vehicle', sea);
+game.update(0.1);
+check('into the water, letting go of her helm, and she stays where she is', !SEA.driven && game.player.swimming
+  && furnitureCentre(SEA)[0] === scx && game.log.at(-1)?.text === 'You go over the side of the caravel into the water. She stays where she is.',
+  `${SEA.driven} ${game.player.swimming} ${game.log.at(-1)?.text}`);
+game.removeFurniture(SEA.id);
+
+/*
  * And on an island, where stepping ashore is the island's to do: the read that
  * no longer has us aboard her lands the body on the dry ground the island put
  * it on, found by the same rule from the same tile, rather than in the water.
@@ -250,6 +290,15 @@ begin
   insert into said values ('GROUND', (select (e->'riders')::text || '|' || coalesce(e->>'helm_open', 'none')
     from jsonb_array_elements(v_row->'placed') e where (e->>'id')::bigint = v_ship));
   insert into said values ('AFAR', coalesce(act_refusal(w, '${BRAN}', 'leave_passenger', t), 'ALLOWED'));
+  -- Out at sea, Bran goes over the side, swims a stroke off, and comes aboard again out of the water.
+  perform act_perform(w, '${BRAN}', 'leave_passenger', t);
+  insert into said values ('OVER', (select coalesce(aboard::text, 'none') || ',' || in_deep_water(w, '${BRAN}')
+    from player where world_id = w and uid = '${BRAN}') || '|'
+    || (select text from event where world_id = w and uid = '${BRAN}' order by n desc limit 1));
+  update player set x = 59.0, y = 58.5 where world_id = w and uid = '${BRAN}';
+  insert into said values ('SWUM', in_deep_water(w, '${BRAN}') || '|' || coalesce(act_refusal(w, '${BRAN}', 'board_passenger', t), 'ALLOWED'));
+  perform act_perform(w, '${BRAN}', 'board_passenger', t);
+  insert into said values ('BACK', (select coalesce(aboard = v_ship, false) || ',' || seat from player where world_id = w and uid = '${BRAN}'));
 
   -- Dane goes away at sea; a passenger takes the empty helm, and Dane is given the place she left.
   update player set away = true where world_id = w and uid = dane;
@@ -268,6 +317,16 @@ begin
   insert into said values ('ASHORE', (select coalesce(aboard::text, 'none') || ',' || has_water(w, floor(x)::int, floor(y)::int)
     from player where world_id = w and uid = '${BRAN}') || '|'
     || (select text from event where world_id = w and uid = '${BRAN}' order by n desc limit 1));
+
+  -- Out at sea again, Anna leaves her helm over the side, and takes it again out of the water.
+  perform drag_along(w, '${ANNA}', 60.5, 58.5);
+  perform act_perform(w, '${ANNA}', 'leave_vehicle', t);
+  insert into said values ('HELM-OVER', (select coalesce(driver::text, 'none') || ',' || cx from placed where id = v_ship) || ','
+    || in_deep_water(w, '${ANNA}') || '|' || (select text from event where world_id = w and uid = '${ANNA}' order by n desc limit 1));
+  update player set x = 59.0, y = 58.5 where world_id = w and uid = '${ANNA}';
+  insert into said values ('HELM-BACK', coalesce(act_refusal(w, '${ANNA}', 'board_vehicle', t), 'ALLOWED'));
+  perform act_perform(w, '${ANNA}', 'board_vehicle', t);
+  insert into said values ('HELM-HELD', (select (driver = '${ANNA}')::text from placed where id = v_ship));
 
   -- Death takes you off her.
   perform player_die(w, '${COLL}');
@@ -302,13 +361,18 @@ check('where the helm takes her, everybody aboard goes', said('WENT') === 'Anna 
 check('and a passenger\'s own walk puts them where she is', said('PINNED') === '60.5,58.5,false', said('PINNED'));
 check('the island says who is aboard her and in which place',
   said('GROUND') === `[{"uid": "${ANNA}", "seat": 1}, {"uid": "${BRAN}", "seat": 2}, {"uid": "${COLL}", "seat": 3}]|false`, said('GROUND'));
-check('with no land in reach, nobody steps ashore, in the same words',
-  said('AFAR') === 'There is no shore within reach. Wait until she comes in close.', said('AFAR'));
+check('with no land in reach, a passenger may still leave her', said('AFAR') === 'ALLOWED', said('AFAR'));
+check('over the side into the water, off her deck, in the same words',
+  said('OVER') === 'none,true|You go over the side of the caravel into the water. She stays where she is.', said('OVER'));
+check('and swimming beside her, comes aboard again out of the water', said('SWUM') === 'true|ALLOWED' && said('BACK') === 'true,2', `${said('SWUM')} / ${said('BACK')}`);
 check('a helm whose holder has gone away is not taken from the shore, in the same words', said('SHORE') === 'Somebody else has the helm.', said('SHORE'));
 check('a helm whose holder has gone away is taken from her deck', said('OPEN') === 'ALLOWED', said('OPEN'));
 check('and the one who went away has the place that was left', said('SWAP') === 'true,true,1,none', said('SWAP'));
 check('brought in, a passenger may step ashore', said('NEAR') === 'ALLOWED', said('NEAR'));
 check('onto dry ground, in the same words', said('ASHORE') === 'none,false|You step ashore from the caravel.', said('ASHORE'));
+check('whoever has her helm leaves it over the side at sea, and she stays where she is, in the same words',
+  said('HELM-OVER') === 'none,60.5,true|You go over the side of the caravel into the water. She stays where she is.', said('HELM-OVER'));
+check('and takes it again out of the water', said('HELM-BACK') === 'ALLOWED' && said('HELM-HELD') === 'true', `${said('HELM-BACK')} / ${said('HELM-HELD')}`);
 check('and dying takes you off her', said('DIED') === 'none', said('DIED'));
 
 for (const line of [...ok, ...bad]) console.log(line);
