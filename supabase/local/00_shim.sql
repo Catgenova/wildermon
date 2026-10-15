@@ -31,6 +31,7 @@ end $$;
 -- could be called the same thing.
 create table if not exists auth.users (id uuid primary key);
 alter table auth.users add column if not exists email text;
+alter table auth.users add column if not exists raw_user_meta_data jsonb;
 create unique index if not exists users_email_key on auth.users (lower(email));
 
 /**

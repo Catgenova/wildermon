@@ -2173,6 +2173,14 @@ export const NEWS: News[] = [
       'Swimming beside her, you can climb aboard, come aboard as a passenger or take her empty helm, as from the shore.',
     ],
   },
+  {
+    n: 159,
+    day: '2026-10-15',
+    lines: () => [
+      'Your name keeps the capitals you type when you make your account: Alice, not alice. Signing in ignores capitals, so alice and Alice are still one account, '
+        + 'and signing in with different capitals changes how your name is written on every island. Only the capitals can change, not the letters.',
+    ],
+  },
 ];
 
 

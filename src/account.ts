@@ -1,5 +1,5 @@
 import {
-  PASSWORD_MIN, Unchecked, breachCount, breachWord, createAccount, foldName,
+  PASSWORD_MIN, Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
   myLook, nameEmail, nameFree, nameTrouble, passwordTrouble, passwordVerdict,
   setLook, signInAs, signOut, whoAmI,
 } from './net/accounts';
@@ -39,7 +39,7 @@ const lede = $<HTMLParagraphElement>('lede');
 const maker = $<HTMLElement>('maker');
 const ashore = $<HTMLButtonElement>('ashore');
 
-const NAME_HELP = 'Three to twenty characters: a letter first, then letters, numbers, underscore or hyphen. It is what everybody on the island will see over your head.';
+const NAME_HELP = 'Three to twenty characters: a letter first, then letters, numbers, underscore or hyphen. It is what everybody on the island will see over your head, with the capitals you type. Signing in ignores capitals, so alice and Alice are one account, and signing in with different capitals changes them.';
 const PW_HELP_NEW = `${PASSWORD_MIN} characters at the very least, and checked against the list of passwords already known to have leaked. Neither it nor its full fingerprint leaves this page.`;
 const PW_HELP_BACK = 'The one you chose when you made the account.';
 
@@ -125,7 +125,7 @@ let asking = 0;
 let timer = 0;
 function checkName(): void {
   window.clearTimeout(timer);
-  const typed = foldName(nameBox.value);
+  const typed = writtenName(nameBox.value);
   if (!typed) return note(nameNote, NAME_HELP);
   const bad = nameTrouble(typed);
   if (bad) return note(nameNote, bad, 'bad');
@@ -147,17 +147,8 @@ function checkName(): void {
   }, 350);
 }
 
-nameBox.addEventListener('input', () => {
-  // Folded as you type rather than behind your back at submit, so that the
-  // name on the screen is the name you are going to get.
-  const at = nameBox.selectionStart;
-  const folded = nameBox.value.toLowerCase();
-  if (folded !== nameBox.value) {
-    nameBox.value = folded;
-    if (at !== null) nameBox.setSelectionRange(at, at);
-  }
-  checkName();
-});
+// Left as you type it: the capitals are yours, and the name on the screen is the name you are going to get.
+nameBox.addEventListener('input', () => checkName());
 
 pwBox.addEventListener('input', () => {
   if (mode === 'back') return note(pwNote, PW_HELP_BACK);
@@ -194,7 +185,7 @@ form.addEventListener('submit', (ev) => {
 });
 
 async function attempt(): Promise<void> {
-  const name = foldName(nameBox.value);
+  const name = writtenName(nameBox.value);
   const pw = pwBox.value;
 
   const badName = nameTrouble(name);

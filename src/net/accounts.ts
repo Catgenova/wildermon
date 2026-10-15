@@ -72,8 +72,22 @@ export const PASSWORD_MIN = 8;
  */
 export const PASSWORD_MAX = 72;
 
-/** What the game will actually call you, given what you typed. */
+/**
+ * The account a name is, given what you typed: the letters, folded, which is
+ * what you sign in with and what makes a name yours. alice and Alice are one.
+ */
 export const foldName = (raw: string): string => raw.trim().toLowerCase();
+
+/**
+ * And the name as you wrote it, which is what everybody sees.
+ *
+ * Capitals are yours to choose. The island keeps them only when they fold back
+ * to the account's own name (`name_cased()`), so they change how you are
+ * shown and nothing else.
+ */
+export const writtenName = (raw: string): string => raw.trim();
+/** A letter first, then letters, numbers, underscore and hyphen, in either case. The same expression as `name_cased()` in SQL. */
+const WRITTEN = /^[A-Za-z][A-Za-z0-9_-]{2,19}$/;
 
 /** The address a username signs in with. */
 export const nameEmail = (name: string): string => foldName(name) + DOMAIN;
@@ -89,7 +103,7 @@ export function nameTrouble(raw: string): string | null {
   if (name.length < 3) return 'Three letters at the least.';
   if (name.length > 20) return `Twenty at the most. That is ${name.length}.`;
   if (!/^[a-z]/.test(name)) return 'Start it with a letter.';
-  if (!SHAPE.test(name)) return 'Letters, numbers, underscore and hyphen only.';
+  if (!SHAPE.test(name) || !WRITTEN.test(writtenName(raw))) return 'Letters, numbers, underscore and hyphen only.';
   return null;
 }
 
@@ -255,7 +269,9 @@ export interface Made {
  */
 export async function createAccount(rawName: string, password: string): Promise<Made> {
   const name = foldName(rawName);
-  const bad = nameTrouble(name);
+  // The capitals ride in with the account, and the island takes them the first time it sees it (`rpc_my_name`).
+  const shown = writtenName(rawName);
+  const bad = nameTrouble(rawName);
   if (bad) throw new Error(bad);
   const worse = passwordTrouble(password);
   if (worse) throw new Error(worse);
@@ -282,16 +298,16 @@ export async function createAccount(rawName: string, password: string): Promise<
    */
   const had = await sb.auth.getSession();
   if ((had.data.session?.user as { is_anonymous?: boolean } | undefined)?.is_anonymous) {
-    const { error: grew } = await sb.auth.updateUser({ email: nameEmail(name), password });
+    const { error: grew } = await sb.auth.updateUser({ email: nameEmail(name), password, data: { display: shown } });
     if (!grew) {
       const { data: called } = await sb.rpc('rpc_my_name');
-      if (typeof called === 'string' && called === name) return { name, unconfirmed: false };
+      if (typeof called === 'string' && foldName(called) === name) return { name: called, unconfirmed: false };
     } else if (/already|taken|registered|exists/i.test(grew.message)) {
       throw new Error('That name is taken. Try another.');
     }
   }
 
-  const { data, error } = await sb.auth.signUp({ email: nameEmail(name), password });
+  const { data, error } = await sb.auth.signUp({ email: nameEmail(name), password, options: { data: { display: shown } } });
   if (error) throw new Error(inOurWords(error.message, nameEmail(name)));
   /**
    * The quiet duplicate.
@@ -303,10 +319,10 @@ export async function createAccount(rawName: string, password: string): Promise<
    */
   if (data.user && (data.user.identities?.length ?? 1) === 0) throw new Error('That name is taken. Try another.');
   if (!data.user) throw new Error('The island keeper did not say whether the account was made.');
-  if (!data.session) return { name, unconfirmed: true };
+  if (!data.session) return { name: shown, unconfirmed: true };
 
-  await sb.rpc('rpc_my_name');
-  return { name, unconfirmed: false };
+  const { data: called } = await sb.rpc('rpc_my_name');
+  return { name: typeof called === 'string' && called ? called : shown, unconfirmed: false };
 }
 
 /** Come back to an account that already exists. */
@@ -328,8 +344,18 @@ export async function signInAs(rawName: string, password: string): Promise<strin
   for (const email of everyEmail(name)) {
     const { error } = await sb.auth.signInWithPassword({ email, password });
     if (!error) {
-      await sb.rpc('rpc_my_name');
-      return name;
+      /*
+       * Signed in as the capitals you typed: they are your name from here on,
+       * on every island (`rpc_name_case`). Whoever got in with the password
+       * owns the account, and only its capitals can change.
+       */
+      const { data: called } = await sb.rpc('rpc_my_name');
+      const shown = writtenName(rawName);
+      if (typeof called === 'string' && called !== shown) {
+        const { data: cased, error: refused } = await sb.rpc('rpc_name_case', { p_display: shown });
+        if (!refused && typeof cased === 'string') return cased;
+      }
+      return typeof called === 'string' && called ? called : shown;
     }
     if (!refusal) refusal = inOurWords(error.message, email);
     if (!/invalid login credentials/i.test(error.message)) break;

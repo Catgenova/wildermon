@@ -2934,6 +2934,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/team.mjs --log-level=error
           node node_modules/.cache/team.mjs
 
+      - name: A name as you write it
+        run: |
+          # Asked: names were all lowercase, because the name was read back out
+          # of the sign-in address. This asks that the capitals written are the
+          # name shown, that only a casing of the account's own name is kept,
+          # that an account may change its capitals and nothing else, and that
+          # the browser keeps them as typed and signs in with them folded.
+          npx esbuild supabase/test/names.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/names.mjs --log-level=error
+          node node_modules/.cache/names.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last
