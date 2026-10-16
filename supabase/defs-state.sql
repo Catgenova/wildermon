@@ -4841,7 +4841,7 @@ create or replace function ryb_cube() returns double precision[] language sql im
 create or replace function knack_chance(p_id text, p_base double precision) returns double precision language sql immutable as $fn$ select (case when p_id = any (array['swimming', 'climbing', 'driving', 'sailing']::text[]) then least(1, p_base / 1) else 1 end) / 5000::double precision $fn$;
 create or replace function knack_chance(p_id text, p_base double precision, p_mul double precision) returns double precision language sql immutable as $fn$ select knack_chance(p_id, p_base) * p_mul $fn$;
 create or replace function elementalism_skill() returns text language sql immutable as $fn$ select 'elementalism' $fn$;
-create or replace function swirls_a_day() returns double precision language sql immutable as $fn$ select 500::double precision $fn$;
+create or replace function swirls_a_day() returns double precision language sql immutable as $fn$ select 1500::double precision $fn$;
 create or replace function swirl_tries() returns double precision language sql immutable as $fn$ select 4::double precision $fn$;
 create or replace function swirl_draws() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function swirl_dark() returns double precision language sql immutable as $fn$ select 0.01::double precision $fn$;

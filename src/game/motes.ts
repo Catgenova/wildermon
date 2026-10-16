@@ -71,7 +71,7 @@ export const moteName = (e: MoteElement): string => `${capital(e)} mote`;
 export const swirlName = (e: MoteElement): string => `${capital(e)} mote swirl`;
 
 /** How many swirls each turn of the woods puts down, over the whole map. */
-export const SWIRLS_A_DAY = 500;
+export const SWIRLS_A_DAY = 1500;
 /** Of swirls on land, the share that are dark, and the share that are light. */
 export const SWIRL_DARK = 0.01;
 export const SWIRL_LIGHT = 0.01;

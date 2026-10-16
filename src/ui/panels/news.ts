@@ -2220,6 +2220,13 @@ export const NEWS: News[] = [
         + 'They used to be laid out again as the page loaded and could come back a cell off, or a cell smaller; the keeper\'s window lost its place to any other window saved before it was made.',
     ],
   },
+  {
+    n: 165,
+    day: '2026-10-16',
+    lines: () => [
+      `Mote swirls: each turn of the woods now puts down ${numberWord(SWIRLS_A_DAY)} across the map, where it put down five hundred, from the next dawn.`,
+    ],
+  },
 ];
 
 
