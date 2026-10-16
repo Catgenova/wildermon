@@ -5729,11 +5729,15 @@ export class Game {
       this.foreknown = true;
       return true;
     }
+    return this.rand() < this.skillChance(skill, difficulty, toolQl, ease);
+  }
+
+  /** The chance a `skillCheck` comes off: better skill and tools help, difficulty hurts, between 30% and 98%. */
+  skillChance(skill: string, difficulty = 10, toolQl = 0, ease = 0): number {
     const s = this.skills.get(skill);
     // A clear head makes a hard piece of work easier, but never simple.
     const d = ease > 0 ? Math.max(difficulty * 0.5, difficulty - ease) : difficulty;
-    const chance = Math.min(0.98, Math.max(0.3, 0.6 + (s / 100) * 0.38 + toolQl / 500 - d / 150));
-    return this.rand() < chance;
+    return Math.min(0.98, Math.max(0.3, 0.6 + (s / 100) * 0.38 + toolQl / 500 - d / 150));
   }
 
   /**

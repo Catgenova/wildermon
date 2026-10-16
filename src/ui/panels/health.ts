@@ -30,7 +30,7 @@ const SVG = 'http://www.w3.org/2000/svg';
 const PART_BONE: Record<string, [string, V3]> = {
   head: ['head', [0, 0, 1.4]],
   chest: ['chest', [0, 0, 0.6]],
-  arms: ['elbow1', [0, 0, 3]],
+  arms: ['arm1', [0, 0, -2.4]],
   offhand: ['wrist0', [0, 0, -0.6]],
   weapon: ['wrist1', [0, 0, -0.6]],
   legs: ['knee0', [0, 0, -2.2]],
@@ -114,6 +114,7 @@ export class HealthPanel {
   private readonly big: HTMLSpanElement;
   private readonly sum: HTMLSpanElement;
   private readonly emptyIn: HTMLDivElement;
+  private readonly emptyText: HTMLSpanElement;
   private readonly rate: HTMLDivElement;
   private readonly pills = new Map<string, { fill: HTMLSpanElement; num: HTMLSpanElement; box: HTMLDivElement }>();
   private readonly stage: HTMLDivElement;
@@ -175,6 +176,8 @@ export class HealthPanel {
     this.big = el('span', 'hp-big', '100%');
     this.sum = el('span', 'hp-sum');
     this.emptyIn = el('div', 'hp-empty-in');
+    this.emptyText = el('span');
+    this.emptyIn.append(el('span', 'hp-glass'), this.emptyText);
     line.append(this.big, el('span', 'hp-big-label', 'health'), this.sum);
     this.rate = el('div', 'hp-rate');
     this.rate.setAttribute('aria-live', 'polite');
@@ -205,7 +208,7 @@ export class HealthPanel {
     this.stage.append(plinth, this.canvas, this.pins);
     this.hands = el('div', 'hp-hands');
     const stageBox = el('div', 'hp-stage-box');
-    stageBox.append(this.stage, this.legend, this.hands);
+    stageBox.append(this.stage, this.legend);
 
     /* ---- the tabs ------------------------------------------------------------------------- */
     const side = el('div', 'hp-side');
@@ -246,7 +249,8 @@ export class HealthPanel {
     this.against = el('div', 'hp-cards');
     this.forYou = el('div', 'hp-cards');
     this.forHead = el('div', 'hp-head', 'For you');
-    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Against you'), this.against, this.forHead, this.forYou);
+    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Against you'), this.against, this.forHead, this.forYou,
+      el('div', 'hp-head', 'Your hands at healing'), this.hands);
     const foodHead = el('div', 'hp-head', 'What you have been eating');
     this.fedWord = el('span', 'hp-fed');
     foodHead.append(this.fedWord);
@@ -259,7 +263,9 @@ export class HealthPanel {
     this.more.type = 'button';
     this.more.hidden = true;
     this.more.addEventListener('click', () => win.body.scrollBy({ top: win.body.clientHeight * 0.7, behavior: this.still ? 'auto' : 'smooth' }));
-    root.append(top, main, this.more);
+    root.append(top, main);
+    // Over the window's foot, not in what scrolls, so the fade under it does not take it too.
+    win.el.append(this.more);
     win.body.addEventListener('scroll', () => this.moreBelow(), { passive: true });
     this.show('wounds');
 
@@ -316,7 +322,7 @@ export class HealthPanel {
       this.forHead.hidden = this.forYou.hidden = !r.forYou.length;
     }
     if (this.tab === 'food') this.drawFood(r);
-    const set = (t: Tab, n: number, hot: boolean): void => {
+    const set = (t: Tab, n: number | string, hot: boolean): void => {
       const b = this.tabs.get(t)?.badge;
       if (!b) return;
       b.textContent = n ? String(n) : '';
@@ -325,14 +331,16 @@ export class HealthPanel {
     };
     set('wounds', r.wounds.length, r.wounds.some((v) => v.state === 'bad' || v.state === 'bleeding' || v.state === 'venom'));
     set('conditions', r.against.length, r.against.length > 0);
-    set('food', 0, false);
+    set('food', r.hungry ? '!' : 0, r.hungry);
     this.moreBelow();
   }
 
   /** The hint at the foot while there is more of the window under it than shows. */
   private moreBelow(): void {
     const b = this.win.body;
-    this.more.hidden = b.scrollHeight - b.scrollTop - b.clientHeight < 12;
+    const more = b.scrollHeight - b.scrollTop - b.clientHeight > 12;
+    this.more.hidden = !more || !this.win.isOpen;
+    b.classList.toggle('hp-body-more', more);
   }
 
   /* ---- along the top -------------------------------------------------------------------- */
@@ -356,7 +364,7 @@ export class HealthPanel {
     this.sum.textContent = r.wounds.length ? (bits.length ? bits.join(' · ') : `${r.wounds.length} dressed`) : '';
     this.sum.classList.toggle('hp-sum-bad', bits.length > 0);
     this.emptyIn.hidden = r.emptyIn === null;
-    if (r.emptyIn !== null) this.emptyIn.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} as you are`;
+    if (r.emptyIn !== null) this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} as you are`;
     this.rate.replaceChildren(...r.rates.map((x) => {
       const chip = el('span', `hp-rate-chip hp-rate-${x.kind}`, x.short);
       chip.title = x.long;
@@ -611,7 +619,7 @@ export class HealthPanel {
     if (this.picked && !states.has(this.picked)) this.picked = null;
     // The worst open by itself the first time there is one, so the window opens on what wants doing.
     if (!this.picked && r.wounds.length && !this.drawn) this.picked = r.wounds[0].key;
-    this.legend.textContent = r.wounds.length ? 'Click a pin or a wound to treat it' : 'Nothing open on you';
+    this.legend.textContent = r.wounds.length ? 'Tap a pin or wound to treat' : 'Nothing open on you';
     const a = this.game.action;
     const doing = a && a.state === 'performing' && a.target.kind === 'item' && a.target.wound ? { key: a.target.wound, id: a.def.id, k: a.elapsed / Math.max(0.001, a.duration), left: Math.max(0, a.duration - a.elapsed) } : null;
     const sig = JSON.stringify([this.picked, doing && [doing.key, doing.id, Math.round(doing.k * 50)], r.wounds.map((v) => [v.key, v.state, v.title, v.tags, v.eta, v.severity.toFixed(2),
@@ -652,7 +660,7 @@ export class HealthPanel {
     const sf = el('span', 'hp-wound-sev-fill');
     sf.style.width = pct(v.severity);
     track.append(sf);
-    sev.append(el('span', 'hp-wound-depth-label', 'Depth'), track);
+    sev.append(el('span', 'hp-wound-depth-label', `Depth ${v.depth}`), track);
     head.append(el('span', 'hp-wound-dot'), name, state, sev, el('span', 'hp-wound-tags', v.tags.join(' · ')), el('span', 'hp-wound-eta', v.eta));
     // Folded, the next thing to do for it, so the list can be read without opening every one.
     if (!open && v.cares.length) {
@@ -716,8 +724,16 @@ export class HealthPanel {
     // What could be held for it, best first: what each does for this wound, and how many you carry.
     const table = el('div', 'hp-opts');
     table.setAttribute('role', 'table');
-    table.append(el('div', 'hp-opts-head', c.options.length > 1 ? 'Carried loose in your pack, one of:' : 'Carried loose in your pack:'));
-    for (const o of c.options) table.append(this.optionRow(o, c.options.length > 1));
+    const many = c.options.length > 1;
+    const numbers = c.options.some((o) => o.closes);
+    table.classList.toggle('hp-opts-numbers', numbers);
+    const cols = el('div', 'hp-opts-head');
+    cols.setAttribute('role', 'row');
+    cols.append(el('span', 'hp-opts-what', many ? 'In your pack, one of' : 'In your pack'));
+    if (numbers) cols.append(el('span', 'hp-opts-num', 'Closes'), el('span', 'hp-opts-num', 'Turns'));
+    cols.append(el('span', 'hp-opts-num', 'Have'));
+    table.append(cols);
+    for (const o of c.options) table.append(this.optionRow(o, many, numbers));
     box.append(table);
     if (c.recipes.length) {
       const make = el('details', 'hp-make');
@@ -731,20 +747,28 @@ export class HealthPanel {
     return box;
   }
 
-  private optionRow(o: CareOption, many: boolean): HTMLElement {
+  private optionRow(o: CareOption, many: boolean, numbers: boolean): HTMLElement {
     const row = el('div', `hp-opt${o.chosen ? ' hp-opt-chosen' : ''}${o.have ? '' : many ? ' hp-opt-none' : ' hp-opt-need'}`);
     row.setAttribute('role', 'row');
     const name = el('div', 'hp-opt-name');
     name.setAttribute('role', 'cell');
     name.append(el('b', '', o.label));
-    if (o.best && many) name.append(el('span', 'hp-opt-best', 'best'));
-    name.append(el('div', 'hp-opt-does', o.does));
+    if (o.chosen) name.append(el('span', 'hp-opt-use', 'will use'));
+    else if (o.best && many) name.append(el('span', 'hp-opt-best', 'best'));
+    if (o.best || !many) name.append(el('div', 'hp-opt-does', o.does));
     const have = el('div', `hp-opt-have${o.have ? ' hp-opt-have-yes' : many ? '' : ' hp-opt-have-need'}`);
-    have.append(el('span', '', many ? `${o.have} carried` : `${o.have} / 1`));
-    if (o.chosen) have.append(el('span', 'hp-opt-use', 'will use'));
+    have.append(el('b', '', many ? String(o.have) : `${o.have} / 1`));
     have.setAttribute('role', 'cell');
     have.title = o.have ? `You carry ${o.have}` : 'You carry none';
-    row.append(icon(o.item), name, have);
+    row.append(icon(o.item), name);
+    if (numbers) {
+      const closes = el('div', 'hp-opt-num', o.closes ?? '–');
+      closes.title = 'How much faster it closes the wound than left open';
+      const turns = el('div', `hp-opt-num${o.turns === '0%' ? ' hp-opt-num-good' : ''}`, o.turns ?? '–');
+      turns.title = "How much of an open wound's chance of going bad is left under it";
+      row.append(closes, turns);
+    }
+    row.append(have);
     return row;
   }
 

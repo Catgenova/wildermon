@@ -104,6 +104,7 @@ export const WINDOW_RUNES: Record<string, string> = {
   inventory: 'othala',
   look: 'algiz',
   skills: 'tiwaz',
+  health: 'heart',
   craft: 'harrow',
   map: 'star8',
   hoard: 'star8',
