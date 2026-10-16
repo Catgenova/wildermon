@@ -407,7 +407,6 @@ export class InventoryPanel {
           children: [
             { label: 'Once', onSelect: () => this.game.requestAction(def, target, 1) },
             ...COUNTS.map((n) => ({ label: `${n} times`, onSelect: () => this.game.requestAction(def, target, n) })),
-            { label: 'Until you stop', note: 'or until your wind gives out', onSelect: () => this.game.requestAction(def, target) },
             ...(def.id === 'improve_item' ? [this.upToEntry(item, def)] : []),
           ],
         };

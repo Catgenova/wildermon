@@ -2188,6 +2188,13 @@ export const NEWS: News[] = [
       'Dirt dropped on a kelp tile, at your feet or on one of its corners, turns it to a dirt tile, the way it does grass, sand or a reed bed. The kelp is gone with it.',
     ],
   },
+  {
+    n: 161,
+    day: '2026-10-16',
+    lines: () => [
+      'The handful menus on a job offer Once and 5, 10, 25 or 50 times; Until you stop is gone from them.',
+    ],
+  },
 ];
 
 

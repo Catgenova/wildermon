@@ -53,7 +53,6 @@ export function jobEntry(g: Game, def: ActionDef, target: Target, reason: string
     children: [
       { label: 'Once', onSelect: () => go(1) },
       ...COUNTS.map((n) => ({ label: `${n} times`, onSelect: () => go(n) })),
-      ...(def.repeat ? [{ label: 'Until you stop', note: 'or until your stamina runs out', onSelect: () => go() }] : []),
     ],
   };
 }
