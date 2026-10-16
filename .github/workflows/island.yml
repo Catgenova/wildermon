@@ -2985,6 +2985,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/order.mjs --log-level=error
           node node_modules/.cache/order.mjs
 
+      - name: Flattening wears the shovel, and every job on the ground its tool
+        run: |
+          # Reported: flattening with two shovels damaged neither. On an island
+          # flattening wore no shovel at all, and four more jobs on the ground
+          # wore nothing either. This asks that a go at flattening wears the
+          # best shovel by a dig's wear on both sides, so two share it, and
+          # that every job on the ground with a tool wears it on the island.
+          npx esbuild supabase/test/flatten.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/flatten.mjs --log-level=error
+          node node_modules/.cache/flatten.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

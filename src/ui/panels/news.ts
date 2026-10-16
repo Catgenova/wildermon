@@ -2227,6 +2227,14 @@ export const NEWS: News[] = [
       `Mote swirls: each turn of the woods now puts down ${numberWord(SWIRLS_A_DAY)} across the map, where it put down five hundred, from the next dawn.`,
     ],
   },
+  {
+    n: 166,
+    day: '2026-10-16',
+    lines: () => [
+      'On an island, flattening wore no shovel at all, however many you carried; nor did bedding or taking up paving, cutting reeds or prospecting wear their tools. '
+        + 'Each go at any of them now wears the best of its tool in your pack by one use, as a dig does, so two of the same tool take turns.',
+    ],
+  },
 ];
 
 
