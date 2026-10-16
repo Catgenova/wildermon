@@ -416,7 +416,7 @@ export class UI {
     const skills = this.windows.create({ id: 'skills', title: 'Skills', x: 364, y: 56, width: 260, height: 380, anchor: 'tr', open: false });
     new SkillsPanel(skills, game);
     // How you are: your wounds and what to dress them with, what is on you, and how you are eating.
-    const healthWin = this.windows.create({ id: 'health', title: 'Health', x: 364, y: 56, width: 360, height: 520, anchor: 'tr', open: false });
+    const healthWin = this.windows.create({ id: 'health', title: 'Health', x: 364, y: 56, width: 540, height: 540, anchor: 'tr', open: false });
     this.health = new HealthPanel(healthWin, game, this.hud.effects.spells);
     // The handful you are moving today, beside the book that holds all forty.
     const craft = this.windows.create({ id: 'craft', title: 'Crafting', x: 364, y: 56, width: 360, height: 360, anchor: 'tr', open: false });

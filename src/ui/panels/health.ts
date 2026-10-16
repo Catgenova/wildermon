@@ -1,41 +1,54 @@
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
+import { DEFAULT_LOOK } from '../../game/look';
+import { gearFrom, wornWire } from '../../game/worn';
+import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } from '../../render/figure';
 import { svgOf, type Effect, type SpellsOnYou } from '../effects';
-import { healthReport, type Care, type HealthReport, type WoundView } from '../health';
+import { clockWords, healthReport, type Care, type CareOption, type HealthReport, type RecipeView, type WoundState, type WoundView } from '../health';
 import type { UIWindow } from '../windows';
 
 /**
  * Health: how you are, what is open on you and what to do about it.
  *
- * A heart at the top fills with your health and beats faster the less of it
- * there is; a little figure beside your wounds wears each one where it is,
- * bleeding, swollen with venom, gone green or bound up; and a wound clicked,
- * on the figure or in the list, opens what can be done for it, with what has
- * to be carried for each and the button that does it. Under those, what is
- * against you and for you, and how well you are eating.
+ * Along the top, always in sight: a heart that fills with your health and
+ * beats faster the less of it there is, what you are losing or mending a
+ * minute, and your stamina, food and water. Under it, on the left, you: your
+ * own figure as the island draws it, in what you wear, standing and breathing,
+ * with each wound pinned where it is -- bleeding drips to the ground, venom
+ * bubbles, a wound gone bad gives off a sickly wisp, and a dressing is bound
+ * round it. On the right, three tabs: the wounds, worst first, each opening
+ * on what can be done for it, what has to be carried and the button that
+ * does it to that wound; what is against you and for you; and how you are
+ * eating.
  *
  * The words and numbers are worked out in `src/ui/health.ts`; this draws them.
  */
 
 const SVG = 'http://www.w3.org/2000/svg';
 
-/** Where on the figure each part's wounds are drawn, in its 100 × 160 box. */
-const PART_AT: Record<string, [number, number]> = {
-  head: [50, 22],
-  chest: [50, 64],
-  arms: [27, 66],
-  offhand: [20, 98],
-  weapon: [80, 98],
-  legs: [41, 120],
-  feet: [40, 150],
+/** The bone each part's wounds are pinned to, and where on it, in the body's own units (`figureJoint`). */
+const PART_BONE: Record<string, [string, V3]> = {
+  head: ['head', [0, 0, 1.4]],
+  chest: ['chest', [0, 0, 0.6]],
+  arms: ['elbow1', [0, 0, 3]],
+  offhand: ['wrist0', [0, 0, -0.6]],
+  weapon: ['wrist1', [0, 0, -0.6]],
+  legs: ['knee0', [0, 0, -2.2]],
+  feet: ['ankle1', [0, 0, -0.4]],
 };
 
 /** The beat at full health and at none, seconds a beat. */
 const BEAT_SLOW = 1.15;
 const BEAT_FAST = 0.5;
-
 /** How long a wound's row stays lit after it has been seen to, seconds. */
 const SEEN_TO = 1.6;
+/** How much of the stage's height the body stands in, and how far its feet are from the stage's foot, CSS px. */
+const BODY_SHARE = 0.78;
+const FEET_UP = 22;
+/** The most frames a second the figure is drawn at. */
+const FIGURE_FPS = 30;
+
+type Tab = 'wounds' | 'conditions' | 'food';
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] => {
   const e = document.createElement(tag);
@@ -53,43 +66,94 @@ const pct = (x: number): string => `${Math.round(Math.max(0, Math.min(1, x)) * 1
 /** The heart, as a path in a 100 × 92 box. */
 const HEART = 'M50 88 C 20 66 4 48 4 28 C 4 13 16 3 30 3 C 39 3 46 8 50 15 C 54 8 61 3 70 3 C 84 3 96 13 96 28 C 96 48 80 66 50 88 Z';
 
+/** Small pictures of what a care takes, in a 24 × 24 box, drawn in the window's own colours. */
+const ITEM_ICONS: Record<string, string> = {
+  bandage: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="9" cy="12" rx="6" ry="7" class="i-cloth"/><ellipse cx="9" cy="12" rx="2.2" ry="2.6" class="i-core"/><path d="M9 5 H19 a2 2 0 0 1 2 2 V9 L17 10 L21 12 V17 a2 2 0 0 1 -2 2 H9" class="i-cloth"/><path d="M13 8.5 h5 M13 15.5 h5" class="i-weave"/></svg>',
+  cover: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3" class="i-cloth"/><path d="M8 15 C 9 10 13 8 17 8 C 17 12 14 15 9 15.5 Z" class="i-leaf"/><path d="M9 15 L15 10" class="i-vein"/></svg>',
+  lye_bucket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 Q 12 1 18 6" class="i-handle"/><path d="M5 8 H19 L17.5 20 a1.5 1.5 0 0 1 -1.5 1.3 H8 a1.5 1.5 0 0 1 -1.5 -1.3 Z" class="i-wood"/><ellipse cx="12" cy="8" rx="7" ry="1.8" class="i-lye"/><path d="M6.3 12 H17.7 M6.8 16.5 H17.2" class="i-band"/></svg>',
+  salve: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M4 9 V16 a8 3 0 0 0 16 0 V9" class="i-tin"/><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M9 8.5 C 10 6.5 13 6 15 7" class="i-vein"/></svg>',
+};
+const icon = (item: string): HTMLSpanElement => {
+  const s = el('span', `hp-icon hp-icon-${item}`);
+  s.innerHTML = ITEM_ICONS[item] ?? '';
+  return s;
+};
+
+/** What is drawn in a wound's pin, so its state reads without its colour: a drop, a fang, a wisp, a wrap or a leaf. */
+const PIN_GLYPH: Record<WoundState, string> = {
+  bleeding: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
+  open: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
+  venom: '<path d="M1.5 2.5 H10.5 V4 H1.5 Z M2.8 4 L4.3 10 L5.6 4 Z M6.4 4 L7.7 10 L9.2 4 Z" stroke="none"/>',
+  bad: '<path fill-rule="evenodd" stroke="none" d="M6 1.2 a4.3 4.3 0 0 0 -4.3 4.3 c0 1.6 .8 2.7 1.9 3.3 V10.6 h4.8 V8.8 c1.1 -.6 1.9 -1.7 1.9 -3.3 A4.3 4.3 0 0 0 6 1.2 Z M4.4 4.6 a1 1 0 1 0 .01 0 Z M7.6 4.6 a1 1 0 1 0 .01 0 Z"/>',
+  dressed: '<path d="M2 4 L10 6 M2 7 L10 9 M2 5.5 L10 3.5" fill="none" stroke-width="1.5" stroke-linecap="round"/>',
+  covered: '<path d="M2.5 9.5 C 3 5 6 2.5 9.5 2.5 C 9.5 6 7 9 2.5 9.5 Z"/>',
+};
+
+/** What a wound's state is called on the legend, in the order it is drawn. */
+const STATE_NAMES: Array<[WoundState, string]> = [
+  ['bleeding', 'Bleeding'], ['bad', 'Gone bad'], ['venom', 'Venom'], ['open', 'Open'], ['dressed', 'Dressed'], ['covered', 'Right herb'],
+];
+
+/** A drop of blood, a bubble of venom or a wisp off a wound gone bad, on the figure's stage. */
+interface Mote {
+  kind: 'drop' | 'bubble' | 'wisp';
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  born: number;
+  life: number;
+  /** Where a drop lands, CSS px down the stage. */
+  floor: number;
+}
+
 export class HealthPanel {
-  private readonly root: HTMLDivElement;
   private readonly heart: HTMLDivElement;
   private readonly heartFill: SVGRectElement;
   private readonly heartWave: SVGGElement;
-  private readonly big: HTMLDivElement;
+  private readonly big: HTMLSpanElement;
+  private readonly sum: HTMLSpanElement;
+  private readonly emptyIn: HTMLDivElement;
   private readonly rate: HTMLDivElement;
-  private readonly bars = new Map<string, { fill: HTMLSpanElement; num: HTMLSpanElement }>();
-  private readonly woundHead: HTMLDivElement;
-  private readonly figure: SVGSVGElement;
-  private readonly figureMarks: SVGGElement;
-  private readonly face: { mouth: SVGPathElement; eyes: SVGGElement };
-  private readonly list: HTMLDivElement;
-  private readonly ails: HTMLDivElement;
-  private readonly boons: HTMLDivElement;
-  private readonly food: HTMLDivElement;
+  private readonly pills = new Map<string, { fill: HTMLSpanElement; num: HTMLSpanElement; box: HTMLDivElement }>();
+  private readonly stage: HTMLDivElement;
+  private readonly canvas: HTMLCanvasElement;
+  private readonly pins: HTMLDivElement;
+  private readonly legend: HTMLDivElement;
+  private readonly hands: HTMLDivElement;
+  private readonly tabs = new Map<Tab, { btn: HTMLButtonElement; badge: HTMLSpanElement; pane: HTMLDivElement }>();
+  private readonly woundsPane: HTMLDivElement;
+  private readonly against: HTMLDivElement;
+  private readonly forYou: HTMLDivElement;
+  private readonly forHead: HTMLDivElement;
+  private readonly foodBars: HTMLDivElement;
   private readonly fedWord: HTMLSpanElement;
   private readonly foodWords: HTMLDivElement;
+  private readonly more: HTMLButtonElement;
+  private tab: Tab = 'wounds';
   /** The wound open in the list, by its key (`woundKey`). */
   private picked: string | null = null;
-  /** What each wound was last drawn as, so a change is drawn once and a wound seen to can light up. */
+  private report: HealthReport | null = null;
   private drawn = '';
   private lastHealth = -1;
   private lastWounds = new Map<string, string>();
   private seenAt = new Map<string, number>();
-  /** Whether the wounds have been looked at once, so the first look flinches at nothing. */
   private primed = false;
   private next = 0;
+  private frame = 0;
+  private lastFigure = 0;
+  private motes: Mote[] = [];
+  /** Where each wound's pin is on the stage, CSS px, as last drawn. */
+  private pinAt = new Map<string, [number, number]>();
+  private readonly still = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   constructor(private readonly win: UIWindow, private readonly game: Game, private readonly spells: SpellsOnYou) {
     win.body.classList.add('hp-body');
-    this.root = el('div', 'hp');
-    win.body.append(this.root);
+    const root = el('div', 'hp');
+    win.body.append(root);
 
-    /* ---- the heart and the bars -------------------------------------------- */
-    const vitals = el('section', 'hp-vitals');
-    vitals.setAttribute('aria-label', 'How you are');
+    /* ---- along the top: the heart, the line under it, the bars ---------------------- */
+    const top = el('header', 'hp-top');
     this.heart = el('div', 'hp-heart');
     const hs = svg('svg', { viewBox: '0 0 100 92', 'aria-hidden': 'true' });
     const defs = svg('defs');
@@ -98,93 +162,112 @@ export class HealthPanel {
     const shine = svg('radialGradient', { id: 'hp-heart-shine', cx: '0.32', cy: '0.25', r: '0.8' });
     shine.append(svg('stop', { offset: '0', 'stop-color': 'var(--hp-heart-lit)' }), svg('stop', { offset: '1', 'stop-color': 'var(--hp-heart)' }));
     defs.append(clip, shine);
-    const back = svg('path', { d: HEART, class: 'hp-heart-back' });
     const filled = svg('g', { 'clip-path': 'url(#hp-heart-clip)' });
-    this.heartFill = svg('rect', { x: 0, y: 0, width: 100, height: 92, class: 'hp-heart-fill', fill: 'url(#hp-heart-shine)' });
-    // The surface of what is in it, rolling gently.
+    this.heartFill = svg('rect', { x: 0, y: 0, width: 100, height: 92, fill: 'url(#hp-heart-shine)' });
     this.heartWave = svg('g');
     this.heartWave.append(svg('path', { class: 'hp-heart-wave', d: 'M-100 4 Q -87.5 0 -75 4 T -50 4 T -25 4 T 0 4 T 25 4 T 50 4 T 75 4 T 100 4 T 125 4 T 150 4 V 12 H -100 Z' }));
     filled.append(this.heartFill, this.heartWave);
-    const rim = svg('path', { d: HEART, class: 'hp-heart-rim' });
-    const glint = svg('ellipse', { cx: 30, cy: 22, rx: 9, ry: 5, class: 'hp-heart-glint', transform: 'rotate(-30 30 22)' });
-    hs.append(defs, back, filled, rim, glint);
+    hs.append(defs, svg('path', { d: HEART, class: 'hp-heart-back' }), filled, svg('path', { d: HEART, class: 'hp-heart-rim' }),
+      svg('ellipse', { cx: 30, cy: 22, rx: 9, ry: 5, class: 'hp-heart-glint', transform: 'rotate(-30 30 22)' }));
     this.heart.append(hs);
-    const words = el('div', 'hp-vital-words');
-    const line = el('div', 'hp-vital-line');
-    this.big = el('div', 'hp-big', '100%');
-    line.append(this.big, el('span', 'hp-big-label', 'Health'));
+    const words = el('div', 'hp-top-words');
+    const line = el('div', 'hp-top-line');
+    this.big = el('span', 'hp-big', '100%');
+    this.sum = el('span', 'hp-sum');
+    this.emptyIn = el('div', 'hp-empty-in');
+    line.append(this.big, el('span', 'hp-big-label', 'health'), this.sum);
     this.rate = el('div', 'hp-rate');
     this.rate.setAttribute('aria-live', 'polite');
-    const bars = el('div', 'hp-bars');
+    words.append(line, this.emptyIn, this.rate);
+    const pills = el('div', 'hp-pills');
     for (const [id, label] of [['stamina', 'Stamina'], ['hunger', 'Food'], ['thirst', 'Water']] as const) {
-      const row = el('div', `hp-bar hp-bar-${id}`);
-      const track = el('span', 'hp-bar-track');
-      const fill = el('span', 'hp-bar-fill');
+      const box = el('div', `hp-pill hp-pill-${id}`);
+      const head = el('div', 'hp-pill-head');
+      const num = el('span', 'hp-pill-num');
+      head.append(el('span', 'hp-pill-label', label), num);
+      const track = el('span', 'hp-pill-track');
+      const fill = el('span', 'hp-pill-fill');
       track.append(fill);
-      const num = el('span', 'hp-bar-num');
-      row.append(el('span', 'hp-bar-label', label), track, num);
-      bars.append(row);
-      this.bars.set(id, { fill, num });
+      box.append(head, track);
+      pills.append(box);
+      this.pills.set(id, { fill, num, box });
     }
-    words.append(line, this.rate, bars);
-    vitals.append(this.heart, words);
+    top.append(this.heart, words, pills);
 
-    /* ---- the wounds -------------------------------------------------------- */
-    const wounds = el('section', 'hp-wounds');
-    this.woundHead = el('div', 'hp-head', 'Wounds');
-    const lay = el('div', 'hp-wound-lay');
-    this.figure = svg('svg', { viewBox: '0 0 100 164', class: 'hp-figure', role: 'img' });
-    const body = svg('g', { class: 'hp-figure-body' });
-    // A soft little figure: head, body, arms, hands, legs and feet.
-    body.append(
-      svg('rect', { x: 34, y: 117, width: 13, height: 33, rx: 6.5, class: 'hp-part', 'data-part': 'legs' }),
-      svg('rect', { x: 53, y: 117, width: 13, height: 33, rx: 6.5, class: 'hp-part', 'data-part': 'legs' }),
-      svg('ellipse', { cx: 40, cy: 152, rx: 9, ry: 5, class: 'hp-part', 'data-part': 'feet' }),
-      svg('ellipse', { cx: 60, cy: 152, rx: 9, ry: 5, class: 'hp-part', 'data-part': 'feet' }),
-      svg('rect', { x: 18, y: 50, width: 12, height: 44, rx: 6, class: 'hp-part', 'data-part': 'arms', transform: 'rotate(10 24 50)' }),
-      svg('rect', { x: 70, y: 50, width: 12, height: 44, rx: 6, class: 'hp-part', 'data-part': 'arms', transform: 'rotate(-10 76 50)' }),
-      svg('circle', { cx: 20, cy: 98, r: 6.5, class: 'hp-part', 'data-part': 'offhand' }),
-      svg('circle', { cx: 80, cy: 98, r: 6.5, class: 'hp-part', 'data-part': 'weapon' }),
-      svg('path', { d: 'M32 52 Q 32 44 42 43 L 58 43 Q 68 44 68 52 L 66 116 Q 50 122 34 116 Z', class: 'hp-part', 'data-part': 'chest' }),
-      svg('circle', { cx: 50, cy: 22, r: 17, class: 'hp-part', 'data-part': 'head' }),
-    );
-    // A face that minds how you are: it blinks, and smiles or frowns with your health.
-    const eyes = svg('g', { class: 'hp-eyes' });
-    eyes.append(svg('ellipse', { cx: 44, cy: 21, rx: 1.8, ry: 2.3 }), svg('ellipse', { cx: 56, cy: 21, rx: 1.8, ry: 2.3 }));
-    const cheeks = svg('g', { class: 'hp-cheeks' });
-    cheeks.append(svg('ellipse', { cx: 40, cy: 27, rx: 3, ry: 1.8 }), svg('ellipse', { cx: 60, cy: 27, rx: 3, ry: 1.8 }));
-    const mouth = svg('path', { class: 'hp-mouth', d: 'M45 29 Q 50 33 55 29' });
-    this.face = { mouth, eyes };
-    this.figureMarks = svg('g', { class: 'hp-marks' });
-    this.figure.append(body, eyes, cheeks, mouth, this.figureMarks);
-    this.figure.addEventListener('click', (e) => {
-      const mark = (e.target as Element).closest('[data-key]');
-      if (mark instanceof SVGElement && mark.dataset.key) this.pick(mark.dataset.key);
-    });
-    this.list = el('div', 'hp-list');
-    this.list.setAttribute('role', 'list');
-    lay.append(this.figure, this.list);
-    wounds.append(this.woundHead, lay);
+    /* ---- you ----------------------------------------------------------------------------- */
+    const main = el('div', 'hp-main');
+    this.stage = el('div', 'hp-stage');
+    this.canvas = el('canvas', 'hp-model');
+    this.canvas.setAttribute('aria-hidden', 'true');
+    this.pins = el('div', 'hp-pins');
+    this.legend = el('div', 'hp-legend');
+    const plinth = el('div', 'hp-plinth');
+    this.stage.append(plinth, this.canvas, this.pins);
+    this.hands = el('div', 'hp-hands');
+    const stageBox = el('div', 'hp-stage-box');
+    stageBox.append(this.stage, this.legend, this.hands);
 
-    /* ---- against you, for you ---------------------------------------------- */
-    const ailSec = el('section', 'hp-ails-sec');
-    this.ails = el('div', 'hp-ails');
-    this.boons = el('div', 'hp-ails hp-boons');
-    ailSec.append(el('div', 'hp-head', 'Against you'), this.ails, el('div', 'hp-head', 'For you'), this.boons);
-
-    /* ---- nutrition ----------------------------------------------------------- */
-    const foodSec = el('section', 'hp-food-sec');
-    const foodHead = el('div', 'hp-head', 'Nutrition');
+    /* ---- the tabs ------------------------------------------------------------------------- */
+    const side = el('div', 'hp-side');
+    const bar = el('div', 'hp-tabs');
+    bar.setAttribute('role', 'tablist');
+    bar.setAttribute('aria-label', 'Health');
+    const panes = el('div', 'hp-panes');
+    for (const [id, label] of [['wounds', 'Wounds'], ['conditions', 'Conditions'], ['food', 'Nutrition']] as const) {
+      const btn = el('button', 'hp-tab');
+      btn.type = 'button';
+      btn.id = `hp-tab-${id}`;
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-controls', `hp-pane-${id}`);
+      const badge = el('span', 'hp-badge');
+      btn.append(el('span', 'hp-tab-label', label), badge);
+      btn.addEventListener('click', () => this.show(id));
+      btn.addEventListener('keydown', (e) => {
+        const order: Tab[] = ['wounds', 'conditions', 'food'];
+        const i = order.indexOf(id);
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          const to = order[(i + (e.key === 'ArrowRight' ? 1 : order.length - 1)) % order.length];
+          this.show(to);
+          this.tabs.get(to)?.btn.focus();
+        }
+      });
+      const pane = el('div', 'hp-pane');
+      pane.id = `hp-pane-${id}`;
+      pane.setAttribute('role', 'tabpanel');
+      pane.setAttribute('aria-labelledby', btn.id);
+      bar.append(btn);
+      panes.append(pane);
+      this.tabs.set(id, { btn, badge, pane });
+    }
+    this.woundsPane = el('div', 'hp-list');
+    this.woundsPane.setAttribute('role', 'list');
+    this.tabs.get('wounds')?.pane.append(this.woundsPane);
+    this.against = el('div', 'hp-cards');
+    this.forYou = el('div', 'hp-cards');
+    this.forHead = el('div', 'hp-head', 'For you');
+    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Against you'), this.against, this.forHead, this.forYou);
+    const foodHead = el('div', 'hp-head', 'What you have been eating');
     this.fedWord = el('span', 'hp-fed');
     foodHead.append(this.fedWord);
-    this.food = el('div', 'hp-food');
-    this.foodWords = el('div', 'hp-food-words');
-    foodSec.append(foodHead, this.food, this.foodWords);
+    this.foodBars = el('div', 'hp-food');
+    this.foodWords = el('ul', 'hp-food-words') as unknown as HTMLDivElement;
+    this.tabs.get('food')?.pane.append(foodHead, this.foodBars, this.foodWords);
+    side.append(bar, panes);
+    main.append(stageBox, side);
+    this.more = el('button', 'hp-more', 'More below');
+    this.more.type = 'button';
+    this.more.hidden = true;
+    this.more.addEventListener('click', () => win.body.scrollBy({ top: win.body.clientHeight * 0.7, behavior: this.still ? 'auto' : 'smooth' }));
+    root.append(top, main, this.more);
+    win.body.addEventListener('scroll', () => this.moreBelow(), { passive: true });
+    this.show('wounds');
 
-    this.root.append(vitals, wounds, ailSec, foodSec);
-
-    win.onOpen = () => this.refresh(true);
-    for (const ev of ['stats', 'inventory', 'skill'] as const) game.events.on(ev, () => this.soon());
+    win.onOpen = () => {
+      this.refresh(true);
+      this.loop();
+    };
+    for (const ev of ['stats', 'inventory', 'skill', 'action'] as const) game.events.on(ev as 'stats', () => this.soon());
   }
 
   /** Drawn again at the next update, not at once: a go can change the pack and the body in one breath. */
@@ -192,141 +275,366 @@ export class HealthPanel {
     this.next = 0;
   }
 
-  /** Called every frame; draws only while open, a few times a second. */
+  /** Called every frame; the words a few times a second while open. */
   update(now: number): void {
     if (!this.win.isOpen || now < this.next) return;
     this.next = now + 250;
     this.refresh(false);
   }
 
-  private pick(key: string): void {
-    this.picked = this.picked === key ? null : key;
+  private show(tab: Tab): void {
+    this.tab = tab;
+    for (const [id, t] of this.tabs) {
+      const on = id === tab;
+      t.btn.setAttribute('aria-selected', String(on));
+      t.btn.tabIndex = on ? 0 : -1;
+      t.btn.classList.toggle('hp-tab-on', on);
+      t.pane.hidden = !on;
+    }
+    if (this.report) this.refresh(true);
+  }
+
+  private pick(key: string, fromPin = false): void {
+    this.picked = this.picked === key && !fromPin ? null : key;
+    this.show('wounds');
     this.drawn = '';
     this.refresh(true);
-    // The row opened, brought into view.
-    this.list.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'nearest' });
+    this.woundsPane.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`)?.scrollIntoView({ block: 'nearest', behavior: this.still ? 'auto' : 'smooth' });
   }
 
   refresh(force: boolean): void {
     if (!this.win.isOpen && !force) return;
     const r = healthReport(this.game, this.spells);
-    this.drawVitals(r);
+    this.report = r;
+    this.drawTop(r);
     this.drawWounds(r);
-    this.drawEffects(this.ails, r.against, 'Nothing is against you.');
-    this.drawEffects(this.boons, r.forYou, 'Nothing is helping you just now.');
-    this.drawFood(r);
+    this.drawHands(r);
+    // The other tabs only while they show.
+    if (this.tab === 'conditions') {
+      this.drawEffects(this.against, r.against, 'Nothing is against you.');
+      this.drawEffects(this.forYou, r.forYou, '');
+      this.forHead.hidden = this.forYou.hidden = !r.forYou.length;
+    }
+    if (this.tab === 'food') this.drawFood(r);
+    const set = (t: Tab, n: number, hot: boolean): void => {
+      const b = this.tabs.get(t)?.badge;
+      if (!b) return;
+      b.textContent = n ? String(n) : '';
+      b.hidden = !n;
+      b.classList.toggle('hp-badge-hot', hot);
+    };
+    set('wounds', r.wounds.length, r.wounds.some((v) => v.state === 'bad' || v.state === 'bleeding' || v.state === 'venom'));
+    set('conditions', r.against.length, r.against.length > 0);
+    set('food', 0, false);
+    this.moreBelow();
   }
 
-  /* ---- drawing ------------------------------------------------------------------ */
+  /** The hint at the foot while there is more of the window under it than shows. */
+  private moreBelow(): void {
+    const b = this.win.body;
+    this.more.hidden = b.scrollHeight - b.scrollTop - b.clientHeight < 12;
+  }
 
-  private drawVitals(r: HealthReport): void {
+  /* ---- along the top -------------------------------------------------------------------- */
+
+  private drawTop(r: HealthReport): void {
     const h = Math.max(0, Math.min(1, r.health));
     this.big.textContent = pct(h);
-    // What is in the heart: its surface at the health's height, rolling.
     const top = 4 + (1 - h) * 84;
     this.heartFill.setAttribute('y', String(top));
     this.heartWave.setAttribute('transform', `translate(0 ${top - 4})`);
     this.heart.style.setProperty('--hp-beat', `${(BEAT_FAST + (BEAT_SLOW - BEAT_FAST) * h).toFixed(2)}s`);
     this.heart.classList.toggle('hp-heart-low', h < 0.3);
     this.heart.classList.toggle('hp-heart-hurt', r.losing > 0 || r.venom > 0);
-    this.heart.title = `${pct(h)} health`;
-    // A little burst of hearts when it goes up.
     if (this.lastHealth >= 0 && h > this.lastHealth + 0.009) this.burst();
     this.lastHealth = h;
-    this.rate.replaceChildren(...r.rateWords.map((w) => el('div', /^(Losing|Venom)/.test(w) ? 'hp-rate-bad' : '', w)));
+    // What is wrong, in a few words: how many are bleeding, gone bad, venomous or open.
+    const count = (st: WoundState): number => r.wounds.filter((v) => v.state === st).length;
+    const bits = [
+      [count('bleeding'), 'bleeding'], [count('bad'), 'gone bad'], [count('venom'), 'with venom'], [count('open'), 'open'],
+    ].filter(([n]) => (n as number) > 0).map(([n, w]) => `${n} ${w}`);
+    this.sum.textContent = r.wounds.length ? (bits.length ? bits.join(' · ') : `${r.wounds.length} dressed`) : '';
+    this.sum.classList.toggle('hp-sum-bad', bits.length > 0);
+    this.emptyIn.hidden = r.emptyIn === null;
+    if (r.emptyIn !== null) this.emptyIn.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} as you are`;
+    this.rate.replaceChildren(...r.rates.map((x) => {
+      const chip = el('span', `hp-rate-chip hp-rate-${x.kind}`, x.short);
+      chip.title = x.long;
+      return chip;
+    }));
+    this.rate.setAttribute('aria-label', r.rateWords.join(' '));
     for (const [id, v] of [['stamina', r.stamina], ['hunger', r.hunger], ['thirst', r.thirst]] as const) {
-      const b = this.bars.get(id);
-      if (!b) continue;
-      b.fill.style.width = pct(v);
-      b.num.textContent = pct(v);
+      const p = this.pills.get(id);
+      if (!p) continue;
+      p.fill.style.width = pct(v);
+      p.num.textContent = pct(v);
+      p.box.classList.toggle('hp-pill-low', v <= 0.2);
     }
-    // The figure's face: a smile while well, flat when worn, a frown when hurt badly.
-    const curve = h > 0.7 ? 4 : h > 0.35 ? 0.5 : -3;
-    this.face.mouth.setAttribute('d', `M45 ${h > 0.35 ? 29 : 31} Q 50 ${(h > 0.35 ? 29 : 31) + curve} 55 ${h > 0.35 ? 29 : 31}`);
-    this.figure.classList.toggle('hp-figure-weak', h < 0.3);
   }
 
   private burst(): void {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (this.still) return;
     for (let i = 0; i < 4; i++) {
       const b = el('span', 'hp-burst');
       b.style.setProperty('--dx', `${(i - 1.5) * 9}px`);
       b.style.animationDelay = `${i * 90}ms`;
-      b.innerHTML = '<svg viewBox="0 0 100 92" aria-hidden="true"><path d="' + HEART + '"/></svg>';
+      b.innerHTML = `<svg viewBox="0 0 100 92" aria-hidden="true"><path d="${HEART}"/></svg>`;
       this.heart.append(b);
       b.addEventListener('animationend', () => b.remove());
     }
   }
 
+  /* ---- you, on the stage ------------------------------------------------------------------ */
+
+  /** Your pose on the stage: standing, facing out, in your own look and everything you wear. */
+  private pose(t: number): FigurePose {
+    const p = this.game.player;
+    return {
+      phase: t * 6,
+      moving: false,
+      facing: 0,
+      swimming: false,
+      working: false,
+      look: p.look ?? DEFAULT_LOOK,
+      gear: gearFrom(wornWire((slot) => this.game.worn(slot))),
+    };
+  }
+
+  /** The figure, drawn while the window is open, at most `FIGURE_FPS` a second. */
+  private loop(): void {
+    if (this.frame) return;
+    const step = (ms: number): void => {
+      this.frame = 0;
+      if (!this.win.isOpen) return;
+      if (ms - this.lastFigure >= 1000 / FIGURE_FPS) {
+        this.lastFigure = ms;
+        this.drawStage(ms / 1000);
+      }
+      if (!this.still) this.frame = requestAnimationFrame(step);
+    };
+    this.frame = requestAnimationFrame(step);
+  }
+
+  private drawStage(t: number): void {
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    const c = this.canvas;
+    // The stage is as big as the window's layout makes it (`.hp-stage`); the canvas follows it.
+    const W = this.stage.clientWidth || 160, H = this.stage.clientHeight || 236;
+    if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) {
+      c.width = Math.round(W * dpr);
+      c.height = Math.round(H * dpr);
+    }
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    const pose = this.pose(this.still ? 0 : t);
+    const view = viewOf(pose.facing);
+    // As big as the stage has room for: the top of the head a little under its top edge.
+    const crown = onScreen(view, figureJoint(pose, 'head', [0, 0, 2.6]));
+    const zoom = (H * BODY_SHARE) / Math.max(1, -crown[1]);
+    const fx = W / 2, fy = H - FEET_UP * (H / 236);
+    drawFigure(g, fx, fy, zoom, pose, { ink: 1.3 });
+    // Each wound's pin over its bone, and what each is doing there.
+    const views = this.report?.wounds ?? [];
+    const onPart = new Map<string, number>();
+    const at = new Map<string, [number, number]>();
+    for (const v of views) {
+      const [bone, off] = PART_BONE[v.wound.part] ?? ['chest', [0, 0, 0] as V3];
+      const s = onScreen(view, figureJoint(pose, bone, off));
+      const n = onPart.get(v.wound.part) ?? 0;
+      onPart.set(v.wound.part, n + 1);
+      const x = fx + s[0] * zoom + (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 12, y = fy + s[1] * zoom;
+      at.set(v.key, [x, y]);
+      if (v.state === 'dressed' || v.state === 'covered') this.drawWrap(g, x, y, v.state === 'covered');
+      if (!this.still) this.spawn(v.state, x, y, fy, t);
+    }
+    // Kept apart, so two wounds near each other are two pins and not one: pushed sideways until 20 px lie between them.
+    const keys = [...at.keys()];
+    for (let pass = 0; pass < 4; pass++) {
+      for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
+        const a = at.get(keys[i]) as [number, number], b = at.get(keys[j]) as [number, number];
+        const dx = b[0] - a[0], dy = b[1] - a[1], d = Math.hypot(dx, dy);
+        if (d >= 20) continue;
+        const push = (20 - d) / 2, ux = d > 0.01 ? dx / d : 1, uy = d > 0.01 ? dy / d : 0;
+        a[0] -= ux * push; a[1] -= uy * push;
+        b[0] += ux * push; b[1] += uy * push;
+      }
+    }
+    this.pinAt = at;
+    this.placePins(views);
+    this.drawMotes(g, t);
+  }
+
+  /** A dressing bound round the place: two turns of cloth, green-edged when it is the herb that suits it. */
+  private drawWrap(g: CanvasRenderingContext2D, x: number, y: number, herb: boolean): void {
+    const css = getComputedStyle(this.stage);
+    const cloth = css.getPropertyValue('--hp-dress').trim() || '#fbf3df';
+    const edge = herb ? css.getPropertyValue('--hp-herb').trim() || '#3f6632' : '#8a7a62';
+    g.save();
+    g.translate(x, y);
+    // Three turns of cloth crossing round the limb, the middle one the other way, each with a fold line along it.
+    for (const [dy, a] of [[-4, -0.3], [0, 0.32], [4, -0.3]] as const) {
+      g.save();
+      g.translate(0, dy);
+      g.rotate(a);
+      g.beginPath();
+      g.roundRect(-7.5, -2, 15, 4, 1.6);
+      g.fillStyle = cloth;
+      g.fill();
+      g.strokeStyle = edge;
+      g.lineWidth = 0.9;
+      g.stroke();
+      g.beginPath();
+      g.moveTo(-6, 0);
+      g.lineTo(6, 0);
+      g.strokeStyle = 'rgba(138, 122, 98, 0.45)';
+      g.lineWidth = 0.6;
+      g.stroke();
+      g.restore();
+    }
+    // The herb under it shows green at the edge.
+    if (herb) {
+      g.fillStyle = edge;
+      g.beginPath();
+      g.ellipse(6.5, -6, 2.6, 1.3, -0.6, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.restore();
+  }
+
+  /** New drops, bubbles and wisps off the wounds that make them, a few a second each. */
+  private spawn(state: WoundState, x: number, y: number, floor: number, t: number): void {
+    const rate = state === 'bleeding' ? 1.6 : state === 'bad' ? 1.2 : state === 'venom' ? 2.2 : 0;
+    if (!rate || Math.random() > rate / FIGURE_FPS) return;
+    const r = (k: number): number => (Math.random() - 0.5) * k;
+    if (state === 'bleeding') this.motes.push({ kind: 'drop', x: x + r(4), y: y + 3, vx: r(4), vy: 6, born: t, life: 3, floor: floor + r(6) });
+    else if (state === 'venom') this.motes.push({ kind: 'bubble', x: x + r(8), y, vx: r(6), vy: -14, born: t, life: 1.4, floor });
+    else this.motes.push({ kind: 'wisp', x: x + r(6), y, vx: r(5), vy: -9, born: t, life: 2, floor });
+    if (this.motes.length > 60) this.motes.shift();
+  }
+
+  private drawMotes(g: CanvasRenderingContext2D, t: number): void {
+    const css = getComputedStyle(this.stage);
+    const blood = css.getPropertyValue('--hp-blood').trim() || '#b8373a';
+    const venom = css.getPropertyValue('--hp-venom').trim() || '#7d48a8';
+    const bad = css.getPropertyValue('--hp-bad').trim() || '#5f8a2c';
+    this.motes = this.motes.filter((m) => t - m.born < m.life);
+    for (const m of this.motes) {
+      const age = t - m.born, u = age / m.life;
+      if (m.kind === 'drop') {
+        // Falling, faster as it goes, and a small splash where it lands, spreading and fading.
+        const fall = m.y + m.vy * age + 140 * age * age;
+        if (fall < m.floor) {
+          g.fillStyle = blood;
+          g.beginPath();
+          g.ellipse(m.x + m.vx * age, fall, 1.6, 2.4, 0, 0, Math.PI * 2);
+          g.fill();
+        } else {
+          const since = age - (-m.vy + Math.sqrt(m.vy * m.vy + 560 * (m.floor - m.y))) / 280;
+          g.globalAlpha = Math.max(0, 0.8 - since * 0.35);
+          g.fillStyle = blood;
+          g.beginPath();
+          g.ellipse(m.x + m.vx * age, m.floor, 2 + since * 2.2, 0.9 + since * 0.5, 0, 0, Math.PI * 2);
+          g.fill();
+          g.globalAlpha = 1;
+        }
+      } else if (m.kind === 'bubble') {
+        g.globalAlpha = Math.sin(Math.PI * u) * 0.85;
+        g.strokeStyle = venom;
+        g.fillStyle = venom;
+        g.lineWidth = 1;
+        g.beginPath();
+        g.arc(m.x + m.vx * age + Math.sin(age * 9) * 1.5, m.y + m.vy * age, 1.4 + u * 1.6, 0, Math.PI * 2);
+        g.globalAlpha *= 0.35;
+        g.fill();
+        g.globalAlpha /= 0.35;
+        g.stroke();
+        g.globalAlpha = 1;
+      } else {
+        g.globalAlpha = Math.sin(Math.PI * u) * 0.5;
+        g.strokeStyle = bad;
+        g.lineWidth = 1.6;
+        g.lineCap = 'round';
+        const x0 = m.x + m.vx * age, y0 = m.y + m.vy * age;
+        g.beginPath();
+        g.moveTo(x0, y0);
+        g.bezierCurveTo(x0 + 3, y0 - 3, x0 - 3, y0 - 6, x0 + Math.sin(age * 3) * 2, y0 - 9);
+        g.stroke();
+        g.globalAlpha = 1;
+      }
+    }
+  }
+
+  /** The pins, as buttons over the figure, one a wound, moved to where each wound is drawn. */
+  private placePins(views: WoundView[]): void {
+    const have = new Map([...this.pins.children].map((b) => [(b as HTMLElement).dataset.key ?? '', b as HTMLButtonElement]));
+    for (const v of views) {
+      let b = have.get(v.key);
+      if (!b) {
+        b = el('button', 'hp-pin');
+        b.type = 'button';
+        b.dataset.key = v.key;
+        b.append(el('span', 'hp-pin-ring'), el('span', 'hp-pin-dot'));
+        b.dataset.state = '';
+        b.addEventListener('click', () => this.pick(v.key, true));
+        this.pins.append(b);
+      }
+      have.delete(v.key);
+      const [x, y] = this.pinAt.get(v.key) ?? [this.stage.clientWidth / 2, this.stage.clientHeight / 2];
+      b.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      b.className = `hp-pin hp-pin-${v.state}${v.key === this.picked ? ' hp-pin-picked' : ''}`;
+      if (b.dataset.state !== v.state) {
+        b.dataset.state = v.state;
+        const dot = b.querySelector('.hp-pin-dot');
+        if (dot) dot.innerHTML = `<svg viewBox="0 0 12 12" aria-hidden="true">${PIN_GLYPH[v.state]}</svg>`;
+      }
+      const name = `${v.title} on your ${v.part}`;
+      b.title = name;
+      b.setAttribute('aria-label', `${name}: ${v.tags[0] ?? ''}`);
+    }
+    for (const b of have.values()) b.remove();
+  }
+
+  /* ---- the wounds ------------------------------------------------------------------------- */
+
   private drawWounds(r: HealthReport): void {
-    this.woundHead.textContent = r.wounds.length ? `Wounds · ${r.wounds.length}` : 'Wounds';
-    // A wound whose dressing or state changed has just been seen to (or got worse): note when, to light its row.
     const now = performance.now() / 1000;
     const states = new Map(r.wounds.map((v) => [v.key, `${v.state}|${v.wound.dressing}|${v.wound.salved ? 1 : 0}`]));
     for (const [key, s] of states) {
       const was = this.lastWounds.get(key);
       if (was !== undefined && was !== s) this.seenAt.set(key, now);
-      // A fresh wound makes the figure flinch.
       if (was === undefined && this.primed) this.flinch();
     }
     this.lastWounds = states;
     this.primed = true;
     if (this.picked && !states.has(this.picked)) this.picked = null;
-    // Nothing on the screen moves unless what it says has: the rows hold their buttons still under a pointer.
-    const sig = JSON.stringify([this.picked, r.wounds.map((v) => [v.key, v.state, v.title, v.tags, v.eta, v.severity.toFixed(2),
-      v.cares.map((c) => [c.id, c.why, c.have, c.make, c.target ? 1 : 0])]), [...this.seenAt.entries()].filter(([, t]) => now - t < SEEN_TO).map(([k]) => k)]);
+    // The worst open by itself the first time there is one, so the window opens on what wants doing.
+    if (!this.picked && r.wounds.length && !this.drawn) this.picked = r.wounds[0].key;
+    this.legend.textContent = r.wounds.length ? 'Click a pin or a wound to treat it' : 'Nothing open on you';
+    const a = this.game.action;
+    const doing = a && a.state === 'performing' && a.target.kind === 'item' && a.target.wound ? { key: a.target.wound, id: a.def.id, k: a.elapsed / Math.max(0.001, a.duration), left: Math.max(0, a.duration - a.elapsed) } : null;
+    const sig = JSON.stringify([this.picked, doing && [doing.key, doing.id, Math.round(doing.k * 50)], r.wounds.map((v) => [v.key, v.state, v.title, v.tags, v.eta, v.severity.toFixed(2),
+      v.cares.map((c) => [c.id, c.why, c.have, c.make, c.target ? 1 : 0, c.options.map((o) => [o.have, o.chosen])])]),
+      [...this.seenAt.entries()].filter(([, t]) => now - t < SEEN_TO).map(([k]) => k)]);
     if (sig === this.drawn) return;
     this.drawn = sig;
-    this.drawFigure(r.wounds);
     if (!r.wounds.length) {
-      this.list.replaceChildren(el('div', 'hp-none', 'Nothing is open on you.'));
+      const empty = el('div', 'hp-empty');
+      empty.append(el('div', 'hp-empty-mark'), el('b', '', 'Nothing is open on you.'), el('div', '', r.rateWords.join(' ')));
+      this.woundsPane.replaceChildren(empty);
       return;
     }
-    this.list.replaceChildren(...r.wounds.map((v) => this.woundRow(v, now)));
+    this.woundsPane.replaceChildren(...r.wounds.map((v) => this.woundRow(v, now, doing && doing.key === v.key ? doing : null)));
   }
 
   private flinch(): void {
-    this.figure.classList.remove('hp-flinch');
-    void this.figure.getBoundingClientRect();
-    this.figure.classList.add('hp-flinch');
+    this.stage.classList.remove('hp-flinch');
+    void this.stage.getBoundingClientRect();
+    this.stage.classList.add('hp-flinch');
   }
 
-  private drawFigure(views: WoundView[]): void {
-    const parts = new Map<string, string>();
-    for (const v of views) if (!parts.has(v.wound.part)) parts.set(v.wound.part, v.state);
-    for (const p of this.figure.querySelectorAll<SVGElement>('.hp-part')) {
-      const st = parts.get(p.dataset.part ?? '');
-      if (st) p.dataset.state = st;
-      else delete p.dataset.state;
-    }
-    const marks: SVGGElement[] = [];
-    const onPart = new Map<string, number>();
-    for (const v of views) {
-      const [x0, y] = PART_AT[v.wound.part] ?? [50, 64];
-      const n = onPart.get(v.wound.part) ?? 0;
-      onPart.set(v.wound.part, n + 1);
-      const x = x0 + (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 9;
-      const g = svg('g', { class: `hp-mark hp-mark-${v.state}`, transform: `translate(${x} ${y})`, 'data-key': v.key, tabindex: 0, role: 'button' });
-      g.setAttribute('aria-label', `${v.title} on your ${v.part}`);
-      if (v.key === this.picked) g.classList.add('hp-mark-picked');
-      const t = svg('title');
-      t.textContent = `${v.title} on your ${v.part}`;
-      g.append(t, svg('circle', { r: 7, class: 'hp-mark-ring' }), svg('circle', { r: 4.2, class: 'hp-mark-dot' }));
-      if (v.state === 'bleeding' || v.state === 'bad') g.append(svg('path', { class: 'hp-drip', d: 'M0 6 C -2 9 -2 11 0 12 C 2 11 2 9 0 6 Z' }));
-      if (v.state === 'dressed' || v.state === 'covered') g.append(svg('rect', { class: 'hp-wrap', x: -7, y: -2.2, width: 14, height: 4.4, rx: 2 }));
-      g.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          this.pick(v.key);
-        }
-      });
-      marks.push(g);
-    }
-    this.figureMarks.replaceChildren(...marks);
-    this.figure.setAttribute('aria-label', views.length ? `Your body, with ${views.length} ${views.length === 1 ? 'wound' : 'wounds'} marked` : 'Your body, unhurt');
-  }
-
-  private woundRow(v: WoundView, now: number): HTMLElement {
+  private woundRow(v: WoundView, now: number, doing: { id: string; k: number; left: number } | null): HTMLElement {
     const open = v.key === this.picked;
     const box = el('div', `hp-wound hp-wound-${v.state}${open ? ' hp-wound-open' : ''}`);
     box.dataset.key = v.key;
@@ -336,56 +644,142 @@ export class HealthPanel {
     const head = el('button', 'hp-wound-head');
     head.type = 'button';
     head.setAttribute('aria-expanded', String(open));
-    const dot = el('span', 'hp-wound-dot');
     const name = el('span', 'hp-wound-name');
     name.append(el('b', '', v.title), el('span', 'hp-wound-part', ` · ${v.part}`));
-    const sev = el('span', 'hp-wound-sev');
-    sev.title = 'How deep it is';
+    const state = el('span', `hp-chip hp-chip-${v.state}`, STATE_NAMES.find(([st]) => st === v.state)?.[1] ?? '');
+    const sev = el('span', 'hp-wound-depth');
+    const track = el('span', 'hp-wound-sev');
     const sf = el('span', 'hp-wound-sev-fill');
     sf.style.width = pct(v.severity);
-    sev.append(sf);
-    const tags = el('span', 'hp-wound-tags', v.tags.join(' · '));
-    const eta = el('span', 'hp-wound-eta', v.eta);
-    const want = v.cares.find((c) => c.why === null);
-    const hint = el('span', `hp-wound-hint${want ? ' hp-wound-hint-go' : ''}`, open ? 'Close' : want ? `${want.button} it` : 'What it needs');
-    head.append(dot, name, hint, sev, tags, eta);
+    track.append(sf);
+    sev.append(el('span', 'hp-wound-depth-label', 'Depth'), track);
+    head.append(el('span', 'hp-wound-dot'), name, state, sev, el('span', 'hp-wound-tags', v.tags.join(' · ')), el('span', 'hp-wound-eta', v.eta));
+    // Folded, the next thing to do for it, so the list can be read without opening every one.
+    if (!open && v.cares.length) {
+      const c = v.cares[0];
+      const next = el('span', `hp-wound-next ${c.why === null ? 'hp-wound-next-go' : 'hp-wound-next-need'}`);
+      next.textContent = c.why === null ? `${c.button}: uses your ${c.uses?.label ?? 'dressing'}` : c.holding ? c.why : `${c.button}: needs ${c.options.length > 1 ? 'a dressing' : `a ${c.options[0].label.toLowerCase()}`}`;
+      head.append(next);
+    }
     head.addEventListener('click', () => this.pick(v.key));
     box.append(head);
-    if (open) box.append(this.careBlock(v));
+    if (open) box.append(this.treat(v, doing));
     return box;
   }
 
-  private careBlock(v: WoundView): HTMLElement {
-    const block = el('div', 'hp-care');
+  private treat(v: WoundView, doing: { id: string; k: number; left: number } | null): HTMLElement {
+    const block = el('div', 'hp-treat');
     if (!v.cares.length) {
-      block.append(el('div', 'hp-care-done', `Under the herb that suits it, nothing closes it faster and it cannot go bad. ${v.eta}`));
+      const done = el('div', 'hp-treat-done');
+      done.append(icon('cover'), el('span', '', `Under the herb that suits it: nothing closes it faster, and it cannot go bad. ${v.eta}`));
+      block.append(done);
       return block;
     }
-    for (const c of v.cares) block.append(this.careRow(c));
+    for (const c of v.cares) block.append(this.careBox(c, v, doing && doing.id === c.id ? doing : null));
     return block;
   }
 
-  private careRow(c: Care): HTMLElement {
-    const row = el('div', `hp-care-row${c.why === null ? ' hp-care-ready' : ''}`);
+  private careBox(c: Care, v: WoundView, doing: { k: number; left: number } | null): HTMLElement {
+    const box = el('section', `hp-care${c.why === null ? ' hp-care-ready' : ''}`);
     const head = el('div', 'hp-care-head');
-    const btn = el('button', 'hp-care-btn', c.button);
-    btn.type = 'button';
-    btn.disabled = c.why !== null || !c.target;
-    if (c.why) btn.title = c.why;
-    btn.addEventListener('click', () => {
+    const title = el('div', 'hp-care-title');
+    title.append(el('b', '', c.title));
+    if (c.uses) title.append(el('span', 'hp-care-uses', `Uses your ${c.uses.label}, QL ${c.uses.ql.toFixed(0)}`));
+    const go = el('button', 'hp-go', doing ? 'Working…' : c.button);
+    go.type = 'button';
+    go.disabled = c.why !== null || !c.target || !!doing;
+    if (c.why) {
+      go.title = c.why;
+      go.prepend(el('span', 'hp-lock'));
+    }
+    go.setAttribute('aria-label', `${c.title}: ${v.title} on your ${v.part}${c.why ? ` (${c.why})` : ''}`);
+    go.addEventListener('click', () => {
       const def = ACTION_BY_ID.get(c.id);
       if (!def || !c.target) return;
       this.game.requestAction(def, c.target, 1);
-      btn.classList.add('hp-care-btn-go');
+      this.soon();
     });
-    head.append(el('b', 'hp-care-title', c.title), btn);
-    const need = el('div', 'hp-care-need');
-    need.append(el('span', `hp-held${c.holding ? ' hp-held-ok' : ''}`, c.holding ? 'Carried' : 'Needed'), document.createTextNode(` ${c.needs}`));
-    row.append(head, need, el('div', 'hp-care-have', c.have));
-    if (c.make) row.append(el('div', 'hp-care-make', c.make));
-    if (c.why) row.append(el('div', 'hp-care-why', c.why));
+    head.append(title, go);
+    box.append(head);
+    if (doing) {
+      const bar = el('div', 'hp-progress');
+      bar.setAttribute('role', 'progressbar');
+      bar.setAttribute('aria-valuenow', String(Math.round(doing.k * 100)));
+      const f = el('span', 'hp-progress-fill');
+      f.style.width = pct(doing.k);
+      bar.append(f, el('span', 'hp-progress-left', `${Math.ceil(doing.left)}s`));
+      box.append(bar);
+    }
+    if (c.effect) box.append(el('div', 'hp-care-effect', c.effect));
+    // Something other than a missing thing in the way: said once, here. A missing thing is said by its row.
+    if (c.why && c.holding) box.append(el('div', 'hp-why', c.why));
+    // What could be held for it, best first: what each does for this wound, and how many you carry.
+    const table = el('div', 'hp-opts');
+    table.setAttribute('role', 'table');
+    table.append(el('div', 'hp-opts-head', c.options.length > 1 ? 'Carried loose in your pack, one of:' : 'Carried loose in your pack:'));
+    for (const o of c.options) table.append(this.optionRow(o, c.options.length > 1));
+    box.append(table);
+    if (c.recipes.length) {
+      const make = el('details', 'hp-make');
+      const sum = el('summary', '', c.holding ? 'How to make more' : 'How to make one');
+      const body = el('div', 'hp-make-body');
+      for (const rv of c.recipes) body.append(this.recipeRow(rv));
+      make.append(sum, body);
+      make.open = !c.holding;
+      box.append(make);
+    }
+    return box;
+  }
+
+  private optionRow(o: CareOption, many: boolean): HTMLElement {
+    const row = el('div', `hp-opt${o.chosen ? ' hp-opt-chosen' : ''}${o.have ? '' : many ? ' hp-opt-none' : ' hp-opt-need'}`);
+    row.setAttribute('role', 'row');
+    const name = el('div', 'hp-opt-name');
+    name.setAttribute('role', 'cell');
+    name.append(el('b', '', o.label));
+    if (o.best && many) name.append(el('span', 'hp-opt-best', 'best'));
+    name.append(el('div', 'hp-opt-does', o.does));
+    const have = el('div', `hp-opt-have${o.have ? ' hp-opt-have-yes' : many ? '' : ' hp-opt-have-need'}`);
+    have.append(el('span', '', many ? `${o.have} carried` : `${o.have} / 1`));
+    if (o.chosen) have.append(el('span', 'hp-opt-use', 'will use'));
+    have.setAttribute('role', 'cell');
+    have.title = o.have ? `You carry ${o.have}` : 'You carry none';
+    row.append(icon(o.item), name, have);
     return row;
   }
+
+  /** A recipe: its inputs against what you carry, its tool, its trade and level, and what it makes. */
+  private recipeRow(rv: RecipeView): HTMLElement {
+    const row = el('div', 'hp-recipe');
+    const head = el('div', 'hp-recipe-head');
+    head.append(el('b', '', rv.title), el('span', 'hp-recipe-makes', `makes ${rv.makes}`));
+    const chips = el('div', 'hp-recipe-chips');
+    for (const i of rv.inputs) {
+      const ok = i.have >= i.need;
+      chips.append(el('span', `hp-rchip ${ok ? 'hp-rchip-ok' : 'hp-rchip-no'}`, `${i.name} ${Math.min(i.have, 99)}/${i.need}`));
+    }
+    if (rv.tool) chips.append(el('span', `hp-rchip ${rv.tool.have ? 'hp-rchip-ok' : 'hp-rchip-no'}`, `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`));
+    chips.append(el('span', 'hp-rchip hp-rchip-skill', `${rv.skill.name} ${rv.skill.level.toFixed(1)}`));
+    row.append(head, chips);
+    if (rv.who) row.append(el('div', 'hp-recipe-who', `Made only by ${rv.who}.`));
+    return row;
+  }
+
+  /** Your first aid and chirurgy under the figure, and what each does for you now. */
+  private drawHands(r: HealthReport): void {
+    const sig = JSON.stringify(r.hands);
+    if (this.hands.dataset.sig === sig) return;
+    this.hands.dataset.sig = sig;
+    this.hands.replaceChildren(...r.hands.map((h) => {
+      const row = el('div', 'hp-hand');
+      const head = el('div', 'hp-hand-head');
+      head.append(el('span', '', h.name), el('b', '', h.level.toFixed(1)));
+      row.append(head, el('div', 'hp-hand-does', h.does));
+      return row;
+    }));
+  }
+
+  /* ---- conditions and food -------------------------------------------------------------- */
 
   private drawEffects(into: HTMLElement, list: Effect[], none: string): void {
     const sig = JSON.stringify(list.map((e) => [e.id, e.name, e.caption, e.does]));
@@ -396,16 +790,15 @@ export class HealthPanel {
       return;
     }
     into.replaceChildren(...list.map((e) => {
-      const row = el('div', `hp-ail ${e.good ? 'hp-ail-good' : 'hp-ail-bad'}`);
-      const icon = el('span', 'hp-ail-icon');
-      icon.innerHTML = svgOf(e.glyph as Parameters<typeof svgOf>[0]);
-      const text = el('div', 'hp-ail-text');
-      const name = el('div', 'hp-ail-name');
+      const row = el('div', `hp-card ${e.good ? 'hp-card-good' : 'hp-card-bad'}`);
+      const ic = el('span', 'hp-card-icon');
+      ic.innerHTML = svgOf(e.glyph as Parameters<typeof svgOf>[0]);
+      const text = el('div', 'hp-card-text');
+      const name = el('div', 'hp-card-name');
       name.append(el('b', '', e.name));
-      if (e.caption) name.append(el('span', 'hp-ail-cap', e.caption));
-      text.append(name, ...e.does.map((d) => el('div', 'hp-ail-does', d)));
-      row.append(icon, text);
-      row.title = `Source: ${e.from}`;
+      if (e.caption) name.append(el('span', 'hp-card-cap', e.caption));
+      text.append(name, ...e.does.map((d) => el('div', 'hp-card-does', d)), el('div', 'hp-card-from', e.from));
+      row.append(ic, text);
       return row;
     }));
   }
@@ -413,9 +806,9 @@ export class HealthPanel {
   private drawFood(r: HealthReport): void {
     this.fedWord.textContent = r.fed;
     const sig = r.nutrition.map((n) => n.value.toFixed(2)).join() + r.nutritionWords.join();
-    if (this.food.dataset.sig === sig) return;
-    this.food.dataset.sig = sig;
-    this.food.replaceChildren(...r.nutrition.map((n) => {
+    if (this.foodBars.dataset.sig === sig) return;
+    this.foodBars.dataset.sig = sig;
+    this.foodBars.replaceChildren(...r.nutrition.map((n) => {
       const row = el('div', `hp-nut hp-nut-${n.id}`);
       const track = el('span', 'hp-nut-track');
       const fill = el('span', 'hp-nut-fill');
@@ -424,6 +817,6 @@ export class HealthPanel {
       row.append(el('span', 'hp-nut-name', n.name), track, el('span', 'hp-nut-num', pct(n.value)), el('span', 'hp-nut-note', n.note));
       return row;
     }));
-    this.foodWords.replaceChildren(...r.nutritionWords.map((w) => el('div', '', w)));
+    this.foodWords.replaceChildren(...r.nutritionWords.map((w) => el('li', '', w)));
   }
 }
