@@ -2212,6 +2212,14 @@ export const NEWS: News[] = [
         + 'and works there, and the hive fills with honey and beeswax while it does. It brings nothing to the crate, and with no hive in reach it says so after an hour.',
     ],
   },
+  {
+    n: 164,
+    day: '2026-10-16',
+    lines: () => [
+      'Windows come back where you left them and the size you left them, to the pixel, after a refresh or with the browser closed and opened again. '
+        + 'They used to be laid out again as the page loaded and could come back a cell off, or a cell smaller; the keeper\'s window lost its place to any other window saved before it was made.',
+    ],
+  },
 ];
 
 

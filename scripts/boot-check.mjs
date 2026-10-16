@@ -17,7 +17,11 @@
  *   * `index.html?alone`, the game on its own, which needs no island and no
  *     network, must come up far enough to hand the console its `wurm`
  *     handle, which is the last thing `main.ts` does before the first frame;
- *   * `account.html`, the landing page, must load without throwing.
+ *   * `account.html`, the landing page, must load without throwing;
+ *   * windows moved and resized come back where they were left, the same to
+ *     the pixel, after a refresh and after the browser is closed and opened
+ *     again (asked: "Ui windows should remember their size and position when
+ *     browser is closed or refreshed").
  *
  * Anything thrown on the way is a failure, with the error and where it was.
  *
@@ -122,11 +126,63 @@ async function open(path, ready) {
   return up && !thrown.length;
 }
 
+/**
+ * Move and resize windows, then refresh, then close the browser and open it
+ * again: every window open is where it was and the size it was, each time.
+ */
+async function windowsKept() {
+  const VIEW = { width: 1600, height: 900 };
+  const up = (page) => page.waitForFunction(() => typeof window.wurm === 'object', null, { timeout: BOOT_WAIT }).then(() => page.waitForTimeout(1500));
+  const boxes = (page) => page.$$eval('.win', (ws) => Object.fromEntries(ws.filter((w) => !w.hidden).map((w) => [w.dataset.id, `${w.offsetLeft},${w.offsetTop} ${w.offsetWidth}x${w.offsetHeight}`])));
+  const differ = (a, b) => Object.keys({ ...a, ...b }).filter((k) => a[k] !== b[k]).map((k) => `${k} ${a[k] ?? 'shut'} came back ${b[k] ?? 'shut'}`);
+  const drag = async (page, sel, dx, dy) => {
+    const b = await (await page.$(sel)).boundingBox();
+    await page.mouse.move(b.x + Math.min(40, b.width / 2), b.y + b.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(b.x + Math.min(40, b.width / 2) + dx, b.y + b.height / 2 + dy, { steps: 8 });
+    await page.mouse.up();
+  };
+  let ctx = await browser.newContext({ viewport: VIEW });
+  let page = await ctx.newPage();
+  await page.goto(`${base}/index.html?alone`);
+  await up(page);
+  await page.mouse.click(VIEW.width / 2, VIEW.height / 2);
+  for (const key of ['KeyK', 'KeyM']) await page.keyboard.press(key);
+  await page.waitForTimeout(300);
+  // The event log resized from its corner, off the foot of the screen; the skills moved and resized; the map moved.
+  await drag(page, '.win[data-id="events"] .win-grip', 50, -41);
+  await drag(page, '.win[data-id="skills"] .win-head', -150, 77);
+  await drag(page, '.win[data-id="skills"] .win-grip', 61, -35);
+  await drag(page, '.win[data-id="map"] .win-head', -213, 29);
+  await page.waitForTimeout(300);
+  const left = await boxes(page);
+  const wrong = [];
+  for (let i = 0; i < 2; i++) {
+    await page.reload();
+    await up(page);
+    for (const d of differ(left, await boxes(page))) wrong.push(`refreshed: ${d}`);
+  }
+  const kept = await ctx.storageState();
+  await ctx.close();
+  ctx = await browser.newContext({ viewport: VIEW, storageState: kept });
+  page = await ctx.newPage();
+  await page.goto(`${base}/index.html?alone`);
+  await up(page);
+  for (const d of differ(left, await boxes(page))) wrong.push(`browser opened again: ${d}`);
+  await ctx.close();
+  for (const w of wrong) bad.push(`windows: ${w}`);
+  return !wrong.length && Object.keys(left).length >= 3;
+}
+
 const game = await open('index.html?alone', (page) => page.waitForFunction(() => typeof window.wurm === 'object', null, { timeout: BOOT_WAIT }));
 const landing = await open('account.html', (page) => page.waitForTimeout(2000));
+const windows = game && (await windowsKept().catch((e) => {
+  bad.push(`windows: could not be moved and resized: ${e instanceof Error ? e.message.split('\n')[0] : e}`);
+  return false;
+}));
 await browser.close();
 server.close();
 
-console.log(`boot check: the game on its own ${game ? 'comes up' : 'DOES NOT come up'}; the landing page ${landing ? 'loads' : 'DOES NOT load'}.`);
+console.log(`boot check: the game on its own ${game ? 'comes up' : 'DOES NOT come up'}; the landing page ${landing ? 'loads' : 'DOES NOT load'}; windows ${windows ? 'come back where they were left' : 'DO NOT come back where they were left'}.`);
 for (const b of bad) console.error(`  ${b}`);
 if (bad.length) process.exit(1);

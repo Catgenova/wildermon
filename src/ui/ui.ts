@@ -565,7 +565,7 @@ export class UI {
      */
     const away = this.island?.away ? awayLines(this.island.away) : [];
     if (away.length) {
-      const awayWin = this.windows.create({ id: 'away', title: 'While you were away', x: 0, y: 0, width: 380, height: 240, open: true });
+      const awayWin = this.windows.create({ id: 'away', title: 'While you were away', x: 0, y: 0, width: 380, height: 240, open: true, fresh: true });
       awayWin.el.style.left = `${Math.max(0, (uiBox().w - 380) / 2)}px`;
       awayWin.el.style.top = `${Math.max(0, uiBox().h / 4)}px`;
       for (const line of away) {
@@ -585,7 +585,7 @@ export class UI {
      */
     if (this.island) void this.island.noticesAshore().then((list) => {
       if (!list.length) return;
-      const win = this.windows.create({ id: 'notices-ashore', title: 'Notices', x: 0, y: 0, width: 380, height: 260, open: true });
+      const win = this.windows.create({ id: 'notices-ashore', title: 'Notices', x: 0, y: 0, width: 380, height: 260, open: true, fresh: true });
       win.el.style.left = `${Math.max(0, (uiBox().w - 380) / 2)}px`;
       win.el.style.top = `${Math.max(0, uiBox().h / 3)}px`;
       for (const n of list) {

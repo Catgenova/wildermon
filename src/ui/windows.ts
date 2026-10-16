@@ -1,4 +1,4 @@
-import { uiBox, uiFloor, uiPoint } from './screen';
+import { uiBox, uiFitted, uiFloor, uiPoint } from './screen';
 import { LAYOUT_NAMES } from '../game/keybinds';
 import { runeFor, runeSvg } from './theme';
 import { CELL, CELL_MAJOR, cells, clearPatch, fits, joinsOf, onScreen, placeFor, seamKey, seamsOf, sizeFor, snap, snapAt, squeezeFor, type Box, type Join, type Seam } from './snapgrid';
@@ -22,6 +22,8 @@ export interface WindowOptions {
    * the map -- which otherwise cover a piece of the island for good.
    */
   seeThrough?: boolean;
+  /** Put somewhere of its own each time it is made, rather than where it was left: the tally of what happened while you were away. */
+  fresh?: boolean;
 }
 
 interface Geometry {
@@ -319,6 +321,16 @@ export class UIWindow implements Piece {
     }
   }
 
+  /**
+   * Back to the place and size kept for it, open or shut as it is now: laid
+   * again once the interface has its real size (`WindowManager.clampAll`).
+   */
+  relay(st: SavedState): void {
+    if (this.maximized || st.max || this.opts.fresh) return;
+    this.applyGeometry(st);
+    this.want = st.ow && st.oh ? { w: st.ow, h: st.oh } : null;
+  }
+
   /** Raise above the other windows. */
   focus(): void {
     this.mgr.bringToFront(this);
@@ -607,6 +619,15 @@ export class WindowManager {
   private drag: Drag | null = null;
   /** The seams as they were last laid, by `seamKey`. */
   private seamKeys = new Set<string>();
+  /**
+   * Whether anything has been moved, resized, opened or shut since the page
+   * was loaded. Until then what was kept is what the windows are, and they
+   * are laid from it again whenever the interface changes size; nothing is
+   * written over it by the windows being placed, measured and dressed as the
+   * page comes up, each of which would put them on the grid a cell off from
+   * where they were left.
+   */
+  private touched = false;
 
   constructor(readonly root: HTMLElement) {
     try {
@@ -630,6 +651,10 @@ export class WindowManager {
     this.ghost.hidden = true;
     root.append(this.gridCanvas, this.ghost);
     window.addEventListener('resize', () => this.clampAll());
+    // Written as the page goes, too, so a close or a refresh keeps what is on the screen.
+    window.addEventListener('pagehide', () => {
+      if (this.touched) this.persist();
+    });
     /*
      * Alt held makes every see-through window solid for as long as it is down:
      * the one way to scroll a see-through log or click a line in it without
@@ -780,6 +805,8 @@ export class WindowManager {
     if (!d) return;
     this.drag = null;
     d.p.put(d.to, d.kind === 'size');
+    // Laid as it will be when the page is next loaded, so it comes back the same: a box that sat against the screen's far edge, off the grid there, is whole cells again once moved or resized away from it.
+    this.settle(d.p);
     d.p.el.classList.remove('snap-moving');
     this.gridCanvas.hidden = true;
     this.ghost.hidden = true;
@@ -942,6 +969,11 @@ export class WindowManager {
    * given against a viewport that was never the screen.
    */
   clampAll(): void {
+    // Until something is changed here, where the windows were left, laid against the interface's real size.
+    if (!this.touched && uiFitted()) for (const [id, win] of this.windows) {
+      const st = this.saved[id];
+      if (st) win.relay(st);
+    }
     // On a phone the windows' floor is the foot of the bars, so the bars are laid first, and the windows at the foot before those kept above them.
     if (!this.grid) this.stackBars();
     const all = [...this.windows.values()];
@@ -1024,6 +1056,7 @@ export class WindowManager {
       if (fits(b.x, b.w, w) && fits(b.y, b.h, h)) return;
       this.settle(win);
       this.rejoin(false);
+      if (this.touched) this.persist();
     }).observe(win.el);
     this.bringToFront(win);
     this.onCreate?.(win);
@@ -1059,15 +1092,18 @@ export class WindowManager {
   }
 
   persist(): void {
+    // Before the interface has its size, a window is only where it was put while it was measured.
+    if (!uiFitted()) return;
+    this.touched = true;
     const out: Record<string, SavedState> = {};
     for (const [id, w] of this.windows) out[id] = w.state();
     if (this.grid) for (const [id, b] of this.bars) out[id] = { ...b.box(), open: true };
+    // What was kept for a window not made yet (the keeper's, made once the island has said so) is kept for when it is.
+    this.saved = { ...this.saved, ...out };
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(out));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.saved));
     } catch {
       // Storage unavailable; layout simply will not persist.
     }
-    // What was kept for a window not made yet is kept for when it is.
-    this.saved = { ...this.saved, ...out };
   }
 }

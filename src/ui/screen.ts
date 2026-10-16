@@ -94,6 +94,9 @@ let box = { w: 0, h: 0, scale: 1, left: 0, top: 0, fit: 1 };
 export const uiBox = (): { w: number; h: number } =>
   box.w ? { w: box.w, h: box.h } : { w: window.innerWidth, h: window.innerHeight };
 
+/** Whether the interface has been measured against the screen yet (`fitScreen`); until then `uiBox` is the page's guess. */
+export const uiFitted = (): boolean => box.w > 0;
+
 /**
  * Where a pointer is, in the interface's own coordinates.
  *
