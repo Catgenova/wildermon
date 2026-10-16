@@ -11,7 +11,7 @@ import { countSaid, fill, listed, numberWord } from './words';
 import { FURNITURE, ONE_ALTAR, VESSELS } from './furniture';
 import { trellisWallWords } from './building';
 import { SUBTILES } from './crates';
-import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULDS } from './metal';
+import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS } from './metal';
 import { FISH } from './fishing';
 import { BOIL_IN, boilCount, boilCountPlain, boiledDye, boilRefusal, BOIL_LITRES, isBoilStuff } from './dyes';
 import { DYE_BUCKET, DYESTUFFS, dyeRecipeId } from './dyestuffs';
@@ -387,6 +387,11 @@ export const RECIPES: Recipe[] = [
  * in the book except in the name of the mould, which nobody thinks to look
  * for. The piece, its count and its metal all come off the mould's own row,
  * so none of this can say something the table does not.
+ *
+ * Every mould is formed by blacksmithing, whatever it casts: asked, "mould
+ * QLs when formed should be based off blacksmithing level". The QL is the
+ * smith's (`productQl`, the island's `product_ql`) and never the sand's; what
+ * the mould casts is beaten true afterwards by the trade its row names.
  */
 const MOULD_RECIPES: Recipe[] = MOULDS.map((m) => ({
   id: `make_${m.id}`,
@@ -394,7 +399,7 @@ const MOULD_RECIPES: Recipe[] = MOULDS.map((m) => ({
   result: m.id,
   inputs: [{ item: 'sand', count: m.sand }],
   station: 'smelter' as Station,
-  skill: m.skill,
+  skill: MOULD_SKILL,
   label: `Fire ${/^[aeiou]/i.test(m.name) ? 'an' : 'a'} ${m.name.toLowerCase()}`,
   note: `Casts ${(m.per ?? 1) > 1 ? `${m.per} ` : article(m.makes)}${plural(m.makes, m.per ?? 1)} from ${m.lumps} ${m.lumps === 1 ? 'lump' : 'lumps'} of metal, poured at a smelter${castWhole(m) ? '' : ' and beaten true on an anvil'}`,
   verb: 'firing a mould',

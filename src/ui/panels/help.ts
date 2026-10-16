@@ -102,7 +102,7 @@ import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN
 import { MARK_CAP } from '../../game/marks';
 import { MATERIAL_BY_ID, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
-import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS } from '../../game/metal';
+import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS } from '../../game/metal';
 import { COIN_WORTH } from '../../game/money';
 import { ORDER_LIFE } from '../../game/orders';
 import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from '../../game/nutrition';
@@ -1398,7 +1398,9 @@ export function helpText(): string {
     &mdash; and their quality comes from the
     metal you put in rather than from your hands; skill only decides how little is lost in the pouring.</p>
     <p>Sand fired in a smelter makes <b>moulds</b>: an anvil mould, a pan mould, heads for rakes,
-    shovels, hatchets, pickaxes and knives, a sword blade and a helm. A mould wears every time it is
+    shovels, hatchets, pickaxes and knives, a sword blade and a helm. Every mould is formed by <b>${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}</b>,
+    whatever it casts: its quality is your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, not the sand's, and pouring one teaches
+    ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()} too. A mould wears every time it is
     filled and <b>cannot be mended</b>; a fine one is simply good for more fillings before it cracks
     through. Pour metal into an <b>anvil mould</b> at the smelter and it cools into an anvil of that
     metal, which you set down on ${numberWord(ANVIL_SUBTILES * ANVIL_SUBTILES)} spots of a tile.</p>

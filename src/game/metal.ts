@@ -161,6 +161,9 @@ export interface MouldDef {
   per?: number;
 }
 
+/** The trade that forms every mould and pours it, whatever it casts (`pour_mould`). */
+export const MOULD_SKILL = 'blacksmithing';
+
 export const MOULDS: MouldDef[] = [
   { id: 'anvil_mould', name: 'Anvil mould', makes: 'anvil', skill: 'blacksmithing', sand: 4, difficulty: 10, lumps: 80 },
   { id: 'pan_mould', name: 'Pan mould', makes: 'frying_pan', skill: 'blacksmithing', sand: 2, difficulty: 8, lumps: 1 },

@@ -8,7 +8,7 @@ import { MELT_HEAT, MELT_KEEP, MELT_SHARE, meltLumps, meltQl, meltRefusal, metal
 import { matOf } from './materials';
 import {
   castSeconds, castWhole, INGOT_LUMPS, ingotOf, isMetalStock, isOreItem, lumpsIn, METAL_BY_LUMP, METAL_BY_ORE, metalOfBar, MOULD_BY_ID,
-  MOULD_DENT, mouldLumps, mouldUsesLeft, mouldWear, ORE_PER_LUMP, pourSeconds, smeltSeconds,
+  MOULD_DENT, MOULD_SKILL, mouldLumps, mouldUsesLeft, mouldWear, ORE_PER_LUMP, pourSeconds, smeltSeconds,
 } from './metal';
 
 /**
@@ -386,7 +386,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     id: 'pour_mould',
     label: 'Pour a mould',
     verb: 'pouring the mould',
-    skill: 'smelting',
+    // Teaches the trade that formed the mould: asked, "pouring moulds should give blacksmithing experience".
+    skill: MOULD_SKILL,
     hidden: true,
     stamina: 0.04,
     baseTime: 5,

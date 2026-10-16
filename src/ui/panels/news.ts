@@ -71,7 +71,7 @@ import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
 import { billWords, countOf, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
-import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID } from '../../game/metal';
+import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
@@ -2193,6 +2193,15 @@ export const NEWS: News[] = [
     day: '2026-10-16',
     lines: () => [
       'The handful menus on a job offer Once and 5, 10, 25 or 50 times; Until you stop is gone from them.',
+    ],
+  },
+  {
+    n: 162,
+    day: '2026-10-16',
+    lines: () => [
+      `Every mould is formed with ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, whatever it casts, and its QL is your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()} and never the sand's. `
+        + 'Sword, axe, armour, ring and pendant moulds were formed with the trade of the piece they cast.',
+      `Pouring a mould, and casting an anvil, teach ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}. On an island a pour used to teach nothing.`,
     ],
   },
 ];
