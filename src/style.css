@@ -7334,7 +7334,8 @@ kbd {
  * the window's own tokens, set for Classic here and for Runecut's day and
  * night below, so the heart, the blood and the herbs read on any of them.
  */
-.hp {
+.hp,
+.hp-more {
   --hp-ink: var(--ui-text);
   --hp-dim: var(--ui-dim);
   --hp-line: rgba(154, 127, 76, 0.32);
@@ -7364,6 +7365,9 @@ kbd {
   --hp-stamina: #6fae6a;
   --hp-food: #d69a4a;
   --hp-water: #5a93c4;
+}
+
+.hp {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -7371,7 +7375,8 @@ kbd {
   color: var(--hp-ink);
 }
 
-[data-ui='runecut'] .hp {
+[data-ui='runecut'] .hp,
+[data-ui='runecut'] .hp-more {
   --hp-ink: var(--rc-ink);
   --hp-dim: var(--rc-carve);
   --hp-line: color-mix(in srgb, var(--rc-shade) 55%, transparent);
@@ -7400,7 +7405,8 @@ kbd {
   --hp-greens: var(--rc-moss);
 }
 
-[data-ui='runecut'][data-rc='night'] .hp {
+[data-ui='runecut'][data-rc='night'] .hp,
+[data-ui='runecut'][data-rc='night'] .hp-more {
   --hp-blood: #ff9a8a;
   --hp-bad: #b4d672;
   --hp-venom: #d2a6f0;
@@ -7424,7 +7430,7 @@ kbd {
 .win > .hp-more {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--rim, 0px) + 10px);
+  bottom: var(--hp-more-at, 10px);
   z-index: 3;
   transform: translateX(-50%);
   padding: 3px 12px 3px 10px;
@@ -7819,7 +7825,9 @@ kbd {
 .hp-wound-name { grid-area: name; min-width: 0; font-size: 13px; }
 .hp-wound-part { color: var(--hp-dim); }
 .hp-wound-depth { grid-area: sev; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: center; }
-.hp-wound-depth-label { font-size: 10.5px; color: var(--hp-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.hp-wound-depth-label { font-size: 11.5px; color: var(--hp-dim); white-space: nowrap; }
+.hp-wound-depth-label b { color: var(--hp-ink); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.hp-wound-sev-fill { min-width: 3px; }
 .hp-wound-sev { height: 4px; }
 .hp-wound-next { grid-area: next; justify-self: start; margin-top: 2px; padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
 .hp-wound-next-go { background: color-mix(in srgb, var(--hp-ok) 16%, transparent); color: var(--hp-ok); }
@@ -7916,14 +7924,14 @@ kbd {
   color: var(--hp-dim);
 }
 
-.hp-opts-numbers .hp-opts-head { grid-template-columns: minmax(0, 1fr) 42px 40px 36px; }
+.hp-opts-numbers .hp-opts-head { grid-template-columns: minmax(0, 1fr) 44px 54px 36px; }
 .hp-opts-num { text-align: right; }
 .hp-opt-num { text-align: right; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hp-opt-num-good { color: var(--hp-ok); }
-.hp-opts-numbers .hp-opt { grid-template-columns: 26px minmax(0, 1fr) 42px 40px 36px; }
+.hp-opts-numbers .hp-opt { grid-template-columns: 26px minmax(0, 1fr) 44px 54px 36px; }
 .hp-opts-numbers .hp-opts-head { padding-left: 40px; }
 .hp-opt-have { display: grid; justify-items: end; gap: 1px; white-space: nowrap; }
-.hp-opt-use { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--hp-ok); color: var(--hp-card-hi); font-size: 10px; font-weight: 700; vertical-align: 1px; white-space: nowrap; }
+.hp-opt-use { margin-right: 6px; padding: 0 6px; border-radius: 999px; background: var(--hp-ok); color: var(--hp-card-hi); font-size: 10px; font-weight: 700; vertical-align: 1px; white-space: nowrap; }
 
 .hp-progress { height: 14px; border-radius: 7px; }
 .hp-progress-fill { background: linear-gradient(90deg, var(--hp-ok), color-mix(in srgb, var(--hp-ok) 70%, white)); border-radius: 7px; transition: width 0.25s linear; }
@@ -7955,7 +7963,7 @@ kbd {
 .hp-opt-have b { font-size: 12.5px; }
 .hp-opt-name { min-width: 0; font-size: 12px; }
 .hp-opt-best {
-  margin-left: 6px;
+  margin-right: 6px;
   padding: 0 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--hp-ok) 20%, transparent);
@@ -7965,9 +7973,10 @@ kbd {
   vertical-align: 1px;
 }
 
-.hp-opt-does { color: var(--hp-dim); font-size: 11.5px; line-height: 1.3; }
+.hp-opt-does { grid-column: 2 / -1; margin-top: -4px; color: var(--hp-dim); font-size: 11.5px; line-height: 1.3; }
 .hp-opt-have { font-size: 12px; font-weight: 700; color: var(--hp-dim); font-variant-numeric: tabular-nums; }
 .hp-opt-have-yes { color: var(--hp-ok); }
+.hp-opt-have.hp-opt-have-need { color: var(--hp-blood); }
 
 .hp-icon { display: inline-grid; width: 24px; height: 24px; }
 .hp-icon svg { width: 24px; height: 24px; }
@@ -8034,7 +8043,12 @@ kbd {
 .hp-card-from { margin-top: 2px; color: var(--hp-dim); font-size: 11px; }
 
 /* ---- nutrition ---- */
-.hp-fed { margin-left: auto; color: var(--hp-ink); font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; font-family: inherit; }
+.hp-fed { justify-self: start; display: inline-block; margin: 0 0 8px; padding: 3px 10px; border-radius: 999px; background: var(--hp-sunk); color: var(--hp-ink); font-size: 12px; font-weight: 600; }
+
+.hp-mend-rule { display: grid; gap: 2px; margin-top: 8px; padding: 7px 10px; border-radius: 8px; background: var(--hp-sunk); color: var(--hp-ink); font-size: 12px; line-height: 1.35; }
+.hp-mend-rule b { font-weight: 600; margin-bottom: 2px; }
+.hp-mend-ok { color: var(--hp-ok); }
+.hp-mend-no { color: var(--hp-blood); font-weight: 600; }
 .hp-food { display: grid; gap: 9px; }
 
 .hp-nut {
@@ -8073,11 +8087,16 @@ kbd {
   .hp-heart { width: 50px; height: 46px; }
 }
 
-/* Narrow: you, smaller, over the tabs, and the wounds the full width under. */
-@container (max-width: 450px) {
-  .hp-main { grid-template-columns: minmax(0, 1fr); --hp-stage-w: 132px; --hp-stage-h: 176px; }
-  .hp-stage-box { position: static; justify-items: center; }
-}
+/* Narrow (`hp-narrow`, set by the panel): you stand in the top card beside your numbers, the heart by your health, and the tabs take the full width under. */
+.hp-narrow .hp-main { grid-template-columns: minmax(0, 1fr); }
+.hp-narrow .hp-top { --hp-stage-w: 112px; --hp-stage-h: 200px; grid-template-columns: var(--hp-stage-w) minmax(0, 1fr); align-items: start; padding: 8px; }
+.hp-narrow .hp-stage-box { position: static; grid-row: 1 / span 2; align-self: stretch; }
+.hp-narrow .hp-stage { height: 100%; min-height: var(--hp-stage-h); }
+.hp-narrow .hp-legend { display: none; }
+.hp-narrow .hp-pills { grid-column: 2; grid-template-columns: minmax(0, 1fr); gap: 6px; padding-top: 0; border-top: 0; align-self: end; }
+.hp-narrow .hp-heart { width: 30px; height: 28px; align-self: center; }
+.hp-narrow .hp-sum { flex-basis: 100%; margin-left: 0; }
+.hp-narrow .hp-empty-in { font-size: 15px; }
 
 @media (prefers-reduced-motion: reduce) {
   .hp-heart > svg, .hp-heart-wave, .hp-heart-low .hp-heart-rim, .hp-flinch, .hp-pin-ring, .hp-wound-dot, .hp-wound-seen,

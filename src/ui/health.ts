@@ -12,7 +12,7 @@ import { ACTION_BY_ID, type ActionDef, type Target } from '../game/actions';
 import { HEAL_FED, HEAL_RATE } from '../game/body';
 import { CLASSES } from '../game/classes';
 import { VENOM_DRAIN } from '../game/fight';
-import { DRESS_CHECK, dressingFor, healAmount, HERB_HEAL, SUITS_HEAL } from '../game/firstaid';
+import { DRESS_CHECK, dressingFor, healAmount, HERB_HEAL, SLIP_HEAL, SUITS_HEAL } from '../game/firstaid';
 import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
 import { balance, fedness, fedWord, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENT_NOTES, NUTRIENTS, tableMul, upkeepMul, type Nutrient } from '../game/nutrition';
@@ -143,6 +143,8 @@ export interface HealthReport {
   rates: Array<{ kind: 'bad' | 'good' | 'still'; short: string; long: string }>;
   /** Your first aid and chirurgy, and what each does for you now. */
   hands: Array<{ name: string; level: number; does: string }>;
+  /** How fast health comes back on its own while resting, and what that waits on, each met or not. */
+  mend: { rate: string; needs: Array<{ ok: boolean; text: string }> };
   wounds: WoundView[];
   against: Effect[];
   forYou: Effect[];
@@ -175,7 +177,7 @@ const whole = (x: number): string => `${Math.round(x * 100)}%`;
 const nextFed = (b: number): string => {
   const steps: Array<[number, string]> = [[0.15, 'living on scraps'], [0.4, 'eating plainly'], [0.7, 'eating well'], [0.95, 'wanting for nothing']];
   const up = steps.find(([at]) => b < at);
-  return up ? ` (${up[1]} from ${whole(up[0])})` : '';
+  return up ? ` · ${up[1]} from ${whole(up[0])}` : '';
 };
 
 /** A multiplier said as "6.4×". */
@@ -241,7 +243,7 @@ export function caresFor(g: Game, w: Wound): Care[] {
       why: target ? ask(g, ACTION_BY_ID.get('clean_wound'), target) : 'You need a bucket of lye to clean it out with.',
       options: [{ item: 'lye_bucket', label: 'Bucket of lye', does: 'Used up; you keep the bucket', closes: null, turns: null, have: n, chosen: !!lye, best: true }],
       uses: lye ? { item: 'lye_bucket', label: 'bucket of lye', ql: lye.ql } : null,
-      effect: `Stops the −${perMinute(woundDrain(w) * 60)}/min and lets it close; ${percent(lye ? g.skillChance('first_aid', CLEAN_CHECK, lye.ql, g.mindEase()) : g.skillChance('first_aid', CLEAN_CHECK, 0, g.mindEase()))} chance it comes clean. It is left bleeding: dress it straight after.`,
+      effect: `Stops the −${perMinute(woundDrain(w) * 60)}/min and lets it close; ${percent(lye ? g.skillChance('first_aid', CLEAN_CHECK, lye.ql, g.mindEase()) : g.skillChance('first_aid', CLEAN_CHECK, 0, g.mindEase()))} chance it comes clean, and then it bleeds: dress it straight after. On a miss the lye is spent (you keep the bucket) and it stays gone bad.`,
       recipes: r ? [recipeView(g, r, 'Bucket of lye')] : [],
     });
     return out;
@@ -276,12 +278,12 @@ export function caresFor(g: Game, w: Wound): Care[] {
       target,
       why,
       options: [
-        { item: 'cover', label: `${capital(k.herb)} cover`, does: `The herb that suits a ${k.name}`, closes: times(CLOSE_RIGHT / CLOSE_BARE), turns: '0%', have: right, chosen: use?.herb === k.herb, best: true },
-        { item: 'cover', label: 'Any other cover', does: 'Any other healing herb', closes: times(CLOSE_WRONG / CLOSE_BARE), turns: percent(FESTER_WRONG), have: covers - right, chosen: !!use && use.herb !== '' && use.herb !== k.herb, best: false },
-        { item: 'bandage', label: 'Bandage', does: 'Cut from cloth', closes: times(CLOSE_CLOTH / CLOSE_BARE), turns: percent(FESTER_CLOTH), have: cloth, chosen: use?.herb === '', best: false },
+        { item: 'cover', label: `${capital(k.herb)} cover`, does: `Heals ${times(SUITS_HEAL)} as much as a bandage`, closes: times(CLOSE_RIGHT / CLOSE_BARE), turns: '0%', have: right, chosen: use?.herb === k.herb, best: true },
+        { item: 'cover', label: 'Any other cover', does: `Heals ${times(HERB_HEAL)} as much as a bandage`, closes: times(CLOSE_WRONG / CLOSE_BARE), turns: percent(FESTER_WRONG), have: covers - right, chosen: !!use && use.herb !== '' && use.herb !== k.herb, best: false },
+        { item: 'bandage', label: 'Bandage', does: 'Heals the base amount', closes: times(CLOSE_CLOTH / CLOSE_BARE), turns: percent(FESTER_CLOTH), have: cloth, chosen: use?.herb === '', best: false },
       ],
       uses: use ? { item: use.herb ? 'cover' : 'bandage', label: use.herb ? `${use.herb} cover` : 'bandage', ql: use.item.ql } : null,
-      effect: use ? `Heals ${percent(healAmount(g.skills.get('first_aid'), use.item.ql) * (use.herb === k.herb ? SUITS_HEAL : use.herb ? HERB_HEAL : 1))} and stops the bleeding when it goes on cleanly: ${percent(dressChance(g, use.item.ql))} chance; it uses the best you carry.` : null,
+      effect: use ? `Heals ${percent(healAmount(g.skills.get('first_aid'), use.item.ql) * (use.herb === k.herb ? SUITS_HEAL : use.herb ? HERB_HEAL : 1))} and stops the bleeding: ${percent(dressChance(g, use.item.ql))} chance. On a slip the dressing is spent, it heals ${percent(SLIP_HEAL)} of that and it keeps bleeding.` : null,
       recipes: [
         ...(!right && coverR ? [recipeView(g, coverR, `${capital(k.herb)} cover`)] : []),
         ...(!use && clothR ? [recipeView(g, clothR, 'Bandages')] : []),
@@ -351,8 +353,8 @@ export function woundView(g: Game, w: Wound): WoundView {
     state: woundState(w),
     title: deep ? `${deep} ${k.name}` : capital(k.name),
     part: PART_NAMES[w.part] ?? w.part,
-    severity: Math.min(1, w.severity / 0.3),
-    depth: `${Math.round(w.severity * 100)}% of a life`,
+    severity: Math.min(1, w.severity),
+    depth: `${Math.round(w.severity * 100)}%`,
     tags,
     eta: closesIn(g, w),
     cares: caresFor(g, w),
@@ -387,18 +389,19 @@ export function healthReport(g: Game, spells: SpellsOnYou): HealthReport {
   else if (mending > 0) say('good', `+${perMinute(mending)}/min resting`, `Mending ${perMinute(mending)} a minute while you rest.`);
   else if (open || !fed) {
     const why = [
-      ...(open ? ['a wound is open'] : []),
-      ...(s.hunger <= HEAL_FED ? [`food ${Math.round(s.hunger * 100)}%`] : []),
-      ...(s.thirst <= HEAL_FED ? [`water ${Math.round(s.thirst * 100)}%`] : []),
+      ...(open ? ['open wound'] : []),
+      ...(s.hunger <= HEAL_FED ? [`food ${Math.round(s.hunger * 100)}%, needs over ${percent(HEAL_FED)}`] : []),
+      ...(s.thirst <= HEAL_FED ? [`water ${Math.round(s.thirst * 100)}%, needs over ${percent(HEAL_FED)}`] : []),
     ];
-    say('still', `Not mending: ${why.join(' · ')}${fed ? '' : ` (needs over ${percent(HEAL_FED)})`}`,
+    // Each reason kept on one line, so a narrow window breaks only between them.
+    say('still', `Not mending: ${why.map((w) => w.replace(/ /g, '\u00a0')).join(' · ')}`,
       `Nothing mends while a wound bleeds, has venom in it or has gone bad, or while your food or water is at ${percent(HEAL_FED)} or under.`);
   }
   // At the losses as they are: the venom's share first, then the steady bleed.
   const emptyIn = losing > 0 ? Math.max(0, (s.health - venom) / (losing / 60)) : venom >= s.health ? 0 : null;
   const aid = g.skills.get('first_aid'), chir = g.skills.get('chirurgy');
   const hands = [
-    { name: 'First aid', level: aid, does: `Dressings heal ${percent(healAmount(aid, 0))}–${percent(healAmount(aid, 100))}, by their QL` },
+    { name: 'First aid', level: aid, does: `Dressings heal ${percent(healAmount(aid, 0)).replace('%', '')}–${percent(healAmount(aid, 100))} by QL` },
     { name: 'Chirurgy', level: chir, does: `Wounds close +${percent((CLOSE_PACE + chir * CLOSE_PER_SKILL) / CLOSE_PACE - 1)} faster` },
   ];
   const n = p.nutrition;
@@ -416,6 +419,14 @@ export function healthReport(g: Game, spells: SpellsOnYou): HealthReport {
     rates,
     emptyIn,
     hands,
+    mend: {
+      rate: `Resting, you mend ${perMinute(HEAL_RATE * 60)} a minute once:`,
+      needs: [
+        { ok: !open, text: 'No wound bleeding, with venom in it or gone bad' },
+        { ok: s.hunger > HEAL_FED, text: `Food over ${percent(HEAL_FED)} (now ${Math.round(s.hunger * 100)}%)` },
+        { ok: s.thirst > HEAL_FED, text: `Water over ${percent(HEAL_FED)} (now ${Math.round(s.thirst * 100)}%)` },
+      ],
+    },
     wounds: ranked.map((w) => woundView(g, w)),
     against: effects.filter((e) => !e.good && !WOUND_EFFECTS.has(e.id)),
     forYou: effects.filter((e) => e.good),

@@ -44,6 +44,8 @@ const BEAT_FAST = 0.5;
 const SEEN_TO = 1.6;
 /** How much of the stage's height the body stands in, and how far its feet are from the stage's foot, CSS px. */
 const BODY_SHARE = 0.78;
+/** At or under this width (CSS px) you stand in the top card instead of beside the tabs. */
+const NARROW = 430;
 const FEET_UP = 22;
 /** The most frames a second the figure is drawn at. */
 const FIGURE_FPS = 30;
@@ -83,9 +85,9 @@ const icon = (item: string): HTMLSpanElement => {
 const PIN_GLYPH: Record<WoundState, string> = {
   bleeding: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
   open: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
-  venom: '<path d="M1.5 2.5 H10.5 V4 H1.5 Z M2.8 4 L4.3 10 L5.6 4 Z M6.4 4 L7.7 10 L9.2 4 Z" stroke="none"/>',
+  venom: '<path stroke="none" d="M1.8 1.8 Q1.6 7 4.6 10.6 Q5.4 6 5.4 1.8 Z M6.6 1.8 Q6.6 6 7.4 10.6 Q10.4 7 10.2 1.8 Z"/>',
   bad: '<path fill-rule="evenodd" stroke="none" d="M6 1.2 a4.3 4.3 0 0 0 -4.3 4.3 c0 1.6 .8 2.7 1.9 3.3 V10.6 h4.8 V8.8 c1.1 -.6 1.9 -1.7 1.9 -3.3 A4.3 4.3 0 0 0 6 1.2 Z M4.4 4.6 a1 1 0 1 0 .01 0 Z M7.6 4.6 a1 1 0 1 0 .01 0 Z"/>',
-  dressed: '<path d="M2 4 L10 6 M2 7 L10 9 M2 5.5 L10 3.5" fill="none" stroke-width="1.5" stroke-linecap="round"/>',
+  dressed: '<path stroke="none" fill-rule="evenodd" d="M4.6 2.4 a3.5 3.5 0 1 0 .01 0 Z M4.6 4.8 a1.1 1.1 0 1 0 .01 0 Z"/><path stroke="none" d="M4.6 7.9 H10.8 V9.9 H4.6 Z"/>',
   covered: '<path d="M2.5 9.5 C 3 5 6 2.5 9.5 2.5 C 9.5 6 7 9 2.5 9.5 Z"/>',
 };
 
@@ -129,6 +131,7 @@ export class HealthPanel {
   private readonly forHead: HTMLDivElement;
   private readonly foodBars: HTMLDivElement;
   private readonly fedWord: HTMLSpanElement;
+  private readonly mendLine: HTMLDivElement;
   private readonly foodWords: HTMLDivElement;
   private readonly more: HTMLButtonElement;
   private tab: Tab = 'wounds';
@@ -249,14 +252,14 @@ export class HealthPanel {
     this.against = el('div', 'hp-cards');
     this.forYou = el('div', 'hp-cards');
     this.forHead = el('div', 'hp-head', 'For you');
-    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Against you'), this.against, this.forHead, this.forYou,
+    this.mendLine = el('div', 'hp-mend-rule');
+    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Against you'), this.against, this.mendLine, this.forHead, this.forYou,
       el('div', 'hp-head', 'Your hands at healing'), this.hands);
     const foodHead = el('div', 'hp-head', 'What you have been eating');
     this.fedWord = el('span', 'hp-fed');
-    foodHead.append(this.fedWord);
     this.foodBars = el('div', 'hp-food');
     this.foodWords = el('ul', 'hp-food-words') as unknown as HTMLDivElement;
-    this.tabs.get('food')?.pane.append(foodHead, this.foodBars, this.foodWords);
+    this.tabs.get('food')?.pane.append(foodHead, this.fedWord, this.foodBars, this.foodWords);
     side.append(bar, panes);
     main.append(stageBox, side);
     this.more = el('button', 'hp-more', 'More below');
@@ -267,6 +270,20 @@ export class HealthPanel {
     // Over the window's foot, not in what scrolls, so the fade under it does not take it too.
     win.el.append(this.more);
     win.body.addEventListener('scroll', () => this.moreBelow(), { passive: true });
+    // Narrow, you stand in the top card beside your numbers with the heart by your health, so the wounds start higher.
+    const fit = (): void => {
+      const narrow = root.clientWidth > 0 && root.clientWidth <= NARROW;
+      if (narrow === root.classList.contains('hp-narrow')) return;
+      root.classList.toggle('hp-narrow', narrow);
+      if (narrow) {
+        top.prepend(stageBox);
+        line.prepend(this.heart);
+      } else {
+        main.prepend(stageBox);
+        top.prepend(this.heart);
+      }
+    };
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(root);
     this.show('wounds');
 
     win.onOpen = () => {
@@ -320,6 +337,11 @@ export class HealthPanel {
       this.drawEffects(this.against, r.against, 'Nothing is against you.');
       this.drawEffects(this.forYou, r.forYou, '');
       this.forHead.hidden = this.forYou.hidden = !r.forYou.length;
+      const sig = JSON.stringify(r.mend);
+      if (this.mendLine.dataset.sig !== sig) {
+        this.mendLine.dataset.sig = sig;
+        this.mendLine.replaceChildren(el('b', '', r.mend.rate), ...r.mend.needs.map((n) => el('div', `hp-mend-need ${n.ok ? 'hp-mend-ok' : 'hp-mend-no'}`, `${n.ok ? '✓' : '✗'} ${n.text}`)));
+      }
     }
     if (this.tab === 'food') this.drawFood(r);
     const set = (t: Tab, n: number | string, hot: boolean): void => {
@@ -341,6 +363,8 @@ export class HealthPanel {
     const more = b.scrollHeight - b.scrollTop - b.clientHeight > 12;
     this.more.hidden = !more || !this.win.isOpen;
     b.classList.toggle('hp-body-more', more);
+    // Just above the foot of the body, wherever each look's frame puts it.
+    if (more) this.more.style.setProperty('--hp-more-at', `${this.win.el.clientHeight - b.offsetTop - b.clientHeight + 10}px`);
   }
 
   /* ---- along the top -------------------------------------------------------------------- */
@@ -364,7 +388,7 @@ export class HealthPanel {
     this.sum.textContent = r.wounds.length ? (bits.length ? bits.join(' · ') : `${r.wounds.length} dressed`) : '';
     this.sum.classList.toggle('hp-sum-bad', bits.length > 0);
     this.emptyIn.hidden = r.emptyIn === null;
-    if (r.emptyIn !== null) this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} as you are`;
+    if (r.emptyIn !== null) this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} at this rate`;
     this.rate.replaceChildren(...r.rates.map((x) => {
       const chip = el('span', `hp-rate-chip hp-rate-${x.kind}`, x.short);
       chip.title = x.long;
@@ -660,7 +684,9 @@ export class HealthPanel {
     const sf = el('span', 'hp-wound-sev-fill');
     sf.style.width = pct(v.severity);
     track.append(sf);
-    sev.append(el('span', 'hp-wound-depth-label', `Depth ${v.depth}`), track);
+    const depth = el('span', 'hp-wound-depth-label', 'Depth ');
+    depth.append(el('b', '', v.depth), ' of full health');
+    sev.append(depth, track);
     head.append(el('span', 'hp-wound-dot'), name, state, sev, el('span', 'hp-wound-tags', v.tags.join(' · ')), el('span', 'hp-wound-eta', v.eta));
     // Folded, the next thing to do for it, so the list can be read without opening every one.
     if (!open && v.cares.length) {
@@ -730,7 +756,7 @@ export class HealthPanel {
     const cols = el('div', 'hp-opts-head');
     cols.setAttribute('role', 'row');
     cols.append(el('span', 'hp-opts-what', many ? 'In your pack, one of' : 'In your pack'));
-    if (numbers) cols.append(el('span', 'hp-opts-num', 'Closes'), el('span', 'hp-opts-num', 'Turns'));
+    if (numbers) cols.append(el('span', 'hp-opts-num', 'Closes'), el('span', 'hp-opts-num', 'Goes bad'));
     cols.append(el('span', 'hp-opts-num', 'Have'));
     table.append(cols);
     for (const o of c.options) table.append(this.optionRow(o, many, numbers));
@@ -753,9 +779,6 @@ export class HealthPanel {
     const name = el('div', 'hp-opt-name');
     name.setAttribute('role', 'cell');
     name.append(el('b', '', o.label));
-    if (o.chosen) name.append(el('span', 'hp-opt-use', 'will use'));
-    else if (o.best && many) name.append(el('span', 'hp-opt-best', 'best'));
-    if (o.best || !many) name.append(el('div', 'hp-opt-does', o.does));
     const have = el('div', `hp-opt-have${o.have ? ' hp-opt-have-yes' : many ? '' : ' hp-opt-have-need'}`);
     have.append(el('b', '', many ? String(o.have) : `${o.have} / 1`));
     have.setAttribute('role', 'cell');
@@ -769,6 +792,12 @@ export class HealthPanel {
       row.append(closes, turns);
     }
     row.append(have);
+    // What it does, the width of the row under it, so the name and the numbers keep their room.
+    const does = el('div', 'hp-opt-does');
+    if (o.chosen) does.append(el('span', 'hp-opt-use', 'will use'));
+    else if (o.best && many) does.append(el('span', 'hp-opt-best', 'best'));
+    does.append(o.does);
+    row.append(does);
     return row;
   }
 

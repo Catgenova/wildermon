@@ -24,6 +24,8 @@ export const healAmount = (skill: number, ql: number): number => 0.06 + (skill /
 /** What a dressing puts back is multiplied by this under the herb that suits the wound, and by this under any other. */
 export const SUITS_HEAL = 1.5;
 export const HERB_HEAL = 1.1;
+/** What a dressing that slips still heals, of what it would have. */
+export const SLIP_HEAL = 0.35;
 
 /** The soundest bandage carried: the good cloth is what you want on a wound. */
 const bestBandage = (g: Game) =>
@@ -141,7 +143,7 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       const clean = g.sureCheck('bind_wound', 'first_aid', DRESS_CHECK, use.item.ql, g.mindEase());
       // Cloth holds a dressing on. The right herb closes the wound. And more on a body far gone, for a Chirurgeon's Triage Instinct.
       const triage = g.player.stats.health < g.perk('triage:below', 0) ? g.perk('triage:heal', 1) : 1;
-      const healed = healAmount(g.skills.get('first_aid'), use.item.ql) * (clean ? 1 : 0.35) * (suits ? SUITS_HEAL : use.herb ? HERB_HEAL : 1) * triage;
+      const healed = healAmount(g.skills.get('first_aid'), use.item.ql) * (clean ? 1 : SLIP_HEAL) * (suits ? SUITS_HEAL : use.herb ? HERB_HEAL : 1) * triage;
       g.player.stats.health = Math.min(1, g.player.stats.health + healed);
       // And wind back for a Chirurgeon's Bedside Manner.
       g.player.stats.stamina = Math.min(1, g.player.stats.stamina + g.perk('stamina:bind_wound', 0));
