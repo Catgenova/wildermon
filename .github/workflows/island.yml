@@ -3006,6 +3006,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/threats.mjs --log-level=error
           node node_modules/.cache/threats.mjs
 
+      - name: A wound you point at, and the Health window
+        run: |
+          # Asked: a Health window where a wound is clicked to be bandaged or
+          # treated, clear about what has to be carried. A dressing, the lye
+          # and a salve each picked their own wound; an ask may now name one
+          # (Target.wound), and that one is treated or the ask refused saying
+          # why, in the same words on both sides. And the window's reckoning:
+          # what it offers each wound, what it says is carried and how to make
+          # what is not, from the recipes.
+          npx esbuild supabase/test/health.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/health.mjs --log-level=error
+          node node_modules/.cache/health.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

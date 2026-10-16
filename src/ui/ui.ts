@@ -110,6 +110,7 @@ import { EventLogPanel } from './panels/eventlog';
 import { InventoryPanel } from './panels/inventory';
 import { MinimapPanel } from './panels/minimap';
 import { SkillsPanel } from './panels/skills';
+import { HealthPanel } from './panels/health';
 import { TradesPanel } from './panels/trades';
 import { FaithPanel } from './panels/faith';
 import { FaithBook } from './faithbook';
@@ -300,6 +301,7 @@ export class UI {
   /** Your faith as the island keeps it, which the Faith window and the spell bar both draw. */
   private readonly faithBook: FaithBook;
   private readonly faith: FaithPanel;
+  private readonly health: HealthPanel;
   private readonly spellBar: SpellBar;
   private readonly deedPanel: DeedPanel;
   private readonly tilePanel: TilePanel;
@@ -413,6 +415,9 @@ export class UI {
       }) ?? null);
     const skills = this.windows.create({ id: 'skills', title: 'Skills', x: 364, y: 56, width: 260, height: 380, anchor: 'tr', open: false });
     new SkillsPanel(skills, game);
+    // How you are: your wounds and what to dress them with, what is on you, and how you are eating.
+    const healthWin = this.windows.create({ id: 'health', title: 'Health', x: 364, y: 56, width: 360, height: 520, anchor: 'tr', open: false });
+    this.health = new HealthPanel(healthWin, game, this.hud.effects.spells);
     // The handful you are moving today, beside the book that holds all forty.
     const craft = this.windows.create({ id: 'craft', title: 'Crafting', x: 364, y: 56, width: 360, height: 360, anchor: 'tr', open: false });
     this.craftPanel = new CraftPanel(craft, game);
@@ -957,6 +962,7 @@ export class UI {
     this.ledgerPanel.update(performance.now());
     this.trades.update(performance.now() / 1000);
     this.faith.update(performance.now() / 1000);
+    this.health.update(performance.now());
     this.spellBar.update();
   }
 

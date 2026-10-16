@@ -6,6 +6,7 @@ import { dragonfly } from './life/dragonfly';
 import { EMBERS, embers } from './life/embers';
 import { FIREFLIES, fireflies } from './life/fireflies';
 import { glints } from './life/glints';
+import { hedgehog } from './life/hedgehog';
 import { ladybird } from './life/ladybird';
 import { MOTES_LEAST, MOTES_MORE, motes } from './life/motes';
 import { moth } from './life/moth';
@@ -37,6 +38,7 @@ export { EMBERS, FIREFLIES, FLAKES, MOTES_LEAST, MOTES_MORE };
 /** What lives on which frame, and when: for the setting's words, under the frames' own names. */
 export const LIFE: Array<{ kind: string | null; what: string }> = [
   { kind: 'wicker', what: 'two butterflies by day' },
+  { kind: 'linen', what: 'a hedgehog asleep on the foot, out and about more after dark' },
   { kind: 'turf', what: `${FIREFLIES} fireflies after dark` },
   { kind: 'bench', what: 'a moth round the lantern after dark, and sparks while something is being made' },
   { kind: 'stall', what: 'a bee by day' },
@@ -67,6 +69,9 @@ export function paintLife(g: Ctx, p: LifePiece, t: number, world: LifeWorld): vo
   switch (p.kind) {
     case 'wicker':
       if (day) butterflies(g, p, t);
+      break;
+    case 'linen':
+      hedgehog(g, p, t, world.night);
       break;
     case 'turf':
       if (!day) fireflies(g, p, t);

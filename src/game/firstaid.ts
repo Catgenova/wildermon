@@ -3,7 +3,7 @@ import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
 import type { Game } from './game';
 import { itemName, type Item } from './items';
-import { PART_NAMES, worstWound, WOUND_KINDS, woundText, woundToDress, type Wound } from './wounds';
+import { dressingHelps, onYour, PART_NAMES, worstWound, WOUND_CLOSED, WOUND_KINDS, woundNamed, woundText, woundToDress, type Wound } from './wounds';
 
 /** How hard a dressing is to put on well: a wound gone bad takes none until it is cleaned out. */
 export const DRESS_CHECK = 10;
@@ -40,7 +40,7 @@ function bestCover(g: Game, w: Wound | null): Item | undefined {
 }
 
 /** The dressing that will actually go on: the right herb, any herb, or cloth. */
-function dressingFor(g: Game, w: Wound | null): { item: Item; herb: string } | null {
+export function dressingFor(g: Game, w: Wound | null): { item: Item; herb: string } | null {
   const cover = bestCover(g, w);
   if (cover) return { item: cover, herb: (cover.extra ?? '').toLowerCase() };
   const cloth = bestBandage(g);
@@ -48,10 +48,32 @@ function dressingFor(g: Game, w: Wound | null): { item: Item; herb: string } | n
 }
 
 /** "the cut on your arm": which wound a dressing went on, or would. */
-const onYou = (w: Wound): string => `the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}`;
+const onYou = onYour;
 
-/** The wound on you a dressing out of your pack would go on (`woundToDress`), or null. */
-const yoursToDress = (g: Game): Wound | null => woundToDress(g.player.wounds, (w) => dressingFor(g, w)?.herb ?? null);
+/** The wound an ask names (`Target.wound`), null when it has closed since, undefined when it names none. */
+const named = (g: Game, t: Target): Wound | null | undefined => (t.kind === 'item' ? woundNamed(g.player.wounds, t.wound) : undefined);
+
+/**
+ * Why a dressing out of your pack will not go on this one wound, or null: it
+ * has gone bad, there is nothing to dress it with, or it is dressed at least
+ * as well already (`dressingHelps`). The island's `dress_refusal_for`.
+ */
+export function dressRefusalFor(g: Game, w: Wound): string | null {
+  if (w.infected) return `${capital(onYou(w))} has gone bad. Clean it out before anything will hold on it.`;
+  const use = dressingFor(g, w);
+  if (!use) return 'You have nothing to dress it with.';
+  if (!dressingHelps(w, use.herb)) return `${capital(onYou(w))} is already dressed at least as well as what you carry would dress it.`;
+  return null;
+}
+
+/** The wound on you a dressing out of your pack would go on: the one asked for while it would do it good, or `woundToDress`'s. */
+const yoursToDress = (g: Game, t?: Target): Wound | null => {
+  const w = t ? named(g, t) : undefined;
+  if (w !== undefined) return w && !dressRefusalFor(g, w) ? w : null;
+  return woundToDress(g.player.wounds, (x) => dressingFor(g, x)?.herb ?? null);
+};
+
+const capital = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** What a dressing says when every open wound is already dressed as well as yours would. The island says the same. */
 export const DRESSED_AS_WELL = 'Every wound on you that has not gone bad is already dressed at least as well as what you carry would dress it. '
@@ -94,7 +116,7 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       if (t.kind === 'person') return `Dress ${personOf(g, t)?.name ?? 'their'}'s wounds`;
       // The wound it will go on: never one gone bad, nor one already dressed as well.
-      const w = yoursToDress(g);
+      const w = yoursToDress(g, t);
       return w ? `Dress ${onYou(w)}` : 'Dress a wound';
     },
     check: (t, g) => {
@@ -102,13 +124,15 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       if (t.kind === 'person') return dressingFor(g, null) ? null : 'You have nothing to dress it with.';
       if (t.kind !== 'item') return null;
       if (!['bandage', 'cover'].includes(g.inventory.get(t.uid)?.id ?? '')) return 'That is not a dressing.';
-      return dressRefusal(g);
+      const w = named(g, t);
+      if (w === null) return WOUND_CLOSED;
+      return w ? dressRefusalFor(g, w) : dressRefusal(g);
     },
     perform: (t, g) => {
       // Nobody else is here to dress offline: another's wounds are dressed on the island, and a Naturalist's Field Medic or a
       // Chirurgeon's Field Surgeon (`heal:others`) puts back more there.
       if (t.kind === 'person') return;
-      const w = yoursToDress(g);
+      const w = yoursToDress(g, t);
       if (!w) return;
       const use = dressingFor(g, w);
       if (!use || !g.inventory.remove(use.item.uid, 1)) return;
@@ -147,8 +171,8 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
               : `You clean ${onYou(w)} and bind it with cloth. The bleeding stops, though it will be slow to close.`,
         'event',
       );
-      // Keep going while a dressing out of the pack would still do some wound good.
-      return !!yoursToDress(g);
+      // Keep going while a dressing out of the pack would still do some wound good: the one asked for, if one was.
+      return !!yoursToDress(g, t);
     },
   },
   {
@@ -160,12 +184,17 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
     baseTime: 14,
     applies: (t, g) => t.kind === 'item' && g.inventory.get(t.uid)?.id === 'lye_bucket' && g.player.wounds.some((w) => w.infected),
     check: (t, g) => {
-      if (!g.player.wounds.some((w) => w.infected)) return 'Nothing on you has gone bad.';
+      const w = named(g, t);
+      if (w === null) return WOUND_CLOSED;
+      if (w && !w.infected) return `${capital(onYou(w))} has not gone bad.`;
+      if (!g.player.wounds.some((x) => x.infected)) return 'Nothing on you has gone bad.';
       if (!g.inventory.has('lye_bucket')) return 'You need a bucket of lye to clean it out with.';
       return null;
     },
     perform: (t, g) => {
-      const w = g.player.wounds.find((x) => x.infected);
+      // The one asked for, or the first gone bad.
+      const asked = named(g, t);
+      const w = asked?.infected ? asked : g.player.wounds.find((x) => x.infected);
       const lye = g.inventory.find('lye_bucket');
       if (!w || !lye) return;
       g.inventory.remove(lye.uid, 1);

@@ -178,6 +178,12 @@ export type Target =
       stone?: string;
       /** The scroll going into this thing, for `enchant` (`enchanting.ts`): the weapon is the target, and the scroll this. */
       scroll?: number;
+      /**
+       * The wound on you this goes on (`woundKey`), for a dressing, the lye
+       * and a salve, asked from the Health window: that wound or a refusal
+       * naming why not, never another. Left out, each picks its own.
+       */
+      wound?: string;
     }
   /** What is lying on a tile; `down` for what lies on the cellar's floor under it. */
   | { kind: 'ground'; x: number; y: number; uid: number | null; down?: boolean }

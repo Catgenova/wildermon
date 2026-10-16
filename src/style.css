@@ -7323,3 +7323,549 @@ kbd {
   z-index: 5990;
   pointer-events: none !important;
 }
+
+/* Health ------------------------------------------------------------------ */
+
+/*
+ * The Health window (`src/ui/panels/health.ts`): a heart that fills with your
+ * health and beats faster the less there is, a little figure wearing your
+ * wounds where they are, and under them what to do about each. Its colours
+ * are the window's own tokens, set for Classic here and for Runecut's day and
+ * night below, so the heart, the blood and the herbs read on either.
+ */
+.hp {
+  --hp-ink: var(--ui-text);
+  --hp-dim: var(--ui-dim);
+  --hp-line: rgba(154, 127, 76, 0.35);
+  --hp-card: rgba(255, 255, 255, 0.04);
+  --hp-card-hi: rgba(255, 255, 255, 0.08);
+  --hp-heart: #d24b5a;
+  --hp-heart-lit: #ff9fab;
+  --hp-heart-deep: #7e2131;
+  --hp-heart-empty: rgba(210, 75, 90, 0.16);
+  --hp-blood: #e0564f;
+  --hp-bad: #8fb04a;
+  --hp-venom: #b07ad8;
+  --hp-dress: #efe3c8;
+  --hp-herb: #79b064;
+  --hp-ok: #8fc27a;
+  --hp-body: #e9d9bf;
+  --hp-body-ink: #6e5a44;
+  --hp-cheek: #f0a5a0;
+  --hp-btn: var(--ui-accent);
+  --hp-btn-ink: #1b1712;
+  --hp-starch: #d9b45e;
+  --hp-flesh: #c96a5a;
+  --hp-fat: #e6d29a;
+  --hp-greens: #7cad5e;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 2px 6px;
+  color: var(--hp-ink);
+}
+
+[data-ui='runecut'] .hp {
+  --hp-ink: var(--rc-ink);
+  --hp-dim: var(--rc-carve);
+  --hp-line: color-mix(in srgb, var(--rc-shade) 60%, transparent);
+  --hp-card: color-mix(in srgb, var(--rc-field) 70%, transparent);
+  --hp-card-hi: var(--rc-field);
+  --hp-heart: #c94755;
+  --hp-heart-lit: #f59aa4;
+  --hp-heart-deep: #7a2232;
+  --hp-heart-empty: color-mix(in srgb, #c94755 14%, var(--rc-field));
+  --hp-blood: #b8373a;
+  --hp-bad: #5f8a2c;
+  --hp-venom: #7d48a8;
+  --hp-dress: #fbf3df;
+  --hp-herb: var(--rc-moss-ink);
+  --hp-ok: var(--rc-moss-ink);
+  --hp-body: #f4e2c6;
+  --hp-body-ink: var(--rc-carve);
+  --hp-btn: var(--rc-rune);
+  --hp-btn-ink: #3a2208;
+  --hp-starch: #c9973a;
+  --hp-flesh: #b4584a;
+  --hp-fat: var(--rc-fat);
+  --hp-greens: var(--rc-moss);
+}
+
+:root[data-rc='night'] [data-ui='runecut'] .hp,
+[data-ui='runecut'][data-rc='night'] .hp {
+  --hp-blood: #ef7469;
+  --hp-bad: #a9cc66;
+  --hp-venom: #c99be8;
+  --hp-heart-empty: color-mix(in srgb, #c94755 22%, var(--rc-field));
+  --hp-body: color-mix(in srgb, #f4e2c6, rgb(12 20 44) 45%);
+}
+
+.hp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0 4px;
+  border-bottom: 1px solid var(--hp-line);
+  margin-bottom: 6px;
+  color: var(--ui-accent);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+[data-ui='runecut'] .hp-head {
+  color: var(--rc-rune-ink);
+  font-family: var(--rc-label-font);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.hp-none {
+  color: var(--hp-dim);
+  font-style: italic;
+  padding: 2px 0 4px;
+}
+
+/* The heart and the bars. */
+.hp-vitals {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--hp-card);
+}
+
+.hp-heart {
+  position: relative;
+  width: 78px;
+  height: 72px;
+  --hp-beat: 1.15s;
+}
+
+.hp-heart > svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 60%;
+  animation: hp-beat var(--hp-beat) ease-in-out infinite;
+  filter: drop-shadow(0 2px 2px rgba(60, 20, 30, 0.25));
+}
+
+.hp-heart-back { fill: var(--hp-heart-empty); }
+.hp-heart-rim { fill: none; stroke: var(--hp-heart-deep); stroke-width: 3; stroke-linejoin: round; }
+.hp-heart-wave { fill: var(--hp-heart); animation: hp-wave 2.6s linear infinite; }
+.hp-heart-glint { fill: rgba(255, 255, 255, 0.55); }
+.hp-heart-hurt .hp-heart-rim { stroke: var(--hp-blood); }
+
+/* Low: it beats hard, and the rim pulses. */
+.hp-heart-low .hp-heart-rim { animation: hp-rim var(--hp-beat) ease-in-out infinite; }
+
+@keyframes hp-beat {
+  0%, 46%, 100% { transform: scale(1); }
+  12% { transform: scale(1.12); }
+  24% { transform: scale(0.98); }
+  34% { transform: scale(1.06); }
+}
+
+@keyframes hp-wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(50px); }
+}
+
+@keyframes hp-rim {
+  0%, 100% { stroke-width: 3; }
+  15% { stroke-width: 5; }
+}
+
+/* Hearts floating up when you mend. */
+.hp-burst {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: 14px;
+  height: 13px;
+  margin-left: -7px;
+  pointer-events: none;
+  opacity: 0;
+  animation: hp-float 1.1s ease-out forwards;
+}
+
+.hp-burst svg { width: 100%; height: 100%; fill: var(--hp-heart-lit); stroke: var(--hp-heart-deep); stroke-width: 6; }
+
+@keyframes hp-float {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), -46px) scale(1); }
+}
+
+.hp-vital-words { min-width: 0; }
+
+.hp-vital-line {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.hp-big {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-ui='runecut'] .hp-big { font-family: var(--rc-title-font); }
+
+.hp-big-label { color: var(--hp-dim); }
+
+.hp-rate {
+  margin: 4px 0 6px;
+  font-size: 12px;
+  color: var(--hp-dim);
+}
+
+.hp-rate-bad { color: var(--hp-blood); font-weight: 600; }
+
+.hp-bars {
+  display: grid;
+  gap: 3px;
+}
+
+.hp-bar {
+  display: grid;
+  grid-template-columns: 52px 1fr 34px;
+  gap: 6px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.hp-bar-label { color: var(--hp-dim); }
+.hp-bar-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.hp-bar-track,
+.hp-nut-track,
+.hp-wound-sev {
+  position: relative;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hp-card-hi);
+  box-shadow: inset 0 0 0 1px var(--hp-line);
+  overflow: hidden;
+}
+
+.hp-bar-fill,
+.hp-nut-fill,
+.hp-wound-sev-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.hp-bar-stamina .hp-bar-fill { background: #6fae6a; }
+.hp-bar-hunger .hp-bar-fill { background: #d69a4a; }
+.hp-bar-thirst .hp-bar-fill { background: #5a93c4; }
+
+/* The figure and the wounds. */
+.hp-wound-lay {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.hp-figure {
+  width: 96px;
+  height: auto;
+  overflow: visible;
+}
+
+.hp-part {
+  fill: var(--hp-body);
+  stroke: var(--hp-body-ink);
+  stroke-width: 1.4;
+  transition: fill 0.4s ease;
+}
+
+.hp-part[data-state='bleeding'] { fill: color-mix(in srgb, var(--hp-body), var(--hp-blood) 28%); }
+.hp-part[data-state='bad'] { fill: color-mix(in srgb, var(--hp-body), var(--hp-bad) 40%); }
+.hp-part[data-state='venom'] { fill: color-mix(in srgb, var(--hp-body), var(--hp-venom) 34%); }
+.hp-part[data-state='open'] { fill: color-mix(in srgb, var(--hp-body), var(--hp-blood) 12%); }
+
+.hp-eyes ellipse {
+  fill: var(--hp-body-ink);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hp-blink 4.6s infinite;
+}
+
+.hp-cheeks ellipse { fill: var(--hp-cheek); opacity: 0.55; }
+.hp-mouth { fill: none; stroke: var(--hp-body-ink); stroke-width: 1.4; stroke-linecap: round; transition: d 0.4s ease; }
+.hp-figure-weak .hp-cheeks ellipse { opacity: 0.15; }
+.hp-figure-weak .hp-figure-body { animation: hp-sway 3.2s ease-in-out infinite; transform-origin: 50% 100%; transform-box: fill-box; }
+
+@keyframes hp-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes hp-sway {
+  0%, 100% { transform: rotate(-1.5deg); }
+  50% { transform: rotate(1.5deg); }
+}
+
+.hp-flinch { animation: hp-flinch 0.45s ease-out; }
+
+@keyframes hp-flinch {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px) rotate(-2deg); }
+  45% { transform: translateX(3px) rotate(1.5deg); }
+  70% { transform: translateX(-1.5px); }
+}
+
+.hp-mark { cursor: pointer; outline: none; }
+.hp-mark-ring { fill: none; stroke-width: 1.6; transform-box: fill-box; transform-origin: center; }
+.hp-mark-dot { stroke: rgba(30, 20, 20, 0.6); stroke-width: 0.8; }
+.hp-mark-bleeding .hp-mark-dot, .hp-mark-open .hp-mark-dot { fill: var(--hp-blood); }
+.hp-mark-bleeding .hp-mark-ring, .hp-mark-open .hp-mark-ring { stroke: var(--hp-blood); }
+.hp-mark-bad .hp-mark-dot { fill: var(--hp-bad); }
+.hp-mark-bad .hp-mark-ring { stroke: var(--hp-bad); }
+.hp-mark-venom .hp-mark-dot { fill: var(--hp-venom); }
+.hp-mark-venom .hp-mark-ring { stroke: var(--hp-venom); }
+.hp-mark-dressed .hp-mark-dot, .hp-mark-covered .hp-mark-dot { fill: var(--hp-dress); }
+.hp-mark-dressed .hp-mark-ring { stroke: var(--hp-body-ink); }
+.hp-mark-covered .hp-mark-ring { stroke: var(--hp-herb); }
+.hp-mark-bleeding .hp-mark-ring, .hp-mark-bad .hp-mark-ring, .hp-mark-venom .hp-mark-ring { animation: hp-pulse 1.4s ease-out infinite; }
+.hp-mark-picked .hp-mark-ring { stroke-width: 2.6; animation: none; transform: scale(1.25); }
+.hp-mark:focus-visible .hp-mark-ring { stroke: var(--ui-accent); stroke-width: 2.6; }
+
+.hp-drip {
+  fill: var(--hp-blood);
+  animation: hp-drip 1.6s ease-in infinite;
+}
+
+.hp-mark-bad .hp-drip { fill: var(--hp-bad); }
+
+.hp-wrap {
+  fill: var(--hp-dress);
+  stroke: var(--hp-body-ink);
+  stroke-width: 0.8;
+  stroke-dasharray: 2 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: hp-wrap 0.6s ease-out;
+}
+
+.hp-mark-covered .hp-wrap { fill: color-mix(in srgb, var(--hp-dress), var(--hp-herb) 30%); }
+
+@keyframes hp-pulse {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes hp-drip {
+  0% { transform: translateY(-2px); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(9px); opacity: 0; }
+}
+
+@keyframes hp-wrap {
+  from { transform: scaleX(0.1); }
+  to { transform: scaleX(1); }
+}
+
+.hp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hp-wound {
+  border-radius: 8px;
+  background: var(--hp-card);
+  box-shadow: inset 3px 0 0 var(--hp-stripe, var(--hp-line));
+  transition: background 0.3s ease;
+}
+
+.hp-wound-bleeding, .hp-wound-open { --hp-stripe: var(--hp-blood); }
+.hp-wound-bad { --hp-stripe: var(--hp-bad); }
+.hp-wound-venom { --hp-stripe: var(--hp-venom); }
+.hp-wound-dressed { --hp-stripe: var(--hp-body-ink); }
+.hp-wound-covered { --hp-stripe: var(--hp-herb); }
+.hp-wound-open, .hp-wound:hover { background: var(--hp-card-hi); }
+.hp-wound-seen { animation: hp-seen 1.6s ease-out; }
+
+@keyframes hp-seen {
+  0% { box-shadow: inset 3px 0 0 var(--hp-stripe), 0 0 0 2px var(--hp-herb); }
+  100% { box-shadow: inset 3px 0 0 var(--hp-stripe), 0 0 0 2px transparent; }
+}
+
+.hp-wound-head {
+  display: grid;
+  grid-template-columns: 10px 1fr auto;
+  grid-template-areas:
+    'dot name hint'
+    'sev sev sev'
+    'tags tags tags'
+    'eta eta eta';
+  gap: 3px 6px;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px 6px 10px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hp-wound-head:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: -2px; border-radius: 8px; }
+.hp-wound-dot { grid-area: dot; width: 8px; height: 8px; border-radius: 50%; background: var(--hp-stripe, var(--hp-dim)); }
+.hp-wound-bleeding .hp-wound-dot, .hp-wound-bad .hp-wound-dot, .hp-wound-venom .hp-wound-dot { animation: hp-dot 1.4s ease-in-out infinite; }
+.hp-wound-name { grid-area: name; min-width: 0; }
+.hp-wound-part { color: var(--hp-dim); }
+.hp-wound-hint { grid-area: hint; font-size: 11px; color: var(--hp-dim); }
+.hp-wound-hint-go { color: var(--hp-ok); font-weight: 600; }
+.hp-wound-sev { grid-area: sev; height: 4px; }
+.hp-wound-sev-fill { background: var(--hp-stripe, var(--hp-dim)); }
+.hp-wound-tags { grid-area: tags; font-size: 11.5px; }
+.hp-wound-eta { grid-area: eta; font-size: 11px; color: var(--hp-dim); }
+
+@keyframes hp-dot {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+}
+
+.hp-care {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 8px 8px 10px;
+  animation: hp-open 0.25s ease-out;
+}
+
+@keyframes hp-open {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.hp-care-row {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px dashed var(--hp-line);
+  font-size: 12px;
+}
+
+.hp-care-ready { border-style: solid; border-color: color-mix(in srgb, var(--hp-ok) 60%, transparent); }
+.hp-care-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+.hp-care-title { font-size: 12.5px; }
+
+.hp-care-btn {
+  padding: 3px 12px;
+  border: 1px solid color-mix(in srgb, var(--hp-btn) 70%, black);
+  border-radius: 999px;
+  background: var(--hp-btn);
+  color: var(--hp-btn-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.hp-care-btn:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+.hp-care-btn:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.hp-care-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.hp-care-btn-go { animation: hp-go 0.4s ease-out; }
+
+@keyframes hp-go {
+  0% { transform: scale(1); }
+  40% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+
+.hp-held {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--hp-blood) 18%, transparent);
+  color: var(--hp-blood);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.hp-held-ok { background: color-mix(in srgb, var(--hp-ok) 20%, transparent); color: var(--hp-ok); }
+.hp-care-need { line-height: 1.45; }
+.hp-care-have { margin-top: 3px; color: var(--hp-ink); font-weight: 600; }
+.hp-care-make { margin-top: 2px; color: var(--hp-dim); }
+.hp-care-why { margin-top: 3px; color: var(--hp-blood); }
+.hp-care-done { color: var(--hp-herb); font-size: 12px; }
+
+/* Against you and for you. */
+.hp-ails { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+
+.hp-ail {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 6px;
+  align-items: start;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--hp-card);
+  font-size: 12px;
+}
+
+.hp-ail-icon { width: 20px; height: 20px; display: grid; place-items: center; }
+.hp-ail-icon svg { width: 18px; height: 18px; }
+.hp-ail-bad .hp-ail-icon { color: var(--hp-blood); }
+.hp-ail-good .hp-ail-icon { color: var(--hp-ok); }
+.hp-ail-name { display: flex; gap: 6px; align-items: baseline; }
+.hp-ail-cap { color: var(--hp-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.hp-ail-does { color: var(--hp-dim); }
+
+/* Nutrition. */
+.hp-fed { margin-left: auto; color: var(--hp-ink); font-size: 11px; text-transform: none; letter-spacing: 0; font-family: inherit; font-weight: 600; }
+.hp-food { display: grid; gap: 6px; }
+
+.hp-nut {
+  display: grid;
+  grid-template-columns: 56px 1fr 36px;
+  grid-template-areas: 'name track num' 'note note note';
+  gap: 1px 6px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.hp-nut-name { grid-area: name; }
+.hp-nut-track { grid-area: track; height: 8px; }
+.hp-nut-num { grid-area: num; text-align: right; font-variant-numeric: tabular-nums; }
+.hp-nut-note { grid-area: note; color: var(--hp-dim); font-size: 11px; }
+.hp-nut-starch .hp-nut-fill { background: var(--hp-starch); }
+.hp-nut-flesh .hp-nut-fill { background: var(--hp-flesh); }
+.hp-nut-fat .hp-nut-fill { background: var(--hp-fat); }
+.hp-nut-greens .hp-nut-fill { background: var(--hp-greens); }
+.hp-food-words { margin-top: 6px; display: grid; gap: 2px; font-size: 11.5px; color: var(--hp-dim); }
+
+.hp-body { container-type: inline-size; }
+
+/* A narrow window: the figure goes above the list. */
+@container (max-width: 300px) {
+  .hp-wound-lay { grid-template-columns: 1fr; }
+  .hp-figure { justify-self: center; }
+}
+
+@media (max-width: 420px) {
+  .hp-wound-lay { grid-template-columns: 72px 1fr; }
+  .hp-figure { width: 72px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hp-heart > svg, .hp-heart-wave, .hp-heart-low .hp-heart-rim, .hp-eyes ellipse, .hp-figure-weak .hp-figure-body,
+  .hp-flinch, .hp-mark-ring, .hp-drip, .hp-wrap, .hp-wound-dot, .hp-wound-seen, .hp-care, .hp-care-btn-go, .hp-burst {
+    animation: none !important;
+  }
+}

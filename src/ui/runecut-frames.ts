@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, turf: 14, ironbound: 12, strap: 12, toolbelt: 14 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, linen: 18, turf: 14, ironbound: 12, strap: 12, toolbelt: 14 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -59,6 +59,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'letter', label: 'Sketches on an oak board', for: ['social'] },
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
+  { kind: 'linen', label: 'Birch, linen and herbs', for: ['health'] },
   { kind: 'turf', label: 'Mossy wood and stone', for: ['tile'] },
   { kind: 'ironbound', label: 'Grey stone, iron and gold', for: ['settings'] },
   { kind: 'chain', label: 'Iron chain', for: ['keeper'] },
@@ -71,7 +72,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26, ironbound: 22 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26, linen: 26, ironbound: 22 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -3569,6 +3570,41 @@ function starLozenge(g: Ctx, x: number, y: number, r: number): void {
 
 /** The wildermon's pale wood, and the brown of its twigs and its marks. */
 const WILD_WOOD = { body: H('#c39a6c'), lit: H('#e3c69e'), deep: H('#8c6644') };
+/** Birch bark for the Health window's frame: near white, its lenticels dark. */
+const BIRCH = { body: H('#ece4d6'), lit: H('#fbf7ef'), deep: H('#b9ab95'), mark: H('#4f453c') };
+/** A round cut from it, for the medallion at the foot. */
+const BIRCH_ROUND = { body: H('#d8ccb6'), lit: H('#f4ede0'), deep: H('#a49478') };
+/** The linen bandage wound round it. */
+const LINEN = { body: H('#f3ead6'), lit: H('#fffaf0'), deep: H('#d9cbb0'), ink: H('#8a7a62'), thread: H('#b8a888') };
+
+/** A heart at (x, y), `s` across: rose-red, lit up and to the left, inked. */
+function heartMark(g: Ctx, x: number, y: number, s: number): void {
+  g.save();
+  g.translate(x, y + s * 0.08);
+  g.scale(s / 100, s / 100);
+  g.beginPath();
+  g.moveTo(0, 38);
+  g.bezierCurveTo(-30, 16, -46, -2, -46, -22);
+  g.bezierCurveTo(-46, -37, -34, -47, -20, -47);
+  g.bezierCurveTo(-11, -47, -4, -42, 0, -35);
+  g.bezierCurveTo(4, -42, 11, -47, 20, -47);
+  g.bezierCurveTo(34, -47, 46, -37, 46, -22);
+  g.bezierCurveTo(46, -2, 30, 16, 0, 38);
+  g.closePath();
+  const f = g.createRadialGradient(-16, -26, 4, 0, -6, 60);
+  f.addColorStop(0, '#f59aa4');
+  f.addColorStop(1, '#b8394b');
+  g.fillStyle = f;
+  g.fill();
+  g.strokeStyle = '#6e1f2d';
+  g.lineWidth = 5;
+  g.stroke();
+  g.beginPath();
+  g.ellipse(-20, -28, 9, 5, -0.6, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  g.fill();
+  g.restore();
+}
 const TWIG = { body: H('#8a6446'), lit: H('#b48b66') };
 const PAW_BROWN = H('#7a5236');
 
@@ -5844,6 +5880,154 @@ const PAINTERS: Record<string, Painter> = {
    * star beyond each. Twigs wound with ivy and white flowers over the top
    * corners, sprigs on the sides, and leafy clumps at the bottom corners.
    */
+  linen(g, w, h, F, R) {
+    // The band: birch, pale and lit across from its outer edge, its bark marked with dark lenticels along the grain.
+    g.save();
+    g.beginPath();
+    g.roundRect(0, 0, w, h, F * 0.5);
+    g.clip();
+    eachSide(g, w, h, (s) => {
+      g.save();
+      mitre(g, s.len, F, 2);
+      g.clip();
+      const f = g.createLinearGradient(0, 0, 0, F);
+      f.addColorStop(0, css(mix(BIRCH.deep, BIRCH.body, 0.4 + s.lit * 0.3)));
+      f.addColorStop(0.3, css(mix(BIRCH.body, BIRCH.lit, s.lit * 0.7)));
+      f.addColorStop(0.75, css(BIRCH.body));
+      f.addColorStop(1, css(BIRCH.deep));
+      g.fillStyle = f;
+      g.fillRect(-2, -2, s.len + 4, F + 2);
+      // Lenticels: short dark dashes across the bark, now and then a darker eye.
+      for (let x = F * 0.4; x < s.len - F * 0.4; x += F * (0.35 + R() * 0.5)) {
+        const y = F * (0.15 + R() * 0.6), len = F * (0.18 + R() * 0.35);
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x + len, y + (R() - 0.5) * 0.6);
+        g.strokeStyle = css(BIRCH.mark, 0.35 + R() * 0.4);
+        g.lineWidth = 0.7 + R() * 0.9;
+        g.lineCap = 'round';
+        g.stroke();
+        if (R() < 0.08) {
+          g.beginPath();
+          g.ellipse(x + len / 2, y, F * 0.16, F * 0.09, 0, 0, Math.PI * 2);
+          g.fillStyle = css(BIRCH.mark, 0.55);
+          g.fill();
+        }
+      }
+      g.restore();
+    });
+    g.restore();
+    // The linen bandage wound round the band, each turn a slanted strip of cloth over the bark.
+    eachSide(g, w, h, (s) => {
+      const step = F * 2.3, slant = F * 0.55, wide = F * 0.95;
+      for (let x = F * 1.6 + R() * F * 0.4; x < s.len - F * 1.9; x += step) {
+        g.save();
+        g.beginPath();
+        g.moveTo(x, -0.5);
+        g.lineTo(x + wide, -0.5);
+        g.lineTo(x + wide + slant, F + 0.5);
+        g.lineTo(x + slant, F + 0.5);
+        g.closePath();
+        g.shadowColor = 'rgba(60, 46, 36, 0.35)';
+        g.shadowBlur = 2;
+        g.shadowOffsetX = 1;
+        const c = g.createLinearGradient(x, 0, x + wide + slant, 0);
+        c.addColorStop(0, css(LINEN.lit));
+        c.addColorStop(0.6, css(LINEN.body));
+        c.addColorStop(1, css(LINEN.deep));
+        g.fillStyle = c;
+        g.fill();
+        g.shadowColor = 'transparent';
+        g.strokeStyle = css(LINEN.ink, 0.7);
+        g.lineWidth = 0.7;
+        g.stroke();
+        // The weave: fine threads along the strip, and a few across.
+        g.clip();
+        g.strokeStyle = css(LINEN.thread, 0.45);
+        g.lineWidth = 0.4;
+        for (let k = 1; k < 4; k++) {
+          g.beginPath();
+          g.moveTo(x + (wide * k) / 4, 0);
+          g.lineTo(x + (wide * k) / 4 + slant, F);
+          g.stroke();
+        }
+        for (let y = F * 0.2; y < F; y += F * 0.22) {
+          g.beginPath();
+          g.moveTo(x + (slant * y) / F, y);
+          g.lineTo(x + wide + (slant * y) / F, y);
+          g.stroke();
+        }
+        g.restore();
+      }
+    });
+    // The cream fillet round the inside, ruled, and the ink edges.
+    band(g, w, h, F, F * 0.8);
+    g.fillStyle = css(LINEN.lit);
+    g.fill('evenodd');
+    g.strokeStyle = css(shade(BIRCH.deep, 0.3));
+    g.lineWidth = 0.8;
+    g.strokeRect(F * 0.8 - 0.5, F * 0.8 - 0.5, w - F * 1.6 + 1, h - F * 1.6 + 1);
+    g.strokeStyle = INK;
+    g.lineWidth = 1;
+    g.strokeRect(F - 0.5, F - 0.5, w - F * 2 + 1, h - F * 2 + 1);
+    g.beginPath();
+    g.roundRect(0.5, 0.5, w - 1, h - 1, F * 0.5);
+    g.stroke();
+    // Herbs over the corners: sage leaves fanned, and chamomile among them.
+    const sprig = (x: number, y: number, a: number): void => {
+      for (let k = 0; k < 5; k++) sageLeaf(g, x, y, a + (k - 2) * 0.42, F * (0.95 + R() * 0.3));
+      for (let k = 0; k < 3; k++) {
+        const b = a + (k - 1) * 0.6;
+        blossom(g, x + Math.cos(b) * F * 0.9, y + Math.sin(b) * F * 0.9, F * 0.26);
+      }
+    };
+    sprig(F * 0.35, F * 0.35, Math.PI * 0.25);
+    sprig(w - F * 0.35, F * 0.35, Math.PI * 0.75);
+    sprig(F * 0.35, h - F * 0.35, -Math.PI * 0.25);
+    sprig(w - F * 0.35, h - F * 0.35, -Math.PI * 0.75);
+    // A little stoppered vial of tonic hung from the middle of the top, rose-red, a highlight down its glass.
+    if (w > F * 8) {
+      const vx = w / 2, vy = F * 0.15, vw = F * 0.62, vh = F * 0.95;
+      g.strokeStyle = css(TWIG.body);
+      g.lineWidth = 0.9;
+      g.beginPath();
+      g.moveTo(vx - F * 1.4, vy - F * 0.05);
+      g.quadraticCurveTo(vx, vy + F * 0.35, vx + F * 1.4, vy - F * 0.05);
+      g.stroke();
+      g.save();
+      g.translate(vx, vy + F * 0.25);
+      g.beginPath();
+      g.roundRect(-vw / 2, F * 0.2, vw, vh, vw * 0.4);
+      g.fillStyle = 'rgba(236, 244, 246, 0.85)';
+      g.fill();
+      g.save();
+      g.clip();
+      const tonic = g.createLinearGradient(0, F * 0.5, 0, F * 0.2 + vh);
+      tonic.addColorStop(0, '#f08a98');
+      tonic.addColorStop(1, '#b23a52');
+      g.fillStyle = tonic;
+      g.fillRect(-vw / 2, F * 0.55, vw, vh);
+      g.restore();
+      g.strokeStyle = INK;
+      g.lineWidth = 0.8;
+      g.stroke();
+      g.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      g.fillRect(-vw * 0.28, F * 0.35, vw * 0.14, vh * 0.65);
+      g.beginPath();
+      g.roundRect(-vw * 0.32, F * 0.02, vw * 0.64, F * 0.24, 1.5);
+      g.fillStyle = css(WILD_WOOD.body);
+      g.fill();
+      g.stroke();
+      g.restore();
+    }
+    // At the middle of the foot, a birch round with a heart on it, and a sprig either side.
+    const cx = w / 2, cy = h - F * 0.2, r = F * 0.92;
+    for (const d of [-1, 1]) {
+      for (let k = 0; k < 3; k++) sageLeaf(g, cx + d * r * 0.7, cy - F * 0.08, (d < 0 ? Math.PI : 0) + d * (k - 1) * 0.5 - d * 0.1, F * (1.15 - k * 0.12));
+      blossom(g, cx + d * r * 1.3, cy - F * 0.3, F * 0.24);
+    }
+    medallion(g, cx, cy, r, BIRCH_ROUND, (x, y, sz) => heartMark(g, x, y, sz));
+  },
   wicker(g, w, h, F, R) {
     const wood = WILD_WOOD;
     // The band, its corners rounded, lit across from its outer edge, grained along.

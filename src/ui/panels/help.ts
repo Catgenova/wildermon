@@ -2479,6 +2479,12 @@ export function helpText(): string {
     a kind, in whichever place it landed, and that wound has its own life: it <b>bleeds</b> until it is
     dressed, it goes <b>bad</b> if it never is, and nothing on you knits at all while something is still
     open. The bars panel lists what you are carrying, worst first, and says what each one wants.</p>
+    <p>The <b>Health</b> window (<b>${keyName(BIND_BY_ID.get('win_health')?.keys[0] ?? '')}</b>, or Health on the menu) shows each wound on a
+    figure of you, where it is, and in a list worst first: how deep it is, how much of your health it takes a minute and when it will
+    have closed. Click one, on the figure or in the list, and it says what can be done for it, what has to be carried for each &mdash;
+    a dressing, a bucket of lye or a salve &mdash; how many you carry and how to make one if you have none, and a button that does it
+    to that wound and no other, or says why it cannot. Under the wounds it lists what is against you and what is for you, and what
+    you have been eating.</p>
     <p>${NumberWord(KINDS.length)} kinds, and each has a herb that suits it:
     ${listed(KINDS.map((k, i) => `a <b>${k.name}</b> ${i === 0 ? 'wants ' : ''}<b>${k.herb}</b>`))}. What leaves which
     is what hit you &mdash; a hoof bruises, a claw opens, a sting goes deep and narrow, and

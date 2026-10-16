@@ -60,6 +60,7 @@ export const WINDOWS: Array<{ label: string; bind: string; id: string }> = [
   { label: 'Craft', bind: 'win_craft', id: 'craft' },
   { label: 'Tile', bind: 'win_tile', id: 'tile' },
   { label: 'Skills', bind: 'win_skills', id: 'skills' },
+  { label: 'Health', bind: 'win_health', id: 'health' },
   { label: 'Trades', bind: 'win_trades', id: 'trades' },
   { label: 'Faith', bind: 'win_faith', id: 'faith' },
   { label: 'Events', bind: 'win_events', id: 'events' },
@@ -172,7 +173,7 @@ export class Hud {
   private feedBtn!: HTMLButtonElement;
   private companionText = document.createElement('span');
   /** What is on you, for you and against you: rest, meals, spells, wounds, a load (`effects.ts`). */
-  private effects: EffectRow;
+  readonly effects: EffectRow;
   private windEl: HTMLDivElement;
   private storeyEl: HTMLDivElement;
   private storeyLabel: HTMLButtonElement;

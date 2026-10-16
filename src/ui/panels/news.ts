@@ -40,6 +40,7 @@ import { ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS
 import { REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
+import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD } from '../../game/learn';
@@ -2242,6 +2243,17 @@ export const NEWS: News[] = [
     lines: () => [
       `Hostile creatures are marked: every wild creature of a kind that hunts on sight, and any creature hunting you, is laid over in red on top of the trees and buildings in front of it, at ${percent(THREAT_SHADE)} strength or ${percent(THREAT_SHADE_HUNTING)} while it is hunting you, `
         + 'with a red marker over its head that pulses while it is hunting you. Settings, Mark hostile creatures, turns it off.',
+    ],
+  },
+  {
+    n: 168,
+    day: '2026-10-16',
+    lines: () => [
+      `A Health window, on the menu and on ${keyName(BIND_BY_ID.get('win_health')?.keys[0] ?? '')}: your health in a heart that beats faster the less of it there is, `
+        + 'every wound on a figure of you and in a list, worst first, with how much it takes a minute and when it will have closed. '
+        + 'Click a wound and it says what can be done for it, what has to be carried for each (a dressing, a bucket of lye or a salve), '
+        + 'how many you carry and how to make one, and its button dresses, cleans or salves that wound and no other, or says why not. '
+        + 'Under them, what is against you and for you, and your nutrition with what each kind does. Framed in birch and linen, with a hedgehog asleep on it.',
     ],
   },
 ];

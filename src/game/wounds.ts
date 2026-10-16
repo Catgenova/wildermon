@@ -76,6 +76,24 @@ export const PART_NAMES: Record<string, string> = {
   weapon: 'hand',
 };
 
+/**
+ * A wound picked out in an ask (`Target.wound`): its kind, its part and when
+ * it was opened, which together tell it from any other on you. The island
+ * keeps no number on a wound, and two of a kind on one part can be open at
+ * once when one has gone bad; it reads the same key (`wound_key`).
+ */
+export const woundKey = (w: Wound): string => `${w.kind}|${w.part}|${w.at ?? ''}`;
+
+/** The wound an ask names, null when it has closed since, or undefined when the ask names none. */
+export const woundNamed = (wounds: Wound[], key: string | undefined): Wound | null | undefined =>
+  key === undefined ? undefined : (wounds.find((w) => woundKey(w) === key) ?? null);
+
+/** What an ask for a wound that has closed since says. The island says the same. */
+export const WOUND_CLOSED = 'That wound has closed.';
+
+/** "the cut on your arm" */
+export const onYour = (w: Wound): string => `the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}`;
+
 /** "a deep cut to the left arm" */
 export function woundText(w: Wound): string {
   const k = WOUND_KINDS[w.kind];

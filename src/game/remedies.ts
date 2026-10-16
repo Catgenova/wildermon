@@ -4,7 +4,7 @@ import type { Game } from './game';
 import { describeFrom, itemDef } from './items';
 import { SKILL_DEFS } from './skills';
 import { listed, percent } from './words';
-import { PART_NAMES, salvable, worstWound, WOUND_KINDS, type Wound } from './wounds';
+import { onYour, PART_NAMES, salvable, worstWound, WOUND_CLOSED, WOUND_KINDS, woundNamed, type Wound } from './wounds';
 
 /**
  * A Naturalist's remedies, taken: a cup of herb tea drunk, a salve rubbed in
@@ -29,6 +29,27 @@ export const salveRefusal = (wounds: Wound[]): string | null => {
   return wounds.some((w) => !w.infected && w.dressing === null)
     ? 'A salve goes on over a dressing. Dress the wound first.'
     : 'Nothing dressed on you can go bad.';
+};
+
+/**
+ * Why a salve will not go on this one wound, or null. The island's
+ * `salve_refusal_for`, which says the same of a wound closed since (null here).
+ */
+export function salveRefusalFor(w: Wound | null): string | null {
+  if (!w) return WOUND_CLOSED;
+  const on = onYour(w), On = on.charAt(0).toUpperCase() + on.slice(1);
+  if (w.infected) return `${On} has gone bad. Clean it out before anything will hold on it.`;
+  if (w.dressing === null) return 'A salve goes on over a dressing. Dress the wound first.';
+  if (w.salved) return `${On} has a salve on it already.`;
+  if (w.dressing === WOUND_KINDS[w.kind].herb) return `${On} is under the ${w.dressing} that suits it, and cannot go bad.`;
+  return null;
+}
+
+/** Where a salve goes: the wound asked for (`Target.wound`) while it can take one, or the worst that can (`salveFor`). */
+const salveOn = (g: Game, t: Target): Wound | null => {
+  const asked = t.kind === 'item' ? woundNamed(g.player.wounds, t.wound) : undefined;
+  if (asked !== undefined) return salveRefusalFor(asked) ? null : asked;
+  return salveFor(g.player.wounds);
 };
 
 export const REMEDY_ACTIONS: ActionDef[] = [
@@ -61,14 +82,18 @@ export const REMEDY_ACTIONS: ActionDef[] = [
     stamina: 0,
     baseTime: 3,
     applies: (t, g) => held(g, t)?.id === 'salve',
-    labelFor: (_t, g) => {
-      const w = salveFor(g.player.wounds);
+    labelFor: (t, g) => {
+      const w = salveOn(g, t);
       return w ? `Rub it into the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}` : 'Rub in the salve';
     },
-    check: (t, g) => (held(g, t) ? salveRefusal(g.player.wounds) : 'It is gone.'),
+    check: (t, g) => {
+      if (!held(g, t)) return 'It is gone.';
+      if (t.kind === 'item' && t.wound !== undefined) return salveRefusalFor(woundNamed(g.player.wounds, t.wound) ?? null);
+      return salveRefusal(g.player.wounds);
+    },
     perform: (t, g) => {
       const it = held(g, t);
-      const w = salveFor(g.player.wounds);
+      const w = salveOn(g, t);
       if (!it || !w || !g.inventory.remove(it.uid, 1)) return;
       w.salved = true;
       g.events.emit('stats');
