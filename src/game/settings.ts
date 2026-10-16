@@ -122,6 +122,8 @@ export const SETTING_DEFAULTS = {
   noticeKnack: true,
   noticeDone: true,
   noticeBirth: true,
+  /** Hostile creatures in red over the trees and buildings in front of them, with a marker over each (`drawThreats`). */
+  markThreats: true,
   /** A ring over each fire, smelter and kiln near you: its fuel, the work in it, and a dot when something is ready (`drawStationRings`). */
   stationRings: true,
   /**

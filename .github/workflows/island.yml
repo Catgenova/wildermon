@@ -2996,6 +2996,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/flatten.mjs --log-level=error
           node node_modules/.cache/flatten.mjs
 
+      - name: Hostile creatures are marked over the trees
+        run: |
+          # Asked: threats are hard to see in a mess of trees. Every wild
+          # creature of a kind that hunts on sight, and anything hunting you,
+          # is drawn in red over what is in front of it with a marker over its
+          # head; nothing else is, and none of yours. No database.
+          npx esbuild supabase/test/threats.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/threats.mjs --log-level=error
+          node node_modules/.cache/threats.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

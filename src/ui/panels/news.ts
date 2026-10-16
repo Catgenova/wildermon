@@ -39,6 +39,7 @@ import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
+import { THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD } from '../../game/learn';
@@ -2233,6 +2234,14 @@ export const NEWS: News[] = [
     lines: () => [
       'On an island, flattening wore no shovel at all, however many you carried; nor did bedding or taking up paving, cutting reeds or prospecting wear their tools. '
         + 'Each go at any of them now wears the best of its tool in your pack by one use, as a dig does, so two of the same tool take turns.',
+    ],
+  },
+  {
+    n: 167,
+    day: '2026-10-16',
+    lines: () => [
+      `Hostile creatures are marked: every wild creature of a kind that hunts on sight, and any creature hunting you, is laid over in red on top of the trees and buildings in front of it, at ${percent(THREAT_SHADE)} strength or ${percent(THREAT_SHADE_HUNTING)} while it is hunting you, `
+        + 'with a red marker over its head that pulses while it is hunting you. Settings, Mark hostile creatures, turns it off.',
     ],
   },
 ];

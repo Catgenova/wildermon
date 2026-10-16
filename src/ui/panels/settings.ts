@@ -11,11 +11,11 @@ import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiColours, type UiFrames, type UiL
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
-import { listed, numberWord } from '../../game/words';
+import { listed, numberWord, percent } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
 import { RING_FADE_MS } from '../pointerring';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
-import { RING_REACH } from '../../render/renderer';
+import { RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FIRE_CAPACITY, fireBurnsFor, type PlacedCampfire } from '../../game/campfire';
 import { keepControlKeys } from '../controlkeys';
 
@@ -393,6 +393,9 @@ export class SettingsPanel {
       () => game.settings.deedBorder,
       (v) => (game.settings.deedBorder = v),
     );
+    add('Mark hostile creatures',
+      `Every wild creature of a kind that hunts on sight, and any creature hunting you, is laid over in red on top of the trees and buildings in front of it, at ${percent(THREAT_SHADE)} strength or ${percent(THREAT_SHADE_HUNTING)} while it is hunting you, with a red marker over its head that pulses while it is hunting you.`,
+      () => game.settings.markThreats, (v) => (game.settings.markThreats = v));
     add('Rings over fires, smelters and kilns', `Over each one within ${RING_REACH} tiles: an outer ring of its fuel, full at ${fireBurnsFor({ fuel: FIRE_CAPACITY } as PlacedCampfire)} of burning, orange while it burns and grey while it is cold; an inner ring of how far the piece at the front of it has come; and a gold dot when something is finished and waiting to be taken out.`,
       () => game.settings.stationRings, (v) => (game.settings.stationRings = v));
 

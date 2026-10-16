@@ -213,6 +213,14 @@ const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORA
 export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'tusk' | 'sinew' | 'scale' | 'hoard';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
+
+/**
+ * A wild creature that is a danger to you: one of a kind that hunts on sight
+ * (`SpeciesDef.hunter`), or anything hunting you now. Marked in red over
+ * whatever stands in front of it (`Renderer.drawThreats`).
+ */
+export const threatens = (c: Creature, def: SpeciesDef): boolean =>
+  c.mode === 'wild' && c.health > 0 && (c.enemy === PLAYER_ATTACKER || !!def.hunter);
 /** What a settlement's workers can be set to; a companion can also guard you (`COMPANION_STANCES`). */
 export const STANCES: Stance[] = ['passive', 'defensive', 'aggressive'];
 export const COMPANION_STANCES: Stance[] = ['passive', 'defensive', 'guard', 'aggressive'];

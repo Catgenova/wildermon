@@ -88,7 +88,7 @@ import { COUNTER_HOLDS, counterHeld, counterSeat, streetOf } from '../game/count
 import { counterHole, counterWares, drawCounterDaylight, drawCounterFrontKept, drawCounterInside, drawCounterReveal, stripeOf, type CounterLook } from './counter';
 import { cropDef, type CropLook } from '../game/farming';
 import { crateCentre, crateKindOfItem, subtileOf, SUBTILES } from '../game/crates';
-import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER, SPECIES, type Creature } from '../game/creatures';
+import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
 import { rarityOf } from '../game/items';
 import { CREST_ALPHA, FOAM_WIDTH, foamAlpha, LONG_WAVE, SHORT_WAVE, SPRING_EDGE, SPRING_PALETTE, springLevel, SWELL_RATE, SWELL_SPEED, swellAt, swellShow, TROUGH_ALPHA, WATER_LIT, WATER_PALETTE, waterLevel } from './water';
 import { Wakes } from './wake';
@@ -122,6 +122,9 @@ const SWELL_RES = 0.5;
 const TREE_BANDS = 24;
 /** Device pixels of tree pictures kept between frames (`drawTree`): about forty-eight megabytes. */
 const TREE_PIXELS = 12_000_000;
+/** How strongly a hostile creature is laid over in red on top of whatever is in front of it (`drawThreats`), and while it is hunting you. */
+export const THREAT_SHADE = 0.5;
+export const THREAT_SHADE_HUNTING = 0.7;
 
 /** A tree drawn ready for the screen (`drawTree`), and where in it the foot is. */
 interface TreePicture {
@@ -1203,6 +1206,8 @@ export class Renderer {
   private pickY = NaN;
   private playerFacing = 1;
   private creatureHits: HitRect[] = [];
+  /** The hostile creatures drawn this frame, and how to draw each again, for marking them over the trees (`drawThreats`). */
+  private threats: Array<{ sx: number; sy: number; top: number; hunting: boolean; draw: (g: CanvasRenderingContext2D, px: number, py: number) => void }> = [];
   private peerHits: HitRect[] = [];
   private crateHits: HitRect[] = [];
   private fireHits: HitRect[] = [];
@@ -3331,6 +3336,7 @@ export class Renderer {
     const pts = this.pts;
     const c = this.cornerBuf;
     this.creatureHits.length = 0;
+    this.threats.length = 0;
     this.peerHits.length = 0;
     this.crateHits.length = 0;
     this.fireHits.length = 0;
@@ -3996,10 +4002,48 @@ export class Renderer {
 
     this.drawOverlays(ctx, zoom);
     this.drawFight(ctx, zoom);
+    if (this.game.settings.markThreats) this.drawThreats(ctx, zoom);
   }
 
   /** Where your feet were drawn this frame, on the screen. */
   private feetAt: { x: number; y: number } | null = null;
+
+  /**
+   * Hostile creatures, marked over whatever stands in front of them: asked,
+   * because a hunter in a wood could not be told from the wood. Each is drawn
+   * again in red over the trees, buildings and anything else, and a red
+   * marker hangs over its head; both stronger while it is hunting you. What
+   * counts as hostile is `threatens`.
+   */
+  private drawThreats(ctx: CanvasRenderingContext2D, zoom: number): void {
+    if (!this.threats.length) return;
+    const red = inkOr('bad', '#e2553c');
+    const bob = Math.sin(this.time * 4) * 2 * zoom;
+    for (const t of this.threats) {
+      const { pad, g, ox, oy, side } = this.scratch(zoom);
+      t.draw(g, ox, oy);
+      this.stamp(red);
+      ctx.globalAlpha = t.hunting ? THREAT_SHADE_HUNTING : THREAT_SHADE;
+      ctx.drawImage(pad, t.sx - ox, t.sy - oy, side, side);
+      ctx.globalAlpha = 1;
+      // Over its head, and over the health bar a creature hunting you has (`drawFight`).
+      const x = t.sx;
+      const y = t.top - (t.hunting ? 14 : 6) * zoom + bob;
+      const r = 5 * Math.max(0.8, zoom);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - r, y - r * 1.6);
+      ctx.lineTo(x + r, y - r * 1.6);
+      ctx.closePath();
+      ctx.lineWidth = Math.max(1.5, zoom * 1.5);
+      ctx.strokeStyle = 'rgba(20, 6, 4, 0.85)';
+      ctx.stroke();
+      ctx.globalAlpha = t.hunting ? 0.75 + 0.25 * Math.sin(this.time * 8) : 0.8;
+      ctx.fillStyle = red;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
 
   /**
    * The fight, over everything else: a bar over whatever is after you and
@@ -4986,25 +5030,30 @@ export class Renderer {
         // And the box it is drawn in, a long beast's length either way and a little over its head, for keeping it off a runestone's runes.
         const reach = Math.max(32 * big, wide * 3);
         const beastBox: [number, number, number, number] = [ent.sx + csx - reach * zoom, ent.sy + csy - (tall * 1.25 + 10) * zoom, 2 * reach * zoom, (tall * 1.25 + 18) * zoom];
-        this.paint(ctx, zoom, hit > 0 || tint ? 'flash' : hovering ? 'hover' : 'none', tint ? tint.share : hit * 0.92, ent.sx + csx, ent.sy + csy, (g, px, py) =>
-          drawCreature(g, px, py, zoom, {
-            species: def.id,
-            facing: turned,
-            phase: cr.walkPhase,
-            moving: cr.moving,
-            gait: this.gaits.of('c' + cr.id, cr.x, cr.y, this.frameDt, BEAST_WALK),
-            colors: def.variants[cr.variant] ?? def.variants[0],
-            health: cr.health / maxHealth(cr, def),
-            fleece: cr.fleece,
-            scale: big,
-            label: cr.mode === 'wild' ? undefined : cr.name,
-            id: cr.id,
-            graze: cr.state === 'forage',
-            rare: cr.rare,
-          }),
+        // Its look worked out once, so a second drawing of it in the frame (`drawThreats`) is the same picture and steps its gait once.
+        const look = {
+          species: def.id,
+          facing: turned,
+          phase: cr.walkPhase,
+          moving: cr.moving,
+          gait: this.gaits.of('c' + cr.id, cr.x, cr.y, this.frameDt, BEAST_WALK),
+          colors: def.variants[cr.variant] ?? def.variants[0],
+          health: cr.health / maxHealth(cr, def),
+          fleece: cr.fleece,
+          scale: big,
+          label: cr.mode === 'wild' ? undefined : cr.name,
+          id: cr.id,
+          graze: cr.state === 'forage',
+          rare: cr.rare,
+        };
+        const draw = (g: CanvasRenderingContext2D, px: number, py: number): void => drawCreature(g, px, py, zoom, look);
+        this.paint(ctx, zoom, hit > 0 || tint ? 'flash' : hovering ? 'hover' : 'none', tint ? tint.share : hit * 0.92, ent.sx + csx, ent.sy + csy, draw,
           tint?.colour,
           beastBox,
         );
+        if (threatens(cr, def)) {
+          this.threats.push({ sx: ent.sx + csx, sy: ent.sy + csy, top: ent.sy - tall * zoom, hunting: cr.enemy === PLAYER_ATTACKER, draw });
+        }
         // In the traces: the reins back from its head to the box of what it pulls.
         if (cr.hitchedTo !== null) this.drawReins(ctx, cr, ent.sx, ent.sy, turned, big, zoom);
         // And a mark over it, for the second it has to be seen in.
