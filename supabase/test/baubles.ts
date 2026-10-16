@@ -37,7 +37,8 @@ import {
   BAUBLE_TIERS, baubleText, baubleTimes, fullSaid, MAJOR_SKILLS, MINOR_SKILLS, readBauble, rollBauble, rollTier,
   REGRET, TARNISHED, YIELD_TIMES, type BaubleKind, type BaubleTier,
 } from '../../src/game/baubles';
-import { rarityStep } from '../../src/game/items';
+import { ITEM_DEFS, rarityStep } from '../../src/game/items';
+import { canImprove, improvable } from '../../src/game/improve';
 import { lacksSaid } from '../../src/game/ranks';
 import { TileType } from '../../src/world/tiles';
 
@@ -65,7 +66,12 @@ const near = (a: number, b: number, eps: number): boolean => Math.abs(a - b) <= 
 
 /* ---- the lists ------------------------------------------------------------ */
 const sorted = (xs: readonly string[]): string => [...xs].sort().join(',');
-const worked = new Set([...ACTIONS.map((a) => a.skill), ...RECIPES.map((r) => r.skill)].filter(Boolean) as string[]);
+// A trade is worked by an action or a recipe, or by improving what it judges: a cast blade is beaten true by weaponsmithing (`improvable`).
+const worked = new Set([
+  ...ACTIONS.map((a) => a.skill),
+  ...RECIPES.map((r) => r.skill),
+  ...Object.keys(ITEM_DEFS).filter(canImprove).map((id) => improvable(id)?.skill),
+].filter(Boolean) as string[]);
 const trades = SKILL_DEFS.filter((s) => s.group === 'Skills' && worked.has(s.id)).map((s) => s.id);
 check('a minor bauble speaks for every trade some job is done with, and no other', sorted(MINOR_SKILLS) === sorted(trades),
   `missing ${trades.filter((s) => !MINOR_SKILLS.includes(s)).join(' ') || 'none'}, extra ${MINOR_SKILLS.filter((s) => !trades.includes(s)).join(' ') || 'none'}`);
