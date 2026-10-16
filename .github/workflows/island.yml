@@ -2945,6 +2945,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/names.mjs --log-level=error
           node node_modules/.cache/names.mjs
 
+      - name: Dirt dropped on a kelp bed makes a dirt floor
+        run: |
+          # Asked: dropping dirt on a kelp tile should make it dirt. Kelp was
+          # not on the list of ground a spadeful buries. This asks, on both
+          # sides, that dirt at your feet and on a corner each turn kelp to dirt.
+          npx esbuild supabase/test/kelp.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/kelp.mjs --log-level=error
+          node node_modules/.cache/kelp.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last

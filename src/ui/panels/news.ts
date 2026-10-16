@@ -2181,6 +2181,13 @@ export const NEWS: News[] = [
         + 'and signing in with different capitals changes how your name is written on every island. Only the capitals can change, not the letters.',
     ],
   },
+  {
+    n: 160,
+    day: '2026-10-16',
+    lines: () => [
+      'Dirt dropped on a kelp tile, at your feet or on one of its corners, turns it to a dirt tile, the way it does grass, sand or a reed bed. The kelp is gone with it.',
+    ],
+  },
 ];
 
 

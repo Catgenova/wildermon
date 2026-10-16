@@ -2390,6 +2390,7 @@ insert into buryable values (8);
 insert into buryable values (9);
 insert into buryable values (10);
 insert into buryable values (11);
+insert into buryable values (18);
 insert into buryable values (19);
 insert into buryable values (20);
 insert into buryable values (24);

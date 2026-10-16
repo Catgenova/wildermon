@@ -197,10 +197,14 @@ export const growth = (t: number): number => GROWTH[t] ?? 0;
  *
  * And a reed bed: a spadeful of dirt on it is dry ground, the way a marsh is
  * drained, and the reeds are gone with the wet they stood in.
+ *
+ * And a kelp bed, which is sand with weed growing out of it under water
+ * (`COVERED`): a spadeful of dirt on it is a dirt floor, and the weed is
+ * buried with the sand it grew from.
  */
 export const BURYABLE: ReadonlySet<number> = new Set<number>([
   TileType.Grass, TileType.Lawn, TileType.Steppe, TileType.Tundra, TileType.Moss,
-  TileType.Marsh, TileType.Sand, TileType.Clay, TileType.Peat, TileType.Tar, TileType.Reed,
+  TileType.Marsh, TileType.Sand, TileType.Clay, TileType.Peat, TileType.Tar, TileType.Reed, TileType.Kelp,
   // And a trail, which is one of those five worn bare: soft ground, and buried the same.
   TileType.Trail,
 ]);
