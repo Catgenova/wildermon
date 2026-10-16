@@ -260,8 +260,10 @@ function swapRefusal(g: Game): string | null {
 /** What a worker set to the deed will do, said the same way whether it came off a leash or out of a crate. */
 export function deedJobLine(c: Creature): string {
   const gathers = c.trade ?? SPECIES[c.species].gathers;
+  // A swarm at the hives brings nothing to the crate: the hives fill themselves while it keeps them.
+  const tail = gathers === 'hive' ? '' : ' and bring what it finds to the crate';
   return gathers
-    ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the token and bring what it finds to the crate`
+    ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the token${tail}`
     : 'stay around the settlement';
 }
 

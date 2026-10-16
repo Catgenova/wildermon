@@ -2338,7 +2338,7 @@ insert into species_diet values ('cudda', 'mixed_grass');
 insert into species_diet values ('cudda', 'cabbage');
 insert into species_diet values ('cudda', 'carrot');
 insert into species_diet values ('cudda', 'wheat');
-insert into species_def values ('vesp', 'Vesp', 'Not one creature so much as a small furious cloud of them, which settles where there are flowers. Give the swarm a hive on your deed and it will fill it with honey and wax and defend it from anything foolish.', 12, 3, 2.4, 18, 0.1, 'berries or honey', false, null, 8, 'lifts off the {food} in a body, hangs in the air a moment, and settles again', 'rises all at once and pours away over the hedge', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'pierce', null, null);
+insert into species_def values ('vesp', 'Vesp', 'Not one creature so much as a small furious cloud of them, which settles where there are flowers. Give the swarm a hive on your deed and it will fill it with honey and wax and defend it from anything foolish.', 12, 3, 2.4, 18, 0.1, 'berries or honey', false, 'hive', 8, 'lifts off the {food} in a body, hangs in the air a moment, and settles again', 'rises all at once and pours away over the hedge', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'pierce', null, null);
 update species_def set hives = true where id = 'vesp';
 update species_def set venom = true where id = 'vesp';
 insert into species_diet values ('vesp', 'blueberry');
@@ -3888,6 +3888,7 @@ insert into gather_def values ('fish', 'fishing', 'fishing', 'fish the water rou
 insert into gather_def values ('prune', 'forestry', 'pruning the wood', 'prune what would otherwise die');
 insert into gather_def values ('stump', 'digging', 'digging out stumps', 'dig out stumps');
 insert into gather_def values ('fruit', 'forestry', 'picking fruit', 'pick what the fruit trees have on them and carry it home');
+insert into gather_def values ('hive', 'animal_husbandry', 'tending the hives', 'tend the hives');
 insert into melt_def values ('anvil', 80);
 insert into melt_def values ('arrow_head', 0.04);
 insert into melt_def values ('axe_head', 2);

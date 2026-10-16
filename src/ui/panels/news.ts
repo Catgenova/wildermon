@@ -54,7 +54,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { GRAZE_FILL } from '../../game/creatures';
+import { GATHER_VERB, GRAZE_FILL } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2202,6 +2202,14 @@ export const NEWS: News[] = [
       `Every mould is formed with ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, whatever it casts, and its QL is your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()} and never the sand's. `
         + 'Sword, axe, armour, ring and pendant moulds were formed with the trade of the piece they cast.',
       `Pouring a mould, and casting an anvil, teach ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}. On an island a pour used to teach nothing.`,
+    ],
+  },
+  {
+    n: 163,
+    day: '2026-10-16',
+    lines: () => [
+      `A Vesp has a trade: ${GATHER_VERB.hive}. It can be set to work the deed, from its menu or out of its crate; it goes to the nearest hive in its reach `
+        + 'and works there, and the hive fills with honey and beeswax while it does. It brings nothing to the crate, and with no hive in reach it says so after an hour.',
     ],
   },
 ];

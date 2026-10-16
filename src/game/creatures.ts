@@ -18,7 +18,7 @@ import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { keyX, keyY, tileKey } from './tileindex';
 import { fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
-import { BUCKET_LITRES, furnitureCentre } from './furniture';
+import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
 import { auraMul, breedTraits, channelOf, CHANNELS, pct, rollTraits, traitList, traitMul, traitTier, TRAIT_SLOTS, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
@@ -101,7 +101,9 @@ export type GatherKind =
   | 'prune'
   | 'stump'
   // A plucka picks what a bearing tree has on it and carries it home.
-  | 'fruit';
+  | 'fruit'
+  // A vesp tends the hives on the deed, which fill with honey and beeswax while it does (`HIVE_SWARMS`).
+  | 'hive';
 /**
  * How far a wild thing will drift from where it stands, and how long it stands.
  *
@@ -203,11 +205,11 @@ const NOBODY: readonly Creature[] = [];
  */
 const TILE_SLACK = 4096;
 
-export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' };
-export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'working the fields', mine: 'working the seams', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'keeping the fires in', fetch: 'clearing up', guard: 'keeping watch', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'reading the ground', plant: 'planting', hod: 'carrying the hod', mend: 'mending', compost: 'clearing up', seek: 'nosing about', fish: 'fishing', prune: 'pruning the wood', stump: 'digging out stumps', fruit: 'picking fruit' };
+export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry' };
+export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'working the fields', mine: 'working the seams', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'keeping the fires in', fetch: 'clearing up', guard: 'keeping watch', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'reading the ground', plant: 'planting', hod: 'carrying the hod', mend: 'mending', compost: 'clearing up', seek: 'nosing about', fish: 'fishing', prune: 'pruning the wood', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending the hives' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest the fields', mine: 'mine the ore', sand: 'dig sand and carry it home', clay: 'dig clay and carry it home', quarry: 'cut stone and carry it home', stoke: 'keep the fires and furnaces fed', fetch: 'pick up what is lying about', guard: 'keep watch over the deed', hunt: 'hunt the country round the deed and bring the carcasses home', peat: 'cut peat and tar and carry them home', reed: 'cut reeds and carry them home', water: 'carry water from the shore or the well to your barrels', prospect: 'read the ground for metal and mark what it finds', plant: 'plant sprouts where the trees have been cut', hod: 'carry brick and timber to your planned walls and fit it', mend: 'mend the damaged gear in your stores', compost: 'clear away what is rotting and turn it into compost', seek: 'smell out buried relics and mark where to dig', fish: 'fish the water round the deed and carry the catch home', prune: 'prune what would otherwise die', stump: 'dig out stumps', fruit: 'pick what the fruit trees have on them and carry it home' };
-const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] };
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest the fields', mine: 'mine the ore', sand: 'dig sand and carry it home', clay: 'dig clay and carry it home', quarry: 'cut stone and carry it home', stoke: 'keep the fires and furnaces fed', fetch: 'pick up what is lying about', guard: 'keep watch over the deed', hunt: 'hunt the country round the deed and bring the carcasses home', peat: 'cut peat and tar and carry them home', reed: 'cut reeds and carry them home', water: 'carry water from the shore or the well to your barrels', prospect: 'read the ground for metal and mark what it finds', plant: 'plant sprouts where the trees have been cut', hod: 'carry brick and timber to your planned walls and fit it', mend: 'mend the damaged gear in your stores', compost: 'clear away what is rotting and turn it into compost', seek: 'smell out buried relics and mark where to dig', fish: 'fish the water round the deed and carry the catch home', prune: 'prune what would otherwise die', stump: 'dig out stumps', fruit: 'pick what the fruit trees have on them and carry it home' , hive: 'tend the hives' };
+const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [] };
 export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'tusk' | 'sinew' | 'scale' | 'hoard';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
@@ -1253,7 +1255,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     diet: ['blueberry', 'raspberry', 'strawberry', 'honey'],
     baitHint: 'berries or honey',
     timid: false,
-    gathers: null,
+    // Its trade: set to work the deed, it tends the hives there (asked: "vesp should work beehives as their trade").
+    gathers: 'hive',
     workRange: 8,
     variants: [
       ['#c8a03a', '#3a3128'],
@@ -1576,6 +1579,12 @@ export const HUNGRY = 0.25;
 export const WATER_RANGE = 4;
 
 /** Whether open water lies within a few tiles of here. */
+/** The hive standing on a tile, if one does: where a vesp set to tend the hives goes to work. The island's `worker_gatherable` asks the same. */
+export function hiveAt(game: Game, x: number, y: number): PlacedFurniture | undefined {
+  for (const f of game.furniture.values()) if (f.kind === 'hive' && f.x === x && f.y === y) return f;
+  return undefined;
+}
+
 export function nearWater(game: Game, x: number, y: number, range = WATER_RANGE): boolean {
   for (let dy = -range; dy <= range; dy++) {
     for (let dx = -range; dx <= range; dx++) {
@@ -3468,6 +3477,8 @@ export class Creatures {
     }
     // Stoking and guarding are not tile work; they never send a worker walking to one.
     if (kind === 'stoke' || kind === 'guard') return false;
+    // A hive standing on the tile, which as many swarms may tend as like (`hiveAt`): no claim on it.
+    if (kind === 'hive') return hiveAt(game, x, y) !== undefined;
     if (kind === 'quarry') {
       // Bare stone with no metal in it, and one cutter to a face.
       const rock = bedrockAt(game.world, x, y);
@@ -3637,6 +3648,8 @@ export class Creatures {
     if (kind === 'mine') return this.finishMining(game, c);
     if (kind === 'sand' || kind === 'clay') return this.finishDigging(game, c, kind === 'sand' ? 'sand' : 'clay');
     if (kind === 'stoke' || kind === 'guard') return null;
+    // Tending a hive brings nothing home: the hive fills itself while a swarm keeps it (`Game.fillHive`).
+    if (kind === 'hive') return null;
     if (kind === 'quarry') return this.finishQuarry(game, c);
     if (kind === 'peat') return this.finishPeat(game, c);
     if (kind === 'reed') return this.finishReed(game, c);

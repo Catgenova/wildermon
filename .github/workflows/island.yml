@@ -2965,6 +2965,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/moulds.mjs --log-level=error
           node node_modules/.cache/moulds.mjs
 
+      - name: A vesp tends the hives, as its trade
+        run: |
+          # Asked: vesp should work beehives as their trade. A vesp had none,
+          # so it could not be set to work a deed. This asks that it can, that
+          # it goes to a hive and works there bringing nothing home while the
+          # hive fills, and that with no hive in reach it says so.
+          npx esbuild supabase/test/vesp.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/vesp.mjs --log-level=error
+          node node_modules/.cache/vesp.mjs
+
       - name: Things of one kind keep one place in a list
         run: |
           # Three nail moulds came out in whatever order the pack was last
