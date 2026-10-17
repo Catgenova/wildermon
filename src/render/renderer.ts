@@ -278,6 +278,11 @@ export interface Pick {
   furniture?: number;
   /** Picked on the floor of a cellar, looking into it, rather than on the ground over it. */
   down?: boolean;
+  /**
+   * For a thing set down on the ground (a wagon, a crate, a fire...): the ground the cursor is over behind it, as it
+   * would have been picked were the thing not there, so the tile under or behind a thing can still be got at.
+   */
+  ground?: Pick;
 }
 
 /** Seconds a cart's rock and bump take to come on as she sets off, and to die away as she stops (`cartRoll`). */
@@ -13934,7 +13939,17 @@ export class Renderer {
     this.picked = null;
   }
 
+  /** What is under the cursor, and for a thing set down there, the ground behind it too (`Pick.ground`). */
   pick(sx: number, sy: number): Pick | null {
+    const p = this.pickTop(sx, sy);
+    if (p && p.peer === undefined && p.creature === undefined && p.bridge === undefined && !p.down
+      && (p.crate ?? p.fire ?? p.smelter ?? p.kiln ?? p.anvil ?? p.post ?? p.trap ?? p.furniture) !== undefined) {
+      p.ground = this.groundPick(sx, sy) ?? undefined;
+    }
+    return p;
+  }
+
+  private pickTop(sx: number, sy: number): Pick | null {
     for (let i = this.peerHits.length - 1; i >= 0; i--) {
       const h = this.peerHits[i];
       if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), peer: h.peer };
@@ -13999,6 +14014,11 @@ export class Renderer {
       }
       for (const h of hulls) if (inOutline(h.hull, sx, sy)) return null;
     }
+    return this.groundPick(sx, sy);
+  }
+
+  /** The ground under a point on the screen, whatever stands on it: the first tile it hits, from the nearest line back. */
+  private groundPick(sx: number, sy: number): Pick | null {
     const cam = this.camera;
     const world = this.game.world;
     const iso = cam.screenToIso(sx, sy);

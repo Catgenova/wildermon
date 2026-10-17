@@ -427,7 +427,7 @@ export class UI {
     const craft = this.windows.create({ id: 'craft', title: 'Crafting', x: 364, y: 56, width: 360, height: 360, anchor: 'tr', open: false });
     this.craftPanel = new CraftPanel(craft, game);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
-    this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick), this.tooltip);
+    this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick, (ground) => this.selectTile(ground)), this.tooltip);
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
     this.minimap = new MinimapPanel(map, game, renderer);
     const settings = this.windows.create({ id: 'settings', title: 'Settings', x: 12, y: 56, width: 380, height: 520, anchor: 'tr', open: false });
@@ -1351,7 +1351,7 @@ export class UI {
   showTileMenu(pick: Pick, sx: number, sy: number): void {
     let built: { title: string; facts?: string[]; entries: MenuItem[] };
     try {
-      built = this.menuFor(pick);
+      built = this.menuFor(pick, (ground) => this.showTileMenu(ground, sx, sy));
     } catch (e) {
       // Said in the log and on the console rather than swallowed: a menu
       // that cannot be built is a bug, and one that took the click handler
@@ -1369,11 +1369,27 @@ export class UI {
    * right-click menu and the tile window are the same list seen two ways, so
    * neither can fall behind the other.
    */
-  menuFor(pick: Pick): { title: string; facts?: string[]; entries: MenuItem[] } {
+  menuFor(pick: Pick, go?: (ground: Pick) => void): { title: string; facts?: string[]; entries: MenuItem[] } {
     const built = this.pickMenu(pick);
     const aim = this.aimAt(pick);
     if (aim) built.entries.push(...(this.spellBar?.entriesFor(aim) ?? []));
+    if (go) built.entries.push(...this.groundEntries(pick, go));
     return built;
+  }
+
+  /**
+   * For a thing set down on the ground -- a wagon, a crate, a fire -- the way through to the ground: the tile it stands
+   * on, and the tile behind it where the cursor was when that is another. A wagon is drawn over more than its own tile,
+   * and without these the ground it stands on and covers could not be picked at all.
+   */
+  private groundEntries(pick: Pick, go: (ground: Pick) => void): MenuItem[] {
+    if (pick.ground === undefined) return [];
+    const named = (p: Pick): string => `${this.game.world.tileName(p.x, p.y)} (${p.x}, ${p.y})`;
+    const under: Pick = { x: pick.x, y: pick.y, wx: pick.wx, wy: pick.wy, cx: pick.cx, cy: pick.cy };
+    const out: MenuItem[] = [{ label: 'The ground under it', note: named(under), onSelect: () => go(under) }];
+    const behind = pick.ground;
+    if (behind.x !== pick.x || behind.y !== pick.y || behind.down) out.push({ label: 'The ground behind it', note: named(behind), onSelect: () => go(behind) });
+    return out;
   }
 
   /**
