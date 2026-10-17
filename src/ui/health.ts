@@ -146,7 +146,7 @@ export interface HealthReport {
   /** The same as marks: a short figure for the chip, and its sentence. */
   rates: Array<{ kind: 'bad' | 'good' | 'still'; short: string; long: string; parts?: string[] }>;
   /** Your first aid and chirurgy, and what each does for you now. */
-  hands: Array<{ name: string; level: number; does: string }>;
+  hands: Array<{ name: string; level: number; does: string; next: string }>;
   /** How fast health comes back on its own while resting, and what that waits on, each met or not. */
   mend: { rate: string; needs: Array<{ ok: boolean; text: string }> };
   wounds: WoundView[];
@@ -176,13 +176,6 @@ export function clockWords(seconds: number): string {
 }
 /** A share as a whole percentage, the way the bars show it. */
 const whole = (x: number): string => `${Math.round(x * 100)}%`;
-
-/** The next word up for how you are eating, and from what lowest (`fedWord`). */
-const nextFed = (b: number): string => {
-  const steps: Array<[number, string]> = [[0.15, 'living on scraps'], [0.4, 'eating plainly'], [0.7, 'eating well'], [0.95, 'wanting for nothing']];
-  const up = steps.find(([at]) => b < at);
-  return up ? ` · ${up[1]} from ${whole(up[0])}` : '';
-};
 
 /** A multiplier said as "6.4×". */
 const times = (x: number): string => `${Number(x.toFixed(1))}×`;
@@ -402,6 +395,11 @@ export function woundView(g: Game, w: Wound): WoundView {
   };
 }
 
+/** What a dressing heals at a first aid, from the worst QL to the best, as "6.2–16.2%". */
+const dressRange = (aid: number): string => `${percent(healAmount(aid, 0)).replace('%', '')}–${percent(healAmount(aid, 100))}`;
+/** How much faster wounds close at a chirurgy than at none, as "+3.3%". */
+const closeFaster = (chir: number): string => `+${percent((CLOSE_PACE + chir * CLOSE_PER_SKILL) / CLOSE_PACE - 1)}`;
+
 export function healthReport(g: Game, spells: SpellsOnYou): HealthReport {
   const p = g.player;
   const s = p.stats;
@@ -442,8 +440,8 @@ export function healthReport(g: Game, spells: SpellsOnYou): HealthReport {
   const emptyIn = losing > 0 ? Math.max(0, (s.health - venom) / (losing / 60)) : venom >= s.health ? 0 : null;
   const aid = g.skills.get('first_aid'), chir = g.skills.get('chirurgy');
   const hands = [
-    { name: 'First aid', level: aid, does: `Dressings heal ${percent(healAmount(aid, 0)).replace('%', '')}–${percent(healAmount(aid, 100))} by QL` },
-    { name: 'Chirurgy', level: chir, does: `Wounds close +${percent((CLOSE_PACE + chir * CLOSE_PER_SKILL) / CLOSE_PACE - 1)} faster` },
+    { name: 'First aid', level: aid, does: `Dressings heal ${dressRange(aid)} by QL`, next: `At ${Math.floor(aid) + 1}: ${dressRange(Math.floor(aid) + 1)}` },
+    { name: 'Chirurgy', level: chir, does: `Wounds close ${closeFaster(chir)} faster`, next: `At ${Math.floor(chir) + 1}: ${closeFaster(Math.floor(chir) + 1)}` },
   ];
   const n = p.nutrition;
   const lowest = NUTRIENTS.reduce((a, b) => (n[b] < n[a] ? b : a));
@@ -464,15 +462,15 @@ export function healthReport(g: Game, spells: SpellsOnYou): HealthReport {
       rate: `Resting, you mend ${perMinute(HEAL_RATE * 60)} a minute when all of these are met:`,
       needs: [
         { ok: !open, text: `No wound bleeding, with venom in it or gone bad (now ${p.wounds.filter((w) => w.bleeding || w.infected || ((w.venom ?? 0) > 0 && w.dressing === null)).length})` },
-        { ok: s.hunger > HEAL_FED, text: `Food over ${percent(HEAL_FED)} (now ${Math.round(s.hunger * 100)}%)` },
-        { ok: s.thirst > HEAL_FED, text: `Water over ${percent(HEAL_FED)} (now ${Math.round(s.thirst * 100)}%)` },
+        { ok: s.hunger > HEAL_FED, text: `Food over ${percent(HEAL_FED)} (now ${Math.round(s.hunger * 100)}%${s.hunger > HEAL_FED ? '' : `, ${whole(HEAL_FED - s.hunger)} short`})` },
+        { ok: s.thirst > HEAL_FED, text: `Water over ${percent(HEAL_FED)} (now ${Math.round(s.thirst * 100)}%${s.thirst > HEAL_FED ? '' : `, ${whole(HEAL_FED - s.thirst)} short`})` },
       ],
     },
     wounds: ranked.map((w) => woundView(g, w)),
     against: effects.filter((e) => !e.good && !WOUND_EFFECTS.has(e.id)),
     forYou: effects.filter((e) => e.good),
     nutrition: NUTRIENTS.map((id) => ({ id, name: NUTRIENT_NAMES[id], value: n[id], note: NUTRIENT_NOTES[id] })),
-    fed: `${capital(fedWord(n))} · lowest ${whole(n[lowest])}${nextFed(balance(n))}`,
+    fed: `${capital(fedWord(n))} · lowest ${whole(n[lowest])}`,
     hungry: balance(n) < 0.4,
     nutritionWords: [
       `Food and water fall ${percent(1 - upkeepMul(n))} slower (by the average of the four, ${whole(fedness(n))}).`,

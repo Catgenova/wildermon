@@ -88,6 +88,8 @@ const ITEM_ICONS: Record<string, string> = {
   salve: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M4 9 V16 a8 3 0 0 0 16 0 V9" class="i-tin"/><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M9 8.5 C 10 6.5 13 6 15 7" class="i-vein"/></svg>',
 };
 /** The healing herbs, which share one picture. */
+/** Conditions whose rule the mend checklist says under them. */
+const SAID_BELOW = new Set(['hunger', 'thirst']);
 const HERBS = new Set(Object.values(WOUND_KINDS).map((k) => k.herb));
 const icon = (item: string): HTMLSpanElement => {
   const s = el('span', `hp-icon hp-icon-${item}`);
@@ -99,7 +101,7 @@ const icon = (item: string): HTMLSpanElement => {
 const PIN_GLYPH: Record<WoundState, string> = {
   bleeding: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
   open: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
-  venom: '<path stroke="none" d="M1.4 2.2 Q6 5.2 10.6 2.2 V3.6 Q6 6.6 1.4 3.6 Z M2.4 3.9 L4.9 5 L3.2 10.4 Z M9.6 3.9 L7.1 5 L8.8 10.4 Z"/><circle cx="6" cy="9.2" r="1.1" stroke="none"/>',
+  venom: '<path stroke="none" fill-rule="evenodd" d="M4.6 4.2 a3.2 3.2 0 1 0 .01 0 Z M3.6 5.6 a.85 .85 0 1 0 .01 0 Z M9 1.9 a2.1 2.1 0 1 0 .01 0 Z M9.4 7.6 a1.35 1.35 0 1 0 .01 0 Z"/>',
   bad: '<path fill-rule="evenodd" stroke="none" d="M6 1.2 a4.3 4.3 0 0 0 -4.3 4.3 c0 1.6 .8 2.7 1.9 3.3 V10.6 h4.8 V8.8 c1.1 -.6 1.9 -1.7 1.9 -3.3 A4.3 4.3 0 0 0 6 1.2 Z M4.4 4.6 a1 1 0 1 0 .01 0 Z M7.6 4.6 a1 1 0 1 0 .01 0 Z"/>',
   dressed: '<path stroke="none" fill-rule="evenodd" transform="rotate(-35 6 6)" d="M2.2 3.6 H9.8 a2.4 2.4 0 0 1 0 4.8 H2.2 a2.4 2.4 0 0 1 0 -4.8 Z M4.6 4.7 H7.4 V7.3 H4.6 Z M2.5 5.6 a.4 .4 0 1 0 .01 0 Z M9.5 5.6 a.4 .4 0 1 0 .01 0 Z"/>',
   covered: '<path d="M2.5 9.5 C 3 5 6 2.5 9.5 2.5 C 9.5 6 7 9 2.5 9.5 Z"/>',
@@ -365,7 +367,8 @@ export class HealthPanel {
     this.drawHands(r);
     // The other tabs only while they show.
     if (this.tab === 'conditions') {
-      this.drawEffects(this.against, r.against, 'Nothing is against you.');
+      // Hunger and thirst only by name and how low: what they stop is the mend checklist's to say, under them.
+      this.drawEffects(this.against, r.against.map((e) => (SAID_BELOW.has(e.id) ? { ...e, does: [] } : e)), 'Nothing is against you.');
       this.drawEffects(this.forYou, r.forYou, '');
       this.forHead.hidden = this.forYou.hidden = !r.forYou.length;
       const sig = JSON.stringify(r.mend);
@@ -419,7 +422,10 @@ export class HealthPanel {
     this.sum.textContent = r.wounds.length ? (bits.length ? bits.join(' · ') : `${r.wounds.length} dressed`) : '';
     this.sum.classList.toggle('hp-sum-bad', bits.length > 0);
     this.emptyIn.hidden = r.emptyIn === null;
-    if (r.emptyIn !== null) this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} at this rate`;
+    if (r.emptyIn !== null) {
+      this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} at this rate`;
+      if (r.venom > 0) this.emptyText.append(el('span', 'hp-empty-note', ' with the venom'));
+    }
     this.rate.replaceChildren(...r.rates.map((x) => {
       // Why nothing mends: a label and a chip a reason, so a narrow window breaks between reasons.
       if (x.parts) {
@@ -758,7 +764,9 @@ export class HealthPanel {
     const title = el('div', 'hp-care-title');
     title.append(el('b', '', c.title));
     if (c.uses) title.append(el('span', 'hp-care-uses', `Uses your ${c.uses.label}, QL ${c.uses.ql.toFixed(0)}`));
-    const go = el('button', 'hp-go', doing ? 'Working…' : c.button);
+    // Locked for want of something: the button says what, since a tooltip is out of reach on a touch screen.
+    const wants = c.why !== null && !c.holding ? `Needs ${c.options.length > 1 ? 'a dressing' : c.options[0].label.toLowerCase()}` : null;
+    const go = el('button', 'hp-go', doing ? 'Working…' : wants ?? c.button);
     go.type = 'button';
     go.disabled = c.why !== null || !c.target || !!doing;
     if (c.why) {
@@ -789,7 +797,9 @@ export class HealthPanel {
       const odds = el('div', 'hp-odds');
       for (const o of c.odds) {
         const line = el('div', `hp-odd ${o.ok ? 'hp-odd-ok' : 'hp-odd-no'}`);
-        line.append(el('span', 'hp-odd-mark', o.ok ? '✓' : '✗'), el('b', 'hp-odd-chance', o.chance), el('span', 'hp-odd-text', o.text));
+        const at = el('span', 'hp-odd-at');
+        at.append(el('span', 'hp-odd-mark', o.ok ? '✓' : '✗'), el('b', 'hp-odd-chance', o.chance));
+        line.append(at, el('span', 'hp-odd-text', o.text));
         odds.append(line);
       }
       box.append(odds);
@@ -887,7 +897,7 @@ export class HealthPanel {
       const row = el('div', 'hp-hand');
       const head = el('div', 'hp-hand-head');
       head.append(el('span', '', h.name), el('b', '', h.level.toFixed(1)));
-      row.append(head, el('div', 'hp-hand-does', h.does));
+      row.append(head, el('div', 'hp-hand-does', h.does), el('div', 'hp-hand-next', h.next));
       return row;
     }));
   }
