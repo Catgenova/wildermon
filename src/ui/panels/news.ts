@@ -2283,7 +2283,9 @@ export const NEWS: News[] = [
       'Goals that read the wrong thing count what they say: smelting is charging a smelter with ore (a lump was never counted), '
         + 'Improve is a pass of yours that leaves the thing at QL 50 or 90, a field is seed sown, a hive is honey taken out (a skep counts), '
         + 'a relic is one restored, a bed is one you built, a cart or a wagon is a whole team in its yokes, a fantastic trait is one bred, '
-        + 'and cooking on a campfire is anything Crafting cooks at one. Something done before today under the old rule ticks the next time you do it.',
+        + 'and cooking on a campfire is anything Crafting cooks at one. An enchanted melee weapon is a melee weapon (any enchanted thing did), '
+        + 'a dyed banner is one on your settlement, a caravel is a sailing boat, and Make dye is Dye something, which is what it counted. '
+        + 'Something done before today under the old rule ticks the next time you do it.',
       'Click any goal in the journal for how to do it, or Show every how-to above the list.',
     ],
   },

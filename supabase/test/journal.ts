@@ -133,7 +133,30 @@ const unmet = cooked.filter((id) => {
 });
 check(`cooking on a campfire is anything Crafting cooks at one (${cooked.length})`, cooked.length > 4 && unmet.length === 0, unmet.join(', '));
 
-// No goal is left with a number not filled in.
+// A melee weapon, a banner on your settlement, any boat with a sail.
+clear();
+const notMelee = game.inventory.add('short_bow', { ql: 30 });
+notMelee.enchant = { id: 'farsight', ql: 30 };
+check('a bow with an enchantment in it is not an enchanted melee weapon', !met('enchanted'));
+const sword = game.inventory.add('sword', { ql: 30, extra: 'Iron' });
+sword.enchant = { id: 'emberbrand', ql: 30 };
+check('a sword with one is', met('enchanted'));
+const banner = game.addFurniture('banner', px + 30, py + 30, 0, 0, 30);
+banner.dye = 'red';
+game.deed = { name: 'Mine', x: px, y: py, radius: 5, level: 1 } as never;
+check('a dyed banner off your settlement is not on it', !met('colours'));
+banner.x = px + 1;
+banner.y = py + 1;
+check('one inside its border is', met('colours'));
+game.deed = null;
+game.removeFurniture(banner.id);
+const caravel = game.addFurniture('caravel', px + 4, py + 4, 0, 0, 30);
+check('a caravel is a sailing boat', met('sail'));
+game.removeFurniture(caravel.id);
+
+// Every goal has a how-to, with every number filled in.
+const missing = ALL_GOALS.filter((g) => !g.how || g.how.length < 20).map((g) => g.id);
+check(`every goal (${ALL_GOALS.length}) has a how-to`, missing.length === 0, missing.join(', '));
 const unfilled = ALL_GOALS.filter((g) => /\{[\w.]+(:\w+)?\}/.test(`${g.text} ${g.hint ?? ''} ${g.how ?? ''}`)).map((g) => g.id);
 check('and none is left with a number not filled in', unfilled.length === 0, unfilled.join(', '));
 

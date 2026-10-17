@@ -8,6 +8,8 @@ import { CHOOSE_AT, PATH_LIST, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, type PathId
 import { KNACK_CAP, KNACK_ODDS, TITLE_STEPS } from './titles';
 import { BLESS_CAP } from './faith';
 import { FURNITURE_BY_ID } from './furniture';
+import { ENCHANTMENTS } from './enchant';
+import { GOAL_HOW } from './journalhow';
 import { capital, fill, listed, NumberWord, numberWord, times } from './words';
 
 /**
@@ -78,6 +80,10 @@ export const LEGEND_AT = TITLE_STEPS[TITLE_STEPS.length - 1];
 /** Whether you founded the settlement you stand on: alone it is always yours; on an island a citizen's is somebody else's. */
 const founded = (g: Game): boolean => !!g.deed && g.deed.mine !== false;
 
+/** Whether a thing stands inside the border of the settlement you are on. */
+const onDeed = (g: Game, at: { x: number; y: number }): boolean =>
+  !!g.deed && Math.abs(Math.floor(at.x) - g.deed.x) <= g.deed.radius && Math.abs(Math.floor(at.y) - g.deed.y) <= g.deed.radius;
+
 /**
  * What counts as cooking on a campfire: everything Crafting cooks at one,
  * handed over by `recipes.ts` as it loads (importing the recipes here would
@@ -98,7 +104,7 @@ export const JOURNAL: Chapter[] = [
     goals: [
       { id: 'tree', text: 'Fell a tree', how: 'Right-click any tree and choose Cut down. The hatchet you came ashore with is already in your pack — every job here takes the right tool and refuses without it, and it says which.', met: did('tree') },
       // Planks made, not a carpentry level: a crate or a shaft raised the skill as far, and a slow saw never got there.
-      { id: 'plank', text: 'Saw a log into planks', how: 'A felled tree leaves logs on the ground. Right-click one and Pick up, then open Crafting (R) and look for Saw into planks. Crafting lists everything there is to make, with what each needs in green if you have it and red if you do not.', met: did('made:plank') },
+      { id: 'plank', text: 'Saw a log into planks', how: 'A felled tree\'s logs go into your pack. Open Crafting (R) and make Saw into planks: {recipe.make_planks.log:w} log and the saw in your kit make {recipe.make_planks.count:w} planks. Crafting lists everything there is to make, with what each needs in green if you have it and red if you do not.', met: did('made:plank') },
       { id: 'fire', text: 'Light a campfire', hint: `${NumberWord(FIRE_COST)} shafts, placed and lit`, how: `Crafting (R) makes shafts from a log. With ${numberWord(FIRE_COST)} in your pack, right-click the ground and choose Build campfire, then right-click the fire and Light. Feed it wood to keep it in.`, met: did('fire') },
       { id: 'cook', text: 'Cook food on a campfire', how: 'Stand next to a lit fire with meat, a fish or a potato in your pack, and it will be among the things Crafting offers. A fire is a place as much as a thing: some recipes only appear when you are standing at one.', met: (g) => [...CAMPFIRE_FOOD].some((id) => (g.tally[`made:${id}`] ?? 0) > 0) },
       { id: 'crate', text: 'Build a crate and place it', how: '{recipe.make_log_crate.log:W} logs and a mallet make a log crate; {recipe.make_plank_crate.plank:w} planks and {recipe.make_plank_crate.nail:w} nails make a better one. Right-click the ground to place it. Everything on this island rots where it lies, and a crate slows that down a great deal.', met: did('crate') },
@@ -155,7 +161,8 @@ export const JOURNAL: Chapter[] = [
       { id: 'perch', text: 'Catch a perch', met: did('fish:perch') },
       { id: 'boat', text: 'Build a boat', met: (g) => ours(g.furniture.values()).some((f) => isBoat(f)) },
       { id: 'allfish', text: 'Catch every kind of fish', hint: FISH.map((f) => f.name.toLowerCase()).join(', '), met: (g) => FISH.every((f) => (g.tally[`fish:${f.id}`] ?? 0) > 0) },
-      { id: 'sail', text: 'Build a sailing boat', met: (g) => ours(g.furniture.values()).some((f) => f.kind === 'sailing_boat') },
+      // Any boat of yours with a sail: a caravel is one too.
+      { id: 'sail', text: 'Build a sailing boat', met: (g) => ours(g.furniture.values()).some((f) => !!FURNITURE_BY_ID.get(f.kind)?.boat?.sail) },
     ],
   },
   {
@@ -199,7 +206,8 @@ export const JOURNAL: Chapter[] = [
       { id: 'cunning', text: 'Cast a circle of cunning on a tool', hint: 'A favour bought at an altar', met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) > 0) },
       { id: 'thrice', text: `Cast ${numberWord(BLESS_CAP)} circles of cunning on one tool`, met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) >= BLESS_CAP) },
       // A scroll written at the crafting window and put into a weapon (`enchant.ts`): held, not counted, so the island has nothing to note.
-      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Write a scroll from papyrus and motes, then Enchant, on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant) },
+      // A melee weapon, as it says: any enchanted thing in the pack did, a ring or a bow among them.
+      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Write a scroll from papyrus and motes, then Enchant, on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant && ENCHANTMENTS[it.enchant.id]?.on === 'melee') },
       { id: 'goblin', text: 'Kill a goblin', met: did('slew:goblin') },
       { id: 'orc', text: 'Kill an orc', met: did('slew:orc') },
       { id: 'ogre', text: 'Kill an ogre', met: did('slew:ogre') },
@@ -209,7 +217,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'composite', text: 'Make a composite bow', hint: 'Tusk and sinew from an orc or an ogre', met: did('made:composite_bow') },
       { id: 'bridged', text: 'Build a bridge', hint: 'Start it on one bank and finish it on the other', met: did('bridged') },
       { id: 'reach', text: 'Sail a beam reach in a fresh wind', hint: 'Wind from the side, at half force or more', met: did('reach') },
-      { id: 'laden', text: 'Sail a boat with its hold more than half full', met: did('laden') },
+      { id: 'laden', text: 'Sail a sailing boat with its hold more than half full', met: did('laden') },
       { id: 'baited', text: 'Catch a fish with bait on the hook', met: did('baited') },
       { id: 'netted', text: 'Haul in a fishing net', met: did('netted') },
       { id: 'creeled', text: 'Empty a creel', hint: 'Weave one from reed, bait it and sink it in water', met: did('creeled') },
@@ -254,10 +262,12 @@ export const JOURNAL: Chapter[] = [
       { id: 'dressed', text: 'Dress a wound with cloth', met: did('dressed') },
       { id: 'covered', text: 'Dress a wound with the right herb', hint: 'Thyme on a cut, sage on a burn', met: did('covered') },
       { id: 'cleaned', text: 'Scour an infected wound with lye', met: did('cleaned') },
-      { id: 'dye', text: 'Make dye', hint: 'Boil petals or leaves with lye', met: did('dyed') },
-      { id: 'colours', text: 'Plant a dyed banner on your settlement', met: (g) => ours(g.furniture.values()).some((f) => f.kind === 'banner' && !!f.dye) },
-      { id: 'title', text: 'Earn a title', hint: `Reach ${TITLE_STEPS[0]} in any skill`, met: (g) => g.player.titles.length > 0 },
-      { id: 'master', text: 'Earn a master title', hint: `Reach ${MASTER_AT} in any skill`, met: (g) => g.player.titles.some((t) => TITLE_STEPS.some((at) => at >= MASTER_AT && t.endsWith(`:${at}`))) },
+      // It ticks on the dyeing, which is what it counts; boiling the dye alone never did.
+      { id: 'dye', text: 'Dye something', hint: 'Boil a dye, then Dye it on the thing', met: did('dyed') },
+      // On your settlement, as it says: a dyed banner of yours anywhere did.
+      { id: 'colours', text: 'Plant a dyed banner on your settlement', met: (g) => founded(g) && ours(g.furniture.values()).some((f) => f.kind === 'banner' && !!f.dye && onDeed(g, f)) },
+      { id: 'title', text: 'Earn a title', hint: `Reach ${TITLE_STEPS[0]} in a skill that has titles`, met: (g) => g.player.titles.length > 0 },
+      { id: 'master', text: 'Earn a master title', hint: `Reach ${MASTER_AT} in a skill that has titles`, met: (g) => g.player.titles.some((t) => TITLE_STEPS.some((at) => at >= MASTER_AT && t.endsWith(`:${at}`))) },
       { id: 'knack', text: 'Gain a knack', hint: `One go in ${numberWord(KNACK_ODDS)} leaves one, at any trade`, met: did('knack') },
       { id: 'knack5', text: `Gain ${numberWord(KNACK_CAP)} knacks in one skill`, met: (g) => Object.values(g.player.knacks).some((n) => n >= KNACK_CAP) },
     ],
@@ -280,6 +290,8 @@ const ours = <T extends { mine?: boolean }>(xs: Iterable<T>): T[] =>
   [...xs].filter((x) => x.mine !== false);
 
 export const ALL_GOALS: Goal[] = JOURNAL.flatMap((c) => c.goals);
+// Every goal opens on how it is done (`journalhow.ts`); the first chapter's have their own, longer, already.
+for (const goal of ALL_GOALS) goal.how ??= GOAL_HOW[goal.id];
 
 /**
  * What to do next, in the order somebody arriving would come to it.
