@@ -224,6 +224,9 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       }
       const ceiling = Math.min(99.9, improveCeiling(g, what.skill, item));
       item.ql = Math.max(item.ql, Math.min(ceiling, item.ql + improveStep(g, item, what.skill)));
+      // The journal's two Improve goals, at the quality a pass of yours leaves it at (the island's `perform_item` the same).
+      if (item.ql >= 50) g.note('improved50');
+      if (item.ql >= 90) g.note('improved90');
       /*
        * And now and again the thing itself comes on, not just its quality.
        *

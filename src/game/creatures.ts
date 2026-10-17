@@ -4511,6 +4511,7 @@ export class Creatures {
     // one let go before her hour drops hers in the wild, and it is nobody's.
     if (dam.mode !== 'wild') game.guideMark(dam.species, 'bred');
     if (c.traits.some((t) => traitTier(t) === 'supreme' || traitTier(t) === 'fantastic')) game.note('goodblood');
+    if (c.traits.some((t) => traitTier(t) === 'fantastic')) game.note('fantasticblood');
     game.events.emit('creature');
     return c;
   }

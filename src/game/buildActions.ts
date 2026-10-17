@@ -442,7 +442,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
         glassResync(g);
         // A shop counter's store opens as it is finished (`counters.ts`).
         counterFinished(g, wall);
-        const what = WALL_TYPE_BY_ID.get(wall.type)?.low ? WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() : 'wall';
+        const low = WALL_TYPE_BY_ID.get(wall.type)?.low;
+        const what = low ? WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() : 'wall';
+        // A wall of a building finished, for the journal; a fence is not one (the island's `perform_building` the same).
+        if (!low) g.note('walled');
         g.logMsg(`You finish the ${mat.name.toLowerCase()} ${what}.`, 'event');
         return false;
       }
@@ -806,6 +809,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       g.events.emit('world', t.x, t.y);
       const what = kind === 'ladder' ? 'ladder' : `${mat?.name.toLowerCase()} ${floorName(floor)}`;
       if (isDone(floor)) {
+        // A floor finished on a second storey or higher, for the journal (the island's `perform_building` the same).
+        if (kind === 'floor' && slotLevel(t, b) >= 1) g.note('storey');
         g.logMsg(`You finish the ${what}.`, 'event');
         return false;
       }

@@ -2274,6 +2274,19 @@ export const NEWS: News[] = [
         + 'and each skill behind them with what it adds now and at its next level. The stance is chosen there too. Framed in oak and iron, with two swords crossed over a shield.',
     ],
   },
+  {
+    n: 171,
+    day: '2026-10-17',
+    lines: () => [
+      'The journal counts only your own work. On an island another player\'s trap catching something, their finished walls and second storey, '
+        + 'or a settlement you are only a citizen of could tick your goals; none of them does now.',
+      'Goals that read the wrong thing count what they say: smelting is charging a smelter with ore (a lump was never counted), '
+        + 'Improve is a pass of yours that leaves the thing at QL 50 or 90, a field is seed sown, a hive is honey taken out (a skep counts), '
+        + 'a relic is one restored, a bed is one you built, a cart or a wagon is a whole team in its yokes, a fantastic trait is one bred, '
+        + 'and cooking on a campfire is anything Crafting cooks at one. Something done before today under the old rule ticks the next time you do it.',
+      'Click any goal in the journal for how to do it, or Show every how-to above the list.',
+    ],
+  },
 ];
 
 

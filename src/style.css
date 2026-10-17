@@ -831,6 +831,75 @@ kbd {
   color: var(--t-good, #9ec27a);
 }
 
+/* A goal is a button that opens its how-to under it. */
+button.goal-row {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button.goal-row:hover {
+  background: var(--t-hover, rgba(255, 255, 255, 0.05));
+}
+
+button.goal-row:focus-visible {
+  outline: 1px solid var(--ui-accent);
+  outline-offset: -1px;
+}
+
+.goal-text {
+  flex: 1 1 auto;
+}
+
+.goal-row .skill-note {
+  margin-left: 0;
+  margin-right: 4px;
+}
+
+/* A chevron that turns as the how-to opens. */
+.goal-fold {
+  width: 10px;
+  color: var(--ui-dim);
+  font-size: 10px;
+  text-align: center;
+  transition: transform 0.15s ease;
+}
+
+.goal-fold::before {
+  content: '\25B8';
+}
+
+.goal-open .goal-fold {
+  transform: rotate(90deg);
+}
+
+.goal-how {
+  margin: 0 4px 6px 23px;
+  padding: 4px 8px;
+  border-left: 2px solid color-mix(in srgb, var(--ui-accent) 55%, transparent);
+  color: var(--ui-dim);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.goal-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .goal-fold {
+    transition: none;
+  }
+}
+
 .hud-companion {
   display: flex;
   align-items: center;

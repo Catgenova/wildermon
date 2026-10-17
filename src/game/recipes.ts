@@ -6,7 +6,7 @@ import {
   describeFrom, describeWith, itemDef, makersMark, markOf, overParts, partsMark, rollRarity, RARITY_ODDS, RARITY_WORD, serveOf, type Item,
 } from './items';
 import { QL_PER_LOOP } from './belt';
-import { describeGoals } from './journal';
+import { campfireFood, describeGoals } from './journal';
 import { countSaid, fill, listed, numberWord } from './words';
 import { FURNITURE, ONE_ALTAR, VESSELS } from './furniture';
 import { trellisWallWords } from './building';
@@ -787,6 +787,8 @@ for (const r of RECIPES) {
 const RECIPE_SAID = { recipe: Object.fromEntries(RECIPES.map((r) => [r.id, { count: r.count ?? 1, ...inputsOf(r) }])) };
 describeWith(RECIPE_SAID);
 describeGoals(RECIPE_SAID);
+// What the journal counts as cooking on a campfire: whatever Crafting cooks at one.
+campfireFood(RECIPES.filter((r) => r.station === 'campfire' && r.category === 'Cooking').map((r) => r.result));
 
 /** Why a recipe that is worked on a settlement is refused anywhere else; the island says the same (`craft_refusal`). */
 export const DEED_ONLY = 'You can only build this standing on a settlement of yours.';

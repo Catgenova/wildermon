@@ -49,7 +49,7 @@ const prefixes = new Set<string>();
 let rarities = false;
 for (const call of sql.match(/journal_note\([^;]*?\)/g) ?? []) {
   for (const m of call.matchAll(/'([a-z_]+):'\s*\|\|/g)) prefixes.add(`${m[1]}:`);
-  for (const m of call.matchAll(/,\s*'([a-z_]+)'/g)) literals.add(m[1]);
+  for (const m of call.matchAll(/,\s*'([a-z_0-9]+(?::[a-z_0-9]+)?)'/g)) literals.add(m[1]);
   // `perform journal_note(p_world, p_uid, rare)` — whatever `rarity_roll` gave.
   if (/,\s*v?_?rare\)/.test(call)) rarities = true;
 }

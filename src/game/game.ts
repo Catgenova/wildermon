@@ -267,6 +267,14 @@ export const FOLLOW_EVERY = 0.5;
 export const FOLLOW_CLOSE = 2;
 export const FOLLOW_LOSE = 40;
 
+/**
+ * The counts the journal reads that only a browser can make, because only it
+ * moves a hull through the water: a beam reach in a fresh wind, and a hold
+ * more than half full under way. Everything else on an island is the island's
+ * to count (`Game.tallyFromIsland`).
+ */
+export const BROWSER_TALLY: ReadonlySet<string> = new Set(['reach', 'laden']);
+
 export const deedLevel = (d: Deed | null): number => Math.max(1, Math.min(MAX_DEED_LEVEL, d?.level ?? 1));
 export const deedRadiusAt = (level: number): number => DEED_RADIUS + (level - 1) * DEED_RADIUS_PER_LEVEL;
 export const deedWorkersAt = (level: number): number => DEED_WORKERS_AT_LEVEL_ONE + (level - 1);
@@ -729,9 +737,23 @@ export class Game {
    */
   journalReady = true;
   private journalAt = -1e9;
+  /**
+   * Whether the counts the journal reads are the island's, which keeps one for each person.
+   *
+   * Reported: "often receiving completions when another online player
+   * completes a task". On an island this side still runs some of the world
+   * for everything it can see -- the traps in view were rolled here, anybody's,
+   * and one that caught something noted "caught" in the journal of whoever was
+   * looking -- and a count only this tab had made was kept through every beat,
+   * so the goal was ticked before the island could say otherwise. On an island
+   * nothing is noted here but `BROWSER_TALLY`, which only this side can see,
+   * and the island's counts replace this side's on every beat.
+   */
+  tallyFromIsland = false;
 
   /** Note that something was done, once. */
   note(key: string, n = 1): void {
+    if (this.tallyFromIsland && !BROWSER_TALLY.has(key)) return;
     this.tally[key] = (this.tally[key] ?? 0) + n;
   }
 
@@ -4395,7 +4417,8 @@ export class Game {
     // A lantern post's candle, which on an island is the island's to say has gone out.
     if (this.furniture.size) burnLamps(this, dt, !this.ask);
     if (this.posts.size) this.runPosts(dt);
-    if (this.traps.size) this.runTraps(dt);
+    // On an island the traps are the island's to roll (`trap_settle`); rolled here, anybody's in view caught for whoever was looking.
+    if (this.traps.size && !this.packFromIsland) this.runTraps(dt);
     if (this.crops.size || this.planted.size) this.growCrops();
     this.creatures.update(dt, this);
     // Ground dug or filled this turn under or round a spring's water: settle it again, once.

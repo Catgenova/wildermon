@@ -376,6 +376,8 @@ CRATE_ACTIONS.push({
     const got = where.take(t.uid);
     if (!got) return;
     g.inventory.addItem(got);
+    // Honey out of a hive, for the journal (the island's `perform_crate` the same).
+    if (got.id === 'honey' && where.piece?.kind === 'hive') g.note('honey');
     g.logMsg(`You take ${got.count > 1 ? `${got.count} × ` : 'the '}${itemName(got).toLowerCase()} out of the ${where.what}.`, 'event');
   },
 });

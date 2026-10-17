@@ -3042,6 +3042,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/equipment.mjs --log-level=error
           node node_modules/.cache/equipment.mjs
 
+      - name: The journal counts only your own work
+        run: |
+          # Reported: goals ticked off by another player's work, and some that
+          # never tick at all. On an island only the island's counts reach the
+          # journal and the traps in view are not rolled here; each goal that
+          # read the world in view reads a count of its own, noted on the
+          # island for whoever did the thing; and every goal has a how-to.
+          npx esbuild supabase/test/journal.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/journal.mjs --log-level=error
+          node node_modules/.cache/journal.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

@@ -186,6 +186,8 @@ export const BEE_ACTIONS: ActionDef[] = [
       const wax = skepWax(honey);
       const ql = g.productQl(SKEP_SKILL, f.ql);
       g.gather('honey', { count: honey, ql });
+      // A skep is a hive too, for the journal (the island's `perform_skep` the same).
+      g.note('honey');
       if (wax > 0) g.gather('wax', { count: wax, ql });
       f.skepAt = now;
       g.logMsg(skepTookSaid(honey, wax), 'event');

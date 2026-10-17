@@ -1,5 +1,5 @@
 import { gearFrom } from '../game/worn';
-import { Game } from '../game/game';
+import { BROWSER_TALLY, Game } from '../game/game';
 import { EMOTE_BY_ID } from '../game/emotes';
 import { cleanLook } from '../game/look';
 import { whoAmI } from './accounts';
@@ -300,6 +300,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   // has not arrived yet is an empty one, and every goal already met would be
   // announced all over again on every refresh.
   game.journalReady = false;
+  // And every count it reads is the island's, but the two only a browser sees (`BROWSER_TALLY`).
+  game.tallyFromIsland = true;
   // And the field guide, which the island keeps too: a kind that comes into
   // view is handed over rather than written down here, and goes in the book
   // when the island has taken it.
@@ -511,13 +513,17 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
      * whatever it did tick went with the tab. The island notes and keeps all
      * three of these now.
      *
-     * The tally is *merged* rather than replaced, because two keys are still
-     * this side's: `reach` and `laden` are sailing, and the browser still owns
-     * how a hull moves through water. The island's count wins wherever it has
-     * one, and a key only this tab knows about survives the beat.
+     * The tally is the island's, but for two keys that are still this side's
+     * (`BROWSER_TALLY`): `reach` and `laden` are sailing, and the browser still
+     * owns how a hull moves through water. Any other key only this tab knows
+     * about goes at the beat: it was counted here for something the island
+     * never counted for you.
      */
-    if (what.tally) for (const [k, v] of Object.entries(what.tally)) {
-      if (typeof v === 'number') game.tally[k] = v;
+    if (what.tally) {
+      // The island's counts, and nothing else but the two only this side sees: a count this tab made for something
+      // the island never counted for you is somebody else's, or nobody's (`Game.tallyFromIsland`).
+      for (const k of Object.keys(game.tally)) if (!BROWSER_TALLY.has(k) && !(k in what.tally)) delete game.tally[k];
+      for (const [k, v] of Object.entries(what.tally)) if (typeof v === 'number') game.tally[k] = v;
     }
     if (what.ledger) {
       for (const k of Object.keys(game.ledger)) delete game.ledger[k];

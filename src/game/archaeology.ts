@@ -343,6 +343,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       for (const p of pieces) g.inventory.remove(p.uid, 1);
       const made = g.inventory.add(f.relic.result, { ql });
       g.gainSkill('mind_logic', tryGain(true, RESTORE_GAIN));
+      g.note('restored');
       g.logMsg(`The pieces go back together and the ${f.relic.name} is whole: ${itemName(made).toLowerCase()}. (QL ${made.ql.toFixed(1)})`, 'event');
     },
   },

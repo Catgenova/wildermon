@@ -27,7 +27,10 @@ export type JournalTab = 'goals' | 'ledger' | 'help' | 'news' | 'boards' | 'guid
  * are climbing are one book.
  */
 export class JournalPanel {
-  private readonly rows = new Map<string, HTMLDivElement>();
+  private readonly rows = new Map<string, HTMLButtonElement>();
+  /** Each goal's how-to, under its row, shown while the row is opened. */
+  private readonly hows = new Map<string, HTMLDivElement>();
+  private readonly allBtn: HTMLButtonElement;
   private readonly count: HTMLDivElement;
   private readonly next: HTMLDivElement;
   private readonly tabs = new Map<JournalTab, HTMLButtonElement>();
@@ -113,26 +116,49 @@ export class JournalPanel {
      */
     this.next = document.createElement('div');
     this.next.className = 'goal-next';
-    goals.append(this.count, this.next);
+    // Every how-to at once, or none: the list read as a manual rather than a checklist.
+    const tools = document.createElement('div');
+    tools.className = 'goal-tools';
+    this.allBtn = document.createElement('button');
+    this.allBtn.type = 'button';
+    this.allBtn.className = 'tb-btn tb-small goal-all';
+    this.allBtn.addEventListener('click', () => this.openAll(![...this.hows.values()].every((h) => !h.hidden)));
+    tools.append(this.count, this.allBtn);
+    goals.append(tools, this.next);
     for (const chapter of JOURNAL) {
       const head = document.createElement('div');
       head.className = 'skill-group';
       head.textContent = chapter.name;
       goals.append(head);
       for (const goal of chapter.goals) {
-        const row = document.createElement('div');
+        // The row opens and shuts its how-to: what to do, where, with what, in the game's own words.
+        const row = document.createElement('button');
+        row.type = 'button';
         row.className = 'skill-row goal-row';
         const tick = document.createElement('span');
         tick.className = 'goal-tick';
         const text = document.createElement('span');
+        text.className = 'goal-text';
         text.textContent = goal.text;
         const hint = document.createElement('span');
         hint.className = 'skill-note';
         hint.textContent = goal.hint ?? '';
-        row.append(tick, text, hint);
-        row.title = goal.hint ?? goal.text;
-        goals.append(row);
+        const fold = document.createElement('span');
+        fold.className = 'goal-fold';
+        fold.setAttribute('aria-hidden', 'true');
+        row.append(tick, text, hint, fold);
+        const how = document.createElement('div');
+        how.className = 'goal-how';
+        how.id = `goal-how-${goal.id}`;
+        how.textContent = goal.how ?? goal.hint ?? '';
+        how.hidden = true;
+        row.setAttribute('aria-expanded', 'false');
+        row.setAttribute('aria-controls', how.id);
+        row.title = 'How to do it';
+        row.addEventListener('click', () => this.openHow(goal.id, how.hidden === true));
+        goals.append(row, how);
         this.rows.set(goal.id, row);
+        this.hows.set(goal.id, how);
       }
     }
     this.refresh();
@@ -143,6 +169,28 @@ export class JournalPanel {
       this.onShow?.(this.tab);
     };
     game.events.on('journal', () => this.refresh());
+  }
+
+  /** Open or shut one goal's how-to. */
+  private openHow(id: string, open: boolean): void {
+    const how = this.hows.get(id);
+    const row = this.rows.get(id);
+    if (!how || !row) return;
+    how.hidden = !open;
+    row.setAttribute('aria-expanded', String(open));
+    row.classList.toggle('goal-open', open);
+    this.sayAll();
+  }
+
+  /** Open or shut every how-to at once. */
+  private openAll(open: boolean): void {
+    for (const id of this.hows.keys()) this.openHow(id, open);
+  }
+
+  /** The button says what it will do: open them all while any is shut. */
+  private sayAll(): void {
+    const all = [...this.hows.values()].every((h) => !h.hidden);
+    this.allBtn.textContent = all ? 'Hide every how-to' : 'Show every how-to';
   }
 
   /** Turn to a tab. */
@@ -178,7 +226,8 @@ export class JournalPanel {
       const tick = row.firstElementChild as HTMLElement;
       tick.textContent = met ? '✔' : '·';
     }
-    this.count.textContent = `${done.size} of ${ALL_GOALS.length} done`;
+    this.count.textContent = `${done.size} of ${ALL_GOALS.length} done · click a goal for how to do it`;
+    this.sayAll();
     this.next.replaceChildren();
     const up = nextGoals(done, 3);
     if (!up.length) {

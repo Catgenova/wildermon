@@ -1,10 +1,7 @@
 import { FISH } from './fishing';
 import type { Game } from './game';
 import { isBoat } from './furniture';
-import { isDone } from './building';
 import { METALS } from './metal';
-import { canImprove } from './improve';
-import { traitTier } from './traits';
 import { FIRE_COST } from './campfire';
 import { billWords, DEED_DECAY, rarityChance } from './items';
 import { CHOOSE_AT, PATH_LIST, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, type PathId } from './meditation';
@@ -44,7 +41,6 @@ export interface Chapter {
 }
 
 const skill = (id: string, at: number) => (g: Game): boolean => g.skills.get(id) >= at;
-const has = (item: string, n = 1) => (g: Game): boolean => g.inventory.count(item) >= n;
 const did = (key: string, n = 1) => (g: Game): boolean => (g.tally[key] ?? 0) >= n;
 
 /*
@@ -79,9 +75,19 @@ const MASTER_AT = TITLE_STEPS[2];
 /** The last title a trade hands out, and the top of the journal. */
 export const LEGEND_AT = TITLE_STEPS[TITLE_STEPS.length - 1];
 
-/** A goal met at a skill level, whose hint says the level: one number, said once. */
-const atSkill = (id: string, at: number, hint: (at: number) => string): Pick<Goal, 'hint' | 'met'> =>
-  ({ hint: hint(at), met: skill(id, at) });
+/** Whether you founded the settlement you stand on: alone it is always yours; on an island a citizen's is somebody else's. */
+const founded = (g: Game): boolean => !!g.deed && g.deed.mine !== false;
+
+/**
+ * What counts as cooking on a campfire: everything Crafting cooks at one,
+ * handed over by `recipes.ts` as it loads (importing the recipes here would
+ * start them ahead of the game they lean on). It was four dishes written out,
+ * and a stew, a broth or a loaf on the stone ticked nothing.
+ */
+const CAMPFIRE_FOOD = new Set<string>();
+export function campfireFood(ids: Iterable<string>): void {
+  for (const id of ids) CAMPFIRE_FOOD.add(id);
+}
 
 /** Distinct species you have tamed and still keep. */
 const kept = (g: Game): number => new Set(g.creatures.yours().map((c) => c.species)).size;
@@ -91,11 +97,12 @@ export const JOURNAL: Chapter[] = [
     name: 'Ashore',
     goals: [
       { id: 'tree', text: 'Fell a tree', how: 'Right-click any tree and choose Cut down. The hatchet you came ashore with is already in your pack — every job here takes the right tool and refuses without it, and it says which.', met: did('tree') },
-      { id: 'plank', text: 'Saw a log into planks', how: 'A felled tree leaves logs on the ground. Right-click one and Pick up, then open Crafting (R) and look for Saw into planks. Crafting lists everything there is to make, with what each needs in green if you have it and red if you do not.', met: skill('carpentry', 1.2) },
+      // Planks made, not a carpentry level: a crate or a shaft raised the skill as far, and a slow saw never got there.
+      { id: 'plank', text: 'Saw a log into planks', how: 'A felled tree leaves logs on the ground. Right-click one and Pick up, then open Crafting (R) and look for Saw into planks. Crafting lists everything there is to make, with what each needs in green if you have it and red if you do not.', met: did('made:plank') },
       { id: 'fire', text: 'Light a campfire', hint: `${NumberWord(FIRE_COST)} shafts, placed and lit`, how: `Crafting (R) makes shafts from a log. With ${numberWord(FIRE_COST)} in your pack, right-click the ground and choose Build campfire, then right-click the fire and Light. Feed it wood to keep it in.`, met: did('fire') },
-      { id: 'cook', text: 'Cook food on a campfire', how: 'Stand next to a lit fire with meat, a fish or a potato in your pack, and it will be among the things Crafting offers. A fire is a place as much as a thing: some recipes only appear when you are standing at one.', met: (g) => Object.keys(g.tally).some((k) => k.startsWith('made:cooked') || k === 'made:baked_potato' || k === 'made:roast_onion' || k === 'made:roast_nuts') },
+      { id: 'cook', text: 'Cook food on a campfire', how: 'Stand next to a lit fire with meat, a fish or a potato in your pack, and it will be among the things Crafting offers. A fire is a place as much as a thing: some recipes only appear when you are standing at one.', met: (g) => [...CAMPFIRE_FOOD].some((id) => (g.tally[`made:${id}`] ?? 0) > 0) },
       { id: 'crate', text: 'Build a crate and place it', how: '{recipe.make_log_crate.log:W} logs and a mallet make a log crate; {recipe.make_plank_crate.plank:w} planks and {recipe.make_plank_crate.nail:w} nails make a better one. Right-click the ground to place it. Everything on this island rots where it lies, and a crate slows that down a great deal.', met: did('crate') },
-      { id: 'deed', text: 'Plant a stake to found a settlement', how: `You came ashore with a settlement stake. Stand where you want the middle of your land and right-click the ground: Found settlement. Inside its border, things rot ${times(1 / DEED_DECAY)} slower and nobody else may dig.`, met: (g) => !!g.deed },
+      { id: 'deed', text: 'Plant a stake to found a settlement', how: `You came ashore with a settlement stake. Stand where you want the middle of your land and right-click the ground: Found settlement. Inside its border, things rot ${times(1 / DEED_DECAY)} slower and nobody else may dig.`, met: (g) => founded(g) },
     ],
   },
   {
@@ -110,14 +117,21 @@ export const JOURNAL: Chapter[] = [
        * it is named after. It is the lump itself now: any metal that comes
        * out of ore, which is every one but the five that are mixed.
        */
+      /*
+       * And then it was the lump, which nothing ever counted: a furnace hands
+       * its lumps back on its own clock, to nobody in particular, so neither
+       * side ever wrote one down. It is the ore going into the fire now, which
+       * is the job, noted by whoever charges the smelter (`smelted`).
+       */
       { id: 'smelt', text: 'Smelt ore into a metal lump',
-        met: (g) => METALS.some((m) => m.ore !== null && (g.tally[`made:${m.lump}`] ?? 0) > 0) },
+        met: (g) => did('smelted')(g) || METALS.some((m) => m.ore !== null && (g.tally[`made:${m.lump}`] ?? 0) > 0) },
       { id: 'anvil', text: 'Cast an anvil and place it', met: (g) => ours(g.anvils.values()).length > 0 },
       { id: 'smith', text: 'Smith a casting at an anvil', met: did('smithed') },
       { id: 'bronze', text: 'Smelt a bronze lump', hint: 'Copper and tin together in a smelter', met: did('made:bronze_lump') },
       { id: 'moon', text: 'Smith a piece of adamantine, glimmersteel, mithril or seryll', met: did('moonmetal') },
-      { id: 'improve', text: 'Improve an item to quality 50', met: (g) => g.inventory.items.some((it) => !it.issued && canImprove(it.id) && it.ql >= 50) },
-      { id: 'improve90', text: 'Improve an item to quality 90', met: (g) => g.inventory.items.some((it) => !it.issued && canImprove(it.id) && it.ql >= 90) },
+      // A pass of yours that leaves a thing there, not anything that good in the pack: a bought one, or one made that good, is not improved.
+      { id: 'improve', text: 'Improve an item to quality 50', met: did('improved50') },
+      { id: 'improve90', text: 'Improve an item to quality 90', met: did('improved90') },
       { id: 'rare', text: 'Make a rare item', met: did('rare') },
       { id: 'supreme', text: 'Make a supreme item', met: did('supreme') },
     ],
@@ -125,7 +139,7 @@ export const JOURNAL: Chapter[] = [
   {
     name: 'The land',
     goals: [
-      { id: 'field', text: 'Till a field and sow seed', met: skill('farming', 3) },
+      { id: 'field', text: 'Till a field and sow seed', met: did('sowed') },
       { id: 'bread', text: 'Bake a loaf of bread', met: did('made:bread') },
       { id: 'orchard', text: 'Plant a fruit tree', met: did('orchard') },
       { id: 'pie', text: 'Bake an apple pie', met: did('made:apple_pie') },
@@ -137,7 +151,7 @@ export const JOURNAL: Chapter[] = [
   {
     name: 'The water',
     goals: [
-      { id: 'rod', text: 'Make a fishing rod', met: has('fishing_rod') },
+      { id: 'rod', text: 'Make a fishing rod', met: did('made:fishing_rod') },
       { id: 'perch', text: 'Catch a perch', met: did('fish:perch') },
       { id: 'boat', text: 'Build a boat', met: (g) => ours(g.furniture.values()).some((f) => isBoat(f)) },
       { id: 'allfish', text: 'Catch every kind of fish', hint: FISH.map((f) => f.name.toLowerCase()).join(', '), met: (g) => FISH.every((f) => (g.tally[`fish:${f.id}`] ?? 0) > 0) },
@@ -151,15 +165,17 @@ export const JOURNAL: Chapter[] = [
       { id: 'work', text: 'Set a wildermon to work on your settlement', met: (g) => g.creatures.working().filter((c) => c.mine !== false).length > 0 },
       { id: 'five', text: 'Keep five species of wildermon at once', met: (g) => kept(g) >= 5 },
       { id: 'ride', text: 'Saddle a wildermon and ride it', met: did('mounted') },
-      { id: 'cart', text: 'Hitch a team to a large cart', met: did('hitched') },
+      // A whole team in its yokes, as the island counts it: the wagon's was read off the creatures in view, and a yoke of anything ticked the cart.
+      { id: 'cart', text: 'Hitch a team to a large cart', met: did('team:large_cart') },
       {
         id: 'wagon',
         get text() {
           return `Hitch ${numberWord(wagonTeam())} wildermon to a wagon`;
         },
-        met: (g) => ours(g.furniture.values()).some((f) => f.kind === 'wagon' && (f.team?.length ?? 0) >= wagonTeam()),
+        met: did('team:wagon'),
       },
-      { id: 'hive', text: 'Build a hive and take honey from it', met: (g) => ours(g.furniture.values()).some((f) => f.kind === 'hive' && f.items.length > 0) },
+      // Honey taken, as it says: it was ticked by honey sitting in a hive, before anybody took it.
+      { id: 'hive', text: 'Take honey from a hive or a skep', met: did('honey') },
       { id: 'post', text: 'Set a wildermon to a work post', met: did('posted') },
       { id: 'worms', text: 'Dig up worms with a shovel', met: did('worms') },
       { id: 'sat', text: 'Sit on a rug and meditate', hint: 'Weave a rug on a loom', met: did('sat') },
@@ -190,7 +206,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'dragon', text: 'Kill a dragon', hint: 'There is one on the island', met: did('slew:dragon') },
       { id: 'hoard', text: 'Open a hoard', hint: 'Dig one up with a treasure map, or butcher a dragon', met: did('hoard') },
       { id: 'scaled', text: 'Wear a full suit of dragon scale armour', met: (g) => ['head', 'chest', 'arms', 'legs', 'feet'].every((sl) => g.worn(sl as never)?.id.startsWith('scale_')) },
-      { id: 'composite', text: 'Make a composite bow', hint: 'Tusk and sinew from an orc or an ogre', met: has('composite_bow') },
+      { id: 'composite', text: 'Make a composite bow', hint: 'Tusk and sinew from an orc or an ogre', met: did('made:composite_bow') },
       { id: 'bridged', text: 'Build a bridge', hint: 'Start it on one bank and finish it on the other', met: did('bridged') },
       { id: 'reach', text: 'Sail a beam reach in a fresh wind', hint: 'Wind from the side, at half force or more', met: did('reach') },
       { id: 'laden', text: 'Sail a boat with its hold more than half full', met: did('laden') },
@@ -203,19 +219,28 @@ export const JOURNAL: Chapter[] = [
       { id: 'groomfull', text: 'Brush a wildermon until its care is full', hint: 'Several brushings', met: did('groomfull') },
       { id: 'bred', text: 'Breed two wildermon', hint: 'A grown male and female of one species, fed, side by side', met: did('bred') },
       { id: 'goodblood', text: 'Breed a wildermon with a supreme trait', met: did('goodblood') },
-      { id: 'fantastic_blood', text: 'Breed a wildermon with a fantastic trait', met: (g) => ours(g.creatures.list.values()).some((c) => c.mode !== 'wild' && c.traits.some((t) => traitTier(t) === 'fantastic')) },
+      // Born to a dam of yours, as the line says: a bought or traded one with the trait is not bred.
+      { id: 'fantastic_blood', text: 'Breed a wildermon with a fantastic trait', met: did('fantasticblood') },
       { id: 'husbandry', text: 'Reach animal husbandry 50', met: skill('animal_husbandry', 50) },
     ],
   },
   {
     name: 'Standing',
     goals: [
-      { id: 'house', text: 'Finish four walls of a building', met: (g) => [...g.buildings.walls.values()].filter((w) => isDone(w)).length >= 4 },
-      { id: 'storey', text: 'Build a second storey', met: (g) => [...g.buildings.list.values()].some((b) => b.levels > 1) },
-      { id: 'deed3', text: 'Raise your settlement to level 3', met: (g) => g.deedLevel >= 3 },
-      { id: 'deed5', text: 'Raise your settlement to level 5', met: (g) => g.deedLevel >= 5 },
-      { id: 'relic', text: 'Restore an ancient relic from its pieces', ...atSkill('restoration', 5, (n) => `Restoration ${n}`) },
-      { id: 'rest', text: 'Sleep in a bed you built', met: did('slept') },
+      /*
+       * Walls and storeys you built, as the island counts them. These read
+       * every building in view, which keeps no builder, so a neighbour's
+       * house finished yours; and a storey was only planned, not built.
+       */
+      { id: 'house', text: 'Finish four walls of a building', met: did('walled', 4) },
+      { id: 'storey', text: 'Build a second storey', met: did('storey') },
+      // A settlement you founded: a citizen of somebody else's was handed both of these, and the stake.
+      { id: 'deed3', text: 'Raise your settlement to level 3', met: (g) => founded(g) && g.deedLevel >= 3 },
+      { id: 'deed5', text: 'Raise your settlement to level 5', met: (g) => founded(g) && g.deedLevel >= 5 },
+      // A relic put back together, not a Restoration level, which a bauble or a failed go raised as well.
+      { id: 'relic', text: 'Restore an ancient relic from its pieces', met: did('restored') },
+      // In a bed you built, as it says: anybody's bed did.
+      { id: 'rest', text: 'Sleep in a bed you built', met: did('slept:own') },
     ],
   },
   {

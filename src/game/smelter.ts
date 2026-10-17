@@ -285,6 +285,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
         s.jobs.push({ item: { ...taken, count: ORE_PER_LUMP }, makes: metal.lump, left: seconds, total: seconds, ql: taken.ql });
       }
       g.events.emit('smelter');
+      // Smelting, for the journal: ore into the fire, which is the job; the lump is the furnace's to hand back later.
+      g.note('smelted');
       g.logMsg(`You charge the smelter with ${n * ORE_PER_LUMP} × ${itemDef(taken.id).name.toLowerCase()}`
         + `${n > 1 ? `, ${n} charges of it` : ''}. Each charge is about ${Math.round(seconds)} seconds of heat`
         + ` and comes out as one lump.`, 'event');

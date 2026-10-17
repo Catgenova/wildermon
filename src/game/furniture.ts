@@ -1291,6 +1291,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (!f || !f.items.length) return;
       const items = f.items.splice(0, f.items.length);
       for (const it of items) g.inventory.addItem(it);
+      // Honey out of a hive, for the journal (the island's `perform_holding` the same).
+      if (f.kind === 'hive' && items.some((it) => it.id === 'honey')) g.note('honey');
       g.events.emit('crate');
       const names = items.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
       g.logMsg(`You take ${names.join(', ')} out of the ${furnitureName(f).toLowerCase()}.`, 'event');

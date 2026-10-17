@@ -1022,6 +1022,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const filled = (f.team ?? []).length;
       const short = v && filled < v.needs ? ` It needs ${v.needs - filled} more before it will move.` : '';
       g.note('hitched');
+      // A whole team in it, for the journal's cart and wagon (the island's `perform_ride` the same).
+      if (v && filled >= v.needs) g.note(`team:${f.kind}`);
       g.logMsg(`${crated ? `${c.name} comes out of the crate. ` : ''}You back ${c.name} into a yoke of the ${furnitureName(f).toLowerCase()}. ${filled} of ${v?.yokes ?? 0} filled.${short}`, 'event');
     },
   },

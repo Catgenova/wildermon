@@ -833,6 +833,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const inside = g.buildings.indoors(f.level ?? 0, Math.floor(f.x), Math.floor(f.y));
       const rest = (def.bed ?? 1) * (0.6 + f.ql / 250) * (inside ? INDOORS_REST : 1);
       g.note('slept');
+      // In a bed of your own making, for the journal: playing by yourself, every one is (the island's `perform_last` asks who made it).
+      if (f.mine !== false) g.note('slept:own');
       // And a Dreamweave set into it banks more of the night (`bankRest`).
       g.sleepUntilMorning(rest, furnitureName(f).toLowerCase(), swingEnchant(f, 'dream'));
     },

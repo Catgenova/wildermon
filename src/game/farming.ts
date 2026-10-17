@@ -352,7 +352,11 @@ function sowOne(g: Game, into: { x: number; y: number } | PlacedFurniture, seed:
   const ql = seed.ql;
   if (!kept && !g.inventory.remove(seed.uid, 1)) return null;
   if ('kind' in into) g.sowPlanter(into, def.id, ql, planterPace(g, into, def.id));
-  else g.plantCrop(into.x, into.y, def.id, ql, sownPace(g, into.x, into.y, def.id));
+  else {
+    g.plantCrop(into.x, into.y, def.id, ql, sownPace(g, into.x, into.y, def.id));
+    // Seed in a field, for the journal (the island's `sow_one` the same); a planter is not a field.
+    g.note('sowed');
+  }
   return kept ? 'kept' : 'sown';
 }
 
