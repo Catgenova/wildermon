@@ -95,20 +95,22 @@ check('a place with nothing on it turns nothing', r.slots.find((s) => s.slot ===
 
 /* ---- the skills ---- */
 const swords = r.skills.find((s) => s.id === 'swords');
+const dealt = stanceDealt(g.settings.fightStance, perk);
 const at = (v: number): number => {
   const was = g.skills.get('swords');
   g.skills.values.set('swords', v);
-  const d = weaponDamage(g, sword, held);
+  const d = weaponDamage(g, sword, held) * dealt;
   g.skills.values.set('swords', was);
   return d;
 };
 const start = SKILL_BY_ID.get('swords')?.start ?? 0;
-const nowGives = at(23.4) / at(start) - 1, nextGives = at(24) / at(23.4) - 1;
-const dmgLine = swords?.gives.find((x) => x.what === 'Damage');
-const pctOf = (s: string | undefined): number => Number((s ?? '').replace('−', '-').replace('%', ''));
-check('Swords: the damage it gives is the rule at your level against at its start, and the next level\'s against now',
-  !!dmgLine && Math.abs(pctOf(dmgLine.now) - nowGives * 100) < 0.06 && Math.abs(pctOf(dmgLine.next) - nextGives * 100) < 0.06,
-  `${dmgLine?.now} / ${dmgLine?.next} against ${(nowGives * 100).toFixed(3)} / ${(nextGives * 100).toFixed(3)}`);
+const blowLine = swords?.gives.find((x) => x.what === 'A blow');
+const wantNow = `${at(start).toFixed(1)} → ${at(23.4).toFixed(1)}`;
+// The next level is said only where it moves the number as shown.
+const wantNext = at(24).toFixed(1) === at(23.4).toFixed(1) ? null : `${at(24).toFixed(1)} at 24`;
+check('Swords: a blow is the rule at where the skill starts → at your level, and at the next level where that moves it',
+  !!blowLine && blowLine.now === wantNow && blowLine.next === wantNext,
+  `${blowLine?.now} / ${blowLine?.next} against ${wantNow} / ${wantNext}`);
 check('the skills it lists are the ones the fight reads off what is on: the weapon\'s, fighting, strength, control, shields and the mail\'s',
   ['swords', 'fighting', 'body_strength', 'body_control', 'shields', 'chain_armour'].every((id) => r.skills.some((s) => s.id === id)),
   r.skills.map((s) => s.id).join(', '));
@@ -117,9 +119,13 @@ check('the skills it lists are the ones the fight reads off what is on: the weap
 check('the shelf holds what in the pack goes on and is not on, each in its own place',
   r.shelf.length === 3 && r.shelf.every((s) => slotOf(s.item.id) === s.slot && !g.isEquipped(s.item.uid)), r.shelf.map((s) => s.item.id).join(', '));
 const ls = r.shelf.find((s) => s.item.uid === better.uid);
-check('a better sword says by how much a blow, for the better',
-  !!ls && ls.better === true && ls.delta === `+${(weaponDamage(g, WEAPON_BY_ID.get('long_sword') ?? sword, better) - weaponDamage(g, sword, held)).toFixed(1)} a blow`, ls?.delta ?? '');
-check('a coif where a cap is says how much more it turns', r.shelf.find((s) => s.item.uid === coif.uid)?.better === true, r.shelf.find((s) => s.item.uid === coif.uid)?.delta ?? '');
+const blowWith = weaponDamage(g, WEAPON_BY_ID.get('long_sword') ?? sword, better) * dealt;
+const wantBlow = `A blow ${stat(r.offence, 'damage').toFixed(1)} → ${blowWith.toFixed(1)}`;
+check('a better sword says a blow now → with it on, for the better',
+  !!ls && ls.main?.better === true && ls.main.text === wantBlow, `${ls?.main?.text ?? ''} against ${wantBlow}`);
+const cs = r.shelf.find((s) => s.item.uid === coif.uid);
+check('a coif where a cap is says how much more the head turns, for the better',
+  cs?.main?.better === true && /^Head: [\d.]+% → [\d.]+% turned$/.test(cs.main.text), cs?.main?.text ?? '');
 check('each socket takes only what is worn there', SLOTS.every((slot) => fitsSlot(coif.id, slot) === (slot === 'head')));
 
 /* ---- on and off ---- */

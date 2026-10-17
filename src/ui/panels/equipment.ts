@@ -7,27 +7,32 @@ import { DEFAULT_LOOK } from '../../game/look';
 import { gearFrom, wornWire } from '../../game/worn';
 import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } from '../../render/figure';
 import { makeDraggable, makeDropZone, type DragPayload } from '../dragdrop';
-import { EMPTY_SAYS, equipReport, fitsSlot, type EquipReport, type ShelfView, type SkillView, type Stat } from '../equipment';
+import { EMPTY_SAYS, equipReport, fitsSlot, pc, type EquipReport, type ShelfView, type SkillView, type Stat } from '../equipment';
 import type { UIWindow } from '../windows';
 
 /**
  * Equipment: what you have on, on a figure of you, and what it makes of you
  * in a fight.
  *
+ * Along the top, what is in your hands, your stance, and four plaques: a
+ * blow, how often it lands, how much of a blow taken gets through, and how
+ * much your swings are slowed.
+ *
  * On the left, you on a turntable, in everything you wear, with the nine
  * places round you as sockets: the five a blow lands on down your left, what
  * is in your hands, your belt and your jewel down your right, each tied to
  * where it sits on the body. Drag a thing onto its socket or onto you to put
  * it on (from this window's shelf or the pack), or a socket's thing back to
- * the shelf to take it off; a click does the same. Below, the shelf: what in
- * the pack could go on, each with what it would change.
+ * the shelf to take it off; a click does the same. Under you, the shelf: what
+ * in the pack could go on, each with what it would do in its place and what
+ * else it would move.
  *
  * On the right, three tabs: Offence (a blow: its damage, time, chance to
- * land and be critical, reach, and what it does a second), Defence (where a
- * blow lands and what is turned there, the dodge, the block, the stance, and
- * what of each kind of blow gets through, with what it all costs to carry),
- * and Skills (each skill the fight reads, how far along, and what it does for
- * you now and at its next level).
+ * land and be critical, reach, and what it does a second, each with what it
+ * came from), Defence (a blow taken step by step, where one lands and what is
+ * turned there, what of each kind gets through, and what it all costs to
+ * carry), and Skills (each skill the fight reads, how far along, and what it
+ * does for you now and at its next level).
  *
  * The numbers are worked out in `src/ui/equipment.ts`, off the rules.
  */
@@ -49,7 +54,7 @@ const SLOT_BONE: Record<Slot, [string, V3]> = {
 /** Which side each socket stands on: the places a blow lands on down the left, the rest (hands, belt, jewel) down the right. */
 const LEFT: Slot[] = ['head', 'chest', 'arms', 'legs', 'feet'];
 
-/** How much of the stage's height the body stands in, and how tall it may be against the stage's width. */
+/** How much of the stage's height the body stands in, and how tall it may be against the gap between the sockets. */
 const BODY_SHARE = 0.74;
 const WIDE_SHARE = 1.45;
 const FEET_UP = 30;
@@ -57,8 +62,10 @@ const FEET_UP = 30;
 const FIGURE_FPS = 30;
 /** How long the hop and a socket's seating take when something goes on, seconds. */
 const SEAT_SECS = 0.9;
-/** At or under this width (CSS px) the tabs go under the figure instead of beside it. */
+/** At or under this width (CSS px) the tabs go under the figure and the shelf under them. */
 const NARROW = 520;
+/** The least the shelf is given beside the tabs, CSS px, however short the window. */
+const SHELF_LEAST = 150;
 
 /** Small pictures of each place, in a 24 × 24 box, drawn in `currentColor`; a weapon by its family. */
 const GLYPH: Record<string, string> = {
@@ -97,6 +104,9 @@ function glyph(slot: Slot, id?: string): SVGSVGElement {
   return s;
 }
 
+/** A place as the shelf names it. */
+const placeName = (slot: Slot): string => (slot === 'weapon' ? 'hand' : slot === 'offhand' ? 'off hand' : slot);
+
 type Tab = 'offence' | 'defence' | 'skills';
 
 interface Socket {
@@ -115,14 +125,15 @@ export class EquipmentPanel {
   private readonly stage: HTMLDivElement;
   private readonly canvas: HTMLCanvasElement;
   private readonly sockets = new Map<Slot, Socket>();
-  private readonly info: HTMLDivElement;
+  private readonly shelfBox: HTMLElement;
   private readonly shelf: HTMLDivElement;
   private readonly shelfHead: HTMLDivElement;
   private readonly stances: HTMLDivElement;
+  private readonly stanceSays: HTMLSpanElement;
   private readonly tabs = new Map<Tab, { btn: HTMLButtonElement; pane: HTMLDivElement }>();
   private tab: Tab = 'offence';
   private report: EquipReport | null = null;
-  /** The place picked on the figure: the shelf shows what fits there, and its line says what is in it. */
+  /** The place picked on the figure: the shelf shows what fits there, and its head says what is in it. */
   private picked: Slot | null = null;
   private facing = 0;
   /** When something last went on or came off, for the hop. */
@@ -130,7 +141,9 @@ export class EquipmentPanel {
   private frame = 0;
   private lastFigure = 0;
   private drawn = '';
-  private primed = false;
+  /** Whether the last draw was made with the window open: only a change seen while it is open is played out. */
+  private seen = false;
+  private next = 0;
   private readonly still = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
@@ -138,12 +151,18 @@ export class EquipmentPanel {
     const root = el('div', 'eq');
     win.body.append(root);
 
-    /* ---- along the top: what is in your hands, and the four numbers that say how a fight goes ---- */
+    /* ---- along the top: what is in your hands, your stance, and the four numbers that say how a fight goes ---- */
     const top = el('header', 'eq-top');
     const id = el('div', 'eq-id');
     this.title = el('div', 'eq-title');
     this.kind = el('span', 'eq-kind');
-    id.append(this.title, this.kind);
+    this.stances = el('div', 'eq-stances');
+    this.stances.setAttribute('role', 'radiogroup');
+    this.stances.setAttribute('aria-label', 'Stance');
+    this.stanceSays = el('span', 'eq-stance-says');
+    const stanceRow = el('div', 'eq-stance-row');
+    stanceRow.append(this.stances, this.stanceSays);
+    id.append(this.title, this.kind, stanceRow);
     const heads = el('div', 'eq-heads');
     for (const key of ['damage', 'lands', 'through', 'slowed']) {
       const box = el('div', `eq-head eq-head-${key}`);
@@ -178,7 +197,7 @@ export class EquipmentPanel {
           this.takeOff(slot);
         }
       });
-      // A thing in it can be carried back to the shelf, or to another socket's place by the pack.
+      // A thing in it can be carried back to the shelf to take it off.
       makeDraggable(box, () => {
         const it = this.game.worn(slot);
         return { uid: it?.uid ?? -1, from: 'inventory', name: it ? itemName(it) : '' };
@@ -187,29 +206,18 @@ export class EquipmentPanel {
       (LEFT.includes(slot) ? colL : colR).append(box);
       this.sockets.set(slot, { slot, box, pic, ql, uid: null });
     }
-    this.stage.append(plinth, this.canvas, colL, colR);
+    // Turn the figure: a button at each side of its plinth, or drag it.
+    const turn = (cls: string, text: string, label: string, by: number): HTMLButtonElement => {
+      const b = el('button', `eq-turn-btn ${cls}`, text);
+      b.type = 'button';
+      b.title = label;
+      b.setAttribute('aria-label', label);
+      b.addEventListener('click', () => this.spin(by));
+      return b;
+    };
+    this.stage.append(plinth, this.canvas, colL, colR, turn('eq-turn-l', '↺', 'Turn the figure left', 1), turn('eq-turn-r', '↻', 'Turn the figure right', -1));
     // Let go of a thing over you and it goes on wherever it is worn.
     makeDropZone(this.canvas, (p) => this.fits(p), (p) => this.putOn(p.uid));
-    const turn = el('div', 'eq-turn');
-    const left = el('button', 'eq-turn-btn', '↺');
-    left.type = 'button';
-    left.title = 'Turn the figure left';
-    left.setAttribute('aria-label', left.title);
-    left.addEventListener('click', () => this.spin(1));
-    const right = el('button', 'eq-turn-btn', '↻');
-    right.type = 'button';
-    right.title = 'Turn the figure right';
-    right.setAttribute('aria-label', right.title);
-    right.addEventListener('click', () => this.spin(-1));
-    this.stances = el('div', 'eq-stances');
-    this.stances.setAttribute('role', 'radiogroup');
-    this.stances.setAttribute('aria-label', 'Stance');
-    turn.append(left, this.stances, right);
-    this.info = el('div', 'eq-info');
-    this.info.setAttribute('aria-live', 'polite');
-    doll.append(this.stage, turn, this.info);
-    const shelfAt = doll;
-    // Drag the figure sideways to turn it.
     let downX: number | null = null;
     this.canvas.addEventListener('pointerdown', (e) => { downX = e.clientX; });
     this.canvas.addEventListener('pointermove', (e) => {
@@ -222,6 +230,17 @@ export class EquipmentPanel {
     const up = (): void => { downX = null; };
     this.canvas.addEventListener('pointerup', up);
     this.canvas.addEventListener('pointerleave', up);
+
+    /* ---- the shelf: what in the pack could go on ---- */
+    this.shelfBox = el('section', 'eq-shelf-box');
+    this.shelfHead = el('div', 'eq-shelf-head');
+    this.shelf = el('div', 'eq-shelf');
+    this.shelf.setAttribute('role', 'list');
+    this.shelfBox.append(this.shelfHead, this.shelf);
+    // A thing worn, carried here, comes off.
+    makeDropZone(this.shelfBox, (p) => p.from === 'inventory' && this.game.isEquipped(p.uid), (p) => this.takeOffUid(p.uid));
+    this.shelf.addEventListener('scroll', () => this.fade(), { passive: true });
+    doll.append(this.stage, this.shelfBox);
 
     /* ---- the tabs ---- */
     const side = el('section', 'eq-side');
@@ -255,21 +274,25 @@ export class EquipmentPanel {
     }
     side.append(bar, panes);
 
-    /* ---- the shelf: what in the pack could go on ---- */
-    const shelfBox = el('section', 'eq-shelf-box');
-    this.shelfHead = el('div', 'eq-shelf-head');
-    this.shelf = el('div', 'eq-shelf');
-    this.shelf.setAttribute('role', 'list');
-    shelfBox.append(this.shelfHead, this.shelf);
-    // A thing worn, carried here, comes off.
-    makeDropZone(shelfBox, (p) => p.from === 'inventory' && this.game.isEquipped(p.uid), (p) => this.takeOffUid(p.uid));
-
-    shelfAt.append(shelfBox);
     main.append(doll, side);
     root.append(top, main);
-    if (typeof ResizeObserver !== 'undefined') {
-      new ResizeObserver(() => root.classList.toggle('eq-narrow', root.clientWidth > 0 && root.clientWidth <= NARROW)).observe(root);
-    }
+
+    // Narrow, the tabs go under you and the shelf under them; wide, the shelf is as tall as the window shows under you.
+    const fit = (): void => {
+      const narrow = root.clientWidth > 0 && root.clientWidth <= NARROW;
+      if (narrow !== root.classList.contains('eq-narrow')) {
+        root.classList.toggle('eq-narrow', narrow);
+        if (narrow) main.append(this.shelfBox);
+        else doll.append(this.shelfBox);
+      }
+      if (narrow) this.shelf.style.removeProperty('max-height');
+      else {
+        const shows = win.body.clientHeight - (this.shelf.offsetTop - win.body.offsetTop) - 22;
+        this.shelf.style.maxHeight = `${Math.max(SHELF_LEAST, shows)}px`;
+      }
+      this.fade();
+    };
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(root);
 
     this.show('offence');
     win.onOpen = () => {
@@ -279,8 +302,6 @@ export class EquipmentPanel {
     for (const ev of ['stats', 'inventory', 'skill', 'action'] as const) game.events.on(ev as 'stats', () => this.soon());
     this.refresh(true);
   }
-
-  private next = 0;
 
   /** Drawn again at the next update, not at once: one go can change the pack and the body in one breath. */
   private soon(): void {
@@ -296,20 +317,20 @@ export class EquipmentPanel {
 
   /* ---- doing ---------------------------------------------------------------------------- */
 
-  /** Whether what is being carried may be let go of here: something worn or held, into its own place when one is named. */
+  /** Whether what is being carried may be let go of here: something worn or held and not on, into its own place when one is named. */
   private fits(p: DragPayload, slot?: Slot): boolean {
     if (p.from !== 'inventory') return false;
     const it = this.game.inventory.get(p.uid);
     if (!it) return false;
-    const where = slotOf(it.id);
-    if (!where || (slot && !fitsSlot(it.id, slot))) return false;
-    return !this.game.isEquipped(it.uid) || (!!slot && this.game.worn(slot)?.uid !== it.uid);
+    if (!slotOf(it.id) || (slot && !fitsSlot(it.id, slot))) return false;
+    return !this.game.isEquipped(it.uid);
   }
 
   private ask(action: 'equip' | 'unequip', uid: number): void {
     const def = ACTION_BY_ID.get(action);
     if (!def) return;
     this.game.requestAction(def, { kind: 'item', uid }, 1);
+    this.soon();
   }
 
   private putOn(uid: number): void {
@@ -350,18 +371,26 @@ export class EquipmentPanel {
     if (this.report) this.refresh(true);
   }
 
+  /** The shelf's foot fades while there is more of it under the fold. */
+  private fade(): void {
+    const s = this.shelf;
+    this.shelfBox.classList.toggle('eq-shelf-more', s.scrollHeight - s.scrollTop - s.clientHeight > 6);
+  }
+
   /* ---- drawing -------------------------------------------------------------------------- */
 
   refresh(force: boolean): void {
     if (!this.win.isOpen && !force) return;
     const r = equipReport(this.game);
     this.report = r;
-    this.drawTop(r);
-    this.drawSockets(r);
+    // A change is played out only when the window was open to see it come, not when it opens on what changed while shut.
+    const live = this.seen && this.win.isOpen && !this.still;
+    this.drawTop(r, live);
+    this.drawSockets(r, live);
     this.drawStances(r);
-    this.drawInfo(r);
-    const sig = JSON.stringify([this.tab, this.picked, r.offence, r.defence, r.burden, r.through, r.skills, r.weapon,
-      r.shelf.map((s) => [s.item.uid, s.delta, s.why, s.item.ql, s.item.dmg])]);
+    this.seen = this.win.isOpen;
+    const sig = JSON.stringify([this.tab, this.picked, r.offence, r.chain, r.defence, r.burden, r.through, r.skills, r.weapon, r.slots.map((s) => s.label),
+      r.shelf.map((s) => [s.item.uid, s.main, s.effects, s.why, s.item.ql, s.item.dmg])]);
     if (sig === this.drawn) return;
     this.drawn = sig;
     this.drawShelf(r);
@@ -372,21 +401,21 @@ export class EquipmentPanel {
     else this.drawSkills(pane, r);
   }
 
-  private drawTop(r: EquipReport): void {
+  private drawTop(r: EquipReport, live: boolean): void {
     this.title.textContent = r.weapon.name;
     const w = this.game.worn('weapon');
-    this.kind.textContent = `${r.weapon.kind}${w ? ` · QL ${w.ql.toFixed(0)}` : ''} · ${r.weapon.blow}`;
+    this.kind.textContent = `${r.weapon.kind}${w ? ` · QL ${w.ql.toFixed(0)}` : ''} · a ${r.weapon.blow === 'cut' ? 'cutting' : r.weapon.blow === 'pierce' ? 'piercing' : 'crushing'} blow`;
     for (const s of r.head) {
       const h = this.heads.get(s.key);
       if (!h) continue;
       h.num.textContent = s.says;
       (h.box.querySelector('.eq-head-label') as HTMLElement).textContent = s.label;
       // A number that moved floats what it moved by, green for the better.
-      if (this.primed && Number.isFinite(h.value) && Math.abs(s.value - h.value) > 1e-6 && !this.still) {
+      if (live && Number.isFinite(h.value) && Math.abs(s.value - h.value) > 1e-6) {
         const d = s.value - h.value;
         const better = s.key === 'through' || s.key === 'slowed' ? d < 0 : d > 0;
         const float = el('span', `eq-float ${better ? 'eq-float-good' : 'eq-float-bad'}`,
-          s.key === 'damage' ? `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}` : `${d > 0 ? '+' : '−'}${Math.abs(d * 100).toFixed(Math.abs(d) < 0.1 ? 1 : 0)}%`);
+          s.key === 'damage' ? `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}` : `${d > 0 ? '+' : '−'}${pc(Math.abs(d))}`);
         float.addEventListener('animationend', () => float.remove());
         h.box.append(float);
       }
@@ -394,47 +423,50 @@ export class EquipmentPanel {
     }
   }
 
-  private drawSockets(r: EquipReport): void {
+  private drawSockets(r: EquipReport, live: boolean): void {
     const now = performance.now() / 1000;
     for (const v of r.slots) {
       const s = this.sockets.get(v.slot);
       if (!s) continue;
       const uid = v.item?.uid ?? null;
-      if (this.primed && uid !== s.uid) {
+      if (live && uid !== s.uid) {
         // Something went on or came off: the socket takes it with a ring, and you hop.
         s.box.classList.remove('eq-seat');
         void s.box.offsetWidth;
-        if (!this.still) s.box.classList.add('eq-seat');
+        s.box.classList.add('eq-seat');
         this.seatAt = now;
       }
       s.uid = uid;
+      const bare = !v.item && v.struck !== null;
       s.box.classList.toggle('eq-full', !!v.item);
+      s.box.classList.toggle('eq-bare', bare);
       s.box.classList.toggle('eq-picked', this.picked === v.slot);
       s.box.classList.toggle('eq-worn-out', v.wear >= 0.75);
       s.box.draggable = !!v.item;
       s.box.style.setProperty('--eq-tint', v.tint ?? 'var(--eq-metal)');
       s.box.style.setProperty('--eq-wear', String(1 - v.wear));
       s.pic.replaceChildren(glyph(v.slot, v.item?.id));
-      s.ql.textContent = v.item ? v.item.ql.toFixed(0) : '';
+      // Its QL; on a bare place a blow lands on, how often one lands there.
+      s.ql.textContent = v.item ? v.item.ql.toFixed(0) : bare ? `${Math.round((v.struck ?? 0) * 100)}%` : '';
       const what = v.label ?? EMPTY_SAYS[v.slot];
       const tip = `${v.name}: ${what}${v.item ? `, QL ${v.item.ql.toFixed(1)}, worn ${Math.round(v.wear * 100)}%` : ''}${v.does ? `. ${v.does}` : ''}`
         + `${v.struck !== null ? `. A blow lands here ${Math.round(v.struck * 100)}% of the time` : ''}.`;
       s.box.title = tip;
       s.box.setAttribute('aria-label', `${tip}${v.item ? ' Press Delete to take it off.' : ''}`);
     }
-    this.primed = true;
   }
 
   private drawStances(r: EquipReport): void {
-    const sig = r.stance.now;
-    if (this.stances.dataset.sig === sig) return;
-    this.stances.dataset.sig = sig;
+    const cur = r.stance.all.find((s) => s.id === r.stance.now);
+    this.stanceSays.textContent = cur ? `×${+cur.dealt.toFixed(2)} dealt, ×${+cur.taken.toFixed(2)} taken` : '';
+    if (this.stances.dataset.sig === r.stance.now) return;
+    this.stances.dataset.sig = r.stance.now;
     this.stances.replaceChildren(...r.stance.all.map((s) => {
       const b = el('button', `eq-stance${s.id === r.stance.now ? ' eq-stance-on' : ''}`, s.name);
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(s.id === r.stance.now));
-      b.title = `${s.name}: ${s.says}`;
+      b.title = `${s.name}: ×${+s.dealt.toFixed(2)} damage dealt, ×${+s.taken.toFixed(2)} damage taken`;
       b.addEventListener('click', () => {
         // Round to it, a step at a time, as the key does, so the island hears each.
         for (let i = 0; i < 3 && this.game.settings.fightStance !== s.id; i++) this.game.cycleStance();
@@ -443,40 +475,34 @@ export class EquipmentPanel {
     }));
   }
 
-  /** The line under the figure: what is in the picked place, or how to use the window. */
-  private drawInfo(r: EquipReport): void {
-    const v = this.picked ? r.slots.find((x) => x.slot === this.picked) : null;
-    this.info.replaceChildren();
-    if (!v) {
-      this.info.append(el('span', 'eq-info-hint', 'Drag a thing onto its socket or onto you to put it on; drag it back to the shelf, or double-click, to take it off.'));
-      return;
-    }
-    const name = el('b', '', v.label ?? EMPTY_SAYS[v.slot]);
-    this.info.append(el('span', 'eq-info-slot', v.name), name);
-    if (v.does) this.info.append(el('span', 'eq-info-does', v.does));
-    if (v.item) {
-      const off = el('button', 'eq-off', 'Take off');
-      off.type = 'button';
-      off.addEventListener('click', () => this.takeOff(v.slot));
-      this.info.append(off);
-    }
-  }
-
   private drawShelf(r: EquipReport): void {
+    const v = this.picked ? r.slots.find((x) => x.slot === this.picked) : null;
     const list = this.picked ? r.shelf.filter((s) => s.slot === this.picked) : r.shelf;
-    this.shelfHead.replaceChildren(el('b', '', this.picked ? `In your pack, for your ${this.picked === 'weapon' ? 'hands' : this.picked === 'offhand' ? 'off hand' : this.picked}` : 'In your pack'),
-      el('span', 'eq-shelf-n', `${list.length} to put on`));
-    if (this.picked) {
-      const all = el('button', 'eq-shelf-all', 'Show all');
+    this.shelfHead.replaceChildren();
+    if (v) {
+      // The place picked: what is in it, what it does, a button to take it off, and the way back to everything.
+      const what = el('div', 'eq-shelf-picked');
+      what.append(el('span', 'eq-shelf-slot', v.name), el('b', '', v.label ?? EMPTY_SAYS[v.slot]));
+      if (v.does) what.append(el('span', 'eq-shelf-does', v.does));
+      const acts = el('div', 'eq-shelf-acts');
+      if (v.item) {
+        const off = el('button', 'eq-pill', 'Take off');
+        off.type = 'button';
+        off.addEventListener('click', () => this.takeOff(v.slot));
+        acts.append(off);
+      }
+      const all = el('button', 'eq-pill', 'Show all');
       all.type = 'button';
-      all.addEventListener('click', () => this.pick(this.picked as Slot));
-      this.shelfHead.append(all);
+      all.addEventListener('click', () => this.pick(v.slot));
+      acts.append(all);
+      this.shelfHead.append(what, acts);
+    } else {
+      this.shelfHead.append(el('b', '', 'In your pack'), el('span', 'eq-shelf-n', `${list.length} to put on · drag onto a socket or onto you`));
     }
     if (!list.length) {
-      this.shelf.replaceChildren(el('div', 'eq-shelf-none', this.picked ? 'Nothing in your pack goes there.' : 'Nothing in your pack is worn or held.'));
-      return;
-    }
-    this.shelf.replaceChildren(...list.map((s) => this.shelfCard(s)));
+      this.shelf.replaceChildren(el('div', 'eq-shelf-none', this.picked ? `Nothing in your pack goes on your ${placeName(this.picked)}.` : 'Nothing in your pack is worn or held.'));
+    } else this.shelf.replaceChildren(...list.map((s) => this.shelfCard(s)));
+    this.fade();
   }
 
   private shelfCard(s: ShelfView): HTMLElement {
@@ -484,14 +510,22 @@ export class EquipmentPanel {
     card.type = 'button';
     card.setAttribute('role', 'listitem');
     card.style.setProperty('--eq-tint', s.tint ?? 'var(--eq-metal)');
-    card.style.setProperty('--eq-wear', String(1 - s.wear));
     const pic = el('span', 'eq-card-pic');
     pic.append(glyph(s.slot, s.item.id));
     const text = el('span', 'eq-card-text');
-    text.append(el('span', 'eq-card-name', s.label), el('span', 'eq-card-ql', `QL ${s.item.ql.toFixed(0)} · ${s.slot === 'weapon' ? 'hand' : s.slot === 'offhand' ? 'off hand' : s.slot}`));
+    const name = el('span', 'eq-card-name');
+    name.append(el('b', '', s.label), el('span', 'eq-card-ql', ` QL ${s.item.ql.toFixed(0)} · ${placeName(s.slot)}`));
+    text.append(name);
+    if (s.main) text.append(el('span', `eq-card-main ${s.main.better ? 'eq-good' : 'eq-bad'}`, s.main.text));
+    if (s.effects.length) {
+      const fx = el('span', 'eq-card-fx');
+      for (const e of s.effects) fx.append(el('span', `eq-fx ${e.better ? 'eq-fx-good' : 'eq-fx-bad'}`, e.text));
+      text.append(fx);
+    }
+    if (s.why) text.append(el('span', 'eq-card-why', s.why));
     card.append(pic, text);
-    if (s.delta) card.append(el('span', `eq-card-delta${s.better === null ? '' : s.better ? ' eq-good' : ' eq-bad'}`, s.delta));
-    card.title = s.why ?? `${s.label}, QL ${s.item.ql.toFixed(1)}: click or drag to put it on${s.delta ? ` (${s.delta} against what is on)` : ''}.`;
+    const says = [s.main?.text, ...s.effects.map((e) => e.text)].filter(Boolean).join(', ');
+    card.title = s.why ?? `${s.label}, QL ${s.item.ql.toFixed(1)}: click or drag to put it on${says ? `. ${says}` : ''}.`;
     card.setAttribute('aria-label', card.title);
     card.disabled = !!s.why;
     card.addEventListener('click', () => this.putOn(s.item.uid));
@@ -499,21 +533,26 @@ export class EquipmentPanel {
     return card;
   }
 
-  /** A number's row: what, how much, and under it how. */
+  /** A number's row: what, how much, and under it the things it came from, a line each. */
   private statRow(s: Stat): HTMLElement {
     const row = el('div', `eq-stat eq-stat-${s.key}`);
     row.append(el('span', 'eq-stat-label', s.label), el('b', 'eq-stat-val', s.says));
-    if (s.note) row.append(el('span', 'eq-stat-note', s.note));
+    if (s.lines?.length) {
+      const ul = el('ul', 'eq-stat-lines');
+      for (const l of s.lines) ul.append(el('li', '', l));
+      row.append(ul);
+    }
     return row;
   }
 
   private drawOffence(pane: HTMLElement, r: EquipReport): void {
+    // What the blow is against what it meets, and what else it does.
     const card = el('div', 'eq-weapon');
     const pic = el('span', 'eq-weapon-pic');
     pic.append(glyph('weapon', this.game.worn('weapon')?.id));
     const words = el('div', 'eq-weapon-words');
-    words.append(el('b', '', r.weapon.name), el('span', '', `${r.weapon.kind}, a ${r.weapon.blow === 'cut' ? 'cutting' : r.weapon.blow === 'pierce' ? 'piercing' : 'crushing'} blow`));
-    if (r.weapon.side) words.append(el('span', 'eq-weapon-side', `On a blow that lands: ${r.weapon.side}.`));
+    words.append(el('span', '', `Against a hide, a ${r.weapon.blow === 'cut' ? 'cutting' : r.weapon.blow === 'pierce' ? 'piercing' : 'crushing'} blow lands ${r.weapon.hides}`));
+    if (r.weapon.side) words.append(el('span', 'eq-weapon-side', `A blow that lands also ${r.weapon.side}.`));
     if (r.weapon.arrows) words.append(el('span', 'eq-weapon-side', r.weapon.arrows));
     card.append(pic, words);
     const rows = el('div', 'eq-stats');
@@ -522,6 +561,24 @@ export class EquipmentPanel {
   }
 
   private drawDefence(pane: HTMLElement, r: EquipReport): void {
+    // A blow on its way to you: what each thing takes off, and how much is left after it.
+    const chain = el('div', 'eq-chain');
+    chain.append(el('div', 'eq-sub', 'A blow on its way to you'));
+    let prev = 1;
+    for (const [i, st] of r.chain.entries()) {
+      const row = el('div', `eq-step${i ? '' : ' eq-step-first'}`);
+      const bar = el('span', 'eq-bar eq-bar-step');
+      const fill = el('span', 'eq-bar-fill');
+      fill.style.width = `${Math.round(st.left * 1000) / 10}%`;
+      // What this step took off, left standing as a pale stub beyond what is left.
+      const off = el('span', 'eq-bar-off');
+      off.style.left = fill.style.width;
+      off.style.width = `${Math.max(0, Math.round((prev - st.left) * 1000) / 10)}%`;
+      bar.append(off, fill);
+      prev = st.left;
+      row.append(el('span', 'eq-step-what', st.what), el('span', 'eq-step-took', st.took), bar, el('b', 'eq-step-left', pc(st.left)));
+      chain.append(row);
+    }
     // Where a blow lands, how often, and what is turned aside there.
     const map = el('div', 'eq-map');
     map.append(el('div', 'eq-sub', 'Where a blow lands'));
@@ -531,33 +588,32 @@ export class EquipmentPanel {
       const fill = el('span', 'eq-bar-fill');
       fill.style.width = `${Math.round((v.soak ?? 0) * 100)}%`;
       bar.append(fill);
-      row.append(el('span', 'eq-loc-name', v.name), el('span', 'eq-loc-odds', `${Math.round((v.struck ?? 0) * 100)}%`), bar,
-        el('span', 'eq-loc-soak', v.soak === null ? 'bare' : `${Math.round(v.soak * 100)}% turned`));
-      row.title = `${v.name}: a blow lands here ${Math.round((v.struck ?? 0) * 100)}% of the time; ${v.soak === null ? 'nothing on it turns any of it' : `${v.label} turns ${Math.round(v.soak * 100)}% of it aside`}.`;
+      row.append(el('span', 'eq-loc-name', v.name), el('span', 'eq-loc-odds', `${Math.round((v.struck ?? 0) * 100)}% of blows`), bar,
+        el('span', 'eq-loc-soak', v.soak === null ? 'bare' : `${pc(v.soak)} turned`));
       map.append(row);
     }
     const rows = el('div', 'eq-stats');
     for (const s of r.defence) rows.append(this.statRow(s));
     // Of each kind of blow, what reaches you.
     const thru = el('div', 'eq-thru');
-    thru.append(el('div', 'eq-sub', 'Of a blow, what gets through'));
+    thru.append(el('div', 'eq-sub', 'Of each kind of blow, what gets through'));
     for (const t of r.through) {
       const row = el('div', 'eq-thru-row');
       const bar = el('span', 'eq-bar eq-bar-thru');
       const fill = el('span', 'eq-bar-fill');
-      fill.style.width = `${Math.round(t.share * 100)}%`;
+      fill.style.width = `${Math.round(t.share * 1000) / 10}%`;
       bar.append(fill);
-      row.append(el('span', 'eq-thru-name', t.name[0].toUpperCase() + t.name.slice(1)), bar, el('b', 'eq-thru-val', `${Math.round(t.share * 100)}%`));
+      row.append(el('span', 'eq-thru-name', t.name[0].toUpperCase() + t.name.slice(1)), bar, el('b', 'eq-thru-val', pc(t.share)));
       thru.append(row);
     }
     const carry = el('div', 'eq-stats eq-carry');
     carry.append(el('div', 'eq-sub', 'What it costs to carry'));
     for (const s of r.burden) carry.append(this.statRow(s));
-    pane.replaceChildren(map, rows, thru, carry);
+    pane.replaceChildren(chain, map, rows, thru, carry);
   }
 
   private drawSkills(pane: HTMLElement, r: EquipReport): void {
-    pane.replaceChildren(el('div', 'eq-sub', 'What each skill adds now, and at its next level'), ...r.skills.map((s) => this.skillRow(s)));
+    pane.replaceChildren(el('div', 'eq-sub', 'Now, and at the next level'), ...r.skills.map((s) => this.skillRow(s)));
   }
 
   private skillRow(s: SkillView): HTMLElement {
@@ -570,12 +626,13 @@ export class EquipmentPanel {
     bar.append(fill);
     bar.title = `${Math.round(s.toNext * 100)}% of the way to ${Math.floor(s.level) + 1}`;
     const gives = el('div', 'eq-gives');
+    if (!s.gives.length) gives.append(el('span', 'eq-give-none', 'Moves nothing you have on now.'));
     for (const g of s.gives) {
       const line = el('span', 'eq-give');
-      line.append(el('span', 'eq-give-what', g.what), el('b', '', g.now), el('span', 'eq-give-next', `${g.next} at ${Math.floor(s.level) + 1}`));
+      line.append(el('span', 'eq-give-what', g.what), el('b', '', g.now), el('span', 'eq-give-next', g.next ?? ''));
       gives.append(line);
     }
-    row.append(head, bar, gives, el('span', 'eq-skill-trains', s.trains));
+    row.append(head, bar, gives);
     return row;
   }
 

@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, linen: 18, armoury: 40, turf: 14, ironbound: 12, strap: 12, toolbelt: 14 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, linen: 18, armoury: 52, turf: 14, ironbound: 12, strap: 12, toolbelt: 14 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -4937,7 +4937,7 @@ function cottage(g: Ctx, x: number, y: number, s: number): void {
  * Where the Equipment frame's swords cross, in the band's width down from its edge, how long a blade is in
  * band widths, and how far each leans off upright (radians): the frame draws them there and the light runs down them there.
  */
-export const ARMOURY_SWORDS = { cy: 0.5, blade: 1.95, tilt: 0.62 };
+export const ARMOURY_SWORDS = { cy: 0.5, blade: 2.6, tilt: 0.62 };
 
 /* ---- the frames -------------------------------------------------------------- */
 
