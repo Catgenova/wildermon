@@ -4,8 +4,9 @@
  * A builder carried everything. Six log walls, at what a log weighs, is trip
  * after trip from the woodpile to the corner of the house — and the crate you
  * tipped them into is standing on the very tile you are working. A wall draws
- * from a crate on its own tile now, and from the pack after. On the tile, not
- * within reach: a crate two tiles off is a store.
+ * from a crate on its own tile now, and from the pack after. A crate on the
+ * next tile is a store: built out of while stores are on, as a craft takes
+ * from one (`buildstores.ts`), and not with them off, when the site's still is.
  *
  * And a bridge may land on a storey. Its ends wanted a bank or a poured slab,
  * and both of those are ground, so two towers a tile apart were a staircase
@@ -102,7 +103,7 @@ check('the wall is finished by them', Object.values(wall.needed).every((n) => n 
   && psql(`select bill_done(needed) from wall where world_id = ${W} and dir = 'h' and x = 20 and y = 20;`) === 't',
   `${LOGS} logs out of the pile on the site`);
 
-/* A crate a tile away is a store, not a site. */
+/* A crate a tile away is a store, not a site: used with stores on, not with them off. */
 const far = Game.create(4242);
 far.inventory.add('mallet', { ql: 40 });
 const fb = far.buildings.create('Store', 20, 20);
@@ -111,8 +112,13 @@ far.player.y = 20.5;
 far.buildings.setWall(fb, 0, 20, 20, 'n', 'solid', 'log');
 const away = far.addCrate('log', 21, 20, 1, 1);
 away.items.push({ uid: 9002, id: 'log', ql: 40, dmg: 0, count: 8 } as never);
-const farSaid = ACTION_BY_ID.get('build_wall')?.check?.({ kind: 'tile', x: 20, y: 20, cx: 20, cy: 20, side: 'n' } as never, far) ?? 'ALLOWED';
-check('while a crate on the next tile is a store and not a site', farSaid.startsWith('You need'), farSaid);
+const farAsk = (): string => ACTION_BY_ID.get('build_wall')?.check?.({ kind: 'tile', x: 20, y: 20, cx: 20, cy: 20, side: 'n' } as never, far) ?? 'ALLOWED';
+far.settings.fromStores = true;
+const farOn = farAsk();
+far.settings.fromStores = false;
+const farSaid = farAsk();
+check('while a crate on the next tile is a store and not a site: built out of with stores on, refused with them off',
+  farOn === 'ALLOWED' && farSaid.startsWith('You need'), `${farOn} / ${farSaid}`);
 
 /* ---- a bridge from one storey to another --------------------------------- */
 const gb = Game.create(4242);
