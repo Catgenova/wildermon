@@ -2079,8 +2079,11 @@ export interface Rig {
   float?: number;
   /** How far a swimmer is under way rather than treading water, nought to one: blended, so the rings of the one fade in over the other. */
   under?: number;
-  /** Sat down, on a seat this high over the floor the feet are on, and astride or not: see `Seat`. */
-  sit?: { up: number; astride: boolean };
+  /**
+   * Sat down, on a seat this high over the floor the feet are on, and astride or not: see `Seat`. On the `ground`, the
+   * legs fold as they do astride but there is no beast under you to hide anything behind.
+   */
+  sit?: { up: number; astride: boolean; ground?: boolean };
   /** What a driver has in hand: see `Seat`. */
   seat?: Seat;
   /** How slack the reins hang, from taut (nought) to let go (one). */
@@ -3488,6 +3491,22 @@ function fistOn(r: Rig, fr: Frame, k: number, at: V3, pole: V3, haft: V3): void 
 /** A saddled beast's barrel under its rider, from the saddle: what the far leg is hidden behind. */
 const BARREL = { c: [0, 0, -2.4] as V3, r: [1.9, 5.5, 2.4] as V3 };
 
+/**
+ * The parts with whatever of them is behind the beast's barrel hidden: each that hides nothing else, copied with the
+ * barrel to hide behind, and every part's `after` and `under` pointed at the copies, so that hair still goes on after
+ * the head it was put after, and not under it.
+ */
+function behindBarrel(parts: Part[]): Part[] {
+  const to = new Map<Part, Part>();
+  for (const p of parts) to.set(p, p.hide ? { ...p } : { ...p, hide: [BARREL], hideIn: ROOT });
+  const re = (x: Part | Part[] | undefined): Part | Part[] | undefined => (Array.isArray(x) ? x.map((q) => to.get(q) ?? q) : x && (to.get(x) ?? x));
+  for (const q of to.values()) {
+    if (q.after) q.after = re(q.after);
+    if (q.under) q.under = re(q.under);
+  }
+  return parts.map((p) => to.get(p) as Part);
+}
+
 /** The box seat of a cart or wagon when nothing says otherwise: the reins out ahead to a team, the bench a hand over the boards. */
 const BOX: Seat = { hands: 'reins', up: 2.7, grip: [0, 14, 5.6] };
 
@@ -4200,7 +4219,7 @@ function meditate(r: Rig, phi: number, fr: Frame): void {
   // In (one) and out (minus one): longer at the top and the bottom than through the middle, as a slow breath is.
   const s = Math.sin((t * TAU) / MEDITATE_BREATH), breath = Math.sign(s) * Math.pow(Math.abs(s), 0.7);
   // Sat on the ground, the feet not stood on it: they rest where the legs fold them.
-  r.sit = { up: MEDITATE_UP, astride: true };
+  r.sit = { up: MEDITATE_UP, astride: true, ground: true };
   r.flat = [false, false];
   // The thighs forward and out, turned out so the knees fall open; the shins folded back across each other, the right over the left.
   r.leg = [[39, -65, -83], [41, -63, -83]];
@@ -12124,7 +12143,7 @@ function drawLive(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
       ctx.clip(p, 'evenodd');
     }
     // Astride, the far leg goes down behind the beast's barrel, which is drawn first: hidden behind it rather than drawn over its flank.
-    render(ctx, r.sit?.astride ? parts.map((p) => (p.hide ? p : { ...p, hide: [BARREL], hideIn: ROOT })) : parts, pal, view, ink, 1 / zoom, now);
+    render(ctx, r.sit?.astride && !r.sit.ground ? behindBarrel(parts) : parts, pal, view, ink, 1 / zoom, now);
     if (sides) ctx.restore();
     for (const o of r.oars ?? []) if (near(o)) oar(ctx, view, ink, o);
     // The tiller over the body, but for what of it the body is in front of (`tillerPart`); over the rim, as it is.
