@@ -368,7 +368,7 @@ export class HealthPanel {
     // The other tabs only while they show.
     if (this.tab === 'conditions') {
       // Hunger and thirst only by name and how low: what they stop is the mend checklist's to say, under them.
-      this.drawEffects(this.against, r.against.map((e) => (SAID_BELOW.has(e.id) ? { ...e, does: [] } : e)), 'Nothing is against you.');
+      this.drawEffects(this.against, r.against.map((e) => (SAID_BELOW.has(e.id) ? { ...e, does: [], from: e.from.replace(/\.$/, '') } : e)), 'Nothing is against you.');
       this.drawEffects(this.forYou, r.forYou, '');
       this.forHead.hidden = this.forYou.hidden = !r.forYou.length;
       const sig = JSON.stringify(r.mend);
@@ -424,7 +424,7 @@ export class HealthPanel {
     this.emptyIn.hidden = r.emptyIn === null;
     if (r.emptyIn !== null) {
       this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} at this rate`;
-      if (r.venom > 0) this.emptyText.append(el('span', 'hp-empty-note', ' with the venom'));
+      if (r.venom > 0) this.emptyText.append(el('span', 'hp-empty-note', ' incl. venom'));
     }
     this.rate.replaceChildren(...r.rates.map((x) => {
       // Why nothing mends: a label and a chip a reason, so a narrow window breaks between reasons.

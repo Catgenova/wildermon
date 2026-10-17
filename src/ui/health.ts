@@ -440,8 +440,8 @@ export function healthReport(g: Game, spells: SpellsOnYou): HealthReport {
   const emptyIn = losing > 0 ? Math.max(0, (s.health - venom) / (losing / 60)) : venom >= s.health ? 0 : null;
   const aid = g.skills.get('first_aid'), chir = g.skills.get('chirurgy');
   const hands = [
-    { name: 'First aid', level: aid, does: `Dressings heal ${dressRange(aid)} by QL`, next: `At ${Math.floor(aid) + 1}: ${dressRange(Math.floor(aid) + 1)}` },
-    { name: 'Chirurgy', level: chir, does: `Wounds close ${closeFaster(chir)} faster`, next: `At ${Math.floor(chir) + 1}: ${closeFaster(Math.floor(chir) + 1)}` },
+    { name: 'First aid', level: aid, does: `Dressings heal ${dressRange(aid)} by QL`, next: `At ${(Math.floor(aid) + 1).toFixed(1)}: ${dressRange(Math.floor(aid) + 1)}` },
+    { name: 'Chirurgy', level: chir, does: `Wounds close ${closeFaster(chir)} faster`, next: `At ${(Math.floor(chir) + 1).toFixed(1)}: ${closeFaster(Math.floor(chir) + 1)}` },
   ];
   const n = p.nutrition;
   const lowest = NUTRIENTS.reduce((a, b) => (n[b] < n[a] ? b : a));

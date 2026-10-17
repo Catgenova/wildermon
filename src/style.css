@@ -7355,6 +7355,7 @@ kbd {
   --hp-accent: var(--ui-accent);
   --hp-btn: var(--ui-accent);
   --hp-btn-ink: #1b1712;
+  --hp-more-bg: #37322b;
   --hp-stage-top: #2d2a33;
   --hp-stage-bottom: #1b1a20;
   --hp-plinth: #4a4250;
@@ -7396,6 +7397,7 @@ kbd {
   --hp-accent: var(--rc-rune-ink);
   --hp-btn: var(--rc-rune);
   --hp-btn-ink: #3a2208;
+  --hp-more-bg: #f8f1e3;
   --hp-stage-top: color-mix(in srgb, var(--rc-field) 60%, #dfe8e4);
   --hp-stage-bottom: color-mix(in srgb, var(--rc-deep) 70%, #c9b9a0);
   --hp-plinth: color-mix(in srgb, var(--rc-shade) 70%, #8d7c6a);
@@ -7407,6 +7409,7 @@ kbd {
 
 [data-ui='runecut'][data-rc='night'] .hp,
 [data-ui='runecut'][data-rc='night'] .hp-more {
+  --hp-more-bg: #474d5e;
   --hp-blood: #ff9a8a;
   --hp-bad: #b4d672;
   --hp-venom: #d2a6f0;
@@ -7434,14 +7437,14 @@ kbd {
   z-index: 3;
   transform: translateX(-50%);
   padding: 3px 12px 3px 10px;
-  border: 0;
+  border: 1px solid var(--hp-line);
   border-radius: 999px;
-  background: var(--hp-btn);
-  color: var(--hp-btn-ink);
+  background: var(--hp-more-bg);
+  color: var(--hp-ink);
   font: inherit;
   font-size: 11.5px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
   cursor: pointer;
 }
 
@@ -7457,6 +7460,18 @@ kbd {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+/* A carved lozenge before each heading. */
+.hp-head::before {
+  content: '';
+  flex: none;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.8;
 }
 
 .hp-cards + .hp-head { margin-top: 12px; }
@@ -7561,13 +7576,14 @@ kbd {
 .hp-sum { margin-left: 4px; font-size: 12px; color: var(--hp-dim); }
 .hp-top-line { row-gap: 0; }
 .hp-sum-bad { color: var(--hp-dim); }
-.hp-empty-in { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--hp-blood); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.hp-empty-in { display: flex; align-items: flex-start; gap: 6px; margin-top: 4px; color: var(--hp-blood); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .hp-empty-in[hidden] { display: none; }
 
 .hp-glass {
   flex: none;
   width: 12px;
   height: 16px;
+  margin-top: 3px;
   background: currentColor;
   clip-path: polygon(0 0, 100% 0, 100% 12%, 62% 50%, 100% 88%, 100% 100%, 0 100%, 0 88%, 38% 50%, 0 12%);
 }
@@ -7587,7 +7603,8 @@ kbd {
 .hp-rate-good { background: color-mix(in srgb, var(--hp-ok) 17%, transparent); color: var(--hp-ok); }
 .hp-rate-still { background: var(--hp-sunk); color: var(--hp-dim); }
 
-.hp-pills { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 6px; border-top: 1px solid var(--hp-line); }
+/* Under a notched rule, as if cut along the card. */
+.hp-pills { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 8px; background: repeating-linear-gradient(90deg, var(--hp-line) 0 7px, transparent 7px 10px) top / 100% 2px no-repeat; }
 .hp-pill-head { display: flex; justify-content: space-between; font-size: 11px; line-height: 1.2; }
 .hp-pill-label { color: var(--hp-dim); }
 .hp-pill-num { font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -7884,6 +7901,7 @@ kbd {
   padding: 9px 10px;
   border-radius: 9px;
   background: var(--hp-sunk);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 -1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .hp-care-ready { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--hp-ok) 70%, transparent); }
@@ -8019,7 +8037,7 @@ kbd {
 /* What comes of a care, taken and missed. */
 .hp-odds { display: grid; gap: 3px; }
 .hp-odd { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 6px; align-items: baseline; font-size: 12px; line-height: 1.35; }
-.hp-odd-at { display: flex; justify-content: space-between; gap: 5px; }
+.hp-odd-at { display: flex; gap: 4px; }
 .hp-odd-mark { font-weight: 800; }
 .hp-odd-chance { font-variant-numeric: tabular-nums; }
 .hp-odd-ok .hp-odd-mark, .hp-odd-ok .hp-odd-chance { color: var(--hp-ok); }

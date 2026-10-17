@@ -1,6 +1,5 @@
 import { itemDef } from './items';
 import { world } from './pace';
-import { times } from './words';
 /**
  * What is actually in a meal.
  *
@@ -30,7 +29,7 @@ export const NUTRIENT_NOTES: Record<Nutrient, string> = {
   starch: 'bread, porridge, roots and grain',
   // Read when said, off the two meats' own feeds, so it cannot drift from them (and so the items are loaded by then).
   get flesh(): string {
-    return `meat and fish; cooked meat feeds ${times((itemDef('cooked_meat').feeds?.flesh ?? 0) / (itemDef('meat').feeds?.flesh ?? 1))} the flesh of raw`;
+    return `meat and fish; cooked meat feeds ${Number(((itemDef('cooked_meat').feeds?.flesh ?? 0) / (itemDef('meat').feeds?.flesh ?? 1)).toFixed(1))}× the flesh of raw`;
   },
   fat: 'oil, nuts, cheese, butter and what is fried in them',
   greens: 'vegetables, fruit and berries',
