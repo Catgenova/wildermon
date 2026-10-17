@@ -6739,6 +6739,11 @@ export class Game {
     return out;
   }
 
+  /** How far a craft reaches into your stores (`CRAFT_REACH`): as far as building does too (`buildReach`). */
+  craftReach(): number {
+    return CRAFT_REACH;
+  }
+
   /** How far a dyeing reaches for a barrel of dye: as far as a craft reaches into your stores. */
   dyeReach(): number {
     return CRAFT_REACH;

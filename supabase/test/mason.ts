@@ -275,10 +275,10 @@ begin
     || '|' || coalesce(${last('You fit % into the wall.%')}, 'unsaid'));
   ${clear('stone_brick')};
 
-  /* ---- Hod Carrier: nothing in the pack, five bricks in a chest of the Mason's three tiles off. ---- */
+  /* ---- Hod Carrier: nothing in the pack, five bricks in a chest of the Mason's four tiles off, past where anybody's building reaches. ---- */
   ${wall('n', 'stone_brick', false)};
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)
-    values (w, 'furniture', 'chest', 12, 9, 0, 0, 12.5, 9.5, 40, 'Pine', u) returning id into v_chest;
+    values (w, 'furniture', 'chest', 13, 9, 0, 0, 13.5, 9.5, 40, 'Pine', u) returning id into v_chest;
   perform furniture_add(w, v_chest, 'stone_brick', 5, 30, null);
   perform pg_temp.hold(w, u, '{}');
   v_t := ${refused('build_wall', side('n'))};
@@ -482,7 +482,7 @@ check(`${P('Two at a Time').name}: a go lays ${P('Two at a Time').fx['lay:build_
   layA === '1' && Number(layB) === P('Two at a Time').fx['lay:build_stone'] && laid.startsWith('You fit two stone bricks into the wall.'),
   say('LAY'));
 const [hodA, hodB, hodLeft, hodLaid] = say('HOD').split('|');
-check(`${P('Hod Carrier').name}: with nothing in the pack, a wall is refused without it and built out of a chest three tiles off with it`,
+check(`${P('Hod Carrier').name}: with nothing in the pack, a wall is refused without it and built out of a chest four tiles off with it`,
   hodA.startsWith('You need ') && hodB === 'ALLOWED' && hodLeft === '4' && hodLaid === '1', say('HOD'));
 const stoneWall = MATERIAL_BY_ID.get('stone_brick')!;
 const back = Math.floor(stoneWall.bill[0][1] * P('Salvage').fx['salvage:build_stone']);

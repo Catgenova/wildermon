@@ -2256,6 +2256,15 @@ export const NEWS: News[] = [
         + 'Under them, what is against you and for you, and your nutrition with what each kind does. Framed in birch and linen, with a hedgehog asleep on it.',
     ],
   },
+  {
+    n: 169,
+    day: '2026-10-17',
+    lines: () => [
+      `Building a wall, a floor, a frame, a bridge or an aqueduct takes what it lays from crates, carts, wagons and containers within ${CRAFT_REACH} tiles, `
+        + 'the same stores a craft takes from, after your pack and a crate on the tile: draw the wagon up beside the wall and build out of it. '
+        + 'Settings, Use stores within reach, turns it off. A Mason\'s Hod Carrier still reaches further on stone, and with it off too.',
+    ],
+  },
 ];
 
 

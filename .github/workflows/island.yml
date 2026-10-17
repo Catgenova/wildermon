@@ -3019,6 +3019,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/health.mjs --log-level=error
           node node_modules/.cache/health.mjs
 
+      - name: Building draws on the stores within reach
+        run: |
+          # Asked: "building a wall or other building actions should also be
+          # able to draw materials from wagon or nearby storage within 3 tiles".
+          # A wall and a bridge's span are built out of somebody else's wagon
+          # two tiles off, refused with stores turned off and with the wagon
+          # four tiles off, the same on both sides.
+          npx esbuild supabase/test/buildstores.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/buildstores.mjs --log-level=error
+          node node_modules/.cache/buildstores.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

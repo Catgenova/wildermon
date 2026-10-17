@@ -1,5 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { isDone } from './building';
+import { takeUnit, toHand } from './buildstock';
 import { BRIDGES, bridgeDone, CLEARANCE, PULL_REACH, pullDownRefusal, spanTiles, spanWants, type Bridge } from './bridges';
 import type { Game } from './game';
 import { greenNow } from './greening';
@@ -346,8 +347,9 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       if (!s) return 'It is finished.';
       if (!g.inventory.has(AQUEDUCT.tool)) return `You need a ${itemDef(AQUEDUCT.tool).name.toLowerCase()}.`;
       if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Work from one end. Walk to the open part of the span.';
-      const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && g.inventory.count(id) < 1);
-      if (short.length) return `That span wants ${spanWants(s)}; you are carrying no ${itemDef(short[0]).name.toLowerCase()}.`;
+      // Out of the pack, a crate on the span or the stores within reach, as a wall's does (`toHand`).
+      const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && toHand(g, id, undefined, s) < 1);
+      if (short.length) return `That span wants ${spanWants(s)}; you have no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
       return null;
     },
     perform: (t, g) => {
@@ -355,9 +357,9 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       if (!b) return;
       const s = b.spans.find((x) => !isDone(x));
       if (!s) return;
-      // One unit of one thing a go, as with a bridge: the first by name that is carried.
-      const id = Object.keys(s.needed).sort().find((k) => s.needed[k] > 0 && g.inventory.count(k) > 0);
-      if (!id || !g.inventory.consume(id, 1)) return;
+      // One unit of one thing a go, as with a bridge: the first by name to hand.
+      const id = Object.keys(s.needed).sort().find((k) => s.needed[k] > 0 && toHand(g, k, undefined, s) > 0);
+      if (!id || !takeUnit(g, id, undefined, s)) return;
       s.needed[id] = Math.max(0, s.needed[id] - 1);
       g.gainSkill(AQUEDUCT.skill, 0.5);
       g.wearTool(AQUEDUCT.tool, 0.4);

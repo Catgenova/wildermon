@@ -411,7 +411,7 @@ export class SettingsPanel {
     const rareWords = `${rareNames.slice(0, -1).join(', ')} or ${rareNames[rareNames.length - 1]}`;
     add(
       'Use stores within reach',
-      `A craft, and work at a station that uses something up, takes it from your pack, then the bags on your back, then crates, pieces and vehicles within ${CRAFT_REACH} tiles. Untick to take it from your pack and bags only.`,
+      `A craft, and work at a station that uses something up, takes it from your pack, then the bags on your back, then crates, pieces and vehicles within ${CRAFT_REACH} tiles; building a wall, floor, frame, bridge or aqueduct takes it from your pack, then a crate on the tile, then the same stores. Untick to take it from your pack and bags only (and, building, a crate on the tile).`,
       () => game.settings.fromStores,
       (v) => {
         game.settings.fromStores = v;

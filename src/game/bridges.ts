@@ -1,5 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { isDone, progressOf, type Bill } from './building';
+import { takeUnit, toHand } from './buildstock';
 import type { Game } from './game';
 import { greenNow } from './greening';
 import { lacks } from './ranks';
@@ -334,8 +335,9 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       if (!s) return 'It is finished.';
       if (!g.inventory.has(def.tool)) return `You need a ${itemDef(def.tool).name.toLowerCase()}.`;
       if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Work from one end. Walk to the open part of the span.';
-      const short = Object.entries(s.needed).filter(([id, n]) => n > 0 && g.inventory.count(id) < 1);
-      if (short.length) return `That span wants ${spanWants(s)}; you are carrying no ${itemDef(short[0][0]).name.toLowerCase()}.`;
+      // What it wants comes out of the pack, a crate on the span or the stores within reach, as a wall's does (`toHand`).
+      const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && toHand(g, id, undefined, s) < 1);
+      if (short.length) return `That span wants ${spanWants(s)}; you have no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
       return null;
     },
     perform: (t, g) => {
@@ -344,11 +346,9 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       const def = bridgeDef(b);
       const s = b.spans.find((x) => !isDone(x));
       if (!s) return;
-      // One unit of one thing per go, as with a wall.
-      const want = Object.entries(s.needed).find(([id, n]) => n > 0 && g.inventory.count(id) > 0);
-      if (!want) return;
-      const [id] = want;
-      if (!g.inventory.consume(id, 1)) return;
+      // One unit of one thing per go, as with a wall, and from where a wall's comes: the first by name to hand.
+      const id = Object.keys(s.needed).sort().find((k) => s.needed[k] > 0 && toHand(g, k, undefined, s) > 0);
+      if (!id || !takeUnit(g, id, undefined, s)) return;
       s.needed[id] = Math.max(0, s.needed[id] - 1);
       g.gainSkill(def.skill, 0.5);
       g.wearTool(def.tool, 0.4);

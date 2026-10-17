@@ -542,8 +542,8 @@ const MASON: Seed[] = [
   {
     num: 35, name: 'Hod Carrier',
     fx: { 'reach:build_stone': 5 },
-    note: (fx) => `Build wall and Build floor on ${STONE_WORK}, also take from crates, carts and containers within `
-      + `${fx['reach:build_stone']} tiles that a craft may take from (now only your pack and a crate on the tile).`,
+    note: (fx) => `Build wall and Build floor on ${STONE_WORK} take from crates, carts and containers within `
+      + `${fx['reach:build_stone']} tiles that a craft may take from (now ${CRAFT_REACH}), even with stores turned off.`,
   },
   {
     num: 47, name: 'Repoint',
