@@ -125,7 +125,7 @@ check('a better sword says a blow now → with it on, for the better',
   !!ls && ls.main?.better === true && ls.main.text === wantBlow, `${ls?.main?.text ?? ''} against ${wantBlow}`);
 const cs = r.shelf.find((s) => s.item.uid === coif.uid);
 check('a coif where a cap is says how much more the head turns, for the better',
-  cs?.main?.better === true && /^Head: [\d.]+% → [\d.]+% turned$/.test(cs.main.text), cs?.main?.text ?? '');
+  cs?.main?.better === true && /^[\d.]+% → [\d.]+% turned$/.test(cs.main.text), cs?.main?.text ?? '');
 check('each socket takes only what is worn there', SLOTS.every((slot) => fitsSlot(coif.id, slot) === (slot === 'head')));
 
 /* ---- on and off ---- */

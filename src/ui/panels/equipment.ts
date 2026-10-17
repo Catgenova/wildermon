@@ -188,7 +188,7 @@ export class EquipmentPanel {
       box.dataset.slot = slot;
       const pic = el('span', 'eq-pic');
       const ql = el('span', 'eq-ql');
-      box.append(el('span', 'eq-wear'), pic, ql, el('span', 'eq-socket-name', slot === 'weapon' ? 'Hand' : slot === 'offhand' ? 'Off hand' : slot[0].toUpperCase() + slot.slice(1)));
+      box.append(el('span', 'eq-wear'), pic, ql, el('span', 'eq-up', '▲'), el('span', 'eq-socket-name', slot === 'weapon' ? 'Hand' : slot === 'offhand' ? 'Off hand' : slot[0].toUpperCase() + slot.slice(1)));
       box.addEventListener('click', () => this.pick(slot));
       box.addEventListener('dblclick', () => this.takeOff(slot));
       box.addEventListener('keydown', (e) => {
@@ -277,13 +277,11 @@ export class EquipmentPanel {
     main.append(doll, side);
     root.append(top, main);
 
-    // Narrow, the tabs go under you and the shelf under them; wide, the shelf is as tall as the window shows under you.
+    // Narrow, the shelf is a row under you that scrolls sideways, and the tabs under it; wide, the shelf is as tall as the window shows under you.
     const fit = (): void => {
       const narrow = root.clientWidth > 0 && root.clientWidth <= NARROW;
       if (narrow !== root.classList.contains('eq-narrow')) {
         root.classList.toggle('eq-narrow', narrow);
-        if (narrow) main.append(this.shelfBox);
-        else doll.append(this.shelfBox);
       }
       if (narrow) this.shelf.style.removeProperty('max-height');
       else {
@@ -375,6 +373,7 @@ export class EquipmentPanel {
   private fade(): void {
     const s = this.shelf;
     this.shelfBox.classList.toggle('eq-shelf-more', s.scrollHeight - s.scrollTop - s.clientHeight > 6);
+    this.shelfBox.classList.toggle('eq-shelf-more-x', s.scrollWidth - s.scrollLeft - s.clientWidth > 6);
   }
 
   /* ---- drawing -------------------------------------------------------------------------- */
@@ -442,6 +441,7 @@ export class EquipmentPanel {
       s.box.classList.toggle('eq-bare', bare);
       s.box.classList.toggle('eq-picked', this.picked === v.slot);
       s.box.classList.toggle('eq-worn-out', v.wear >= 0.75);
+      s.box.classList.toggle('eq-upgrade', v.upgrade);
       s.box.draggable = !!v.item;
       s.box.style.setProperty('--eq-tint', v.tint ?? 'var(--eq-metal)');
       s.box.style.setProperty('--eq-wear', String(1 - v.wear));
@@ -449,20 +449,20 @@ export class EquipmentPanel {
       // Its QL; on a bare place a blow lands on, how often one lands there.
       s.ql.textContent = v.item ? v.item.ql.toFixed(0) : bare ? `${Math.round((v.struck ?? 0) * 100)}%` : '';
       const what = v.label ?? EMPTY_SAYS[v.slot];
-      const tip = `${v.name}: ${what}${v.item ? `, QL ${v.item.ql.toFixed(1)}, worn ${Math.round(v.wear * 100)}%` : ''}${v.does ? `. ${v.does}` : ''}`
-        + `${v.struck !== null ? `. A blow lands here ${Math.round(v.struck * 100)}% of the time` : ''}.`;
+      const tip = `${v.name}: ${what}${v.item ? `, QL ${v.item.ql.toFixed(1)}, ${v.wearSays}` : ''}${v.does ? `. ${v.does}` : ''}`
+        + `${v.struck !== null ? `. A blow lands here ${Math.round(v.struck * 100)}% of the time` : ''}${v.upgrade ? '. Your pack has something that does better here' : ''}.`;
       s.box.title = tip;
       s.box.setAttribute('aria-label', `${tip}${v.item ? ' Press Delete to take it off.' : ''}`);
     }
   }
 
   private drawStances(r: EquipReport): void {
-    const cur = r.stance.all.find((s) => s.id === r.stance.now);
-    this.stanceSays.textContent = cur ? `×${+cur.dealt.toFixed(2)} dealt, ×${+cur.taken.toFixed(2)} taken` : '';
+    this.stanceSays.textContent = 'damage dealt / taken';
     if (this.stances.dataset.sig === r.stance.now) return;
     this.stances.dataset.sig = r.stance.now;
     this.stances.replaceChildren(...r.stance.all.map((s) => {
-      const b = el('button', `eq-stance${s.id === r.stance.now ? ' eq-stance-on' : ''}`, s.name);
+      const b = el('button', `eq-stance${s.id === r.stance.now ? ' eq-stance-on' : ''}`);
+      b.append(el('span', 'eq-stance-name', s.name), el('span', 'eq-stance-by', `×${+s.dealt.toFixed(2)} / ×${+s.taken.toFixed(2)}`));
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(s.id === r.stance.now));
@@ -483,7 +483,9 @@ export class EquipmentPanel {
       // The place picked: what is in it, what it does, a button to take it off, and the way back to everything.
       const what = el('div', 'eq-shelf-picked');
       what.append(el('span', 'eq-shelf-slot', v.name), el('b', '', v.label ?? EMPTY_SAYS[v.slot]));
-      if (v.does) what.append(el('span', 'eq-shelf-does', v.does));
+      // What it does here, and under it its QL and what its wear costs it.
+      if (v.does) what.append(el('span', 'eq-shelf-does', `${v.does}.`));
+      if (v.item) what.append(el('span', 'eq-shelf-does', `QL ${v.item.ql.toFixed(0)}, ${v.wearSays}.`));
       const acts = el('div', 'eq-shelf-acts');
       if (v.item) {
         const off = el('button', 'eq-pill', 'Take off');
@@ -514,14 +516,13 @@ export class EquipmentPanel {
     pic.append(glyph(s.slot, s.item.id));
     const text = el('span', 'eq-card-text');
     const name = el('span', 'eq-card-name');
-    name.append(el('b', '', s.label), el('span', 'eq-card-ql', ` QL ${s.item.ql.toFixed(0)} · ${placeName(s.slot)}`));
+    name.append(el('b', '', s.label), el('span', 'eq-card-ql', ` QL ${s.item.ql.toFixed(0)} · ${placeName(s.slot)} · ${s.kg.toFixed(1)} kg`));
     text.append(name);
-    if (s.main) text.append(el('span', `eq-card-main ${s.main.better ? 'eq-good' : 'eq-bad'}`, s.main.text));
-    if (s.effects.length) {
-      const fx = el('span', 'eq-card-fx');
-      for (const e of s.effects) fx.append(el('span', `eq-fx ${e.better ? 'eq-fx-good' : 'eq-fx-bad'}`, e.text));
-      text.append(fx);
-    }
+    // What it does in its place, and beside it what else moves.
+    const fx = el('span', 'eq-card-fx');
+    if (s.main) fx.append(el('span', `eq-card-main ${s.main.better ? 'eq-good' : 'eq-bad'}`, s.main.text));
+    for (const e of s.effects) fx.append(el('span', `eq-fx ${e.better ? 'eq-fx-good' : 'eq-fx-bad'}`, e.text));
+    if (fx.childElementCount) text.append(fx);
     if (s.why) text.append(el('span', 'eq-card-why', s.why));
     card.append(pic, text);
     const says = [s.main?.text, ...s.effects.map((e) => e.text)].filter(Boolean).join(', ');
@@ -551,7 +552,8 @@ export class EquipmentPanel {
     const pic = el('span', 'eq-weapon-pic');
     pic.append(glyph('weapon', this.game.worn('weapon')?.id));
     const words = el('div', 'eq-weapon-words');
-    words.append(el('span', '', `Against a hide, a ${r.weapon.blow === 'cut' ? 'cutting' : r.weapon.blow === 'pierce' ? 'piercing' : 'crushing'} blow lands ${r.weapon.hides}`));
+    words.append(el('b', 'eq-weapon-head', `${r.weapon.blow === 'cut' ? 'A cut' : r.weapon.blow === 'pierce' ? 'A thrust' : 'A crushing blow'} against a hide`),
+      el('span', '', `${r.weapon.hides} · no hide ×1`));
     if (r.weapon.side) words.append(el('span', 'eq-weapon-side', `A blow that lands also ${r.weapon.side}.`));
     if (r.weapon.arrows) words.append(el('span', 'eq-weapon-side', r.weapon.arrows));
     card.append(pic, words);

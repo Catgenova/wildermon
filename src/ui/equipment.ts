@@ -18,8 +18,10 @@ import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, hitChance, pieceSoak, SHIE
 import { BLOCK_PER_SKILL, blockChance, blockQl, blowOf, bowReach, critMul, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance,
   FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, HIDE_NAMES, HIDE_TAKES, HIDES, meleeReach, myCritChance, nockedArrow, SHIELD_WEAR, sideOf,
   stanceDealt, stanceSays, stanceTaken, swungWith, type FightStance } from '../game/fight';
+import { BELT_MAX, QL_PER_LOOP } from '../game/belt';
 import type { Game } from '../game/game';
-import { itemDef, itemName, itemWeight, type Item } from '../game/items';
+import { JEWEL_BONUS, stonesOf, tradeName } from '../game/gems';
+import { itemDef, itemName, itemWeight, unitWeight, type Item } from '../game/items';
 import { matOf } from '../game/materials';
 import { SKILL_BY_ID } from '../game/skills';
 import { WOUND_KINDS, type WoundKind } from '../game/wounds';
@@ -47,9 +49,13 @@ export interface SlotView {
   soak: number | null;
   /** A colour for the piece's material, `#rrggbb`, or null. */
   tint: string | null;
+  /** How worn it is and what that costs it, by the rule that reads the wear: "worn 38%: turns ×0.71 of what it turned new". */
+  wearSays: string | null;
+  /** Whether the pack holds something that does better here, by its shelf card's main line. */
+  upgrade: boolean;
 }
 
-/** One thing a change does, and whether for the better: "gets through −1.7%". */
+/** One thing a change does, and whether for the better: "through −1.7%". */
 export interface Effect { text: string; better: boolean }
 
 /** A thing in the pack that could be put on, with what it would change. */
@@ -57,12 +63,16 @@ export interface ShelfView {
   item: Item;
   slot: Slot;
   label: string;
-  /** What it does in its place, against what is there now: "Head: 20.4% → 38.9% turned". */
+  /** What it does in its place, against what is there now: "20.4% → 38.9% turned". */
   main: Effect | null;
+  /** How much better the main line gets, for putting the best first: a blow's share more, or the share of a blow more turned or blocked. */
+  gain: number;
   /** And what else it moves, each said once and signed: "gets through −1.7%", "swings +0.5%", "+1.8 kg". */
   effects: Effect[];
   /** Why it cannot go on now, or null. */
   why: string | null;
+  /** What it weighs. */
+  kg: number;
   wear: number;
   tint: string | null;
 }
@@ -159,13 +169,32 @@ const blockOf = (g: Game, it: Item): number => {
 
 /** What a piece does where it is, with its number. */
 function slotDoes(g: Game, slot: Slot, it: Item | null): string | null {
-  if (!it) return null;
+  const loops = `one loop for a job per ${QL_PER_LOOP} QL, up to ${BELT_MAX}`;
+  const jewel = `a stone set in a ring or pendant gives ${+(JEWEL_BONUS * 100).toFixed(1)}% more skill from each go at its trade`;
+  if (!it) return slot === 'belt' ? `Nothing in a fight; a belt has ${loops}` : slot === 'jewel' ? `Nothing in a fight; ${jewel}` : null;
   if (ARMOUR_BY_ID.get(it.id)) return `Turns aside ${pc(slotSoak(g, slot) ?? 0)} of a blow here`;
   const w = WEAPON_BY_ID.get(it.id);
   if (w) return `${weaponDamage(g, w, it).toFixed(1)} a blow, lands ${pc(hitChance(g, w, it))}`;
   if (SHIELDS[it.id]) return `Blocks ${pc(blockOf(g, it))} of blows`;
-  if (slot === 'belt') return `${g.beltLoops()} loops for jobs`;
+  if (slot === 'belt') return `${g.beltLoops()} loops for jobs (${loops}); nothing in a fight`;
+  const stones = stonesOf(it);
+  if (slot === 'jewel') return stones.length ? `${+(JEWEL_BONUS * 100).toFixed(1)}% more skill from each go at ${stones.map((x) => tradeName(x.skill)).join(', ')}; nothing in a fight` : 'No stone set in it';
   return itemDef(it.id).name;
+}
+
+/** How worn a thing is, and what the wear takes off it, asked of the rule with the wear and without it. */
+function wearOf(g: Game, it: Item | null): string | null {
+  if (!it) return null;
+  const n = `worn ${Math.round(Math.min(100, it.dmg))}%`;
+  const fresh = { ...it, dmg: 0 };
+  const a = ARMOUR_BY_ID.get(it.id);
+  if (a) {
+    const sk = g.skills.get(ARMOUR_CLASSES[a.cls].skill);
+    return `${n}: turns ×${(pieceSoak(a, it, sk) / Math.max(1e-9, pieceSoak(a, fresh, sk))).toFixed(2)} of what it turned new`;
+  }
+  const w = WEAPON_BY_ID.get(it.id);
+  if (w) return `${n}: hits ×${(weaponDamage(g, w, it) / Math.max(1e-9, weaponDamage(g, w, fresh))).toFixed(2)} as hard as new`;
+  return n;
 }
 
 /** What is swung or drawn now: the weapon in hand, a bow drawn, or fists. */
@@ -209,25 +238,27 @@ function headsWith(g: Game, it: Item, slot: Slot): Heads {
 }
 
 /** What putting a thing on would change: what it does in its place, and the rest of what moves, each signed and judged. */
-function changeOf(g: Game, now: Heads, it: Item, slot: Slot): { main: Effect | null; effects: Effect[] } {
+function changeOf(g: Game, now: Heads, it: Item, slot: Slot): { main: Effect | null; gain: number; effects: Effect[] } {
   const then = headsWith(g, it, slot);
   const effects: Effect[] = [];
   let main: Effect | null = null;
+  let gain = 0;
   const tiny = (d: number): boolean => Math.abs(d) < 5e-4;
   if (WEAPON_BY_ID.get(it.id)) {
     main = { text: `A blow ${now.damage.toFixed(1)} → ${then.damage.toFixed(1)}`, better: then.damage >= now.damage };
+    gain = (then.damage - now.damage) / Math.max(0.1, now.damage);
     if (!tiny(then.lands - now.lands)) effects.push({ text: `lands ${dpc(then.lands - now.lands)}`, better: then.lands > now.lands });
   } else if (ARMOUR_BY_ID.get(it.id)) {
     const a = now.soak.get(slot) ?? 0, b = then.soak.get(slot) ?? 0;
-    main = { text: `${SLOT_NAMES[slot]}: ${pc(a)} → ${pc(b)} turned`, better: b >= a };
+    main = { text: `${pc(a)} → ${pc(b)} turned`, better: b >= a };
+    gain = b - a;
   } else if (SHIELDS[it.id]) {
     main = { text: `Blocks ${pc(now.block)} → ${pc(then.block)}`, better: then.block >= now.block };
+    gain = then.block - now.block;
   }
-  if (!tiny(then.through - now.through)) effects.push({ text: `gets through ${dpc(then.through - now.through)}`, better: then.through < now.through });
+  if (!tiny(then.through - now.through)) effects.push({ text: `through ${dpc(then.through - now.through)}`, better: then.through < now.through });
   if (!tiny(then.slowed - now.slowed)) effects.push({ text: `swings ${dpc(then.slowed - now.slowed)}`, better: then.slowed < now.slowed });
-  const kg = then.kg - now.kg;
-  if (Math.abs(kg) >= 0.05) effects.push({ text: `${kg > 0 ? '+' : '−'}${Math.abs(kg).toFixed(1)} kg`, better: kg < 0 });
-  return { main, effects };
+  return { main, gain, effects };
 }
 
 /** A skill's line: for each number it moves, where it starts → where it is, and what the next level makes it; a number it does not move is left out. */
@@ -258,6 +289,7 @@ export function equipReport(g: Game): EquipReport {
     return {
       slot, name: SLOT_NAMES[slot], item: it, label: it ? itemName(it) : null, does: slotDoes(g, slot, it),
       wear: it ? Math.min(1, it.dmg / 100) : 0, struck: struck.get(slot) ?? null, soak: slotSoak(g, slot), tint: tintOf(it),
+      wearSays: wearOf(g, it), upgrade: false,
     };
   });
 
@@ -267,9 +299,11 @@ export function equipReport(g: Game): EquipReport {
     const slot = slotOf(it.id);
     if (!slot || g.isEquipped(it.uid)) continue;
     const why = slot === 'offhand' && g.twoHandedInHand() ? 'Both your hands are on your weapon.' : null;
-    shelf.push({ item: it, slot, label: itemName(it), ...changeOf(g, now, it, slot), why, wear: Math.min(1, it.dmg / 100), tint: tintOf(it) });
+    shelf.push({ item: it, slot, label: itemName(it), ...changeOf(g, now, it, slot), why, kg: unitWeight(it), wear: Math.min(1, it.dmg / 100), tint: tintOf(it) });
   }
-  shelf.sort((a, b) => SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || b.item.ql - a.item.ql);
+  // Best first: what does most for its place, then by place.
+  shelf.sort((a, b) => b.gain - a.gain || SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || b.item.ql - a.item.ql);
+  for (const v of slots) v.upgrade = shelf.some((s) => s.slot === v.slot && !s.why && s.gain > 5e-4);
 
   // A blow: what it does, how long each takes and why, how often it lands and is critical, how far it reaches.
   const dealt = stanceDealt(g.settings.fightStance, perk);
@@ -284,7 +318,8 @@ export function equipReport(g: Game): EquipReport {
     { key: 'damage', label: 'Damage a blow', value: now.damage, says: now.damage.toFixed(1),
       lines: dealt !== 1 ? [`${(now.damage / dealt).toFixed(1)} the weapon in your hands`, `×${+dealt.toFixed(2)} ${FIGHT_STANCE_NAMES[g.settings.fightStance].toLowerCase()} stance`] : undefined },
     { key: 'swing', label: ranged ? 'A shot every' : 'A swing every', value: t.secs, says: `${t.secs.toFixed(2)} s`,
-      lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.map((p) => `×${p.by.toFixed(3)} ${p.what}`), ...(t.floored ? ['never quicker than the floor'] : [])] },
+      lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.map((p) => `×${p.by.toFixed(3)} ${p.what.startsWith('armour ')
+        ? `armour and shield: ${g.armourKg().toFixed(1)} kg worn, counted as ${g.armourCounted().toFixed(1)} kg (each family a share of its weight)` : p.what}`), ...(t.floored ? ['never quicker than the floor'] : [])] },
     { key: 'lands', label: 'Lands', value: lands, says: pc(lands) },
     { key: 'crit', label: 'Critical', value: crit, says: `${pc(crit)}, ×${+mul.toFixed(2)} as hard` },
     { key: 'reach', label: ranged ? 'Shoots' : 'Reaches', value: reach, says: `${+reach.toFixed(1)} tiles` },
@@ -297,7 +332,7 @@ export function equipReport(g: Game): EquipReport {
     kind: def.id === FIST.id ? 'Bare hands' : WEAPON_SKILL_NAMES[def.kind],
     ranged,
     blow,
-    hides: HIDES.map((h) => `${HIDE_NAMES[h].toLowerCase()} ×${HIDE_TAKES[h][blow]}`).join(', '),
+    hides: HIDES.map((h) => `${HIDE_NAMES[h].toLowerCase()} ×${HIDE_TAKES[h][blow]}`).join(' · '),
     side: sideOf(def),
     arrows: ranged ? (arrow ? `${itemName(arrow)}, ${g.inventory.count(arrow.id)} in your pack` : 'No arrows in your pack') : null,
   };
