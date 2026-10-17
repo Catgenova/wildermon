@@ -356,7 +356,7 @@ export function equipReport(g: Game): EquipReport {
       lines: dealt !== 1 ? [`${(now.damage / dealt).toFixed(1)} the weapon in your hands`, `×${+dealt.toFixed(2)} ${FIGHT_STANCE_NAMES[g.settings.fightStance].toLowerCase()} stance`] : undefined },
     { key: 'swing', label: ranged ? 'A shot every' : 'A swing every', value: t.secs, says: `${t.secs.toFixed(2)} s`,
       lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.flatMap((p) => p.what.startsWith('armour ')
-        ? [`×${p.by.toFixed(3)} armour and shield, ${g.armourKg().toFixed(1)} kg worn → ${g.armourCounted().toFixed(1)} kg counted (${shares(g)})`]
+        ? [`×${p.by.toFixed(3)} armour and shield, ${g.armourKg().toFixed(1)} kg worn, counted as ${g.armourCounted().toFixed(1)} kg (${shares(g)})`]
         : [`×${p.by.toFixed(3)} ${p.what}`]), ...(t.floored ? ['never quicker than the floor'] : [])] },
     { key: 'lands', label: 'Lands', value: lands, says: pc(lands) },
     { key: 'crit', label: 'Critical', value: crit, says: `${pc(crit)}, ×${+mul.toFixed(2)} as hard` },
