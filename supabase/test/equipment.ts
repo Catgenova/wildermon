@@ -126,6 +126,12 @@ check('a better sword says a blow now → with it on, for the better',
 const cs = r.shelf.find((s) => s.item.uid === coif.uid);
 check('a coif where a cap is says how much more the head turns, for the better',
   cs?.main?.better === true && /^[\d.]+% → [\d.]+% turned$/.test(cs.main.text), cs?.main?.text ?? '');
+const hand = r.slots.find((v) => v.slot === 'weapon');
+check('a two-handed sword with a shield on is a trade, not an upgrade: it says the shield comes off and what more gets through',
+  !!WEAPON_BY_ID.get('long_sword')?.twoHanded && hand?.upgrade === 'trade' && !!ls?.effects.some((e) => !e.better && e.text === 'two-handed: shield off')
+    && !!ls?.effects.some((e) => !e.better && e.text.startsWith('through +')), `${hand?.upgrade}: ${hand?.upgradeSays}`);
+check('a coif where a cap is: an upgrade, as all it costs is a slower swing, and its tooltip names that',
+  r.slots.find((v) => v.slot === 'head')?.upgrade === 'up' && (r.slots.find((v) => v.slot === 'head')?.upgradeSays ?? '').includes('but swing +'), r.slots.find((v) => v.slot === 'head')?.upgradeSays ?? '');
 check('each socket takes only what is worn there', SLOTS.every((slot) => fitsSlot(coif.id, slot) === (slot === 'head')));
 
 /* ---- on and off ---- */

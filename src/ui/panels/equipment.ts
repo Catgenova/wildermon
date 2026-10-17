@@ -441,28 +441,31 @@ export class EquipmentPanel {
       s.box.classList.toggle('eq-bare', bare);
       s.box.classList.toggle('eq-picked', this.picked === v.slot);
       s.box.classList.toggle('eq-worn-out', v.wear >= 0.75);
-      s.box.classList.toggle('eq-upgrade', v.upgrade);
+      s.box.classList.toggle('eq-upgrade', v.upgrade !== null);
+      s.box.classList.toggle('eq-trade', v.upgrade === 'trade');
+      (s.box.querySelector('.eq-up') as HTMLElement).textContent = v.upgrade === 'trade' ? '◆' : '▲';
+      const held = !v.item && v.slot === 'offhand' && !!v.does;
+      s.box.classList.toggle('eq-held', held);
       s.box.draggable = !!v.item;
       s.box.style.setProperty('--eq-tint', v.tint ?? 'var(--eq-metal)');
       s.box.style.setProperty('--eq-wear', String(1 - v.wear));
       s.pic.replaceChildren(glyph(v.slot, v.item?.id));
       // Its QL; on a bare place a blow lands on, how often one lands there.
-      s.ql.textContent = v.item ? v.item.ql.toFixed(0) : bare ? `${Math.round((v.struck ?? 0) * 100)}%` : '';
+      s.ql.textContent = v.item ? v.item.ql.toFixed(0) : bare ? `${Math.round((v.struck ?? 0) * 100)}%` : held ? '2H' : '';
       const what = v.label ?? EMPTY_SAYS[v.slot];
       const tip = `${v.name}: ${what}${v.item ? `, QL ${v.item.ql.toFixed(1)}, ${v.wearSays}` : ''}${v.does ? `. ${v.does}` : ''}`
-        + `${v.struck !== null ? `. A blow lands here ${Math.round(v.struck * 100)}% of the time` : ''}${v.upgrade ? '. Your pack has something that does better here' : ''}.`;
+        + `${v.struck !== null ? `. A blow lands here ${Math.round(v.struck * 100)}% of the time` : ''}${v.upgradeSays ? `. ${v.upgradeSays}` : ''}.`;
       s.box.title = tip;
       s.box.setAttribute('aria-label', `${tip}${v.item ? ' Press Delete to take it off.' : ''}`);
     }
   }
 
   private drawStances(r: EquipReport): void {
-    this.stanceSays.textContent = 'damage dealt / taken';
     if (this.stances.dataset.sig === r.stance.now) return;
     this.stances.dataset.sig = r.stance.now;
     this.stances.replaceChildren(...r.stance.all.map((s) => {
       const b = el('button', `eq-stance${s.id === r.stance.now ? ' eq-stance-on' : ''}`);
-      b.append(el('span', 'eq-stance-name', s.name), el('span', 'eq-stance-by', `×${+s.dealt.toFixed(2)} / ×${+s.taken.toFixed(2)}`));
+      b.append(el('span', 'eq-stance-name', s.name), el('span', 'eq-stance-by', `deals ×${+s.dealt.toFixed(2)}`), el('span', 'eq-stance-by', `takes ×${+s.taken.toFixed(2)}`));
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(s.id === r.stance.now));
@@ -516,7 +519,7 @@ export class EquipmentPanel {
     pic.append(glyph(s.slot, s.item.id));
     const text = el('span', 'eq-card-text');
     const name = el('span', 'eq-card-name');
-    name.append(el('b', '', s.label), el('span', 'eq-card-ql', ` QL ${s.item.ql.toFixed(0)} · ${placeName(s.slot)} · ${s.kg.toFixed(1)} kg`));
+    name.append(pic, el('b', '', s.label), el('span', 'eq-card-ql', ` QL ${s.item.ql.toFixed(0)} · ${placeName(s.slot)} · ${s.kg.toFixed(1)} kg`));
     text.append(name);
     // What it does in its place, and beside it what else moves.
     const fx = el('span', 'eq-card-fx');
@@ -524,7 +527,7 @@ export class EquipmentPanel {
     for (const e of s.effects) fx.append(el('span', `eq-fx ${e.better ? 'eq-fx-good' : 'eq-fx-bad'}`, e.text));
     if (fx.childElementCount) text.append(fx);
     if (s.why) text.append(el('span', 'eq-card-why', s.why));
-    card.append(pic, text);
+    card.append(text);
     const says = [s.main?.text, ...s.effects.map((e) => e.text)].filter(Boolean).join(', ');
     card.title = s.why ?? `${s.label}, QL ${s.item.ql.toFixed(1)}: click or drag to put it on${says ? `. ${says}` : ''}.`;
     card.setAttribute('aria-label', card.title);
@@ -552,8 +555,10 @@ export class EquipmentPanel {
     const pic = el('span', 'eq-weapon-pic');
     pic.append(glyph('weapon', this.game.worn('weapon')?.id));
     const words = el('div', 'eq-weapon-words');
+    const hides = el('span', 'eq-hides');
+    hides.append(...[...r.weapon.hides.split(' · '), 'no hide ×1'].map((h) => el('span', 'eq-hide', h)));
     words.append(el('b', 'eq-weapon-head', `${r.weapon.blow === 'cut' ? 'A cut' : r.weapon.blow === 'pierce' ? 'A thrust' : 'A crushing blow'} against a hide`),
-      el('span', '', `${r.weapon.hides} · no hide ×1`));
+      hides);
     if (r.weapon.side) words.append(el('span', 'eq-weapon-side', `A blow that lands also ${r.weapon.side}.`));
     if (r.weapon.arrows) words.append(el('span', 'eq-weapon-side', r.weapon.arrows));
     card.append(pic, words);

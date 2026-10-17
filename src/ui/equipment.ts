@@ -15,8 +15,8 @@
  */
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, hitChance, pieceSoak, SHIELDS, SLOT_NAMES, SLOTS, slotOf, WEAPON_BY_ID,
   WEAPON_SKILL_NAMES, weaponDamage, type Slot, type WeaponDef } from '../game/gear';
-import { BLOCK_PER_SKILL, blockChance, blockQl, blowOf, bowReach, critMul, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance,
-  FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, HIDE_NAMES, HIDE_TAKES, HIDES, meleeReach, myCritChance, nockedArrow, SHIELD_WEAR, sideOf,
+import { ARMOUR_SWING_BY, BLOCK_PER_SKILL, blockChance, blockQl, blowOf, bowReach, critMul, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, dodgeChance,
+  FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, HIDE_NAMES, HIDE_TAKES, HIDES, meleeReach, myCritChance, nockedArrow, SHIELD_SWING_BY, SHIELD_WEAR, sideOf,
   stanceDealt, stanceSays, stanceTaken, swungWith, type FightStance } from '../game/fight';
 import { BELT_MAX, QL_PER_LOOP } from '../game/belt';
 import type { Game } from '../game/game';
@@ -51,8 +51,13 @@ export interface SlotView {
   tint: string | null;
   /** How worn it is and what that costs it, by the rule that reads the wear: "worn 38%: turns ×0.71 of what it turned new". */
   wearSays: string | null;
-  /** Whether the pack holds something that does better here, by its shelf card's main line. */
-  upgrade: boolean;
+  /**
+   * Whether the pack holds something that does more here, by its shelf card's main line: 'up' when nothing
+   * else it moves is for the worse, 'trade' when something is, or null.
+   */
+  upgrade: 'up' | 'trade' | null;
+  /** For a place something better is waiting: what it is, and what it costs, said once for its tooltip. */
+  upgradeSays: string | null;
 }
 
 /** One thing a change does, and whether for the better: "through −1.7%". */
@@ -171,6 +176,7 @@ const blockOf = (g: Game, it: Item): number => {
 function slotDoes(g: Game, slot: Slot, it: Item | null): string | null {
   const loops = `one loop for a job per ${QL_PER_LOOP} QL, up to ${BELT_MAX}`;
   const jewel = `a stone set in a ring or pendant gives ${+(JEWEL_BONUS * 100).toFixed(1)}% more skill from each go at its trade`;
+  if (!it && slot === 'offhand' && g.twoHandedInHand()) return `Held: both hands are on your ${itemName(g.worn('weapon') as Item).toLowerCase()}`;
   if (!it) return slot === 'belt' ? `Nothing in a fight; a belt has ${loops}` : slot === 'jewel' ? `Nothing in a fight; ${jewel}` : null;
   if (ARMOUR_BY_ID.get(it.id)) return `Turns aside ${pc(slotSoak(g, slot) ?? 0)} of a blow here`;
   const w = WEAPON_BY_ID.get(it.id);
@@ -180,6 +186,18 @@ function slotDoes(g: Game, slot: Slot, it: Item | null): string | null {
   const stones = stonesOf(it);
   if (slot === 'jewel') return stones.length ? `${+(JEWEL_BONUS * 100).toFixed(1)}% more skill from each go at ${stones.map((x) => tradeName(x.skill)).join(', ')}; nothing in a fight` : 'No stone set in it';
   return itemDef(it.id).name;
+}
+
+/** What of each family's weight counts against a swing, for the families worn: "leather ×0.5 · chain ×1 · shield ×1". */
+function shares(g: Game): string {
+  const seen = new Map<string, number>();
+  for (const slot of SLOTS) {
+    const it = g.worn(slot);
+    const a = it && ARMOUR_BY_ID.get(it.id);
+    if (a) seen.set(a.cls, ARMOUR_SWING_BY[a.cls]);
+    else if (it && slot === 'offhand' && SHIELDS[it.id]) seen.set('shield', SHIELD_SWING_BY);
+  }
+  return [...seen].map(([k, by]) => `${k} ×${+by.toFixed(2)}`).join(' · ');
 }
 
 /** How worn a thing is, and what the wear takes off it, asked of the rule with the wear and without it. */
@@ -250,14 +268,16 @@ function changeOf(g: Game, now: Heads, it: Item, slot: Slot): { main: Effect | n
     if (!tiny(then.lands - now.lands)) effects.push({ text: `lands ${dpc(then.lands - now.lands)}`, better: then.lands > now.lands });
   } else if (ARMOUR_BY_ID.get(it.id)) {
     const a = now.soak.get(slot) ?? 0, b = then.soak.get(slot) ?? 0;
-    main = { text: `${pc(a)} → ${pc(b)} turned`, better: b >= a };
+    // Onto a bare place, just what it turns; over something, from what that turns.
+    main = { text: now.soak.get(slot) == null ? `${pc(b)} turned` : `${pc(a)} → ${pc(b)} turned`, better: b >= a };
     gain = b - a;
   } else if (SHIELDS[it.id]) {
     main = { text: `Blocks ${pc(now.block)} → ${pc(then.block)}`, better: then.block >= now.block };
     gain = then.block - now.block;
   }
   if (!tiny(then.through - now.through)) effects.push({ text: `through ${dpc(then.through - now.through)}`, better: then.through < now.through });
-  if (!tiny(then.slowed - now.slowed)) effects.push({ text: `swings ${dpc(then.slowed - now.slowed)}`, better: then.slowed < now.slowed });
+  if (WEAPON_BY_ID.get(it.id)?.twoHanded && g.worn('offhand')) effects.push({ text: 'two-handed: shield off', better: false });
+  if (!tiny(then.slowed - now.slowed)) effects.push({ text: `swing ${dpc(then.slowed - now.slowed)}`, better: then.slowed < now.slowed });
   return { main, gain, effects };
 }
 
@@ -289,7 +309,7 @@ export function equipReport(g: Game): EquipReport {
     return {
       slot, name: SLOT_NAMES[slot], item: it, label: it ? itemName(it) : null, does: slotDoes(g, slot, it),
       wear: it ? Math.min(1, it.dmg / 100) : 0, struck: struck.get(slot) ?? null, soak: slotSoak(g, slot), tint: tintOf(it),
-      wearSays: wearOf(g, it), upgrade: false,
+      wearSays: wearOf(g, it), upgrade: null, upgradeSays: null,
     };
   });
 
@@ -303,7 +323,16 @@ export function equipReport(g: Game): EquipReport {
   }
   // Best first: what does most for its place, then by place.
   shelf.sort((a, b) => b.gain - a.gain || SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || b.item.ql - a.item.ql);
-  for (const v of slots) v.upgrade = shelf.some((s) => s.slot === v.slot && !s.why && s.gain > 5e-4);
+  for (const v of slots) {
+    // The best for this place, by what it does there; a trade if anything else it moves is for the worse.
+    const best = shelf.find((s) => s.slot === v.slot && !s.why && s.gain > 5e-4);
+    if (!best) continue;
+    // A trade is one that makes the other side of a fight worse: more getting through, landing less, the shield off.
+    // A slower swing alone is named in its tooltip but does not make it one.
+    const worse = best.effects.filter((e) => !e.better);
+    v.upgrade = worse.some((e) => !e.text.startsWith('swing')) ? 'trade' : 'up';
+    v.upgradeSays = `${best.label} in your pack: ${best.main?.text ?? ''}${worse.length ? `, but ${worse.map((e) => e.text).join(', ')}` : ''}`;
+  }
 
   // A blow: what it does, how long each takes and why, how often it lands and is critical, how far it reaches.
   const dealt = stanceDealt(g.settings.fightStance, perk);
@@ -318,8 +347,9 @@ export function equipReport(g: Game): EquipReport {
     { key: 'damage', label: 'Damage a blow', value: now.damage, says: now.damage.toFixed(1),
       lines: dealt !== 1 ? [`${(now.damage / dealt).toFixed(1)} the weapon in your hands`, `×${+dealt.toFixed(2)} ${FIGHT_STANCE_NAMES[g.settings.fightStance].toLowerCase()} stance`] : undefined },
     { key: 'swing', label: ranged ? 'A shot every' : 'A swing every', value: t.secs, says: `${t.secs.toFixed(2)} s`,
-      lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.map((p) => `×${p.by.toFixed(3)} ${p.what.startsWith('armour ')
-        ? `armour and shield: ${g.armourKg().toFixed(1)} kg worn, counted as ${g.armourCounted().toFixed(1)} kg (each family a share of its weight)` : p.what}`), ...(t.floored ? ['never quicker than the floor'] : [])] },
+      lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.flatMap((p) => p.what.startsWith('armour ')
+        ? [`×${p.by.toFixed(3)} armour and shield: ${g.armourKg().toFixed(1)} kg worn, ${g.armourCounted().toFixed(1)} kg counted`, `  of their weight: ${shares(g)}`]
+        : [`×${p.by.toFixed(3)} ${p.what}`]), ...(t.floored ? ['never quicker than the floor'] : [])] },
     { key: 'lands', label: 'Lands', value: lands, says: pc(lands) },
     { key: 'crit', label: 'Critical', value: crit, says: `${pc(crit)}, ×${+mul.toFixed(2)} as hard` },
     { key: 'reach', label: ranged ? 'Shoots' : 'Reaches', value: reach, says: `${+reach.toFixed(1)} tiles` },
