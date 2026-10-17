@@ -72,6 +72,11 @@ export interface ShelfView {
   main: Effect | null;
   /** How much better the main line gets, for putting the best first: a blow's share more, or the share of a blow more turned or blocked. */
   gain: number;
+  /**
+   * What it comes to: 'up' does more in its place with nothing else in a fight the worse, 'trade' does more but costs
+   * something a fight reads (more gets through, lands less, the shield off), 'down' does less.
+   */
+  verdict: 'up' | 'trade' | 'down';
   /** And what else it moves, each said once and signed: "gets through −1.7%", "swings +0.5%", "+1.8 kg". */
   effects: Effect[];
   /** Why it cannot go on now, or null. */
@@ -319,18 +324,21 @@ export function equipReport(g: Game): EquipReport {
     const slot = slotOf(it.id);
     if (!slot || g.isEquipped(it.uid)) continue;
     const why = slot === 'offhand' && g.twoHandedInHand() ? 'Both your hands are on your weapon.' : null;
-    shelf.push({ item: it, slot, label: itemName(it), ...changeOf(g, now, it, slot), why, kg: unitWeight(it), wear: Math.min(1, it.dmg / 100), tint: tintOf(it) });
+    const change = changeOf(g, now, it, slot);
+    // A slower swing alone is named but does not make a trade: nearly every piece costs some.
+    const costs = change.effects.some((e) => !e.better && !e.text.startsWith('swing'));
+    const verdict = change.gain <= 5e-4 ? 'down' : costs ? 'trade' : 'up';
+    shelf.push({ item: it, slot, label: itemName(it), ...change, verdict, why, kg: unitWeight(it), wear: Math.min(1, it.dmg / 100), tint: tintOf(it) });
   }
-  // Best first: what does most for its place, then by place.
-  shelf.sort((a, b) => b.gain - a.gain || SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || b.item.ql - a.item.ql);
+  // Clean upgrades first, then trades, then the rest; within each, what does most for its place first.
+  const rank = { up: 0, trade: 1, down: 2 } as const;
+  shelf.sort((a, b) => Number(!!a.why) - Number(!!b.why) || rank[a.verdict] - rank[b.verdict] || b.gain - a.gain || SLOTS.indexOf(a.slot) - SLOTS.indexOf(b.slot) || b.item.ql - a.item.ql);
   for (const v of slots) {
     // The best for this place, by what it does there; a trade if anything else it moves is for the worse.
-    const best = shelf.find((s) => s.slot === v.slot && !s.why && s.gain > 5e-4);
+    const best = shelf.find((s) => s.slot === v.slot && !s.why && s.verdict !== 'down');
     if (!best) continue;
-    // A trade is one that makes the other side of a fight worse: more getting through, landing less, the shield off.
-    // A slower swing alone is named in its tooltip but does not make it one.
     const worse = best.effects.filter((e) => !e.better);
-    v.upgrade = worse.some((e) => !e.text.startsWith('swing')) ? 'trade' : 'up';
+    v.upgrade = best.verdict === 'up' ? 'up' : 'trade';
     v.upgradeSays = `${best.label} in your pack: ${best.main?.text ?? ''}${worse.length ? `, but ${worse.map((e) => e.text).join(', ')}` : ''}`;
   }
 
@@ -348,7 +356,7 @@ export function equipReport(g: Game): EquipReport {
       lines: dealt !== 1 ? [`${(now.damage / dealt).toFixed(1)} the weapon in your hands`, `×${+dealt.toFixed(2)} ${FIGHT_STANCE_NAMES[g.settings.fightStance].toLowerCase()} stance`] : undefined },
     { key: 'swing', label: ranged ? 'A shot every' : 'A swing every', value: t.secs, says: `${t.secs.toFixed(2)} s`,
       lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.flatMap((p) => p.what.startsWith('armour ')
-        ? [`×${p.by.toFixed(3)} armour and shield: ${g.armourKg().toFixed(1)} kg worn, ${g.armourCounted().toFixed(1)} kg counted`, `  of their weight: ${shares(g)}`]
+        ? [`×${p.by.toFixed(3)} armour and shield, ${g.armourKg().toFixed(1)} kg worn → ${g.armourCounted().toFixed(1)} kg counted (${shares(g)})`]
         : [`×${p.by.toFixed(3)} ${p.what}`]), ...(t.floored ? ['never quicker than the floor'] : [])] },
     { key: 'lands', label: 'Lands', value: lands, says: pc(lands) },
     { key: 'crit', label: 'Critical', value: crit, says: `${pc(crit)}, ×${+mul.toFixed(2)} as hard` },

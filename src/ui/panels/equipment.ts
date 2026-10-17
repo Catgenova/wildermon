@@ -519,6 +519,8 @@ export class EquipmentPanel {
     pic.append(glyph(s.slot, s.item.id));
     const text = el('span', 'eq-card-text');
     const name = el('span', 'eq-card-name');
+    // The same mark as a socket's: a clean upgrade, or a trade.
+    if (s.verdict !== 'down' && !s.why) name.append(el('span', `eq-card-mark eq-card-${s.verdict}`, s.verdict === 'up' ? '▲' : '◆'));
     name.append(pic, el('b', '', s.label), el('span', 'eq-card-ql', ` QL ${s.item.ql.toFixed(0)} · ${placeName(s.slot)} · ${s.kg.toFixed(1)} kg`));
     text.append(name);
     // What it does in its place, and beside it what else moves.

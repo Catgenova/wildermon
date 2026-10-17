@@ -132,6 +132,9 @@ check('a two-handed sword with a shield on is a trade, not an upgrade: it says t
     && !!ls?.effects.some((e) => !e.better && e.text.startsWith('through +')), `${hand?.upgrade}: ${hand?.upgradeSays}`);
 check('a coif where a cap is: an upgrade, as all it costs is a slower swing, and its tooltip names that',
   r.slots.find((v) => v.slot === 'head')?.upgrade === 'up' && (r.slots.find((v) => v.slot === 'head')?.upgradeSays ?? '').includes('but swing +'), r.slots.find((v) => v.slot === 'head')?.upgradeSays ?? '');
+const order = r.shelf.map((x) => x.verdict);
+check('the shelf puts clean upgrades before trades, and trades before what does less',
+  order.every((v, i) => i === 0 || ({ up: 0, trade: 1, down: 2 })[order[i - 1]] <= ({ up: 0, trade: 1, down: 2 })[v]) && ls?.verdict === 'trade', order.join(', '));
 check('each socket takes only what is worn there', SLOTS.every((slot) => fitsSlot(coif.id, slot) === (slot === 'head')));
 
 /* ---- on and off ---- */
