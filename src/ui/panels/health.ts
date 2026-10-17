@@ -153,6 +153,10 @@ export class HealthPanel {
   private tab: Tab = 'wounds';
   /** The wound open in the list, by its key (`woundKey`). */
   private picked: string | null = null;
+  /** The wound whose care was last drawn open, so a redraw of the same one does not play its opening again. */
+  private shownOpen: string | null = null;
+  /** "How to make" opened or shut by hand, by wound and care, kept across redraws. */
+  private makeOpen = new Map<string, boolean>();
   private report: HealthReport | null = null;
   private drawn = '';
   private lastHealth = -1;
@@ -423,7 +427,8 @@ export class HealthPanel {
     this.sum.classList.toggle('hp-sum-bad', bits.length > 0);
     this.emptyIn.hidden = r.emptyIn === null;
     if (r.emptyIn !== null) {
-      this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} at this rate`;
+      this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)}`;
+      if (r.emptyIn > 0) this.emptyText.append(el('span', 'hp-empty-rate', ' at this rate'));
       if (r.venom > 0) this.emptyText.append(el('span', 'hp-empty-note', ' incl. venom'));
     }
     this.rate.replaceChildren(...r.rates.map((x) => {
@@ -702,7 +707,11 @@ export class HealthPanel {
       this.woundsPane.replaceChildren(empty);
       return;
     }
+    // Redrawn as the numbers move: keep the focus where it was.
+    const had = this.woundsPane.contains(document.activeElement) ? (document.activeElement as HTMLElement).dataset.focus : undefined;
     this.woundsPane.replaceChildren(...r.wounds.map((v) => this.woundRow(v, now, doing && doing.key === v.key ? doing : null)));
+    this.shownOpen = this.picked;
+    if (had) this.woundsPane.querySelector<HTMLElement>(`[data-focus="${CSS.escape(had)}"]`)?.focus({ preventScroll: true });
   }
 
   private flinch(): void {
@@ -720,6 +729,7 @@ export class HealthPanel {
     if (seen !== undefined && now - seen < SEEN_TO) box.classList.add('hp-wound-seen');
     const head = el('button', 'hp-wound-head');
     head.type = 'button';
+    head.dataset.focus = `${v.key}|head`;
     head.setAttribute('aria-expanded', String(open));
     const name = el('span', 'hp-wound-name');
     name.append(el('b', '', v.title), el('span', 'hp-wound-part', ` · ${v.part}`));
@@ -742,12 +752,12 @@ export class HealthPanel {
     }
     head.addEventListener('click', () => this.pick(v.key));
     box.append(head);
-    if (open) box.append(this.treat(v, doing));
+    if (open) box.append(this.treat(v, doing, this.shownOpen !== v.key));
     return box;
   }
 
-  private treat(v: WoundView, doing: { id: string; k: number; left: number } | null): HTMLElement {
-    const block = el('div', 'hp-treat');
+  private treat(v: WoundView, doing: { id: string; k: number; left: number } | null, opening: boolean): HTMLElement {
+    const block = el('div', `hp-treat${opening ? ' hp-treat-opening' : ''}`);
     if (!v.cares.length) {
       const done = el('div', 'hp-treat-done');
       done.append(icon('cover'), el('span', '', `Under the herb that suits it: nothing closes it faster, and it cannot go bad. ${v.eta}`));
@@ -768,6 +778,7 @@ export class HealthPanel {
     const wants = c.why !== null && !c.holding ? `Needs ${c.options.length > 1 ? 'a dressing' : c.options[0].label.toLowerCase()}` : null;
     const go = el('button', 'hp-go', doing ? 'Working…' : wants ?? c.button);
     go.type = 'button';
+    go.dataset.focus = `${v.key}|${c.id}`;
     go.disabled = c.why !== null || !c.target || !!doing;
     if (c.why) {
       go.title = c.why;
@@ -826,7 +837,10 @@ export class HealthPanel {
       const body = el('div', 'hp-make-body');
       for (const rv of c.recipes) body.append(this.recipeRow(rv));
       make.append(sum, body);
-      make.open = !c.holding;
+      const kept = `${v.key}|${c.id}`;
+      make.open = this.makeOpen.get(kept) ?? !c.holding;
+      make.addEventListener('toggle', () => this.makeOpen.set(kept, make.open));
+      sum.dataset.focus = `${kept}|make`;
       box.append(make);
     }
     return box;

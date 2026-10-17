@@ -7603,8 +7603,8 @@ kbd {
 .hp-rate-good { background: color-mix(in srgb, var(--hp-ok) 17%, transparent); color: var(--hp-ok); }
 .hp-rate-still { background: var(--hp-sunk); color: var(--hp-dim); }
 
-/* Under a notched rule, as if cut along the card. */
-.hp-pills { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 8px; background: repeating-linear-gradient(90deg, var(--hp-line) 0 7px, transparent 7px 10px) top / 100% 2px no-repeat; }
+/* Under a groove cut along the card: a dark line and its lit edge. */
+.hp-pills { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding-top: 8px; background: linear-gradient(var(--hp-line), var(--hp-line)) 0 0 / 100% 1px no-repeat, linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.35)) 0 1px / 100% 1px no-repeat; }
 .hp-pill-head { display: flex; justify-content: space-between; font-size: 11px; line-height: 1.2; }
 .hp-pill-label { color: var(--hp-dim); }
 .hp-pill-num { font-variant-numeric: tabular-nums; font-weight: 600; }
@@ -7888,7 +7888,8 @@ kbd {
 .hp-chip-dressed { color: var(--hp-dim); }
 
 /* ---- what can be done ---- */
-.hp-treat { display: grid; gap: 8px; padding: 0 10px 10px 13px; animation: hp-open 0.22s ease-out; }
+.hp-treat { display: grid; gap: 8px; padding: 0 10px 10px 13px; }
+.hp-treat-opening { animation: hp-open 0.22s ease-out; }
 
 @keyframes hp-open {
   from { opacity: 0; transform: translateY(-4px); }
@@ -8156,7 +8157,7 @@ kbd {
 
 /* Narrow (`hp-narrow`, set by the panel): you stand in the top card beside your numbers, the heart by your health, and the tabs take the full width under. */
 .hp-narrow .hp-main { grid-template-columns: minmax(0, 1fr); }
-.hp-narrow .hp-top { --hp-stage-w: 112px; --hp-stage-h: 200px; grid-template-columns: var(--hp-stage-w) minmax(0, 1fr); align-items: start; padding: 8px; }
+.hp-narrow .hp-top { --hp-stage-w: 112px; --hp-stage-h: 168px; grid-template-columns: var(--hp-stage-w) minmax(0, 1fr); align-items: start; padding: 8px; }
 .hp-narrow .hp-stage-box { position: static; align-self: stretch; }
 .hp-narrow .hp-stage { height: 100%; min-height: var(--hp-stage-h); }
 .hp-narrow .hp-legend { display: none; }
@@ -8164,10 +8165,11 @@ kbd {
 .hp-narrow .hp-heart { width: 30px; height: 28px; align-self: center; }
 .hp-narrow .hp-sum { flex-basis: 100%; margin-left: 0; }
 .hp-narrow .hp-empty-in { font-size: 15px; }
+.hp-narrow .hp-empty-rate { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .hp-heart > svg, .hp-heart-wave, .hp-heart-low .hp-heart-rim, .hp-flinch, .hp-pin-ring, .hp-wound-dot, .hp-wound-seen,
-  .hp-treat, .hp-burst, .hp-empty-mark {
+  .hp-treat-opening, .hp-burst, .hp-empty-mark {
     animation: none !important;
   }
 }
