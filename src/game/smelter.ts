@@ -238,7 +238,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       s.lit = false;
       g.events.emit('smelter');
       g.events.emit('world', s.x, s.y);
-      g.logMsg('You damp the smelter down. What is left of the fuel keeps.', 'event');
+      g.logMsg(`You damp the smelter down. Its ${smelterBurnsFor(s)} of fuel keeps for later.`, 'event');
     },
   },
   {

@@ -205,7 +205,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
       if (!f) return;
       f.lit = false;
       g.events.emit('world', f.x, f.y);
-      g.logMsg('You smother the fire. The wood is saved for later.', 'event');
+      g.logMsg(`You smother the fire. Its ${fireBurnsFor(f)} of fuel keeps for later.`, 'event');
     },
   },
   {

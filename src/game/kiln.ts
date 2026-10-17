@@ -289,7 +289,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       k.lit = false;
       g.events.emit('smelter');
       g.events.emit('world', k.x, k.y);
-      g.logMsg('You close the kiln down and let it cool. What is left of the fuel keeps.', 'event');
+      g.logMsg(`You close the kiln down and let it cool. Its ${kilnBurnsFor(k)} of fuel keeps for later.`, 'event');
     },
   },
   {
