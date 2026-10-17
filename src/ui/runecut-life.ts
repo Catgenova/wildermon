@@ -7,6 +7,7 @@ import { EMBERS, embers } from './life/embers';
 import { FIREFLIES, fireflies } from './life/fireflies';
 import { glints } from './life/glints';
 import { hedgehog } from './life/hedgehog';
+import { sheen } from './life/sheen';
 import { ladybird } from './life/ladybird';
 import { MOTES_LEAST, MOTES_MORE, motes } from './life/motes';
 import { moth } from './life/moth';
@@ -39,6 +40,7 @@ export { EMBERS, FIREFLIES, FLAKES, MOTES_LEAST, MOTES_MORE };
 export const LIFE: Array<{ kind: string | null; what: string }> = [
   { kind: 'wicker', what: 'two butterflies by day' },
   { kind: 'linen', what: 'a hedgehog asleep on the foot, out and about more after dark' },
+  { kind: 'armoury', what: 'light running down the crossed swords now and then by day' },
   { kind: 'turf', what: `${FIREFLIES} fireflies after dark` },
   { kind: 'bench', what: 'a moth round the lantern after dark, and sparks while something is being made' },
   { kind: 'stall', what: 'a bee by day' },
@@ -72,6 +74,9 @@ export function paintLife(g: Ctx, p: LifePiece, t: number, world: LifeWorld): vo
       break;
     case 'linen':
       hedgehog(g, p, t, world.night);
+      break;
+    case 'armoury':
+      if (day) sheen(g, p, t);
       break;
     case 'turf':
       if (!day) fireflies(g, p, t);

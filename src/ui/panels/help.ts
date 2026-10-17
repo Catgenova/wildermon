@@ -90,7 +90,7 @@ import {
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, WAKE_AFTER_DAWN, wearPerUse,
   QL_TOP,
 } from '../../game/game';
-import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
+import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
 import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, RARITIES, RARITY_ROOM, rarityChance, roomFor } from '../../game/items';
@@ -2753,6 +2753,14 @@ export function helpText(): string {
     whatever you were doing goes to the front of the line and is picked up again after, and you keep
     swinging until it is dead, gone or out of reach. A bite while you walk never turns you round, a swing
     you were already aiming at it is left alone, and nothing tame counts. Settings, Fighting turns it off.</p>
+    <p>The <b>Equipment</b> window (<b>${keyName(BIND_BY_ID.get('win_equipment')?.keys[0] ?? '')}</b>, or Equipment on the menu) shows you
+    in everything you have on, with a socket for each of the ${numberWord(SLOTS.length)} places round you. Drag a thing onto its socket or
+    onto you to put it on, from the window's shelf or from your pack, and back to the shelf to take it off; a click on the shelf puts
+    a thing on, and a double-click on a socket takes it off. The shelf says, beside each thing, what it would change against what is on
+    in its place. Its tabs give every number a fight reads off you, each from the rule the fight uses: a blow's damage, time, chance
+    to land and be critical, reach and damage a second; where a blow lands and what is turned aside there, your dodge, your block, your
+    stance and what gets through of each kind of blow, with what it all costs to carry; and each skill behind them, with what it
+    adds now over where it starts and what its next level adds.</p>
     <p>Your <b>stance</b> is on the button beside your health bar; click it or press
     <b>${keyName(BIND_BY_ID.get('fight_stance')?.keys[0] ?? '')}</b> for the next. ${FIGHT_STANCES.map((st) => `<b>${FIGHT_STANCE_NAMES[st]}</b>: ${stanceSays(st)}`).join(' ')}</p>
     <p>A swing takes its weapon's own time before skill: ${listed([...WEAPONS].filter((w) => !w.ammo).sort((a, b) => a.swing - b.swing).map((w) => `${itemDef(w.id).name.toLowerCase()} ${w.swing}`))}

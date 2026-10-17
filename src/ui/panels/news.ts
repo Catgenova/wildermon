@@ -105,7 +105,7 @@ import { defaultKey } from '../../game/keybinds';
 import { guidePages } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ARMOUR, SHIELDS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ARMOUR, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { itemDef, RARITIES, rarityChance } from '../../game/items';
 import { improvable } from '../../game/improve';
@@ -2263,6 +2263,15 @@ export const NEWS: News[] = [
       `Building a wall, a floor, a frame, a bridge or an aqueduct takes what it lays from crates, carts, wagons and containers within ${CRAFT_REACH} tiles, `
         + 'the same stores a craft takes from, after your pack and a crate on the tile: draw the wagon up beside the wall and build out of it. '
         + 'Settings, Use stores within reach, turns it off. A Mason\'s Hod Carrier still reaches further on stone, and with it off too.',
+    ],
+  },  {
+    n: 170,
+    day: '2026-10-17',
+    lines: () => [
+      `An Equipment window, on the menu and on ${keyName(BIND_BY_ID.get('win_equipment')?.keys[0] ?? '')}: you on a turntable in everything you have on, with a socket for each of the ${numberWord(SLOTS.length)} places round you. `
+        + 'Drag a thing onto its socket or onto you to put it on, and back to the shelf of what is in your pack to take it off; the shelf says what each would change against what is on. '
+        + 'Its tabs give every number a fight reads off you, each from the rule the fight uses (a blow, a blow taken, what it costs to carry), '
+        + 'and each skill behind them with what it adds now and at its next level. The stance is chosen there too. Framed in oak and iron, with two swords crossed over a shield.',
     ],
   },
 ];

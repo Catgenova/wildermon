@@ -3030,6 +3030,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/buildstores.mjs --log-level=error
           node node_modules/.cache/buildstores.mjs
 
+      - name: The Equipment window's numbers are the fight's own
+        run: |
+          # Asked: an Equipment window to drag things on and off a figure of
+          # you, with every combat number and the skills behind them. Each
+          # number it shows is held against the rule that decides it in a
+          # fight, each skill's line against the rule at its start and its next
+          # level, and putting on and taking off goes through the pack's jobs.
+          # No database.
+          npx esbuild supabase/test/equipment.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/equipment.mjs --log-level=error
+          node node_modules/.cache/equipment.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

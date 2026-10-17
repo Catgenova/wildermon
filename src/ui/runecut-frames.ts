@@ -32,7 +32,7 @@ export const FRAME_REACH = 4;
  * lumps, and the lavender and wheat caught in it, hang a little out over the
  * island. Never more than a few pixels: a frame is not to cover the game.
  */
-export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, linen: 18, turf: 14, ironbound: 12, strap: 12, toolbelt: 14 };
+export const FRAME_REACHES: Partial<Record<string, number>> = { burlap: 10, crate: 8, bench: 12, runestone: 12, guild: 12, altar: 8, parchment: 12, treasure: 14, stall: 36, scroll: 42, book: 24, letter: 26, palisade: 30, wicker: 22, linen: 18, armoury: 40, turf: 14, ironbound: 12, strap: 12, toolbelt: 14 };
 /** How far past a window's edge a frame of this kind may stand. */
 export const reachOf = (kind: string): number => FRAME_REACHES[kind] ?? FRAME_REACH;
 
@@ -60,6 +60,7 @@ export const FRAMES: FrameDef[] = [
   { kind: 'palisade', label: 'Oak and stone parapet', for: ['deed'] },
   { kind: 'wicker', label: 'Pale wood and wildflowers', for: ['wildermon'] },
   { kind: 'linen', label: 'Birch, linen and herbs', for: ['health'] },
+  { kind: 'armoury', label: 'Oak, iron and crossed swords', for: ['equipment'] },
   { kind: 'turf', label: 'Mossy wood and stone', for: ['tile'] },
   { kind: 'ironbound', label: 'Grey stone, iron and gold', for: ['settings'] },
   { kind: 'chain', label: 'Iron chain', for: ['keeper'] },
@@ -72,7 +73,7 @@ export const FRAMES: FrameDef[] = [
  * they are made of is bulky: a stuffed sack's roll does not lie flat in 16.
  * The window grows by it like any rim, so its content keeps its room.
  */
-export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26, linen: 26, ironbound: 22 };
+export const FRAME_RIM: Partial<Record<string, number>> = { burlap: 34, crate: 24, bench: 26, runestone: 32, guild: 26, altar: 22, parchment: 22, treasure: 26, stall: 30, scroll: 26, book: 28, letter: 30, palisade: 28, wicker: 26, linen: 26, armoury: 24, ironbound: 22 };
 
 /**
  * The frames that are wider or stand further out than the rest, in words for
@@ -4932,6 +4933,12 @@ function cottage(g: Ctx, x: number, y: number, s: number): void {
   g.fillRect(x - s * 0.05, y - wh - roof * 0.55, s * 0.1, s * 0.08);
 }
 
+/**
+ * Where the Equipment frame's swords cross, in the band's width down from its edge, how long a blade is in
+ * band widths, and how far each leans off upright (radians): the frame draws them there and the light runs down them there.
+ */
+export const ARMOURY_SWORDS = { cy: 0.5, blade: 1.95, tilt: 0.62 };
+
 /* ---- the frames -------------------------------------------------------------- */
 
 type Painter = (g: Ctx, w: number, h: number, F: number, R: () => number, o: FrameOpts) => void;
@@ -6126,6 +6133,175 @@ const PAINTERS: Record<string, Painter> = {
    * grass standing up off the top and the foot, and a pebble or two sat on
    * the top edge.
    */
+  /*
+   * Equipment: an armoury's rack. A band of oak boards, mitred at the corners
+   * and capped there with iron brackets, a steel fillet ruled round the inside,
+   * a rivet every so often along each side, and leather wound twice round each
+   * side near its corners. Over the middle of the top, two swords crossed
+   * behind a round shield with an iron rim and boss, their points up past the
+   * edge (`ARMOURY_SWORDS`, which the light down them reads); at the middle of the foot,
+   * a leather strap round the band, its brass buckle done up.
+   */
+  armoury(g, w, h, F, R) {
+    const oak = WOOD.oak;
+    g.save();
+    g.beginPath();
+    g.rect(0, 0, w, h);
+    g.clip();
+    eachSide(g, w, h, (s) => {
+      g.save();
+      mitre(g, s.len, F, 2);
+      g.clip();
+      board(g, R, -2, s.len + 2, 0, F, oak, s.lit);
+      g.restore();
+    });
+    g.restore();
+    // The steel fillet round the inside, and the ink.
+    band(g, w, h, F, F * 0.84);
+    const steel = g.createLinearGradient(0, 0, 0, h);
+    steel.addColorStop(0, '#c9ced8');
+    steel.addColorStop(1, '#7c8392');
+    g.fillStyle = steel;
+    g.fill('evenodd');
+    inkBand(g, w, h, F);
+    g.strokeStyle = INK;
+    g.lineWidth = 0.8;
+    g.strokeRect(F * 0.84 + 0.4, F * 0.84 + 0.4, w - F * 1.68 - 0.8, h - F * 1.68 - 0.8);
+    // Leather wound round each side near its corners, two turns apiece.
+    const LEATHER = H('#7a4a2c');
+    eachSide(g, w, h, (s) => {
+      for (const at of [F * 2.2, s.len - F * 2.2 - F * 0.9]) {
+        if (s.len < F * 7) continue;
+        for (let k = 0; k < 2; k++) {
+          const x = at + k * F * 0.42;
+          g.save();
+          g.beginPath();
+          g.moveTo(x, -0.8);
+          g.lineTo(x + F * 0.34, -0.8);
+          g.lineTo(x + F * 0.5, F * 0.84);
+          g.lineTo(x + F * 0.16, F * 0.84);
+          g.closePath();
+          g.shadowColor = 'rgba(30, 20, 14, 0.4)';
+          g.shadowBlur = 2;
+          g.shadowOffsetX = 1;
+          const c = g.createLinearGradient(x, 0, x + F * 0.5, 0);
+          c.addColorStop(0, css(light(LEATHER, 0.25)));
+          c.addColorStop(1, css(shade(LEATHER, 0.25)));
+          g.fillStyle = c;
+          g.fill();
+          g.restore();
+          g.strokeStyle = css(shade(LEATHER, 0.55));
+          g.lineWidth = 0.7;
+          g.stroke();
+        }
+      }
+      // A rivet every so often between the wraps.
+      for (let x = F * 4; x < s.len - F * 4; x += F * 2.6) head(g, x, F * 0.42, F * 0.09, IRON.body, IRON.ink);
+    });
+    // Iron brackets over the corners.
+    eachCorner(g, w, h, () => ironCorner(g, F * 1.15));
+    // Two swords crossed behind a round shield, over the middle of the top.
+    if (w > F * 9) {
+      const { cy, blade, tilt } = ARMOURY_SWORDS;
+      const cx = w / 2, L = F * blade;
+      for (const dir of [-1, 1]) {
+        g.save();
+        g.translate(cx, F * cy);
+        g.rotate(Math.PI + dir * tilt);
+        // The blade, its fuller, the guard and the grip with its pommel.
+        g.beginPath();
+        g.moveTo(-F * 0.13, -L * 0.15);
+        g.lineTo(F * 0.13, -L * 0.15);
+        g.lineTo(F * 0.13, L * 0.62);
+        g.lineTo(0, L * 0.78);
+        g.lineTo(-F * 0.13, L * 0.62);
+        g.closePath();
+        const bl = g.createLinearGradient(-F * 0.13, 0, F * 0.13, 0);
+        bl.addColorStop(0, '#eef1f6');
+        bl.addColorStop(0.5, '#b9c0cc');
+        bl.addColorStop(1, '#7d8594');
+        g.fillStyle = bl;
+        g.fill();
+        g.strokeStyle = INK;
+        g.lineWidth = 0.8;
+        g.stroke();
+        g.beginPath();
+        g.moveTo(0, -L * 0.1);
+        g.lineTo(0, L * 0.55);
+        g.strokeStyle = 'rgba(90, 98, 112, 0.6)';
+        g.lineWidth = 0.6;
+        g.stroke();
+        g.fillStyle = css(BRASS.body);
+        g.strokeStyle = css(BRASS.ink);
+        g.beginPath();
+        g.roundRect(-F * 0.42, -L * 0.2, F * 0.84, F * 0.16, F * 0.06);
+        g.fill();
+        g.stroke();
+        g.fillStyle = css(H('#5a3a24'));
+        g.fillRect(-F * 0.08, -L * 0.42, F * 0.16, L * 0.22);
+        head(g, 0, -L * 0.45, F * 0.13, BRASS.body, BRASS.ink);
+        g.restore();
+      }
+      // The shield: oak boards in an iron rim, an iron boss.
+      const r = F * 0.82, sy = F * cy;
+      g.save();
+      g.beginPath();
+      g.arc(cx, sy, r, 0, Math.PI * 2);
+      g.shadowColor = 'rgba(30, 20, 14, 0.45)';
+      g.shadowBlur = 3;
+      g.shadowOffsetY = 1.5;
+      g.fillStyle = css(oak);
+      g.fill();
+      g.restore();
+      g.save();
+      g.beginPath();
+      g.arc(cx, sy, r, 0, Math.PI * 2);
+      g.clip();
+      for (let k = -2; k <= 2; k++) {
+        g.fillStyle = css(k % 2 ? shade(oak, 0.12) : light(oak, 0.06));
+        g.fillRect(cx + k * r * 0.4 - r * 0.2, sy - r, r * 0.4, r * 2);
+      }
+      g.restore();
+      g.beginPath();
+      g.arc(cx, sy, r, 0, Math.PI * 2);
+      g.strokeStyle = '#5b6170';
+      g.lineWidth = F * 0.16;
+      g.stroke();
+      g.strokeStyle = INK;
+      g.lineWidth = 0.8;
+      g.beginPath();
+      g.arc(cx, sy, r + F * 0.08, 0, Math.PI * 2);
+      g.stroke();
+      head(g, cx, sy, r * 0.32, H('#8d94a3'), IRON.ink);
+    }
+    // A leather strap round the middle of the foot, its brass buckle done up.
+    if (w > F * 7) {
+      const bx = w / 2, by = h - F;
+      g.save();
+      g.fillStyle = css(H('#7a4a2c'));
+      g.fillRect(bx - F * 0.45, by - 1, F * 0.9, F + 2);
+      g.strokeStyle = css(shade(H('#7a4a2c'), 0.55));
+      g.lineWidth = 0.8;
+      g.strokeRect(bx - F * 0.45, by - 1, F * 0.9, F + 2);
+      stitches(g, bx - F * 0.45 + 2, bx + F * 0.45 - 2, by + 2, H('#e2c79a'), 2, 2);
+      g.beginPath();
+      g.roundRect(bx - F * 0.62, by + F * 0.2, F * 1.24, F * 0.62, F * 0.12);
+      g.lineWidth = F * 0.13;
+      g.strokeStyle = css(BRASS.body);
+      g.stroke();
+      g.lineWidth = 0.7;
+      g.strokeStyle = css(BRASS.ink);
+      g.stroke();
+      g.beginPath();
+      g.moveTo(bx, by + F * 0.2);
+      g.lineTo(bx, by + F * 0.82);
+      g.lineWidth = F * 0.1;
+      g.strokeStyle = css(BRASS.body);
+      g.stroke();
+      g.restore();
+    }
+  },
+
   turf(g, w, h, F, R) {
     const wood = TURF_WOOD;
     eachSide(g, w, h, (s) => {

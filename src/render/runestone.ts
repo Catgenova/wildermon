@@ -666,6 +666,8 @@ export const GLYPHS: Record<string, Stroke[]> = {
   ingwaz: [{ pts: [[0, 0.62], [0.48, 0], [0, -0.62], [-0.48, 0]], closed: true }, { pts: [[0, 1], [0, 0.62]] }, { pts: [[0, -0.62], [0, -1]] }],
   // The Health window's: a heart.
   heart: [{ pts: [[0, -0.9], [-0.55, -0.3], [-0.85, 0.15], [-0.8, 0.55], [-0.5, 0.8], [-0.18, 0.72], [0, 0.45], [0.18, 0.72], [0.5, 0.8], [0.8, 0.55], [0.85, 0.15], [0.55, -0.3]], closed: true }],
+  // The Equipment window's: a heater shield with its boss.
+  shield: [{ pts: [[0, 0.95], [0.78, 0.68], [0.78, 0], [0.5, -0.55], [0, -0.95], [-0.5, -0.55], [-0.78, 0], [-0.78, 0.68]], closed: true }, { pts: arc(0, 0.12, 0.2, 0, TAU, 10), closed: true }],
   dagaz: [{ pts: [[-0.6, 0.9], [0.6, -0.9], [0.6, 0.9], [-0.6, -0.9]], closed: true }],
   othala: [{ pts: [[0.62, -1], [-0.5, 0.25], [0, 0.95], [0.5, 0.25], [-0.62, -1]] }],
   ring: [{ pts: arc(0, 0, 0.7, 0, TAU, 20), closed: true }, dotAt(0, 0)],

@@ -73,6 +73,7 @@ export const BINDS: BindDef[] = [
   { id: 'win_tile', label: 'Tile', hint: 'Everything you could do to whatever you last clicked.', group: 'Windows', keys: ['KeyT'] },
   { id: 'win_skills', label: 'Skills', hint: 'What you know and how well.', group: 'Windows', keys: ['KeyK'] },
   // Every letter is spoken for, and the comma is nobody's.
+  { id: 'win_equipment', label: 'Equipment', hint: 'What you have on, on a figure of you, to drag things onto and off; every number a fight reads off you, and what each skill behind them does for you.', group: 'Windows', keys: ['BracketLeft'] },
   { id: 'win_health', label: 'Health', hint: 'Your wounds on a figure of you, and what each needs carried to be dressed, cleaned out or salved, with a button that does it; what is against you and for you; and what you have been eating.', group: 'Windows', keys: ['Comma'] },
   { id: 'win_trades', label: 'Trades', hint: `The trade you have taken up, the ${numberWord(NODES_PER_TRADE)} nodes or ${numberWord(PERK_TIER_AT.length * PERKS_PER_TIER)} perks behind it, and its rite.`, group: 'Windows', keys: ['KeyF'] },
   { id: 'win_faith', label: 'Faith', hint: `Your faith and favour, the ${numberWord(PATRONS.length)} patrons, and the spells your patron gives: ${numberWord(SPELLS_PER_TIER)} at each of ${numberWord(FAITH_TIER_AT.length)} tiers, one taken at each. The spell bar along the bottom is called with Shift and a slot's number.`, group: 'Windows', keys: [] },
