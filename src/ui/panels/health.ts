@@ -6,6 +6,7 @@ import { drawFigure, figureJoint, onScreen, viewOf, type FigurePose, type V3 } f
 import { svgOf, type Effect, type SpellsOnYou } from '../effects';
 import { clockWords, healthReport, type Care, type CareOption, type HealthReport, type RecipeView, type WoundState, type WoundView } from '../health';
 import type { UIWindow } from '../windows';
+import { WOUND_KINDS } from '../../game/wounds';
 
 /**
  * Health: how you are, what is open on you and what to do about it.
@@ -44,8 +45,12 @@ const BEAT_FAST = 0.5;
 const SEEN_TO = 1.6;
 /** How much of the stage's height the body stands in, and how far its feet are from the stage's foot, CSS px. */
 const BODY_SHARE = 0.78;
+/** How tall the figure may stand against the stage's width, so the shoulders keep inside it. */
+const WIDE_SHARE = 1.5;
 /** At or under this width (CSS px) you stand in the top card instead of beside the tabs. */
 const NARROW = 430;
+/** How short and how tall the stage may be beside the tabs (CSS px). */
+const STAGE_MIN = 292, STAGE_MAX = 560;
 const FEET_UP = 22;
 /** The most frames a second the figure is drawn at. */
 const FIGURE_FPS = 30;
@@ -73,8 +78,17 @@ const ITEM_ICONS: Record<string, string> = {
   bandage: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="9" cy="12" rx="6" ry="7" class="i-cloth"/><ellipse cx="9" cy="12" rx="2.2" ry="2.6" class="i-core"/><path d="M9 5 H19 a2 2 0 0 1 2 2 V9 L17 10 L21 12 V17 a2 2 0 0 1 -2 2 H9" class="i-cloth"/><path d="M13 8.5 h5 M13 15.5 h5" class="i-weave"/></svg>',
   cover: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="3" class="i-cloth"/><path d="M8 15 C 9 10 13 8 17 8 C 17 12 14 15 9 15.5 Z" class="i-leaf"/><path d="M9 15 L15 10" class="i-vein"/></svg>',
   lye_bucket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 Q 12 1 18 6" class="i-handle"/><path d="M5 8 H19 L17.5 20 a1.5 1.5 0 0 1 -1.5 1.3 H8 a1.5 1.5 0 0 1 -1.5 -1.3 Z" class="i-wood"/><ellipse cx="12" cy="8" rx="7" ry="1.8" class="i-lye"/><path d="M6.3 12 H17.7 M6.8 16.5 H17.2" class="i-band"/></svg>',
+  water_bucket: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6 Q 12 1 18 6" class="i-handle"/><path d="M5 8 H19 L17.5 20 a1.5 1.5 0 0 1 -1.5 1.3 H8 a1.5 1.5 0 0 1 -1.5 -1.3 Z" class="i-wood"/><ellipse cx="12" cy="8" rx="7" ry="1.8" class="i-water"/><path d="M6.3 12 H17.7 M6.8 16.5 H17.2" class="i-band"/></svg>',
+  ash: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19 C 5 12 9 9 12 9 C 15 9 19 12 21 19 Z" class="i-ash"/><path d="M8 15 h2 M13 13 h2 M11 17 h3" class="i-ash-fleck"/></svg>',
+  herb: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 V6" class="i-vein"/><path d="M12 9 C 8 9 6 6 6 3 C 9 3 12 5 12 9 Z M12 13 C 16 13 18 10 18 7 C 15 7 12 9 12 13 Z M12 17 C 8 17 6 14 6 11 C 9 11 12 13 12 17 Z" class="i-leaf"/></svg>',
+  cotton: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="10" r="4.5" class="i-fluff"/><circle cx="15" cy="10" r="4.5" class="i-fluff"/><circle cx="12" cy="14.5" r="4.5" class="i-fluff"/><path d="M12 19 V22" class="i-vein"/></svg>',
+  cloth: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8 L12 4 L21 8 L21 17 L12 21 L3 17 Z" class="i-cloth"/><path d="M3 8 L12 12 L21 8 M12 12 V21" class="i-weave"/></svg>',
+  wax: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10 L12 6 L20 10 V16 L12 20 L4 16 Z" class="i-wax"/><path d="M4 10 L12 14 L20 10 M12 14 V20" class="i-wax-edge"/></svg>',
+  knife: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20 L10 14" class="i-handle-thick"/><path d="M10 14 L20 4 C 20 9 16 13 12 16 Z" class="i-blade"/></svg>',
   salve: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M4 9 V16 a8 3 0 0 0 16 0 V9" class="i-tin"/><ellipse cx="12" cy="9" rx="8" ry="3" class="i-lid"/><path d="M9 8.5 C 10 6.5 13 6 15 7" class="i-vein"/></svg>',
 };
+/** The healing herbs, which share one picture. */
+const HERBS = new Set(Object.values(WOUND_KINDS).map((k) => k.herb));
 const icon = (item: string): HTMLSpanElement => {
   const s = el('span', `hp-icon hp-icon-${item}`);
   s.innerHTML = ITEM_ICONS[item] ?? '';
@@ -85,9 +99,9 @@ const icon = (item: string): HTMLSpanElement => {
 const PIN_GLYPH: Record<WoundState, string> = {
   bleeding: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
   open: '<path d="M6 1.5 C 4 4.5 3 6 3 7.5 a3 3 0 0 0 6 0 C 9 6 8 4.5 6 1.5 Z"/>',
-  venom: '<path stroke="none" d="M1.8 1.8 Q1.6 7 4.6 10.6 Q5.4 6 5.4 1.8 Z M6.6 1.8 Q6.6 6 7.4 10.6 Q10.4 7 10.2 1.8 Z"/>',
+  venom: '<path stroke="none" d="M1.4 2.2 Q6 5.2 10.6 2.2 V3.6 Q6 6.6 1.4 3.6 Z M2.4 3.9 L4.9 5 L3.2 10.4 Z M9.6 3.9 L7.1 5 L8.8 10.4 Z"/><circle cx="6" cy="9.2" r="1.1" stroke="none"/>',
   bad: '<path fill-rule="evenodd" stroke="none" d="M6 1.2 a4.3 4.3 0 0 0 -4.3 4.3 c0 1.6 .8 2.7 1.9 3.3 V10.6 h4.8 V8.8 c1.1 -.6 1.9 -1.7 1.9 -3.3 A4.3 4.3 0 0 0 6 1.2 Z M4.4 4.6 a1 1 0 1 0 .01 0 Z M7.6 4.6 a1 1 0 1 0 .01 0 Z"/>',
-  dressed: '<path stroke="none" fill-rule="evenodd" d="M4.6 2.4 a3.5 3.5 0 1 0 .01 0 Z M4.6 4.8 a1.1 1.1 0 1 0 .01 0 Z"/><path stroke="none" d="M4.6 7.9 H10.8 V9.9 H4.6 Z"/>',
+  dressed: '<path stroke="none" fill-rule="evenodd" transform="rotate(-35 6 6)" d="M2.2 3.6 H9.8 a2.4 2.4 0 0 1 0 4.8 H2.2 a2.4 2.4 0 0 1 0 -4.8 Z M4.6 4.7 H7.4 V7.3 H4.6 Z M2.5 5.6 a.4 .4 0 1 0 .01 0 Z M9.5 5.6 a.4 .4 0 1 0 .01 0 Z"/>',
   covered: '<path d="M2.5 9.5 C 3 5 6 2.5 9.5 2.5 C 9.5 6 7 9 2.5 9.5 Z"/>',
 };
 
@@ -283,7 +297,24 @@ export class HealthPanel {
         top.prepend(this.heart);
       }
     };
-    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(root);
+    // Wide, you stand as tall as the column beside you, up to what the window shows at once, so it is not left empty under you.
+    const tall = (): void => {
+      if (root.classList.contains('hp-narrow')) {
+        main.style.removeProperty('--hp-stage-h');
+        return;
+      }
+      // What shows of the body under the top card at rest, less the foot the "More below" pill takes.
+      const shows = win.body.clientHeight - main.offsetTop - 48;
+      const room = Math.min(shows, side.offsetHeight) - this.legend.offsetHeight - 6;
+      main.style.setProperty('--hp-stage-h', `${Math.round(Math.max(STAGE_MIN, Math.min(STAGE_MAX, room)))}px`);
+    };
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(() => {
+        fit();
+        tall();
+      }).observe(root);
+      new ResizeObserver(tall).observe(side);
+    }
     this.show('wounds');
 
     win.onOpen = () => {
@@ -390,6 +421,13 @@ export class HealthPanel {
     this.emptyIn.hidden = r.emptyIn === null;
     if (r.emptyIn !== null) this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)} at this rate`;
     this.rate.replaceChildren(...r.rates.map((x) => {
+      // Why nothing mends: a label and a chip a reason, so a narrow window breaks between reasons.
+      if (x.parts) {
+        const group = el('span', 'hp-rate-group');
+        group.title = x.long;
+        group.append(el('span', 'hp-rate-label', 'Not mending'), ...x.parts.map((p) => el('span', `hp-rate-chip hp-rate-${x.kind}`, p)));
+        return group;
+      }
       const chip = el('span', `hp-rate-chip hp-rate-${x.kind}`, x.short);
       chip.title = x.long;
       return chip;
@@ -464,7 +502,8 @@ export class HealthPanel {
     const view = viewOf(pose.facing);
     // As big as the stage has room for: the top of the head a little under its top edge.
     const crown = onScreen(view, figureJoint(pose, 'head', [0, 0, 2.6]));
-    const zoom = (H * BODY_SHARE) / Math.max(1, -crown[1]);
+    // As tall as the stage allows, but no wider than it: a tall stage leaves room over the head instead.
+    const zoom = Math.min(H * BODY_SHARE, W * WIDE_SHARE) / Math.max(1, -crown[1]);
     const fx = W / 2, fy = H - FEET_UP * (H / 236);
     drawFigure(g, fx, fy, zoom, pose, { ink: 1.3 });
     // Each wound's pin over its bone, and what each is doing there.
@@ -745,6 +784,16 @@ export class HealthPanel {
       box.append(bar);
     }
     if (c.effect) box.append(el('div', 'hp-care-effect', c.effect));
+    // What comes of it, taken and missed, each with its chance.
+    if (c.odds.length) {
+      const odds = el('div', 'hp-odds');
+      for (const o of c.odds) {
+        const line = el('div', `hp-odd ${o.ok ? 'hp-odd-ok' : 'hp-odd-no'}`);
+        line.append(el('span', 'hp-odd-mark', o.ok ? '✓' : '✗'), el('b', 'hp-odd-chance', o.chance), el('span', 'hp-odd-text', o.text));
+        odds.append(line);
+      }
+      box.append(odds);
+    }
     // Something other than a missing thing in the way: said once, here. A missing thing is said by its row.
     if (c.why && c.holding) box.append(el('div', 'hp-why', c.why));
     // What could be held for it, best first: what each does for this wound, and how many you carry.
@@ -755,8 +804,8 @@ export class HealthPanel {
     table.classList.toggle('hp-opts-numbers', numbers);
     const cols = el('div', 'hp-opts-head');
     cols.setAttribute('role', 'row');
-    cols.append(el('span', 'hp-opts-what', many ? 'In your pack, one of' : 'In your pack'));
-    if (numbers) cols.append(el('span', 'hp-opts-num', 'Closes'), el('span', 'hp-opts-num', 'Goes bad'));
+    cols.append(el('span', 'hp-opts-what', 'In your pack'));
+    if (numbers) cols.append(el('span', 'hp-opts-num', 'Heals'), el('span', 'hp-opts-num', 'Closes in'), el('span', 'hp-opts-num', 'Goes bad'));
     cols.append(el('span', 'hp-opts-num', 'Have'));
     table.append(cols);
     for (const o of c.options) table.append(this.optionRow(o, many, numbers));
@@ -785,19 +834,22 @@ export class HealthPanel {
     have.title = o.have ? `You carry ${o.have}` : 'You carry none';
     row.append(icon(o.item), name);
     if (numbers) {
+      const heals = el('div', 'hp-opt-num', o.heals ?? '–');
+      heals.title = 'Health it puts back on this wound, at the QL you carry (or, with none, at the QL of what would go on)';
       const closes = el('div', 'hp-opt-num', o.closes ?? '–');
-      closes.title = 'How much faster it closes the wound than left open';
+      closes.title = 'How long this wound would take to close under it';
+      row.append(heals);
       const turns = el('div', `hp-opt-num${o.turns === '0%' ? ' hp-opt-num-good' : ''}`, o.turns ?? '–');
       turns.title = "How much of an open wound's chance of going bad is left under it";
       row.append(closes, turns);
     }
     row.append(have);
-    // What it does, the width of the row under it, so the name and the numbers keep their room.
-    const does = el('div', 'hp-opt-does');
-    if (o.chosen) does.append(el('span', 'hp-opt-use', 'will use'));
-    else if (o.best && many) does.append(el('span', 'hp-opt-best', 'best'));
-    does.append(o.does);
-    row.append(does);
+    // The one that goes on: a tick on its picture. With the numbers in columns, the words are its title; alone, a line under it.
+    if (o.chosen && many) {
+      row.querySelector('.hp-icon')?.append(el('span', 'hp-opt-tick', '✓'));
+      row.title = `Will use this: ${o.does}`;
+    } else row.title = o.does;
+    if (!numbers) row.append(el('div', 'hp-opt-does', o.does));
     return row;
   }
 
@@ -809,9 +861,17 @@ export class HealthPanel {
     const chips = el('div', 'hp-recipe-chips');
     for (const i of rv.inputs) {
       const ok = i.have >= i.need;
-      chips.append(el('span', `hp-rchip ${ok ? 'hp-rchip-ok' : 'hp-rchip-no'}`, `${i.name} ${Math.min(i.have, 99)}/${i.need}`));
+      const chip = el('span', `hp-rchip ${ok ? 'hp-rchip-ok' : 'hp-rchip-no'}`);
+      const pic = ITEM_ICONS[i.item] ?? (HERBS.has(i.item) ? ITEM_ICONS.herb : '');
+      if (pic) chip.append(Object.assign(el('span', 'hp-rchip-icon'), { innerHTML: pic }));
+      chip.append(`${i.name} ${Math.min(i.have, 99)}/${i.need}`);
+      chips.append(chip);
     }
-    if (rv.tool) chips.append(el('span', `hp-rchip ${rv.tool.have ? 'hp-rchip-ok' : 'hp-rchip-no'}`, `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`));
+    if (rv.tool) {
+      const chip = el('span', `hp-rchip ${rv.tool.have ? 'hp-rchip-ok' : 'hp-rchip-no'}`);
+      chip.append(Object.assign(el('span', 'hp-rchip-icon'), { innerHTML: ITEM_ICONS.knife }), `${rv.tool.name} ${rv.tool.have ? '✓' : '✗'}`);
+      chips.append(chip);
+    }
     chips.append(el('span', 'hp-rchip hp-rchip-skill', `${rv.skill.name} ${rv.skill.level.toFixed(1)}`));
     row.append(head, chips);
     if (rv.who) row.append(el('div', 'hp-recipe-who', `Made only by ${rv.who}.`));
