@@ -1602,7 +1602,7 @@ for (const [fn, v] of [
   /* Evolving: the levels a kind that evolves does so at, and what each stage multiplies over the one before. */
   ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]],
   ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],
-  ['stage_mul_speed', STAGE_MUL.speed ?? 1], ['stage_mul_work', STAGE_MUL.work ?? 1],
+  ['stage_mul_speed', STAGE_MUL.speed ?? 1], ['stage_mul_work', STAGE_MUL.work ?? 1], ['stage_mul_grow', STAGE_MUL.grow ?? 1],
   /* A companion's orders: how near a guarding one keeps a fight, and how long one fallen back starts none. */
   ['guard_range', GUARD_RANGE], ['fall_back', FALL_BACK],
   /* Wounds that slow a swing, and how far; a blow at your back, a crowd on

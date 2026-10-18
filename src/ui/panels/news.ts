@@ -2430,6 +2430,17 @@ export const NEWS: News[] = [
         line('warda', false, 'walk, strike, look about while it stands,'),
       ];
     },
+  },  {
+    n: 185,
+    day: '2026-10-18',
+    lines: () => {
+      const d = SPECIES.woola;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false, true)} at the first, ${stageSays(2, false, true)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own fleece of clouds from full to shorn, walk, strike, graze and shake, and voice.`,
+        `A digger's lump of clay or heap of sand is raised by its yield traits as well as its digging, in a game of your own as it already was on an island.`,
+      ];
+    },
   },
 ];
 

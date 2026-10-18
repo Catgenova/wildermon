@@ -17,7 +17,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
-import { attackOf, EVOLVE_AT, kindName, maxHealth, SPECIES, STAGE_MUL, stageOf, type Creature } from '../../src/game/creatures';
+import { attackOf, bloodMul, EVOLVE_AT, kindName, maxHealth, SPECIES, STAGE_MUL, stageOf, type Creature } from '../../src/game/creatures';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -40,7 +40,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-6 * Math.max(1, Math.abs(b));
 const [AT1, AT2] = EVOLVE_AT;
-const H = STAGE_MUL.hardy!, T = STAGE_MUL.tough!, S = STAGE_MUL.speed!, W = STAGE_MUL.work!;
+const H = STAGE_MUL.hardy!, T = STAGE_MUL.tough!, S = STAGE_MUL.speed!, W = STAGE_MUL.work!, G = STAGE_MUL.grow!;
 
 /* ---- on the island ----------------------------------------------------------------- */
 
@@ -66,7 +66,7 @@ begin
   insert into said select 'SANDPIP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Crawler')).id from species_def where id = 'crawler';
   insert into said select 'SKYLOOK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Warda')).id from species_def where id = 'warda';
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
-  insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work());
+  insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work() || '|' || stage_mul_grow());
   a := creature_spawn(w, 'rabba', 17, 16.5, 'deed', now() - interval '30 days', u);
   v := creature_spawn(w, 'dowse', 18, 16.5, 'deed', now() - interval '30 days', u);
   update creature set traits = '{}', rare = null where world_id = w and id in (a, v);
@@ -79,6 +79,11 @@ begin
   update creature set skills = jsonb_build_object('prospecting', 80) where world_id = w and id = v;
   select * into c from creature where world_id = w and id = v;
   insert into said values ('STILL', stage_of(c) || '|' || round(beast_mul(c, 'speed')::numeric, 4));
+  -- A Cloudborne grows its fleece back sooner by its stage (asked for: "Yes, faster regrowth").
+  v := creature_spawn(w, 'woola', 19, 16.5, 'deed', now() - interval '30 days', u);
+  update creature set traits = '{}', rare = null, skills = jsonb_build_object('animal_husbandry', ${AT2}) where world_id = w and id = v;
+  select * into c from creature where world_id = w and id = v;
+  insert into said values ('FLEECE', stage_of(c) || '|' || round(beast_mul(c, 'grow')::numeric, 4));
   -- Learning across the line: it says so, and is as full of health as it was.
   update creature set mode = 'active', skills = jsonb_build_object('foraging', ${AT1} - 0.0001), health = 10 where world_id = w and id = a;
   for i in 1..50 loop
@@ -129,8 +134,8 @@ const chip = SPECIES.quarra;
 check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and an old Quarra carcass is still one, on both sides',
   chip.name === 'Chiptail' && chip.stages?.map((x) => x.name).join(',') === 'Quarrybash,Monolithump'
     && at('CHIPTAIL') === 'Chiptail|Quarrybash,Monolithump|Quarra|quarra', at('CHIPTAIL'));
-check(`it evolves at ${AT1} and ${AT2}, and each stage is ${H}, ${T}, ${S} and ${W} over the last, on both sides`,
-  at('NUMBERS') === `${AT1}|${AT2}|${H}|${T}|${S}|${W}`, at('NUMBERS'));
+check(`it evolves at ${AT1} and ${AT2}, and each stage is ${H}, ${T}, ${S}, ${W} and ${G} over the last, on both sides`,
+  at('NUMBERS') === `${AT1}|${AT2}|${H}|${T}|${S}|${W}|${G}`, at('NUMBERS'));
 for (let i = 0; i < 3; i++) {
   const [stage, health, attack, speed, work] = at(`STAGE:${i}`).split('|').map(Number);
   const k = i;
@@ -138,6 +143,7 @@ for (let i = 0; i < 3; i++) {
     stage === k && health === Math.round(def.health * H ** k) && near(attack, Number((def.attack * T ** k).toFixed(4)))
       && near(speed, Number((S ** k).toFixed(4))) && near(work, Number((W ** k).toFixed(4))), at(`STAGE:${i}`));
 }
+check(`on the island, a Cloudborne grows its fleece back ${G} squared as fast`, at('FLEECE') === `2|${(G ** 2).toFixed(4)}`, at('FLEECE'));
 check('a dowse, which does not evolve, is not touched at any level', at('STILL') === '0|1.0000' || at('STILL') === '0|1', at('STILL'));
 const [crossed, healthAfter] = at('CROSSED').split('|');
 check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
@@ -160,6 +166,11 @@ for (const [skill, stage, name] of [[AT1 - 0.01, 0, 'Snufflet'], [AT1, 1, 'Snuff
     stageOf(r) === stage && kindName(r) === name && maxHealth(r, def) === Math.round(def.health * H ** stage) && near(attackOf(r, def), def.attack * T ** stage)
       && near(g.creatures.speedMul(r), S ** stage) && near(g.creatures.workMul(r), W ** stage),
     `${stageOf(r)} ${kindName(r)} ${maxHealth(r, def)} ${attackOf(r, def)} ${g.creatures.speedMul(r)} ${g.creatures.workMul(r)}`);
+}
+{
+  const sheep = mine('woola');
+  sheep.skills = { animal_husbandry: AT2 };
+  check(`in the browser, a Cloudborne grows its fleece back ${G} squared as fast`, stageOf(sheep) === 2 && near(bloodMul(sheep, 'grow'), G ** 2), `${stageOf(sheep)} ${bloodMul(sheep, 'grow')}`);
 }
 const still = mine('dowse');
 still.skills = { prospecting: 80 };

@@ -504,11 +504,14 @@ export interface StageDef {
  * and 50", and "Each evolution add movement speed and task speed and base stats".
  */
 export const EVOLVE_AT = [25, 50] as const;
+/** How much quicker each stage is at its task, and at growing back its fleece, than the one before. */
+const STAGE_QUICKER = 1.15;
 /**
  * What each stage multiplies over the one before, on the channels its blood is counted on (`bloodMul`): its health
- * (hardy), its blow (tough), its pace (speed) and how fast it gets a task done (work). The island's `evo_mul`.
+ * (hardy), its blow (tough), its pace (speed), how fast it gets a task done (work), and how fast its fleece grows back
+ * (grow; asked for: "Yes, faster regrowth"). The island's `evo_mul`.
  */
-export const STAGE_MUL: Partial<Record<TraitChannel, number>> = { hardy: 1.2, tough: 1.2, speed: 1.2, work: 1.15 };
+export const STAGE_MUL: Partial<Record<TraitChannel, number>> = { hardy: 1.2, tough: 1.2, speed: 1.2, work: STAGE_QUICKER, grow: STAGE_QUICKER };
 /** Which stage it is at: nought below the first of `EVOLVE_AT`, and so on; nought always for a kind that does not evolve. The island's `stage_of`. */
 export function stageOf(c: Pick<Creature, 'species' | 'skills'>): 0 | 1 | 2 {
   if (!SPECIES[c.species]?.stages) return 0;
@@ -651,22 +654,26 @@ export const yielded = (c: Creature): boolean => c.health <= sparFloor(c) + SPAR
 export const sparSaid = (c: Creature): string =>
   `You land one on ${c.name}. It is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', and yields' : ''}.`;
 
-/** What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task, each as a share. */
-export function stageSays(stage: number, task = true): string {
+/**
+ * What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task,
+ * and for one with a fleece, how fast that grows back, each as a share.
+ */
+export function stageSays(stage: number, task = true, fleece = false): string {
   const more = (ch: TraitChannel): string => percent((STAGE_MUL[ch] ?? 1) ** stage - 1);
-  return task
-    ? `${more('hardy')} more health, a ${more('tough')} harder blow, ${more('speed')} faster on its feet and ${more('work')} quicker at each go of its task`
-    : `${more('hardy')} more health, a ${more('tough')} harder blow and ${more('speed')} faster on its feet`;
+  const parts = [`${more('hardy')} more health`, `a ${more('tough')} harder blow`, `${more('speed')} faster on its feet`];
+  if (task) parts.push(`${more('work')} quicker at each go of its task`);
+  if (fleece) parts.push(`its fleece grows back ${more('grow')} faster`);
+  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
 }
 
 /**
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean): string {
   if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into ${article(names[1])} ${names[1]}.`;
   const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into ${article(names[2])} ${names[2]}.` : '';
-  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
+  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task, fleece)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
 }
 
 /** Seconds between chances for an unruly companion to turn on its keeper. */
@@ -681,8 +688,12 @@ function sayLine(id: string, job: string, level: string): void {
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
   // Its stages work faster only at a task, so a kind with none is not told they do.
   const task = !!d.gathers;
-  d.description = lineSays(names, job, level, 0, task);
-  d.stages = [{ name: names[1], description: lineSays(names, job, level, 1, task) }, { name: names[2], description: lineSays(names, job, level, 2, task) }];
+  const fleece = !!d.fleece;
+  d.description = lineSays(names, job, level, 0, task, fleece);
+  d.stages = [
+    { name: names[1], description: lineSays(names, job, level, 1, task, fleece) },
+    { name: names[2], description: lineSays(names, job, level, 2, task, fleece) },
+  ];
 }
 
 export const SPECIES: Record<string, SpeciesDef> = {
@@ -3530,9 +3541,9 @@ sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of 
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
   'Its level is its mining.');
-sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging and never over 100, and carries it to the crate.`,
+sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate.`,
   'Its level is its digging.');
-sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
+sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
   'Its level is its digging.');
 sayLine('warda', `Out at your heel or keeping a settlement it sees ${SPECIES.warda.sight} tiles round itself for you, where most of yours see ${KEPT_SIGHT}, and ${percent(KEPT_NIGHT_LOSS / 2)} less at the dead of night. Struck, it strikes back every time.`,
   `Its level is its awareness, which it learns ${LEARNS_SAYS.out}.`);
@@ -5815,7 +5826,8 @@ export class Creatures {
     w.setDirt(cx, cy, left);
     if (left <= 0) game.exposeRock(cx, cy);
     game.events.emit('world', c.workX, c.workY);
-    const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1));
+    // Times what its yield traits bring, as the island's `worker_do` has it.
+    const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1) * this.yieldMul(c));
     return { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: 1 };
   }
 
