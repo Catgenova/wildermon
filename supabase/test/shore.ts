@@ -296,9 +296,10 @@ const ironLevel = Number(psql(`select level from rock_def where yields = 'iron_o
 const copperLevel = Number(psql(`select level from rock_def where yields = 'copper_ore'`));
 check('iron wants more of a miner than a fresh one has', ironLevel === 5 && copperLevel === 1,
   `iron ${ironLevel}, copper ${copperLevel}`);
-check('so a mola is level one until its mining reaches five',
-  psql(`select creature_level(jsonb_build_object('mining', 4.9))`) === '1'
-    && psql(`select creature_level(jsonb_build_object('mining', 5))`) === '2',
+check('so a mola\'s level is its mining, to the whole number below, and one before it has any',
+  psql(`select creature_level(jsonb_build_object('mining', 4.9))`) === '4'
+    && psql(`select creature_level(jsonb_build_object('mining', 5))`) === '5'
+    && psql(`select creature_level('{}'::jsonb)`) === '1',
   `4.9 is level ${psql(`select creature_level(jsonb_build_object('mining', 4.9))`)}, 5 is level ${psql(`select creature_level(jsonb_build_object('mining', 5))`)}`);
 
 /* ---- and the trades that use it ------------------------------------------ */

@@ -4040,7 +4040,12 @@ const FORAGE_TIME = 2.5;
 export const NIP_EVERY = 25;
 
 /** A creature's level, read off its best task skill. */
-export const creatureLevel = (c: Creature): number => 1 + Math.floor(Math.max(0, ...Object.values(c.skills), 0) / 5);
+/**
+ * A wildermon's level is its skill: the one it was born to (its job's, or a draught beast's hauling), to the whole
+ * number below, and one for a kind that has none. Asked for: "Level should be equal to that skill, since there's only
+ * 1 skill per wildermon". The island's `creature_level`.
+ */
+export const creatureLevel = (c: Creature): number => Math.max(1, Math.floor(Math.max(0, ...Object.values(c.skills))));
 
 /** How long a deed worker takes over a task: twice what a player of the same skill would. */
 export function workDuration(skill: number): number {

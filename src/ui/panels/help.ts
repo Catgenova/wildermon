@@ -3103,7 +3103,7 @@ export function helpText(): string {
     drops what it finds in the settlement's storage, or is shut in a <b>creature crate</b>. Feed them
     from your pack; deed workers help themselves from storage.
     The <b>Wildermon</b> window (<kbd>P</kbd>) shows the condition, level and skills of every creature
-    you own; wild ones keep theirs to themselves. Deed workers learn from their work, gaining skill at
+    you own; wild ones keep theirs to themselves. A wildermon's level is its skill. Deed workers learn from their work, gaining skill at
     half a player's pace and working at half a player's speed, and better skill means better quality
     finds and quicker work.</p>
     <p><b>Creature crates.</b> A creature crate holds <b>one</b> wildermon. A fine carpenter builds it
