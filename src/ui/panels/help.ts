@@ -2968,7 +2968,7 @@ export function helpText(): string {
     all of or none of. The Settlement window adds up what yours give.</p>
     <h3>Wildermon</h3>
     <p>Wild creatures roam the island. The <b>Snufflet</b> is a leafy piglet that forages berries when
-    hungry; the <b>Vola</b> is a mole-like digger that botanizes herbs and roots instead; the
+    hungry; the <b>${SPECIES.vola.name}</b> (the Vola that was) is a mushroom-capped forager that botanizes herbs and roots instead, and evolves into a ${SPECIES.vola.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.vola.stages![1].name} at ${EVOLVE_AT[1]}; the
     <b>Bevere</b> is a flat-tailed gnawer that never settles far from water, eats vegetables and
     starchy things, is placid by nature, and fells trees for its deed, carrying the logs to the crate;
     the <b>Seavic</b> is a squirrel that lives among the trees, eats acorns and nuts, is placid too, and
@@ -3021,7 +3021,7 @@ export function helpText(): string {
     lives beside the clay pits, eats root vegetables, and digs <b>clay</b> with its bill for its deed,
     carrying it to the crate a load at a time &mdash; which is what keeps a potter in clay without
     walking the shore for it. Carry what the creature eats (a berry or vegetable for
-    a Snufflet, a spice or vegetable for a Vola), long-press or right-click one and choose <b>Tame</b>: the
+    a Snufflet, a spice or vegetable for a ${SPECIES.vola.name}), long-press or right-click one and choose <b>Tame</b>: the
     food is used up, success is uncommon at low taming skill, and none of them holds a failed attempt
     against you.</p>
     <p><b>Keep at it.</b> A wild thing that has taken food from your hand and refused you is a little

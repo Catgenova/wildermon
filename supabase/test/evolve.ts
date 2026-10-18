@@ -59,10 +59,11 @@ begin
   perform rpc_join(w, 'Mira');
   insert into said select 'NAMES', name || '|' || array_to_string(stages, ',') from species_def where id = 'rabba';
   insert into said select 'IRONEMOLE', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Mola')).id from species_def where id = 'mola';
+  insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
   insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work());
   a := creature_spawn(w, 'rabba', 17, 16.5, 'deed', now() - interval '30 days', u);
-  v := creature_spawn(w, 'vola', 18, 16.5, 'deed', now() - interval '30 days', u);
+  v := creature_spawn(w, 'dowse', 18, 16.5, 'deed', now() - interval '30 days', u);
   update creature set traits = '{}', rare = null where world_id = w and id in (a, v);
   for i in 0..2 loop
     update creature set skills = jsonb_build_object('foraging', case i when 0 then ${AT1} - 0.01 when 1 then ${AT1} else ${AT2} end) where world_id = w and id = a;
@@ -70,9 +71,9 @@ begin
     insert into said values ('STAGE:' || i, stage_of(c) || '|' || max_health(c) || '|' || round(attack_of(c)::numeric, 4)
       || '|' || round(beast_mul(c, 'speed')::numeric, 4) || '|' || round(beast_mul(c, 'work')::numeric, 4));
   end loop;
-  update creature set skills = jsonb_build_object('botanizing', 80) where world_id = w and id = v;
+  update creature set skills = jsonb_build_object('prospecting', 80) where world_id = w and id = v;
   select * into c from creature where world_id = w and id = v;
-  insert into said values ('VOLA', stage_of(c) || '|' || round(beast_mul(c, 'speed')::numeric, 4));
+  insert into said values ('STILL', stage_of(c) || '|' || round(beast_mul(c, 'speed')::numeric, 4));
   -- Learning across the line: it says so, and is as full of health as it was.
   update creature set mode = 'active', skills = jsonb_build_object('foraging', ${AT1} - 0.0001), health = 10 where world_id = w and id = a;
   for i in 1..50 loop
@@ -95,6 +96,10 @@ const iron = SPECIES.mola;
 check('the Mola is the Ironemole now, a Ferrodrill and an Oremander after, and an old Mola carcass is still one, on both sides',
   iron.name === 'Ironemole' && iron.stages?.map((x) => x.name).join(',') === 'Ferrodrill,Oremander'
     && at('IRONEMOLE') === 'Ironemole|Ferrodrill,Oremander|Mola|mola' && iron.stages[1].description.startsWith('An Ironemole at level'), at('IRONEMOLE'));
+const spore = SPECIES.vola;
+check('the Vola is the Sporeling now, a Sporekin and a Sporelord after, and an old Vola carcass is still one, on both sides',
+  spore.name === 'Sporeling' && spore.stages?.map((x) => x.name).join(',') === 'Sporekin,Sporelord'
+    && at('SPORELING') === 'Sporeling|Sporekin,Sporelord|Vola|vola', at('SPORELING'));
 const chip = SPECIES.quarra;
 check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and an old Quarra carcass is still one, on both sides',
   chip.name === 'Chiptail' && chip.stages?.map((x) => x.name).join(',') === 'Quarrybash,Monolithump'
@@ -108,7 +113,7 @@ for (let i = 0; i < 3; i++) {
     stage === k && health === Math.round(def.health * H ** k) && near(attack, Number((def.attack * T ** k).toFixed(4)))
       && near(speed, Number((S ** k).toFixed(4))) && near(work, Number((W ** k).toFixed(4))), at(`STAGE:${i}`));
 }
-check('a vola, which does not evolve, is not touched at any level', at('VOLA') === '0|1.0000' || at('VOLA') === '0|1', at('VOLA'));
+check('a dowse, which does not evolve, is not touched at any level', at('STILL') === '0|1.0000' || at('STILL') === '0|1', at('STILL'));
 const [crossed, healthAfter] = at('CROSSED').split('|');
 check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
   crossed === '1' && near(Number(healthAfter), 10 * H) && at('TOLD').includes('evolves into a Snuffroot'), `${at('CROSSED')} ${at('TOLD')}`);
@@ -131,9 +136,9 @@ for (const [skill, stage, name] of [[AT1 - 0.01, 0, 'Snufflet'], [AT1, 1, 'Snuff
       && near(g.creatures.speedMul(r), S ** stage) && near(g.creatures.workMul(r), W ** stage),
     `${stageOf(r)} ${kindName(r)} ${maxHealth(r, def)} ${attackOf(r, def)} ${g.creatures.speedMul(r)} ${g.creatures.workMul(r)}`);
 }
-const vola = mine('vola');
-vola.skills = { botanizing: 80 };
-check('a vola is not touched at any level', stageOf(vola) === 0 && kindName(vola) === 'Vola' && near(g.creatures.speedMul(vola), 1));
+const still = mine('dowse');
+still.skills = { prospecting: 80 };
+check('a dowse is not touched at any level', stageOf(still) === 0 && kindName(still) === SPECIES.dowse.name && near(g.creatures.speedMul(still), 1));
 {
   r.skills = { foraging: AT1 - 0.0001 };
   r.health = 10;

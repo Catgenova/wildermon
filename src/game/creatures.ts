@@ -710,8 +710,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   vola: {
     id: 'vola',
-    name: 'Vola',
-    description: 'A velvet-furred digger with a pink snout and broad shovel paws. It noses through the undergrowth for herbs and roots and would rather burrow than bite.',
+    name: 'Sporeling',
+    was: ['Vola'],
+    // Asked for: "Now to replace Vola with Sporeling, Sporekin, Sporelord". Its words are written with every number they
+    // read (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Sporekin', description: '' },
+      { name: 'Sporelord', description: '' },
+    ],
     health: 16,
     attack: 2,
     speed: 1.9,
@@ -722,11 +729,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'botanize',
     workRange: 8,
+    // Its coat and its cap: cream with a coral cap, white with a rose one, fawn with a red one, and grey-cream with a lilac one.
     variants: [
-      ['#4a3b33', '#7d6a5c'],
-      ['#6f6c68', '#a09a92'],
-      ['#7d5a3c', '#b8926a'],
-      ['#2b2624', '#5b524c'],
+      ['#f3e8d6', '#ec8a7c'],
+      ['#fbf8f2', '#e47c98'],
+      ['#d8b48e', '#d4453e'],
+      ['#ddd6cb', '#b48ad0'],
     ],
     butcher: { meat: 2, fur: 3, leather: 2, bone: 2, gland: 1 },
     tameFail: 'snuffles the {food} out of your palm, then shuffles away and buries itself in the leaf litter',
@@ -3466,6 +3474,8 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
 // The words of each line that evolves, and its stages', now that every number they read is here.
 sayLine('rabba', `Set to work on a settlement it forages within ${SPECIES.rabba.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`,
   'Its level is its foraging.');
+sayLine('vola', `Set to work on a settlement it botanizes within ${SPECIES.vola.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`,
+  'Its level is its botanizing.');
 sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of bare rock with no seam in it, within ${SPECIES.quarra.workRange} tiles of the token and ${SPECIES.quarra.rangePerStep} further for every ${SKILL_STEP} levels, and carries it home.`,
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,

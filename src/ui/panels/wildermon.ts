@@ -240,7 +240,7 @@ export class WildermonPanel {
     const owned = this.game.creatures.yours();
     const shown = owned.filter((c) => this.matches(c) && (!this.attention || this.wants(c)));
     if (!owned.length) {
-      this.place([this.note('none', 'You have no tamed wildermon yet. Carry a berry for a Snufflet or a spice for a Vola, then try Tame on a wild one.')]);
+      this.place([this.note('none', `You have no tamed wildermon yet. Carry a berry for a ${SPECIES.rabba.name} or a spice for a ${SPECIES.vola.name}, then try Tame on a wild one.`)]);
       this.footer.replaceChildren();
       this.footerKey = '';
       return;

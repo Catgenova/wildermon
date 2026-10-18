@@ -82,7 +82,7 @@ export const dietText = (c: Creature): string => {
   return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
 };
 
-/** "a berry or vegetable" for a Snufflet, "a spice or vegetable" for a Vola. */
+/** "a berry or vegetable" for a Snufflet, "a spice or vegetable" for a Sporeling. */
 export const baitHint = (c: Creature): string => SPECIES[c.species].baitHint;
 
 /**
