@@ -35,11 +35,13 @@ export interface Hearth {
  * Rake out whatever ashes have built up. Shared by the campfire, the smelter
  * and the kiln, since all three burn the same wood the same way.
  */
+/** What raked-out ashes are, whoever rakes them: the island's `give(.., 'ash', whole, 20)`. */
+export const ASH_QL = 20;
 export function rakeAshes(g: Game, h: Hearth, what: string): void {
   const whole = Math.floor(h.ash ?? 0);
   if (whole <= 0) return;
   h.ash = (h.ash ?? 0) - whole;
-  const got = g.inventory.add('ash', { count: whole, ql: 20 });
+  const got = g.inventory.add('ash', { count: whole, ql: ASH_QL });
   g.logMsg(`You rake ${whole} ${whole === 1 ? 'lot' : 'lots'} of ashes out of the ${what}. (QL ${got.ql.toFixed(0)})`, 'event');
   g.events.emit('world', h.x, h.y);
 }

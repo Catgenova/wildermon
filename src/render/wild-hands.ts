@@ -17,7 +17,7 @@ import { pawed, trot } from './wild-paws';
 /* ---- shared by these kinds ---------------------------------------------------------- */
 
 /** A small round muzzle out in front of the eyes with a nose on it and a mouth under. */
-function snout(at: number, z: number, r: V3, nose: number, n: number, k: number, mat: Mat = 'muzzle'): Mesh {
+export function snout(at: number, z: number, r: V3, nose: number, n: number, k: number, mat: Mat = 'muzzle'): Mesh {
   const c: V3 = [0, at, z];
   return merge(
     orbAlong(c, [0, 1, -0.1], r, n, k, mat),
@@ -27,7 +27,7 @@ function snout(at: number, z: number, r: V3, nose: number, n: number, k: number,
 }
 
 /** A tail of links, each a short tube, the tip of the last pointing back along -y. */
-function links(r: readonly number[], len: number, n: number, mat: Mat | ((ring: number, j: number) => Mat)): Mesh[] {
+export function links(r: readonly number[], len: number, n: number, mat: Mat | ((ring: number, j: number) => Mat)): Mesh[] {
   return r.slice(0, -1).map((r0, q) => tube([[0, 0.1, 0], [0, 0, 0], [0, -len, 0]], [r0, r0, r[q + 1]], [r0, r0, r[q + 1]], n, mat, { seam: q === r.length - 2 ? 'start' : 'both' }));
 }
 

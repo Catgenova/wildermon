@@ -2316,6 +2316,16 @@ export const NEWS: News[] = [
         .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
     ],
   },
+  {
+    n: 174,
+    day: '2026-10-18',
+    lines: () => [
+      'Twelve more wildermon, each with a trade to work on your settlement:',
+      ...['forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra']
+        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+      'In a game of your own, a plucka set to work now finds the fruit trees round it; it had been passing every one by.',
+    ],
+  },
 ];
 
 

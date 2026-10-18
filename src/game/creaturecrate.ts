@@ -261,8 +261,8 @@ function swapRefusal(g: Game): string | null {
 export function deedJobLine(c: Creature): string {
   const gathers = c.trade ?? SPECIES[c.species].gathers;
   // A swarm at the hives brings nothing to the crate: the hives fill themselves while it keeps them. Nor does
-  // a trade worked at the stores or at your own (`TEND_JOBS`): its words already say where what it makes goes.
-  const tail = gathers === 'hive' || TEND_JOBS.has(gathers ?? 'forage') ? '' : ' and bring what it finds to the crate';
+  // a trade worked at the stores or at your own (`TEND_JOBS`): its words already say where what it makes goes; nor a scurra's scrubbing.
+  const tail = gathers === 'hive' || gathers === 'scrub' || TEND_JOBS.has(gathers ?? 'forage') ? '' : ' and bring what it finds to the crate';
   return gathers
     ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the token${tail}`
     : 'stay around the settlement';

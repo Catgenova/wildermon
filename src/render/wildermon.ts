@@ -11,6 +11,7 @@ import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
 import { BEVERE, BOGGA, EMBRA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
 import { COBBE, GRUBBA, QUARRA, ROWL } from './wild-wild';
 import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA, WICKA } from './wild-hands';
+import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, SPRIGGA, WURLA } from './wild-hands2';
 
 /**
  * The wildermon, each as a body of its own (`./beasts` for what they are all
@@ -77,6 +78,18 @@ export const WILDERMON: Record<string, Kind> = {
   brambo: BRAMBO,
   grazza: GRAZZA,
   siffa: SIFFA,
+  forga: FORGA,
+  potta: POTTA,
+  cindra: CINDRA,
+  hoppa: HOPPA,
+  simma: SIMMA,
+  relka: RELKA,
+  bedda: BEDDA,
+  wurla: WURLA,
+  sprigga: SPRIGGA,
+  ambra: AMBRA,
+  petta: PETTA,
+  scurra: SCURRA,
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */

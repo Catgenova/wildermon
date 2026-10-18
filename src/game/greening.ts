@@ -258,3 +258,44 @@ const SCRUB_MOSS: ActionDef = {
 };
 
 export const GREEN_ACTIONS: ActionDef[] = [CLEAR_IVY, SCRUB_MOSS];
+
+/* ---- a scurra's round ------------------------------------------------------- */
+
+/**
+ * What greens on one tile of yours, for a scurra: the paving and the slab on
+ * it, a statue standing on it, and the stone walls along its north and its
+ * west edges (each wall is the north or the west edge of exactly one tile).
+ * Nothing on a tile that is not on a settlement of yours.
+ */
+function greenThings(g: Game, x: number, y: number): { paving: boolean; slab?: Foundation; pieces: PlacedFurniture[]; walls: Wall[] } | null {
+  if (!g.deedOfMineAt(x, y)) return null;
+  const slab = g.slabAt(x, y);
+  return {
+    paving: PAVED.has(g.world.getTile(x, y)),
+    slab: slab && foundationDone(slab) ? slab : undefined,
+    pieces: [...g.furniture.values()].filter((f) => f.x === x && f.y === y && mossyPiece(f)),
+    walls: [...ivyWalls(g, x, y, 'n'), ...ivyWalls(g, x, y, 'w')],
+  };
+}
+
+/** The most days anything on a tile of yours has been greening (`greenThings`), nought when nothing there greens. The island's `green_on_tile`. */
+export function greenOnTile(g: Game, x: number, y: number, now: number): number {
+  const t = greenThings(g, x, y);
+  if (!t) return 0;
+  let days = t.paving ? (pavingGreen(g, x, y, now) ?? 0) : 0;
+  if (t.slab) days = Math.max(days, slabGreen(g, t.slab, now) ?? 0);
+  for (const f of t.pieces) days = Math.max(days, pieceGreen(g, f, now) ?? 0);
+  for (const w of t.walls) days = Math.max(days, wallGreen(g, w, now) ?? 0);
+  return days;
+}
+
+/** Everything on a tile of yours back to bare stone (`greenThings`), as Scrub the moss and Clear the ivy leave it. The island's `scrub_tile`. */
+export function scrubTile(g: Game, x: number, y: number, now: number): void {
+  const t = greenThings(g, x, y);
+  if (!t) return;
+  if (t.paving) g.pavingSince.set(`${x},${y}`, now);
+  if (t.slab) t.slab.greenSince = now;
+  for (const f of t.pieces) f.greenSince = now;
+  for (const w of t.walls) w.greenSince = now;
+  g.events.emit('world', x, y);
+}
