@@ -33,6 +33,7 @@
 import { execFileSync } from 'node:child_process';
 import { BOARD_TOP, bredScore } from '../../src/game/boards';
 import { Game, MAX_DEED_LEVEL } from '../../src/game/game';
+import { SPECIES } from '../../src/game/creatures';
 import { GRADE_STEP, TIERS, TRAIT_SLOTS } from '../../src/game/traits';
 import { BOARD_RULES, BRED_MAX, figure, soloStanding } from '../../src/ui/panels/boards';
 
@@ -298,7 +299,7 @@ const mine = soloStanding(game);
 check('your best skill, a characteristic higher than it not counted',
   mine.skills === 'Your best skill, characteristics not counted: Mining 12.50.', mine.skills);
 check('your best-bred wildermon, by the board\'s own score, the wild one left out',
-  mine.wildermon === `Your best-bred wildermon: Stormcaller, Rabba, at 14 of ${figure(BRED_MAX)}, level 1.`, mine.wildermon);
+  mine.wildermon === `Your best-bred wildermon: Stormcaller, ${SPECIES.rabba.name}, at 14 of ${figure(BRED_MAX)}, level 1.`, mine.wildermon);
 check('and your settlement, with its level of the most there is',
   mine.settlements === `Your settlement: Hearth, level 2 of ${MAX_DEED_LEVEL}, 1 citizen: you.`, mine.settlements);
 

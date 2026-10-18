@@ -490,6 +490,8 @@ export interface SpeciesDef {
   learns?: { skill: string; by: LearnsBy };
   /** What it evolves into at each of `EVOLVE_AT`, for a kind that evolves: a name and words of each stage's own. */
   stages?: [StageDef, StageDef];
+  /** What the kind used to be called, which a carcass or a crate from before can still say. */
+  was?: readonly string[];
 }
 
 /** A stage a wildermon evolves into: what it is called, and its words. */
@@ -669,6 +671,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   rabba: {
     id: 'rabba',
     name: 'Snufflet',
+    was: ['Rabba'],
     // Asked for: "This first will replace Rabba. Snufflet, Snuffroot, Snuffthorn". Its words, and each stage's, say what it
     // does and what each stage adds, in the game's own numbers, and are written once those are all here (`snuffSays`).
     description: '',

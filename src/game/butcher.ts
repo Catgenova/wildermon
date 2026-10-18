@@ -49,8 +49,11 @@ export const butcherShare = (g: Game, knifeQl: number | null): number =>
 /** Glands are the rare part: only a steady hand finds them intact. */
 const GLAND_CHANCE = 0.35;
 
-export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined =>
-  Object.values(SPECIES).find((s) => s.name.toLowerCase() === (item.extra ?? '').toLowerCase());
+/** The kind a carcass is of, by the name it carries: the kind's, a stage's, or one it used to have (`SpeciesDef.was`). */
+export const corpseSpecies = (item: Item): (typeof SPECIES)[string] | undefined => {
+  const name = (item.extra ?? '').toLowerCase();
+  return Object.values(SPECIES).find((s) => [s.name, ...(s.stages ?? []).map((x) => x.name), ...(s.was ?? [])].some((n) => n.toLowerCase() === name));
+};
 
 /**
  * The quality what comes off a carcass is taken at: the Butchering skill's,

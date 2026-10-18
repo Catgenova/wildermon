@@ -48,7 +48,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { RECIPES } from '../../src/game/recipes';
 import { itemDef, groundDecayRate } from '../../src/game/items';
 import { furnitureDef } from '../../src/game/furniture';
-import type { Creature } from '../../src/game/creatures';
+import { SPECIES, type Creature } from '../../src/game/creatures';
 import { CREATURE_CRATE, crateTheKept, emptyCrate, occupiedRefusal } from '../../src/game/creaturecrate';
 
 const psql = (sql: string): string =>
@@ -100,7 +100,7 @@ act('tame').perform(at(first), game);
 check('the first one tamed follows you', first.mode === 'active', first.mode);
 const second = beside();
 const refused = act('tame').check?.(at(second), game) ?? null;
-check('the next is refused without a crate', refused === 'Rabba already follows you. Carry an empty creature crate to tame another: it goes into the crate.', refused ?? 'allowed');
+check('the next is refused without a crate', refused === `${SPECIES.rabba.name} already follows you. Carry an empty creature crate to tame another: it goes into the crate.`, refused ?? 'allowed');
 const crate = game.inventory.add(CREATURE_CRATE, { ql: 30 });
 check('and allowed with one', (act('tame').check?.(at(second), game) ?? null) === null);
 act('tame').perform(at(second), game);
@@ -109,7 +109,7 @@ check('and goes into the crate', second.mode === 'stored' && crate.creature === 
 const held: Target = { kind: 'item', uid: crate.uid };
 const offered = game.actionsFor(held).map((a) => a.def.id);
 check('an occupied crate is not offered to be dropped or put away', !offered.includes('drop') && !offered.includes('stow_item'), offered.join(','));
-check('and says why when asked', occupiedRefusal(game, 'drop', held) === 'Rabba is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.');
+check('and says why when asked', occupiedRefusal(game, 'drop', held) === `${SPECIES.rabba.name} is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.`);
 check('nothing takes it out of the pack', game.inventory.take(crate.uid) === null);
 
 // Set down beside you, on the first spot that will have it.
@@ -331,7 +331,7 @@ check('the next is refused without a crate, in the browser\'s words', said('NOCR
 check('and allowed with one', said('WITHCRATE') === 'allowed', said('WITHCRATE'));
 check('and goes into the crate', said('CRATED') === 'stored,true', said('CRATED'));
 check('an occupied crate is not dropped, in the browser\'s words',
-  said('DROP') === 'Rabba is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.', said('DROP'));
+  said('DROP') === `${SPECIES.rabba.name} is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.`, said('DROP'));
 check('and nothing moves it anywhere else, past any door', said('STAYS') === 'A creature crate with a wildermon in it is carried, set down, opened or traded, and nothing else.', said('STAYS'));
 check('it may be set down', said('PLACEOK') === 'allowed', said('PLACEOK'));
 check('set down, it stands with the wildermon in it, which stands where it does', said('PLACED') === 'true,true,0.00', said('PLACED'));

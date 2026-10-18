@@ -24,7 +24,7 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { coaxStep, tameChance, TAME_MOST } from '../../src/game/creatureActions';
-import { AGES, BREED_REST, CARE_BONUS, CARE_HOURS, careMul, COAX_STEP, GESTATION, keptOf, OLD_AT, ageOf, setLocalKept, type Creature } from '../../src/game/creatures';
+import { AGES, BREED_REST, CARE_BONUS, CARE_HOURS, careMul, COAX_STEP, GESTATION, keptOf, OLD_AT, ageOf, setLocalKept, SPECIES, type Creature } from '../../src/game/creatures';
 import { breedChance, GROOM_HEAL, groomGain, studBook } from '../../src/game/husbandry';
 import { ITEM_DEFS } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
@@ -173,12 +173,12 @@ begin
   perform pg_temp.hold(w, u, '{}');
   v_t := v_t || '|' || tame_chance(w, u, ${row('v_c')}) || ':' || coax_bonus(${row('v_c')});
   ${beast('examine_creature')};
-  v_u := coalesce(${last('A wild rabba:%')}, 'unsaid');
+  v_u := coalesce(${last(`A wild ${SPECIES.rabba.name.toLowerCase()}:%`)}, 'unsaid');
   ${hold('Patient Coax')};
   v_t := v_t || ':' || tame_chance(w, u, ${row('v_c')});
   ${beast('examine_creature')};
   insert into said values ('TAME', v_t);
-  insert into said values ('COAXSAID', v_u || '#' || coalesce(${last('A wild rabba:%')}, 'unsaid'));
+  insert into said values ('COAXSAID', v_u || '#' || coalesce(${last(`A wild ${SPECIES.rabba.name.toLowerCase()}:%`)}, 'unsaid'));
   update creature set coaxed = 0, coaxed_at = null where world_id = w and id = v_c;
 
   /* ---- Any Offering: a bowl of stew is no rabba's food, and it is for a Herdsman who has it. ---- */
@@ -367,7 +367,7 @@ check('and examining it says so, in the step of whoever looks',
 const [baitAsk, baitGone] = say('ANYBAIT').split('|');
 const [baitNo, baitNone, baitYes, baitAny] = baitAsk.split('#');
 check(`${P('Any Offering').name}: a bowl of stew is refused for a rabba without it and offered with it`,
-  baitNo.startsWith('Rabbas take') && baitNone === 'none' && baitYes === 'ALLOWED' && baitAny === 'stew', baitAsk);
+  baitNo.startsWith(`${SPECIES.rabba.name}s take`) && baitNone === 'none' && baitYes === 'ALLOWED' && baitAny === 'stew', baitAsk);
 check('and the rabba takes it and is kept', baitGone === '0:active:true', baitGone);
 
 /* ---- A beast you keep --------------------------------------------------------------------- */

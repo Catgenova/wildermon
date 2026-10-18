@@ -540,6 +540,8 @@ out.push(`alter table species_def add column if not exists learns text;`);
 out.push(`alter table species_def add column if not exists learns_by text;`);
 /* What a kind that evolves is called at each stage after its first (\`SpeciesDef.stages\`). */
 out.push(`alter table species_def add column if not exists stages text[];`);
+/* What a kind used to be called, which a carcass from before can still say (\`SpeciesDef.was\`). */
+out.push(`alter table species_def add column if not exists was text[];`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1279,6 +1281,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (learns) out.push(`update species_def set learns = ${q(learns.skill)}, learns_by = ${q(learns.by)} where id = ${q(d.id)};`);
   const stages = (d as unknown as { stages?: Array<{ name: string }> }).stages;
   if (stages) out.push(`update species_def set stages = array[${stages.map((x) => q(x.name)).join(', ')}]::text[] where id = ${q(d.id)};`);
+  const was = (d as unknown as { was?: string[] }).was;
+  if (was) out.push(`update species_def set was = array[${was.map((x) => q(x)).join(', ')}]::text[] where id = ${q(d.id)};`);
   for (const item of d.diet as string[]) out.push(`insert into species_diet values (${q(d.id)}, ${q(item)});`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
