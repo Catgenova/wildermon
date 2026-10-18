@@ -669,6 +669,9 @@ function lineSays(names: readonly [string, string, string], job: string, level: 
   return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
 }
 
+/** Seconds between chances for an unruly companion to turn on its keeper. */
+export const NIP_EVERY = 25;
+
 /** What a digger's lump of sand or clay comes out at, as a share of its digging: anywhere between the two. */
 export const DIG_QL: readonly [number, number] = [0.6, 1.4];
 
@@ -779,8 +782,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
     hide: 'shell',
     wound: 'cut',
     venom: true,
-    name: 'Crawler',
-    description: 'A broad sand-coloured crab that goes at everything sideways. It shovels sand with its claws, and it has never once been sorry for pinching anybody.',
+    name: 'Sandpip',
+    was: ['Crawler'],
+    // Asked for: "Sandpip, sandpincher, sandpinnacle for crawler replacement". Its words, and each stage's, are written once every
+    // number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Sandpincher', description: '' },
+      { name: 'Sandpinnacle', description: '' },
+    ],
     health: 24,
     attack: 5,
     speed: 1.6,
@@ -3520,6 +3530,8 @@ sayLine('mola', `Set to work on a settlement it mines the nearest ore seam withi
   'Its level is its mining.');
 sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging and never over 100, and carries it to the crate.`,
   'Its level is its digging.');
+sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
+  'Its level is its digging.');
 sayLine('warda', `Out at your heel or keeping a settlement it sees ${SPECIES.warda.sight} tiles round itself for you, where most of yours see ${KEPT_SIGHT}, and ${percent(KEPT_NIGHT_LOSS / 2)} less at the dead of night. Struck, it strikes back every time.`,
   `Its level is its awareness, which it learns ${LEARNS_SAYS.out}.`);
 
@@ -4223,8 +4235,6 @@ export const forgetCoaxing = (c: Creature): void => {
 
 /** Seconds a wild creature spends grazing. */
 const FORAGE_TIME = 2.5;
-/** Seconds between chances for an unruly companion to turn on its keeper. */
-export const NIP_EVERY = 25;
 
 /** A creature's level, read off its best task skill. */
 /**

@@ -2983,8 +2983,8 @@ export function helpText(): string {
     its mining reaches ${METAL_LEVEL('iron')}. It works <b>${numberWord(MINE_DEPTH)} units of water</b> deep, the same as you do, and a face it
     cannot stand on it works from the bank beside it: a shore seam is an ${SPECIES.mola.name}'s to cut, and so is a
     seabed under wading depth. The same goes for a <b>${SPECIES.quarra.name}</b> and plain rock. Its range grows by
-    ${SPECIES.mola.rangePerStep ?? RANGE_PER_STEP} tiles every ${SKILL_STEP} levels rather than the usual ${RANGE_PER_STEP}. The <b>Crawler</b> is a broad crab that lives on the
-    sand, eats vegetables, and digs sand for its deed &mdash; a clawful at a time, taken from the highest
+    ${SPECIES.mola.rangePerStep ?? RANGE_PER_STEP} tiles every ${SKILL_STEP} levels rather than the usual ${RANGE_PER_STEP}. The <b>${SPECIES.crawler.name}</b> (the Crawler that was) is a hermit crab that lives on the
+    sand, eats vegetables, evolves into a ${SPECIES.crawler.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.crawler.stages![1].name} at ${EVOLVE_AT[1]}, and digs sand for its deed &mdash; a clawful at a time, taken from the highest
     corner of the tile and carried to the crate, which is where the sand for mortar and moulds comes from
     once nobody wants to dig it themselves. It is the first of the defensive sort: strike one and it
     comes straight back at you every time, and even a tamed one is never quite tamed, so now and again it
