@@ -3061,8 +3061,8 @@ export function helpText(): string {
     and goes up ground an Orse turns away from. The <b>Wadd</b> is the one mount that will swim deep
     water with a rider on it. The <b>Shaggan</b> is slower in the traces than anything else and stronger
     than all of them: each adds ${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} to a team's pull where most beasts add ${percent(PULL_DEFAULT)}.</p>
-    <p><b>Eyes and produce.</b> The <b>Warda</b> is a watcher: keep one and it sees ${SPECIES.warda.sight} tiles for you
-    wherever it stands. The <b>Quill</b> is a ground-bird you <b>pluck</b> rather than shear, for
+    <p><b>Eyes and produce.</b> The <b>${SPECIES.warda.name}</b> (the Warda that was) is a watcher: keep one and it sees ${SPECIES.warda.sight} tiles for you
+    wherever it stands, and evolves into a ${SPECIES.warda.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.warda.stages![1].name} at ${EVOLVE_AT[1]}. The <b>Quill</b> is a ground-bird you <b>pluck</b> rather than shear, for
     <b>feathers</b>, which is what keeps an archer in arrows. The <b>Cudda</b> is <b>milked</b> into an
     empty bucket, and a bucket of milk presses into ${numberWord(made('make_cheese'))} <b>cheeses</b>. The <b>Vesp</b> is a swarm
     rather than a creature: build a <b>hive</b> (${bill('make_hive', true)}), set it down

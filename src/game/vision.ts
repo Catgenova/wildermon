@@ -2,6 +2,7 @@ import { TileType } from '../world/tiles';
 import { isDone, MATERIAL_BY_ID, WALL_TYPE_BY_ID } from './building';
 import { CELLAR_DAYLIGHT } from './cellar';
 import { bloodMul } from './creatures';
+import { COMPANION_SIGHT, NIGHT_LOSS } from './limits';
 import type { Game } from './game';
 import { heldReachOf } from './light';
 import { isLampPiece, lampAt, lampBurning, lampReach } from './lamps';
@@ -38,13 +39,12 @@ export const BASE_SIGHT = 15;
 const HEIGHT_PER_TILE = 9;
 export const MAX_SIGHT = 28;
 /**
- * How much of your sight the dark takes.
+ * How much of your sight the dark takes: three quarters of it (`limits`).
  *
- * Three quarters of it. A night used to cost about half, which made the dark
- * an inconvenience; at three quarters it is a reason to stop walking, and a
- * reason for the torch to exist.
+ * A night used to cost about half, which made the dark an inconvenience; at
+ * three quarters it is a reason to stop walking, and a reason for the torch to exist.
  */
-export const NIGHT_LOSS = 0.75;
+export { COMPANION_SIGHT, NIGHT_LOSS };
 /** How much of what the night took a light in your hand gives back. */
 export const LIGHT_GIVES_BACK = 0.75;
 /**
@@ -60,8 +60,6 @@ export const LIGHT_GIVES_BACK = 0.75;
 const AWARE_FLOOR = 0.36;
 export const awarenessReach = (level: number): number =>
   AWARE_FLOOR + (1 - AWARE_FLOOR) * Math.sqrt(Math.max(0, Math.min(100, level)) / 100);
-/** Tamed creatures are extra eyes, but not far-seeing ones: this many tiles, unless the kind says otherwise. */
-export const COMPANION_SIGHT = 7;
 /** A lit fire shows its own ground, however dark it is. */
 const FIRE_SIGHT = 6;
 /**

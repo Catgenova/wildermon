@@ -19,7 +19,7 @@ import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
 import { furnitureDef, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
 
 import { milkLitres } from './dairy';
-import { SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
+import { COMPANION_SIGHT as KEPT_SIGHT, NIGHT_LOSS as KEPT_NIGHT_LOSS, SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
 import { candleBurn } from './light';
 import { isLampPiece } from './lamps';
 import { GRAPE, grapesFor, isTrellis, vineStage } from './vineyard';
@@ -651,28 +651,32 @@ export const yielded = (c: Creature): boolean => c.health <= sparFloor(c) + SPAR
 export const sparSaid = (c: Creature): string =>
   `You land one on ${c.name}. It is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', and yields' : ''}.`;
 
-/** What a stage adds over a kind's first, in words: its health, its blow, its pace and its task, each as a share. */
-export function stageSays(stage: number): string {
+/** What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task, each as a share. */
+export function stageSays(stage: number, task = true): string {
   const more = (ch: TraitChannel): string => percent((STAGE_MUL[ch] ?? 1) ** stage - 1);
-  return `${more('hardy')} more health, a ${more('tough')} harder blow, ${more('speed')} faster on its feet and ${more('work')} quicker at each go of its task`;
+  return task
+    ? `${more('hardy')} more health, a ${more('tough')} harder blow, ${more('speed')} faster on its feet and ${more('work')} quicker at each go of its task`
+    : `${more('hardy')} more health, a ${more('tough')} harder blow and ${more('speed')} faster on its feet`;
 }
 
 /**
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean): string {
   if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into ${article(names[1])} ${names[1]}.`;
   const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into ${article(names[2])} ${names[2]}.` : '';
-  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
+  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
 }
 
 /** Writes a line's words onto its kind and its two stages, once every number they read is here. */
 function sayLine(id: string, job: string, level: string): void {
   const d = SPECIES[id];
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
-  d.description = lineSays(names, job, level, 0);
-  d.stages = [{ name: names[1], description: lineSays(names, job, level, 1) }, { name: names[2], description: lineSays(names, job, level, 2) }];
+  // Its stages work faster only at a task, so a kind with none is not told they do.
+  const task = !!d.gathers;
+  d.description = lineSays(names, job, level, 0, task);
+  d.stages = [{ name: names[1], description: lineSays(names, job, level, 1, task) }, { name: names[2], description: lineSays(names, job, level, 2, task) }];
 }
 
 export const SPECIES: Record<string, SpeciesDef> = {
@@ -2924,8 +2928,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   warda: {
     id: 'warda',
     wound: 'cut',
-    name: 'Warda',
-    description: 'A tall, still, long-sighted thing that picks the highest ground it can find and watches from it. Nothing comes near a settlement with one of these on the hill without you knowing.',
+    name: 'Skylooklet',
+    was: ['Warda'],
+    // Asked for: "This family to replace warda". Its words, and each stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Skywarden', description: '' },
+      { name: 'Skyrange', description: '' },
+    ],
     health: 30,
     attack: 5,
     speed: 1.9,
@@ -3499,6 +3509,8 @@ sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of 
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
   'Its level is its mining.');
+sayLine('warda', `Out at your heel or keeping a settlement it sees ${SPECIES.warda.sight} tiles round itself for you, where most of yours see ${KEPT_SIGHT}, and ${percent(KEPT_NIGHT_LOSS / 2)} less at the dead of night. Struck, it strikes back every time.`,
+  `Its level is its awareness, which it learns ${LEARNS_SAYS.out}.`);
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {

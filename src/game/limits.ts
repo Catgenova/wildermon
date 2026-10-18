@@ -32,3 +32,8 @@ export const MOSS_PER_CUT = GRASS_PER_CUT;
 export const SHEAR_FROM = 0.35;
 export const SHEAR_WOOL = 3;
 export const SHEAR_FEATHERS = 6;
+
+/** Tamed creatures are extra eyes, but not far-seeing ones: this many tiles, unless the kind says otherwise. */
+export const COMPANION_SIGHT = 7;
+/** How much of your sight the dark takes: three quarters of it. A kept creature's eyes lose half of that. */
+export const NIGHT_LOSS = 0.75;
