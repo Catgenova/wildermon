@@ -5306,6 +5306,7 @@ create or replace function cellar_decay() returns double precision language sql 
 create or replace function cellar_least_soil() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
 create or replace function column_share() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function jetty_reach() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
+create or replace function outside_stair_level() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function wall_height() returns double precision language sql immutable as $fn$ select 30::double precision $fn$;
 create or replace function class_at() returns double precision language sql immutable as $fn$ select 50::double precision $fn$;
 create or replace function class_change_cost() returns double precision language sql immutable as $fn$ select 500::double precision $fn$;

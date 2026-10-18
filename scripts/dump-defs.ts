@@ -25,7 +25,7 @@ import { WATER_PLANTS, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTIN
 import { CROP_LIST, glassExamine } from '../src/game/farming';
 import { FISH, BAITS } from '../src/game/fishing';
 import { GLASS_ROOF, onlySaid, WALL_TYPES, MATERIALS as BUILD_MATERIALS, ROOF_SHAPES, STOREY_SKILL, INDOORS_DECAY, INDOORS_REST, WALL_HEIGHT, LADDER_PLANKS, MAX_LEVELS, TOP_LEVELS, WALL_THICK,
-  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_LEVEL, CELLAR_SOIL, COLUMN_SHARE, JETTY_REACH } from '../src/game/building';
+  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_LEVEL, CELLAR_SOIL, COLUMN_SHARE, JETTY_REACH, OUTSIDE_STAIR_LEVEL } from '../src/game/building';
 import { cellarOutdoor } from '../src/game/cellar';
 import { REPOINT_BACK } from '../src/game/buildActions';
 import { CONCRETE_PER_STEP } from '../src/game/foundations';
@@ -1783,6 +1783,8 @@ for (const [fn, v] of [
   ['cellar_level', CELLAR_LEVEL], ['cellar_depth', CELLAR_DEPTH], ['cellar_decay', CELLAR_DECAY], ['cellar_least_soil', CELLAR_SOIL],
   /* What a column takes of a solid wall's bill, and how far out past the footprint a jetty reaches. */
   ['column_share', COLUMN_SHARE], ['jetty_reach', JETTY_REACH],
+  /* And the storey an outside staircase climbs to from the ground out past the footprint. */
+  ['outside_stair_level', OUTSIDE_STAIR_LEVEL],
   /* And how high one storey stands, which a bridge landing on one has to know. */
   ['wall_height', WALL_HEIGHT],
   /* What a trade asks before its card is on the table, and what changing one costs. */

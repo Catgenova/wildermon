@@ -55,7 +55,7 @@ import type { LightSource } from '../game/light';
 import { FLOOR_PPT, FLOOR_TILES, concrete, flooring, slabbing } from './flooring';
 import { LADDER, stairStyle } from './stairing';
 import { BEAM_DEEP, drawBeam, drawColumn, drawJettySupports, drawRailing, JOIST_DEEP, PILASTER_PROUD, type Cut, type RailEnds } from './framing';
-import { jettyBase } from '../game/frame';
+import { jettyBase, outsideStairBase } from '../game/frame';
 import { drawSteps, stepsFootAt } from './steps';
 import { seasonAt, type Season } from '../world/calendar';
 import { drawShine, shines } from './shine';
@@ -239,7 +239,7 @@ import { ENCHANTERS_PLINTH } from '../game/enchant';
  */
 export type Ghost =
   | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean }
-  | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean };
+  | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number };
 
 export interface Pick {
   x: number;
@@ -5642,7 +5642,10 @@ export class Renderer {
     } else {
       const hand = ghost.floorKind === 'stairs' ? ghost.hand : undefined;
       const tile: FloorTile = { building: 0, level: ghost.level, x: ghost.x, y: ghost.y, material: ghost.material, kind: ghost.floorKind, facing: ghost.side, ...(hand ? { hand } : {}), ...floorBill(ghost.material, ghost.floorKind, undefined, hand) };
-      const base = this.game.buildings.buildingAt(ghost.x, ghost.y)?.deck ?? world.getHeight(ghost.x, ghost.y);
+      // Out past the footprint, an outside staircase from the floor its head meets (`outsideStairBase`).
+      const host = ghost.buildingId !== undefined && !this.game.buildings.buildingAt(ghost.x, ghost.y) ? this.game.buildings.list.get(ghost.buildingId) : undefined;
+      const base = (host ? outsideStairBase(this.game, host, ghost.x, ghost.y, ghost.side) : null)
+        ?? this.game.buildings.buildingAt(ghost.x, ghost.y)?.deck ?? world.getHeight(ghost.x, ghost.y);
       if (ghost.level === 0 && !below && this.game.buildings.cellarDone(ghost.x, ghost.y)) this.drawOpening(tile, ghost.x, ghost.y, base, 0.6);
       else if (ghost.floorKind === 'stairs') this.drawStairs(tile, ghost.x, ghost.y, base, 0.6);
       else this.drawLadder(tile, ghost.x, ghost.y, base, 0.6, ghost.level > 0);
@@ -5754,7 +5757,8 @@ export class Renderer {
             if (!lid || !isDone(lid)) this.drawOpening(floor, x, y, base, alpha);
           } else switch (floorKind(floor)) {
             case 'stairs':
-              this.drawStairs(floor, x, y, base, alpha);
+              // An outside staircase climbs from its building's floor, its top level with the storey it goes to (`jettyBase`).
+              this.drawStairs(floor, x, y, floorBase, alpha);
               break;
             case 'ladder':
               late = () => this.drawLadder(floor, x, y, base, alpha, above <= 0);
@@ -8547,7 +8551,8 @@ export class Renderer {
     let over = false;
     for (let level = 1; level < jetty.levels && !over; level++) {
       const f = this.game.buildings.floor(level, x, y);
-      over = !!f && f.building === jetty.id && isDone(f);
+      // An outside staircase stands on the ground, and casts no storey's shade on it.
+      over = !!f && f.building === jetty.id && isDone(f) && floorKind(f) !== 'stairs';
     }
     if (!over) return;
     const cam = this.camera;

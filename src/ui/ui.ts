@@ -253,7 +253,7 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
  */
 type Placing =
   | { kind: 'furniture'; itemUid: number; piece: string; material?: string; facing: Side }
-  | { kind: 'stairs'; x: number; y: number; cx: number; cy: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; down?: boolean; hand?: StairHand };
+  | { kind: 'stairs'; x: number; y: number; cx: number; cy: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; down?: boolean; hand?: StairHand; buildingId?: number };
 
 /**
  * Where a stack at hand is, on its menu row, when it is not on you: "in the
@@ -1077,7 +1077,8 @@ export class UI {
   startPlacingStairs(base: Target, level: number, material: string, floorKind: 'stairs' | 'ladder', side: Side, down = false, hand?: StairHand): void {
     if (base.kind !== 'tile') return;
     const single = floorKind === 'stairs' ? hand : undefined;
-    this.placing = { kind: 'stairs', x: base.x, y: base.y, cx: base.cx, cy: base.cy, level, material, floorKind, side, down, hand: single };
+    // Out past the footprint, an outside staircase: for the building the job names, on the storey it names (`outsideStairReason`).
+    this.placing = { kind: 'stairs', x: base.x, y: base.y, cx: base.cx, cy: base.cy, level, material, floorKind, side, down, hand: single, buildingId: base.buildingId };
     this.game.logMsg(single ? `${SINGLE_TURNS}, a click plans it, Escape lets it go.` : 'Q and E choose the side to climb from, a click plans it, Escape lets it go.', 'info');
   }
 
@@ -1097,6 +1098,12 @@ export class UI {
     } else p.side = turnedFacing(p.side, step);
   }
 
+  /** The job a staircase or a ladder being placed asks for: an outside staircase names its building and its storey. */
+  private stairsTarget(p: Extract<Placing, { kind: 'stairs' }>): Target {
+    const out = p.buildingId !== undefined ? { buildingId: p.buildingId, level: p.level } : {};
+    return { kind: 'tile', x: p.x, y: p.y, cx: p.cx, cy: p.cy, side: p.side, material: p.material, floorKind: p.floorKind, down: p.down, hand: p.hand, ...out };
+  }
+
   cancelPlacing(): void {
     this.placing = null;
     this.renderer.ghost = null;
@@ -1111,8 +1118,8 @@ export class UI {
     }
     if (p.kind === 'stairs') {
       const plan = ACTION_BY_ID.get('plan_floor');
-      const target: Target = { kind: 'tile', x: p.x, y: p.y, cx: p.cx, cy: p.cy, side: p.side, material: p.material, floorKind: p.floorKind, down: p.down, hand: p.hand };
-      this.renderer.ghost = { kind: 'stairs', x: p.x, y: p.y, level: p.level, material: p.material, floorKind: p.floorKind, side: p.side, hand: p.hand, ok: !(plan?.check?.(target, this.game) ?? null) };
+      const target = this.stairsTarget(p);
+      this.renderer.ghost = { kind: 'stairs', x: p.x, y: p.y, level: p.level, material: p.material, floorKind: p.floorKind, side: p.side, hand: p.hand, ok: !(plan?.check?.(target, this.game) ?? null), buildingId: p.buildingId };
       return;
     }
     if (!pick) {
@@ -1135,7 +1142,7 @@ export class UI {
     }
     if (p.kind === 'stairs') {
       const plan = ACTION_BY_ID.get('plan_floor');
-      const target: Target = { kind: 'tile', x: p.x, y: p.y, cx: p.cx, cy: p.cy, side: p.side, material: p.material, floorKind: p.floorKind, down: p.down, hand: p.hand };
+      const target = this.stairsTarget(p);
       const reason = plan?.check?.(target, this.game) ?? null;
       if (reason) {
         this.game.logMsg(reason, 'error');
@@ -3168,7 +3175,7 @@ export class UI {
     const b = bld.buildingAt(x, y);
     if (!b) {
       // Out past a building: the jetty that goes there, or is there (`frameMenu.ts`).
-      entries.push(...frameJettyEntries(g, pick));
+      entries.push(...frameJettyEntries(g, pick, (base, level, material, side, hand) => this.startPlacingStairs(base, level, material, 'stairs', side, false, hand)));
       // No building here: a fence or a half wall still goes on any border,
       // and the border is decided by which edge of the tile was clicked.
       const side = nearestSide(x, y, pick.wx, pick.wy);

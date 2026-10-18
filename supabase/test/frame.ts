@@ -270,8 +270,11 @@ same('while a building of one storey is told to plan another', 'plan_floor', JET
   'A jetty is floored out from a storey above the ground: plan another storey and work on it.');
 setLevels(1, 2, 1);
 
-same('stairs and ladders stay inside the footprint', 'plan_floor', { ...JETTY, floorKind: 'stairs', side: 'n' },
-  'Stairs and ladders go inside the footprint, not out on a jetty.');
+same('a ladder stays inside the footprint', 'plan_floor', { ...JETTY, floorKind: 'ladder', material: 'plank', side: 's' },
+  'A ladder goes inside the footprint, not out on a jetty.');
+same('and a staircase out past it is an outside staircase, its head against the building (`outstairs.ts`)', 'plan_floor',
+  { ...JETTY, floorKind: 'stairs', side: 'n' },
+  'Its head goes against Tower and its foot out on the ground: turn it to climb toward the building.');
 
 wall(1, 0, 18, 23, 's', 'half_wall', 'log');
 same('it rests on a full-height wall of the storey below, and a half wall is not one', 'plan_floor', JETTY,

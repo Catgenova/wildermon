@@ -23,7 +23,7 @@ import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FAL
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
-  roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
+  OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { materialName } from '../../game/buildActions';
@@ -2397,6 +2397,18 @@ export const NEWS: News[] = [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own walk, strike, work and voice.`,
       ];
     }),
+  },
+  {
+    n: 182,
+    day: '2026-10-18',
+    lines: () => {
+      const storey = OUTSIDE_STAIR_LEVEL + 1;
+      return [
+        `Outside staircases: a staircase, wide or single, now goes on a tile of open ground sharing a side with the footprint of a building of ${numberWord(storey)} storeys or more, and climbs from the ground straight to storey ${storey}. The tile's menu offers Plan outside staircase and Plan outside ${SINGLE_STAIRS_NAME}; it costs what the same staircase costs inside, ${percent(STAIRS_SHARE)} or ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials, and Q and E turn it.`,
+        `Its head goes against the building and its foot out on the ground. It is refused in water, on a tree or a bush, under a jetty or a bridge, off your deed, and on ground higher than the building's ground floor. A ladder still goes inside the footprint.`,
+        `Walk onto it from the ground, off its head onto storey ${storey} through a door, a double door, an arch or no wall, and off its sides or its foot back onto the ground. It is no part of the storey: no wall is asked round it, no roof goes over it, no wall below carries it, and nothing else is planned on its tile while it stands.`,
+      ];
+    },
   },
 ];
 

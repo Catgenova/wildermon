@@ -693,6 +693,15 @@ export function floorBill(material: string, kind: FloorKind = 'floor', roof: Roo
  * a jetty is one tile, sharing an edge with the building, and never more.
  */
 export const JETTY_REACH = 1;
+/**
+ * The storey an outside staircase climbs to: a staircase, wide or single,
+ * on a tile of open ground just out past the footprint, its head against the
+ * building, its foot out on the ground. It is a floor tile of this storey, as
+ * every flight is a floor tile of the storey it climbs to, and no part of the
+ * storey (`Buildings.storeyArea`): no walls are asked round it, no roof goes
+ * over it, and nothing rests on it (`frame.ts`).
+ */
+export const OUTSIDE_STAIR_LEVEL = 1;
 /** What a column takes of a solid wall's bill in the same material. */
 export const COLUMN_SHARE = 0.25;
 
@@ -1222,6 +1231,8 @@ export class Buildings {
     if (!b) return undefined;
     if (level < 0) return this.cellarRoom(b, x, y);
     if (level > 0 && !this.floor(level, x, y)) return undefined;
+    // An outside staircase is in no room: it stands out on the ground (`outsideStair`).
+    if (level > 0 && this.outsideStair(x, y, level)) return undefined;
     const seen = new Set<string>([tileKey(x, y)]);
     const queue: Array<[number, number]> = [[x, y]];
     const sides: Side[] = ['n', 'e', 's', 'w'];
@@ -1233,7 +1244,7 @@ export class Buildings {
         const w = this.wallOnBorder(level, borderOf(tx, ty, side));
         if (w && isDone(w)) continue;
         if (this.tileIndex.get(tileKey(nx, ny)) !== b.id && !(level > 0 && this.jettyAt(nx, ny)?.id === b.id)) continue;
-        if (level > 0 && !this.floor(level, nx, ny)) continue;
+        if (level > 0 && (!this.floor(level, nx, ny) || this.outsideStair(nx, ny, level))) continue;
         seen.add(tileKey(nx, ny));
         queue.push([nx, ny]);
       }
@@ -1366,6 +1377,18 @@ export class Buildings {
   }
 
   /**
+   * The outside staircase on a tile, if one is there: a staircase out past
+   * every footprint, on the storey it climbs to (`OUTSIDE_STAIR_LEVEL`, or
+   * `level` when asked of another). It is no part of that storey
+   * (`storeyArea`), nor in any room (`room`), and nothing rests on it.
+   */
+  outsideStair(x: number, y: number, level = OUTSIDE_STAIR_LEVEL): FloorTile | undefined {
+    if (!this.jettyIndex.size || level < 1) return undefined;
+    const f = this.floors.get(floorKey(level, x, y));
+    return f && floorKind(f) === 'stairs' && !this.tileIndex.has(tileKey(x, y)) ? f : undefined;
+  }
+
+  /**
    * What a jetty on a storey rests on: a finished full-height wall of the
    * storey below, of this building, on a border the tile shares with its
    * footprint -- its joists or its corbels go into that wall. The first of
@@ -1401,7 +1424,8 @@ export class Buildings {
         const nk = tileKey(x + dx, y + dy);
         if (area.has(nk) || this.tileIndex.has(nk)) continue;
         const f = this.floors.get(floorKey(level, x + dx, y + dy));
-        if (!f || f.building !== b.id) continue;
+        // An outside staircase is no part of the storey it climbs to (`outsideStair`).
+        if (!f || f.building !== b.id || floorKind(f) === 'stairs') continue;
         const border = borderOf(x, y, side);
         // `shut`: as it would be with a wall on that border, which is what a wall planned there is asked.
         if (shut && shut.dir === border.dir && shut.x === border.x && shut.y === border.y) continue;

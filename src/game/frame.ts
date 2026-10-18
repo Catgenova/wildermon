@@ -14,6 +14,15 @@
  * over it. The ground under either stays open ground: walked, fenced and
  * rotted on as any field is.
  *
+ * An **outside staircase** is a staircase, wide or single, on the floor slot
+ * of storey `OUTSIDE_STAIR_LEVEL + 1` of a tile of open ground out past the
+ * footprint, its head against the building and its foot out on the ground
+ * (`outsideStairReason`). It is billed, built, walked and taken out as any
+ * staircase is, and drawn from the floor its head meets (`outsideStairBase`),
+ * but it is no part of the storey: no walls are asked round it, no roof goes
+ * over it, no wall carries it, and it is in no room (`Buildings.outsideStair`).
+ * Nothing else is planned on its tile while it stands (`jettyOver`).
+ *
  * A **railing** is a wall type (`WALL_TYPES`): waist-high, seen through, and
  * low, so nothing is built on it. It goes on the edges of a storey above the
  * ground, a balcony's included, of a deck on piers (`piers.ts`), and round a
@@ -47,6 +56,8 @@ import {
   isLowWall,
   jobLevel,
   MATERIAL_BY_ID,
+  OPPOSITE_SIDE,
+  OUTSIDE_STAIR_LEVEL,
   progressOf,
   roofShapeOf,
   SIDE_NAMES,
@@ -156,10 +167,64 @@ export const cornerOf = (t: TileTarget): [number, number] | null =>
 export const cornerName = (t: { x: number; y: number }, cx: number, cy: number): string =>
   `${SIDE_NAMES[cy === t.y ? 'n' : 's']}-${SIDE_NAMES[cx === t.x ? 'w' : 'e']}`;
 
-/** Whether a jetty of some building is over a tile, and so whose: nothing else may be built there. */
+/**
+ * Whether a jetty of some building is over a tile, or its outside staircase
+ * stands on it, and so whose: nothing else may be built there.
+ */
 export function jettyOver(g: Game, x: number, y: number): string | null {
   const over = g.buildings.jettyAt(x, y);
-  return over ? `That tile is under ${over.name}'s jetty.` : null;
+  if (!over) return null;
+  return g.buildings.outsideStair(x, y) ? `${over.name}'s outside staircase stands on that tile.` : `That tile is under ${over.name}'s jetty.`;
+}
+
+/** The tile across a side of another. */
+const acrossOf = (x: number, y: number, side: Side): [number, number] =>
+  side === 'n' ? [x, y - 1] : side === 's' ? [x, y + 1] : side === 'w' ? [x - 1, y] : [x + 1, y];
+
+/**
+ * The height an outside staircase climbing from `facing` on a tile is
+ * counted from: the floor its head meets, the building's deck on piers or
+ * the ground of the footprint tile at its head, as the building's own floors
+ * are counted from their tile's corner. Null when its head is not against
+ * the building.
+ */
+export function outsideStairBase(g: Game, b: Building, x: number, y: number, facing: Side): number | null {
+  const [hx, hy] = acrossOf(x, y, OPPOSITE_SIDE[facing]);
+  if (g.buildings.tileIndex.get(`${hx},${hy}`) !== b.id) return null;
+  return b.deck ?? g.world.getHeight(hx, hy);
+}
+
+/**
+ * Why an outside staircase may not be planned on a tile out past a
+ * building's footprint, or null when it may: a staircase, wide or single,
+ * on storey `OUTSIDE_STAIR_LEVEL + 1`'s floor slot, on open ground, its head
+ * against the building and its foot out on the ground. The island's
+ * `frame_outside_stair_refusal`, word for word.
+ */
+export function outsideStairReason(g: Game, t: TileTarget, b: Building, level: number): string | null {
+  const bld = g.buildings;
+  const storey = OUTSIDE_STAIR_LEVEL + 1;
+  if (b.levels <= OUTSIDE_STAIR_LEVEL) return `An outside staircase climbs from the ground to storey ${storey}: plan storey ${storey} of ${b.name} first.`;
+  if (level !== OUTSIDE_STAIR_LEVEL) return `An outside staircase climbs from the ground to storey ${storey}: work on storey ${storey} to plan one.`;
+  // Nothing of any building's over it or on it already, at any storey; one of its own on this storey is "already planned".
+  const there = bld.jettyAt(t.x, t.y);
+  if (there && (there.id !== b.id || !bld.floor(level, t.x, t.y))) return jettyOver(g, t.x, t.y);
+  if (!g.onDeed(t.x, t.y)) return 'You may only build on your own deed.';
+  const span = g.bridges.size ? g.bridgeAt(t.x, t.y) : undefined;
+  if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'A bridge crosses that tile.';
+  if (g.bridges.size && drawbridgeWinchAt(g, t.x, t.y)) return JETTY_OVER_WINCH;
+  const tile = g.world.getTile(t.x, t.y);
+  if (!g.world.isPassable(t.x, t.y) || tile === TileType.Bush) return 'An outside staircase stands on open ground: clear the tree or the bush from it first.';
+  if (g.world.hasWater(t.x, t.y)) return 'An outside staircase stands on dry ground, not in water.';
+  if (!t.side) return 'Choose the side to climb from.';
+  const base = outsideStairBase(g, b, t.x, t.y, t.side);
+  if (base === null) return `Its head goes against ${b.name} and its foot out on the ground: turn it to climb toward the building.`;
+  // Its foot on the ground and the whole flight over it: never lower than the floor its head is level with the bottom of.
+  const floorBelow = base + (level - 1) * WALL_HEIGHT;
+  const w = g.world;
+  const high = Math.max(w.getHeight(t.x, t.y), w.getHeight(t.x + 1, t.y), w.getHeight(t.x + 1, t.y + 1), w.getHeight(t.x, t.y + 1));
+  if (high > floorBelow) return `The ground under it rises above the floor of storey ${level}: dig it down first.`;
+  return null;
 }
 
 /**
@@ -170,6 +235,12 @@ export function jettyOver(g: Game, x: number, y: number): string | null {
  */
 export function jettyBase(g: Game, b: Building, x: number, y: number): number | null {
   if (b.deck != null) return b.deck;
+  // An outside staircase, from the footprint tile at its head, whose floor its top meets (`outsideStairBase`).
+  const stair = g.buildings.outsideStair(x, y);
+  if (stair && stair.building === b.id && stair.facing) {
+    const base = outsideStairBase(g, b, x, y, stair.facing);
+    if (base !== null) return base;
+  }
   for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
     if (g.buildings.tileIndex.get(`${x + dx},${y + dy}`) === b.id) return g.world.getHeight(x + dx, y + dy);
   }
@@ -184,7 +255,9 @@ export function jettyBase(g: Game, b: Building, x: number, y: number): number | 
  */
 export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind, level: number): string | null {
   const bld = g.buildings;
-  if (kind === 'stairs' || kind === 'ladder') return 'Stairs and ladders go inside the footprint, not out on a jetty.';
+  if (kind === 'ladder') return 'A ladder goes inside the footprint, not out on a jetty.';
+  // A staircase out past it is an outside staircase, up from the ground (`outsideStairReason`).
+  if (kind === 'stairs') return outsideStairReason(g, t, b, level);
   if (kind === 'roof') {
     // Glass on a pitched roof and nowhere else, out over a jetty as over the footprint (`glassPlanRefusal`).
     if (t.material === GLASS && (b.roof ?? t.roofShape ?? 'hip') === 'flat') return GLASS_PITCHED;
@@ -202,7 +275,7 @@ export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind
       : 'A jetty is floored out from a storey above the ground: plan another storey and work on it.';
   }
   const other = bld.jettyAt(t.x, t.y);
-  if (other && other.id !== b.id) return `That tile is under ${other.name}'s jetty.`;
+  if (other && other.id !== b.id) return jettyOver(g, t.x, t.y);
   if (!g.onDeed(t.x, t.y)) return 'You may only build on your own deed.';
   // No span of a bridge or an aqueduct goes under it (`aqueducts.ts`); a bridge's ends are its banks.
   const span = g.bridges.size ? g.bridgeAt(t.x, t.y) : undefined;
@@ -329,7 +402,8 @@ export function jettyOnWall(g: Game, wall: Wall): number | null {
   for (const [[jx, jy], [fx, fy]] of [[[wall.x, wall.y], [ox, oy]], [[ox, oy], [wall.x, wall.y]]] as Array<[[number, number], [number, number]]>) {
     if (bld.tileIndex.get(`${fx},${fy}`) !== b.id || bld.tileIndex.has(`${jx},${jy}`)) continue;
     const f = bld.floor(wall.level + 1, jx, jy);
-    if (!f || f.building !== b.id) continue;
+    // An outside staircase stands on the ground, and rests on no wall (`outsideStair`).
+    if (!f || f.building !== b.id || f.kind === 'stairs') continue;
     // Its other walls to rest on, this one left out.
     let others = 0;
     for (const [side, dx, dy] of [['n', 0, -1], ['e', 1, 0], ['s', 0, 1], ['w', -1, 0]] as Array<[Side, number, number]>) {

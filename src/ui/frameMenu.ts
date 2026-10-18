@@ -16,6 +16,9 @@ import {
   isDone,
   MATERIAL_BY_ID,
   MATERIALS,
+  OPPOSITE_SIDE,
+  OUTSIDE_STAIR_LEVEL,
+  SINGLE_STAIRS_NAME,
   takesAs,
   progressOf,
   ROOF_SHAPES,
@@ -27,6 +30,8 @@ import {
   workLevel,
   type Building,
   type RoofShape,
+  type Side,
+  type StairHand,
 } from '../game/building';
 import { cornerName } from '../game/frame';
 import { fitsMaterial, hiddenDoorIronWords, hiddenDoorWants, planHiddenDoor } from '../game/gates';
@@ -122,13 +127,68 @@ export function frameFootprintEntries(g: Game, pick: Pick, b: Building): MenuIte
   return [...columnRows(g, b, base), ...terraceRows(g, b, pick, base)];
 }
 
+/** Starts placing an outside staircase on a tile for a building: Q and E turn it (`UI.startPlacingStairs`). */
+export type PlaceStairs = (base: TileTarget, level: number, material: string, side: Side, hand?: StairHand) => void;
+
+/**
+ * The rows for an outside staircase of a building on a tile out past its
+ * footprint (`outsideStairReason`): planning one, wide or single, its head
+ * turned to the building to start with, and Q and E turning it; or building
+ * and taking out the one there.
+ */
+function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceStairs): MenuItem[] {
+  const bld = g.buildings;
+  const storey = OUTSIDE_STAIR_LEVEL + 1;
+  const t: TileTarget = { ...base, level: OUTSIDE_STAIR_LEVEL };
+  const there = bld.outsideStair(t.x, t.y);
+  if (there && there.building === b.id) {
+    const what = there.hand ? `outside ${SINGLE_STAIRS_NAME}` : 'outside staircase';
+    const rows: MenuItem[] = [];
+    if (!isDone(there)) rows.push(entry(g, act('build_floor'), t, `Build ${what} · needs ${describeNeeds(there, materialName)}`));
+    rows.push(entry(g, act('remove_floor'), t, `Remove ${what}`));
+    return rows;
+  }
+  if (bld.jettyAt(t.x, t.y) || !place) return [];
+  // Its head against the building: climbed from the side away from it.
+  const head = (['n', 'e', 's', 'w'] as Side[]).find((side) => {
+    const [dx, dy] = side === 'n' ? [0, -1] : side === 's' ? [0, 1] : side === 'w' ? [-1, 0] : [1, 0];
+    return bld.tileIndex.get(`${t.x + dx},${t.y + dy}`) === b.id;
+  }) ?? 'n';
+  const side = OPPOSITE_SIDE[head];
+  const plan = act('plan_floor');
+  const rows: MenuItem[] = [];
+  for (const hand of [undefined, 'l'] as Array<StairHand | undefined>) {
+    const label = `Plan outside ${hand ? SINGLE_STAIRS_NAME : 'staircase'} (storey ${storey})`;
+    const asked: TileTarget = { ...t, floorKind: 'stairs', side, ...(hand ? { hand } : {}) };
+    const probe = plan.check?.({ ...asked, material: 'log' }, g) ?? null;
+    if (probe) {
+      rows.push({ label, hint: probe, disabled: true });
+      continue;
+    }
+    rows.push({
+      label,
+      children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => {
+        const why = plan.check?.({ ...asked, material: m.id }, g) ?? null;
+        return {
+          label: m.name,
+          note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, hand), materialName)} · Q and E turn it`,
+          hint: why ?? undefined,
+          disabled: !!why,
+          onSelect: () => place(t, OUTSIDE_STAIR_LEVEL, m.id, side, hand),
+        };
+      }),
+    });
+  }
+  return rows;
+}
+
 /**
  * The rows for a tile out past every footprint: for each building beside it
  * that has a storey above the ground, or whose jetty is already there, the
  * jetty's floor, its walls and railings, its columns and the roof over it, on
- * the storey being worked.
+ * the storey being worked; and its outside staircase (`outsideStairRows`).
  */
-export function frameJettyEntries(g: Game, pick: Pick): MenuItem[] {
+export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs): MenuItem[] {
   const bld = g.buildings;
   const { x, y } = pick;
   const hosts: Building[] = [];
@@ -145,9 +205,17 @@ export function frameJettyEntries(g: Game, pick: Pick): MenuItem[] {
     // A jetty is a storey above the ground's: worked from the ground floor, the rows are for the storey over it.
     const level = b.levels > 1 ? Math.max(1, workLevel(b)) : workLevel(b);
     const base: TileTarget = { kind: 'tile', x, y, cx: pick.cx, cy: pick.cy, buildingId: b.id, level };
+    const stairs = outsideStairRows(g, b, base, place);
+    const stair = bld.outsideStair(x, y);
+    const ownStair = !!stair && stair.building === b.id;
+    // On its own storey the tile is its outside staircase and nothing else: no jetty is floored there too.
+    if (ownStair && level === OUTSIDE_STAIR_LEVEL) {
+      out.push({ label: `Outside staircase of ${b.name} (storey ${OUTSIDE_STAIR_LEVEL + 1})`, children: stairs });
+      continue;
+    }
     const rows: MenuItem[] = [];
     const floor = bld.floor(level, x, y);
-    if (floor && floor.building === b.id) {
+    if (floor && floor.building === b.id && floorKind(floor) !== 'stairs') {
       const what = FLOOR_KIND_NAMES[floorKind(floor)];
       if (!isDone(floor)) rows.push(entry(g, act('build_floor'), base, `Build jetty ${what} · needs ${describeNeeds(floor, materialName)}`));
       rows.push(entry(g, act('remove_floor'), base, `Remove jetty ${what}`));
@@ -204,6 +272,11 @@ export function frameJettyEntries(g: Game, pick: Pick): MenuItem[] {
       }
     }
     out.push(hosts.length > 1 ? { label: `${b.name}'s jetty`, children: rows } : { label: `Jetty of ${b.name} (storey ${level + 1})`, children: rows });
+    // And its outside staircase, planned or standing, beside the jetty rather than in it.
+    if (stairs.length) {
+      if (hosts.length > 1 || ownStair) out.push({ label: `Outside staircase of ${b.name} (storey ${OUTSIDE_STAIR_LEVEL + 1})`, children: stairs });
+      else out.push(...stairs);
+    }
   }
   return out;
 }
@@ -228,7 +301,7 @@ export function frameHoverLines(g: Game, pick: Pick): string[] {
     for (let level = 1; level < host.levels; level++) {
       const f = bld.floor(level, x, y);
       if (!f || f.building !== host.id) continue;
-      const what = bld.storeyArea(host, level).has(`${x},${y}`) ? 'jetty' : 'balcony';
+      const what = floorKind(f) === 'stairs' ? 'outside staircase' : bld.storeyArea(host, level).has(`${x},${y}`) ? 'jetty' : 'balcony';
       out.push(`${host.name}'s ${what} · storey ${level + 1} · ${stuffOf(f.material)} ${FLOOR_KIND_NAMES[floorKind(f)]}${built(f)}`);
       const wall = bld.wall(level, x, y, side);
       if (wall) out.push(`${SIDE_NAMES[side]} wall: ${WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() ?? wall.type} ${stuffOf(wall.material)}${built(wall)}`);

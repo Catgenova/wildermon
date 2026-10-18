@@ -30,7 +30,7 @@ import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '..
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
-  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, takesAs,
+  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, OUTSIDE_STAIR_LEVEL, takesAs,
   MAX_LEVELS, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
 } from '../../game/building';
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
@@ -1509,6 +1509,15 @@ export function helpText(): string {
     ${percent(STAIRS_SHARE)} of a solid wall's materials, and the <b>${SINGLE_STAIRS_NAME}</b>, half the tile wide, for
     ${percent(SINGLE_STAIRS_SHARE)}. A ${SINGLE_STAIRS_NAME} runs up the half of its tile on your left or your right as you
     climb it, and the other half is the stairwell beside it; it takes you up and down just as the wide one does.
+    An <b>outside staircase</b> climbs from the ground straight to storey ${OUTSIDE_STAIR_LEVEL + 1}: on a tile of open ground
+    sharing a side with the footprint of a building of ${numberWord(OUTSIDE_STAIR_LEVEL + 1)} storeys or more, the tile's menu
+    offers <b>Plan outside staircase</b> and <b>Plan outside ${SINGLE_STAIRS_NAME}</b>, for the same materials as the same
+    staircase inside. Q and E turn it; its head goes against the building and its foot out on the ground. It is refused in
+    water, on a tree or a bush, under a jetty or a bridge, off your deed, and on ground higher than the building's ground
+    floor; a ladder stays inside the footprint. You walk onto it from the ground, off its head onto storey
+    ${OUTSIDE_STAIR_LEVEL + 1} through a door, a double door, an arch or no wall in that storey's wall, and off its sides or
+    its foot back down onto the ground. It is no part of the storey: no wall is asked round it, no roof goes over it, no
+    wall below carries it, and nothing else is planned on its tile while it stands.
     Once the top storey's walls are done you can <b>Plan roof</b> tile by tile; neighbouring roof tiles
     join into ridges and hips.</p>
     <p>A roof can be laid in <b>glass</b>: <b>Plan roof</b> offers it beside the building materials, glass panels on timber

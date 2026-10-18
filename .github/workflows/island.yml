@@ -2077,6 +2077,21 @@ jobs:
             --outfile=node_modules/.cache/stairs.mjs --log-level=error
           node node_modules/.cache/stairs.mjs
 
+      - name: The outside staircase
+        run: |
+          # "Allow building a staircase adjacent to a building to allow stairs
+          # going directly to the floor above from outside a building". A
+          # staircase, wide or single, on open ground just out past the
+          # footprint, its head against the building, up from the ground to
+          # storey 2. Every refusal in the same words on both sides; the same
+          # floor tile and bill planned; built, walked up from the ground,
+          # through a door off its head and down off its side; no part of the
+          # storey, its room or what a wall carries; taken out; and a jetty
+          # floor planned as before.
+          npx esbuild supabase/test/outstairs.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/outstairs.mjs --log-level=error
+          node node_modules/.cache/outstairs.mjs
+
       - name: Glassblowing, glass panels, bottles and the stained glass wall
         run: |
           # The Artisan's fourth trade, at a hot smelter: sand melted into

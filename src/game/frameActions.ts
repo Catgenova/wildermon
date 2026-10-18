@@ -5,7 +5,7 @@
  */
 import type { ActionDef, Target } from './actions';
 import { consumeUnit, materialName, needsText, needTool, nextAvailable } from './buildActions';
-import { heftWord, INDOORS_DECAY, INDOORS_REST, isDone, jobLevel, MATERIAL_BY_ID, onlyRefusal, TOP_LEVELS } from './building';
+import { floorKind, heftWord, INDOORS_DECAY, INDOORS_REST, isDone, jobLevel, MATERIAL_BY_ID, onlyRefusal, SIDE_NAMES, TOP_LEVELS } from './building';
 import { SUBTILES } from './crates';
 import { furnitureCovers } from './furniture';
 import type { Game } from './game';
@@ -151,7 +151,11 @@ export function frameSays(g: Game, x: number, y: number): string {
     for (let level = 1; level <= j.levels; level++) {
       const f = bld.floor(level, x, y);
       if (!f || f.building !== j.id) continue;
-      if (!isDone(f)) out += ` A jetty of ${j.name}'s storey ${level + 1} is planned over it.`;
+      // An outside staircase, up from the ground on it (`outsideStair`).
+      if (floorKind(f) === 'stairs') {
+        out += isDone(f) ? ` On it is an outside staircase up to ${j.name}'s storey ${level + 1}, climbed from the ${SIDE_NAMES[f.facing ?? 's']}.`
+          : ` An outside staircase up to ${j.name}'s storey ${level + 1} is planned on it.`;
+      } else if (!isDone(f)) out += ` A jetty of ${j.name}'s storey ${level + 1} is planned over it.`;
       else if (bld.storeyArea(j, level).has(`${x},${y}`)) {
         out += ` Over it is a jetty of ${j.name}'s storey ${level + 1}, part of that storey: its open sides want a wall, a railing or columns to close the storey in, and a roof over it rests on walls or columns, never on a railing.`;
       } else {
