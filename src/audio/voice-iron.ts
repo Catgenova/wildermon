@@ -123,7 +123,7 @@ function thud(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
  * with its crystals chiming over it and rattling as it settles.
  */
 const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), out = level(ctx, dest, [1.25, 1.38, 1.15][s]), b = bodyOf(stage, v);
+  const s = Math.max(0, Math.min(2, stage)), out = level(ctx, dest, [1.25, 1.32, 1.15][s]), b = bodyOf(stage, v);
   const hits = IRON_HITS[s].map((h) => at + h * ACT_SECS.strike);
   if (s === 0) {
     squeak(ctx, out, at + 0.06, v, 0.45, 1.5);
@@ -157,7 +157,7 @@ const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
  * as many, heavier and lower.
  */
 const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), out = level(ctx, dest, [3.6, 3.5, 1.75][s]), b = bodyOf(stage, v);
+  const s = Math.max(0, Math.min(2, stage)), out = level(ctx, dest, [3.6, 3.5, 1.6][s]), b = bodyOf(stage, v);
   const n = IRON_DIGS[s], each = ACT_SECS.work / n;
   for (let k = 0; k < n; k++) {
     const bite = at + (k + DIG_STROKE.bite) * each, fling = at + (k + DIG_STROKE.fling) * each;
@@ -168,10 +168,14 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
     burst(ctx, out, bite, { dur: drag * 0.7, freq: 3000 * b.key, to: 1800, q: 1.2, gain: 0.05, attack: 0.02 });
     if (s === 2) thud(ctx, out, bite, stage, 0.35);
     // Metal in the seam, struck: a clink on every stroke, alternately higher and lower; longer and lower on a bigger body.
-    clink(ctx, out, bite + 0.01, (k % 2 ? 2200 : 2900) * b.key * (0.97 + 0.06 * v), 0.45, 0.16 * b.long);
+    // The Ferrodrill's a lower pair, ringing on; the others' alternately higher and lower.
+    const ring2 = s === 1 ? (k % 2 ? 1800 : 2400) : (k % 2 ? 2200 : 2900);
+    clink(ctx, out, bite + 0.01, ring2 * b.key * (0.97 + 0.06 * v), 0.45, 0.16 * b.long);
     // The earth thrown back, a soft hiss.
     burst(ctx, out, fling, { dur: 0.17, freq: 1800, to: 1100, q: 0.6, gain: 0.12, attack: 0.02 });
   }
+  // The Ferrodrill snorts the dust out of its snout halfway through its last stroke.
+  if (s === 1) snort(ctx, out, at + (n - 0.5) * each, stage, v, 0.35);
   // The chunk of ore landing behind it, where its picture comes down (`digSpray`).
   clink(ctx, out, at + ((DIG_STROKE.fling - 0.08) * each) + 0.69, 3400 * b.key, 0.55, 0.22);
 };

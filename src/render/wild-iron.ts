@@ -64,8 +64,8 @@ interface Mole {
   crest: { from: number; to: number; rows: number; per: number; spread: number; tall: number; r: number; peak: number; width: number; slate: number; peach: number; slateK: number };
   /** Crystals along the crown of the head, leading the crest down onto it: how many, and the longest. */
   crown: [number, number];
-  /** Small crystals like pebbles over the back below the crest: how many, and how long. */
-  pebbles: [number, number];
+  /** Small crystals like pebbles over the back below the crest and down the flanks: how many, how long, and how far down the flank they go (radians from level, up positive). */
+  pebbles: [number, number, number];
   /** Crystals out of each shoulder and each haunch: how many, and the longest. */
   shoulder: [number, number];
   /** Crystals out of the outside of each leg: how many, and the longest. */
@@ -91,7 +91,7 @@ interface Mole {
 
 /** An Ironemole: small, low and round, a head too big for it with big glossy eyes, small round ears, and a short crest of copper. */
 const IRONEMOLE_LOOK: Mole = {
-  body: { y: [-1.22, -1.08, -0.58, 0.04, 0.62, 1.0, 1.16], z: [0.04, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0], w: [0.48, 0.94, 1.14, 1.18, 1.12, 0.94, 0.46], h: [0.3, 0.5, 0.58, 0.6, 0.58, 0.5, 0.28] },
+  body: { y: [-1.22, -1.0, -0.52, 0.04, 0.62, 1.0, 1.16], z: [0.06, 0.04, 0.0, 0.0, 0.0, 0.0, 0.0], w: [0.45, 0.75, 1.1, 1.18, 1.12, 0.94, 0.46], h: [0.3, 0.5, 0.58, 0.6, 0.58, 0.5, 0.28] },
   len: 1.8,
   fore: [0.14, 0.12, 0.1], hind: [0.14, 0.13, 0.09], thick: 0.27,
   paw: 0.27, hindPaw: 0.21,
@@ -107,7 +107,7 @@ const IRONEMOLE_LOOK: Mole = {
   ear: 0.18,
   crest: { from: 0.98, to: -1.06, rows: 9, per: 3, spread: 0.42, tall: 0.95, r: 0.3, peak: 0.15, width: 0.16, slate: 0.24, peach: 0.2, slateK: 0.6 },
   crown: [2, 0.42],
-  pebbles: [24, 0.2],
+  pebbles: [40, 0.2, -0.2],
   shoulder: [0, 0],
   limb: [0, 0],
   brow: [0, 0],
@@ -137,7 +137,7 @@ const FERRODRILL_LOOK: Mole = {
   ear: 0.16,
   crest: { from: 1.22, to: -1.46, rows: 10, per: 6, spread: 1.0, tall: 1.2, r: 0.36, peak: 0.3, width: 0.18, slate: 0.36, peach: 0.14, slateK: 1 },
   crown: [2, 0.46],
-  pebbles: [26, 0.26],
+  pebbles: [26, 0.26, 0.12],
   shoulder: [2, 0.8],
   limb: [2, 0.5],
   brow: [0, 0],
@@ -154,7 +154,7 @@ const FERRODRILL_LOOK: Mole = {
  * and a towering mountain of copper and slate down its back, with crystals out of its shoulders, flanks and legs.
  */
 const OREMANDER_LOOK: Mole = {
-  body: { y: [-2.3, -2.06, -1.26, -0.1, 1.0, 1.86, 2.14], z: [-0.02, 0.0, 0.06, 0.12, 0.16, 0.12, 0.06], w: [0.68, 1.24, 1.52, 1.62, 1.68, 1.46, 0.7], h: [0.54, 1.0, 1.24, 1.34, 1.4, 1.26, 0.6] },
+  body: { y: [-2.3, -2.06, -1.26, -0.1, 1.0, 1.86, 2.14], z: [0.0, 0.0, -0.04, 0.02, 0.06, 0.08, 0.06], w: [0.68, 1.24, 1.52, 1.62, 1.68, 1.46, 0.7], h: [0.54, 1.0, 1.34, 1.44, 1.5, 1.3, 0.6] },
   len: 3.9,
   fore: [0.42, 0.36, 0.18], hind: [0.42, 0.38, 0.16], thick: 0.75,
   paw: 0.5, hindPaw: 0.4,
@@ -170,7 +170,7 @@ const OREMANDER_LOOK: Mole = {
   ear: 0,
   crest: { from: 1.86, to: -2.1, rows: 14, per: 7, spread: 1.12, tall: 2.1, r: 0.52, peak: 0.3, width: 0.3, slate: 0.38, peach: 0.2, slateK: 1 },
   crown: [0, 0],
-  pebbles: [30, 0.34],
+  pebbles: [30, 0.34, 0.03],
   shoulder: [3, 0.9],
   limb: [3, 0.75],
   brow: [3, 0.5],
@@ -470,6 +470,12 @@ function strikePose(s: Mole, p: QuadPose, t: number): void {
 function moleBones(s: Mole): (a: Anim) => Bones {
   const spec = specOf(s);
   const grazing = quadBonesOf(spec, (p, a) => molePose(s, spec, p, a));
+  /** How far the body is tipped to level it on its four feet standing still: a strike or evolving starts and ends there. */
+  let rest: number | undefined;
+  const level = (p: QuadPose, b: Bones, feet: readonly number[]): number => {
+    const fore = feet.filter((i) => i < 2), hind = feet.filter((i) => i >= 2);
+    return fore.length && hind.length ? Math.atan2(lowOf(spec, b, hind) - lowOf(spec, b, fore), spec.fore.at[1] - spec.hind.at[1]) / DEG : 0;
+  };
   return (a) => {
     const act = a.act;
     let b: Bones;
@@ -481,16 +487,20 @@ function moleBones(s: Mole): (a: Anim) => Bones {
       molePose(s, spec, p, a);
       const feet = supporting(s, p, a);
       b = quadBones(spec, p);
-      // Going or digging, the body levelled between its fore and hind feet bearing weight, so neither pair hangs off the
+      // Standing, going or digging, the body levelled between its fore and hind feet bearing weight, so neither pair hangs off the
       // ground: tipped by as much as one pair's soles are over the other's, across the length between shoulder and hip.
-      if (a.go > 0 || act?.kind === 'work') {
-        const fore = feet.filter((i) => i < 2), hind = feet.filter((i) => i >= 2);
-        if (fore.length && hind.length) {
-          const over = lowOf(spec, b, hind) - lowOf(spec, b, fore);
-          p.pitch += Math.atan2(over, spec.fore.at[1] - spec.hind.at[1]) / DEG;
-          b = quadBones(spec, p);
+      // A strike or evolving pitches the body on purpose, so it keeps only the tip it has standing still, which it begins
+      // and ends at.
+      if (!act || act.kind === 'work') p.pitch += level(p, b, feet);
+      else {
+        if (rest === undefined) {
+          const q = quadPose(spec, { ...a, act: undefined, t: 0, go: 0, graze: 0 });
+          molePose(s, spec, q, { ...a, act: undefined, t: 0, go: 0, graze: 0 });
+          rest = level(q, quadBones(spec, q), [0, 1, 2, 3]);
         }
+        p.pitch += rest;
       }
+      b = quadBones(spec, p);
       b = standOn(spec, b, p, feet);
     }
     const d = surge(s, a);
@@ -712,16 +722,17 @@ function crestGems(s: Mole): Gem[] {
     }
   }
   // Pebbles: small crystals over the back below the crest and down onto the flanks, both sides alike but not mirrored.
-  const [np, pl] = s.pebbles;
+  const [np, pl, low] = s.pebbles;
   for (let q = 0; q < np; q++) {
     const id = 400 + q, sd = q % 2 ? 1 : -1;
     const f = (Math.floor(q / 2) + 0.5 * jitter(id)) / Math.ceil(np / 2);
     const y = lerp(C.from + 0.1, C.to - 0.05, f);
-    const th0 = Math.PI / 2 - (C.spread * 0.75 + 0.1 + 0.6 * jitter(id + 2));
+    // From just under the crest down the flank as far as the stage says, smaller the lower they are.
+    const down = jitter(id + 2), th0 = lerp(Math.PI / 2 - C.spread * 0.75 - 0.1, low, down);
     const at = onRings(s.body, y, sd > 0 ? th0 : Math.PI - th0);
     const pick = jitter(id + 4);
     const tone: Tone = pick < 0.4 ? 'copper' : pick < 0.72 ? 'slate' : 'peach';
-    out.push({ root: add(at.p, scale(at.n, -0.02)), dir: unit(add(at.n, [0, -0.6, 0.2])), len: pl * (0.7 + 0.6 * jitter(id + 5)), r: pl * 0.55, flat: 0.7, tone, id });
+    out.push({ root: add(at.p, scale(at.n, -0.02)), dir: unit(add(at.n, [0, -0.6, 0.2])), len: pl * (0.7 + 0.6 * jitter(id + 5)) * (1 - 0.3 * down), r: pl * 0.55, flat: 0.7, tone, id });
   }
   // Crystals out of each shoulder and each haunch, pointing up, out and back.
   const [ns, sl] = s.shoulder;
@@ -759,7 +770,8 @@ function browGems(s: Mole): Gem[] {
       // From over the eye back along the side of the crown to the back of the skull, to meet the crest.
       const id = 700 + q + (sd > 0 ? 0 : 10), f = n > 1 ? q / (n - 1) : 0;
       const q0 = onRings(H, lerp(E.y - E.size * 0.4, H.y[0] * 0.4, f), E.up + 0.5 + 0.35 * f), at = sd > 0 ? q0 : left(q0);
-      out.push({ root: sub(at.p, scale(at.n, 0.03)), dir: unit(add(at.n, [0, -0.8, 0.4])), len: L * (0.8 + 0.25 * f), r: L * 0.3, flat: 0.7, tone: q === 1 ? 'slate' : 'copper', id: id * 2 });
+      // Laid back along the skull, broad, so they are the crest running on down onto the head.
+      out.push({ root: sub(at.p, scale(at.n, 0.03)), dir: unit(add(scale(at.n, 0.35), [0, -1.2, 0.5])), len: L * (0.8 + 0.25 * f), r: L * 0.4, flat: 0.7, tone: q === 1 ? 'slate' : 'copper', id: id * 2 });
     }
   }
   // Along the crown, leading the crest down onto the head: lying back, the one nearest the neck the tallest.
@@ -928,6 +940,28 @@ function hindPaw(s: Mole, n: number, k: number): Mesh {
   return merge(paw, ...claws);
 }
 
+/**
+ * A barrel's rings with its ends rounded: between the last ring at either
+ * end and the one inside it, another, still most of the way out, so the rump
+ * and the chest are domes rather than cut off flat.
+ */
+function domed(B: Rings): Rings {
+  const out: Rings = { y: [], z: [], w: [], h: [] };
+  const put = (y: number, z: number, w: number, h: number): void => { out.y.push(y); out.z.push(z); out.w.push(w); out.h.push(h); };
+  const between = (a: number, b: number, f: number): void => {
+    // `f` of the way from ring `a` (inside) to ring `b` (the end) along it, but only `f` squared of the way in toward its size.
+    const g = f * f;
+    put(lerp(B.y[a], B.y[b], f), lerp(B.z[a], B.z[b], f), lerp(B.w[a], B.w[b], g), lerp(B.h[a], B.h[b], g));
+  };
+  const last = B.y.length - 1;
+  put(B.y[0], B.z[0], B.w[0], B.h[0]);
+  between(1, 0, 0.6);
+  for (let k = 1; k < last; k++) put(B.y[k], B.z[k], B.w[k], B.h[k]);
+  between(last - 1, last, 0.6);
+  put(B.y[last], B.z[last], B.w[last], B.h[last]);
+  return out;
+}
+
 /** Its speckled fur: flecks lighter and darker than the coat over the flanks, and a few of copper, as if dusted with ore. */
 function specks(s: Mole): Mesh {
   const out: Disc[] = [];
@@ -948,8 +982,14 @@ function specks(s: Mole): Mesh {
 function moleBuild(s: Mole, lod: number): Piece[] {
   const n = cut(lod, 8, 12), k = cut(lod, 5, 6), sides = cut(lod, 4, 5);
   const B = s.body, skull = headSolids(s)[0];
-  const body = tube(B.y.map((y, q) => [0, y, B.z[q]] as V3), B.w, B.h, n,
-    (ring, j) => (s.belly && ring > 0 && ring < B.y.length - 2 && under(n, j, s.belly) ? 'belly' : 'coat'));
+  const R = domed(B);
+  const barrel = tube(R.y.map((y, q) => [0, y, R.z[q]] as V3), R.w, R.h, n,
+    (ring, j) => (s.belly && ring > 1 && ring < R.y.length - 3 && under(n, j, s.belly) ? 'belly' : 'coat'));
+  // Its underside tucked in toward the belly, so seen from behind it is a dome on its legs rather than a box.
+  const body = mesh(barrel.v.map((p, i) => {
+    const k = Math.min(R.y.length - 1, Math.floor(i / n)), t = clamp((R.z[k] - p[2]) / R.h[k]);
+    return [p[0] * (1 - 0.24 * t * t), p[1], p[2]] as V3;
+  }), barrel.f);
   // A cream bib on the chest under the head, on the older ones.
   const bib = s.belly ? orbAlong([0, B.y[5] + 0.02, B.z[5] - B.h[5] * 0.42], [0, 1, -0.5], [B.w[5] * 0.7, B.h[5] * 0.55, B.h[5] * 0.36], n, k, 'belly') : undefined;
   const crest = gemsOf(crestGems(s), sides);
@@ -1165,6 +1205,12 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Mole, b: Bones,
         const sweep = ramp(since, -0.025, 0.035), al = 1 - ramp(since, 0.06, 0.2);
         streaks(g, view, add(add(P, scale(fwd, 1.3 * big)), [0, 0, 1 * big]), fwd, 3.2 * big, sweep, al, key === 'fl2' ? -0.6 : 0.6);
       }
+      // Seen from behind, a flash over the shoulder on the striking side as the blow lands: the paw is hidden beyond the body.
+      if (front && away && since > -0.02 && since < 0.2) {
+        const side = key === 'fl2' ? -1 : 1, top = place(at.body, [side * s.body.w[4] * 0.45, s.len * 0.5, s.body.h[4] + s.crest.tall * 0.35]);
+        const [x, y] = onScreen(view, top);
+        glint(g, x, y, 1.1 * sb * (1 - since / 0.2), 1 - smooth(since / 0.2));
+      }
       // Sparks off the claws: small bright crystal chips flying out and falling, each with a glint.
       if (since > 0 && since < 0.45) {
         const fade = 1 - smooth(since / 0.45), count = 5 + 3 * s.strike;
@@ -1172,6 +1218,8 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Mole, b: Bones,
           const id = c * 7 + q * 31 + (key === 'fl2' ? 13 : 0);
           const th = (c / count) * TAU + jitter(id) * 0.8;
           const v: V3 = [Math.cos(th) * (1.6 + 2 * jitter(id + 1)), 1 + Math.sin(th) * 2 + 1.5 * jitter(id + 2), 2.4 + 2.4 * jitter(id + 3)];
+          // What flies the viewer's way is thrown higher, so seen from behind it clears the crest.
+          if (dot(v, view.T) > 0) v[2] += 2;
           const p = thrown(tip, scale(v, 0.9 + 0.25 * s.strike), since, 8);
           if (nearSide(p, b.body.t, view) !== front) continue;
           const [x, y] = onScreen(view, p);
@@ -1207,7 +1255,9 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Mole, b: Bones,
       g.beginPath();
       g.ellipse(gx, gy, rx, rx * 0.45, 0, 0, TAU);
       g.stroke();
-    } else dust(g, view, ground, big * (1.4 + 3 * ramp(since, 0, 0.35)), 0.5 * (1 - ramp(since, 0.1, 0.42)));
+    }
+    // The dust over the body only where it is on the viewer's side of it; from behind, under it.
+    if (nearSide(ground, b.body.t, view) === front) dust(g, view, ground, big * (1.4 + 3 * ramp(since, 0, 0.35)), 0.5 * (1 - ramp(since, 0.1, 0.42)));
     if (since < 0.5) {
       const fade = 1 - smooth(since / 0.5);
       for (let c = 0; c < 10; c++) {
@@ -1278,13 +1328,17 @@ function digSpray(g: CanvasRenderingContext2D, view: View, s: Mole, b: Bones, a:
       const side = sd * (q % 3 === 1 ? -0.8 : 1);
       const v: V3 = [side * (3.5 + 2.5 * jitter(id)), -(2.2 + 2.6 * jitter(id + 1)), 5 + 3 * jitter(id + 2)];
       if (dot([side, 0, 0], view.T) > 0) v[2] += 2;
-      const p = thrown(from, scale(v, 0.85 + 0.15 * big), since - late);
+      // Over the Oremander's mountain of a crest it has to go higher still to be seen.
+      if (s.strike === 2) v[2] += 3;
+      // Thrown from beside the shoulder on the side it goes to, back past the flank, so none of it crosses the face.
+      const start = place(b.trunk, [Math.sign(side) * s.body.w[4] * 0.85, s.len * 0.42, 0]);
+      const p = thrown([start[0], start[1], 0.3], scale(v, 0.85 + 0.15 * big), since - late);
       if (nearSide(p, b.body.t, view) !== front) continue;
       const [x, y] = onScreen(view, p);
       if (q % 4 === 3) {
         shard(g, x, y, 0.55 * big, id + since * 12, q % 8 === 3 ? COPPER : SLATE, fade);
         if (q % 8 === 3) glint(g, x, y, 0.55 * big * fade, 0.8 * fade);
-      } else clod(g, x, y, (0.35 + 0.25 * jitter(id + 3)) * big, id, fade, q % 2 ? LOAM : SOIL, RIM);
+      } else clod(g, x, y, (0.35 + 0.25 * jitter(id + 3)) * big * (s.strike === 2 ? 1.3 : 1), id, fade, q % 2 ? LOAM : SOIL, RIM);
     }
     if (front && since < 0.6) {
       dust(g, view, from, (1 + 2.4 * since) * big, 0.45 * fade);
