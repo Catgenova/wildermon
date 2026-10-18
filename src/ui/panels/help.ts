@@ -51,7 +51,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -745,6 +745,9 @@ const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 
   'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
 /** The wildermon that fight in a way of their own (`FightStyle`), in the order the help gives them. */
 const FIGHTERS = ['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra'];
+/** The wildermon with an ability of their own (`AbilityId`), in the order the help gives them. */
+const ABLE = ['lungra', 'hamma', 'crakka', 'bashka', 'executa', 'whirla', 'scorcha', 'frosta', 'rootle', 'dulla', 'brittla', 'shova',
+  'howla', 'marka', 'wardo', 'stona', 'leecha'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good`,
   sheela: `a full fleece gives ${numberWord(SHEAR_WOOL)} wool and a full crop of feathers ${numberWord(SHEAR_FEATHERS)}, and a cudda a bucket of milk`,
@@ -3070,6 +3073,13 @@ export function helpText(): string {
     on another creature, at your heel or keeping a settlement; a wild one of these kinds fights as any other does. ${FIGHTERS.map((id) => {
       const d = SPECIES[id];
       return `The <b>${d.name}</b> (taming ${d.tameLevel}): ${STYLE_SAYS[d.style!]}.`;
+    }).join(' ')}</p>
+    <p><b>Wildermon with an ability.</b> ${NumberWord(ABLE.length)} use an ability of their own in a fight instead of a blow, the first time
+    it is any use and then not again until its rest is out: each a fighting trade's spell at that spell's numbers, but for the
+    Frosta's. They use it wherever one of yours fights, at your heel or keeping a settlement; a wild one of these kinds fights
+    as any other does. ${ABLE.map((id) => {
+      const d = SPECIES[id];
+      return `The <b>${d.name}</b> (taming ${d.tameLevel}), ${abilityName(d.ability!)}: ${abilitySays(d.ability!)}.`;
     }).join(' ')}</p>
     <p>Right-click any tile of your settlement for the <b>deed menu</b>: it lists the wildermon kept
     there, sets their <b>orders</b>, offers to <b>upgrade</b> the settlement, and renames or disbands it.

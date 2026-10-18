@@ -12,6 +12,7 @@
 -- What the definitions bring in, ahead of them, for what is written here to be read against: the column a species'
 -- style is kept in, and the two numbers a spar is held to (`SPAR_YIELD`, `SPAR_SLACK`), which the definitions that
 -- come in after this write again from the browser's.
+set local lock_timeout = '3s';
 alter table species_def add column if not exists style text;
 create or replace function spar_yield() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function spar_slack() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;

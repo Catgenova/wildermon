@@ -60,7 +60,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { GATHER_DO, GATHER_VERB, GRAZE_FILL, STYLE_SAYS } from '../../game/creatures';
+import { abilityName, abilitySays, GATHER_DO, GATHER_VERB, GRAZE_FILL, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2345,8 +2345,22 @@ export const NEWS: News[] = [
         .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[SPECIES[id].style!]}.`),
     ],
   },
+  {
+    n: 177,
+    day: '2026-10-18',
+    lines: () => [
+      `${NumberWord(ABLE_NEWS.length)} wildermon that use an ability of their own in a fight instead of a blow, then rest:`,
+      ...ABLE_NEWS
+        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}), ${abilityName(SPECIES[id].ability!)}: ${abilitySays(SPECIES[id].ability!)}.`),
+      'In a game of your own, a skin over you now takes the blows that come at you, as it does on an island.',
+    ],
+  },
 ];
 
+
+/** The wildermon with an ability of their own, as What's new 177 gives them. */
+const ABLE_NEWS = ['lungra', 'hamma', 'crakka', 'bashka', 'executa', 'whirla', 'scorcha', 'frosta', 'rootle', 'dulla', 'brittla', 'shova',
+  'howla', 'marka', 'wardo', 'stona', 'leecha'];
 
 /** The highest entry this browser has shown. */
 const SEEN = 'wurm.news.seen';

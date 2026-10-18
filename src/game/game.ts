@@ -34,7 +34,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { underGlass } from './glasshouse';
-import { ageDef, attackOf, bloodMul, BLOW_SHARE, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, HAUL_SKILL, isBaitFor, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, HAUL_SKILL, isBaitFor, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -2982,6 +2982,8 @@ export class Game {
   hurtPlayer(raw: number, what: string, kind: WoundKind = 'bite'): void {
     const by = this.player.attackedBy;
     const from = by !== null && by !== PLAYER_ATTACKER ? this.creatures.get(by) : undefined;
+    // Smaller from claws a dulla has dulled (`binder_dull_claws`), as `hurt_player` has it (`class_dull`).
+    raw *= markOn(this, from, 'dull');
     // Dodged, before anything else has its say (`dodgeChance`): your body control, less the armour on you.
     // No roll at all while there is no chance, so nothing else's luck moves.
     const dodge = this.dodge();
@@ -2994,6 +2996,19 @@ export class Game {
       if (share > 0 && from) riposte(this, from, share);
       this.fightBack();
       return;
+    }
+    // The skin over you takes it first, and is spent doing it; what it does not cover carries on (`hurt_player`'s aegis).
+    if (this.player.skin.size > 0) {
+      const skin = this.player.skin.size;
+      this.player.skin = skin > raw ? { ...this.player.skin, size: skin - raw } : { size: 0, mine: false, by: null };
+      if (skin >= raw) {
+        this.player.attackedAt = this.time;
+        this.logMsg(`The ward takes ${what.charAt(0).toLowerCase()}${what.slice(1)}, and holds.`, 'fight');
+        this.fightBack();
+        return;
+      }
+      raw -= skin;
+      this.logMsg('The ward goes with a sound like ice, and the rest of it reaches you.', 'fight');
     }
     // A blow that lands is answered with its share of the creature's own attack, for a Warder's Thorns (`class_owed_pay`).
     const thorns = this.perk('thorns:attack', 0);

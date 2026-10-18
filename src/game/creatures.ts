@@ -34,7 +34,8 @@ import { bedrockAt, oreAt } from '../world/ore';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
 import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
-import { PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
+import { CLASS_SPELL_BY_ID } from './talents';
 import { fill, listed, numberWord, percent, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
@@ -482,6 +483,8 @@ export interface SpeciesDef {
   venom?: boolean;
   /** How one of yours fights another creature, besides its blow (`FightStyle`). */
   style?: FightStyle;
+  /** What one of yours does in a fight once every so often instead of a blow (`AbilityId`). */
+  ability?: AbilityId;
 }
 
 /**
@@ -518,6 +521,62 @@ export const STYLE_SAYS: Record<FightStyle, string> = {
   bore: `its blows land ${percent(BODKIN_HIDE - 1)} harder on anything with a thick hide, a shell or scales, as a bodkin does`,
   spar: `you may Spar with it while it is out with you: each swing teaches the fighting, the weapon skill and the body strength a swing at a wild thing teaches, and wears your weapon as much, but your blows take it no lower than ${percent(SPAR_YIELD)} of its health, where it yields until it is back above it, and it never strikes back`,
 };
+/**
+ * What one of yours does in a fight once every so often, instead of a blow, wherever it fights -- at your heel or
+ * keeping a settlement: a fighting trade's spell, used as the trade's own spell is and at its numbers and its rest
+ * (`CLASS_SPELLS`), or a frost breath. A wild one of these kinds fights as any other does. The island's
+ * `beast_ability`, which reads the same spells off `class_spell`.
+ */
+export type AbilityId = 'beastmaster_pounce' | 'blade_hamstring' | 'berserker_skull_crack' | 'blade_shield_bash'
+  | 'berserker_execute' | 'berserker_whirlwind' | 'kindler_scorch' | 'frost_breath' | 'binder_root' | 'binder_dull_claws'
+  | 'binder_brittle' | 'pikeman_keep_away' | 'blade_guardians_call' | 'skirmisher_marked_for_death' | 'warder_ward'
+  | 'warder_stoneskin' | 'chirurgeon_leech';
+/** What is on a creature for a while (`Creature.marks`). */
+export type MarkKind = 'ability' | 'root' | 'dull' | 'brittle' | 'marked' | 'stone' | 'keep_away';
+/** Seconds between a frost breath and the next. */
+export const FROST_BREATH_REST = 15;
+/** The skin a wardo lays over you, as a share of your full health: it takes that much of the blows that come at you. */
+export const WARD_SKIN = 0.1;
+/** Seconds between goes at an ability. */
+export const abilityRest = (id: AbilityId): number => (id === 'frost_breath' ? FROST_BREATH_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
+/** A number an ability is used at: its spell's own. */
+export const abilityFx = (id: AbilityId, k: string): number => CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0;
+/** An ability's name: its spell's. */
+export const abilityName = (id: AbilityId): string => (id === 'frost_breath' ? 'Frost Breath' : CLASS_SPELL_BY_ID.get(id)?.name ?? id);
+/** What an ability does, in the game's own terms, for a species' words, the help and What's new. */
+export function abilitySays(id: AbilityId): string {
+  const f = (k: string): number => abilityFx(id, k);
+  const said: Record<AbilityId, () => string> = {
+    beastmaster_pounce: () => `when what it is going for is within ${f('reach')} tiles of it, it leaps to it and strikes at ${percent(f('more'))} of a blow, and puts its next blow back ${f('back')} seconds`,
+    blade_hamstring: () => `a blow at ${percent(f('more'))} after which what it strikes goes at ${percent(f('pace'))} of its pace for ${f('secs')} seconds`,
+    berserker_skull_crack: () => `a blow at ${percent(f('more'))} that holds what it strikes where it stands, neither moving nor striking, for ${f('hold')} seconds, a monster for ${f('hold') * f('monster')}`,
+    blade_shield_bash: () => `a blow at ${percent(f('more'))} that knocks a heavy blow off its stroke and puts the next blow of what it strikes back ${f('back')} seconds`,
+    berserker_execute: () => `a blow at ${percent(f('more'))} on anything below ${percent(f('low'))} of its health`,
+    berserker_whirlwind: () => `${numberWord(f('blows'))} blows at ${percent(f('more'))} on every wild thing within ${f('reach')} tiles of it`,
+    kindler_scorch: () => `a blow at ${percent(f('fire'))} that sets what it strikes burning, ${percent(f('each'))} of its health a second for ${f('secs')} seconds`,
+    frost_breath: () => `a blow that leaves what it strikes going at ${percent(FROST_PACE)} of its pace for ${FROST_SECS} seconds, as a Frostbite does`,
+    binder_root: () => `roots what it fights where it stands for ${f('secs')} seconds: it may strike but not move`,
+    binder_dull_claws: () => `for ${f('secs')} seconds what it fights lands its blows ${percent(1 - f('dealt'))} smaller`,
+    binder_brittle: () => `for ${f('secs')} seconds what it fights takes ${percent(f('taken') - 1)} more from everything that strikes it`,
+    pikeman_keep_away: () => `for ${f('secs')} seconds every blow it lands pushes what it lands on ${f('push')} ${f('push') === 1 ? 'tile' : 'tiles'} further from it`,
+    blade_guardians_call: () => `every wild thing within ${f('reach')} tiles of it that is after anybody turns on it, and stays on it for ${f('secs')} seconds`,
+    skirmisher_marked_for_death: () => `for ${f('secs')} seconds every blow, throw and shot of yours that lands on what it fights is critical ${times(f('crit'))} as often`,
+    warder_ward: () => `while it is at your heel, lays a skin over you that takes the next ${percent(WARD_SKIN)} of your health of the blows that come at you, when the skin over you is smaller`,
+    warder_stoneskin: () => `for ${f('secs')} seconds it takes ${percent(f('cut'))} less from every blow`,
+    chirurgeon_leech: () => `a blow at ${percent(f('more'))}, and it gets back the share of its own health that the blow took of the other's`,
+  };
+  return `${said[id]()}, once every ${abilityRest(id)} seconds`;
+}
+/** A mark on a creature while it holds, or `none` once it has run out. The island's `beast_mark`. */
+export const markOn = (game: { time: number }, c: Creature | undefined, kind: MarkKind, none = 1): number => {
+  const m = c?.marks?.[kind];
+  return m && m.until > game.time ? m.val : none;
+};
+/** A mark put on a creature, to the later of its end and one already on it. The island's `class_mark_put`. */
+export function putMark(game: { time: number }, c: Creature, kind: MarkKind, val: number, secs: number): void {
+  const was = c.marks?.[kind];
+  (c.marks ??= {})[kind] = { val, until: Math.max(was && was.until > game.time ? was.until : 0, game.time + secs) };
+}
 /** Within this of `SPAR_YIELD` of its health, a sparring partner has yielded and will not spar until it has its breath back. */
 export const SPAR_SLACK = 0.5;
 /** The health a sparring partner yields at. */
@@ -2143,6 +2202,465 @@ export const SPECIES: Record<string, SpeciesDef> = {
     wound: 'crush',
     style: 'spar',
   },
+  lungra: {
+    id: 'lungra',
+    name: 'Lungra',
+    description: `A long-legged, deep-chested creature that never runs at anything when it can jump at it. Tamed, ${abilitySays('beastmaster_pounce')}.`,
+    health: 30,
+    attack: 8,
+    speed: 2.3,
+    tameLevel: 24,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#8c6c4c', '#e0c8a8'],
+      ['#7c5c40', '#d4b898'],
+      ['#9c7c58', '#ecd4b4'],
+      ['#6c5038', '#c8ac8c'],
+    ],
+    butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
+    tameFail: 'leaps on the {food} and is gone with it',
+    leaves: 'bounds off in great leaps',
+    wound: 'bite',
+    defensive: true,
+    ability: 'beastmaster_pounce',
+  },
+  hamma: {
+    id: 'hamma',
+    name: 'Hamma',
+    description: `A low, quick creature that goes for the back of the leg and nothing else. Tamed, ${abilitySays('blade_hamstring')}.`,
+    health: 28,
+    attack: 7,
+    speed: 2.2,
+    tameLevel: 22,
+    tameChance: 0.08,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#6c6458', '#c8c0b0'],
+      ['#5c544c', '#b8b0a4'],
+      ['#7c7060', '#d4c8b8'],
+      ['#4c4844', '#aca8a0'],
+    ],
+    butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
+    tameFail: 'nips the {food} at the heel and leaves it',
+    leaves: 'slips off low through the grass',
+    wound: 'cut',
+    defensive: true,
+    ability: 'blade_hamstring',
+  },
+  crakka: {
+    id: 'crakka',
+    name: 'Crakka',
+    description: `A heavy-browed creature with a skull like a boulder, which it uses. Tamed, ${abilitySays('berserker_skull_crack')}.`,
+    health: 40,
+    attack: 9,
+    speed: 1.7,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['meat', 'potato'],
+    baitHint: 'meat or a potato',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#7c7064', '#d4cbc0'],
+      ['#6c6c68', '#c4c4c0'],
+      ['#8c7c68', '#e0d4c0'],
+      ['#5c5650', '#b4ada4'],
+    ],
+    butcher: { meat: 6, fur: 3, leather: 4, bone: 5 },
+    tameFail: 'butts the {food} across the ground and leaves it',
+    leaves: 'plods off rubbing its brow on a stone',
+    wound: 'crush',
+    defensive: true,
+    ability: 'berserker_skull_crack',
+  },
+  bashka: {
+    id: 'bashka',
+    name: 'Bashka',
+    description: `A broad creature with a flat plate of bone across its forehead. Tamed, ${abilitySays('blade_shield_bash')}.`,
+    health: 38,
+    attack: 8,
+    speed: 1.7,
+    tameLevel: 26,
+    tameChance: 0.07,
+    diet: ['meat', 'cabbage'],
+    baitHint: 'meat or a cabbage',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#8c8478', '#dcd4c8'],
+      ['#7c746c', '#ccc4bc'],
+      ['#948c7c', '#e4dcd0'],
+      ['#6c6460', '#bcb4ac'],
+    ],
+    butcher: { meat: 5, fur: 2, leather: 4, bone: 5 },
+    tameFail: 'shoves the {food} away with its plate',
+    leaves: 'shoulders its way off through the brush',
+    wound: 'crush',
+    defensive: true,
+    ability: 'blade_shield_bash',
+  },
+  executa: {
+    id: 'executa',
+    name: 'Executa',
+    description: `A gaunt, patient creature that hangs back until something is nearly finished. Tamed, ${abilitySays('berserker_execute')}.`,
+    health: 30,
+    attack: 8,
+    speed: 2.0,
+    tameLevel: 30,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#4c4448', '#a8a0a4'],
+      ['#3c3c44', '#9c9ca8'],
+      ['#5c4c4c', '#b8a8a8'],
+      ['#34343c', '#8c8c98'],
+    ],
+    butcher: { meat: 4, fur: 4, leather: 3, bone: 3 },
+    tameFail: 'watches the {food} until it gives up, then leaves it',
+    leaves: 'is simply not there any more',
+    wound: 'cut',
+    defensive: true,
+    ability: 'berserker_execute',
+  },
+  whirla: {
+    id: 'whirla',
+    name: 'Whirla',
+    description: `A wiry creature with a long whip of a tail it spins about itself. Tamed, ${abilitySays('berserker_whirlwind')}.`,
+    health: 32,
+    attack: 7,
+    speed: 2.1,
+    tameLevel: 30,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#a07c50', '#e8d0b0'],
+      ['#8c6c44', '#dcc0a0'],
+      ['#b08c5c', '#f0dcbc'],
+      ['#7c5c3c', '#ccb090'],
+    ],
+    butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
+    tameFail: 'spins round the {food} three times and leaves it',
+    leaves: 'spins off in a cloud of dust',
+    wound: 'cut',
+    defensive: true,
+    ability: 'berserker_whirlwind',
+  },
+  scorcha: {
+    id: 'scorcha',
+    name: 'Scorcha',
+    description: `A sooty creature that smells of burning and breathes out sparks. Tamed, ${abilitySays('kindler_scorch')}.`,
+    health: 30,
+    attack: 7,
+    speed: 1.9,
+    tameLevel: 30,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#5c3c2c', '#d89c6c'],
+      ['#4c3428', '#c88c5c'],
+      ['#6c4430', '#e4a878'],
+      ['#3c2c24', '#b47c50'],
+    ],
+    butcher: { meat: 4, scale: 3, leather: 3, bone: 3 },
+    tameFail: 'chars the {food} black and leaves it',
+    leaves: 'trots off trailing a thread of smoke',
+    wound: 'burn',
+    defensive: true,
+    ability: 'kindler_scorch',
+  },
+  frosta: {
+    id: 'frosta',
+    name: 'Frosta',
+    description: `A pale, thick-furred creature whose breath hangs white in the air even in summer. Tamed, ${abilitySays('frost_breath')}.`,
+    health: 32,
+    attack: 7,
+    speed: 1.9,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#c8d8e0', '#f4fcff'],
+      ['#b8c8d4', '#ecf4fc'],
+      ['#d4e0e8', '#f8fcff'],
+      ['#a8b8c8', '#e0ecf4'],
+    ],
+    butcher: { meat: 4, fur: 5, leather: 3, bone: 3 },
+    tameFail: 'breathes on the {food} until it is frozen and leaves it',
+    leaves: 'pads off leaving frost in its footprints',
+    wound: 'bite',
+    defensive: true,
+    ability: 'frost_breath',
+  },
+  rootle: {
+    id: 'rootle',
+    name: 'Rootle',
+    description: `A gnarled, bark-brown creature with tendrils that creep along the ground about it. Tamed, ${abilitySays('binder_root')}.`,
+    health: 34,
+    attack: 5,
+    speed: 1.6,
+    tameLevel: 24,
+    tameChance: 0.07,
+    diet: ['carrot', 'cabbage', 'apple', 'meat'],
+    baitHint: 'a vegetable or meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#6c5c3c', '#c8b890'],
+      ['#5c4c34', '#b8a880'],
+      ['#7c6c44', '#d8c8a0'],
+      ['#4c4030', '#a89878'],
+    ],
+    butcher: { meat: 3, fur: 2, leather: 3, bone: 2 },
+    tameFail: 'wraps the {food} in tendrils and leaves it',
+    leaves: 'creeps off, its tendrils last to go',
+    wound: 'pierce',
+    defensive: true,
+    ability: 'binder_root',
+  },
+  dulla: {
+    id: 'dulla',
+    name: 'Dulla',
+    description: `A soft-pawed, grey-blue creature that leaves everything it touches slower and blunter. Tamed, ${abilitySays('binder_dull_claws')}.`,
+    health: 30,
+    attack: 5,
+    speed: 1.8,
+    tameLevel: 24,
+    tameChance: 0.07,
+    diet: ['meat', 'perch'],
+    baitHint: 'meat or a fish',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#6c7c8c', '#c8d4e0'],
+      ['#5c6c7c', '#b8c4d4'],
+      ['#7c8c9c', '#d4e0ec'],
+      ['#4c5c6c', '#a8b8c8'],
+    ],
+    butcher: { meat: 4, fur: 4, leather: 3, bone: 2 },
+    tameFail: 'paws the {food} until it is dull and leaves it',
+    leaves: 'ambles off unhurried',
+    wound: 'bite',
+    defensive: true,
+    ability: 'binder_dull_claws',
+  },
+  brittla: {
+    id: 'brittla',
+    name: 'Brittla',
+    description: `A glassy-eyed creature with a cracked, crystalline sheen to its hide. Tamed, ${abilitySays('binder_brittle')}.`,
+    health: 28,
+    attack: 6,
+    speed: 1.9,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#8ca4b4', '#dce8f0'],
+      ['#7c94a4', '#ccdce8'],
+      ['#9cb4c4', '#e4f0f8'],
+      ['#6c8494', '#bccce0'],
+    ],
+    butcher: { meat: 3, scale: 4, leather: 2, bone: 3 },
+    tameFail: 'taps the {food} until it cracks and leaves it',
+    leaves: 'tinkles off into the long grass',
+    wound: 'cut',
+    defensive: true,
+    ability: 'binder_brittle',
+  },
+  shova: {
+    id: 'shova',
+    name: 'Shova',
+    description: `A thick-necked creature that shoulders everything out of its way. Tamed, ${abilitySays('pikeman_keep_away')}.`,
+    health: 40,
+    attack: 7,
+    speed: 1.8,
+    tameLevel: 24,
+    tameChance: 0.07,
+    diet: ['meat', 'potato'],
+    baitHint: 'meat or a potato',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#7c6448', '#d4bc9c'],
+      ['#6c5840', '#c4ac8c'],
+      ['#8c7050', '#e0c8a8'],
+      ['#5c4c38', '#b49c80'],
+    ],
+    butcher: { meat: 6, fur: 3, leather: 4, bone: 4 },
+    tameFail: 'shoves the {food} back at you and leaves it',
+    leaves: 'shoulders off through the herd',
+    wound: 'crush',
+    defensive: true,
+    ability: 'pikeman_keep_away',
+  },
+  howla: {
+    id: 'howla',
+    name: 'Howla',
+    description: `A shaggy, big-voiced creature whose call carries right across a valley. Tamed, ${abilitySays('blade_guardians_call')}.`,
+    health: 44,
+    attack: 6,
+    speed: 1.8,
+    tameLevel: 26,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#5c5450', '#bcb4ac'],
+      ['#4c4844', '#aca8a0'],
+      ['#6c605c', '#ccc0b8'],
+      ['#3c3834', '#9c9890'],
+    ],
+    butcher: { meat: 6, fur: 5, leather: 4, bone: 4 },
+    tameFail: 'howls at the {food} and leaves it',
+    leaves: 'lopes off howling',
+    wound: 'bite',
+    defensive: true,
+    ability: 'blade_guardians_call',
+  },
+  marka: {
+    id: 'marka',
+    name: 'Marka',
+    description: `A sharp-eyed creature that marks what it hunts with a smear of something that will not wash off. Tamed, ${abilitySays('skirmisher_marked_for_death')}.`,
+    health: 26,
+    attack: 6,
+    speed: 2.1,
+    tameLevel: 26,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#8c3c3c', '#e4a4a4'],
+      ['#7c3434', '#d49494'],
+      ['#9c4848', '#ecb4b4'],
+      ['#6c2c2c', '#c48484'],
+    ],
+    butcher: { meat: 3, fur: 3, leather: 2, bone: 2, gland: 1 },
+    tameFail: 'smears the {food} red and leaves it',
+    leaves: 'slinks off, watching you',
+    wound: 'cut',
+    defensive: true,
+    ability: 'skirmisher_marked_for_death',
+  },
+  wardo: {
+    id: 'wardo',
+    name: 'Wardo',
+    description: `A calm creature with a faint shimmer about its fur, as if the air near it were thicker. Tamed, ${abilitySays('warder_ward')}.`,
+    health: 30,
+    attack: 4,
+    speed: 1.8,
+    tameLevel: 30,
+    tameChance: 0.06,
+    diet: ['apple', 'honey', 'nuts', 'meat'],
+    baitHint: 'an apple or honey',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#c4b8d4', '#f0ecf8'],
+      ['#b4a8c4', '#e8e0f0'],
+      ['#d0c4e0', '#f8f4fc'],
+      ['#a498b4', '#dcd4e8'],
+    ],
+    butcher: { meat: 3, fur: 4, leather: 2, bone: 2 },
+    tameFail: 'holds the {food} in its shimmer and leaves it',
+    leaves: 'fades off into the haze',
+    wound: 'bite',
+    defensive: true,
+    ability: 'warder_ward',
+  },
+  stona: {
+    id: 'stona',
+    name: 'Stona',
+    description: `A squat creature whose hide goes grey and hard as stone when it is struck. Tamed, ${abilitySays('warder_stoneskin')}.`,
+    health: 46,
+    attack: 6,
+    speed: 1.5,
+    tameLevel: 26,
+    tameChance: 0.07,
+    diet: ['meat', 'potato', 'carrot'],
+    baitHint: 'meat or a vegetable',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#8c8c84', '#d4d4cc'],
+      ['#7c7c78', '#c8c8c0'],
+      ['#94948c', '#dcdcd4'],
+      ['#6c6c68', '#bcbcb4'],
+    ],
+    butcher: { meat: 5, scale: 4, leather: 3, bone: 4 },
+    tameFail: 'sets like stone over the {food} and leaves it',
+    leaves: 'grinds off over the rocks',
+    wound: 'crush',
+    defensive: true,
+    ability: 'warder_stoneskin',
+  },
+  leecha: {
+    id: 'leecha',
+    name: 'Leecha',
+    description: `A sleek, dark creature with a round sucking mouth. Tamed, ${abilitySays('chirurgeon_leech')}.`,
+    health: 28,
+    attack: 6,
+    speed: 2.0,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#3c2c3c', '#a08ca0'],
+      ['#2c2c3c', '#8c8ca8'],
+      ['#4c3444', '#b098a8'],
+      ['#2c242c', '#847484'],
+    ],
+    butcher: { meat: 3, leather: 4, bone: 2, gland: 2 },
+    tameFail: 'drains the {food} dry and leaves it',
+    leaves: 'slides off licking its lips',
+    wound: 'pierce',
+    defensive: true,
+    ability: 'chirurgeon_leech',
+  },
   // ---- Backs and saddles. ----
   bura: {
     id: 'bura',
@@ -2666,6 +3184,23 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['spitta', 3],
   ['awla', 3],
   ['sparra', 4],
+  ['lungra', 2],
+  ['hamma', 2],
+  ['crakka', 2],
+  ['bashka', 2],
+  ['executa', 2],
+  ['whirla', 2],
+  ['scorcha', 2],
+  ['frosta', 2],
+  ['rootle', 2],
+  ['dulla', 2],
+  ['brittla', 2],
+  ['shova', 2],
+  ['howla', 2],
+  ['marka', 2],
+  ['wardo', 2],
+  ['stona', 2],
+  ['leecha', 2],
 ];
 
 /** How far off a hunter picks up your scent, and how far you must get to lose it. */
@@ -3201,6 +3736,12 @@ export interface Creature {
   /** The game time a slow on it ends, and the share of its pace it goes at until then (a Frostbite, `frost`). Missing on one never slowed. */
   slowUntil?: number;
   slowPace?: number;
+  /**
+   * What is on it for a while and what it is worth (`markOn`): a root, dulled claws, a brittleness, a mark for
+   * death, a stone skin, a keep-away, and when its own ability is ready again. The island's `class_mark`.
+   * Missing on one never marked.
+   */
+  marks?: Partial<Record<MarkKind, { val: number; until: number }>>;
   busyUntil: number;
   searchAt: number;
   /** Where it first had your scent, which is what the leash is tied to. */
@@ -4518,6 +5059,8 @@ export class Creatures {
     const dy = ty - c.y;
     const dist = Math.hypot(dx, dy);
     if (dist < 0.12) return 'arrived';
+    // Rooted where it stands (`binder_root`): it goes nowhere until the root lets go.
+    if (markOn(game, c, 'root', 0) > 0) return 'moving';
     const pace = c.mode === 'deed' ? 1 + Math.max(1, ...Object.values(c.skills)) / 500 : 1;
     // And slower while a frost holds it (`frost`), as the island's `beast_mul` has a slow.
     const slow = (c.slowUntil ?? 0) > game.time ? c.slowPace ?? 1 : 1;
@@ -6927,6 +7470,8 @@ export class Creatures {
             this.attack(game, c, e);
             c.cooldown = COMPANION_BLOW / this.mul(c, 'haste');
           }
+        } else if (c.cooldown <= 0 && this.pounce(game, c, e, d)) {
+          c.cooldown = COMPANION_BLOW / this.mul(c, 'haste');
         } else if (this.stepToward(game, c, e.x, e.y, dt, COMPANION_PACE) === 'blocked') {
           c.enemy = null;
         }
@@ -7227,6 +7772,8 @@ export class Creatures {
   }
 
   attack(game: Game, a: Creature, t: Creature): void {
+    // Its own ability instead, when it is ready and there is a use for it (`AbilityId`).
+    if (a.mode !== 'wild' && this.species(a).ability && this.ability(game, a, t)) return;
     const trained = trainedHit(a.skills[FIGHT_SKILL] ?? 0);
     const style = a.mode === 'wild' ? undefined : this.species(a).style;
     // Its blood has a say in what it lands for, as it does in what it bites you for.
@@ -7234,10 +7781,199 @@ export class Creatures {
     // And harder for how it fights (`FightStyle`): a borer on a hide, a flanker on one whose mind is elsewhere.
     const dmg = this.species(a).attack * this.mul(a, 'tough') * trained * (0.7 + game.rand() * 0.6) * game.herdMul(a, 'dealt')
       * (style === 'bore' && this.species(t).hide ? BODKIN_HIDE : 1)
-      * (style === 'flank' && this.elsewhere(t, a) ? BLINDSIDE : 1);
+      * (style === 'flank' && this.elsewhere(t, a) ? BLINDSIDE : 1)
+      // And smaller while its claws are dulled (`binder_dull_claws`).
+      * markOn(game, a, 'dull');
     this.hurt(game, t, dmg, a);
     if (style && t.health > 0 && this.list.has(t.id)) this.styleBlow(game, a, t, style, dmg);
+    // And pushed off while a keep-away holds on what struck it (`pikeman_keep_away`).
+    const push = markOn(game, a, 'keep_away', 0);
+    if (push > 0 && t.health > 0 && this.list.has(t.id)) this.shove(game, t, a.x, a.y, push);
     if (a.skills[FIGHT_SKILL] !== undefined) this.gainSkill(game, a, FIGHT_SKILL, 0.05);
+  }
+
+  /** A blow of one of yours at a share of its own, as a Beastmaster's companion strikes (`class_beast_blow`). */
+  private blowAt(game: Game, a: Creature, t: Creature, more: number): { died: boolean; dmg: number } {
+    const dmg = this.species(a).attack * this.mul(a, 'tough') * trainedHit(a.skills[FIGHT_SKILL] ?? 0) * (0.7 + game.rand() * 0.6)
+      * game.herdMul(a, 'dealt') * more;
+    this.hurt(game, t, dmg, a);
+    if (a.skills[FIGHT_SKILL] !== undefined) this.gainSkill(game, a, FIGHT_SKILL, 0.05);
+    return { died: !this.list.has(t.id) || t.health <= 0, dmg };
+  }
+
+  /** Held where it stands, neither moving nor striking, as a Skull Crack holds it (`class_hold`). */
+  private holdFor(game: Game, t: Creature, secs: number): void {
+    t.stunUntil = Math.max(t.stunUntil ?? 0, game.time + secs);
+    t.windup = 0;
+    t.moving = false;
+  }
+
+  /** Pushed this far from a point, as far of it as the ground lets it go in quarters. The island's `class_shove`. */
+  private shove(game: Game, t: Creature, fx: number, fy: number, by: number): void {
+    const d = Math.hypot(t.x - fx, t.y - fy);
+    if (d < 0.001 || t.mode !== 'wild') return;
+    for (let i = 4; i >= 1; i--) {
+      const x = t.x + ((t.x - fx) / d) * by * i / 4;
+      const y = t.y + ((t.y - fy) / d) * by * i / 4;
+      if (this.tileOk(game, Math.floor(x), Math.floor(y)) && this.clearLine(game, t.x, t.y, x, y)) {
+        t.x = x;
+        t.y = y;
+        return;
+      }
+    }
+  }
+
+  /** Nothing a creature cannot stand on between two points. The island's `line_clear`. */
+  private clearLine(game: Game, x0: number, y0: number, x1: number, y1: number): boolean {
+    const n = Math.max(1, Math.ceil(2 * Math.hypot(x1 - x0, y1 - y0)));
+    for (let i = 0; i <= n; i++) {
+      if (!this.tileOk(game, Math.floor(x0 + ((x1 - x0) * i) / n), Math.floor(y0 + ((y1 - y0) * i) / n))) return false;
+    }
+    return true;
+  }
+
+  /**
+   * One of yours uses its ability on what it is fighting, when it is ready and there is a use for it: true when that
+   * was its blow, false when it strikes as well or did nothing. Then not again for its rest. The island's
+   * `beast_ability`.
+   */
+  private ability(game: Game, a: Creature, t: Creature): boolean {
+    const id = this.species(a).ability!;
+    if (markOn(game, a, 'ability', 0) > 0) return false;
+    const f = (k: string): number => abilityFx(id, k);
+    const tdef = this.species(t);
+    let spent = true;
+    switch (id) {
+      case 'beastmaster_pounce':
+        // Used on the way to it (`pounce`), never in reach.
+        return false;
+      case 'blade_hamstring': {
+        if (!this.blowAt(game, a, t, f('more')).died) {
+          t.slowPace = f('pace');
+          t.slowUntil = game.time + f('secs');
+        }
+        break;
+      }
+      case 'berserker_skull_crack':
+        if (!this.blowAt(game, a, t, f('more')).died) this.holdFor(game, t, f('hold') * (tdef.monster ? f('monster') : 1));
+        break;
+      case 'blade_shield_bash':
+        if (!this.blowAt(game, a, t, f('more')).died) {
+          t.windup = 0;
+          t.cooldown = Math.max(0, t.cooldown) + f('back');
+        }
+        break;
+      case 'berserker_execute':
+        if (t.health >= maxHealth(t, tdef) * f('low')) return false;
+        this.blowAt(game, a, t, f('more'));
+        break;
+      case 'berserker_whirlwind':
+        for (const o of [...this.list.values()]) {
+          if (o.mode !== 'wild' || o.health <= 0 || Math.hypot(o.x - a.x, o.y - a.y) > f('reach')) continue;
+          for (let n = 0; n < f('blows'); n++) if (this.blowAt(game, a, o, f('more')).died) break;
+        }
+        break;
+      case 'kindler_scorch':
+        if (!this.blowAt(game, a, t, f('fire')).died) {
+          // As a burn of yours runs (`burn`), at the spell's own numbers.
+          const rate = maxHealth(t, tdef) * f('each');
+          const running = t.bleedUntil > game.time;
+          t.bleedRate = running ? Math.max(t.bleedRate, rate) : rate;
+          if (!running) t.bleedFrom = game.time;
+          t.bleedUntil = Math.max(running ? t.bleedUntil : 0, game.time + f('secs'));
+          t.burnUntil = Math.max(t.burnUntil ?? 0, game.time + f('secs'));
+        }
+        break;
+      case 'frost_breath':
+        if (!this.blowAt(game, a, t, 1).died) {
+          // As a Frostbite leaves it (`frost`).
+          const running = (t.slowUntil ?? 0) > game.time;
+          t.slowPace = running ? Math.min(t.slowPace ?? 1, FROST_PACE) : FROST_PACE;
+          t.slowUntil = Math.max(running ? t.slowUntil ?? 0 : 0, game.time + FROST_SECS);
+        }
+        break;
+      case 'binder_root':
+        if (markOn(game, t, 'root', 0) > 0) return false;
+        putMark(game, t, 'root', 1, f('secs'));
+        break;
+      case 'binder_dull_claws':
+        if (markOn(game, t, 'dull') < 1) return false;
+        putMark(game, t, 'dull', f('dealt'), f('secs'));
+        break;
+      case 'binder_brittle':
+        if (markOn(game, t, 'brittle') > 1) return false;
+        putMark(game, t, 'brittle', f('taken'), f('secs'));
+        break;
+      case 'skirmisher_marked_for_death':
+        if (markOn(game, t, 'marked') > 1) return false;
+        putMark(game, t, 'marked', f('crit'), f('secs'));
+        break;
+      case 'pikeman_keep_away':
+        putMark(game, a, 'keep_away', f('push'), f('secs'));
+        spent = false;
+        break;
+      case 'warder_stoneskin':
+        putMark(game, a, 'stone', 1 - f('cut'), f('secs'));
+        spent = false;
+        break;
+      case 'blade_guardians_call': {
+        let n = 0;
+        for (const o of this.list.values()) {
+          if (o.mode !== 'wild' || o.health <= 0 || o.brawl === a.id || this.species(o).timid) continue;
+          const after = o.enemy === PLAYER_ATTACKER || o.brawl !== null || (o.enemy !== null && this.list.get(o.enemy)?.mode !== 'wild');
+          if (!after || Math.hypot(o.x - a.x, o.y - a.y) > f('reach')) continue;
+          o.brawl = a.id;
+          // Held on it for the whole of the call, as the spell holds them on you.
+          o.threatAt = game.time + f('secs') - THREAT_HOLD;
+          o.windup = 0;
+          n += 1;
+        }
+        if (n === 0) return false;
+        spent = false;
+        break;
+      }
+      case 'warder_ward':
+        if (a.mode !== 'active' || game.player.skin.size >= WARD_SKIN) return false;
+        game.player.skin = { size: WARD_SKIN, mine: false, by: a.name };
+        spent = false;
+        break;
+      case 'chirurgeon_leech': {
+        const was = t.health;
+        const top = maxHealth(t, tdef);
+        const b = this.blowAt(game, a, t, f('more'));
+        a.health = Math.min(maxHealth(a, this.species(a)), a.health + (Math.min(b.dmg, was) / top) * maxHealth(a, this.species(a)));
+        break;
+      }
+    }
+    putMark(game, a, 'ability', 1, abilityRest(id));
+    if (a.mode === 'active') game.logMsg(`${a.name} uses ${abilityName(id)}.`, 'fight');
+    return spent;
+  }
+
+  /**
+   * A pounce, on the way to what it is going for: within the spell's reach of it and nothing in between, it leaps to
+   * half its own reach short of it and strikes, and puts its next blow back. True when it did. The island's
+   * `beast_pounce`.
+   */
+  private pounce(game: Game, c: Creature, e: Creature, d: number): boolean {
+    const id: AbilityId = 'beastmaster_pounce';
+    if (this.species(c).ability !== id || markOn(game, c, 'ability', 0) > 0 || d > abilityFx(id, 'reach')) return false;
+    if (!this.clearLine(game, c.x, c.y, e.x, e.y)) return false;
+    let x = e.x - ((e.x - c.x) / Math.max(d, 0.001)) * COMPANION_REACH / 2;
+    let y = e.y - ((e.y - c.y) / Math.max(d, 0.001)) * COMPANION_REACH / 2;
+    if (!this.tileOk(game, Math.floor(x), Math.floor(y))) {
+      x = e.x;
+      y = e.y;
+    }
+    c.x = x;
+    c.y = y;
+    if (!this.blowAt(game, c, e, abilityFx(id, 'more')).died) {
+      e.windup = 0;
+      e.cooldown = Math.max(0, e.cooldown) + abilityFx(id, 'back');
+    }
+    putMark(game, c, 'ability', 1, abilityRest(id));
+    if (c.mode === 'active') game.logMsg(`${c.name} uses ${abilityName(id)}.`, 'fight');
+    return true;
   }
 
   /** Whether a wild thing's mind is on a fight with something other than this one: you, or another of yours. The island's `style_dealt`. */
@@ -7288,7 +8024,8 @@ export class Creatures {
    */
   private threat(game: Game, t: Creature, by: Creature): void {
     if (t.brawl === by.id) {
-      t.threatAt = game.time;
+      // Kept on it at least as long as it was held there already (`blade_guardians_call`).
+      t.threatAt = Math.max(t.threatAt, game.time);
       return;
     }
     if (by.stance !== 'guard' && game.time - t.threatAt < THREAT_HOLD) return;
@@ -7304,7 +8041,8 @@ export class Creatures {
     const before = t.health;
     // What a blow costs it is its blood's to say, and its herd's.
     // And less on your companion inside a Heart of the Herd (`herd_heart`).
-    t.health -= dmg * this.mul(t, 'soak') * game.herdMul(t, 'taken');
+    // And more while it is brittle, and less inside a stone skin (`binder_brittle`, `warder_stoneskin`; the island's `class_brittle`).
+    t.health -= dmg * this.mul(t, 'soak') * game.herdMul(t, 'taken') * markOn(game, t, 'brittle') * markOn(game, t, 'stone');
     t.attackedBy = by === 'player' ? PLAYER_ATTACKER : by.id;
     t.attackedAt = game.time;
     game.events.emit('hit', t.x, t.y, Math.max(0, before - Math.max(0, t.health)), crit ? 'crit' : 'dealt');

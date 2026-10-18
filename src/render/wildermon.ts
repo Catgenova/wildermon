@@ -14,6 +14,7 @@ import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA, WICK
 import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, SPRIGGA, WURLA } from './wild-hands2';
 import { CHISSA, CORDRA, DIPPA, FLECHA, GLOSSA, MUDDA, PAPRA, RIPPA } from './wild-hands3';
 import { AWLA, GASHA, SKULKA, SPARRA, SPITTA, TESTA, THUMPA } from './wild-fighters';
+import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, LUNGRA, MARKA, ROOTLE, SCORCHA, SHOVA, STONA, WARDO, WHIRLA } from './wild-abilities';
 
 /**
  * The wildermon, each as a body of its own (`./beasts` for what they are all
@@ -107,6 +108,23 @@ export const WILDERMON: Record<string, Kind> = {
   spitta: SPITTA,
   awla: AWLA,
   sparra: SPARRA,
+  lungra: LUNGRA,
+  hamma: HAMMA,
+  crakka: CRAKKA,
+  bashka: BASHKA,
+  executa: EXECUTA,
+  whirla: WHIRLA,
+  scorcha: SCORCHA,
+  frosta: FROSTA,
+  rootle: ROOTLE,
+  dulla: DULLA,
+  brittla: BRITTLA,
+  shova: SHOVA,
+  howla: HOWLA,
+  marka: MARKA,
+  wardo: WARDO,
+  stona: STONA,
+  leecha: LEECHA,
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */

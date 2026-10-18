@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BLOW_SHARE, BREED_REST, GESTATION, SPAR_SLACK, SPAR_YIELD } from '../src/game/creatures';
+import { BLOW_SHARE, BREED_REST, FROST_BREATH_REST, GESTATION, SPAR_SLACK, SPAR_YIELD, WARD_SKIN } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -533,6 +533,8 @@ out.push(`alter table species_def add column if not exists coward boolean not nu
 out.push(`alter table species_def add column if not exists venom boolean not null default false;`);
 /* How one of yours fights another creature, besides its blow (\`FightStyle\`). */
 out.push(`alter table species_def add column if not exists style text;`);
+/* What one of yours does in a fight once every so often (\`AbilityId\`): a fighting trade's spell's id, or a frost breath. */
+out.push(`alter table species_def add column if not exists ability text;`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1267,6 +1269,7 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (d.coward) out.push(`update species_def set coward = true where id = ${q(d.id)};`);
   if (d.venom) out.push(`update species_def set venom = true where id = ${q(d.id)};`);
   if (d.style) out.push(`update species_def set style = ${q(d.style)} where id = ${q(d.id)};`);
+  if (d.ability) out.push(`update species_def set ability = ${q(d.ability)} where id = ${q(d.id)};`);
   for (const item of d.diet as string[]) out.push(`insert into species_diet values (${q(d.id)}, ${q(item)});`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
@@ -1578,6 +1581,8 @@ for (const [fn, v] of [
   ['threat_hold', THREAT_HOLD],
   /* A sparring partner of yours: the share of its health it yields at, and how near that it has yielded. */
   ['spar_yield', SPAR_YIELD], ['spar_slack', SPAR_SLACK],
+  /* A wildermon's own ability: the seconds between frost breaths, and the skin a wardo lays over you. */
+  ['frost_breath_rest', FROST_BREATH_REST], ['ward_skin', WARD_SKIN],
   /* A companion's orders: how near a guarding one keeps a fight, and how long one fallen back starts none. */
   ['guard_range', GUARD_RANGE], ['fall_back', FALL_BACK],
   /* Wounds that slow a swing, and how far; a blow at your back, a crowd on

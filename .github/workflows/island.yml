@@ -3106,6 +3106,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/fightstyles.mjs --log-level=error
           node node_modules/.cache/fightstyles.mjs
 
+      - name: Abilities on a cooldown
+        run: |
+          # Seventeen wildermon each use a fighting trade's spell, or a frost
+          # breath, instead of a blow, then rest for the spell's rest: the
+          # same numbers on both sides, and never a wild one.
+          npx esbuild supabase/test/abilities.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/abilities.mjs --log-level=error
+          node node_modules/.cache/abilities.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

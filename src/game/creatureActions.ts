@@ -2,7 +2,7 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
+import { markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
 import { numberWord } from './words';
 import { bestTier, traitList } from './traits';
@@ -216,7 +216,7 @@ export function riposte(g: Game, c: Creature, share: number): void {
     return;
   }
   const bane = banes(item) && def.glow ? BANE_BONUS : 1;
-  const crit = g.rand() < myCritChance(g, usable);
+  const crit = g.rand() < myCritChance(g, usable) * markOn(g, c, 'marked');
   const dmg = weaponDamage(g, usable, item) * bane * stanceDealt(g.settings.fightStance, (k, o) => g.perk(k, o))
     * hideTakes(def.hide, blowOf(usable)) * blindside(c) * (0.75 + g.rand() * 0.5) * (crit ? critMul(g, usable) : 1)
     * classDealt(g, c) * share;
@@ -622,7 +622,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
          * on another fight (`fight.ts`).
          */
         // And now and then a critical one (`myCritChance`), harder for a Skirmisher's Lethal on a knife (`critMul`).
-        const crit = g.rand() < myCritChance(g, usable);
+        const crit = g.rand() < myCritChance(g, usable) * markOn(g, c, 'marked');
         const dmg = weaponDamage(g, usable, item) * bane * stanceDealt(g.settings.fightStance, (k, o) => g.perk(k, o))
           * hideTakes(def.hide, blowOf(usable)) * blindside(c) * (0.75 + g.rand() * 0.5) * (crit ? critMul(g, usable) : 1)
           // And what your fighting trade's passives make of it (`classDealt`).
@@ -725,7 +725,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         // The stave throws it; the head is what goes in. Both have a say.
         const head = matOfItem(arrow);
         const bane = head.bane && def.glow ? BANE_BONUS : 1;
-        const crit = g.rand() < myCritChance(g, bow);
+        // And more often on one marked for death (`skirmisher_marked_for_death`; the island's `class_marked`).
+        const crit = g.rand() < myCritChance(g, bow) * markOn(g, c, 'marked');
         // And what the head is: a blunt crushes, a bodkin goes through a hide (`headBlow`, `headHide`).
         const dmg = weaponDamage(g, bow, held) * head.edge * bane * stanceDealt(g.settings.fightStance, (k, o) => g.perk(k, o))
           * hideTakes(def.hide, headBlow(shape, bow)) * headHide(shape, def.hide) * blindside(c)
