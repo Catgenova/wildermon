@@ -67,22 +67,22 @@ function voiced(ctx: BaseAudioContext, dest: AudioNode, at: number, o: Voiced): 
 /** How a stage sounds: how far down its buzz is, how far down its resonances (a bigger snout), how long it draws a sound out, and how much octave is under it. */
 function bodyOf(stage: number, v: number): { pitch: number; snout: number; long: number; under: number } {
   const s = Math.max(0, Math.min(2, stage));
-  return { pitch: [1, 0.78, 0.6][s] * (0.94 + 0.12 * v), snout: [1, 0.86, 0.74][s], long: 1 + 0.15 * s, under: [0, 0.35, 0.6][s] };
+  return { pitch: [1, 0.7, 0.5][s] * (0.94 + 0.12 * v), snout: [1, 0.86, 0.74][s], long: 1 + 0.15 * s, under: [0, 0.35, 0.6][s] };
 }
 
-/** A grunt: a short nasal buzz, its pitch lifting and falling, `k` loud; with an octave under it on a bigger body. */
+/** A grunt: a short nasal buzz, a piglet's at 250 Hz, its pitch lifting and falling, `k` loud; with an octave under it on a bigger body. */
 function grunt(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number, k: number, lift = 1.18): void {
-  const b = bodyOf(stage, v), f = 150 * b.pitch, dur = 0.2 * b.long;
+  const b = bodyOf(stage, v), f = 250 * b.pitch, dur = 0.2 * b.long;
   const formants = [[380 * b.snout, 3, 1], [1000 * b.snout, 5, 0.6], [2400 * b.snout, 6, 0.22]] as const;
   voiced(ctx, dest, at, { f: [f, f * lift, f * 0.82], dur, gain: 0.5 * k, formants, burr: [30 + 10 * v, 0.6] });
   if (b.under) voiced(ctx, dest, at, { f: [f / 2, (f * lift) / 2, (f * 0.82) / 2], dur: dur * 1.1, gain: 0.5 * k * b.under, formants: [[260 * b.snout, 2, 1], [700 * b.snout, 3, 0.5]], burr: [24, 0.5] });
 }
 
-/** A squeal: a high bright buzz going up and coming down, short. */
+/** A squeal: a high bright buzz, a piglet's round 900 Hz, going up and coming down, short. */
 function squeal(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number, k: number): void {
-  const b = bodyOf(stage, v), f = 620 * b.pitch;
+  const b = bodyOf(stage, v), f = 900 * b.pitch;
   voiced(ctx, dest, at, {
-    f: [f * 0.8, f * 1.45, f * 1.3, f * 0.9], dur: 0.22 * b.long, gain: 0.42 * k,
+    f: [f * 0.75, f * 1.2, f * 1.08, f * 0.78], dur: 0.22 * b.long, gain: 0.42 * k,
     formants: [[1150 * b.snout, 4, 1], [2500 * b.snout, 5, 0.5], [3700 * b.snout, 6, 0.18]], burr: [52, 0.3], attack: 0.012,
   });
 }
@@ -97,23 +97,28 @@ const sniff = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number
 function snort(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number, k: number): void {
   const b = bodyOf(stage, v);
   burst(ctx, dest, at, { dur: 0.12 * b.long, freq: 1500 * b.snout, to: 520 * b.snout, q: 1.1, gain: 0.32 * k, attack: 0.006 });
-  voiced(ctx, dest, at, { f: [110 * b.pitch, 90 * b.pitch], dur: 0.1 * b.long, gain: 0.22 * k, formants: [[420 * b.snout, 2.5, 1], [1100 * b.snout, 4, 0.4]], burr: [28, 0.7] });
+  voiced(ctx, dest, at, { f: [190 * b.pitch, 150 * b.pitch], dur: 0.1 * b.long, gain: 0.22 * k, formants: [[420 * b.snout, 2.5, 1], [1100 * b.snout, 4, 0.4]], burr: [28, 0.7] });
 }
 
-/** The leaves it wears, shaken: a scatter of tiny dry ticks high up, over a soft hush. */
+/** The leaves it wears, shaken: a scatter of tiny dry ticks in a narrow band, over a soft hush kept under the hiss. */
 function rustle(ctx: BaseAudioContext, dest: AudioNode, at: number, len: number, v: number, k: number): void {
-  burst(ctx, dest, at, { dur: len, freq: 4200 + v * 600, to: 3000, q: 0.6, gain: 0.08 * k, attack: len * 0.35 });
+  burst(ctx, dest, at, { dur: len, freq: 3400 + v * 400, to: 2600, q: 0.9, gain: 0.06 * k, attack: len * 0.35 });
   for (let q = 0; q < 7; q++) {
     const when = at + len * ((q + 0.3 * Math.sin(q * 3.7 + v * 5)) / 7);
-    burst(ctx, dest, Math.max(at, when), { dur: 0.025 + 0.015 * (q % 3), freq: 5200 + 900 * Math.sin(q * 2.1 + v), q: 1.4, gain: 0.11 * k, type: 'highpass' });
+    burst(ctx, dest, Math.max(at, when), { dur: 0.025 + 0.015 * (q % 3), freq: 6500 + 500 * Math.sin(q * 2.1 + v), q: 2.5, gain: 0.066 * k });
   }
 }
 
-/** A blow landing: a low thud that drops, and the dull knock of it. */
+/**
+ * A blow landing: a low thud dropping to a floor of 60 Hz, which a small
+ * speaker can still give some of, the short knock of skull on something at
+ * 180 to 250 Hz, and the dull slap of it.
+ */
 function thump(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void {
   const b = bodyOf(stage, v);
-  ring(ctx, dest, at, { freq: 120 * b.snout, to: 48 * b.snout, dur: 0.2 * b.long, gain: 0.38, type: 'sine' });
-  burst(ctx, dest, at, { dur: 0.09, freq: 420 * b.snout, to: 160, q: 0.7, gain: 0.34, type: 'lowpass', attack: 0.002 });
+  ring(ctx, dest, at, { freq: 130, to: 60, dur: 0.18 * b.long, gain: 0.3 + 0.06 * stage, type: 'sine', attack: 0.003 });
+  ring(ctx, dest, at, { freq: 250 - 30 * stage + 20 * v, to: 180, dur: 0.06, gain: 0.2, type: 'triangle', attack: 0.002 });
+  burst(ctx, dest, at, { dur: 0.09, freq: 420 * b.snout, to: 160, q: 0.7, gain: 0.3, type: 'lowpass', attack: 0.002 });
 }
 
 /** A cue's own level, over everything in it, so each is set against the others as a whole. */
@@ -159,20 +164,23 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
 };
 
 /**
- * Evolving: a bright chime climbing five notes, over a rising shimmer of
- * leaves, a sparkle at the top, and then a happy double grunt; a bigger
- * stage's grunt deeper, and its chime with a low note under it.
+ * Evolving, a cue the length of the act: a shimmer of leaves rising under
+ * it, then a bright chime climbing five notes to the flash at the middle of
+ * it, a sparkle there and a soft chord ringing on under the burst of leaves,
+ * and then a happy double grunt. Each stage's chime is a step lower than the
+ * last, and its grunt deeper.
  */
 const evolve = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
   dest = level(ctx, dest, 2.3);
-  const notes = [784, 988, 1175, 1568, 1976];
-  const bell = [[1, 0.7], [2, 0.2], [3.01, 0.08]] as const;
-  notes.forEach((f, q) => ring(ctx, dest, at + q * 0.085, { freq: f, dur: 0.55 - q * 0.04, gain: 0.13, type: 'triangle', partials: bell }));
-  if (stage > 0) ring(ctx, dest, at, { freq: 392 / (stage > 1 ? 2 : 1), dur: 0.9, gain: 0.12, type: 'sine', attack: 0.08, partials: [[1, 0.8], [2, 0.2]] });
-  burst(ctx, dest, at + 0.05, { dur: 0.7, freq: 2200, to: 6800, q: 1.3, gain: 0.12, attack: 0.35 });
-  ring(ctx, dest, at + 0.46, { freq: 3136, dur: 0.35, gain: 0.05, type: 'sine', partials: [[1, 0.6], [1.5, 0.4]] });
-  grunt(ctx, dest, at + 0.78, stage, v, 0.5, 1.35);
-  grunt(ctx, dest, at + 1.0, stage, v, 0.45, 1.5);
+  const key = [1, 0.89, 0.75][Math.max(0, Math.min(2, stage))];
+  const bell = [[1, 0.7], [2, 0.2], [3, 0.08]] as const;
+  burst(ctx, dest, at + 0.2, { dur: 0.75, freq: 1800, to: 5200, q: 1.3, gain: 0.1, attack: 0.5 });
+  [784, 988, 1175, 1568, 1976].forEach((f, q) => ring(ctx, dest, at + 0.45 + q * 0.11, { freq: f * key, dur: 0.5, gain: 0.12, type: 'sine', attack: 0.008, partials: bell }));
+  // The flash, at the middle of the act: the top note's sparkle and a chord under it.
+  ring(ctx, dest, at + 0.9, { freq: 3136 * key, dur: 0.4, gain: 0.05, type: 'sine', attack: 0.006, partials: [[1, 0.6], [1.5, 0.4]] });
+  for (const f of [392, 494, 587]) ring(ctx, dest, at + 0.9, { freq: f * key, dur: 0.65, gain: 0.06, type: 'sine', attack: 0.01, partials: [[1, 0.8], [2, 0.2]] });
+  grunt(ctx, dest, at + 1.15, stage, v, 0.5, 1.35);
+  grunt(ctx, dest, at + 1.35, stage, v, 0.45, 1.5);
 };
 
 export const SNUFF_VOICE: Voice = { strike, work, evolve };

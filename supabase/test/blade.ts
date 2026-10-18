@@ -26,7 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { CLASS_TIER_AT, CLASSES } from '../../src/game/classes';
-import { BLOW_SHARE } from '../../src/game/creatures';
+import { BLOW_SHARE, SPECIES } from '../../src/game/creatures';
 import { BLOCK_MOST, blockChance, STANCE_DEALT, STANCE_TAKEN, stanceDealt, stanceTaken, THREAT_HOLD } from '../../src/game/fight';
 import { SHIELDS } from '../../src/game/gear';
 import { SPELL_BAR } from '../../src/game/patrons';
@@ -632,7 +632,7 @@ check('and it wants a shield', island('NOSHIELD') === 'Shield Bash wants a shiel
   check(`Challenge: it turns on you, and is not turned off you for ${fx('challenge', 'secs')} s`,
     turned === 'true' && near(Number(secs), fx('challenge', 'secs') - THREAT_HOLD, 1e-6), island('CHALLENGE'));
   check('and a blow of your own on it after does not cut that short', near(Number(island('CHALLENGE:HELD')), Number(secs), 1e-6), island('CHALLENGE:HELD'));
-  check('and something that fights nobody is refused', island('TIMID') === 'The rabba will not fight anybody.', island('TIMID'));
+  check('and something that fights nobody is refused', island('TIMID') === `The ${SPECIES.rabba.name.toLowerCase()} will not fight anybody.`, island('TIMID'));
 }
 {
   const [who, line] = parts('CALL');
