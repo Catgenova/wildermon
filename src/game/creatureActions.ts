@@ -154,10 +154,9 @@ export function companionSwap(g: Game, taking: Creature): { current: Creature; t
 
 /** What has to be fitted before anything can be ridden. */
 export { TACK } from './creatures';
-/** How grown a fleece has to be to shear, and what a full one gives: wool, or a bird's feathers. The island has the same. */
-export const SHEAR_FROM = 0.35;
-export const SHEAR_WOOL = 3;
-export const SHEAR_FEATHERS = 6;
+/** How grown a fleece has to be to shear, and what a full one gives: wool, or a bird's feathers (kept in `./limits`, so a kind's words can read them as it loads). */
+import { SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
+export { SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL };
 
 
 /** Harder at something whose mind is on another fight: a companion's, or somebody else's (`BLINDSIDE`). */

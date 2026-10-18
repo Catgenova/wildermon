@@ -27,3 +27,8 @@ export const GRASS_PER_CUT = 2;
  * moss." The island's `moss_per_cut`.
  */
 export const MOSS_PER_CUT = GRASS_PER_CUT;
+
+/** How grown a fleece has to be to shear, and what a full one gives: wool, or a bird's feathers. The island has the same. */
+export const SHEAR_FROM = 0.35;
+export const SHEAR_WOOL = 3;
+export const SHEAR_FEATHERS = 6;

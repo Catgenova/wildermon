@@ -19,7 +19,7 @@ import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
 import { furnitureDef, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
 
 import { milkLitres } from './dairy';
-import { SHEAR_FEATHERS, SHEAR_WOOL } from './creatureActions';
+import { SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
 import { candleBurn } from './light';
 import { isLampPiece } from './lamps';
 import { GRAPE, grapesFor, isTrellis, vineStage } from './vineyard';
@@ -889,8 +889,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   woola: {
     id: 'woola',
-    name: 'Woola',
-    description: 'A round, mild grazer under a deep fleece, which it grows back as fast as you can take it off. It has no opinion about anything and no job worth speaking of, and everyone keeps one anyway.',
+    name: 'Cloudlet',
+    was: ['Woola'],
+    // Asked for: "Cloudlet, cloudram, cloudborne", in place of the Woola. Its words are written with every number they
+    // read (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Cloudram', description: '' },
+      { name: 'Cloudborne', description: '' },
+    ],
     health: 26,
     attack: 2,
     speed: 1.3,
@@ -3476,6 +3483,8 @@ sayLine('rabba', `Set to work on a settlement it forages within ${SPECIES.rabba.
   'Its level is its foraging.');
 sayLine('vola', `Set to work on a settlement it botanizes within ${SPECIES.vola.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`,
   'Its level is its botanizing.');
+sayLine('woola', `Shear it with a carving knife once its fleece is ${percent(SHEAR_FROM)} grown back, for up to ${SHEAR_WOOL} wool when it is full; a grown one grows it back in ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
+  'Its level is its animal husbandry, which it learns by being shorn, plucked or milked.');
 sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of bare rock with no seam in it, within ${SPECIES.quarra.workRange} tiles of the token and ${SPECIES.quarra.rangePerStep} further for every ${SKILL_STEP} levels, and carries it home.`,
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,

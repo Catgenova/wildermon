@@ -60,6 +60,7 @@ begin
   insert into said select 'NAMES', name || '|' || array_to_string(stages, ',') from species_def where id = 'rabba';
   insert into said select 'IRONEMOLE', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Mola')).id from species_def where id = 'mola';
   insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
+  insert into said select 'CLOUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Woola')).id from species_def where id = 'woola';
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
   insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work());
   a := creature_spawn(w, 'rabba', 17, 16.5, 'deed', now() - interval '30 days', u);
@@ -100,6 +101,10 @@ const spore = SPECIES.vola;
 check('the Vola is the Sporeling now, a Sporekin and a Sporelord after, and an old Vola carcass is still one, on both sides',
   spore.name === 'Sporeling' && spore.stages?.map((x) => x.name).join(',') === 'Sporekin,Sporelord'
     && at('SPORELING') === 'Sporeling|Sporekin,Sporelord|Vola|vola', at('SPORELING'));
+const cloud = SPECIES.woola;
+check('the Woola is the Cloudlet now, a Cloudram and a Cloudborne after, and an old Woola carcass is still one, on both sides',
+  cloud.name === 'Cloudlet' && cloud.stages?.map((x) => x.name).join(',') === 'Cloudram,Cloudborne'
+    && at('CLOUDLET') === 'Cloudlet|Cloudram,Cloudborne|Woola|woola', at('CLOUDLET'));
 const chip = SPECIES.quarra;
 check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and an old Quarra carcass is still one, on both sides',
   chip.name === 'Chiptail' && chip.stages?.map((x) => x.name).join(',') === 'Quarrybash,Monolithump'

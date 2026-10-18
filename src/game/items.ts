@@ -336,7 +336,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   log: { name: 'Log', category: 'material', weight: 24, stackable: true, raw: true, decay: 18 },
   plank: { name: 'Plank', category: 'material', weight: 2, stackable: true, decay: 20 },
   timber: { name: 'Timber', category: 'material', weight: 6, stackable: true, decay: 18 },
-  wool: { name: 'Wool', category: 'material', weight: 0.4, stackable: true, raw: true, decay: 14, description: 'A fleece shorn from a living Woola. It grows back, which fur never does.' },
+  wool: { name: 'Wool', category: 'material', weight: 0.4, stackable: true, raw: true, decay: 14, description: 'A fleece shorn from a living Cloudlet. It grows back, which fur never does.' },
   cloth: { name: 'Cloth', category: 'material', weight: 0.3, stackable: true, decay: 14, description: 'Wool or cotton spun and woven. Stuffs a mattress and makes what you wear.' },
   fur: { name: 'Fur', category: 'material', weight: 1, stackable: true, raw: true, decay: 16, description: 'A soft pelt taken from a butchered wildermon.' },
   hide: { name: 'Hide', category: 'material', weight: 2, stackable: true, raw: true, decay: 40, description: 'A raw skin off a carcass. Useless until it has been through lye.' },

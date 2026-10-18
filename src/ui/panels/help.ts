@@ -2996,7 +2996,7 @@ export function helpText(): string {
     the deed fed and lit from the crate &mdash; the one chore you otherwise have to come home for. The
     <b>Magga</b> is a magpie that clears a settlement of everything dropped and forgotten and puts it in
     the crate; wild ones do the reverse, so do not leave anything lying about near their trees. The
-    <b>Woola</b> is a mild grazer that does no work at all: it grows a fleece, and once it has grown you
+    <b>${SPECIES.woola.name}</b> (the Woola that was) is a cloud-fleeced grazer that does no work at all, and evolves into a ${SPECIES.woola.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.woola.stages![1].name} at ${EVOLVE_AT[1]}: it grows a fleece, and once it has grown you
     <b>shear</b> it with a knife for <b>wool</b>, which grows back in ${spanWords(1 / (SPECIES.woola.fleece ?? 1))}. The
     <b>Ulva</b> is the first thing on this island that will come at you unprovoked: it hunts by scent
     from ${numberWord(SPECIES.ulva.notice ?? HUNT_SIGHT)} tiles off and does not stop until you are well away or it is badly hurt. It takes taming
