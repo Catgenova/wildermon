@@ -40,12 +40,14 @@ interface Snuff {
    * are the snout, pink. How far its nose is carried up, in degrees.
    */
   head: { y: number[]; z: number[]; w: number[]; h: number[]; pitch: number };
-  /** The eyes: how far along the head, how far up its side from level (radians), and how big across. */
-  eye: { y: number; up: number; size: number };
+  /** The eyes: how far along the head, how far up its side from level (radians), how big across, and how heavy a ridge of brow is over each (nought for a piglet's smooth brow). */
+  eye: { y: number; up: number; size: number; brow: number };
   /** Each ear: its length and width, and how far it is splayed out and laid back (degrees). */
   ear: { len: number; w: number; out: number; back: number };
   /** The mane's rows, front to back: how many leaves in each, how long they are, and how far back they are swept (degrees). */
   ruff: Array<[number, number, number]>;
+  /** How far the leaves down its sides hang down rather than standing out. */
+  hang: number;
   /** Pairs of leaves cascading down the back behind the mane: how many, and the longest. */
   back: [number, number];
   /** Leaves standing up on the crown between the ears: how many, how long, and how wide they are fanned. */
@@ -66,78 +68,82 @@ interface Snuff {
   size: number;
 }
 
-/** A Snufflet: a round little piglet with a big head and full cheeks, the shortest muzzle, short legs, and a puff of leaves round its neck. */
+/** A Snufflet: a round little piglet with a domed head too big for it, big eyes, the shortest snout, short legs, and a wide puff of leaves round its neck. */
 const SNUFFLET_LOOK: Snuff = {
   body: { y: [-1.12, -0.96, -0.52, 0.08, 0.6, 0.92, 1.06], z: [0.14, 0.12, 0.1, 0.1, 0.12, 0.16, 0.18], w: [0.45, 0.8, 0.92, 0.94, 0.9, 0.78, 0.34], h: [0.42, 0.74, 0.84, 0.86, 0.84, 0.74, 0.32] },
   len: 2.0, legs: 0.78, thick: 0.26, hoof: 0.15,
   neck: { at: [0, 0.82, 0.2], len: 0.36, w: 0.64, lean: 40 },
   head: {
-    y: [-0.48, -0.3, 0.05, 0.42, 0.72, 0.95, 1.06, 1.2, 1.25], z: [0.36, 0.34, 0.28, 0.22, 0.14, 0.08, 0.07, 0.06, 0.06],
-    w: [0.3, 0.72, 0.86, 0.72, 0.5, 0.36, 0.34, 0.3, 0.25], h: [0.3, 0.72, 0.8, 0.64, 0.46, 0.33, 0.31, 0.28, 0.23], pitch: -2,
+    y: [-0.48, -0.3, 0.05, 0.42, 0.68, 0.86, 0.96, 1.1, 1.15], z: [0.38, 0.38, 0.32, 0.22, 0.13, 0.07, 0.06, 0.05, 0.05],
+    w: [0.3, 0.72, 0.86, 0.72, 0.5, 0.36, 0.35, 0.31, 0.26], h: [0.32, 0.8, 0.88, 0.66, 0.46, 0.34, 0.32, 0.29, 0.24], pitch: -2,
   },
-  eye: { y: 0.44, up: 0.3, size: 0.13 },
-  ear: { len: 1.2, w: 0.5, out: 52, back: 22 },
-  ruff: [[22, 0.66, 14], [22, 0.74, 28], [18, 0.68, 42]],
+  eye: { y: 0.4, up: 0.3, size: 0.16, brow: 0 },
+  ear: { len: 1.2, w: 0.5, out: 55, back: 22 },
+  ruff: [[22, 0.82, 14], [22, 0.92, 28], [20, 0.8, 44]],
+  hang: 0.3,
   back: [0, 0],
   crest: [4, 0.5, 1],
   flowers: [1, 1, 0],
   tail: 0.5,
-  cuff: 0.24,
+  cuff: 0.3,
   tusk: 0,
   toss: 0,
-  wild: 0,
+  wild: 0.1,
   gait: { trot: true, bounce: 0.06, nod: 4, swing: [24, 38] },
   size: 1.55,
 };
 
-/** A Snuffroot: long in the leg and the body, its head carried higher on a longer muzzle, and the mane swept back over its shoulders. */
+/** A Snuffroot: a young boar, longer in the leg and the body, its head carried higher on a longer muzzle, and the mane swept back over its shoulders. */
 const SNUFFROOT_LOOK: Snuff = {
-  body: { y: [-1.56, -1.36, -0.76, 0, 0.76, 1.3, 1.5], z: [0.16, 0.12, 0.1, 0.1, 0.14, 0.2, 0.22], w: [0.5, 0.84, 0.98, 1.0, 1.02, 0.9, 0.4], h: [0.42, 0.68, 0.78, 0.8, 0.82, 0.76, 0.36] },
-  len: 2.7, legs: 1.5, thick: 0.37, hoof: 0.18,
-  neck: { at: [0, 1.22, 0.26], len: 0.46, w: 0.7, lean: 36 },
+  body: { y: [-1.56, -1.36, -0.76, 0, 0.76, 1.3, 1.5], z: [0.16, 0.12, 0.1, 0.1, 0.14, 0.2, 0.22], w: [0.5, 0.86, 1.0, 1.02, 1.04, 0.92, 0.4], h: [0.46, 0.75, 0.86, 0.88, 0.9, 0.84, 0.4] },
+  len: 2.7, legs: 1.35, thick: 0.37, hoof: 0.18,
+  neck: { at: [0, 1.22, 0.26], len: 0.46, w: 0.72, lean: 36 },
   head: {
     y: [-0.45, -0.28, 0.05, 0.42, 0.82, 1.18, 1.34, 1.5, 1.55], z: [0.34, 0.32, 0.26, 0.2, 0.1, 0.02, 0.0, -0.01, -0.01],
     w: [0.28, 0.66, 0.8, 0.64, 0.44, 0.33, 0.32, 0.28, 0.23], h: [0.28, 0.68, 0.74, 0.58, 0.42, 0.31, 0.3, 0.27, 0.22], pitch: 2,
   },
-  eye: { y: 0.46, up: 0.3, size: 0.12 },
-  ear: { len: 1.5, w: 0.6, out: 52, back: 30 },
-  ruff: [[24, 0.72, 14], [24, 0.84, 28], [18, 1.2, 62], [16, 1.3, 68]],
+  eye: { y: 0.44, up: 0.3, size: 0.145, brow: 0.7 },
+  ear: { len: 1.5, w: 0.6, out: 55, back: 30 },
+  ruff: [[24, 0.82, 14], [24, 0.92, 28], [26, 1.05, 46], [26, 1.1, 50], [24, 1.1, 54]],
+  hang: 0.5,
   back: [0, 0],
   crest: [5, 0.62, 1.4],
   flowers: [2, 1, 0],
   tail: 0.55,
-  cuff: 0.28,
+  cuff: 0.36,
   tusk: 0,
-  toss: 25,
-  wild: 0.15,
-  gait: { trot: true, bounce: 0.045, nod: 3, swing: [22, 36] },
+  toss: 20,
+  wild: 0.35,
+  gait: { trot: true, bounce: 0.045, nod: 3, swing: [22, 34] },
   size: 1.72,
 };
 
 /**
- * A Snuffthorn: a big boar, deep and broad in the chest and humped at the shoulder, its head carried high on the longest,
- * heaviest muzzle and deepest jaw, a crescent tusk curving up each side, and the mane cascading on down its back.
+ * A Snuffthorn: a big heavy boar, deep and broad in the chest and humped at the shoulder, its head carried high on the
+ * longest, heaviest muzzle and deepest jaw, a stubby crescent tusk each side, and a huge mane of leaves standing up over its
+ * withers, framing its head and hanging to its knees, and cascading on down its back.
  */
 const SNUFFTHORN_LOOK: Snuff = {
-  body: { y: [-1.86, -1.66, -1.0, -0.1, 0.8, 1.5, 1.78], z: [0.1, 0.1, 0.12, 0.2, 0.32, 0.36, 0.36], w: [0.55, 0.98, 1.1, 1.18, 1.3, 1.18, 0.5], h: [0.5, 0.9, 1.02, 1.12, 1.22, 1.1, 0.5] },
-  len: 3.3, legs: 1.75, thick: 0.5, hoof: 0.24,
-  neck: { at: [0, 1.5, 0.5], len: 0.5, w: 0.88, lean: 25 },
+  body: { y: [-1.86, -1.66, -1.0, -0.1, 0.8, 1.5, 1.78], z: [0.1, 0.1, 0.12, 0.2, 0.32, 0.36, 0.36], w: [0.55, 1.0, 1.14, 1.22, 1.34, 1.2, 0.5], h: [0.55, 0.99, 1.12, 1.23, 1.34, 1.21, 0.55] },
+  len: 3.3, legs: 1.55, thick: 0.5, hoof: 0.24,
+  neck: { at: [0, 1.5, 0.5], len: 0.5, w: 0.9, lean: 25 },
   head: {
     y: [-0.5, -0.3, 0.08, 0.5, 0.98, 1.44, 1.66, 1.86, 1.92], z: [0.36, 0.32, 0.24, 0.16, 0.04, -0.06, -0.08, -0.09, -0.09],
     w: [0.32, 0.76, 0.9, 0.72, 0.52, 0.4, 0.4, 0.35, 0.29], h: [0.32, 0.8, 0.86, 0.7, 0.54, 0.44, 0.39, 0.35, 0.29], pitch: 8,
   },
-  eye: { y: 0.52, up: 0.3, size: 0.12 },
-  ear: { len: 1.9, w: 0.72, out: 54, back: 30 },
-  ruff: [[26, 0.78, 14], [26, 0.86, 26], [24, 0.9, 55], [24, 0.95, 62], [22, 1.0, 70]],
-  back: [7, 0.72],
+  eye: { y: 0.5, up: 0.3, size: 0.14, brow: 1 },
+  ear: { len: 1.9, w: 0.72, out: 55, back: 30 },
+  ruff: [[28, 0.95, 14], [28, 1.05, 26], [26, 1.1, 46], [26, 1.2, 50], [24, 1.3, 52], [24, 1.3, 55], [22, 1.25, 58]],
+  hang: 0.7,
+  back: [6, 1.1],
   crest: [5, 0.78, 2.2],
-  flowers: [3, 1, 1],
+  flowers: [3, 1, 2],
   tail: 0.7,
-  cuff: 0.32,
+  cuff: 0.42,
   tusk: 1,
-  toss: 50,
-  wild: 0.3,
-  gait: { trot: false, bounce: 0.03, nod: 2, swing: [20, 32] },
+  toss: 32,
+  wild: 0.5,
+  gait: { trot: false, bounce: 0.03, nod: 2, swing: [16, 26] },
   size: 1.92,
 };
 
@@ -177,7 +183,7 @@ function earRoot(s: Snuff): V3 {
 /** A stage's body on four hooves (`QuadSpec`): its legs, neck, ears and tail from its numbers, and a pig's short quick stride. */
 const specOf = (s: Snuff): QuadSpec => ({
   high: s.legs + 0.7,
-  fore: { at: [s.body.w[4] * 0.52, s.len * 0.42, -0.42], len: [s.legs * 0.5, s.legs * 0.5, s.hoof], rest: [0, 0, 0], fold: [55, 85], toe: [s.thick * 0.85, s.thick * 0.35] },
+  fore: { at: [s.body.w[4] * 0.52, s.len * 0.42, -0.42], len: [s.legs * 0.5, s.legs * 0.5, s.hoof], rest: [-6, 10, 0], fold: [55, 85], toe: [s.thick * 0.85, s.thick * 0.35] },
   hind: { at: [s.body.w[2] * 0.54, -s.len * 0.38, -0.2], len: [s.legs * 0.54, s.legs * 0.54, s.hoof], rest: [14, -28, 0], fold: [35, 55], toe: [s.thick * 0.85, s.thick * 0.35] },
   neck: { at: s.neck.at, len: s.neck.len, lean: s.neck.lean },
   head: { pitch: s.head.pitch },
@@ -186,9 +192,9 @@ const specOf = (s: Snuff): QuadSpec => ({
   swing: s.gait.swing,
   duty: [0.56, 0.36],
   // Grazing, the neck bowed far enough down from however upright it is carried for the snout to reach the ground.
-  graze: 95 - s.neck.lean,
-  nose: 20,
-  bow: 16,
+  graze: 118 - s.neck.lean,
+  nose: 30,
+  bow: 6,
   rock: 5,
 });
 
@@ -277,6 +283,11 @@ function snuffPose(s: Snuff, spec: QuadSpec, p: QuadPose, a: Anim): void {
     p.neck[0] += 10 * snuffle;
     p.head[0] -= 10 * snuffle + 3 * snuffle * Math.sin(a.t * 30);
   }
+  // Head down at the ground, the fore legs kept straight under the chest rather than folded, as a pig roots: it reaches down with
+  // its neck, not by kneeling.
+  const down = a.graze * (1 - g);
+  p.legs[0][1] -= 0.8 * down;
+  p.legs[1][1] -= 0.8 * down;
   const act = a.act;
   if (act?.kind === 'strike') {
     const k = strikeOf(act.t), toss = s.toss * hump(act.t, 0.64, 0.14);
@@ -285,7 +296,7 @@ function snuffPose(s: Snuff, spec: QuadSpec, p: QuadPose, a: Anim): void {
     p.lift -= 0.08 * k.gather;
     p.legs[2][1] += 0.3 * k.gather;
     p.legs[3][1] += 0.3 * k.gather;
-    p.neck[0] += -20 * k.gather + 32 * k.thrust - 8 * k.settle - 0.32 * toss;
+    p.neck[0] += -20 * k.gather + 32 * k.thrust - 8 * k.settle - 0.15 * toss;
     p.head[0] += -22 * k.gather - 4 * k.thrust + 6 * k.settle + toss;
     // As it gathers, a fore hoof scraped once along the ground, as a boar does before it charges: lifted forward, put down, and
     // dragged back along the ground.
@@ -296,7 +307,8 @@ function snuffPose(s: Snuff, spec: QuadSpec, p: QuadPose, a: Anim): void {
     // Thrown forward snout first: the hind legs driving off their toes, the ears streaming back, and flopping forward as it settles.
     p.foot[2] -= 22 * k.thrust;
     p.foot[3] -= 22 * k.thrust;
-    for (const e of p.ears) e[0] += 34 * k.gather + 48 * k.thrust - 22 * k.settle;
+    // As it tosses its head up the ears are brought up as far as the head goes back, so they stay upright and not laid over its face.
+    for (const e of p.ears) e[0] += 34 * k.gather + 40 * k.thrust - 22 * k.settle - 1.1 * toss;
     p.tail[0] += 30 * k.thrust;
     p.squash += 0.06 * k.gather - 0.05 * k.thrust;
     // The legs kept upright against the body's pitch.
@@ -305,9 +317,9 @@ function snuffPose(s: Snuff, spec: QuadSpec, p: QuadPose, a: Anim): void {
     const r = rootOf(act.t, a.graze);
     // Rooting: the snout driven down into the ground and flicked up out of it, twice a go; the body shoving behind it, an ear
     // flicked on each shove, and the tail going hard.
-    p.neck[0] += r.down * (14 + 20 * r.push - 10 * r.flick);
-    p.head[0] += r.down * (-8 - 26 * r.push + 28 * r.flick);
-    p.pitch -= r.down * 4 * r.push;
+    p.neck[0] += r.down * (14 + 12 * r.push - 6 * r.flick);
+    p.head[0] += r.down * (-8 - 22 * r.push + 16 * r.flick);
+    p.pitch -= r.down * 2 * r.push;
     p.roll += r.down * 3 * Math.sin(act.t * TAU * 2);
     p.ears[0][0] += r.down * 34 * hump(act.t, 0.2, 0.1);
     p.ears[1][0] += r.down * 34 * hump(act.t, 0.7, 0.1);
@@ -421,19 +433,28 @@ function leaf(root: V3, dir: V3, face: V3, len: number, w: number, K: number, to
   return sheet(curve(root, mid, tip, K - 1), widths, f, 0.25, TONES[tone]);
 }
 
-/** A small five-petalled flower at `c`, facing along `n`, `r` across: cream petals, pale underneath, round a yellow middle. */
+/**
+ * A small five-petalled flower at `c`, facing along `n`, `r` across: cream
+ * petals round a yellow middle. Each petal is a sheet, for its outline and
+ * its shape, with its colour painted on both its faces always lit, so a
+ * flower turned from the light is cream and not the grey-lilac a shaded
+ * cream goes.
+ */
 function flower(c: V3, n: V3, r: number, spin = 0): Mesh {
   const z = unit(n);
   let x = cross([0, 0, 1], z);
   if (Math.hypot(x[0], x[1], x[2]) < 1e-3) x = [1, 0, 0];
   x = unit(x);
   const y = cross(z, x);
+  const paints: Disc[] = [];
   const petals = Array.from({ length: 5 }, (_, q) => {
     const t = spin + (q / 5) * TAU, d = add(scale(x, Math.cos(t)), scale(y, Math.sin(t)));
     const at = (k: number, lift: number): V3 => add(add(c, scale(d, r * k)), scale(z, r * lift));
-    return sheet([at(0.12, 0.05), at(0.55, 0.12), at(0.95, 0.08)], [r * 0.2, r * 0.42, r * 0.2], z, 0.12, ['petal', 'petal', 'spot']);
+    for (const sd of [1, -1]) paints.push(disc(add(at(0.55, 0.11), scale(z, sd * 0.012)), scale(z, sd), r * 0.36, r * 0.3, 7, 'petal', { up: cross(z, d), lit: true }));
+    return sheet([at(0.12, 0.05), at(0.55, 0.12), at(0.95, 0.08)], [r * 0.2, r * 0.42, r * 0.2], z, 0.12, ['petal', 'petal', 'petal']);
   });
-  return merge(...petals, orbAlong(add(c, scale(z, r * 0.14)), z, [r * 0.26, r * 0.26, r * 0.14], 6, 3, 'bloom'));
+  for (const sd of [1, -1]) paints.push(disc(add(c, scale(z, sd * r * 0.16)), scale(z, sd), r * 0.24, r * 0.24, 7, 'bloom', { lit: true }));
+  return merge(...petals, orbAlong(add(c, scale(z, r * 0.14)), z, [r * 0.26, r * 0.26, r * 0.14], 6, 3, 'bloom'), paint(paints));
 }
 
 /** One leaf or flower of a piece of them: its mesh, the way it lifts when it rustles, and whether it is a flower, which pops as it evolves. */
@@ -534,9 +555,9 @@ function ruffRows(s: Snuff, rows: number[], K: number): Frond[] {
       // Each turned a little round the ring, alternately one way and the other, so they fan and overlap like the leaves of a
       // spray, and are never all seen edge on at once.
       const round = scale(unit(cross(n, back)), q % 2 ? 1 : -1);
-      const dir = unit(add(add(add(scale(n, Math.cos(sweep) + nape), scale(back, Math.sin(sweep))), [0, 0, -0.25 * Math.abs(Math.cos(th))]), scale(round, 0.3 * jitter(id + 2))));
+      const dir = unit(add(add(add(scale(n, Math.cos(sweep) + nape), scale(back, Math.sin(sweep))), [0, 0, -s.hang * Math.abs(Math.cos(th))]), scale(round, 0.3 * jitter(id + 2))));
       const face = add(add(scale(n, Math.sin(sweep)), scale(back, -Math.cos(sweep))), scale(round, 0.6));
-      out.push({ mesh: leaf(add(p, scale(n, 0.02 - 0.04 * r)), dir, face, len, len * 0.4, K, toneOf(id), 0.18), out: unit(face) });
+      out.push({ mesh: leaf(add(p, scale(n, 0.02 - 0.04 * r)), dir, face, len, len * 0.45, K, toneOf(id), 0.18), out: unit(face) });
     }
   }
   return out;
@@ -552,7 +573,7 @@ function maneFlowers(s: Snuff): Frond[] {
       const th = (sd > 0 ? 0 : Math.PI) + sd * (0.45 - 0.6 * q + 0.2 * jitter(q + (sd > 0 ? 0 : 5)));
       const { p, n } = r < NECK_ROWS ? onNeck(s, s.neck.len * 0.7 - r * L * 0.45, th) : onBarrel(s, rowY(s, r) - L * 0.25, th);
       const at = add(add(p, scale(n, L * 0.45)), r < NECK_ROWS ? s.neck.at : [0, 0, 0]);
-      out.push({ mesh: flower(at, add(n, [0, 0.35, 0.2]), 0.17 + 0.02 * r, q * 0.7), out: n, bloom: true });
+      out.push({ mesh: flower(at, add(n, [0, 0.35, 0.2]), 0.26 + 0.02 * r, q * 0.7), out: n, bloom: true });
     }
   }
   return out;
@@ -577,29 +598,30 @@ function bibOf(s: Snuff, K: number): Frond[] {
     }
   }
   const at = scale(v, R * 1.15);
-  out.push({ mesh: flower(add(at, [0.08, 0.05, -0.05]), add(v, [0.1, 0.3, 0.3]), 0.2, 0.4), out: v, bloom: true });
+  out.push({ mesh: flower(add(at, [0.08, 0.05, -0.05]), add(v, [0.1, 0.3, 0.3]), 0.28, 0.4), out: v, bloom: true });
   return out;
 }
 
-/** Leaves cascading down the back behind the mane: along the ridge, and lower down each flank, lying back, shorter toward the rump. */
+/** Leaves cascading down the back behind the mane: along the ridge and down each flank in three layers, standing off it, shorter toward the rump. */
 function backLeaves(s: Snuff, K: number): Frond[] {
   const [pairs, L] = s.back;
   const out: Frond[] = [];
   for (let q = 0; q < pairs; q++) {
-    const y = rowY(s, s.ruff.length - 1) - 0.3 - q * ((s.len * 0.75) / pairs);
-    const len = L * (1 - 0.45 * (q / pairs));
+    const y = lerp(rowY(s, s.ruff.length - 1) - 0.3, s.body.y[1] + 0.35, q / Math.max(1, pairs - 1));
+    const len = L * (1 - 0.4 * (q / pairs));
     for (const sd of [1, -1]) {
-      for (const [lay, th] of [[0, 1.3], [1, 0.75]]) {
-        const id = 300 + q * 4 + (sd > 0 ? 0 : 2) + lay;
-        const at = onBarrel(s, y - lay * 0.2, sd > 0 ? th : Math.PI - th);
-        const dir = unit(add(scale(at.n, 0.35), [0, -1, -0.25 * lay]));
-        out.push({ mesh: leaf(add(at.p, scale(at.n, 0.02)), dir, at.n, len * (0.85 + 0.25 * jitter(id + 3)) * (1 - 0.15 * lay), len * 0.4, K, toneOf(id, 0.35), 0.2), out: at.n });
+      // Three layers, ridge to flank, each standing off the back at about thirty degrees and the lower ones hanging further.
+      for (const [lay, th] of [[0, 1.45], [1, 1.05], [2, 0.65]]) {
+        const id = 300 + q * 6 + (sd > 0 ? 0 : 3) + lay;
+        const at = onBarrel(s, y - lay * 0.15, sd > 0 ? th : Math.PI - th);
+        const dir = unit(add(scale(at.n, 0.5), [0, -0.87, -0.3 * lay * s.hang]));
+        out.push({ mesh: leaf(add(at.p, scale(at.n, 0.02)), dir, at.n, len * (0.85 + 0.25 * jitter(id + 3)) * (1 - 0.1 * lay), len * 0.45, K, toneOf(id, 0.2), 0.2), out: at.n });
       }
     }
     // A flower at every other pair, along the ridge, as many as it has.
     if (q % 2 === 0 && q / 2 < s.flowers[2]) {
-      const at = onBarrel(s, y - 0.25, Math.PI / 2 + (q % 4 ? 0.3 : -0.3));
-      out.push({ mesh: flower(add(at.p, scale(at.n, 0.12)), add(at.n, [0, 0.2, 0]), 0.2, q), out: at.n, bloom: true });
+      const at = onBarrel(s, y - 0.25, Math.PI / 2 + (q % 4 ? 0.35 : -0.35));
+      out.push({ mesh: flower(add(at.p, scale(at.n, 0.3)), add(at.n, [0, 0.2, 0]), 0.28, q), out: at.n, bloom: true });
     }
   }
   return out;
@@ -638,7 +660,7 @@ function eyesOf(s: Snuff, shut: boolean): Mesh {
   const E = s.eye, out: Disc[] = [];
   for (const side of [1, -1]) {
     const q0 = onHead(s, E.y, E.up), q = side > 0 ? q0 : left(q0);
-    const n = unit(add(q.n, [0, 0.25, 0.05])), p = add(q.p, scale(n, 0.01)), at = add(p, scale(n, 0.05));
+    const n = unit(add(q.n, [0, 0.12, 0.05])), p = add(q.p, scale(n, 0.01)), at = add(p, scale(n, 0.03));
     const up = unit(cross(cross(n, [0, 0, 1]), n)), across = unit(cross(up, n));
     const o = { at, up: [0, 0, 1] as V3 };
     const r = E.size;
@@ -676,11 +698,11 @@ function headOf(s: Snuff, n: number, k: number, shut: boolean): Mesh {
   // Jowls low at the back of the head, a little wider than the skull, and a small chin under the muzzle.
   const jowls = merge(...[1, -1].map((sd) => orb([sd * H.w[2] * 0.5, H.y[2] + 0.04, H.z[2] - H.h[2] * 0.38], [H.w[2] * 0.56, (H.y[3] - H.y[1]) * 0.42, H.h[2] * 0.52], n, k, 'coat')));
   const chin = orb([0, lerp(H.y[4], H.y[5], 0.5), H.z[5] - H.h[5] * 0.7], [H.w[5] * 0.62, (H.y[6] - H.y[4]) * 0.4, H.h[5] * 0.42], n, k, 'coat');
-  // A ridge over each eye, along the slope of the brow.
+  // A ridge over each eye, along the slope of the brow, the heavier the older it is; a piglet's brow is smooth.
   const E = s.eye;
-  const brows = merge(...[1, -1].map((sd) => {
+  const brows = E.brow > 0 && merge(...[1, -1].map((sd) => {
     const q0 = onHead(s, E.y - E.size * 0.2, E.up + E.size * 3), q = sd > 0 ? q0 : left(q0);
-    return orbAlong(sub(q.p, scale(q.n, E.size * 0.25)), [0, 1, -0.45], [E.size * 0.6, E.size * 0.55, E.size * 1.6], 6, 3, 'coat');
+    return orbAlong(sub(q.p, scale(q.n, E.size * (1.05 - 0.45 * E.brow))), [0, 1, -0.45], [E.size * 1.1, E.size * 1.0, E.size * 2], 7, 4, 'coat');
   }));
   // The smile: from low on the side of the muzzle near the snout back to the corner of the mouth under the cheek, turned up there.
   const mouth = paint([1, -1].map((sd) => line(Array.from({ length: 6 }, (_, q) => {
@@ -693,11 +715,12 @@ function headOf(s: Snuff, n: number, k: number, shut: boolean): Mesh {
     ...[cheek, left(cheek)].map((q) => disc(add(q.p, scale(q.n, 0.02)), q.n, H.w[2] * 0.2, H.h[2] * 0.12, 8, 'inner')),
     disc(add(brow.p, scale(brow.n, 0.02)), brow.n, H.w[2] * 0.2, H.w[2] * 0.14, 7, 'mark', { spin: 0.4 }),
   ]);
-  // The tusks: out of the upper jaw beside the snout, a crescent curving out and then up and back in at the tip.
+  // The tusks: out of the upper jaw beside the snout, a stubby crescent curving out and then up to the top of the snout.
   const tusks = s.tusk ? merge(...[1, -1].map((sd) => {
     const r = H.w[snout], y = H.y[snout], z = H.z[snout];
-    const pts = curve([sd * r * 0.8, y - 0.06, z - H.h[snout] * 0.35], [sd * r * 2.3, y + 0.12, z - H.h[snout] * 0.55], [sd * r * 1.3, y - 0.14, z + H.h[snout] * 1.9], 6);
-    return tube(pts, pts.map((_, q) => lerp(0.13, 0.025, q / 6) * s.tusk), pts.map((_, q) => lerp(0.13, 0.025, q / 6) * s.tusk), 6, 'tooth');
+    const h = H.h[snout], pts = curve([sd * r * 0.8, y - 0.08, z - h * 0.4], [sd * r * 1.8, y + 0.04, z - h * 0.35], [sd * r * 1.3, y - 0.08, z + h * 0.9], 5);
+    const rr = pts.map((_, q) => lerp(h * 0.35, h * 0.12, q / 5) * s.tusk);
+    return tube(pts, rr, rr, 6, 'tooth');
   })) : undefined;
   return merge(skull, jowls, chin, brows, tusks, disk, mouth, marks, eyesOf(s, shut));
 }
@@ -733,15 +756,23 @@ function cloven(r: number, h: number, n: number): Mesh {
     [r * 0.42, r * 0.48, r * 0.5], [r * 0.62, r * 0.78, r * 0.86], n, 'hoof', { seam: 'start' })));
 }
 
-/** A cuff of leaves round the lower leg just over the hoof, tips up and out, like leg warmers; built on the lower leg's bone. */
-function cuffOf(s: Snuff, lower: number, r: number, K: number, seed: number): Fronds {
-  const count = 7;
-  return fronds(Array.from({ length: count }, (_, q) => {
-    const th = (q / count) * TAU + 0.4 * jitter(seed + q), rad: V3 = [Math.cos(th), Math.sin(th), 0];
-    const root = add(scale(rad, r * 0.8), [0, 0, -lower * 0.92]);
-    const len = s.cuff * (0.85 + 0.35 * jitter(seed + q + 11));
-    return { mesh: leaf(root, unit(add(scale(rad, 0.45), [0, 0, 1])), rad, len, len * 0.45, K, toneOf(seed + q, 0.2), 0.1), out: rad };
-  }));
+/**
+ * A cuff of leaves round the lower leg over the hoof, like leg warmers, in
+ * two rings, tips up and out, covering the lower part of the leg; built on
+ * the lower leg's bone, `w` thick at its top and tapering to 0.7 of that.
+ */
+function cuffOf(s: Snuff, lower: number, w: number, K: number, seed: number): Fronds {
+  const out: Frond[] = [];
+  for (const [ring, count, at] of [[0, 6, 0.93], [1, 5, 0.7]]) {
+    for (let q = 0; q < count; q++) {
+      const id = seed + ring * 10 + q;
+      const th = ((q + 0.5 * ring) / count) * TAU + 0.3 * jitter(id), rad: V3 = [Math.cos(th), Math.sin(th), 0];
+      const root = add(scale(rad, w * (1 - 0.3 * at) * 0.85), [0, 0, -lower * at]);
+      const len = s.cuff * (0.85 + 0.3 * jitter(id + 11)) * (1 - 0.15 * ring);
+      out.push({ mesh: leaf(root, unit(add(scale(rad, 0.35), [0, 0, 1])), rad, len, len * 0.5, K, toneOf(id, 0.15), 0.1), out: rad });
+    }
+  }
+  return fronds(out);
 }
 
 /** Its soft pink patches: blotches of two or three overlapping spots, scattered along both flanks and over the rump. */
@@ -778,7 +809,7 @@ function snuffBuild(s: Snuff, lod: number): Piece[] {
     }),
     ...Array.from({ length: s.flowers[1] }, (_, q): Frond => {
       const at = onHead(s, lerp(H.y[1], H.y[2], 0.8), Math.PI / 2 - (q % 2 ? -0.5 : 0.5));
-      return { mesh: flower(add(at.p, scale(at.n, 0.06)), add(at.n, [0, 0.5, 0]), 0.19, q), out: at.n, bloom: true };
+      return { mesh: flower(add(at.p, scale(at.n, 0.08)), add(at.n, [0, 0.5, 0]), 0.25, q), out: at.n, bloom: true };
     }),
   ]);
   // The tail: a short curl, and a tuft of leaves on the end of it fanned out back and up, mostly green.
@@ -796,10 +827,20 @@ function snuffBuild(s: Snuff, lod: number): Piece[] {
   const ruffLen = s.ruff[s.ruff.length - 1][1];
   const legs = (fore: boolean): { upper: [number, number, number, number]; lower: [number, number, number, number]; foot: Mesh } => {
     const L = (fore ? 0.5 : 0.54) * s.legs, w = s.thick;
-    return { upper: [fore ? 0.35 : 0.15, -L, w * (fore ? 1.75 : 1.55), w * 1.08], lower: [0, -L, w * 1.04, w * 0.88], foot: cloven(w * 0.95, s.hoof, n) };
+    return { upper: [fore ? 0.3 : 0.05, -L, w * (fore ? 2.0 : 1.5), w * 1.05], lower: [0, -L, w, w * 0.7], foot: cloven(w * 0.8, s.hoof, n) };
   };
-  const hindUpper = 0.54 * s.legs;
-  const thigh = (sd: number): Mesh => paint([disc([sd * s.thick * 1.6, -0.05, -hindUpper * 0.25], [sd, -0.2, 0.1], s.thick * 0.68, s.thick * 0.82, 7, 'mark')]);
+  // A heavy boar's quarters, part of the barrel: a ham bulging out of the rump over each hind leg, with a pink patch on it, and a
+  // mass of shoulder over each fore leg, both reaching down to where the leg comes out from under the body.
+  const spec = specOf(s), w = s.thick;
+  const quarters = merge(...[1, -1].flatMap((sd) => {
+    const hip = spec.hind.at, sh = spec.fore.at, ham: V3 = [sd * (hip[0] + w * 0.15), hip[1] - 0.05, hip[2] + 0.22];
+    const hr: V3 = [w * 1.15 + 0.12, w * 1.6 + 0.15, s.body.h[2] * 0.55];
+    return [
+      orb(ham, hr, n, k, 'coat'),
+      orb([sd * (sh[0] + w * 0.1), sh[1], sh[2] + 0.25], [w * 1.0 + 0.12, w * 1.35 + 0.12, s.body.h[4] * 0.5], n, k, 'coat'),
+      paint([disc(add(ham, [sd * (hr[0] + 0.02), 0, -0.05]), [sd, -0.15, 0], hr[1] * 0.45, hr[2] * 0.45, 8, 'mark')]),
+    ];
+  }));
   const pieces = quadPieces({
     n, k,
     body: { ...s.body, belly: false },
@@ -807,7 +848,7 @@ function snuffBuild(s: Snuff, lod: number): Piece[] {
     // The head is its own (`headOf`): this egg is only where it stands for the ears to go behind.
     head: { c: skull.c, r: skull.r, eye: { dir: [0.6, 0.6, 0.4], size: 0.01 } },
     ear: earOf(s.ear.len, s.ear.w, n),
-    earTurn: 20,
+    earTurn: -45,
     tail: [tube(curve([0, 0.04, 0], [0, -0.16, 0.08], [0, -0.24, -0.02], 3), 0.07, 0.07, 5, 'coat', { seam: 'start' }), tuft.mesh],
     fore: legs(true),
     hind: legs(false),
@@ -818,20 +859,18 @@ function snuffBuild(s: Snuff, lod: number): Piece[] {
       { key: 'bib', mesh: bib.mesh, bone: 'ruff', bias: 0.17, after: ['body', 'neck', 'fl0', 'fr0'], front: [0, 1, 0], thin: true, bent: rustling(s, bib, s.ruff[0][1], 0.3) },
       { key: 'blooms', mesh: blooms.mesh, bone: 'trunk', bias: 0.17, after: ['mane', 'ruff', 'body'], thin: true, bent: rustling(s, blooms, ruffLen, 0.6) },
       { key: 'crest', mesh: crest.mesh, bone: 'head', bias: 0.23, after: ['head', 'ear0', 'ear1'], hide: [skull], thin: true, bent: rustling(s, crest, crestL, 0.3) },
-      { key: 'thighs', mesh: thigh(-1), bone: 'hl0', bias: 0.012, after: 'hl0' },
-      { key: 'thighs1', mesh: thigh(1), bone: 'hr0', bias: 0.012, after: 'hr0' },
     ],
   });
   // The leaf cuffs on each lower leg, over the leg and drawn with it.
   for (const [key, side, fore] of [['fl', -1, true], ['fr', 1, true], ['hl', -1, false], ['hr', 1, false]] as Array<[string, number, boolean]>) {
     const lower = (fore ? 0.5 : 0.54) * s.legs;
-    const c = cuffOf(s, lower, s.thick * 0.95, K, key.charCodeAt(0) * 7 + key.charCodeAt(1));
+    const c = cuffOf(s, lower, s.thick, K, key.charCodeAt(0) * 7 + key.charCodeAt(1));
     pieces.push({ key: `${key}cuff`, mesh: c.mesh, bone: `${key}1`, bias: 0.025, after: [`${key}1`, `${key}2`, 'body'], front: [side * 0.7, fore ? 0.7 : -0.7, 0], thin: true, bent: rustling(s, c, s.cuff, fore ? 0 : 1) });
   }
   // Its own head, eyes and all, in place of the egg; the patches painted on the barrel; and the tail's tuft rustling as the mane does.
   return pieces.map((pc) => {
     if (pc.key === 'head') return { ...pc, mesh: headOf(s, n, k, false), shut: headOf(s, n, k, true), hide: headSolids(s) };
-    if (pc.key === 'body') return { ...pc, mesh: merge(pc.mesh, patches(s)) };
+    if (pc.key === 'body') return { ...pc, mesh: merge(pc.mesh, quarters, patches(s)) };
     if (pc.key === 'tail1') return { ...pc, bent: rustling(s, tuft, s.tail, 1.5) };
     return pc;
   });
@@ -965,8 +1004,9 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Snuff, b: Bones
  * leaf shaken loose from the mane, and a low puff of dust where it went in.
  * A go played once, from standing, throws nothing until its first flick.
  */
-function rootSpray(g: CanvasRenderingContext2D, view: View, s: Snuff, b: Bones, a: Anim, t: number, front: boolean): void {
-  const tip = place(b.head, noseOf(s).tip);
+function rootSpray(g: CanvasRenderingContext2D, view: View, s: Snuff, b: Bones, at: Bones, a: Anim, t: number, front: boolean): void {
+  // Where the snout goes in at the bottom of a shove, which is where the earth is turned, whatever the snout is doing now.
+  const tip = place(at.head, noseOf(s).tip);
   const ground: V3 = [tip[0], tip[1], 0.05];
   const big = bigness(s) * 1.2;
   if (!front) {
@@ -988,7 +1028,7 @@ function rootSpray(g: CanvasRenderingContext2D, view: View, s: Snuff, b: Bones, 
       const id = q + t0 * 40;
       const v: V3 = [(jitter(id) - 0.5) * 2.8, 0.1 + 1.0 * jitter(id + 3), 3.2 + 2.2 * jitter(id + 6)];
       const p = thrown(ground, v, since);
-      if (nearSide(p, ground, view) !== front) continue;
+      if (nearSide(p, b.body.t, view) !== front) continue;
       const [x, y] = onScreen(view, p);
       if (q === 7) flyingPetal(g, x, y, 0.24 * big, id + since * 8, fade);
       else if (q === 8) flyingLeaf(g, x, y, 0.95 * big, id + since * 7, LEAF, fade);
@@ -999,25 +1039,26 @@ function rootSpray(g: CanvasRenderingContext2D, view: View, s: Snuff, b: Bones, 
 }
 
 /**
- * Evolving: at the start a burst of leaves and petals out from all over it,
+ * Evolving: at the start a burst of leaves and petals popping out of it,
  * which covers the moment it changes into its new body; then petals and
  * leaves going up round it in a spiral, wider at the foot and gathering in
  * as they rise.
  */
 function evolveSwirl(g: CanvasRenderingContext2D, view: View, s: Snuff, b: Bones, t: number, front: boolean): void {
   const big = bigness(s), mid: V3 = [0, 0, b.body.t[2]];
-  const burst = 1 - ramp(t, 0.06, 0.24);
+  // Popping out from the middle of the body, growing to full size as they go, and gone by a quarter of the way through.
+  const burst = ramp(t, 0, 0.025) * (1 - ramp(t, 0.08, 0.26)), grow = 0.4 + 0.6 * ramp(t, 0, 0.06);
   if (burst > 0) {
     const since = t * ACT_SECS.evolve;
     for (let q = 0; q < 34; q++) {
       const th = (q / 34) * TAU * 2.6 + jitter(q) * 0.7, el = (jitter(q + 40) - 0.3) * 1.6;
-      const from: V3 = [Math.cos(th) * s.body.w[3] * 0.6, s.body.y[3] + Math.sin(th) * s.len * 0.45, b.body.t[2] + el * s.body.h[3] * 0.5];
-      const v: V3 = [Math.cos(th) * (2 + 2 * jitter(q + 3)), Math.sin(th) * (2 + 2 * jitter(q + 5)), 1.5 + 2.5 * jitter(q + 7)];
+      const from: V3 = [Math.cos(th) * s.body.w[3] * 0.25, s.body.y[3] + Math.sin(th) * s.len * 0.2, b.body.t[2] + el * s.body.h[3] * 0.3];
+      const v: V3 = [Math.cos(th) * (3 + 2.5 * jitter(q + 3)), Math.sin(th) * (3 + 2.5 * jitter(q + 5)), 2 + 3 * jitter(q + 7)];
       const p = thrown(from, v, since, 4);
       if (nearSide(p, mid, view) !== front) continue;
       const [x, y] = onScreen(view, p);
-      if (q % 3 === 0) flyingPetal(g, x, y, 0.36 * big, q + since * 6, burst);
-      else flyingLeaf(g, x, y, 1.35 * big, q * 1.3 + since * 7, q % 3 === 1 ? LEAF : LEAF_PINK, burst);
+      if (q % 3 === 0) flyingPetal(g, x, y, 0.36 * big * grow, q + since * 6, burst);
+      else flyingLeaf(g, x, y, 1.35 * big * grow, q * 1.3 + since * 7, q % 3 === 1 ? LEAF : LEAF_PINK, burst);
     }
   }
   const fade = ramp(t, 0.1, 0.25) * (1 - ramp(t, 0.75, 1));
@@ -1051,6 +1092,8 @@ function snuffKind(s: Snuff): Kind {
   const bones = snuffBones(s);
   // Where everything is at the moment the snout goes in, for what is torn off then to fly from.
   const atHit = (a: Anim): Bones => bones({ ...a, act: { kind: 'strike', t: STRIKE.hit } });
+  // And where it is at the bottom of a shove of its rooting, head right down, for where the earth it turns is.
+  const atRoot = (a: Anim): Bones => bones({ ...a, graze: 1, act: { kind: 'work', t: 0.3 } });
   return {
     bones,
     build: (lod) => snuffBuild(s, lod),
@@ -1071,7 +1114,6 @@ function snuffKind(s: Snuff): Kind {
       shellDark: mix(LEAF_PINK, [214, 140, 152], 0.3),
       shell: [236, 200, 198],
       petal: [253, 249, 240],
-      spot: [246, 228, 228],
       bloom: [246, 210, 92],
       hoof: [98, 72, 64],
       tooth: [244, 232, 200],
@@ -1086,7 +1128,7 @@ function snuffKind(s: Snuff): Kind {
       if (!act) return;
       const front = !under;
       if (act.kind === 'strike') strikeBurst(g, view, s, b, atHit(a), act.t, front);
-      else if (act.kind === 'work') rootSpray(g, view, s, b, a, act.t, front);
+      else if (act.kind === 'work') rootSpray(g, view, s, b, atRoot(a), a, act.t, front);
       else if (act.kind === 'evolve') evolveSwirl(g, view, s, b, act.t, front);
     },
   };
