@@ -185,8 +185,21 @@ export const MIN_GAIN = 0.0001;
  */
 export const GAIN_RATE = 0.2;
 
-/** One gain: the curve, floored, then luck of a fifth either way, at `GAIN_RATE`. */
-export const skillGain = (v: number, base: number, roll: number): number => Math.max(MIN_GAIN, base * skillRoom(v)) * roll * GAIN_RATE;
+/**
+ * The most of a skill anything reads. A skill goes on past it, for the boards
+ * alone: what you make, how often it comes off and how fast all read no more
+ * than this (`Skills.get`), and the boards read the whole of it
+ * (`Skills.standing`). Asked for: "Allow skills to continue to gain exp above
+ * 100.00 on a exponential 2^. This is for leaderboard purpose only".
+ */
+export const SKILL_TOP = 100;
+
+/** Past `SKILL_TOP`, what a go is worth is divided by this for every point already over it. */
+export const PAST_TOP = 2;
+
+/** One gain: the curve, floored, then luck of a fifth either way, at `GAIN_RATE`, and halved again for every point past the top. */
+export const skillGain = (v: number, base: number, roll: number): number =>
+  (Math.max(MIN_GAIN, base * skillRoom(v)) * roll * GAIN_RATE) / PAST_TOP ** Math.max(0, v - SKILL_TOP);
 
 export class Skills {
   values = new Map<string, number>();
@@ -195,7 +208,13 @@ export class Skills {
     for (const def of SKILL_DEFS) this.values.set(def.id, saved?.[def.id] ?? def.start);
   }
 
+  /** A skill as everything that uses it reads it: no more than `SKILL_TOP`. */
   get(id: string): number {
+    return Math.min(SKILL_TOP, this.standing(id));
+  }
+
+  /** The whole of a skill, past `SKILL_TOP` too: what the boards and the Skills window show. */
+  standing(id: string): number {
     return this.values.get(id) ?? 1;
   }
 
@@ -205,9 +224,9 @@ export class Skills {
    * one hardly comes at all, as in Wurm.
    */
   gain(id: string, base: number, rand: () => number = Math.random): number {
-    const v = this.get(id);
+    const v = this.standing(id);
     const gain = skillGain(v, base, 0.6 + 0.8 * rand());
-    const next = Math.min(100, v + gain);
+    const next = v + gain;
     this.values.set(id, next);
     return next - v;
   }

@@ -3134,6 +3134,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/evolve.mjs --log-level=error
           node node_modules/.cache/evolve.mjs
 
+      - name: Skills go on past a hundred, for the boards
+        run: |
+          # A go is worth what it was up to SKILL_TOP and is divided by
+          # PAST_TOP for every point past it; a skill raised at the top goes
+          # on past it, everything that uses it reads it no higher than the
+          # top, and the boards read the whole of it. The same on both sides.
+          npx esbuild supabase/test/pasttop.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/pasttop.mjs --log-level=error
+          node node_modules/.cache/pasttop.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

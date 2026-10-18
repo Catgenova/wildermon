@@ -5420,6 +5420,8 @@ create or replace function sit_swirl_said() returns text language sql immutable 
 create or replace function sit_stone_said() returns text language sql immutable as $fn$ select 'A Runestone stands within five tiles: twice as much.' $fn$;
 create or replace function sit_stale_said() returns text language sql immutable as $fn$ select 'You have sat within two tiles of here since the woods last turned: half as much.' $fn$;
 create or replace function gain_rate() returns double precision language sql immutable as $fn$ select 0.2::double precision $fn$;
+create or replace function skill_top() returns double precision language sql immutable as $fn$ select 100::double precision $fn$;
+create or replace function past_top() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
 create or replace function driving_skill() returns text language sql immutable as $fn$ select 'driving' $fn$;
 create or replace function sailing_skill() returns text language sql immutable as $fn$ select 'sailing' $fn$;
 create or replace function driving_top() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;

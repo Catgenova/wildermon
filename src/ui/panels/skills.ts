@@ -55,7 +55,7 @@ export class SkillsPanel {
   }
 
   refresh(): void {
-    for (const [id, el] of this.values) el.textContent = this.game.skills.get(id).toFixed(2);
+    for (const [id, el] of this.values) el.textContent = this.game.skills.standing(id).toFixed(2);
     for (const [id, el] of this.notes) {
       const [short, long] = this.note(id);
       el.textContent = short;

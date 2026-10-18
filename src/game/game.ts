@@ -4001,12 +4001,12 @@ export class Game {
 
   gainSkill(id: string, base = ORDINARY_GAIN): number {
     const def = SKILL_DEFS.find((d) => d.id === id);
-    const before = this.skills.get(id);
+    const before = this.skills.standing(id);
     const gain = this.skills.gain(id, base * this.skillMult(id) * this.firstOfDay(id), this.rand);
     // The last stretch of a skill moves in ten-thousandths, and a player at
     // ninety-nine deserves to see that it is moving at all.
     if (gain <= 0.000005 || !def) return gain;
-    const now = this.skills.get(id);
+    const now = this.skills.standing(id);
     // What you pick up in the background says less about itself than what you set out to do.
     if (isQuiet(id)) {
       if (Math.floor(now) > Math.floor(before)) {

@@ -14,7 +14,7 @@ import { CATEGORY_DECAY, ITEM_DEFS } from '../src/game/items';
 import { BURYABLE, STONE_BEDS, BUSH_DEFS, ROAD_TILES, ROCK_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TREE_ROOM_ONE, TREE_ROOM_TWO, TREE_SEEDS, TREE_SEED_BOTH, TREE_SEED_NONE, TREE_SEED_REACH, TREE_DAWN_UTC } from '../src/world/tiles';
 import { STEPS_BRICKS, STEPS_LEAST, STEPS_MORTAR, STEPS_MOST, STEPS_NAILS, STEPS_PLANKS, STEPS_SLABS, STEPS_TIMBER, STEPS_TWIST, TileType } from '../src/world/tiles';
 import { STEPS_BACK } from '../src/game/steps';
-import { GAIN_RATE, SKILL_DEFS, isQuiet } from '../src/game/skills';
+import { GAIN_RATE, PAST_TOP, SKILL_DEFS, SKILL_TOP, isQuiet } from '../src/game/skills';
 import { MATERIALS } from '../src/game/materials';
 import { ACTIONS } from '../src/game/actions';
 import { RECIPES } from '../src/game/recipes';
@@ -1955,6 +1955,9 @@ out.push(`create or replace function sit_stone_said() returns text language sql 
 out.push(`create or replace function sit_stale_said() returns text language sql immutable as $fn$ select ${q(SIT_STALE_SAID)} $fn$;`);
 /* What every gain is worth against the curve, for everybody (`GAIN_RATE`): `skill_gain_of` reads it. */
 out.push(`create or replace function gain_rate() returns double precision language sql immutable as $fn$ select ${q(GAIN_RATE)}::double precision $fn$;`);
+/* The most of a skill anything reads (`SKILL_TOP`), and what a go past it is divided by for every point over (`PAST_TOP`). */
+out.push(`create or replace function skill_top() returns double precision language sql immutable as $fn$ select ${q(SKILL_TOP)}::double precision $fn$;`);
+out.push(`create or replace function past_top() returns double precision language sql immutable as $fn$ select ${q(PAST_TOP)}::double precision $fn$;`);
 /* Driving and sailing (`travel.ts`): the skills, what each adds to the pace at 100, and what a tile gone into teaches. */
 for (const [fn, v] of [['driving_skill', DRIVING], ['sailing_skill', SAILING]] as Array<[string, string]>) {
   out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);

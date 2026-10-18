@@ -48,7 +48,7 @@ const citizens = (n: number): string => `${n} ${n === 1 ? 'citizen' : 'citizens'
  * way the island's board measures it.
  */
 export function soloStanding(game: Game): Record<Tab, string> {
-  const skill = bestSkill((id) => game.skills.get(id));
+  const skill = bestSkill((id) => game.skills.standing(id));
   let bred: { c: Creature; score: number } | null = null;
   for (const c of game.creatures.list.values()) {
     if (c.mode === 'wild') continue;
@@ -210,7 +210,7 @@ export class BoardsPanel {
     // The one you had, while it still has a board; else your own best, if it
     // has one; else the first there is.
     const has = (id: string | null): id is string => !!id && !!b.skills[id]?.length;
-    const own = bestSkill((id) => this.game.skills.get(id))?.id ?? null;
+    const own = bestSkill((id) => this.game.skills.standing(id))?.id ?? null;
     const shown = has(this.skill) ? this.skill : has(own) ? own : known[0][1][0].id;
     this.skill = shown;
     const pick = document.createElement('select');

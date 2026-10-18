@@ -31,7 +31,7 @@ import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters'
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
 import { flameSources } from '../../game/lantern';
 import { ACTION_FLOOR, ACTION_PACE, WORLD_PACE } from '../../game/pace';
-import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
+import { GAIN_RATE, MIN_GAIN, PAST_TOP, SKILL_BY_ID, SKILL_TOP, skillGain } from '../../game/skills';
 import { favourCap, PRAYER_GAIN, PRAYER_PEAKS, PRAYER_REST, prayerWorth } from '../../game/faith';
 import {
   calmCap, CHOOSE_AT, PATH_PICK_BY_ID, PATH_TIER_AT, PATHS, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_WORTH, TECHNIQUES,
@@ -2378,6 +2378,14 @@ export const NEWS: News[] = [
         'A carcass on the ground is drawn as a heap of hide and bones rather than a sack.',
       ];
     },
+  },
+  {
+    n: 180,
+    day: '2026-10-18',
+    lines: () => [
+      `A skill goes on past ${SKILL_TOP}, for the boards alone: past it, a go is worth ${percent(1 / PAST_TOP)} as much for every point already over, so each point past ${SKILL_TOP} takes ${PAST_TOP} times the goes of the point before it.`,
+      `Everything a skill does it does at ${SKILL_TOP} at most: what you make, how often it comes off and how fast are as they were. The Skills window and the boards show the whole of it.`,
+    ],
   },
 ];
 
