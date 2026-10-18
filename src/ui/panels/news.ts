@@ -2387,6 +2387,17 @@ export const NEWS: News[] = [
       `Everything a skill does it does at ${SKILL_TOP} at most: what you make, how often it comes off and how fast are as they were. The Skills window and the boards show the whole of it.`,
     ],
   },
+  {
+    n: 181,
+    day: '2026-10-18',
+    lines: () => (['quarra', 'mola'] as const).flatMap((id) => {
+      const d = SPECIES[id];
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own walk, strike, work and voice.`,
+      ];
+    }),
+  },
 ];
 
 
