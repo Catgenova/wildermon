@@ -657,14 +657,22 @@ export function stageSays(stage: number): string {
   return `${more('hardy')} more health, a ${more('tough')} harder blow, ${more('speed')} faster on its feet and ${more('work')} quicker at each go of its task`;
 }
 
-/** A Snufflet's words at each stage: its trade, what it eats, and what each stage is and adds. */
-function snuffSays(stage: 0 | 1 | 2): string {
-  const names = ['Snufflet', 'Snuffroot', 'Snuffthorn'];
-  const job = `Set to work on a settlement it forages within ${SPECIES.rabba.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`;
-  const level = 'Its level is its foraging.';
+/**
+ * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
+ * every number read off the rule it describes.
+ */
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2): string {
   if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into a ${names[1]}.`;
   const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into a ${names[2]}.` : '';
   return `A ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage)} than a ${names[0]}. ${job}${next}`;
+}
+
+/** Writes a line's words onto its kind and its two stages, once every number they read is here. */
+function sayLine(id: string, job: string, level: string): void {
+  const d = SPECIES[id];
+  const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
+  d.description = lineSays(names, job, level, 0);
+  d.stages = [{ name: names[1], description: lineSays(names, job, level, 1) }, { name: names[2], description: lineSays(names, job, level, 2) }];
 }
 
 export const SPECIES: Record<string, SpeciesDef> = {
@@ -673,7 +681,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     name: 'Snufflet',
     was: ['Rabba'],
     // Asked for: "This first will replace Rabba. Snufflet, Snuffroot, Snuffthorn". Its words, and each stage's, say what it
-    // does and what each stage adds, in the game's own numbers, and are written once those are all here (`snuffSays`).
+    // does and what each stage adds, in the game's own numbers, and are written once those are all here (`sayLine`).
     description: '',
     stages: [
       { name: 'Snuffroot', description: '' },
@@ -838,8 +846,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'quarra',
     hide: 'shell',
     wound: 'crush',
-    name: 'Quarra',
-    description: 'A low, broad creature with a jaw like a chisel and a hide the colour of the rock it sits on. It eats clay by the mouthful and spends the rest of the day taking the mountain apart a piece at a time.',
+    name: 'Chiptail',
+    was: ['Quarra'],
+    // Asked for: "Begin work on this family line to replace Quarra": Chiptail, Quarrybash, Monolithump. Its words are
+    // written with every number they read (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Quarrybash', description: '' },
+      { name: 'Monolithump', description: '' },
+    ],
     health: 34,
     attack: 5,
     speed: 1.2,
@@ -3438,9 +3453,11 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
   const id = workSkill(species);
   return id ? (c.skills[id] ?? 1) : 0;
 }
-// A Snufflet's words and its stages', now that every number they read is here.
-SPECIES.rabba.description = snuffSays(0);
-SPECIES.rabba.stages = [{ name: 'Snuffroot', description: snuffSays(1) }, { name: 'Snuffthorn', description: snuffSays(2) }];
+// The words of each line that evolves, and its stages', now that every number they read is here.
+sayLine('rabba', `Set to work on a settlement it forages within ${SPECIES.rabba.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`,
+  'Its level is its foraging.');
+sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of bare rock with no seam in it, within ${SPECIES.quarra.workRange} tiles of the token and ${SPECIES.quarra.rangePerStep} further for every ${SKILL_STEP} levels, and carries it home.`,
+  'Its level is its mining.');
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {

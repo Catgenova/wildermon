@@ -52,7 +52,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
+  EVOLVE_AT, MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -2087,7 +2087,7 @@ export function helpText(): string {
     drags its feet, so feed the team before it goes in. Whoever has the reins drives with <b>driving</b>, which makes the
     team's pace ${percent(drivingPace(TRAVEL_TOP_AT / 2) - 1)} faster at driving ${TRAVEL_TOP_AT / 2} and ${percent(DRIVING_TOP)} faster at ${TRAVEL_TOP_AT}; every tile the vehicle goes into
     with you on the seat trains it. A Seavic pair will outrun you at a walk; ${numberWord(WAGON.vehicle?.needs ?? 0)}
-    Quarra will not, but they will shift ${numberWord(WAGON.capacity ?? 0)} bricks.</p>
+    ${SPECIES.quarra.name}s will not, but they will shift ${numberWord(WAGON.capacity ?? 0)} bricks.</p>
     <p>The team is not only the pace but the pitch: a draught beast trains <b>climbing</b> by hauling
     over bad ground, and what the team knows between them decides both how fast the wheels turn and how
     steep a step they will take. A green pair balks at a bank a worked pair goes straight up.</p>
@@ -2973,15 +2973,15 @@ export function helpText(): string {
     any metal beyond its skill &mdash; so a fresh one takes copper and coal, and starts on iron the day
     its mining reaches ${METAL_LEVEL('iron')}. It works <b>${numberWord(MINE_DEPTH)} units of water</b> deep, the same as you do, and a face it
     cannot stand on it works from the bank beside it: a shore seam is a Mola's to cut, and so is a
-    seabed under wading depth. The same goes for a <b>Quarra</b> and plain rock. Its range grows by
+    seabed under wading depth. The same goes for a <b>${SPECIES.quarra.name}</b> and plain rock. Its range grows by
     ${SPECIES.mola.rangePerStep ?? RANGE_PER_STEP} tiles every ${SKILL_STEP} levels rather than the usual ${RANGE_PER_STEP}. The <b>Crawler</b> is a broad crab that lives on the
     sand, eats vegetables, and digs sand for its deed &mdash; a clawful at a time, taken from the highest
     corner of the tile and carried to the crate, which is where the sand for mortar and moulds comes from
     once nobody wants to dig it themselves. It is the first of the defensive sort: strike one and it
     comes straight back at you every time, and even a tamed one is never quite tamed, so now and again it
     will round on whoever is standing next to it. A helm turns the worst of that aside. Each of them picks
-    that spot clean for a while, exactly as you would. The <b>Quarra</b> is a slab of a creature with a
-    jaw made for stone: it sits on bare rock, eats clay, and cuts rock, slate, marble and sandstone into
+    that spot clean for a while, exactly as you would. The <b>${SPECIES.quarra.name}</b> (the Quarra that was) is a stone-backed creature that
+    evolves into a ${SPECIES.quarra.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.quarra.stages![1].name} at ${EVOLVE_AT[1]}: it sits on bare rock, eats clay, and cuts rock, slate, marble and sandstone into
     shards for the deed, which is what keeps a mason in brick. The <b>Embra</b> sleeps in the peat and
     tar of the marshes, eats nothing that has not been cooked, and keeps every fire, smelter and kiln on
     the deed fed and lit from the crate &mdash; the one chore you otherwise have to come home for. The
