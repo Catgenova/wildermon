@@ -2326,6 +2326,16 @@ export const NEWS: News[] = [
       'In a game of your own, a plucka set to work now finds the fruit trees round it; it had been passing every one by.',
     ],
   },
+  {
+    n: 175,
+    day: '2026-10-18',
+    lines: () => [
+      'Eight more wildermon, each with a trade to work on your settlement:',
+      ...['rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa']
+        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+      'None of them fails a go, and what each makes is at its own skill. A stack you have locked is left alone.',
+    ],
+  },
 ];
 
 

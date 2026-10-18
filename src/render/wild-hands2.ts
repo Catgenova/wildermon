@@ -17,10 +17,10 @@ import { links, snout } from './wild-hands';
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
 
-const OWN = (own: Partial<Record<Mat, RGB>>): Partial<Record<Mat, RGB>> => own;
+export const OWN = (own: Partial<Record<Mat, RGB>>): Partial<Record<Mat, RGB>> => own;
 
 /** A round body of rings, `len` long, `w` wide and `h` deep at its widest, its back rising `rise` toward the shoulders. */
-function barrel(len: number, w: number, h: number, rise = 0.12): QuadLook['body'] {
+export function barrel(len: number, w: number, h: number, rise = 0.12): QuadLook['body'] {
   const ys = [-0.5, -0.4, -0.2, 0.04, 0.26, 0.42, 0.5].map((f) => f * len);
   const k = [0.25, 0.82, 0.96, 1, 0.95, 0.8, 0.26];
   return { y: ys, z: ys.map((_, q) => 0.08 + rise * (q / 6)), w: k.map((f) => f * w), h: k.map((f) => f * h), belly: true };
@@ -35,7 +35,7 @@ function leafEar(len: number, w: number, mat: Mat = 'leaf'): Mesh {
 }
 
 /** The usual four paws, `r` across, the legs `legs` long and `thick` thick. */
-function paws(n: number, k: number, legs: number, thick: number, r: number, mat: Mat = 'coatLight'): Pick<QuadLook, 'fore' | 'hind'> {
+export function paws(n: number, k: number, legs: number, thick: number, r: number, mat: Mat = 'coatLight'): Pick<QuadLook, 'fore' | 'hind'> {
   return {
     fore: { upper: [0.26, -legs * 0.5, thick, thick * 0.86], lower: [0, -legs * 0.46, thick * 0.86, thick * 0.78], foot: pawMesh(r, n, k, mat) },
     hind: { upper: [0.28, -legs * 0.52, thick * 1.1, thick * 0.94], lower: [0, -legs * 0.48, thick * 0.86, thick * 0.78], foot: pawMesh(r, n, k, mat) },

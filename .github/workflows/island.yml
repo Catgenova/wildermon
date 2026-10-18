@@ -3085,6 +3085,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/twelvehands.mjs --log-level=error
           node node_modules/.cache/twelvehands.mjs
 
+      - name: Eight more hands on a settlement
+        run: |
+          # A rippa saws planks, a chissa chisels stone brick, a mudda shapes
+          # clay brick, a cordra lays up rope and a flecha fletches arrows at
+          # the stores, a papra presses papyrus at a paper press, a glossa
+          # glazes the pottery and a dippa fills the empty buckets: each the
+          # same on both sides.
+          npx esbuild supabase/test/eighthands.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/eighthands.mjs --log-level=error
+          node node_modules/.cache/eighthands.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

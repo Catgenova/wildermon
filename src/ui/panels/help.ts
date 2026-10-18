@@ -741,7 +741,8 @@ const pedigreeSources = (): string => {
 /** The dressing quality the help works a salva's number at. */
 const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
-  'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra'];
+  'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
+  'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good`,
   sheela: `a full fleece gives ${numberWord(SHEAR_WOOL)} wool and a full crop of feathers ${numberWord(SHEAR_FEATHERS)}, and a cudda a bucket of milk`,
