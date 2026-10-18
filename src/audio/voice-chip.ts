@@ -10,15 +10,17 @@ import type { Voice } from './voices';
  * noise. A bigger stage is a lower voice and lower, longer, heavier stone.
  *
  * Every cue is laid against its picture (`./wild-chip`): a strike lands at
- * half way through its 0.55 s, a go at its task brings the club down at 0.33 s
- * and rakes the rock at 0.7 s and 0.94 s, and evolving flashes at the
- * middle of its 1.8 s.
+ * half way through its 0.55 s, a go at its task brings the club down at 0.33 s,
+ * drags the hind paw's claws along the rock from 0.63 s and from 0.87 s and
+ * drops the shard it breaks out on the ground at 1.05 s, and evolving
+ * flashes at the middle of its 1.8 s.
  */
 
 /** When, in seconds from the start of a cue, the picture's club lands (a strike), hits the rock and is raked (a go at its task), and flashes (evolving). */
 const LANDS = 0.275;
 const KNOCK = 0.33;
-const RAKES = [0.7, 0.94] as const;
+const RAKES = [0.63, 0.87] as const;
+const SHARD = 1.05;
 const FLASH = 0.9;
 
 /** A voiced sound: a buzz through a throat's resonances under an envelope, with a burr (a flutter in its loudness) in it. */
@@ -167,7 +169,7 @@ function whoosh(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
  * the club lands in its picture.
  */
 const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const out = level(ctx, dest, 1.1 * [1, 1, 0.82][Math.max(0, Math.min(2, stage))]);
+  const out = level(ctx, dest, [1.4, 1.1, 0.9][Math.max(0, Math.min(2, stage))]);
   if (stage <= 0) {
     chirp(ctx, out, at + 0.03, v, 0.9);
     mew(ctx, out, at + LANDS + 0.05, v, 0.7, 1.25, 0.16);
@@ -185,18 +187,24 @@ const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
  * low hum, by stage.
  */
 const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const out = level(ctx, dest, 1.5 * [1, 1, 0.9][Math.max(0, Math.min(2, stage))]), b = bodyOf(stage, v);
+  const out = level(ctx, dest, 0.85 * [1, 1, 0.9][Math.max(0, Math.min(2, stage))]), b = bodyOf(stage, v);
   whoosh(ctx, out, at + KNOCK - 0.1, stage, 0.1, 0.7);
   ring(ctx, out, at + KNOCK, { freq: 760 * b.stone + 40 * v, to: 600 * b.stone, dur: 0.09 + 0.04 * b.heavy, gain: 0.26, type: 'triangle', attack: 0.002, partials: [[1, 0.55], [1.83, 0.3], [3.1, 0.15]] });
   ring(ctx, out, at + KNOCK, { freq: 150 - 30 * b.heavy, to: 80 - 20 * b.heavy, dur: 0.12 + 0.08 * b.heavy, gain: 0.22 + 0.06 * b.heavy, type: 'sine', attack: 0.003 });
   burst(ctx, out, at + KNOCK, { dur: 0.08, freq: 1200 * b.stone, to: 300, q: 0.8, gain: 0.16, type: 'lowpass', attack: 0.002 });
   clatter(ctx, out, at + KNOCK + 0.03, 0.26, 5, b.stone * 1.25, v, 0.6);
   for (const [q, r] of RAKES.entries()) {
-    // A scrape: claws dragged along stone, a gritty band of noise with a tremble in it, then grit falling off it.
-    for (let g = 0; g < 4; g++) burst(ctx, out, at + r - 0.06 + g * 0.035, { dur: 0.05, freq: (2200 + 300 * g) * (0.8 + 0.2 * b.stone), q: 2.2, gain: 0.1 + 0.03 * (g % 2), attack: 0.004 });
-    clatter(ctx, out, at + r + 0.06, 0.12, 3, b.stone * 1.5, v + q, 0.4);
+    // A scrape: claws dragged along stone for as long as the paw drags, a run of short gritty grains each sliding down a little,
+    // lower for a heavier paw; then grit falling off it.
+    for (let g = 0; g < 4; g++) {
+      const f = (1800 - 120 * g) * (0.75 + 0.25 * b.stone);
+      burst(ctx, out, at + r + g * 0.036, { dur: 0.045, freq: f, to: f * 0.8, q: 1.2, gain: 0.55 + 0.08 * (g % 2), attack: 0.004 });
+    }
+    clatter(ctx, out, at + r + 0.13, 0.12, 3, b.stone * 1.5, v + q, 0.5);
   }
-  clack(ctx, out, at + RAKES[1] + 0.12, b.stone * 0.9, 0.7);
+  // The shard broken out landing on the ground.
+  clack(ctx, out, at + SHARD, b.stone * 0.8, 1.1);
+  ring(ctx, out, at + SHARD, { freq: 420 * b.stone, to: 340 * b.stone, dur: 0.06, gain: 0.12, type: 'triangle', attack: 0.002 });
   if (stage <= 0) chirp(ctx, out, at + 0.5, v, 0.45);
   else if (stage === 1) growl(ctx, out, at + 0.5, stage, v, 0.32, 0.18);
   else rumble(ctx, out, at + 0.48, v, 0.35, 0.3);
@@ -217,7 +225,9 @@ const evolve = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
   burst(ctx, dest, at, { dur: 0.14, freq: 1400, to: 500, q: 0.8, gain: 0.2, attack: 0.008 });
   clatter(ctx, dest, at + 0.02, 0.3, 7, 1.1, v, 0.6);
   // Grinding: low gritty noise swelling up to the flash, with stone ticks quickening in it as the pebbles come in.
-  burst(ctx, dest, at + 0.15, { dur: FLASH - 0.15, freq: 300 * b.stone + 200, to: 900, q: 1.4, gain: 0.12, attack: (FLASH - 0.15) * 0.85 });
+  // A heavier body's grind lower, and coming in sooner and longer.
+  const grind = 0.15 - 0.08 * b.heavy;
+  burst(ctx, dest, at + grind, { dur: FLASH - grind, freq: (300 * b.stone + 200) * [1, 0.85, 0.7][s], to: 900 * [1, 0.85, 0.7][s], q: 1.4, gain: 0.12, attack: (FLASH - grind) * 0.85 });
   burst(ctx, dest, at + 0.2, { dur: FLASH - 0.2, freq: 2400, to: 3600, q: 1.2, gain: 0.05, attack: (FLASH - 0.2) * 0.9 });
   for (let q = 0; q < 10; q++) {
     const u = q / 10, when = at + 0.25 + (FLASH - 0.3) * (1 - (1 - u) ** 1.6);
