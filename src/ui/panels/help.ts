@@ -51,7 +51,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, GATHER_VERB, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, GATHER_DO, GATHER_VERB, panFind, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -75,6 +75,9 @@ import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sa
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
 import { MOTE_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
+import { groomGain } from '../../game/husbandry';
+import { SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
+import { butcherYield } from '../../game/butcher';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
@@ -731,6 +734,19 @@ const sailSpeeds = listed(
 const pedigreeSources = (): string => {
   const parts = Object.values(TRAIT_SOURCES).map((s) => `<b>${s.label}</b> (${s.means})`);
   return `${parts.slice(0, -1).join(', ')} or ${parts[parts.length - 1]}`;
+};
+
+
+/** The settlement's hands, in the order the help names them, and what each one's numbers come to at no skill and at a hundred. */
+/** The dressing quality the help works a salva's number at. */
+const SHOWN_QL = 50;
+const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa'];
+const HAND_NUMBERS: Record<string, string> = {
+  kemma: `a brushing puts in ${percent(groomGain(1, 1))} care at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good`,
+  sheela: `a full fleece gives ${numberWord(SHEAR_WOOL)} wool and a full crop of feathers ${numberWord(SHEAR_FEATHERS)}, and a cudda a bucket of milk`,
+  salva: `a QL ${SHOWN_QL} dressing puts back ${percent(healAmount(1, SHOWN_QL))} of a life at no first aid and ${percent(healAmount(SKILL_TOP, SHOWN_QL))} at ${SKILL_TOP}`,
+  carra: `it keeps ${percent(butcherYield(1, 1))} of a carcass at no butchering and ${percent(butcherYield(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}`,
+  siffa: `something is in the pan ${percent(panFind(0))} of the time at no prospecting and ${percent(panFind(SKILL_TOP))} at ${SKILL_TOP}`,
 };
 
 export function helpText(): string {
@@ -3034,6 +3050,13 @@ export function helpText(): string {
     <b>beeswax</b>. It brings nothing to the crate, and with no hive in reach it says so &mdash; and ${bill('make_candle')} draw ${numberWord(made('make_candle'))} <b>candles</b>. The
     <b>Lume</b> is only ever out after dark and carries its own light about with it: keep one and it
     lights ${numberWord(SPECIES.lume.glow ?? 0)} tiles round itself however dark it is.</p>
+    <p><b>The settlement's hands.</b> ${NumberWord(HANDS.length)} more take the chores you would otherwise do by hand. Each is set to work a deed
+    like any other and works within its reach of the token; ${numberWord(HANDS.filter((id) => TEND_JOBS.has(SPECIES[id].gathers!)).length)} of them work at the stores or at one of your own and
+    put what they make into the store they made it at, then into whichever store on the settlement will take it, and
+    failing all of them onto the ground there. ${HANDS.map((id) => {
+      const d = SPECIES[id];
+      return `The <b>${d.name}</b> (taming ${d.tameLevel}) will ${GATHER_DO[d.gathers!]}${HAND_NUMBERS[id] ? `: ${HAND_NUMBERS[id]}` : ''}.`;
+    }).join(' ')}</p>
     <p>Right-click any tile of your settlement for the <b>deed menu</b>: it lists the wildermon kept
     there, sets their <b>orders</b>, offers to <b>upgrade</b> the settlement, and renames or disbands it.
     Orders apply to every wildermon on the deed at once and take effect the moment something wild

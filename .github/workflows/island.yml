@@ -3063,6 +3063,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/qol.mjs --log-level=error
           node node_modules/.cache/qol.mjs
 
+      - name: Ten more hands on a settlement
+        run: |
+          # A kemma brushes the herd, a sheela milks and shears it, a salva
+          # dresses its hurts, a carra butchers and a tanna tans what is in the
+          # stores, a grista mills, a wicka keeps the lanterns, and a brambo,
+          # a grazza and a siffa pick bushes, cut grass and pan sand: each the
+          # same on both sides, and each saying what it does in numbers.
+          npx esbuild supabase/test/tenhands.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/tenhands.mjs --log-level=error
+          node node_modules/.cache/tenhands.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

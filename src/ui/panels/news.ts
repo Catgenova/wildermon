@@ -60,7 +60,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { GATHER_VERB, GRAZE_FILL } from '../../game/creatures';
+import { GATHER_DO, GATHER_VERB, GRAZE_FILL } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2305,6 +2305,15 @@ export const NEWS: News[] = [
       `Settings, Eating: eat by yourself when Food falls under ${AUTO_EAT_AT.filter((v) => v).map((v) => `${Math.round(v * 100)}%`).join(', ')} (your choice), after the job in hand, never from a locked stack. `
         + `Notices: something you wear or hold at ${DAMAGE_WARN}% damage, and food on the ground near you with under ${Math.round(ROT_SOON / 60)} minutes before it rots; a thing on the ground says how long it has in its tooltip and Pick up menu.`,
       'Wildermon: Needs attention shows only the hungry, the hurt, those wanting a brush and those about to give birth. The Equipment and Health keys open their windows again.',
+    ],
+  },
+  {
+    n: 173,
+    day: '2026-10-18',
+    lines: () => [
+      'Ten new wildermon, each with a trade to work on your settlement:',
+      ...['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa']
+        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
     ],
   },
 ];

@@ -18,3 +18,12 @@ export const BLOW_SHARE = 0.012;
  * on it where it stands, in tiles: the island's `placed_in_reach` default.
  */
 export const PLACED_REACH = 2.4;
+
+/** Bundles of mixed grass a cut gives. */
+export const GRASS_PER_CUT = 2;
+/**
+ * Moss a cut of a moss tile gives: as many as a cut of grass gives bundles.
+ * Asked for: "make that cuttable like grass into mixed grass, but yielding
+ * moss." The island's `moss_per_cut`.
+ */
+export const MOSS_PER_CUT = GRASS_PER_CUT;

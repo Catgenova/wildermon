@@ -7,13 +7,25 @@ import type { DeedStore, Game } from './game';
 import { DAY_SECONDS } from './game';
 import { CROP_BY_SEED, cropDef, cropReady, cropYield } from './farming';
 import { MINE_COLLAPSE, MINE_DEPTH } from './actions';
+import { groomGain, GROOM_HEAL } from './husbandry';
+import { healAmount } from './firstaid';
+import { BUTCHER_PARTS, butcherYield, corpseSpecies, HOARD_LUMPS, HOARD_METALS, HOARD_MORE } from './butcher';
+import { RECIPE_BY_ID, type Recipe } from './recipes';
+import { milkLitres } from './dairy';
+import { SHEAR_FEATHERS, SHEAR_WOOL } from './creatureActions';
+import { candleBurn } from './light';
+import { isLampPiece } from './lamps';
+import { GRAPE, grapesFor, isTrellis, vineStage } from './vineyard';
+import { BUSH_DEFS, bushSpecies, mownDays, MOWN_TODAY } from '../world/tiles';
+import { besideWater, CUT_GRASS, PAN_ORES } from './actions';
+import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PIER_SHOO } from './piers';
 import { bedrockAt, oreAt } from '../world/ore';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
 import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
 import { swingEnchant, type Enchant, type EnchantEffect } from './enchant';
-import { fill, listed, times } from './words';
+import { fill, listed, percent, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { keyX, keyY, tileKey } from './tileindex';
@@ -103,7 +115,22 @@ export type GatherKind =
   // A plucka picks what a bearing tree has on it and carries it home.
   | 'fruit'
   // A vesp tends the hives on the deed, which fill with honey and beeswax while it does (`HIVE_SWARMS`).
-  | 'hive';
+  | 'hive'
+  // The settlement's own hands (`TEND_JOBS`): a kemma brushes the herd, a sheela milks and shears it, a salva
+  // dresses its hurts, a carra butchers the carcasses in the stores, a tanna tans the hides, a grista mills
+  // the grain and a wicka keeps the lanterns.
+  | 'groom'
+  | 'dairy'
+  | 'heal'
+  | 'butcher'
+  | 'tan'
+  | 'mill'
+  | 'lamp'
+  // And three that walk out for a load: a brambo picks the bushes and the vines, a grazza cuts grass and
+  // moss, and a siffa pans the sand at the water's edge.
+  | 'bush'
+  | 'grass'
+  | 'pan';
 /**
  * How far a wild thing will drift from where it stands, and how long it stands.
  *
@@ -205,11 +232,30 @@ const NOBODY: readonly Creature[] = [];
  */
 const TILE_SLACK = 4096;
 
-export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry' };
-export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'working the fields', mine: 'working the seams', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'keeping the fires in', fetch: 'clearing up', guard: 'keeping watch', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'reading the ground', plant: 'planting', hod: 'carrying the hod', mend: 'mending', compost: 'clearing up', seek: 'nosing about', fish: 'fishing', prune: 'pruning the wood', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending the hives' };
+/** Care under which a wildermon is said to be wanting a brush, and the Wildermon window counts it as wanting attention; a kemma brushes what is under it. */
+export const CARE_WANTING = 0.4;
+/** How far grown back a fleece, a crop of feathers or a cudda's milk is before a sheela takes it: the more there is, the more and the better comes off. */
+export const DAIRY_FULL = 0.9;
+/** The share of its health under which a salva dresses one of yours; a bleeding one it dresses whatever its health. */
+export const HEAL_BELOW = 0.75;
+/** What a salva puts a dressing on: cloth, or a herb cover. */
+export const DRESSINGS = ['bandage', 'cover'];
+/** A siffa's chance of something in the pan, at no skill and at a hundred: a Miner's who has learned to pan (`pan` perk) to twice it. */
+export const PAN_FIND = [1 / 8, 1 / 4] as const;
+/** The top of a worker's skill, where its numbers stop rising. */
+export const SKILL_TOP = 100;
+export const panFind = (skill: number): number => PAN_FIND[0] + (PAN_FIND[1] - PAN_FIND[0]) * Math.max(0, Math.min(SKILL_TOP, skill)) / SKILL_TOP;
+/** The recipes a tanna and a grista work at the stores, each with its tool somewhere in them. */
+export const TAN_RECIPES = ['tan_hide'];
+export const MILL_RECIPES = ['make_flour', 'make_cornmeal', 'press_olives'];
+/** The trades that work at the stores or at one of your own rather than walking out to a tile, and bring nothing home in their arms. */
+export const TEND_JOBS = new Set<GatherKind>(['groom', 'dairy', 'heal', 'butcher', 'tan', 'mill', 'lamp']);
+
+export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting' };
+export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'working the fields', mine: 'working the seams', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'keeping the fires in', fetch: 'clearing up', guard: 'keeping watch', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'reading the ground', plant: 'planting', hod: 'carrying the hod', mend: 'mending', compost: 'clearing up', seek: 'nosing about', fish: 'fishing', prune: 'pruning the wood', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending the hives', groom: 'brushing the herd', dairy: 'milking and shearing', heal: 'dressing hurts', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'keeping the lanterns', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest the fields', mine: 'mine the ore', sand: 'dig sand and carry it home', clay: 'dig clay and carry it home', quarry: 'cut stone and carry it home', stoke: 'keep the fires and furnaces fed', fetch: 'pick up what is lying about', guard: 'keep watch over the deed', hunt: 'hunt the country round the deed and bring the carcasses home', peat: 'cut peat and tar and carry them home', reed: 'cut reeds and carry them home', water: 'carry water from the shore or the well to your barrels', prospect: 'read the ground for metal and mark what it finds', plant: 'plant sprouts where the trees have been cut', hod: 'carry brick and timber to your planned walls and fit it', mend: 'mend the damaged gear in your stores', compost: 'clear away what is rotting and turn it into compost', seek: 'smell out buried relics and mark where to dig', fish: 'fish the water round the deed and carry the catch home', prune: 'prune what would otherwise die', stump: 'dig out stumps', fruit: 'pick what the fruit trees have on them and carry it home' , hive: 'tend the hives' };
-const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [] };
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest the fields', mine: 'mine the ore', sand: 'dig sand and carry it home', clay: 'dig clay and carry it home', quarry: 'cut stone and carry it home', stoke: 'keep the fires and furnaces fed', fetch: 'pick up what is lying about', guard: 'keep watch over the deed', hunt: 'hunt the country round the deed and bring the carcasses home', peat: 'cut peat and tar and carry them home', reed: 'cut reeds and carry them home', water: 'carry water from the shore or the well to your barrels', prospect: 'read the ground for metal and mark what it finds', plant: 'plant sprouts where the trees have been cut', hod: 'carry brick and timber to your planned walls and fit it', mend: 'mend the damaged gear in your stores', compost: 'clear away what is rotting and turn it into compost', seek: 'smell out buried relics and mark where to dig', fish: 'fish the water round the deed and carry the catch home', prune: 'prune what would otherwise die', stump: 'dig out stumps', fruit: 'pick what the fruit trees have on them and carry it home' , hive: 'tend the hives', groom: `brush down your wildermon whose care is under ${percent(CARE_WANTING)}`, dairy: `milk your cudda into the empty buckets in your stores and shear or pluck your others, each once it is ${percent(DAIRY_FULL)} grown back, and put what comes off in your stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} of their health with a bandage or a cover out of your stores`, butcher: 'butcher the carcasses in your stores and put what comes off them back in', tan: 'tan the hides in your stores in its lye, with a carving knife kept in them', mill: 'grind the wheat and corn and press the olives in your stores, on a quern kept in them', lamp: 'put a candle out of your stores in every lantern post and pillar of yours that has none, light them after dark and put them out by day', bush: 'pick the bushes and the vines on your trellises and carry it home', grass: 'cut grass and moss and carry it home', pan: 'pan the sand at the water\'s edge and carry home what settles in the pan' };
+const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], butcher: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [] };
 export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'tusk' | 'sinew' | 'scale' | 'hoard';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
@@ -1045,6 +1091,255 @@ export const SPECIES: Record<string, SpeciesDef> = {
     tameFail: 'eats the {food} and everything within a foot of where it fell',
     leaves: 'shuffles into the undergrowth after something it can smell and you cannot',
   },
+  // ---- The settlement's own hands. ----
+  // Each says what it does on a settlement in the game's own terms; the numbers are the trades' (`TEND_JOBS`, `GATHER_DO`).
+  kemma: {
+    id: 'kemma',
+    name: 'Kemma',
+    description: 'A soft, round grazer with a broad tongue and a coat that is always clean. Set to work on a settlement it brushes down every wildermon of yours within its reach whose care is under {careWanting:pct}, as a keeper of its skill with a brush of the same quality would.',
+    health: 18,
+    attack: 2,
+    speed: 2,
+    tameLevel: 12,
+    tameChance: 0.12,
+    diet: ['mixed_grass', 'carrot', 'cabbage', 'apple'],
+    baitHint: 'grass or a vegetable',
+    timid: true,
+    gathers: 'groom',
+    workRange: 8,
+    variants: [
+      ['#c9b48e', '#f3e7cf'],
+      ['#a89c8c', '#e6ddd1'],
+      ['#b98f6e', '#f0d3b8'],
+      ['#8f9a86', '#d8e0cf'],
+    ],
+    butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
+    tameFail: 'licks the {food} clean and leaves it',
+    leaves: 'wanders off grooming its own shoulder',
+  },
+  sheela: {
+    id: 'sheela',
+    name: 'Sheela',
+    description: 'A short, deft creature with clever forepaws and shears for teeth. Set to work on a settlement it milks your cudda into the empty buckets in your stores, and shears or plucks every other of yours with a fleece or feathers, each once it is {dairyFull:pct} grown back; what comes off goes in your stores.',
+    health: 20,
+    attack: 2,
+    speed: 2.2,
+    tameLevel: 16,
+    tameChance: 0.1,
+    diet: ['mixed_grass', 'wheat', 'carrot', 'cheese'],
+    baitHint: 'grass, grain or cheese',
+    timid: true,
+    gathers: 'dairy',
+    workRange: 8,
+    variants: [
+      ['#d6c7a6', '#7a6248'],
+      ['#b8b2a8', '#5d564e'],
+      ['#c9a77f', '#6e4f36'],
+      ['#e1d9c8', '#857462'],
+    ],
+    butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
+    tameFail: 'snips the {food} in half and walks off with the bigger piece',
+    leaves: 'trots away clicking its teeth',
+  },
+  salva: {
+    id: 'salva',
+    name: 'Salva',
+    description: 'A long-fingered, careful creature that smells of crushed leaves. Set to work on a settlement it dresses any wildermon of yours within its reach that is bleeding or under {healBelow:pct} of its health, with a bandage or a herb cover out of your stores: the bleeding stops, and it puts back the share of a life a dressing of that quality at its first aid would.',
+    health: 16,
+    attack: 1,
+    speed: 2,
+    tameLevel: 20,
+    tameChance: 0.09,
+    diet: ['blueberry', 'raspberry', 'honey', 'apple'],
+    baitHint: 'berries or honey',
+    timid: true,
+    gathers: 'heal',
+    workRange: 8,
+    variants: [
+      ['#7f9a7a', '#dfe9d6'],
+      ['#8d8a6c', '#e8e3c4'],
+      ['#6f8590', '#d2e0e6'],
+      ['#9a7f8c', '#eadbe2'],
+    ],
+    butcher: { meat: 2, fur: 2, leather: 1, bone: 1, gland: 2 },
+    tameFail: 'sniffs the {food}, decides you are the one who needs looking after, and pats your hand',
+    leaves: 'goes off into the long grass looking for something to put on a cut',
+    nearTrees: true,
+  },
+  carra: {
+    id: 'carra',
+    name: 'Carra',
+    description: 'A heavy-jawed scavenger with a cleaver of a beak, which goes where the hunters have been. Set to work on a settlement it butchers the carcasses in your stores, taking as much of each as a butcher of its skill with a knife of the same quality would, and puts what comes off back in your stores.',
+    health: 30,
+    attack: 5,
+    speed: 2,
+    tameLevel: 22,
+    tameChance: 0.09,
+    diet: ['meat', 'offal', 'cooked_meat', 'minnow'],
+    baitHint: 'meat or a fish',
+    timid: false,
+    gathers: 'butcher',
+    workRange: 6,
+    variants: [
+      ['#4a4440', '#c2b7a8'],
+      ['#5b4636', '#d1b79a'],
+      ['#3b3f45', '#aab3bb'],
+      ['#614a3f', '#d8c0ae'],
+    ],
+    butcher: { meat: 4, fur: 2, leather: 2, bone: 3, feather: 4 },
+    tameFail: 'takes the {food} apart into neat pieces and eats none of them',
+    leaves: 'lopes off toward wherever something last died',
+    nearTrees: true,
+  },
+  tanna: {
+    id: 'tanna',
+    name: 'Tanna',
+    description: 'A sleek, bark-brown wader with hands stained to the wrist. Set to work on a settlement it tans the hides in your stores, a hide and a bucket of lye to each piece of leather, so long as a carving knife is kept in your stores; the bucket goes back in with the leather.',
+    health: 22,
+    attack: 3,
+    speed: 2,
+    tameLevel: 18,
+    tameChance: 0.1,
+    diet: ['minnow', 'perch', 'trout', 'acorn'],
+    baitHint: 'a fish or an acorn',
+    timid: true,
+    gathers: 'tan',
+    workRange: 6,
+    variants: [
+      ['#7a5634', '#d9b98e'],
+      ['#5e4630', '#c7a982'],
+      ['#8c6a43', '#e6cba2'],
+      ['#4d3b2c', '#b39878'],
+    ],
+    butcher: { meat: 3, fur: 3, leather: 3, bone: 2 },
+    tameFail: 'dunks the {food} in the nearest water and forgets about it',
+    leaves: 'slides off toward the water',
+    nearWater: true,
+  },
+  grista: {
+    id: 'grista',
+    name: 'Grista',
+    description: 'A stout, dusty creature with jaws like millstones and a tail it sweeps the floor with. Set to work on a settlement it grinds the wheat and corn and presses the olives in your stores, so long as a quern is kept in your stores, and puts the flour, cornmeal and oil back in.',
+    health: 26,
+    attack: 3,
+    speed: 1.6,
+    tameLevel: 14,
+    tameChance: 0.11,
+    diet: ['wheat', 'corn', 'nuts', 'bread'],
+    baitHint: 'grain or bread',
+    timid: true,
+    gathers: 'mill',
+    workRange: 6,
+    variants: [
+      ['#d8cfbf', '#9b8b72'],
+      ['#c2b49a', '#7f6e55'],
+      ['#e4dccb', '#a69677'],
+      ['#b7aa94', '#6e604c'],
+    ],
+    butcher: { meat: 4, fur: 3, leather: 2, bone: 3 },
+    tameFail: 'grinds the {food} to dust and blows it away',
+    leaves: 'shuffles off in a small cloud of flour',
+  },
+  wicka: {
+    id: 'wicka',
+    name: 'Wicka',
+    description: 'A small, moth-winged thing that comes out at dusk and goes to every light it can see. Set to work on a settlement it puts a candle out of your stores in every lantern post and pillar of yours that has none, lights them once it is dark and puts them out by day, so no candle burns while the sun is up.',
+    health: 10,
+    attack: 1,
+    speed: 2.6,
+    tameLevel: 24,
+    tameChance: 0.08,
+    diet: ['honey', 'apple', 'pear', 'plum'],
+    baitHint: 'honey or soft fruit',
+    timid: true,
+    gathers: 'lamp',
+    workRange: 8,
+    variants: [
+      ['#6e6354', '#f0d58a'],
+      ['#5a5a66', '#e9d9a8'],
+      ['#7d6a52', '#f5c77a'],
+      ['#4f5b56', '#dfe3a0'],
+    ],
+    butcher: { meat: 1, fur: 1, leather: 1, gland: 2 },
+    tameFail: 'flutters round the {food} twice and settles on your lantern instead',
+    leaves: 'flits off toward the nearest light',
+    nocturnal: true,
+  },
+  brambo: {
+    id: 'brambo',
+    name: 'Brambo',
+    description: 'A burr-coated rummager of the hedges with a mouth that strips a bush clean. Set to work on a settlement it picks the bushes in their season, as many off each as your hands would at its forestry, and the ripe vines on your trellises, and carries it home.',
+    health: 22,
+    attack: 3,
+    speed: 2,
+    tameLevel: 10,
+    tameChance: 0.12,
+    diet: ['blueberry', 'raspberry', 'strawberry', 'grape'],
+    baitHint: 'berries or grapes',
+    timid: true,
+    gathers: 'bush',
+    workRange: 8,
+    variants: [
+      ['#6b4f3a', '#c69a72'],
+      ['#4f5a38', '#a7b47e'],
+      ['#7a4a46', '#d39a92'],
+      ['#5a4a5e', '#b49ab8'],
+    ],
+    butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
+    tameFail: 'eats the {food} and then the bush you were standing by',
+    leaves: 'pushes off into the nearest hedge',
+    nearTrees: true,
+  },
+  grazza: {
+    id: 'grazza',
+    name: 'Grazza',
+    description: 'A low, wide grazer that crops the ground as it goes, flat as a scythe. Set to work on a settlement it cuts grass, {grassPerCut:w} bundles of mixed grass a cut, and moss, {mossPerCut:w} clumps a cut, and carries it home; grass it keeps cut on your settlement turns to lawn as it does for you.',
+    health: 24,
+    attack: 2,
+    speed: 1.8,
+    tameLevel: 6,
+    tameChance: 0.14,
+    diet: ['mixed_grass', 'wheat', 'carrot', 'cabbage'],
+    baitHint: 'grass or a vegetable',
+    timid: true,
+    gathers: 'grass',
+    workRange: 8,
+    variants: [
+      ['#8a9a5c', '#d8e2b0'],
+      ['#7d8a6a', '#cdd6bd'],
+      ['#9a8a5a', '#e2d6a8'],
+      ['#6a7a5a', '#bfcaae'],
+    ],
+    butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
+    tameFail: 'eats the {food} and the grass under it',
+    leaves: 'grazes its way off in a straight line',
+  },
+  siffa: {
+    id: 'siffa',
+    name: 'Siffa',
+    description: 'A long-legged shore wader with a scoop of a bill it swirls the wet sand in. Set to work on a settlement it pans the sand at the water\u2019s edge and carries home what settles: something {panLeast:pct} of the time at no skill, rising to {panMost:pct} at {skillTop} prospecting.',
+    health: 16,
+    attack: 2,
+    speed: 2.2,
+    tameLevel: 20,
+    tameChance: 0.09,
+    diet: ['minnow', 'perch', 'trout', 'nuts'],
+    baitHint: 'a fish',
+    timid: true,
+    gathers: 'pan',
+    workRange: 8,
+    variants: [
+      ['#b9a27a', '#efe2c4'],
+      ['#8f9aa0', '#dde5ea'],
+      ['#a68d6a', '#e8d6b6'],
+      ['#7f8b7a', '#d4dccd'],
+    ],
+    butcher: { meat: 2, fur: 1, leather: 1, bone: 2, feather: 5 },
+    tameFail: 'washes the {food} in the shallows until there is nothing left of it',
+    leaves: 'stalks off along the waterline',
+    onSand: true,
+    nearWater: true,
+  },
   // ---- Backs and saddles. ----
   bura: {
     id: 'bura',
@@ -1469,7 +1764,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
 /** A beast's share of a team's pull when it was not bred for the traces. */
 export const PULL_DEFAULT = 0.25;
 // A species says what it carries and pulls off its own row.
-for (const s of Object.values(SPECIES)) s.description = fill(s.description, { ...s, pullDefault: PULL_DEFAULT });
+for (const s of Object.values(SPECIES)) {
+  s.description = fill(s.description, {
+    ...s, pullDefault: PULL_DEFAULT, careWanting: CARE_WANTING, dairyFull: DAIRY_FULL, healBelow: HEAL_BELOW,
+    grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP,
+  });
+}
 
 /** Which species roam wild, by weight. */
 /**
@@ -1526,6 +1826,16 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['shaggan', 4],
   ['snout', 2],
   ['lume', 2],
+  ['kemma', 6],
+  ['sheela', 5],
+  ['salva', 4],
+  ['carra', 4],
+  ['tanna', 5],
+  ['grista', 5],
+  ['wicka', 3],
+  ['brambo', 6],
+  ['grazza', 7],
+  ['siffa', 5],
 ];
 
 /** How far off a hunter picks up your scent, and how far you must get to lose it. */
@@ -1588,6 +1898,15 @@ export const WATER_RANGE = 4;
 
 /** Whether open water lies within a few tiles of here. */
 /** The hive standing on a tile, if one does: where a vesp set to tend the hives goes to work. The island's `worker_gatherable` asks the same. */
+/** The trellis standing on a tile with its vine ripe (`vineStage`), if one does: where a brambo goes to pick grapes. The island's `worker_gatherable` asks the same. */
+export function ripeTrellisAt(game: Game, x: number, y: number): PlacedFurniture | undefined {
+  for (const f of game.furniture.values()) {
+    if (isTrellis(f) && Math.floor(f.x) === x && Math.floor(f.y) === y && vineStage(f, game.wallNow()) === 'ripe') return f;
+  }
+  return undefined;
+}
+
+/** The hive standing on a tile, if one does: where a vesp set to tend the hives goes to work. The island's `worker_gatherable` asks the same. */
 export function hiveAt(game: Game, x: number, y: number): PlacedFurniture | undefined {
   for (const f of game.furniture.values()) if (f.kind === 'hive' && f.x === x && f.y === y) return f;
   return undefined;
@@ -1647,8 +1966,8 @@ export const mayEat = (species: SpeciesDef, item: Item): boolean =>
   isBaitFor(species, item.id) && !item.locked && item.price === undefined;
 /** What a wild one does to feed itself; felling trees puts no food in its belly. */
 /** The jobs that are errands rather than a walk out for a load of something. */
-const ERRAND_JOBS = new Set<GatherKind>(['water', 'hod', 'mend', 'plant', 'prospect', 'compost']);
-const INDOOR_JOBS = new Set<GatherKind>(['woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'stoke', 'fetch', 'guard', 'hunt', 'water', 'prospect', 'plant', 'hod', 'mend', 'compost', 'seek', 'prune', 'stump']);
+const ERRAND_JOBS = new Set<GatherKind>(['water', 'hod', 'mend', 'plant', 'prospect', 'compost', ...TEND_JOBS]);
+const INDOOR_JOBS = new Set<GatherKind>(['woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'stoke', 'fetch', 'guard', 'hunt', 'water', 'prospect', 'plant', 'hod', 'mend', 'compost', 'seek', 'prune', 'stump', ...TEND_JOBS, 'bush', 'grass', 'pan']);
 export const wildGather = (species: SpeciesDef): GatherKind | null => (species.gathers && INDOOR_JOBS.has(species.gathers) ? 'forage' : species.gathers);
 /** The task skill a species trains, if it has a job. */
 export const workSkill = (species: SpeciesDef): string | null => (species.gathers ? GATHER_SKILL[species.gathers] : null);
@@ -1792,8 +2111,6 @@ export const CARE_HOURS = 3;
 export const CARE_BONUS = 0.25;
 export const careMul = (c: Creature): number => 1 + Math.max(0, Math.min(1, c.care)) * keptOf(c, 'kept:care_bonus', CARE_BONUS);
 /** How it reads on a card: groomed, kept, or let go. */
-/** Care under which a wildermon is said to be wanting a brush, and the Wildermon window counts it as wanting attention. */
-export const CARE_WANTING = 0.4;
 export const careWord = (care: number): string =>
   care >= 0.75 ? 'well looked after' : care >= CARE_WANTING ? 'kept' : care >= 0.12 ? 'wanting a brush' : 'neglected';
 
@@ -3493,6 +3810,27 @@ export class Creatures {
     if (kind === 'stoke' || kind === 'guard') return false;
     // A hive standing on the tile, which as many swarms may tend as like (`hiveAt`): no claim on it.
     if (kind === 'hive') return hiveAt(game, x, y) !== undefined;
+    // The errands at the stores and at your own are never a tile's work.
+    if (TEND_JOBS.has(kind)) return false;
+    if (kind === 'bush') {
+      // A bush in its season with nothing taken off it today, or a trellis whose vine is ripe (`vineStage`).
+      if (this.claimed(x, y, c) || !this.tileOk(game, x, y)) return false;
+      if (ripeTrellisAt(game, x, y)) return true;
+      if (game.world.getTile(x, y) !== TileType.Bush) return false;
+      const yields = BUSH_DEFS[bushSpecies(game.world.getData(x, y))].yields;
+      return !!yields && fruitsAt(yields, game.wallNow()) && !game.isForaged(x, y, 'forage');
+    }
+    if (kind === 'grass') {
+      // Grass that has grown back since its last cut, or moss.
+      if (this.claimed(x, y, c) || !this.tileOk(game, x, y)) return false;
+      const t = game.world.getTile(x, y);
+      if (t === TileType.Moss) return !game.isForaged(x, y, 'moss');
+      return CUT_GRASS.has(t) && !game.isForaged(x, y, 'grass');
+    }
+    if (kind === 'pan') {
+      // Sand with the water at one of its corners, as a person's pan wants (`besideWater`).
+      return game.world.getTile(x, y) === TileType.Sand && besideWater(game, x, y) && this.tileOk(game, x, y) && !this.claimed(x, y, c);
+    }
     if (kind === 'quarry') {
       // Bare stone with no metal in it, and one cutter to a face.
       const rock = bedrockAt(game.world, x, y);
@@ -3664,6 +4002,7 @@ export class Creatures {
     if (kind === 'stoke' || kind === 'guard') return null;
     // Tending a hive brings nothing home: the hive fills itself while a swarm keeps it (`Game.fillHive`).
     if (kind === 'hive') return null;
+    if (kind === 'bush' || kind === 'grass' || kind === 'pan') return this.finishHands(game, c, kind, x, y);
     if (kind === 'quarry') return this.finishQuarry(game, c);
     if (kind === 'peat') return this.finishPeat(game, c);
     if (kind === 'reed') return this.finishReed(game, c);
@@ -3691,6 +4030,52 @@ export class Creatures {
     const id = rollTable(table, game.rand());
     const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1) * careful);
     return { uid: game.inventory.nextUid++, id, ql, dmg: 0, count: 1 };
+  }
+
+  /**
+   * Picking a bush or a vine, cutting grass or moss, and panning: the load
+   * the worker carries home, as much as a person's hands would take at its
+   * skill. The island's `worker_do`.
+   */
+  private finishHands(game: Game, c: Creature, kind: GatherKind, x: number, y: number): Item | null {
+    if (c.mode !== 'deed') return null;
+    const skillId = GATHER_SKILL[kind];
+    const skill = c.skills[skillId] ?? 1;
+    this.gainSkill(game, c, skillId, 0.225);
+    const ql = this.madeQl(game, c, skill);
+    const load = (id: string, count: number): Item => ({ uid: game.inventory.nextUid++, id, ql, dmg: 0, count });
+    const w = game.world;
+    if (kind === 'bush') {
+      const trellis = ripeTrellisAt(game, x, y);
+      if (trellis) {
+        trellis.pickedAt = game.wallNow();
+        game.events.emit('world', x, y);
+        return load(GRAPE, grapesFor(skill));
+      }
+      if (w.getTile(x, y) !== TileType.Bush) return null;
+      const yields = BUSH_DEFS[bushSpecies(w.getData(x, y))].yields;
+      if (!yields) return null;
+      game.markForaged(x, y, 'forage');
+      // As a person's sickle takes off a bush (`harvest_bush`): more to a practised hand, and never nothing.
+      return load(yields, Math.max(1, Math.round(3 * (0.5 + skill / 130) * (0.7 + game.rand() * 0.6))));
+    }
+    if (kind === 'grass') {
+      const t = w.getTile(x, y);
+      if (t === TileType.Moss) {
+        game.markForaged(x, y, 'moss');
+        return load('moss', MOSS_PER_CUT);
+      }
+      game.markForaged(x, y, 'grass');
+      // Grass kept cut on a settlement becomes lawn, as it does under your own hands (`cut_grass`).
+      if (t === TileType.Grass && game.onDeed(x, y)) {
+        w.setTile(x, y, TileType.Grass, mownDays(w.getData(x, y)) | MOWN_TODAY);
+        game.events.emit('world', x, y);
+      }
+      return load('mixed_grass', GRASS_PER_CUT);
+    }
+    // Panning: something in the pan `panFind` of the time, one of what a person's pan turns up.
+    if (game.rand() >= panFind(skill)) return null;
+    return load(PAN_ORES[Math.floor(game.rand() * PAN_ORES.length)], 1);
   }
 
   /** Fell the tree a worker walked to, and hand it the log it carries home. */
@@ -3998,7 +4383,308 @@ export class Creatures {
     if (kind === 'plant') return this.plantStep(game, c, goto, near, range, deed);
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);
     if (kind === 'compost') return this.compostStep(game, c, goto, near);
+    if (kind === 'groom' || kind === 'dairy' || kind === 'heal') return this.herdStep(game, c, kind, goto, near);
+    if (kind === 'butcher') return this.butcherStep(game, c, goto);
+    if (kind === 'tan' || kind === 'mill') return this.recipeStep(game, c, kind === 'tan' ? TAN_RECIPES : MILL_RECIPES, goto);
+    if (kind === 'lamp') return this.lampStep(game, c, goto, near);
     return false;
+  }
+
+  /** How long a go at an errand keeps it where it is, as it would at a tile of its trade (`workDuration`). */
+  private errandWork(game: Game, c: Creature, kind: GatherKind): void {
+    c.busyUntil = game.time + workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.workMul(c);
+  }
+
+  /** What a worker of this skill makes a thing at: the same spread a tile's load is taken at. */
+  private madeQl(game: Game, c: Creature, skill: number): number {
+    return Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1) * this.yieldMul(c));
+  }
+
+  /**
+   * Something made at the stores, put into them: the store it was made at
+   * while that has room, then whichever on the settlement will take it, and
+   * failing all of them on the ground where it was made. The island's
+   * `worker_put`.
+   */
+  private intoStores(game: Game, item: Item, at: DeedStore | null, x: number, y: number): void {
+    const to = at && at.room(item) ? at : game.deedStores().find((st) => st.room(item));
+    if (to && to.add(item)) {
+      to.changed();
+      return;
+    }
+    game.dropOnGround(x, y, item);
+  }
+
+  /** One of a thing taken out of whichever store on the settlement has it, or null. */
+  private takeOne(game: Game, ids: readonly string[], prefer?: DeedStore): Item | null {
+    const stores = game.deedStores();
+    for (const store of prefer ? [prefer, ...stores.filter((st) => st !== prefer)] : stores) {
+      const it = store.items.find((x: Item) => ids.includes(x.id) && x.count > 0 && !x.locked);
+      if (!it) continue;
+      it.count -= 1;
+      if (it.count <= 0) store.items.splice(store.items.indexOf(it), 1);
+      store.changed();
+      return { uid: game.inventory.nextUid++, id: it.id, ql: it.ql, dmg: 0, count: 1, extra: it.extra };
+    }
+    return null;
+  }
+
+  /** The nearest store on the settlement holding one of these, or undefined. */
+  private storeWith(game: Game, c: Creature, ids: readonly string[]): DeedStore | undefined {
+    let best: DeedStore | undefined;
+    let bestD = Infinity;
+    for (const st of game.deedStores()) {
+      if (!st.items.some((x: Item) => ids.includes(x.id) && x.count > 0 && !x.locked)) continue;
+      const d = Math.hypot(st.centre[0] - c.x, st.centre[1] - c.y);
+      if (d < bestD) {
+        bestD = d;
+        best = st;
+      }
+    }
+    return best;
+  }
+
+  /** Whether a sheela milks this one, rather than shearing it: one that fills a bucket at a milking (`milkLitres`). */
+  static milker(def: SpeciesDef): boolean {
+    return !!def.milk && milkLitres(def.id) >= BUCKET_LITRES;
+  }
+
+  /**
+   * Whether one of yours wants a kemma, a sheela or a salva: care under
+   * `CARE_WANTING`; a fleece, feathers or milk `DAIRY_FULL` grown back (and
+   * for a milker an empty bucket to be had, `has`); bleeding, or under
+   * `HEAL_BELOW` of its health (and a dressing to be had, `has`).
+   */
+  herdWants(game: Game, c: Creature, o: Creature, kind: GatherKind, has: boolean): boolean {
+    if (o === c || (o.mode !== 'deed' && o.mode !== 'active') || o.mine === false || o.health <= 0) return false;
+    const def = this.species(o);
+    if (def.monster) return false;
+    if (kind === 'groom') return o.care < CARE_WANTING;
+    if (kind === 'dairy') return !!def.fleece && o.fleece >= DAIRY_FULL && (!Creatures.milker(def) || has);
+    if (kind === 'heal') return has && (o.bleedUntil > game.time || o.health < maxHealth(o, def) * HEAL_BELOW);
+    return false;
+  }
+
+  /**
+   * Brushing, milking and shearing, and dressing hurts: the errands done to
+   * one of your own wildermon within reach of the token. What it needs out
+   * of the stores first -- an empty bucket for a cudda, a dressing for a
+   * hurt -- it fetches before it goes, and what comes off goes in the stores.
+   */
+  private herdStep(
+    game: Game,
+    c: Creature,
+    kind: GatherKind,
+    goto: (x: number, y: number, reach?: number) => boolean,
+    near: (x: number, y: number) => boolean,
+  ): boolean {
+    // Whether what it would carry to one -- a bucket, a dressing -- is in its arms or to be had, asked once for the whole herd.
+    const carried = kind === 'heal' ? DRESSINGS : ['bucket'];
+    const has = kind !== 'groom' && (carried.includes(c.carrying?.id ?? '') || !!this.storeWith(game, c, carried));
+    let o: Creature | undefined;
+    let bestD = Infinity;
+    for (const x of this.list.values()) {
+      if (!near(Math.floor(x.x), Math.floor(x.y)) || !this.herdWants(game, c, x, kind, has)) continue;
+      const d = Math.hypot(x.x - c.x, x.y - c.y);
+      if (d < bestD) {
+        bestD = d;
+        o = x;
+      }
+    }
+    // Nothing wanting it: a bucket or a dressing in its arms goes back with everything else carried.
+    if (!o) return false;
+    const def = this.species(o);
+    const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
+    const want = kind === 'heal' ? DRESSINGS : kind === 'dairy' && Creatures.milker(def) ? ['bucket'] : null;
+    if (want && !want.includes(c.carrying?.id ?? '')) {
+      if (c.carrying) return false;
+      const store = this.storeWith(game, c, want);
+      if (!store) return false;
+      if (!goto(store.centre[0], store.centre[1])) return true;
+      c.carrying = this.takeOne(game, want, store);
+      return true;
+    }
+    if (!goto(o.x, o.y, 1.6)) return true;
+    const top = maxHealth(o, def);
+    if (kind === 'groom') {
+      // As a keeper of its skill with a brush as good (`groomGain`), and the small hurts seen to with it.
+      o.care = Math.min(1, o.care + groomGain(skill, skill));
+      if (o.health < top) o.health = Math.min(top, o.health + top * GROOM_HEAL);
+      this.gainSkill(game, c, GATHER_SKILL.groom, 0.25);
+    } else if (kind === 'dairy') {
+      const [x, y] = [Math.floor(o.x), Math.floor(o.y)];
+      if (Creatures.milker(def)) {
+        // A bucket off it, as the keeper's own milking fills one (`milk_go`): what it has been fed on is what comes out of it.
+        const ql = Math.max(1, Math.min(100, 20 + o.fleece * 40 + o.hunger * 30));
+        c.carrying = null;
+        this.intoStores(game, { uid: game.inventory.nextUid++, id: 'milk_bucket', ql, dmg: 0, count: 1 }, null, x, y);
+      } else {
+        // A full fleece is three, a full crop of feathers six, and quality follows what was there.
+        const yields = def.shearYield ?? 'wool';
+        const n = Math.max(1, Math.round(o.fleece * (yields === 'wool' ? SHEAR_WOOL : SHEAR_FEATHERS)));
+        const ql = Math.max(1, Math.min(100, 15 + o.fleece * 45 + skill * 0.4));
+        this.intoStores(game, { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: n }, null, x, y);
+      }
+      o.fleece = 0;
+      this.gainSkill(game, c, GATHER_SKILL.dairy, 0.25);
+    } else {
+      // A dressing's share of a life, at its first aid and the dressing's quality (`healAmount`), and the bleeding stopped.
+      const ql = c.carrying?.ql ?? 1;
+      c.carrying = null;
+      o.health = Math.min(top, o.health + top * healAmount(skill, ql));
+      o.bleedUntil = 0;
+      o.bleedRate = 0;
+      this.gainSkill(game, c, GATHER_SKILL.heal, 0.25);
+    }
+    game.events.emit('creature');
+    this.errandWork(game, c, kind);
+    return true;
+  }
+
+  /**
+   * Butchering: at the store with a carcass in it, taken apart as a butcher
+   * of its skill with a knife as good would (`butcherYield`), and what comes
+   * off it put back in the stores. The island's `errand_do`.
+   */
+  private butcherStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean): boolean {
+    if (c.carrying) return false;
+    let store: DeedStore | undefined;
+    let corpse: Item | undefined;
+    let bestD = Infinity;
+    for (const st of game.deedStores()) {
+      const it = st.items.find((x: Item) => x.id === 'corpse' && !x.locked && !!corpseSpecies(x));
+      const d = Math.hypot(st.centre[0] - c.x, st.centre[1] - c.y);
+      if (it && d < bestD) {
+        bestD = d;
+        store = st;
+        corpse = it;
+      }
+    }
+    if (!store || !corpse) return false;
+    if (!goto(store.centre[0], store.centre[1])) return true;
+    const def = corpseSpecies(corpse);
+    if (!def) return false;
+    const skill = c.skills[GATHER_SKILL.butcher] ?? 1;
+    const share = butcherYield(skill, skill);
+    const ql = this.madeQl(game, c, skill);
+    if (corpse.count > 1) corpse.count -= 1;
+    else store.items.splice(store.items.indexOf(corpse), 1);
+    store.changed();
+    const put = (id: string, count: number, q: number): void => this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: q, dmg: 0, count }, store, store.x, store.y);
+    const hoard = def.butcher.hoard ?? 0;
+    for (let i = 0; i < Math.round(hoard * (HOARD_LUMPS + share * HOARD_MORE)); i++) {
+      put(HOARD_METALS[Math.floor(game.rand() * HOARD_METALS.length)], 1, Math.max(20, Math.min(100, 40 + game.rand() * 55)));
+    }
+    for (const [part, id] of BUTCHER_PARTS) {
+      const base = def.butcher[part] ?? 0;
+      if (!base) continue;
+      let count = Math.floor(base * share);
+      if (game.rand() < base * share - count) count += 1;
+      if (part === 'gland' && count > 0 && game.rand() > 0.35 * (0.5 + share)) count = 0;
+      if (count > 0) put(id, count, ql);
+    }
+    this.gainSkill(game, c, GATHER_SKILL.butcher, 0.3);
+    this.errandWork(game, c, 'butcher');
+    return true;
+  }
+
+  /**
+   * The first of these recipes the stores hold everything for: its tool in
+   * one of them, and every input across them. Null when none is.
+   */
+  recipeInStores(game: Game, recipes: readonly string[]): { recipe: Recipe; at: DeedStore } | null {
+    const stores = game.deedStores();
+    const has = (id: string, n: number): boolean =>
+      stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + x.count, 0), 0) >= n;
+    for (const id of recipes) {
+      const r = RECIPE_BY_ID.get(id);
+      if (!r || (r.tool && !has(r.tool, 1)) || !r.inputs.every((i) => has(i.item, i.count ?? 1))) continue;
+      const at = stores.find((st) => st.items.some((x: Item) => x.id === r.inputs[0].item && !x.locked));
+      if (at) return { recipe: r, at };
+    }
+    return null;
+  }
+
+  /**
+   * Tanning and milling: a recipe worked at the stores, its inputs taken out
+   * of them, its tool kept in one of them, and what it makes -- with what it
+   * hands back, a bucket after the lye -- put back in. The island's
+   * `errand_do`.
+   */
+  private recipeStep(game: Game, c: Creature, recipes: readonly string[], goto: (x: number, y: number, reach?: number) => boolean): boolean {
+    if (c.carrying) return false;
+    const job = this.recipeInStores(game, recipes);
+    if (!job) return false;
+    const { recipe: r, at } = job;
+    if (!goto(at.centre[0], at.centre[1])) return true;
+    for (const i of r.inputs) for (let n = 0; n < (i.count ?? 1); n++) this.takeOne(game, [i.item], at);
+    const kind = this.species(c).gathers ?? 'mill';
+    const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
+    this.intoStores(game, { uid: game.inventory.nextUid++, id: r.result, ql: this.madeQl(game, c, skill), dmg: 0, count: r.count ?? 1 }, at, at.x, at.y);
+    for (const [id, n] of r.returns ?? []) this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: 40, dmg: 0, count: n }, at, at.x, at.y);
+    this.gainSkill(game, c, GATHER_SKILL[kind], 0.25);
+    this.errandWork(game, c, kind);
+    return true;
+  }
+
+  /** What a lantern post or pillar of yours wants of a wicka, or null: a candle, a light after dark, or putting out by day. */
+  lampWants(game: Game, f: PlacedFurniture): 'candle' | 'light' | 'douse' | null {
+    if (!isLampPiece(f) || !f.lamp) return null;
+    if ((f.fuel ?? 0) <= 0) return 'candle';
+    const night = game.isNight();
+    if (night && !f.lit) return 'light';
+    if (!night && f.lit) return 'douse';
+    return null;
+  }
+
+  /**
+   * Keeping the lanterns: a candle out of the stores into every post and
+   * pillar of yours that has none, each lit once it is dark and put out by
+   * day. The island's `errand_step` and `errand_do`.
+   */
+  private lampStep(
+    game: Game,
+    c: Creature,
+    goto: (x: number, y: number, reach?: number) => boolean,
+    near: (x: number, y: number) => boolean,
+  ): boolean {
+    const holding = c.carrying?.id === 'candle';
+    if (c.carrying && !holding) return false;
+    const candles = holding || !!this.storeWith(game, c, ['candle']);
+    let f: PlacedFurniture | undefined;
+    let bestD = Infinity;
+    for (const x of game.furniture.values()) {
+      if (!near(x.x, x.y) || !game.onDeed(x.x, x.y)) continue;
+      const want = this.lampWants(game, x);
+      if (!want || (want === 'candle' && !candles)) continue;
+      const [fx, fy] = furnitureCentre(x);
+      const d = Math.hypot(fx - c.x, fy - c.y);
+      if (d < bestD) {
+        bestD = d;
+        f = x;
+      }
+    }
+    if (!f) return false;
+    const want = this.lampWants(game, f);
+    if (want === 'candle' && !holding) {
+      const store = this.storeWith(game, c, ['candle']);
+      if (!store) return false;
+      if (!goto(store.centre[0], store.centre[1])) return true;
+      c.carrying = this.takeOne(game, ['candle'], store);
+      return true;
+    }
+    const [fx, fy] = furnitureCentre(f);
+    if (!goto(fx, fy, 1.6)) return true;
+    if (want === 'candle' && f.lamp) {
+      f.fuel = Math.round(candleBurn(f.lamp.ql));
+      f.lit = game.isNight();
+      c.carrying = null;
+    } else if (want === 'light') f.lit = true;
+    else if (want === 'douse') f.lit = false;
+    this.gainSkill(game, c, GATHER_SKILL.lamp, 0.2);
+    game.events.emit('world', f.x, f.y);
+    this.errandWork(game, c, 'lamp');
+    return true;
   }
 
   /**

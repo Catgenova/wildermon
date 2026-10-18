@@ -1,4 +1,5 @@
 export { TRY_LEARN, tryGain } from './learn';
+import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
 import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
@@ -534,14 +535,10 @@ export function needsFlattening(g: Game, x: number, y: number): boolean {
  */
 export const MINE_COLLAPSE = 1 / 30;
 
-/** Bundles of mixed grass a cut gives. */
-export const GRASS_PER_CUT = 2;
-/**
- * Moss a cut of a moss tile gives: as many as a cut of grass gives bundles.
- * Asked for: "make that cuttable like grass into mixed grass, but yielding
- * moss." The island's `moss_per_cut`.
- */
-export const MOSS_PER_CUT = GRASS_PER_CUT;
+/** The ground a cut of grass is taken off: a grazza's as well as yours. */
+export const CUT_GRASS = new Set<number>([TileType.Grass, TileType.Steppe, TileType.Lawn, TileType.Tundra]);
+// What a cut of grass and of moss gives lives in the leaf (`limits.ts`), so a grazza's words can say it.
+export { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 /** Reeds a cut gives, and the foraging at which a third is certain (a third one in this many points of it). */
 export const REED_CUT = 2;
 export const REED_EXTRA_AT = 140;
@@ -3089,7 +3086,7 @@ export const ACTIONS: ActionDef[] = [
     skill: 'foraging',
     stamina: 0.02,
     baseTime: 3,
-    applies: (t, g) => ([TileType.Grass, TileType.Steppe, TileType.Lawn, TileType.Tundra] as TileType[]).includes(tile(t, g)),
+    applies: (t, g) => CUT_GRASS.has(tile(t, g)),
     check: (t, g) => (t.kind === 'tile' && g.isForaged(t.x, t.y, 'grass') ? 'The grass here is still short.' : null),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
