@@ -1,5 +1,5 @@
 import {
-  beat, clamp, coatPalette, curve, cyc, darker, DEG, disc, frac, lerp, lighter, merge, moved, onEgg, orb, orbAlong, paint, pastel, quadBones, quadPose, smile, smooth, taper, TAU, tube,
+  beat, clamp, coatPalette, curve, cyc, DEG, disc, frac, lerp, lighter, merge, moved, onEgg, orb, orbAlong, paint, pastel, quadBones, quadPose, smile, smooth, taper, TAU, tube,
   type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, hoofMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
@@ -7,8 +7,7 @@ import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The wild ones and the workers: the rowl, the grubba, the cobbe and the
- * quarra.
+ * The wild ones and the workers: the rowl, the grubba and the cobbe.
  */
 
 /* ---- what they share ----------------------------------------------------------------- */
@@ -67,13 +66,6 @@ function brought(c0: RGB, grey: number, least: number, rich = 1): RGB {
   let k = 1;
   while (k < 3 && luma(pastel(up(k), grey)) < least) k += 0.02;
   return up(k);
-}
-
-/** The hue of a colour, in degrees round the wheel: for a grey to be painted in its own (`pastel`) rather than in its kind's. */
-function hueOf(c: RGB): number {
-  const [r, g, b] = c, hi = Math.max(r, g, b), d = hi - Math.min(r, g, b);
-  if (!d) return 0;
-  return 60 * (hi === r ? (g - b) / d + (g < b ? 6 : 0) : hi === g ? (b - r) / d + 2 : (r - g) / d + 4);
 }
 
 /** How far over the ground a leg's sole is, at its toe or its heel, whichever is lower, as `quadBones` stands a body on them. */
@@ -483,76 +475,3 @@ export const COBBE: Kind = {
   size: 2.3,
 };
 
-/* ---- the quarra ---------------------------------------------------------------------- */
-
-/**
- * A quarra: a low, broad creature with a jaw like a chisel and a hide the
- * colour of the rock it sits on, laid in plates; a cluster of crystal has
- * grown out of the stone on its back.
- */
-const QUARRA_SPEC = { ...pawed({ high: 1.25, len: 3.2, legs: 0.8, neck: 0.35, lean: 75, swing: [20, 34], ears: [50, 20], tail: [0.4, -18, -4] }), graze: 15, nose: 6, bow: 10 };
-const QUARRA_HEAD = { c: [0, 0.4, 0.05] as V3, r: [1.0, 0.95, 0.8] as V3 };
-/** When in its loop, standing, the crystal on its back brightens, and how long for. */
-const QUARRA_PULSE = { at: [2.5, 10.5, 18.5], len: 1.1 };
-
-function quarraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = QUARRA_HEAD;
-  // Plates of stone down the back and out over the flanks, each a flattened ball tipped forward, overlapping the next like tiles,
-  // dark and pale by turns.
-  const plates = merge(...[-1.4, -0.8, -0.2, 0.4, 1.0].map((y, q) =>
-    orbAlong([0, y, 0.72 - Math.abs(y) * 0.08], [0, 0.8, 1], [1.15 - Math.abs(y) * 0.12, 0.52, 0.22], n, 3, q % 2 ? 'stone' : 'stoneDark')));
-  const crystals = merge(
-    taper([[0, -0.4, 0.8], [0.05, -0.35, 1.55]], 0.22, 0.0, 6, 'crystal'),
-    taper([[0.25, -0.2, 0.78], [0.5, -0.1, 1.25]], 0.16, 0.0, 6, 'crystalDark'),
-    taper([[-0.25, -0.6, 0.76], [-0.5, -0.75, 1.2]], 0.15, 0.0, 6, 'crystal'),
-  );
-  // The chisel of a jaw: broad and flat, carried up at the eyes' height, with two big square front teeth hanging under its lip.
-  const jaw = merge(
-    tube([[0, 0.9, -0.02], [0, 1.57, -0.06]], [0.56, 0.5], [0.32, 0.28], n, 'muzzle'),
-    ...[1, -1].map((s) => tube([[s * 0.11, 1.53, -0.24], [s * 0.11, 1.55, -0.46]], 0.1, 0.06, 4, 'tooth')),
-    orbAlong([0, 1.58, 0.14], [0, 1, 0.3], [0.14, 0.09, 0.1], 5, 3, 'nose'),
-    smile([0, 1.59, -0.16], [0, 1, -0.2], 0.3),
-  );
-  // The tail plated as the back is, each link a flattened plate over the next, and blunt at the end: it drags.
-  const plate = (w0: number, w1: number, len: number, m: Mat): Mesh => taper([[0, 0.05, 0.02], [0, -len, 0]], w0, w1, 6, m, 0.5);
-  const tail = [plate(0.36, 0.3, 0.42, 'stoneDark'), plate(0.3, 0.22, 0.42, 'stone'), merge(plate(0.22, 0.16, 0.34, 'stoneDark'), orb([0, -0.36, 0], [0.16, 0.14, 0.09], 6, 3, 'stoneDark'))];
-  return quadWithEyes({
-    n, k,
-    body: { y: [-1.75, -1.5, -0.8, 0, 0.8, 1.4, 1.7], z: [0.1, 0.12, 0.15, 0.15, 0.15, 0.15, 0.15], w: [0.25, 1.05, 1.25, 1.3, 1.25, 1.1, 0.3], h: [0.25, 0.62, 0.7, 0.72, 0.7, 0.64, 0.25], belly: true },
-    neck: { w: 0.85, h: 0.7, len: 0.35 },
-    head: { c: H.c, r: H.r, face: jaw, eye: { dir: [0.8, 0.5, 0.3], size: 0.32, rim: 0.12 }, blush: [[0.8, 0.48, -0.26], 0.2] },
-    ear: earMesh(0.32, 0.3, n),
-    tail,
-    fore: { upper: [0.3, -0.42, 0.36, 0.3], lower: [0, -0.37, 0.3, 0.28], foot: pawMesh(0.3, n, k, 'stoneDark') },
-    hind: { upper: [0.18, -0.45, 0.33, 0.3], lower: [0, -0.45, 0.3, 0.28], foot: pawMesh(0.3, n, k, 'stoneDark') },
-    extras: [
-      { key: 'plates', mesh: plates, bone: 'trunk', bias: 0.03, after: 'body' },
-      { key: 'crystals', mesh: crystals, bone: 'trunk', bias: 0.05, after: ['body', 'plates'] },
-    ],
-  });
-}
-
-export const QUARRA: Kind = {
-  bones: grazing(QUARRA_SPEC, (p, a) => {
-    trot(p, a);
-    if (a.go > 0) return;
-    // Chewing stone: the jaw working, and now and then a satisfied settle, sinking down onto its legs and tipping its nose up.
-    const settle = beat(a.t, [6.2, 14.8], 1.6);
-    p.head[0] += 3 * Math.sin(a.t * Math.PI * 4) + 5 * settle;
-    p.squash += 0.06 * settle;
-    p.pitch += 5 * settle * (1 - a.graze);
-  }, 35),
-  build: quarraBuild,
-  // Each variant the colour of its own rock -- a granite, a slate, a sandstone, an ironstone -- its greys painted in their own hue,
-  // made a little stronger, rather than all in one blue-grey.
-  palette: (coat, mark) => {
-    const own = hueOf(coat), c = brought(coat, own, 0, 2.6), stone = pastel(c, own);
-    return coatPalette(c, mark, { stone: lighter(stone, 0.35), stoneDark: darker(stone, 0.25), crystal: [210, 186, 246], crystalDark: [170, 150, 226], tooth: [250, 246, 236], nose: [150, 110, 120] }, own);
-  },
-  shadow: [2.1, 1.5],
-  stride: 1.2,
-  size: 1.9,
-  // The crystal's light, brightening three times a loop while it stands.
-  glow: (b, a) => [{ p: place(b.trunk ?? b.body, [0, -0.4, 1.3]), r: 1.3, c: [200, 170, 255], a: 0.22 + 0.28 * (a.go > 0 ? 0 : beat(a.t, QUARRA_PULSE.at, QUARRA_PULSE.len)) }],
-};

@@ -10,7 +10,8 @@ import { SEAVIC, WOOLA } from './wild-small';
 import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
 import { BEVERE, BOGGA, EMBRA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
-import { COBBE, GRUBBA, QUARRA, ROWL } from './wild-wild';
+import { COBBE, GRUBBA, ROWL } from './wild-wild';
+import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
 import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA, WICKA } from './wild-hands';
 import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, SPRIGGA, WURLA } from './wild-hands2';
 import { CHISSA, CORDRA, DIPPA, FLECHA, GLOSSA, MUDDA, PAPRA, RIPPA } from './wild-hands3';
@@ -54,7 +55,7 @@ export const WILDERMON: Record<string, Kind> = {
   rowl: ROWL,
   grubba: GRUBBA,
   cobbe: COBBE,
-  quarra: QUARRA,
+  quarra: CHIPTAIL,
   embra: EMBRA,
   bogga: BOGGA,
   bevere: BEVERE,
@@ -134,6 +135,7 @@ export const WILDERMON: Record<string, Kind> = {
  */
 export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = {
   rabba: [SNUFFROOT, SNUFFTHORN],
+  quarra: [QUARRYBASH, MONOLITHUMP],
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */
