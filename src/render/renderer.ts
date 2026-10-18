@@ -187,7 +187,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawAnvil, drawCampfire, drawCreature, drawKiln, drawPlayer, drawSmelter, facingOf, pileSprite, tokenSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawAnvil, drawCampfire, drawCreature, drawKiln, drawPlayer, drawSmelter, facingOf, lyingSprite, tokenSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -3643,7 +3643,7 @@ export class Renderer {
         }
         if (!cutHere && this.game.ground.size && this.game.groundAt(x, y).length) {
           const avg = (this.game.buildings.pierTiles.size ? this.game.pierDeckAt(x, y) : null) ?? (c[0] + c[1] + c[2] + c[3]) / 4;
-          const pile = this.take('pile', x, y, baseX, baseY + hh - avg * hs, pileSprite());
+          const pile = this.take('pile', x, y, baseX, baseY + hh - avg * hs, lyingSprite(this.game.groundAt(x, y), x, y));
           // A heap shines for the best thing in it: one fantastic hatchet under
           // a hundred rocks is still a fantastic hatchet lying in the grass.
           let best = 0;
@@ -6239,7 +6239,7 @@ export class Renderer {
     const cam = this.camera;
     const pile = g.groundAt(x, y, CELLAR_LEVEL);
     if (pile.length) {
-      const e = this.take('pile', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, floor), pileSprite());
+      const e = this.take('pile', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, floor), lyingSprite(pile, x, y));
       let best = 0;
       for (const it of pile) if ((it.rare ?? 0) > best) best = it.rare ?? 0;
       if (best) e.rare = best;

@@ -37,9 +37,10 @@ interface Snuff {
   /**
    * The head's rings in its own frame, from the back of the skull to the end of the snout: where each is along it and how
    * high, how wide and how deep. The widest are the cheeks; from the eyes on it narrows into the muzzle, and the last three
-   * are the snout, pink. How far its nose is carried up, in degrees.
+   * are the snout, pink. How far its nose is carried up, in degrees; how deep its chin is against the muzzle; and how far out
+   * its jowls are set, against the width of the head.
    */
-  head: { y: number[]; z: number[]; w: number[]; h: number[]; pitch: number };
+  head: { y: number[]; z: number[]; w: number[]; h: number[]; pitch: number; chin: number; jowl: number };
   /** The eyes: how far along the head, how far up its side from level (radians), how big across, and how heavy a ridge of brow is over each (nought for a piglet's smooth brow). */
   eye: { y: number; up: number; size: number; brow: number };
   /** Each ear: its length and width, and how far it is splayed out and laid back (degrees). */
@@ -48,6 +49,11 @@ interface Snuff {
   ruff: Array<[number, number, number]>;
   /** How far the leaves down its sides hang down rather than standing out. */
   hang: number;
+  /**
+   * Whether its bib has a flower each side, turned out to that side, rather than one in the middle facing forward: on a short
+   * bib a middle flower is seen edge on side on, as a few white strokes at the throat.
+   */
+  bibPair: boolean;
   /** Pairs of leaves cascading down the back behind the mane: how many, and the longest. */
   back: [number, number];
   /** Leaves standing up on the crown between the ears: how many, how long, and how wide they are fanned. */
@@ -74,13 +80,14 @@ const SNUFFLET_LOOK: Snuff = {
   len: 2.0, legs: 0.78, thick: 0.26, hoof: 0.15,
   neck: { at: [0, 0.82, 0.2], len: 0.36, w: 0.64, lean: 40 },
   head: {
-    y: [-0.48, -0.3, 0.05, 0.42, 0.68, 0.86, 0.96, 1.1, 1.15], z: [0.38, 0.38, 0.32, 0.22, 0.13, 0.07, 0.06, 0.05, 0.05],
-    w: [0.3, 0.72, 0.86, 0.72, 0.5, 0.36, 0.35, 0.31, 0.26], h: [0.32, 0.8, 0.88, 0.66, 0.46, 0.34, 0.32, 0.29, 0.24], pitch: -2,
+    y: [-0.48, -0.3, 0.05, 0.42, 0.68, 0.86, 0.96, 1.05, 1.1], z: [0.38, 0.38, 0.32, 0.22, 0.13, 0.07, 0.06, 0.05, 0.05],
+    w: [0.3, 0.72, 0.86, 0.72, 0.5, 0.36, 0.35, 0.31, 0.26], h: [0.5, 0.82, 0.88, 0.72, 0.52, 0.34, 0.36, 0.33, 0.28], pitch: -2, chin: 0.6, jowl: 0.44,
   },
   eye: { y: 0.4, up: 0.3, size: 0.16, brow: 0 },
   ear: { len: 1.2, w: 0.5, out: 55, back: 22 },
-  ruff: [[22, 0.82, 14], [22, 0.92, 28], [20, 0.8, 44]],
+  ruff: [[30, 0.54, 14], [30, 0.6, 28], [20, 0.8, 44]],
   hang: 0.3,
+  bibPair: true,
   back: [0, 0],
   crest: [4, 0.5, 1],
   flowers: [1, 1, 0],
@@ -95,18 +102,19 @@ const SNUFFLET_LOOK: Snuff = {
 
 /** A Snuffroot: a young boar, longer in the leg and the body, its head carried higher on a longer muzzle, and the mane swept back over its shoulders. */
 const SNUFFROOT_LOOK: Snuff = {
-  body: { y: [-1.56, -1.36, -0.76, 0, 0.76, 1.3, 1.5], z: [0.16, 0.12, 0.1, 0.1, 0.14, 0.2, 0.22], w: [0.5, 0.86, 1.0, 1.02, 1.04, 0.92, 0.4], h: [0.46, 0.75, 0.86, 0.88, 0.9, 0.84, 0.4] },
+  body: { y: [-1.45, -1.3, -0.76, 0, 0.76, 1.3, 1.5], z: [0.16, 0.12, 0.1, 0.1, 0.14, 0.2, 0.22], w: [0.62, 0.88, 1.0, 1.02, 1.04, 0.92, 0.4], h: [0.6, 0.78, 0.86, 0.88, 0.9, 0.84, 0.4] },
   len: 2.7, legs: 1.35, thick: 0.37, hoof: 0.18,
   neck: { at: [0, 1.22, 0.26], len: 0.46, w: 0.72, lean: 36 },
   head: {
     y: [-0.45, -0.28, 0.05, 0.42, 0.82, 1.18, 1.34, 1.5, 1.55], z: [0.34, 0.32, 0.26, 0.2, 0.1, 0.02, 0.0, -0.01, -0.01],
-    w: [0.28, 0.66, 0.8, 0.64, 0.44, 0.33, 0.32, 0.28, 0.23], h: [0.28, 0.68, 0.74, 0.58, 0.42, 0.31, 0.3, 0.27, 0.22], pitch: 2,
+    w: [0.28, 0.66, 0.8, 0.64, 0.44, 0.33, 0.32, 0.28, 0.23], h: [0.4, 0.7, 0.74, 0.58, 0.42, 0.34, 0.33, 0.3, 0.25], pitch: 2, chin: 0.58, jowl: 0.5,
   },
   eye: { y: 0.44, up: 0.3, size: 0.145, brow: 0.7 },
   ear: { len: 1.5, w: 0.6, out: 55, back: 30 },
   ruff: [[24, 0.82, 14], [24, 0.92, 28], [26, 1.05, 46], [26, 1.1, 50], [24, 1.1, 54]],
   hang: 0.5,
-  back: [0, 0],
+  bibPair: false,
+  back: [4, 0.8],
   crest: [5, 0.62, 1.4],
   flowers: [2, 1, 0],
   tail: 0.55,
@@ -129,12 +137,13 @@ const SNUFFTHORN_LOOK: Snuff = {
   neck: { at: [0, 1.5, 0.5], len: 0.5, w: 0.9, lean: 25 },
   head: {
     y: [-0.5, -0.3, 0.08, 0.5, 0.98, 1.44, 1.66, 1.86, 1.92], z: [0.36, 0.32, 0.24, 0.16, 0.04, -0.06, -0.08, -0.09, -0.09],
-    w: [0.32, 0.76, 0.9, 0.72, 0.52, 0.4, 0.4, 0.35, 0.29], h: [0.32, 0.8, 0.86, 0.7, 0.54, 0.44, 0.39, 0.35, 0.29], pitch: 8,
+    w: [0.32, 0.76, 0.9, 0.72, 0.52, 0.4, 0.4, 0.35, 0.29], h: [0.32, 0.8, 0.86, 0.7, 0.54, 0.44, 0.39, 0.35, 0.29], pitch: 8, chin: 0.42, jowl: 0.5,
   },
   eye: { y: 0.5, up: 0.3, size: 0.14, brow: 1 },
   ear: { len: 1.9, w: 0.72, out: 55, back: 30 },
   ruff: [[28, 0.95, 14], [28, 1.05, 26], [26, 1.1, 46], [26, 1.2, 50], [24, 1.3, 52], [24, 1.3, 55], [22, 1.25, 58]],
   hang: 0.7,
+  bibPair: false,
   back: [6, 1.1],
   crest: [5, 0.78, 2.2],
   flowers: [3, 1, 2],
@@ -581,8 +590,9 @@ function maneFlowers(s: Snuff): Frond[] {
 
 /**
  * A bib of leaves at the throat, pointing forward and down over the top of
- * the chest under the chin, with a flower at the middle of it: in the mane's
- * front frame, at the neck's root, so it goes down with the head.
+ * the chest under the chin, with a flower at the middle of it or one at
+ * each side (`Snuff.bibPair`): in the mane's front frame, at the neck's
+ * root, so it goes down with the head.
  */
 function bibOf(s: Snuff, K: number): Frond[] {
   const lean = s.neck.lean * DEG, L = s.ruff[0][1] * 1.2, R = s.neck.w;
@@ -598,7 +608,12 @@ function bibOf(s: Snuff, K: number): Frond[] {
     }
   }
   const at = scale(v, R * 1.15);
-  out.push({ mesh: flower(add(at, [0.08, 0.05, -0.05]), add(v, [0.1, 0.3, 0.3]), 0.28, 0.4), out: v, bloom: true });
+  if (s.bibPair) {
+    for (const sd of [1, -1]) {
+      const side = add(scale(v, 0.75), [sd * 0.66, 0, 0]);
+      out.push({ mesh: flower(add(scale(side, R * 1.1), [0, 0.04, 0.02]), add(side, [0, 0.15, 0.2]), 0.24, sd * 0.4), out: side, bloom: true });
+    }
+  } else out.push({ mesh: flower(add(at, [0.08, 0.05, -0.05]), add(v, [0.1, 0.3, 0.3]), 0.28, 0.4), out: v, bloom: true });
   return out;
 }
 
@@ -696,8 +711,8 @@ function headOf(s: Snuff, n: number, k: number, shut: boolean): Mesh {
     ...[1, -1].map((sd) => disc(add(end, [sd * er * 0.38, 0.01, 0]), [0, 1, 0], er * 0.16, eh * 0.32, 6, 'pad')),
   ]);
   // Jowls low at the back of the head, a little wider than the skull, and a small chin under the muzzle.
-  const jowls = merge(...[1, -1].map((sd) => orb([sd * H.w[2] * 0.5, H.y[2] + 0.04, H.z[2] - H.h[2] * 0.38], [H.w[2] * 0.56, (H.y[3] - H.y[1]) * 0.42, H.h[2] * 0.52], n, k, 'coat')));
-  const chin = orb([0, lerp(H.y[4], H.y[5], 0.5), H.z[5] - H.h[5] * 0.7], [H.w[5] * 0.62, (H.y[6] - H.y[4]) * 0.4, H.h[5] * 0.42], n, k, 'coat');
+  const jowls = merge(...[1, -1].map((sd) => orb([sd * H.w[2] * H.jowl, H.y[2] + 0.04, H.z[2] - H.h[2] * 0.38], [H.w[2] * 0.56, (H.y[3] - H.y[1]) * 0.42, H.h[2] * 0.52], n, k, 'coat')));
+  const chin = orb([0, lerp(H.y[4], H.y[5], 0.5), H.z[5] - H.h[5] * 0.7], [H.w[5] * 0.62, (H.y[6] - H.y[4]) * 0.45, H.h[5] * H.chin], n, k, 'coat');
   // A ridge over each eye, along the slope of the brow, the heavier the older it is; a piglet's brow is smooth.
   const E = s.eye;
   const brows = E.brow > 0 && merge(...[1, -1].map((sd) => {

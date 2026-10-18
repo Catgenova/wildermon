@@ -60,7 +60,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { abilityName, abilitySays, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, STYLE_SAYS } from '../../game/creatures';
+import { abilityName, abilitySays, EVOLVE_AT, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, stageSays, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2363,6 +2363,21 @@ export const NEWS: News[] = [
       ...Object.values(SPECIES).filter((d) => d.learns)
         .map((d) => `${d.name}: learns ${SKILL_BY_ID.get(d.learns!.skill)?.name.toLowerCase() ?? d.learns!.skill} ${LEARNS_SAYS[d.learns!.by]}.`),
     ],
+  },
+  {
+    n: 179,
+    day: '2026-10-18',
+    lines: () => {
+      const d = SPECIES.rabba;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into a ${one.name} at level ${EVOLVE_AT[0]} and a ${two.name} at level ${EVOLVE_AT[1]}.`,
+        `A ${one.name} has ${stageSays(1)} than a ${d.name}; a ${two.name}, ${stageSays(2)}.`,
+        'Each of the three is a new model, with its own walk, strike, rooting and voice, and evolving is seen and heard.',
+        `A ${d.was![0]} carcass from before still butchers as a ${d.name}.`,
+        'A carcass on the ground is drawn as a heap of hide and bones rather than a sack.',
+      ];
+    },
   },
 ];
 
