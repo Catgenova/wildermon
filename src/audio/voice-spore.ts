@@ -1,5 +1,5 @@
 import { ACT_SECS } from '../render/beasts';
-import { BERRY_FLIGHT, SPORE_HITS, SPORE_WORK } from '../render/wild-spore';
+import { BERRY_FLIGHT, berryLand, SPORE_HITS, SPORE_WORK } from '../render/wild-spore';
 import { burst, ring } from './kit';
 import type { Voice } from './voices';
 
@@ -83,14 +83,18 @@ function chitter(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, 
   }
 }
 
-/** The Sporelord's hum: a low, closed-mouthed "hmm-mm" round 130 Hz, rising and settling, with a slow waver in it. */
-function hum(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, k: number, len = 0.5): void {
-  const f = 128 + 10 * v;
-  voiced(ctx, dest, at, { f: [f * 0.94, f * 1.1, f * 1.04, f * 0.92], dur: len, gain: 0.34 * k, type: 'sawtooth', cut: 620, vib: [5, 3] });
-  voiced(ctx, dest, at, { f: [f * 1.88, f * 2.2, f * 2.08, f * 1.84], dur: len, gain: 0.08 * k, type: 'sine', cut: 1200 });
+/**
+ * The Sporelord's hoot: the same small creature's voice as its chirp and its chitter, grown and slowed -- a soft, round "hoo-hm"
+ * between 330 and 420 Hz, rising and settling as the chirp does, with a slow waver in it and a quiet low tone under it for its
+ * size.
+ */
+function hum(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, k: number, len = 0.4): void {
+  const f = 360 + 20 * v;
+  voiced(ctx, dest, at, { f: [f * 0.94, f * 1.16, f * 1.06, f * 0.92], dur: len, gain: 0.32 * k, type: 'triangle', cut: 1800, vib: [6, 6] });
+  voiced(ctx, dest, at + 0.02, { f: [130, 136, 128], dur: len * 0.9, gain: 0.1 * k, type: 'sine', cut: 600 });
 }
 
-/** Its own sound, by stage: the chirp, the chitter or the hum. */
+/** Its own sound, by stage: the chirp, the chitter or the hoot. */
 function call(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number, k: number): void {
   if (stage <= 0) chirp(ctx, dest, at, v, k);
   else if (stage === 1) chitter(ctx, dest, at, v, k);
@@ -146,13 +150,13 @@ const found = (ctx: BaseAudioContext, dest: AudioNode, at: number, key: number, 
 
 /** A stalk snapped: a short bright snip and a tiny pitched tick. */
 function snip(ctx: BaseAudioContext, dest: AudioNode, at: number, key: number, k: number): void {
-  burst(ctx, dest, at, { dur: 0.045, freq: 4400 * key, q: 3, gain: 0.3 * k, attack: RISE });
+  burst(ctx, dest, at, { dur: 0.045, freq: 4400 * key, q: 3, gain: 0.2 * k, attack: RISE });
   ring(ctx, dest, at, { freq: 1700 * key, to: 1200 * key, dur: 0.05, gain: 0.12 * k, type: 'triangle', attack: RISE });
 }
 
-/** A herb let fall into the basket: the wicker creaking under it, a run of small dry clicks, and the soft drop of it. */
-function wicker(ctx: BaseAudioContext, dest: AudioNode, at: number, key: number, v: number, k: number): void {
-  burst(ctx, dest, at, { dur: 0.09, freq: 420 * key, to: 220, q: 0.8, gain: 0.26 * k, type: 'lowpass', attack: RISE });
+/** A herb let fall into the basket: the wicker creaking under it, a run of small dry clicks, and the soft drop of it; deeper and longer in a bigger basket. */
+function wicker(ctx: BaseAudioContext, dest: AudioNode, at: number, key: number, v: number, k: number, big = false): void {
+  burst(ctx, dest, at, { dur: big ? 0.14 : 0.09, freq: (big ? 260 : 420) * key, to: big ? 140 : 220, q: 0.8, gain: 0.26 * k, type: 'lowpass', attack: RISE });
   for (let q = 0; q < 6; q++) {
     burst(ctx, dest, at + 0.03 + q * (0.022 + 0.004 * Math.sin(q + v * 3)), { dur: 0.03, freq: (1500 + 260 * (q % 3)) * key, q: 4, gain: 0.12 * k * (1 - 0.1 * q), attack: RISE });
   }
@@ -169,11 +173,11 @@ function munch(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, k:
  * A strike. The Sporeling chirps as it crouches and bonks with its cap, a
  * soft boing and a puff of spores. The Sporekin chitters as it winds back, its
  * sprig whooshes round, and its berries come down in a patter of little pops.
- * The Sporelord hums as it raises its staff, knocks it down on the ground with
+ * The Sporelord hoots as it raises its staff, knocks it down on the ground with
  * a deep woody thud, and the spores go up off it in a long whoosh.
  */
 const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [0.8, 1.5, 0.95][s]);
+  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [0.48, 1.5, 0.95][s]);
   const hit = at + SPORE_HITS[s] * ACT_SECS.strike;
   if (s === 0) {
     chirp(ctx, out, at + 0.04, v, 0.55, 1.5);
@@ -185,12 +189,8 @@ const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
     whoosh(ctx, out, hit - 0.14, 0.2, b.key, 1);
     rustle(ctx, out, hit, 0.12, b.key, v, 0.7);
     // The berries landing, each where its picture comes down (`strikeBurst`): spread a little either side of the flight.
-    const land = BERRY_FLIGHT * ACT_SECS.strike;
-    for (let q = 0; q < 5; q++) {
-      const when = hit + land * (0.86 + 0.28 * ((q * 0.618) % 1));
-      plink(ctx, out, when, (1500 - 140 * q) * b.key * (0.97 + 0.06 * v), 1 - 0.08 * q);
-    }
-    puff(ctx, out, hit + land, b.key, 0.6);
+    for (let q = 0; q < 5; q++) plink(ctx, out, hit + berryLand(q) * ACT_SECS.strike, (1500 - 140 * q) * b.key * (0.97 + 0.06 * v), 1 - 0.08 * q);
+    puff(ctx, out, hit + BERRY_FLIGHT * ACT_SECS.strike, b.key, 0.6);
     return;
   }
   hum(ctx, out, at + 0.02, v, 0.55, 0.26);
@@ -209,7 +209,7 @@ const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
  * basket and the creak of the wicker. All inside the second a go takes.
  */
 const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [1.9, 2.5, 2.5][s]);
+  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [2.3, 3.1, 2.4][s]);
   const W = SPORE_WORK, go = ACT_SECS.work;
   rustle(ctx, out, at + 0.12 * go, (W.reach - 0.1) * go, b.key, v, 0.8);
   const pluck = at + W.pluck * go;
@@ -217,12 +217,16 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
   found(ctx, out, pluck + 0.04, b.key, 1);
   rustle(ctx, out, pluck + 0.02, 0.14, b.key, v, 0.6);
   const drop = at + W.drop * go;
+  // Then its own small pleased sound, each stage its own voice, all over before the go ends.
   if (s === 0) {
     munch(ctx, out, drop, v, 1);
-    chirp(ctx, out, drop + 0.3, v, 0.35, 1.2);
+    chirp(ctx, out, drop + 0.18, v, 0.3, 1.2);
   } else {
     // The herb lands in the basket a tenth of a second after it is let go (`workSpray`).
-    wicker(ctx, out, drop + 0.1, b.key, v, 1);
+    wicker(ctx, out, drop + 0.1, b.key, v, 1, s === 2);
+    if (s === 1) {
+      for (let q = 0; q < 2; q++) voiced(ctx, out, drop + 0.17 + q * 0.06, { f: [1150, 1350, 1200], dur: 0.05, gain: 0.08, type: 'triangle', cut: 4800, vib: [40, 50] });
+    } else hum(ctx, out, drop + 0.08, v, 0.25, 0.22);
   }
 };
 
