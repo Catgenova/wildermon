@@ -60,7 +60,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { abilityName, abilitySays, GATHER_DO, GATHER_VERB, GRAZE_FILL, STYLE_SAYS } from '../../game/creatures';
+import { abilityName, abilitySays, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2353,6 +2353,15 @@ export const NEWS: News[] = [
       ...ABLE_NEWS
         .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}), ${abilityName(SPECIES[id].ability!)}: ${abilitySays(SPECIES[id].ability!)}.`),
       'In a game of your own, a skin over you now takes the blows that come at you, as it does on an island.',
+    ],
+  },
+  {
+    n: 178,
+    day: '2026-10-18',
+    lines: () => [
+      'A wildermon\'s level is its skill now, to the whole number below, where it was one more than a fifth of it.',
+      ...Object.values(SPECIES).filter((d) => d.learns)
+        .map((d) => `${d.name}: learns ${SKILL_BY_ID.get(d.learns!.skill)?.name.toLowerCase() ?? d.learns!.skill} ${LEARNS_SAYS[d.learns!.by]}.`),
     ],
   },
 ];

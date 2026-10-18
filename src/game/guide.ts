@@ -35,7 +35,7 @@ import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
   GATHER_DO, GATHER_SKILL, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
-  PULL_DEFAULT, RANGE_PER_STEP, SKILL_STEP, SPECIES, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
+  LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, SKILL_STEP, SPECIES, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
@@ -282,6 +282,7 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
   }
   if (def.pannier) lines.push(`${solo}${solo ? 'carries' : 'Carries'} ${def.pannier} things in panniers on its own back`);
   if (def.sight) lines.push(`Sees ${def.sight} tiles for you, where most see ${KEPT_EYES}`);
+  if (def.learns) lines.push(`Learns ${SKILL_BY_ID.get(def.learns.skill)?.name.toLowerCase() ?? def.learns.skill}, which is its level, ${LEARNS_SAYS[def.learns.by]}`);
   if (def.unruly) lines.push(`${solo}${solo ? 'rounds' : 'Rounds'} on whoever stands beside it: ${percent(def.unruly)} odds every ${spanWords(NIP_EVERY)}`);
   return lines;
 }

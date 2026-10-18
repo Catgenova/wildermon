@@ -3115,6 +3115,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/abilities.mjs --log-level=error
           node node_modules/.cache/abilities.mjs
 
+      - name: A skill for every wildermon, and its level is that skill
+        run: |
+          # A kind with no trade and no traces learns one of its own by what
+          # it does -- sheared, plucked or milked, sparred with, out with you,
+          # out after dark -- and every wildermon's level is its skill.
+          npx esbuild supabase/test/ownskill.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/ownskill.mjs --log-level=error
+          node node_modules/.cache/ownskill.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

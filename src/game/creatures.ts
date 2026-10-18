@@ -485,7 +485,28 @@ export interface SpeciesDef {
   style?: FightStyle;
   /** What one of yours does in a fight once every so often instead of a blow (`AbilityId`). */
   ability?: AbilityId;
+  /** For a kind with no trade and no traces, the skill it learns and what teaches it (`LearnsBy`). */
+  learns?: { skill: string; by: LearnsBy };
 }
+
+/**
+ * What teaches a wildermon with no trade and no traces its one skill, which is its level: being sheared, plucked or
+ * milked (`tended`); a spar swing of yours landing on it (`spar`); being out -- at your heel or keeping a settlement --
+ * for every `OUT_EVERY` of it (`out`), or for every `OUT_EVERY` of it after dark (`dark`). Asked for: "Give skill-less
+ * wildermon a skill that levels as they complete tasks". The island's `beast_learns`.
+ */
+export type LearnsBy = 'tended' | 'spar' | 'out' | 'dark';
+/** Seconds of being out that count as one go at its task, for a kind that learns by being out. */
+export const OUT_EVERY = 30;
+/** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, and a spell of being out. */
+export const LEARNS_GAIN: Record<LearnsBy, number> = { tended: 0.3, spar: 0.05, out: 0.2, dark: 0.2 };
+/** What a kind that learns its own skill does to learn it, for its card and the help. */
+export const LEARNS_SAYS: Record<LearnsBy, string> = {
+  tended: 'each time it is sheared, plucked or milked',
+  spar: 'each time a spar swing of yours lands on it',
+  out: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement`,
+  dark: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement after dark`,
+};
 
 /**
  * How a wildermon of yours fights, wherever its blows land on another creature
@@ -800,6 +821,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     tameFail: 'eats the {food} without appearing to notice you at all',
     leaves: 'wanders off grazing and does not look back',
     fleece: 1 / 900,
+    learns: { skill: 'animal_husbandry', by: 'tended' },
   },
   ulva: {
     id: 'ulva',
@@ -2201,6 +2223,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     leaves: 'bounces off with its fists still up',
     wound: 'crush',
     style: 'spar',
+    learns: { skill: 'fighting', by: 'spar' },
   },
   lungra: {
     id: 'lungra',
@@ -2689,6 +2712,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     leaves: 'ambles away at exactly the pace it does everything else',
     defensive: true,
     pannier: 200,
+    learns: { skill: 'body_strength', by: 'out' },
   },
   gorral: {
     id: 'gorral',
@@ -2810,6 +2834,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     leaves: 'lifts, circles once to see everything, and is a speck',
     defensive: true,
     sight: 18,
+    learns: { skill: 'awareness', by: 'out' },
   },
   quill: {
     id: 'quill',
@@ -2837,6 +2862,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     leaves: 'runs off with its neck out, going faster than looks possible',
     fleece: 1 / 700,
     shearYield: 'feather',
+    learns: { skill: 'animal_husbandry', by: 'tended' },
   },
   cudda: {
     id: 'cudda',
@@ -2864,6 +2890,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     leaves: 'walks to the far side of the field and carries on chewing',
     fleece: 1 / 600,
     milk: true,
+    learns: { skill: 'animal_husbandry', by: 'tended' },
   },
   vesp: {
     id: 'vesp',
@@ -2945,6 +2972,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     leaves: 'goes out like a blown candle and is not there when the light comes back',
     glow: 8,
     nocturnal: true,
+    learns: { skill: 'awareness', by: 'dark' },
   },
 
   // ---- The things that are not wildermon ----
@@ -3372,6 +3400,8 @@ export const siteRange = (c: Creature, species: SpeciesDef, site: WorkSite): num
 const startSkills = (species: SpeciesDef): Record<string, number> => {
   const id = workSkill(species);
   const skills: Record<string, number> = id ? { [id]: 1 } : {};
+  // A kind with no trade learns its own (`LearnsBy`).
+  if (species.learns) skills[species.learns.skill] = 1;
   // A beast bred to pull starts knowing nothing about hills and learns in the
   // traces, which is what decides the pace of everything it is put in front of.
   if (species.draught) skills[HAUL_SKILL] = 1;
@@ -4780,6 +4810,10 @@ export class Creatures {
       // and whether its dam is out working or standing at the token.
       if (c.due > 0 && game.time >= c.due) this.giveBirth(game, c);
       if (c.mode === 'stored') continue;
+      // A kind that learns by being out, a go for every `OUT_EVERY` of it (after dark, for one that learns in the dark).
+      const learns = this.species(c).learns;
+      if (learns && (c.mode === 'active' || c.mode === 'deed') && (learns.by === 'out' || (learns.by === 'dark' && game.isNight()))
+        && game.rand() < dt / OUT_EVERY) this.learnBy(game, c, learns.by);
       const tier = this.tierOf(game, c, px, py);
       this.ticked[tier]++;
       let step = dt;
@@ -6366,6 +6400,7 @@ export class Creatures {
         this.intoStores(game, { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: n }, null, x, y);
       }
       o.fleece = 0;
+      this.learnBy(game, o, 'tended');
       this.gainSkill(game, c, GATHER_SKILL.dairy, 0.25);
     } else {
       // A dressing's share of a life, at its first aid and the dressing's quality (`healAmount`), and the bleeding stopped.
@@ -7051,6 +7086,12 @@ export class Creatures {
     if (c.traits.some((t) => traitTier(t) === 'fantastic')) game.note('fantasticblood');
     game.events.emit('creature');
     return c;
+  }
+
+  /** A go at its own task, for a kind that learns its own skill this way (`LearnsBy`). The island's `beast_learns`. */
+  learnBy(game: Game, c: Creature, by: LearnsBy): void {
+    const l = this.species(c).learns;
+    if (l && l.by === by && c.mode !== 'wild') this.gainSkill(game, c, l.skill, LEARNS_GAIN[by]);
   }
 
   /** Same diminishing curve as the player's skills. */

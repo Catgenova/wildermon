@@ -375,6 +375,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const ql = Math.max(1, Math.min(100, 15 + c.fleece * 45 + g.skills.get('tailoring') * 0.4));
       const wool = g.gather(yields, { count: n, ql });
       c.fleece = 0;
+      g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('tailoring', 0.4);
       g.gainSkill('taming', 0.1);
       g.logMsg(`You ${yields === 'wool' ? 'shear' : 'pluck'} ${c.name} and come away with ${n} ${itemDef(yields).name.toLowerCase()}. (QL ${wool.ql.toFixed(1)}) It will grow back.`, 'event');
@@ -631,6 +632,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
           // Sparring: no lower than it yields at, and nothing else besides. The island's `perform_fight`.
           c.health = Math.max(sparFloor(c), c.health - dmg);
           c.attackedAt = g.time;
+          g.creatures.learnBy(g, c, 'spar');
           if (item) g.damageItem(item, 0.35 * g.perk('worn:weapon', 1));
           g.logMsg(sparSaid(c), 'fight');
           return !yielded(c) && Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
@@ -826,6 +828,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
           g.inventory.add(MILK_PART, { ql: made }).charges = now;
         }
         c.fleece = 0;
+        g.creatures.learnBy(g, c, 'tended');
         g.gainSkill('farming', 0.3);
         g.logMsg(milkedSays(c.name, now, made), 'event');
         return;
@@ -841,6 +844,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.inventory.add('milk_bucket', { ql });
       }
       c.fleece = 0;
+      g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('farming', 0.3);
       g.logMsg(milkedSays(c.name, litres, ql, !!spare), 'event');
     },
