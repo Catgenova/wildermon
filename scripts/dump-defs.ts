@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BLOW_SHARE, BREED_REST, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, SPAR_SLACK, SPAR_YIELD, WARD_SKIN } from '../src/game/creatures';
+import { BLOW_SHARE, BREED_REST, EVOLVE_AT, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -538,6 +538,8 @@ out.push(`alter table species_def add column if not exists ability text;`);
 /* For a kind with no trade and no traces, the skill it learns and what teaches it (\`LearnsBy\`). */
 out.push(`alter table species_def add column if not exists learns text;`);
 out.push(`alter table species_def add column if not exists learns_by text;`);
+/* What a kind that evolves is called at each stage after its first (\`SpeciesDef.stages\`). */
+out.push(`alter table species_def add column if not exists stages text[];`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1275,6 +1277,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (d.ability) out.push(`update species_def set ability = ${q(d.ability)} where id = ${q(d.id)};`);
   const learns = (d as unknown as { learns?: { skill: string; by: string } }).learns;
   if (learns) out.push(`update species_def set learns = ${q(learns.skill)}, learns_by = ${q(learns.by)} where id = ${q(d.id)};`);
+  const stages = (d as unknown as { stages?: Array<{ name: string }> }).stages;
+  if (stages) out.push(`update species_def set stages = array[${stages.map((x) => q(x.name)).join(', ')}]::text[] where id = ${q(d.id)};`);
   for (const item of d.diet as string[]) out.push(`insert into species_diet values (${q(d.id)}, ${q(item)});`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
@@ -1591,6 +1595,10 @@ for (const [fn, v] of [
   /* A kind that learns its own skill: the seconds of being out that are one go at it, and what each kind of go teaches. */
   ['out_every', OUT_EVERY], ['learns_gain_tended', LEARNS_GAIN.tended], ['learns_gain_spar', LEARNS_GAIN.spar],
   ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark],
+  /* Evolving: the levels a kind that evolves does so at, and what each stage multiplies over the one before. */
+  ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]],
+  ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],
+  ['stage_mul_speed', STAGE_MUL.speed ?? 1], ['stage_mul_work', STAGE_MUL.work ?? 1],
   /* A companion's orders: how near a guarding one keeps a fight, and how long one fallen back starts none. */
   ['guard_range', GUARD_RANGE], ['fall_back', FALL_BACK],
   /* Wounds that slow a swing, and how far; a blow at your back, a crowd on

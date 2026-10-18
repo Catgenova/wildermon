@@ -201,6 +201,7 @@ alter table species_def add column if not exists style text;
 alter table species_def add column if not exists ability text;
 alter table species_def add column if not exists learns text;
 alter table species_def add column if not exists learns_by text;
+alter table species_def add column if not exists stages text[];
 alter table furniture_def add column if not exists cart boolean not null default false;
 create table if not exists vehicle_def (
   id text primary key, yokes int not null, needs int not null, seat real not null
@@ -2136,7 +2137,8 @@ insert into look_option values ('trousers', 'verdigris', 12, 'Verdigris', '#4b7a
 insert into look_option values ('trousers', 'woad', 13, 'Woad blue', '#3d5f9c', false);
 insert into look_option values ('trousers', 'slate', 14, 'Slate', '#48525c', false);
 insert into look_option values ('trousers', 'charcoal', 15, 'Charcoal', '#2f2d2b', false);
-insert into species_def values ('rabba', 'Rabba', 'A plump, long-eared grazer with a twitching nose. Skittish, but it cannot resist a berry.', 20, 3, 2.2, 1, 0.12, 'a berry or vegetable', true, 'forage', 8, 'nibbles the {food}, twitches its nose, and hops off unconvinced', 'bounds off into the wild', 4, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null, null, null);
+insert into species_def values ('rabba', 'Snufflet', 'Set to work on a settlement it forages within 8 tiles of the token, 10 further for every 10 levels, and brings what it finds to the crate. Its level is its foraging. At level 25 it evolves into a Snuffroot.', 20, 3, 2.2, 1, 0.12, 'a berry or vegetable', true, 'forage', 8, 'nibbles the {food}, twitches its nose, and hops off unconvinced', 'bounds off into the wild', 4, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null, null, null);
+update species_def set stages = array['Snuffroot', 'Snuffthorn']::text[] where id = 'rabba';
 insert into species_diet values ('rabba', 'blueberry');
 insert into species_diet values ('rabba', 'raspberry');
 insert into species_diet values ('rabba', 'strawberry');
@@ -5114,6 +5116,12 @@ create or replace function learns_gain_tended() returns double precision languag
 create or replace function learns_gain_spar() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;
 create or replace function learns_gain_out() returns double precision language sql immutable as $fn$ select 0.2::double precision $fn$;
 create or replace function learns_gain_dark() returns double precision language sql immutable as $fn$ select 0.2::double precision $fn$;
+create or replace function evolve_at_1() returns double precision language sql immutable as $fn$ select 25::double precision $fn$;
+create or replace function evolve_at_2() returns double precision language sql immutable as $fn$ select 50::double precision $fn$;
+create or replace function stage_mul_hardy() returns double precision language sql immutable as $fn$ select 1.2::double precision $fn$;
+create or replace function stage_mul_tough() returns double precision language sql immutable as $fn$ select 1.2::double precision $fn$;
+create or replace function stage_mul_speed() returns double precision language sql immutable as $fn$ select 1.2::double precision $fn$;
+create or replace function stage_mul_work() returns double precision language sql immutable as $fn$ select 1.15::double precision $fn$;
 create or replace function guard_range() returns double precision language sql immutable as $fn$ select 4::double precision $fn$;
 create or replace function fall_back() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
 create or replace function arm_slow() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;

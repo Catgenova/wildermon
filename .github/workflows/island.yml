@@ -3124,6 +3124,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/ownskill.mjs --log-level=error
           node node_modules/.cache/ownskill.mjs
 
+      - name: Wildermon evolve at 25 and 50
+        run: |
+          # A kind that evolves is its second stage from the first level and
+          # its third from the second, each multiplying its health, blow,
+          # pace and task over the last; the Snufflet, which was the Rabba,
+          # first. The same on both sides.
+          npx esbuild supabase/test/evolve.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/evolve.mjs --log-level=error
+          node node_modules/.cache/evolve.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

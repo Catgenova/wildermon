@@ -1,6 +1,6 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
+import { CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
 import { TIER_LEVEL } from '../../game/husbandry';
 
@@ -240,7 +240,7 @@ export class WildermonPanel {
     const owned = this.game.creatures.yours();
     const shown = owned.filter((c) => this.matches(c) && (!this.attention || this.wants(c)));
     if (!owned.length) {
-      this.place([this.note('none', 'You have no tamed wildermon yet. Carry a berry for a Rabba or a spice for a Vola, then try Tame on a wild one.')]);
+      this.place([this.note('none', 'You have no tamed wildermon yet. Carry a berry for a Snufflet or a spice for a Vola, then try Tame on a wild one.')]);
       this.footer.replaceChildren();
       this.footerKey = '';
       return;
@@ -440,8 +440,8 @@ export class WildermonPanel {
     const refresh = (c: Creature): void => {
       cur = c;
       const def = SPECIES[c.species] ?? SPECIES.rabba;
-      set(name, `${SEX_MARK[c.sex]} ${c.name}${c.name !== def.name ? ` · ${def.name}` : ''}`,
-        `${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}`);
+      set(name, `${SEX_MARK[c.sex]} ${c.name}${c.name !== kindName(c) ? ` · ${kindName(c)}` : ''}`,
+        `${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}`);
       // "Rare · half again the size of its kind · +20% speed, …": the first two parts are what it is.
       const [what = '', size = '', ...gives] = rarityLine(c).split(' · ');
       const named = size ? `${what} · ${size}` : what;

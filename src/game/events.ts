@@ -5,6 +5,9 @@
  */
 export type LogKind = 'info' | 'event' | 'skill' | 'error' | 'chat' | 'system' | 'fight';
 
+/** What a wildermon did, for its moves, its light and its voice. */
+export type BeastAct = 'strike' | 'work' | 'cast' | 'evolve';
+
 export interface LogEntry {
   time: number;
   text: string;
@@ -103,6 +106,13 @@ export type GameEvents = {
    * happened in words, this says where to write it.
    */
   hit: [x: number, y: number, amount: number, kind: 'dealt' | 'taken' | 'crit'];
+  /** A wildermon reached the level a stage begins at and became the next of its kind (`EVOLVE_AT`). */
+  evolve: [id: number, stage: number];
+  /**
+   * A wildermon did what it does: struck, finished a go at its task, or used its ability. Carried so the renderer can
+   * play its moves and its light, and the ear its voice, without either looking for what changed.
+   */
+  beast: [id: number, act: BeastAct];
   /**
    * A turn of work landed somewhere: a swing of the pickaxe, a pass of the
    * file, one of a hundred repetitions. Carried so the renderer can show the

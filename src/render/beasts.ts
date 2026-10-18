@@ -3,6 +3,7 @@ import {
   type Face, type Mat, type Mesh, type Palette, type Part, type RGB, type V3, type View, type Xf,
 } from './figure';
 import { UNITS_PER_TILE } from './iso';
+import type { BeastAct } from '../game/events';
 
 /**
  * Wildermon, as low-poly bodies.
@@ -396,6 +397,28 @@ export interface Anim {
   fleece: number;
   /** A number of its own, for all the things a herd should not do at once. */
   seed: number;
+  /**
+   * What it is doing this moment, and how far through it, nought to one: a strike, a go at its task, its ability, or
+   * evolving (`BeastAct`). Missing while it does none of them, which is how every kind that has no move for them is
+   * drawn; a kind that has its moves poses them in `bones` and lights them in `glow` and `extra`.
+   */
+  act?: { kind: BeastAct; t: number };
+}
+
+/** How long each act takes to play through, in seconds. */
+export const ACT_SECS: Record<BeastAct, number> = { strike: 0.55, work: 1.1, cast: 0.9, evolve: 1.8 };
+
+/**
+ * What a creature is doing this moment and how far through it: the last thing it did while that plays, or else, while
+ * it is at its task on a tile, the go at it played over and over.
+ */
+export function actOf(c: { act?: BeastAct; actAt?: number; state?: string }, now: number): { kind: BeastAct; t: number } | undefined {
+  if (c.act && c.actAt !== undefined) {
+    const t = (now - c.actAt) / ACT_SECS[c.act];
+    if (t >= 0 && t < 1) return { kind: c.act, t };
+  }
+  if (c.state === 'forage') return { kind: 'work', t: frac(now / ACT_SECS.work) };
+  return undefined;
 }
 
 /**
@@ -432,6 +455,11 @@ export interface Kind {
   glow?(b: Bones, a: Anim): Array<{ p: V3; r: number; c: RGB; a: number }>;
   /** Drawn by hand over or under the body, for what is not a mesh: a swarm, a flicker. */
   extra?(g: CanvasRenderingContext2D, view: View, b: Bones, a: Anim, under: boolean): void;
+  /**
+   * The acts it has moves for (`Anim.act`), posed in `bones` and lit in `glow` and `extra`. Only these are drawn as they
+   * happen, frame by frame; every other moment it is kept as pictures. Evolving is drawn for every kind.
+   */
+  acts?: readonly BeastAct[];
 }
 
 /* ---- motion ---------------------------------------------------------------------- */
@@ -1073,6 +1101,8 @@ export interface BeastPose {
   graze?: boolean;
   /** How rare it is, a step (`RARITIES`): a rare one shines, and is drawn afresh every frame for its light to move. */
   rare?: number;
+  /** What it is doing this moment, and how far through it (`Anim.act`): drawn afresh every frame while it does it. */
+  act?: { kind: BeastAct; t: number };
 }
 
 /** How long a turn of an eighth takes, and how fast a body gets going or settles, per second. */
@@ -1174,7 +1204,7 @@ export function animOf(kind: Kind, p: BeastPose, now: number, go: number, graze:
   return {
     t, u: p.phase * strideRate(kind, go > 0 ? (p.gait ?? 0) : 0), go, gait: go > 0 ? (p.gait ?? 0) : 0, graze, blink: blinking(kind, t),
     breath: (0.5 + 0.5 * cyc(t, 7)) * (1 - go) + 0.5 * go,
-    fleece: p.fleece ?? 1, seed,
+    fleece: p.fleece ?? 1, seed, act: p.act,
   };
 }
 
@@ -1297,13 +1327,21 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     return [off * ey[0] * zoom, off * ey[1] * zoom];
   };
   // Turning, getting going or settling, or rare, its light crossing it: drawn for itself, as it is this frame.
-  if (s.changing || !Number.isInteger(s.facing) || p.rare) {
+  // Only an act it has moves for, and evolving, which every kind does in the same light (`Kind.acts`).
+  if (p.act && p.act.kind !== 'evolve' && !kind.acts?.includes(p.act.kind)) {
+    p = { ...p, act: undefined };
+    a.act = undefined;
+  }
+  if (s.changing || !Number.isInteger(s.facing) || p.rare || p.act) {
     const [ax, ay] = ahead(a.u);
     ctx.save();
     ctx.translate(sx + ax, sy + ay);
     ctx.scale(zoom, zoom);
     const shine = p.rare ? { rare: p.rare, seed: typeof p.id === 'number' ? p.id % 97 : 0, now } : undefined;
+    // Evolving: the light it is changing in, under it and over it (`evolveBurst`).
+    if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, true);
     drawKind(ctx, kind, kit, pal, s.facing, a, inkAt(zoom, kind.size), 1 / zoom, false, shine);
+    if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, false);
     ctx.restore();
     return;
   }
@@ -1369,6 +1407,54 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   ctx.drawImage(f.canvas, sx + ax - (f.ox / f.k) * zoom, sy + ay - (f.oy / f.k) * zoom, (f.canvas.width / f.k) * zoom, (f.canvas.height / f.k) * zoom);
 }
 
+/**
+ * The light a wildermon evolves in, drawn in its own units with its feet at the origin, `t` nought to one through it:
+ * under it, a ring going out over the ground and a column of light; over it, motes of its own colours rising and a
+ * flash at the turn. Every kind evolves in it; a kind may add light of its own in `glow` and `extra` on the act.
+ */
+export function evolveBurst(g: CanvasRenderingContext2D, species: string, kind: Kind, pal: Palette, t: number, under: boolean): void {
+  const tall = Math.max(10, topOf(species, kind) / (kind.size ?? 1));
+  const coat = pal.coat ?? [220, 220, 200];
+  const light = pal.coatLight ?? [255, 250, 230];
+  const rgba = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${Math.max(0, Math.min(1, al)).toFixed(3)})`;
+  const fade = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+  g.save();
+  if (under) {
+    // A ring going out over the ground, and a column of light standing up through it.
+    g.lineWidth = 1.6;
+    g.strokeStyle = rgba(light, fade * 0.9);
+    g.beginPath();
+    g.ellipse(0, 0, tall * (0.3 + t * 0.9), tall * (0.12 + t * 0.36), 0, 0, Math.PI * 2);
+    g.stroke();
+    const col = g.createLinearGradient(0, 0, 0, -tall * 1.6);
+    col.addColorStop(0, rgba(light, fade * 0.55));
+    col.addColorStop(1, rgba(light, 0));
+    g.fillStyle = col;
+    g.fillRect(-tall * 0.35, -tall * 1.6, tall * 0.7, tall * 1.6);
+  } else {
+    // Motes of its own colours going up round it, and a flash as it turns.
+    for (let q = 0; q < 14; q++) {
+      const ang = (q / 14) * Math.PI * 2 + t * 2.4;
+      const rise = frac(t * 1.3 + q * 0.137);
+      const x = Math.cos(ang) * tall * (0.35 + 0.15 * Math.sin(q));
+      const y = -rise * tall * 1.4 + Math.sin(ang) * tall * 0.12;
+      g.fillStyle = rgba(q % 2 ? coat : light, fade * (1 - rise));
+      g.beginPath();
+      g.arc(x, y, 0.9 + (q % 3) * 0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+    const flash = Math.max(0, 1 - Math.abs(t - 0.5) / 0.12);
+    if (flash > 0) {
+      const glow = g.createRadialGradient(0, -tall * 0.5, 0, 0, -tall * 0.5, tall * 0.9);
+      glow.addColorStop(0, rgba([255, 255, 255], flash * 0.85));
+      glow.addColorStop(1, rgba([255, 255, 255], 0));
+      g.fillStyle = glow;
+      g.fillRect(-tall, -tall * 1.4, tall * 2, tall * 1.5);
+    }
+  }
+  g.restore();
+}
+
 const palettes = new Map<string, Palette>();
 /** A kind's palette in a variant's colours, made once. */
 export function paletteFor(species: string, kind: Kind, colors: [string, string]): Palette {
@@ -1388,9 +1474,10 @@ const portraits = new Map<string, HTMLCanvasElement>();
  * `ink`, every pixel of it that one colour instead: the shape and nothing
  * else, for a kind nobody has seen yet.
  */
-export function drawBeastPortrait(ctx: CanvasRenderingContext2D, w: number, h: number, species: string, kind: Kind, colors: [string, string], facing = 1, ink?: string, t = 0): void {
+export function drawBeastPortrait(ctx: CanvasRenderingContext2D, w: number, h: number, species: string, kind: Kind, colors: [string, string], facing = 1, ink?: string, t = 0,
+  pose?: Partial<Anim>): void {
   // Drawn once for each size and look it is wanted at, and put down from then on: a page of forty of them opens at once.
-  const key = `${species}|${colors[0]}|${colors[1]}|${facing}|${Math.round(w)}|${Math.round(h)}|${ink ?? ''}|${t}`;
+  const key = `${species}|${colors[0]}|${colors[1]}|${facing}|${Math.round(w)}|${Math.round(h)}|${ink ?? ''}|${t}|${pose ? JSON.stringify(pose) : ''}`;
   let pic = portraits.get(key);
   if (!pic) {
     pic = document.createElement('canvas');
@@ -1399,13 +1486,16 @@ export function drawBeastPortrait(ctx: CanvasRenderingContext2D, w: number, h: n
     const g = pic.getContext('2d');
     if (!g) return;
     const kit = kitOf(species, kind, 1);
-    const a: Anim = { t, u: 0, go: 0, gait: 0, graze: 0, blink: false, breath: 0.5, fleece: 1, seed: 0.3 };
-    const e = extentOf(kind, kit, facing, a);
+    // Posed, for a page that shows a kind walking, striking or at its task: as it is drawn on the island at that moment.
+    const a: Anim = { t, u: 0, go: 0, gait: 0, graze: 0, blink: false, breath: 0.5, fleece: 1, seed: 0.3, ...pose };
+    const e = extentOf(kind, kit, facing, { ...a, act: undefined });
     const bw = e.x1 - e.x0, bh = Math.max(e.y1, 0) - e.y0;
     const k = Math.min(w / Math.max(1, bw), h / Math.max(1, bh)) * 0.92;
     g.translate(w / 2 - ((e.x0 + e.x1) / 2) * k, h / 2 + (bh / 2) * k - Math.max(e.y1, 0) * k);
     g.scale(k, k);
+    if (a.act?.kind === 'evolve' && !ink) evolveBurst(g, species, kind, paletteFor(species, kind, colors), a.act.t, true);
     drawKind(g, kind, kit, paletteFor(species, kind, colors), facing, a, Math.max(0.9, 1.2 * Math.min(1, 40 / (bh * k))) / k, 1 / k, !!ink);
+    if (a.act?.kind === 'evolve' && !ink) evolveBurst(g, species, kind, paletteFor(species, kind, colors), a.act.t, false);
     // A kind nobody has seen yet: every pixel of it one colour, the shape and nothing else.
     if (ink) {
       g.setTransform(1, 0, 0, 1, 0, 0);

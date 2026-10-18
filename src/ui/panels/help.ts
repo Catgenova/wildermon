@@ -2958,7 +2958,7 @@ export function helpText(): string {
     ${times(1 + BAUBLE_KINDS.learn.cap / 100)} the skill gain, and a ${percent(BAUBLE_KINDS.double.cap / 100)} chance of ${times(YIELD_TIMES)} the yield, which a go gets
     all of or none of. The Settlement window adds up what yours give.</p>
     <h3>Wildermon</h3>
-    <p>Wild creatures roam the island. The <b>Rabba</b> is a rabbit-like grazer that forages berries when
+    <p>Wild creatures roam the island. The <b>Snufflet</b> is a leafy piglet that forages berries when
     hungry; the <b>Vola</b> is a mole-like digger that botanizes herbs and roots instead; the
     <b>Bevere</b> is a flat-tailed gnawer that never settles far from water, eats vegetables and
     starchy things, is placid by nature, and fells trees for its deed, carrying the logs to the crate;
@@ -3012,7 +3012,7 @@ export function helpText(): string {
     lives beside the clay pits, eats root vegetables, and digs <b>clay</b> with its bill for its deed,
     carrying it to the crate a load at a time &mdash; which is what keeps a potter in clay without
     walking the shore for it. Carry what the creature eats (a berry or vegetable for
-    a Rabba, a spice or vegetable for a Vola), long-press or right-click one and choose <b>Tame</b>: the
+    a Snufflet, a spice or vegetable for a Vola), long-press or right-click one and choose <b>Tame</b>: the
     food is used up, success is uncommon at low taming skill, and none of them holds a failed attempt
     against you.</p>
     <p><b>Keep at it.</b> A wild thing that has taken food from your hand and refused you is a little
@@ -3099,7 +3099,7 @@ export function helpText(): string {
     seasoned one works a wide stretch of country. Its card in the Wildermon window shows the range it
     has now and how much skill the next step needs.</p>
     <p>A tamed wildermon either <b>travels with you</b> (one at a time; its stance is Passive, Defensive
-    or Aggressive), is <b>assigned to your deed</b>, where a Rabba forages around the settlement and
+    or Aggressive), is <b>assigned to your deed</b>, where a Snufflet forages around the settlement and
     drops what it finds in the settlement's storage, or is shut in a <b>creature crate</b>. Feed them
     from your pack; deed workers help themselves from storage.
     The <b>Wildermon</b> window (<kbd>P</kbd>) shows the condition, level and skills of every creature

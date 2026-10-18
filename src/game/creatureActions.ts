@@ -2,7 +2,7 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
+import { kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
 import { numberWord } from './words';
 import { bestTier, traitList } from './traits';
@@ -82,7 +82,7 @@ export const dietText = (c: Creature): string => {
   return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
 };
 
-/** "a berry or vegetable" for a Rabba, "a spice or vegetable" for a Vola. */
+/** "a berry or vegetable" for a Snufflet, "a spice or vegetable" for a Vola. */
 export const baitHint = (c: Creature): string => SPECIES[c.species].baitHint;
 
 /**
@@ -254,7 +254,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const mood = c.hunger < 0.3 ? 'It looks hungry.' : c.hunger < 0.6 ? 'It could eat.' : 'It looks well fed.';
       const skills = Object.entries(c.skills).map(([id, v]) => `${id} ${v.toFixed(1)}`).join(', ');
       const range = c.mode === 'deed' && def.gathers ? ` It works up to ${workRangeOf(c, def)} tiles from the token.` : '';
-      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${g.creatures.describe(c)}): ${def.description} Level ${creatureLevel(c)}, ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. It is ${careWord(c.care)} and carries ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} It eats ${dietText(c)}.${studBook(g, c)}`, 'event');
+      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${kindDescription(c)} Level ${creatureLevel(c)}, ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. It is ${careWord(c.care)} and carries ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} It eats ${dietText(c)}.${studBook(g, c)}`, 'event');
     },
   },
   {

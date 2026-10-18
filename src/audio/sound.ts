@@ -2,6 +2,8 @@ import type { Game } from '../game/game';
 import { TileType, stepsTimber } from '../world/tiles';
 import { MATERIAL_BY_ID } from '../game/building';
 import { blow, chime, footfall, stroke, type Footing, type Stroke } from './kit';
+import { VOICES } from './voices';
+import { stageOf } from '../game/creatures';
 
 /**
  * What the game sounds like from where the camera is standing.
@@ -439,6 +441,12 @@ export class Sound {
     const g = this.game;
     g.events.on('work', (x, y, kind) => this.say(x, y, (ctx, node, at) => stroke(ctx, node, at, kind as Stroke, this.next())));
     g.events.on('hit', (x, y, _amount, kind) => this.say(x, y, (ctx, node, at) => blow(ctx, node, at, kind === 'taken', this.next())));
+    // A wildermon's own voice, for each act it has a sound for (`VOICES`), at the stage it is at.
+    g.events.on('beast', (id, act) => {
+      const c = g.creatures.get(id);
+      const cue = c && VOICES[c.species]?.[act];
+      if (c && cue) this.say(c.x, c.y, (ctx, node, at) => cue(ctx, node, at, stageOf(c), this.next()));
+    });
     // A skill speaks when its whole number changes, which is the same rule
     // the log already uses for a characteristic. Anything else would be a
     // note every two seconds for an entire evening.

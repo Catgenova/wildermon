@@ -1,3 +1,4 @@
+import { actOf } from './beasts';
 import { gearFrom, wornWire } from '../game/worn';
 import { Camera } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
@@ -65,7 +66,7 @@ import { bridgeGreen, greenNow, greenShows, GREEN_WET_REACH, mossyPiece, pavingG
 import { anvilCentre, type PlacedAnvil } from '../game/anvil';
 import { postCentre, postLeft, postLife, type PlacedPost } from '../game/posts';
 import { trapCentre, type PlacedTrap } from '../game/traps';
-import { ageDef } from '../game/creatures';
+import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre, type PlacedCampfire } from '../game/campfire';
 import { smelterCentre, type PlacedSmelter } from '../game/smelter';
@@ -5030,7 +5031,9 @@ export class Renderer {
         const tint = hit > 0 || hovering ? undefined : this.spells.tintOf({ kind: 'creature', id: cr.id });
         // As tall and as wide as it is drawn: a big one, or a rare one, is clicked by its head as well as its feet.
         const size = rarityOf(cr).size;
-        const tall = Math.max(22 * size, (wildermonTop(def.id) ?? 0) * big);
+        // The stage it has evolved to, which may be drawn as another body.
+        const stage = stageOf(cr);
+        const tall = Math.max(22 * size, (wildermonTop(def.id, stage) ?? 0) * big);
         const wide = 10 * size;
         // And the box it is drawn in, a long beast's length either way and a little over its head, for keeping it off a runestone's runes.
         const reach = Math.max(32 * big, wide * 3);
@@ -5050,6 +5053,8 @@ export class Renderer {
           id: cr.id,
           graze: cr.state === 'forage',
           rare: cr.rare,
+          stage,
+          act: actOf(cr, this.game.time),
         };
         const draw = (g: CanvasRenderingContext2D, px: number, py: number): void => drawCreature(g, px, py, zoom, look);
         this.paint(ctx, zoom, hit > 0 || tint ? 'flash' : hovering ? 'hover' : 'none', tint ? tint.share : hit * 0.92, ent.sx + csx, ent.sy + csy, draw,

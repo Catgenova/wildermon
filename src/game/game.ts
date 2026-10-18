@@ -1184,6 +1184,8 @@ export class Game {
     // A hidden door is a door to whoever its padlock admits, and a wall to everybody else (`gates.ts`).
     this.buildings.admits = (w) => this.lockRefusal({ lock: w.lock, x: w.x, y: w.y }) === null;
     this.creatures = Creatures.fromJSON(init.creatures);
+    // What a wildermon does, for its moves, its light and its voice (`beast`).
+    this.creatures.onAct = (id, act) => this.events.emit('beast', id, act);
     for (const c of init.crates ?? []) {
       this.crates.set(c.id, c);
       if (c.id >= this.nextCrateId) this.nextCrateId = c.id + 1;

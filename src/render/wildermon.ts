@@ -127,31 +127,46 @@ export const WILDERMON: Record<string, Kind> = {
   leecha: LEECHA,
 };
 
+/**
+ * What a kind that evolves is drawn as at its second stage and its third (`SpeciesDef.stages`). A kind with none here
+ * is drawn as its first at every stage.
+ */
+export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = {};
+
 /** Whether a kind is drawn as a model here, or still by hand. */
 export const modelled = (species: string | undefined): boolean => !!species && species in WILDERMON;
 
-/** A wildermon with its feet at (sx, sy). */
-export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose): void {
+/** The model a kind is drawn as at a stage, and the name its pictures are kept under. */
+function modelAt(species: string, stage = 0): { key: string; kind: Kind } | null {
+  const later = stage > 0 ? WILDERMON_STAGES[species]?.[stage - 1] : undefined;
+  if (later) return { key: `${species}@${stage}`, kind: later };
   const kind = WILDERMON[species];
-  if (kind) drawBeast(ctx, sx, sy, zoom, species, kind, colors, p);
+  return kind ? { key: species, kind } : null;
+}
+
+/** A wildermon with its feet at (sx, sy), as it is drawn at its stage. */
+export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose, stage = 0): void {
+  const m = modelAt(species, stage);
+  if (m) drawBeast(ctx, sx, sy, zoom, m.key, m.kind, colors, p);
 }
 
 /** How far over its feet the top of a kind is, standing, at zoom one: where its name and health bar go. */
-export function wildermonTop(species: string): number | undefined {
-  const kind = WILDERMON[species];
-  return kind ? topOf(species, kind) : undefined;
+export function wildermonTop(species: string, stage = 0): number | undefined {
+  const m = modelAt(species, stage);
+  return m ? topOf(m.key, m.kind) : undefined;
 }
 
 /** Where a kind's head is over its feet at a facing, at zoom one (`headOf`): where the reins of a team come to. */
-export function wildermonHead(species: string, facing: number): [number, number] | null {
-  const kind = WILDERMON[species];
-  return kind ? headOf(species, kind, facing) : null;
+export function wildermonHead(species: string, facing: number, stage = 0): [number, number] | null {
+  const m = modelAt(species, stage);
+  return m ? headOf(m.key, m.kind, facing) : null;
 }
 
-/** A kind on its own, for a page. */
-export function drawWildermonPortrait(ctx: CanvasRenderingContext2D, w: number, h: number, species: string, colors: [string, string], facing = 1, ink?: string): void {
-  const kind = WILDERMON[species];
-  if (kind) drawBeastPortrait(ctx, w, h, species, kind, colors, facing, ink);
+/** A kind on its own, for a page; posed, for one that shows it walking, striking or at its task. */
+export function drawWildermonPortrait(ctx: CanvasRenderingContext2D, w: number, h: number, species: string, colors: [string, string], facing = 1, ink?: string,
+  stage = 0, pose?: Partial<Anim>, t = 0): void {
+  const m = modelAt(species, stage);
+  if (m) drawBeastPortrait(ctx, w, h, m.key, m.kind, colors, facing, ink, t, pose);
 }
 
 export type { Anim };

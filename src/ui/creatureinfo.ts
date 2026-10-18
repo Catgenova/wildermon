@@ -5,6 +5,7 @@ import {
   careWord,
   coaxBonus,
   creatureLevel,
+  kindName,
   GATHER_VERB,
   growsAt,
   maxHealth,
@@ -84,7 +85,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
   }
 
   if (c.mode === 'wild') {
-    lines.push(`Wild ${def.name} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''}`);
+    lines.push(`Wild ${kindName(c)} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''}`);
     if (c.rare) lines.push(...rarityLines(c));
     lines.push(`Eats ${baitHint(c)}`);
     const taming = g.skills.get('taming');
@@ -98,7 +99,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
   }
 
   // One of your own: name, what it is, and how far along it is.
-  lines.push(`${c.name} · ${SEX_NAMES[c.sex]} ${def.name} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''} · Lv ${creatureLevel(c)}`);
+  lines.push(`${c.name} · ${SEX_NAMES[c.sex]} ${kindName(c)} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''} · Lv ${creatureLevel(c)}`);
   if (c.rare) lines.push(...rarityLines(c));
   const max = maxHealth(c, def);
   lines.push(`Health ${Math.ceil(c.health)}/${max} ${bar(c.health / max)}`);

@@ -36,6 +36,7 @@ import { fishable, fishHere, waterDepth } from './fishing';
 import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
+import type { BeastAct } from './events';
 import { fill, listed, numberWord, percent, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
@@ -487,6 +488,44 @@ export interface SpeciesDef {
   ability?: AbilityId;
   /** For a kind with no trade and no traces, the skill it learns and what teaches it (`LearnsBy`). */
   learns?: { skill: string; by: LearnsBy };
+  /** What it evolves into at each of `EVOLVE_AT`, for a kind that evolves: a name and words of each stage's own. */
+  stages?: [StageDef, StageDef];
+}
+
+/** A stage a wildermon evolves into: what it is called, and its words. */
+export interface StageDef {
+  name: string;
+  description: string;
+}
+/**
+ * The levels a kind that evolves does so at: its second stage, and its third. Asked for: "Evolutions happen at level 25
+ * and 50", and "Each evolution add movement speed and task speed and base stats".
+ */
+export const EVOLVE_AT = [25, 50] as const;
+/**
+ * What each stage multiplies over the one before, on the channels its blood is counted on (`bloodMul`): its health
+ * (hardy), its blow (tough), its pace (speed) and how fast it gets a task done (work). The island's `evo_mul`.
+ */
+export const STAGE_MUL: Partial<Record<TraitChannel, number>> = { hardy: 1.2, tough: 1.2, speed: 1.2, work: 1.15 };
+/** Which stage it is at: nought below the first of `EVOLVE_AT`, and so on; nought always for a kind that does not evolve. The island's `stage_of`. */
+export function stageOf(c: Pick<Creature, 'species' | 'skills'>): 0 | 1 | 2 {
+  if (!SPECIES[c.species]?.stages) return 0;
+  const level = creatureLevel(c);
+  return level >= EVOLVE_AT[1] ? 2 : level >= EVOLVE_AT[0] ? 1 : 0;
+}
+/** What its stage makes of one channel of its blood. */
+export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitChannel): number => (STAGE_MUL[channel] ?? 1) ** stageOf(c);
+/** What it is called at the stage it is at. */
+export function kindName(c: Pick<Creature, 'species' | 'skills'>): string {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  return stage && def?.stages ? def.stages[stage - 1].name : def?.name ?? c.species;
+}
+/** Its words at the stage it is at. */
+export function kindDescription(c: Pick<Creature, 'species' | 'skills'>): string {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  return stage && def?.stages ? def.stages[stage - 1].description : def?.description ?? '';
 }
 
 /**
@@ -610,11 +649,33 @@ export const yielded = (c: Creature): boolean => c.health <= sparFloor(c) + SPAR
 export const sparSaid = (c: Creature): string =>
   `You land one on ${c.name}. It is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', and yields' : ''}.`;
 
+/** What a stage adds over a kind's first, in words: its health, its blow, its pace and its task, each as a share. */
+export function stageSays(stage: number): string {
+  const more = (ch: TraitChannel): string => percent((STAGE_MUL[ch] ?? 1) ** stage - 1);
+  return `${more('hardy')} more health, a ${more('tough')} harder blow, ${more('speed')} faster on its feet and ${more('work')} quicker at each go of its task`;
+}
+
+/** A Snufflet's words at each stage: its trade, what it eats, and what each stage is and adds. */
+function snuffSays(stage: 0 | 1 | 2): string {
+  const names = ['Snufflet', 'Snuffroot', 'Snuffthorn'];
+  const job = `Set to work on a settlement it forages within ${SPECIES.rabba.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`;
+  const level = 'Its level is its foraging.';
+  if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into a ${names[1]}.`;
+  const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into a ${names[2]}.` : '';
+  return `A ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage)} than a ${names[0]}. ${job}${next}`;
+}
+
 export const SPECIES: Record<string, SpeciesDef> = {
   rabba: {
     id: 'rabba',
-    name: 'Rabba',
-    description: 'A plump, long-eared grazer with a twitching nose. Skittish, but it cannot resist a berry.',
+    name: 'Snufflet',
+    // Asked for: "This first will replace Rabba. Snufflet, Snuffroot, Snuffthorn". Its words, and each stage's, say what it
+    // does and what each stage adds, in the game's own numbers, and are written once those are all here (`snuffSays`).
+    description: '',
+    stages: [
+      { name: 'Snuffroot', description: '' },
+      { name: 'Snuffthorn', description: '' },
+    ],
     health: 20,
     attack: 3,
     speed: 2.2,
@@ -3373,6 +3434,10 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
   const id = workSkill(species);
   return id ? (c.skills[id] ?? 1) : 0;
 }
+// A Snufflet's words and its stages', now that every number they read is here.
+SPECIES.rabba.description = snuffSays(0);
+SPECIES.rabba.stages = [{ name: 'Snuffroot', description: snuffSays(1) }, { name: 'Snuffthorn', description: snuffSays(2) }];
+
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {
   const earned = species.workRange + rangeSteps(taskSkill(c, species)) * (species.rangePerStep ?? RANGE_PER_STEP);
@@ -3546,7 +3611,7 @@ export function raritySays(c: Pick<Creature, 'rare'>): string {
 }
 
 /** Its own blood on one channel, as rare as it is, with nothing communal in it. */
-export const bloodMul = (c: Creature, channel: TraitChannel): number => traitMul(c.traits, channel) * rarityMul(c, channel);
+export const bloodMul = (c: Creature, channel: TraitChannel): number => traitMul(c.traits, channel) * rarityMul(c, channel) * evoMul(c, channel);
 
 /** What it can take, once its blood is counted, and its keeper's Thick Hide while it follows them. */
 export const maxHealth = (c: Creature, species: SpeciesDef): number =>
@@ -3766,6 +3831,13 @@ export interface Creature {
   /** The game time a slow on it ends, and the share of its pace it goes at until then (a Frostbite, `frost`). Missing on one never slowed. */
   slowUntil?: number;
   slowPace?: number;
+  /** The last thing it did that is drawn and heard (`BeastAct`), and when, on the game clock; missing on one that has done nothing yet. */
+  act?: BeastAct;
+  actAt?: number;
+  /** The phase the island last said it was in, for telling when it struck or set to work there. */
+  islandPhase?: string;
+  /** Heard of from the island before, so that what it says next is a change rather than the first word of it. */
+  islandSeen?: boolean;
   /**
    * What is on it for a while and what it is worth (`markOn`): a root, dulled claws, a brittleness, a mark for
    * death, a stone skin, a keep-away, and when its own ability is ready again. The island's `class_mark`.
@@ -4075,7 +4147,7 @@ export const NIP_EVERY = 25;
  * number below, and one for a kind that has none. Asked for: "Level should be equal to that skill, since there's only
  * 1 skill per wildermon". The island's `creature_level`.
  */
-export const creatureLevel = (c: Creature): number => Math.max(1, Math.floor(Math.max(0, ...Object.values(c.skills))));
+export const creatureLevel = (c: Pick<Creature, 'skills'>): number => Math.max(1, Math.floor(Math.max(0, ...Object.values(c.skills))));
 
 /** How long a deed worker takes over a task: twice what a player of the same skill would. */
 export function workDuration(skill: number): number {
@@ -4104,6 +4176,15 @@ const HURT_FLOOR = 0.05;
 export class Creatures {
   readonly list = new Map<number, Creature>();
   nextId = 1;
+  /** Told whenever a wildermon strikes, finishes a go at its task or uses its ability: the game passes it on as `beast`. */
+  onAct?: (id: number, act: BeastAct) => void;
+
+  /** It did something worth drawing and hearing (`BeastAct`): marked on it, and passed on. */
+  acted(c: Creature, act: BeastAct, time: number): void {
+    c.act = act;
+    c.actAt = time;
+    this.onAct?.(c.id, act);
+  }
   /**
    * Who is standing where, filed under the tile and rebuilt every tick.
    *
@@ -4376,8 +4457,19 @@ export class Creatures {
       // The working life, which comes for yours and for nobody else's.
       if (r.care !== undefined) c.care = r.care;
       if (r.xp !== undefined) c.xp = r.xp;
-      if (r.skills) c.skills = r.skills;
-      if (r.phase !== undefined) c.state = STATE_OF[r.phase] ?? 'idle';
+      if (r.skills) {
+        // Evolved there since it was last heard of: drawn and heard here as it would be in a game of your own.
+        const was = stageOf(c);
+        c.skills = r.skills;
+        if (c.islandSeen && stageOf(c) > was) this.acted(c, 'evolve', time);
+        c.islandSeen = true;
+      }
+      if (r.phase !== undefined) {
+        c.state = STATE_OF[r.phase] ?? 'idle';
+        // Struck or set to work there since it was last heard of: drawn and heard here as it would be in a game of your own.
+        if (r.phase !== c.islandPhase && (r.phase === 'strike' || r.phase === 'work')) this.acted(c, r.phase, time);
+        c.islandPhase = r.phase;
+      }
       if (r.carrying !== undefined) {
         c.carrying = r.carrying
           ? { uid: 0, id: r.carrying.def, ql: r.carrying.ql ?? 1, dmg: 0, count: r.carrying.count ?? 1 }
@@ -6266,6 +6358,7 @@ export class Creatures {
 
   /** How long a go at an errand keeps it where it is, as it would at a tile of its trade (`workDuration`). */
   private errandWork(game: Game, c: Creature, kind: GatherKind): void {
+    this.acted(c, 'work', game.time);
     c.busyUntil = game.time + workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.workMul(c);
   }
 
@@ -7105,6 +7198,14 @@ export class Creatures {
     c.skills[id] = Math.min(100, v + gain);
     c.xp += gain;
     if (creatureLevel(c) > before) game.logMsg(`${c.name} reaches level ${creatureLevel(c)}.`, 'skill');
+    // And evolves, at a level a stage begins at: what it can take grows with it, as full as it was (`EVOLVE_AT`).
+    const stage = stageOf(c);
+    if (stage > stageOf({ species: c.species, skills: { ...c.skills, [id]: v } })) {
+      c.health *= STAGE_MUL.hardy ?? 1;
+      if (c.mode !== 'wild') game.logMsg(`${c.name} evolves into a ${kindName(c)}!`, 'skill');
+      game.events.emit('evolve', c.id, stage);
+      this.acted(c, 'evolve', game.time);
+    }
     const def = this.species(c);
     if (c.mode === 'deed' && id === workSkill(def) && rangeSteps(c.skills[id]) > beforeSteps) {
       game.logMsg(`${c.name} knows the land better and will now work up to ${workRangeOf(c, def)} tiles from where it is set to work.`, 'skill');
@@ -7601,6 +7702,7 @@ export class Creatures {
     if (c.state === 'forage') {
       if (game.time >= c.until) {
         c.carrying = kind ? this.finishForage(game, c, kind) : null;
+        if (kind) this.acted(c, 'work', game.time);
         c.state = 'idle';
         c.until = game.time + 0.5;
       }
@@ -7820,6 +7922,7 @@ export class Creatures {
   attack(game: Game, a: Creature, t: Creature): void {
     // Its own ability instead, when it is ready and there is a use for it (`AbilityId`).
     if (a.mode !== 'wild' && this.species(a).ability && this.ability(game, a, t)) return;
+    this.acted(a, 'strike', game.time);
     const trained = trainedHit(a.skills[FIGHT_SKILL] ?? 0);
     const style = a.mode === 'wild' ? undefined : this.species(a).style;
     // Its blood has a say in what it lands for, as it does in what it bites you for.
@@ -7992,6 +8095,7 @@ export class Creatures {
       }
     }
     putMark(game, a, 'ability', 1, abilityRest(id));
+    this.acted(a, 'cast', game.time);
     if (a.mode === 'active') game.logMsg(`${a.name} uses ${abilityName(id)}.`, 'fight');
     return spent;
   }
@@ -8018,6 +8122,7 @@ export class Creatures {
       e.cooldown = Math.max(0, e.cooldown) + abilityFx(id, 'back');
     }
     putMark(game, c, 'ability', 1, abilityRest(id));
+    this.acted(c, 'cast', game.time);
     if (c.mode === 'active') game.logMsg(`${c.name} uses ${abilityName(id)}.`, 'fight');
     return true;
   }

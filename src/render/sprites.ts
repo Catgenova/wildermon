@@ -1,3 +1,4 @@
+import type { BeastAct } from '../game/events';
 import { hash2, mulberry32 } from '../world/noise';
 import { cushions, hashOf, type Cushion } from './ivy';
 import { inkOr } from './inks';
@@ -2469,6 +2470,10 @@ export interface CreaturePose {
   colors: [string, string];
   /** 0..1 health fraction; a bar shows when below 1. */
   health: number;
+  /** The stage it has evolved to (`stageOf`), for a kind drawn differently at each. */
+  stage?: number;
+  /** What it is doing this moment, and how far through it (`BeastPose.act`). */
+  act?: { kind: BeastAct; t: number };
   label?: string;
   /** Species id; decides which body is drawn. */
   species?: string;
@@ -2939,8 +2944,9 @@ export function drawCreature(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   if (modelled(pose.species)) {
     drawWildermon(ctx, sx, sy, zoom, pose.species as string, pose.colors, {
       id: pose.id, facing: pose.facing, phase: pose.phase, moving: pose.moving, gait: pose.gait, fleece: pose.fleece, graze: pose.graze, rare: pose.rare,
-    });
-    drawCreatureOverlay(ctx, sx, sy, zoom, pose, wildermonTop(pose.species as string));
+      act: pose.act,
+    }, pose.stage);
+    drawCreatureOverlay(ctx, sx, sy, zoom, pose, wildermonTop(pose.species as string, pose.stage));
     return;
   }
   const kept = standingSprite(pose);
