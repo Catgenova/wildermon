@@ -1409,47 +1409,76 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
 
 /**
  * The light a wildermon evolves in, drawn in its own units with its feet at the origin, `t` nought to one through it:
- * under it, a ring going out over the ground and a column of light; over it, motes of its own colours rising and a
- * flash at the turn. Every kind evolves in it; a kind may add light of its own in `glow` and `extra` on the act.
+ * under it, a thin ring going out over the ground and a soft glow standing up behind it; over it, small motes of its
+ * own colours rising round it and, at the turn, a ring of light going out from it and a brief soft flash. Every size
+ * is a share of how tall it is, so a lume and an ogre evolve alike, and none of it so bright or so big that the body
+ * is lost in it. Every kind evolves in it; a kind may add light of its own in `glow` and `extra` on the act.
  */
 export function evolveBurst(g: CanvasRenderingContext2D, species: string, kind: Kind, pal: Palette, t: number, under: boolean): void {
-  const tall = Math.max(10, topOf(species, kind) / (kind.size ?? 1));
+  const tall = Math.max(6, topOf(species, kind) / (kind.size ?? 1));
   const coat = pal.coat ?? [220, 220, 200];
   const light = pal.coatLight ?? [255, 250, 230];
+  const white: RGB = [255, 253, 240];
   const rgba = (c: RGB, al: number): string => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${Math.max(0, Math.min(1, al)).toFixed(3)})`;
   const fade = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+  // The turn: a bump at the middle of it.
+  const turn = Math.max(0, 1 - Math.abs(t - 0.5) / 0.1);
   g.save();
   if (under) {
-    // A ring going out over the ground, and a column of light standing up through it.
-    g.lineWidth = 1.6;
-    g.strokeStyle = rgba(light, fade * 0.9);
-    g.beginPath();
-    g.ellipse(0, 0, tall * (0.3 + t * 0.9), tall * (0.12 + t * 0.36), 0, 0, Math.PI * 2);
-    g.stroke();
-    const col = g.createLinearGradient(0, 0, 0, -tall * 1.6);
-    col.addColorStop(0, rgba(light, fade * 0.55));
+    // A soft glow standing up behind the body, an upright oval of light, brightest at the turn.
+    g.save();
+    g.translate(0, -tall * 0.42);
+    g.scale(tall * 0.4, tall * 0.62);
+    const col = g.createRadialGradient(0, 0, 0, 0, 0, 1);
+    col.addColorStop(0, rgba(white, fade * (0.16 + 0.22 * turn)));
+    col.addColorStop(0.6, rgba(light, fade * (0.06 + 0.08 * turn)));
     col.addColorStop(1, rgba(light, 0));
     g.fillStyle = col;
-    g.fillRect(-tall * 0.35, -tall * 1.6, tall * 0.7, tall * 1.6);
+    g.beginPath();
+    g.arc(0, 0, 1, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+    // A thin ring going out over the ground from under its feet.
+    const rx = tall * (0.3 + 0.25 * t);
+    g.lineWidth = tall * 0.022;
+    g.strokeStyle = rgba(light, fade * 0.75);
+    g.beginPath();
+    g.ellipse(0, 0, rx, rx * 0.42, 0, 0, Math.PI * 2);
+    g.stroke();
   } else {
-    // Motes of its own colours going up round it, and a flash as it turns.
+    // Small motes of its own colours going up round it, each a point with a little light about it.
     for (let q = 0; q < 14; q++) {
       const ang = (q / 14) * Math.PI * 2 + t * 2.4;
       const rise = frac(t * 1.3 + q * 0.137);
-      const x = Math.cos(ang) * tall * (0.35 + 0.15 * Math.sin(q));
-      const y = -rise * tall * 1.4 + Math.sin(ang) * tall * 0.12;
-      g.fillStyle = rgba(q % 2 ? coat : light, fade * (1 - rise));
+      const x = Math.cos(ang) * tall * (0.36 + 0.08 * Math.sin(q));
+      const y = -rise * tall * 1.1 + Math.sin(ang) * tall * 0.1;
+      const al = fade * Math.sin(rise * Math.PI);
+      const r = tall * (0.012 + 0.006 * (q % 3));
+      const halo = g.createRadialGradient(x, y, 0, x, y, r * 3);
+      halo.addColorStop(0, rgba(white, al * 0.5));
+      halo.addColorStop(1, rgba(white, 0));
+      g.fillStyle = halo;
+      g.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+      g.fillStyle = rgba(q % 2 ? coat : light, al);
       g.beginPath();
-      g.arc(x, y, 0.9 + (q % 3) * 0.4, 0, Math.PI * 2);
+      g.arc(x, y, r, 0, Math.PI * 2);
       g.fill();
     }
-    const flash = Math.max(0, 1 - Math.abs(t - 0.5) / 0.12);
-    if (flash > 0) {
-      const glow = g.createRadialGradient(0, -tall * 0.5, 0, 0, -tall * 0.5, tall * 0.9);
-      glow.addColorStop(0, rgba([255, 255, 255], flash * 0.85));
-      glow.addColorStop(1, rgba([255, 255, 255], 0));
+    // At the turn, a ring of light going out from its middle, and a brief soft flash under it.
+    const out = clamp((t - 0.42) / 0.3);
+    if (out > 0 && out < 1) {
+      g.lineWidth = tall * 0.018 * (1 - out);
+      g.strokeStyle = rgba(white, 0.8 * (1 - out));
+      g.beginPath();
+      g.ellipse(0, -tall * 0.4, tall * (0.2 + 0.45 * out), tall * (0.2 + 0.45 * out) * 0.8, 0, 0, Math.PI * 2);
+      g.stroke();
+    }
+    if (turn > 0) {
+      const glow = g.createRadialGradient(0, -tall * 0.4, 0, 0, -tall * 0.4, tall * 0.5);
+      glow.addColorStop(0, rgba(white, turn * 0.3));
+      glow.addColorStop(1, rgba(white, 0));
       g.fillStyle = glow;
-      g.fillRect(-tall, -tall * 1.4, tall * 2, tall * 1.5);
+      g.fillRect(-tall * 0.5, -tall * 0.9, tall, tall);
     }
   }
   g.restore();

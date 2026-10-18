@@ -1,4 +1,5 @@
 import type { BeastAct } from '../game/events';
+import { SNUFF_VOICE } from './voice-snuff';
 
 /**
  * Wildermon voices.
@@ -15,4 +16,7 @@ export type Cue = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: nu
 export type Voice = Partial<Record<BeastAct, Cue>>;
 
 /** Each kind's voice, by species. */
-export const VOICES: Partial<Record<string, Voice>> = {};
+export const VOICES: Partial<Record<string, Voice>> = {
+  // The Snufflet, the Snuffroot and the Snuffthorn.
+  rabba: SNUFF_VOICE,
+};

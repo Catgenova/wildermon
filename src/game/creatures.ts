@@ -686,11 +686,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'forage',
     workRange: 8,
+    // Its coat and its patches: cream with pink, blush with rose, a dun with cinnamon, and white with the palest pink.
     variants: [
-      ['#9a7048', '#d2b08a'],
-      ['#8c8a86', '#c8c5bf'],
-      ['#c9b58a', '#ede2c8'],
-      ['#eae6de', '#ffffff'],
+      ['#f6e9da', '#eda4ae'],
+      ['#f2bcc0', '#d97f90'],
+      ['#b88c68', '#8e5a48'],
+      ['#fdfbf7', '#f2cdd2'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 3, gland: 1 },
     tameFail: 'nibbles the {food}, twitches its nose, and hops off unconvinced',

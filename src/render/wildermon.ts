@@ -6,7 +6,8 @@ import { DOWSE, MOLA, SNOUT, VOLA } from './wild-diggers';
 import { BURA, CUDDA, GORRAL, ORSE, ROXXEN, SAPPA, SHAGGAN, SNEDDA } from './wild-herd';
 import { CRAWLER, MAGGA, NOOT } from './wild-odd';
 import { ULVA } from './wild-hunters';
-import { RABBA, SEAVIC, WOOLA } from './wild-small';
+import { SEAVIC, WOOLA } from './wild-small';
+import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
 import { BEVERE, BOGGA, EMBRA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
 import { COBBE, GRUBBA, QUARRA, ROWL } from './wild-wild';
@@ -23,7 +24,7 @@ import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, 
  * None of them is simply the animal it was drawn from. Every one is a cute
  * thing first -- a head a size too big for it, eyes that look back at you at
  * forty pixels, soft round masses -- and every one carries something that is
- * not in any field guide: a rabba's ears end in leaves, a woola's fleece is
+ * not in any field guide: a snufflet wears a mane of leaves, a woola's fleece is
  * cloud. What it is made of is its variant's two colours, the coat and the
  * markings, and its kind's own things.
  */
@@ -31,7 +32,7 @@ import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, 
 /* ---- the kinds ----------------------------------------------------------------------- */
 
 export const WILDERMON: Record<string, Kind> = {
-  rabba: RABBA,
+  rabba: SNUFFLET,
   woola: WOOLA,
   magga: MAGGA,
   noot: NOOT,
@@ -131,7 +132,9 @@ export const WILDERMON: Record<string, Kind> = {
  * What a kind that evolves is drawn as at its second stage and its third (`SpeciesDef.stages`). A kind with none here
  * is drawn as its first at every stage.
  */
-export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = {};
+export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = {
+  rabba: [SNUFFROOT, SNUFFTHORN],
+};
 
 /** Whether a kind is drawn as a model here, or still by hand. */
 export const modelled = (species: string | undefined): boolean => !!species && species in WILDERMON;
