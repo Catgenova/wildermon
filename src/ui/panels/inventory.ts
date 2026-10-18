@@ -1,3 +1,5 @@
+import { STORE_REACH } from '../../game/crates';
+import { putAway } from '../../game/putaway';
 import { isArrow } from '../../game/fight';
 import { CARRY_STOP, type Game } from '../../game/game';
 import { itemDef, itemName, type Item, type ItemCategory, itemWeight, bagRoom, bagUnits, isBag, RARITIES } from '../../game/items';
@@ -96,7 +98,14 @@ export class InventoryPanel {
       this.render();
     });
     groupBtn.classList.add('tb-on');
-    bar.append(sortSel, groupBtn);
+    // Every loose stack into a store within reach that already holds the like of it (`putaway.ts`).
+    const awayBtn = document.createElement('button');
+    awayBtn.type = 'button';
+    awayBtn.className = 'tb-btn tb-small';
+    awayBtn.textContent = 'Put away';
+    awayBtn.title = `Put each stack into a crate, chest or cart within ${STORE_REACH} tiles that already holds the same thing`;
+    awayBtn.addEventListener('click', () => putAway(this.game));
+    bar.append(sortSel, groupBtn, awayBtn);
     const head = headRow({ label: 'Wt', className: 'inv-wt', title: 'Weight of the whole stack, in kg' });
     this.list = document.createElement('div');
     this.list.className = 'inv-list';

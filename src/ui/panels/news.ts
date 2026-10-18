@@ -1,3 +1,7 @@
+import { AUTO_EAT_AT } from '../../game/autoeat';
+import { STORE_REACH } from '../../game/crates';
+import { DAMAGE_WARN, TRAVEL_LEG } from '../../game/game';
+import { ROT_SOON } from '../../game/rot';
 import {
   BODKIN_HIDE, BURN_WEAR, CONSIDER_EASY, CONSIDER_HARD, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, DODGE_FROM, DODGE_PER_CONTROL, DODGE_PER_KG, KNIFE_BLEED,
   KNIFE_BLEED_SECS, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
@@ -2287,6 +2291,20 @@ export const NEWS: News[] = [
         + 'a dyed banner is one on your settlement, a caravel is a sailing boat, and Make dye is Dye something, which is what it counted. '
         + 'Something done before today under the old rule ticks the next time you do it.',
       'Click any goal in the journal for how to do it, or Show every how-to above the list.',
+    ],
+  },
+  {
+    n: 172,
+    day: '2026-10-18',
+    lines: () => [
+      `Put away, in the Inventory: every loose stack goes into a crate, chest or cart within ${STORE_REACH} tiles that already holds the same thing. `
+        + `The Stores window says how many of what you searched for there are, all told, and Within ${CRAFT_REACH} tiles keeps to the stores a craft takes from.`,
+      'Crafting: List puts a recipe on the Shopping list window, with everything it takes down to what is gathered, cast or made on the way, against your pack and the stores within reach, '
+        + 'each thing counted once however many branches want it. To… makes until you hold so many, counting what you have, and tops up when a failed go leaves you short.',
+      `Map: double-click anywhere on it, or Go on a pin, and you walk there in legs of up to ${TRAVEL_LEG} tiles, however far. On an island your pins are kept in this browser now; they were lost on a refresh.`,
+      `Settings, Eating: eat by yourself when Food falls under ${AUTO_EAT_AT.filter((v) => v).map((v) => `${Math.round(v * 100)}%`).join(', ')} (your choice), after the job in hand, never from a locked stack. `
+        + `Notices: something you wear or hold at ${DAMAGE_WARN}% damage, and food on the ground near you with under ${Math.round(ROT_SOON / 60)} minutes before it rots; a thing on the ground says how long it has in its tooltip and Pick up menu.`,
+      'Wildermon: Needs attention shows only the hungry, the hurt, those wanting a brush and those about to give birth. The Equipment and Health keys open their windows again.',
     ],
   },
 ];

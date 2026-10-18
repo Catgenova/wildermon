@@ -3053,6 +3053,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/journal.mjs --log-level=error
           node node_modules/.cache/journal.mjs
 
+      - name: Ten conveniences hold to what they say
+        run: |
+          # Put away into the stores within reach that hold the like of it,
+          # rot times on the ground, eating by yourself, the shopping list's
+          # netting, map pins kept, long walks in legs, and a dam's due time
+          # told to her keeper only.
+          npx esbuild supabase/test/qol.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/qol.mjs --log-level=error
+          node node_modules/.cache/qol.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

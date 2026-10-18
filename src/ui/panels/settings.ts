@@ -1,4 +1,7 @@
-import { NIGHT_ENDS, NIGHT_STARTS, type Game } from '../../game/game';
+import { AUTO_EAT_AT } from '../../game/autoeat';
+import { HEAL_FED } from '../../game/body';
+import { ROT_LOOK, ROT_SOON } from '../../game/rot';
+import { DAMAGE_MAX, DAMAGE_WARN, NIGHT_ENDS, NIGHT_STARTS, type Game } from '../../game/game';
 import { applyLook, islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { BINDS, BIND_GROUPS, keyName, keyReserved, MAX_KEYS, type Keybinds } from '../../game/keybinds';
 import { whoAmI } from '../../net/accounts';
@@ -464,6 +467,22 @@ export class SettingsPanel {
       () => game.settings.noticeDone, (v) => (game.settings.noticeDone = v));
     add('A birth', `A line for ${seconds} seconds when one of your wildermon gives birth.`,
       () => game.settings.noticeBirth, (v) => (game.settings.noticeBirth = v));
+    add('Wearing out', `A line for ${seconds} seconds when something you wear or hold reaches ${DAMAGE_WARN}% damage; at ${DAMAGE_MAX}% it breaks.`,
+      () => game.settings.noticeWear, (v) => (game.settings.noticeWear = v));
+    add('Food about to rot', `A line for ${seconds} seconds when food lying on the ground within ${ROT_LOOK} tiles of you has under ${Math.round(ROT_SOON / 60)} minutes before it rots away. Nothing rots in a pack or a store.`,
+      () => game.settings.noticeRot, (v) => (game.settings.noticeRot = v));
+
+    // Eating by itself (src/game/autoeat.ts).
+    head('Eating');
+    choose<number>(
+      'Eat by yourself',
+      `When Food falls under this, eat from your pack after the job in hand, until it is back over it. Below ${Math.round(HEAL_FED * 100)}% Food you stop healing. A locked stack, or food in a bag, is never eaten.`,
+      AUTO_EAT_AT.map((v) => [v, v ? `Under ${Math.round(v * 100)}% Food` : 'Never']),
+      () => game.settings.autoEat,
+      (v) => (game.settings.autoEat = v),
+    );
+    add('Worst food first', 'Eat the lowest quality food first, to use it up, rather than whatever fills the most.',
+      () => game.settings.autoEatWorst, (v) => (game.settings.autoEatWorst = v));
 
     /**
      * Who you are, and the one thing the game can do about it.

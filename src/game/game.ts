@@ -383,6 +383,10 @@ export const queueCapAt = (mind: number): number => BASE_QUEUE + Math.floor(Math
 export const ASH_RATE = 1 / 120;
 /** Damage at which a tool starts warning you, and every `DAMAGE_WARN_STEP` points after. */
 export const DAMAGE_WARN = 75;
+/** The longest leg of a long walk, in tiles (`travelTo`): well inside what one path is looked for over. */
+export const TRAVEL_LEG = 60;
+/** Legs in a row that bring you no nearer before a long walk gives up. */
+export const TRAVEL_STUCK = 3;
 export const DAMAGE_WARN_STEP = 5;
 /** Damage a thing goes to pieces at (`limits.ts`). */
 export { DAMAGE_MAX };
@@ -2604,15 +2608,38 @@ export class Game {
     const mark: Marker = { id: this.nextMarkId++, name: markName(name, x, y), x, y, colour };
     this.marks.push(mark);
     while (this.marks.length > MARK_CAP) this.marks.shift();
+    this.marksChanged?.();
     this.logMsg(`You mark ${mark.name} on the map at (${x}, ${y}).`, 'info');
     this.events.emit('world', x, y);
     return mark;
+  }
+
+  /** Told whenever the marks change, so an island game can keep them in this browser (`play.ts`). */
+  marksChanged?: () => void;
+
+  /** Change a mark's colour. */
+  recolourMark(id: number, colour: string): void {
+    const mark = this.marks.find((m) => m.id === id);
+    if (!mark) return;
+    mark.colour = colour;
+    this.marksChanged?.();
+    this.events.emit('world', mark.x, mark.y);
+  }
+
+  /** Marks kept somewhere else than the save, taken back: an island game's, from this browser. Graves mark themselves. */
+  takeMarks(marks: readonly Marker[]): void {
+    for (const m of marks) {
+      if (m.grave !== undefined || this.marks.some((k) => k.id === m.id)) continue;
+      this.marks.push({ ...m });
+      if (m.id >= this.nextMarkId) this.nextMarkId = m.id + 1;
+    }
   }
 
   removeMark(id: number): void {
     const i = this.marks.findIndex((m) => m.id === id);
     if (i < 0) return;
     const [gone] = this.marks.splice(i, 1);
+    this.marksChanged?.();
     this.logMsg(`You rub ${gone.name} off the map.`, 'info');
     this.events.emit('world', gone.x, gone.y);
   }
@@ -2621,6 +2648,7 @@ export class Game {
     const mark = this.marks.find((m) => m.id === id);
     if (!mark) return;
     mark.name = markName(name, mark.x, mark.y);
+    this.marksChanged?.();
     this.events.emit('world', mark.x, mark.y);
   }
 
@@ -4148,6 +4176,7 @@ export class Game {
      * would walk every guest after whoever you picked.
      */
     if (this.followed) this.updateFollow(dt);
+    if (this.travel) this.updateTravel();
     this.updateWorld(dt);
   }
 
@@ -4818,6 +4847,8 @@ export class Game {
   hold: (() => void) | null = null;
 
   cancelAction(silent = false): void {
+    // Stop is stop: a long walk in legs as well.
+    this.travel = null;
     const a = this.action;
     const lined = this.queue.length;
     // Out of the fight as well as the job: nothing goes after it again.
@@ -5007,6 +5038,8 @@ export class Game {
   }
 
   requestAction(def: ActionDef, target: Target, goes?: number): void {
+    // Asking for a job is deciding to stop somewhere: a long walk in legs ends here.
+    this.travel = null;
     const named = target.kind === 'item' ? target.uid : 'itemUid' in target ? target.itemUid : undefined;
     this.lastAsked = { def, target, goes, was: named !== undefined ? this.inventory.get(named)?.id : undefined };
     // gates: a hidden door asked for is kept only while a plan of a wall on its border is in hand or lined up (`keepHiddenAsks`).
@@ -5304,7 +5337,9 @@ export class Game {
    * click, walking home, a job that wants you nearer — is you, and you going
    * somewhere is how anybody stops following without thinking about it.
    */
-  moveTo(x: number, y: number, keepFollowing = false): boolean {
+  moveTo(x: number, y: number, keepFollowing = false, quiet = false): boolean {
+    // You going somewhere is a new order: a long walk in legs gives way to it (`travelTo` asks quietly).
+    if (!quiet) this.travel = null;
     if (this.player.aboard !== null) {
       if (keepFollowing) this.unfollow();
       else this.logMsg('You are aboard as a passenger. Step ashore first.', 'error');
@@ -5327,8 +5362,72 @@ export class Game {
     const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
     for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim)) return true;
-    this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, "You can't find a way there.") : "You can't find a way there.", 'error');
+    if (!quiet) this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, "You can't find a way there.") : "You can't find a way there.", 'error');
     return false;
+  }
+
+  /**
+   * A long walk, to somewhere further than one path can be found to: a map
+   * pin across the island. The pathfinder looks so far and gives up, so a
+   * click on the far side of a bay said "You can't find a way there." This
+   * walks it a leg at a time, each up to `TRAVEL_LEG` tiles toward the place
+   * and shorter where a leg that long finds no way, and sets off on the next
+   * as each ends. Any other order -- a click, a job, Stop -- ends it.
+   */
+  private travel: { x: number; y: number; name: string; best: number; stuck: number } | null = null;
+
+  /** Where a long walk is headed, while one is under way. */
+  get travelling(): { x: number; y: number; name: string } | null {
+    return this.travel;
+  }
+
+  travelTo(x: number, y: number, name: string): boolean {
+    this.travel = null;
+    const away = Math.round(Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y));
+    if (away < 2) {
+      this.logMsg(`You are at ${name} already.`, 'info');
+      return true;
+    }
+    if (!this.legToward(x, y)) {
+      this.logMsg(`You can't find a way toward ${name} from here.`, 'error');
+      return false;
+    }
+    this.travel = { x, y, name, best: away, stuck: 0 };
+    this.logMsg(`You set off for ${name}, ${away} tiles off.`, 'info');
+    return true;
+  }
+
+  /** Set off on the next leg toward a place: as long as `TRAVEL_LEG`, shorter where that finds no way. */
+  private legToward(x: number, y: number): boolean {
+    const px = this.player.x - 0.5, py = this.player.y - 0.5;
+    const d = Math.hypot(x - px, y - py);
+    for (const leg of [TRAVEL_LEG, TRAVEL_LEG / 2, TRAVEL_LEG / 4]) {
+      const f = Math.min(1, leg / Math.max(1, d));
+      if (this.moveTo(Math.round(px + (x - px) * f), Math.round(py + (y - py) * f), false, true)) return true;
+      if (f >= 1) break;
+    }
+    return false;
+  }
+
+  /** Each frame of a long walk: when a leg has ended, the next, until there or no nearer for `TRAVEL_STUCK` legs. */
+  private updateTravel(): void {
+    const t = this.travel;
+    if (!t || this.player.path) return;
+    const away = Math.hypot(t.x + 0.5 - this.player.x, t.y + 0.5 - this.player.y);
+    if (away < 1.5) {
+      this.travel = null;
+      this.logMsg(`You are at ${t.name}.`, 'info');
+      return;
+    }
+    // Getting no nearer, leg after leg, is a way round that does not go round.
+    if (away < t.best - 1) {
+      t.best = away;
+      t.stuck = 0;
+    } else t.stuck++;
+    if (t.stuck >= TRAVEL_STUCK || !this.legToward(t.x, t.y)) {
+      this.travel = null;
+      this.logMsg(`You can't find a way on toward ${t.name} from here, ${Math.round(away)} tiles off.`, 'error');
+    }
   }
 
   /**

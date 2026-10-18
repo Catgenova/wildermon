@@ -2,6 +2,8 @@ import { crateCentre, crateCapacity, crateName, crateUnits } from '../../game/cr
 import { furnitureCapacity, furnitureCentre, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureUnits } from '../../game/furniture';
 import type { Game } from '../../game/game';
 import { itemDef, itemName, type Item } from '../../game/items';
+import { STORE_SEEN } from '../../game/keep';
+import { CRAFT_REACH } from '../../game/recipes';
 import type { UIWindow } from '../windows';
 
 /**
@@ -42,6 +44,9 @@ export class StoresPanel {
   private search: HTMLInputElement;
   private query = '';
   private lastRender = 0;
+  /** Only the stores within crafting reach: the ones a craft draws from and you can open without walking. */
+  private near = false;
+  private readonly nearBtn: HTMLButtonElement;
 
   constructor(
     private readonly win: UIWindow,
@@ -65,11 +70,26 @@ export class StoresPanel {
       this.query = '';
       this.render();
     });
+    const bar = document.createElement('div');
+    bar.className = 'panel-bar';
+    this.nearBtn = document.createElement('button');
+    this.nearBtn.type = 'button';
+    this.nearBtn.className = 'tb-btn tb-small';
+    this.nearBtn.textContent = `Within ${CRAFT_REACH} tiles`;
+    this.nearBtn.title = `Only the stores within ${CRAFT_REACH} tiles of you, which a craft takes from with Use stores within reach on`;
+    this.nearBtn.setAttribute('aria-pressed', 'false');
+    this.nearBtn.addEventListener('click', () => {
+      this.near = !this.near;
+      this.nearBtn.classList.toggle('tb-on', this.near);
+      this.nearBtn.setAttribute('aria-pressed', String(this.near));
+      this.render();
+    });
+    bar.append(this.nearBtn);
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
     this.footer.className = 'inv-footer';
-    win.body.append(this.search, this.list, this.footer);
+    win.body.append(this.search, bar, this.list, this.footer);
     game.events.on('crate', () => this.render());
     game.events.on('world', () => this.render());
     this.render();
@@ -82,15 +102,20 @@ export class StoresPanel {
     this.render();
   }
 
-  /** Every container you own, wherever it is. */
+  /**
+   * Every container that is yours or one of your settlement's stores,
+   * wherever it is. Somebody else's, which the ground read carries as well,
+   * was listed too, and a search for planks found a neighbour's.
+   */
   private holders(): Holder[] {
     const g = this.game;
     const out: Holder[] = [];
     for (const c of g.crates.values()) {
+      if (c.mine === false && !c.storeOf) continue;
       out.push({ name: crateName(c), centre: crateCentre(c), items: c.items, units: crateUnits(c), capacity: crateCapacity(c), crate: c.id });
     }
     for (const f of g.furniture.values()) {
-      if (!furnitureHolds(f)) continue;
+      if (!furnitureHolds(f) || (f.mine === false && !f.storeOf)) continue;
       out.push({
         name: furnitureName(f), centre: furnitureCentre(f), items: f.items,
         units: furnitureUnits(f), capacity: furnitureCapacity(f),
@@ -110,9 +135,16 @@ export class StoresPanel {
     return h.items.filter((it) => `${itemName(it)} ${itemDef(it.id).category}`.toLowerCase().includes(this.query));
   }
 
+  /** Within crafting reach, counted as a craft counts it: tiles, the larger way across. */
+  private within(h: Holder): boolean {
+    const { x, y } = this.game.player;
+    return Math.max(Math.abs(h.centre[0] - x), Math.abs(h.centre[1] - y)) <= CRAFT_REACH + 0.5;
+  }
+
   render(): void {
     const all = this.holders();
-    const shown = this.query ? all.filter((h) => this.hits(h).length) : all;
+    const pool = this.near ? all.filter((h) => this.within(h)) : all;
+    const shown = this.query ? pool.filter((h) => this.hits(h).length) : pool;
     shown.sort((a, b) => this.far(a) - this.far(b));
     this.list.replaceChildren();
     if (!all.length) {
@@ -126,14 +158,19 @@ export class StoresPanel {
     if (!shown.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = `Nothing in any of your ${all.length} stores answers to “${this.search.value.trim()}”. Press Escape in the box to clear it.`;
+      empty.textContent = `Nothing in ${this.near ? `the ${pool.length} stores within ${CRAFT_REACH} tiles` : `any of your ${all.length} stores`} answers to “${this.search.value.trim()}”.`
+        + `${this.game.ask && !this.near ? ` On an island a store says what is in it only while you are within ${STORE_SEEN} tiles of it.` : ''} Press Escape in the box to clear it.`;
       this.list.append(empty);
     }
     for (const h of shown.slice(0, 60)) this.list.append(this.row(h));
     const held = all.reduce((n, h) => n + h.units, 0);
     const room = all.reduce((n, h) => n + h.capacity, 0);
     const full = all.filter(brimming).length;
-    this.footer.textContent = `${all.length} stores · ${held} of ${room} things${full ? ` · ${full} full` : ''}`;
+    // What answers to the search, all told, so "how many planks have I got about" is one number.
+    const found = this.query ? shown.reduce((n, h) => n + this.hits(h).reduce((m, it) => m + it.count, 0), 0) : 0;
+    this.footer.textContent = this.query
+      ? `${found} matching in ${shown.length} ${shown.length === 1 ? 'store' : 'stores'}${this.near ? ` within ${CRAFT_REACH} tiles` : ''}`
+      : `${all.length} stores · ${held} of ${room} things${full ? ` · ${full} full` : ''}`;
     this.footer.classList.toggle('inv-over', full > 0 && full === all.length);
   }
 

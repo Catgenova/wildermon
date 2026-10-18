@@ -501,6 +501,14 @@ export const GROUND_EVERY = 1;
 export const GROUND_RANGE = 40;
 
 /**
+ * And how near a store has to be for the ground read to carry what is in it
+ * (a crate further off says only how full it is, a piece of furniture
+ * nothing): tiles, the larger way across. The island's ground read says the
+ * same, `greatest(abs(pl.cx - p.x), abs(pl.cy - p.y)) <= 6`.
+ */
+export const STORE_SEEN = 6;
+
+/**
  * Seconds between asking the island about the springs near you. A spring's
  * water changes only when somebody digs, and anything you do yourself asks
  * again at once, so this is how long somebody else's digging takes to show.

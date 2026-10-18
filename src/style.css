@@ -5679,6 +5679,10 @@ button.goal-row:focus-visible {
 .notice-done::before { content: '✓'; color: var(--t-info, #9fc4e0); }
 .notice-birth { border-color: var(--t-rose, #e6a6c8); }
 .notice-birth::before { content: '❀'; color: var(--t-rose, #e6a6c8); }
+.notice-wear { border-color: var(--t-bad, #e0907a); }
+.notice-wear::before { content: '\26A0\FE0E'; color: var(--t-bad, #e0907a); }
+.notice-rot { border-color: var(--t-warn, #d8b46a); }
+.notice-rot::before { content: '\2672\FE0E'; color: var(--t-warn, #d8b46a); }
 
 .notice-going {
   opacity: 0;
@@ -8795,3 +8799,68 @@ button.goal-row:focus-visible {
 .eq-card-mark { display: inline-grid; place-items: center; width: 13px; height: 13px; margin-right: 4px; border-radius: 50%; font-size: 7px; vertical-align: 1px; }
 .eq-card-up { background: var(--eq-gold); color: #2a1d0c; }
 .eq-card-trade { background: var(--eq-iron-lit); color: var(--eq-ink); font-size: 8px; }
+
+/* ---- The shopping list (src/ui/panels/shopping.ts) ---- */
+.shop {
+  display: grid;
+  gap: 6px;
+  padding: 4px 2px;
+}
+
+.shop-section {
+  display: grid;
+  gap: 2px;
+}
+
+.shop-note {
+  color: var(--ui-dim);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.shop-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 4px;
+  font-size: 12px;
+}
+
+.shop-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shop-bar {
+  position: relative;
+  flex: 0 0 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ui-dim) 25%, transparent);
+  overflow: hidden;
+}
+
+.shop-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--ui-accent);
+}
+
+.shop-count {
+  flex: 0 0 auto;
+  min-width: 64px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.shop-done {
+  color: var(--t-good, #8fb86a);
+}
+
+.shop-done .shop-bar > span {
+  background: var(--t-good, #8fb86a);
+}

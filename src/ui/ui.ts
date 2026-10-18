@@ -91,6 +91,9 @@ import { DELIVER_REACH, settleLine } from '../game/noticeboard';
 import type { LedgerPanel } from './panels/ledger';
 import { JournalPanel, type JournalTab } from './panels/journal';
 import { ContextMenu, type MenuItem } from './contextmenu';
+import { AutoEat } from '../game/autoeat';
+import { ShoppingPanel } from './panels/shopping';
+import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { frameFootprintEntries, frameHoverLines, frameJettyEntries } from './frameMenu';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
@@ -304,6 +307,7 @@ export class UI {
   private readonly faith: FaithPanel;
   private readonly health: HealthPanel;
   private readonly equipment: EquipmentPanel;
+  private readonly shopping: ShoppingPanel;
   private readonly spellBar: SpellBar;
   private readonly deedPanel: DeedPanel;
   private readonly tilePanel: TilePanel;
@@ -329,6 +333,8 @@ export class UI {
   placing: Placing | null = null;
   /** Lines near the top of the screen for a new whole number, a knack, work done or a birth. */
   readonly notices: Notices;
+  /** Eating by itself when Food runs low (`settings.autoEat`). */
+  private readonly autoEat: AutoEat;
   /** The job in hand as a ring round the mouse pointer (`pointerring.ts`). */
   private readonly pointerRing: PointerRing;
   /** A settlement's name as you cross into it (`deedbanner.ts`). */
@@ -426,6 +432,10 @@ export class UI {
     // The handful you are moving today, beside the book that holds all forty.
     const craft = this.windows.create({ id: 'craft', title: 'Crafting', x: 364, y: 56, width: 360, height: 360, anchor: 'tr', open: false });
     this.craftPanel = new CraftPanel(craft, game);
+    // What a thing takes down to what is gathered, put there by Crafting's List (`shopping.ts`).
+    const shopWin = this.windows.create({ id: 'shopping', title: 'Shopping list', x: 364, y: 430, width: 340, height: 360, anchor: 'tr', open: false });
+    this.shopping = new ShoppingPanel(shopWin, game);
+    this.craftPanel.onList = (recipe, count) => this.shopping.add(recipe, count);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick, (ground) => this.selectTile(ground)), this.tooltip);
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
@@ -565,6 +575,7 @@ export class UI {
     this.craftPanel.onNoRecipe = (item) => void this.helpAbout(item);
     this.palette = new Palette(root, () => this.findables());
     this.notices = new Notices(root, game);
+    this.autoEat = new AutoEat(game);
     this.pointerRing = new PointerRing(root, game, canvas);
     this.deedBanner = new DeedBanner(root, game);
 
@@ -947,6 +958,7 @@ export class UI {
     // Runecut's light on the island clock turns at dusk and dawn; set to Day or Night this writes nothing.
     applyLook(this.game.settings, this.game.isNight());
     this.notices.update(performance.now());
+    this.autoEat.update(performance.now() / 1000);
     this.pointerRing.update(performance.now());
     this.deedBanner.update(performance.now());
     this.hud.update(this.renderer, fps);
@@ -969,6 +981,7 @@ export class UI {
     this.faith.update(performance.now() / 1000);
     this.health.update(performance.now());
     this.equipment.update(performance.now());
+    this.shopping.update(performance.now());
     this.spellBar.update();
   }
 
@@ -1297,9 +1310,11 @@ export class UI {
     const pile = this.game.groundAt(pick.x, pick.y);
     if (pile.length === 1) {
       const it = pile[0];
-      lines.push(`On the ground: ${itemName(it).toLowerCase()}${it.count > 1 ? ` ×${it.count}` : ''}${it.dmg >= 1 ? ` · ${Math.round(it.dmg)}% damage` : ''}`);
+      lines.push(`On the ground: ${itemName(it).toLowerCase()}${it.count > 1 ? ` ×${it.count}` : ''}${it.dmg >= 1 ? ` · ${Math.round(it.dmg)}% damage` : ''} · ${rotLine(this.game, it, pick.x, pick.y)}`);
     } else if (pile.length) {
-      lines.push(`On the ground: ${pile.length} items`);
+      // The first of them to go, which is the one worth knowing about.
+      const soonest = Math.min(...pile.map((it) => rotSeconds(this.game, it, pick.x, pick.y)));
+      lines.push(`On the ground: ${pile.length} items · the first rots in ${rotSaid(soonest)}`);
     }
     this.tooltip.show(sx, sy, lines);
   }
@@ -1716,6 +1731,8 @@ export class UI {
     if (pile.length && pickUp) {
       const children: MenuItem[] = pile.map((item) => ({
         label: (item.count > 1 ? `${itemName(item)} (${item.count})` : itemName(item)) + (item.dmg >= 1 ? ` · dmg ${Math.round(item.dmg)}` : ''),
+        // How long it has lying here: nothing rots in a pack or a store.
+        note: rotLine(this.game, item, pick.x, pick.y),
         onSelect: () => this.game.requestAction(pickUp, { kind: 'ground', x: pick.x, y: pick.y, uid: item.uid }),
       }));
       if (pile.length > 1) children.push({ label: 'Everything', onSelect: () => this.game.requestAction(pickUp, { kind: 'ground', x: pick.x, y: pick.y, uid: null }) });
@@ -1839,8 +1856,7 @@ export class UI {
             label: c.name,
             note: c.note,
             onSelect: () => {
-              here.colour = c.id;
-              this.game.events.emit('world', here.x, here.y);
+              this.game.recolourMark(here.id, c.id);
             },
           })),
         ],

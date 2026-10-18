@@ -116,6 +116,7 @@ export const WINDOW_RUNES: Record<string, string> = {
   help: 'eye',
   crate: 'diamond',
   stores: 'diamond',
+  shopping: 'harrow',
   faith: 'crescent',
   trades: 'crescent',
 };

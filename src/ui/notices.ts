@@ -1,23 +1,28 @@
-import type { Game } from '../game/game';
 import type { LogEntry } from '../game/events';
 import { SKILL_DEFS } from '../game/skills';
+import { DAMAGE_MAX, DAMAGE_WARN, type Game } from '../game/game';
+import { SLOTS } from '../game/gear';
+import { itemName } from '../game/items';
+import { rotSaid, rottingNear } from '../game/rot';
 
 /**
  * Notices: a line near the top of the screen for the few moments worth
  * looking up for, that fades on its own and leaves the event log as it was.
  *
- * Four kinds, each switched on or off in Settings:
+ * Six kinds, each switched on or off in Settings:
  *  - a skill reaching a new whole number (`noticeLevel`),
  *  - a knack (`noticeKnack`),
  *  - a run of work finishing, after at least `DONE_AFTER` seconds of it (`noticeDone`),
- *  - a wildermon born (`noticeBirth`).
+ *  - a wildermon born (`noticeBirth`),
+ *  - something worn or held reaching `DAMAGE_WARN` damage, once until it is mended (`noticeWear`),
+ *  - food on the ground near you with under `ROT_SOON` left before it rots, once a stack (`noticeRot`).
  *
  * Read off what the game already says and holds -- the skill book, the log
  * and the job in hand -- so the island and the game played alone give the
  * same notices without either of them knowing these exist.
  */
 
-export type NoticeKind = 'level' | 'knack' | 'done' | 'birth';
+export type NoticeKind = 'level' | 'knack' | 'done' | 'birth' | 'wear' | 'rot';
 
 /** How long a notice stays, in milliseconds, before it fades. */
 export const NOTICE_MS = 4500;
@@ -55,12 +60,17 @@ export function underTopBars(root: HTMLElement, skip?: Element): number {
   return y;
 }
 
-const SETTING: Record<NoticeKind, 'noticeLevel' | 'noticeKnack' | 'noticeDone' | 'noticeBirth'> = {
+const SETTING: Record<NoticeKind, 'noticeLevel' | 'noticeKnack' | 'noticeDone' | 'noticeBirth' | 'noticeWear' | 'noticeRot'> = {
   level: 'noticeLevel',
   knack: 'noticeKnack',
   done: 'noticeDone',
   birth: 'noticeBirth',
+  wear: 'noticeWear',
+  rot: 'noticeRot',
 };
+
+/** How often the ground round you is looked over for food about to rot, in milliseconds. */
+const ROT_EVERY = 5000;
 
 export class Notices {
   private readonly el: HTMLDivElement;
@@ -77,6 +87,16 @@ export class Notices {
    * and every skill moves off the value it was given before it came.
    */
   private readonly settledAt = performance.now() + 6000;
+  /**
+   * What worn or held has been said to be wearing out, by uid; and whether
+   * the first look has been taken, which only notes what is already worn so
+   * that coming ashore in an old coat is not news.
+   */
+  private readonly worn = new Set<number>();
+  private wornSeen = false;
+  /** Food on the ground already said to be rotting, by uid, and when the ground was last looked over. */
+  private readonly rotting = new Set<number>();
+  private rotAt = 0;
 
   constructor(private readonly root: HTMLElement, private readonly game: Game) {
     this.el = document.createElement('div');
@@ -86,6 +106,36 @@ export class Notices {
       if (e.text.startsWith('You have a knack for')) this.show('knack', e.text);
       else if (e.text.includes(' drops a young ')) this.show('birth', e.text.replace(/:.*$/, '.'));
     });
+  }
+
+  /** Something worn or held past `DAMAGE_WARN` damage: said once, and again only after it has been mended under it. */
+  private lookWear(): void {
+    const g = this.game;
+    const now = new Set<number>();
+    for (const slot of SLOTS) {
+      const it = g.worn(slot);
+      if (!it || it.dmg < DAMAGE_WARN) continue;
+      now.add(it.uid);
+      if (this.worn.has(it.uid)) continue;
+      this.worn.add(it.uid);
+      if (this.wornSeen) this.show('wear', `Your ${itemName(it).toLowerCase()} is ${Math.floor(it.dmg)}% worn; at ${DAMAGE_MAX}% it breaks.`);
+    }
+    for (const uid of [...this.worn]) if (!now.has(uid)) this.worn.delete(uid);
+    this.wornSeen = true;
+  }
+
+  /** Food lying near you that rots within `ROT_SOON`: once a stack. */
+  private lookRot(): void {
+    const g = this.game;
+    const near = rottingNear(g);
+    const here = new Set(near.map((r) => r.item.uid));
+    for (const uid of [...this.rotting]) if (!here.has(uid)) this.rotting.delete(uid);
+    for (const r of near) {
+      if (this.rotting.has(r.item.uid)) continue;
+      this.rotting.add(r.item.uid);
+      const off = Math.round(Math.hypot(r.x + 0.5 - g.player.x, r.y + 0.5 - g.player.y));
+      this.show('rot', `${r.item.count > 1 ? `${r.item.count} × ` : 'The '}${itemName(r.item).toLowerCase()} on the ground ${off < 1 ? 'here' : `${off} tiles off`} rots in ${rotSaid(r.secs)}. Nothing rots in a pack or a store.`);
+    }
   }
 
   /** A run of work stopped by hand ends without a notice. */
@@ -110,6 +160,7 @@ export class Notices {
     if (now - this.lookedAt >= LOOK_EVERY) {
       this.lookedAt = now;
       if (this.el.childElementCount) this.el.style.top = `${underTopBars(this.root)}px`;
+      this.lookWear();
       for (const def of SKILL_DEFS) {
         const whole = Math.floor(this.game.skills.get(def.id) + 1e-9);
         const was = this.floors.get(def.id);
@@ -117,6 +168,10 @@ export class Notices {
         // One whole number up and no more: a jump of several is the book arriving from the island, not a go.
         if (was !== undefined && whole === was + 1 && now > this.settledAt) this.show('level', `${def.name} is now ${whole}`);
       }
+    }
+    if (now - this.rotAt >= ROT_EVERY && now > this.settledAt) {
+      this.rotAt = now;
+      this.lookRot();
     }
     const busy = this.game.action;
     if (busy) {

@@ -1,5 +1,6 @@
 import { gearFrom } from '../game/worn';
 import { BROWSER_TALLY, Game } from '../game/game';
+import type { Marker } from '../game/marks';
 import { EMOTE_BY_ID } from '../game/emotes';
 import { cleanLook } from '../game/look';
 import { whoAmI } from './accounts';
@@ -296,6 +297,26 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   // And the record of what has been ticked off, which is the island's to keep:
   // nothing on this side is ever written down on an island.
   game.tickedGoal = (id) => island.tickGoal(id);
+  /*
+   * And the pins on your map, which an island game has nowhere to keep: it
+   * never saves, and the island holds no pins. Kept in this browser, one set
+   * for each island and each person on it, and taken back as the game starts.
+   */
+  const marksKey = `wurm.marks.${info.id}.${island.uid}`;
+  try {
+    const kept = JSON.parse(localStorage.getItem(marksKey) ?? '[]') as unknown;
+    if (Array.isArray(kept)) game.takeMarks(kept.filter((m): m is Marker => !!m && typeof m === 'object'
+      && typeof m.id === 'number' && typeof m.x === 'number' && typeof m.y === 'number' && typeof m.name === 'string' && typeof m.colour === 'string'));
+  } catch {
+    // Nothing kept, or storage shut: the map starts with no pins of yours.
+  }
+  game.marksChanged = () => {
+    try {
+      localStorage.setItem(marksKey, JSON.stringify(game.marks.filter((m) => m.grave === undefined)));
+    } catch {
+      // Storage full or shut: the pins last as long as the page.
+    }
+  };
   // And nothing is read out of it until the island has sent it: a tally that
   // has not arrived yet is an empty one, and every goal already met would be
   // announced all over again on every refresh.

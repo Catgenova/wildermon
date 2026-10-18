@@ -1,6 +1,6 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
+import { CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
 import { TIER_LEVEL } from '../../game/husbandry';
 
@@ -53,6 +53,8 @@ const SORTS: Array<[SortKey, string]> = [
  */
 export const HURT_AT = 0.6;
 export const HUNGRY_AT = 0.3;
+/** A dam due within this many seconds wants attention too: a quarter of her carrying. */
+export const DUE_SOON = GESTATION / 4;
 
 /** Your tamed wildermon with their condition, progress and actions. Wild ones are not listed. */
 export class WildermonPanel {
@@ -64,6 +66,9 @@ export class WildermonPanel {
   private sortSel!: HTMLSelectElement;
   private groupBtn!: HTMLButtonElement;
   private grouped = true;
+  /** Only the ones that want something doing: hungry, hurt, wanting a brush, or about to give birth. */
+  private attention = false;
+  private attentionBtn!: HTMLButtonElement;
   private lastRender = 0;
   /**
    * The cards on screen, by the wildermon each one is for, and the group
@@ -136,7 +141,16 @@ export class WildermonPanel {
       groupBtn.classList.toggle('tb-on', this.grouped);
       this.render();
     });
-    bar.append(sortSel, groupBtn);
+    const attentionBtn = document.createElement('button');
+    this.attentionBtn = attentionBtn;
+    attentionBtn.type = 'button';
+    attentionBtn.className = 'tb-btn tb-small';
+    attentionBtn.textContent = 'Needs attention';
+    attentionBtn.title = `Only those under ${Math.round(HUNGRY_AT * 100)}% fed, under ${Math.round(HURT_AT * 100)}% health, `
+      + `under ${Math.round(CARE_WANTING * 100)}% care (wanting a brush), or due to give birth within ${clockLeft(DUE_SOON)}`;
+    attentionBtn.setAttribute('aria-pressed', 'false');
+    attentionBtn.addEventListener('click', () => this.showAttention(!this.attention));
+    bar.append(sortSel, groupBtn, attentionBtn);
     this.list = document.createElement('div');
     this.list.className = 'pals-list';
     this.footer = document.createElement('div');
@@ -224,7 +238,7 @@ export class WildermonPanel {
 
   render(): void {
     const owned = this.game.creatures.yours();
-    const shown = owned.filter((c) => this.matches(c));
+    const shown = owned.filter((c) => this.matches(c) && (!this.attention || this.wants(c)));
     if (!owned.length) {
       this.place([this.note('none', 'You have no tamed wildermon yet. Carry a berry for a Rabba or a spice for a Vola, then try Tame on a wild one.')]);
       this.footer.replaceChildren();
@@ -251,7 +265,9 @@ export class WildermonPanel {
       for (const c of this.ordered(group)) take(c);
     }
     if (!shown.length) {
-      want.push(this.note('search', `None of your wildermon answer to “${this.search.value.trim()}”.`));
+      want.push(this.attention
+        ? this.note('search', `None of your ${owned.length} wildermon wants anything doing.${this.query ? ` (Only those that answer to “${this.search.value.trim()}”.)` : ''}`)
+        : this.note('search', `None of your wildermon answer to “${this.search.value.trim()}”.`));
     }
     this.place(want);
     // Cards for wildermon that are no longer any of ours are let go, so a herd
@@ -263,12 +279,13 @@ export class WildermonPanel {
 
     const hungry = owned.filter((c) => this.isHungry(c)).length;
     const hurt = owned.filter((c) => this.isHurt(c)).length;
+    const wanting = owned.filter((c) => this.wants(c)).length;
     /*
      * The footer carries two buttons of its own, so it is rebuilt only when
      * what it says has actually changed -- which is when one of these three
      * numbers moves, and not two and a half times a second.
      */
-    const key = `${shown.length}/${owned.length}|${hungry}|${hurt}`;
+    const key = `${shown.length}/${owned.length}|${hungry}|${hurt}|${wanting}|${this.attention}`;
     if (key !== this.footerKey) {
       this.footerKey = key;
       this.footer.replaceChildren();
@@ -289,8 +306,32 @@ export class WildermonPanel {
       };
       jump(hungry, 'hungry', 'hunger');
       jump(hurt, 'hurt', 'health');
+      // Everything wanting attention at once, which is the view the button above turns on.
+      if (wanting && !this.attention) {
+        this.footer.append(document.createTextNode(' · '));
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pal-jump';
+        b.textContent = `${wanting} want attention`;
+        b.title = this.attentionBtn.title;
+        b.addEventListener('click', () => this.showAttention(true));
+        this.footer.append(b);
+      }
       this.footer.classList.toggle('inv-over', hungry > 0 || hurt > 0);
     }
+  }
+
+  /** Wanting something done: hungry, hurt, wanting a brush, or about to give birth. */
+  private wants(c: Creature): boolean {
+    return this.isHungry(c) || this.isHurt(c) || c.care < CARE_WANTING || (c.due > 0 && c.due - this.game.time <= DUE_SOON);
+  }
+
+  /** Turn the Needs attention view on or off. */
+  private showAttention(on: boolean): void {
+    this.attention = on;
+    this.attentionBtn.classList.toggle('tb-on', on);
+    this.attentionBtn.setAttribute('aria-pressed', String(on));
+    this.render();
   }
 
   /** Hurt enough to be worth doing something about. */

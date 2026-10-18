@@ -1,4 +1,4 @@
-import type { Game } from '../../game/game';
+import { TRAVEL_LEG, type Game } from '../../game/game';
 import { MARK_COLOURS, MARK_CSS } from '../../game/marks';
 import { furnitureDef, furnitureName } from '../../game/furniture';
 import { hasRunestones, RUNESTONES, stoneCentre } from '../../game/runestones';
@@ -109,7 +109,7 @@ export class MinimapPanel {
     homeBtn.type = 'button';
     homeBtn.className = 'tb-btn tb-small';
     homeBtn.textContent = 'Walk home';
-    homeBtn.title = 'Set off for the settlement token, or the bed you last woke in (Home)';
+    homeBtn.title = 'Set off for the settlement token, or the bed you last woke in (Home). Double-click the map to walk anywhere on it.';
     homeBtn.addEventListener('click', () => game.walkHome());
     const nameBtn = document.createElement('button');
     nameBtn.type = 'button';
@@ -154,6 +154,17 @@ export class MinimapPanel {
       cam.follow = false;
       cam.focus(x, y, w.heightAt(x, y), null);
     });
+    // A double click walks there, a leg at a time however far (`travelTo`); to a pin, if one is close by the click.
+    this.view.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      const [fx, fy] = this.tileAt(e.clientX, e.clientY);
+      const x = Math.floor(fx), y = Math.floor(fy);
+      if (!w.inBounds(x, y)) return;
+      const pin = game.markNear(x, y, Math.max(2, this.win.span / 64));
+      this.renderer.camera.follow = true;
+      if (pin) game.travelTo(pin.x, pin.y, pin.name);
+      else game.travelTo(x, y, `(${x}, ${y})`);
+    });
   }
 
   /** Where on the island a point on the drawn map is. */
@@ -195,7 +206,7 @@ export class MinimapPanel {
       pip.setAttribute('aria-label', `Colour of ${m.name}: click for the next one`);
       pip.addEventListener('click', () => {
         const i = MARK_COLOURS.findIndex((c) => c.id === m.colour);
-        m.colour = MARK_COLOURS[(i + 1) % MARK_COLOURS.length].id;
+        this.game.recolourMark(m.id, MARK_COLOURS[(i + 1) % MARK_COLOURS.length].id);
         this.listMarks();
       });
       const name = document.createElement('button');
@@ -218,11 +229,9 @@ export class MinimapPanel {
       go.type = 'button';
       go.className = 'tb-btn tb-small';
       go.textContent = 'Go';
-      go.title = `Walk to (${m.x}, ${m.y})`;
-      go.addEventListener('click', () => {
-        g.moveTo(m.x, m.y);
-        g.logMsg(`Walking to ${m.name}.`, 'info');
-      });
+      go.title = `Walk to (${m.x}, ${m.y}), a leg of up to ${TRAVEL_LEG} tiles at a time however far it is`;
+      // However far: a long walk goes in legs (`travelTo`), where one path was all there was.
+      go.addEventListener('click', () => g.travelTo(m.x, m.y, m.name));
       const off = document.createElement('button');
       off.type = 'button';
       off.className = 'tb-btn tb-small tb-danger';

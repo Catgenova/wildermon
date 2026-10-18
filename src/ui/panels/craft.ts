@@ -6,6 +6,9 @@ import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { UIWindow } from '../windows';
 import { Repaint } from '../repaint';
+
+/** The most goes one ask runs to: the island's `rpc_act` takes no more than this at once. */
+const MOST_GOES = 100;
 import { RecipeTree } from '../recipetree';
 import { QueueView } from './craftqueue';
 
@@ -57,6 +60,11 @@ export class CraftPanel {
   private readyOnly = false;
   /** What each recipe is to be made of, where the row was set to a wood or a metal: recipe id to material. */
   private readonly wants = new Map<string, string>();
+  /**
+   * Make until you hold so many: the recipe, the count wanted, and what was
+   * held when the last run was asked for, to see the next one get nearer.
+   */
+  private target: { r: Recipe; want: number; had: number; started: boolean } | null = null;
   /** The tile you were on when the book last looked, since a step can bring a store into reach or take one out of it. */
   private tile = '';
   private readyBox: HTMLInputElement;
@@ -70,6 +78,8 @@ export class CraftPanel {
   private counted: unknown = null;
   /** Told when a missing material is clicked that no recipe makes: the help is asked instead. */
   onNoRecipe: ((item: string) => void) | null = null;
+  /** Put a recipe on the shopping list, so many of what it makes (`ShoppingPanel`). */
+  onList: ((recipe: string, count: number) => void) | null = null;
   /** How a missing part is made, popped out of it on hover or focus (`recipetree.ts`). */
   private readonly tree: RecipeTree;
   /** Everything queued, the job in hand first, at the foot of the book (`craftqueue.ts`). */
@@ -133,6 +143,7 @@ export class CraftPanel {
      * `requestAction`, which keeps what it was last asked.
      */
     game.events.on('action', () => {
+      this.carryOnTo();
       const asked = game.lastAsked;
       if (!asked || asked === this.counted) return;
       this.counted = asked;
@@ -500,6 +511,23 @@ export class CraftPanel {
     if (!st.ready) craft.title = recipeReason(r, this.game, undefined, stock) ?? '';
     craft.addEventListener('click', () => this.craft(r, 1));
     buttons.append(craft);
+    // On the shopping list: everything it takes, down to what is gathered, against what is at hand.
+    const listBtn = document.createElement('button');
+    listBtn.type = 'button';
+    listBtn.className = 'tb-btn tb-small';
+    listBtn.textContent = 'List';
+    listBtn.title = `Put it on the shopping list: everything it takes, down to what is gathered, against your pack and the stores within ${CRAFT_REACH} tiles`;
+    listBtn.addEventListener('click', () => void this.askList(r));
+    buttons.append(listBtn);
+    if (st.ready) {
+      const to = document.createElement('button');
+      to.type = 'button';
+      to.className = 'tb-btn tb-small';
+      to.textContent = 'To…';
+      to.title = `Make until you hold so many ${lower(r.result)}, counting your pack, bags and stores within ${reachFor(this.game, r)} tiles; it stops early if what it takes runs out`;
+      to.addEventListener('click', () => void this.askTarget(r));
+      buttons.append(to);
+    }
     if (st.max > 1) {
       const all = document.createElement('button');
       all.type = 'button';
@@ -549,7 +577,86 @@ export class CraftPanel {
     if (!this.showMaking(item)) this.onNoRecipe?.(item);
   }
 
-  private craft(r: Recipe, times: number): void {
+  /** Ask how many to put on the shopping list. */
+  private async askList(r: Recipe): Promise<void> {
+    const per = this.game.madeAGo(r);
+    const said = await this.game.hooks.prompt(`How many ${lower(r.result)} to put on the shopping list? One go makes ${per}.`, String(per));
+    if (said === null) return;
+    const n = Math.floor(Number(said.trim()));
+    if (!Number.isFinite(n) || n <= 0) {
+      this.game.logMsg('Give a whole number of them.', 'error');
+      return;
+    }
+    this.onList?.(r.id, n);
+  }
+
+  /** How many of what a recipe makes you hold: in the pack, its bags and the stores it would reach. */
+  private holding(r: Recipe): number {
+    return this.game.craftStock(undefined, true, reachFor(this.game, r))
+      .filter((s) => s.item.id === r.result).reduce((n, s) => n + s.item.count, 0);
+  }
+
+  /** Ask how many to hold, and set off making the difference. */
+  private async askTarget(r: Recipe): Promise<void> {
+    const name = lower(r.result);
+    const had = this.holding(r);
+    const said = await this.game.hooks.prompt(`Make ${name} until you hold how many? You hold ${had}, counting your pack, bags and stores within ${reachFor(this.game, r)} tiles.`, String(had + 10 * this.game.madeAGo(r)));
+    if (said === null) return;
+    const want = Math.floor(Number(said.trim()));
+    if (!Number.isFinite(want) || want <= 0) {
+      this.game.logMsg('Give a whole number of them to hold.', 'error');
+      return;
+    }
+    if (want <= had) {
+      this.game.logMsg(`You hold ${had} ${name} already.`, 'info');
+      return;
+    }
+    this.target = { r, want, had, started: false };
+    this.goTo();
+  }
+
+  /** Ask for the goes it would take to make up the difference: as many as it can take now, and no more than the island takes at once. */
+  private goTo(): void {
+    const t = this.target;
+    if (!t) return;
+    const st = recipeStatus(t.r, this.game, this.wants.get(t.r.id), this.game.craftStock(undefined, false, reachFor(this.game, t.r)));
+    const goes = Math.min(Math.ceil((t.want - t.had) / Math.max(1, this.game.madeAGo(t.r))), Math.max(1, st.max), MOST_GOES);
+    // A run is judged only once it has been seen at work: on an island it starts a moment after it is asked for.
+    t.started = false;
+    if (!this.craft(t.r, goes)) this.target = null;
+  }
+
+  /**
+   * As a run ends: there yet, or nearer and able to go on, or stopped. A go
+   * that fails makes nothing, so a run of the right length can fall short;
+   * it is topped up for as long as each run gets nearer.
+   */
+  private carryOnTo(): void {
+    const t = this.target;
+    if (!t) return;
+    if (this.game.action) {
+      t.started = true;
+      return;
+    }
+    if (!t.started || this.game.queue.length) return;
+    const name = lower(t.r.result);
+    const have = this.holding(t.r);
+    if (have >= t.want) {
+      this.target = null;
+      this.game.logMsg(`You hold ${have} ${name}, the ${t.want} you set out to.`, 'event');
+      return;
+    }
+    const why = recipeReason(t.r, this.game, undefined, this.game.craftStock(undefined, false, reachFor(this.game, t.r)));
+    if (have <= t.had || why) {
+      this.target = null;
+      this.game.logMsg(`Stopped at ${have} of the ${t.want} ${name} you set out to hold${why ? `: ${why}` : '.'}`, 'error');
+      return;
+    }
+    t.had = have;
+    this.goTo();
+  }
+
+  private craft(r: Recipe, times: number): boolean {
     const def = ACTION_BY_ID.get(r.id);
     // Start on a stack of whatever the window said it would be made of, so
     // clicking Craft makes the thing the row described -- the first one a
@@ -560,10 +667,11 @@ export class CraftPanel {
     const first = r.inputs[0].item;
     const material = ((want ? stock.find((s) => s.item.id === first && s.item.extra === want) : undefined)
       ?? stock.find((s) => s.item.id === first))?.item;
-    if (!def || !material) return;
+    if (!def || !material) return false;
     // The number of goes, which is the island's `p_times`. It used to ride
     // inside the target as `count`, where the island reads it as "how many of
     // the stack" and a craft reads it not at all.
     this.game.requestAction(def, { kind: 'item', uid: material.uid }, times);
+    return true;
   }
 }

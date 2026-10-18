@@ -452,7 +452,10 @@ input.onKey = (code, ev) => {
     ui.layout(Number(layout[1]) - 1, ev.shiftKey);
     return;
   }
-  PRESSES[id]?.();
+  const press = PRESSES[id];
+  if (press) press();
+  // A window with no press of its own opens by its name: Health, Equipment and the shopping list had keys that did nothing.
+  else if (id.startsWith('win_')) ui.toggleWindow(id.slice(4));
 };
 
 const loop = new GameLoop(
