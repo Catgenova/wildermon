@@ -67,13 +67,13 @@ interface Spore {
 const SPORELING_LOOK: Spore = {
   stage: 0,
   leg: { at: [0.46, 0.12, -0.08], len: [0.38, 0.28, 0.1], rest: [80, -115], w: [0.4, 0.24], foot: 0.5 },
-  hips: [0.86, 0.78, 0.5],
+  hips: [0.86, 0.78, 0.46],
   chest: { at: [0, 0, 0.18], lean: -6 },
   torso: { z: [-0.25, 0.05, 0.36, 0.56, 0.68], y: [0.04, 0.08, 0.06, 0.03, 0], w: [0.86, 0.88, 0.72, 0.5, 0.3], h: [0.76, 0.78, 0.62, 0.44, 0.26] },
   neck: { at: [0, 0.03, 0.6], len: 0.08 },
   arm: { at: [0.5, 0.18, 0.44], len: [0.32, 0.3], rest: [8, 6, 30], w: [0.17, 0.15], paw: 0.16 },
   head: { c: [0, 0.06, 0.6], r: [0.84, 0.78, 0.74], pitch: 0, eye: 0.17, ear: 0.28, tufts: 0.16 },
-  cap: { r: 1.66, h: 0.94, droop: 0.12, flare: 0.1, lip: 0.07, up: 0.36, tilt: [28, 6], spots: 8, stem: 0.55 },
+  cap: { r: 1.66, h: 0.8, droop: 0.12, flare: 0.16, lip: 0.14, up: 0.36, tilt: [18, 6], spots: 8, stem: 0.55 },
   mantle: [[14, 0.58, 0.4, 0.7, 1]],
   sprig: { leaves: 5, len: 0.7, flowers: 1, back: 6, backFlowers: 1 },
   hang: { kind: 'none', bunches: 0, len: 0 },
@@ -92,7 +92,7 @@ const SPOREKIN_LOOK: Spore = {
   neck: { at: [0, 0.04, 1.18], len: 0.14 },
   arm: { at: [0.54, 0.1, 0.96], len: [0.48, 0.44], rest: [8, 8, 26], w: [0.16, 0.14], paw: 0.17 },
   head: { c: [0, 0.08, 0.58], r: [0.8, 0.76, 0.72], pitch: 2, eye: 0.165, ear: 0.4, tufts: 0.24 },
-  cap: { r: 2.0, h: 1.1, droop: 0.12, flare: 0.12, lip: 0.08, up: 0.36, tilt: [27, 11], spots: 9, stem: 0.56 },
+  cap: { r: 2.0, h: 0.94, droop: 0.12, flare: 0.19, lip: 0.16, up: 0.36, tilt: [18, 8], spots: 9, stem: 0.56 },
   mantle: [[16, 0.66, 0.55, 1.12, 1], [16, 0.72, 0.82, 0.78, 0.7], [14, 0.7, 0.9, 0.4, 0.5]],
   sprig: { leaves: 6, len: 0.82, flowers: 2, back: 9, backFlowers: 2 },
   hang: { kind: 'berry', bunches: 5, len: 0.72 },
@@ -108,14 +108,14 @@ const SPOREKIN_LOOK: Spore = {
  */
 const SPORELORD_LOOK: Spore = {
   stage: 2,
-  leg: { at: [0.48, 0.0, -0.14], len: [0.62, 0.56, 0.16], rest: [10, -22], w: [0.54, 0.34], foot: 0.78 },
-  hips: [0.98, 0.84, 0.74],
+  leg: { at: [0.6, 0.0, -0.14], len: [0.62, 0.56, 0.16], rest: [10, -22], w: [0.62, 0.38], foot: 0.8 },
+  hips: [1.22, 0.92, 0.74],
   chest: { at: [0, 0, 0.26], lean: 4 },
-  torso: { z: [-0.36, 0.2, 0.86, 1.46, 1.74], y: [0.04, 0.12, 0.1, 0.04, 0], w: [0.94, 0.98, 0.9, 0.7, 0.34], h: [0.78, 0.82, 0.74, 0.56, 0.3] },
+  torso: { z: [-0.36, 0.2, 0.86, 1.46, 1.74], y: [0.04, 0.12, 0.1, 0.04, 0], w: [1.18, 1.22, 1.12, 0.88, 0.42], h: [0.86, 0.9, 0.81, 0.62, 0.33] },
   neck: { at: [0, 0.04, 1.6], len: 0.16 },
-  arm: { at: [0.76, 0.1, 1.34], len: [0.62, 0.56], rest: [6, 10, 22], w: [0.22, 0.19], paw: 0.24 },
+  arm: { at: [0.95, 0.1, 1.34], len: [0.62, 0.56], rest: [6, 10, 22], w: [0.24, 0.21], paw: 0.25 },
   head: { c: [0, 0.1, 0.62], r: [0.86, 0.8, 0.76], pitch: 2, eye: 0.155, ear: 0.44, tufts: 0.34 },
-  cap: { r: 2.55, h: 1.36, droop: 0.14, flare: 0.14, lip: 0.09, up: 0.36, tilt: [26, 5], spots: 11, stem: 0.6 },
+  cap: { r: 2.55, h: 1.16, droop: 0.14, flare: 0.24, lip: 0.18, up: 0.36, tilt: [18, 5], spots: 11, stem: 0.6 },
   mantle: [[16, 0.86, 0.62, 1.54, 0.72], [18, 1.04, 0.82, 1.16, 0.42], [22, 1.12, 0.9, 0.7, 0.3], [22, 1.16, 0.95, 0.22, 0.24]],
   sprig: { leaves: 7, len: 1.0, flowers: 2, back: 13, backFlowers: 3 },
   hang: { kind: 'pod', bunches: 3, len: 0.42 },
@@ -164,8 +164,8 @@ function frameAlong(t: V3, z: V3, fwd: V3): Xf {
 export const SPORE_HITS: readonly number[] = [0.5, 0.46, 0.56];
 /** How long the berries the Sporekin throws are in the air, from leaving the sprig to landing, as a share of the strike. */
 export const BERRY_FLIGHT = 0.3;
-/** How long the `q`th of its five berries is in the air, as a share of the strike: each a little sooner or later than the flight. */
-export const berryLand = (q: number): number => BERRY_FLIGHT * (0.86 + 0.28 * jitter(q + 7));
+/** How long the `q`th of its five berries is in the air, as a share of the strike: each a little sooner or later than the flight, the last twelve milliseconds after the fourth, which would otherwise land with it. */
+export const berryLand = (q: number): number => BERRY_FLIGHT * (0.86 + 0.28 * jitter(q + 7)) + (q === 4 ? 0.012 / ACT_SECS.strike : 0);
 
 /**
  * A go at its task, as shares of the go: the paw is down at the ground by `reach`, closes on what it has found and plucks it at
@@ -175,16 +175,17 @@ export const berryLand = (q: number): number => BERRY_FLIGHT * (0.86 + 0.28 * ji
 export const SPORE_WORK = { reach: 0.3, pluck: 0.38, lift: 0.46, drop: 0.72 } as const;
 
 /** How far through a go it is stooped to the ground: eased in and out of a go played once, and held while it works on. */
-const downOf = (t: number, graze: number): number => Math.max(graze, ramp(t, 0, 0.18) * (1 - ramp(t, 0.8, 1)));
+const downOf = (t: number, graze: number): number => Math.max(graze, ramp(t, 0, 0.18) * (1 - ramp(t, SPORE_WORK.drop + 0.02, 1)));
 /** How far each stage bows its chest at the ground, and bends its knees (`crouch`), so its paw reaches the ground. */
-export const WORK_BOW = [40, 72, 78], WORK_KNEE = [0.3, 1.1, 1.0], WORK_ARM = [-10, -20, -20];
+export const WORK_BOW = [30, 72, 78], WORK_KNEE = [0.3, 1.1, 1.0], WORK_ARM = [-15, -20, -20];
 /** Where the picking arm is as it lets go (forward, out, elbow): the Sporeling's paw at its cheek, the others' over their baskets. */
-export const WORK_DROP: Array<[number, number, number]> = [[120, 0, 20], [-50, 20, 20], [210, 60, 20]];
+export const WORK_DROP: Array<[number, number, number]> = [[120, 0, 20], [-50, 20, 20], [200, 70, 30]];
 
 /** The picking paw through a go: how far it is reaching down (nought up at the basket or the mouth, one at the ground) and how far closed on what it holds. */
 function pickOf(t: number): { reach: number; grip: number; tug: number } {
   const W = SPORE_WORK;
-  const reach = keyed(t, [[0, 0.45], [W.reach, 1], [W.pluck, 1], [W.lift + 0.06, 0.45], [W.drop - 0.06, 0], [W.drop + 0.04, 0]]);
+  // Up from the ground to the basket in one long easy swing, from the pluck to the drop.
+  const reach = keyed(t, [[0, 0.45], [W.reach, 1], [W.pluck + 0.02, 1], [W.drop - 0.02, 0], [W.drop + 0.06, 0]]);
   const grip = keyed(t, [[0, 0], [W.reach - 0.04, 0], [W.pluck, 1], [W.drop - 0.02, 1], [W.drop + 0.04, 0]]);
   const tug = hump(t, W.pluck + 0.02, 0.05);
   return { reach, grip, tug };
@@ -337,12 +338,33 @@ function planted(s: Spore, p: BipedPose, stride: ReadonlyArray<readonly [number,
   });
 }
 
+/** How much of every crouch is made this moment: one, unless it would put its seat in the ground (`sporeBones`). */
+let squat = 1;
+
+/** The corners of its seat and its torso, as they are built, for how low they go (`seatOf`): every other one. */
+const seats = new Map<Spore, { hips: V3[]; torso: V3[] }>();
+/** How high over the ground the lowest of its seat and the bottom of its body are. */
+function seatOf(s: Spore, b: Bones): number {
+  let c = seats.get(s);
+  if (!c) {
+    const T = s.torso;
+    const torso = tube(T.z.map((z, q) => [0, T.y[q], z] as V3), T.w, T.h, 12, 'coat', { up: [0, 1, 0] }).v;
+    c = { hips: orb([0, 0, 0], s.hips, 12, 7, 'coat').v.filter((_, i) => i % 2 === 0), torso: torso.filter((_, i) => i % 2 === 0) };
+    seats.set(s, c);
+  }
+  let low = Infinity;
+  for (const v of c.hips) low = Math.min(low, place(b.body, v)[2]);
+  for (const v of c.torso) low = Math.min(low, place(b.chest, v)[2]);
+  return low;
+}
+
 /**
  * Each leg bent at the knee by `fold` more (as `bipedBones` folds a leg: the thigh forward twenty degrees and the knee back
  * fifty-five to each one of it) with the thigh brought forward or back by as much more as keeps the sole where it was, under
  * the hip: a crouch, or a stretch for a fold under nought, that never slides its feet over the ground.
  */
 function crouch(s: Spore, p: BipedPose, fold: number): void {
+  if (fold > 0) fold *= squat;
   if (!fold) return;
   const [L1, L2] = s.leg.len, [lp, kp] = s.leg.rest;
   for (const l of p.legs) {
@@ -401,10 +423,12 @@ function strikePose(s: Spore, p: BipedPose, t: number): void {
   }
   // The staff: raised high as it draws itself up tall, then driven down on the ground before it, the body dropping onto it with
   // the knees giving; a shake through it as it lands, and it rises.
-  p.chest[0] += -10 * k.gather + 18 * k.land - 4 * k.after;
-  p.head[0] += 10 * k.gather - 10 * k.land;
+  p.chest[0] += -14 * k.gather + 18 * k.land - 4 * k.after;
+  p.head[0] += 12 * k.gather - 10 * k.land;
   crouch(s, p, 0.32 * k.land - 0.06 * k.gather);
-  p.arms[1] = [p.arms[1][0] + 96 * k.gather + 26 * k.land, p.arms[1][1] - 12 * k.gather, p.arms[1][2] - 20 * k.gather + 10 * k.land];
+  // Its staff paw out to its side at the height of its head, the staff in it raised forward and out past its brim.
+  const arm = p.arms[1], raise = STAFF_RAISE_ARM;
+  p.arms[1] = [lerp(arm[0], raise[0], k.gather) + 26 * k.land, lerp(arm[1], raise[1], k.gather), lerp(arm[2], raise[2], k.gather) + 10 * k.land];
   p.arms[0] = [p.arms[0][0] + 26 * k.gather + 20 * k.land, p.arms[0][1] + 20 * k.gather, p.arms[0][2] + 30 * k.gather];
   p.tail[0] += 16 * k.gather - 10 * k.land;
 }
@@ -448,7 +472,8 @@ function workPose(s: Spore, p: BipedPose, t: number, graze: number): void {
   p.arms[0] = [0, 1, 2].map((q) => lerp(arm[q], lerp(ground[q], basket[q], up), d)) as [number, number, number];
   p.chest[2] += d * (s.stage === 1 ? 12 : -18) * up;
   p.head[1] += d * (s.stage === 1 ? 14 : 8) * up;
-  if (s.stage === 1) p.arms[1] = [p.arms[1][0] - d * 10, p.arms[1][1], p.arms[1][2]];
+  // The Sporekin's sprig held up out of the way as it stoops, clear of the ground.
+  if (s.stage === 1) p.arms[1] = [p.arms[1][0] - d * SPRIG_UP, p.arms[1][1], p.arms[1][2] + d * SPRIG_BEND];
   // The Sporelord's staff paw taken out to its side with the staff (`staffOf`).
   if (s.stage === 2) p.arms[1] = [p.arms[1][0] + d * STAFF_WORK_ARM[0], p.arms[1][1] + d * STAFF_WORK_ARM[1], p.arms[1][2] + d * STAFF_WORK_ARM[2]];
 }
@@ -457,7 +482,7 @@ function workPose(s: Spore, p: BipedPose, t: number, graze: number): void {
 function tailBones(s: Spore, body: Xf, a: Anim, p: { lift: number; sway: number }): Xf[] {
   const at: V3 = [0, -s.hips[1] * 0.82, -s.hips[2] * 0.42];
   const out: Xf[] = [];
-  let prev = joint(body, at, 2 - p.lift * 0.4, 0, p.sway * 0.6);
+  let prev = joint(body, at, -6 - p.lift * 0.4, 0, p.sway * 0.6);
   out.push(prev);
   for (const [q, curl] of [[1, -42], [2, -46]] as const) {
     prev = joint(prev, [0, -s.tail.len, 0], curl - p.lift * 0.3 * q, 0, p.sway * 0.3);
@@ -486,11 +511,19 @@ function reachOf(spec: BipedSpec, own: (p: BipedPose, a: Anim) => void, gait: nu
   return time > 0 ? back / time : 1;
 }
 
+/** The most the cap is ever tipped back from upright, in degrees, however the head under it is tipped. */
+const CAP_BACK = 32;
+
 /** Where the Sporelord's staff stands on the ground standing, against its feet: out to its right and a little ahead. */
 const STAFF_REST = (s: Spore): V3 => [s.arm.at[0] + 0.86, 0.86, 0];
-/** How far the staff's end is moved out from where it stands as the Sporelord stoops at its task, and how far its paw is taken out with it. */
-export const STAFF_WORK: V3 = [0, -0.4, 0];
-export const STAFF_WORK_ARM = [0, 20, 0];
+/** Where the staff's end stands against its paw as the Sporelord stoops at its task, and how far its paw is taken out to its side. */
+export const STAFF_WORK: V3 = [-0.6, -0.6, 0];
+/** How far the Sporekin brings forward the arm holding its sprig (negative: back) and bends its elbow as it stoops, the sprig held up at its chest out of the ground. */
+export const SPRIG_UP = -20, SPRIG_BEND = 80;
+export const STAFF_WORK_ARM = [0, 50, 0];
+/** The raised staff's foot, and the arm (forward, out, elbow) whose paw holds it out at the height of its head. */
+const STAFF_RAISE: V3 = [1.1, 0.4, 1.8];
+const STAFF_RAISE_ARM: [number, number, number] = [20, 80, 0];
 /** The staff's length. */
 const staffLen = (s: Spore): number => s.arm.at[2] + s.chest.at[2] + s.leg.len[0] + s.leg.len[1] + 1.4;
 /** Where the end of the staff comes down as it strikes: further ahead, before its right foot. */
@@ -512,7 +545,19 @@ function sporeBones(s: Spore): (a: Anim) => Bones {
     // what says the go is looping.
     const base = act && act.kind !== 'evolve' ? { ...a, graze: 0 } : a;
     const own = (p: BipedPose): void => sporePose(s, p, a);
-    const b = bipedBones(spec, base, own);
+    squat = 1;
+    let b = bipedBones(spec, base, own);
+    // Crouched no deeper than keeps its seat and its belly off the ground: the crouch eased off until they are.
+    if (seatOf(s, b) < 0) {
+      let lo = 0, hi = 1;
+      for (let q = 0; q < 7; q++) {
+        squat = (lo + hi) / 2;
+        if (seatOf(s, bipedBones(spec, base, own)) < 0) hi = squat; else lo = squat;
+      }
+      squat = lo;
+      b = bipedBones(spec, base, own);
+      squat = 1;
+    }
     const g = smooth(a.go), w = frac(a.u);
     // The tail: swept along the ground behind, swinging with the waddle, lifted as it gathers itself and evolves.
     let lift = 0, sway = 10 * cyc(a.t, 4) * (1 - g) + g * 3 * s.gait.waddle * Math.sin(w * TAU + 1.4);
@@ -535,7 +580,10 @@ function sporeBones(s: Spore): (a: Anim) => Bones {
     if (act?.kind === 'evolve') wobR += 8 * hump(act.t, 0.6, 0.12) * Math.sin(act.t * 50);
     // Tipped back about a point well behind its middle, so the front of the brim lifts off the face and shows the gills, and the
     // back of it stays up over the nape rather than sinking onto the shoulders.
-    const pitch = C.tilt[0] + wob, pv: V3 = [0, -C.r * 0.32, 0], cp = Math.cos(pitch * DEG), sp = Math.sin(pitch * DEG);
+    // However far the head is tipped back as well -- reaching up to its cheek, gathering itself to strike -- the cap is never
+    // tipped back past CAP_BACK from upright, where it would flip over like a lid.
+    const headBack = -Math.asin(clamp(b.head.m[5], -1, 1)) / DEG;
+    const pitch = Math.min(C.tilt[0] + wob, CAP_BACK - headBack), pv: V3 = [0, -C.r * 0.32, 0], cp = Math.cos(pitch * DEG), sp = Math.sin(pitch * DEG);
     const turned: V3 = [0, pv[1] * cp - pv[2] * sp, pv[1] * sp + pv[2] * cp];
     b.cap = joint(b.head, add(add(s.head.c, [0, 0, C.up]), sub(pv, turned)), pitch, -C.tilt[1] - wobR, 0);
     // The basket at its hip, hung from its strap: swinging fore and aft with the stride, out with the waddle.
@@ -576,14 +624,15 @@ function staffOf(s: Spore, b: Bones, a: Anim, reach: number): Xf {
   }
   const act = a.act;
   if (act?.kind === 'work') {
-    // Stooping, it sets the staff's end out to its side and back, and leans the staff out away from it, clear of its cap.
-    const d = downOf(act.t, a.graze);
-    tip = add(tip, scale(STAFF_WORK, d));
+    // Stooping, it stands the staff upright under its paw, out at its side, clear of the paw it picks with and of its cap.
+    const d = downOf(act.t, a.graze), hand = place(b.hand1, [0, 0, 0]);
+    tip = [lerp(tip[0], hand[0] + STAFF_WORK[0], d), lerp(tip[1], hand[1] + STAFF_WORK[1], d), 0];
   }
   if (act?.kind === 'strike') {
     const t = act.t, hit = SPORE_HITS[2], k = strikeOf(s, t);
-    // Raised out to its side and forward, clear of its cap, so the raise is seen whichever way it is turned.
-    const high: V3 = [rest[0] + 0.6, 2.4, 1.8];
+    // Its foot raised off the ground beside it, so the staff stands up forward and out past its brim from the paw out at its side:
+    // seen beside the cap whichever way it is turned.
+    const high = STAFF_RAISE;
     const to = STAFF_HIT(s);
     const raise = ramp(t, 0.04, hit - 0.12), drive = ramp(t, hit - 0.1, hit), back = ramp(t, hit + 0.12, 0.98);
     const lifted: V3 = [lerp(rest[0], high[0], raise), lerp(rest[1], high[1], raise), lerp(0, high[2], raise)];
@@ -722,7 +771,7 @@ function fronds(parts: readonly Frond[]): Fronds {
  */
 function rustle(s: Spore, a: Anim, phase: number): { lift: number; bounce: number } {
   let lift = 0.04 * beat(a.t, [4.6, 13.9, 21.2], 1.2) * (1 - a.go);
-  let bounce = a.go > 0 ? smooth(a.go) * (0.05 + s.gait.bounce + 0.04 * a.gait) * Math.sin(frac(a.u) * TAU * 2 - 1.2 - phase) : 0;
+  let bounce = a.go > 0 ? smooth(a.go) * (0.05 + 0.03 * a.gait) * Math.sin(frac(a.u) * TAU * 2 - 1.2 - phase) : 0;
   const act = a.act;
   if (act?.kind === 'strike') {
     const k = strikeOf(s, act.t);
@@ -898,7 +947,8 @@ function capDeco(s: Spore, n: number, K: number): { sprig: Fronds; hang: Array<{
   const bunches: Array<{ mesh: Mesh; dir: V3 }> = [];
   for (let q = 0; q < s.hang.bunches; q++) {
     const hang: Mesh[] = [];
-    const th = Math.PI * (0.88 + (0.42 * q) / Math.max(1, s.hang.bunches - 1)) + 0.06 * jitter(q);
+    // Round the back of the brim, framing it, and clear of the face from either side.
+    const th = Math.PI * (1.15 + (0.4 * q) / Math.max(1, s.hang.bunches - 1)) + 0.06 * jitter(q);
     const [rimR, rimZ] = capProfile(C, 0.96);
     const top: V3 = [rimR * Math.cos(th), rimR * Math.sin(th), rimZ - 0.04];
     const L = s.hang.len * (0.55 + 0.6 * jitter(q + 4));
@@ -1010,7 +1060,7 @@ function berrySprig(n: number, K: number): { stalk: Mesh; berries: Mesh } {
 function staffMesh(len: number, n: number, K: number): Mesh {
   const pts: V3[] = Array.from({ length: 8 }, (_, q) => {
     const f = q / 7;
-    return [0.06 * Math.sin(q * 2.1) * (q > 0 ? 1 : 0), 0.05 * Math.cos(q * 1.7) * (q > 0 ? 1 : 0), f * len];
+    return [0.06 * Math.sin(q * 2.1) * (q > 0 ? 1 : 0), 0.05 * Math.cos(q * 1.7) * (q > 0 ? 1 : 0), 0.13 + f * (len - 0.13)];
   });
   const head: V3[] = [pts[7], add(pts[7], [0.05, 0.12, 0.2]), add(pts[7], [0.04, 0.32, 0.22]), add(pts[7], [0.02, 0.4, 0.06])];
   const stick = tube([...pts, ...head.slice(1)], [0.09, 0.095, 0.1, 0.095, 0.105, 0.11, 0.12, 0.13, 0.12, 0.1, 0.07], [0.09, 0.095, 0.1, 0.095, 0.105, 0.11, 0.12, 0.13, 0.12, 0.1, 0.07], 6,
@@ -1062,8 +1112,9 @@ function basketOf(R: number, H: number, n: number, K: number, flowers: number, s
 const pawOf = (r: number, n: number): Mesh => orbAlong([0, r * 0.25, -r * 0.55], [0, 0.3, -1], [r * 0.9, r * 0.78, r], n, 4, 'muzzle');
 
 /** A foot: a pale padded lump forward of the ankle with three dark claws at its toes. */
-function footOf(w: number, len: number, n: number): Mesh {
-  const drop = w * 0.55;
+function footOf(w: number, len: number, sole: number, n: number): Mesh {
+  // Its underside on the sole, where the legs' spec puts the ground, and no lower.
+  const drop = Math.min(w * 0.55, sole / 1.15);
   const claws = [-1, 0, 1].map((q) => {
     const root: V3 = [q * w * 0.42, len * 0.82, -drop * 0.7];
     return taper([root, add(root, [q * w * 0.08, len * 0.2, -drop * 0.25])], w * 0.16, w * 0.03, 4, 'claw');
@@ -1129,11 +1180,12 @@ const backBasket = (s: Spore): { at: V3; r: number } => ({ at: [-0.3, -s.torso.h
 
 /**
  * The strap across the chest: from the left hip up over the front to the
- * right shoulder and down the back, a band of leather lying on the torso; and
- * on the Sporelord, lying over its cloak, from one side of the rim of the
- * basket on its back round under its left arm, across its chest past a round
- * wooden buckle on its breastbone, over its right shoulder and down to the
- * other side of the rim, so the basket hangs from it.
+ * right shoulder and down the back, a band of leather lying on the torso. On
+ * the Sporelord it lies on its cloak, at the roots of the leaves: from the
+ * right rim of the basket on its back up over its right shoulder, across its
+ * chest past a round wooden buckle on its breastbone, down to its left hip,
+ * and round under its left arm to the bottom of the basket's left side, so
+ * the basket hangs from it.
  */
 function strapOf(s: Spore, n: number): Mesh {
   const T = s.torso;
@@ -1144,30 +1196,25 @@ function strapOf(s: Spore, n: number): Mesh {
     const w = lerp(T.w[k], T.w[k + 1], f) + lift, h = lerp(T.h[k], T.h[k + 1], f) + lift, y = lerp(T.y[k], T.y[k + 1], f);
     return [Math.cos(th) * w, y + Math.sin(th) * h, z];
   };
-  const zTop = T.z[T.z.length - 2] + 0.04, zLow = T.z[1] - 0.1;
-  // Over the cloak, on the Sporelord: as far out as its leaves stand off it, and a little more.
-  const lift = s.stage === 2 ? 0.3 : 0.05 + 0.02 * s.stage;
-  const th0 = Math.PI * 1.02, th1 = Math.PI * 0.08;
-  const front = Array.from({ length: 9 }, (_, q) => {
-    const f = q / 8;
-    return on(lerp(zLow, zTop, f), lerp(th0, th1, f), lift * (1 - 0.35 * f));
-  });
-  let back = Array.from({ length: 6 }, (_, q) => {
-    const f = (q + 1) / 6;
-    return on(lerp(zTop, zLow, f), lerp(-Math.PI * 0.06, -Math.PI * 0.98, f), lift * (0.65 + 0.35 * f));
-  });
-  let lead: V3[] = [];
-  if (s.stage === 2) {
-    // Down the back to the rim of the basket on its right, and from the rim's left round to under its left arm.
-    const B = backBasket(s), rim = (sd: number): V3 => add(B.at, [sd * B.r * 0.9, B.r * 0.2, 0.02]);
-    back = [...back.slice(0, 3), ...curve(back[2], add(rim(1), [0, 0.1, 0.5]), rim(1), 3).slice(1)];
-    lead = curve(rim(-1), add(rim(-1), [-0.2, 0.2, 0.3]), front[0], 3).slice(0, -1);
+  const zTop = T.z[T.z.length - 2] + 0.04, zLow = T.z[1] - 0.1, w = 0.1 + 0.04 * s.stage;
+  if (s.stage < 2) {
+    const lift = 0.05 + 0.02 * s.stage;
+    const front = Array.from({ length: 7 }, (_, q) => on(lerp(zLow, zTop, q / 6), lerp(Math.PI * 1.02, Math.PI * 0.08, q / 6), lift));
+    const back = Array.from({ length: 6 }, (_, q) => on(lerp(zTop, zLow, (q + 1) / 6), lerp(-Math.PI * 0.06, -Math.PI * 0.98, (q + 1) / 6), lift));
+    return tube([...front, ...back], w, 0.035, 4, (_r, j) => (j % 2 ? 'leatherDark' : 'leather'), { start: false, end: false });
   }
-  const w = 0.1 + 0.04 * s.stage;
-  const band = tube([...lead, ...front, ...back], w, 0.035, 4, (_r, j) => (j % 2 ? 'leatherDark' : 'leather'), { start: false, end: false });
-  if (s.stage < 2) return band;
+  // On the cloak: as far out as the roots of its leaves (`mantleOf`), and a little more.
+  const lift = 0.13;
+  const B = backBasket(s), rim = (sd: number): V3 => add(B.at, [sd * B.r * 1.0, B.r * 0.15, 0.04]);
+  // Over the right shoulder from the back to the front, then diagonally across the chest to the left hip.
+  const over = Array.from({ length: 4 }, (_, q) => on(zTop - 0.05 * Math.abs(q - 1.5), lerp(-Math.PI * 0.32, Math.PI * 0.12, q / 3), lift + 0.03));
+  const across = Array.from({ length: 8 }, (_, q) => on(lerp(zTop - 0.08, zLow + 0.15, (q + 1) / 8), lerp(Math.PI * 0.12, Math.PI * 1.02, (q + 1) / 8), lift));
+  // Round under its left arm, low, to the bottom of the basket's left side.
+  const under = Array.from({ length: 3 }, (_, q) => on(zLow + 0.15 + 0.08 * (q + 1), lerp(Math.PI * 1.02, Math.PI * 1.3, (q + 1) / 3), lift));
+  const low: V3 = add(B.at, [-B.r * 0.72, B.r * 0.2, -0.62]);
+  const band = tube([rim(1), ...over, ...across, ...under, low], w, 0.035, 4, (_r, j) => (j % 2 ? 'leatherDark' : 'leather'), { start: false, end: false });
   // The buckle on its breastbone, where the strap crosses the middle of its chest.
-  const f = (th0 - Math.PI / 2) / (th0 - th1), mid = on(lerp(zLow, zTop, f), Math.PI / 2, lift * (1 - 0.35 * f) + 0.03), nrm = unit([0, 1, 0.15]);
+  const mid = on(lerp(zTop - 0.08, zLow + 0.15, 0.42), Math.PI / 2, lift + 0.04), nrm = unit([0, 1, 0.15]);
   return merge(
     band,
     orbAlong(add(mid, scale(nrm, 0.04)), nrm, [0.32, 0.32, 0.09], n, 3, 'bill'),
@@ -1190,7 +1237,7 @@ function limbs(s: Spore, n: number): Piece[] {
   }
   for (const [key, sd] of [['ll', -1], ['lr', 1]] as Array<[string, number]>) {
     const front: V3 = [sd * 0.8, 0.5, 0];
-    const foot = footOf(L.w[1] * 1.05, L.foot, n);
+    const foot = footOf(L.w[1] * 1.05, L.foot, L.len[2], n);
     out.push(
       // The thigh, a round haunch at its top tapering to the knee.
       { key: `${key}0`, mesh: merge(
@@ -1268,7 +1315,10 @@ function sporeBuild(s: Spore, lod: number): Piece[] {
     pieces.push({ key: 'strap', mesh: strapOf(s, n), bone: 'chest', bias: 0.07, after: ['body'], hide: [torsoSolid] });
   }
   if (s.stage === 2) {
-    pieces.push({ key: 'staff', mesh: staffMesh(staffLen(s), n, K), bone: 'staff', bias: 0.05, after: ['hand1'], front: [0, 0, 0] });
+    // The staff; and while it is raised to strike, up and forward past the brim, drawn over the cap when it is in front of it.
+    const staff = staffMesh(staffLen(s), n, K), raised = (a: Anim): boolean => a.act?.kind === 'strike' && a.act.t > 0.12 && a.act.t < SPORE_HITS[2] - 0.03;
+    pieces.push({ key: 'staff', mesh: staff, bone: 'staff', bias: 0.05, after: ['hand1'], front: [0, 0, 0], shown: (a) => !raised(a) });
+    pieces.push({ key: 'staffUp', mesh: staff, bone: 'staff', bias: 0.05, after: ['hand1', 'cap', 'sprig', 'hang0', 'hang1', 'hang2'], front: [0, 1, 0], shown: raised });
     const back = basketOf(0.82, 1.1, n, K, 2, 2.1), B = backBasket(s);
     pieces.push({ key: 'basket', mesh: moved(back, B.at, 10, 14, -8), bone: 'chest', bias: 0.03, after: ['body', 'mantle'], front: [0, -1, 0] });
     pieces.push({ key: 'strap', mesh: strapOf(s, n), bone: 'chest', bias: 0.085, after: ['body', 'mantle', 'basket'], hide: [torsoSolid] });
@@ -1608,6 +1658,18 @@ function workSpray(g: CanvasRenderingContext2D, view: View, s: Spore, b: Bones, 
           const [x, y] = onScreen(view, p);
           flyingLeaf(g, x, y, 0.7 * big, 1 + since * 6, LEAF, 1 - ramp(since, 0.1, 0.22));
         }
+        // On the Sporelord, two leaves flicked up off the rim of the basket on its back as the herb goes in, out behind and up
+        // past its brim, so the drop is seen whichever way it is turned.
+        if (s.stage === 2) {
+          const top = b.cap.t[2] + s.cap.h, back = sub(place(atDrop.chest, B.at), atDrop.chest.t);
+          for (let q = 0; q < 2; q++) {
+            const out = unit([back[0] + (q ? 0.6 : -0.6), back[1], 0]);
+            const pp = thrown(over, [out[0] * 2.4, out[1] * 2.4, 7.5 + q], since, 9);
+            if ((nearSide(pp, mid, view) || pp[2] > top) !== front) continue;
+            const [x, y] = onScreen(view, pp);
+            flyingLeaf(g, x, y, 0.75 * big, q * 2.2 + since * 10, q ? LEAF : LEAF_PINK, 1 - ramp(since, 0.24, 0.4));
+          }
+        }
       }
     }
   }
@@ -1737,10 +1799,10 @@ function sporeKind(s: Spore): Kind {
         leaf: [128, 176, 96],
         stem: [112, 160, 84],
         leafDark: [96, 136, 76],
-        // Its second leaf colour: sage gone to olive with a warm blush in it, not the pink of its skin.
-        moss: [194, 180, 132],
-        membrane: [180, 164, 118],
-        tongue: [160, 148, 108],
+        // Its second leaf colour: a pale sage with a warm blush in it, set off from the green and neither tan nor its skin's pink.
+        moss: [196, 206, 150],
+        membrane: [176, 188, 134],
+        tongue: [156, 168, 118],
         petal: [255, 253, 248],
         bloom: [248, 206, 64],
         ember: [216, 52, 56],

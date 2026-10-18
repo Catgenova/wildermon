@@ -133,7 +133,7 @@ const whoosh = (ctx: BaseAudioContext, dest: AudioNode, at: number, dur: number,
 
 /** A berry landing: a tiny wet pop with a pitch to it, and a whisper of spores. */
 function plink(ctx: BaseAudioContext, dest: AudioNode, at: number, f: number, k: number): void {
-  ring(ctx, dest, at, { freq: f, to: f * 0.7, dur: 0.07, gain: 0.26 * k, type: 'sine', attack: RISE });
+  ring(ctx, dest, at, { freq: f, to: f * 0.7, dur: 0.07, gain: 0.2 * k, type: 'sine', attack: RISE });
   burst(ctx, dest, at, { dur: 0.04, freq: 2400, q: 2, gain: 0.12 * k, attack: RISE });
 }
 
@@ -164,7 +164,7 @@ function wicker(ctx: BaseAudioContext, dest: AudioNode, at: number, key: number,
 
 /** The Sporeling stuffing its cheek: three soft munches, low and muffled. */
 function munch(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, k: number): void {
-  for (let q = 0; q < 3; q++) burst(ctx, dest, at + q * (0.09 + 0.01 * v), { dur: 0.07, freq: 700, to: 380, q: 0.9, gain: 0.26 * k * (1 - 0.15 * q), type: 'lowpass', attack: RISE });
+  for (let q = 0; q < 3; q++) burst(ctx, dest, at + q * (0.09 + 0.01 * v), { dur: 0.07, freq: 700, to: 380, q: 0.9, gain: 0.16 * k * (1 - 0.15 * q), type: 'lowpass', attack: RISE });
 }
 
 /* ---- the cues ---------------------------------------------------------------------------- */
@@ -177,7 +177,7 @@ function munch(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, k:
  * a deep woody thud, and the spores go up off it in a long whoosh.
  */
 const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [0.48, 1.5, 0.95][s]);
+  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [0.48, 1.8, 0.95][s]);
   const hit = at + SPORE_HITS[s] * ACT_SECS.strike;
   if (s === 0) {
     chirp(ctx, out, at + 0.04, v, 0.55, 1.5);
@@ -185,11 +185,13 @@ const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
     return;
   }
   if (s === 1) {
-    chitter(ctx, out, at + 0.02, v, 0.6);
+    chitter(ctx, out, at + 0.02, v, 0.42);
     whoosh(ctx, out, hit - 0.14, 0.2, b.key, 1);
     rustle(ctx, out, hit, 0.12, b.key, v, 0.7);
     // The berries landing, each where its picture comes down (`strikeBurst`): spread a little either side of the flight.
-    for (let q = 0; q < 5; q++) plink(ctx, out, hit + berryLand(q) * ACT_SECS.strike, (1500 - 140 * q) * b.key * (0.97 + 0.06 * v), 1 - 0.08 * q);
+    const lands = [0, 1, 2, 3, 4].map((q) => hit + berryLand(q) * ACT_SECS.strike);
+    // Two landing within ten milliseconds of each other are one patter, each at half its loudness, rather than one twice as loud.
+    lands.forEach((when, q) => plink(ctx, out, when, (1500 - 140 * q) * b.key * (0.97 + 0.06 * v), (1 - 0.08 * q) * (lands.some((o, r) => r !== q && Math.abs(o - when) < 0.01) ? 0.5 : 1)));
     puff(ctx, out, hit + BERRY_FLIGHT * ACT_SECS.strike, b.key, 0.6);
     return;
   }
@@ -226,7 +228,7 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
     wicker(ctx, out, drop + 0.1, b.key, v, 1, s === 2);
     if (s === 1) {
       for (let q = 0; q < 2; q++) voiced(ctx, out, drop + 0.17 + q * 0.06, { f: [1150, 1350, 1200], dur: 0.05, gain: 0.08, type: 'triangle', cut: 4800, vib: [40, 50] });
-    } else hum(ctx, out, drop + 0.08, v, 0.25, 0.22);
+    } else hum(ctx, out, drop + 0.08, v, 0.15, 0.22);
   }
 };
 
