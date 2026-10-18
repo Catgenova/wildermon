@@ -60,7 +60,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { GATHER_DO, GATHER_VERB, GRAZE_FILL } from '../../game/creatures';
+import { GATHER_DO, GATHER_VERB, GRAZE_FILL, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2334,6 +2334,15 @@ export const NEWS: News[] = [
       ...['rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa']
         .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
       'None of them fails a go, and what each makes is at its own skill. A stack you have locked is left alone.',
+    ],
+  },
+  {
+    n: 176,
+    day: '2026-10-18',
+    lines: () => [
+      'Seven wildermon that fight in a way of their own, at your heel or keeping a settlement:',
+      ...['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra']
+        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[SPECIES[id].style!]}.`),
     ],
   },
 ];

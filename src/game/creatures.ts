@@ -46,7 +46,7 @@ import { auraMul, breedTraits, channelOf, CHANNELS, pct, rollTraits, traitList, 
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
-import { BACK_PACE, BACK_SLACK, blowEvery, THREAT_HOLD, circlePoint, CIRCLE_ARC, CIRCLE_R, COMPANION_BLOW, COMPANION_LEASH, COMPANION_PACE, COMPANION_REACH, COMPANION_SIGHT, COWARD_DRAG, FIGHT_GIVE_UP, FIGHT_LEASH, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HEAVY_EVERY, HEAVY_HIT, HUNT_REACH, KEEP_OFF, KNIFE_BLEED_SECS, PACK_CALL, PACK_MOST, PACK_RANGE, slotAngle, THROW_HIT, THROW_REACH, turnsAt, turnTo, WIND_UP, type Hide } from './fight';
+import { BACK_PACE, BACK_SLACK, BLINDSIDE, blowEvery, BODKIN_HIDE, KNIFE_BLEED, STUN_SECS, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS, circlePoint, CIRCLE_ARC, CIRCLE_R, COMPANION_BLOW, COMPANION_LEASH, COMPANION_PACE, COMPANION_REACH, COMPANION_SIGHT, COWARD_DRAG, FIGHT_GIVE_UP, FIGHT_LEASH, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HEAVY_EVERY, HEAVY_HIT, HUNT_REACH, KEEP_OFF, KNIFE_BLEED_SECS, PACK_CALL, PACK_MOST, PACK_RANGE, slotAngle, THROW_HIT, THROW_REACH, turnsAt, turnTo, WIND_UP, type Hide } from './fight';
 
 /**
  * Wildermon: creatures that roam the wild, can be tamed with the taming
@@ -480,7 +480,55 @@ export interface SpeciesDef {
   coward?: boolean;
   /** Its bite leaves venom in the wound (`VENOM_DRAIN`, `VENOM_SECS`). */
   venom?: boolean;
+  /** How one of yours fights another creature, besides its blow (`FightStyle`). */
+  style?: FightStyle;
 }
+
+/**
+ * How a wildermon of yours fights, wherever its blows land on another creature
+ * -- at your heel, or keeping a settlement -- besides what its blow takes:
+ *
+ *   shield  every wild thing after you or one of yours within `GUARD_RANGE`
+ *           of it turns on it, each time it lands a blow;
+ *   flank   its blows land `BLINDSIDE` as hard on anything fighting you or
+ *           another of yours rather than it, as yours do;
+ *   bleed   it bleeds what it bites as a knife does (`KNIFE_BLEED` for
+ *           `KNIFE_BLEED_SECS`);
+ *   stun    every `HEAVY_EVERY`th blow it lands stuns for `STUN_SECS`;
+ *   venom   its bite leaves venom, `VENOM_DRAIN` of the thing's health a
+ *           second for `VENOM_SECS`, as a venomous bite does on you;
+ *   bore    its blows land `BODKIN_HIDE` as hard on anything with a hide, as
+ *           a bodkin does;
+ *   spar    you may attack it, and your blows take it no lower than
+ *           `SPAR_YIELD` of its health, where it yields.
+ *
+ * A wild one of these kinds fights as any other does. The island's
+ * `style_dealt` and `style_blow`, and `perform_fight` for a spar.
+ */
+export type FightStyle = 'shield' | 'flank' | 'bleed' | 'stun' | 'venom' | 'bore' | 'spar';
+/** The share of its health a sparring partner yields at: your blows take it no lower. */
+export const SPAR_YIELD = 0.5;
+/** What each way of fighting does, in the game's own terms, for a species' words and the help. */
+export const STYLE_SAYS: Record<FightStyle, string> = {
+  shield: `every blow it lands turns each wild thing within ${GUARD_RANGE} tiles of it that is after you or another of yours onto it instead`,
+  flank: `its blows land ${percent(BLINDSIDE - 1)} harder on anything fighting you or another of yours rather than it`,
+  bleed: `every bite it lands on another creature bleeds it ${percent(KNIFE_BLEED)} of the bite a second for ${KNIFE_BLEED_SECS} seconds, as a knife does`,
+  stun: `the last of every ${numberWord(HEAVY_EVERY)} blows it lands on another creature stuns it for ${STUN_SECS} seconds, in which it neither moves nor strikes`,
+  venom: `its bite leaves venom in other creatures, taking ${percent(VENOM_DRAIN)} of their health a second for ${VENOM_SECS} seconds, as it would take yours`,
+  bore: `its blows land ${percent(BODKIN_HIDE - 1)} harder on anything with a thick hide, a shell or scales, as a bodkin does`,
+  spar: `you may Spar with it while it is out with you: each swing teaches the fighting, the weapon skill and the body strength a swing at a wild thing teaches, and wears your weapon as much, but your blows take it no lower than ${percent(SPAR_YIELD)} of its health, where it yields until it is back above it, and it never strikes back`,
+};
+/** Within this of `SPAR_YIELD` of its health, a sparring partner has yielded and will not spar until it has its breath back. */
+export const SPAR_SLACK = 0.5;
+/** The health a sparring partner yields at. */
+export const sparFloor = (c: Creature): number => maxHealth(c, SPECIES[c.species]) * SPAR_YIELD;
+/** Whether it is a sparring partner of yours, out and about, and so may be attacked. */
+export const sparring = (c: Creature | undefined): boolean => !!c && c.mode !== 'wild' && c.mode !== 'stored' && SPECIES[c.species]?.style === 'spar';
+/** Whether a sparring partner has yielded. */
+export const yielded = (c: Creature): boolean => c.health <= sparFloor(c) + SPAR_SLACK;
+/** What a blow that lands on a sparring partner says. The island's `spar_said`. */
+export const sparSaid = (c: Creature): string =>
+  `You land one on ${c.name}. It is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', and yields' : ''}.`;
 
 export const SPECIES: Record<string, SpeciesDef> = {
   rabba: {
@@ -1905,6 +1953,196 @@ export const SPECIES: Record<string, SpeciesDef> = {
     tameFail: 'dunks the {food} in a puddle and leaves it',
     leaves: 'waddles off toward the water',
   },
+  testa: {
+    id: 'testa',
+    name: 'Testa',
+    description: `A broad, low creature under a domed shell, slow and very hard to put down. Tamed, ${STYLE_SAYS.shield}, and it guards you unless you tell it otherwise.`,
+    health: 80,
+    attack: 3,
+    speed: 1.4,
+    tameLevel: 26,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat', 'cabbage'],
+    baitHint: 'meat or a cabbage',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#7c6a4c', '#d8c8a4'],
+      ['#6a6458', '#ccc4b4'],
+      ['#84704c', '#e0cca0'],
+      ['#5c5444', '#bcb09c'],
+    ],
+    butcher: { meat: 6, scale: 4, leather: 3, bone: 4 },
+    tameFail: 'draws its head in over the {food} and does not come out',
+    leaves: 'plods off with its head held low',
+    hide: 'shell',
+    defensive: true,
+    defaultStance: 'guard',
+    style: 'shield',
+  },
+  skulka: {
+    id: 'skulka',
+    name: 'Skulka',
+    description: `A low, long-bodied creature that slips round behind whatever it is fighting. Tamed, ${STYLE_SAYS.flank}.`,
+    health: 30,
+    attack: 8,
+    speed: 2.2,
+    tameLevel: 24,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#4c4844', '#a8a098'],
+      ['#5c4c3c', '#b8a48c'],
+      ['#3c4044', '#9ca4a8'],
+      ['#64584c', '#c4b8a8'],
+    ],
+    butcher: { meat: 4, fur: 4, leather: 3, bone: 3 },
+    tameFail: 'snatches the {food} and is behind you before you see it go',
+    leaves: 'slinks off along the nearest shadow',
+    wound: 'bite',
+    defensive: true,
+    style: 'flank',
+  },
+  gasha: {
+    id: 'gasha',
+    name: 'Gasha',
+    description: `A wiry, rust-red creature with a mouthful of hooked teeth. Tamed, ${STYLE_SAYS.bleed}.`,
+    health: 28,
+    attack: 7,
+    speed: 2.0,
+    tameLevel: 22,
+    tameChance: 0.08,
+    diet: ['meat', 'cooked_meat'],
+    baitHint: 'meat',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#9c4c34', '#e0a890'],
+      ['#8c3c2c', '#d49480'],
+      ['#a8583c', '#ecb49c'],
+      ['#743424', '#c48470'],
+    ],
+    butcher: { meat: 4, fur: 3, leather: 3, bone: 3, tusk: 1 },
+    tameFail: 'tears the {food} to strips and leaves them',
+    leaves: 'lopes off licking its teeth',
+    wound: 'cut',
+    defensive: true,
+    style: 'bleed',
+  },
+  thumpa: {
+    id: 'thumpa',
+    name: 'Thumpa',
+    description: `A heavy-shouldered creature with a club of a tail. Tamed, ${STYLE_SAYS.stun}.`,
+    health: 44,
+    attack: 9,
+    speed: 1.6,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['meat', 'cooked_meat', 'potato'],
+    baitHint: 'meat or a potato',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#6c5c4c', '#c8b8a4'],
+      ['#5c5c54', '#bcbcb0'],
+      ['#7c644c', '#d8c0a0'],
+      ['#4c4840', '#aca89c'],
+    ],
+    butcher: { meat: 6, fur: 3, leather: 4, bone: 5 },
+    tameFail: 'flattens the {food} with its tail and walks off',
+    leaves: 'stamps off shaking the ground',
+    wound: 'crush',
+    defensive: true,
+    style: 'stun',
+  },
+  spitta: {
+    id: 'spitta',
+    name: 'Spitta',
+    description: `A slim, bright-banded creature with a forked tongue. Wild, its bite leaves venom in you. Tamed, ${STYLE_SAYS.venom}.`,
+    health: 24,
+    attack: 6,
+    speed: 2.0,
+    tameLevel: 26,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat', 'perch'],
+    baitHint: 'meat or a fish',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#5c8c3c', '#d4e0a0'],
+      ['#8c8c2c', '#e8e4a0'],
+      ['#3c7c5c', '#b4dcc4'],
+      ['#7c5c2c', '#dcc49c'],
+    ],
+    butcher: { meat: 3, scale: 4, leather: 2, bone: 2, gland: 2 },
+    tameFail: 'tastes the {food} with its tongue and leaves it',
+    leaves: 'slides off through the grass',
+    wound: 'pierce',
+    defensive: true,
+    venom: true,
+    style: 'venom',
+  },
+  awla: {
+    id: 'awla',
+    name: 'Awla',
+    description: `A narrow-headed creature with a horn like an awl. Tamed, ${STYLE_SAYS.bore}.`,
+    health: 30,
+    attack: 8,
+    speed: 1.9,
+    tameLevel: 24,
+    tameChance: 0.07,
+    diet: ['meat', 'cooked_meat', 'nuts'],
+    baitHint: 'meat or nuts',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      ['#8c7c64', '#dcd0bc'],
+      ['#7c6c5c', '#d0c4b4'],
+      ['#948468', '#e4d8c0'],
+      ['#6c6050', '#c4b8a4'],
+    ],
+    butcher: { meat: 4, fur: 2, leather: 3, bone: 3, tusk: 1 },
+    tameFail: 'spears the {food} on its horn and shakes it off',
+    leaves: 'trots off with its horn down',
+    wound: 'pierce',
+    defensive: true,
+    style: 'bore',
+  },
+  sparra: {
+    id: 'sparra',
+    name: 'Sparra',
+    description: `A sturdy, good-natured creature that circles anyone it likes with its fists up. Tamed, ${STYLE_SAYS.spar}.`,
+    health: 60,
+    attack: 2,
+    speed: 1.9,
+    tameLevel: 6,
+    tameChance: 0.12,
+    diet: ['apple', 'carrot', 'bread', 'nuts'],
+    baitHint: 'an apple or bread',
+    timid: true,
+    gathers: null,
+    workRange: 0,
+    variants: [
+      ['#c49c74', '#f0dcc4'],
+      ['#b48c64', '#e8d0b4'],
+      ['#cca884', '#f4e4cc'],
+      ['#a07c58', '#dcc4a8'],
+    ],
+    butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
+    tameFail: 'boxes the {food} out of your hand and grins',
+    leaves: 'bounces off with its fists still up',
+    wound: 'crush',
+    style: 'spar',
+  },
   // ---- Backs and saddles. ----
   bura: {
     id: 'bura',
@@ -2421,6 +2659,13 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['papra', 4],
   ['glossa', 3],
   ['dippa', 6],
+  ['testa', 3],
+  ['skulka', 3],
+  ['gasha', 3],
+  ['thumpa', 3],
+  ['spitta', 3],
+  ['awla', 3],
+  ['sparra', 4],
 ];
 
 /** How far off a hunter picks up your scent, and how far you must get to lose it. */
@@ -6983,11 +7228,57 @@ export class Creatures {
 
   attack(game: Game, a: Creature, t: Creature): void {
     const trained = trainedHit(a.skills[FIGHT_SKILL] ?? 0);
+    const style = a.mode === 'wild' ? undefined : this.species(a).style;
     // Its blood has a say in what it lands for, as it does in what it bites you for.
     // And more by your companion inside a Heart of the Herd (`herd_heart`).
-    const dmg = this.species(a).attack * this.mul(a, 'tough') * trained * (0.7 + game.rand() * 0.6) * game.herdMul(a, 'dealt');
+    // And harder for how it fights (`FightStyle`): a borer on a hide, a flanker on one whose mind is elsewhere.
+    const dmg = this.species(a).attack * this.mul(a, 'tough') * trained * (0.7 + game.rand() * 0.6) * game.herdMul(a, 'dealt')
+      * (style === 'bore' && this.species(t).hide ? BODKIN_HIDE : 1)
+      * (style === 'flank' && this.elsewhere(t, a) ? BLINDSIDE : 1);
     this.hurt(game, t, dmg, a);
+    if (style && t.health > 0 && this.list.has(t.id)) this.styleBlow(game, a, t, style, dmg);
     if (a.skills[FIGHT_SKILL] !== undefined) this.gainSkill(game, a, FIGHT_SKILL, 0.05);
+  }
+
+  /** Whether a wild thing's mind is on a fight with something other than this one: you, or another of yours. The island's `style_dealt`. */
+  private elsewhere(t: Creature, a: Creature): boolean {
+    return t.brawl !== null ? t.brawl !== a.id : t.enemy !== null && t.enemy !== a.id;
+  }
+
+  /** What a blow of one of yours does besides its damage, by how it fights (`FightStyle`). The island's `style_blow`. */
+  private styleBlow(game: Game, a: Creature, t: Creature, style: FightStyle, dmg: number): void {
+    if (style === 'bleed') {
+      // As a knife opens it (`sideBlow`).
+      t.bleedRate = Math.max(t.bleedRate, dmg * KNIFE_BLEED);
+      t.bleedFrom = game.time;
+      t.bleedUntil = game.time + KNIFE_BLEED_SECS;
+    } else if (style === 'venom') {
+      // As a Venom enchantment leaves it (`venom` in `enchanting.ts`): the stronger of it and a bleed already running, to the later end.
+      const rate = maxHealth(t, this.species(t)) * VENOM_DRAIN;
+      const running = t.bleedUntil > game.time;
+      t.bleedRate = running ? Math.max(t.bleedRate, rate) : rate;
+      if (!running) t.bleedFrom = game.time;
+      t.bleedUntil = Math.max(running ? t.bleedUntil : 0, game.time + VENOM_SECS);
+    } else if (style === 'stun') {
+      a.blows += 1;
+      // As a Concussion stuns it (`stun` in `enchanting.ts`).
+      if (a.blows % HEAVY_EVERY === 0) {
+        t.stunUntil = Math.max(t.stunUntil ?? 0, game.time + STUN_SECS);
+        t.windup = 0;
+        t.moving = false;
+      }
+    } else if (style === 'shield') {
+      for (const o of this.list.values()) {
+        if (o.mode !== 'wild' || o.health <= 0 || o.brawl === a.id || this.species(o).timid) continue;
+        // After you, or after one of yours.
+        const after = o.enemy === PLAYER_ATTACKER || o.brawl !== null || (o.enemy !== null && this.list.get(o.enemy)?.mode !== 'wild');
+        if (!after || Math.hypot(o.x - a.x, o.y - a.y) > GUARD_RANGE) continue;
+        o.brawl = a.id;
+        o.threatAt = game.time;
+        o.windup = 0;
+        if (a.mode === 'active') game.logMsg(`The ${this.species(o).name.toLowerCase()} turns on ${a.name}.`, 'fight');
+      }
+    }
   }
 
   /**

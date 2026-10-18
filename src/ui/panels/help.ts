@@ -51,7 +51,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, SKILL_STEP, SPECIES, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -743,6 +743,8 @@ const SHOWN_QL = 50;
 const HANDS = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa',
   'forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra',
   'rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
+/** The wildermon that fight in a way of their own (`FightStyle`), in the order the help gives them. */
+const FIGHTERS = ['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra'];
 const HAND_NUMBERS: Record<string, string> = {
   kemma: `a brushing puts in ${percent(groomGain(1, 1))} care at no husbandry and ${percent(groomGain(SKILL_TOP, SKILL_TOP))} at ${SKILL_TOP}, as a keeper of its skill with a brush as good`,
   sheela: `a full fleece gives ${numberWord(SHEAR_WOOL)} wool and a full crop of feathers ${numberWord(SHEAR_FEATHERS)}, and a cudda a bucket of milk`,
@@ -3063,6 +3065,11 @@ export function helpText(): string {
     failing all of them onto the ground there. ${HANDS.map((id) => {
       const d = SPECIES[id];
       return `The <b>${d.name}</b> (taming ${d.tameLevel}) will ${GATHER_DO[d.gathers!]}${HAND_NUMBERS[id] ? `: ${HAND_NUMBERS[id]}` : ''}.`;
+    }).join(' ')}</p>
+    <p><b>Wildermon that fight.</b> ${NumberWord(FIGHTERS.length)} fight in a way of their own wherever a blow of one of yours lands
+    on another creature, at your heel or keeping a settlement; a wild one of these kinds fights as any other does. ${FIGHTERS.map((id) => {
+      const d = SPECIES[id];
+      return `The <b>${d.name}</b> (taming ${d.tameLevel}): ${STYLE_SAYS[d.style!]}.`;
     }).join(' ')}</p>
     <p>Right-click any tile of your settlement for the <b>deed menu</b>: it lists the wildermon kept
     there, sets their <b>orders</b>, offers to <b>upgrade</b> the settlement, and renames or disbands it.

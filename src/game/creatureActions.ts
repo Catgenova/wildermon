@@ -2,7 +2,7 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
+import { sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
 import { numberWord } from './words';
 import { bestTier, traitList } from './traits';
@@ -583,11 +583,14 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     stamina: 0.07,
     baseTime: 2.5,
     repeat: true,
-    applies: (t, g) => creatureOf(g, t)?.mode === 'wild',
+    // Something wild, or a sparring partner of yours (`SPAR_YIELD`).
+    applies: (t, g) => creatureOf(g, t)?.mode === 'wild' || sparring(creatureOf(g, t)),
+    labelFor: (t, g) => (sparring(creatureOf(g, t)) ? 'Spar' : 'Attack'),
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'It is dead or gone.';
-      if (c.mode !== 'wild') return 'That one is tame. Release it first if you mean it.';
+      if (c.mode !== 'wild' && !sparring(c)) return 'That one is tame. Release it first if you mean it.';
+      if (c.mode !== 'wild' && yielded(c)) return `${c.name} has yielded. Let it get its breath back first.`;
       if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > meleeReach(g)) return 'It is out of reach.';
       return null;
     },
@@ -606,8 +609,10 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       // And, if it is dark enough to matter, what it teaches you about noticing.
       g.fought(DARK_SWING);
       let dealt = 0;
+      const spar = c.mode !== 'wild';
       if (!landed) {
-        g.logMsg(`You swing at the ${def.name.toLowerCase()}${item ? ` with your ${itemName(item).toLowerCase()}` : ''} and miss.`, 'fight');
+        g.logMsg(`You swing at ${spar ? c.name : `the ${def.name.toLowerCase()}`}${item ? ` with your ${itemName(item).toLowerCase()}` : ''} and miss.`, 'fight');
+        if (spar) return Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
       } else {
         // Silver's old virtue: what carries its own light hates a silver edge.
         const bane = banes(item) && def.glow ? BANE_BONUS : 1;
@@ -622,6 +627,14 @@ export const CREATURE_ACTIONS: ActionDef[] = [
           * hideTakes(def.hide, blowOf(usable)) * blindside(c) * (0.75 + g.rand() * 0.5) * (crit ? critMul(g, usable) : 1)
           // And what your fighting trade's passives make of it (`classDealt`).
           * classDealt(g, c);
+        if (spar) {
+          // Sparring: no lower than it yields at, and nothing else besides. The island's `perform_fight`.
+          c.health = Math.max(sparFloor(c), c.health - dmg);
+          c.attackedAt = g.time;
+          if (item) g.damageItem(item, 0.35 * g.perk('worn:weapon', 1));
+          g.logMsg(sparSaid(c), 'fight');
+          return !yielded(c) && Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
+        }
         g.creatures.hurt(g, c, dmg, 'player', crit);
         dealt = dmg;
         // And what the weapon does besides: a maul staggers, a spear holds it off, a knife opens it up (a fist none of these).

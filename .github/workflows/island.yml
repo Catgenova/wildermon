@@ -3096,6 +3096,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/eighthands.mjs --log-level=error
           node node_modules/.cache/eighthands.mjs
 
+      - name: Seven that fight
+        run: |
+          # A testa draws what is after you onto itself, a skulka strikes
+          # harder at what is fighting something else, a gasha bleeds, a
+          # thumpa stuns, a spitta leaves venom, an awla goes through a hide,
+          # and a sparra may be sparred with: each the same on both sides.
+          npx esbuild supabase/test/fightstyles.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/fightstyles.mjs --log-level=error
+          node node_modules/.cache/fightstyles.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where
