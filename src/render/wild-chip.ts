@@ -28,8 +28,13 @@ import { trot } from './wild-paws';
 /** Rings along a body or a head: where each is along it and how high, how wide and how deep. */
 interface Rings { y: number[]; z: number[]; w: number[]; h: number[] }
 
-/** How the tail is carried: lifted at the root (degrees up from straight back), swung to the right, curled up at each link, and curled up further at its last two links and the club. */
-interface Key { lift: number; yaw: number; curl: number; tip: number }
+/**
+ * How the tail is carried: lifted at the root (degrees up from straight back), swung to the right, curled up at each link, and
+ * curled up further at its last two links and the club; an S-bend down it, `bend` degrees up at a link in its first half and
+ * down in its second; and a wave running down it, `wave` degrees at each link, each a little behind the one before (`phase`,
+ * in strides).
+ */
+interface Key { lift: number; yaw: number; curl: number; tip: number; bend?: number; wave?: number; phase?: number }
 
 /**
  * Rock on the back: rows of it down each side, each row at `th` round the barrel from the right side (a quarter turn is the
@@ -99,17 +104,17 @@ interface Chip {
 /** A Chiptail: a small kit with a head too big for it, huge ears, wide amber eyes, a long tail ending in a round clump of rock, and a few chips of stone on its back. */
 const CHIPTAIL_LOOK: Chip = {
   body: { y: [-1.12, -0.98, -0.5, 0.05, 0.62, 0.98, 1.1], z: [0.1, 0.08, 0.05, 0.04, 0.08, 0.12, 0.14], w: [0.32, 0.52, 0.56, 0.52, 0.58, 0.54, 0.26], h: [0.34, 0.5, 0.52, 0.48, 0.54, 0.52, 0.26] },
-  len: 1.8, legs: 0.52, thick: 0.16, paw: 0.2, foot: 'paw',
-  neck: { at: [0, 0.92, 0.14], len: 0.3, w: 0.38, lean: 48 },
-  head: { r: [0.78, 0.66, 0.64], muzzle: [0.3, 0.3, 0.2], drop: 0.24, pitch: -2 },
-  eye: { dir: [0.62, 0.7, 0.2], size: 0.21, fierce: 0 },
-  ear: { len: 0.9, w: 0.56, out: 44, back: 8 },
-  cheek: 0.3,
+  len: 1.8, legs: 0.52, thick: 0.22, paw: 0.24, foot: 'paw',
+  neck: { at: [0, 0.92, 0.04], len: 0.3, w: 0.42, lean: 50 },
+  head: { r: [0.96, 0.82, 0.8], muzzle: [0.36, 0.36, 0.24], drop: 0.3, pitch: -8 },
+  eye: { dir: [0.62, 0.7, 0.2], size: 0.26, fierce: 0 },
+  ear: { len: 1.1, w: 0.68, out: 44, back: 8 },
+  cheek: 0.37,
   mane: 0,
   brow: 0,
   tail: {
-    at: [0, -1.04, 0.3], links: [0.3, 0.29, 0.28, 0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21], w: [0.13, 0.125, 0.12, 0.115, 0.11, 0.105, 0.1, 0.1, 0.1, 0.1], stone: false, club: 0.55, blocky: false,
-    rest: { lift: -10, yaw: 12, curl: 2, tip: 30 }, wind: { lift: 40, yaw: -24, curl: 12, tip: 10 }, aim: 150, work: 90, arc: 30,
+    at: [0, -1.04, 0.3], links: [0.42, 0.4, 0.39, 0.38, 0.36, 0.34, 0.32], w: [0.14, 0.135, 0.13, 0.125, 0.12, 0.115, 0.11], stone: false, club: 0.55, blocky: false,
+    rest: { lift: -12, yaw: 12, curl: 2, tip: 8, bend: 9 }, wind: { lift: 40, yaw: -24, curl: 14, tip: 10, bend: 4 }, aim: 170, work: 120, arc: 30,
   },
   back: [
     { th: 1.4, y0: -0.45, y1: 0.45, count: 4, r: [0.21, 0.23, 0.13] },
@@ -135,8 +140,8 @@ const QUARRYBASH_LOOK: Chip = {
   mane: 0,
   brow: 0.42,
   tail: {
-    at: [0, -1.38, 0.42], links: [0.48, 0.47, 0.46, 0.45, 0.44, 0.43, 0.42, 0.41, 0.4, 0.39], w: [0.27, 0.26, 0.25, 0.24, 0.23, 0.22, 0.21, 0.2, 0.2, 0.2], stone: true, club: 1.05, blocky: false,
-    rest: { lift: 44, yaw: 6, curl: 18, tip: 8 }, wind: { lift: 52, yaw: -24, curl: 12, tip: 0 }, aim: 150, work: 90, arc: 30,
+    at: [0, -1.38, 0.42], links: [0.52, 0.51, 0.5, 0.49, 0.48, 0.46, 0.44], w: [0.34, 0.33, 0.32, 0.31, 0.3, 0.29, 0.28], stone: true, club: 1.05, blocky: false,
+    rest: { lift: 42, yaw: 6, curl: 2, tip: 2 }, wind: { lift: 50, yaw: -24, curl: 12, tip: 0 }, aim: 170, work: 120, arc: 30,
   },
   back: [
     { th: Math.PI / 2, y0: -1.0, y1: 0.95, count: 5, r: [0.24, 0.34, 0.3], spike: true },
@@ -144,11 +149,11 @@ const QUARRYBASH_LOOK: Chip = {
     { th: 0.66, y0: -0.9, y1: 0.6, count: 4, r: [0.32, 0.32, 0.17], stand: 10 },
   ],
   armour: 1,
-  patches: 1,
+  patches: 0,
   legPatches: false,
   gait: { trot: false, bounce: 0.03, nod: 3, swing: [30, 42], roll: 3, low: 0.15 },
   slam: 1,
-  size: 1.56,
+  size: 1.45,
 };
 
 /** A Monolithump: massive and low, a mountain of rock plates and spikes on its back, legs armoured in stone on boulder feet, a maned scowl of a face, and a thick stone tail ending in a boulder of a club. */
@@ -156,15 +161,15 @@ const MONOLITHUMP_LOOK: Chip = {
   body: { y: [-2.1, -1.9, -1.1, -0.1, 0.9, 1.6, 1.82], z: [0.1, 0.12, 0.18, 0.22, 0.26, 0.24, 0.22], w: [0.8, 1.36, 1.56, 1.62, 1.64, 1.46, 0.68], h: [0.56, 0.88, 1.0, 1.04, 1.04, 0.94, 0.48] },
   len: 3.2, legs: 1.3, thick: 0.72, paw: 0.62, foot: 'boulder',
   neck: { at: [0, 1.5, 0.1], len: 0.72, w: 0.9, lean: 70 },
-  head: { r: [0.96, 0.78, 0.74], muzzle: [0.44, 0.52, 0.32], drop: 0.28, pitch: 4 },
+  head: { r: [0.96, 0.78, 0.74], muzzle: [0.46, 0.7, 0.34], drop: 0.28, pitch: 4 },
   eye: { dir: [0.5, 0.8, 0.26], size: 0.21, fierce: 1 },
   ear: { len: 0.9, w: 0.42, out: 46, back: 26 },
   cheek: 0.42,
-  mane: 1,
+  mane: 0.75,
   brow: 0.85,
   tail: {
     at: [0, -1.98, 0.42], links: [0.7, 0.68, 0.66, 0.64], w: [0.74, 0.7, 0.66, 0.62], stone: true, club: 2.0, blocky: true,
-    rest: { lift: 6, yaw: 8, curl: 8, tip: 4 }, wind: { lift: 30, yaw: -62, curl: 6, tip: 0 }, aim: 100, work: 90, arc: 8,
+    rest: { lift: 0, yaw: 8, curl: 2, tip: 0 }, wind: { lift: 30, yaw: -62, curl: 6, tip: 0 }, aim: 100, work: 120, arc: 8,
   },
   back: [
     { th: Math.PI / 2, y0: -1.4, y1: 1.15, count: 5, r: [0.32, 0.46, 0.46], spike: true },
@@ -177,7 +182,7 @@ const MONOLITHUMP_LOOK: Chip = {
   legPatches: false,
   gait: { trot: false, bounce: 0.02, nod: 2, swing: [17, 26], roll: 6, low: 0.05 },
   slam: 2,
-  size: 1.66,
+  size: 2.05,
 };
 
 /* ---- helpers --------------------------------------------------------------------------- */
@@ -310,8 +315,14 @@ function line(pts: ReadonlyArray<{ p: V3; n: V3 }>, w: number, m: Mat): Disc {
 
 /* ---- its tail ---------------------------------------------------------------------------- */
 
-const mixKey = (a: Key, b: Key, t: number): Key => ({ lift: lerp(a.lift, b.lift, t), yaw: lerp(a.yaw, b.yaw, t), curl: lerp(a.curl, b.curl, t), tip: lerp(a.tip, b.tip, t) });
-const addKey = (a: Key, d: Partial<Key>): Key => ({ lift: a.lift + (d.lift ?? 0), yaw: a.yaw + (d.yaw ?? 0), curl: a.curl + (d.curl ?? 0), tip: a.tip + (d.tip ?? 0) });
+const mixKey = (a: Key, b: Key, t: number): Key => ({
+  lift: lerp(a.lift, b.lift, t), yaw: lerp(a.yaw, b.yaw, t), curl: lerp(a.curl, b.curl, t), tip: lerp(a.tip, b.tip, t),
+  bend: lerp(a.bend ?? 0, b.bend ?? 0, t), wave: lerp(a.wave ?? 0, b.wave ?? 0, t), phase: t < 0.5 ? a.phase : b.phase,
+});
+const addKey = (a: Key, d: Partial<Key>): Key => ({
+  lift: a.lift + (d.lift ?? 0), yaw: a.yaw + (d.yaw ?? 0), curl: a.curl + (d.curl ?? 0), tip: a.tip + (d.tip ?? 0),
+  bend: (a.bend ?? 0) + (d.bend ?? 0), wave: (a.wave ?? 0) + (d.wave ?? 0), phase: d.phase ?? a.phase,
+});
 
 /** Where the middle of the club is on its bone: a little way on from the end of the last link. */
 const clubMid = (s: Chip): V3 => [0, -s.tail.club * 0.72, 0];
@@ -325,8 +336,10 @@ function tailBones(s: Chip, body: Xf, k: Key): Xf[] {
   const T = s.tail, out: Xf[] = [];
   let prev = joint(body, T.at, -k.lift, 0, k.yaw);
   out.push(prev);
-  for (let q = 1; q < T.links.length; q++) {
-    prev = joint(prev, [0, -T.links[q - 1], 0], -(k.curl + (q >= T.links.length - 2 ? k.tip : 0)));
+  const n = T.links.length;
+  for (let q = 1; q < n; q++) {
+    const s2 = (k.bend ?? 0) * Math.sin((TAU * q) / Math.max(1, n - 1)), w = (k.wave ?? 0) * Math.sin(TAU * ((k.phase ?? 0) - q * 0.08));
+    prev = joint(prev, [0, -T.links[q - 1], 0], -(k.curl + (q >= n - 2 ? k.tip : 0) + s2 + w));
     out.push(prev);
   }
   out.push(joint(prev, [0, -T.links[T.links.length - 1], 0], -(k.curl + k.tip) * 0.6));
@@ -397,7 +410,8 @@ function reach(s: Chip, b: Bones, goal: V3, guess: Key): Key {
       pts.push([scale(add(a, c), 0.5), T.w[Math.min(q - 1, T.w.length - 1)]], [c, T.w[Math.min(q, T.w.length - 1)]]);
     }
     pts.push([place(chain[n], clubMid(s)), T.club * 0.5]);
-    const plates = Math.max(0, ...s.back.map((r) => (r.spike ? r.r[2] * 1.2 : r.r[2] * 1.8)));
+    // Clear of the rock on its back, and never less than a little over it, so the tail arches over the back and does not lie on it.
+    const plates = Math.max(0.3, ...s.back.map((r) => (r.spike ? r.r[2] * 1.2 : r.r[2] * 1.8)));
     for (const [p, r] of pts) {
       over += 4 * inside(s.body, local(b.body, p), r * 0.8 + plates * 0.4) ** 2;
       if (b.head) over += 2 * insideEgg(local(b.head, p), headSolids(s)[0], r * 0.8 + s.ear.len * 0.25) ** 2;
@@ -405,7 +419,7 @@ function reach(s: Chip, b: Bones, goal: V3, guess: Key): Key {
     return over;
   };
   const cost = (x: number[]): number => {
-    const k = { lift: x[0], yaw: x[1], curl: x[2], tip: guess.tip };
+    const k = { ...guess, lift: x[0], yaw: x[1], curl: x[2] };
     const chain = tailBones(s, b.body, k);
     const p = place(chain[n], clubMid(s)), d = sub(p, goal);
     return 12 * dot(d, d) + into(chain) + 1e-5 * ((x[0] - guess.lift) ** 2 + (x[1] - guess.yaw) ** 2 + (x[2] - guess.curl) ** 2);
@@ -431,7 +445,7 @@ function reach(s: Chip, b: Bones, goal: V3, guess: Key): Key {
     }
   }
   const best = pts[vals.indexOf(Math.min(...vals))];
-  return { lift: best[0], yaw: best[1], curl: best[2], tip: guess.tip };
+  return { ...guess, lift: best[0], yaw: best[1], curl: best[2] };
 }
 
 /* ---- its moves --------------------------------------------------------------------------- */
@@ -455,7 +469,7 @@ function hitOf(s: Chip, aim: number, clear: number): V3 {
   return [d[0] * r, s.tail.at[1] + d[1] * r, 0];
 }
 /** Where the club comes down to strike: in the forward half, beside its head. */
-const blowOf = (s: Chip): V3 => hitOf(s, s.tail.aim, s.tail.club * 0.7);
+const blowOf = (s: Chip): V3 => hitOf(s, s.tail.aim, s.tail.club * 0.45);
 /** Where the rock it quarries is: off its side, beside its haunch. */
 const rockOf = (s: Chip): V3 => hitOf(s, s.tail.work, rockR(s));
 const rockR = (s: Chip): number => Math.max(0.44, s.tail.club * 0.9);
@@ -503,7 +517,8 @@ function rakeOf(u: number): { out: number; swing: number; fold: number; dig: num
 function specOf(s: Chip): QuadSpec {
   return {
     high: s.legs + 0.6,
-    fore: { at: [s.body.w[4] * 0.5, s.len * 0.44, -0.36], len: [s.legs * 0.5, s.legs * 0.46, s.paw * 0.55], rest: [-3, 6, 0], fold: [55, 85], toe: [s.paw * 1.1, s.paw * 0.4] },
+    // A prowler's fore legs a little bent at the elbow.
+    fore: { at: [s.body.w[4] * 0.5, s.len * 0.44, -0.36], len: [s.legs * 0.5, s.legs * 0.46, s.paw * 0.55], rest: s.slam === 1 ? [-7, 15, 0] : [-3, 6, 0], fold: [55, 85], toe: [s.paw * 1.1, s.paw * 0.4] },
     hind: { at: [s.body.w[2] * 0.52, -s.len * 0.42, -0.18], len: [s.legs * 0.56, s.legs * 0.52, s.paw * 0.55], rest: [18, -36, 0], fold: [35, 55], toe: [s.paw * 1.1, s.paw * 0.4] },
     neck: { at: s.neck.at, len: s.neck.len, lean: s.neck.lean },
     head: { pitch: s.head.pitch },
@@ -607,11 +622,12 @@ function chipPose(s: Chip, spec: QuadSpec, p: QuadPose, a: Anim, graze: number):
     const w = workOf(act.t, graze), d = w.down;
     // At the rock beside its haunch: turned to look round and down at it over its shoulder; a jolt through the body at each blow;
     // the weight off the near hind leg, which kicks out at the rock and rakes along it (`rakeOf`, and turned out in `chipBones`).
+    // Most of the turn in the neck, a little in the head, and the head rolled back the other way so its ears stay upright.
     p.neck[0] += d * 10;
-    p.neck[1] -= d * 45;
-    p.head[0] -= d * 24;
-    p.head[1] -= d * 45;
-    p.head[2] -= d * 10;
+    p.neck[1] -= d * 60;
+    p.head[0] -= d * 22;
+    p.head[1] -= d * 20;
+    p.head[2] += d * 20;
     p.pitch -= d * 3 * w.jolt;
     p.roll -= d * 3;
     p.squash += d * 0.08 * w.jolt;
@@ -644,7 +660,9 @@ function tailCarried(s: Chip, a: Anim): Key {
   if (s.slam === 0) {
     // A kit's club bobbing a beat after each bounce, and flicked now and then as it stands.
     const flick = beat(a.t, [3.6, 11.2, 19.4], 0.5) * (1 - g);
-    k = addKey(k, { lift: g * 4 * Math.sin(w * TAU * 2 - 1.6) + 6 * flick, curl: g * 1.5 * Math.sin(w * TAU * 2 - 2.2), tip: g * 8 * Math.sin(w * TAU * 2 - 2.4) + 14 * flick, yaw: g * 8 * Math.sin(w * TAU + 0.8) });
+    k = addKey(k, { lift: g * 3 * Math.sin(w * TAU * 2 - 1.6) + 6 * flick, curl: 0, tip: g * 5 * Math.sin(w * TAU * 2 - 2.4) + 14 * flick, yaw: g * 8 * Math.sin(w * TAU + 0.8) });
+    // And a wave running down it, each link a little behind the one before: twice a stride as it trots, slowly as it stands.
+    k = { ...k, wave: 2.6 * g + 2 * (1 - g), phase: g > 0.5 ? frac(a.u) * 2 : a.t / 2.4 };
   } else if (s.slam === 1) {
     // Held up over its back and swaying as it prowls.
     k = addKey(k, { yaw: g * 11 * Math.sin(w * TAU - 0.9), lift: g * 3 * Math.sin(w * TAU * 2 - 1.2), curl: g * 2 * Math.sin(w * TAU * 2 - 1.8) });
@@ -690,6 +708,14 @@ function chipBones(s: Chip): (a: Anim) => Bones {
     const act = a.act, work = act?.kind === 'work';
     settled = a.graze;
     let b = posed(work ? { ...a, graze: 0 } : a);
+    // A prowler's fore legs splayed a little out from the shoulder.
+    if (s.slam === 1) {
+      const B = b.body.m, fwd: V3 = [B[1], B[4], B[7]];
+      for (const [leg, sd] of [['fl', 1], ['fr', -1]] as const) {
+        const at = b[`${leg}0`].t;
+        for (const k of [0, 1, 2]) b[`${leg}${k}`] = turned(b[`${leg}${k}`], at, fwd, sd * 10);
+      }
+    }
     if (act?.kind === 'strike') b = twisted(b, pivotOf(s, b), twistOf(s, act.t));
     let k = tailCarried(s, a);
     if (act?.kind === 'strike') {
@@ -703,7 +729,7 @@ function chipBones(s: Chip): (a: Anim) => Bones {
         k = addKey(mixKey(W, K.strike, e), { lift: s.tail.arc * Math.sin(Math.PI * e) });
       } else {
         // A little bounce of the club off the ground, then let back up to how it carries it.
-        const bounce = Math.sin(clamp((t - STRIKE.hit) / 0.12) * Math.PI) * (t < STRIKE.hit + 0.12 ? 1 : 0);
+        const bounce = Math.sin(clamp((t - STRIKE.hit) / 0.14) * Math.PI) * (t < STRIKE.hit + 0.14 ? 1 : 0) * (s.slam === 2 ? 0.5 : 2.4);
         // Carried back up over its back the way it came rather than swept round low behind it.
         const back = ramp(t, STRIKE.hold, 1);
         k = addKey(mixKey(addKey(K.strike, { lift: 5 * bounce, curl: -3 * bounce }), k, back), { lift: 12 * Math.sin(Math.PI * back) });
@@ -777,7 +803,7 @@ function eyesOf(s: Chip, shut: boolean): Mesh {
     if (E.fierce > 0) {
       // The lid: the fur of the brow come down over the top two fifths of the eye at a slant, lower toward the nose, with a dark
       // line along its edge: a scowl.
-      const tilt = -side * 0.7 * E.fierce, lidUp = unit(add(scale(up, Math.cos(tilt)), scale(across, Math.sin(tilt))));
+      const tilt = side * 0.7 * E.fierce, lidUp = unit(add(scale(up, Math.cos(tilt)), scale(across, Math.sin(tilt))));
       const edge = r * tall * (1 - 0.8 * E.fierce);
       out.push(onto(disc(add(p, scale(lidUp, edge + r * 0.62)), n, r * 1.4, r * 0.64, 10, 'coat', { ...o, up: lidUp }), 0.028));
       out.push(onto(disc(add(p, scale(lidUp, edge + r * 0.02)), n, r * 1.36, r * 0.13, 8, 'lid', { ...o, up: lidUp }), 0.032));
@@ -836,12 +862,13 @@ function headOf(s: Chip, n: number, k: number, shut: boolean): Mesh {
     const E = s.eye, out: Mesh[] = [];
     for (let q = 0; q < (s.mane ? 2 : 1); q++) {
       const at = onSkull(s, [sd * E.dir[0] * (1 - 0.15 * q), E.dir[1] * (0.7 - 0.35 * q), E.dir[2] + 0.55 + 0.25 * q]);
-      const dir = unit(add(at.n, [0, -1.0, 0.5]));
-      out.push(rock(sub(at.p, scale(at.n, 0.03)), [s.brow * 0.24, s.brow * 0.24, s.brow * (0.5 - 0.1 * q)], { up: dir, fwd: [0, 0, 1], n: 4, point: true, seed: 40 + q + (sd > 0 ? 0 : 5), mat: q ? 'shell' : 'stone' }));
+      // Swept well back, as horns, in grey stone.
+      const dir = unit(add(at.n, [0, -1.6, 0.35]));
+      out.push(rock(sub(at.p, scale(at.n, 0.03)), [s.brow * 0.24, s.brow * 0.24, s.brow * (0.5 - 0.1 * q)], { up: dir, fwd: [0, 0, 1], n: 4, point: true, seed: 40 + q + (sd > 0 ? 0 : 5), mat: q ? 'stoneDark' : 'stone' }));
     }
     if (s.mane) {
       const ch = onEgg([sd * H.r[0] * 0.5, C[1] + H.r[1] * 0.22, C[2] - H.r[2] * 0.4], [H.r[0] * 0.56, H.r[1] * 0.62, H.r[2] * 0.5], [sd, -0.1, -0.2]);
-      out.push(rock(sub(ch.p, scale(ch.n, 0.03)), [s.brow * 0.2, s.brow * 0.2, s.brow * 0.42], { up: unit(add(ch.n, [0, -0.9, -0.1])), fwd: [0, 0, 1], n: 4, point: true, seed: 50 + (sd > 0 ? 0 : 3), mat: 'shell' }));
+      out.push(rock(sub(ch.p, scale(ch.n, 0.03)), [s.brow * 0.2, s.brow * 0.2, s.brow * 0.42], { up: unit(add(ch.n, [0, -1.4, 0.15])), fwd: [0, 0, 1], n: 4, point: true, seed: 50 + (sd > 0 ? 0 : 3), mat: 'stoneDark' }));
     }
     return out;
   }));
@@ -985,7 +1012,7 @@ function patches(s: Chip): Mesh {
   const out: Disc[] = [];
   const spots: Array<[number, number, number, Mat]> = [[-0.62, 0.35, 0.3, 'spot'], [0.3, 0.2, 0.26, 'mark'], [-0.15, -0.3, 0.22, 'spot'], [0.75, 0.6, 0.2, 'mark'], [-0.95, 0.9, 0.22, 'mark'], [0.05, 0.9, 0.2, 'spot']];
   for (const sd of [1, -1]) {
-    for (let q = 0; q < Math.min(spots.length, s.patches + 2); q++) {
+    for (let q = 0; q < (s.patches ? Math.min(spots.length, s.patches + 2) : 0); q++) {
       const [fy, th, r, m] = spots[q];
       const y = (fy + (sd > 0 ? 0 : 0.15 * (jitter(q) - 0.4))) * s.len * 0.5;
       const ang = sd > 0 ? th : Math.PI - th;
@@ -1010,7 +1037,11 @@ function tailOf(s: Chip, n: number): { links: Mesh[]; club: Mesh } {
   const links = T.links.map((L, q) => {
     const w0 = T.w[q], w1 = T.w[Math.min(q + 1, T.w.length - 1)];
     if (!T.stone) {
-      const fur = tube([[0, 0.05, 0], [0, -L * 0.5, 0], [0, -L - 0.03, 0]], [w0, (w0 + w1) / 2, w1], [w0, (w0 + w1) / 2, w1], Math.min(n, 7), (ring) => (ring === 1 && q % 2 ? 'spot' : 'coat'), { seam: 'both' });
+      const fur = tube([[0, 0.05, 0], [0, -L * 0.5, 0], [0, -L - 0.03, 0]], [w0, (w0 + w1) / 2, w1], [w0, (w0 + w1) / 2, w1], Math.min(n, 7), (ring, j) => {
+        // Mottled, a scatter of grey and rust facets rather than rings.
+        const k = jitter(q * 13 + ring * 7 + j * 3.1);
+        return k < 0.16 ? 'spot' : k < 0.24 ? 'mark' : 'coat';
+      }, { seam: 'both' });
       const chip = q >= T.links.length - 2 && rock([0, -L * 0.5, w0 * 0.85], [w0 * 0.7, w0 * 0.8, w0 * 0.45], { up: [0, 0, 1], n: 4, seed: 60 + q, mat: stoneMat(60 + q) });
       return merge(fur, chip);
     }
@@ -1221,22 +1252,30 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Chip, at: Bones
   if (since <= 0) return;
   const club = place(at.club, clubMid(s)), ground: V3 = [club[0], club[1], 0.04];
   const big = bigness(s), fade = 1 - ramp(t, 0.72, 1), mid = at.body.t;
+  // The top of its back, and of its head, over the ground.
+  const top = Math.max(mid[2] + s.body.h[4] + 0.2, at.head.t[2] + s.head.r[2] * 1.3);
+  // The plume of dust going up from the blow: behind the body from the near side, and once it is up over it, in front.
+  const rise = s.tail.club * 0.6 + 9 * since, plume = add(ground, [0, 0, rise]);
+  if (front === (nearSide(ground, mid, view) || rise > top)) {
+    dust(g, view, plume, (s.tail.club + 0.3) * (1 + 4 * since) * (1 + 0.3 * s.slam), 0.5 * (1 - smooth(since / 0.26)));
+  }
   if (!front) {
     // The ring of the blow going out over the ground; a monolith's cracking it, the cracks running out in the first moment.
     if (s.slam >= 1) shock(g, view, ground, s.tail.club * (1.1 + 5 * since) * (s.slam === 2 ? 1.3 : 0.9), (s.slam === 2 ? 0.7 : 0.4) * (1 - smooth(since / 0.28)), 0, 3);
     if (s.slam === 2) shock(g, view, ground, 0, 0.55 * fade, s.tail.club * 2.2 * smooth(since / 0.05), 7);
     dust(g, view, ground, s.tail.club * (1.3 + 3.5 * since) * (1 + 0.4 * s.slam), 0.42 * (1 - smooth(since / 0.3)));
-    // And a plume of it going up, which shows over the back when the blow lands on the far side.
-    dust(g, view, add(ground, [0, 0, s.tail.club * 0.6 + 4.5 * since]), s.tail.club * (1 + 2.5 * since) * (1 + 0.3 * s.slam), 0.36 * (1 - smooth(since / 0.28)));
   }
-  const count = 7 + 5 * s.slam;
+  const count = 10 + 3 * s.slam;
   for (let q = 0; q < count; q++) {
     const a = (q / count) * TAU + jitter(q) * 0.7, speed = (1.6 + 2 * jitter(q + 9)) * (0.8 + 0.25 * s.slam) * big;
-    const v: V3 = [Math.cos(a) * speed, Math.sin(a) * speed, (3.4 + 3.4 * jitter(q + 2)) * (0.85 + 0.2 * s.slam)];
+    // Thrown up well over its back, so a blow on its far side still shows over it.
+    // (The strike is over in half a second, so they must go fast to go anywhere in it.)
+    const v: V3 = [Math.cos(a) * speed * 1.6, Math.sin(a) * speed * 1.6, (9 + 7 * jitter(q + 2)) * (0.9 + 0.15 * s.slam)];
     const p = thrown(add(ground, [0, 0, s.tail.club * 0.4]), v, since, 9);
-    if (nearSide(p, mid, view) !== front) continue;
+    // Once up over its back a chip is in the air in front of whatever is behind it, whichever side it came from.
+    if ((nearSide(p, mid, view) || p[2] > top) !== front) continue;
     const [x, y] = onScreen(view, p);
-    shard(g, x, y, (0.17 + 0.1 * jitter(q + 5)) * big * (1 + 0.25 * s.slam), q * 1.7 + since * 14 * (q % 2 ? 1 : -1), chipColour(q, pal), fade);
+    shard(g, x, y, (0.17 + 0.1 * jitter(q + 5)) * big * (s.slam ? 1 + 0.25 * s.slam : 1.4), q * 1.7 + since * 14 * (q % 2 ? 1 : -1), chipColour(q, pal), fade);
   }
   if (front) {
     for (let q = 0; q < 2 + s.slam; q++) {
@@ -1344,11 +1383,14 @@ function evolveSwirl(g: CanvasRenderingContext2D, view: View, s: Chip, b: Bones,
     shard(g, x, y, (0.28 + 0.12 * (q % 3)) * big * (1 - 0.4 * u), ang * 1.3, chipColour(q + 7, pal), fade * ramp(u, 0, 0.15));
   }
   // As they knit into its back, a glint at each place along the ridge with a small ring going out from it.
-  const knit = hump(t, 0.47, 0.06);
-  if (front && knit > 0) {
+  if (front && t > 0.38 && t < 0.56) {
     for (let q = 0; q < 6; q++) {
+      // Each its own size and its own moment, as each pebble arrives.
+      const t0 = 0.45 + 0.03 * (jitter(q + 21) * 2 - 1) + 0.012 * (q % 3), knit = hump(t, t0, 0.05);
+      if (knit <= 0) continue;
       const at = onRings(s.body, s.len * 0.45 * (q / 2.5 - 1), Math.PI / 2), [x, y] = onScreen(view, place(b.body, add(at.p, scale(at.n, 0.3))));
-      const k = knit * (0.6 + 0.4 * jitter(q + 3)), r = (0.12 + 0.3 * ramp(t, 0.42, 0.52)) * big;
+      const size = 0.6 + 0.8 * jitter(q + 7);
+      const k = knit * (0.6 + 0.4 * jitter(q + 3)), r = (0.12 + 0.3 * ramp(t, t0 - 0.05, t0 + 0.05)) * big * size;
       g.strokeStyle = css([255, 246, 220], 0.8 * k);
       g.lineWidth = Math.max(0.06, r * 0.18);
       g.beginPath();
