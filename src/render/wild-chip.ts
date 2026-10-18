@@ -117,8 +117,8 @@ const CHIPTAIL_LOOK: Chip = {
     rest: { lift: -12, yaw: 12, curl: 2, tip: 8, bend: 9 }, wind: { lift: 40, yaw: -24, curl: 14, tip: 10, bend: 4 }, aim: 170, work: 120, arc: 30,
   },
   back: [
-    { th: 1.4, y0: -0.45, y1: 0.45, count: 4, r: [0.21, 0.23, 0.13] },
-    { th: 0.95, y0: -0.25, y1: 0.25, count: 2, r: [0.15, 0.16, 0.09] },
+    { th: 1.42, y0: -0.9, y1: 0.75, count: 6, r: [0.16, 0.18, 0.08] },
+    { th: 1.0, y0: -0.5, y1: 0.4, count: 3, r: [0.11, 0.12, 0.06] },
   ],
   armour: 0,
   patches: 4,
@@ -140,8 +140,8 @@ const QUARRYBASH_LOOK: Chip = {
   mane: 0,
   brow: 0.42,
   tail: {
-    at: [0, -1.38, 0.42], links: [0.52, 0.51, 0.5, 0.49, 0.48, 0.46, 0.44], w: [0.34, 0.33, 0.32, 0.31, 0.3, 0.29, 0.28], stone: true, club: 1.05, blocky: false,
-    rest: { lift: 42, yaw: 6, curl: 2, tip: 2 }, wind: { lift: 50, yaw: -24, curl: 12, tip: 0 }, aim: 170, work: 120, arc: 30,
+    at: [0, -1.38, 0.42], links: [0.52, 0.51, 0.5, 0.49, 0.48, 0.46, 0.44], w: [0.44, 0.43, 0.41, 0.4, 0.39, 0.37, 0.36], stone: true, club: 1.05, blocky: false,
+    rest: { lift: 36, yaw: 6, curl: -6, tip: 4 }, wind: { lift: 50, yaw: -24, curl: 12, tip: 0 }, aim: 170, work: 120, arc: 30,
   },
   back: [
     { th: Math.PI / 2, y0: -1.0, y1: 0.95, count: 5, r: [0.24, 0.34, 0.3], spike: true },
@@ -158,9 +158,9 @@ const QUARRYBASH_LOOK: Chip = {
 
 /** A Monolithump: massive and low, a mountain of rock plates and spikes on its back, legs armoured in stone on boulder feet, a maned scowl of a face, and a thick stone tail ending in a boulder of a club. */
 const MONOLITHUMP_LOOK: Chip = {
-  body: { y: [-2.1, -1.9, -1.1, -0.1, 0.9, 1.6, 1.82], z: [0.1, 0.12, 0.18, 0.22, 0.26, 0.24, 0.22], w: [0.8, 1.36, 1.56, 1.62, 1.64, 1.46, 0.68], h: [0.56, 0.88, 1.0, 1.04, 1.04, 0.94, 0.48] },
-  len: 3.2, legs: 1.3, thick: 0.72, paw: 0.62, foot: 'boulder',
-  neck: { at: [0, 1.5, 0.1], len: 0.72, w: 0.9, lean: 70 },
+  body: { y: [-2.62, -2.38, -1.38, -0.12, 1.12, 2.0, 2.28], z: [0.1, 0.12, 0.18, 0.22, 0.26, 0.24, 0.22], w: [0.8, 1.36, 1.56, 1.62, 1.64, 1.46, 0.68], h: [0.5, 0.79, 0.9, 0.94, 0.94, 0.85, 0.43] },
+  len: 4.0, legs: 1.0, thick: 0.72, paw: 0.62, foot: 'boulder',
+  neck: { at: [0, 1.9, 0.1], len: 0.72, w: 0.9, lean: 85 },
   head: { r: [0.96, 0.78, 0.74], muzzle: [0.46, 0.7, 0.34], drop: 0.28, pitch: 4 },
   eye: { dir: [0.5, 0.8, 0.26], size: 0.21, fierce: 1 },
   ear: { len: 0.9, w: 0.42, out: 46, back: 26 },
@@ -168,14 +168,14 @@ const MONOLITHUMP_LOOK: Chip = {
   mane: 0.75,
   brow: 0.85,
   tail: {
-    at: [0, -1.98, 0.42], links: [0.7, 0.68, 0.66, 0.64], w: [0.74, 0.7, 0.66, 0.62], stone: true, club: 2.0, blocky: true,
+    at: [0, -2.48, 0.38], links: [0.7, 0.68, 0.66, 0.64], w: [0.74, 0.7, 0.66, 0.62], stone: true, club: 2.0, blocky: true,
     rest: { lift: 0, yaw: 8, curl: 2, tip: 0 }, wind: { lift: 30, yaw: -62, curl: 6, tip: 0 }, aim: 100, work: 120, arc: 8,
   },
   back: [
-    { th: Math.PI / 2, y0: -1.4, y1: 1.15, count: 5, r: [0.32, 0.46, 0.46], spike: true },
-    { th: 1.2, y0: -1.55, y1: 1.2, count: 6, r: [0.62, 0.56, 0.44], stand: 62 },
-    { th: 0.86, y0: -1.45, y1: 1.05, count: 5, r: [0.6, 0.55, 0.4], stand: 52 },
-    { th: 0.5, y0: -1.2, y1: 0.8, count: 4, r: [0.52, 0.5, 0.28], stand: 20 },
+    { th: Math.PI / 2, y0: -1.75, y1: 1.44, count: 7, r: [0.32, 0.46, 0.46], spike: true },
+    { th: 1.2, y0: -1.94, y1: 1.5, count: 7, r: [0.62, 0.56, 0.44], stand: 62 },
+    { th: 0.86, y0: -1.81, y1: 1.31, count: 6, r: [0.6, 0.55, 0.4], stand: 52 },
+    { th: 0.5, y0: -1.5, y1: 1.0, count: 5, r: [0.52, 0.5, 0.28], stand: 20 },
   ],
   armour: 2,
   patches: 2,
@@ -471,7 +471,7 @@ function hitOf(s: Chip, aim: number, clear: number): V3 {
 /** Where the club comes down to strike: in the forward half, beside its head. */
 const blowOf = (s: Chip): V3 => hitOf(s, s.tail.aim, s.tail.club * 0.45);
 /** Where the rock it quarries is: off its side, beside its haunch. */
-const rockOf = (s: Chip): V3 => hitOf(s, s.tail.work, rockR(s));
+const rockOf = (s: Chip): V3 => hitOf(s, s.tail.work, rockR(s) + (s.slam === 2 ? 0.5 * s.tail.club : 0));
 const rockR = (s: Chip): number => Math.max(0.44, s.tail.club * 0.9);
 const rockH = (s: Chip): number => rockR(s) * 0.88;
 
@@ -700,7 +700,7 @@ function chipBones(s: Chip): (a: Anim) => Bones {
     const atRock = posed({ ...still, act: { kind: 'work', t: WORK.hit } });
     const smash = reach(s, atRock, [hit[0], hit[1], top + low], { lift: 30, yaw: T.work * 0.85, curl: -4, tip: 0 });
     const hover = reach(s, atRock, [hit[0] - 0.15 * T.club, hit[1], top + low + T.club * 1.1 + 0.2], smash);
-    const raise = reach(s, atRock, [hit[0] * 0.6, lerp(hit[1], T.at[1], 0.35), top + low + T.club * 2.2 + 0.8], hover);
+    const raise = reach(s, atRock, [hit[0] * 0.6, lerp(hit[1], T.at[1], 0.35), top + low + T.club * (s.slam === 2 ? 2.8 : 2.2) + 0.8], hover);
     keys = { strike, smash, hover, raise };
     return keys;
   };
@@ -1252,8 +1252,8 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Chip, at: Bones
   if (since <= 0) return;
   const club = place(at.club, clubMid(s)), ground: V3 = [club[0], club[1], 0.04];
   const big = bigness(s), fade = 1 - ramp(t, 0.72, 1), mid = at.body.t;
-  // The top of its back, and of its head, over the ground.
-  const top = Math.max(mid[2] + s.body.h[4] + 0.2, at.head.t[2] + s.head.r[2] * 1.3);
+  // The top of its back over the ground.
+  const top = mid[2] + s.body.h[4] + 0.1;
   // The plume of dust going up from the blow: behind the body from the near side, and once it is up over it, in front.
   const rise = s.tail.club * 0.6 + 9 * since, plume = add(ground, [0, 0, rise]);
   if (front === (nearSide(ground, mid, view) || rise > top)) {
@@ -1261,7 +1261,7 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Chip, at: Bones
   }
   if (!front) {
     // The ring of the blow going out over the ground; a monolith's cracking it, the cracks running out in the first moment.
-    if (s.slam >= 1) shock(g, view, ground, s.tail.club * (1.1 + 5 * since) * (s.slam === 2 ? 1.3 : 0.9), (s.slam === 2 ? 0.7 : 0.4) * (1 - smooth(since / 0.28)), 0, 3);
+    shock(g, view, ground, s.tail.club * (1.1 + 5 * since) * [1.1, 0.9, 1.3][s.slam], [0.3, 0.4, 0.7][s.slam] * (1 - smooth(since / 0.28)), 0, 3);
     if (s.slam === 2) shock(g, view, ground, 0, 0.55 * fade, s.tail.club * 2.2 * smooth(since / 0.05), 7);
     dust(g, view, ground, s.tail.club * (1.3 + 3.5 * since) * (1 + 0.4 * s.slam), 0.42 * (1 - smooth(since / 0.3)));
   }
@@ -1270,12 +1270,14 @@ function strikeBurst(g: CanvasRenderingContext2D, view: View, s: Chip, at: Bones
     const a = (q / count) * TAU + jitter(q) * 0.7, speed = (1.6 + 2 * jitter(q + 9)) * (0.8 + 0.25 * s.slam) * big;
     // Thrown up well over its back, so a blow on its far side still shows over it.
     // (The strike is over in half a second, so they must go fast to go anywhere in it.)
-    const v: V3 = [Math.cos(a) * speed * 1.6, Math.sin(a) * speed * 1.6, (9 + 7 * jitter(q + 2)) * (0.9 + 0.15 * s.slam)];
-    const p = thrown(add(ground, [0, 0, s.tail.club * 0.4]), v, since, 9);
+    // On a kit, four of them knocked straight up off the top of the club, to show over its back at once.
+    const up = s.slam === 0 && q % 3 === 0 && q < 10;
+    const v: V3 = up ? [Math.cos(a) * 0.8, Math.sin(a) * 0.8, 15] : [Math.cos(a) * speed * 1.6, Math.sin(a) * speed * 1.6, (9 + 7 * jitter(q + 2)) * (0.9 + 0.15 * s.slam)];
+    const p = thrown(add(ground, [0, 0, s.tail.club * (up ? 1.6 : 0.4)]), v, since, 9);
     // Once up over its back a chip is in the air in front of whatever is behind it, whichever side it came from.
     if ((nearSide(p, mid, view) || p[2] > top) !== front) continue;
     const [x, y] = onScreen(view, p);
-    shard(g, x, y, (0.17 + 0.1 * jitter(q + 5)) * big * (s.slam ? 1 + 0.25 * s.slam : 1.4), q * 1.7 + since * 14 * (q % 2 ? 1 : -1), chipColour(q, pal), fade);
+    shard(g, x, y, (0.17 + 0.1 * jitter(q + 5)) * big * (s.slam ? 1 + 0.25 * s.slam : up ? 2 : 1.4), q * 1.7 + since * 14 * (q % 2 ? 1 : -1), chipColour(q, pal), fade);
   }
   if (front) {
     for (let q = 0; q < 2 + s.slam; q++) {
