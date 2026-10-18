@@ -11,7 +11,7 @@ import { groomGain, GROOM_HEAL } from './husbandry';
 import { healAmount } from './firstaid';
 import { BUTCHER_PARTS, butcherYield, corpseSpecies, HOARD_LUMPS, HOARD_METALS, HOARD_MORE } from './butcher';
 import { RECIPE_BY_ID, RECIPES, type Recipe } from './recipes';
-import { isOreItem, METAL_BY_ORE, smeltSeconds } from './metal';
+import { isOreItem, METAL_BY_ORE, METALS, smeltSeconds } from './metal';
 import { smelterCapacity, smelterCentre, type PlacedSmelter } from './smelter';
 import { fireSeconds, firedQl, kilnCapacity, kilnCentre, POTTERY_BY_UNFIRED, isGreenware, type PlacedKiln } from './kiln';
 import { BREWS, isWorking, type BrewDef } from './brewing';
@@ -37,7 +37,7 @@ import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type I
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
-import { fill, listed, numberWord, percent, times } from './words';
+import { article, capital, fill, listed, numberWord, percent, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { keyX, keyY, tileKey } from './tileindex';
@@ -662,9 +662,9 @@ export function stageSays(stage: number): string {
  * every number read off the rule it describes.
  */
 function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2): string {
-  if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into a ${names[1]}.`;
-  const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into a ${names[2]}.` : '';
-  return `A ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage)} than a ${names[0]}. ${job}${next}`;
+  if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into ${article(names[1])} ${names[1]}.`;
+  const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into ${article(names[2])} ${names[2]}.` : '';
+  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
 }
 
 /** Writes a line's words onto its kind and its two stages, once every number they read is here. */
@@ -866,11 +866,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'quarry',
     workRange: 8,
     rangePerStep: 6,
+    // Its fur, and the rust of its stone: beige under rust and grey, grey under slate, sandstone under ochre, and dark granite
+    // under orange.
     variants: [
-      ['#8d8a84', '#c3bfb6'],
-      ['#6f7684', '#a9b0bc'],
-      ['#9a8f7e', '#cfc6b4'],
-      ['#7c7269', '#b4aa9c'],
+      ['#d2b78c', '#c0703e'],
+      ['#bab5ad', '#66727e'],
+      ['#ddb47a', '#c48a2c'],
+      ['#7e7774', '#d77a34'],
     ],
     butcher: { meat: 4, leather: 3, bone: 4, gland: 1 },
     tameFail: 'takes the {food} in one bite, considers you, and goes back to the rock',
@@ -961,8 +963,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   mola: {
     id: 'mola',
     wound: 'cut',
-    name: 'Mola',
-    description: 'A heavy-shouldered mole with claws like trowels and grit worked into its coat. It can smell metal through a foot of stone and would rather be underground than not.',
+    name: 'Ironemole',
+    was: ['Mola'],
+    // Asked for: "Begin work on this line to replace Mola": Ironemole, Ferrodrill, Oremander, "Mines metals from the
+    // ground". Its words are written with every number they read (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Ferrodrill', description: '' },
+      { name: 'Oremander', description: '' },
+    ],
     health: 22,
     attack: 4,
     speed: 1.5,
@@ -3458,6 +3467,8 @@ sayLine('rabba', `Set to work on a settlement it forages within ${SPECIES.rabba.
   'Its level is its foraging.');
 sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of bare rock with no seam in it, within ${SPECIES.quarra.workRange} tiles of the token and ${SPECIES.quarra.rangePerStep} further for every ${SKILL_STEP} levels, and carries it home.`,
   'Its level is its mining.');
+sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
+  'Its level is its mining.');
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {
@@ -4809,7 +4820,7 @@ export class Creatures {
     } else if (def.onSand) {
       if (w.getTile(x, y) !== TileType.Sand) return false;
     } else if (def.onStone) {
-      // Bare rock with nothing in it: the Mola takes the seams, the Quarra the rest.
+      // Bare rock with nothing in it: the Ironemole takes the seams, the Chiptail the rest.
       if (w.getTile(x, y) !== TileType.Rock || isSeam(bedrockAt(w, x, y))) return false;
     } else if (!TILE_DEFS[w.getTile(x, y)].forage) return false;
     if (def.nearWater && !nearWater(game, x, y)) return false;
@@ -7223,7 +7234,7 @@ export class Creatures {
     const stage = stageOf(c);
     if (stage > stageOf({ species: c.species, skills: { ...c.skills, [id]: v } })) {
       c.health *= STAGE_MUL.hardy ?? 1;
-      if (c.mode !== 'wild') game.logMsg(`${c.name} evolves into a ${kindName(c)}!`, 'skill');
+      if (c.mode !== 'wild') game.logMsg(`${c.name} evolves into ${article(kindName(c))} ${kindName(c)}!`, 'skill');
       game.events.emit('evolve', c.id, stage);
       this.acted(c, 'evolve', game.time);
     }

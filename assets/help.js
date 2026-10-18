@@ -2312,12 +2312,12 @@ import{$r as e,$s as t,Aa as n,An as r,Ao as i,Ar as a,Bi as o,Bl as s,Bn as c,B
     harvest back. Seed it has no field to put in goes back to the stores with everything else, so what
     it reaps is on a shelf where you can count it rather than in its cheeks. It cannot rake a field of
     its own, so it only works ground you have tilled. The
-    <b>Mola</b> is a heavier mole built around its claws, found sitting on metal, living on spices, and
-    working the seams for its deed: it takes the nearest ore no other Mola has claimed, and the quality
+    <b>${P.mola.name}</b> (the Mola that was) is a crystal-backed mole that evolves into a ${P.mola.stages[0].name} at level ${wo[0]} and a ${P.mola.stages[1].name} at ${wo[1]}, found sitting on metal, living on spices, and
+    working the seams for its deed: it takes the nearest ore no other ${P.mola.name} has claimed, and the quality
     of what it brings back is its own mining skill, up to whatever the seam holds, and it leaves alone
     any metal beyond its skill &mdash; so a fresh one takes copper and coal, and starts on iron the day
     its mining reaches ${Nu(`iron`)}. It works <b>${v(10)} units of water</b> deep, the same as you do, and a face it
-    cannot stand on it works from the bank beside it: a shore seam is a Mola's to cut, and so is a
+    cannot stand on it works from the bank beside it: a shore seam is an ${P.mola.name}'s to cut, and so is a
     seabed under wading depth. The same goes for a <b>${P.quarra.name}</b> and plain rock. Its range grows by
     ${P.mola.rangePerStep??10} tiles every 10 levels rather than the usual 10. The <b>Crawler</b> is a broad crab that lives on the
     sand, eats vegetables, and digs sand for its deed &mdash; a clawful at a time, taken from the highest

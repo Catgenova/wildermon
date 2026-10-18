@@ -2967,12 +2967,12 @@ export function helpText(): string {
     harvest back. Seed it has no field to put in goes back to the stores with everything else, so what
     it reaps is on a shelf where you can count it rather than in its cheeks. It cannot rake a field of
     its own, so it only works ground you have tilled. The
-    <b>Mola</b> is a heavier mole built around its claws, found sitting on metal, living on spices, and
-    working the seams for its deed: it takes the nearest ore no other Mola has claimed, and the quality
+    <b>${SPECIES.mola.name}</b> (the Mola that was) is a crystal-backed mole that evolves into a ${SPECIES.mola.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.mola.stages![1].name} at ${EVOLVE_AT[1]}, found sitting on metal, living on spices, and
+    working the seams for its deed: it takes the nearest ore no other ${SPECIES.mola.name} has claimed, and the quality
     of what it brings back is its own mining skill, up to whatever the seam holds, and it leaves alone
     any metal beyond its skill &mdash; so a fresh one takes copper and coal, and starts on iron the day
     its mining reaches ${METAL_LEVEL('iron')}. It works <b>${numberWord(MINE_DEPTH)} units of water</b> deep, the same as you do, and a face it
-    cannot stand on it works from the bank beside it: a shore seam is a Mola's to cut, and so is a
+    cannot stand on it works from the bank beside it: a shore seam is an ${SPECIES.mola.name}'s to cut, and so is a
     seabed under wading depth. The same goes for a <b>${SPECIES.quarra.name}</b> and plain rock. Its range grows by
     ${SPECIES.mola.rangePerStep ?? RANGE_PER_STEP} tiles every ${SKILL_STEP} levels rather than the usual ${RANGE_PER_STEP}. The <b>Crawler</b> is a broad crab that lives on the
     sand, eats vegetables, and digs sand for its deed &mdash; a clawful at a time, taken from the highest

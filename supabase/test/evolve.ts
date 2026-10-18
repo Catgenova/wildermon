@@ -58,6 +58,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   insert into said select 'NAMES', name || '|' || array_to_string(stages, ',') from species_def where id = 'rabba';
+  insert into said select 'IRONEMOLE', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Mola')).id from species_def where id = 'mola';
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
   insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work());
   a := creature_spawn(w, 'rabba', 17, 16.5, 'deed', now() - interval '30 days', u);
@@ -90,6 +91,10 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 const def = SPECIES.rabba;
 check('the Rabba is the Snufflet now, a Snuffroot and a Snuffthorn after, on both sides',
   def.name === 'Snufflet' && def.stages?.map((x) => x.name).join(',') === 'Snuffroot,Snuffthorn' && at('NAMES') === 'Snufflet|Snuffroot,Snuffthorn', at('NAMES'));
+const iron = SPECIES.mola;
+check('the Mola is the Ironemole now, a Ferrodrill and an Oremander after, and an old Mola carcass is still one, on both sides',
+  iron.name === 'Ironemole' && iron.stages?.map((x) => x.name).join(',') === 'Ferrodrill,Oremander'
+    && at('IRONEMOLE') === 'Ironemole|Ferrodrill,Oremander|Mola|mola' && iron.stages[1].description.startsWith('An Ironemole at level'), at('IRONEMOLE'));
 const chip = SPECIES.quarra;
 check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and an old Quarra carcass is still one, on both sides',
   chip.name === 'Chiptail' && chip.stages?.map((x) => x.name).join(',') === 'Quarrybash,Monolithump'
