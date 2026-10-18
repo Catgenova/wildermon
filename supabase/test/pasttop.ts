@@ -58,7 +58,7 @@ begin
   for i in 1..40 loop perform skill_raise(w, u, 'mining', 2000); end loop;
   insert into said select 'RAISED', skill_standing(w, u, 'mining') || '|' || skill_of(w, u, 'mining');
   insert into said select 'BOARD', b->'skills'->'mining'->0->>'value' from rpc_boards(w) b;
-  insert into said select 'TOLD', text from event where world_id = w and uid = u and text like 'Mining increased%' order by at desc limit 1;
+  insert into said select 'TOLD', text from event where world_id = w and uid = u and text like 'Mining increased%' order by n desc limit 1;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
