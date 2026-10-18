@@ -2,13 +2,14 @@ import { darker, drawBeast, drawBeastPortrait, headOf, topOf, type Anim, type Be
 import { LUME, VESP } from './wild-air';
 import { QUILL, SEDRA, WARDA } from './wild-birds';
 import { DRAGON } from './wild-dragon';
-import { DOWSE, SNOUT, VOLA } from './wild-diggers';
+import { DOWSE, SNOUT } from './wild-diggers';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
 import { BURA, CUDDA, GORRAL, ORSE, ROXXEN, SAPPA, SHAGGAN, SNEDDA } from './wild-herd';
 import { CRAWLER, MAGGA, NOOT } from './wild-odd';
 import { ULVA } from './wild-hunters';
 import { SEAVIC, WOOLA } from './wild-small';
 import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
+import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
 import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
 import { BEVERE, BOGGA, EMBRA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
 import { COBBE, GRUBBA, ROWL } from './wild-wild';
@@ -41,7 +42,7 @@ export const WILDERMON: Record<string, Kind> = {
   crawler: CRAWLER,
   ulva: ULVA,
   seavic: SEAVIC,
-  vola: VOLA,
+  vola: SPORELING,
   mola: IRONEMOLE,
   dowse: DOWSE,
   snout: SNOUT,
@@ -138,6 +139,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   rabba: [SNUFFROOT, SNUFFTHORN],
   mola: [FERRODRILL, OREMANDER],
   quarra: [QUARRYBASH, MONOLITHUMP],
+  vola: [SPOREKIN, SPORELORD],
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */

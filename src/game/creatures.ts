@@ -731,7 +731,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     workRange: 8,
     // Its coat and its cap: cream with a coral cap, white with a rose one, fawn with a red one, and grey-cream with a lilac one.
     variants: [
-      ['#f3e8d6', '#ec8a7c'],
+      ['#f3e8d6', '#ea8486'],
       ['#fbf8f2', '#e47c98'],
       ['#d8b48e', '#d4453e'],
       ['#ddd6cb', '#b48ad0'],

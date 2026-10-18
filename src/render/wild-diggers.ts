@@ -1,11 +1,11 @@
 import {
-  add, beat, coatPalette, cross, curve, cyc, DEG, disc, merge, moved, onEgg, orb, orbAlong, paint, quadBonesOf, scale, smile, sub, taper, TAU, tube, unit,
+  add, beat, coatPalette, cross, curve, DEG, disc, merge, onEgg, orb, orbAlong, paint, quadBonesOf, scale, smile, sub, taper, TAU, tube, unit,
   type Anim, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, hoofMesh, pawMesh, quadPieces } from './beastkit';
-import { joint, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
+import { joint, place, type Mat, type RGB, type V3 } from './figure';
 
-/** The diggers: the vola, the dowse and the snout, all long and low and nose-first. (The mola is the iron line now, in `./wild-iron`.) */
+/** The diggers: the dowse and the snout, long and low and nose-first. (The mola is the iron line now, in `./wild-iron`, and the vola the spore line, in `./wild-spore`.) */
 
 /**
  * A long low burrower: short legs, the body close to the ground, the head carried forward and low. `lean` is how far forward of
@@ -42,124 +42,6 @@ function scurry(p: QuadPose, a: Anim, sniff = 14): void {
   p.head[0] += 3 * Math.sin(a.t * Math.PI * 6) - sniff * 0.5 * down;
   p.neck[0] += sniff * down;
 }
-
-/**
- * Broad fore paws carried through their swing nearly as level as they are put down: `k` of the tip and the curl a paw is given
- * lifting off (`quadBones`) taken out of it again, since a trowel or a shovel tipped up on end is a stick.
- */
-function flatFore(p: QuadPose, s: QuadSpec, k: number): void {
-  const rest = s.fore.rest ?? [0, 0, 0], folds = s.fore.fold ?? [45, 75];
-  for (const i of [0, 1]) {
-    const [sw, fold, off] = p.legs[i];
-    const knee = fold * (folds[0] + (folds[1] - folds[0]) * Math.min(1, Math.abs(sw) / 40));
-    const flat = -(p.pitch + rest[0] + sw + rest[1] - knee);
-    p.foot[i] += k * (0.6 * flat + 35 * fold) * Math.min(1, off * 3);
-  }
-}
-
-/* ---- the vola ------------------------------------------------------------------------ */
-
-/**
- * A vola: a velvet digger with broad pink shovel paws and a snout like a pink
- * star, which noses through the undergrowth for herbs. A little garden grows
- * on its back: two sprigs of herb, a yellow flower and a red toadstool.
- */
-const VOLA_SPEC = digger({ high: 0.95, len: 3.4, legs: 0.62, neck: 0.3, nose: 10 });
-const VOLA_HEAD = { c: [0, 0.4, 0.1] as V3, r: [0.92, 0.9, 0.78] as V3 };
-/** The middle of the star on the end of its snout, in the head's frame. */
-const STAR_AT: V3 = [0, 1.64, -0.04];
-
-function volaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = VOLA_HEAD;
-  // A pale muzzle standing out of the face, so side on there is a nose line in front of the eye with the star on its end.
-  const muzzle = orbAlong([0, 1.17, -0.08], [0, 1, 0], [0.37, 0.31, 0.44], n, k, 'muzzle');
-  // The star of a snout: a round nub with a ring of pink fingers round it.
-  const nub = orbAlong(STAR_AT, [0, 1, 0], [0.24, 0.2, 0.2], 6, 4, 'nose');
-  const star = merge(
-    nub,
-    ...Array.from({ length: 6 }, (_, q) => {
-      const a = (q / 6) * TAU;
-      return orbAlong(add(STAR_AT, [Math.cos(a) * 0.26, 0.06, Math.sin(a) * 0.22]), [Math.cos(a), 0.7, Math.sin(a)], [0.08, 0.08, 0.15], 5, 3, 'nose');
-    }),
-  );
-  const fingersFrom = nub.v.length;
-  // A sprig of herb: a stalk with a leaf at its tip and three up it, each turned a third of the way round from the last and to the
-  // sky, and twisted along its length, so some are always side on and none is ever edge on.
-  const sprig = (at: V3, lean: number, turn: number): Mesh => {
-    const tip = add(at, [lean * 0.13, 0.04, 0.42]);
-    const leaf = (root: V3, d: V3, rise: number): Mesh => {
-      const pt = (u: number): V3 => add(root, [d[0] * u, d[1] * u, d[2] * u + rise * (u / 0.28) ** 1.3]);
-      return blade([pt(0), pt(0.1), pt(0.2), pt(0.28)], [0.03, 0.13, 0.11, 0.02], [0, 0, 1], { twist: 0.8, mat: 'leaf', rib: 'stem' });
-    };
-    return merge(
-      tube3(curve(at, add(at, [lean * 0.06, 0, 0.22]), tip, 3), 0.05),
-      ...[0.1, 0.2, 0.3].map((h, q) => {
-        const a = turn + (q * TAU) / 3;
-        return leaf(add(at, [lean * 0.13 * (h / 0.42), 0.02, h]), [Math.cos(a), Math.sin(a), 0], 0.14);
-      }),
-      leaf(tip, [lean * 0.5, 0.12, 0.35], 0.06),
-    );
-  };
-  // The garden on its back, set on the velvet rather than sunk in it: a red toadstool, two sprigs of herb and a yellow flower.
-  const toadstool = merge(
-    taper([[0.15, -0.3, 0.82], [0.15, -0.3, 1.1]], 0.13, 0.11, 6, 'spot'),
-    orbAlong([0.15, -0.3, 1.14], [0, 0, 1], [0.4, 0.4, 0.21], n, k, 'cap'),
-    paint([disc([0.15, -0.3, 1.36], [0, 0, 1], 0.09, 0.09, 5, 'spot'), disc([0.42, -0.24, 1.25], [0.7, 0, 0.7], 0.08, 0.08, 5, 'spot'), disc([-0.08, -0.1, 1.27], [-0.4, 0.4, 0.8], 0.08, 0.08, 5, 'spot')]),
-  );
-  const flower = merge(
-    tube3([[-0.35, -0.9, 0.8], [-0.36, -0.88, 1.02]], 0.045),
-    orb([-0.36, -0.88, 1.04], [0.2, 0.2, 0.09], 7, 3, 'bloom'),
-    paint([disc([-0.36, -0.88, 1.135], [0, 0, 1], 0.08, 0.08, 6, 'ember')]),
-  );
-  // The herbs are too fine to carry the lines a body does: outlined thinly, and nothing drawn across their leaves. The sprig ahead
-  // of the toadstool goes down after it only seen from ahead, and the sprig and the flower behind it only seen from behind.
-  const herbs = (key: string, m: Mesh, ahead: number): Piece => ({ key, mesh: m, bone: 'trunk', bias: 0.01, after: 'garden', front: [0, ahead, 0], thin: true, lines: false });
-  // Shovels: the fore paws broad and flat, laid over with the palm turned out and down, which is how they dig.
-  const shovel = moved(orbAlong([0, 0.2, 0], [0, 1, 0], [0.3, 0.09, 0.34], n, k, 'pad'), [0.05, 0, 0.12], 0, -10, -40);
-  return [
-    ...quadPieces({
-      n, k,
-      body: { y: [-1.95, -1.6, -0.9, 0, 0.9, 1.5, 1.8], z: [0.1, 0.14, 0.16, 0.16, 0.16, 0.2, 0.25], w: [0.2, 0.8, 1.02, 1.08, 1.0, 0.78, 0.25], h: [0.18, 0.62, 0.75, 0.78, 0.72, 0.6, 0.22], belly: true },
-      neck: { w: 0.66, h: 0.56, len: 0.3 },
-      head: { c: H.c, r: H.r, face: merge(muzzle, smile([0, 1.38, -0.34], [0, 1, -0.4], 0.24)), eye: { dir: [0.72, 0.6, 0.26], size: 0.27, rim: 0.12 }, blush: [[0.78, 0.5, -0.3], 0.16] },
-      ear: earMesh(0.35, 0.26, n),
-      tail: [taper([[0, 0, 0], [0, -0.34, 0]], 0.12, 0.1, 5, 'coatDark'), taper([[0, 0, 0], [0, -0.3, 0]], 0.1, 0.03, 5, 'coatDark')],
-      fore: { upper: [0.25, -0.35, 0.24, 0.2], lower: [0, -0.28, 0.2, 0.18], foot: shovel },
-      hind: { upper: [0.25, -0.38, 0.28, 0.2], lower: [0, -0.3, 0.18, 0.16], foot: pawMesh(0.2, n, k, 'pad', 0.12) },
-      extras: [
-        { key: 'garden', mesh: toadstool, bone: 'trunk', bias: 0.05, after: 'body' },
-        herbs('herbs0', sprig([-0.3, 0.35, 0.85], -1, 0.5), 1),
-        herbs('herbs1', merge(sprig([0.35, -1.05, 0.8], 1, 2.2), flower), -1),
-      ],
-    }),
-    // The star as a piece of its own, so its fingers can work at the air: spread and drawn in again on every other still.
-    {
-      key: 'star', mesh: star, bone: 'head', bias: 0.22, after: 'head', hide: [{ c: H.c, r: H.r }], hideIn: 'head', lines: false,
-      bent: (v, a) => {
-        const s = 1 + 0.15 * cyc(a.t, 72) * (1 - a.go);
-        return v.map((p, i) => (i < fingersFrom ? p : [STAR_AT[0] + (p[0] - STAR_AT[0]) * s, p[1], STAR_AT[2] + (p[2] - STAR_AT[2]) * s]));
-      },
-    },
-  ];
-}
-
-/** A stalk: a thin green tube. */
-const tube3 = (pts: V3[], r: number): Mesh => taper(pts, r, r * 0.8, 5, 'stem');
-
-export const VOLA: Kind = {
-  bones: quadBonesOf(VOLA_SPEC, (p, a) => {
-    scurry(p, a, 24);
-    flatFore(p, VOLA_SPEC, 0.7);
-  }),
-  build: volaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, {
-    nose: [246, 168, 188], pad: [236, 168, 176], cap: [226, 96, 92], spot: [252, 246, 236], leaf: [156, 212, 104], stem: [110, 160, 80], bloom: [250, 214, 110], ember: [236, 146, 70],
-  }),
-  shadow: [2.1, 1.1],
-  stride: 1.9,
-  size: 1.45,
-};
 
 /* ---- the dowse ----------------------------------------------------------------------- */
 

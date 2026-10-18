@@ -2,6 +2,7 @@ import type { BeastAct } from '../game/events';
 import { CHIP_VOICE } from './voice-chip';
 import { IRON_VOICE } from './voice-iron';
 import { SNUFF_VOICE } from './voice-snuff';
+import { SPORE_VOICE } from './voice-spore';
 
 /**
  * Wildermon voices.
@@ -25,4 +26,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   mola: IRON_VOICE,
   // The Chiptail, the Quarrybash and the Monolithump.
   quarra: CHIP_VOICE,
+  // The Sporeling, the Sporekin and the Sporelord.
+  vola: SPORE_VOICE,
 };
