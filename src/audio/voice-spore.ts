@@ -177,7 +177,7 @@ function munch(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, k:
  * a deep woody thud, and the spores go up off it in a long whoosh.
  */
 const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [0.48, 1.8, 0.95][s]);
+  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [0.48, 2.0, 0.95][s]);
   const hit = at + SPORE_HITS[s] * ACT_SECS.strike;
   if (s === 0) {
     chirp(ctx, out, at + 0.04, v, 0.55, 1.5);
@@ -211,7 +211,7 @@ const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: numbe
  * basket and the creak of the wicker. All inside the second a go takes.
  */
 const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [2.3, 3.1, 2.4][s]);
+  const s = Math.max(0, Math.min(2, stage)), b = bodyOf(stage, v), out = level(ctx, dest, [1.5, 3.1, 2.4][s]);
   const W = SPORE_WORK, go = ACT_SECS.work;
   rustle(ctx, out, at + 0.12 * go, (W.reach - 0.1) * go, b.key, v, 0.8);
   const pluck = at + W.pluck * go;

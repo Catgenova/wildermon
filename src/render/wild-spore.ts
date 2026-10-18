@@ -459,7 +459,7 @@ function workPose(s: Spore, p: BipedPose, t: number, graze: number): void {
     // and the cheek it stuffs puffs out and is chewed down again.
     const arm = p.arms[1], up = 1 - k.reach, mouth = WORK_DROP[0], ground: [number, number, number] = [low, 18, 6];
     p.arms[1] = [0, 1, 2].map((q) => lerp(arm[q], lerp(ground[q], mouth[q], up), d)) as [number, number, number];
-    p.head[0] += d * 22 * up;
+    p.head[0] += d * 9 * up;
     p.head[1] += d * 10 * up;
     p.jaw = d * Math.max(0, Math.sin((t - W.drop) * TAU * 6)) * ramp(frac(t - W.drop), 0, 0.05) * (1 - ramp(frac(t - W.drop), 0.4, 0.55));
     return;
@@ -521,8 +521,8 @@ export const STAFF_WORK: V3 = [-0.6, -0.6, 0];
 /** How far the Sporekin brings forward the arm holding its sprig (negative: back) and bends its elbow as it stoops, the sprig held up at its chest out of the ground. */
 export const SPRIG_UP = -20, SPRIG_BEND = 80;
 export const STAFF_WORK_ARM = [0, 50, 0];
-/** The raised staff's foot, and the arm (forward, out, elbow) whose paw holds it out at the height of its head. */
-const STAFF_RAISE: V3 = [1.1, 0.4, 1.8];
+/** The raised staff's foot against where it stands, and the arm (forward, out, elbow) whose paw holds it out at the height of its head. */
+const STAFF_RAISE: V3 = [0.6, -0.8, 2.6];
 const STAFF_RAISE_ARM: [number, number, number] = [20, 80, 0];
 /** The staff's length. */
 const staffLen = (s: Spore): number => s.arm.at[2] + s.chest.at[2] + s.leg.len[0] + s.leg.len[1] + 1.4;
@@ -630,9 +630,9 @@ function staffOf(s: Spore, b: Bones, a: Anim, reach: number): Xf {
   }
   if (act?.kind === 'strike') {
     const t = act.t, hit = SPORE_HITS[2], k = strikeOf(s, t);
-    // Its foot raised off the ground beside it, so the staff stands up forward and out past its brim from the paw out at its side:
-    // seen beside the cap whichever way it is turned.
-    const high = STAFF_RAISE;
+    // Swung up and back over its right shoulder, its foot raised high behind it, so the staff stands out past its brim from the
+    // paw out at its side and comes down over it in a long arc, seen across the picture whichever way it is turned.
+    const high: V3 = [rest[0] + STAFF_RAISE[0], STAFF_RAISE[1], STAFF_RAISE[2]];
     const to = STAFF_HIT(s);
     const raise = ramp(t, 0.04, hit - 0.12), drive = ramp(t, hit - 0.1, hit), back = ramp(t, hit + 0.12, 0.98);
     const lifted: V3 = [lerp(rest[0], high[0], raise), lerp(rest[1], high[1], raise), lerp(0, high[2], raise)];
@@ -1210,9 +1210,7 @@ function strapOf(s: Spore, n: number): Mesh {
   const over = Array.from({ length: 4 }, (_, q) => on(zTop - 0.05 * Math.abs(q - 1.5), lerp(-Math.PI * 0.32, Math.PI * 0.12, q / 3), lift + 0.03));
   const across = Array.from({ length: 8 }, (_, q) => on(lerp(zTop - 0.08, zLow + 0.15, (q + 1) / 8), lerp(Math.PI * 0.12, Math.PI * 1.02, (q + 1) / 8), lift));
   // Round under its left arm, low, to the bottom of the basket's left side.
-  const under = Array.from({ length: 3 }, (_, q) => on(zLow + 0.15 + 0.08 * (q + 1), lerp(Math.PI * 1.02, Math.PI * 1.3, (q + 1) / 3), lift));
-  const low: V3 = add(B.at, [-B.r * 0.72, B.r * 0.2, -0.62]);
-  const band = tube([rim(1), ...over, ...across, ...under, low], w, 0.035, 4, (_r, j) => (j % 2 ? 'leatherDark' : 'leather'), { start: false, end: false });
+  const band = tube([rim(1), ...over, ...across], w, 0.035, 4, (_r, j) => (j % 2 ? 'leatherDark' : 'leather'), { start: false, end: false });
   // The buckle on its breastbone, where the strap crosses the middle of its chest.
   const mid = on(lerp(zTop - 0.08, zLow + 0.15, 0.42), Math.PI / 2, lift + 0.04), nrm = unit([0, 1, 0.15]);
   return merge(
