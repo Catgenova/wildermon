@@ -27,6 +27,7 @@
 import { execFileSync } from 'node:child_process';
 import { AWAY_NAMED, awayFor, awayLines, type Away } from '../../src/game/away';
 import { priceWords } from '../../src/game/money';
+import { SPECIES } from '../../src/game/creatures';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -198,7 +199,7 @@ const lines = away ? awayLines(away) : [];
 check('the browser says how long', lines[0] === 'You were away 3 hours.', lines[0]);
 check('and all five of them', lines.length === 6, lines.join(' / '));
 check('the loads', lines.includes('Your workers put 3 × log into the stores.'), lines[1]);
-check('the young', lines.includes('Born to your wildermon: 1 rabba.'), lines[2]);
+check('the young', lines.includes(`Born to your wildermon: 1 ${SPECIES.rabba.name.toLowerCase()}.`), lines[2]);
 check('the sales, summed', lines.includes(`Your stalls sold 3 × shaft and 1 × plank for ${priceWords(10)}. It is in their tills.`), lines[4]);
 check('and the parcel', lines.includes('A parcel from Cato waits for you at any mailbox.'), lines[5]);
 
