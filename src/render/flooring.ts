@@ -624,53 +624,77 @@ function handmade(o: Stone & { unit: number; joint: number; seed: number }): HTM
 }
 
 /**
- * Octagon and dot: white marble cut in octagons, their corners taken off
- * square so four of them meet round a small square of dark marble set on its
- * point, each octagon veined on its own.
+ * Polished marble laid as one slab: a white ground clouded in faintly warmer and cooler whites, crossed by long grey
+ * veins that wander and fork as they go, soft at their edges and fine at their hearts. Nothing in it marks where a
+ * tile ends: every cloud and vein is drawn again a picture's width over, so the picture runs on into the next.
  */
-function octagons(o: Stone & { unit: number; joint: number; dot: Stone; vein: string; seed: number }): HTMLCanvasElement {
+function marbled(o: { ground: string; clouds: string[]; vein: string; soft: string; seed: number }): HTMLCanvasElement {
   const [c, g] = canvas(S, S);
-  g.fillStyle = o.bed;
+  g.fillStyle = o.ground;
   g.fillRect(0, 0, S, S);
   const R = rand(o.seed);
-  const n = Math.round(S / o.unit), u = S / n, cut = u / (2 + Math.SQRT2), jt = o.joint / 2;
-  const veins = (dx: number, dy: number, x: number, y: number, size: number, ink: string, r: Rand): void => {
-    const k = 1 + Math.floor(r() * 2);
-    for (let v = 0; v < k; v++) {
-      const ang = r() * Math.PI;
-      const ca = Math.cos(ang), sa = Math.sin(ang);
-      let px = x + dx - ca * size + (r() - 0.5) * size * 0.6, py = y + dy - sa * size + (r() - 0.5) * size * 0.6;
-      g.strokeStyle = hexA(ink, 0.55 + r() * 0.3);
-      g.lineWidth = 0.9 + r() * 1.4;
-      g.lineCap = 'round';
-      g.beginPath();
-      g.moveTo(px, py);
-      for (let s = 0; s < 7; s++) {
-        px += ca * size * 0.32 + (r() - 0.5) * size * 0.22;
-        py += sa * size * 0.32 + (r() - 0.5) * size * 0.22;
-        g.lineTo(px, py);
-      }
-      g.stroke();
-    }
+  const everywhere = (draw: (dx: number, dy: number) => void): void => {
+    for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) draw(dx, dy);
   };
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      const x0 = i * u, y0 = j * u, x1 = x0 + u, y1 = y0 + u;
-      const oct: Pt[] = [
-        [x0 + cut + jt, y0 + jt], [x1 - cut - jt, y0 + jt], [x1 - jt, y0 + cut + jt], [x1 - jt, y1 - cut - jt],
-        [x1 - cut - jt, y1 - jt], [x0 + cut + jt, y1 - jt], [x0 + jt, y1 - cut - jt], [x0 + jt, y0 + cut + jt],
-      ];
-      const tone = pick(o.tones, R);
-      const vs = Math.floor(R() * 1e9);
-      stone(g, (dx, dy) => path(g, oct, dx, dy), [x0, y0, x1, y1], tone, o, R, (dx, dy) => veins(dx, dy, (x0 + x1) / 2, (y0 + y1) / 2, u * 0.55, o.vein, rand(vs)));
-      // The dot at its top-left corner, which the grid's wrap turns into every corner's.
-      const d = cut - jt * 1.4;
-      const dot: Pt[] = [[x0, y0 - d], [x0 + d, y0], [x0, y0 + d], [x0 - d, y0]];
-      const dtone = pick(o.dot.tones, R);
-      const ds = Math.floor(R() * 1e9);
-      stone(g, (dx, dy) => path(g, dot, dx, dy), [x0 - d, y0 - d, x0 + d, y0 + d], dtone, o.dot, R, (dx, dy) => veins(dx, dy, x0, y0, d, o.dot.speck[0], rand(ds)));
-    }
+  // The clouding: broad soft patches, each a little lighter or duller than the ground.
+  for (let i = 0; i < 46; i++) {
+    const x = R() * S, y = R() * S, r = S * (0.08 + R() * 0.22), tone = o.clouds[Math.floor(R() * o.clouds.length)], a = 0.25 + R() * 0.35;
+    everywhere((dx, dy) => {
+      const grad = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+      grad.addColorStop(0, hexA(tone, a));
+      grad.addColorStop(1, hexA(tone, 0));
+      g.fillStyle = grad;
+      g.fillRect(x + dx - r, y + dy - r, r * 2, r * 2);
+    });
   }
+  // A vein: a wandering line from where it starts, with a soft wash under a fine core, and now and then a fork.
+  const vein = (x: number, y: number, ang: number, len: number, w: number, depth: number): void => {
+    const pts: Pt[] = [[x, y]];
+    let px = x, py = y, a = ang, turn = 0;
+    const steps = Math.max(4, Math.round(len / 10));
+    for (let k = 0; k < steps; k++) {
+      // It bends as stone flows, slowly, not as a twig does.
+      turn = turn * 0.8 + (R() - 0.5) * 0.12;
+      a += turn;
+      px += Math.cos(a) * (len / steps);
+      py += Math.sin(a) * (len / steps);
+      pts.push([px, py]);
+      if (depth < 1 && R() < 0.03) vein(px, py, a + (R() < 0.5 ? -1 : 1) * (0.5 + R() * 0.6), len * (0.25 + R() * 0.3), w * 0.6, depth + 1);
+    }
+    // Open, not closed as `path` draws a stone's outline.
+    const line = (dx: number, dy: number): void => {
+      g.beginPath();
+      pts.forEach(([qx, qy], k) => (k ? g.lineTo(qx + dx, qy + dy) : g.moveTo(qx + dx, qy + dy)));
+    };
+    everywhere((dx, dy) => {
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+      // A broad drift of grey either side, then a narrower one, then the fine heart of it.
+      line(dx, dy);
+      g.strokeStyle = hexA(o.soft, 0.08);
+      g.lineWidth = w * 16;
+      g.stroke();
+      line(dx, dy);
+      g.strokeStyle = hexA(o.soft, 0.16);
+      g.lineWidth = w * 5;
+      g.stroke();
+      line(dx, dy);
+      g.strokeStyle = hexA(o.vein, 0.35 + R() * 0.2);
+      g.lineWidth = w;
+      g.stroke();
+    });
+  };
+  // A few long veins that mostly run one way, as they do through a block, and hairlines between them.
+  const grain = R() * Math.PI;
+  for (let i = 0; i < 4; i++) vein(R() * S, R() * S, grain + (R() - 0.5) * 0.7, S * (0.7 + R() * 0.5), 1 + R() * 0.8, 0);
+  for (let i = 0; i < 6; i++) vein(R() * S, R() * S, grain + (R() - 0.5) * 1.2, S * (0.15 + R() * 0.25), 0.5 + R() * 0.3, 1);
+  // And the faint grain of a polished stone.
+  g.save();
+  g.beginPath();
+  g.rect(0, 0, S, S);
+  g.clip();
+  specks(g, 0, 0, S, S, 900, '#ffffff', o.soft, R, 0.8);
+  g.restore();
   return c;
 }
 
@@ -1012,16 +1036,11 @@ function laid(material: string): { img: HTMLCanvasElement; runs: boolean } | nul
         }),
       };
     case 'marble':
+      // Asked for: "just the marbled white surface, no black diamonds": one polished slab, no joints and no inlay.
       return {
         runs: false,
-        img: octagons({
-          unit: 64, joint: 2.4, seed: 263, bed: '#b8bec8', vein: '#c3c9d3',
-          tones: [['#f2f4f6', 3], ['#eef0f3', 3], ['#f6f7f9', 2], ['#ebeef1', 2]],
-          hi: '#ffffff', lo: '#d3d8df', ink: '#a9b0bb', speck: ['#ffffff', '#dde1e7', 2],
-          dot: {
-            bed: '#b8bec8', tones: [['#7a8292', 3], ['#737b8c', 2], ['#838a99', 2]],
-            hi: '#a2a9b7', lo: '#5d6474', ink: '#555c6b', speck: ['#a4abb8', '#666d7c', 2],
-          },
+        img: marbled({
+          ground: '#f1f2f4', clouds: ['#ffffff', '#e1e5eb', '#e8eaef', '#fafbfc'], vein: '#8e97a5', soft: '#bcc3cd', seed: 263,
         }),
       };
     case 'stained_glass':
