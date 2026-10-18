@@ -62,6 +62,7 @@ begin
   insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
   insert into said select 'CLOUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Woola')).id from species_def where id = 'woola';
   insert into said select 'PIGROOT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Seavic')).id from species_def where id = 'seavic';
+  insert into said select 'MUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Noot')).id from species_def where id = 'noot';
   insert into said select 'SKYLOOK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Warda')).id from species_def where id = 'warda';
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
   insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work());
@@ -111,6 +112,10 @@ const pig = SPECIES.seavic;
 check('the Seavic is the Pigroot now, a Plowhog and a Harvestusk after, and an old Seavic carcass is still one, on both sides',
   pig.name === 'Pigroot' && pig.stages?.map((x) => x.name).join(',') === 'Plowhog,Harvestusk'
     && at('PIGROOT') === 'Pigroot|Plowhog,Harvestusk|Seavic|seavic', at('PIGROOT'));
+const mud = SPECIES.noot;
+check('the Noot is the Mudlet now, a Clayburrow and a Terramole after, and an old Noot carcass is still one, on both sides',
+  mud.name === 'Mudlet' && mud.stages?.map((x) => x.name).join(',') === 'Clayburrow,Terramole'
+    && at('MUDLET') === 'Mudlet|Clayburrow,Terramole|Noot|noot', at('MUDLET'));
 const sky = SPECIES.warda;
 check('the Warda is the Skylooklet now, a Skywarden and a Skyrange after, an old Warda carcass is still one, and its stages are not said to work faster, on both sides',
   sky.name === 'Skylooklet' && sky.stages?.map((x) => x.name).join(',') === 'Skywarden,Skyrange' && !sky.stages[1].description.includes('task')

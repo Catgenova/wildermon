@@ -2362,8 +2362,8 @@ import{$i as e,$l as t,$s as n,Aa as r,Ao as i,Bi as a,Bo as o,Br as s,Ci as ee,
     tamed on a deed it hunts <b>for</b> you: it works a circuit of the token, runs down anything wild
     inside it, and carries the carcasses back to storage for butchering. Its <b>fighting</b> skill is
     both its bite and its beat: it hits ${v(pr(q))} as hard at mastery, and its circuit grows from
-    ${t(N.rowl.workRange)} tiles to ${t(N.rowl.workRange+jn(q)*(N.rowl.rangePerStep??10))}. The <b>Noot</b> is a plump upright waddler that
-    lives beside the clay pits, eats root vegetables, and digs <b>clay</b> with its bill for its deed,
+    ${t(N.rowl.workRange)} tiles to ${t(N.rowl.workRange+jn(q)*(N.rowl.rangePerStep??10))}. The <b>${N.noot.name}</b> (the Noot that was) lives beside the clay pits, eats root vegetables,
+    evolves into a ${N.noot.stages[0].name} at level ${j[0]} and a ${N.noot.stages[1].name} at ${j[1]}, and digs <b>clay</b> for its deed,
     carrying it to the crate a load at a time &mdash; which is what keeps a potter in clay without
     walking the shore for it. Carry what the creature eats (a berry or vegetable for
     a Snufflet, a spice or vegetable for a ${N.vola.name}), long-press or right-click one and choose <b>Tame</b>: the

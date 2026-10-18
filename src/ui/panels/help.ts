@@ -3017,8 +3017,8 @@ export function helpText(): string {
     tamed on a deed it hunts <b>for</b> you: it works a circuit of the token, runs down anything wild
     inside it, and carries the carcasses back to storage for butchering. Its <b>fighting</b> skill is
     both its bite and its beat: it hits ${times(trainedHit(TOP_SKILL))} as hard at mastery, and its circuit grows from
-    ${numberWord(SPECIES.rowl.workRange)} tiles to ${numberWord(SPECIES.rowl.workRange + rangeSteps(TOP_SKILL) * (SPECIES.rowl.rangePerStep ?? RANGE_PER_STEP))}. The <b>Noot</b> is a plump upright waddler that
-    lives beside the clay pits, eats root vegetables, and digs <b>clay</b> with its bill for its deed,
+    ${numberWord(SPECIES.rowl.workRange)} tiles to ${numberWord(SPECIES.rowl.workRange + rangeSteps(TOP_SKILL) * (SPECIES.rowl.rangePerStep ?? RANGE_PER_STEP))}. The <b>${SPECIES.noot.name}</b> (the Noot that was) lives beside the clay pits, eats root vegetables,
+    evolves into a ${SPECIES.noot.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.noot.stages![1].name} at ${EVOLVE_AT[1]}, and digs <b>clay</b> for its deed,
     carrying it to the crate a load at a time &mdash; which is what keeps a potter in clay without
     walking the shore for it. Carry what the creature eats (a berry or vegetable for
     a Snufflet, a spice or vegetable for a ${SPECIES.vola.name}), long-press or right-click one and choose <b>Tame</b>: the

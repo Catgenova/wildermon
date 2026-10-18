@@ -669,6 +669,9 @@ function lineSays(names: readonly [string, string, string], job: string, level: 
   return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
 }
 
+/** What a digger's lump of sand or clay comes out at, as a share of its digging: anywhere between the two. */
+export const DIG_QL: readonly [number, number] = [0.6, 1.4];
+
 /** Writes a line's words onto its kind and its two stages, once every number they read is here. */
 function sayLine(id: string, job: string, level: string): void {
   const d = SPECIES[id];
@@ -805,8 +808,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   noot: {
     id: 'noot',
     wound: 'pierce',
-    name: 'Noot',
-    description: 'A plump, upright waddler in a slate coat, with a broad bill it uses as a spade and a flat tail it uses as a stool. It spends its whole day up to the knees in a clay pit and appears to think this is the good life.',
+    name: 'Mudlet',
+    was: ['Noot'],
+    // Asked for: "This family to replace the Noot". Its words, and each stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Clayburrow', description: '' },
+      { name: 'Terramole', description: '' },
+    ],
     health: 26,
     attack: 3,
     speed: 1.5,
@@ -3509,6 +3518,8 @@ sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of 
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
   'Its level is its mining.');
+sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging and never over 100, and carries it to the crate.`,
+  'Its level is its digging.');
 sayLine('warda', `Out at your heel or keeping a settlement it sees ${SPECIES.warda.sight} tiles round itself for you, where most of yours see ${KEPT_SIGHT}, and ${percent(KEPT_NIGHT_LOSS / 2)} less at the dead of night. Struck, it strikes back every time.`,
   `Its level is its awareness, which it learns ${LEARNS_SAYS.out}.`);
 
@@ -5792,7 +5803,7 @@ export class Creatures {
     w.setDirt(cx, cy, left);
     if (left <= 0) game.exposeRock(cx, cy);
     game.events.emit('world', c.workX, c.workY);
-    const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1));
+    const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1));
     return { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: 1 };
   }
 
