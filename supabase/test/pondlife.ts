@@ -185,6 +185,11 @@ const ISLAND_SCENE = `
   delete from water_plant where world_id = w;
   delete from placed where world_id = w and x < 41 and y > 29;
   delete from foundation where world_id = w and x < 41 and y > 29;
+  -- Any settlement over the scene goes too: the browser's has none. The island test founds Dane's
+  -- Latecomer over a hoard buried at random within a third of the island of its middle, and about
+  -- one run in sixteen it covers the pond, where Crowd4 is told the ground is Latecomer's when
+  -- planting and pulling up a lotus (runs 39142911860 and 39165693328).
+  delete from deed where world_id = w and x - radius < 41 and y + radius > 30;
   perform land_set_height(w, v.x, v.y, v.h) from (values ${cornerRows.join(', ')}) v(x, y, h);
   perform land_set_tile(w, v.x, v.y, v.t), land_set_data(w, v.x, v.y, v.d) from (values ${tileRows.join(', ')}) v(x, y, t, d);
   insert into spring (world_id, x, y, cx, cy, made_by)
