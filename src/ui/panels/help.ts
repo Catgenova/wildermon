@@ -1361,7 +1361,7 @@ export function helpText(): string {
     gives ${cropYield(0).produce} crop and ${cropYield(0).seeds} seed, while one tended at every stage gives <b>${cropYield(RIPE).produce} crops and ${cropYield(RIPE).seeds} seeds</b>. Tending
     and tilling both train <b>Farming</b>, and your farming skill sets the quality of what you harvest.
     Harvesting leaves the ground still tilled, so a field can be sown again without raking it afresh
-    &mdash; which is what lets a Seavic keep one running on its own.</p>
+    &mdash; which is what lets a ${SPECIES.seavic.name} keep one running on its own.</p>
     <p>A Farmer can learn to work a patch at a time: <b>Sow a patch</b>, <b>Tend a patch</b> and <b>Harvest
     a patch</b> each take the ${PATCH_SIDE}&times;${PATCH_SIDE} tiles around the field you choose as one job, in the time of
     ${numberWord(PATCH_TIME)} of the one-field job. Sow a patch sows the seed you choose on every empty field in it, one
@@ -2095,7 +2095,7 @@ export function helpText(): string {
     the driver's: a quick animal gets there sooner, more of them pull better than fewer, and a hungry one
     drags its feet, so feed the team before it goes in. Whoever has the reins drives with <b>driving</b>, which makes the
     team's pace ${percent(drivingPace(TRAVEL_TOP_AT / 2) - 1)} faster at driving ${TRAVEL_TOP_AT / 2} and ${percent(DRIVING_TOP)} faster at ${TRAVEL_TOP_AT}; every tile the vehicle goes into
-    with you on the seat trains it. A Seavic pair will outrun you at a walk; ${numberWord(WAGON.vehicle?.needs ?? 0)}
+    with you on the seat trains it. A ${SPECIES.seavic.name} pair will outrun you at a walk; ${numberWord(WAGON.vehicle?.needs ?? 0)}
     ${SPECIES.quarra.name}s will not, but they will shift ${numberWord(WAGON.capacity ?? 0)} bricks.</p>
     <p>The team is not only the pace but the pitch: a draught beast trains <b>climbing</b> by hauling
     over bad ground, and what the team knows between them decides both how fast the wheels turn and how
@@ -2971,7 +2971,7 @@ export function helpText(): string {
     hungry; the <b>${SPECIES.vola.name}</b> (the Vola that was) is a mushroom-capped forager that botanizes herbs and roots instead, and evolves into a ${SPECIES.vola.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.vola.stages![1].name} at ${EVOLVE_AT[1]}; the
     <b>Bevere</b> is a flat-tailed gnawer that never settles far from water, eats vegetables and
     starchy things, is placid by nature, and fells trees for its deed, carrying the logs to the crate;
-    the <b>Seavic</b> is a squirrel that lives among the trees, eats acorns and nuts, is placid too, and
+    the <b>${SPECIES.seavic.name}</b> (the Seavic that was) is a leaf-backed piglet that evolves into a ${SPECIES.seavic.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.seavic.stages![1].name} at ${EVOLVE_AT[1]}, lives among the trees, eats acorns and nuts, is placid too, and
     runs a farm for its deed &mdash; sowing seed from the crate, tending every stage and carrying the
     harvest back. Seed it has no field to put in goes back to the stores with everything else, so what
     it reaps is on a shelf where you can count it rather than in its cheeks. It cannot rake a field of

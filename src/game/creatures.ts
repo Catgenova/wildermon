@@ -908,11 +908,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: null,
     workRange: 6,
+    // [coat, cloud]: cream with sky-blue clouds, white with lavender, warm fawn with peach, slate grey with silver-blue.
     variants: [
-      ['#efe9dc', '#d8cfbc'],
-      ['#e3d6c2', '#c6b69c'],
-      ['#4c4742', '#6d665e'],
-      ['#f4efe6', '#cdc0ac'],
+      ['#f2e8d4', '#8fbcf0'],
+      ['#fbf9f5', '#b9a2ea'],
+      ['#d9b48e', '#f4a888'],
+      ['#7f8494', '#a6c0e0'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
     tameFail: 'eats the {food} without appearing to notice you at all',
@@ -1012,8 +1013,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   seavic: {
     id: 'seavic',
-    name: 'Seavic',
-    description: 'A quick red-brown squirrel with a tail it wears like a cloak and cheeks it stuffs with seed. It lives in the treetops and cannot leave a field alone.',
+    name: 'Pigroot',
+    was: ['Seavic'],
+    // Asked for: "Pigroot, plowhog, harvestusk to replace seavic". Its words are written with every number they read
+    // (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Plowhog', description: '' },
+      { name: 'Harvestusk', description: '' },
+    ],
     health: 14,
     attack: 2,
     speed: 2.6,
@@ -3485,6 +3493,8 @@ sayLine('vola', `Set to work on a settlement it botanizes within ${SPECIES.vola.
   'Its level is its botanizing.');
 sayLine('woola', `Shear it with a carving knife once its fleece is ${percent(SHEAR_FROM)} grown back, for up to ${SHEAR_WOOL} wool when it is full; a grown one grows it back in ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
   'Its level is its animal husbandry, which it learns by being shorn, plucked or milked.');
+sayLine('seavic', `Set to work on a settlement it sows, tends and harvests the fields you have tilled within ${SPECIES.seavic.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, sowing seed from the crate and carrying the harvest and the seed it has no field for back to it. It does not till.`,
+  'Its level is its farming.');
 sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of bare rock with no seam in it, within ${SPECIES.quarra.workRange} tiles of the token and ${SPECIES.quarra.rangePerStep} further for every ${SKILL_STEP} levels, and carries it home.`,
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
@@ -7800,7 +7810,7 @@ export class Creatures {
      *
      * The pouch is how a harvest's seed rides home, not a place to keep it: a
      * field is sown out of the settlement's stores just as readily as out of a
-     * Seavic's mouth, so seed left in one is seed nobody can see, count, cook
+     * Pigroot's mouth, so seed left in one is seed nobody can see, count, cook
      * or plant by hand. Reported from the island as a farm hand that harvested
      * all season and put nothing but the crop in the crate.
      *

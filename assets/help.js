@@ -709,7 +709,7 @@ import{$i as e,$l as t,Aa as n,As as r,Bi as i,Bo as a,Br as o,Ci as s,Cs as ee,
     gives ${Nn(0).produce} crop and ${Nn(0).seeds} seed, while one tended at every stage gives <b>${Nn(3).produce} crops and ${Nn(3).seeds} seeds</b>. Tending
     and tilling both train <b>Farming</b>, and your farming skill sets the quality of what you harvest.
     Harvesting leaves the ground still tilled, so a field can be sown again without raking it afresh
-    &mdash; which is what lets a Seavic keep one running on its own.</p>
+    &mdash; which is what lets a ${F.seavic.name} keep one running on its own.</p>
     <p>A Farmer can learn to work a patch at a time: <b>Sow a patch</b>, <b>Tend a patch</b> and <b>Harvest
     a patch</b> each take the ${yd}&times;${yd} tiles around the field you choose as one job, in the time of
     ${m(3)} of the one-field job. Sow a patch sows the seed you choose on every empty field in it, one
@@ -1442,7 +1442,7 @@ import{$i as e,$l as t,Aa as n,As as r,Bi as i,Bo as a,Br as o,Ci as s,Cs as ee,
     the driver's: a quick animal gets there sooner, more of them pull better than fewer, and a hungry one
     drags its feet, so feed the team before it goes in. Whoever has the reins drives with <b>driving</b>, which makes the
     team's pace ${t(Ac(50)-1)} faster at driving 50 and ${t(zs)} faster at 100; every tile the vehicle goes into
-    with you on the seat trains it. A Seavic pair will outrun you at a walk; ${m(Md.vehicle?.needs??0)}
+    with you on the seat trains it. A ${F.seavic.name} pair will outrun you at a walk; ${m(Md.vehicle?.needs??0)}
     ${F.quarra.name}s will not, but they will shift ${m(Md.capacity??0)} bricks.</p>
     <p>The team is not only the pace but the pitch: a draught beast trains <b>climbing</b> by hauling
     over bad ground, and what the team knows between them decides both how fast the wheels turn and how
@@ -2316,7 +2316,7 @@ import{$i as e,$l as t,Aa as n,As as r,Bi as i,Bo as a,Br as o,Ci as s,Cs as ee,
     hungry; the <b>${F.vola.name}</b> (the Vola that was) is a mushroom-capped forager that botanizes herbs and roots instead, and evolves into a ${F.vola.stages[0].name} at level ${N[0]} and a ${F.vola.stages[1].name} at ${N[1]}; the
     <b>Bevere</b> is a flat-tailed gnawer that never settles far from water, eats vegetables and
     starchy things, is placid by nature, and fells trees for its deed, carrying the logs to the crate;
-    the <b>Seavic</b> is a squirrel that lives among the trees, eats acorns and nuts, is placid too, and
+    the <b>${F.seavic.name}</b> (the Seavic that was) is a leaf-backed piglet that evolves into a ${F.seavic.stages[0].name} at level ${N[0]} and a ${F.seavic.stages[1].name} at ${N[1]}, lives among the trees, eats acorns and nuts, is placid too, and
     runs a farm for its deed &mdash; sowing seed from the crate, tending every stage and carrying the
     harvest back. Seed it has no field to put in goes back to the stores with everything else, so what
     it reaps is on a shelf where you can count it rather than in its cheeks. It cannot rake a field of
