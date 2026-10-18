@@ -2966,10 +2966,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: null,
     workRange: 8,
     variants: [
-      ['#7d7a72', '#d6d2c6'],
-      ['#5a6470', '#b0bac6'],
-      ['#8a7256', '#d9c19c'],
-      ['#43474a', '#93989c'],
+      // Fawn with cream, tawny brown with cream, pale sand with white, dusky grey-brown with pale grey: the coat and the throat, chest
+      // and belly. Its blue crest and flight feathers are its own, the same on every one.
+      ['#a8703c', '#f0dcb8'],
+      ['#7e4e2a', '#ead2aa'],
+      ['#c4a272', '#fbf8f0'],
+      ['#6a5c52', '#cdcac4'],
     ],
     butcher: { meat: 4, feather: 5, leather: 2, bone: 3, gland: 1 },
     tameFail: 'takes the {food} without once taking its eyes off the horizon',

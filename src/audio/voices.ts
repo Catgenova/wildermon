@@ -1,6 +1,7 @@
 import type { BeastAct } from '../game/events';
 import { CHIP_VOICE } from './voice-chip';
 import { IRON_VOICE } from './voice-iron';
+import { SKY_VOICE } from './voice-sky';
 import { SNUFF_VOICE } from './voice-snuff';
 import { SPORE_VOICE } from './voice-spore';
 
@@ -28,4 +29,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   quarra: CHIP_VOICE,
   // The Sporeling, the Sporekin and the Sporelord.
   vola: SPORE_VOICE,
+  // The Skylooklet, the Skywarden and the Skyrange.
+  warda: SKY_VOICE,
 };

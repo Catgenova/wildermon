@@ -1,6 +1,7 @@
 import { darker, drawBeast, drawBeastPortrait, headOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
 import { LUME, VESP } from './wild-air';
-import { QUILL, SEDRA, WARDA } from './wild-birds';
+import { QUILL, SEDRA } from './wild-birds';
+import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
 import { DRAGON } from './wild-dragon';
 import { DOWSE, SNOUT } from './wild-diggers';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
@@ -66,7 +67,7 @@ export const WILDERMON: Record<string, Kind> = {
   plucka: PLUCKA,
   middun: MIDDUN,
   sedra: SEDRA,
-  warda: WARDA,
+  warda: SKYLOOKLET,
   quill: QUILL,
   tinka: TINKA,
   goblin: GOBLIN,
@@ -140,6 +141,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   mola: [FERRODRILL, OREMANDER],
   quarra: [QUARRYBASH, MONOLITHUMP],
   vola: [SPOREKIN, SPORELORD],
+  warda: [SKYWARDEN, SKYRANGE],
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */

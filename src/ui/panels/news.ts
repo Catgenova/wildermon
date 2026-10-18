@@ -2416,6 +2416,20 @@ export const NEWS: News[] = [
     lines: () => [
       'A marble floor is now one polished white slab with grey veins running through it, with no joints, in place of white octagon tiles with dark diamonds between them. It costs and does what it did.',
     ],
+  },  {
+    n: 184,
+    day: '2026-10-18',
+    lines: () => {
+      const line = (id: 'vola' | 'warda', task: boolean, moves: string): string => {
+        const d = SPECIES[id];
+        const [one, two] = d.stages!;
+        return `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, task)} at the first, ${stageSays(2, task)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own ${moves} and voice.`;
+      };
+      return [
+        line('vola', true, 'walk, strike, botanizing'),
+        line('warda', false, 'walk, strike, look about while it stands,'),
+      ];
+    },
   },
 ];
 
