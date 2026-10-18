@@ -169,7 +169,7 @@ const MONOLITHUMP_LOOK: Chip = {
   brow: 0.85,
   tail: {
     at: [0, -2.48, 0.38], links: [0.7, 0.68, 0.66, 0.64], w: [0.74, 0.7, 0.66, 0.62], stone: true, club: 2.0, blocky: true,
-    rest: { lift: 0, yaw: 8, curl: 2, tip: 0 }, wind: { lift: 30, yaw: -62, curl: 6, tip: 0 }, aim: 100, work: 120, arc: 8,
+    rest: { lift: 0, yaw: 8, curl: 2, tip: 0 }, wind: { lift: 30, yaw: -62, curl: 6, tip: 0 }, aim: 100, work: 100, arc: 8,
   },
   back: [
     { th: Math.PI / 2, y0: -1.75, y1: 1.44, count: 7, r: [0.32, 0.46, 0.46], spike: true },
@@ -458,11 +458,11 @@ const WORK = { lift: 0.03, top: 0.16, drop: 0.22, hit: 0.3, back: 0.46, rakes: [
 const SHARD = { at: 0.3, fall: 0.19 };
 
 /** Where its club comes down, on the ground behind its near haunch, in the body's ground frame; and how big the rock it quarries there is. */
-function hitOf(s: Chip, aim: number, clear: number): V3 {
+function hitOf(s: Chip, aim: number, clear: number, legs = 1.3): V3 {
   // Out from under the root of its tail the way it aims, `aim` degrees round from straight behind it toward its right, as far
   // as clears its body, its legs and the rock on it by `clear`.
   const a = aim * Math.PI / 180, d: V3 = [Math.sin(a), -Math.cos(a), 0];
-  const z = s.body.z[2], room = clear + s.thick * 1.3 + s.armour * s.thick * 0.3 + 0.1;
+  const z = s.body.z[2], room = clear + s.thick * legs + s.armour * s.thick * 0.3 + 0.1;
   let r = 0;
   const at = (k: number): V3 => [d[0] * k, s.tail.at[1] + d[1] * k, z];
   while (r < 12 && inside(s.body, at(r), room) > 0) r += 0.05;
@@ -471,7 +471,9 @@ function hitOf(s: Chip, aim: number, clear: number): V3 {
 /** Where the club comes down to strike: in the forward half, beside its head. */
 const blowOf = (s: Chip): V3 => hitOf(s, s.tail.aim, s.tail.club * 0.45);
 /** Where the rock it quarries is: off its side, beside its haunch. */
-const rockOf = (s: Chip): V3 => hitOf(s, s.tail.work, rockR(s) + (s.slam === 2 ? 0.5 * s.tail.club : 0));
+// A monolith's rock right up against its hip, where its short tail reaches: its boulder of a club comes down on it beside its
+// haunch, and its hind leg is already as far out as the rock is.
+const rockOf = (s: Chip): V3 => (s.slam === 2 ? hitOf(s, s.tail.work, rockR(s) * 0.8, 0) : hitOf(s, s.tail.work, rockR(s)));
 const rockR = (s: Chip): number => Math.max(0.44, s.tail.club * 0.9);
 const rockH = (s: Chip): number => rockR(s) * 0.88;
 
