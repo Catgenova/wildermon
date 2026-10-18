@@ -96,10 +96,14 @@ function call(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
 
 /** Claws raked over stone: a high band of noise falling, rough with a run of tiny ticks; sharper, longer and lower on a bigger body. */
 function scrape(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number, k: number): void {
-  const b = bodyOf(stage, v), dur = 0.09 + 0.03 * stage;
-  burst(ctx, dest, at, { dur, freq: (4200 - 600 * stage) + 300 * v, to: 2000 - 300 * stage, q: 1.6 + stage, gain: 0.26 * k, attack: RISE });
+  const b = bodyOf(stage, v), dur = 0.13 + 0.03 * stage;
+  burst(ctx, dest, at, { dur, freq: (4200 - 600 * stage) + 300 * v, to: 2000 - 300 * stage, q: 1.6 + stage, gain: 0.6 * k, attack: RISE });
   for (let q = 0; q < 4 + stage; q++) burst(ctx, dest, at + q * dur * 0.22, { dur: 0.03, freq: (5200 - 500 * stage) * b.key, q: 4, gain: 0.08 * k, attack: RISE });
 }
+
+/** A paw landing a blow: a short knock dropping from 300 to 120 Hz, the body of the hit under the scrape of the claws. */
+const knock = (ctx: BaseAudioContext, dest: AudioNode, at: number, k: number): void =>
+  ring(ctx, dest, at, { freq: 300, to: 120, dur: 0.1, gain: 0.4 * k, type: 'sine', attack: RISE });
 
 /** A crystal struck: a bar's ring, short, `f` its root; a bigger stage's lower. */
 const clink = (ctx: BaseAudioContext, dest: AudioNode, at: number, f: number, k: number, dur = 0.28): void =>
@@ -119,19 +123,22 @@ function thud(ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
  * with its crystals chiming over it and rattling as it settles.
  */
 const strike = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const s = Math.max(0, Math.min(2, stage)), out = level(ctx, dest, [1.25, 1.9, 1.15][s]), b = bodyOf(stage, v);
+  const s = Math.max(0, Math.min(2, stage)), out = level(ctx, dest, [1.25, 1.38, 1.15][s]), b = bodyOf(stage, v);
   const hits = IRON_HITS[s].map((h) => at + h * ACT_SECS.strike);
   if (s === 0) {
-    squeak(ctx, out, at + 0.06, v, 1, 1.5);
+    squeak(ctx, out, at + 0.06, v, 0.45, 1.5);
     scrape(ctx, out, hits[0] - 0.02, 0, v, 1);
+    knock(ctx, out, hits[0], 1);
     clink(ctx, out, hits[0] + 0.01, 3100 * b.key, 0.5, 0.18);
     squeak(ctx, out, hits[0] + 0.1, v, 0.6, 1.2);
     return;
   }
   if (s === 1) {
-    snort(ctx, out, at + 0.02, stage, v, 0.9);
+    snort(ctx, out, at + 0.02, stage, v, 0.6);
     scrape(ctx, out, hits[0] - 0.03, 1, v, 1);
+    knock(ctx, out, hits[0], 0.9);
     scrape(ctx, out, hits[1] - 0.03, 1, v, 1);
+    knock(ctx, out, hits[1], 1);
     clink(ctx, out, hits[1], 2500 * b.key, 0.8);
     return;
   }
@@ -155,17 +162,18 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
   for (let k = 0; k < n; k++) {
     const bite = at + (k + DIG_STROKE.bite) * each, fling = at + (k + DIG_STROKE.fling) * each;
     const drag = fling - bite;
-    // The claws through the soil: a band of noise, dropping as they drag back, its grit on top.
-    burst(ctx, out, bite, { dur: drag, freq: 1100 * b.key, to: 420 * b.key, q: 0.8, gain: 0.2 * b.weight, attack: 0.02 });
-    burst(ctx, out, bite, { dur: drag * 0.7, freq: 3000 * b.key, to: 1800, q: 1.2, gain: 0.07, attack: 0.02 });
+    // The claws through the soil: a band of noise, dropping as they drag back, its grit on top; the Ironemole's a light
+    // scratch, the Ferrodrill's lower and heavier, the Oremander's lower still with the thud of each stroke under it.
+    burst(ctx, out, bite, { dur: drag, freq: [1100, 900, 760][s] * b.key, to: [420, 350, 300][s] * b.key, q: 0.8, gain: 0.2 * [0.6, 1, 1][s], attack: 0.02 });
+    burst(ctx, out, bite, { dur: drag * 0.7, freq: 3000 * b.key, to: 1800, q: 1.2, gain: 0.05, attack: 0.02 });
     if (s === 2) thud(ctx, out, bite, stage, 0.35);
-    // Metal in the seam, struck: a clink on every stroke, alternately higher and lower.
-    clink(ctx, out, bite + 0.01, (k % 2 ? 2200 : 2900) * b.key * (0.97 + 0.06 * v), 0.45, 0.16);
-    // The earth thrown back.
-    burst(ctx, out, fling, { dur: 0.17, freq: 2400, to: 1300, q: 0.6, gain: 0.12, attack: 0.02 });
+    // Metal in the seam, struck: a clink on every stroke, alternately higher and lower; longer and lower on a bigger body.
+    clink(ctx, out, bite + 0.01, (k % 2 ? 2200 : 2900) * b.key * (0.97 + 0.06 * v), 0.45, 0.16 * b.long);
+    // The earth thrown back, a soft hiss.
+    burst(ctx, out, fling, { dur: 0.17, freq: 1800, to: 1100, q: 0.6, gain: 0.12, attack: 0.02 });
   }
-  // The chunk of ore landing behind it.
-  clink(ctx, out, at + (DIG_STROKE.fling * each) + 0.3, 3400 * b.key, 0.55, 0.22);
+  // The chunk of ore landing behind it, where its picture comes down (`digSpray`).
+  clink(ctx, out, at + ((DIG_STROKE.fling - 0.08) * each) + 0.69, 3400 * b.key, 0.55, 0.22);
 };
 
 /**
@@ -176,7 +184,7 @@ const work = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number,
  * what it has become. Each stage's chime is lower than the last.
  */
 const evolve = (ctx: BaseAudioContext, dest: AudioNode, at: number, stage: number, v: number): void => {
-  const out = level(ctx, dest, 1.5), b = bodyOf(stage, v);
+  const out = level(ctx, dest, stage <= 0 ? 1.15 : 1.5), b = bodyOf(stage, v);
   const flash = at + 0.5 * ACT_SECS.evolve;
   // The burst of shards at the start.
   burst(ctx, out, at, { dur: 0.18, freq: 3200, to: 1800, q: 1.4, gain: 0.12, attack: RISE });

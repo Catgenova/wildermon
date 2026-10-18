@@ -417,7 +417,9 @@ export function actOf(c: { act?: BeastAct; actAt?: number; state?: string }, now
     const t = (now - c.actAt) / ACT_SECS[c.act];
     if (t >= 0 && t < 1) return { kind: c.act, t };
   }
-  if (c.state === 'forage') return { kind: 'work', t: frac(now / ACT_SECS.work) };
+  // Counted from when its last go at its task was played, if that is what it last did, so the loop carries on from where
+  // that go ended rather than jumping to wherever the island's clock is in a go.
+  if (c.state === 'forage') return { kind: 'work', t: frac((now - (c.act === 'work' && c.actAt !== undefined ? c.actAt : 0)) / ACT_SECS.work) };
   return undefined;
 }
 
@@ -453,6 +455,11 @@ export interface Kind {
   leaps?: readonly [boolean, boolean];
   /** Light rather than stuff, drawn over the body: a lume's glow, an ember on a back. */
   glow?(b: Bones, a: Anim): Array<{ p: V3; r: number; c: RGB; a: number }>;
+  /**
+   * The two colours of the motes rising round it as it evolves (`evolveBurst`), for a kind whose own colours are not its
+   * coat's: crystals on a dark coat. Its coat and the coat's light by default.
+   */
+  motes?: readonly [RGB, RGB];
   /** Drawn by hand over or under the body, for what is not a mesh: a swarm, a flicker. */
   extra?(g: CanvasRenderingContext2D, view: View, b: Bones, a: Anim, under: boolean): void;
   /**
@@ -1447,6 +1454,7 @@ export function evolveBurst(g: CanvasRenderingContext2D, species: string, kind: 
     g.stroke();
   } else {
     // Small motes of its own colours going up round it, each a point with a little light about it.
+    const [mote0, mote1] = kind.motes ?? [coat, light];
     for (let q = 0; q < 14; q++) {
       const ang = (q / 14) * Math.PI * 2 + t * 2.4;
       const rise = frac(t * 1.3 + q * 0.137);
@@ -1459,7 +1467,7 @@ export function evolveBurst(g: CanvasRenderingContext2D, species: string, kind: 
       halo.addColorStop(1, rgba(white, 0));
       g.fillStyle = halo;
       g.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
-      g.fillStyle = rgba(q % 2 ? coat : light, al);
+      g.fillStyle = rgba(q % 2 ? mote0 : mote1, al);
       g.beginPath();
       g.arc(x, y, r, 0, Math.PI * 2);
       g.fill();
