@@ -1,5 +1,6 @@
 import type { BeastAct } from '../game/events';
 import { CHIP_VOICE } from './voice-chip';
+import { IRON_VOICE } from './voice-iron';
 import { SNUFF_VOICE } from './voice-snuff';
 
 /**
@@ -20,6 +21,8 @@ export type Voice = Partial<Record<BeastAct, Cue>>;
 export const VOICES: Partial<Record<string, Voice>> = {
   // The Snufflet, the Snuffroot and the Snuffthorn.
   rabba: SNUFF_VOICE,
+  // The Ironemole, the Ferrodrill and the Oremander.
+  mola: IRON_VOICE,
   // The Chiptail, the Quarrybash and the Monolithump.
   quarra: CHIP_VOICE,
 };

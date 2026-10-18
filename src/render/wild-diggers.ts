@@ -1,11 +1,11 @@
 import {
-  add, beat, coatPalette, cross, curve, cyc, DEG, disc, lighter, merge, mirrored, moved, onEgg, orb, orbAlong, paint, quadBonesOf, scale, smile, sub, taper, TAU, tube, unit,
+  add, beat, coatPalette, cross, curve, cyc, DEG, disc, merge, moved, onEgg, orb, orbAlong, paint, quadBonesOf, scale, smile, sub, taper, TAU, tube, unit,
   type Anim, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, hoofMesh, pawMesh, quadPieces } from './beastkit';
-import { joint, mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
+import { joint, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 
-/** The diggers: the vola, the mola, the dowse and the snout, all long and low and nose-first. */
+/** The diggers: the vola, the dowse and the snout, all long and low and nose-first. (The mola is the iron line now, in `./wild-iron`.) */
 
 /**
  * A long low burrower: short legs, the body close to the ground, the head carried forward and low. `lean` is how far forward of
@@ -159,129 +159,6 @@ export const VOLA: Kind = {
   shadow: [2.1, 1.1],
   stride: 1.9,
   size: 1.45,
-};
-
-/* ---- the mola ------------------------------------------------------------------------ */
-
-/**
- * A mola: a heavy-shouldered mole with trowels for claws, grit and flecks of
- * ore worked into its coat, and eyes it keeps shut and smiling. It smells
- * metal through the crystal that grows on the end of its nose.
- */
-const MOLA_SPEC = digger({ high: 1.0, len: 3.2, legs: 0.6, neck: 0.4, lean: 56, nose: 11 });
-const MOLA_HEAD = { c: [0, 0.4, 0.12] as V3, r: [1.08, 1.02, 0.9] as V3 };
-/**
- * The crystal on its nose: where it grows from, on top of the end of the snout, and the way it points, tipped half-way and more
- * from upright toward straight ahead, so it is a star on the snout under the eyes seen from ahead and points ahead side on.
- */
-const MOLA_CRYSTAL = { at: [0, 1.56, 0.1] as V3, dir: [0, Math.sin(50 * DEG), Math.cos(50 * DEG)] as V3 };
-/** The middle of the crystal, in the head's frame: where its light is. */
-const MOLA_GLINT: V3 = add(MOLA_CRYSTAL.at, scale(MOLA_CRYSTAL.dir, 0.22));
-
-/**
- * A shut eye, smiling: an arch like a ∩ painted on an egg of a head, `w` across
- * and a band `th` wide, where the way out of the middle `dir` meets its shell;
- * every corner laid on the shell, so an arch as wide as this bends round the
- * head rather than standing off it at its ends.
- */
-function shutEye(c: V3, r: V3, dir: V3, w: number, th: number): Mesh {
-  const { p, n } = onEgg(c, r, dir);
-  const u = unit(cross([0, 0, 1], n)), up = cross(n, u);
-  const arc = Array.from({ length: 9 }, (_, q): [number, number] => {
-    const a = Math.PI * (0.08 + (0.84 * q) / 8);
-    return [Math.cos(a), Math.sin(a) * 0.9 - 0.35];
-  });
-  const band = [...arc.map(([x, y]) => [x * (w + th / 2), y * (w + th / 2)]), ...arc.reverse().map(([x, y]) => [x * (w - th / 2), y * (w - th / 2)])];
-  return paint([{
-    v: band.map(([x, y]) => {
-      const e = onEgg(c, r, sub(add(p, add(scale(u, x), scale(up, y))), c));
-      return add(e.p, scale(e.n, 0.04));
-    }),
-    m: 'eye',
-  }]);
-}
-
-/**
- * A flat thing of a shape, lying on the ground: `outline` round it (across,
- * forward; anticlockwise from above), its underside at `z`, `thick` deep.
- */
-function slab(outline: ReadonlyArray<[number, number]>, z: number, thick: number, mat: Mat): Mesh {
-  const n = outline.length;
-  const v: V3[] = [...outline.map(([x, y]): V3 => [x, y, z]), ...outline.map(([x, y]): V3 => [x, y, z + thick])];
-  return mesh(v, [
-    { i: Array.from({ length: n }, (_, j) => n - 1 - j), m: mat },
-    { i: Array.from({ length: n }, (_, j) => n + j), m: mat },
-    ...Array.from({ length: n }, (_, j) => ({ i: [j, (j + 1) % n, n + ((j + 1) % n), n + j], m: mat })),
-  ]);
-}
-
-function molaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = MOLA_HEAD;
-  const snout = merge(
-    taper([[0, 0.9, -0.06], [0, 1.36, -0.09], [0, 1.6, -0.09]], 0.38, 0.23, n, 'muzzle'),
-    orbAlong([0, 1.66, -0.07], [0, 1, 0], [0.2, 0.14, 0.17], 6, 3, 'nose'),
-  );
-  // Happy shut eyes: two arches on the skin, set far enough round the head that side on one of them shows whole, clear of the
-  // head's edge, and broad and dark enough to be a face at play size rather than a blank dome.
-  const face = merge(snout, shutEye(H.c, H.r, [0.72, 0.5, 0.44], 0.3, 0.22), shutEye(H.c, H.r, [-0.72, 0.5, 0.44], 0.3, 0.22), smile([0, 1.52, -0.36], [0, 1, -0.5], 0.24, 'eye'));
-  // The crystal on its nose: a star of short points fanned out of the end of the snout, forward and outward, pale and bright:
-  // one straight along the way it points, and four round it, each leaning 38 degrees out from it.
-  const C = MOLA_CRYSTAL, across: V3 = [1, 0, 0], down = cross(C.dir, across);
-  const shard = (d: V3, len: number, r: number, m: Mat): Mesh => taper([add(C.at, scale(d, 0.04)), add(C.at, scale(d, len))], r, 0, 6, m);
-  const crystal = merge(
-    shard(C.dir, 0.45, 0.14, 'crystal'),
-    ...[45, 135, 225, 315].map((a, q) => {
-      const out = add(scale(across, Math.cos(a * DEG)), scale(down, Math.sin(a * DEG)));
-      return shard(unit(add(scale(C.dir, Math.cos(38 * DEG)), scale(out, Math.sin(38 * DEG)))), q % 2 ? 0.36 : 0.4, 0.11, q % 2 ? 'crystalDark' : 'crystal');
-    }),
-  );
-  const flecks = paint(([[0.6, 0.4, 0.5], [-0.5, -0.4, 0.62], [0.3, -1.0, 0.55], [-0.2, 0.9, 0.62], [0.75, -0.6, 0.3]] as V3[]).map((c) => disc(c, [c[0], 0, 0.8], 0.16, 0.12, 6, 'gem', { lit: true })));
-  // Trowels: the fore paws broad, flat and pale, ahead of the leg, and three long claws fanned out of each, which are the shape
-  // of its edge rather than things of their own, so they are not lost in their own lines. Each is tipped up onto its outer edge
-  // with its back turned out, so from the side and from ahead it shows its face and its three claws, not the stepped edge of a
-  // block lying flat.
-  const trowel = moved(moved(slab([
-    [0.26, -0.06], [0.42, 0.18], [0.5, 0.46], [0.54, 0.72], [0.5, 0.92], [0.42, 1.02], [0.32, 0.8], [0.2, 0.56], [0.13, 0.9], [0, 1.15],
-    [-0.13, 0.9], [-0.2, 0.56], [-0.32, 0.8], [-0.42, 1.02], [-0.5, 0.92], [-0.54, 0.72], [-0.5, 0.46], [-0.42, 0.18], [-0.26, -0.06],
-  ], -0.13, 0.13, 'claw'), [-0.54, 0, 0.13]), [0.54, 0, -0.13], 0, 0, 30);
-  return quadPieces({
-    n, k,
-    body: { y: [-1.75, -1.45, -0.8, 0, 0.7, 1.25, 1.6], z: [0.05, 0.12, 0.2, 0.25, 0.28, 0.3, 0.28], w: [0.2, 0.85, 1.1, 1.2, 1.2, 1.0, 0.3], h: [0.18, 0.66, 0.82, 0.86, 0.86, 0.74, 0.25] },
-    neck: { w: 0.8, h: 0.7, len: 0.4 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.4, 0.9, 0.4], size: 0.0001 }, blush: [[0.72, 0.55, -0.25], 0.22] },
-    tail: [taper([[0, 0, 0], [0, -0.3, 0]], 0.1, 0.06, 5, 'coatDark')],
-    fore: { upper: [0.25, -0.33, 0.32, 0.26], lower: [0, -0.27, 0.26, 0.22], foot: pawMesh(0.2, n, k, 'coat', 0.12) },
-    hind: { upper: [0.25, -0.36, 0.3, 0.22], lower: [0, -0.3, 0.2, 0.17], foot: pawMesh(0.2, n, k, 'pad', 0.12) },
-    extras: [
-      // Glass: outlined thinly, and no lines across it.
-      { key: 'crystal', mesh: crystal, bone: 'head', bias: 0.25, after: 'head', hide: [{ c: H.c, r: H.r }], hideIn: 'head', thin: true, lines: false },
-      { key: 'flecks', mesh: flecks, bone: 'trunk', bias: 0.01, after: 'body' },
-      // Each trowel on its fore foot, over the paw it grows from, and with no lines drawn across it: only the outline round it.
-      ...([['fl2', -1], ['fr2', 1]] as Array<[string, number]>).map(([bone, side]): Piece => ({
-        key: `trowel${bone}`, mesh: side < 0 ? mirrored(trowel) : trowel, bone, bias: 0.035, after: ['body', bone], front: [side * 0.7, 0.7, 0], lines: false,
-      })),
-    ],
-  });
-}
-
-export const MOLA: Kind = {
-  bones: quadBonesOf(MOLA_SPEC, (p, a) => {
-    scurry(p, a);
-    flatFore(p, MOLA_SPEC, 0.85);
-  }),
-  build: molaBuild,
-  // Its greys a cool slate, where the vola's and the dowse's are warm: the three are told apart at a glance. A pale slate, near
-  // the grass in lightness, so its light and shade show on it.
-  palette: (coat, mark) => coatPalette(lighter(coat, 0.25), lighter(mark, 0.25), {
-    nose: [230, 140, 158], pad: [232, 170, 170], claw: [236, 220, 190], horn: [214, 200, 176], crystal: [186, 226, 250], crystalDark: [140, 184, 236], gem: [250, 190, 90],
-  }, 250),
-  shadow: [1.9, 1.2],
-  stride: 1.8,
-  size: 2.05,
-  blinks: 0,
-  // The crystal's light, brightening and dimming every four seconds as it smells for metal.
-  glow: (b, a) => [{ p: place(b.head, MOLA_GLINT), r: 1.3, c: [170, 220, 255], a: 0.28 + 0.08 * cyc(a.t, 6) }],
 };
 
 /* ---- the dowse ----------------------------------------------------------------------- */

@@ -983,11 +983,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'mine',
     workRange: 8,
     rangePerStep: 5,
+    // Its fur and its crystals: umber with copper, charcoal with slate, tawny with gold, and near black with rust.
     variants: [
-      ['#3f3b38', '#78706a'],
-      ['#4a4038', '#8a7c6e'],
-      ['#5c5450', '#9a9088'],
-      ['#332e2c', '#6a625c'],
+      ['#4a3a30', '#c96a3a'],
+      ['#34353a', '#8a96a6'],
+      ['#7a5a3a', '#d9a640'],
+      ['#2a2422', '#a8452c'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 2 },
     tameFail: 'noses the {food} over, thinks better of you, and digs itself out of sight',
