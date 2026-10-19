@@ -2363,7 +2363,8 @@ export const NEWS: News[] = [
     day: '2026-10-18',
     lines: () => [
       'A wildermon\'s level is its skill now, to the whole number below, where it was one more than a fifth of it.',
-      ...Object.values(SPECIES).filter((d) => d.learns)
+      // As it was that day: the Roxxen's, by pulling, came later (212).
+      ...Object.values(SPECIES).filter((d) => d.learns && d.learns.by !== 'pull')
         .map((d) => `${d.name}: learns ${SKILL_BY_ID.get(d.learns!.skill)?.name.toLowerCase() ?? d.learns!.skill} ${LEARNS_SAYS[d.learns!.by]}.`),
     ],
   },
@@ -2740,6 +2741,14 @@ export const NEWS: News[] = [
         + 'as people walk into it, starting with where you are standing.',
       'One that is tamed or kept, in a fight, struck a moment ago, trapped, ridden, in the traces, tied to a post, stunned, marked, being offered food '
         + 'or being acted on stays until that is over. Monsters keep their own rules.',
+    ],
+  },
+  {
+    n: 212,
+    day: '2026-10-19',
+    lines: () => [
+      `A ${SPECIES.roxxen.name}'s level is its driving now, where it was its climbing: it learns driving ${LEARNS_SAYS.pull}, and nothing standing still or out of the traces.`,
+      `In the traces its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take. A ${SPECIES.roxxen.name} you already have keeps its level: its climbing is its driving now.`,
     ],
   },
 ];

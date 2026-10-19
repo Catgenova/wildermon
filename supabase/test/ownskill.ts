@@ -43,7 +43,9 @@ const kept = Object.values(SPECIES).filter((d) => !d.monster);
 const none = kept.filter((d) => !workSkill(d) && !d.draught && !d.learns);
 check(`every one of the ${kept.length} kinds that can be kept has a skill to learn`, none.length === 0, none.map((d) => d.id).join(', '));
 const own = kept.filter((d) => d.learns);
-check('and a kind with no trade and no traces has one of its own, and only those', own.every((d) => !workSkill(d) && !d.draught), own.map((d) => d.id).join(', '));
+// A draught beast has one of its own only when it learns it by pulling, which it keeps in the traces where the rest keep climbing (the Roxxen's driving).
+check('and a kind with no trade and no traces has one of its own, and only those, and a draught beast only by pulling',
+  own.every((d) => !workSkill(d) && (!d.draught || d.learns!.by === 'pull')), own.map((d) => `${d.id} by ${d.learns!.by}`).join(', '));
 
 /* ---- on the island ----------------------------------------------------------------- */
 

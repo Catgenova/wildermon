@@ -42,6 +42,7 @@ import type { BeastAct } from './events';
 import { article, capital, daySays, fill, listed, numberWord, percent, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
+import { DRIVING, DRIVING_LEARN } from './travel';
 import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
@@ -433,7 +434,9 @@ export interface SpeciesDef {
   defaultStance?: Stance;
   /**
    * Bred to pull. A draught beast trains climbing in the traces, and what it
-   * knows decides how fast a vehicle goes and how steep a line it can take.
+   * knows decides how fast a vehicle goes and how steep a line it can take --
+   * or, for a kind that learns its own skill by pulling (`learns.by` 'pull'),
+   * that skill in climbing's place (`tracesSkill`).
    */
   draught?: boolean;
   /** Can be ridden once it is saddled and bridled; the seat height in pixels. */
@@ -493,7 +496,10 @@ export interface SpeciesDef {
   style?: FightStyle;
   /** What one of yours does in a fight once every so often instead of a blow (`AbilityId`). */
   ability?: AbilityId;
-  /** For a kind with no trade and no traces, the skill it learns and what teaches it (`LearnsBy`). */
+  /**
+   * For a kind with no trade, the skill it learns and what teaches it (`LearnsBy`). A draught beast that learns by
+   * pulling keeps this skill in the traces where another keeps climbing (`tracesSkill`).
+   */
   learns?: { skill: string; by: LearnsBy };
   /** What it evolves into at each of `EVOLVE_AT`, for a kind that evolves: a name and words of each stage's own. */
   stages?: [StageDef, StageDef];
@@ -568,22 +574,33 @@ export function kindDescription(c: Pick<Creature, 'species' | 'skills'>): string
 }
 
 /**
- * What teaches a wildermon with no trade and no traces its one skill, which is its level: being sheared, plucked or
- * milked (`tended`); a spar swing of yours landing on it (`spar`); being out -- at your heel or keeping a settlement --
- * for every `OUT_EVERY` of it (`out`), or for every `OUT_EVERY` of it after dark (`dark`). Asked for: "Give skill-less
- * wildermon a skill that levels as they complete tasks". The island's `beast_learns`.
+ * What teaches a wildermon with no trade its one skill, which is its level: being sheared, plucked or milked
+ * (`tended`); a spar swing of yours landing on it (`spar`); being out -- at your heel or keeping a settlement -- for
+ * every `OUT_EVERY` of it (`out`), or for every `OUT_EVERY` of it after dark (`dark`); or pulling, a go for every tile
+ * a large cart or a wagon it is hitched to goes into while you drive it (`pull`). Asked for: "Give skill-less
+ * wildermon a skill that levels as they complete tasks", and "Roxxen need to have the Driving trade and gain
+ * experience in it when pulling a large cart or wagon". The island's `beast_learns`.
  */
-export type LearnsBy = 'tended' | 'spar' | 'out' | 'dark';
+export type LearnsBy = 'tended' | 'spar' | 'out' | 'dark' | 'pull';
 /** Seconds of being out that count as one go at its task, for a kind that learns by being out. */
 export const OUT_EVERY = 30;
-/** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, and a spell of being out. */
-export const LEARNS_GAIN: Record<LearnsBy, number> = { tended: 0.3, spar: 0.05, out: 0.2, dark: 0.2 };
+/**
+ * What a tile pulled teaches a kind that learns by pulling, as the base of a gain: what the same tile teaches whoever
+ * has the reins (`DRIVING_LEARN`), as a deed worker's go at its task is priced about as yours at it is. A lone Roxxen
+ * takes a large cart along at under a tile a second and a wagon team goes at nearer three, so this comes to from under
+ * half to a little over what a kind that learns by being out (`LEARNS_GAIN.out` every `OUT_EVERY`) picks up in the
+ * same time.
+ */
+export const PULL_LEARN = DRIVING_LEARN;
+/** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, a spell of being out, and a tile pulled. */
+export const LEARNS_GAIN: Record<LearnsBy, number> = { tended: 0.3, spar: 0.05, out: 0.2, dark: 0.2, pull: PULL_LEARN };
 /** What a kind that learns its own skill does to learn it, for its card and the help. */
 export const LEARNS_SAYS: Record<LearnsBy, string> = {
   tended: 'each time it is sheared, plucked or milked',
   spar: 'each time a spar swing of yours lands on it',
   out: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement`,
   dark: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement after dark`,
+  pull: 'for every tile a large cart or a wagon it is hitched to goes into while you drive it, as much as the same tile teaches you at the reins',
 };
 
 /**
@@ -1149,7 +1166,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     heavy: true,
     wound: 'crush',
     name: 'Roxxen',
-    description: 'A great slab-shouldered ox with horns that sweep forward and a head it holds low. It will not start anything, and it will finish most things that start with it. Nothing but a Shaggan pulls a loaded wagon like a pair of them.',
+    description: 'A great slab-shouldered ox with horns that sweep forward and a head it holds low. It will not start anything, and it will finish most things that start with it. Nothing but a Shaggan pulls a loaded wagon like a pair of them.'
+      + ` Its level is its driving, which it learns ${LEARNS_SAYS.pull}; in the traces its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
     health: 80,
     attack: 11,
     speed: 1.1,
@@ -1172,6 +1190,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     defensive: true,
     draught: true,
     pull: 0.3,
+    learns: { skill: DRIVING, by: 'pull' },
   },
   orse: {
     id: 'orse',
@@ -3727,10 +3746,27 @@ const startSkills = (species: SpeciesDef): Record<string, number> => {
   // A kind with no trade learns its own (`LearnsBy`).
   if (species.learns) skills[species.learns.skill] = 1;
   // A beast bred to pull starts knowing nothing about hills and learns in the
-  // traces, which is what decides the pace of everything it is put in front of.
-  if (species.draught) skills[HAUL_SKILL] = 1;
+  // traces, which is what decides the pace of everything it is put in front of
+  // (or, for a kind that learns by pulling, its own skill does: `tracesSkill`).
+  if (species.draught) skills[tracesSkill(species)] = 1;
   return skills;
 };
+
+/**
+ * A saved book of skills, carried over to what its kind learns now. A Roxxen learned climbing in the traces until it
+ * was given Driving to learn by pulling: one saved with climbing has it as driving instead, the higher of the two
+ * where it somehow has both, so nobody's Roxxen comes back a level lower. The island moved its own the same way
+ * (`20261019210000_a_roxxen_learns_driving_in_the_traces`).
+ */
+export function carriedSkills(species: SpeciesDef, saved: Record<string, number> | undefined): Record<string, number> {
+  const skills = { ...startSkills(species), ...(saved ?? {}) };
+  const traces = tracesSkill(species);
+  if (traces !== HAUL_SKILL && skills[HAUL_SKILL] !== undefined) {
+    skills[traces] = Math.max(skills[traces] ?? 0, skills[HAUL_SKILL]);
+    delete skills[HAUL_SKILL];
+  }
+  return skills;
+}
 
 /**
  * Age. Everything alive on the island was born at some hour and gets older
@@ -3960,6 +3996,12 @@ export const TRAIT_COUNT = TRAIT_SLOTS;
 
 /** What a draught beast trains by pulling, and a mount by being ridden. */
 export const HAUL_SKILL = 'climbing';
+/**
+ * The skill a draught beast keeps in the traces, which a team's pace and the steepest step its wheels take read
+ * (`Game.teamClimb`): climbing, but for a kind that learns its own skill by pulling, whose own skill stands in it. The
+ * island's `beast_climb`.
+ */
+export const tracesSkill = (species: SpeciesDef): string => species.learns?.by === 'pull' ? species.learns.skill : HAUL_SKILL;
 /** What a hunter trains, which decides how hard it hits and how far it ranges. */
 export const FIGHT_SKILL = 'fighting';
 /** A hunter hits harder the more hunting it has done: half again at mastery. */
@@ -4524,7 +4566,7 @@ const FORAGE_TIME = 2.5;
 
 /** A creature's level, read off its best task skill. */
 /**
- * A wildermon's level is its skill: the one it was born to (its job's, or a draught beast's hauling), to the whole
+ * A wildermon's level is its skill: the one it was born to (its job's, a draught beast's hauling, or its own), to the whole
  * number below, and one for a kind that has none. Asked for: "Level should be equal to that skill, since there's only
  * 1 skill per wildermon". The island's `creature_level`.
  */
@@ -8813,7 +8855,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: { ...startSkills(SPECIES[j.species] ?? SPECIES.rabba), ...(j.skills ?? {}) } });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills) });
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }

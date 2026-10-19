@@ -34,7 +34,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { underGlass } from './glasshouse';
-import { ageDef, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, HAUL_SKILL, isBaitFor, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, HAUL_SKILL, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -4265,6 +4265,16 @@ export class Game {
        * walk it is told about (`rpc_move`), as it pays climbing.
        */
       if (!this.bodyFromIsland && driven) this.gainSkill(boat ? SAILING : DRIVING, boat ? SAILING_LEARN : DRIVING_LEARN);
+      /*
+       * And the same tile is a go for every beast in the traces of a large
+       * cart or a wagon that learns its own skill by pulling, a Roxxen its
+       * driving (`LearnsBy` 'pull', `PULL_LEARN`); nothing for one standing,
+       * since only a tile gone into is paid. On an island the island pays it,
+       * off the same walk (`rpc_move`).
+       */
+      if (!this.bodyFromIsland && driven && !boat && furnitureDef(driven.kind).vehicle) {
+        for (const c of this.team(driven)) this.creatures.learnBy(this, c, 'pull');
+      }
       p.steppedX = -1;
       p.steppedY = -1;
     }
@@ -7454,12 +7464,15 @@ export class Game {
     return cap ? Math.min(1, furnitureUnits(f) / cap) : 0;
   }
 
-  /** What a team knows about hills between them, which is what a slope asks. */
+  /**
+   * What a team knows about hills between them, which is what a slope asks: each one's climbing, or for a kind that
+   * learns its own skill by pulling, that skill in its place (`tracesSkill`). The island's `team_climb`.
+   */
   teamClimb(f: PlacedFurniture): number {
     const team = this.team(f);
     if (!team.length) return 0;
     let sum = 0;
-    for (const c of team) sum += c.skills[HAUL_SKILL] ?? 0;
+    for (const c of team) sum += c.skills[tracesSkill(this.creatures.species(c))] ?? 0;
     return sum / team.length;
   }
 

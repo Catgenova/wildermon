@@ -535,7 +535,7 @@ out.push(`alter table species_def add column if not exists venom boolean not nul
 out.push(`alter table species_def add column if not exists style text;`);
 /* What one of yours does in a fight once every so often (\`AbilityId\`): a fighting trade's spell's id, or a frost breath. */
 out.push(`alter table species_def add column if not exists ability text;`);
-/* For a kind with no trade and no traces, the skill it learns and what teaches it (\`LearnsBy\`). */
+/* For a kind with no trade, the skill it learns and what teaches it (\`LearnsBy\`); one that learns by pulling keeps it in the traces (\`tracesSkill\`). */
 out.push(`alter table species_def add column if not exists learns text;`);
 out.push(`alter table species_def add column if not exists learns_by text;`);
 /* What a kind that evolves is called at each stage after its first (\`SpeciesDef.stages\`). */
@@ -1608,7 +1608,7 @@ for (const [fn, v] of [
   ['frost_breath_rest', FROST_BREATH_REST], ['ward_skin', WARD_SKIN], ['fear_secs', FEAR_SECS], ['fear_rest', FEAR_REST],
   /* A kind that learns its own skill: the seconds of being out that are one go at it, and what each kind of go teaches. */
   ['out_every', OUT_EVERY], ['learns_gain_tended', LEARNS_GAIN.tended], ['learns_gain_spar', LEARNS_GAIN.spar],
-  ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark],
+  ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark], ['learns_gain_pull', LEARNS_GAIN.pull],
   /* Evolving: the levels a kind that evolves does so at, and what each stage multiplies over the one before. */
   ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]],
   ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],

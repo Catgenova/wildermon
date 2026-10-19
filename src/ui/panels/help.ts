@@ -53,7 +53,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
+  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -2156,7 +2156,10 @@ export function helpText(): string {
     ${SPECIES.quarra.name}s will not, but they will shift ${numberWord(WAGON.capacity ?? 0)} bricks.</p>
     <p>The team is not only the pace but the pitch: a draught beast trains <b>climbing</b> by hauling
     over bad ground, and what the team knows between them decides both how fast the wheels turn and how
-    steep a step they will take. A green pair balks at a bank a worked pair goes straight up.</p>
+    steep a step they will take. A green pair balks at a bank a worked pair goes straight up. A
+    <b>${SPECIES.roxxen.name}</b> learns <b>driving</b> instead, ${LEARNS_SAYS.pull} (${percent(PULL_LEARN / KNACK_GO)} of a go),
+    and its driving counts where another beast's climbing does; a beast standing in the traces, or out of them, learns
+    none.</p>
     <p>Wheels keep to open ground: no fords, no garden steps and nothing steeper than a horse would take. They
     go indoors through an <b>arch</b>, a <b>double door</b> or a <b>gate</b>, and never through a plain door.
     Indoors a cart or wagon goes up a finished <b>wide staircase</b>, driven onto it from its foot, and drives on
@@ -3065,10 +3068,11 @@ export function helpText(): string {
     ${SPECIES.ulva.tameLevel} to try, and a tamed one keeps watch over the deed, going for anything wild that crosses the
     border. The
     <b>Roxxen</b> is a slab-shouldered ox that will not start anything and will finish most things that
-    start with it. It does no job on a deed; it is there to be hitched, and what it learns in the traces
-    (its <b>climbing</b>) decides how fast a cart or wagon goes and how steep a line the wheels will
+    start with it. It does no job on a deed; it is there to be hitched, and its level is its <b>driving</b>,
+    which it learns ${LEARNS_SAYS.pull}. Its driving counts in the traces where another beast's climbing does,
+    deciding how fast a cart or wagon goes and how steep a line the wheels will
     take. A green pair labours over ground a worked pair walks up. It also leaves the biggest carcass on
-    the island by a long way. The <b>Orse</b> is long in the leg and learns the same skill, in the traces
+    the island by a long way. The <b>Orse</b> is long in the leg and learns <b>climbing</b> instead, in the traces
     or under a rider: stitch a <b>saddle</b> and a <b>bridle</b>, fit both from its menu, and
     <b>mount</b> it. A green one carries you at ${times(ORSE_GREEN / BASE_SPEED)} your own pace and over the same ground;
     one whose climbing is worked right up is ${times(ORSE_WORKED / ORSE_GREEN)} as fast as a green one and goes up slopes you would
@@ -3190,7 +3194,8 @@ export function helpText(): string {
     The <b>Wildermon</b> window (<kbd>P</kbd>) shows the condition, level and skills of every creature
     you own; wild ones keep theirs to themselves. A wildermon's level is its skill. Deed workers learn from their work, gaining skill at
     half a player's pace and working at half a player's speed, and better skill means better quality
-    finds and quicker work.</p>
+    finds and quicker work. A kind with no work of its own learns its one skill some other way:
+    ${listed(Object.values(SPECIES).filter((d) => d.learns).map((d) => `the ${d.name} its ${(SKILL_BY_ID.get(d.learns!.skill)?.name ?? d.learns!.skill).toLowerCase()}, ${LEARNS_SAYS[d.learns!.by]}`))}.</p>
     <p><b>Creature crates.</b> A creature crate holds <b>one</b> wildermon. A fine carpenter builds it
     with a mallet from ${CRATE_BILL}; it weighs <b>${itemDef(CREATURE_CRATE).weight} kg</b> and does not rot.
     The first wildermon you tame follows you; <b>every one after that goes into an empty crate in your

@@ -15,6 +15,7 @@ import {
   SPECIES,
   STANCE_NAMES,
   taskSkill,
+  tracesSkill,
   workRangeOf,
   workSkill,
   type Creature,
@@ -162,7 +163,8 @@ export function creatureSkills(g: Game, c: Creature): string[] {
     const name = SKILL_BY_ID.get(id)?.name ?? id;
     // A skill is worth the same to a beast as to you: what it can attempt and
     // how well it does it.
-    const note = id === trade ? 'its trade' : id === 'climbing' ? 'in the traces, and so the pace of any cart' : id === 'fighting' ? 'what it hits for' : '';
+    // What it keeps in the traces is climbing, or a Roxxen's driving (`tracesSkill`).
+    const note = id === trade ? 'its trade' : (id === 'climbing' || id === tracesSkill(def)) ? 'in the traces, and so the pace of any cart' : id === 'fighting' ? 'what it hits for' : '';
     lines.push(`${name} ${value.toFixed(1)} ${bar(value / 100)}${note ? ` · ${note}` : ''}`);
   }
   if (trade && c.mode === 'deed') lines.push(`Working, it reaches ${workRangeOf(c, def)} tiles from where it takes its orders.`);

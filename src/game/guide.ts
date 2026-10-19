@@ -35,7 +35,7 @@ import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
   GATHER_DO, GATHER_SKILL, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
-  LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
+  HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
@@ -280,8 +280,12 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
   if (def.pitch) lines.push(`Under a rider, what its climbing adds to the steepest step it takes counts ${times(def.pitch)}`);
   if (def.swims) lines.push('Carries a rider across deep water');
   if (def.draught) {
+    // A kind that learns its own skill by pulling has that skill in the traces where the rest have climbing (`tracesSkill`).
+    const traces = tracesSkill(def);
     lines.push(`In the traces it adds ${percent(def.pull ?? PULL_DEFAULT)} to a team's pull`
-      + `${def.pull !== undefined && def.pull !== PULL_DEFAULT ? `, where most add ${percent(PULL_DEFAULT)}` : ''}, and learns climbing as it pulls`);
+      + `${def.pull !== undefined && def.pull !== PULL_DEFAULT ? `, where most add ${percent(PULL_DEFAULT)}` : ''}`
+      + (traces === HAUL_SKILL ? ', and learns climbing as it pulls'
+        : `, and its ${SKILL_BY_ID.get(traces)?.name.toLowerCase() ?? traces} counts where another's climbing does, in the team's pace and the steepest step its wheels take`));
   }
   if (def.pannier) lines.push(`${solo}${solo ? 'carries' : 'Carries'} ${def.pannier} things in panniers on its own back`);
   if (def.sight) lines.push(`Sees ${def.sight} tiles for you, where most see ${KEPT_EYES}`);
