@@ -2239,12 +2239,14 @@ update species_def set stages = array['Plowhog', 'Harvestusk']::text[] where id 
 update species_def set was = array['Seavic']::text[] where id = 'seavic';
 insert into species_diet values ('seavic', 'acorn');
 insert into species_diet values ('seavic', 'nuts');
-insert into species_def values ('roxxen', 'Roxxen', 'A great slab-shouldered ox with horns that sweep forward and a head it holds low. It will not start anything, and it will finish most things that start with it. Nothing but a Shaggan pulls a loaded wagon like a pair of them. Its level is its driving, which it learns for every tile a large cart or a wagon it is hitched to goes into while you drive it, as much as the same tile teaches you at the reins; in the traces its driving counts where another beast''s climbing does, in the team''s pace and the steepest step the wheels take.', 80, 11, 1.1, 25, 0.07, 'grass or grain', false, null, 6, 'chews through the {food} without once looking up, and goes back to the grass', 'walks off at its own pace and does not look back', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
+insert into species_def values ('roxxen', 'Cartling', 'It does no job on a deed: it is for hitching to a large cart or a wagon. In the traces it adds 30% to its team''s pace, where a beast not bred for the traces adds 25%, and its driving counts where another beast''s climbing does, in the team''s pace and the steepest step the wheels take. Its level is its driving, which it learns for every tile a large cart or a wagon it is hitched to goes into while you drive it, as much as the same tile teaches you at the reins. At level 25 it evolves into a Wagonox.', 80, 11, 1.1, 25, 0.07, 'grass or grain', false, null, 6, 'chews through the {food} without once looking up, and goes back to the grass', 'walks off at its own pace and does not look back', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
 update species_def set pull = 0.3 where id = 'roxxen';
 update species_def set draught = true where id = 'roxxen';
 update species_def set hide = 'thick' where id = 'roxxen';
 update species_def set heavy = true where id = 'roxxen';
 update species_def set learns = 'driving', learns_by = 'pull' where id = 'roxxen';
+update species_def set stages = array['Wagonox', 'Haulhorn']::text[] where id = 'roxxen';
+update species_def set was = array['Roxxen']::text[] where id = 'roxxen';
 insert into species_diet values ('roxxen', 'mixed_grass');
 insert into species_diet values ('roxxen', 'wheat');
 insert into species_diet values ('roxxen', 'corn');

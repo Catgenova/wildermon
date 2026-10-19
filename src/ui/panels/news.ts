@@ -2751,6 +2751,18 @@ export const NEWS: News[] = [
       `In the traces its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take. A ${SPECIES.roxxen.name} you already have keeps its level: its climbing is its driving now.`,
     ],
   },
+  {
+    n: 213,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.roxxen;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}. In the traces it still adds ${percent(d.pull!)} to its team's pace.`,
+        `Each of the three is a new model, a cream calf in a leaf mane and a plain harness that takes on ram horns, a padded collar and a bell, then poles, a yoke and banners, with its own walk, trot, strike, haul and voice.`,
+      ];
+    },
+  },
 ];
 
 

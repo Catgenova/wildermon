@@ -1585,7 +1585,7 @@ export function helpText(): string {
     need a building around them: point at the edge of any tile &mdash; on your deed or a mile from it,
     on packed ground or in the long grass &mdash; and choose <b>Plan fence</b>. A log fence is ${numberWord(wallBill('log', 'fence').needed.log)} logs
     where a log wall is ${numberWord(wallBill('log', 'solid').needed.log)}; a half wall is ${share(WALL_TYPE_BY_ID.get('half_wall')?.factor ?? 0)} of one. Both stop anything alive at that border,
-    yourself included, which is how a paddock holds a Roxxen; a <b>fence gate</b> is the one kind you
+    yourself included, which is how a paddock holds a ${SPECIES.roxxen.name}; a <b>fence gate</b> is the one kind you
     can walk through. Feed them materials with <b>Build fence</b> exactly as you would a wall, and take
     them down again from the same menu. Nothing rests on waist-high work: a storey cannot be planned
     over a run of fence, half wall or railing, so if you want a floor above, the side below needs a wall,
@@ -3067,8 +3067,8 @@ export function helpText(): string {
     from ${numberWord(SPECIES.ulva.notice ?? HUNT_SIGHT)} tiles off and does not stop until you are well away or it is badly hurt. It takes taming
     ${SPECIES.ulva.tameLevel} to try, and a tamed one keeps watch over the deed, going for anything wild that crosses the
     border. The
-    <b>Roxxen</b> is a slab-shouldered ox that will not start anything and will finish most things that
-    start with it. It does no job on a deed; it is there to be hitched, and its level is its <b>driving</b>,
+    <b>${SPECIES.roxxen.name}</b> (the Roxxen that was), which evolves into a ${SPECIES.roxxen.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.roxxen.stages![1].name} at ${EVOLVE_AT[1]},
+    is a draught ox that adds ${percent(SPECIES.roxxen.pull!)} to its team's pace in the traces. It does no job on a deed; it is there to be hitched, and its level is its <b>driving</b>,
     which it learns ${LEARNS_SAYS.pull}. Its driving counts in the traces where another beast's climbing does,
     deciding how fast a cart or wagon goes and how steep a line the wheels will
     take. A green pair labours over ground a worked pair walks up. It also leaves the biggest carcass on
@@ -3368,7 +3368,7 @@ export function helpText(): string {
     whether the animal is held or not, and a beast that thrashes has to be tried again.</p>
     <h3>Blood, the brush and breeding</h3>
     <p>Every wildermon is born <b>male</b> or <b>female</b> and carries <b>${numberWord(TRAIT_SLOTS)} traits</b>, and the
-    traits are the whole difference between one Roxxen and the next. A trait sits in one of ${numberWord(TIERS.length)} tiers
+    traits are the whole difference between one ${SPECIES.roxxen.name} and the next. A trait sits in one of ${numberWord(TIERS.length)} tiers
     &mdash; ${listed(TIERS.map((t) => `<b>${t}</b>`))} &mdash; and what it is worth
     climbs steeply with the tier: a common trait moves its number by ${percent(TIER_SPAN.common[0])} to ${percent(TIER_SPAN.common[1])},
     a fantastic one by ${percent(TIER_SPAN.fantastic[0])} to ${percent(TIER_SPAN.fantastic[1])}. Traits lift how fast it <b>moves</b>, how quickly it <b>works</b>, how fast what it does

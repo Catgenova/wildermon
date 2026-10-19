@@ -6,8 +6,9 @@ import { blade, cut, earMesh, hoofMesh, quadPieces, type QuadLook } from './beas
 import { mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
 
 /**
- * The herd: the big grazers and beasts of burden -- the roxxen, the orse,
- * the cudda, the bura, the gorral, the shaggan, the snedda and the sappa.
+ * The herd: the big grazers and beasts of burden -- the orse, the cudda,
+ * the bura, the gorral, the shaggan, the snedda and the sappa (the roxxen is
+ * its own line now, `./wild-haul`).
  * Hooves, deep bodies, and heads still a size too big for them.
  */
 
@@ -183,72 +184,6 @@ const tuftTail = (n: number): Mesh[] => [
   taper([[0, 0, 0], [0, -0.5, 0]], 0.1, 0.08, 5, 'coat'),
   merge(taper([[0, 0, 0], [0, -0.2, 0]], 0.08, 0.1, 5, 'coat'), orbAlong([0, -0.45, 0], [0, -1, 0], [0.22, 0.22, 0.34], n, 4, 'mark')),
 ];
-
-/* ---- the roxxen ---------------------------------------------------------------------- */
-
-/**
- * A roxxen: a great slab-shouldered ox that holds its head low. Its shoulders
- * are a hill -- a hump of moss with flowers and a toadstool in it -- its
- * lyre of horns is ringed like old stone, and its hooves are stone.
- */
-const ROXXEN_SPEC: QuadSpec = {
-  ...hoofed({ high: 2.4, len: 3.6, legs: 1.7, neck: 0.8, lean: 80, swing: [18, 30], ears: [70, 10], crop: [56, 10, 12] }),
-  // The ears on the corners of its big head.
-  ears: { at: [0.83, -0.29, 0.52], out: 70, back: 10 },
-  tail: curledTail(3.6),
-};
-const ROXXEN_HEAD = { c: [0, 0.35, 0.0] as V3, r: [1.32, 1.2, 1.1] as V3 };
-
-function roxxenBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = ROXXEN_HEAD;
-  // A broad soft muzzle standing half a head's depth out in front of the eyes, so side on there is a face ahead of the eye.
-  const muzzle = merge(
-    orbAlong([0, 1.56, -0.25], [0, 1, -0.2], [0.8, 0.71, 0.58], n, k, 'muzzle'),
-    paint([disc([0.32, 2.13, -0.17], [0.2, 1, 0.2], 0.115, 0.09, 6, 'nose'), disc([-0.32, 2.13, -0.17], [-0.2, 1, 0.2], 0.115, 0.09, 6, 'nose')]),
-    smile([0, 2.16, -0.52], [0, 1, -0.3], 0.39),
-  );
-  // Horns growing from the sides of the head, out and up at once and curving forward at the tips, ringed in darker bands like
-  // weathered stone above their plain roots: no part of them pointing at the viewer from any side, so each shows its length and
-  // not its end -- side on a horn's hook over the brow, and from in front or behind a lyre.
-  const horn = (s: number): Mesh => taper(curve([s * 1.05, 0.08, 0.58], [s * 1.7, 0.0, 1.15], [s * 1.55, 0.3, 1.8], 5), 0.3, 0.1, 7, (ring) => (ring >= 2 && ring % 2 ? 'stoneDark' : 'horn'));
-  // The hill on its shoulders: moss heaped half a unit over the line of the back, so it breaks the outline from every side, and
-  // flowers and a toadstool growing out of the top of it.
-  const hill = merge(
-    orb([0, 0.9, 1.85], [1.05, 1.25, 0.65], n + 1, k, 'moss'),
-    orb([0, 0.2, 1.75], [0.9, 0.9, 0.55], n, k, 'moss'),
-    ...([[0.4, 1.3, 2.5], [-0.5, 0.7, 2.45], [0.2, 0.3, 2.3], [-0.2, 1.5, 2.4]] as V3[]).map((c, q) => orb(c, 0.17, 5, 3, q % 2 ? 'petal' : 'bloom')),
-    taper([[0.55, 0.6, 2.25], [0.55, 0.6, 2.6]], 0.08, 0.07, 5, 'spot'),
-    orbAlong([0.55, 0.6, 2.62], [0, 0, 1], [0.26, 0.26, 0.14], n, 3, 'cap'),
-  );
-  // Stout legs, not a calf's thin ones, on stone hooves as wide as the leg is thick and five-sided like a cut block.
-  const hoof = hoofMesh(0.5, 0.22, 5, 'stone');
-  return quadPieces({
-    n, k,
-    // Rounded off at the rump and the chest rather than cut square: the ends of the trunk close over in three rings.
-    body: { y: [-2.6, -2.45, -2.25, -1.2, 0, 1.2, 2.0, 2.3, 2.5], z: [0.3, 0.22, 0.2, 0.25, 0.35, 0.55, 0.6, 0.58, 0.55], w: [0.35, 0.9, 1.15, 1.45, 1.55, 1.7, 1.5, 1.15, 0.5], h: [0.3, 0.8, 1.0, 1.2, 1.3, 1.45, 1.3, 1.0, 0.45], belly: true },
-    neck: { w: 1.0, h: 0.95, len: 0.8 },
-    head: { c: H.c, r: H.r, face: muzzle, eye: { dir: [0.8, 0.52, 0.2], size: 0.38, rim: 0.12 }, blush: [[0.82, 0.45, -0.35], 0.27] },
-    ear: earMesh(0.66, 0.4, n),
-    tail: tuftTail(n),
-    fore: { upper: [0.35, -0.88, 0.62, 0.5], lower: [0, -0.82, 0.45, 0.42], foot: hoof },
-    hind: { upper: [0.35, -0.94, 0.7, 0.52], lower: [0, -0.94, 0.45, 0.42], foot: hoof },
-    extras: [
-      { key: 'horns', mesh: merge(horn(1), horn(-1)), bone: 'head', bias: 0.25, after: ['head', 'ear0', 'ear1'] },
-      { key: 'hill', mesh: hill, bone: 'trunk', bias: 0.03, after: 'body' },
-    ],
-    breath: 0.04,
-  });
-}
-
-export const ROXXEN: Kind = {
-  bones: quadBonesOf(ROXXEN_SPEC, plod),
-  build: roxxenBuild,
-  palette: (coat, mark) => coatPalette(lit(coat, 28), mark, { moss: [134, 178, 100], horn: [232, 222, 200], stoneDark: [170, 162, 150], stone: [150, 145, 138], bloom: [250, 220, 120], petal: [244, 180, 206], cap: [222, 106, 96], spot: [250, 244, 232] }, 28),
-  shadow: [3.0, 1.9],
-  stride: 0.75,
-  size: 1.75,
-};
 
 /* ---- the orse ------------------------------------------------------------------------ */
 

@@ -4703,7 +4703,9 @@ export class Renderer {
     const to = f && reinsTo(f.kind);
     if (!f || !to) return;
     const cam = this.camera;
-    const head = wildermonHead(cr.species, facing) ?? [0, -(wildermonTop(cr.species) ?? 20) * 0.8];
+    // At the stage it is drawn at: a Haulhorn's head is not where its Cartling's was.
+    const stage = stageOf(cr);
+    const head = wildermonHead(cr.species, facing, stage) ?? [0, -(wildermonTop(cr.species, stage) ?? 20) * 0.8];
     const hx = sx + head[0] * zoom * big, hy = sy + head[1] * zoom * big;
     // The driver's hands: over the front of the box, toward the team, where the seat is.
     const [cx, cy] = furnitureCentre(f);

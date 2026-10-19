@@ -1165,9 +1165,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
     hide: 'thick',
     heavy: true,
     wound: 'crush',
-    name: 'Roxxen',
-    description: 'A great slab-shouldered ox with horns that sweep forward and a head it holds low. It will not start anything, and it will finish most things that start with it. Nothing but a Shaggan pulls a loaded wagon like a pair of them.'
-      + ` Its level is its driving, which it learns ${LEARNS_SAYS.pull}; in the traces its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
+    name: 'Cartling',
+    was: ['Roxxen'],
+    // Asked for: "This family to replace Roxxen once specced and rated": Cartling, Wagonox, Haulhorn. Its words, and each
+    // stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Wagonox', description: '' },
+      { name: 'Haulhorn', description: '' },
+    ],
     health: 80,
     attack: 11,
     speed: 1.1,
@@ -1179,10 +1185,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: null,
     workRange: 6,
     variants: [
-      ['#7a5a3c', '#c2a077'],
-      ['#4a4441', '#8f8880'],
-      ['#8d4f34', '#caa484'],
-      ['#b3a894', '#e4dccb'],
+      ['#c9a06a', '#f1e6cc'],
+      ['#b08454', '#eadcbc'],
+      ['#d6b07a', '#f6eedb'],
+      ['#9e7a4e', '#e2d2b0'],
     ],
     butcher: { meat: 26, fur: 4, leather: 14, bone: 18, gland: 1 },
     tameFail: 'chews through the {food} without once looking up, and goes back to the grass',
@@ -3703,6 +3709,8 @@ sayLine('mola', `Set to work on a settlement it mines the nearest ore seam withi
   'Its level is its mining.');
 sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECIES.bevere.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, as many bites to a tree as a person's swings, leaving a stump where the tree had timber in it. Each log is at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its woodcutting, raised by any yield trait it has and never over 100; it carries one to the crate and leaves the rest at the stump.`,
   'Its level is its woodcutting.');
+sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart or a wagon. In the traces it adds ${percent(SPECIES.roxxen.pull!)} to its team's pace, where a beast not bred for the traces adds ${percent(PULL_DEFAULT)}, and its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
+  `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
 sayLine('cobbe', `Set to work on a settlement it carries what a planned ground-floor wall within ${SPECIES.cobbe.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it: the nearest wall first, and of what that wall wants whatever is furthest behind its bill.`,
   'Its level is its masonry.');
 sayLine('embra', `Set to work on a settlement it keeps your campfires, smelters and kilns within ${SPECIES.embra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, fed and lit: whenever one holds under ${HEARTH_FULL / 60} minutes of fuel, it carries a piece of fuel from your stores to the nearest such, one at a time, and lights it if it has gone out. It eats only what has been cooked.`,
