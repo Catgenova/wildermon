@@ -1,0 +1,75 @@
+# A look at the live island, and nothing else: what the database is doing now.
+#
+# Asked about: "The server isnt loading now", with wildermon frozen and workers idle. The Island workflow reports on
+# the project only after its whole test suite has run, the better part of an hour, which is no use while the island
+# is down. This reads, and writes nothing: whether the database takes writes, how full its disk is, what is running
+# and what is waiting on what, the clock's last rounds and failures, the faults it kept, and what browsers reported.
+name: Look at the island
+
+on:
+  workflow_dispatch:
+
+jobs:
+  look:
+    name: What the live database is doing
+    runs-on: ubuntu-latest
+    environment: AI
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        id: cli
+        continue-on-error: true
+        with:
+          version: latest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Get the CLI another way if that did not work
+        if: steps.cli.outcome != 'success'
+        run: npm i -g supabase && supabase --version
+      - name: Look
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          disk=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                   "https://api.supabase.com/v1/projects/$PROJECT_REF/config/disk/util" \
+                 | jq -r '.metrics | "\(.fs_used_bytes) \(.fs_size_bytes)"' 2>/dev/null || true)
+          echo "== disk (used, size in bytes): $disk"
+          ask "mode and size" "select current_setting('transaction_read_only') as read_only,
+                 pg_size_pretty(pg_database_size(current_database())) as database, now() as at"
+          ask "what is running, longest first" "select pid, state, wait_event_type || ':' || coalesce(wait_event, '') as waiting,
+                 round(extract(epoch from now() - xact_start)::numeric, 1) as xact_s,
+                 round(extract(epoch from now() - query_start)::numeric, 1) as query_s,
+                 usename, left(regexp_replace(query, '\s+', ' ', 'g'), 120) as query
+            from pg_stat_activity
+           where datname = current_database() and pid <> pg_backend_pid() and state <> 'idle'
+           order by xact_start nulls last limit 25"
+          ask "who is blocking whom" "select a.pid as waiting, pg_blocking_pids(a.pid) as blocked_by,
+                 round(extract(epoch from now() - a.query_start)::numeric, 1) as waited_s,
+                 left(regexp_replace(a.query, '\s+', ' ', 'g'), 100) as query
+            from pg_stat_activity a where cardinality(pg_blocking_pids(a.pid)) > 0 limit 25"
+          ask "connections by state" "select state, usename, count(*) from pg_stat_activity group by 1, 2 order by 3 desc"
+          ask "the clock, last 20 runs" "select jobname, status, to_char(start_time, 'HH24:MI:SS') as started,
+                 round(extract(epoch from end_time - start_time)::numeric, 2) as secs, left(return_message, 120) as said
+            from cron.job_run_details d join cron.job j using (jobid)
+           where j.jobname = 'world-tick' order by start_time desc limit 20"
+          ask "the clock's failures, last hour" "select status, count(*), left(return_message, 160) as said
+            from cron.job_run_details d join cron.job j using (jobid)
+           where j.jobname = 'world-tick' and start_time > now() - interval '1 hour' and status <> 'succeeded'
+           group by 1, 3 order by 2 desc limit 10"
+          ask "rounds, last 15 minutes" "select count(*) as rounds, round(avg(ms)::numeric, 1) as ms_avg, round(max(ms)::numeric, 1) as ms_worst,
+                 to_char(max(at), 'HH24:MI:SS') as last from tick_time where at > now() - interval '15 minutes'"
+          ask "faults, last 6 hours" "select to_char(f.at, 'MM-DD HH24:MI') as first, to_char(f.last_at, 'MM-DD HH24:MI') as last, f.times,
+                 f.stage, coalesce(f.job, '') as job, left(f.error, 120) as error,
+                 left(regexp_replace(coalesce(f.context, ''), '\s+', ' ', 'g'), 200) as at_line
+            from private.tick_fault f where f.last_at > now() - interval '6 hours' order by f.last_at desc limit 20"
+          ask "browser errors, last 6 hours" "select count(*) as times, max(build) as build, to_char(max(at), 'HH24:MI') as last,
+                 left(message, 160) as message, left(max(place), 80) as place
+            from client_error where at > now() - interval '6 hours' group by left(message, 160) order by 1 desc limit 15"
+          ask "biggest tables" "select n.nspname || '.' || c.relname as relation, pg_size_pretty(pg_total_relation_size(c.oid)) as total,
+                 c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
+            from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid
+           where c.relkind in ('r', 'm') order by pg_total_relation_size(c.oid) desc limit 8"
