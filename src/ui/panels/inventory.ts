@@ -318,8 +318,8 @@ export class InventoryPanel {
      * you do once, at the end, somewhere else entirely.
      */
     if (item.id === 'treasure_map') entries.push({ label: 'Read', note: 'Look at the country on it', onSelect: () => this.readMap?.(item.uid) });
-    // A mote goes into something else, which is chosen here.
-    const absorb = item.id === SOUL ? ACTION_BY_ID.get('absorb_mote') : undefined;
+    // A soul goes into something else, which is chosen here.
+    const absorb = item.id === SOUL ? ACTION_BY_ID.get('absorb_soul') : undefined;
     if (absorb) {
       const into = absorbable(this.game);
       entries.push({
@@ -328,7 +328,7 @@ export class InventoryPanel {
         hint: into.length ? undefined : ABSORB_SAID.pickItem,
         disabled: !into.length,
         children: into.map((it) => {
-          const t = { kind: 'item' as const, uid: it.uid, mote: item.uid };
+          const t = { kind: 'item' as const, uid: it.uid, soul: item.uid };
           const why = absorb.check?.(t, this.game) ?? null;
           return { label: itemName(it), note: it.count > 1 ? `one of ${it.count}` : undefined, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(absorb, t) };
         }),

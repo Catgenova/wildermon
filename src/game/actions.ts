@@ -173,8 +173,8 @@ export type Target =
        * same words, so "take it to sixty" means the same thing on both sides.
        */
       upto?: number;
-      /** The mote going into this thing, for `absorb_mote`: the thing is the target, and the mote this. */
-      mote?: number;
+      /** The soul going into this thing, for `absorb_soul`: the thing is the target, and the soul this. */
+      soul?: number;
       /** The Runestone a Telestone is to take you to, for `travel_runestone` (`runestones.ts`). */
       stone?: string;
       /** The scroll going into this thing, for `enchant` (`enchanting.ts`): the weapon is the target, and the scroll this. */

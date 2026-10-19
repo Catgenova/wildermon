@@ -48,6 +48,7 @@ import {
   collectedSays, ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, landElement, laySwirls, MOTE_ELEMENTS, moteItem, MOTES_LEAST, MOTES_MOST, MOTES_STEP, motesFor,
   motesWord, SWIRL_DARK, SWIRL_DRAWS, SWIRL_LIGHT, SWIRL_SAID, SWIRL_TRIES, swirlElement, swirlSays, SWIRLS_A_DAY, type MoteElement, type Swirl,
 } from '../../src/game/motes';
+import { SOUL } from '../../src/game/sacrifice';
 import { REGIONS } from '../../src/world/regions';
 import { chartCells, chartRegion } from '../../src/world/chart';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
@@ -120,15 +121,15 @@ check('as many swirls a day, as many rounds and draws to find room, as much dark
 
 const defs = psql(`select (select id || ':' || start || ':' || quiet from skill_def where id = 'elementalism')
   || '#' || (select string_agg(id || ':' || name || ':' || stackable || ':' || weight || ':' || coalesce(description, ''), '#' order by id collate "C")
-             from item_def where id = any(array[${MOTE_ELEMENTS.map((e) => `'${moteItem(e)}'`).join(', ')}, 'mote']))
+             from item_def where id = any(array[${MOTE_ELEMENTS.map((e) => `'${moteItem(e)}'`).join(', ')}, '${SOUL}']))
   || '#' || act_ported('collect_motes') || ':' || (select count(*) from rpc_unported() u where u::text like '%collect_motes%')`);
 const defsHere = [`${ELEMENTALISM}:1:false`,
-  ...[...MOTE_ELEMENTS.map(moteItem), 'mote'].sort().map((id) => `${id}:${ITEM_DEFS[id].name}:${!!ITEM_DEFS[id].stackable}:${ITEM_DEFS[id].weight}:${ITEM_DEFS[id].description ?? ''}`),
+  ...[...MOTE_ELEMENTS.map(moteItem), SOUL].sort().map((id) => `${id}:${ITEM_DEFS[id].name}:${!!ITEM_DEFS[id].stackable}:${ITEM_DEFS[id].weight}:${ITEM_DEFS[id].description ?? ''}`),
   'true:0'].join('#');
-check('Elementalism is a skill beginning at one that speaks on every go, eight motes are things of their own beside the altar\'s, and collecting is ported',
+check('Elementalism is a skill beginning at one that speaks on every go, eight motes are things of their own beside the altar\'s soul, and collecting is ported',
   defs === defsHere && SKILL_BY_ID.get(ELEMENTALISM)?.start === 1 && !isQuiet(ELEMENTALISM)
     && new Set(MOTE_ELEMENTS.map((e) => ITEM_DEFS[moteItem(e)].name)).size === MOTE_ELEMENTS.length
-    && MOTE_ELEMENTS.every((e) => ITEM_DEFS[moteItem(e)].name !== ITEM_DEFS.mote.name && moteItem(e) !== 'mote'),
+    && MOTE_ELEMENTS.every((e) => ITEM_DEFS[moteItem(e)].name !== ITEM_DEFS[SOUL].name && moteItem(e) !== SOUL),
   defs === defsHere ? '' : `island ${defs.slice(0, 300)}…`);
 
 /* ---- on the island -------------------------------------------------------- */

@@ -135,7 +135,7 @@ export const HUSHED: ReadonlySet<string> = new Set([
   'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'drink_tea', 'take_tincture',
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
-  'pray', 'cast', 'meditate', 'sacrifice', 'absorb_mote',
+  'pray', 'cast', 'meditate', 'sacrifice', 'absorb_soul',
   // Getting on and off things, and being pulled along by one.
   'board_vehicle', 'board_passenger', 'mount_creature', 'dismount_creature', 'pull_cart', 'unhitch_team',
   // Winning an animal over, which is done by standing very quietly; and a

@@ -10,8 +10,8 @@ import { capital, listed } from './words';
  * Giving a rare thing up at the altar, and the souls it now and again leaves.
  *
  * Asked for, later: "Change the names of the rewards from motes > souls now that we have an actual mote system"
- * (`motes.ts`, the swirls). A soul is the item `mote` still, by id, so the ones already held stay what they are;
- * everything said of it calls it a soul.
+ * (`motes.ts`, the swirls), and then "Rename the ID as well". What a sacrifice leaves was a mote, by name and by id;
+ * it is a soul by both now, and `absorb_soul` puts it into something.
  *
  * Asked for: "Allow sacrificing rare, supreme, and fantastic items at the
  * altar. Each time one is sacrificed, all nutritional values are maxed. Each
@@ -24,25 +24,25 @@ import { capital, listed } from './words';
  *   * `sacrifice` gives up one of a rare, supreme or fantastic thing from the
  *     pack at an altar you are kneeling at -- one of a stack, where it is a
  *     stack -- and fills all four nutrients (`NUTRIENTS`) to the top.
- *   * `MOTE_CHANCE` of sacrifices leave a mote of the same rarity in the pack.
- *   * `absorb_mote` puts a mote into an ordinary thing in the pack -- one of a
- *     stack -- and that thing takes the mote's rarity; the mote is used up.
+ *   * `SOUL_CHANCE` of sacrifices leave a soul of the same rarity in the pack.
+ *   * `absorb_soul` puts a soul into an ordinary thing in the pack -- one of a
+ *     stack -- and that thing takes the soul's rarity; the soul is used up.
  *
  * What cannot be given up is what cannot be lost without taking something
  * else with it, or that was put by on purpose: a locked thing, a worn one, a
  * bag with anything in it and a crate with a wildermon in it. A bauble takes
- * no mote: its rarity is rolled when it is restored, and is already in what
+ * no soul: its rarity is rolled when it is restored, and is already in what
  * is written on it.
  *
  * The island does the same (`sacrifice_*` and `absorb_*` in the migrations),
  * off the same numbers crossed in the defs, and says the same words.
  */
 
-/** Of sacrifices, the share that leave a soul behind (the island's `mote_chance`). */
+/** Of sacrifices, the share that leave a soul behind (the island's `soul_chance`). */
 export const SOUL_CHANCE = 0.01;
 
-/** What a sacrifice may leave, a soul: it takes the rarity of what was given up, and gives it to an ordinary thing. Its id is from when it was called a mote. */
-export const SOUL = 'mote';
+/** What a sacrifice may leave, a soul: it takes the rarity of what was given up, and gives it to an ordinary thing. */
+export const SOUL = 'soul';
 // The share a soul's description quotes, from the rule itself.
 describeWith({ sacrifice: { soul: SOUL_CHANCE } });
 
@@ -100,15 +100,15 @@ export function sacrificeSetting(g: Game, t: Target): { why: string } | { altar:
 }
 
 /** Why this soul will not go into this thing, or the two of them when it will. */
-export function absorbSetting(g: Game, t: Target): { why: string } | { mote: Item; item: Item } {
-  const mote = t.kind === 'item' && t.mote !== undefined ? g.inventory.get(t.mote) : undefined;
-  if (!mote || mote.id !== SOUL || !mote.rare) return { why: ABSORB_SAID.pickSoul };
+export function absorbSetting(g: Game, t: Target): { why: string } | { soul: Item; item: Item } {
+  const soul = t.kind === 'item' && t.soul !== undefined ? g.inventory.get(t.soul) : undefined;
+  if (!soul || soul.id !== SOUL || !soul.rare) return { why: ABSORB_SAID.pickSoul };
   const item = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
   if (!item) return { why: ABSORB_SAID.pickItem };
   if (item.id === SOUL) return { why: ABSORB_SAID.intoSoul };
   if (isBauble(item)) return { why: ABSORB_SAID.bauble };
   if (item.rare) return { why: alreadyRare(item) };
-  return { mote, item };
+  return { soul, item };
 }
 
 /** What a soul may go into, of what is in the pack: every ordinary thing that is not a soul or a bauble. */
@@ -148,13 +148,13 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
     },
   },
   {
-    id: 'absorb_mote',
+    id: 'absorb_soul',
     label: 'Absorb a soul',
     verb: 'absorbing a soul',
     hidden: true,
     stamina: 0.01,
     baseTime: 3,
-    applies: (t) => t.kind === 'item' && t.mote !== undefined,
+    applies: (t) => t.kind === 'item' && t.soul !== undefined,
     check: (t, g) => {
       const s = absorbSetting(g, t);
       return 'why' in s ? s.why : null;
@@ -162,9 +162,9 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const s = absorbSetting(g, t);
       if ('why' in s) return;
-      const { mote, item } = s;
-      const rare = mote.rare ?? 0;
-      const moteName = itemName({ ...mote, count: 1 }).toLowerCase();
+      const { soul, item } = s;
+      const rare = soul.rare ?? 0;
+      const soulName = itemName({ ...soul, count: 1 }).toLowerCase();
       const name = itemName({ ...item, count: 1 }).toLowerCase();
       // One of a stack takes it, where it is a stack, and the rest stay as they were; a thing on its own takes it where it is.
       if (item.count > 1) {
@@ -175,8 +175,8 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
       } else {
         item.rare = rare;
       }
-      g.inventory.remove(mote.uid, 1);
-      g.logMsg(`The ${moteName} sinks into the ${name}, and it is ${RARITIES[rare].name} now.`, 'event');
+      g.inventory.remove(soul.uid, 1);
+      g.logMsg(`The ${soulName} sinks into the ${name}, and it is ${RARITIES[rare].name} now.`, 'event');
       g.events.emit('inventory');
     },
   },

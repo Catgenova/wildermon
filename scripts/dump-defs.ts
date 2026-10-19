@@ -2291,7 +2291,7 @@ for (const [fn, v] of [
   ['bauble_share', BAUBLE_SHARE], ['regret_share', REGRET_SHARE], ['bauble_low', BAUBLE_LOW], ['bauble_high', BAUBLE_HIGH], ['ancient_plus', ANCIENT_PLUS],
   ['bauble_yield_times', YIELD_TIMES],
   // What a sacrifice at the altar may leave (`src/game/sacrifice.ts`).
-  ['mote_chance', SOUL_CHANCE],
+  ['soul_chance', SOUL_CHANCE],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }

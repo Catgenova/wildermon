@@ -664,11 +664,11 @@ function finish(world: World, m: SaveMeta): Game {
   // hold. Species no longer need seeding one at a time: what is let out of the
   // bank is rolled from the whole table, so every one of them turns up.
   game.creatures.stockIsland(game);
-  // The settlement deed form became a carved stake, and mosaic stained glass;
-  // rename them wherever they sit.
-  const RENAMED: Record<string, string> = { settlement_deed: 'deed_stake', mosaic_tile: 'stained_glass_pane' };
-  const restake = (items: Item[]): void => {
-    for (const it of items) {
+  // The settlement deed form became a carved stake, mosaic stained glass, and
+  // the altar's mote a soul; rename them wherever they sit.
+  const RENAMED: Record<string, string> = { settlement_deed: 'deed_stake', mosaic_tile: 'stained_glass_pane', mote: 'soul' };
+  const restake = (items: Item[] | undefined): void => {
+    for (const it of items ?? []) {
       it.id = RENAMED[it.id] ?? it.id;
       if (it.inside) restake(it.inside);
     }
@@ -677,6 +677,13 @@ function finish(world: World, m: SaveMeta): Game {
   for (const pile of game.ground.values()) restake(pile);
   for (const pile of game.cellarGround.values()) restake(pile);
   for (const crate of game.crates.values()) restake(crate.items);
+  for (const piece of game.furniture.values()) restake(piece.items);
+  for (const counter of game.counters.list.values()) restake(counter.items);
+  for (const oven of [...game.kilns.values(), ...game.smelters.values()]) restake(oven.output);
+  for (const c of game.creatures.list.values()) {
+    restake(c.pannier);
+    if (c.carrying) restake([c.carrying]);
+  }
   const rekey = (rec: Record<string, unknown>): void => {
     for (const [was, now] of Object.entries(RENAMED)) if (was in rec) { rec[now] = rec[was]; delete rec[was]; }
   };
