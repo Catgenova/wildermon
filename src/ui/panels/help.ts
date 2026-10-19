@@ -522,10 +522,10 @@ const RARE_STEPS = RARITIES.map((_, i) => i).slice(1);
  * rule (`rarityBands`): two units, one of them supreme, against two plain ones.
  */
 const SUPREME = RARITIES.findIndex((r) => r.name === 'supreme');
-const RARE_IN_EXAMPLE = ((): { step: string; more: number } => {
+const RARE_IN_EXAMPLE = ((): { units: number; step: string; more: number } => {
   const one = RARITIES.map((_, i) => (i === 0 || i === SUPREME ? 1 : 0));
   const plain = RARITIES.map((_, i) => (i === 0 ? 2 : 0));
-  return { step: RARITIES[SUPREME].name, more: rarityBands(one)[SUPREME] - rarityBands(plain)[SUPREME] };
+  return { units: one.reduce((a: number, b) => a + b, 0), step: RARITIES[SUPREME].name, more: rarityBands(one)[SUPREME] - rarityBands(plain)[SUPREME] };
 })();
 /** How long a go at a book is, as the action has it. */
 const STUDY_TIME = ARCHAEOLOGY_ACTION_BY_ID.get('study_book')?.baseTime ?? 0;
@@ -2637,7 +2637,7 @@ export function helpText(): string {
     produce. About ${listed(RARE_STEPS.map((step, i) => `<b>one thing in ${numberWord(Math.round(1 / rarityChance(step)))}</b> ${i === 0 ? 'is ' : ''}<b>${RARITIES[step].name}</b>`))}.
     Skill, tools and the metal do not bring it on; you make ${numberWord(Math.round(1 / rarityChance(RARITIES.length - 1)))} ordinary things and find that you have one.</p>
     <p><b>Rare ingredients do.</b> Of the units a craft uses up, the share that is ${listedOr(RARE_STEPS.map((step) => RARITIES[step].name))}
-    is added to the chance that what comes out is that rare: two units, one of them ${RARE_IN_EXAMPLE.step}, have a
+    is added to the chance that what comes out is that rare: ${numberWord(RARE_IN_EXAMPLE.units)} units, one of them ${RARE_IN_EXAMPLE.step}, have a
     <b>+${percent(RARE_IN_EXAMPLE.more)} chance</b> of coming out ${RARE_IN_EXAMPLE.step}, over the odds above. The steps are rolled from
     ${RARITIES[RARITIES.length - 1].name} down and the first that comes up wins. Tools, the station and a full bucket, which comes back
     empty, are not ingredients. At the anvil the one casting or lump that goes in is all of it, so a rare one makes the piece or the coins
