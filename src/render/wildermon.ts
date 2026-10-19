@@ -133,6 +133,8 @@ export const WILDERMON: Record<string, Kind> = {
   wardo: WARDO,
   stona: STONA,
   leecha: LEECHA,
+  // Drawn as a Lume, a pale drifter, until it has a model of its own.
+  whispet: LUME,
 };
 
 /**

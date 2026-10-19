@@ -35,7 +35,7 @@ import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
   GATHER_DO, GATHER_SKILL, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
-  LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, SKILL_STEP, SPECIES, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
+  LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
@@ -203,6 +203,7 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   if (def.nearTar) near.push(either([TileType.Tar, TileType.Peat, TileType.Marsh].map(tileName)));
   if (near.length) lines.push(`Within ${WATER_RANGE} tiles of ${listed(near)}`);
   if (def.nocturnal) lines.push('Put down only at night');
+  if (def.season) lines.push(`Found wild only from ${seasonSays(def.season)}, by the calendar in UTC, and gone from the wild on every other day`);
   if (def.monster) {
     lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement's token`);
     if (onIsland) lines.push(`Never within ${PEACE_REACH} tiles of where everybody comes ashore`);

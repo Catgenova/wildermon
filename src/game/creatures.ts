@@ -37,7 +37,7 @@ import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type I
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
-import { article, capital, fill, listed, numberWord, percent, times } from './words';
+import { article, capital, daySays, fill, listed, numberWord, percent, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { keyX, keyY, tileKey } from './tileindex';
@@ -457,6 +457,11 @@ export interface SpeciesDef {
   /** Only ever found out of doors after dark. */
   nocturnal?: boolean;
   /**
+   * Only put down wild on these days of the year (`WildSeason`), and gone from the wild on every other: one tamed,
+   * kept, bred or penned stays all year.
+   */
+  season?: WildSeason;
+  /**
    * The kind of wound it leaves. A hoof bruises, a claw opens, a sting goes
    * deep and narrow, and something that carries its own fire burns. Most
    * things bite.
@@ -493,6 +498,33 @@ export interface SpeciesDef {
   /** What the kind used to be called, which a carcass or a crate from before can still say. */
   was?: readonly string[];
 }
+
+/**
+ * The days of the year a kind is put down wild on, by the calendar in UTC, from and to and both of them in: each a
+ * [month, day], the month counted from one. One that runs past the new year (from later in the year than to) runs from
+ * its first day to the year's end and from the year's start to its last. The island's `season_holds`, which has each
+ * as `month * 100 + day` (`species_def.season_from`, `season_to`).
+ */
+export interface WildSeason {
+  from: readonly [number, number];
+  to: readonly [number, number];
+}
+/** The Whispet's: asked for, "only available October 15-november 15". */
+export const HALLOW_SEASON: WildSeason = { from: [10, 15], to: [11, 15] };
+/** A day of the year as the island keeps it: `month * 100 + day`. */
+export const seasonDay = ([month, day]: readonly [number, number]): number => month * 100 + day;
+/** Whether a season holds at a moment, in epoch seconds: the day it falls on in UTC is one of its days. */
+export function seasonHolds(s: WildSeason, now: number): boolean {
+  const d = new Date(now * 1000);
+  const day = (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+  const from = seasonDay(s.from);
+  const to = seasonDay(s.to);
+  return from <= to ? day >= from && day <= to : day >= from || day <= to;
+}
+/** Whether a kind may be put down wild, or stay wild, at a moment (epoch seconds): always, but for a kind with a season. */
+export const wildInSeason = (def: SpeciesDef, now: number): boolean => !def.season || seasonHolds(def.season, now);
+/** A season's days, in words: "15 October to 15 November". */
+export const seasonSays = (s: WildSeason): string => `${daySays(s.from)} to ${daySays(s.to)}`;
 
 /** A stage a wildermon evolves into: what it is called, and its words. */
 export interface StageDef {
@@ -589,25 +621,33 @@ export const STYLE_SAYS: Record<FightStyle, string> = {
 /**
  * What one of yours does in a fight once every so often, instead of a blow, wherever it fights -- at your heel or
  * keeping a settlement: a fighting trade's spell, used as the trade's own spell is and at its numbers and its rest
- * (`CLASS_SPELLS`), or a frost breath. A wild one of these kinds fights as any other does. The island's
- * `beast_ability`, which reads the same spells off `class_spell`.
+ * (`CLASS_SPELLS`), or a frost breath, or a Whispet's Fear (`FEAR_SECS`, `FEAR_REST`). A wild one of these kinds
+ * fights as any other does. The island's `beast_ability`, which reads the same spells off `class_spell`.
  */
 export type AbilityId = 'beastmaster_pounce' | 'blade_hamstring' | 'berserker_skull_crack' | 'blade_shield_bash'
   | 'berserker_execute' | 'berserker_whirlwind' | 'kindler_scorch' | 'frost_breath' | 'binder_root' | 'binder_dull_claws'
   | 'binder_brittle' | 'pikeman_keep_away' | 'blade_guardians_call' | 'skirmisher_marked_for_death' | 'warder_ward'
-  | 'warder_stoneskin' | 'chirurgeon_leech';
+  | 'warder_stoneskin' | 'chirurgeon_leech' | 'fear';
 /** What is on a creature for a while (`Creature.marks`). */
-export type MarkKind = 'ability' | 'root' | 'dull' | 'brittle' | 'marked' | 'stone' | 'keep_away';
+export type MarkKind = 'ability' | 'root' | 'dull' | 'brittle' | 'marked' | 'stone' | 'keep_away' | 'fear';
 /** Seconds between a frost breath and the next. */
 export const FROST_BREATH_REST = 15;
+/**
+ * A Fear (a Whispet's): what it fights runs from it for this many seconds, as a Chaos Fright runs it (`fleeFrom`, the
+ * island's `flee_from`), and not again for its rest. Asked for: "has a fear ability on cooldown".
+ */
+export const FEAR_SECS = 5;
+export const FEAR_REST = 20;
 /** The skin a wardo lays over you, as a share of your full health: it takes that much of the blows that come at you. */
 export const WARD_SKIN = 0.1;
 /** Seconds between goes at an ability. */
-export const abilityRest = (id: AbilityId): number => (id === 'frost_breath' ? FROST_BREATH_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
+export const abilityRest = (id: AbilityId): number =>
+  (id === 'frost_breath' ? FROST_BREATH_REST : id === 'fear' ? FEAR_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
 /** A number an ability is used at: its spell's own. */
-export const abilityFx = (id: AbilityId, k: string): number => CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0;
+export const abilityFx = (id: AbilityId, k: string): number => (id === 'fear' ? ({ secs: FEAR_SECS } as Record<string, number>)[k] ?? 0 : CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0);
 /** An ability's name: its spell's. */
-export const abilityName = (id: AbilityId): string => (id === 'frost_breath' ? 'Frost Breath' : CLASS_SPELL_BY_ID.get(id)?.name ?? id);
+export const abilityName = (id: AbilityId): string =>
+  (id === 'frost_breath' ? 'Frost Breath' : id === 'fear' ? 'Fear' : CLASS_SPELL_BY_ID.get(id)?.name ?? id);
 /** What an ability does, in the game's own terms, for a species' words, the help and What's new. */
 export function abilitySays(id: AbilityId): string {
   const f = (k: string): number => abilityFx(id, k);
@@ -629,6 +669,7 @@ export function abilitySays(id: AbilityId): string {
     warder_ward: () => `while it is at your heel, lays a skin over you that takes the next ${percent(WARD_SKIN)} of your health of the blows that come at you, when the skin over you is smaller`,
     warder_stoneskin: () => `for ${f('secs')} seconds it takes ${percent(f('cut'))} less from every blow`,
     chirurgeon_leech: () => `a blow at ${percent(f('more'))}, and it gets back the share of its own health that the blow took of the other's`,
+    fear: () => `it frightens what it fights unless that is a monster, so that for ${f('secs')} seconds, or until you strike it, the thing runs from it and strikes nothing`,
   };
   return `${said[id]()}, once every ${abilityRest(id)} seconds`;
 }
@@ -686,8 +727,9 @@ export const DIG_QL: readonly [number, number] = [0.6, 1.4];
 function sayLine(id: string, job: string, level: string): void {
   const d = SPECIES[id];
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
-  // Its stages work faster only at a task, so a kind with none is not told they do.
-  const task = !!d.gathers;
+  // Its stages work faster only at a task, so a kind with none is not told they do; and keeping watch is not a task
+  // anything is quicker at, as a guard's goes are not timed.
+  const task = !!d.gathers && d.gathers !== 'guard';
   const fleece = !!d.fleece;
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
@@ -2837,6 +2879,44 @@ export const SPECIES: Record<string, SpeciesDef> = {
     defensive: true,
     ability: 'chirurgeon_leech',
   },
+  whispet: {
+    id: 'whispet',
+    // Asked for: "Add a Halloween event wildermon only available October 15-november 15. Combat creature, has a fear
+    // ability on cooldown". Its words, and each stage's, are written once every number is here (`sayLine`).
+    name: 'Whispet',
+    description: '',
+    stages: [
+      { name: 'Lanternveil', description: '' },
+      { name: 'Hallowmire', description: '' },
+    ],
+    health: 28,
+    attack: 5,
+    speed: 2.0,
+    tameLevel: 28,
+    tameChance: 0.06,
+    diet: ['apple', 'nuts', 'acorn'],
+    baitHint: 'an apple or nuts',
+    timid: false,
+    gathers: 'guard',
+    workRange: 10,
+    variants: [
+      // Pale lilac with white, mist grey with pale blue, a sickly pale green with white, and pumpkin-lit cream: the sheet
+      // and the face.
+      ['#dcd6ec', '#f8f6fd'],
+      ['#c4ccdc', '#eef2fa'],
+      ['#cfe2d4', '#f2fbf5'],
+      ['#ead8bc', '#fcf4e6'],
+    ],
+    // Nothing in it but what a gland is made of: no meat, hide, bone or fur on a ghost.
+    butcher: { gland: 3 },
+    tameFail: 'passes straight through the {food} and leaves it',
+    leaves: 'fades out from the bottom up',
+    wound: 'crush',
+    defensive: true,
+    nocturnal: true,
+    season: HALLOW_SEASON,
+    ability: 'fear',
+  },
   // ---- Backs and saddles. ----
   bura: {
     id: 'bura',
@@ -3390,6 +3470,9 @@ export const WILD_SPECIES: Array<[string, number]> = [
   ['wardo', 2],
   ['stona', 2],
   ['leecha', 2],
+  // Only out after dark and only in its season, so put down twice as often as the kinds with an ability that are out
+  // all year whenever it may be.
+  ['whispet', 4],
 ];
 
 /** How far off a hunter picks up your scent, and how far you must get to lose it. */
@@ -3551,6 +3634,8 @@ sayLine('noot', `Set to work on a settlement it digs clay off the clay ground wi
   'Its level is its digging.');
 sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
   'Its level is its digging.');
+sayLine('whispet', `Tamed, ${abilitySays('fear')}. Struck, it strikes back every time. Wild, it comes out only after dark and only from ${seasonSays(SPECIES.whispet.season!)} by the calendar in UTC; on every other day none comes out and the wild ones are gone, while one you have tamed, kept or bred stays all year.`,
+  `Its level is its body strength, which it learns each time it goes for something wild while it keeps watch over a settlement.`);
 sayLine('warda', `Out at your heel or keeping a settlement it sees ${SPECIES.warda.sight} tiles round itself for you, where most of yours see ${KEPT_SIGHT}, and ${percent(KEPT_NIGHT_LOSS / 2)} less at the dead of night. Struck, it strikes back every time.`,
   `Its level is its awareness, which it learns ${LEARNS_SAYS.out}.`);
 
@@ -4910,6 +4995,8 @@ export class Creatures {
     if (def.nearClay && !nearClay(game, x, y)) return false;
     if (def.nearTar && !nearTar(game, x, y)) return false;
     if (def.nocturnal && !game.isNight()) return false;
+    // And only in its season, for a kind with one (`WildSeason`), by the wall clock's day.
+    if (!wildInSeason(def, game.wallNow())) return false;
     return true;
   }
 
@@ -5131,9 +5218,17 @@ export class Creatures {
   private stream(game: Game): void {
     const px = game.player.x;
     const py = game.player.y;
-    // Away and unwatched: put it back on the books.
+    // Away and unwatched: put it back on the books. And a wild one whose season is over, wherever it is, fighting or
+    // not: the island's `wild_out_of_season`. One in a trap is the trap's.
+    const now = game.wallNow();
     for (const c of [...this.list.values()]) {
       if (c.mode !== 'wild' || c.trapped !== null) continue;
+      if (!wildInSeason(this.species(c), now)) {
+        const r = this.region(c.x, c.y);
+        this.banked.set(r, (this.banked.get(r) ?? 0) + 1);
+        this.list.delete(c.id);
+        continue;
+      }
       if (c.enemy !== null || c.attackedBy !== null) continue;
       const d = Math.max(Math.abs(c.x - px), Math.abs(c.y - py));
       if (d <= CULL_RANGE || game.vision.isWatched(c.x, c.y)) continue;
@@ -7334,7 +7429,8 @@ export class Creatures {
     const kind = wildGather(def);
     if (c.state === 'flee') {
       if (game.time >= c.until) c.state = 'idle';
-      else if (this.stepToward(game, c, c.tx, c.ty, dt, 1.6) !== 'moving') c.state = 'idle';
+      // Frightened, it stands where its run ended until the fright is out, as the island's leg does (`fleeFrom`).
+      else if (this.stepToward(game, c, c.tx, c.ty, dt, FLEE_PACE) !== 'moving' && markOn(game, c, 'fear', 0) <= 0) c.state = 'idle';
       return;
     }
     if (c.state === 'forage') {
@@ -7412,8 +7508,10 @@ export class Creatures {
     c.windup = 0;
     // One of a pack struck leads whatever of its pack comes to it (`PACK_CALL`).
     c.packLead = this.species(c).pack ? c.id : null;
-    // Whatever it was about, it is about you now.
-    if (c.state !== 'flee') {
+    // Whatever it was about, it is about you now; and a blow of yours ends a fright, as on the island (`engage_beast`),
+    // unless what it was on still holds it.
+    if (c.state !== 'flee' || (c.brawl === null && markOn(game, c, 'fear', 0) > 0)) {
+      if (c.marks?.fear) delete c.marks.fear;
       c.state = 'idle';
       c.until = game.time;
     }
@@ -7659,6 +7757,24 @@ export class Creatures {
     c.ty = c.y + ((c.y - p.y) / d) * run;
     c.until = game.time + FLEE_SECS;
     game.logMsg(`The ${def.name.toLowerCase()} turns tail.`, 'fight');
+  }
+
+  /**
+   * It runs from a spot for so long, as a Chaos Fright runs it (the island's `flee_from`): its hunt and its fight
+   * dropped and none taken up meanwhile, and a leg away as far as it runs in that time at the pace a nerve gone makes
+   * it (`FLEE_PACE`). It strikes nothing until the time is out. Frightened (`fear`), it stands where the run ends.
+   */
+  fleeFrom(game: Game, c: Creature, fx: number, fy: number, secs: number): void {
+    const d = Math.max(0.001, Math.hypot(c.x - fx, c.y - fy));
+    const run = Math.max(0.1, this.species(c).speed * ageDef(c, game.time).speed * this.speedMul(c) * FLEE_PACE) * secs;
+    c.enemy = null;
+    c.brawl = null;
+    c.windup = 0;
+    c.huntRest = Math.max(c.huntRest, game.time + secs);
+    c.state = 'flee';
+    c.tx = c.x + ((c.x - fx) / d) * run;
+    c.ty = c.y + ((c.y - fy) / d) * run;
+    c.until = game.time + secs;
   }
 
   private updateActive(c: Creature, dt: number, game: Game): void {
@@ -8200,6 +8316,12 @@ export class Creatures {
         if (a.mode !== 'active' || game.player.skin.size >= WARD_SKIN) return false;
         game.player.skin = { size: WARD_SKIN, mine: false, by: a.name };
         spent = false;
+        break;
+      case 'fear':
+        // Monsters are not frightened, as a Fright does not frighten them; and one already running from it is left to run.
+        if (tdef.monster || markOn(game, t, 'fear', 0) > 0 || t.mode !== 'wild') return false;
+        this.fleeFrom(game, t, a.x, a.y, f('secs'));
+        putMark(game, t, 'fear', 1, f('secs'));
         break;
       case 'chirurgeon_leech': {
         const was = t.health;

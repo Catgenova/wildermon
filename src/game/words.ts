@@ -169,6 +169,11 @@ export function timeWords(secs: number): string {
   return unit(mins, 'minute');
 }
 
+/** The months of the year, January first. */
+export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+/** A day of the year as [month, day], month counted from one: "15 October". */
+export const daySays = ([month, day]: readonly [number, number]): string => `${day} ${MONTHS[month - 1]}`;
+
 /** "a, b and c", for a list somebody reads rather than parses. */
 export const listed = (xs: readonly string[]): string =>
   xs.length < 2 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;

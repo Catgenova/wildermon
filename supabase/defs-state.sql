@@ -203,6 +203,8 @@ alter table species_def add column if not exists learns text;
 alter table species_def add column if not exists learns_by text;
 alter table species_def add column if not exists stages text[];
 alter table species_def add column if not exists was text[];
+alter table species_def add column if not exists season_from int;
+alter table species_def add column if not exists season_to int;
 alter table furniture_def add column if not exists cart boolean not null default false;
 create table if not exists vehicle_def (
   id text primary key, yokes int not null, needs int not null, seat real not null
@@ -2576,6 +2578,13 @@ insert into species_def values ('leecha', 'Leecha', 'A sleek, dark creature with
 update species_def set ability = 'chirurgeon_leech' where id = 'leecha';
 insert into species_diet values ('leecha', 'meat');
 insert into species_diet values ('leecha', 'cooked_meat');
+insert into species_def values ('whispet', 'Whispet', 'Tamed, it frightens what it fights unless that is a monster, so that for 5 seconds, or until you strike it, the thing runs from it and strikes nothing, once every 20 seconds. Struck, it strikes back every time. Wild, it comes out only after dark and only from 15 October to 15 November by the calendar in UTC; on every other day none comes out and the wild ones are gone, while one you have tamed, kept or bred stays all year. Its level is its body strength, which it learns each time it goes for something wild while it keeps watch over a settlement. At level 25 it evolves into a Lanternveil.', 28, 5, 2, 28, 0.06, 'an apple or nuts', false, 'guard', 10, 'passes straight through the {food} and leaves it', 'fades out from the bottom up', 4, false, false, false, false, false, false, false, false, true, false, true, false, null, null, null, null, 'crush', null, null);
+update species_def set ability = 'fear' where id = 'whispet';
+update species_def set stages = array['Lanternveil', 'Hallowmire']::text[] where id = 'whispet';
+update species_def set season_from = 1015, season_to = 1115 where id = 'whispet';
+insert into species_diet values ('whispet', 'apple');
+insert into species_diet values ('whispet', 'nuts');
+insert into species_diet values ('whispet', 'acorn');
 insert into species_def values ('bura', 'Bura', 'A broad, slow, endlessly patient creature that was clearly made to have things strapped to it. Two hundred things ride on its back, and it neither hurries nor complains.', 55, 6, 1.5, 22, 0.09, 'grass or grain', false, null, 6, 'accepts the {food}, considers it, and goes back to standing still', 'ambles away at exactly the pace it does everything else', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, 'crush', null, null);
 update species_def set pannier = 200 where id = 'bura';
 update species_def set hide = 'thick' where id = 'bura';
@@ -4312,6 +4321,7 @@ insert into species_butcher values ('leecha', 'meat', 3);
 insert into species_butcher values ('leecha', 'leather', 4);
 insert into species_butcher values ('leecha', 'bone', 2);
 insert into species_butcher values ('leecha', 'gland', 2);
+insert into species_butcher values ('whispet', 'gland', 3);
 insert into species_butcher values ('bura', 'meat', 14);
 insert into species_butcher values ('bura', 'fur', 4);
 insert into species_butcher values ('bura', 'leather', 9);
@@ -4597,6 +4607,7 @@ insert into wild_table values ('marka', 2, false, null);
 insert into wild_table values ('wardo', 2, false, null);
 insert into wild_table values ('stona', 2, false, null);
 insert into wild_table values ('leecha', 2, false, null);
+insert into wild_table values ('whispet', 4, false, null);
 insert into wild_table values ('goblin', 60, true, 6);
 insert into wild_table values ('orc', 26, true, 3);
 insert into wild_table values ('ogre', 12, true, 2);
@@ -5131,6 +5142,8 @@ create or replace function spar_yield() returns double precision language sql im
 create or replace function spar_slack() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function frost_breath_rest() returns double precision language sql immutable as $fn$ select 15::double precision $fn$;
 create or replace function ward_skin() returns double precision language sql immutable as $fn$ select 0.1::double precision $fn$;
+create or replace function fear_secs() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
+create or replace function fear_rest() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function out_every() returns double precision language sql immutable as $fn$ select 30::double precision $fn$;
 create or replace function learns_gain_tended() returns double precision language sql immutable as $fn$ select 0.3::double precision $fn$;
 create or replace function learns_gain_spar() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;

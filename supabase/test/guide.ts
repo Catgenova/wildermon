@@ -46,7 +46,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
-  HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
+  HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
 import {
   countsLine, FieldGuide, guideCounts, guidePage, guidePages, seenLine, whereItLives, wildShare,
@@ -105,6 +105,7 @@ for (const d of KINDS) {
     ['by clay', !!d.nearClay, /tiles of[^|]*clay/.test(lines)],
     ['by the black ground', !!d.nearTar, /tiles of[^|]*tar, peat or marsh/.test(lines)],
     ['only at night', !!d.nocturnal, lines.includes('only at night')],
+    ['only in its season', !!d.season, !!d.season && lines.includes(`Found wild only from ${seasonSays(d.season)}`)],
     [`in herds within ${HERD_REACH}`, !d.hunter, lines.includes(`In herds: one put down within ${HERD_REACH} tiles`)],
     ['alone, a hunter', !!d.hunter, lines.includes('Alone: a hunter')],
     [`home within ${WILD_RANGE}`, true, lines.includes(`Keeps within ${WILD_RANGE} tiles of its home ground`)],

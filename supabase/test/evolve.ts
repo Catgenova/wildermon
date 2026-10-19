@@ -67,6 +67,7 @@ begin
   insert into said select 'MUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Noot')).id from species_def where id = 'noot';
   insert into said select 'SANDPIP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Crawler')).id from species_def where id = 'crawler';
   insert into said select 'SKYLOOK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Warda')).id from species_def where id = 'warda';
+  insert into said select 'WHISPET', name || '|' || array_to_string(stages, ',') from species_def where id = 'whispet';
   insert into said select 'CHIPTAIL', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Quarra')).id from species_def where id = 'quarra';
   insert into said values ('NUMBERS', evolve_at_1() || '|' || evolve_at_2() || '|' || stage_mul_hardy() || '|' || stage_mul_tough() || '|' || stage_mul_speed() || '|' || stage_mul_work() || '|' || stage_mul_grow());
   a := creature_spawn(w, 'rabba', 17, 16.5, 'deed', now() - interval '30 days', u);
@@ -139,6 +140,10 @@ const chip = SPECIES.quarra;
 check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and an old Quarra carcass is still one, on both sides',
   chip.name === 'Chiptail' && chip.stages?.map((x) => x.name).join(',') === 'Quarrybash,Monolithump'
     && at('CHIPTAIL') === 'Chiptail|Quarrybash,Monolithump|Quarra|quarra', at('CHIPTAIL'));
+const ghost = SPECIES.whispet;
+check('the Whispet is new, a Lanternveil and a Hallowmire after, and as it keeps watch rather than working its stages are not said to work faster, on both sides',
+  ghost.name === 'Whispet' && ghost.stages?.map((x) => x.name).join(',') === 'Lanternveil,Hallowmire' && !ghost.stages[1].description.includes('task')
+    && ghost.stages[1].description.startsWith('A Whispet at level') && at('WHISPET') === 'Whispet|Lanternveil,Hallowmire', at('WHISPET'));
 check(`it evolves at ${AT1} and ${AT2}, and each stage is ${H}, ${T}, ${S}, ${W} and ${G} over the last, on both sides`,
   at('NUMBERS') === `${AT1}|${AT2}|${H}|${T}|${S}|${W}|${G}`, at('NUMBERS'));
 for (let i = 0; i < 3; i++) {

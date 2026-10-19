@@ -60,7 +60,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { abilityName, abilitySays, EVOLVE_AT, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, stageSays, STYLE_SAYS } from '../../game/creatures';
+import { abilityName, abilitySays, EVOLVE_AT, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2485,6 +2485,20 @@ export const NEWS: News[] = [
       return [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a clay-caked burrower in teal-glazed armour that grows into a great mole carrying clay pots on its back, with its own walk, strike, digging and voice.`,
         `Butchered, ${article(d.name)} ${d.name} gives up to ${d.butcher.clay} ${itemDef('clay').name.toLowerCase()} instead of feathers, as many as the share of the carcass your butchering takes, on an island as in a game of your own.`,
+      ];
+    },
+  },
+  {
+    n: 190,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.whispet;
+      const [one, two] = d.stages!;
+      const food = d.diet.map((id) => itemDef(id).name.toLowerCase());
+      return [
+        `New, from ${seasonSays(d.season!)}: the ${d.name}, a wildermon found wild only ${d.nocturnal ? 'after dark and only ' : ''}on those days, by the calendar in UTC. On every other day none comes out and the wild ones are gone, on an island as in a game of your own; one you have tamed, kept or bred stays all year.`,
+        `Taming ${d.tameLevel} to try, at a base ${percent(d.tameChance)} chance an offering, and it takes ${listedOr(food)} from your hand. Tamed, it uses ${abilityName(d.ability!)} in a fight: ${abilitySays(d.ability!)}. A wild one fights as any other does, and struck, it strikes back every time.`,
+        `It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}. Its level is its body strength, which it learns keeping watch over a settlement. Butchered, it gives up to ${numberWord(d.butcher.gland ?? 0)} ${itemDef('gland').name.toLowerCase()}s and nothing else. Until it has a model of its own it is drawn as a Lume.`,
       ];
     },
   },

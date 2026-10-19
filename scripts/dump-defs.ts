@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BLOW_SHARE, BREED_REST, EVOLVE_AT, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN } from '../src/game/creatures';
+import { BLOW_SHARE, BREED_REST, EVOLVE_AT, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -542,6 +542,9 @@ out.push(`alter table species_def add column if not exists learns_by text;`);
 out.push(`alter table species_def add column if not exists stages text[];`);
 /* What a kind used to be called, which a carcass from before can still say (\`SpeciesDef.was\`). */
 out.push(`alter table species_def add column if not exists was text[];`);
+/* The days of the year it is put down wild on, as `month * 100 + day` in UTC, both in (`SpeciesDef.season`): null for all year. */
+out.push(`alter table species_def add column if not exists season_from int;`);
+out.push(`alter table species_def add column if not exists season_to int;`);
 /* A cart is pulled by hand; a vehicle is driven from a seat with a team in
  * front of it; a boat is neither and wants water under it. */
 out.push(`alter table furniture_def add column if not exists cart boolean not null default false;`);
@@ -1283,6 +1286,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (stages) out.push(`update species_def set stages = array[${stages.map((x) => q(x.name)).join(', ')}]::text[] where id = ${q(d.id)};`);
   const was = (d as unknown as { was?: string[] }).was;
   if (was) out.push(`update species_def set was = array[${was.map((x) => q(x)).join(', ')}]::text[] where id = ${q(d.id)};`);
+  const season = (d as unknown as { season?: WildSeason }).season;
+  if (season) out.push(`update species_def set season_from = ${q(seasonDay(season.from))}, season_to = ${q(seasonDay(season.to))} where id = ${q(d.id)};`);
   for (const item of d.diet as string[]) out.push(`insert into species_diet values (${q(d.id)}, ${q(item)});`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
@@ -1594,8 +1599,9 @@ for (const [fn, v] of [
   ['threat_hold', THREAT_HOLD],
   /* A sparring partner of yours: the share of its health it yields at, and how near that it has yielded. */
   ['spar_yield', SPAR_YIELD], ['spar_slack', SPAR_SLACK],
-  /* A wildermon's own ability: the seconds between frost breaths, and the skin a wardo lays over you. */
-  ['frost_breath_rest', FROST_BREATH_REST], ['ward_skin', WARD_SKIN],
+  /* A wildermon's own ability: the seconds between frost breaths, and the skin a wardo lays over you; and a Fear's
+     run, and its rest. */
+  ['frost_breath_rest', FROST_BREATH_REST], ['ward_skin', WARD_SKIN], ['fear_secs', FEAR_SECS], ['fear_rest', FEAR_REST],
   /* A kind that learns its own skill: the seconds of being out that are one go at it, and what each kind of go teaches. */
   ['out_every', OUT_EVERY], ['learns_gain_tended', LEARNS_GAIN.tended], ['learns_gain_spar', LEARNS_GAIN.spar],
   ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark],

@@ -3143,6 +3143,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/abilities.mjs --log-level=error
           node node_modules/.cache/abilities.mjs
 
+      - name: The Whispet, out only from 15 October to 15 November
+        run: |
+          # A wild one is put down only after dark and only in its season, by
+          # the calendar in UTC, and the spawner takes the wild ones off once
+          # it is over; one you keep stays. Tamed, it frightens what it fights
+          # instead of a blow, and rests: the same on both sides.
+          npx esbuild supabase/test/whispet.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/whispet.mjs --log-level=error
+          node node_modules/.cache/whispet.mjs
+
       - name: A skill for every wildermon, and its level is that skill
         run: |
           # A kind with no trade and no traces learns one of its own by what
