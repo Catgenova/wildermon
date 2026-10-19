@@ -109,7 +109,7 @@ import { defaultKey } from '../../game/keybinds';
 import { guidePages } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ARMOUR, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { itemDef, RARITIES, rarityChance } from '../../game/items';
 import { improvable } from '../../game/improve';
@@ -119,7 +119,7 @@ import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER
 import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
-import { COMPANION_SIGHT, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
+import { COMPANION_SIGHT, HEARTH_FULL, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
 import { betterThanCommon, CHANNELS, husbandryOdds, pct as cardPct } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -2511,6 +2511,19 @@ export const NEWS: News[] = [
       return [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a beaver kit that grows a mantle of wood shingles and leaves and then a crest of split planks, with its own walk, strike, gnawing and voice.`,
         `A log it fells is raised by its yield traits as well as its woodcutting, in a game of your own as it already was on an island.`,
+      ];
+    },
+  },
+  {
+    n: 192,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.embra;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a snail whose shell glows with fire inside it, larger and hotter at each stage, with its own glide, strike, stoking and voice.`,
+        `Its words now say what it does on a settlement: it keeps every campfire, smelter and kiln within its reach fed with fuel from your stores whenever one holds under ${HEARTH_FULL / 60} minutes of it, and lights it if it has gone out.`,
+        `Silver bites only what carries its own light ${times(BANE_BONUS)} as hard: ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} ${s.name}`))}. The help had said an Embra was one of them, and it never was.`,
       ];
     },
   },

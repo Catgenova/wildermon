@@ -4,6 +4,7 @@ import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
 import { GNAW_VOICE } from './voice-gnaw';
 import { IRON_VOICE } from './voice-iron';
+import { SLUG_VOICE } from './voice-slug';
 import { PIG_VOICE } from './voice-pig';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
@@ -46,4 +47,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   noot: CLAY_VOICE,
   // The Sapgnaw, the Logchewer and the Timberlord.
   bevere: GNAW_VOICE,
+  // The Sluglow, the Slugember and the Slugferno.
+  embra: SLUG_VOICE,
 };

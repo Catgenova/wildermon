@@ -65,6 +65,7 @@ begin
   insert into said select 'PIGROOT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Seavic')).id from species_def where id = 'seavic';
   insert into said select 'MUDCUT', string_agg(b.item || ':' || sb.n, ',' order by b.ord) from butcher_part b join species_butcher sb on sb.part = b.part where sb.species = 'noot';
   insert into said select 'SAPGNAW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Bevere')).id from species_def where id = 'bevere';
+  insert into said select 'SLUGLOW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Embra')).id from species_def where id = 'embra';
   insert into said select 'MUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Noot')).id from species_def where id = 'noot';
   insert into said select 'SANDPIP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Crawler')).id from species_def where id = 'crawler';
   insert into said select 'SKYLOOK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Warda')).id from species_def where id = 'warda';
@@ -126,6 +127,10 @@ const gnaw = SPECIES.bevere;
 check('the Bevere is the Sapgnaw now, a Logchewer and a Timberlord after, and an old Bevere carcass is still one, on both sides',
   gnaw.name === 'Sapgnaw' && gnaw.stages?.map((x) => x.name).join(',') === 'Logchewer,Timberlord'
     && at('SAPGNAW') === 'Sapgnaw|Logchewer,Timberlord|Bevere|bevere', at('SAPGNAW'));
+const slug = SPECIES.embra;
+check('the Embra is the Sluglow now, a Slugember and a Slugferno after, and an old Embra carcass is still one, on both sides',
+  slug.name === 'Sluglow' && slug.stages?.map((x) => x.name).join(',') === 'Slugember,Slugferno'
+    && at('SLUGLOW') === 'Sluglow|Slugember,Slugferno|Embra|embra', at('SLUGLOW'));
 const mud = SPECIES.noot;
 check('the Noot is the Mudlet now, a Clayburrow and a Terramole after, and an old Noot carcass is still one, on both sides',
   mud.name === 'Mudlet' && mud.stages?.map((x) => x.name).join(',') === 'Clayburrow,Terramole'

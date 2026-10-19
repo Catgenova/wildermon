@@ -1225,7 +1225,7 @@ export function helpText(): string {
     which is iron with coal beaten through it, keeps an edge ${times(mat('copper').wear / mat('steel').wear)} as long as copper and does not
     mind the weather. <b>Bronze</b> and <b>brass</b> are the first alloys worth a crucible. <b>Silver</b> hardly
     tarnishes and bites anything that carries its own light ${times(BANE_BONUS)} as hard, which is what a
-    <b>Lume</b> or an <b>Embra</b> is. <b>Gold</b> rots at ${percent(mat('gold').decay / mat('copper').decay)} of copper's pace, weighs
+    ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} <b>${s.name}</b>`))} is. <b>Gold</b> rots at ${percent(mat('gold').decay / mat('copper').decay)} of copper's pace, weighs
     ${times(mat('gold').weight / mat('copper').weight)} what copper does and is good for nothing else. The ${numberWord(DEEP_METALS.length)} out of the deep seams are what a
     lifetime of mining is for: <b>adamantine</b> takes the keenest edge, <b>glimmersteel</b> is light and turns
     aside ${percent(mat('glimmersteel').soak / mat('copper').soak - 1)} more than copper does, <b>mithril</b> is lighter than the wood it is hafted to, and
@@ -2998,7 +2998,7 @@ export function helpText(): string {
     will round on whoever is standing next to it. A helm turns the worst of that aside. Each of them picks
     that spot clean for a while, exactly as you would. The <b>${SPECIES.quarra.name}</b> (the Quarra that was) is a stone-backed creature that
     evolves into a ${SPECIES.quarra.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.quarra.stages![1].name} at ${EVOLVE_AT[1]}: it sits on bare rock, eats clay, and cuts rock, slate, marble and sandstone into
-    shards for the deed, which is what keeps a mason in brick. The <b>Embra</b> sleeps in the peat and
+    shards for the deed, which is what keeps a mason in brick. The <b>${SPECIES.embra.name}</b> (the Embra that was) evolves into a ${SPECIES.embra.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.embra.stages![1].name} at ${EVOLVE_AT[1]}, sleeps in the peat and
     tar of the marshes, eats nothing that has not been cooked, and keeps every fire, smelter and kiln on
     the deed fed and lit from the crate &mdash; the one chore you otherwise have to come home for. The
     <b>Magga</b> is a magpie that clears a settlement of everything dropped and forgotten and puts it in

@@ -15,7 +15,8 @@ import { CLOUDBORNE, CLOUDLET, CLOUDRAM } from './wild-cloud';
 import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
 import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
-import { BOGGA, EMBRA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
+import { BOGGA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
+import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
 import { LOGCHEWER, SAPGNAW, TIMBERLORD } from './wild-gnaw';
 import { COBBE, GRUBBA, ROWL } from './wild-wild';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
@@ -63,7 +64,7 @@ export const WILDERMON: Record<string, Kind> = {
   grubba: GRUBBA,
   cobbe: COBBE,
   quarra: CHIPTAIL,
-  embra: EMBRA,
+  embra: SLUGLOW,
   bogga: BOGGA,
   bevere: SAPGNAW,
   wadd: WADD,
@@ -151,6 +152,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   woola: [CLOUDRAM, CLOUDBORNE],
   seavic: [PLOWHOG, HARVESTUSK],
   bevere: [LOGCHEWER, TIMBERLORD],
+  embra: [SLUGEMBER, SLUGFERNO],
   noot: [CLAYBURROW, TERRAMOLE],
   crawler: [SANDPINCHER, SANDPINNACLE],
 };

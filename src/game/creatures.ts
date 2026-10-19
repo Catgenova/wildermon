@@ -915,8 +915,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   embra: {
     id: 'embra',
     wound: 'burn',
-    name: 'Embra',
-    description: 'A soot-dark, slow-blinking creature that sleeps in the peat and tar of the marshes and wakes up wherever there is a fire. It carries wood the way other creatures carry food, and it will not eat anything raw.',
+    name: 'Sluglow',
+    was: ['Embra'],
+    // Asked for: "Embra > sluglow slugember slugferno". Its words, and each stage's, are written once every number is here
+    // (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Slugember', description: '' },
+      { name: 'Slugferno', description: '' },
+    ],
     health: 24,
     attack: 4,
     speed: 1.5,
@@ -927,11 +934,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'stoke',
     workRange: 10,
+    // Its body and its spots: cream with peach-orange spots, ivory with coral, pale peach with umber, pale ash-grey with amber.
     variants: [
-      ['#3c3631', '#e08a3c'],
-      ['#4a3d33', '#f0a850'],
-      ['#33312e', '#d2702c'],
-      ['#453a3a', '#e8c35a'],
+      ['#f6e8d0', '#f29a5c'],
+      ['#fbf4e6', '#ee7666'],
+      ['#f7dcc4', '#93644a'],
+      ['#e4e0da', '#eca83e'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 2 },
     tameFail: 'sniffs at the {food}, finds it cold, and turns its back on you',
@@ -3529,7 +3537,7 @@ export const HUNT_HOME = WILD_RANGE + 12;
  */
 export const HUNT_REST = world(60);
 /** Fuel in a hearth above which a stoker leaves it alone: ten minutes' worth. */
-const HEARTH_FULL = 600;
+export const HEARTH_FULL = 600;
 /** A deed worker goes looking for a meal once its belly is down to this. */
 export const HUNGRY = 0.25;
 
@@ -3639,6 +3647,8 @@ sayLine('mola', `Set to work on a settlement it mines the nearest ore seam withi
   'Its level is its mining.');
 sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECIES.bevere.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, as many bites to a tree as a person's swings, leaving a stump where the tree had timber in it. Each log is at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its woodcutting, raised by any yield trait it has and never over 100; it carries one to the crate and leaves the rest at the stump.`,
   'Its level is its woodcutting.');
+sayLine('embra', `Set to work on a settlement it keeps your campfires, smelters and kilns within ${SPECIES.embra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, fed and lit: whenever one holds under ${HEARTH_FULL / 60} minutes of fuel, it carries a piece of fuel from your stores to the nearest such, one at a time, and lights it if it has gone out. It eats only what has been cooked.`,
+  'Its level is its smelting.');
 sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate.`,
   'Its level is its digging.');
 sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
