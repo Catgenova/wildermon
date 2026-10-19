@@ -33,7 +33,8 @@ set local lock_timeout = '30s';
 select pg_advisory_xact_lock(hashtext('world_tick')::bigint);
 select pg_advisory_xact_lock(hashtext('stock_tick')::bigint);
 select pg_advisory_xact_lock(hashtext('tree_tick')::bigint);
-lock table creature in exclusive mode;
+-- In a block, so a file run statement by statement outside a transaction (the rules' replays) takes it and lets it go.
+do $$ begin lock table creature in exclusive mode; end $$;
 
 set local lock_timeout = '3s';
 
