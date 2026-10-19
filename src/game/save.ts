@@ -666,9 +666,10 @@ function finish(world: World, m: SaveMeta): Game {
   // hold. Species no longer need seeding one at a time: what is let out of the
   // bank is rolled from the whole table, so every one of them turns up.
   game.creatures.stockIsland(game);
-  // The settlement deed form became a carved stake, mosaic stained glass, and
-  // the altar's mote a soul; rename them wherever they sit.
-  const RENAMED: Record<string, string> = { settlement_deed: 'deed_stake', mosaic_tile: 'stained_glass_pane', mote: 'soul' };
+  // The settlement deed form became a carved stake, mosaic stained glass, the
+  // altar's mote a soul and a restored bone comb an ancient comb; rename them
+  // wherever they sit.
+  const RENAMED: Record<string, string> = { settlement_deed: 'deed_stake', mosaic_tile: 'stained_glass_pane', mote: 'soul', bone_comb: 'ancient_comb' };
   const restake = (items: Item[] | undefined): void => {
     for (const it of items ?? []) {
       it.id = RENAMED[it.id] ?? it.id;

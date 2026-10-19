@@ -425,7 +425,7 @@ begin
   ${dice(SURE_ROLL)};
   perform perform_dig(w, u, 'restore_relic', ${itemT('v_it')});
   ${nodice};
-  insert into said values ('RELIC', coalesce((select ql::text from item where id = ${newest('clay_pot')}), 'none'));
+  insert into said values ('RELIC', coalesce((select ql::text from item where id = ${newest('ancient_pot')}), 'none'));
   ${clearAll};
   ${checks(true)};
 
@@ -754,7 +754,7 @@ const missedOn = (pass: boolean, what: 'bauble' | 'relic'): boolean => {
   const was = own.swingMissed;
   delete (own as { sureCheck?: unknown }).sureCheck;
   own.swingMissed = false;
-  for (const it of [...game.inventory.items]) if (['tarnished_bauble', 'fragment', 'bauble_minor', 'clay_pot'].includes(it.id)) game.inventory.remove(it.uid, it.count);
+  for (const it of [...game.inventory.items]) if (['tarnished_bauble', 'fragment', 'bauble_minor', 'ancient_pot'].includes(it.id)) game.inventory.remove(it.uid, it.count);
   return was;
 };
 check('its restoring pays Restoration as the island does: a whole go when it comes off, a missed one when it does not',

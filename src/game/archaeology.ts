@@ -41,10 +41,16 @@ export interface RelicDef {
  * seen whole in a lifetime. A relic is only turned up once archaeology has
  * come far enough to know what it is looking at.
  */
+/*
+ * The first three restore into ancient things of their own, which are what a
+ * wildermon of yours can be given (`creatureActions.ts`): an old pot and an old
+ * file used to come back an ordinary clay pot and file, the same as one made at
+ * a bench, and any made before this still are.
+ */
 export const RELICS: RelicDef[] = [
-  { name: 'old pot', parts: 2, result: 'clay_pot', difficulty: 12 },
-  { name: 'bone comb', parts: 2, result: 'bone_comb', difficulty: 16 },
-  { name: 'old file', parts: 3, result: 'file', difficulty: 22 },
+  { name: 'old pot', parts: 2, result: 'ancient_pot', difficulty: 12 },
+  { name: 'bone comb', parts: 2, result: 'ancient_comb', difficulty: 16 },
+  { name: 'old file', parts: 3, result: 'ancient_file', difficulty: 22 },
   { name: 'old lamp', parts: 3, result: 'old_lamp', difficulty: 26 },
   { name: 'bronze mirror', parts: 3, result: 'bronze_mirror', difficulty: 30 },
   { name: 'old blade', parts: 4, result: 'short_sword', difficulty: 34 },

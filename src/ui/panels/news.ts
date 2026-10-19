@@ -57,12 +57,12 @@ import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
 import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
-import { SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
+import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
 import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
-import { abilityName, abilitySays, EVOLVE_AT, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS } from '../../game/creatures';
+import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2655,6 +2655,24 @@ export const NEWS: News[] = [
         + 'because it reckoned every piece of furniture on the island, once for every planned wall, to find what your settlement held. '
         + 'Nothing moved, wildermon could not be acted on, and in the end the island would not load. It now reads only the stores on your settlement, once a choice.',
     ],
+  },
+  {
+    n: 205,
+    day: '2026-10-19',
+    lines: () => {
+      const named = (action: string): string => itemDef(ARTIFACT_FOR[action]).name.toLowerCase();
+      return [
+        `An old pot, a bone comb and an old file restore into ${article(named('use_ancient_pot'))} ${named('use_ancient_pot')}, ${article(named('use_ancient_comb'))} ${named('use_ancient_comb')} `
+          + `and ${article(named('use_ancient_file'))} ${named('use_ancient_file')}, used on a wildermon of yours from its menu and used up whatever comes of it. `
+          + 'An old pot or old file restored before this is still an ordinary clay pot or file, and a bone comb you held is an ancient comb.',
+        `The ${named('use_ancient_comb')} takes one stage off its age: an old one is grown again, as old as one only just grown, and a grown one is young, as one only just born.`,
+        `The ${named('use_ancient_file')} makes it one step rarer one time in ${FILE_RARITY_ODDS}, up to ${RARITIES[RARITIES.length - 1].name}: `
+          + `each step makes every figure its blood decides ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} over an ordinary one's at ${listed(RARITIES.slice(1).map((r) => r.name))}.`,
+        `The ${named('use_ancient_pot')} puts a point into one of its ${numberWord(BASE_STATS.length)} base stats, at random among those not yet at ${POT_MOST}: `
+          + `${listed(BASE_STATS.map((st) => st.name.toLowerCase()))}. Each point is ${percent(POT_STEP)} more of that stat than its kind and blood give it, up to ${POT_MOST} points a stat.`,
+        'Its card in the Wildermon window now says its base stats as the rules read them, with the points ancient pots have put into each: health, attack, its speed in tiles a second and its work as a multiplier.',
+      ];
+    },
   },
 ];
 

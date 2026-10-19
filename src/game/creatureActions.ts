@@ -2,16 +2,16 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
+import { BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
-import { numberWord } from './words';
-import { bestTier, traitList } from './traits';
+import { article, numberWord, percent } from './words';
+import { bestTier, pct, traitList } from './traits';
 import type { Game } from './game';
 import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
 import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET, WHEY_FEED, wheyFedSays } from './dairy';
 import { vesselBecame } from './placeables';
 import { crateTheRest, crateToHand, deedJobLine, emptyCrate, letOut, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
-import { itemDef, itemName, rarityOf, type Mark } from './items';
+import { itemDef, itemName, RARITIES, rarityOf, type Mark } from './items';
 import { BANE_BONUS, banes, hitChance, isBow, WEAPON_BY_ID, weaponDamage } from './gear';
 import { ARROWS, armsRefusal, beastReach, BLINDSIDE, blowOf, bowReach, critMul, drawClosest, FALL_BACK, FIST, headBlow, headHide, headSide, hideTakes, nockedArrow, KNIFE_BLEED, KNIFE_BLEED_SECS, meleeReach, myCritChance, STAGGER_MAUL, STAGGER_POLE, stanceDealt, swungWith } from './fight';
 import { matOfItem } from './materials';
@@ -225,6 +225,97 @@ export function riposte(g: Game, c: Creature, share: number): void {
   g.logMsg(c.health > 0
     ? `You answer the ${def.name.toLowerCase()}${crit ? ' with a critical blow' : ''}. It is down to ${Math.ceil(c.health)} of ${maxHealth(c, def)}.`
     : `You answer the ${def.name.toLowerCase()}, and it dies.`, 'fight');
+}
+
+/**
+ * Three things put back together out of the ground, used on a wildermon of
+ * yours from its menu: an ancient comb takes one stage off its age
+ * (`combedBorn`), an ancient file makes it a step rarer one time in
+ * `FILE_RARITY_ODDS`, and an ancient pot puts a point into one of its base
+ * stats (`BASE_STATS`, `POT_STEP`, `POT_MOST`). Asked for: "restored artifacts
+ * can be used on Wildermon". Each is used up whatever comes of it; one that
+ * would do nothing is refused and kept. The island's `artifact_action`,
+ * `artifact_refusal` and `perform_artifact`.
+ */
+export const ARTIFACT_FOR: Readonly<Record<string, string>> = {
+  use_ancient_comb: 'ancient_comb',
+  use_ancient_file: 'ancient_file',
+  use_ancient_pot: 'ancient_pot',
+};
+const artifactName = (action: string): string => itemDef(ARTIFACT_FOR[action]).name.toLowerCase();
+/** The one in your pack it would use: a locked one is not offered up, as nothing else spends one. */
+const artifactIn = (g: Game, action: string) => g.inventory.find(ARTIFACT_FOR[action]);
+/** Yours, out of its crate: what an artifact can be used on, and what its menu offers one for. */
+const artifactOn = (c: Creature | undefined): boolean => !!c && c.mode !== 'wild' && c.mine !== false;
+
+/** Why an artifact would do nothing for this one, or null. The island's `artifact_refusal` says the same. */
+export function artifactRefusal(g: Game, c: Creature | undefined, action: string): string | null {
+  if (!c) return 'It is gone.';
+  if (!artifactOn(c)) return c.mode === 'wild' ? 'It is not yours.' : `${c.name} is not yours.`;
+  if (c.mode === 'stored') return `${c.name} is in a creature crate. Open the crate first.`;
+  if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
+  const name = artifactName(action);
+  if (!artifactIn(g, action)) return `You need ${article(name)} ${name}.`;
+  if (action === 'use_ancient_comb' && ageOf(c, g.time) === 'young') return `${c.name} is young already, and nothing is younger than young.`;
+  if (action === 'use_ancient_file' && c.rare >= RARITIES.length - 1) {
+    return `${c.name} is ${RARITIES[RARITIES.length - 1].name} already, as rare as there is.`;
+  }
+  if (action === 'use_ancient_pot' && !potRoom(c).length) {
+    return `Every base stat of ${c.name} has ${POT_MOST} points from ancient pots, the most one takes.`;
+  }
+  return null;
+}
+
+/** What the points from ancient pots in one stat come to, in the game's terms: "3 of 10: the health it can carry is 9% more than ...". */
+export const potSays = (stat: BaseStat, points: number): string =>
+  `${points} of ${POT_MOST}: ${BASE_STATS.find((s) => s.id === stat)?.says ?? stat} is ${percent(POT_STEP * points)} more than its kind and blood give it`;
+
+function artifactAction(id: string, label: string, verb: string): ActionDef {
+  return {
+    id,
+    label,
+    verb,
+    stamina: 0.01,
+    baseTime: 3,
+    applies: (t, g) => {
+      const c = creatureOf(g, t);
+      return artifactOn(c) && g.inventory.has(ARTIFACT_FOR[id]);
+    },
+    check: (t, g) => artifactRefusal(g, creatureOf(g, t), id),
+    perform: (t, g) => {
+      const c = creatureOf(g, t);
+      if (artifactRefusal(g, c, id) || !c) return;
+      const used = artifactIn(g, id);
+      if (!used || !g.inventory.remove(used.uid, 1)) return;
+      const name = artifactName(id);
+      if (id === 'use_ancient_comb') {
+        const born = combedBorn(c, g.time);
+        if (born === null) return;
+        const was = ageOf(c, g.time);
+        c.born = born;
+        g.logMsg(was === 'old'
+          ? `You comb ${c.name} with the ${name}, and it is grown again: as old as one only just grown, at its full pace and pull. The comb is used up.`
+          : `You comb ${c.name} with the ${name}, and it is young again: as young as one only just born, and it cannot be worked, ridden or put in the traces until it is grown. The comb is used up.`,
+        'event');
+      } else if (id === 'use_ancient_file') {
+        // One time in `FILE_RARITY_ODDS`, a step and no more.
+        if (g.rand() < 1 / FILE_RARITY_ODDS) {
+          c.rare = Math.min(RARITIES.length - 1, c.rare + 1);
+          g.logMsg(`You go over ${c.name} with the ${name}, and it comes up ${rarityOf(c).name}: every figure its blood decides is ${pct(rarityOf(c).blood)} over an ordinary one's. The file is used up.`, 'event');
+        } else {
+          g.logMsg(`You go over ${c.name} with the ${name}, and it is no rarer. The file is used up; one time in ${FILE_RARITY_ODDS} it makes one a step rarer.`, 'event');
+        }
+      } else {
+        // A stat not yet at the most it takes, any of them as likely as another.
+        const room = potRoom(c);
+        const stat = room[Math.floor(g.rand() * room.length)];
+        const points = potPoints(c, stat) + 1;
+        c.boosts = { ...c.boosts, [stat]: points };
+        g.logMsg(`You use the ${name} on ${c.name}: its ${BASE_STATS.find((s) => s.id === stat)?.name.toLowerCase()} takes a point, ${potSays(stat, points)}. The pot is used up.`, 'event');
+      }
+      g.events.emit('creature');
+    },
+  };
 }
 
 export const CREATURE_ACTIONS: ActionDef[] = [
@@ -1153,6 +1244,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.logMsg(`The ${c.name.toLowerCase()} ${SPECIES[c.species].leaves}.`, 'system');
     },
   },
+  artifactAction('use_ancient_comb', 'Comb it with the ancient comb', 'combing it'),
+  artifactAction('use_ancient_file', 'Go over it with the ancient file', 'going over it'),
+  artifactAction('use_ancient_pot', 'Use the ancient pot on it', 'using the pot'),
 ];
 
 export const CREATURE_ACTION_BY_ID = new Map(CREATURE_ACTIONS.map((a) => [a.id, a]));

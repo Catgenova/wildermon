@@ -252,7 +252,7 @@ check('a cindra rakes the two whole ashes out of a campfire and leaches them wit
 const [brewLiquid, brewLitres, brewWorking, wheatLeft] = at('BREW').split('|');
 check('a hoppa sets ale going in a barrel of water with the wheat from the stores', brewLiquid === 'ale' && Number(brewLitres) === 15 && brewWorking === 'true' && wheatLeft === '0', at('BREW'));
 check('a simma cooks the meat at a lit campfire and puts it back in the stores', at('COOK') === 'cooked_meat 1', at('COOK'));
-check('a relka puts a bone comb back together out of both its pieces', at('RESTORE') === 'bone_comb 1', at('RESTORE'));
+check('a relka puts a bone comb back together out of both its pieces', at('RESTORE') === 'ancient_comb 1', at('RESTORE'));
 const [sown, ripeLeft, planterStores] = at('PLANTER').split('|');
 check('a bedda sows an empty planter with the seed from the stores, harvests the ripe one into them, and sows that again with the seed it gave',
   sown === 'wheat' && ripeLeft === '0' && /wheat \d/.test(planterStores) && planterStores.includes(SEED), at('PLANTER'));
@@ -348,7 +348,7 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   const crate = stock(g, [['fragment', 1, 'bone comb 1/2'], ['fragment', 1, 'bone comb 2/2']]);
   worker(g, 'relka');
   run(g, 60);
-  check('a relka puts a bone comb back together out of both its pieces', held(crate) === 'bone_comb 1', held(crate));
+  check('a relka puts a bone comb back together out of both its pieces', held(crate) === 'ancient_comb 1', held(crate));
 }
 {
   const g = body();

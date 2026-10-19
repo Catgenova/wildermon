@@ -36,7 +36,7 @@ import {
 } from '../game/building';
 import { deckBill, metres, pierDrop } from '../game/piers';
 import { cellarGate, targetFloor } from '../game/cellar';
-import { baitHint, CREATURE_ACTION_BY_ID, feedable, vehicleFor } from '../game/creatureActions';
+import { ARTIFACT_FOR, baitHint, CREATURE_ACTION_BY_ID, feedable, vehicleFor } from '../game/creatureActions';
 import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '../game/glasshouse';
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
@@ -2903,6 +2903,8 @@ export class UI {
       });
     } else push(pairing);
     push(item('read_blood'));
+    // An ancient comb, file or pot out of the ground, offered only while you carry one (`ARTIFACT_FOR`).
+    for (const id of Object.keys(ARTIFACT_FOR)) push(item(id));
     push(item('shear'));
     push(item('milk_creature'));
     push(item('tack_creature'));

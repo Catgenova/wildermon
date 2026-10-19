@@ -35,7 +35,7 @@ import { chartRegion } from '../world/chart';
 import { lairOf, REGIONS } from '../world/regions';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
-import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
+import { describeWith, itemDef, markOf, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
@@ -3800,6 +3800,8 @@ export const companionMul = (c: { mode: CreatureMode; kept?: Record<string, numb
  * lived counts at `kept:age` of itself.
  */
 export const ageOf = (c: Creature, now: number): Age => {
+  // On an island, the island's word for it: the hour it was born is never sent, so the sum below would read every one grown.
+  if (c.islandAge) return c.islandAge;
   // Nothing born before the clock started has an age worth working out: what
   // was already walking about when the island was raised is simply grown.
   if (c.born <= 0) return 'grown';
@@ -3860,8 +3862,80 @@ export function raritySays(c: Pick<Creature, 'rare'>): string {
   return ` It came into the world ${r.name}: ${times(r.size)} the size of its kind, ${rarityEffects(c)}.`;
 }
 
-/** Its own blood on one channel, as rare as it is, with nothing communal in it. */
-export const bloodMul = (c: Creature, channel: TraitChannel): number => traitMul(c.traits, channel) * rarityMul(c, channel) * evoMul(c, channel);
+/**
+ * Ancient pots. A restored old pot used on a wildermon of yours puts one point
+ * into one of its base stats, chosen at random among those not yet at
+ * `POT_MOST`, and each point is `POT_STEP` more of that stat than its kind and
+ * its blood would give it on their own: its health (the `hardy` channel), the
+ * blow it lands (`tough`), its pace on its feet, under a rider and in the
+ * traces (`speed`), and how quickly it gets a go of its task done (`work`).
+ * They are the four figures every stage of evolving lifts (`STAGE_MUL`), and
+ * the four every rule of fighting, travelling and working reads through its
+ * blood, so a point goes wherever its blood goes. Asked for: "Old pot
+ * increases one base stat randomly by 1 (max 10 per stat per wildermon)". The
+ * island's `pot_step`, `pot_most` and `pot_mul`.
+ */
+export type BaseStat = 'hardy' | 'tough' | 'speed' | 'work';
+export const BASE_STATS: ReadonlyArray<{ id: BaseStat; name: string; says: string }> = [
+  { id: 'hardy', name: 'Health', says: 'the health it can carry' },
+  { id: 'tough', name: 'Attack', says: 'what each of its blows lands for' },
+  { id: 'speed', name: 'Speed', says: 'its pace on its feet, under a rider and in the traces' },
+  { id: 'work', name: 'Work', says: 'the pace it gets each go of its task done at' },
+];
+/** What each point an ancient pot puts into a stat is worth, over what its kind and blood give it. */
+export const POT_STEP = 0.03;
+/** The most points any one stat of one wildermon takes. */
+export const POT_MOST = 10;
+const BASE_STAT_IDS: ReadonlySet<string> = new Set(BASE_STATS.map((s) => s.id));
+/** The points ancient pots have put into one of its stats, as many as there may be. */
+export const potPoints = (c: Pick<Creature, 'boosts'>, stat: BaseStat): number =>
+  Math.max(0, Math.min(POT_MOST, Math.floor(c.boosts?.[stat] ?? 0)));
+/** What they make of one channel: `POT_STEP` more for each point, on the four base stats and nothing else. */
+export const potMul = (c: Pick<Creature, 'boosts'>, channel: TraitChannel): number =>
+  (BASE_STAT_IDS.has(channel) ? 1 + POT_STEP * potPoints(c, channel as BaseStat) : 1);
+/** The stats an ancient pot could still put a point into. */
+export const potRoom = (c: Pick<Creature, 'boosts'>): BaseStat[] => BASE_STATS.filter((s) => potPoints(c, s.id) < POT_MOST).map((s) => s.id);
+
+/**
+ * An ancient comb takes one stage off a wildermon's age: an old one is grown
+ * again and a grown one young. Its birth is moved on to the start of the stage
+ * below, `COMB_INTO` seconds into it so that the sum lands inside it, as its
+ * keeper's Kin and Long-lived age it (`kept:age`): an old one is as old as one
+ * that has only just grown up, and a grown one as one only just born. Null for
+ * a young one, which has no stage below. The island's `comb_into` and the
+ * comb's half of `perform_artifact`.
+ */
+export const COMB_INTO = 1;
+export function combedBorn(c: Creature, now: number): number | null {
+  const age = ageOf(c, now);
+  if (age === 'young') return null;
+  const pace = keptOf(c, 'kept:age', 1);
+  return now - ((age === 'old' ? YOUNG_FOR : 0) + COMB_INTO) / pace;
+}
+
+/**
+ * An ancient file raises a wildermon's rarity one step, one time in
+ * `FILE_RARITY_ODDS`, and never past the rarest there is. The island's
+ * `file_rarity_odds`.
+ */
+export const FILE_RARITY_ODDS = 20;
+
+// The numbers an ancient comb, file and pot quote, from the rules themselves.
+describeWith({
+  artifact: {
+    oldSpeed: AGES.old.speed,
+    oldPull: AGES.old.pull,
+    fileOdds: FILE_RARITY_ODDS,
+    rareBlood: listed(RARITIES.slice(1).map((r) => pct(r.blood))),
+    potMost: POT_MOST,
+    potStep: POT_STEP,
+    stats: listed(BASE_STATS.map((s) => `${s.name.toLowerCase()} (${s.says})`)),
+  },
+});
+
+/** Its own blood on one channel, as rare as it is and with what ancient pots put into it, with nothing communal in it. */
+export const bloodMul = (c: Creature, channel: TraitChannel): number =>
+  traitMul(c.traits, channel) * rarityMul(c, channel) * evoMul(c, channel) * potMul(c, channel);
 
 /** What it can take, once its blood is counted, and its keeper's Thick Hide while it follows them. */
 export const maxHealth = (c: Creature, species: SpeciesDef): number =>
@@ -3946,6 +4020,10 @@ export interface IslandCreature {
   mine?: boolean;
   /** How rare it is, as the island words it ('rare', 'supreme', 'fantastic'); absent for an ordinary one. */
   rare?: string | null;
+  /** How old it is, as the island reckons it ('young', 'grown', 'old'). */
+  age?: string;
+  /** What ancient pots have put into its base stats, by the stat: sent for your own only, and null for one that has had none. */
+  boosts?: Partial<Record<BaseStat, number>> | null;
   /** Shod, by the island's clock. */
   shod?: boolean;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
@@ -4027,6 +4105,13 @@ export interface Creature {
    * true for it.
    */
   rare: number;
+  /**
+   * The points ancient pots have put into its base stats, by the stat
+   * (`BASE_STATS`), each at most `POT_MOST`; absent on one that has had none.
+   * It is its own, as its rarity is, and nothing breeds true for it. The
+   * island keeps the same map in the creature's `boosts` column.
+   */
+  boosts?: Partial<Record<BaseStat, number>>;
   /** How well it has been looked after lately, 0..1. Brushing puts it up; time takes it down. */
   care: number;
   /** Game time it was last put to a mate, so nothing is bred twice in an afternoon. */
@@ -4092,6 +4177,8 @@ export interface Creature {
   islandCast?: number | null;
   /** Heard of from the island before, so that what it says next is a change rather than the first word of it. */
   islandSeen?: boolean;
+  /** How old the island says it is (`rpc_creatures`), which `ageOf` reads before its own sum; missing off an island. */
+  islandAge?: Age;
   /**
    * What is on it for a while and what it is worth (`markOn`): a root, dulled claws, a brittleness, a mark for
    * death, a stone skin, a keep-away, and when its own ability is ready again. The island's `class_mark`.
@@ -4211,6 +4298,8 @@ export interface CreatureJSON {
   traits?: string[];
   /** How rare it came into the world; absent in a save from before there were rare ones, which were all ordinary. */
   rare?: number;
+  /** What ancient pots have put into its base stats; absent on one that has had none, and in a save from before there were any. */
+  boosts?: Partial<Record<BaseStat, number>>;
   care?: number;
   bredAt?: number;
   due?: number;
@@ -4672,6 +4761,10 @@ export class Creatures {
       c.traits = r.traits ?? c.traits;
       // How rare it is, which the island rolled when it came into the world; nothing said is an ordinary one.
       c.rare = rarityStep(r.rare) ?? 0;
+      // How old it is, by the island's clock and its keeper's perks, which is what `ageOf` reads here.
+      c.islandAge = r.age === 'young' || r.age === 'grown' || r.age === 'old' ? r.age : undefined;
+      // What ancient pots have put into it, which comes for yours and for nobody else's.
+      if (r.boosts !== undefined) c.boosts = r.boosts ?? undefined;
       // The island sends a pedigree with anything bred and with nothing else.
       c.pedigree = r.pedigree ?? null;
       // The island says `hunting` only of one that is after you (`rpc_creatures`), and that is what `PLAYER_ATTACKER` means here.
@@ -8613,6 +8706,7 @@ export class Creatures {
         sex: c.sex,
         traits: c.traits,
         rare: c.rare,
+        boosts: c.boosts,
         care: c.care,
         bredAt: c.bredAt,
         due: c.due,
@@ -8633,7 +8727,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: { ...startSkills(SPECIES[j.species] ?? SPECIES.rabba), ...(j.skills ?? {}) } });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: { ...startSkills(SPECIES[j.species] ?? SPECIES.rabba), ...(j.skills ?? {}) } });
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }

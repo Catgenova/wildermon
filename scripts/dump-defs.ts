@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BLOW_SHARE, BREED_REST, EVOLVE_AT, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
+import { BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -1613,6 +1613,9 @@ for (const [fn, v] of [
   ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]],
   ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],
   ['stage_mul_speed', STAGE_MUL.speed ?? 1], ['stage_mul_work', STAGE_MUL.work ?? 1], ['stage_mul_grow', STAGE_MUL.grow ?? 1],
+  /* Restored relics on a wildermon: the seconds into the younger stage an ancient comb leaves one, the odds of an ancient
+     file's step of rarity, and what each ancient pot's point in a base stat is worth and how many a stat takes. */
+  ['comb_into', COMB_INTO], ['file_rarity_odds', FILE_RARITY_ODDS], ['pot_step', POT_STEP], ['pot_most', POT_MOST],
   /* A companion's orders: how near a guarding one keeps a fight, and how long one fallen back starts none. */
   ['guard_range', GUARD_RANGE], ['fall_back', FALL_BACK],
   /* Wounds that slow a swing, and how far; a blow at your back, a crowd on

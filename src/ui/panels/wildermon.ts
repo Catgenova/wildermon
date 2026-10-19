@@ -1,6 +1,6 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
+import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
 import { TIER_LEVEL } from '../../game/husbandry';
 
@@ -10,6 +10,7 @@ import { furnitureDef } from '../../game/furniture';
 import { SKILL_BY_ID } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
+import { percent } from '../../game/words';
 
 /**
  * Where a wildermon is, as the list groups it: under a rider or in a
@@ -55,6 +56,35 @@ export const HURT_AT = 0.6;
 export const HUNGRY_AT = 0.3;
 /** A dam due within this many seconds wants attention too: a quarter of her carrying. */
 export const DUE_SOON = GESTATION / 4;
+
+/**
+ * Its four base stats as the rules read them now (`BASE_STATS`), each with
+ * what ancient pots have put into it: "Attack 4.4 (+2 of 10 from ancient
+ * pots)". Health is the health it can carry (`maxHealth`), attack what a blow
+ * of its lands for (`attackOf`), speed its pace on its feet in tiles a second
+ * at its age (what `Creatures.update` walks it at), and work how much quicker
+ * than its kind it gets a go of its task done (`workMul`). Read off the same
+ * functions the rules call, so the card cannot say one thing while the rules
+ * do another.
+ */
+export function baseStatTags(g: Game, c: Creature): Array<{ stat: BaseStat; text: string; title: string }> {
+  const def = SPECIES[c.species] ?? SPECIES.rabba;
+  const figure: Record<BaseStat, string> = {
+    hardy: `${maxHealth(c, def)}`,
+    tough: attackOf(c, def).toFixed(attackOf(c, def) % 1 ? 1 : 0),
+    speed: `${(def.speed * ageDef(c, g.time).speed * g.creatures.speedMul(c)).toFixed(2)} tiles/s`,
+    work: `\u00d7${g.creatures.workMul(c).toFixed(2)}`,
+  };
+  return BASE_STATS.map((s) => {
+    const n = potPoints(c, s.id);
+    return {
+      stat: s.id,
+      text: `${s.name} ${figure[s.id]}${n ? ` (+${n} of ${POT_MOST} from ancient pots)` : ''}`,
+      title: `${s.name}: ${s.says}.${n ? ` ${n} of ${POT_MOST} points from ancient pots, ${percent(POT_STEP * n)} more than its kind and blood give it.` : ''}`
+        + ` Each ancient pot used on it puts a point into one of its base stats, ${percent(POT_STEP)} more of that stat, up to ${POT_MOST} a stat.`,
+    };
+  });
+}
 
 /** Your tamed wildermon with their condition, progress and actions. Wild ones are not listed. */
 export class WildermonPanel {
@@ -428,9 +458,12 @@ export class WildermonPanel {
     bloodBox.className = 'pal-traits';
     const worthBox = document.createElement('div');
     worthBox.className = 'pal-worth';
+    // Its base stats, and what ancient pots have put into each (`baseStatTags`).
+    const statBox = document.createElement('div');
+    statBox.className = 'pal-worth pal-stats';
     const info = document.createElement('div');
     info.className = 'pal-info';
-    card.append(health.row, hunger.row, care.row, pedigree, bloodBox, worthBox, info);
+    card.append(health.row, hunger.row, care.row, statBox, pedigree, bloodBox, worthBox, info);
 
     const set = (el: { textContent: string | null; title: string }, text: string, title: string): void => {
       if (el.textContent !== text) el.textContent = text;
@@ -499,6 +532,22 @@ export class WildermonPanel {
       const w = this.worth(c);
       worthBox.replaceChildren(...(w ? [...w.childNodes] : []));
       worthBox.hidden = !w;
+      const tags = baseStatTags(this.game, c);
+      const statKey = tags.map((t) => t.text).join('|');
+      if (statBox.dataset.says !== statKey) {
+        statBox.dataset.says = statKey;
+        const label = document.createElement('span');
+        label.className = 'worth-label';
+        label.textContent = 'Stats';
+        label.title = 'Its base stats as the rules read them now, with what ancient pots have put into each';
+        statBox.replaceChildren(label, ...tags.map((t) => {
+          const tag = document.createElement('span');
+          tag.className = 'worth-tag';
+          tag.textContent = t.text;
+          tag.title = t.title;
+          return tag;
+        }));
+      }
 
       const parts: string[] = [];
       // Which vehicle, since a herd can be spread over more than one.
@@ -520,7 +569,6 @@ export class WildermonPanel {
         const toNext = SKILL_STEP - (taskSkill(c, def) % SKILL_STEP);
         parts.push(`Range ${workRangeOf(c, def)} tiles (+${def.rangePerStep ?? RANGE_PER_STEP} in ${toNext.toFixed(1)} skill)`);
       }
-      parts.push(`Attack ${attackOf(c, def).toFixed(attackOf(c, def) % 1 ? 1 : 0)}`);
       // By the skill's own name, as the creature's note and your skills window say it, not its id.
       const skills = Object.entries(c.skills).map(([id, v]) => `${SKILL_BY_ID.get(id)?.name ?? id} ${v.toFixed(2)}`);
       parts.push(...skills);
@@ -634,6 +682,7 @@ export class WildermonPanel {
       // Where it came from, so a figure that moved has somewhere to have moved from.
       const parts = [`${ch.note}.`, `Blood ${traitMul(c.traits, ch.id).toFixed(2)}×`];
       if (c.rare) parts.push(`${rarityOf(c).name} ${rarityMul(c, ch.id).toFixed(2)}×`);
+      if (Math.abs(potMul(c, ch.id) - 1) >= 0.005) parts.push(`ancient pots ${potMul(c, ch.id).toFixed(2)}×`);
       const herd = beasts.aura(c, ch.id);
       if (Math.abs(herd - 1) >= 0.005) parts.push(`herd ${herd.toFixed(2)}×`);
       if ((ch.id === 'work' || ch.id === 'learn') && c.care > 0) parts.push(`brushing ${careMul(c).toFixed(2)}×`);

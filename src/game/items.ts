@@ -406,7 +406,16 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   bauble_ancient: { name: 'Ancient bauble', category: 'misc', weight: 0.1, description: 'Set it into one of the {bauble.ancient.slots} ancient sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then gets what is written on it added to every yield of that one action.' },
   old_lamp: { name: 'Old lamp', category: 'misc', weight: 0.9, decay: 3, description: 'A closed clay lamp with a wick hole. It still smells faintly of oil.' },
   bronze_mirror: { name: 'Bronze mirror', category: 'misc', weight: 0.8, decay: 3, description: 'A disc of bronze polished on one face. It gives back a dim, honest likeness.' },
-  bone_comb: { name: 'Bone comb', category: 'misc', weight: 0.15, decay: 3, description: 'Fine teeth cut in old bone. Somebody took a great deal of trouble over it.' },
+  /*
+   * What three relics are restored into, and good for on a wildermon of yours
+   * (`creatureActions.ts`, `{artifact.*}`): a bone comb, an old file and an old
+   * pot. Their own things rather than an ordinary file and clay pot, so that
+   * nothing made at a bench does what only a restored one does. The comb was
+   * `bone_comb` before; a save carries it across (`RENAMED`), as the island did.
+   */
+  ancient_comb: { name: 'Ancient comb', category: 'misc', weight: 0.15, decay: 3, description: 'Restored from the pieces of a bone comb. Used on a wildermon of yours, from its menu, it takes one stage off its age: an old one is grown again, as old as one only just grown, and a grown one young, as one only just born. Old, it goes at {artifact.oldSpeed:pct} of its pace and pulls {artifact.oldPull:pct} of its share; grown, at its full figures; young, it cannot be worked, ridden or put in the traces. Nothing is younger than young. It is used up.' },
+  ancient_file: { name: 'Ancient file', category: 'misc', weight: 0.8, decay: 3, description: 'Restored from the pieces of an old file. Used on a wildermon of yours, from its menu, it makes it one step rarer one time in {artifact.fileOdds}: ordinary to rare, rare to supreme, supreme to fantastic, which is as rare as there is. Each step makes every figure its blood decides better, {artifact.rareBlood} over an ordinary one at rare, supreme and fantastic, and draws it bigger. It is used up whether or not the step comes.' },
+  ancient_pot: { name: 'Ancient pot', category: 'misc', weight: 1.2, decay: 3, description: 'Restored from the pieces of an old pot. Used on a wildermon of yours, from its menu, it puts one point into one of its base stats, chosen at random among those not yet at {artifact.potMost}: {artifact.stats}. Each point is {artifact.potStep:pct} more of that stat than its kind and its blood give it, and no stat takes more than {artifact.potMost:w}. It is used up.' },
   mixed_grass: { name: 'Mixed grass', category: 'material', weight: 0.1, stackable: true, raw: true, decay: 120, description: 'Cutting a grass tile gives {grass.cut:w}; plant {grass.plant} of it on a tile of dirt and the tile is grass.' },
   sage: { name: 'Sage', category: 'plant', weight: 0.05, stackable: true, food: 0.01, feeds: { greens: 0.01 } },
   basil: { name: 'Basil', category: 'plant', weight: 0.05, stackable: true, food: 0.01, feeds: { greens: 0.01 } },

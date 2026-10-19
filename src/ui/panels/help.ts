@@ -53,7 +53,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  EVOLVE_AT, MONSTER_SHARE, MONSTERS, OLD_AT, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
+  BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, MONSTER_SHARE, MONSTERS, OLD_AT, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -77,7 +77,7 @@ import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, B
 import { SOUL_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
-import { SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
+import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
 import { butcherYield } from '../../game/butcher';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
@@ -761,6 +761,32 @@ const HAND_NUMBERS: Record<string, string> = {
   ambra: `${numberWord(RESIN_TAPPED)} tar a pine a day`,
   petta: `it leaves every tile within ${numberWord(SKEP_REACH)} of a skep to the skep`,
 };
+
+/**
+ * What the three relics that restore into things of their own do on a wildermon of yours, every number read off the
+ * rule (`ARTIFACT_FOR`, `combedBorn`, `FILE_RARITY_ODDS`, `POT_STEP`, `POT_MOST`).
+ */
+function artifactHelp(): string {
+  const from = (action: string): string => {
+    const id = ARTIFACT_FOR[action];
+    const relic = RELICS.find((r) => r.result === id)?.name ?? '';
+    return `<b>${itemDef(id).name}</b>, restored from ${article(relic)} ${relic}`;
+  };
+  return `<p>Three restore into things of their own, which are used on a wildermon of yours that is out of its crate
+    and beside you, from its menu. Each is used up whatever comes of it; one that would do nothing is refused and kept.</p>
+    <ul>
+      <li>${from('use_ancient_comb')}: one stage off its age. An old one is grown again, as old as one only just grown,
+      and goes and pulls at its full figures where it went at ${percent(AGES.old.speed)} and pulled ${percent(AGES.old.pull)}; a grown one is young,
+      as one only just born, and cannot be worked, ridden or put in the traces until it is grown again. Not on a young one.</li>
+      <li>${from('use_ancient_file')}: one time in ${FILE_RARITY_ODDS} it is one step rarer &mdash; ${listed(RARITIES.map((r) => r.name || 'ordinary'))}, a step at a time &mdash;
+      and each step makes every figure its blood decides ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} over an ordinary one's at
+      ${listed(RARITIES.slice(1).map((r) => r.name))}. Not on ${article(RARITIES[RARITIES.length - 1].name)} ${RARITIES[RARITIES.length - 1].name} one.</li>
+      <li>${from('use_ancient_pot')}: a point in one of its ${numberWord(BASE_STATS.length)} base stats, chosen at random among those not yet at ${POT_MOST}:
+      ${listed(BASE_STATS.map((st) => `${st.name.toLowerCase()} (${st.says})`))}. Each point is ${percent(POT_STEP)} more of that stat than its kind and its
+      blood give it, so ${percent(POT_STEP * POT_MOST)} more at ${POT_MOST} points, which is the most a stat takes. Not on one with every stat at ${POT_MOST}.</li>
+    </ul>
+    <p>An old pot or old file restored before these were their own things came back an ordinary clay pot or file, and stays one.</p>`;
+}
 
 export function helpText(): string {
   const CRATE_BILL = crateBill();
@@ -2949,9 +2975,9 @@ export function helpText(): string {
     <b>Restoration</b> skill, at any damage short of breaking: a success puts the thing back together, and a failure
     puts ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on every piece. What comes out is only as good as the pieces that went in,
     less ${percent(1 / RESTORE_AGE)} of it for each point of damage on them. Some of it is
-    treasure and nothing more &mdash; a statuette, a bronze mirror, a bone comb, an old lamp &mdash;
-    and some of it is an <b>old file</b>, an <b>old blade</b> or an <b>ancient helm</b>, which are the
-    real prize: a file before you have a forge to cast one in.</p>
+    treasure and nothing more &mdash; a statuette, a bronze mirror, an old lamp &mdash;
+    and an <b>old blade</b> or an <b>ancient helm</b> is a sword or a helm to fight in.</p>
+    ${artifactHelp()}
     <h3>Baubles</h3>
     <p>${capital(percent(BAUBLE_SHARE))} of what a trowel turns up is not a fragment but a <b>tarnished bauble</b>, whole in one
     piece: ${listed(BAUBLE_TIERS.map((t) => `${percent(t.odds)} of them ${t.name.toLowerCase()}`))}. Tarnished, it gives nothing. <b>Restore</b> it on
@@ -3048,7 +3074,12 @@ export function helpText(): string {
     ${percent(AGES.old.growth)} of the pace growing a fleece back, but heavier, and an old carcass is worth ${percent(AGES.old.yield - 1)} more
     than a grown one. The Wildermon window says which
     it is and how long a yearling has left to grow. What was already walking about when the island was
-    raised counts as grown.</p>
+    raised counts as grown. ${capital(article(itemDef(ARTIFACT_FOR.use_ancient_comb).name.toLowerCase()))} <b>${itemDef(ARTIFACT_FOR.use_ancient_comb).name.toLowerCase()}</b>
+    takes one stage off it (see <b>Digging up the past</b>).</p>
+    <p><b>Base stats.</b> Its card in the Wildermon window says its ${numberWord(BASE_STATS.length)} base stats as the rules read them now:
+    ${listed(BASE_STATS.map((st) => `<b>${st.name}</b>, ${st.says}`))}, work as a multiplier on its kind's. Beside each are the points
+    ${article(itemDef(ARTIFACT_FOR.use_ancient_pot).name.toLowerCase())} ${itemDef(ARTIFACT_FOR.use_ancient_pot).name.toLowerCase()} has put into it,
+    ${percent(POT_STEP)} more of that stat each, up to ${POT_MOST}.</p>
     <p><b>Putting one down.</b> An animal you keep can be <b>culled</b> from its own menu &mdash; one
     action, wherever it stands, and it leaves the same carcass anything else would. You are asked
     first, and asked harder if its blood is worth keeping, because there is no getting that back.
