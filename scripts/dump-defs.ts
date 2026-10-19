@@ -100,7 +100,7 @@ import {
 } from '../src/game/classes';
 import { FX_RULE, PERKS } from '../src/game/perks';
 import { SCHOOLS, SPELLS } from '../src/game/arcane';
-import { BRIDGES, CLEARANCE, END_SLOP } from '../src/game/bridges';
+import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
@@ -1490,7 +1490,7 @@ out.push(`create or replace function board_top() returns int language sql immuta
 /* A gap worth bridging, two banks that will carry one deck, and a pair that
  * will stand close enough to be put together. */
 for (const [fn, v] of [
-  ['clearance', CLEARANCE], ['end_slop', END_SLOP], ['pair_range', PAIR_RANGE],
+  ['clearance', CLEARANCE], ['end_slop', END_SLOP], ['ramp_slope', RAMP_SLOPE], ['pair_range', PAIR_RANGE],
   ['groom_cap', GROOM_CAP], ['groom_heal', GROOM_HEAL], ['breed_rest', BREED_REST], ['gestation', GESTATION],
   ['rest_cap', REST_CAP], ['rest_mult', REST_MULT], ['rest_per_second', REST_PER_SECOND],
   ['dawn_hour', DAWN], ['dusk_hour', DUSK], ['day_seconds', DAY_SECONDS],

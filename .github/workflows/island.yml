@@ -835,6 +835,19 @@ jobs:
           npx esbuild supabase/test/site.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/site.mjs --log-level=error
           node node_modules/.cache/site.mjs
+      - name: A ramp bridge, from one storey up to another
+        run: |
+          # Asked: "Is it possible to plan a bridge stretching up from 1st to
+          # 3rd floor?" A bridge's ends had to be within END_SLOP of each
+          # other and on one storey. Past END_SLOP its deck is a ramp now, at
+          # RAMP_SLOPE a tile at most. Both sides allow exactly that slope and
+          # refuse one more in the same words, allow the ground to storey 3
+          # over the tiles that climb wants and refuse one fewer, set out the
+          # same bridge with the same bill, stand a body at the same height
+          # along it, and walk it up and down at the storeys of its ends.
+          npx esbuild supabase/test/ramp.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/ramp.mjs --log-level=error
+          node node_modules/.cache/ramp.mjs
       - name: Eight ways round, not two
         run: |
           # Reported: "when changing camera angles models just twist in

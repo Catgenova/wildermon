@@ -50,7 +50,7 @@ import { Game, type IslandGround } from '../../src/game/game';
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { borderOf, MATERIALS, WALL_TYPE_BY_ID, WALL_TYPES, wallBill, type Side } from '../../src/game/building';
-import { BRIDGES, PULL_REACH, spanBill, type BridgeKind } from '../../src/game/bridges';
+import { BRIDGES, PULL_REACH, rampRefusal, spanBill, type BridgeKind } from '../../src/game/bridges';
 import {
   BRIDGE_END_HERE, BRIDGE_END_INSIDE, bridgeEndRefusal, bridgeEndWall, DRAWBRIDGE_UNDER_JETTY, drawbridgeEndsOut, drawbridgeSaid, gateHoverLine, gatePlanRefusal,
   JETTY_OVER_WINCH,
@@ -1609,8 +1609,13 @@ sameBridge('a drawbridge\'s winch is not set on the ground under a jetty, even o
 sameBridge('while its far end there is refused for what is under it, the flat ground, not for the jetty', 'draw', 19, 12, 21, 12,
   'That is not a gap, it is ground. Walk it.');
 // A finished jetty is a floor of the storey it is out from, which a bridge's end lands on, as the island has always had it (`top_deck`).
-sameBridge('a bridge\'s end at a finished jetty is on the jetty\'s storey, as on any finished floor, on both sides', 'wood', 23, 11, 23, 9,
-  'One end is on storey 2 and the other on the ground. A deck meets one storey or the other.');
+{
+  // Storey 2 to the ground over a tile of deck: a ramp too steep for it (`rampRefusal`), which names the jetty's storey.
+  const g = kayAt(24.5, 11.5);
+  const [a, b] = [g.topDeck(23, 11), g.topDeck(23, 9)];
+  sameBridge('a bridge\'s end at a finished jetty is on the jetty\'s storey, as on any finished floor, on both sides', 'wood', 23, 11, 23, 9,
+    a.level === 1 && b.level === 0 ? rampRefusal(a.level, b.level, Math.abs(a.height - b.height), 1) : `storeys ${a.level} and ${b.level}`);
+}
 sameBridge('so a drawbridge, which goes from ground to ground, ends on none', 'draw', 23, 9, 23, 11, `A ${BRIDGES.draw.name.toLowerCase()} goes from ground to ground, not to a storey.`);
 sameBridge('nor is set out from one, which is a storey and not the ground under a jetty', 'draw', 23, 11, 23, 9,
   `A ${BRIDGES.draw.name.toLowerCase()} goes from ground to ground, not to a storey.`);

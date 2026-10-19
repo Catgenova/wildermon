@@ -23,7 +23,7 @@ import {
   CUT_VINE, CUTTING_TOOL, GRAPE, GRAPE_CUTTING, onceEvery, GRAPE_SEASON, GRAPES_A_PICK, GRAPES_BASE, GRAPES_SPAN, grapesFor, PICK_GRAPES, PLANT_VINE,
   TRELLIS_RULE, trellisRefusedSaid, VINE_BEARS, VINE_REST, VINE_SKILL, vineSoilWords, VINEYARD_ACTIONS, WILD_VINE,
 } from '../../game/vineyard';
-import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH } from '../../game/bridges';
+import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, CORNER_LITRES, FOUNTAIN_RIM, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
@@ -1835,17 +1835,24 @@ export function helpText(): string {
     will not follow you into water or up anything it cannot roll over.</p>
     <h3>Bridges</h3>
     <p>Water and ravines have been walls: the island is full of places you can see across and cannot get
-    to. A <b>bridge</b> is a run of deck from one piece of solid ground to another at much the same height, and
+    to. A <b>bridge</b> is a run of deck from one piece of solid ground to another, and
     once it is finished it is simply ground &mdash; you walk it, you ride it, and depending on what it is
     made of you drive a cart over it.</p>
     <p>Stand on one bank and right-click the other: <b>Throw a bridge across from here</b>. It must run
     straight (north, south, east or west), both ends must be dry ground you can stand in the middle of,
-    the ends must be within ${numberWord(END_SLOP)} height units of each other, and everything between must be at
-    least ${numberWord(CLEARANCE)} units below the deck &mdash; a gap, not a slope. The deck is carried at the mean of its
-    end tiles' heights, each taken at the tile's middle, the mean of its corners, or at the top of a foundation poured
-    on it or of a finished deck on piers; an end on an upper floor is taken at that floor's height.
+    and everything between must be at least ${numberWord(CLEARANCE)} units below the deck over the middle of its tile &mdash; a gap, not a slope.
+    Each end's height is taken at the tile's middle, the mean of its corners, or at the top of a foundation poured
+    on it or of a finished deck on piers; an end on an upper floor is taken at that floor's height. Ends within
+    ${numberWord(END_SLOP)} height units of each other carry a level deck, at the mean of their heights.
     ${NumberWord(Object.values(BRIDGES).filter((b) => b !== AQUEDUCT).length)} kinds:
     ${listed(Object.values(BRIDGES).filter((b) => b !== AQUEDUCT).map((b) => `a <b>${b.name.toLowerCase()}</b> (${billWords(b.bill)} a span${b.tool === 'trowel' ? ', with a trowel' : ''}) goes <b>${numberWord(b.span)}</b> tiles and ${b.carts ? 'carries a cart' : 'takes foot traffic only'}`))}.</p>
+    <p>Ends further apart carry a <b>ramp</b>: its deck rises evenly from one end to the other, at most
+    <b>${RAMP_SLOPE}</b> height units for every tile of deck between them, or it is refused with how many tiles that climb wants.
+    A storey is ${WALL_HEIGHT} high, so a ramp up one storey wants at least ${numberWord(rampTiles(WALL_HEIGHT))} tiles of deck, and
+    ${((up: number) => `one up ${numberWord(up)} storeys, from the ground to storey ${up + 1}, at least ${numberWord(rampTiles(up * WALL_HEIGHT))}`)(2)}. Its ends may be on different storeys, or one on the ground:
+    you step onto it at the storey of the end you step on from, walk it at that storey, and step off at the storey of the end you
+    step off onto. Each span costs what it does on a level bridge, so a ramp costs a span's bill for every tile of its deck. A ramp of a kind that carries a cart
+    carries one only with both its ends on the ground, and a drawbridge is always level.</p>
     <p>An end may also be a finished upper floor of a building, a jetty's floor among them, or a building's finished
     deck on piers. It may not be inside a building on a ground floor laid on the ground, nor on the end of another
     bridge, and no end meets its deck through a wall: from a storey or a deck, a bridge goes out through a doorway, an
@@ -1866,7 +1873,7 @@ export function helpText(): string {
     climb: a tile that falls more than ${MAX_STAND} height units from its highest corner to its lowest, or a step of more than
     ${MAX_STEP} between the middles of neighbouring tiles, each ${CLIMB_PER_LEVEL} more for every level of climbing. Water in it stops nobody; it
     is swum. Lowered, it is a bridge and carries a cart. Its deck is carried at the mean of its end tiles' heights, as every
-    bridge's is, so one over a moat a tile wide, between the sloping tiles of its banks, sits halfway down it. A foundation
+    level bridge's is, so one over a moat a tile wide, between the sloping tiles of its banks, sits halfway down it. A foundation
     on each end tile, dug to bare rock, set out and poured, is level with the tile's highest corner, the bank's, and the deck is
     then level with the bank. Its winch is not set on the ground under a jetty, and no jetty is floored out over its winch:
     its gallows rise there higher than a storey. Without a padlock anybody may raise or lower it; a padlock on its winch keeps raising,

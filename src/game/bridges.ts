@@ -162,8 +162,15 @@ export interface Bridge {
   ay: number;
   bx: number;
   by: number;
-  /** Height the deck is carried at. */
+  /** Height the deck is carried at: on a ramp, at the middle of its length (`deckHeight`). */
   height: number;
+  /**
+   * A ramp's: how much higher its deck is at end b than at end a, rising
+   * evenly along its length (`deckHeight`). Nought or none for a level deck.
+   */
+  rise?: number;
+  /** The storey end b lands on, where it is not end a's (`level`): a ramp from one storey to another. */
+  levelB?: number | null;
   /**
    * The storey its two ends meet, and the storey you walk it on.
    *
@@ -228,6 +235,66 @@ export const CLEARANCE = 3;
  * deck would meet one end and hang over the other.
  */
 export const END_SLOP = 12;
+
+/**
+ * Ramps. Past `END_SLOP` between its ends a deck is not carried level: it
+ * rises evenly from one end to the other, so long as it rises no more than
+ * this many height units for every tile of deck between them. That is how a
+ * bridge links a storey to the storey above or below it. A drawbridge, whose
+ * deck stands on end over its hinge, is carried level. The island's
+ * `ramp_slope`.
+ */
+export const RAMP_SLOPE = 15;
+
+/** How many tiles of deck a climb of `apart` height units wants, at `RAMP_SLOPE` a tile. */
+export const rampTiles = (apart: number): number => Math.ceil(Math.abs(apart) / RAMP_SLOPE);
+
+/** The rise of a deck between ends at these heights: nought within `END_SLOP`, where it is carried level. The island's `ramp_rise`. */
+export const rampRise = (ha: number, hb: number): number => (Math.abs(hb - ha) > END_SLOP ? Math.round(hb - ha) : 0);
+
+/**
+ * The height of a deck `s` tiles along it from the edge of end a's tile, of
+ * `n` tiles of deck carried at `height` in its middle and rising `rise` from
+ * end a's edge to end b's. The island's `ramp_deck`.
+ */
+export const rampDeck = (height: number, rise: number, n: number, s: number): number =>
+  rise ? height + rise * (Math.min(1, Math.max(0, s / n)) - 0.5) : height;
+
+/** The storeys a bridge's two ends land on, end a's first. */
+export const bridgeLevels = (b: Bridge): [number, number] => [b.level ?? 0, b.levelB ?? b.level ?? 0];
+
+/** The height of a bridge's deck at a point over it: its `height` all the way across a level one, and up its slope on a ramp. */
+export function deckHeight(b: Bridge, x: number, y: number): number {
+  if (!b.rise) return b.height;
+  const s = b.ay === b.by ? (b.bx > b.ax ? x - (b.ax + 1) : b.ax - x) : (b.by > b.ay ? y - (b.ay + 1) : b.ay - y);
+  return rampDeck(b.height, b.rise, b.spans.length, s);
+}
+
+/** What a body's storey is called in what is said of a bridge's ends. */
+const storeyNamed = (level: number): string => (level ? `storey ${level + 1}` : 'the ground');
+
+/**
+ * Why a ramp may not climb from one end to the other over so few tiles: how
+ * far apart they are, how many tiles that wants at `RAMP_SLOPE`, and how many
+ * it has. The island's `ramp_refusal`.
+ */
+export function rampRefusal(la: number, lb: number, apart: number, n: number): string {
+  const ends = la !== lb ? `One end is on ${storeyNamed(la)} and the other on ${storeyNamed(lb)},` : 'The two ends are';
+  return `${ends} ${apart.toFixed(0)} apart in height. A deck rises at most ${RAMP_SLOPE} a tile, so that wants ${rampTiles(apart)} tiles of deck; this one has ${n}.`;
+}
+
+/**
+ * Where a bridge set out goes, as it is said when it is: the storeys its ends
+ * land on, if either is off the ground, and a ramp's rise from the end it was
+ * set out from. The island's `bridge_set_out`.
+ */
+export function setOutWords(b: Bridge): string {
+  const [la, lb] = bridgeLevels(b);
+  const storeys = la || lb ? `, ${storeyNamed(la)} to ${storeyNamed(lb)}` : '';
+  const rise = b.rise ?? 0;
+  const slope = rise ? `, its deck ${rise > 0 ? 'rising' : 'falling'} ${Math.abs(rise)} from this end to the far one` : '';
+  return `${storeys}${slope}`;
+}
 
 export const bridgeState = (b: Bridge): string => {
   const n = b.spans.length;
@@ -302,12 +369,14 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
        */
       const ends = [g.topDeck(ax, ay), g.topDeck(t.x, t.y)];
       const height = Math.round((ends[0].height + ends[1].height) / 2);
-      const b = g.addBridge(kind, ax, ay, t.x, t.y, height, kind === 'stone' ? undefined : 'Oak', ends[0].level);
+      // And past `END_SLOP` between them, a ramp: its deck rises from one end to the other (`rampRise`).
+      const b = g.addBridge(kind, ax, ay, t.x, t.y, height, kind === 'stone' ? undefined : 'Oak', ends[0].level, ends[1].level,
+        rampRise(ends[0].height, ends[1].height));
       const def = BRIDGES[kind];
       g.gainSkill(def.skill, 0.4);
       g.note('planned_bridge');
       g.logMsg(
-        `You set out a ${def.name.toLowerCase()} of ${b.spans.length} span${b.spans.length > 1 ? 's' : ''} across${b.level ? `, storey ${b.level + 1} to storey ${b.level + 1}` : ''}. Each one wants ${def.bill.map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase()}`).join(', ')}. ${def.note}`,
+        `You set out a ${def.name.toLowerCase()} of ${b.spans.length} span${b.spans.length > 1 ? 's' : ''} across${setOutWords(b)}. Each one wants ${def.bill.map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase()}`).join(', ')}. ${def.note}`,
         'system',
       );
       for (const sp of b.spans) g.events.emit('world', sp.x, sp.y);

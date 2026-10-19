@@ -196,7 +196,7 @@ import {
   type DrawbridgeGeom, type Motion, type WallFace,
 } from './gates';
 import { hingeKey, hingeOf, isDrawbridge, landingOf } from '../game/gates';
-import { bridgeDone, type Bridge } from '../game/bridges';
+import { bridgeDone, bridgeLevels, deckHeight, type Bridge } from '../game/bridges';
 import { SmallLife, type Mote } from './life';
 import { personBody, SpellStage, type Aim, type Told, type Who } from './spells/stage';
 import { guessTold, type Standing } from './spells/guess';
@@ -3731,12 +3731,14 @@ export class Renderer {
             const span = bridge.spans.find((sp) => sp.x === x && sp.y === y);
             const wx = x + 0.5;
             const wy = y + 0.5;
-            const dx = cam.worldToScreenX(wx, wy), dy = cam.worldToScreenY(wx, wy, bridge.height);
-            // The tile it spans, corner by corner at the deck's height, so it is that tile at every turn of the view.
+            // On a ramp the deck is at its own height at every point along it, up its slope (`deckHeight`).
+            const mid = deckHeight(bridge, wx, wy);
+            const dx = cam.worldToScreenX(wx, wy), dy = cam.worldToScreenY(wx, wy, mid);
+            // The tile it spans, corner by corner at the deck's height there, so it is that tile at every turn of the view.
             const q = ([[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]] as Array<[number, number]>)
-              .map(([a, b]): [number, number] => [(cam.worldToScreenX(a, b) - dx) / zoom, (cam.worldToScreenY(a, b, bridge.height) - dy) / zoom]);
+              .map(([a, b]): [number, number] => [(cam.worldToScreenX(a, b) - dx) / zoom, (cam.worldToScreenY(a, b, deckHeight(bridge, a, b)) - dy) / zoom]);
             this.take('deck', x, y, dx, dy, null).deck =
-              { kind: bridge.kind, done: !!span && Object.values(span.needed).every((n) => n <= 0), drop: bridge.height - world.centerHeight(x, y), id: bridge.id,
+              { kind: bridge.kind, done: !!span && Object.values(span.needed).every((n) => n <= 0), drop: mid - world.centerHeight(x, y), id: bridge.id,
                 shape: { q, along: bridge.ay === bridge.by ? 'x' : 'y' },
                 // How far the moss on a stone arch has got (`greening.ts`): over water, always by it.
                 green: greenShows(bridgeGreen(this.game, bridge, this.greenAt) ?? 0, 0, this.wetness(x, y)) };
@@ -3817,7 +3819,8 @@ export class Renderer {
             const [px, py] = this.game.roster.drawnAt(peer);
             const flight = peer.level === 0 ? this.onFlight(px, py) : null;
             const pe = this.take('peer', x, y, cam.worldToScreenX(px, py),
-              cam.worldToScreenY(px, py, flight ? flight.h : (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
+              cam.worldToScreenY(px, py, flight ? flight.h : this.peerDeck(px, py, peer.level)
+                ?? (this.game.deckBase(Math.floor(px), Math.floor(py), peer.level) ?? this.footOn(px, py, peer.level)) + peer.level * WALL_HEIGHT), null);
             pe.peer = peer;
             if (flight) pe.clip = flight.clip;
           }
@@ -3846,7 +3849,7 @@ export class Renderer {
         // On the deck unless you are in a hull passing under it.
         // In a building on piers, on its deck and the storeys over it (`piers.ts`).
         const piered = this.game.afloat() ? null : this.game.deckBase(player.tileX, player.tileY, player.level);
-        const deck = this.game.afloat() || piered !== null ? null : this.game.laidOver(player.tileX, player.tileY);
+        const deck = this.game.afloat() || piered !== null ? null : this.game.laidOver(player.tileX, player.tileY, player);
         // A driver is drawn on the seat, which is a lift in screen pixels
         // rather than in world height: the cart is under them, not the ground.
         const drivenBy = this.game.driving();
@@ -8461,6 +8464,17 @@ export class Renderer {
     if (b.deck != null) return b.deck;
     const i = b.tiles[0].indexOf(',');
     return this.game.world.getHeight(+b.tiles[0].slice(0, i), +b.tiles[0].slice(i + 1));
+  }
+
+  /**
+   * Where somebody else on the island stands on a bridge's deck at the storey
+   * they are walking it at, up a ramp's slope too, as you do (`deckHeightAt`);
+   * null off a deck, or under one walked at another storey.
+   */
+  private peerDeck(x: number, y: number, level: number): number | null {
+    if (!this.game.bridges.size) return null;
+    const b = this.game.bridgeAt(Math.floor(x), Math.floor(y));
+    return b && bridgeLevels(b).includes(level) ? this.game.deckHeightAt(x, y) : null;
   }
 
   /** Where feet stand on a tile at a storey: up on a jetty, its building's floor; anywhere else, the ground. */

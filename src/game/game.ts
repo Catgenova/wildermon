@@ -59,7 +59,7 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { BRIDGES, bridgeDone, CLEARANCE, END_SLOP, spanBill, spanTiles, type Bridge, type BridgeKind } from './bridges';
+import { BRIDGES, bridgeDone, bridgeLevels, CLEARANCE, deckHeight, END_SLOP, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, spanBill, spanTiles, type Bridge, type BridgeKind } from './bridges';
 import { AQ_NOT_THROWN, AQ_OVER, channelOf } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
@@ -1345,9 +1345,10 @@ export class Game {
     if (this.connector(x1, y1, level + 1) && !b.blocksAt(level, x0, y0, x1, y1)) return level + 1;
     // Deck is ground: it is flat, and the drop under it is not your problem.
     if (this.bridges.size) {
-      const deck = this.bridgeStepLevel(x0, y0, x1, y1);
-      // gates: and a wall on the border is still a wall, a portcullis let down among them (`gates.ts`).
-      if (deck !== null && deck === level) return b.blocksAt(level, x0, y0, x1, y1) ? null : deck;
+      // Walked at the storey you are on: a ramp's at either of its ends' (`bridgeStepLevel`).
+      const deck = this.bridgeStepLevel(x0, y0, x1, y1, level);
+      // gates: and a wall on the border is still a wall, a portcullis let down among them (`gates.ts`): at the storey of the end it is on.
+      if (deck !== null) return b.blocksAt(deck, x0, y0, x1, y1) ? null : deck;
     }
     if (this.standable(x1, y1, level) && !b.blocksAt(level, x0, y0, x1, y1)) {
       if (level === 0) {
@@ -1421,8 +1422,8 @@ export class Game {
     if (this.bridges.size && this.bridgeStep(x0, y0, x1, y1)) {
       const b = this.bridgeAt(x1, y1) ?? this.bridgeAt(x0, y0);
       if (!b || !BRIDGES[b.kind].carts) return null;
-      // A walkway between two upper storeys is a walkway. Nobody drives it.
-      if (b.level) return null;
+      // A walkway between two upper storeys is a walkway, and so is a ramp up to one. Nobody drives it.
+      if (b.level || b.levelB) return null;
       // Coming off the deck onto the bank: the bank still has to take wheels.
       if (!this.bridgeAt(x1, y1) && !this.vehicleGround(x1, y1)) return null;
       // gates: and through a gateway wide enough, as off any other ground (`gates.ts`).
@@ -1984,6 +1985,9 @@ export class Game {
     const p = this.player;
     const jetty = p.level > 0 && this.buildings.jettyAt(p.tileX, p.tileY);
     const base = jetty ? jettyBase(this, jetty, p.tileX, p.tileY) : this.deckBase(p.tileX, p.tileY, p.level);
+    // On a bridge's deck, at its height there, up a ramp's slope too, as the body is drawn (`deckHeightAt`).
+    const deck = base === null && this.bridges.size && !this.afloat() ? this.deckHeightAt(p.x, p.y) : null;
+    if (deck !== null) return deck;
     return (base ?? this.world.heightAt(p.x, p.y)) + p.visualLevel * 30;
   }
 
@@ -5937,10 +5941,14 @@ export class Game {
 
   // ---- Bridges: ground where there was none. ----
 
-  addBridge(kind: BridgeKind, ax: number, ay: number, bx: number, by: number, height: number, material?: string, level = 0): Bridge {
+  addBridge(kind: BridgeKind, ax: number, ay: number, bx: number, by: number, height: number, material?: string, level = 0,
+    levelB = level, rise = 0): Bridge {
     // The first span, beside the end it is set out from, carries a drawbridge's winch.
     const spans = spanTiles(ax, ay, bx, by).map(([x, y], i) => ({ x, y, ...spanBill(kind, i === 0) }));
     const b: Bridge = { id: this.nextBridgeId++, kind, ax, ay, bx, by, height, material, level, spans };
+    // A ramp: its far end on another storey, and its deck rising to it (`deckHeight`).
+    if (levelB !== level) b.levelB = levelB;
+    if (rise) b.rise = rise;
     this.bridges.set(b.id, b);
     this.reindexDecks();
     return b;
@@ -5974,9 +5982,18 @@ export class Game {
 
   /** The height of finished deck over this tile, or null for open ground: an aqueduct's deck is water, and nobody stands on it. */
   deckAt(x: number, y: number): number | null {
-    const b = this.bridgeAt(x, y);
+    return this.deckHeightAt(x + 0.5, y + 0.5);
+  }
+
+  /**
+   * The height of finished deck at a point, or null for open ground: up its
+   * slope on a ramp (`deckHeight`), which is where a body walking it stands.
+   * The island's `deck_height_at`.
+   */
+  deckHeightAt(x: number, y: number): number | null {
+    const b = this.bridgeAt(Math.floor(x), Math.floor(y));
     // A drawbridge drawn up has no deck: what is under it is what there is (`gates.ts`).
-    return b && deckDown(b) && b.kind !== 'aqueduct' ? b.height : null;
+    return b && deckDown(b) && b.kind !== 'aqueduct' ? deckHeight(b, x, y) : null;
   }
 
   /** Whether a tile is walked on a bridge's deck rather than on the ground: under an aqueduct it is the ground, worn and climbed as ever. */
@@ -6022,11 +6039,12 @@ export class Game {
    * ground is the ground. A deck on piers is not asked here: a body on one is
    * on a storey of its building (`deckBase`), and nothing else is there.
    */
-  laidOver(x: number, y: number): number | null {
+  laidOver(x: number, y: number, at?: { x: number; y: number }): number | null {
     const slab = this.foundations.size ? this.slabAt(x, y) : undefined;
     // In a pool, a body swims with its head out, as in the sea.
     if (slab) return slab.pool ? poolLevel(slab.top) - SWIM_DEPTH : slab.top;
-    return this.bridges.size ? this.deckAt(x, y) : null;
+    // At a point on the tile, where one is given: on a ramp the deck is higher at one side of it than the other.
+    return this.bridges.size ? (at ? this.deckHeightAt(at.x, at.y) : this.deckAt(x, y)) : null;
   }
 
   /** Whether a bridge's ends or deck cover this tile, which is where you may step on. */
@@ -6050,15 +6068,28 @@ export class Game {
    * floor is walked at that storey, so stepping onto it from the room it meets
    * keeps you upstairs instead of dropping you into the yard.
    */
-  bridgeStepLevel(x0: number, y0: number, x1: number, y1: number): number | null {
-    // Onto the deck, from an end or from the deck itself. Never an aqueduct's: under it is open ground.
+  bridgeStepLevel(x0: number, y0: number, x1: number, y1: number, level?: number): number | null {
+    // gates: a drawbridge drawn up has no deck to step onto or off (`deckDown`). Never an aqueduct's: under it is open ground.
+    const walked = (b: Bridge | undefined): b is Bridge => !!b && deckDown(b) && b.kind !== 'aqueduct';
+    // A ramp's two ends may be on two storeys, and its deck is walked at either: at the one you came onto it at.
+    const at = (b: Bridge): boolean => level === undefined || bridgeLevels(b).includes(level);
+    // Onto the deck, from an end at the storey that end lands on, or along the deck itself.
     const to = this.bridgeAt(x1, y1);
-    // gates: a drawbridge drawn up has no deck to step onto or off (`deckDown`).
-    if (to && deckDown(to) && to.kind !== 'aqueduct' && this.onBridge(to, x0, y0)) return to.level ?? 0;
+    if (walked(to) && this.onBridge(to, x0, y0)) {
+      const end = this.bridgeEndLevel(to, x0, y0);
+      if (end !== null) return level === undefined || level === end ? end : null;
+      return at(to) ? level ?? bridgeLevels(to)[0] : null;
+    }
     // And off the far end of it again, which is a step down onto solid ground
-    // from a deck the terrain underneath knows nothing about.
+    // from a deck the terrain underneath knows nothing about: onto the storey that end lands on.
     const from = this.bridgeAt(x0, y0);
-    return from && deckDown(from) && from.kind !== 'aqueduct' && this.onBridge(from, x1, y1) ? from.level ?? 0 : null;
+    return walked(from) && this.onBridge(from, x1, y1) && at(from) ? this.bridgeEndLevel(from, x1, y1) : null;
+  }
+
+  /** The storey a bridge's end on this tile lands on, or null where neither of its ends is. */
+  bridgeEndLevel(b: Bridge, x: number, y: number): number | null {
+    const [la, lb] = bridgeLevels(b);
+    return x === b.ax && y === b.ay ? la : x === b.bx && y === b.by ? lb : null;
   }
 
   /**
@@ -6120,20 +6151,21 @@ export class Game {
     if (outside) return outside;
     // A drawbridge goes from bank to bank: its hinge and its winch stand on the ground (`gates.ts`).
     if (def.grounded && (ends[0].level || ends[1].level)) return `A ${def.name.toLowerCase()} goes from ground to ground, not to a storey.`;
-    if (ends[0].level !== ends[1].level) {
-      const named = (n: number): string => (n ? `storey ${n + 1}` : 'the ground');
-      return `One end is on ${named(ends[0].level)} and the other on ${named(ends[1].level)}. A deck meets one storey or the other.`;
-    }
     const ha = ends[0].height;
     const hb = ends[1].height;
-    if (Math.abs(ha - hb) > END_SLOP) return `The two ends are ${Math.abs(ha - hb).toFixed(0)} apart in height. One deck will not meet both; level one of them.`;
+    const apart = Math.abs(ha - hb);
+    // Past `END_SLOP` a deck is a ramp, from one storey to another or from bank to bank, at `RAMP_SLOPE` a tile at most.
+    if (apart > END_SLOP && def.grounded) return `The two ends are ${apart.toFixed(0)} apart in height. One deck will not meet both; level one of them.`;
+    if (apart > END_SLOP && apart > RAMP_SLOPE * span.length) return rampRefusal(ends[0].level, ends[1].level, apart, span.length);
     const height = Math.round((ha + hb) / 2);
-    for (const [x, y] of span) {
+    const rise = rampRise(ha, hb);
+    for (const [i, [x, y]] of span.entries()) {
       // gates: nor over the end of another, as the island has it (`bridge_at`).
       if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'Something is already bridged across there.';
       if (this.buildings.buildingAt(x, y)) return 'Not over a building.';
       if (this.buildings.jettyAt(x, y)) return 'Not over a building\'s jetty.';
-      if (height - this.surfaceHeight(x, y) < CLEARANCE) return 'That is not a gap, it is ground. Walk it.';
+      // At the deck's height over the middle of the tile, up a ramp's slope.
+      if (rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y) < CLEARANCE) return 'That is not a gap, it is ground. Walk it.';
     }
     return null;
   }

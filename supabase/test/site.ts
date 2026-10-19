@@ -17,6 +17,7 @@
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { WALL_HEIGHT, type Side } from '../../src/game/building';
+import { rampRefusal } from '../../src/game/bridges';
 import { Game } from '../../src/game/game';
 import { TileType } from '../../src/world/tiles';
 
@@ -150,9 +151,10 @@ check('a finished second floor is the top deck of its tile',
 const across = gb.bridgeReason('wood', 40, 40, 42, 40);
 check('and a walkway may be thrown from one tower to the other', across === null, across ?? 'allowed');
 
-const down = gb.bridgeReason('wood', 40, 40, 44, 40);
-check('but not from a storey to the ground, and it says which is which',
-  down === 'One end is on storey 2 and the other on the ground. A deck meets one storey or the other.', down ?? 'allowed');
+// From a storey to the ground is a ramp (`ramp.ts`), and over a tile of deck too steep a one, which says which end is which.
+const down = gb.bridgeReason('wood', 42, 40, 44, 40);
+check('but not from a storey to the ground over too few tiles, and it says which is which',
+  down === rampRefusal(1, 0, WALL_HEIGHT, 1), down ?? 'allowed');
 
 /* The same two questions of the island. */
 psql(`
@@ -180,7 +182,7 @@ begin
 end $$;`);
 const theirDeck = Number(psql(`select top_deck(${W}, 40, 40);`));
 check('the island reads the same top deck', theirDeck === 1, `storey ${theirDeck + 1}`);
-const theirDown = psql(`select coalesce(bridge_reason(${W}, 'wood', 40, 40, 44, 40), 'ALLOWED');`);
+const theirDown = psql(`select coalesce(bridge_reason(${W}, 'wood', 42, 40, 44, 40), 'ALLOWED');`);
 check('and refuses the mismatched pair in the same words', theirDown === down,
   `island "${theirDown}", browser "${down}"`);
 

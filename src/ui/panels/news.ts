@@ -139,7 +139,7 @@ import {
 import { BOIL_LITRES, boilCountPlain, gramsOf } from '../../game/dyes';
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
-import { BRIDGES, CLEARANCE, PULL_REACH } from '../../game/bridges';
+import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
 import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
@@ -2461,6 +2461,18 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       return [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a leaf-backed piglet that grows into a plough-snouted hog and then a great tusked boar, with its own walk, strike, field work and voice.`,
+      ];
+    },
+  },
+  {
+    n: 188,
+    day: '2026-10-19',
+    lines: () => {
+      const up = 2;
+      return [
+        `Ramp bridges: where a bridge's two ends are more than ${END_SLOP} height units apart, its deck now rises evenly from one end to the other, at most ${RAMP_SLOPE} height units for every tile of deck. Its ends may be on different storeys, or one on the ground and one on a storey, or on two banks. A storey is ${WALL_HEIGHT} high: up one storey wants at least ${rampTiles(WALL_HEIGHT)} tiles of deck, and from the ground to storey ${up + 1} (${up * WALL_HEIGHT}) at least ${rampTiles(up * WALL_HEIGHT)}. One too steep for its length is refused, saying how many tiles that climb wants.`,
+        `You step onto a ramp at the storey of the end you step on from and off it at the storey of the end you step off onto. Each span costs what a span of that kind does on a level bridge, so a ramp costs one span's bill for every tile of its deck. A ramp of a kind that carries a cart carries one only with both its ends on the ground, and a drawbridge is still level.`,
+        `On an island, a bridge set out to a storey now keeps that storey and is carried at that storey's floor, as in a game of your own, where before it was carried at the ground under its ends.`,
       ];
     },
   },

@@ -5040,6 +5040,7 @@ $fn$;
 create or replace function board_top() returns int language sql immutable as $fn$ select 10::int $fn$;
 create or replace function clearance() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
 create or replace function end_slop() returns double precision language sql immutable as $fn$ select 12::double precision $fn$;
+create or replace function ramp_slope() returns double precision language sql immutable as $fn$ select 15::double precision $fn$;
 create or replace function pair_range() returns double precision language sql immutable as $fn$ select 4::double precision $fn$;
 create or replace function groom_cap() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function groom_heal() returns double precision language sql immutable as $fn$ select 0.06::double precision $fn$;
