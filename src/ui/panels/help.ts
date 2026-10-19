@@ -74,7 +74,7 @@ import { CASTS, FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
-import { MOTE_CHANCE } from '../../game/sacrifice';
+import { SOUL_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
 import { SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
@@ -3229,10 +3229,10 @@ export function helpText(): string {
     <p>It also holds the settlement's bauble sockets: see <b>Baubles</b>, under digging up the past.</p>
     <p><b>Sacrifice</b>, on the altar's menu, gives up one ${RARITIES.slice(1, -1).map((r) => r.name).join(', ')} or ${RARITIES[RARITIES.length - 1].name} thing from your
     pack, one of a stack where it is a stack, and fills ${listed(NUTRIENTS.map((k) => NUTRIENT_NAMES[k].toLowerCase()))} to the top.
-    ${capital(percent(MOTE_CHANCE))} of sacrifices also leave a <b>mote</b> of the rarity of what was given up. Absorb a mote
-    (<b>Absorb into</b>, on the mote) into an ordinary thing in your pack and that thing, or one of it where it is a stack,
-    takes the mote's rarity. A locked thing, a worn one, a bag with anything in it and a crate with a wildermon in it
-    are not given up, and a bauble takes no mote: its rarity is rolled when it is restored.</p>
+    ${capital(percent(SOUL_CHANCE))} of sacrifices also leave a <b>soul</b> of the rarity of what was given up. Absorb a soul
+    (<b>Absorb into</b>, on the soul) into an ordinary thing in your pack and that thing, or one of it where it is a stack,
+    takes the soul's rarity. A locked thing, a worn one, a bag with anything in it and a crate with a wildermon in it
+    are not given up, and a bauble takes no soul: its rarity is rolled when it is restored.</p>
     <p>${NumberWord(CASTS.length)} things it buys, and none of them can be had any other way:</p>
     <table>
       ${CASTS.map((c) => `<tr><td><b>${c.name}</b></td><td>${c.cost} favour, faith ${c.level}. ${c.note}</td></tr>`).join('\n      ')}

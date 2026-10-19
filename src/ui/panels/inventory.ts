@@ -12,7 +12,7 @@ import type { UIWindow } from '../windows';
 import { COUNTS, pinEntry, pinnable } from '../beltmenu';
 import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
-import { ABSORB_SAID, absorbable, MOTE } from '../../game/sacrifice';
+import { ABSORB_SAID, absorbable, SOUL } from '../../game/sacrifice';
 import { ENCHANT, enchantable, fitsOn } from '../../game/enchanting';
 import { ENCHANT_SAID, enchantChance, ENCHANTERS_PLINTH, ENCHANTING, scrollOf, wrongKind } from '../../game/enchant';
 import { percent } from '../../game/words';
@@ -319,7 +319,7 @@ export class InventoryPanel {
      */
     if (item.id === 'treasure_map') entries.push({ label: 'Read', note: 'Look at the country on it', onSelect: () => this.readMap?.(item.uid) });
     // A mote goes into something else, which is chosen here.
-    const absorb = item.id === MOTE ? ACTION_BY_ID.get('absorb_mote') : undefined;
+    const absorb = item.id === SOUL ? ACTION_BY_ID.get('absorb_mote') : undefined;
     if (absorb) {
       const into = absorbable(this.game);
       entries.push({

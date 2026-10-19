@@ -137,7 +137,7 @@ import { GRAVE_KEEPS, GRAVE_REACH } from '../src/game/graves';
 import { spanWords } from '../src/game/words';
 import { DARK_HIT, DARK_SHOT, DARK_SWING, ENCHANT_HEAD, HEAVY_SKILLS, HOARD_HEAD, NIGHT_EYES_FROM, PROSPECT_HEAD, TAME_HEAD, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT } from '../src/game/learn';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../src/game/baubles';
-import { MOTE_CHANCE } from '../src/game/sacrifice';
+import { SOUL_CHANCE } from '../src/game/sacrifice';
 import { GLASSHOUSE_GROWTH, HAND_WINTER, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_GROWTH, YEAR_SECONDS, YEARLESS_GROWTH } from '../src/game/growth';
 import { SEASON_DAYS, SEASONS, YEAR_DAYS, YEAR_FROM } from '../src/world/calendar';
 import { PLANTER_GROWING } from '../src/game/furniture';
@@ -2291,7 +2291,7 @@ for (const [fn, v] of [
   ['bauble_share', BAUBLE_SHARE], ['regret_share', REGRET_SHARE], ['bauble_low', BAUBLE_LOW], ['bauble_high', BAUBLE_HIGH], ['ancient_plus', ANCIENT_PLUS],
   ['bauble_yield_times', YIELD_TIMES],
   // What a sacrifice at the altar may leave (`src/game/sacrifice.ts`).
-  ['mote_chance', MOTE_CHANCE],
+  ['mote_chance', SOUL_CHANCE],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }

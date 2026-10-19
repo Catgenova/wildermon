@@ -63,7 +63,7 @@ export const ISLAND_ELEMENT: Readonly<Record<string, LandElement>> = {
   WestSkerry: 'wind',
 };
 
-/** The item a swirl of this element gives. Not `mote`, which is the altar's (`sacrifice.ts`). */
+/** The item a swirl of this element gives. Not `mote`, which is the altar's soul (`sacrifice.ts`). */
 export const moteItem = (e: MoteElement): string => `${e}_mote`;
 /** And what it is called: "Fire mote". */
 export const moteName = (e: MoteElement): string => `${capital(e)} mote`;

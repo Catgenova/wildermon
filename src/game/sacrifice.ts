@@ -7,7 +7,11 @@ import { BAUBLE_TIERS, TARNISHED } from './baubles';
 import { capital, listed } from './words';
 
 /**
- * Giving a rare thing up at the altar, and the motes it now and again leaves.
+ * Giving a rare thing up at the altar, and the souls it now and again leaves.
+ *
+ * Asked for, later: "Change the names of the rewards from motes > souls now that we have an actual mote system"
+ * (`motes.ts`, the swirls). A soul is the item `mote` still, by id, so the ones already held stay what they are;
+ * everything said of it calls it a soul.
  *
  * Asked for: "Allow sacrificing rare, supreme, and fantastic items at the
  * altar. Each time one is sacrificed, all nutritional values are maxed. Each
@@ -34,13 +38,13 @@ import { capital, listed } from './words';
  * off the same numbers crossed in the defs, and says the same words.
  */
 
-/** Of sacrifices, the share that leave a mote behind. */
-export const MOTE_CHANCE = 0.01;
+/** Of sacrifices, the share that leave a soul behind (the island's `mote_chance`). */
+export const SOUL_CHANCE = 0.01;
 
-/** What a sacrifice may leave: it takes the rarity of what was given up, and gives it to an ordinary thing. */
-export const MOTE = 'mote';
-// The share a mote's description quotes, from the rule itself.
-describeWith({ sacrifice: { mote: MOTE_CHANCE } });
+/** What a sacrifice may leave, a soul: it takes the rarity of what was given up, and gives it to an ordinary thing. Its id is from when it was called a mote. */
+export const SOUL = 'mote';
+// The share a soul's description quotes, from the rule itself.
+describeWith({ sacrifice: { soul: SOUL_CHANCE } });
 
 /** The rarities there are, by name, as they are listed to somebody choosing: "rare, supreme or fantastic". */
 const RARE_NAMES = RARITIES.slice(1).map((r) => r.name);
@@ -51,7 +55,7 @@ export const SACRIFICE_SAID = {
   notAltar: 'That is not an altar.',
   reach: 'Kneel at the altar.',
   pick: `Choose a ${anyRare} thing to give up.`,
-  mote: 'A mote is not given up. Absorb it into something instead.',
+  soul: 'A soul is not given up. Absorb it into something instead.',
   notRare: `Only a ${anyRare} thing may be given up.`,
   locked: 'It is kept back. Put it back in the pack first.',
   worn: 'Take it off first.',
@@ -60,14 +64,14 @@ export const SACRIFICE_SAID = {
 } as const;
 
 export const ABSORB_SAID = {
-  pickMote: 'Choose a mote to absorb.',
+  pickSoul: 'Choose a soul to absorb.',
   pickItem: 'Choose something to absorb it into.',
-  intoMote: 'A mote will not go into another mote.',
+  intoSoul: 'A soul will not go into another soul.',
   bauble: 'A bauble\'s rarity is rolled when it is restored.',
 } as const;
-/** Why a thing that is already rare takes no mote. */
+/** Why a thing that is already rare takes no soul. */
 export const alreadyRare = (item: Pick<Item, 'rare'>): string =>
-  `Only an ordinary thing takes a mote, and this is ${RARITIES[item.rare ?? 0].name} already.`;
+  `Only an ordinary thing takes a soul, and this is ${RARITIES[item.rare ?? 0].name} already.`;
 
 /** What a sacrifice does for the one who makes it, in so many words: every nutrient named, and full. */
 export const FED_SAID = `${capital(listed(NUTRIENTS.map((k) => NUTRIENT_NAMES[k].toLowerCase())))} are all at their fullest.`;
@@ -86,7 +90,7 @@ export function sacrificeSetting(g: Game, t: Target): { why: string } | { altar:
   if (!kneeling(g, f)) return { why: SACRIFICE_SAID.reach };
   const item = t.kind === 'furniture' && t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
   if (!item) return { why: SACRIFICE_SAID.pick };
-  if (item.id === MOTE) return { why: SACRIFICE_SAID.mote };
+  if (item.id === SOUL) return { why: SACRIFICE_SAID.soul };
   if (!item.rare) return { why: SACRIFICE_SAID.notRare };
   if (item.locked) return { why: SACRIFICE_SAID.locked };
   if (g.isEquipped(item.uid)) return { why: SACRIFICE_SAID.worn };
@@ -95,23 +99,23 @@ export function sacrificeSetting(g: Game, t: Target): { why: string } | { altar:
   return { altar: f, item };
 }
 
-/** Why this mote will not go into this thing, or the two of them when it will. */
+/** Why this soul will not go into this thing, or the two of them when it will. */
 export function absorbSetting(g: Game, t: Target): { why: string } | { mote: Item; item: Item } {
   const mote = t.kind === 'item' && t.mote !== undefined ? g.inventory.get(t.mote) : undefined;
-  if (!mote || mote.id !== MOTE || !mote.rare) return { why: ABSORB_SAID.pickMote };
+  if (!mote || mote.id !== SOUL || !mote.rare) return { why: ABSORB_SAID.pickSoul };
   const item = t.kind === 'item' ? g.inventory.get(t.uid) : undefined;
   if (!item) return { why: ABSORB_SAID.pickItem };
-  if (item.id === MOTE) return { why: ABSORB_SAID.intoMote };
+  if (item.id === SOUL) return { why: ABSORB_SAID.intoSoul };
   if (isBauble(item)) return { why: ABSORB_SAID.bauble };
   if (item.rare) return { why: alreadyRare(item) };
   return { mote, item };
 }
 
-/** What a mote may go into, of what is in the pack: every ordinary thing that is not a mote or a bauble. */
-export const absorbable = (g: Game): Item[] => g.inventory.items.filter((it) => it.id !== MOTE && !it.rare && !isBauble(it));
+/** What a soul may go into, of what is in the pack: every ordinary thing that is not a soul or a bauble. */
+export const absorbable = (g: Game): Item[] => g.inventory.items.filter((it) => it.id !== SOUL && !it.rare && !isBauble(it));
 
-/** What may be given up, of what is in the pack: everything rare, supreme or fantastic that is not a mote. */
-export const sacrificeable = (g: Game): Item[] => g.inventory.items.filter((it) => it.id !== MOTE && !!it.rare);
+/** What may be given up, of what is in the pack: everything rare, supreme or fantastic that is not a soul. */
+export const sacrificeable = (g: Game): Item[] => g.inventory.items.filter((it) => it.id !== SOUL && !!it.rare);
 
 export const SACRIFICE_ACTIONS: ActionDef[] = [
   {
@@ -136,17 +140,17 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
       if (!g.inventory.remove(item.uid, 1)) return;
       for (const k of NUTRIENTS) g.player.nutrition[k] = 1;
       g.logMsg(`You give up the ${name} at the altar. ${FED_SAID}`, 'event');
-      if (g.rand() < MOTE_CHANCE) {
-        g.inventory.addItem({ uid: g.inventory.nextUid++, id: MOTE, ql, dmg: 0, count: 1, rare });
-        g.logMsg(`A ${RARITIES[rare].name} mote is left where the ${name} was.`, 'event');
+      if (g.rand() < SOUL_CHANCE) {
+        g.inventory.addItem({ uid: g.inventory.nextUid++, id: SOUL, ql, dmg: 0, count: 1, rare });
+        g.logMsg(`A ${RARITIES[rare].name} soul is left where the ${name} was.`, 'event');
       }
       g.events.emit('inventory');
     },
   },
   {
     id: 'absorb_mote',
-    label: 'Absorb a mote',
-    verb: 'absorbing a mote',
+    label: 'Absorb a soul',
+    verb: 'absorbing a soul',
     hidden: true,
     stamina: 0.01,
     baseTime: 3,

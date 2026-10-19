@@ -881,7 +881,7 @@ insert into item_def values ('tarnished_bauble', 'Tarnished bauble', 'misc', 0.1
 insert into item_def values ('bauble_minor', 'Minor bauble', 'misc', 0.1, false, null, null);
 insert into item_def values ('bauble_major', 'Major bauble', 'misc', 0.1, false, null, null);
 insert into item_def values ('bauble_regret', 'Bauble of Regret', 'misc', 0.1, false, null, null);
-insert into item_def values ('mote', 'Mote', 'misc', 0.01, true, null, null);
+insert into item_def values ('mote', 'Soul', 'misc', 0.01, true, null, null);
 insert into item_def values ('bauble_ancient', 'Ancient bauble', 'misc', 0.1, false, null, null);
 insert into item_def values ('old_lamp', 'Old lamp', 'misc', 0.9, false, 3, null);
 insert into item_def values ('bronze_mirror', 'Bronze mirror', 'misc', 0.8, false, 3, null);
@@ -1470,7 +1470,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('take_honey', 'Take honey', 'taking the honey', 'animal_husbandry', null, false, null, 0.02, 6, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('examine_skep', 'Examine', 'looking into the skep', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('sacrifice', 'Sacrifice', 'making a sacrifice', null, null, false, null, 0.01, 4, null, false, false);
-insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('absorb_mote', 'Absorb a mote', 'absorbing a mote', null, null, false, null, 0.01, 3, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('absorb_mote', 'Absorb a soul', 'absorbing a soul', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('enchant', 'Enchant', 'enchanting', 'enchanting', null, false, null, 0.02, 8, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('meditate', 'Sit and think about nothing', 'sitting', 'meditation', null, false, null, 0, 25, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('choose_path', 'Choose a path', 'choosing', null, null, false, null, 0, 0, null, true, false);
@@ -3170,7 +3170,7 @@ update item_def set description = 'Gives nothing until it is restored. Restore i
 update item_def set description = 'Set it into one of the 21 minor sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then gets what is written on it: less time per action, or more skill gained, in that one skill.' where id = 'bauble_minor';
 update item_def set description = 'Set it into one of the 5 major sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then has the chance written on it of twice the yield from each action in that one skill.' where id = 'bauble_major';
 update item_def set description = 'Undoes one of your trades. In the Trades window, Undo on your crafting or your fighting trade puts it down as though you had never taken it up, clears its tree, and uses this up; the next trade you take up in its place costs nothing, where a change costs 500 silver. Only on an island, where trades are kept.' where id = 'bauble_regret';
-update item_def set description = 'Left by 1% of sacrifices at an altar, with the rarity of what was given up. Absorb it into an ordinary thing in your pack (Absorb into, on the mote) and that thing, or one of it where it is a stack, takes the mote''s rarity. The mote is used up.' where id = 'mote';
+update item_def set description = 'Left by 1% of sacrifices at an altar, with the rarity of what was given up. Absorb it into an ordinary thing in your pack (Absorb into, on the soul) and that thing, or one of it where it is a stack, takes the soul''s rarity. The soul is used up.' where id = 'mote';
 update item_def set description = 'Set it into one of the 3 ancient sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then gets what is written on it added to every yield of that one action.' where id = 'bauble_ancient';
 update item_def set description = 'A closed clay lamp with a wick hole. It still smells faintly of oil.' where id = 'old_lamp';
 update item_def set description = 'A disc of bronze polished on one face. It gives back a dim, honest likeness.' where id = 'bronze_mirror';

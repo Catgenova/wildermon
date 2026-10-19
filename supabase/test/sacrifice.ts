@@ -23,7 +23,8 @@ import { execFileSync } from 'node:child_process';
 import { Game, type Deed } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { NUTRIENTS } from '../../src/game/nutrition';
-import { ABSORB_SAID, alreadyRare, FED_SAID, MOTE, MOTE_CHANCE, SACRIFICE_SAID } from '../../src/game/sacrifice';
+import { ABSORB_SAID, alreadyRare, FED_SAID, SACRIFICE_SAID, SOUL, SOUL_CHANCE } from '../../src/game/sacrifice';
+import { ITEM_DEFS } from '../../src/game/items';
 import { RARITIES } from '../../src/game/items';
 
 const psql = (sql: string): string =>
@@ -46,10 +47,14 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 
 /* ---- the same numbers ------------------------------------------------------ */
-check('the island leaves a mote as often as the browser', psql('select mote_chance()') === String(MOTE_CHANCE), psql('select mote_chance()'));
+check('the island leaves a mote as often as the browser', psql('select mote_chance()') === String(SOUL_CHANCE), psql('select mote_chance()'));
 check('and fills the same nutrients', psql(`select array_to_string(nutrients(), ',')`) === NUTRIENTS.join(','), psql(`select array_to_string(nutrients(), ',')`));
 check('and says so in the same words', psql('select fed_said()') === FED_SAID, psql('select fed_said()'));
-check('a mote is a thing both sides know, and stacks by its rarity', psql(`select stackable from item_def where id = '${MOTE}'`) === 't');
+check('a soul is called a soul on both sides, not taken for a swirl\'s mote',
+  psql(`select name from item_def where id = '${SOUL}'`) === 'Soul' && ITEM_DEFS[SOUL].name === 'Soul', psql(`select name from item_def where id = '${SOUL}'`));
+check('and Absorb a soul is its job, on both sides',
+  psql(`select label from action_def where id = 'absorb_mote'`) === 'Absorb a soul' && ACTION_BY_ID.get('absorb_mote')?.label === 'Absorb a soul', psql(`select label from action_def where id = 'absorb_mote'`));
+check('a soul is a thing both sides know, and stacks by its rarity', psql(`select stackable from item_def where id = '${SOUL}'`) === 't');
 
 /* ---- the island ------------------------------------------------------------- */
 const out = psql(`
@@ -148,7 +153,7 @@ const say = (k: string): string => said.get(k) ?? '(nothing)';
 check('a chest is not an altar', say('NOTALTAR') === SACRIFICE_SAID.notAltar, say('NOTALTAR'));
 check('a sacrifice is made kneeling at the altar', say('REACH') === SACRIFICE_SAID.reach, say('REACH'));
 check('of something', say('PICK') === SACRIFICE_SAID.pick, say('PICK'));
-check('never a mote', say('MOTE') === SACRIFICE_SAID.mote, say('MOTE'));
+check('never a mote', say('MOTE') === SACRIFICE_SAID.soul, say('MOTE'));
 check('nor anything ordinary', say('PLAIN') === SACRIFICE_SAID.notRare, say('PLAIN'));
 check('nor a thing put by', say('LOCKED') === SACRIFICE_SAID.locked, say('LOCKED'));
 check('nor one worn', say('WORN') === SACRIFICE_SAID.worn, say('WORN'));
@@ -159,17 +164,17 @@ check('and every nutrient is full', say('FED') === NUTRIENTS.map((k) => `${k}=1`
 check('said as the browser says it', say('AXESAID') === `You give up the rare hatchet at the altar. ${FED_SAID}`, say('AXESAID'));
 check('of a stack, one is given up', say('PLANKSLEFT') === '2', say('PLANKSLEFT'));
 check('and a mote left is of the rarity of what was given up', say('MOTES') === 'rare x1,supreme x1', say('MOTES'));
-check('and says so', say('MOTESAID') === 'A supreme mote is left where the supreme plank was.', say('MOTESAID'));
+check('and says so', say('MOTESAID') === 'A supreme soul is left where the supreme plank was.', say('MOTESAID'));
 check('every nutrient full again from empty', say('FEDAGAIN') === 'true', say('FEDAGAIN'));
-check('a mote is absorbed only from a mote', say('PICKMOTE') === ABSORB_SAID.pickMote, say('PICKMOTE'));
+check('a mote is absorbed only from a mote', say('PICKMOTE') === ABSORB_SAID.pickSoul, say('PICKMOTE'));
 check('into something', say('PICKITEM') === ABSORB_SAID.pickItem, say('PICKITEM'));
-check('never another mote', say('INTOMOTE') === ABSORB_SAID.intoMote, say('INTOMOTE'));
+check('never another mote', say('INTOMOTE') === ABSORB_SAID.intoSoul, say('INTOMOTE'));
 check('nor a bauble', say('BAUBLE') === ABSORB_SAID.bauble, say('BAUBLE'));
 check('nor a thing already rare', say('ALREADY') === alreadyRare({ rare: 1 }), say('ALREADY'));
 check('an ordinary stack takes it', say('ABSORB') === 'null', say('ABSORB'));
 check('one of it, and the rest stay as they were', say('SPLIT') === 'plain x4,supreme x2,supreme x1' || say('SPLIT') === 'plain x4,supreme x1,supreme x2', say('SPLIT'));
 check('and the mote is used up', say('MOTEUSED') === '0', say('MOTEUSED'));
-check('said as the browser says it', say('ABSORBSAID') === 'The supreme mote sinks into the plank, and it is supreme now.', say('ABSORBSAID'));
+check('said as the browser says it', say('ABSORBSAID') === 'The supreme soul sinks into the plank, and it is supreme now.', say('ABSORBSAID'));
 check('a thing on its own takes it where it is', say('SINGLE') === 'fantastic', say('SINGLE'));
 
 /* ---- the browser ------------------------------------------------------------ */
@@ -199,13 +204,13 @@ const worn = rare('pickaxe', 3);
 game.player.equipped.weapon = worn.uid;
 const bag = rare('satchel', 1);
 bag.inside = [{ uid: game.inventory.nextUid++, id: 'nail', ql: 20, dmg: 0, count: 3 }];
-const mote1 = rare(MOTE, 1);
+const mote1 = rare(SOUL, 1);
 check('the browser: a chest is not an altar', sac.check?.(at(chest.id, axe.uid), game) === SACRIFICE_SAID.notAltar);
 game.player.x = 44.5; game.player.y = 44.5;
 check('kneel at the altar', sac.check?.(at(altar.id, axe.uid), game) === SACRIFICE_SAID.reach);
 game.player.x = 40.5; game.player.y = 40.5;
 check('of something', sac.check?.(at(altar.id), game) === SACRIFICE_SAID.pick);
-check('never a mote', sac.check?.(at(altar.id, mote1.uid), game) === SACRIFICE_SAID.mote);
+check('never a mote', sac.check?.(at(altar.id, mote1.uid), game) === SACRIFICE_SAID.soul);
 check('nor anything ordinary', sac.check?.(at(altar.id, plain.uid), game) === SACRIFICE_SAID.notRare);
 check('nor a thing put by', sac.check?.(at(altar.id, kept.uid), game) === SACRIFICE_SAID.locked);
 check('nor one worn', sac.check?.(at(altar.id, worn.uid), game) === SACRIFICE_SAID.worn);
@@ -222,13 +227,13 @@ check('it is gone, and every nutrient is full, said as the island says it',
   !game.inventory.get(axe.uid) && NUTRIENTS.every((k) => game.player.nutrition[k] === 1) && lastSaid() === say('AXESAID'), lastSaid());
 game.rand = () => 0;
 sac.perform(at(altar.id, planks.uid), game);
-const motes = game.inventory.items.filter((it) => it.id === MOTE);
+const motes = game.inventory.items.filter((it) => it.id === SOUL);
 check('of a stack, one is given up, and a mote left of its rarity, said as the island says it',
   game.inventory.get(planks.uid)?.count === 2 && motes.some((m) => m.rare === 2) && lastSaid() === say('MOTESAID'), lastSaid());
 const mote2 = motes.find((m) => m.rare === 2)!;
-check('a mote is absorbed only from a mote', absorb.check?.({ kind: 'item', uid: plain.uid, mote: plain.uid }, game) === ABSORB_SAID.pickMote);
+check('a mote is absorbed only from a mote', absorb.check?.({ kind: 'item', uid: plain.uid, mote: plain.uid }, game) === ABSORB_SAID.pickSoul);
 check('into something', absorb.check?.({ kind: 'item', uid: -1, mote: mote2.uid }, game) === ABSORB_SAID.pickItem);
-check('never another mote', absorb.check?.({ kind: 'item', uid: mote2.uid, mote: mote2.uid }, game) === ABSORB_SAID.intoMote);
+check('never another mote', absorb.check?.({ kind: 'item', uid: mote2.uid, mote: mote2.uid }, game) === ABSORB_SAID.intoSoul);
 const bauble = game.inventory.add('bauble_minor', { ql: 40, extra: 'cooking: +2.1% skill gain' });
 check('nor a bauble', absorb.check?.({ kind: 'item', uid: bauble.uid, mote: mote2.uid }, game) === ABSORB_SAID.bauble);
 check('nor a thing already rare, in the island\'s words', absorb.check?.({ kind: 'item', uid: kept.uid, mote: mote2.uid }, game) === say('ALREADY'));
@@ -237,7 +242,7 @@ const planksNow = game.inventory.items.filter((it) => it.id === 'plank').map((it
 check('one of an ordinary stack takes it, and the mote is used, said as the island says it',
   planksNow.includes('plain x4') && planksNow.some((p) => p.startsWith('supreme')) && !game.inventory.get(mote2.uid) && lastSaid() === say('ABSORBSAID'),
   `${planksNow.join(', ')} | ${lastSaid()}`);
-const mote3 = rare(MOTE, 3);
+const mote3 = rare(SOUL, 3);
 const single = game.inventory.add('hatchet', { ql: 40 });
 absorb.perform({ kind: 'item', uid: single.uid, mote: mote3.uid }, game);
 check('a thing on its own takes it where it is', game.inventory.get(single.uid)?.rare === 3);
@@ -253,8 +258,8 @@ const pileRare = g2.inventory.take(pile.uid, N)!;
 pileRare.rare = 1;
 g2.inventory.addItem(pileRare);
 for (let i = 0; i < N; i++) sac.perform(at(alt2.id, pileRare.uid), g2);
-left = g2.inventory.items.filter((it) => it.id === MOTE).reduce((n, it) => n + it.count, 0);
-check(`about ${MOTE_CHANCE * 100}% of sacrifices leave a mote`, Math.abs(left / N - MOTE_CHANCE) < 0.004, `${left} of ${N}`);
+left = g2.inventory.items.filter((it) => it.id === SOUL).reduce((n, it) => n + it.count, 0);
+check(`about ${SOUL_CHANCE * 100}% of sacrifices leave a mote`, Math.abs(left / N - SOUL_CHANCE) < 0.004, `${left} of ${N}`);
 
 /* ---- every rarity, as a body asks for it ------------------------------------- */
 // Through the ask a body makes (\`rpc_act\`, settled), not the job alone: each of rare, supreme and fantastic given up
@@ -332,7 +337,7 @@ for (const [step, r] of RARITIES.slice(1).map((x, i) => [i + 1, x.name] as const
   g3.requestAction(sac, at(alt3.id, one.uid));
   run();
   const fed = NUTRIENTS.map((k) => g3.player.nutrition[k]);
-  const left3 = g3.inventory.items.find((x) => x.id === MOTE);
+  const left3 = g3.inventory.items.find((x) => x.id === SOUL);
   const shovel = g3.inventory.add('shovel', { ql: 40 });
   if (left3) g3.requestAction(absorb, { kind: 'item', uid: shovel.uid, mote: left3.uid } as Target);
   run();
@@ -363,8 +368,8 @@ end $$;
 select n from counted;
 rollback;
 `).split('\n').filter(Boolean).pop());
-check(`on the island about ${MOTE_CHANCE * 100}% of sacrifices leave a mote, by its own dice`,
-  Math.abs(islandLeft / M - MOTE_CHANCE) < 0.006, `${islandLeft} of ${M}`);
+check(`on the island about ${SOUL_CHANCE * 100}% of sacrifices leave a mote, by its own dice`,
+  Math.abs(islandLeft / M - SOUL_CHANCE) < 0.006, `${islandLeft} of ${M}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\n${ok.length} passed, ${bad.length} failed`);

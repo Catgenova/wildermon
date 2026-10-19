@@ -401,7 +401,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   bauble_minor: { name: 'Minor bauble', category: 'misc', weight: 0.1, description: 'Set it into one of the {bauble.minor.slots} minor sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then gets what is written on it: less time per action, or more skill gained, in that one skill.' },
   bauble_major: { name: 'Major bauble', category: 'misc', weight: 0.1, description: 'Set it into one of the {bauble.major.slots} major sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then has the chance written on it of {bauble.yield:times} the yield from each action in that one skill.' },
   bauble_regret: { name: 'Bauble of Regret', category: 'misc', weight: 0.1, description: 'Undoes one of your trades. In the Trades window, Undo on your crafting or your fighting trade puts it down as though you had never taken it up, clears its tree, and uses this up; the next trade you take up in its place costs nothing, where a change costs {regret.saves} silver. Only on an island, where trades are kept.' },
-  mote: { name: 'Mote', category: 'misc', weight: 0.01, stackable: true, description: 'Left by {sacrifice.mote:pct} of sacrifices at an altar, with the rarity of what was given up. Absorb it into an ordinary thing in your pack (Absorb into, on the mote) and that thing, or one of it where it is a stack, takes the mote\'s rarity. The mote is used up.' },
+  // A soul, by its id from when it was called a mote (`sacrifice.ts`).
+  mote: { name: 'Soul', category: 'misc', weight: 0.01, stackable: true, description: 'Left by {sacrifice.soul:pct} of sacrifices at an altar, with the rarity of what was given up. Absorb it into an ordinary thing in your pack (Absorb into, on the soul) and that thing, or one of it where it is a stack, takes the soul\'s rarity. The soul is used up.' },
   bauble_ancient: { name: 'Ancient bauble', category: 'misc', weight: 0.1, description: 'Set it into one of the {bauble.ancient.slots} ancient sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then gets what is written on it added to every yield of that one action.' },
   old_lamp: { name: 'Old lamp', category: 'misc', weight: 0.9, decay: 3, description: 'A closed clay lamp with a wick hole. It still smells faintly of oil.' },
   bronze_mirror: { name: 'Bronze mirror', category: 'misc', weight: 0.8, decay: 3, description: 'A disc of bronze polished on one face. It gives back a dim, honest likeness.' },
@@ -621,7 +622,7 @@ for (const m of METALS) {
 
 /*
  * A mote of each element, off a mote swirl (`motes.ts`): `earth_mote` and the
- * rest. Not the altar's `mote`, which is a rarity left by a sacrifice; these
+ * rest. Not the altar's soul (id `mote`), which is a rarity left by a sacrifice; these
  * are named for their element so the two never share a name in a menu, a
  * search or the ledger.
  */

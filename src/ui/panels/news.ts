@@ -101,7 +101,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { HUSBANDRY_ACTIONS } from '../../game/husbandry';
 import { TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
-import { FED_SAID, MOTE_CHANCE } from '../../game/sacrifice';
+import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
@@ -497,7 +497,7 @@ export const NEWS: News[] = [
     day: '2026-09-26',
     lines: () => [
       `Sacrifice, on an altar's menu, gives up one rare, supreme or fantastic thing from your pack. ${FED_SAID}`,
-      `${percent(MOTE_CHANCE)} of sacrifices leave a mote of the same rarity. Absorb it into an ordinary thing in your pack (Absorb into, on the mote) and that thing takes the mote's rarity.`,
+      `${percent(SOUL_CHANCE)} of sacrifices leave a mote of the same rarity. Absorb it into an ordinary thing in your pack (Absorb into, on the mote) and that thing takes the mote's rarity.`,
     ],
   },
   {
@@ -2551,6 +2551,13 @@ export const NEWS: News[] = [
     day: '2026-10-19',
     lines: () => [
       `Build wall, Build floor and every other row that builds a planned piece (stairs, a roof, a railing, a jetty's floor) now opens onto how many goes to take, a piece of material a go: one, ${listed(BUILD_COUNTS.map(String))} where the piece still needs more than that, or all it needs, up to ${MOST_GOES} a time. It stops early once the piece is finished or nothing it needs is to hand. On an island each Build used to fit one piece.`,
+    ],
+  },
+  {
+    n: 196,
+    day: '2026-10-19',
+    lines: () => [
+      `What a sacrifice at an altar now and again leaves (${percent(SOUL_CHANCE)} of them) is a soul now, no longer a mote, so it is not taken for the motes a swirl gives. It does what it did: absorbed into an ordinary thing (Absorb into, on the soul), it gives that thing its rarity. The ones you hold are souls already.`,
     ],
   },
 ];
