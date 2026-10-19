@@ -2609,6 +2609,16 @@ jobs:
             --outfile=node_modules/.cache/errandhome.mjs --log-level=error
           node node_modules/.cache/errandhome.mjs
 
+      - name: A settlement's stores are read off the settlement
+        run: |
+          # The world clock timed out every round inside a hod carrier's choice
+          # of wall: every piece of furniture on the island was reckoned, once a
+          # wall. The stores read are exactly the keeper's, and fast with three
+          # thousand stocked chests elsewhere on the island.
+          npx esbuild supabase/test/storesread.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/storesread.mjs --log-level=error
+          node node_modules/.cache/storesread.mjs
+
       - name: The Bauble of Regret, and a trade undone
         run: |
           # Asked for: a 3% chance of a Bauble of Regret in archaeology, which

@@ -2647,6 +2647,15 @@ export const NEWS: News[] = [
         + 'and found nothing to do from where it was assigned, used to stand there for good, and one walking home in a single long leg could not be seen or selected by anybody near it.',
     ],
   },
+  {
+    n: 204,
+    day: '2026-10-19',
+    lines: () => [
+      'The island stood still from 16:57 UTC until this went in: every round of its clock ran out of time while a hod carrier chose its wall, '
+        + 'because it reckoned every piece of furniture on the island, once for every planned wall, to find what your settlement held. '
+        + 'Nothing moved, wildermon could not be acted on, and in the end the island would not load. It now reads only the stores on your settlement, once a choice.',
+    ],
+  },
 ];
 
 
