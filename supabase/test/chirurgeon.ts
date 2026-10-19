@@ -167,6 +167,15 @@ begin
   update player set wounds = ${WOUNDS} where world_id = w.world_id and uid = o;
   r := class_spell_cast(w.world_id, w.uid, 'chirurgeon_quick_stitch', ${ON_O});
   insert into said select 'STITCH', ${WOUNDS_READ} || '|' || coalesce(r->>'said', r->>'why') from player pl where pl.world_id = w.world_id and pl.uid = o;
+  -- And wounds as a body takes them (\`hurt_player\`), with no id: a light cut taken first and a deep burn after it, the
+  -- burn the worst. Asked about: "I have a deep burn that is a 94% wound and Quick Stitch keeps fixing 30% off my 3% wound".
+  update player set wounds = jsonb_build_array(
+      jsonb_build_object('kind', 'cut', 'part', 'arms', 'severity', 0.03, 'bleeding', true, 'infected', false, 'dressing', null, 'at', now()),
+      jsonb_build_object('kind', 'burn', 'part', 'chest', 'severity', 0.94, 'bleeding', false, 'infected', false, 'dressing', null, 'at', now()))
+   where world_id = w.world_id and uid = o;
+  perform class_spell_cast(w.world_id, w.uid, 'chirurgeon_quick_stitch', ${ON_O});
+  insert into said select 'STITCH:TAKEN', string_agg((wd->>'kind') || ':' || round((wd->>'severity')::numeric, 3), ',' order by t.ord)
+    from player pl, jsonb_array_elements(pl.wounds) with ordinality t(wd, ord) where pl.world_id = w.world_id and pl.uid = o;
   update player set wounds = '[]'::jsonb where world_id = w.world_id and uid = o;
   insert into said values ('STITCH:NONE', class_spell_cast(w.world_id, w.uid, 'chirurgeon_quick_stitch', ${ON_O})->>'why');
 
@@ -417,6 +426,8 @@ check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
   const [wounds, line] = parts('STITCH');
   check(`Quick Stitch: the worst wound ${pct(fx('quick_stitch', 'close'))} closed, and the other as it was`,
     wounds === `1:0.100:true,2:${(0.2 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}:true` && /closes the worst wound on/.test(line), island('STITCH'));
+  check('and on wounds as a body takes them, with no id, it closes the deep burn and not the light cut taken before it',
+    island('STITCH:TAKEN') === `cut:0.030,burn:${(0.94 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}`, island('STITCH:TAKEN'));
   check('and it is refused on somebody with no wound', / has no wound\.$/.test(island('STITCH:NONE')), island('STITCH:NONE'));
 }
 {

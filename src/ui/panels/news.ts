@@ -2560,6 +2560,18 @@ export const NEWS: News[] = [
       `What a sacrifice at an altar now and again leaves (${percent(SOUL_CHANCE)} of them) is a soul now, no longer a mote, so it is not taken for the motes a swirl gives. It does what it did: absorbed into an ordinary thing (Absorb into, on the soul), it gives that thing its rarity. The ones you hold are souls already.`,
     ],
   },
+  {
+    n: 197,
+    day: '2026-10-19',
+    lines: () => {
+      const stitch = CLASS_SPELL_BY_ID.get('chirurgeon_quick_stitch')!, mass = CLASS_SPELL_BY_ID.get('chirurgeon_mass_dressing')!;
+      return [
+        `On an island, ${stitch.name} closed the wound you took first rather than your worst one, and ${mass.name} stopped that one bleeding `
+          + `and closed it. Both take the worst wound now, as they say: ${stitch.name} closes it by ${percent(stitch.fx.close)} of its severity, `
+          + `${mass.name} stops it bleeding and closes it by ${percent(mass.fx.close)}.`,
+      ];
+    },
+  },
 ];
 
 
