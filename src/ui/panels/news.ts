@@ -2606,6 +2606,16 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 200,
+    day: '2026-10-19',
+    lines: () => [
+      `A ${SPECIES.cobbe.name.toLowerCase()} stood idle when the nearest planned wall wanted something your stores did not hold, and on an island `
+        + 'it never took from a bin, a chest or anything else but a crate. It now takes the nearest wall wanting something your stores hold, '
+        + 'from any store of yours on the deed, and brings whatever that wall is furthest behind on first, so brick and mortar go in together. '
+        + 'On an island a worker on any errand now takes only from your own stores.',
+    ],
+  },
 ];
 
 

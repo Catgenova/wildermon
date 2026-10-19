@@ -6188,7 +6188,7 @@ export class Creatures {
     const near = (x: number, y: number): boolean => Math.max(Math.abs(x - deed.x), Math.abs(y - deed.y)) <= range;
 
     if (kind === 'water') return this.waterStep(game, c, dt, range, goto, near);
-    if (kind === 'hod') return this.hodStep(game, c, dt, goto, near);
+    if (kind === 'hod') return this.hodStep(game, c, dt, goto, near, deed);
     if (kind === 'mend') return this.mendStep(game, c, goto);
     if (kind === 'plant') return this.plantStep(game, c, goto, near, range, deed);
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);
@@ -6956,15 +6956,22 @@ export class Creatures {
     dt: number,
     goto: (x: number, y: number, reach?: number) => boolean,
     near: (x: number, y: number) => boolean,
+    deed: { x: number; y: number },
   ): boolean {
-    const job = game.wallNeeding(near, c.carrying?.id);
+    // What the stores hold to bring, crates and furniture alike, and never what is kept back.
+    const takeable = (it: Item, item: string): boolean => it.id === item && it.count > 0 && !it.locked;
+    const stocked = (item: string): boolean => game.deedStores().some((st) => st.items.some((it: Item) => takeable(it, item)));
+    const job = game.wallNeeding(near, c.carrying?.id, deed, stocked);
     if (!job) {
       c.carrying = null;
       return false;
     }
+    if (c.carrying && c.carrying.id !== job.item) c.carrying = null;
     if (!c.carrying) {
-      const store = game.deedStores().find((st) => st.items.some((it: Item) => it.id === job.item));
-      const stock = store?.items.find((it: Item) => it.id === job.item);
+      // The store nearest the wall holding it (the island's `store_holding`).
+      const holding = game.deedStores().filter((st) => st.items.some((it: Item) => takeable(it, job.item)));
+      const store = holding.sort((a, b) => Math.hypot(a.centre[0] - job.x - 0.5, a.centre[1] - job.y - 0.5) - Math.hypot(b.centre[0] - job.x - 0.5, b.centre[1] - job.y - 0.5))[0];
+      const stock = store?.items.find((it: Item) => takeable(it, job.item));
       if (!store || !stock) return false;
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;

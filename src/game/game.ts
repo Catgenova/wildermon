@@ -7603,17 +7603,34 @@ export class Game {
   }
 
   /** An unfinished wall within reach that wants something, and what it wants. */
-  wallNeeding(near: (x: number, y: number) => boolean, holding?: string): { wall: Wall; item: string; x: number; y: number } | undefined {
+  wallNeeding(
+    near: (x: number, y: number) => boolean,
+    holding?: string,
+    from?: { x: number; y: number },
+    stocked?: (item: string) => boolean,
+  ): { wall: Wall; item: string; x: number; y: number } | undefined {
+    /*
+     * Every planned ground-floor wall within reach and each thing it still wants: the piece in hand first, wherever
+     * it is wanted, and otherwise only what the stores hold (`stocked`), nearest `from` first -- so one wall wanting
+     * what nobody has brought never keeps a hod carrier from another it could finish -- and of a wall's wants, what is
+     * furthest behind its bill, so brick and mortar go in together. The island's `wall_needing` and
+     * `wall_needing_stocked`.
+     */
+    let best: { wall: Wall; item: string; x: number; y: number; d: number; held: boolean; behind: number } | undefined;
     for (const wall of this.buildings.walls.values()) {
       if (wall.level !== 0 || isDone(wall)) continue;
       if (!near(wall.x, wall.y)) continue;
-      const wants = Object.entries(wall.needed).filter(([, n]) => n > 0);
-      if (!wants.length) continue;
-      const pick = holding ? wants.find(([id]) => id === holding) : undefined;
-      const [item] = pick ?? wants[0];
-      return { wall, item, x: wall.x, y: wall.y };
+      const d = from ? (wall.x - from.x) ** 2 + (wall.y - from.y) ** 2 : 0;
+      for (const [item, n] of Object.entries(wall.needed).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+        if (n <= 0) continue;
+        const held = item === holding;
+        if (!held && stocked && !stocked(item)) continue;
+        const behind = n / Math.max(1, wall.total[item] ?? 0);
+        const better = !best || (held && !best.held) || (held === best.held && (d < best.d || (d === best.d && behind > best.behind)));
+        if (better) best = { wall, item, x: wall.x, y: wall.y, d, held, behind };
+      }
     }
-    return undefined;
+    return best && { wall: best.wall, item: best.item, x: best.x, y: best.y };
   }
 
   /** Fit one piece into a planned wall, the way a builder does by hand. */
