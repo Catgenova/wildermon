@@ -2568,15 +2568,25 @@ jobs:
             --outfile=node_modules/.cache/unrestored.mjs --log-level=error
           node node_modules/.cache/unrestored.mjs
 
-      - name: A sacrifice at the altar, and the motes it leaves
+      - name: A sacrifice at the altar, and the souls it leaves
         run: |
           # Asked for: rare, supreme and fantastic things given up at the
-          # altar fill every nutrient; one in a hundred leaves a mote of the
+          # altar fill every nutrient; one in a hundred leaves a soul of the
           # same rarity, which gives an ordinary thing that rarity. Both sides
           # refuse the same things in the same words and do the same.
           npx esbuild supabase/test/sacrifice.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/sacrifice.mjs --log-level=error
           node node_modules/.cache/sacrifice.mjs
+
+      - name: The dragon keeps to Volcano Isle, and wildermon go by their kinds' names
+        run: |
+          # Asked about: a dragon stood up on the Crescent, and tamed wildermon
+          # were still called Rabba and the like. The dragon stands up on Volcano
+          # Isle alone, a grand map's hoard (a dragon guards it) is buried there,
+          # and no wildermon keeps its kind's old name, on both sides and in a save.
+          npx esbuild supabase/test/dragonisle.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/dragonisle.mjs --log-level=error
+          node node_modules/.cache/dragonisle.mjs
 
       - name: The Bauble of Regret, and a trade undone
         run: |

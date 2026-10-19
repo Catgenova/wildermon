@@ -4990,6 +4990,8 @@ insert into tier_odds values ('supreme', 2, 0.025);
 insert into tier_odds values ('fantastic', 3, 0.005);
 create or replace function monster_share() returns double precision language sql immutable as $fn$ select 0.022::double precision $fn$;
 create or replace function region_monsters(p_region int) returns int language sql immutable as $fn$ select case p_region when 2 then 3 else 0 end $fn$;
+create or replace function region_middle(p_region int) returns double precision[] language sql immutable as $fn$ select case p_region when 0 then array[0.5048, 0.7091]::double precision[] when 1 then array[0.2044, 0.2674]::double precision[] when 2 then array[0.8378, 0.2728]::double precision[] when 3 then array[0.5039, 0.1258]::double precision[] when 4 then array[0.5043, 0.3946]::double precision[] when 5 then array[0.7541, 0.4599]::double precision[] when 6 then array[0.0801, 0.4309]::double precision[] end $fn$;
+create or replace function monster_isle(p_species text) returns int language sql immutable as $fn$ select case p_species when 'dragon' then 3 else null end $fn$;
 create or replace function region_treeless(p_region int) returns boolean language sql immutable as $fn$ select coalesce(p_region = any(array[2]::int[]), false) $fn$;
 create or replace function trait_slots() returns int language sql immutable as $fn$ select 3 $fn$;
 create or replace function fight_share() returns double precision language sql immutable as $fn$ select 0.3::double precision $fn$;

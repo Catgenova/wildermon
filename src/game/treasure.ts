@@ -148,6 +148,8 @@ export function mapChanceFromBeast(health: number): number {
 
 /* ------------------------------------------------------------------ the game */
 
+import { chartRegion } from '../world/chart';
+import { lairOf, REGIONS } from '../world/regions';
 import type { Game } from './game';
 import type { ActionDef } from './actions';
 import { HOARD_METALS, ITEM_DEFS, rollRarity, type Item } from './items';
@@ -209,8 +211,13 @@ export function deedCovers(g: Game, x: number, y: number): boolean {
  * crowded island there may be no such spot, and a map to the sea would be
  * worse than no map at all.
  */
-export function hoardSpot(g: Game, fromX: number, fromY: number): { x: number; y: number } | null {
-  for (let i = 0; i < 60; i++) {
+export function hoardSpot(g: Game, fromX: number, fromY: number, guard?: string): { x: number; y: number } | null {
+  // A hoard whose guard keeps to one island (`Region.lair`) is buried on that island, round its middle, wherever the map
+  // turned up: a grand map's dragon stands up on Volcano Isle and nowhere else. The island's `treasure_spot_for`.
+  const lair = guard === undefined ? undefined : lairOf(guard);
+  const isle = lair ? REGIONS.indexOf(lair) : -1;
+  if (lair) [fromX, fromY] = [lair.at[0] * g.world.w, lair.at[1] * g.world.h];
+  for (let i = 0; i < (lair ? 200 : 60); i++) {
     const a = g.rand() * Math.PI * 2;
     // Scaled to the island: a hundred and fifty tiles is off the edge of a
     // small one, and every candidate would land in the sea.
@@ -219,6 +226,7 @@ export function hoardSpot(g: Game, fromX: number, fromY: number): { x: number; y
     const x = Math.floor(fromX + Math.cos(a) * r);
     const y = Math.floor(fromY + Math.sin(a) * r);
     if (x < 1 || y < 1 || x >= g.world.w - 1 || y >= g.world.h - 1) continue;
+    if (lair && chartRegion(x + 0.5, y + 0.5, g.world.w) !== isle) continue;
     if (g.world.centerHeight(x, y) < 4) continue;
     if (deedCovers(g, x, y)) continue;
     return { x, y };
@@ -226,11 +234,14 @@ export function hoardSpot(g: Game, fromX: number, fromY: number): { x: number; y
   return null;
 }
 
+/** The thing guarding a hoard of this tier. */
+const guardOf = (tier: string): string => (TREASURE_TIERS.find((k) => k.id === tier) ?? TREASURE_TIERS[0]).guard;
+
 /** Bury one, and put the map of it in the pack. */
 export function buryTreasure(g: Game, ql: number, fromX: number, fromY: number): Item | null {
-  const spot = hoardSpot(g, fromX, fromY);
-  if (!spot) return null;
   const tier = treasureTier(ql);
+  const spot = hoardSpot(g, fromX, fromY, tier.guard);
+  if (!spot) return null;
   const map = g.inventory.add('treasure_map', { ql, extra: tier.id });
   g.hoards.push({ uid: map.uid, x: spot.x, y: spot.y, tier: tier.id });
   g.note('map');
@@ -250,8 +261,11 @@ export function buryTreasure(g: Game, ql: number, fromX: number, fromY: number):
  */
 export function hoardOf(g: Game, uid: number): Hoard | undefined {
   const h = g.hoards.find((k: Hoard) => k.uid === uid);
-  if (!h || !deedCovers(g, h.x, h.y)) return h;
-  const moved = hoardSpot(g, h.x, h.y);
+  // And a hoard whose guard keeps to another island than the one it was buried on moves to that island.
+  const lair = h ? lairOf(guardOf(h.tier)) : undefined;
+  const astray = !!h && !!lair && chartRegion(h.x + 0.5, h.y + 0.5, g.world.w) !== REGIONS.indexOf(lair);
+  if (!h || (!astray && !deedCovers(g, h.x, h.y))) return h;
+  const moved = hoardSpot(g, h.x, h.y, guardOf(h.tier));
   if (moved) { h.x = moved.x; h.y = moved.y; }
   return h;
 }

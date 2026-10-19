@@ -1,3 +1,4 @@
+import { lairOf } from '../world/regions';
 import { storeySkill } from './building';
 import { BLESS_CAP } from './faith';
 import { rarityChance } from './items';
@@ -62,7 +63,7 @@ export const GOAL_HOW: Readonly<Record<string, string>> = {
   goblin: 'Find a goblin out in the country, away from any settlement token, and "Attack" it (its right-click menu, or Space). The blow or shot that kills it must be yours: a kill by your companion or your settlement\'s wildermon does not count.',
   orc: 'Orcs keep away from settlement tokens; attack one and land the killing blow or shot yourself. A kill by a wildermon does not count.',
   ogre: 'Ogres keep away from settlement tokens; attack one and land the killing blow or shot yourself. A kill by a wildermon does not count.',
-  dragon: 'The dragon keeps far from any settlement token, and a grand treasure map\'s hoard is guarded by one. The killing blow or shot must be yours.',
+  dragon: `The dragon stands up only on ${lairOf('dragon')?.name ?? 'one island'} and keeps far from any settlement token, and a grand treasure map's hoard is guarded by one. The killing blow or shot must be yours.`,
   hoard: 'Butcher a dead dragon ("Butcher" on its corpse), or find a treasure map (digging, mining and monsters turn them up), right-click it in your Inventory and choose "Dig it up" with a shovel. Away from the spot the refusal says how close you are, and digging it up sets its guard on you.',
   scaled: 'Butcher a dragon for its scales, then make all five with an awl in Crafting (R): "Rivet a scale helm", "Rivet a scale cuirass", "Rivet scale sleeves", "Rivet scale leggings" and "Rivet scale boots" ({recipe.make_scale_helm.dragon_scale} + {recipe.make_scale_cuirass.dragon_scale} + {recipe.make_scale_sleeves.dragon_scale} + {recipe.make_scale_leggings.dragon_scale} + {recipe.make_scale_boots.dragon_scale} scales, with leather and metal ribbons). Wear all five at once ("Wear or wield", or the Equipment window).',
   composite: 'Make "Lay up a composite bow" in Crafting (R): {recipe.make_composite_bow.tusk} tusks, {recipe.make_composite_bow.sinew} sinew, {recipe.make_composite_bow.shaft} shafts and {recipe.make_composite_bow.rope} rope, with a carving knife. Tusks come from butchering an orc or an ogre; a lay-up that fails uses everything up and does not count.',

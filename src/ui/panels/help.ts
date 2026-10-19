@@ -142,7 +142,7 @@ import {
 } from '../../game/wounds';
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
-import { REGIONS } from '../../world/regions';
+import { lairOf, REGIONS } from '../../world/regions';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { LANDING_STAND, RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
@@ -3271,9 +3271,10 @@ export function helpText(): string {
     ${listed(MONSTERS.map(([id, w]) => `${percent(w / MONSTER_WEIGHT)} ${SPECIES[id].name.toLowerCase()}s`))}. Only so many of each are alive at once
     (${listed(MONSTERS.map(([id]) => `${numberWord(MONSTER_CAP[id] ?? 1)} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) === 1 ? '' : 's'}`))}), and the bigger the thing the further it keeps
     from your token &mdash; ${listed(MONSTERS.map(([id]) => `${article(SPECIES[id].name)} ${SPECIES[id].name.toLowerCase()} ${numberWord(MONSTER_KEEP_OFF[id] ?? 0)} tiles`))}. None of them can be tamed,
-    ${REGIONS.filter((R) => R.monsters).map((R) => `${capital(islandName(R.name))} is monster country: everything wild that stands up there is one of these and never a wildermon, and it holds ${times(R.monsters ?? 1)} the number of each that the rest of the chart shares between them (${listed(MONSTERS.map(([id]) => `${numberWord((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).`).join(' ')}
     trapped, bred or brushed. There is nothing to be done with one but kill it, and nothing to be gained
-    by meeting one in your shirt: ${listed(MONSTERS.map(([id], i) => `${article(SPECIES[id].name)} ${SPECIES[id].name.toLowerCase()}'s ${i === 0 ? 'blow takes ' : ''}${percent(Math.round(SPECIES[id].attack * BLOW_SHARE * 100) / 100)}`))} of an unarmoured life.</p>
+    by meeting one in your shirt: ${listed(MONSTERS.map(([id], i) => `${article(SPECIES[id].name)} ${SPECIES[id].name.toLowerCase()}'s ${i === 0 ? 'blow takes ' : ''}${percent(Math.round(SPECIES[id].attack * BLOW_SHARE * 100) / 100)}`))} of an unarmoured life.
+    ${REGIONS.filter((R) => R.monsters).map((R) => `${capital(islandName(R.name))} is monster country: everything wild that stands up there is one of these and never a wildermon, and it holds ${times(R.monsters ?? 1)} the number of each that the rest of the chart shares between them (${listed(MONSTERS.filter(([id]) => (lairOf(id) ?? R) === R).map(([id]) => `${numberWord((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}).`).join(' ')}
+    ${REGIONS.filter((R) => R.lair?.length).map((R) => `${capital(listed(R.lair!.map((id) => `${article(SPECIES[id].name)} ${SPECIES[id].name.toLowerCase()}`)))} ${R.lair!.length === 1 ? 'stands' : 'stand'} up on ${islandName(R.name)} and on no other island.`).join(' ')}</p>
     <p>What they are worth is on the other side of that. Butchering one gives what a wildermon gives and
     then some: <b>tusk</b> and <b>sinew</b> off an orc or an ogre, and off a dragon ${numberWord(SPECIES.dragon.butcher.scale ?? 0)}
     <b>dragon scales</b> and a <b>hoard</b> &mdash; ${numberWord(HOARD_LUMPS)} to ${numberWord(HOARD_LUMPS + HOARD_MORE)} lumps, by how much of the carcass you keep,

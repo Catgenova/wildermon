@@ -43,6 +43,7 @@ import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } f
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { REGIONS } from '../../world/regions';
+import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRLS_A_DAY } from '../../game/motes';
 import { THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
@@ -120,7 +121,7 @@ import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER
 import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
-import { COMPANION_SIGHT, HEARTH_FULL, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
+import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
 import { betterThanCommon, CHANNELS, husbandryOdds, pct as cardPct } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -2569,6 +2570,21 @@ export const NEWS: News[] = [
         `On an island, ${stitch.name} closed the wound you took first rather than your worst one, and ${mass.name} stopped that one bleeding `
           + `and closed it. Both take the worst wound now, as they say: ${stitch.name} closes it by ${percent(stitch.fx.close)} of its severity, `
           + `${mass.name} stops it bleeding and closes it by ${percent(mass.fx.close)}.`,
+      ];
+    },
+  },
+  {
+    n: 198,
+    day: '2026-10-19',
+    lines: () => {
+      const lair = REGIONS.find((R) => R.lair?.includes('dragon'))!;
+      const grand = TREASURE_TIERS.find((t) => t.guard === 'dragon')!;
+      return [
+        `The dragon stands up on ${lair.name} and on no other island; one stood up on the Crescent. A ${grand.name}'s hoard, which a dragon guards, `
+          + `is buried on ${lair.name} wherever the map turned up, and one you already hold that points somewhere else points there now.`,
+        `A wildermon that stood up before its kind was renamed kept the old name as its own, so one tamed since was still called a `
+          + `${['rabba', 'bevere'].map((id) => FORMER_NAME[id]).join(' or a ')}. Every one still called its kind's old name is called its kind's name now; `
+          + 'a name somebody gave one is kept.',
       ];
     },
   },

@@ -47,7 +47,7 @@ import { HUNTER_TRAPPED, TIMID_TRAPPED } from './traps';
 import { COMPANION_SIGHT as KEPT_EYES } from './vision';
 import { WOUND_KINDS } from './wounds';
 import { article, capital, listed, numberWord, percent, spanWords, times } from './words';
-import { REGIONS } from '../world/regions';
+import { lairOf, REGIONS } from '../world/regions';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
 export const GUIDE_MARKS: GuideMark[] = ['seen', 'tamed', 'bred'];
@@ -216,7 +216,9 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   if (share > 0) lines.push(`1 in ${Math.round(1 / share)} of what the wild puts down`);
   if (def.monster) {
     lines.push(`No more than ${numberWord(MONSTER_CAP[def.id] ?? 1)} on the island at once`);
-    for (const R of REGIONS) if (R.monsters) lines.push(`And up to ${numberWord((MONSTER_CAP[def.id] ?? 1) * R.monsters)} more on ${R.name}, where nothing else wild stands up`);
+    const lair = lairOf(def.id);
+    if (lair) lines.push(`Only on ${lair.name}, and on no other island`);
+    for (const R of REGIONS) if (R.monsters && (lair ?? R) === R) lines.push(`And up to ${numberWord((MONSTER_CAP[def.id] ?? 1) * R.monsters)} more on ${R.name}, where nothing else wild stands up`);
   }
   return lines;
 }

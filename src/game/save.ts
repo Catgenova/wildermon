@@ -32,7 +32,7 @@ import { upgradeDyes } from './dyestuffs';
 import { BUCKET_LITRES } from './furniture';
 import { keyX, keyY } from './tileindex';
 import type { PlacedCrate } from './crates';
-import type { CreatureJSON } from './creatures';
+import { renamedKind, type CreatureJSON } from './creatures';
 import type { Item } from './items';
 import { Game, type Deed } from './game';
 import type { GuestSave } from './actor';
@@ -688,6 +688,8 @@ function finish(world: World, m: SaveMeta): Game {
     for (const [was, now] of Object.entries(RENAMED)) if (was in rec) { rec[now] = rec[was]; delete rec[was]; }
   };
   rekey(game.ledger);
+  // And a wildermon that is still called what its kind used to be called is called what its kind is now (`renamedKind`).
+  for (const c of game.creatures.list.values()) c.name = renamedKind(c);
   for (const part of [...game.buildings.walls.values(), ...game.buildings.floors.values(), ...game.buildings.columns.values()]) {
     if (part.material === 'mosaic') part.material = 'stained_glass';
     rekey(part.needed);

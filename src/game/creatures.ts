@@ -31,6 +31,8 @@ import { greenNow, greenOnTile, scrubTile } from './greening';
 import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PIER_SHOO } from './piers';
 import { bedrockAt, oreAt } from '../world/ore';
+import { chartRegion } from '../world/chart';
+import { lairOf, REGIONS } from '../world/regions';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
 import { describeWith, itemDef, markOf, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
@@ -3393,6 +3395,18 @@ export const MONSTER_SHARE = 0.022;
 export const MONSTER_CAP: Record<string, number> = { goblin: 6, orc: 3, ogre: 2, dragon: 1 };
 /** How far from a settlement's token each keeps, in tiles: the bigger the thing, the further out. */
 export const MONSTER_KEEP_OFF: Record<string, number> = { goblin: 26, orc: 40, ogre: 55, dragon: 90 };
+/**
+ * What a kind of wildermon was called before it was renamed, by its id: a wild one stood up under the old name keeps
+ * it as its own until it is called something else, so one tamed since was still a Rabba. A name that is its kind's
+ * old one is its kind's name now (`renamedKind`, in a save; the island's migration, on an island).
+ */
+export const FORMER_NAME: Record<string, string> = {
+  rabba: 'Rabba', vola: 'Vola', woola: 'Woola', seavic: 'Seavic', warda: 'Warda', noot: 'Noot', crawler: 'Crawler',
+  mola: 'Mola', quarra: 'Quarra', bevere: 'Bevere', embra: 'Embra',
+};
+/** Its name, or its kind's name now where what it is called is only what its kind used to be called. */
+export const renamedKind = (c: { species: string; name: string }): string =>
+  FORMER_NAME[c.species] !== undefined && c.name === FORMER_NAME[c.species] ? SPECIES[c.species]?.name ?? c.name : c.name;
 
 export const WILD_SPECIES: Array<[string, number]> = [
   ['rabba', 27],
@@ -5316,7 +5330,9 @@ export class Creatures {
   private pickMonster(game: Game, x: number, y: number): string | null {
     const alive: Record<string, number> = {};
     for (const c of this.list.values()) if (c.mode === 'wild') alive[c.species] = (alive[c.species] ?? 0) + 1;
-    const room = MONSTERS.filter(([id]) => (alive[id] ?? 0) < (MONSTER_CAP[id] ?? 1));
+    // And one kept to an island (`Region.lair`) only on that island.
+    const here = REGIONS[chartRegion(x + 0.5, y + 0.5, game.world.w)];
+    const room = MONSTERS.filter(([id]) => (alive[id] ?? 0) < (MONSTER_CAP[id] ?? 1) && (lairOf(id) ?? here) === here);
     if (!room.length) return null;
     const id = rollTable(room, game.rand());
     // A settlement keeps the worst of it at arm's length. The bigger the

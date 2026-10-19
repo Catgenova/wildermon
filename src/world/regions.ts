@@ -73,6 +73,12 @@ export interface Region {
    * counted among those standing on this island and apart from the rest.
    */
   monsters?: number;
+  /**
+   * The monsters that stand up here and on no other island, by species id: the dragon on Volcano Isle, the
+   * northernmost. Asked for: "a dragon spawned on the crescent island, theyre only supposed to spawn on the
+   * northernmost island". Its cap is all there are of it, here. The island's `monster_isle`.
+   */
+  lair?: string[];
 }
 
 export const REGIONS: Region[] = [
@@ -126,6 +132,7 @@ export const REGIONS: Region[] = [
     stone: 'slate_shards',
     ores: ['seryll_ore'],
     trees: [LEMON],
+    lair: ['dragon'],
   },
   {
     key: 'MiddleIsle',
@@ -166,6 +173,9 @@ export const REGIONS: Region[] = [
 ];
 
 export const OCEAN_REGION = 255;
+
+/** The island a monster is kept to (`Region.lair`), or undefined for one that may stand up on any. */
+export const lairOf = (species: string): Region | undefined => REGIONS.find((R) => R.lair?.includes(species));
 
 /** Centre of the crescent's inner bay, and the shore band players start on. */
 export const BAY: [number, number] = [0.5221, 0.8193];

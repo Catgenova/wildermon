@@ -1433,6 +1433,10 @@ out.push(`create or replace function monster_share() returns double precision la
  * there at all.
  */
 out.push(`create or replace function region_monsters(p_region int) returns int language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => (R.monsters ? `when ${i} then ${R.monsters} ` : '')).join('')}else 0 end $fn$;`);
+// The middle of each island on the chart, nought to one each way (`Region.at`): where a hoard kept to it is buried round.
+out.push(`create or replace function region_middle(p_region int) returns double precision[] language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => `when ${i} then array[${q(R.at[0])}, ${q(R.at[1])}]::double precision[] `).join('')}end $fn$;`);
+// The monsters kept to one island, by its index in REGIONS (`Region.lair`); null for one that may stand up on any.
+out.push(`create or replace function monster_isle(p_species text) returns int language sql immutable as $fn$ select case p_species ${REGIONS.flatMap((R, i) => (R.lair ?? []).map((id) => `when ${q(id)} then ${i} `)).join('')}else null end $fn$;`);
 out.push(`create or replace function region_treeless(p_region int) returns boolean language sql immutable as $fn$ select coalesce(p_region = any(array[${REGIONS.map((R, i) => (R.treeless ? i : -1)).filter((i) => i >= 0).join(', ') || '-1'}]::int[]), false) $fn$;`);
 out.push(`create or replace function trait_slots() returns int language sql immutable as $fn$ select ${q(TRAIT_SLOTS)} $fn$;`);
 /* And the share of a wild roll that is fighting blood, which then rolls its own grade. */
