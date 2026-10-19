@@ -16,6 +16,7 @@ export const BUTCHER_PARTS: Array<[ButcherPart, string]> = [
   ['bone', 'bone'],
   ['gland', 'gland'],
   ['feather', 'feather'],
+  ['clay', 'clay'],
   ['tusk', 'tusk'],
   ['sinew', 'sinew'],
   ['scale', 'dragon_scale'],

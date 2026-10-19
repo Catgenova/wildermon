@@ -335,7 +335,7 @@ export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botaniz
   fill: 'fill the empty buckets in your stores with water at the shore or a well and put them back in your stores',
 };
 const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], butcher: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], rope: [], fletch: [], paper: [], glaze: [], fill: [] };
-export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'tusk' | 'sinew' | 'scale' | 'hoard';
+export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard';
 /** Marks a creature as last hurt by the player rather than another creature. */
 export const PLAYER_ATTACKER = -1;
 
@@ -850,14 +850,17 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'clay',
     workRange: 9,
     variants: [
-      ['#4a5a6e', '#eceff3'],
-      ['#3d4a5c', '#e2e7ee'],
-      ['#5c5348', '#f0ece2'],
-      ['#46605c', '#e6efec'],
+      // The coat and the clay: cream fur with rust clay; cream with brown clay; sandy with red-brown clay; grey-cream with dark
+      // umber clay. Its teal glaze is its own, the same on every one.
+      ['#f2e2c4', '#c8642e'],
+      ['#f0e0c6', '#94603c'],
+      ['#e6cc9a', '#a8402a'],
+      ['#dcd6c8', '#5c3e2c'],
     ],
-    butcher: { meat: 3, leather: 2, bone: 2, gland: 1, feather: 4 },
-    tameFail: 'takes the {food} in its bill, honks once through it, and waddles off',
-    leaves: 'waddles back to the nearest clay pit and settles into it',
+    // The clay caked in its coat and packed in its armour comes off with it.
+    butcher: { meat: 3, leather: 2, bone: 2, gland: 1, clay: 4 },
+    tameFail: 'packs the {food} into a ball of clay, buries it, and trundles off',
+    leaves: 'trundles back to the nearest clay pit and digs itself in',
     nearClay: true,
   },
   embra: {

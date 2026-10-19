@@ -2476,6 +2476,18 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 189,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.noot;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a clay-caked burrower in teal-glazed armour that grows into a great mole carrying clay pots on its back, with its own walk, strike, digging and voice.`,
+        `Butchered, ${article(d.name)} ${d.name} gives up to ${d.butcher.clay} ${itemDef('clay').name.toLowerCase()} instead of feathers, as many as the share of the carcass your butchering takes, on an island as in a game of your own.`,
+      ];
+    },
+  },
 ];
 
 

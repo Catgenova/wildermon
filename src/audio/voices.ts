@@ -1,6 +1,7 @@
 import type { BeastAct } from '../game/events';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
+import { CLAY_VOICE } from './voice-clay';
 import { IRON_VOICE } from './voice-iron';
 import { PIG_VOICE } from './voice-pig';
 import { SAND_VOICE } from './voice-sand';
@@ -40,4 +41,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   crawler: SAND_VOICE,
   // The Pigroot, the Plowhog and the Harvestusk.
   seavic: PIG_VOICE,
+  // The Mudlet, the Clayburrow and the Terramole.
+  noot: CLAY_VOICE,
 };

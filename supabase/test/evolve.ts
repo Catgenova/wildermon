@@ -17,6 +17,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
+import { BUTCHER_PARTS } from '../../src/game/butcher';
 import { attackOf, bloodMul, EVOLVE_AT, kindName, maxHealth, SPECIES, STAGE_MUL, stageOf, type Creature } from '../../src/game/creatures';
 
 const psql = (sql: string): string =>
@@ -62,6 +63,7 @@ begin
   insert into said select 'SPORELING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Vola')).id from species_def where id = 'vola';
   insert into said select 'CLOUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Woola')).id from species_def where id = 'woola';
   insert into said select 'PIGROOT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Seavic')).id from species_def where id = 'seavic';
+  insert into said select 'MUDCUT', string_agg(b.item || ':' || sb.n, ',' order by b.ord) from butcher_part b join species_butcher sb on sb.part = b.part where sb.species = 'noot';
   insert into said select 'MUDLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Noot')).id from species_def where id = 'noot';
   insert into said select 'SANDPIP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Crawler')).id from species_def where id = 'crawler';
   insert into said select 'SKYLOOK', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Warda')).id from species_def where id = 'warda';
@@ -122,6 +124,9 @@ const mud = SPECIES.noot;
 check('the Noot is the Mudlet now, a Clayburrow and a Terramole after, and an old Noot carcass is still one, on both sides',
   mud.name === 'Mudlet' && mud.stages?.map((x) => x.name).join(',') === 'Clayburrow,Terramole'
     && at('MUDLET') === 'Mudlet|Clayburrow,Terramole|Noot|noot', at('MUDLET'));
+const mudCut = BUTCHER_PARTS.filter(([p]) => (mud.butcher[p] ?? 0) > 0).map(([p, item]) => `${item}:${mud.butcher[p]}`).join(',');
+check('and butchered it gives clay, not feathers, the same on both sides',
+  mudCut.includes('clay:') && !mudCut.includes('feather') && at('MUDCUT') === mudCut, `browser ${mudCut}, island ${at('MUDCUT')}`);
 const pip = SPECIES.crawler;
 check('the Crawler is the Sandpip now, a Sandpincher and a Sandpinnacle after, and an old Crawler carcass is still one, on both sides',
   pip.name === 'Sandpip' && pip.stages?.map((x) => x.name).join(',') === 'Sandpincher,Sandpinnacle'
