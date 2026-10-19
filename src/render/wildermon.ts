@@ -17,6 +17,7 @@ import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
 import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
 import { BOGGA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
 import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
+import { HALLOWMIRE, LANTERNVEIL, WHISPET } from './wild-ghost';
 import { LOGCHEWER, SAPGNAW, TIMBERLORD } from './wild-gnaw';
 import { COBBE, GRUBBA, ROWL } from './wild-wild';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
@@ -135,8 +136,7 @@ export const WILDERMON: Record<string, Kind> = {
   wardo: WARDO,
   stona: STONA,
   leecha: LEECHA,
-  // Drawn as a Lume, a pale drifter, until it has a model of its own.
-  whispet: LUME,
+  whispet: WHISPET,
 };
 
 /**
@@ -153,6 +153,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   seavic: [PLOWHOG, HARVESTUSK],
   bevere: [LOGCHEWER, TIMBERLORD],
   embra: [SLUGEMBER, SLUGFERNO],
+  whispet: [LANTERNVEIL, HALLOWMIRE],
   noot: [CLAYBURROW, TERRAMOLE],
   crawler: [SANDPINCHER, SANDPINNACLE],
 };

@@ -2915,12 +2915,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'guard',
     workRange: 10,
     variants: [
-      // Pale lilac with white, mist grey with pale blue, a sickly pale green with white, and pumpkin-lit cream: the sheet
-      // and the face.
-      ['#dcd6ec', '#f8f6fd'],
-      ['#c4ccdc', '#eef2fa'],
-      ['#cfe2d4', '#f2fbf5'],
-      ['#ead8bc', '#fcf4e6'],
+      // Its body and the wisps of its hem, curls and tail: pearl white with lavender, moon-white with a pale blue-violet,
+      // ivory with rose-lilac, and a pale mint-white with violet. Its hat, pumpkins and lanterns are the same on all four.
+      ['#f6f3fb', '#ae94e4'],
+      ['#eef2fb', '#98a2e6'],
+      ['#fbf6ea', '#d29ad6'],
+      ['#eef8f2', '#9478d8'],
     ],
     // Nothing in it but what a gland is made of: no meat, hide, bone or fur on a ghost.
     butcher: { gland: 3 },

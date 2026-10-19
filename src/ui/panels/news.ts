@@ -2527,6 +2527,17 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 193,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.whispet;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.name}, the ${one.name} and the ${two.name} are each drawn as their own model now, no longer as a Lume: a round pearly ghost, a sheet ghost in a purple witch hat with a jack-o'-lantern, and a tall tattered veil under a torn hat hung with lanterns. Each floats its own way, strikes, uses ${abilityName(d.ability!)} with a swell and a ring of violet wisps, evolves in a mist, and has its own voice.`,
+      ];
+    },
+  },
 ];
 
 

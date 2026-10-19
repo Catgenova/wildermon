@@ -3,6 +3,7 @@ import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
 import { GNAW_VOICE } from './voice-gnaw';
+import { GHOST_VOICE } from './voice-ghost';
 import { IRON_VOICE } from './voice-iron';
 import { SLUG_VOICE } from './voice-slug';
 import { PIG_VOICE } from './voice-pig';
@@ -49,4 +50,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   bevere: GNAW_VOICE,
   // The Sluglow, the Slugember and the Slugferno.
   embra: SLUG_VOICE,
+  // The Whispet, the Lanternveil and the Hallowmire.
+  whispet: GHOST_VOICE,
 };
