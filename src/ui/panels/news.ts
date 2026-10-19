@@ -122,7 +122,7 @@ import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER
 import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
-import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
+import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
 import { betterThanCommon, CHANNELS, husbandryOdds, pct as cardPct } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -2636,6 +2636,15 @@ export const NEWS: News[] = [
       `A wildermon takes its kind's name as its own and kept it as it evolved, so a ${SPECIES.seavic.name} grown into a ${SPECIES.seavic.stages![1].name} was still `
         + `called ${SPECIES.seavic.name}. One called only its kind's name, a stage's or the name its kind went by before is renamed for the stage it is at `
         + 'as it evolves, and every one there is now has been: a name somebody gave it is kept.',
+    ],
+  },
+  {
+    n: 203,
+    day: '2026-10-19',
+    lines: () => [
+      `A wildermon assigned to your settlement from far away now walks back to it before taking up its trade, ${numberWord(HOME_LEG)} tiles a leg, `
+        + `as soon as it is more than ${numberWord(HOME_SLACK)} tiles past the ground it works. One that mends, carries the hod, stokes or runs any other errand, `
+        + 'and found nothing to do from where it was assigned, used to stand there for good, and one walking home in a single long leg could not be seen or selected by anybody near it.',
     ],
   },
 ];

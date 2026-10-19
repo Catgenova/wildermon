@@ -2599,6 +2599,16 @@ jobs:
             --outfile=node_modules/.cache/hod.mjs --log-level=error
           node node_modules/.cache/hod.mjs
 
+      - name: A worker off its ground walks back to it
+        run: |
+          # Reported: a Tinka sent home from 300 tiles away did not move and
+          # could not be selected. A worker past its ground walks back first, a
+          # short leg at a time so that whoever is near it is told of it, and an
+          # errand trade with nothing to run wanders in round the token.
+          npx esbuild supabase/test/errandhome.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/errandhome.mjs --log-level=error
+          node node_modules/.cache/errandhome.mjs
+
       - name: The Bauble of Regret, and a trade undone
         run: |
           # Asked for: a 3% chance of a Bauble of Regret in archaeology, which

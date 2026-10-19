@@ -3649,6 +3649,12 @@ export const wildGather = (species: SpeciesDef): GatherKind | null => (species.g
 export const workSkill = (species: SpeciesDef): string | null => (species.gathers ? GATHER_SKILL[species.gathers] : null);
 /** Every ten levels of its task skill let a worker range ten tiles further from the token. */
 export const SKILL_STEP = 10;
+/**
+ * A worker more than this many tiles past the ground it works walks back to it before taking up its trade, this many
+ * tiles a leg: the island's `home_slack` and `home_leg` (`errandhome` holds the two sides to one number).
+ */
+export const HOME_SLACK = 8;
+export const HOME_LEG = 2;
 export const RANGE_PER_STEP = 10;
 export const rangeSteps = (skill: number): number => Math.floor(skill / SKILL_STEP);
 /** A worker's task skill, or 0 for a species with no job. */
