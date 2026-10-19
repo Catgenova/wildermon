@@ -97,7 +97,7 @@ import {
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
-import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, RARITIES, RARITY_ROOM, rarityChance, roomFor } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guidePages, keepable } from '../../game/guide';
 import { MOBS_RANGE } from '../../game/keep';
@@ -517,6 +517,16 @@ const columnBills = (): string => ['log', 'marble'].map((m) => `${billWords(Obje
 
 /** The steps of rarity above the ordinary. */
 const RARE_STEPS = RARITIES.map((_, i) => i).slice(1);
+/**
+ * What one supreme unit of two puts on the chance of a supreme thing, off the
+ * rule (`rarityBands`): two units, one of them supreme, against two plain ones.
+ */
+const SUPREME = RARITIES.findIndex((r) => r.name === 'supreme');
+const RARE_IN_EXAMPLE = ((): { step: string; more: number } => {
+  const one = RARITIES.map((_, i) => (i === 0 || i === SUPREME ? 1 : 0));
+  const plain = RARITIES.map((_, i) => (i === 0 ? 2 : 0));
+  return { step: RARITIES[SUPREME].name, more: rarityBands(one)[SUPREME] - rarityBands(plain)[SUPREME] };
+})();
 /** How long a go at a book is, as the action has it. */
 const STUDY_TIME = ARCHAEOLOGY_ACTION_BY_ID.get('study_book')?.baseTime ?? 0;
 /** The trade a map is drawn with, by name, and the level the help times its jobs at. */
@@ -2625,8 +2635,13 @@ export function helpText(): string {
     <h3>Rare things</h3>
     <p>Now and again a thing comes off the bench better than the hands that made it had any right to
     produce. About ${listed(RARE_STEPS.map((step, i) => `<b>one thing in ${numberWord(Math.round(1 / rarityChance(step)))}</b> ${i === 0 ? 'is ' : ''}<b>${RARITIES[step].name}</b>`))}.
-    Nothing brings it on &mdash; not skill, not tools, not the metal &mdash; and nothing you do can make
-    it more likely; you make ${numberWord(Math.round(1 / rarityChance(RARITIES.length - 1)))} ordinary things and find that you have one.</p>
+    Skill, tools and the metal do not bring it on; you make ${numberWord(Math.round(1 / rarityChance(RARITIES.length - 1)))} ordinary things and find that you have one.</p>
+    <p><b>Rare ingredients do.</b> Of the units a craft uses up, the share that is ${listedOr(RARE_STEPS.map((step) => RARITIES[step].name))}
+    is added to the chance that what comes out is that rare: two units, one of them ${RARE_IN_EXAMPLE.step}, have a
+    <b>+${percent(RARE_IN_EXAMPLE.more)} chance</b> of coming out ${RARE_IN_EXAMPLE.step}, over the odds above. The steps are rolled from
+    ${RARITIES[RARITIES.length - 1].name} down and the first that comes up wins. Tools, the station and a full bucket, which comes back
+    empty, are not ingredients. At the anvil the one casting or lump that goes in is all of it, so a rare one makes the piece or the coins
+    at least that rare. Every go with a rare ingredient in it says what it added.</p>
     <p>A rare thing is <b>better at whatever it was for</b> by ${listed(RARE_STEPS.map((step) => share(RARITIES[step].boost - 1))).replace(/ and ([^,]*)$/, ' or $1')}
     &mdash; an edge that bites, armour that turns aside more, a tool that works truer &mdash; <b>wears and rots
     at ${listed(RARE_STEPS.map((step) => percent(RARITIES[step].keep)))}</b> of an ordinary one's pace, and can be <b>improved past the

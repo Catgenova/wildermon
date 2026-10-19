@@ -114,7 +114,7 @@ import { MUTE_FOR, MUTE_SHUTS } from '../../game/keeper';
 import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
-import { itemDef, RARITIES, rarityChance } from '../../game/items';
+import { itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid } from '../../game/items';
 import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
@@ -2682,6 +2682,25 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       return [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a brick lizard that takes on a hod of mortar and a trowel and then a brick tower, with its own walk, strike, bricklaying and voice.`,
+      ];
+    },
+  },
+  {
+    n: 207,
+    day: '2026-10-19',
+    lines: () => {
+      // Two units, one of them supreme, off the rule (`rarityBands`).
+      const s = RARITIES.findIndex((r) => r.name === 'supreme');
+      const one = RARITIES.map((_, i) => (i === 0 || i === s ? 1 : 0));
+      const more = rarityBands(one)[s] - rarityBands(RARITIES.map((_, i) => (i === 0 ? 2 : 0)))[s];
+      const top = RARITIES.length - 1;
+      return [
+        `Rare ingredients make rare work more likely. Of the units a craft uses up, the share at each of ${listed(RARITIES.slice(1).map((r) => r.name))} `
+          + `is added to the chance that what comes out is that rare: two units, one of them supreme, have a +${percent(more)} chance of coming out supreme. `
+          + `The steps are rolled from ${RARITIES[top].name} down and the first that comes up wins.`,
+        'Tools, the station and a full bucket, which comes back empty, are not counted. At the anvil the one casting a piece is beaten from, '
+          + 'or the one lump a strike of coins takes, is the whole of it, so a rare one makes what comes out at least that rare.',
+        `A go with rare ingredients in it says what they added, as "${rareInputSaid(one)}"`,
       ];
     },
   },

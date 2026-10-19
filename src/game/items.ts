@@ -1078,8 +1078,8 @@ export const rarityStep = (word: string | null | undefined): number | undefined 
  * by "the odds of a fantastic" is the three multiplied out — one in ten
  * thousand — and that is what this is.
  */
-export const rarityChance = (step: number): number =>
-  step < 1 || step >= RARITIES.length ? 0 : RARITY_ODDS.slice(0, step).reduce((p, o) => p * o, 1);
+export const rarityChance = (step: number, first = RARITY_ODDS[0]): number =>
+  step < 1 || step >= RARITIES.length ? 0 : RARITY_ODDS.slice(0, step).reduce((p, o, i) => p * (i === 0 ? first : o), 1);
 
 /**
  * A step up under the file, on a pass that went well.
@@ -1112,6 +1112,83 @@ export function rollRarity(rand: () => number, first = RARITY_ODDS[0]): number {
   }
   return step;
 }
+
+/**
+ * What the rare things that went into a craft do to the chance of what comes
+ * out of it.
+ *
+ * Asked for: "When crafting, if an ingredient used to craft is rare+, the
+ * chance that the outcome is rare+ is increased by the percentage of total
+ * ingredients that rare ingredient represents. E.g. a craft with two
+ * ingredients, one of which is supreme, has a +50% chance to be supreme."
+ *
+ * `units` is how many of the units a go used up were at each step, ordinary at
+ * nought: counted by the unit, so that four rare planks in a chest of eight
+ * are half of it, and only what is used up. A tool, the station it is made at
+ * and the bucket a liquid comes back out of are not ingredients, and a
+ * container that comes back is not counted on either side of the share.
+ *
+ * Each step's share of the units goes onto the chance of coming out at
+ * exactly that step, rolled from the top step down, the first that comes up
+ * winning, and no step's chance more than the steps above it left of a
+ * certainty. A step's own odds (`rarityChance`, `first` the first step's,
+ * which a perk may better) stay under the share: two units, one of them
+ * supreme, come out supreme half the time and the thousandth part they always
+ * did, fantastic the ten-thousandth part they always did, and rare or plain
+ * the rest. Nothing rare in it and it is the ordinary odds, step for step.
+ *
+ * The chance of each step, ordinary at nought: the island's `rarity_bands`.
+ */
+export function rarityBands(units: readonly number[], first = RARITY_ODDS[0]): number[] {
+  const total = units.reduce((a, n) => a + Math.max(0, n), 0);
+  const bands = RARITIES.map(() => 0);
+  let above = 0;
+  for (let step = RARITIES.length - 1; step >= 1; step--) {
+    const own = rarityChance(step, first) - rarityChance(step + 1, first);
+    const share = total > 0 ? Math.max(0, units[step] ?? 0) / total : 0;
+    bands[step] = Math.max(0, Math.min(1 - above, own + share));
+    above += bands[step];
+  }
+  bands[0] = Math.max(0, 1 - above);
+  return bands;
+}
+
+/** Whether anything rare went into it at all, which is when `rarityBands` changes the roll. */
+export const anyRareIn = (units: readonly number[]): boolean => units.some((n, step) => step > 0 && n > 0);
+
+/**
+ * Roll for rarity on a thing made out of `units` (`rarityBands`): with nothing
+ * rare in it, the very roll `rollRarity` always made, dice and all; with
+ * something, one die against the steps from the top down.
+ */
+export function rollRarityFrom(rand: () => number, units: readonly number[], first = RARITY_ODDS[0]): number {
+  if (!anyRareIn(units)) return rollRarity(rand, first);
+  const bands = rarityBands(units, first);
+  const roll = rand();
+  let below = 0;
+  for (let step = RARITIES.length - 1; step >= 1; step--) {
+    below += bands[step];
+    if (roll < below) return step;
+  }
+  return 0;
+}
+
+/**
+ * What a go says of the rare things that went into it, or null when there were
+ * none: each step's share of the units used, as the points it put on the
+ * chance of coming out at that step, and the count it is the share of. The
+ * island's `rare_input_said`, word for word.
+ */
+export function rareInputSaid(units: readonly number[]): string | null {
+  if (!anyRareIn(units)) return null;
+  const total = units.reduce((a, n) => a + Math.max(0, n), 0);
+  const parts = units.flatMap((n, step) => (step > 0 && n > 0
+    ? [`+${Math.round((n * 100) / total)}% chance of ${RARITIES[step].name} (${n} of ${total} units used)`] : []));
+  return `Rare ingredients: ${parts.reverse().join(', ')}.`;
+}
+
+/** A tally of units by step, ordinary at nought, to count a go's ingredients into. */
+export const rarityTally = (): number[] => RARITIES.map(() => 0);
 
 export function itemDef(id: string): ItemDef {
   return ITEM_DEFS[id] ?? { name: id, category: 'misc', weight: 1 };

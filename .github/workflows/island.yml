@@ -2631,6 +2631,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/relicuse.mjs --log-level=error
           node node_modules/.cache/relicuse.mjs
 
+      - name: Rare ingredients make rare work more likely
+        run: |
+          # Asked for: a rare+ ingredient raises the chance a craft comes out
+          # that rare by its share of the ingredients: two, one supreme, is
+          # +50% supreme. The same chance of each step and the same words on
+          # both sides; many goes of mortar off a supreme clay come out supreme
+          # about half the time on both, and plain clay as ever; a full bucket
+          # is no ingredient; a rare lump or casting at the anvil is all of it.
+          npx esbuild supabase/test/rareinput.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/rareinput.mjs --log-level=error
+          node node_modules/.cache/rareinput.mjs
+
       - name: The Bauble of Regret, and a trade undone
         run: |
           # Asked for: a 3% chance of a Bauble of Regret in archaeology, which

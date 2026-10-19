@@ -3,7 +3,8 @@ import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import {
-  describeFrom, describeWith, itemDef, makersMark, markOf, overParts, partsMark, rollRarity, RARITY_ODDS, RARITY_WORD, serveOf, type Item,
+  describeFrom, describeWith, itemDef, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
+  serveOf, type Item,
 } from './items';
 import { QL_PER_LOOP } from './belt';
 import { campfireFood, describeGoals } from './journal';
@@ -1118,15 +1119,24 @@ function drawFor(stock: readonly CraftStock[], id: string, n: number, preferUid?
   return [...from].sort((a, b) => Number(b.item.uid === preferUid) - Number(a.item.uid === preferUid));
 }
 
-/** Use up `n` units of an item from the stacks `drawFor` names. */
-function consumeAcross(stock: readonly CraftStock[], id: string, n: number, preferUid?: number, mat?: string, strict = false): boolean {
+/**
+ * Use up `n` units of an item from the stacks `drawFor` names, and count what
+ * was taken into `tally` by its rarity where one is handed in: what a craft's
+ * rare ingredients put on the chance of a rare one is the units actually used
+ * (`rarityBands`).
+ */
+function consumeAcross(stock: readonly CraftStock[], id: string, n: number, preferUid?: number, mat?: string, strict = false, tally?: number[]): boolean {
   const from = drawFor(stock, id, n, preferUid, mat, strict);
   if (!from) return false;
   let left = n;
   for (const s of from) {
     if (left <= 0) break;
     const take = Math.min(left, s.item.count);
-    if (take > 0 && s.spend(take)) left -= take;
+    const step = s.item.rare ?? 0;
+    if (take > 0 && s.spend(take)) {
+      left -= take;
+      if (tally) tally[step] = (tally[step] ?? 0) + take;
+    }
   }
   return left === 0;
 }
@@ -1282,9 +1292,13 @@ export function recipeAction(r: Recipe): ActionDef {
       const keeps = vessel ? markOf(vessel, 'keeps') : 1;
       // What a boil takes of its dyestuff, to say so when it comes off (`boiledDye`).
       const boiled = r.result === DYE_BUCKET ? needOf(g, r, r.inputs[0]) : 0;
+      // The units used up, by their rarity, for what rare ones put on the
+      // chance of a rare one (`rarityBands`). A bucket of water or lye is the
+      // bucket's rarity and the bucket comes back, so it is no ingredient.
+      const used = rarityTally();
       for (const i of r.inputs) {
         if (vesselKept && VESSELS[i.item]) continue;
-        if (!consumeAcross(stock, i.item, needOf(g, r, i), t.uid, mat, strict.get(i.item))) return;
+        if (!consumeAcross(stock, i.item, needOf(g, r, i), t.uid, mat, strict.get(i.item), VESSELS[i.item] ? undefined : used)) return;
       }
       carryOn(t, g, was, mat);
       /*
@@ -1325,10 +1339,13 @@ export function recipeAction(r: Recipe): ActionDef {
       const marked = mark && Object.keys(mark).length ? mark : undefined;
       // Now and again a thing comes off the bench better than the hands that
       // made it had any right to produce, the odds bettered by a perk on the
-      // recipe (a Carpenter's Master Joiner). Rolled before it goes into the
-      // pack, and rare work carries its maker's name, so that it starts a pile
-      // of its own: set after, it made the whole pile it went onto rare.
-      const rare = rollRarity(g.rand, g.perk(`rare:${r.id}`, RARITY_ODDS[0]));
+      // recipe (a Carpenter's Master Joiner) and by the rare things that went
+      // into it, each step by its share of the units used (`rarityBands`).
+      // Rolled before it goes into the pack, and rare work carries its maker's
+      // name, so that it starts a pile of its own: set after, it made the whole
+      // pile it went onto rare.
+      const rare = rollRarityFrom(g.rand, used, g.perk(`rare:${r.id}`, RARITY_ODDS[0]));
+      const rareIn = rareInputSaid(used);
       const item = g.inventory.add(r.result, {
         count, ql, extra: r.extra ?? mat, ...(stackable && marked ? { mark: marked } : {}), ...(rare ? { rare } : {}),
         // Rare work, and one thing made at the signing QL, carries its maker's name (`signing.ts`).
@@ -1337,6 +1354,8 @@ export function recipeAction(r: Recipe): ActionDef {
       if (!stackable && marked) item.mark = marked;
       // A boil leaves its dye in the bucket it was boiled in (`dyes.ts`).
       if (r.result === DYE_BUCKET) boiledDye(g, item, r.inputs[0].item, boiled);
+      // What the rare ingredients put on the chance, said whether or not it came up.
+      if (rareIn) g.logMsg(rareIn, 'event');
       if (rare) {
         g.note(['', 'rare', 'supreme', 'fantastic'][rare]);
         g.logMsg(RARITY_WORD[rare], 'skill');

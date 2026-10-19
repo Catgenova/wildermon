@@ -4,7 +4,7 @@ import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { madeBy } from './signing';
-import { itemDef, makersMark, rarityOf, rollRarity, RARITY_ODDS, RARITY_WORD } from './items';
+import { itemDef, makersMark, rareInputSaid, rarityOf, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD } from './items';
 import { matOf, matOfItem, workingQl } from './materials';
 import { metalOfItem } from './melt';
 import { COIN_DIFFICULTY, COIN_METALS, COIN_REFUSAL, coinPurity, COINS_PER_LUMP, DIE_WEAR, isCasting, isMetalStock, METAL_BY_ID, METAL_BY_LUMP, metalOfBar, MOULD_BY_MAKES, type MouldDef } from './metal';
@@ -188,6 +188,10 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const metal = lump && METAL_BY_LUMP.get(lump.id);
       if (!die || !stack || !lump || !metal || !COIN_METALS.includes(metal.id)) return;
       const lumpQl = lump.ql;
+      // The one lump a strike uses is all that goes into it, so a rare lump is
+      // the whole of it, for what it puts on the chance of rare coins (`rarityBands`).
+      const used = rarityTally();
+      used[lump.rare ?? 0] += 1;
       if (!stack.spend(1)) return;
       // The die wears with every strike, good or bad, and no die can be mended.
       const dieQl = Math.max(1, die.ql - die.dmg / 2);
@@ -208,7 +212,9 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const ql = Math.min(100, smithQl(g, { skill: 'blacksmithing' } as MouldDef, dieQl, lump.ql, a) + swingEnchant(a, 'master'));
       g.gainSkill('blacksmithing', tryGain(true, SMITH_GAIN));
       const made = g.inventory.add('coin', { ql, extra: metal.name, count: COINS_PER_LUMP });
-      const rare = rollRarity(g.rand);
+      const rare = rollRarityFrom(g.rand, used);
+      const rareIn = rareInputSaid(used);
+      if (rareIn) g.logMsg(rareIn, 'event');
       if (rare) {
         made.rare = rare;
         made.maker = g.player.name;
@@ -266,6 +272,10 @@ export const ANVIL_ACTIONS: ActionDef[] = [
         g.logMsg(`The ${itemDef(def.makes).name.toLowerCase()} comes out misshapen and ${kept ? 'goes back into the fire: the casting is kept' : 'you throw the metal back'}.`, 'event');
         return;
       }
+      // The one casting is all that goes into it, for what a rare one puts on
+      // the chance of a rare piece (`rarityBands`).
+      const used = rarityTally();
+      used[casting.rare ?? 0] += 1;
       if (!stack.spend(1)) return;
       g.events.emit('inventory');
       // The casting carries the mould and the metal it was poured from, so it
@@ -278,8 +288,11 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       // Maker, Temper Bath), which goes with it into whatever it is fitted to.
       const mark = makersMark((k, d) => g.perk(k, d), def.makes);
       const made = g.inventory.add(def.makes, { ql, extra: casting.extra, count: per, mark });
-      // Rarer odds for a Smith's Master's Mark, as `rare:smith` has it on the island.
-      const rare = rollRarity(g.rand, g.perk('rare:smith', RARITY_ODDS[0]));
+      // Rarer odds for a Smith's Master's Mark, as `rare:smith` has it on the
+      // island, and for a rare casting.
+      const rare = rollRarityFrom(g.rand, used, g.perk('rare:smith', RARITY_ODDS[0]));
+      const rareIn = rareInputSaid(used);
+      if (rareIn) g.logMsg(rareIn, 'event');
       // One thing beaten out at the signing QL carries its maker's name as rare work does (`signing.ts`).
       const by = madeBy(g.player.name, def.makes, made.ql);
       if (by) made.maker = by;
