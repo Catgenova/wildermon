@@ -2441,7 +2441,8 @@ export const NEWS: News[] = [
         `A digger's lump of clay or heap of sand is raised by its yield traits as well as its digging, in a game of your own as it already was on an island.`,
       ];
     },
-  },  {
+  },
+  {
     n: 186,
     day: '2026-10-19',
     lines: () => {
@@ -2449,6 +2450,17 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       return [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a hermit crab carrying a shell heaped with sand that grows into a crown of shells and coral, with its own walk, strike, digging and voice.`,
+      ];
+    },
+  },
+  {
+    n: 187,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.seavic;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a leaf-backed piglet that grows into a plough-snouted hog and then a great tusked boar, with its own walk, strike, field work and voice.`,
       ];
     },
   },

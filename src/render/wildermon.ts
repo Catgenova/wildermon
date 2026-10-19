@@ -9,7 +9,7 @@ import { BURA, CUDDA, GORRAL, ORSE, ROXXEN, SAPPA, SHAGGAN, SNEDDA } from './wil
 import { MAGGA, NOOT } from './wild-odd';
 import { SANDPINCHER, SANDPINNACLE, SANDPIP } from './wild-sand';
 import { ULVA } from './wild-hunters';
-import { SEAVIC } from './wild-small';
+import { HARVESTUSK, PIGROOT, PLOWHOG } from './wild-pig';
 import { CLOUDBORNE, CLOUDLET, CLOUDRAM } from './wild-cloud';
 import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
@@ -44,7 +44,7 @@ export const WILDERMON: Record<string, Kind> = {
   noot: NOOT,
   crawler: SANDPIP,
   ulva: ULVA,
-  seavic: SEAVIC,
+  seavic: PIGROOT,
   vola: SPORELING,
   mola: IRONEMOLE,
   dowse: DOWSE,
@@ -145,6 +145,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   vola: [SPOREKIN, SPORELORD],
   warda: [SKYWARDEN, SKYRANGE],
   woola: [CLOUDRAM, CLOUDBORNE],
+  seavic: [PLOWHOG, HARVESTUSK],
   crawler: [SANDPINCHER, SANDPINNACLE],
 };
 
