@@ -5,6 +5,8 @@
  * its terrace; a tile out past one gets the jetty that could go there, or the
  * one that is there, on the storey being worked.
  */
+import type { Bill } from '../game/building';
+import { buildRow } from './buildCounts';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../game/actions';
 import { materialName } from '../game/buildActions';
 import {
@@ -52,6 +54,8 @@ const entry = (g: Game, def: ActionDef, target: Target, label = def.label): Menu
   const reason = def.check?.(target, g) ?? null;
   return { label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(def, target) };
 };
+/** Building a planned piece, a number of goes at a time (`buildCounts.ts`). */
+const build = (g: Game, def: ActionDef, target: Target, label: string, bill: Bill): MenuItem => buildRow(g, def, target, label, bill, def.check?.(target, g) ?? null);
 
 /** A row that opens onto the twelve materials, each with what it costs. */
 const materials = (g: Game, def: ActionDef, target: TileTarget, label: string, bill: (m: string) => Parameters<typeof describeNeeds>[0]): MenuItem => {
@@ -114,7 +118,7 @@ function terraceRows(g: Game, b: Building, pick: Pick, base: TileTarget): MenuIt
   const standing = g.buildings.wall(b.levels, base.x, base.y, side);
   if (standing) {
     const out: MenuItem[] = [];
-    if (!isDone(standing)) out.push(entry(g, act('build_wall'), t, `Build railing round the roof (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`));
+    if (!isDone(standing)) out.push(build(g, act('build_wall'), t, `Build railing round the roof (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`, standing));
     out.push(entry(g, act('remove_wall'), t, `Remove railing round the roof (${SIDE_NAMES[side]})`));
     return out;
   }
@@ -144,7 +148,7 @@ function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceS
   if (there && there.building === b.id) {
     const what = there.hand ? `outside ${SINGLE_STAIRS_NAME}` : 'outside staircase';
     const rows: MenuItem[] = [];
-    if (!isDone(there)) rows.push(entry(g, act('build_floor'), t, `Build ${what} · needs ${describeNeeds(there, materialName)}`));
+    if (!isDone(there)) rows.push(build(g, act('build_floor'), t, `Build ${what} · needs ${describeNeeds(there, materialName)}`, there));
     rows.push(entry(g, act('remove_floor'), t, `Remove ${what}`));
     return rows;
   }
@@ -217,7 +221,7 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs): Men
     const floor = bld.floor(level, x, y);
     if (floor && floor.building === b.id && floorKind(floor) !== 'stairs') {
       const what = FLOOR_KIND_NAMES[floorKind(floor)];
-      if (!isDone(floor)) rows.push(entry(g, act('build_floor'), base, `Build jetty ${what} · needs ${describeNeeds(floor, materialName)}`));
+      if (!isDone(floor)) rows.push(build(g, act('build_floor'), base, `Build jetty ${what} · needs ${describeNeeds(floor, materialName)}`, floor));
       rows.push(entry(g, act('remove_floor'), base, `Remove jetty ${what}`));
       // Its walls and railings, on the side nearest the click.
       const side = nearestSide(x, y, pick.wx, pick.wy);
@@ -225,7 +229,7 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs): Men
       const wall = bld.wall(level, x, y, side);
       if (wall) {
         const name = WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() ?? 'wall';
-        if (!isDone(wall)) rows.push(entry(g, act('build_wall'), withSide, `Build ${name} (${SIDE_NAMES[side]}) · needs ${describeNeeds(wall, materialName)}`));
+        if (!isDone(wall)) rows.push(build(g, act('build_wall'), withSide, `Build ${name} (${SIDE_NAMES[side]}) · needs ${describeNeeds(wall, materialName)}`, wall));
         rows.push(entry(g, act('remove_wall'), withSide, `Remove ${name} (${SIDE_NAMES[side]})`));
       } else {
         const plan = act('plan_wall');
@@ -263,7 +267,7 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs): Men
       const roof = bld.floor(b.levels, x, y);
       const roofTarget: TileTarget = { ...base, floorKind: 'roof' };
       if (roof) {
-        if (!isDone(roof)) rows.push(entry(g, act('build_floor'), roofTarget, `Build roof over the jetty · needs ${describeNeeds(roof, materialName)}`));
+        if (!isDone(roof)) rows.push(build(g, act('build_floor'), roofTarget, `Build roof over the jetty · needs ${describeNeeds(roof, materialName)}`, roof));
         rows.push(entry(g, act('remove_floor'), roofTarget, 'Remove roof over the jetty'));
       } else {
         const shapes = roofShapeMenu(g, b, roofTarget);

@@ -3058,6 +3058,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/buildstores.mjs --log-level=error
           node node_modules/.cache/buildstores.mjs
 
+      - name: A wall or a floor is built a number of goes at a time
+        run: |
+          # Asked: "Allow bulk actions when building structures like walls and
+          # floors, e.g. build 5 10 25 50". A log wall's row offers its counts;
+          # five goes fit five logs, and fifty finish it and stop, on both sides.
+          npx esbuild supabase/test/buildcount.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/buildcount.mjs --log-level=error
+          node node_modules/.cache/buildcount.mjs
+
       - name: The Equipment window's numbers are the fight's own
         run: |
           # Asked: an Equipment window to drag things on and off a figure of

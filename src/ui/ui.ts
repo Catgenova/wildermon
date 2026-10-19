@@ -1,3 +1,5 @@
+import type { Bill } from '../game/building';
+import { buildRow } from './buildCounts';
 import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
 import type { Pick, Renderer } from '../render/renderer';
@@ -204,7 +206,8 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
   if (flight && (kind === 'stairs' || kind === 'ladder')) {
     const t: Target = { ...base, floorKind: kind, down: true };
     const what = `${floorName(flight)} down`;
-    if (!isDone(flight)) entries.push(...item(ACTION_BY_ID.get('build_floor'), t, `Build ${what} · needs ${describeNeeds(flight, materialName)}`));
+    const build = ACTION_BY_ID.get('build_floor');
+    if (!isDone(flight) && build) entries.push(buildRow(g, build, t, `Build ${what} · needs ${describeNeeds(flight, materialName)}`, flight, cellarReason(g, build, t)));
     entries.push(...item(ACTION_BY_ID.get('remove_floor'), t, `Remove ${what}`));
     return entries;
   }
@@ -3147,6 +3150,8 @@ export class UI {
       const reason = cellarReason(g, def, target);
       return { label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(def, target) };
     };
+    // Building a planned piece, a number of goes at a time (`buildCounts.ts`).
+    const build = (def: ActionDef, target: Target, label: string, bill: Bill): MenuItem => buildRow(g, def, target, label, bill, cellarReason(g, def, target));
     // A Mason's Repoint: a finished wall of stone laid again in another stone, one entry to each.
     const repoint = (standing: { material: string; type: Parameters<typeof layingBill>[1] }, target: Extract<Target, { kind: 'tile' }>, label: string): MenuItem[] => {
       const def = act('repoint_wall');
@@ -3184,7 +3189,7 @@ export class UI {
       if (standing) {
         const what = WALL_TYPE_BY_ID.get(bld.seenType(standing))?.name ?? 'Fence';
         entries.push(...gateEntries(this.game, withSide));
-        if (!isDone(standing)) entries.push(item(act('build_wall'), withSide, `Build ${what.toLowerCase()} (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`));
+        if (!isDone(standing)) entries.push(build(act('build_wall'), withSide, `Build ${what.toLowerCase()} (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`, standing));
         entries.push(item(act('remove_wall'), withSide, `Remove ${what.toLowerCase()} (${SIDE_NAMES[side]})`));
         entries.push(...repoint(standing, withSide, `Repoint ${what.toLowerCase()} (${SIDE_NAMES[side]})`));
         entries.push(...ivy(withSide));
@@ -3255,7 +3260,7 @@ export class UI {
     // A portcullis stands on the ground floor, whichever storey is being worked on.
     entries.push(...gateEntries(this.game, withSide));
     if (wall) {
-      if (!isDone(wall)) entries.push(item(act('build_wall'), withSide, `Build wall (${sideName}) · needs ${describeNeeds(wall, materialName)}`));
+      if (!isDone(wall)) entries.push(build(act('build_wall'), withSide, `Build wall (${sideName}) · needs ${describeNeeds(wall, materialName)}`, wall));
       entries.push(item(act('remove_wall'), withSide, `Remove wall (${sideName})`));
       entries.push(...repoint(wall, withSide, `Repoint wall (${sideName})`));
     } else {
@@ -3304,7 +3309,7 @@ export class UI {
       // Below.
     } else if (floor) {
       const what = deck ? 'deck' : floorKind(floor) === 'floor' && level === 0 ? 'flooring' : floorName(floor);
-      if (!isDone(floor)) entries.push(item(act('build_floor'), base, `Build ${what} · needs ${describeNeeds(floor, materialName)}`));
+      if (!isDone(floor)) entries.push(build(act('build_floor'), base, `Build ${what} · needs ${describeNeeds(floor, materialName)}`, floor));
       entries.push(item(act('remove_floor'), base, `Remove ${what}`));
     } else {
       const floorLabel = deck ? 'deck' : level > 0 ? 'floor' : 'flooring';
@@ -3367,7 +3372,7 @@ export class UI {
     const roof = bld.floor(b.levels, x, y);
     const roofTarget: Target = { ...base, floorKind: 'roof' };
     if (roof) {
-      if (!isDone(roof)) entries.push(item(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`));
+      if (!isDone(roof)) entries.push(build(act('build_floor'), roofTarget, `Build roof · needs ${describeNeeds(roof, materialName)}`, roof));
       entries.push(item(act('remove_floor'), roofTarget, 'Remove roof'));
     } else {
       const probe = cellarReason(g, plan, { ...roofTarget, material: 'log' });

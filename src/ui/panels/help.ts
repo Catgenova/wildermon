@@ -1,3 +1,4 @@
+import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
 import { JOINT_EVERY, PIN_EVERY, SOFT, STITCH_EVERY } from '../runecut-dress';
 import { FRAMES } from '../runecut-frames';
@@ -1495,7 +1496,9 @@ export function helpText(): string {
     <b>Build wall</b> feeds it materials one at a time, out of your pack, then a crate standing on the tile, then the
     crates, carts, wagons and containers within ${CRAFT_REACH} tiles a craft takes from (<i>Use stores within reach</i>,
     unticked, keeps it to the pack and the crate on the tile); a floor, a frame and a bridge's or an aqueduct's spans take
-    theirs the same way. Floors are planned the same way and laid with
+    theirs the same way. Its row opens onto how many goes to take, a piece of material a go: one, ${listed(BUILD_COUNTS.map(String))} where the
+    piece still needs more than that, or all it needs (up to ${MOST_GOES} a time); it stops early once the piece is finished or
+    nothing it needs is to hand. Floors are planned the same way and laid with
     the paving skill. Another storey can only be planned once every side of the storey below has a finished wall,
     or a finished column at each end, up to ${numberWord(MAX_LEVELS)} in all. Every job on a building goes to the
     storey you are working on (<b>Work on storey N</b> on its menu). A finished full-height wall with a wall of its

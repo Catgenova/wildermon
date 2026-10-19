@@ -1,3 +1,4 @@
+import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { STORE_REACH } from '../../game/crates';
 import { DAMAGE_WARN, TRAVEL_LEG } from '../../game/game';
@@ -2543,6 +2544,13 @@ export const NEWS: News[] = [
     day: '2026-10-19',
     lines: () => [
       `On an island, a wildermon of yours that uses its ability is now drawn and heard doing it, as in a game of your own. ${NumberWord(Object.values(SPECIES).filter((d) => d.ability).length)} kinds have one, the ${SPECIES.whispet.name}'s ${abilityName(SPECIES.whispet.ability!)} among them; before, it looked like an ordinary blow.`,
+    ],
+  },
+  {
+    n: 195,
+    day: '2026-10-19',
+    lines: () => [
+      `Build wall, Build floor and every other row that builds a planned piece (stairs, a roof, a railing, a jetty's floor) now opens onto how many goes to take, a piece of material a go: one, ${listed(BUILD_COUNTS.map(String))} where the piece still needs more than that, or all it needs, up to ${MOST_GOES} a time. It stops early once the piece is finished or nothing it needs is to hand. On an island each Build used to fit one piece.`,
     ],
   },
 ];
