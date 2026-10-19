@@ -78,6 +78,11 @@ jobs:
              and not exists (select 1 from creature c where c.species = t.species and c.mode = 'wild') order by 2 desc"
           ask "the island's stocked blocks: how many, and when they were last topped up" "select count(*) as blocks,
                  to_char(min(at), 'MM-DD HH24:MI') as oldest, to_char(max(at), 'MM-DD HH24:MI') as newest from world_stocked"
+          ask "deed workers by keeper, and how far each is from its keeper's settlement" "select left(c.keeper::text, 8) as keeper, c.id, c.species, c.name, c.phase,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y, (my_deed(c.world_id, c.keeper)).name as deed,
+                 round(greatest(abs(creature_x(c) - (my_deed(c.world_id, c.keeper)).x), abs(creature_y(c) - (my_deed(c.world_id, c.keeper)).y))::numeric) as off_token,
+                 workers_on_deed(c.world_id, c.keeper) as counted, worker_cap(c.world_id, c.keeper) as cap
+            from creature c where c.mode = 'deed' and c.post is null order by c.keeper, c.id"
           ask "biggest tables" "select n.nspname || '.' || c.relname as relation, pg_size_pretty(pg_total_relation_size(c.oid)) as total,
                  c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
             from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid
