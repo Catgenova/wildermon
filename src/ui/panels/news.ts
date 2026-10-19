@@ -2724,6 +2724,11 @@ export const NEWS: News[] = [
     day: '2026-10-19',
     lines: () => [`A brush is made of ${recipeBill('make_brush')} now, not a plank and wool.`],
   },
+  {
+    n: 210,
+    day: '2026-10-19',
+    lines: () => ['On an island your settlement counted a neighbour\'s wildermon at work within sight against its own places, and refused yours for room it had. It counts only yours now.'],
+  },
 ];
 
 

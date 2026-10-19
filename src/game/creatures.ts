@@ -5001,14 +5001,21 @@ export class Creatures {
    * The wildermon working the settlement itself. One set to a work post is at
    * work too, but not on the deed's books: it costs no settlement slot, which
    * is most of what a post is for.
+   *
+   * Your own only (`mine`, which the island says of each and which is unset in
+   * a game of your own, where everything is yours). On an island the list holds
+   * every worker within sight, a neighbour's as well, and counting theirs
+   * against your settlement's places refused a third worker of two as the fifth
+   * of five, beside a neighbour's four. The island's `workers_on_deed` counts
+   * by keeper.
    */
   workers(): Creature[] {
-    return [...this.list.values()].filter((c) => c.mode === 'deed' && c.post === null);
+    return [...this.list.values()].filter((c) => c.mode === 'deed' && c.post === null && c.mine !== false);
   }
 
-  /** Everything at work anywhere, posts included. */
+  /** Everything of yours at work anywhere, posts included. */
   working(): Creature[] {
-    return [...this.list.values()].filter((c) => c.mode === 'deed');
+    return [...this.list.values()].filter((c) => c.mode === 'deed' && c.mine !== false);
   }
 
   wildCount(): number {
