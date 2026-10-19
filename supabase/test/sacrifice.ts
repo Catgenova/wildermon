@@ -256,6 +256,116 @@ for (let i = 0; i < N; i++) sac.perform(at(alt2.id, pileRare.uid), g2);
 left = g2.inventory.items.filter((it) => it.id === MOTE).reduce((n, it) => n + it.count, 0);
 check(`about ${MOTE_CHANCE * 100}% of sacrifices leave a mote`, Math.abs(left / N - MOTE_CHANCE) < 0.004, `${left} of ${N}`);
 
+/* ---- every rarity, as a body asks for it ------------------------------------- */
+// Through the ask a body makes (\`rpc_act\`, settled), not the job alone: each of rare, supreme and fantastic given up
+// leaves a mote of its own rarity when the dice say so, and that mote, absorbed, makes an ordinary thing that rarity.
+const asked = psql(`
+begin;
+create temp table said (k text, v text);
+do $$
+declare w uuid; u uuid; alt bigint; it bigint; plain bigint; mote bigint; r text; i int;
+begin
+  select id into w from world where name = 'Stonehaven';
+  select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
+  perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
+  delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  update player set x = 8.5, y = 8.5, body_at = now(), act = null, act_queue = '[]', equipped = '{}'::jsonb,
+         stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1'), nutrition = '{}'::jsonb
+   where world_id = w and uid = u;
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
+    values (w, 'furniture', 'altar', 9, 8, 0, 0, 9.5, 8.5, 50, u) returning id into alt;
+  create or replace function mote_chance() returns double precision language sql immutable as 'select 1::double precision';
+  foreach r in array array['rare', 'supreme', 'fantastic'] loop
+    it := give(w, u, 'hatchet', 1, 40, null, r);
+    update player set nutrition = '{}'::jsonb where world_id = w and uid = u;
+    insert into said values ('ASK_' || r, coalesce(rpc_act(w, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', it))->>'why', 'started'));
+    for i in 1 .. 5 loop
+      exit when (select act from player where world_id = w and uid = u) is null;
+      update player set act_ends = now() - interval '1 second' where world_id = w and uid = u;
+      perform settle(w, u);
+    end loop;
+    insert into said select 'GONE_' || r, count(*)::text from item where id = it;
+    insert into said select 'FED_' || r, (select bool_and((nutrition->>k)::double precision = 1) from unnest(nutrients()) k)::text
+      from player where world_id = w and uid = u;
+    insert into said select 'MOTE_' || r, coalesce(sum(count), 0)::text from item
+     where world_id = w and holder = 'player' and holder_uid = u and def = 'mote' and rare = r;
+    -- And that mote, absorbed into an ordinary thing, makes it the same.
+    select id into mote from item where world_id = w and holder = 'player' and holder_uid = u and def = 'mote' and rare = r limit 1;
+    plain := give(w, u, 'shovel', 1, 40);
+    insert into said values ('INTO_' || r, coalesce(rpc_act(w, 'absorb_mote', jsonb_build_object('kind', 'item', 'uid', plain, 'mote', mote))->>'why', 'started'));
+    for i in 1 .. 5 loop
+      exit when (select act from player where world_id = w and uid = u) is null;
+      update player set act_ends = now() - interval '1 second' where world_id = w and uid = u;
+      perform settle(w, u);
+    end loop;
+    insert into said select 'TOOK_' || r, coalesce(rare, 'plain') from item where id = plain;
+  end loop;
+end $$;
+select k || E'\\t' || coalesce(v, 'null') from said;
+rollback;
+`);
+const asks = new Map(asked.split('\n').filter(Boolean).map((l) => {
+  const at = l.indexOf('\t');
+  return [l.slice(0, at), l.slice(at + 1)] as [string, string];
+}));
+for (const [step, r] of RARITIES.slice(1).map((x, i) => [i + 1, x.name] as const)) {
+  check(`on the island, asked for: a ${r} thing given up is gone, every nutrient full, and a ${r} mote left`,
+    asks.get(`ASK_${r}`) === 'started' && asks.get(`GONE_${r}`) === '0' && asks.get(`FED_${r}`) === 'true' && asks.get(`MOTE_${r}`) === '1',
+    `${asks.get(`ASK_${r}`)} gone=${asks.get(`GONE_${r}`)} fed=${asks.get(`FED_${r}`)} motes=${asks.get(`MOTE_${r}`)}`);
+  check(`and the ${r} mote, absorbed, makes an ordinary shovel ${r}`,
+    asks.get(`INTO_${r}`) === 'started' && asks.get(`TOOK_${r}`) === r, `${asks.get(`INTO_${r}`)} ${asks.get(`TOOK_${r}`)}`);
+  // The browser, through the same ask.
+  const g3 = Game.create(7 + step);
+  g3.player.x = 40.5; g3.player.y = 40.5;
+  for (const x of [...g3.inventory.items]) g3.inventory.remove(x.uid, x.count);
+  const alt3 = g3.addFurniture('altar', 41, 40, 0, 0, 50);
+  const one = g3.inventory.add('hatchet', { ql: 40 });
+  one.rare = step;
+  for (const k of NUTRIENTS) g3.player.nutrition[k] = 0;
+  g3.rand = () => 0;
+  const run = (): void => {
+    for (let i = 0; i < 4000 && g3.action; i++) {
+      g3.player.stats.stamina = 1;
+      g3.update(0.05);
+    }
+  };
+  g3.requestAction(sac, at(alt3.id, one.uid));
+  run();
+  const fed = NUTRIENTS.map((k) => g3.player.nutrition[k]);
+  const left3 = g3.inventory.items.find((x) => x.id === MOTE);
+  const shovel = g3.inventory.add('shovel', { ql: 40 });
+  if (left3) g3.requestAction(absorb, { kind: 'item', uid: shovel.uid, mote: left3.uid } as Target);
+  run();
+  check(`in the browser, asked for: a ${r} thing given up leaves a ${r} mote, every nutrient full, and it makes a shovel ${r}`,
+    !g3.inventory.get(one.uid) && left3?.rare === step && fed.every((v) => v > 0.999) && g3.inventory.get(shovel.uid)?.rare === step,
+    `gone ${!g3.inventory.get(one.uid)} fed ${fed.map((v) => v.toFixed(4)).join(',')} mote ${left3?.rare} shovel ${g3.inventory.get(shovel.uid)?.rare}`);
+}
+
+// And how often on the island, with its own dice: about one in a hundred.
+const M = 4000;
+const islandLeft = Number(psql(`
+begin;
+do $$
+declare w uuid; u uuid; alt bigint; it bigint; i int;
+begin
+  select id into w from world where name = 'Stonehaven';
+  select p.uid into u from player p where p.world_id = w order by p.uid limit 1;
+  delete from item where world_id = w and holder = 'player' and holder_uid = u;
+  update player set x = 8.5, y = 8.5, act = null, act_queue = '[]', equipped = '{}'::jsonb where world_id = w and uid = u;
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by)
+    values (w, 'furniture', 'altar', 9, 8, 0, 0, 9.5, 8.5, 50, u) returning id into alt;
+  it := give(w, u, 'plank', ${M}, 40, null, 'rare');
+  for i in 1 .. ${M} loop
+    perform act_perform(w, u, 'sacrifice', jsonb_build_object('kind', 'furniture', 'id', alt, 'itemUid', it));
+  end loop;
+  create temp table counted as select coalesce(sum(count), 0) as n from item where world_id = w and holder = 'player' and holder_uid = u and def = 'mote';
+end $$;
+select n from counted;
+rollback;
+`).split('\n').filter(Boolean).pop());
+check(`on the island about ${MOTE_CHANCE * 100}% of sacrifices leave a mote, by its own dice`,
+  Math.abs(islandLeft / M - MOTE_CHANCE) < 0.006, `${islandLeft} of ${M}`);
+
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\n${ok.length} passed, ${bad.length} failed`);
 if (bad.length) process.exit(1);
