@@ -308,7 +308,7 @@ export const TEACHES_NOTHING = new Set<string>([
   'eat', 'drink', 'drink_from_vessel', 'drink_skin', 'feed',
   // Carrying things about, in and out of whatever holds them.
   'pick_up', 'pick_up_all', 'drop', 'crate_take_all', 'furniture_take_all',
-  'kiln_take_all', 'smelter_take_all', 'store_in_crate', 'store_in_furniture',
+  'kiln_take_all', 'smelter_take_all', 'store_in_crate', 'store_in_furniture', 'rack_put',
   'take_from_store', 'stow_item', 'empty_bag', 'throw_away', 'equip', 'unequip',
   // And pouring, which is carrying by another name.
   'fill_bucket', 'fill_skin', 'empty_bucket', 'empty_vessel', 'pour_into_barrel',

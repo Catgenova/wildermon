@@ -137,7 +137,8 @@ export function targetSpot(g: Game, id: string, t: Target): TargetSpot | null {
       if (id === 'set_out_goods' || id === 'take_off_counter') return { floor: 0, x: 0, y: 0 };
       // Going into a store, or coming out of one, is done where the store is.
       if (t.into !== undefined) {
-        const store = id === 'store_in_crate' ? g.crates.get(t.into) : id === 'store_in_furniture' ? g.furniture.get(t.into) : undefined;
+        const store = id === 'store_in_crate' ? g.crates.get(t.into)
+          : id === 'store_in_furniture' || id === 'rack_put' ? g.furniture.get(t.into) : undefined;
         return store ? spot(store.level, store.x, store.y) : null;
       }
       if (id === 'take_from_store' && !g.inventory.get(t.uid)) {

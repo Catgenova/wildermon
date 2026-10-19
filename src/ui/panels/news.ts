@@ -1,6 +1,6 @@
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
-import { STORE_REACH } from '../../game/crates';
+import { rackPutLine, STORE_REACH } from '../../game/crates';
 import { DAMAGE_WARN, TRAVEL_LEG } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import {
@@ -2701,6 +2701,21 @@ export const NEWS: News[] = [
         'Tools, the station and a full bucket, which comes back empty, are not counted. At the anvil the one casting a piece is beaten from, '
           + 'or the one lump a strike of coins takes, is the whole of it, so a rare one makes what comes out at least that rare.',
         `A go with rare ingredients in it says what they added, as "${rareInputSaid(one)}"`,
+      ];
+    },
+  },
+  {
+    n: 208,
+    day: '2026-10-19',
+    lines: () => {
+      const shelf = furnitureDef('crate_shelf');
+      const brick = itemDef('stone_brick').name;
+      return [
+        `A stack dragged out of the inventory and let go over a ${shelf.name.toLowerCase()} goes into the crates standing on it, in the order its ${numberWord(shelf.crates ?? 0)} spots fill: `
+          + 'the first crate with room takes as much as it has room for, then the next, until the stack is gone or every crate is full. What none of them has room for stays in your pack.',
+        'A crate on it that is shut to you (somebody else\'s, padlocked, or a settlement store your rank cannot use) is passed over and the rest are filled. '
+          + 'It is the same as putting the stack into each crate in turn: the same rules, all in one go.',
+        `One line says how much went where, as "${rackPutLine(12, 20, brick, 2, '', shelf.name)}"`,
       ];
     },
   },

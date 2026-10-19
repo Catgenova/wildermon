@@ -790,12 +790,17 @@ export class UI {
    * cursor: a crate, or a piece of furniture that holds things -- a chest, a
    * larder, a cart, a wagon. Not a trash crate, which destroys what goes in,
    * and not a market stall, whose wares want a price; both keep to the menu.
+   *
+   * And a crate rack, which holds nothing itself and so was never a place to
+   * let anything go: what is dropped on one goes into the crates standing on
+   * it, filling them one after another (`rack_put`).
    */
-  storeAt(pick: Pick | null): { kind: 'crate' | 'furniture'; id: number } | null {
+  storeAt(pick: Pick | null): { kind: 'crate' | 'furniture' | 'rack'; id: number } | null {
     if (!pick) return null;
     if (pick.crate !== undefined && this.game.crates.has(pick.crate)) return { kind: 'crate', id: pick.crate };
     if (pick.furniture === undefined) return null;
     const f = this.game.furniture.get(pick.furniture);
+    if (f && rackSpots(f)) return { kind: 'rack', id: f.id };
     if (!f || !furnitureHolds(f)) return null;
     const def = furnitureDef(f.kind);
     return def.trash || def.stall ? null : { kind: 'furniture', id: f.id };
@@ -819,7 +824,7 @@ export class UI {
       g.logMsg(`Take the ${p.name.toLowerCase()} off first.`, 'error');
       return true;
     }
-    const def = ACTION_BY_ID.get(at.kind === 'crate' ? 'store_in_crate' : 'store_in_furniture');
+    const def = ACTION_BY_ID.get(at.kind === 'crate' ? 'store_in_crate' : at.kind === 'rack' ? 'rack_put' : 'store_in_furniture');
     if (!def) return true;
     const target: Target = { kind: 'item', uid: held.uid, count: held.count, into: at.id };
     if (!def.applies(target, g)) {

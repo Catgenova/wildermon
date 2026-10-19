@@ -1755,6 +1755,11 @@ export function helpText(): string {
     <p>A stack <b>dragged</b> out of the inventory window and let go over a crate, a cart, a wagon or a
     piece that holds things goes into it whole, under the same rules as <b>Put away</b>. If it is out of
     reach you walk to it first. A trash crate and a market stall do not take a drop.</p>
+    <p>Let go over a <b>${furnitureDef('crate_shelf').name.toLowerCase()}</b>, a stack goes into the crates standing on it, in the order
+    its ${numberWord(furnitureDef('crate_shelf').crates ?? 0)} spots fill, front row first: the first crate with room takes as much as it has room for,
+    then the next, until the stack is gone or every crate is full. What none of them has room for stays in your pack.
+    A crate on it that is shut to you &mdash; somebody else's, padlocked, or a settlement store your rank cannot use &mdash;
+    is passed over, and the rest are filled.</p>
     <h3>Shop counters</h3>
     <p>A <b>shop counter</b> is a wall with a market stall in it. Plan it as any wall &mdash; <b>Plan wall</b>,
     <b>Shop counter</b>, in any of the ${numberWord(WALL_MATERIALS.filter((m) => takesAs(m, { wall: 'counter' })).length)} materials it may be laid in &mdash; and build it with ${share(COUNTER_TYPE.factor ?? 1)} of a solid wall's

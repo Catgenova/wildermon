@@ -5551,7 +5551,8 @@ export class Game {
       const c = this.crates.get(target.into);
       return c ? { x: c.x, y: c.y, centre: crateCentre(c) } : null;
     }
-    if (def.id === 'store_in_furniture') {
+    // A rack is loaded from beside it, measured from its middle as any piece is (`rack_put`).
+    if (def.id === 'store_in_furniture' || def.id === 'rack_put') {
       const f = this.furniture.get(target.into);
       return f ? { x: f.x, y: f.y, centre: furnitureCentre(f) } : null;
     }
@@ -9001,11 +9002,16 @@ export class Game {
     return undefined;
   }
 
-  /** The crates standing on a rack, in the order its spots fill. */
+  /**
+   * The crates standing on a rack, in the order its spots fill.
+   *
+   * On the rack's own storey: a rack down in a cellar carries the crates down
+   * there, not the ones standing on the floor over its head.
+   */
   cratesOn(f: PlacedFurniture): PlacedCrate[] {
     const out: PlacedCrate[] = [];
     for (const [sx, sy] of rackDeck(f)) {
-      const crate = this.crateAt(f.x, f.y, sx, sy);
+      const crate = this.crateAt(f.x, f.y, sx, sy, f.level ?? 0);
       if (crate) out.push(crate);
     }
     return out;

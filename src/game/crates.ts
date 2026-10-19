@@ -1,9 +1,9 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { roomMul, type Enchant } from './enchant';
-import { describeFrom, itemName, rarityOf, roomFor, storedLine, type Item } from './items';
+import { describeFrom, itemDef, itemName, rarityOf, roomFor, storedLine, type Item } from './items';
 import { matOf } from './materials';
-import { furnitureDef, pieceShut } from './furniture';
+import { furnitureCentre, furnitureDef, furnitureName, pieceShut, rackSpots, type PlacedFurniture } from './furniture';
 import { CELLAR_FLOOR, floorOf } from './building';
 import { lacks } from './ranks';
 import { storeMoveRefusal, storeUse } from './stores';
@@ -305,7 +305,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = crateInto(g, t);
       if (!c || !nearCrate(g, c)) return 'Stand next to a crate.';
-      const shut = crateShut(g, c, ' to put anything in');
+      const shut = cratePutShut(g, c);
       if (shut) return shut;
       // Room for some of it is enough: what fits goes in and the rest stays in
       // the pack. Only a crate with no room at all has anything to refuse, and
@@ -318,15 +318,8 @@ export const CRATE_ACTIONS: ActionDef[] = [
       const c = crateInto(g, t);
       if (!c) return;
       const want = t.count ?? 1;
-      const fits = Math.min(want, crateSpare(c));
-      if (fits <= 0) {
-        g.logMsg(`The ${crateName(c).toLowerCase()} is full.`, 'error');
-        return;
-      }
-      const item = g.inventory.take(t.uid, fits);
-      if (!item) return;
-      if (!g.crateAdd(c, item)) {
-        g.inventory.addItem(item);
+      const item = cratePut(g, c, t.uid, want);
+      if (!item) {
         g.logMsg(`The ${crateName(c).toLowerCase()} is full.`, 'error');
         return;
       }
@@ -334,6 +327,136 @@ export const CRATE_ACTIONS: ActionDef[] = [
     },
   },
 ];
+
+/**
+ * Why a crate will not have anything put into it by you, or null: a
+ * settlement store by its own rule, anything else by whose it is and its
+ * padlock. How much room it has is a separate question, asked after.
+ *
+ * `store_in_crate` asks this of the one crate it is aimed at and `rack_put`
+ * of every crate on the rack, so a crate on a rack is shut to a load of the
+ * rack exactly when it is shut to a put of its own. The island's
+ * `crate_put_shut`.
+ */
+export const cratePutShut = (g: Game, c: PlacedCrate): string | null => crateShut(g, c, ' to put anything in');
+
+/**
+ * Put up to `want` of a stack in the pack into one crate: as many as it has
+ * room for, the rest staying where they are. What went in, or null when
+ * nothing did. The island's `crate_put`, which `store_in_crate` and
+ * `rack_put` both move things with, so the two cannot come to disagree about
+ * what a crate will take.
+ */
+export function cratePut(g: Game, c: PlacedCrate, uid: number, want: number): Item | null {
+  const fits = Math.min(want, crateSpare(c));
+  if (fits <= 0) return null;
+  const item = g.inventory.take(uid, fits);
+  if (!item) return null;
+  if (!g.crateAdd(c, item)) {
+    g.inventory.addItem(item);
+    return null;
+  }
+  return item;
+}
+
+/**
+ * What a load of a rack said: how many of how many, into how many crates on
+ * it — the crate by name when it was only one — and how many did not fit.
+ * The island's `rack_put_line`, word for word.
+ */
+export const rackPutLine = (put: number, want: number, what: string, crates: number, one: string, rack: string): string =>
+  `You put ${put === want ? (put > 1 ? `${put} × ` : 'the ') : `${put} of ${want} × `}${what.toLowerCase()} into `
+  + `${crates === 1 ? `the ${one.toLowerCase()}` : `${crates} crates`} on the ${rack.toLowerCase()}.`
+  + (want > put ? ` The other ${want - put} would not fit.` : '');
+
+/** The rack a load is aimed at: the piece `into` names, when it is one whose deck takes crates. */
+const rackInto = (g: Game, t: Target): PlacedFurniture | undefined => {
+  if (t.kind !== 'item' || t.into === undefined) return undefined;
+  const f = g.furniture.get(t.into);
+  return f && rackSpots(f) ? f : undefined;
+};
+
+/**
+ * Loading a rack: a stack let go over a crate shelf goes into the crates
+ * standing on it, one after another.
+ *
+ * Asked for: "Allow dragging inventory to a Crate shelf, where the crates on it
+ * will fill one by one according to available space." A rack holds nothing of
+ * its own — it is the ground eight crates stand on — so a drop on it had
+ * nowhere to go and did nothing; the way to fill one was to open each crate in
+ * turn and drag into it, counting what was left over by hand.
+ *
+ * So the first crate in the rack's own order (`rackDeck`, the order its spots
+ * fill and the model draws them) takes as much as it has room for, then the
+ * next, and so on until the stack is gone or every crate is full. Each crate
+ * is put into by the same rule a put of its own goes by (`cratePutShut`,
+ * `cratePut`): a crate shut to you — somebody else's, padlocked, a settlement
+ * store your rank cannot use — is passed over, and the rest are filled. What
+ * none of them has room for stays in the pack, and one line says how much went
+ * where. On an island it is one ask, `rack_put`, and the whole fill is done
+ * there in one go.
+ */
+CRATE_ACTIONS.push({
+  id: 'rack_put',
+  label: 'Put in the crates on it',
+  verb: 'stowing',
+  instant: true,
+  quantity: true,
+  stamina: 0,
+  baseTime: 0,
+  // Not in the item menu: it is what a drop on a rack means, and a rack is named in the ask.
+  hidden: true,
+  applies: (t, g) => t.kind === 'item' && !!rackInto(g, t) && !crateKindOfItem(g.inventory.get(t.uid)?.id ?? ''),
+  check: (t, g) => {
+    if (t.kind !== 'item') return null;
+    const item = g.inventory.get(t.uid);
+    if (!item) return 'It is gone.';
+    if (crateKindOfItem(item.id)) return 'A crate does not go in a crate.';
+    const f = rackInto(g, t);
+    if (!f) return 'It is gone.';
+    const [cx, cy] = furnitureCentre(f);
+    if (Math.hypot(cx - g.player.x, cy - g.player.y) > STORE_REACH) return `Stand next to the ${furnitureName(f).toLowerCase()}.`;
+    const on = g.cratesOn(f);
+    if (!on.length) return `There are no crates on the ${furnitureName(f).toLowerCase()}.`;
+    // A thing that stacks goes in as far as there is room; one that does not goes in whole or not at all.
+    const need = itemDef(item.id).stackable ? 1 : Math.min(item.count, t.count ?? 1);
+    let shut: string | null = null;
+    let open = 0;
+    for (const c of on) {
+      const why = cratePutShut(g, c);
+      if (why) shut ??= why;
+      else if (crateSpare(c) >= need) return null;
+      else open++;
+    }
+    // Every one of them shut or full: full when none was shut, what shut the
+    // first when all were, and both when it was some of each.
+    if (!shut) return `Every crate on the ${furnitureName(f).toLowerCase()} is full.`;
+    return open ? `${shut} The others are full.` : shut;
+  },
+  perform: (t, g) => {
+    if (t.kind !== 'item') return;
+    const f = rackInto(g, t);
+    const held = g.inventory.get(t.uid);
+    if (!f || !held) return;
+    const what = itemName(held);
+    const want = Math.max(1, Math.min(held.count, t.count ?? 1));
+    let put = 0;
+    const into: PlacedCrate[] = [];
+    for (const c of g.cratesOn(f)) {
+      if (put >= want) break;
+      if (cratePutShut(g, c)) continue;
+      const went = cratePut(g, c, t.uid, want - put);
+      if (!went) continue;
+      put += went.count;
+      into.push(c);
+    }
+    if (!put) {
+      g.logMsg(`Every crate on the ${furnitureName(f).toLowerCase()} is full.`, 'error');
+      return;
+    }
+    g.logMsg(rackPutLine(put, want, what, into.length, crateName(into[0]), furnitureName(f)), 'event');
+  },
+});
 
 CRATE_ACTIONS.push({
   id: 'take_from_store',
