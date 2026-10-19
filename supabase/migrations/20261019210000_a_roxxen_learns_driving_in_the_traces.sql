@@ -23,6 +23,15 @@
 -- What the definitions bring in, ahead of them, so the doors below close on it: the number (`LEARNS_GAIN.pull`, which
 -- is `PULL_LEARN`, which is `DRIVING_LEARN`), which the definitions that come in after this write again from the
 -- browser's.
+-- The clocks wait for this, and so does anything else that writes a creature. A round of the tick moving the same
+-- creatures in another order deadlocked the first try at this file: each held rows the other wanted. Each clock skips
+-- its round while another holds its lock, and reads go on as before.
+set local lock_timeout = '30s';
+select pg_advisory_xact_lock(hashtext('world_tick')::bigint);
+select pg_advisory_xact_lock(hashtext('stock_tick')::bigint);
+select pg_advisory_xact_lock(hashtext('tree_tick')::bigint);
+lock table creature in exclusive mode;
+
 set local lock_timeout = '3s';
 create or replace function learns_gain_pull() returns double precision language sql immutable as $fn$ select 0.003::double precision $fn$;
 

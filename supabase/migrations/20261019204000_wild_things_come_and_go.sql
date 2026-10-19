@@ -26,6 +26,15 @@
 -- second near whoever is walking, the one underfoot first and then the eight round it (`creature_stock_ahead`), so the
 -- country round somebody is full again inside ten seconds and the rest as people walk into it.
 
+-- The clocks wait for this, and so does anything else that writes a creature. A round of the tick moving the same
+-- creatures in another order deadlocked the first try at this file: each held rows the other wanted. Each clock skips
+-- its round while another holds its lock, and reads go on as before.
+set local lock_timeout = '30s';
+select pg_advisory_xact_lock(hashtext('world_tick')::bigint);
+select pg_advisory_xact_lock(hashtext('stock_tick')::bigint);
+select pg_advisory_xact_lock(hashtext('tree_tick')::bigint);
+lock table creature in exclusive mode;
+
 set local lock_timeout = '3s';
 
 -- The span itself, which the definitions emit from `WILD_STAY`; here too so that this file stands on its own.
