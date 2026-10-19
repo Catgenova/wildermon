@@ -63,6 +63,41 @@ export function lifeWords(): string {
   return LIFE.map((l) => (l.kind ? `${FRAMES.find((f) => f.kind === l.kind)?.label.toLowerCase() ?? l.kind}, ${l.what}` : l.what)).join('; ');
 }
 
+/**
+ * Whether anything lives on a frame of this kind now: what `paintLife` would
+ * draw something for, case by case, so that a screen of frames with nothing
+ * on them this hour is not cleared and drawn afresh for nothing
+ * (`RunecutArt.paintLife`).
+ */
+export function livesOn(kind: string, world: LifeWorld): boolean {
+  if (world.winter) return true;
+  const day = !world.night;
+  switch (kind) {
+    case 'wicker':
+    case 'armoury':
+    case 'stall':
+    case 'letter':
+    case 'parchment':
+    case 'book':
+      return day;
+    case 'turf':
+    case 'strap':
+    case 'toolbelt':
+      return !day;
+    case 'bench':
+      return !day || world.crafting;
+    case 'linen':
+    case 'palisade':
+    case 'burlap':
+    case 'crate':
+    case 'runestone':
+    case 'altar':
+    case 'treasure':
+      return true;
+  }
+  return false;
+}
+
 /** Whatever lives on this piece's frame now, drawn in the piece's own place. */
 export function paintLife(g: Ctx, p: LifePiece, t: number, world: LifeWorld): void {
   g.save();

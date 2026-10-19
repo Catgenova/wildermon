@@ -108,6 +108,7 @@ import { drawSwirl, glowSwirl } from './swirls';
 import { runestoneAt, stoneCentre, type Runestone } from '../game/runestones';
 import type { WaterField } from '../world/springs';
 import { Dust } from './dust';
+import { StructureWatch } from './structwatch';
 import { BEAST_WALK, Gaits } from './gait';
 import type { Peer } from '../game/roster';
 import { css, HAZE_REACH, rgba, skyAt, unknownInk, type Sky } from './sky';
@@ -124,6 +125,28 @@ const SWELL_RES = 0.5;
 const TREE_BANDS = 24;
 /** Device pixels of tree pictures kept between frames (`drawTree`): about forty-eight megabytes. */
 const TREE_PIXELS = 12_000_000;
+/**
+ * How long the zoom has to have held still, in milliseconds, before pictures
+ * are made for it (`zoomSettled`). A wheel is a run of notches with a few
+ * frames between each, and a picture made at every notch was a whole screen
+ * of them thrown away at the next: until then the nearest kept picture is
+ * drawn stretched to the size wanted.
+ */
+const ZOOM_SETTLE = 220;
+/** How long, in milliseconds, a frame may spend making tree pictures (`drawTree`) for trees that already have one at another size to stand in. */
+const TREE_PICTURE_MS = 6;
+/**
+ * How far a tree's picture at another size is stretched, either way, to
+ * stand in for it while the zoom moves (`treePicture`). Past this a picture
+ * shrunk goes grainy and one blown up goes soft, so a new one is made at the
+ * size it is now, which stands in in its turn: two or three to a tree over
+ * the whole of a zoom from closest in to furthest out.
+ */
+const STAND_IN_MOST = 1.6;
+/** How many tiles' edge pictures (`hems`) may be made in a frame while the zoom moves, for tiles with none near enough the size wanted; the rest are drawn as they always were. */
+const HEM_MOVING_MOST = 48;
+/** Device pixels of rescaled sprites (`atSize`) and their hazed copies (`hazed`) kept, across zooms: about sixty-four megabytes. */
+const SCALED_PIXELS = 16_000_000;
 /** How strongly a hostile creature is laid over in red on top of whatever is in front of it (`drawThreats`), and while it is hunting you. */
 export const THREAT_SHADE = 0.5;
 export const THREAT_SHADE_HUNTING = 0.7;
@@ -135,8 +158,41 @@ interface TreePicture {
   footY: number;
   /** The frame it was last put down in. */
   used: number;
+  /** Which tree it is of (`treeOwn`), and how far it is mixed toward the distance: what may stand in for it at another size. */
+  own: string;
+  haze: number;
+  /** The colour it was mixed toward, which moves with the hour; and what it is kept under. */
+  ink: string;
+  key: string;
+  /** How tall the whole tree is in it, and how many of its rows were empty over the top and left off (`treePicture`). */
+  tall: number;
+  cropTop: number;
 }
-/** How long a wall's or a roof's picture is kept before it is made again whatever happens (`baked`), in seconds. */
+/**
+ * The twelve borders whose walls can throw their shade on a tile
+ * (`groundShade`), as a direction (0 along x, 1 along y) and a step from the
+ * tile, three numbers each: its own four, and the eight running on from
+ * its corners.
+ */
+const SHADE_BORDERS = [
+  0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0,
+  0, -1, 0, 1, 0, -1, 0, 1, 0, 1, 1, -1,
+  0, 1, 1, 1, 1, 1, 0, -1, 1, 1, 0, 1,
+];
+/** A storey's border as one number, for the shade it throws (`shadeOf`): no island is 65536 tiles across, nor a building 4096 storeys tall. */
+const shadeKey = (level: number, b: Border): number => ((level * 2 + (b.dir === 'v' ? 1 : 0)) * 65536 + b.x) * 65536 + b.y;
+/**
+ * How long a wall's or a roof's picture is kept before it is made again
+ * whatever happens (`baked`), in seconds, give or take a quarter: what it
+ * reads that nothing says has changed -- the ivy growing up it, a pond dug
+ * near enough to green it -- moves slower than this.
+ */
+const BAKE_KEEP = 20;
+/**
+ * Over how long, in seconds, the pictures are made again when the light
+ * they were made in moves on a step (`baked`): each in its own turn, so a
+ * village is not all drawn afresh in one frame.
+ */
 const BAKE_LIFE = 0.5;
 /** Device pixels of wall and roof pictures kept before the lot go: about a hundred and twenty-eight megabytes. */
 const BAKE_PIXELS = 32_000_000;
@@ -153,6 +209,12 @@ interface Baked {
   by: number;
   at: number;
   life: number;
+  /** How long after the light moves on a step this one waits its turn to be made again. */
+  wait: number;
+  /** The count of the patches of the island it reads (`StructureWatch.version`), the view and the light it was made in. */
+  ver: number;
+  epoch: number;
+  light: number;
 }
 /** How many device pixels of tile edge pictures are kept before the lot go (`hems`): about sixty-four megabytes. */
 const HEM_PIXELS = 16_000_000;
@@ -165,6 +227,8 @@ interface HemPicture {
   py: number;
   bx: number;
   by: number;
+  /** The zoom it was made at: at another, it is stretched about the tile's corner while the zoom moves (`hems`) and made again once it stops. */
+  zoom: number;
 }
 
 /** The thin darker line where a pond meets its bank. */
@@ -1288,6 +1352,46 @@ export class Renderer {
    * is the whole of what it covers; what is strewn on it stands inside it
    * but for the tips of the grass.
    */
+  /**
+   * A tile's outline, every edge moved half a pixel out, onto the path: what
+   * a fill and then a stroke a pixel wide in the same colour covered, as one
+   * shape. Each corner is where its two moved edges cross, kept to two pixels
+   * out at the sharpest. False, and nothing put on the path, for a tile that
+   * is not convex on the screen -- folded over on a cliff, or flat to a line.
+   */
+  private outsetTile(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>): boolean {
+    // Which way round it goes on the screen: every corner must turn the same way.
+    let turn = 0;
+    for (let i = 0; i < 4; i++) {
+      const a = i * 2, b = ((i + 1) & 3) * 2, c = ((i + 2) & 3) * 2;
+      const z = (pts[b] - pts[a]) * (pts[c + 1] - pts[b + 1]) - (pts[b + 1] - pts[a + 1]) * (pts[c] - pts[b]);
+      if (Math.abs(z) < 1e-6) return false;
+      const sz = z > 0 ? 1 : -1;
+      if (turn && sz !== turn) return false;
+      turn = sz;
+    }
+    const n = this.outsetNormals;
+    for (let i = 0; i < 4; i++) {
+      const a = i * 2, b = ((i + 1) & 3) * 2;
+      const ex = pts[b] - pts[a], ey = pts[b + 1] - pts[a + 1];
+      const l = Math.hypot(ex, ey);
+      // Outward, for a path going round clockwise on the screen and for one going the other way.
+      n[a] = (turn * ey) / l;
+      n[a + 1] = (-turn * ex) / l;
+    }
+    for (let i = 0; i < 4; i++) {
+      const a = i * 2, p = ((i + 3) & 3) * 2;
+      const sx = n[p] + n[a], sy = n[p + 1] + n[a + 1];
+      // Half a pixel out along both edges' normals: half the sum over one plus their dot, kept to two pixels.
+      const k = Math.min(2 / Math.max(Math.hypot(sx, sy), 1e-6), 0.5 / Math.max(1 + n[p] * n[a] + n[p + 1] * n[a + 1], 1e-6));
+      const x = pts[a] + sx * k, y = pts[a + 1] + sy * k;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    return true;
+  }
+  private readonly outsetNormals = new Float64Array(8);
+
   private occludeGround(ctx: CanvasRenderingContext2D, pts: ArrayLike<number>, minY: number, maxY: number): void {
     const minX = Math.min(pts[0], pts[2], pts[4], pts[6]);
     const maxX = Math.max(pts[0], pts[2], pts[4], pts[6]);
@@ -1343,9 +1447,17 @@ export class Renderer {
   private roomTiles: Set<string> | null = null;
   /**
    * The shade each wall throws on the ground, worked out the first time a
-   * tile asks for it in a frame: up to six tiles ask after the same wall.
+   * tile asks for it: up to six tiles ask after the same wall, and every
+   * tile near a building asks after twelve. By the storey and the border as
+   * one number (`shadeKey`). Kept from frame to frame while the buildings,
+   * the ground under them, the view and the cutaway stand as they were
+   * (`shadeFor`, `structuresFrame`).
    */
-  private shades = new Map<string, Float64Array | null>();
+  private shades = new Map<number, Float64Array | null>();
+  private shadeFor = '';
+  private readonly shadeAsk: Border = { dir: 'h', x: 0, y: 0 };
+  /** What has changed about the buildings, and where (`structwatch.ts`): looked over once a frame. */
+  private readonly structs = new StructureWatch();
   /** The pitched roofs to lay this frame, by the line of the ground after whose walls each goes on. */
   private roofQueue = new Map<number, Building[]>();
   /**
@@ -1408,6 +1520,8 @@ export class Renderer {
     game.world.onChange((x, y) => this.springWater.touched(x, y));
     // And what is near a tree or near water, for the fireflies.
     game.world.onChange(() => this.life.touched());
+    // And what stands on the ground, or near it: a wall's foot, its shade, how wet it is (`structwatch.ts`).
+    game.world.onChange((x, y) => this.structs.ground(x, y));
     // Damage and skill both go up over the thing they happened to. Damage adds
     // up per target, skill per skill, so a flurry of either reads as one
     // running number rather than a stack of them.
@@ -1470,9 +1584,13 @@ export class Renderer {
    * seventy times a frame for eight answers.
    *
    * Each one is squeezed once, into a canvas of its own at the size the screen
-   * wants, and then blitted. The cache is thrown away whenever the zoom
-   * changes, which is the only thing that can change the answer — a pinch
-   * costs one frame of rebuilding and every frame after it is a straight copy.
+   * wants, and then blitted. It was all thrown away whenever the zoom changed,
+   * which made a zoom a couple of hundred new canvases every frame of it, each
+   * used once. They are kept across zooms now, the least lately used going
+   * past `SCALED_PIXELS`; while the zoom moves the nearest size a sprite
+   * already has is stretched to the one wanted, and once it has stopped
+   * (`zoomSettled`) each is made again at its own size the first time it is
+   * asked for at that zoom.
    *
    * Kept at device pixels rather than CSS ones, because the context is scaled
    * by the display's ratio: a canvas made at CSS size would be blown back up
@@ -1483,7 +1601,10 @@ export class Renderer {
   private scaledSizes = new Map<HTMLCanvasElement, Map<number, HTMLCanvasElement>>();
   /** The distance-mixed copies of each rescaled sprite, one per haze step. */
   private hazes = new WeakMap<HTMLCanvasElement, HTMLCanvasElement[]>();
-  private scaledAt = -1;
+  /** Each rescaled copy, the least lately used first: what it is of, its size step, the zoom it was made at and the frame it was last asked for. */
+  private scaledUse = new Map<HTMLCanvasElement, { src: HTMLCanvasElement; step: number; zoom: number; used: number }>();
+  /** Device pixels in the rescaled copies and their hazed ones together. */
+  private scaledPixels = 0;
 
   /** The same sprite, already down to `w` by `h` CSS pixels. */
   /**
@@ -1525,6 +1646,8 @@ export class Renderer {
       g.fillRect(0, 0, cv.width, cv.height);
     }
     steps[step] = cv;
+    // Counted with the copy it was made from, and gone with it (`atSize`).
+    if (this.scaledUse.has(ready)) this.scaledPixels += cv.width * cv.height;
     return cv;
   }
 
@@ -1545,17 +1668,82 @@ export class Renderer {
       sizes = new Map();
       this.scaledSizes.set(src, sizes);
     }
-    const had = sizes.get(step);
-    if (had) return had;
     const dpr = this.canvas.dpr;
-    const cv = document.createElement('canvas');
-    cv.width = Math.max(1, Math.round(w * dpr));
+    const zoom = this.camera.zoom;
+    const cw = Math.max(1, Math.round(w * dpr));
     // A height of nought means square, which is what a ground picture is.
-    cv.height = h > 0 ? Math.max(1, Math.round(h * dpr)) : cv.width;
+    const ch = h > 0 ? Math.max(1, Math.round(h * dpr)) : cw;
+    const had = sizes.get(step);
+    /*
+     * The zoom still moving: the size this step had, or failing that the
+     * nearest the sprite has within `STAND_IN_MOST` of it, stretched by
+     * whoever draws it -- every caller puts it down at the size it asked for.
+     * Once it has stopped, a copy made at another zoom is made again, as one
+     * made at this zoom for another size in the step is not: that was always
+     * the bargain of a step.
+     */
+    if (!had && !this.zoomSettled && sizes.size) {
+      let near: HTMLCanvasElement | undefined;
+      let off = Infinity;
+      for (const cv of sizes.values()) {
+        const by = Math.abs(Math.log(cv.width / cw));
+        if (by < off) {
+          off = by;
+          near = cv;
+        }
+      }
+      if (near && off <= Math.log(STAND_IN_MOST)) return this.scaledUsed(near);
+    }
+    if (had) {
+      const use = this.scaledUse.get(had);
+      if (!this.zoomSettled || !use || use.zoom === zoom || (had.width === cw && had.height === ch)) return this.scaledUsed(had);
+      this.forgetScaled(had);
+    }
+    const cv = document.createElement('canvas');
+    cv.width = cw;
+    cv.height = ch;
     const g = cv.getContext('2d');
     if (g) g.drawImage(src, 0, 0, cv.width, cv.height);
     sizes.set(step, cv);
+    this.scaledUse.set(cv, { src, step, zoom, used: this.frameNo });
+    this.scaledPixels += cw * ch;
+    // Room made by putting away what has gone longest unasked for, and never what this frame has asked for already.
+    for (const [old, use] of this.scaledUse) {
+      if (this.scaledPixels <= SCALED_PIXELS || use.used === this.frameNo) break;
+      this.forgetScaled(old);
+    }
     return cv;
+  }
+
+  /** A rescaled copy asked for again: to the back of the queue to be put away. */
+  private scaledUsed(cv: HTMLCanvasElement): HTMLCanvasElement {
+    const use = this.scaledUse.get(cv);
+    if (use && use.used !== this.frameNo) {
+      use.used = this.frameNo;
+      this.scaledUse.delete(cv);
+      this.scaledUse.set(cv, use);
+    }
+    return cv;
+  }
+
+  /** A rescaled copy put away, and its hazed copies with it. */
+  private forgetScaled(cv: HTMLCanvasElement): void {
+    const use = this.scaledUse.get(cv);
+    if (!use) return;
+    this.scaledUse.delete(cv);
+    this.scaledPixels -= cv.width * cv.height;
+    for (const hz of this.hazes.get(cv) ?? []) if (hz) this.scaledPixels -= hz.width * hz.height;
+    this.hazes.delete(cv);
+    const sizes = this.scaledSizes.get(use.src);
+    if (sizes?.get(use.step) === cv) sizes.delete(use.step);
+    if (sizes && !sizes.size) this.scaledSizes.delete(use.src);
+  }
+
+  /** Every rescaled copy put away: the trees have turned with the season and nothing kept is of them any more. */
+  private forgetAllScaled(): void {
+    this.scaledSizes.clear();
+    this.scaledUse.clear();
+    this.scaledPixels = 0;
   }
 
   private invalidate(x: number, y: number): void {
@@ -1591,15 +1779,24 @@ export class Renderer {
     const len = Math.hypot(dx, dy);
     if (len < 0.5) return;
     const r = Math.max(3, size * 0.55);
-    ctx.save();
-    ctx.translate(sx, sy);
-    ctx.rotate(Math.atan2(dy, dx));
-    ctx.fillStyle = `rgba(0,0,0,${alpha.toFixed(3)})`;
+    /*
+     * One ellipse turned the way the shadow falls, its middle half the
+     * shadow's length out from the foot: what it was when the context was
+     * saved, moved, turned and put back for every tree in a wood, which cost
+     * more than the ellipse.
+     */
+    if (alpha !== this.shadowInkFor) {
+      this.shadowInkFor = alpha;
+      this.shadowInk = `rgba(0,0,0,${alpha.toFixed(3)})`;
+    }
+    ctx.fillStyle = this.shadowInk;
     ctx.beginPath();
-    ctx.ellipse(len * 0.5, 0, len * 0.5 + r, r * 0.42, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + dx * 0.5, sy + dy * 0.5, len * 0.5 + r, r * 0.42, Math.atan2(dy, dx), 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
+  /** The shadows' ink, for the alpha it was last made for: the same all frame. */
+  private shadowInk = '';
+  private shadowInkFor = NaN;
 
   /**
    * How much a light is worth this instant. A fire breathes: two waves out of
@@ -2325,10 +2522,15 @@ export class Renderer {
   private hemCache = new Map<number, HemPicture>();
   private hemMemCache = new Map<number, HemPicture>();
   private hemPixels = 0;
-  /** The zoom, view and screen the pictures were made for, and whether the zoom has held still since the last frame. */
+  /** The view and screen the pictures were made for, the zoom last frame, and whether the zoom has held still since the last frame. */
   private hemFor = '';
   private hemZoomWas = 0;
   private hemSteady = false;
+  /** When the zoom last moved (`performance.now`), and whether it has held still for `ZOOM_SETTLE` since. */
+  private zoomMovedAt = -Infinity;
+  private zoomSettled = true;
+  /** Tiles' edge pictures made this frame while the zoom moves (`HEM_MOVING_MOST`). */
+  private hemsMoving = 0;
 
   private forgetHems(lit?: boolean): void {
     if (lit !== false) this.hemCache.clear();
@@ -2339,12 +2541,30 @@ export class Renderer {
 
   /** `swardEdges`, from the tile's picture when it has one that fits, making one when it may. */
   private hems(ctx: CanvasRenderingContext2D, V: View, x: number, y: number, pts: Float64Array, zoom: number, lit: boolean): boolean {
-    if (!this.hemSteady) return this.swardEdges(ctx, V, x, y, pts, zoom, lit);
     const dpr = this.canvas.dpr;
     const cache = lit ? this.hemCache : this.hemMemCache;
     const key = y * this.game.world.w + x;
     const had = cache.get(key);
-    if (had) {
+    /*
+     * While the zoom moves, the picture the tile had, stretched about its
+     * corner by as much as the zoom has moved since: the tile's own outline
+     * is drawn at the new size underneath it, and a few frames of an edge a
+     * fraction of a pixel soft is not something anybody sees in the middle of
+     * a zoom. Drawing them afresh was most of what a zoom cost on open
+     * country, every frame of it. A tile with none, or with one too far from
+     * this size to stretch (`STAND_IN_MOST`), has one made at this size, up to
+     * `HEM_MOVING_MOST` a frame, and its edges drawn as they always were past
+     * that; a tile with no edges has none at any size.
+     */
+    if (!this.zoomSettled) {
+      const r = had ? zoom / had.zoom : 0;
+      if (had && (!had.cv || (r <= STAND_IN_MOST && r * STAND_IN_MOST >= 1))) {
+        if (had.cv) ctx.drawImage(had.cv, pts[0] + (had.bx - had.px) * r, pts[1] + (had.by - had.py) * r, (had.cv.width / dpr) * r, (had.cv.height / dpr) * r);
+        return had.cv !== null;
+      }
+      if (this.hemsMoving >= HEM_MOVING_MOST) return this.swardEdges(ctx, V, x, y, pts, zoom, lit);
+      this.hemsMoving++;
+    } else if (had && had.zoom === zoom) {
       const dx = (pts[0] - had.px) * dpr;
       const dy = (pts[1] - had.py) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
@@ -2352,6 +2572,8 @@ export class Renderer {
         if (had.cv) ctx.drawImage(had.cv, had.bx + rx / dpr, had.by + ry / dpr, had.cv.width / dpr, had.cv.height / dpr);
         return had.cv !== null;
       }
+    }
+    if (had) {
       if (had.cv) this.hemPixels -= had.cv.width * had.cv.height;
       cache.delete(key);
     }
@@ -2372,7 +2594,7 @@ export class Renderer {
     g.setTransform(dpr, 0, 0, dpr, -bx, -by);
     const drew = this.swardEdges(g, V, x, y, pts, zoom, lit);
     if (this.hemPixels + w * h > HEM_PIXELS) this.forgetHems();
-    cache.set(key, { cv: drew ? cv : null, px: pts[0], py: pts[1], bx: bx / dpr, by: by / dpr });
+    cache.set(key, { cv: drew ? cv : null, px: pts[0], py: pts[1], bx: bx / dpr, by: by / dpr, zoom });
     if (drew) {
       this.hemPixels += w * h;
       ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
@@ -3033,11 +3255,24 @@ export class Renderer {
     const unit = cam.zoom * this.canvas.dpr;
     cam.cx = Math.round(cx * unit) / unit;
     cam.cy = Math.round(cy * unit) / unit;
-    // The pictures are for one zoom, one view and one screen; and none are made while the zoom is moving.
-    const fit = `${cam.zoom}|${cam.rotation}|${cam.width}|${cam.height}|${this.canvas.dpr}`;
+    /*
+     * The pictures are for one view and one screen, and each knows the zoom
+     * it was made at. While the zoom is moving, and for `ZOOM_SETTLE` after,
+     * the ground's edges and the trees are put down from the pictures they
+     * had, stretched to the size wanted (`hems`, `drawTree`, `atSize`), and
+     * none is made for a size that will be gone next frame; walls and roofs
+     * are drawn as they always were while it moves (`baked`). Turning the
+     * view or resizing the screen drops the edges outright: a picture of a
+     * tile from another quarter is not the same tile stretched.
+     */
+    const fit = `${cam.rotation}|${cam.width}|${cam.height}|${this.canvas.dpr}`;
+    const now = performance.now();
     this.hemSteady = cam.zoom === this.hemZoomWas;
+    if (!this.hemSteady) this.zoomMovedAt = now;
     this.hemZoomWas = cam.zoom;
-    if (this.hemSteady && fit !== this.hemFor) {
+    this.zoomSettled = now - this.zoomMovedAt >= ZOOM_SETTLE;
+    this.hemsMoving = 0;
+    if (fit !== this.hemFor) {
       this.hemFor = fit;
       this.forgetHems();
     }
@@ -3073,7 +3308,6 @@ export class Renderer {
     // Whether the fields are waiting out a winter, which they are drawn doing: asked once a frame, not once a tile.
     this.dormant = this.game.crops.size > 0 && fieldRate(this.game.wallNow()) <= 0;
     this.roomTiles = this.myRoom();
-    this.shades.clear();
     // The spells first: what they light is among what is burning.
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
@@ -3149,6 +3383,7 @@ export class Renderer {
       for (const cel of this.game.buildings.cellars.values()) this.cut.add(cel.building);
       this.cutInFront();
     }
+    this.structuresFrame();
     this.queueRoofs(V, dLo, dHi);
     // What the spells drew this frame, sorted into the lines it goes down with.
     this.spells.layout(ctx, V, dLo, dHi);
@@ -3270,17 +3505,7 @@ export class Renderer {
     // Paving is laid rather than poured, and from close enough you can see
     // every joint in it. Cheaper than grain and worth more, so it starts
     // sooner.
-    /*
-     * One squeeze per picture per zoom, rather than one per thing drawn --
-     * emptied here rather than where the entities are drawn, because the
-     * ground now uses it too and the ground goes first.
-     */
-    if (zoom !== this.scaledAt) {
-      this.scaledAt = zoom;
-      this.scaled.clear();
-      this.scaledSizes.clear();
-      this.forgetTreePictures();
-    }
+    // The squeezed pictures (`atSize`) and the trees' (`drawTree`) are no longer emptied when the zoom changes: each knows the zoom it was made at.
     const paved = zoom >= 0.75;
     /*
      * A seam is shapes in the stone, and below this a band of it is a few
@@ -3412,7 +3637,7 @@ export class Renderer {
     if (year.season !== this.year.season || lookStep(year.day) !== lookStep(this.year.day)) {
       forgetTrees();
       this.scaled.clear();
-      this.scaledSizes.clear();
+      this.forgetAllScaled();
       this.forgetTreePictures();
     }
     this.year = year;
@@ -3482,11 +3707,21 @@ export class Renderer {
         const lit = fog === VISIBLE;
         const color = this.groundColor(x, y, lit, sun);
         ctx.beginPath();
-        ctx.moveTo(pts[0], pts[1]);
-        ctx.lineTo(pts[2], pts[3]);
-        ctx.lineTo(pts[4], pts[5]);
-        ctx.lineTo(pts[6], pts[7]);
-        ctx.closePath();
+        /*
+         * Without the grid, a tile's edge is stroked in its own colour, to
+         * close the hairline the smoothing leaves between two tiles; the same
+         * is a tile half a pixel bigger all round, in one fill rather than a
+         * fill and a stroke (`outsetTile`), and a far view is six thousand
+         * tiles. One folded over on a cliff is outlined and stroked as before.
+         */
+        const outset = !grid && this.outsetTile(ctx, pts);
+        if (!outset) {
+          ctx.moveTo(pts[0], pts[1]);
+          ctx.lineTo(pts[2], pts[3]);
+          ctx.lineTo(pts[4], pts[5]);
+          ctx.lineTo(pts[6], pts[7]);
+          ctx.closePath();
+        }
         ctx.fillStyle = color;
         ctx.fill();
         if (stoneLit) this.occludeGround(ctx, pts, minY, maxY);
@@ -3526,8 +3761,10 @@ export class Renderer {
         const t0 = this.groundAt(x, y, lit);
         // Stepping stones go down after the line's water, over it; remembered ones too, as paving is.
         if (here === TileType.SteppingStones) (lit ? this.stoneRow : this.stoneRowDim).push(x, y);
-        ctx.strokeStyle = grid && !wet ? GRID_COLOR : color;
-        ctx.stroke();
+        if (!outset) {
+          ctx.strokeStyle = grid && !wet ? GRID_COLOR : color;
+          ctx.stroke();
+        }
         // How wide that edge went down, which a deck's shade on this tile has to come back over (`piers.ts`).
         this.groundEdge = ctx.lineWidth;
         // Weed on the bottom goes under the water rather than over it.
@@ -3628,7 +3865,7 @@ export class Renderer {
             const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
             this.take(t === TileType.Tree ? 'tree' : t === TileType.Bush ? 'bush' : 'stump', x, y, baseX, baseY + hh - avg * hs, spr);
           }
-          if (this.game.buildings.list.size || this.game.buildings.walls.size) this.drawStructures(x, y, V, d > playerDepth);
+          if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
           if (this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
           const top = raising ? this.raisedTop(x, y) : null;
           this.tileColumn(lineFog, pts, c, top, hs);
@@ -3845,7 +4082,9 @@ export class Renderer {
           }
         }
         if (this.game.foundations.size) this.drawFoundation(x, y, lit);
-        if (this.game.buildings.list.size || this.game.buildings.walls.size) this.drawStructures(x, y, V, d > playerDepth);
+        // Only a tile near something built has anything of it to draw (`StructureWatch.nearAny`): once one building stood
+        // anywhere, every tile on the screen went through all of this, and a tenth of a far view's frame with it.
+        if (this.structs.nearAny(x, y)) this.drawStructures(x, y, V, d > playerDepth);
         if (this.hingeTiles.has(x * 65536 + y)) this.drawGateAt(x, y, V);
       }
 
@@ -5514,19 +5753,35 @@ export class Renderer {
     const step = Math.min(HAZE_STEPS, Math.round((far * 0.94 + own) * HAZE_STEPS));
     const sway = -this.lean.x * bend;
     const t = ctx.getTransform();
-    // While the zoom is moving every size is new every frame, and a picture made for one frame is wasted: drawn as it was.
-    if (this.hemSteady && t.b === 0 && t.c === 0 && t.a === t.d) {
+    if (t.b === 0 && t.c === 0 && t.a === t.d) {
       const wDev = Math.round(dw * t.a);
       const hDev = Math.round(dh * t.a);
-      const pic = wDev > 0 && hDev > 0 ? this.treePicture(spr, wDev, hDev, step, Math.round(stand * hDev)) : null;
+      const pic = wDev > 0 && hDev > 0 ? this.treePicture(spr, `${ent.x},${ent.y}`, wDev, hDev, step, Math.round(stand * hDev)) : null;
       if (pic) {
-        const x = Math.round(t.a * ent.sx + t.e - pic.footX);
-        const y = Math.round(t.d * ent.sy + t.f - pic.footY);
         const cv = pic.cv;
+        // How much it is stretched: not at all, unless it is this tree's picture at another size standing in while the zoom moves (`treePicture`).
+        const k = hDev / pic.tall;
+        const W = cv.width * k;
+        const x = Math.round(t.a * ent.sx + t.e - pic.footX * k);
+        const yf = t.d * ent.sy + t.f - pic.footY * k;
+        const y = Math.round(yf);
+        /** Rows `y0` to `y1` of its picture, `off` pixels along, onto the screen's own pixels; a stretched one with its rows' ends put on whole pixels, so no seam opens between two. */
+        const put = (g: CanvasRenderingContext2D, y0: number, y1: number, off: number): void => {
+          if (k === 1) {
+            g.drawImage(cv, 0, y0, cv.width, y1 - y0, x + off, y + y0, cv.width, y1 - y0);
+            return;
+          }
+          const d0 = Math.round(yf + y0 * k), d1 = Math.round(yf + y1 * k);
+          if (d1 > d0) g.drawImage(cv, 0, y0, cv.width, y1 - y0, x + off, d0, W, d1 - d0);
+        };
         /** Its picture onto `g`, whose transform is the screen's own pixels: whole, or in bands each shifted by the wind at its height. */
         const lay = (g: CanvasRenderingContext2D): void => {
+          const H = cv.height;
+          // The whole tree's rows, counted from the top of what is kept of it: the cuts are where they always were, empty rows or not.
+          const head = -pic.cropTop, tail = pic.tall - pic.cropTop;
           if (Math.abs(sway) * hDev < 0.5) {
-            g.drawImage(cv, x, y);
+            if (k === 1) g.drawImage(cv, x, y);
+            else put(g, 0, H, 0);
             return;
           }
           /*
@@ -5537,16 +5792,33 @@ export class Renderer {
            * down the tree: it shook. Short enough that a full gale puts no
            * more than a pixel between one band and the next, and never more
            * than `TREE_BANDS` of them.
+           *
+           * Bands next to each other that the wind has put the same whole
+           * number of pixels over are one copy rather than several. It is the
+           * same picture to the pixel -- each band was a straight copy, and
+           * two straight copies shifted alike are one -- but a band was a call
+           * apiece, about eleven a tree, and the calls rather than the pixels
+           * were most of what a wood cost: a breeze leans the crown of a tree
+           * at zoom one two or three pixels, which is three or four copies.
            */
-          const band = Math.max(Math.ceil(2 / SWAY_MAX), Math.ceil(hDev / TREE_BANDS));
-          const strip = (y0: number, y1: number): void => {
-            if (y1 <= y0) return;
-            const off = Math.round(sway * ((y0 + y1) / 2 - pic.footY));
-            g.drawImage(cv, 0, y0, cv.width, y1 - y0, x + off, y + y0, cv.width, y1 - y0);
+          const band = Math.max(Math.ceil(2 / SWAY_MAX), Math.ceil(pic.tall / TREE_BANDS));
+          // The run being gathered, bottom up: its rows, and how far over it goes.
+          let top = H, bottom = H, at = NaN;
+          const cut = (y0: number, y1: number): void => {
+            const off = Math.round(sway * k * ((y0 + y1) / 2 - pic.footY));
+            const a = Math.max(0, y0), b = Math.min(H, y1);
+            if (b <= a) return;
+            if (off !== at) {
+              if (bottom > top) put(g, top, bottom, at);
+              at = off;
+              bottom = b;
+            }
+            top = a;
           };
-          const foot = Math.max(0, Math.min(hDev, Math.round(pic.footY)));
-          strip(foot, hDev);
-          for (let y1 = foot; y1 > 0; y1 -= band) strip(Math.max(0, y1 - band), y1);
+          const foot = Math.max(head, Math.min(tail, Math.round(pic.footY)));
+          cut(foot, tail);
+          for (let y1 = foot; y1 > Math.max(head, 0); y1 -= band) cut(Math.max(head, y1 - band), y1);
+          if (bottom > top) put(g, top, bottom, at);
         };
         ctx.save();
         ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -5554,7 +5826,7 @@ export class Renderer {
         // In front of a runestone's runes after dark: the same picture, leaned and banded as it was laid, kept off them (`RunestoneNight`).
         if (this.runeNight.active) {
           const reach = Math.ceil(Math.abs(sway) * hDev) + 1;
-          this.runeNight.occludeDraw(ctx, x - reach, y, cv.width + 2 * reach, cv.height, lay, this.occClips);
+          this.runeNight.occludeDraw(ctx, x - reach, y, Math.ceil(W) + 2 * reach, Math.ceil(cv.height * k), lay, this.occClips);
         }
         ctx.restore();
         return;
@@ -5581,66 +5853,176 @@ export class Renderer {
   private treePics = new Map<string, TreePicture>();
   private treePixels = 0;
   private spriteIds = new WeakMap<HTMLCanvasElement, number>();
+  /**
+   * Each tree's latest picture at each haze step, whatever size it was made
+   * at: what is put down, stretched, while the zoom moves, or while this
+   * frame has made all the pictures it may (`TREE_PICTURE_MS`).
+   */
+  private treeOwn = new Map<string, (TreePicture | undefined)[]>();
+  /** The colour the distance is mixed toward this frame, and the frame it was read in. */
+  private hazeInk = '';
+  private inkFrame = -1;
+  /** The milliseconds spent making tree pictures in the frame `treeMakeFrame`, against `TREE_PICTURE_MS`. */
+  private treeMadeMs = 0;
+  private treeMakeFrame = -1;
 
   private forgetTreePictures(): void {
     this.treePics.clear();
+    this.treeOwn.clear();
     this.treePixels = 0;
+  }
+
+  /** A tree picture put away, and out of its tree's stand-ins if it was one. */
+  private dropTreePicture(key: string, pic: TreePicture): void {
+    this.treePics.delete(key);
+    this.treePixels -= pic.cv.width * pic.cv.height;
+    const own = this.treeOwn.get(pic.own);
+    if (own?.[pic.haze] === pic) {
+      own[pic.haze] = undefined;
+      if (!own.some((p) => p)) this.treeOwn.delete(pic.own);
+    }
   }
 
   /**
    * `spr` at `w` by `h` device pixels, sheared about its foot so its crown
-   * stands `lean` pixels over, and mixed `haze` steps toward the distance.
+   * stands `lean` pixels over, and mixed `haze` steps toward the distance:
+   * the tree at `tree`.
+   *
+   * Made only for so long in a frame (`TREE_PICTURE_MS`), and while the
+   * zoom moves only when the tree has none within `STAND_IN_MOST` of this
+   * size. Otherwise the one it has stands in -- the same haze if it has it,
+   * the nearest if not -- for whoever draws it to stretch: a zoom used to
+   * make every tree on the screen afresh every frame of it, and threw them
+   * all away the next. One mixed with the distance as it was earlier in the
+   * day is made again as the light changes, in the same few milliseconds.
    * Null when the pictures in use this frame already fill `TREE_PIXELS`.
    */
-  private treePicture(spr: Sprite, w: number, h: number, haze: number, lean: number): TreePicture | null {
+  private treePicture(spr: Sprite, tree: string, w: number, h: number, haze: number, lean: number): TreePicture | null {
     let id = this.spriteIds.get(spr.canvas);
     if (id === undefined) {
       id = ++this.spriteCount;
       this.spriteIds.set(spr.canvas, id);
     }
-    const key = `${id}|${w}|${h}|${haze}|${lean}`;
-    const had = this.treePics.get(key);
-    if (had) {
-      had.used = this.frameNo;
-      this.treePics.delete(key);
-      this.treePics.set(key, had);
-      return had;
+    if (this.inkFrame !== this.frameNo) {
+      this.inkFrame = this.frameNo;
+      this.hazeInk = css(this.sky.far);
     }
+    const key = `${id}|${w}|${h}|${haze}|${lean}`;
+    const own = `${id}|${tree}`;
+    const had = this.treePics.get(key);
+    const use = (pic: TreePicture, k: string): TreePicture => {
+      pic.used = this.frameNo;
+      this.treePics.delete(k);
+      this.treePics.set(k, pic);
+      return pic;
+    };
+    if (had && (haze === 0 || had.ink === this.hazeInk)) return use(had, key);
+    if (this.treeMakeFrame !== this.frameNo) {
+      this.treeMakeFrame = this.frameNo;
+      this.treeMadeMs = 0;
+    }
+    const may = this.treeMadeMs < TREE_PICTURE_MS;
+    if (had && (!may || !this.zoomSettled)) return use(had, key);
+    if (!may || !this.zoomSettled) {
+      const list = this.treeOwn.get(own);
+      for (let d = 0; list && d <= HAZE_STEPS; d++) {
+        const near = list[haze - d] ?? list[haze + d];
+        if (near && (!may || (h <= near.tall * STAND_IN_MOST && h * STAND_IN_MOST >= near.tall))) return use(near, near.key);
+        if (near) break;
+      }
+    }
+    const t0 = performance.now();
+    const made = this.makeTreePicture(spr, key, own, w, h, haze, lean);
+    this.treeMadeMs += performance.now() - t0;
+    return made;
+  }
+
+  /** `treePicture`'s new picture, kept under `key`: null when there is no room. */
+  private makeTreePicture(spr: Sprite, key: string, own: string, w: number, h: number, haze: number, lean: number): TreePicture | null {
+    const had = this.treePics.get(key);
+    if (had) this.dropTreePicture(key, had);
     const s = lean / h;
     const fx = (spr.ax / spr.w) * w;
     const fy = (spr.ay / spr.h) * h;
-    const lo = Math.min(0, -s * fy, s * (h - fy));
-    const hi = Math.max(0, -s * fy, s * (h - fy));
+    /*
+     * Only the part of it there is anything in, and a pixel round that for
+     * the smoothing. A tree's sprite is cut with room for the biggest crown
+     * and the longest lean the species has, and three quarters of a wood's
+     * pictures were empty: copied every frame all the same, four screens of
+     * pixels at zoom one where a screen does. Moved by whole pixels only, so
+     * what is kept is the same picture to the pixel.
+     */
+    const [u0, v0, u1, v1] = this.spriteInk(spr.canvas);
+    const x0 = Math.max(0, Math.floor(u0 * w) - 2), x1 = Math.min(w, Math.ceil(u1 * w) + 2);
+    const y0 = Math.max(0, Math.floor(v0 * h) - 2), y1 = Math.min(h, Math.ceil(v1 * h) + 2);
+    const ch = Math.max(1, y1 - y0);
+    const lo = Math.min(0, s * (y0 - fy), s * (y1 - fy));
+    const hi = Math.max(0, s * (y0 - fy), s * (y1 - fy));
     const ox = Math.ceil(-lo);
-    const cw = Math.ceil(w + ox + hi) + 1;
+    const cw = Math.max(1, Math.ceil(x1 - x0 + ox + hi) + 1);
     // Room made by putting away what has gone longest unused, and never what this frame has drawn already.
-    while (this.treePixels + cw * h > TREE_PIXELS) {
+    while (this.treePixels + cw * ch > TREE_PIXELS) {
       const first = this.treePics.entries().next();
       if (first.done || first.value[1].used === this.frameNo) return null;
-      this.treePics.delete(first.value[0]);
-      this.treePixels -= first.value[1].cv.width * first.value[1].cv.height;
+      this.dropTreePicture(first.value[0], first.value[1]);
     }
     const cv = document.createElement('canvas');
     cv.width = cw;
-    cv.height = h;
+    cv.height = ch;
     const g = cv.getContext('2d');
     if (!g) return null;
-    g.setTransform(1, 0, s, 1, ox - s * fy, 0);
+    g.setTransform(1, 0, s, 1, ox - x0 - s * fy, -y0);
     g.drawImage(spr.canvas, 0, 0, w, h);
     if (haze > 0) {
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.globalCompositeOperation = 'source-atop';
       g.globalAlpha = (haze / HAZE_STEPS) * 0.62;
-      g.fillStyle = css(this.sky.far);
-      g.fillRect(0, 0, cw, h);
+      g.fillStyle = this.hazeInk;
+      g.fillRect(0, 0, cw, ch);
     }
-    const pic: TreePicture = { cv, footX: ox + fx, footY: fy, used: this.frameNo };
+    const pic: TreePicture = { cv, footX: ox + fx - x0, footY: fy - y0, used: this.frameNo, own, haze, ink: this.hazeInk, key, tall: h, cropTop: y0 };
     this.treePics.set(key, pic);
-    this.treePixels += cw * h;
+    this.treePixels += cw * ch;
+    let list = this.treeOwn.get(own);
+    if (!list) {
+      list = [];
+      this.treeOwn.set(own, list);
+    }
+    list[haze] = pic;
     return pic;
   }
 
   private spriteCount = 0;
+  /** Where in each sprite there is anything, as shares of its width and height: left, top, right, bottom (`spriteInk`). */
+  private inked = new WeakMap<HTMLCanvasElement, [number, number, number, number]>();
+
+  /** The box round everything not see-through in a sprite, read off it once. The whole sprite where it cannot be read. */
+  private spriteInk(src: HTMLCanvasElement): [number, number, number, number] {
+    const had = this.inked.get(src);
+    if (had) return had;
+    let box: [number, number, number, number] = [0, 0, 1, 1];
+    try {
+      const W = src.width, H = src.height;
+      const px = src.getContext('2d')?.getImageData(0, 0, W, H).data;
+      if (px) {
+        let x0 = W, y0 = H, x1 = -1, y1 = -1;
+        for (let y = 0; y < H; y++) {
+          for (let x = 0, i = y * W * 4 + 3; x < W; x++, i += 4) {
+            if (!px[i]) continue;
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            y1 = y;
+          }
+        }
+        if (x1 >= 0) box = [x0 / W, y0 / H, (x1 + 1) / W, (y1 + 1) / H];
+      }
+    } catch {
+      // A sprite that cannot be read is kept whole.
+    }
+    this.inked.set(src, box);
+    return box;
+  }
 
   /** The ghost of what is being set down, over everything, and washed red where it will not go. */
   private drawGhost(ctx: CanvasRenderingContext2D, zoom: number, ghost: Ghost): void {
@@ -6625,11 +7007,12 @@ export class Renderer {
     const ctx = this.canvas.ctx;
     ctx.beginPath();
     let any = false;
-    for (const b of [
-      { dir: 'h', x, y }, { dir: 'h', x, y: y + 1 }, { dir: 'v', x, y }, { dir: 'v', x: x + 1, y },
-      { dir: 'h', x: x - 1, y }, { dir: 'v', x, y: y - 1 }, { dir: 'h', x: x + 1, y }, { dir: 'v', x: x + 1, y: y - 1 },
-      { dir: 'h', x: x + 1, y: y + 1 }, { dir: 'v', x: x + 1, y: y + 1 }, { dir: 'h', x: x - 1, y: y + 1 }, { dir: 'v', x, y: y + 1 },
-    ] as Border[]) {
+    // One border, moved round the twelve, rather than twelve made a tile: the shade is looked up by number (`shadeOf`).
+    const b = this.shadeAsk;
+    for (let i = 0; i < SHADE_BORDERS.length; i += 3) {
+      b.dir = SHADE_BORDERS[i] ? 'v' : 'h';
+      b.x = x + SHADE_BORDERS[i + 1];
+      b.y = y + SHADE_BORDERS[i + 2];
       const p = this.shadeOf(level, b, V);
       if (!p) continue;
       any = true;
@@ -6674,9 +7057,11 @@ export class Renderer {
    * shade covers the rest.
    */
   private shadeOf(level: number, b: Border, V: View): Float64Array | null {
-    const key = `${level}:${b.dir}:${b.x},${b.y}`;
+    const key = shadeKey(level, b);
     const had = this.shades.get(key);
     if (had !== undefined) return had;
+    // Asked with `shadeAsk`, which the next ask moves: the rest of this is worked out from a copy.
+    b = { dir: b.dir, x: b.x, y: b.y };
     const bld = this.game.buildings;
     const world = this.game.world;
     const found = (bb: Border): Wall | undefined => {
@@ -7578,13 +7963,14 @@ export class Renderer {
     let sig = '';
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     let lowest = Infinity, wide = 1;
-    let fx = Infinity, fy = Infinity;
+    let fx = Infinity, fy = Infinity, gx = -Infinity, gy = -Infinity;
     for (const [x, y] of roofTiles) {
       const f = bld.floor(level, x, y);
       if (!f || floorKind(f) !== 'roof') continue;
       sig += `${x},${y},${f.material},${f.dye ?? ''},${isDone(f) ? 1 : 0};`;
       lowest = Math.min(lowest, world.getHeight(x, y));
       fx = Math.min(fx, x); fy = Math.min(fy, y);
+      gx = Math.max(gx, x); gy = Math.max(gy, y);
       wide = Math.max(wide, Math.abs(x - roofTiles[0][0]) + 1, Math.abs(y - roofTiles[0][1]) + 1);
     }
     if (!sig) return;
@@ -7600,7 +7986,9 @@ export class Renderer {
       }
     }
     const key = `r|${b.id}|${level}|${b.deck ?? ''}|${roofShapeOf(b)}|${sig}`;
-    this.baked(key, cam.worldToScreenX(fx, fy), cam.worldToScreenY(fx, fy, lowest), [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b));
+    // What it reads is its own building and what stands round it: `REACH` round the tiles it covers (`StructureWatch`).
+    this.baked(key, cam.worldToScreenX(fx, fy), cam.worldToScreenY(fx, fy, lowest), [x0, y0, x1, y1], () => this.drawPitchedRoofNow(b),
+      this.structs.version(fx, fy, gx, gy));
   }
 
   private drawPitchedRoofNow(b: Building): void {
@@ -9371,7 +9759,8 @@ export class Renderer {
       }
     }
     const key = `f|${floor.level}|${x},${y}|${floor.material}|${floor.kind ?? ''}|${floor.dye ?? ''}|${isDone(floor) ? 1 : 0}|${base}`;
-    this.baked(key, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h), [x0, y0, x1, y1], () => this.drawFloorNow(floor, x, y, base, alpha));
+    this.baked(key, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h), [x0, y0, x1, y1], () => this.drawFloorNow(floor, x, y, base, alpha),
+      this.structs.version(x, y, x, y));
   }
 
   private drawFloorNow(floor: FloorTile, x: number, y: number, base: number, alpha: number): void {
@@ -9622,18 +10011,78 @@ export class Renderer {
    * Like the ground's edges (`hems`) a picture is good only where it lands on
    * the same fraction of a pixel, which the camera's whole-pixel step keeps
    * true; `ax`, `ay` is a point on the screen that moves with the thing, to
-   * tell. Each picture is also made again after `BAKE_LIFE` seconds whatever
-   * else happens, a little sooner or later for each so they do not all come
-   * due in one frame: a wall reads its neighbours, its ivy and its wetness,
-   * and what any of those do shows within that, rather than having to be
-   * named here. What changes faster than that -- a lamp behind it at night, a
-   * room it is seen through, the wash of remembered ground -- is drawn as it
-   * always was (`drawWall`, `drawPitchedRoof`).
+   * tell.
+   *
+   * A picture is made again when something it was drawn from has changed,
+   * and not otherwise. It used to be made again every `BAKE_LIFE` seconds
+   * whatever happened, because nothing said when a wall's neighbours, its
+   * paint or the floor over it had changed: in a village a fifth of the
+   * pictures on the screen were drawn afresh every frame, and kept for good
+   * the same village drew in four fifths of the time. What it reads is in
+   * three parts:
+   *
+   *   * The buildings round it: `ver`, the count of the patches of the
+   *     island it reads (`StructureWatch.version`), which goes up when
+   *     anything built within `REACH` of it changes, or the ground under it.
+   *     The caller says which tiles those are; a wall also puts in its key
+   *     what it reads from further off (a counter's wares).
+   *   * The view: the zoom, the turn, the screen's sharpness, the storey
+   *     looked at, the cutaway and what is taken off over a cellar
+   *     (`bakeEpoch`). All of them go at once when that changes, as the
+   *     ground's edges do.
+   *   * The light: the sun's step through the day, the dark in twentieths
+   *     and whether the ivy is in flower (`bakeLight`) -- a glass roof
+   *     throws the sun back. When that moves on, each is made again in its
+   *     own turn over the next `BAKE_LIFE` seconds, by its key, so a village
+   *     is not drawn afresh in one frame.
+   *
+   * And after `BAKE_KEEP` seconds whatever happens, for what nothing tells
+   * of: ivy growing, water coming near enough to green it. What changes
+   * faster than any of that -- a lamp behind it at night, a room it is seen
+   * through, a portcullis on its way down -- is drawn as it always was
+   * (`drawWall`, `drawPitchedRoof`).
    */
   private bakes = new Map<string, Baked>();
   private bakePixels = 0;
+  /** The view the pictures are for, as a count that goes up when it changes, and what it was (`structuresFrame`). */
+  private bakeEpoch = 0;
+  private bakeView = '';
+  /** The light they are for, the same way, and when it last moved on. */
+  private bakeLight = 0;
+  private bakeLit = '';
+  private bakeLightAt = -Infinity;
 
-  private baked(key: string, ax: number, ay: number, box: [number, number, number, number], draw: () => void): void {
+  /**
+   * Once a frame, once the buildings taken off over a cellar are known:
+   * what has changed about the buildings (`StructureWatch`), and the view
+   * and the light the pictures of them are made for (`baked`), and whether
+   * the shade the walls throw on the ground (`shadeOf`) still stands.
+   */
+  private structuresFrame(): void {
+    const cam = this.camera;
+    const settings = this.game.settings;
+    this.structs.update(this.game.buildings);
+    const cut = this.cut.size ? [...this.cut].join(',') : '';
+    const view = `${cam.zoom}|${cam.rotation}|${this.canvas.dpr}|${settings.viewLevel}|${settings.cutaway}|${cut}`;
+    if (view !== this.bakeView) {
+      this.bakeView = view;
+      this.bakeEpoch++;
+    }
+    const lit = `${Math.floor((this.game.hourOfDay() / 24) * SUN_STEPS)}|${Math.round(this.game.darkness() * 20)}|${this.bloom}`;
+    if (lit !== this.bakeLit) {
+      this.bakeLit = lit;
+      this.bakeLight++;
+      this.bakeLightAt = this.time;
+    }
+    // The shade reads the walls, the ground under them, which way is the back of a tile, the cutaway and what is taken off.
+    const shade = `${this.structs.stamp}|${cam.rotation}|${settings.cutaway}|${cut}`;
+    if (shade !== this.shadeFor || this.shades.size > 200_000) {
+      this.shadeFor = shade;
+      this.shades.clear();
+    }
+  }
+
+  private baked(key: string, ax: number, ay: number, box: [number, number, number, number], draw: () => void, ver: number): void {
     if (!this.hemSteady) {
       draw();
       this.occludeLine(box, draw);
@@ -9642,7 +10091,8 @@ export class Renderer {
     const ctx = this.canvas.ctx;
     const dpr = this.canvas.dpr;
     const had = this.bakes.get(key);
-    if (had && this.time - had.at < had.life && this.time >= had.at) {
+    if (had && had.ver === ver && had.epoch === this.bakeEpoch && this.time - had.at < had.life && this.time >= had.at
+      && (had.light === this.bakeLight || this.time - this.bakeLightAt < had.wait)) {
       const dx = (ax - had.ax) * dpr, dy = (ay - had.ay) * dpr;
       const rx = Math.round(dx), ry = Math.round(dy);
       if (Math.abs(dx - rx) < 0.02 && Math.abs(dy - ry) < 0.02) {
@@ -9670,7 +10120,20 @@ export class Renderer {
     if (cv.width !== w || cv.height !== h) {
       cv.width = w;
       cv.height = h;
-    } else (cv.getContext('2d') as CanvasRenderingContext2D).clearRect(0, 0, w, h);
+    } else {
+      /*
+       * Its old picture's canvas, the same size: cleared, and its pen put back
+       * as a new one's is. A wall drawn into it leaves its alpha, its way of
+       * laying one colour over another and the rest as it last set them, and
+       * a picture made again on that came out a shade off one made fresh --
+       * which, now a picture is made again only when something has changed,
+       * would have stayed. Setting the width again does the same in a browser
+       * without `reset`.
+       */
+      const old = cv.getContext('2d') as CanvasRenderingContext2D & { reset?: () => void };
+      if (old.reset) old.reset();
+      else cv.width = w;
+    }
     const g = cv.getContext('2d') as CanvasRenderingContext2D;
     g.setTransform(dpr, 0, 0, dpr, -bx, -by);
     // What the screen's pen was left holding, which the drawing reads without setting: the ends of a line, the joins, the type.
@@ -9696,10 +10159,14 @@ export class Renderer {
       this.bakes.clear();
       this.bakePixels = 0;
     }
-    // Due again somewhere in the second half of a life to the first half of the next, by the key, so they come due apart.
+    // Its turn, by the key, so they come due apart: when the light moves on, and when it is kept no longer.
     let spread = 0;
     for (let i = 0; i < key.length; i++) spread = (spread * 31 + key.charCodeAt(i)) >>> 0;
-    this.bakes.set(key, { cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_LIFE * (0.75 + (spread % 1000) / 2000) });
+    const turn = (spread % 1000) / 1000;
+    this.bakes.set(key, {
+      cv, ax, ay, bx: bx / dpr, by: by / dpr, at: this.time, life: BAKE_KEEP * (0.75 + turn / 2), wait: BAKE_LIFE * turn,
+      ver, epoch: this.bakeEpoch, light: this.bakeLight,
+    });
     this.bakePixels += w * h;
     ctx.drawImage(cv, bx / dpr, by / dpr, w / dpr, h / dpr);
     if (this.runeNight.active) this.runeNight.occlude(ctx, cv, bx / dpr, by / dpr, w / dpr, h / dpr);
@@ -9759,16 +10226,70 @@ export class Renderer {
       const sx = cam.worldToScreenX(wx, wy), sy = cam.worldToScreenY(wx, wy, z);
       x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
     }
-    // Seen through, half built, taking the wash off remembered ground, or with a lamp behind it at night: as it always was.
-    if (alpha < 1 || this.wallLift || !isDone(wall) || this.lampBehind(wall, border) > 0) {
+    // Seen through, half built, with a lamp behind it at night, or a portcullis on its way up or down: as it always was.
+    if (alpha < 1 || !isDone(wall) || this.lampBehind(wall, border) > 0 || this.gateMoving(wall, border)) {
       this.drawWallNow(wall, border, base, alpha);
       // Kept off a runestone's runes in front of it too -- all but one seen through, which the runes show through.
       if (alpha >= 1) this.occludeLine([x0, y0, x1, y1], () => this.drawWallNow(wall, border, base, alpha));
       return;
     }
-    const key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}`;
-    this.baked(key, cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, base), [x0, y0, x1, y1],
-      () => this.drawWallNow(wall, border, base, alpha));
+    /*
+     * Taking the wash off remembered ground behind it, it does from its
+     * picture what drawing it would have done (`liftBaked`). It used to be
+     * drawn afresh instead, and once the first wall in sight in front of
+     * remembered ground had been, so was every wall after it in the frame.
+     */
+    const lift = this.wallLift;
+    if (lift) this.liftBaked(wall, border, base);
+    let key = `w|${wall.level}|${border.dir}${border.x},${border.y}|${wall.type}|${wall.material}|${wall.dye ?? ''}|${wall.glass ?? ''}|${wall.building}|${base}`;
+    // A shop counter shows what is on it (`drawCounterPart`), which is no part of the building.
+    if (wall.type === 'counter') {
+      const c = this.game.counters.onBorder(border);
+      if (c) key += `|${counterWares(c).join(',')}|${counterHeld(c)}`;
+    }
+    // What it reads round it is the two tiles either side of it, and `REACH` round those (`StructureWatch`).
+    const ver = this.structs.version(border.dir === 'v' ? border.x - 1 : border.x, border.dir === 'h' ? border.y - 1 : border.y, border.x, border.y);
+    // And not again by drawing it, when its picture is made: once is the outline, and the picture is the same either way.
+    this.wallLift = null;
+    try {
+      this.baked(key, cam.worldToScreenX(ax, ay), cam.worldToScreenY(ax, ay, base), [x0, y0, x1, y1],
+        () => this.drawWallNow(wall, border, base, alpha), ver);
+    } finally {
+      this.wallLift = lift;
+    }
+  }
+
+  /**
+   * `liftWall` for a wall laid from its picture, which is not drawn and so
+   * does not take the wash off as it is: the same points on it as
+   * `drawWallBody` works out -- its two faces, from its foot to its top.
+   */
+  private liftBaked(wall: Wall, border: Border, base: number): void {
+    const kind = WALL_TYPE_BY_ID.get(wall.type);
+    // A railing hides nothing behind it, and takes nothing off (`drawWallBody`).
+    if (kind?.railed || !MATERIAL_BY_ID.get(wall.material)) return;
+    const cam = this.camera;
+    const [ax, ay, bx, by] = borderPoints(border);
+    const dx = bx - ax, dy = by - ay;
+    const half = WALL_THICK * (kind?.thick ?? 1);
+    const nx = -dy * half, ny = dx * half;
+    const toward = cam.nearSide(nx, ny);
+    const h0 = base + wall.level * WALL_HEIGHT;
+    const h1 = h0 + WALL_HEIGHT * this.standing(wall, border);
+    this.liftWall(
+      (t, _k, s = 1) => cam.worldToScreenX(ax + dx * t + nx * s * toward, ay + dy * t + ny * s * toward),
+      (t, k, s = 1) => cam.worldToScreenY(ax + dx * t + nx * s * toward, ay + dy * t + ny * s * toward, h0 + (h1 - h0) * k));
+  }
+
+  /**
+   * Whether a portcullis is on its way up or down (`grille`), or has been
+   * let down or taken up since it was last drawn: its picture would hold
+   * the grille where it was when the picture was made.
+   */
+  private gateMoving(wall: Wall, border: Border): boolean {
+    if (wall.type !== 'portcullis') return false;
+    const m = this.gateMotion.get(`p:${wall.level}:${border.dir}:${border.x},${border.y}`);
+    return !m || m.to !== (wall.lowered ? 1 : 0) || (m.secs > 0 && (this.time - m.at < m.secs || this.time < m.at));
   }
 
   /**
@@ -13187,41 +13708,70 @@ export class Renderer {
     const ax = cam.worldToScreenX(0, 0), ay = cam.worldToScreenY(0, 0, 0);
     const fit = `${zoom}|${cam.rotation}|${W}|${H}|${dev}|${t.e}|${t.f}`;
     let pic = this.swellPic;
-    // Never two frames running, so a slow machine is not painting it afresh every frame it draws.
+    /*
+     * The waves cross the screen a zoom's worth as fast as they would close
+     * up, so the picture is made that much less often for the same step
+     * between one and the next: a third as often at a third of the zoom.
+     * Never two frames running, so a slow machine is not painting it afresh
+     * every frame it draws.
+     */
+    const rate = SWELL_RATE * Math.min(1, Math.max(0.25, zoom));
     if (!pic || pic.fit !== fit || Math.abs(ax - pic.ax) > W / 4 || Math.abs(ay - pic.ay) > H / 4
-      || ((this.time - pic.at >= 1 / SWELL_RATE || this.time < pic.at) && this.frameNo - pic.frame > 1)) {
+      || ((this.time - pic.at >= 1 / rate || this.time < pic.at) && this.frameNo - pic.frame > 1)) {
       const full = pic?.cv ?? document.createElement('canvas');
       const half = pic?.half ?? document.createElement('canvas');
       if (full.width !== ctx.canvas.width || full.height !== ctx.canvas.height) {
         full.width = ctx.canvas.width;
         full.height = ctx.canvas.height;
       }
+      // Where on it the sea is, in its pixels, so only that much of it is copied on.
+      const b = this.seaBox;
+      const bx = Math.max(0, Math.floor(t.a * b[0] + t.e) - 2), by = Math.max(0, Math.floor(t.d * b[1] + t.f) - 2);
+      const box: [number, number, number, number] = [bx, by, Math.min(full.width, Math.ceil(t.a * b[2] + t.e) + 2) - bx, Math.min(full.height, Math.ceil(t.d * b[3] + t.f) + 2) - by];
       // The two gradients worked out at `SWELL_RES` of the pixels: neither has an edge of its own to keep sharp.
       const sw = Math.max(1, Math.ceil(full.width * SWELL_RES)), sh = Math.max(1, Math.ceil(full.height * SWELL_RES));
       if (half.width !== sw || half.height !== sh) {
         half.width = sw;
         half.height = sh;
       }
-      const h = half.getContext('2d') as CanvasRenderingContext2D;
-      h.setTransform(1, 0, 0, 1, 0, 0);
-      h.clearRect(0, 0, sw, sh);
-      h.setTransform(t.a * SWELL_RES, 0, 0, t.d * SWELL_RES, t.e * SWELL_RES, t.f * SWELL_RES);
-      this.swellBand(h, zoom, 0, LONG_WAVE, CREST_ALPHA, 1, null);
-      this.swellBand(h, zoom, 0.55, SHORT_WAVE, TROUGH_ALPHA * 0.7, 0.62, null);
-      // And cut to the sea at the screen's own, which is where the edge is: the shore.
-      const g = full.getContext('2d') as CanvasRenderingContext2D;
-      g.setTransform(1, 0, 0, 1, 0, 0);
-      g.globalCompositeOperation = 'source-over';
-      g.clearRect(0, 0, full.width, full.height);
-      g.drawImage(half, 0, 0, full.width, full.height);
-      g.setTransform(t);
-      g.globalCompositeOperation = 'destination-in';
-      g.fillStyle = '#000';
-      g.fill(this.seaPath);
-      // Where on it the sea is, in its pixels, so only that much of it is copied on.
-      const b = this.seaBox;
-      const bx = Math.max(0, Math.floor(t.a * b[0] + t.e) - 2), by = Math.max(0, Math.floor(t.d * b[1] + t.f) - 2);
-      const box: [number, number, number, number] = [bx, by, Math.min(full.width, Math.ceil(t.a * b[2] + t.e) + 2) - bx, Math.min(full.height, Math.ceil(t.d * b[3] + t.f) + 2) - by];
+      /*
+       * And all of it only over the sea's box, a little past it on the
+       * half-sized one for the smoothing to draw from: everything outside
+       * the box was cut away by the sea, and never copied on. Painting,
+       * stretching and cutting the whole screen to keep the third of it a
+       * far view of a coast has as sea was most of the swell's cost.
+       */
+      if (box[2] > 0 && box[3] > 0) {
+        const kx = sw / full.width, ky = sh / full.height;
+        const hx = Math.max(0, Math.floor(bx * kx) - 2), hy = Math.max(0, Math.floor(by * ky) - 2);
+        const hw = Math.min(sw, Math.ceil((bx + box[2]) * kx) + 2) - hx, hh = Math.min(sh, Math.ceil((by + box[3]) * ky) + 2) - hy;
+        const h = half.getContext('2d') as CanvasRenderingContext2D;
+        h.save();
+        h.setTransform(1, 0, 0, 1, 0, 0);
+        h.clearRect(hx, hy, hw, hh);
+        h.beginPath();
+        h.rect(hx, hy, hw, hh);
+        h.clip();
+        h.setTransform(t.a * SWELL_RES, 0, 0, t.d * SWELL_RES, t.e * SWELL_RES, t.f * SWELL_RES);
+        this.swellBand(h, zoom, 0, LONG_WAVE, CREST_ALPHA, 1, null);
+        this.swellBand(h, zoom, 0.55, SHORT_WAVE, TROUGH_ALPHA * 0.7, 0.62, null);
+        h.restore();
+        // And cut to the sea at the screen's own, which is where the edge is: the shore.
+        const g = full.getContext('2d') as CanvasRenderingContext2D;
+        g.save();
+        g.setTransform(1, 0, 0, 1, 0, 0);
+        g.globalCompositeOperation = 'source-over';
+        g.clearRect(bx, by, box[2], box[3]);
+        g.beginPath();
+        g.rect(bx, by, box[2], box[3]);
+        g.clip();
+        g.drawImage(half, 0, 0, full.width, full.height);
+        g.setTransform(t);
+        g.globalCompositeOperation = 'destination-in';
+        g.fillStyle = '#000';
+        g.fill(this.seaPath);
+        g.restore();
+      }
       pic = this.swellPic = { cv: full, half, fit, at: this.time, frame: this.frameNo, ax, ay, box };
     }
     ctx.save();

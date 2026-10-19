@@ -1121,6 +1121,8 @@ interface Held {
   facing: number; goal: number; turnFrom: number; turnSince: number; go: number; graze: number; seen: number;
   /** Where it is in its stride, the walk phase that was counted up to, and when; and strides to a radian of the phase last frame: see `strideOf`. */
   u?: number; phase?: number; at?: number; k?: number;
+  /** Since when it has been put down from a picture other than its own, waiting for a new one to be drawn: see `drawBeast`. */
+  waiting?: number;
 }
 const held = new Map<string, Held>();
 
@@ -1219,18 +1221,60 @@ export function animOf(kind: Kind, p: BeastPose, now: number, go: number, graze:
  * A body on the island is not drawn afresh every frame, nor even once for
  * each body. Every kind is kept as pictures -- one for each facing, each
  * twelfth of a stride at a walk and at a run, each sixth of a second of its
- * loop standing or grazing, and each fifteenth of a second of an act it plays
- * standing -- and each is drawn the first time a body wants it and put down
- * from then on. So a herd of woolas walking the same way share twelve pictures
- * between them, and a settlement full of animals standing about, or at their
- * tasks, costs what putting down pictures costs. Only a body turning or getting
- * going or settling, evolving, rare, or acting on the move is drawn for itself,
- * while it does it.
+ * loop standing or grazing (fewer where the loop is slow: `standMap`), and
+ * each fifteenth of a second of an act it plays standing, grazing, or at its
+ * task on the move -- and each is drawn the first time a body wants it and
+ * put down from then on. So a herd of woolas walking the same way share
+ * twelve pictures between them, and a settlement full of animals standing
+ * about, or at their tasks, costs what putting down pictures costs. Only a
+ * body evolving, rare, or striking or casting on the move is drawn for
+ * itself, while it does it; and one turning, getting going or settling, or
+ * putting its head down to the grass, when it is drawn big enough for that to
+ * show (`SNAP_BELOW`).
  */
 const STRIDE_FRAMES = 12;
 const STAND_FPS = 6;
 /** Pictures to a second of an act played standing (`ACT_SECS`): a strike is eight of them, a go at a task seventeen. */
 const ACT_FPS = 15;
+/**
+ * Most of a loop standing is slow: a breath over three seconds and more, a
+ * look round over several, the weight from foot to foot, the tail. Only a
+ * blink, a flick of an ear, a sniff or a mouthful of grass is over in a few
+ * sixths of a second. A picture for every sixth of a second of all of it was
+ * a hundred and forty-four for each kind, colour and facing, standing, and as
+ * many grazing, at ten milliseconds each; a herd in view was still drawing
+ * five or six of them a frame forty seconds after it came into view, which
+ * was half of the frame. So a sixth of a second in which no point of the body
+ * is more than `STAND_SAME` of a device pixel from where it is in one of the
+ * last `STAND_BACK` pictures made for the loop is put down from that picture:
+ * the slow stretches take one picture for several sixths, the two heads of a
+ * mouthful of grass are drawn once each and taken in turn, and whatever is
+ * quick -- a blink, an ear -- still has every sixth. What less than a pixel
+ * is depends on the size it is drawn at, so the loop is worked out for each
+ * (`standMap`), from where its bones and its breath put a few corners of
+ * every piece at each sixth (`loopOf`), and what anything drawn by hand
+ * over it puts down (`traced`).
+ */
+const STAND_SAME = 0.5;
+const STAND_BACK = 4;
+/** Corners of each piece measured, spread along its mesh: enough to follow a piece carried on its bone, and a bent one roughly. */
+const LOOP_CORNERS = 6;
+/** How far a glow's strength counts as moving, against a body's units: a twentieth of its full strength is as much as half a unit. */
+const GLOW_UNITS = 10;
+/**
+ * Under this scale -- drawn from the coarser kit (`lod`), a body a few dozen
+ * pixels long -- a body turning is put down at the nearest of the eight ways
+ * round, one getting going or stopping as walking once it is half way there
+ * and as standing before, and one putting its head down to the grass or
+ * lifting it at the nearest `GRAZE_STEPS` of the way down, each from pictures
+ * as the rest are. Drawn for itself every frame, each of those costs a whole
+ * picture a frame for most of a second (two for the grass), and at that size
+ * a turn of an eighth in a tenth of a second, or a head going down in steps
+ * of a quarter, is not to be told from the smooth one. Bigger, it is drawn
+ * for itself while it changes, as before.
+ */
+const SNAP_BELOW = 1.5;
+const GRAZE_STEPS = 4;
 /**
  * The scales pictures are drawn at, a zoom taking the next one up and
  * shrinking it: the island's zoom is a wheel, and a picture for every notch
@@ -1241,12 +1285,16 @@ const ACT_FPS = 15;
 const STEPS = Array.from({ length: 21 }, (_, q) => 0.5 * 2 ** (q / 4));
 /**
  * How long, in milliseconds, new pictures may take in any sixtieth of a
- * second. A herd come into view at once, or a zoom, wants a great many new
- * pictures in the same moment; past this, a body waiting for its next one
- * keeps the one before it a little longer, and the pictures fill in over the
- * next few frames rather than all in one.
+ * second: drawing one and putting it down the first time, which is when the
+ * canvas actually fills it in. A herd come into view at once, or a zoom,
+ * wants a great many new pictures in the same moment; past this, a body
+ * waiting for its next one keeps the nearest one before it that is drawn, and
+ * the pictures fill in over the next few frames rather than all in one. None
+ * waits longer than `WAIT` seconds, so a body kept waiting in a crowd still
+ * moves, if less often, rather than standing frozen while others are drawn.
  */
 const ALLOWANCE = 4;
+const WAIT = 0.4;
 let spent = 0, since = 0;
 function drawingAllowed(): boolean {
   const now = performance.now();
@@ -1271,6 +1319,173 @@ function keep(key: string, f: Frame): void {
       if (framePixels < BUDGET * 0.8) break;
     }
   }
+}
+
+/** A body standing or grazing at the `i`th sixth of a second of its loop, as that sixth's picture is drawn. */
+function standAnim(kind: Kind, i: number, graze: number): Anim {
+  const t = (i + 0.5) / STAND_FPS;
+  return { t, u: 0, go: 0, gait: 0, graze, blink: blinking(kind, t), breath: 0.5 + 0.5 * cyc(t, 7), fleece: 1, seed: 0.37 };
+}
+
+/** A number for a name, to tell one call or setting from another in `traced`. */
+const nameNum = (name: PropertyKey): number => {
+  const t = String(name);
+  let h = 0;
+  for (let k = 0; k < t.length; k++) h = (h * 31 + t.charCodeAt(k)) % 100_003;
+  return h;
+};
+
+/**
+ * What a kind's hand-drawn extra (`Kind.extra`) puts down at a moment, under
+ * the body and over it, from two sides: every call and every setting it makes
+ * on a stand-in for the canvas, as numbers -- a mark for the call and each
+ * number it is given in the kind's own units, and the numbers in a colour as
+ * `GLOW_UNITS` are -- so a sparkle that comes and goes, or a star that
+ * twinkles, is measured as the body is. Most kinds draw nothing standing.
+ * Nothing at all if it reads back from the canvas or fails on the stand-in:
+ * then it is not to be measured.
+ */
+function traced(kind: Kind, b: Bones, a: Anim): number[] | null {
+  const out: number[] = [];
+  if (!kind.extra) return out;
+  const put = (v: unknown): void => {
+    if (typeof v === 'number') out.push(v);
+    else if (typeof v === 'boolean') out.push(v ? 1e5 : -1e5);
+    else if (typeof v === 'string') {
+      out.push(-1e5 - v.length);
+      for (const m of v.match(/-?\d*\.?\d+/g) ?? []) {
+        const n = Number(m);
+        out.push((n > 1 ? n / 255 : n) * GLOW_UNITS);
+      }
+    } else if (Array.isArray(v)) v.forEach(put);
+    else if (v !== undefined && v !== null && v !== fake) throw new Error('not to be measured');
+  };
+  const set = new Map<PropertyKey, unknown>([['globalAlpha', 1], ['lineWidth', 1]]);
+  const fake: object = new Proxy({}, {
+    get: (_, name) => (set.has(name) ? set.get(name) : (...args: unknown[]) => {
+      out.push(1e6 + nameNum(name));
+      args.forEach(put);
+      return fake;
+    }),
+    set: (_, name, v) => {
+      out.push(2e6 + nameNum(name));
+      put(v);
+      set.set(name, v);
+      return true;
+    },
+  });
+  try {
+    for (const f of [1, 5]) for (const under of [true, false]) kind.extra(fake as CanvasRenderingContext2D, viewOf(f), b, a, under);
+  } catch {
+    return null;
+  }
+  return out;
+}
+
+/**
+ * Where a kind standing (or grazing) is at each sixth of a second of its
+ * loop: a few corners of every piece of it, placed by its bones and its
+ * breath in its own units, any light over it (`Kind.glow`), what it draws by
+ * hand (`traced`), and whether its eyes are shut. A piece not shown at that
+ * moment is put far off, so a sixth that shows it is never taken for one that
+ * does not. Fully fleeced, so a fleece's own sway counts. Worked out once for
+ * each kind, standing and grazing: about what one picture costs. `whole`
+ * when it could not be measured, and every sixth is its own picture.
+ */
+interface Loop { at: Float32Array[]; shut: Uint8Array; whole?: boolean }
+const loops = new Map<string, Loop>();
+function loopOf(species: string, kind: Kind, grazing: boolean): Loop {
+  const key = `${species}|${grazing ? 'g' : 's'}`;
+  let L = loops.get(key);
+  if (L) return L;
+  const t0 = performance.now();
+  const kit = kitOf(species, kind, 0);
+  const picks = kit.map((pc) => {
+    const m = pc.mesh.v.length, c = Math.min(m, LOOP_CORNERS);
+    return Array.from({ length: c }, (_, q) => Math.floor((q * m) / c));
+  });
+  const width = picks.reduce((w, q) => w + q.length * 3, 0);
+  const n = LOOP * STAND_FPS;
+  L = { at: [], shut: new Uint8Array(n) };
+  for (let i = 0; i < n; i++) {
+    const a = standAnim(kind, i, grazing ? 1 : 0);
+    const b = kind.bones(a);
+    const glow = kind.glow ? kind.glow(b, a) : [];
+    const drawn = traced(kind, b, a);
+    if (!drawn) L.whole = true;
+    const out = new Float32Array(width + glow.length * 8 + (drawn?.length ?? 0));
+    let o = 0;
+    kit.forEach((pc, pi) => {
+      const pick = picks[pi], xf = b[pc.bone];
+      if (!xf || (pc.shown && !pc.shown(a))) {
+        out.fill(1e6, o, o + pick.length * 3);
+        o += pick.length * 3;
+        return;
+      }
+      const v = pc.bent ? pc.bent(pc.mesh.v, a) : pc.mesh.v;
+      for (const q of pick) {
+        const w = place(xf, pc.breathes ? breathOf([v[q]], pc.breathes.c, pc.breathes.k * (a.breath - 0.5))[0] : v[q]);
+        out[o++] = w[0];
+        out[o++] = w[1];
+        out[o++] = w[2];
+      }
+    });
+    for (const l of glow) {
+      out.set([l.p[0], l.p[1], l.p[2], l.r, l.a * GLOW_UNITS, (l.c[0] / 255) * GLOW_UNITS, (l.c[1] / 255) * GLOW_UNITS, (l.c[2] / 255) * GLOW_UNITS], o);
+      o += 8;
+    }
+    if (drawn) out.set(drawn, o);
+    L.at.push(out);
+    L.shut[i] = a.blink ? 1 : 0;
+  }
+  loops.set(key, L);
+  if (loops.size > 32) loops.delete(loops.keys().next().value as string);
+  // Counted against this moment's allowance for new pictures, which it saves many of.
+  spent += performance.now() - t0;
+  return L;
+}
+
+/** Whether no number in one is further than `eps` from the same in the other. */
+function near(a: Float32Array, b: Float32Array, eps: number): boolean {
+  if (a.length !== b.length) return false;
+  for (let j = 0; j < a.length; j++) if (Math.abs(a[j] - b[j]) > eps) return false;
+  return true;
+}
+
+/**
+ * Which sixth's picture each sixth of a second of a kind's loop standing (or
+ * grazing) is put down from, drawn `k` device pixels to its unit: itself, or
+ * one of the last `STAND_BACK` drawn before it that it is within `STAND_SAME`
+ * of a device pixel of everywhere (`loopOf`), eyes open or shut alike.
+ */
+const standMaps = new Map<string, Int16Array>();
+function standMap(species: string, kind: Kind, grazing: boolean, k: number): Int16Array {
+  const key = `${species}|${grazing ? 'g' : 's'}|${k}`;
+  let map = standMaps.get(key);
+  if (map) return map;
+  const n = LOOP * STAND_FPS;
+  map = new Int16Array(n);
+  const L = loopOf(species, kind, grazing);
+  if (L.whole) {
+    for (let i = 0; i < n; i++) map[i] = i;
+  } else {
+    const eps = STAND_SAME / k;
+    const made: number[] = [];
+    for (let i = 0; i < n; i++) {
+      let r = -1;
+      for (let w = made.length - 1; w >= 0 && w >= made.length - STAND_BACK && r < 0; w--) {
+        if (L.shut[made[w]] === L.shut[i] && near(L.at[made[w]], L.at[i], eps)) r = made[w];
+      }
+      if (r < 0) {
+        made.push(i);
+        r = i;
+      }
+      map[i] = r;
+    }
+  }
+  standMaps.set(key, map);
+  if (standMaps.size > 256) standMaps.delete(standMaps.keys().next().value as string);
+  return map;
 }
 
 /** How far round its feet a kind can reach at any facing and in any pose, in its own units, with room to spare: the size of its picture. */
@@ -1318,36 +1533,48 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   const now = performance.now() / 1000;
   const id = p.id !== undefined ? String(p.id) : undefined;
   const s = id ? settle(id, p, now) : { facing: ((Math.round(p.facing) % 8) + 8) % 8, go: p.moving ? 1 : 0, graze: p.graze && !p.moving ? 1 : 0, changing: false };
-  const a = animOf(kind, p, now, s.go, s.graze);
-  if (id) a.u = strideOf(id, kind, p.phase, a.gait, now);
-  // A body that leaps is carried in the air rather than at an even pace (`leapOf`): how far ahead of the island's place for it, or
-  // behind, it is drawn, along the way it faces, for the part of its stride its picture is.
-  const going = s.go > 0.5 && id ? held.get(id)?.k : undefined;
-  const reach = going ? UNITS_PER_TILE / PHASE_PER_TILE / (kind.size ?? 1) / going : 0;
-  const uc = a.u;
-  const pal = paletteFor(species, kind, colors);
   const t = ctx.getTransform();
   const dev = Math.hypot(t.a, t.b) || 1;
   const step = STEPS.find((z) => z >= zoom * 0.98) ?? STEPS[STEPS.length - 1];
   const lod = step < 1.5 ? 0 : 1;
+  // Small, a change is put down from pictures as well (`SNAP_BELOW`): at the nearest way round, going or not, and a step of
+  // the way down to the grass; on the move, with its head up.
+  let facing = s.facing, go = s.go, graze = s.graze, changing = s.changing;
+  if (changing && step < SNAP_BELOW) {
+    facing = ((Math.round(facing) % 8) + 8) % 8;
+    if (go > 0 && go < 1) go = go >= 0.5 ? 1 : 0;
+    graze = go > 0 ? 0 : Math.round(graze * GRAZE_STEPS) / GRAZE_STEPS;
+    changing = false;
+  }
+  // Settled on the grass is all the way down, so a picture of it is the same whoever wanted it first.
+  if (!changing && graze > 0.99) graze = 1;
+  const a = animOf(kind, p, now, go, graze);
+  if (id) a.u = strideOf(id, kind, p.phase, a.gait, now);
+  // A body that leaps is carried in the air rather than at an even pace (`leapOf`): how far ahead of the island's place for it, or
+  // behind, it is drawn, along the way it faces, for the part of its stride its picture is.
+  const going = go > 0.5 && id ? held.get(id)?.k : undefined;
+  const reach = going ? UNITS_PER_TILE / PHASE_PER_TILE / (kind.size ?? 1) / going : 0;
+  const uc = a.u;
+  const pal = paletteFor(species, kind, colors);
   const kit = kitOf(species, kind, lod);
   const ahead = (u: number): [number, number] => {
     if (!reach) return [0, 0];
     const off = leapOf(kind, a.gait, u, reach) + (frac(u) - frac(uc)) * reach;
-    const ey = viewOf(s.facing).ey;
+    const ey = viewOf(facing).ey;
     return [off * ey[0] * zoom, off * ey[1] * zoom];
   };
-  // Turning, getting going or settling, or rare, its light crossing it: drawn for itself, as it is this frame.
   // Only an act it has moves for, and evolving, which every kind does in the same light (`Kind.acts`).
   if (p.act && p.act.kind !== 'evolve' && !kind.acts?.includes(p.act.kind)) {
     p = { ...p, act: undefined };
     a.act = undefined;
   }
-  // An act played standing still is kept as pictures as a stride is (`ACT_FPS`): a worker at its task does it the whole
-  // time it works, and drawn afresh each frame it cost as much as a dozen of anything else on the screen. Evolving keeps
-  // its light, and is drawn for itself.
-  const actHeld = !!a.act && a.act.kind !== 'evolve' && s.go === 0 && s.graze === 0;
-  if (s.changing || !Number.isInteger(s.facing) || p.rare || (p.act && !actHeld)) {
+  // An act is kept as pictures as a stride is (`ACT_FPS`): a worker at its task does it the whole time it works, standing, head
+  // down at the ground or, at a task on the move, walking, and drawn afresh each frame it cost as much as a dozen of anything
+  // else on the screen. A strike or a cast on the move is over in a moment, and evolving keeps its light: those are drawn for
+  // themselves.
+  const actHeld = !!a.act && a.act.kind !== 'evolve' && !changing && (graze === 0 || graze === 1) && (go === 0 || a.act.kind === 'work');
+  // Turning, getting going or settling, or rare, its light crossing it: drawn for itself, as it is this frame.
+  if (changing || !Number.isInteger(facing) || p.rare || (p.act && !actHeld)) {
     const [ax, ay] = ahead(a.u);
     ctx.save();
     ctx.translate(sx + ax, sy + ay);
@@ -1355,50 +1582,67 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     const shine = p.rare ? { rare: p.rare, seed: typeof p.id === 'number' ? p.id % 97 : 0, now } : undefined;
     // Evolving: the light it is changing in, under it and over it (`evolveBurst`).
     if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, true);
-    drawKind(ctx, kind, kit, pal, s.facing, a, inkAt(zoom, kind.size), 1 / zoom, false, shine);
+    drawKind(ctx, kind, kit, pal, facing, a, inkAt(zoom, kind.size), 1 / zoom, false, shine);
     if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, false);
     ctx.restore();
     return;
   }
-  // Which picture it is: a fifteenth of a second of an act, a twelfth of a stride going, a sixth of a second of the loop
-  // standing.
+  // Which picture it is: a fifteenth of a second of an act (and a twelfth of a stride, at it on the move), a twelfth of a stride
+  // going, a sixth of a second of the loop standing or grazing, or the sixth whose picture stands for it (`standMap`).
   let prefix: string, i: number, count: number;
+  // The sixth before this one in its loop, `back` sixths back, whose picture will do while this one waits (`ALLOWANCE`).
+  let before = (back: number): number => (i - back + count) % count;
+  const strideAt = (): string => {
+    const run = a.gait > 0.5;
+    const q = Math.floor(frac(a.u) * STRIDE_FRAMES);
+    a.u = Math.floor(a.u) + (q + 0.5) / STRIDE_FRAMES;
+    a.gait = run ? 1 : 0;
+    return `${run ? 'r' : 'w'}${q}`;
+  };
   if (actHeld && a.act) {
-    const { kind: act, t } = a.act;
+    const { kind: act, t: at } = a.act;
     count = Math.max(1, Math.round(ACT_SECS[act] * ACT_FPS));
-    i = Math.min(count - 1, Math.max(0, Math.floor(t * count)));
-    prefix = `a${act}`;
+    i = Math.min(count - 1, Math.max(0, Math.floor(at * count)));
+    prefix = `a${act}${graze ? 'g' : ''}${go ? `${strideAt()}-` : ''}`;
     a.act = { kind: act, t: (i + 0.5) / count };
     a.t = 0;
     a.blink = false;
     a.breath = 0.5;
-  } else if (s.go > 0) {
-    const run = a.gait > 0.5;
-    i = Math.floor(frac(a.u) * STRIDE_FRAMES);
+  } else if (go > 0) {
     count = STRIDE_FRAMES;
+    const run = a.gait > 0.5;
     prefix = run ? 'r' : 'w';
-    a.u = Math.floor(a.u) + (i + 0.5) / STRIDE_FRAMES;
-    a.gait = run ? 1 : 0;
+    i = Math.floor(frac(a.u) * STRIDE_FRAMES);
+    strideAt();
   } else {
-    i = Math.floor(a.t * STAND_FPS);
     count = LOOP * STAND_FPS;
-    prefix = s.graze > 0 ? 'g' : 's';
-    a.t = (i + 0.5) / STAND_FPS;
-    a.blink = blinking(kind, a.t);
-    a.breath = 0.5 + 0.5 * cyc(a.t, 7);
+    const raw = Math.min(count - 1, Math.floor(a.t * STAND_FPS));
+    const map = graze === 0 || graze === 1 ? standMap(species, kind, graze === 1, step * dev) : undefined;
+    i = map ? map[raw] : raw;
+    if (map) before = (back) => map[(raw - back + count) % count];
+    // Part of the way down to the grass, at its own step (`GRAZE_STEPS`).
+    prefix = graze === 0 ? 's' : graze === 1 ? 'g' : `g${Math.round(graze * GRAZE_STEPS)}-`;
+    const sa = standAnim(kind, i, graze);
+    a.t = sa.t;
+    a.blink = sa.blink;
+    a.breath = sa.breath;
   }
   const fleece = Math.round(clamp(a.fleece) * 6);
   a.fleece = fleece / 6;
-  const head = `${species}|${colors[0]}|${colors[1]}|${s.facing}|`;
+  const head = `${species}|${colors[0]}|${colors[1]}|${facing}|`;
   const base = `${head}${step}|${dev}|`;
   const key = `${base}${prefix}${i}|${fleece}`;
   let fkey = key;
   let f = frames.get(key);
   // Over this moment's allowance for new pictures, the nearest one before it that is already drawn does, for now; or, a zoom
-  // under way, the same one drawn at a scale near this, stretched to it.
-  if (!f && !drawingAllowed()) {
-    for (let back = 1; back <= 8 && !f; back++) {
-      fkey = `${base}${prefix}${(i - back + count) % count}|${fleece}`;
+  // under way, the same one drawn at a scale near this, stretched to it. But not for longer than `WAIT`.
+  const h = id ? held.get(id) : undefined;
+  if (!f && !drawingAllowed() && !(h?.waiting !== undefined && now - h.waiting > WAIT)) {
+    for (let back = 1, last = i; back < count && !f; back++) {
+      const j = before(back);
+      if (j === last) continue;
+      last = j;
+      fkey = `${base}${prefix}${j}|${fleece}`;
       f = frames.get(fkey);
     }
     const at = STEPS.indexOf(step);
@@ -1410,26 +1654,30 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
       }
     }
   }
+  let made = 0;
   if (f) {
     frames.delete(fkey);
     frames.set(fkey, f);
+    if (h) h.waiting = fkey === key ? undefined : h.waiting ?? now;
   } else {
-    const t0 = performance.now();
+    made = performance.now();
     const box = reachOf(species, kind, kit);
     const k = step * dev;
-    const w = Math.max(1, Math.ceil((box.right - box.left) * k)), h = Math.max(1, Math.ceil((box.bottom - box.top) * k));
+    const w = Math.max(1, Math.ceil((box.right - box.left) * k)), hh = Math.max(1, Math.ceil((box.bottom - box.top) * k));
     const canvas = document.createElement('canvas');
     canvas.width = w;
-    canvas.height = h;
+    canvas.height = hh;
     const g = canvas.getContext('2d') as CanvasRenderingContext2D;
-    f = { canvas, ox: Math.round(-box.left * k), oy: Math.round(-box.top * k), k, px: w * h };
+    f = { canvas, ox: Math.round(-box.left * k), oy: Math.round(-box.top * k), k, px: w * hh };
     g.setTransform(k, 0, 0, k, f.ox, f.oy);
-    drawKind(g, kind, kit, pal, s.facing, a, inkAt(step, kind.size), 1 / step);
+    drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step);
     keep(key, f);
-    spent += performance.now() - t0;
+    if (h) h.waiting = undefined;
   }
-  const [ax, ay] = s.go > 0 ? ahead(a.u) : [0, 0];
+  const [ax, ay] = go > 0 ? ahead(a.u) : [0, 0];
   ctx.drawImage(f.canvas, sx + ax - (f.ox / f.k) * zoom, sy + ay - (f.oy / f.k) * zoom, (f.canvas.width / f.k) * zoom, (f.canvas.height / f.k) * zoom);
+  // What a new picture cost is counted to here: the canvas fills it in the first time it is put down, not as it is drawn.
+  if (made) spent += performance.now() - made;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { frameFor, frameLamps, reachOf, NICHE_H, NICHE_W, paintFrame, paintNiche, paintNightGlow, paintPlate, seedOf, sideOf, type ArtOpts } from './runecut-art';
 import { watchLook, type Look } from './theme';
 import type { Join, Seam } from './snapgrid';
-import { paintLife, type LifePiece, type LifeWorld } from './runecut-life';
+import { livesOn, paintLife, type LifePiece, type LifeWorld } from './runecut-life';
 
 /**
  * Runecut's art on the page: each window's slab, its niche and its frame
@@ -77,6 +77,13 @@ export const JOINT_EVERY = 48;
 export const PIN_EVERY = 40;
 /** The life on the frames is drawn this often, in ms: thirty times a second. */
 const LIFE_MS = 1000 / 30;
+/**
+ * How far past a piece's box, in interface px, anything that lives on its
+ * frame is ever drawn: the most a half hour of every one of them came to,
+ * day and night, with snow, was the songbird by day at 155 px. The life's
+ * canvas reaches only that far round the pieces it is drawn on (`paintLife`).
+ */
+const LIFE_REACH = 160;
 /** How long a new seam's glint takes to run its length. */
 const GLINT_MS = 650;
 
@@ -477,6 +484,8 @@ export class RunecutArt {
   private readonly lifeCanvas: HTMLCanvasElement;
   private lifeLast = 0;
   private lifeDrew = false;
+  /** Where the canvas is laid, and how big, in interface px, as last drawn: x, y, w, h. */
+  private lifeBox = '';
   /** Whether the life on the frames is wanted (the setting, Fast graphics, a phone's screen), and what the island says to it; set by the UI. */
   lifeOn: () => boolean = () => false;
   lifeWorld: (() => Omit<LifeWorld, 'night'>) | null = null;
@@ -485,11 +494,35 @@ export class RunecutArt {
    * The animals and lights on the frames (`src/ui/runecut-life.ts`), drawn
    * afresh every `LIFE_MS` over everything but what is inside a window: each
    * window's and bar's room inside its band is cut out of the canvas first.
+   *
+   * The canvas covers only the pieces that have anything living on them this
+   * hour (`livesOn`), and `LIFE_REACH` round them, and is laid over that part
+   * of the interface. It was the whole interface, and a canvas is handed on
+   * to the screen whole every time it is drawn in: a mouse on the pack's
+   * frame was a full screen of pixels thirty times a second, some four
+   * milliseconds of every frame. With nothing living on any piece it is put
+   * away until there is.
    */
   private paintLife(t: number): void {
     const c = this.lifeCanvas;
     const on = this.look?.ui === 'runecut' && this.seamsShown && !reduced() && this.lifeOn() && !!this.lifeWorld;
-    if (!on) {
+    const all = on ? this.all.map((d) => d.lifePiece()).filter((p): p is LifePiece => !!p) : [];
+    const world = on && this.lifeWorld ? { ...this.lifeWorld(), night: this.look?.rc === 'night' } : null;
+    const pieces = world ? all.filter((p) => livesOn(p.kind, world)) : [];
+    const w = this.root.offsetWidth, h = this.root.offsetHeight;
+    // The box round every live piece and its reach, in whole interface px, kept to the interface.
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (const p of pieces) {
+      x0 = Math.min(x0, Math.floor(p.x - LIFE_REACH));
+      y0 = Math.min(y0, Math.floor(p.y - LIFE_REACH));
+      x1 = Math.max(x1, Math.ceil(p.x + p.w + LIFE_REACH));
+      y1 = Math.max(y1, Math.ceil(p.y + p.h + LIFE_REACH));
+    }
+    x0 = Math.max(0, x0);
+    y0 = Math.max(0, y0);
+    x1 = Math.min(w, x1);
+    y1 = Math.min(h, y1);
+    if (!world || x1 <= x0 || y1 <= y0) {
       if (this.lifeDrew) {
         c.getContext('2d')?.clearRect(0, 0, c.width, c.height);
         c.hidden = true;
@@ -497,27 +530,30 @@ export class RunecutArt {
       }
       return;
     }
-    const w = this.root.offsetWidth, h = this.root.offsetHeight;
     const k = (window.devicePixelRatio || 1) * this.scale();
-    const cw = Math.max(1, Math.ceil(w * k)), ch = Math.max(1, Math.ceil(h * k));
+    const cw = Math.max(1, Math.ceil((x1 - x0) * k)), ch = Math.max(1, Math.ceil((y1 - y0) * k));
     if (c.width !== cw || c.height !== ch) {
       c.width = cw;
       c.height = ch;
-      c.style.width = `${w}px`;
-      c.style.height = `${h}px`;
+    }
+    const box = `${x0},${y0},${x1 - x0},${y1 - y0}`;
+    if (box !== this.lifeBox) {
+      this.lifeBox = box;
+      c.style.left = `${x0}px`;
+      c.style.top = `${y0}px`;
+      c.style.width = `${x1 - x0}px`;
+      c.style.height = `${y1 - y0}px`;
     }
     const g = c.getContext('2d');
-    if (!g || !this.lifeWorld) return;
+    if (!g) return;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, cw, ch);
-    g.setTransform(k, 0, 0, k, 0, 0);
-    const pieces = this.all.map((d) => d.lifePiece()).filter((p): p is LifePiece => !!p);
+    g.setTransform(k, 0, 0, k, -x0 * k, -y0 * k);
     g.save();
     g.beginPath();
-    g.rect(0, 0, w, h);
-    for (const p of pieces) g.rect(p.x + p.F, p.y + p.F, Math.max(0, p.w - p.F * 2), Math.max(0, p.h - p.F * 2));
+    g.rect(x0, y0, x1 - x0, y1 - y0);
+    for (const p of all) g.rect(p.x + p.F, p.y + p.F, Math.max(0, p.w - p.F * 2), Math.max(0, p.h - p.F * 2));
     g.clip('evenodd');
-    const world = { ...this.lifeWorld(), night: this.look?.rc === 'night' };
     for (const p of pieces) paintLife(g, p, t, world);
     g.restore();
     c.hidden = false;

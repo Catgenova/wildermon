@@ -12171,7 +12171,8 @@ export const FIGURE_TOP: number = (() => {
  * is; the picture is drawn again a dozen times a second while it stands and
  * thirty while it walks, which is more than a stride or a breath needs --
  * fewer in a crowd -- and every frame while it is blending from one thing to
- * another or turning.
+ * another or turning. Standing about, those dozen a second are kept as the
+ * pictures of a loop and drawn once each (`idleLoop`).
  * A few hundred facets a frame for every person in view is what the island
  * could not afford; a picture a frame is what it always drew.
  *
@@ -12217,6 +12218,8 @@ interface Still {
   put?: { ctx: CanvasRenderingContext2D; x: number; y: number; w: number; h: number };
   /** How many times it has been drawn, so whatever is made from it knows when to make it again (`figurePicture`). */
   drawn?: number;
+  /** The picture of its loop standing it was last put down from instead (`idleLoop`), if it was. */
+  shown?: HTMLCanvasElement;
 }
 
 const stills = new Map<string, Still>();
@@ -12228,7 +12231,7 @@ const stills = new Map<string, Still>();
  */
 export function figurePicture(id: string): { ctx: CanvasRenderingContext2D; canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number; ver: number } | null {
   const st = stills.get(id);
-  return st?.put ? { ...st.put, canvas: st.canvas, ver: st.drawn ?? 0 } : null;
+  return st?.put ? { ...st.put, canvas: st.shown ?? st.canvas, ver: st.drawn ?? 0 } : null;
 }
 
 function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean, ink: number, now: number): void {
@@ -12255,6 +12258,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
     lately.since = now;
   }
   lately.ids.add(id);
+  if (idleLoop(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, key, dev, id)) return;
   const close = zoom >= STILL_BELOW;
   // Something rare on them is drawn often enough for its glint to cross it smoothly.
   const rate = Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity);
@@ -12277,6 +12281,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
     st.key = key;
     st.at = now;
     st.drawn = (st.drawn ?? 0) + 1;
+    st.shown = undefined;
     st.g.setTransform(1, 0, 0, 1, 0, 0);
     st.g.clearRect(0, 0, w, h);
     st.g.setTransform(dev, 0, 0, dev, st.ox, st.oy);
@@ -12363,6 +12368,78 @@ interface StrideFrame {
 
 const strides = new Map<string, StrideFrame>();
 let stridePixels = 0;
+
+/*
+ * Standing about is a loop as well: everything a body does standing (`idle`)
+ * comes round again in `IDLE_LOOP` seconds, and everybody standing is at the
+ * same moment in it (the island's clock). It was drawn afresh as a still a
+ * dozen times a second for as long as it stood, two or three milliseconds
+ * each for the player alone, which made every fifth frame or so a long one.
+ * So each of those twelfths of a second of the loop is kept as a picture the
+ * first time it is drawn, and put down whenever the body is at that twelfth
+ * again: after its first loop standing at a size, a body standing about draws
+ * nothing, and two people dressed alike share the pictures. A picture is the
+ * body as it was when that twelfth was first wanted, somewhere in it, which is
+ * what the still drawn a dozen times a second showed. Kept only while a loop
+ * for everybody drawn lately fits in `IDLE_PIXELS`: close in, where one loop
+ * is a great many pixels, or with a crowd standing about, a body is drawn as
+ * a still as before. Emoting, turning, blending, or wearing something whose
+ * light moves across it, it is drawn as a still too.
+ */
+const IDLE_LOOP = 16;
+/** Device pixels of standing pictures kept, the longest unused going first: about sixty-four megabytes. */
+const IDLE_PIXELS = 16_000_000;
+const idles = new Map<string, StrideFrame>();
+let idlePixels = 0;
+
+/** Put down a body standing about from its loop's pictures, making the one it needs if it is new; false when it is not to be. */
+function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean,
+  ink: number, now: number, still: string, dev: number, id: string): boolean {
+  if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear)) return false;
+  const rate = STILL_RATE.idle, count = IDLE_LOOP * rate;
+  const k = zoom * dev;
+  const w = Math.ceil((STILL_BOX.right - STILL_BOX.left) * k), h = Math.ceil((STILL_BOX.bottom - STILL_BOX.top) * k);
+  if (Math.max(1, lately.count, lately.ids.size) * count * w * h > IDLE_PIXELS) return false;
+  // The same clock the pose is worked out from (`rigOf`).
+  const t = (((pose.phase / 6) % IDLE_LOOP) + IDLE_LOOP) % IDLE_LOOP;
+  const key = `${still}|${Math.min(count - 1, Math.floor(t * rate))}`;
+  let f = idles.get(key);
+  if (f) {
+    idles.delete(key);
+    idles.set(key, f);
+  } else {
+    while (idlePixels + w * h > IDLE_PIXELS && idles.size) {
+      const [old, gone] = idles.entries().next().value as [string, StrideFrame];
+      idles.delete(old);
+      idlePixels -= gone.canvas.width * gone.canvas.height;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const g = canvas.getContext('2d') as CanvasRenderingContext2D;
+    f = { canvas, ox: Math.round(-STILL_BOX.left * k), oy: Math.round(-STILL_BOX.top * k), dev };
+    g.setTransform(dev, 0, 0, dev, f.ox, f.oy);
+    drawLive(g, 0, 0, zoom, pose, kit, r, facing, ink, now);
+    idles.set(key, f);
+    idlePixels += w * h;
+  }
+  const x = sx - f.ox / f.dev, y = sy - f.oy / f.dev;
+  const px = zoom >= STILL_BELOW ? Math.round(x * f.dev) / f.dev : x, py = zoom >= STILL_BELOW ? Math.round(y * f.dev) / f.dev : y;
+  ctx.drawImage(f.canvas, px, py, f.canvas.width / f.dev, f.canvas.height / f.dev);
+  // Where it went, as a still's is (`figurePicture`), and drawn again as far as anything made from it is concerned when it is another picture.
+  let st = stills.get(id);
+  if (!st) {
+    const canvas = document.createElement('canvas');
+    st = { canvas, g: canvas.getContext('2d') as CanvasRenderingContext2D, key: '', at: 0, ox: 0, oy: 0, dev };
+    stills.set(id, st);
+  }
+  if (st.shown !== f.canvas) st.drawn = (st.drawn ?? 0) + 1;
+  st.shown = f.canvas;
+  st.key = '';
+  st.at = now;
+  st.put = { ctx, x: px, y: py, w: f.canvas.width / f.dev, h: f.canvas.height / f.dev };
+  return true;
+}
 
 /** Put down a walking body from its stride's pictures, making the picture it needs if it is new; false when it is not walking steadily. */
 function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, facing: number, changing: boolean,
