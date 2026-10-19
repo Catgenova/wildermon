@@ -223,7 +223,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'creeled', text: 'Empty a creel', hint: 'Weave one from reed, bait it and sink it in water', met: did('creeled') },
       { id: 'caught', text: 'Catch a wildermon in a trap', hint: 'A baited snare or deadfall in the wild', met: did('caught') },
       { id: 'trapped', text: 'Take a live wildermon out of a trap', met: did('trapped') },
-      { id: 'groom', text: 'Brush a wildermon', hint: 'A brush is a plank and {recipe.make_brush.wool:w} wool', met: did('groom') },
+      { id: 'groom', text: 'Brush a wildermon', hint: 'A brush is a plank and {recipe.make_brush.nail:w} nails', met: did('groom') },
       { id: 'groomfull', text: 'Brush a wildermon until its care is full', hint: 'Several brushings', met: did('groomfull') },
       { id: 'bred', text: 'Breed two wildermon', hint: 'A grown male and female of one species, fed, side by side', met: did('bred') },
       { id: 'goodblood', text: 'Breed a wildermon with a supreme trait', met: did('goodblood') },

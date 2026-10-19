@@ -2719,6 +2719,11 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 209,
+    day: '2026-10-19',
+    lines: () => [`A brush is made of ${recipeBill('make_brush')} now, not a plank and wool.`],
+  },
 ];
 
 
