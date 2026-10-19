@@ -813,10 +813,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'sand',
     workRange: 8,
     variants: [
-      ['#c58a52', '#e8c79a'],
-      ['#a8623c', '#dba173'],
-      ['#8f8a6e', '#cfc7a6'],
-      ['#b5483a', '#e0937f'],
+      // Its body and legs, and the main colour of the speckles on its claws and bowl: peach with coral-pink, pale coral with
+      // sky-blue, sandy tan with peach, and rose with cream. Its cream bowl and the gold sand in it are the same on every one.
+      ['#ec9460', '#ee6f80'],
+      ['#f2a894', '#6fa8e6'],
+      ['#d4a46e', '#f49a66'],
+      ['#d9727f', '#f7e4c4'],
     ],
     butcher: { meat: 3, leather: 1, bone: 4, gland: 1 },
     tameFail: 'takes the {food} in one claw, waves the other at you, and backs off sideways',

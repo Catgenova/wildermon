@@ -6,7 +6,8 @@ import { DRAGON } from './wild-dragon';
 import { DOWSE, SNOUT } from './wild-diggers';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
 import { BURA, CUDDA, GORRAL, ORSE, ROXXEN, SAPPA, SHAGGAN, SNEDDA } from './wild-herd';
-import { CRAWLER, MAGGA, NOOT } from './wild-odd';
+import { MAGGA, NOOT } from './wild-odd';
+import { SANDPINCHER, SANDPINNACLE, SANDPIP } from './wild-sand';
 import { ULVA } from './wild-hunters';
 import { SEAVIC } from './wild-small';
 import { CLOUDBORNE, CLOUDLET, CLOUDRAM } from './wild-cloud';
@@ -41,7 +42,7 @@ export const WILDERMON: Record<string, Kind> = {
   woola: CLOUDLET,
   magga: MAGGA,
   noot: NOOT,
-  crawler: CRAWLER,
+  crawler: SANDPIP,
   ulva: ULVA,
   seavic: SEAVIC,
   vola: SPORELING,
@@ -144,6 +145,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   vola: [SPOREKIN, SPORELORD],
   warda: [SKYWARDEN, SKYRANGE],
   woola: [CLOUDRAM, CLOUDBORNE],
+  crawler: [SANDPINCHER, SANDPINNACLE],
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */

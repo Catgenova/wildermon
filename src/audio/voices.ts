@@ -2,6 +2,7 @@ import type { BeastAct } from '../game/events';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { IRON_VOICE } from './voice-iron';
+import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
 import { SNUFF_VOICE } from './voice-snuff';
 import { SPORE_VOICE } from './voice-spore';
@@ -34,4 +35,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   warda: SKY_VOICE,
   // The Cloudlet, the Cloudram and the Cloudborne.
   woola: CLOUD_VOICE,
+  // The Sandpip, the Sandpincher and the Sandpinnacle.
+  crawler: SAND_VOICE,
 };
