@@ -152,6 +152,16 @@ check('pins kept elsewhere are taken back, and every change after is told', game
 /* ---- a long walk ---- */
 // On a game of its own, from where it puts you ashore: the rest of this file moves you about by hand.
 const walker = Game.create(4242);
+/*
+ * No wildlife, and none coming: what is checked is the legs, not the way
+ * there. Left to itself the island lets out its hunters as you go
+ * (`stream`), on Math.random, and about one walk in ten an ulva had your
+ * scent half way, killed you, and you woke where you came ashore, 96 tiles
+ * from the far spot. So the creatures are taken away and left to an island's
+ * keeping, which here is nobody's: none is banked, streamed in or moved on.
+ */
+for (const c of [...walker.creatures.list.values()]) walker.creatures.remove(c.id);
+walker.creatures.fromIsland = true;
 const wx = Math.floor(walker.player.x), wy = Math.floor(walker.player.y);
 let target: [number, number] | null = null;
 // Somewhere further than one leg and a half and no more than three, dry: the nearest such, across the whole map.
