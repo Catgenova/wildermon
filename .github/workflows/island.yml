@@ -2583,7 +2583,8 @@ jobs:
           # Asked about: a dragon stood up on the Crescent, and tamed wildermon
           # were still called Rabba and the like. The dragon stands up on Volcano
           # Isle alone, a grand map's hoard (a dragon guards it) is buried there,
-          # and no wildermon keeps its kind's old name, on both sides and in a save.
+          # no wildermon keeps its kind's old name, on both sides and in a save,
+          # and a save's wild dragon off Volcano Isle is gone, as the island's went.
           npx esbuild supabase/test/dragonisle.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/dragonisle.mjs --log-level=error
           node node_modules/.cache/dragonisle.mjs

@@ -2616,6 +2616,19 @@ export const NEWS: News[] = [
         + 'On an island a worker on any errand now takes only from your own stores.',
     ],
   },
+  {
+    n: 201,
+    day: '2026-10-19',
+    lines: () => {
+      const lair = REGIONS.find((R) => R.lair?.includes('dragon'))!;
+      return [
+        'A wildermon at its task, striking or using its ability while standing still was drawn from scratch every frame, and the newer models '
+          + 'take far longer to draw than the old ones, so a settlement with a few of them at work ran slowly and was slow to answer. Those '
+          + 'moments are drawn once and kept, as walking and standing already were. Evolving and a rare one\'s shine are still drawn each frame.',
+        `Every wild dragon that was standing anywhere but ${lair.name} is gone, on the island and in a game of your own; one caught in a trap stays.`,
+      ];
+    },
+  },
 ];
 
 

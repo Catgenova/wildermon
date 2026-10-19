@@ -1218,15 +1218,19 @@ export function animOf(kind: Kind, p: BeastPose, now: number, go: number, graze:
 /**
  * A body on the island is not drawn afresh every frame, nor even once for
  * each body. Every kind is kept as pictures -- one for each facing, each
- * twelfth of a stride at a walk and at a run, and each sixth of a second of
- * its loop standing or grazing -- and each is drawn the first time a body
- * wants it and put down from then on. So a herd of woolas walking the same
- * way share twelve pictures between them, and a settlement full of animals
- * standing about costs what putting down pictures costs. Only a body turning
- * or getting going or settling is drawn for itself, while it does it.
+ * twelfth of a stride at a walk and at a run, each sixth of a second of its
+ * loop standing or grazing, and each fifteenth of a second of an act it plays
+ * standing -- and each is drawn the first time a body wants it and put down
+ * from then on. So a herd of woolas walking the same way share twelve pictures
+ * between them, and a settlement full of animals standing about, or at their
+ * tasks, costs what putting down pictures costs. Only a body turning or getting
+ * going or settling, evolving, rare, or acting on the move is drawn for itself,
+ * while it does it.
  */
 const STRIDE_FRAMES = 12;
 const STAND_FPS = 6;
+/** Pictures to a second of an act played standing (`ACT_SECS`): a strike is eight of them, a go at a task seventeen. */
+const ACT_FPS = 15;
 /**
  * The scales pictures are drawn at, a zoom taking the next one up and
  * shrinking it: the island's zoom is a wheel, and a picture for every notch
@@ -1339,7 +1343,11 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     p = { ...p, act: undefined };
     a.act = undefined;
   }
-  if (s.changing || !Number.isInteger(s.facing) || p.rare || p.act) {
+  // An act played standing still is kept as pictures as a stride is (`ACT_FPS`): a worker at its task does it the whole
+  // time it works, and drawn afresh each frame it cost as much as a dozen of anything else on the screen. Evolving keeps
+  // its light, and is drawn for itself.
+  const actHeld = !!a.act && a.act.kind !== 'evolve' && s.go === 0 && s.graze === 0;
+  if (s.changing || !Number.isInteger(s.facing) || p.rare || (p.act && !actHeld)) {
     const [ax, ay] = ahead(a.u);
     ctx.save();
     ctx.translate(sx + ax, sy + ay);
@@ -1352,9 +1360,19 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     ctx.restore();
     return;
   }
-  // Which picture it is: a twelfth of a stride going, a sixth of a second of the loop standing.
+  // Which picture it is: a fifteenth of a second of an act, a twelfth of a stride going, a sixth of a second of the loop
+  // standing.
   let prefix: string, i: number, count: number;
-  if (s.go > 0) {
+  if (actHeld && a.act) {
+    const { kind: act, t } = a.act;
+    count = Math.max(1, Math.round(ACT_SECS[act] * ACT_FPS));
+    i = Math.min(count - 1, Math.max(0, Math.floor(t * count)));
+    prefix = `a${act}`;
+    a.act = { kind: act, t: (i + 0.5) / count };
+    a.t = 0;
+    a.blink = false;
+    a.breath = 0.5;
+  } else if (s.go > 0) {
     const run = a.gait > 0.5;
     i = Math.floor(frac(a.u) * STRIDE_FRAMES);
     count = STRIDE_FRAMES;

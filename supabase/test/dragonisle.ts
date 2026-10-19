@@ -10,7 +10,8 @@
  *   * a grand map's hoard, which a dragon guards, is buried on Volcano Isle wherever the map turned up, and one buried
  *     elsewhere before now moves there when its map is asked where it points; a worn map's stays where it is;
  *   * no wildermon on the island is called its kind's old name, and a save holding one called so comes back calling it
- *     its kind's name now, while one somebody named keeps its name.
+ *     its kind's name now, while one somebody named keeps its name;
+ *   * and a save holding a wild dragon on the Crescent comes back without it, as the island's went.
  *
  * The island half runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
@@ -159,10 +160,26 @@ const rabba = old.creatures.spawn('rabba', old.player.x + 2, old.player.y, 'acti
 rabba.name = FORMER_NAME.rabba;
 const horn = old.creatures.spawn('rabba', old.player.x + 3, old.player.y, 'active');
 horn.name = 'Horn';
+// And a wild dragon that stood up on the Crescent before dragons kept to their island, with one on Volcano Isle.
+const isleOf = (region: number): [number, number] => {
+  const R = REGIONS[region];
+  for (let r = 0; r < old.world.w; r++) for (let a = 0; a < 32; a++) {
+    const x = Math.floor(R.at[0] * old.world.w + Math.cos((a / 32) * Math.PI * 2) * r) + 0.5;
+    const y = Math.floor(R.at[1] * old.world.h + Math.sin((a / 32) * Math.PI * 2) * r) + 0.5;
+    if (old.world.inBounds(Math.floor(x), Math.floor(y)) && chartRegion(x, y, old.world.w) === region) return [x, y];
+  }
+  return [-1, -1];
+};
+const astrayDragon = old.creatures.spawn('dragon', ...isleOf(CRESCENT), 'wild');
+const homeDragon = old.creatures.spawn('dragon', ...isleOf(VOLCANO), 'wild');
 const back = await unpack(await packLand(old), packWorld(old));
 check(`a save holding a ${SPECIES.rabba.name} called ${FORMER_NAME.rabba} comes back calling it ${SPECIES.rabba.name}, and one called Horn keeps its name`,
   back?.creatures.get(rabba.id)?.name === SPECIES.rabba.name && back?.creatures.get(horn.id)?.name === 'Horn',
   `${back?.creatures.get(rabba.id)?.name}, ${back?.creatures.get(horn.id)?.name}`);
+
+check(`and a wild dragon it held on the Crescent is gone, while one on ${LAIR.name} is still there`,
+  !back?.creatures.get(astrayDragon.id) && !!back?.creatures.get(homeDragon.id),
+  `${!!back?.creatures.get(astrayDragon.id)} ${!!back?.creatures.get(homeDragon.id)}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nthe dragon's island, and wildermon by their kinds' names — ${ok.length} of ${ok.length + bad.length}`);

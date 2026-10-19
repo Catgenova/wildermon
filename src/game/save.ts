@@ -33,6 +33,8 @@ import { BUCKET_LITRES } from './furniture';
 import { keyX, keyY } from './tileindex';
 import type { PlacedCrate } from './crates';
 import { renamedKind, type CreatureJSON } from './creatures';
+import { chartRegion } from '../world/chart';
+import { lairOf, REGIONS } from '../world/regions';
 import type { Item } from './items';
 import { Game, type Deed } from './game';
 import type { GuestSave } from './actor';
@@ -690,6 +692,12 @@ function finish(world: World, m: SaveMeta): Game {
   rekey(game.ledger);
   // And a wildermon that is still called what its kind used to be called is called what its kind is now (`renamedKind`).
   for (const c of game.creatures.list.values()) c.name = renamedKind(c);
+  // And a wild monster kept to one island (`Region.lair`) that stood up on another before it was kept there is gone, as
+  // the island's wild dragons off Volcano Isle went. One in a trap is the trap's.
+  for (const c of [...game.creatures.list.values()]) {
+    const lair = lairOf(c.species);
+    if (lair && c.mode === 'wild' && c.trapped === null && REGIONS[chartRegion(c.x, c.y, game.world.w)] !== lair) game.creatures.remove(c.id);
+  }
   for (const part of [...game.buildings.walls.values(), ...game.buildings.floors.values(), ...game.buildings.columns.values()]) {
     if (part.material === 'mosaic') part.material = 'stained_glass';
     rekey(part.needed);
