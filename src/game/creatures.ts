@@ -805,8 +805,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   bevere: {
     id: 'bevere',
-    name: 'Bevere',
-    description: 'A broad, flat-tailed gnawer with orange teeth and oiled fur. It never strays far from water, and it fells trees for whoever keeps it.',
+    name: 'Sapgnaw',
+    was: ['Bevere'],
+    // Asked for: a "family to replace bevere": Sapgnaw, Logchewer, Timberlord. Its words, and each stage's, are written once every
+    // number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Logchewer', description: '' },
+      { name: 'Timberlord', description: '' },
+    ],
     health: 26,
     attack: 3,
     speed: 1.8,
@@ -819,10 +826,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     workRange: 8,
     /** It will not settle more than this far from water. */
     variants: [
-      ['#6b4a2e', '#a67c4e'],
-      ['#4f3a2a', '#8a6a48'],
-      ['#7d5636', '#c09163'],
-      ['#3b2f26', '#6f5a44'],
+      ['#a8693a', '#ecd0a2'],
+      ['#8a4426', '#e6c896'],
+      ['#4e3424', '#c9a477'],
+      ['#c8914a', '#f2e2c2'],
     ],
     butcher: { meat: 3, fur: 3, leather: 3, bone: 2, gland: 1 },
     tameFail: 'takes the {food} in both paws, eats it without hurry, and slips back into the water',
@@ -3630,6 +3637,8 @@ sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of 
   'Its level is its mining.');
 sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
   'Its level is its mining.');
+sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECIES.bevere.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, as many bites to a tree as a person's swings, leaving a stump where the tree had timber in it. Each log is at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its woodcutting, raised by any yield trait it has and never over 100; it carries one to the crate and leaves the rest at the stump.`,
+  'Its level is its woodcutting.');
 sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate.`,
   'Its level is its digging.');
 sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
@@ -5863,7 +5872,8 @@ export class Creatures {
     // A tree with timber in it leaves a stump, as it does under a hatchet.
     game.world.setTile(tx, ty, logs ? TileType.Stump : TileType.Grass, logs ? packTreeData(treeSpecies(data), 0) : 0);
     if (!logs) return null;
-    const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1));
+    // The same spread as a dig, raised by its yield traits, as on an island.
+    const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1) * this.yieldMul(c));
     // The rest of the tree is left at the stump; it can only carry one at a time.
     if (logs > 1) {
       game.dropOnGround(tx, ty, { uid: game.inventory.nextUid++, id: 'log', ql, dmg: 0, count: logs - 1, extra: def.name });

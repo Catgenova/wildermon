@@ -2976,7 +2976,7 @@ export function helpText(): string {
     <h3>Wildermon</h3>
     <p>Wild creatures roam the island. The <b>Snufflet</b> is a leafy piglet that forages berries when
     hungry; the <b>${SPECIES.vola.name}</b> (the Vola that was) is a mushroom-capped forager that botanizes herbs and roots instead, and evolves into a ${SPECIES.vola.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.vola.stages![1].name} at ${EVOLVE_AT[1]}; the
-    <b>Bevere</b> is a flat-tailed gnawer that never settles far from water, eats vegetables and
+    <b>${SPECIES.bevere.name}</b> (the Bevere that was) is a flat-tailed gnawer that evolves into a ${SPECIES.bevere.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.bevere.stages![1].name} at ${EVOLVE_AT[1]}, never settles far from water, eats vegetables and
     starchy things, is placid by nature, and fells trees for its deed, carrying the logs to the crate;
     the <b>${SPECIES.seavic.name}</b> (the Seavic that was) is a leaf-backed piglet that evolves into a ${SPECIES.seavic.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.seavic.stages![1].name} at ${EVOLVE_AT[1]}, lives among the trees, eats acorns and nuts, is placid too, and
     runs a farm for its deed &mdash; sowing seed from the crate, tending every stage and carrying the

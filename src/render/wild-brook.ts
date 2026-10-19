@@ -83,16 +83,6 @@ function wound(v: V3[], faces: Array<{ i: number[]; m: Mat; want: V3; soft?: boo
   }));
 }
 
-/** A box from corner `a` to corner `b`, every face out: a tooth, a block. */
-function block(a: V3, b: V3, m: Mat): Mesh {
-  const [x0, y0, z0] = a, [x1, y1, z1] = b;
-  const v: V3[] = [[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], [x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]];
-  return wound(v, [
-    { i: [0, 1, 2, 3], m, want: [0, 0, -1] }, { i: [4, 5, 6, 7], m, want: [0, 0, 1] }, { i: [0, 1, 5, 4], m, want: [0, -1, 0] },
-    { i: [1, 2, 6, 5], m, want: [1, 0, 0] }, { i: [2, 3, 7, 6], m, want: [0, 1, 0] }, { i: [3, 0, 4, 7], m, want: [-1, 0, 0] },
-  ]);
-}
-
 /**
  * Lights drawn over a body, each only while the side it is on is toward the
  * viewer: bright in the middle, gone at the edge, added to what is under it.
@@ -418,82 +408,6 @@ export const BOGGA: Kind = {
   shadow: [2.1, 1.5],
   stride: 1.0,
   size: 2.05,
-};
-
-/* ---- the bevere ---------------------------------------------------------------------- */
-
-/**
- * A bevere: a broad, flat-tailed gnawer with orange teeth and oiled fur. Its
- * paddle of a tail is a slice of a tree, ring inside ring, and two twigs of
- * antler with new leaves grow from its head.
- */
-const BEVERE_SPEC = pawed({ high: 1.2, len: 2.7, legs: 0.7, neck: 0.35, lean: 70, swing: [22, 36], ears: [60, 25], tail: [0.55, 2, 2] });
-/** The head: broad and flat, a gnawer's. */
-const BEVERE_HEAD = { c: [0, 0.4, 0.05] as V3, r: [1.15, 0.95, 0.8] as V3 };
-
-function bevereBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = BEVERE_HEAD;
-  const face = merge(
-    muzzle({ at: 1.2, r: [0.56, 0.42, 0.45], nose: 0.13, mouth: 0.22 }, n, k),
-    // Two long orange front teeth under the muzzle, solid, so they show side on as well as from in front.
-    block([-0.1, 1.46, -0.6], [-0.01, 1.56, -0.3], 'tooth'),
-    block([0.01, 1.46, -0.6], [0.1, 1.56, -0.3], 'tooth'),
-  );
-  // A twig of antler from each side of the crown, in front of the ears: a stick that forks, a new leaf at the end of each fork.
-  const twig = (s: number): Mesh => merge(
-    tube(curve([s * 0.3, 0.45, 0.8], [s * 0.4, 0.42, 1.12], [s * 0.6, 0.3, 1.38], 3), [0.09, 0.08, 0.068, 0.052], [0.09, 0.08, 0.068, 0.052], 5, 'bark', { seam: 'start' }),
-    tube(curve([s * 0.42, 0.42, 1.14], [s * 0.48, 0.56, 1.24], [s * 0.54, 0.7, 1.3], 2), [0.06, 0.054, 0.046], [0.06, 0.054, 0.046], 5, 'bark', { seam: 'start' }),
-  );
-  const leaf = (s: number, at: V3, d: V3, len: number): Mesh => blade(curve(at, add(at, scale(d, len * 0.5)), add(at, scale(d, len)), 3), [0.03, 0.16, 0.14, 0.03], [s * 0.3, -0.2, 1], { twist: 0.6 * s, fold: 0.26, mat: 'leaf', rib: 'leafDark' });
-  const leaves = merge(...[1, -1].flatMap((s) => [
-    leaf(s, [s * 0.6, 0.3, 1.38], unit([s * 0.55, -0.35, 0.75]), 0.6),
-    leaf(s, [s * 0.54, 0.7, 1.3], unit([s * 0.5, 0.75, 0.4]), 0.5),
-  ]));
-  // The tail: a round, flat slice of a tree, the bark round its edge and three dark rings on its pale face, few and far enough
-  // apart that they stay rings when it is drawn small rather than running together into one colour.
-  const R = 0.85;
-  const bands: Array<[number, Mat]> = [[1, 'bark'], [0.93, 'shell'], [0.84, 'bark'], [0.76, 'shell'], [0.54, 'bark'], [0.46, 'shell'], [0.24, 'bark'], [0.16, 'shell']];
-  const slice = merge(
-    tube([[0, 0, -0.06], [0, 0, 0.06]], R * 0.8, R, lod ? 14 : 10, (ring) => (ring ? 'shell' : 'bark'), { up: [0, 1, 0] }),
-    paint(bands.map(([r, m], q) => disc([0, 0, 0.065 + q * 0.002], [0, 0, 1], R * 0.8 * r, R * r, lod ? 14 : 10, m))),
-  );
-  const pieces = quadPieces({
-    n, k,
-    body: { y: [-1.45, -1.22, -0.65, 0, 0.65, 1.15, 1.4], z: [0.1, 0.15, 0.2, 0.2, 0.2, 0.22, 0.25], w: [0.3, 1.0, 1.2, 1.25, 1.2, 1.0, 0.3], h: [0.25, 0.7, 0.8, 0.82, 0.8, 0.7, 0.25], belly: true },
-    // The neck shallow from front to back, so that side on its back edge stays inside the head and the back rather than showing
-    // as a dark tick over the shoulder.
-    neck: { w: 0.85, h: 0.42, len: 0.35 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.72, 0.52, 0.34], size: 0.28, rim: 0.12 }, blush: [[0.84, 0.4, -0.3], 0.2] },
-    ear: earMesh(0.28, 0.22, n),
-    tail: [moved(slice, [0, -0.72, 0])],
-    fore: { upper: [0.25, -0.36, 0.3, 0.26], lower: [0, -0.32, 0.26, 0.24], foot: pawMesh(0.24, n, k, 'coatDark') },
-    hind: { upper: [0.25, -0.39, 0.34, 0.28], lower: [0, -0.39, 0.26, 0.24], foot: pawMesh(0.32, n, k, 'coatDark') },
-    extras: [
-      { key: 'twigs', mesh: merge(twig(1), twig(-1)), bone: 'head', bias: 0.25, after: ['head', 'ear0', 'ear1'] },
-      { key: 'leaves', mesh: leaves, bone: 'head', bias: 0.26, after: 'twigs', thin: true, airy: true },
-    ],
-  });
-  // Oiled fur: a gloss along the top of the back where it turns away.
-  return pieces.map((pc) => (pc.key === 'body' ? { ...pc, sheen: 'coatLight' } : pc));
-}
-
-export const BEVERE: Kind = {
-  bones: quadBonesOf({ ...BEVERE_SPEC, graze: 25, nose: 11, tail: { at: [0, -1.4, 0.1], links: 1, len: 0.6, lift: 4, curl: 0, sway: 10 } }, (p, a) => {
-    trot(p, a);
-    // A slap of the tail on the ground now and then.
-    if (a.go <= 0) p.tail[0] += 30 * beat(a.t, [8.3, 20.1], 0.5);
-  }),
-  build: bevereBuild,
-  palette: (coat, mark) => {
-    // Warmer than its variant says, toward a beaver's caramel, where the pastel of it came out a piglet's pink, and lighter, so
-    // it stands off the grass by colour and by lightness both; its bark and the rings in its tail stay dark against it.
-    const base = coatPalette(coat, mark, {}, 28), c = lighter(mix(base.coat, [226, 164, 108], 0.55), 0.12);
-    return { ...base, coat: c, coatDark: darker(c, 0.2), coatLight: lighter(c, 0.28), lid: darker(c, 0.42), muzzle: lighter(mix(c, base.mark, 0.5), 0.12), tooth: [246, 164, 80], bark: [170, 128, 88], shell: [232, 200, 158], leaf: [170, 214, 120], leafDark: [118, 170, 84] };
-  },
-  shadow: [2.0, 1.4],
-  stride: 1.1,
-  size: 1.8,
 };
 
 /* ---- the wadd ------------------------------------------------------------------------ */
