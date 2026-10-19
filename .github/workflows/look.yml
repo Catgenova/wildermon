@@ -69,6 +69,15 @@ jobs:
           ask "browser errors, last 6 hours" "select count(*) as times, max(build) as build, to_char(max(at), 'HH24:MI') as last,
                  left(message, 160) as message, left(max(place), 80) as place
             from client_error where at > now() - interval '6 hours' group by left(message, 160) order by 1 desc limit 15"
+          ask "the wild, by kind: how many, and how long ago the newest stood up" "select c.species, count(*) as wild,
+                 to_char(max(c.born), 'MM-DD HH24:MI') as newest_born, coalesce(max(t.weight), 0) as weight
+            from creature c left join wild_table t on t.species = c.species
+           where c.mode = 'wild' group by c.species order by 2 desc"
+          ask "kinds the wild table can put out that are nowhere in the wild" "select t.species, t.weight
+            from wild_table t where not t.monster
+             and not exists (select 1 from creature c where c.species = t.species and c.mode = 'wild') order by 2 desc"
+          ask "the island's stocked blocks: how many, and when they were last topped up" "select count(*) as blocks,
+                 to_char(min(at), 'MM-DD HH24:MI') as oldest, to_char(max(at), 'MM-DD HH24:MI') as newest from world_stocked"
           ask "biggest tables" "select n.nspname || '.' || c.relname as relation, pg_size_pretty(pg_total_relation_size(c.oid)) as total,
                  c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
             from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid
