@@ -3941,6 +3941,8 @@ export interface IslandCreature {
   skills?: Record<string, number>;
   /** What the island says it is up to: `idle`, `out`, `work`, `home`, and the rest. */
   phase?: string;
+  /** When the rest after its ability runs out (epoch seconds), which moves each time it uses it; null before the first. */
+  cast?: number | null;
   carrying?: { def: string; count?: number; ql?: number } | null;
   /**
    * Its dam, its sire and where each trait came from, for anything bred and
@@ -4056,6 +4058,8 @@ export interface Creature {
   actAt?: number;
   /** The phase the island last said it was in, for telling when it struck or set to work there. */
   islandPhase?: string;
+  /** When the island last said its ability's rest runs out, for telling when it used its ability there. */
+  islandCast?: number | null;
   /** Heard of from the island before, so that what it says next is a change rather than the first word of it. */
   islandSeen?: boolean;
   /**
@@ -4687,6 +4691,11 @@ export class Creatures {
         // Struck or set to work there since it was last heard of: drawn and heard here as it would be in a game of your own.
         if (r.phase !== c.islandPhase && (r.phase === 'strike' || r.phase === 'work')) this.acted(c, r.phase, time);
         c.islandPhase = r.phase;
+      }
+      if (r.cast !== undefined) {
+        // Used its ability there since it was last heard of: drawn and heard here as it would be in a game of your own.
+        if (c.islandCast !== undefined && r.cast !== null && r.cast !== c.islandCast) this.acted(c, 'cast', time);
+        c.islandCast = r.cast;
       }
       if (r.carrying !== undefined) {
         c.carrying = r.carrying

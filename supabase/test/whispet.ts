@@ -19,7 +19,8 @@ import { execFileSync } from 'node:child_process';
 import { Game, DAY_SECONDS } from '../../src/game/game';
 import { BUTCHER_PARTS } from '../../src/game/butcher';
 import {
-  EVOLVE_AT, FEAR_REST, FEAR_SECS, HALLOW_SEASON, markOn, seasonDay, seasonHolds, SPECIES, wildInSeason, type Creature,
+  Creatures, EVOLVE_AT, FEAR_REST, FEAR_SECS, HALLOW_SEASON, markOn, seasonDay, seasonHolds, SPECIES, wildInSeason, type Creature,
+  type IslandCreature,
 } from '../../src/game/creatures';
 import { whereItLives } from '../../src/game/guide';
 import { TileType } from '../../src/world/tiles';
@@ -134,7 +135,11 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   update creature set health = 5000, brawl = a, threat_at = now() - interval '1 hour' where world_id = w and id = t;
   select * into c from creature where world_id = w and id = t;
   v_d := sqrt((creature_x(c) - 16.5) ^ 2 + (creature_y(c) - 16.5) ^ 2);
+  -- What its keeper is told of it before and after: when the rest after its ability runs out.
+  insert into said select 'CASTBEFORE', coalesce((select (e->'cast')::text from jsonb_array_elements(rpc_creatures(w, 30)) e where (e->>'id')::int = a), 'missing');
   perform creature_attack(w, a, t);
+  insert into said select 'CASTAFTER', coalesce((select round((e->>'cast')::numeric - extract(epoch from now())::numeric)::text
+    from jsonb_array_elements(rpc_creatures(w, 30)) e where (e->>'id')::int = a), 'missing');
   select * into c from creature where world_id = w and id = t;
   insert into said values ('FEAR', (c.health = 5000)::text || '|' || round(extract(epoch from c.until - now())::numeric) || '|'
     || round(extract(epoch from c.hunt_again - now())::numeric) || '|' || coalesce(c.brawl::text, '-') || '|' || coalesce(c.hunting::text, '-') || '|'
@@ -271,6 +276,26 @@ check('a monster is not frightened: it is struck, does not run, and the rest is 
   at('MONSTER') === 'true|true' && at('MONSTERMARK') === '-' && at('MONSTERREST') === '-', `${at('MONSTER')} ${at('MONSTERMARK')} ${at('MONSTERREST')}`);
 check('a wild Whispet strikes as any other wild thing, and frightens nothing',
   at('WILD') === 'true' && at('WILDMARK') === '-' && at('WILDREST') === '-', `${at('WILD')} ${at('WILDMARK')} ${at('WILDREST')}`);
+
+check(`and its keeper is told it used it: when its ability's rest runs out, ${FEAR_REST} s on, where before it had none`,
+  at('CASTBEFORE') === 'null' && at('CASTAFTER') === String(FEAR_REST), `${at('CASTBEFORE')} ${at('CASTAFTER')}`);
+{
+  // The browser plays that as its Fear, as it would in a game of your own, and not at the first word of one.
+  const seen = new Creatures();
+  seen.fromIsland = true;
+  const row = (cast: number | null): IslandCreature => ({
+    id: 7, species: 'whispet', name: 'Boo', variant: 0, mode: 'active', stance: 'aggressive', x: 10, y: 12,
+    health: 28, phase: 'idle', cast,
+  } as unknown as IslandCreature);
+  seen.sawAll([row(1000)], 5);
+  const first = seen.list.get(7)?.act;
+  seen.sawAll([row(1000)], 6);
+  const same = seen.list.get(7)?.act;
+  seen.sawAll([row(1020)], 7);
+  const c = seen.list.get(7);
+  check('in the browser a new end to its rest plays its Fear, the first word of one and the same one again do not',
+    first === undefined && same === undefined && c?.act === 'cast' && c?.actAt === 7, `${first} ${same} ${c?.act} ${c?.actAt}`);
+}
 
 /* ---- a Fear, in the browser --------------------------------------------------------- */
 

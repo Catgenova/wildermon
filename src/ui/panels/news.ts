@@ -2538,6 +2538,13 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 194,
+    day: '2026-10-19',
+    lines: () => [
+      `On an island, a wildermon of yours that uses its ability is now drawn and heard doing it, as in a game of your own. ${NumberWord(Object.values(SPECIES).filter((d) => d.ability).length)} kinds have one, the ${SPECIES.whispet.name}'s ${abilityName(SPECIES.whispet.ability!)} among them; before, it looked like an ordinary blow.`,
+    ],
+  },
 ];
 
 
