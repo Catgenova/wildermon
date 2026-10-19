@@ -3396,17 +3396,27 @@ export const MONSTER_CAP: Record<string, number> = { goblin: 6, orc: 3, ogre: 2,
 /** How far from a settlement's token each keeps, in tiles: the bigger the thing, the further out. */
 export const MONSTER_KEEP_OFF: Record<string, number> = { goblin: 26, orc: 40, ogre: 55, dragon: 90 };
 /**
- * What a kind of wildermon was called before it was renamed, by its id: a wild one stood up under the old name keeps
+ * What a kind of wildermon was called before it was renamed, by its id, off its `was`: a wild one stood up under the old name keeps
  * it as its own until it is called something else, so one tamed since was still a Rabba. A name that is its kind's
  * old one is its kind's name now (`renamedKind`, in a save; the island's migration, on an island).
  */
-export const FORMER_NAME: Record<string, string> = {
-  rabba: 'Rabba', vola: 'Vola', woola: 'Woola', seavic: 'Seavic', warda: 'Warda', noot: 'Noot', crawler: 'Crawler',
-  mola: 'Mola', quarra: 'Quarra', bevere: 'Bevere', embra: 'Embra',
-};
-/** Its name, or its kind's name now where what it is called is only what its kind used to be called. */
-export const renamedKind = (c: { species: string; name: string }): string =>
-  FORMER_NAME[c.species] !== undefined && c.name === FORMER_NAME[c.species] ? SPECIES[c.species]?.name ?? c.name : c.name;
+export const FORMER_NAME: Record<string, string> = Object.fromEntries(
+  Object.values(SPECIES).filter((s) => s.was?.length).map((s) => [s.id, s.was![0]]),
+);
+/**
+ * Whether what it is called is only one of its kind's own names -- its kind's, a stage's, or one its kind went by
+ * before (`was`) -- so that nobody has named it. The island's `kind_named`.
+ */
+export function kindNamed(c: Pick<Creature, 'species' | 'name'>): boolean {
+  const d = SPECIES[c.species];
+  return !!d && (c.name === d.name || !!d.stages?.some((st) => st.name === c.name) || !!d.was?.includes(c.name));
+}
+/**
+ * Its name, or, where nobody has named it, what its kind is called at the stage it is at: one stood up a Pigroot that
+ * is a Harvestusk now is called a Harvestusk (asked for: "Stage 3 evolutions that never had a name change should have
+ * their names updated as they evolve"), and one stood up under its kind's old name its kind's name now.
+ */
+export const renamedKind = (c: Pick<Creature, 'species' | 'name' | 'skills'>): string => (kindNamed(c) ? kindName(c) : c.name);
 
 export const WILD_SPECIES: Array<[string, number]> = [
   ['rabba', 27],
@@ -7465,6 +7475,8 @@ export class Creatures {
     if (stage > stageOf({ species: c.species, skills: { ...c.skills, [id]: v } })) {
       c.health *= STAGE_MUL.hardy ?? 1;
       if (c.mode !== 'wild') game.logMsg(`${c.name} evolves into ${article(kindName(c))} ${kindName(c)}!`, 'skill');
+      // And one nobody has named is called what it has become (`kindNamed`).
+      if (kindNamed(c)) c.name = kindName(c);
       game.events.emit('evolve', c.id, stage);
       this.acted(c, 'evolve', game.time);
     }

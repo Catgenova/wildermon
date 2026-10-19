@@ -2629,6 +2629,15 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 202,
+    day: '2026-10-19',
+    lines: () => [
+      `A wildermon takes its kind's name as its own and kept it as it evolved, so a ${SPECIES.seavic.name} grown into a ${SPECIES.seavic.stages![1].name} was still `
+        + `called ${SPECIES.seavic.name}. One called only its kind's name, a stage's or the name its kind went by before is renamed for the stage it is at `
+        + 'as it evolves, and every one there is now has been: a name somebody gave it is kept.',
+    ],
+  },
 ];
 
 

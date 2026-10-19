@@ -16,6 +16,7 @@
  * is rolled back.
  */
 import { execFileSync } from 'node:child_process';
+import { packLand, packWorld, unpack } from '../../src/game/save';
 import { Game } from '../../src/game/game';
 import { BUTCHER_PARTS } from '../../src/game/butcher';
 import { attackOf, bloodMul, EVOLVE_AT, kindName, maxHealth, SPECIES, STAGE_MUL, stageOf, type Creature } from '../../src/game/creatures';
@@ -90,7 +91,7 @@ begin
   select * into c from creature where world_id = w and id = v;
   insert into said values ('FLEECE', stage_of(c) || '|' || round(beast_mul(c, 'grow')::numeric, 4));
   -- Learning across the line: it says so, and is as full of health as it was.
-  update creature set mode = 'active', skills = jsonb_build_object('foraging', ${AT1} - 0.0001), health = 10 where world_id = w and id = a;
+  update creature set mode = 'active', skills = jsonb_build_object('foraging', ${AT1} - 0.0001), health = 10, name = '${SPECIES.rabba.name}' where world_id = w and id = a;
   for i in 1..50 loop
     perform worker_learn(w, a, 'foraging', 5);
     exit when (select stage_of(cr) from creature cr where cr.world_id = w and cr.id = a) = 1;
@@ -98,6 +99,19 @@ begin
   select * into c from creature where world_id = w and id = a;
   insert into said values ('CROSSED', stage_of(c) || '|' || round(c.health::numeric, 4));
   insert into said select 'TOLD', coalesce(string_agg(text, ' / '), '-') from event where world_id = w and uid = u and text like '%evolves into%';
+  -- Called only its kind's name, it is called what it has become; one somebody named keeps the name.
+  insert into said select 'RENAMED', name from creature where world_id = w and id = a;
+  update creature set skills = jsonb_build_object('foraging', ${AT2} - 0.0001), name = 'Horn' where world_id = w and id = a;
+  for i in 1..50 loop
+    perform worker_learn(w, a, 'foraging', 5);
+    exit when (select stage_of(cr) from creature cr where cr.world_id = w and cr.id = a) = 2;
+  end loop;
+  insert into said select 'KEPT', stage_of(cr) || '|' || cr.name from creature cr where cr.world_id = w and cr.id = a;
+  -- And one past both stages still called its kind's first name, or the name its kind went by before, is put right.
+  update creature set name = '${SPECIES.seavic.was![0]}', skills = jsonb_build_object('foraging', ${AT2}) where world_id = w and id = a;
+  insert into said select 'NAMEDAT', kind_named(cr) || '|' || kind_name_at(cr) from creature cr where cr.world_id = w and cr.id = a;
+  update creature set name = '${SPECIES.rabba.name}' where world_id = w and id = a;
+  insert into said select 'NAMEDAT2', kind_named(cr) || '|' || kind_name_at(cr) from creature cr where cr.world_id = w and cr.id = a;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -169,6 +183,11 @@ const [crossed, healthAfter] = at('CROSSED').split('|');
 check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
   crossed === '1' && near(Number(healthAfter), 10 * H) && at('TOLD').includes('evolves into a Snuffroot'), `${at('CROSSED')} ${at('TOLD')}`);
 
+check(`and called only its kind's name, it is called a ${SPECIES.rabba.stages![0].name} now; called Horn, it keeps Horn as a ${SPECIES.rabba.stages![1].name}`,
+  at('RENAMED') === SPECIES.rabba.stages![0].name && at('KEPT') === '2|Horn', `${at('RENAMED')} ${at('KEPT')}`);
+check(`a ${SPECIES.rabba.stages![1].name} still called ${SPECIES.rabba.name} is nobody's naming and goes by its stage; another kind's old name is somebody's`,
+  at('NAMEDAT2') === `true|${SPECIES.rabba.stages![1].name}` && at('NAMEDAT') === `false|${SPECIES.rabba.stages![1].name}`, `${at('NAMEDAT2')} ${at('NAMEDAT')}`);
+
 /* ---- in the browser ---------------------------------------------------------------- */
 
 const g = Game.create(4254);
@@ -207,6 +226,23 @@ check('a dowse is not touched at any level', stageOf(still) === 0 && kindName(st
   check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
     stageOf(r) === 1 && near(r.health, 10 * H) && evolved === 1 && acts.includes('evolve')
       && g.log.some((e) => e.text.includes('evolves into a Snuffroot')), `${stageOf(r)} ${r.health} ${evolved} ${acts}`);
+}
+
+{
+  // Called only its kind's name, it is called what it has become; one somebody named keeps the name.
+  check(`and called only its kind's name, it is called a ${SPECIES.rabba.stages![0].name} now`, r.name === SPECIES.rabba.stages![0].name, r.name);
+  r.name = 'Horn';
+  for (let n = 0; n < 200 && stageOf(r) < 2; n++) { r.skills = { foraging: Math.max(r.skills.foraging ?? 0, AT2 - 0.0001) }; g.creatures.gainSkill(g, r, 'foraging', 5); }
+  check(`called Horn, it keeps Horn as a ${SPECIES.rabba.stages![1].name}`, stageOf(r) === 2 && r.name === 'Horn', `${stageOf(r)} ${r.name}`);
+  // And a save holding a Harvestusk still called a Pigroot comes back calling it a Harvestusk.
+  const old = Game.create(5);
+  for (const c of [...old.creatures.list.values()]) old.creatures.list.delete(c.id);
+  const tusk = old.creatures.spawn('seavic', old.player.x + 2, old.player.y, 'deed', old.rand, old.time - 3600 * 24 * 30);
+  tusk.skills = { farming: AT2 };
+  tusk.name = SPECIES.seavic.name;
+  const back = await unpack(await packLand(old), packWorld(old));
+  check(`a save holding a ${SPECIES.seavic.stages![1].name} still called ${SPECIES.seavic.name} comes back calling it a ${SPECIES.seavic.stages![1].name}`,
+    back?.creatures.get(tusk.id)?.name === SPECIES.seavic.stages![1].name, back?.creatures.get(tusk.id)?.name);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

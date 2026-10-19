@@ -690,7 +690,7 @@ function finish(world: World, m: SaveMeta): Game {
     for (const [was, now] of Object.entries(RENAMED)) if (was in rec) { rec[now] = rec[was]; delete rec[was]; }
   };
   rekey(game.ledger);
-  // And a wildermon that is still called what its kind used to be called is called what its kind is now (`renamedKind`).
+  // And a wildermon nobody has named is called what its kind is called at the stage it is at, old names and all (`renamedKind`).
   for (const c of game.creatures.list.values()) c.name = renamedKind(c);
   // And a wild monster kept to one island (`Region.lair`) that stood up on another before it was kept there is gone, as
   // the island's wild dragons off Volcano Isle went. One in a trap is the trap's.
