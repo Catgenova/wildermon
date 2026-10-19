@@ -5324,6 +5324,7 @@ create or replace function wild_rest_spread() returns double precision language 
 create or replace function wild_range() returns double precision language sql immutable as $fn$ select 28::double precision $fn$;
 create or replace function herd_reach() returns double precision language sql immutable as $fn$ select 14::double precision $fn$;
 create or replace function site_looks() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
+create or replace function wild_stay() returns double precision language sql immutable as $fn$ select 86400::double precision $fn$;
 create or replace function carry_base() returns double precision language sql immutable as $fn$ select 120::double precision $fn$;
 create or replace function carry_per_strength() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
 create or replace function carry_stop() returns double precision language sql immutable as $fn$ select 1.5::double precision $fn$;

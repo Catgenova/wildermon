@@ -122,7 +122,7 @@ import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER
 import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
-import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, SPECIES } from '../../game/creatures';
+import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { betterThanCommon, CHANNELS, husbandryOdds, pct as cardPct } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -2728,6 +2728,19 @@ export const NEWS: News[] = [
     n: 210,
     day: '2026-10-19',
     lines: () => ['On an island your settlement counted a neighbour\'s wildermon at work within sight against its own places, and refused yours for room it had. It counts only yours now.'],
+  },
+  {
+    n: 211,
+    day: '2026-10-19',
+    lines: () => [
+      `A wild creature now goes once it is between ${spanWords(WILD_STAY)} and ${spanWords(2 * WILD_STAY)} old, the next time the country it stands in is stocked, `
+        + `and new ones are rolled in its place from all ${WILD_SPECIES.length} kinds at their weights. Before, country was only topped up for what had been killed, `
+        + 'so kinds added since it was first stocked hardly ever came out.',
+      'Every wild creature on the island that nobody was fighting, taming, marking or keeping has gone now, and the country is stocked again '
+        + 'as people walk into it, starting with where you are standing.',
+      'One that is tamed or kept, in a fight, struck a moment ago, trapped, ridden, in the traces, tied to a post, stunned, marked, being offered food '
+        + 'or being acted on stays until that is over. Monsters keep their own rules.',
+    ],
   },
 ];
 

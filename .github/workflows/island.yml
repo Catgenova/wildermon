@@ -2666,6 +2666,21 @@ jobs:
             --outfile=node_modules/.cache/workercount.mjs --log-level=error
           node node_modules/.cache/workercount.mjs
 
+      - name: A wild thing goes after its span and the stretch is stocked afresh
+        run: |
+          # Asked: "I havent seen a single one of the new 60 wildermon." Country
+          # was put out once and only topped up for what was killed, so 52 new
+          # kinds had no wild head at all. A wild one with nothing to do with
+          # anybody now goes at its stretch's stocking once it is a day to two
+          # old, by its id, the same on both sides; a young one, a tamed one,
+          # one fighting or fought, trapped, marked, coaxed or acted on, and a
+          # monster stay; the one-off sweep takes every such one whatever its
+          # age; and stocked over and over a stretch shows every kind its ground
+          # suits, near its weight, the newest included.
+          npx esbuild supabase/test/turnover.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/turnover.mjs --log-level=error
+          node node_modules/.cache/turnover.mjs
+
       - name: The Bauble of Regret, and a trade undone
         run: |
           # Asked for: a 3% chance of a Bauble of Regret in archaeology, which

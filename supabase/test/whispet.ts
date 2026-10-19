@@ -108,10 +108,11 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   insert into said values ('SUITS:day:in', suits(w, 'whispet', 20, 20)::text);
   update world set epoch = now() where id = w;
 
-  -- The spawner: a wild one, a tamed one and a wild ulva, looked at in season and then out of it.
-  ww := creature_spawn(w, 'whispet', 30.5, 30.5, 'wild', now() - interval '30 days', null);
+  -- The spawner: a wild one, a tamed one and a wild ulva, looked at in season and then out of it. The wild ones born
+  -- an hour ago, inside their span (wild_stay), so that only their season takes them off.
+  ww := creature_spawn(w, 'whispet', 30.5, 30.5, 'wild', now() - interval '1 hour', null);
   tame := creature_spawn(w, 'whispet', 31.5, 30.5, 'deed', now() - interval '30 days', u);
-  ul := creature_spawn(w, 'ulva', 32.5, 30.5, 'wild', now() - interval '30 days', null);
+  ul := creature_spawn(w, 'ulva', 32.5, 30.5, 'wild', now() - interval '1 hour', null);
   ${pin(IN)}
   perform creature_stock_block(w, 0, 0);
   insert into said select 'STOCK:in', string_agg(id::text, ',' order by id) from creature where world_id = w and id in (ww, tame, ul);
@@ -123,7 +124,7 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   insert into said select 'STOCK:wild', count(*)::text from creature where world_id = w and species = 'whispet' and mode = 'wild';
   insert into said values ('STOCK:ids', ww || ',' || tame || ',' || ul);
   -- And the whole island's stocking takes one off as well.
-  ww := creature_spawn(w, 'whispet', 30.5, 31.5, 'wild', now() - interval '30 days', null);
+  ww := creature_spawn(w, 'whispet', 30.5, 31.5, 'wild', now() - interval '1 hour', null);
   perform creature_stock(w);
   insert into said select 'STOCKALL', count(*)::text from creature where world_id = w and id = ww;
   delete from creature where world_id = w; delete from class_mark where world_id = w;
@@ -249,9 +250,10 @@ check('and out of its season nothing puts one down, where in it the same ask doe
 clear();
 {
   const cr = g.creatures as unknown as { stream: (g: Game) => void };
-  const wild = g.creatures.spawn('whispet', g.player.x + 2, g.player.y, 'wild', g.rand, g.time - 3600 * 24 * 30);
+  // The wild ones an hour old, inside their span (`WILD_STAY`), so that only the season takes one off.
+  const wild = g.creatures.spawn('whispet', g.player.x + 2, g.player.y, 'wild', g.rand, g.time - 3600);
   const kept = g.creatures.spawn('whispet', g.player.x + 3, g.player.y, 'deed', g.rand, g.time - 3600 * 24 * 30);
-  const ulva = g.creatures.spawn('ulva', g.player.x + 4, g.player.y, 'wild', g.rand, g.time - 3600 * 24 * 30);
+  const ulva = g.creatures.spawn('ulva', g.player.x + 4, g.player.y, 'wild', g.rand, g.time - 3600);
   dateAt(IN);
   cr.stream(g);
   const stays = g.creatures.list.has(wild.id) && g.creatures.list.has(kept.id) && g.creatures.list.has(ulva.id);

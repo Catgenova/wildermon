@@ -4462,6 +4462,37 @@ export const PER_REGION = 1;
 export const wildTargetFor = (w: number, h: number): number =>
   Math.max(WILD_TARGET, Math.round(Math.ceil(w / REGION) * Math.ceil(h / REGION) * PER_REGION));
 /**
+ * How long a wild one stays out in the country before it goes, in seconds of real time: a day.
+ *
+ * Asked: "I havent seen a single one of the new 60 wildermon. Are they populated on the island?" They were in the
+ * roll (`WILD_SPECIES`) and almost never rolled for, because nothing wild ever left. A stretch of country was put out
+ * once and afterwards only topped up for what had been killed, so the island was still the mix the weights asked for
+ * on the day it was first walked, and every kind added since stood up only in the gaps a hunter left. Fifty-two of
+ * them had not one wild head anywhere.
+ *
+ * So a wild thing has a span. Each one goes once it is older than this and between once and twice this, by its id
+ * (`wildStayOf`), so that what stood up together does not all go together; and it goes the way one out of its season
+ * goes (`wild_out_of_season`, `stream`), at the next stocking of its stretch of country, which then tops the
+ * stretch up off the weights as they are now. Only one that has nothing to do with anybody (`wildUntouched`): a
+ * monster, a tamed one, one in a fight, in a trap, in the traces, under a rider or a mark, being coaxed or being
+ * acted on stays.
+ *
+ * A day, because the oldest goes at two, so the whole mix is the current weights within two days of a change, and a
+ * stretch of country you walk every evening holds a different set every few evenings rather than every hour. It is
+ * also as long as the most either side dates a new one's birth back (`OLD_AT` × 1.6 in here, 9.6 hours on the island)
+ * so nothing stood up is old enough to go on the pass after it is put out.
+ *
+ * The island's `wild_stay()`, emitted from here.
+ */
+export const WILD_STAY = 24 * 60 * 60;
+/** The step the share of a second span a wild one gets goes up by from one id to the next: the golden ratio's, so neighbours land far apart. The island's `wild_stay_of`. */
+const WILD_SPREAD = (Math.sqrt(5) - 1) / 2;
+/** How old a wild one is when it goes, by its id: `WILD_STAY` and up to as much again. The island's `wild_stay_of`. */
+export const wildStayOf = (id: number): number => {
+  const s = id * WILD_SPREAD;
+  return WILD_STAY * (1 + (s - Math.floor(s)));
+};
+/**
  * Coaxing. A wild thing offered food again and again grows used to the hand
  * holding it, so every attempt in a row makes the next a little likelier. A
  * run lapses if you leave it alone, and raising a hand to it ends the run
@@ -5378,6 +5409,41 @@ export class Creatures {
   }
 
   /**
+   * The creatures something else has hold of by id: what is being fought, brawled with or led in a pack, what struck
+   * one of them or you inside `BLOW_MEMORY`, and what you are acting on. The island's `held` in `wild_turnover`.
+   */
+  heldIds(game: Game): Set<number> {
+    const held = new Set<number>();
+    for (const o of this.list.values()) {
+      if (o.enemy !== null) held.add(o.enemy);
+      if (o.brawl !== null) held.add(o.brawl);
+      if (o.packLead !== null && o.packLead !== o.id) held.add(o.packLead);
+      if (o.attackedBy !== null && game.time - o.attackedAt < BLOW_MEMORY) held.add(o.attackedBy);
+    }
+    const p = game.player;
+    if (p.attackedBy !== null && game.time - p.attackedAt < BLOW_MEMORY) held.add(p.attackedBy);
+    const t = game.action?.target;
+    if (t?.kind === 'creature') held.add(t.id);
+    return held;
+  }
+
+  /**
+   * Whether a wild one has nothing to do with anybody, and so may go when its span is out (`WILD_STAY`): not a
+   * monster, not anybody's, not fighting, struck inside `BLOW_MEMORY`, held (`heldIds`), in a trap, in the traces,
+   * ridden, tied to a post, stunned, under a mark or being coaxed inside `COAX_LAPSE`. The island's `wild_turnover`.
+   */
+  wildUntouched(game: Game, c: Creature, held: Set<number>): boolean {
+    if (c.mode !== 'wild' || c.mine || this.species(c).monster) return false;
+    if (c.trapped !== null || c.hitchedTo !== null || c.ridden || c.post !== null) return false;
+    if (c.enemy !== null || c.brawl !== null || c.packLead !== null || held.has(c.id)) return false;
+    if (c.attackedBy !== null && game.time - c.attackedAt < BLOW_MEMORY) return false;
+    if ((c.stunUntil ?? 0) > game.time) return false;
+    if (Object.values(c.marks ?? {}).some((m) => m && m.until > game.time)) return false;
+    if (c.coaxed > 0 && game.time - c.coaxedAt < COAX_LAPSE) return false;
+    return true;
+  }
+
+  /**
    * Put away what has been left behind and let out what has been come upon.
    * This is the whole of streaming: the island keeps its wildlife as numbers,
    * and only the stretch of it being walked costs anything.
@@ -5388,9 +5454,13 @@ export class Creatures {
     // Away and unwatched: put it back on the books. And a wild one whose season is over, wherever it is, fighting or
     // not: the island's `wild_out_of_season`. One in a trap is the trap's.
     const now = game.wallNow();
+    // And one past its span (`WILD_STAY`) that has nothing to do with anybody, which is the island's `wild_turnover`:
+    // what comes out again in its place is rolled off the weights as they are now.
+    const held = this.heldIds(game);
     for (const c of [...this.list.values()]) {
       if (c.mode !== 'wild' || c.trapped !== null) continue;
-      if (!wildInSeason(this.species(c), now)) {
+      if (!wildInSeason(this.species(c), now)
+        || (game.time - c.born > wildStayOf(c.id) && this.wildUntouched(game, c, held))) {
         const r = this.region(c.x, c.y);
         this.banked.set(r, (this.banked.get(r) ?? 0) + 1);
         this.list.delete(c.id);

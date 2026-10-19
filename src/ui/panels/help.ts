@@ -53,7 +53,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, MONSTER_SHARE, MONSTERS, OLD_AT, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
+  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -1074,6 +1074,12 @@ export function helpText(): string {
     for the country it was in, and comes out again when somebody walks that way. Nothing is ever seen to
     come or go &mdash; it happens well past the edge of anybody's sight &mdash; and the island keeps the same
     head of wildlife however far you wander. It is what lets the map grow without the game slowing down.</p>
+    <p><b>Wild things come and go.</b> A wild creature is out in the country until it is between ${spanWords(WILD_STAY)} and
+    ${spanWords(2 * WILD_STAY)} old, the share set by its own number. After that it goes the next time the country it is standing in is
+    stocked, and that country is topped back up with new ones rolled from every kind there is, at the kinds' weights now. One stays
+    while it is tamed or kept, fighting or being fought, struck in the last ${spanWords(BLOW_MEMORY)}, in a trap, in the traces, ridden,
+    tied to a post, stunned or under a mark, offered food in the last ${spanWords(COAX_LAPSE)}, or while somebody is doing something
+    to it. A monster does not go this way.</p>
     <h3>Windows</h3>
     <table>
       <tr><td><kbd>I</kbd></td><td>Inventory</td></tr>

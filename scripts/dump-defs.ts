@@ -30,7 +30,7 @@ import { cellarOutdoor } from '../src/game/cellar';
 import { REPOINT_BACK } from '../src/game/buildActions';
 import { CONCRETE_PER_STEP } from '../src/game/foundations';
 import { PIER_CLEAR, PIER_DROP, PIER_SHOO, PIER_WALL_DROP, PIER_WATER } from '../src/game/piers';
-import { COAX_LAPSE, COAX_STEP, HERD_REACH, HUNT_HOME, HUNT_LEASH, HUNT_REST, OLD_AT, YOUNG_FOR, SITE_LOOKS, WILD_RANGE, WILD_REACH, WILD_REST, WILD_REST_SPREAD, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT,
+import { COAX_LAPSE, COAX_STEP, HERD_REACH, WILD_STAY, HUNT_HOME, HUNT_LEASH, HUNT_REST, OLD_AT, YOUNG_FOR, SITE_LOOKS, WILD_RANGE, WILD_REACH, WILD_REST, WILD_REST_SPREAD, SHOE_DAYS, SHOE_PACE, SHOE_STEP, SHOES_PER_MOUNT,
          COMPANION_SIGHT, COMPANION_LEASH, COMPANION_REACH, COMPANION_BLOW, COMPANION_PACE, BLOW_MEMORY, FIGHT_BACK_GOES } from '../src/game/creatures';
 import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLES } from '../src/game/titles';
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
@@ -1759,6 +1759,8 @@ for (const [fn, v] of [
      of its own kind a grazer has to be to throw in with it. */
   ['wild_range', WILD_RANGE], ['herd_reach', HERD_REACH],
   ['site_looks', SITE_LOOKS],
+  /* And how long a wild one is out in the country before it goes, which `wild_stay_of` spreads by its id. */
+  ['wild_stay', WILD_STAY],
   /*
    * What a back takes, and where carrying stops being a drag and becomes a
    * wall. The island never needed these while the pack was the browser's own
