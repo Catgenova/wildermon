@@ -91,6 +91,7 @@ import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } f
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
+import { DEED_UPGRADES } from '../../game/deed';
 import { SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
@@ -105,7 +106,7 @@ import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
-import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, goSeconds, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
+import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, deedWorkersAt, goSeconds, MAX_DEED_LEVEL, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
 import { defaultKey } from '../../game/keybinds';
 import { guidePages } from '../../game/guide';
@@ -2585,6 +2586,23 @@ export const NEWS: News[] = [
         `A wildermon that stood up before its kind was renamed kept the old name as its own, so one tamed since was still called a `
           + `${['rabba', 'bevere'].map((id) => FORMER_NAME[id]).join(' or a ')}. Every one still called its kind's old name is called its kind's name now; `
           + 'a name somebody gave one is kept.',
+      ];
+    },
+  },
+  {
+    n: 199,
+    day: '2026-10-19',
+    lines: () => {
+      // Whether the runes up a token count its workers too: so long as one more may work at each level, starting from one.
+      const workers = [1, 2, MAX_DEED_LEVEL].every((l) => deedWorkersAt(l) === l);
+      // What each level asked for, as the settlement menu lists it.
+      const asked = (level: number): string => listed((DEED_UPGRADES[level] ?? []).map((r) => r.label.toLowerCase()));
+      return [
+        `A settlement's token is drawn as a carved stone totem now, one block taller for each level of the settlement up to level ${MAX_DEED_LEVEL}, `
+          + `each block with one lit rune in its front: the lit runes up its front are the settlement's level${workers ? ', which is also how many wildermon may work there' : ''}. `
+          + `Each block is carved for what its level asked for: a fire bowl for ${asked(2)}, iron bands for ${asked(3)}, a winged bird for ${asked(4)}, `
+          + `and a roofed crown with carved wildermon heads for ${asked(5)}. Before, every token was the same pillar. `
+          + 'It gives no light: its runes and the embers in its fire bowl glow, and light nothing round it.',
       ];
     },
   },

@@ -3116,7 +3116,8 @@ export function helpText(): string {
     border out ${numberWord(DEED_RADIUS_PER_LEVEL)} tiles and lets ${deedWorkersAt(2) - deedWorkersAt(1) === 1 ? 'one' : numberWord(deedWorkersAt(2) - deedWorkersAt(1))} more wildermon work the deed, and each is earned by building the
     settlement out: ${UPGRADES_SAID}. Upgrades are
     taken in order, so each level only asks for the new thing. The menu ticks off what you have and names what is
-    missing, and a settlement goes no higher than level ${MAX_DEED_LEVEL}.</p>
+    missing, and a settlement goes no higher than level ${MAX_DEED_LEVEL}. The token stands one carved block
+    taller for each level, each block with one lit rune in its front, so the lit runes up its front count its level.</p>
     <p>A deed worker feeds itself: once its belly falls below ${share(HUNGRY)} it goes to whichever crate on
     the deed holds something it eats, helps itself, and goes back to work. Keep food in a crate and your
     workers will look after themselves.</p>

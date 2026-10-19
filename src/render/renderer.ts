@@ -41,6 +41,7 @@ import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
+import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { isRuneLantern } from '../game/runelantern';
 import { drawRuneGate, gateVariant, RUNE_GATE_OPENING } from './runegate';
 import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
@@ -73,7 +74,7 @@ import { smelterCentre, type PlacedSmelter } from '../game/smelter';
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
-import { DAWN, DUSK } from '../game/game';
+import { DAWN, deedLevel, DUSK } from '../game/game';
 import { boatSway, clothInWind, crewOrder, deviceOf, drawFurniture, drawFurnitureLive, driverOn, swayOnScreen, WHEELS, wheelBlur, wheelTrim, steeredByTiller, woodHex, furnitureHoles, helmSeat, reinsTo, rowedPiece, furnitureSpan, FURNITURE_HEIGHT, glowsAtNight, headingView, mossTrim, PIECE_STAGES, pieceView, planterTrim, roseTrim, vineTrim, VINE_VARIANTS, type Air, type Crew, type PieceView } from './furniture';
 import { roseStage } from '../game/roses';
 import { isTrellis, vineStage } from '../game/vineyard';
@@ -187,7 +188,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawAnvil, drawCampfire, drawCreature, drawKiln, drawPlayer, drawSmelter, facingOf, lyingSprite, tokenSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawAnvil, drawCampfire, drawCreature, drawKiln, drawPlayer, drawSmelter, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -330,6 +331,8 @@ interface Entity {
   swirl?: Swirl;
   /** A Runestone, taken on its front tile and drawn over its whole three by three (`./runestones`). */
   stone?: Runestone;
+  /** A settlement's token, drawn as a totem a course taller for each level of the settlement (`./deedtotem`). */
+  totem?: DeedTotemLook;
   /** 1 rare, 2 supreme, 3 fantastic, for the shine over it; absent for the ordinary run of things. */
   rare?: number;
   /**
@@ -1026,6 +1029,7 @@ export class Renderer {
     e.plant = undefined;
     e.swirl = undefined;
     e.stone = undefined;
+    e.totem = undefined;
     e.lift = undefined;
     e.drawDx = undefined;
     e.drawDy = undefined;
@@ -1300,7 +1304,7 @@ export class Renderer {
     });
   }
   private anvilHits: HitRect[] = [];
-  /** The Runestones drawn this frame, each the box its standing stone covers, picked as its centre tile. */
+  /** The Runestones and settlement tokens drawn this frame, each the box its standing stone covers, picked as its centre tile. */
   private stoneHits: HitRect[] = [];
   private postHits: HitRect[] = [];
   private trapHits: HitRect[] = [];
@@ -3651,8 +3655,10 @@ export class Renderer {
           if (best) pile.rare = best;
         }
         if (this.game.isToken(x, y)) {
+          // The token of one of our settlements, as tall as the settlement's level has built it (`deedtotem.ts`).
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-          this.take('token', x, y, baseX, baseY + hh - avg * hs, tokenSprite());
+          const deed = this.game.myDeeds().find((d) => d.x === x && d.y === y) ?? null;
+          this.take('token', x, y, baseX, baseY + hh - avg * hs, null).totem = { level: deedLevel(deed), variant: deedTotemVariant(x, y) };
         }
         // A water plant: what lies on the water goes down after the line's water; a lotus's stalks stand up among everything else.
         if (this.plantFrame) {
@@ -5287,6 +5293,32 @@ export class Renderer {
       }
       if (ent.kind === 'waterplant' && ent.plant && this.plantFrame) {
         drawPlantUpright(ctx, ent.plant, this.plantFrame);
+        continue;
+      }
+      if (ent.kind === 'token' && ent.totem) {
+        /*
+         * A settlement's token, drawn as the rune lantern post is
+         * (`deedtotem.ts`): its bake under the pointer's ring, its runes'
+         * light over it, and after dark its runes taken off the night in
+         * their own shapes, kept off whatever stands in front of it
+         * (`RunestoneNight`). Clicked by the parts of the totem standing up off
+         * its tile, as its tile, so its hover and its menu are the token's. No
+         * cast shadow: its bake lays its own on the ground, as a runestone's does.
+         */
+        const look = ent.totem, turn = this.camera.rotation, dark = this.game.darkness();
+        // The box it is drawn in, turf and all, for keeping it off a runestone's runes (`paint`).
+        const [bl, bt, br, bb] = deedTotemBounds(look, turn, zoom);
+        const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
+        drawDeedTotemBloom(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+          drawDeedTotem(g, px, py, zoom, look, turn, dark, this.time, false);
+        }, undefined, box);
+        drawDeedTotemLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+        this.runeNight.source(ctx, ent.sx, ent.sy, zoom, deedTotemNight(look, turn, zoom), this.time);
+        // A box round each part of it -- each block, the bowl, the wings, the crown -- and not the air between them.
+        for (const [hl, ht, hr, hb] of deedTotemHits(look, turn, zoom)) {
+          this.stoneHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom });
+        }
         continue;
       }
       if (ent.kind === 'runestone' && ent.stone) {
@@ -12907,6 +12939,9 @@ export class Renderer {
         return h.post !== undefined && h.post === ent.post?.id;
       case 'trap':
         return h.trap !== undefined && h.trap === ent.trap?.id;
+      case 'token':
+        // Its own tile, with nothing else on it picked.
+        return h.x === ent.x && h.y === ent.y && !h.down && (h.creature ?? h.peer ?? h.crate ?? h.fire ?? h.smelter ?? h.kiln ?? h.anvil ?? h.post ?? h.trap ?? h.furniture ?? h.bridge) === undefined;
       default:
         return false;
     }
@@ -14022,7 +14057,7 @@ export class Renderer {
       const h = this.fireHits[i];
       if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), fire: h.fire };
     }
-    // A Runestone, by the stone standing up off its footprint: its centre tile, whose hover and Examine name it.
+    // A Runestone or a settlement's token, by the stone standing up off its footprint: its centre tile, whose hover and Examine name it.
     for (let i = this.stoneHits.length - 1; i >= 0; i--) {
       const h = this.stoneHits[i];
       if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return this.makePick(h.x, h.y, sx, sy);

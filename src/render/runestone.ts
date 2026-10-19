@@ -673,6 +673,10 @@ export const GLYPHS: Record<string, Stroke[]> = {
   ring: [{ pts: arc(0, 0, 0.7, 0, TAU, 20), closed: true }, dotAt(0, 0)],
   sowilo: [{ pts: [[-0.38, 1], [0.44, 0.22], [-0.44, -0.22], [0.38, -1]] }],
   laguz: [{ pts: [[-0.3, -1], [-0.3, 1], [0.48, 0.42]] }],
+  // The torch, the thorn and the people, cut up a settlement's token (`deedtotem.ts`).
+  kenaz: [{ pts: [[0.42, 1], [-0.42, 0], [0.42, -1]] }],
+  thurisaz: [{ pts: [[-0.32, -1], [-0.32, 1]] }, { pts: [[-0.32, 0.58], [0.44, 0], [-0.32, -0.58]] }],
+  mannaz: [{ pts: [[-0.52, -1], [-0.52, 1], [0.52, 0.12]] }, { pts: [[0.52, -1], [0.52, 1], [-0.52, 0.12]] }],
   wave: [{ pts: wave(0.36) }, { pts: wave(-0.36) }],
   harrow: [{ pts: [[-0.66, 0.72], [0.66, 0.72]] }, { pts: [[-0.58, 0.72], [-0.58, -0.62]] }, { pts: [[0, 1], [0, -1]] }, { pts: [[0.58, 0.72], [0.58, -0.62]] }],
   eye: [{ pts: [...arc(0, -0.62, 1.05, 0.62, Math.PI - 0.62, 10), ...arc(0, 0.62, 1.05, Math.PI + 0.62, TAU - 0.62, 10).slice(1, -1)], closed: true }, { pts: arc(0, 0, 0.24, 0, TAU, 10), closed: true }],
