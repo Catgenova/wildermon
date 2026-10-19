@@ -2,12 +2,13 @@ import {
   beat, clamp, coatPalette, curve, cyc, DEG, disc, frac, lerp, lighter, merge, moved, onEgg, orb, orbAlong, paint, pastel, quadBones, quadPose, smile, smooth, taper, TAU, tube,
   type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, hoofMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
+import { blade, cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
 import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The wild ones and the workers: the rowl, the grubba and the cobbe.
+ * The wild ones and the workers: the rowl and the grubba. (The cobbe is the
+ * brick line now, in `./wild-brick`.)
  */
 
 /* ---- what they share ----------------------------------------------------------------- */
@@ -404,74 +405,3 @@ export const GRUBBA: Kind = {
   stride: 1.1,
   size: 1.85,
 };
-
-/* ---- the cobbe ----------------------------------------------------------------------- */
-
-/**
- * A cobbe: a squat, hard-headed hauler with shoulders like a wall. Its back
- * is a shell laid like a wall too -- courses of brick with pale mortar between
- * -- and its brow is a keystone.
- */
-const COBBE_PAWS = pawed({ high: 1.5, len: 2.6, legs: 0.9, neck: 0.4, lean: 65, swing: [18, 30], ears: [60, 20], tail: [0.25, -20, -10] });
-const COBBE_SPEC = { ...COBBE_PAWS, hind: { ...COBBE_PAWS.hind, rest: [10, -20, 0] as V3 }, graze: 40, nose: 8, bow: 14 };
-const COBBE_HEAD = { c: [0, 0.35, 0.1] as V3, r: [0.95, 0.9, 0.82] as V3 };
-/** The shell's courses, bottom to top: where each band starts up the dome, brick or mortar; the dome's height, and how wide and long it is at the bottom. */
-const SHELL = { z: [0, 0.24, 0.29, 0.51, 0.56, 0.76, 0.81, 1.0], high: 1.0, w: 1.55, d: 1.85 };
-
-function cobbeBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = COBBE_HEAD;
-  // The shell: a dome in courses of brick, a thin course of pale mortar between each two, and brick over its top, not a disc of mortar.
-  const round = lod ? 12 : 10;
-  const across = (z: number): number => Math.cos((z / SHELL.high) * 1.25);
-  const dome = tube(SHELL.z.map((z) => [0, 0, 0.1 + z] as V3), SHELL.z.map((z) => SHELL.w * across(z)), SHELL.z.map((z) => SHELL.d * across(z)), round,
-    (ring) => (ring % 2 && ring < SHELL.z.length - 1 ? 'stone' : 'shell'), { up: [0, 1, 0] });
-  // Where on the dome's facets a point is, `z` up it and `t` radians round.
-  const onDome = (z: number, t: number): V3 => {
-    const f = across(z), s = (t / TAU) * round - 0.5, j = Math.floor(s), e = s - j;
-    const at = (i: number): V3 => { const u = ((i + 0.5) / round) * TAU; return [Math.cos(u) * SHELL.w * f, Math.sin(u) * SHELL.d * f, 0.1 + z]; };
-    const a = at(j), b = at(j + 1);
-    return [lerp(a[0], b[0], e), lerp(a[1], b[1], e), 0.1 + z];
-  };
-  // The upright joints between the bricks: seven to a course, each course half a brick round from the one under it.
-  const joints = paint([0, 2, 4].flatMap((c) => Array.from({ length: 7 }, (_, q) => {
-    const t = ((q + (c % 4 ? 0.5 : 0)) / 7) * TAU, z0 = SHELL.z[c] + 0.02, z1 = SHELL.z[c + 1] - 0.02;
-    const half = 0.035 / (SHELL.w * across((z0 + z1) / 2));
-    return { v: facing([onDome(z0, t - half), onDome(z0, t + half), onDome(z1, t + half), onDome(z1, t - half)], [Math.cos(t), Math.sin(t), 0.3]), m: 'stone' as Mat };
-  })));
-  const shell = merge(dome, joints, tube([[0, 0, 0.05], [0, 0, 0.14]], [1.6], [1.9], round, 'spot', { up: [0, 1, 0] }));
-  // The keystone: a wedge of darker brick on the brow, wider at the top, standing up out of the head's outline.
-  const keystone = tube([[0, 0.5, 0.62], [0, 0.52, 1.12]], [0.19, 0.3], [0.17, 0.17], 4, 'shellDark');
-  return quadWithEyes({
-    n, k,
-    body: { y: [-1.5, -1.2, -0.6, 0, 0.6, 1.2, 1.5], z: [0.1, 0.1, 0.1, 0.1, 0.1, 0.12, 0.15], w: [0.3, 1.2, 1.4, 1.45, 1.4, 1.2, 0.35], h: [0.3, 0.6, 0.66, 0.7, 0.66, 0.6, 0.3], belly: true },
-    neck: { w: 0.7, h: 0.65, len: 0.4 },
-    head: { c: H.c, r: H.r, face: merge(muzzleAt({ at: 0.98, z: 0.02, r: [0.48, 0.38, 0.42] }, n, k), keystone), eye: { dir: [0.78, 0.5, 0.22], size: 0.3, rim: 0.12 }, blush: [[0.78, 0.5, -0.28], 0.2] },
-    ear: earMesh(0.35, 0.3, n),
-    tail: [taper([[0, 0, 0], [0, -0.28, 0]], 0.12, 0.03, 5, 'coat')],
-    fore: { upper: [0.3, -0.48, 0.4, 0.36], lower: [0, -0.42, 0.36, 0.34], foot: hoofMesh(0.38, 0.14, n, 'coatDark') },
-    hind: { upper: [0.3, -0.5, 0.42, 0.36], lower: [0, -0.5, 0.36, 0.34], foot: hoofMesh(0.38, 0.14, n, 'coatDark') },
-    extras: [{ key: 'shell', mesh: moved(shell, [0, 0, 0.2]), bone: 'trunk', bias: 0.04, after: ['body', 'fl0', 'fr0', 'hl0', 'hr0'] }],
-    breath: 0.03,
-  });
-}
-
-export const COBBE: Kind = {
-  bones: grazing(COBBE_SPEC, (p, a) => {
-    trot(p, a);
-    p.roll += a.go * 4 * Math.sin((a.u % 1) * TAU);
-    if (a.go > 0) return;
-    // A nod of that keystone of a head, as if agreeing with something, the neck bowing into it so the head need not tip so far that
-    // its eye comes to the front of its outline; and now and then a shuffle of the shell, settling it. The nod not while it grazes.
-    const nod = beat(a.t, [5.5, 13.2, 19.8], 1.0) * (1 - a.graze);
-    p.head[0] -= 13 * nod;
-    p.neck[0] += 10 * nod;
-    p.roll += 5 * beat(a.t, [9.1, 16.4], 1.2) * Math.sin(a.t * TAU * 2.5);
-  }, 30),
-  build: cobbeBuild,
-  palette: (coat, mark) => coatPalette(lighter(coat, 0.12), mark, { shell: [198, 110, 86], shellDark: [170, 86, 68], stone: [240, 228, 210], spot: [246, 236, 222] }, 30),
-  shadow: [1.9, 1.7],
-  stride: 1.05,
-  size: 2.3,
-};
-

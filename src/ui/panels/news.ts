@@ -2674,6 +2674,17 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 206,
+    day: '2026-10-19',
+    lines: () => {
+      const d = SPECIES.cobbe;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a brick lizard that takes on a hod of mortar and a trowel and then a brick tower, with its own walk, strike, bricklaying and voice.`,
+      ];
+    },
+  },
 ];
 
 

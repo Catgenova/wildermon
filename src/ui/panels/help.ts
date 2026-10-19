@@ -3091,9 +3091,10 @@ export function helpText(): string {
     where papyrus starts. The <b>Holla</b> carries <b>water</b> in its throat from the shore or a well
     and pours it into your barrels. The <b>Dowse</b> will not live anywhere there is no metal under it,
     and on a deed it <b>reads the ground</b> and marks what is down there. The <b>Sappa</b> buries more
-    seed than it eats, and on a deed it <b>plants sprouts</b> where the axe has been. The <b>Cobbe</b>
-    carries the <b>hod</b>: brick, mortar and timber out of your stores and into whatever wall you have
-    planned, one piece at a time. The <b>Tinka</b> <b>mends</b> the damaged gear in your stores. The
+    seed than it eats, and on a deed it <b>plants sprouts</b> where the axe has been. The <b>${SPECIES.cobbe.name}</b>
+    (the Cobbe that was), which evolves into a ${SPECIES.cobbe.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.cobbe.stages![1].name} at ${EVOLVE_AT[1]},
+    carries the <b>hod</b>: whatever a planned wall still wants out of your stores, crates and furniture alike, and into
+    that wall, one piece a trip. The <b>Tinka</b> <b>mends</b> the damaged gear in your stores. The
     <b>Middun</b> eats what is rotting on the ground and turns it into <b>compost</b>. The <b>Snout</b>
     smells out <b>buried relics</b> and marks where to dig &mdash; taming ${SPECIES.snout.tameLevel}, and worth every point of
     it.</p>

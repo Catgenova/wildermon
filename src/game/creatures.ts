@@ -1438,8 +1438,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   cobbe: {
     id: 'cobbe',
     hide: 'thick',
-    name: 'Cobbe',
-    description: 'A squat, hard-headed hauler with shoulders like a wall itself. It carries brick and mortar to whatever you have planned and fits it, one piece at a time, unasked.',
+    name: 'Brickling',
+    was: ['Cobbe'],
+    // Asked for: "Implement this family through a rate loop to replace Cobbe": Brickling, Mortarback, Bastiondrake. Its
+    // words, and each stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Mortarback', description: '' },
+      { name: 'Bastiondrake', description: '' },
+    ],
     health: 40,
     attack: 5,
     speed: 1.5,
@@ -1451,10 +1458,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'hod',
     workRange: 12,
     variants: [
-      ['#8a8178', '#cfc7bb'],
-      ['#6e6259', '#b2a79a'],
-      ['#9a8467', '#ddcaa8'],
-      ['#5c5a58', '#a09d99'],
+      ['#b4532f', '#ecd9b8'],
+      ['#9a3f27', '#e3cba4'],
+      ['#c56b3f', '#f1e2c6'],
+      ['#7e3a25', '#d8c09e'],
     ],
     butcher: { meat: 6, fur: 1, leather: 5, bone: 6 },
     tameFail: 'eats the {food} in one, looks at you, and goes back to shoving rocks about',
@@ -3677,6 +3684,8 @@ sayLine('mola', `Set to work on a settlement it mines the nearest ore seam withi
   'Its level is its mining.');
 sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECIES.bevere.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, as many bites to a tree as a person's swings, leaving a stump where the tree had timber in it. Each log is at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its woodcutting, raised by any yield trait it has and never over 100; it carries one to the crate and leaves the rest at the stump.`,
   'Its level is its woodcutting.');
+sayLine('cobbe', `Set to work on a settlement it carries what a planned ground-floor wall within ${SPECIES.cobbe.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it: the nearest wall first, and of what that wall wants whatever is furthest behind its bill.`,
+  'Its level is its masonry.');
 sayLine('embra', `Set to work on a settlement it keeps your campfires, smelters and kilns within ${SPECIES.embra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, fed and lit: whenever one holds under ${HEARTH_FULL / 60} minutes of fuel, it carries a piece of fuel from your stores to the nearest such, one at a time, and lights it if it has gone out. It eats only what has been cooked.`,
   'Its level is its smelting.');
 sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate.`,

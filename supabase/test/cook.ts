@@ -26,6 +26,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
+import { SPECIES } from '../../src/game/creatures';
 import { ACTION_BY_ID, tasteSays } from '../../src/game/actions';
 import type { Target } from '../../src/game/actions';
 import { boonTime } from '../../src/game/boons';
@@ -298,7 +299,7 @@ begin
   perform act_perform(w, u, 'butcher', jsonb_build_object('kind', 'ground', 'x', 9, 'y', 9));
   v_t := v_t || '|' || ${count('meat')} || ':' || ${count('bone')} || ':' || ${count('hide')} || ':' || ${count('fur')} || ':' || ${count('offal')}
     || '|' || ${qls('meat')} || ':' || ${qls('bone')} || ':' || ${qls('hide')} || ':' || ${qls('fur')} || ':' || ${qls('offal')}
-    || '|' || coalesce(${last('You butcher the cobbe%')}, 'unsaid');
+    || '|' || coalesce(${last(`You butcher the ${SPECIES.cobbe.name.toLowerCase()}%`)}, 'unsaid');
   ${clear('meat', 'bone', 'hide', 'fur', 'offal')};
   ${patch('Full Carcass', { 'share:butcher': 3 })};
   ${hold('Full Carcass')};

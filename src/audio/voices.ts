@@ -1,4 +1,5 @@
 import type { BeastAct } from '../game/events';
+import { BRICK_VOICE } from './voice-brick';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
@@ -52,4 +53,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   embra: SLUG_VOICE,
   // The Whispet, the Lanternveil and the Hallowmire.
   whispet: GHOST_VOICE,
+  // The Brickling, the Mortarback and the Bastiondrake.
+  cobbe: BRICK_VOICE,
 };

@@ -19,7 +19,8 @@ import { BOGGA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
 import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
 import { HALLOWMIRE, LANTERNVEIL, WHISPET } from './wild-ghost';
 import { LOGCHEWER, SAPGNAW, TIMBERLORD } from './wild-gnaw';
-import { COBBE, GRUBBA, ROWL } from './wild-wild';
+import { GRUBBA, ROWL } from './wild-wild';
+import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
 import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA, WICKA } from './wild-hands';
 import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, SPRIGGA, WURLA } from './wild-hands2';
@@ -63,7 +64,7 @@ export const WILDERMON: Record<string, Kind> = {
   sappa: SAPPA,
   rowl: ROWL,
   grubba: GRUBBA,
-  cobbe: COBBE,
+  cobbe: BRICKLING,
   quarra: CHIPTAIL,
   embra: SLUGLOW,
   bogga: BOGGA,
@@ -156,6 +157,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   whispet: [LANTERNVEIL, HALLOWMIRE],
   noot: [CLAYBURROW, TERRAMOLE],
   crawler: [SANDPINCHER, SANDPINNACLE],
+  cobbe: [MORTARBACK, BASTIONDRAKE],
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */
