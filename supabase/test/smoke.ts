@@ -841,6 +841,18 @@ async function main(): Promise<void> {
      */
     const farthest = Math.max(back.w, back.h);
     const full = (): boolean => corners.length >= CORNERS_TRIED;
+    /*
+     * Every tile the body is standing on. Half a tile's walk above leaves it
+     * exactly on a corner, which `floor` puts on one of the four tiles there,
+     * and live run 1385 (seed 682755288) put it on a steep knoll our copy of
+     * the land would route nothing out of, though the spawn beside it reached
+     * forty-eight corners worth digging: "all rock and water" of an island
+     * with soil a short walk off. On a corner, a path from any of the tiles
+     * round it is a way there.
+     */
+    const starts: Array<[number, number]> = [];
+    for (const fx of new Set([Math.floor(me.x), Math.floor(me.x - 1e-6)]))
+      for (const fy of new Set([Math.floor(me.y), Math.floor(me.y - 1e-6)])) starts.push([fx, fy]);
     for (let r = 0; r <= farthest && !full(); r++) {
       for (let dy = -r; dy <= r && !full(); dy++) {
         for (let dx = -r; dx <= r && !full(); dx++) {
@@ -867,7 +879,7 @@ async function main(): Promise<void> {
            * dig was refused for being too far away, which was true and was
            * again about the wrong thing.
            */
-          if ((dx || dy) && !findPath(back, Math.floor(me.x), Math.floor(me.y), 0, x, y, pathOptions(back))) continue;
+          if ((dx || dy) && !starts.some(([fx, fy]) => findPath(back, fx, fy, 0, x, y, pathOptions(back)))) continue;
           corners.push([x, y]);
         }
       }
