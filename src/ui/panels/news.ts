@@ -2795,6 +2795,18 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 217,
+    day: '2026-10-20',
+    lines: () => {
+      const d = SPECIES.orse;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now, and still the mount. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}.`,
+        'Each of the three is a new model, a long-eared hare that grows from a fluffy kit to a courser and a great Moonhare with a flowing mane and two plumes, with its own walk, bounding gallop, kick and voice. You sit each one where its back is: knees up on a Thistlekit, astride further back on the bigger two.',
+      ];
+    },
+  },
 ];
 
 

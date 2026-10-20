@@ -67,6 +67,7 @@ begin
   insert into said select 'MUDCUT', string_agg(b.item || ':' || sb.n, ',' order by b.ord) from butcher_part b join species_butcher sb on sb.part = b.part where sb.species = 'noot';
   insert into said select 'SAPGNAW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Bevere')).id from species_def where id = 'bevere';
   insert into said select 'BRICKLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Cobbe')).id from species_def where id = 'cobbe';
+  insert into said select 'THISTLEKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Orse')).id from species_def where id = 'orse';
   insert into said select 'STITCHKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Tinka')).id from species_def where id = 'tinka';
   insert into said select 'CARTLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Roxxen')).id from species_def where id = 'roxxen';
   insert into said select 'SLUGLOW', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Embra')).id from species_def where id = 'embra';
@@ -160,6 +161,10 @@ const stitch = SPECIES.tinka;
 check('the Tinka is the Stitchkit now, a Patchcoon and a Mendermask after, and an old Tinka carcass is still one, on both sides',
   stitch.name === 'Stitchkit' && stitch.stages?.map((x) => x.name).join(',') === 'Patchcoon,Mendermask'
     && at('STITCHKIT') === 'Stitchkit|Patchcoon,Mendermask|Tinka|tinka', at('STITCHKIT'));
+const hare = SPECIES.orse;
+check('the Orse is the Thistlekit now, a Bunnycourser and a Moonhare after, and an old Orse carcass is still one, on both sides',
+  hare.name === 'Thistlekit' && hare.stages?.map((x) => x.name).join(',') === 'Bunnycourser,Moonhare'
+    && at('THISTLEKIT') === 'Thistlekit|Bunnycourser,Moonhare|Orse|orse', at('THISTLEKIT'));
 const mud = SPECIES.noot;
 check('the Noot is the Mudlet now, a Clayburrow and a Terramole after, and an old Noot carcass is still one, on both sides',
   mud.name === 'Mudlet' && mud.stages?.map((x) => x.name).join(',') === 'Clayburrow,Terramole'

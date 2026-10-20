@@ -6,6 +6,7 @@ import { CLAY_VOICE } from './voice-clay';
 import { GNAW_VOICE } from './voice-gnaw';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
+import { HARE_VOICE } from './voice-hare';
 import { IRON_VOICE } from './voice-iron';
 import { MEND_VOICE } from './voice-mend';
 import { SLUG_VOICE } from './voice-slug';
@@ -61,4 +62,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   roxxen: HAUL_VOICE,
   // The Stitchkit, the Patchcoon and the Mendermask.
   tinka: MEND_VOICE,
+  // The Thistlekit, the Bunnycourser and the Moonhare.
+  orse: HARE_VOICE,
 };

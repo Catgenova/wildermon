@@ -571,7 +571,7 @@ const LAST_RELIC = RELICS[RELICS.length - 1];
 
 /** The mining a metal's seam asks for. */
 const METAL_LEVEL = (id: string): number => METALS.find((m) => m.id === id)?.level ?? 0;
-/** An Orse under a rider, green and with its climbing worked right up. */
+/** A Thistlekit (`orse`) under a rider, green and with its climbing worked right up. */
 const ORSE_GREEN = SPECIES.orse.speed * footing(0);
 const ORSE_WORKED = Math.min(MAX_MOUNT_SPEED, SPECIES.orse.speed * footing(TOP_SKILL));
 /** What each settlement level asks for, as the deed menu says it. */
@@ -3072,7 +3072,8 @@ export function helpText(): string {
     which it learns ${LEARNS_SAYS.pull}. Its driving counts in the traces where another beast's climbing does,
     deciding how fast a cart or wagon goes and how steep a line the wheels will
     take. A green pair labours over ground a worked pair walks up. It also leaves the biggest carcass on
-    the island by a long way. The <b>Orse</b> is long in the leg and learns <b>climbing</b> instead, in the traces
+    the island by a long way. The <b>${SPECIES.orse.name}</b> (the Orse that was), which evolves into a ${SPECIES.orse.stages![0].name} at level ${EVOLVE_AT[0]} and a
+    ${SPECIES.orse.stages![1].name} at ${EVOLVE_AT[1]}, is the mount, and learns <b>climbing</b> instead, in the traces
     or under a rider: stitch a <b>saddle</b> and a <b>bridle</b>, fit both from its menu, and
     <b>mount</b> it. A green one carries you at ${times(ORSE_GREEN / BASE_SPEED)} your own pace and over the same ground;
     one whose climbing is worked right up is ${times(ORSE_WORKED / ORSE_GREEN)} as fast as a green one and goes up slopes you would
@@ -3132,7 +3133,7 @@ export function helpText(): string {
     it.</p>
     <p><b>Backs and traces.</b> The <b>Bura</b> does no work but carries <b>${SPECIES.bura.pannier} things</b> in panniers on
     its own back; open them from its menu. The <b>Gorral</b> is a horned cliff-goat that takes a saddle
-    and goes up ground an Orse turns away from. The <b>Wadd</b> is the one mount that will swim deep
+    and goes up ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} turns away from. The <b>Wadd</b> is the one mount that will swim deep
     water with a rider on it. The <b>Shaggan</b> is slower in the traces than anything else and stronger
     than all of them: each adds ${percent(SPECIES.shaggan.pull ?? PULL_DEFAULT)} to a team's pull where most beasts add ${percent(PULL_DEFAULT)}.</p>
     <p><b>Eyes and produce.</b> The <b>${SPECIES.warda.name}</b> (the Warda that was) is a watcher: keep one and it sees ${SPECIES.warda.sight} tiles for you

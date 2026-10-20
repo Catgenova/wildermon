@@ -1201,8 +1201,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   orse: {
     id: 'orse',
     wound: 'crush',
-    name: 'Orse',
-    description: 'Long in the leg and deep in the chest, with a mane that falls to one side. It will carry a rider once it is saddled and bridled, and the further it has been worked the surer its footing on a bad slope.',
+    name: 'Thistlekit',
+    was: ['Orse'],
+    // Asked for: "This family to replace Orse as a rideable mount": Thistlekit, Bunnycourser, Moonhare. Its words, and each
+    // stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Bunnycourser', description: '' },
+      { name: 'Moonhare', description: '' },
+    ],
     health: 50,
     attack: 7,
     speed: 3,
@@ -1214,10 +1221,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: null,
     workRange: 6,
     variants: [
-      ['#6b4830', '#2e2320'],
-      ['#8f8880', '#514c47'],
-      ['#3a3330', '#211d1b'],
-      ['#a8703c', '#e0c294'],
+      ['#f4ece4', '#c8a6d6'],
+      ['#efe6ee', '#b996cc'],
+      ['#f7efe6', '#d6a8c8'],
+      ['#e9e2ea', '#a68fc4'],
     ],
     butcher: { meat: 14, fur: 3, leather: 10, bone: 12, gland: 1 },
     tameFail: 'lips the {food} out of your hand, tosses its head, and moves off a few lengths',
@@ -3007,7 +3014,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'gorral',
     wound: 'crush',
     name: 'Gorral',
-    description: 'A horned cliff-goat that stands on ground you would not put a ladder against. Under a saddle it goes up what an Orse turns away from, and the more it is worked the worse the ground it will take.',
+    description: 'A horned cliff-goat that stands on ground you would not put a ladder against. Under a saddle it goes up what a Thistlekit turns away from, and the more it is worked the worse the ground it will take.',
     health: 44,
     attack: 7,
     speed: 2.4,
@@ -3409,6 +3416,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
 
 /** A beast's share of a team's pull when it was not bred for the traces. */
 export const PULL_DEFAULT = 0.25;
+/** No mount carries a rider faster than this. */
+export const MAX_MOUNT_SPEED = 5;
+/** What practice on bad ground is worth to a beast's pace, from its climbing. */
+export const footing = (climb: number): number => 0.9 + climb / 140;
 
 /**
  * A mender's go at a damaged thing in the stores (`mendStep`): this much damage off it and one more for every
@@ -3728,6 +3739,8 @@ sayLine('mola', `Set to work on a settlement it mines the nearest ore seam withi
   'Its level is its mining.');
 sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECIES.bevere.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, as many bites to a tree as a person's swings, leaving a stump where the tree had timber in it. Each log is at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its woodcutting, raised by any yield trait it has and never over 100; it carries one to the crate and leaves the rest at the stump.`,
   'Its level is its woodcutting.');
+sayLine('orse', `Saddled and bridled, it carries you at its own pace: a grown one, fed and with no climbing, at ${+(SPECIES.orse.speed * footing(0)).toFixed(2)} tiles a second, ${percent(1 / 140 / footing(0))} faster for every level of climbing, never over ${MAX_MOUNT_SPEED} tiles a second but for what a Saddler's tack adds; and the higher its climbing the steeper the ground it takes you up. In the traces of a large cart or a wagon it adds ${percent(SPECIES.orse.pull ?? PULL_DEFAULT)} to its team's pace.`,
+  'Its level is its climbing, which it learns under a rider and in the traces.');
 sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart or a wagon. In the traces it adds ${percent(SPECIES.roxxen.pull!)} to its team's pace, where a beast not bred for the traces adds ${percent(PULL_DEFAULT)}, and its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
   `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
 sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go every ${MEND_EVERY} seconds: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,

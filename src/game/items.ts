@@ -360,7 +360,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   torch: { name: 'Torch', category: 'tool', weight: 0.8, decay: 4, description: 'A shaft with oiled cloth wound round the head of it. Touch it to a fire and it burns {light.torchShort:span} to {light.torchLong:span} by how well it was wound, throwing {light.torchNear:w} to {light.torchFar:w} tiles of light.' },
   candle: { name: 'Candle', category: 'misc', weight: 0.2, stackable: true, decay: 2, description: 'Wax drawn round a wick. Set one in a lantern and it will show you the ground on the blackest night.' },
   compost: { name: 'Compost', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 2, description: 'What a Middun leaves behind, which is the best thing that ever happened to a field. Spread it on tilled ground.' },
-  saddle: { name: 'Saddle', category: 'material', weight: 7, stackable: true, decay: 8, description: 'A tree of wood under stitched leather, girthed and stirruped. Fit one to an Orse and you can ride it.' },
+  saddle: { name: 'Saddle', category: 'material', weight: 7, stackable: true, decay: 8, description: 'A tree of wood under stitched leather, girthed and stirruped. Fit one to a Thistlekit and you can ride it.' },
   bridle: { name: 'Bridle', category: 'material', weight: 2, stackable: true, decay: 8, description: 'Headstall, bit and reins. Without one there is nothing to steer by.' },
   thatch: { name: 'Thatch', category: 'material', weight: 0.5, stackable: true, decay: 60 },
   sprout: { name: 'Sprout', category: 'plant', weight: 0.1, stackable: true, decay: 160, description: 'Plant it on grass or dirt to grow a tree. Wilts quickly if left lying around.' },

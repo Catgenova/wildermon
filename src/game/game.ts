@@ -34,7 +34,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, HAUL_SKILL, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -424,10 +424,8 @@ const HAUL_HUNGER = 0.0006;
 const VEHICLE_STEP = MAX_STEP / 2;
 /** Height units of extra slope every point of a beast's climbing is worth. */
 const CLIMB_PITCH = 0.16;
-/** No mount carries a rider faster than this. */
-export const MAX_MOUNT_SPEED = 5;
-/** What practice on bad ground is worth to a beast's pace, from its climbing. */
-export const footing = (climb: number): number => 0.9 + climb / 140;
+// A mount's pace (`mountSpeed`) is read off these, which its kind's words say (`creatures.ts`).
+export { footing, MAX_MOUNT_SPEED } from './creatures';
 /** Tiles to a side of a new island. */
 export const WORLD_SIZE = 1024;
 /**

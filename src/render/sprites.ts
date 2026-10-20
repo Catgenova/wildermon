@@ -2639,6 +2639,8 @@ export interface CreaturePose {
    * `scale`, so a rare one in a crate is drawn the crate's size.
    */
   rare?: number;
+  /** Saddled and bridled (`Creature.tacked`), for a kind that is drawn with its tack on. */
+  tacked?: boolean;
 }
 
 /**
@@ -3093,7 +3095,7 @@ export function drawCreature(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     drawWildermon(ctx, sx, sy, zoom, pose.species as string, pose.colors, {
       id: pose.id, facing: pose.facing, phase: pose.phase, moving: pose.moving, gait: pose.gait, fleece: pose.fleece, graze: pose.graze, rare: pose.rare,
       act: pose.act,
-    }, pose.stage);
+    }, pose.stage, pose.tacked);
     drawCreatureOverlay(ctx, sx, sy, zoom, pose, wildermonTop(pose.species as string, pose.stage));
     return;
   }
@@ -5060,8 +5062,11 @@ function drawCreatureOverlay(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.lineWidth = 3;
+    // Round joins: mitred, the outline of an M or a V put a dark spike up over the name at its points.
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = 'rgba(0,0,0,0.7)';
     ctx.strokeText(pose.label, sx, bar - 2 * zoom);
+    ctx.lineJoin = 'miter';
     ctx.fillStyle = '#e3b657';
     ctx.fillText(pose.label, sx, bar - 2 * zoom);
   }

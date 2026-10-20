@@ -2299,6 +2299,12 @@ export interface Seat {
   up: number;
   /** Astride a beast's back with the legs down either side of it, rather than sat with the feet on a floor. */
   astride?: boolean;
+  /**
+   * Astride, how far the legs are drawn up, nought to one: the thighs forward along the beast's back, the knees high and the
+   * shins folded back along its flanks, so the boots ride up at its sides -- on a small mount, or short in the stirrups.
+   * Left out, nought: the legs hang down its sides.
+   */
+  tuck?: number;
   /** Where the reins run to; the right-hand oar's rowlock (the left's is its mirror); the end of the tiller. */
   grip: V3;
   /**
@@ -3579,8 +3585,9 @@ function reinsIn(r: Rig, phi: number, moving: boolean, seat: Seat, fr: Frame): v
   const cart = moving && !seat.astride ? 1 : 0;
   const b = Math.sin((t * TAU) / 4.2);
   if (seat.astride) {
-    r.leg = [[46, 26, -8], [46, 26, -8]];
-    r.knee = [62, 62];
+    const k = Math.max(0, Math.min(1, seat.tuck ?? 0));
+    r.leg = [[46 + 40 * k, 26 + 10 * k, -8], [46 + 40 * k, 26 + 10 * k, -8]];
+    r.knee = [62 + 68 * k, 62 + 68 * k];
     r.foot = [12, 12];
     r.flat = [false, false];
     r.at = [0, 0.3, moving ? 0.12 * Math.abs(Math.sin(phi * 0.5)) : 0];

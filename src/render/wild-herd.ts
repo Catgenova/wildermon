@@ -1,14 +1,14 @@
 import {
-  add, beat, clamp, coatPalette, cross, curve, cyc, disc, lighter, merge, mix, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, smooth, sub, taper,
+  add, beat, clamp, coatPalette, cross, curve, cyc, disc, lighter, merge, mix, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, smooth, taper,
   TAU, tube, unit, type Anim, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, hoofMesh, quadPieces, type QuadLook } from './beastkit';
-import { mesh, onScreen, place, type Face, type Mat, type Mesh, type RGB, type V3, type View, type Xf } from './figure';
+import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 
 /**
- * The herd: the big grazers and beasts of burden -- the orse, the cudda,
- * the bura, the gorral, the shaggan, the snedda and the sappa (the roxxen is
- * its own line now, `./wild-haul`).
+ * The herd: the big grazers and beasts of burden -- the cudda, the bura,
+ * the gorral, the shaggan, the snedda and the sappa (the roxxen is its own
+ * line now, `./wild-haul`, and the orse `./wild-hare`).
  * Hooves, deep bodies, and heads still a size too big for them.
  */
 
@@ -118,208 +118,12 @@ function flower(at: V3, up: V3, r: number, n: number, petal: Mat, heart: Mat): M
   return merge(mesh(disc0.v.map((p) => to(lobe(p))), disc0.f), mesh(bead.v.map(to), bead.f));
 }
 
-/**
- * A sheet laid over something round, `at(t, a)` the point on it `t` nought
- * to one along it and `a` radians round it: from `left(t)` round to
- * `right(t)` at each `t`, in `K` rows along and `J` round, each facet drawn in
- * `mat` of its row and column. Faces out, away from the line it is laid
- * round; open all round its edge, since it lies on what it is laid over.
- */
-function drape(at: (t: number, a: number) => V3, left: (t: number) => number, right: (t: number) => number, K: number, J: number, mat: (k: number, j: number) => Mat): Mesh {
-  const v: V3[] = [];
-  const f: Face[] = [];
-  for (let k = 0; k <= K; k++) {
-    const t = k / K;
-    for (let j = 0; j <= J; j++) v.push(at(t, left(t) + (right(t) - left(t)) * (j / J)));
-  }
-  for (let k = 0; k < K; k++) {
-    for (let j = 0; j < J; j++) {
-      const A = k * (J + 1) + j, B = A + J + 1;
-      const i = [A, A + 1, B + 1, B];
-      // Wound to face out, away from the line it is laid round.
-      const c = i.reduce((s, q) => add(s, scale(v[q], 0.25)), [0, 0, 0] as V3);
-      const n = cross(sub(v[A + 1], v[A]), sub(v[B], v[A]));
-      f.push({ i: n[0] * c[0] + n[1] * c[1] < 0 ? i.reverse() : i, m: mat(k, j) });
-    }
-  }
-  return mesh(v, f);
-}
-
-/** Light drawn over a body, as a kind's glow is (`Kind.glow`): bright in the middle, gone at its edge, and added to what is under it. */
-function shine(g: CanvasRenderingContext2D, view: View, p: V3, r: number, c: RGB, al: number): void {
-  if (al < 0.01) return;
-  const [x, y] = onScreen(view, p);
-  const grad = g.createRadialGradient(x, y, 0, x, y, r);
-  grad.addColorStop(0, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al})`);
-  grad.addColorStop(0.45, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${al * 0.35})`);
-  grad.addColorStop(1, `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},0)`);
-  g.save();
-  g.globalCompositeOperation = 'lighter';
-  g.fillStyle = grad;
-  g.fillRect(x - r, y - r, r * 2, r * 2);
-  g.restore();
-}
-
-/**
- * Whether a point is out of sight behind an egg (`c`, `r` in the frame `xf`,
- * a head on its bone) as seen along `T`, toward the viewer: inside it, or
- * with the egg between it and the viewer.
- */
-function inEgg(xf: Xf, c: V3, r: V3, T: V3): (p: V3) => boolean {
-  const m = xf.m;
-  const back = (v: V3): V3 => [m[0] * v[0] + m[3] * v[1] + m[6] * v[2], m[1] * v[0] + m[4] * v[1] + m[7] * v[2], m[2] * v[0] + m[5] * v[1] + m[8] * v[2]];
-  const t = back(T), d: V3 = [t[0] / r[0], t[1] / r[1], t[2] / r[2]];
-  const dd = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
-  return (p) => {
-    const q = back([p[0] - xf.t[0], p[1] - xf.t[1], p[2] - xf.t[2]]);
-    const o: V3 = [(q[0] - c[0]) / r[0], (q[1] - c[1]) / r[1], (q[2] - c[2]) / r[2]];
-    const oo = o[0] * o[0] + o[1] * o[1] + o[2] * o[2], od = o[0] * d[0] + o[1] * d[1] + o[2] * d[2];
-    return oo < 1 || (od < 0 && od * od - dd * (oo - 1) > 0);
-  };
-}
-
 /** A tail: a rope with a tuft at its end. */
 const tuftTail = (n: number): Mesh[] => [
   taper([[0, 0, 0], [0, -0.5, 0]], 0.12, 0.1, 5, 'coat'),
   taper([[0, 0, 0], [0, -0.5, 0]], 0.1, 0.08, 5, 'coat'),
   merge(taper([[0, 0, 0], [0, -0.2, 0]], 0.08, 0.1, 5, 'coat'), orbAlong([0, -0.45, 0], [0, -1, 0], [0.22, 0.22, 0.34], n, 4, 'mark')),
 ];
-
-/* ---- the orse ------------------------------------------------------------------------ */
-
-/**
- * An orse: long in the leg and deep in the chest, its mane falling to one
- * side like water, with stars caught in it; feathered tufts at its fetlocks
- * like little wings, and a tail like a waterfall.
- */
-const ORSE_SPEC: QuadSpec = {
-  ...hoofed({ high: 3.3, len: 3.4, legs: 2.9, neck: 2.0, lean: 24, swing: [22, 40], ears: [18, 6], crop: [114, 10, 18] }),
-  // The neck rising from high on the chest, so a length of it shows between the back and the head, and the mane on it.
-  neck: { at: [0, 1.95, 0.55], len: 2.0, lean: 24 },
-  // Ears up on the crown, as a horse's are, rather than at the back corners of the head.
-  ears: { at: [0.5, 0.05, 0.85], out: 18, back: 6 },
-  // A waterfall of a tail: set high on the rump, arching back and pouring down.
-  tail: { at: [0, -2.25, 0.9], links: 3, len: 0.75, lift: -40, curl: -18, sway: 15 },
-};
-const ORSE_HEAD = { c: [0, 0.45, 0.12] as V3, r: [1.0, 1.1, 0.94] as V3 };
-/**
- * A point on its mane, in the neck's frame: `t` nought to one up the neck
- * from the withers to the poll, `a` radians round it from the crest (a
- * quarter turn is the right side), and `off` out from the mane's face. The
- * mane stands proud of the neck along the crest and lies close to it at its
- * edges, and the further down the side it falls the further back toward the
- * withers it runs, as water running off it would.
- */
-const orseMane = (t: number, a: number, off = 0): V3 => {
-  const up = 1.03 + 0.36 * Math.sin(Math.PI * (0.15 + 0.7 * t)) * Math.cos(a) ** 2, s = Math.sin(a);
-  return [s * (0.56 * up + off), -Math.cos(a) * (0.72 * up + off), -0.3 + 2.35 * t - 0.3 * s * s];
-};
-/** Tongues of the mane, a bump of one at each of `at` along the neck, `w` long. */
-const tongues = (t: number, at: readonly number[], w: number): number => at.reduce((s, c) => s + Math.exp(-(((t - c) / w) ** 2)), 0);
-/** Where the stars are caught in its mane, along it and round it: one in each of the tongues it falls in down the right side. */
-const ORSE_STARS: Array<[number, number]> = [[0.28, 1.2], [0.55, 1.35], [0.78, 1.5]];
-
-function orseBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = ORSE_HEAD;
-  // A long soft muzzle well out in front of the eyes, its top at their height, so side on it is a face with a nose to it.
-  const muzzle = merge(
-    orbAlong([0, 1.6, -0.08], [0, 1, -0.35], [0.6, 0.62, 0.55], n, k, 'muzzle'),
-    paint([disc([0.22, 2.07, -0.16], [0.3, 1, 0.1], 0.09, 0.07, 6, 'nose'), disc([-0.22, 2.07, -0.16], [-0.3, 1, 0.1], 0.09, 0.07, 6, 'nose')]),
-    smile([0, 2.0, -0.53], [0, 1, -0.4], 0.28),
-  );
-  // The mane, water: lying along the top of the neck, standing up off it at the crest, and falling to both sides of it -- in three
-  // tongues down the right, where most of it falls, and two little ones down the left -- with a streak of light along it just off
-  // the crest. Each side is a piece of its own, so the side turned away from the viewer goes down under the neck, and each is
-  // lined only round the outside, as water has no lines in it. Stars are caught in the tongues on the right, each two crossed
-  // slivers of light, so it has points, and a glow over it (`ORSE.extra`).
-  const K = lod ? 18 : 12;
-  const right = drape(orseMane, () => 0, (t) => 1.1 + 0.72 * tongues(t, [0.28, 0.56, 0.84], 0.085), K, 3, (_k, j) => (j === 0 ? 'shell' : 'water'));
-  const left = drape(orseMane, (t) => -0.85 - 0.4 * tongues(t, [0.4, 0.78], 0.1), () => 0, K, 2, () => 'water');
-  const stars = paint(ORSE_STARS.flatMap(([t, a]) => {
-    const c = orseMane(t, a, 0.03), n = unit(sub(orseMane(t, a, 1), c));
-    return [disc(c, n, 0.2, 0.06, 4, 'glint', { lit: true }), disc(c, n, 0.06, 0.2, 4, 'glint', { lit: true })];
-  }));
-  const forelock = taper(curve([0, 0.2, 1.02], [0.1, 0.8, 1.0], [0.15, 1.2, 0.72], 3), 0.26, 0.06, 6, 'mark', 0.6);
-  // The tail: three long links, flatter across than deep so side on it is a broad fall, widening and then drawn to a point: water,
-  // with streaks of its markings and of light down the length of it.
-  const streak = (d: [number, number, number]): Mesh => tube(curve([0, 0, 0], [0, -0.38, 0.03], [0, -0.75, 0], 2), d.map((x) => x * 0.62), d, n, (_ring, j) => (j % 3 === 1 ? 'mark' : j % 3 === 2 ? 'crystal' : 'water'));
-  const tail = [streak([0.24, 0.3, 0.36]), streak([0.36, 0.42, 0.44]), streak([0.44, 0.3, 0.08])];
-  // A little wing at each fetlock: two broad pale feathers, flat side out, swept back and up, lined lightly.
-  const wing = (sd: number): Mesh => merge(
-    blade(curve([sd * 0.2, -0.04, 0.3], [sd * 0.42, -0.3, 0.45], [sd * 0.5, -0.58, 0.78], 3), [0.05, 0.17, 0.18, 0.03], [sd, 0.15, 0.3], { mat: 'spot', rib: 'water', fold: 0.15, thick: 0.035 }),
-    blade(curve([sd * 0.2, -0.02, 0.22], [sd * 0.4, -0.32, 0.3], [sd * 0.47, -0.6, 0.48], 3), [0.04, 0.14, 0.14, 0.02], [sd, 0.15, 0.2], { mat: 'spot', rib: 'water', fold: 0.15, thick: 0.035 }),
-  );
-  const wings: Piece[] = (['fl', 'fr', 'hl', 'hr'] as const).map((leg) => {
-    const sd = leg[1] === 'l' ? -1 : 1;
-    return { key: `wing${leg}`, mesh: wing(sd), bone: `${leg}2`, bias: 0.035, after: `${leg}2`, front: [sd * 0.7, leg[0] === 'f' ? 0.7 : -0.7, 0] as V3, airy: true };
-  });
-  return quadPieces({
-    n, k,
-    body: { y: [-2.35, -2.2, -1.95, -1.1, 0, 1.1, 1.85, 2.1, 2.3], z: [0.35, 0.3, 0.3, 0.35, 0.3, 0.38, 0.45, 0.48, 0.5], w: [0.3, 0.8, 1.0, 1.15, 1.1, 1.2, 1.1, 0.85, 0.35], h: [0.3, 0.75, 0.95, 1.05, 1.0, 1.1, 1.0, 0.8, 0.35], belly: false },
-    neck: { w: 0.56, h: 0.72, len: 2.0 },
-    head: { c: H.c, r: H.r, face: muzzle, eye: { dir: [0.8, 0.52, 0.22], size: 0.34, rim: 0.12 }, blush: [[0.8, 0.5, -0.3], 0.22] },
-    // A horse's ear, pointed and near as thick as it is broad, so turned edge on it is still an ear and not a sliver.
-    ear: merge(
-      tube(curve([0, 0, 0], [0, 0.04, 0.36], [0, -0.04, 0.72], 4), [0.24, 0.3, 0.24, 0.135, 0.02], [0.16, 0.17, 0.15, 0.1, 0.02], n, 'coat', { up: [0, 1, 0], seam: 'start' }),
-      paint([disc([0, 0.19, 0.32], [0, 1, 0.1], 0.14, 0.2, 7, 'inner')]),
-    ),
-    earTurn: 25,
-    tail,
-    fore: { upper: [0.35, -1.5, 0.42, 0.28], lower: [0, -1.4, 0.24, 0.22], foot: hoofMesh(0.3, 0.24, n) },
-    hind: { upper: [0.35, -1.6, 0.5, 0.3], lower: [0, -1.6, 0.24, 0.22], foot: hoofMesh(0.3, 0.24, n) },
-    extras: [
-      { key: 'mane', mesh: merge(right, stars), bone: 'neck', bias: 0.12, after: ['neck', 'body'], front: [1, -0.7, 0], lines: false },
-      { key: 'maneLeft', mesh: left, bone: 'neck', bias: 0.12, after: ['neck', 'body'], front: [-1, -0.7, 0], lines: false },
-      { key: 'forelock', mesh: forelock, bone: 'head', bias: 0.22, after: ['head', 'ear0', 'ear1'] },
-      ...wings,
-    ],
-  });
-}
-
-export const ORSE: Kind = {
-  bones: quadBonesOf(ORSE_SPEC, (p, a) => {
-    plod(p, a);
-    // At a run the neck stretches out and the tail streams out behind.
-    p.neck[0] += 25 * a.gait * a.go;
-    p.tail[0] += 25 * a.gait * a.go;
-    // Standing, now and then a toss of the head, the neck drawn up with it; and a fore hoof pawing at the ground, twice over.
-    const toss = beat(a.t, [3.6, 14.2], 0.8) * (1 - a.graze);
-    p.head[0] += 24 * toss;
-    p.neck[0] -= 10 * toss;
-    const paw = stamp(a.t, [10.4, 11.1]) * (1 - a.go) * (1 - a.graze);
-    p.legs[1][0] += 18 * paw;
-    p.legs[1][1] += 0.7 * paw;
-    p.legs[1][2] = Math.max(p.legs[1][2], paw);
-  }),
-  build: orseBuild,
-  palette: (coat, mark) => {
-    // The muzzle the paler of the coat and the markings lightened, so a dark-maned orse does not have a dark nose.
-    const c = lit(coat, 30), fromCoat = lighter(pastel(c, 30), 0.3), fromMark = lighter(pastel(mark, 30), 0.3);
-    const water = mix([150, 206, 236], pastel(mark), 0.2);
-    return coatPalette(c, mark, {
-      muzzle: luma(fromMark) > luma(fromCoat) ? fromMark : fromCoat, water, crystal: [218, 240, 252], shell: mix(water, [246, 252, 255], 0.5),
-      spot: [250, 248, 240], hoof: [120, 104, 100],
-    }, 30);
-  },
-  // Stars caught in the mane, each twinkling in its own time: a point of light each, and only while the side of the mane it is in
-  // is turned toward the viewer and the head is not in front of it, since light added over the picture would shine through both.
-  extra: (g, view, b, a, under) => {
-    if (under) return;
-    const m = b.neck.m, T = view.T;
-    const side = clamp(((m[0] * T[0] + m[3] * T[1] + m[6] * T[2]) - 0.05) / 0.3);
-    if (side <= 0) return;
-    const head = inEgg(b.head, ORSE_HEAD.c, ORSE_HEAD.r, T);
-    ORSE_STARS.forEach(([u, round], q) => {
-      const p = place(b.neck, orseMane(u, round, 0.05));
-      if (head(p)) return;
-      shine(g, view, p, 0.7, [236, 246, 255], side * (0.35 + 0.4 * Math.max(0, Math.sin(a.t * 2.1 + q * 2.3))));
-    });
-  },
-  shadow: [2.6, 1.3],
-  stride: 0.7,
-  size: 1.6,
-};
 
 /* ---- the cudda ----------------------------------------------------------------------- */
 

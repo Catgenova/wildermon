@@ -253,7 +253,7 @@ import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
 import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawAnvil, drawCampfire, drawCreature, drawKiln, drawPlayer, drawSmelter, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
-import { wildermonHead, wildermonTop } from './wildermon';
+import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
   drawStandingDeck,
@@ -286,7 +286,9 @@ const SADDLE: Seat = { hands: 'reins', up: 0, astride: true, grip: [0, 7.5, 2.5]
 /** Reins: dark leather, inked. */
 const REIN_LEATHER = 'rgb(112, 74, 46)';
 const REIN_LINE = 'rgba(46, 30, 22, 0.85)';
-const TRACES_SCALE = Math.max(1, (1.25 * FIGURE_TOP) / (wildermonTop('orse') ?? FIGURE_TOP));
+/** The grown orse's top the draught size was set against, in pixels at zoom one: pinned, so its model changing does not resize every team. */
+const DRAUGHT_ORSE_TOP = 31.4;
+const TRACES_SCALE = Math.max(1, (1.25 * FIGURE_TOP) / DRAUGHT_ORSE_TOP);
 import {
   CELLAR_DARK, CELLAR_DARK_INK, CELLAR_FALL, CELLAR_VEIL, cellarFloor, cellarFloorHeight, cellarOrder, cutFace, earthEnd, earthFace, faceOn, KERB, OUT, UNDER,
   flightShade, SHAFT_STOPS, shaftAlpha, shaftShade, sidesOf, type CellarCanvas,
@@ -4124,7 +4126,11 @@ export class Renderer {
           if (reined) pe.sway = this.cartSwayOf(drivenBy, cam.worldToScreenX(vx, vy), cam.worldToScreenY(vx, vy, this.pieceBase(drivenBy, vx, vy)), zoom);
         }
         // A rider, astride.
-        else if (up) pe.seat = SADDLE;
+        else if (up) {
+          // The reins out to its bit, where its model has it, drawn up as the mount is; the legs drawn up as far as it says.
+          const own = wildermonSaddle(up.species, stageOf(up)), k = ageDef(up, this.game.time).scale * rarityOf(up).size;
+          pe.seat = own ? { ...SADDLE, grip: [own.grip[0] * k, own.grip[1] * k, own.grip[2] * k], tuck: own.tuck } : SADDLE;
+        }
       }
       // A wall laid at the end of the line is laid again over one already laid, which took the wash off it then.
       this.wallLift = null;
@@ -4758,7 +4764,9 @@ export class Renderer {
     const f = this.game.driving();
     if (f) return furnitureDef(f.kind).vehicle?.seat ?? furnitureDef(f.kind).boat?.seat ?? 0;
     const up = this.game.mounted();
-    return up ? SPECIES[up.species]?.mount ?? 0 : 0;
+    if (!up) return 0;
+    // On its saddle: where its model has it at the stage it has come to, drawn up as the mount is by its age and rarity.
+    return (wildermonSeat(up.species, stageOf(up)) ?? SPECIES[up.species]?.mount ?? 0) * ageDef(up, this.game.time).scale * rarityOf(up).size;
   }
 
   /**
@@ -5305,6 +5313,7 @@ export class Renderer {
           rare: cr.rare,
           stage,
           act: actOf(cr, this.game.time),
+          tacked: cr.tacked,
         };
         const draw = (g: CanvasRenderingContext2D, px: number, py: number): void => drawCreature(g, px, py, zoom, look);
         this.paint(ctx, zoom, hit > 0 || tint ? 'flash' : hovering ? 'hover' : 'none', tint ? tint.share : hit * 0.92, ent.sx + csx, ent.sy + csy, draw,

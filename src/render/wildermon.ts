@@ -1,12 +1,14 @@
-import { darker, drawBeast, drawBeastPortrait, headOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
+import { darker, drawBeast, drawBeastPortrait, extentOf, headOf, kitOf, topOf, type Anim, type BeastPose, type Kind } from './beasts';
+import type { V3 } from './figure';
 import { LUME, VESP } from './wild-air';
 import { QUILL, SEDRA } from './wild-birds';
 import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
 import { DRAGON } from './wild-dragon';
 import { DOWSE, SNOUT } from './wild-diggers';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
-import { BURA, CUDDA, GORRAL, ORSE, SAPPA, SHAGGAN, SNEDDA } from './wild-herd';
+import { BURA, CUDDA, GORRAL, SAPPA, SHAGGAN, SNEDDA } from './wild-herd';
 import { CARTLING, HAULHORN, WAGONOX } from './wild-haul';
+import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THISTLEKIT } from './wild-hare';
 import { MAGGA } from './wild-odd';
 import { CLAYBURROW, MUDLET, TERRAMOLE } from './wild-clay';
 import { SANDPINCHER, SANDPINNACLE, SANDPIP } from './wild-sand';
@@ -57,7 +59,7 @@ export const WILDERMON: Record<string, Kind> = {
   dowse: DOWSE,
   snout: SNOUT,
   roxxen: CARTLING,
-  orse: ORSE,
+  orse: THISTLEKIT,
   cudda: CUDDA,
   bura: BURA,
   gorral: GORRAL,
@@ -162,13 +164,21 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   cobbe: [MORTARBACK, BASTIONDRAKE],
   roxxen: [WAGONOX, HAULHORN],
   tinka: [PATCHCOON, MENDERMASK],
+  orse: [BUNNYCOURSER, MOONHARE],
+};
+
+/** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
+const TACKED: Partial<Record<string, { kinds: readonly Kind[]; seat: (stage: number) => number; grip: (stage: number) => V3; tuck: readonly number[] }>> = {
+  orse: { kinds: HARE_TACKED, seat: hareSeat, grip: hareGrip, tuck: HARE_TUCK },
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */
 export const modelled = (species: string | undefined): boolean => !!species && species in WILDERMON;
 
 /** The model a kind is drawn as at a stage, and the name its pictures are kept under. */
-function modelAt(species: string, stage = 0): { key: string; kind: Kind } | null {
+function modelAt(species: string, stage = 0, tacked = false): { key: string; kind: Kind } | null {
+  const saddled = tacked ? TACKED[species]?.kinds[Math.max(0, Math.min(2, stage))] : undefined;
+  if (saddled) return { key: `${species}@${stage}+tack`, kind: saddled };
   const later = stage > 0 ? WILDERMON_STAGES[species]?.[stage - 1] : undefined;
   if (later) return { key: `${species}@${stage}`, kind: later };
   const kind = WILDERMON[species];
@@ -176,15 +186,50 @@ function modelAt(species: string, stage = 0): { key: string; kind: Kind } | null
 }
 
 /** A wildermon with its feet at (sx, sy), as it is drawn at its stage. */
-export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose, stage = 0): void {
-  const m = modelAt(species, stage);
+export function drawWildermon(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, species: string, colors: [string, string], p: BeastPose, stage = 0, tacked = false): void {
+  const m = modelAt(species, stage, tacked);
   if (m) drawBeast(ctx, sx, sy, zoom, m.key, m.kind, colors, p);
 }
 
 /** How far over its feet the top of a kind is, standing, at zoom one: where its name and health bar go. */
 export function wildermonTop(species: string, stage = 0): number | undefined {
   const m = modelAt(species, stage);
-  return m ? topOf(m.key, m.kind) : undefined;
+  if (!m) return undefined;
+  return CLEARS.has(species) ? Math.max(topOf(m.key, m.kind), clearOf(m.key, m.kind)) : topOf(m.key, m.kind);
+}
+
+/**
+ * The kinds whose name and health bar go over the highest they reach standing about or at their acts, not only standing still and
+ * going: a beast that rears, or whose tall ears swivel, would otherwise come up through its own name.
+ */
+const CLEARS = new Set(['orse']);
+/** Over the feet the highest any part of a kind comes, in screen units at zoom one, through its loop standing and its strike and task, with a margin. */
+const clears = new Map<string, number>();
+function clearOf(key: string, kind: Kind): number {
+  const had = clears.get(key);
+  if (had !== undefined) return had;
+  const kit = kitOf(key, kind, 0), base: Anim = { t: 0, u: 0, go: 0, gait: 0, graze: 0, blink: false, breath: 0.5, fleece: 1, seed: 0 };
+  let hi = 0;
+  const up = (a: Anim): void => { for (let f = 0; f < 8; f++) hi = Math.max(hi, -extentOf(kind, kit, f, a).y0); };
+  for (let t = 0; t < 24; t += 0.5) up({ ...base, t, breath: 0.5 + 0.5 * Math.sin(t) });
+  for (const act of kind.acts ?? []) for (let q = 0; q <= 16; q++) up({ ...base, act: { kind: act, t: q / 16 } });
+  const top = hi * (kind.size ?? 1) + 3;
+  clears.set(key, top);
+  return top;
+}
+
+/** How high a rider sits on a kind at its stage, in screen pixels at zoom one over its feet, grown: where its model's saddle is. */
+export function wildermonSeat(species: string, stage = 0): number | undefined {
+  return TACKED[species]?.seat(stage);
+}
+
+/**
+ * How its rider sits on a kind at its stage: where the reins go to -- its bit, in the rider's own units from the saddle, grown
+ * (`Seat.grip`) -- and how far the legs are drawn up (`Seat.tuck`).
+ */
+export function wildermonSaddle(species: string, stage = 0): { grip: V3; tuck: number } | undefined {
+  const t = TACKED[species];
+  return t && { grip: t.grip(stage), tuck: t.tuck[Math.max(0, Math.min(t.tuck.length - 1, stage))] };
 }
 
 /** Where a kind's head is over its feet at a facing, at zoom one (`headOf`): where the reins of a team come to. */
