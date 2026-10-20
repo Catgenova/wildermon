@@ -86,6 +86,7 @@ import { FURNITURE_BY_ID, isPlanter, rackDeck, rackSpots } from '../game/furnitu
 import { isLampPiece, lampBurning } from '../game/lamps';
 import { drawLampBloom } from './furniture';
 import { drawMemorial, memorialNight } from './memorial';
+import { denHit, denPools, drawDen, drawDenLive, isDen, prewarmDen, type DenLook } from './dens';
 import { MEMORIAL } from '../game/memorial';
 import { COUNTER_HOLDS, counterHeld, counterSeat, streetOf } from '../game/counters';
 import { counterHole, counterWares, drawCounterDaylight, drawCounterFrontKept, drawCounterInside, drawCounterReveal, stripeOf, type CounterLook } from './counter';
@@ -1816,7 +1817,7 @@ export class Renderer {
    * as \`lightLayers\` lays them (a light's hole its strength at its middle,
    * a little over half that at a little over half its reach, nothing at its
    * edge). For something laying light of its own under the wash, to be laid
-   * as much stronger (\`drawSmelterNight\`).
+   * as much stronger (\`drawSmelterNight\`, \`drawDenLive\`).
    */
   private nightOver(sx: number, sy: number, dark: number): number {
     let keep = 1;
@@ -1911,6 +1912,23 @@ export class Renderer {
     for (const f of this.game.furniture.values()) {
       if (!isRuneLantern(f) || (f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
       out.push(runeLanternPool(f, this.camera.rotation));
+    }
+    return out;
+  }
+
+  /**
+   * The soft light of each wildermon bed's bells near enough to matter
+   * (`denPools`), as \`lights\` gathers what burns: a little of the night
+   * taken off the bed and round it, lavender, so the bells' own light laid in
+   * the bed's place comes up through what is left (`drawDenLive`).
+   */
+  private denPools(): LightSource[] {
+    const out: LightSource[] = [];
+    const { x: px, y: py, level } = this.game.player;
+    if (level < 0) return out;
+    for (const f of this.game.furniture.values()) {
+      if ((f.level ?? 0) < 0 || Math.abs(f.x - px) >= 60 || Math.abs(f.y - py) >= 60) continue;
+      out.push(...denPools(f.kind, furnitureCentre(f), pieceFacing(f), this.camera.rotation));
     }
     return out;
   }
@@ -3346,7 +3364,7 @@ export class Renderer {
     this.spells.update({ eye: this.camera, now: performance.now() / 1000, dt, fast: this.fast, night: this.game.darkness() });
     this.game.spellLights = this.spells.lights;
     // What is burning, for glass to glow with at night, and last frame's glow gone.
-    this.lightsNow = this.game.darkness() > 0.02 ? [...this.game.lights(), ...this.runeLanternPools()] : [];
+    this.lightsNow = this.game.darkness() > 0.02 ? [...this.game.lights(), ...this.runeLanternPools(), ...this.denPools()] : [];
     this.glassNight.length = 0;
     // Every drawbridge by the border it is hinged on, and the two tiles either side of that border, one of
     // which draws it (`drawGateAt`): a number per tile, so the tiles with none cost one lookup.
@@ -5457,6 +5475,30 @@ export class Renderer {
             });
           }, undefined, pieceBox);
           drawn = box;
+        } else if (isDen(piece.kind)) {
+          /*
+           * A wildermon bed (`dens.ts`): its bake under the pointer's ring, and
+           * whoever sleeps in it (`PlacedFurniture.sleeper`) curled on its
+           * cushion in their own coat, breathing, the near rim over them and a
+           * `z` rising off them. After dark its bells throw a soft pool of
+           * light into the night's light layer (`denPools`), and their own
+           * light is added here in the bed's place, turned up by what the
+           * wash will still take off it (`nightOver`) -- so whatever stands in
+           * front is drawn over it, and no frame pays the runestones' keeping
+           * for a deed full of beds.
+           */
+          const look = this.denLook(piece), dark = this.game.darkness();
+          this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+            drawDen(g, px, py, zoom, piece.kind, view, look, this.time, false);
+          }, undefined, pieceBox);
+          // Clicked by its basket and its hood, not the grass at its foot.
+          const [hl, ht, hr, hb] = denHit(piece.kind, view, zoom);
+          drawn = [hl * zoom, ht * zoom, hr * zoom, hb * zoom];
+          // Its bells' light turned up by what the wash will take off it there, their own pool of light having taken some (`denPools`).
+          drawDenLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, look, this.time, dark, dark > 0.02 ? this.nightOver(ent.sx, ent.sy - 24 * zoom, dark) : 0);
+          // The turns either side of this one baked ahead while the browser is idle, so turning the camera finds them made.
+          const rot = this.camera.rotation, facing = pieceFacing(piece);
+          prewarmDen(piece.kind, [pieceView(facing, rot + 1), pieceView(facing, rot - 1)], zoom, look);
         } else if (isRuneLantern(piece)) {
           /*
            * A rune lantern post, drawn as the runestones are (`runelantern.ts`):
@@ -14504,6 +14546,14 @@ export class Renderer {
   }
 
   /** How a rune lantern post is drawn: the way it faces, its moss as the stage of a statue's would be, and which of its cuts it is. */
+  /** Who sleeps in a wildermon bed, as it is drawn: their kind, the stage they are drawn at, their coat and markings (`DenLook`), or nobody. */
+  private denLook(f: PlacedFurniture): DenLook {
+    const cr = f.sleeper !== undefined ? this.game.creatures.get(f.sleeper) : undefined;
+    if (!cr) return {};
+    const def = SPECIES[cr.species];
+    return { sleeper: { colors: def?.variants[cr.variant] ?? def?.variants[0] ?? ['#c8b49a', '#8a7060'], seed: cr.id, species: cr.species, stage: stageOf(cr) } };
+  }
+
   private runeLook(f: PlacedFurniture): RuneLanternLook {
     const days = pieceGreen(this.game, f, this.greenAt) ?? 0;
     const stage = Math.round(greenShows(days, 0, this.wetness(f.x, f.y)) * PIECE_STAGES);

@@ -14,6 +14,7 @@ import { MOSS, hashOf } from './ivy';
 import { LAMP_ARM, LAMP_GLASS, LAMP_HANG } from '../game/lamps';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
 import { drawPlinth, drawPlinthRunes } from './plinth';
+import { drawDen, isDen } from './dens';
 import { BRASS_PAINT, IRON_PAINT, LINEN_PAINT, WOOD_TONE } from './materials';
 
 /**
@@ -4209,6 +4210,23 @@ const MODELS: Record<string, Model> = {
    * anything that draws a piece by its kind alone: its two courses and its
    * stone, as high as that draws them.
    */
+  /*
+   * The wildermon beds are drawn as the Runestones are, by `dens.ts`; these
+   * are their blocks, for how tall each stands (`FURNITURE_HEIGHT`): the
+   * basket, and the hood over the back of the two bigger ones.
+   */
+  den_small: ({ sc, wood }) => {
+    sc.box(-4.5, 4.5, -4.5, 4.5, 0, 3.1, wood);
+    sc.box(-3, -1.5, -4.5, -3, 3.1, 5.6, wood);
+  },
+  den_medium: ({ sc, wood }) => {
+    sc.box(-8.6, 8.6, -8.6, 8.6, 0, 4.6, wood);
+    sc.box(-4, 4, -8.6, 0, 4.6, 14, wood);
+  },
+  den_large: ({ sc, wood }) => {
+    sc.box(-13, 13, -13, 13, 0, 5.8, wood);
+    sc.box(-7.3, 7.3, -13, 2, 5.8, 21.5, wood);
+  },
   memorial_stone: ({ sc }) => {
     sc.shadows = [[-7, 7, -4, 4]];
     sc.box(-7.3, 7.3, -4.3, 4.3, 0, 1.7, STONE);
@@ -5580,6 +5598,8 @@ export function drawFurniture(ctx: CanvasRenderingContext2D, sx: number, sy: num
     if (live) drawPlinthRunes(ctx, sx, sy, zoom, view, trim, 0, false);
     return box;
   }
+  // A wildermon bed, built of the same kit (`dens.ts`), empty: one that somebody sleeps in is drawn by the renderer, who knows who.
+  if (isDen(kind)) return drawDen(ctx, sx, sy, zoom, kind, view, {}, undefined, live);
   const rolling = !crew && !!WHEELS[kind];
   const b = bakedFor(zoom, kind, lit, tint, rolling ? undefined : trim, view, material, crew, manned, rolling);
   const k = zoom / b.scale;
