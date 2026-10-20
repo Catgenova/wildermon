@@ -109,11 +109,13 @@ begin
   insert into said values ('AURA|' || v_n || ' of ' || (v_beasts * v_chan));
   insert into said values ('PAIRS|' || (v_beasts * v_chan) || ' over ' || v_chan || ' channels');
 
-  -- One worked out straight from the tables, owing nothing to either body: its blood, and a rare one's rarity.
+  -- One worked out straight from the tables, owing nothing to either body: its blood, a rare one's rarity, and the
+  -- stage it has evolved to (a wild one can come in evolved now: wild_stage_roll).
   select count(*) filter (where max_health(c) is distinct from round(s.health
       * coalesce((select exp(sum(ln(e.mul))) from trait_effect e
                    where e.channel = 'hardy' and e.trait = any(coalesce(c.traits, '{}'))), 1)
-      * coalesce((select r.blood from rarity_def r where r.id = c.rare), 1)))
+      * coalesce((select r.blood from rarity_def r where r.id = c.rare), 1)
+      * power(stage_mul_hardy(), stage_of(c))))
     into v_n from creature c join species_def s on s.id = c.species where c.mode <> 'deed';
   insert into said values ('SUMS|' || v_n);
 
