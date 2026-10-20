@@ -1,4 +1,5 @@
 import type { ActionDef, Target } from './actions';
+import type { Game } from './game';
 import { isDone, progressOf, type Bill } from './building';
 import { TileType } from '../world/tiles';
 import { POOL_DEPTH, POOL_LIP, poolFloor, poolLevel } from '../world/springs';
@@ -104,6 +105,30 @@ export const foundationState = (f: Foundation): string =>
     ? `poured to ${f.top}`
     : `${Math.round(foundationProgress(f) * 100)}% · ${f.needed.concrete ?? 0} concrete still to go`;
 
+/**
+ * One barrowful of concrete into a foundation's shuttering, as a go of "Pour
+ * the foundation" works it, without the builder's skill or words. A hod
+ * carrier's barrowful goes in the same way (`Game.fitPiece`). The island's
+ * `perform_foundation` and `hod_fit`.
+ */
+export function pourIntoFoundation(g: Game, f: Foundation): void {
+  f.needed.concrete = Math.max(0, (f.needed.concrete ?? 0) - 1);
+  g.events.emit('world', f.x, f.y);
+  if (!foundationDone(f)) return;
+  /*
+   * And the top of it is packed ground, which is what everything that asks
+   * what a tile is made of wants to hear: a building wants packed dirt
+   * under it and paving wants a packed floor, and a slab is both. The
+   * corners are not touched — that is the whole promise of the thing —
+   * only what the top of the tile is surfaced with.
+   */
+  g.world.setTile(f.x, f.y, TileType.PackedDirt);
+  // Poured, and bare: the moss starts from here (`greening.ts`).
+  f.greenSince = greenNow();
+  // A slab is a wall to water, and one poured over a spring stops it.
+  g.poolsChanged(f.x, f.y);
+}
+
 type TileTarget = Extract<Target, { kind: 'tile' }>;
 const isTile = (t: Target): t is TileTarget => t.kind === 'tile';
 
@@ -166,24 +191,11 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return;
       const f = g.foundationAt(t.x, t.y);
       if (!f || foundationDone(f) || !g.inventory.consume('concrete')) return;
-      f.needed.concrete = Math.max(0, (f.needed.concrete ?? 0) - 1);
-      g.events.emit('world', t.x, t.y);
+      pourIntoFoundation(g, f);
       if (!foundationDone(f)) {
         g.logMsg(`You work another barrowful into the shuttering. ${f.needed.concrete} to go.`, 'event');
         return true;
       }
-      /*
-       * And the top of it is packed ground, which is what everything that asks
-       * what a tile is made of wants to hear: a building wants packed dirt
-       * under it and paving wants a packed floor, and a slab is both. The
-       * corners are not touched — that is the whole promise of the thing —
-       * only what the top of the tile is surfaced with.
-       */
-      g.world.setTile(f.x, f.y, TileType.PackedDirt);
-      // Poured, and bare: the moss starts from here (`greening.ts`).
-      f.greenSince = greenNow();
-      // A slab is a wall to water, and one poured over a spring stops it.
-      g.poolsChanged(f.x, f.y);
       g.note('poured_foundation');
       g.logMsg(`The last of it goes in and the slab stands level at ${f.top}. You can build on it, pave it, or bring a bridge to it.`, 'event');
       return false;

@@ -2666,6 +2666,17 @@ jobs:
             --outfile=node_modules/.cache/workercount.mjs --log-level=error
           node node_modules/.cache/workercount.mjs
 
+      - name: A hod carrier works on everything built off a bill
+        run: |
+          # Asked for: the Brickling works on floors and the rest of a deed's
+          # building, not only ground-floor walls. Walls on any storey, floors,
+          # roofs, stairs, ladders, columns, bridge and aqueduct spans and
+          # foundations, chosen and fitted piece for piece the same on both
+          # sides, and an hour of one at work on each.
+          npx esbuild supabase/test/hodwork.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/hodwork.mjs --log-level=error
+          node node_modules/.cache/hodwork.mjs
+
       - name: A wild thing goes after its span and the stretch is stocked afresh
         run: |
           # Asked: "I havent seen a single one of the new 60 wildermon." Country

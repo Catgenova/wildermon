@@ -2763,6 +2763,18 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 214,
+    day: '2026-10-20',
+    lines: () => [
+      `A ${SPECIES.cobbe.name} at work on a settlement now carries the hod to all planned building work within its reach, not only to walls on the ground floor: `
+        + 'walls on any storey, floors, roofs, staircases, ladders, decks on piers, columns, the open span of a bridge or an aqueduct, and the concrete of a foundation.',
+      'Each piece goes in as a go of your own puts one in: the bill comes down by one, and the last piece does what yours would, '
+        + 'starting the moss or ivy, making a glasshouse under a glass roof, opening a shop counter\'s store, letting an aqueduct\'s water run, or packing a foundation\'s top.',
+      'It chooses as before: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, '
+        + 'and of what that work wants, whatever is furthest behind its bill.',
+    ],
+  },
 ];
 
 

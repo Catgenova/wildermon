@@ -2444,8 +2444,9 @@ import{$a as e,$s as t,Al as n,Au as r,Bc as i,Bu as a,Ci as o,Cs as s,Da as c,D
     and on a deed it <b>reads the ground</b> and marks what is down there. The <b>Sappa</b> buries more
     seed than it eats, and on a deed it <b>plants sprouts</b> where the axe has been. The <b>${j.cobbe.name}</b>
     (the Cobbe that was), which evolves into a ${j.cobbe.stages[0].name} at level ${M[0]} and a ${j.cobbe.stages[1].name} at ${M[1]},
-    carries the <b>hod</b>: whatever a planned wall still wants out of your stores, crates and furniture alike, and into
-    that wall, one piece a trip. The <b>Tinka</b> <b>mends</b> the damaged gear in your stores. The
+    carries the <b>hod</b>: whatever a planned wall on any storey, a floor, roof, staircase or ladder, a column, the
+    open span of a bridge or an aqueduct, or a foundation still wants out of your stores, crates and furniture alike,
+    and into it, one piece a trip. The <b>Tinka</b> <b>mends</b> the damaged gear in your stores. The
     <b>Middun</b> eats what is rotting on the ground and turns it into <b>compost</b>. The <b>Snout</b>
     smells out <b>buried relics</b> and marks where to dig &mdash; taming ${j.snout.tameLevel}, and worth every point of
     it.</p>

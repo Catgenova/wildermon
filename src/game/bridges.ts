@@ -200,6 +200,23 @@ export const bridgeName = (b: Bridge): string =>
   b.material ? `${bridgeDef(b).name} (${b.material.toLowerCase()})` : bridgeDef(b).name;
 /** Finished when every tile of deck is. */
 export const bridgeDone = (b: Bridge): boolean => b.spans.every(isDone);
+
+/** The span of a bridge or an aqueduct that is worked: the first still open, as a builder works it from one end. The island's `bridge_span` lowest `n` not `span_done`. */
+export const openSpan = (b: Bridge): BridgeSpan | undefined => b.spans.find((x) => !isDone(x));
+
+/**
+ * One piece of `id` into a bridge's open span, as a go of "Work on the bridge"
+ * fits it, without the builder's skill, tool or words: the bill comes down by
+ * one, and the last span decked starts the moss on it (`greening.ts`). A hod
+ * carrier's piece goes in the same way (`Game.fitPiece`). An aqueduct's is
+ * `fitIntoChannel` (`./aqueducts`).
+ */
+export function fitIntoSpan(g: Game, b: Bridge, s: BridgeSpan, id: string): void {
+  s.needed[id] = Math.max(0, (s.needed[id] ?? 0) - 1);
+  // Open, and bare: the moss on a stone arch starts from here (`greening.ts`).
+  if (bridgeDone(b)) b.greenSince = greenNow();
+  g.events.emit('world', s.x, s.y);
+}
 export const bridgeProgress = (b: Bridge): number =>
   b.spans.length ? b.spans.reduce((n, s) => n + progressOf(s), 0) / b.spans.length : 1;
 
@@ -418,22 +435,19 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       // One unit of one thing per go, as with a wall, and from where a wall's comes: the first by name to hand.
       const id = Object.keys(s.needed).sort().find((k) => s.needed[k] > 0 && toHand(g, k, undefined, s) > 0);
       if (!id || !takeUnit(g, id, undefined, s)) return;
-      s.needed[id] = Math.max(0, s.needed[id] - 1);
+      fitIntoSpan(g, b, s, id);
       g.gainSkill(def.skill, 0.5);
       g.wearTool(def.tool, 0.4);
       if (isDone(s)) {
         const left = b.spans.filter((x) => !isDone(x)).length;
         if (left) g.logMsg(`That span is decked. ${left} still open.`, 'event');
         else {
-          // Open, and bare: the moss on a stone arch starts from here (`greening.ts`).
-          b.greenSince = greenNow();
           g.note('bridged');
           g.logMsg(`The last span is decked and the ${bridgeName(b).toLowerCase()} is open. ${def.carts ? 'A cart will cross it.' : 'Foot traffic only; nothing with a wheel.'}`, 'system');
         }
       } else {
         g.logMsg(`You work a ${itemDef(id).name.toLowerCase()} into the span. It still wants ${spanWants(s)}.`, 'event');
       }
-      g.events.emit('world', s.x, s.y);
       return !!b.spans.find((x) => !isDone(x));
     },
   },

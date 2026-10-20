@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { isDone } from './building';
 import { takeUnit, toHand } from './buildstock';
-import { BRIDGES, bridgeDone, CLEARANCE, PULL_REACH, pullDownRefusal, spanTiles, spanWants, type Bridge } from './bridges';
+import { BRIDGES, bridgeDone, CLEARANCE, PULL_REACH, pullDownRefusal, spanTiles, spanWants, type Bridge, type BridgeSpan } from './bridges';
 import type { Game } from './game';
 import { greenNow } from './greening';
 import { itemDef } from './items';
@@ -228,6 +228,25 @@ export function aqueductHeads(g: Game, tx: number, ty: number): Array<{ x: numbe
   return out;
 }
 
+/**
+ * One piece of `id` into an aqueduct's open span, as a go of "Work on the
+ * aqueduct" fits it, without the builder's skill, tool or words: the bill
+ * comes down by one, and with the last span laid the moss starts on it and
+ * the springs whose water reaches its head are settled again, so its water
+ * runs from then. A hod carrier's piece goes in the same way (`Game.fitPiece`).
+ * The island's `perform_aqueduct` and `hod_fit`.
+ */
+export function fitIntoChannel(g: Game, b: Bridge, s: BridgeSpan, id: string): void {
+  s.needed[id] = Math.max(0, (s.needed[id] ?? 0) - 1);
+  g.events.emit('world', s.x, s.y);
+  if (!bridgeDone(b)) return;
+  // Finished, and bare: the moss on its stone starts from here, as on a stone arch (`greening.ts`).
+  b.greenSince = greenNow();
+  // The springs whose water reaches its head are settled again now, so what is said is what happens.
+  g.springs.channelChanged(channelOf(g, b));
+  g.springs.update(Date.now());
+}
+
 /** An aqueduct as the springs see it, finished and pouring into what stands at its foot now. */
 export const channelOf = (g: Game, b: Bridge): Channel => ({
   id: b.id, from: [b.ax, b.ay], to: [b.bx, b.by], height: b.height, along: b.spans.length,
@@ -360,10 +379,9 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       // One unit of one thing a go, as with a bridge: the first by name to hand.
       const id = Object.keys(s.needed).sort().find((k) => s.needed[k] > 0 && toHand(g, k, undefined, s) > 0);
       if (!id || !takeUnit(g, id, undefined, s)) return;
-      s.needed[id] = Math.max(0, s.needed[id] - 1);
+      fitIntoChannel(g, b, s, id);
       g.gainSkill(AQUEDUCT.skill, 0.5);
       g.wearTool(AQUEDUCT.tool, 0.4);
-      g.events.emit('world', s.x, s.y);
       if (!isDone(s)) {
         g.logMsg(`You work a ${itemDef(id).name.toLowerCase()} into the span. It still wants ${spanWants(s)}.`, 'event');
         return true;
@@ -373,11 +391,6 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
         g.logMsg(`That span is laid. ${left} still open.`, 'event');
         return true;
       }
-      // Finished, and bare: the moss on its stone starts from here, as on a stone arch (`greening.ts`).
-      b.greenSince = greenNow();
-      // The springs whose water reaches its head are settled again now, so what is said is what happens.
-      g.springs.channelChanged(channelOf(g, b));
-      g.springs.update(Date.now());
       g.logMsg(aqueductSays(g, b), 'system');
       return false;
     },

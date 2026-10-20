@@ -2315,7 +2315,7 @@ insert into species_diet values ('plucka', 'pomegranate');
 insert into species_diet values ('plucka', 'apricot');
 insert into species_diet values ('plucka', 'quince');
 insert into species_diet values ('plucka', 'nuts');
-insert into species_def values ('cobbe', 'Brickling', 'Set to work on a settlement it carries what a planned ground-floor wall within 12 tiles of the token, 10 further for every 10 levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it: the nearest wall first, and of what that wall wants whatever is furthest behind its bill. Its level is its masonry. At level 25 it evolves into a Mortarback.', 40, 5, 1.5, 20, 0.09, 'bread or something cooked', false, 'hod', 12, 'eats the {food} in one, looks at you, and goes back to shoving rocks about', 'walks off with its head down and does not look back', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, null, null, null);
+insert into species_def values ('cobbe', 'Brickling', 'Set to work on a settlement it carries what a planned wall on any storey, floor, roof, staircase, ladder, column, the open span of a bridge or an aqueduct, or a foundation within 12 tiles of the token, 10 further for every 10 levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it as a builder''s go would: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, and of what that work wants whatever is furthest behind its bill. Its level is its masonry. At level 25 it evolves into a Mortarback.', 40, 5, 1.5, 20, 0.09, 'bread or something cooked', false, 'hod', 12, 'eats the {food} in one, looks at you, and goes back to shoving rocks about', 'walks off with its head down and does not look back', 4, false, false, false, false, false, false, false, false, false, false, true, false, null, null, null, null, null, null, null);
 update species_def set hide = 'thick' where id = 'cobbe';
 update species_def set stages = array['Mortarback', 'Bastiondrake']::text[] where id = 'cobbe';
 update species_def set was = array['Cobbe']::text[] where id = 'cobbe';
@@ -4421,7 +4421,7 @@ insert into gather_def values ('reed', 'foraging', 'cutting reeds', 'cut reeds a
 insert into gather_def values ('water', 'carrying', 'carrying water', 'carry water from the shore or the well to your barrels');
 insert into gather_def values ('prospect', 'prospecting', 'reading the ground', 'read the ground for metal and mark what it finds');
 insert into gather_def values ('plant', 'forestry', 'planting', 'plant sprouts where the trees have been cut');
-insert into gather_def values ('hod', 'masonry', 'carrying the hod', 'carry brick and timber to your planned walls and fit it');
+insert into gather_def values ('hod', 'masonry', 'carrying the hod', 'carry to your planned building work what it wants out of your stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations');
 insert into gather_def values ('mend', 'repair', 'mending', 'mend the damaged gear in your stores');
 insert into gather_def values ('compost', 'farming', 'clearing up', 'clear away what is rotting and turn it into compost');
 insert into gather_def values ('seek', 'archaeology', 'nosing about', 'smell out buried relics and mark where to dig');

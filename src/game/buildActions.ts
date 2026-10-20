@@ -32,7 +32,7 @@ import type { Game } from './game';
 import { gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
 import { greenNow } from './greening';
 import { glassPlanRefusal, glassResync } from './glasshouse';
-import { counterFinished, counterGone, counterPlanRefusal, counterRemoveRefusal, counterStreetRefusal } from './counters';
+import { counterGone, counterPlanRefusal, counterRemoveRefusal, counterStreetRefusal } from './counters';
 import { lampWallRefusal } from './lamps';
 import { itemDef } from './items';
 import { billPlus, deckBears, deckCarries, metres, pierBill, pierDrop } from './piers';
@@ -435,13 +435,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!used || !mat) return false;
       g.gainSkill(mat.skill, 0.4);
       g.events.emit('world', t.x, t.y);
+      // What the last of it starts, as a hod carrier's piece does (`Game.wallFitted`).
+      g.wallFitted(wall);
       if (isDone(wall)) {
-        // Finished, and bare: the ivy starts from here (`greening.ts`).
-        wall.greenSince = greenNow();
-        // The last wall round a building roofed in glass makes a glasshouse of it (`glasshouse.ts`).
-        glassResync(g);
-        // A shop counter's store opens as it is finished (`counters.ts`).
-        counterFinished(g, wall);
         const low = WALL_TYPE_BY_ID.get(wall.type)?.low;
         const what = low ? WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() : 'wall';
         // A wall of a building finished, for the journal; a fence is not one (the island's `perform_building` the same).
@@ -800,8 +796,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!floor || isDone(floor)) return false;
       const used = consumeUnit(g, floor, t);
       if (!used) return false;
-      // The last pane of a glass roof makes a glasshouse, and what grows in it goes onto the glass clock.
-      glassResync(g);
+      // What a piece of it starts, as a hod carrier's piece does (`Game.floorFitted`).
+      g.floorFitted();
       const kind = floorKind(floor);
       const mat = material(floor.material);
       // Floors are paving; stairs, ladders and roofs are carpentry or masonry by material.

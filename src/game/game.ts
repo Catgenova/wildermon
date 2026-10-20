@@ -20,7 +20,7 @@ import type { ItemRow } from '../net/island';
 import { packed, type Aged } from '../net/packed';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, type BuildingsJSON, type Building, type Wall, type Side } from './building';
+import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
@@ -33,7 +33,7 @@ import { crateTheRest, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefu
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
-import { underGlass } from './glasshouse';
+import { glassResync, underGlass } from './glasshouse';
 import { ageDef, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, HAUL_SKILL, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
@@ -59,11 +59,11 @@ import {
   type TrapKind,
 } from './traps';
 import { BAIT_BY_ID, FISH, fishHere, pickFish, waterDepth } from './fishing';
-import { BRIDGES, bridgeDone, bridgeLevels, CLEARANCE, deckHeight, END_SLOP, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, spanBill, spanTiles, type Bridge, type BridgeKind } from './bridges';
-import { AQ_NOT_THROWN, AQ_OVER, channelOf } from './aqueducts';
+import { BRIDGES, bridgeDone, bridgeLevels, CLEARANCE, deckHeight, END_SLOP, RAMP_SLOPE, rampDeck, rampRefusal, rampRise, fitIntoSpan, openSpan, spanBill, spanTiles, type Bridge, type BridgeKind, type BridgeSpan } from './bridges';
+import { AQ_NOT_THROWN, AQ_OVER, channelOf, fitIntoChannel } from './aqueducts';
 import { AQUEDUCT_LPS, aqueductShut, type Channel } from '../world/aqueducts';
 import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hingeOf, isDrawbridge, keepHiddenAsks } from './gates';
-import { CLEAR_OF_BUILDINGS, LIFT_PER_MASONRY, concreteFor, foundationBill, foundationDone, liftFor, masonryFor, soilSays, type Foundation } from './foundations';
+import { CLEAR_OF_BUILDINGS, LIFT_PER_MASONRY, concreteFor, foundationBill, foundationDone, liftFor, masonryFor, pourIntoFoundation, soilSays, type Foundation } from './foundations';
 import { poolLevel } from '../world/springs';
 import { deckOver, floorNear, levelGround, pierDrop, pierGround, pierRefusal, pierSays, type PierGround } from './piers';
 import { greenNow, mossyPiece } from './greening';
@@ -115,6 +115,25 @@ export interface PlacedEnchantable {
   /** Its middle, in tiles. */
   at: [number, number];
   lock?: number;
+}
+
+/** What a hod carrier works on, in the order it takes them when all else is even. The island's `hod_rank`. */
+export const HOD_WORK = ['wall', 'floor', 'column', 'span', 'foundation'] as const;
+
+/** A piece of planned work a hod carrier fits into (`Game.hodNeeding`). */
+export type HodTarget =
+  | { kind: 'wall'; wall: Wall }
+  | { kind: 'floor'; floor: FloorTile }
+  | { kind: 'column'; column: Column }
+  | { kind: 'span'; bridge: Bridge; span: BridgeSpan }
+  | { kind: 'foundation'; foundation: Foundation };
+
+/** The work a hod carrier is to fit a piece into, the piece, and the tile it is worked from. */
+export interface HodJob {
+  target: HodTarget;
+  item: string;
+  x: number;
+  y: number;
 }
 
 export interface DeedStore {
@@ -7616,46 +7635,131 @@ export class Game {
     this.events.emit('crate');
   }
 
-  /** An unfinished wall within reach that wants something, and what it wants. */
-  wallNeeding(
+  /**
+   * The planned work within reach that wants something, and what it wants: a
+   * wall on any storey, a floor slot (a floor, a roof, a staircase or a
+   * ladder, a deck on piers with its piers), a column, the open span of a
+   * bridge or an aqueduct, or a foundation's shuttering -- whatever is built a
+   * piece at a time off a bill (`HOD_WORK`).
+   *
+   * The piece in hand first, wherever it is wanted, and otherwise only what
+   * the stores hold (`stocked`), nearest `from` first -- so one piece of work
+   * wanting what nobody has brought never keeps a hod carrier from another it
+   * could finish -- and of one piece of work's wants, what is furthest behind
+   * its bill, so brick and mortar go in together. Ties go by kind in the order
+   * of `HOD_WORK`, then storey, side, x, y and the thing's name. The island's
+   * `hod_needing` and `hod_needing_stocked`, in the same order.
+   */
+  hodNeeding(
     near: (x: number, y: number) => boolean,
     holding?: string,
     from?: { x: number; y: number },
     stocked?: (item: string) => boolean,
-  ): { wall: Wall; item: string; x: number; y: number } | undefined {
-    /*
-     * Every planned ground-floor wall within reach and each thing it still wants: the piece in hand first, wherever
-     * it is wanted, and otherwise only what the stores hold (`stocked`), nearest `from` first -- so one wall wanting
-     * what nobody has brought never keeps a hod carrier from another it could finish -- and of a wall's wants, what is
-     * furthest behind its bill, so brick and mortar go in together. The island's `wall_needing` and
-     * `wall_needing_stocked`.
-     */
-    let best: { wall: Wall; item: string; x: number; y: number; d: number; held: boolean; behind: number } | undefined;
-    for (const wall of this.buildings.walls.values()) {
-      if (wall.level !== 0 || isDone(wall)) continue;
-      if (!near(wall.x, wall.y)) continue;
-      const d = from ? (wall.x - from.x) ** 2 + (wall.y - from.y) ** 2 : 0;
-      for (const [item, n] of Object.entries(wall.needed).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+  ): HodJob | undefined {
+    type Key = { held: boolean; d: number; behind: number; rank: number; level: number; dir: string; x: number; y: number; item: string };
+    const before = (a: Key, b: Key): boolean => {
+      if (a.held !== b.held) return a.held;
+      if (a.d !== b.d) return a.d < b.d;
+      if (a.behind !== b.behind) return a.behind > b.behind;
+      if (a.rank !== b.rank) return a.rank < b.rank;
+      if (a.level !== b.level) return a.level < b.level;
+      if (a.dir !== b.dir) return a.dir < b.dir;
+      if (a.x !== b.x) return a.x < b.x;
+      if (a.y !== b.y) return a.y < b.y;
+      return a.item < b.item;
+    };
+    let best: (Key & { target: HodTarget }) | undefined;
+    const consider = (target: HodTarget, bill: Bill, x: number, y: number, level: number, dir: string): void => {
+      if (!near(x, y)) return;
+      const d = from ? (x - from.x) ** 2 + (y - from.y) ** 2 : 0;
+      for (const [item, n] of Object.entries(bill.needed)) {
         if (n <= 0) continue;
         const held = item === holding;
         if (!held && stocked && !stocked(item)) continue;
-        const behind = n / Math.max(1, wall.total[item] ?? 0);
-        const better = !best || (held && !best.held) || (held === best.held && (d < best.d || (d === best.d && behind > best.behind)));
-        if (better) best = { wall, item, x: wall.x, y: wall.y, d, held, behind };
+        const key = { held, d, behind: n / Math.max(1, bill.total[item] ?? 0), rank: HOD_WORK.indexOf(target.kind), level, dir, x, y, item };
+        if (!best || before(key, best)) best = { ...key, target };
       }
+    };
+    for (const wall of this.buildings.walls.values()) if (!isDone(wall)) consider({ kind: 'wall', wall }, wall, wall.x, wall.y, wall.level, wall.dir);
+    for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider({ kind: 'floor', floor }, floor, floor.x, floor.y, floor.level, '');
+    for (const column of this.buildings.columns.values()) if (!isDone(column)) consider({ kind: 'column', column }, column, column.x, column.y, column.level, '');
+    for (const bridge of this.bridges.values()) {
+      // The span a builder works: the first still open (`openSpan`).
+      const span = openSpan(bridge);
+      if (span) consider({ kind: 'span', bridge, span }, span, span.x, span.y, 0, '');
     }
-    return best && { wall: best.wall, item: best.item, x: best.x, y: best.y };
+    for (const foundation of this.foundations.values()) if (!foundationDone(foundation)) consider({ kind: 'foundation', foundation }, foundation, foundation.x, foundation.y, 0, '');
+    return best && { target: best.target, item: best.item, x: best.x, y: best.y };
+  }
+
+  /**
+   * Fit one piece of `item` into a piece of planned work, as a builder's own go
+   * at it does: the same bill, and what the last of it starts (`wallFitted`,
+   * `floorFitted`, `fitIntoSpan`, `fitIntoChannel`, `pourIntoFoundation`).
+   * Without the builder's skill, tool or words, which are the builder's own.
+   * The island's `hod_fit`.
+   */
+  fitPiece(target: HodTarget, item: string): void {
+    switch (target.kind) {
+      case 'wall':
+        return this.fitIntoWall(target.wall, item);
+      case 'floor': {
+        const f = target.floor;
+        if ((f.needed[item] ?? 0) <= 0) return;
+        f.needed[item] -= 1;
+        this.floorFitted();
+        this.events.emit('world', f.x, f.y);
+        return;
+      }
+      case 'column': {
+        const c = target.column;
+        if ((c.needed[item] ?? 0) <= 0) return;
+        c.needed[item] -= 1;
+        this.events.emit('world', c.x, c.y);
+        return;
+      }
+      case 'span': {
+        if ((target.span.needed[item] ?? 0) <= 0) return;
+        if (target.bridge.kind === 'aqueduct') fitIntoChannel(this, target.bridge, target.span, item);
+        else fitIntoSpan(this, target.bridge, target.span, item);
+        return;
+      }
+      case 'foundation':
+        if (item !== 'concrete' || (target.foundation.needed.concrete ?? 0) <= 0) return;
+        return pourIntoFoundation(this, target.foundation);
+    }
   }
 
   /** Fit one piece into a planned wall, the way a builder does by hand. */
   fitIntoWall(wall: Wall, item: string): void {
     if ((wall.needed[item] ?? 0) <= 0) return;
     wall.needed[item] -= 1;
-    // The last of it, and the ivy starts from bare stone (`greening.ts`).
-    if (isDone(wall)) wall.greenSince = greenNow();
-    // And a shop counter's store opens behind it, as it does for a builder (`counters.ts`).
-    counterFinished(this, wall);
+    this.wallFitted(wall);
     this.events.emit('world', wall.x, wall.y);
+  }
+
+  /**
+   * What a piece fitted into a wall starts, a builder's or a hod carrier's:
+   * with the last of it the ivy starts from bare stone (`greening.ts`), the last
+   * wall round a building roofed in glass makes a glasshouse of it
+   * (`glasshouse.ts`), and a shop counter's store opens behind it
+   * (`counters.ts`). On the island the wall's triggers and `counter_finished`.
+   */
+  wallFitted(wall: Wall): void {
+    if (!isDone(wall)) return;
+    wall.greenSince = greenNow();
+    glassResync(this);
+    counterFinished(this, wall);
+  }
+
+  /**
+   * What a piece fitted into a floor slot starts, a builder's or a hod
+   * carrier's: the last pane of a glass roof makes a glasshouse, and what
+   * grows in it goes onto the glass clock (`glasshouse.ts`). On the island the
+   * floor's triggers.
+   */
+  floorFitted(): void {
+    glassResync(this);
   }
 
   /**
