@@ -1,5 +1,6 @@
 import { CARRY_PER_STRENGTH, type Game } from '../../game/game';
 import { SKILL_DEFS } from '../../game/skills';
+import { effectTracks, SKILL_EFFECTS, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
@@ -9,6 +10,9 @@ export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
   private notes = new Map<string, HTMLSpanElement>();
   private rows = new Map<string, HTMLDivElement>();
+  /** Each skill's sliders, under its row, and which are open. */
+  private effects = new Map<string, HTMLDivElement>();
+  private open = new Set<string>();
 
   private titleBox: HTMLDivElement;
 
@@ -37,6 +41,29 @@ export class SkillsPanel {
         value.className = 'skill-value';
         row.append(name, note, value);
         win.body.append(row);
+        // A skill with numbers behind it opens onto a slider for each (`skilleffects.ts`).
+        if (SKILL_EFFECTS[def.id]?.length) {
+          const box = document.createElement('div');
+          box.className = 'skill-effects';
+          box.hidden = true;
+          row.classList.add('skill-opens');
+          row.tabIndex = 0;
+          row.setAttribute('role', 'button');
+          row.setAttribute('aria-expanded', 'false');
+          const toggle = (): void => {
+            if (this.open.has(def.id)) this.open.delete(def.id);
+            else this.open.add(def.id);
+            this.drawEffects(def.id);
+          };
+          row.addEventListener('click', toggle);
+          row.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            toggle();
+          });
+          win.body.append(box);
+          this.effects.set(def.id, box);
+        }
         this.values.set(def.id, value);
         this.notes.set(def.id, note);
         this.rows.set(def.id, row);
@@ -65,7 +92,63 @@ export class SkillsPanel {
     }
     // A skill never raised is drawn quieter, so the ones you have worked stand out.
     for (const def of SKILL_DEFS) this.rows.get(def.id)?.classList.toggle('skill-raw', this.game.skills.get(def.id) <= def.start);
+    for (const id of this.open) this.drawEffects(id);
     this.drawTitles();
+  }
+
+  /** A skill's sliders, drawn afresh when it is open: one track per effect, from its starting value to the top. */
+  private drawEffects(id: string): void {
+    const box = this.effects.get(id);
+    const row = this.rows.get(id);
+    if (!box || !row) return;
+    const open = this.open.has(id);
+    box.hidden = !open;
+    row.classList.toggle('skill-open', open);
+    row.setAttribute('aria-expanded', String(open));
+    if (!open) return;
+    box.replaceChildren(...effectTracks(this.game, id).map((t) => this.track(t)));
+  }
+
+  private track(t: EffectTrack): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'fx';
+    const head = document.createElement('div');
+    head.className = 'fx-head';
+    const name = document.createElement('span');
+    name.className = 'fx-name';
+    name.textContent = t.label;
+    const now = document.createElement('span');
+    now.className = 'fx-now';
+    now.textContent = t.now;
+    head.append(name, now);
+    const rail = document.createElement('div');
+    rail.className = 'fx-rail';
+    rail.setAttribute('aria-hidden', 'true');
+    const pct = `${(t.share * 100).toFixed(1)}%`;
+    const fill = document.createElement('i');
+    fill.style.width = pct;
+    const knob = document.createElement('b');
+    knob.style.left = pct;
+    rail.append(fill, knob);
+    const ends = document.createElement('div');
+    ends.className = 'fx-ends';
+    const end = (value: string, level: number): HTMLSpanElement => {
+      const s = document.createElement('span');
+      const at = document.createElement('small');
+      at.textContent = ` at ${level}`;
+      s.append(value, at);
+      return s;
+    };
+    ends.append(end(t.low, t.from), end(t.high, t.to));
+    el.append(head, rail, ends);
+    if (t.note) {
+      const note = document.createElement('div');
+      note.className = 'fx-note';
+      note.textContent = t.note;
+      el.append(note);
+    }
+    el.title = `${t.label}: ${t.low} at ${t.from}, ${t.now} now, ${t.high} at ${t.to}.`;
+    return el;
   }
 
   /** The titles earned, the one worn, and a way to change your mind. */

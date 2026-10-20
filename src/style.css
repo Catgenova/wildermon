@@ -3167,6 +3167,98 @@ button.goal-row:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* A skill that opens onto its sliders (`skilleffects.ts`): a caret, and the row it belongs to marked while open. */
+.skill-book .skill-opens {
+  cursor: pointer;
+}
+
+.skill-book .skill-opens > :first-child::before {
+  content: '\25B8';
+  display: inline-block;
+  width: 1em;
+  color: var(--ui-dim);
+}
+
+.skill-book .skill-open > :first-child::before {
+  content: '\25BE';
+}
+
+.skill-book .skill-opens:focus-visible {
+  outline: 1px solid var(--ui-accent);
+  outline-offset: -1px;
+}
+
+.skill-book .skill-open {
+  background: var(--t-hover, rgba(255, 255, 255, 0.06));
+}
+
+/* One track per effect: its name and value now, the track from the skill's start to the top with your level on it, and the two ends. */
+.skill-effects {
+  display: grid;
+  gap: 8px;
+  padding: 4px 6px 8px 1.4em;
+}
+
+.fx-head,
+.fx-ends {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.fx-name {
+  color: var(--ui-dim);
+  font-size: 11px;
+}
+
+.fx-now {
+  color: var(--ui-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-rail {
+  position: relative;
+  height: 4px;
+  margin: 5px 6px;
+  border-radius: 2px;
+  background: var(--t-track, rgba(255, 255, 255, 0.15));
+}
+
+.fx-rail i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 2px;
+  background: var(--t-fill-action, #e3b657);
+}
+
+.fx-rail b {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--t-strong, #fff);
+  border: 2px solid var(--ui-accent);
+  box-sizing: border-box;
+}
+
+.fx-ends {
+  color: var(--ui-dim);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fx-ends small {
+  opacity: 0.75;
+}
+
+.fx-note {
+  color: var(--ui-dim);
+  font-size: 10px;
+}
+
 .skill-row.flash {
   animation: skill-flash 1.6s ease-out;
 }
