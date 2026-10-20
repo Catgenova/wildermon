@@ -36,6 +36,10 @@ import { CLASS_TIER_AT } from '../../src/game/classes';
 import { SPELL_BAR } from '../../src/game/patrons';
 import { foldPerks, perksOf, PERK_BY_ID, TIERS } from '../../src/game/perks';
 import { CLASS_SPELL_BY_ID, classSpellsOf, NEEDS_SAID, type ClassSpellDef } from '../../src/game/talents';
+import { SPECIES } from '../../src/game/creatures';
+
+/** What the island calls the kind the spells are cast on, in its sentences (`roxxen`, by whatever name it goes by now). */
+const OX = SPECIES.roxxen.name.toLowerCase();
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -456,7 +460,7 @@ check('and made with a sapphire', island('NEEDS:SAPPHIRE') === 'ready', island('
 {
   const [share, held, line] = parts('BIND');
   check(`Bind: held at ${pct(fx('bind', 'hold'))} of a Snare's hold`,
-    near(Number(share), fx('bind', 'hold'), 1e-6) && held === 'true' && /^Bind: the roxxen is held where it stands for [\d.]+ s\.$/.test(line),
+    near(Number(share), fx('bind', 'hold'), 1e-6) && held === 'true' && new RegExp(`^Bind: the ${OX} is held where it stands for [\\d.]+ s\\.$`).test(line),
     island('BIND'));
   check(`and ${pct(fx('bind', 'monster'))} of that on a monster`,
     near(Number(island('BIND:MONSTER')), fx('bind', 'hold') * fx('bind', 'monster'), 1e-6), island('BIND:MONSTER'));
@@ -504,13 +508,13 @@ check('the casts teach the Binder\'s trade and binding', island('LEARN') === 'tr
 {
   const [took, line] = parts('BRITTLE');
   check(`Brittle: ${pct(fx('brittle', 'taken') - 1)} more from what strikes it`, near(Number(took), 10 * fx('brittle', 'taken'), 1e-4)
-    && line === 'Brittle: for 10 s the roxxen takes 25% more from everything that strikes it.', island('BRITTLE'));
+    && line === `Brittle: for 10 s the ${OX} takes 25% more from everything that strikes it.`, island('BRITTLE'));
 }
 {
   const [ratio, took, line] = parts('BRITTLE:SAID');
   check(`and a shatter on it says what came off, ${pct(fx('brittle', 'taken') - 1)} more included, and what it is down to`,
     near(Number(ratio), fx('brittle', 'taken'), 1e-4)
-      && line === `Shatter: the shatter takes ${Math.round(Number(took))} off the roxxen. It is down to ${Math.ceil(80 - Number(took))} of 80.`,
+      && line === `Shatter: the shatter takes ${Math.round(Number(took))} off the ${OX}. It is down to ${Math.ceil(80 - Number(took))} of 80.`,
     island('BRITTLE:SAID'));
   const [left, health, dmg] = parts('BRITTLE:BLOW');
   check('and so does a blow: what it is down to is what it has left, not what the blow was', left === health && Number(dmg) > 0,
