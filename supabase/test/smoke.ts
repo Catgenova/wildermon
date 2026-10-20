@@ -345,7 +345,7 @@ async function main(): Promise<void> {
      */
     const noLogs = await island.act('make_planks', { kind: 'item' }, 1);
     check('a recipe we lack the materials for is refused in its own words',
-      !noLogs.started && /plank/i.test(noLogs.why ?? ''), noLogs.why ?? 'IT STARTED');
+      !noLogs.started && /^Need .*\blogs?\b/i.test(noLogs.why ?? ''), noLogs.why ?? 'IT STARTED');
     /*
      * And which of them have no performer behind them yet — asked, not played.
      *
@@ -415,7 +415,7 @@ async function main(): Promise<void> {
       const wild = mob[0];
       const noBait = await island.act('tame', { kind: 'creature', id: wild.id }, 1);
       check('taming one with an empty hand is refused in its own words',
-        !noBait.started && /(take|tamed|taming|close)/i.test(noBait.why ?? ''), noBait.why ?? 'IT STARTED');
+        !noBait.started && /(too far|taming|tame|need)/i.test(noBait.why ?? ''), noBait.why ?? 'IT STARTED');
       check('and a client is told which of it has our scent',
         mob.every((c) => 'hunting' in c),
         `${mob.filter((c) => c.hunting).length} of ${mob.length} are coming for us`);
@@ -655,7 +655,7 @@ async function main(): Promise<void> {
     }
     const nothingWrong = await island.act('bind_wound', { kind: 'item' }, 1);
     check('dressing a wound we have not got is refused in its own words',
-      !nothingWrong.started && /nothing/i.test(nothingWrong.why ?? ''), nothingWrong.why ?? 'IT STARTED');
+      !nothingWrong.started && /not hurt/i.test(nothingWrong.why ?? ''), nothingWrong.why ?? 'IT STARTED');
 
     /*
      * The building rules, which start by saying no.
