@@ -15,7 +15,8 @@ import { HARVESTUSK, PIGROOT, PLOWHOG } from './wild-pig';
 import { CLOUDBORNE, CLOUDLET, CLOUDRAM } from './wild-cloud';
 import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
-import { GOBLIN, OGRE, ORC, TINKA } from './wild-upright';
+import { GOBLIN, OGRE, ORC } from './wild-upright';
+import { MENDERMASK, PATCHCOON, STITCHKIT } from './wild-mend';
 import { BOGGA, HOLLA, MIDDUN, PLUCKA, WADD } from './wild-brook';
 import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
 import { HALLOWMIRE, LANTERNVEIL, WHISPET } from './wild-ghost';
@@ -77,7 +78,7 @@ export const WILDERMON: Record<string, Kind> = {
   sedra: SEDRA,
   warda: SKYLOOKLET,
   quill: QUILL,
-  tinka: TINKA,
+  tinka: STITCHKIT,
   goblin: GOBLIN,
   orc: ORC,
   ogre: OGRE,
@@ -160,6 +161,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   crawler: [SANDPINCHER, SANDPINNACLE],
   cobbe: [MORTARBACK, BASTIONDRAKE],
   roxxen: [WAGONOX, HAULHORN],
+  tinka: [PATCHCOON, MENDERMASK],
 };
 
 /** Whether a kind is drawn as a model here, or still by hand. */

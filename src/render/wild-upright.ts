@@ -1,14 +1,15 @@
 import {
-  add, beat, bend, bipedBones, blush, coatPalette, cross, curve, cyc, darker, disc, dot, drift, eyes, lighter, merge, mirrored, mix, moved, onEgg, orb, orbAlong, paint,
-  pastel, scale, smile, sub, taper, TAU, tube, unit, type BipedPose, type BipedSpec, type Disc, type Kind, type Piece,
+  add, beat, bend, bipedBones, coatPalette, cross, curve, cyc, darker, disc, dot, drift, eyes, lighter, merge, mirrored, mix, moved, onEgg, orb, orbAlong, paint,
+  pastel, scale, sub, taper, TAU, tube, unit, type BipedPose, type BipedSpec, type Disc, type Kind, type Piece,
 } from './beasts';
 import { joint, mesh, ROOT, type Mat, type Mesh, type V3 } from './figure';
 import { blade, cut } from './beastkit';
 
 /**
- * The ones that stand up: the tinka, and the three bad things of the high
- * ground -- the goblin, the orc and the ogre -- each a chunky soft-edged
- * body like every other wildermon, and each with what it carries in its hand.
+ * The ones that stand up: the three bad things of the high ground -- the
+ * goblin, the orc and the ogre -- each a chunky soft-edged body like every
+ * other wildermon, and each with what it carries in its hand. (The tinka is
+ * the mend line now, `./wild-mend`.)
  */
 
 /** Arms and legs on the upright bones: an upper and a lower tube down each, a hand and a foot as the kind makes them. */
@@ -137,147 +138,6 @@ function grin(c: V3, r: V3, dirs: V3[], w: number, teeth: Array<[number, number]
   });
   return merge(tube(pts, w, w, 4, 'nose'), paint(fangs));
 }
-
-/* ---- the tinka --------------------------------------------------------------------- */
-
-/**
- * A tinka: a small, fussy, masked thing on its hind legs, forever taking
- * something apart. Six long fingers on each hand, always busy; brass rings
- * round its great eyes like a jeweller's glasses; a screw tucked behind one
- * ear; and a ringed tail held up behind it.
- */
-const TINKA_SPEC: BipedSpec = {
-  high: 0.86,
-  leg: { at: [0.48, 0, -0.1], len: [0.4, 0.38, 0.1], rest: [12, -24] },
-  chest: { at: [0, 0, 0.2], lean: 16 },
-  neck: { at: [0, 0.1, 1.08], len: 0.22, lean: 0 },
-  head: { pitch: -4 },
-  arm: { at: [0.94, 0.12, 0.82], len: [0.55, 0.55], rest: [28, 14, 62] },
-  tail: { at: [0, -0.68, 0.1], lift: 60, len: 0.55, links: 3 },
-  swing: [30, 44],
-  waddle: 4,
-  armSwing: 10,
-};
-
-const TINKA_HEAD = { c: [0, 0.12, 0.72] as V3, r: [1.08, 1.0, 0.92] as V3 };
-
-/**
- * How much bigger the head is drawn than it is built, about the skull's middle, rings, ears and all. A tinka is the smallest
- * thing on its feet, and at the size it is played at its face is what says what it is: half the rabba's area with its head as
- * built, and the goggles a smudge.
- */
-const TINKA_HEAD_GROW = 1.15;
-const grown = (m: Mesh, c: V3, k: number): Mesh => ({ ...m, v: m.v.map((q): V3 => [c[0] + (q[0] - c[0]) * k, c[1] + (q[1] - c[1]) * k, c[2] + (q[2] - c[2]) * k]) });
-
-/** The tail's girth where each of its three links starts, and at its tip. */
-const TINKA_TAIL = [0.38, 0.35, 0.28, 0.16];
-
-function tinkaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  // A plump little body on short legs, so that at the size it is played at it is a body and not a stick under its eyes.
-  const torso = tube([[0, 0, -0.25], [0, 0.03, 0.15], [0, 0.04, 0.6], [0, 0.02, 1.0], [0, 0, 1.18]], [0.86, 1.04, 0.98, 0.74, 0.38], [0.72, 0.86, 0.82, 0.64, 0.34], n,
-    (ring, j) => (ring > 0 && Math.abs(((j + 1) / n) * TAU - Math.PI * 0.5) < 1.0 ? 'mark' : 'coat'), { up: [0, 1, 0] });
-  const H = TINKA_HEAD;
-  const skull = orb(H.c, H.r, n + 1, k + 1, 'coat');
-  // The eyes far enough round the head that one is whole inside the outline seen side on, with the muzzle out in front of it.
-  const eyeDir: V3 = [0.8, 0.5, 0.26];
-  // The mask across the eyes, a pale muzzle and a small dark nose at the end of it.
-  const face = merge(
-    orbAlong(add(H.c, [0, 0.62, 0.1]), [0, 1, 0.1], [0.92, 0.36, 0.34], n, k, 'coatDark'),
-    orbAlong(add(H.c, [0, 0.98, -0.1]), [0, 1, -0.25], [0.34, 0.34, 0.42], n, k, 'mark'),
-    orbAlong(add(H.c, [0, 1.42, -0.16]), [0, 1, 0.2], [0.13, 0.09, 0.1], 5, 3, 'nose'),
-    smile(add(H.c, [0, 1.3, -0.42]), [0, 1, -0.4], 0.34),
-    blush(H.c, H.r, [0.78, 0.5, -0.3], 0.18),
-  );
-  const look = (shut: boolean): Mesh => eyes(H.c, H.r, eyeDir, 0.31, { tall: 1.05, shut, rim: 0.1 });
-  // Brass rings round the eyes, like a jeweller's glasses grown on: each a hoop round the way its eye looks, wide enough that the
-  // whole eye shows inside it, and lying on the curve of the head a little off the skin rather than flat across it, so that the
-  // far one does not stand up over the top of the head seen side on.
-  const rings = merge(...[1, -1].map((s) => {
-    const { p, n: out } = onEgg(H.c, H.r, [eyeDir[0] * s, eyeDir[1], eyeDir[2]]);
-    const u = unit(cross([0, 0, 1], out)), v = cross(out, u);
-    const pts = Array.from({ length: 17 }, (_, q) => {
-      const on = onEgg(H.c, H.r, sub(add(p, add(scale(u, Math.cos((q / 16) * TAU) * 0.41), scale(v, Math.sin((q / 16) * TAU) * 0.43))), H.c));
-      return add(on.p, scale(on.n, 0.05));
-    });
-    return tube(pts, 0.045, 0.045, 5, 'crystal', { start: false, end: false });
-  }));
-  // Big round ears, pale inside.
-  const ear = (s: number): Mesh => merge(
-    orbAlong(add(H.c, [s * 0.78, -0.12, 0.72]), [s * 0.6, 0.35, 0.72], [0.38, 0.14, 0.42], n, k, 'coat'),
-    orbAlong(add(H.c, [s * 0.8, -0.02, 0.72]), [s * 0.6, 0.35, 0.72], [0.26, 0.06, 0.3], n, k, 'inner'),
-  );
-  // A screw tucked behind the right ear like a pencil: its slotted head up by the ear, its threaded shank poking out behind.
-  const tip: V3 = add(H.c, [0.75, -1.1, 0.25]), head: V3 = add(tip, scale(unit([-0.1, 0.8, 0.55]), 0.65)), along = unit(sub(head, tip));
-  const screw = merge(
-    taper([tip, add(tip, scale(along, 0.2)), add(tip, scale(along, 0.4)), head], 0.03, 0.07, 5, (ring) => (ring % 2 ? 'hornDark' : 'horn')),
-    orbAlong(head, along, [0.13, 0.13, 0.05], 6, 3, 'horn'),
-    paint([disc(add(head, scale(along, 0.055)), along, 0.12, 0.025, 4, 'nose', { up: [0, 0, 1] })]),
-  );
-  // A tail in rings, carried up high behind, its end curled.
-  const tail = [0, 1, 2].map((q) => tube([[0, 0.08, 0], [0, -0.28, 0], [0, -0.58, 0]], [TINKA_TAIL[q], (TINKA_TAIL[q] + TINKA_TAIL[q + 1]) / 2, TINKA_TAIL[q + 1]],
-    [TINKA_TAIL[q], (TINKA_TAIL[q] + TINKA_TAIL[q + 1]) / 2, TINKA_TAIL[q + 1]], 6, (ring) => (ring % 2 ? 'coatDark' : 'coat'), { start: false, end: q === 2 }));
-  const hide = [{ c: H.c, r: H.r }];
-  const pieces: Piece[] = [
-    { key: 'hips', mesh: orb([0, 0, 0], [0.9, 0.76, 0.6], n, k, 'coat'), bone: 'body', bias: 0 },
-    { key: 'body', mesh: torso, bone: 'chest', bias: 0.005, breathes: { c: [0, 0, 0.4], k: 0.04 } },
-    ...tail.map((m, q): Piece => ({ key: `tail${q}`, mesh: m, bone: `tail${q}`, bias: -0.1 + q * 0.01, chain: 'tail' })),
-    { key: 'head', mesh: merge(skull, face, look(false)), shut: merge(skull, face, look(true)), bone: 'head', bias: 0.2 },
-    { key: 'rings', mesh: rings, bone: 'head', bias: 0.205, after: 'head', hide },
-    { key: 'ear0', mesh: ear(-1), bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'ear1', mesh: ear(1), bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'screw', mesh: screw, bone: 'head', bias: 0.195, hide },
-    // Pale hands with dark tips to the fingers, and no lines between the fingers, only round the hand: six fingers each inked, or
-    // dark all over, are a black mitten at the size it is played at.
-    ...limbs({ n, arm: [0.55, 0.55], armW: [0.22, 0.19], hand: hand(0.22, 6, 0.5, n, 'mark', { thick: 0.3, tipMat: 'coatDark' }), leg: [0.4, 0.38], legW: [0.3, 0.25], foot: pawFoot(0.24, 0.52, n, 'mark') })
-      .map((pc): Piece => (pc.key.startsWith('hand') ? { ...pc, lines: false } : pc)),
-  ];
-  const g = TINKA_HEAD_GROW;
-  return pieces.map((pc): Piece => (pc.bone !== 'head' ? pc : {
-    ...pc,
-    mesh: grown(pc.mesh, H.c, g),
-    ...(pc.shut ? { shut: grown(pc.shut, H.c, g) } : {}),
-    ...(pc.hide ? { hide: pc.hide.map((h) => ({ c: h.c, r: [h.r[0] * g, h.r[1] * g, h.r[2] * g] as V3 })) } : {}),
-  }));
-}
-
-export const TINKA: Kind = {
-  bones: (a) => {
-    const b = bipedBones(TINKA_SPEC, a, (p: BipedPose) => {
-      if (a.go > 0) {
-        // A quick scurry, hunched, the tail up and swinging.
-        p.chest[0] += 8 * a.go;
-        p.tail[0] -= 10 * a.go;
-        return;
-      }
-      const t = a.t, gz = a.graze;
-      // Busy: the hands working at something held between them, the head tipped down at it; now and then the thing held up to one
-      // eye to be looked at close.
-      const peer = beat(t, [8.4, 19.6], 2.2) * (1 - gz);
-      const fid = Math.sin(t * TAU * 1.5), fid2 = Math.sin(t * TAU * 2.1 + 1);
-      p.head[0] -= (8 * (1 - peer) - 6 * peer) * (1 - gz);
-      p.head[1] *= 0.4;
-      p.arms[0] = [p.arms[0][0] + 15 * fid * (1 - gz) + 40 * peer, p.arms[0][1] - 4, p.arms[0][2] + 15 * fid2 * (1 - gz) + 30 * peer];
-      p.arms[1] = [p.arms[1][0] - 15 * fid2 * (1 - gz) + 10 * peer, p.arms[1][1] - 4, p.arms[1][2] - 15 * fid * (1 - gz)];
-      p.tail[1] += 10 * cyc(t, 6);
-      // Foraging it squats right down and digs at the ground between its feet: the chest bowed further than the general bend,
-      // the knees folded deep and the thighs forward, the arms straight down to the ground, and the face up off it enough to be
-      // seen, a little down from level.
-      p.chest[0] += 10 * gz;
-      p.head[0] += 12 * gz;
-      p.legs = p.legs.map((l) => [l[0] + 20 * gz, l[1] + 0.5 * gz, l[2]] as [number, number, number]);
-      p.arms = p.arms.map((ar) => [ar[0] - 10 * gz, ar[1], ar[2] - 30 * gz] as [number, number, number]) as BipedPose['arms'];
-    });
-    // The tail's last link curled up at the end.
-    b.tail2 = joint(b.tail2, [0, 0, 0], -20);
-    return b;
-  },
-  build: tinkaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, { crystal: [236, 190, 96], horn: [196, 204, 214], hornDark: [150, 158, 172], nose: [80, 60, 70], coatDark: darker(pastel(coat), 0.5) }),
-  shadow: [1.2, 1.0],
-  stride: 1.6,
-  size: 1.9,
-};
 
 /* ---- the goblin -------------------------------------------------------------------- */
 

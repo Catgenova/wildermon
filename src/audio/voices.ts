@@ -7,6 +7,7 @@ import { GNAW_VOICE } from './voice-gnaw';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
 import { IRON_VOICE } from './voice-iron';
+import { MEND_VOICE } from './voice-mend';
 import { SLUG_VOICE } from './voice-slug';
 import { PIG_VOICE } from './voice-pig';
 import { SAND_VOICE } from './voice-sand';
@@ -58,4 +59,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   cobbe: BRICK_VOICE,
   // The Cartling, the Wagonox and the Haulhorn.
   roxxen: HAUL_VOICE,
+  // The Stitchkit, the Patchcoon and the Mendermask.
+  tinka: MEND_VOICE,
 };

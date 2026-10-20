@@ -1495,8 +1495,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   tinka: {
     id: 'tinka',
-    name: 'Tinka',
-    description: 'A small, fussy thing with far too many fingers, forever taking something apart to see how it is put together. Left alone with your gear it mends it, which is more than most would do.',
+    name: 'Stitchkit',
+    was: ['Tinka'],
+    // Asked for: "This family to replace reppa", the Tinka: Stitchkit, Patchcoon, Mendermask. Its words, and each stage's,
+    // are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Patchcoon', description: '' },
+      { name: 'Mendermask', description: '' },
+    ],
     health: 16,
     attack: 2,
     speed: 2,
@@ -1508,10 +1515,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'mend',
     workRange: 6,
     variants: [
-      ['#8c7a5c', '#e0d1ac'],
-      ['#6a6a72', '#bdbdc6'],
-      ['#94694f', '#e4bb96'],
-      ['#5f6b5a', '#b3c0ab'],
+      ['#8a7a6a', '#efe3cf'],
+      ['#7a6e66', '#e6dccb'],
+      ['#96806a', '#f2e6d2'],
+      ['#6e6660', '#ddd3c4'],
     ],
     butcher: { meat: 1, fur: 2, leather: 1, bone: 1, gland: 2 },
     tameFail: 'turns the {food} over twice looking for a seam in it, then puts it down',
@@ -3402,6 +3409,18 @@ export const SPECIES: Record<string, SpeciesDef> = {
 
 /** A beast's share of a team's pull when it was not bred for the traces. */
 export const PULL_DEFAULT = 0.25;
+
+/**
+ * A mender's go at a damaged thing in the stores (`mendStep`): this much damage off it and one more for every
+ * `MEND_DMG_LEVELS` of its repair, and this much quality lost with it less one for every `MEND_QL_LEVELS`, never under
+ * `MEND_QL_LEAST`; a go every `MEND_EVERY` seconds. The island's errand mends by the same numbers.
+ */
+export const MEND_DMG = 2;
+export const MEND_DMG_LEVELS = 12;
+export const MEND_QL = 0.6;
+export const MEND_QL_LEVELS = 220;
+export const MEND_QL_LEAST = 0.05;
+export const MEND_EVERY = 1.5;
 // A species says what it carries and pulls off its own row.
 for (const s of Object.values(SPECIES)) {
   s.description = fill(s.description, {
@@ -3711,6 +3730,8 @@ sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECI
   'Its level is its woodcutting.');
 sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart or a wagon. In the traces it adds ${percent(SPECIES.roxxen.pull!)} to its team's pace, where a beast not bred for the traces adds ${percent(PULL_DEFAULT)}, and its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
   `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
+sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go every ${MEND_EVERY} seconds: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,
+  'Its level is its repair.');
 sayLine('cobbe', `Set to work on a settlement it carries what a planned wall on any storey, floor, roof, staircase, ladder, column, the open span of a bridge or an aqueduct, or a foundation within ${SPECIES.cobbe.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it as a builder's go would: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, and of what that work wants whatever is furthest behind its bill.`,
   'Its level is its masonry.');
 sayLine('embra', `Set to work on a settlement it keeps your campfires, smelters and kilns within ${SPECIES.embra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, fed and lit: whenever one holds under ${HEARTH_FULL / 60} minutes of fuel, it carries a piece of fuel from your stores to the nearest such, one at a time, and lights it if it has gone out. It eats only what has been cooked.`,
@@ -7243,10 +7264,10 @@ export class Creatures {
     this.gainSkill(game, c, GATHER_SKILL.mend, 0.2);
     // The same bargain the player's own repair makes: damage out, a little
     // quality with it, and a better hand loses less of it.
-    found.item.dmg = Math.max(0, found.item.dmg - (2 + skill / 12));
-    found.item.ql = Math.max(1, found.item.ql - Math.max(0.05, 0.6 - skill / 220));
+    found.item.dmg = Math.max(0, found.item.dmg - (MEND_DMG + skill / MEND_DMG_LEVELS));
+    found.item.ql = Math.max(1, found.item.ql - Math.max(MEND_QL_LEAST, MEND_QL - skill / MEND_QL_LEVELS));
     found.store.changed();
-    c.busyUntil = game.time + 1.5;
+    c.busyUntil = game.time + MEND_EVERY;
     return true;
   }
 

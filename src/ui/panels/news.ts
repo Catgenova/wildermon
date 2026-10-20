@@ -2783,6 +2783,18 @@ export const NEWS: News[] = [
         + 'It used to walk only while you stood near it, and stopped wherever you left it.',
     ],
   },
+  {
+    n: 216,
+    day: '2026-10-20',
+    lines: () => {
+      const d = SPECIES.tinka;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
+        'Each of the three is a new model, a tinker raccoon with a spanner that takes on goggles, a pack and a mallet, then a great pack with a lantern and a brass wrench, with its own walk, strike, mending and voice.',
+      ];
+    },
+  },
 ];
 
 

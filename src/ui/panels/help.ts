@@ -3125,7 +3125,8 @@ export function helpText(): string {
     (the Cobbe that was), which evolves into a ${SPECIES.cobbe.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.cobbe.stages![1].name} at ${EVOLVE_AT[1]},
     carries the <b>hod</b>: whatever a planned wall on any storey, a floor, roof, staircase or ladder, a column, the
     open span of a bridge or an aqueduct, or a foundation still wants out of your stores, crates and furniture alike,
-    and into it, one piece a trip. The <b>Tinka</b> <b>mends</b> the damaged gear in your stores. The
+    and into it, one piece a trip. The <b>${SPECIES.tinka.name}</b> (the Tinka that was), which evolves
+    into a ${SPECIES.tinka.stages![0].name} at level ${EVOLVE_AT[0]} and a ${SPECIES.tinka.stages![1].name} at ${EVOLVE_AT[1]}, <b>mends</b> the damaged gear in your stores, the most damaged first. The
     <b>Middun</b> eats what is rotting on the ground and turns it into <b>compost</b>. The <b>Snout</b>
     smells out <b>buried relics</b> and marks where to dig &mdash; taming ${SPECIES.snout.tameLevel}, and worth every point of
     it.</p>
