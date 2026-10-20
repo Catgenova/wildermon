@@ -34,15 +34,25 @@ import { article, listed, listedOr } from './words';
  *   * `far`: walking home, so many tiles (the number) from its work;
  *   * `away`: on the island, its keeper is away, so nothing works it;
  *   * `unswept`: on the island, nobody awake is within the number of tiles of it, so nothing works it.
+ *
+ * And three that are not idleness but rest, which its card says in the same place (`TIRE_GOES`, `REST_FOR`):
+ *
+ *   * `rest`: resting where it stands, the number the seconds of it left;
+ *   * `bed`: asleep in a wildermon bed (`bed`, the piece's kind), the number the seconds left;
+ *   * `tired`: walking to a wildermon bed (`bed`) to rest in it.
  */
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept'];
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired'];
 
-/** Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token. */
+/**
+ * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token;
+ * for a rest in a bed, the bed's kind.
+ */
 export interface Idle {
   why: IdleWhy;
   n: number;
   post?: boolean;
+  bed?: string;
 }
 
 /**
@@ -108,6 +118,12 @@ function recipeWants(kind: GatherKind): string {
   return listedOr(recipes.map((r) => withTool(bill(r), toolOf(r))));
 }
 
+/** Seconds left, whole and never under one: "1 more second", "37 more seconds". */
+const secondsMore = (secs: number): string => {
+  const n = Math.max(1, Math.ceil(secs));
+  return `${n} more second${n === 1 ? '' : 's'}`;
+};
+
 /**
  * The sentence for a reason, in the game's own terms and with its number:
  * "Idle: no reed bed within 30 tiles of the token." `kind` is the trade it
@@ -135,6 +151,16 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       return 'Idle: its keeper is away, so it is not worked.';
     case 'unswept':
       return `Idle: nobody awake is within ${n} tiles of it, so it is not worked.`;
+    case 'rest':
+      return `Resting: ${secondsMore(idle.n)}.`;
+    case 'bed': {
+      const name = itemDef(idle.bed ?? '').name.toLowerCase();
+      return `Asleep in ${article(name)} ${name}: ${secondsMore(idle.n)}.`;
+    }
+    case 'tired': {
+      const name = itemDef(idle.bed ?? '').name.toLowerCase();
+      return `Tired: walking to ${article(name)} ${name} to rest in it.`;
+    }
   }
 }
 

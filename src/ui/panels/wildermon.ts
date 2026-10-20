@@ -572,7 +572,9 @@ export class WildermonPanel {
       if (place === 'active') parts.push(`Stance: ${STANCE_NAMES[c.stance]}`);
       if (place === 'deed') {
         const verb = def.gathers ? GATHER_VERB[def.gathers] : 'working';
-        parts.push(c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the crate` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Heading out to ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Looking for work');
+        // Resting (`REST_FOR`) before anything it holds: a tired water carrier rests with its bucket.
+        const rest = c.idle?.why === 'bed' ? 'Asleep in its bed' : c.idle?.why === 'rest' ? 'Resting' : c.idle?.why === 'tired' ? 'Going to its bed to rest' : '';
+        parts.push(rest || (c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the crate` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Heading out to ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Looking for work'));
       }
       if (c.mode === 'deed' && def.gathers) {
         const toNext = SKILL_STEP - (taskSkill(c, def) % SKILL_STEP);

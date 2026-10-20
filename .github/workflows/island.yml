@@ -3439,6 +3439,46 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/stagework.mjs --log-level=error
           node node_modules/.cache/stagework.mjs
 
+      - name: Deed workers tire, rest, and sleep in a bed of their size
+        run: |
+          # TIRE_GOES goes and no more, REST_FOR where it stands, BED_REST of it
+          # in a free bed of its class on the settlement (its stage, or its
+          # kind's health band for one that does not evolve), and the bed let
+          # go when it gets up, is called to heel, crated or killed, or the bed
+          # is moved. Every kind's class the same on both sides, and the words.
+          npx esbuild supabase/test/rest.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/rest.mjs --log-level=error
+          node node_modules/.cache/rest.mjs
+
+      - name: A worker a day without a meal works at half its pace
+        run: |
+          # Its seconds at work since it last ate, counted only while it
+          # works and put back by any meal; at UPKEEP_FOR (the island day) a
+          # go takes it 1/UNFED_PACE times as long. Both sides, and its card.
+          npx esbuild supabase/test/upkeep.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/upkeep.mjs --log-level=error
+          node node_modules/.cache/upkeep.mjs
+
+      - name: Three of a trade on a settlement make it a specialty
+        run: |
+          # Deed workers of a trade on a settlement, a citizen's among them;
+          # at SPECIALTY_AT a go's work time is divided by 1 + SPECIALTY_BONUS.
+          # The count measured on an island with a crowd on it, and the words.
+          npx esbuild supabase/test/specialty.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/specialty.mjs --log-level=error
+          node node_modules/.cache/specialty.mjs
+
+      - name: The browser's errands and the island's reed cutter agree
+        run: |
+          # A mender, a water carrier, a hod carrier, a planter, a stoker and a
+          # prospector in the browser take a go's work time, and wait after a
+          # fetch as the island does; a stoker, a fetcher and a clearer of rot
+          # learn the same a go on both sides; and the island's reed cutter
+          # cuts 1 and 1 more for every REED_LEVELS, as the browser does.
+          npx esbuild supabase/test/agree2.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/agree2.mjs --log-level=error
+          node node_modules/.cache/agree2.mjs
+
       - name: Skills go on past a hundred, for the boards
         run: |
           # A go is worth what it was up to SKILL_TOP and is divided by

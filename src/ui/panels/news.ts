@@ -62,6 +62,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
+import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
@@ -2928,6 +2929,25 @@ export const NEWS: News[] = [
         'Each of the three is a new model, a frog with water bladders on its back in rope rings that grows into a Springcarrier with a bladder on each flank and a great Aquavoyager with a wooden yoke pipe, spouts and a leaf canopy, with its own hop, strike, pour and voice.',
       ];
     },
+  },
+  {
+    n: 226,
+    day: '2026-10-20',
+    lines: () => [
+      `Deed workers tire: each has ${TIRE_GOES} goes at its task in it, a go being one gain, so a stage's extra loads and handlings cost nothing more. `
+        + `With none left, once its arms are empty or between the steps of an errand, it rests ${spanWords(restFor(false))} and gets up with its stamina full. Its card shows its stamina, and while it rests the seconds left.`,
+      `A wildermon bed of its own size standing free on your settlement shortens that: it walks to the nearest and sleeps in it for ${share(BED_REST)} as long, ${spanWords(restFor(true))}. `
+        + `A small bed fits one in its first stage (under level ${EVOLVE_AT[0]}), a medium one its second, a large one its third (level ${EVOLVE_AT[1]} and over); `
+        + `a kind that does not evolve fits the small one under ${DEN_HEALTH[0]} health, the medium one under ${DEN_HEALTH[1]}, and the large one at that and over. None sleeps in a bed of another size, and a bed holds one at a time.`,
+      `Upkeep: a deed worker that has been at work ${spanWords(UPKEEP_FOR)}, an island day, without a meal takes its task at ${percent(UNFED_PACE)} of its pace until it next eats, and its card says so. `
+        + 'It eats out of your stores on the settlement whenever it is hungry, as ever, so only one with nothing to eat there slows.',
+      `Specialties: with ${SPECIALTY_AT} or more deed workers of one trade on a settlement, each takes its task ${percent(SPECIALTY_BONUS)} faster. The settlement window lists your trades and how many work each, and a worker's card says its own.`,
+      `In a game of your own a mender, a water carrier, a hod carrier, a planter, a stoker and a prospector now take a go's work time over every go, `
+        + `${Math.round(workDuration(1))} seconds at level 1 and ${Math.round(workDuration(SKILL_TOP))} at ${SKILL_TOP} before care and stage, and wait as long after a fetch out of the stores as the island does; `
+        + 'a fetcher and a stoker learn what they learn on the island, and clearing up rot is a trade that walks out to a tile, as it is there. '
+        + `On the island a reed cutter now cuts 1 reed and 1 more for every ${REED_LEVELS} levels of its foraging, as its words say: ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} a cut at ${SKILL_TOP}.`,
+      `Every trade's share of learning was worked out again with its rest counted, so each still takes about as long as the middle one to evolve: ${learnPaceSays()}.`,
+    ],
   },
 ];
 

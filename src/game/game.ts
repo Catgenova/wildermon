@@ -7890,18 +7890,6 @@ export class Game {
     this.logMsg(`${by.name} scratches at the ground and stands over ${[...names].join(' and ')}.`, 'event');
   }
 
-  /** Something rotting on the ground in reach, for whatever eats such things. */
-  rottingNear(near: (x: number, y: number) => boolean): { x: number; y: number; uid: number } | undefined {
-    for (const [key, pile] of this.ground) {
-      const x = keyX(key);
-      const y = keyY(key);
-      if (!near(x, y)) continue;
-      const item = pile.find((it) => it.id === 'corpse' || it.dmg >= 40);
-      if (item) return { x, y, uid: item.uid };
-    }
-    return undefined;
-  }
-
   /**
    * The nearest vehicle to a point with a yoke still free, within reach of
    * somebody standing there.
@@ -8341,6 +8329,8 @@ export class Game {
           // The settlement it is a store of, when it is marked one (`stores.ts`).
           ...(r.store_of ? { storeOf: r.store_of } : {}),
           creature: r.creature ?? undefined,
+          // The wildermon asleep in a wildermon bed (`placed.sleeper`).
+          ...(r.sleeper ? { sleeper: r.sleeper } : {}),
           // A planter's last crop, which Crop Rotation reads as it reads a field's.
           ...(typeof r.state?.sown === 'string' ? { sown: r.state.sown } : {}),
           // A lantern post's lantern (`lamps.ts`).
@@ -10065,6 +10055,8 @@ export interface IslandPlaced {
   lock?: number | null;
   /** The founder of the settlement it is a store of, when it is marked one (`stores.ts`). */
   store_of?: string | null;
+  /** For a wildermon bed, the wildermon asleep in it (`PlacedFurniture.sleeper`). */
+  sleeper?: number | null;
   /** Whoever has the reins of it or is sitting in it, by uid. */
   driver?: string | null;
   /** Whether that helm is as good as empty, its holder having gone away; only sent when there is a holder. */

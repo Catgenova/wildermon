@@ -53,6 +53,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, CULL_RANGE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
   BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -3267,6 +3268,23 @@ export function helpText(): string {
     dressing out of the stores for each that wants one. A go still teaches what one go teaches. Keeping watch, hunting,
     pruning, digging out stumps, scrubbing, tending hives, reading the ground, charging smelters and kilns and brewing do no
     more at once.</p>
+    <p><b>Rest, and wildermon beds.</b> A deed worker has ${TIRE_GOES} goes at its task in it before it tires, a go being one
+    gain, so a stage's extra loads and handlings cost it nothing more. With none left, once its arms are empty (or between
+    the steps of an errand), it rests ${spanWords(restFor(false))} and gets up with its stamina full; a rest is no go in its ledger.
+    A <b>wildermon bed</b> of its own size standing free on your settlement shortens it: it walks to the nearest such and sleeps
+    in it for ${share(BED_REST)} as long, ${spanWords(restFor(true))}. A small bed fits one in its first stage, under level ${EVOLVE_AT[0]},
+    a medium one its second, up to ${EVOLVE_AT[1] - 1}, and a large one its third; a kind that does not evolve fits the small one
+    under ${DEN_HEALTH[0]} health, the medium one under ${DEN_HEALTH[1]} and the large one at ${DEN_HEALTH[1]} and over. None sleeps in
+    a bed of another size, and a bed holds one at a time. Its card shows its stamina, and while it rests what is left of it
+    (&ldquo;${idleSays({ why: 'bed', n: restFor(true), bed: 'den_small' }, 'forage')}&rdquo;).</p>
+    <p><b>Upkeep.</b> A deed worker eats out of your stores on the settlement whenever it is hungry. One that has been at work
+    ${spanWords(UPKEEP_FOR)} &mdash; an island day &mdash; without a meal, having found nothing it eats there, takes its task at
+    ${percent(UNFED_PACE)} of its pace until it next eats, and its card says so
+    (&ldquo;${unfedSays({ species: 'sedra', unfed: UPKEEP_FOR })}&rdquo;). So the food your settlement makes feeds its work.</p>
+    <p><b>Specialties.</b> With ${SPECIALTY_AT} or more deed workers of one trade on a settlement, every one of them takes its
+    task ${percent(SPECIALTY_BONUS)} faster, its work time a go divided by ${1 + SPECIALTY_BONUS}, besides what its stage and its
+    blood do. Keeping watch and hunting have no such go to quicken. The settlement window lists each trade your workers are at
+    and how many there are of it, and a worker's card says the same of its own.</p>
     <p><b>Creature crates.</b> A creature crate holds <b>one</b> wildermon. A fine carpenter builds it
     with a mallet from ${CRATE_BILL}; it weighs <b>${itemDef(CREATURE_CRATE).weight} kg</b> and does not rot.
     The first wildermon you tame follows you; <b>every one after that goes into an empty crate in your

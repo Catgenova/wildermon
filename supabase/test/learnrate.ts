@@ -11,7 +11,10 @@
  * live world, step by step as `worker_settle` takes it (`errand_step`, `errand_do`, `worker_do`): the walk to where it
  * works at its kind's pace (`stepToward`, the island's `pace`), `workDuration` at its stage, the second the island
  * rests after every go and the half second after a fetch, which steps teach and what, and for a trade that walks a
- * load home, the share of its goes that bring one. It assumes a typical deed: the stores at the token, the ground a
+ * load home, the share of its goes that bring one; and its rest, `REST_FOR` after every `TIRE_GOES` goes, which is the
+ * same for every trade a go and so is spread over its goes, a `TIRE_GOES`th of it on each (a go being what the ledger
+ * counts: every step of a trade's round but a fetch out of the stores). With no bed, as the factors are worked out;
+ * `--table` also gives the minutes with a bed of its size on the settlement (`BED_REST`). It assumes a typical deed: the stores at the token, the ground a
  * trade works `FIELD` tiles out and the next tile of it `NEXT` on, a piece of yours (a fire, a press, a barrel, a
  * lantern, a planter, one of your wildermon) `NEAR` from the stores, and the water `SHORE` from the barrels; a worker
  * kept (care full), with no traits, grown, fed, and with all it needs to work on at hand. A kind with no trade: out
@@ -25,14 +28,15 @@
  * `learn_pace` multiplies the same skill for the same trade as `learnPace`, and a gain at the same roll comes out the
  * same in the browser's `gainSkill` and the island's `worker_learn`.
  *
- *   --table  prints the minutes, before and after, as a table.
+ *   --table  prints the minutes, before and after, as a table, and each trade's minutes with no rest at all (the rules
+ *            before rest), resting where it stands, and resting in a bed.
  *
  * Runs against the database the suite leaves behind, in one transaction that is rolled back.
  */
 import { execFileSync } from 'node:child_process';
 import {
   CARE_BONUS, DAIRY_FULL, EVOLVE_AT, footing, LEARN_PACE, LEARN_PACE_LEAST, LEARN_PACE_MOST, learnPace,
-  LEARNS_GAIN, MEND_EVERY, OUT_EVERY, PULL_LEARN, SPECIES, STAGE_LOADS, STAGE_MUL, workDuration, type GatherKind, type LearnsBy,
+  LEARNS_GAIN, OUT_EVERY, PULL_LEARN, restFor, SPECIES, STAGE_LOADS, STAGE_MUL, TIRE_GOES, workDuration, type GatherKind, type LearnsBy,
 } from '../../src/game/creatures';
 import { skillGain } from '../../src/game/skills';
 import { TREE_AGES } from '../../src/world/tiles';
@@ -66,8 +70,16 @@ const CARE = 1 + CARE_BONUS;
 const DRIFT = 0.05;
 const WITHIN = 0.35;
 
-/** A step of a trade's go: seconds, and the base of what it teaches (nought for a step that teaches nothing). */
-type Step = { secs: number; base: number };
+/**
+ * A step of a trade's go: seconds, the base of what it teaches (nought for a step that teaches nothing), and whether it
+ * is a go its stamina pays for (`TIRE_GOES`): every step a trade worked on a deed counts to its ledger, which is every
+ * one but a fetch out of the stores, and none of a kind with no trade's.
+ */
+type Step = { secs: number; base: number; go?: boolean };
+/** How it rests: not at all (the rules before rest), where it stands, or in a bed of its size. */
+type Rest = 'none' | 'stands' | 'bed';
+/** A go's share of its rest. */
+const restPerGo = (rest: Rest): number => (rest === 'none' ? 0 : restFor(rest === 'bed') / TIRE_GOES);
 /** At a skill and a stage, with so many loads a trip: the steps of one round of the trade. */
 type Round = (skill: number, stage: number, loads: number) => Step[];
 
@@ -93,13 +105,14 @@ const gathers = (at: GatherKind, base: number, p: (skill: number) => number, idl
   (skill, stage, loads) => {
     const q = p(skill);
     const tiles = q * ((2 * FIELD) / loads + (1 - 1 / loads) * next) + (1 - q) * idle;
-    return [{ secs: walk(at, tiles, skill, stage) + work(skill, stage) + REST, base }];
+    return [{ secs: walk(at, tiles, skill, stage) + work(skill, stage) + REST, base, go: true }];
   };
 /** An errand: steps that walk so far and work (a go, then the rest) or fetch (half a second), each teaching its base. */
 const errand = (at: GatherKind, steps: Array<[tiles: number | ((skill: number) => number), how: 'work' | 'fetch', base: number]>): Round =>
   (skill, stage) => steps.map(([tiles, how, base]) => ({
     secs: walk(at, typeof tiles === 'number' ? tiles : tiles(skill), skill, stage) + (how === 'work' ? work(skill, stage) + REST : FETCH),
     base,
+    go: how === 'work',
   }));
 /** A kind with no trade: a go every so many seconds. */
 const every = (secs: (skill: number, stage: number) => number, base: number): Round => (skill, stage) => [{ secs: secs(skill, stage), base }];
@@ -190,36 +203,20 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   pull: every((s, stage) => 1 / towing(s, stage), PULL_LEARN),
 };
 const MEASURED = Object.keys(ROUNDS) as Array<GatherKind | LearnsBy>;
-/**
- * Where the browser's go is not the island's, for the table alone: a mender's go every `MEND_EVERY` at no
- * `workDuration`, a water carrier, a hod carrier, a planter and a stoker at none either, a compost heap's clearer and a
- * fetcher at a lower base, a prospector resting two seconds. The factors are the island's, which runs the live world.
- */
-const BROWSER: Partial<Record<GatherKind | LearnsBy, Round>> = {
-  mend: every(() => MEND_EVERY, 0.2),
-  water: (s, st) => [{ secs: walk('water', 2 * SHORE, s, st) + 0.5, base: 0.2 }],
-  hod: (s, st) => [{ secs: walk('hod', 2 * FIELD, s, st), base: 0.25 }],
-  plant: (s, st) => [{ secs: walk('plant', 2 * FIELD, s, st), base: 0.25 }],
-  stoke: (s, st) => [{ secs: walk('stoke', 2 * NEAR, s, st) + 1, base: 0.18 }],
-  compost: (s, st) => [{ secs: walk('compost', 2 * FIELD, s, st) + 1, base: 0.2 }],
-  prospect: (s, st) => [{ secs: walk('prospect', 3 + Math.floor(s / 20), s, st) + 2, base: 0.22 }],
-  fetch: (s, st, loads) => [{ secs: gathers('fetch', 0.12, () => 1)(s, st, loads)[0].secs - 0.5, base: 0.12 }],
-};
-
 /** Whether the kind that works it evolves, and so works at its stage, and carries its stage's loads, past the first. */
 const evolves = (at: GatherKind | LearnsBy): boolean => !!SPECIES[kindOf(at)].stages;
 /** The loads a trip at a stage: its stage's for a kind that evolves now, one before there were stages that carried more. */
 const loadsAt = (at: GatherKind | LearnsBy, stage: number, now: boolean): number => (now && evolves(at) ? STAGE_LOADS[stage] : 1);
 
-/** Minutes from one level to another, round after round at the mean of the roll, at this pace. */
-function minutes(at: GatherKind | LearnsBy, from: number, to: number, pace: number, now: boolean, rounds = ROUNDS): number {
-  const round = rounds[at]!;
+/** Minutes from one level to another, round after round at the mean of the roll, at this pace, resting so. */
+function minutes(at: GatherKind | LearnsBy, from: number, to: number, pace: number, now: boolean, rest: Rest = 'stands'): number {
+  const round = ROUNDS[at]!;
   const stage = evolves(at) && from >= EVOLVE_AT[0] ? 1 : 0;
   let v = from;
   let t = 0;
   for (let n = 0; v < to && n < 1e7; n++) {
     const steps = round(v, stage, loadsAt(at, stage, now));
-    for (const s of steps) t += s.secs;
+    for (const s of steps) t += s.secs + (s.go ? restPerGo(rest) : 0);
     for (const s of steps) if (s.base > 0) v += skillGain(v, s.base * CARE * pace, 1);
   }
   return t / 60;
@@ -230,8 +227,8 @@ const median = (xs: number[]): number => {
   const s = [...xs].sort((a, b) => a - b);
   return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
 };
-const span = (at: GatherKind | LearnsBy, pace: number, now: boolean): [number, number] =>
-  [minutes(at, 1, EVOLVE_AT[0], pace, now), minutes(at, EVOLVE_AT[0], EVOLVE_AT[1], pace, now)];
+const span = (at: GatherKind | LearnsBy, pace: number, now: boolean, rest: Rest = 'stands'): [number, number] =>
+  [minutes(at, 1, EVOLVE_AT[0], pace, now, rest), minutes(at, EVOLVE_AT[0], EVOLVE_AT[1], pace, now, rest)];
 // Before: the rules as they were, every trade at 1 and a load a trip. The mark: the median trade then.
 const before = new Map(MEASURED.map((at) => [at, span(at, 1, false)]));
 const MARK: [number, number] = [median(MEASURED.map((at) => before.get(at)![0])), median(MEASURED.map((at) => before.get(at)![1]))];
@@ -251,13 +248,14 @@ if (process.argv.includes('--table')) {
     const vs = Math.sqrt((r.before[0] / MARK[0]) * (r.before[1] / MARK[1]));
     console.log(`| ${r.at} | ${SPECIES[kindOf(r.at)].name}${evolves(r.at) ? ' (evolves)' : ''} | ${f(r.before[0])} | ${f(r.before[1])} | ×${vs.toFixed(2)} | ${r.derived.toFixed(2)} | ${LEARN_PACE[r.at]} | ${f(r.after[0])} | ${f(r.after[1])} |`);
   }
-  console.log(`\nWhere the browser's go is not the island's (the factor applied, at the rules now):\n`);
-  console.log(`| Trade | Browser: 1–${EVOLVE_AT[0]} | Browser: ${EVOLVE_AT[0]}–${EVOLVE_AT[1]} | Island: 1–${EVOLVE_AT[0]} | Island: ${EVOLVE_AT[0]}–${EVOLVE_AT[1]} |`);
-  console.log('|---|---|---|---|---|');
-  for (const at of Object.keys(BROWSER) as Array<GatherKind | LearnsBy>) {
-    const r = ROWS.find((x) => x.at === at)!;
-    const b = [minutes(at, 1, EVOLVE_AT[0], LEARN_PACE[at], true, BROWSER), minutes(at, EVOLVE_AT[0], EVOLVE_AT[1], LEARN_PACE[at], true, BROWSER)];
-    console.log(`| ${at} | ${f(b[0])} | ${f(b[1])} | ${f(r.after[0])} | ${f(r.after[1])} |`);
+  const none = MEASURED.map((at) => span(at, 1, false, 'none'));
+  console.log(`\nThe mark with no rest at all, as it was: ${f(median(none.map((m) => m[0])))} and ${f(median(none.map((m) => m[1])))}.`);
+  console.log(`\nEach trade at its factor: with no rest (the rules before rest), resting where it stands, and resting in a bed of its size:\n`);
+  console.log(`| Trade | No rest: 1–${EVOLVE_AT[0]} | ${EVOLVE_AT[0]}–${EVOLVE_AT[1]} | Rest: 1–${EVOLVE_AT[0]} | ${EVOLVE_AT[0]}–${EVOLVE_AT[1]} | Bed: 1–${EVOLVE_AT[0]} | ${EVOLVE_AT[0]}–${EVOLVE_AT[1]} |`);
+  console.log('|---|---|---|---|---|---|---|');
+  for (const at of MEASURED) {
+    const [n, r, b] = (['none', 'stands', 'bed'] as const).map((how) => span(at, LEARN_PACE[at], true, how));
+    console.log(`| ${at} | ${f(n[0])} | ${f(n[1])} | ${f(r[0])} | ${f(r[1])} | ${f(b[0])} | ${f(b[1])} |`);
   }
   console.log('\nDerived, for the table in creatures.ts:');
   console.log(MEASURED.map((at) => `${at}: ${+ROWS.find((r) => r.at === at)!.derived.toFixed(2)}`).join(', '));

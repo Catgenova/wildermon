@@ -4,7 +4,7 @@ import { mapFromBeast } from './treasure';
 import { BOTANIZE_TABLE, FORAGE_TABLE, rollTable } from './forage';
 import { fruitsAt, inSeason } from './fruiting';
 import type { DeedStore, Game } from './game';
-import { DAY_SECONDS } from './game';
+import { DAY_SECONDS } from './pace';
 import { CROP_BY_SEED, cropDef, cropReady, cropYield } from './farming';
 import { GLAZE_ASH, GLAZEABLE, MINE_COLLAPSE, MINE_DEPTH } from './actions';
 import { groomGain, GROOM_HEAL } from './husbandry';
@@ -16,7 +16,7 @@ import { smelterCapacity, smelterCentre, type PlacedSmelter } from './smelter';
 import { fireSeconds, firedQl, kilnCapacity, kilnCentre, POTTERY_BY_UNFIRED, isGreenware, type PlacedKiln } from './kiln';
 import { BREWS, isWorking, type BrewDef } from './brewing';
 import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
-import { furnitureDef, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
+import { fitsDen, furnitureDef, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
 
 import { milkLitres } from './dairy';
 import { COMPANION_SIGHT as KEPT_SIGHT, NIGHT_LOSS as KEPT_NIGHT_LOSS, SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
@@ -39,7 +39,7 @@ import { describeWith, itemDef, markOf, RARITIES, rarityOf, rarityStep, rollRari
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
-import { article, capital, daySays, fill, listed, numberWord, percent, spanWords, timeWords, times } from './words';
+import { article, capital, daySays, fill, listed, numberWord, percent, share, spanWords, timeWords, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { DRIVING, DRIVING_LEARN } from './travel';
@@ -584,6 +584,88 @@ export const STAGE_LOADS = [1, 2, 3] as const;
 export const stageLoads = (c: Pick<Creature, 'species' | 'skills'>): number => STAGE_LOADS[stageOf(c)];
 /** The loads in its arms: the one it is carrying and the ones gathered before it this trip (`Creature.laden`). */
 export const loadsIn = (c: Pick<Creature, 'carrying' | 'laden'>): number => (c.carrying ? 1 : 0) + (c.laden?.length ?? 0);
+
+/*
+ * Rest. Asked for: "Workers tire after N goes and rest for a short while. A bed or pen on the deed shortens the rest",
+ * and of the wildermon beds, "wildermon can only use [the bed] equivalent to their evolution stage". A deed worker
+ * spends a `TIRE_GOES`th of its stamina a go -- a go being what one gain is, so a stage's extra loads and handlings
+ * (`STAGE_LOADS`) cost it nothing more -- and with none left, once its arms are empty (or between the steps of an
+ * errand), it rests `REST_FOR` and comes back to it full. With a bed of its own size free on its settlement
+ * (`denClass`, `FurnitureDef.den`), it walks to the nearest and sleeps in it (`PlacedFurniture.sleeper`) for
+ * `BED_REST` of that. The island's `tire_goes`, `rest_for`, `bed_rest`, `den_class` and `worker_settle`.
+ */
+export const TIRE_GOES = 30;
+/** How long a worker with no stamina left rests, in seconds. */
+export const REST_FOR = 4 * 60;
+/** What a bed of its size on its settlement makes of that rest. */
+export const BED_REST = 0.5;
+/** How long it rests, in a bed or not. */
+export const restFor = (inBed: boolean): number => REST_FOR * (inBed ? BED_REST : 1);
+/** Its stamina, a share of full: what is left of its `TIRE_GOES` goes since it last rested (`Creature.worn`). */
+export const staminaOf = (c: Pick<Creature, 'worn'>): number => Math.max(0, 1 - (c.worn ?? 0) / TIRE_GOES);
+/**
+ * The base health under which a kind that does not evolve sleeps in a small bed, and then in a medium one; at the
+ * second and over, a large one. One that evolves sleeps in the bed of its stage. The island's `den_health_1` and
+ * `den_health_2`.
+ */
+export const DEN_HEALTH = [25, 40] as const;
+/**
+ * The bed it fits, by `FurnitureDef.den`: for a kind that evolves the stage it is at (`stageOf`), and for one that does
+ * not the band its kind's base health is in (`DEN_HEALTH`). It sleeps in a bed of exactly this and no other. The
+ * island's `den_class`.
+ */
+export function denClass(c: Pick<Creature, 'species' | 'skills'>): 0 | 1 | 2 {
+  const def = SPECIES[c.species];
+  if (def?.stages) return stageOf(c);
+  const health = def?.health ?? 0;
+  return health < DEN_HEALTH[0] ? 0 : health < DEN_HEALTH[1] ? 1 : 2;
+}
+
+/*
+ * Upkeep. Asked for: "Each worker eats from deed stores once per island day. An unfed one works at -50% and shows it
+ * on its card, so food production matters." A deed worker eats out of the stores on its settlement whenever it is
+ * hungry, as ever (`GRAZE_HUNGRY`, `HUNGRY`); the time it has worked since its last meal is kept (`Creature.unfed`),
+ * and once that is `UPKEEP_FOR` it takes its task at `UNFED_PACE` of its pace until it next eats. The island's
+ * `upkeep_for`, `unfed_pace` and `creature.unfed`.
+ */
+export const UPKEEP_FOR = DAY_SECONDS;
+export const UNFED_PACE = 0.5;
+/** Whether it has gone `UPKEEP_FOR` at work without a meal. */
+export const unfedNow = (c: Pick<Creature, 'unfed'>): boolean => (c.unfed ?? 0) >= UPKEEP_FOR;
+
+/*
+ * Specialties. Asked for: "Three or more workers of one trade on a deed unlock a +10% bonus for that trade." With
+ * `SPECIALTY_AT` or more deed workers of a trade on a settlement, every one of them takes its task in `1 +
+ * SPECIALTY_BONUS` less time, where its stage and its blood already speed it (`STAGE_MUL.work`). The island's
+ * `specialty_at`, `specialty_bonus` and `deed_trade_workers`.
+ */
+export const SPECIALTY_AT = 3;
+export const SPECIALTY_BONUS = 0.1;
+/** What so many workers of a trade on a settlement make of each one's pace at it. */
+export const specialtyMul = (n: number): number => (n >= SPECIALTY_AT ? 1 + SPECIALTY_BONUS : 1);
+/** Whether a trade is one a specialty speeds: one with a go to take less time over, which a watch and a hunt have not. */
+export const specialtyTrade = (kind: GatherKind | null | undefined): kind is GatherKind => !!kind && kind !== 'guard' && kind !== 'hunt';
+/** Its stamina, for its card: "Stamina: 21 of 30 goes left before it rests." */
+export const staminaSays = (c: Pick<Creature, 'worn'>): string =>
+  `Stamina: ${Math.max(0, TIRE_GOES - (c.worn ?? 0))} of ${TIRE_GOES} goes left before it rests ${spanWords(restFor(false))}, or ${spanWords(restFor(true))} in a bed of its size on the settlement.`;
+/** For its card, once it has gone `UPKEEP_FOR` without a meal: "Unfed for 1 hour and 12 minutes: works at 50% until it eats." */
+export function unfedSays(c: Pick<Creature, 'unfed' | 'species'>): string {
+  if (!unfedNow(c)) return '';
+  const def = SPECIES[c.species];
+  return `Unfed for ${timeWords(c.unfed ?? 0)}: works at ${percent(UNFED_PACE)} until it eats. No food in your stores on the settlement${def ? ` that it eats (${def.baitHint})` : ''}.`;
+}
+/** A trade's specialty on a settlement, for a card and the settlement window: "Specialty: cutting reeds, 4 workers: +10% speed at its task." */
+export function specialtySays(kind: GatherKind, n: number): string {
+  if (n >= SPECIALTY_AT) return `Specialty: ${GATHER_VERB[kind]}, ${n} workers: +${percent(SPECIALTY_BONUS)} speed at its task.`;
+  return `${capital(GATHER_VERB[kind])}: ${n} of the ${SPECIALTY_AT} workers that make it a specialty, +${percent(SPECIALTY_BONUS)} speed at its task.`;
+}
+// What a wildermon bed does and for whom (`den` in `furniture.ts`), off the stages, the health bands and the rest.
+describeWith({
+  den: {
+    first: EVOLVE_AT[0], secondLast: EVOLVE_AT[1] - 1, second: EVOLVE_AT[1], small: DEN_HEALTH[0], large: DEN_HEALTH[1],
+    tire: TIRE_GOES, share: share(BED_REST), bed: spanWords(restFor(true)), rest: spanWords(restFor(false)),
+  },
+});
 /**
  * The trades that carry a load between where they get it and where it goes, and so carry their stage's loads a trip
  * (`STAGE_LOADS`): every trade that walks out to the ground and brings a load home, which with room in its arms for
@@ -746,6 +828,8 @@ export function fedOn(c: Creature, item: string, ql: number, time: number): void
     c.fedUntil = time + FED_FOR;
   }
   c.care = Math.min(1, c.care + FED_CARE * q / QL_TOP);
+  // And it has eaten (`UPKEEP_FOR`).
+  c.unfed = 0;
 }
 /** Its favourite and what it is worth, for its card and its page: "Favourite: reed, +40% learning for two and a half hours at quality 100". */
 export function favouriteSays(def: SpeciesDef): string {
@@ -799,8 +883,8 @@ export const LEARN_PACE_MOST = 4;
  * learns by being out every `OUT_EVERY` -- so some lines reached `EVOLVE_AT` in a fraction of the time others took.
  *
  * Derived from the measured go rates, not chosen: `supabase/test/learnrate.ts` works out, from each trade's go on the
- * island (its walks at its kind's pace, `workDuration` at its stage, the second the island rests after a go, and the
- * share of its goes that teach), the minutes a well-kept worker with no traits takes from level 1 to the first of
+ * island (its walks at its kind's pace, `workDuration` at its stage, the second the island rests after a go, its rest
+ * of `REST_FOR` every `TIRE_GOES` goes, and the share of its goes that teach), the minutes a well-kept worker with no traits takes from level 1 to the first of
  * `EVOLVE_AT` and from there to the second, takes the median trade as the mark, and divides each trade's time by it
  * (the two spans' ratios multiplied and the root taken), held to between `LEARN_PACE_LEAST` and `LEARN_PACE_MOST`.
  * That test recomputes these and fails when one has drifted from what the rule now makes. Rerun it with `--table` to
@@ -809,20 +893,20 @@ export const LEARN_PACE_MOST = 4;
  */
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
-  forage: 0.91, botanize: 0.92, woodcut: 0.88, farm: 0.87, mine: 0.99, quarry: 1.03, sand: 0.98, clay: 0.99, peat: 1.14,
-  reed: 0.96, fetch: 1.07, compost: 1.12, fruit: 1.1, bush: 1.07, grass: 1.09, sprout: 1.05, resin: 1.07, flower: 1.04,
-  worm: 1.03, fish: 0.98, seek: 0.98, pan: 0.92, prune: 0.93, stump: 0.93, scrub: 0.93, hive: 0.9,
+  forage: 0.94, botanize: 0.95, woodcut: 0.92, farm: 0.91, mine: 1.01, quarry: 1.04, sand: 1, clay: 1.01, peat: 1.12,
+  reed: 0.98, fetch: 1.06, compost: 1.11, fruit: 1.09, bush: 1.06, grass: 1.08, sprout: 1.05, resin: 1.06, flower: 1.04,
+  worm: 1.04, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.95, hive: 0.93,
   // At the stores, a fire, a press or a barrel, one thing after another.
-  mend: 0.95, butcher: 0.67, restore: 0.67, glaze: 1.01, tan: 0.81, mill: 0.81, saw: 0.81, chisel: 0.81, brick: 0.81,
-  rope: 0.81, fletch: 0.81, cook: 0.81, paper: 0.81, ash: 0.95, brew: 0.69,
+  mend: 1, butcher: 0.7, restore: 0.7, glaze: 1.05, tan: 0.84, mill: 0.84, saw: 0.84, chisel: 0.84, brick: 0.84,
+  rope: 0.84, fletch: 0.84, cook: 0.84, paper: 0.84, ash: 0.97, brew: 0.71,
   // To one of yours, or to a piece of yours, with something out of the stores for some.
-  groom: 0.85, dairy: 0.85, heal: 1.71, lamp: 2.11, smelt: 1.29, kiln: 1.29, patch: 1.01,
+  groom: 0.87, dairy: 0.87, heal: 1.75, lamp: 2.16, smelt: 1.32, kiln: 1.32, patch: 1.04,
   // Carrying between the stores, the water and the work.
-  fill: 3.29, water: 2.15, hod: 0.96, stoke: 1.1, plant: 1, prospect: 0.99,
+  fill: 3.34, water: 2.2, hod: 0.96, stoke: 1.12, plant: 0.99, prospect: 1.01,
   // What wild things come onto the deed.
   guard: 1, hunt: 1,
   // A kind with no trade.
-  out: 1.2, dark: LEARN_PACE_MOST, tended: LEARN_PACE_MOST, spar: 0.33, pull: 1.95,
+  out: 0.94, dark: 3.66, tended: LEARN_PACE_MOST, spar: 0.26, pull: 1.53,
 };
 /** What its level is learned by: its trade, or for a kind with no trade what teaches it; null for neither. */
 export function learnsAt(c: Pick<Creature, 'species' | 'trade'>): GatherKind | LearnsBy | null {
@@ -3706,14 +3790,13 @@ export const footing = (climb: number): number => 0.9 + climb / 140;
 /**
  * A mender's go at a damaged thing in the stores (`mendStep`): this much damage off it and one more for every
  * `MEND_DMG_LEVELS` of its repair, and this much quality lost with it less one for every `MEND_QL_LEVELS`, never under
- * `MEND_QL_LEAST`; a go every `MEND_EVERY` seconds. The island's errand mends by the same numbers.
+ * `MEND_QL_LEAST`; a go takes what a go at any trade does (`workDuration`). The island's errand mends by the same numbers.
  */
 export const MEND_DMG = 2;
 export const MEND_DMG_LEVELS = 12;
 export const MEND_QL = 0.6;
 export const MEND_QL_LEVELS = 220;
 export const MEND_QL_LEAST = 0.05;
-export const MEND_EVERY = 1.5;
 // A species says what it carries and pulls off its own row.
 for (const s of Object.values(SPECIES)) {
   s.description = fill(s.description, {
@@ -3908,6 +3991,9 @@ export const HUNT_REST = world(60);
 export const HEARTH_FULL = 600;
 /** A deed worker goes looking for a meal once its belly is down to this. */
 export const HUNGRY = 0.25;
+/** What a clearer takes off the ground to turn into compost: a carcass, or anything this damaged or worse. */
+export const ROT_DMG = 40;
+export const isRotting = (it: Pick<Item, 'id' | 'dmg'>): boolean => it.id === 'corpse' || it.dmg >= ROT_DMG;
 
 /**
  * How close to open water a water-bound species will settle, and to the
@@ -3986,7 +4072,7 @@ export const mayEat = (species: SpeciesDef, item: Item): boolean =>
   isBaitFor(species, item.id) && !item.locked && item.price === undefined;
 /** What a wild one does to feed itself; felling trees puts no food in its belly. */
 /** The jobs that are errands rather than a walk out for a load of something. */
-const ERRAND_JOBS = new Set<GatherKind>(['water', 'hod', 'mend', 'plant', 'prospect', 'compost', ...TEND_JOBS]);
+const ERRAND_JOBS = new Set<GatherKind>(['water', 'hod', 'mend', 'plant', 'prospect', ...TEND_JOBS]);
 const INDOOR_JOBS = new Set<GatherKind>(['woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'stoke', 'fetch', 'guard', 'hunt', 'water', 'prospect', 'plant', 'hod', 'mend', 'compost', 'seek', 'prune', 'stump', ...TEND_JOBS, 'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'scrub']);
 export const wildGather = (species: SpeciesDef): GatherKind | null => (species.gathers && INDOOR_JOBS.has(species.gathers) ? 'forage' : species.gathers);
 /** The task skill a species trains, if it has a job. */
@@ -4025,7 +4111,7 @@ sayLine('orse', `Saddled and bridled, it carries you at its own pace: a grown on
   'Its level is its climbing, which it learns under a rider and in the traces.');
 sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart or a wagon. In the traces it adds ${percent(SPECIES.roxxen.pull!)} to its team's pace, where a beast not bred for the traces adds ${percent(PULL_DEFAULT)}, and its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
   `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
-sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go every ${MEND_EVERY} seconds: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,
+sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go taking it ${Math.round(workDuration(1))} seconds at level 1 and ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP} as a go at any trade does, less for its care: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,
   'Its level is its repair.');
 sayLine('holla', `Set to work on a settlement it fills a bladder at the shore or a well within ${SPECIES.holla.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, ${BUCKET_LITRES} litres a bucket, and pours it into whichever barrel on the settlement has room for water.`,
   'Its level is its carrying.');
@@ -4476,6 +4562,15 @@ export interface IslandCreature {
   idlePost?: boolean;
   /** What a worker of yours did this island day and the one before (`WorkLedger`), yours only. */
   ledger?: WorkLedger | null;
+  /** For a rest in a wildermon bed, the bed's kind (`Idle.bed`). */
+  idleBed?: string | null;
+  /**
+   * A worker of yours: its goes since it rested (`TIRE_GOES`), its seconds at work since it last ate (`UPKEEP_FOR`),
+   * and how many deed workers of its trade its settlement has (`SPECIALTY_AT`).
+   */
+  worn?: number;
+  unfed?: number;
+  specialty?: number;
   /**
    * Its dam, its sire and where each trait came from, for anything bred and
    * for nothing else. Somebody else's says where a trait came from only for
@@ -4490,7 +4585,7 @@ export interface IslandCreature {
  * Two words each side of the same thing: the island counts a trip as out,
  * work, home; this side has toForage, forage, and a thing with its arms full.
  */
-const STATE_OF: Record<string, string> = { out: 'toForage', work: 'forage' };
+const STATE_OF: Record<string, string> = { out: 'toForage', work: 'forage', rest: 'rest', bed: 'toBed' };
 
 export interface Creature {
   id: number;
@@ -4653,6 +4748,18 @@ export interface Creature {
   idle?: Idle | null;
   /** What a worker did this island day and the one before (`ledgerAdd`). Saved. The island's `ledger`. */
   ledger?: WorkLedger | null;
+  /** Goes at its task since it last rested (`TIRE_GOES`, `staminaOf`). Saved. The island's `worn`. */
+  worn?: number;
+  /**
+   * While it rests (`REST_FOR`): the game time it gets up, and the wildermon bed it is walking to or asleep in, by
+   * the piece's id (`PlacedFurniture.sleeper`). Saved. The island's phase `rest` and `bed`, its `until` and `bed`.
+   */
+  restUntil?: number;
+  bed?: number;
+  /** Seconds it has worked since it last ate (`UPKEEP_FOR`, `unfedNow`). Saved. The island's `unfed`. */
+  unfed?: number;
+  /** On an island, how many deed workers of its trade its settlement has, as the island counts them (`deed_trade_workers`). */
+  specialty?: number;
   /** Time banked up while nobody was watching, spent on the next think. */
   owed: number;
   /** When the player last called it over for an action; it drops everything and comes. */
@@ -4753,6 +4860,11 @@ export interface CreatureJSON {
   trade?: GatherKind | null;
   /** What it did this island day and the one before, on a worker; absent in a save from before there was a ledger. */
   ledger?: WorkLedger | null;
+  /** Its goes since it rested, when it rests and the bed it is in, and its work since it ate; absent from a save from before. */
+  worn?: number;
+  restUntil?: number;
+  bed?: number;
+  unfed?: number;
   /**
    * The middle of its own ground. Saved, because a herd that scattered every
    * time somebody reloaded would not be a herd; a save from before this has
@@ -4960,6 +5072,8 @@ export const forgetCoaxing = (c: Creature): void => {
 
 /** Seconds a wild creature spends grazing. */
 const FORAGE_TIME = 2.5;
+/** What an errand waits after fetching what it carries out of the stores, as the island's `worker_settle` does after a fetch. */
+const ERRAND_FETCH = 0.5;
 
 /** A creature's level, read off its best task skill. */
 /**
@@ -5307,10 +5421,14 @@ export class Creatures {
       // Why it is standing about, and what it did yesterday: the island's words for both, said on its card here (`idleSays`).
       if (r.idleWhy !== undefined) {
         c.idle = r.idleWhy && (IDLE_WHYS as readonly string[]).includes(r.idleWhy)
-          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost }
+          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost, ...(r.idleBed ? { bed: r.idleBed } : {}) }
           : null;
       }
       if (r.ledger !== undefined) c.ledger = r.ledger;
+      // Its stamina, its time since it ate and its settlement's specialty, the island's words for each (`staminaOf`, `unfedNow`, `specialtyMul`).
+      if (r.worn !== undefined) c.worn = r.worn;
+      if (r.unfed !== undefined) c.unfed = r.unfed;
+      if (r.specialty !== undefined) c.specialty = r.specialty;
       if (r.carrying !== undefined) {
         c.carrying = r.carrying
           ? { uid: 0, id: r.carrying.def, ql: r.carrying.ql ?? 1, dmg: 0, count: r.carrying.count ?? 1 }
@@ -5770,6 +5888,12 @@ export class Creatures {
       // A young one arrives on its own hour, whether or not anybody is looking
       // and whether its dam is out working or standing at the token.
       if (c.due > 0 && game.time >= c.due) this.giveBirth(game, c);
+      // Called to heel, crated or let go while it rested: out of its bed, and its rest is over.
+      if (c.mode !== 'deed' && (c.bed !== undefined || c.restUntil !== undefined)) {
+        this.outOfBed(game, c);
+        c.restUntil = undefined;
+        if (c.state === 'rest' || c.state === 'toBed') c.state = 'idle';
+      }
       if (c.mode === 'stored') continue;
       // A kind that learns by being out, a go for every `OUT_EVERY` of it (after dark, for one that learns in the dark).
       const learns = this.species(c).learns;
@@ -6303,6 +6427,11 @@ export class Creatures {
       if (!game.onDeed(x, y) || !game.groundAt(x, y).length) return false;
       return this.tileOk(game, x, y) && !this.claimed(x, y, c);
     }
+    if (kind === 'compost') {
+      // A carcass, or anything knocked about past saving, lying on the deed (`isRotting`): the island's `worker_gatherable`.
+      if (!game.onDeed(x, y) || !game.groundAt(x, y).some((it) => isRotting(it))) return false;
+      return this.tileOk(game, x, y) && !this.claimed(x, y, c);
+    }
     if (kind === 'farm') return !!c && this.farmJobAt(game, c, x, y) !== null;
     if (kind === 'woodcut') return game.world.getTile(x, y) === TileType.Tree && !!this.beside(game, x, y);
     if (kind === 'prune') {
@@ -6423,7 +6552,7 @@ export class Creatures {
 
   private beginForage(game: Game, c: Creature, kind: GatherKind): void {
     c.state = 'forage';
-    c.until = game.time + (c.mode === 'deed' ? workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.workMul(c) : FORAGE_TIME);
+    c.until = game.time + (c.mode === 'deed' ? workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.taskMul(c, kind) : FORAGE_TIME);
   }
 
   /**
@@ -6453,6 +6582,7 @@ export class Creatures {
     if (kind === 'fish') return this.finishFish(game, c);
     if (kind === 'seek') return this.finishSeek(game, c);
     if (kind === 'fetch') return this.finishFetch(game, c);
+    if (kind === 'compost') return this.finishCompost(game, c);
     game.markForaged(x, y, kind);
     // Only what is in season is there to find (`fruiting.ts`), the rest at the weights they had.
     const table = inSeason(GATHER_TABLE[kind], game.wallNow());
@@ -6749,9 +6879,24 @@ export class Creatures {
   private finishFetch(game: Game, c: Creature): Item | null {
     const pile = game.groundAt(c.workX, c.workY);
     if (!pile.length) return null;
-    this.gainSkill(game, c, GATHER_SKILL.fetch, 0.12);
+    this.gainSkill(game, c, GATHER_SKILL.fetch, 0.225);
     const [item] = game.takeFromGround(c.workX, c.workY, pile[0].uid);
     return item ?? null;
+  }
+
+  /**
+   * Clear one thing rotting on the tile a clearer walked to -- a carcass, or anything knocked about past saving -- and
+   * hand it the compost it carries home: half as many as there were of it and one at the least, better for its
+   * farming. A trade that walks out to a tile, as the island's `worker_do` has it, not an errand.
+   */
+  private finishCompost(game: Game, c: Creature): Item | null {
+    const rot = game.groundAt(c.workX, c.workY).find((it) => isRotting(it));
+    if (!rot) return null;
+    const [taken] = game.takeFromGround(c.workX, c.workY, rot.uid);
+    if (!taken) return null;
+    const skill = c.skills[GATHER_SKILL.compost] ?? 1;
+    this.gainSkill(game, c, GATHER_SKILL.compost, 0.225);
+    return { uid: game.inventory.nextUid++, id: 'compost', ql: Math.min(100, 20 + skill * 0.6), dmg: 0, count: Math.max(1, Math.round(taken.count / 2)) };
   }
 
   /** Sow, tend or harvest the field the worker is standing on. */
@@ -6857,7 +7002,6 @@ export class Creatures {
     if (kind === 'mend') return this.mendStep(game, c, goto);
     if (kind === 'plant') return this.plantStep(game, c, goto, near, range, deed);
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);
-    if (kind === 'compost') return this.compostStep(game, c, goto, near, range);
     if (kind === 'groom' || kind === 'dairy' || kind === 'heal') return this.herdStep(game, c, kind, goto, near, range);
     if (kind === 'butcher') return this.butcherStep(game, c, goto);
     const atStores = STORE_RECIPES[kind];
@@ -7314,7 +7458,48 @@ export class Creatures {
   private errandWork(game: Game, c: Creature, kind: GatherKind): void {
     this.acted(c, 'work', game.time);
     this.toLedger(game, c, { goes: 1 });
-    c.busyUntil = game.time + workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.workMul(c);
+    c.busyUntil = game.time + workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.taskMul(c, kind);
+  }
+
+  /** What it fetched out of the stores for an errand in its arms: the half second the island's errand waits after a fetch. */
+  private errandFetched(game: Game, c: Creature): void {
+    c.busyUntil = game.time + ERRAND_FETCH;
+  }
+
+  /**
+   * What a deed worker's go at its task is quickened by: its blood, its care and its stage (`workMul`); its
+   * settlement's specialty in the trade (`specialtyMul`); and `UNFED_PACE` while it has gone `UPKEEP_FOR` without a
+   * meal. Every go's work time is divided by it. The island's `worker_pace`.
+   */
+  taskMul(c: Creature, kind: GatherKind | null): number {
+    return this.workMul(c) * (unfedNow(c) ? UNFED_PACE : 1) * (specialtyTrade(kind) ? specialtyMul(this.tradeWorkers(kind)) : 1);
+  }
+
+  /**
+   * How many deed workers of a trade its settlement has, the one asking among them, in a game of your own; on an
+   * island each of yours carries the island's count (`Creature.specialty`, its `deed_trade_workers`).
+   */
+  tradeWorkers(kind: GatherKind): number {
+    let n = 0;
+    for (const o of this.list.values()) if (o.mode === 'deed' && (o.trade ?? this.species(o).gathers) === kind) n++;
+    return n;
+  }
+
+  /** How many deed workers of its trade a worker's settlement has: the island's count on an island (`specialty`), or this side's. */
+  specialtyOf(c: Creature): number {
+    const kind = c.trade ?? this.species(c).gathers;
+    if (!specialtyTrade(kind)) return 0;
+    return this.fromIsland ? c.specialty ?? 0 : this.tradeWorkers(kind);
+  }
+
+  /** Every trade your deed workers are at that a specialty speeds, with how many of them its settlement has, most first. */
+  specialties(): Array<{ kind: GatherKind; n: number }> {
+    const by = new Map<GatherKind, number>();
+    for (const c of this.working()) {
+      const kind = c.trade ?? this.species(c).gathers;
+      if (specialtyTrade(kind)) by.set(kind, Math.max(by.get(kind) ?? 0, this.specialtyOf(c)));
+    }
+    return [...by].map(([kind, n]) => ({ kind, n })).sort((a, b) => b.n - a.n || a.kind.localeCompare(b.kind));
   }
 
   /** What a worker of this skill makes a thing at: the same spread a tile's load is taken at. */
@@ -7696,12 +7881,11 @@ export class Creatures {
       const room = (furnitureDef(vessel.kind).liquid ?? 0) - (vessel.litres ?? 0);
       const n = Math.max(1, Math.min(held.count, Math.ceil(room / BUCKET_LITRES)));
       game.pourInto(vessel, n * BUCKET_LITRES, 'water');
-      this.toLedger(game, c, { goes: 1 });
       held.count -= n;
       if (held.count <= 0) c.carrying = null;
       this.gainSkill(game, c, GATHER_SKILL.water, 0.2);
-      c.state = 'idle';
-      c.until = game.time + 0.5;
+      // A go, timed as the island's errand times it (`workDuration`).
+      this.errandWork(game, c, 'water');
       return true;
     }
     const source = game.waterSource(c.x, c.y, range, near);
@@ -7711,8 +7895,8 @@ export class Creatures {
     const n = this.bucketsAt(c, source);
     if (source.well) game.drawFromWell(source.well, n * BUCKET_LITRES);
     c.carrying = { uid: game.inventory.nextUid++, id: 'water_bucket', ql: 40, dmg: 0, count: n };
-    // A go, as the island's `errand_do` counts the filling as one.
-    this.toLedger(game, c, { goes: 1 });
+    // A go, as the island's `errand_do` counts the filling as one and times it as one.
+    this.errandWork(game, c, 'water');
     return true;
   }
 
@@ -7749,6 +7933,7 @@ export class Creatures {
       if (stock.count <= 0) store.items.splice(store.items.indexOf(stock), 1);
       store.changed();
       c.carrying = { uid: game.inventory.nextUid++, id: job.item, ql: stock.ql, dmg: 0, count: n };
+      this.errandFetched(game, c);
       return true;
     }
     if (!goto(job.x + 0.5, job.y + 0.5, 1.6)) return true;
@@ -7758,9 +7943,9 @@ export class Creatures {
       game.fitPiece(job.target, held.id);
       held.count -= 1;
     } while (held.count > 0 && game.hodWants(job.target, held.id) > 0);
-    this.toLedger(game, c, { goes: 1 });
     if (held.count <= 0) c.carrying = null;
     this.gainSkill(game, c, GATHER_SKILL.hod, 0.25);
+    this.errandWork(game, c, 'hod');
     return true;
   }
 
@@ -7770,7 +7955,6 @@ export class Creatures {
     if (!found) return this.why(c, 'stock');
     const [sx, sy] = found.store.centre;
     if (!goto(sx, sy)) return true;
-    this.toLedger(game, c, { goes: 1 });
     const skill = c.skills[GATHER_SKILL.mend] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.mend, 0.2);
     // The most damaged thing in the stores and, at a stage, the next most damaged after it, its stage's number of
@@ -7784,7 +7968,8 @@ export class Creatures {
       one.item.ql = Math.max(1, one.item.ql - Math.max(MEND_QL_LEAST, MEND_QL - skill / MEND_QL_LEVELS));
       one.store.changed();
     }
-    c.busyUntil = game.time + MEND_EVERY;
+    // A go takes what a go at its trade does (`workDuration`), as the island's errand times it.
+    this.errandWork(game, c, 'mend');
     return true;
   }
 
@@ -7809,6 +7994,7 @@ export class Creatures {
       if (sprout.count <= 0) store.items.splice(store.items.indexOf(sprout), 1);
       store.changed();
       c.carrying = { uid: game.inventory.nextUid++, id: 'sprout', ql: sprout.ql, dmg: 0, count: n, extra: sprout.extra };
+      this.errandFetched(game, c);
       return true;
     }
     if (c.carrying.id !== 'sprout') return false;
@@ -7820,11 +8006,11 @@ export class Creatures {
     }
     if (!goto(c.workX + 0.5, c.workY + 0.5)) return true;
     game.plantSprout(c.workX, c.workY, c.carrying.extra);
-    this.toLedger(game, c, { goes: 1 });
     c.carrying.count -= 1;
     if (c.carrying.count <= 0) c.carrying = null;
     c.workX = -1;
     this.gainSkill(game, c, GATHER_SKILL.plant, 0.25);
+    this.errandWork(game, c, 'plant');
     return true;
   }
 
@@ -7845,39 +8031,10 @@ export class Creatures {
     }
     if (!goto(c.workX + 0.5, c.workY + 0.5)) return true;
     const skill = c.skills[GATHER_SKILL.prospect] ?? 1;
-    this.toLedger(game, c, { goes: 1 });
     this.gainSkill(game, c, GATHER_SKILL.prospect, 0.22);
     game.readGround(c, c.workX, c.workY, 2 + Math.floor(skill / 20));
     c.workX = -1;
-    c.busyUntil = game.time + 2;
-    return true;
-  }
-
-  /** Clearing up: what is rotting on the ground goes back to the fields. */
-  private compostStep(
-    game: Game,
-    c: Creature,
-    goto: (x: number, y: number, reach?: number) => boolean,
-    near: (x: number, y: number) => boolean,
-    range: number,
-  ): boolean {
-    // Home once its arms are full (`stageLoads`), or once there is no more to clear with something in them.
-    if (c.carrying && (c.homeward || loadsIn(c) >= stageLoads(c))) return false;
-    const rot = game.rottingNear(near);
-    if (!rot) {
-      if (c.carrying) {
-        c.homeward = true;
-        return false;
-      }
-      return this.why(c, 'range', range);
-    }
-    if (!goto(rot.x + 0.5, rot.y + 0.5)) return true;
-    const [taken] = game.takeFromGround(rot.x, rot.y, rot.uid);
-    if (!taken) return true;
-    this.gainSkill(game, c, GATHER_SKILL.compost, 0.2);
-    if (c.carrying) (c.laden ??= []).push(c.carrying);
-    // Whatever it was, what comes back is compost, and the more of it the better.
-    c.carrying = { uid: game.inventory.nextUid++, id: 'compost', ql: Math.min(100, 20 + (c.skills[GATHER_SKILL.compost] ?? 1) * 0.6), dmg: 0, count: Math.max(1, Math.round(taken.count / 2)) };
+    this.errandWork(game, c, 'prospect');
     return true;
   }
 
@@ -7909,6 +8066,7 @@ export class Creatures {
     c.workX = hearth.x;
     c.workY = hearth.y;
     c.job = hearth.kind;
+    this.errandFetched(game, c);
     return true;
   }
 
@@ -7930,7 +8088,7 @@ export class Creatures {
     const light = (fuel: number, lit: boolean, set: (f: number, l: boolean) => void, what: string): void => {
       const now = Math.min(FIRE_CAPACITY, fuel + per);
       set(now, lit || now > 0);
-      this.gainSkill(game, c, GATHER_SKILL.stoke, 0.18);
+      this.gainSkill(game, c, GATHER_SKILL.stoke, 0.2);
       if (!lit) game.logMsg(`${c.name} gets the ${what} going again.`, 'event');
     };
     if (c.job === 'campfire') {
@@ -7945,8 +8103,10 @@ export class Creatures {
     }
     game.events.emit('smelter');
     game.events.emit('world', c.workX, c.workY);
-    // A go, and the piece it fed in handled, as the island's `worker_settle` counts a stoker's.
-    this.toLedger(game, c, { goes: 1, item: carrying.id, n: carrying.count });
+    // A go, timed as the island's errand times one (`workDuration`), and the piece it fed in handled, as the island's
+    // `worker_settle` counts a stoker's.
+    this.toLedger(game, c, { item: carrying.id, n: carrying.count });
+    this.errandWork(game, c, 'stoke');
     c.carrying = null;
     c.job = null;
     c.state = 'idle';
@@ -8765,11 +8925,127 @@ export class Creatures {
     return false;
   }
 
-  /** Counted to a worker's ledger for the island day it is (`ledgerAdd`), as the island's `ledger_add` counts it. */
+  /**
+   * Counted to a worker's ledger for the island day it is (`ledgerAdd`), as the island's `ledger_add` counts it; and a
+   * go spends a `TIRE_GOES`th of its stamina (`worn`), as the island's `worker_settle` spends it where it counts one.
+   */
   private toLedger(game: Game, c: Creature, add: { goes?: number; skill?: number; item?: string; n?: number }): void {
     if (c.mode !== 'deed') return;
     c.ledger = ledgerAdd(c.ledger, game.islandDay(), add);
-    if (add.goes) this.went = true;
+    if (add.goes) {
+      this.went = true;
+      c.worn = (c.worn ?? 0) + add.goes;
+    }
+  }
+
+  /**
+   * Out of the bed it is in or walking to, if any: the bed is free again (`PlacedFurniture.sleeper`). When it gets up,
+   * is called over, stops working or dies. The island clears `placed.sleeper` at the same moments (`worker_settle`,
+   * `creature_out_of_bed`).
+   */
+  outOfBed(game: Game, c: Creature): void {
+    if (c.bed === undefined) return;
+    const f = game.furniture.get(c.bed);
+    if (f?.sleeper === c.id) {
+      f.sleeper = undefined;
+      game.events.emit('world', f.x, f.y);
+    }
+    c.bed = undefined;
+  }
+
+  /** Whether a bed is free for this one: nobody in it, or only somebody who is no longer lying there. */
+  private bedFree(f: PlacedFurniture, c: Creature): boolean {
+    if (f.sleeper === undefined || f.sleeper === c.id) return true;
+    const o = this.list.get(f.sleeper);
+    return !o || o.mode !== 'deed' || o.bed !== f.id;
+  }
+
+  /**
+   * The nearest wildermon bed on its settlement that is free and of its own class (`denClass`, `fitsDen`), or none.
+   * The island's `free_bed`.
+   */
+  freeBed(game: Game, c: Creature): PlacedFurniture | undefined {
+    const cls = denClass(c);
+    let best: PlacedFurniture | undefined;
+    let bestD = Infinity;
+    for (const f of game.furniture.values()) {
+      if (!fitsDen(f.kind, cls) || !game.onDeed(f.x, f.y) || !this.bedFree(f, c)) continue;
+      const [fx, fy] = furnitureCentre(f);
+      const d = Math.hypot(fx - c.x, fy - c.y);
+      if (d < bestD) {
+        bestD = d;
+        best = f;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Resting (`TIRE_GOES`, `REST_FOR`): true while it rests or walks to a bed to rest in, which is all it does. With no
+   * stamina left, standing idle with its arms empty -- or between the steps of an errand, whatever it holds -- it
+   * walks to the nearest free bed of its size on the settlement and sleeps in it for `BED_REST` of the rest, or rests
+   * where it stands for all of it; and gets up with its stamina full. The island's `worker_settle`, phases `bed` and
+   * `rest`.
+   */
+  private restStep(game: Game, c: Creature, dt: number, kind: GatherKind | null): boolean {
+    const post = c.post !== null;
+    if (c.state === 'toBed') {
+      const f = c.bed !== undefined ? game.furniture.get(c.bed) : undefined;
+      if (!f || !this.bedFree(f, c) || !fitsDen(f.kind, denClass(c))) {
+        // Gone, or taken by another on the way: it looks again.
+        c.bed = undefined;
+        c.state = 'idle';
+      } else {
+        const [bx, by] = furnitureCentre(f);
+        const r = Math.hypot(bx - c.x, by - c.y) <= 1.3 ? 'arrived' : this.stepToward(game, c, bx, by, dt);
+        if (r === 'moving') {
+          c.idle = { why: 'tired', n: 0, post, bed: f.kind };
+          return true;
+        }
+        c.state = 'rest';
+        if (r === 'arrived') {
+          f.sleeper = c.id;
+          c.x = bx;
+          c.y = by;
+          game.events.emit('world', f.x, f.y);
+          c.restUntil = game.time + restFor(true);
+        } else {
+          // No way through to it: it rests where it stands.
+          c.bed = undefined;
+          c.restUntil = game.time + restFor(false);
+        }
+      }
+    }
+    if (c.state === 'rest') {
+      if (game.time >= (c.restUntil ?? 0)) {
+        this.outOfBed(game, c);
+        c.worn = 0;
+        c.restUntil = undefined;
+        c.state = 'idle';
+        c.until = game.time;
+        c.idle = null;
+        return false;
+      }
+      const f = c.bed !== undefined ? game.furniture.get(c.bed) : undefined;
+      c.moving = false;
+      c.idle = f?.sleeper === c.id
+        ? { why: 'bed', n: (c.restUntil ?? 0) - game.time, post, bed: f.kind }
+        : { why: 'rest', n: (c.restUntil ?? 0) - game.time, post };
+      return true;
+    }
+    if ((c.worn ?? 0) < TIRE_GOES || c.state !== 'idle' || game.time < c.until) return false;
+    if (c.carrying && !(kind && (ERRAND_JOBS.has(kind) || kind === 'stoke'))) return false;
+    const f = this.freeBed(game, c);
+    if (f) {
+      c.bed = f.id;
+      c.state = 'toBed';
+      c.idle = { why: 'tired', n: 0, post, bed: f.kind };
+    } else {
+      c.state = 'rest';
+      c.restUntil = game.time + restFor(false);
+      c.idle = { why: 'rest', n: restFor(false), post };
+    }
+    return true;
   }
 
   /** Set when a worker's step has just counted a go to its ledger, for what was in its arms to be counted with it. */
@@ -8785,12 +9061,16 @@ export class Creatures {
     const site = c.mode === 'deed' ? game.workSite(c) : null;
     if (!site) return;
     const off = Math.max(Math.abs(site.x + 0.5 - c.x), Math.abs(site.y + 0.5 - c.y)) > siteRange(c, this.species(c), site) + HOME_SLACK;
+    // Resting is what it is doing wherever it rests, as the island's rest comes before its walk home.
+    if (c.state === 'rest' || c.state === 'toBed') return;
     if (off) c.idle = { why: 'far', n: Math.hypot(site.x + 0.5 - c.x, site.y + 0.5 - c.y), post: c.post !== null };
     else if (c.idle?.why === 'far') c.idle = null;
   }
 
   private workerStep(c: Creature, dt: number, game: Game): void {
     c.hunger = Math.max(0, c.hunger - dt * HUNGER_RATE.deed * bloodMul(c, 'appetite') * keptOf(c, 'kept:hunger', 1));
+    // Its time at work since it last ate (`UPKEEP_FOR`), which a meal puts back to nought (`fedOn`).
+    c.unfed = (c.unfed ?? 0) + dt;
     // A post stands in for the token: the same loop, a different middle.
     const deed = game.workSite(c);
     if (!deed) {
@@ -8803,11 +9083,17 @@ export class Creatures {
       c.searchAt = game.time + 4;
       this.feedFromStores(game, c, deed);
     }
-    if (this.comeWhenCalled(c, dt, game)) return;
+    if (this.comeWhenCalled(c, dt, game)) {
+      // Called over, it gets out of bed for it, and finishes its rest where it is let go.
+      this.outOfBed(game, c);
+      return;
+    }
     // Nothing in its arms is nothing to walk home with, whatever it was doing when its arms emptied.
     if (!c.carrying && c.homeward) c.homeward = false;
     const def = this.species(c);
     const kind = c.trade ?? def.gathers;
+    // Resting, or too tired to do anything else (`TIRE_GOES`).
+    if (this.restStep(game, c, dt, kind)) return;
     // Standing orders come before any job: an intruder is everyone's business.
     if (this.defendDeed(game, c, dt, deed)) return;
     if (kind === 'guard') {
@@ -9401,6 +9687,8 @@ export class Creatures {
     // that dies under a rider puts them on the ground.
     if (t.hitchedTo !== null) game.unhitch(t);
     if (t.ridden) game.dismount();
+    // And a bed it was asleep in is free.
+    this.outOfBed(game, t);
     // A hunter marks where its kill went down and comes back for it.
     if (killer && killer !== 'player' && this.species(killer).gathers === 'hunt' && !killer.carrying) {
       killer.workX = Math.floor(t.x);
@@ -9496,6 +9784,10 @@ export class Creatures {
         trade: c.trade,
         shodAt: c.shodAt,
         ledger: c.ledger ?? undefined,
+        worn: c.worn || undefined,
+        restUntil: c.restUntil,
+        bed: c.bed,
+        unfed: c.unfed || undefined,
       })),
     };
   }
@@ -9507,7 +9799,10 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null, worn: j.worn, restUntil: j.restUntil, bed: j.bed, unfed: j.unfed });
+      // A rest it was taking when the game was saved goes on where it left off, or the walk to its bed (`restStep`).
+      if (c.restUntil !== undefined) c.state = 'rest';
+      else if (c.bed !== undefined) c.state = 'toBed';
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }

@@ -1,7 +1,8 @@
 import { DEED_RADIUS_PER_LEVEL, MAX_DEED_LEVEL, deedWorkersAt, type Deed, type Game } from '../../game/game';
 import { DEED_ACTION_BY_ID, standingWord, upgradeProgress, upgradeReason } from '../../game/deed';
 import { furnitureDef, furnitureName } from '../../game/furniture';
-import { STANCES, STANCE_NAMES } from '../../game/creatures';
+import { SPECIALTY_AT, SPECIALTY_BONUS, specialtySays, STANCES, STANCE_NAMES } from '../../game/creatures';
+import { percent } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import { crateName } from '../../game/crates';
 import { trapName } from '../../game/traps';
@@ -572,6 +573,11 @@ export class DeedPanel {
     this.body.append(this.row('Level', `${level} of ${MAX_DEED_LEVEL}`));
     this.body.append(this.row('Border', `${d.radius} tiles out · ${side} × ${side}`, `From the token at (${d.x}, ${d.y}).`));
     this.body.append(this.row('Working', `${workers} of ${g.workerCap}`, 'Wildermon set to work the deed, of the number the settlement has work for at its level.'));
+    // Each trade its workers are at, and whether there are enough of them at it for a specialty (`SPECIALTY_AT`).
+    for (const { kind, n } of g.creatures.specialties()) {
+      this.body.append(this.row(n >= SPECIALTY_AT ? 'Specialty' : 'Trade', specialtySays(kind, n).replace(/^Specialty: /, ''),
+        `With ${SPECIALTY_AT} or more deed workers of one trade, every one of them takes its task ${percent(SPECIALTY_BONUS)} faster.`));
+    }
     this.body.append(this.row('In creature crates', String(crated), 'Yours, shut in creature crates: neither working nor following you.'));
     this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'What every wildermon on the deed does when something walks in.'));
     this.body.append(this.place('The token', d.x, d.y));

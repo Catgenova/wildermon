@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
+import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -580,6 +580,8 @@ out.push(`create table if not exists bridge_winch (
 out.push(`alter table bridge_def add column if not exists grounded boolean not null default false;`);
 /* Something to sleep in, and how much of a night it is worth. */
 out.push(`alter table furniture_def add column if not exists bed real;`);
+/* A wildermon bed: the stage of wildermon it is sized for (`FurnitureDef.den`, `fitsDen`), nought before its first evolution. */
+out.push(`alter table furniture_def add column if not exists den int;`);
 /* Crate spots on a rack's deck: its footprint is what it carries. */
 out.push(`alter table furniture_def add column if not exists crates int;`);
 /* Climbing roses grow on it from the moment it is set down, which the ground read hands over for it. */
@@ -1635,6 +1637,13 @@ for (const [fn, v] of [
   ['lamp_tier_odds', LAMP_TIER_ODDS],
   /* Breeding: how deep a line may run and what each generation past the first adds, and the odds of a mutation. */
   ['pedigree_most', PEDIGREE_MOST], ['pedigree_step', PEDIGREE_STEP], ['mutation_odds', MUTATION_ODDS],
+  /* A deed worker's rest: the goes it has in it, how long it rests, what a bed of its size makes of that, and the
+     health bands that size a kind that does not evolve (`den_class`). Its upkeep: how long at work without a meal
+     before it slows, and to what share of its pace. A settlement's specialty: the workers of a trade that make one,
+     and what it adds to their pace. And a reed cutter's armful: one reed more for every so many levels. */
+  ['tire_goes', TIRE_GOES], ['rest_for', REST_FOR], ['bed_rest', BED_REST], ['den_health_1', DEN_HEALTH[0]], ['den_health_2', DEN_HEALTH[1]],
+  ['upkeep_for', UPKEEP_FOR], ['unfed_pace', UNFED_PACE], ['specialty_at', SPECIALTY_AT], ['specialty_bonus', SPECIALTY_BONUS],
+  ['reed_levels', REED_LEVELS],
   /* A companion's orders: how near a guarding one keeps a fight, and how long one fallen back starts none. */
   ['guard_range', GUARD_RANGE], ['fall_back', FALL_BACK],
   /* Wounds that slow a swing, and how far; a blow at your back, a crowd on
@@ -2211,6 +2220,7 @@ for (const f of FURNITURE as unknown as A[]) {
   if (f.pond !== undefined) out.push(`update furniture_def set pond = ${q(f.pond)} where id = ${q(f.id)};`);
   if (f.trash !== undefined) out.push(`update furniture_def set trash = ${q(f.trash)} where id = ${q(f.id)};`);
   if (f.bed !== undefined) out.push(`update furniture_def set bed = ${q(f.bed)} where id = ${q(f.id)};`);
+  if (f.den !== undefined) out.push(`update furniture_def set den = ${q(f.den)} where id = ${q(f.id)};`);
   if (f.roses) out.push(`update furniture_def set roses = true where id = ${q(f.id)};`);
   if (f.crates !== undefined) out.push(`update furniture_def set crates = ${q(f.crates)} where id = ${q(f.id)};`);
   if (f.cart) out.push(`update furniture_def set cart = true where id = ${q(f.id)};`);

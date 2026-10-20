@@ -526,6 +526,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       // A bucket of whey is drunk out of the bucket, and the bucket is kept.
       if (whey) {
         if (!vesselBecame(g, food, 'bucket')) return;
+        // Drunk, it counts as a meal to a worker's upkeep (`UPKEEP_FOR`), as everything it eats does (`fedOn`).
+        c.unfed = 0;
       } else {
         // What it eats is worth something to its learning and its care, by its quality (`fedOn`); whey is drunk, not eaten.
         fedOn(c, food.id, food.ql, g.time);

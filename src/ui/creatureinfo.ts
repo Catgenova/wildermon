@@ -15,11 +15,16 @@ import {
   rarityLine,
   SEX_NAMES,
   SPECIES,
+  specialtySays,
+  specialtyTrade,
+  staminaOf,
+  staminaSays,
   stageTameSays,
   STANCE_NAMES,
   tameNeeds,
   taskSkill,
   tracesSkill,
+  unfedSays,
   workRangeOf,
   wellFedSays,
   workSkill,
@@ -134,6 +139,15 @@ export function creatureLines(g: Game, c: Creature): string[] {
     if (def.gathers) lines.push(`Deed worker · ${GATHER_VERB[def.gathers]} at ${taskSkill(c, def).toFixed(1)} · reaches ${workRangeOf(c, def)} tiles`);
     else lines.push(`Deed worker · no trade of its own, so it keeps the deed company`);
     if (c.carrying) lines.push(`Carrying ${itemDef(c.carrying.id).name.toLowerCase()} home`);
+    // Its stamina and its settlement's specialty in its trade, for a trade with goes to tire it and to quicken.
+    const kind = c.trade ?? def.gathers;
+    if (specialtyTrade(kind)) {
+      lines.push(`${staminaSays(c)} ${bar(staminaOf(c))}`);
+      lines.push(specialtySays(kind, g.creatures.specialtyOf(c)));
+    }
+    // And what a day without a meal makes of its pace (`UPKEEP_FOR`).
+    const unfed = unfedSays(c);
+    if (unfed) lines.push(unfed);
     // Why it is standing about, and what it did this island day and the one before.
     if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));

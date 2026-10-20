@@ -194,6 +194,15 @@ export interface FurnitureDef {
    * quality does, for everybody, and burns nothing (`runelantern.ts`).
    */
   runes?: boolean;
+  /**
+   * A wildermon bed (`render/dens.ts`): the bed class it is sized for
+   * (`denClass` in `creatures.ts`: a kind that evolves by its stage, nought
+   * before its first evolution, and one that does not by its health), and
+   * only that class fits it (`fitsDen`). A tired deed worker of that class
+   * sleeps in one free on its settlement for `BED_REST` of its rest, named in
+   * `PlacedFurniture.sleeper` while it does.
+   */
+  den?: 0 | 1 | 2;
 }
 
 /**
@@ -299,6 +308,22 @@ export const FURNITURE: FurnitureDef[] = [
   piece('bed', 'Bed', 3, 2, [['plank', 24], ['timber', 16], ['cloth', 8], ['nail', 40]], 18, 15, 'You nail up a bed and stuff the mattress.', undefined, { bed: 1 }),
   piece('cot', 'Cot', 2, 2, [['plank', 16], ['timber', 8], ['cloth', 4], ['nail', 24]], 12, 10, 'You nail up a narrow cot.', undefined, { bed: 0.7 }),
   // A Tailor's tent: cloth over a ridge pole, light enough to carry and set down wherever the night finds you.
+  /*
+   * Wildermon beds, one to a stage (`den`): a woven basket nest of reed on
+   * bent shafts, a cushion of cloth stuffed with fur in the shape of a
+   * flower, moss and wildflowers round the rim, and over the two bigger ones
+   * a vine hood hung with lavender bells. A subtile across for the smallest,
+   * two for the next and three for the last, by how big each stage is drawn.
+   */
+  piece('den_small', 'Small wildermon bed', 1, 1, [['plank', 1], ['reed', 12], ['shaft', 2], ['cloth', 2], ['moss', 2], ['wildflowers', 3]], 10, 8,
+    'You weave the reed round the shafts into a basket, stuff a flower of cloth for its cushion and set moss and flowers round the rim.', undefined,
+    { skill: 'carpentry', tool: 'carving_knife', den: 0 }),
+  piece('den_medium', 'Medium wildermon bed', 2, 2, [['plank', 2], ['reed', 24], ['shaft', 6], ['cloth', 4], ['fur', 1], ['moss', 4], ['wildflowers', 6], ['lavender', 3]], 16, 12,
+    'You weave the reed round the shafts into a basket, bend a hood of vine over its back, stuff a flower of cloth and fur for its cushion and hang lavender from the hood.', undefined,
+    { skill: 'carpentry', tool: 'carving_knife', den: 1 }),
+  piece('den_large', 'Large wildermon bed', 3, 3, [['plank', 4], ['reed', 40], ['shaft', 12], ['cloth', 8], ['fur', 2], ['moss', 6], ['wildflowers', 10], ['lavender', 6]], 22, 16,
+    'You weave the reed round the shafts into a broad basket, bend a hood of vine right over it, stuff a flower of cloth and fur for its cushion and hang lavender all along the hood.', undefined,
+    { skill: 'carpentry', tool: 'carving_knife', den: 2 }),
   piece('tent', 'Tent', 2, 2, [['cloth', 8], ['rope', 2], ['shaft', 3]], 16, 14, 'You stitch the cloth into a fly, cut the poles and tie in the guy ropes.', undefined, { bed: 0.5, skill: 'tailoring', tool: 'needle', perk: 'tent' }),
   piece('chest', 'Chest', 2, 2, [['plank', 32], ['timber', 8], ['nail', 36]], 16, 12, 'You nail up a banded chest.', 60),
   piece('coffer', 'Coffer', 1, 1, [['plank', 16], ['nail', 20]], 14, 8, 'You nail up a small coffer.', 25),
@@ -542,6 +567,10 @@ export const FURNITURE: FurnitureDef[] = [
 ];
 
 export const FURNITURE_BY_ID = new Map(FURNITURE.map((f) => [f.id, f]));
+/** Whether a piece is a wildermon bed, and the stage it is sized for (`FurnitureDef.den`). */
+export const denStage = (kind: string): 0 | 1 | 2 | undefined => FURNITURE_BY_ID.get(kind)?.den;
+/** Whether a wildermon of a bed class (`denClass`) fits a bed of this kind: only the class it is sized for does. */
+export const fitsDen = (kind: string, cls: number): boolean => denStage(kind) === cls;
 export const isFurniture = (id: string): boolean => FURNITURE_BY_ID.has(id);
 export const furnitureDef = (id: string): FurnitureDef => FURNITURE_BY_ID.get(id) ?? FURNITURE[0];
 /** Pieces that hold things, largest first: the point of a larder. */
@@ -697,6 +726,14 @@ export interface PlacedFurniture {
    * (`Actor.who`). See `graves.ts`.
    */
   grave?: { who?: string; name: string; crumbles: number; units?: number };
+  /**
+   * For a wildermon bed (`FurnitureDef.den`): the wildermon asleep in it, by
+   * its id, drawn curled on its cushion (`render/dens.ts`). Set when a tired
+   * worker of its class (`fitsDen`) lies down in it, and cleared when it gets
+   * up or stops being a worker (`Creatures.outOfBed`). The island's
+   * `placed.sleeper`.
+   */
+  sleeper?: number;
   /**
    * When the moss on a piece that gathers it (`FurnitureDef.mossy`) began, in
    * real seconds: when it was set down or last scrubbed. See `greening.ts`.
