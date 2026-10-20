@@ -33,28 +33,28 @@ const skillName = (id: string): string => (SKILL_BY_ID.get(id)?.name ?? id).toLo
 
 export const RAISED_BY: Readonly<Record<string, readonly Raise[]>> = {
   body_strength: [
-    { what: `go at ${listed([...HEAVY_SKILLS].map(skillName))}`, base: WORK_BACK },
+    { what: `action in ${listed([...HEAVY_SKILLS].map(skillName))}`, base: WORK_BACK },
     { what: 'melee swing', base: SWING_BODY, tried: true },
   ],
   body_stamina: [
-    { what: 'go that costs stamina', base: WORK_WIND, more: `+${percent(WORK_WIND_SPENT)} of a go per full stamina bar spent, proportional` },
+    { what: 'action that costs stamina', base: WORK_WIND, more: `+${percent(WORK_WIND_SPENT)} of an action's gain per full stamina bar spent, proportional` },
     { what: 'night of sleep', how: 'more in a better bed' },
   ],
   body_control: [
-    { what: 'go of work (any job with a stamina cost or a time)', base: WORK_HAND },
+    { what: 'action with a stamina cost or a time', base: WORK_HAND },
     { what: 'blow dodged', base: DODGE_GAIN },
   ],
   mind_logic: [
     { what: 'craft', base: CRAFT_HEAD, tried: true },
     { what: 'find restored', base: RESTORE_GAIN, tried: true },
-    { what: 'go of prospecting', base: PROSPECT_HEAD },
-    { what: 'offering to a wild creature', base: TAME_HEAD, tried: true },
+    { what: 'prospecting action', base: PROSPECT_HEAD },
+    { what: 'offering to a wild wildermon', base: TAME_HEAD, tried: true },
     { what: 'scroll set into a weapon or placed thing', base: ENCHANT_HEAD, tried: true },
     { what: 'treasure map hoard dug up', base: HOARD_HEAD },
-    { what: 'go of study at a plain book', how: 'see Reeds, papyrus and books' },
+    { what: 'study action at a plain book', how: 'see Reeds, papyrus and books' },
   ],
   soul_strength: [
-    { what: 'offering to a wild creature', base: TAME_NERVE, tried: true },
+    { what: 'offering to a wild wildermon', base: TAME_NERVE, tried: true },
   ],
   awareness: [
     { what: 'swing in the dark', base: DARK_SWING },
@@ -67,7 +67,7 @@ export const RAISED_BY: Readonly<Record<string, readonly Raise[]>> = {
 /** One way a characteristic is raised, as a label: "craft: 25% of a go (30% of that on failure)". */
 export function raiseSays(r: Raise): string {
   let said = r.what;
-  if (r.base !== undefined) said += `: ${percent(r.base / KNACK_GO)} of a go`;
+  if (r.base !== undefined) said += `: ${percent(r.base / KNACK_GO)} of an action's gain`;
   if (r.more) said += ` ${r.more}`;
   if (r.tried) said += ` (${percent(TRY_LEARN)} of that on failure)`;
   if (r.how) said += ` (${r.how})`;

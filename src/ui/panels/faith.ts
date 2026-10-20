@@ -7,10 +7,16 @@ import {
   calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PATHS, PICKS_PER_TIER, picksOf, SIT_PLACES_SAID, type PathDef, type PathId, type PathPickDef, type PathSaid,
 } from '../../game/meditation';
 import { listed } from '../../game/words';
+import { SKILL_BY_ID } from '../../game/skills';
+import { FAITH } from '../../game/faith';
 import { durationSaid } from '../../game/boons';
 import type { FaithBook } from '../faithbook';
 import { reveal, sharedWhy } from './trades';
 import type { UIWindow } from '../windows';
+
+/** The skill favour is held by, as the Skills window names it: "Devotion". */
+const DEVOTION = SKILL_BY_ID.get(FAITH)?.name ?? FAITH;
+const devotion = DEVOTION.toLowerCase();
 
 /**
  * Faith: your patron, and the spells it gives.
@@ -147,12 +153,12 @@ export class FaithPanel {
   private standing(s: NonNullable<FaithBook['said']>): HTMLDivElement {
     const box = document.createElement('div');
     box.className = 'faith-stand';
-    box.append(meter('Favour', s.favour, s.cap, 'Pays for spells and rites. Max set by faith.'));
+    box.append(meter('Favour', s.favour, s.cap, `Pays for spells and rites. Max set by ${devotion}.`));
     if (s.path) box.append(meter('Calm', s.path.calm, s.path.cap, 'Pays for path techniques. Gained by sitting on a rug.'));
     const mine = s.patron ? PATRON_BY_ID.get(s.patron as PatronId)?.name ?? s.patron : null;
     const next = FAITH_TIER_AT.find((at) => at > s.faith);
-    const tier = next === undefined ? 'all tiers open' : `tier ${FAITH_TIER_AT.indexOf(next) + 1} at ${next}`;
-    box.append(note(`Faith ${s.faith.toFixed(1)} · ${tier} · ${mine ? `patron: ${mine}` : `patron at faith ${PATRON_AT}`}`));
+    const tier = next === undefined ? 'all faith tiers open' : `faith tier ${FAITH_TIER_AT.indexOf(next) + 1} at ${next}`;
+    box.append(note(`${DEVOTION} ${s.faith.toFixed(1)} · ${tier} · ${mine ? `patron: ${mine}` : `patron at ${devotion} ${PATRON_AT}`}`));
     return box;
   }
 
@@ -171,7 +177,7 @@ export class FaithPanel {
     align.textContent = ALIGNMENT_NAMES[p.alignment];
     top.append(name, align);
     card.append(top);
-    card.append(cardNote(`Tiers at faith ${listed(FAITH_TIER_AT.map(String))}: pick 1 of ${SPELLS_PER_TIER} spells per tier, ${FAITH_TIER_AT.length} in all. Spell bar slots: ${slotsFor('faith')}.`));
+    card.append(cardNote(`Faith tiers at ${devotion} ${listed(FAITH_TIER_AT.map(String))}: pick 1 of ${SPELLS_PER_TIER} spells per faith tier, ${FAITH_TIER_AT.length} in all. Spell bar slots: ${slotsFor('faith')}.`));
     if (!s) return card;
     if (s.patron === p.id) {
       card.append(cardNote('Your patron. Spells below.'));
@@ -182,7 +188,7 @@ export class FaithPanel {
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${p.name} as your patron?`, [
         'Permanent: no other patron after it.',
-        `Tier 1 opens with it; later tiers at faith ${listed(FAITH_TIER_AT.slice(1).map(String))}.`,
+        `Faith tier 1 opens with it; later faith tiers at ${devotion} ${listed(FAITH_TIER_AT.slice(1).map(String))}.`,
       ], `Take ${p.name}`, () => this.book.takePatron(p.id)));
       return card;
     }
@@ -210,7 +216,7 @@ export class FaithPanel {
     if (s && !open) block.classList.add('trade-tier-shut');
     const head = document.createElement('div');
     head.className = 'trade-col-head';
-    head.textContent = `Tier ${tier} · ${at} faith${s ? (open ? ' · open' : '') : ''}`;
+    head.textContent = `Faith tier ${tier} · ${at} ${devotion}${s ? (open ? ' · open' : '') : ''}`;
     block.append(head);
     const spells = spellsOf(p.id, tier);
     if (!spells.length) {
@@ -258,8 +264,8 @@ export class FaithPanel {
     }
     const ask = `spell:${sp.id}`;
     if (this.confirming === ask) {
-      card.append(this.confirm(`Take ${sp.name} at tier ${sp.tier}?`, [
-        `Permanent: the other ${SPELLS_PER_TIER - 1} at this tier close.`,
+      card.append(this.confirm(`Take ${sp.name} at faith tier ${sp.tier}?`, [
+        `Permanent: the other ${SPELLS_PER_TIER - 1} at this faith tier close.`,
       ], `Take ${sp.name}`, () => this.book.takeSpell(sp.id)));
       return card;
     }
@@ -321,7 +327,7 @@ export class FaithPanel {
     name.className = 'trade-name';
     name.textContent = path.name;
     top.append(name);
-    card.append(top, cardNote(`${path.note} Steps by meditation (not yet on tiers):`));
+    card.append(top, cardNote(`${path.note} Steps by meditation (not yet on path tiers):`));
     for (const st of path.steps) {
       card.append(cardNote(`${st.at}${med >= st.at ? ' (yours)' : ''}: ${st.name}. ${st.note}${st.ability ? ` Used at the rug; cooldown ${durationSaid(st.ability.rest)}.` : ''}`));
     }
@@ -339,7 +345,7 @@ export class FaithPanel {
     name.textContent = path.name;
     top.append(name);
     card.append(top, cardNote(path.note));
-    card.append(cardNote(`Tiers at meditation ${listed(PATH_TIER_AT.map(String))}: 1 technique and ${PICKS_PER_TIER - 1} disciplines each; pick 1 per tier, permanent. `
+    card.append(cardNote(`Path tiers at meditation ${listed(PATH_TIER_AT.map(String))}: 1 technique and ${PICKS_PER_TIER - 1} disciplines each; pick 1 per path tier, permanent. `
       + 'Technique: spell bar path slot, costs Calm. Discipline: always on once taken.'));
     if (ps?.way === path.id) card.append(cardNote('Your path. Picks below.'));
     else if (!ps?.way) card.append(cardNote(`Chosen at the rug from meditation ${CHOOSE_AT}. Permanent.`));
@@ -353,7 +359,7 @@ export class FaithPanel {
     if (ps && ps.way === path.id && !open) block.classList.add('trade-tier-shut');
     const head = document.createElement('div');
     head.className = 'trade-col-head';
-    head.textContent = `Tier ${tier} · ${at} meditation${open ? ' · open' : ''}`;
+    head.textContent = `Path tier ${tier} · ${at} meditation${open ? ' · open' : ''}`;
     block.append(head);
     const picks = picksOf(path.id as PathId, tier);
     // As with spells: the island's reason once under the tier, when every pick still to take shares it.
@@ -386,8 +392,8 @@ export class FaithPanel {
     }
     const ask = `pick:${k.id}`;
     if (this.confirming === ask) {
-      card.append(this.confirm(`Take ${k.name} at tier ${k.tier}?`, [
-        `Permanent: the other ${PICKS_PER_TIER - 1} at this tier close.`,
+      card.append(this.confirm(`Take ${k.name} at path tier ${k.tier}?`, [
+        `Permanent: the other ${PICKS_PER_TIER - 1} at this path tier close.`,
       ], `Take ${k.name}`, () => this.takePick(k.id)));
       return card;
     }

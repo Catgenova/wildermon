@@ -291,7 +291,7 @@ export class SettingsPanel {
     // The job in hand at the pointer (src/ui/pointerring.ts), and a settlement's name at its border (src/ui/deedbanner.ts).
     add(
       'Progress ring at the pointer',
-      'Ring at the pointer: fills clockwise with current job progress (as the action bar); '
+      'Ring at the pointer: fills clockwise with current action progress (as the action bar); '
         + `in combat, once per swing or draw. Fades over ${RING_FADE_MS / 1000} s when done. `
         + 'Only over the world; not over windows, bars or menus, nor on touch screens.',
       () => game.settings.pointerRing,
@@ -390,8 +390,8 @@ export class SettingsPanel {
       (v) => (game.settings.edgePan = v),
     );
     add(
-      'Always show deed border',
-      'Settlement border always shown. Off: only while pointing at the token.',
+      'Always show settlement border',
+      'Settlement border always shown. Off: only while pointing at the totem.',
       () => game.settings.deedBorder,
       (v) => (game.settings.deedBorder = v),
     );
@@ -437,7 +437,7 @@ export class SettingsPanel {
     head('Fighting');
     add(
       'Turn on what bites you',
-      `Bitten after standing still ${FIGHT_BACK_STILL} s: fight back until it dies or leaves reach; current job waits at the queue front. Not while walking. Off: fight only what you attack.`,
+      `Bitten after standing still ${FIGHT_BACK_STILL} s: fight back until it dies or leaves reach; current action waits at the front of the action queue. Not while walking. Off: fight only what you attack.`,
       () => game.settings.fightBack,
       (v) => {
         game.settings.fightBack = v;
@@ -475,7 +475,7 @@ export class SettingsPanel {
     head('Eating');
     choose<number>(
       'Eat by yourself',
-      `Food below this: eat from your pack after the current job, until above it. No healing below ${Math.round(HEAL_FED * 100)}% Food. Locked stacks and bagged food never eaten.`,
+      `Food below this: eat from your pack after the current action, until above it. No healing below ${Math.round(HEAL_FED * 100)}% Food. Locked stacks and bagged food never eaten.`,
       AUTO_EAT_AT.map((v) => [v, v ? `Under ${Math.round(v * 100)}% Food` : 'Never']),
       () => game.settings.autoEat,
       (v) => (game.settings.autoEat = v),

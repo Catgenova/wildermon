@@ -491,7 +491,7 @@ check('and refuses a second sowing, an early harvest and lifting it while it gro
 check('and tends it once a stage, as a field is tended',
   // The seed's fifty and the hands' forty, averaged over the care it was given.
   say('TENDED') === '1:true:45.00' && say('TENDSAID') === `Tended: wheat. Expected yield: ${cropYield(1).produce} wheat, ${cropYield(1).seeds} seed.`
-    && say('TENDAGAIN') === 'Already tended at this stage.', `${say('TENDED')} / ${say('TENDSAID')}`);
+    && say('TENDAGAIN') === 'Already tended at this growth stage.', `${say('TENDED')} / ${say('TENDSAID')}`);
 {
   const [id, stage, grown, hasNow, nowRight] = say('GROUND').split(':');
   check('the ground read says what grows in it and how far it has grown on its own clock, and the island\'s clock',

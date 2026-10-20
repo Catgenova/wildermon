@@ -33,9 +33,14 @@ import type { Game } from './game';
 import type { LightSource } from './light';
 import { REGIONS } from '../world/regions';
 import { chartRegion } from '../world/chart';
-import { TILE_DEFS } from '../world/tiles';
+import { TILE_DEFS, TREE_DAWN_UTC } from '../world/tiles';
 import { capital, listed } from './words';
 import { runestoneAt } from './runestones';
+
+/** The daily reset as the hud's clock shows it: "13:00" (`TREE_DAWN_UTC`). */
+const resetHour = (): string =>
+  `${String(Math.floor(TREE_DAWN_UTC)).padStart(2, '0')}:${String(Math.round((TREE_DAWN_UTC % 1) * 60)).padStart(2, '0')}`;
+
 
 /** The skill a mote swirl is collected with, and the only thing that trains it. */
 export const ELEMENTALISM = 'elementalism';
@@ -227,7 +232,7 @@ export const collectedSays = (n: number, e: MoteElement): string =>
 
 /** What Examine says of a swirl over a tile. The island's `ground_says` says the same. */
 export const swirlSays = (e: MoteElement): string =>
-  ` Mote swirl: ${e}, until the woods next turn.`;
+  ` Mote swirl: ${e}, until the next daily reset (${resetHour()} UTC).`;
 
 export const MOTE_ACTIONS: ActionDef[] = [
   {

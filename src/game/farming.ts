@@ -1,4 +1,4 @@
-import { TileType, TILE_DEFS } from '../world/tiles';
+import { metres, TileType, TILE_DEFS } from '../world/tiles';
 import { seasonAt, YEAR_FROM } from '../world/calendar';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
@@ -226,17 +226,17 @@ export function cropWhen(next: string, left: number, clock: boolean | CropClock,
  */
 export function stageNote(name: string, per: number, clock: boolean | CropClock, wall: number): string {
   const k = clockNamed(clock);
-  if (k === 'planter') return `${name}, ${Math.round(per / PLANTER_GROWTH)}s a stage in any season`;
-  if (k === 'glass') return `${name}, ${Math.round(per / steadyRate(k))}s a stage in any season`;
+  if (k === 'planter') return `${name}, ${Math.round(per / PLANTER_GROWTH)}s a growth stage in any season`;
+  if (k === 'glass') return `${name}, ${Math.round(per / steadyRate(k))}s a growth stage in any season`;
   const rate = k === 'hand' ? handRate(wall) : fieldRate(wall);
   const season = seasonAt(wall).season;
   if (rate <= 0) return `${name}, no growth until ${seasonAt(fieldWakes(wall)).season} (fields do not grow in ${season})`;
-  return `${name}, ${Math.round(per / rate)}s a stage${wall >= YEAR_FROM ? ` in ${season}` : ''}`;
+  return `${name}, ${Math.round(per / rate)}s a growth stage${wall >= YEAR_FROM ? ` in ${season}` : ''}`;
 }
 
-/** A share of a crop's pace as a line says it: "at its own pace", "half again as fast", "at half its pace", "at a quarter of its pace", "not at all". */
+/** A share of a crop's pace as a line says it: "growth speed ×1.5". */
 export function growthWords(r: number): string {
-  return `at ×${+Math.max(0, r).toFixed(2)} speed`;
+  return `growth speed ×${+Math.max(0, r).toFixed(2)}`;
 }
 
 /**
@@ -246,7 +246,7 @@ export function growthWords(r: number): string {
  * definitions, and `glass_examine`).
  */
 export const glassExamine = (): string =>
-  ` Glasshouse: full-height walls all round, glass roof. Ground tills into fields; crops grow ${growthWords(GLASSHOUSE_GROWTH)} in every season, winter included.`;
+  ` Glasshouse: full-height walls all round, glass roof. Ground tills into fields; crop ${growthWords(GLASSHOUSE_GROWTH)} in every season, winter included.`;
 
 /** Examine's line for a building: `glassExamine` for a glasshouse, nothing for any other. */
 export const glassSays = (bld: Buildings, b: Building | undefined): string => (isGlasshouse(bld, b) ? glassExamine() : '');
@@ -407,7 +407,8 @@ export const FARM_ACTIONS: ActionDef[] = [
       const inside = glassTillRefusal(g, t.x, t.y, TILLABLE);
       if (inside) return inside;
       if (g.world.hasWater(t.x, t.y)) return 'Not under water.';
-      if (g.world.slope(t.x, t.y) > 20) return 'Too steep: slope over 20.';
+      const steepest = 20;
+      if (g.world.slope(t.x, t.y) > steepest) return `Too steep: slope over ${metres(steepest)} m.`;
       return null;
     },
     perform: (t, g) => {
@@ -472,7 +473,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       const c = cropOf(g, t);
       if (!c) return 'No crop there.';
       if (cropReady(c)) return 'Ripe: harvest it.';
-      if (c.tendedNow) return 'Already tended at this stage.';
+      if (c.tendedNow) return 'Already tended at this growth stage.';
       return null;
     },
     perform: (t, g) => {

@@ -81,7 +81,7 @@ ITEM_DEFS[WHEY_BUCKET] ??= {
   weight: 6,
   decay: itemDef('milk_bucket').decay,
   description: `${BUCKET_LITRES} litres of whey (left over from pressing a bucket of milk into cheese). `
-    + `Feed to any creature you keep: hunger +${percent(WHEY_FEED)}; bucket emptied. `
+    + `Feed to any wildermon you keep: hunger +${percent(WHEY_FEED)}; bucket emptied. `
     + 'Can be poured into a barrel or emptied.',
 };
 

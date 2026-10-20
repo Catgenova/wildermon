@@ -30,6 +30,7 @@ import { Game } from '../../src/game/game';
 import { DAY_SECONDS } from '../../src/game/pace';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { CELLAR_DECAY, CELLAR_DEPTH, CELLAR_LEVEL, CELLAR_SOIL, INDOORS_DECAY, INDOORS_REST, type Side } from '../../src/game/building';
+import { metres } from '../../src/world/tiles';
 import { cellarGate, cellarSoil } from '../../src/game/cellar';
 import { furnitureCentre, furnitureDef } from '../../src/game/furniture';
 import { bedrockAt } from '../../src/world/ore';
@@ -229,7 +230,7 @@ put(34, 44, 0);
 same('nor under one that is not closed in: the ground floor is not a floor yet', 'dig_cellar', tile(34, 44));
 put(26, 44, 0);
 same(`nor where the rock comes within ${CELLAR_SOIL} of the ground floor at a corner`, 'dig_cellar', tile(26, 44),
-  `Rock 2 under the ground floor at the shallowest corner; needs ${CELLAR_SOIL} of soil at every corner.`);
+  `Rock ${metres(2)} m under the ground floor at the shallowest corner; needs ${metres(CELLAR_SOIL)} m of soil at every corner.`);
 put(30, 44, 0);
 same(`nor where a cellar ${CELLAR_DEPTH} down would lie under the sea`, 'dig_cellar', tile(30, 44));
 put(20, 45, 0);
@@ -237,11 +238,11 @@ same('nor by anybody outside the building, through its wall', 'dig_cellar', tile
   'Stand inside that building: ground floor or cellar.');
 put(21, 44, 0);
 same('and a pick has nothing to cut while there is soil over the rock', 'mine_cellar', tile(20, 44),
-  `Dig the soil first: ${S} left, with a shovel.`);
+  `Dig the soil first: ${metres(S)} m left, with a shovel.`);
 same('and nothing to fill in where nothing is dug', 'fill_cellar', tile(20, 44), 'No cellar under this tile.');
 same('and no flight goes down where there is no cellar to go down to', 'plan_floor',
   tile(20, 44, { material: 'plank', floorKind: 'stairs', side: 'e', down: true }),
-  `Dig the cellar first: 0/${CELLAR_DEPTH}.`);
+  `Dig the cellar first: ${metres(0)} m of ${metres(CELLAR_DEPTH)} m dug.`);
 put(PIER[0], PIER[1] - 1, 0);
 same('nor is one dug under a deck on piers, whose ground is not dug while the building stands', 'dig_cellar', tile(PIER[0], PIER[1]),
   'Not under a deck on piers.');
@@ -311,7 +312,7 @@ check(`a tile dug out gives ${S} dirt for the soil and ${CELLAR_DEPTH - S} rock 
   `browser ${mineFirst.dirt} dirt and ${mineFirst.rock} shards, island ${theirFirst.dirt} and ${theirFirst.rock}`);
 check('and then it is a cellar, the whole storey down, on both sides',
   game.buildings.cellarDone(20, 44) && val(`cellar_done(${W}, 20, 44)`) === 't'
-    && mineFirst.refused === theirFirst.refused && mineFirst.refused === `Cellar fully dug: ${CELLAR_DEPTH} down.`,
+    && mineFirst.refused === theirFirst.refused && mineFirst.refused === `Cellar fully dug: ${metres(CELLAR_DEPTH)} m down.`,
   `browser "${mineFirst.refused}", island "${theirFirst.refused}"`);
 
 mineDig(21, 44);
@@ -325,7 +326,7 @@ check('a seam under the house stops a pick that cannot work it, at the rock, in 
   mineTin.refused === theirTin.refused && mineTin.refused === 'Tin vein: needs mining 10; have 5.0.' && mineTin.dirt === S,
   `browser "${mineTin.refused}" after ${mineTin.dirt} dirt, island "${theirTin.refused}" after ${theirTin.dirt}`);
 same('and a shovel says where the soil gives out', 'dig_cellar', tile(22, 44),
-  `Soil dug through at ${S} down. Rock below: use a pickaxe.`);
+  `Soil dug through at ${metres(S)} m down. Rock below: use a pickaxe.`);
 game.skills.values.set('mining', 90);
 psql(`update skill set value = 90 where world_id = ${W} and uid = ${DANE} and id = 'mining';`);
 const mineOre = mineDig(22, 44);
@@ -660,7 +661,7 @@ ACTION_BY_ID.get('examine')?.perform(tile(20, 44) as never, game);
 const mineLook = game.log.map((l) => l.text).find((t) => t.includes(' at (20, 44)')) ?? '';
 const theirLook = val(`examine_tile_text(${W}, 20, 44, ${DANE})`);
 check('an examine says a cellar is dug out under the tile, in the same words',
-  mineLook.includes(`Cellar under it: ${CELLAR_DEPTH} deep.`) && theirLook.includes(`Cellar under it: ${CELLAR_DEPTH} deep.`),
+  mineLook.includes(`Cellar under it: ${metres(CELLAR_DEPTH)} m deep.`) && theirLook.includes(`Cellar under it: ${metres(CELLAR_DEPTH)} m deep.`),
   theirLook);
 
 island(`insert into item (world_id, holder, gx, gy, def, ql, count) values (w, 'cellar', 21, 44, 'bread', 40, 2);`);
@@ -680,7 +681,7 @@ const mineBelow = game.log.map((l) => l.text).find((t) => t.startsWith('Cellar f
 const theirBelow = psql(`select set_config('wurm.floor', floor_said(${W}, -1, 21.5, 44.5), false) \\g /dev/null
   select examine_tile_text(${W}, 21, 44, ${DANE});`).split('\n').pop() ?? '';
 check('an examine from down in the cellar says its floor, in the same words',
-  mineBelow === theirBelow && mineBelow === `Cellar floor under Cellar house at (21, 44): rock, ${CELLAR_DEPTH} under the ground floor, height ${(H - CELLAR_DEPTH).toFixed(1)}. Items on it: 2.`,
+  mineBelow === theirBelow && mineBelow === `Cellar floor under Cellar house at (21, 44): rock, ${metres(CELLAR_DEPTH)} m under the ground floor, height ${metres(H - CELLAR_DEPTH)} m. Items on it: 2.`,
   `browser "${mineBelow}", island "${theirBelow}"`);
 
 /* ---- a way down where the ground floor is floored ------------------------------------------ */

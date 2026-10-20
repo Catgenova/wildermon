@@ -123,7 +123,7 @@ check('and the settlement is no longer handed to you as yours', said('HANDED_AFT
 check('you are told', said('TOLD') === `You are no longer a citizen of ${deed.name}.`, said('TOLD'));
 check('and so is its founder', said('FOUNDER_TOLD').endsWith(` has left ${deed.name}.`), said('FOUNDER_TOLD'));
 check('asked again, the social answer has nothing there to leave', rollAt(after, deed.x, deed.y) === undefined, `${after.length} settlements`);
-check('and the door says there is nobody to send away', (JSON.parse(said('AGAIN')) as { why?: string }).why === 'Not on the roll.', said('AGAIN'));
+check('and the door says there is nobody to send away', (JSON.parse(said('AGAIN')) as { why?: string }).why === 'Not on the member list.', said('AGAIN'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

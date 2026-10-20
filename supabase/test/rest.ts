@@ -325,7 +325,7 @@ const worker = (sp: string, skills: Record<string, number>, x = T + 0.5, y = T +
   const c = worker('tinka', { repair: 10 }, T + 1.5, T + 0.5);
   for (let i = 0; i < TIRE_GOES - 1; i++) call('mendStep', g, c, yes);
   const card = staminaSays(c);
-  check(`in the browser, a worker after ${TIRE_GOES - 1} goes has one left, its card saying so`, c.worn === TIRE_GOES - 1 && card.includes(`1/${TIRE_GOES} goes`), `${c.worn} "${card}"`);
+  check(`in the browser, a worker after ${TIRE_GOES - 1} goes has one left, its card saying so`, c.worn === TIRE_GOES - 1 && card.includes(`1/${TIRE_GOES} cycles`), `${c.worn} "${card}"`);
   call('mendStep', g, c, yes);
   const goes = c.ledger?.now.goes;
   c.busyUntil = 0;
@@ -438,11 +438,11 @@ for (const [sp, f] of [['bogga', medium], ['magga', small]] as const) {
 for (const [id, stage] of [['den_small', 'first'], ['den_medium', 'second'], ['den_large', 'third']] as const) {
   const words = ITEM_DEFS[id].description ?? '';
   check(`the ${ITEM_DEFS[id].name.toLowerCase()}'s words say whom it fits and what it does, off the rule`,
-    !words.includes('{') && words.includes(`${stage}-stage`) && words.includes(`rest ${share(BED_REST)} as long, ${spanWords(restFor(true))} instead of ${spanWords(REST_FOR)}`)
-    && words.includes(`every ${TIRE_GOES} goes`) && words.includes(`${id === 'den_large' ? DEN_HEALTH[1] : DEN_HEALTH[0]} health`), words);
+    !words.includes('{') && words.includes(`${stage}-evolution-stage`) && words.includes(`rest ${share(BED_REST)} as long, ${spanWords(restFor(true))} instead of ${spanWords(REST_FOR)}`)
+    && words.includes(`every ${TIRE_GOES} cycles`) && words.includes(`${id === 'den_large' ? DEN_HEALTH[1] : DEN_HEALTH[0]} health`), words);
 }
 check('a stamina line says the goes left and both rests, off the rule',
-  staminaSays({ worn: 10 }) === `Stamina: ${TIRE_GOES - 10}/${TIRE_GOES} goes. Rest: ${timeWords(REST_FOR)}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`,
+  staminaSays({ worn: 10 }) === `Stamina: ${TIRE_GOES - 10}/${TIRE_GOES} cycles. Rest: ${timeWords(REST_FOR)}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`,
   staminaSays({ worn: 10 }));
 
 for (const line of [...ok, ...bad]) console.log(line);

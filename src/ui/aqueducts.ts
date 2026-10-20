@@ -6,6 +6,7 @@ import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
 import { AQUEDUCT_FLOW, pondCovers } from '../world/aqueducts';
 import { settleChain, springCorner } from '../world/springs';
+import { metres } from '../world/tiles';
 import type { MenuItem } from './contextmenu';
 
 /** What one span of an aqueduct takes, written out. */
@@ -48,7 +49,7 @@ export function aqueductMenu(g: Game, x: number, y: number, target: Extract<Targ
       return {
         label: `From the ${g.slabAt(h.x, h.y)?.pool ? 'pool' : 'pond'} ${h.tiles} tiles ${h.dir}`,
         note: typeof plan === 'string' ? undefined
-          : `${spans} span${spans === 1 ? '' : 's'} of ${BILL} · channel height ${plan.height} · ${AQUEDUCT_FLOW} litres/min into the ${plan.foot} at ${plan.level}`,
+          : `${spans} span${spans === 1 ? '' : 's'} of ${BILL} · channel height ${metres(plan.height)} m · ${AQUEDUCT_FLOW} litres/min into the ${plan.foot} at ${metres(plan.level)} m`,
         hint: typeof plan === 'string' ? plan : undefined,
         disabled: typeof plan === 'string',
         onSelect: () => g.requestAction(def, t),
@@ -62,7 +63,7 @@ export function aqueductEntries(g: Game, b: Bridge): MenuItem[] {
   const bt: Target = { kind: 'bridge', id: b.id };
   const entries: MenuItem[] = [];
   const n = b.spans.length;
-  entries.push({ label: `${n} span${n === 1 ? '' : 's'} · channel height ${b.height} · not walkable`, disabled: true });
+  entries.push({ label: `${n} span${n === 1 ? '' : 's'} · channel height ${metres(b.height)} m · not walkable`, disabled: true });
   const open = b.spans.find((s) => !isDone(s));
   const foot = open ? null : footSays(g, b, Date.now());
   if (open) entries.push({ label: `Open span needs: ${spanWants(open)}`, disabled: true });
@@ -91,10 +92,10 @@ function dryWhy(g: Game, b: Bridge): string {
     return g.slabAt(b.ax, b.ay)?.pool ? 'Dry: no spring in or feeding the pool at its head' : 'Dry: no spring water at its head';
   }
   const top = Math.max(...there.map((p) => p.level));
-  if (top < b.height) return `Dry: water at its head at ${top}, below channel height ${b.height}`;
+  if (top < b.height) return `Dry: water at its head at ${metres(top)} m, below channel height ${metres(b.height)} m`;
   const first = [...g.bridges.values()]
     .filter((o) => o.kind === 'aqueduct' && o.id !== b.id && waterAlong(g, o.id) && there.some((p) => pondCovers(p, o.ax, o.ay)))
     .sort((p, q) => p.id - q.id)[0];
   if (first) return `Dry: the aqueduct from ${first.ax}, ${first.ay} takes that water first`;
-  return `Dry: no spring water at its head at height ${b.height} or above`;
+  return `Dry: no spring water at its head at height ${metres(b.height)} m or above`;
 }

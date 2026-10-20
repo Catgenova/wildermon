@@ -141,7 +141,7 @@ check('and its crate is empty after', at('COB-CRATE') === 'empty', at('COB-CRATE
 check('and it says so', at('T:crated').startsWith('Hitched from the crate: Cob to the '), at('T:crated'));
 check('with one following and no empty crate, one stays in the traces', at('ASH-STAYS') === at('WAGON'), at('ASH-STAYS'));
 check('with one empty crate, it comes out into the crate', at('R:one-crate') === 'none' && at('ASH-OUT') === 'stored'
-  && at('T:one').endsWith(' Into creature crates in your pack: Ash. Bea follows you.'), `${at('ASH-OUT')} / ${at('T:one')}`);
+  && at('T:one').endsWith(' Into wildermon crates in your pack: Ash. Bea follows you.'), `${at('ASH-OUT')} / ${at('T:one')}`);
 check('and the last of a team comes out to follow you when nothing else does', at('R:last') === 'none' && at('FOLLOWS:last') === 'Cob', `${at('R:last')} / ${at('FOLLOWS:last')}`);
 
 /* ---- in the browser, the same, in the same words ------------------------------------------ */

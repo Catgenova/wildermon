@@ -374,13 +374,13 @@ export class CraftPanel {
         ? `up to QL ${pr.ceiling.toFixed(0)}`
         // A miss that comes out at the same whole QL as a hit is no miss worth naming.
         : pr.reach >= 0.9 || pr.short.toFixed(0) === pr.ceiling.toFixed(0)
-          ? `QL ${pr.ceiling.toFixed(0)}, nearly every go`
-          : `up to QL ${pr.ceiling.toFixed(0)} on ~${Math.round(pr.reach * 100)}% of goes; otherwise ~QL ${pr.short.toFixed(0)}`;
+          ? `QL ${pr.ceiling.toFixed(0)}, nearly every action`
+          : `up to QL ${pr.ceiling.toFixed(0)} on ~${Math.round(pr.reach * 100)}% of actions; otherwise ~QL ${pr.short.toFixed(0)}`;
     worth.title = pr.fromInputs
-      ? `QL from parts, no roll: weighted average of input QL by amount; your ${r.skill.replace(/_/g, ' ')} keeps ${Math.round(pr.keep * 100)}% of it. Better parts only.`
+      ? `QL from parts, no check: weighted average of input QL by amount; your ${r.skill.replace(/_/g, ' ')} keeps ${Math.round(pr.keep * 100)}% of it. Better parts only.`
       : pr.toolBound
         ? `Limited by your ${lower(r.tool as string)}: a better one reaches your skill more often.`
-        : 'Max QL: your skill. Tool QL: how often a go reaches it.';
+        : 'Max QL: your skill. Tool QL: how often an action reaches it.';
     name.append(worth);
     // What the name does not say: for a mould, the piece it is the only way to.
     if (r.note) {

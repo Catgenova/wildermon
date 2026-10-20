@@ -114,7 +114,7 @@ v.mode = 'deed';
 // The reach is each creature's own (its skill and its blood), so the words are compared and not the number.
 const words = (s: string): string => s.replace(/\d+/g, 'N');
 check('and it says what it will do in the island\'s words, with nothing about the crate',
-  words(deedJobLine(v)) === words(at('LINE')) && words(at('LINE')) === 'tend the hives within N tiles of the token', `${deedJobLine(v)} / ${at('LINE')}`);
+  words(deedJobLine(v)) === words(at('LINE')) && words(at('LINE')) === 'tend the hives within N tiles of the totem', `${deedJobLine(v)} / ${at('LINE')}`);
 const assign = CREATURE_ACTION_BY_ID.get('assign_deed');
 v.mode = 'active';
 const why = assign?.check?.({ kind: 'creature', id: v.id }, g) ?? 'none';

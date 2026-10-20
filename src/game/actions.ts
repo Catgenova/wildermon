@@ -5,7 +5,7 @@ import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES,
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS } from './motes';
 import { STONE_GUARDED, stoneGroundRefusal, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
-import { isSeam } from '../world/tiles';
+import { DAILY_RESET, isSeam, metres } from '../world/tiles';
 import type { World } from '../world/world';
 import { bedrockAt, oreAt } from '../world/ore';
 import { BUILD_ACTIONS } from './buildActions';
@@ -346,7 +346,7 @@ export function treeOutlook(age: TreeAge, treesAt: number): string {
   const now = Date.now() / 1000;
   const when = hoursHence((treesAt < lastDawn(now) ? now : nextDawn(now)) - now);
   const then = age.next === null ? 'gone' : TREE_AGES[age.next].name.toLowerCase();
-  let out = ` Next stage ${when}: ${then}.`;
+  let out = ` Next age ${when}: ${then}.`;
   if (!age.alive) out += ' Fell it before then for its logs.';
   else if (age.pruned !== null && age.next !== null && !TREE_AGES[age.next].alive) out += ' Prune to keep it alive.';
   return out;
@@ -465,8 +465,8 @@ export function flattenTarget(g: Game, x: number, y: number): number {
 export function levelStop(g: Game, cx: number, cy: number, dir: -1 | 1): string | null {
   if (g.level === null) return null;
   const h = g.world.getHeight(cx, cy);
-  if (dir < 0 && h <= g.level) return `Corner already at level ${g.level}.`;
-  if (dir > 0 && h >= g.level) return `Corner already at level ${g.level}.`;
+  if (dir < 0 && h <= g.level) return `Corner already at level ${metres(g.level)} m.`;
+  if (dir > 0 && h >= g.level) return `Corner already at level ${metres(g.level)} m.`;
   return null;
 }
 
@@ -697,7 +697,7 @@ export function rockRaiseRefusal(g: Game, cx: number, cy: number, what: 'Concret
   if (w.getDirt(cx, cy) > 0) return `Soil on that corner. ${what} needs bare rock.`;
   const deep = g.perk('depth:raise_rock', 0);
   if (w.getHeight(cx, cy) < -deep) {
-    return deep > 0 ? `${what}: not under more than ${deep} of water.` : `${what}: not under water.`;
+    return deep > 0 ? `${what}: not under more than ${metres(deep)} m of water.` : `${what}: not under water.`;
   }
   if (seamUnder(w, cx, cy)) return `Corner on a seam. ${what} needs plain rock.`;
   const under = cornerUnderBuilding(g, cx, cy);
@@ -734,7 +734,7 @@ export function slopeRefusal(g: Game, skill: 'digging' | 'masonry', cx: number, 
   const cap = skill === 'digging' ? maxDigSlope(g) : maxMasonSlope(g);
   if (would <= cap) return null;
   const per = g.perk(`slope:${skill}`, SLOPE_PER_SKILL);
-  return `Slope would be ${would}; ${skill} allows ${cap}, needs ${skill} ${slopeNeeds(would, per).toFixed(1)}.`;
+  return `Slope would be ${metres(would)} m; ${skill} allows ${metres(cap)} m, needs ${skill} ${slopeNeeds(would, per).toFixed(1)}.`;
 }
 
 /** Why a rank may not disband: only its founder does. The island says the same. */
@@ -853,7 +853,7 @@ export function tasteSays(g: Game, item: Item): string {
     .map((k) => `${k} +${wholePct((def.feeds?.[k] ?? 0) * helpingOf(item.ql) * markOf(item, 'feed'))}`);
   said.push(...feeds);
   const skill = knackable(item.id) ? boonOf(g.seed, item.id) : null;
-  if (skill) said.push(`knack ${clockLeft(boonTime(item.id, item.ql, markOf(item, 'knack')))}`);
+  if (skill) said.push(`${(def.food ?? 0) > 0 ? 'meal' : 'drink'} boost ${clockLeft(boonTime(item.id, item.ql, markOf(item, 'knack')))}`);
   return ` Per helping: ${said.join(', ')}.`;
 }
 
@@ -900,7 +900,7 @@ export const ACTIONS: ActionDef[] = [
         const fruit = TREE_DEFS[treeSpecies(data)].fruit;
         if (fruit) text += fruitingSays(fruit, fruitSeason(g.wallNow()));
       } else if (type === TileType.Stump) {
-        text = `${TREE_DEFS[treeSpecies(w.getData(t.x, t.y))].name} stump at (${t.x}, ${t.y}). Dig out, or grass at next dawn.`;
+        text = `${TREE_DEFS[treeSpecies(w.getData(t.x, t.y))].name} stump at (${t.x}, ${t.y}). Dig out, or grass at the next ${DAILY_RESET}.`;
       } else if (type === TileType.Grass && (w.getData(t.x, t.y) & MOWING)) {
         const d = w.getData(t.x, t.y);
         text += ` Mown: ${mownDays(d) + (mownToday(d) ? 1 : 0)}/${LAWN_AFTER} days to lawn.`;
@@ -915,7 +915,7 @@ export const ACTIONS: ActionDef[] = [
       const water = w.hasWater(t.x, t.y) ? ` Under water.${fishJournal(g, t.x, t.y)}` : '';
       let extra = '';
       const here = g.deedOfMineAt(t.x, t.y);
-      if (here && g.isToken(t.x, t.y)) extra += ` Settlement token: ${here.name}.`;
+      if (here && g.isToken(t.x, t.y)) extra += ` Settlement totem: ${here.name}.`;
       else if (here) extra += ` Settlement: ${here.name}.`;
       const b = g.buildings.buildingAt(t.x, t.y);
       if (b) extra += ` Building: ${b.name}, ${b.levels} ${b.levels === 1 ? 'storey' : 'storeys'}.`;
@@ -926,14 +926,14 @@ export const ACTIONS: ActionDef[] = [
       // And what is dug out under it: the island's `examine_tile_text` says the same.
       const under = g.buildings.cellar(t.x, t.y);
       if (under) {
-        extra += under.dug >= CELLAR_DEPTH ? ` Cellar under it: ${CELLAR_DEPTH} deep.`
-          : ` Cellar under it: dug ${under.dug}/${CELLAR_DEPTH}.`;
+        extra += under.dug >= CELLAR_DEPTH ? ` Cellar under it: ${metres(CELLAR_DEPTH)} m deep.`
+          : ` Cellar under it: ${metres(under.dug)} m of ${metres(CELLAR_DEPTH)} m dug.`;
       }
       // A jetty over it, columns on its corners, a roof on columns (`frameSays`).
       extra += frameSays(g, t.x, t.y);
       const crates = g.cratesOnTile(t.x, t.y);
       if (crates.length) extra += ` Crates: ${crates.length}.`;
-      g.logMsg(`${text} Height ${avg.toFixed(1)}, slope ${w.slope(t.x, t.y)}.${water}${extra}`, 'event');
+      g.logMsg(`${text} Height ${metres(avg)} m, slope ${metres(w.slope(t.x, t.y))} m.${water}${extra}`, 'event');
     },
   },
   {
@@ -1355,7 +1355,7 @@ export const ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.level = g.world.getHeight(t.cx, t.cy);
-      g.logMsg(`Level set: ${g.level}. Flatten works to it; dig, drop and concrete stop at it.`, 'event');
+      g.logMsg(`Level set: ${metres(g.level)} m. Flatten works to it; dig, drop and concrete stop at it.`, 'event');
       g.events.emit('action');
     },
   },
@@ -2050,7 +2050,7 @@ export const ACTIONS: ActionDef[] = [
       if (treeSpecies(data) !== RESIN_TREE) return `Only a ${pine}.`;
       if (!treeAge(data).alive) return 'Tree is dead.';
       if (!tappable(data)) return `${capital(pine)}: too young to tap.`;
-      if (g.tappedToday(t.x, t.y)) return 'Tapped today. Again at dawn.';
+      if (g.tappedToday(t.x, t.y)) return `Tapped today. Again at the ${DAILY_RESET}.`;
       return null;
     },
     perform: (t, g) => {
@@ -2304,7 +2304,7 @@ export const ACTIONS: ActionDef[] = [
       const made = materialOfItem(item);
       const stuff = made ? ` ${made.name}: ${made.note}` : '';
       const r = rarityOf(item);
-      const rare = r.name ? ` ${capital(r.name)}: effect ×${r.boost}, wear and rot ×${r.keep}, improvable to ${r.ceiling} QL past your skill.` : '';
+      const rare = r.name ? ` ${capital(r.name)}: effect ×${r.boost}, wear and rot ×${r.keep}, improvable to ${r.ceiling} quality past your skill.` : '';
       // Rare work and work made at the signing QL carry their maker's name, and the line it was signed with
       // (`signing.ts`): the island's `maker_says`. And what a maker's perks put into it is said.
       // And what is enchanted into it, at its quality (`enchanting.ts`): the island's `enchant_says`.
@@ -2315,21 +2315,21 @@ export const ACTIONS: ActionDef[] = [
       // A knack comes off something somebody made, so the examine line says so
       // for the same things the eating does.
       const skill = knackable(item.id) ? boonOf(g.seed, item.id) : null;
-      const favours = (skill ? ` Knack: ${(SKILL_DEFS.find((d) => d.id === skill)?.name ?? skill).toLowerCase()}.` : '')
+      const favours = (skill ? ` ${(def.food ?? 0) > 0 ? 'Meal' : 'Drink'} boost: ${(SKILL_DEFS.find((d) => d.id === skill)?.name ?? skill).toLowerCase()}.` : '')
         // And what an Artisan's circlet has in it.
         + (item.id === CIRCLET ? circletSays(item) : '')
         // And how far a Telestone reaches and how long a journey on it makes you wait, at its own quality.
         + (item.id === TELESTONE ? telestoneSays(item.ql) : '');
       // What it is worth at the work now, which is rarely the number stamped on it.
       const worth = g.toolWorth(item);
-      const at = itemDef(item.id).category === 'tool' && Math.abs(worth - item.ql) >= 0.05 ? ` Works as QL ${worth.toFixed(1)} now.` : '';
+      const at = itemDef(item.id).category === 'tool' && Math.abs(worth - item.ql) >= 0.05 ? ` Works as Quality ${worth.toFixed(1)} now.` : '';
       // And to a Cook's tongue, what a helping of it does (a Cook's Taste).
       const taste = g.perk('taste', 0) > 0 ? tasteSays(g, item) : '';
       // What dye is in it, or what colour it was dyed (`dyestuffs.ts`): the island's `dye_item_says`.
       const held = dyeIn(item);
       const hex = held ? null : dyeHexOf(item.dye);
       const dyed = held ? ` Holds: ${dyeSays(held.liquid, held.litres)}` : hex ? ` Dyed: ${hex}.` : '';
-      g.logMsg(`${itemName(item)}: QL ${item.ql.toFixed(2)}, damage ${item.dmg.toFixed(2)}, weight ${itemWeight(item).toFixed(2)} kg.${at}${desc}${dyed}${rare}${by}${favours}${stuff}${taste}`, 'event');
+      g.logMsg(`${itemName(item)}: Quality ${item.ql.toFixed(2)}, damage ${item.dmg.toFixed(2)}%, weight ${itemWeight(item).toFixed(2)} kg.${at}${desc}${dyed}${rare}${by}${favours}${stuff}${taste}`, 'event');
     },
   },
   {
@@ -2509,7 +2509,7 @@ export const ACTIONS: ActionDef[] = [
       g.events.emit('inventory');
       g.gainSkill(improvable(item.id)?.skill ?? 'tailoring', 0.25);
       // The piece by its plain name, as the island says it.
-      g.logMsg(`Patched: ${itemDef(item.id).name.toLowerCase()}, damage ${item.dmg.toFixed(2)}.`, 'event');
+      g.logMsg(`Patched: ${itemDef(item.id).name.toLowerCase()}, damage ${item.dmg.toFixed(2)}%.`, 'event');
     },
   },
   {
@@ -2546,7 +2546,7 @@ export const ACTIONS: ActionDef[] = [
       item.dmg = Math.max(0, item.dmg - KIT_MEND);
       g.events.emit('inventory');
       g.gainSkill('repair', 0.25);
-      g.logMsg(`Mended: ${itemDef(item.id).name.toLowerCase()}, damage ${item.dmg.toFixed(2)}.`, 'event');
+      g.logMsg(`Mended: ${itemDef(item.id).name.toLowerCase()}, damage ${item.dmg.toFixed(2)}%.`, 'event');
     },
   },
   {
@@ -2978,8 +2978,8 @@ export const ACTIONS: ActionDef[] = [
       // it, which is exactly what a token wants and is sometimes the only
       // such tile on a hillside.
       if (!g.slabAt(x, y)) {
-        if (w.hasWater(x, y)) return 'Token needs dry land.';
-        if (!w.isPassable(x, y)) return 'Token needs a clear tile.';
+        if (w.hasWater(x, y)) return 'Totem needs dry land.';
+        if (!w.isPassable(x, y)) return 'Totem needs a clear tile.';
       }
       return null;
     },
@@ -2996,7 +2996,7 @@ export const ACTIONS: ActionDef[] = [
       if (!g.inventory.remove(stake.uid, 1)) return;
       g.deed = { name: name.trim().slice(0, 32), x: g.player.tileX, y: g.player.tileY, radius: DEED_RADIUS, level: 1 };
       g.placeDeedCrate();
-      g.logMsg(`Founded: ${g.deed.name}. Build area: ${DEED_RADIUS * 2 + 1}×${DEED_RADIUS * 2 + 1} tiles round the token. Deed crate placed beside it.`, 'system');
+      g.logMsg(`Founded: ${g.deed.name}. Build area: ${DEED_RADIUS * 2 + 1}×${DEED_RADIUS * 2 + 1} tiles round the totem. Settlement crate placed beside it.`, 'system');
       g.events.emit('world', g.deed.x, g.deed.y);
     },
   },
@@ -3051,7 +3051,7 @@ export const ACTIONS: ActionDef[] = [
       if (!g.deed) return;
       const name = g.deed.name;
       let freed = 0;
-      // The settlement's workers go with it. One in a creature crate is in
+      // The settlement's workers go with it. One in a wildermon crate is in
       // your crate, not the settlement's, and stays yours.
       for (const c of g.creatures.list.values()) {
         if (c.mode === 'deed') {
@@ -3080,8 +3080,8 @@ export const ACTIONS: ActionDef[] = [
       for (const c of g.crates.values()) c.deed = false;
       g.deed = null;
       g.inventory.add('deed_stake', { ql: 50 });
-      const spilt = tipped ? ' Deed crate removed; its contents dropped where it stood.' : ' Deed crate removed.';
-      g.logMsg(`Disbanded: ${name}. Deed stake to pack.${crate ? spilt : ''}${freed ? ` Wildermon gone wild: ${freed}.` : ''}`, 'system');
+      const spilt = tipped ? ' Settlement crate removed; its contents dropped where it stood.' : ' Settlement crate removed.';
+      g.logMsg(`Disbanded: ${name}. ${itemDef('deed_stake').name} to pack.${crate ? spilt : ''}${freed ? ` Wildermon gone wild: ${freed}.` : ''}`, 'system');
     },
   },
   {

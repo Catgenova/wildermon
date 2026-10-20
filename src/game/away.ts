@@ -64,7 +64,7 @@ export function awayLines(away: Away): string[] {
   if (born.length) lines.push(`Born to your wildermon: ${listed(born.map(speciesCount))}.`);
   const strayed = of('strayed');
   if (strayed.length) {
-    lines.push('Born and gone wild (a companion already followed you and no empty creature crate was '
+    lines.push('Born and gone wild (a companion already followed you and no empty wildermon crate was '
       + `in your pack or on your settlement): ${listed(strayed.map(speciesCount))}.`);
   }
   const sold = of('sold');

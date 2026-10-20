@@ -76,7 +76,7 @@ import { runestoneAt } from '../game/runestones';
 import { cornerReading, groundReading } from './tileinfo';
 import { deedWorkersAt, MAX_DEED_LEVEL, type Deed } from '../game/game';
 import { isFounder, lacks } from '../game/ranks';
-import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, type CraftStock, type Recipe } from '../game/recipes';
+import { CRAFT_REACH, reachFor, RECIPE_BY_ID, recipeNeeds, recipeReason, recipeStatus, RECIPES, skillName, type CraftStock, type Recipe } from '../game/recipes';
 import { CraftPanel } from './panels/craft';
 import { unseenNews } from './panels/news';
 import { CratePanel } from './panels/crate';
@@ -447,7 +447,7 @@ export class UI {
     // How you look: back to the character creator on the account page, for
     // somebody on an island, who has an account to keep a look with.
     this.settings = new SettingsPanel(settings, game, cb.keys, this.island ? () => location.assign(creatorPage()) : null, this.windows);
-    const crate = this.windows.create({ id: 'crate', title: 'Deed crate', x: 364, y: 56, width: 320, height: 348, anchor: 'tr', open: false });
+    const crate = this.windows.create({ id: 'crate', title: 'Settlement crate', x: 364, y: 56, width: 320, height: 348, anchor: 'tr', open: false });
     this.cratePanel = new CratePanel(crate, game, (p) => this.moveDragged(p, 'store'),
       (x, y, title, items) => this.menu.show(x, y, title, items), (item, x, y) => this.compareCard(item, x, y));
     // Somebody else's shop counter: what is on it is bought, on an island.
@@ -535,7 +535,7 @@ export class UI {
      * A trade with one other person: opened by asking or being asked, not off
      * the Menu, and shut again by its close button when it is over.
      */
-    const barterWin = this.windows.create({ id: 'barter', title: 'Trade', x: 12, y: 56, width: 440, height: 420, anchor: 'tl', open: false });
+    const barterWin = this.windows.create({ id: 'barter', title: 'Barter', x: 12, y: 56, width: 440, height: 420, anchor: 'tl', open: false });
     this.barter = new BarterPanel(barterWin, game, this.island);
     if (this.island) this.social.trade = (uid) => void this.barter.ask(uid);
     /*
@@ -1260,7 +1260,7 @@ export class UI {
     // A Runestone standing on it, by name (`runestones.ts`).
     const stone = runestoneAt(pick.x, pick.y, w.w);
     if (stone) lines.push(`${stone.name}, a Runestone`);
-    lines.push(`${pick.x}, ${pick.y} · slope ${w.slope(pick.x, pick.y)}`);
+    lines.push(`${pick.x}, ${pick.y} · slope ${metres(w.slope(pick.x, pick.y))} m`);
     lines.push(cornerReading(this.game, pick.cx, pick.cy));
     const reading = groundReading(this.game, pick.x, pick.y);
     if (reading) lines.push(reading);
@@ -1280,7 +1280,7 @@ export class UI {
       const token = this.game.isToken(pick.x, pick.y);
       const who = 'holder' in here && here.holder ? `, ${here.holder}\u2019s` : '';
       const level = here.level && here.level > 1 ? ` \u00b7 level ${here.level}` : '';
-      lines.push(`${token ? 'Settlement token of' : 'Part of'} ${here.name}${who}${level}`);
+      lines.push(`${token ? 'Settlement totem of' : 'Part of'} ${here.name}${who}${level}`);
       lines.push(mine ? standingWord(mine) : 'Not a citizen: walk only, no building or terraforming.');
     }
     // A drawbridge says whether it is up (`gates.ts`).
@@ -1540,7 +1540,7 @@ export class UI {
       const worth = sittingWorth(g);
       entries.push({
         label: 'Meditate',
-        note: why ? undefined : `meditation ${med.toFixed(1)} · spot ×${worth.place.toFixed(2)} · +${Math.floor(worth.calm)} Calm`,
+        note: why ? undefined : `meditation ${med.toFixed(1)} · meditation gain and Calm ×${worth.place.toFixed(2)} at this spot · +${Math.floor(worth.calm)} Calm`,
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => g.requestAction(sit, target),
@@ -1570,7 +1570,7 @@ export class UI {
         const next = PATH_TIER_AT.find((at) => med < at);
         entries.push({
           label: `Path: ${way.name}`,
-          note: `Calm ${Math.floor(g.player.calm)} of ${Math.floor(g.calmCap())} · ${next !== undefined ? `next tier at ${next}` : 'every tier open'}`,
+          note: `Calm ${Math.floor(g.player.calm)} of ${Math.floor(g.calmCap())} · ${next !== undefined ? `next path tier at meditation ${next}` : 'every path tier open'}`,
           onSelect: () => this.windows.get('faith')?.open(),
         });
         // Playing by yourself there is no spell bar, so the techniques you hold are called from here.
@@ -1895,7 +1895,7 @@ export class UI {
     const hangable = this.game.actionsFor(target).filter((a) => pinnable(a.def));
     if (hangable.length && this.game.beltLoops()) {
       entries.push({
-        label: 'Hang job on belt',
+        label: 'Hang action on belt',
         children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id }).children })),
       });
     }
@@ -1976,7 +1976,7 @@ export class UI {
     }
     const building = g.buildings.buildingAt(x, y);
     const c = g.buildings.cellar(x, y);
-    const facts = c ? [`Cellar · ${c.dug} of ${CELLAR_DEPTH} dug out · ${pile.length ? `${pile.reduce((n, it) => n + it.count, 0)} lying here` : 'nothing lying here'}`] : [];
+    const facts = c ? [`Cellar · ${metres(c.dug)} m of ${metres(CELLAR_DEPTH)} m dug · ${pile.length ? `${pile.reduce((n, it) => n + it.count, 0)} lying here` : 'nothing lying here'}`] : [];
     return { title: `${building ? `Cellar of ${building.name}` : 'Cellar'} (${x}, ${y})`, facts, entries };
   }
 
@@ -2184,7 +2184,7 @@ export class UI {
   /** What a planter has in it, or that it is empty and grows at its rate in every season. */
   private planterLine(f: PlacedFurniture): string {
     const c = this.game.planted.get(f.id);
-    return c ? this.cropLine(c) : `Empty: any seed. Growth ×${PLANTER_GROWTH}, every season.`;
+    return c ? this.cropLine(c) : `Empty: any seed. Growth speed ×${PLANTER_GROWTH}, every season.`;
   }
 
   /**
@@ -2352,7 +2352,7 @@ export class UI {
             const why = cast.check?.(wantsItem ? { kind: 'item', uid: targets[0]?.uid ?? -1, spell: c.id } : plain, g) ?? null;
             return {
               label: c.name,
-              note: `${c.cost} favour · faith ${c.level}`,
+              note: `${c.cost} favour · ${skillName(FAITH).toLowerCase()} ${c.level}`,
               hint: why ?? c.note,
               disabled: !!why && !wantsItem,
               children: wantsItem
@@ -2539,7 +2539,7 @@ export class UI {
     entries.push({ label: `QL ${p.ql.toFixed(0)} · reaches ${reach} tiles · ${postState(p, postKeep(this.game))}`, disabled: true });
     if (worker) {
       const def = SPECIES[worker.species];
-      entries.push({ label: `${worker.name} works out of it`, note: def.gathers ? GATHER_VERB[def.gathers] : 'no job', disabled: true });
+      entries.push({ label: `${worker.name} works out of it`, note: def.gathers ? GATHER_VERB[def.gathers] : 'no task', disabled: true });
     } else {
       const assign = ACTION_BY_ID.get('assign_post');
       const candidates = postCandidates(g);
@@ -2553,7 +2553,7 @@ export class UI {
                 const ct: Target = { kind: 'post', id: p.id, creature: c.id };
                 const reason = assign.check?.(ct, g) ?? null;
                 const def = SPECIES[c.species];
-                const job = def.gathers ? GATHER_DO[def.gathers].split(' and ')[0] : 'no job';
+                const job = def.gathers ? GATHER_DO[def.gathers].split(' and ')[0] : 'no task';
                 return {
                   label: c.name,
                   note: c.mode === 'stored' ? `in a crate · ${job}` : job,
@@ -2824,7 +2824,7 @@ export class UI {
     const stance = g.deedStance();
     children.push({
       label: `Orders: ${STANCE_NAMES[stance]}`,
-      note: 'Applies to every wildermon on the deed',
+      note: 'Applies to every wildermon on the settlement',
       children: STANCES.map((st) => ({
         label: st === stance ? `${STANCE_NAMES[st]} (current)` : STANCE_NAMES[st],
         note: st === 'aggressive' ? 'Attacks wild creatures inside the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights',
@@ -2849,7 +2849,7 @@ export class UI {
   private deliverEntry(): MenuItem[] {
     if (!this.island) return [];
     return [
-      { label: 'Deliver work', note: `At the token, within ${DELIVER_REACH} tiles`, onSelect: () => this.deedPanel.open('work') },
+      { label: 'Deliver work', note: `At the totem, within ${DELIVER_REACH} tiles`, onSelect: () => this.deedPanel.open('work') },
       { label: 'Notices', onSelect: () => this.deedPanel.open('notices') },
     ];
   }
@@ -3004,7 +3004,7 @@ export class UI {
     const reason = def.check?.(t, g) ?? null;
     return [{
       label: 'Found a settlement here',
-      note: reason ? undefined : here ? 'Places the token here' : 'Walks there, then places the token',
+      note: reason ? undefined : here ? 'Places the totem here' : 'Walks there, then places the totem',
       hint: reason ?? undefined,
       disabled: !!reason,
       // The name is asked for by `requestAction`, which every other way of
@@ -3106,7 +3106,7 @@ export class UI {
     const apart = who ? Math.max(Math.abs(who.x - this.game.player.x), Math.abs(who.y - this.game.player.y)) : 0;
     const far = apart > BARTER_REACH ? BARTER_SAID.far : null;
     entries.push({
-      label: `Trade with ${name}`,
+      label: `Barter with ${name}`,
       note: far ? undefined : 'Both add items and silver; exchanged when both accept',
       hint: far ?? undefined,
       disabled: !!far,
@@ -3245,7 +3245,7 @@ export class UI {
       // Where the ground is not level with the floor the tile would stand on piers: the deck it would stand under, and the drop (`piers.ts`).
       const onPiers = (into?: Building): PierNote => {
         const site = g.foundationAt(x, y) ? null : g.pierSite(x, y, into);
-        return site?.deck == null ? { on: '' } : { on: ' on piers', note: `deck at ${site.deck}, ${metres(pierDrop(site.ground, site.deck))} m drop` };
+        return site?.deck == null ? { on: '' } : { on: ' on piers', note: `deck at ${metres(site.deck)} m, ${metres(pierDrop(site.ground, site.deck))} m drop` };
       };
       if (nb) {
         const p = onPiers(nb);
@@ -3265,7 +3265,7 @@ export class UI {
     if (glazing(bld, b)) {
       entries.push({
         label: isGlasshouse(bld, b)
-          ? `Glasshouse: tilled ground, crop growth ×${GLASSHOUSE_GROWTH}, every season`
+          ? `Glasshouse: tilled ground, crop growth speed ×${GLASSHOUSE_GROWTH}, every season`
           : b.levels !== 1
             ? `Glass roof over ${b.levels} storeys: glasshouse must be 1 storey`
             : glassDone(bld, b) < b.tiles.length
@@ -3434,7 +3434,7 @@ export class UI {
             },
             // What glass is for, in full, where it is chosen: a note is cut to its slot, a line is not.
             { label: 'Glasshouse: 1 storey, full-height walls all round, all-glass roof', disabled: true },
-            { label: `Crop growth ×${GLASSHOUSE_GROWTH}, every season`, disabled: true },
+            { label: `Crop growth speed ×${GLASSHOUSE_GROWTH}, every season`, disabled: true },
           ];
         };
         entries.push({

@@ -124,12 +124,12 @@ export function vehicleFor(g: Game, c: Creature) {
 
 /**
  * Why one more wildermon cannot be tamed, or null: the first follows you, and
- * every one after that goes into an empty creature crate you carry.
+ * every one after that goes into an empty wildermon crate you carry.
  */
 export function tameRoomRefusal(g: Game): string | null {
   const with_ = g.creatures.active();
   if (!with_ || emptyCrate(g)) return null;
-  return `${with_.name} already follows you. Need an empty creature crate.`;
+  return `${with_.name} already follows you. Need an empty wildermon crate.`;
 }
 
 /**
@@ -149,8 +149,8 @@ export function companionSwap(g: Game, taking: Creature): { current: Creature; t
   return {
     current,
     refused: g.deed
-      ? `${current.name} has nowhere to go: ${g.deed.name} full (${g.workerCap} workers at level ${g.deedLevel}), no empty creature crate.`
-      : `${current.name} has nowhere to go: no settlement, no empty creature crate.`,
+      ? `${current.name} has nowhere to go: ${g.deed.name} full (${g.workerCap} workers at level ${g.deedLevel}), no empty wildermon crate.`
+      : `${current.name} has nowhere to go: no settlement, no empty wildermon crate.`,
   };
 }
 
@@ -257,7 +257,7 @@ const artifactOn = (c: Creature | undefined): boolean => !!c && c.mode !== 'wild
 export function artifactRefusal(g: Game, c: Creature | undefined, action: string): string | null {
   if (!c) return 'Gone.';
   if (!artifactOn(c)) return c.mode === 'wild' ? 'Not yours.' : `${c.name}: not yours.`;
-  if (c.mode === 'stored') return `${c.name} is in a creature crate: open it first.`;
+  if (c.mode === 'stored') return `${c.name} is in a wildermon crate: open it first.`;
   if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
   const name = artifactName(action);
   if (!artifactIn(g, action)) return `Need ${article(name)} ${name}.`;
@@ -286,8 +286,8 @@ const kindled = (id: string): string => {
 
 /** What an ancient lamp says it did, word for word as the island's `perform_artifact` says it. */
 export function lampSays(c: Pick<Creature, 'name'>, name: string, did: Rekindled): string {
-  const up = did.up ? `, a tier above ${did.from}` : '';
-  const odds = !did.up && nextTier(did.from) ? ` Tier-up chance: 1 in ${LAMP_TIER_ODDS}.` : '';
+  const up = did.up ? `, a rarity above ${did.from}` : '';
+  const odds = !did.up && nextTier(did.from) ? ` Rarity-up chance: 1 in ${LAMP_TIER_ODDS}.` : '';
   return did.was
     ? `${capital(name)} used on ${c.name}: ${traitName(did.was)} (${did.from}) replaced by ${kindled(did.now)}${up}.${odds}`
     : `${capital(name)} used on ${c.name}: ${kindled(did.now)} added to an empty slot${up}.${odds}`;
@@ -361,7 +361,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const def = SPECIES[c.species];
       if (c.mode === 'wild') {
         if (def.monster) {
-          g.logMsg(`${def.name}: ${def.description ? `${def.description} ` : ''}Health ${Math.ceil(c.health)}/${maxHealth(c, def)}, blow ${attackOf(c, def).toFixed(0)}. Cannot be tamed.`, 'error');
+          g.logMsg(`${def.name}: ${def.description ? `${def.description} ` : ''}Health ${Math.ceil(c.health)}/${maxHealth(c, def)}, blow ${attackOf(c, def).toFixed(0)} damage. Cannot be tamed.`, 'error');
           return;
         }
         const warm = coaxBonus(c, g.time, coaxStep(g));
@@ -371,7 +371,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       }
       const mood = c.hunger < 0.3 ? 'Hungry.' : c.hunger < 0.6 ? 'Peckish.' : 'Fed.';
       const skills = Object.entries(c.skills).map(([id, v]) => `${id} ${v.toFixed(1)}`).join(', ');
-      const range = c.mode === 'deed' && def.gathers ? ` Range: ${workRangeOf(c, def)} tiles from the token.` : '';
+      const range = c.mode === 'deed' && def.gathers ? ` Range: ${workRangeOf(c, def)} tiles from the totem.` : '';
       const desc = kindDescription(c);
       g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'event');
     },
@@ -429,7 +429,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         const crate = g.creatures.active() ? emptyCrate(g) : undefined;
         if (crate) {
           shutIn(g, c, crate);
-          g.logMsg(`Tamed: ${c.name}. In the creature crate in your pack.`, 'system');
+          g.logMsg(`Tamed: ${c.name}. In the wildermon crate in your pack.`, 'system');
         } else {
           c.mode = 'active';
           g.logMsg(`Tamed: ${c.name}. Follows you.`, 'system');
@@ -611,7 +611,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'assign_deed',
-    label: 'Assign to deed',
+    label: 'Assign to settlement',
     verb: 'assigning',
     instant: true,
     stamina: 0,
@@ -633,7 +633,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (c && want) {
         const def = SPECIES[c.species];
         const trades: string[] = def.trades ?? (def.gathers ? [def.gathers] : []);
-        if (!trades.includes(want)) return `${def.name}: not one of its trades.`;
+        if (!trades.includes(want)) return `${def.name}: not one of its tasks.`;
       }
       return null;
     },
@@ -697,7 +697,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         const into = emptyCrate(g);
         if (into) {
           shutIn(g, swap.current, into);
-          g.logMsg(`${swap.current.name}: into the creature crate in your pack.`, 'info');
+          g.logMsg(`${swap.current.name}: into the wildermon crate in your pack.`, 'info');
         }
       }
     },
@@ -1129,7 +1129,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'Gone.';
-      if (c.mode === 'stored' && !crateToHand(g, c)) return `${c.name} is in a creature crate: let it out first.`;
+      if (c.mode === 'stored' && !crateToHand(g, c)) return `${c.name} is in a wildermon crate: let it out first.`;
       const f = vehicleFor(g, c);
       if (!f) return 'No cart or wagon with an empty yoke here.';
       const storey = tracesStoreyRefusal(f);

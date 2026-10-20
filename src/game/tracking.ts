@@ -230,7 +230,7 @@ export function trackBandsSays(): string[] {
   const way = (b: TrackBand): string => (b.points === 360 ? 'to 1°' : `to ${b.points} points`);
   const far = (b: TrackBand): string => (b.round === null ? `far (over ${TRACK_FAR} tiles) or not` : `to the nearest ${b.round} tiles`);
   return TRACK_BANDS.map((b, i) => {
-    const adds = [b.stage && !TRACK_BANDS[i - 1]?.stage ? 'stage' : '', b.detail && !TRACK_BANDS[i - 1]?.detail ? 'level and moving or still' : '']
+    const adds = [b.stage && !TRACK_BANDS[i - 1]?.stage ? 'evolution stage' : '', b.detail && !TRACK_BANDS[i - 1]?.detail ? 'level and moving or still' : '']
       .filter(Boolean);
     const upto = TRACK_BANDS[i + 1] ? `${b.at} to ${TRACK_BANDS[i + 1].at - 1}` : `${b.at} and over`;
     return `${upto}: way ${way(b)}, distance ${far(b)}${adds.length ? `, plus ${listed(adds)}` : ''}`;

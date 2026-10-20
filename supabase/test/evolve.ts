@@ -130,7 +130,7 @@ check('the Rabba is the Snufflet now, a Snuffroot and a Snuffthorn after, on bot
 const iron = SPECIES.mola;
 check('the Mola is the Ironemole now, a Ferrodrill and an Oremander after, and an old Mola carcass is still one, on both sides',
   iron.name === 'Ironemole' && iron.stages?.map((x) => x.name).join(',') === 'Ferrodrill,Oremander'
-    && at('IRONEMOLE') === 'Ironemole|Ferrodrill,Oremander|Mola|mola' && iron.stages[1].description.startsWith(`Stage 3, level ${EVOLVE_AT[1]}+. Over an Ironemole:`), at('IRONEMOLE'));
+    && at('IRONEMOLE') === 'Ironemole|Ferrodrill,Oremander|Mola|mola' && iron.stages[1].description.startsWith(`Evolution stage 3, level ${EVOLVE_AT[1]}+. Over an Ironemole:`), at('IRONEMOLE'));
 const spore = SPECIES.vola;
 check('the Vola is the Sporeling now, a Sporekin and a Sporelord after, and an old Vola carcass is still one, on both sides',
   spore.name === 'Sporeling' && spore.stages?.map((x) => x.name).join(',') === 'Sporekin,Sporelord'
@@ -197,7 +197,7 @@ check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and
 const ghost = SPECIES.whispet;
 check('the Whispet is new, a Lanternveil and a Hallowmire after, and as it keeps watch rather than working its stages are not said to work faster, on both sides',
   ghost.name === 'Whispet' && ghost.stages?.map((x) => x.name).join(',') === 'Lanternveil,Hallowmire' && !ghost.stages[1].description.includes('task')
-    && ghost.stages[1].description.startsWith(`Stage 3, level ${EVOLVE_AT[1]}+. Over a Whispet:`) && at('WHISPET') === 'Whispet|Lanternveil,Hallowmire', at('WHISPET'));
+    && ghost.stages[1].description.startsWith(`Evolution stage 3, level ${EVOLVE_AT[1]}+. Over a Whispet:`) && at('WHISPET') === 'Whispet|Lanternveil,Hallowmire', at('WHISPET'));
 check(`it evolves at ${AT1} and ${AT2}, and each stage is ${H}, ${T}, ${S}, ${W} and ${G} over the last, on both sides`,
   at('NUMBERS') === `${AT1}|${AT2}|${H}|${T}|${S}|${W}|${G}`, at('NUMBERS'));
 for (let i = 0; i < 3; i++) {

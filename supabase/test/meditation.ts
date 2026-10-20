@@ -621,7 +621,7 @@ check('and with a job behind it, the sitting comes due at once and gives nothing
   check('the mark goes once the hoard is dug up', at('DUG') === 'null', at('DUG'));
   check('and with none within reach it is refused', at('TRACENONE') === `No hoard of a map in your pack within ${tr.fx.reach} tiles.`, at('TRACENONE'));
   check(`Foreknow sets ${fk.fx.goes} goes, for ${fk.cost} Calm, resting ${fk.rest} seconds`,
-    at('FORE') === `Next ${fk.fx.goes} goes with a success roll: success.|${CALM - fk.cost}|${fk.fx.goes}|${fk.rest}`, at('FORE'));
+    at('FORE') === `Next ${fk.fx.goes} actions with a success check: success.|${CALM - fk.cost}|${fk.fx.goes}|${fk.rest}`, at('FORE'));
   check(`through the clock, each of ${fk.fx.goes} goes cannot fail a roll and spends one; the next is rolled again`,
     at('FOREGO') === `${Array.from({ length: fk.fx.goes }, () => 'on:true').join(',')},:-|0`, at('FOREGO'));
   check('and nothing of it is left set once the clock is done', at('FORESET') === '|', at('FORESET'));

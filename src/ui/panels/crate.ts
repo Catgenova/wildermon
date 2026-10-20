@@ -14,6 +14,7 @@ import { orderBy, sortSelect, type SortKey } from '../sorting';
 import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
 import { priceWords } from '../../game/money';
+import { POWER } from '../../game/ranks';
 import { counterStore } from '../counterMenu';
 import { deedAt, isSettlementStore, storeMarkable, storeMarkedLine, storeMarkRefusal, storeUse, type Keepable } from '../../game/stores';
 
@@ -383,7 +384,7 @@ export class CratePanel {
     const deed = deedAt(this.game, kept.thing.x, kept.thing.y)?.name ?? 'the settlement';
     this.markBtn.textContent = on ? 'Set as settlement store' : 'Unset settlement store';
     this.markBtn.title = on
-      ? `Access: founder and ${deed} ranks with Use the stores, padlock ignored; nobody else. Every take and put logged.`
+      ? `Access: founder and ${deed} ranks with ${POWER.use_stores.label}, padlock ignored; nobody else. Every take and put logged.`
       : 'Access: by owner and padlock again.';
   }
 
@@ -636,7 +637,7 @@ export class CratePanel {
     // A settlement store says whose it is, and whether it is shut to you, in place of its padlock.
     const use = store.kept ? storeUse(this.game, store.kept.thing, store.what) : null;
     this.win.titleText.textContent = store.title + (use
-      ? ` \u2014 store of ${deedAt(this.game, store.kept?.thing.x ?? 0, store.kept?.thing.y ?? 0)?.name ?? 'a settlement'}${use === 'open' ? '' : ', shut to you'}`
+      ? ` \u2014 settlement store of ${deedAt(this.game, store.kept?.thing.x ?? 0, store.kept?.thing.y ?? 0)?.name ?? 'a settlement'}${use === 'open' ? '' : ', shut to you'}`
       : !store.lock?.lock ? '' : shut ? ' \u2014 locked' : ' \u2014 unlocked');
     this.drawMark(store);
     this.bar.hidden = false;

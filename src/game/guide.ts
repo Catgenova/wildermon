@@ -205,7 +205,7 @@ export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   if (def.nocturnal) lines.push('Spawns only at night');
   if (def.season) lines.push(`Wild only ${seasonSays(def.season)} (UTC); gone from the wild on other days`);
   if (def.monster) {
-    lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement token`);
+    lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement totem`);
     if (onIsland) lines.push(`Never within ${PEACE_REACH} tiles of the landing beach`);
   }
   lines.push(`Home range: ${WILD_RANGE} tiles`);
@@ -253,7 +253,7 @@ function keeping(def: SpeciesDef): string[] {
   const lines: string[] = [];
   if (def.gathers) {
     const skill = skillName(GATHER_SKILL[def.gathers]);
-    lines.push(`Deed job: ${GATHER_DO[def.gathers]}. Learns ${skill}`
+    lines.push(`Settlement task: ${GATHER_DO[def.gathers]}. Learns ${skill}`
       // At its trade's own pace, which evens out every trade's time to level (`LEARN_PACE`).
       + (LEARN_PACE[def.gathers] !== 1 ? `, learning pace ${percent(LEARN_PACE[def.gathers])}` : ''));
     for (const other of def.trades ?? []) {
@@ -261,7 +261,7 @@ function keeping(def: SpeciesDef): string[] {
     }
     lines.push(`Range: ${def.workRange} tiles from its orders, +${def.rangePerStep ?? RANGE_PER_STEP} `
       + `per ${SKILL_STEP} levels of ${skill}`);
-  } else lines.push('No trade');
+  } else lines.push('No task');
   if (def.fleece) {
     const yields = def.shearYield ?? 'wool';
     lines.push(`${yields === 'feather' ? 'Pluck' : 'Shear'} with a ${itemName('carving_knife')}: ${itemName(yields)}`);
@@ -300,7 +300,7 @@ function keeping(def: SpeciesDef): string[] {
 
 /** What it is like to meet: its body, what it does when struck, what its blows leave, and what bites it hardest. */
 function fighting(def: SpeciesDef): string[] {
-  const lines = [`Grown: ${def.health} health, blow ${def.attack}, speed ${def.speed} ${def.speed === 1 ? 'tile' : 'tiles'} a second`];
+  const lines = [`Grown: ${def.health} health, blow ${def.attack} damage, speed ${def.speed} ${def.speed === 1 ? 'tile' : 'tiles'} a second`];
   if (def.hunter) lines.push(`${def.monster ? 'Attacks' : 'Wild: attacks'} on sight from ${def.notice ?? HUNT_SIGHT} tiles`);
   if (def.timid) lines.push('Wild: flees when struck');
   if (def.defensive) lines.push('Strikes back every time');

@@ -2,7 +2,8 @@ import type { Game } from '../../game/game';
 import type {
   ChannelCard, ClassCard, ClassesSaid, Island, RiteCard, TreeNode, TreePerk, TreeSaid, TreeTier, TreeTrade,
 } from '../../net/island';
-import { SKILL_DEFS } from '../../game/skills';
+import { SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
+import { FAITH } from '../../game/faith';
 import { REGRET } from '../../game/baubles';
 import {
   CHANNELS, CLASS_CHANGE_COST, CLASS_COLUMNS, CLASS_NODES, CLASS_POINTS_MAX, CLASS_TIER_AT, CLASSES, classDef, classOpen,
@@ -382,8 +383,9 @@ export class TradesPanel {
     const at = tiersAtFor(c.kind);
     const reach = c.kind === 'combat' ? this.classLevel(c.id, mine) : this.game.skills.get(c.main);
     const open = c.open || mine ? at.filter((x, i) => i === 0 || reach >= x).length : 0;
-    if (mine && c.kind === 'combat') return `level ${Math.floor(reach)} · tiers ${open}/${at.length}`;
-    return mine ? `tiers ${open}/${at.length}` : `tiers ${open}/${at.length} if taken`;
+    if (mine && c.kind === 'combat') return `level ${Math.floor(reach)} · class tiers ${open}/${at.length}`;
+    const tiers = `${c.kind === 'combat' ? 'class' : 'perk'} tiers ${open}/${at.length}`;
+    return mine ? tiers : `${tiers} if taken`;
   }
 
   /** A fighting trade's level: the island's word for your own, and where it starts for one not yet taken up. */
@@ -418,9 +420,9 @@ export class TradesPanel {
     }
     if (PERK_CLASSES.has(c.id)) {
       const first = perksOf(c.id).filter((p) => p.tier === 1).map((p) => p.name);
-      lines.push(`Tier 1 opens at once: pick ${either(first)} on the Tree tab.`);
+      lines.push(`${c.kind === 'combat' ? 'Class' : 'Perk'} tier 1 opens at once: pick ${either(first)} on the Tree tab.`);
       if (c.kind === 'combat') {
-        lines.push(`Starts at class level ${CLASS_LEVEL_START}; later tiers at class level `
+        lines.push(`Starts at class level ${CLASS_LEVEL_START}; later class tiers at class level `
           + `${listed(CLASS_TIER_AT.slice(1).map(String))}. Class level rises with blows and kills landed.`);
       }
     } else {
@@ -489,8 +491,9 @@ export class TradesPanel {
         cap.className = 'trade-card-top';
         const says = document.createElement('span');
         says.className = 'trade-col-head';
-        says.textContent = i === 0 ? `Tier ${i + 1} · on taking`
-          : combat ? `Tier ${i + 1} · class level ${at}` : `Tier ${i + 1} · ${skillName(c.main).toLowerCase()} ${at}`;
+        const word = combat ? 'Class tier' : 'Perk tier';
+        says.textContent = i === 0 ? `${word} ${i + 1} · on taking`
+          : combat ? `${word} ${i + 1} · class level ${at}` : `${word} ${i + 1} · ${skillName(c.main).toLowerCase()} ${at}`;
         cap.append(says);
         if (!reached && i > 0 && !combat) {
           const have = document.createElement('span');
@@ -548,7 +551,7 @@ export class TradesPanel {
     name.textContent = r.name;
     const cost = document.createElement('span');
     cost.className = 'trade-points';
-    cost.textContent = `${r.cost} favour · ${r.level} prayer`;
+    cost.textContent = `${r.cost} favour · ${r.level} ${(SKILL_BY_ID.get(FAITH)?.name ?? FAITH).toLowerCase()}`;
     top.append(name, cost);
     const note = document.createElement('div');
     note.className = 'trade-card-note';
@@ -646,9 +649,10 @@ export class TradesPanel {
     const cap = document.createElement('div');
     cap.className = 'trade-col-head';
     const main = classDef(t.class)?.main;
-    cap.textContent = tier.tier === 1 ? `Tier ${tier.tier} · on taking`
-      : t.kind === 'combat' ? `Tier ${tier.tier} · class level ${tier.at}`
-        : `Tier ${tier.tier} · ${main ? `${skillName(main).toLowerCase()} ` : ''}${tier.at}`;
+    const word = t.kind === 'combat' ? 'Class tier' : 'Perk tier';
+    cap.textContent = tier.tier === 1 ? `${word} ${tier.tier} · on taking`
+      : t.kind === 'combat' ? `${word} ${tier.tier} · class level ${tier.at}`
+        : `${word} ${tier.tier} · ${main ? `${skillName(main).toLowerCase()} ` : ''}${tier.at}`;
     box.append(cap);
     // The island's reason, said once under the tier when it is the same for every perk still to take.
     const shared = sharedWhy(tier.perks);
@@ -700,7 +704,7 @@ export class TradesPanel {
     const cost = this.said?.change_cost ?? CLASS_CHANGE_COST;
     return this.confirm(`Take ${p.name}?`, [
       p.note,
-      `One perk per tier: ${listed(others)} ${others.length === 1 ? 'closes' : 'close'} while you hold ${t.name}.`,
+      `One perk per ${t.kind === 'combat' ? 'class' : 'perk'} tier: ${listed(others)} ${others.length === 1 ? 'closes' : 'close'} while you hold ${t.name}.`,
       `To choose again: remove the class and all its perks (Bauble of Regret, or a class change for ${cost} silver).`,
     ], `Take ${p.name}`, () => this.island!.takePerk(p.id));
   }

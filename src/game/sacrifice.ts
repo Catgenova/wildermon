@@ -67,7 +67,7 @@ export const ABSORB_SAID = {
   pickSoul: 'Choose a soul to absorb.',
   pickItem: 'Choose an item.',
   intoSoul: 'Not into another soul.',
-  bauble: 'Not on a bauble: its rarity is rolled when restored.',
+  bauble: 'Not on a bauble: its rarity is set by chance when restored.',
 } as const;
 /** Why a thing that is already rare takes no soul. */
 export const alreadyRare = (item: Pick<Item, 'rare'>): string =>

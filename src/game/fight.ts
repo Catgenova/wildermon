@@ -483,8 +483,8 @@ export function blockSays(): string {
       + `${percent(blockChance(sh.block, SAID_QL_LOW, 0, NO_PERK))} at QL ${SAID_QL_LOW}, ${percent(blockChance(sh.block, QL_TOP, 0, NO_PERK))} at QL ${QL_TOP} (shields 0), `
       + `${percent(blockChance(sh.block, QL_TOP, SAID_SKILL_TOP, NO_PERK))} at QL ${QL_TOP} and shields ${SAID_SKILL_TOP}`;
   });
-  return `Off-hand shield: chance to block a blow fully, rolled after dodge, before armour. `
-    + `Chance: shield share × (${BLOCK_QL_FROM} + QL ÷ ${BLOCK_QL_SPAN}) + ${finePercent(BLOCK_PER_SKILL)} per shields skill point, `
+  return `Off-hand shield: chance to block a blow fully, checked after dodge, before armour. `
+    + `Chance: shield's base block × (${BLOCK_QL_FROM} + QL ÷ ${BLOCK_QL_SPAN}) + ${finePercent(BLOCK_PER_SKILL)} per shields skill point, `
     + `max ${percent(BLOCK_MOST)}: ${each.join('; ')}. `
     + `Each other attacker on you: −${percent(CROWD_BLOCK)}. Blocked: no damage, trains shields, `
     + `shield wear ${SHIELD_WEAR} damage per whole health the blow would have taken (${+(SHIELD_WEAR / 10).toFixed(2)} for a tenth of your health). `
@@ -497,7 +497,7 @@ export function blockNote(block: number, ql: number, shields: number, perk: Perk
   const cap = perk('blockcap:shield', BLOCK_MOST);
   return `Block: ${percent(block)} × ${+blockQl(ql).toFixed(3)} (QL ${+ql.toFixed(1)}) + ${finePercent(shields * BLOCK_PER_SKILL)} (shields ${+shields.toFixed(1)})`
     + `${extra ? ` + ${finePercent(extra)} (perks)` : ''}, max ${percent(cap)}`
-    + `${plain + extra > cap ? ' (capped)' : ''}. Rolled after dodge. Blocked: no damage; shield wear ${SHIELD_WEAR} damage per whole health the blow would have taken.`;
+    + `${plain + extra > cap ? ' (capped)' : ''}. Checked after dodge. Blocked: no damage; shield wear ${SHIELD_WEAR} damage per whole health the blow would have taken.`;
 }
 /** A blow at something whose mind is on another fight lands this much harder. */
 export const BLINDSIDE = 1.25;

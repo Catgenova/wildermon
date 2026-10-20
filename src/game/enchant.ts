@@ -96,7 +96,7 @@ export const ON_WORDS: Record<EnchantOn, string> = {
   chest: 'chest pieces: tunic, jerkin, hauberk, breastplate or cuirass',
   shield: 'shields',
   // A weapon takes one of these only where a job is done with it (`FITS.tool`).
-  tool: 'tools used for a job',
+  tool: 'tools used for an action',
   reaper: 'sickles or fishing rods',
   pick: 'pickaxes',
   light: 'lanterns or torches',

@@ -365,7 +365,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     if (left <= 0) continue;
     const skill = SKILL_BY_ID.get(b.skill)?.name ?? b.skill;
     add({
-      id: `boon:${b.kind ?? 'dish'}:${b.skill}`, good: true, glyph: b.kind === 'tincture' ? 'flask' : 'meal', name: `${skill} knack`, caption: shortLeft(left),
+      id: `boon:${b.kind ?? 'dish'}:${b.skill}`, good: true, glyph: b.kind === 'tincture' ? 'flask' : 'meal', name: `${skill} ${b.kind === 'tincture' ? 'tincture' : 'meal'} boost`, caption: shortLeft(left),
       does: [`${skill} skill gain +${percent(b.bonus)} (added).`, `${longLeft(left)} left.`],
       from: `${b.kind === 'tincture' ? 'A tincture' : 'A meal'}: ${b.from}.`,
     });
@@ -386,7 +386,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const faith = g.skills.get(FAITH);
     add({
       id: 'favour', good: true, glyph: 'sun', name: 'Favour', caption: String(Math.floor(p.favour)),
-      does: [`${Math.floor(p.favour)}/${Math.floor(favourCap(faith))} (max at faith ${faith.toFixed(1)}). Pays for faith spells.`],
+      does: [`${Math.floor(p.favour)}/${Math.floor(favourCap(faith))} (max at ${(SKILL_BY_ID.get(FAITH)?.name ?? FAITH).toLowerCase()} ${faith.toFixed(1)}). Pays for faith spells.`],
       from: 'Prayer at an altar; slow regeneration.',
     });
   }
@@ -518,7 +518,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
   // Wind, at the two lines it is drawn at.
   if (s.stamina < WINDED_AT) {
     const does = [p.unslowed ? 'Surge: no slowing.' : `Walk speed ×${WINDED_PACE} on foot.`];
-    if (s.stamina < EXHAUSTED) does.push(`No timed jobs until stamina ${percent(EXHAUSTED)}.`);
+    if (s.stamina < EXHAUSTED) does.push(`No timed actions until ${percent(EXHAUSTED)} stamina.`);
     add({ id: 'winded', good: false, glyph: 'wind', name: s.stamina < EXHAUSTED ? 'Exhausted' : 'Winded', caption: '', does, from: `Stamina under ${percent(WINDED_AT)}.` });
   }
   if (s.stamina < TIRED_AT) {

@@ -227,8 +227,8 @@ const browserMind = (at: number): string => {
 };
 for (const [at, want] of [
   [24.999, 'Mind logic: 25.'],
-  [29.999, 'Mind logic: 30. Job queue: 4.'],
-  [39.999, 'Mind logic: 40. Job queue: 5.'],
+  [29.999, 'Mind logic: 30. Action queue: 4.'],
+  [39.999, 'Mind logic: 40. Action queue: 5.'],
 ] as Array<[number, string]>) {
   const isleLine = isleMind(at);
   const hereLine = browserMind(at);

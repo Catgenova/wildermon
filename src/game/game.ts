@@ -66,6 +66,7 @@ import { BRIDGE_END_HERE, bridgeEndAt, bridgeEndRefusal, deckDown, hingeKey, hin
 import { CLEAR_OF_BUILDINGS, LIFT_PER_MASONRY, concreteFor, foundationBill, foundationDone, liftFor, masonryFor, pourIntoFoundation, soilSays, type Foundation } from './foundations';
 import { poolLevel } from '../world/springs';
 import { deckOver, floorNear, levelGround, pierDrop, pierGround, pierRefusal, pierSays, type PierGround } from './piers';
+import { metres } from '../world/tiles';
 import { greenNow, mossyPiece } from './greening';
 import { WATER_PLANT_BY_ID, type WaterPlant, type WaterPlantKind } from '../world/waterplants';
 import { liveSettings, type Settings } from './settings';
@@ -2252,8 +2253,8 @@ export class Game {
    * new plan. The island's `plan_reason` and `extend_reason`.
    */
   planReason(x: number, y: number, into?: Building): string | null {
-    if (!this.onDeed(x, y)) return 'Only on your own deed.';
-    if (this.isToken(x, y)) return 'Settlement token here.';
+    if (!this.onDeed(x, y)) return 'Only on your own settlement.';
+    if (this.isToken(x, y)) return 'Settlement totem here.';
     if (this.buildings.buildingAt(x, y)) return 'Already part of a building.';
     if (this.bridgeAt(x, y)?.kind === 'aqueduct') return AQ_OVER;
     // gates: nor over the end of a bridge, whose winch or landing stands there (`gates.ts`).
@@ -2275,7 +2276,7 @@ export class Game {
       if (slab.pool) return 'Not in a pool.';
       // And level with a deck the building already has, since a floor is.
       if (into?.deck != null && slab.top !== into.deck) {
-        return `Slab at ${slab.top}; ${into.name} floor at ${into.deck}. Must match.`;
+        return `Slab at ${metres(slab.top)} m; ${into.name} floor at ${metres(into.deck)} m. Must match.`;
       }
     } else {
       const site = this.pierSite(x, y, into);
@@ -2946,7 +2947,7 @@ export class Game {
     if (item.dmg >= 100) {
       this.inventory.remove(item.uid, 1);
       this.player.equipped[part] = null;
-      this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX} damage).`, 'fight');
+      this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX}% damage).`, 'fight');
     }
     this.events.emit('inventory');
     // And more for Power's Ironhide, as the island's `hurt_player` has it.
@@ -3911,7 +3912,7 @@ export class Game {
     const next = foes[(at + 1) % foes.length];
     this.marked = next.id;
     const def = this.creatures.species(next);
-    this.logMsg(`Target: ${def.name.toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, health ${Math.ceil(next.health)}.`, 'fight');
+    this.logMsg(`Target: ${def.name.toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, ${Math.ceil(next.health)} health.`, 'fight');
     return next;
   }
 
@@ -4083,7 +4084,7 @@ export class Game {
     if (isQuiet(id)) {
       if (Math.floor(now) > Math.floor(before)) {
         const room = id === 'mind_logic' && queueCapAt(now) > queueCapAt(before);
-        this.logMsg(`${def.name}: ${Math.floor(now)}.${room ? ` Job queue: ${queueCapAt(now)}.` : ''}`, 'skill');
+        this.logMsg(`${def.name}: ${Math.floor(now)}.${room ? ` Action queue: ${queueCapAt(now)}.` : ''}`, 'skill');
       }
     } else {
       const places = gain < 0.0001 ? 6 : 4;
@@ -5318,7 +5319,7 @@ export class Game {
    */
   queueRefusal(): string | null {
     if (!this.action || this.queueCapacity() - 1 - this.queue.length > 0) return null;
-    return `Job queue full: ${this.queueCapacity()}. Mind logic raises it.`;
+    return `Action queue full: ${this.queueCapacity()}. Mind logic raises it.`;
   }
 
   /** Put an action in hand and either begin it or start walking to it. */
@@ -5423,7 +5424,7 @@ export class Game {
     if (!this.queue.length) return;
     const n = this.queue.length;
     this.queue.length = 0;
-    if (!silent) this.logMsg(`Queue cleared: ${n} ${n === 1 ? 'job' : 'jobs'}.`, 'info');
+    if (!silent) this.logMsg(`Queue cleared: ${n} ${n === 1 ? 'action' : 'actions'}.`, 'info');
     this.events.emit('action');
   }
 
@@ -5925,9 +5926,9 @@ export class Game {
     if (item.dmg >= DAMAGE_MAX) {
       this.inventory.remove(item.uid, 1);
       for (const [slot, uid] of Object.entries(this.player.equipped)) if (uid === item.uid) this.player.equipped[slot] = null;
-      this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX} damage).`, 'error');
+      this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX}% damage).`, 'error');
     } else if (item.dmg >= DAMAGE_WARN && (before < DAMAGE_WARN || step(item.dmg) > step(before))) {
-      this.logMsg(`${capital(itemName(item).toLowerCase())}: damage ${Math.floor(item.dmg)}/${DAMAGE_MAX}. Repair it.`, 'error');
+      this.logMsg(`${capital(itemName(item).toLowerCase())}: damage ${Math.floor(item.dmg)}% of ${DAMAGE_MAX}%. Repair it.`, 'error');
     }
     this.events.emit('inventory');
   }
@@ -6234,7 +6235,7 @@ export class Game {
     const hb = ends[1].height;
     const apart = Math.abs(ha - hb);
     // Past `END_SLOP` a deck is a ramp, from one storey to another or from bank to bank, at `RAMP_SLOPE` a tile at most.
-    if (apart > END_SLOP && def.grounded) return `Ends ${apart.toFixed(0)} apart in height; max ${END_SLOP}. Level one.`;
+    if (apart > END_SLOP && def.grounded) return `Ends ${metres(apart)} m apart in height; max ${metres(END_SLOP)} m. Level one.`;
     if (apart > END_SLOP && apart > RAMP_SLOPE * span.length) return rampRefusal(ends[0].level, ends[1].level, apart, span.length);
     const height = Math.round((ha + hb) / 2);
     const rise = rampRise(ha, hb);
@@ -6244,7 +6245,7 @@ export class Game {
       if (this.buildings.buildingAt(x, y)) return 'Not over a building.';
       if (this.buildings.jettyAt(x, y)) return 'Not over a building\'s jetty.';
       // At the deck's height over the middle of the tile, up a ramp's slope.
-      if (rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y) < CLEARANCE) return `Ground under the span: needs ${CLEARANCE} clearance.`;
+      if (rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y) < CLEARANCE) return `Ground under the span: needs ${metres(CLEARANCE)} m clearance.`;
     }
     return null;
   }
@@ -6308,7 +6309,7 @@ export class Game {
     if (f.pool) return 'Already a pool.';
     const b = this.buildings.buildingAt(x, y);
     if (b) return `${b.name} is on it.`;
-    if (this.isToken(x, y)) return 'Settlement token there.';
+    if (this.isToken(x, y)) return 'Settlement totem there.';
     const over = this.carriedOver(x, y);
     if (over) return over;
     if (this.groundAt(x, y).length) return 'Items on the tile: clear them first.';
@@ -6387,7 +6388,7 @@ export class Game {
     const high = Math.max(...corners);
     // It fills a hole; it does not cut one. Pouring below the ground you are
     // pouring over is not a foundation, it is a trench.
-    if (top < high) return `Foundations fill up only. High corner ${high}: set a level at or above it.`;
+    if (top < high) return `Foundations fill up only. High corner ${metres(high)} m: set a level at or above it.`;
     /*
      * And it is an answer to a slope. On ground that is already flat there is
      * nothing to fill, and the tile next to it is the flat tile you were
@@ -6405,7 +6406,7 @@ export class Game {
         if (b) return `${b.name} too close: needs a tile clear of buildings and plans.`;
       }
     }
-    if (this.isToken(x, y)) return 'Settlement token there.';
+    if (this.isToken(x, y)) return 'Settlement totem there.';
     const over = this.carriedOver(x, y);
     if (over) return over;
     if (this.groundAt(x, y).length) return 'Items on the tile: clear them first.';
@@ -6419,8 +6420,8 @@ export class Game {
     const want = masonryFor(lift);
     const have = this.skills.get('masonry');
     if (have < want) {
-      return `Pour ${lift} deep needs masonry ${want.toFixed(1)}; have ${have.toFixed(1)}.`
-        + ` Your max depth: ${(have * LIFT_PER_MASONRY).toFixed(0)}.`;
+      return `Pour ${metres(lift)} m deep needs masonry ${want.toFixed(1)}; have ${have.toFixed(1)}.`
+        + ` Your max depth: ${metres(have * LIFT_PER_MASONRY)} m.`;
     }
     return null;
   }
@@ -6455,12 +6456,13 @@ export class Game {
     if (!this.world.inBounds(x, y)) return 'Not there.';
     if (TRAPS[kind]?.water) {
       // A creel goes in the water, within reach of a bank you can stand on.
-      if (waterDepth(this, x, y) < 1) return 'Creel needs water 1 deep or more.';
+      const creelDepth = 1;
+      if (waterDepth(this, x, y) < creelDepth) return `Creel needs water ${metres(creelDepth)} m deep or more.`;
       if (Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) > 3.6) return 'Too far: within 3.6 tiles.';
       if (this.trapAt(x, y, sx, sy)) return 'Something is already there.';
       return null;
     }
-    if (this.onDeed(x, y)) return 'Not on your deed: wild creatures do not enter it.';
+    if (this.onDeed(x, y)) return 'Not on your settlement: wild creatures do not enter it.';
     if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'Trap needs dry, open ground.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
     if (this.occupiedSubtile(x, y, sx, sy)) return 'Something is already there.';
@@ -6618,9 +6620,10 @@ export class Game {
   /** Why a post cannot go in here, or null. */
   postPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     if (!this.world.inBounds(x, y)) return 'Not there.';
-    if (this.onDeed(x, y)) return 'Not on your deed: the token covers it.';
+    if (this.onDeed(x, y)) return 'Not on your settlement: the totem covers it.';
     if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'Post needs dry, open ground.';
-    if (this.world.slope(x, y) > 25) return 'Too steep: slope over 25.';
+    const steepest = 25;
+    if (this.world.slope(x, y) > steepest) return `Too steep: slope over ${metres(steepest)} m.`;
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
     if (this.occupiedSubtile(x, y, sx, sy)) return 'Something is already standing there.';
     return null;
@@ -6649,10 +6652,10 @@ export class Game {
       this.logMsg(`Post ${why}: ${c.name} back to work at ${this.deed.name}.`, 'system');
     } else if (into) {
       shutIn(this, c, into);
-      this.logMsg(`Post ${why}: ${c.name} into the creature crate in your pack.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} into the wildermon crate in your pack.`, 'system');
     } else {
       c.mode = 'wild';
-      this.logMsg(`Post ${why}: no settlement, no empty creature crate, active slot taken. ${c.name} went wild.`, 'error');
+      this.logMsg(`Post ${why}: no settlement, no empty wildermon crate, active slot taken. ${c.name} went wild.`, 'error');
     }
     this.events.emit('creature');
   }
@@ -7101,8 +7104,9 @@ export class Game {
   firePlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     const [ax, ay] = fireAnchor(sx, sy);
     if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'Fire needs dry, open ground.';
-    if (this.world.slope(x, y) > 20) return 'Too steep: slope over 20.';
-    if (this.isToken(x, y)) return 'Not on the token.';
+    const steepest = 20;
+    if (this.world.slope(x, y) > steepest) return `Too steep: slope over ${metres(steepest)} m.`;
+    if (this.isToken(x, y)) return 'Not on the totem.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
     for (let dy = 0; dy < FIRE_SUBTILES; dy++) {
       for (let dx = 0; dx < FIRE_SUBTILES; dx++) {
@@ -8797,8 +8801,9 @@ export class Game {
     const [ax, ay] = smelterAnchor(sx, sy);
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Smelter needs dry, solid ground.';
-    if (deck === null && this.world.slope(x, y) > 12) return 'Too uneven: slope over 12.';
-    if (this.isToken(x, y)) return 'Not on the token.';
+    const steepest = 12;
+    if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
+    if (this.isToken(x, y)) return 'Not on the totem.';
     for (let dy = 0; dy < SMELTER_H; dy++) {
       for (let dx = 0; dx < SMELTER_W; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
@@ -8834,8 +8839,9 @@ export class Game {
     const [ax, ay] = kilnAnchor(sx, sy);
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Kiln needs dry, solid ground.';
-    if (deck === null && this.world.slope(x, y) > 14) return 'Too uneven: slope over 14.';
-    if (this.isToken(x, y)) return 'Not on the token.';
+    const steepest = 14;
+    if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
+    if (this.isToken(x, y)) return 'Not on the totem.';
     for (let dy = 0; dy < KILN_SUBTILES; dy++) {
       for (let dx = 0; dx < KILN_SUBTILES; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
@@ -8905,15 +8911,16 @@ export class Game {
     if (def.boat) {
       // A hull goes in the water and nowhere else, and you have to be able to
       // reach the water you are putting it in.
-      if (!this.launchSpot(kind, x, y)) return `Needs water ${def.boat.draught} deep.`;
+      if (!this.launchSpot(kind, x, y)) return `Needs water ${metres(def.boat.draught)} m deep.`;
       if (Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) > 4) return 'Too far: within 4 tiles.';
       for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something already in the water there.';
       return null;
     }
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
-    if (deck === null && this.world.slope(x, y) > 16) return 'Too uneven: slope over 16.';
-    if (this.isToken(x, y)) return 'Not on the token.';
+    const steepest = 16;
+    if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
+    if (this.isToken(x, y)) return 'Not on the totem.';
     // An altar goes down on a settlement of yours, and on one that has none yet; one already standing may still be turned where it is.
     if (def.deed && except === undefined && !this.onDeed(x, y)) return DEED_PLACE;
     if (def.altar && except === undefined && this.altarOfDeedAt(x, y)) return ONE_ALTAR;
@@ -9142,8 +9149,9 @@ export class Game {
     const [ax, ay] = anvilAnchor(sx, sy);
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Anvil needs dry, level ground.';
-    if (deck === null && this.world.slope(x, y) > 16) return 'Too uneven: slope over 16.';
-    if (this.isToken(x, y)) return 'Not on the token.';
+    const steepest = 16;
+    if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
+    if (this.isToken(x, y)) return 'Not on the totem.';
     for (let dy = 0; dy < ANVIL_SUBTILES; dy++) {
       for (let dx = 0; dx < ANVIL_SUBTILES; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
@@ -9947,7 +9955,7 @@ export class Game {
         break;
       }
       case 'where':
-        this.logMsg(`Position (${this.player.tileX}, ${this.player.tileY}), height ${this.world.heightAt(this.player.x, this.player.y).toFixed(1)}.`, 'system');
+        this.logMsg(`Position (${this.player.tileX}, ${this.player.tileY}), height ${metres(this.world.heightAt(this.player.x, this.player.y))} m.`, 'system');
         break;
       case 'help':
         this.logMsg(`Commands: /name <name>, /where, ${EMOTES.map((e) => `/${e.id}`).join(', ')}, /help.`
@@ -10093,7 +10101,7 @@ export interface IslandPlaced {
   riders?: Array<{ uid: string; seat: number }>;
   /** Whoever has a cart by the shafts, by uid. */
   puller?: string | null;
-  /** The wildermon shut in it, for a creature crate; absent from older islands. */
+  /** The wildermon shut in it, for a wildermon crate; absent from older islands. */
   creature?: number | null;
   /** What its maker's perks put into it (`Mark`); null for most, and absent from older islands. */
   mark?: Mark | null;

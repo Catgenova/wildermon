@@ -74,12 +74,12 @@ export const BINDS: BindDef[] = [
   // Every letter is spoken for, and the comma is nobody's.
   { id: 'win_equipment', label: 'Equipment', hint: 'Worn items on a figure (drag on and off); every combat number and the skills behind them.', group: 'Windows', keys: ['BracketLeft'] },
   { id: 'win_health', label: 'Health', hint: 'Wounds on a figure, what each needs to dress, clean or salve (with buttons); effects on you; nutrition.', group: 'Windows', keys: ['Comma'] },
-  { id: 'win_trades', label: 'Trades', hint: `Your trade: its ${NODES_PER_TRADE} nodes or ${PERK_TIER_AT.length * PERKS_PER_TIER} perks, and its rite.`, group: 'Windows', keys: ['KeyF'] },
-  { id: 'win_faith', label: 'Faith', hint: `Faith and favour; ${PATRONS.length} patrons; your patron's spells, ${SPELLS_PER_TIER} per tier at ${FAITH_TIER_AT.length} tiers, pick one per tier. Spell bar: Shift + slot number.`, group: 'Windows', keys: [] },
-  { id: 'win_tracker', label: 'Tracker', hint: 'Journal, Tracker tab: watched trades, a bar each.', group: 'Windows', keys: ['KeyV'] },
+  { id: 'win_trades', label: 'Trades', hint: `Your craft and fighting class: each one's ${NODES_PER_TRADE} nodes or ${PERK_TIER_AT.length * PERKS_PER_TIER} perks, and its rite.`, group: 'Windows', keys: ['KeyF'] },
+  { id: 'win_faith', label: 'Faith', hint: `Devotion and favour; ${PATRONS.length} patrons; your patron's spells, ${SPELLS_PER_TIER} per faith tier at ${FAITH_TIER_AT.length} faith tiers, pick one per faith tier. Spell bar: Shift + slot number.`, group: 'Windows', keys: [] },
+  { id: 'win_tracker', label: 'Tracker', hint: 'Journal, Tracker tab: watched skills, a bar each.', group: 'Windows', keys: ['KeyV'] },
   { id: 'win_events', label: 'Event log', hint: 'Event log and chat box.', group: 'Windows', keys: ['KeyL'] },
   { id: 'win_map', label: 'Map', hint: 'Explored map.', group: 'Windows', keys: ['KeyM'] },
-  { id: 'win_wildermon', label: 'Wildermon', hint: 'Your tamed creatures: loads and assignments.', group: 'Windows', keys: ['KeyP'] },
+  { id: 'win_wildermon', label: 'Wildermon', hint: 'Your wildermon: loads and assignments.', group: 'Windows', keys: ['KeyP'] },
   // F3 is the browser's own Find in every one of them, and F4 is nobody's.
   { id: 'win_guide', label: 'Field guide', hint: 'Journal, Field guide tab: every creature kind; seen, tamed, bred; habitat and yields.', group: 'Windows', keys: ['F4'] },
   { id: 'win_deed', label: 'Settlement', hint: 'Settlement overview.', group: 'Windows', keys: ['KeyN'] },
@@ -89,7 +89,7 @@ export const BINDS: BindDef[] = [
   { id: 'win_boards', label: 'Leaderboards', hint: 'Journal, Leaderboards tab: top skills, best-bred wildermon, biggest settlements.', group: 'Windows', keys: ['F2'] },
   { id: 'win_ledger', label: 'Ledger', hint: 'Journal, Ledger tab: everything you have made.', group: 'Windows', keys: [] },
   { id: 'win_shopping', label: 'Shopping list', hint: 'Crafting List targets and all inputs down to raw materials, against your pack and nearby stores.', group: 'Windows', keys: [] },
-  { id: 'win_stores', label: 'Stores', hint: 'Contents of every crate and cupboard on your deed.', group: 'Windows', keys: ['KeyU'] },
+  { id: 'win_stores', label: 'Stores', hint: 'Contents of every crate and cupboard on your settlement.', group: 'Windows', keys: ['KeyU'] },
   { id: 'win_journal', label: 'Journal', hint: 'Goals; tick themselves off.', group: 'Windows', keys: ['KeyJ'] },
   // No key out of the box: it is for the few who keep an island, and every letter is spoken for.
   { id: 'win_keeper', label: 'Island keeper', hint: 'Everyone on the island: position, muted or not; Move, Mute, Unmute.', group: 'Windows', keys: [], keeper: true },
@@ -108,17 +108,17 @@ export const BINDS: BindDef[] = [
     keys: [`F${6 + i}`],
   })),
 
-  { id: 'walk_home', label: 'Walk home', hint: 'Walk to your settlement token or bed.', group: 'Doing things', keys: ['Home'] },
+  { id: 'walk_home', label: 'Walk home', hint: 'Walk to your settlement totem or bed.', group: 'Doing things', keys: ['Home'] },
   /*
    * One key for all of them rather than one each. Two emotes is a pair of
    * keybindings; five is a keyboard nobody can remember, and the menu costs
    * one keypress more than a bind and never runs out of room.
    */
   { id: 'emotes', label: 'Emotes', hint: 'Emote menu.', group: 'Doing things', keys: ['KeyZ'] },
-  { id: 'stop', label: 'Stop', hint: 'Cancel the current job and the queue. Closes an open menu first.', group: 'Doing things', keys: ['Escape'] },
+  { id: 'stop', label: 'Stop', hint: 'Cancel the current action and the action queue. Closes an open menu first.', group: 'Doing things', keys: ['Escape'] },
   // Full stop is Vim's repeat, and no letter was left.
-  { id: 'repeat', label: 'Do it again', hint: 'Repeat the last job: same action, same target, same count. Uses another stack of the same kind if the old one is gone.', group: 'Doing things', keys: ['Period'] },
-  { id: 'carry_on', label: 'Carry on', hint: 'Resume jobs put down by walking.', group: 'Doing things', keys: ['KeyB'] },
+  { id: 'repeat', label: 'Do it again', hint: 'Repeat the last action: same target, same count. Uses another stack of the same kind if the old one is gone.', group: 'Doing things', keys: ['Period'] },
+  { id: 'carry_on', label: 'Carry on', hint: 'Resume actions put down by walking.', group: 'Doing things', keys: ['KeyB'] },
   { id: 'chat', label: 'Talk', hint: 'Focus the chat box (event log).', group: 'Doing things', keys: ['Enter'] },
   // Tab and Space are nobody else's, and a key a hand finds without looking is what a fight wants.
   { id: 'fight_mark', label: 'Mark the nearest foe', hint: `Target the nearest hostile wild creature within ${TARGET_RANGE} tiles; again for the next.`, group: 'Doing things', keys: ['Tab'] },

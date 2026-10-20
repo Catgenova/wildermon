@@ -156,7 +156,7 @@ function flightDownReason(g: Game, t: TileTarget, b: Building): string | null {
       : 'Stairs and ladders need an upper storey: plan one first.';
   }
   const dug = c?.dug ?? 0;
-  if (dug < CELLAR_DEPTH) return `Dig the cellar first: ${dug}/${CELLAR_DEPTH}.`;
+  if (dug < CELLAR_DEPTH) return `Dig the cellar first: ${metres(dug)} m of ${metres(CELLAR_DEPTH)} m dug.`;
   // A glasshouse's field is cleared before anything is planned over it (`glasshouse.ts`).
   if (g.world.getTile(t.x, t.y) === TileType.Field) return 'Field here: clear it first.';
   if (!t.side) return 'Choose the side to climb from.';
@@ -212,7 +212,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // Nothing walks under a deck: a creature standing there is moved off (`Creatures.shoo`).
       if (deck !== undefined) g.creatures.shoo(g, t.x, t.y);
       if (site && deck !== undefined) {
-        g.logMsg(`Planned: ${b.name}, on piers. Deck at ${deck}, ${metres(pierDrop(site.ground, deck))} m over the lowest ground.`
+        g.logMsg(`Planned: ${b.name}, on piers. Deck at ${metres(deck)} m, ${metres(pierDrop(site.ground, deck))} m over the lowest ground.`
           + ' Next: plan the deck (builds the piers), then walls.', 'event');
       } else {
         g.logMsg(`Planned: ${b.name}. Next: extend onto adjacent packed tiles, then plan walls on its borders.`, 'event');
@@ -251,7 +251,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // A tile with no glass over it: a glasshouse is one no longer, and what grows in it goes back on the field's clock.
       glassResync(g);
       if (site && deck !== undefined) {
-        g.logMsg(`Added to ${b.name}, on piers: deck at ${deck}, ${metres(pierDrop(site.ground, deck))} m over the lowest ground.`, 'event');
+        g.logMsg(`Added to ${b.name}, on piers: deck at ${metres(deck)} m, ${metres(pierDrop(site.ground, deck))} m over the lowest ground.`, 'event');
       } else {
         g.logMsg(`Added to ${b.name}.`, 'event');
       }

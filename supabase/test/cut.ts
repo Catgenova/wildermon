@@ -15,7 +15,7 @@
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, flattenTarget, foreignGround, slopeNeeds, slopeRefusal, tileCorners } from '../../src/game/actions';
-import { TileType } from '../../src/world/tiles';
+import { metres, TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -66,11 +66,11 @@ game.player.y = 10.5;
 w.setHeight(20, 20, 100);
 w.setHeight(21, 20, 39);
 const said = slopeRefusal(game, 'digging', 20, 20, -1) ?? '';
-const slope = Number(/Slope would be (\d+)/.exec(said)?.[1] ?? 0);
+const slope = Math.round(Number(/Slope would be (\d+\.\d) m/.exec(said)?.[1] ?? 0) * 10);
 check('the slope refusal carries its numbers',
-  /^Slope would be \d+; digging allows 60, needs digging \d+\.\d\.$/.test(said), said || 'nothing said');
+  new RegExp(`^Slope would be \\d+\\.\\d m; digging allows ${metres(60).replace('.', '\\.')} m, needs digging \\d+\\.\\d\\.$`).test(said), said || 'nothing said');
 const islandSaid = psql(
-  `select 'Slope would be ' || ${slope} || '; digging allows 60, needs digging '`
+  `select 'Slope would be ' || metres(${slope}) || ' m; digging allows ' || metres(60) || ' m, needs digging '`
   + ` || to_char(slope_needs(${slope}), 'FM990.0') || '.'`);
 check('and the island builds the same sentence', said === islandSaid, `island "${islandSaid}"`);
 const islandNeeds = psql('select slope_needs(62) || \' \' || slope_needs(40) || \' \' || slope_needs(41)');
@@ -161,10 +161,10 @@ for (let i = 0; i < 10; i++) {
 check('ten spadefuls asked for at a bank three proud of it stop on the mark',
   dug < 10 && w.getHeight(6, 6) === 100, `${dug} goes, corner at ${w.getHeight(6, 6)}`);
 check('and the door says the corner is there',
-  asked('dig', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === 'Corner already at level 100.',
+  asked('dig', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === `Corner already at level ${metres(100)} m.`,
   asked('dig', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }));
 check('and will not have it back either',
-  asked('drop_dirt', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === 'Corner already at level 100.',
+  asked('drop_dirt', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === `Corner already at level ${metres(100)} m.`,
   asked('drop_dirt', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }));
 ACTION_BY_ID.get('clear_level')!.perform({ kind: 'tile', x: 5, y: 5 } as never, game);
 check('and putting the level away clears it', game.level === null, String(game.level));

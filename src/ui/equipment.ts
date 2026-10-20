@@ -133,7 +133,7 @@ export interface EquipReport {
 /** What a place on the body is for, when nothing is in it. */
 export const EMPTY_SAYS: Record<Slot, string> = {
   head: 'Empty', chest: 'Empty', arms: 'Empty', legs: 'Empty',
-  feet: 'Empty', weapon: 'Fists', offhand: 'Empty', belt: 'No belt: 0 job loops',
+  feet: 'Empty', weapon: 'Fists', offhand: 'Empty', belt: 'No belt: 0 action loops',
   jewel: 'Empty',
 };
 
@@ -179,15 +179,15 @@ const blockOf = (g: Game, it: Item): number => {
 
 /** What a piece does where it is, with its number. */
 function slotDoes(g: Game, slot: Slot, it: Item | null): string | null {
-  const loops = `1 job loop per ${QL_PER_LOOP} QL, max ${BELT_MAX}`;
-  const jewel = `stone in a ring or pendant: skill gain +${+(JEWEL_BONUS * 100).toFixed(1)}% on its trade`;
+  const loops = `1 action loop per ${QL_PER_LOOP} QL, max ${BELT_MAX}`;
+  const jewel = `stone in a ring or pendant: skill gain +${+(JEWEL_BONUS * 100).toFixed(1)}% on its skill`;
   if (!it && slot === 'offhand' && g.twoHandedInHand()) return `In use: two-handed ${itemName(g.worn('weapon') as Item).toLowerCase()}`;
   if (!it) return slot === 'belt' ? `No combat effect; belt: ${loops}` : slot === 'jewel' ? `No combat effect; ${jewel}` : null;
   if (ARMOUR_BY_ID.get(it.id)) return `Damage stopped here: ${pc(slotSoak(g, slot) ?? 0)}`;
   const w = WEAPON_BY_ID.get(it.id);
   if (w) return `Damage ${weaponDamage(g, w, it).toFixed(1)}, hit chance ${pc(hitChance(g, w, it))}`;
   if (SHIELDS[it.id]) return `Block chance ${pc(blockOf(g, it))}`;
-  if (slot === 'belt') return `Job loops ${g.beltLoops()} (${loops}); no combat effect`;
+  if (slot === 'belt') return `Action loops ${g.beltLoops()} (${loops}); no combat effect`;
   const stones = stonesOf(it);
   if (slot === 'jewel') return stones.length ? `Skill gain +${+(JEWEL_BONUS * 100).toFixed(1)}%: ${stones.map((x) => tradeName(x.skill)).join(', ')}; no combat effect` : 'No stone set';
   return itemDef(it.id).name;
@@ -268,7 +268,7 @@ function changeOf(g: Game, now: Heads, it: Item, slot: Slot): { main: Effect | n
   let gain = 0;
   const tiny = (d: number): boolean => Math.abs(d) < 5e-4;
   if (WEAPON_BY_ID.get(it.id)) {
-    main = { text: `A blow ${now.damage.toFixed(1)} → ${then.damage.toFixed(1)}`, better: then.damage >= now.damage };
+    main = { text: `A blow ${now.damage.toFixed(1)} → ${then.damage.toFixed(1)} damage`, better: then.damage >= now.damage };
     gain = (then.damage - now.damage) / Math.max(0.1, now.damage);
     if (!tiny(then.lands - now.lands)) effects.push({ text: `lands ${dpc(then.lands - now.lands)}`, better: then.lands > now.lands });
   } else if (ARMOUR_BY_ID.get(it.id)) {
@@ -352,8 +352,8 @@ export function equipReport(g: Game): EquipReport {
   const reach = ranged ? bowReach(g, def, item) : meleeReach(g);
   const arrow = ranged ? nockedArrow(g) : undefined;
   const offence: Stat[] = [
-    { key: 'damage', label: 'Damage per blow', value: now.damage, says: now.damage.toFixed(1),
-      lines: dealt !== 1 ? [`${(now.damage / dealt).toFixed(1)} the weapon in your hands`, `×${+dealt.toFixed(2)} ${FIGHT_STANCE_NAMES[g.settings.fightStance].toLowerCase()} stance`] : undefined },
+    { key: 'damage', label: 'Damage per blow', value: now.damage, says: `${now.damage.toFixed(1)} damage`,
+      lines: dealt !== 1 ? [`${(now.damage / dealt).toFixed(1)} damage from the weapon in your hands`, `×${+dealt.toFixed(2)} ${FIGHT_STANCE_NAMES[g.settings.fightStance].toLowerCase()} stance`] : undefined },
     { key: 'swing', label: ranged ? 'Shot time' : 'Swing time', value: t.secs, says: `${t.secs.toFixed(2)} s`,
       lines: [`${t.own.toFixed(2)} s its own`, ...t.parts.flatMap((p) => p.what.startsWith('armour ')
         ? [`×${p.by.toFixed(3)} armour and shield, ${g.armourKg().toFixed(1)} kg worn, counted as ${g.armourCounted().toFixed(1)} kg (${shares(g)})`]
@@ -361,8 +361,8 @@ export function equipReport(g: Game): EquipReport {
     { key: 'lands', label: 'Lands', value: lands, says: pc(lands) },
     { key: 'crit', label: 'Critical', value: crit, says: `${pc(crit)}, ×${+mul.toFixed(2)} as hard` },
     { key: 'reach', label: ranged ? 'Shoots' : 'Reaches', value: reach, says: `${+reach.toFixed(1)} tiles` },
-    { key: 'dps', label: 'Damage per second', value: perSec, says: perSec.toFixed(2),
-      lines: [`${now.damage.toFixed(1)} a blow × ${pc(lands)} landing`, `× ${(1 + crit * (mul - 1)).toFixed(3)} for criticals`, `÷ ${t.secs.toFixed(2)} s a swing`] },
+    { key: 'dps', label: 'Damage per second', value: perSec, says: `${perSec.toFixed(2)} damage/s`,
+      lines: [`${now.damage.toFixed(1)} damage a blow × ${pc(lands)} landing`, `× ${(1 + crit * (mul - 1)).toFixed(3)} for criticals`, `÷ ${t.secs.toFixed(2)} s a swing`] },
   ];
   const blow = blowOf(def);
   const weapon = {
@@ -402,7 +402,7 @@ export function equipReport(g: Game): EquipReport {
     `${pc(sh.block)} its own × ${+blockQl(shield.ql).toFixed(3)} for QL ${shield.ql.toFixed(0)}`,
     `+ ${pc(g.skills.get('shields') * BLOCK_PER_SKILL)} for shields ${g.skills.get('shields').toFixed(1)}`,
     ...(perk('block:shield', 0) ? [`+ ${pc(perk('block:shield', 0))} for your perks`] : []),
-    `max ${pc(perk('blockcap:shield', 0.6))}; rolled after dodge`,
+    `max ${pc(perk('blockcap:shield', 0.6))}; checked after dodge`,
     `shield wear per block: ${SHIELD_WEAR} damage per whole health blocked`,
   ] : undefined;
   const defence: Stat[] = [
@@ -420,14 +420,14 @@ export function equipReport(g: Game): EquipReport {
     { key: 'kg', label: 'Total worn weight', value: now.kg, says: `${now.kg.toFixed(1)} kg`,
       lines: [`armour and shield: ${g.armourKg().toFixed(1)} kg`, `armour (counts for dodge): ${kg.toFixed(1)} kg`] },
     { key: 'swingby', label: 'Swing or draw time', value: swingBy * over, says: `+${pc(swingBy * over - 1)}`,
-      lines: [`armour and shield counted: ${g.armourCounted().toFixed(1)} kg (each family its own share of its weight)`,
+      lines: [`armour and shield counted: ${g.armourCounted().toFixed(1)} kg (each family a % of its weight)`,
         ...(over > 1 ? [`+${pc(over - 1)} from overload`] : [])] },
     { key: 'walk', label: 'Walk speed and stamina', value: walk, says: `−${pc(walk)}` },
   ];
 
   // The skills behind it all, and what each is doing for you.
   const skill = (id: string): string => SKILL_BY_ID.get(id)?.name ?? id;
-  const one = (v: number): string => v.toFixed(1);
+  const one = (v: number): string => `${v.toFixed(1)} damage`;
   const skills: SkillView[] = [];
   skills.push(skillView(g, def.kind, WEAPON_SKILL_NAMES[def.kind] ?? skill(def.kind), [
     { what: 'A blow', rule: (gg) => weaponDamage(gg, def, item) * dealt, say: one },

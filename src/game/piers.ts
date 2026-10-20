@@ -57,7 +57,7 @@
  * `supabase/test/piers.ts` holds the two to each other.
  */
 import { floorBill, heftWord, MATERIAL_BY_ID, WALL_HEIGHT, type Bill, type Building, type Buildings, type MaterialDef } from './building';
-import { STONE_BEDS, TileType } from '../world/tiles';
+import { metres, STONE_BEDS, TileType } from '../world/tiles';
 import type { World } from '../world/world';
 
 /** The most a deck stands over the lowest corner of the ground or bed under its tile: two storeys. */
@@ -80,8 +80,8 @@ export const PIER_WALL_DROP = 100;
  */
 export const PIER_SHOO = 8;
 
-/** A height in metres, to a tenth, as the island says one (`metres`). */
-export const metres = (units: number): string => (units / 10).toFixed(1);
+/** A height in metres, to a tenth, as the island says one (`metres`). Defined beside the land (`world/tiles.ts`). */
+export { metres } from '../world/tiles';
 
 /** What a tile offers a pier: its highest and lowest corner, the water standing over it (null where it is dry), and what it is. */
 export interface PierGround {
@@ -119,12 +119,12 @@ export const pierDrop = (g: PierGround, deck: number): number => deck - g.low;
 export function pierRefusal(g: PierGround, deck: number, plant?: string): string | null {
   if (!STONE_BEDS.has(g.tile)) return 'Piers need bare ground or flat growth: clear the tile first.';
   if (plant) return `Pull up the ${plant} first.`;
-  if (g.high > deck) return `Ground rises to ${g.high}, above the deck at ${deck}: plan from the highest tile.`;
+  if (g.high > deck) return `Ground rises to ${metres(g.high)} m, above the deck at ${metres(deck)} m: plan from the highest tile.`;
   if (g.water !== null && g.water - g.low > PIER_WATER) {
     return `Water ${metres(g.water - g.low)} m deep; piers stand in ${metres(PIER_WATER)} m at most.`;
   }
   if (g.water !== null && deck < g.water + PIER_CLEAR) {
-    return `Water at ${g.water}, deck at ${deck}: deck must clear water by ${metres(PIER_CLEAR)} m.`;
+    return `Water at ${metres(g.water)} m, deck at ${metres(deck)} m: deck must clear water by ${metres(PIER_CLEAR)} m.`;
   }
   if (deck - g.low > PIER_DROP) return `Ground falls ${metres(deck - g.low)} m under the deck; piers span ${metres(PIER_DROP)} m at most.`;
   return null;
@@ -148,10 +148,10 @@ export function pierBill(material: string, drop: number): Bill {
  * and the lip can be raised round it. The island's `pier_says`.
  */
 export const pierSays = (deck: number, drop: number, built: boolean, water: number | null): string =>
-  ` On piers: deck at ${deck}, ${metres(drop)} m above the lowest ground.`
+  ` On piers: deck at ${metres(deck)} m, ${metres(drop)} m above the lowest ground.`
   + (built ? '' : ' Deck not built: nothing stands on it yet.')
   + (water === null || water + PIER_CLEAR <= deck ? ''
-    : ` Water under it: ${water}, ${water < deck ? `${metres(deck - water)} m below the deck` : 'over the deck'}.`);
+    : ` Water under it: ${metres(water)} m, ${water < deck ? `${metres(deck - water)} m below the deck` : 'over the deck'}.`);
 
 /**
  * Why a wall or a storey of a material cannot stand on a building on piers,

@@ -12,7 +12,7 @@ import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { flowerSeason, flowersOn, FLOWER_SEASONS } from '../world/flowers';
 import { SEASONS } from '../world/calendar';
-import { FLOWERS_PICKED, TILE_DEFS, TileType, trailGround, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS } from '../world/tiles';
+import { FLOWERS_PICKED, TILE_DEFS, TileType, trailGround, TREE_DAWN_UTC, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS } from '../world/tiles';
 import { listed } from './words';
 import { swirlSays } from './motes';
 import { runestoneAt, stoneSays } from './runestones';
@@ -53,7 +53,7 @@ export function groundSays(g: Game, x: number, y: number, now = Date.now() / 100
   let said = '';
   if (t === TileType.Trail) {
     const was = TILE_DEFS[trailGround(w.getData(x, y))].name.toLowerCase();
-    said += ` Trail (was ${was}): wear ${worn}/${WEAR_MOST}. Loses ${WEAR_FALL} each woods turn; back to ${was} at 0.`;
+    said += ` Trail (was ${was}): wear ${worn}/${WEAR_MOST}. Loses ${WEAR_FALL} each daily reset (${String(TREE_DAWN_UTC).padStart(2, '0')}:00 UTC); back to ${was} at 0.`;
   } else if (WEARS.has(t) && worn > 0) {
     said += ` Wear: ${worn}/${WEAR_TRAIL} to become a trail.`;
   }

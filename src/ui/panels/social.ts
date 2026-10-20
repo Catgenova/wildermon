@@ -180,7 +180,7 @@ export const joinedLine = (deed: string, rank: string, perms: number): string =>
 export function sendAwayRefusal(d: MyDeed, me: string, uid: string): string | null {
   if (uid !== me && uid === d.founder) return `Cannot send away the founder of ${d.name}.`;
   const onRoll = uid === me ? !d.mine : !!rankOf(d, uid);
-  if (!onRoll) return 'Not on the roll.';
+  if (!onRoll) return 'Not on the member list.';
   if (uid !== me) {
     const no = lacks(asRanked(d), 'send_away');
     if (no) return no;
@@ -473,7 +473,7 @@ export class SocialPanel {
   private tradeButton(who: Folk): HTMLButtonElement | null {
     const go = this.trade;
     if (!go || !who.online || who.uid === this.me()) return null;
-    return this.button('Trade', `Request trade with ${who.name}. Range: ${BARTER_REACH} tiles.`, () => go(who.uid));
+    return this.button('Barter', `Request barter with ${who.name}. Range: ${BARTER_REACH} tiles.`, () => go(who.uid));
   }
 
   /**

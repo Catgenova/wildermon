@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { isDone, progressOf, type Bill } from './building';
-import { TileType } from '../world/tiles';
+import { metres, TileType } from '../world/tiles';
 import { POOL_DEPTH, POOL_LIP, poolFloor, poolLevel } from '../world/springs';
 import { greenNow } from './greening';
 
@@ -46,7 +46,7 @@ import { greenNow } from './greening';
  * says it in the same words (`foundation_reason`).
  */
 export const soilSays = (soil: number): string =>
-  `Soil left over rock: ${soil} (all corners). Dig every corner down to rock first.`;
+  `Soil left over rock: ${metres(soil)} m (all corners). Dig every corner down to rock first.`;
 
 /** Concrete per step of one corner lifted. */
 export const CONCRETE_PER_STEP = 10;
@@ -102,7 +102,7 @@ export const foundationBill = (concrete: number): Bill => ({ needed: { concrete 
 
 export const foundationState = (f: Foundation): string =>
   foundationDone(f)
-    ? `poured to ${f.top}`
+    ? `poured to ${metres(f.top)} m`
     : `${Math.round(foundationProgress(f) * 100)}% · ${f.needed.concrete ?? 0} concrete to go`;
 
 /**
@@ -147,7 +147,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return 'Set out a foundation';
       const top = g.foundationTop(t.x, t.y);
       const want = concreteFor(g.world.tileCorners(t.x, t.y), top);
-      return `Set out a foundation to ${top} (needs ${want} concrete)`;
+      return `Set out a foundation to ${metres(top)} m (needs ${want} concrete)`;
     },
     check: (t, g) => (isTile(t) ? g.foundationReason(t.x, t.y, g.foundationTop(t.x, t.y)) : null),
     perform: (t, g) => {
@@ -157,7 +157,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       const f = g.addFoundation(t.x, t.y, top);
       g.note('planned_foundation');
       g.logMsg(
-        `Foundation planned: top at ${top}.`
+        `Foundation planned: top at ${metres(top)} m.`
         + ` Needs ${f.total.concrete} concrete. Surrounding ground is unchanged.`,
         'system',
       );
@@ -197,7 +197,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
         return true;
       }
       g.note('poured_foundation');
-      g.logMsg(`Foundation done: top at ${f.top}. Can be built on, paved or bridged to.`, 'event');
+      g.logMsg(`Foundation done: top at ${metres(f.top)} m. Can be built on, paved or bridged to.`, 'event');
       return false;
     },
   },
@@ -212,7 +212,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
     applies: (t, g) => isTile(t) && !!g.slabAt(t.x, t.y) && !g.slabAt(t.x, t.y)!.pool,
     labelFor: (t, g) => {
       const f = isTile(t) ? g.slabAt(t.x, t.y) : undefined;
-      return f ? `Dig a pool (water at ${poolLevel(f.top)}, floor at ${poolFloor(f.top)})` : 'Dig a pool';
+      return f ? `Dig a pool (water at ${metres(poolLevel(f.top))} m, floor at ${metres(poolFloor(f.top))} m)` : 'Dig a pool';
     },
     check: (t, g) => {
       if (!isTile(t)) return null;
@@ -226,8 +226,8 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       f.pool = true;
       g.poolsChanged(f.x, f.y);
       g.logMsg(
-        `Pool dug: floor at ${poolFloor(f.top)}, water at ${poolLevel(f.top)},`
-        + ` ${((POOL_DEPTH - POOL_LIP) / 10).toFixed(1)} m deep. Joins adjacent pools of the same top. A spring in it spills over its lowest edge.`,
+        `Pool dug: floor at ${metres(poolFloor(f.top))} m, water at ${metres(poolLevel(f.top))} m,`
+        + ` ${metres(POOL_DEPTH - POOL_LIP)} m deep. Joins adjacent pools of the same top. A spring in it spills over its lowest edge.`,
         'event',
       );
       g.events.emit('world', t.x, t.y);
@@ -256,7 +256,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       if (!f?.pool || !g.inventory.consume('concrete', POOL_FILL)) return;
       f.pool = false;
       g.poolsChanged(f.x, f.y);
-      g.logMsg(`Pool filled: ${POOL_FILL} concrete, top at ${f.top}. Any spring in it stops.`, 'event');
+      g.logMsg(`Pool filled: ${POOL_FILL} concrete, top at ${metres(f.top)} m. Any spring in it stops.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },

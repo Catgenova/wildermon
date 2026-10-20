@@ -173,12 +173,12 @@ function readGo(before: string[], after: string[], told: string): Rekindled | nu
   if (before.length < TRAIT_SLOTS) {
     if (after.length !== before.length + 1 || before.some((t, i) => after[i] !== t)) return null;
     const now = after[before.length];
-    return { slot: before.length, was: null, from: TIERS[0], now, tier: traitTier(now), up: told.includes(', a tier above ') };
+    return { slot: before.length, was: null, from: TIERS[0], now, tier: traitTier(now), up: told.includes(', a rarity above ') };
   }
   const changed = before.flatMap((t, i) => (after[i] !== t ? [i] : []));
   if (changed.length !== 1 || after.length !== before.length) return null;
   const slot = changed[0];
-  return { slot, was: before[slot], from: traitTier(before[slot]), now: after[slot], tier: traitTier(after[slot]), up: told.includes(', a tier above ') };
+  return { slot, was: before[slot], from: traitTier(before[slot]), now: after[slot], tier: traitTier(after[slot]), up: told.includes(', a rarity above ') };
 }
 
 /** Everything a go must keep to, on either side: the lowest slot, never lower, a tier above only when said, a name it did not carry. */
@@ -231,7 +231,7 @@ check('on the island, a lamp tried on somebody else\'s is kept and its blood unt
   const each = [...goes.entries()].every(([, gs]) => gs.every((g0, k) => g0.lamps === gs.length - k - 1));
   check('on the island, each go uses up one lamp', each, [...goes.entries()].map(([k, gs]) => `${k}:${gs.map((g0) => g0.lamps).slice(-2)}`).join(' '));
 
-  const ups = run('mixed').filter((g0) => g0.told.includes(', a tier above ')).length;
+  const ups = run('mixed').filter((g0) => g0.told.includes(', a rarity above ')).length;
   check(`on the island, ${GOES} goes on a common lowest come up a tier above about one time in ${LAMP_TIER_ODDS}`, inBand(ups), `${ups} of ${GOES}`);
   const slots = new Set(run('tie').map((g0) => readGo(g0.before, g0.after, g0.told)?.slot));
   check('on the island, where two share the lowest tier either may go, and the one above them never does',
@@ -239,7 +239,7 @@ check('on the island, a lamp tried on somebody else\'s is kept and its blood unt
   const fightSeen = run('tie').some((g0) => FIGHTING.some((f) => familyOf(g0.after[readGo(g0.before, g0.after, g0.told)!.slot]) === f.id));
   check('on the island, fighting blood comes up too, and never a grade of a name it carries', fightSeen);
   check(`on the island, at ${TOP} it is always another ${TOP} trait, and never says a tier above`,
-    run('top').length === 300 && run('top').every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above')
+    run('top').length === 300 && run('top').every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('rarity above')
       && !g0.told.includes('one time in')), run('top')[0]?.told ?? '-');
   check('on the island, one with no traits gets one in an empty slot, and one with one keeps it and gets a second',
     run('none').every((g0) => g0.after.length === 1 && g0.told.includes('added to an empty slot'))
@@ -248,13 +248,13 @@ check('on the island, a lamp tried on somebody else\'s is kept and its blood unt
   check('on the island, an empty slot is filled common, or a tier above rare, never anything else',
     [...run('none'), ...run('one')].every((g0) => ['common', 'rare'].includes(traitTier(g0.after[g0.after.length - 1]))));
   check('on the island, with every roll forced low a common lowest comes up rare, a supreme one fantastic and an empty slot rare, every time',
-    run('mixed_up').every((g0) => traitTier(g0.after[2]) === 'rare' && g0.told.includes(', a tier above common'))
-      && run('high_up').every((g0) => traitTier(g0.after[1]) === 'fantastic' && g0.told.includes(', a tier above supreme'))
+    run('mixed_up').every((g0) => traitTier(g0.after[2]) === 'rare' && g0.told.includes(', a rarity above common'))
+      && run('high_up').every((g0) => traitTier(g0.after[1]) === 'fantastic' && g0.told.includes(', a rarity above supreme'))
       && run('none_up').every((g0) => traitTier(g0.after[0]) === 'rare'),
     `${run('mixed_up')[0]?.told} / ${run('high_up')[0]?.told}`);
   check(`on the island, with every roll forced low a ${TOP} one is still another ${TOP}, and with every roll high a common one stays common`,
-    run('top_up').every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above'))
-      && run('mixed_flat').every((g0) => traitTier(g0.after[2]) === 'common' && g0.told.includes(`Tier-up chance: 1 in ${LAMP_TIER_ODDS}`)),
+    run('top_up').every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('rarity above'))
+      && run('mixed_flat').every((g0) => traitTier(g0.after[2]) === 'common' && g0.told.includes(`Rarity-up chance: 1 in ${LAMP_TIER_ODDS}`)),
     `${run('top_up')[0]?.told} / ${run('mixed_flat')[0]?.told}`);
 }
 
@@ -318,12 +318,12 @@ function browserGoes(set: string[], n: number, rand: () => number = Math.random)
   check('in the browser, each go says it as the island does and uses up one lamp',
     all.every((g0) => g0.told === lampSays(ash, LAMP, readGo(g0.before, g0.after, g0.told)!)) && count() === left,
     all.find((g0) => g0.told !== lampSays(ash, LAMP, readGo(g0.before, g0.after, g0.told)!))?.told ?? `${count()} left of ${left}`);
-  const ups = mixed.filter((g0) => g0.told.includes(', a tier above ')).length;
+  const ups = mixed.filter((g0) => g0.told.includes(', a rarity above ')).length;
   check(`in the browser, ${GOES} goes on a common lowest come up a tier above about one time in ${LAMP_TIER_ODDS}`, inBand(ups), `${ups} of ${GOES}`);
   const slots = new Set(tie.map((g0) => readGo(g0.before, g0.after, g0.told)?.slot));
   check('in the browser, where two share the lowest tier either may go, and the one above them never does', slots.has(0) && slots.has(1) && !slots.has(2), [...slots].join(','));
   check(`in the browser, at ${TOP} it is always another ${TOP} trait, and never says a tier above`,
-    top.every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above')), top[0]?.told);
+    top.every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('rarity above')), top[0]?.told);
   check('in the browser, one with no traits or one gets one more in an empty slot, common or rare, and keeps what it had',
     none.every((g0) => g0.after.length === 1) && one.every((g0) => g0.after.length === 2 && g0.after[0] === SETS.one[0])
       && [...none, ...one].every((g0) => ['common', 'rare'].includes(traitTier(g0.after[g0.after.length - 1])) && g0.told.includes('to an empty slot')),
@@ -337,7 +337,7 @@ function browserGoes(set: string[], n: number, rand: () => number = Math.random)
   const flat = browserGoes(SETS.mixed, 5, hi);
   check('in the browser, with every roll forced low a common lowest comes up rare, a supreme one fantastic, an empty slot rare, and a top one stays top',
     up1.every((g0) => traitTier(g0.after[2]) === 'rare') && up2.every((g0) => traitTier(g0.after[1]) === 'fantastic')
-      && up4.every((g0) => traitTier(g0.after[0]) === 'rare') && up3.every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above')),
+      && up4.every((g0) => traitTier(g0.after[0]) === 'rare') && up3.every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('rarity above')),
     `${up1[0]?.told} / ${up3[0]?.told}`);
   check('in the browser, with every roll forced high a common lowest stays common', flat.every((g0) => traitTier(g0.after[2]) === 'common'), flat[0]?.told);
   // The rule itself, with a roll that is the tier-above one exactly at its edge.

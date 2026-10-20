@@ -85,7 +85,7 @@ function statsOf(g: Game, item: Item): Stat[] | null {
     // What a go of the fight with it would take in your hands now (`Game.swingTime`, the same sum as `Game.duration`), and why.
     const t = g.swingTime(weapon, item);
     return [
-      { label: 'Damage per blow', value: weaponDamage(g, weapon, item), say: (v) => v.toFixed(1), diff: (d) => signed(d, 1), more: true },
+      { label: 'Damage per blow', value: weaponDamage(g, weapon, item), say: (v) => `${v.toFixed(1)} damage`, diff: (d) => signed(d, 1, ' damage'), more: true },
       { label: weapon.ammo ? 'Shot time' : 'Swing time', value: t.secs, say: (v) => `${v.toFixed(2)} s`, diff: (d) => signed(d, 2, ' s'), more: false,
         note: swingNote(t) },
       { label: 'Lands', value: hitChance(g, weapon, item), say: (v) => `${percent(v)} of ${weapon.ammo ? 'shots' : 'swings'}`, diff: points, more: true },
@@ -127,7 +127,7 @@ export function compareLines(g: Game, item: Item): TipLine[] | null {
   const on = g.worn(slot);
   const same = on?.uid === item.uid;
   const theirs = on && !same ? statsOf(g, on) : null;
-  const lines: TipLine[] = [`${itemName(item)} · QL ${item.ql.toFixed(1)}`];
+  const lines: TipLine[] = [`${itemName(item)} · Quality ${item.ql.toFixed(1)}`];
   mine.forEach((s, i) => {
     const o = theirs?.[i];
     if (!o || o.label !== s.label) {
@@ -149,7 +149,7 @@ export function compareLines(g: Game, item: Item): TipLine[] | null {
   lines.push(same
     ? 'Worn.'
     : on
-      ? `Compared with: ${itemName(on).toLowerCase()} (QL ${on.ql.toFixed(1)}) ${where}.`
+      ? `Compared with: ${itemName(on).toLowerCase()} (Quality ${on.ql.toFixed(1)}) ${where}.`
       : `Nothing ${where} to compare.`);
   return lines;
 }
@@ -191,13 +191,13 @@ export const isJobTool = (id: string): boolean => toolSkills().has(id);
  */
 export function itemCard(g: Game, item: Item): TipLine[] {
   const def = itemDef(item.id);
-  const lines: TipLine[] = [`${itemName(item)} · QL ${item.ql.toFixed(1)}`];
+  const lines: TipLine[] = [`${itemName(item)} · Quality ${item.ql.toFixed(1)}`];
   lines.push({ text: `Weighs ${itemWeight(item).toFixed(1)} kg${item.count > 1 ? `, ${unitWeight(item).toFixed(2)} kg each` : ''}` });
   if (item.dmg > 0) lines.push({ text: `Damage ${item.dmg.toFixed(1)} of 100` });
   const skills = toolSkills().get(item.id);
   if (skills) {
     const names = [...skills].map((k) => (SKILL_BY_ID.get(k)?.name ?? k).toLowerCase());
-    lines.push({ text: `Effective QL ${g.toolWorth(item).toFixed(1)}${names.length ? ` for ${listed(names)}` : ''}` });
+    lines.push({ text: `Effective quality ${g.toolWorth(item).toFixed(1)}${names.length ? ` for ${listed(names)}` : ''}` });
   }
   if (isBag(item)) {
     lines.push({ text: `Holds ${bagRoom(item)} things; ${bagUnits(item)} in it now` });

@@ -356,7 +356,7 @@ export const FURNITURE: FurnitureDef[] = [
     'A parcel put in at one comes out at any other.', 30,
     { post: true }),
   // One wildermon, shut in to be carried or set down: see `creaturecrate.ts`.
-  piece('creature_crate', 'Creature crate', 2, 2, [['plank', 32], ['nail', 8], ['ribbon', 4]], 16, 10,
+  piece('creature_crate', 'Wildermon crate', 2, 2, [['plank', 32], ['nail', 8], ['ribbon', 4]], 16, 10,
     ''),
   piece('lectern', 'Lectern', 1, 1, [['plank', 16], ['shaft', 2], ['nail', 16]], 16, 9, ''),
   piece('coat_rack', 'Coat rack', 1, 1, [['plank', 4], ['shaft', 4], ['nail', 12]], 10, 6, ''),
@@ -379,7 +379,7 @@ export const FURNITURE: FurnitureDef[] = [
     [['plank', 80], ['timber', 32], ['nail', 88]], 24, 22,
     '',
     undefined, { crates: 8 }),
-  piece('bell', 'Bell', 1, 1, [['bell_casting', 1], ['timber', 8], ['thick_rope', 1], ['nail', 16]], 22, 18, 'Rung on your settlement: every wildermon of the deed comes; every citizen hears where it hangs.', undefined, { bell: true, material: 'metal' }),
+  piece('bell', 'Bell', 1, 1, [['bell_casting', 1], ['timber', 8], ['thick_rope', 1], ['nail', 16]], 22, 18, 'Rung on your settlement: every settlement worker comes; every citizen hears where it hangs.', undefined, { bell: true, material: 'metal' }),
   piece('statue', 'Statue', 1, 1, [['statue_casting', 1], ['stone_slab', 1]], 24, 20, 'Shown on the map.', undefined, { landmark: true, material: 'metal', skill: 'masonry', tool: 'trowel', mossy: true }),
   piece('hive', 'Hive', 2, 1, [['plank', 24], ['shaft', 2], ['cloth', 4], ['nail', 24]], 18, 13, '', undefined, { hive: 40 }),
   /*
@@ -715,7 +715,7 @@ export interface PlacedFurniture {
    * thing on this island that does anything for you while you are away.
    */
   till?: number;
-  /** The wildermon shut in it, for a creature crate standing on the ground. It is drawn inside. */
+  /** The wildermon shut in it, for a wildermon crate standing on the ground. It is drawn inside. */
   creature?: number;
   /**
    * For a grave: who lies under it, what they were called, and the moment it
@@ -1076,7 +1076,7 @@ export function furnitureRefuses(f: PlacedFurniture, item: Item): string | null 
   if (def.pond) return `${it}: take fish only; nothing goes in.`;
   if (!furnitureHolds(f)) return `${it}: holds nothing.`;
   // Its id is spelled out rather than imported: creaturecrate.ts imports this file.
-  if (item.id === 'creature_crate' && !def.stall) return 'Creature crates go on a stall only.';
+  if (item.id === 'creature_crate' && !def.stall) return 'Wildermon crates go on a stall only.';
   const takes = def.takes && TAKES[def.takes];
   if (takes && !takes.is(item.id)) return takes.refusal;
   return null;
@@ -1346,7 +1346,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
     applies: (t, g) => {
       if (t.kind !== 'item') return false;
       const item = g.inventory.get(t.uid);
-      // A piece of furniture goes into no store, but for a creature crate, which goes on a stall to be sold.
+      // A piece of furniture goes into no store, but for a wildermon crate, which goes on a stall to be sold.
       return !!item && (!isFurniture(item.id) || item.id === 'creature_crate') && storeInto(g, t, item) !== undefined;
     },
     check: (t, g) => {

@@ -209,7 +209,7 @@ check('and the patrons, by name and alignment',
   island('PATRONS') === [...PATRONS].sort((a, b) => a.id.localeCompare(b.id)).map((p) => `${p.id}:${p.name}:${p.alignment}`).join(','),
   island('PATRONS'));
 check(`and the ${BAR_SLOTS} slots of the bar, by school`, island('SLOTS') === SPELL_BAR.join(','), island('SLOTS'));
-check('the faith skill is called Faith on both sides', island('SKILL') === 'Faith' && SKILL_BY_ID.get('prayer')?.name === 'Faith', island('SKILL'));
+check('the faith skill is called Devotion on both sides', island('SKILL') === 'Devotion' && SKILL_BY_ID.get('prayer')?.name === 'Devotion', island('SKILL'));
 
 check('a patron is refused below its faith, in the same words on both sides',
   island('LOW') === patronRefusal('blessing', null, 10), island('LOW'));

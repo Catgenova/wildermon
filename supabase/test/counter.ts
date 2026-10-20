@@ -16,7 +16,7 @@
  *   * that finishing it opens its store, keyed to its wall, and that nobody
  *     walks through it and the eye does not stop at it;
  *   * its keeper sets goods out, and nobody else does; furniture is set down
- *     rather than laid out, but for a creature crate;
+ *     rather than laid out, but for a wildermon crate;
  *   * a price, the keeper's alone;
  *   * a buyer looking at it from the street is sent what is on it and at what
  *     price, and buys it there -- and not from inside, not from beside the

@@ -110,7 +110,7 @@ for (const d of KINDS) {
     ['alone, a hunter', !!d.hunter, lines.includes('Solitary: a home ground of its own')],
     [`home within ${WILD_RANGE}`, true, lines.includes(`Home range: ${WILD_RANGE} tiles`)],
     [`1 in ${Math.round(1 / wildShare(d))}`, true, lines.includes(`Spawn share: 1 in ${Math.round(1 / wildShare(d))}`)],
-    [`off a token by ${MONSTER_KEEP_OFF[d.id]}`, !!d.monster, lines.includes(`Never within ${MONSTER_KEEP_OFF[d.id]} tiles of a settlement token`)],
+    [`off a token by ${MONSTER_KEEP_OFF[d.id]}`, !!d.monster, lines.includes(`Never within ${MONSTER_KEEP_OFF[d.id]} tiles of a settlement totem`)],
     [`no more than ${MONSTER_CAP[d.id]}`, !!d.monster, lines.includes(`Island cap: ${MONSTER_CAP[d.id] ?? 0} at once`)],
     ['no quiet beach alone', false, lines.includes('landing beach')],
   ];
@@ -137,7 +137,7 @@ for (const d of KINDS) {
     ['a light', !!d.glow, text.includes(`Lights ${d.glow} tiles round itself`)],
     ['its taming', !d.monster, text.includes(`Taming ${d.tameLevel}, base chance ${percent(d.tameChance)} per offering`)],
     ['that it is not a wildermon', !!d.monster, text.includes('Cannot be tamed, trapped, bred or kept')],
-    ['its body', true, text.includes(`Grown: ${d.health} health, blow ${d.attack}`)],
+    ['its body', true, text.includes(`Grown: ${d.health} health, blow ${d.attack} damage`)],
     ['its carcass', Object.values(d.butcher).some((n) => !!n), Object.entries(d.butcher).filter(([p]) => p !== 'hoard').every(([, n]) => text.includes(`${n} × `))],
   ];
   for (const [what, should, is] of want) if (should !== is) kept.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);

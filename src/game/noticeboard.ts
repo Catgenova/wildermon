@@ -96,7 +96,7 @@ export const SETTLE_SAID = {
   /** Asking for a kind of thing there is no such thing as. */
   what: 'No such item.',
   /** Asking for a thing a crate does not take. */
-  unstored: '{what} cannot go in a deed crate, so cannot be asked for.',
+  unstored: '{what} cannot go in a settlement crate, so cannot be asked for.',
   /** Asking for too few or too many. */
   count: `Count: 1 to ${WORK_COUNT_MAX}.`,
   /** A lowest quality over the top of the scale. */
@@ -106,15 +106,15 @@ export const SETTLE_SAID = {
   /** A work finished, taken down or never there. */
   noWork: 'Work finished or taken down.',
   /** Too far from the token. */
-  far: `Deliver within ${DELIVER_REACH} tiles of the {deed} token.`,
+  far: `Deliver within ${DELIVER_REACH} tiles of the {deed} totem.`,
   /** Nothing in the pack that matches. */
   none: 'No {what} carried.',
   /** Nothing in the pack good enough. */
   poor: 'No {what} of QL {n} or better carried.',
   /** No deed crate standing. */
-  noCrate: '{deed} has no deed crate to deliver into.',
+  noCrate: '{deed} has no settlement crate to deliver into.',
   /** The deed crate full. */
-  crateFull: 'Deed crate at {deed} is full.',
+  crateFull: 'Settlement crate at {deed} is full.',
   /** Told to whoever delivered. */
   delivered: 'Delivered: {n} × {what} to {deed}.',
   /** Told to the founder, when somebody else delivered. */

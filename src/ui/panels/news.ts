@@ -220,6 +220,12 @@ const mult = (m: number): string => `×${Number(m.toFixed(2))}`;
 /** A stretch of time in figures: "45 s", "1 hour and 15 minutes", "2 days". */
 const dur = (secs: number): string => (Math.round(secs) < 90 ? `${Math.round(secs)} s` : timeWords(secs));
 
+/** An hour of the island's clock as the hud shows it: "06:00". */
+const hudHour = (h: number): string =>
+  `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+/** The moment the woods turn and the day's counts start again, by one name everywhere. */
+const RESET = `daily reset (${hudHour(TREE_DAWN_UTC)} UTC)`;
+
 /** What a boil made and a dyeing took the day dye became a liquid (111), before it went by weight (117). */
 const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, floor: 1 } as const;
 
@@ -228,15 +234,15 @@ export const NEWS: News[] = [
     n: 1,
     day: '2026-09-25',
     lines: () => [
-      'Added: creature crates, 1 wildermon each. With one already following you, another is tamed only into an empty crate in your pack.',
-      'Removed: keeping wildermon at the token. Those kept there: in crates set down beside it, or in the keeper\'s pack where there was no room.',
+      `Added: ${itemDef('creature_crate').name.toLowerCase()}s, 1 wildermon each. With one already following you, another is tamed only into an empty crate in your pack.`,
+      'Removed: keeping wildermon at the settlement totem. Those kept there: in crates set down beside it, or in the keeper\'s pack where there was no room.',
       'Changed: a newborn follows its keeper when nothing else does; else goes into an empty crate in their pack; else an empty crate of theirs on their settlement, nearest its dam first; else goes wild.',
       'Changed: Butchering trains on an island as well as solo. Carcass yield made at your Butchering and knife quality; the carcass\'s own quality no longer lowers it.',
       'Added: a citizen may leave a settlement they joined (its menu on its land, or the Settlement window) and may found one of their own.',
-      'Added: market board (Market window at a settlement token or a mailbox): every stall on the island, its prices, location and owner. A crated wildermon can be offered in a deal, sold off a stall or posted; the crate\'s new owner keeps it.',
+      'Added: market board (Market window at a settlement totem or a mailbox): every stall on the island, its prices, location and owner. A crated wildermon can be offered in a deal, sold off a stall or posted; the crate\'s new owner keeps it.',
       `Added: leaderboards: top ${BOARD_TOP} in each skill, top ${BOARD_TOP} best-bred wildermon, top ${BOARD_TOP} biggest settlements.`,
-      'Added: creature window names a newborn\'s dam and sire and which parent each readable trait came from.',
-      `Added: While you were away window on coming ashore: workers' deliveries to stores, newborns, stall sales, parcels posted to you; counted from ${IDLE_LOGOUT / 60} min after your browser was last heard from.`,
+      'Added: Wildermon window names a newborn\'s dam and sire and which parent each readable trait came from.',
+      `Added: While you were away window on coming ashore: workers' deliveries to settlement stores, newborns, stall sales, parcels posted to you; counted from ${IDLE_LOGOUT / 60} min after your browser was last heard from.`,
     ],
   },
   {
@@ -246,10 +252,10 @@ export const NEWS: News[] = [
       const caravel = furnitureDef('caravel'), sailer = furnitureDef('sailing_boat');
       return [
         `Changed: wall bills, scaled to the cobblestone wall's ${wallBill('cobblestone')}: log wall ${wallBill('log')}, plank wall ${wallBill('plank')}, marble wall ${wallBill('marble')}. Floors, stairs, roofs and fences rise with their material. Already-planned work keeps its old bill.`,
-        `Changed: furniture planks, timber, cloth, stone bricks and mortar ×4; nails and metal ribbon ×2; legs, wheels, ropes, castings and other counted parts unchanged. Chest: ${pieceBill('chest')}.`,
+        `Changed: furniture bill amounts: planks, timber, cloth, stone bricks and mortar ×4 the old amount; nails and metal ribbon ×2; legs, wheels, ropes, castings and other counted parts unchanged. Chest: ${pieceBill('chest')}.`,
         `Changed: smelter ${recipeBill('make_smelter')}; kiln ${recipeBill('make_kiln')}; anvil poured from ${MOULD_BY_ID.get('anvil_mould')?.lumps ?? 0} lumps. Traps rose as furniture did.`,
         `Changed: rowing boat ${pieceBill('rowing_boat')}; sailing boat ${pieceBill('sailing_boat')}.`,
-        `Added: caravel: ${pieceBill('caravel')}. Holds ${caravel.capacity} items; ${caravel.boat?.passengers} passengers plus the helmsman; speed ${caravel.boat?.speed} tiles/s (sailing boat ${sailer.boat?.speed}); draught ${num(caravel.boat?.draught ?? 0)}.`,
+        `Added: caravel: ${pieceBill('caravel')}. Holds ${caravel.capacity} items; ${caravel.boat?.passengers} passengers plus the helmsman; speed ${caravel.boat?.speed} tiles/s (sailing boat ${sailer.boat?.speed}); draught ${metres(caravel.boat?.draught ?? 0)} m.`,
       ];
     },
   },
@@ -269,7 +275,7 @@ export const NEWS: News[] = [
     lines: () => [
       'Fixed: people on a caravel drawn in depth order with her sails.',
       'Changed: a piece is clickable anywhere it is drawn beyond its tile (caravel: bow and stern).',
-      `Added: buy orders (Market window at a settlement token or a mailbox): item, minimum quality, count, silver each; full price held from your purse. Anyone there can fill some or all from their pack and is paid at once; goods come to you by post. Cancel any time; open ${ORDER_LIFE / 86400} days: cancels itself, returning what it holds.`,
+      `Added: buy orders (Market window at a settlement totem or a mailbox): item, minimum quality, count, silver each; full price held from your purse. Anyone there can fill some or all from their pack and is paid at once; goods come to you by post. Cancel any time; open ${ORDER_LIFE / 86400} days: cancels itself, returning what it holds.`,
       `Added: Field guide (${defaultKey('win_guide')}): a page per creature kind, ${guidePages().length} kinds: seen, tamed, bred, habitat, yields.`,
       'Added: What\'s new window: opens on coming ashore when there are unread entries; also in the UI Menu.',
     ],
@@ -286,7 +292,7 @@ export const NEWS: News[] = [
     n: 6,
     day: '2026-09-26',
     lines: () => [
-      'Added: island keepers: the founder, and the all-islands keeper. A keeper sees everyone on the island, can move a stuck body to the token of the settlement it founded (or the newcomer landing if none), and can clear a tile.',
+      'Added: island keepers: the founder, and the all-islands keeper. A keeper sees everyone on the island, can move a stuck body to the totem of the settlement it founded (or the newcomer landing if none), and can clear a tile.',
       `Added: keeper mute ${either(MUTE_FOR.map((secs) => (secs === null ? 'until a keeper lifts it' : `for ${awayFor(secs)}`)))}. While muted, the island refuses ${MUTE_SHUTS} and gives the end time.`,
     ],
   },
@@ -467,7 +473,7 @@ export const NEWS: News[] = [
     day: '2026-09-26',
     lines: () => [
       'Fixed: Climbing gains reverting at the next island update or reload. The island now raises it.',
-      `Changed: Climbing trains on a step between tiles of more than ${frac(CLIMB_LEARN_FROM)} of ${MAX_STEP} up or down, on foot only: not mounted, on a cart or boat, on a bridge or upper floor.`,
+      `Changed: Climbing trains on a step between tiles of more than ${metres(CLIMB_LEARN_FROM * MAX_STEP)} m (${frac(CLIMB_LEARN_FROM)} of the ${metres(MAX_STEP)} m highest step) up or down, on foot only: not mounted, on a cart or boat, on a bridge or upper floor.`,
     ],
   },
   {
@@ -495,10 +501,10 @@ export const NEWS: News[] = [
     n: 23,
     day: '2026-09-26',
     lines: () => [
-      `Added: baubles: ${percent(BAUBLE_SHARE)} of archaeology finds are a tarnished bauble: ${listed(BAUBLE_TIERS.map((t) => `${percent(t.odds)} ${t.name.toLowerCase()}`))}. Restore as a relic; its effect is rolled and written on it.`,
-      `Added: set into an altar on your settlement (Baubles on the altar menu). Sockets per settlement: ${listed(BAUBLE_TIERS.map((t) => `${num(t.slots)} ${t.name.toLowerCase()}`))}. Applies to the founder, mayors and builders on every action on its land.`,
-      `Added: Minor: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% less time per action, or ${BAUBLE_LOW} to ${BAUBLE_HIGH}% more skill gain, in 1 skill. Major: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% chance of ${mult(YIELD_TIMES)} yield per action in 1 skill. Ancient: +${ANCIENT_PLUS} to every yield of 1 action, e.g. ${ANCIENT_EFFECTS[1].said}.`,
-      `Added: rarity multiplies the roll: ${listed(RARITIES.slice(1).map((r, i) => `${mult(baubleTimes(i + 1))} for ${article(r.name)} ${r.name} one`))}.`,
+      `Added: baubles: ${percent(BAUBLE_SHARE)} of archaeology finds are a tarnished bauble: ${listed(BAUBLE_TIERS.map((t) => `${percent(t.odds)} ${t.name.toLowerCase()}`))}. Restore as a relic; its effect is set at random and written on it.`,
+      `Added: set into an altar on your settlement (Baubles on the altar menu). Sockets per settlement, by grade: ${listed(BAUBLE_TIERS.map((t) => `${num(t.slots)} ${t.name.toLowerCase()}`))}. Applies to the founder, mayors and builders on every action on its land.`,
+      `Added: Minor: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% less time per action, or ${BAUBLE_LOW} to ${BAUBLE_HIGH}% more skill gain, in 1 skill. Major: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% chance of yield ${mult(YIELD_TIMES)} per action in 1 skill. Ancient: +${ANCIENT_PLUS} to every yield of 1 action, e.g. ${ANCIENT_EFFECTS[1].said}.`,
+      `Added: rarity multiplies the effect: ${listed(RARITIES.slice(1).map((r, i) => `${mult(baubleTimes(i + 1))} for ${article(r.name)} ${r.name} one`))}.`,
       'Added: a set bauble cannot be removed. Setting another in its socket destroys the old one.',
     ],
   },
@@ -539,7 +545,7 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'terraformer')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Terraformer from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Pick 1 of ${num(PERKS_PER_TIER)} per tier in the Trades window; each card states its effect.`,
+        `Changed: Terraformer from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Pick 1 of ${num(PERKS_PER_TIER)} per perk tier in the Trades window; each card states its effect.`,
         'Removed: Terraformer tree nodes. Dropping the trade (silver or Bauble of Regret) drops its perks too.',
       ];
     },
@@ -550,7 +556,7 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'miner')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Miner from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Added job: Pan, on sand with water at a corner.`,
+        `Changed: Miner from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Added action: Pan, on sand with water at a corner.`,
         'Removed: Miner tree nodes.',
       ];
     },
@@ -559,14 +565,14 @@ export const NEWS: News[] = [
     n: 30,
     day: '2026-09-27',
     lines: () => [
-      'Changed: Terraformer perks set in final tiers. Taken perks that moved tier are cleared to choose again in the Trades window; Wader and Dredger unmoved.',
+      'Changed: Terraformer perks set in final perk tiers. Taken perks that moved perk tier are cleared to choose again in the Trades window; Wader and Dredger unmoved.',
     ],
   },
   {
     n: 31,
     day: '2026-09-27',
     lines: () => [
-      'Changed: Miner perks set in final tiers. Taken perks that moved are cleared to choose again in the Trades window; only Pan unmoved.',
+      'Changed: Miner perks set in final perk tiers. Taken perks that moved are cleared to choose again in the Trades window; only Pan unmoved.',
     ],
   },
   {
@@ -575,7 +581,7 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'mason')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Mason from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Added jobs: Repoint (relay a finished stone wall in another stone) and Raise the rock with rubble.`,
+        `Changed: Mason from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Added actions: Repoint (relay a finished stone wall in another stone) and Raise the rock with rubble.`,
         'Removed: Mason tree nodes.',
       ];
     },
@@ -584,7 +590,7 @@ export const NEWS: News[] = [
     n: 33,
     day: '2026-09-27',
     lines: () => [
-      `Added: What it offers on every Trades window card: the trade's ${num(PERK_TIER_AT.length)} perk tiers, or its rite and tree, before taking it up, with each tier's skill threshold and your skill. Solo: shown for every trade.`,
+      `Added: What it offers on every Trades window card: the trade's ${num(PERK_TIER_AT.length)} perk tiers, or its rite and tree, before taking it up, with each perk tier's skill threshold and your skill. Solo: shown for every trade.`,
       'Added: confirmation on taking up a trade or a perk, stating what is lost, the cost and which perks close.',
     ],
   },
@@ -594,9 +600,9 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'carpenter')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Carpenter from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Carpenter tree nodes.`,
+        `Changed: Carpenter from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Carpenter tree nodes.`,
         'Added: some perks are built into the item for any later owner: chest capacity, boat or wagon speed, bow damage or range. Examine shows what its maker put in.',
-        'Fixed: on an island the bench wears its tool each go (saws, carving knives, mallets, files, etc.), as solo.',
+        'Fixed: on an island the bench wears its tool each action (saws, carving knives, mallets, files, etc.), as solo.',
       ];
     },
   },
@@ -619,7 +625,7 @@ export const NEWS: News[] = [
       const main = (CLASSES.find((c) => c.id === 'smith')?.main ?? '').replace(/_/g, ' ');
       const hauberk = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
       return [
-        `Changed: Smith from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Smith tree nodes.`,
+        `Changed: Smith from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Smith tree nodes.`,
         'Added: some perks are built into the item: blade damage or hit chance (for whoever fits the weapon), chain and plate deflection, mould life, and 1 quench of a weapon or tool for quality. Examine shows what its maker put in.',
         `Added: Ingots perk: ${INGOT_LUMPS} lumps into a bar weighing ${frac(INGOT_WEIGHT)} as much, counted as ${num(INGOT_LUMPS)} lumps at smelter, anvil, bench and file.`,
         `Fixed: island melting rounds .5 up, as solo: chain hauberk returns ${meltLumps(hauberk, 1)} lumps, not 1 fewer.`,
@@ -632,8 +638,8 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'forester')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Forester from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Forester tree nodes.`,
-        'Added jobs: Coppice (grown tree back to young, yields its logs, tree stays); Tap Resin (tar from a living pine, once a day); Clear Brush (bushes and reeds around a tile in one go).',
+        `Changed: Forester from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Forester tree nodes.`,
+        'Added actions: Coppice (grown tree back to young, yields its logs, tree stays); Tap Resin (tar from a living pine, once a day); Clear Brush (bushes and reeds around a tile at once).',
         'Changed: Look on a partly cut tree counts strokes left at your felling rate.',
       ];
     },
@@ -644,8 +650,8 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'farmer')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Farmer from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Farmer tree nodes.`,
-        'Added jobs: Sow a patch, Tend a patch, Harvest a patch: every field in the square around the chosen one, as 1 job.',
+        `Changed: Farmer from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Farmer tree nodes.`,
+        'Added actions: Sow a patch, Tend a patch, Harvest a patch: every field in the square around the chosen one, as 1 action.',
         'Changed: a crop keeps the growth pace it was sown at, whoever harvests it.',
         'Fixed: island farming wildermon brought home the seed and left the harvest; now the reverse.',
       ];
@@ -657,7 +663,7 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'cook')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Cook from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Cook tree nodes.`,
+        `Changed: Cook from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Cook tree nodes.`,
         'Added: Cook perks stay in the dish for whoever eats it. Fixed: island Examine shows what the maker put in, as solo.',
         'Added: broth, spirit and offal bait, for a Cook who has learned them.',
         'Fixed: part of a pile set down on an island keeps maker marks, rarity, colour and blessing.',
@@ -673,12 +679,12 @@ export const NEWS: News[] = [
       const mends = perksOf('tailor').find((p) => p.fx.patch_item)?.fx.patch_item ?? 0;
       const sprouts = perksOf('forester').find((p) => p.fx['count:sprout']);
       return [
-        `Changed: Tailor from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Tailor tree nodes.`,
+        `Changed: Tailor from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Tailor tree nodes.`,
         `Added: tent (${billWords(tent.bill, true)}): a night's rest ${percent((tent.bed ?? 0) / (furnitureDef('bed').bed ?? 1))} of a bed's; `
           + `and Patch: −${mends} damage on a cloth or leather piece for 1 cloth or 1 leather. Both for a Tailor who has learned them.`,
         'Fixed: offline, every fail-chance perk works as on an island (was only the anvil\'s), and so does Nothing Wasted (a failed craft keeps its inputs).',
         ...(sprouts ? [`Fixed: offline, ${sprouts.name} gives its ${num(sprouts.fx['count:sprout'])} sprouts, as on an island.`] : []),
-        'Fixed: offline, a go that makes more than its recipe count reports how many, as on an island.',
+        'Fixed: offline, an action that makes more than its recipe count reports how many, as on an island.',
       ];
     },
   },
@@ -689,7 +695,7 @@ export const NEWS: News[] = [
       const main = (CLASSES.find((c) => c.id === 'herdsman')?.main ?? '').replace(/_/g, ' ');
       const kept = perksOf('herdsman').filter((p) => Object.keys(p.fx).some((k) => k.startsWith('kept:'))).map((p) => p.name);
       return [
-        `Changed: Herdsman from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Herdsman tree nodes.`,
+        `Changed: Herdsman from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Herdsman tree nodes.`,
         `Fixed: ${listed(HUSBANDRY_ACTIONS.map((a) => a.label))} were missing from the wildermon menu.`,
         `Added: ${listed(kept)} apply to every wildermon the Herdsman keeps, island and offline. On a change of hands it takes its new keeper's.`,
       ];
@@ -701,9 +707,9 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'naturalist')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Naturalist from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Naturalist tree nodes.`,
+        `Changed: Naturalist from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Naturalist tree nodes.`,
         `Added (made by a Naturalist who has learned them, usable by anyone): herb tea: +${percent(itemDef('herb_tea').stamina ?? 0)} stamina a cup; `
-          + `salve: a dressed wound cannot go bad; tincture: ${TINCTURE_NAMES} each go ${percent(TINCTURE_BONUS)} faster for ${dur(TINCTURE_SECONDS)}.`,
+          + `salve: a dressed wound cannot go bad; tincture: ${TINCTURE_NAMES} each action ${percent(TINCTURE_BONUS)} faster for ${dur(TINCTURE_SECONDS)}.`,
         'Added: Field Medic: dress another person\'s wounds from their menu.',
         'Fixed: island hives fill with honey and beeswax for Vesp kept on their settlement, as offline. First island source of beeswax.',
         'Fixed: offline, a rare item made at a bench made its whole stack rare.',
@@ -717,12 +723,12 @@ export const NEWS: News[] = [
       const main = (CLASSES.find((c) => c.id === 'fisher')?.main ?? '').replace(/_/g, ' ');
       const smoked = perksOf('fisher').find((p) => p.name === 'Smoke Fish')?.fx['rot:trout'] ?? 1;
       return [
-        `Changed: Fisher from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Fisher tree nodes.`,
+        `Changed: Fisher from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Fisher tree nodes.`,
         `Added (for a Fisher who has learned them): smoked fish: rot ${percent(1 - smoked)} slower anywhere; fish pond (on your settlement): `
           + `stocks 1 fish every ${dur(POND_EVERY)} up to ${furnitureDef('fish_pond').pond}; Fishing Journal: Examine on water lists what it holds for you.`,
         'Changed: a net clicked on water out of reach goes into the deepest water within whole tiles of its reach, as a line does. Fixed: island searched further than offline.',
-        'Fixed: offline, rod, net and digging for worms wore the tool ×2; now as on an island.',
-        'Fixed: offline, a net\'s deep fish came all or none; now each deep fish in a haul rolls separately, as on an island.',
+        'Fixed: offline, rod, net and digging for worms gave tool wear ×2 the island\'s; now as on an island.',
+        'Fixed: offline, a net\'s deep fish came all or none; now each deep fish in a haul has its own chance, as on an island.',
       ];
     },
   },
@@ -732,9 +738,9 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'mender')?.main ?? '').replace(/_/g, ' ');
       return [
-        `Changed: Mender from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Mender tree nodes.`,
+        `Changed: Mender from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Mender tree nodes.`,
         `Added (made by a Mender who has learned them, usable by anyone): repair kit: −${KIT_MEND} damage on anything, anywhere, no quality loss; sealant: 1 item stops decaying wherever left.`,
-        'Changed: job-time perks apply after the minimum job time, not before; each now gives its stated amount at any skill, and Quick Hands shortens a Repair go.',
+        'Changed: action-time perks apply after the minimum action time, not before; each now gives its stated amount at any skill, and Quick Hands shortens a Repair action.',
         `Fixed: island lowest-quality work post lasts ${dur(POST_LIFE_MIN)}, as offline (fell in well under 1/2 of that).`,
         'Fixed: offline, brushing a wildermon wears the brush by its quality, as on an island.',
         `Added: hammer: head cast in a hammer head mould at a smelter, trued on an anvil, fitted to a shaft. `
@@ -750,12 +756,12 @@ export const NEWS: News[] = [
       const wheel = furnitureDef('potters_wheel').pace;
       const more = GEMS.filter((g) => g.perk);
       return [
-        `Changed: Artisan from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Artisan tree nodes; no craft trade has a tree.`,
-        `Added (for an Artisan who has learned them): gold circlet (head slot): ${num(CIRCLET_STONES)} stones at ${frac(CIRCLET_SHARE)} of a ring's each, set by anyone; amphora: holds ${itemDef('amphora').holds} of 1 food or drink; potter's wheel: pottery go −${percent(1 - (wheel?.by ?? 1))} for anyone within ${wheel?.reach} tiles; glaze of ${num(GLAZE_ASH)} lot of ashes: pot never decays; book on a craft trade the writer has at ${TRADE_BOOK_AT}: teaches that trade.`,
+        `Changed: Artisan from a tree to perks: ${num(PERK_TIER_AT.length)} perk tiers of ${num(PERKS_PER_TIER)}; perk tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Artisan tree nodes; no craft trade has a tree.`,
+        `Added (for an Artisan who has learned them): gold circlet (head slot): ${num(CIRCLET_STONES)} stones at ${frac(CIRCLET_SHARE)} of a ring's each, set by anyone; amphora: holds ${itemDef('amphora').holds} of 1 food or drink; potter's wheel: pottery time per action −${percent(1 - (wheel?.by ?? 1))} for anyone within ${wheel?.reach} tiles; glaze of ${num(GLAZE_ASH)} lot of ashes: pot never decays; book on a skill the writer has at ${TRADE_BOOK_AT}: teaches that skill.`,
         `Added: More Stones: ${num(more.length)} more stones in rock: ${listed(more.map((g) => g.name.toLowerCase()))}.`,
         'Added: Jewellery heading in the crafting window (ring, pendant, focus were only on the stone menu).',
         'Fixed: pot, bowl or jar kept its maker\'s perks through the kiln.',
-        'Fixed: island bags left lying rot their contents at the share of weather the bag keeps off (did not rot); a set-down item is no longer charged for time spent in a pack.',
+        'Fixed: island bags left lying rot their contents at the % of weather the bag keeps off (did not rot); a set-down item is no longer charged for time spent in a pack.',
       ];
     },
   },
@@ -763,14 +769,14 @@ export const NEWS: News[] = [
     n: 46,
     day: '2026-09-27',
     lines: () => [
-      `Fixed: island relic and bauble restoring trains Restoration: a full go on success, ${percent(TRY_LEARN)} of 1 go on failure, as offline (trained only Mind Logic).`,
+      `Fixed: island relic and bauble restoring trains Restoration: a full action's gain on success, ${percent(TRY_LEARN)} of 1 action's on failure, as offline (trained only Mind Logic).`,
     ],
   },
   {
     n: 47,
     day: '2026-09-27',
     lines: () => [
-      `Fixed: island Wildermon window lists only wildermon you tamed (listed every tame one near you). "${ALL_GOALS.find((g) => g.id === 'five')?.text}", post-assignable wildermon and herd best tier count only yours.`,
+      `Fixed: island Wildermon window lists only wildermon you tamed (listed every tame one near you). "${ALL_GOALS.find((g) => g.id === 'five')?.text}", post-assignable wildermon and herd best trait rarity count only yours.`,
     ],
   },
   {
@@ -803,7 +809,7 @@ export const NEWS: News[] = [
       const up = CHANNELS.filter((ch) => ch.up).map((ch) => ch.label);
       const down = CHANNELS.filter((ch) => !ch.up).map((ch) => ch.label);
       return [
-        `Added: rare wildermon, at made-item odds: ${listed(steps.map((s) => `1 in ${num(Math.round(1 / rarityChance(s)))} ${name(s)}`))}. Never monsters. Newborns rolled at birth regardless of parents.`,
+        `Added: rare wildermon, at made-item odds: ${listed(steps.map((s) => `1 in ${num(Math.round(1 / rarityChance(s)))} ${name(s)}`))}. Never monsters. Newborns' rarity set by chance at birth regardless of parents.`,
         `Added: size vs its kind: ${name(1)} ${mult(RARITIES[1].size)}, ${listed(steps.slice(1).map((s) => `${name(s)} ${mult(RARITIES[s].size)}`))}.`,
         `Added: ${listed(up)} up by ${each((s) => by(RARITIES[s].blood))}; ${listed(down)} down by ${each((s) => by(1 / RARITIES[s].blood))}.`,
         `Added: wild-caught trait odds: better than common for ${listed(steps.map((s) => `${better(s)} of ${article(name(s))} ${name(s)} one's`))}; ordinary: ${better(0)}.`,
@@ -820,7 +826,7 @@ export const NEWS: News[] = [
       while (age && !age.logs && age.next !== null) age = TREE_AGES.find((a) => a.id === age?.next);
       return [
         `Changed: a tree dying of age leaves grass, not a stump. Stumps only from felling a tree with timber: ${(age?.name ?? 'Young').toLowerCase()} or older.`,
-        `Changed: every stump goes at the next turn of the woods (${TREE_DAWN_UTC}:00 UTC), for everyone. Fixed: seen stumps stayed until reload.`,
+        `Changed: every stump goes at the next ${RESET}, for everyone. Fixed: seen stumps stayed until reload.`,
       ];
     },
   },
@@ -881,8 +887,8 @@ export const NEWS: News[] = [
     lines: () => {
       const bill = (id: string): string => billWords((RECIPE_BY_ID.get(`make_${id}`)?.inputs ?? []).map((i) => [i.item, i.count ?? 1] as const), true);
       return [
-        `Added: garden steps on packed dirt, slope ${STEPS_LEAST} to ${STEPS_MOST}, end corners within ${STEPS_TWIST}. Stone (trowel, masonry): ${STONE_STEPS_BILL}; timber (mallet, carpentry): ${TIMBER_STEPS_BILL}.`,
-        `Added: steps standable at slope up to ${STEPS_MOST} (bare ground ${MAX_STAND}); steps on or off ignore the ${MAX_STEP} tile-centre limit. No carts or wagons. Pickaxe removal returns ${frac(STEPS_BACK)}: ${num(stepsBack(STEPS_SLABS))} of ${num(STEPS_SLABS)} slabs and ${num(stepsBack(STEPS_BRICKS))} of ${num(STEPS_BRICKS)} bricks, or ${num(stepsBack(STEPS_PLANKS))} of ${num(STEPS_PLANKS)} planks.`,
+        `Added: garden steps on packed dirt, slope ${metres(STEPS_LEAST)} to ${metres(STEPS_MOST)} m, end corners within ${metres(STEPS_TWIST)} m. Stone (trowel, masonry): ${STONE_STEPS_BILL}; timber (mallet, carpentry): ${TIMBER_STEPS_BILL}.`,
+        `Added: steps standable at slope up to ${metres(STEPS_MOST)} m (bare ground ${metres(MAX_STAND)} m); steps on or off ignore the ${metres(MAX_STEP)} m tile-centre limit. No carts or wagons. Pickaxe removal returns ${frac(STEPS_BACK)}: ${num(stepsBack(STEPS_SLABS))} of ${num(STEPS_SLABS)} slabs and ${num(stepsBack(STEPS_BRICKS))} of ${num(STEPS_BRICKS)} bricks, or ${num(stepsBack(STEPS_PLANKS))} of ${num(STEPS_PLANKS)} planks.`,
         `Added: rose arch (carpentry: ${bill('rose_arch')}) and stone rose arch (masonry: ${bill('stone_rose_arch')}), walk-through over a path. ${ROSES_RULE}`,
         `Added: flagpole (tailoring: ${bill('flagpole')}); flag and banner cloth follow the wind. Both take dye; on a settlement they show its device, 1 of ${num(DEVICE_COUNT)}, chosen by settlement name. Fixed: banners and sails set down lost their dye.`,
       ];
@@ -903,7 +909,7 @@ export const NEWS: News[] = [
       // As it was then: a pot of orange, before dye was mixed (`LEGACY_DYES`).
       const dye = LEGACY_DYES.find((d) => d.id === 'wildflowers');
       return [
-        `Added: trail wear on ${listed([...WEARS].map((t) => GROUNDS[t as Ground].name.toLowerCase()))}: +1 per step on foot, up to ${WEAR_MOST}; at ${WEAR_TRAIL} it is a bare-earth trail (as packed dirt). −${WEAR_FALL} per tile at each turn of the woods (${TREE_DAWN_UTC}:00 UTC); at zero it reverts. Paved, built, tilled or planted ground never wears.`,
+        `Added: trail wear on ${listed([...WEARS].map((t) => GROUNDS[t as Ground].name.toLowerCase()))}: +1 per step on foot, up to ${WEAR_MOST}; at ${WEAR_TRAIL} it is a bare-earth trail (as packed dirt). −${WEAR_FALL} per tile at each ${RESET}; at zero it reverts. Paved, built, tilled or planted ground never wears.`,
         `Added: grass flowers in ${listed(FLOWER_SEASONS)}: up to ${num(FLOWER_MOST.summer)} clumps a tile in summer, ${num(FLOWER_MOST.spring)} in spring. Pick flowers: 1 wildflower per clump at your foraging quality; none again until next spring.`,
         `Added: wildflower dye: ${billWords([[dye?.from ?? 'wildflowers', dye?.count ?? 1], ['lye_bucket', 1]], true)} boil into ${num(LEGACY_POTS)} pots of ${dye?.word ?? 'orange'}, alchemy ${dye?.difficulty ?? 0}.`,
         'Changed: steep rock drawn with overhanging grass, moss on the upper face, ferns in cracks, damp at the foot over water. Visual only.',
@@ -930,9 +936,9 @@ export const NEWS: News[] = [
     lines: () => {
       const rotation = perksOf('farmer').find((p) => 'rotate:plant_seed' in p.fx)?.name ?? 'Crop Rotation';
       return [
-        `Added: seasonal crop growth: ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}. Winter: holds its stage until spring; no dying; sowing, tending and harvesting still allowed.`,
-        `Added: planter: 1 crop ${growthWords(PLANTER_GROWTH)} every season incl. winter, indoors or out (cotton stage: ${dur(CROPS.cotton.stageSeconds / PLANTER_GROWTH)}). Sow, tend, harvest, pull up from its menu; same seeds, stages, yields as a field; Farmer sow/harvest perks apply; ${rotation} reads the planter's last crop. Cannot be picked up while growing; empty: bare earth.`,
-        'Added: hovering over or sowing a field or planter shows real time to the next stage; a wintering field shows the wait for spring.',
+        `Added: seasonal crop growth: ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}. Winter: holds its growth stage until spring; no dying; sowing, tending and harvesting still allowed.`,
+        `Added: planter: 1 crop ${growthWords(PLANTER_GROWTH)} every season incl. winter, indoors or out (cotton growth stage: ${dur(CROPS.cotton.stageSeconds / PLANTER_GROWTH)}). Sow, tend, harvest, pull up from its menu; same seeds, growth stages, yields as a field; Farmer sow/harvest perks apply; ${rotation} reads the planter's last crop. Cannot be picked up while growing; empty: bare earth.`,
+        'Added: hovering over or sowing a field or planter shows real time to the next growth stage; a wintering field shows the wait for spring.',
         'Changed: Bounty affects crops (incl. planters) on your own settlements only, not others\'.',
       ];
     },
@@ -964,7 +970,7 @@ export const NEWS: News[] = [
     n: 63,
     day: '2026-09-28',
     lines: () => [
-      `Changed: last of a trade's ${num(PERK_TIER_AT.length)} perk tiers from 100 to ${PERK_TIER_AT[PERK_TIER_AT.length - 1]} main skill. Tiers after the first: ${listed(PERK_TIER_AT.slice(1).map(String))}.`,
+      `Changed: last of a trade's ${num(PERK_TIER_AT.length)} perk tiers from 100 to ${PERK_TIER_AT[PERK_TIER_AT.length - 1]} main skill. Perk tiers after the first: ${listed(PERK_TIER_AT.slice(1).map(String))}.`,
     ],
   },
   {
@@ -975,10 +981,10 @@ export const NEWS: News[] = [
       return [
         `Added: jetties: Plan jetty floor on an upper storey: floor ${num(JETTY_REACH)} tile past the footprint over open ground on your settlement, on a finished full-height wall of the storey below on the shared side (door counts; half wall, fence, railing do not). Costs as an inside floor; no heavier than the lightest wall or column under it carries. A storey above a jettied room floors out over it on the room's walls. Ground under a jetty stays open: no plans, planting, bridges, aqueducts, digging or raising; walkable. On piers, storeys count from the deck.`,
         'Added: a jetty open to its storey is part of it; walls, railings or columns on its outer sides close the storey. Roof over it on walls or columns only: each outer side needs a finished full-height wall, or at each end a finished column or full-height wall end (railings carry nothing). The supporting wall, and a wall whose end alone carries an end, stay up until columns take the roof; a column alone carrying an end stays until that side is walled or the roof is off. Behind a wall or door it is a balcony: outside the storey, no roof.',
-        'Added: jetty and column rows name their storey (Jetty of ‹house› (storey N), Plan column (‹corner› corner, storey N)). Every building job goes to the storey you are working on, island too; lower storeys workable from above; ground-floor stairs under an upper storey say to work on storey 2 or above. A finished full-height wall with a same-side wall of the storey above (once any of its materials are in) stays up until that wall comes down or a finished column at each end carries the side; likewise the last wall a jetty rests on.',
+        'Added: jetty and column rows name their storey (Jetty of ‹house› (storey N), Plan column (‹corner› corner, storey N)). Every building action goes to the storey you are working on, island too; lower storeys workable from above; ground-floor stairs under an upper storey say to work on storey 2 or above. A finished full-height wall with a same-side wall of the storey above (once any of its materials are in) stays up until that wall comes down or a finished column at each end carries the side; likewise the last wall a jetty rests on.',
         `Added: railings: wall type for open edges of upper storeys, jetties, balconies, finished pier decks and finished flat roofs (Plan railing round the roof); never on the ground. ${capital(frac(WALL_TYPE_BY_ID.get('railing')?.factor ?? 0))} of a solid wall's bill (log: ${bill(typeBill('log', 'railing'))}); ${metres(RAILING_HEIGHT * WALL_HEIGHT)} m high; see-through; finished: blocks crossing.`,
         `Added: columns: Plan column on a tile corner of a building, ${frac(COLUMN_SHARE)} of a solid wall's bill (log ${bill(columnBill('log'))}, marble ${bill(columnBill('marble'))}); on the ground, a finished pier deck or a finished floor of its storey; never glass; on piers no heavier than the lightest deck (which must carry the heaviest column and wall). On the ground it takes each adjacent tile's corner spot: no furniture, smelter or kiln there, no column over furniture there. A side with a finished column at each end is closed like a wall: columns on every corner plus a roof = open hall; a row = colonnade; storeys can rise on them. Counts toward what may be raised over it and storey count as a wall of its material. Comes down only if it does not carry a side with no full-height wall under a floor or roof; the refusal names that side. Drawn as a pilaster where walls meet.`,
-        `Added: under a roof on columns, decay ${frac(INDOORS_DECAY)} of outdoors, as in a room. Beds there count as outdoors: the ×${INDOORS_REST} indoor rest needs walls all round.`,
+        `Added: under a roof on columns, decay ${frac(INDOORS_DECAY)} of outdoors, as in a room. Beds there count as outdoors: indoor rest (×${INDOORS_REST} of outdoors) needs walls all round.`,
         'Added: Examine on a tile names any jetty or balcony over it, its corner columns, and what an unfinished one needs.',
       ];
     },
@@ -1011,7 +1017,7 @@ export const NEWS: News[] = [
       const tile = listed(Object.entries(floorBill(GLASS_ROOF.id, 'roof', shape).total).map(([id, n]) => `${n} ${materialName(id, n)}`));
       return [
         `Added: glass roof in Plan roof: ${tile} per tile of the ${roofShapeDef(undefined).name.toLowerCase()} roof; mallet, carpentry. Roofs only.`,
-        `Added: glasshouse: 1 storey, walled all round at full height, every footprint tile under finished glass. Till ground-floor tiles with no floor planned or slab poured; sow, tend, harvest as fields (Farmer patches, perks and Bounty apply). Growth ${growthWords(GLASSHOUSE_GROWTH)} every season incl. winter: cotton stage ${dur(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} all year. While it has a field: no floor over the field, no roof but glass, no storey above, until Clear the field packs the ground.`,
+        `Added: glasshouse: 1 storey, walled all round at full height, every footprint tile under finished glass. Till ground-floor tiles with no floor planned or slab poured; sow, tend, harvest as fields (Farmer patches, perks and Bounty apply). Growth ${growthWords(GLASSHOUSE_GROWTH)} every season incl. winter: cotton growth stage ${dur(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} all year. While it has a field: no floor over the field, no roof but glass, no storey above, until Clear the field packs the ground.`,
         `Added: on the last pane or wall, crops carry on from their progress at glasshouse pace; removing a roof tile or wall, or adding a footprint tile, returns them to field pace. A glasshouse is indoors: decay ${frac(INDOORS_DECAY)} of outdoors.`,
       ];
     },
@@ -1038,7 +1044,7 @@ export const NEWS: News[] = [
       return [
         `Added: portcullis: wall type for a ground-floor wall of ${listed(stones)}; double-door-wide gateway; iron grille ${billWords(WALL_TYPE_BY_ID.get('portcullis')?.fittings ?? [], true)} on top of the stone bill. Raise the portcullis ${gateJobWords('raise_portcullis', goSeconds)}, Lower the portcullis ${gateJobWords('lower_portcullis', goSeconds)}, either side, within ${num(portReach)} tile${portReach === 1 ? '' : 's'} of the adjacent tile. Down: blocks people, carts and wildermon; see-through. Up: everything passes, carts included.`,
         `Added: drawbridge: plank bridge, open ground to open ground, at most ${num(BRIDGES.draw.span)} tiles of deck; ${billWords(BRIDGES.draw.bill, true)} a span, first span +${billWords(BRIDGES.draw.winch ?? [], true)} for gallows and winch. ${winchReach === 0 ? 'On the tile it was set out from' : `Within ${num(winchReach)} tiles of the tile it was set out from`}: Raise the drawbridge ${gateJobWords('raise_drawbridge', goSeconds)}, Lower the drawbridge ${gateJobWords('lower_drawbridge', goSeconds)}. Up: no crossing or seeing past; anyone on the deck drops to what is under it. Down: ${BRIDGES.draw.carts ? 'carts can cross' : 'foot traffic only'}. No winch under a jetty and no jetty over a winch (the gallows exceed a storey).`,
-        `Added: hidden door: exactly a solid wall's bill and look. Plan wall, Hidden door plans what everyone else sees as a solid wall: ${dur(goSeconds(planWall?.baseTime ?? 0))}, ${percent(planWall?.stamina ?? 0)} stamina; on finishing it takes ${billWords(HIDDEN_DOOR_IRON, true)} and the padlock becomes its key. Each request is for 1 side of 1 tile, kept only if its plan is started or queued, then while a wall plan on that side is in hand or queued (several can queue). Walking away pauses it and keeps the request; Esc clears it with the jobs. The next solid wall you plan on that side, on your working storey, is the door. Unused after ${dur(HIDDEN_DOOR_LAPSE)}: lapses, the plan is a solid wall. Key holder and settlement founder see a door with a dashed seam and keyhole; to everyone else it is a solid wall, and their island browser is told nothing else.`,
+        `Added: hidden door: exactly a solid wall's bill and look. Plan wall, Hidden door plans what everyone else sees as a solid wall: ${dur(goSeconds(planWall?.baseTime ?? 0))}, ${percent(planWall?.stamina ?? 0)} stamina; on finishing it takes ${billWords(HIDDEN_DOOR_IRON, true)} and the padlock becomes its key. Each request is for 1 side of 1 tile, kept only if its plan is started or queued, then while a wall plan on that side is in hand or queued (several can queue). Walking away pauses it and keeps the request; Esc clears it with the queued actions. The next solid wall you plan on that side, on your working storey, is the door. Unused after ${dur(HIDDEN_DOOR_LAPSE)}: lapses, the plan is a solid wall. Key holder and settlement founder see a door with a dashed seam and keyhole; to everyone else it is a solid wall, and their island browser is told nothing else.`,
         'Added: padlock on a portcullis or drawbridge winch: only the key holder and the settlement founder can raise, lower or demolish it.',
         'Changed: every new bridge starts and ends on open ground, a finished pier deck or a finished upper floor (jetties included); never inside a ground-floor building on the ground, never on another bridge\'s end, never through a wall (from a storey or deck it exits through a doorway, archway or open side). No building on a tile a bridge lands on.',
         `Fixed: ${pull} on an island returned an error. Changed: if either end is on a settlement, only its builders may ${pull?.toLowerCase()} (not guests); elsewhere anyone. Within ${PULL_REACH} tiles of the middle of either end. ${ACTION_BY_ID.get('demolish_aqueduct')?.label}: same 2 rules.`,
@@ -1051,7 +1057,7 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: shop counter: wall type with a market stall, ${frac(counterType()?.factor ?? 1)} of a solid wall's material plus ${countOf('hinge', counterType()?.fittings?.find(([id]) => id === 'hinge')?.[1] ?? 0, true)}. Outside ground-floor wall with no building across it. Holds ${num(COUNTER_HOLDS)} items priced on the Market window's Stall tab; sells to the street only, within ${COUNTER_REACH} tiles of its middle, not to anyone inside a building; silver held in its till for the planner.`,
       `Added: lantern post (${skillOf('make_lamp_post')}) and lantern pillar (${skillOf('make_lamp_pillar')}): fixed lantern; takes candles; light and put out as in hand; at night lights the ground to the lantern's reach, ${num(lanternReach(1))} to ${num(lanternReach(100))} tiles, for everyone. Padlock: lantern removable by key holder only; anyone may light it.`,
-      `Fixed: island lantern candles burned at ${mult(WORLD_PACE)} speed; now ${dur(candleBurn(1))} to ${dur(candleBurn(100))} by lantern quality. Fixed: a light taken off a brazier or lantern post said "oven". Added: an unlit lantern with no flame near names what lights it: a burning ${flameSources()}.`,
+      `Fixed: island lantern candles burned at burn speed ${mult(WORLD_PACE)}; now ${dur(candleBurn(1))} to ${dur(candleBurn(100))} by lantern quality. Fixed: a light taken off a brazier or lantern post said "oven". Added: an unlit lantern with no flame near names what lights it: a burning ${flameSources()}.`,
       'Changed: overlapping night light glows draw the stronger, not the sum.',
     ],
   },
@@ -1061,9 +1067,9 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: swing time per weapon before skill (s): ${[...WEAPONS].filter((w) => !w.ammo).sort((a, b) => a.swing - b.swing).map((w) => `${itemDef(w.id).name.toLowerCase()} ${w.swing}`).join(', ')}; bare hands ${FIST.swing}. Bows draw at their own pace likewise.`,
       `Added: each swing or draw costs ${pct(SWING_WIND)} stamina +${pct(SWING_WIND_KG)} per kg in hand. Below ${pct(TIRED_AT)} stamina swings slow, up to ${pct(TIRED_SLOW)} slower at zero.`,
-      `Changed: targets that do not flee fight back on their own clock: hunters and monsters every ${BLOW_HUNTER} s, defensive kinds every ${BLOW_DEFENSIVE} s, others every ${BLOW_PREY} s. They follow up to ${FIGHT_LEASH} tiles from where struck, and give up at ${FIGHT_GIVE_UP} tiles. Removed: a counter-roll on each of your swings.`,
+      `Changed: targets that do not flee fight back on their own clock: hunters and monsters every ${BLOW_HUNTER} s, defensive kinds every ${BLOW_DEFENSIVE} s, others every ${BLOW_PREY} s. They follow up to ${FIGHT_LEASH} tiles from where struck, and give up at ${FIGHT_GIVE_UP} tiles. Removed: a counter-attack check on each of your swings.`,
       `Added: stances (button beside the health bar, or \`): ${FIGHT_STANCES.map((st) => `${FIGHT_STANCE_NAMES[st]}, ${stanceSays(st).toLowerCase()}`).join(' ')}`,
-      `Added: left-click a creature after you, or a hunt-on-sight kind, to fight it; you follow up to ${FOLLOW_RANGE} tiles. Tab marks the nearest foe within ${TARGET_RANGE} tiles; Space attacks it. Fights jump to the front of the job queue.`,
+      `Added: left-click a creature after you, or a hunt-on-sight kind, to fight it; you follow up to ${FOLLOW_RANGE} tiles. Tab marks the nearest foe within ${TARGET_RANGE} tiles; Space attacks it. Fights jump to the front of the action queue.`,
       `Changed: walking leaves a fight: a ground click cancels the queued swing-back; a bite while walking does not turn you. A bite turns you to the biter after ${FIGHT_BACK_STILL} s standing still; toggle in Settings, Fighting.`,
     ],
   },
@@ -1071,7 +1077,7 @@ export const NEWS: News[] = [
     n: 72,
     day: '2026-10-03',
     lines: () => [
-      `Added: heavy blows: ${Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`).join(', ')} every ${HEAVY_EVERY} blows. Red ring shows the reach for ${WIND_UP} s; anything inside takes ${HEAVY_HIT}× the blow.`,
+      `Added: heavy blows: ${Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`).join(', ')} every ${HEAVY_EVERY} blows. Red ring shows the reach for ${WIND_UP} s; anything inside takes ×${HEAVY_HIT} the damage of a normal blow.`,
       `Added: blow types: ${blowSays('cut')} cut, ${blowSays('pierce')} puncture, ${blowSays('crush')} crush. ${HIDES.map((h) => `${HIDE_NAMES[h]} (${Object.values(SPECIES).filter((d) => d.hide === h).map((d) => d.name.toLowerCase()).join(', ')}): ${hideSays(h)}.`).join(' ')}`,
       `Added: armour by blow type: ${(Object.keys(ARMOUR_VS) as Array<keyof typeof ARMOUR_VS>).map((c) => `${c} ${armourSays(c)}`).join('; ')}.`,
       `Added: maul hit ${sideOf(WEAPON_BY_ID.get('maul')!)}; spear ${sideOf(WEAPON_BY_ID.get('spear')!)}; knife ${sideOf(WEAPON_BY_ID.get('hunting_knife')!)}, never taking the last of it.`,
@@ -1088,7 +1094,7 @@ export const NEWS: News[] = [
     day: '2026-10-03',
     lines: () => [
       `Added: packs: ${listed(Object.values(SPECIES).filter((d) => d.pack).map((d) => `${d.name.toLowerCase()}s`))} share a home, up to ${PACK_MOST}. When one has your scent, all of its kind within ${PACK_CALL} tiles come; they circle at ${CIRCLE_R} tiles then close in from their sides.`,
-      `Added: throwers: ${listed(Object.values(SPECIES).filter((d) => d.throws).map((d) => `${d.name.toLowerCase()}s`))} keep ${KEEP_OFF} tiles off, throw from up to ${THROW_REACH} for ${pct(THROW_HIT)} of a blow; closer than ${KEEP_OFF - BACK_SLACK} they back off at ${pct(BACK_PACE)} of walk speed.`,
+      `Added: throwers: ${listed(Object.values(SPECIES).filter((d) => d.throws).map((d) => `${d.name.toLowerCase()}s`))} keep ${KEEP_OFF} tiles off, throw from up to ${THROW_REACH} for ${pct(THROW_HIT)} of a blow's damage; closer than ${KEEP_OFF - BACK_SLACK} they back off at ${pct(BACK_PACE)} of walk speed.`,
       `Added: fleeing: hunters below ${pct(HUNTER_TURN)} health, monsters below ${pct(MONSTER_TURN)}, ${listed(Object.values(SPECIES).filter((d) => d.coward).map((d) => `${d.name.toLowerCase()}s`))} below ${pct(COWARD_AT)}, or ${pct(COWARD_DRAG)} once a nearby one of their kind has fled. Killing or routing a pack leader routs the pack.`,
       `Added: companion orders, any distance: Attack my target (${defaultKey('pet_attack')}, or Set … on it from a wild one's menu), any stance; Fall back (${defaultKey('pet_back')}): no fighting for ${FALL_BACK} s; Guarding you stance: attacks anything hunting you within ${COMPANION_SIGHT} tiles, stays within ${GUARD_RANGE} tiles. Dashed blue line to its target.`,
       `Added: bows while moving: walking continues a draw at ${pct(DRAW_WALK)} speed; keeps loosing while in range. Target line fills with the draw: amber in range, grey out.`,
@@ -1098,10 +1104,10 @@ export const NEWS: News[] = [
     n: 74,
     day: '2026-10-03',
     lines: () => [
-      `Added: dodge: each creature hit is first rolled against ${finePercent(DODGE_PER_CONTROL)} per body control point above the starting ${DODGE_FROM}, −${finePercent(DODGE_PER_KG)} per kg of armour worn. Dodged: no damage; trains body control.`,
-      `Added: critical hits: ${percent(CRIT_BASE)} +${finePercent(CRIT_PER_SKILL)} per weapon subskill point, ${mult(CRIT_KNIFE)} with a knife; +${percent(CRIT_HIT - 1)} damage. Shown larger, in orange.`,
+      `Added: dodge: each creature hit first has a dodge chance of ${finePercent(DODGE_PER_CONTROL)} per body control point above the starting ${DODGE_FROM}, −${finePercent(DODGE_PER_KG)} per kg of armour worn. Dodged: no damage; trains body control.`,
+      `Added: critical hits: ${percent(CRIT_BASE)} +${finePercent(CRIT_PER_SKILL)} per weapon subskill point, crit chance ${mult(CRIT_KNIFE)} with a knife; +${percent(CRIT_HIT - 1)} damage. Shown larger, in orange.`,
       `Added: arrow heads (fletched like arrows): broadhead: bleed ${percent(KNIFE_BLEED)} of the shot/s for ${KNIFE_BLEED_SECS} s; bodkin: +${percent(BODKIN_HIDE - 1)} on thick hide, shell or scales; blunt: crush, interrupts a heavy blow, delays the next by ${STAGGER_MAUL} s. Shoot these first on an arrow stack picks the kind.`,
-      `Added: venom: ${listed(Object.values(SPECIES).filter((d) => d.venom).map((d) => `${d.name.toLowerCase()}`))} bites drain ${percent(VENOM_DRAIN)} health/s for ${VENOM_SECS} s while undressed. Armour wear from burns ${mult(BURN_WEAR)}.`,
+      `Added: venom: ${listed(Object.values(SPECIES).filter((d) => d.venom).map((d) => `${d.name.toLowerCase()}`))} bites drain ${percent(VENOM_DRAIN)} health/s for ${VENOM_SECS} s while undressed. Armour wear from burns ${mult(BURN_WEAR)} that of other blows.`,
       `Added: threat: a creature switches to your companion when it strikes, after ${THREAT_HOLD} s without damage from you (at once if Guarding you), and back the same way. While on your companion it does not count as on you.`,
       `Added: Consider (Examine on a wild creature, and the target panel): approx. your blows to down it and its blows to down you; Easy (it needs ${mult(CONSIDER_EASY)} the time or more), Hard (under ${percent(CONSIDER_HARD)} as long) or Even.`,
     ],
@@ -1110,7 +1116,7 @@ export const NEWS: News[] = [
     n: 75,
     day: '2026-10-04',
     lines: () => [
-      `Added: patrons: at ${PATRON_AT} faith take ${PATRONS.map((p) => `${p.name} (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`).join(', ').replace(/, ([^,]*)$/, ' or $1')}, permanently, in the Faith window. ${SPELLS_PER_TIER} spells at each of ${FAITH_TIER_AT.length} tiers (${FAITH_TIER_AT.join(', ')} faith), 1 per tier. Blessing's spells next.`,
+      `Added: patrons: at ${PATRON_AT} faith take ${PATRONS.map((p) => `${p.name} (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`).join(', ').replace(/, ([^,]*)$/, ' or $1')}, permanently, in the Faith window. ${SPELLS_PER_TIER} spells at each of ${FAITH_TIER_AT.length} faith tiers (${FAITH_TIER_AT.join(', ')} faith), 1 per faith tier. Blessing's spells next.`,
       `Added: spell bar (bottom middle): ${BAR_SLOTS} slots, ${(['class', 'faith', 'path'] as const).map((s) => `${slotsFor(s)} ${SCHOOL_NAMES[s].toLowerCase()}`).join(', ')}. Click or Shift+number to cast; right-click to assign.`,
       'Changed: Prayer skill renamed Faith. No other change.',
     ],
@@ -1127,24 +1133,24 @@ export const NEWS: News[] = [
     n: 77,
     day: '2026-10-04',
     lines: () => [
-      `Added: Blessing spells, ${SPELLS_PER_TIER} per tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'blessing').map((s) => s.name))}. Exact effects in the Faith window.`,
-      `Added: patron at ${PATRON_AT} faith; 1 spell per tier as faith reaches it; ${num(slotsFor('faith'))} on the spell bar.`,
+      `Added: Blessing spells, ${SPELLS_PER_TIER} per faith tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'blessing').map((s) => s.name))}. Exact effects in the Faith window.`,
+      `Added: patron at ${PATRON_AT} faith; 1 spell per faith tier as faith reaches it; ${num(slotsFor('faith'))} on the spell bar.`,
     ],
   },
   {
     n: 78,
     day: '2026-10-04',
     lines: () => [
-      `Added: Justice spells, ${SPELLS_PER_TIER} per tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'justice').map((s) => s.name))}. Exact effects in the Faith window.`,
-      'Added: per tier: 1 spell judges its target, 1 keeps order in a fight, 1 measures. Oath binds friends only; Restitution returns your latest grave\'s contents.',
+      `Added: Justice spells, ${SPELLS_PER_TIER} per faith tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'justice').map((s) => s.name))}. Exact effects in the Faith window.`,
+      'Added: per faith tier: 1 spell judges its target, 1 keeps order in a fight, 1 measures. Oath binds friends only; Restitution returns your latest grave\'s contents.',
     ],
   },
   {
     n: 79,
     day: '2026-10-04',
     lines: () => [
-      `Added: Chaos spells, ${SPELLS_PER_TIER} per tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'chaos').map((s) => s.name))}. Exact effects in the Faith window.`,
-      'Added: per tier: 1 spell ruins, 1 dreads, 1 is a bargain paid in your health or items instead of favour. None target another person.',
+      `Added: Chaos spells, ${SPELLS_PER_TIER} per faith tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'chaos').map((s) => s.name))}. Exact effects in the Faith window.`,
+      'Added: per faith tier: 1 spell ruins, 1 dreads, 1 is a bargain paid in your health or items instead of favour. None target another person.',
     ],
   },
   {
@@ -1181,8 +1187,8 @@ export const NEWS: News[] = [
       const banks = (v: number): number => Math.round(prayerWorth(altar, PRAYER_PEAKS[0], v));
       return [
         `Added: Prayer skill, starting at ${low}. Per prayer at ${low}: Prayer approx. +${skillGain(low, tryGain(true), 1).toFixed(1)}, Faith approx. +${skillGain(low, PRAYER_GAIN, 1).toFixed(1)}.`,
-        `Changed: favour banked per prayer set by Prayer, not Faith: QL ${altar} altar at ${String(PRAYER_PEAKS[0]).padStart(2, '0')}:00: ${banks(low)} at Prayer ${low}, ${banks(high)} at Prayer ${high}.`,
-        `Changed: Faith sets max favour: ${Math.floor(favourCap(low))} at Faith ${low}, ${Math.floor(favourCap(high))} at Faith ${high}.`,
+        `Changed: favour banked per prayer set by Prayer, not Faith: QL ${altar} altar at ${String(PRAYER_PEAKS[0]).padStart(2, '0')}:00: ${banks(low)} favour at Prayer ${low}, ${banks(high)} favour at Prayer ${high}.`,
+        `Changed: Faith sets max favour: ${Math.floor(favourCap(low))} favour at Faith ${low}, ${Math.floor(favourCap(high))} favour at Faith ${high}.`,
       ];
     },
   },
@@ -1205,7 +1211,7 @@ export const NEWS: News[] = [
       const go = (v: number): string => skillGain(v, tryGain(true), 1).toFixed(v < 50 ? 2 : 3);
       return [
         `Changed: all skill gain to ${frac(GAIN_RATE)} of before (players, workers, wildermon); skill already learned is kept.`,
-        `Changed: a successful go approx. +${go(1)} at level 1, +${go(50)} at 50, +${go(90)} at 90; the last point takes about ${num(Math.round(1 / (MIN_GAIN * GAIN_RATE)))} goes.`,
+        `Changed: a successful action approx. +${go(1)} at level 1, +${go(50)} at 50, +${go(90)} at 90; the last point takes about ${num(Math.round(1 / (MIN_GAIN * GAIN_RATE)))} actions.`,
       ];
     },
   },
@@ -1224,10 +1230,10 @@ export const NEWS: News[] = [
       const blade = CLASSES.find((c) => c.id === 'blade');
       const first = perksOf('blade').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `Changed: ${blade?.name} from a tree to spells and passives: ${num(CLASS_TIER_AT.length)} tiers, each offering `
-          + `${num(PERKS_PER_TIER - 1)} spells and a passive, take 1. Removed: its tree and bought nodes. Rite kept, above the tiers.`,
-        `Added: tiers open on class level: ${CLASS_LEVEL_START} on taking it up, then ${listed(CLASS_TIER_AT.slice(1).map(String))}. `
-          + `Class level rises per landed blow while you hold the trade, on the skill curve; a kill counts ${num(1 + CLASS_LEARN_KILL / CLASS_LEARN_BLOW)} times as much.`,
+        `Changed: ${blade?.name} from a tree to spells and passives: ${num(CLASS_TIER_AT.length)} class tiers, each offering `
+          + `${num(PERKS_PER_TIER - 1)} spells and a passive, take 1. Removed: its tree and bought nodes. Rite kept, above the class tiers.`,
+        `Added: class tiers open on class level: ${CLASS_LEVEL_START} on taking it up, then ${listed(CLASS_TIER_AT.slice(1).map(String))}. `
+          + `Class level rises per landed blow while you hold the class, on the skill curve; a kill counts ${num(1 + CLASS_LEARN_KILL / CLASS_LEARN_BLOW)} times as much.`,
         first ? `Added: ${num(classSpellsOf('blade').length)} spells in the spell bar's class slots, paid in stamina. ${first.name}: ${spellTerms(first)} ${first.note}` : '',
         'Added: a creature turned on you by Summons or Challenge stays on you for its full duration however often you strike it.',
       ].filter(Boolean);
@@ -1242,10 +1248,10 @@ export const NEWS: News[] = [
       const wants = spells.filter((sp) => sp.needs).map((sp) => sp.name);
       return [
         `Changed: Berserker from a tree to ${num(spells.length)} spells and ${num(perksOf('berserker').length - spells.length)} passives `
-          + `in ${num(CLASS_TIER_AT.length)} tiers on class level, as Sworn Blade. Removed: its tree and bought nodes. Rite kept.`,
+          + `in ${num(CLASS_TIER_AT.length)} class tiers on class level, as Sworn Blade. Removed: its tree and bought nodes. Rite kept.`,
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
         wants.length ? `Added: ${listed(wants)} need the named weapon in hand; refused without it.` : '',
-        'Added: a fighting-trade spell blow also has its weapon\'s swing effect: maul staggers, spear holds off, knife opens it up.',
+        'Added: a fighting-class spell blow also has its weapon\'s swing effect: maul staggers, spear holds off, knife opens it up.',
       ].filter(Boolean);
     },
   },
@@ -1257,7 +1263,7 @@ export const NEWS: News[] = [
       const first = perksOf('pikeman').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
         `Changed: Pikeman from a tree to ${num(spells.length)} spells and ${num(perksOf('pikeman').length - spells.length)} passives `
-          + `in ${num(CLASS_TIER_AT.length)} tiers on class level, as Sworn Blade and Berserker. Removed: its tree and bought nodes. `
+          + `in ${num(CLASS_TIER_AT.length)} class tiers on class level, as Sworn Blade and Berserker. Removed: its tree and bought nodes. `
           + 'Rite kept.',
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
         'Fixed: offline, Berserker\'s Executioner and Pain Fuels count on every landed blow, as on an island.',
@@ -1272,7 +1278,7 @@ export const NEWS: News[] = [
       const first = perksOf('archer').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
         `Changed: Archer from a tree to ${num(spells.length)} spells and ${num(perksOf('archer').length - spells.length)} passives `
-          + `in ${num(CLASS_TIER_AT.length)} tiers on class level, as Sworn Blade, Berserker and Pikeman. Removed: its tree and `
+          + `in ${num(CLASS_TIER_AT.length)} class tiers on class level, as Sworn Blade, Berserker and Pikeman. Removed: its tree and `
           + 'bought nodes. Rite kept.',
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
       ].filter(Boolean);
@@ -1286,7 +1292,7 @@ export const NEWS: News[] = [
       const first = perksOf('skirmisher').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
         `Changed: Skirmisher from a tree to ${num(spells.length)} spells and `
-          + `${num(perksOf('skirmisher').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class level, `
+          + `${num(perksOf('skirmisher').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} class tiers on class level, `
           + 'as Sworn Blade, Berserker, Pikeman and Archer. Removed: its tree and bought nodes. Rite kept.',
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
       ].filter(Boolean);
@@ -1300,7 +1306,7 @@ export const NEWS: News[] = [
       const first = perksOf('chirurgeon').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
         `Changed: Chirurgeon from a tree to ${num(spells.length)} spells and `
-          + `${num(perksOf('chirurgeon').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class level, `
+          + `${num(perksOf('chirurgeon').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} class tiers on class level, `
           + 'as Sworn Blade, Berserker, Pikeman, Archer and Skirmisher. Removed: its tree and bought nodes. '
           + 'Rite kept.',
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
@@ -1316,7 +1322,7 @@ export const NEWS: News[] = [
       const first = perksOf('beastmaster').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
         `Changed: Beastmaster from a tree to ${num(spells.length)} spells and `
-          + `${num(perksOf('beastmaster').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + `${num(perksOf('beastmaster').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} class tiers on class `
           + 'level, as Sworn Blade, Berserker, Pikeman, Archer, Skirmisher and Chirurgeon. Removed: its tree '
           + 'and bought nodes. Rite kept.',
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
@@ -1333,7 +1339,7 @@ export const NEWS: News[] = [
       const before = CLASSES.filter((c) => c.kind === 'combat' && c.id !== 'kindler' && PERK_CLASSES.has(c.id)).map((c) => `the ${c.name}’s`);
       return [
         `Changed: Kindler from a tree to ${num(spells.length)} spells and `
-          + `${num(perksOf('kindler').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + `${num(perksOf('kindler').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} class tiers on class `
           + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept.`,
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
         'Added: Kindler spells cast from the best garnet or ruby focus in your pack, no wear; each cast trains kindling, '
@@ -1350,7 +1356,7 @@ export const NEWS: News[] = [
       const before = CLASSES.filter((c) => c.kind === 'combat' && c.id !== 'binder' && PERK_CLASSES.has(c.id)).map((c) => `the ${c.name}’s`);
       return [
         `Changed: Binder from a tree to ${num(spells.length)} spells and `
-          + `${num(perksOf('binder').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + `${num(perksOf('binder').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} class tiers on class `
           + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept.`,
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
         'Added: Binder spells cast from the best sapphire or diamond focus in your pack, no wear; each cast trains binding, '
@@ -1372,8 +1378,8 @@ export const NEWS: News[] = [
       const aegis = spellDef('aegis')!;
       return [
         `Changed: Warder from a tree to ${num(spells.length)} spells and `
-          + `${num(perksOf('warder').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
-          + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept. No trade uses a tree now.`,
+          + `${num(perksOf('warder').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} class tiers on class `
+          + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept. No class or trade uses a tree now.`,
         first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
         'Added: Warder spells cast from the best topaz or emerald focus in your pack, no wear; each cast trains warding, '
           + 'as Aegis does.',
@@ -1417,10 +1423,10 @@ export const NEWS: News[] = [
         const p = PERK_BY_ID.get(id)!;
         const cls = CLASSES.find((c) => c.id === p.class)!;
         const at = tiersAtFor(cls.kind)[p.tier - 1];
-        return `${cls.name}, ${p.name}, tier ${p.tier} (at ${cls.kind === 'combat' ? 'class level' : 'skill'} ${at}): ${p.note}`;
+        return `${cls.name}, ${p.name}, perk tier ${p.tier} (at ${cls.kind === 'combat' ? 'class level' : 'skill'} ${at}): ${p.note}`;
       };
       return [
-        'Changed: some class perks. A taken perk that moved or was removed reopens its tier.',
+        'Changed: some class perks. A taken perk that moved or was removed reopens its perk tier.',
         `Added: ${said('smith_masters_mark')} Replaces Long Shift.`,
         `Added: ${said('cook_quick_kitchen')} Replaces the Cook’s Cool Pack.`,
         `Added: ${said('binder_hard_edges')} Replaces Unmoved.`,
@@ -1478,7 +1484,7 @@ export const NEWS: News[] = [
     lines: () => REGIONS.filter((R) => R.monsters || R.treeless).flatMap((R) => [
       ...(R.treeless ? [`Changed: no trees grow or seed by themselves on the ${R.name.replace(/^The /, '')}.`] : []),
       ...(R.monsters ? [`Changed: every wild creature that fights back on the ${R.name.replace(/^The /, '')} is a monster, never a wildermon, at ${mult(R.monsters)} `
-        + `the rest of the chart's share of each: ${listed(MONSTERS.map(([id]) => `${num((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}.`] : []),
+        + `the rest of the chart's count of each: ${listed(MONSTERS.map(([id]) => `${num((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}.`] : []),
     ]),
   },
   {
@@ -1490,8 +1496,8 @@ export const NEWS: News[] = [
         + `${percent(coinPurity(0))} at the bottom of the scale, linear between.`,
       `Changed: gold only from under the mountain of the ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => R.name.replace(/^The /, '')).join(' and ')}. `
         + 'Removed: gold from panning, hoards and chests. Gold seams elsewhere are now iron.',
-      `Added: foraging finds a gold coin 1 go in ${num(COIN_FIND_ONE_IN)}, up to ${num(COIN_FINDS_A_DAY)} a day per person. `
-        + 'Deed foraging workers never find one.',
+      `Added: foraging finds a gold coin 1 action in ${num(COIN_FIND_ONE_IN)}, up to ${num(COIN_FINDS_A_DAY)} a day per person. `
+        + 'Settlement foraging workers never find one.',
     ],
   },
   {
@@ -1500,7 +1506,7 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: trees and bushes drawn from a cached picture at exact screen size, leaning as grown; wind sway in whole pixels.',
       `Changed: sea swell painted ${num(SWELL_RATE)} times a second, moved with the view between, not every frame.`,
-      'Changed: close-up people and wildermon redrawn as often as distant ones (was ×2 as often).',
+      'Changed: close-up people and wildermon redrawn as often as distant ones (was twice as often).',
       `Added: Settings, Show drawing times: ms per frame under the frame rate for the ground, ${listed(Object.keys(LAYERS))}; `
         + `Measure each layer: omits each for ${num(TRIAL_SECONDS)} second in turn and records the frame rate without it.`,
     ],
@@ -1550,7 +1556,7 @@ export const NEWS: News[] = [
     day: '2026-10-09',
     lines: () => [
       `Changed: walk speed on open ground from 2.4 to ${Number(BASE_SPEED.toFixed(2))} tiles/s, matching the drawn stride (planted feet stay put). Roads, wading, swimming, slopes, wounds, load, `
-        + 'drawing a bow and Hit and Run keep the same share of this pace.',
+        + 'drawing a bow and Hit and Run keep the same % of this pace.',
       `Changed: jogging and running lengthen strides as well as quicken them, up to ${mult(strideAt(1) / strideAt(0))} `
         + 'walking stride length at a flat run; feet stay planted. Mounts, carts, wagons, boats, wildermon and monsters unchanged.',
     ],
@@ -1559,7 +1565,7 @@ export const NEWS: News[] = [
     n: 110,
     day: '2026-10-10',
     lines: () => [
-      `Added: mote swirls: at each turn of the woods the day's swirls go and ${num(SWIRLS_A_DAY)} new ones appear anywhere, `
+      `Added: mote swirls: at each ${RESET} the day's swirls go and ${num(SWIRLS_A_DAY)} new ones appear anywhere, `
         + 'land or water, never on a tree or inside a building.',
       `Added: swirl element: water on water; on land dark ${percent(SWIRL_DARK)}, light ${percent(SWIRL_LIGHT)}, else `
         + `the island's element: ${listed(REGIONS.map((R) => `${ISLAND_ELEMENT[R.key]} on ${R.name.replace(/^The /, 'the ')}`))}.`,
@@ -1581,7 +1587,7 @@ export const NEWS: News[] = [
         `Changed: dye is a liquid in a bucket or barrel, boiled in 3 primaries: ${listed(PRIMARIES.map((p) => `${p} from ${from(p)}`))}. `
           + `A boil turns a bucket of lye into ${num(was.boil)} L of dye at the alchemy QL `
           + `(was ${num(LEGACY_POTS)} pots of 1 of ${num(LEGACY_DYES.length)} colours). Removed: dye from ${listed(gone)}; their other uses unchanged.`,
-        'Added: mixing by pouring: dye into a barrel of dye mixes, primary shares and QL averaged by litres. '
+        'Added: mixing by pouring: dye into a barrel of dye mixes, primary % and QL averaged by litres. '
           + 'Dye mixes only with dye. A bucket fills from a dye barrel (less than full if that is all there is); '
           + 'a part-full dye bucket tops up from one, mixing.',
         `Added: dye QL is brightness: black at QL ${DYE_QL_BLACK}, the pure mix at ${DYE_QL_PURE}, white at ${DYE_QL_WHITE}, linear between. `
@@ -1601,21 +1607,21 @@ export const NEWS: News[] = [
     n: 112,
     day: '2026-10-10',
     lines: () => [
-      `Changed: knack rolls for ${listed(KNACK_BY_LEARNING.map((k) => SKILL_BY_ID.get(k)?.name.toLowerCase() ?? k))} (raised in small steps while moving) from a whole go's odds (1 in ${num(KNACK_ODDS)}) `
-        + `to the share of a go each step teaches: `
+      `Changed: knack checks for ${listed(KNACK_BY_LEARNING.map((k) => SKILL_BY_ID.get(k)?.name.toLowerCase() ?? k))} (raised in small steps while moving) from a whole action's chance (1 in ${num(KNACK_ODDS)}) `
+        + `to the % of an action each step teaches: `
         + `a second in deep water ${percent(SWIM_LEARN / KNACK_GO)}, a tile driven ${percent(DRIVING_LEARN / KNACK_GO)}, a tile sailed ${percent(SAILING_LEARN / KNACK_GO)}, `
         + `a steep step climbed ${percent((CLIMB_LEARN + CLIMB_LEARN_FROM * CLIMB_LEARN_STEEP) / KNACK_GO)} to ${percent((CLIMB_LEARN + CLIMB_LEARN_STEEP) / KNACK_GO)}.`,
       `Changed: 1 knack per ${Math.round(KNACK_ODDS * KNACK_GO / SWIM_LEARN).toLocaleString('en')} s of swimming (was 1 in ${num(KNACK_ODDS)}); `
-        + `1 per ${Math.round(KNACK_ODDS * KNACK_GO / DRIVING_LEARN).toLocaleString('en')} tiles driven or sailed. Other trades unchanged. Earned knacks kept.`,
+        + `1 per ${Math.round(KNACK_ODDS * KNACK_GO / DRIVING_LEARN).toLocaleString('en')} tiles driven or sailed. Other skills unchanged. Earned knacks kept.`,
     ],
   },
   {
     n: 113,
     day: '2026-10-10',
     lines: () => [
-      `Added: repeat key (${defaultKey('repeat')}): repeats the last job: same action, same target, same count. `
-        + 'Queued like any job: lines up behind the current one, walks to its target, refused for the same reasons.',
-      'Added: if the last job\'s stack is gone, another of the same kind in your pack is used. Names or confirmations are asked again. '
+      `Added: repeat key (${defaultKey('repeat')}): repeats the last action: same action, same target, same count. `
+        + 'Queued like any action: lines up behind the current one, walks to its target, refused for the same reasons.',
+      'Added: if the last action\'s stack is gone, another of the same kind in your pack is used. Names or confirmations are asked again. '
         + 'Rebind in Settings, Keys.',
     ],
   },
@@ -1626,14 +1632,14 @@ export const NEWS: News[] = [
       // What this entry was about, which later entries moved past: Knowledge alone, with Love and Power still on their steps (115).
       const moved = [PATHS.knowledge];
       return [
-        `Changed: meditation path chosen at ${CHOOSE_AT} meditation, where its first tier opens. Existing choices kept regardless of meditation.`,
-        `Added: Calm: each sitting banks ${SIT_CALM}× the spot multiplier. Max Calm follows favour's curve on meditation, `
-          + `${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m}`))}; no regeneration.`,
+        `Changed: meditation path chosen at ${CHOOSE_AT} meditation, where its first path tier opens. Existing choices kept regardless of meditation.`,
+        `Added: Calm: each sitting banks ${SIT_CALM} Calm × the spot multiplier. Max Calm follows favour's curve on meditation, `
+          + `${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} Calm at ${m}`))}; no regeneration.`,
         `Added: sitting within ${num(SIT_WORTH.swirlReach)} tiles of a mote swirl +${percent(SIT_WORTH.swirl - 1)}; within ${num(SIT_WORTH.staleReach)} tiles `
-          + `of anywhere you sat since the woods last turned: ${percent(SIT_WORTH.stale)}. A blow landing on you ends the sitting with nothing gained.`,
-        `Changed: ${listed(moved.map((p) => p.name))} onto tiers: ${num(PICKS_PER_TIER)} picks at each of ${listed(PATH_TIER_AT.map(String))} meditation, `
+          + `of anywhere you sat since the last ${RESET}: ${percent(SIT_WORTH.stale)}. A blow landing on you ends the sitting with nothing gained.`,
+        `Changed: ${listed(moved.map((p) => p.name))} onto path tiers: ${num(PICKS_PER_TIER)} picks at each of ${listed(PATH_TIER_AT.map(String))} meditation, `
           + `a technique and ${num(PICKS_PER_TIER - 1)} disciplines, take 1 (Faith window, Path tab). `
-          + `Techniques go in the path slot and cost Calm: ${listed(TECHNIQUES.filter((k) => moved.some((p) => p.id === k.path)).map((k) => `${k.name} ${k.cost}`))}. `
+          + `Techniques go in the path slot and cost Calm: ${listed(TECHNIQUES.filter((k) => moved.some((p) => p.id === k.path)).map((k) => `${k.name} ${k.cost} Calm`))}. `
           + `Removed: old steps, incl. Sense the Rock and Recall the Way. Attentive (now ${percent(picksOf('knowledge', 1).find((k) => k.name === 'Attentive')?.fx.learn ?? 0)}), `
           + 'Reader and Keen Sight are disciplines. Love and Power keep their steps and abilities for now.',
       ];
@@ -1646,14 +1652,14 @@ export const NEWS: News[] = [
       const fx = (id: string, key: string): number => PATH_PICK_BY_ID.get(id)?.fx[key] ?? 0;
       const tiers = (path: 'love' | 'power'): string => PATH_TIER_AT.map((at, i) => `${at}: ${listedOr(picksOf(path, i + 1).map((k) => k.name))}`).join('; ');
       return [
-        `Changed: Love and Power onto tiers, as Knowledge: ${num(PICKS_PER_TIER)} picks per tier, take 1 (Faith window, Path tab). `
-          + 'Walkers keep their path and pick at each tier reached; old steps stop.',
+        `Changed: Love and Power onto path tiers, as Knowledge: ${num(PICKS_PER_TIER)} picks per path tier, take 1 (Faith window, Path tab). `
+          + 'Walkers keep their path and pick at each path tier reached; old steps stop.',
         `Added: Love: ${tiers('love')}.`,
         `Added: Power: ${tiers('power')}.`,
         `Changed: Abundance +${percent(fx('love_abundance', 'harvest') - 1)}, on fruit as well as crops. Green Thumb, Gentle Hand, Strong Back unchanged. `
           + `Fixed: Ironhide's +${percent(fx('power_ironhide', 'hide') - 1)} now counted on the island.`,
-        'Removed: Fury, Hard Hands, Mend the Flesh (damage belongs to fighting trades, healing to the Blessing).',
-        `Changed: every technique costs Calm: ${listed(TECHNIQUES.filter((k) => k.path !== 'knowledge').map((k) => `${k.name} ${k.cost}`))}.`,
+        'Removed: Fury, Hard Hands, Mend the Flesh (damage belongs to fighting classes, healing to the Blessing).',
+        `Changed: every technique costs Calm: ${listed(TECHNIQUES.filter((k) => k.path !== 'knowledge').map((k) => `${k.name} ${k.cost} Calm`))}.`,
       ];
     },
   },
@@ -1711,7 +1717,7 @@ export const NEWS: News[] = [
       `Added: scrolls (crafting window, ${skillOf(`make_${ENCHANTMENT_LIST[0].scroll}`)}): ${listed(ENCHANTMENT_LIST.slice(0, 3).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}. `
         + `QL capped at the papyrus QL. Failure: motes lost, papyrus takes ${SCROLL_HARM} damage.`,
       `Added: Enchant (on a scroll) into a melee weapon in your pack: success chance = average of enchanting and scroll QL as a percent, `
-        + `${percent(ENCHANT_LEAST)} to ${percent(ENCHANT_MOST)}; quality rolled around that average, capped at scroll and weapon QL. `
+        + `${percent(ENCHANT_LEAST)} to ${percent(ENCHANT_MOST)}; quality set at random around that average, capped at scroll and weapon QL. `
         + `Failure: weapon takes ${ENCHANT_HARM} damage, ${percent(ENCHANT_BREAK)} chance it breaks. Scroll consumed either way; 1 enchantment per weapon.`,
       ...ENCHANTMENT_LIST.slice(0, 3).map((e) => `Added: ${e.name}: a landed ordinary melee swing ${EFFECT_HEAD[e.effect]} ${percent(enchantHitChance(e, NEWS_QL_TOP))} of the time at QL ${NEWS_QL_TOP}, `
         + `proportionally less below. ${EFFECT_TAIL[e.effect]}`),
@@ -1723,7 +1729,7 @@ export const NEWS: News[] = [
     n: 119,
     day: '2026-10-11',
     lines: () => [
-      `Removed: the ${CLASS_AT} skill requirement for fighting trades (${listed(CLASSES.filter((c) => c.kind === 'combat').map((c) => c.name))}); `
+      `Removed: the ${CLASS_AT} skill requirement for fighting classes (${listed(CLASSES.filter((c) => c.kind === 'combat').map((c) => c.name))}); `
         + `available from the start. Craft trades still open at ${CLASS_AT} in any covered skill.`,
     ],
   },
@@ -1760,7 +1766,7 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: ${num(ENCHANTMENT_LIST.slice(18, 22).length)} tool enchantments: ${listed(ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
       ...ENCHANTMENT_LIST.slice(18, 22).map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
-      'Changed: carrying several of a tool, the job uses the best one for the work, and its enchantment counts.',
+      'Changed: carrying several of a tool, the action uses the best one for the work, and its enchantment counts.',
     ],
   },
   {
@@ -1770,7 +1776,7 @@ export const NEWS: News[] = [
       const e = ENCHANTMENTS.lanterns_grace;
       return [
         `Added: ${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`,
-        `Fixed: island torches burned at ${mult(WORLD_PACE)} speed; now ${dur(torchBurn(1))} to ${dur(torchBurn(100))} by winding quality.`,
+        `Fixed: island torches burned at burn speed ${mult(WORLD_PACE)}; now ${dur(torchBurn(1))} to ${dur(torchBurn(100))} by winding quality.`,
       ];
     },
   },  {
@@ -1902,7 +1908,7 @@ export const NEWS: News[] = [
       'Added: ◐ on the event log, tracker and map title bars: see-through, clicks pass '
         + 'to the island. Hold Alt to click in one.',
       'Added: hovering a weapon, armour piece or shield in the pack or a store shows damage, swing, hit chance, '
-        + 'deflection share or block chance, each compared with what you wear in that slot.',
+        + 'deflection % or block chance, each compared with what you wear in that slot.',
       'Added: Shift+drag a stack to move part of it (asks how many).',
       'Added: pack load bar, marked where weight starts to slow you, ending at crawl.',
       'Added: Take every one of it (right-click in a store), stack by stack; pack menu: Put every one of it in the open store.',
@@ -1998,7 +2004,7 @@ export const NEWS: News[] = [
     day: '2026-10-12',
     lines: () => [
       // As it was that day: the fixed ranks this describes are gone (145), so nothing here is read from them.
-      'Added: ranks, in the Settlement window under Citizens. The founder may set anyone else on the roll to mayor, builder or guest; '
+      'Added: ranks, in the Settlement window under Citizens. The founder may set anyone else on the member list to mayor, builder or guest; '
         + 'a mayor may move a citizen between builder and guest. Only the founder makes or unmakes mayors; nobody changes the founder\'s rank or their own.',
       'Added: mayors may build, invite, send away builders and guests, and make them builders or guests. Mayors invite from the Social window and right-click menu like the founder; '
         + 'founder or mayor of several settlements: choose which one Invite is for.',
@@ -2017,7 +2023,7 @@ export const NEWS: News[] = [
         + `${DEFAULT_RANKS.map((r) => `${r.name} may ${rankMay(permsOf(r.powers))}`).join('; ')}. `
         + `Newcomers join as ${NEWCOMER_RANK} until the founder sets another rank.`,
       `Added: ${POWER.send_away.label} and ${POWER.set_ranks.label} act only on citizens ranked below you; ${POWER.set_ranks.label} gives only ranks below yours. `
-        + 'Upgrading and renaming can be granted to a rank; disbanding cannot (it frees the founder\'s wildermon and empties the founder\'s deed crate). '
+        + 'Upgrading and renaming can be granted to a rank; disbanding cannot (it frees the founder\'s wildermon and empties the founder\'s settlement crate). '
         + 'A held rank cannot be deleted until its holders have another.',
       `Added: rank refusals name the rank and what it lacks, worded the same everywhere: "${lacksSaid('Hearth', 'Guest', 'locks')}"`,
     ],
@@ -2033,11 +2039,11 @@ export const NEWS: News[] = [
       // The fighting from which the old clock (a job's, `goSeconds`) held a short sword on the job floor.
       const flat = Array.from({ length: 100 }, (_, i) => i + 1).find((f) => goSeconds(sword.swing, f) <= ACTION_FLOOR + 1e-9) ?? 100;
       return [
-        `Changed: swing and draw time from job timing to the weapon's own seconds less skill: ${name} ${sword.swing} s before skill, ${s(swingSeconds(sword.swing, 1))} at fighting 1, `
-          + `${s(swingSeconds(sword.swing, 30))} at fighting 30. Was: job weight at ${s(ACTION_PACE)} s per unit, minimum `
+        `Changed: swing and draw time from action timing to the weapon's own seconds less skill: ${name} ${sword.swing} s before skill, ${s(swingSeconds(sword.swing, 1))} at fighting 1, `
+          + `${s(swingSeconds(sword.swing, 30))} at fighting 30. Was: action weight at ${s(ACTION_PACE)} s per unit, minimum `
           + `${s(ACTION_FLOOR)} s: ${name} ${s(goSeconds(sword.swing, 1))} s at fighting 1, ${s(goSeconds(sword.swing, 30))} at fighting 30, `
           + `and from fighting ${flat} no quicker than a knife.`,
-        `Added: minimum swing or draw ${SWING_FLOOR.toFixed(1)} s. Fighting (archery for draws) and body control reduce it by the same share as before; `
+        `Added: minimum swing or draw ${SWING_FLOOR.toFixed(1)} s. Fighting (archery for draws) and body control reduce it by the same % as before; `
           + 'tired or wounded arms add the same. Armour, carried load and wagons (driven or not) do not affect swing time.',
         'Changed: weapon hover A swing every shows your current swing seconds, with base seconds and each modifier on the line below. '
           + 'Examine and the target panel use that time.',
@@ -2063,22 +2069,22 @@ export const NEWS: News[] = [
       `Added: ${armourSwingSays()}`,
       `Added: ${overburdenSwingSays()} Carry capacity ${CARRY_BASE} kg +${CARRY_PER_STRENGTH} per body strength point, plus trade perks, Power's Pack Mule and a Packmule enchantment on a pack.`,
       `Added: both apply after the ${SWING_FLOOR.toFixed(1)} s floor, island and browser alike, multiplying with tired and wounded arms. `
-        + 'Weapon hover lists each under A swing every, with its share.',
+        + 'Weapon hover lists each under A swing every, with its %.',
     ],
   },
   {
     n: 149,
     day: '2026-10-13',
     lines: () => [
-      'Added: status panel effect row: round marks left for buffs (rest, meal or tincture knack, favour, Calm, spells and techniques, lit light, worn enchantments, settlement baubles), '
+      'Added: status panel effect row: round marks left for buffs (rest, meal boost, tincture boost, favour, Calm, spells and techniques, lit light, worn enchantments, settlement baubles), '
         + 'square red marks right for harms (wounds, bleeding, venom, burns, hunger and thirst, overload, winded or tired arms, darkness). '
         + 'Time left under each; hover or tap for exact effect and source. Removed: the separate rest, meal, favour, light and Overloaded lines and the wound list.',
-      'Added: progress ring at the mouse pointer for the current job, like the action bar; in a fight, once per swing or draw. Over the island only, not windows, bars or menus; not on touch screens. '
+      'Added: progress ring at the mouse pointer for the current action, like the action bar; in a fight, once per swing or draw. Over the island only, not windows, bars or menus; not on touch screens. '
         + 'Settings, Display, Interface: Progress ring at the pointer.',
       'Added: entering a settlement\'s border shows its name near the top of the screen with your rank there or its founder; leaving shows a leaving notice. '
         + 'Settings, Display, Interface: Settlement names at the border.',
-      'Added: Crafting window job queue, current job first: goes left, time at your pace, and for crafts the inputs and their source (pack, bags or a named store), '
-        + 'after earlier jobs take theirs. Reorder by dragging the grip or with up/down buttons; × removes; the current job is fixed.',
+      'Added: Crafting window action queue, current action first: actions left, time at your pace, and for crafts the inputs and their source (pack, bags or a named store), '
+        + 'after earlier actions take theirs. Reorder by dragging the grip or with up/down buttons; × removes; the current action is fixed.',
       'Added: hover, tab to or long-press a red tool or material in a recipe: a tree of how to make it down to gathered items, with counts needed and at hand. Click a line for that recipe.',
       'Added: Settings, Display, Interface: Colours: red–green safe or blue–yellow safe palette for every meaningful colour, windows and island. '
         + 'In every palette, better/worse, have/lack, fight odds, overload and irreversible buttons also carry a mark.',
@@ -2089,13 +2095,13 @@ export const NEWS: News[] = [
     n: 150,
     day: '2026-10-13',
     lines: () => [
-      `Added: Mind logic from prospecting ${percent(PROSPECT_HEAD)} of a go, `
+      `Added: Mind logic from prospecting ${percent(PROSPECT_HEAD)} of an action, `
         + `taming offerings ${percent(TAME_HEAD)}, setting an enchantment scroll ${percent(ENCHANT_HEAD)}, digging a treasure hoard ${percent(HOARD_HEAD)}; ${percent(TRY_LEARN)} of that `
         + 'on a refused offering or failed scroll. Skills window and Help (What the characteristics are for) list what raises each characteristic.',
       `Added: ${armourSwingSays()}`,
       'Fixed: spells on you keep their remaining time through a reload and stay in sync each beat. Added: status panel mark for a Warder skin on you '
-        + '(size as a share of your health, and caster); also for pending Thicken, Ward Link, Stoneskin and Bastion of Stone.',
-      `Added: trade with someone within ${num(BARTER_REACH)} tiles: right-click them or Trade in the Social window. Once accepted, `
+        + '(size as a % of your health, and caster); also for pending Thicken, Ward Link, Stoneskin and Bastion of Stone.',
+      `Added: exchange items with someone within ${num(BARTER_REACH)} tiles: right-click them or Trade in the Social window. Once accepted, `
         + 'each adds pack items (part stacks allowed) and silver; both press Accept. Any change clears both Accepts; '
         + `the exchange is all or nothing. Cancelled by moving more than ${num(BARTER_REACH)} tiles apart, leaving, or ${dur(BARTER_IDLE)} without change.`,
       `Added: seasonal fruit, bushes and forage/botanize finds: ${SEASONS.map((season) => `${season}: ${listed(Object.entries(FRUITING)
@@ -2107,7 +2113,7 @@ export const NEWS: News[] = [
         + `Female Gorral milkable: ${num(GORRAL_MILK)} L a milking into a part bucket, full at ${num(BUCKET_LITRES)}. Help: Milk, butter and cheese.`,
       `Added: vineyards: build a trellis; cut a grape cutting from a thorn bush with a sickle; plant at the trellis foot. Bears from ${num(VINE_BEARS)} days after planting, `
         + `${GRAPE_SEASON} only; ${num(GRAPE_WINE_GRAPES)} grapes brew a barrel of grape wine. Wine and grape wine +${WINE_AGE_RATE} QL a day in their barrel `
-        + `once finished, ${mult(CELLAR_AGEING)} in a cellar, up to +${WINE_AGE_CAP} QL; drinking from the barrel uses the aged QL. Help: Vineyards.`,
+        + `once finished, ageing ${mult(CELLAR_AGEING)} in a cellar, up to +${WINE_AGE_CAP} QL; drinking from the barrel uses the aged QL. Help: Vineyards.`,
       `Added: Draw a map (papyrus): records tiles round you, ${num(CHART_LEAST)} each way +1 per ${CHART_QL_PER_TILE} QL. `
         + 'Study map adds that square to your map permanently; Copy map makes another, capped at the map and sheet QL. Help: Maps.',
     ],
@@ -2116,16 +2122,16 @@ export const NEWS: News[] = [
     n: 151,
     day: '2026-10-13',
     lines: () => [
-      'Changed: a bucket drawn from a non-water barrel takes the barrel\'s QL incl. ageing gain (aged wine sells and trades at aged QL). '
+      'Changed: a bucket drawn from a non-water barrel takes the barrel\'s QL incl. ageing gain (aged wine sells and exchanges at aged QL). '
         + 'Pouring into an empty barrel sets its QL; into the same contents, the litre-weighted average; a brew poured into stops ageing.',
-      `Added: mead ageing: +${MEAD_AGE_RATE} QL a day in its barrel, ${mult(CELLAR_AGEING)} in a cellar, up to +${MEAD_AGE_CAP} QL.`,
-      `Added: pressing a bucket of milk into cheese leaves it full of whey. Whey fed to your creature fills ${percent(WHEY_FEED)} hunger `
+      `Added: mead ageing: +${MEAD_AGE_RATE} QL a day in its barrel, ageing ${mult(CELLAR_AGEING)} in a cellar, up to +${MEAD_AGE_CAP} QL.`,
+      `Added: pressing a bucket of milk into cheese leaves it full of whey. Whey fed to your wildermon fills ${percent(WHEY_FEED)} hunger `
         + `(1 diet item: ${percent(GRAZE_FILL)}), bucket returned empty; feed button offers whey first.`,
       'Fixed: island treasure hoard digging trains digging and wears the shovel, as offline.',
       `Added: Settlement window Notices and Work tabs. Founder and ranks with Post notices post up to ${NOTICE_MAX} characters; newest ${NOTICE_KEEP} kept; `
         + `absent citizens see new ones on coming ashore; absent more than ${num(NOTICE_MAIL_DAYS)} days: each sent as a letter. `
         + `Founder and ranks with Set work list up to ${num(WORK_OPEN_MAX)} wanted works (kind, count, optional minimum QL); a citizen within ${num(DELIVER_REACH)} tiles `
-        + 'of the token presses Deliver to move matching pack items into the deed crate; deliveries go in the settlement ledger.',
+        + 'of the totem presses Deliver to move matching pack items into the settlement crate; deliveries go in the settlement ledger.',
       'Added: founder or a rank with Keep the stores can make a settlement crate or storage piece a settlement store (its Storage window). Opens for the founder and ranks '
         + `with Use the stores, padlocked or not, for nobody else, key or not; every take and put logged, last ${STORE_LOG_CAP} shown in the Settlement window.`,
       `Added: bench or anvil work at QL ${SIGN_QL}+ carries your name; Sign once with up to ${SIGN_MAX} characters, shown on Examine. `
@@ -2149,7 +2155,7 @@ export const NEWS: News[] = [
     n: 153,
     day: '2026-10-14',
     lines: () => [
-      `Fixed: Shear missing from the tame creature menu; now beside Milk: carving knife, fleece ${percent(SHEAR_FROM)} regrown, `
+      `Fixed: Shear missing from the wildermon menu; now beside Milk: carving knife, fleece ${percent(SHEAR_FROM)} regrown, `
         + `${num(SHEAR_WOOL)} wool from a full fleece.`,
     ],
   },
@@ -2187,8 +2193,8 @@ export const NEWS: News[] = [
     day: '2026-10-15',
     lines: () => [
       'Changed: a hitched companion no longer counts as following you; another can be let out of its crate.',
-      'Added: Hitch to the traces also lists your wildermon in creature crates in your pack or within reach; each goes straight from crate to yoke.',
-      'Changed: unhitched, one of yours follows you only if nothing else does; others go into empty creature crates in your pack; too few: they stay hitched, with the number of crates needed.',
+      `Added: Hitch to the traces also lists your wildermon in ${itemDef('creature_crate').name.toLowerCase()}s in your pack or within reach; each goes straight from crate to yoke.`,
+      `Changed: unhitched, one of yours follows you only if nothing else does; others go into empty ${itemDef('creature_crate').name.toLowerCase()}s in your pack; too few: they stay hitched, with the number of crates needed.`,
     ],
   },
   {
@@ -2219,7 +2225,7 @@ export const NEWS: News[] = [
     n: 161,
     day: '2026-10-16',
     lines: () => [
-      'Changed: job count menus offer Once and 5, 10, 25 or 50 times. Removed: Until you stop.',
+      'Changed: action count menus offer Once and 5, 10, 25 or 50 times. Removed: Until you stop.',
     ],
   },
   {
@@ -2227,7 +2233,7 @@ export const NEWS: News[] = [
     day: '2026-10-16',
     lines: () => [
       `Changed: every mould formed with ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}; QL = your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, never the sand's. `
-        + 'Was: sword, axe, armour, ring and pendant moulds used the cast piece\'s trade.',
+        + 'Was: sword, axe, armour, ring and pendant moulds used the cast piece\'s skill.',
       `Changed: pouring a mould and casting an anvil train ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}. Fixed: island pours trained nothing.`,
     ],
   },
@@ -2235,7 +2241,7 @@ export const NEWS: News[] = [
     n: 163,
     day: '2026-10-16',
     lines: () => [
-      `Added: Vesp deed job: ${GATHER_VERB.hive}. Set from its menu or crate; goes to the nearest hive in reach `
+      `Added: Vesp settlement task: ${GATHER_VERB.hive}. Set from its menu or crate; goes to the nearest hive in reach `
         + 'and works it; the hive fills with honey and beeswax meanwhile. Brings nothing to the crate; no hive in reach: reports it after an hour.',
     ],
   },
@@ -2251,7 +2257,7 @@ export const NEWS: News[] = [
     n: 165,
     day: '2026-10-16',
     lines: () => [
-      `Changed: mote swirls per turn of the woods from 500 to ${num(SWIRLS_A_DAY)}, from the next dawn.`,
+      `Changed: mote swirls per ${RESET} from 500 to ${num(SWIRLS_A_DAY)}, from the next one.`,
     ],
   },
   {
@@ -2259,7 +2265,7 @@ export const NEWS: News[] = [
     day: '2026-10-16',
     lines: () => [
       'Fixed: island flattening, bedding or taking up paving, cutting reeds and prospecting wore no tool. '
-        + 'Each go now wears the best such tool in your pack by 1 use, as digging does; 2 of a tool alternate.',
+        + 'Each action now wears the best such tool in your pack by 1 use, as digging does; 2 of a tool alternate.',
     ],
   },
   {
@@ -2286,7 +2292,7 @@ export const NEWS: News[] = [
     day: '2026-10-17',
     lines: () => [
       `Added: building walls, floors, frames, bridges and aqueducts takes materials from crates, carts, wagons and containers within ${CRAFT_REACH} tiles `
-        + '(the stores crafting uses), after your pack and a crate on the tile. '
+        + '(the containers crafting uses), after your pack and a crate on the tile. '
         + 'Toggle: Settings, Use stores within reach. Mason\'s Hod Carrier still reaches further on stone, also with it off.',
     ],
   },  {
@@ -2319,11 +2325,11 @@ export const NEWS: News[] = [
     day: '2026-10-18',
     lines: () => [
       `Added: Put away (Inventory): each loose stack goes into a crate, chest or cart within ${STORE_REACH} tiles already holding the same item. `
-        + `Stores window shows total count of the searched item; Within ${CRAFT_REACH} tiles limits it to the stores crafting uses.`,
-      'Added: Crafting: List adds a recipe to the Shopping list window, with every input down to gathered, cast or intermediate items, against your pack and stores in reach, '
-        + 'each item counted once across branches. To… crafts until you hold the target count, counting what you have, and tops up after a failed go.',
+        + `Stores window shows total count of the searched item; Within ${CRAFT_REACH} tiles limits it to the containers crafting uses.`,
+      'Added: Crafting: List adds a recipe to the Shopping list window, with every input down to gathered, cast or intermediate items, against your pack and containers in reach, '
+        + 'each item counted once across branches. To… crafts until you hold the target count, counting what you have, and tops up after a failed action.',
       `Added: Map: double-click, or Go on a pin, to walk there in legs of up to ${TRAVEL_LEG} tiles, any distance. Fixed: island pins lost on refresh; now kept in this browser.`,
-      `Added: Settings, Eating: auto-eat when Food falls under ${AUTO_EAT_AT.filter((v) => v).map((v) => `${Math.round(v * 100)}%`).join(', ')} (choose), after the current job, never from a locked stack. `
+      `Added: Settings, Eating: auto-eat when Food falls under ${AUTO_EAT_AT.filter((v) => v).map((v) => `${Math.round(v * 100)}%`).join(', ')} (choose), after the current action, never from a locked stack. `
         + `Notices: a worn or held item at ${DAMAGE_WARN}% damage; food on the ground near you under ${Math.round(ROT_SOON / 60)} min from rotting; ground items show time left in their tooltip and Pick up menu.`,
       'Changed: Wildermon Needs attention shows only hungry, hurt, needing a brush, or about to give birth. Fixed: Equipment and Health keys open their windows again.',
     ],
@@ -2334,7 +2340,7 @@ export const NEWS: News[] = [
     lines: () => {
       const ids = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa'];
       return [
-        `Added: ${num(ids.length)} wildermon with settlement jobs:`,
+        `Added: ${num(ids.length)} wildermon with settlement tasks:`,
         ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
       ];
     },
@@ -2345,7 +2351,7 @@ export const NEWS: News[] = [
     lines: () => {
       const ids = ['forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra'];
       return [
-        `Added: ${num(ids.length)} more wildermon with settlement jobs:`,
+        `Added: ${num(ids.length)} more wildermon with settlement tasks:`,
         ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
         'Fixed: offline, a working plucka skipped every fruit tree round it.',
       ];
@@ -2357,9 +2363,9 @@ export const NEWS: News[] = [
     lines: () => {
       const ids = ['rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
       return [
-        `Added: ${num(ids.length)} more wildermon with settlement jobs:`,
+        `Added: ${num(ids.length)} more wildermon with settlement tasks:`,
         ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
-        'Added: they never fail a go; output QL at their own skill. Locked stacks untouched.',
+        'Added: they never fail a cycle; output QL at their own skill. Locked stacks untouched.',
       ];
     },
   },
@@ -2413,7 +2419,7 @@ export const NEWS: News[] = [
     n: 180,
     day: '2026-10-18',
     lines: () => [
-      `Added: skills continue past ${SKILL_TOP}, for leaderboards only: each go ×${percent(1 / PAST_TOP)} per point already over, so each point past ${SKILL_TOP} takes ${PAST_TOP}× the goes of the one before.`,
+      `Added: skills continue past ${SKILL_TOP}, for leaderboards only: gain per action ×${percent(1 / PAST_TOP)} per point already over, so each point past ${SKILL_TOP} takes ×${PAST_TOP} the actions of the one before.`,
       `Added: every skill effect caps at ${SKILL_TOP} (output, success chance, speed unchanged). Skills window and boards show the full value.`,
     ],
   },
@@ -2435,7 +2441,7 @@ export const NEWS: News[] = [
       const storey = OUTSIDE_STAIR_LEVEL + 1;
       return [
         `Added: outside staircases, wide or single: on an open-ground tile sharing a side with the footprint of a building of ${num(storey)}+ storeys; climbs from the ground to storey ${storey}. Tile menu: Plan outside staircase, Plan outside ${SINGLE_STAIRS_NAME}; cost as indoors, ${percent(STAIRS_SHARE)} or ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; Q and E rotate.`,
-        'Added: head against the building, foot on the ground. Refused in water, on a tree or bush, under a jetty or bridge, off your deed, or on ground higher than the ground floor. Ladders still go inside the footprint.',
+        'Added: head against the building, foot on the ground. Refused in water, on a tree or bush, under a jetty or bridge, off your settlement, or on ground higher than the ground floor. Ladders still go inside the footprint.',
         `Added: enter from the ground; exit at the head onto storey ${storey} through a door, double door, arch or no wall; leave by its sides or foot back to the ground. Not part of the storey: no walls needed round it, no roof over it, no wall below carries it; nothing else planned on its tile.`,
       ];
     },
@@ -2500,7 +2506,7 @@ export const NEWS: News[] = [
     lines: () => {
       const up = 2;
       return [
-        `Added: ramp bridges: ends more than ${END_SLOP} height units apart: deck rises evenly, at most ${RAMP_SLOPE} per deck tile. Ends may be on different storeys, ground and a storey, or 2 banks. Storey height ${WALL_HEIGHT}: 1 storey up needs ${rampTiles(WALL_HEIGHT)}+ deck tiles; ground to storey ${up + 1} (${up * WALL_HEIGHT}) needs ${rampTiles(up * WALL_HEIGHT)}+. Too steep: refused, stating the tiles needed.`,
+        `Added: ramp bridges: ends more than ${metres(END_SLOP)} m apart: deck rises evenly, at most ${metres(RAMP_SLOPE)} m per deck tile. Ends may be on different storeys, ground and a storey, or 2 banks. Storey height ${metres(WALL_HEIGHT)} m: 1 storey up needs ${rampTiles(WALL_HEIGHT)}+ deck tiles; ground to storey ${up + 1} (${metres(up * WALL_HEIGHT)} m) needs ${rampTiles(up * WALL_HEIGHT)}+. Too steep: refused, stating the tiles needed.`,
         'Added: step on at the storey of the end you enter from, off at the storey of the end you leave onto. Each span costs as on a level bridge (1 span bill per deck tile). Cart-carrying kinds carry carts only with both ends on the ground; drawbridges stay level.',
         'Fixed: island bridges set out to a storey were carried at the ground under their ends; now at that storey\'s floor, as offline.',
       ];
@@ -2514,7 +2520,7 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       return [
         `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: clay-caked burrower in teal-glazed armour to a great mole carrying clay pots (walk, strike, digging, voice).`,
-        `Changed: butchering ${article(d.name)} ${d.name} gives up to ${d.butcher.clay} ${itemDef('clay').name.toLowerCase()} instead of feathers, by your butchering's share of the carcass, island and offline.`,
+        `Changed: butchering ${article(d.name)} ${d.name} gives up to ${d.butcher.clay} ${itemDef('clay').name.toLowerCase()} instead of feathers, by your butchering's % of the carcass, island and offline.`,
       ];
     },
   },
@@ -2552,7 +2558,7 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       return [
         `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: snail with a fire-lit shell, larger and hotter per stage (glide, strike, stoking, voice).`,
-        `Fixed: description now states its settlement job: keeps every campfire, smelter and kiln in reach fuelled from your stores when under ${HEARTH_FULL / 60} min of fuel, relighting if out.`,
+        `Fixed: description now states its settlement task: keeps every campfire, smelter and kiln in reach fuelled from your settlement stores when under ${HEARTH_FULL / 60} min of fuel, relighting if out.`,
         `Fixed: help listed Embra as silver-vulnerable. Silver damage ${mult(BANE_BONUS)} only on light-carrying kinds: ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} ${s.name}`))}.`,
       ];
     },
@@ -2579,7 +2585,7 @@ export const NEWS: News[] = [
     n: 195,
     day: '2026-10-19',
     lines: () => [
-      `Added: Build wall, Build floor and every row building a planned piece (stairs, roof, railing, jetty floor) open a go count, 1 material piece a go: 1, ${listed(BUILD_COUNTS.map(String))} where the piece needs more than that, or all it needs, up to ${MOST_GOES}. Stops early when finished or when nothing needed is at hand. Was: island Build fitted 1 piece.`,
+      `Added: Build wall, Build floor and every row building a planned piece (stairs, roof, railing, jetty floor) open an action count, 1 material piece an action: 1, ${listed(BUILD_COUNTS.map(String))} where the piece needs more than that, or all it needs, up to ${MOST_GOES}. Stops early when finished or when nothing needed is at hand. Was: island Build fitted 1 piece.`,
     ],
   },
   {
@@ -2625,7 +2631,7 @@ export const NEWS: News[] = [
       // What each level asked for, as the settlement menu lists it.
       const asked = (level: number): string => listed((DEED_UPGRADES[level] ?? []).map((r) => r.label.toLowerCase()));
       return [
-        `Changed: settlement token from a plain pillar to a carved stone totem, 1 block per settlement level up to ${MAX_DEED_LEVEL}, `
+        `Changed: settlement totem look from a plain pillar to carved stone, 1 block per settlement level up to ${MAX_DEED_LEVEL}, `
           + `each with 1 lit rune: lit runes = settlement level${workers ? ' = wildermon worker slots' : ''}. `
           + `Block carvings by level requirement: fire bowl (${asked(2)}), iron bands (${asked(3)}), winged bird (${asked(4)}), `
           + `roofed crown with carved wildermon heads (${asked(5)}). `
@@ -2637,10 +2643,10 @@ export const NEWS: News[] = [
     n: 200,
     day: '2026-10-19',
     lines: () => [
-      `Fixed: ${SPECIES.cobbe.name.toLowerCase()} idled when the nearest planned wall needed something not in your stores; on an island `
-        + 'it took only from crates. Now: nearest wall needing something your stores hold, '
-        + 'from any of your stores on the deed, bringing what that wall lacks most first (brick and mortar together). '
-        + 'Changed: island errand workers take only from your own stores.',
+      `Fixed: ${SPECIES.cobbe.name.toLowerCase()} idled when the nearest planned wall needed something not in your settlement stores; on an island `
+        + 'it took only from crates. Now: nearest wall needing something your settlement stores hold, '
+        + 'from any of your settlement stores on the settlement, bringing what that wall lacks most first (brick and mortar together). '
+        + 'Changed: island errand workers take only from your own settlement stores.',
     ],
   },
   {
@@ -2660,7 +2666,7 @@ export const NEWS: News[] = [
     day: '2026-10-19',
     lines: () => [
       `Fixed: wildermon kept their kind's name after evolving (a ${SPECIES.seavic.name} grown into a ${SPECIES.seavic.stages![1].name} still `
-        + `named ${SPECIES.seavic.name}). One named only its kind's name, a stage name, or its kind's former name is renamed for its current stage `
+        + `named ${SPECIES.seavic.name}). One named only its kind's name, an evolution stage name, or its kind's former name is renamed for its current evolution stage `
         + 'on evolving; all existing ones updated. Player-given names kept.',
     ],
   },
@@ -2668,7 +2674,7 @@ export const NEWS: News[] = [
     n: 203,
     day: '2026-10-19',
     lines: () => [
-      `Fixed: a wildermon assigned to your settlement from afar walks back before starting its job, ${num(HOME_LEG)} tiles a leg, `
+      `Fixed: a wildermon assigned to your settlement from afar walks back before starting its task, ${num(HOME_LEG)} tiles a leg, `
         + `once more than ${num(HOME_SLACK)} tiles past its work area. Was: menders, hod carriers, stokers and other errand workers `
         + 'with nothing to do from the assignment spot stood there forever; one walking home in 1 long leg was invisible and unselectable to those nearby.',
     ],
@@ -2679,7 +2685,7 @@ export const NEWS: News[] = [
     lines: () => [
       'Fixed: island frozen from 16:57 UTC until this fix: clock rounds timed out while a hod carrier chose its wall '
         + '(it scanned every piece of furniture on the island once per planned wall). '
-        + 'Nothing moved, wildermon could not be used, finally the island would not load. Now reads only your settlement\'s stores, once per choice.',
+        + 'Nothing moved, wildermon could not be used, finally the island would not load. Now reads only your settlement stores, once per choice.',
     ],
   },
   {
@@ -2691,7 +2697,7 @@ export const NEWS: News[] = [
         `Added: old pot, bone comb and old file restore into ${article(named('use_ancient_pot'))} ${named('use_ancient_pot')}, ${article(named('use_ancient_comb'))} ${named('use_ancient_comb')} `
           + `and ${article(named('use_ancient_file'))} ${named('use_ancient_file')}: used on your wildermon from its menu, consumed regardless of outcome. `
           + 'Old pots and files restored earlier stay ordinary clay pots and files; held bone combs became ancient combs.',
-        `Added: ${named('use_ancient_comb')}: 1 age stage younger: old to just grown, grown to just born.`,
+        `Added: ${named('use_ancient_comb')}: 1 age younger: old to just grown, grown to just born.`,
         `Added: ${named('use_ancient_file')}: 1 rarity step up, 1 time in ${FILE_RARITY_ODDS}, up to ${RARITIES[RARITIES.length - 1].name}; `
           + `blood-set figures ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} over ordinary at ${listed(RARITIES.slice(1).map((r) => r.name))}.`,
         `Added: ${named('use_ancient_pot')}: +1 point in a random one of ${num(BASE_STATS.length)} base stats not yet at ${POT_MOST}: `
@@ -2721,12 +2727,12 @@ export const NEWS: News[] = [
       const more = rarityBands(one)[s] - rarityBands(RARITIES.map((_, i) => (i === 0 ? 2 : 0)))[s];
       const top = RARITIES.length - 1;
       return [
-        `Added: rare ingredients raise output rarity chance: the share of consumed units at each of ${listed(RARITIES.slice(1).map((r) => r.name))} `
+        `Added: rare ingredients raise output rarity chance: the % of consumed units at each of ${listed(RARITIES.slice(1).map((r) => r.name))} `
           + `is added to the chance of that rarity (2 units, 1 supreme: +${percent(more)} supreme chance). `
-          + `Rolled from ${RARITIES[top].name} down; first hit wins.`,
+          + `Checked from ${RARITIES[top].name} down; first hit wins.`,
         'Added: tools, the station and a full bucket (returned empty) not counted. At the anvil the casting a piece is beaten from, '
           + 'or a coin strike\'s 1 lump, is the whole input: a rare one makes the output at least that rare.',
-        `Added: a go with rare ingredients reports their effect, e.g. "${rareInputSaid(one)}"`,
+        `Added: an action with rare ingredients reports their effect, e.g. "${rareInputSaid(one)}"`,
       ];
     },
   },
@@ -2740,7 +2746,7 @@ export const NEWS: News[] = [
         `Added: drop a stack from the inventory onto a ${shelf.name.toLowerCase()}: fills its crates in spot order (${num(shelf.crates ?? 0)} spots), `
           + 'each taking what it has room for, until the stack is gone or all are full. Remainder stays in your pack.',
         'Added: crates closed to you (others\', padlocked, or a settlement store your rank cannot use) are skipped. '
-          + 'Same rules as putting into each crate in turn, in one go.',
+          + 'Same rules as putting into each crate in turn, at once.',
         `Added: 1 summary line, e.g. "${rackPutLine(12, 20, brick, 2, '', shelf.name)}"`,
       ];
     },
@@ -2760,7 +2766,7 @@ export const NEWS: News[] = [
     day: '2026-10-19',
     lines: () => [
       `Changed: wild creatures despawn between ${dur(WILD_STAY)} and ${dur(2 * WILD_STAY)} old, at the next restock of their area, `
-        + `replaced by new rolls from all ${WILD_SPECIES.length} kinds at their weights. Was: areas only refilled for kills, `
+        + `replaced by new random picks from all ${WILD_SPECIES.length} kinds at their weights. Was: areas only refilled for kills, `
         + 'so kinds added later rarely spawned.',
       'Changed: every wild creature not being fought, tamed, marked or kept was removed; areas restock '
         + 'as people enter them, starting where you stand.',
@@ -2773,7 +2779,7 @@ export const NEWS: News[] = [
     day: '2026-10-19',
     lines: () => [
       `Changed: ${SPECIES.roxxen.name} level from climbing to driving; learns driving ${LEARNS_SAYS.pull}, nothing while still or unhitched.`,
-      `Changed: hitched, its driving counts where other beasts' climbing does (team pace, steepest step the wheels take). Existing ${SPECIES.roxxen.name} keep their level: climbing converted to driving.`,
+      `Changed: hitched, its driving counts where other wildermon's climbing does (team pace, steepest step the wheels take). Existing ${SPECIES.roxxen.name} keep their level: climbing converted to driving.`,
     ],
   },
   {
@@ -2794,9 +2800,9 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: a working ${SPECIES.cobbe.name} carries the hod to all planned building work in reach, not only ground-floor walls: `
         + 'walls on any storey, floors, roofs, staircases, ladders, pier decks, columns, open bridge or aqueduct spans, and foundation concrete.',
-      'Added: each piece counts as 1 of your goes: bill −1; the last piece triggers what yours would '
+      'Added: each piece counts as 1 of your actions: bill −1; the last piece triggers what yours would '
         + '(moss or ivy start, glasshouse under a glass roof, shop counter store opens, aqueduct water runs, foundation top packed).',
-      'Changed: none to target choice: the piece it carries wherever wanted, else the nearest work needing something your stores hold, '
+      'Changed: none to target choice: the piece it carries wherever wanted, else the nearest work needing something your settlement stores hold, '
         + 'bringing whatever is furthest behind its bill.',
     ],
   },
@@ -2852,8 +2858,8 @@ export const NEWS: News[] = [
       const lamp = itemDef(ARTIFACT_FOR.use_ancient_lamp).name.toLowerCase();
       const top = TIERS[TIERS.length - 1];
       return [
-        `Added: old lamp restores into ${article(lamp)} ${lamp}; held ones converted. Used on your wildermon from its menu: rerolls its lowest-tier trait `
-          + `(random among ties) into one it lacks, same tier, or 1 time in ${LAMP_TIER_ODDS} the tier above `
+        `Added: old lamp restores into ${article(lamp)} ${lamp}; held ones converted. Used on your wildermon from its menu: replaces its lowest-rarity trait `
+          + `(random among ties) with one it lacks, same rarity, or 1 time in ${LAMP_TIER_ODDS} the rarity above `
           + `(${listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`))}), never lower. At ${top}: another ${top} trait. Consumed.`,
         `Added: with fewer than ${num(TRAIT_SLOTS)} traits, the lamp fills an empty slot first: ${article(TIERS[0])} ${TIERS[0]} trait, or 1 time in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one.`,
       ];
@@ -2863,18 +2869,18 @@ export const NEWS: News[] = [
     n: 220,
     day: '2026-10-20',
     lines: () => [
-      `Added: idle deed workers show the reason on their card and hover until they next set out: nothing of their trade in range of the token at their level ("${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}"), `
-        + `nothing in your stores to work, with what is wanted ("${idleSays({ why: 'stock', n: 0 }, 'mend')}"), "${idleSays({ why: 'room', n: 0 }, 'water')}", `
+      `Added: idle settlement workers show the reason on their card and hover until they next set out: nothing of their task in range of the totem at their level ("${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}"), `
+        + `nothing in your settlement stores to work, with what is wanted ("${idleSays({ why: 'stock', n: 0 }, 'mend')}"), "${idleSays({ why: 'room', n: 0 }, 'water')}", `
         + `a load with nowhere on the settlement to go, or walking home from more than ${HOME_SLACK} tiles past range, with distance.`,
-      'Added: island: also when nothing runs it: keeper away, or nobody awake near enough, with how near. Changed: you receive all your deed workers wherever they are, not only nearby ones.',
-      `Added: card ledger for this island day and the previous (${dur(DAY_SECONDS)} each): goes at its task, skill gained, and the top ${num(LEDGER_SHOWN)} items handled, of up to ${num(LEDGER_ITEMS)} kinds a day.`,
+      'Added: island: also when nothing runs it: keeper away, or nobody awake near enough, with how near. Changed: you receive all your settlement workers wherever they are, not only nearby ones.',
+      `Added: card ledger for this island day and the previous (${dur(DAY_SECONDS)} each): cycles at its task, skill gained, and the top ${num(LEDGER_SHOWN)} items handled, of up to ${num(LEDGER_ITEMS)} kinds a day.`,
     ],
   },
   {
     n: 221,
     day: '2026-10-20',
     lines: () => [
-      `Added: Tracking skill (Naturalist). Track, on the field guide page of a seen wildermon: nearest wild one of that kind, any stage, `
+      `Added: Tracking skill (Naturalist). Track, on the field guide page of a seen wildermon: nearest wild one of that kind, any evolution stage, `
         + `within ${TRACK_RANGE_BASE} tiles +${TRACK_RANGE_PER} per Tracking level (${trackRange(SKILL_TOP)} at ${SKILL_TOP}); gives direction and distance. Kept ones never tracked.`,
       `Added: direction error ${trackErrSays()}. Distance: ${trackBandsSays().join('; ')}.`,
       `Added: on-screen arrow along the read direction from where you stood, for ${TRACK_SHOW} s. Offline, range capped at ${CULL_RANGE} tiles (wild beyond that is kept as a count).`,
@@ -2890,12 +2896,12 @@ export const NEWS: News[] = [
       const at = (lv: number) => tameNeeds({ species: e.id, skills: { [levelSkill(e)!]: lv } });
       const fav = favouriteOf(e)!;
       return [
-        `Added: wild evolved spawns: 1 time in ${WILD_STAGE_ODDS[0]} second stage, level ${a} to ${b - 1}; 1 time in ${WILD_STAGE_ODDS[1]} third stage, ${c} to ${d - 1}; named, drawn and as strong as that stage.`
-          + ` Taming +${WILD_STAGE_TAME} per stage past the first, base chance ×${percent(WILD_STAGE_CHANCE)} per stage:`
+        `Added: wild evolved spawns: 1 time in ${WILD_STAGE_ODDS[0]} second evolution stage, level ${a} to ${b - 1}; 1 time in ${WILD_STAGE_ODDS[1]} third evolution stage, ${c} to ${d - 1}; named, drawn and as strong as that evolution stage.`
+          + ` Taming +${WILD_STAGE_TAME} per evolution stage past the first, base chance ×${percent(WILD_STAGE_CHANCE)} per evolution stage:`
           + ` ${e.stages![0].name} taming ${at(a).level} at base ${percent(at(a).chance)}, ${e.stages![1].name} ${at(c).level} at ${percent(at(c).chance)}; ${e.name} ${e.tameLevel} at ${percent(e.tameChance)}.`,
         `Added: food quality: each diet item eaten gives ${percent(FED_CARE)} care at QL ${NEWS_QL_TOP} and +${percent(FED_LEARN)} learning for ${dur(FED_FOR)} at QL ${NEWS_QL_TOP},`
-          + ` ${mult(FED_FAVOURITE)} for its favourite (first in its diet); both proportionally less below QL ${NEWS_QL_TOP}. ${e.name} favourite: ${itemDef(fav).name.toLowerCase()}, +${percent(fedBonus(e, fav, NEWS_QL_TOP))} learning at QL ${NEWS_QL_TOP}.`,
-        `Added: a meal worth as much or more than the current one replaces it and restarts the ${dur(FED_FOR)}; a lesser one does nothing; no stacking. Grazing and whey give neither. Card shows favourite value and meal time left; wild ones show stage requirements over their kind's.`,
+          + ` both ${mult(FED_FAVOURITE)} for its favourite (first in its diet); both proportionally less below QL ${NEWS_QL_TOP}. ${e.name} favourite: ${itemDef(fav).name.toLowerCase()}, +${percent(fedBonus(e, fav, NEWS_QL_TOP))} learning at QL ${NEWS_QL_TOP}.`,
+        `Added: a meal worth as much or more than the current one replaces it and restarts the ${dur(FED_FOR)}; a lesser one does nothing; no stacking. Grazing and whey give neither. Card shows favourite value and meal time left; wild ones show evolution stage requirements over their kind's.`,
       ];
     },
   },
@@ -2910,12 +2916,12 @@ export const NEWS: News[] = [
           return `${article(d.stages![0].name)} ${d.stages![0].name} ${verb} ${rest.replace(/,$/, '')}`;
         });
       return [
-        `Changed: evolution time equalised across trades (some reached level ${EVOLVE_AT[0]} in a fraction of others' time). Each deed worker gain at its level skill ×its trade's share, `
+        `Changed: evolution time equalised across tasks (some reached level ${EVOLVE_AT[0]} in a fraction of others' time). Each settlement worker's gain in its level skill × its task's learning factor, `
           + `set so each takes about as long as the median to reach level ${EVOLVE_AT[0]} and then ${EVOLVE_AT[1]}: ${learnPaceSays()}. Watch and hunting unchanged.`,
-        `Added: stage loads: ${STAGE_LOADS[1]} at the second stage, ${STAGE_LOADS[2]} at the third (first: ${STAGE_LOADS[0]}). `
+        `Added: loads by evolution stage: ${STAGE_LOADS[1]} at the second, ${STAGE_LOADS[2]} at the third (first: ${STAGE_LOADS[0]}). `
           + 'Gatherers carry that many a trip, moving to the next tile while arms have room; errands carrying water, pieces, fuel, sprouts, candles, seed and buckets carry that many; '
-          + `in-place trades handle that many a go: items mended, batches made, carcasses butchered, relics restored, pieces glazed, your wildermon brushed, milked, shorn or dressed within ${TEND_REACH} tiles. `
-          + `Second stage: ${lines.join('; ')}; third: ${STAGE_LOADS[2]} of each. Learning per action unchanged.`,
+          + `in-place tasks handle that many a cycle: items mended, batches made, carcasses butchered, relics restored, pieces glazed, your wildermon brushed, milked, shorn or dressed within ${TEND_REACH} tiles. `
+          + `Second evolution stage: ${lines.join('; ')}; third: ${STAGE_LOADS[2]} of each. Learning per action unchanged.`,
       ];
     },
   },
@@ -2926,15 +2932,15 @@ export const NEWS: News[] = [
       const top = TIERS[TIERS.length - 1];
       const deepest = depthMul(PEDIGREE_MOST, 'tough');
       return [
-        'Added: Put it to a mate preview before confirming, from the covering\'s own roll at your husbandry, their care and your perks: '
-          + 'success chance, chance the young carries each parent trait, best-trait tier odds, '
-          + 'mutation chance and tier, resulting line depth, and its rarity odds.',
+        'Added: Put it to a mate preview before confirming, from the covering\'s own success check at your husbandry, their care and your perks: '
+          + 'success chance, chance the young carries each parent trait, best-trait rarity odds, '
+          + 'mutation chance and rarity, resulting line depth, and its rarity odds.',
         `Added: pedigree per trait channel: 1 generation per consecutive generation (incl. itself) carrying a trait on it, up to ${PEDIGREE_MOST}. `
           + `Each generation past the first +${Math.round(PEDIGREE_STEP * 100)}% to its blood effect there, ${cardPct(deepest)} at ${PEDIGREE_MOST}, `
           + 'reversed where lower is better. Card shows a line each. Existing island wildermon start at 1 on each carried channel.',
-        `Added: mutation, 1 young in ${MUTATION_ODDS}: a trait neither parent carries at any grade, 1 tier above their best (${top} at ${top}), `
-          + 'in its lowest-tier slot. Birth message names it; card marks its source as mutation.',
-        'Fixed: island wild trait rolls repeating a carried name now reroll as in the browser; both sides roll the same odds.',
+        `Added: mutation, 1 young in ${MUTATION_ODDS}: a trait neither parent carries at any rarity, 1 rarity above their best (${top} at ${top}), `
+          + 'in its lowest-rarity slot. Birth message names it; card marks its source as mutation.',
+        'Fixed: island wild trait picks repeating a carried name now pick again as in the browser; both sides use the same odds.',
       ];
     },
   },
@@ -2955,26 +2961,26 @@ export const NEWS: News[] = [
     n: 226,
     day: '2026-10-20',
     lines: () => [
-      `Added: deed worker stamina: ${TIRE_GOES} goes at its task, 1 go = 1 gain (stage extra loads cost nothing more). `
+      `Added: settlement worker stamina: ${TIRE_GOES} cycles at its task, 1 cycle = 1 gain (extra loads from evolution stage cost nothing more). `
         + `At zero, once arms are empty or between errand steps, rests ${dur(restFor(false))}, then full stamina. Card shows stamina and rest seconds left.`,
       `Added: a free wildermon bed of its size on your settlement: walks to the nearest and sleeps ${frac(BED_REST)} as long, ${dur(restFor(true))}. `
-        + `Small bed: first stage (under level ${EVOLVE_AT[0]}); medium: second; large: third (level ${EVOLVE_AT[1]}+). `
+        + `Small bed: first evolution stage (under level ${EVOLVE_AT[0]}); medium: second; large: third (level ${EVOLVE_AT[1]}+). `
         + `Non-evolving kinds: small under ${DEN_HEALTH[0]} health, medium under ${DEN_HEALTH[1]}, large at that and over. Only its own size; 1 per bed.`,
-      `Added: upkeep: a deed worker working ${dur(UPKEEP_FOR)} (an island day) without a meal works at ${percent(UNFED_PACE)} pace until it eats; card shows it. `
+      `Added: upkeep: a settlement worker working ${dur(UPKEEP_FOR)} (an island day) without a meal works at ${percent(UNFED_PACE)} pace until it eats; card shows it. `
         + 'Eats from your settlement stores when hungry, as before; only one with nothing to eat slows.',
-      `Added: specialties: ${SPECIALTY_AT}+ deed workers of 1 trade on a settlement: each works ${percent(SPECIALTY_BONUS)} faster. Settlement window lists your trades and counts; worker card shows its own.`,
-      `Fixed: offline, mender, water carrier, hod carrier, planter, stoker and prospector take a go's work time on every go, `
-        + `${Math.round(workDuration(1))} s at level 1, ${Math.round(workDuration(SKILL_TOP))} at ${SKILL_TOP} before care and stage, and wait after a store fetch as on the island; `
+      `Added: specialties: ${SPECIALTY_AT}+ settlement workers of 1 task on a settlement: each works ${percent(SPECIALTY_BONUS)} faster. Settlement window lists your tasks and counts; worker card shows its own.`,
+      `Fixed: offline, mender, water carrier, hod carrier, planter, stoker and prospector take a cycle's work time on every cycle, `
+        + `${Math.round(workDuration(1))} s at level 1, ${Math.round(workDuration(SKILL_TOP))} at ${SKILL_TOP} before care and evolution stage, and wait after a settlement store fetch as on the island; `
         + 'fetcher and stoker learn as on the island; rot clearing walks out to a tile, as there. '
         + `Fixed: island reed cutter cuts 1 reed +1 per ${REED_LEVELS} foraging levels, as described: ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} at ${SKILL_TOP}.`,
-      `Changed: trade learning shares recalculated with rest counted; each still evolves in about the median time: ${learnPaceSays()}.`,
+      `Changed: task learning factors recalculated with rest counted; each still evolves in about the median time: ${learnPaceSays()}.`,
     ],
   },
   {
     n: 227,
     day: '2026-10-20',
     lines: () => [
-      'Added: Ask to join, on another player\'s settlement token. Stand on the settlement to ask.',
+      'Added: Ask to join, on another player\'s settlement totem. Stand on the settlement to ask.',
       'Answered under Social → Waiting by the founder and any rank with Invite: Let in (rank for newcomers) or No. Your own requests: same tab, Withdraw.',
       `Limit: citizen of ${DEEDS_JOINED} settlements, checked when asking and when let in.`,
       'Fixed: settlement totems were drawn only for settlements you belong to.',
@@ -2985,9 +2991,10 @@ export const NEWS: News[] = [
     day: '2026-10-20',
     lines: () => [
       `Added: Skills window: click a skill for a slider per effect, its value now and at either end. Left end: the skill's starting value. Right end: ${SKILL_TOP}.`,
-      'Effects read off the rules with your gear and perks: carry weight, blow damage, hit and crit chance, swing and draw time, block, armour, time per action, success chance, best QL and each trade\'s own.',
+      'Effects read off the rules with your gear and perks: carry weight, blow damage, hit and crit chance, swing and draw time, block, armour, time per action, success chance, best QL and each skill\'s own.',
     ],
-  },  {
+  },
+  {
     n: 229,
     day: '2026-10-20',
     lines: () => [
@@ -3000,6 +3007,28 @@ export const NEWS: News[] = [
     lines: () => [
       'Fixed: work posts refused every wildermon ("Choose a wildermon.").',
       `Set a wildermon to it (post menu), as Hitch: those following you within ${POST_FOLLOW_REACH} tiles, then those in a crate in your pack or beside you. A crated one is let out at the post.`,
+    ],
+  },
+  {
+    n: 231,
+    day: '2026-10-20',
+    lines: () => [
+      'Renamed: go → action.',
+      `Renamed: Faith skill → ${SKILL_BY_ID.get('prayer')?.name} skill. Faith window unchanged.`,
+      `Renamed: Prayer skill → ${SKILL_BY_ID.get('praying')?.name} skill.`,
+      `Renamed: deed → settlement: ${itemDef('deed_stake').name}, settlement worker, settlement crate.`,
+      'Renamed: settlement token → settlement totem.',
+      `Renamed: height units → metres, to ${metres(1)} m: highest step ${metres(MAX_STEP)} m (was ${MAX_STEP}).`,
+      'Renamed: meal knack → meal boost.',
+      `Renamed: trait tier → rarity: ${listed(TIERS)}.`,
+      `Renamed: bauble tier → grade: ${listed(BAUBLE_TIERS.map((t) => t.name.toLowerCase()))}.`,
+      'Renamed: settlement roll → member list.',
+      'Renamed: Job queue → Action queue.',
+      'Renamed: settlement worker go → cycle.',
+      `Renamed: Creature crate → ${itemDef('creature_crate').name}.`,
+      'Renamed: Deed job → Settlement task; a worker\'s trade → task.',
+      'Renamed: Tier Up perk → Grade Up.',
+      'Renamed: Trade window (face to face) → Barter.',
     ],
   },
 ];

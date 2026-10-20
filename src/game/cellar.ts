@@ -9,6 +9,7 @@ import { maybeGem } from './gems';
 import { maybeMap } from './treasure';
 import { capital } from './words';
 import { bedrockAt } from '../world/ore';
+import { metres } from '../world/tiles';
 import type { World } from '../world/world';
 
 /**
@@ -215,7 +216,7 @@ export function cellarDigReason(g: Game, t: Target): string | null {
   if (g.buildings.onPiers(x, y)) return 'Not under a deck on piers.';
   if (!standsIn(g, b.id)) return 'Stand inside that building: ground floor or cellar.';
   const dug = g.buildings.cellar(x, y)?.dug ?? 0;
-  if (dug >= CELLAR_DEPTH) return `Cellar fully dug: ${CELLAR_DEPTH} down.`;
+  if (dug >= CELLAR_DEPTH) return `Cellar fully dug: ${metres(CELLAR_DEPTH)} m down.`;
   // A building standing over it, and closed in: there is no ground floor to dig under until there is.
   const open = gapText(1, g.buildings.levelGaps(b, 0, g.player.x, g.player.y));
   if (open) return open;
@@ -223,11 +224,11 @@ export function cellarDigReason(g: Game, t: Target): string | null {
   const w = g.world;
   const shallow = cellarShallowest(w, x, y);
   if (dug === 0 && shallow < CELLAR_SOIL) {
-    return `Rock ${shallow} under the ground floor at the shallowest corner; needs ${CELLAR_SOIL} of soil at every corner.`;
+    return `Rock ${metres(shallow)} m under the ground floor at the shallowest corner; needs ${metres(CELLAR_SOIL)} m of soil at every corner.`;
   }
   const h = groundFloorAt(w, x, y);
   if (h - CELLAR_DEPTH < 0) {
-    return `Ground floor at ${h}: needs ${CELLAR_DEPTH} above sea level for a ${CELLAR_DEPTH}-deep cellar.`;
+    return `Ground floor at ${metres(h)} m: needs ${metres(CELLAR_DEPTH)} m above sea level for a ${metres(CELLAR_DEPTH)} m deep cellar.`;
   }
   return null;
 }
@@ -291,16 +292,16 @@ export function cellarFloorSaid(g: Game, x: number, y: number): string | null {
   const b = c ? g.buildings.list.get(c.building) : undefined;
   if (!c || !b || g.player.level >= 0 || c.building !== g.myCellar()) return null;
   const floor = c.dug > cellarSoil(g.world, x, y) ? bedrockAt(g.world, x, y).name.toLowerCase() : 'soil';
-  const height = (groundFloorAt(g.world, x, y) - c.dug).toFixed(1);
+  const height = metres(groundFloorAt(g.world, x, y) - c.dug);
   const lying = g.groundAt(x, y, CELLAR_LEVEL).reduce((n, it) => n + it.count, 0);
   return (c.dug >= CELLAR_DEPTH
-    ? `Cellar floor under ${b.name} at (${x}, ${y}): ${floor}, ${CELLAR_DEPTH} under the ground floor, height ${height}.`
-    : `Cellar being dug under ${b.name} at (${x}, ${y}): ${floor}, ${downSaid(c.dug)}, height ${height}.`)
+    ? `Cellar floor under ${b.name} at (${x}, ${y}): ${floor}, ${metres(CELLAR_DEPTH)} m under the ground floor, height ${height} m.`
+    : `Cellar being dug under ${b.name} at (${x}, ${y}): ${floor}, ${downSaid(c.dug)}, height ${height} m.`)
     + ` Items on it: ${lying}.`;
 }
 
 /** "12 of 30 down": how far a tile is dug out, as the log says it. */
-const downSaid = (dug: number): string => `${dug}/${CELLAR_DEPTH} down`;
+const downSaid = (dug: number): string => `${metres(dug)} m of ${metres(CELLAR_DEPTH)} m dug`;
 
 /** A slice more off a tile's cellar, for the two jobs that dig one. */
 function slice(g: Game, x: number, y: number, building: number): number {
@@ -328,7 +329,7 @@ export const CELLAR_ACTIONS: ActionDef[] = [
       const why = cellarDigReason(g, t);
       if (why) return why;
       if (nextSliceRock(g, t.x, t.y)) {
-        return `Soil dug through at ${g.buildings.cellar(t.x, t.y)?.dug ?? 0} down. Rock below: use a pickaxe.`;
+        return `Soil dug through at ${metres(g.buildings.cellar(t.x, t.y)?.dug ?? 0)} m down. Rock below: use a pickaxe.`;
       }
       return g.inventory.has('shovel') ? null : 'Need a shovel.';
     },
@@ -345,11 +346,11 @@ export const CELLAR_ACTIONS: ActionDef[] = [
       g.logMsg(`Dug: dirt, QL ${item.ql.toFixed(1)}. Cellar ${downSaid(dug)}.`, 'event');
       maybeMap(g, 'digging', 'shovel');
       if (dug >= CELLAR_DEPTH) {
-        g.logMsg(`Cellar fully dug: ${CELLAR_DEPTH} down.`, 'event');
+        g.logMsg(`Cellar fully dug: ${metres(CELLAR_DEPTH)} m down.`, 'event');
         return false;
       }
       if (nextSliceRock(g, site.x, site.y)) {
-        g.logMsg(`Rock at ${dug} down: use a pickaxe.`, 'event');
+        g.logMsg(`Rock at ${metres(dug)} m down: use a pickaxe.`, 'event');
         return false;
       }
       return true;
@@ -373,7 +374,7 @@ export const CELLAR_ACTIONS: ActionDef[] = [
       if (why) return why;
       if (!nextSliceRock(g, t.x, t.y)) {
         const c = g.buildings.cellar(t.x, t.y)?.dug ?? 0;
-        return `Dig the soil first: ${cellarSoil(g.world, t.x, t.y) - c} left, with a shovel.`;
+        return `Dig the soil first: ${metres(cellarSoil(g.world, t.x, t.y) - c)} m left, with a shovel.`;
       }
       if (!g.inventory.has('pickaxe')) return 'Need a pickaxe.';
       // A seam under the building gives up its metal only to somebody who knows how to take it, as a face of it would.
@@ -401,7 +402,7 @@ export const CELLAR_ACTIONS: ActionDef[] = [
       maybeMap(g, 'mining', 'pickaxe');
       maybeGem(g, 'mining', 'pickaxe');
       if (dug >= CELLAR_DEPTH) {
-        g.logMsg(`Cellar fully dug: ${CELLAR_DEPTH} down.`, 'event');
+        g.logMsg(`Cellar fully dug: ${metres(CELLAR_DEPTH)} m down.`, 'event');
         return false;
       }
       return true;

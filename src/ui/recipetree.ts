@@ -290,7 +290,7 @@ export class RecipeTree {
       how.className = 'rtree-how';
       const made = this.game.madeAGo(r);
       const bits = [`${r.label} × ${n.goes}`, skillName(r.skill)];
-      if (made > 1) bits.push(`makes ${made} a go`);
+      if (made > 1) bits.push(`makes ${made} per action`);
       if (r.station) bits.push(`at a ${stationName(r.station)}`);
       if (n.recipes > 1) bits.push(n.ready ? `first of ${n.recipes} recipes; makeable now` : `first of ${n.recipes} recipes; none makeable now`);
       how.textContent = bits.join(' · ');

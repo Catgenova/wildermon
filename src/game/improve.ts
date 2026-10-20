@@ -219,7 +219,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       g.gainSkill(what.skill, tryGain(ok, IMPROVE_GAIN));
       if (!ok) {
         g.damageItem(item, 3 + g.rand() * 5);
-        g.logMsg(`Improve failed: ${itemName(item).toLowerCase()} damage ${item.dmg.toFixed(1)}.`, 'event');
+        g.logMsg(`Improve failed: ${itemName(item).toLowerCase()}, ${item.dmg.toFixed(1)} damage.`, 'event');
         return item.dmg <= 10;
       }
       const ceiling = Math.min(99.9, improveCeiling(g, what.skill, item));

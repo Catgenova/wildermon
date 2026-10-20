@@ -71,7 +71,7 @@ export const BAIT_SHY = 0.35;
 // A bait's note says what it does, off its own numbers.
 for (const b of BAITS) {
   const pulls = b.favours.map((id, rank) => `×${BAIT_PULL / (rank + 1)} ${FISH.find((f) => f.id === id)?.name.toLowerCase() ?? id}`);
-  b.note = `Bite weight: ${pulls.join(', ')}; ×${BAIT_SHY} other fish.`;
+  b.note = `Bite weight against a bare hook: ${pulls.join(', ')}; ×${BAIT_SHY} other fish.`;
 }
 /**
  * What counts as food here: anything that fills you. A Fisher with Any Bait

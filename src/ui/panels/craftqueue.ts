@@ -82,7 +82,7 @@ export class QueueView {
     this.go.type = 'button';
     this.go.className = 'tb-btn tb-small';
     this.go.textContent = 'Resume';
-    this.go.title = 'Resume the jobs paused by walking, from the top';
+    this.go.title = 'Resume the actions paused by walking, from the top';
     this.go.addEventListener('click', () => this.game.resumeQueue());
     this.head.append(this.fold, this.go);
     this.list = document.createElement('ol');
@@ -214,8 +214,8 @@ export class QueueView {
     let total = a && a.state !== 'walking' ? Math.max(0, a.duration - a.elapsed) + Math.max(0, (a.left ?? 1) - 1) * a.duration : 0;
     for (const j of q) total += this.secsOf(j.def, Math.max(1, j.goes ?? 1));
     const putDown = !a && this.game.held;
-    this.title.textContent = `${this.folded ? '▸' : '▾'} ${putDown ? 'Jobs paused' : 'Jobs'} · ${held}/${cap} · ${clockSaid(total)} total`;
-    this.fold.title = this.folded ? 'Show jobs' : 'Hide jobs';
+    this.title.textContent = `${this.folded ? '▸' : '▾'} ${putDown ? 'Actions paused' : 'Action queue'} · ${held}/${cap} · ${clockSaid(total)} total`;
+    this.fold.title = this.folded ? 'Show actions' : 'Hide actions';
     this.fold.setAttribute('aria-expanded', String(!this.folded));
     this.go.hidden = !putDown;
     this.list.hidden = this.folded;
@@ -255,8 +255,8 @@ export class QueueView {
     meta.className = 'cq-meta';
     if (at < 0) {
       grip.textContent = '▶';
-      grip.title = 'Current job: not reorderable';
-      const count = of && of > 1 ? `${goes} of ${of} goes left · ` : '';
+      grip.title = 'Current action: not reorderable';
+      const count = of && of > 1 ? `${goes} of ${of} actions left · ` : '';
       meta.append(document.createTextNode(count));
       const t = document.createElement('span');
       this.nowSaid = this.timeLeft();

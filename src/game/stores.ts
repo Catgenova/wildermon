@@ -49,11 +49,11 @@ export function deedAt(g: Game, x: number, y: number): { name: string } | undefi
 
 /** What a settlement store says to somebody who is not its citizen. The island's `store_refusal`. */
 export const storeStrangerSaid = (what: string, deed: string): string =>
-  `${capital(what)}: store of ${deed}. Opens for its founder and ranks with ${POWER.use_stores.label} only.`;
+  `${capital(what)}: settlement store of ${deed}. Opens for its founder and ranks with ${POWER.use_stores.label} only.`;
 
 /** Why a settlement store is not yours to move: the island's `store_move_said`. */
 export const storeMoveSaid = (what: string, deed: string): string =>
-  `${capital(what)}: store of ${deed}. Only whoever set it down and its founder may move or pick it up.`;
+  `${capital(what)}: settlement store of ${deed}. Only whoever set it down and its founder may move or pick it up.`;
 
 /** Marking a store that stands on no settlement: the island's `store_unsettled_said`. */
 export const STORE_UNSETTLED = 'Not on a settlement.';
@@ -122,16 +122,16 @@ export function storeMarkRefusal(g: Game, s: Keepable, what: string, markable: b
   if (!mine) return `Not a citizen of ${deed.name}.`;
   const rank = lacks(mine, 'keep_stores');
   if (rank) return rank;
-  if (on && isSettlementStore(s)) return `${capital(what)}: already a store of ${deed.name}.`;
+  if (on && isSettlementStore(s)) return `${capital(what)}: already a settlement store of ${deed.name}.`;
   if (!on && !isSettlementStore(s)) return `${capital(what)}: not a settlement store.`;
   return null;
 }
 
 /** What marking or unmarking a store says, in the log. */
 export const storeMarkedLine = (what: string, deed: string, on: boolean): string => (on
-  ? `${capital(what)}: now a store of ${deed}. Opens for its founder and ranks with ${POWER.use_stores.label}, `
+  ? `${capital(what)}: now a settlement store of ${deed}. Opens for its founder and ranks with ${POWER.use_stores.label}, `
     + `padlocked or not; nobody else. Every take and put is logged.`
-  : `${capital(what)}: no longer a store of ${deed}. Its padlock and owner decide who opens it.`);
+  : `${capital(what)}: no longer a settlement store of ${deed}. Its padlock and owner decide who opens it.`);
 
 /** One take or put out of a settlement store, as `rpc_store_log` lists it. */
 export interface StoreLogEntry {

@@ -198,7 +198,7 @@ check('a thing on somebody else\'s stall is not taken', said('THEFT') === 'Someo
 check('its owner takes it back', said('OWNERTAKES') === 'allowed', said('OWNERTAKES'));
 check('and it comes back without its price', said('UNPRICED') === 'null', said('UNPRICED'));
 check('a crate with a wildermon in it goes on a stall', said('ONSTALL') === 'allowed', said('ONSTALL'));
-check('and into no other store', said('INCHEST') === 'Creature crates go on a stall only.', said('INCHEST'));
+check('and into no other store', said('INCHEST') === 'Wildermon crates go on a stall only.', said('INCHEST'));
 check('it carries no price in a pack', said('PACKPRICE') === 'refused', said('PACKPRICE'));
 check('it goes into no bag', said('INBAG') === 'refused', said('INBAG'));
 check('it can be offered in a deal', said('OFFERED') === 'out', said('OFFERED'));

@@ -670,7 +670,7 @@ rollback;`));
 /* ---- Creatures: never onto a tile on piers, nor under one ---------------------------------------- */
 
 {
-  // Where a creature crate stood on the jetty's deck at (5, 44), its door to the east, has its middle: the browser's own reckoning.
+  // Where a wildermon crate stood on the jetty's deck at (5, 44), its door to the east, has its middle: the browser's own reckoning.
   const crateAt = ((): [number, number] => {
     const gg = browserScene();
     return furnitureCentre(gg.addFurniture(CREATURE_CRATE, 5, 44, 1, 1, 30, [], undefined, 'e'));

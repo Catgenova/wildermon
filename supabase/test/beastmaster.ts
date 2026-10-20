@@ -609,12 +609,12 @@ check('the six passives fold on the island to what they fold to in the browser',
 check('Call of the Wild: never a monster', island('WILD:MONSTER') === 'The ogre: untameable.', island('WILD:MONSTER'));
 check(`and no further than ${fx('call_of_the_wild', 'reach')} tiles`, island('WILD:FAR') === 'Too far: max 4 tiles.', island('WILD:FAR'));
 check('and never above your taming', island('WILD:SKILL') === 'The rowl: need 35 taming (have 10).', island('WILD:SKILL'));
-check('and never without room for it', /already follows you\. Need an empty creature crate\.$/.test(island('WILD:ROOM')),
+check('and never without room for it', /already follows you\. Need an empty wildermon crate\.$/.test(island('WILD:ROOM')),
   island('WILD:ROOM'));
 {
   const [mode, mine, line] = parts('WILD:CRATED');
   check('into the crate in your pack when something follows you already', mode === 'stored' && mine === 'true'
-    && /^Tamed: .+\. In the creature crate in your pack\.$/.test(line), island('WILD:CRATED'));
+    && /^Tamed: .+\. In the wildermon crate in your pack\.$/.test(line), island('WILD:CRATED'));
   const [mode2, mine2, line2] = parts('WILD:FOLLOWS');
   check('and to follow you when nothing does', mode2 === 'active' && mine2 === 'true' && /^Tamed: .+\. Follows you\.$/.test(line2),
     island('WILD:FOLLOWS'));

@@ -210,7 +210,7 @@ export function outsideStairReason(g: Game, t: TileTarget, b: Building, level: n
   // Nothing of any building's over it or on it already, at any storey; one of its own on this storey is "already planned".
   const there = bld.jettyAt(t.x, t.y);
   if (there && (there.id !== b.id || !bld.floor(level, t.x, t.y))) return jettyOver(g, t.x, t.y);
-  if (!g.onDeed(t.x, t.y)) return 'Only on your own deed.';
+  if (!g.onDeed(t.x, t.y)) return 'Only on your own settlement.';
   const span = g.bridges.size ? g.bridgeAt(t.x, t.y) : undefined;
   if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'Bridge over that tile.';
   if (g.bridges.size && drawbridgeWinchAt(g, t.x, t.y)) return JETTY_OVER_WINCH;
@@ -277,7 +277,7 @@ export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind
   }
   const other = bld.jettyAt(t.x, t.y);
   if (other && other.id !== b.id) return jettyOver(g, t.x, t.y);
-  if (!g.onDeed(t.x, t.y)) return 'Only on your own deed.';
+  if (!g.onDeed(t.x, t.y)) return 'Only on your own settlement.';
   // No span of a bridge or an aqueduct goes under it (`aqueducts.ts`); a bridge's ends are its banks.
   const span = g.bridges.size ? g.bridgeAt(t.x, t.y) : undefined;
   if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'Bridge over that tile.';

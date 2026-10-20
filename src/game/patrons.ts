@@ -148,9 +148,9 @@ export const FAITH_SPELLS: FaithSpellDef[] = [
   blessing(2, 'purify', 'Purify', 12, 45, ['self', 'player'], {},
     () => 'Removes venom from every wound; heals every burn.'),
   blessing(2, 'calm', 'Calm', 14, 90, ['enemy'], { secs: 60 },
-    (fx) => `Wild creature stops hunting; cannot hunt for ${span(fx.secs)}. Not monsters.`),
+    (fx) => `Wild wildermon stops hunting; cannot hunt for ${span(fx.secs)}. Not monsters.`),
   blessing(2, 'steady', 'Steady Hands', 14, 600, ['object'], { cut: 0.1, secs: 1800 },
-    (fx) => `${span(fx.secs)}: jobs using this tool take −${percent(fx.cut)} time while carried.`),
+    (fx) => `${span(fx.secs)}: actions using this tool take −${percent(fx.cut)} time while carried.`),
 
   blessing(3, 'renewal', 'Renewal', 20, 60, ['self', 'player'], { each: 0.03, every: 3, secs: 30 },
     (fx) => `Heals ${percent(fx.each)} health every ${span(fx.every)} for ${span(fx.secs)}: ${percent(fx.each * fx.secs / fx.every)} total.`),
@@ -171,7 +171,7 @@ export const FAITH_SPELLS: FaithSpellDef[] = [
   blessing(5, 'radiance', 'Radiance', 60, 600, ['area'], { each: 0.02, secs: 30 },
     (fx, r) => `${span(fx.secs)}: creatures hunting anyone within ${r} tiles of the spot lose ${percent(fx.each)} health per second, ${percent(fx.each * fx.secs)} total; never lethal.`, 8),
   blessing(5, 'land', 'Bless the Land', 50, 3600, ['area'], {},
-    (_fx, r) => `Trees within ${r} tiles of the spot grow 1 stage: ${LAND_GROWS_SAID}. Not into dying; not clipped trees.`, 10),
+    (_fx, r) => `Trees within ${r} tiles of the spot grow 1 age: ${LAND_GROWS_SAID}. Not into dying; not clipped trees.`, 10),
 
   justice(1, 'mark', 'Mark of Judgment', 10, 30, ['enemy'], { more: 0.15, secs: 30 },
     (fx) => `${span(fx.secs)}: damage taken by the creature +${percent(fx.more)}, from any source.`),
@@ -211,7 +211,7 @@ export const FAITH_SPELLS: FaithSpellDef[] = [
   chaos(1, 'hex', 'Hex', 8, 20, ['enemy'], { each: 0.02, secs: 15 },
     (fx) => `Bleed: ${percent(fx.each)} health per second for ${span(fx.secs)}, ${percent(fx.each * fx.secs)} total. Never lethal.`),
   chaos(1, 'fright', 'Fright', 10, 60, ['enemy'], { secs: 8 },
-    (fx) => `The creature flees from you for ${span(fx.secs)}. Not monsters.`),
+    (fx) => `The wildermon flees from you for ${span(fx.secs)}. Not monsters.`),
   chaos(1, 'blood_price', 'Blood Price', 0, 300, ['self'], { price: 0.2, favour: 15, floor: 0.3 },
     (fx) => `No favour cost. Spend ${percent(fx.price)} health for ${fx.favour} favour; needs over ${percent(fx.floor)} health.`),
 
@@ -341,9 +341,9 @@ export function faithSpellRefusal(
   if (s.patron !== mine) return `${PATRON_BY_ID.get(s.patron)?.name ?? s.patron} spell; your patron is ${PATRON_BY_ID.get(mine)?.name ?? mine}.`;
   if (taken.includes(s.id)) return 'Already taken.';
   const other = spells.find((o) => o.patron === s.patron && o.tier === s.tier && taken.includes(o.id));
-  if (other) return `Already took ${other.name} at this tier.`;
+  if (other) return `Already took ${other.name} at this faith tier.`;
   const at = faithTierAt(s.tier);
-  if (faith < at) return `Tier needs ${faithName()} ${at}; have ${Math.floor(faith)}.`;
+  if (faith < at) return `Faith tier needs ${faithName()} ${at}; have ${Math.floor(faith)}.`;
   return null;
 }
 

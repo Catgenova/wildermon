@@ -4,6 +4,7 @@ import { sailWord, windFrom, windWord } from '../game/wind';
 import { FURNITURE_BY_ID } from '../game/furniture';
 import { CELLAR_LEVEL, TOP_LEVELS } from '../game/building';
 import { seasonLine } from '../world/calendar';
+import { metres } from '../world/tiles';
 import type { Game } from '../game/game';
 import { itemName } from '../game/items';
 import { ACTION_BY_ID } from '../game/actions';
@@ -72,7 +73,7 @@ export const WINDOWS: Array<{ label: string; bind: string; id: string }> = [
   { label: 'Journal', bind: 'win_journal', id: 'journal' },
   { label: 'Stores', bind: 'win_stores', id: 'stores' },
   { label: 'Shopping list', bind: 'win_shopping', id: 'shopping' },
-  { label: 'Deed', bind: 'win_deed', id: 'deed' },
+  { label: 'Settlement', bind: 'win_deed', id: 'deed' },
   { label: 'Social', bind: 'win_social', id: 'social' },
   // Made, and so listed, only for somebody the island says keeps it.
   { label: 'Island keeper', bind: 'win_keeper', id: 'keeper' },
@@ -573,7 +574,7 @@ export class Hud {
         what.textContent = pin ? pinLabel(pin, undefined) : 'empty';
         el.classList.toggle('belt-empty', !pin);
         el.classList.remove('belt-barred');
-        el.title = pin ? 'Right-click: remove from belt.' : `Loop ${i + 1} empty. Hang a job here from a menu.`;
+        el.title = pin ? 'Right-click: remove from belt.' : `Loop ${i + 1} empty. Hang an action here from a menu.`;
         continue;
       }
       const label = pinLabel(aim.pin, aim.def);
@@ -791,7 +792,7 @@ export class Hud {
     const standing = this.game.deedOfMineAt(p.tileX, p.tileY);
     const deed = standing ? `  ·  ${standing.name}` : '';
     const title = this.game.titleName();
-    this.say(this.posEl, `${p.tileX}, ${p.tileY}  ·  h ${h.toFixed(0)}  ·  ${this.game.clock()}  ·  ${seasonLine(this.game.wallNow())}${p.swimming ? '  ·  swimming' : ''}${deed}${title ? `  ·  ${title}` : ''}`);
+    this.say(this.posEl, `${p.tileX}, ${p.tileY}  ·  h ${metres(h)} m  ·  ${this.game.clock()}  ·  ${seasonLine(this.game.wallNow())}${p.swimming ? '  ·  swimming' : ''}${deed}${title ? `  ·  ${title}` : ''}`);
     // What is on you: a mark each, written only where a mark has changed.
     this.effects.update();
     // The wind, which only matters when there is a sail over you.
@@ -912,7 +913,7 @@ export class Hud {
       }
       this.actionEl.hidden = false;
       this.goBtn.hidden = false;
-      this.actionLabel.textContent = `Jobs paused: ${waiting.length}`;
+      this.actionLabel.textContent = `Actions paused: ${waiting.length}`;
       this.actionFill.style.width = '0%';
       this.queueEl.hidden = false;
       this.queueEl.textContent = `Waiting: ${this.queueWords(waiting)}`;
@@ -947,7 +948,7 @@ export class Hud {
     // What is lined up behind it, and how much room is left in your head.
     if (waiting.length) {
       this.queueEl.hidden = false;
-      this.queueEl.textContent = `Then: ${this.queueWords(waiting)} (${waiting.length + 1} of ${this.game.queueCapacity()} jobs held)`;
+      this.queueEl.textContent = `Then: ${this.queueWords(waiting)} (${waiting.length + 1} of ${this.game.queueCapacity()} actions held)`;
     } else this.queueEl.hidden = true;
   }
 

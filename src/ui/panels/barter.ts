@@ -122,24 +122,24 @@ export class BarterPanel {
   private draw(): void {
     this.page.replaceChildren();
     if (!this.island) {
-      this.note('Trading: island only.');
+      this.note('Bartering: island only.');
       return;
     }
     const b = this.shown;
     if (!b) {
       if (this.ended) this.note(this.ended, 'barter-ended');
-      this.note(`No trade open. Start one: right-click a player, or Trade in the Social window. Range: ${BARTER_REACH} tiles.`);
+      this.note(`No barter open. Start one: right-click a player, or Barter in the Social window. Range: ${BARTER_REACH} tiles.`);
       return;
     }
     const them = b.theirs.name;
     if (b.state === 'asked') {
       if (b.asker) {
-        this.note(`Trade request sent to ${them}. Waiting.`);
+        this.note(`Barter request sent to ${them}. Waiting.`);
         this.bar(this.button('Cancel', 'Withdraw request', () => void this.act(this.island!.barterCancel(b.n))));
       } else {
-        this.note(`Trade request from ${them}.`);
+        this.note(`Barter request from ${them}.`);
         this.bar(
-          this.button('Trade', `Open trade with ${them}`, () => void this.act(this.island!.barterAnswer(b.n, true))),
+          this.button('Barter', `Open barter with ${them}`, () => void this.act(this.island!.barterAnswer(b.n, true))),
           this.button('No', `Turn ${them} down`, () => void this.act(this.island!.barterAnswer(b.n, false))),
         );
       }
@@ -157,7 +157,7 @@ export class BarterPanel {
       () => void this.act(this.island!.barterAccept(b.n, b.rev)));
     accept.disabled = b.mine.ok;
     accept.classList.add('barter-accept');
-    this.bar(accept, this.button('Cancel', 'Cancel the trade. Nothing changes hands.', () => void this.act(this.island!.barterCancel(b.n))));
+    this.bar(accept, this.button('Cancel', 'Cancel the barter. Nothing changes hands.', () => void this.act(this.island!.barterCancel(b.n))));
     this.note(b.mine.ok && b.theirs.ok ? '' : b.mine.ok ? `Accepted. Waiting for ${them}.`
       : b.theirs.ok ? `${them} accepted.` : 'Not accepted. Any change resets both Accepts.',
     'barter-status');
@@ -181,7 +181,7 @@ export class BarterPanel {
       const name = document.createElement('span');
       name.className = 'barter-name';
       name.textContent = `${t.count > 1 ? `${t.count} × ` : ''}${thingName(t)}`;
-      name.title = t.has < t.count ? 'Not enough in pack: trade refused while listed.' : `QL ${t.ql.toFixed(1)}`;
+      name.title = t.has < t.count ? 'Not enough in pack: barter refused while listed.' : `QL ${t.ql.toFixed(1)}`;
       row.append(name);
       if (mine) {
         row.append(this.button('×', `Remove ${thingName(t).toLowerCase()}`,
@@ -243,7 +243,7 @@ export class BarterPanel {
     const row1 = document.createElement('div');
     row1.className = 'barter-row';
     if (pack.length) row1.append(sel, n, add);
-    else row1.append(this.line('Nothing else tradeable: coins go as silver; worn, held or kept-back items excluded.', 'barter-none'));
+    else row1.append(this.line('Nothing else to barter: coins go as silver; worn, held or kept-back items excluded.', 'barter-none'));
 
     const coins = document.createElement('input');
     coins.type = 'number';

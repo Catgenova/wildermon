@@ -161,7 +161,7 @@ const standingAt = (at: string) => {
 };
 
 console.log('--- asking');
-check('no settlement where nothing stands', got('NO_TOKEN') === 'No settlement token here.', got('NO_TOKEN'));
+check('no settlement where nothing stands', got('NO_TOKEN') === 'No settlement totem here.', got('NO_TOKEN'));
 same('a tile past its edge is too far to ask from', joinFromAfar(standingAt(got('FAR_AT')), { name: deed, x, y, radius }), got('FAR'));
 check('and the browser lets you ask from its last tile',
   joinFromAfar(standingAt(`${x},${y + radius}`), { name: deed, x, y, radius }) === null);

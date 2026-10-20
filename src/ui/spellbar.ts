@@ -8,6 +8,8 @@ import {
 import { CLASS_SPELL_BY_ID } from '../game/talents';
 import { CHOOSE_AT, PATH_PICK_BY_ID } from '../game/meditation';
 import { percent } from '../game/words';
+import { SKILL_BY_ID } from '../game/skills';
+import { FAITH } from '../game/faith';
 import type { MenuItem } from './contextmenu';
 import type { FaithBook } from './faithbook';
 import { toldIn, toldOf } from '../net/told';
@@ -339,7 +341,7 @@ export class SpellBar {
       if (!this.book.said?.pathSpells?.length) return `Path techniques: Faith window, Path tab, from meditation ${CHOOSE_AT}.`;
       return 'Right-click: choose a path technique.';
     }
-    if (!this.book.said?.patron) return `Faith spells: take a patron at faith ${PATRON_AT} in the Faith window.`;
+    if (!this.book.said?.patron) return `Faith spells: take a patron at ${(SKILL_BY_ID.get(FAITH)?.name ?? FAITH).toLowerCase()} ${PATRON_AT} in the Faith window.`;
     if (!this.book.said.taken.length) return 'Faith spells: take one in the Faith window.';
     return 'Right-click: choose a faith spell.';
   }

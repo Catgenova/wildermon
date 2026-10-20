@@ -154,7 +154,7 @@ const same = (what: string, key: string, c: Creature, want: IdleWhy, sentence: s
 
 same('a water carrier with a full bucket and no barrel', 'HOLLA', holla, 'room', 'Idle: no barrel on the settlement has room for water.');
 const reach = workRangeOf(sedra, SPECIES.sedra);
-same(`a reed cutter with no reed bed within its ${reach} tiles`, 'SEDRA', sedra, 'range', `Idle: no reed bed within ${reach} tiles of the token.`);
+same(`a reed cutter with no reed bed within its ${reach} tiles`, 'SEDRA', sedra, 'range', `Idle: no reed bed within ${reach} tiles of the totem.`);
 check('the range in the reason is its own at its level, on both sides',
   islandIdle('SEDRA')?.n === reach && Number((isle.get('SEDRA') ?? '').split('|')[2]) === reach && sedra.idle?.n === reach, `${isle.get('SEDRA')} / ${reach}`);
 same('a mender with nothing in the stores', 'TINKA', tinka, 'stock', 'Idle: nothing in your settlement stores to mend.');

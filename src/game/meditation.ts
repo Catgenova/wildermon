@@ -7,7 +7,13 @@ import { listed, listedOr, percent, timeWords } from './words';
 import { durationSaid } from './boons';
 import { COMPANION_LEASH, GUARD_RANGE, HEAVY_HIT } from './fight';
 import { HAND_WINTER, SPRING_GROWTH } from './growth';
-import { lastDawn, TREE_AGES } from '../world/tiles';
+import { lastDawn, TREE_AGES, TREE_DAWN_UTC } from '../world/tiles';
+import { metres } from './piers';
+
+/** The daily reset as the hud's clock shows it: "13:00" (`TREE_DAWN_UTC`). */
+const resetHour = (): string =>
+  `${String(Math.floor(TREE_DAWN_UTC)).padStart(2, '0')}:${String(Math.round((TREE_DAWN_UTC % 1) * 60)).padStart(2, '0')}`;
+
 import { runestoneWithin } from './runestones';
 
 /**
@@ -238,20 +244,20 @@ export function sitPlace(f: SitFacts): { place: number; where: string } {
     place *= SIT_WORTH.stale;
     by.push(SIT_STALE_SAID);
   }
-  return { place, where: `Sitting: ${by.length ? by.join(', ') : 'no place modifier'}.` };
+  return { place, where: `Meditation and Calm gained: ${by.length ? by.join(', ') : 'no place modifier'}.` };
 }
 
 /** Each place multiplier as a sitting names it: the island's `sit_place`. */
 export const SIT_YARD_SAID = `own yard ×${SIT_WORTH.yard}`;
-export const SIT_THIN_SAID = `over ${SIT_WORTH.thinAt} high ×${SIT_WORTH.thin}`;
-export const SIT_HIGH_SAID = `over ${SIT_WORTH.highAt} high, off your settlement ×${SIT_WORTH.high}`;
+export const SIT_THIN_SAID = `over ${metres(SIT_WORTH.thinAt)} m high ×${SIT_WORTH.thin}`;
+export const SIT_HIGH_SAID = `over ${metres(SIT_WORTH.highAt)} m high, off your settlement ×${SIT_WORTH.high}`;
 export const SIT_WATER_SAID = `feet in water ×${SIT_WORTH.water}`;
 /** A swirl within reach. The island's `sit_swirl_said`. */
 export const SIT_SWIRL_SAID = `mote swirl within ${SIT_WORTH.swirlReach} tiles ×${SIT_WORTH.swirl}`;
 /** And a Runestone. The island's `sit_stone_said`. */
 export const SIT_STONE_SAID = `Runestone within ${SIT_WORTH.stoneReach} tiles ×${SIT_WORTH.stone}`;
 /** And near where you have sat today. The island's `sit_stale_said`. */
-export const SIT_STALE_SAID = `sat within ${SIT_WORTH.staleReach} tiles since the trees last grew ×${SIT_WORTH.stale}`;
+export const SIT_STALE_SAID = `sat within ${SIT_WORTH.staleReach} tiles since the daily reset (${resetHour()} UTC) ×${SIT_WORTH.stale}`;
 
 /**
  * Every place multiplier in one line, in `sitPlace`'s order, for the Faith
@@ -407,7 +413,7 @@ export const PATH_PICKS: PathPickDef[] = [
     (fx) => `Collect motes: +${fx.motes} mote.`),
 
   knowledge(4, 'technique', 'foreknow', 'Foreknow', 40, 40 * 60, { goes: 5 },
-    (fx) => `Your next ${fx.goes} goes at any job with a success roll succeed.`),
+    (fx) => `Your next ${fx.goes} actions with a success check succeed.`),
   knowledge(4, 'discipline', 'cartographer', 'Cartographer', 0, 0, { reveal: 2 },
     (fx) => `Map reveal radius ×${fx.reveal} your sight range, as you walk.`),
   knowledge(4, 'discipline', 'deep_reading', 'Deep Reading', 0, 0, { further: 3 },
@@ -432,14 +438,14 @@ export const PATH_PICKS: PathPickDef[] = [
   love(1, 'technique', 'refresh', 'Refresh', 15, 20 * 60, {},
     () => 'Hunger and thirst full at once.'),
   love(1, 'discipline', 'green_thumb', 'Green Thumb', 0, 0, { grow: 0.8 },
-    (fx) => `Crop stage time on your settlement −${percent(1 - fx.grow)}.`),
+    (fx) => `Crop growth stage time on your settlement −${percent(1 - fx.grow)}.`),
   love(1, 'discipline', 'gentle_hand', 'Gentle Hand', 0, 0, { tame: 1.25 },
     (fx) => `Tame chance ×${fx.tame}.`),
 
   love(2, 'technique', 'bond', 'Bond', 20, 10 * 60, { reach: 10, heal: 0.4 },
     (fx) => `Companion within ${fx.reach} tiles: health +${percent(fx.heal)}.`),
   love(2, 'discipline', 'kin', 'Kin', 0, 0, { 'kept:age': 0.75 },
-    (fx) => `Ageing of wildermon you keep −${percent(1 - fx['kept:age'])}: young and grown stages last +${percent(1 / fx['kept:age'] - 1)}.`),
+    (fx) => `Ageing of wildermon you keep −${percent(1 - fx['kept:age'])}: young and grown ages last +${percent(1 / fx['kept:age'] - 1)}.`),
   love(2, 'discipline', 'abundance', 'Abundance', 0, 0, { harvest: 1.25 },
     (fx) => `Harvest from fields and planters, and fruit picked from trees, +${percent(fx.harvest - 1)}.`),
 
@@ -448,12 +454,12 @@ export const PATH_PICKS: PathPickDef[] = [
   love(3, 'discipline', 'steady_herd', 'Steady Herd', 0, 0, { steady: 1 },
     () => `Your companion never breaks off a fight for distance from you (base: ${COMPANION_LEASH} tiles, ${GUARD_RANGE} when guarding).`),
   love(3, 'discipline', 'long_table', 'Long Table', 0, 0, { table: 1.25 },
-    (fx) => `Food and drink knack duration +${percent(fx.table - 1)}.`),
+    (fx) => `Meal and drink boost duration +${percent(fx.table - 1)}.`),
 
   love(4, 'technique', 'lull', 'Lull', 40, 30 * 60, { reach: 8, secs: 60 },
     (fx) => `Every creature within ${fx.reach} tiles hunting you stops; no new hunt for ${fx.secs} s unless you strike it.`),
   love(4, 'discipline', 'good_stock', 'Good Stock', 0, 0, { up: 0.1 },
-    (fx) => `Young you breed: chance each trait comes out a grade better +${Math.round(fx.up * 100)} percentage points.`),
+    (fx) => `Young you breed: chance each trait comes out one rarity higher +${Math.round(fx.up * 100)} percentage points.`),
   love(4, 'discipline', 'seasons_hand', 'Season’s Hand', 0, 0, { winter: HAND_WINTER },
     (fx) => `Fields you sow grow in winter at ${percent(fx.winter / SPRING_GROWTH)} of spring speed (base: no growth until spring).`),
 
@@ -462,7 +468,7 @@ export const PATH_PICKS: PathPickDef[] = [
   love(5, 'discipline', 'old_friend', 'Old Friend', 0, 0, { sure: 1 },
     () => 'Taming a kind of wildermon you have tamed before never fails: first offering accepted.'),
   love(5, 'discipline', 'bloom', 'Bloom', 0, 0, { bloom: 5 },
-    (fx) => `Once per island-clock day, your first finished sitting grows every tree within ${fx.bloom} tiles one stage: ${LAND_GROWS_SAID}. Not into dying, not clipped trees. One island-clock day: ${durationSaid(DAY_SECONDS)}.`),
+    (fx) => `Once per island-clock day, your first finished sitting grows every tree within ${fx.bloom} tiles one age: ${LAND_GROWS_SAID}. Not into dying, not clipped trees. One island-clock day: ${durationSaid(DAY_SECONDS)}.`),
 
   /*
    * Power's are the body itself. Its techniques bring the wind back, make
@@ -528,12 +534,12 @@ export function pathPickRefusal(
 ): string | null {
   if (!way) return `Choose a path first (opens at meditation ${CHOOSE_AT}).`;
   if (p.path !== way) return `Not your path: ${PATHS[p.path].name} (yours: ${PATHS[way].name}).`;
-  if (!PATHS[way].moved) return `${PATHS[way].name}: still on steps, not tiers.`;
+  if (!PATHS[way].moved) return `${PATHS[way].name}: still on steps, not path tiers.`;
   if (taken.includes(p.id)) return 'Already taken.';
   const other = picks.find((o) => o.path === p.path && o.tier === p.tier && taken.includes(o.id));
-  if (other) return `Tier already taken: ${other.name}.`;
+  if (other) return `Path tier already taken: ${other.name}.`;
   const at = pathTierAt(p.tier);
-  if (meditation < at) return `Tier opens at meditation ${at} (have ${Math.floor(meditation)}).`;
+  if (meditation < at) return `Path tier opens at meditation ${at} (have ${Math.floor(meditation)}).`;
   return null;
 }
 
@@ -542,7 +548,7 @@ export const tookSaid = (p: PathPickDef): string => `${p.name}. ${p.note}`;
 
 /** What reaching a tier says, at the rug. */
 export const tierSaid = (path: PathId, tier: number): string =>
-  `${PATHS[path].name}: tier ${tier} open. Pick one: ${listedOr(picksOf(path, tier).map((p) => p.name))} (Faith window).`;
+  `${PATHS[path].name}: path tier ${tier} open. Pick one: ${listedOr(picksOf(path, tier).map((p) => p.name))} (Faith window).`;
 
 /* ---- What the techniques say ---------------------------------------------------------- */
 
@@ -556,7 +562,7 @@ export const traceSaid = (dist: number): string => `Hoard of a map in your pack:
 /** And finding none, which costs nothing. */
 export const traceNone = (reach: number): string => `No hoard of a map in your pack within ${reach} tiles.`;
 /** Foreknow. */
-export const foreknowSaid = (goes: number): string => `Next ${goes} goes with a success roll: success.`;
+export const foreknowSaid = (goes: number): string => `Next ${goes} actions with a success check: success.`;
 /** Clarity. */
 export const claritySaid = (secs: number, more: number): string => `Skill gain +${percent(more)} for ${timeWords(secs)}.`;
 
@@ -603,7 +609,7 @@ export const unbrokenSaid = (secs: number): string => `No stamina cost for ${tim
 /** Hard to Kill, taking a killing blow. */
 export const hardToKillSaid = (heal: number): string => `Hard to Kill: killing blow survived at ${percent(heal)} health.`;
 /** Bloom, after a sitting. */
-export const bloomSaid = (n: number): string => `Bloom: ${n} ${n === 1 ? 'tree' : 'trees'} grew a stage.`;
+export const bloomSaid = (n: number): string => `Bloom: ${n} ${n === 1 ? 'tree' : 'trees'} grew one age.`;
 
 /**
  * Read the Sky: the wind at each of the next `hours` game-hours from `time`,

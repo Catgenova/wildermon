@@ -264,11 +264,11 @@ const after = psql(`select x || ',' || y || ',' || level || ',' || coalesce(act,
 check('is there, on the ground, with its job stopped and its queue empty', after === '20.5,22.5,0,none,[]', after);
 const toldStig = psql(`select text from event where world_id = '${KEEP}' and uid = '${STUCK}' order by n desc limit 1;`);
 check('and is told who moved it, where to, and what stopped',
-  toldStig === `Osric, who keeps this island, has moved you to the token of Stuckholm at (20, 22). You stop ${digging}, and the 2 jobs queued after it are cleared.`,
+  toldStig === `Osric, who keeps this island, has moved you to the totem of Stuckholm at (20, 22). You stop ${digging}, and the 2 actions queued after it are cleared.`,
   toldStig);
 const toldOsric = psql(`select text from event where world_id = '${KEEP}' and uid = '${OWNER}' order by n desc limit 1;`);
 check('and the keeper, in the same words about them',
-  toldOsric === `You move Stig to the token of Stuckholm at (20, 22). They stop ${digging}, and the 2 jobs queued after it are cleared.`,
+  toldOsric === `You move Stig to the totem of Stuckholm at (20, 22). They stop ${digging}, and the 2 actions queued after it are cleared.`,
   toldOsric);
 const sent = psql(`select payload::text from realtime.messages where topic = 'own:${KEEP}:${STUCK}' and event = 'moved' order by id desc limit 1;`);
 check('and its browser is sent the spot', sent === '{"x": 20.5, "y": 22.5, "level": 0}', sent);

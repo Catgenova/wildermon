@@ -64,8 +64,8 @@ export const COUNTER_SEEN = 6;
 export const COUNTER_TOO_FAR_TO_SEE = `Too far to see its goods: within ${COUNTER_SEEN} tiles.`;
 /** Setting goods out on somebody else's counter. */
 export const COUNTER_NOT_KEEPER = 'Only the counter\'s planner sets goods out.';
-/** A piece of furniture, which is set down rather than laid out, but for a creature crate. */
-export const COUNTER_NO_PIECES = 'No furniture on a counter (creature crates allowed).';
+/** A piece of furniture, which is set down rather than laid out, but for a wildermon crate. */
+export const COUNTER_NO_PIECES = 'No furniture on a counter (wildermon crates allowed).';
 /** Taking the counter down with anything on it or in its till. */
 export const COUNTER_EMPTY_FIRST = 'Remove the goods and the till takings first.';
 
@@ -248,7 +248,7 @@ export function buyRefusal(g: Game, c: Counter, good: Item): string | null {
   return null;
 }
 
-/** Why a thing will not go on a counter, or null: furniture is set down, but for a creature crate. */
+/** Why a thing will not go on a counter, or null: furniture is set down, but for a wildermon crate. */
 export function counterRefuses(item: Item): string | null {
   return isFurniture(item.id) && item.id !== 'creature_crate' ? COUNTER_NO_PIECES : null;
 }

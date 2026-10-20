@@ -127,7 +127,7 @@ export const crateName = (c: PlacedCrate): string => {
   if (c.name) return c.name;
   const wood = c.material ? ` (${c.material.toLowerCase()})` : '';
   const rare = rarityOf(c).name;
-  const said = c.deed ? `Deed crate (${CRATE_DEFS[c.kind].name.toLowerCase()})${wood}` : `${CRATE_DEFS[c.kind].name}${wood}`;
+  const said = c.deed ? `Settlement crate (${CRATE_DEFS[c.kind].name.toLowerCase()})${wood}` : `${CRATE_DEFS[c.kind].name}${wood}`;
   return rare ? `${rare.charAt(0).toUpperCase()}${rare.slice(1)} ${said.toLowerCase()}` : said;
 };
 /** World position of a crate's centre. */
@@ -215,7 +215,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
         if (deck === null && g.world.slope(t.x, t.y) > 20) return 'Too steep.';
       }
       if (g.crateAt(t.x, t.y, t.sx, t.sy, level)) return 'Spot taken.';
-      if (g.isToken(t.x, t.y)) return 'Not on the token.';
+      if (g.isToken(t.x, t.y)) return 'Not on the totem.';
       return null;
     },
     perform: (t, g) => {
@@ -264,7 +264,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       if (c.rare) back.rare = c.rare;
       if (c.enchant) back.enchant = c.enchant;
       if (c.dmg) back.dmg = c.dmg;
-      g.logMsg(`Picked up: ${CRATE_DEFS[c.kind].name.toLowerCase()}.${c.deed ? ' Deed workers leave their finds by the token until a deed crate is set down.' : ''}`, 'event');
+      g.logMsg(`Picked up: ${CRATE_DEFS[c.kind].name.toLowerCase()}.${c.deed ? ' Settlement workers leave their finds by the totem until a settlement crate is set down.' : ''}`, 'event');
       g.events.emit('world', c.x, c.y);
     },
   },

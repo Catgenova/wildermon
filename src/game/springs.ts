@@ -17,6 +17,7 @@ import {
   type Chain, type Pond, type PondWater, type Shut, type SlabAt, type Stream, type StreamWater,
 } from '../world/springs';
 import { AQUEDUCT_FLOW, pondRate, settleWater, type Channel } from '../world/aqueducts';
+import { metres } from '../world/tiles';
 
 /** One spring, and what its water does. */
 export interface Spring {
@@ -147,7 +148,7 @@ export class Springs {
       for (let k = 0; k < tiles.length; k += 2) if (this.at(tiles[k], tiles[k + 1])) return 'Pool already has a spring.';
       return null;
     }
-    if (r === 'flat') return `Water would run off downhill: dig in a hollow holding ${(SPRING_DEPTH / 10).toFixed(1)} m of water or more.`;
+    if (r === 'flat') return `Water would run off downhill: dig in a hollow holding ${metres(SPRING_DEPTH)} m of water or more.`;
     if (r === 'wide') return `Hollow too wide: a pond covers ${POND_MOST} corners at most.`;
     return null;
   }
@@ -365,7 +366,7 @@ export function aqueductSpringSays(chain: Chain, head: (id: number) => readonly 
   if (first.tiles) {
     return k ? `Spring in the pool: flows into ${more} ${go}.` : `Spring in the pool: flows ${go}, not over its edge.`;
   }
-  const stand = `Spring: pond ${((first.level - first.floor) / 10).toFixed(1)} m deep over ${first.wet.length / 2} corners`;
+  const stand = `Spring: pond ${metres(first.level - first.floor)} m deep over ${first.wet.length / 2} corners`;
   return k ? `${stand}, then spills over its rim into ${more} ${go}.` : `${stand}, then flows ${go}, not over its rim.`;
 }
 
@@ -375,12 +376,12 @@ export function springSays(s: Spring, head: (id: number) => readonly [number, nu
   if (along) return along;
   const [first, ...rest] = s.chain.ponds;
   const last = s.chain.streams[s.chain.streams.length - 1];
-  const deep = ((first.level - first.floor) / 10).toFixed(1);
+  const deep = metres(first.level - first.floor);
   const on = rest.length ? `into ${rest.length} more pond${rest.length === 1 ? '' : 's'} below, then from the last ` : '';
   const end = last?.to === 'sea' ? 'into the sea' : last?.to === 'lost' ? 'into the ground' : 'back into a pond of its own';
   if (first.tiles) {
     if (!first.spill) return 'Spring in the pool: stays full, no outflow (nothing lower beside it).';
-    const fall = ((first.level - first.spill.to) / 10).toFixed(1);
+    const fall = metres(first.level - first.spill.to);
     const onto = rest[0]?.tiles && first.spill.to === rest[0].level ? 'into the pool below' : 'to the ground';
     // The last of them a pool with nothing lower beside it: the water stops there.
     const bottom = s.chain.ponds[s.chain.ponds.length - 1];

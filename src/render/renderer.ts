@@ -236,7 +236,7 @@ interface HemPicture {
 /** The thin darker line where a pond meets its bank. */
 const POND_SHORE = `rgba(${SPRING_EDGE.join(',')},0.6)`;
 
-/** The top of a creature crate's floor, in pixels at zoom 1: 0.7 units up. */
+/** The top of a wildermon crate's floor, in pixels at zoom 1: 0.7 units up. */
 const CRATE_FLOOR = 0.7 * HEIGHT_SCALE;
 /** How big a wildermon is drawn in a crate against out in the world, so a grown one stands inside it. */
 const CRATE_SCALE = 0.8;
@@ -5401,7 +5401,7 @@ export class Renderer {
         // The box it stands in, and a margin for what it is drawn as past that, for keeping it off a runestone's runes (`paint`).
         const pieceBox: [number, number, number, number] = [ent.sx - W * 1.3 * zoom, ent.sy - (h + D + 8) * zoom, W * 2.6 * zoom, (h + 2 * D + 14) * zoom];
         /*
-         * A creature crate with somebody in it: its far half, the wildermon
+         * A wildermon crate with somebody in it: its far half, the wildermon
          * standing on its floor facing the door, and its near half and lid
          * over them, so it is seen inside rather than on top. Its name stands
          * over the crate the way a companion's stands over its head.

@@ -166,12 +166,12 @@ check('it is the preview of this pair, the sire put to the dam', asked.startsWit
 check('it says how often it takes, off the rule', line('Success: ') === `Success: ${Math.round(breedChance(HUSBANDRY, CARE) * 100)}%.`, line('Success: '));
 check('and how often each trait is drawn from their blood and comes out a tier better',
   line('Each of ').includes(`inherited ${Math.round(inheritChance(HUSBANDRY, CARE) * 100)}%`)
-    && line('Each of ').includes(`tier-up ${Math.round(upgradeChance(HUSBANDRY, CARE) * 100)}%`), line('Each of '));
+    && line('Each of ').includes(`rarity-up ${Math.round(upgradeChance(HUSBANDRY, CARE) * 100)}%`), line('Each of '));
 {
   const want = Object.keys(preview.carry).sort((a, b) => preview.carry[b] - preview.carry[a]).map((id) => `${traitName(id)} ${said(preview.carry[id])}`).join(', ');
   check('each trait either parent carries, with the share of young born carrying it', line('Born carrying: ') === `Born carrying: ${want}.`, line('Born carrying: '));
-  check('the share whose best trait comes out at each tier', line('Best trait tier: ') === `Best trait tier: ${TIERS.map((t) => `${t} ${said(preview.best[t])}`).join(', ')}.`,
-    line('Best trait tier: '));
+  check('the share whose best trait comes out at each tier', line('Best trait rarity: ') === `Best trait rarity: ${TIERS.map((t) => `${t} ${said(preview.best[t])}`).join(', ')}.`,
+    line('Best trait rarity: '));
   const tier = mutationTier(SIRE, DAM);
   check(`one in ${MUTATION_ODDS} a mutation, at the tier above the best of theirs (${tier})`,
     line('Mutation: ') === `Mutation: 1 in ${MUTATION_ODDS} (${said(1 / MUTATION_ODDS)}): a ${tier} trait in neither parent, in its lowest slot.`

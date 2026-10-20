@@ -6,6 +6,7 @@ import { greenNow } from './greening';
 import { lacks } from './ranks';
 import { itemDef } from './items';
 import { fill } from './words';
+import { metres } from '../world/tiles';
 import { AQUEDUCT_FLOW, CHANNEL_WIDE, TILE_METRES } from '../world/aqueducts';
 
 /**
@@ -297,7 +298,7 @@ const storeyNamed = (level: number): string => (level ? `storey ${level + 1}` : 
  */
 export function rampRefusal(la: number, lb: number, apart: number, n: number): string {
   const ends = la !== lb ? ` (${storeyNamed(la)} to ${storeyNamed(lb)})` : '';
-  return `Ends ${apart.toFixed(0)} apart in height${ends}. Max rise ${RAMP_SLOPE}/tile: needs ${rampTiles(apart)} tiles of deck; has ${n}.`;
+  return `Ends ${metres(apart)} m apart in height${ends}. Max rise ${metres(RAMP_SLOPE)} m/tile: needs ${rampTiles(apart)} tiles of deck; has ${n}.`;
 }
 
 /**
@@ -309,7 +310,7 @@ export function setOutWords(b: Bridge): string {
   const [la, lb] = bridgeLevels(b);
   const storeys = la || lb ? `, ${storeyNamed(la)} to ${storeyNamed(lb)}` : '';
   const rise = b.rise ?? 0;
-  const slope = rise ? `, deck ${rise > 0 ? 'rising' : 'falling'} ${Math.abs(rise)} toward the far end` : '';
+  const slope = rise ? `, deck ${rise > 0 ? 'rising' : 'falling'} ${metres(Math.abs(rise))} m toward the far end` : '';
   return `${storeys}${slope}`;
 }
 

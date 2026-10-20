@@ -212,7 +212,7 @@ export function vesselSays(f: PlacedFurniture, now = Date.now() / 1000): string 
     : dye ? `Holds: ${dyeSays(dye, litres)}`
       : `Holds: ${litres.toFixed(0)} litres of ${LIQUID_NAME[f.liquid]}.`;
   // And a wine kept in it, how long and what it has gained (`ageing.ts`).
-  return `${furnitureName(f)}: QL ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}${wineAgeSays(f, now)}`;
+  return `${furnitureName(f)}: Quality ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}${wineAgeSays(f, now)}`;
 }
 
 /** Whether there is water at hand at all: a shore, a well or a barrel of it. */
@@ -897,7 +897,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
         came++;
       }
       g.note('rang');
-      g.logMsg(`Rang: ${furnitureName(f).toLowerCase()} at ${f.x}, ${f.y}. Deed workers called: ${came}. Citizens of ${g.deed.name} notified.`, 'event');
+      g.logMsg(`Rang: ${furnitureName(f).toLowerCase()} at ${f.x}, ${f.y}. Settlement workers called: ${came}. Citizens of ${g.deed.name} notified.`, 'event');
     },
   },
 ];

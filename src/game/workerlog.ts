@@ -69,7 +69,7 @@ const IDLE_SOURCE: Partial<Record<GatherKind, string>> = {
   sprout: 'trees to pick a sprout off', resin: 'pines to tap', flower: 'wildflowers to pick', scrub: 'moss or ivy on your stone',
   fetch: 'anything lying on the ground', compost: 'anything rotting on the ground', hunt: 'quarry or carcass',
   water: 'shore or well to fill from', fill: 'shore or well to fill a bucket at', prospect: 'unread ground',
-  plant: 'cleared ground to plant a sprout in', hod: 'planned building work wanting something your stores hold',
+  plant: 'cleared ground to plant a sprout in', hod: 'planned building work wanting something your settlement stores hold',
   stoke: 'fire, furnace or kiln burning low', groom: 'wildermon of yours wanting brushing',
   dairy: 'wildermon of yours ready to milk or shear', heal: 'wildermon of yours hurt or bleeding',
   lamp: 'lantern post or pillar of yours wanting a candle, lighting or putting out',
@@ -133,7 +133,7 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
   const n = Math.round(idle.n);
   switch (idle.why) {
     case 'range':
-      return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its trade'} within ${n} tiles of ${idle.post ? 'its work post' : 'the token'}.`;
+      return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its task'} within ${n} tiles of ${idle.post ? 'its work post' : 'the totem'}.`;
     case 'stock': {
       const verb = (kind && IDLE_STOCK[kind]) ?? 'work';
       const wants = kind ? IDLE_STOCK_THING[kind] ?? recipeWants(kind) : '';
@@ -237,7 +237,7 @@ export function ledgerDays(l: WorkLedger | null | undefined, day: number): { tod
 export function ledgerSays(label: string, d: LedgerDay | null, skill?: string | null): string {
   if (!d || (d.goes <= 0 && d.skill <= 0 && !Object.keys(d.made).length)) return '';
   const made = Object.entries(d.made).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, LEDGER_SHOWN);
-  const parts: string[] = [`${d.goes} go${d.goes === 1 ? '' : 'es'}`];
+  const parts: string[] = [`${d.goes} cycle${d.goes === 1 ? '' : 's'}`];
   if (made.length) parts.push(`handled ${listed(made.map(([id, n]) => countOf(id, n, true)))}`);
   if (d.skill > 0) parts.push(`+${d.skill.toFixed(2)} ${skill ? (SKILL_BY_ID.get(skill)?.name ?? skill).toLowerCase() : 'skill'}`);
   return `${label}: ${parts.join('; ')}.`;

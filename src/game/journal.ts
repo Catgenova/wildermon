@@ -103,7 +103,7 @@ export const JOURNAL: Chapter[] = [
   {
     name: 'Ashore',
     goals: [
-      { id: 'tree', text: 'Fell a tree', how: 'Right-click a tree: Cut down. Needs a hatchet (in your starting pack). Every job needs its tool and names it when missing.', met: did('tree') },
+      { id: 'tree', text: 'Fell a tree', how: 'Right-click a tree: Cut down. Needs a hatchet (in your starting pack). Every action needs its tool and names it when missing.', met: did('tree') },
       // Planks made, not a carpentry level: a crate or a shaft raised the skill as far, and a slow saw never got there.
       { id: 'plank', text: 'Saw a log into planks', how: 'Crafting (R): Saw into planks. {recipe.make_planks.log} log + saw = {recipe.make_planks.count} planks. Crafting lists every recipe; inputs in green if you have them, red if not.', met: did('made:plank') },
       { id: 'fire', text: 'Light a campfire', hint: `${FIRE_COST} shafts, placed and lit`, how: `Crafting (R): shafts from a log. With ${FIRE_COST} in your pack, right-click the ground: Build campfire; right-click the fire: Light. Add wood to keep it burning.`, met: did('fire') },
@@ -113,7 +113,7 @@ export const JOURNAL: Chapter[] = [
     ],
   },
   {
-    name: 'The trades',
+    name: 'The crafts',
     goals: [
       { id: 'ore', text: 'Mine some ore', met: did('ore') },
       /*
@@ -190,7 +190,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'path', text: 'Choose a meditation path', hint: `At meditation ${CHOOSE_AT}, on the rug. Permanent`, met: (g) => !!g.player.way },
       { id: 'walked', text: `Walk your path to its end: meditation ${listed(PATH_ENDS)}`, met: (g) => !!g.player.way && g.skills.get('meditation') >= pathEnd(g.player.way) },
       {
-        id: 'tiered', text: 'Take a pick at every tier of your path',
+        id: 'tiered', text: 'Take a pick at every path tier',
         hint: `A technique or discipline at meditation ${PATH_TIER_AT.join(', ')}: Faith window, Path tab (tiered paths)`,
         met: (g) => !!g.player.way && PATHS[g.player.way].moved && PATH_TIER_AT.every((_, i) => g.player.picks.some((id) => id.startsWith(`${g.player.way}_`) && PATH_PICK_TIER(id) === i + 1)),
       },
@@ -222,7 +222,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'baited', text: 'Catch a fish with bait on the hook', met: did('baited') },
       { id: 'netted', text: 'Haul in a fishing net', met: did('netted') },
       { id: 'creeled', text: 'Empty a creel', hint: 'Weave from reed, bait, sink in water', met: did('creeled') },
-      { id: 'caught', text: 'Catch a wildermon in a trap', hint: 'Baited snare or deadfall, outside your deed', met: did('caught') },
+      { id: 'caught', text: 'Catch a wildermon in a trap', hint: 'Baited snare or deadfall, outside your settlement', met: did('caught') },
       { id: 'trapped', text: 'Take a live wildermon out of a trap', met: did('trapped') },
       { id: 'groom', text: 'Brush a wildermon', hint: 'Brush: {recipe.make_brush.plank} plank + {recipe.make_brush.nail} nails', met: did('groom') },
       { id: 'groomfull', text: 'Brush a wildermon until its care is full', hint: 'Brush repeatedly', met: did('groomfull') },
@@ -269,7 +269,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'colours', text: 'Plant a dyed banner on your settlement', met: (g) => founded(g) && ours(g.furniture.values()).some((f) => f.kind === 'banner' && !!f.dye && onDeed(g, f)) },
       { id: 'title', text: 'Earn a title', hint: `Reach ${TITLE_STEPS[0]} in a skill that has titles`, met: (g) => g.player.titles.length > 0 },
       { id: 'master', text: 'Earn a master title', hint: `Reach ${MASTER_AT} in a skill that has titles`, met: (g) => g.player.titles.some((t) => TITLE_STEPS.some((at) => at >= MASTER_AT && t.endsWith(`:${at}`))) },
-      { id: 'knack', text: 'Gain a knack', hint: `Chance per action: ${+(100 / KNACK_ODDS).toFixed(2)}%, any trade`, met: did('knack') },
+      { id: 'knack', text: 'Gain a knack', hint: `Chance per action: ${+(100 / KNACK_ODDS).toFixed(2)}%, in any skill`, met: did('knack') },
       { id: 'knack5', text: `Gain ${KNACK_CAP} knacks in one skill`, met: (g) => Object.values(g.player.knacks).some((n) => n >= KNACK_CAP) },
     ],
   },

@@ -40,7 +40,7 @@ import { MATERIALS as IMPROVE_MATERIALS } from '../../src/game/improve';
 import { BRIDGES } from '../../src/game/bridges';
 import { buildWork } from '../../src/game/buildActions';
 import { MATERIALS as BUILD_MATERIALS } from '../../src/game/building';
-import { ROAD_TILES, TILE_DEFS } from '../../src/world/tiles';
+import { metres, ROAD_TILES, TILE_DEFS } from '../../src/world/tiles';
 import { STANCE_TAKEN } from '../../src/game/fight';
 import { WEAPON_BY_ID } from '../../src/game/gear';
 
@@ -652,13 +652,13 @@ check(`${P('Dredger').name}: a bottom at forty is out of reach without it and in
 
 const [capA, sentA] = say('SLOPE').split('|');
 const [capB, sentB] = say('STEEP').split('|');
-const would = Number(sentA.match(/Slope would be (\d+)/)?.[1] ?? NaN);
+const would = Math.round(Number(sentA.match(/Slope would be (\d+\.\d) m/)?.[1] ?? NaN) * 10);
 const per = P('Steep Cut').fx['slope:digging'];
 check(`${P('Steep Cut').name}: the steepest a spade leaves is ${per} times digging, not ${SLOPE_PER_SKILL}`,
   Number(capA) === Math.max(SLOPE_FLOOR, Math.floor(50 * SLOPE_PER_SKILL)) && Number(capB) === Math.max(SLOPE_FLOOR, Math.floor(50 * per)),
   `${capA}, then ${capB}`);
 check('and a cut between the two is refused in numbers without it and allowed with it',
-  sentA === `Slope would be ${would}; digging allows ${capA}, needs digging ${slopeNeeds(would, SLOPE_PER_SKILL).toFixed(1)}.`
+  sentA === `Slope would be ${metres(would)} m; digging allows ${metres(Number(capA))} m, needs digging ${slopeNeeds(would, SLOPE_PER_SKILL).toFixed(1)}.`
     && sentB === 'ALLOWED', `${sentA} / ${sentB}`);
 
 const [sA, sB, sC, sBase] = say('ROAD').split('|').map(Number);

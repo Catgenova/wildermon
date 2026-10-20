@@ -548,7 +548,7 @@ export class DeedPanel {
     if (!d) {
       const none = document.createElement('div');
       none.className = 'deed-none';
-      none.textContent = 'No settlement. Plant a settlement token to found one.';
+      none.textContent = 'No settlement. Plant a settlement totem to found one.';
       this.body.append(none);
       return;
     }
@@ -571,16 +571,16 @@ export class DeedPanel {
       this.body.append(standing);
     }
     this.body.append(this.row('Level', `${level} of ${MAX_DEED_LEVEL}`));
-    this.body.append(this.row('Border', `radius ${d.radius} tiles · ${side} × ${side}`, `Centred on the token at (${d.x}, ${d.y}).`));
-    this.body.append(this.row('Working', `${workers}/${g.workerCap}`, 'Wildermon working the deed / max at this level.'));
+    this.body.append(this.row('Border', `radius ${d.radius} tiles · ${side} × ${side}`, `Centred on the totem at (${d.x}, ${d.y}).`));
+    this.body.append(this.row('Working', `${workers}/${g.workerCap}`, 'Wildermon working the settlement / max at this level.'));
     // Each trade its workers are at, and whether there are enough of them at it for a specialty (`SPECIALTY_AT`).
     for (const { kind, n } of g.creatures.specialties()) {
-      this.body.append(this.row(n >= SPECIALTY_AT ? 'Specialty' : 'Trade', specialtySays(kind, n).replace(/^Specialty: /, ''),
-        `${SPECIALTY_AT}+ deed workers of one trade: task speed +${percent(SPECIALTY_BONUS)} each.`));
+      this.body.append(this.row(n >= SPECIALTY_AT ? 'Specialty' : 'Task', specialtySays(kind, n).replace(/^Specialty: /, ''),
+        `${SPECIALTY_AT}+ settlement workers on one task: task speed +${percent(SPECIALTY_BONUS)} each.`));
     }
-    this.body.append(this.row('In creature crates', String(crated), 'Yours in creature crates: not working or following.'));
-    this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'Deed wildermon response to intruders.'));
-    this.body.append(this.place('Token', d.x, d.y));
+    this.body.append(this.row('In wildermon crates', String(crated), 'Yours in wildermon crates: not working or following.'));
+    this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'Settlement wildermon response to intruders.'));
+    this.body.append(this.place('Totem', d.x, d.y));
     // Who lives here and the settlement's ranks, from the island's social answer.
     this.roll?.prime();
     const here: MyDeed | undefined = this.roll?.known()?.deeds.find((e) => e.x === d.x && e.y === d.y);
@@ -727,7 +727,7 @@ export class DeedPanel {
       if (tail.childElementCount) this.body.append(this.head('Settlement'), tail);
       return;
     }
-    this.body.append(this.head('Deed wildermon orders'));
+    this.body.append(this.head('Settlement wildermon orders'));
     const stance = g.deedStance();
     const row = document.createElement('div');
     row.className = 'deed-buttons';
@@ -761,7 +761,7 @@ export class DeedPanel {
     if (!d) {
       const none = document.createElement('div');
       none.className = 'deed-none';
-      none.textContent = 'No settlement. Found one (settlement token) or accept an invitation.';
+      none.textContent = 'No settlement. Found one (settlement totem) or accept an invitation.';
       this.body.replaceChildren(none);
       this.listKey = '';
       return;
@@ -910,7 +910,7 @@ export class DeedPanel {
     thing.className = 'panel-select deed-input';
     thing.setAttribute('list', list.id);
     thing.placeholder = 'Item wanted';
-    thing.title = 'Anything a deed crate takes (not coins or crates).';
+    thing.title = 'Anything a settlement crate takes (not coins or crates).';
     const count = document.createElement('input');
     count.className = 'panel-select deed-input deed-num';
     count.type = 'number';
@@ -963,8 +963,8 @@ export class DeedPanel {
     const open = b.work.filter((w) => w.closed === null);
     const closed = b.work.filter((w) => w.closed !== null);
     this.listHost.append(this.note(
-      `Deliver within ${DELIVER_REACH} tiles of the token: matching pack items into the deed crate, lowest QL first, until filled or the crate is full.`
-      + (b.room === null ? ' No deed crate here.' : ` Deed crate room: ${b.room}.`)));
+      `Deliver within ${DELIVER_REACH} tiles of the totem: matching pack items into the settlement crate, lowest QL first, until filled or the crate is full.`
+      + (b.room === null ? ' No settlement crate here.' : ` Settlement crate room: ${b.room}.`)));
     if (!open.length) this.listHost.append(this.note(b.set ? 'No work posted. Set some above.' : 'No work posted.'));
     for (const w of open) {
       const i = b.work.indexOf(w);
@@ -993,7 +993,7 @@ export class DeedPanel {
       give.className = 'tb-btn tb-small';
       give.textContent = reasons[i] ? 'Deliver' : `Deliver ${going}`;
       give.disabled = !!reasons[i];
-      give.title = reasons[i] ?? `Deliver ${going} × ${thingName(w.def)} to the deed crate, lowest QL first.`;
+      give.title = reasons[i] ?? `Deliver ${going} × ${thingName(w.def)} to the settlement crate, lowest QL first.`;
       give.addEventListener('click', () => this.boardDo(this.roll!.deliver(b.founder, w.id)));
       tools.append(give);
       if (b.set) {
@@ -1001,9 +1001,9 @@ export class DeedPanel {
         down.type = 'button';
         down.className = 'tb-btn tb-small tb-danger';
         down.textContent = 'Take down';
-        down.title = 'Close it. Deliveries stay in the deed crate.';
+        down.title = 'Close it. Deliveries stay in the settlement crate.';
         down.addEventListener('click', () => {
-          void this.game.hooks.confirm(`Close ${workLabel(w)}? ${w.got} delivered stay in the deed crate.`).then((yes) => {
+          void this.game.hooks.confirm(`Close ${workLabel(w)}? ${w.got} delivered stay in the settlement crate.`).then((yes) => {
             if (yes) this.boardDo(this.roll!.dropWork(b.founder, w.id));
           });
         });

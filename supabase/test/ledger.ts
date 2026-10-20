@@ -198,7 +198,7 @@ check('the island day is the island clock over a day\'s length', isle.get('DAY')
   check('and rolled over at the day boundary by the work itself', tinka.ledger?.day === day + 1 && tinka.ledger.last?.goes === 1 && tinka.ledger.now.goes === 1,
     JSON.stringify(tinka.ledger));
   const lines = ledgerLines(tinka.ledger, g.islandDay());
-  check(`and said on its card: ${lines.join(' / ')}`, lines.length === 2 && lines[0].startsWith('This island day: 1 go; +') && lines[1].startsWith('Last island day: 1 go; +'),
+  check(`and said on its card: ${lines.join(' / ')}`, lines.length === 2 && lines[0].startsWith('This island day: 1 cycle; +') && lines[1].startsWith('Last island day: 1 cycle; +'),
     lines.join(' / '));
 }
 
@@ -207,7 +207,7 @@ check('the island day is the island clock over a day\'s length', isle.get('DAY')
   const l: WorkLedger = { day: 9, now: { goes: 0, skill: 0, made: {} }, last: { goes: 38, skill: 2.1, made: { reed: 140, log: 2, seed: 12, clay: 1 } } };
   const lines = ledgerLines(l, 9);
   check(`the last island day reads off the numbers, ${LEDGER_SHOWN} things at most: ${lines.join(' / ')}`,
-    lines.length === 1 && lines[0] === 'Last island day: 38 goes; handled 140 reeds, 12 seeds and 2 logs; +2.10 skill.', lines.join(' / '));
+    lines.length === 1 && lines[0] === 'Last island day: 38 cycles; handled 140 reeds, 12 seeds and 2 logs; +2.10 skill.', lines.join(' / '));
   check('and a ledger last written two days ago says nothing', ledgerLines(l, 11).length === 0);
 }
 

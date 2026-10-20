@@ -432,7 +432,7 @@ export function gateHoverLine(g: Game, x: number, y: number, side: Side, sideNam
 /** What raising or lowering one says. */
 export const drawbridgeSaid = (up: boolean): string => (up
   ? 'Drawbridge raised: nothing crosses.'
-  : `Drawbridge lowered: people and beasts${BRIDGES.draw.carts ? ' and carts' : ''} cross.`);
+  : `Drawbridge lowered: people and creatures${BRIDGES.draw.carts ? ' and carts' : ''} cross.`);
 
 /**
  * A portcullis or a drawbridge as something a padlock is fitted to: the

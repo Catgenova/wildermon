@@ -196,7 +196,7 @@ export class InventoryPanel {
     this.load.classList.toggle('inv-stuck', stuck);
     this.load.title = `${weight.toFixed(1)}/${stop.toFixed(0)} kg. From ${limit.toFixed(0)} kg: slower, more stamina use. At ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}.`;
     this.footer.title = stuck
-      ? `Load ${weight.toFixed(1)} kg (limit ${limit.toFixed(0)}). Over ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}. Drop ${(weight - stop).toFixed(1)} kg.`
+      ? `Load ${weight.toFixed(1)} kg (limit ${limit.toFixed(0)} kg). Over ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}. Drop ${(weight - stop).toFixed(1)} kg.`
       : over > 0
         ? `Overload ${over.toFixed(1)} kg: slower, more stamina use; over ${stop.toFixed(0)} kg, speed ×${CARRY_CRAWL}.`
         : `${(limit - weight).toFixed(1)} kg spare.`;
@@ -428,7 +428,7 @@ export class InventoryPanel {
     const hangable = this.game.actionsFor(target).filter((a) => pinnable(a.def));
     if (hangable.length && this.game.beltLoops()) {
       entries.push({
-        label: 'Hang job on belt',
+        label: 'Hang action on belt',
         children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id, item: item.id }).children })),
       });
     }

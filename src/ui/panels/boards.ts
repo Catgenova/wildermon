@@ -23,10 +23,10 @@ export const BRED_MAX = TRAIT_SLOTS * GRADE_STEP[TIERS[TIERS.length - 1]];
  */
 export const BOARD_RULES: Record<Tab, string> = {
   skills: `Top ${BOARD_TOP} per skill, by level. Only players who raised the skill are ranked.`,
-  wildermon: `Top ${BOARD_TOP} tamed wildermon by trait total, per grade: `
+  wildermon: `Top ${BOARD_TOP} tamed wildermon by trait total, points per trait rarity: `
     + `${TIERS.map((t) => `${t} ${figure(GRADE_STEP[t])}`).join(', ')}; max ${figure(BRED_MAX)} for ${TRAIT_SLOTS} traits. `
     + 'Tie: higher level first. Wild not ranked; traits not named.',
-  settlements: `Top ${BOARD_TOP} settlements by level (1 to ${MAX_DEED_LEVEL}), then citizens (founder and roll), `
+  settlements: `Top ${BOARD_TOP} settlements by level (1 to ${MAX_DEED_LEVEL}), then citizens (founder and member list), `
     + 'then age, oldest first.',
 };
 

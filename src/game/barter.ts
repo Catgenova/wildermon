@@ -43,18 +43,18 @@ export const BARTER_REFRESH = 3;
  */
 export const BARTER_SAID = {
   /** Asking yourself, or nobody. */
-  self: 'Nobody there to trade with.',
+  self: 'Nobody there to barter with.',
   /** The other one is not on the island, or is away. */
   gone: '{who} is not ashore.',
   /** Too far apart to ask, to say yes or to accept. */
-  far: `Too far: trade within ${BARTER_REACH} tiles.`,
+  far: `Too far: barter within ${BARTER_REACH} tiles.`,
   /** Already in a trade. */
-  busy: 'Already trading: finish or cancel first.',
-  busyThem: '{who} is already trading.',
+  busy: 'Already bartering: finish or cancel first.',
+  busyThem: '{who} is already bartering.',
   /** A trade you are not in, or one that never was: the same answer, so it tells a stranger nothing. */
-  none: 'No such trade.',
+  none: 'No such barter.',
   /** One of yours, already finished. */
-  over: 'Trade over.',
+  over: 'Barter over.',
   /** Putting things in, or accepting, before the one asked has said yes. */
   notYet: '{who} has not agreed yet.',
   /** Answering a trade you asked for. */
@@ -74,20 +74,20 @@ export const BARTER_SAID = {
   /** Too many things on one side. */
   most: `Max ${BARTER_MOST} items per side.`,
   /** An Accept sent against a side that has changed since it was drawn. */
-  changed: 'Trade changed before your Accept: check it, then accept.',
+  changed: 'Barter changed before your Accept: check it, then accept.',
   /** What each is told along the way. */
-  asked: 'Trade request from {who}: answer in the Trade window.',
-  asking: 'Trade request sent: {who}.',
-  opened: 'Trading with {who}: add your side, then Accept.',
-  declined: 'Trade declined by {who}.',
-  youDeclined: 'Trade with {who} declined.',
-  cancelled: 'Trade cancelled by {who}. Nothing exchanged.',
-  youCancelled: 'Trade with {who} cancelled. Nothing exchanged.',
-  apart: `Trade with {who} off: more than ${BARTER_REACH} tiles apart. Nothing exchanged.`,
-  left: 'Trade with {who} off: {who} left. Nothing exchanged.',
-  lapsed: `Trade with {who} lapsed: idle ${BARTER_IDLE} s. Nothing exchanged.`,
+  asked: 'Barter request from {who}: answer in the Barter window.',
+  asking: 'Barter request sent: {who}.',
+  opened: 'Bartering with {who}: add your side, then Accept.',
+  declined: 'Barter declined by {who}.',
+  youDeclined: 'Barter with {who} declined.',
+  cancelled: 'Barter cancelled by {who}. Nothing exchanged.',
+  youCancelled: 'Barter with {who} cancelled. Nothing exchanged.',
+  apart: `Barter with {who} off: more than ${BARTER_REACH} tiles apart. Nothing exchanged.`,
+  left: 'Barter with {who} off: {who} left. Nothing exchanged.',
+  lapsed: `Barter with {who} lapsed: idle ${BARTER_IDLE} s. Nothing exchanged.`,
   accepts: '{who} accepted.',
-  done: 'Trade with {who} done: both sides exchanged.',
+  done: 'Barter with {who} done: both sides exchanged.',
 } as const;
 export type BarterKey = keyof typeof BARTER_SAID;
 

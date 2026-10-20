@@ -117,12 +117,12 @@ export const RANK_POWERS: readonly RankPower[] = [
   {
     id: 'invite', bit: 7, label: 'Invite',
     may: 'invite people to it', mayNot: 'invite anybody to it',
-    rule: 'Ask anybody onto its roll, from the Social window or the right-click menu. They join at the rank for newcomers.',
+    rule: 'Ask anybody onto its member list, from the Social window or the right-click menu. They join at the rank for newcomers.',
   },
   {
     id: 'send_away', bit: 8, label: 'Send away',
     may: 'send away citizens of lower rank', mayNot: 'send anybody away',
-    rule: 'Take a citizen off its roll, if their rank is below yours in the list.',
+    rule: 'Take a citizen off its member list, if their rank is below yours in the list.',
   },
   {
     id: 'set_ranks', bit: 9, label: 'Set ranks',
@@ -147,15 +147,15 @@ export const RANK_POWERS: readonly RankPower[] = [
   {
     id: 'work', bit: 13, label: 'Set work',
     may: 'set and take down the work it wants', mayNot: 'set or take down the work it wants',
-    rule: `List work it wants: a kind of thing, how many (at most ${WORK_COUNT_MAX}) and a lowest quality if you like, up to ${WORK_OPEN_MAX} open at once; and take any of it down. Any citizen delivers toward it within ${DELIVER_REACH} tiles of its token.`,
+    rule: `List work it wants: a kind of thing, how many (at most ${WORK_COUNT_MAX}) and a lowest quality if you like, up to ${WORK_OPEN_MAX} open at once; and take any of it down. Any citizen delivers toward it within ${DELIVER_REACH} tiles of its totem.`,
   },
   {
-    id: 'keep_stores', bit: 14, label: 'Keep the stores',
+    id: 'keep_stores', bit: 14, label: 'Keep the settlement stores',
     may: 'mark its settlement stores and read their log', mayNot: 'mark its settlement stores or read their log',
     rule: `Mark a crate or a piece of storage furniture on it as a settlement store, or unmark one, from its Storage window; and read the store log, its last ${STORE_LOG_CAP} takes and puts, in the Settlement window.`,
   },
   {
-    id: 'use_stores', bit: 15, label: 'Use the stores',
+    id: 'use_stores', bit: 15, label: 'Use the settlement stores',
     may: 'take from and put into its settlement stores', mayNot: 'use its settlement stores',
     rule: 'Take from and put into every settlement store on it, padlocked or not, without the key. Nobody but its founder and the ranks holding this opens one, key or not.',
   },

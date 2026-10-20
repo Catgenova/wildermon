@@ -338,7 +338,7 @@ rollback;
 const said = (key: string): string => isle.split('\n').find((l) => l.startsWith(`${key}|`))?.slice(key.length + 1) ?? 'MISSING';
 
 check('nobody puts an order up away from a token or a mailbox',
-  said('NOBOARD') === 'Stand at a settlement token or a mailbox to put up an order.', said('NOBOARD'));
+  said('NOBOARD') === 'Stand at a settlement totem or a mailbox to put up an order.', said('NOBOARD'));
 check('nor asks for coins', said('COIN') === 'Coins are what an order pays with, not something it can ask for.', said('COIN'));
 check('nor for a thing there is not', said('NOSUCH') === 'No such item.', said('NOSUCH'));
 check('nor for none, nor for nothing each', said('ZERO') === 'Ask for at least one.|Offer at least a silver for each.', said('ZERO'));
@@ -354,7 +354,7 @@ check('at a mailbox the board lists it: what, how many, for how much, how good, 
 const ORDER_KEYS: Array<keyof Order> = ['n', 'def', 'ql', 'want', 'got', 'price', 'who', 'mine', 'x', 'y', 'deed', 'left'];
 check('and says every field the window reads, and nothing else', said('KEYS') === [...ORDER_KEYS].sort().join(','), said('KEYS'));
 check('away from one there is no board, and nothing is filled from there',
-  said('AWAY') === 'false|0|Stand at a settlement token or a mailbox to fill an order.', said('AWAY'));
+  said('AWAY') === 'false|0|Stand at a settlement totem or a mailbox to fill an order.', said('AWAY'));
 check('its owner sees his own wherever he is', said('MINE') === 'false|true,true', said('MINE'));
 check('the wrong kind, the wrong quality and a stack put by do not fill it, and nothing goes',
   said('NONE') === 'You have none in your pack that will do.|0', said('NONE'));

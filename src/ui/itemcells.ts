@@ -34,7 +34,7 @@ export function nameCell(item: Item, opts: { worn?: boolean; occupant?: string }
   const name = document.createElement('span');
   name.className = 'inv-name';
   const worn = opts.worn ?? false;
-  // A creature crate says who is in it.
+  // A wildermon crate says who is in it.
   const marks = [worn ? 'worn' : '', item.locked ? 'kept' : '', opts.occupant ? `${opts.occupant} inside` : ''].filter(Boolean);
   const full = (item.count > 1 ? `${itemName(item)} (${item.count})` : itemName(item))
     + (marks.length ? ` · ${marks.join(' · ')}` : '');
@@ -78,7 +78,7 @@ export function qualityCell(game: Game, item: Item): HTMLSpanElement {
    */
   if (!isJobTool(item.id)) return ql;
   const worth = game.toolWorth(item);
-  ql.title = `QL ${item.ql.toFixed(1)}; effective QL ${worth.toFixed(1)} (damage, metal, rarity and blessing counted).`;
+  ql.title = `Quality ${item.ql.toFixed(1)}; effective quality ${worth.toFixed(1)} (damage, metal, rarity and blessing counted).`;
   if (worth < item.ql - 0.05) {
     ql.classList.add('inv-blunt');
     ql.textContent = `${item.ql.toFixed(1)}→${worth.toFixed(0)}`;
@@ -99,7 +99,7 @@ export function headRow(last: { label: string; title?: string; className?: strin
   head.className = 'inv-head';
   const cols: Array<[string, string, string]> = [
     ['Item', '', 'Name and stack count'],
-    ['QL', 'inv-ql', 'Quality (max 100). Tools: effective QL after the arrow.'],
+    ['QL', 'inv-ql', 'Quality (QL, max 100). Tools: effective quality after the arrow.'],
     ['Dmg', 'inv-dmg', 'Damage (max 100). Repair removes it; destroyed at 100.'],
     [last.label, last.className ?? '', last.title ?? ''],
   ];

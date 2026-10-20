@@ -105,9 +105,9 @@ const at = (v: number): number => {
 };
 const start = SKILL_BY_ID.get('swords')?.start ?? 0;
 const blowLine = swords?.gives.find((x) => x.what === 'A blow');
-const wantNow = `${at(start).toFixed(1)} → ${at(23.4).toFixed(1)}`;
+const wantNow = `${at(start).toFixed(1)} damage → ${at(23.4).toFixed(1)} damage`;
 // The next level is said only where it moves the number as shown.
-const wantNext = at(24).toFixed(1) === at(23.4).toFixed(1) ? null : `${at(24).toFixed(1)} at 24`;
+const wantNext = at(24).toFixed(1) === at(23.4).toFixed(1) ? null : `${at(24).toFixed(1)} damage at 24`;
 check('Swords: a blow is the rule at where the skill starts → at your level, and at the next level where that moves it',
   !!blowLine && blowLine.now === wantNow && blowLine.next === wantNext,
   `${blowLine?.now} / ${blowLine?.next} against ${wantNow} / ${wantNext}`);
@@ -120,7 +120,7 @@ check('the shelf holds what in the pack goes on and is not on, each in its own p
   r.shelf.length === 3 && r.shelf.every((s) => slotOf(s.item.id) === s.slot && !g.isEquipped(s.item.uid)), r.shelf.map((s) => s.item.id).join(', '));
 const ls = r.shelf.find((s) => s.item.uid === better.uid);
 const blowWith = weaponDamage(g, WEAPON_BY_ID.get('long_sword') ?? sword, better) * dealt;
-const wantBlow = `A blow ${stat(r.offence, 'damage').toFixed(1)} → ${blowWith.toFixed(1)}`;
+const wantBlow = `A blow ${stat(r.offence, 'damage').toFixed(1)} → ${blowWith.toFixed(1)} damage`;
 check('a better sword says a blow now → with it on, for the better',
   !!ls && ls.main?.better === true && ls.main.text === wantBlow, `${ls?.main?.text ?? ''} against ${wantBlow}`);
 const cs = r.shelf.find((s) => s.item.uid === coif.uid);

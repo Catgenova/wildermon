@@ -1,12 +1,12 @@
 /**
- * Creature crates.
+ * Wildermon crates.
  *
- * Asked for: "Creature crates cost 8 planks and 4 nails, and 2 ribbons.
+ * Asked for: "Wildermon crates cost 8 planks and 4 nails, and 2 ribbons.
  * Wildermon can be tamed to be set to active if currently no active
  * wildermon, but any additional wildermon cannot be tamed unless the player
- * carries a creature crate. Creature crates can be placed on the ground and
+ * carries a wildermon crate. Wildermon crates can be placed on the ground and
  * display the wildermon inside them. They weigh 10kg. Wildermon can no longer
- * be Kept at Token. Interacting with a creature crate allows you to pick it up
+ * be Kept at Token. Interacting with a wildermon crate allows you to pick it up
  * / place it, assign the creature to active, or assign the creature to work
  * the deed."
  *
@@ -100,7 +100,7 @@ act('tame').perform(at(first), game);
 check('the first one tamed follows you', first.mode === 'active', first.mode);
 const second = beside();
 const refused = act('tame').check?.(at(second), game) ?? null;
-check('the next is refused without a crate', refused === `${SPECIES.rabba.name} already follows you. Need an empty creature crate.`, refused ?? 'allowed');
+check('the next is refused without a crate', refused === `${SPECIES.rabba.name} already follows you. Need an empty wildermon crate.`, refused ?? 'allowed');
 const crate = game.inventory.add(CREATURE_CRATE, { ql: 30 });
 check('and allowed with one', (act('tame').check?.(at(second), game) ?? null) === null);
 act('tame').perform(at(second), game);
@@ -177,14 +177,14 @@ const onDeed = [...game.furniture.values()].find((f) => f.kind === CREATURE_CRAT
 const crated2 = born();
 check('with one following you and no empty crate in the pack, it goes into an empty crate standing on the settlement',
   crated2.c?.mode === 'stored' && onDeed?.creature === crated2.c.id
-  && crated2.said.endsWith(`In the empty creature crate at (${onDeed.x}, ${onDeed.y}) on Hearth.`), `${crated2.c?.mode}; ${crated2.said}`);
+  && crated2.said.endsWith(`In the empty wildermon crate at (${onDeed.x}, ${onDeed.y}) on Hearth.`), `${crated2.c?.mode}; ${crated2.said}`);
 const spare = game.inventory.add(CREATURE_CRATE, { ql: 30 });
 const packed2 = born();
 check('an empty crate in the pack comes before one standing on the settlement', packed2.c?.mode === 'stored' && spare.creature === packed2.c.id,
   `${packed2.c?.mode}; ${packed2.said}`);
 const lost = born();
 check('and with none of those, it goes off into the wild', lost.c?.mode === 'wild'
-  && lost.said.endsWith('No free companion slot or empty creature crate in your pack or on your settlement: released into the wild.'),
+  && lost.said.endsWith('No free companion slot or empty wildermon crate in your pack or on your settlement: released into the wild.'),
   `${lost.c?.mode}; ${lost.said}`);
 
 // An old save's wildermon kept at the token.
@@ -332,7 +332,7 @@ check('and allowed with one', said('WITHCRATE') === 'allowed', said('WITHCRATE')
 check('and goes into the crate', said('CRATED') === 'stored,true', said('CRATED'));
 check('an occupied crate is not dropped, in the browser\'s words',
   said('DROP') === `${SPECIES.rabba.name} is in that crate. An occupied crate can only be carried, set down, opened or traded.`, said('DROP'));
-check('and nothing moves it anywhere else, past any door', said('STAYS') === 'A creature crate with a wildermon in it is carried, set down, opened or traded, and nothing else.', said('STAYS'));
+check('and nothing moves it anywhere else, past any door', said('STAYS') === 'A wildermon crate with a wildermon in it is carried, set down, opened or traded, and nothing else.', said('STAYS'));
 check('it may be set down', said('PLACEOK') === 'allowed', said('PLACEOK'));
 check('set down, it stands with the wildermon in it, which stands where it does', said('PLACED') === 'true,true,0.00', said('PLACED'));
 check('and the ground the browser is sent says who is in it', said('GROUND') !== 'none' && said('GROUND') !== '', said('GROUND'));
@@ -349,7 +349,7 @@ check('and its keeper is told where it went', said('BORNSAID').endsWith(' Follow
 const [nurserySaid, nurseryAt] = said('NURSERYSAID').split('|');
 const [nx, ny] = (nurseryAt ?? ',').split(',');
 check('with one following and no empty crate in the pack, it goes into an empty crate standing on the settlement', said('NURSERY') === 'stored,true', said('NURSERY'));
-check('in the browser\'s words', nurserySaid.endsWith(`In the empty creature crate at (${nx}, ${ny}) on ${said('DEED')}.`), nurserySaid);
+check('in the browser\'s words', nurserySaid.endsWith(`In the empty wildermon crate at (${nx}, ${ny}) on ${said('DEED')}.`), nurserySaid);
 check('and with none of those, it goes off into the wild, nobody\'s', said('WILD') === 'wild,true', said('WILD'));
 
 for (const line of [...ok, ...bad]) console.log(line);
@@ -357,4 +357,4 @@ if (bad.length) {
   console.error(`${bad.length} of ${ok.length + bad.length} are not what they should be`);
   process.exit(1);
 }
-console.log(`creature crates — ${ok.length} of ${ok.length}`);
+console.log(`wildermon crates — ${ok.length} of ${ok.length}`);

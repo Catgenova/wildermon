@@ -31,6 +31,7 @@
  * is checked, not hoped for: `craft.ts` asks both sides for the list and adds
  * it up.
  */
+import { SKILL_BY_ID } from './skills';
 
 
 /** Fifty in any skill a craft trade covers, and its card is on the table. A fighting trade asks nothing. */
@@ -347,8 +348,8 @@ export const CHANNELS: Record<Channel, { name: string; note: string; lower: bool
   aim: { name: 'Aim', note: 'Chance to hit', lower: false },
   guard: { name: 'Guard', note: 'Damage stopped by shield and armour', lower: false },
   knit: { name: 'Knitting', note: 'Wound healing speed', lower: false },
-  hide: { name: 'Hide', note: 'Maximum health of creatures you keep', lower: false },
-  fang: { name: 'Fang', note: 'Damage dealt by creatures you keep', lower: false },
+  hide: { name: 'Hide', note: 'Maximum health of wildermon you keep', lower: false },
+  fang: { name: 'Fang', note: 'Damage dealt by wildermon you keep', lower: false },
   tame: { name: 'Quiet', note: 'Chance to tame', lower: false },
   force: { name: 'Force', note: 'Spell damage, hold and skin', lower: false },
   reach: { name: 'Reach', note: 'Spell range', lower: false },
@@ -626,16 +627,16 @@ const skillWords = (id: string): string => id.replace(/_/g, ' ');
 for (const c of CLASSES) {
   if (PERK_CLASSES.has(c.id) && c.kind === 'combat') {
     const later = CLASS_TIER_AT.slice(1);
-    c.note = `Tiers: on taking the class, then at class level ${listed(later.map(String))}. `
+    c.note = `Class tiers: on taking the class, then at class level ${listed(later.map(String))}. `
       + 'Class level rises with blows and kills landed while held.';
-    c.lever = `Per tier: pick one of ${PERKS_PER_TIER - 1} spells and a passive. `
+    c.lever = `Per class tier: pick one of ${PERKS_PER_TIER - 1} spells and a passive. `
       + `${CLASS_TIER_AT.length} picks of ${CLASS_TIER_AT.length * PERKS_PER_TIER}.`;
     continue;
   }
   if (PERK_CLASSES.has(c.id)) {
     const later = PERK_TIER_AT.slice(1);
-    c.note = `Tiers: on taking the class, then at ${skillWords(c.main)} ${listed(later.map(String))}.`;
-    c.lever = `Per tier: pick one of ${PERKS_PER_TIER} perks. `
+    c.note = `Perk tiers: on taking the class, then at ${skillWords(c.main)} ${listed(later.map(String))}.`;
+    c.lever = `Per perk tier: pick one of ${PERKS_PER_TIER} perks. `
       + `${PERK_TIER_AT.length} picks of ${PERK_TIER_AT.length * PERKS_PER_TIER}.`;
     continue;
   }
@@ -849,7 +850,7 @@ export function riteRefusal(
   r: RiteDef, mine: string | null, prayer: number, favour: number, restLeft: number,
 ): string | null {
   if (r.class !== mine) return `Not your class: ${classDef(r.class)?.name ?? r.class}.`;
-  if (prayer < r.level) return `${r.name}: need ${r.level} faith (have ${Math.floor(prayer)}).`;
+  if (prayer < r.level) return `${r.name}: need ${r.level} ${(SKILL_BY_ID.get('prayer')?.name ?? 'prayer').toLowerCase()} (have ${Math.floor(prayer)}).`;
   if (favour < r.cost) return `${r.name}: need ${r.cost} favour (have ${Math.floor(favour)}).`;
   if (restLeft > 0) return `${r.name}: ready in ${Math.ceil(restLeft / 60)} min.`;
   return null;

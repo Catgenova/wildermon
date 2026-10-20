@@ -319,7 +319,7 @@ begin
   insert into said values ('BLOOD', v_t || '|' || (select string_agg(value, ',' order by value) from jsonb_each_text((select unborn->'from' from creature where world_id = w and id = v_dam))));
   delete from creature where world_id = w and id in (v_dam, v_sire);
 
-  /* ---- Light Crate: what an empty creature crate weighs in the pack. ---- */
+  /* ---- Light Crate: what an empty wildermon crate weighs in the pack. ---- */
   perform pg_temp.hold(w, u, '{}');
   ${clear('brush', 'stew')};
   perform give(w, u, 'creature_crate', 1, 40);
@@ -442,12 +442,12 @@ check('and a covering reads the breeder\'s True Blood', drawn(bloodPaired), bloo
 
 const [crateNo, crateYes] = say('CRATE').split('|').map(Number);
 const crateKg = ITEM_DEFS.creature_crate.weight;
-check(`${P('Light Crate').name}: an empty creature crate weighs ${crateKg * fx('Light Crate', 'weight:creature_crate')} kg where it weighed ${crateKg}`,
+check(`${P('Light Crate').name}: an empty wildermon crate weighs ${crateKg * fx('Light Crate', 'weight:creature_crate')} kg where it weighed ${crateKg}`,
   near(crateNo - crateYes, crateKg * (1 - fx('Light Crate', 'weight:creature_crate'))), `${crateNo} → ${crateYes}`);
 const [studNo, studYes] = say('STUD').split('#');
 const care = 0.5;
 const studWant = ` Paired with Horn: success ${Math.round(breedChance(SKILL, care) * 100)}%; each of ${TRAIT_SLOTS} traits `
-  + `inherited ${Math.round(inheritChance(SKILL, care) * 100)}%, tier-up `
+  + `inherited ${Math.round(inheritChance(SKILL, care) * 100)}%, rarity-up `
   + `${Math.round(upgradeChance(SKILL, care) * 100)}%.`;
 check(`${P('Stud Book').name}: examining one of yours says the odds, in the browser's words, and nothing without it`,
   studYes.endsWith(studWant) && !studNo.includes('Put to'), `${studYes.slice(-160)} // ${studWant}`);

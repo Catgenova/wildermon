@@ -393,7 +393,7 @@ for (const sp of ['sedra', 'tinka', 'cobbe', 'embra', 'quarra']) {
     !!work && d.stages![1].description.includes(`It ${work[0]} ${work[1]}`) && work[1].includes(String(STAGE_LOADS[2])), d.stages![1].description);
 }
 check('and a kind with no trade, or one a stage lets do no more at once, is told nothing of it',
-  ['woola', 'warda', 'whispet', 'roxxen', 'orse'].every((sp) => !SPECIES[sp].stages![1].description.includes(' a trip') && !SPECIES[sp].stages![1].description.includes(' a go,')));
+  ['woola', 'warda', 'whispet', 'roxxen', 'orse'].every((sp) => !SPECIES[sp].stages![1].description.includes(' a trip') && !SPECIES[sp].stages![1].description.includes(' a cycle,')));
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\neach stage does more at once — ${ok.length} of ${ok.length + bad.length}`);

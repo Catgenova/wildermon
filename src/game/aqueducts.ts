@@ -8,7 +8,7 @@ import { itemDef } from './items';
 import { lacks } from './ranks';
 import { POND_MOST, pondFull, poolLevel, settleChain, springCorner, SPRING_DEPTH, type Chain, type Stream } from '../world/springs';
 import { AQUEDUCT_FLOW, CHANNEL_DEEP, fillSeconds, FOUNTAIN_RIM, pondRate, type Channel } from '../world/aqueducts';
-import { TileType } from '../world/tiles';
+import { metres, TileType } from '../world/tiles';
 
 /**
  * Aqueducts: a stone arch whose deck is a channel, carrying a spring's water
@@ -48,7 +48,7 @@ export const AQ_SEA_HEAD = 'Not from the sea: draw from a pond or pool.';
 export const AQ_DRY_HEAD = 'No pond or pool there to draw from.';
 export const AQ_SLAB_FOOT = 'Dig a pool in the foundation first.';
 export const AQ_SEA_FOOT = 'Not into the sea: pour into a pool, pond, fountain or hollow.';
-export const AQ_FLAT = `Foot needs a pool, pond, fountain, or a hollow holding ${(SPRING_DEPTH / 10).toFixed(1)} m of water or more.`;
+export const AQ_FLAT = `Foot needs a pool, pond, fountain, or a hollow holding ${metres(SPRING_DEPTH)} m of water or more.`;
 export const AQ_WIDE = `Hollow too wide: a pond covers ${POND_MOST} corners at most.`;
 export const AQ_SAME = 'That is the water it draws from.';
 export const AQ_END_BRIDGED = 'A bridge already spans one end.';
@@ -57,14 +57,14 @@ export const AQ_NOT_THROWN = 'Aqueducts are set out from the pool, pond, fountai
 export const aqSpan = (n: number): string => `Aqueduct: max span ${AQUEDUCT.span} tiles; this is ${n}.`;
 export const aqDeed = (name: string): string => `Part of ${name}: builders only.`;
 export const aqUphill = (level: number, height: number): string =>
-  `Water there at ${level}, above the head at ${height}: water runs downhill only.`;
+  `Water there at ${metres(level)} m, above the head at ${metres(height)} m: water runs downhill only.`;
 /** What stands too high under a span: the ground, a foundation's top, or the water in a pool dug in one. */
 export type UnderKind = 'ground' | 'foundation' | 'pool';
 const UNDER_WORD: Record<UnderKind, [string, string]> = {
   ground: ['The ground', 'the ground'], foundation: ['The foundation', 'a foundation'], pool: ['The water in the pool', 'the water'],
 };
 export const aqGround = (x: number, y: number, what: UnderKind = 'ground'): string =>
-  `${UNDER_WORD[what][0]} at ${x}, ${y} is within ${(CLEARANCE / 10).toFixed(1)} m of the channel bed.`;
+  `${UNDER_WORD[what][0]} at ${x}, ${y} is within ${metres(CLEARANCE)} m of the channel bed.`;
 /** A tree or a bush where a span would stand over it: it would grow up through the arches. */
 export const aqGrowing = (x: number, y: number, what: 'tree' | 'bush'): string => `${what === 'tree' ? 'Tree' : 'Bush'} at ${x}, ${y} under a span: cut it down first.`;
 /** The water at the head drawn from by another aqueduct already, which takes all of it: by the tile that one draws from. */
@@ -269,7 +269,7 @@ export function waterAlong(g: Game, id: number): { chain: Chain; stream: Stream;
 export function aqueductSays(g: Game, b: Bridge): string {
   const foot = footSays(g, b);
   if (!foot) {
-    return `Last span laid. Channel dry: no spring water at its head at ${b.height} or over.`;
+    return `Last span laid. Channel dry: no spring water at its head at ${metres(b.height)} m or over.`;
   }
   return `Last span laid. Flow ${AQUEDUCT_FLOW} litres/min out of its head, not over its lip. ${foot}`;
 }
@@ -294,7 +294,7 @@ export function footSays(g: Game, b: Bridge, now?: number): string | null {
     const f = along.fill[stream.to as number];
     const full = f && (f.from >= into.level || (now !== undefined && pondFull({ from: f.from, level: into.level, since: f.since, rate: pondRate(into) }) <= now));
     if (full) return 'Pond at its foot full; spills over its lip.';
-    return `Fills the hollow to ${into.level} in ${fillWords(fillSeconds(into.volume))}, then spills over its lip.`;
+    return `Fills the hollow to ${metres(into.level)} m in ${fillWords(fillSeconds(into.volume))}, then spills over its lip.`;
   }
   return 'Pours onto the ground; runs downhill.';
 }
@@ -339,7 +339,7 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       g.gainSkill(AQUEDUCT.skill, 0.4);
       const n = b.spans.length;
       g.logMsg(
-        `Aqueduct planned: ${n} span${n > 1 ? 's' : ''}, ${HEAD_WORD[plan.head]} to ${FOOT_WORD[plan.foot]}, channel at ${plan.height}. `
+        `Aqueduct planned: ${n} span${n > 1 ? 's' : ''}, ${HEAD_WORD[plan.head]} to ${FOOT_WORD[plan.foot]}, channel at ${metres(plan.height)} m. `
         + `Per span: ${spanWants(b.spans[0])}. ${AQUEDUCT.note}`,
         'system',
       );

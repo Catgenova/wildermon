@@ -5,6 +5,7 @@ import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
+import { metres } from '../../game/piers';
 
 export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
@@ -159,7 +160,7 @@ export class SkillsPanel {
     if (!earned.length) {
       const none = document.createElement('div');
       none.className = 'title-none';
-      none.textContent = `None. First title at ${Math.min(...[...TITLE_BY_ID.values()].map((t) => t.at))} in any trade.`;
+      none.textContent = `None. First title at ${Math.min(...[...TITLE_BY_ID.values()].map((t) => t.at))} in any skill.`;
       this.titleBox.append(none);
       return;
     }
@@ -212,27 +213,27 @@ export class SkillsPanel {
       }
       case 'body_stamina': {
         const off = Math.round((1 - g.staminaCost(1)) * 100);
-        return off > 0 ? [`Stamina cost −${off}%`, `Stamina cost of jobs and swings −${off}%.`] : null;
+        return off > 0 ? [`Stamina cost −${off}%`, `Stamina cost of actions and swings −${off}%.`] : null;
       }
       case 'body_control': {
         const off = Math.round((1 - g.controlSpeed()) * 100);
-        return off > 0 ? [`Action time −${off}%`, `Time per job −${off}%.`] : null;
+        return off > 0 ? [`Action time −${off}%`, `Time per action −${off}%.`] : null;
       }
       case 'mind_logic': {
         const n = g.queueCapacity();
-        return [`Job queue ${n}`, `Max queued jobs: ${n}.`];
+        return [`Action queue ${n}`, `Max queued actions: ${n}.`];
       }
       case 'soul_strength': {
         const up = g.soulBonus() * 100;
         return up > 0 ? [`Tame chance +${up.toFixed(1)}%`, `Tame chance +${up.toFixed(1)} percentage points.`] : null;
       }
       case 'climbing': {
-        const step = Math.round(g.climbStep());
-        return [`Max step ${step}`, `Max step up on foot: ${step} height units.`];
+        const step = metres(g.climbStep());
+        return [`Max step ${step} m`, `Max step up on foot: ${step} m.`];
       }
       case 'swimming': {
         const pace = Math.round(g.player.swimSpeed * 100);
-        return [`Swim speed ×${(pace / 100).toFixed(2)}`, `Swim speed in deep water: ${pace}% of walk speed.`];
+        return [`Swim speed ${pace}% of walk`, `Swim speed in deep water: ${pace}% of walk speed.`];
       }
       // What a go of Track reaches and reads at this level, and what each band of it says (`tracking.ts`).
       case TRACKING:

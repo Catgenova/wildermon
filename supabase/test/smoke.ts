@@ -667,7 +667,7 @@ async function main(): Promise<void> {
      * campfires because they share a first word.
      */
     const noDeed = await island.act('plan_building', { kind: 'tile', ...here, name: 'Hall' }, 1);
-    check('building anywhere at all wants a deed first', !noDeed.started && /deed/i.test(noDeed.why ?? ''),
+    check('building anywhere at all wants a settlement first', !noDeed.started && /settlement|deed/i.test(noDeed.why ?? ''),
       noDeed.why ?? 'IT WENT THROUGH');
     const noWall = await island.act('build_wall', { kind: 'tile', ...here, side: 'n' }, 1);
     check('a wall with nothing planned is a wall, not a campfire',

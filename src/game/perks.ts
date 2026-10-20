@@ -80,6 +80,12 @@ import { MAP_ODDS } from './treasure';
 import { CRAFT_REACH, DISTIL_BUCKETS, isDish, RECIPES, TAILOR_SKILLS, TRADE_BOOK_AT, TRADE_BOOK_SKILLS, type Recipe } from './recipes';
 import { BUSH_DEFS, ROAD_TILES, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../world/tiles';
 import { walkKey } from './player';
+import { metres } from './piers';
+
+/** The daily reset as the hud's clock shows it: "13:00" (`TREE_DAWN_UTC`). */
+const resetHour = (): string =>
+  `${String(Math.floor(TREE_DAWN_UTC)).padStart(2, '0')}:${String(Math.round((TREE_DAWN_UTC % 1) * 60)).padStart(2, '0')}`;
+
 import { article, capital, listed, listedOr, percent } from './words';
 import { helpingOf, NUTRIENTS, TABLE_BEST } from './nutrition';
 import { BREWS } from './brewing';
@@ -193,12 +199,12 @@ const TERRAFORMER: Seed[] = [
     num: 6, name: 'Rare Earth',
     fx: { 'rare:dig': 0.01, 'rare:dredge': 0.01, 'rare:collect': 0.01 },
     note: (fx) => `Rare chance on Dig, Dredge and Collect: ${oneIn(fx['rare:dig'])} (base: none). `
-      + 'Rolls on to supreme and fantastic at crafting odds.',
+      + 'Rare may become supreme or fantastic at crafting odds.',
   },
   {
     num: 9, name: 'Level Hand',
     fx: { 'flatten:step': 2 },
-    note: (fx) => `Flatten height units per action: ${fx['flatten:step']} (base ${FLATTEN_STEP}).`,
+    note: (fx) => `Flatten height per action: ${metres(fx['flatten:step'])} m (base ${metres(FLATTEN_STEP)} m).`,
   },
   {
     num: 10, name: 'Quick Level',
@@ -208,18 +214,18 @@ const TERRAFORMER: Seed[] = [
   {
     num: 12, name: 'Steep Cut',
     fx: { 'slope:digging': 4 },
-    note: (fx) => `Max slope left by Dig, Drop dirt and Dredge: ${fx['slope:digging']}× digging `
-      + `(base ${SLOPE_PER_SKILL}×, min ${SLOPE_FLOOR}).`,
+    note: (fx) => `Max slope left by Dig, Drop dirt and Dredge: ${metres(fx['slope:digging'])} m per digging level `
+      + `(base ${metres(SLOPE_PER_SKILL)} m, min ${metres(SLOPE_FLOOR)} m).`,
   },
   {
     num: 14, name: 'Wader',
     fx: { 'depth:dig': 20 },
-    note: (fx) => `Dig and Flatten max water depth: ${fx['depth:dig']} (base ${MINE_DEPTH}).`,
+    note: (fx) => `Dig and Flatten max water depth: ${metres(fx['depth:dig'])} m (base ${metres(MINE_DEPTH)} m).`,
   },
   {
     num: 15, name: 'Dredger',
     fx: { 'depth:dredge': 60, 'time:dredge': 0.8 },
-    note: (fx) => `Dredge max depth: ${fx['depth:dredge']} (base ${DREDGE_DEPTH}). Dredge time ${cut(fx['time:dredge'])}.`,
+    note: (fx) => `Dredge max depth: ${metres(fx['depth:dredge'])} m (base ${metres(DREDGE_DEPTH)} m). Dredge time ${cut(fx['time:dredge'])}.`,
   },
   {
     num: 17, name: 'Bed Worker',
@@ -250,7 +256,7 @@ const TERRAFORMER: Seed[] = [
   {
     num: 27, name: 'Frugal Cobbler',
     fx: { 'keep:pave_cobble': 1 / 3 },
-    note: (fx) => `Pave (cobblestone) uses no stone brick: ${oneIn(fx['keep:pave_cobble'])} goes.`,
+    note: (fx) => `Pave (cobblestone) uses no stone brick: ${oneIn(fx['keep:pave_cobble'])} actions.`,
   },
   {
     num: 29, name: 'Road Legs',
@@ -278,7 +284,7 @@ const TERRAFORMER: Seed[] = [
   {
     num: 44, name: 'Dig Out the Tile',
     fx: { dig_tile: 1 },
-    note: () => `New job: Dig out the tile. Lowers all ${TILE_CORNERS} corners by one in a single go: ${secs(DIG_TILE_TIME)} base `
+    note: () => `New action: Dig out the tile. Lowers all ${TILE_CORNERS} corners by ${metres(1)} m in one action: ${secs(DIG_TILE_TIME)} base `
       + `(${TILE_CORNERS} digs: ${secs(TILE_CORNERS * base('dig'))}). Output: ${TILE_CORNERS} of the material.`,
   },
 ];
@@ -308,7 +314,7 @@ const MINER: Seed[] = [
   {
     num: 2, name: 'Rich Seam',
     fx: { 'more:mine': 0.15 },
-    note: (fx) => `Mine: one extra output on ${percent(fx['more:mine'])} of goes.`,
+    note: (fx) => `Mine: one extra output on ${percent(fx['more:mine'])} of actions.`,
   },
   {
     num: 3, name: 'Sure Swing',
@@ -319,7 +325,7 @@ const MINER: Seed[] = [
     num: 6, name: 'Rare Ore',
     fx: { 'rare:mine': 0.01 },
     note: (fx) => `Rare chance on Mine: ${oneIn(fx['rare:mine'])} (base: none). `
-      + 'Rolls on to supreme and fantastic at crafting odds.',
+      + 'Rare may become supreme or fantastic at crafting odds.',
   },
   {
     num: 7, name: 'Ore Sense',
@@ -335,22 +341,22 @@ const MINER: Seed[] = [
   {
     num: 9, name: 'Chipper',
     fx: { 'chip:chance': 0.5 },
-    note: (fx) => `Chip corner lowers the corner: ${oneIn(fx['chip:chance'])} goes (base ${oneIn(CHIP_CHANCE)}).`,
+    note: (fx) => `Chip corner lowers the corner: ${oneIn(fx['chip:chance'])} actions (base ${oneIn(CHIP_CHANCE)}).`,
   },
   {
     num: 11, name: 'Face Shaper',
     fx: { 'chip:step': 2 },
-    note: (fx) => `Chip corner drop per success: ${fx['chip:step']} steps (base one). Never below a level you have taken.`,
+    note: (fx) => `Chip corner drop per success: ${metres(fx['chip:step'])} m (base ${metres(1)} m). Never below a level you have taken.`,
   },
   {
     num: 13, name: 'Rock Slide',
     fx: { 'slide:more': 3 },
-    note: (fx) => `Face collapse while mining (${oneIn(MINE_COLLAPSE)} goes): +${fx['slide:more']} of the mined material.`,
+    note: (fx) => `Face collapse while mining (${oneIn(MINE_COLLAPSE)} actions): +${fx['slide:more']} of the mined material.`,
   },
   {
     num: 14, name: 'Wet Work',
     fx: { 'depth:mine': 20 },
-    note: (fx) => `Mine and Chip corner max water depth: ${fx['depth:mine']} (base ${MINE_DEPTH}).`,
+    note: (fx) => `Mine and Chip corner max water depth: ${metres(fx['depth:mine'])} m (base ${metres(MINE_DEPTH)} m).`,
   },
   {
     num: 15, name: 'Gem Eye',
@@ -394,7 +400,7 @@ const MINER: Seed[] = [
   {
     num: 50, name: 'Pan',
     fx: { pan: 1 / 8 },
-    note: (fx) => `New job: Pan, on sand with water at a corner. ${oneIn(fx.pan)} goes give `
+    note: (fx) => `New action: Pan, on sand with water at a corner. ${oneIn(fx.pan)} actions give `
       + `${either(PAN_ORES.map(itemName))} (equal odds), QL by prospecting.`,
   },
 ];
@@ -497,14 +503,14 @@ const MASON: Seed[] = [
   {
     num: 18, name: 'Double Lift',
     fx: { 'lift:raise_rock': 2 },
-    note: (fx) => `Raise the rock with concrete: ${fx['lift:raise_rock']} steps per concrete `
-      + '(base one), where your slope limit and level allow; otherwise one.',
+    note: (fx) => `Raise the rock with concrete: ${metres(fx['lift:raise_rock'])} m per concrete `
+      + `(base ${metres(1)} m), where your slope limit and level allow; otherwise ${metres(1)} m.`,
   },
   {
     num: 19, name: 'Steep Stone',
     fx: { 'slope:masonry': 4 },
-    note: (fx) => `Max slope left by raising rock: ${fx['slope:masonry']}× masonry `
-      + `(base ${SLOPE_PER_SKILL}×, min ${SLOPE_FLOOR}).`,
+    note: (fx) => `Max slope left by raising rock: ${metres(fx['slope:masonry'])} m per masonry level `
+      + `(base ${metres(SLOPE_PER_SKILL)} m, min ${metres(SLOPE_FLOOR)} m).`,
   },
   {
     num: 20, name: 'Good Mix',
@@ -515,7 +521,7 @@ const MASON: Seed[] = [
   {
     num: 22, name: 'Wet Set',
     fx: { 'depth:raise_rock': 10 },
-    note: (fx) => `Raising rock max water depth: ${fx['depth:raise_rock']} (base: above water only).`,
+    note: (fx) => `Raising rock max water depth: ${metres(fx['depth:raise_rock'])} m (base: above water only).`,
   },
   {
     num: 24, name: 'Careful Builder', key: 'nothing_wasted',
@@ -539,19 +545,19 @@ const MASON: Seed[] = [
     num: 35, name: 'Hod Carrier',
     fx: { 'reach:build_stone': 5 },
     note: (fx) => `Build wall and Build floor on ${STONE_WORK}: take from crates, carts and craft-reachable containers within `
-      + `${fx['reach:build_stone']} tiles (base ${CRAFT_REACH}), with stores on or off.`,
+      + `${fx['reach:build_stone']} tiles (base ${CRAFT_REACH}), with Use stores within reach on or off.`,
   },
   {
     num: 47, name: 'Repoint',
     fx: { repoint: 1 },
-    note: () => `New job: Repoint, on a finished wall of ${STONE_WORK}. Relays it in another stone in one go: `
+    note: () => `New action: Repoint, on a finished wall of ${STONE_WORK}. Relays it in another stone in one action: `
       + `${secs(BUILD_ACTION_BY_ID.get('repoint_wall')?.baseTime ?? 0)} base. Cost: the new stone's full bill. `
       + `Returns ${percent(REPOINT_BACK)} of the old stone, rounded down.`,
   },
   {
     num: 48, name: 'Rubble Fill',
     fx: { rubble: 5 },
-    note: (fx) => `New job: Raise the rock with rubble. Raises a bare rock corner one step for ${fx.rubble} rock shards `
+    note: (fx) => `New action: Raise the rock with rubble. Raises a bare rock corner ${metres(1)} m for ${fx.rubble} rock shards `
       + `instead of a concrete; same rules and check (difficulty ${diff('raise_rock')}) as concrete.`,
   },
 ];
@@ -876,7 +882,7 @@ const SMITH: Seed[] = [
   {
     num: 45, name: 'Temper Bath',
     fx: onEach('temper', TEMPERED, 5),
-    note: (fx) => `New job: Quench, at water or beside a barrel or well of it, by you or any Smith with Temper Bath. `
+    note: (fx) => `New action: Quench, at water or beside a barrel or well of it, by you or any Smith with Temper Bath. `
       + `+${fx[`temper:${TEMPERED[0]}`]} QL, once, on a weapon or tool you finish: `
       + `${listed(TEMPERED.map((id) => plural(itemName(id))))} (fitted from an anvil-beaten head or blade, or anvil-beaten whole). `
       + 'Stays with the item until quenched.',
@@ -931,7 +937,7 @@ const FORESTER: Seed[] = [
     num: 6, name: 'Rare Heartwood',
     fx: { 'rare:cut_down': RARITY_ODDS[0] },
     note: (fx) => `Rare log chance per tree felled: ${oneIn(fx['rare:cut_down'])} (base: none). `
-      + 'Rolls on to supreme and fantastic at crafting odds.',
+      + 'Rare may become supreme or fantastic at crafting odds.',
   },
   {
     num: 7, name: 'Clean Drop',
@@ -969,7 +975,7 @@ const FORESTER: Seed[] = [
     num: 20, name: 'Hedge Harvest',
     fx: { 'more:harvest_bush': 1 },
     note: (fx) => `Bush harvest: one extra ${either(BUSH_DEFS.flatMap((b) => (b.yields ? [itemName(b.yields)] : [])))} on `
-      + `${fx['more:harvest_bush'] >= 1 ? 'every go' : `${percent(fx['more:harvest_bush'])} of goes`}.`,
+      + `${fx['more:harvest_bush'] >= 1 ? 'every action' : `${percent(fx['more:harvest_bush'])} of actions`}.`,
   },
   {
     num: 21, name: 'Nest Finder',
@@ -997,22 +1003,22 @@ const FORESTER: Seed[] = [
   {
     num: 40, name: 'Coppice',
     fx: { coppice: 2 },
-    note: (fx) => `New job: ${label('coppice')} (hatchet, ${secs(base('coppice'))}, check at difficulty ${diff('coppice')}). `
+    note: (fx) => `New action: ${label('coppice')} (hatchet, ${secs(base('coppice'))}, check at difficulty ${diff('coppice')}). `
       + `Cuts ${either(COPPICED.map((a) => a.name.toLowerCase()))} trees back to ${age(PLANTED_AGE)} for `
       + `${fx.coppice} logs; the tree stays standing.`,
   },
   {
     num: 43, name: 'Tap Resin',
     fx: { tap_resin: 1 },
-    note: (fx) => `New job: ${label('tap_resin')} (carving knife, ${secs(base('tap_resin'))}). ${fx.tap_resin} `
-      + `${itemName('tar')} from a living ${TREE_DEFS[RESIN_TREE].name.toLowerCase()}, once a day per tree; day turns at `
-      + `${TREE_DAWN_UTC} o'clock UTC.`,
+    note: (fx) => `New action: ${label('tap_resin')} (carving knife, ${secs(base('tap_resin'))}). ${fx.tap_resin} `
+      + `${itemName('tar')} from a living ${TREE_DEFS[RESIN_TREE].name.toLowerCase()}, once a day per tree; day starts at the `
+      + `daily reset (${resetHour()} UTC).`,
   },
   {
     num: 44, name: 'Clear Brush',
     fx: { clear_brush: 1 },
-    note: (fx) => `New job: ${label('clear_brush')} (sickle, ${secs(base('clear_brush'))}). Clears every bush and reed in a `
-      + `${2 * fx.clear_brush + 1}×${2 * fx.clear_brush + 1} area in one go. Bush leaves `
+    note: (fx) => `New action: ${label('clear_brush')} (sickle, ${secs(base('clear_brush'))}). Clears every bush and reed in a `
+      + `${2 * fx.clear_brush + 1}×${2 * fx.clear_brush + 1} area at once. Bush leaves `
       + `${tileName(CLEARED_TO[TileType.Bush] as TileType)}, reed leaves ${tileName(CLEARED_TO[TileType.Reed] as TileType)}. `
       + 'No output.',
   },
@@ -1049,25 +1055,25 @@ const FARMER: Seed[] = [
   {
     num: 5, name: 'Fast Growth',
     fx: { 'grow:plant_seed': 0.8 },
-    note: (fx) => `Crop stage time ${cut(fx['grow:plant_seed'])} on crops you sow: ${stageRange(fx['grow:plant_seed'])}.`,
+    note: (fx) => `Crop growth stage time ${cut(fx['grow:plant_seed'])} on crops you sow: ${stageRange(fx['grow:plant_seed'])}.`,
   },
   {
     num: 6, name: 'Crop Rotation',
     fx: { 'rotate:plant_seed': 0.75 },
-    note: (fx) => `Crop stage time ${cut(fx['rotate:plant_seed'])} on a field last sown with a different crop: `
+    note: (fx) => `Crop growth stage time ${cut(fx['rotate:plant_seed'])} on a field last sown with a different crop: `
       + `${stageRange(fx['rotate:plant_seed'])}. A field never sown, or broken up since, has no last crop.`,
   },
   {
     num: 8, name: 'Bumper Crop',
     fx: { 'bumper:harvest_crop': 1 },
-    note: (fx) => `Harvest of a crop tended at all ${RIPE} stages: ${cropYield(RIPE, fx['bumper:harvest_crop']).produce} `
+    note: (fx) => `Harvest of a crop tended at all ${RIPE} growth stages: ${cropYield(RIPE, fx['bumper:harvest_crop']).produce} `
       + `produce (base ${cropYield(RIPE).produce}).`,
   },
   {
     num: 11, name: 'Rare Harvest',
     fx: { 'rare:harvest_crop': RARITY_ODDS[0] },
     note: (fx) => `Rare harvest chance: ${oneIn(fx['rare:harvest_crop'])} crops (base: none); seed is never rare. `
-      + 'Rolls on to supreme and fantastic at crafting odds.',
+      + 'Rare may become supreme or fantastic at crafting odds.',
   },
   {
     num: 14, name: 'Fodder',
@@ -1111,7 +1117,7 @@ const FARMER: Seed[] = [
     num: 25, name: 'Milkmaid',
     fx: { 'time:milk_creature': 0.6, 'more:milk_creature': 0.5 },
     note: (fx) => `${capital(ACTION_BY_ID.get('milk_creature')?.verb ?? 'milking')} time ${cut(fx['time:milk_creature'])} (base ${secs(base('milk_creature'))}). `
-      + `Cudda: second bucket of milk on ${oneIn(fx['more:milk_creature'])} goes, if you carry another empty bucket. `
+      + `Cudda: second bucket of milk on ${oneIn(fx['more:milk_creature'])} actions, if you carry another empty bucket. `
       + `Gorral: ${GORRAL_MILK} litres per milking either way.`,
   },
   {
@@ -1132,25 +1138,25 @@ const FARMER: Seed[] = [
     fx: { 'tool:till': 20 },
     note: (fx) => `Rake QL counts +${fx['tool:till']} when tilling, max ${QL_TOP}: ${label('till')} time `
       + `−${percent(fx['tool:till'] / TOOL_QL_SPAN)} (base ${secs(base('till'))}; each tool QL point `
-      + `−${percent(1 / TOOL_QL_SPAN)} of a go's time).`,
+      + `−${percent(1 / TOOL_QL_SPAN)} of an action's time).`,
   },
   {
     num: 39, name: 'Sow a Patch',
     fx: { sow_patch: 1 },
-    note: (fx) => `New job: ${label('sow_patch')} (${secs(base('sow_patch'))}, the time of ${base('sow_patch') / base('plant_seed')} `
+    note: (fx) => `New action: ${label('sow_patch')} (${secs(base('sow_patch'))}, the time of ${base('sow_patch') / base('plant_seed')} `
       + `sowings). Sows the chosen seed on every empty field in a ${patchSide(fx.sow_patch)} area, `
       + 'one seed per field.',
   },
   {
     num: 40, name: 'Tend a Patch',
     fx: { tend_patch: 1 },
-    note: (fx) => `New job: ${label('tend_patch')} (${secs(base('tend_patch'))}, the time of ${base('tend_patch') / base('tend_crop')} `
-      + `tendings). Tends every unripe crop not yet tended at its stage in a ${patchSide(fx.tend_patch)} area.`,
+    note: (fx) => `New action: ${label('tend_patch')} (${secs(base('tend_patch'))}, the time of ${base('tend_patch') / base('tend_crop')} `
+      + `tendings). Tends every unripe crop not yet tended at its growth stage in a ${patchSide(fx.tend_patch)} area.`,
   },
   {
     num: 41, name: 'Harvest a Patch',
     fx: { harvest_patch: 1 },
-    note: (fx) => `New job: ${label('harvest_patch')} (${secs(base('harvest_patch'))}, the time of `
+    note: (fx) => `New action: ${label('harvest_patch')} (${secs(base('harvest_patch'))}, the time of `
       + `${base('harvest_patch') / base('harvest_crop')} harvests). Harvests every ripe crop in a ${patchSide(fx.harvest_patch)} `
       + 'area, each by its own tending.',
   },
@@ -1201,7 +1207,7 @@ const COOK: Seed[] = [
   {
     num: 11, name: 'Flavoursome',
     fx: onDishes('knack', 1.5),
-    note: (fx) => `Knack duration ${more(fx[`knack:${DISH_ITEMS[0]}`])}, dishes you cook, for whoever eats them.`,
+    note: (fx) => `Meal boost duration ${more(fx[`knack:${DISH_ITEMS[0]}`])}, dishes you cook, for whoever eats them.`,
   },
   {
     num: 14, name: 'Balanced Diet',
@@ -1231,7 +1237,7 @@ const COOK: Seed[] = [
   {
     num: 28, name: 'Strong Brew',
     fx: Object.fromEntries(BREWS.map((b) => [`brewed:${b.id}`, 1.5])),
-    note: (fx) => `Knack duration ${more(fx[`brewed:${BREWS[0].id}`])}: ${listed(BREWS.map((b) => b.name.toLowerCase()))} you brew, `
+    note: (fx) => `Drink boost duration ${more(fx[`brewed:${BREWS[0].id}`])}: ${listed(BREWS.map((b) => b.name.toLowerCase()))} you brew, `
       + 'for whoever drinks it, from the barrel or a bucket drawn off it.',
   },
   {
@@ -1260,7 +1266,7 @@ const COOK: Seed[] = [
     num: 47, name: 'Distil',
     fx: { distil: 1 },
     note: () => `New recipe per brew: ${DISTIL_BUCKETS} buckets (${DISTIL_BUCKETS * BUCKET_LITRES} litres) over a campfire `
-      + `make one bucket of spirit (${BUCKET_LITRES} litres) and return ${DISTIL_BUCKETS - 1} empty buckets. Spirit knack at QL ${QL_TOP}: `
+      + `make one bucket of spirit (${BUCKET_LITRES} litres) and return ${DISTIL_BUCKETS - 1} empty buckets. Spirit drink boost at QL ${QL_TOP}: `
       + `${durationSaid(boonTime('spirit_bucket', QL_TOP))} (${listed(BREWS.map((b) => `${b.name.toLowerCase()} `
       + `${durationSaid(boonTime(`${b.id}_bucket`, QL_TOP))}`))}).`,
   },
@@ -1274,7 +1280,7 @@ const COOK: Seed[] = [
     num: 50, name: 'Taste',
     fx: { taste: 1 },
     note: () => 'Examine on food or drink shows: food bar filled (or thirst quenched) per helping, '
-      + `each of the ${NUTRIENTS.length} nutrients fed, and knack duration, at its QL and maker.`,
+      + `each of the ${NUTRIENTS.length} nutrients fed, and meal or drink boost duration, at its QL and maker.`,
   },
 ];
 
@@ -1340,7 +1346,7 @@ const TAILOR: Seed[] = [
   {
     num: 19, name: 'Lye Saver',
     fx: { 'lye:tan_hide': 0.5 },
-    note: (fx) => `Tanning keeps the lye in the bucket: ${oneIn(fx['lye:tan_hide'])} goes (base: bucket returned empty).`,
+    note: (fx) => `Tanning keeps the lye in the bucket: ${oneIn(fx['lye:tan_hide'])} actions (base: bucket returned empty).`,
   },
   {
     num: 21, name: 'Sure Awl',
@@ -1389,7 +1395,7 @@ const TAILOR: Seed[] = [
   {
     num: 46, name: 'Patch',
     fx: { patch_item: 20 },
-    note: (fx) => `New job: ${label('patch_item')} (${secs(base('patch_item'))}). Removes ${fx.patch_item} damage from a cloth or `
+    note: (fx) => `New action: ${label('patch_item')} (${secs(base('patch_item'))}). Removes ${fx.patch_item} damage from a cloth or `
       + 'leather item for one cloth or leather. No QL loss.',
   },
   {
@@ -1489,7 +1495,7 @@ const HERDSMAN: Seed[] = [
   {
     num: 26, name: 'Bred Up',
     fx: { 'breed:upgrade': 0.1 },
-    note: (fx) => `Chance each of a young's traits comes out a tier better: +${points(fx['breed:upgrade'])} (base `
+    note: (fx) => `Chance each of a young's traits comes out one rarity higher: +${points(fx['breed:upgrade'])} (base `
       + `+${Number((upgradeChance(100, 0) / 100 * 100).toFixed(2))} percentage points per husbandry level, up to `
       + `+${points(upgradeChance(0, 1))} for care, max ${percent(upgradeChance(100, 1))}).`,
   },
@@ -1501,13 +1507,13 @@ const HERDSMAN: Seed[] = [
   {
     num: 37, name: 'Light Crate',
     fx: { 'weight:creature_crate': 0.3 },
-    note: (fx) => `Creature crate weight: ${kgSaid(CRATE_KG * fx['weight:creature_crate'])} (base ${kgSaid(CRATE_KG)}).`,
+    note: (fx) => `${capital(itemName('creature_crate'))} weight: ${kgSaid(CRATE_KG * fx['weight:creature_crate'])} (base ${kgSaid(CRATE_KG)}).`,
   },
   {
     num: 50, name: 'Stud Book',
     fx: { stud_book: 1 },
     note: () => 'Examine on one of yours shows, for its mate: pairing success chance, and per trait the chance it is drawn '
-      + 'from their blood and the chance it comes out a tier better.',
+      + 'from their blood and the chance it comes out one rarity higher.',
   },
 ];
 
@@ -1529,13 +1535,13 @@ const NATURALIST: Seed[] = [
   {
     num: 2, name: 'Keen Eye',
     fx: { 'passes:forage': 1, 'passes:botanize': 1 },
-    note: (fx) => `Foraging and botanizing rolls per action +${fx['passes:forage']} `
+    note: (fx) => `Foraging and botanizing looks per action +${fx['passes:forage']} `
       + `(base one, one more per ${PER_ROLL} skill).`,
   },
   {
     num: 3, name: 'Sure Find',
     fx: { 'empty:forage': 0, 'empty:botanize': 0 },
-    note: () => `Foraging and botanizing: no empty roll by chance (base ${oneIn(EMPTY_CHANCE)}, `
+    note: () => `Foraging and botanizing: no empty look by chance (base ${oneIn(EMPTY_CHANCE)}, `
       + 'before the skill check).',
   },
   {
@@ -1745,7 +1751,7 @@ const FISHER: Seed[] = [
   {
     num: 45, name: 'Fishing Journal',
     fx: { fish_journal: 1 },
-    note: () => 'Examine water also shows: depth, each landable fish\'s share of bites with your bait, '
+    note: () => 'Examine water also shows: depth, each landable fish\'s % of bites with your bait, '
       + 'and your rod\'s hook chance.',
   },
   {
@@ -1787,7 +1793,7 @@ const MENDER: Seed[] = [
   {
     num: 1, name: 'Big Mend',
     fx: { 'mend:repair_item': 1.5 },
-    note: (fx) => `Damage removed per Repair go ${more(fx['mend:repair_item'])}, same QL cost per point: `
+    note: (fx) => `Damage removed per Repair action ${more(fx['mend:repair_item'])}, same QL cost per point: `
       + `${healedAt(offeredAt('mender', 1), fx['mend:repair_item'])} at repair ${offeredAt('mender', 1)} (base ${healedAt(offeredAt('mender', 1))}).`,
   },
   {
@@ -1799,18 +1805,18 @@ const MENDER: Seed[] = [
   {
     num: 3, name: 'Clean Repair',
     fx: { 'keep:repair_item': 0.25 },
-    note: (fx) => `Repair costs no QL: ${oneIn(fx['keep:repair_item'])} goes.`,
+    note: (fx) => `Repair costs no QL: ${oneIn(fx['keep:repair_item'])} actions.`,
   },
   {
     num: 4, name: 'Quick Hands',
     fx: { 'time:repair_item': 0.6 },
     note: (fx) => `Repair time ${cut(fx['time:repair_item'])}: ${secs(goSeconds(base('repair_item')) * fx['time:repair_item'])} `
-      + `(base ${secs(goSeconds(base('repair_item')))}, the minimum for any job without a perk).`,
+      + `(base ${secs(goSeconds(base('repair_item')))}, the minimum for any action without a perk).`,
   },
   {
     num: 9, name: 'Tool Care',
     fx: onEach('wear', WORN_TOOLS, 0.75),
-    note: (fx) => `Tool damage per use ${cut(fx[`wear:${WORN_TOOLS[0]}`])}: every tool, any job and material.`,
+    note: (fx) => `Tool damage per use ${cut(fx[`wear:${WORN_TOOLS[0]}`])}: every tool, any action and material.`,
   },
   {
     num: 10, name: 'Armour Care',
@@ -1861,13 +1867,13 @@ const MENDER: Seed[] = [
   {
     num: 25, name: 'Second Look',
     fx: { 'rolls:bauble': 2 },
-    note: (fx) => `Minor and major baubles you restore: rolled ${fx['rolls:bauble']} times, best kept `
-      + `(each roll ${BAUBLE_LOW}–${BAUBLE_HIGH}% before rarity). Ancient baubles unchanged.`,
+    note: (fx) => `Minor and major baubles you restore: strength drawn ${fx['rolls:bauble']} times, best kept `
+      + `(each draw ${BAUBLE_LOW}–${BAUBLE_HIGH}% before rarity). Ancient baubles unchanged.`,
   },
   {
-    num: 26, name: 'Tier Up',
+    num: 26, name: 'Grade Up', key: 'tier_up',
     fx: { 'tier:restore_relic': 0.1 },
-    note: (fx) => `Baubles you restore come out a tier higher: ${oneIn(fx['tier:restore_relic'])} (${tiersUp()}).`,
+    note: (fx) => `Baubles you restore come out one grade higher: ${oneIn(fx['tier:restore_relic'])} (${tiersUp()}).`,
   },
   {
     num: 27, name: 'Handyman',
@@ -1931,7 +1937,7 @@ const ARTISAN: Seed[] = [
   {
     num: 7, name: 'Cut True',
     fx: onEach('cut', JEWELS, 0.05),
-    note: (fx) => `Rings, pendants and circlets you make: skill gain on each stone's trade up to +${percent(fx['cut:jewelled_ring'])}, `
+    note: (fx) => `Rings, pendants and circlets you make: skill gain on each stone's skill up to +${percent(fx['cut:jewelled_ring'])}, `
       + `by QL: full at QL ${QL_TOP}, half at QL ${QL_TOP / 2} (base: QL has no effect). `
       + `Circlet stones give ${percent(CIRCLET_SHARE)} of it.`,
   },
@@ -1965,7 +1971,7 @@ const ARTISAN: Seed[] = [
   {
     num: 4, name: 'Bright Stone',
     fx: onEach('bright', JEWELS, 1.5),
-    note: (fx) => `Skill gain on the stone's trade: rings and pendants you make +${percent(JEWEL_BONUS * fx['bright:jewelled_ring'])} `
+    note: (fx) => `Skill gain on the stone's skill: rings and pendants you make +${percent(JEWEL_BONUS * fx['bright:jewelled_ring'])} `
       + `(base +${percent(JEWEL_BONUS)}); each stone in a circlet you make `
       + `+${percent(JEWEL_BONUS * CIRCLET_SHARE * fx['bright:circlet'])} (base +${percent(JEWEL_BONUS * CIRCLET_SHARE)}).`,
   },
@@ -2003,14 +2009,14 @@ const ARTISAN: Seed[] = [
   {
     num: 28, name: 'Glaze',
     fx: { glaze_item: 1 },
-    note: () => `New job: Glaze it, on ${GLAZE_ON}. Cost: ${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'lot' : 'lots'} of ashes. `
+    note: () => `New action: Glaze it, on ${GLAZE_ON}. Cost: ${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'lot' : 'lots'} of ashes. `
       + 'Glazed item never decays, anywhere.',
   },
   {
     num: 36, name: 'Trade Book',
     fx: { trade_book: 1 },
     note: () => `New papyrusmaking recipe: ${counted(TRADE_BOOK)} with a ${itemName(TRADE_BOOK.tool ?? 'needle')} make a `
-      + `book on any craft trade you have at ${TRADE_BOOK_AT}+. Study teaches that trade, as much per action as a plain book `
+      + `book on any crafting skill you have at ${TRADE_BOOK_AT}+. Study teaches that skill, as much per action as a plain book `
       + 'teaches mind logic. Readable by anyone.',
   },
   {
@@ -2019,7 +2025,7 @@ const ARTISAN: Seed[] = [
     note: () => `New jewellery recipe: ${counted(CIRCLET_MAKE)} with a ${itemName(CIRCLET_MAKE.tool ?? 'file')} make a `
       + `circlet (head slot, replaces a helm). Holds ${CIRCLET_STONES} stones, set by anyone from the stone's `
       + `menu; each gives ${percent(CIRCLET_SHARE)} of a ring's bonus: +${percent(JEWEL_BONUS * CIRCLET_SHARE)} skill gain `
-      + 'on its trade.',
+      + 'on its skill.',
   },
 ];
 
@@ -2577,15 +2583,17 @@ export const foldPerks = (taken: readonly string[]): Fx =>
 export function perkRefusal(p: PerkDef, mine: string | null, taken: readonly string[], main: number): string | null {
   if (p.class !== mine) return `Not your class: ${CLASSES.find((c) => c.id === p.class)?.name ?? p.class}.`;
   if (taken.includes(p.id)) return 'Already taken.';
-  const other = taken.map((id) => PERK_BY_ID.get(id)).find((o) => o && o.class === p.class && o.tier === p.tier);
-  if (other) return `Tier already taken: ${other.name}.`;
-  // A fighting trade's tiers open on its own level (`CLASS_TIER_AT`), and `main` is that level.
   const c = CLASSES.find((x) => x.id === p.class);
+  // A fighting class's tiers are class tiers, a craft class's perk tiers.
+  const tier = c?.kind === 'combat' ? 'Class tier' : 'Perk tier';
+  const other = taken.map((id) => PERK_BY_ID.get(id)).find((o) => o && o.class === p.class && o.tier === p.tier);
+  if (other) return `${tier} already taken: ${other.name}.`;
+  // A fighting trade's tiers open on its own level (`CLASS_TIER_AT`), and `main` is that level.
   const at = tiersAtFor(c?.kind ?? 'craft')[p.tier - 1];
   if (p.tier > 1 && main < at) {
     return c?.kind === 'combat'
-      ? `Tier opens at class level ${at} (have ${Math.floor(main)}).`
-      : `Tier opens at ${(c?.main ?? '').replace(/_/g, ' ')} ${at} (have ${Math.floor(main)}).`;
+      ? `${tier} opens at class level ${at} (have ${Math.floor(main)}).`
+      : `${tier} opens at ${(c?.main ?? '').replace(/_/g, ' ')} ${at} (have ${Math.floor(main)}).`;
   }
   return null;
 }

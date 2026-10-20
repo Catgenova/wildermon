@@ -217,7 +217,7 @@ same('a mayor cannot send away another mayor', sendAwayRefusal(on(sMay), may, ma
 same('nor the founder', sendAwayRefusal(on(sMay), may, boss), got('MAY_SEND_BOSS'));
 check('a mayor sends a guest away, and the browser offers it',
   got('MAY_SEND_GUEST') === deed && sendAwayRefusal(on(sMay), may, gst) === null, got('MAY_SEND_GUEST'));
-check('and the founder hears it', got('MAY_SEND_TOLD') === `${nMay} has taken ${nGst} off the roll of ${deed}.`, got('MAY_SEND_TOLD'));
+check('and the founder hears it', got('MAY_SEND_TOLD') === `${nMay} has taken ${nGst} off the member list of ${deed}.`, got('MAY_SEND_TOLD'));
 
 console.log('--- the one asked');
 const sNu = answer('S_NU');

@@ -337,16 +337,16 @@ export const RESIN_TAPPED = 1;
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying' };
 export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items', guard: 'guard the deed', hunt: 'hunt round the deed and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the deed and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'tend the hives', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your stores`, butcher: 'butcher carcasses in your stores; output to your stores', tan: 'tan hides in your stores with lye; needs a carving knife in your stores', mill: 'grind wheat and corn and press olives in your stores; needs a quern in your stores', lamp: 'put candles from your stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your stores and empty them', kiln: 'load your kilns with unfired pottery from your stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your stores; leach ash and buckets of water from your stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your stores', cook: 'cook from your stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your stores', patch: 'sow, tend and harvest your planters from your stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'tend the hives', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye; needs a carving knife in your settlement stores', mill: 'grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
-  get saw() { return `saw logs in your stores into planks, ${recipeMakes('make_planks')} a log; needs a saw in your stores`; },
-  get chisel() { return `chisel rock shards in your stores into stone brick, ${recipeMakes('make_stone_brick')} a shard; needs a chisel in your stores`; },
-  get brick() { return `shape clay in your stores into unfired clay brick, ${recipeMakes('make_clay_brick')} a lump`; },
-  get rope() { return `make rope from wemp in your stores, ${recipeTakes('make_rope', 'wemp')} fibres a rope; needs a rope tool in your stores`; },
-  get fletch() { return `fletch arrows from shafts, arrowheads and feathers in your stores, ${recipeMakes('make_arrows')} a shaft, ${recipeTakes('make_arrows', 'arrow_head')} heads and ${recipeTakes('make_arrows', 'feather')} feathers; needs a carving knife in your stores`; },
-  get paper() { return `press reeds in your stores into papyrus at your paper presses, ${recipeMakes('make_papyrus')} sheets per ${recipeTakes('make_papyrus', 'reed')} reeds and a bucket of water; the empty bucket goes back to your stores`; },
-  get glaze() { return `glaze fired pots, bowls, jars and amphorae in your stores with ${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'ash' : 'ashes'} each from your stores; glazed pottery never decays`; },
-  fill: 'fill empty buckets from your stores with water at the shore or a well; output to your stores',
+  get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log; needs a saw in your settlement stores`; },
+  get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard; needs a chisel in your settlement stores`; },
+  get brick() { return `shape clay in your settlement stores into unfired clay brick, ${recipeMakes('make_clay_brick')} a lump`; },
+  get rope() { return `make rope from wemp in your settlement stores, ${recipeTakes('make_rope', 'wemp')} fibres a rope; needs a rope tool in your settlement stores`; },
+  get fletch() { return `fletch arrows from shafts, arrowheads and feathers in your settlement stores, ${recipeMakes('make_arrows')} a shaft, ${recipeTakes('make_arrows', 'arrow_head')} heads and ${recipeTakes('make_arrows', 'feather')} feathers; needs a carving knife in your settlement stores`; },
+  get paper() { return `press reeds in your settlement stores into papyrus at your paper presses, ${recipeMakes('make_papyrus')} sheets per ${recipeTakes('make_papyrus', 'reed')} reeds and a bucket of water; the empty bucket goes back to your settlement stores`; },
+  get glaze() { return `glaze fired pots, bowls, jars and amphorae in your settlement stores with ${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'ash' : 'ashes'} each from your settlement stores; glazed pottery never decays`; },
+  fill: 'fill empty buckets from your settlement stores with water at the shore or a well; output to your settlement stores',
 };
 const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], butcher: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], rope: [], fletch: [], paper: [], glaze: [], fill: [] };
 export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard';
@@ -643,7 +643,7 @@ export const specialtyMul = (n: number): number => (n >= SPECIALTY_AT ? 1 + SPEC
 export const specialtyTrade = (kind: GatherKind | null | undefined): kind is GatherKind => !!kind && kind !== 'guard' && kind !== 'hunt';
 /** Its stamina, for its card: "Stamina: 21 of 30 goes left before it rests." */
 export const staminaSays = (c: Pick<Creature, 'worn'>): string =>
-  `Stamina: ${Math.max(0, TIRE_GOES - (c.worn ?? 0))}/${TIRE_GOES} goes. Rest: ${timeWords(restFor(false))}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`;
+  `Stamina: ${Math.max(0, TIRE_GOES - (c.worn ?? 0))}/${TIRE_GOES} cycles. Rest: ${timeWords(restFor(false))}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`;
 /** For its card, once it has gone `UPKEEP_FOR` without a meal: "Unfed for 1 hour and 12 minutes: works at 50% until it eats." */
 export function unfedSays(c: Pick<Creature, 'unfed' | 'species'>): string {
   if (!unfedNow(c)) return '';
@@ -697,20 +697,20 @@ export const TEND_REACH = 3;
 /** What a stage lets a trade do at once, as a verb and the rest, for its stages' words (`lineSays`): "carries", "2 loads home a trip". */
 const STAGE_WORK: Partial<Record<GatherKind, [verb: string, rest: (n: number) => string]>> = {
   water: ['carries', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} of water a trip (${n * BUCKET_LITRES} litres)`],
-  hod: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} a trip, up to what the work still wants, fitted in one go`],
-  stoke: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} of fuel a trip, up to the hearth's room, fed in one go`],
+  hod: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} a trip, up to what the work still wants, fitted at once`],
+  stoke: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} of fuel a trip, up to the hearth's room, fed at once`],
   plant: ['carries', (n) => `${n} ${n === 1 ? 'sprout' : 'sprouts'} a trip`],
   lamp: ['carries', (n) => `${n} ${n === 1 ? 'candle' : 'candles'} a trip`],
   patch: ['carries', (n) => `${n} ${n === 1 ? 'seed' : 'seeds'} a trip`],
   fill: ['fills', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} a trip`],
-  mend: ['mends', (n) => `the ${n} most damaged ${n === 1 ? 'item' : 'items'} in your stores a go`],
-  butcher: ['butchers', (n) => `${n} ${n === 1 ? 'carcass' : 'carcasses'} a go`],
-  restore: ['restores', (n) => `${n} ${n === 1 ? 'relic' : 'relics'} a go`],
-  glaze: ['glazes', (n) => `${n} ${n === 1 ? 'piece' : 'pieces'} a go`],
-  ash: ['does', (n) => `${n} ${n === 1 ? 'job' : 'jobs'} a go (a hearth raked out or a batch of lye)`],
-  groom: ['brushes', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a go`],
-  dairy: ['milks or shears', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a go, a bucket from the stores per milking`],
-  heal: ['dresses', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a go, a dressing from the stores each`],
+  mend: ['mends', (n) => `the ${n} most damaged ${n === 1 ? 'item' : 'items'} in your settlement stores a cycle`],
+  butcher: ['butchers', (n) => `${n} ${n === 1 ? 'carcass' : 'carcasses'} a cycle`],
+  restore: ['restores', (n) => `${n} ${n === 1 ? 'relic' : 'relics'} a cycle`],
+  glaze: ['glazes', (n) => `${n} ${n === 1 ? 'piece' : 'pieces'} a cycle`],
+  ash: ['does', (n) => `${n} ${n === 1 ? 'action' : 'actions'} a cycle (a hearth raked out or a batch of lye)`],
+  groom: ['brushes', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a cycle`],
+  dairy: ['milks or shears', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a cycle, a bucket from the settlement stores per milking`],
+  heal: ['dresses', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a cycle, a dressing from the settlement stores each`],
 };
 /**
  * What its stage lets a trade do at once, in words, for a stage's words: "carries 2 loads home a trip". Null for a
@@ -720,7 +720,7 @@ export function stageWorkSays(kind: GatherKind | null | undefined, n: number): [
   if (!kind) return null;
   const own = STAGE_WORK[kind];
   if (own) return [own[0], own[1](n)];
-  if (STORE_RECIPES[kind] || kind === 'cook' || kind === 'paper') return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a go, while the stores hold the makings`];
+  if (STORE_RECIPES[kind] || kind === 'cook' || kind === 'paper') return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a cycle, while the settlement stores hold the makings`];
   if (LOAD_TRADES.has(kind)) return ['carries', `${n} ${n === 1 ? 'load' : 'loads'} a trip`];
   return null;
 }
@@ -1030,7 +1030,7 @@ export function abilitySays(id: AbilityId): string {
     skirmisher_marked_for_death: () => `for ${f('secs')} seconds your blows, throws and shots on its target crit chance ×${f('crit')}`,
     warder_ward: () => `while at your heel, a skin on you that absorbs damage up to ${percent(WARD_SKIN)} of your health, when your skin is smaller`,
     warder_stoneskin: () => `damage taken −${percent(f('cut'))} for ${f('secs')} seconds`,
-    chirurgeon_leech: () => `blow ×${percent(f('more'))}; heals the share of its health that the blow took of the target's`,
+    chirurgeon_leech: () => `blow ×${percent(f('more'))}; heals the same % of its health as the blow took of the target's`,
     fear: () => `target (not a monster) flees and strikes nothing for ${f('secs')} seconds or until you strike it`,
   };
   return `${said[id]()}; cooldown ${abilityRest(id)} seconds`;
@@ -1079,7 +1079,7 @@ function lineSays(names: readonly [string, string, string], job: string, level: 
   // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of.
   const work = stageWorkSays(kind, STAGE_LOADS[stage]);
   const more = work ? ` It ${work[0]} ${work[1]} (${names[0]}: ${STAGE_LOADS[0]}).` : '';
-  return `Stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more} ${job}${next}`;
+  return `Evolution stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more} ${job}${next}`;
 }
 
 /** Seconds between chances for an unruly companion to turn on its keeper. */
@@ -1372,7 +1372,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'ulva',
     wound: 'cut',
     name: 'Ulva',
-    description: 'Wild: attacks on sight. Deed job: guard the deed; attacks wild creatures that come onto it.',
+    description: 'Wild: attacks on sight. Settlement task: guard the settlement; attacks wild creatures that come onto it.',
     health: 34,
     attack: 9,
     speed: 2.1,
@@ -1398,7 +1398,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'magga',
     wound: 'cut',
     name: 'Magga',
-    description: 'Deed job: carry items lying on the settlement home.',
+    description: 'Settlement task: carry items lying on the settlement home.',
     health: 16,
     attack: 3,
     speed: 2,
@@ -1557,7 +1557,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'rowl',
     wound: 'cut',
     name: 'Rowl',
-    description: 'Wild: attacks on sight. Deed job: hunt round the settlement and bring carcasses home; range grows with its fighting.',
+    description: 'Wild: attacks on sight. Settlement task: hunt round the settlement and bring carcasses home; range grows with its fighting.',
     health: 46,
     attack: 14,
     speed: 2.5,
@@ -1587,7 +1587,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   bogga: {
     id: 'bogga',
     name: 'Bogga',
-    description: 'Deed job: cut peat and tar from the bog; output home.',
+    description: 'Settlement task: cut peat and tar from the bog; output home.',
     health: 30,
     attack: 4,
     speed: 1.4,
@@ -1670,7 +1670,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   dowse: {
     id: 'dowse',
     name: 'Dowse',
-    description: 'Found only on ground with metal under it. Deed job: prospect the deed and mark the metal found.',
+    description: 'Found only on ground with metal under it. Settlement task: prospect the settlement and mark the metal found.',
     health: 20,
     attack: 3,
     speed: 1.8,
@@ -1694,7 +1694,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   sappa: {
     id: 'sappa',
     name: 'Sappa',
-    description: 'Deed job: plant sprouts where trees were cut.',
+    description: 'Settlement task: plant sprouts where trees were cut.',
     health: 26,
     attack: 3,
     speed: 1.7,
@@ -1717,7 +1717,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   snedda: {
     id: 'snedda',
     name: 'Snedda',
-    description: 'Deed job: prune tree stages that would otherwise die; nothing else.',
+    description: 'Settlement task: prune trees whose next growth stage is dead; nothing else.',
     health: 24,
     attack: 2,
     speed: 1.6,
@@ -1740,7 +1740,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   grubba: {
     id: 'grubba',
     name: 'Grubba',
-    description: 'Deed job: dig out stumps.',
+    description: 'Settlement task: dig out stumps.',
     health: 30,
     attack: 4,
     speed: 1.4,
@@ -1763,7 +1763,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   plucka: {
     id: 'plucka',
     name: 'Plucka',
-    description: 'Deed job: pick what the fruit trees bear; output to the crate.',
+    description: 'Settlement task: pick what the fruit trees bear; output to the crate.',
     health: 18,
     attack: 1,
     speed: 1.7,
@@ -1846,7 +1846,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   middun: {
     id: 'middun',
     name: 'Middun',
-    description: 'Deed job: turn rotting items on the deed into compost.',
+    description: 'Settlement task: turn rotting items on the settlement into compost.',
     health: 24,
     attack: 3,
     speed: 1.5,
@@ -1870,7 +1870,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   kemma: {
     id: 'kemma',
     name: 'Kemma',
-    description: 'Deed job: brush your wildermon within its reach under {careWanting:pct} care, as a keeper of its skill with a brush of the same QL.',
+    description: 'Settlement task: brush your wildermon within its reach under {careWanting:pct} care, as a keeper of its skill with a brush of the same QL.',
     health: 18,
     attack: 2,
     speed: 2,
@@ -1892,7 +1892,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   sheela: {
     id: 'sheela',
     name: 'Sheela',
-    description: 'Deed job: milk your cudda into empty buckets in your stores; shear or pluck your other fleeced or feathered wildermon at {dairyFull:pct} regrowth. Output: your stores.',
+    description: 'Settlement task: milk your cudda into empty buckets in your settlement stores; shear or pluck your other fleeced or feathered wildermon at {dairyFull:pct} regrowth. Output: your settlement stores.',
     health: 20,
     attack: 2,
     speed: 2.2,
@@ -1914,7 +1914,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   salva: {
     id: 'salva',
     name: 'Salva',
-    description: 'Deed job: dress your wildermon within its reach that are bleeding or under {healBelow:pct} health, with a bandage or herb cover from your stores: stops bleeding, heals as a dressing of that QL at its first aid.',
+    description: 'Settlement task: dress your wildermon within its reach that are bleeding or under {healBelow:pct} health, with a bandage or herb cover from your settlement stores: stops bleeding, heals as a dressing of that QL at its first aid.',
     health: 16,
     attack: 1,
     speed: 2,
@@ -1937,7 +1937,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   carra: {
     id: 'carra',
     name: 'Carra',
-    description: 'Deed job: butcher carcasses in your stores, yield as a butcher of its skill with a knife of the same QL. Output: your stores.',
+    description: 'Settlement task: butcher carcasses in your settlement stores, yield as a butcher of its skill with a knife of the same QL. Output: your settlement stores.',
     health: 30,
     attack: 5,
     speed: 2,
@@ -1960,7 +1960,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   tanna: {
     id: 'tanna',
     name: 'Tanna',
-    description: 'Deed job: tan hides in your stores, a hide and a bucket of lye per leather; needs a carving knife in your stores. The bucket goes back with the leather.',
+    description: 'Settlement task: tan hides in your settlement stores, a hide and a bucket of lye per leather; needs a carving knife in your settlement stores. The bucket goes back with the leather.',
     health: 22,
     attack: 3,
     speed: 2,
@@ -1983,7 +1983,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   grista: {
     id: 'grista',
     name: 'Grista',
-    description: 'Deed job: grind wheat and corn and press olives in your stores; needs a quern in your stores. Output: flour, cornmeal and oil to your stores.',
+    description: 'Settlement task: grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores. Output: flour, cornmeal and oil to your settlement stores.',
     health: 26,
     attack: 3,
     speed: 1.6,
@@ -2005,7 +2005,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   wicka: {
     id: 'wicka',
     name: 'Wicka',
-    description: 'Deed job: put a candle from your stores in each of your lantern posts and pillars without one; lights them after dark, puts them out by day.',
+    description: 'Settlement task: put a candle from your settlement stores in each of your lantern posts and pillars without one; lights them after dark, puts them out by day.',
     health: 10,
     attack: 1,
     speed: 2.6,
@@ -2028,7 +2028,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   brambo: {
     id: 'brambo',
     name: 'Brambo',
-    description: 'Deed job: pick bushes in season, as many as your hands would at its forestry, and ripe trellis vines; output home.',
+    description: 'Settlement task: pick bushes in season, as many as your hands would at its forestry, and ripe trellis vines; output home.',
     health: 22,
     attack: 3,
     speed: 2,
@@ -2051,7 +2051,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   grazza: {
     id: 'grazza',
     name: 'Grazza',
-    description: 'Deed job: cut grass, {grassPerCut} mixed grass a cut, and moss, {mossPerCut} a cut; output home. Grass it keeps cut on your settlement turns to lawn.',
+    description: 'Settlement task: cut grass, {grassPerCut} mixed grass a cut, and moss, {mossPerCut} a cut; output home. Grass it keeps cut on your settlement turns to lawn.',
     health: 24,
     attack: 2,
     speed: 1.8,
@@ -2073,7 +2073,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   siffa: {
     id: 'siffa',
     name: 'Siffa',
-    description: 'Deed job: pan sand at the water\u2019s edge; output home. Find chance: {panLeast:pct} unskilled, {panMost:pct} at {skillTop} prospecting.',
+    description: 'Settlement task: pan sand at the water\u2019s edge; output home. Find chance: {panLeast:pct} unskilled, {panMost:pct} at {skillTop} prospecting.',
     health: 16,
     attack: 2,
     speed: 2.2,
@@ -2098,7 +2098,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   forga: {
     id: 'forga',
     name: 'Forga',
-    description: 'Deed job: empty your smelters into your stores and charge them with ore from your stores, a charge per ore, up to capacity. Does not light or fuel them.',
+    description: 'Settlement task: empty your smelters into your settlement stores and charge them with ore from your settlement stores, a charge per ore, up to capacity. Does not light or fuel them.',
     health: 28,
     attack: 4,
     speed: 1.8,
@@ -2121,7 +2121,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   potta: {
     id: 'potta',
     name: 'Potta',
-    description: 'Deed job: empty your kilns into your stores and load them with unfired pottery from your stores, up to capacity. Does not light or fuel them.',
+    description: 'Settlement task: empty your kilns into your settlement stores and load them with unfired pottery from your settlement stores, up to capacity. Does not light or fuel them.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2144,7 +2144,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   cindra: {
     id: 'cindra',
     name: 'Cindra',
-    description: 'Deed job: rake whole ashes from your campfires, ovens, smelters and kilns into your stores; with none to rake, leach ash and a bucket of water from your stores into lye, per the lye recipe.',
+    description: 'Settlement task: rake whole ashes from your campfires, ovens, smelters and kilns into your settlement stores; with none to rake, leach ash and a bucket of water from your settlement stores into lye, per the lye recipe.',
     health: 18,
     attack: 2,
     speed: 2,
@@ -2167,7 +2167,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   hoppa: {
     id: 'hoppa',
     name: 'Hoppa',
-    description: 'Deed job: start a brew in each idle barrel of yours with enough water, from makings in your stores, brews tried in list order. Never spoils a brew. Brew QL: half the makings\' QL plus half its brewing.',
+    description: 'Settlement task: start a brew in each idle barrel of yours with enough water, from makings in your settlement stores, brews tried in list order. Never spoils a brew. Brew QL: half the makings\' QL plus half its brewing.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2189,7 +2189,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   simma: {
     id: 'simma',
     name: 'Simma',
-    description: 'Deed job: cook from your stores at your lit campfires and ovens, recipes tried in list order, with any bowl, pot or pan a recipe needs from your stores. Output: your stores. Never burns.',
+    description: 'Settlement task: cook from your settlement stores at your lit campfires and ovens, recipes tried in list order, with any bowl, pot or pan a recipe needs from your settlement stores. Output: your settlement stores. Never burns.',
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2211,7 +2211,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   relka: {
     id: 'relka',
     name: 'Relka',
-    description: 'Deed job: restore each relic whose pieces are all in your stores, at the pieces\' worth less their damage and at its restoration, as your hands would. Output: your stores. Never fails.',
+    description: 'Settlement task: restore each relic whose pieces are all in your settlement stores, at the pieces\' worth less their damage and at its restoration, as your hands would. Output: your settlement stores. Never fails.',
     health: 16,
     attack: 1,
     speed: 1.8,
@@ -2233,7 +2233,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   bedda: {
     id: 'bedda',
     name: 'Bedda',
-    description: 'Deed job: harvest ripe crops in your planters into your stores, tend growing ones, sow empty ones with seed from your stores.',
+    description: 'Settlement task: harvest ripe crops in your planters into your settlement stores, tend growing ones, sow empty ones with seed from your settlement stores.',
     health: 18,
     attack: 2,
     speed: 1.8,
@@ -2255,7 +2255,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   wurla: {
     id: 'wurla',
     name: 'Wurla',
-    description: 'Deed job: dig worms on dry grass, dirt, marsh and moss as your spade would, more in marsh or moss, sometimes none; output home. A dug tile rests as long as a forage bed.',
+    description: 'Settlement task: dig worms on dry grass, dirt, marsh and moss as your spade would, more in marsh or moss, sometimes none; output home. A dug tile rests as long as a forage bed.',
     health: 18,
     attack: 2,
     speed: 1.8,
@@ -2278,7 +2278,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   sprigga: {
     id: 'sprigga',
     name: 'Sprigga',
-    description: 'Deed job: pick sprouts off living trees, each named for its tree; output home. A picked tree rests as long as a forage bed.',
+    description: 'Settlement task: pick sprouts off living trees, each named for its tree; output home. A picked tree rests as long as a forage bed.',
     health: 16,
     attack: 2,
     speed: 2.2,
@@ -2301,7 +2301,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   ambra: {
     id: 'ambra',
     name: 'Ambra',
-    description: 'Deed job: tap each pine big enough to tap, {resinTapped} tar per pine per day; output home.',
+    description: 'Settlement task: tap each pine big enough to tap, {resinTapped} tar per pine per day; output home.',
     health: 18,
     attack: 2,
     speed: 2,
@@ -2324,7 +2324,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   petta: {
     id: 'petta',
     name: 'Petta',
-    description: 'Deed job: pick wildflowers, a flower per clump on a tile; output home. Flowers within a skep\'s reach are left to the skep.',
+    description: 'Settlement task: pick wildflowers, a flower per clump on a tile; output home. Flowers within a skep\'s reach are left to the skep.',
     health: 12,
     attack: 1,
     speed: 2.4,
@@ -2346,7 +2346,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   scurra: {
     id: 'scurra',
     name: 'Scurra',
-    description: 'Deed job: scrub moss off your paving, poured foundations and statues and ivy off your stone walls once greened a day, back to bare stone. Carries nothing home.',
+    description: 'Settlement task: scrub moss off your paving, poured foundations and statues and ivy off your stone walls once greened a day, back to bare stone. Carries nothing home.',
     health: 22,
     attack: 3,
     speed: 1.8,
@@ -2369,7 +2369,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   rippa: {
     id: 'rippa',
     name: 'Rippa',
-    description: 'Deed job: saw each log in your stores into planks, as many as your saw gets; needs a saw in your stores. Output: your stores. Never spoils a log.',
+    description: 'Settlement task: saw each log in your settlement stores into planks, as many as your saw gets; needs a saw in your settlement stores. Output: your settlement stores. Never spoils a log.',
     health: 24,
     attack: 3,
     speed: 1.8,
@@ -2391,7 +2391,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   chissa: {
     id: 'chissa',
     name: 'Chissa',
-    description: 'Deed job: chisel each rock shard in your stores into stone brick, as many as your chisel gets; needs a chisel in your stores. Output: your stores. Never spoils a shard.',
+    description: 'Settlement task: chisel each rock shard in your settlement stores into stone brick, as many as your chisel gets; needs a chisel in your settlement stores. Output: your settlement stores. Never spoils a shard.',
     health: 28,
     attack: 3,
     speed: 1.8,
@@ -2413,7 +2413,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   mudda: {
     id: 'mudda',
     name: 'Mudda',
-    description: 'Deed job: shape each lump of clay in your stores into an unfired clay brick. Output: your stores. Never spoils a brick.',
+    description: 'Settlement task: shape each lump of clay in your settlement stores into an unfired clay brick. Output: your settlement stores. Never spoils a brick.',
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2435,7 +2435,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   cordra: {
     id: 'cordra',
     name: 'Cordra',
-    description: 'Deed job: make rope from wemp in your stores, as many fibres a rope as your hands take; needs a rope tool in your stores. Output: your stores. Never fails.',
+    description: 'Settlement task: make rope from wemp in your settlement stores, as many fibres a rope as your hands take; needs a rope tool in your settlement stores. Output: your settlement stores. Never fails.',
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2457,7 +2457,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   flecha: {
     id: 'flecha',
     name: 'Flecha',
-    description: 'Deed job: fletch arrows from shafts, arrowheads and feathers in your stores; needs a carving knife in your stores. Output: your stores. Never spoils a shaft.',
+    description: 'Settlement task: fletch arrows from shafts, arrowheads and feathers in your settlement stores; needs a carving knife in your settlement stores. Output: your settlement stores. Never spoils a shaft.',
     health: 18,
     attack: 3,
     speed: 1.8,
@@ -2479,7 +2479,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   papra: {
     id: 'papra',
     name: 'Papra',
-    description: 'Deed job: press reeds and buckets of water from your stores into papyrus at your paper presses. Output: sheets and the empty bucket to your stores. Never fails.',
+    description: 'Settlement task: press reeds and buckets of water from your settlement stores into papyrus at your paper presses. Output: sheets and the empty bucket to your settlement stores. Never fails.',
     health: 16,
     attack: 1,
     speed: 1.8,
@@ -2501,7 +2501,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   glossa: {
     id: 'glossa',
     name: 'Glossa',
-    description: 'Deed job: glaze each fired pot, bowl, jar and amphora in your stores with ash from your stores; glazed pottery never decays, as with an Artisan\'s glaze. Needs no Artisan learning.',
+    description: 'Settlement task: glaze each fired pot, bowl, jar and amphora in your settlement stores with ash from your settlement stores; glazed pottery never decays, as with an Artisan\'s glaze. Needs no Artisan learning.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2523,7 +2523,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   dippa: {
     id: 'dippa',
     name: 'Dippa',
-    description: 'Deed job: fill empty buckets from your stores with water at the shore or a well; output to your stores. Never spills.',
+    description: 'Settlement task: fill empty buckets from your settlement stores with water at the shore or a well; output to your settlement stores. Never spills.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -3273,7 +3273,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     heavy: true,
     wound: 'crush',
     name: 'Shaggan',
-    description: 'Traces: team pace +{pull:pct} (most beasts: +{pullDefault:pct}). Slowest of the draught beasts.',
+    description: 'Traces: team pace +{pull:pct} (most wildermon: +{pullDefault:pct}). Slowest of the draught wildermon.',
     health: 90,
     attack: 12,
     speed: 1,
@@ -3387,7 +3387,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     wound: 'pierce',
     venom: true,
     name: 'Vesp',
-    description: 'Deed job: tend a hive on your deed; fills it with honey and wax and defends it.',
+    description: 'Settlement task: tend a hive on your settlement; fills it with honey and wax and defends it.',
     health: 12,
     attack: 3,
     speed: 2.4,
@@ -3412,7 +3412,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   snout: {
     id: 'snout',
     name: 'Snout',
-    description: 'Deed job: find buried relics and mark dig sites.',
+    description: 'Settlement task: find buried relics and mark dig sites.',
     health: 24,
     attack: 4,
     speed: 1.6,
@@ -3900,36 +3900,36 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
 }
 // The words of each line that evolves, and its stages', now that every number they read is here.
 const reach = (id: string): string =>
-  `within ${SPECIES[id].workRange} tiles of the token, +${SPECIES[id].rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels`;
+  `within ${SPECIES[id].workRange} tiles of the totem, +${SPECIES[id].rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels`;
 const yieldQl = (skill: string): string => `${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its ${skill}, raised by yield traits, max 100`;
-sayLine('rabba', `Deed job: forage ${reach('rabba')}; output to the crate.`, 'Level: foraging.');
-sayLine('vola', `Deed job: botanize ${reach('vola')}; output to the crate.`, 'Level: botanizing.');
+sayLine('rabba', `Settlement task: forage ${reach('rabba')}; output to the crate.`, 'Level: foraging.');
+sayLine('vola', `Settlement task: botanize ${reach('vola')}; output to the crate.`, 'Level: botanizing.');
 sayLine('woola', `Shear with a carving knife from ${percent(SHEAR_FROM)} fleece regrowth: up to ${SHEAR_WOOL} wool when full. Regrowth, grown: ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
   `Level: animal husbandry, learned ${LEARNS_SAYS.tended}.`);
-sayLine('seavic', `Deed job: sow, tend and harvest your tilled fields ${reach('seavic')}; seed from the crate, harvest and unused seed back to it. Does not till.`,
+sayLine('seavic', `Settlement task: sow, tend and harvest your tilled fields ${reach('seavic')}; seed from the crate, harvest and unused seed back to it. Does not till.`,
   'Level: farming.');
-sayLine('quarra', `Deed job: cut rock shards from bare rock with no seam ${reach('quarra')}; output home.`, 'Level: mining.');
-sayLine('mola', `Deed job: mine the nearest ore seam ${reach('mola')}, QL up to its mining and the seam's; output home. Skips metals above its mining: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} ${m.level}`))}.`,
+sayLine('quarra', `Settlement task: cut rock shards from bare rock with no seam ${reach('quarra')}; output home.`, 'Level: mining.');
+sayLine('mola', `Settlement task: mine the nearest ore seam ${reach('mola')}, QL up to its mining and the seam's; output home. Skips metals above its mining: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} ${m.level}`))}.`,
   'Level: mining.');
-sayLine('bevere', `Deed job: fell trees ${reach('bevere')}, as many bites a tree as a person's swings; a stump is left where the tree had timber. Log QL: ${yieldQl('woodcutting')}. 1 log to the crate, the rest left at the stump.`,
+sayLine('bevere', `Settlement task: fell trees ${reach('bevere')}, as many bites a tree as a person's swings; a stump is left where the tree had timber. Log QL: ${yieldQl('woodcutting')}. 1 log to the crate, the rest left at the stump.`,
   'Level: woodcutting.');
 sayLine('orse', `Mount, saddled and bridled: ${+(SPECIES.orse.speed * footing(0)).toFixed(2)} tiles a second grown and fed at 0 climbing, +${percent(1 / 140 / footing(0))} per climbing level, max ${MAX_MOUNT_SPEED} tiles a second before a Saddler's tack. Higher climbing: steeper ground. Traces of a large cart or wagon: team pace +${percent(SPECIES.orse.pull ?? PULL_DEFAULT)}.`,
   'Level: climbing, learned under a rider and in the traces.');
-sayLine('roxxen', `No deed job. Traces of a large cart or wagon: team pace +${percent(SPECIES.roxxen.pull!)} (beasts not bred for it: +${percent(PULL_DEFAULT)}); its driving counts as climbing for team pace and the steepest step the wheels take.`,
+sayLine('roxxen', `No settlement task. Traces of a large cart or wagon: team pace +${percent(SPECIES.roxxen.pull!)} (wildermon not bred for it: +${percent(PULL_DEFAULT)}); its driving counts as climbing for team pace and the steepest step the wheels take.`,
   `Level: driving, learned ${LEARNS_SAYS.pull}.`);
-sayLine('tinka', `Deed job: mend damaged gear in your stores on the deed, most damaged first. Time per action: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per action: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,
+sayLine('tinka', `Settlement task: mend damaged gear in your settlement stores, most damaged first. Time per action: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per action: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,
   'Level: repair.');
-sayLine('holla', `Deed job: fill a bladder at the shore or a well ${reach('holla')}, ${BUCKET_LITRES} litres a bucket; poured into a settlement barrel with room for water.`,
+sayLine('holla', `Settlement task: fill a bladder at the shore or a well ${reach('holla')}, ${BUCKET_LITRES} litres a bucket; poured into a settlement barrel with room for water.`,
   'Level: carrying.');
-sayLine('sedra', `Deed job: cut reed beds ${reach('sedra')}, from the bank. Reeds per cut: 1, +1 per ${REED_LEVELS} levels. QL: ${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its foraging +1, max 100. Output to the crate.`,
+sayLine('sedra', `Settlement task: cut reed beds ${reach('sedra')}, from the bank. Reeds per cut: 1, +1 per ${REED_LEVELS} levels. QL: ${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its foraging +1, max 100. Output to the crate.`,
   'Level: foraging.');
-sayLine('cobbe', `Deed job: carry what planned building work still wants from your stores on the deed, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's go: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your stores; of that work's wants, the one furthest behind its bill.`,
+sayLine('cobbe', `Settlement task: carry what planned building work still wants from your settlement stores, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's action: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your settlement stores; of that work's wants, the one furthest behind its bill.`,
   'Level: masonry.');
-sayLine('embra', `Deed job: keep your campfires, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your stores to the nearest, and relights it if out. Eats only cooked food.`,
+sayLine('embra', `Settlement task: keep your campfires, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your settlement stores to the nearest, and relights it if out. Eats only cooked food.`,
   'Level: smelting.');
-sayLine('noot', `Deed job: dig clay off clay ground ${reach('noot')}, 1 lump a dig. QL: ${yieldQl('digging')}. Output to the crate.`,
+sayLine('noot', `Settlement task: dig clay off clay ground ${reach('noot')}, 1 lump a dig. QL: ${yieldQl('digging')}. Output to the crate.`,
   'Level: digging.');
-sayLine('crawler', `Deed job: dig sand off sandy ground ${reach('crawler')}, 1 heap a dig. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
+sayLine('crawler', `Settlement task: dig sand off sandy ground ${reach('crawler')}, 1 heap a dig. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
   'Level: digging.');
 sayLine('whispet', `Tamed, ${abilityName('fear')}: ${abilitySays('fear')}. Strikes back every time. Wild: after dark only, ${seasonSays(SPECIES.whispet.season!)} (UTC); none wild on other days. Tamed, kept or bred ones stay all year.`,
   'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
@@ -5398,7 +5398,7 @@ export class Creatures {
     return [...this.list.values()].filter((c) => c.mode !== 'wild' && c.mine !== false);
   }
 
-  /** The ones shut in creature crates. */
+  /** The ones shut in wildermon crates. */
   stored(): Creature[] {
     return [...this.list.values()].filter((c) => c.mode === 'stored');
   }
@@ -7965,7 +7965,7 @@ export class Creatures {
     }
     if (!best) return false;
     c.enemy = best.id;
-    game.logMsg(`${c.name} attacks: ${this.species(best).name.toLowerCase()} on the deed.`, 'fight');
+    game.logMsg(`${c.name} attacks: ${this.species(best).name.toLowerCase()} on the settlement.`, 'fight');
     return true;
   }
 
@@ -8163,7 +8163,7 @@ export class Creatures {
      * Where it goes, now that nothing is kept at the token: where a tamed one
      * goes, and then a crate standing on your settlement. A dam let go before
      * her hour drops a wild one. Otherwise it follows you when nothing else
-     * does; goes into an empty creature crate in your pack when something
+     * does; goes into an empty wildermon crate in your pack when something
      * does; and, carrying none, into an empty one of yours standing on your
      * settlement, the nearest the dam. With none of those it goes off into
      * the wild.
@@ -8180,12 +8180,12 @@ export class Creatures {
       where = ' Follows you.';
     } else if (crate && 'kind' in crate) {
       mode = 'stored';
-      where = ` In the empty creature crate at (${crate.x}, ${crate.y}) on ${game.deed?.name ?? 'your settlement'}.`;
+      where = ` In the empty wildermon crate at (${crate.x}, ${crate.y}) on ${game.deed?.name ?? 'your settlement'}.`;
     } else if (crate) {
       mode = 'stored';
-      where = ' In the creature crate in your pack.';
+      where = ' In the wildermon crate in your pack.';
     } else {
-      where = ' No free companion slot or empty creature crate in your pack or on your settlement: released into the wild.';
+      where = ' No free companion slot or empty wildermon crate in your pack or on your settlement: released into the wild.';
     }
     const c = this.spawn(dam.species, at[0], at[1], mode, game.rand, game.time);
     c.traits = coming.traits;
@@ -9536,11 +9536,11 @@ export class Creatures {
       case 'active':
         return `your companion · ${STANCE_NAMES[c.stance].toLowerCase()}`;
       case 'deed':
-        if (c.carrying) return `deed worker · carrying ${itemDef(c.carrying.id).name.toLowerCase()}`;
-        if (c.state === 'forage') return `deed worker · ${job === 'farm' && c.job ? `${c.job}ing a field` : verb}`;
-        return 'deed worker';
+        if (c.carrying) return `settlement worker · carrying ${itemDef(c.carrying.id).name.toLowerCase()}`;
+        if (c.state === 'forage') return `settlement worker · ${job === 'farm' && c.job ? `${c.job}ing a field` : verb}`;
+        return 'settlement worker';
       case 'stored':
-        return 'in a creature crate';
+        return 'in a wildermon crate';
       default:
         return c.state === 'forage' ? `wild · ${verb}` : c.state === 'flee' ? 'wild · fleeing' : 'wild';
     }

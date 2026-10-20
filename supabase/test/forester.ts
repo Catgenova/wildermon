@@ -30,7 +30,7 @@ import { ACTION_BY_ID, PLANTED_AGE, plantedAge, RESIN_TREE } from '../../src/gam
 import type { Target } from '../../src/game/actions';
 import { perksOf, STRIDE, type PerkDef } from '../../src/game/perks';
 import { pathOptions } from '../../src/game/player';
-import { packTreeData, TILE_DEFS, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
+import { DAILY_RESET, packTreeData, TILE_DEFS, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
 import { FRUITING } from '../../src/game/fruiting';
 
 /** Hold the island in a season the thing is picked in for the rest of the transaction (`fruiting.ts`), whatever day it is run on. */
@@ -454,7 +454,7 @@ check(`${P('Tap Resin').name}: refused without the perk, an oak, a sapling, a de
     && resGrass === 'No tree here.' && resOk === 'ALLOWED', resRefused);
 const [resGot, resAgain, resDawn] = resAfter.split('#');
 check(`and a pine gives ${P('Tap Resin').fx.tap_resin} tar, is refused the rest of the day, and gives again once the woods have turned`,
-  resGot === `${P('Tap Resin').fx.tap_resin}:${HANDS}` && resAgain === 'Tapped today. Again at dawn.'
+  resGot === `${P('Tap Resin').fx.tap_resin}:${HANDS}` && resAgain === `Tapped today. Again at the ${DAILY_RESET}.`
     && resDawn === 'ALLOWED' && resSaid.startsWith(`Tapped: ${P('Tap Resin').fx.tap_resin} tar,`),
   `${resAfter} | ${resSaid}`);
 const [brushRefused, brushAfter, brushSaid] = say('BRUSH').split('|');

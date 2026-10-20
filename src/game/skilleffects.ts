@@ -1,4 +1,4 @@
-import { goSeconds, hullSpeed, productQlRange, queueCapAt, type Game } from './game';
+import { CHAR_START, goSeconds, hullSpeed, productQlRange, queueCapAt, type Game } from './game';
 import { ACTIONS, maxDigSlope, maxMasonSlope, prospectReach, repairGo } from './actions';
 import { RECIPES } from './recipes';
 import { MOULDS } from './metal';
@@ -27,6 +27,7 @@ import { skinOf } from './talents';
 import { furnitureDef } from './furniture';
 import { itemDef, type Item } from './items';
 import { percent } from './words';
+import { metres } from './piers';
 
 /**
  * What a skill's level changes, one entry per number, for the Skills window's
@@ -97,13 +98,17 @@ export function effectTracks(g: Game, id: string): EffectTrack[] {
 
 /* ---- How values are written ------------------------------------------------- */
 
-const times = (v: number): string => `×${v.toFixed(2)}`;
+/** A multiplier against the value at a level: "29% of level 0". */
+const ofLevel = (at: number) => (v: number): string => `${percent(v)} of level ${at}`;
 const kg = (v: number): string => `${Math.round(v)} kg`;
 const secs = (v: number): string => `${v.toFixed(1)} s`;
 const tiles = (v: number): string => `${v.toFixed(1)} tiles`;
 const pace = (v: number): string => `${v.toFixed(2)} tiles/s`;
-const points = (v: number): string => v.toFixed(1);
-const height = (v: number): string => (Number.isFinite(v) ? `${Math.round(v)}` : 'any');
+const damage = (v: number): string => `${v.toFixed(1)} damage`;
+const favour = (v: number): string => `${v.toFixed(1)} favour`;
+const height = (v: number): string => (Number.isFinite(v) ? `${metres(v)} m` : 'any');
+/** A count of things: "3 motes". */
+const count = (one: string, many: string) => (v: number): string => `${v} ${v === 1 ? one : many}`;
 
 /* ---- What a rule is asked about ----------------------------------------------- */
 
@@ -143,7 +148,7 @@ const boatPace = (g: Game, kind: string, body: number): number => {
 function weaponEffects(kind: string): SkillEffect[] {
   return [
     { label: 'Hit chance', at: (g) => { const w = weaponFor(g, kind); return hitChance(g, w.def, w.item); }, say: percent, note: undefined },
-    { label: 'Damage per blow', at: (g) => { const w = weaponFor(g, kind); return weaponDamage(g, w.def, w.item); }, say: points },
+    { label: 'Damage per blow', at: (g) => { const w = weaponFor(g, kind); return weaponDamage(g, w.def, w.item); }, say: damage },
     { label: 'Critical chance', at: (g) => myCritChance(g, weaponFor(g, kind).def), say: percent },
   ];
 }
@@ -183,7 +188,7 @@ function workEffects(id: string): SkillEffect[] {
   const jobs = [...done, ...MOULDS.filter((m) => m.skill === id)];
   if (!jobs.length) return [];
   const out: SkillEffect[] = timed.length
-    ? [{ label: 'Time per action', at: (g) => goSeconds(SLOW_GO, g.skills.get(id)) / goSeconds(SLOW_GO, 0), say: times }]
+    ? [{ label: 'Time per action', at: (g) => goSeconds(SLOW_GO, g.skills.get(id)) / goSeconds(SLOW_GO, 0), say: ofLevel(0) }]
     : [];
   if (jobs.some((j) => j.difficulty)) {
     out.push({ label: 'Success chance', at: (g) => g.skillChance(id, CHANCE_AT, 0, g.mindEase()), say: percent, note: `Difficulty ${CHANCE_AT}, no tool` });
@@ -194,7 +199,7 @@ function workEffects(id: string): SkillEffect[] {
   }
   return out;
 }
-/** The trades that bring things in rather than make them from a recipe, each at a QL its skill caps (`productQl`). */
+/** The skills that bring things in rather than make them from a recipe, each at a QL its skill caps (`productQl`). */
 const BRINGS_IN = new Set(['digging', 'mining', 'prospecting', 'woodcutting', 'forestry', 'foraging', 'botanizing', 'fishing', 'farming',
   'butchering', 'archaeology', 'elementalism', 'animal_husbandry', 'paving']);
 /** The difficulty a success chance is shown at: the one a job has when it names none (`skillChance`). */
@@ -216,22 +221,22 @@ function buildEffects(): Record<string, SkillEffect[]> {
   const fx: Record<string, SkillEffect[]> = {
     body_strength: [
       { label: 'Carry weight', at: (g) => g.carryLimit(), say: kg },
-      { label: 'Damage per blow', at: (g) => { const w = swungWith(g); return weaponDamage(g, w.def, w.item); }, say: points },
+      { label: 'Damage per blow', at: (g) => { const w = swungWith(g); return weaponDamage(g, w.def, w.item); }, say: damage },
       { label: 'Rowing boat speed', at: (g) => boatPace(g, 'rowing_boat', g.skills.get('body_strength')), say: pace, note: `QL ${EXAMPLE_QL}, empty` },
     ],
     body_stamina: [
-      { label: 'Stamina cost of jobs and swings', at: (g) => g.staminaCost(1), say: times },
-      { label: 'Stamina regained', at: (g) => g.windRegen(), say: times },
+      { label: 'Stamina cost of actions and swings', at: (g) => g.staminaCost(1), say: ofLevel(CHAR_START) },
+      { label: 'Stamina regained', at: (g) => g.windRegen(), say: ofLevel(CHAR_START) },
     ],
     body_control: [
-      { label: 'Time per job', at: (g) => g.controlSpeed(), say: times },
+      { label: 'Time per action', at: (g) => g.controlSpeed(), say: ofLevel(CHAR_START) },
       { label: 'Dodge chance', at: (g) => g.dodge(), say: percent },
       { label: 'Hit chance', at: (g) => { const w = swungWith(g); return hitChance(g, w.def, w.item); }, say: percent },
       { label: 'Sailing boat speed', at: (g) => boatPace(g, 'sailing_boat', g.skills.get('body_control')), say: pace, note: `QL ${EXAMPLE_QL}, empty, wind astern` },
     ],
     mind_logic: [
-      { label: 'Job queue', at: (g) => queueCapAt(g.skills.get('mind_logic')) + g.perk('jobs', 0), say: (v) => `${v} jobs` },
-      { label: 'Craft difficulty eased', at: (g) => g.mindEase(), say: (v) => (v > 0 ? `−${+v.toFixed(1)}` : '0'), note: 'At most half a craft\'s difficulty' },
+      { label: 'Action queue', at: (g) => queueCapAt(g.skills.get('mind_logic')) + g.perk('jobs', 0), say: count('action', 'actions') },
+      { label: 'Craft difficulty eased', at: (g) => g.mindEase(), say: (v) => (v > 0 ? `−${+v.toFixed(1)} difficulty` : '0 difficulty'), note: 'At most half a craft\'s difficulty' },
     ],
     soul_strength: [{ label: 'Tame chance', at: (g) => g.soulBonus(), say: (v) => `+${percent(v)}` }],
     awareness: [{ label: 'Sight range', at: (g) => BASE_SIGHT * awarenessReach(g.skills.get('awareness')), say: tiles, note: 'Daylight, flat ground' }],
@@ -241,14 +246,14 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Steepest ground to stand on', at: (g) => g.standSlope(), say: height },
     ],
     swimming: [
-      { label: 'Swim speed', at: (g) => g.swimPace(), say: (v) => `${times(v)} walk` },
-      { label: 'Stamina lost swimming', at: (g) => g.swimWind(), say: (v) => `${percent(v)}/s` },
+      { label: 'Swim speed', at: (g) => g.swimPace(), say: (v) => `${percent(v)} of walking speed` },
+      { label: 'Stamina lost swimming', at: (g) => g.swimWind(), say: (v) => `${percent(v)} stamina/s` },
     ],
-    driving: [{ label: 'Cart and wagon speed', at: (g) => drivingPace(g.skills.get('driving')), say: times }],
-    sailing: [{ label: 'Boat speed', at: (g) => sailingPace(g.skills.get(SAILING)), say: times }],
+    driving: [{ label: 'Cart and wagon speed', at: (g) => drivingPace(g.skills.get('driving')), say: ofLevel(0) }],
+    sailing: [{ label: 'Boat speed', at: (g) => sailingPace(g.skills.get(SAILING)), say: ofLevel(0) }],
     fighting: [
       { label: 'Hit chance', at: (g) => { const w = swungWith(g); return hitChance(g, w.def, w.item); }, say: percent },
-      { label: 'Damage per blow', at: (g) => { const w = swungWith(g); return weaponDamage(g, w.def, w.item); }, say: points },
+      { label: 'Damage per blow', at: (g) => { const w = swungWith(g); return weaponDamage(g, w.def, w.item); }, say: damage },
       { label: 'Swing time', at: (g) => { const w = swungWith(g); return g.swingTime(w.def, w.item).secs; }, say: secs },
     ],
     shields: [{
@@ -260,7 +265,7 @@ function buildEffects(): Record<string, SkillEffect[]> {
       },
       say: percent,
     }],
-    kindling: [{ label: 'Ember damage', at: (g) => spellForce(spellDef('ember')!, g.skills.get('kindling'), EXAMPLE_QL, 1), say: points, note: `Focus QL ${EXAMPLE_QL}` }],
+    kindling: [{ label: 'Ember damage', at: (g) => spellForce(spellDef('ember')!, g.skills.get('kindling'), EXAMPLE_QL, 1), say: damage, note: `Focus QL ${EXAMPLE_QL}` }],
     binding: [{ label: 'Snare hold', at: (g) => spellSecs(spellDef('snare')!, g.skills.get('binding'), 1), say: secs }],
     warding: [{ label: 'Aegis skin', at: (g) => skinOf(spellForce(spellDef('aegis')!, g.skills.get('warding'), EXAMPLE_QL, 1)), say: (v) => `${percent(v)} of max health`, note: `Focus QL ${EXAMPLE_QL}` }],
   };
@@ -269,9 +274,9 @@ function buildEffects(): Record<string, SkillEffect[]> {
     digging: [{ label: 'Steepest slope you may leave', at: (g) => maxDigSlope(g), say: height }],
     mining: [{ label: 'Hardest ore', at: (g) => g.skills.get('mining'), say: hardestOre }],
     prospecting: [{ label: 'Prospect reach', at: (g) => prospectReach(g), say: tiles }],
-    forestry: [{ label: 'Grapes per pick', at: (g) => grapesFor(g.skills.get('forestry')), say: (v) => `${v}` }],
-    foraging: [{ label: 'Looks per action', at: (g) => rollsAt(g.skills.get('foraging')), say: (v) => `${v}` }],
-    botanizing: [{ label: 'Looks per action', at: (g) => rollsAt(g.skills.get('botanizing')), say: (v) => `${v}` }],
+    forestry: [{ label: 'Grapes per pick', at: (g) => grapesFor(g.skills.get('forestry')), say: count('grape', 'grapes') }],
+    foraging: [{ label: 'Looks per action', at: (g) => rollsAt(g.skills.get('foraging')), say: count('look', 'looks') }],
+    botanizing: [{ label: 'Looks per action', at: (g) => rollsAt(g.skills.get('botanizing')), say: count('look', 'looks') }],
     tracking: [
       { label: 'Track reach', at: (g) => trackRange(trackLevel(g.skills.get('tracking'))), say: (v) => `${v} tiles` },
       { label: 'Bearing error', at: (g) => trackErr(trackLevel(g.skills.get('tracking'))), say: (v) => `±${v.toFixed(0)}°` },
@@ -284,21 +289,21 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Care per brushing', at: (g) => groomGain(g.skills.get('animal_husbandry'), EXAMPLE_QL), say: percent, note: `Brush QL ${EXAMPLE_QL}` },
     ],
     butchering: [{ label: 'Carcass kept', at: (g) => butcherYield(g.skills.get('butchering'), EXAMPLE_QL), say: percent, note: `Knife QL ${EXAMPLE_QL}` }],
-    prayer: [{ label: 'Most favour held', at: (g) => favourCap(g.skills.get('prayer')), say: (v) => `${Math.round(v)}` }],
-    praying: [{ label: 'Favour per prayer', at: (g) => prayerWorth(EXAMPLE_QL, PRAYER_PEAKS[0], g.skills.get('praying')), say: points, note: `Altar QL ${EXAMPLE_QL}, hour ${PRAYER_PEAKS[0]}` }],
-    meditation: [{ label: 'Most Calm held', at: (g) => calmCap(g.skills.get('meditation')), say: (v) => `${Math.round(v)}` }],
+    prayer: [{ label: 'Most favour held', at: (g) => favourCap(g.skills.get('prayer')), say: (v) => `${Math.round(v)} favour` }],
+    praying: [{ label: 'Favour per prayer', at: (g) => prayerWorth(EXAMPLE_QL, PRAYER_PEAKS[0], g.skills.get('praying')), say: favour, note: `Altar QL ${EXAMPLE_QL}, hour ${PRAYER_PEAKS[0]}` }],
+    meditation: [{ label: 'Most Calm held', at: (g) => calmCap(g.skills.get('meditation')), say: (v) => `${Math.round(v)} Calm` }],
     repair: [
-      { label: 'Damage mended per action', at: (g) => repairGo(g.skills.get('repair')).healed, say: points },
-      { label: 'QL lost per damage mended', at: (g) => repairGo(g.skills.get('repair')).cost, say: (v) => v.toFixed(3) },
+      { label: 'Damage mended per action', at: (g) => repairGo(g.skills.get('repair')).healed, say: damage },
+      { label: 'QL lost per damage mended', at: (g) => repairGo(g.skills.get('repair')).cost, say: (v) => `${v.toFixed(3)} QL` },
     ],
     first_aid: [{ label: 'Health a dressing heals', at: (g) => healAmount(g.skills.get('first_aid'), EXAMPLE_QL), say: percent, note: `Dressing QL ${EXAMPLE_QL}` }],
-    chirurgy: [{ label: 'Wound closing speed', at: (g) => woundClose(CLOTHED, g.skills.get('chirurgy')) / woundClose(CLOTHED, 0), say: times, note: 'Under cloth' }],
+    chirurgy: [{ label: 'Wound closing speed', at: (g) => woundClose(CLOTHED, g.skills.get('chirurgy')) / woundClose(CLOTHED, 0), say: ofLevel(0), note: 'Under cloth' }],
     archaeology: [
       { label: 'Chance of a find', at: (g) => findChance(g.skills.get('archaeology'), EXAMPLE_QL), say: percent, note: `Trowel QL ${EXAMPLE_QL}` },
-      { label: 'Relics you can find', at: (g) => relicsWithin(g.skills.get('archaeology')).length, say: (v) => `${v}` },
+      { label: 'Relics you can find', at: (g) => relicsWithin(g.skills.get('archaeology')).length, say: count('relic', 'relics') },
     ],
     restoration: [{ label: 'QL kept restoring', at: (g) => restoredQl(g, 100) / 100, say: percent }],
-    elementalism: [{ label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: (v) => `${v}` }],
+    elementalism: [{ label: 'Motes per swirl', at: (g) => motesFor(g.skills.get('elementalism')), say: count('mote', 'motes') }],
     enchanting: [{ label: 'Enchantment takes', at: (g) => enchantChance(g.skills.get('enchanting'), EXAMPLE_QL), say: percent, note: `Scroll QL ${EXAMPLE_QL}` }],
   };
   for (const def of SKILL_BY_ID.values()) {

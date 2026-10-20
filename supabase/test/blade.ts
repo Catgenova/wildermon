@@ -562,7 +562,7 @@ check('a trade\'s spell does not go in a patron\'s slot', island('FAITHSLOT') ==
 }
 {
   const [opened, line] = parts('OPENS');
-  const want = `Your ${BLADE.name.toLowerCase()} level reaches ${CLASS_TIER_AT[1]}, and a new tier opens in the Trades window.`;
+  const want = `Your ${BLADE.name.toLowerCase()} level reaches ${CLASS_TIER_AT[1]}, and a new class tier opens in the Trades window.`;
   check(`and a kill that takes it over ${CLASS_TIER_AT[1]} says the tier it opens`, opened === 'true' && line === want, island('OPENS'));
 }
 check('somebody with no fighting trade learns nothing', Number(island('NOBODY')) === 0, island('NOBODY'));

@@ -121,7 +121,7 @@ const SURE_ROLL = (1 + fx('Sure Restore', 'fail:restore_relic')) / 2;
 const HARM_ROLL = 0.5;
 /** Dice between the plain odds of a rare bauble and a Lucky Polish's. */
 const RARE_ROLL = fx('Lucky Polish', 'rare:restore_relic') * 0.75;
-const TIER_ROLL = fx('Tier Up', 'tier:restore_relic') / 2;
+const TIER_ROLL = fx('Grade Up', 'tier:restore_relic') / 2;
 const PLAIN_ROLL = 0.5;
 const LOCATION_ROLL = 0.2;
 const BLOCK_ROLL = 0.001;
@@ -373,7 +373,7 @@ begin
 
   /* ---- Tier Up: under its chance, a minor bauble comes out major. ---- */
   v_t := '';
-  foreach v_t in array array['', ${q(P('Tier Up').id)}] loop
+  foreach v_t in array array['', ${q(P('Grade Up').id)}] loop
     perform pg_temp.hold(w, u, case when v_t = '' then '{}'::text[] else array[v_t] end);
     v_b := ${thing('tarnished_bauble', BAUBLE_QL, BAUBLE_DMG, "'minor'")};
     ${dice(TIER_ROLL)};
@@ -609,10 +609,10 @@ const lucky = RARITIES[rollRarity(() => RARE_ROLL, fx('Lucky Polish', 'rare:rest
 check(`${P('Lucky Polish').name}: dice of ${RARE_ROLL} make nothing rare without it, and with it what the browser's roll makes of them (${lucky})`,
   say('RAREplain') === 'none' && lucky !== '' && say(`RARE${P('Lucky Polish').id}`) === lucky, `${say('RAREplain')} / ${say(`RARE${P('Lucky Polish').id}`)}`);
 const tierPlain = say('TIERplain').split(':');
-const tierUp = say(`TIER${P('Tier Up').id}`).split(':');
-check(`${P('Tier Up').name}: under its ${fx('Tier Up', 'tier:restore_relic')} a minor bauble comes out major, and says so`,
+const tierUp = say(`TIER${P('Grade Up').id}`).split(':');
+check(`${P('Grade Up').name}: under its ${fx('Grade Up', 'tier:restore_relic')} a minor bauble comes out major, and says so`,
   tierPlain.slice(0, 2).join(':') === '1:0' && tierUp.slice(0, 2).join(':') === '0:1'
-    && tierUp.slice(2).join(':').startsWith('Restored: ') && tierUp.slice(2).join(':').endsWith(' Tier up: minor to major.'), `${say('TIERplain')} / ${say(`TIER${P('Tier Up').id}`)}`);
+    && tierUp.slice(2).join(':').startsWith('Restored: ') && tierUp.slice(2).join(':').endsWith(' Grade up: minor to major.'), `${say('TIERplain')} / ${say(`TIER${P('Grade Up').id}`)}`);
 const [lookFirst, lookSecond] = say('LOOKplain').split('#');
 const [keptFirst, keptSecond] = say(`LOOK${P('Second Look').id}`).split('#');
 check(`${P('Second Look').name}: without it a bauble keeps the one roll it had, the smaller or the larger`,
@@ -649,7 +649,7 @@ const kit = say('KIT').split('#');
 check(`${P('Repair Kit').name}: refused without it in the browser's words, made with it`,
   kit[0] === RECIPE_PERK_SAYS.repair_kit && kit[1] === 'ALLOWED' && kit[2] === '1', kit.slice(0, 3).join(' / '));
 check(`anybody may use one: it takes ${KIT_MEND} off a shovel and none of its quality, and is used up`,
-  kit[3] === 'ALLOWED' && kit[4] === `${80 - KIT_MEND}:${QL}` && kit[5] === '0' && kit[6] === `Mended: shovel, damage ${(80 - KIT_MEND).toFixed(2)}.`,
+  kit[3] === 'ALLOWED' && kit[4] === `${80 - KIT_MEND}:${QL}` && kit[5] === '0' && kit[6] === `Mended: shovel, damage ${(80 - KIT_MEND).toFixed(2)}%.`,
   kit.slice(3, 7).join(' / '));
 check('and is refused with none left, and on a thing that wants nothing, in the browser\'s words',
   kit[7] === 'Need a repair kit.' && kit[8] === 'Not damaged.', kit.slice(7).join(' / '));
@@ -764,14 +764,14 @@ const missedOn = (pass: boolean, what: 'bauble' | 'relic'): boolean => {
 check('its restoring pays Restoration as the island does: a whole go when it comes off, a missed one when it does not',
   !missedOn(true, 'bauble') && missedOn(false, 'bauble') && !missedOn(true, 'relic') && missedOn(false, 'relic'),
   `${missedOn(true, 'bauble')} ${missedOn(false, 'bauble')} ${missedOn(true, 'relic')} ${missedOn(false, 'relic')}`);
-game.setPerks(P('Tier Up').fx);
+game.setPerks(P('Grade Up').fx);
 const tarnished = game.inventory.add('tarnished_bauble', { ql: BAUBLE_QL, extra: 'minor' });
 tarnished.dmg = BAUBLE_DMG;
 game.rand = () => TIER_ROLL;
 game.log.length = 0;
 restoreDef.perform(itemTarget(tarnished), game);
 check('its Tier Up makes a major bauble of a minor one under the same dice, and says so in the island\'s words',
-  game.inventory.count('bauble_major') === 1 && game.log.some((l) => l.text.startsWith('Restored: ') && l.text.endsWith(' Tier up: minor to major.')),
+  game.inventory.count('bauble_major') === 1 && game.log.some((l) => l.text.startsWith('Restored: ') && l.text.endsWith(' Grade up: minor to major.')),
   game.log.map((l) => l.text).join(' | '));
 game.setPerks({});
 game.skills.values.set('carpentry', LOW_SKILL);

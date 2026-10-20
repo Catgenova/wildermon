@@ -344,7 +344,7 @@ export const CLASS_SPELLS: ClassSpellDef[] = [
   chirurgeon(2, 'Quick Stitch', 0.08, 10, ['self', 'player'], { close: 0.3, reach: 2 },
     (fx) => `You or a player within ${fx.reach} tiles: worst wound severity −${percent(fx.close)}.`),
   chirurgeon(49, 'Leech', 0.12, 20, ['enemy'], { more: 0.8 },
-    (fx) => `knife blow at ${ofBlow(fx.more)}; you regain the share of your health equal to the share it takes of the creature's.`, 'knives'),
+    (fx) => `knife blow at ${ofBlow(fx.more)}; health regained: the % of the target's max health it takes, as % of yours.`, 'knives'),
   chirurgeon(4, 'Regenerate', 0.15, 45, ['self', 'player'], { each: 0.02, secs: 15, reach: 4 },
     (fx) => `You or a player within ${fx.reach} tiles: health +${percent(fx.each)} per second for ${span(fx.secs)}.`),
   chirurgeon(43, 'Toxin', 0.12, 30, ['enemy'], { each: 0.01, secs: 20, reach: 4 },
@@ -400,15 +400,15 @@ export const CLASS_SPELLS: ClassSpellDef[] = [
     (fx) => `for ${span(fx.secs)}: companion damage +${percent(fx.more - 1)}, attack rate +${percent(fx.quick - 1)}.`,
     'companion'),
   beastmaster(41, 'Call of the Wild', 0.4, 900, ['enemy'], { reach: 4 },
-    (fx) => `Wild creature within ${fx.reach} tiles with tame level up to your taming: tamed outright. It follows you, or goes `
-      + 'into an empty creature crate in your pack if something already follows you. Not monsters.'),
+    (fx) => `Wild wildermon within ${fx.reach} tiles with tame level up to your taming: tamed outright. It follows you, or goes `
+      + 'into an empty wildermon crate in your pack if something already follows you. Not monsters.'),
 
   /* ---- The Kindler ---- */
   kindler(3, 'Scorch', 0.08, 12, ['enemy'], { reach: 8, fire: 0.8, each: 0.01, secs: 8 },
     (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles; ${burns(fx.each, fx.secs)}; ${BURN_LAST}. ${FIRE_IS}`,
     'kindling'),
   kindler(6, 'Heat Seeker', 0.1, 15, ['self'], { reach: 10, fire: 1 },
-    (fx) => `${fire(fx.fire)} on the enemy within ${fx.reach} tiles with the lowest share of max health left, nearest on a `
+    (fx) => `${fire(fx.fire)} on the enemy within ${fx.reach} tiles with the lowest % of max health left, nearest on a `
       + `tie. ${FIRE_IS}`, 'kindling'),
   kindler(11, 'Scald', 0.1, 20, ['enemy'], { reach: 8, fire: 0.7, pace: 0.6, secs: 6 },
     (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles; target move speed ${percent(fx.pace)} for `

@@ -7,15 +7,15 @@ import type { Game } from './game';
 import type { Item } from './items';
 
 /**
- * A creature crate: the one place a wildermon goes when it is neither
+ * A wildermon crate: the one place a wildermon goes when it is neither
  * travelling with you nor working the deed.
  *
  * It replaces keeping one at the settlement token. Asked for: "Wildermon can
  * be tamed to be set to active if currently no active wildermon, but any
  * additional wildermon cannot be tamed unless the player carries a creature
- * crate. Creature crates can be placed on the ground and display the
+ * crate. Wildermon crates can be placed on the ground and display the
  * wildermon inside them. ... Wildermon can no longer be Kept at Token.
- * Interacting with a creature crate allows you to pick it up / place it,
+ * Interacting with a wildermon crate allows you to pick it up / place it,
  * assign the creature to active, or assign the creature to work the deed."
  *
  * A crate holds one wildermon. The crate knows which: `Item.creature` while
@@ -39,11 +39,11 @@ export function crateLine(g: Game, crate: { creature?: number }): string {
 }
 const ageOfWord = (c: Creature, now: number): string => (ageDef(c, now).name === 'grown' ? '' : `${ageDef(c, now).name} `);
 
-/** An empty creature crate in the pack, the first there is. */
+/** An empty wildermon crate in the pack, the first there is. */
 export const emptyCrate = (g: Game): Item | undefined =>
   g.inventory.items.find((it) => it.id === CREATURE_CRATE && it.creature === undefined);
 
-/** An empty creature crate of yours standing on your settlement, the nearest to (x, y) there is. */
+/** An empty wildermon crate of yours standing on your settlement, the nearest to (x, y) there is. */
 export function standingCrate(g: Game, x: number, y: number): PlacedFurniture | undefined {
   let best: PlacedFurniture | undefined;
   let bestD = Infinity;
@@ -68,7 +68,7 @@ export function standingCrate(g: Game, x: number, y: number): PlacedFurniture | 
  */
 export const OCCUPIED_CRATE_ACTIONS: ReadonlySet<string> = new Set([
   'examine_item', 'place_furniture', 'crate_follow', 'crate_work', 'lock_item', 'unlock_item', 'name_thing',
-  // On a stall, to be sold, and back off it; the store itself takes a creature crate nowhere else.
+  // On a stall, to be sold, and back off it; the store itself takes a wildermon crate nowhere else.
   'store_in_furniture', 'take_from_store',
   // And on a shop counter, the same (`counters.ts`).
   'set_out_goods', 'take_off_counter',
@@ -117,7 +117,7 @@ export function crateToHand(g: Game, c: Creature): Holding | null {
   return h.carried ? h : null;
 }
 
-/** The empty creature crates in your pack, in the order the island takes them. */
+/** The empty wildermon crates in your pack, in the order the island takes them. */
 const emptyCrates = (g: Game): Item[] => g.inventory.items.filter((it) => it.id === CREATURE_CRATE && it.creature === undefined);
 
 /**
@@ -142,8 +142,8 @@ export function teamOut(g: Game, team: Creature[]): { follows: Creature | undefi
 export function teamOutRefusal(g: Game, team: Creature[]): string | null {
   const { follows, crated, short } = teamOut(g, team);
   if (!short || !follows) return null;
-  if (team.length === 1) return `${follows.name} already follows you. Need an empty creature crate for ${crated[0].name}.`;
-  return `1 wildermon follows you. Need ${crated.length} empty creature ${crated.length === 1 ? 'crate' : 'crates'} for this team: `
+  if (team.length === 1) return `${follows.name} already follows you. Need an empty wildermon crate for ${crated[0].name}.`;
+  return `1 wildermon follows you. Need ${crated.length} empty wildermon ${crated.length === 1 ? 'crate' : 'crates'} for this team: `
     + `${follows.name} follows you, the rest go in crates.`;
 }
 
@@ -158,7 +158,7 @@ export function crateTheRest(g: Game, out: { follows: Creature | undefined; crat
   if (!put.length || !out.follows) return '';
   const names = put.map((c) => c.name);
   const who = names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-  return ` Into creature crates in your pack: ${who}. ${out.follows.name} follows you.`;
+  return ` Into wildermon crates in your pack: ${who}. ${out.follows.name} follows you.`;
 }
 
 /** Out through a crate's door, which is on the side it faces: the way the one inside faces, and the way it comes out. */
@@ -263,8 +263,8 @@ export function deedJobLine(c: Creature): string {
   // a trade worked at the stores or at your own (`TEND_JOBS`): its words already say where what it makes goes; nor a scurra's scrubbing.
   const tail = gathers === 'hive' || gathers === 'scrub' || TEND_JOBS.has(gathers ?? 'forage') ? '' : '; output to the crate';
   return gathers
-    ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the token${tail}`
-    : 'no trade';
+    ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the totem${tail}`
+    : 'no task';
 }
 
 export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
@@ -282,7 +282,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = t.kind === 'creature' ? g.creatures.get(t.id) : undefined;
       if (!c) return 'Gone.';
-      if (!emptyCrate(g)) return 'Need an empty creature crate in your pack.';
+      if (!emptyCrate(g)) return 'Need an empty wildermon crate in your pack.';
       return null;
     },
     perform: (t, g) => {
@@ -290,7 +290,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       const crate = emptyCrate(g);
       if (!c || !crate || (c.mode !== 'active' && c.mode !== 'deed')) return;
       shutIn(g, c, crate);
-      g.logMsg(`${c.name}: into the creature crate.`, 'system');
+      g.logMsg(`${c.name}: into the wildermon crate.`, 'system');
     },
   },
   {
@@ -307,7 +307,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
     applies: (t, g) => !!crateAt(g, t)?.c,
     check: (t, g) => {
       const at = crateAt(g, t);
-      if (!at) return 'Not a creature crate.';
+      if (!at) return 'Not a wildermon crate.';
       return openRefusal(g, at) ?? swapRefusal(g);
     },
     perform: (t, g) => {
@@ -329,10 +329,10 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'crate_work',
-    label: 'Set it to work the deed',
+    label: 'Set it to work the settlement',
     labelFor: (t, g) => {
       const at = crateAt(g, t);
-      return at?.c ? `Set ${at.c.name} to work the deed` : 'Set it to work the deed';
+      return at?.c ? `Set ${at.c.name} to work the settlement` : 'Set it to work the settlement';
     },
     verb: 'opening the crate',
     instant: true,
@@ -341,12 +341,12 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
     applies: (t, g) => !!crateAt(g, t)?.c,
     check: (t, g) => {
       const at = crateAt(g, t);
-      if (!at) return 'Not a creature crate.';
+      if (!at) return 'Not a wildermon crate.';
       const shut = openRefusal(g, at);
       if (shut) return shut;
       if (!g.deed) return 'No settlement.';
       const def = at.c ? SPECIES[at.c.species] : undefined;
-      if (def && !def.gathers) return `${def.name}: no trade.`;
+      if (def && !def.gathers) return `${def.name}: no task.`;
       if (g.creatures.workers().length >= g.workerCap) {
         return `${g.deed.name} full: ${g.workerCap} workers at level ${g.deedLevel}.`;
       }

@@ -29,6 +29,7 @@ import { describeNeeds, MATERIAL_BY_ID, MAX_LEVELS, TALL_STOREYS, TOP_LEVELS } f
 import { BRIDGES } from '../../src/game/bridges';
 import { ITEM_DEFS } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
+import { metres } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -538,9 +539,9 @@ const [wetA, wetB, wetC] = say('WET').split('|');
 check(`${P('Wet Set').name}: rock under five of water is refused without it and not for the water with it`,
   wetA === 'Concrete: not under water.' && !wetB.includes('water'), say('WET'));
 check(`and under fifteen, past its ${deep}, refused with it in its own words`,
-  wetC === `Concrete: not under more than ${deep} of water.`, wetC);
+  wetC === `Concrete: not under more than ${metres(deep)} m of water.`, wetC);
 const [steepA, steepB] = say('STEEP').split('|');
-const allows = (s: string): number => Number(s.match(/allows (\d+)/)?.[1] ?? NaN);
+const allows = (s: string): number => Math.round(Number(s.match(/allows (\d+\.\d) m/)?.[1] ?? NaN) * 10);
 check(`${P('Steep Stone').name}: at masonry 20 the steepest slope is ${20 * P('Steep Stone').fx['slope:masonry']} with it, 60 without`,
   allows(steepA) === 60 && allows(steepB) === 20 * P('Steep Stone').fx['slope:masonry'], say('STEEP'));
 const shards = P('Rubble Fill').fx.rubble;

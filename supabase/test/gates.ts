@@ -62,7 +62,7 @@ import { isGlasshouse } from '../../src/game/glasshouse';
 import { frameJettyEntries } from '../../src/ui/frameMenu';
 import type { MenuItem } from '../../src/ui/contextmenu';
 import type { Pick } from '../../src/render/renderer';
-import { TileType } from '../../src/world/tiles';
+import { metres, TileType } from '../../src/world/tiles';
 import { numberWord, spanWords } from '../../src/game/words';
 import { lacksSaid } from '../../src/game/ranks';
 
@@ -1161,7 +1161,7 @@ delete from wall where world_id = ${W} and level = 1 and dir = 'h' and x = 11 an
 {
   const cap = Number(psql(`select queue_capacity(${W}, '${WHO.gil}')`));
   const other = NT('solid', MAT, 11, 9, 'w');
-  const FULL = `Job queue full: ${cap}. Mind logic raises it.`;
+  const FULL = `Action queue full: ${cap}. Mind logic raises it.`;
   const SPENT = 'Too exhausted. Rest.';
   const FAR = 'You are too far away from that.';
   /** The island asked, as Gil in the state `body` puts him in at `at`: its answer, what is kept, and what he has in hand. */
@@ -1607,7 +1607,7 @@ psql(`insert into floor_tile (world_id, level, x, y, building, material, kind, n
 sameBridge('a drawbridge\'s winch is not set on the ground under a jetty, even one only planned, in the same words on both sides',
   'draw', 21, 12, 19, 12, DRAWBRIDGE_UNDER_JETTY);
 sameBridge('while its far end there is refused for what is under it, the flat ground, not for the jetty', 'draw', 19, 12, 21, 12,
-  `Ground under the span: needs ${CLEARANCE} clearance.`);
+  `Ground under the span: needs ${metres(CLEARANCE)} m clearance.`);
 // A finished jetty is a floor of the storey it is out from, which a bridge's end lands on, as the island has always had it (`top_deck`).
 {
   // Storey 2 to the ground over a tile of deck: a ramp too steep for it (`rampRefusal`), which names the jetty's storey.

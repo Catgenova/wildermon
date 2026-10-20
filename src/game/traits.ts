@@ -122,7 +122,7 @@ const PLAIN_TRAITS: TraitDef[] = [
   { id: 'swift', name: 'swift', tier: 'supreme', effects: { speed: 1.4 } },
   { id: 'tireless', name: 'tireless', tier: 'supreme', effects: { work: 1.4, appetite: 0.9 } },
   { id: 'quick_witted', name: 'quick-witted', tier: 'supreme', effects: { learn: 1.6 } },
-  { id: 'lead_beast', name: 'lead beast', tier: 'supreme', effects: { work: 1.16 }, aura: true },
+  { id: 'lead_beast', name: 'lead wildermon', tier: 'supreme', effects: { work: 1.16 }, aura: true },
   { id: 'strong_shouldered', name: 'strong-shouldered', tier: 'supreme', effects: { haul: 1.6, tough: 1.2 } },
   { id: 'fine_fleeced', name: 'fine-fleeced', tier: 'supreme', effects: { grow: 1.9, yield: 1.2 } },
 
@@ -370,15 +370,15 @@ export interface ChannelDef {
 
 export const CHANNELS: ChannelDef[] = [
   { id: 'speed', label: 'speed', up: true, note: 'pace on foot, under a rider and in the traces' },
-  { id: 'work', label: 'work', up: true, note: 'deed job speed' },
+  { id: 'work', label: 'work', up: true, note: 'settlement task speed' },
   { id: 'learn', label: 'learning', up: true, note: 'skill gained from its work' },
-  { id: 'haul', label: 'hauling', up: true, note: 'pannier capacity and share of a team’s pull' },
+  { id: 'haul', label: 'hauling', up: true, note: 'pannier capacity and its pull in a team' },
   { id: 'yield', label: 'yield', up: true, note: 'output per trip' },
   { id: 'appetite', label: 'upkeep', up: false, note: 'hunger rate' },
   { id: 'hardy', label: 'health', up: true, note: 'max health' },
   { id: 'tough', label: 'damage', up: true, note: 'blow damage' },
   { id: 'sight', label: 'sight', up: true, note: 'sight range for you' },
-  { id: 'range', label: 'range', up: true, note: 'work range from the token or post' },
+  { id: 'range', label: 'range', up: true, note: 'work range from the totem or post' },
   { id: 'grow', label: 'regrowth', up: true, note: 'fleece regrowth and milk' },
   { id: 'soak', label: 'damage taken', up: false, note: 'damage taken per landed blow' },
   { id: 'evade', label: 'chance to be hit', up: false, note: 'chance a swing at it lands' },
@@ -476,9 +476,9 @@ export const TRAIT_SOURCES: Record<TraitSource, { label: string; means: string }
   dam: { label: 'from the dam', means: 'drawn from a trait the dam carries and the sire does not' },
   sire: { label: 'from the sire', means: 'drawn from a trait the sire carries and the dam does not' },
   both: { label: 'from both', means: 'drawn from a trait the dam and the sire both carry' },
-  roll: { label: 'fresh roll', means: 'rolled off the wild table, tilted towards the better tiers by the breeder’s husbandry' },
-  up: { label: 'bred up', means: 'one tier above what its slot drew, as a grade up its own name for fighting blood and a trait of the tier above for the rest' },
-  mutation: { label: 'mutation', means: `a trait neither parent carries, one tier above the best of theirs, which 1 young in ${MUTATION_ODDS} is born with in its lowest slot` },
+  roll: { label: 'fresh draw', means: 'drawn from the wild table, weighted towards the better rarities by the breeder’s husbandry' },
+  up: { label: 'bred up', means: 'one rarity above what its slot drew, as a grade up its own name for fighting blood and a trait of the rarity above for the rest' },
+  mutation: { label: 'mutation', means: `a trait neither parent carries, one rarity above the best of theirs, which 1 young in ${MUTATION_ODDS} is born with in its lowest slot` },
 };
 
 /** What a pairing throws: the traits, and where each of them came from. */

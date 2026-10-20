@@ -87,7 +87,7 @@ export class KeeperPanel {
     }
     // What the three buttons do, under the list they act on rather than over it.
     this.head('Actions');
-    this.say('Move: to their settlement token, or the newcomer landing; stops their action, empties their queue, '
+    this.say('Move: to their settlement totem, or the newcomer landing; stops their action, empties their queue, '
       + 'dismounts them from anything ridden, driven, pulled or boarded. '
       + `Mute: refuses ${MUTE_SHUTS}. Clear a ground pile: right-click its tile.`);
     // Asked again every so often: the list stays where it was being read.

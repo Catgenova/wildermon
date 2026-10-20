@@ -385,12 +385,12 @@ begin
   update item set charges = (select charges from item_def where id = 'spirit_bucket') where id = v_row;
   perform pg_temp.hold(w, u, '{}');
   ${item('examine_item', 'v_it')};
-  insert into said values ('TASTE0', coalesce(${last('Stew: QL%')}, 'unsaid'));
+  insert into said values ('TASTE0', coalesce(${last('Stew: Quality%')}, 'unsaid'));
   ${hold('Taste')};
   ${item('examine_item', 'v_it')};
-  insert into said values ('TASTE1', coalesce(${last('Stew: QL%')}, 'unsaid'));
+  insert into said values ('TASTE1', coalesce(${last('Stew: Quality%')}, 'unsaid'));
   ${item('examine_item', 'v_row')};
-  insert into said values ('TASTE2', coalesce(${last('Bucket of spirit %: QL%')}, 'unsaid'));
+  insert into said values ('TASTE2', coalesce(${last('Bucket of spirit %: Quality%')}, 'unsaid'));
   ${clear('stew', 'spirit_bucket')};
 
   /* ---- What the island says of a mark, and how long a knack lasts, beside the browser. ---- */

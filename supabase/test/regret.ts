@@ -181,7 +181,7 @@ check(`and a tarnished bauble for about ${pct(BAUBLE_SHARE)} still`,
   Math.abs(iTarnished / iFinds - BAUBLE_SHARE) < 0.04, `${iTarnished} of ${iFinds} (${pct(iTarnished / iFinds)})`);
 check('one comes up whole, of a quality, and nothing else with it', say('WHOLE') === '1|true|true' && say('NOTARNISHED') === '0',
   `${say('WHOLE')} / ${say('NOTARNISHED')}`);
-const FOUND = /^Found: Bauble of Regret, QL \d+\.\d\. Undoes one trade \(Trades window\)\.$/;
+const FOUND = /^Found: Bauble of Regret, QL \d+\.\d\. Undoes one class \(Trades window\)\.$/;
 check('and says so', FOUND.test(say('FOUNDSAID')), say('FOUNDSAID'));
 check('a trade that is not a slot is refused', say('KIND') === REGRET_SAID.kind, say('KIND'));
 check('as is breaking one without one', say('NONE') === REGRET_SAID.none, say('NONE'));

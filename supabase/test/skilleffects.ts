@@ -59,14 +59,14 @@ check('carry weight at either end is the rule\'s, with nothing worn and no perks
   `${carry.low} – ${carry.high}`);
 const time = effectTracks(g, 'mining').find((t) => t.label === 'Time per action')!;
 check('a trade\'s time per action is the rule\'s share of the time at level 0',
-  time.high === `×${(goSeconds(100, SKILL_TOP) / goSeconds(100, 0)).toFixed(2)}`, time.high);
+  time.high === `${percent(goSeconds(100, SKILL_TOP) / goSeconds(100, 0))} of level 0`, time.high);
 const chance = effectTracks(g, 'mining').find((t) => t.label === 'Success chance')!;
 check('and its success chance now is the rule\'s at the level it is at',
   chance.now === percent(g.skillChance('mining', 10, 0, g.mindEase())), `${chance.now} at mining 37.5`);
 const sword = WEAPONS.find((w) => w.kind === 'swords')!;
 const blow = effectTracks(g, 'swords').find((t) => t.label === 'Damage per blow')!;
 check('a weapon skill\'s blow at the top is the weapon\'s at swords 100',
-  blow.high === atLevel(g, 'swords', SKILL_TOP, () => weaponDamage(g, sword, null)).toFixed(1), blow.high);
+  blow.high === `${atLevel(g, 'swords', SKILL_TOP, () => weaponDamage(g, sword, null)).toFixed(1)} damage`, blow.high);
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

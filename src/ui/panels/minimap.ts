@@ -109,7 +109,7 @@ export class MinimapPanel {
     homeBtn.type = 'button';
     homeBtn.className = 'tb-btn tb-small';
     homeBtn.textContent = 'Walk home';
-    homeBtn.title = 'Walk to the settlement token or the last bed slept in (Home). Double-click the map: walk there.';
+    homeBtn.title = 'Walk to the settlement totem or the last bed slept in (Home). Double-click the map: walk there.';
     homeBtn.addEventListener('click', () => game.walkHome());
     const nameBtn = document.createElement('button');
     nameBtn.type = 'button';

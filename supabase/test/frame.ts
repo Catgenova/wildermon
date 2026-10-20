@@ -31,7 +31,7 @@ import { COUNTER_EMPTY_FIRST } from '../../src/game/counters';
 import { GLASS_PITCHED, GLASS_ROOF_ONLY } from '../../src/game/glasshouse';
 import { deckBears, deckCarries } from '../../src/game/piers';
 import { numberWord } from '../../src/game/words';
-import { TileType } from '../../src/world/tiles';
+import { metres, TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -307,7 +307,7 @@ building(2, 'Edge', [[16, 28]], 2, 1);
 for (const side of ['n', 'e', 's', 'w'] as Side[]) wall(2, 0, 16, 28, side, 'solid', 'log');
 floor(2, 1, 16, 28, 'plank');
 same('and only over your own settlement', 'plan_floor', { x: 15, y: 28, material: 'plank', floorKind: 'floor', buildingId: 2 },
-  'Only on your own deed.');
+  'Only on your own settlement.');
 
 /* Planned, on both sides, in the same words. */
 const [planMine, planTheirs] = both('plan_floor', JETTY, 'Planned: ');
@@ -1098,7 +1098,7 @@ const SHOP_STAIRS = { x: 22, y: 32, material: 'plank', floorKind: 'stairs', side
 same('stairs on the ground floor of two storeys, over no cellar, are a storey up', 'plan_floor', SHOP_STAIRS,
   'Plan stairs from storey 2 or above.');
 same('and a way down asked for over no cellar is the cellar\'s to refuse', 'plan_floor', { ...SHOP_STAIRS, down: true },
-  `Dig the cellar first: 0/${CELLAR_DEPTH}.`);
+  `Dig the cellar first: ${metres(0)} m of ${metres(CELLAR_DEPTH)} m dug.`);
 bld.setCellar(14, 22, 32, CELLAR_DEPTH);
 sql(`insert into cellar_tile (world_id, x, y, building, dug) values (w, 22, 32, 14, ${CELLAR_DEPTH});`);
 same('as are stairs over a cellar dug out under the tile', 'plan_floor', SHOP_STAIRS,

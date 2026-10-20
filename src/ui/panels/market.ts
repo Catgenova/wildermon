@@ -49,7 +49,7 @@ const REFRESH = 5;
  * rather than showing empty tabs: there is one person in that game and none
  * of these is a thing you do alone.
  *
- * A creature crate with a wildermon in it goes everywhere the rest do: into a
+ * A wildermon crate with a wildermon in it goes everywhere the rest do: into a
  * deal, onto a stall, into the post. Whoever it goes to keeps the wildermon.
  */
 /**
@@ -125,7 +125,7 @@ export class MarketPanel {
     this.bar = document.createElement('div');
     this.bar.className = 'log-tabs market-tabs';
     for (const [id, label, title] of [
-      ['board', 'Board', 'All stalls and buy orders; read at a settlement token or mailbox'],
+      ['board', 'Board', 'All stalls and buy orders; read at a settlement totem or mailbox'],
       ['prices', 'Prices', `Sale prices, last ${SALE_DAYS} days`],
       ['orders', 'Orders', 'Your buy orders; place one'],
       ['deals', 'Deals', 'Offers sent and received'],
@@ -432,7 +432,7 @@ export class MarketPanel {
    */
   private drawBoard(): void {
     if (!this.market.board) {
-      this.say('Board: stand at a settlement token or mailbox.');
+      this.say('Board: stand at a settlement totem or mailbox.');
       return;
     }
     const me = this.game.player;
@@ -514,7 +514,7 @@ export class MarketPanel {
 
     this.head('New order');
     if (!this.orders.board) {
-      this.say('Need a settlement token or mailbox.');
+      this.say('Need a settlement totem or mailbox.');
       return;
     }
     // What it would hold, said under the boxes and said again as they change.

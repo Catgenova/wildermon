@@ -3365,7 +3365,7 @@ const MODELS: Record<string, Model> = {
     sc.lathe(x - 3, -y + 3.6, [[0, 2], [1.6, 2.4], [3.6, 2], [4.6, 1], [5.2, 0.5]], paintOf(hex('#d9caa4')), 12);
   },
   /*
-   * A creature crate: a boarded floor, a post at each corner, and open sides
+   * A wildermon crate: a boarded floor, a post at each corner, and open sides
    * -- a rail at the foot, a rail at the top, one slat between and two thin
    * bars -- so whatever is inside can be seen. Its lid is two slats with the
    * two metal ribbons of its bill strapped across them, and a hasp on the

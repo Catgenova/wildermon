@@ -112,7 +112,7 @@ export function studBook(g: Game, c: Creature): string {
   const keep = Math.min(1, inheritChance(skill, care) + g.perk('breed:inherit', 0));
   const up = Math.min(1, upgradeChance(skill, care) + g.perk('breed:upgrade', 0));
   return ` Paired with ${mate.name}: success ${wholePct(breedChance(skill, care))}; each of ${TRAIT_SLOTS} traits `
-    + `inherited ${wholePct(keep)}, tier-up ${wholePct(up)}.`;
+    + `inherited ${wholePct(keep)}, rarity-up ${wholePct(up)}.`;
 }
 
 /** A share as a percentage, to a whole one, or to the first figure that is not nought under one. */
@@ -151,10 +151,10 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
     `Pair ${sire.name} with ${dam.name} (animal husbandry ${Math.floor(skill)}, care ${wholePct(care)}):`,
     `Success: ${wholePct(breedChance(skill, care))}.`,
     `Each of ${TRAIT_SLOTS} traits: inherited ${wholePct(Math.min(1, inheritChance(skill, care) + keepPlus))}`
-      + `, tier-up ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))}.`,
+      + `, rarity-up ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))}.`,
     `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${sharePct(odds.carry[id])}`).join(', ') || 'none readable'}`
       + `${hidden ? `; ${hidden} more unreadable` : ''}.`,
-    `Best trait tier: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
+    `Best trait rarity: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
     `Mutation: 1 in ${MUTATION_ODDS} (${sharePct(1 / MUTATION_ODDS)}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
   ];
   // How deep its line would run, on each channel either of them carries a trait on.
@@ -240,7 +240,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'Gone.';
-      if (!g.deed) return 'Need a settlement: the young go to its token.';
+      if (!g.deed) return 'Need a settlement: the young go to its totem.';
       if (!nearPlayer(g, c, 2.4)) return `Stand next to ${c.name}.`;
       if (c.due > 0) return `${c.name} is already in young.`;
       const mate = mateFor(g, c);

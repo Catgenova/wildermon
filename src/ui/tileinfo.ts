@@ -1,5 +1,5 @@
 import { TILLABLE } from '../game/farming';
-import { isSeam } from '../world/tiles';
+import { DAILY_RESET, isSeam, metres } from '../world/tiles';
 import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
 import { bedrockAt } from '../world/ore';
@@ -59,13 +59,13 @@ export function cornerReading(g: Game, cx: number, cy: number): string {
   const w = g.world;
   const h = w.getHeight(cx, cy);
   const soil = w.getDirt(cx, cy);
-  const stands = h === 0 ? 'at the water line' : h > 0 ? `${h} above the water` : `${-h} under water`;
+  const stands = h === 0 ? 'at the water line' : h > 0 ? `${metres(h)} m above the water` : `${metres(-h)} m under water`;
   // And where it stands against the level, when one has been taken, which is
   // the number every job on this corner is working towards.
   const mark = g.level === null ? ''
     : h === g.level ? ' · at the level'
-    : ` · ${Math.abs(h - g.level)} ${h > g.level ? 'above' : 'below'} the level of ${g.level}`;
-  return `Corner ${cx}, ${cy} · ${stands} · ${soil > 0 ? `${soil} soil over rock` : 'bare rock'}${mark}`;
+    : ` · ${metres(Math.abs(h - g.level))} m ${h > g.level ? 'above' : 'below'} the level of ${metres(g.level)} m`;
+  return `Corner ${cx}, ${cy} · ${stands} · ${soil > 0 ? `${metres(soil)} m soil over rock` : 'bare rock'}${mark}`;
 }
 
 /**
@@ -100,8 +100,8 @@ export function tileUses(g: Game, x: number, y: number): string[] {
     const slope = w.slope(x, y);
     // A flight of steps is stood on at any slope a flight is laid on.
     const cap = standCap(type, g.standSlope());
-    if (slope > cap) lines.push(`Slope ${slope}: too steep (your max ${Math.floor(cap)}, raised by climbing)`);
-    else if (slope > SLOW_SLOPE) lines.push(`Slope ${slope}: walk speed ${Math.round((100 * SLOW_SLOPE) / slope)}%`);
+    if (slope > cap) lines.push(`Slope ${metres(slope)} m: too steep (your max ${metres(Math.floor(cap))} m, raised by climbing)`);
+    else if (slope > SLOW_SLOPE) lines.push(`Slope ${metres(slope)} m: walk speed ${Math.round((100 * SLOW_SLOPE) / slope)}%`);
   }
 
   // Working it with a tool.
@@ -124,9 +124,9 @@ export function tileUses(g: Game, x: number, y: number): string[] {
   const worn = g.ask ? '' : ` · wear ${w.wearAt(x, y)}`;
   if (type === TileType.Trail) {
     const was = TILE_DEFS[trailGround(w.getData(x, y))].name.toLowerCase();
-    lines.push(`Trail: back to ${was} when wear reaches 0 (−${WEAR_FALL} per day, max ${WEAR_MOST})${worn}`);
+    lines.push(`Trail: back to ${was} when wear reaches 0 (−${WEAR_FALL} at each ${DAILY_RESET}, max ${WEAR_MOST})${worn}`);
   } else if (WEARS.has(type)) {
-    lines.push(`Wear: +1 per step, trail at ${WEAR_TRAIL}, −${WEAR_FALL} per day${worn}`);
+    lines.push(`Wear: +1 per step, trail at ${WEAR_TRAIL}, −${WEAR_FALL} at each ${DAILY_RESET}${worn}`);
   }
   const blooms = type === TileType.Grass ? flowersHere(g, x, y) : 0;
   if (blooms) lines.push(`In flower: Pick flowers for ${blooms} ${blooms === 1 ? 'wildflower' : 'wildflowers'}`);
@@ -144,7 +144,7 @@ export function tileUses(g: Game, x: number, y: number): string[] {
   // road, or that bare rock will not take one, is not worth a line.
   const paved = type === TileType.Cobblestone || type === TileType.Slabs;
   if (type === TileType.Steps) {
-    lines.push(`${w.tileName(x, y)}: walkable at any slope up to ${STEPS_MOST}; no wheels`);
+    lines.push(`${w.tileName(x, y)}: walkable at any slope up to ${metres(STEPS_MOST)} m; no wheels`);
     lines.push(`Pickaxe: remove; returns ${stepsTimber(w.getData(x, y)) ? `${stepsBack(STEPS_PLANKS)}/${STEPS_PLANKS} planks` : `${stepsBack(STEPS_SLABS)}/${STEPS_SLABS} slabs and ${stepsBack(STEPS_BRICKS)}/${STEPS_BRICKS} bricks`}; leaves packed dirt`);
   } else if (type === TileType.PackedDirt) {
     const why = stepsGroundRefusal(w.corners(x, y, [0, 0, 0, 0]));

@@ -30,8 +30,8 @@ const GROUPS: Array<[Place, string]> = [
   ['saddle', 'Ridden'],
   ['traces', 'In the traces'],
   ['active', 'Companion'],
-  ['deed', 'Working the deed'],
-  ['stored', 'In creature crates'],
+  ['deed', 'Working the settlement'],
+  ['stored', 'In wildermon crates'],
 ];
 
 /** How a herd may be put in order. */
@@ -72,7 +72,7 @@ export function baseStatTags(g: Game, c: Creature): Array<{ stat: BaseStat; text
   const def = SPECIES[c.species] ?? SPECIES.rabba;
   const figure: Record<BaseStat, string> = {
     hardy: `${maxHealth(c, def)}`,
-    tough: attackOf(c, def).toFixed(attackOf(c, def) % 1 ? 1 : 0),
+    tough: `${attackOf(c, def).toFixed(attackOf(c, def) % 1 ? 1 : 0)} damage`,
     speed: `${(def.speed * ageDef(c, g.time).speed * g.creatures.speedMul(c)).toFixed(2)} tiles/s`,
     work: `\u00d7${g.creatures.workMul(c).toFixed(2)}`,
   };
@@ -132,7 +132,7 @@ export class WildermonPanel {
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
-    this.search.placeholder = 'Name, kind, trait, job…';
+    this.search.placeholder = 'Name, kind, trait, task…';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -647,7 +647,7 @@ export class WildermonPanel {
         const says = CHANNELS.filter((ch) => t.effects[ch.id] !== undefined)
           .map((ch) => `${pct(t.effects[ch.id] as number)} ${ch.label}: ${ch.note}`);
         if (came) says.push(`${came.label[0].toUpperCase()}${came.label.slice(1)}: ${came.means}.`);
-        chip.title = `${t.tier}${t.aura ? ', communal: applies to every wildermon on the same deed or post, itself included' : ''}`
+        chip.title = `Rarity: ${t.tier}${t.aura ? ', communal: applies to every wildermon on the same settlement or post, itself included' : ''}`
           + `\n${says.join('\n')}`;
       } else {
         chip.textContent = 'something';

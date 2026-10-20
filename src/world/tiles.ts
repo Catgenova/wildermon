@@ -546,6 +546,9 @@ export const SLAB_BY_ITEM = new Map(SLAB_VARIANTS.map((v, i) => [v.item, i]));
  * being stood on at `MAX_STAND` and walked up a tile at a time at `MAX_STEP`
  * of rise.
  */
+/** A height in metres, to a tenth, as the island says one (`metres`): heights are kept in tenths of a metre. */
+export const metres = (units: number): string => (units / 10).toFixed(1);
+
 export const STEPS_LEAST = 10;
 export const STEPS_MOST = 80;
 /**
@@ -605,10 +608,10 @@ export function stepsFit(c: readonly number[]): { up: 'n' | 'e' | 's' | 'w'; ris
 export function stepsGroundRefusal(c: readonly number[]): string | null {
   const f = stepsFit(c);
   if (f.slope < STEPS_LEAST || f.slope > STEPS_MOST) {
-    return `Steps are laid on a slope of ${STEPS_LEAST} to ${STEPS_MOST}. This one is ${f.slope}.`;
+    return `Steps are laid on a slope of ${metres(STEPS_LEAST)} m to ${metres(STEPS_MOST)} m. This one is ${metres(f.slope)} m.`;
   }
   if (f.twist > STEPS_TWIST) {
-    return `The two corners at each end of a flight have to be within ${STEPS_TWIST} of each other. These are ${f.twist} apart.`;
+    return `The two corners at each end of a flight have to be within ${metres(STEPS_TWIST)} m of each other. These are ${metres(f.twist)} m apart.`;
   }
   return null;
 }
@@ -932,6 +935,8 @@ export const TREE_AGES: TreeAge[] = [
  * sides' Look says when the next one is.
  */
 export const TREE_DAWN_UTC = 13;
+/** The daily reset's name, with its hour as the hud shows one: "daily reset (13:00 UTC)". The island's `daily_reset_words()`. */
+export const DAILY_RESET = `daily reset (${String(TREE_DAWN_UTC).padStart(2, '0')}:00 UTC)`;
 const DAY = 24 * 60 * 60;
 /** The most recent dawn at or before `now`, in epoch seconds. */
 export const lastDawn = (now: number): number => Math.floor((now - TREE_DAWN_UTC * 3600) / DAY) * DAY + TREE_DAWN_UTC * 3600;

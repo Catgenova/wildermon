@@ -103,7 +103,7 @@ const METAL_PROPS: Record<string, Props> = {
 const wood = (name: string): MaterialDef => ({ id: name.toLowerCase(), name, kind: 'wood', ...(WOOD_PROPS[name] ?? WOOD_PROPS.Pine) });
 const metal = (id: string, name: string): MaterialDef => ({ id, name, kind: 'metal', ...(METAL_PROPS[id] ?? METAL_PROPS.copper) });
 /** A stone: nothing is made *of* one but the setting, and the rarer it is the harder it is to seat. Its line says what it favours. */
-const gem = (g: GemDef): MaterialDef => ({ id: g.id, name: g.name, kind: 'gem', difficulty: 3 * (5 - g.weight), weight: 1, wear: 1, decay: 1, edge: 1, soak: 1, bite: 1, hold: 1, note: `Trade: ${tradeName(g.skill)}.` });
+const gem = (g: GemDef): MaterialDef => ({ id: g.id, name: g.name, kind: 'gem', difficulty: 3 * (5 - g.weight), weight: 1, wear: 1, decay: 1, edge: 1, soak: 1, bite: 1, hold: 1, note: `Skill: ${tradeName(g.skill)}.` });
 
 export const WOODS: MaterialDef[] = TREE_DEFS.map((t) => wood(t.name));
 export const METAL_MATERIALS: MaterialDef[] = METALS.map((m) => metal(m.id, m.name));

@@ -194,7 +194,7 @@ function restoreBauble(g: Game, item: Item): void {
   g.gainSkill('mind_logic', tryGain(true, RESTORE_GAIN));
   g.logMsg(tier === found
     ? `Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`
-    : `Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}. Tier up: ${found.id} to ${tier.id}.`,
+    : `Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}. Grade up: ${found.id} to ${tier.id}.`,
   'event');
 }
 
@@ -249,7 +249,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       if (kind === 'regret') {
         const found = g.gather(REGRET, { ql: Math.max(1, g.productQl('archaeology', toolQl) * (0.55 + g.rand() * 0.35)) });
         g.events.emit('inventory');
-        g.logMsg(`Found: Bauble of Regret, QL ${found.ql.toFixed(1)}. Undoes one trade (Trades window).`, 'event');
+        g.logMsg(`Found: Bauble of Regret, QL ${found.ql.toFixed(1)}. Undoes one class (Trades window).`, 'event');
         return;
       }
       if (kind === 'bauble') {

@@ -225,7 +225,7 @@ const tilesWord = (n: number): string => String(Math.floor(n + 0.5));
 
 /** Somebody following you, who would be left behind. */
 export const companionSaid = (name: string): string =>
-  `${name} would be left behind: send it to your deed or into a crate first.`;
+  `${name} would be left behind: send it to your settlement or into a crate first.`;
 /** A stone out of this one's reach. */
 export const farSaid = (s: Runestone, d: number, reach: number): string =>
   `${s.name}: ${tilesWord(d)} tiles away; this Telestone reaches ${tilesWord(reach)}.`;

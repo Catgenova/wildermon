@@ -353,7 +353,7 @@ export interface ItemRow {
   maker: string | null;
   /** The piece a casting is of, for a casting; null for everything else. */
   piece: string | null;
-  /** The wildermon shut in it, for a creature crate; null for everything else. */
+  /** The wildermon shut in it, for a wildermon crate; null for everything else. */
   creature?: number | null;
   /** What its maker's perks put into it: a Carpenter's chest that holds more. Null for most things. */
   mark?: Mark | null;
@@ -539,7 +539,7 @@ export interface Deal {
   things: Array<{ id: number; def: string; ql: number; dmg: number; count: number; extra: string | null; rare: number | null; creature?: Occupant | null; enchant?: Enchant | null }>;
 }
 
-/** The wildermon in a creature crate, as a deal, a parcel or a stall names it. */
+/** The wildermon in a wildermon crate, as a deal, a parcel or a stall names it. */
 export interface Occupant {
   name: string;
   species: string;

@@ -545,7 +545,7 @@ check('and the others of that tier close, ditto', at('SHUT') === pathPickRefusal
   check('and the ground read says so, with how far it has grown on its clock', flag === 'true' && Math.abs(Number(grown) - Number(part('HANDREAD', 1))) <= 1, at('HANDREAD'));
   const grows = new Map(LAND_GROWS);
   check(`Bloom: a sitting grows the trees within ${P('bloom').fx.bloom} tiles a stage, and not a very old one, a clipped one or one beyond reach`,
-    at('BLOOM') === `${grows.get(3)},${grows.get(1)},4,6,3|Bloom: 2 trees grew a stage.|true`, at('BLOOM'));
+    at('BLOOM') === `${grows.get(3)},${grows.get(1)},4,6,3|Bloom: 2 trees grew one age.|true`, at('BLOOM'));
   check('and only once a day of the island\'s clock', at('BLOOMAGAIN') === `${grows.get(3)},${grows.get(1)}`, at('BLOOMAGAIN'));
   check('and again the next', at('BLOOMNEXT') === `${grows.get(grows.get(3) as number)},${grows.get(grows.get(1) as number)}`, at('BLOOMNEXT'));
 }

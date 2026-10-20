@@ -72,7 +72,7 @@ export const muteLine = (b: KeptBody, until?: (secs: number) => string): string 
 
 /** Where Move puts somebody, in the island's words for it. */
 export const moveTarget = (b: KeptBody, spawn: Kept['spawn']): string =>
-  b.home ? `the token of ${b.home.name} at (${b.home.x}, ${b.home.y})` : `where newcomers come ashore, at (${spawn.x}, ${spawn.y})`;
+  b.home ? `the totem of ${b.home.name} at (${b.home.x}, ${b.home.y})` : `where newcomers come ashore, at (${spawn.x}, ${spawn.y})`;
 
 /** Everything Move does, for the button's title. */
 export const moveHint = (b: KeptBody, spawn: Kept['spawn']): string =>

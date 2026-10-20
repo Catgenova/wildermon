@@ -4,6 +4,7 @@ import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture
 import { itemName, NOT_RESTORED, unrestored, type Item } from './items';
 import { worldRate } from './pace';
 import { WELL_CEILING, wellCap } from './wells';
+import { SKILL_BY_ID } from './skills';
 
 /**
  * An altar, and what it is worth to have one.
@@ -144,7 +145,7 @@ export const CASTS: CastDef[] = [
     cost: 44,
     level: 40,
     on: 'self',
-    note: 'Every crop on your settlement grows a stage.',
+    note: 'Every crop on your settlement grows one growth stage.',
   },
 ];
 export const CAST_BY_ID = new Map(CASTS.map((c) => [c.id, c]));
@@ -171,7 +172,7 @@ export function altarNear(g: Game): PlacedFurniture | undefined {
 
 /** Why this cast will not go, or null. */
 export function castReason(g: Game, def: CastDef, item?: Item): string | null {
-  if (g.skills.get(FAITH) < def.level) return `${def.name} needs faith ${def.level}; have ${g.skills.get(FAITH).toFixed(0)}.`;
+  if (g.skills.get(FAITH) < def.level) return `${def.name} needs ${(SKILL_BY_ID.get(FAITH)?.name ?? FAITH).toLowerCase()} ${def.level}; have ${g.skills.get(FAITH).toFixed(0)}.`;
   if (g.player.favour < def.cost) return `${def.name} costs ${def.cost} favour; have ${Math.floor(g.player.favour)}. Pray at an altar.`;
   if (def.on === 'item' && !item) return 'Choose an item.';
   // Not on a find nobody has restored yet, which nothing mends (`unrestored`).
@@ -229,7 +230,7 @@ export function doCast(g: Game, def: CastDef, item?: Item): string {
     }
     case 'bounty': {
       const n = g.hastenCrops();
-      return n ? `Crops grown 1 stage: ${n}.` : 'No crops to grow.';
+      return n ? `Crops grown 1 growth stage: ${n}.` : 'No crops to grow.';
     }
     default:
       return 'No effect.';

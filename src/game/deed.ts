@@ -18,12 +18,12 @@ export interface DeedRequirement {
 const inside = (d: Deed, x: number, y: number): boolean => Math.abs(x - d.x) <= d.radius && Math.abs(y - d.y) <= d.radius;
 
 const crates = (n: number): DeedRequirement => ({
-  label: n === 1 ? 'A crate on the deed' : `${n} crates on the deed`,
+  label: n === 1 ? 'A crate on the settlement' : `${n} crates on the settlement`,
   met: (g, d) => [...g.crates.values()].filter((c) => inside(d, c.x, c.y)).length >= n,
 });
 
 const campfires = (n: number): DeedRequirement => ({
-  label: n === 1 ? 'A campfire on the deed' : `${n} campfires on the deed`,
+  label: n === 1 ? 'A campfire on the settlement' : `${n} campfires on the settlement`,
   met: (g, d) => [...g.campfires.values()].filter((f) => inside(d, f.x, f.y)).length >= n,
 });
 
@@ -37,12 +37,12 @@ const buildings = (n: number): DeedRequirement => ({
 });
 
 const smelters = (n: number): DeedRequirement => ({
-  label: n === 1 ? 'A stone smelter on the deed' : `${n} stone smelters on the deed`,
+  label: n === 1 ? 'A stone smelter on the settlement' : `${n} stone smelters on the settlement`,
   met: (g, d) => [...g.smelters.values()].filter((s) => inside(d, s.x, s.y)).length >= n,
 });
 
 const anvils = (n: number): DeedRequirement => ({
-  label: n === 1 ? 'An anvil set down on the deed' : `${n} anvils set down on the deed`,
+  label: n === 1 ? 'An anvil set down on the settlement' : `${n} anvils set down on the settlement`,
   met: (g, d) => [...g.anvils.values()].filter((a) => inside(d, a.x, a.y)).length >= n,
 });
 
@@ -52,7 +52,7 @@ const anvils = (n: number): DeedRequirement => ({
  * the island counts the founder's and has the last word.
  */
 const workers = (n: number): DeedRequirement => ({
-  label: n === 1 ? 'A wildermon working the deed' : `${n} wildermon working the deed`,
+  label: n === 1 ? 'A wildermon working the settlement' : `${n} wildermon working the settlement`,
   met: (g, d) => (isFounder(d) ? g.creatures.workers()
     : [...g.creatures.list.values()].filter((c) => c.mode === 'deed' && c.post === null && inside(d, Math.floor(c.x), Math.floor(c.y)))).length >= n,
 });
@@ -109,7 +109,7 @@ export function standingWord(d: Pick<Deed, 'role' | 'rank' | 'perms'> & { name?:
  * nothing but a fresh invitation puts you back on it.
  */
 export const leaveQuestion = (d: Deed, holder?: string | null): string =>
-  `Leave ${d.name}? You leave its roll at once and become a stranger: no shaping, `
+  `Leave ${d.name}? You leave its member list at once and become a stranger: no shaping, `
   + `and only stores you made still open for you. `
   + `${holder ? `${holder} is` : 'Its founder is'} told; only a new invitation brings you back.`;
 
@@ -143,7 +143,7 @@ export const DEED_ACTIONS: ActionDef[] = [
       d.level = level;
       d.radius = deedRadiusAt(level);
       g.logMsg(
-        `${d.name}: level ${level}. Border ${d.radius} tiles from the token; ${deedWorkersAt(level)} wildermon may work here.`,
+        `${d.name}: level ${level}. Border ${d.radius} tiles from the totem; ${deedWorkersAt(level)} wildermon may work here.`,
         'system',
       );
       g.events.emit('world', d.x, d.y);

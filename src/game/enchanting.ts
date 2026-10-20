@@ -112,9 +112,9 @@ export function enchantLine(e: EnchantmentDef): string {
         + `pieces add, max ${enchantPct(THORNHIDE_CAP)}.`;
     case 'shadow': return 'Worn: at night, creature notice range \u2212{v}.';
     case 'block': return 'Shield block chance +{v}, above the normal shield max.';
-    case 'work': return 'Job time \u2212{v}.';
+    case 'work': return 'Action time \u2212{v}.';
     case 'temper': return 'Damage from use \u2212{v}.';
-    case 'bounty': return 'Sickle bush harvest or rod catch: one extra on {v} of goes.';
+    case 'bounty': return 'Sickle bush harvest or rod catch: one extra on {v} of actions.';
     case 'grace': return `Candle or struck torch burn time +{v}; light radius +${GRACE_TILES} tiles.`;
     case 'learn': return 'Worn: skill gain +{v}.';
     case 'knack': return 'Worn: knack chance per action +{v}.';
@@ -125,7 +125,7 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'mule': return 'Carried: carry weight +{v}; each pack adds its own.';
     case 'swim': return 'Worn: swim speed +{v} (max walk speed), swimming stamina \u2212{v}.';
     case 'sight': return 'Worn: sight range +{v}.';
-    case 'lode': return 'Mining ore or stone: one extra on {v} of goes.';
+    case 'lode': return 'Mining ore or stone: one extra on {v} of actions.';
     case 'ember': return 'Fuel use \u2212{v}.';
     case 'master': return `QL of things made here +{v}, max QL ${QL_TOP}; the best within reach counts.`;
     case 'sail': return 'Sailing speed +{v}, on every point of sail.';
