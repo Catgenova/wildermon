@@ -1,6 +1,6 @@
 import { CARRY_PER_STRENGTH, type Game } from '../../game/game';
 import { SKILL_DEFS } from '../../game/skills';
-import { effectTracks, SKILL_EFFECTS, type EffectTrack } from '../../game/skilleffects';
+import { effectTracks, hasEffects, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
@@ -42,7 +42,7 @@ export class SkillsPanel {
         row.append(name, note, value);
         win.body.append(row);
         // A skill with numbers behind it opens onto a slider for each (`skilleffects.ts`).
-        if (SKILL_EFFECTS[def.id]?.length) {
+        if (hasEffects(def.id)) {
           const box = document.createElement('div');
           box.className = 'skill-effects';
           box.hidden = true;

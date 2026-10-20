@@ -1106,6 +1106,7 @@ export function helpText(): string {
       on a bridge, on an upper floor, or on or off garden steps.</li>
       <li><b>Swimming</b>: deep-water speed and wind cost. Learned while out of your depth.</li>
       <li>Both log only whole points. Current value: Skills window (<kbd>K</kbd>).</li>
+      <li>Skills window: click a skill for a slider per effect. Left end: the skill's starting value. Right end: ${SKILL_TOP}. Marker: your level.</li>
     </ul>
     <h3>What you can see</h3>
     <table>

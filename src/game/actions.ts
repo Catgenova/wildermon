@@ -681,7 +681,7 @@ export const besideWater = (g: Game, x: number, y: number): boolean =>
 export const SLOPE_PER_SKILL = 3;
 export const SLOPE_FLOOR = 40;
 
-function maxDigSlope(g: Game): number {
+export function maxDigSlope(g: Game): number {
   return Math.max(SLOPE_FLOOR, Math.floor(g.skills.get('digging') * g.perk('slope:digging', SLOPE_PER_SKILL)));
 }
 
@@ -707,7 +707,7 @@ export function rockRaiseRefusal(g: Game, cx: number, cy: number, what: 'Concret
 }
 
 /** The same rule for a mason raising rock as for a digger moving soil. */
-function maxMasonSlope(g: Game): number {
+export function maxMasonSlope(g: Game): number {
   return Math.max(SLOPE_FLOOR, Math.floor(g.skills.get('masonry') * g.perk('slope:masonry', SLOPE_PER_SKILL)));
 }
 

@@ -2978,6 +2978,14 @@ export const NEWS: News[] = [
       'Fixed: settlement totems were drawn only for settlements you belong to.',
     ],
   },
+  {
+    n: 228,
+    day: '2026-10-20',
+    lines: () => [
+      `Added: Skills window: click a skill for a slider per effect, its value now and at either end. Left end: the skill's starting value. Right end: ${SKILL_TOP}.`,
+      'Effects read off the rules with your gear and perks: carry weight, blow damage, hit and crit chance, swing and draw time, block, armour, time per go, success chance, best QL and each trade\'s own.',
+    ],
+  },
 ];
 
 

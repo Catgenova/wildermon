@@ -1496,6 +1496,18 @@ jobs:
             --outfile=node_modules/.cache/mayors.mjs --log-level=error
           node node_modules/.cache/mayors.mjs
 
+      - name: The Skills window's sliders, off the rules
+        run: |
+          # Asked for: a slider in the Skills window for everything a skill
+          # changes, every skill, each track from the skill's own starting
+          # value (20 for a characteristic) to the top. Every skill has
+          # sliders, every value reads, none is flat, reading them leaves the
+          # skill where it was, and carry weight, time per go, success chance
+          # and a sword's blow are the rules' own.
+          npx esbuild supabase/test/skilleffects.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/skilleffects.mjs --log-level=error
+          node node_modules/.cache/skilleffects.mjs
+
       - name: Ask to join a settlement at its token
         run: |
           # Asked for: "Allow players to request to join a settlement at the

@@ -2411,6 +2411,16 @@ export class Game {
     return SWIM_WIND * Math.max(0.4, 1 - this.skills.get('swimming') / 200) * this.pathFx('swim', 1) * (1 - this.wornEnchant('swim'));
   }
 
+  /** How fast your wind comes back, as a share of its pace at the start: more for body stamina, and Steady Heart's (`windMul`). */
+  windRegen(): number {
+    return (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
+  }
+
+  /** Your pace in deep water, as a share of a walk: more for swimming and a Seal's Coat worn, never past a walk (`travel_speed`). */
+  swimPace(): number {
+    return Math.min(1, Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033) * (1 + this.wornEnchant('swim')));
+  }
+
   /** Body stamina makes the same work cost less wind; armour makes it dearer. */
   staminaCost(cost: number): number {
     // Nothing at all while Power's Unbroken holds.
@@ -4370,7 +4380,7 @@ export class Game {
        * `bodyForward` is `body_settle` to the letter and deliberately not the
        * richer version above it — see the note on it.
        */
-      const wind = (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
+      const wind = this.windRegen();
       // What the wounds are taking, by the island's own sum — `woundDrain` and
       // `wound_drain` are the same arithmetic over the same table.
       const drain = p.wounds.reduce((n, w) => n + woundDrain(w), 0);
@@ -4414,7 +4424,7 @@ export class Game {
     p.maxDrop = this.dropStep();
     p.maxStand = this.standSlope();
     // And faster for a Seal's Coat worn, but never past a walk, which is all the island lets a body cover (`travel_speed`).
-    p.swimSpeed = Math.min(1, Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033) * (1 + this.wornEnchant('swim')));
+    p.swimSpeed = this.swimPace();
     if (p.lastClimb > 0) {
       /*
        * Only ground that would have turned you back at the start teaches you
@@ -4471,7 +4481,7 @@ export class Game {
       }
     } else if (!performing && !this.bodyFromIsland) {
       // Body stamina is what gets your wind back between jobs.
-      const wind = (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
+      const wind = this.windRegen();
       const regen = (moved > 0 ? WIND_WALK : WIND_REST) * wind;
       const starving = s.hunger <= 0 || s.thirst <= 0 ? WIND_STARVING : 1;
       s.stamina = Math.min(1, s.stamina + dt * regen * starving);

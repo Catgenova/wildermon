@@ -138,7 +138,7 @@ const restoreHarm = (g: Game): number => (RESTORE_HARM + g.rand() * RESTORE_HARM
 export const RESTORE_AGE = 200;
 const aged = (g: Game, dmg: number): number => 1 - (dmg / RESTORE_AGE) * g.perk('age:restore_relic', 1);
 /** What restoring brings out of what went in, at the restorer's skill, and more for a Mender's Fine Restore. */
-const restoredQl = (g: Game, ql: number): number =>
+export const restoredQl = (g: Game, ql: number): number =>
   Math.max(1, Math.min(100, ql * (0.72 + g.skills.get('restoration') / 260) * g.perk('ql:restore_relic', 1)));
 
 /**
