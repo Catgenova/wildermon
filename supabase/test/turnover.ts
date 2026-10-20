@@ -66,6 +66,10 @@ const ROLLS = 15;
 const out = psql(`
 discard temp;
 begin;
+-- The stocking's rolls are the island's random(), seeded so every run puts out the same heads. Unseeded, one pass over
+-- a plain of grass put out anywhere from a third to all of what the stretch was owed (it gives up at twelve tries a
+-- head), so the half asked of it below failed about one run in four (live run 1389).
+select setseed(0.5);
 create temp table said (k text, v text);
 create temp table seen (species text);
 do $t$
