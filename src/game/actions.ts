@@ -63,7 +63,7 @@ import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
 import { TRACK_ACTIONS } from './trackAction';
-import { SPECIES, type Stance } from './creatures';
+import { SPECIES, type Stance, takeArms } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollsAt, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
 import { CELLAR_DEPTH, CELLAR_LEVEL, floorOf, type FloorKind, type RoofShape, type Side, type StairHand, type WallType } from './building';
@@ -3055,8 +3055,8 @@ export const ACTIONS: ActionDef[] = [
       // your crate, not the settlement's, and stays yours.
       for (const c of g.creatures.list.values()) {
         if (c.mode === 'deed') {
-          if (c.carrying) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), c.carrying);
-          c.carrying = null;
+          // Every load of a trip in its arms, not only the last.
+          for (const it of takeArms(c)) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
           c.mode = 'wild';
           c.name = SPECIES[c.species]?.name ?? c.name;
           freed++;

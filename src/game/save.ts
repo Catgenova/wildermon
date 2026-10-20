@@ -686,6 +686,7 @@ function finish(world: World, m: SaveMeta): Game {
   for (const c of game.creatures.list.values()) {
     restake(c.pannier);
     if (c.carrying) restake([c.carrying]);
+    if (c.laden) restake(c.laden);
   }
   const rekey = (rec: Record<string, unknown>): void => {
     for (const [was, now] of Object.entries(RENAMED)) if (was in rec) { rec[now] = rec[was]; delete rec[was]; }

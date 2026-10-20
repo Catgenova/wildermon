@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { STORE_REACH, SUBTILES } from './crates';
-import { ageDef, GATHER_DO, SPECIES, TEND_JOBS, workRangeOf, type Creature } from './creatures';
+import { ageDef, GATHER_DO, SPECIES, takeArms, TEND_JOBS, workRangeOf, type Creature } from './creatures';
 import { facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Side } from './building';
 import type { Game } from './game';
@@ -184,8 +184,8 @@ function doorOf(g: Game, h: Holding): [number, number] {
  */
 export function shutIn(g: Game, c: Creature, crate: Item | PlacedFurniture): void {
   g.clearPost(c);
-  if (c.carrying) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), c.carrying);
-  c.carrying = null;
+  // Every load of a trip in its arms, not only the last.
+  for (const it of takeArms(c)) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
   c.mode = 'stored';
   c.enemy = null;
   c.state = 'idle';

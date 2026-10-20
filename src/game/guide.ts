@@ -35,7 +35,7 @@ import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
   favouriteSays, GATHER_DO, GATHER_SKILL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
-  HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
+  HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
 import { HOARD_METALS, itemDef } from './items';
@@ -260,7 +260,9 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
   const lines: string[] = [];
   if (def.gathers) {
     const skill = skillName(GATHER_SKILL[def.gathers]);
-    lines.push(`Set to work on a settlement it will ${GATHER_DO[def.gathers]}, learning ${skill} as it does`);
+    lines.push(`Set to work on a settlement it will ${GATHER_DO[def.gathers]}, learning ${skill} as it does`
+      // At its trade's own pace, which evens out every trade's time to level (`LEARN_PACE`).
+      + (LEARN_PACE[def.gathers] !== 1 ? `, each go's gain at ${percent(LEARN_PACE[def.gathers])} of the skill curve's` : ''));
     for (const other of def.trades ?? []) {
       if (other !== def.gathers) lines.push(`Or, set to it by name, ${GATHER_DO[other]}, learning ${skillName(GATHER_SKILL[other])}`);
     }
@@ -296,7 +298,12 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
   }
   if (def.pannier) lines.push(`${solo}${solo ? 'carries' : 'Carries'} ${def.pannier} things in panniers on its own back`);
   if (def.sight) lines.push(`Sees ${def.sight} tiles for you, where most see ${KEPT_EYES}`);
-  if (def.learns) lines.push(`Learns ${SKILL_BY_ID.get(def.learns.skill)?.name.toLowerCase() ?? def.learns.skill}, which is its level, ${LEARNS_SAYS[def.learns.by]}`);
+  if (def.learns) {
+    // And at its own pace, which evens out every trade's time to level (`LEARN_PACE`); pulling says its own.
+    const pace = LEARN_PACE[def.learns.by];
+    lines.push(`Learns ${SKILL_BY_ID.get(def.learns.skill)?.name.toLowerCase() ?? def.learns.skill}, which is its level, ${LEARNS_SAYS[def.learns.by]}`
+      + (pace !== 1 && def.learns.by !== 'pull' ? `, each go's gain at ${percent(pace)} of the skill curve's` : ''));
+  }
   if (def.unruly) lines.push(`${solo}${solo ? 'rounds' : 'Rounds'} on whoever stands beside it: ${percent(def.unruly)} odds every ${spanWords(NIP_EVERY)}`);
   return lines;
 }

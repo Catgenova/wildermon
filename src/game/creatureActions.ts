@@ -2,7 +2,7 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { fedOn, tameNeeds, BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
+import { fedOn, tameNeeds, BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, numberWord, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -673,9 +673,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (swap && 'refused' in swap) return;
       g.clearPost(c);
       const crate = g.deedCrate();
-      if (c.carrying && !(crate && g.crateAdd(crate, c.carrying))) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), c.carrying);
+      // Every load of a trip in its arms, not only the last.
+      for (const it of takeArms(c)) if (!(crate && g.crateAdd(crate, it))) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
       c.mode = 'active';
-      c.carrying = null;
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;
@@ -1229,9 +1229,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const x = Math.floor(c.x);
       const y = Math.floor(c.y);
       // Whatever it was holding is not buried with it.
-      if (c.carrying) g.dropOnGround(x, y, c.carrying);
+      for (const it of takeArms(c)) g.dropOnGround(x, y, it);
       if (c.pouch) g.dropOnGround(x, y, c.pouch);
-      c.carrying = null;
       c.pouch = null;
       const name = c.name;
       const what = SPECIES[c.species].name.toLowerCase();
@@ -1267,8 +1266,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return;
       if (c.mode === 'stored') letOut(g, c);
-      if (c.carrying) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), c.carrying);
-      c.carrying = null;
+      for (const it of takeArms(c)) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
       c.mode = 'wild';
       c.stance = 'passive';
       c.enemy = null;

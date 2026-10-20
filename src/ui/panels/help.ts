@@ -53,7 +53,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, CULL_RANGE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME,
+  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -2167,7 +2167,7 @@ export function helpText(): string {
     <p>The team is not only the pace but the pitch: a draught beast trains <b>climbing</b> by hauling
     over bad ground, and what the team knows between them decides both how fast the wheels turn and how
     steep a step they will take. A green pair balks at a bank a worked pair goes straight up. A
-    <b>${SPECIES.roxxen.name}</b> learns <b>driving</b> instead, ${LEARNS_SAYS.pull} (${percent(PULL_LEARN / KNACK_GO)} of a go),
+    <b>${SPECIES.roxxen.name}</b> learns <b>driving</b> instead, ${LEARNS_SAYS.pull} (${percent((PULL_LEARN * LEARN_PACE.pull) / KNACK_GO)} of a go),
     and its driving counts where another beast's climbing does; a beast standing in the traces, or out of them, learns
     none.</p>
     <p>Wheels keep to open ground: no fords, no garden steps and nothing steeper than a horse would take. They
@@ -3242,6 +3242,26 @@ export function helpText(): string {
     half a player's pace and working at half a player's speed, and better skill means better quality
     finds and quicker work. A kind with no work of its own learns its one skill some other way:
     ${listed(Object.values(SPECIES).filter((d) => d.learns).map((d) => `the ${d.name} its ${(SKILL_BY_ID.get(d.learns!.skill)?.name ?? d.learns!.skill).toLowerCase()}, ${LEARNS_SAYS[d.learns!.by]}`))}.</p>
+    <p><b>Every trade learns at its own pace.</b> A trade's go comes round at its own rate &mdash; a mender's where it stands,
+    a water carrier's after a fill and a pour, a kind that learns by being out every so many seconds &mdash; so every gain a worker
+    makes at its level skill is multiplied by its trade's own share, worked out so that each trade takes about as long as the
+    middle one to reach level ${EVOLVE_AT[0]} and to go on to ${EVOLVE_AT[1]}: ${learnPaceSays()}. Keeping watch and hunting learn at the
+    skill curve's own gain, as what they learn by is the wild things that come onto the deed. Anything else a worker learns is
+    at the skill curve's own gain too.</p>
+    <p><b>What a stage lets a worker do at once.</b> Besides its numbers, a deed worker at its second stage does
+    ${STAGE_LOADS[1]} things at once where its first does ${STAGE_LOADS[0]}, and ${STAGE_LOADS[2]} at its third. A trade that walks out
+    to the ground and brings a load home carries that many loads a trip: with room in its arms it goes on to the next tile
+    rather than home, and goes home with what it has when there is no more to be had. A water carrier fills that many buckets
+    and pours as many as the barrel has room for in one go; a hod carrier brings that many pieces, as many as the work still
+    wants, and fits them in one go; a stoker that many pieces of fuel, as many as the hearth has room for, and feeds them in
+    one go; a planter, a lantern keeper, a keeper of planters and a bucket filler carry that many sprouts, candles, seeds and
+    buckets a trip. A trade worked in place handles that many a go: a mender the most damaged things in your stores, a trade
+    at the stores, a fire or a press that many batches while the stores hold the makings, a butcher that many carcasses, a
+    restorer that many relics, a glazer that many pieces, an ash raker that many of a hearth raked and lye leached, and a
+    brusher, a milker or shearer and a dresser of hurts that many of yours within ${TEND_REACH} tiles of it, with a bucket or a
+    dressing out of the stores for each that wants one. A go still teaches what one go teaches. Keeping watch, hunting,
+    pruning, digging out stumps, scrubbing, tending hives, reading the ground, charging smelters and kilns and brewing do no
+    more at once.</p>
     <p><b>Creature crates.</b> A creature crate holds <b>one</b> wildermon. A fine carpenter builds it
     with a mallet from ${CRATE_BILL}; it weighs <b>${itemDef(CREATURE_CRATE).weight} kg</b> and does not rot.
     The first wildermon you tame follows you; <b>every one after that goes into an empty crate in your

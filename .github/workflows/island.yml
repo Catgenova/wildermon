@@ -3385,6 +3385,33 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/fedwell.mjs --log-level=error
           node node_modules/.cache/fedwell.mjs
 
+      - name: Every trade takes about as long to evolve
+        run: |
+          # Asked for: "Even out the time to evolve across trades". Each
+          # trade's gains at its level skill are multiplied by LEARN_PACE,
+          # which this recomputes from a model of each trade's go on the
+          # island and holds to what it was derived as; with it every trade's
+          # minutes to level 25 and on to 50 are within 35% of the median
+          # trade's, unless held at a quarter or four. The island's
+          # learn_pace_def is the same table, and a gain at the same roll is
+          # the same on both sides. --table prints the minutes.
+          npx esbuild supabase/test/learnrate.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/learnrate.mjs --log-level=error
+          node node_modules/.cache/learnrate.mjs
+
+      - name: Each stage lets a deed worker do more at once
+        run: |
+          # Asked for: "Each stage unlocks something, not just bigger
+          # numbers". STAGE_LOADS (1, 2, 3) the same on both sides, and the
+          # same trades carrying and handling; a water carrier at its second
+          # stage pours twice the litres a trip, a mender mends its stage's
+          # number of the most damaged, a brick-maker makes two batches, and
+          # a reed cutter walks on to a second load before it goes home --
+          # each go teaching what one go does.
+          npx esbuild supabase/test/stagework.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/stagework.mjs --log-level=error
+          node node_modules/.cache/stagework.mjs
+
       - name: Skills go on past a hundred, for the boards
         run: |
           # A go is worth what it was up to SKILL_TOP and is divided by

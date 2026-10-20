@@ -7752,6 +7752,13 @@ export class Game {
     }
   }
 
+  /** How many more of `item` a piece of planned work wants. The island's `hod_left`. */
+  hodWants(target: HodTarget, item: string): number {
+    const bill = target.kind === 'wall' ? target.wall : target.kind === 'floor' ? target.floor : target.kind === 'column' ? target.column
+      : target.kind === 'span' ? target.span : target.foundation;
+    return Math.max(0, (bill.needed as Record<string, number>)[item] ?? 0);
+  }
+
   /** Fit one piece into a planned wall, the way a builder does by hand. */
   fitIntoWall(wall: Wall, item: string): void {
     if ((wall.needed[item] ?? 0) <= 0) return;
@@ -7786,13 +7793,14 @@ export class Game {
 
   /**
    * The most knocked-about thing in the deed's stores, and where it is kept.
-   * Never a find nobody has restored yet, which nothing mends (`unrestored`).
+   * Never a find nobody has restored yet, which nothing mends (`unrestored`), and never one in `skip`: a mender
+   * at a stage mends the next most damaged after it in the same go.
    */
-  damagedInStores(): { store: DeedStore; item: Item } | undefined {
+  damagedInStores(skip?: ReadonlySet<Item>): { store: DeedStore; item: Item } | undefined {
     let best: { store: DeedStore; item: Item } | undefined;
     for (const store of this.deedStores()) {
       for (const item of store.items) {
-        if (item.dmg <= 1 || unrestored(item)) continue;
+        if (item.dmg <= 1 || unrestored(item) || skip?.has(item)) continue;
         if (!best || item.dmg > best.item.dmg) best = { store, item };
       }
     }

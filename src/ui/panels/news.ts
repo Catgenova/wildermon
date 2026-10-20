@@ -63,7 +63,7 @@ import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
-import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS } from '../../game/creatures';
+import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
@@ -2874,6 +2874,26 @@ export const NEWS: News[] = [
         `Food quality matters. Each thing of its diet one of yours eats puts ${percent(FED_CARE)} care into it at quality ${NEWS_QL_TOP}, and has it learn ${percent(FED_LEARN)} faster for ${spanWords(FED_FOR)} at quality ${NEWS_QL_TOP},`
           + ` ${times(FED_FAVOURITE)} that for its favourite, the first of its diet; both are as much less as the quality is under ${NEWS_QL_TOP}. A ${e.name}'s is ${itemDef(fav).name.toLowerCase()}, worth ${percent(fedBonus(e, fav, NEWS_QL_TOP))} faster learning at quality ${NEWS_QL_TOP}.`,
         `A meal worth as much as or more than what is on it puts its own on and starts the ${spanWords(FED_FOR)} again; a lesser one leaves it be, and none adds to another. Grazing and a bucket of whey are worth nothing to either. Its card says what its favourite is worth and how long a meal has left, and a wild one's what its stage asks over its kind's.`,
+      ];
+    },
+  },
+  {
+    n: 223,
+    day: '2026-10-20',
+    lines: () => {
+      // The kinds that evolve and have a trade a stage lets do more of, at their second stage.
+      const lines = Object.values(SPECIES).filter((d) => d.stages && stageWorkSays(d.gathers, STAGE_LOADS[1]))
+        .map((d) => {
+          const [verb, rest] = stageWorkSays(d.gathers, STAGE_LOADS[1])!;
+          return `${article(d.stages![0].name)} ${d.stages![0].name} ${verb} ${rest.replace(/,$/, '')}`;
+        });
+      return [
+        `Every trade takes about as long to evolve now. A trade's go came round at its own rate, so some lines reached level ${EVOLVE_AT[0]} in a fraction of the time others took; every gain a deed worker makes at its level skill is multiplied by its trade's own share, `
+          + `worked out from each trade's go so that each takes about as long as the middle one to reach level ${EVOLVE_AT[0]} and to go on to ${EVOLVE_AT[1]}: ${learnPaceSays()}. Keeping watch and hunting are as they were.`,
+        `And each stage lets a deed worker do more at once: ${STAGE_LOADS[1]} things at its second stage and ${STAGE_LOADS[2]} at its third, where its first does ${STAGE_LOADS[0]}. `
+          + 'A trade that brings a load home carries that many a trip, going on to the next tile with room in its arms rather than home; the errands that carry water, pieces, fuel, sprouts, candles, seed and buckets carry that many; '
+          + `and a trade worked in place handles that many a go: things mended, batches made, carcasses butchered, relics restored, pieces glazed, and wildermon of yours brushed, milked or shorn, or dressed within ${TEND_REACH} tiles. `
+          + `At its second stage, ${lines.join('; ')}; at its third, ${STAGE_LOADS[2]} of each. A go still teaches what one go teaches.`,
       ];
     },
   },

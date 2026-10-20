@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
+import { BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -838,6 +838,8 @@ out.push(`create table if not exists crate_def (
 out.push(`create table if not exists gather_def (
   id text primary key, skill text not null, verb text not null, plain text not null
 );`);
+/* What each trade's gains at its level skill are multiplied by, or a kind with no trade's by what teaches it (`LEARN_PACE`). */
+out.push(`create table if not exists learn_pace_def (id text primary key, pace double precision not null);`);
 /* What the fire gives back of a thing: the lumps it was cast from, a piece at a time. */
 out.push(`create table if not exists melt_def (item text primary key, content real not null);`);
 out.push(`create table if not exists trait_def (
@@ -1221,7 +1223,7 @@ out.push(emptied(['melt_def', 'wall_fitting', 'recipe', 'recipe_input', 'recipe_
   'furniture_def', 'rock_def', 'tree_def', 'tree_age_def', 'bush_def', 'loot_table',
   'crop_def', 'fish_def', 'bait_favours', 'bait_def', 'wall_type_def', 'roof_shape_def',
   'build_material_def', 'build_material_bill', 'species_def', 'species_diet', 'wild_table',
-  'trait_def', 'trait_effect', 'channel_def', 'age_def', 'tier_odds', 'gather_def',
+  'trait_def', 'trait_effect', 'channel_def', 'age_def', 'tier_odds', 'gather_def', 'learn_pace_def',
   'weapon_def', 'armour_class_def', 'armour_def', 'shield_def', 'hit_location',
   'wound_kind_def', 'butcher_part', 'species_butcher', 'hoard_metal', 'crate_def', 'metal_def',
   'pottery_def', 'mould_def', 'improve_material_def', 'improve_tool', 'improve_stock',
@@ -1417,6 +1419,7 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
 for (const [id, skill] of Object.entries(GATHER_SKILL)) {
   out.push(`insert into gather_def values (${q(id)}, ${q(skill)}, ${q(GATHER_VERB[id as 'forage'])}, ${q(GATHER_DO[id as 'forage'])});`);
 }
+for (const [id, pace] of Object.entries(LEARN_PACE)) out.push(`insert into learn_pace_def values (${q(id)}, ${q(pace)});`);
 for (const [item, content] of Object.entries(METAL_CONTENT).sort()) out.push(`insert into melt_def values (${q(item)}, ${q(content)});`);
 for (const [id, weight] of WILD_SPECIES) out.push(`insert into wild_table values (${q(id)}, ${q(weight)}, false, null);`);
 for (const [id, weight] of MONSTERS) out.push(`insert into wild_table values (${q(id)}, ${q(weight)}, true, ${q(MONSTER_CAP[id] ?? 1)});`);

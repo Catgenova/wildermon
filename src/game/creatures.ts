@@ -561,6 +561,89 @@ export function stageOf(c: Pick<Creature, 'species' | 'skills'>): 0 | 1 | 2 {
 }
 /** What its stage makes of one channel of its blood. */
 export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitChannel): number => (STAGE_MUL[channel] ?? 1) ** stageOf(c);
+/**
+ * What each stage lets a deed worker do at once, by the stage it is at (`stageOf`): a trade that carries a load
+ * between where it gets it and where it goes carries this many loads a trip, and a trade worked in place on things in
+ * your stores handles this many of them a go, where there are that many to do (`LOAD_TRADES`, `HANDS_TRADES`). Asked
+ * for: "Each stage unlocks something, not just bigger numbers", "a stage-2 worker carries 2 loads a trip, a stage-3
+ * worker 3", and "a stage-2 worker handles 2 targets per go". A go still teaches what one go teaches: a load more in
+ * its arms or a thing more in its hands is no more gain. The island's `stage_loads`.
+ */
+export const STAGE_LOADS = [1, 2, 3] as const;
+/** How many loads a trip, or things a go, it takes at the stage it is at. */
+export const stageLoads = (c: Pick<Creature, 'species' | 'skills'>): number => STAGE_LOADS[stageOf(c)];
+/** The loads in its arms: the one it is carrying and the ones gathered before it this trip (`Creature.laden`). */
+export const loadsIn = (c: Pick<Creature, 'carrying' | 'laden'>): number => (c.carrying ? 1 : 0) + (c.laden?.length ?? 0);
+/**
+ * The trades that carry a load between where they get it and where it goes, and so carry their stage's loads a trip
+ * (`STAGE_LOADS`): every trade that walks out to the ground and brings a load home, which with room in its arms for
+ * another walks on to the next tile rather than home -- where a trade already brings several a go, its trip is that
+ * many goes' worth, not more a go -- and the errands that carry: water, a hod's pieces as many as the work wants,
+ * fuel as much as the hearth takes, sprouts, candles, seed and empty buckets. The island's `load_trade`.
+ */
+export const LOAD_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
+  'forage', 'botanize', 'woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'fetch', 'peat', 'reed', 'fish', 'seek', 'fruit',
+  'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'compost',
+  'water', 'hod', 'stoke', 'plant', 'lamp', 'patch', 'fill',
+]);
+/**
+ * The trades worked in place on things in your stores, or on your wildermon round about, that handle their stage's
+ * number a go (`STAGE_LOADS`), where there are that many to do: the mender the most damaged things in the stores, the
+ * trades at the stores and at a fire or a press that many batches, the butcher that many carcasses at the store, the
+ * restorer that many relics, the glazer that many pieces, the ash-raker that many of a hearth raked and lye leached;
+ * and the brusher, the milker and shearer and the dresser of hurts that many of yours within `TEND_REACH` of the one it
+ * went to, with a bucket or a dressing for each out of what it fetched. The island's `hands_trade`.
+ *
+ * Left as they were, as no step of theirs is something a stage could do more of at once: a keeping watch and a hunt,
+ * which carry nothing but a carcass on a walk of its own; pruning, digging out stumps, scrubbing and tending a hive,
+ * which bring nothing home; reading the ground, which carries nothing and reads where it stands; charging a smelter
+ * or a kiln, whose every go already moves a whole stack, as much as the furnace has room for; and brewing, where each
+ * barrel is a walk of its own.
+ */
+export const HANDS_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
+  'mend', 'butcher', 'restore', 'glaze', 'tan', 'mill', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'cook', 'paper', 'ash',
+  'groom', 'dairy', 'heal',
+]);
+/** How far from it the others a herd trade sees to in the same go may stand, in tiles: the island's `errand_do` reads 3. */
+export const TEND_REACH = 3;
+/** What a stage lets a trade do at once, as a verb and the rest, for its stages' words (`lineSays`): "carries", "2 loads home a trip". */
+const STAGE_WORK: Partial<Record<GatherKind, [verb: string, rest: (n: number) => string]>> = {
+  water: ['carries', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} of water a trip, ${n * BUCKET_LITRES} litres,`],
+  hod: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} a trip, as many as the work it takes them to still wants, and fits them in one go,`],
+  stoke: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} of fuel a trip, as many as the hearth has room for, and feeds them in one go,`],
+  plant: ['carries', (n) => `${n} ${n === 1 ? 'sprout' : 'sprouts'} a trip`],
+  lamp: ['carries', (n) => `${n} ${n === 1 ? 'candle' : 'candles'} a trip`],
+  patch: ['carries', (n) => `${n} ${n === 1 ? 'seed' : 'seeds'} a trip`],
+  fill: ['fills', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} a trip`],
+  mend: ['mends', (n) => `the ${n} most damaged ${n === 1 ? 'thing' : 'things'} in your stores a go`],
+  butcher: ['butchers', (n) => `${n} ${n === 1 ? 'carcass' : 'carcasses'} a go`],
+  restore: ['restores', (n) => `${n} ${n === 1 ? 'relic' : 'relics'} a go`],
+  glaze: ['glazes', (n) => `${n} ${n === 1 ? 'piece' : 'pieces'} a go`],
+  ash: ['does', (n) => `${n} of its jobs a go, a hearth raked out or a batch of lye leached,`],
+  groom: ['brushes', (n) => `up to ${n} of your wildermon a go, those within ${TEND_REACH} tiles of it,`],
+  dairy: ['milks or shears', (n) => `up to ${n} of your wildermon a go, those within ${TEND_REACH} tiles of it, with a bucket out of the stores for each it milks,`],
+  heal: ['dresses', (n) => `up to ${n} of your wildermon a go, those within ${TEND_REACH} tiles of it, with a dressing out of the stores for each,`],
+};
+/**
+ * What its stage lets a trade do at once, in words, for a stage's words: "carries 2 loads home a trip". Null for a
+ * trade a stage lets do no more at once.
+ */
+export function stageWorkSays(kind: GatherKind | null | undefined, n: number): [verb: string, rest: string] | null {
+  if (!kind) return null;
+  const own = STAGE_WORK[kind];
+  if (own) return [own[0], own[1](n)];
+  if (STORE_RECIPES[kind] || kind === 'cook' || kind === 'paper') return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a go, while the stores hold the makings,`];
+  if (LOAD_TRADES.has(kind)) return ['carries', `${n} ${n === 1 ? 'load' : 'loads'} home a trip`];
+  return null;
+}
+/** Everything in its arms, and its arms emptied: what it puts down when it stops working, the loads of a trip and all. */
+export function takeArms(c: Pick<Creature, 'carrying' | 'laden' | 'homeward'>): Item[] {
+  const all = [...(c.carrying ? [c.carrying] : []), ...(c.laden ?? [])];
+  c.carrying = null;
+  c.laden = undefined;
+  c.homeward = false;
+  return all;
+}
 /** What it is called at the stage it is at. */
 export function kindName(c: Pick<Creature, 'species' | 'skills'>): string {
   const def = SPECIES[c.species];
@@ -696,14 +779,82 @@ export const OUT_EVERY = 30;
 export const PULL_LEARN = DRIVING_LEARN;
 /** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, a spell of being out, and a tile pulled. */
 export const LEARNS_GAIN: Record<LearnsBy, number> = { tended: 0.3, spar: 0.05, out: 0.2, dark: 0.2, pull: PULL_LEARN };
+/** The least and the most a trade's learning is multiplied by (`LEARN_PACE`). */
+export const LEARN_PACE_LEAST = 0.25;
+export const LEARN_PACE_MOST = 4;
+/**
+ * What every gain of a deed worker's level skill is multiplied by, by its trade, or for a kind with no trade by what
+ * teaches it (`LearnsBy`). Asked for: "Even out the time to evolve across trades": each trade's go comes round at its
+ * own rate -- a mender's at the stores, a water carrier's after two goes and a walk to the shore and back, a kind that
+ * learns by being out every `OUT_EVERY` -- so some lines reached `EVOLVE_AT` in a fraction of the time others took.
+ *
+ * Derived from the measured go rates, not chosen: `supabase/test/learnrate.ts` works out, from each trade's go on the
+ * island (its walks at its kind's pace, `workDuration` at its stage, the second the island rests after a go, and the
+ * share of its goes that teach), the minutes a well-kept worker with no traits takes from level 1 to the first of
+ * `EVOLVE_AT` and from there to the second, takes the median trade as the mark, and divides each trade's time by it
+ * (the two spans' ratios multiplied and the root taken), held to between `LEARN_PACE_LEAST` and `LEARN_PACE_MOST`.
+ * That test recomputes these and fails when one has drifted from what the rule now makes. Rerun it with `--table` to
+ * see the minutes. A keeping watch and a hunt are 1: what they learn by is what wild things come onto the deed, which
+ * no deed sets. The island's `learn_pace`, off `learn_pace_def`.
+ */
+export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
+  // Out to the ground and home with a load.
+  forage: 0.91, botanize: 0.92, woodcut: 0.88, farm: 0.87, mine: 0.99, quarry: 1.03, sand: 0.98, clay: 0.99, peat: 1.14,
+  reed: 0.96, fetch: 1.07, compost: 1.12, fruit: 1.1, bush: 1.07, grass: 1.09, sprout: 1.05, resin: 1.07, flower: 1.04,
+  worm: 1.03, fish: 0.98, seek: 0.98, pan: 0.92, prune: 0.93, stump: 0.93, scrub: 0.93, hive: 0.9,
+  // At the stores, a fire, a press or a barrel, one thing after another.
+  mend: 0.95, butcher: 0.67, restore: 0.67, glaze: 1.01, tan: 0.81, mill: 0.81, saw: 0.81, chisel: 0.81, brick: 0.81,
+  rope: 0.81, fletch: 0.81, cook: 0.81, paper: 0.81, ash: 0.95, brew: 0.69,
+  // To one of yours, or to a piece of yours, with something out of the stores for some.
+  groom: 0.85, dairy: 0.85, heal: 1.71, lamp: 2.11, smelt: 1.29, kiln: 1.29, patch: 1.01,
+  // Carrying between the stores, the water and the work.
+  fill: 3.29, water: 2.31, hod: 0.96, stoke: 1.1, plant: 1, prospect: 0.99,
+  // What wild things come onto the deed.
+  guard: 1, hunt: 1,
+  // A kind with no trade.
+  out: 1.2, dark: LEARN_PACE_MOST, tended: LEARN_PACE_MOST, spar: 0.33, pull: 1.95,
+};
+/** What its level is learned by: its trade, or for a kind with no trade what teaches it; null for neither. */
+export function learnsAt(c: Pick<Creature, 'species' | 'trade'>): GatherKind | LearnsBy | null {
+  const def = SPECIES[c.species];
+  return c.trade ?? def?.gathers ?? def?.learns?.by ?? null;
+}
+/**
+ * What a gain of this skill is multiplied by for its trade (`LEARN_PACE`): its level skill only, the skill its trade
+ * or what teaches it trains, and 1 for anything else it learns. The island's `learn_pace`.
+ */
+export function learnPace(c: Pick<Creature, 'species' | 'trade'>, skill: string): number {
+  const at = learnsAt(c);
+  if (!at) return 1;
+  const own = at in GATHER_SKILL ? GATHER_SKILL[at as GatherKind] : SPECIES[c.species]?.learns?.skill;
+  return own === skill ? LEARN_PACE[at] : 1;
+}
 /** What a kind that learns its own skill does to learn it, for its card and the help. */
 export const LEARNS_SAYS: Record<LearnsBy, string> = {
   tended: 'each time it is sheared, plucked or milked',
   spar: 'each time a spar swing of yours lands on it',
   out: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement`,
   dark: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement after dark`,
-  pull: 'for every tile a large cart or a wagon it is hitched to goes into while you drive it, as much as the same tile teaches you at the reins',
+  pull: `for every tile a large cart or a wagon it is hitched to goes into while you drive it, ${LEARN_PACE.pull === 1 ? 'as much as' : `${percent(LEARN_PACE.pull)} of what`} the same tile teaches you at the reins`,
 };
+/** What a kind with no trade learns by, as a trade is named (`GATHER_VERB`), for the help. */
+const LEARNS_VERB: Record<LearnsBy, string> = {
+  tended: 'being shorn, plucked or milked', spar: 'sparring', out: 'being out', dark: 'being out after dark', pull: 'pulling a cart or a wagon',
+};
+/** And the two trades `GATHER_VERB` calls the same, told apart. */
+const PACE_VERB: Partial<Record<GatherKind, string>> = { fetch: 'picking up what lies about', compost: 'turning what rots into compost', dairy: 'milking or shearing' };
+/**
+ * Every trade's factor and every way of learning's (`LEARN_PACE`), the ones at the same factor together, least first:
+ * "33% for sparring; 67% for butchering and restoring; ...". Leaves out a keeping watch and a hunt, which are 1.
+ */
+export function learnPaceSays(): string {
+  const by = new Map<number, string[]>();
+  for (const [at, f] of Object.entries(LEARN_PACE) as Array<[GatherKind | LearnsBy, number]>) {
+    if (at === 'guard' || at === 'hunt') continue;
+    by.set(f, [...(by.get(f) ?? []), PACE_VERB[at as GatherKind] ?? (at in GATHER_VERB ? GATHER_VERB[at as GatherKind] : LEARNS_VERB[at as LearnsBy])]);
+  }
+  return [...by].sort((a, b) => a[0] - b[0]).map(([f, names]) => `${percent(f)} for ${listed(names)}`).join('; ');
+}
 
 /**
  * How a wildermon of yours fights, wherever its blows land on another creature
@@ -832,10 +983,13 @@ export function stageSays(stage: number, task = true, fleece = false): string {
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null): string {
   if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into ${article(names[1])} ${names[1]}.`;
   const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into ${article(names[2])} ${names[2]}.` : '';
-  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task, fleece)} than ${article(names[0])} ${names[0]}. ${job}${next}`;
+  // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of.
+  const work = stageWorkSays(kind, STAGE_LOADS[stage]);
+  const more = work ? ` It ${work[0]} ${work[1]} where ${article(names[0])} ${names[0]} ${work[0]} ${STAGE_LOADS[0]}.` : '';
+  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task, fleece)} than ${article(names[0])} ${names[0]}.${more} ${job}${next}`;
 }
 
 /** Seconds between chances for an unruly companion to turn on its keeper. */
@@ -856,8 +1010,8 @@ function sayLine(id: string, job: string, level: string): void {
   const fleece = !!d.fleece;
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
-    { name: names[1], description: lineSays(names, job, level, 1, task, fleece) },
-    { name: names[2], description: lineSays(names, job, level, 2, task, fleece) },
+    { name: names[1], description: lineSays(names, job, level, 1, task, fleece, d.gathers) },
+    { name: names[2], description: lineSays(names, job, level, 2, task, fleece, d.gathers) },
   ];
 }
 
@@ -4310,6 +4464,13 @@ export interface Creature {
   health: number;
   hunger: number;
   carrying: Item | null;
+  /**
+   * The loads it has gathered this trip before the one in `carrying`, for a worker whose stage lets it carry more
+   * than one home (`stageLoads`); put away one after another when it gets there, the first first.
+   */
+  laden?: Item[];
+  /** Walking home with what it has gathered, however few loads that is: no more is to be had, or its arms are full. */
+  homeward?: boolean;
   /** Total experience earned from work. */
   xp: number;
   /** How much fleece has grown back, 0..1, for the species that carry one. */
@@ -4516,6 +4677,7 @@ export interface CreatureJSON {
   health: number;
   hunger: number;
   carrying: Item | null;
+  laden?: Item[];
   pouch?: Item | null;
   xp?: number;
   fleece?: number;
@@ -6788,6 +6950,8 @@ export class Creatures {
     this.intoStores(game, { uid: game.inventory.nextUid++, id: 'ash', ql: ASH_QL, dmg: 0, count: whole }, null, it.x, it.y);
     this.gainSkill(game, c, GATHER_SKILL.ash, 0.2);
     this.errandWork(game, c, 'ash');
+    // At a stage, lye leached where it stands after the raking, in the same go.
+    this.moreRecipes(game, c, LYE_RECIPES, null, it.x, it.y);
     return true;
   }
 
@@ -6861,6 +7025,7 @@ export class Creatures {
     const spot = at as [number, number];
     if (!goto(spot[0], spot[1], 1.8)) return true;
     this.workRecipe(game, c, job.recipe, null, Math.floor(spot[0]), Math.floor(spot[1]));
+    this.moreRecipes(game, c, cookRecipes(), null, Math.floor(spot[0]), Math.floor(spot[1]));
     return true;
   }
 
@@ -6888,6 +7053,7 @@ export class Creatures {
     const spot = at as [number, number];
     if (!goto(spot[0], spot[1], 1.8)) return true;
     this.workRecipe(game, c, job.recipe, null, Math.floor(spot[0]), Math.floor(spot[1]));
+    this.moreRecipes(game, c, PAPER_RECIPES, null, Math.floor(spot[0]), Math.floor(spot[1]));
     return true;
   }
 
@@ -6908,11 +7074,17 @@ export class Creatures {
     const st = this.storeWhere(game, c, bare);
     if (!st) return this.why(c, 'stock');
     if (!goto(st.centre[0], st.centre[1])) return true;
-    const it = st.items.find(bare);
-    if (!it) return true;
-    for (let n = 0; n < GLAZE_ASH; n++) this.takeOne(game, ['ash'], st);
-    it.mark = { ...(it.mark ?? {}), glaze: 0 };
-    st.changed();
+    if (!st.items.find(bare)) return true;
+    // The piece it came to and, at a stage, the next bare one nearest it, its stage's number of them in the one go
+    // (`stageLoads`), while the stores hold the ash.
+    for (let n = 0; n < stageLoads(c); n++) {
+      const at = n === 0 ? st : this.storeWhere(game, c, bare);
+      const it = at?.items.find(bare);
+      if (!at || !it || (n > 0 && this.inStores(game, 'ash') < GLAZE_ASH)) break;
+      for (let k = 0; k < GLAZE_ASH; k++) this.takeOne(game, ['ash'], at);
+      it.mark = { ...(it.mark ?? {}), glaze: 0 };
+      at.changed();
+    }
     this.gainSkill(game, c, GATHER_SKILL.glaze, 0.2);
     this.errandWork(game, c, 'glaze');
     return true;
@@ -6948,7 +7120,8 @@ export class Creatures {
     if (!source) return this.why(c, 'range', range);
     if (held) {
       if (!goto(source.x, source.y, 1.5)) return true;
-      if (source.well) game.drawFromWell(source.well, BUCKET_LITRES);
+      // Every bucket it carries, filled in the one go.
+      if (source.well) game.drawFromWell(source.well, held.count * BUCKET_LITRES);
       c.carrying = { ...held, id: 'water_bucket' };
       this.gainSkill(game, c, GATHER_SKILL.fill, 0.2);
       this.errandWork(game, c, 'fill');
@@ -6957,8 +7130,18 @@ export class Creatures {
     const st = this.storeWith(game, c, ['bucket']);
     if (!st) return this.why(c, 'stock');
     if (!goto(st.centre[0], st.centre[1])) return true;
-    c.carrying = this.takeOne(game, ['bucket'], st);
+    // Its stage's buckets a trip (`stageLoads`), as many as the water it is filling them at holds whole.
+    c.carrying = this.takeFrom(st, (it) => it.id === 'bucket', this.bucketsAt(c, source), game);
     return true;
+  }
+
+  /**
+   * How many buckets a trip it fills at this water: its stage's (`stageLoads`), at a well as many whole ones as the
+   * well holds and one at the least. The island's `fill_buckets`.
+   */
+  private bucketsAt(c: Creature, source: { well?: PlacedFurniture }): number {
+    const n = stageLoads(c);
+    return source.well ? Math.max(1, Math.min(n, Math.floor((source.well.litres ?? 0) / BUCKET_LITRES))) : n;
   }
 
   /**
@@ -6972,24 +7155,30 @@ export class Creatures {
     const set = this.relicInStores(game);
     if (!set) return this.why(c, 'stock');
     if (!goto(set.at.centre[0], set.at.centre[1])) return true;
-    let worth = 0;
-    for (let part = 1; part <= set.relic.parts; part++) {
-      let piece: { st: DeedStore; it: Item } | undefined;
-      for (const st of game.deedStores()) {
-        for (const it of st.items) {
-          const f = it.id === 'fragment' && !it.locked ? fragmentOf(it) : null;
-          if (f && f.relic === set.relic && f.part === part && (!piece || it.dmg < piece.it.dmg)) piece = { st, it };
-        }
-      }
-      if (!piece) return false;
-      worth += piece.it.ql * (1 - piece.it.dmg / RESTORE_AGE);
-      if (piece.it.count > 1) piece.it.count -= 1;
-      else piece.st.items.splice(piece.st.items.indexOf(piece.it), 1);
-      piece.st.changed();
-    }
     const skill = c.skills[GATHER_SKILL.restore] ?? 1;
-    const ql = Math.max(1, Math.min(100, (worth / set.relic.parts) * restoredMul(skill)));
-    this.intoStores(game, { uid: game.inventory.nextUid++, id: set.relic.result, ql, dmg: 0, count: 1 }, set.at, set.at.x, set.at.y);
+    // The relic it came to and, at a stage, the next whose pieces are all in the stores too, its stage's number of
+    // them in the one go (`stageLoads`), each put in the store it came to.
+    for (let n = 0; n < stageLoads(c); n++) {
+      const one = n === 0 ? set : this.relicInStores(game);
+      if (!one) break;
+      let worth = 0;
+      for (let part = 1; part <= one.relic.parts; part++) {
+        let piece: { st: DeedStore; it: Item } | undefined;
+        for (const st of game.deedStores()) {
+          for (const it of st.items) {
+            const f = it.id === 'fragment' && !it.locked ? fragmentOf(it) : null;
+            if (f && f.relic === one.relic && f.part === part && (!piece || it.dmg < piece.it.dmg)) piece = { st, it };
+          }
+        }
+        if (!piece) return n > 0;
+        worth += piece.it.ql * (1 - piece.it.dmg / RESTORE_AGE);
+        if (piece.it.count > 1) piece.it.count -= 1;
+        else piece.st.items.splice(piece.st.items.indexOf(piece.it), 1);
+        piece.st.changed();
+      }
+      const ql = Math.max(1, Math.min(100, (worth / one.relic.parts) * restoredMul(skill)));
+      this.intoStores(game, { uid: game.inventory.nextUid++, id: one.relic.result, ql, dmg: 0, count: 1 }, set.at, set.at.x, set.at.y);
+    }
     this.gainSkill(game, c, GATHER_SKILL.restore, 0.3);
     this.errandWork(game, c, 'restore');
     return true;
@@ -7044,7 +7233,8 @@ export class Creatures {
       const store = this.storeWhere(game, c, seed);
       if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
-      c.carrying = this.takeFrom(store, seed, 1, game);
+      // Its stage's seeds a trip (`stageLoads`), each sown in a go of its own.
+      c.carrying = this.takeFrom(store, seed, stageLoads(c), game);
       return true;
     }
     const [fx, fy] = furnitureCentre(f);
@@ -7054,7 +7244,8 @@ export class Creatures {
     if (!crop) {
       const def = CROP_BY_SEED.get(c.carrying!.id)!;
       game.sowPlanter(f, def.id, c.carrying!.ql);
-      c.carrying = null;
+      c.carrying!.count -= 1;
+      if (c.carrying!.count <= 0) c.carrying = null;
     } else if (cropReady(crop)) {
       const def = cropDef(crop.id);
       const y = cropYield(crop.tended);
@@ -7187,22 +7378,52 @@ export class Creatures {
       const store = this.storeWith(game, c, want);
       if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
-      c.carrying = this.takeOne(game, want, store);
+      // Its stage's buckets or dressings (`stageLoads`), one for each it may see to in a go.
+      c.carrying = this.takeFrom(store, (it) => want.includes(it.id), stageLoads(c), game);
       return true;
     }
     if (!goto(o.x, o.y, 1.6)) return true;
+    this.tendOne(game, c, o, kind, skill, true);
+    // At a stage, the next of yours wanting it within `TEND_REACH` of where it stands, its stage's number of them in
+    // the one go (`stageLoads`), each with a bucket or a dressing of what it carries where it wants one. The island's
+    // `errand_go`.
+    for (let n = 1; n < stageLoads(c); n++) {
+      let next: Creature | undefined;
+      let nearD = Infinity;
+      for (const x of this.list.values()) {
+        const d = Math.hypot(x.x - c.x, x.y - c.y);
+        if (d > TEND_REACH || d >= nearD || !this.herdWants(game, c, x, kind, carried.includes(c.carrying?.id ?? ''))) continue;
+        nearD = d;
+        next = x;
+      }
+      if (!next) break;
+      const needs = kind === 'heal' ? DRESSINGS : kind === 'dairy' && Creatures.milker(this.species(next)) ? ['bucket'] : null;
+      if (needs && !needs.includes(c.carrying?.id ?? '')) break;
+      this.tendOne(game, c, next, kind, skill, false);
+    }
+    game.events.emit('creature');
+    this.errandWork(game, c, kind);
+    return true;
+  }
+
+  /** Brushing, milking or shearing, or dressing a hurt on one of yours: `learn` false for one after the first in a go. */
+  private tendOne(game: Game, c: Creature, o: Creature, kind: GatherKind, skill: number, learn: boolean): void {
+    const def = this.species(o);
+    const gain = (id: string, base: number): void => {
+      if (learn) this.gainSkill(game, c, id, base);
+    };
     const top = maxHealth(o, def);
     if (kind === 'groom') {
       // As a keeper of its skill with a brush as good (`groomGain`), and the small hurts seen to with it.
       o.care = Math.min(1, o.care + groomGain(skill, skill));
       if (o.health < top) o.health = Math.min(top, o.health + top * GROOM_HEAL);
-      this.gainSkill(game, c, GATHER_SKILL.groom, 0.25);
+      gain(GATHER_SKILL.groom, 0.25);
     } else if (kind === 'dairy') {
       const [x, y] = [Math.floor(o.x), Math.floor(o.y)];
       if (Creatures.milker(def)) {
         // A bucket off it, as the keeper's own milking fills one (`milk_go`): what it has been fed on is what comes out of it.
         const ql = Math.max(1, Math.min(100, 20 + o.fleece * 40 + o.hunger * 30));
-        c.carrying = null;
+        if (c.carrying && (c.carrying.count -= 1) <= 0) c.carrying = null;
         this.intoStores(game, { uid: game.inventory.nextUid++, id: 'milk_bucket', ql, dmg: 0, count: 1 }, null, x, y);
       } else {
         // A full fleece is three, a full crop of feathers six, and quality follows what was there.
@@ -7213,19 +7434,16 @@ export class Creatures {
       }
       o.fleece = 0;
       this.learnBy(game, o, 'tended');
-      this.gainSkill(game, c, GATHER_SKILL.dairy, 0.25);
+      gain(GATHER_SKILL.dairy, 0.25);
     } else {
       // A dressing's share of a life, at its first aid and the dressing's quality (`healAmount`), and the bleeding stopped.
       const ql = c.carrying?.ql ?? 1;
-      c.carrying = null;
+      if (c.carrying && (c.carrying.count -= 1) <= 0) c.carrying = null;
       o.health = Math.min(top, o.health + top * healAmount(skill, ql));
       o.bleedUntil = 0;
       o.bleedRate = 0;
-      this.gainSkill(game, c, GATHER_SKILL.heal, 0.25);
+      gain(GATHER_SKILL.heal, 0.25);
     }
-    game.events.emit('creature');
-    this.errandWork(game, c, kind);
-    return true;
   }
 
   /**
@@ -7249,26 +7467,33 @@ export class Creatures {
     }
     if (!store || !corpse) return this.why(c, 'stock');
     if (!goto(store.centre[0], store.centre[1])) return true;
-    const def = corpseSpecies(corpse);
-    if (!def) return false;
+    if (!corpseSpecies(corpse)) return false;
+    const at = store;
     const skill = c.skills[GATHER_SKILL.butcher] ?? 1;
     const share = butcherYield(skill, skill);
-    const ql = this.madeQl(game, c, skill);
-    if (corpse.count > 1) corpse.count -= 1;
-    else store.items.splice(store.items.indexOf(corpse), 1);
-    store.changed();
-    const put = (id: string, count: number, q: number): void => this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: q, dmg: 0, count }, store, store.x, store.y);
-    const hoard = def.butcher.hoard ?? 0;
-    for (let i = 0; i < Math.round(hoard * (HOARD_LUMPS + share * HOARD_MORE)); i++) {
-      put(HOARD_METALS[Math.floor(game.rand() * HOARD_METALS.length)], 1, Math.max(20, Math.min(100, 40 + game.rand() * 55)));
-    }
-    for (const [part, id] of BUTCHER_PARTS) {
-      const base = def.butcher[part] ?? 0;
-      if (!base) continue;
-      let count = Math.floor(base * share);
-      if (game.rand() < base * share - count) count += 1;
-      if (part === 'gland' && count > 0 && game.rand() > 0.35 * (0.5 + share)) count = 0;
-      if (count > 0) put(id, count, ql);
+    const put = (id: string, count: number, q: number): void => this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: q, dmg: 0, count }, at, at.x, at.y);
+    // The carcass it came to and, at a stage, the next in the same store, its stage's number of them in the one go
+    // (`stageLoads`).
+    for (let n = 0; n < stageLoads(c); n++) {
+      const one = n === 0 ? corpse : at.items.find((x: Item) => x.id === 'corpse' && !x.locked && !!corpseSpecies(x));
+      const def = one && corpseSpecies(one);
+      if (!one || !def) break;
+      const ql = this.madeQl(game, c, skill);
+      if (one.count > 1) one.count -= 1;
+      else at.items.splice(at.items.indexOf(one), 1);
+      at.changed();
+      const hoard = def.butcher.hoard ?? 0;
+      for (let i = 0; i < Math.round(hoard * (HOARD_LUMPS + share * HOARD_MORE)); i++) {
+        put(HOARD_METALS[Math.floor(game.rand() * HOARD_METALS.length)], 1, Math.max(20, Math.min(100, 40 + game.rand() * 55)));
+      }
+      for (const [part, id] of BUTCHER_PARTS) {
+        const base = def.butcher[part] ?? 0;
+        if (!base) continue;
+        let count = Math.floor(base * share);
+        if (game.rand() < base * share - count) count += 1;
+        if (part === 'gland' && count > 0 && game.rand() > 0.35 * (0.5 + share)) count = 0;
+        if (count > 0) put(id, count, ql);
+      }
     }
     this.gainSkill(game, c, GATHER_SKILL.butcher, 0.3);
     this.errandWork(game, c, 'butcher');
@@ -7305,16 +7530,34 @@ export class Creatures {
     const { recipe: r, at } = job;
     if (!goto(at.centre[0], at.centre[1])) return true;
     this.workRecipe(game, c, r, at, at.x, at.y);
+    this.moreRecipes(game, c, recipes, at, at.x, at.y);
     return true;
   }
 
-  /** One go at a recipe out of the stores: its inputs taken, and what it makes and hands back put in them. */
-  private workRecipe(game: Game, c: Creature, r: Recipe, at: DeedStore | null, x: number, y: number): void {
+  /**
+   * At a stage, the next batches after the first in the same go, its stage's number in all (`stageLoads`), while the
+   * stores hold the makings of one: taken out of them as the first's were, and made where it stands. The island's
+   * `errand_go`.
+   */
+  private moreRecipes(game: Game, c: Creature, recipes: readonly string[], at: DeedStore | null, x: number, y: number): void {
+    for (let n = 1; n < stageLoads(c); n++) {
+      const next = this.recipeInStores(game, recipes);
+      if (!next) return;
+      this.workRecipe(game, c, next.recipe, at, x, y, false);
+    }
+  }
+
+  /**
+   * One go at a recipe out of the stores: its inputs taken, and what it makes and hands back put in them. `go` false
+   * for a batch after the first in the same go, which teaches nothing more and takes no more time.
+   */
+  private workRecipe(game: Game, c: Creature, r: Recipe, at: DeedStore | null, x: number, y: number, go = true): void {
     for (const i of r.inputs) for (let n = 0; n < (i.count ?? 1); n++) this.takeOne(game, [i.item], at ?? undefined);
     const kind = this.species(c).gathers ?? 'mill';
     const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
     this.intoStores(game, { uid: game.inventory.nextUid++, id: r.result, ql: this.madeQl(game, c, skill), dmg: 0, count: r.count ?? 1 }, at, x, y);
     for (const [id, n] of r.returns ?? []) this.intoStores(game, { uid: game.inventory.nextUid++, id, ql: 40, dmg: 0, count: n }, at, x, y);
+    if (!go) return;
     this.gainSkill(game, c, GATHER_SKILL[kind], 0.25);
     this.errandWork(game, c, kind);
   }
@@ -7363,7 +7606,8 @@ export class Creatures {
       const store = this.storeWith(game, c, ['candle']);
       if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
-      c.carrying = this.takeOne(game, ['candle'], store);
+      // Its stage's candles a trip (`stageLoads`), each set in a go of its own.
+      c.carrying = this.takeFrom(store, (it) => it.id === 'candle', stageLoads(c), game);
       return true;
     }
     const [fx, fy] = furnitureCentre(f);
@@ -7371,7 +7615,8 @@ export class Creatures {
     if (want === 'candle' && f.lamp) {
       f.fuel = Math.round(candleBurn(f.lamp.ql));
       f.lit = game.isNight();
-      c.carrying = null;
+      c.carrying!.count -= 1;
+      if (c.carrying!.count <= 0) c.carrying = null;
     } else if (want === 'light') f.lit = true;
     else if (want === 'douse') f.lit = false;
     this.gainSkill(game, c, GATHER_SKILL.lamp, 0.2);
@@ -7399,9 +7644,15 @@ export class Creatures {
     if (full) {
       const [vx, vy] = furnitureCentre(vessel);
       if (!goto(vx, vy)) return true;
-      game.pourInto(vessel, BUCKET_LITRES, 'water');
+      // As many of the buckets it carries as the barrel has room for, poured in one go (`stageLoads`); the rest go on
+      // to the next barrel.
+      const held = c.carrying!;
+      const room = (furnitureDef(vessel.kind).liquid ?? 0) - (vessel.litres ?? 0);
+      const n = Math.max(1, Math.min(held.count, Math.ceil(room / BUCKET_LITRES)));
+      game.pourInto(vessel, n * BUCKET_LITRES, 'water');
       this.toLedger(game, c, { goes: 1 });
-      c.carrying = null;
+      held.count -= n;
+      if (held.count <= 0) c.carrying = null;
       this.gainSkill(game, c, GATHER_SKILL.water, 0.2);
       c.state = 'idle';
       c.until = game.time + 0.5;
@@ -7410,8 +7661,10 @@ export class Creatures {
     const source = game.waterSource(c.x, c.y, range, near);
     if (!source) return this.why(c, 'range', range);
     if (!goto(source.x, source.y, 1.5)) return true;
-    if (source.well) game.drawFromWell(source.well, BUCKET_LITRES);
-    c.carrying = { uid: game.inventory.nextUid++, id: 'water_bucket', ql: 40, dmg: 0, count: 1 };
+    // Its stage's buckets a trip: at a well, as many whole ones as it holds, and one at the least as ever.
+    const n = this.bucketsAt(c, source);
+    if (source.well) game.drawFromWell(source.well, n * BUCKET_LITRES);
+    c.carrying = { uid: game.inventory.nextUid++, id: 'water_bucket', ql: 40, dmg: 0, count: n };
     // A go, as the island's `errand_do` counts the filling as one.
     this.toLedger(game, c, { goes: 1 });
     return true;
@@ -7444,16 +7697,23 @@ export class Creatures {
       if (!store || !stock) return this.why(c, 'stock');
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;
-      stock.count -= 1;
+      // Its stage's pieces a trip (`stageLoads`), as many as the work still wants.
+      const n = Math.max(1, Math.min(stageLoads(c), stock.count, game.hodWants(job.target, job.item)));
+      stock.count -= n;
       if (stock.count <= 0) store.items.splice(store.items.indexOf(stock), 1);
       store.changed();
-      c.carrying = { uid: game.inventory.nextUid++, id: job.item, ql: stock.ql, dmg: 0, count: 1 };
+      c.carrying = { uid: game.inventory.nextUid++, id: job.item, ql: stock.ql, dmg: 0, count: n };
       return true;
     }
     if (!goto(job.x + 0.5, job.y + 0.5, 1.6)) return true;
-    game.fitPiece(job.target, c.carrying.id);
+    // Every piece it carries that the work still wants, in the one go; any over go on to the next work wanting them.
+    const held = c.carrying;
+    do {
+      game.fitPiece(job.target, held.id);
+      held.count -= 1;
+    } while (held.count > 0 && game.hodWants(job.target, held.id) > 0);
     this.toLedger(game, c, { goes: 1 });
-    c.carrying = null;
+    if (held.count <= 0) c.carrying = null;
     this.gainSkill(game, c, GATHER_SKILL.hod, 0.25);
     return true;
   }
@@ -7467,11 +7727,17 @@ export class Creatures {
     this.toLedger(game, c, { goes: 1 });
     const skill = c.skills[GATHER_SKILL.mend] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.mend, 0.2);
-    // The same bargain the player's own repair makes: damage out, a little
-    // quality with it, and a better hand loses less of it.
-    found.item.dmg = Math.max(0, found.item.dmg - (MEND_DMG + skill / MEND_DMG_LEVELS));
-    found.item.ql = Math.max(1, found.item.ql - Math.max(MEND_QL_LEAST, MEND_QL - skill / MEND_QL_LEVELS));
-    found.store.changed();
+    // The most damaged thing in the stores and, at a stage, the next most damaged after it, its stage's number of
+    // them in the one go (`stageLoads`), each mended once.
+    const done = new Set<Item>();
+    for (let one: typeof found | undefined = found; one && done.size < stageLoads(c); one = game.damagedInStores(done)) {
+      done.add(one.item);
+      // The same bargain the player's own repair makes: damage out, a little
+      // quality with it, and a better hand loses less of it.
+      one.item.dmg = Math.max(0, one.item.dmg - (MEND_DMG + skill / MEND_DMG_LEVELS));
+      one.item.ql = Math.max(1, one.item.ql - Math.max(MEND_QL_LEAST, MEND_QL - skill / MEND_QL_LEVELS));
+      one.store.changed();
+    }
     c.busyUntil = game.time + MEND_EVERY;
     return true;
   }
@@ -7491,10 +7757,12 @@ export class Creatures {
       if (!store || !sprout) return this.why(c, 'stock');
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;
-      sprout.count -= 1;
+      // Its stage's sprouts a trip (`stageLoads`), each planted in a go of its own.
+      const n = Math.min(stageLoads(c), sprout.count);
+      sprout.count -= n;
       if (sprout.count <= 0) store.items.splice(store.items.indexOf(sprout), 1);
       store.changed();
-      c.carrying = { uid: game.inventory.nextUid++, id: 'sprout', ql: sprout.ql, dmg: 0, count: 1, extra: sprout.extra };
+      c.carrying = { uid: game.inventory.nextUid++, id: 'sprout', ql: sprout.ql, dmg: 0, count: n, extra: sprout.extra };
       return true;
     }
     if (c.carrying.id !== 'sprout') return false;
@@ -7507,7 +7775,8 @@ export class Creatures {
     if (!goto(c.workX + 0.5, c.workY + 0.5)) return true;
     game.plantSprout(c.workX, c.workY, c.carrying.extra);
     this.toLedger(game, c, { goes: 1 });
-    c.carrying = null;
+    c.carrying.count -= 1;
+    if (c.carrying.count <= 0) c.carrying = null;
     c.workX = -1;
     this.gainSkill(game, c, GATHER_SKILL.plant, 0.25);
     return true;
@@ -7546,13 +7815,21 @@ export class Creatures {
     near: (x: number, y: number) => boolean,
     range: number,
   ): boolean {
-    if (c.carrying) return false;
+    // Home once its arms are full (`stageLoads`), or once there is no more to clear with something in them.
+    if (c.carrying && (c.homeward || loadsIn(c) >= stageLoads(c))) return false;
     const rot = game.rottingNear(near);
-    if (!rot) return this.why(c, 'range', range);
+    if (!rot) {
+      if (c.carrying) {
+        c.homeward = true;
+        return false;
+      }
+      return this.why(c, 'range', range);
+    }
     if (!goto(rot.x + 0.5, rot.y + 0.5)) return true;
     const [taken] = game.takeFromGround(rot.x, rot.y, rot.uid);
     if (!taken) return true;
     this.gainSkill(game, c, GATHER_SKILL.compost, 0.2);
+    if (c.carrying) (c.laden ??= []).push(c.carrying);
     // Whatever it was, what comes back is compost, and the more of it the better.
     c.carrying = { uid: game.inventory.nextUid++, id: 'compost', ql: Math.min(100, 20 + (c.skills[GATHER_SKILL.compost] ?? 1) * 0.6), dmg: 0, count: Math.max(1, Math.round(taken.count / 2)) };
     return true;
@@ -7564,7 +7841,8 @@ export class Creatures {
     const def = this.species(c);
     const hearth = this.coldHearth(game, c, siteRange(c, def, site));
     if (!hearth) return this.why(c, 'range', siteRange(c, def, site));
-    // Nothing to carry: go to whichever store has wood in it and take a piece.
+    // Nothing to carry: go to whichever store has wood in it and take a piece -- its stage's pieces (`stageLoads`), as
+    // many as the hearth has room for and one at the least.
     const store = game.deedStores().find((st) => st.items.some((it: Item) => isFuel(it.id)));
     const fuel = store?.items.find((it: Item) => isFuel(it.id));
     if (!store || !fuel) return this.why(c, 'stock');
@@ -7577,10 +7855,11 @@ export class Creatures {
       }
       return true;
     }
-    fuel.count -= 1;
+    const n = Math.max(1, Math.min(stageLoads(c), fuel.count, Math.floor((FIRE_CAPACITY - hearth.fuel) / (FUEL_VALUES[fuel.id] ?? 1))));
+    fuel.count -= n;
     if (fuel.count <= 0) store.items.splice(store.items.indexOf(fuel), 1);
     store.changed();
-    c.carrying = { uid: game.inventory.nextUid++, id: fuel.id, ql: fuel.ql, dmg: 0, count: 1 };
+    c.carrying = { uid: game.inventory.nextUid++, id: fuel.id, ql: fuel.ql, dmg: 0, count: n };
     c.workX = hearth.x;
     c.workY = hearth.y;
     c.job = hearth.kind;
@@ -7600,7 +7879,8 @@ export class Creatures {
       }
       return;
     }
-    const per = FUEL_VALUES[carrying.id] ?? 0;
+    // Every piece it carries, fed in the one go.
+    const per = (FUEL_VALUES[carrying.id] ?? 0) * carrying.count;
     const light = (fuel: number, lit: boolean, set: (f: number, l: boolean) => void, what: string): void => {
       const now = Math.min(FIRE_CAPACITY, fuel + per);
       set(now, lit || now > 0);
@@ -7930,8 +8210,8 @@ export class Creatures {
   gainSkill(game: Game, c: Creature, id: string, base: number): number {
     const v = c.skills[id] ?? 1;
     // A beast learns on the same curve a player does, and crawls the same last
-    // stretch of it.
-    const gain = skillGain(v, base * this.learnMul(c, game.time), 0.6 + 0.8 * game.rand());
+    // stretch of it; its level skill at what its trade's goes are worth against every other trade's (`LEARN_PACE`).
+    const gain = skillGain(v, base * this.learnMul(c, game.time) * learnPace(c, id), 0.6 + 0.8 * game.rand());
     const before = creatureLevel(c);
     const beforeSteps = rangeSteps(v);
     c.skills[id] = Math.min(100, v + gain);
@@ -8478,6 +8758,8 @@ export class Creatures {
       this.feedFromStores(game, c, deed);
     }
     if (this.comeWhenCalled(c, dt, game)) return;
+    // Nothing in its arms is nothing to walk home with, whatever it was doing when its arms emptied.
+    if (!c.carrying && c.homeward) c.homeward = false;
     const def = this.species(c);
     const kind = c.trade ?? def.gathers;
     // Standing orders come before any job: an intruder is everyone's business.
@@ -8507,7 +8789,12 @@ export class Creatures {
     }
     if (c.state === 'forage') {
       if (game.time >= c.until) {
-        c.carrying = kind ? this.finishForage(game, c, kind) : null;
+        // What it got goes into its arms with whatever it has gathered already this trip (`stageLoads`).
+        const got = kind ? this.finishForage(game, c, kind) : null;
+        if (got) {
+          if (c.carrying) (c.laden ??= []).push(c.carrying);
+          c.carrying = got;
+        }
         if (kind) this.acted(c, 'work', game.time);
         if (kind) this.toLedger(game, c, { goes: 1 });
         c.state = 'idle';
@@ -8519,11 +8806,14 @@ export class Creatures {
       this.feedFire(game, c, dt);
       return;
     }
-    if (c.carrying) {
+    // With room in its arms for another load of its trade (`stageLoads`), it goes on to the next tile rather than home.
+    if (c.carrying && !this.roomInArms(c, kind)) {
+      c.homeward = true;
       if (c.hunger < HUNGRY && isBaitFor(def, c.carrying.id)) {
         c.hunger = Math.min(1, c.hunger + 0.5);
         fedOn(c, c.carrying.id, c.carrying.ql, game.time);
-        c.carrying = null;
+        c.carrying = c.laden?.shift() ?? null;
+        if (!c.carrying) c.homeward = false;
         return;
       }
       const store = this.storeFor(game, c, c.carrying);
@@ -8546,7 +8836,10 @@ export class Creatures {
         if (!store.add(load)) return;
         // Brought in: counted to its ledger as the island counts a load into a store (`worker_settle`'s `home`).
         this.toLedger(game, c, { item: load.id, n: load.count });
-        c.carrying = null;
+        // And the next load of the trip, put away the same way, until its arms are empty.
+        c.carrying = c.laden?.shift() ?? null;
+        if (!c.laden?.length) c.laden = undefined;
+        if (!c.carrying) c.homeward = false;
         c.state = 'idle';
         c.until = game.time + 1;
       } else if (this.stepToward(game, c, dx, dy, dt) === 'blocked') {
@@ -8570,7 +8863,7 @@ export class Creatures {
      * it to go: a worker with its hands full and nowhere to empty them stops
      * working, and a mouthful of seed is not worth stopping a farm for.
      */
-    if (c.pouch && c.pouch.count > 0 && this.storeFor(game, c, c.pouch)) {
+    if (!c.carrying && c.pouch && c.pouch.count > 0 && this.storeFor(game, c, c.pouch)) {
       c.carrying = c.pouch;
       c.pouch = null;
       return;
@@ -8637,6 +8930,11 @@ export class Creatures {
           return;
         }
       }
+      // Nothing more to be had and loads in its arms: home with what it has.
+      if (c.carrying) {
+        c.homeward = true;
+        return;
+      }
     }
     // Nothing of its trade within its range of the token: the island's `find_work_tile` coming back empty. An errand
     // trade has said its own why already.
@@ -8644,6 +8942,15 @@ export class Creatures {
     // Nothing to do right now: potter about near the token.
     this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
     c.until = game.time + 4;
+  }
+
+  /**
+   * Whether a worker with a load in its arms goes on for another rather than home: a trade that walks out to the
+   * ground and carries loads home (`LOAD_TRADES`), with fewer in its arms than its stage carries (`stageLoads`), and
+   * not already on its way home. The island's `worker_settle`, off `loads_in` and `stage_loads`.
+   */
+  private roomInArms(c: Creature, kind: GatherKind | null): boolean {
+    return !!kind && LOAD_TRADES.has(kind) && !ERRAND_JOBS.has(kind) && !c.homeward && loadsIn(c) < stageLoads(c);
   }
 
   /**
@@ -9115,6 +9422,7 @@ export class Creatures {
         health: c.health,
         hunger: c.hunger,
         carrying: c.carrying,
+        laden: c.laden?.length ? c.laden : undefined,
         pouch: c.pouch,
         xp: c.xp,
         fleece: c.fleece,
@@ -9153,7 +9461,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, fedBonus: j.fedBonus, fedUntil: j.fedUntil, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), ledger: j.ledger ?? null });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null });
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }
