@@ -70,6 +70,22 @@ export const smelterName = (s: { rare?: number }): string => {
 /** How many jobs this one will hold: the plain twenty, and more for a rare furnace. */
 export const smelterCapacity = (s: { rare?: number }): number => roomFor(SMELTER_CAPACITY, s);
 
+/**
+ * Where its smoke comes out: the head of its stack, so high over the ground
+ * in tenths of a metre (`HEIGHT_SCALE` units) and so far back from the middle
+ * of its block toward the north, in tiles, as it is drawn (`forge.ts`).
+ */
+export const SMELTER_STACK_UP = 25.6;
+export const SMELTER_STACK_BACK = 0.0325;
+/**
+ * How a fire's smoke goes up where it is not the island's plain plume
+ * (\`Game.fires\`): how far it rises and how big its puffs, against the plain
+ * one's, and how pale and warm, nought to one.
+ */
+export interface Plume { rise: number; size: number; pale: number }
+/** A smelter's stack draws well: a short, thin, pale plume, a third the height of a campfire's; paler still while it works a charge. */
+export const SMELTER_PLUME: Plume = { rise: 0.34, size: 0.5, pale: 0.8 };
+export const SMELTER_PLUME_WORKING: Plume = { rise: 0.3, size: 0.46, pale: 1 };
 export const smelterCentre = (s: PlacedSmelter): [number, number] => [s.x + (s.sx + SMELTER_W / 2) / SUBTILES, s.y + (s.sy + SMELTER_H / 2) / SUBTILES];
 
 export function smelterCovers(s: { sx: number; sy: number }, sx: number, sy: number): boolean {

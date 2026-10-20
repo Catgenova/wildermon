@@ -71,6 +71,7 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre, type PlacedCampfire } from '../game/campfire';
 import { smelterCentre, type PlacedSmelter } from '../game/smelter';
+import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawSmelter, drawSmelterLive, drawSmelterNight, smelterBounds, smelterHit } from './forge';
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
@@ -252,7 +253,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawAnvil, drawCampfire, drawCreature, drawKiln, drawPlayer, drawSmelter, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawKiln, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -970,6 +971,9 @@ type CellarLaid = { cv: HTMLCanvasElement; x0: number; y0: number; ax: number; a
 
 /** You, as the spell stage names whoever casts. */
 const PLAYER_CASTS: Who = { kind: 'player' };
+
+/** How much of an anvil's rune the night's wash may take off before its rune takes the night off itself (\`Renderer.nightOver\`, \`anvilNight\`). */
+const ANVIL_UNDER_WASH = 0.4;
 
 /** Tiles round you within which a fire, a smelter or a kiln has its ring drawn (`drawStationRings`). */
 export const RING_REACH = 14;
@@ -1805,6 +1809,34 @@ export class Renderer {
    * step, so it never settles into a rhythm you can watch. A steady light —
    * a candle behind cloth, a creature that glows — does not do this at all.
    */
+  /**
+   * How much of what is drawn at (sx, sy) on the screen the night's wash will
+   * take off when it is laid this frame, nought to one: the washes together
+   * (\`skyWash\`), less the holes the lights burn in them there, worked out
+   * as \`lightLayers\` lays them (a light's hole its strength at its middle,
+   * a little over half that at a little over half its reach, nothing at its
+   * edge). For something laying light of its own under the wash, to be laid
+   * as much stronger (\`drawSmelterNight\`).
+   */
+  private nightOver(sx: number, sy: number, dark: number): number {
+    let keep = 1;
+    for (const w of skyWash(this.game.hourOfDay(), dark)) keep *= 1 - w.alpha;
+    let left = 1;
+    const cam = this.camera, zoom = cam.zoom;
+    for (const l of this.lightsNow) {
+      const r = Math.max(8, l.radius * HALF_W * zoom * this.flicker(l));
+      const dx = cam.worldToScreenX(l.x, l.y) - sx;
+      if (Math.abs(dx) >= r) continue;
+      const dy = cam.worldToScreenY(l.x, l.y, this.standTop(l.x, l.y)) - sy;
+      const d = Math.hypot(dx, dy) / r;
+      if (d >= 1) continue;
+      const s = l.strength * (l.soft ? lightHole(l.radius) : 1);
+      const hole = d < 0.55 ? s * (1 - (0.45 * d) / 0.55) : s * 0.55 * ((1 - d) / 0.45);
+      left *= 1 - hole;
+    }
+    return (1 - keep) * left;
+  }
+
   private flicker(l: { x: number; y: number; steady?: boolean }): number {
     if (l.steady) return 1;
     const seed = l.x * 0.7 + l.y * 1.3;
@@ -5517,22 +5549,65 @@ export class Renderer {
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.time, 52 * zoom, 36 * zoom);
       }
       if (ent.kind === 'smelter' && ent.smelter) {
-        const sm = ent.smelter;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawSmelter(g, px, py, zoom, sm.lit, sm.jobs.length > 0, this.time));
-        this.smelterHits.push({ x: ent.x, y: ent.y, left: ent.sx - 34 * zoom, top: ent.sy - 58 * zoom, w: 68 * zoom, h: 62 * zoom, smelter: sm.id });
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.time, 68 * zoom, 48 * zoom);
+        /*
+         * A smelter, drawn as the runestones are (`forge.ts`): its bake and
+         * the fire in its mouth and flue under the pointer's ring, and its
+         * flare and sparks over it. After dark the game's own light takes the
+         * night off it (`Game.lights`), and its fire and runes are added as
+         * light here, in its own place, turned up by what the wash will take
+         * off them (`nightOver`) -- not the runestones' keeping, which costs a
+         * frame a box of everything drawn after it. Clicked by its solids.
+         */
+        const sm = ent.smelter, turn = this.camera.rotation, dark = this.game.darkness();
+        const look = { lit: sm.lit, working: sm.lit && sm.jobs.length > 0 };
+        const [bl, bt, br, bb] = smelterBounds(turn, zoom);
+        const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+          drawSmelter(g, px, py, zoom, turn, look, dark, this.time, false);
+        }, undefined, box);
+        drawSmelterLive(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time);
+        // Its fire and runes after dark, added as light here in its own place, so what stands in front is drawn over it.
+        if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
+        const [hl, ht, hr, hb] = smelterHit(turn, zoom);
+        this.smelterHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'anvil' && ent.anvil) {
-        // An anvil takes the colour of the metal it was cast from.
-        const metal = ent.anvil.metal;
-        const rock = ROCK_VARIANTS.find((r) => r.yields === `${metal}_ore`);
-        const c = rock ? rock.color : ([150, 150, 156] as const);
-        const face = `rgb(${c[0]},${c[1]},${c[2]})`;
-        const shade = `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawAnvil(g, px, py, zoom, face, shade));
-        this.anvilHits.push({ x: ent.x, y: ent.y, left: ent.sx - 20 * zoom, top: ent.sy - 27 * zoom, w: 40 * zoom, h: 30 * zoom, anvil: ent.anvil.id });
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, ent.anvil.id, this.time, 40 * zoom, 22 * zoom);
+        // An anvil takes the colour of the metal it was cast from, on a block with a rune cut in it (`forge.ts`), lit over the night after dark.
+        const an = ent.anvil, turn = this.camera.rotation, dark = this.game.darkness();
+        let [face, shade] = anvilTone(an.metal) ?? ['', ''];
+        if (!face) {
+          // A metal with no colour of its own drawn: its ore's.
+          const rock = ROCK_VARIANTS.find((r) => r.yields === `${an.metal}_ore`);
+          const c = rock ? rock.color : ([150, 150, 156] as const);
+          face = `rgb(${c[0]},${c[1]},${c[2]})`;
+          shade = `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`;
+        }
+        const variant = anvilVariant(an.x, an.y, an.sx, an.sy);
+        const [bl, bt, br, bb] = anvilBounds(face, shade, variant, turn, zoom);
+        const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+          drawAnvil(g, px, py, zoom, face, shade, turn, variant, dark, this.time, false);
+        }, undefined, box);
+        drawAnvilLive(ctx, ent.sx, ent.sy, zoom, face, shade, turn, variant, dark, this.time);
+        if (dark > 0.02) {
+          /*
+           * Its rune's light here in its own place, turned up by what the wash
+           * will take off it. Where that is most of it -- out of any light,
+           * where no picture laid under the wash could come up through it --
+           * the night is taken off the rune in its own shape as well, kept off
+           * whatever stands in front (\`RunestoneNight\`); by a forge's fire it
+           * needs none of that, and is spared its keeping.
+           */
+          const over = this.nightOver(ent.sx, ent.sy - 8 * zoom, dark);
+          const dim = over > ANVIL_UNDER_WASH;
+          drawAnvilNight(ctx, ent.sx, ent.sy, zoom, face, shade, turn, variant, dark, this.time, dim ? 0 : over);
+          if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, anvilNight(face, shade, variant, turn, zoom), this.time);
+        }
+        const [hl, ht, hr, hb] = anvilHit(face, shade, variant, turn, zoom);
+        this.anvilHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, anvil: an.id });
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, an.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'post' && ent.post) {
@@ -13428,17 +13503,21 @@ export class Renderer {
       for (let i = 0; i < PUFFS; i++) {
         const age = puffAge(i, this.time, seed);
         const puff = puffOf(age, f.heat);
-        if (puff.alpha < 0.012) continue;
+        // A plume of its own where it says so (`Game.fires`): a smelter's stack sends up a short, thin, pale one.
+        const pl = f.plume, pale = pl?.pale ?? 0, size = pl?.size ?? 1;
+        const alpha = puff.alpha * (1 - 0.3 * pale) * (pl ? 1.3 : 1);
+        if (alpha < 0.012) continue;
         // Higher up it has been in the wind longer, so a plume leans over
         // rather than standing straight.
         const blown = drift * age * age * HALF_W * zoom;
         const px = sx + this.lean.x * blown + Math.sin(age * 7 + seed * 11) * 1.6 * zoom;
-        const py = sy + this.lean.y * blown * 0.4 - (6 + age * PUFF_RISE) * zoom;
-        // Dark and tight at the fire, pale and open once it has thinned.
-        const grey = Math.round(64 + age * 168);
-        ctx.fillStyle = `rgba(${grey},${grey - 4},${grey - 10},${puff.alpha.toFixed(3)})`;
+        // Off the ground, or out of the head of a stack (`lift`, in height units).
+        const py = sy + this.lean.y * blown * 0.4 - (6 + age * PUFF_RISE * (pl?.rise ?? 1) + (f.lift ?? 0) * HEIGHT_SCALE) * zoom;
+        // Dark and tight at the fire, pale and open once it has thinned; a pale plume pale from the first and a little warm.
+        const grey = Math.round(64 + age * 168 + pale * (112 - age * 100));
+        ctx.fillStyle = `rgba(${Math.min(255, grey + Math.round(10 * pale))},${grey - 4},${grey - 10 - Math.round(16 * pale)},${Math.min(1, alpha).toFixed(3)})`;
         ctx.beginPath();
-        ctx.ellipse(px, py, puff.radius * zoom, puff.radius * 0.82 * zoom, 0, 0, Math.PI * 2);
+        ctx.ellipse(px, py, puff.radius * size * zoom, puff.radius * size * 0.82 * zoom, 0, 0, Math.PI * 2);
         ctx.fill();
       }
     }
