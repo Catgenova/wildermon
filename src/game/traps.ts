@@ -3,7 +3,7 @@ import { enchantTail, swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
-import { isBaitFor, SPECIES, type Creature } from './creatures';
+import { isBaitFor, SPECIES, tameNeeds, type Creature } from './creatures';
 import { emptyCrate, shutIn } from './creaturecrate';
 import { tameRoomRefusal } from './creatureActions';
 import { itemDef, itemName, markOf, type Item, type Mark } from './items';
@@ -178,7 +178,8 @@ export function catchChance(t: PlacedTrap, c: Creature): number {
   const s = SPECIES[c.species];
   if (!s) return 0;
   const quality = 0.5 + clampQl(t.ql) / 140;
-  const wary = Math.max(0.15, 1 - s.tameLevel / (trapHolds(t) * 1.8));
+  // As wary as the taming it asks at its stage (`tameNeeds`).
+  const wary = Math.max(0.15, 1 - tameNeeds(c).level / (trapHolds(t) * 1.8));
   const timid = s.timid ? TIMID_TRAPPED : s.hunter ? HUNTER_TRAPPED : 1;
   // And better for a Snarecraft set into it where it stands.
   return Math.min(CATCH_MOST, def.odds * quality * wary * timid * (1 + swingEnchant(t, 'snare')));
@@ -323,7 +324,8 @@ export const TRAP_ACTIONS: ActionDef[] = [
       if (!c) return 'Whatever was in it is gone.';
       if (!nearTrap(g, trap)) return 'Stand at the trap.';
       const s = SPECIES[c.species];
-      if (s && g.skills.get('taming') < s.tameLevel) return `A ${s.name.toLowerCase()} takes taming ${s.tameLevel} to handle, trapped or not. It is held; come back when you can.`;
+      const needs = tameNeeds(c).level;
+      if (s && g.skills.get('taming') < needs) return `A ${s.name.toLowerCase()} takes taming ${needs} to handle, trapped or not. It is held; come back when you can.`;
       // The same rule as taming: the first follows you, and every one after that goes into a crate.
       return tameRoomRefusal(g);
     },
@@ -339,7 +341,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
         return;
       }
       // It is held, not willing. Getting it out without being bitten is the skill.
-      const clean = g.skillCheck('taming', s ? s.tameLevel + 10 : 10, trap.ql, g.mindEase());
+      const clean = g.skillCheck('taming', s ? tameNeeds(c).level + 10 : 10, trap.ql, g.mindEase());
       g.gainSkill('taming', tryGain(clean, FREE_GAIN));
       if (!clean) {
         g.logMsg(`The ${s?.name.toLowerCase() ?? 'thing'} thrashes and you cannot get a hand on it. It is still held.`, 'error');

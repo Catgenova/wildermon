@@ -41,7 +41,7 @@ import { FIELD_GLASS_ONLY, glassDone, glazing, isGlasshouse, underGlass } from '
 import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
 import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/graves';
-import { COMPANION_STANCES, isBaitFor, SPECIES, STANCE_HINTS, STANCE_NAMES, STANCES, GATHER_VERB, GATHER_DO } from '../game/creatures';
+import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, STANCES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { nearestSide } from '../render/renderer';
 import { crateKindOfItem, crateName, crateCapacity, crateUnits, subtileOf } from '../game/crates';
@@ -2605,7 +2605,7 @@ export class UI {
     const held = t.caught !== null ? g.creatures.get(t.caught) : undefined;
     if (held) {
       const s = SPECIES[held.species];
-      entries.push({ label: `A ${s?.name.toLowerCase() ?? 'thing'} is held in it`, note: `taming ${s?.tameLevel ?? 1} to handle`, disabled: true });
+      entries.push({ label: `A ${s?.name.toLowerCase() ?? 'thing'} is held in it`, note: `taming ${tameNeeds(held).level} to handle`, disabled: true });
     }
     const bait = ACTION_BY_ID.get('bait_trap');
     if (bait && bait.applies(tt, g)) {

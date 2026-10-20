@@ -144,7 +144,7 @@ const before = new Map(team.concat(parked, loose).map((c) => [c.id, c.skills[DRI
 const climbed = orse1.skills[HAUL_SKILL];
 // What each go is worth at the least and the most, at each one's learning (its blood, its care).
 const bounds = (c: Creature): [number, number] => {
-  const base = PULL_LEARN * game.creatures.learnMul(c);
+  const base = PULL_LEARN * game.creatures.learnMul(c, game.time);
   return [skillGain(2, base, 0.6), skillGain(1, base, 1.4)];
 };
 check('and they take us somewhere', game.moveTo(px + 12, py));

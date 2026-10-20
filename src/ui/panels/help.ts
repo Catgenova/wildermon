@@ -53,7 +53,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, CULL_RANGE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
+  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -3115,6 +3115,18 @@ export function helpText(): string {
     means a long run of refusals is going somewhere. The run lapses if you leave it alone for
     ${spanWords(COAX_LAPSE)}, and <b>raising a hand to it ends the run outright</b> &mdash; nothing that has been hit
     takes food from the hand that hit it. Examining a wild one says how far you have got with it.</p>
+    <p><b>Evolved in the wild.</b> ${((): string => {
+      const [a, b] = stageLevels(1);
+      const [c, d] = stageLevels(2);
+      const e = SPECIES.sedra;
+      const st = e.stages![0].name;
+      return `One time in ${WILD_STAGE_ODDS[0]} a wild one of a kind that evolves is already at its second stage, somewhere from level ${a} to
+    ${b - 1}, and one time in ${WILD_STAGE_ODDS[1]} at its third, from level ${c} to ${d - 1}: called by that stage's name, drawn as it, and with that
+    stage's health, blow, pace and task, as one that evolved has. Taming it asks <b>${WILD_STAGE_TAME} more taming</b> than its kind does for each stage
+    past its first, and its base chance an offering is <b>${percent(WILD_STAGE_CHANCE)} of its kind's</b> for each: ${article(st)} ${st} asks taming
+    ${tameNeeds({ species: e.id, skills: { [levelSkill(e)!]: a } }).level} at a base ${percent(tameNeeds({ species: e.id, skills: { [levelSkill(e)!]: a } }).chance)}, where
+    ${article(e.name)} ${e.name} asks ${e.tameLevel} at ${percent(e.tameChance)}. Its card says what it asks.`;
+    })()}</p>
     <p><b>Age.</b> Everything alive was born at some hour and gets older from there. A <b>young</b> one is
     ${percent(AGES.young.scale)} the size, moves at ${percent(AGES.young.speed)} of the pace, grows no fleece and gives no milk, and is no use in the
     traces or under a saddle &mdash; but it has not learned to mistrust you, so it is ${times(AGES.young.tame)} as easy
@@ -3436,6 +3448,13 @@ export function helpText(): string {
     knife) and <b>brush a wildermon down</b>: it puts <b>care</b> into the animal, and a cared-for beast
     works quicker, learns faster and heals as you go over it. Care runs out again over ${spanWords(CARE_HOURS * HOUR)}
     of being left alone, so it is a thing you keep up rather than do once.</p>
+    <p><b>Feeding it well.</b> Each thing of its diet one of yours eats, from your hand or out of the stores, puts
+    <b>${percent(FED_CARE)} care</b> into it at quality ${QL_TOP}, and as much less as its quality is under that; and for
+    ${spanWords(FED_FOR)} after, it <b>learns ${percent(FED_LEARN)} faster</b> at quality ${QL_TOP}, again as much less as the
+    quality is under it, and ${times(FED_FAVOURITE)} that for its <b>favourite</b>, the first thing its kind's page in the
+    field guide says it takes. None of it adds to another: a meal worth as much as or more than what is on it puts its own
+    on and starts the ${spanWords(FED_FOR)} again, and a lesser one leaves it be. Grazing is worth nothing to either, and nor is
+    a bucket of whey. Its card says what its favourite is worth and how long a meal has left.</p>
     <p>To breed, stand a <b>male</b> and a <b>female</b> of one sort within ${numberWord(PAIR_RANGE)} tiles of each other,
     both <b>grown</b>, both <b>fed</b>, and neither put to a mate in the last ${spanWords(BREED_REST)}, then
     choose <b>Put it to a mate</b>. The young one goes where a tamed one goes: it <b>follows you</b> when

@@ -5,6 +5,7 @@ import {
   careWord,
   coaxBonus,
   creatureLevel,
+  favouriteSays,
   kindName,
   GATHER_VERB,
   growsAt,
@@ -13,10 +14,13 @@ import {
   rarityLine,
   SEX_NAMES,
   SPECIES,
+  stageTameSays,
   STANCE_NAMES,
+  tameNeeds,
   taskSkill,
   tracesSkill,
   workRangeOf,
+  wellFedSays,
   workSkill,
   type Creature,
 } from '../game/creatures';
@@ -90,9 +94,13 @@ export function creatureLines(g: Game, c: Creature): string[] {
     lines.push(`Wild ${kindName(c)} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''}`);
     if (c.rare) lines.push(...rarityLines(c));
     lines.push(`Eats ${baitHint(c)}`);
+    // What taming it asks at its stage (`tameNeeds`), and for one past its first, what that adds over its kind's.
     const taming = g.skills.get('taming');
-    if (taming < def.tameLevel) lines.push(`Taming ${def.tameLevel} to try · you have ${taming.toFixed(1)}`);
-    else lines.push(`Taming ${def.tameLevel} to try · you have ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% chance per offering`);
+    const needs = tameNeeds(c).level;
+    if (taming < needs) lines.push(`Taming ${needs} to try · you have ${taming.toFixed(1)}`);
+    else lines.push(`Taming ${needs} to try · you have ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% chance per offering`);
+    const evolved = stageTameSays(c);
+    if (evolved) lines.push(evolved);
     // At the step the chance itself is worked out with, a Herdsman's Patient Coax and all.
     const warm = coaxBonus(c, g.time, coaxStep(g));
     if (warm > 0) lines.push(`It has taken ${c.coaxed} offering${c.coaxed === 1 ? '' : 's'} from your hand · +${pct(warm)} points of that chance`);
@@ -106,6 +114,11 @@ export function creatureLines(g: Game, c: Creature): string[] {
   const max = maxHealth(c, def);
   lines.push(`Health ${Math.ceil(c.health)}/${max} ${bar(c.health / max)}`);
   lines.push(`Fed ${pct(c.hunger)}% ${bar(c.hunger)} · care ${pct(c.care)}%, ${careWord(c.care)}`);
+  // What a good meal is putting on its learning now, and what its favourite would (`fedOn`).
+  const fed = wellFedSays(c, g.time);
+  if (fed) lines.push(fed);
+  const favourite = favouriteSays(def);
+  if (favourite) lines.push(favourite);
 
   // What it is doing, and how well it does it.
   if (c.ridden) lines.push('Under the saddle');

@@ -28,7 +28,7 @@ import { besideWater, CUT_GRASS, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, WOR
 import { flowersHere } from './wildflowers';
 import { SKEP, SKEP_REACH } from './bees';
 import { greenNow, greenOnTile, scrubTile } from './greening';
-import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
+import { GRASS_PER_CUT, MOSS_PER_CUT, QL_TOP } from './limits';
 import { PIER_SHOO } from './piers';
 import { bedrockAt, oreAt } from '../world/ore';
 import { chartRegion } from '../world/chart';
@@ -39,7 +39,7 @@ import { describeWith, itemDef, markOf, RARITIES, rarityOf, rarityStep, rollRari
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
-import { article, capital, daySays, fill, listed, numberWord, percent, times } from './words';
+import { article, capital, daySays, fill, listed, numberWord, percent, spanWords, timeWords, times } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { DRIVING, DRIVING_LEARN } from './travel';
@@ -572,6 +572,107 @@ export function kindDescription(c: Pick<Creature, 'species' | 'skills'>): string
   const def = SPECIES[c.species];
   const stage = stageOf(c);
   return stage && def?.stages ? def.stages[stage - 1].description : def?.description ?? '';
+}
+
+/**
+ * Evolved in the wild, rarely. Asked for: "When a wild one of an evolving kind is spawned, one time in 20 it comes in at
+ * stage 2 ... and one time in 200 at stage 3". One put out in the country (`standWild`, the island's `wild_stage_put`)
+ * of a kind that evolves comes in at its second stage one time in the first of these and at its third one time in the
+ * second, and at its first otherwise. The island's `wild_stage_odds_1` and `wild_stage_odds_2`.
+ */
+export const WILD_STAGE_ODDS = [20, 200] as const;
+/** The taming one asks for each stage it is past its first. The island's `wild_stage_tame`. */
+export const WILD_STAGE_TAME = 15;
+/** What each stage it is past its first multiplies its kind's base chance an offering by. The island's `wild_stage_chance`. */
+export const WILD_STAGE_CHANCE = 0.5;
+/**
+ * The stage one put out in the wild comes in at, off one roll: its third for a roll under one in the second of
+ * `WILD_STAGE_ODDS`, its second for one under that and one in the first, so each comes up exactly as often as it says;
+ * always its first for a kind that does not evolve. The island's `wild_stage_roll`.
+ */
+export function wildStageRoll(def: SpeciesDef, roll: number): 0 | 1 | 2 {
+  if (!def.stages) return 0;
+  const third = 1 / WILD_STAGE_ODDS[1];
+  return roll < third ? 2 : roll < third + 1 / WILD_STAGE_ODDS[0] ? 1 : 0;
+}
+/** How many levels past where the third stage begins one put out in the wild at it may be: asked for, "[EVOLVE_AT[1], EVOLVE_AT[1]+10)". The island's `wild_stage_span`. */
+export const WILD_STAGE_SPAN = 10;
+/** The levels one put out in the wild at a stage may be at, the first of them in and the last out: the whole of its second stage, and the first `WILD_STAGE_SPAN` of its third. The island's `wild_stage_levels`. */
+export const stageLevels = (stage: 1 | 2): readonly [number, number] =>
+  (stage === 1 ? [EVOLVE_AT[0], EVOLVE_AT[1]] : [EVOLVE_AT[1], EVOLVE_AT[1] + WILD_STAGE_SPAN]);
+/**
+ * The skill a kind's level is (`creatureLevel`): its trade's, or its own for one with none, or what a draught beast
+ * keeps in the traces. The island's `level_skill`.
+ */
+export const levelSkill = (def: SpeciesDef): string | null =>
+  workSkill(def) ?? def.learns?.skill ?? (def.draught ? tracesSkill(def) : null);
+/**
+ * What it takes to win one over at the stage it is at: its kind's taming and `WILD_STAGE_TAME` more for each stage past
+ * its first, and its kind's base chance an offering times `WILD_STAGE_CHANCE` for each. Every check of taming reads
+ * this -- an offering, a trap, the card. The island's `tame_needs`.
+ */
+export function tameNeeds(c: Pick<Creature, 'species' | 'skills'>): { level: number; chance: number } {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  return { level: (def?.tameLevel ?? 1) + WILD_STAGE_TAME * stage, chance: (def?.tameChance ?? 0) * WILD_STAGE_CHANCE ** stage };
+}
+
+/**
+ * Food quality matters. Asked for: "when a tame wildermon eats a food item of quality q (0–100), it gets a learning
+ * bonus of FED_LEARN (= 0.2) × q/100 for FED_FOR (= one island hour) ... If the food is the FIRST item of its diet list
+ * (its favourite), the bonus is doubled. Grazing grass counts as quality 0 (no bonus)", and "each food item eaten adds
+ * FED_CARE (= 0.05) × q/100 to care (clamped to 1)". Feeding put nothing into care before this, so the care is all
+ * this. The island's `fed_learn`, `fed_for`, `fed_care` and `beast_fed`.
+ */
+export const FED_LEARN = 0.2;
+/** How long a meal's learning lasts: an hour at the world's pace. */
+export const FED_FOR = world(60 * 60);
+export const FED_CARE = 0.05;
+/** What its favourite multiplies a meal's learning by. */
+export const FED_FAVOURITE = 2;
+/** Its favourite food: the first of its diet. */
+export const favouriteOf = (def: SpeciesDef): string | undefined => def.diet[0];
+/** The learning a meal of something at a quality is worth to a kind: `FED_LEARN` at quality 100, twice that for its favourite. */
+export const fedBonus = (def: SpeciesDef, item: string, ql: number): number =>
+  FED_LEARN * Math.max(0, Math.min(QL_TOP, ql)) / QL_TOP * (item === favouriteOf(def) ? FED_FAVOURITE : 1);
+/** The learning a meal is putting on it now, nought once its hour is out. */
+export const fedNow = (c: Pick<Creature, 'fedBonus' | 'fedUntil'>, time: number): number =>
+  (c.fedUntil ?? -Infinity) > time ? c.fedBonus ?? 0 : 0;
+/**
+ * One of yours eats something: the learning it is worth replaces a smaller one still on it and starts its hour again
+ * (one as large starts the hour again too), and one smaller leaves what is on it be; and its care goes up by
+ * `FED_CARE` at quality 100. A wild one is fed nothing by this. The island's `beast_fed`.
+ */
+export function fedOn(c: Creature, item: string, ql: number, time: number): void {
+  const def = SPECIES[c.species];
+  if (!def || c.mode === 'wild') return;
+  const q = Math.max(0, Math.min(QL_TOP, ql));
+  const bonus = fedBonus(def, item, q);
+  if (bonus > 0 && bonus >= fedNow(c, time)) {
+    c.fedBonus = bonus;
+    c.fedUntil = time + FED_FOR;
+  }
+  c.care = Math.min(1, c.care + FED_CARE * q / QL_TOP);
+}
+/** Its favourite and what it is worth, for its card and its page: "Favourite: reed, +40% learning for two and a half hours at quality 100". */
+export function favouriteSays(def: SpeciesDef): string {
+  const fav = favouriteOf(def);
+  return fav ? `Favourite: ${itemDef(fav).name.toLowerCase()}, +${percent(fedBonus(def, fav, QL_TOP))} learning for ${spanWords(FED_FOR)} at quality ${QL_TOP}` : '';
+}
+/** A meal's learning still on it, for its card: "Well fed: +14% learning for 38 minutes more"; nothing once it is out. */
+export function wellFedSays(c: Pick<Creature, 'fedBonus' | 'fedUntil'>, time: number): string {
+  const fed = fedNow(c, time);
+  return fed > 0 ? `Well fed: +${percent(fed)} learning for ${timeWords((c.fedUntil ?? time) - time)} more` : '';
+}
+/**
+ * What a wild one past its first stage asks over its kind's, for its card: "Already a Reedweaver: 15 more taming than a
+ * Reedpup and 50% of its base chance an offering"; nothing for one at its first.
+ */
+export function stageTameSays(c: Pick<Creature, 'species' | 'skills'>): string {
+  const def = SPECIES[c.species];
+  const stage = stageOf(c);
+  if (!def || !stage) return '';
+  return `Already ${article(kindName(c))} ${kindName(c)}: ${WILD_STAGE_TAME * stage} more taming than ${article(def.name)} ${def.name} and ${percent(WILD_STAGE_CHANCE ** stage)} of its base chance an offering`;
 }
 
 /**
@@ -4158,6 +4259,9 @@ export interface IslandCreature {
   care?: number;
   xp?: number;
   skills?: Record<string, number>;
+  /** The learning a meal is putting on it, and the seconds of it left (`beast_fed`); absent when none is. */
+  fed?: number;
+  fedLeft?: number;
   /** What the island says it is up to: `idle`, `out`, `work`, `home`, and the rest. */
   phase?: string;
   /** When the rest after its ability runs out (epoch seconds), which moves each time it uses it; null before the first. */
@@ -4234,6 +4338,9 @@ export interface Creature {
   boosts?: Partial<Record<BaseStat, number>>;
   /** How well it has been looked after lately, 0..1. Brushing puts it up; time takes it down. */
   care: number;
+  /** The learning its last good meal put on it (`fedOn`), and the game time that runs out; absent before its first. */
+  fedBonus?: number;
+  fedUntil?: number;
   /** Game time it was last put to a mate, so nothing is bred twice in an afternoon. */
   bredAt: number;
   /** Game time a carried young is due, or 0 for one that is not in calf. */
@@ -4428,6 +4535,9 @@ export interface CreatureJSON {
   /** What ancient pots have put into its base stats; absent on one that has had none, and in a save from before there were any. */
   boosts?: Partial<Record<BaseStat, number>>;
   care?: number;
+  /** A meal's learning and when it runs out (`fedOn`); absent in a save from before meals were worth any. */
+  fedBonus?: number;
+  fedUntil?: number;
   bredAt?: number;
   due?: number;
   unborn?: Unborn | null;
@@ -4961,7 +5071,12 @@ export class Creatures {
        */
       if (r.hitchedTo !== undefined) c.hitchedTo = r.hitchedTo;
       // The working life, which comes for yours and for nobody else's.
-      if (r.care !== undefined) c.care = r.care;
+      if (r.care !== undefined) {
+        c.care = r.care;
+        // And what a meal is putting on its learning, on this side's clock (`beast_fed`), which comes with it.
+        c.fedBonus = r.fed ?? undefined;
+        c.fedUntil = r.fed && r.fedLeft ? time + r.fedLeft : undefined;
+      }
       if (r.xp !== undefined) c.xp = r.xp;
       if (r.skills) {
         // Evolved there since it was last heard of: drawn and heard here as it would be in a game of your own.
@@ -5112,9 +5227,9 @@ export class Creatures {
     return bloodMul(c, 'work') * this.aura(c, 'work') * careMul(c);
   }
 
-  /** Everything that bears on how fast the work goes into it. */
-  learnMul(c: Creature): number {
-    return bloodMul(c, 'learn') * this.aura(c, 'learn') * careMul(c);
+  /** Everything that bears on how fast the work goes into it: and a good meal's learning while it lasts (`fedNow`). */
+  learnMul(c: Creature, time: number): number {
+    return bloodMul(c, 'learn') * this.aura(c, 'learn') * careMul(c) * (1 + fedNow(c, time));
   }
 
   /** Everything that bears on what it brings home from a trip out. */
@@ -5326,6 +5441,26 @@ export class Creatures {
     return true;
   }
 
+  /**
+   * One put out in the country. Born at some point in the past, so the country is not all yearlings; and one of a kind
+   * that evolves comes in now and then already past its first stage (`wildStageRoll`), at a level somewhere in that
+   * stage's span (`stageLevels`) on the skill its level is (`levelSkill`), called and as big as that stage, as one that
+   * evolved does. The island's `wild_stage_put`.
+   */
+  standWild(game: Game, id: string, x: number, y: number): Creature {
+    const c = this.spawn(id, x, y, 'wild', game.rand, game.time - game.rand() * OLD_AT * 1.6);
+    const def = this.species(c);
+    const stage = def.stages ? wildStageRoll(def, game.rand()) : 0;
+    const skill = levelSkill(def);
+    if (stage && skill) {
+      const [lo, hi] = stageLevels(stage);
+      c.skills[skill] = lo + game.rand() * (hi - lo);
+      c.name = kindName(c);
+      c.health = maxHealth(c, def);
+    }
+    return c;
+  }
+
   /** Drop wild creatures on grazing land away from the player and the deed. */
   spawnWild(game: Game, count: number, minDistance = 12): number {
     return this.spawnSpecies(game, null, count, minDistance);
@@ -5385,8 +5520,7 @@ export class Creatures {
         y = site.y;
         tries += SITE_LOOKS;
       }
-      // Born at some point in the past, so the country is not all yearlings.
-      this.spawn(id, x + 0.5, y + 0.5, 'wild', game.rand, game.time - game.rand() * OLD_AT * 1.6);
+      this.standWild(game, id, x + 0.5, y + 0.5);
       placed++;
     }
     return placed;
@@ -5639,7 +5773,7 @@ export class Creatures {
       // Now and again what stands up out there is not a wildermon at all.
       const id = game.rand() < MONSTER_SHARE ? this.pickMonster(game, x, y) : rollTable(WILD_SPECIES, game.rand());
       if (!id || !this.suits(game, SPECIES[id], x, y)) continue;
-      this.spawn(id, x + 0.5, y + 0.5, 'wild', game.rand, game.time - game.rand() * OLD_AT * 1.6);
+      this.standWild(game, id, x + 0.5, y + 0.5);
       return true;
     }
     return false;
@@ -7797,7 +7931,7 @@ export class Creatures {
     const v = c.skills[id] ?? 1;
     // A beast learns on the same curve a player does, and crawls the same last
     // stretch of it.
-    const gain = skillGain(v, base * this.learnMul(c), 0.6 + 0.8 * game.rand());
+    const gain = skillGain(v, base * this.learnMul(c, game.time), 0.6 + 0.8 * game.rand());
     const before = creatureLevel(c);
     const beforeSteps = rangeSteps(v);
     c.skills[id] = Math.min(100, v + gain);
@@ -8288,6 +8422,8 @@ export class Creatures {
         if (!worst || it.ql < worst.ql) worst = it;
       }
       if (!worst) continue;
+      // What it is worth to its learning and its care, by its quality (`fedOn`).
+      fedOn(c, worst.id, worst.ql, game.time);
       if (worst.count > 1) worst.count -= 1;
       else crate.items.splice(crate.items.indexOf(worst), 1);
       c.hunger = Math.min(1, c.hunger + GRAZE_FILL);
@@ -8386,6 +8522,7 @@ export class Creatures {
     if (c.carrying) {
       if (c.hunger < HUNGRY && isBaitFor(def, c.carrying.id)) {
         c.hunger = Math.min(1, c.hunger + 0.5);
+        fedOn(c, c.carrying.id, c.carrying.ql, game.time);
         c.carrying = null;
         return;
       }
@@ -8447,6 +8584,7 @@ export class Creatures {
           const idx = larder.items.findIndex((it) => mayEat(def, it));
           if (idx >= 0) {
             const it = larder.items[idx];
+            fedOn(c, it.id, it.ql, game.time);
             it.count -= 1;
             if (it.count <= 0) larder.items.splice(idx, 1);
             larder.changed();
@@ -8993,6 +9131,8 @@ export class Creatures {
         rare: c.rare,
         boosts: c.boosts,
         care: c.care,
+        fedBonus: c.fedBonus,
+        fedUntil: c.fedUntil,
         bredAt: c.bredAt,
         due: c.due,
         unborn: c.unborn,
@@ -9013,7 +9153,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), ledger: j.ledger ?? null });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, fedBonus: j.fedBonus, fedUntil: j.fedUntil, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), ledger: j.ledger ?? null });
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }

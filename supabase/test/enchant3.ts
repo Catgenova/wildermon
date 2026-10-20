@@ -679,7 +679,7 @@ const trapRefusals: Array<[string, string, string]> = [
 check(`Snarecraft goes on ${ON_WORDS.trap}, Netmender on ${ON_WORDS.net} and Dreamweave on ${ON_WORDS.bed}, each refused elsewhere in words that say so, on both sides`,
   trapRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
   trapRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
-const orse = { species: 'orse' } as unknown as Creature;
+const orse = { species: 'orse', skills: {} } as unknown as Creature;
 const snare0 = catchChance(trapP, orse);
 trapP.enchant = { id: SNARE.id, ql: 100 };
 const snare100 = catchChance(trapP, orse);

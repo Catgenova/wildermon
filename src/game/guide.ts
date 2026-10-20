@@ -34,7 +34,7 @@ import { TACK } from './creatureActions';
 import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
-  GATHER_DO, GATHER_SKILL, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
+  favouriteSays, GATHER_DO, GATHER_SKILL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
   HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef,
 } from './creatures';
 import { BANE_BONUS } from './gear';
@@ -234,8 +234,15 @@ function taming(def: SpeciesDef): string[] {
   if (def.monster) return ['It cannot be tamed, trapped, bred or kept'];
   const lines = [
     `Taming ${def.tameLevel} to try, and at that a base ${percent(def.tameChance)} chance an offering`,
-    `Takes ${either(def.diet.map(itemName))} from your hand`,
   ];
+  // One that comes in already past its first stage asks more (`wildStageRoll`, `tameNeeds`).
+  if (def.stages) {
+    lines.push(def.stages.map((st, i) => `${i ? 'and o' : 'O'}ne time in ${WILD_STAGE_ODDS[i]} a wild one is already ${article(st.name)} ${st.name}, `
+      + `taming ${def.tameLevel + WILD_STAGE_TAME * (i + 1)} to try at a base ${percent(def.tameChance * WILD_STAGE_CHANCE ** (i + 1))}`).join('; '));
+  }
+  lines.push(`Takes ${either(def.diet.map(itemName))} from your hand`);
+  // And what its favourite is worth to one of yours (`fedOn`).
+  if (favouriteSays(def)) lines.push(favouriteSays(def));
   if (def.timid) lines.push(`Walks into a trap ${times(TIMID_TRAPPED)} as readily as most`);
   else if (def.hunter) lines.push(`Walks into a trap ${percent(HUNTER_TRAPPED)} as readily as most`);
   return lines;

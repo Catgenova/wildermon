@@ -114,6 +114,7 @@ import { CHIP_CHANCE, GRASS_PLANT, KIT_MEND, MOSS_PLANT, TRY_LEARN } from '../sr
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GUARDIAN_REACH } from '../src/game/talents';
 import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY } from '../src/game/placeables';
+import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
 import {
   MAP_BANDS, MAP_KILL_CAP, MAP_KILL_SCALE, MAP_ODDS, MAP_RANGE, MAP_SNIPPET, TREASURE_TIERS,
@@ -543,6 +544,8 @@ out.push(`alter table species_def add column if not exists learns text;`);
 out.push(`alter table species_def add column if not exists learns_by text;`);
 /* What a kind that evolves is called at each stage after its first (\`SpeciesDef.stages\`). */
 out.push(`alter table species_def add column if not exists stages text[];`);
+/* Its favourite food, the first of its diet (\`favouriteOf\`), which a meal's learning doubles for. */
+out.push(`alter table species_def add column if not exists favourite text;`);
 /* What a kind used to be called, which a carcass from before can still say (\`SpeciesDef.was\`). */
 out.push(`alter table species_def add column if not exists was text[];`);
 /* The days of the year it is put down wild on, as `month * 100 + day` in UTC, both in (`SpeciesDef.season`): null for all year. */
@@ -1292,6 +1295,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   const season = (d as unknown as { season?: WildSeason }).season;
   if (season) out.push(`update species_def set season_from = ${q(seasonDay(season.from))}, season_to = ${q(seasonDay(season.to))} where id = ${q(d.id)};`);
   for (const item of d.diet as string[]) out.push(`insert into species_diet values (${q(d.id)}, ${q(item)});`);
+  const favourite = (d.diet as string[])[0];
+  if (favourite) out.push(`update species_def set favourite = ${q(favourite)} where id = ${q(d.id)};`);
   const trades = (d as unknown as { trades?: string[] }).trades;
   if (trades) out.push(`update species_def set trades = array[${trades.map(q).join(', ')}]::text[] where id = ${q(d.id)};`);
 }
@@ -1616,6 +1621,10 @@ for (const [fn, v] of [
   ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]],
   ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],
   ['stage_mul_speed', STAGE_MUL.speed ?? 1], ['stage_mul_work', STAGE_MUL.work ?? 1], ['stage_mul_grow', STAGE_MUL.grow ?? 1],
+  /* And one put out in the wild already evolved: one time in how many at its second stage and at its third, and the
+     taming and the share of the chance each stage past its first asks of it. */
+  ['wild_stage_odds_1', WILD_STAGE_ODDS[0]], ['wild_stage_odds_2', WILD_STAGE_ODDS[1]],
+  ['wild_stage_tame', WILD_STAGE_TAME], ['wild_stage_chance', WILD_STAGE_CHANCE], ['wild_stage_span', WILD_STAGE_SPAN],
   /* Restored relics on a wildermon: the seconds into the younger stage an ancient comb leaves one, the odds of an ancient
      file's step of rarity, and what each ancient pot's point in a base stat is worth and how many a stat takes. */
   ['comb_into', COMB_INTO], ['file_rarity_odds', FILE_RARITY_ODDS], ['pot_step', POT_STEP], ['pot_most', POT_MOST],
@@ -1698,6 +1707,8 @@ for (const [fn, v] of [
   ['deeds_joined', DEEDS_JOINED], ['crowd_hides', CROWD_HIDES],
   /* And what a brush is worth, which the card had been claiming and no rule read. */
   ['care_bonus', CARE_BONUS], ['care_hours', CARE_HOURS],
+  /* And a meal: the learning it is worth at the top quality, for how long, what its favourite multiplies that by, and the care it puts in. */
+  ['fed_learn', FED_LEARN], ['fed_for', FED_FOR], ['fed_favourite', FED_FAVOURITE], ['fed_care', FED_CARE],
   /* A look over the ground: how often it is empty by chance, how hard it is, and how many points of skill a pass is. */
   ['forage_empty', EMPTY_CHANCE], ['find_check', FIND_CHECK], ['per_roll', PER_ROLL],
   /* What a cut of grass, moss or reeds gives, and the foraging at which a third reed is certain. */

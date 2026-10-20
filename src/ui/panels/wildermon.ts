@@ -1,6 +1,6 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
+import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
 import { TIER_LEVEL } from '../../game/husbandry';
 
@@ -523,6 +523,8 @@ export class WildermonPanel {
       health.value.textContent = `${Math.ceil(c.health)}/${top}`;
       width(hunger.fill, c.hunger);
       hunger.value.textContent = `${Math.round(c.hunger * 100)}%`;
+      // What a meal is putting on its learning now, and what its favourite would (`fedOn`).
+      hunger.row.title = [wellFedSays(c, this.game.time), favouriteSays(def)].filter(Boolean).join(' \u00b7 ');
       width(care.fill, c.care);
       care.value.textContent = `${Math.round(c.care * 100)}%`;
       // What brushing is worth, said as the figure the rules read rather than
@@ -674,7 +676,7 @@ export class WildermonPanel {
     const net = (ch: TraitChannel): number =>
       ch === 'speed' ? beasts.speedMul(c)
       : ch === 'work' ? beasts.workMul(c)
-      : ch === 'learn' ? beasts.learnMul(c)
+      : ch === 'learn' ? beasts.learnMul(c, this.game.time)
       : ch === 'yield' ? beasts.yieldMul(c)
       : bloodMul(c, ch);
     const row = document.createElement('div');
@@ -699,6 +701,8 @@ export class WildermonPanel {
       const herd = beasts.aura(c, ch.id);
       if (Math.abs(herd - 1) >= 0.005) parts.push(`herd ${herd.toFixed(2)}×`);
       if ((ch.id === 'work' || ch.id === 'learn') && c.care > 0) parts.push(`brushing ${careMul(c).toFixed(2)}×`);
+      const fed = ch.id === 'learn' ? fedNow(c, this.game.time) : 0;
+      if (fed > 0) parts.push(`well fed ${(1 + fed).toFixed(2)}×`);
       tag.title = parts.join(' · ');
       row.append(tag);
     }

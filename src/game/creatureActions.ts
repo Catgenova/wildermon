@@ -2,7 +2,7 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
+import { fedOn, tameNeeds, BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
 import { article, numberWord, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -102,7 +102,9 @@ export function tameChance(g: Game, c: Creature): number {
   if (!def || def.monster) return 0;
   if (g.pathFx('sure', 0) > 0 && g.guide.has(c.species, 'tamed')) return 1;
   const skill = g.skills.get('taming');
-  const raw = def.tameChance + (skill - def.tameLevel) / 200 + (c.hunger < 0.5 ? 0.1 : 0) + coaxBonus(c, g.time, coaxStep(g)) + g.soulBonus();
+  // What its stage asks over its kind's (`tameNeeds`): more taming, and less of a chance at it.
+  const needs = tameNeeds(c);
+  const raw = needs.chance + (skill - needs.level) / 200 + (c.hunger < 0.5 ? 0.1 : 0) + coaxBonus(c, g.time, coaxStep(g)) + g.soulBonus();
   // A young one easier still for a Herdsman's Young Trust.
   const age = ageOf(c, g.time) === 'young' ? g.perk('tame:young', AGES.young.tame) : ageDef(c, g.time).tame;
   // And every offering so many points likelier for a Herdsman's Soft Hand, over all the rest of it.
@@ -387,7 +389,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c) return 'It is gone.';
       const def = SPECIES[c.species];
       if (def.monster) return `A ${def.name.toLowerCase()} is not a wildermon. There is nothing to be done with it but kill it.`;
-      if (g.skills.get('taming') < def.tameLevel) return `You need taming ${def.tameLevel} to try.`;
+      const needs = tameNeeds(c).level;
+      if (g.skills.get('taming') < needs) return `You need taming ${needs} to try.`;
       if (!offering(g, c)) return `${def.name}s take ${dietText(c)}. Bring some.`;
       return tameRoomRefusal(g);
     },
@@ -416,7 +419,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       void skill;
       c.hunger = Math.min(1, c.hunger + 0.25);
       if (g.rand() < chance) {
-        c.name = def.name;
+        // Called what it is at its stage, as the island leaves the name it had in the wild (`kindName`).
+        c.name = kindName(c);
         c.enemy = null;
         c.attackedBy = null;
         c.stance = 'defensive';
@@ -522,7 +526,11 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       // A bucket of whey is drunk out of the bucket, and the bucket is kept.
       if (whey) {
         if (!vesselBecame(g, food, 'bucket')) return;
-      } else g.inventory.remove(food.uid, 1);
+      } else {
+        // What it eats is worth something to its learning and its care, by its quality (`fedOn`); whey is drunk, not eaten.
+        fedOn(c, food.id, food.ql, g.time);
+        g.inventory.remove(food.uid, 1);
+      }
       c.hunger = Math.min(1, c.hunger + fill);
       g.logMsg(said, 'event');
     },

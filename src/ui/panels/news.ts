@@ -62,6 +62,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
+import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
@@ -2856,6 +2857,25 @@ export const NEWS: News[] = [
       `The way it reads is off the true bearing by ${trackErrSays()}. Then it says ${trackBandsSays().join('; ')}.`,
       `An arrow on the screen points the way it read, from where you stood, for ${TRACK_SHOW} seconds. In a game of your own a track reaches no further than ${CULL_RANGE} tiles, past which the wild is kept as a count and not as creatures.`,
     ],
+  },
+  {
+    n: 222,
+    day: '2026-10-20',
+    lines: () => {
+      const [a, b] = stageLevels(1);
+      const [c, d] = stageLevels(2);
+      const e = SPECIES.sedra;
+      const at = (lv: number) => tameNeeds({ species: e.id, skills: { [levelSkill(e)!]: lv } });
+      const fav = favouriteOf(e)!;
+      return [
+        `One time in ${WILD_STAGE_ODDS[0]} a wild one of a kind that evolves comes in already at its second stage, at a level from ${a} to ${b - 1}, and one time in ${WILD_STAGE_ODDS[1]} at its third, from ${c} to ${d - 1}: called, drawn and as strong as that stage.`
+          + ` Taming it asks ${WILD_STAGE_TAME} more taming for each stage past its first, at ${percent(WILD_STAGE_CHANCE)} of its kind's base chance an offering for each:`
+          + ` ${article(e.stages![0].name)} ${e.stages![0].name} asks taming ${at(a).level} at a base ${percent(at(a).chance)} and ${article(e.stages![1].name)} ${e.stages![1].name} ${at(c).level} at ${percent(at(c).chance)}, where ${article(e.name)} ${e.name} asks ${e.tameLevel} at ${percent(e.tameChance)}.`,
+        `Food quality matters. Each thing of its diet one of yours eats puts ${percent(FED_CARE)} care into it at quality ${NEWS_QL_TOP}, and has it learn ${percent(FED_LEARN)} faster for ${spanWords(FED_FOR)} at quality ${NEWS_QL_TOP},`
+          + ` ${times(FED_FAVOURITE)} that for its favourite, the first of its diet; both are as much less as the quality is under ${NEWS_QL_TOP}. A ${e.name}'s is ${itemDef(fav).name.toLowerCase()}, worth ${percent(fedBonus(e, fav, NEWS_QL_TOP))} faster learning at quality ${NEWS_QL_TOP}.`,
+        `A meal worth as much as or more than what is on it puts its own on and starts the ${spanWords(FED_FOR)} again; a lesser one leaves it be, and none adds to another. Grazing and a bucket of whey are worth nothing to either. Its card says what its favourite is worth and how long a meal has left, and a wild one's what its stage asks over its kind's.`,
+      ];
+    },
   },
 ];
 
