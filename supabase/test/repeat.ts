@@ -37,7 +37,7 @@ g.requestAction = (def: ActionDef, target: Target, goes?: number): void => {
 const lastSaid = (): string => g.log[g.log.length - 1]?.text ?? '';
 
 g.repeatLast();
-check('with nothing asked yet it says so, and asks for nothing', asked.length === 0 && lastSaid() === 'There is nothing to do again yet.', lastSaid());
+check('with nothing asked yet it says so, and asks for nothing', asked.length === 0 && lastSaid() === 'Nothing to repeat.', lastSaid());
 
 const examine = ACTION_BY_ID.get('examine_item')!;
 // The starter pack has a hatchet of its own; only these two are in play.

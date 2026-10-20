@@ -9,7 +9,7 @@ import type { Game } from './game';
 import { describeFrom, itemDef } from './items';
 import { lampTooFar } from './lamps';
 import { DAY_SECONDS } from './pace';
-import { article, listedOr, numberWord, timeWords } from './words';
+import { article, capital, listedOr, timeWords } from './words';
 import { SEASONS, SEASON_DAYS, seasonAt, seasonBegan, type Season } from '../world/calendar';
 import { BUSH_DEFS, TILE_DEFS, TileType, bushSpecies } from '../world/tiles';
 
@@ -99,12 +99,12 @@ export { trellisWallWords };
 export const trellisRefusedWords = (): string => listedOr(WALL_TYPES.filter((w) => !w.trellis && w.id !== 'hidden_door').map(aWall));
 /** Every way a trellis is refused, said once for its text and the help. */
 export const trellisRefusedSaid = (): string =>
-  `A ${trellisWord()} is refused on a tile of a building, upstairs, on a side with no wall or an unfinished one, and against ${trellisRefusedWords()}. `
-  + `A hidden door is refused only to whoever its padlock admits; to anybody else it is a solid wall.`;
+  `${capital(trellisWord())}: not on a building tile, upstairs, a side with no or an unfinished wall, or against ${trellisRefusedWords()}. `
+  + `A hidden door refuses it only for those its padlock admits; for anyone else it counts as a solid wall.`;
 /** What setting a trellis down against a wall of a type that takes none says: "A trellis cannot stand against a door." The island's `trellis_against_said`. */
 export const trellisAgainstSaid = (type: WallType): string => {
   const w = WALL_TYPE_BY_ID.get(type);
-  return `A ${trellisWord()} cannot stand against ${w ? aWall(w) : `a ${type}`}.`;
+  return `${capital(trellisWord())}: not against ${w ? aWall(w) : `a ${type}`}.`;
 };
 /**
  * What the owner of a trellis is told when it is handed back because another
@@ -113,8 +113,8 @@ export const trellisAgainstSaid = (type: WallType): string => {
  * one. The island's `trellis_returned_said`.
  */
 export const trellisReturnedSaid = (x: number, y: number, vine: boolean): string =>
-  `Your ${trellisWord()} at ${x}, ${y} is back in your pack${vine ? `, and its vine with it as a ${cuttingWord()}` : ''}: `
-  + `a ${trellisWord()} takes the whole row of spots along its side of a tile now, and another ${trellisWord()} or another piece stands in that row.`;
+  `Returned to your pack: ${trellisWord()} at ${x}, ${y}${vine ? `, its vine as a ${cuttingWord()}` : ''}. `
+  + `A ${trellisWord()} needs the whole row of spots along its side of the tile; another ${trellisWord()} or piece now stands in that row.`;
 
 /** The soils, as they are said: "grass, dirt, field, lawn or steppe". */
 export const vineSoilWords = (): string => listedOr(VINE_SOIL.map((t) => TILE_DEFS[t].name.toLowerCase()));
@@ -148,7 +148,7 @@ export function vineStage(f: Pick<PlacedFurniture, 'vineAt' | 'pickedAt'>, now: 
 const SKILL_FLOOR = 1;
 const SKILL_TOP = 100;
 
-const days = (n: number): string => `${numberWord(n)} day${n === 1 ? '' : 's'}`;
+const days = (n: number): string => `${n} day${n === 1 ? '' : 's'}`;
 /** "once a day", "once every two days". */
 export const onceEvery = (n: number): string => (n === 1 ? 'once a day' : `once every ${days(n)}`);
 const trellisWord = (): string => itemDef(TRELLIS).name.toLowerCase();
@@ -156,24 +156,24 @@ const cuttingWord = (): string => itemDef(GRAPE_CUTTING).name.toLowerCase();
 
 /** What a refused go at a vine says. The island says the same (`vine_said`). */
 export const VINE_SAID = {
-  get none(): string { return `Nothing grows on this ${trellisWord()}. Plant a ${cuttingWord()} at its foot.`; },
-  get young(): string { return `The vine is too young to bear. A vine bears from ${days(VINE_BEARS)} after it is planted.`; },
-  get picked(): string { return `You have picked this vine. It bears again ${days(VINE_REST)} after it is picked.`; },
-  has: 'A vine grows on it already.',
-  get soil(): string { return `A vine roots only in soil. Set the ${trellisWord()} down on ${vineSoilWords()}.`; },
-  get noCutting(): string { return `You have no ${cuttingWord()}.`; },
-  noWild: 'There is no wild vine in this.',
-  get cut(): string { return `You have taken the cutting this ${WILD_VINE.toLowerCase()} has. Come back later.`; },
-  get noTool(): string { return `You need a ${itemDef(CUTTING_TOOL).name.toLowerCase()} to cut a vine.`; },
+  get none(): string { return `No vine: plant a ${cuttingWord()} at its foot.`; },
+  get young(): string { return `Too young: a vine bears from ${days(VINE_BEARS)} after planting.`; },
+  get picked(): string { return `Already picked: bears again ${days(VINE_REST)} after picking.`; },
+  has: 'Already has a vine.',
+  get soil(): string { return `Vines need soil: set the ${trellisWord()} on ${vineSoilWords()}.`; },
+  get noCutting(): string { return `Need a ${cuttingWord()}.`; },
+  noWild: 'No wild vine in this.',
+  get cut(): string { return `Cutting already taken from this ${WILD_VINE.toLowerCase()}.`; },
+  get noTool(): string { return `Need a ${itemDef(CUTTING_TOOL).name.toLowerCase()}.`; },
   /** Where a trellis is set down, said once for its rule (`TRELLIS_RULE`). */
-  get wall(): string { return `A ${trellisWord()} is set down only on the ground outside a building, against the outer face of a finished ${trellisWallWords()}.`; },
+  get wall(): string { return `${capital(trellisWord())}: ground level, outside a building, against the outer face of a finished ${trellisWallWords()}.`; },
   /** And why not here, each way of missing it (`trellisWallRefusal`); a wall of a type that takes none is `trellisAgainstSaid`. */
-  get upstairs(): string { return `A ${trellisWord()} is set down only on the ground, not upstairs.`; },
-  inside: 'That is the inside of a building.',
-  noWall: 'There is no wall on that side of this tile.',
-  unfinished: 'That wall is not finished.',
+  get upstairs(): string { return `${capital(trellisWord())}: ground level only, not upstairs.`; },
+  inside: 'Inside a building.',
+  noWall: 'No wall on that side.',
+  unfinished: 'Wall not finished.',
   /** Turned, with no other side of its tile against such a wall (`trellisTurnsTo`). */
-  get turn(): string { return `No other side of this tile has the outer face of a finished ${trellisWallWords()} for the ${trellisWord()} to stand against.`; },
+  get turn(): string { return `No other side of this tile has the outer face of a finished ${trellisWallWords()}.`; },
 };
 
 /**
@@ -282,19 +282,19 @@ export function vineSeasonSaid(now: number): string {
 }
 /** The same, round the season it is and the wait, for the island to put its own into. */
 export const vineSeasonWords = (season: string, wait: string): string =>
-  `Grapes ripen only in ${GRAPE_SEASON}. It is ${season} now; this vine fruits in ${wait}.`;
+  `Grapes ripen in ${GRAPE_SEASON} only. Now: ${season}; fruits in ${wait}.`;
 
 /** What planting says. The island's `vine_planted_said`. */
 export const vinePlantedSaid = (): string =>
-  `You plant the ${cuttingWord()} at the foot of the ${trellisWord()}. It bears from ${days(VINE_BEARS)} on, in ${GRAPE_SEASON}.`;
+  `Planted: ${cuttingWord()}. Bears from ${days(VINE_BEARS)}, in ${GRAPE_SEASON}.`;
 
 /** What a pick says. The island's `grapes_said`. */
 export const grapesSaid = (n: number, ql: number): string =>
-  `You pick ${n} ${itemDef(GRAPE).name.toLowerCase()}${n === 1 ? '' : 's'} off the vine. (QL ${fixedTo(ql, 1)})`;
+  `Picked: ${n} ${itemDef(GRAPE).name.toLowerCase()}${n === 1 ? '' : 's'}, QL ${fixedTo(ql, 1)}.`;
 
 /** What a cutting says. The island's `cut_vine_said`. */
 export const cutVineSaid = (ql: number): string =>
-  `You cut a ${cuttingWord()} off the wild vine in the ${WILD_VINE.toLowerCase()}. (QL ${fixedTo(ql, 1)})`;
+  `Cut: ${cuttingWord()}, QL ${fixedTo(ql, 1)}.`;
 
 /** What the line under a trellis's name says of its vine. */
 export function vineSays(f: PlacedFurniture, now: number): string {
@@ -417,16 +417,16 @@ export const VINEYARD_ACTIONS: ActionDef[] = [
  * -- which wall where a tile has two (`trellisFacing`), and that the wall is
  * asked of only then.
  */
-export const TRELLIS_RULE = (): string => `${VINE_SAID.wall} It faces the wall and takes the ${numberWord(SUBTILES)} spots along that side of its tile, one deep, `
-  + `where nothing else stands but a ${trellisWord()} on the next side of the tile, which shares the corner spot with it. `
-  + `On a tile with such walls on more than one side, it goes against the one nearest where it is set down. `
-  + `The wall is asked of only when the ${trellisWord()} is set down or turned: it stays standing, vine and all, if the wall is changed or taken down after.`;
+export const TRELLIS_RULE = (): string => `${VINE_SAID.wall} Takes the ${SUBTILES} spots along that side of its tile, one deep; `
+  + `only a ${trellisWord()} on the next side may share the corner spot. `
+  + `With such walls on several sides, it faces the one nearest where it is set down. `
+  + `The wall is checked only when set down or turned: it stays, vine and all, if the wall changes or goes.`;
 
 /** The vine's rule, said once: for the cutting's text and the help. */
-export const VINE_RULE = (): string => `Plant a ${cuttingWord()} at the foot of a ${trellisWord()} standing on ${vineSoilWords()}. `
-  + `The vine bears from ${days(VINE_BEARS)} after it is planted, in ${GRAPE_SEASON} only, and ${onceEvery(VINE_REST)}: `
+export const VINE_RULE = (): string => `Plant a ${cuttingWord()} at the foot of a ${trellisWord()} on ${vineSoilWords()}. `
+  + `Bears from ${days(VINE_BEARS)} after planting, in ${GRAPE_SEASON} only, ${onceEvery(VINE_REST)}: `
   + `a pick gives ${GRAPES_A_PICK} × (${GRAPES_BASE} + ${VINE_SKILL} ÷ ${GRAPES_SPAN}) grapes to the nearest whole one, `
-  + `${grapesFor(SKILL_FLOOR)} at ${VINE_SKILL} ${SKILL_FLOOR} and ${grapesFor(SKILL_TOP)} at ${SKILL_TOP}. Picking the ${trellisWord()} up loses its vine.`;
+  + `${grapesFor(SKILL_FLOOR)} at ${VINE_SKILL} ${SKILL_FLOOR} and ${grapesFor(SKILL_TOP)} at ${SKILL_TOP}. Picking up the ${trellisWord()} loses its vine.`;
 
 // The line under a trellis's name says how its vine stands.
 STATE_TAILS.push((f) => (isTrellis(f) ? ` · ${vineSays(f, Date.now() / 1000)}` : ''));

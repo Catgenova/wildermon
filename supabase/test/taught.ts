@@ -105,7 +105,7 @@ begin
       on conflict (world_id, uid, id) do update set value = 1;
     delete from event where uid = u;
     perform perform_craft(w, u, 'make_bronze', '{}'::jsonb);
-    exit when exists (select 1 from event where uid = u and text like '%will not take%');
+    exit when exists (select 1 from event where uid = u and text like 'Failed: bronze lump.%');
   end loop;
 end $$;
 select 'ROSE|' || to_char(skill_of(${W}, ${DANE}, 'smelting') - 1, 'FM0.000000');
@@ -122,7 +122,7 @@ const isleSaid = field('SAID', isle);
 check('the island pays for a crucible that would not take', isleRose > 0,
   `smelting up by ${isleRose.toFixed(6)} after "${field('TOLD', isle)}"`);
 check('and says what it was worth, which is the half that was missing',
-  /^Smelting increased by [0-9.]+ to [0-9.]+\.$/.test(isleSaid), `"${isleSaid}"`);
+  /^Smelting [0-9.]+ \(\+[0-9.]+\)\.$/.test(isleSaid), `"${isleSaid}"`);
 
 /* ---- and the same failed craft in the browser ---------------------------- */
 const game = Game.create(4242);
@@ -166,7 +166,7 @@ for (let go = 0; go < 40 && !said; go++) {
   game.log.length = 0;
   game.requestAction(act, { kind: 'item', uid: copper.uid });
   for (let t = 0; t < 200 && game.action; t++) game.update(0.25);
-  if (!game.log.some((l) => l.text.includes('will not take'))) continue;
+  if (!game.log.some((l) => l.text.startsWith('Failed: bronze lump.'))) continue;
   brose = game.skills.get('smelting') - before;
   said = game.log.find((l) => l.kind === 'skill' && l.text.startsWith('Smelting'))?.text ?? 'NOTHING SAID';
 }
@@ -174,7 +174,7 @@ bronze.difficulty = was;
 check('the browser pays for the same ruined crucible', brose > 0,
   `smelting up by ${brose.toFixed(6)}`);
 check('and says it in the same sentence the island says',
-  /^Smelting increased by [0-9.]+ to [0-9.]+\.$/.test(said), `"${said}"`);
+  /^Smelting [0-9.]+ \(\+[0-9.]+\)\.$/.test(said), `"${said}"`);
 
 /* ---- and the quiet ones, when they reach a new whole number -------------- */
 /*
@@ -226,9 +226,9 @@ const browserMind = (at: number): string => {
     || 'NOTHING SAID';
 };
 for (const [at, want] of [
-  [24.999, 'Mind logic is now 25.'],
-  [29.999, 'Mind logic is now 30. You can keep 4 jobs in your head.'],
-  [39.999, 'Mind logic is now 40. You can keep 5 jobs in your head.'],
+  [24.999, 'Mind logic: 25.'],
+  [29.999, 'Mind logic: 30. Job queue: 4.'],
+  [39.999, 'Mind logic: 40. Job queue: 5.'],
 ] as Array<[number, string]>) {
   const isleLine = isleMind(at);
   const hereLine = browserMind(at);

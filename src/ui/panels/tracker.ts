@@ -81,7 +81,7 @@ export class TrackerPanel {
     this.addBtn.className = 'tb-btn track-add';
     this.addBtn.addEventListener('click', () => {
       const r = this.addBtn.getBoundingClientRect();
-      this.showMenu(r.left, r.bottom, 'Track a trade', this.choices());
+      this.showMenu(r.left, r.bottom, 'Track a skill', this.choices());
     });
     host.append(this.list, this.addBtn);
     this.draw();
@@ -105,7 +105,7 @@ export class TrackerPanel {
       this.tracked.splice(at, 1);
     } else {
       if (this.tracked.length >= TRACKED_MAX) {
-        const why = `You can watch ${TRACKED_MAX} trades at once. Drop one first.`;
+        const why = `Max ${TRACKED_MAX} tracked. Remove one first.`;
         this.game.logMsg(why, 'error');
         return why;
       }
@@ -135,12 +135,12 @@ export class TrackerPanel {
   draw(): void {
     this.list.replaceChildren();
     this.addBtn.textContent = this.tracked.length >= TRACKED_MAX
-      ? `Watching ${TRACKED_MAX} — swap one out`
-      : 'Track a trade…';
+      ? `Tracking ${TRACKED_MAX} (max): swap one`
+      : 'Track a skill…';
     if (!this.tracked.length) {
       const none = document.createElement('div');
       none.className = 'inv-empty';
-      none.textContent = `Pick up to ${TRACKED_MAX} trades and they will keep a bar here: how far each is toward its next level, and what it stands at now.`;
+      none.textContent = `Track up to ${TRACKED_MAX} skills: level and progress to next.`;
       this.list.append(none);
       return;
     }
@@ -166,7 +166,7 @@ export class TrackerPanel {
       drop.type = 'button';
       drop.className = 'tb-btn tb-small track-drop';
       drop.textContent = '✕';
-      drop.title = `Stop watching ${def.name.toLowerCase()}`;
+      drop.title = `Stop tracking ${def.name.toLowerCase()}`;
       drop.setAttribute('aria-label', drop.title);
       drop.addEventListener('click', () => void this.toggle(id));
 

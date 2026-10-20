@@ -385,7 +385,7 @@ for (const line of out.split('\n')) {
 }
 const island = (k: string): string => said.get(k) ?? '(nothing)';
 const parts = (k: string): string[] => island(k).split('|');
-const [O_NAME, Q_NAME] = parts('NAMES');
+const [O_NAME] = parts('NAMES');
 
 /* ---- What came back ------------------------------------------------------ */
 
@@ -397,7 +397,7 @@ const [O_NAME, Q_NAME] = parts('NAMES');
 }
 check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
 check('a Warder spell is refused with no focus of its stones in your pack, in the words its note uses',
-  island('NEEDS:NONE') === `Ward wants ${NEEDS_SAID.warding.wants}.` && island('NEEDS:SAPPHIRE') === island('NEEDS:NONE'),
+  island('NEEDS:NONE') === `Ward: needs ${NEEDS_SAID.warding.wants}.` && island('NEEDS:SAPPHIRE') === island('NEEDS:NONE'),
   `${island('NEEDS:NONE')} / ${island('NEEDS:SAPPHIRE')}`);
 check('and made with a topaz', island('NEEDS:TOPAZ') === 'ready', island('NEEDS:TOPAZ'));
 {
@@ -409,7 +409,7 @@ check('and made with a topaz', island('NEEDS:TOPAZ') === 'ready', island('NEEDS:
 {
   const [skill, skin, line] = parts('AEGIS');
   check('the school\'s Aegis lays a skin of its force in hundredths of health, and says how large',
-    near(Number(skin), skinOf(spellForce(AEGIS, Number(skill), CUT, 1))) && line.endsWith(`(${Math.round(Number(skin) * 100)})`),
+    near(Number(skin), skinOf(spellForce(AEGIS, Number(skill), CUT, 1))) && line.endsWith(`: ${Math.round(Number(skin) * 100)}.`),
     island('AEGIS'));
 }
 {
@@ -419,38 +419,38 @@ check('and made with a topaz', island('NEEDS:TOPAZ') === 'ready', island('NEEDS:
   check(`Ward, Greater Ward and Deep Ward: skins of ${pct(fx('ward', 'skin'))}, ${pct(fx('greater_ward', 'skin'))} and `
     + `${pct(fx('deep_ward', 'skin'))}, each over a smaller one`,
     near(Number(ward), fx('ward', 'skin')) && near(Number(greater), fx('greater_ward', 'skin')) && near(Number(deep), fx('deep_ward', 'skin'))
-      && /^Ward: a skin of \d+% goes over you\.$/.test(wardSaid)
-      && /^Greater Ward: a skin of \d+% goes over you, in place of a smaller one\.$/.test(greaterSaid)
-      && /^Deep Ward: a skin of \d+% goes over you, in place of a smaller one\.$/.test(deepSaid),
+      && /^Ward: skin \d+% on you\.$/.test(wardSaid)
+      && /^Greater Ward: skin \d+% on you, replacing a smaller one\.$/.test(greaterSaid)
+      && /^Deep Ward: skin \d+% on you, replacing a smaller one\.$/.test(deepSaid),
     `${island('WARD')} / ${island('GREATER')} / ${island('DEEP')}`);
-  check('and none over a larger, refused before anything is spent', island('SMALLER') === 'The skin over you is larger already.',
+  check('and none over a larger, refused before anything is spent', island('SMALLER') === 'Existing skin is larger.',
     island('SMALLER'));
 }
 {
   const [share, line, by, me] = parts('OTHER');
   check(`Ward Other: a skin of ${pct(fx('ward_other', 'skin'))} over somebody within ${fx('ward_other', 'reach')} tiles, marked yours`,
     near(Number(share), fx('ward_other', 'skin')) && by === me
-      && new RegExp(`^Ward Other: a skin of \\d+% goes over ${O_NAME}\\.$`).test(line), island('OTHER'));
+      && new RegExp(`^Ward Other: skin \\d+% on ${O_NAME}\\.$`).test(line), island('OTHER'));
   check(`Greater Ward Other: ${pct(fx('greater_ward_other', 'skin'))}`, near(Number(parts('OTHER:GREATER')[0]), fx('greater_ward_other', 'skin')),
     island('OTHER:GREATER'));
-  check('and nobody further off than it reaches', island('OTHER:FAR') === `${Q_NAME} is more than ${fx('ward_other', 'reach')} tiles away.`,
+  check('and nobody further off than it reaches', island('OTHER:FAR') === `Too far: max ${fx('ward_other', 'reach')} tiles.`,
     island('OTHER:FAR'));
 }
 {
   const [mine, theirs, beyond, line] = parts('SANCTUARY');
   check(`Sanctuary: ${pct(fx('sanctuary', 'skin'))} over you and everybody within ${fx('sanctuary', 'reach')} tiles, and nobody beyond`,
     near(Number(mine), fx('sanctuary', 'skin')) && near(Number(theirs), fx('sanctuary', 'skin')) && Number(beyond) === 0
-      && /^Sanctuary: a skin of \d+% goes over you, and a skin of \d+% goes over 1 other\.$/.test(line), island('SANCTUARY'));
+      && /^Sanctuary: skin \d+% on you; skin \d+% on 1 other\.$/.test(line), island('SANCTUARY'));
 }
 {
   const [share, still] = parts('THICKEN');
   check(`Thicken: the next skin ${pct(fx('thicken', 'more') - 1)} larger, and spent by it`,
     near(Number(share), fx('ward', 'skin') * fx('thicken', 'more')) && still === 'false'
-      && island('THICKEN:SAID') === 'Thicken: the next skin you lay within 60 s is 50% larger.', `${island('THICKEN')} / ${island('THICKEN:SAID')}`);
+      && island('THICKEN:SAID') === 'Thicken: next skin within 60 s +50%.', `${island('THICKEN')} / ${island('THICKEN:SAID')}`);
 }
 check('Ward Burst is refused with no skin over you, and with nothing near enough to take it',
-  island('BURST:BARE') === 'There is no skin over you to break.'
-    && island('BURST:EMPTY') === `Nothing is within ${fx('ward_burst', 'reach')} tiles of you to strike.`,
+  island('BURST:BARE') === 'No skin to break.'
+    && island('BURST:EMPTY') === `No target within ${fx('ward_burst', 'reach')} tiles.`,
   `${island('BURST:BARE')} / ${island('BURST:EMPTY')}`);
 {
   const [A, B, C] = island('IDS').split(',');
@@ -460,12 +460,12 @@ check('Ward Burst is refused with no skin over you, and with nothing near enough
   check(`Ward Burst: ${fx('ward_burst', 'dmg')} damage a hundredth of the skin on everything within ${fx('ward_burst', 'reach')} tiles, `
     + 'nothing beyond, and the skin gone',
     near(Number(lost.get(A)), each, 1e-4) && near(Number(lost.get(B)), each, 1e-4) && Number(lost.get(C)) === 0 && Number(left) === 0
-      && line === `Ward Burst: the skin of 20% over you breaks for ${each} damage on 2 creatures.`, island('BURST'));
+      && line === `Ward Burst: skin 20% broken, ${each} damage on 2 creatures.`, island('BURST'));
 }
 {
   const [taken, line] = parts('STONESKIN');
   check(`Stoneskin: ${pct(fx('stoneskin', 'cut'))} less from every blow`, near(Number(taken), BLOW_RAW * (1 - fx('stoneskin', 'cut')))
-    && line === 'Stoneskin: for 10 s you take 25% less from every blow.', island('STONESKIN'));
+    && line === 'Stoneskin: damage taken −25% for 10 s.', island('STONESKIN'));
 }
 {
   const [mine, near2, far, line] = parts('BASTION');
@@ -473,25 +473,24 @@ check('Ward Burst is refused with no skin over you, and with nothing near enough
   check(`Bastion of Stone: ${pct(fx('bastion_of_stone', 'cut'))} less on you and on everybody within ${fx('bastion_of_stone', 'reach')} tiles, `
     + 'and nobody beyond',
     near(Number(mine), cut) && near(Number(near2), cut) && near(Number(far), BLOW_RAW)
-      && line === 'Bastion of Stone: for 10 s you and one other take 40% less from every blow.', island('BASTION'));
+      && line === 'Bastion of Stone: damage taken −40% for 10 s, on you and 1 other.', island('BASTION'));
 }
 {
   const [taken, line] = parts('UNBREAKABLE');
-  check('Unbreakable: no blow lands', Number(taken) === 0 && line === 'Unbreakable: for 6 s no blow aimed at you lands.', island('UNBREAKABLE'));
+  check('Unbreakable: no blow lands', Number(taken) === 0 && line === 'Unbreakable: no blow lands on you for 6 s.', island('UNBREAKABLE'));
 }
 {
   const [share, after] = parts('LINK');
   check(`Ward Link: a skin of ${pct(fx('ward_link', 'skin'))} back over somebody whose skin of yours is used up, and only once`,
     near(Number(share), fx('ward_link', 'skin')) && Number(after) === 0
-      && island('LINK:SAID') === 'Ward Link: for 30 s, when a skin of yours over somebody within 8 tiles of you is used up, a skin of 30% '
-        + 'goes back over them, once each.', `${island('LINK')} / ${island('LINK:SAID')}`);
+      && island('LINK:SAID') === 'Ward Link: your skins used up within 8 tiles relaid at 30%, once per person, for 30 s.', `${island('LINK')} / ${island('LINK:SAID')}`);
 }
 check('the casts teach the Warder\'s trade and warding', island('LEARN') === 'true|true', island('LEARN'));
 {
   const [cast, stamina] = parts('PAID');
   check(`the door charges ${pct(spell('stoneskin').cost)} of your stamina and rests it ${spell('stoneskin').rest} s`,
     cast === 'warder_stoneskin' && near(Number(stamina), 1 - spell('stoneskin').cost), island('PAID'));
-  check('and will not call it again until it has rested', /can be called again in \d+ seconds\.$/.test(island('RESTING')), island('RESTING'));
+  check('and will not call it again until it has rested', /: cooldown \d+ s\.$/.test(island('RESTING')), island('RESTING'));
 }
 check('the six passives fold on the island to what they fold to in the browser',
   island('FOLDED') === Object.keys(FOLD).filter((k) => /^(skin|stamina|watch|thorns):/.test(k)).sort()
@@ -505,7 +504,7 @@ check(`Protector: ${pct(FOLD['skin:other'] - 1)} larger again over somebody else
   const laid = fx('greater_ward', 'skin') * FOLD['skin:size'] * at;
   check(`Overcharge: a skin over one adds to it, up to ${pct(FOLD['skin:over'])} of the larger`,
     near(now, Math.min(was + laid, FOLD['skin:over'] * Math.max(was, laid)))
-      && /^Greater Ward: a skin of \d+% goes over you, added to the one there: \d+% now\.$/.test(line), island('OVERCHARGE'));
+      && /^Greater Ward: skin \d+% on you, stacked: \d+%\.$/.test(line), island('OVERCHARGE'));
 }
 {
   const [skill, skin] = parts('AEGIS:THICK').map(Number);

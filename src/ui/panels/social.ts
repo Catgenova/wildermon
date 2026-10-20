@@ -120,17 +120,17 @@ export const inviteDeeds = (s: Social): MyDeed[] => s.deeds.filter((d) => deedMa
  */
 export function inviteRefusal(s: Social, uid: string, name: string, founder?: string): string | null {
   const d = founder === undefined ? s.deeds.find((e) => e.mine) : s.deeds.find((e) => e.founder === founder);
-  if (!d) return founder === undefined ? 'You hold no settlement to invite anybody to.' : 'That settlement is gone.';
+  if (!d) return founder === undefined ? 'No settlement to invite to.' : 'Settlement gone.';
   const no = lacks(asRanked(d), 'invite');
   if (no) return no;
-  if (rankOf(d, uid)) return `${name} already lives here.`;
+  if (rankOf(d, uid)) return `${name}: already a citizen.`;
   if (rollFull(s, uid)) {
-    return `${name} is a citizen of ${DEEDS_JOINED} settlements already, which is as many as anybody may be.`;
+    return `${name}: citizen of ${DEEDS_JOINED} settlements (max).`;
   }
   // An island from before mayors lists only the founder's own, without saying whose.
   const own = s.deeds.find((e) => e.mine)?.founder;
   if (s.sent.some((w) => w.uid === uid && (w.founder ?? own) === d.founder)) {
-    return `${name} has already been asked, and has not answered.`;
+    return `${name}: invitation pending.`;
   }
   return null;
 }
@@ -147,29 +147,29 @@ export function inviteRefusal(s: Social, uid: string, name: string, founder?: st
 export function rankRefusal(d: MyDeed, me: string, uid: string, name: string, rank: string): string | null {
   const no = lacks(asRanked(d), 'set_ranks');
   if (no) return no;
-  if (uid === me) return 'Nobody may change their own rank.';
-  if (uid === d.founder) return `Nobody may change the rank of whoever founded ${d.name}.`;
+  if (uid === me) return 'Cannot change your own rank.';
+  if (uid === d.founder) return `Cannot change the founder's rank at ${d.name}.`;
   const theirs = defOf(d, uid);
-  if (!theirs) return `${name} is not a citizen of ${d.name}.`;
+  if (!theirs) return `${name}: not a citizen of ${d.name}.`;
   const to = defsOf(d).find((r) => r.name.toLowerCase() === rank.trim().toLowerCase());
-  if (!to) return `${d.name} has no rank called ${rank.trim()}.`;
+  if (!to) return `${d.name}: no rank named ${rank.trim()}.`;
   if (myRank(d) !== FOUNDER) {
     const mine = myPlace(d);
     const mineName = rankName(asRanked(d));
-    if (theirs.ord <= mine) return `${name} holds ${theirs.name} at ${d.name}. Your rank, ${mineName}, may set the rank only of those ranked below it.`;
-    if (to.ord <= mine) return `Your rank at ${d.name}, ${mineName}, may give only ranks below it.`;
+    if (theirs.ord <= mine) return `${name} holds ${theirs.name} at ${d.name}; your rank (${mineName}) sets ranks only below it.`;
+    if (to.ord <= mine) return `Your rank at ${d.name} (${mineName}) gives only ranks below it.`;
   }
-  if (theirs.id === to.id) return `${name} already holds ${to.name} at ${d.name}.`;
+  if (theirs.id === to.id) return `${name}: already ${to.name} at ${d.name}.`;
   return null;
 }
 
 /** What somebody is told when they are given a rank: `rpc_rank`'s line, word for word. */
 export const rankedLine = (by: string, rank: string, deed: string, perms: number): string =>
-  `${by} gives you the rank of ${rank} at ${deed}: you may ${rankMay(perms)}.`;
+  `Rank at ${deed}: ${rank} (from ${by}). Allowed: ${rankMay(perms)}.`;
 
 /** What somebody is told when they say yes to an invitation: `rpc_invite_answer`'s line, word for word. */
 export const joinedLine = (deed: string, rank: string, perms: number): string =>
-  `You are a citizen of ${deed}, at the rank of ${rank}: you may ${rankMay(perms)}.`;
+  `Citizen of ${deed}: rank ${rank}. Allowed: ${rankMay(perms)}.`;
 
 /**
  * Whether you may take somebody off the roll of a settlement of yours -- or
@@ -178,9 +178,9 @@ export const joinedLine = (deed: string, rank: string, perms: number): string =>
  * rank holds Send away sends away anybody ranked below them.
  */
 export function sendAwayRefusal(d: MyDeed, me: string, uid: string): string | null {
-  if (uid !== me && uid === d.founder) return `Nobody may send away whoever founded ${d.name}.`;
+  if (uid !== me && uid === d.founder) return `Cannot send away the founder of ${d.name}.`;
   const onRoll = uid === me ? !d.mine : !!rankOf(d, uid);
-  if (!onRoll) return 'Nobody there to send away.';
+  if (!onRoll) return 'Not on the roll.';
   if (uid !== me) {
     const no = lacks(asRanked(d), 'send_away');
     if (no) return no;
@@ -188,7 +188,7 @@ export function sendAwayRefusal(d: MyDeed, me: string, uid: string): string | nu
       const theirs = defOf(d, uid);
       const name = d.folk.find((f) => f.uid === uid)?.name ?? 'somebody';
       if (theirs && theirs.ord <= myPlace(d)) {
-        return `${name} holds ${theirs.name} at ${d.name}. Your rank, ${rankName(asRanked(d))}, may send away only those ranked below it.`;
+        return `${name} holds ${theirs.name} at ${d.name}; your rank (${rankName(asRanked(d))}) sends away only ranks below it.`;
       }
     }
   }
@@ -213,7 +213,7 @@ export function ranksToGive(d: MyDeed, me: string, uid: string, name: string): R
  */
 export function moveInRefusal(s: Social): string | null {
   if (s.room > 0) return null;
-  return `You are a citizen of ${DEEDS_JOINED - s.room} settlements already, which is as many as anybody may be. Leave one first.`;
+  return `Citizen of ${DEEDS_JOINED - s.room} settlements (max). Leave one first.`;
 }
 
 /**
@@ -269,9 +269,9 @@ export class SocialPanel {
     this.bar = document.createElement('div');
     this.bar.className = 'log-tabs';
     for (const [id, label, title] of [
-      ['waiting', 'Waiting', 'Invitations and askings that want an answer'],
-      ['friends', 'Friends', 'Who you know, and where they are'],
-      ['letters', 'Letters', 'What has been written to you'],
+      ['waiting', 'Waiting', 'Invitations and requests to answer'],
+      ['friends', 'Friends', 'Friends and locations'],
+      ['letters', 'Letters', 'Messages'],
     ] as Array<['waiting' | 'friends' | 'letters', string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -425,7 +425,7 @@ export class SocialPanel {
     el.className = 'social-row';
     const dot = document.createElement('span');
     dot.className = `social-dot${who.online ? ' social-on' : ''}`;
-    dot.title = who.online ? 'Ashore now' : 'Away';
+    dot.title = who.online ? 'Ashore' : 'Away';
     const name = document.createElement('span');
     name.className = 'social-name';
     name.textContent = who.name;
@@ -473,7 +473,7 @@ export class SocialPanel {
   private tradeButton(who: Folk): HTMLButtonElement | null {
     const go = this.trade;
     if (!go || !who.online || who.uid === this.me()) return null;
-    return this.button('Trade', `Ask ${who.name} to trade. You both stand within ${BARTER_REACH} tiles of each other.`, () => go(who.uid));
+    return this.button('Trade', `Request trade with ${who.name}. Range: ${BARTER_REACH} tiles.`, () => go(who.uid));
   }
 
   /**
@@ -513,7 +513,7 @@ export class SocialPanel {
     const acts = document.createElement('span');
     acts.className = 'social-acts';
     for (const d of can) {
-      const b = this.button(d.name, `Invite asks people onto ${d.name}, where you hold ${rankName(asRanked(d))}`, () => {
+      const b = this.button(d.name, `Invite to ${d.name} (your rank: ${rankName(asRanked(d))})`, () => {
         this.inviteFrom = d.founder;
         this.draw();
       });
@@ -548,11 +548,11 @@ export class SocialPanel {
     this.page.replaceChildren();
     this.page.classList.toggle('social-talking', this.tab === 'letters' && !!this.talkingTo);
     if (!this.island) {
-      this.page.append(this.empty('You are playing by yourself, in this browser. There is nobody else here to know.'));
+      this.page.append(this.empty('Social: island only.'));
       return;
     }
     if (!s) {
-      this.page.append(this.empty('Asking the island who is about…'));
+      this.page.append(this.empty('Loading…'));
       return;
     }
     if (this.tab === 'waiting') this.drawWaiting(s);
@@ -567,7 +567,7 @@ export class SocialPanel {
     const requests = s.requests ?? [];
     const requesting = s.requesting ?? [];
     if (!s.invites.length && !s.asked.length && !s.sent.length && !s.asking.length && !requests.length && !requesting.length) {
-      this.page.append(this.empty('Nothing is waiting on you. Right-click somebody on the island to invite them home or ask to be their friend.'));
+      this.page.append(this.empty('Nothing waiting. Right-click a player to invite or befriend.'));
       return;
     }
     if (requests.length) {
@@ -584,11 +584,11 @@ export class SocialPanel {
       }
     }
     if (s.invites.length) {
-      this.page.append(this.head('Asked to live somewhere'));
+      this.page.append(this.head('Invitations received'));
       const full = moveInRefusal(s);
       if (full) this.page.append(this.empty(full));
       for (const inv of s.invites) {
-        const moveIn = this.button('Move in', full ?? `Become a citizen of ${inv.deed}`,
+        const moveIn = this.button('Move in', full ?? `Join ${inv.deed} as a citizen`,
           () => void this.did(isle.answerInvite(inv.founder, true)));
         moveIn.disabled = !!full;
         this.page.append(this.plain(inv.deed, `from ${inv.by}`, [
@@ -598,7 +598,7 @@ export class SocialPanel {
       }
     }
     if (s.asked.length) {
-      this.page.append(this.head('Would like to be your friend'));
+      this.page.append(this.head('Friend requests received'));
       for (const who of s.asked) {
         this.page.append(this.plain(who.name, '', [
           this.button('Yes', `${who.name} becomes a friend`, () => void this.did(isle.befriend(who.uid))),
@@ -607,7 +607,7 @@ export class SocialPanel {
       }
     }
     if (s.sent.length) {
-      this.page.append(this.head('Invitations out'));
+      this.page.append(this.head('Invitations sent'));
       for (const who of s.sent) {
         this.page.append(this.plain(who.name, who.deed ? `to ${who.deed}, not answered` : 'not answered', []));
       }
@@ -620,10 +620,10 @@ export class SocialPanel {
       }
     }
     if (s.asking.length) {
-      this.page.append(this.head('Friends you have asked'));
+      this.page.append(this.head('Friend requests sent'));
       for (const who of s.asking) {
         this.page.append(this.plain(who.name, 'not answered',
-          [this.button('Withdraw', 'Take the asking back', () => void this.did(isle.unfriend(who.uid)))]));
+          [this.button('Withdraw', 'Withdraw request', () => void this.did(isle.unfriend(who.uid)))]));
       }
     }
   }
@@ -636,13 +636,13 @@ export class SocialPanel {
     if (pick) this.page.append(pick);
     this.page.append(this.head(`Friends (${s.friends.length})`));
     if (!s.friends.length) {
-      this.page.append(this.empty('Nobody yet. Right-click somebody on the island, or pick a name below.'));
+      this.page.append(this.empty('None. Right-click a player, or pick a name below.'));
     }
     for (const who of s.friends) {
       const acts = [
         this.button('Write', `Write to ${who.name}`, () => void this.openThread(who)),
-        this.button('Drop', `Take ${who.name} off your friends. You are asked first.`,
-          () => void this.sure(`Drop ${who.name} from your friends? To be friends again, one of you asks and the other says yes.`, () => isle.unfriend(who.uid))),
+        this.button('Drop', `Remove ${who.name} from friends (asks to confirm).`,
+          () => void this.sure(`Remove ${who.name} from friends? Re-friending needs a new request and acceptance.`, () => isle.unfriend(who.uid))),
       ];
       const ask = this.inviteButton(s, who);
       if (ask) acts.unshift(ask);
@@ -654,17 +654,17 @@ export class SocialPanel {
     for (const d of s.deeds) this.drawDeed(s, d);
     if (!s.deeds.length) {
       this.page.append(this.head('Settlements'));
-      this.page.append(this.empty('You hold none and live on none. Plant a stake, or wait to be asked.'));
+      this.page.append(this.empty('No settlement. Found one, or accept an invitation.'));
     } else if (s.room > 0) {
-      this.page.append(this.empty(`You may be a citizen of ${s.room} more.`));
+      this.page.append(this.empty(`Citizenships left: ${s.room}.`));
     } else {
-      this.page.append(this.empty(`You are a citizen of ${DEEDS_JOINED} other people's settlements, which is as many as anybody may be.`));
+      this.page.append(this.empty(`Citizen of ${DEEDS_JOINED} other settlements (max).`));
     }
 
     const known = new Set([...s.friends, ...this.neighbours(s)].map((f) => f.uid));
     const strangers = s.here.filter((f) => !known.has(f.uid));
-    this.page.append(this.head(`Everybody else ashore (${strangers.length})`));
-    if (!strangers.length) this.page.append(this.empty('Nobody else has been here.'));
+    this.page.append(this.head(`Others ashore (${strangers.length})`));
+    if (!strangers.length) this.page.append(this.empty('None.'));
     for (const who of strangers) {
       const acts = [
         this.button('Befriend', `Ask ${who.name} to be a friend`, () => void this.did(isle.befriend(who.uid))),
@@ -684,8 +684,8 @@ export class SocialPanel {
      */
     if (s.open !== undefined) {
       this.page.append(this.empty(s.open
-        ? `While there are fewer than ${s.crowd ?? 0} people about, the island says where everybody is, and they are all on your map. That stops on its own once it fills up.`
-        : `There are ${s.crowd ?? 0} or more people about, so the island says where your friends and neighbours are and no more.`));
+        ? `Under ${s.crowd ?? 0} players: everyone shown on your map.`
+        : `${s.crowd ?? 0}+ players: only friends and neighbours shown.`));
     }
   }
 
@@ -704,8 +704,8 @@ export class SocialPanel {
     this.page.append(this.head(`${d.name} · ${d.mine ? 'yours' : `${d.by}'s`} · ${d.x}, ${d.y}`));
     if (!d.folk.length) {
       this.page.append(this.empty(deedMay(asRanked(d), 'invite')
-        ? 'Nobody else lives here yet. Right-click somebody and invite them.'
-        : 'Nobody else lives here yet.'));
+        ? 'No other citizens. Right-click a player to invite.'
+        : 'No other citizens.'));
     }
     for (const who of d.folk) {
       const acts = [this.button('Write', `Write to ${who.name}`, () => void this.openThread(who))];
@@ -715,8 +715,8 @@ export class SocialPanel {
       const trade = this.tradeButton(who);
       if (trade) acts.unshift(trade);
       if (!sendAwayRefusal(d, this.me(), who.uid)) {
-        const away = this.button('Send away', `Take ${who.name} off the roll of ${d.name}. You are asked first.`,
-          () => void this.sure(`Send ${who.name} away from ${d.name}? They come off its roll at once, and only an invitation puts them back on it.`,
+        const away = this.button('Send away', `Remove ${who.name} from ${d.name} (asks to confirm).`,
+          () => void this.sure(`Send ${who.name} away from ${d.name}? Removed at once; only a new invitation restores them.`,
             () => isle.leaveDeed(d.founder, who.uid)));
         away.classList.add('tb-danger');
         acts.push(away);
@@ -724,10 +724,10 @@ export class SocialPanel {
       this.page.append(this.row(who, this.whereabouts(who), acts, who.uid === d.founder ? 'Founder' : defOf(d, who.uid)?.name));
     }
     if (!d.mine) {
-      const leave = this.button('Leave', `Stop being a citizen of ${d.name}. You are asked first.`,
+      const leave = this.button('Leave', `Leave ${d.name} (asks to confirm).`,
         () => void this.sure(leaveQuestion({ name: d.name, x: d.x, y: d.y, radius: d.radius }, d.by), () => isle.leaveDeed(d.founder)));
       leave.classList.add('tb-danger');
-      this.page.append(this.plain(`You hold ${rankName(asRanked(d))} at ${d.name}.`, '', [leave]));
+      this.page.append(this.plain(`Your rank at ${d.name}: ${rankName(asRanked(d))}.`, '', [leave]));
     }
   }
 
@@ -745,13 +745,13 @@ export class SocialPanel {
     const people = [...all.filter((f) => unread.has(f.uid)), ...all.filter((f) => !unread.has(f.uid))];
     this.page.append(this.head('Write to'));
     if (!people.length) {
-      this.page.append(this.empty('Make a friend or move onto somebody’s land, and this is where you can write to them. Anybody ashore can be written to from the Friends tab.'));
+      this.page.append(this.empty('Friends and fellow citizens appear here. Write to anyone ashore from the Friends tab.'));
       return;
     }
     for (const who of people) {
       const n = unread.get(who.uid) ?? 0;
       const el = this.row(who, n ? `${n} waiting` : this.whereabouts(who),
-        [this.button('Open', `Read what ${who.name} has written`, () => void this.openThread(who))]);
+        [this.button('Open', `Read letters from ${who.name}`, () => void this.openThread(who))]);
       if (n) el.classList.add('social-unread');
       this.page.append(el);
     }
@@ -768,7 +768,7 @@ export class SocialPanel {
     name.textContent = `${who.name} · ${this.whereabouts(who)}`;
     const acts = document.createElement('span');
     acts.className = 'social-acts';
-    acts.append(this.button('Back', 'Everybody you write to', () => {
+    acts.append(this.button('Back', 'All letters', () => {
       this.talkingTo = null;
       this.draw();
     }));
@@ -777,7 +777,7 @@ export class SocialPanel {
     const list = document.createElement('div');
     list.className = 'social-thread';
     if (!this.thread.length) {
-      list.append(this.empty(`Nothing has been said between you and ${who.name} yet.`));
+      list.append(this.empty(`No letters with ${who.name}.`));
     }
     for (const line of this.thread) {
       const el = document.createElement('div');
@@ -805,7 +805,7 @@ export class SocialPanel {
     box.addEventListener('input', () => {
       this.draft = box.value;
     });
-    const send = this.button('Send', `Send it to ${who.name}`, () => void 0);
+    const send = this.button('Send', `Send to ${who.name}`, () => void 0);
     send.type = 'submit';
     write.append(box, send);
     write.addEventListener('submit', (e) => {

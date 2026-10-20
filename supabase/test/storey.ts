@@ -127,7 +127,7 @@ setLevels(3);
 const capMine = mineSay('add_floor', {});
 const capTheirs = theirSay('add_floor', '{"x":40,"y":40}');
 check('logs will not stand a fourth storey, and both sides say so in the same words',
-  capMine === 'Log will not stand 4 storeys. 3 is as high as it goes.' && capTheirs === capMine,
+  capMine === 'Log: max 3 storeys.' && capTheirs === capMine,
   `browser "${capMine}", island "${capTheirs}"`);
 
 /* ---- and the hands it takes ---------------------------------------------- */
@@ -136,7 +136,7 @@ setSkill('carpentry', 5);
 const skillMine = mineSay('add_floor', {});
 const skillTheirs = theirSay('add_floor', '{"x":40,"y":40}');
 check('a second storey over logs takes carpentry ten, in the same sentence on both sides',
-  skillMine === 'Raising a 2nd storey over log takes carpentry 10. You have 5.0.' && skillTheirs === skillMine,
+  skillMine === 'Storey 2 over log needs carpentry 10; have 5.0.' && skillTheirs === skillMine,
   `browser "${skillMine}", island "${skillTheirs}"`);
 
 setSkill('carpentry', 10);
@@ -156,7 +156,7 @@ psql(`insert into floor_tile (world_id, level, x, y, building, material, kind, n
 const heavyMine = mineSay('plan_wall', { side: 'n', wallType: 'solid', material: 'marble' });
 const heavyTheirs = theirSay('plan_wall', '{"x":40,"y":40,"side":"n","wallType":"solid","material":"marble"}');
 check('marble will not go up over a log storey, and the refusal is word for word the same',
-  heavyMine === 'Marble is too heavy to raise over what is under it. This storey carries timber, no more.'
+  heavyMine === 'Marble too heavy for what is under it: this storey carries timber at most.'
     && heavyTheirs === heavyMine, `browser "${heavyMine}", island "${heavyTheirs}"`);
 
 const lightMine = mineSay('plan_wall', { side: 'n', wallType: 'solid', material: 'plank' });
@@ -168,7 +168,7 @@ check('while planks over logs are nothing to object to', lightMine === 'ALLOWED'
 setLevels(1, 0);
 const groundMine = mineSay('plan_wall', { side: 'n', wallType: 'solid', material: 'marble' });
 check('and a ground floor of marble stands on the earth, which carries anything',
-  groundMine === 'There is already a wall on that side.', groundMine);
+  groundMine === 'Already a wall on that side.', groundMine);
 
 /* ---- what fits through a door -------------------------------------------- */
 /*

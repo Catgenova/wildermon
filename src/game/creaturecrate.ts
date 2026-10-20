@@ -5,7 +5,6 @@ import { facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from '.
 import type { Side } from './building';
 import type { Game } from './game';
 import type { Item } from './items';
-import { numberWord } from './words';
 
 /**
  * A creature crate: the one place a wildermon goes when it is neither
@@ -36,9 +35,9 @@ export function crateLine(g: Game, crate: { creature?: number }): string {
   const c = crate.creature === undefined ? undefined : g.creatures.get(crate.creature);
   if (crate.creature === undefined) return 'empty';
   if (!c) return 'a wildermon inside';
-  return `${c.name}, ${ageOfWord(c, g.time)} ${SPECIES[c.species].name.toLowerCase()}, inside`;
+  return `${c.name}, ${ageOfWord(c, g.time)}${SPECIES[c.species].name.toLowerCase()}, inside`;
 }
-const ageOfWord = (c: Creature, now: number): string => (ageDef(c, now).name === 'grown' ? 'a' : `a ${ageDef(c, now).name}`);
+const ageOfWord = (c: Creature, now: number): string => (ageDef(c, now).name === 'grown' ? '' : `${ageDef(c, now).name} `);
 
 /** An empty creature crate in the pack, the first there is. */
 export const emptyCrate = (g: Game): Item | undefined =>
@@ -81,7 +80,7 @@ export function occupiedRefusal(g: Game, actionId: string, t: Target): string | 
   const it = g.inventory.get(t.uid);
   if (!it || it.creature === undefined) return null;
   const c = g.creatures.get(it.creature);
-  return `${c?.name ?? 'A wildermon'} is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.`;
+  return `${c?.name ?? 'A wildermon'} is in that crate. An occupied crate can only be carried, set down, opened or traded.`;
 }
 
 /**
@@ -143,9 +142,9 @@ export function teamOut(g: Game, team: Creature[]): { follows: Creature | undefi
 export function teamOutRefusal(g: Game, team: Creature[]): string | null {
   const { follows, crated, short } = teamOut(g, team);
   if (!short || !follows) return null;
-  if (team.length === 1) return `${follows.name} already follows you. Carry an empty creature crate to take ${crated[0].name} out of the traces: it goes into the crate.`;
-  return `Only one wildermon follows you. Carry ${crated.length === 1 ? 'an empty creature crate' : `${numberWord(crated.length)} empty creature crates`} to take this team out of the traces: `
-    + `${follows.name} follows you and the rest go into them.`;
+  if (team.length === 1) return `${follows.name} already follows you. Need an empty creature crate for ${crated[0].name}.`;
+  return `1 wildermon follows you. Need ${crated.length} empty creature ${crated.length === 1 ? 'crate' : 'crates'} for this team: `
+    + `${follows.name} follows you, the rest go in crates.`;
 }
 
 /** Put those of yours a team leaves behind into the empty crates in your pack, once it is out of the traces; what to say of it, or ''. */
@@ -159,7 +158,7 @@ export function crateTheRest(g: Game, out: { follows: Creature | undefined; crat
   if (!put.length || !out.follows) return '';
   const names = put.map((c) => c.name);
   const who = names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
-  return ` ${who} ${put.length === 1 ? 'goes into a creature crate' : 'go into creature crates'} in your pack: ${out.follows.name} follows you.`;
+  return ` Into creature crates in your pack: ${who}. ${out.follows.name} follows you.`;
 }
 
 /** Out through a crate's door, which is on the side it faces: the way the one inside faces, and the way it comes out. */
@@ -240,7 +239,7 @@ function crateAt(g: Game, t: Target): { crate: Item | PlacedFurniture; placed: b
 
 /** Why a crate cannot be opened from where you stand, or null. */
 function openRefusal(g: Game, at: NonNullable<ReturnType<typeof crateAt>>): string | null {
-  if (!at.c) return 'The crate is empty.';
+  if (!at.c) return 'Crate empty.';
   if (at.c.mode !== 'stored') return `${at.c.name} is not in it.`;
   if (at.placed) {
     const [cx, cy] = furnitureCentre(at.crate as PlacedFurniture);
@@ -253,7 +252,7 @@ function openRefusal(g: Game, at: NonNullable<ReturnType<typeof crateAt>>): stri
 function swapRefusal(g: Game): string | null {
   const current = g.creatures.active();
   if (!current) return null;
-  if (current.ridden) return `Get down off ${current.name} first: it goes into the crate in its place.`;
+  if (current.ridden) return `Get down off ${current.name} first.`;
   return null;
 }
 
@@ -262,10 +261,10 @@ export function deedJobLine(c: Creature): string {
   const gathers = c.trade ?? SPECIES[c.species].gathers;
   // A swarm at the hives brings nothing to the crate: the hives fill themselves while it keeps them. Nor does
   // a trade worked at the stores or at your own (`TEND_JOBS`): its words already say where what it makes goes; nor a scurra's scrubbing.
-  const tail = gathers === 'hive' || gathers === 'scrub' || TEND_JOBS.has(gathers ?? 'forage') ? '' : ' and bring what it finds to the crate';
+  const tail = gathers === 'hive' || gathers === 'scrub' || TEND_JOBS.has(gathers ?? 'forage') ? '' : '; output to the crate';
   return gathers
     ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the token${tail}`
-    : 'stay around the settlement';
+    : 'no trade';
 }
 
 export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
@@ -282,8 +281,8 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = t.kind === 'creature' ? g.creatures.get(t.id) : undefined;
-      if (!c) return 'It is gone.';
-      if (!emptyCrate(g)) return 'You need an empty creature crate in your pack.';
+      if (!c) return 'Gone.';
+      if (!emptyCrate(g)) return 'Need an empty creature crate in your pack.';
       return null;
     },
     perform: (t, g) => {
@@ -291,7 +290,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       const crate = emptyCrate(g);
       if (!c || !crate || (c.mode !== 'active' && c.mode !== 'deed')) return;
       shutIn(g, c, crate);
-      g.logMsg(`${c.name} goes into the creature crate. Set the crate down and it can be seen inside.`, 'system');
+      g.logMsg(`${c.name}: into the creature crate.`, 'system');
     },
   },
   {
@@ -308,7 +307,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
     applies: (t, g) => !!crateAt(g, t)?.c,
     check: (t, g) => {
       const at = crateAt(g, t);
-      if (!at) return 'That is not a creature crate.';
+      if (!at) return 'Not a creature crate.';
       return openRefusal(g, at) ?? swapRefusal(g);
     },
     perform: (t, g) => {
@@ -322,9 +321,9 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       if (current && current !== c) {
         shutIn(g, current, at.crate);
-        g.logMsg(`${c.name} comes out of the crate and follows you. ${current.name} goes into the crate in its place.`, 'system');
+        g.logMsg(`${c.name} out of the crate, follows you. ${current.name} into the crate in its place.`, 'system');
       } else {
-        g.logMsg(`${c.name} comes out of the crate and follows you.`, 'system');
+        g.logMsg(`${c.name} out of the crate, follows you.`, 'system');
       }
     },
   },
@@ -342,14 +341,14 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
     applies: (t, g) => !!crateAt(g, t)?.c,
     check: (t, g) => {
       const at = crateAt(g, t);
-      if (!at) return 'That is not a creature crate.';
+      if (!at) return 'Not a creature crate.';
       const shut = openRefusal(g, at);
       if (shut) return shut;
-      if (!g.deed) return 'You have no settlement to set it to work on.';
+      if (!g.deed) return 'No settlement.';
       const def = at.c ? SPECIES[at.c.species] : undefined;
-      if (def && !def.gathers) return `A ${def.name.toLowerCase()} has no trade to be set to.`;
+      if (def && !def.gathers) return `${def.name}: no trade.`;
       if (g.creatures.workers().length >= g.workerCap) {
-        return `${g.deed.name} has work for ${g.workerCap} wildermon at level ${g.deedLevel}. Upgrade the settlement to take on more.`;
+        return `${g.deed.name} full: ${g.workerCap} workers at level ${g.deedLevel}.`;
       }
       return null;
     },
@@ -361,7 +360,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       c.mode = 'deed';
       c.trade = null;
       c.enemy = null;
-      g.logMsg(`${c.name} comes out of the crate and will ${deedJobLine(c)}.`, 'system');
+      g.logMsg(`${c.name} out of the crate, assigned: ${deedJobLine(c)}.`, 'system');
     },
   },
 ];

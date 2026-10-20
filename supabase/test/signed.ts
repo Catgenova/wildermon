@@ -78,7 +78,7 @@ const wordsIsle = psql(`select concat_ws('#', sign_said('notMade'), sign_said('s
 const wordsHere = [SIGN_SAID.notMade, SIGN_SAID.signed, SIGN_SAID.nothing, signNotYours('Mira'), signedSaid('For Otto'),
   makerLine('Mira', undefined), makerLine('Mira', 'For Otto'), makerLine(undefined, 'For Otto')].join('#');
 check('every sentence it says is the same on both sides, and the QL in it is the rule\'s', wordsIsle === wordsHere
-  && SIGN_SAID.notMade.includes(`QL ${SIGN_QL}`) && makerLine('Mira', 'For Otto') === ' Made and signed by Mira: “For Otto”.', `${wordsIsle} / ${wordsHere}`);
+  && SIGN_SAID.notMade.includes(`QL ${SIGN_QL}`) && makerLine('Mira', 'For Otto') === ' Made by Mira, signed: “For Otto”.', `${wordsIsle} / ${wordsHere}`);
 
 // Who carries a maker's name, made: one thing at the QL or better, and rare work, the same on both sides.
 const CASES: Array<[string, number, number]> = [

@@ -723,7 +723,7 @@ rollback;`));
   const chain = [...g.springs.list.values()][0].chain;
   const via = chain.streams.find((st) => st.via !== undefined);
   const now = footSays(g, b);
-  say(r('fed') === `${FOUNT[0]},${FOUNT[1]},true` && fedBefore && keptBefore === 'It keeps the fountain at its foot full.',
+  say(r('fed') === `${FOUNT[0]},${FOUNT[1]},true` && fedBefore && keptBefore === 'Keeps the fountain at its foot full.',
     `kept full while it stands: "${keptBefore}" (island ${r('fed')})`);
   say(viaOne(canon(chain)) === stripFill(JSON.parse(r('chain'))) && !!via && !via.fountain && via.path.length > 0 && !g.springs.feeds(FOUNT[0], FOUNT[1])
     && r('feed') === `${FOUNT[0]},${FOUNT[1]},false`,
@@ -944,7 +944,7 @@ rollback;`));
   h.inventory.add('mortar', { count: 1, ql: 40 });
   act('build_aqueduct').perform({ kind: 'bridge', id: a.id }, h);
   const full = h.log[h.log.length - 1]?.text ?? '';
-  say(full === r('full') && full.endsWith('The pond at its foot is full already, and spills over its lip.'),
+  say(full === r('full') && full.endsWith('Pond at its foot full; spills over its lip.'),
     `finished into a spring's pond standing full, it says so: "${full}"${full === r('full') ? '' : ` | island "${r('full')}"`}`);
 }
 

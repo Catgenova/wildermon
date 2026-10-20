@@ -9938,9 +9938,9 @@ begin
       (select id from item where world_id = w and holder_uid = me and def = 'pear' order by id limit 1)));
   end loop;
 end $$;
-select text as juice_said from event where uid = :'ivar' and kind = 'event' and text like 'You crush the apples%' order by n desc limit 1 \gset
-select text as cider_said from event where uid = :'ivar' and kind = 'event' and text like 'You crush the pears%' order by n desc limit 1 \gset
-select count(*) as spoiled from event where uid = :'ivar' and kind = 'event' and (text like 'The pulp clogs%' or text like 'The must sours%') \gset
+select text as juice_said from event where uid = :'ivar' and kind = 'event' and text like 'Made: %juice%' order by n desc limit 1 \gset
+select text as cider_said from event where uid = :'ivar' and kind = 'event' and text like 'Made: %cider%' order by n desc limit 1 \gset
+select count(*) as spoiled from event where uid = :'ivar' and kind = 'event' and text like 'Failed: %' \gset
 select id as juice, coalesce(charges, 0) as sips from item where world_id = :'world2' and holder_uid = :'ivar' and def = 'juice_bucket' order by id desc limit 1 \gset
 update player set stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{thirst}', '0.4') where world_id = :'world2' and uid = :'ivar' \g /dev/null
 select coalesce(act_refusal(:'world2', :'ivar', 'drink_skin', ('{"kind":"item","uid":' || :'juice' || '}')::jsonb), 'ALLOWED') as sip_door \gset

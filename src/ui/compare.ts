@@ -2,7 +2,7 @@ import type { Game } from '../game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
 import { armourSwingKg, blockChance, blockNote, reachOf, SWING_FLOOR, swingByOf, swingKgOf, THROWN_PAST } from '../game/fight';
 import { bagRoom, bagUnits, isBag, itemDef, itemName, itemWeight, unitWeight, type Item } from '../game/items';
-import { finePercent, listed, percent, share as shareWords } from '../game/words';
+import { finePercent, listed, percent } from '../game/words';
 import { ACTIONS, tasteSays } from '../game/actions';
 import { RECIPES } from '../game/recipes';
 import { MATERIALS } from '../game/improve';
@@ -44,7 +44,7 @@ const share = (by: number): string => `${by > 1 ? '+' : '−'}${percent(Math.abs
  */
 export function swingNote(t: ReturnType<Game['swingTime']>): string {
   const parts = t.parts.map((p) => `${p.what} ${share(p.by)}`);
-  return `Its own ${t.own.toFixed(2)} s${parts.length ? `; ${parts.join(', ')}` : ''}${t.floored ? `; never under ${SWING_FLOOR.toFixed(1)} s` : ''}.`;
+  return `Base ${t.own.toFixed(2)} s${parts.length ? `; ${parts.join(', ')}` : ''}${t.floored ? `; min ${SWING_FLOOR.toFixed(1)} s` : ''}.`;
 }
 
 /**
@@ -55,7 +55,7 @@ export function swingNote(t: ReturnType<Game['swingTime']>): string {
 function swingStat(id: string, family: string): Stat {
   const kg = itemDef(id).weight;
   return {
-    label: 'Each swing or draw', value: swingKgOf(id) * armourSwingKg(), say: (v) => `${finePercent(v)} longer`,
+    label: 'Swing or draw time', value: swingKgOf(id) * armourSwingKg(), say: (v) => `+${finePercent(v)}`,
     diff: (d) => `${d > 0 ? '+' : '−'}${finePercent(Math.abs(d))}`, more: false,
     note: `Its ${kg.toFixed(1)} kg counts ×${+swingByOf(id).toFixed(2)} for ${family}, ${swingKgOf(id).toFixed(2)} kg at ${finePercent(armourSwingKg())} a kilogram.`,
   };
@@ -69,7 +69,7 @@ function swingStat(id: string, family: string): Stat {
 function reachStat(g: Game, weapon: NonNullable<ReturnType<typeof WEAPON_BY_ID.get>>): Stat {
   const own = reachOf(weapon);
   const more = g.perk(`length:${weapon.kind}`, 0);
-  const why = weapon.thrown ? `Its range ${weapon.range ?? 0} and ${THROWN_PAST} past it` : `All ${weapon.kind} reach ${+own.toFixed(1)} tiles`;
+  const why = weapon.thrown ? `Range ${weapon.range ?? 0} + ${THROWN_PAST}` : `All ${weapon.kind}: reach ${+own.toFixed(1)} tiles`;
   return {
     label: 'Reaches', value: own + more, say: (v) => `${+v.toFixed(1)} tiles`, diff: (d) => signed(d, 1, ' tiles'), more: true,
     note: `${why}${more ? `, + ${+more.toFixed(1)} for your perks` : ''}.`,
@@ -85,8 +85,8 @@ function statsOf(g: Game, item: Item): Stat[] | null {
     // What a go of the fight with it would take in your hands now (`Game.swingTime`, the same sum as `Game.duration`), and why.
     const t = g.swingTime(weapon, item);
     return [
-      { label: 'Damage a blow', value: weaponDamage(g, weapon, item), say: (v) => v.toFixed(1), diff: (d) => signed(d, 1), more: true },
-      { label: weapon.ammo ? 'A shot every' : 'A swing every', value: t.secs, say: (v) => `${v.toFixed(2)} s`, diff: (d) => signed(d, 2, ' s'), more: false,
+      { label: 'Damage per blow', value: weaponDamage(g, weapon, item), say: (v) => v.toFixed(1), diff: (d) => signed(d, 1), more: true },
+      { label: weapon.ammo ? 'Shot time' : 'Swing time', value: t.secs, say: (v) => `${v.toFixed(2)} s`, diff: (d) => signed(d, 2, ' s'), more: false,
         note: swingNote(t) },
       { label: 'Lands', value: hitChance(g, weapon, item), say: (v) => `${percent(v)} of ${weapon.ammo ? 'shots' : 'swings'}`, diff: points, more: true },
       ...(weapon.ammo ? [] : [reachStat(g, weapon)]),
@@ -96,8 +96,8 @@ function statsOf(g: Game, item: Item): Stat[] | null {
   if (armour) {
     const skill = g.skills.get(ARMOUR_CLASSES[armour.cls].skill);
     return [
-      { label: 'Turns aside', value: pieceSoak(armour, item, skill), say: (v) => `${percent(v)} of a blow there`, diff: points, more: true },
-      { label: 'Slows you by', value: pieceBurden(armour, item), say: (v) => percent(v), diff: points, more: false },
+      { label: 'Damage stopped', value: pieceSoak(armour, item, skill), say: (v) => `${percent(v)} of a blow there`, diff: points, more: true },
+      { label: 'Burden', value: pieceBurden(armour, item), say: (v) => percent(v), diff: points, more: false },
       { label: 'Weighs', value: itemWeight(item), say: (v) => `${v.toFixed(1)} kg`, diff: (d) => signed(d, 1, ' kg'), more: false },
       swingStat(item.id, ARMOUR_CLASSES[armour.cls].name.toLowerCase()),
     ];
@@ -108,7 +108,7 @@ function statsOf(g: Game, item: Item): Stat[] | null {
     return [
       { label: 'Blocks', value: blockChance(shield.block, item.ql, g.skills.get('shields'), perk), say: (v) => `${finePercent(v)} of blows`, diff: points, more: true,
         note: blockNote(shield.block, item.ql, g.skills.get('shields'), perk) },
-      { label: 'Slows you by', value: shield.burden, say: (v) => percent(v), diff: points, more: false },
+      { label: 'Burden', value: shield.burden, say: (v) => percent(v), diff: points, more: false },
       swingStat(item.id, 'a shield'),
     ];
   }
@@ -147,10 +147,10 @@ export function compareLines(g: Game, item: Item): TipLine[] | null {
   });
   const where = slot === 'weapon' ? 'in your hands' : `on your ${SLOT_NAMES[slot].toLowerCase()}`;
   lines.push(same
-    ? `You have this on.`
+    ? 'Worn.'
     : on
-      ? `Set against the ${itemName(on).toLowerCase()} (QL ${on.ql.toFixed(1)}) ${where}.`
-      : `Nothing ${where} to set it against.`);
+      ? `Compared with: ${itemName(on).toLowerCase()} (QL ${on.ql.toFixed(1)}) ${where}.`
+      : `Nothing ${where} to compare.`);
   return lines;
 }
 
@@ -197,11 +197,11 @@ export function itemCard(g: Game, item: Item): TipLine[] {
   const skills = toolSkills().get(item.id);
   if (skills) {
     const names = [...skills].map((k) => (SKILL_BY_ID.get(k)?.name ?? k).toLowerCase());
-    lines.push({ text: `Works as QL ${g.toolWorth(item).toFixed(1)}${names.length ? ` at ${listed(names)}` : ''}` });
+    lines.push({ text: `Effective QL ${g.toolWorth(item).toFixed(1)}${names.length ? ` for ${listed(names)}` : ''}` });
   }
   if (isBag(item)) {
     lines.push({ text: `Holds ${bagRoom(item)} things; ${bagUnits(item)} in it now` });
-    if (def.shelter !== undefined) lines.push(`What is in it rots at ${shareWords(def.shelter)} the rate when it is left on the ground.`);
+    if (def.shelter !== undefined) lines.push(`Rot rate of contents on the ground ×${def.shelter}.`);
   }
   if (def.charges) lines.push({ text: `Holds ${def.charges} drinks; ${item.charges ?? 0} left` });
   const taste = g.perk('taste', 0) > 0 ? tasteSays(g, item).trim() : '';
@@ -210,6 +210,6 @@ export function itemCard(g: Game, item: Item): TipLine[] {
     const feeds = NUTRIENTS.filter((k) => (def.feeds?.[k] ?? 0) > 0).map((k) => NUTRIENT_NAMES[k].toLowerCase());
     if (feeds.length) lines.push({ text: `Feeds ${listed(feeds)}` });
   }
-  if (item.locked) lines.push('Kept back: nothing will spend, drop or feed it away.');
+  if (item.locked) lines.push('Kept back: never spent, dropped or fed away.');
   return lines;
 }

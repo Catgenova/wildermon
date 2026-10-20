@@ -100,10 +100,10 @@ export class GuidePanel {
     if (key === this.drawn) return;
     this.drawn = key;
     this.counts.textContent = countsLine(g);
-    this.counts.title = 'Kinds seen out of every kind there is; tamed and bred out of the kinds that can be, which the monsters cannot';
+    this.counts.title = 'Seen: of all kinds. Tamed, bred: of kinds that can be (not monsters)';
     this.bar.replaceChildren();
     this.view.replaceChildren();
-    if (this.failed) this.say('The island did not answer just now, so this is what it said last. It is asked again each time the Field guide tab is turned to.');
+    if (this.failed) this.say('Island did not answer: showing its last reply. Asked again each time this tab opens.');
     const def = this.page ? SPECIES[this.page] : undefined;
     if (def) this.drawPage(def);
     else this.drawIndex();
@@ -119,7 +119,7 @@ export class GuidePanel {
     if (guidePages().some((def) => !g.seen.has(def.id))) {
       const how = document.createElement('div');
       how.className = 'guide-how';
-      how.textContent = 'A kind is drawn and named the first time one is in sight. Click a card for its page.';
+      how.textContent = 'A kind is added the first time one is in sight. Click a card for its page.';
       this.view.append(how);
     }
     guidePages().forEach((def, i) => {
@@ -169,9 +169,9 @@ export class GuidePanel {
     where.className = 'guide-where';
     where.textContent = `No. ${at + 1} of ${pages.length}`;
     this.bar.append(
-      button('Index', 'Every kind, a card each', () => this.turnTo(null)),
-      button('‹', 'The page before', () => this.turnTo(back.id)),
-      button('›', 'The page after', () => this.turnTo(next.id)),
+      button('Index', 'All kinds', () => this.turnTo(null)),
+      button('‹', 'Previous page', () => this.turnTo(back.id)),
+      button('›', 'Next page', () => this.turnTo(next.id)),
       where,
     );
 
@@ -209,7 +209,7 @@ export class GuidePanel {
       go.textContent = 'Track';
       // Alone, no further than the wild that is out (`trackAction.ts`).
       const reach = this.island ? trackRange(L) : Math.min(trackRange(L), CULL_RANGE);
-      go.title = `Find the nearest wild ${def.name} within ${reach} tiles of you, the way to it read to within ${degreesSays(trackErr(L))}°, at your Tracking of ${L}`;
+      go.title = `Nearest wild ${def.name} within ${reach} tiles, bearing ±${degreesSays(trackErr(L))}° (Tracking ${L})`;
       go.addEventListener('click', () => this.game.requestAction(track, trackTarget(this.game, def.id)));
       side.append(go);
     }

@@ -94,7 +94,7 @@ function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: stri
     row.setAttribute('aria-expanded', 'false');
     // A row that is both a job and a fold: the label does it, the arrow opens
     // the choices. A row that is only a fold opens wherever it is clicked.
-    if (item.onSelect) chevron.title = 'More ways to do this';
+    if (item.onSelect) chevron.title = 'More options';
     row.append(chevron);
     let open: HTMLElement[] | null = null;
     const fold = (remember = true): void => {

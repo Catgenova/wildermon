@@ -82,45 +82,45 @@ export const SETTLE_REFRESH = 10;
  */
 export const SETTLE_SAID = {
   /** The settlement was disbanded. */
-  gone: 'That settlement is gone.',
+  gone: 'Settlement gone.',
   /** Reading or delivering to a settlement you are not on the roll of. */
-  stranger: 'You are not a citizen of {deed}.',
+  stranger: 'Not a citizen of {deed}.',
   /** A notice with nothing in it. */
-  empty: 'Write something to post.',
+  empty: 'Notice is empty.',
   /** A notice too long. */
-  long: `A notice is at most ${NOTICE_MAX} characters.`,
+  long: `Notice: max ${NOTICE_MAX} characters.`,
   /** Taking down a notice that is not there. */
-  noNotice: 'That notice is gone.',
+  noNotice: 'Notice gone.',
   /** The start of a notice told in the log: the notice follows it. */
   heard: 'Notice at {deed} from {who}:',
   /** Asking for a kind of thing there is no such thing as. */
-  what: 'There is no such thing to ask for.',
+  what: 'No such item.',
   /** Asking for a thing a crate does not take. */
-  unstored: '{what} cannot go into a deed crate, so it cannot be asked for.',
+  unstored: '{what} cannot go in a deed crate, so cannot be asked for.',
   /** Asking for too few or too many. */
-  count: `Ask for at least one and at most ${WORK_COUNT_MAX}.`,
+  count: `Count: 1 to ${WORK_COUNT_MAX}.`,
   /** A lowest quality over the top of the scale. */
-  ql: `A lowest quality is a whole number, at most ${WORK_QL_TOP}.`,
+  ql: `Lowest QL: whole number, max ${WORK_QL_TOP}.`,
   /** Too many works open. */
-  full: `{deed} has ${WORK_OPEN_MAX} works open, which is as many as a settlement may have.`,
+  full: `{deed}: max ${WORK_OPEN_MAX} works open.`,
   /** A work finished, taken down or never there. */
-  noWork: 'That work is finished or taken down.',
+  noWork: 'Work finished or taken down.',
   /** Too far from the token. */
-  far: `Stand within ${DELIVER_REACH} tiles of the token of {deed} to deliver.`,
+  far: `Deliver within ${DELIVER_REACH} tiles of the {deed} token.`,
   /** Nothing in the pack that matches. */
-  none: 'You carry no {what} to deliver.',
+  none: 'No {what} carried.',
   /** Nothing in the pack good enough. */
-  poor: 'You carry no {what} of QL {n} or better to deliver.',
+  poor: 'No {what} of QL {n} or better carried.',
   /** No deed crate standing. */
-  noCrate: '{deed} has no deed crate standing to deliver into.',
+  noCrate: '{deed} has no deed crate to deliver into.',
   /** The deed crate full. */
-  crateFull: 'The deed crate at {deed} is full.',
+  crateFull: 'Deed crate at {deed} is full.',
   /** Told to whoever delivered. */
-  delivered: 'You deliver {n} × {what} to {deed}.',
+  delivered: 'Delivered: {n} × {what} to {deed}.',
   /** Told to the founder, when somebody else delivered. */
   deliveredBy: '{who} delivers {n} × {what} to {deed}.',
   /** Told to whoever delivered, the founder and whoever set it, when a work has all it wants. */
-  finished: 'The work for {n} × {what} at {deed} is done.',
+  finished: 'Work done: {n} × {what} at {deed}.',
 } as const;
 
 export type SettleKey = keyof typeof SETTLE_SAID;

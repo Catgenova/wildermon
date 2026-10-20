@@ -108,7 +108,7 @@ const TJ = '{"x":30,"y":30,"side":"n"}';
 const mineSaid = (): string => {
   game.log.length = 0;
   ACTION_BY_ID.get('paint_wall')?.perform?.(target as never, game);
-  return game.log.map((l) => l.text).find((t) => t.startsWith('You brush')) ?? 'NOTHING SAID';
+  return game.log.map((l) => l.text).find((t) => t.startsWith('Painted: ')) ?? 'NOTHING SAID';
 };
 const theirSaid = (action: string): string => psql(`
 begin;
@@ -144,7 +144,7 @@ check('painting it the colour it already is is refused in the same words',
 /* And lye takes it back off, the bucket with it. */
 game.log.length = 0;
 ACTION_BY_ID.get('strip_wall_paint')?.perform?.(target as never, game);
-const mineStrip = game.log.map((l) => l.text).find((t) => t.startsWith('You scrub')) ?? 'NOTHING SAID';
+const mineStrip = game.log.map((l) => l.text).find((t) => t.startsWith('Paint removed: ')) ?? 'NOTHING SAID';
 const theirStrip = psql(`
 begin;
 create temp table said (k text);

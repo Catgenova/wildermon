@@ -52,8 +52,8 @@ export class Palette {
     this.input.type = 'search';
     this.input.className = 'palette-input';
     this.input.id = 'palette-input';
-    this.input.placeholder = 'Find a window, recipe, setting or help page…';
-    this.input.setAttribute('aria-label', 'Find a window, recipe, setting, help page, layout or key');
+    this.input.placeholder = 'Search windows, recipes, settings, help…';
+    this.input.setAttribute('aria-label', 'Search windows, recipes, settings, help pages, layouts and keys');
     this.input.autocomplete = 'off';
     this.input.spellcheck = false;
     this.list = document.createElement('div');
@@ -186,9 +186,9 @@ export class Palette {
       return row;
     }));
     this.count.textContent = !hits.length
-      ? `Nothing is called “${this.input.value.trim()}”.`
+      ? `No match: “${this.input.value.trim()}”.`
       : hits.length > SHOWN
-        ? `The first ${SHOWN} of ${hits.length}: type more to narrow it.`
-        : `${hits.length} found · ↑ ↓ to choose, Enter to open, Esc to shut`;
+        ? `${SHOWN} of ${hits.length} shown: type more to narrow.`
+        : `${hits.length} found · ↑ ↓ choose, Enter open, Esc close`;
   }
 }

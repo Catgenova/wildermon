@@ -54,28 +54,28 @@ export const ENCHANT_BURN = { each: SCORCH?.fx.each ?? 0, secs: SCORCH?.fx.secs 
 /** The Kindler's Firebrand spell (not this enchantment): while it holds, every burn its caster starts lasts `long` times as long. */
 export const BRAND_SPELL = CLASS_SPELLS.find((s) => s.id === 'kindler_firebrand');
 
-/** What a rolled hit does, as Examine's line begins it: "sets the target burning". */
+/** What a rolled hit does, as Examine's line begins it: "Burn on 30% of hits". */
 export const EFFECT_HEAD: Partial<Record<EnchantEffect, string>> = {
-  burn: 'sets the target burning',
-  bleed: 'opens a bleed on the target',
-  stun: `stuns the target for ${STUN_SECS} seconds`,
-  venom: 'puts venom in the target',
+  burn: 'Burn',
+  bleed: 'Bleed',
+  stun: `Stun (${STUN_SECS} s)`,
+  venom: 'Venom',
 };
 /** And what that is, after it: the rule it borrows, in its numbers. */
 export const EFFECT_TAIL: Partial<Record<EnchantEffect, string>> = {
-  burn: `A burn takes ${enchantPct(ENCHANT_BURN.each)} of its full health a second for ${ENCHANT_BURN.secs} seconds, never the last of it.`,
-  bleed: `A bleed takes ${enchantPct(KNIFE_BLEED)} of the blow a second for ${KNIFE_BLEED_SECS} seconds, never the last of it, as a knife's does.`,
-  stun: 'Stunned, it neither moves nor strikes; a stun on one already stunned starts again rather than adding to it.',
-  venom: `Venom takes ${enchantPct(VENOM_DRAIN)} of its full health a second for ${VENOM_SECS} seconds, never the last of it, as a venomous bite's does on you.`,
+  burn: `Burn: ${enchantPct(ENCHANT_BURN.each)} of max health per second for ${ENCHANT_BURN.secs} s, never the last of it.`,
+  bleed: `Bleed: ${enchantPct(KNIFE_BLEED)} of the blow per second for ${KNIFE_BLEED_SECS} s, never the last of it (as a knife).`,
+  stun: 'Stunned: no moving or striking; a new stun restarts it, does not add.',
+  venom: `Venom: ${enchantPct(VENOM_DRAIN)} of max health per second for ${VENOM_SECS} s, never the last of it (as a venomous bite).`,
 };
-/** And what the log says when it does it, `{t}` the creature: "Your Emberbrand sets the boar burning." */
+/** And what the log says when it does it, after "Emberbrand: ", `{t}` the creature: "Emberbrand: boar burning." */
 export const EFFECT_SAID: Partial<Record<EnchantEffect, string>> = {
-  burn: 'sets the {t} burning.',
-  bleed: 'opens the {t} up, and it bleeds.',
-  stun: `stuns the {t} for ${STUN_SECS} seconds.`,
-  venom: 'puts venom in the {t}.',
-  flame: 'sets the {t} burning.',
-  frost: `slows the {t} to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds.`,
+  burn: '{t} burning.',
+  bleed: '{t} bleeding.',
+  stun: `{t} stunned ${STUN_SECS} s.`,
+  venom: '{t} envenomed.',
+  flame: '{t} burning.',
+  frost: `{t} slowed to ${enchantPct(FROST_PACE)} speed for ${FROST_SECS} s.`,
 };
 
 /** Every hostile monster, by name, for what Sunstrike is harder on. */
@@ -90,53 +90,52 @@ export const monsterNames = (): string => listed(Object.values(SPECIES).filter((
 export function enchantLine(e: EnchantmentDef): string {
   switch (e.effect) {
     case 'burn': case 'bleed': case 'stun': case 'venom':
-      return `a hit ${EFFECT_HEAD[e.effect]} {v} of the time. ${EFFECT_TAIL[e.effect]}`;
-    case 'swing': return 'a swing with it takes {v} less time.';
-    case 'crit': return '{v} more of its blows that land are critical: that much is added to your chance.';
-    case 'smite': return 'a blow with it does {v} more damage to a hostile monster, one that cannot be tamed.';
+      return `${EFFECT_HEAD[e.effect]} on {v} of hits. ${EFFECT_TAIL[e.effect]}`;
+    case 'swing': return 'Swing time \u2212{v}.';
+    case 'crit': return 'Critical chance +{v} (added).';
+    case 'smite': return 'Damage +{v} on hostile (untameable) monsters.';
     case 'leech':
-      return `every hit with it that lands and leaves the creature standing gives you back {v} of the damage it deals as health, each point of it worth ${enchantPct(BLOW_SHARE)} of your health, as a creature's blow is.`;
+      return `Health back: {v} of damage dealt, on hits that leave the target standing; each point ${enchantPct(BLOW_SHARE)} of your health, as a creature's blow.`;
     case 'drain':
-      return 'every hit with it that lands puts the creature\'s next blow back by {v} of the time between its blows.';
-    case 'range': return 'it reaches {v} further.';
-    case 'flame': return `a shot from it that lands sets the target burning {v} of the time. ${EFFECT_TAIL.burn}`;
+      return 'Per hit: target\'s next blow delayed {v} of its attack interval.';
+    case 'range': return 'Range +{v}.';
+    case 'flame': return `Shot: burn on {v} of hits. ${EFFECT_TAIL.burn}`;
     case 'frost':
-      return `a shot from it that lands slows the target to ${enchantPct(FROST_PACE)} of its pace for ${FROST_SECS} seconds {v} of the time; `
-        + 'another on one already slowed starts it again rather than adding on.';
+      return `Shot: slow to ${enchantPct(FROST_PACE)} speed for ${FROST_SECS} s on {v} of hits; a new slow restarts it, does not add.`;
     case 'guard':
-      return `while it is worn, every blow that reaches you lands {v} lighter; each piece with it adds its share, ${enchantPct(STONESKIN_CAP)} at most together.`;
+      return `Worn: damage taken from blows \u2212{v}; pieces add, max ${enchantPct(STONESKIN_CAP)}.`;
     case 'fireguard':
-      return `while it is worn, a burn that reaches you lands {v} lighter; each piece with it adds its share, ${enchantPct(EMBERWARD_CAP)} at most together.`;
-    case 'stride': return 'while they are worn, you walk {v} faster.';
+      return `Worn: burn damage taken \u2212{v}; pieces add, max ${enchantPct(EMBERWARD_CAP)}.`;
+    case 'stride': return 'Worn: walk speed +{v}.';
     case 'thorns':
-      return 'while it is worn, a creature whose blow lands on you takes {v} of the damage it did you back, as a blow of yours of that size would hurt it; '
-        + `each piece with it adds its share, ${enchantPct(THORNHIDE_CAP)} at most together.`;
-    case 'shadow': return 'while it is worn, at night a hunting creature notices you from {v} closer.';
-    case 'block': return '{v} is added to the shield\'s chance of turning a blow aside, past the most a shield otherwise blocks.';
-    case 'work': return 'a job done with it takes {v} less time.';
-    case 'temper': return 'it takes {v} less damage from use.';
-    case 'bounty': return 'a bush harvested with a sickle, or a fish landed with a rod, brings one more {v} of the time.';
-    case 'grace': return `a candle set in it, or the torch when it is struck, burns {v} longer, and it throws its light ${GRACE_TILES} tiles further.`;
-    case 'learn': return 'while it is worn, every go at any trade teaches {v} more skill.';
-    case 'knack': return 'while it is worn, the chance of a knack from a go is {v} greater.';
-    case 'wind': return 'while it is worn, your stamina comes back {v} faster.';
-    case 'upkeep': return 'while it is worn, hunger and thirst fall {v} slower.';
-    case 'favour': return 'while it is worn, a prayer gives {v} more favour.';
-    case 'calm': return 'while it is worn, a sitting banks {v} more Calm.';
-    case 'mule': return 'while it is carried, you carry {v} more before the weight tells on you; each pack with it adds its own.';
-    case 'swim': return 'while it is worn, you swim {v} faster, never past a walk, and swimming costs {v} less stamina.';
-    case 'sight': return 'while it is worn, you see {v} further.';
-    case 'lode': return 'a go at mining with it that brings out ore or stone brings one more {v} of the time.';
-    case 'ember': return 'it burns {v} less fuel for the same work: a firebox full keeps it hot that much longer.';
-    case 'master': return `a thing made at it comes out {v} higher, never past QL ${QL_TOP}; where more than one is within reach, the best counts.`;
-    case 'sail': return 'under sail she goes {v} faster, on every point of sail.';
-    case 'room': return 'it takes {v} more, in things or in kilos, whichever it is measured in.';
-    case 'bag': return 'it holds {v} more, in things, kilos or litres, whichever it is measured in; what is in it still weighs all it weighs.';
-    case 'snare': return `its chance of taking a creature that comes to it is {v} better, never past ${enchantPct(CATCH_MOST)}; a creel's chance of taking a fish, {v} better.`;
-    case 'mend': return 'a drag with it brings up {v} more fish on the average, and it wears {w} slower.';
-    case 'fleet': return 'a mount wearing it carries you {v} faster, after its makers\' marks on its tack.';
-    case 'tame': return 'an offering made with it in your pack is {v} likelier to tame, and a mount wearing it never breaks off a fight, however far from you the fight goes.';
-    case 'dream': return 'a night in it banks {v} more rest, and you can hold {v} more rest than the most otherwise banked.';
+      return 'Worn: an attacker that hits you takes {v} of the damage it dealt, as your blow would; '
+        + `pieces add, max ${enchantPct(THORNHIDE_CAP)}.`;
+    case 'shadow': return 'Worn: at night, creature notice range \u2212{v}.';
+    case 'block': return 'Shield block chance +{v}, above the normal shield max.';
+    case 'work': return 'Job time \u2212{v}.';
+    case 'temper': return 'Damage from use \u2212{v}.';
+    case 'bounty': return 'Sickle bush harvest or rod catch: one extra on {v} of goes.';
+    case 'grace': return `Candle or struck torch burn time +{v}; light radius +${GRACE_TILES} tiles.`;
+    case 'learn': return 'Worn: skill gain +{v}.';
+    case 'knack': return 'Worn: knack chance per go +{v}.';
+    case 'wind': return 'Worn: stamina regeneration +{v}.';
+    case 'upkeep': return 'Worn: hunger and thirst rate \u2212{v}.';
+    case 'favour': return 'Worn: favour per prayer +{v}.';
+    case 'calm': return 'Worn: Calm per sitting +{v}.';
+    case 'mule': return 'Carried: carry weight +{v}; each pack adds its own.';
+    case 'swim': return 'Worn: swim speed +{v} (max walk speed), swimming stamina \u2212{v}.';
+    case 'sight': return 'Worn: sight range +{v}.';
+    case 'lode': return 'Mining ore or stone: one extra on {v} of goes.';
+    case 'ember': return 'Fuel use \u2212{v}.';
+    case 'master': return `QL of things made here +{v}, max QL ${QL_TOP}; the best within reach counts.`;
+    case 'sail': return 'Sailing speed +{v}, on every point of sail.';
+    case 'room': return 'Capacity +{v} (things or kg).';
+    case 'bag': return 'Capacity +{v} (things, kg or litres); contents weigh the same.';
+    case 'snare': return `Catch chance +{v}, max ${enchantPct(CATCH_MOST)}; creel fish chance +{v}.`;
+    case 'mend': return 'Fish per drag +{v} on average; wear \u2212{w}.';
+    case 'fleet': return 'Mount speed +{v}, after tack makers\' bonuses.';
+    case 'tame': return 'In pack: tame chance per offering +{v}. On a mount: never breaks off a fight for distance.';
+    case 'dream': return 'Rest banked per night +{v}; max banked rest +{v}.';
   }
 }
 /** That line with its figure at this quality. */
@@ -154,7 +153,7 @@ export function enchantSays(item: Pick<Item, 'enchant'>): string {
 // What each scroll says it does: its line at the top of the scale, and in proportion below.
 describeWith({
   enchant: Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, {
-    does: `At QL ${QL_TOP}, ${enchantLineAt(e, QL_TOP)} In proportion below.`,
+    does: `At QL ${QL_TOP}: ${enchantLineAt(e, QL_TOP)} Linear below.`,
   }])),
 });
 
@@ -306,8 +305,8 @@ export const craftSpread = (base: number, r: number): number => base * (QL_LOW +
 
 /** What a go that took says: "Emberbrand goes into the sword (iron) at QL 34.0, held to the sword's QL 34.0. The scroll is used up." */
 export function enchantedSaid(e: EnchantmentDef, name: string, kind: string, ql: number, held: EnchantHeld, scrollQl: number, itemQl: number): string {
-  const by = held === 'item' ? `, held to the ${kind}'s QL ${qlWord(itemQl)}` : held === 'scroll' ? `, held to the scroll's QL ${qlWord(scrollQl)}` : '';
-  return `${e.name} goes into the ${name} at QL ${qlWord(ql)}${by}. The scroll is used up.`;
+  const by = held === 'item' ? ` (capped at ${kind} QL ${qlWord(itemQl)})` : held === 'scroll' ? ` (capped at scroll QL ${qlWord(scrollQl)})` : '';
+  return `Enchanted: ${name}, ${e.name} QL ${qlWord(ql)}${by}. Scroll used.`;
 }
 /**
  * What a go that did not take on a thing standing where it was set down says.
@@ -315,16 +314,16 @@ export function enchantedSaid(e: EnchantmentDef, name: string, kind: string, ql:
  * never goes to pieces from a scroll (`ENCHANT_SAID.standing`).
  */
 export function placedNotTakenSaid(e: EnchantmentDef, name: string, harm: number, dmg: number): string {
-  return `The ${e.name} scroll does not take. The ${name} takes ${qlWord(harm)} damage and is at ${qlWord(dmg)}. The scroll is used up.`;
+  return `${e.name} failed: ${name} +${qlWord(harm)} damage (now ${qlWord(dmg)}). Scroll used.`;
 }
 /** The damage a scroll that did not take leaves on a placed thing: its harm, held short of broken. */
 export const placedHarm = (dmg: number): number => Math.min(DAMAGE_MAX - 1, dmg + ENCHANT_HARM);
 /** What a go that did not take says: what happened to the weapon. */
 export function notTakenSaid(e: EnchantmentDef, name: string, how: 'broke' | 'harm' | 'harmBroke', dmg: number): string {
-  const head = `The ${e.name} scroll does not take`;
-  if (how === 'broke') return `${head}, and the ${name} goes to pieces. The scroll is used up.`;
-  if (how === 'harmBroke') return `${head}. The ${name} takes ${ENCHANT_HARM} damage and goes to pieces. The scroll is used up.`;
-  return `${head}. The ${name} takes ${ENCHANT_HARM} damage and is at ${qlWord(dmg)}. The scroll is used up.`;
+  const head = `${e.name} failed: ${name}`;
+  if (how === 'broke') return `${head} destroyed. Scroll used.`;
+  if (how === 'harmBroke') return `${head} +${ENCHANT_HARM} damage, destroyed. Scroll used.`;
+  return `${head} +${ENCHANT_HARM} damage (now ${qlWord(dmg)}). Scroll used.`;
 }
 
 function lose(g: Game, item: Item): void {
@@ -417,9 +416,9 @@ export function enchantRoll(g: Game, item: Item | null | undefined, c: Creature)
   return g.rand() < enchantHitChance(e, item.enchant.ql) ? e : null;
 }
 
-/** "Your Concussion stuns the boar for 2 seconds." Nothing for one that works every time, which would say so on every swing. */
+/** "Concussion: boar stunned 2 s." Nothing for one that works every time, which would say so on every swing. */
 export const enchantHitSaid = (e: EnchantmentDef, creature: string): string =>
-  (EFFECT_SAID[e.effect] ? `Your ${e.name} ${EFFECT_SAID[e.effect]!.replace('{t}', creature)}` : '');
+  (EFFECT_SAID[e.effect] ? `${e.name}: ${EFFECT_SAID[e.effect]!.replace('{t}', creature)}` : '');
 
 /**
  * Venom in a creature, as the island's `enchant_venom`: a bleed of

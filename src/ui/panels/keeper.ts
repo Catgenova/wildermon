@@ -72,24 +72,24 @@ export class KeeperPanel {
     this.page.replaceChildren();
     const kept = this.seen;
     if (!kept) {
-      this.say(this.failed ? `The island did not answer. It is asked again every ${KEEPER_REFRESH} seconds while this window is open.`
-        : 'Asking the island…', this.failed);
+      this.say(this.failed ? `No answer from the island. Retry every ${KEEPER_REFRESH} s while open.`
+        : 'Loading…', this.failed);
     } else {
-      if (this.failed) this.say(`The island did not answer just now, so this is its last answer. It is asked again every ${KEEPER_REFRESH} seconds.`, true);
+      if (this.failed) this.say(`No answer just now: showing the last answer. Retry every ${KEEPER_REFRESH} s.`, true);
       const ashore = kept.people.filter((b) => !b.away);
       const away = kept.people.filter((b) => b.away);
       this.head(`Ashore (${ashore.length})`);
-      if (!ashore.length) this.empty('Nobody is ashore.');
+      if (!ashore.length) this.empty('Nobody ashore.');
       for (const b of ashore) this.page.append(this.row(b, kept));
       this.head(`Away (${away.length})`);
-      if (!away.length) this.empty('Nobody with a body here is away.');
+      if (!away.length) this.empty('Nobody away.');
       for (const b of away) this.page.append(this.row(b, kept));
     }
     // What the three buttons do, under the list they act on rather than over it.
-    this.head('What each does');
-    this.say('Move puts somebody on the token of the settlement they founded, or where newcomers come ashore; '
-      + 'it stops what they are doing, empties their queue and takes them off anything they ride, drive, pull or are aboard. '
-      + `A mute refuses ${MUTE_SHUTS}. To clear a pile off the ground, right-click its tile.`);
+    this.head('Actions');
+    this.say('Move: to their settlement token, or the newcomer landing; stops their action, empties their queue, '
+      + 'dismounts them from anything ridden, driven, pulled or boarded. '
+      + `Mute: refuses ${MUTE_SHUTS}. Clear a ground pile: right-click its tile.`);
     // Asked again every so often: the list stays where it was being read.
     this.page.scrollTop = top;
   }
@@ -100,7 +100,7 @@ export class KeeperPanel {
     el.className = 'social-row keeper-row';
     const dot = document.createElement('span');
     dot.className = `social-dot${b.away ? '' : ' social-on'}`;
-    dot.title = b.away ? 'Away' : 'Ashore now';
+    dot.title = b.away ? 'Away' : 'Ashore';
     const who = document.createElement('span');
     who.className = 'keeper-who';
     const name = document.createElement('span');
@@ -113,13 +113,13 @@ export class KeeperPanel {
     who.append(name, facts);
     const acts = document.createElement('span');
     acts.className = 'social-acts';
-    acts.append(this.button('Move', `${moveHint(b, kept.spawn)} You are asked first.`, () => {
+    acts.append(this.button('Move', `${moveHint(b, kept.spawn)} Asks to confirm.`, () => {
       void this.game.hooks.confirm(`${moveHint(b, kept.spawn).replace(/\.$/, '')}?`).then((yes) => {
         if (yes) void this.did(this.island.keeperMove(b.uid));
       });
     }));
     const mute = this.button(b.muted ? 'Mute again' : 'Mute',
-      `Choose how long. Until then the island refuses ${MUTE_SHUTS}; muting again replaces the time left.`, () => {
+      `Choose duration. Refuses ${MUTE_SHUTS} until then; muting again replaces the time left.`, () => {
         const r = mute.getBoundingClientRect();
         this.showMenu(r.left, r.bottom + 2, `Mute ${b.you ? 'yourself' : b.name}`, MUTE_FOR.map((secs) => ({
           label: muteLabel(secs),
@@ -130,7 +130,7 @@ export class KeeperPanel {
     mute.classList.add('keeper-mute');
     acts.append(mute);
     // Unmute keeps its place, hidden, on a row with no mute, so Move and Mute stand in one column down the list.
-    const unmute = this.button('Unmute', `Lift the mute: ${MUTE_SHUTS} is sent again`,
+    const unmute = this.button('Unmute', `Unmute: ${MUTE_SHUTS} allowed again`,
       () => void this.did(this.island.keeperUnmute(b.uid)));
     if (!b.muted) {
       unmute.classList.add('keeper-gap');
@@ -139,7 +139,7 @@ export class KeeperPanel {
       unmute.setAttribute('aria-hidden', 'true');
     }
     acts.append(unmute);
-    el.title = `Move puts ${b.you ? 'you' : 'them'} on ${moveTarget(b, kept.spawn)}.`;
+    el.title = `Move to: ${moveTarget(b, kept.spawn)}.`;
     el.append(dot, who, acts);
     return el;
   }

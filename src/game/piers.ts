@@ -117,16 +117,16 @@ export const pierDrop = (g: PierGround, deck: number): number => deck - g.low;
  * word for word and in this order.
  */
 export function pierRefusal(g: PierGround, deck: number, plant?: string): string | null {
-  if (!STONE_BEDS.has(g.tile)) return 'Piers go down on bare ground or what grows flat on it. Clear what stands or is laid here first.';
-  if (plant) return `A ${plant} grows here. Pull it up first.`;
-  if (g.high > deck) return `The ground here rises to ${g.high}, over the deck at ${deck}. A deck is level: plan a building on piers from its highest tile.`;
+  if (!STONE_BEDS.has(g.tile)) return 'Piers need bare ground or flat growth: clear the tile first.';
+  if (plant) return `Pull up the ${plant} first.`;
+  if (g.high > deck) return `Ground rises to ${g.high}, above the deck at ${deck}: plan from the highest tile.`;
   if (g.water !== null && g.water - g.low > PIER_WATER) {
-    return `The water here is ${metres(g.water - g.low)} m deep. A pier stands in ${metres(PIER_WATER)} m of water at most.`;
+    return `Water ${metres(g.water - g.low)} m deep; piers stand in ${metres(PIER_WATER)} m at most.`;
   }
   if (g.water !== null && deck < g.water + PIER_CLEAR) {
-    return `The water here stands at ${g.water} and the deck would be at ${deck}. A deck clears the water by ${metres(PIER_CLEAR)} m.`;
+    return `Water at ${g.water}, deck at ${deck}: deck must clear water by ${metres(PIER_CLEAR)} m.`;
   }
-  if (deck - g.low > PIER_DROP) return `The ground falls ${metres(deck - g.low)} m under the deck. A pier spans ${metres(PIER_DROP)} m at most.`;
+  if (deck - g.low > PIER_DROP) return `Ground falls ${metres(deck - g.low)} m under the deck; piers span ${metres(PIER_DROP)} m at most.`;
   return null;
 }
 
@@ -148,10 +148,10 @@ export function pierBill(material: string, drop: number): Bill {
  * and the lip can be raised round it. The island's `pier_says`.
  */
 export const pierSays = (deck: number, drop: number, built: boolean, water: number | null): string =>
-  ` It stands on piers under a deck at ${deck}, ${metres(drop)} m over the lowest ground under it.`
-  + (built ? '' : ' The deck is not built: nothing stands on the tile until it is.')
+  ` On piers: deck at ${deck}, ${metres(drop)} m above the lowest ground.`
+  + (built ? '' : ' Deck not built: nothing stands on it yet.')
   + (water === null || water + PIER_CLEAR <= deck ? ''
-    : ` The water under it has risen to ${water}, ${water < deck ? `${metres(deck - water)} m under the deck` : 'over the deck'}.`);
+    : ` Water under it: ${water}, ${water < deck ? `${metres(deck - water)} m below the deck` : 'over the deck'}.`);
 
 /**
  * Why a wall or a storey of a material cannot stand on a building on piers,
@@ -162,13 +162,13 @@ export const pierSays = (deck: number, drop: number, built: boolean, water: numb
  */
 export function deckCarries(mat: MaterialDef, deck: MaterialDef | undefined, building: string): string | null {
   if (!deck || mat.heft <= deck.heft) return null;
-  return `${mat.name} is too heavy for the ${deck.name.toLowerCase()} deck under ${building}: a deck on piers carries what it is laid in, ${heftWord(deck.heft)}, no more.`;
+  return `${mat.name} too heavy for the ${deck.name.toLowerCase()} deck under ${building}: it carries ${heftWord(deck.heft)} at most.`;
 }
 
 /** Why a deck cannot be laid in a material under a building whose heaviest wall is `over`, or null (`deck_carries`'s other half). */
 export function deckBears(mat: MaterialDef, over: number, building: string): string | null {
   if (mat.heft >= over) return null;
-  return `${mat.name} will not carry the ${heftWord(over)} standing on ${building}: a deck on piers carries what it is laid in.`;
+  return `${mat.name} cannot carry the ${heftWord(over)} on ${building}.`;
 }
 
 /** Two bills as one, item by item: a deck's floor and the piers under it. */

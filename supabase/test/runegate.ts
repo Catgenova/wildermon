@@ -188,7 +188,7 @@ check('and it holds no lock and nothing hangs in it: it has no hinge and no padl
   check('a rune gate is taken in stone brick and in nothing else, with one sentence for the rest',
     // A material laid as only some things says so first: stained glass is a solid wall's, and says that.
     gateAnswers.every((a, i) => (MATERIALS[i].id === MAT ? a === null : a === (MATERIALS[i].only ? onlySaid(MATERIALS[i]) : laidInSaid(def!))))
-      && laidInSaid(def!) === 'A rune gate is laid in stone brick and nothing else.',
+      && laidInSaid(def!) === 'Rune gate: stone brick only.',
     `"${laidInSaid(def!)}"`);
   check('and no other wall type is held to one material', WALL_TYPES.filter((w) => w.laidIn).map((w) => w.id).join(',') === RUNE_GATE
     && psql(`select string_agg(id, ',') from wall_type_def where laid_in is not null`) === RUNE_GATE);

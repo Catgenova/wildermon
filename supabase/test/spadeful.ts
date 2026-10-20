@@ -195,7 +195,7 @@ console.log('--- a fault in one job');
 check('the round finishes', said('ROUND') === 'ran', said('ROUND'));
 check('another body\'s job in the same round settles', said('OTHER') === '2,1,idle', said('OTHER'));
 check('the faulty job stops with its queue, and what it did is undone', said('STOPPED') === 'idle,0,5,0', said('STOPPED'));
-check('its owner is told what the island said', said('TOLD').startsWith('You stop ') && said('TOLD').includes(FAULT), said('TOLD'));
+check('its owner is told what the island said', said('TOLD').startsWith('Stopped ') && said('TOLD').includes(FAULT), said('TOLD'));
 check('the fault is kept where the deploy reads it', said('KEPT') === `settle,drop_dirt,${FAULT},1`, said('KEPT'));
 check('a browser\'s heartbeat is not refused for it, and the same fault again is counted on the same row',
   said('BEAT') === '0,idle,2', said('BEAT'));

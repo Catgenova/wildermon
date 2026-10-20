@@ -58,7 +58,7 @@ export function lockRefusal(items: readonly Item[], store: Lockable | undefined,
   if (!isLocked(store)) return null;
   if (founder || keyFor(items, store)) return null;
   // On a settlement of yours whose locks your rank may not open, that is the reason given (`lock_refusal`).
-  return lacking ?? 'It is locked, and you have no key to it.';
+  return lacking ?? 'Locked: no key.';
 }
 
 /** What a locked store says about itself, for a window title or a tooltip. */
@@ -93,8 +93,8 @@ export const LOCK_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const store = lockableAt(g, t);
       if (!store) return 'It is gone.';
-      if (isLocked(store)) return 'There is a padlock on it already.';
-      if (!padlockToFit(g.inventory.items)) return 'You have no padlock. Forge one at a smelter.';
+      if (isLocked(store)) return 'Already padlocked.';
+      if (!padlockToFit(g.inventory.items)) return 'Need a padlock: forge one at a smelter.';
       return null;
     },
     perform: (t, g) => {
@@ -110,7 +110,7 @@ export const LOCK_ACTIONS: ActionDef[] = [
        */
       store.lock = lock.uid;
       keyFromPadlock(lock);
-      g.logMsg(`You fit the padlock and cut its key. Nothing opens it now but that key${
+      g.logMsg(`Padlock fitted; key made. Only that key opens it${
         g.deedOfMineAt(Math.floor(store.x), Math.floor(store.y)) ? ', or you, on your own land' : ''}.`, 'event');
       g.events.emit('inventory');
       g.events.emit('crate');
@@ -126,7 +126,7 @@ export const LOCK_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const store = lockableAt(g, t);
       if (!store) return 'It is gone.';
-      if (!isLocked(store)) return 'There is no padlock on it.';
+      if (!isLocked(store)) return 'No padlock on it.';
       return g.lockRefusal(store as Lockable & { x: number; y: number });
     },
     perform: (t, g) => {
@@ -141,7 +141,7 @@ export const LOCK_ACTIONS: ActionDef[] = [
       // gates: the key itself becomes the padlock handed back, as the island makes it (`padlockFromKey`).
       if (key) padlockFromKey(key);
       else g.inventory.add('padlock', { ql: 40 });
-      g.logMsg(`You take the padlock off${key ? ' and throw the key in after it' : ''}. It is open to anybody again.${
+      g.logMsg(`Padlock removed${key ? ', key returned with it' : ''}. Open to anyone.${
         code ? '' : ''}`, 'event');
       g.events.emit('inventory');
       g.events.emit('crate');

@@ -31,7 +31,6 @@ import type { Target } from '../../src/game/actions';
 import { perksOf, STRIDE, type PerkDef } from '../../src/game/perks';
 import { pathOptions } from '../../src/game/player';
 import { packTreeData, TILE_DEFS, TileType, TREE_AGES, TREE_DEFS } from '../../src/world/tiles';
-import { numberWord } from '../../src/game/words';
 import { FRUITING } from '../../src/game/fruiting';
 
 /** Hold the island in a season the thing is picked in for the rest of the transaction (`fruiting.ts`), whatever day it is run on. */
@@ -212,7 +211,7 @@ begin
   insert into said values ('FELL', v_t || '|' || (select ql || ':' || coalesce(rare, '-') from item where id = ${newest('log')}) || ':'
     || ${count('log')} || ':' || ${tileAt(10, 9)} || ':' || ${count('feather')} || ':' || ${count('honey')}
     || ':' || (select ql from item where id = ${newest('feather')}) || ':' || (select ql from item where id = ${newest('honey')})
-    || '|' || coalesce(${last('The young pine comes down.%')}, 'unsaid'));
+    || '|' || coalesce(${last('Felled young pine:%')}, 'unsaid'));
 
   /* ---- Kindling: a bush cut down gives shafts. ---- */
   perform pg_temp.hold(w, u, '{}');
@@ -224,7 +223,7 @@ begin
   ${ground(10, 9, 'Bush')};
   ${act('cut_down', 10, 9)};
   insert into said values ('KINDLING', v_t || '|' || ${count('shaft')} || ':' || ${tileAt(10, 9)} || ':'
-    || (select ql from item where id = ${newest('shaft')}) || '|' || coalesce(${last('You trim % out of it.%')}, 'unsaid'));
+    || (select ql from item where id = ${newest('shaft')}) || '|' || coalesce(${last('Kindling: %')}, 'unsaid'));
 
   /* ---- Sprout Picker: every check failing, and two sprouts all the same. ---- */
   ${checks(false)};
@@ -235,7 +234,7 @@ begin
   v_t := ${count('sprout')}::text;
   ${hold('Sprout Picker')};
   ${act('pick_sprout', 10, 9)};
-  insert into said values ('SPROUTS', v_t || '|' || ${count('sprout')} || '|' || coalesce(${last('You pick % sprouts.')}, 'unsaid'));
+  insert into said values ('SPROUTS', v_t || '|' || ${count('sprout')} || '|' || coalesce(${last('Picked: % sprouts.')}, 'unsaid'));
   ${checks(true)};
 
   /* ---- Nursery: a sprout planted comes up further on. ---- */
@@ -250,7 +249,7 @@ begin
   perform give(w, u, 'sprout', 1, 50, 'Pine');
   ${act('plant', 10, 9)};
   insert into said values ('NURSERY', v_t || '|' || ${tileAt(10, 9)} || ':' || ${ageAt(10, 9)} || '|'
-    || coalesce(${last('You plant the pine sprout.%')}, 'unsaid'));
+    || coalesce(${last('Planted: pine sprout.%')}, 'unsaid'));
   insert into said select 'PLANTED', string_agg(planted_age(n)::text, ',' order by n) from generate_series(0, 3) n;
 
   /* ---- Master Grafter: every check failing, and the graft takes. ---- */
@@ -316,7 +315,7 @@ begin
   ${act('coppice', 10, 9)};
   insert into said values ('COPPICE', v_t || '|' || ${tileAt(10, 9)} || ':' || ${ageAt(10, 9)} || ':' || tree_cuts(w, 10, 9)
     || ':' || ${count('log')} || ':' || (select ql from item where id = ${newest('log')})
-    || '|' || coalesce(${last('You cut the mature pine back to the stool%')}, 'unsaid'));
+    || '|' || coalesce(${last('Coppiced mature pine%')}, 'unsaid'));
 
   /* ---- Tap Resin: every refusal, a pine tapped, refused the rest of the day, and again at dawn. ---- */
   perform pg_temp.hold(w, u, '{}');
@@ -339,7 +338,7 @@ begin
   v_u := ${count('tar')} || ':' || (select ql from item where id = ${newest('tar')}) || '#' || ${refused('tap_resin', 10, 9)};
   update foraged set at = tree_last_dawn() - interval '1 second' where world_id = w and x = 10 and y = 9 and kind = 'resin';
   insert into said values ('RESIN', v_t || '|' || v_u || '#' || ${refused('tap_resin', 10, 9)}
-    || '|' || coalesce(${last("You cut the pine's bark%")}, 'unsaid'));
+    || '|' || coalesce(${last('Tapped: %')}, 'unsaid'));
 
   /* ---- Clear Brush: the bushes and reeds in the three by three, and nothing else. ---- */
   perform pg_temp.hold(w, u, '{}');
@@ -351,7 +350,7 @@ begin
   ${act('clear_brush', 10, 10)};
   insert into said values ('BRUSH', v_t || '|' || ${tileAt(10, 10)} || ':' || ${tileAt(9, 10)} || ':' || ${tileAt(11, 11)} || ':'
     || ${tileAt(11, 9)} || ':' || ${tileAt(10, 9)} || ':' || ${tileAt(12, 10)} || ':' || ${tileAt(9, 9)}
-    || '|' || coalesce(${last('You clear the brush off%')}, 'unsaid'));
+    || '|' || coalesce(${last('Brush cleared: %')}, 'unsaid'));
 
   /* ---- The three jobs as the island has them, and the one tree resin comes from. ---- */
   insert into said select 'JOBS', string_agg(id || ':' || base_time || ':' || coalesce(skill, '-') || ':' || coalesce(tool, '-')
@@ -381,7 +380,7 @@ const [lookMine, lookAnyone] = swingLook.split('#');
 check(`${P('Heavy Swing').name}: two strokes leave a mature pine standing without it, and fell it with it`,
   swingPlain === 'Tree:2' && swingHeavy === 'Stump', say('SWING'));
 check('and Look counts the strokes as the one looking would fell it in',
-  lookMine.includes('It has 1 of 2 strokes in it.') && lookAnyone.includes('It has 1 of 3 strokes in it.'), swingLook);
+  lookMine.includes('Cuts: 1/2.') && lookAnyone.includes('Cuts: 1/3.'), swingLook);
 check('and every stage comes down in a stroke fewer, never under one, as the note says',
   say('HITS') === TREE_AGES.map((a) => Math.max(1, a.hits - P('Heavy Swing').fx['fewer:cut_down'])).join(','), say('HITS'));
 check(`${P('Sure Hatchet').name}: with every check failing, the stroke glances off without it and lands with it (its failure put at none)`,
@@ -398,7 +397,7 @@ check(`${P('Choice Logs').name}: the logs come up at ${P('Choice Logs').fx['ql:c
 check(`${P('Rare Heartwood').name}: the logs rare, with its chance put at one`, ['rare', 'supreme', 'fantastic'].includes(perkRare)
   && Number(perkLogs) === TREE_AGES[YOUNG].logs, fellPerks);
 check(`${P('Clean Drop').name}: grass where the tree stood, and it says so`,
-  perkTile === 'Grass' && fellSaid.includes('The ground is clear where it stood.'), fellSaid);
+  perkTile === 'Grass' && fellSaid.includes('No stump.'), fellSaid);
 check(`${P('Nest Finder').name}: ${P('Nest Finder').fx['nest:feathers']} feathers at the logs' QL, with its chance put at one`,
   Number(perkFeathers) === P('Nest Finder').fx['nest:feathers'] && near(Number(featherQl), Number(perkQl), 1e-4), fellPerks);
 check(`${P('Honey Hunter').name}: ${P('Honey Hunter').fx['honey:count']} honey at the logs' QL, with its chance put at one`,
@@ -406,7 +405,7 @@ check(`${P('Honey Hunter').name}: ${P('Honey Hunter').fx['honey:count']} honey a
 const [kindPlain, kindPerk, kindSaid] = say('KINDLING').split('|');
 check(`${P('Kindling').name}: a bush cut down gives nothing without it and ${P('Kindling').fx['bush:shaft']} shafts with it`,
   kindPlain === '0:Grass' && kindPerk === `${P('Kindling').fx['bush:shaft']}:Grass:${HANDS}`
-    && kindSaid === `You trim ${numberWord(P('Kindling').fx['bush:shaft'])} straight shafts out of it. (QL ${HANDS.toFixed(1)})`,
+    && kindSaid === `Kindling: ${P('Kindling').fx['bush:shaft']} shafts, QL ${HANDS.toFixed(1)}.`,
   say('KINDLING'));
 
 /* ---- The ground -------------------------------------------------------------------------- */
@@ -414,13 +413,13 @@ check(`${P('Kindling').name}: a bush cut down gives nothing without it and ${P('
 const [sproutsPlain, sproutsPerk, sproutsSaid] = say('SPROUTS').split('|');
 check(`${P('Sprout Picker').name}: with every check failing, no sprout without it and ${P('Sprout Picker').fx['count:sprout']} with it`,
   sproutsPlain === '0' && Number(sproutsPerk) === P('Sprout Picker').fx['count:sprout']
-    && sproutsSaid === `You pick ${numberWord(P('Sprout Picker').fx['count:sprout'])} ${pine} sprouts.`,
+    && sproutsSaid === `Picked: ${P('Sprout Picker').fx['count:sprout']} ${pine} sprouts.`,
   say('SPROUTS'));
 const [nurseryPlain, nurseryPerk, nurserySaid] = say('NURSERY').split('|');
 const grown = plantedAge(P('Nursery').fx['grown:plant']);
 check(`${P('Nursery').name}: a sprout comes up ${TREE_AGES[PLANTED_AGE].name.toLowerCase()} without it and ${TREE_AGES[grown].name.toLowerCase()} with it`,
   nurseryPlain === `Tree:${PLANTED_AGE}` && nurseryPerk === `Tree:${grown}`
-    && nurserySaid.endsWith(`It comes up a ${TREE_AGES[grown].name.toLowerCase()} ${pine}.`), say('NURSERY'));
+    && nurserySaid.endsWith(`Starts ${TREE_AGES[grown].name.toLowerCase()}.`), say('NURSERY'));
 check('and the stage a planting comes up at is the browser\'s, step by step',
   say('PLANTED') === [0, 1, 2, 3].map(plantedAge).join(','), say('PLANTED'));
 check(`${P('Master Grafter').name}: with every check failing, the graft does not take without it and takes with it`,
@@ -439,32 +438,32 @@ check(`${P('Hedge Harvest').name}: the same harvest from the same roll gives one
 const [copRefused, copAfter, copSaid] = say('COPPICE').split('|');
 const [copNoPerk, copYoung, copDead, copGrass, copOk] = copRefused.split('#');
 check(`${P('Coppice').name}: refused without the perk, a young pine, a dead one and bare ground, each in its own words`,
-  copNoPerk === 'That wants a Forester who has learned to coppice.' && copYoung === `The ${pine} is too young to coppice. Let it grow.`
-    && copDead === 'There is no coppicing a dead tree.' && copGrass === 'There is no tree here to coppice.' && copOk === 'ALLOWED',
+  copNoPerk === 'Needs perk: Coppice (Forester).' && copYoung === `${TREE_DEFS[RESIN_TREE].name}: too young to coppice.`
+    && copDead === 'Tree is dead.' && copGrass === 'No tree here.' && copOk === 'ALLOWED',
   copRefused);
 const [copTile, copAge, copCuts, copLogs, copQl] = copAfter.split(':');
 check(`and a mature pine is cut back to young, notch and all, for ${P('Coppice').fx.coppice} logs, and stays standing`,
   copTile === 'Tree' && Number(copAge) === PLANTED_AGE && copCuts === '0' && Number(copLogs) === P('Coppice').fx.coppice
-    && Number(copQl) === HANDS && copSaid.endsWith(`It stands as a ${TREE_AGES[PLANTED_AGE].name.toLowerCase()} ${pine} now.`),
+    && Number(copQl) === HANDS && copSaid.endsWith(`Now ${TREE_AGES[PLANTED_AGE].name.toLowerCase()}.`),
   `${copAfter} | ${copSaid}`);
 const [resRefused, resAfter, resSaid] = say('RESIN').split('|');
 const [resNoPerk, resOak, resSapling, resDead, resGrass, resOk] = resRefused.split('#');
 check(`${P('Tap Resin').name}: refused without the perk, an oak, a sapling, a dead pine and bare ground, each in its own words`,
-  resNoPerk === 'That wants a Forester who has learned to tap resin.' && resOak === `Only a ${pine} gives resin.`
-    && resSapling === `The ${pine} is too small to tap. Let it grow.` && resDead === `A dead ${pine} gives no resin.`
-    && resGrass === 'There is no tree here to tap.' && resOk === 'ALLOWED', resRefused);
+  resNoPerk === 'Needs perk: Tap Resin (Forester).' && resOak === `Only a ${pine}.`
+    && resSapling === `${TREE_DEFS[RESIN_TREE].name}: too young to tap.` && resDead === 'Tree is dead.'
+    && resGrass === 'No tree here.' && resOk === 'ALLOWED', resRefused);
 const [resGot, resAgain, resDawn] = resAfter.split('#');
 check(`and a pine gives ${P('Tap Resin').fx.tap_resin} tar, is refused the rest of the day, and gives again once the woods have turned`,
-  resGot === `${P('Tap Resin').fx.tap_resin}:${HANDS}` && resAgain === `This ${pine} has given its resin today. It runs again at dawn.`
-    && resDawn === 'ALLOWED' && resSaid.startsWith(`You cut the ${pine}'s bark and collect ${P('Tap Resin').fx.tap_resin} tar from it.`),
+  resGot === `${P('Tap Resin').fx.tap_resin}:${HANDS}` && resAgain === 'Tapped today. Again at dawn.'
+    && resDawn === 'ALLOWED' && resSaid.startsWith(`Tapped: ${P('Tap Resin').fx.tap_resin} tar,`),
   `${resAfter} | ${resSaid}`);
 const [brushRefused, brushAfter, brushSaid] = say('BRUSH').split('|');
 const [brushNoPerk, brushGrass, brushOk] = brushRefused.split('#');
 check(`${P('Clear Brush').name}: refused without the perk and on ground with no brush, each in its own words`,
-  brushNoPerk === 'That wants a Forester who has learned to clear brush.' && brushGrass === 'There is no brush here to clear.'
+  brushNoPerk === 'Needs perk: Clear Brush (Forester).' && brushGrass === 'No brush here.'
     && brushOk === 'ALLOWED', brushRefused);
 check(`and every bush and reed in the ${2 * P('Clear Brush').fx.clear_brush + 1}×${2 * P('Clear Brush').fx.clear_brush + 1} is cleared -- bushes to grass, reeds to dirt -- and nothing past it`,
-  brushAfter === 'Grass:Dirt:Grass:Dirt:Grass:Bush:Dirt' && brushSaid === 'You clear the brush off 4 tiles.', `${brushAfter} | ${brushSaid}`);
+  brushAfter === 'Grass:Dirt:Grass:Dirt:Grass:Bush:Dirt' && brushSaid === 'Brush cleared: 4 tiles.', `${brushAfter} | ${brushSaid}`);
 check('the three jobs are the browser\'s, and the ground\'s',
   say('JOBS') === ['clear_brush', 'coppice', 'tap_resin'].map((id) => {
     const d = ACTION_BY_ID.get(id)!;

@@ -46,7 +46,7 @@ import { greenNow } from './greening';
  * says it in the same words (`foundation_reason`).
  */
 export const soilSays = (soil: number): string =>
-  `This tile still has ${soil} soil over rock on its corners. A foundation goes on bare rock, seam or ore: dig every corner down to the rock first.`;
+  `Soil left over rock: ${soil} (all corners). Dig every corner down to rock first.`;
 
 /** Concrete per step of one corner lifted. */
 export const CONCRETE_PER_STEP = 10;
@@ -103,7 +103,7 @@ export const foundationBill = (concrete: number): Bill => ({ needed: { concrete 
 export const foundationState = (f: Foundation): string =>
   foundationDone(f)
     ? `poured to ${f.top}`
-    : `${Math.round(foundationProgress(f) * 100)}% · ${f.needed.concrete ?? 0} concrete still to go`;
+    : `${Math.round(foundationProgress(f) * 100)}% · ${f.needed.concrete ?? 0} concrete to go`;
 
 /**
  * One barrowful of concrete into a foundation's shuttering, as a go of "Pour
@@ -147,7 +147,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return 'Set out a foundation';
       const top = g.foundationTop(t.x, t.y);
       const want = concreteFor(g.world.tileCorners(t.x, t.y), top);
-      return `Set out a foundation to ${top} (wants ${want} concrete)`;
+      return `Set out a foundation to ${top} (needs ${want} concrete)`;
     },
     check: (t, g) => (isTile(t) ? g.foundationReason(t.x, t.y, g.foundationTop(t.x, t.y)) : null),
     perform: (t, g) => {
@@ -157,8 +157,8 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       const f = g.addFoundation(t.x, t.y, top);
       g.note('planned_foundation');
       g.logMsg(
-        `You shutter a foundation over the tile, to be poured level at ${top}.`
-        + ` It wants ${f.total.concrete} concrete. The ground around it will not move: the slab fills the hole instead.`,
+        `Foundation planned: top at ${top}.`
+        + ` Needs ${f.total.concrete} concrete. Surrounding ground is unchanged.`,
         'system',
       );
       g.events.emit('world', t.x, t.y);
@@ -181,10 +181,10 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t)) return null;
       const f = g.foundationAt(t.x, t.y);
-      if (!f) return 'There is no shuttering here.';
-      if (foundationDone(f)) return 'It is poured.';
-      if (!g.inventory.has('trowel')) return 'You need a trowel to work concrete.';
-      if (!g.inventory.has('concrete')) return 'You have no concrete.';
+      if (!f) return 'No shuttering here.';
+      if (foundationDone(f)) return 'Already poured.';
+      if (!g.inventory.has('trowel')) return 'Need a trowel.';
+      if (!g.inventory.has('concrete')) return 'Need concrete.';
       return null;
     },
     perform: (t, g) => {
@@ -193,11 +193,11 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       if (!f || foundationDone(f) || !g.inventory.consume('concrete')) return;
       pourIntoFoundation(g, f);
       if (!foundationDone(f)) {
-        g.logMsg(`You work another barrowful into the shuttering. ${f.needed.concrete} to go.`, 'event');
+        g.logMsg(`Concrete poured. ${f.needed.concrete} to go.`, 'event');
         return true;
       }
       g.note('poured_foundation');
-      g.logMsg(`The last of it goes in and the slab stands level at ${f.top}. You can build on it, pave it, or bring a bridge to it.`, 'event');
+      g.logMsg(`Foundation done: top at ${f.top}. Can be built on, paved or bridged to.`, 'event');
       return false;
     },
   },
@@ -212,11 +212,11 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
     applies: (t, g) => isTile(t) && !!g.slabAt(t.x, t.y) && !g.slabAt(t.x, t.y)!.pool,
     labelFor: (t, g) => {
       const f = isTile(t) ? g.slabAt(t.x, t.y) : undefined;
-      return f ? `Dig a pool (water at ${poolLevel(f.top)} over a floor at ${poolFloor(f.top)})` : 'Dig a pool';
+      return f ? `Dig a pool (water at ${poolLevel(f.top)}, floor at ${poolFloor(f.top)})` : 'Dig a pool';
     },
     check: (t, g) => {
       if (!isTile(t)) return null;
-      if (!g.inventory.has('pickaxe')) return 'You need a pickaxe to break out a pool.';
+      if (!g.inventory.has('pickaxe')) return 'Need a pickaxe.';
       return g.poolReason(t.x, t.y);
     },
     perform: (t, g) => {
@@ -226,8 +226,8 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       f.pool = true;
       g.poolsChanged(f.x, f.y);
       g.logMsg(
-        `You break the middle out of the slab down to ${poolFloor(f.top)}, leaving a lip round it, and it holds water at ${poolLevel(f.top)}:`
-        + ` ${((POOL_DEPTH - POOL_LIP) / 10).toFixed(1)} m deep. A pool beside it poured to the same top is the same pool; dig a spring in it and it spills over its lowest edge.`,
+        `Pool dug: floor at ${poolFloor(f.top)}, water at ${poolLevel(f.top)},`
+        + ` ${((POOL_DEPTH - POOL_LIP) / 10).toFixed(1)} m deep. Joins adjacent pools of the same top. A spring in it spills over its lowest edge.`,
         'event',
       );
       g.events.emit('world', t.x, t.y);
@@ -242,12 +242,12 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
     stamina: 0.08,
     baseTime: 20,
     applies: (t, g) => isTile(t) && !!g.slabAt(t.x, t.y)?.pool,
-    labelFor: () => `Fill the pool in (wants ${POOL_FILL} concrete)`,
+    labelFor: () => `Fill the pool in (needs ${POOL_FILL} concrete)`,
     check: (t, g) => {
       if (!isTile(t)) return null;
-      if (!g.slabAt(t.x, t.y)?.pool) return 'There is no pool here.';
-      if (!g.inventory.has('trowel')) return 'You need a trowel to work concrete.';
-      if (g.inventory.count('concrete') < POOL_FILL) return `Filling it in wants ${POOL_FILL} concrete, and you have ${g.inventory.count('concrete')}.`;
+      if (!g.slabAt(t.x, t.y)?.pool) return 'No pool here.';
+      if (!g.inventory.has('trowel')) return 'Need a trowel.';
+      if (g.inventory.count('concrete') < POOL_FILL) return `Need ${POOL_FILL} concrete; have ${g.inventory.count('concrete')}.`;
       return null;
     },
     perform: (t, g) => {
@@ -256,7 +256,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       if (!f?.pool || !g.inventory.consume('concrete', POOL_FILL)) return;
       f.pool = false;
       g.poolsChanged(f.x, f.y);
-      g.logMsg(`You fill the pool in with ${POOL_FILL} concrete, level with the top of the slab at ${f.top}. A spring that rose in it stops.`, 'event');
+      g.logMsg(`Pool filled: ${POOL_FILL} concrete, top at ${f.top}. Any spring in it stops.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -270,10 +270,10 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t)) return null;
       const f = g.foundationAt(t.x, t.y);
-      if (!f) return 'There is no shuttering here.';
+      if (!f) return 'No shuttering here.';
       // Concrete that has gone off is not coming back out of the ground, and a
       // slab that is holding a house up is not a plan any more.
-      if (foundationDone(f)) return 'It is poured. That is a floor now, not a plan.';
+      if (foundationDone(f)) return 'Already poured: not a plan.';
       return null;
     },
     perform: (t, g) => {
@@ -284,7 +284,7 @@ export const FOUNDATION_ACTIONS: ActionDef[] = [
       g.removeFoundation(f.id);
       // What went in has set; the boards come away and the rest is rubble.
       if (back > 0) g.inventory.add('rock_shards', { count: back, ql: 20 });
-      g.logMsg(`You strike the shuttering${back > 0 ? ` and break out ${back} barrowful${back > 1 ? 's' : ''} of set concrete as shards` : ''}.`, 'event');
+      g.logMsg(`Shuttering struck.${back > 0 ? ` Got ${back} rock shards.` : ''}`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },

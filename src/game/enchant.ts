@@ -86,36 +86,36 @@ export const SHOT_EFFECTS: ReadonlySet<EnchantEffect> = new Set(['flame', 'frost
 /** What an enchantment goes on: what the scroll may be put into, and what its refusal names. */
 export type EnchantOn = 'melee' | 'bow' | 'armour' | 'boots' | 'chest' | 'shield' | 'tool' | 'reaper' | 'pick' | 'light' | 'ring' | 'amulet' | 'pack' | 'head'
   | 'furnace' | 'station' | 'ship' | 'hull' | 'cart' | 'store' | 'trap' | 'net' | 'bed' | 'saddle' | 'bridle';
-/** What the refusal calls each: "Emberbrand goes on a melee weapon, not a bow or a thrown weapon." */
+/** What the refusal calls each: "Emberbrand: only on melee weapons (not bows or thrown weapons)." */
 export const ON_WORDS: Record<EnchantOn, string> = {
-  melee: 'a melee weapon, not a bow or a thrown weapon',
-  bow: 'a bow',
-  armour: 'a piece of armour or clothing that is worn',
+  melee: 'melee weapons (not bows or thrown weapons)',
+  bow: 'bows',
+  armour: 'worn armour or clothing',
   boots: 'boots or shoes',
   // The game has no cloaks; what hangs over the body is the piece worn on the chest.
-  chest: 'what is worn on the chest: a tunic, a jerkin, a hauberk, a breastplate or a cuirass',
-  shield: 'a shield',
+  chest: 'chest pieces: tunic, jerkin, hauberk, breastplate or cuirass',
+  shield: 'shields',
   // A weapon takes one of these only where a job is done with it (`FITS.tool`).
-  tool: 'a tool that a job is done with',
-  reaper: 'a sickle or a fishing rod',
-  pick: 'a pickaxe',
-  light: 'a lantern or a torch',
-  ring: 'a jewelled ring',
-  amulet: 'a jewelled pendant',
-  pack: 'a backpack or a satchel',
-  head: 'what is worn on the head: a cap, a coif or a helm',
+  tool: 'tools used for a job',
+  reaper: 'sickles or fishing rods',
+  pick: 'pickaxes',
+  light: 'lanterns or torches',
+  ring: 'jewelled rings',
+  amulet: 'jewelled pendants',
+  pack: 'backpacks or satchels',
+  head: 'headwear: cap, coif or helm',
   // These two are enchanted where they stand (`Game.placedFor`).
-  furnace: 'a smelter or a kiln',
-  station: 'an anvil or a loom',
-  ship: 'a sailing boat or a caravel',
-  hull: 'a boat: a rowing boat, a sailing boat or a caravel',
-  cart: 'a cart, a large cart or a wagon',
-  store: 'anything that holds things: a chest, a barrel, a larder, a crate, a bag or a pack, a cart, a wagon or a boat',
-  trap: 'a trap: a snare, a deadfall or a creel',
-  net: 'a fishing net',
-  bed: 'a bed: a bed, a cot or a tent',
-  saddle: 'a saddle',
-  bridle: 'a bridle',
+  furnace: 'smelters or kilns',
+  station: 'anvils or looms',
+  ship: 'sailing boats or caravels',
+  hull: 'boats: rowing boat, sailing boat or caravel',
+  cart: 'carts, large carts or wagons',
+  store: 'containers: chest, barrel, larder, crate, bag, pack, cart, wagon or boat',
+  trap: 'traps: snare, deadfall or creel',
+  net: 'fishing nets',
+  bed: 'beds, cots or tents',
+  saddle: 'saddles',
+  bridle: 'bridles',
 };
 /**
  * The ones a worn piece holds, and the most all of that kind you wear can come
@@ -389,16 +389,16 @@ export const enchantMarker = (e: Enchant | undefined | null): string =>
 /** Why a scroll will not go into this, or null; in the words both sides say. */
 export const ENCHANT_SAID = {
   scroll: 'Choose an enchantment scroll.',
-  weapon: 'Choose something in your pack to enchant.',
-  broken: 'It is broken.',
-  gone: 'It is gone.',
-  reach: 'Stand within reach of it.',
-  plinth: `You need to stand at an ${PLINTH_NAME}.`,
+  weapon: 'Choose a thing in your pack to enchant.',
+  broken: 'Broken.',
+  gone: 'Gone.',
+  reach: 'Too far.',
+  plinth: `Need an ${PLINTH_NAME}.`,
 } as const;
-/** Why this scroll will not go into a thing of the wrong kind: "Featherstep goes on boots." */
-export const wrongKind = (e: EnchantmentDef): string => `${e.name} goes on ${ON_WORDS[e.on]}.`;
+/** Why this scroll will not go into a thing of the wrong kind: "Featherstep: only on boots or shoes." */
+export const wrongKind = (e: EnchantmentDef): string => `${e.name}: only on ${ON_WORDS[e.on]}.`;
 /** Why a thing that holds an enchantment already takes no other. */
-export const alreadyEnchanted = (e: Enchant): string => `It already holds ${ENCHANTMENTS[e.id]?.name ?? e.id} at QL ${qlWord(e.ql)}.`;
+export const alreadyEnchanted = (e: Enchant): string => `Already enchanted: ${ENCHANTMENTS[e.id]?.name ?? e.id} QL ${qlWord(e.ql)}.`;
 
 /**
  * What an enchantment on what you swing makes of the swing: the share of time

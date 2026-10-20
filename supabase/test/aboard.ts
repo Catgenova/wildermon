@@ -104,8 +104,8 @@ check('afloat where the water is deep enough', game.launchSpot('caravel', SX, WY
 // A padlock on her keeps her helm, her deck and her where she is to whoever has its key.
 ship.lock = 424242;
 check('locked, she is not boarded, steered or lifted without the key, in the hold\'s words',
-  say('board_passenger') === 'It is locked, and you have no key to it.' && say('board_vehicle') === 'It is locked, and you have no key to it.'
-    && say('pick_up_furniture') === 'It is locked, and you have no key to it.',
+  say('board_passenger') === 'Locked: no key.' && say('board_vehicle') === 'Locked: no key.'
+    && say('pick_up_furniture') === 'Locked: no key.',
   `${say('board_passenger')} | ${say('board_vehicle')} | ${say('pick_up_furniture')}`);
 const key = game.inventory.add('key', { ql: 40 });
 key.keyed = 424242;
@@ -133,9 +133,9 @@ check('her helm stands aft of all three places, on a deck above theirs',
   `helm ${along(game.helmSpot(ship)).toFixed(2)} at ${SHIP.boat?.seat}, places ${places.map((n) => n.toFixed(2)).join(' ')} at ${SHIP.boat?.waist}`);
 game.log.length = 0;
 const walked = game.moveTo(W0 - 4, WY);
-check('and goes nowhere on their own feet', !walked && game.log.some((l) => l.text === 'You are aboard as a passenger. Step ashore first.'),
+check('and goes nowhere on their own feet', !walked && game.log.some((l) => l.text === 'Aboard as a passenger: step ashore first.'),
   game.log.map((l) => l.text).join(' | '));
-check('is not offered the same place twice', !does('board_passenger') && say('board_passenger') === 'You are aboard her already.', say('board_passenger'));
+check('is not offered the same place twice', !does('board_passenger') && say('board_passenger') === 'Already aboard.', say('board_passenger'));
 check('and may step ashore, with land in reach', does('leave_passenger') && say('leave_passenger') === 'ALLOWED', say('leave_passenger'));
 act('leave_passenger');
 check('onto the dry ground, and off her list', game.player.aboard === null && !ridersOf(ship).length
@@ -145,14 +145,14 @@ check('onto the dry ground, and off her list', game.player.aboard === null && !r
 onShore();
 game.player.x = W0 - 0.5;
 ship.riders = [{ who: 'a', seat: 1 }, { who: 'b', seat: 2 }, { who: 'c', seat: 3 }];
-check('the fourth is told every place is taken', say('board_passenger') === 'Every one of her 3 places is taken.', say('board_passenger'));
-check('and nobody picks her up with people aboard', say('pick_up_furniture') === 'There are people aboard her.', say('pick_up_furniture'));
+check('the fourth is told every place is taken', say('board_passenger') === 'All 3 places taken.', say('board_passenger'));
+check('and nobody picks her up with people aboard', say('pick_up_furniture') === 'Passengers aboard.', say('pick_up_furniture'));
 ship.riders = [];
 ship.helm = 'somebody';
-check('a helm somebody else holds is theirs', !does('board_vehicle') && say('board_vehicle') === 'Somebody else has the helm.', say('board_vehicle'));
+check('a helm somebody else holds is theirs', !does('board_vehicle') && say('board_vehicle') === 'Someone else has the helm.', say('board_vehicle'));
 ship.helm = undefined;
 ship.helmAway = 'somebody';
-check('a helm whose holder went away is not taken from the shore', say('board_vehicle') === 'Somebody else has the helm.', say('board_vehicle'));
+check('a helm whose holder went away is not taken from the shore', say('board_vehicle') === 'Someone else has the helm.', say('board_vehicle'));
 ship.helmAway = undefined;
 act('board_passenger');
 game.player.x = W0 + 5;
@@ -184,7 +184,7 @@ check('with no land in reach, leaving her is going over the side, and it is allo
 act('leave_passenger', sea);
 game.update(0.1);
 check('into the water where she is, off her list, and said so', game.player.aboard === null && !ridersOf(SEA).length && game.player.swimming
-  && game.log.at(-1)?.text === 'You go over the side of the caravel into the water. She stays where she is.', `${game.player.swimming} ${game.log.at(-1)?.text}`);
+  && game.log.at(-1)?.text === 'Over the side of the caravel: swimming. The boat stays.', `${game.player.swimming} ${game.log.at(-1)?.text}`);
 swimBeside();
 check('somebody swimming beside her may take her empty helm', say('board_vehicle', sea) === 'ALLOWED', say('board_vehicle', sea));
 act('board_vehicle', sea);
@@ -194,7 +194,7 @@ check('and leave it over the side, with no land in reach', !!SEA.driven && helmL
 act('leave_vehicle', sea);
 game.update(0.1);
 check('into the water, letting go of her helm, and she stays where she is', !SEA.driven && game.player.swimming
-  && furnitureCentre(SEA)[0] === scx && game.log.at(-1)?.text === 'You go over the side of the caravel into the water. She stays where she is.',
+  && furnitureCentre(SEA)[0] === scx && game.log.at(-1)?.text === 'Over the side of the caravel: swimming. The boat stays.',
   `${SEA.driven} ${game.player.swimming} ${game.log.at(-1)?.text}`);
 game.removeFurniture(SEA.id);
 
@@ -344,34 +344,34 @@ commit;
 const said = (key: string): string =>
   isle.split('\n').find((l) => l.startsWith(`${key}|`))?.slice(key.length + 1) ?? 'MISSING';
 
-check('too far off to come aboard, in the same words', said('FAR') === 'Stand beside her first.', said('FAR'));
+check('too far off to come aboard, in the same words', said('FAR') === 'Stand beside it.', said('FAR'));
 check('locked, nobody without the key takes her helm, comes aboard or lifts her, in the hold\'s words',
-  said('LOCKED') === 'It is locked, and you have no key to it.|It is locked, and you have no key to it.|It is locked, and you have no key to it.',
+  said('LOCKED') === 'Locked: no key.|Locked: no key.|Locked: no key.',
   said('LOCKED'));
 check('and with the key, both are open', said('KEYED') === 'ALLOWED|ALLOWED', said('KEYED'));
 check('beside her, a passenger may come aboard', said('ASK') === 'ALLOWED', said('ASK'));
-check('and is told where they are', said('SAID') === 'You climb aboard the caravel and find a place on deck. 1 of 3 places are taken.', said('SAID'));
+check('and is told where they are', said('SAID') === 'Aboard: caravel. Places taken: 1/3.', said('SAID'));
 check('in the first place, where she is', said('ANNA') === 'true,1,55.5,58.5', said('ANNA'));
 check('and not in the water', said('DEEP') === 'false', said('DEEP'));
-check('the fourth is told every place is taken, in the same words', said('FULL') === 'Every one of her 3 places is taken.', said('FULL'));
+check('the fourth is told every place is taken, in the same words', said('FULL') === 'All 3 places taken.', said('FULL'));
 check('the three have a place each', said('SEATS') === 'Anna 1, Bran 2, Coll 3', said('SEATS'));
-check('nobody picks her up with people aboard, in the same words', said('LIFT') === 'There are people aboard her.', said('LIFT'));
-check('a helm somebody present holds is theirs, in the same words', said('HELD') === 'Somebody else has the helm.', said('HELD'));
+check('nobody picks her up with people aboard, in the same words', said('LIFT') === 'Passengers aboard.', said('LIFT'));
+check('a helm somebody present holds is theirs, in the same words', said('HELD') === 'Someone else has the helm.', said('HELD'));
 check('where the helm takes her, everybody aboard goes', said('WENT') === 'Anna 60.5,58.5; Bran 60.5,58.5; Coll 60.5,58.5', said('WENT'));
 check('and a passenger\'s own walk puts them where she is', said('PINNED') === '60.5,58.5,false', said('PINNED'));
 check('the island says who is aboard her and in which place',
   said('GROUND') === `[{"uid": "${ANNA}", "seat": 1}, {"uid": "${BRAN}", "seat": 2}, {"uid": "${COLL}", "seat": 3}]|false`, said('GROUND'));
 check('with no land in reach, a passenger may still leave her', said('AFAR') === 'ALLOWED', said('AFAR'));
 check('over the side into the water, off her deck, in the same words',
-  said('OVER') === 'none,true|You go over the side of the caravel into the water. She stays where she is.', said('OVER'));
+  said('OVER') === 'none,true|Over the side of the caravel: swimming. The boat stays.', said('OVER'));
 check('and swimming beside her, comes aboard again out of the water', said('SWUM') === 'true|ALLOWED' && said('BACK') === 'true,2', `${said('SWUM')} / ${said('BACK')}`);
-check('a helm whose holder has gone away is not taken from the shore, in the same words', said('SHORE') === 'Somebody else has the helm.', said('SHORE'));
+check('a helm whose holder has gone away is not taken from the shore, in the same words', said('SHORE') === 'Someone else has the helm.', said('SHORE'));
 check('a helm whose holder has gone away is taken from her deck', said('OPEN') === 'ALLOWED', said('OPEN'));
 check('and the one who went away has the place that was left', said('SWAP') === 'true,true,1,none', said('SWAP'));
 check('brought in, a passenger may step ashore', said('NEAR') === 'ALLOWED', said('NEAR'));
-check('onto dry ground, in the same words', said('ASHORE') === 'none,false|You step ashore from the caravel.', said('ASHORE'));
+check('onto dry ground, in the same words', said('ASHORE') === 'none,false|Stepped ashore from the caravel.', said('ASHORE'));
 check('whoever has her helm leaves it over the side at sea, and she stays where she is, in the same words',
-  said('HELM-OVER') === 'none,60.5,true|You go over the side of the caravel into the water. She stays where she is.', said('HELM-OVER'));
+  said('HELM-OVER') === 'none,60.5,true|Over the side of the caravel: swimming. The boat stays.', said('HELM-OVER'));
 check('and takes it again out of the water', said('HELM-BACK') === 'ALLOWED' && said('HELM-HELD') === 'true', `${said('HELM-BACK')} / ${said('HELM-HELD')}`);
 check('and dying takes you off her', said('DIED') === 'none', said('DIED'));
 

@@ -139,109 +139,109 @@ const chaos = spellOf('chaos');
  */
 export const FAITH_SPELLS: FaithSpellDef[] = [
   blessing(1, 'soothe', 'Soothe', 8, 20, ['self', 'player'], { heal: 0.1 },
-    (fx) => `Heals ${percent(fx.heal)} of their health and stops their worst bleeding wound bleeding.`),
+    (fx) => `Heals ${percent(fx.heal)} health; stops the worst bleeding wound.`),
   blessing(1, 'ward', 'Ward', 10, 60, ['self', 'player'], { cut: 0.5, secs: 30 },
-    (fx) => `The next blow to land on them within ${span(fx.secs)} does ${percent(fx.cut)} less damage.`),
+    (fx) => `Next blow on the target within ${span(fx.secs)}: damage −${percent(fx.cut)}.`),
   blessing(1, 'tend', 'Tend', 8, 30, ['wildermon'], { heal: 0.25 },
-    (fx) => `Heals the wildermon ${percent(fx.heal)} of its health and stops it bleeding.`),
+    (fx) => `Heals the wildermon ${percent(fx.heal)} health; stops its bleeding.`),
 
   blessing(2, 'purify', 'Purify', 12, 45, ['self', 'player'], {},
-    () => 'Draws the venom out of every wound they have and closes every burn.'),
+    () => 'Removes venom from every wound; heals every burn.'),
   blessing(2, 'calm', 'Calm', 14, 90, ['enemy'], { secs: 60 },
-    (fx) => `A wild creature stops hunting and cannot start a hunt for ${span(fx.secs)}. Monsters are not calmed.`),
+    (fx) => `Wild creature stops hunting; cannot hunt for ${span(fx.secs)}. Not monsters.`),
   blessing(2, 'steady', 'Steady Hands', 14, 600, ['object'], { cut: 0.1, secs: 1800 },
-    (fx) => `For ${span(fx.secs)}, every job that wants this tool takes ${percent(fx.cut)} less time while you carry it.`),
+    (fx) => `${span(fx.secs)}: jobs using this tool take −${percent(fx.cut)} time while carried.`),
 
   blessing(3, 'renewal', 'Renewal', 20, 60, ['self', 'player'], { each: 0.03, every: 3, secs: 30 },
-    (fx) => `Heals ${percent(fx.each)} of their health every ${span(fx.every)} for ${span(fx.secs)}: ${percent(fx.each * fx.secs / fx.every)} in all.`),
+    (fx) => `Heals ${percent(fx.each)} health every ${span(fx.every)} for ${span(fx.secs)}: ${percent(fx.each * fx.secs / fx.every)} total.`),
   blessing(3, 'arms', 'Bless Arms', 20, 120, ['self', 'player'], { more: 0.2, secs: 60 },
-    (fx) => `For ${span(fx.secs)}, their blows do ${percent(fx.more)} more damage to monsters.`),
+    (fx) => `${span(fx.secs)}: damage to monsters +${percent(fx.more)}.`),
   blessing(3, 'kinship', 'Kinship', 20, 600, ['wildermon'], { points: 0.25, secs: 60 },
-    (fx) => `Your next go at taming this wildermon within ${span(fx.secs)} is ${Math.round(fx.points * 100)} points likelier to succeed.`),
+    (fx) => `Next taming try on this wildermon within ${span(fx.secs)}: chance +${Math.round(fx.points * 100)} points.`),
 
   blessing(4, 'benediction', 'Benediction', 30, 120, ['area'], { heal: 0.2 },
-    (fx, r) => `Everybody within ${r} tiles of the spot, you too, and every wildermon there heals ${percent(fx.heal)} of their health and stops bleeding.`, 6),
+    (fx, r) => `Everyone and every wildermon within ${r} tiles of the spot, you included: heals ${percent(fx.heal)} health; stops bleeding.`, 6),
   blessing(4, 'shield', 'Shield of Dawn', 30, 180, ['self', 'player'], { share: 0.3, secs: 60 },
-    (fx) => `For ${span(fx.secs)}, damage up to ${percent(fx.share)} of their health is taken by the shield instead of them.`),
+    (fx) => `${span(fx.secs)}: absorbs damage up to ${percent(fx.share)} of the target's health.`),
   blessing(4, 'sanctuary', 'Sanctuary', 34, 300, ['area'], { secs: 30 },
-    (fx, r) => `For ${span(fx.secs)}, nothing wild starts a hunt on anybody within ${r} tiles of the spot, and whatever is hunting somebody there gives it up.`, 4),
+    (fx, r) => `${span(fx.secs)}: within ${r} tiles of the spot, wild creatures start no hunts and drop current ones.`, 4),
 
   blessing(5, 'second_life', 'Second Life', 60, 1800, ['self', 'player'], { secs: 600, heal: 0.5 },
-    (fx) => `For ${span(fx.secs)}, the first blow that would kill them leaves them at ${percent(fx.heal)} of their health instead.`),
+    (fx) => `${span(fx.secs)}: the first killing blow leaves the target at ${percent(fx.heal)} health instead.`),
   blessing(5, 'radiance', 'Radiance', 60, 600, ['area'], { each: 0.02, secs: 30 },
-    (fx, r) => `For ${span(fx.secs)}, every creature within ${r} tiles of the spot that is hunting somebody loses ${percent(fx.each)} of its health a second, ${percent(fx.each * fx.secs)} in all; it is never killed by it.`, 8),
+    (fx, r) => `${span(fx.secs)}: creatures hunting anyone within ${r} tiles of the spot lose ${percent(fx.each)} health per second, ${percent(fx.each * fx.secs)} total; never lethal.`, 8),
   blessing(5, 'land', 'Bless the Land', 50, 3600, ['area'], {},
-    (_fx, r) => `Every tree within ${r} tiles of the spot grows a stage: ${LAND_GROWS_SAID}. One that would grow into dying, and one that is clipped, stays as it is.`, 10),
+    (_fx, r) => `Trees within ${r} tiles of the spot grow 1 stage: ${LAND_GROWS_SAID}. Not into dying; not clipped trees.`, 10),
 
   justice(1, 'mark', 'Mark of Judgment', 10, 30, ['enemy'], { more: 0.15, secs: 30 },
-    (fx) => `For ${span(fx.secs)} the creature takes ${percent(fx.more)} more damage from every blow, whoever or whatever strikes it.`),
+    (fx) => `${span(fx.secs)}: damage taken by the creature +${percent(fx.more)}, from any source.`),
   justice(1, 'retribution', 'Retribution', 10, 60, ['self', 'player'], { share: 0.2, secs: 60 },
-    (fx) => `For ${span(fx.secs)}, ${percent(fx.share)} of every blow that lands on them is dealt back to whatever struck.`),
+    (fx) => `${span(fx.secs)}: ${percent(fx.share)} of each blow on the target is dealt back to the attacker.`),
   justice(1, 'assay', 'Assay', 12, 600, ['area'], { secs: 600 },
-    (fx, r) => `Every ore seam under the ground within ${r} tiles of the spot is marked for you for ${span(fx.secs)}, as a prospector's sensing marks it.`, 8),
+    (fx, r) => `Marks every ore seam within ${r} tiles of the spot for ${span(fx.secs)}, as Prospect does.`, 8),
 
   justice(2, 'sentence', 'Sentence', 16, 60, ['enemy'], { share: 0.25 },
-    (fx) => `Strikes the creature for ${percent(fx.share)} of the health it has already lost. Not on a creature that is unhurt.`),
+    (fx) => `Damage: ${percent(fx.share)} of the creature's missing health. Not on an unhurt creature.`),
   justice(2, 'bind', 'Bind', 14, 90, ['enemy'], { secs: 5, monster: 0.5 },
-    (fx) => `Holds the creature where it stands for ${span(fx.secs)}: it neither moves nor strikes. A monster is held for ${span(fx.secs * fx.monster)}.`),
+    (fx) => `Holds the creature ${span(fx.secs)} (no moving, no striking); monsters ${span(fx.secs * fx.monster)}.`),
   justice(2, 'equity', 'Equity', 10, 60, ['player'], {},
-    () => 'You and the other person both end at the average of your healths.'),
+    () => 'Sets you and the target to the average of your two healths.'),
 
   justice(3, 'verdict', 'Verdict', 24, 120, ['enemy'], { below: 0.2, monster: 0.1, share: 0.1 },
-    (fx) => `A creature below ${percent(fx.below)} of its health dies at once, a monster below ${percent(fx.monster)}; any other loses ${percent(fx.share)} of its health.`),
+    (fx) => `Kills a creature below ${percent(fx.below)} health (monster: ${percent(fx.monster)}); otherwise −${percent(fx.share)} health.`),
   justice(3, 'summons', 'Summons', 20, 60, ['enemy'], { secs: 20 },
-    (fx) => `The creature turns on you and hunts only you for ${span(fx.secs)}, whoever it was after.`),
+    (fx) => `The creature hunts only you for ${span(fx.secs)}.`),
   justice(3, 'temper', 'Temper', 20, 600, ['object'], { secs: 1800 },
-    (fx) => `For ${span(fx.secs)}, the thing takes no wear at all while you carry it.`),
+    (fx) => `${span(fx.secs)}: no wear on the item while carried.`),
 
   justice(4, 'judgment', 'Judgment', 34, 300, ['area'], { share: 0.15, more: 0.15, secs: 30 },
-    (fx, r) => `Every creature within ${r} tiles of the spot that is hunting somebody loses ${percent(fx.share)} of its health and, for ${span(fx.secs)}, takes ${percent(fx.more)} more damage from every blow.`, 6),
+    (fx, r) => `Creatures hunting anyone within ${r} tiles of the spot: −${percent(fx.share)} health, and damage taken +${percent(fx.more)} for ${span(fx.secs)}.`, 6),
   justice(4, 'truce', 'Truce', 30, 600, ['area'], { secs: 30 },
-    (fx, r) => `For ${span(fx.secs)}, nothing within ${r} tiles of the spot can strike or be struck, people and creatures alike.`, 8),
+    (fx, r) => `${span(fx.secs)}: no one and nothing within ${r} tiles of the spot can strike or be struck.`, 8),
   justice(4, 'restitution', 'Restitution', 40, 3600, ['self', 'player'], {},
-    () => 'Everything in their latest grave comes back into their pack, wherever they are.'),
+    () => 'Returns everything in the target\'s latest grave to their pack, anywhere.'),
 
   justice(5, 'execution', 'Execution', 60, 1800, ['enemy'], { below: 0.5, monster: 0.3, share: 0.2 },
-    (fx) => `A creature below ${percent(fx.below)} of its health dies at once, a monster below ${percent(fx.monster)}; any other loses ${percent(fx.share)} of its health.`),
+    (fx) => `Kills a creature below ${percent(fx.below)} health (monster: ${percent(fx.monster)}); otherwise −${percent(fx.share)} health.`),
   justice(5, 'oath', 'Oath', 50, 3600, ['player'], { secs: 600 },
-    (fx) => `For ${span(fx.secs)}, every blow that lands on you or on the friend it is cast on is split evenly between you. Only on a friend.`),
+    (fx) => `${span(fx.secs)}: every blow on you or the friend is split evenly between you. Friends only.`),
   justice(5, 'reward', 'Due Reward', 50, 3600, ['self', 'player'], { more: 0.2, secs: 1800 },
-    (fx) => `For ${span(fx.secs)}, every skill they raise gains ${percent(fx.more)} more.`),
+    (fx) => `${span(fx.secs)}: skill gain +${percent(fx.more)}.`),
 
   chaos(1, 'hex', 'Hex', 8, 20, ['enemy'], { each: 0.02, secs: 15 },
-    (fx) => `The creature bleeds ${percent(fx.each)} of its health a second for ${span(fx.secs)}, ${percent(fx.each * fx.secs)} in all. Bleeding never kills.`),
+    (fx) => `Bleed: ${percent(fx.each)} health per second for ${span(fx.secs)}, ${percent(fx.each * fx.secs)} total. Never lethal.`),
   chaos(1, 'fright', 'Fright', 10, 60, ['enemy'], { secs: 8 },
-    (fx) => `The creature flees from you for ${span(fx.secs)}. Monsters are not frightened.`),
+    (fx) => `The creature flees from you for ${span(fx.secs)}. Not monsters.`),
   chaos(1, 'blood_price', 'Blood Price', 0, 300, ['self'], { price: 0.2, favour: 15, floor: 0.3 },
-    (fx) => `Costs no favour. Spend ${percent(fx.price)} of your health for ${fx.favour} favour; not with less than ${percent(fx.floor)} of your health.`),
+    (fx) => `No favour cost. Spend ${percent(fx.price)} health for ${fx.favour} favour; needs over ${percent(fx.floor)} health.`),
 
   chaos(2, 'siphon', 'Siphon', 12, 30, ['enemy'], { share: 0.1 },
-    (fx) => `Takes ${percent(fx.share)} of the creature's health, and heals you by what a blow of that much would take from you.`),
+    (fx) => `Damage: ${percent(fx.share)} of the creature's health; heals you by what a blow that size would take from you.`),
   chaos(2, 'cower', 'Cower', 14, 60, ['enemy'], { cut: 0.3, secs: 30 },
-    (fx) => `For ${span(fx.secs)} the creature's blows do ${percent(fx.cut)} less damage.`),
+    (fx) => `${span(fx.secs)}: the creature's damage −${percent(fx.cut)}.`),
   chaos(2, 'pact', 'Pact', 0, 180, ['self'], { price: 0.3, more: 0.4, secs: 60 },
-    (fx) => `Costs no favour. Spend ${percent(fx.price)} of your health: for ${span(fx.secs)} your blows do ${percent(fx.more)} more damage.`),
+    (fx) => `No favour cost. Spend ${percent(fx.price)} health: damage +${percent(fx.more)} for ${span(fx.secs)}.`),
 
   chaos(3, 'plague', 'Plague', 26, 180, ['area'], { each: 0.015, secs: 30 },
-    (fx, r) => `Every wild creature within ${r} tiles of the spot bleeds ${percent(fx.each)} of its health a second for ${span(fx.secs)}, ${percent(fx.each * fx.secs)} in all. Bleeding never kills.`, 5),
+    (fx, r) => `Wild creatures within ${r} tiles of the spot bleed ${percent(fx.each)} health per second for ${span(fx.secs)}, ${percent(fx.each * fx.secs)} total. Never lethal.`, 5),
   chaos(3, 'panic', 'Panic', 24, 120, ['area'], { secs: 10, monster: 3 },
-    (fx, r) => `Every wild creature within ${r} tiles of the spot flees from it for ${span(fx.secs)}, a monster for ${span(fx.monster)}.`, 6),
+    (fx, r) => `Wild creatures within ${r} tiles of the spot flee from it for ${span(fx.secs)} (monsters ${span(fx.monster)}).`, 6),
   chaos(3, 'unmake', 'Unmake', 0, 600, ['object'], { per: 0.25, most: 25 },
-    (fx) => `Costs no favour. Destroys a thing you carry and gives you favour of ${percent(fx.per)} of its quality, ${fx.most} at most. Not a thing you wear, a locked thing, or a bag with anything in it.`),
+    (fx) => `No favour cost. Destroys a carried item for favour = ${percent(fx.per)} of its QL, max ${fx.most}. Not worn, locked, or a non-empty bag.`),
 
   chaos(4, 'soul_rend', 'Soul Rend', 36, 300, ['enemy'], { share: 0.3, favour: 30 },
-    (fx) => `Takes ${percent(fx.share)} of the creature's health; if that kills it, ${fx.favour} favour comes back to you.`),
+    (fx) => `Damage: ${percent(fx.share)} of the creature's health; on a kill, +${fx.favour} favour.`),
   chaos(4, 'shroud', 'Shroud', 30, 300, ['self'], { reach: 3, secs: 60 },
-    (fx) => `For ${span(fx.secs)} nothing notices you from further than ${fx.reach} tiles off, and whatever is hunting you from further than that loses you.`),
+    (fx) => `${span(fx.secs)}: unnoticed beyond ${fx.reach} tiles; hunters beyond that lose you.`),
   chaos(4, 'blood_feast', 'Blood Feast', 0, 600, ['self'], { price: 0.15, share: 0.25, secs: 60 },
-    (fx) => `Costs no favour. Spend ${percent(fx.price)} of your health: for ${span(fx.secs)}, every blow you land heals you by ${percent(fx.share)} of what it dealt.`),
+    (fx) => `No favour cost. Spend ${percent(fx.price)} health: ${span(fx.secs)} of healing ${percent(fx.share)} of damage dealt.`),
 
   chaos(5, 'cataclysm', 'Cataclysm', 70, 1800, ['area'], { share: 0.4 },
-    (fx, r) => `Every wild creature within ${r} tiles of the spot loses ${percent(fx.share)} of its health at once.`, 8),
+    (fx, r) => `Wild creatures within ${r} tiles of the spot: −${percent(fx.share)} health.`, 8),
   chaos(5, 'abyssal_gaze', 'Abyssal Gaze', 60, 1800, ['enemy'], { secs: 15, more: 0.5 },
-    (fx) => `The creature flees from you for ${span(fx.secs)}, monsters too, and takes ${percent(fx.more)} more damage from every blow while it does.`),
+    (fx) => `The creature flees from you for ${span(fx.secs)}, monsters included; damage taken +${percent(fx.more)} meanwhile.`),
   chaos(5, 'undying', 'Undying', 0, 3600, ['self'], { price: 0.25, secs: 60, floor: 0.01 },
-    (fx) => `Costs no favour. Spend ${percent(fx.price)} of your health: for ${span(fx.secs)} no blow can kill you, and one that would leaves you at ${percent(fx.floor)} of your health.`),
+    (fx) => `No favour cost. Spend ${percent(fx.price)} health: unkillable for ${span(fx.secs)}; a killing blow leaves you at ${percent(fx.floor)}.`),
 ];
 export const FAITH_SPELL_BY_ID = new Map(FAITH_SPELLS.map((s) => [s.id, s]));
 export const spellsOf = (patron: PatronId, tier: number): FaithSpellDef[] =>
@@ -249,7 +249,7 @@ export const spellsOf = (patron: PatronId, tier: number): FaithSpellDef[] =>
 
 /** What a spell can be cast on, as the Faith window says it. */
 export const spellOnText = (s: Pick<FaithSpellDef, 'on' | 'radius'>): string =>
-  listedOr(s.on.map((o) => (o === 'area' ? `the ground, everything within ${s.radius ?? 0} tiles of you or of a tile you choose` : SPELL_ON_WORDS[o])));
+  listedOr(s.on.map((o) => (o === 'area' ? `the ground: all within ${s.radius ?? 0} tiles of you or a chosen tile` : SPELL_ON_WORDS[o])));
 
 /**
  * What a spell was pointed at, as the island finds it. `rpc_cast_spell` takes
@@ -297,13 +297,13 @@ export function spellOnOf(on: readonly SpellOn[], t: PointedAt): SpellOn | null 
  * a kind the spell takes, or too far off.
  */
 export function spellTargetRefusal(s: FaithSpellDef, t: PointedAt): string | null {
-  if (!t.found) return 'That is not here.';
+  if (!t.found) return 'Target not here.';
   if (!spellOnOf(s.on, t)) {
-    if (t.kind === 'creature' && s.on.includes('enemy') && !t.wild) return 'That is tame, not an enemy.';
-    if (t.kind === 'creature' && s.on.includes('wildermon') && t.after) return 'That is after you.';
-    return `${s.name} is cast on ${listedOr(s.on.map((o) => SPELL_ON_WORDS[o]))}.`;
+    if (t.kind === 'creature' && s.on.includes('enemy') && !t.wild) return 'Tame, not an enemy.';
+    if (t.kind === 'creature' && s.on.includes('wildermon') && t.after) return 'It is hunting you.';
+    return `${s.name}: cast on ${listedOr(s.on.map((o) => SPELL_ON_WORDS[o]))}.`;
   }
-  if (t.dist > SPELL_REACH) return `That is more than ${SPELL_REACH} tiles away.`;
+  if (t.dist > SPELL_REACH) return `Too far: max ${SPELL_REACH} tiles.`;
   return null;
 }
 
@@ -322,9 +322,9 @@ const faithName = (): string => (SKILL_BY_ID.get(FAITH)?.name ?? 'Faith').toLowe
  */
 export function patronRefusal(id: string, mine: PatronId | null, faith: number): string | null {
   const p = PATRON_BY_ID.get(id as PatronId);
-  if (!p) return 'There is no such patron.';
-  if (mine) return `${PATRON_BY_ID.get(mine)?.name ?? mine} is your patron already, and a patron is for good.`;
-  if (faith < PATRON_AT) return `A patron is taken at ${PATRON_AT} ${faithName()}; you have ${Math.floor(faith)}.`;
+  if (!p) return 'No such patron.';
+  if (mine) return `Patron already ${PATRON_BY_ID.get(mine)?.name ?? mine}; permanent.`;
+  if (faith < PATRON_AT) return `Needs ${faithName()} ${PATRON_AT}; have ${Math.floor(faith)}.`;
   return null;
 }
 
@@ -338,12 +338,12 @@ export function faithSpellRefusal(
   s: FaithSpellDef, mine: PatronId | null, taken: readonly string[], faith: number, spells: readonly FaithSpellDef[] = FAITH_SPELLS,
 ): string | null {
   if (!mine) return 'Take a patron first.';
-  if (s.patron !== mine) return `That is ${PATRON_BY_ID.get(s.patron)?.name ?? s.patron}’s, and ${PATRON_BY_ID.get(mine)?.name ?? mine} is your patron.`;
-  if (taken.includes(s.id)) return 'You have that already.';
+  if (s.patron !== mine) return `${PATRON_BY_ID.get(s.patron)?.name ?? s.patron} spell; your patron is ${PATRON_BY_ID.get(mine)?.name ?? mine}.`;
+  if (taken.includes(s.id)) return 'Already taken.';
   const other = spells.find((o) => o.patron === s.patron && o.tier === s.tier && taken.includes(o.id));
-  if (other) return `You took ${other.name} at this tier.`;
+  if (other) return `Already took ${other.name} at this tier.`;
   const at = faithTierAt(s.tier);
-  if (faith < at) return `This tier opens at ${at} ${faithName()}; you have ${Math.floor(faith)}.`;
+  if (faith < at) return `Tier needs ${faithName()} ${at}; have ${Math.floor(faith)}.`;
   return null;
 }
 
@@ -372,9 +372,9 @@ export const schoolOf = (id: string): SpellSchool | null =>
 export function slotRefusal(
   slot: number, id: string | null, known: readonly string[], school: SpellSchool | null = id ? schoolOf(id) : null,
 ): string | null {
-  if (!Number.isInteger(slot) || slot < 0 || slot >= BAR_SLOTS) return 'There is no such slot.';
+  if (!Number.isInteger(slot) || slot < 0 || slot >= BAR_SLOTS) return 'No such slot.';
   if (id === null) return null;
-  if (!school || !known.includes(id)) return 'You do not have that spell.';
-  if (school !== SPELL_BAR[slot]) return `That slot is for ${SCHOOL_NAMES[SPELL_BAR[slot]].toLowerCase()} spells.`;
+  if (!school || !known.includes(id)) return 'Spell not known.';
+  if (school !== SPELL_BAR[slot]) return `Slot for ${SCHOOL_NAMES[SPELL_BAR[slot]].toLowerCase()} spells only.`;
   return null;
 }

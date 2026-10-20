@@ -160,16 +160,16 @@ say(r('dig') === 'none' && r('pools') === 'true,true', `island: a pool is dug in
 const [wet, surface, depth, beside] = r('water').split(' ');
 say(wet === 'true' && Number(surface) === TOP - POOL_LIP && Number(depth) === POOL_DEPTH - POOL_LIP && beside === 'false',
   `island: it is water ${(POOL_DEPTH - POOL_LIP) / 10} m deep standing at ${TOP - POOL_LIP}, and the ground beside it is not -- ${r('water')}`);
-say(r('again') === 'There is a pool here already.', `island: a pool is not dug twice -- ${r('again')}`);
+say(r('again') === 'Already a pool.', `island: a pool is not dug twice -- ${r('again')}`);
 say(r('swim') === 'true', 'island: in a pool, you swim');
 say(/"pool": true/.test(r('ground')), 'island: a browser is told which foundations have pools in them');
 say(r('spring') === 'none', `island: a spring may be dug in a pool -- ${r('spring')}`);
 const chain = JSON.parse(r('chain') || 'null') as { ponds: Array<{ tiles?: number[]; spill?: { to: number }; level: number }>; streams: unknown[] } | null;
 say(!!chain && chain.ponds[0].tiles?.length === 4 && chain.ponds[0].spill?.to === 30,
   `island: its pool is both tiles, and it goes over the plinth's edge to the ground at 30 -- ${r('chain').slice(0, 200)}`);
-say(/spills over its lowest edge, falling 2\.8 m to the ground/.test(r('told')), `island: the digger is told how far it falls -- "${r('told')}"`);
-say(r('second') === 'A spring rises in this pool already.', `island: one spring to a pool -- ${r('second')}`);
-say(r('noconcrete') === `Filling it in wants ${POOL_FILL} concrete, and you have 0.`, `island: filling it in wants concrete -- ${r('noconcrete')}`);
+say(/spills over its lowest edge, falls 2\.8 m to the ground/.test(r('told')), `island: the digger is told how far it falls -- "${r('told')}"`);
+say(r('second') === 'Pool already has a spring.', `island: one spring to a pool -- ${r('second')}`);
+say(r('noconcrete') === `Need ${POOL_FILL} concrete; have 0.`, `island: filling it in wants concrete -- ${r('noconcrete')}`);
 say(r('filled') === 'false,true 0 0', `island: filled in with ${POOL_FILL} concrete, the pool is gone and the spring in it with it -- ${r('filled')}`);
 
 /* ---- In the browser ------------------------------------------------------------------------------ */
@@ -208,13 +208,13 @@ function browser(): void {
   const s = [...g.springs.list.values()][0];
   say(may && !!s && s.chain.ponds[0].tiles?.length === 4 && s.chain.ponds[0].spill?.to === 30,
     `browser: a spring dug in it makes its pool both tiles, going over the edge to the ground at 30 -- ${s ? canon(s.chain.ponds[0]).slice(0, 160) : 'none'}`);
-  say((spring.check?.(tile(bx + 1, by), g) ?? null) === 'A spring rises in this pool already.', 'browser: one spring to a pool');
+  say((spring.check?.(tile(bx + 1, by), g) ?? null) === 'Pool already has a spring.', 'browser: one spring to a pool');
   const fill = act('fill_pool');
   const refused = fill.check?.(tile(bx, by), g) ?? null;
   g.inventory.add('concrete', { count: POOL_FILL, ql: 40 });
   fill.perform(tile(bx, by), g);
   g.update(0.01);
-  say(/wants \d+ concrete/.test(refused ?? '') && !g.slabAt(bx, by)?.pool && g.springs.list.size === 0 && !w.hasWater(bx, by) && w.hasWater(bx + 1, by),
+  say(/^Need \d+ concrete/.test(refused ?? '') && !g.slabAt(bx, by)?.pool && g.springs.list.size === 0 && !w.hasWater(bx, by) && w.hasWater(bx + 1, by),
     `browser: filled in with ${POOL_FILL} concrete, that tile is dry and the spring in it stops, and the tile beside it is still a pool -- "${refused}"`);
 }
 browser();

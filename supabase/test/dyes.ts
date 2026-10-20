@@ -356,7 +356,7 @@ begin
   perform perform_craft(w, u, '${RASP}', jsonb_build_object('kind', 'item', 'uid', null));
   insert into said select 'DOUBLE', (select string_agg(i.def || ':' || coalesce(i.dye, '-') || ':' || i.count, ',' order by i.def) from item i
       where i.world_id = w and i.holder_uid = u)
-    || '#' || (select e.text from event e where e.world_id = w and e.uid = u and e.text like 'You boil down%' order by e.n limit 1);
+    || '#' || (select e.text from event e where e.world_id = w and e.uid = u and e.text like 'Boiled: %' order by e.n limit 1);
   update player set class_mul = v_mul where world_id = w and uid = u;
 
   -- 9. A caravel: a barrel within reach short of it and one further off that is not, then the near one enough.
@@ -456,7 +456,7 @@ g.player.y = py + 0.5;
     // What it took, said the same; then the line the recipe says, at the QL each side's hands made it.
     const [took, done] = boiled.split('#');
     const [isleTook, isleDone] = at(`BOILSAID_${r.id}`).split('#');
-    if (took !== isleTook || took !== boilSaid(d.from, r.inputs[0].count ?? 1) || done?.replace(/\(QL [\d.]+\)/, '') !== isleDone?.replace(/\(QL [\d.]+\)/, '')) {
+    if (took !== isleTook || took !== boilSaid(d.from, r.inputs[0].count ?? 1) || done?.replace(/QL [\d.]+/, '') !== isleDone?.replace(/QL [\d.]+/, '')) {
       saidWrong.push(`${d.from}: island "${at(`BOILSAID_${r.id}`)}", browser "${boiled}"`);
     }
   }
@@ -552,13 +552,13 @@ const bT: Target = { kind: 'furniture', id: barrel.id };
   const again = ask('dye_item', itemT(tunic));
   check('dyeing it again in the same colour is refused in the same words', again === at('AGAIN') && again === dyedAlready(hex), `island "${at('AGAIN')}", browser "${again}"`);
   const look = act('examine_item', itemT(tunic));
-  check('Examine on the tunic says its hex, in the island\'s words', look === at('LOOK_TUNIC') && look.includes(`It is dyed ${hex}.`), `island "${at('LOOK_TUNIC')}", browser "${look}"`);
+  check('Examine on the tunic says its hex, in the island\'s words', look === at('LOOK_TUNIC') && look.includes(`Dyed: ${hex}.`), `island "${at('LOOK_TUNIC')}", browser "${look}"`);
   const ship = give('caravel', 30);
   const big = ask('dye_item', itemT(ship));
   check(`a caravel takes ${DYE_LITRES.ship} litres, more than the bucket holds, and is refused with the most it holds, in the same words`,
     big === at('TOO_BIG') && big === tooLittleDye(DYE_LITRES.ship, BUCKET_LITRES), `island "${at('TOO_BIG')}", browser "${big}"`);
   const strip = ask('strip_dye', itemT(purple));
-  check('a bucket of dye has no colour to boil out of it', strip === at('STRIP_BUCKET') && strip === 'It has taken no colour.', `island "${at('STRIP_BUCKET')}", browser "${strip}"`);
+  check('a bucket of dye has no colour to boil out of it', strip === at('STRIP_BUCKET') && strip === 'No colour to remove.', `island "${at('STRIP_BUCKET')}", browser "${strip}"`);
   g.inventory.remove(purple.uid, 1);
   const none = ask('dye_item', itemT(tunic));
   check('and with no dye at all, it says where dye comes from', none === at('NONE') && none === noDye(CRAFT_REACH), `island "${at('NONE')}", browser "${none}"`);
@@ -612,7 +612,7 @@ const bT: Target = { kind: 'furniture', id: barrel.id };
   give('lye_bucket', 30);
   const recipe = RECIPE_BY_ID.get(RASP)!;
   const short = ask(RASP, itemT(rasp));
-  const want = `It takes ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG))} kg of raspberries for ${BOIL_LITRES} litres of lye; you have ${kgSaid(SHORT * gramsOf('raspberry'))} kg.`;
+  const want = `Need ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG))} kg of raspberries per ${BOIL_LITRES} litres of lye; have ${kgSaid(SHORT * gramsOf('raspberry'))} kg.`;
   check(`a boil on ${SHORT} raspberries is refused in kilos, "${want}", the same on both sides`,
     short === at('BOIL_SHORT') && short === want && short === boilRefusal(g, RASP, 'raspberry', SHORT), `island "${at('BOIL_SHORT')}", browser "${short}"`);
   g.setPerks({ 'litres:dye': DOUBLE });

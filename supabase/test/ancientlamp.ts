@@ -199,7 +199,7 @@ check('the ancient lamp is an item named Ancient lamp, and the old lamp is no it
   at('ITEMS') === 'ancient_lamp:Ancient lamp' && ITEM_DEFS.ancient_lamp?.name === 'Ancient lamp' && !ITEM_DEFS.old_lamp, at('ITEMS'));
 check('no item, tally, sale, order, ledger or load on the island is an old lamp', at('OLDROWS') === '0', at('OLDROWS'));
 check(`its description says the odds off the rule, one time in ${LAMP_TIER_ODDS}, and has nothing left unfilled`,
-  !!ITEM_DEFS.ancient_lamp?.description?.includes(`one time in ${LAMP_TIER_ODDS}`) && !ITEM_DEFS.ancient_lamp.description.includes('{'),
+  !!ITEM_DEFS.ancient_lamp?.description?.includes(`1 in ${LAMP_TIER_ODDS}`) && !ITEM_DEFS.ancient_lamp.description.includes('{'),
   ITEM_DEFS.ancient_lamp?.description ?? '-');
 check(`one time in ${LAMP_TIER_ODDS} and ${TRAIT_SLOTS} slots, on both sides`, at('ODDS') === `${LAMP_TIER_ODDS}|${TRAIT_SLOTS}`, at('ODDS'));
 check('it is a creature action the island does and prices, using the ancient lamp',
@@ -211,9 +211,9 @@ check('it is a creature action the island does and prices, using the ancient lam
 }
 
 // Refusals.
-check('on the island, without one in the pack it is refused', at('NONE') === `You need ${'an'} ${LAMP}.`, at('NONE'));
+check('on the island, without one in the pack it is refused', at('NONE') === `Need ${'an'} ${LAMP}.`, at('NONE'));
 check('on the island, a wild one and somebody else\'s are not yours, and with a lamp your own one is not refused',
-  at('WILD') === 'It is not yours.' && at('THEIRS') === 'Birch is not yours.' && at('MINE') === '-', `${at('WILD')} / ${at('THEIRS')} / ${at('MINE')}`);
+  at('WILD') === 'Not yours.' && at('THEIRS') === 'Birch: not yours.' && at('MINE') === '-', `${at('WILD')} / ${at('THEIRS')} / ${at('MINE')}`);
 check('on the island, a lamp tried on somebody else\'s is kept and its blood untouched', at('THEIRSKEPT') === '1|true', at('THEIRSKEPT'));
 
 // The island's goes.
@@ -242,8 +242,8 @@ check('on the island, a lamp tried on somebody else\'s is kept and its blood unt
     run('top').length === 300 && run('top').every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above')
       && !g0.told.includes('one time in')), run('top')[0]?.told ?? '-');
   check('on the island, one with no traits gets one in an empty slot, and one with one keeps it and gets a second',
-    run('none').every((g0) => g0.after.length === 1 && g0.told.includes('is kindled in an empty slot'))
-      && run('one').every((g0) => g0.after.length === 2 && g0.after[0] === SETS.one[0] && g0.told.includes('is kindled in an empty slot')),
+    run('none').every((g0) => g0.after.length === 1 && g0.told.includes('added to an empty slot'))
+      && run('one').every((g0) => g0.after.length === 2 && g0.after[0] === SETS.one[0] && g0.told.includes('added to an empty slot')),
     `${run('none')[0]?.told} / ${run('one')[0]?.after}`);
   check('on the island, an empty slot is filled common, or a tier above rare, never anything else',
     [...run('none'), ...run('one')].every((g0) => ['common', 'rare'].includes(traitTier(g0.after[g0.after.length - 1]))));
@@ -254,7 +254,7 @@ check('on the island, a lamp tried on somebody else\'s is kept and its blood unt
     `${run('mixed_up')[0]?.told} / ${run('high_up')[0]?.told}`);
   check(`on the island, with every roll forced low a ${TOP} one is still another ${TOP}, and with every roll high a common one stays common`,
     run('top_up').every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above'))
-      && run('mixed_flat').every((g0) => traitTier(g0.after[2]) === 'common' && g0.told.includes(`one time in ${LAMP_TIER_ODDS} it kindles one a tier above`)),
+      && run('mixed_flat').every((g0) => traitTier(g0.after[2]) === 'common' && g0.told.includes(`Tier-up chance: 1 in ${LAMP_TIER_ODDS}`)),
     `${run('top_up')[0]?.told} / ${run('mixed_flat')[0]?.told}`);
 }
 
@@ -326,7 +326,7 @@ function browserGoes(set: string[], n: number, rand: () => number = Math.random)
     top.every((g0) => g0.after.every((t) => traitTier(t) === TOP) && !g0.told.includes('tier above')), top[0]?.told);
   check('in the browser, one with no traits or one gets one more in an empty slot, common or rare, and keeps what it had',
     none.every((g0) => g0.after.length === 1) && one.every((g0) => g0.after.length === 2 && g0.after[0] === SETS.one[0])
-      && [...none, ...one].every((g0) => ['common', 'rare'].includes(traitTier(g0.after[g0.after.length - 1])) && g0.told.includes('in an empty slot')),
+      && [...none, ...one].every((g0) => ['common', 'rare'].includes(traitTier(g0.after[g0.after.length - 1])) && g0.told.includes('to an empty slot')),
     `${none[0]?.told}`);
   const lo = (): number => 0.001;
   const hi = (): number => 0.999;

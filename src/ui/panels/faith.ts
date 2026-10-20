@@ -6,7 +6,8 @@ import type { Game } from '../../game/game';
 import {
   calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PATHS, PICKS_PER_TIER, picksOf, SIT_PLACES_SAID, type PathDef, type PathId, type PathPickDef, type PathSaid,
 } from '../../game/meditation';
-import { listed, NumberWord, numberWord, spanWords } from '../../game/words';
+import { listed } from '../../game/words';
+import { durationSaid } from '../../game/boons';
 import type { FaithBook } from '../faithbook';
 import { reveal, sharedWhy } from './trades';
 import type { UIWindow } from '../windows';
@@ -127,9 +128,9 @@ export class FaithPanel {
     }
     const s = this.book.said;
     if (!this.book.island) {
-      this.page.append(note('Patrons are the island’s to keep. Playing by yourself in this browser there is nobody to keep one, so none can be taken, but what each offers is here to read.'));
+      this.page.append(note('Patrons: island only. Single-player: read only.'));
     } else if (!s) {
-      this.page.append(note('Asking the island about your faith…'));
+      this.page.append(note('Loading faith…'));
     } else {
       this.page.append(this.standing(s));
     }
@@ -148,12 +149,12 @@ export class FaithPanel {
   private standing(s: NonNullable<FaithBook['said']>): HTMLDivElement {
     const box = document.createElement('div');
     box.className = 'faith-stand';
-    box.append(meter('Favour', s.favour, s.cap, 'What spells and rites are paid from, and the most it holds at your faith.'));
-    if (s.path) box.append(meter('Calm', s.path.calm, s.path.cap, 'What a path’s techniques are paid from, banked by sitting on a rug.'));
+    box.append(meter('Favour', s.favour, s.cap, 'Pays for spells and rites. Max set by faith.'));
+    if (s.path) box.append(meter('Calm', s.path.calm, s.path.cap, 'Pays for path techniques. Gained by sitting on a rug.'));
     const mine = s.patron ? PATRON_BY_ID.get(s.patron as PatronId)?.name ?? s.patron : null;
     const next = FAITH_TIER_AT.find((at) => at > s.faith);
-    const tier = next === undefined ? 'every tier open' : `tier ${FAITH_TIER_AT.indexOf(next) + 1} opens at ${next}`;
-    box.append(note(`Faith ${s.faith.toFixed(1)} · ${tier} · ${mine ? `your patron is ${mine}` : `a patron is taken at ${PATRON_AT} faith`}`));
+    const tier = next === undefined ? 'all tiers open' : `tier ${FAITH_TIER_AT.indexOf(next) + 1} at ${next}`;
+    box.append(note(`Faith ${s.faith.toFixed(1)} · ${tier} · ${mine ? `patron: ${mine}` : `patron at faith ${PATRON_AT}`}`));
     return box;
   }
 
@@ -172,18 +173,18 @@ export class FaithPanel {
     align.textContent = ALIGNMENT_NAMES[p.alignment];
     top.append(name, align);
     card.append(top);
-    card.append(cardNote(`${NumberWord(SPELLS_PER_TIER)} spells at each of ${numberWord(FAITH_TIER_AT.length)} tiers, at ${listed(FAITH_TIER_AT.map(String))} faith; one is taken at each tier, ${numberWord(FAITH_TIER_AT.length)} in all, and ${numberWord(slotsFor('faith'))} of them go on the spell bar at a time.`));
+    card.append(cardNote(`Tiers at faith ${listed(FAITH_TIER_AT.map(String))}: pick 1 of ${SPELLS_PER_TIER} spells per tier, ${FAITH_TIER_AT.length} in all. Spell bar slots: ${slotsFor('faith')}.`));
     if (!s) return card;
     if (s.patron === p.id) {
-      card.append(cardNote(`Your patron, since ${PATRON_AT} faith. Its spells are below.`));
+      card.append(cardNote('Your patron. Spells below.'));
       return card;
     }
     if (s.patron) return card;
     const ask = `patron:${p.id}`;
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${p.name} as your patron?`, [
-        'A patron is for good: no other can be taken after it.',
-        `Its first tier of spells opens with it, the rest at ${listed(FAITH_TIER_AT.slice(1).map(String))} faith.`,
+        'Permanent: no other patron after it.',
+        `Tier 1 opens with it; later tiers at faith ${listed(FAITH_TIER_AT.slice(1).map(String))}.`,
       ], `Take ${p.name}`, () => this.book.takePatron(p.id)));
       return card;
     }
@@ -215,7 +216,7 @@ export class FaithPanel {
     block.append(head);
     const spells = spellsOf(p.id, tier);
     if (!spells.length) {
-      block.append(note(`No spells are written for this tier yet: ${numberWord(SPELLS_PER_TIER)} will be, and one of them taken.`));
+      block.append(note(`Not written yet: ${SPELLS_PER_TIER} spells planned, pick 1.`));
       return block;
     }
     // The island's reason, said once under the tier when every spell still to take shares it.
@@ -239,18 +240,18 @@ export class FaithPanel {
     name.textContent = sp.name;
     const cost = document.createElement('span');
     cost.className = 'trade-points';
-    cost.textContent = `${sp.cost} favour · rests ${sp.rest} s`;
+    cost.textContent = `${sp.cost} favour · cooldown ${sp.rest} s`;
     top.append(name, cost);
-    card.append(top, cardNote(`${sp.note} Cast on ${spellOnText(sp)}.`));
+    card.append(top, cardNote(`${sp.note} Target: ${spellOnText(sp)}.`));
     if (!s || s.patron !== p.id) return card;
     if (taken) {
       const slot = s.bar.indexOf(sp.id);
       if (slot >= 0) {
-        card.append(cardNote(`On the spell bar, slot ${slot + 1} (Shift+${slot + 1}).`));
+        card.append(cardNote(`Spell bar slot ${slot + 1} (Shift+${slot + 1}).`));
       } else {
         const acts = document.createElement('div');
         acts.className = 'trade-acts';
-        const put = button('Put on the spell bar', 'trade-take');
+        const put = button('Add to spell bar', 'trade-take');
         put.addEventListener('click', () => void this.putOnBar(sp.id));
         acts.append(put);
         card.append(acts);
@@ -260,7 +261,7 @@ export class FaithPanel {
     const ask = `spell:${sp.id}`;
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${sp.name} at tier ${sp.tier}?`, [
-        `One spell is taken at each tier, for good: the other ${numberWord(SPELLS_PER_TIER - 1)} at this tier close.`,
+        `Permanent: the other ${SPELLS_PER_TIER - 1} at this tier close.`,
       ], `Take ${sp.name}`, () => this.book.takeSpell(sp.id)));
       return card;
     }
@@ -289,20 +290,20 @@ export class FaithPanel {
   private drawPath(): void {
     const ps = this.path();
     if (this.book.island && !ps) {
-      this.page.append(note(this.book.said ? 'The island said nothing of your path.' : 'Asking the island about your path…'));
+      this.page.append(note(this.book.said ? 'No path data from the island.' : 'Loading path…'));
     } else if (ps) {
       const mine = ps.way ? PATHS[ps.way]?.name ?? ps.way : null;
       const box = document.createElement('div');
       box.className = 'faith-stand';
       box.append(
-        meter('Calm', ps.calm, ps.cap, 'What a path’s techniques are paid from, banked by sitting on a rug.'),
-        note(`Meditation ${ps.meditation.toFixed(1)} · ${mine ? `your path is ${mine}` : `a path is chosen at ${CHOOSE_AT} meditation, at the rug`}`),
+        meter('Calm', ps.calm, ps.cap, 'Pays for path techniques. Gained by sitting on a rug.'),
+        note(`Meditation ${ps.meditation.toFixed(1)} · ${mine ? `path: ${mine}` : `path at meditation ${CHOOSE_AT}, from the rug`}`),
       );
       this.page.append(box);
     }
     if (this.why) this.page.append(whyEl(this.why));
-    this.page.append(note(`Calm is banked by sitting on a rug, and spent on a path’s techniques. It holds as much as favour does at the same level: `
-      + `${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m} meditation`))}.`));
+    this.page.append(note(`Calm: gained by sitting on a rug, spent on path techniques. Max Calm (same as max favour at that level): `
+      + `${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at meditation ${m}`))}.`));
     this.page.append(note(SIT_PLACES_SAID));
     const own = ps?.way ? PATHS[ps.way] : null;
     if (own && !own.moved) this.page.append(this.stepsCard(own, ps?.meditation ?? 0));
@@ -322,9 +323,9 @@ export class FaithPanel {
     name.className = 'trade-name';
     name.textContent = path.name;
     top.append(name);
-    card.append(top, cardNote(`${path.note} Walked by its steps, each opened by the meditation it takes, until it moves onto tiers:`));
+    card.append(top, cardNote(`${path.note} Steps by meditation (not yet on tiers):`));
     for (const st of path.steps) {
-      card.append(cardNote(`${st.at}${med >= st.at ? ' (yours)' : ''}: ${st.name}. ${st.note}${st.ability ? ` Called at the rug, then ${spanWords(st.ability.rest)} before it again.` : ''}`));
+      card.append(cardNote(`${st.at}${med >= st.at ? ' (yours)' : ''}: ${st.name}. ${st.note}${st.ability ? ` Used at the rug; cooldown ${durationSaid(st.ability.rest)}.` : ''}`));
     }
     return card;
   }
@@ -340,11 +341,10 @@ export class FaithPanel {
     name.textContent = path.name;
     top.append(name);
     card.append(top, cardNote(path.note));
-    card.append(cardNote(`${NumberWord(PICKS_PER_TIER)} picks at each of ${numberWord(PATH_TIER_AT.length)} tiers, at ${listed(PATH_TIER_AT.map(String))} meditation: `
-      + `a technique and ${numberWord(PICKS_PER_TIER - 1)} disciplines. One is taken at each tier, for good. A technique goes in the spell bar’s path slot and is paid for in Calm; `
-      + 'a discipline is true from the moment it is taken.'));
-    if (ps?.way === path.id) card.append(cardNote(`Your path. Its picks are below.`));
-    else if (!ps?.way) card.append(cardNote(`Chosen at the rug, once ${CHOOSE_AT} meditation is behind you, and never changed.`));
+    card.append(cardNote(`Tiers at meditation ${listed(PATH_TIER_AT.map(String))}: 1 technique and ${PICKS_PER_TIER - 1} disciplines each; pick 1 per tier, permanent. `
+      + 'Technique: spell bar path slot, costs Calm. Discipline: always on once taken.'));
+    if (ps?.way === path.id) card.append(cardNote('Your path. Picks below.'));
+    else if (!ps?.way) card.append(cardNote(`Chosen at the rug from meditation ${CHOOSE_AT}. Permanent.`));
     return card;
   }
 
@@ -378,9 +378,9 @@ export class FaithPanel {
     name.textContent = k.name;
     const cost = document.createElement('span');
     cost.className = 'trade-points';
-    cost.textContent = k.kind === 'technique' ? `Technique · ${k.cost} Calm · rests ${spanWords(k.rest)}` : 'Discipline';
+    cost.textContent = k.kind === 'technique' ? `Technique · ${k.cost} Calm · cooldown ${durationSaid(k.rest)}` : 'Discipline';
     top.append(name, cost);
-    card.append(top, cardNote(k.kind === 'technique' ? `${k.note} Cast on yourself.` : k.note));
+    card.append(top, cardNote(k.kind === 'technique' ? `${k.note} Target: self.` : k.note));
     if (!ps || ps.way !== k.path) return card;
     if (taken) {
       if (k.kind === 'technique') card.append(this.techniqueActs(k));
@@ -389,7 +389,7 @@ export class FaithPanel {
     const ask = `pick:${k.id}`;
     if (this.confirming === ask) {
       card.append(this.confirm(`Take ${k.name} at tier ${k.tier}?`, [
-        `One pick is taken at each tier, for good: the other ${numberWord(PICKS_PER_TIER - 1)} at this tier close.`,
+        `Permanent: the other ${PICKS_PER_TIER - 1} at this tier close.`,
       ], `Take ${k.name}`, () => this.takePick(k.id)));
       return card;
     }
@@ -425,7 +425,7 @@ export class FaithPanel {
       const call = button(`Call ${k.name}`, 'trade-take');
       const why = this.game.techniqueRefusal(k.id);
       call.disabled = !!why;
-      call.title = why ?? `${k.cost} Calm`;
+      call.title = why ?? `Cost: ${k.cost} Calm`;
       call.addEventListener('click', () => {
         this.why = this.game.castTechnique(k.id);
         this.draw();
@@ -436,10 +436,10 @@ export class FaithPanel {
     }
     const slot = this.book.said?.bar.indexOf(k.id) ?? -1;
     if (slot >= 0) {
-      acts.append(cardNote(`On the spell bar, slot ${slot + 1} (Shift+${slot + 1}).`));
+      acts.append(cardNote(`Spell bar slot ${slot + 1} (Shift+${slot + 1}).`));
       return acts;
     }
-    const put = button('Put on the spell bar', 'trade-take');
+    const put = button('Add to spell bar', 'trade-take');
     put.addEventListener('click', () => void this.putOnBar(k.id, 'path'));
     acts.append(put);
     return acts;
@@ -477,7 +477,7 @@ export class FaithPanel {
         this.draw();
       });
     });
-    const no = button('Not yet', 'trade-take');
+    const no = button('Cancel', 'trade-take');
     no.addEventListener('click', () => {
       this.confirming = null;
       this.draw();
@@ -518,7 +518,7 @@ function meter(label: string, held: number, cap: number, title: string): HTMLDiv
   bar.append(fill);
   const num = document.createElement('span');
   num.className = 'trade-points';
-  num.textContent = `${Math.floor(held)} of ${Math.floor(cap)}`;
+  num.textContent = `${Math.floor(held)}/${Math.floor(cap)}`;
   row.append(name, bar, num);
   return row;
 }

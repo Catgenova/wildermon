@@ -44,7 +44,7 @@ import type { Target } from './actions';
 import type { Game } from './game';
 import type { Creature, SpeciesDef } from './creatures';
 import { SKILL_TOP } from './skills';
-import { article, capital, listed } from './words';
+import { listed } from './words';
 
 /** The skill a trail is read with, and the only thing that trains it. */
 export const TRACKING = 'tracking';
@@ -175,14 +175,13 @@ export interface TrackFound {
  * The island's `track_said`, word for word.
  */
 export function trackSaid(kind: string, range: number, found: TrackFound | null, r: TrackReading | null): string {
-  if (!found || !r) return `You find no sign of ${article(kind)} ${kind} within ${range} tiles.`;
+  if (!found || !r) return `No ${kind.toLowerCase()} within ${range} tiles.`;
   const b = TRACK_BANDS[r.band];
   const name = b.stage ? found.stageName : kind;
   if (b.detail) {
-    return `Fresh tracks: ${article(name)} ${name}, level ${found.level}, ${r.way}, ${trackDistSays(r)}, ${found.moving ? 'on the move' : 'standing still'}.`;
+    return `Tracks: ${name}, level ${found.level}, ${r.way}, ${trackDistSays(r)}, ${found.moving ? 'moving' : 'still'}.`;
   }
-  if (r.tiles === null) return `You pick up the trail of ${article(name)} ${name}: somewhere to the ${r.way}, ${trackDistSays(r)}.`;
-  return `Tracks of ${article(name)} ${name} lead ${r.way}, ${trackDistSays(r)}.`;
+  return `Tracks: ${name}, ${r.way}, ${trackDistSays(r)}.`;
 }
 
 /** Whether a kind's page in the field guide has a Track button: a wildermon, not a monster, and one you have seen. */
@@ -190,9 +189,9 @@ export const trackable = (def: SpeciesDef, seen: ReadonlySet<string>): boolean =
 
 /** Why a kind (its definition, if there is one) cannot be tracked, or null when it can: the island's `track_refusal`, in the same words. */
 export function trackRefusal(def: SpeciesDef | undefined, seen: ReadonlySet<string>): string | null {
-  if (!def) return 'There is no such kind to track.';
-  if (def.monster) return `${capital(article(def.name))} ${def.name} is no wildermon, and leaves no trail you can read.`;
-  if (!seen.has(def.id)) return `You have not seen ${article(def.name)} ${def.name} yet. Only a kind marked seen in your field guide can be tracked.`;
+  if (!def) return 'No such kind.';
+  if (def.monster) return `${def.name}: not a wildermon, no trail.`;
+  if (!seen.has(def.id)) return `${def.name} not seen yet: only kinds marked seen in your field guide can be tracked.`;
   return null;
 }
 
@@ -228,19 +227,19 @@ export interface Trail {
  * at". For the Skills window, the help and What's new.
  */
 export function trackBandsSays(): string[] {
-  const way = (b: TrackBand): string => (b.points === 360 ? 'to the degree' : `to ${b.points} points`);
-  const far = (b: TrackBand): string => (b.round === null ? `far off (over ${TRACK_FAR} tiles) or not` : `to the nearest ${b.round} tiles`);
+  const way = (b: TrackBand): string => (b.points === 360 ? 'to 1°' : `to ${b.points} points`);
+  const far = (b: TrackBand): string => (b.round === null ? `far (over ${TRACK_FAR} tiles) or not` : `to the nearest ${b.round} tiles`);
   return TRACK_BANDS.map((b, i) => {
-    const adds = [b.stage && !TRACK_BANDS[i - 1]?.stage ? 'the stage it is at' : '', b.detail && !TRACK_BANDS[i - 1]?.detail ? 'its level and whether it is moving' : '']
+    const adds = [b.stage && !TRACK_BANDS[i - 1]?.stage ? 'stage' : '', b.detail && !TRACK_BANDS[i - 1]?.detail ? 'level and moving or still' : '']
       .filter(Boolean);
     const upto = TRACK_BANDS[i + 1] ? `${b.at} to ${TRACK_BANDS[i + 1].at - 1}` : `${b.at} and over`;
-    return `at ${upto}, the way ${way(b)} and the distance ${far(b)}${adds.length ? `, with ${listed(adds)}` : ''}`;
+    return `${upto}: way ${way(b)}, distance ${far(b)}${adds.length ? `, plus ${listed(adds)}` : ''}`;
   });
 }
 
 /** The spread, in words off the numbers: "up to 60° either way at nought, 0.6° less a level, and never under 5°, from 92". */
 export const trackErrSays = (): string =>
-  `up to ${TRACK_ERR_MOST}° either way at nought, ${degreesSays(TRACK_ERR_MOST / SKILL_TOP)}° less a level, and never under ${TRACK_ERR_LEAST}°, from ${TRACK_ERR_FLOOR_AT}`;
+  `±${TRACK_ERR_MOST}° at level 0, −${degreesSays(TRACK_ERR_MOST / SKILL_TOP)}° per level, min ±${TRACK_ERR_LEAST}° from level ${TRACK_ERR_FLOOR_AT}`;
 
 /**
  * What the Skills window says Tracking is worth, short and as a sentence: the
@@ -255,10 +254,10 @@ export function trackingSays(skill: number, solo?: number): [string, string] {
   const reach = solo !== undefined ? Math.min(solo, trackRange(L)) : trackRange(L);
   return [
     `${reach} tiles · ±${fmt(err)}° · ${band.points === 360 ? 'degree' : `${band.points} points`}`,
-    `Track, from a kind's page in the field guide, finds the nearest wild one of a kind you have seen within ${TRACK_RANGE_BASE} tiles and ${TRACK_RANGE_PER} more a level `
-      + `(${trackRange(L)} now), the way to it read off by ${trackErrSays()} (±${fmt(err)}° now); ${bands.join('; ')}.`
+    `Track (from a kind's field guide page): nearest wild one of a seen kind within ${TRACK_RANGE_BASE} tiles, +${TRACK_RANGE_PER} per level `
+      + `(${trackRange(L)} now). Bearing error: ${trackErrSays()} (±${fmt(err)}° now). Levels: ${bands.join('; ')}.`
       // Alone, the wild past what is out is a count, not creatures (`trackAction.ts`).
-      + (solo !== undefined && solo < trackRange(L) ? ` In a game of your own it reaches no further than ${solo} tiles, past which the wild is kept as a count and not as creatures.` : ''),
+      + (solo !== undefined && solo < trackRange(L) ? ` Single-player: max ${solo} tiles (the wild beyond is a count, not creatures).` : ''),
   ];
 }
 

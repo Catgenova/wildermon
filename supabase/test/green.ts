@@ -555,7 +555,7 @@ for (const a of BARE) {
   const mine = asked(ivy, a);
   check(`${a.key}: the same refusal on both sides`, mine === scene.get(`R_${a.key}`), `"${mine}" against "${scene.get(`R_${a.key}`)}"`);
 }
-check('which is the tool, named', scene.get('R_nosickle') === 'You need a sickle to clear the ivy.' && scene.get('R_nobrush') === 'You need a brush to scrub the moss.',
+check('which is the tool, named', scene.get('R_nosickle') === 'Need a sickle.' && scene.get('R_nobrush') === 'Need a brush.',
   `${scene.get('R_nosickle')} / ${scene.get('R_nobrush')}`);
 const rook = browserOf('rook', 'GROUND_rook');
 const wren = browserOf('wren', 'GROUND_wren');
@@ -574,13 +574,13 @@ check('whatever has grown, its settlement\'s builders may clear it', ['w1', 'w1s
 check('and anybody may on land nobody holds', said('rook_wild') === 'ALLOWED', said('rook_wild'));
 // Since ranks are the founder's own (145), a citizen whose rank lacks Shape and build is told that instead.
 check('a stranger is told whose it is, and a guest what the rank lacks',
-  said('rook_w1') === `That is part of ${DEED.name}. Only its builders may clear the ivy there.`
+  said('rook_w1') === `Part of ${DEED.name}: only builders may clear the ivy there.`
     && said('wren_p1') === lacksSaid(DEED.name, 'Guest', 'shape'),
   `${said('rook_w1')} / ${said('wren_p1')}`);
 check('a wall of timber, or one still going up, has no ivy to clear',
-  said('wood') === 'There is no finished wall of stone or brick there.' && said('half') === said('wood') && said('nowall') === said('wood'),
+  said('wood') === 'No finished stone or brick wall there.' && said('half') === said('wood') && said('nowall') === said('wood'),
   `${said('wood')} / ${said('half')} / ${said('nowall')}`);
-check('a tile with neither paving nor a poured slab has no moss to scrub', said('swet') === 'There is no paving or poured foundation here.' && said('bare') === said('swet'), said('bare'));
+check('a tile with neither paving nor a poured slab has no moss to scrub', said('swet') === 'No paving or poured foundation here.' && said('bare') === said('swet'), said('bare'));
 check('nor has a chest or a rope bridge', said('chest') === 'No moss grows on that.' && said('rope') === said('chest'), said('rope'));
 check('a wall finished today has nothing on it yet', said('fresh') === NOTHING_YET, said('fresh'));
 check('and the island asks you to stand beside what you clear', said('far') === 'You are too far away from that.', said('far'));
@@ -598,10 +598,10 @@ for (const a of DOES) {
   check(`${a.key}: and leaves nothing to clear on either`, after === NOTHING_YET && scene.get(`AFTER_${a.key}`) === NOTHING_YET,
     `"${after}" / "${scene.get(`AFTER_${a.key}`)}"`);
 }
-check('the words name what was cleared', scene.get('DID_w1') === `You clear the ivy off the north wall. ${GREEN_AGAIN}`
-  && scene.get('DID_pslab') === `You scrub the moss off the paving and the foundation. ${GREEN_AGAIN}`
-  && scene.get('DID_statue') === `You scrub the moss off the statue. ${GREEN_AGAIN}`
-  && scene.get('DID_arch') === `You scrub the moss off the bridge. ${GREEN_AGAIN}`, scene.get('DID_pslab'));
+check('the words name what was cleared', scene.get('DID_w1') === `Ivy cleared: north wall. ${GREEN_AGAIN}`
+  && scene.get('DID_pslab') === `Moss scrubbed: the paving and the foundation. ${GREEN_AGAIN}`
+  && scene.get('DID_statue') === `Moss scrubbed: the statue. ${GREEN_AGAIN}`
+  && scene.get('DID_arch') === `Moss scrubbed: the bridge. ${GREEN_AGAIN}`, scene.get('DID_pslab'));
 const ivyNow = browserDays(ivy);
 const cleared = ['w1_0', 'w1_1', 'p1', 'pslab', 'pslab_s', 's1', 'statue', 'arch'];
 check('every storey of that side, and everything scrubbed, is bare stone in the browser that did it',

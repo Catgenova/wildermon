@@ -101,7 +101,7 @@ const wordsHere = [memorialSays(undefined), memorialSays('Here lies Bramble'), e
   engravedItemSays({ engraving: 'Here lies Bramble' }), engravedItemSays({}), MEMORIAL_SAID.notYours, MEMORIAL_SAID.noChisel, MEMORIAL_SAID.nothing,
   MEMORIAL_SAID.same, lampTooFar('memorial stone')].join('#');
 check('every sentence it says is the same on both sides, and Examine reads the line back in quotes', wordsIsle === wordsHere
-  && memorialSays('Here lies Bramble') === 'The memorial stone reads: “Here lies Bramble”', `${wordsIsle} / ${wordsHere}`);
+  && memorialSays('Here lies Bramble') === 'Memorial stone: “Here lies Bramble”', `${wordsIsle} / ${wordsHere}`);
 
 /* ---- on the island --------------------------------------------------------------- */
 

@@ -41,7 +41,7 @@ import { baubleSummary } from '../game/baubles';
 import { itemDef, itemName, type Item } from '../game/items';
 import { groundRoll, TILE_DEFS } from '../world/tiles';
 import { furnitureDef } from '../game/furniture';
-import { article, capital, listed, percent, share, timeWords, times } from '../game/words';
+import { capital, listed, percent, timeWords } from '../game/words';
 import type { TipLine, Tooltip } from './tooltip';
 
 /* ---- What is on you -------------------------------------------------------- */
@@ -250,12 +250,12 @@ function heldLines(spell: string, fx: Readonly<Record<string, number>> | undefin
   switch (spell) {
     case 'warder_thicken': {
       const more = fx?.more ?? CLASS_SPELL_BY_ID.get(spell)?.fx.more ?? 1;
-      return [`Waiting: ×${Number(more.toFixed(2))} on the next skin you lay, ${percent(more - 1)} larger; laying it spends this.`];
+      return [`Next skin: ×${Number(more.toFixed(2))} (+${percent(more - 1)}); used by the next skin laid.`];
     }
     case 'warder_ward_link':
-      return !fx?.done ? [] : [`A skin has gone back over ${fx.done === 1 ? 'one person' : `${fx.done} people`} so far.`];
+      return !fx?.done ? [] : [`Skins renewed so far: ${fx.done}.`];
     case 'kindler_blaze_momentum':
-      return fx?.more === undefined ? [] : [`Your fire is ${percent(fx.more)} larger just now.`];
+      return fx?.more === undefined ? [] : [`Fire damage now: +${percent(fx.more)}.`];
     default:
       return [];
   }
@@ -295,7 +295,7 @@ const ROUGH_FROM = 0.985;
 
 /** Its line, with what you have of it put in, from where it says "while it is worn" on. */
 function enchantOnYou(e: EnchantmentDef, total: number): string {
-  const line = enchantLine(e).replaceAll('{v}', enchantFigure(e, total)).replace(/^while (it is|they are) (worn|carried), /, '');
+  const line = enchantLine(e).replaceAll('{v}', enchantFigure(e, total)).replace(/^(Worn|Carried|In pack): /, '');
   return capital(line);
 }
 
@@ -315,9 +315,8 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const size = skinSaid(p.skin.size);
     add({
       id: 'skin', good: true, glyph: 'skin', name: `Skin of ${size}`, caption: size,
-      does: [`Every blow on you takes what it can out of it before your shield and armour do: ${size} of your full health is left in it.`,
-        'It lasts until blows use it up.'],
-      from: p.skin.mine ? 'Laid by you.' : p.skin.by ? `Laid by ${p.skin.by}.` : 'A Warder\'s spell, an Aegis or a Bulwark.',
+      does: [`Absorbs blows before shield and armour: ${size} of max health left.`, 'Lasts until used up.'],
+      from: p.skin.mine ? 'Laid by you.' : p.skin.by ? `Laid by ${p.skin.by}.` : 'Source: Warder spell, Aegis or Bulwark.',
     });
   }
   // Spells cast on you, yours or anybody's, and a passive the island keeps a share of.
@@ -332,7 +331,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     add({
       id: `spell:${on.spell}`, good: true, glyph: card.glyph, name: card.name, caption: shortLeft(on.left),
       does: [card.note, ...heldLines(on.spell, on.fx), `${longLeft(on.left)} left.`],
-      from: passive ? `Your ${card.kind}.` : who ? `Cast by ${who}: ${withArticle(card.kind)}.` : `${capital(withArticle(card.kind))}.`,
+      from: passive ? `Your ${card.kind}.` : who ? `Cast by ${who}: ${card.kind}.` : `${capital(card.kind)}.`,
     });
   }
   // A path's techniques that hold a while.
@@ -355,9 +354,9 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
   if (p.rested > 0) {
     add({
       id: 'rest', good: true, glyph: 'rest', name: 'Rested', caption: shortLeft(p.rested),
-      does: [`Every skill gain starts from ${times(REST_MULT)} the ordinary rate rather than once, and the other bonuses are added to that.`,
-        `It burns down only while you are working: ${longLeft(p.rested)} of work left.`],
-      from: 'A night in a bed.',
+      does: [`Skill gain ×${REST_MULT} base, other bonuses added.`,
+        `Used only while working: ${longLeft(p.rested)} of work left.`],
+      from: 'Sleep in a bed.',
     });
   }
   // What a dish or a tincture favours, while it lasts.
@@ -367,7 +366,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const skill = SKILL_BY_ID.get(b.skill)?.name ?? b.skill;
     add({
       id: `boon:${b.kind ?? 'dish'}:${b.skill}`, good: true, glyph: b.kind === 'tincture' ? 'flask' : 'meal', name: `${skill} knack`, caption: shortLeft(left),
-      does: [`${skill} skill gain +${percent(b.bonus)}, added to your other bonuses.`, `${longLeft(left)} left.`],
+      does: [`${skill} skill gain +${percent(b.bonus)} (added).`, `${longLeft(left)} left.`],
       from: `${b.kind === 'tincture' ? 'A tincture' : 'A meal'}: ${b.from}.`,
     });
   }
@@ -377,9 +376,9 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const left = lamp.charges ?? 0;
     add({
       id: 'lamp', good: true, glyph: 'lamp', name: `${itemName(lamp)} lit`, caption: shortLeft(left),
-      does: [`It gives back ${percent(LIGHT_GIVES_BACK)} of what the dark takes off how far you see, and you always see as far as it throws.`,
-        `You see ${Math.round(g.vision.sightRange())} tiles.`, `${longLeft(left)} of light left.`],
-      from: `The ${itemName(lamp).toLowerCase()} in your pack.`,
+      does: [`Restores ${percent(LIGHT_GIVES_BACK)} of sight lost to darkness; sight at least its light radius.`,
+        `Sight: ${Math.round(g.vision.sightRange())} tiles.`, `${longLeft(left)} of light left.`],
+      from: `${capital(itemName(lamp).toLowerCase())} in your pack.`,
     });
   }
   // Favour and Calm, which are what spells and techniques are paid in.
@@ -387,14 +386,14 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const faith = g.skills.get(FAITH);
     add({
       id: 'favour', good: true, glyph: 'sun', name: 'Favour', caption: String(Math.floor(p.favour)),
-      does: [`${Math.floor(p.favour)} of the ${Math.floor(favourCap(faith))} your Faith of ${faith.toFixed(1)} holds. Faith spells are paid in it.`],
-      from: 'Prayer at an altar, and it comes back slowly on its own.',
+      does: [`${Math.floor(p.favour)}/${Math.floor(favourCap(faith))} (max at faith ${faith.toFixed(1)}). Pays for faith spells.`],
+      from: 'Prayer at an altar; slow regeneration.',
     });
   }
   if (p.calm >= 1) {
     add({
       id: 'calm', good: true, glyph: 'enso', name: 'Calm', caption: String(Math.floor(p.calm)),
-      does: [`${Math.floor(p.calm)} of the ${Math.floor(g.calmCap())} your Meditation holds. Your path's techniques are paid in it.`],
+      does: [`${Math.floor(p.calm)}/${Math.floor(g.calmCap())} (max by meditation). Pays for path techniques.`],
       from: 'Sitting on a rug.',
     });
   }
@@ -419,8 +418,8 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const name = deed?.name ?? 'This settlement';
     add({
       id: 'baubles', good: true, glyph: 'gem', name: `${name}'s baubles`, caption: String(here.length),
-      does: baubleSummary(here).map((b) => `${capital(b.text)}${b.capped ? ', at its cap' : ''}.`),
-      from: `The ${here.length === 1 ? 'bauble' : `${here.length} baubles`} in ${name}'s altar, while you stand on ${name}.`,
+      does: baubleSummary(here).map((b) => `${capital(b.text)}${b.capped ? ' (capped)' : ''}.`),
+      from: `${here.length} ${here.length === 1 ? 'bauble' : 'baubles'} in ${name}'s altar, while on ${name}.`,
     });
   }
 
@@ -428,7 +427,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
 
   // Deep water and nothing left to swim with.
   if (p.swimming && s.stamina <= 0) {
-    add({ id: 'drown', good: false, glyph: 'waves', name: 'Drowning', caption: '', does: [`You lose ${percent(DROWN_RATE)} of your health a second while you swim with no stamina.`], from: 'Deep water, and no stamina left.' });
+    add({ id: 'drown', good: false, glyph: 'waves', name: 'Drowning', caption: '', does: [`Health −${percent(DROWN_RATE)}/s while swimming at 0 stamina.`], from: 'Deep water, no stamina.' });
   }
   const wounds = p.wounds;
   const kind = (w: Wound): string => WOUND_KINDS[w.kind].name;
@@ -440,7 +439,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const drain = bleeding.reduce((n, w) => n + woundDrain(w), 0);
     add({
       id: 'bleed', good: false, glyph: 'drop', name: 'Bleeding', caption: String(bleeding.length),
-      does: [`You lose ${perMinute(drain)} of your health a minute.`, 'A dressing that holds stops a wound bleeding.'],
+      does: [`Health −${perMinute(drain)}/min.`, 'A dressing stops a wound bleeding.'],
       from: `${capital(listed(bleeding.map(plain)))}.`,
     });
   }
@@ -449,7 +448,7 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const left = Math.max(...venom.map((w) => w.venom ?? 0));
     add({
       id: 'venom', good: false, glyph: 'fang', name: 'Venom', caption: shortLeft(left),
-      does: [`Each wound with venom in it takes ${percent(VENOM_DRAIN)} of your health a second, for ${longLeft(left)} more at most.`, 'A dressing on the wound stops it.'],
+      does: [`Per venomous wound: health −${percent(VENOM_DRAIN)}/s, up to ${longLeft(left)} more.`, 'A dressing stops it.'],
       from: `A venomous bite: ${listed(venom.map(plain))}.`,
     });
   }
@@ -457,9 +456,9 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
   if (bad.length) {
     const drain = bad.reduce((n, w) => n + woundDrain({ ...w, bleeding: false }), 0);
     add({
-      id: 'fester', good: false, glyph: 'blister', name: 'Gone bad', caption: String(bad.length),
-      does: [`You lose ${perMinute(drain)} of your health a minute, and it does not close.`, 'Clean it out with lye before any dressing will hold on it.'],
-      from: `${capital(listed(bad.map((w) => `the ${kind(w)} on your ${PART_NAMES[w.part] ?? w.part}`)))}, left to fester.`,
+      id: 'fester', good: false, glyph: 'blister', name: 'Infected', caption: String(bad.length),
+      does: [`Health −${perMinute(drain)}/min; does not close.`, 'Clean out with lye before dressing.'],
+      from: `Infected: ${listed(bad.map((w) => `${kind(w)} on your ${PART_NAMES[w.part] ?? w.part}`))}.`,
     });
   }
   const burns = wounds.filter((w) => w.kind === 'burn' && !w.infected);
@@ -468,8 +467,8 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const drain = weeping.reduce((n, w) => n + woundDrain(w), 0);
     add({
       id: 'burn', good: false, glyph: 'flame', name: burns.length === 1 ? 'Burn' : 'Burns', caption: String(burns.length),
-      does: [weeping.length ? `Weeping: you lose ${perMinute(drain)} of your health a minute until it is dressed.` : 'Dressed: it no longer weeps.',
-        `A ${WOUND_KINDS.burn.herb} cover suits a burn.`],
+      does: [weeping.length ? `Weeping: health −${perMinute(drain)}/min until dressed.` : 'Dressed: not weeping.',
+        `Right herb for burns: ${WOUND_KINDS.burn.herb}.`],
       from: `${capital(listed(burns.map(plain)))}.`,
     });
   }
@@ -479,24 +478,24 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const legs = p.unslowed ? 1 : legPace(wounds);
     const does: string[] = [];
     if (worst) does.push(`Worst: ${woundText(worst)}.`);
-    if (arms > 1) does.push(`Wounds on your arms and hands make every swing or draw ${percent(arms - 1)} longer, ${percent(ARM_SLOW_MOST)} at most.`);
-    if (legs < 1) does.push(`Wounds on your legs and feet take ${percent(1 - legs)} off your walking pace, ${percent(LEG_SLOW_MOST)} at most.`);
+    if (arms > 1) does.push(`Arm and hand wounds: swing and draw time +${percent(arms - 1)} (max +${percent(ARM_SLOW_MOST)}).`);
+    if (legs < 1) does.push(`Leg and foot wounds: walk speed −${percent(1 - legs)} (max −${percent(LEG_SLOW_MOST)}).`);
     const sorted = [...wounds].sort((a, b) => (b.infected ? 1 : 0) - (a.infected ? 1 : 0) || b.severity - a.severity);
     for (const w of sorted.slice(0, 5)) {
       does.push(`${capital(woundText(w).replace(/^an? /, ''))}: ${w.infected ? 'clean it out with lye' : `wants a ${WOUND_KINDS[w.kind].herb} cover`}.`);
     }
     if (sorted.length > 5) does.push(`And ${sorted.length - 5} more.`);
     add({
-      id: 'wounds', good: false, glyph: 'claw', name: wounds.length === 1 ? 'One wound' : `${wounds.length} wounds`, caption: String(wounds.length), does,
-      from: `Blows taken. The herb that suits a wound closes it ${times(CLOSE_RIGHT / CLOSE_BARE)} as fast as leaving it bare.`,
+      id: 'wounds', good: false, glyph: 'claw', name: `Wounds: ${wounds.length}`, caption: String(wounds.length), does,
+      from: `Blows taken. Right herb: closing ×${+(CLOSE_RIGHT / CLOSE_BARE).toFixed(2)} vs undressed.`,
     });
   }
   // Food and water, at the two lines the body draws.
   for (const [bar, low, empty, word, glyph] of [['hunger', 'Hungry', 'Starving', 'food', 'bowl'], ['thirst', 'Thirsty', 'Parched', 'water', 'cup']] as const) {
     const v = s[bar];
     if (v > HEAL_FED) continue;
-    const does = [`Your health does not mend while your ${word} is at or under ${percent(HEAL_FED)}; over it, it mends ${perMinute(HEAL_RATE)} a minute.`];
-    if (v <= 0) does.push(`Your stamina comes back at ${percent(WIND_STARVING)} of its pace while your ${word} is empty.`);
+    const does = [`No healing while ${word} ≤ ${percent(HEAL_FED)}; above it, +${perMinute(HEAL_RATE)}/min.`];
+    if (v <= 0) does.push(`Stamina regeneration ×${WIND_STARVING} while ${word} is empty.`);
     add({ id: bar, good: false, glyph, name: v <= 0 ? empty : low, caption: '', does, from: `${capital(word)} at ${percent(Math.round(v * 100) / 100)}.` });
   }
   // A load past what your back takes: the status panel's warning, and the walk it slows.
@@ -505,28 +504,28 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
     const limit = g.carryLimit();
     const burden = g.burden();
     const load = overDrag(over, limit) * g.pathFx('burden', 1);
-    const does = [`You carry ${kg(limit + over)}; your back takes ${kg(limit)}.`];
-    if (p.unslowed) does.push('Your Surge keeps your pace while it holds.');
+    const does = [`Load ${kg(limit + over)}; limit ${kg(limit)}.`];
+    if (p.unslowed) does.push('Surge: no slowing.');
     else {
-      does.push(`You walk ${percent(load / (1 + burden))} slower for the load.`);
+      does.push(`Walk speed −${percent(load / (1 + burden))} from load.`);
       does.push(p.stalled
-        ? `Past ${kg(limit * CARRY_STOP)}, ${times(CARRY_STOP)} what your back takes, you keep ${percent(CARRY_CRAWL)} of your pace.`
-        : `Past ${kg(limit * CARRY_STOP)}, ${times(CARRY_STOP)} what your back takes, you would keep ${percent(CARRY_CRAWL)} of your pace.`);
+        ? `Over ${kg(limit * CARRY_STOP)} (limit ×${CARRY_STOP}): speed ×${CARRY_CRAWL} (now).`
+        : `Over ${kg(limit * CARRY_STOP)} (limit ×${CARRY_STOP}): speed ×${CARRY_CRAWL}.`);
     }
-    does.push(`Every swing or draw takes ${percent(OVERBURDEN_SWING)} longer.`);
-    add({ id: 'over', good: false, glyph: 'weight', name: p.stalled ? 'Overloaded: crawling' : 'Overloaded', caption: '', does, from: `What you carry: ${kg(over)} over.` });
+    does.push(`Swing and draw time +${percent(OVERBURDEN_SWING)}.`);
+    add({ id: 'over', good: false, glyph: 'weight', name: p.stalled ? 'Overloaded: crawling' : 'Overloaded', caption: '', does, from: `Overload: ${kg(over)}.` });
   }
   // Wind, at the two lines it is drawn at.
   if (s.stamina < WINDED_AT) {
-    const does = [p.unslowed ? 'Your Surge keeps your pace while it holds.' : `You walk at ${share(WINDED_PACE)} your pace on your own feet.`];
-    if (s.stamina < EXHAUSTED) does.push(`You cannot start a job that takes time until your stamina is back to ${percent(EXHAUSTED)}.`);
+    const does = [p.unslowed ? 'Surge: no slowing.' : `Walk speed ×${WINDED_PACE} on foot.`];
+    if (s.stamina < EXHAUSTED) does.push(`No timed jobs until stamina ${percent(EXHAUSTED)}.`);
     add({ id: 'winded', good: false, glyph: 'wind', name: s.stamina < EXHAUSTED ? 'Exhausted' : 'Winded', caption: '', does, from: `Stamina under ${percent(WINDED_AT)}.` });
   }
   if (s.stamina < TIRED_AT) {
     const slow = tiredPace(s.stamina) - 1;
     add({
       id: 'tired', good: false, glyph: 'hourglass', name: 'Tired arms', caption: `+${Math.round(slow * 100)}%`,
-      does: [`Every swing or draw takes ${percent(slow)} longer, up to ${percent(TIRED_SLOW)} longer with no stamina at all.`],
+      does: [`Swing and draw time +${percent(slow)} (+${percent(TIRED_SLOW)} at 0 stamina).`],
       from: `Stamina under ${percent(TIRED_AT)}.`,
     });
   }
@@ -537,9 +536,9 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
   if (!lamp && (down || g.isNight()) && loss > 0) {
     add({
       id: 'dark', good: false, glyph: 'moon', name: 'Dark', caption: '',
-      does: [`The dark takes ${percent(loss)} off how far you see: you see ${Math.round(g.vision.sightRange())} tiles.`,
-        `A lit lantern or torch gives back ${percent(LIGHT_GIVES_BACK)} of that.`],
-      from: down ? 'A cellar, which is dark at any hour.' : `The hour: ${g.clock()}.`,
+      does: [`Sight −${percent(loss)}: ${Math.round(g.vision.sightRange())} tiles.`,
+        `Lit lantern or torch: restores ${percent(LIGHT_GIVES_BACK)} of it.`],
+      from: down ? 'Cellar: dark at any hour.' : `Time: ${g.clock()}.`,
     });
   }
   // What the ground under a loaded wheel is costing, when it is costing anything.
@@ -551,15 +550,12 @@ export function effectsOn(g: Game, spells: SpellsOnYou): Effect[] {
       const what = furnitureDef(cart.kind).name.toLowerCase();
       add({
         id: 'ground', good: false, glyph: 'wheel', name: `${def.name} underfoot`, caption: '',
-        does: [`Your ${what} goes at ${percent(roll)} of its pace here, under the load it has.`], from: `The ground: ${def.name.toLowerCase()}.`,
+        does: [`${capital(what)} speed here: ${percent(roll)} (with its load).`], from: `Ground: ${def.name.toLowerCase()}.`,
       });
     }
   }
   return out;
 }
-
-/** "a Berserker spell", "an Ice spell". */
-const withArticle = (word: string): string => `${article(word)} ${word}`;
 
 /* ---- How it is drawn -------------------------------------------------------- */
 
@@ -658,12 +654,12 @@ export class EffectRow {
     this.spells = new SpellsOnYou(game);
     this.el.className = 'hud-fx';
     this.el.hidden = true;
-    this.el.setAttribute('aria-label', 'What is on you');
+    this.el.setAttribute('aria-label', 'Effects');
     const half = (cls: string, side: 'good' | 'bad'): Half => {
       const el = document.createElement('div');
       el.className = `hud-fx-side ${cls}`;
       el.setAttribute('role', 'list');
-      el.setAttribute('aria-label', side === 'good' ? 'For you' : 'Against you');
+      el.setAttribute('aria-label', side === 'good' ? 'Buffs' : 'Debuffs');
       const more = document.createElement('button');
       more.type = 'button';
       more.className = 'hud-fx-mark hud-fx-more';

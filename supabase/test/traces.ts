@@ -412,7 +412,7 @@ const said = (key: string): string =>
 console.log('--- the island');
 check('a grown orse beside a large cart can be hitched', said('refusal-hitch') === 'none', said('refusal-hitch'));
 check('asked through the door a browser uses, the hitch starts', said('asked') === 'true', said('asked'));
-check('and when it is done it says so', said('told') === 'You start hitching it up. / You back Greyfell into a yoke of the large cart (pine). 1 of 2 filled.',
+check('and when it is done it says so', said('told') === 'Hitching. / Hitched: Greyfell to the large cart (pine), 1/2 yokes.',
   said('told'));
 check('and the cart takes two', said('hitched') === '2', said('hitched'));
 check('hitched again when it already is, it says so rather than nothing',
@@ -429,7 +429,7 @@ check('while one beside it that is not in harness has eaten into its belly',
 
 check('asked to hitch one already in, the island says so', said('again') === 'Greyfell is already in the traces.', said('again'));
 for (const [key, what] of [['crate', 'into a crate'], ['take', 'back to you'], ['release', 'back to the wild'], ['assign', 'to work'], ['cull', 'to the knife']]) {
-  check(`and nothing sends one in harness ${what}`, said(key).endsWith('is in the traces. Take it out first.'), said(key));
+  check(`and nothing sends one in harness ${what}`, said(key).endsWith('is in the traces: unhitch it first.'), said(key));
 }
 check('or to a post, in the browser\'s words', said('post') === 'Greyfell is in harness.', said('post'));
 check('and taking out one that is not in says that', said('unhitch-free') === 'Loose is not in the traces.', said('unhitch-free'));

@@ -277,9 +277,9 @@ for (const lv of REED_AT) {
 /* ---- the words ---------------------------------------------------------------------------------------------------- */
 
 check('the Stitchkit\'s words say a go\'s time off the rule, not a second and a half',
-  SPECIES.tinka.description.includes(`${Math.round(workDuration(1))} seconds at level 1 and ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}`)
+  SPECIES.tinka.description.includes(`Time per go: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}`)
   && !SPECIES.tinka.description.includes('a go every'), SPECIES.tinka.description);
-check('and the Reedpup\'s say its armful off the rule', SPECIES.sedra.description.includes(`1 more for every ${REED_LEVELS} levels`), SPECIES.sedra.description);
+check('and the Reedpup\'s say its armful off the rule', SPECIES.sedra.description.includes(`Reeds per cut: 1, +1 per ${REED_LEVELS} levels`), SPECIES.sedra.description);
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nthe browser's errands and the island's reed cutter agree — ${ok.length} of ${ok.length + bad.length}`);

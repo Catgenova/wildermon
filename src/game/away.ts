@@ -59,27 +59,27 @@ export function awayLines(away: Away): string[] {
     away.tally.filter((r) => r.what === what && r.n > 0).sort((a, b) => b.n - a.n || a.def.localeCompare(b.def));
   const lines: string[] = [];
   const hauls = of('haul');
-  if (hauls.length) lines.push(`Your workers put ${listed(hauls.map(itemCount))} into the stores.`);
+  if (hauls.length) lines.push(`Workers stored: ${listed(hauls.map(itemCount))}.`);
   const born = of('born');
   if (born.length) lines.push(`Born to your wildermon: ${listed(born.map(speciesCount))}.`);
   const strayed = of('strayed');
   if (strayed.length) {
-    lines.push('Born to your wildermon and gone off into the wild, with something already following you and no empty '
-      + `creature crate in your pack or standing on your settlement: ${listed(strayed.map(speciesCount))}.`);
+    lines.push('Born and gone wild (a companion already followed you and no empty creature crate was '
+      + `in your pack or on your settlement): ${listed(strayed.map(speciesCount))}.`);
   }
   const sold = of('sold');
   if (sold.length) {
-    lines.push(`Your stalls sold ${listed(sold.map(itemCount))} for ${priceWords(sum(sold, (r) => r.silver))}. It is in their tills.`);
+    lines.push(`Stalls sold: ${listed(sold.map(itemCount))} for ${priceWords(sum(sold, (r) => r.silver))}, in their tills.`);
   }
   const bought = of('bought');
   if (bought.length) {
-    lines.push(`Brought to your buy orders: ${listed(bought.map(itemCount))}, paid for with `
-      + `${priceWords(sum(bought, (r) => r.silver))} of what they held. It waits for you at any mailbox.`);
+    lines.push(`Buy orders filled: ${listed(bought.map(itemCount))}, for `
+      + `${priceWords(sum(bought, (r) => r.silver))} of their silver. Collect at any mailbox.`);
   }
   const parcels = of('parcel');
   const posted = sum(parcels, (r) => r.n);
-  if (posted === 1) lines.push(`A parcel from ${parcels[0].def} waits for you at any mailbox.`);
-  else if (posted > 1) lines.push(`${posted} parcels wait for you at any mailbox: ${listed(parcels.map((r) => `${r.n} from ${r.def}`))}.`);
-  if (lines.length) lines.unshift(`You were away ${awayFor(away.secs)}.`);
+  if (posted === 1) lines.push(`Parcel from ${parcels[0].def}: collect at any mailbox.`);
+  else if (posted > 1) lines.push(`${posted} parcels to collect at any mailbox: ${listed(parcels.map((r) => `${r.n} from ${r.def}`))}.`);
+  if (lines.length) lines.unshift(`Away for ${awayFor(away.secs)}.`);
   return lines;
 }

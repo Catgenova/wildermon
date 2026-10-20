@@ -78,7 +78,7 @@ export const PUT_AWAY_SPACING = 0.15;
 export function putAway(g: Game, later: (fn: () => void, ms: number) => void = (fn, ms) => setTimeout(fn, ms)): number {
   const plan = putAwayPlan(g);
   if (!plan.length) {
-    g.logMsg('Nothing in your pack goes in a store within reach: a store takes what it already holds the like of.', 'error');
+    g.logMsg('Nothing to put away: stores within reach only take kinds they already hold.', 'error');
     return 0;
   }
   plan.forEach((p, i) => {

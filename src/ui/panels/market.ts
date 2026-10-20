@@ -9,7 +9,7 @@ import { priceWords, purse } from '../../game/money';
 import { couldBring, ORDER_LIFE, orderWords } from '../../game/orders';
 import { awayFor } from '../../game/away';
 import { COUNTER_BUY_FROM, sellsTooFar } from '../../game/counters';
-import { spanWords } from '../../game/words';
+import { durationSaid } from '../../game/boons';
 import type { UIWindow } from '../windows';
 
 /** How often the window asks again while it is open. */
@@ -125,12 +125,12 @@ export class MarketPanel {
     this.bar = document.createElement('div');
     this.bar.className = 'log-tabs market-tabs';
     for (const [id, label, title] of [
-      ['board', 'Board', 'Every stall and buy order on the island, read at a settlement token or a mailbox'],
-      ['prices', 'Prices', `What everything has sold for on the island in the last ${SALE_DAYS} days`],
-      ['orders', 'Orders', 'What you have asked for, and asking for something'],
-      ['deals', 'Deals', 'Offers out and offers in'],
-      ['stall', 'Stall', 'What you have laid out, and what it has taken'],
-      ['post', 'Post', 'Parcels waiting at a mailbox'],
+      ['board', 'Board', 'All stalls and buy orders; read at a settlement token or mailbox'],
+      ['prices', 'Prices', `Sale prices, last ${SALE_DAYS} days`],
+      ['orders', 'Orders', 'Your buy orders; place one'],
+      ['deals', 'Deals', 'Offers sent and received'],
+      ['stall', 'Stall', 'Your stall goods and takings'],
+      ['post', 'Post', 'Parcels at mailboxes'],
     ] as Array<[Tab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -209,8 +209,7 @@ export class MarketPanel {
   private draw(): void {
     this.page.replaceChildren();
     if (!this.island) {
-      this.say('There is one person on this island, and every one of these wants somebody else. '
-        + 'The board, buy orders, deals, stalls and the post are for an island with other people on it.');
+      this.say('Market: island only (board, buy orders, deals, stalls, post).');
       return;
     }
     if (this.tab === 'board') this.drawBoard();
@@ -233,11 +232,10 @@ export class MarketPanel {
       .filter((r): r is { def: string; days: SaleDay[]; s: SaleSummary } => !!r.s)
       .sort((a, b) => b.s.n - a.s.n || itemDef(a.def).name.localeCompare(itemDef(b.def).name));
     if (!rows.length) {
-      this.say(`Nothing has been bought off a stall or a counter, or brought to a buy order, on this island in the last ${SALE_DAYS} days.`);
+      this.say(`No sales in the last ${SALE_DAYS} days.`);
       return;
     }
-    this.say(`Everything bought off a stall or a counter, or brought to a buy order, in the last ${SALE_DAYS} days. Each bar is a day, `
-      + 'oldest on the left, as tall as what one sold for that day against its dearest day; a gap is a day it did not sell.');
+    this.say(`Stall, counter and buy-order sales, last ${SALE_DAYS} days. One bar per day, oldest left; height: that day's price vs its highest; gap: no sale.`);
     for (const { def, days, s } of rows) {
       const row = document.createElement('div');
       row.className = 'price-row';
@@ -324,23 +322,23 @@ export class MarketPanel {
   private drawDeals(): void {
     const mine = this.deals.filter((d) => d.mine);
     const theirs = this.deals.filter((d) => !d.mine);
-    this.head('Offered to you');
-    if (!theirs.length) this.say('Nothing. An offer stands until it is taken or turned down.');
+    this.head('Received');
+    if (!theirs.length) this.say('None. Offers stand until taken or refused.');
     for (const d of theirs) {
       const row = document.createElement('div');
       row.className = 'skill-row market-row';
       row.append(this.lines(this.terms(d), `from ${d.who}`),
-        this.button('Take it', 'You both have to be standing together', () => void this.act(this.island!.answerDeal(d.n, true))),
-        this.button('No', 'Turn it down; everything goes back', () => void this.act(this.island!.answerDeal(d.n, false))));
+        this.button('Accept', 'Both must stand together', () => void this.act(this.island!.answerDeal(d.n, true))),
+        this.button('Refuse', 'Refuse; everything returns', () => void this.act(this.island!.answerDeal(d.n, false))));
       this.page.append(row);
     }
 
-    this.head('Offered by you');
-    if (!mine.length) this.say('Nothing out.');
+    this.head('Sent');
+    if (!mine.length) this.say('None.');
     for (const d of mine) {
       const row = document.createElement('div');
       row.className = 'skill-row market-row';
-      row.append(this.lines(this.terms(d), `to ${d.who}`), this.button('Take it back', 'Everything held comes home', () => void this.act(this.island!.answerDeal(d.n, false))));
+      row.append(this.lines(this.terms(d), `to ${d.who}`), this.button('Withdraw', 'Everything held returns', () => void this.act(this.island!.answerDeal(d.n, false))));
       this.page.append(row);
     }
 
@@ -348,11 +346,10 @@ export class MarketPanel {
      * And making one. Tick what is going, name what is wanted for it, choose
      * who — in that order, because that is the order somebody thinks in.
      */
-    this.head('Make an offer');
+    this.head('New offer');
     const people = this.folk();
     if (!people.length) {
-      this.say('You know nobody to offer anything to yet. Anybody you share land with, '
-        + 'or have written to, is somebody you can deal with.');
+      this.say('No contacts. Fellow citizens and letter contacts can receive offers.');
       return;
     }
     this.pick(this.picked, 'Offer');
@@ -364,24 +361,24 @@ export class MarketPanel {
     price.min = '0';
     price.className = 'panel-select market-price';
     price.value = String(this.want);
-    price.title = 'Silver you want for it. Nought gives it away.';
+    price.title = 'Silver asked. 0: gift.';
     price.addEventListener('input', () => (this.want = Math.max(0, Number(price.value) || 0)));
     const who = document.createElement('select');
     who.className = 'panel-select market-who';
-    who.title = 'Who it is offered to';
+    who.title = 'Recipient';
     for (const f of people) {
       const o = document.createElement('option');
       o.value = f.uid;
       o.textContent = f.name;
       who.append(o);
     }
-    bar.append(field('silver wanted', price), field('to', who), this.button('Offer', 'The terms are fixed once it is out', () => {
+    bar.append(field('silver wanted', price), field('to', who), this.button('Offer', 'Terms fixed once sent', () => {
       const items = [...this.picked];
       this.picked.clear();
       void this.act(this.island!.offer(who.value, items, this.want, 0));
     }));
     this.page.append(bar);
-    this.say(`You are carrying ${priceWords(purse(this.game.inventory.items))}.`);
+    this.say(`Carried: ${priceWords(purse(this.game.inventory.items))}.`);
   }
 
   private drawStall(): void {
@@ -394,8 +391,7 @@ export class MarketPanel {
      */
     const stalls = this.market.stalls.filter((st) => st.mine);
     if (!stalls.length) {
-      this.say(`You have no stall. Nail one up — ${billWords(furnitureDef('stall').bill)} — `
-        + 'and stand it somewhere people walk past.');
+      this.say(`No stall. Build one: ${billWords(furnitureDef('stall').bill, true)}.`);
       return;
     }
     for (const st of stalls) {
@@ -405,24 +401,24 @@ export class MarketPanel {
       row.className = 'skill-row market-row';
       const text = document.createElement('span');
       text.className = 'market-what';
-      text.textContent = till > 0 ? `The till holds ${priceWords(till)}.` : 'The till is empty.';
+      text.textContent = till > 0 ? `Till: ${priceWords(till)}.` : 'Till empty.';
       row.append(text);
-      if (till > 0) row.append(this.button('Take the takings', sellsTooFar(st.what === 'counter' ? 'counter' : 'stall'), () => void this.act(this.island!.takings(st.id))));
+      if (till > 0) row.append(this.button('Collect takings', sellsTooFar(st.what === 'counter' ? 'counter' : 'stall'), () => void this.act(this.island!.takings(st.id))));
       this.page.append(row);
-      if (!st.goods.length) this.say('Nothing on the counter. Put something in it, then set a price.');
+      if (!st.goods.length) this.say('Counter empty. Add goods, then set prices.');
       for (const good of st.goods) {
         const box = document.createElement('input');
         box.type = 'number';
         box.min = '0';
         box.className = 'panel-select market-price';
         box.value = String(good.price ?? 0);
-        box.title = 'Silver for it. Nought takes it off sale.';
+        box.title = 'Silver price. 0: off sale.';
         box.setAttribute('aria-label', `Silver for ${goodName(good)}`);
         const unit = document.createElement('label');
         unit.className = 'market-field';
         unit.append(box, 'silver');
         this.page.append(this.good(this.lines(goodName(good), good.price ? `on sale at ${priceWords(good.price)}` : 'not for sale'), unit,
-          this.button('Set', 'Nought takes it off sale', () => void this.act(this.island!.setPrice(good.id, Math.max(0, Number(box.value) || 0))))));
+          this.button('Set', '0: off sale', () => void this.act(this.island!.setPrice(good.id, Math.max(0, Number(box.value) || 0))))));
       }
     }
   }
@@ -436,15 +432,14 @@ export class MarketPanel {
    */
   private drawBoard(): void {
     if (!this.market.board) {
-      this.say('The market board is read at a settlement token or a mailbox. '
-        + 'Stand at one to see every stall and every buy order on the island.');
+      this.say('Board: stand at a settlement token or mailbox.');
       return;
     }
     const me = this.game.player;
     const theirs = this.market.stalls
       .filter((st) => !st.mine && st.goods.length)
       .sort((a, b) => Math.hypot(a.x - me.x, a.y - me.y) - Math.hypot(b.x - me.x, b.y - me.y));
-    if (!theirs.length) this.say('Nobody has anything for sale.');
+    if (!theirs.length) this.say('Nothing for sale.');
     for (const st of theirs) {
       const far = Math.round(Math.hypot(st.x + 0.5 - me.x, st.y + 0.5 - me.y));
       this.place(`${st.owner}'s ${st.what === 'counter' ? 'shop counter' : 'stall'}`,
@@ -455,8 +450,7 @@ export class MarketPanel {
       }
     }
     this.drawWanted();
-    this.say(`You are carrying ${priceWords(purse(this.game.inventory.items))}. `
-      + 'Your own stalls are on the Stall tab, and your own orders on the Orders tab.');
+    this.say(`Carried: ${priceWords(purse(this.game.inventory.items))}. Your stalls: Stall tab. Your orders: Orders tab.`);
   }
 
   /**
@@ -467,15 +461,15 @@ export class MarketPanel {
   private drawWanted(): void {
     this.head('Wanted');
     const theirs = this.orders.orders.filter((o) => !o.mine);
-    if (!theirs.length) this.say('Nobody has put up an order.');
+    if (!theirs.length) this.say('No orders.');
     for (const o of theirs) {
       const left = o.want - o.got;
       const have = couldBring(this.game.inventory.items, o, (uid) => this.game.isEquipped(uid));
       const row = document.createElement('div');
       row.className = 'skill-row market-row';
       row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
-        `${o.who}'s order, put up at ${o.x},${o.y}${o.deed ? ` on ${o.deed}` : ''}. `
-        + (have ? `You have ${have} that will do.` : 'You have none that will do.')));
+        `${o.who}'s order at ${o.x},${o.y}${o.deed ? ` on ${o.deed}` : ''}. `
+        + `You have: ${have}.`));
       if (have) {
         const most = Math.min(have, left);
         const box = document.createElement('input');
@@ -484,11 +478,11 @@ export class MarketPanel {
         box.max = String(most);
         box.className = 'panel-select market-count';
         box.value = String(Math.min(this.bringing.get(o.n) ?? most, most));
-        box.title = 'How many to bring';
-        box.setAttribute('aria-label', 'How many to bring');
+        box.title = 'Count to bring';
+        box.setAttribute('aria-label', 'Count to bring');
         box.addEventListener('input', () => this.bringing.set(o.n, Math.max(1, Math.floor(Number(box.value) || 1))));
         row.append(box, this.button('Fill',
-          `Paid ${priceWords(o.price)} for each out of what it holds, at once; what you bring goes to ${o.who} by the post`,
+          `Paid ${priceWords(o.price)} each at once; goods go to ${o.who} by post`,
           () => {
             const n = Math.max(1, Math.floor(Number(box.value) || 1));
             this.bringing.delete(o.n);
@@ -507,20 +501,20 @@ export class MarketPanel {
   private drawOrders(): void {
     this.head('Your orders');
     const mine = this.orders.orders.filter((o) => o.mine);
-    if (!mine.length) this.say('Nothing asked for.');
+    if (!mine.length) this.say('None.');
     for (const o of mine) {
       const left = o.want - o.got;
       const row = document.createElement('div');
       row.className = 'skill-row market-row';
       row.append(this.lines(`${orderWords(o.def, left, o.ql)} at ${priceWords(o.price)} each`,
-        `${o.got ? `${o.got} of ${o.want} brought. ` : ''}${priceWords(left * o.price)} held, lapses in ${awayFor(o.left)}.`), this.button('Take it back', `${priceWords(left * o.price)} comes back to your purse`,
+        `${o.got ? `${o.got}/${o.want} brought. ` : ''}${priceWords(left * o.price)} held, lapses in ${awayFor(o.left)}.`), this.button('Withdraw', `${priceWords(left * o.price)} returned to your purse`,
         () => void this.act(this.island!.cancelOrder(o.n))));
       this.page.append(row);
     }
 
-    this.head('Put up an order');
+    this.head('New order');
     if (!this.orders.board) {
-      this.say('Stand at a settlement token or a mailbox to put one up.');
+      this.say('Need a settlement token or mailbox.');
       return;
     }
     // What it would hold, said under the boxes and said again as they change.
@@ -533,8 +527,8 @@ export class MarketPanel {
     const kind = document.createElement('input');
     kind.type = 'text';
     kind.className = 'panel-select market-kind';
-    kind.placeholder = 'What you want';
-    kind.title = 'Anything of this kind will do, whatever it is made of';
+    kind.placeholder = 'Item wanted';
+    kind.title = 'Any material of this kind accepted';
     kind.setAttribute('list', list.id);
     kind.value = this.wanted.name;
     kind.addEventListener('input', () => (this.wanted.name = kind.value));
@@ -551,15 +545,15 @@ export class MarketPanel {
       });
       return el;
     };
-    const ql = box(this.wanted.ql, 0, 'The least quality that will do; nought takes any', (n) => (this.wanted.ql = Math.min(100, n)));
+    const ql = box(this.wanted.ql, 0, 'Min QL; 0: any', (n) => (this.wanted.ql = Math.min(100, n)));
     ql.max = '100';
-    const count = box(this.wanted.count, 1, 'How many you want', (n) => (this.wanted.count = n));
-    const price = box(this.wanted.price, 1, 'Silver for each one brought', (n) => (this.wanted.price = n));
+    const count = box(this.wanted.count, 1, 'Count', (n) => (this.wanted.count = n));
+    const price = box(this.wanted.price, 1, 'Silver each', (n) => (this.wanted.price = n));
     form.append(kind, field('quality at least', ql), field('how many', count), field('silver each', price),
-      this.button('Put it up', 'The whole price comes out of your purse now', () => {
+      this.button('Place order', 'Full price taken from your purse now', () => {
         const def = kindNamed(this.wanted.name);
         if (!def) {
-          this.game.logMsg('There is no such thing to ask for. Choose one off the list.', 'error');
+          this.game.logMsg('Unknown item: choose from the list.', 'error');
           return;
         }
         const { ql: least, count: n, price: each } = this.wanted;
@@ -574,9 +568,9 @@ export class MarketPanel {
   /** What the order being written would hold, and for how long, against what you carry. */
   private holds(): string {
     const { count, price } = this.wanted;
-    return `It holds ${priceWords(count * price)} out of your purse until it is filled, until you take it back, `
-      + `or for ${spanWords(ORDER_LIFE)}, when it lapses and gives back what is left. `
-      + `You are carrying ${priceWords(purse(this.game.inventory.items))}.`;
+    return `Holds ${priceWords(count * price)} from your purse until filled, withdrawn, `
+      + `or lapsed after ${durationSaid(ORDER_LIFE)} (remainder returned). `
+      + `Carried: ${priceWords(purse(this.game.inventory.items))}.`;
   }
 
   /** A tick list of what is in your pack, to offer or to post. A crate with a wildermon in it is on it too. */
@@ -603,15 +597,14 @@ export class MarketPanel {
     }
     this.page.append(list);
     if (pack.length > PICK_SHOWN) {
-      this.say(`…and ${pack.length - PICK_SHOWN} more. ${doing} what is at the top of your pack, or put the rest away first.`);
+      this.say(`+${pack.length - PICK_SHOWN} more not shown. ${doing}: top of pack only; store the rest first.`);
     }
   }
 
   private drawPost(): void {
-    this.head('Waiting for you');
+    this.head('Waiting');
     if (!this.waiting.things.length) {
-      this.say('Nothing in the post. A parcel goes in at one mailbox and comes out at any other, '
-        + 'so you need one within reach to send and they need one to collect.');
+      this.say('No parcels. Send at any mailbox; collect at any mailbox.');
     }
     for (const t of this.waiting.things) {
       const row = document.createElement('div');
@@ -622,10 +615,10 @@ export class MarketPanel {
     if (this.waiting.things.length) {
       const bar = document.createElement('div');
       bar.className = 'panel-bar';
-      bar.append(this.button('Collect it all', this.waiting.at_box ? 'Out of the box and into your pack' : 'Stand at a mailbox first',
+      bar.append(this.button('Collect all', this.waiting.at_box ? 'Into your pack' : 'Need a mailbox',
         () => void this.act(this.island!.collect())));
       this.page.append(bar);
-      if (!this.waiting.at_box) this.say('Stand at a mailbox to draw it out. Any mailbox will do.');
+      if (!this.waiting.at_box) this.say('Collect at any mailbox.');
     }
 
     /*
@@ -633,14 +626,14 @@ export class MarketPanel {
      * into the post at the mailbox you stand at and is theirs from then on,
      * waiting for them at any mailbox.
      */
-    this.head('Send a parcel');
+    this.head('Send parcel');
     if (!this.waiting.at_box) {
-      this.say('Stand at a mailbox to send one.');
+      this.say('Need a mailbox.');
       return;
     }
     const people = this.folk();
     if (!people.length) {
-      this.say('You know nobody to send anything to yet. Anybody you share land with, or have written to, is somebody you can post to.');
+      this.say('No contacts. Fellow citizens and letter contacts can receive parcels.');
       return;
     }
     this.pick(this.posting, 'Send');
@@ -650,19 +643,19 @@ export class MarketPanel {
     note.type = 'text';
     note.maxLength = LETTER_MAX;
     note.className = 'panel-select market-note-input';
-    note.placeholder = 'A line with it';
+    note.placeholder = 'Note';
     note.value = this.note;
     note.addEventListener('input', () => (this.note = note.value));
     const who = document.createElement('select');
     who.className = 'panel-select market-who';
-    who.title = 'Who it goes to';
+    who.title = 'Recipient';
     for (const f of people) {
       const o = document.createElement('option');
       o.value = f.uid;
       o.textContent = f.name;
       who.append(o);
     }
-    bar.append(note, field('to', who), this.button('Send', 'It is theirs from the moment it goes in', () => {
+    bar.append(note, field('to', who), this.button('Send', 'Theirs once sent', () => {
       const items = [...this.posting];
       this.posting.clear();
       const text = this.note;

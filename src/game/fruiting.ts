@@ -29,7 +29,7 @@
 import { SEASONS, YEAR_FROM, seasonAt, type Season } from '../world/calendar';
 import { BUSH_DEFS, TREE_DEFS } from '../world/tiles';
 import { ITEM_DEFS } from './items';
-import { listed } from './words';
+import { capital, listed } from './words';
 
 /** The seasons each thing is picked, cut or found in, in the order the year has them. Anything not here is had all year. */
 export const FRUITING: Record<string, readonly Season[]> = {
@@ -99,11 +99,11 @@ export function fruitSource(id: string): string {
 
 /** Why a tree or a bush has nothing on it in a season: its seasons, the season it is, and when it next has. The island's `fruit_out_said`. */
 export const outOfSeasonSaid = (id: string, season: Season): string =>
-  `The ${fruitSource(id)} bears in ${listed(fruitingSeasons(id))}, and it is ${season}: nothing on it until ${nextFruiting(id, season)}.`;
+  `${capital(fruitSource(id))}: fruits in ${listed(fruitingSeasons(id))}. Now ${season}: none until ${nextFruiting(id, season)}.`;
 
 /** What Examine adds about a tree or a bush that bears: its seasons, and whether it is in season now. The island's `fruit_says`. */
 export const fruitingSays = (id: string, season: Season | null): string =>
-  ` It bears in ${listed(fruitingSeasons(id))}: ${fruitsIn(id, season) ? 'in season now' : `out of season until ${nextFruiting(id, season as Season)}`}.`;
+  ` Fruits in ${listed(fruitingSeasons(id))}: ${fruitsIn(id, season) ? 'in season now' : `out of season until ${nextFruiting(id, season as Season)}`}.`;
 
 /** Why picking a thing is refused at a moment, or null when it is in season. */
 export const fruitRefusal = (id: string, now: number, glass = false): string | null => {
@@ -116,7 +116,7 @@ export const inSeason = (table: Array<[string, number]>, now: number): Array<[st
   table.filter(([id]) => fruitsAt(id, now));
 
 /** A thing's seasons as an item's tooltip gives them. */
-export const seasonLine = (id: string): string => `In season in ${listed(fruitingSeasons(id))}.`;
+export const seasonLine = (id: string): string => `Fruits in ${listed(fruitingSeasons(id))}.`;
 
 // Every item in the table says its seasons wherever its description is shown.
 for (const id of Object.keys(FRUITING)) {

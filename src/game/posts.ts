@@ -106,7 +106,7 @@ export const POST_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('work_post');
-      if (!item || item.id !== 'work_post') return 'You have no work post to drive in.';
+      if (!item || item.id !== 'work_post') return 'Need a work post.';
       return g.postPlaceReason(t.x, t.y, t.sx, t.sy);
     },
     perform: (t, g) => {
@@ -115,7 +115,7 @@ export const POST_ACTIONS: ActionDef[] = [
       if (!item || item.id !== 'work_post' || !g.inventory.remove(item.uid, 1)) return;
       const p = g.addPost(t.x, t.y, t.sx, t.sy, item.ql, item.extra);
       g.logMsg(
-        `You drive the post in and tack the ribbon to it. It will stand about ${Math.round(postLife(p.ql) * postKeep(g) / 60)} minutes and reach ${postRadius(p.ql)} tiles. Set a wildermon to it.`,
+        `Work post placed: lasts about ${Math.round(postLife(p.ql) * postKeep(g) / 60)} minutes, reach ${postRadius(p.ql)} tiles. Assign a wildermon to it.`,
         'event',
       );
       g.events.emit('world', p.x, p.y);
@@ -183,7 +183,7 @@ export const POST_ACTIONS: ActionDef[] = [
       const p = postOf(g, t);
       const c = p && p.worker !== null ? g.creatures.get(p.worker) : undefined;
       if (!p || !c) return;
-      g.leavePost(p, 'is called off the post');
+      g.leavePost(p, 'stood down');
     },
   },
   {
@@ -202,10 +202,10 @@ export const POST_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const p = postOf(g, t);
       if (!p) return;
-      g.removePost(p.id, 'is pulled up');
+      g.removePost(p.id, 'pulled up');
       // Half rotten by now, most likely, and it comes up as it went in.
       g.inventory.add('work_post', { ql: Math.max(1, p.ql * (1 - p.dmg / 100)), extra: p.material });
-      g.logMsg(`You pull the post up and coil the ribbon round it.`, 'event');
+      g.logMsg(`Work post removed.`, 'event');
       g.events.emit('world', p.x, p.y);
     },
   },

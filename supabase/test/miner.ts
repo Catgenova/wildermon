@@ -148,12 +148,12 @@ begin
   perform pg_temp.hold(w, u, '{}');
   insert into said values ('GOLD', coalesce(act_refusal(w, u, 'mine', ${FACE}), 'ALLOWED'));
   perform perform_ground(w, u, 'prospect', jsonb_build_object('kind', 'tile', 'x', 3, 'y', 3));
-  insert into said select 'SAMPLE', e.text from event e where e.world_id = w and e.uid = u and e.text like 'You sample%'
+  insert into said select 'SAMPLE', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Here: %'
     order by e.n desc limit 1;
   ${hold('Ore Sense')};
   insert into said values ('GOLDSENSE', coalesce(act_refusal(w, u, 'mine', ${FACE}), 'ALLOWED'));
   perform perform_ground(w, u, 'prospect', jsonb_build_object('kind', 'tile', 'x', 3, 'y', 3));
-  insert into said select 'SAMPLESENSE', e.text from event e where e.world_id = w and e.uid = u and e.text like 'You sample%'
+  insert into said select 'SAMPLESENSE', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Here: %'
     order by e.n desc limit 1;
   perform land_set_rock(w, 3, 3, 0);
 
@@ -163,12 +163,12 @@ begin
   perform pg_temp.hold(w, u, '{}');
   perform perform_ground(w, u, 'prospect', jsonb_build_object('kind', 'tile', 'x', 3, 'y', 3));
   insert into said select 'REACH', e.text from event e where e.world_id = w and e.uid = u
-    and (e.text like 'Within %' or e.text like 'You read the ground %') order by e.n desc limit 1;
+    and (e.text like 'Seams within %' or e.text like 'No seams within %') order by e.n desc limit 1;
   update skill set value = 0 where world_id = w and uid = u and id = 'prospecting';
   ${hold('Far Reader')};
   perform perform_ground(w, u, 'prospect', jsonb_build_object('kind', 'tile', 'x', 3, 'y', 3));
   insert into said select 'REACHED', e.text from event e where e.world_id = w and e.uid = u
-    and (e.text like 'Within %' or e.text like 'You read the ground %') order by e.n desc limit 1;
+    and (e.text like 'Seams within %' or e.text like 'No seams within %') order by e.n desc limit 1;
 
   /* ---- Wet Work: the face at fifteen deep. ---- */
   perform land_set_height(w, 4, 4, -15);
@@ -320,20 +320,20 @@ begin
     on conflict (world_id, uid, id) do update set value = 0;
   perform give(w, u, 'trowel', 1, 1);
   perform pg_temp.hold(w, u, '{}');
-  v_e := ${told('You go through the soil and turn up nothing%')};
+  v_e := ${told('Found nothing.')};
   for k in 1..20 loop
     update skill set value = 0 where world_id = w and uid = u and id = 'archaeology';
     perform perform_dig(w, u, 'investigate', jsonb_build_object('kind', 'tile', 'x', 8, 'y', 8));
   end loop;
-  v_t := (${told('You go through the soil and turn up nothing%')} - v_e)::text;
+  v_t := (${told('Found nothing.')} - v_e)::text;
   ${patch('Keen Trowel', { 'find:investigate': 1, 'cap:investigate': 1 })};
   ${hold('Keen Trowel')};
-  v_e := ${told('You go through the soil and turn up nothing%')};
+  v_e := ${told('Found nothing.')};
   for k in 1..20 loop
     update skill set value = 0 where world_id = w and uid = u and id = 'archaeology';
     perform perform_dig(w, u, 'investigate', jsonb_build_object('kind', 'tile', 'x', 8, 'y', 8));
   end loop;
-  insert into said values ('TROWEL', v_t || '|' || (${told('You go through the soil and turn up nothing%')} - v_e));
+  insert into said values ('TROWEL', v_t || '|' || (${told('Found nothing.')} - v_e));
 
   -- Bauble Hunter, every find a find, the Bauble of Regret's share put at nought.
   create or replace function regret_share() returns double precision language sql immutable as 'select 0::double precision';
@@ -414,16 +414,16 @@ check('a failure passed at a perk\'s rate passes about that share', Math.abs(pas
 
 const below = P('Ore Sense').fx['ore:below'];
 check(`${P('Ore Sense').name}: a gold vein wants mining 50 without it`,
-  say('GOLD') === 'Gold vein needs mining 50 to work. Yours is 45.0.', say('GOLD'));
+  say('GOLD') === 'Gold vein: needs mining 50; have 45.0.', say('GOLD'));
 check(`and ${50 - below} with it, so 45 works it`, say('GOLDSENSE') === 'ALLOWED', say('GOLDSENSE'));
 check('and Prospect\'s sample says the mining it wants of you',
-  say('SAMPLE').includes('It needs mining 50 to work,') && say('SAMPLESENSE').includes(`It needs mining ${50 - below} to work, which you have,`),
+  say('SAMPLE').includes('Needs mining 50.') && say('SAMPLESENSE').includes(`Needs mining ${50 - below} (you have it).`),
   `${say('SAMPLE')} / ${say('SAMPLESENSE')}`);
 const reach = (s: string): number => Number(s.match(/(\d+) tiles/)?.[1] ?? NaN);
 check(`${P('Far Reader').name}: Prospect reads ${P('Far Reader').fx['further:prospect']} tiles further`,
   reach(say('REACH')) === prospectRadius(0) && reach(say('REACHED')) === prospectRadius(0) + P('Far Reader').fx['further:prospect'],
   `${reach(say('REACH'))} then ${reach(say('REACHED'))}`);
-const deep = 'The water is too deep here to work in.';
+const deep = 'Water too deep.';
 check(`${P('Wet Work').name}: a face at fifteen deep is refused to Mine and Chip corner without it`,
   say('WET') === `${deep}|${deep}`, say('WET'));
 check(`and worked with it, to ${P('Wet Work').fx['depth:mine']}`, say('WETTER') === 'ALLOWED|ALLOWED', say('WETTER'));
@@ -467,9 +467,9 @@ check(`${P('Pieces that Fit').name}: a relic too hard to find at no skill comes 
 
 /* ---- Pan -------------------------------------------------------------------------- */
 
-check('Pan is refused without the perk, in the island\'s words', say('PAN_NO') === 'That wants a Miner who has learned to pan.', say('PAN_NO'));
-check('and anywhere but sand', say('PAN_DIRT') === 'Panning is done on sand.', say('PAN_DIRT'));
-check('and on sand with no water at a corner', say('PAN_DRY') === 'There is no water at this sand to wash it in.', say('PAN_DRY'));
+check('Pan is refused without the perk, in the island\'s words', say('PAN_NO') === 'Needs perk: Pan (Miner).', say('PAN_NO'));
+check('and anywhere but sand', say('PAN_DIRT') === 'Needs sand.', say('PAN_DIRT'));
+check('and on sand with no water at a corner', say('PAN_DRY') === 'Needs water at a corner of the sand.', say('PAN_DRY'));
 check('and allowed on sand with water at a corner', say('PAN_YES') === 'ALLOWED', say('PAN_YES'));
 const [panA, panB, panned] = say('PANNED').split('|');
 check('a go at its chance washes out one of the pan\'s ores, and without it nothing',

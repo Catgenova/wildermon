@@ -40,7 +40,7 @@ export function aqueductMenu(g: Game, x: number, y: number, target: Extract<Targ
   const heads = near.map((h) => ({ ...h, plan: aqueductPlan(g, h.x, h.y, x, y) })).filter((h) => h.plan !== AQ_SAME && h.plan !== AQ_THERE);
   if (!heads.length) return [];
   return [{
-    label: 'Lead an aqueduct here',
+    label: 'Build aqueduct here',
     children: heads.map((h) => {
       const t: Target = { ...target, head: [h.x, h.y] };
       const plan = h.plan;
@@ -48,7 +48,7 @@ export function aqueductMenu(g: Game, x: number, y: number, target: Extract<Targ
       return {
         label: `From the ${g.slabAt(h.x, h.y)?.pool ? 'pool' : 'pond'} ${h.tiles} tiles ${h.dir}`,
         note: typeof plan === 'string' ? undefined
-          : `${spans} span${spans === 1 ? '' : 's'} of ${BILL} · its channel at ${plan.height}, ${AQUEDUCT_FLOW} litres a minute into the ${plan.foot} at ${plan.level}`,
+          : `${spans} span${spans === 1 ? '' : 's'} of ${BILL} · channel height ${plan.height} · ${AQUEDUCT_FLOW} litres/min into the ${plan.foot} at ${plan.level}`,
         hint: typeof plan === 'string' ? plan : undefined,
         disabled: typeof plan === 'string',
         onSelect: () => g.requestAction(def, t),
@@ -62,12 +62,12 @@ export function aqueductEntries(g: Game, b: Bridge): MenuItem[] {
   const bt: Target = { kind: 'bridge', id: b.id };
   const entries: MenuItem[] = [];
   const n = b.spans.length;
-  entries.push({ label: `${n} span${n === 1 ? '' : 's'} · its channel at ${b.height} · nobody walks it`, disabled: true });
+  entries.push({ label: `${n} span${n === 1 ? '' : 's'} · channel height ${b.height} · not walkable`, disabled: true });
   const open = b.spans.find((s) => !isDone(s));
   const foot = open ? null : footSays(g, b, Date.now());
-  if (open) entries.push({ label: `The open span wants ${spanWants(open)}`, disabled: true });
+  if (open) entries.push({ label: `Open span needs: ${spanWants(open)}`, disabled: true });
   else if (foot) {
-    entries.push({ label: `A spring's water runs along it, ${AQUEDUCT_FLOW} litres a minute`, disabled: true });
+    entries.push({ label: `Flowing: ${AQUEDUCT_FLOW} litres/min of spring water`, disabled: true });
     entries.push({ label: foot, disabled: true });
   } else entries.push({ label: dryWhy(g, b), disabled: true });
   for (const id of ['build_aqueduct', 'scrub_moss', 'demolish_aqueduct']) {
@@ -88,13 +88,13 @@ export function aqueductEntries(g: Game, b: Bridge): MenuItem[] {
 function dryWhy(g: Game, b: Bridge): string {
   const there = [...g.springs.list.values()].flatMap((s) => s.chain.ponds).filter((p) => pondCovers(p, b.ax, b.ay));
   if (!there.length) {
-    return g.slabAt(b.ax, b.ay)?.pool ? 'Dry: no spring rises in the pool at its head, and none runs into it' : 'Dry: no spring\'s water stands at its head';
+    return g.slabAt(b.ax, b.ay)?.pool ? 'Dry: no spring in or feeding the pool at its head' : 'Dry: no spring water at its head';
   }
   const top = Math.max(...there.map((p) => p.level));
-  if (top < b.height) return `Dry: the water at its head stands at ${top}, under its channel at ${b.height}`;
+  if (top < b.height) return `Dry: water at its head at ${top}, below channel height ${b.height}`;
   const first = [...g.bridges.values()]
     .filter((o) => o.kind === 'aqueduct' && o.id !== b.id && waterAlong(g, o.id) && there.some((p) => pondCovers(p, o.ax, o.ay)))
     .sort((p, q) => p.id - q.id)[0];
   if (first) return `Dry: the aqueduct from ${first.ax}, ${first.ay} takes that water first`;
-  return `Dry: no spring's water stands at its head at ${b.height} or over`;
+  return `Dry: no spring water at its head at height ${b.height} or above`;
 }

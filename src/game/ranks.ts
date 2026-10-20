@@ -253,7 +253,7 @@ export const rankMay = (perms: number): string => {
  * on both sides. The island's `rank_lacks`.
  */
 export const lacksSaid = (deed: string, rank: string, p: PowerId): string =>
-  `Your rank at ${deed}, ${rank}, may not ${POWER[p].mayNot}.`;
+  `Your rank at ${deed} (${rank}) cannot ${POWER[p].mayNot}.`;
 
 /** The refusal for this power on this settlement of yours, or null when your rank holds it. */
 export const lacks = (d: Ranked | null | undefined, p: PowerId): string | null =>
@@ -265,15 +265,15 @@ export const lacks = (d: Ranked | null | undefined, p: PowerId): string | null =
 export function rankNameRefusal(deed: string, defs: readonly RankDef[], name: string, except?: number): string | null {
   const n = name.trim();
   if (!n) return 'Name the rank.';
-  if (n.length > RANK_NAME_MAX) return `A rank's name is at most ${RANK_NAME_MAX} characters.`;
-  if (n.toLowerCase() === FOUNDER) return 'Founder is whoever founded the settlement, not a rank.';
-  if (defs.some((r) => r.id !== except && r.name.toLowerCase() === n.toLowerCase())) return `${deed} already has a rank called ${n}.`;
+  if (n.length > RANK_NAME_MAX) return `Rank name: max ${RANK_NAME_MAX} characters.`;
+  if (n.toLowerCase() === FOUNDER) return 'Founder is not a rank name.';
+  if (defs.some((r) => r.id !== except && r.name.toLowerCase() === n.toLowerCase())) return `${deed} already has a rank named ${n}.`;
   return null;
 }
 
 /** Why a new rank will not be made, or null. The island's `rpc_rank_add`. */
 export function rankAddRefusal(deed: string, defs: readonly RankDef[], name: string): string | null {
-  if (defs.length >= RANK_CAP) return `${deed} has ${RANK_CAP} ranks besides its founder, which is as many as a settlement may have.`;
+  if (defs.length >= RANK_CAP) return `${deed}: max ${RANK_CAP} ranks besides the founder.`;
   return rankNameRefusal(deed, defs, name);
 }
 
@@ -282,8 +282,8 @@ export function rankMoveRefusal(defs: readonly RankDef[], id: number, dir: numbe
   const sorted = [...defs].sort((a, b) => a.ord - b.ord);
   const at = sorted.findIndex((r) => r.id === id);
   if (at < 0) return 'That rank is gone.';
-  if (dir < 0 && at === 0) return `${sorted[at].name} is already the highest rank.`;
-  if (dir > 0 && at === sorted.length - 1) return `${sorted[at].name} is already the lowest rank.`;
+  if (dir < 0 && at === 0) return `${sorted[at].name}: already the highest rank.`;
+  if (dir > 0 && at === sorted.length - 1) return `${sorted[at].name}: already the lowest rank.`;
   return null;
 }
 
@@ -295,7 +295,7 @@ export function rankMoveRefusal(defs: readonly RankDef[], id: number, dir: numbe
 export function rankDropRefusal(defs: readonly RankDef[], id: number): string | null {
   const r = defs.find((e) => e.id === id);
   if (!r) return 'That rank is gone.';
-  if (r.newcomer) return `${r.name} is the rank newcomers are given. Choose another for them first.`;
-  if (r.held > 0) return `${r.held} ${r.held === 1 ? 'citizen holds' : 'citizens hold'} ${r.name}. Give them another rank first.`;
+  if (r.newcomer) return `${r.name} is the newcomer rank: choose another first.`;
+  if (r.held > 0) return `${r.name} held by ${r.held} ${r.held === 1 ? 'citizen' : 'citizens'}: give them another rank first.`;
   return null;
 }

@@ -39,11 +39,11 @@ check('the table knows a copper vein and a coal seam', copper > 0 && coal > 0, `
 // The corner at 22,22 holds up the tiles 21,21 · 22,21 · 21,22 · 22,22.
 for (const [x, y] of [[21, 21], [22, 21], [21, 22], [22, 22]]) {
   w.setRockKind(x, y, copper);
-  check(`a copper vein under the tile at ${x},${y}: refused`, door(22, 22) === 'That corner is on a seam. Concrete goes on plain rock.', door(22, 22));
+  check(`a copper vein under the tile at ${x},${y}: refused`, door(22, 22) === 'Corner on a seam. Concrete needs plain rock.', door(22, 22));
   w.setRockKind(x, y, 0);
 }
 w.setRockKind(21, 21, coal);
-check('the coal seam is a seam too', door(22, 22) === 'That corner is on a seam. Concrete goes on plain rock.', door(22, 22));
+check('the coal seam is a seam too', door(22, 22) === 'Corner on a seam. Concrete needs plain rock.', door(22, 22));
 check('while the corner next door, over plain rock, is still open', door(23, 23) === 'allowed', door(23, 23));
 w.setRockKind(21, 21, 0);
 check('and plain again, the door reopens', door(22, 22) === 'allowed', door(22, 22));

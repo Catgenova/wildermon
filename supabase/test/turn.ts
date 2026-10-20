@@ -43,11 +43,11 @@ check('bitten, he turns on it', game.action?.def.id === 'attack_creature' && gam
   `${game.action?.def.id} on ${JSON.stringify(game.action?.target)}`);
 check(`with ${FIGHT_BACK_GOES} swings in hand`, game.action?.goes === FIGHT_BACK_GOES, String(game.action?.goes));
 check('and the hole first in line behind it', game.queue[0]?.def.id === 'dig' && game.queue[0]?.goes === 3, `${game.queue[0]?.def.id} ×${game.queue[0]?.goes}`);
-const said = game.log.filter((l) => l.text.startsWith('You turn on'));
-check('and says so on the Combat tab', said.length === 1 && said[0].kind === 'fight' && said[0].text === 'You turn on the ulva.', JSON.stringify(said.map((l) => [l.kind, l.text])));
+const said = game.log.filter((l) => l.text.startsWith('Fighting back: '));
+check('and says so on the Combat tab', said.length === 1 && said[0].kind === 'fight' && said[0].text === 'Fighting back: ulva.', JSON.stringify(said.map((l) => [l.kind, l.text])));
 
 game.hurtPlayer(0.05, 'The ulva is on you');
-check('a second bite changes nothing', game.action?.def.id === 'attack_creature' && game.queue.length === 1 && game.log.filter((l) => l.text.startsWith('You turn on')).length === 1,
+check('a second bite changes nothing', game.action?.def.id === 'attack_creature' && game.queue.length === 1 && game.log.filter((l) => l.text.startsWith('Fighting back: ')).length === 1,
   `${game.action?.def.id}, ${game.queue.length} in line`);
 
 const pet = game.creatures.spawn('crawler', 21.5, 22.5, 'active', () => 0.5, 0);

@@ -165,7 +165,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
   check('it went on the cut and left the bite as it was, on both sides',
     d.left === '1:bad,2:dressed ""' && d.theirsLeft === d.left, `browser ${d.left}, island ${d.theirsLeft}`);
   check('and both say which wound, in the same sentence',
-    d.mine === d.line && d.line === 'You clean the cut on your arm and bind it with cloth. The bleeding stops, though it will be slow to close.',
+    d.mine === d.line && d.line === 'Dressed: the cut on your arm, cloth. Bleeding stopped; heals slowly.',
     `browser "${d.mine}", island "${d.line}"`);
   check('and the browser does not go again: the cut is under cloth and the bite has gone bad', !d.again);
 }
@@ -174,7 +174,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
 {
   const [mine, isle] = asked([BITE]);
   check('with only the bite left, it is refused, and says which and why, in the same words',
-    mine === 'The bite on your leg has gone bad. Clean it out before anything will hold on it.' && isle === mine,
+    mine === 'The bite on your leg: infected. Clean it with lye first.' && isle === mine,
     `browser "${mine}", island "${isle}"`);
 }
 
@@ -187,7 +187,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
       delete from item i where i.world_id = ${W} and i.holder = 'player' and i.holder_uid = ${DANE} and i.def in ('bandage', 'cover'); end $$;
     select coalesce(act_refusal(${W}, ${DANE}, 'bind_wound', '{"kind":"item"}'), 'ALLOWED');`);
   check('with only the bite and no dressings, the refusal still names the bite, the same on both sides',
-    mine === 'The bite on your leg has gone bad. Clean it out before anything will hold on it.' && isle === mine, `browser "${mine}", island "${isle}"`);
+    mine === 'The bite on your leg: infected. Clean it with lye first.' && isle === mine, `browser "${mine}", island "${isle}"`);
   browserDane([CUT]);
   for (const it of game.inventory.items.filter((i) => i.id === 'bandage' || i.id === 'cover')) game.inventory.remove(it.uid, it.count);
   const none = dressRefusal(game) ?? 'ALLOWED';
@@ -195,7 +195,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
       delete from item i where i.world_id = ${W} and i.holder = 'player' and i.holder_uid = ${DANE} and i.def in ('bandage', 'cover'); end $$;
     select coalesce(act_refusal(${W}, ${DANE}, 'bind_wound', '{"kind":"item"}'), 'ALLOWED');`);
   check('and with a cut and no dressings, it says there is nothing to dress it with, the same on both sides',
-    none === 'You have nothing to dress it with.' && noneIsle === none, `browser "${none}", island "${noneIsle}"`);
+    none === 'Nothing to dress it with.' && noneIsle === none, `browser "${none}", island "${noneIsle}"`);
 }
 
 /* A cover is not replaced by cloth. */
@@ -212,7 +212,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
   check('and the browser does not go again after it', !d.again);
   const [both, bothIsle] = asked([CUT_THYME, BITE]);
   check('a cut under thyme and a bite gone bad: the refusal names the bite, the same on both sides',
-    both === 'The bite on your leg has gone bad. Clean it out before anything will hold on it.' && bothIsle === both,
+    both === 'The bite on your leg: infected. Clean it with lye first.' && bothIsle === both,
     `browser "${both}", island "${bothIsle}"`);
 }
 
@@ -223,7 +223,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
   const d = dressed([CUT_CLOTH], 'thyme');
   check('and it is on the cut afterwards, on both sides', d.left === '2:dressed "thyme"' && d.theirsLeft === d.left, `browser ${d.left}, island ${d.theirsLeft}`);
   check('and both say so in the same sentence',
-    d.mine === d.line && d.line === 'You lay the thyme cover on the cut on your arm and bind it. The bleeding stops at once and it is already closing.',
+    d.mine === d.line && d.line === 'Dressed: the cut on your arm, thyme cover. Bleeding stopped; heals fast.',
     `browser "${d.mine}", island "${d.line}"`);
   const [sage, sageIsle] = asked([CUT_SAGE], 'thyme');
   check('and over the wrong herb', sage === 'ALLOWED' && sageIsle === 'ALLOWED', `browser "${sage}", island "${sageIsle}"`);
@@ -249,8 +249,8 @@ select why || ' | ' || ${theirs(OTHER)} from dress_said;`);
   const name = psql(`select coalesce(name, 'them') from player where world_id = ${W} and uid = ${OTHER}`);
   const thyme = otherDressed([CUT_THYME]);
   check('and cloth does not go over thyme on them either, and says why',
-    thyme === `Every wound on ${name} that has not gone bad is already dressed at least as well as what you carry would dress it. `
-      + `A dressing only goes over one that closes the wound slower. | 2:dressed "thyme"`, thyme);
+    thyme === `Every uninfected wound on ${name} is already dressed as well or better. `
+      + `A dressing only replaces one that heals slower. | 2:dressed "thyme"`, thyme);
   const up = otherDressed([CUT_CLOTH], 'thyme');
   check('and a thyme cover goes over cloth on them', /^ALLOWED \| 2:dressed "(thyme|)"$/.test(up), up);
   // A person's uid is a uuid, and `target_item` cast it to a number. With `item` read by its primary key that cast is

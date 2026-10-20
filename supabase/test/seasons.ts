@@ -391,7 +391,7 @@ begin
       || (select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder_uid = u and i.def = 'wheat_seed')
       || ':' || (select p.state->>'sown' from placed p where p.id = v_box)
     from planter_crop c where c.placed = v_box;
-  insert into said select 'SOWSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'You sow %' order by e.n desc limit 1;
+  insert into said select 'SOWSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Sown: %' order by e.n desc limit 1;
   insert into said values ('AGAIN', coalesce(act_refusal(w, u, 'plant_seed', t || jsonb_build_object('itemUid', v_seed)), 'ALLOWED'));
   insert into said values ('EARLY', coalesce(act_refusal(w, u, 'harvest_crop', t), 'ALLOWED'));
   insert into said values ('LIFT', coalesce(act_refusal(w, u, 'pick_up_furniture', t), 'ALLOWED'));
@@ -399,7 +399,7 @@ begin
   -- Tended, once a stage.
   perform act_perform(w, u, 'tend_crop', t);
   insert into said select 'TENDED', c.tended || ':' || c.tended_now || ':' || round(c.ql::numeric, 2) from planter_crop c where c.placed = v_box;
-  insert into said select 'TENDSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'You weed %' order by e.n desc limit 1;
+  insert into said select 'TENDSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Tended: %' order by e.n desc limit 1;
   insert into said values ('TENDAGAIN', coalesce(act_refusal(w, u, 'tend_crop', t), 'ALLOWED'));
 
   -- What the ground read says of it: its stage, how far into it it has grown on its own clock, and the island's clock.
@@ -418,7 +418,7 @@ begin
   insert into said values ('HARVEST', (select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder_uid = u and i.def = 'wheat')
       || ':' || (select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder_uid = u and i.def = 'wheat_seed')
       || ':' || (select count(*) from planter_crop c where c.placed = v_box));
-  insert into said select 'HARVESTSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'You harvest %' order by e.n desc limit 1;
+  insert into said select 'HARVESTSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Harvested: %' order by e.n desc limit 1;
 
   -- The Farmer's pace, and Crop Rotation keyed to the planter: wheat after wheat is none, carrot after wheat is.
   perform pg_temp.hold(w, u, array[${q(FAST.id)}, ${q(ROTATE.id)}]);
@@ -427,7 +427,7 @@ begin
     (select i.id from item i where i.world_id = w and i.holder_uid = u and i.def = 'wheat_seed' order by i.id desc limit 1)));
   insert into said select 'PACE', c.pace::text from planter_crop c where c.placed = v_box;
   perform act_perform(w, u, 'clear_field', t);
-  insert into said select 'PULLSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'You turn %' order by e.n desc limit 1;
+  insert into said select 'PULLSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Cleared: %' order by e.n desc limit 1;
   perform act_perform(w, u, 'plant_seed', t || jsonb_build_object('itemUid',
     (select i.id from item i where i.world_id = w and i.holder_uid = u and i.def = 'carrot_seed' order by i.id desc limit 1)));
   insert into said select 'ROTATED', c.id || ':' || c.pace from planter_crop c where c.placed = v_box;
@@ -481,27 +481,27 @@ const say = (k: string): string => isaid.get(k) ?? 'unsaid';
 const wheatPer = CROPS.wheat.stageSeconds;
 const plantSaid = sownSaid('Wheat', true, cropWhen(STAGE_NAMES[1], wheatPer, true, YEAR_FROM));
 check('the island refuses a planter with no seed and from across the island, in the field\'s words and the furniture\'s',
-  say('NOSEED') === 'Choose a seed to sow.' && say('FAR') === 'Stand next to the planter.', `${say('NOSEED')} / ${say('FAR')}`);
+  say('NOSEED') === 'Choose a seed.' && say('FAR') === 'Stand next to the planter.', `${say('NOSEED')} / ${say('FAR')}`);
 check('and sows it through the doors: one seed, at its own pace, and the planter remembers it',
   say('SOWASK') === 'ALLOWED' && say('SOWN') === 'wheat:0:1:4:wheat', say('SOWN'));
 check(`and says when it will sprout at a planter's ${PLANTER_GROWTH} of the crop's pace: "${plantSaid}"`, say('SOWSAID') === plantSaid, say('SOWSAID'));
 check('and refuses a second sowing, an early harvest and lifting it while it grows, in so many words',
-  say('AGAIN') === 'Something is already growing there.' && say('EARLY') === 'It is only sown. Let it grow.' && say('LIFT') === PLANTER_GROWING,
+  say('AGAIN') === 'Already growing a crop.' && say('EARLY') === 'Not ripe: sown.' && say('LIFT') === PLANTER_GROWING,
   `${say('AGAIN')} / ${say('EARLY')} / ${say('LIFT')}`);
 check('and tends it once a stage, as a field is tended',
   // The seed's fifty and the hands' forty, averaged over the care it was given.
-  say('TENDED') === '1:true:45.00' && say('TENDSAID') === `You weed and water the wheat. It should give ${cropYield(1).produce} wheat and ${cropYield(1).seeds} seed.`
-    && say('TENDAGAIN') === 'You have already tended it at this stage. Wait for it to grow on.', `${say('TENDED')} / ${say('TENDSAID')}`);
+  say('TENDED') === '1:true:45.00' && say('TENDSAID') === `Tended: wheat. Expected yield: ${cropYield(1).produce} wheat, ${cropYield(1).seeds} seed.`
+    && say('TENDAGAIN') === 'Already tended at this stage.', `${say('TENDED')} / ${say('TENDSAID')}`);
 {
   const [id, stage, grown, hasNow, nowRight] = say('GROUND').split(':');
   check('the ground read says what grows in it and how far it has grown on its own clock, and the island\'s clock',
     Number(id) > 0 && stage === '0' && Math.abs(Number(grown) - 400 * PLANTER_GROWTH) < 0.5 && hasNow === 'true' && nowRight === 'true', say('GROUND'));
 }
 check('three stages of the planter\'s time ripen it by the clock alone, and the doors know it without a hand on it',
-  say('RIPE') === 'It is ripe. Harvest it.|ALLOWED', say('RIPE'));
+  say('RIPE') === 'Ripe: harvest it.|ALLOWED', say('RIPE'));
 check(`and it harvests as a field does: ${cropYield(1).produce} wheat and ${cropYield(1).seeds} seed for one tending, and the planter empty`,
   // Its forty-five and the hands' forty, halved.
-  say('HARVEST') === `${cropYield(1).produce}:${4 + cropYield(1).seeds}:0` && say('HARVESTSAID').endsWith('The planter is ready to sow again. (QL 42.5)'),
+  say('HARVEST') === `${cropYield(1).produce}:${4 + cropYield(1).seeds}:0` && say('HARVESTSAID').endsWith('QL 42.5. Planter ready to sow.'),
   `${say('HARVEST')} / ${say('HARVESTSAID')}`);
 const fg = FAST.fx['grow:plant_seed'];
 const cr = ROTATE.fx['rotate:plant_seed'];
@@ -509,7 +509,7 @@ check(`Fast Growth's pace goes into a planter, ${fg}, and Crop Rotation is the p
   Math.abs(Number(say('PACE')) - fg) < 1e-9 && say('ROTATED').startsWith('carrot:') && Math.abs(Number(say('ROTATED').split(':')[1]) - fg * cr) < 1e-9,
   `${say('PACE')} / ${say('ROTATED')}`);
 check('pulled up, it says so, it is empty, and it may be lifted',
-  say('PULLSAID') === 'You turn the wheat back into the soil.' && say('PULLED') === '0:ALLOWED:Nothing is growing there.', `${say('PULLSAID')} / ${say('PULLED')}`);
+  say('PULLSAID') === 'Cleared: wheat.' && say('PULLED') === '0:ALLOWED:No crop there.', `${say('PULLSAID')} / ${say('PULLED')}`);
 check('and asked through the door a browser uses, the clock finishing the go, it is sown just the same', say('DOOR') === 'taken:wheat:0', say('DOOR'));
 check('Bounty brings on every crop on the caster\'s settlement, the planter standing on it included, and not one off it',
   say('BOUNTY') === '2:1:0:2', say('BOUNTY'));
@@ -547,14 +547,14 @@ const growing = game.planted.get(box.id);
 check('and sows it: one seed, at its own pace, and the planter remembers it, as the island has it',
   `${growing?.id}:${growing?.stage}:${growing?.pace ?? 1}:${game.inventory.count('wheat_seed')}:${box.sown}` === say('SOWN'),
   `${growing?.id}:${growing?.stage}:${growing?.pace ?? 1}:${game.inventory.count('wheat_seed')}:${box.sown}`);
-check('and says the island\'s line about when it will sprout', heard('You sow ') === say('SOWSAID'), heard('You sow '));
+check('and says the island\'s line about when it will sprout', heard('Sown: ') === say('SOWSAID'), heard('Sown: '));
 check('and refuses a second sowing, an early harvest and lifting it in the island\'s words',
   ask('plant_seed', withSeed(wheat.uid)) === say('AGAIN') && ask('harvest_crop', ft) === say('EARLY') && ask('pick_up_furniture', ft) === say('LIFT'),
   `${ask('plant_seed', withSeed(wheat.uid))} / ${ask('harvest_crop', ft)} / ${ask('pick_up_furniture', ft)}`);
 run('tend_crop', ft);
 check('and tends it, saying what it will give, and not twice a stage',
-  `${growing?.tended}:${growing?.tendedNow}:${growing?.ql.toFixed(2)}` === say('TENDED') && heard('You weed ') === say('TENDSAID')
-    && ask('tend_crop', ft) === say('TENDAGAIN'), `${growing?.tended}:${growing?.tendedNow}:${growing?.ql.toFixed(2)} / ${heard('You weed ')}`);
+  `${growing?.tended}:${growing?.tendedNow}:${growing?.ql.toFixed(2)}` === say('TENDED') && heard('Tended: ') === say('TENDSAID')
+    && ask('tend_crop', ft) === say('TENDAGAIN'), `${growing?.tended}:${growing?.tendedNow}:${growing?.ql.toFixed(2)} / ${heard('Tended: ')}`);
 // Three stages of the planter's own time, by the clock alone.
 if (growing) growing.stageAt -= 3 * wheatPer + PLANTER_GROWTH;
 game.update(0.01);
@@ -563,13 +563,13 @@ check('ripened by the planter\'s clock, it wants harvesting and not tending, as 
 run('harvest_crop', ft);
 check('and harvests to the same yield and the same line',
   `${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')}:${game.planted.has(box.id) ? 1 : 0}` === say('HARVEST')
-    && heard('You harvest ') === say('HARVESTSAID'), `${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')} / ${heard('You harvest ')}`);
+    && heard('Harvested: ') === say('HARVESTSAID'), `${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')} / ${heard('Harvested: ')}`);
 game.setPerks({ ...FAST.fx, ...ROTATE.fx });
 run('plant_seed', withSeed(game.inventory.find('wheat_seed')!.uid));
 const samePace = game.planted.get(box.id)?.pace ?? 1;
-check('Pull it up is what a planter calls clearing', ACTION_BY_ID.get('clear_field')!.labelFor?.(ft, game) === 'Pull it up');
+check('Pull it up is what a planter calls clearing', ACTION_BY_ID.get('clear_field')!.labelFor?.(ft, game) === 'Pull up crop');
 run('clear_field', ft);
-const pullSaid = heard('You turn ');
+const pullSaid = heard('Cleared: ');
 const carrots = game.inventory.add('carrot_seed', { count: 3, ql: 50 });
 run('plant_seed', withSeed(carrots.uid));
 const rotated = game.planted.get(box.id);

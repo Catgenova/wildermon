@@ -73,7 +73,6 @@ export interface TraitDef {
    * tiers of the one name, and which grade an animal gets is its own roll.
    */
   family?: string;
-  note: string;
 }
 
 export const TIERS: TraitTier[] = ['common', 'rare', 'supreme', 'fantastic'];
@@ -96,43 +95,43 @@ export const TIER_CSS = Object.fromEntries(TIERS.map((t) => [t, `var(--rarity-${
 
 const PLAIN_TRAITS: TraitDef[] = [
   // ---- Common: a few percent apiece, and most of what the wild holds. ----
-  { id: 'light_footed', name: 'light-footed', tier: 'common', effects: { speed: 1.08 }, note: 'It picks its way quickly.' },
-  { id: 'willing', name: 'willing', tier: 'common', effects: { work: 1.08 }, note: 'It gets on with the work.' },
-  { id: 'curious', name: 'curious', tier: 'common', effects: { learn: 1.12 }, note: 'It watches what it is doing and takes something from it.' },
-  { id: 'broad_backed', name: 'broad-backed', tier: 'common', effects: { haul: 1.12 }, note: 'It carries and pulls more than its size says.' },
-  { id: 'thrifty', name: 'thrifty', tier: 'common', effects: { appetite: 0.92 }, note: 'A cheap thing to keep.' },
-  { id: 'thick_coated', name: 'thick-coated', tier: 'common', effects: { hardy: 1.12 }, note: 'There is a lot of coat between the world and it.' },
-  { id: 'keen_nosed', name: 'keen-nosed', tier: 'common', effects: { sight: 1.18 }, note: 'It notices things before you do.' },
-  { id: 'biddable', name: 'biddable', tier: 'common', effects: { work: 1.03 }, aura: true, note: 'It sets an example, and the others keep up with it.' },
-  { id: 'careful', name: 'careful', tier: 'common', effects: { yield: 1.07 }, note: 'It brings back what it went out for, in one piece.' },
-  { id: 'rangy', name: 'rangy', tier: 'common', effects: { range: 1.12 }, note: 'It will go further out than most before it turns for home.' },
-  { id: 'milky', name: 'milky', tier: 'common', effects: { grow: 1.25 }, note: 'Fleece and milk come back quickly on it.' },
-  { id: 'scrappy', name: 'scrappy', tier: 'common', effects: { tough: 1.12 }, note: 'It fights above its weight.' },
+  { id: 'light_footed', name: 'light-footed', tier: 'common', effects: { speed: 1.08 } },
+  { id: 'willing', name: 'willing', tier: 'common', effects: { work: 1.08 } },
+  { id: 'curious', name: 'curious', tier: 'common', effects: { learn: 1.12 } },
+  { id: 'broad_backed', name: 'broad-backed', tier: 'common', effects: { haul: 1.12 } },
+  { id: 'thrifty', name: 'thrifty', tier: 'common', effects: { appetite: 0.92 } },
+  { id: 'thick_coated', name: 'thick-coated', tier: 'common', effects: { hardy: 1.12 } },
+  { id: 'keen_nosed', name: 'keen-nosed', tier: 'common', effects: { sight: 1.18 } },
+  { id: 'biddable', name: 'biddable', tier: 'common', effects: { work: 1.03 }, aura: true },
+  { id: 'careful', name: 'careful', tier: 'common', effects: { yield: 1.07 } },
+  { id: 'rangy', name: 'rangy', tier: 'common', effects: { range: 1.12 } },
+  { id: 'milky', name: 'milky', tier: 'common', effects: { grow: 1.25 } },
+  { id: 'scrappy', name: 'scrappy', tier: 'common', effects: { tough: 1.12 } },
 
   // ---- Rare: worth a fifth to a third, and worth breeding towards. ----
-  { id: 'fleet', name: 'fleet', tier: 'rare', effects: { speed: 1.2 }, note: 'Quick over open ground.' },
-  { id: 'diligent', name: 'diligent', tier: 'rare', effects: { work: 1.2 }, note: 'It does not stop to look about.' },
-  { id: 'bright', name: 'bright', tier: 'rare', effects: { learn: 1.32 }, note: 'It learns a trade faster than it has any right to.' },
-  { id: 'draught_bred', name: 'draught-bred', tier: 'rare', effects: { haul: 1.32 }, note: 'Bred for the traces and built for them.' },
-  { id: 'frugal', name: 'frugal', tier: 'rare', effects: { appetite: 0.8 }, note: 'It goes a long way on very little.' },
-  { id: 'deep_chested', name: 'deep-chested', tier: 'rare', effects: { hardy: 1.32, speed: 1.05 }, note: 'Wind enough to keep going, and to keep standing.' },
-  { id: 'herd_minded', name: 'herd-minded', tier: 'rare', effects: { work: 1.08, learn: 1.08 }, aura: true, note: 'The herd works and learns better for having it among them.' },
-  { id: 'far_ranging', name: 'far-ranging', tier: 'rare', effects: { range: 1.32, sight: 1.2 }, note: 'It knows the country a long way out.' },
+  { id: 'fleet', name: 'fleet', tier: 'rare', effects: { speed: 1.2 } },
+  { id: 'diligent', name: 'diligent', tier: 'rare', effects: { work: 1.2 } },
+  { id: 'bright', name: 'bright', tier: 'rare', effects: { learn: 1.32 } },
+  { id: 'draught_bred', name: 'draught-bred', tier: 'rare', effects: { haul: 1.32 } },
+  { id: 'frugal', name: 'frugal', tier: 'rare', effects: { appetite: 0.8 } },
+  { id: 'deep_chested', name: 'deep-chested', tier: 'rare', effects: { hardy: 1.32, speed: 1.05 } },
+  { id: 'herd_minded', name: 'herd-minded', tier: 'rare', effects: { work: 1.08, learn: 1.08 }, aura: true },
+  { id: 'far_ranging', name: 'far-ranging', tier: 'rare', effects: { range: 1.32, sight: 1.2 } },
 
   // ---- Supreme: a third to a half, and rarely caught rather than bred. ----
-  { id: 'swift', name: 'swift', tier: 'supreme', effects: { speed: 1.4 }, note: 'There is very little on the island that will catch it.' },
-  { id: 'tireless', name: 'tireless', tier: 'supreme', effects: { work: 1.4, appetite: 0.9 }, note: 'It works all day on one meal.' },
-  { id: 'quick_witted', name: 'quick-witted', tier: 'supreme', effects: { learn: 1.6 }, note: 'Show it once.' },
-  { id: 'lead_beast', name: 'lead beast', tier: 'supreme', effects: { work: 1.16 }, aura: true, note: 'The whole herd works to its pace.' },
-  { id: 'strong_shouldered', name: 'strong-shouldered', tier: 'supreme', effects: { haul: 1.6, tough: 1.2 }, note: 'Put it in front of anything.' },
-  { id: 'fine_fleeced', name: 'fine-fleeced', tier: 'supreme', effects: { grow: 1.9, yield: 1.2 }, note: 'Its fleece comes back quickly, and there is more of it.' },
+  { id: 'swift', name: 'swift', tier: 'supreme', effects: { speed: 1.4 } },
+  { id: 'tireless', name: 'tireless', tier: 'supreme', effects: { work: 1.4, appetite: 0.9 } },
+  { id: 'quick_witted', name: 'quick-witted', tier: 'supreme', effects: { learn: 1.6 } },
+  { id: 'lead_beast', name: 'lead beast', tier: 'supreme', effects: { work: 1.16 }, aura: true },
+  { id: 'strong_shouldered', name: 'strong-shouldered', tier: 'supreme', effects: { haul: 1.6, tough: 1.2 } },
+  { id: 'fine_fleeced', name: 'fine-fleeced', tier: 'supreme', effects: { grow: 1.9, yield: 1.2 } },
 
   // ---- Fantastic: half again and better. A herd may hold one. ----
-  { id: 'windborn', name: 'windborn', tier: 'fantastic', effects: { speed: 1.65, range: 1.2 }, note: 'It moves like weather.' },
-  { id: 'unflagging', name: 'unflagging', tier: 'fantastic', effects: { work: 1.65, appetite: 0.85 }, note: 'It has never once been seen to stop.' },
-  { id: 'old_blood', name: 'old blood', tier: 'fantastic', effects: { learn: 2, yield: 1.2 }, note: 'Something in it remembers being wild and clever.' },
-  { id: 'pack_leader', name: 'pack leader', tier: 'fantastic', effects: { work: 1.25, learn: 1.25, speed: 1.1 }, aura: true, note: 'Every wildermon on the deed is the better for it standing there.' },
-  { id: 'ironsides', name: 'ironsides', tier: 'fantastic', effects: { hardy: 2, tough: 1.6 }, note: 'It has been through worse than you can arrange.' },
+  { id: 'windborn', name: 'windborn', tier: 'fantastic', effects: { speed: 1.65, range: 1.2 } },
+  { id: 'unflagging', name: 'unflagging', tier: 'fantastic', effects: { work: 1.65, appetite: 0.85 } },
+  { id: 'old_blood', name: 'old blood', tier: 'fantastic', effects: { learn: 2, yield: 1.2 } },
+  { id: 'pack_leader', name: 'pack leader', tier: 'fantastic', effects: { work: 1.25, learn: 1.25, speed: 1.1 }, aura: true },
+  { id: 'ironsides', name: 'ironsides', tier: 'fantastic', effects: { hardy: 2, tough: 1.6 } },
 ];
 
 // ---- Fighting blood ----
@@ -160,47 +159,46 @@ export interface FightingTraitDef {
   /** What it lifts at the common grade, as a share: 0.1 is a tenth. */
   gains: Partial<Record<TraitChannel, number>>;
   aura?: boolean;
-  note: string;
 }
 
 export const FIGHTING: FightingTraitDef[] = [
   // What its blows land for.
-  { id: 'fanged', name: 'fanged', gains: { tough: 0.1 }, note: 'Long teeth, and it uses them.' },
-  { id: 'heavy_pawed', name: 'heavy-pawed', gains: { tough: 0.12 }, note: 'There is weight behind everything it lands.' },
-  { id: 'hook_clawed', name: 'hook-clawed', gains: { tough: 0.09 }, note: 'What it catches, it opens.' },
-  { id: 'hard_biting', name: 'hard-biting', gains: { tough: 0.11 }, note: 'It does not let go until something gives.' },
-  { id: 'horned', name: 'horned', gains: { tough: 0.08, hardy: 0.03 }, note: 'It meets what comes at it head first.' },
+  { id: 'fanged', name: 'fanged', gains: { tough: 0.1 } },
+  { id: 'heavy_pawed', name: 'heavy-pawed', gains: { tough: 0.12 } },
+  { id: 'hook_clawed', name: 'hook-clawed', gains: { tough: 0.09 } },
+  { id: 'hard_biting', name: 'hard-biting', gains: { tough: 0.11 } },
+  { id: 'horned', name: 'horned', gains: { tough: 0.08, hardy: 0.03 } },
   // How much it can take.
-  { id: 'thick_hided', name: 'thick-hided', gains: { hardy: 0.1 }, note: 'There is a lot of it between a blow and anything that matters.' },
-  { id: 'big_boned', name: 'big-boned', gains: { hardy: 0.12 }, note: 'Built heavier than its kind.' },
-  { id: 'broad_chested', name: 'broad-chested', gains: { hardy: 0.09, mend: 0.03 }, note: 'Room in it for a long fight.' },
-  { id: 'stout', name: 'stout', gains: { hardy: 0.11 }, note: 'It takes a great deal of stopping.' },
-  { id: 'long_lived', name: 'long-lived', gains: { hardy: 0.08, mend: 0.05 }, note: 'Old wounds and old years sit lightly on it.' },
+  { id: 'thick_hided', name: 'thick-hided', gains: { hardy: 0.1 } },
+  { id: 'big_boned', name: 'big-boned', gains: { hardy: 0.12 } },
+  { id: 'broad_chested', name: 'broad-chested', gains: { hardy: 0.09, mend: 0.03 } },
+  { id: 'stout', name: 'stout', gains: { hardy: 0.11 } },
+  { id: 'long_lived', name: 'long-lived', gains: { hardy: 0.08, mend: 0.05 } },
   // What a blow costs it.
-  { id: 'tough_skinned', name: 'tough-skinned', gains: { soak: 0.1 }, note: 'A blow lands, and less of it goes in.' },
-  { id: 'plated', name: 'plated', gains: { soak: 0.12 }, note: 'The hide over its back is nearer shell than skin.' },
-  { id: 'scarred', name: 'scarred', gains: { soak: 0.08, tough: 0.03 }, note: 'It has been in fights before, and learned from them.' },
-  { id: 'bristled', name: 'bristled', gains: { soak: 0.09 }, note: 'Everything about it says do not.' },
-  { id: 'stone_backed', name: 'stone-backed', gains: { soak: 0.11 }, note: 'Strike it and it is your hand that hurts.' },
+  { id: 'tough_skinned', name: 'tough-skinned', gains: { soak: 0.1 } },
+  { id: 'plated', name: 'plated', gains: { soak: 0.12 } },
+  { id: 'scarred', name: 'scarred', gains: { soak: 0.08, tough: 0.03 } },
+  { id: 'bristled', name: 'bristled', gains: { soak: 0.09 } },
+  { id: 'stone_backed', name: 'stone-backed', gains: { soak: 0.11 } },
   // How often a swing at it lands.
-  { id: 'slippery', name: 'slippery', gains: { evade: 0.1 }, note: 'It is never quite where the blow lands.' },
-  { id: 'wary', name: 'wary', gains: { evade: 0.11 }, note: 'It sees a swing coming a long way off.' },
-  { id: 'nimble', name: 'nimble', gains: { evade: 0.08, speed: 0.03 }, note: 'Light on its feet in a fight.' },
-  { id: 'low_slung', name: 'low-slung', gains: { evade: 0.1 }, note: 'It goes under what was meant for it.' },
-  { id: 'sharp_eyed', name: 'sharp-eyed', gains: { evade: 0.09 }, note: 'Nothing gets to it unseen.' },
+  { id: 'slippery', name: 'slippery', gains: { evade: 0.1 } },
+  { id: 'wary', name: 'wary', gains: { evade: 0.11 } },
+  { id: 'nimble', name: 'nimble', gains: { evade: 0.08, speed: 0.03 } },
+  { id: 'low_slung', name: 'low-slung', gains: { evade: 0.1 } },
+  { id: 'sharp_eyed', name: 'sharp-eyed', gains: { evade: 0.09 } },
   // How quickly its blows come.
-  { id: 'quick_jawed', name: 'quick-jawed', gains: { haste: 0.1 }, note: 'Its blows come quicker than another\'s.' },
-  { id: 'snappish', name: 'snappish', gains: { haste: 0.11 }, note: 'It does not wait to be sure.' },
-  { id: 'twitchy', name: 'twitchy', gains: { haste: 0.08, evade: 0.03 }, note: 'Never still, and never where it was.' },
-  { id: 'sudden', name: 'sudden', gains: { haste: 0.1 }, note: 'It is on you before you have decided about it.' },
-  { id: 'wild_eyed', name: 'wild-eyed', gains: { haste: 0.09, tough: 0.03 }, note: 'Something in it does not know when to stop.' },
+  { id: 'quick_jawed', name: 'quick-jawed', gains: { haste: 0.1 } },
+  { id: 'snappish', name: 'snappish', gains: { haste: 0.11 } },
+  { id: 'twitchy', name: 'twitchy', gains: { haste: 0.08, evade: 0.03 } },
+  { id: 'sudden', name: 'sudden', gains: { haste: 0.1 } },
+  { id: 'wild_eyed', name: 'wild-eyed', gains: { haste: 0.09, tough: 0.03 } },
   // How fast its wounds close.
-  { id: 'quick_healing', name: 'quick-healing', gains: { mend: 0.12 }, note: 'Its wounds close quicker than another\'s.' },
-  { id: 'clean_blooded', name: 'clean-blooded', gains: { mend: 0.1 }, note: 'Its wounds do not go bad.' },
-  { id: 'hard_to_kill', name: 'hard to kill', gains: { mend: 0.08, hardy: 0.04 }, note: 'It has been left for dead before.' },
+  { id: 'quick_healing', name: 'quick-healing', gains: { mend: 0.12 } },
+  { id: 'clean_blooded', name: 'clean-blooded', gains: { mend: 0.1 } },
+  { id: 'hard_to_kill', name: 'hard to kill', gains: { mend: 0.08, hardy: 0.04 } },
   // And two that fight for the herd.
-  { id: 'war_leader', name: 'war leader', gains: { tough: 0.04, haste: 0.02 }, aura: true, note: 'The others fight harder with it in the line.' },
-  { id: 'shield_wall', name: 'shield wall', gains: { soak: 0.04 }, aura: true, note: 'Beside it the herd stands closer and takes less.' },
+  { id: 'war_leader', name: 'war leader', gains: { tough: 0.04, haste: 0.02 }, aura: true },
+  { id: 'shield_wall', name: 'shield wall', gains: { soak: 0.04 }, aura: true },
 ];
 
 /** What each grade multiplies the common gain by: the same steep climb the plain tiers keep. */
@@ -217,7 +215,7 @@ export function gradeMul(channel: TraitChannel, gain: number, tier: TraitTier): 
 export const FIGHTING_TRAITS: TraitDef[] = FIGHTING.flatMap((f) => TIERS.map((tier): TraitDef => {
   const effects: Partial<Record<TraitChannel, number>> = {};
   for (const [ch, g] of Object.entries(f.gains)) effects[ch as TraitChannel] = gradeMul(ch as TraitChannel, g as number, tier);
-  return { id: gradeId(f.id, tier), name: tier === 'common' ? f.name : `${f.name} (${tier})`, tier, family: f.id, aura: f.aura, effects, note: f.note };
+  return { id: gradeId(f.id, tier), name: tier === 'common' ? f.name : `${f.name} (${tier})`, tier, family: f.id, aura: f.aura, effects };
 }));
 /** The share of what the wild throws up, per slot, that is fighting blood. */
 export const FIGHT_SHARE = 0.3;
@@ -371,21 +369,21 @@ export interface ChannelDef {
 }
 
 export const CHANNELS: ChannelDef[] = [
-  { id: 'speed', label: 'speed', up: true, note: 'how fast it moves — on its own feet, under a rider, in the traces' },
-  { id: 'work', label: 'work', up: true, note: 'how quickly it finishes a job on the deed' },
-  { id: 'learn', label: 'learning', up: true, note: 'how fast the work it does goes into it as skill' },
-  { id: 'haul', label: 'hauling', up: true, note: 'what its panniers hold and its share of a team’s pull' },
-  { id: 'yield', label: 'yield', up: true, note: 'what it brings back from a trip out' },
-  { id: 'appetite', label: 'upkeep', up: false, note: 'how fast its belly empties' },
-  { id: 'hardy', label: 'health', up: true, note: 'how much it can take' },
-  { id: 'tough', label: 'damage', up: true, note: 'what its attack lands for' },
-  { id: 'sight', label: 'sight', up: true, note: 'how far it sees for you' },
-  { id: 'range', label: 'range', up: true, note: 'how far from the token or the post it will work' },
-  { id: 'grow', label: 'regrowth', up: true, note: 'how fast fleece grows back and milk comes in' },
-  { id: 'soak', label: 'damage taken', up: false, note: 'what a blow costs it once it lands' },
-  { id: 'evade', label: 'chance to be hit', up: false, note: 'how often a swing at it lands' },
-  { id: 'haste', label: 'speed of blows', up: true, note: 'how quickly its blows come' },
-  { id: 'mend', label: 'healing', up: true, note: 'how fast its wounds close' },
+  { id: 'speed', label: 'speed', up: true, note: 'pace on foot, under a rider and in the traces' },
+  { id: 'work', label: 'work', up: true, note: 'deed job speed' },
+  { id: 'learn', label: 'learning', up: true, note: 'skill gained from its work' },
+  { id: 'haul', label: 'hauling', up: true, note: 'pannier capacity and share of a team’s pull' },
+  { id: 'yield', label: 'yield', up: true, note: 'output per trip' },
+  { id: 'appetite', label: 'upkeep', up: false, note: 'hunger rate' },
+  { id: 'hardy', label: 'health', up: true, note: 'max health' },
+  { id: 'tough', label: 'damage', up: true, note: 'blow damage' },
+  { id: 'sight', label: 'sight', up: true, note: 'sight range for you' },
+  { id: 'range', label: 'range', up: true, note: 'work range from the token or post' },
+  { id: 'grow', label: 'regrowth', up: true, note: 'fleece regrowth and milk' },
+  { id: 'soak', label: 'damage taken', up: false, note: 'damage taken per landed blow' },
+  { id: 'evade', label: 'chance to be hit', up: false, note: 'chance a swing at it lands' },
+  { id: 'haste', label: 'speed of blows', up: true, note: 'blow rate' },
+  { id: 'mend', label: 'healing', up: true, note: 'wound healing rate' },
 ];
 
 export const CHANNEL_BY_ID = new Map(CHANNELS.map((c) => [c.id, c]));
@@ -423,7 +421,7 @@ export const traitTier = (id: string): TraitTier => TRAIT_BY_ID.get(id)?.tier ??
 /** "light-footed, fleet and quick-witted" */
 export function traitList(traits: string[]): string {
   const names = traits.map(traitName);
-  if (!names.length) return 'nothing worth the name';
+  if (!names.length) return 'none';
   if (names.length === 1) return names[0];
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
@@ -668,7 +666,7 @@ export function bredLine(young: string[], dam: { traits: string[]; line?: Line }
 /** "Line: 4 generations bred for damage, +6% damage", for each channel its line runs past one on. */
 export const lineSaid = (traits: string[] | undefined, line: Line | undefined): string[] =>
   CHANNELS.filter((ch) => lineDepth(traits, line, ch.id) > 1)
-    .map((ch) => `Line: ${lineDepth(traits, line, ch.id)} generations bred for ${ch.label}, ${pct(depthMul(lineDepth(traits, line, ch.id), ch.id))} ${ch.label}`);
+    .map((ch) => `Line (${ch.label}): ${lineDepth(traits, line, ch.id)} generations, ${pct(depthMul(lineDepth(traits, line, ch.id), ch.id))} ${ch.label}`);
 
 // ---- What a pairing would throw ----
 

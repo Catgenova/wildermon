@@ -168,7 +168,7 @@ const nearCrate = (g: Game, c: PlacedCrate): boolean => {
  */
 export function crateNotYours(g: Game, c: PlacedCrate, tail = ''): string | null {
   if (c.mine !== false) return null;
-  return lacks(g.deedOfMineAt(c.x, c.y), 'stores') ?? `The ${crateName(c).toLowerCase()} is not yours${tail}.`;
+  return lacks(g.deedOfMineAt(c.x, c.y), 'stores') ?? `Not yours: ${crateName(c).toLowerCase()}${tail}.`;
 }
 
 const crateInto = (g: Game, t: Target): PlacedCrate | undefined => {
@@ -194,7 +194,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'tile' || t.itemUid === undefined || t.sx === undefined || t.sy === undefined) return 'Choose a crate and a spot.';
       const item = g.inventory.get(t.itemUid);
       const kind = item && crateKindOfItem(item.id);
-      if (!item || !kind) return 'That is not a crate.';
+      if (!item || !kind) return 'Not a crate.';
       /*
        * A rack's deck is a crate spot, and the ground under it is the rack's
        * business rather than the crate's: whoever put the rack there already
@@ -207,14 +207,14 @@ export const CRATE_ACTIONS: ActionDef[] = [
       if (level < 0 && !g.buildings.sameCellar(g.myCellar(), t.x, t.y)) return CELLAR_FLOOR;
       const rack = g.rackAt(t.x, t.y, t.sx, t.sy, level);
       if (rack) {
-        if (kind !== 'plank') return `A ${CRATE_DEFS[kind].name.toLowerCase()} will not sit on the runners. The rack takes plank crates.`;
+        if (kind !== 'plank') return 'Plank crates only on a rack.';
       } else if (level >= 0) {
         // A deck on piers is dry, level floor whatever is under it, and one not built yet is nothing to stand on.
         const deck = g.deckFooting(t.x, t.y);
-        if (deck === false || (deck === null && (!g.world.isPassable(t.x, t.y) || g.world.hasWater(t.x, t.y)))) return 'Crates need dry, open ground.';
-        if (deck === null && g.world.slope(t.x, t.y) > 20) return 'The ground is too steep for a crate to stand.';
+        if (deck === false || (deck === null && (!g.world.isPassable(t.x, t.y) || g.world.hasWater(t.x, t.y)))) return 'Need dry, open ground.';
+        if (deck === null && g.world.slope(t.x, t.y) > 20) return 'Too steep.';
       }
-      if (g.crateAt(t.x, t.y, t.sx, t.sy, level)) return 'There is already a crate on that spot.';
+      if (g.crateAt(t.x, t.y, t.sx, t.sy, level)) return 'Spot taken.';
       if (g.isToken(t.x, t.y)) return 'Not on the token.';
       return null;
     },
@@ -230,7 +230,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       if (item.enchant) crate.enchant = item.enchant;
       if (item.dmg) crate.dmg = item.dmg;
       g.note('crate');
-      g.logMsg(`You set the ${crateName(crate).toLowerCase()} down.`, 'event');
+      g.logMsg(`Set down: ${crateName(crate).toLowerCase()}.`, 'event');
       g.events.emit('world', crate.x, crate.y);
     },
   },
@@ -264,7 +264,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       if (c.rare) back.rare = c.rare;
       if (c.enchant) back.enchant = c.enchant;
       if (c.dmg) back.dmg = c.dmg;
-      g.logMsg(`You pick up the ${CRATE_DEFS[c.kind].name.toLowerCase()}.${c.deed ? ' Deed workers will leave their finds by the token until a deed crate stands again.' : ''}`, 'event');
+      g.logMsg(`Picked up: ${CRATE_DEFS[c.kind].name.toLowerCase()}.${c.deed ? ' Deed workers leave their finds by the token until a deed crate is set down.' : ''}`, 'event');
       g.events.emit('world', c.x, c.y);
     },
   },
@@ -277,11 +277,11 @@ export const CRATE_ACTIONS: ActionDef[] = [
     applies: (t) => t.kind === 'crate',
     check: (t, g) => {
       const c = crateOf(g, t);
-      if (!c) return 'The crate is empty.';
+      if (!c) return 'Crate empty.';
       // A settlement store by its rule, anything else by whose it is and its padlock.
       const shut = crateShut(g, c);
       if (shut) return shut;
-      return c.items.length ? null : 'The crate is empty.';
+      return c.items.length ? null : 'Crate empty.';
     },
     perform: (t, g) => {
       const c = crateOf(g, t);
@@ -290,7 +290,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       for (const it of items) g.inventory.addItem(it);
       g.events.emit('crate');
       const names = items.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
-      g.logMsg(`You take ${names.join(', ')} from the crate.`, 'event');
+      g.logMsg(`Taken from crate: ${names.join(', ')}.`, 'event');
     },
   },
   {
@@ -310,7 +310,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       // Room for some of it is enough: what fits goes in and the rest stays in
       // the pack. Only a crate with no room at all has anything to refuse, and
       // the refusal names the crate you were aiming at.
-      if (crateSpare(c) <= 0) return `The ${crateName(c).toLowerCase()} is full.`;
+      if (crateSpare(c) <= 0) return `${crateName(c)} full.`;
       return null;
     },
     perform: (t, g) => {
@@ -320,7 +320,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
       const want = t.count ?? 1;
       const item = cratePut(g, c, t.uid, want);
       if (!item) {
-        g.logMsg(`The ${crateName(c).toLowerCase()} is full.`, 'error');
+        g.logMsg(`${crateName(c)} full.`, 'error');
         return;
       }
       g.logMsg(storedLine(item.count, itemName(item), crateName(c), want - item.count), 'event');
@@ -338,7 +338,7 @@ export const CRATE_ACTIONS: ActionDef[] = [
  * rack exactly when it is shut to a put of its own. The island's
  * `crate_put_shut`.
  */
-export const cratePutShut = (g: Game, c: PlacedCrate): string | null => crateShut(g, c, ' to put anything in');
+export const cratePutShut = (g: Game, c: PlacedCrate): string | null => crateShut(g, c, ', nothing goes in');
 
 /**
  * Put up to `want` of a stack in the pack into one crate: as many as it has
@@ -365,9 +365,9 @@ export function cratePut(g: Game, c: PlacedCrate, uid: number, want: number): It
  * The island's `rack_put_line`, word for word.
  */
 export const rackPutLine = (put: number, want: number, what: string, crates: number, one: string, rack: string): string =>
-  `You put ${put === want ? (put > 1 ? `${put} × ` : 'the ') : `${put} of ${want} × `}${what.toLowerCase()} into `
-  + `${crates === 1 ? `the ${one.toLowerCase()}` : `${crates} crates`} on the ${rack.toLowerCase()}.`
-  + (want > put ? ` The other ${want - put} would not fit.` : '');
+  `Stored: ${put === want ? put : `${put} of ${want}`} × ${what.toLowerCase()} in `
+  + `${crates === 1 ? one.toLowerCase() : `${crates} crates`} on ${rack.toLowerCase()}.`
+  + (want > put ? ` ${want - put} did not fit.` : '');
 
 /** The rack a load is aimed at: the piece `into` names, when it is one whose deck takes crates. */
 const rackInto = (g: Game, t: Target): PlacedFurniture | undefined => {
@@ -411,13 +411,13 @@ CRATE_ACTIONS.push({
     if (t.kind !== 'item') return null;
     const item = g.inventory.get(t.uid);
     if (!item) return 'It is gone.';
-    if (crateKindOfItem(item.id)) return 'A crate does not go in a crate.';
+    if (crateKindOfItem(item.id)) return 'No crates inside crates.';
     const f = rackInto(g, t);
     if (!f) return 'It is gone.';
     const [cx, cy] = furnitureCentre(f);
     if (Math.hypot(cx - g.player.x, cy - g.player.y) > STORE_REACH) return `Stand next to the ${furnitureName(f).toLowerCase()}.`;
     const on = g.cratesOn(f);
-    if (!on.length) return `There are no crates on the ${furnitureName(f).toLowerCase()}.`;
+    if (!on.length) return `No crates on ${furnitureName(f).toLowerCase()}.`;
     // A thing that stacks goes in as far as there is room; one that does not goes in whole or not at all.
     const need = itemDef(item.id).stackable ? 1 : Math.min(item.count, t.count ?? 1);
     let shut: string | null = null;
@@ -430,8 +430,8 @@ CRATE_ACTIONS.push({
     }
     // Every one of them shut or full: full when none was shut, what shut the
     // first when all were, and both when it was some of each.
-    if (!shut) return `Every crate on the ${furnitureName(f).toLowerCase()} is full.`;
-    return open ? `${shut} The others are full.` : shut;
+    if (!shut) return `All crates on ${furnitureName(f).toLowerCase()} full.`;
+    return open ? `${shut} Others full.` : shut;
   },
   perform: (t, g) => {
     if (t.kind !== 'item') return;
@@ -451,7 +451,7 @@ CRATE_ACTIONS.push({
       into.push(c);
     }
     if (!put) {
-      g.logMsg(`Every crate on the ${furnitureName(f).toLowerCase()} is full.`, 'error');
+      g.logMsg(`All crates on ${furnitureName(f).toLowerCase()} full.`, 'error');
       return;
     }
     g.logMsg(rackPutLine(put, want, what, into.length, crateName(into[0]), furnitureName(f)), 'event');
@@ -482,12 +482,12 @@ CRATE_ACTIONS.push({
     if (!where) return 'It is gone.';
     const dx = where.at[0] - g.player.x;
     const dy = where.at[1] - g.player.y;
-    if (Math.hypot(dx, dy) > STORE_REACH) return `Stand next to the ${where.what} to take things out of it.`;
+    if (Math.hypot(dx, dy) > STORE_REACH) return `Stand next to the ${where.what}.`;
     // One thing out of a padlocked crate is as shut as everything out of it, and a settlement store opens by its rule.
     if (where.crate) return crateShut(g, where.crate);
     // A counter is not a chest: what is on somebody else's stall is bought, not taken.
     if (where.piece && furnitureDef(where.piece.kind).stall && where.piece.mine === false) {
-      return "That is on somebody else's stall. Buy it at the counter.";
+      return "Someone else's stall: buy it at the counter.";
     }
     if (where.piece) return pieceShut(g, where.piece);
     return null;
@@ -501,7 +501,7 @@ CRATE_ACTIONS.push({
     g.inventory.addItem(got);
     // Honey out of a hive, for the journal (the island's `perform_crate` the same).
     if (got.id === 'honey' && where.piece?.kind === 'hive') g.note('honey');
-    g.logMsg(`You take ${got.count > 1 ? `${got.count} × ` : 'the '}${itemName(got).toLowerCase()} out of the ${where.what}.`, 'event');
+    g.logMsg(`Taken from ${where.what}: ${got.count > 1 ? `${got.count} × ` : ''}${itemName(got).toLowerCase()}.`, 'event');
   },
 });
 

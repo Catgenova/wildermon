@@ -100,3 +100,16 @@ export function clockLeft(seconds: number): string {
   const m = Math.floor(s / 60);
   return m >= 1 ? `${m}m` : `${s}s`;
 }
+
+/**
+ * A stretch of time in figures, as a label says it: "45 s", "25 min", "1 h 35 min", "6 h". Seconds under two
+ * minutes, minutes under an hour, and hours and minutes past that. Asked for: digits, not number words, for every
+ * count and quantity.
+ */
+export function durationSaid(seconds: number): string {
+  if (seconds < 120) return `${Number(seconds.toFixed(1))} s`;
+  const m = Math.round(seconds / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60);
+  return m % 60 ? `${h} h ${m % 60} min` : `${h} h`;
+}

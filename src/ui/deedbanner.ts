@@ -48,9 +48,9 @@ export function depthIn(d: Pick<Deed, 'x' | 'y' | 'radius'>, x: number, y: numbe
 
 /** The line under a settlement's name: your rank, yours, or whose. Null when the island did not say whose. */
 export function standingLine(g: Game, d: Shown): string | null {
-  if (d === g.deed || (d.mine && isFounder(d))) return 'Founded by you';
+  if (d === g.deed || (d.mine && isFounder(d))) return 'Founder: you';
   if (d.mine) return `Your rank: ${rankName(d)}`;
-  return d.holder ? `Founded by ${d.holder}` : null;
+  return d.holder ? `Founder: ${d.holder}` : null;
 }
 
 export class DeedBanner {

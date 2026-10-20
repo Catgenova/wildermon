@@ -119,7 +119,7 @@ const farOn = farAsk();
 far.settings.fromStores = false;
 const farSaid = farAsk();
 check('while a crate on the next tile is a store and not a site: built out of with stores on, refused with them off',
-  farOn === 'ALLOWED' && farSaid.startsWith('You need'), `${farOn} / ${farSaid}`);
+  farOn === 'ALLOWED' && farSaid.startsWith('Need '), `${farOn} / ${farSaid}`);
 
 /* ---- a bridge from one storey to another --------------------------------- */
 const gb = Game.create(4242);

@@ -1,5 +1,6 @@
 import type { Game } from './game';
 import { isFounder, lacks, POWER } from './ranks';
+import { capital } from './words';
 
 /**
  * Shared settlement stores.
@@ -48,18 +49,18 @@ export function deedAt(g: Game, x: number, y: number): { name: string } | undefi
 
 /** What a settlement store says to somebody who is not its citizen. The island's `store_refusal`. */
 export const storeStrangerSaid = (what: string, deed: string): string =>
-  `The ${what} is a store of ${deed}. Only its founder and the citizens whose rank holds ${POWER.use_stores.label} may open it.`;
+  `${capital(what)}: store of ${deed}. Opens for its founder and ranks with ${POWER.use_stores.label} only.`;
 
 /** Why a settlement store is not yours to move: the island's `store_move_said`. */
 export const storeMoveSaid = (what: string, deed: string): string =>
-  `The ${what} is a store of ${deed}. Only whoever set it down and its founder may move it or pick it up.`;
+  `${capital(what)}: store of ${deed}. Only whoever set it down and its founder may move or pick it up.`;
 
 /** Marking a store that stands on no settlement: the island's `store_unsettled_said`. */
-export const STORE_UNSETTLED = 'Only a store standing on a settlement can be one of its stores.';
+export const STORE_UNSETTLED = 'Not on a settlement.';
 
 /** Marking anything that is no crate or piece of storage furniture: the island's `store_markable_refusal`. */
-export const STORE_NOT_MARKABLE = 'Only a crate or a piece of storage furniture can be a settlement store: not a stall, a trash crate, '
-  + 'a mailbox, or anything driven, pulled or sailed.';
+export const STORE_NOT_MARKABLE = 'Settlement stores: crates and storage furniture only; not stalls, trash crates, '
+  + 'mailboxes, or anything driven, pulled or sailed.';
 
 /**
  * Whether a store opens for you when it is a settlement store: `open`, when
@@ -118,19 +119,19 @@ export function storeMarkRefusal(g: Game, s: Keepable, what: string, markable: b
   const deed = deedAt(g, s.x, s.y);
   if (!deed) return STORE_UNSETTLED;
   const mine = g.deedOfMineAt(Math.floor(s.x), Math.floor(s.y));
-  if (!mine) return `You are not a citizen of ${deed.name}.`;
+  if (!mine) return `Not a citizen of ${deed.name}.`;
   const rank = lacks(mine, 'keep_stores');
   if (rank) return rank;
-  if (on && isSettlementStore(s)) return `The ${what} is already a store of ${deed.name}.`;
-  if (!on && !isSettlementStore(s)) return `The ${what} is not a settlement store.`;
+  if (on && isSettlementStore(s)) return `${capital(what)}: already a store of ${deed.name}.`;
+  if (!on && !isSettlementStore(s)) return `${capital(what)}: not a settlement store.`;
   return null;
 }
 
 /** What marking or unmarking a store says, in the log. */
 export const storeMarkedLine = (what: string, deed: string, on: boolean): string => (on
-  ? `The ${what} is now a store of ${deed}. Its founder and the ranks holding ${POWER.use_stores.label} take from it and put into it, `
-    + `padlocked or not, nobody else opens it, and every take and put goes in its log.`
-  : `The ${what} is no longer a store of ${deed}. Its padlock and whose it is decide who opens it again.`);
+  ? `${capital(what)}: now a store of ${deed}. Opens for its founder and ranks with ${POWER.use_stores.label}, `
+    + `padlocked or not; nobody else. Every take and put is logged.`
+  : `${capital(what)}: no longer a store of ${deed}. Its padlock and owner decide who opens it.`);
 
 /** One take or put out of a settlement store, as `rpc_store_log` lists it. */
 export interface StoreLogEntry {

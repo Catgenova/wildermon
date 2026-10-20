@@ -77,7 +77,7 @@ export class SkillsPanel {
     if (!earned.length) {
       const none = document.createElement('div');
       none.className = 'title-none';
-      none.textContent = 'Take any trade to 50 and they will start calling you something.';
+      none.textContent = `None. First title at ${Math.min(...[...TITLE_BY_ID.values()].map((t) => t.at))} in any trade.`;
       this.titleBox.append(none);
       return;
     }
@@ -89,7 +89,7 @@ export class SkillsPanel {
       chip.className = `title-chip${id === worn ? ' title-worn' : ''}`;
       chip.setAttribute('aria-pressed', String(id === worn));
       chip.textContent = t.name;
-      chip.title = id === worn ? 'Worn. Click to take it off.' : `Earned at ${t.at} ${SKILL_DEFS.find((d) => d.id === t.skill)?.name.toLowerCase() ?? t.skill}. Click to wear it.`;
+      chip.title = id === worn ? 'Worn. Click to remove.' : `Earned at ${SKILL_DEFS.find((d) => d.id === t.skill)?.name.toLowerCase() ?? t.skill} ${t.at}. Click to wear.`;
       chip.addEventListener('click', () => {
         this.game.wearTitle(id === worn ? null : id);
         this.refresh();
@@ -104,14 +104,14 @@ export class SkillsPanel {
     const [short, worth] = this.plain(id) ?? ['', ''];
     // What raises a characteristic, which no trade's name says for it (`RAISED_BY`).
     const raised = raisedBySays(id);
-    const long = [worth, raised ? `Raised by ${raised}.` : ''].filter(Boolean).join(' ');
+    const long = [worth, raised ? `Raised by: ${raised}.` : ''].filter(Boolean).join(' ');
     // A knack is worth saying before anything else: it never wears off.
     const knacks = Math.min(KNACK_CAP, g.player.knacks[id] ?? 0);
     if (!knacks) return [short, long];
     const bonus = Math.round(knackBonus(knacks) * 100);
     return [
-      `knack ×${knacks} · +${bonus}%${short ? ` · ${short}` : ''}`,
-      `${knacks} of at most ${KNACK_CAP} knacks: +${bonus}% to what every go in this skill raises it.${long ? ` ${long}` : ''}`,
+      `Knacks ${knacks}/${KNACK_CAP}: skill gain +${bonus}%${short ? ` · ${short}` : ''}`,
+      `Knacks: ${knacks} of max ${KNACK_CAP}. Skill gain per go +${bonus}%.${long ? ` ${long}` : ''}`,
     ];
   }
 
@@ -126,31 +126,31 @@ export class SkillsPanel {
     switch (id) {
       case 'body_strength': {
         const kg = Math.round(v * CARRY_PER_STRENGTH);
-        return [`+${kg} kg carried`, `You carry ${kg} kg more before the weight tells on you: ${CARRY_PER_STRENGTH} kg a point.`];
+        return [`Carry weight +${kg} kg`, `Carry weight +${kg} kg (${CARRY_PER_STRENGTH} kg per level).`];
       }
       case 'body_stamina': {
         const off = Math.round((1 - g.staminaCost(1)) * 100);
-        return off > 0 ? [`−${off}% wind`, `Every job and every swing costs ${off}% less stamina.`] : null;
+        return off > 0 ? [`Stamina cost −${off}%`, `Stamina cost of jobs and swings −${off}%.`] : null;
       }
       case 'body_control': {
         const off = Math.round((1 - g.controlSpeed()) * 100);
-        return off > 0 ? [`−${off}% time`, `Every job takes ${off}% less time.`] : null;
+        return off > 0 ? [`Action time −${off}%`, `Time per job −${off}%.`] : null;
       }
       case 'mind_logic': {
         const n = g.queueCapacity();
-        return [`${n} jobs lined up`, `You can line up ${n} jobs at once.`];
+        return [`Job queue ${n}`, `Max queued jobs: ${n}.`];
       }
       case 'soul_strength': {
         const up = g.soulBonus() * 100;
-        return up > 0 ? [`+${up.toFixed(1)}% tame`, `Taming a creature succeeds ${up.toFixed(1)} percentage points more often.`] : null;
+        return up > 0 ? [`Tame chance +${up.toFixed(1)}%`, `Tame chance +${up.toFixed(1)} percentage points.`] : null;
       }
       case 'climbing': {
         const step = Math.round(g.climbStep());
-        return [`slopes to ${step}`, `You can walk up a step of ${step} height units.`];
+        return [`Max step ${step}`, `Max step up on foot: ${step} height units.`];
       }
       case 'swimming': {
         const pace = Math.round(g.player.swimSpeed * 100);
-        return [`${pace}% swim speed`, `In deep water you move at ${pace}% of your walking pace.`];
+        return [`Swim speed ×${(pace / 100).toFixed(2)}`, `Swim speed in deep water: ${pace}% of walk speed.`];
       }
       // What a go of Track reaches and reads at this level, and what each band of it says (`tracking.ts`).
       case TRACKING:

@@ -217,7 +217,7 @@ check('the chest somebody else set down, the padlocked wagon and the far wagon a
   count(theirs.items, 'iron_lump') === 5 && count(shut.items, 'iron_lump') === 7 && count(far.items, 'iron_lump') === 9,
   `${count(theirs.items, 'iron_lump')}, ${count(shut.items, 'iron_lump')}, ${count(far.items, 'iron_lump')}`);
 const aimed = [theirs, shut, far].map((f) => go('pour_mould', { ...st, mouldUid: mould.uid, itemUid: first(f.items, 'iron_lump').uid } as Target));
-check('and a pour aimed at any of them says there is no metal', aimed.every((a) => a === 'You have no metal to pour.'), aimed.join(' | '));
+check('and a pour aimed at any of them says there is no metal', aimed.every((a) => a === 'Need metal.'), aimed.join(' | '));
 
 /* ---- the island ---------------------------------------------------------- */
 
@@ -421,7 +421,7 @@ check('a brew is set going out of the wagon', said('BREW?') === 'none' && said('
 check('the chest somebody else set down, the padlocked wagon and the far wagon are untouched',
   said('UNTOUCHED') === '5,7,9', said('UNTOUCHED'));
 check('and a pour aimed at any of them says there is no metal',
-  said('AIMED') === 'You have no metal to pour. | You have no metal to pour. | You have no metal to pour.', said('AIMED'));
+  said('AIMED') === 'Need metal. | Need metal. | Need metal.', said('AIMED'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

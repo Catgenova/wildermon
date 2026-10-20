@@ -2,6 +2,7 @@ import { STORE_REACH } from '../../game/crates';
 import { putAway } from '../../game/putaway';
 import { isArrow } from '../../game/fight';
 import { CARRY_STOP, type Game } from '../../game/game';
+import { CARRY_CRAWL } from '../../game/player';
 import { itemDef, itemName, type Item, type ItemCategory, itemWeight, bagRoom, bagUnits, isBag, RARITIES } from '../../game/items';
 import { damageCell, headRow, nameCell, qualityCell } from '../itemcells';
 import { occupantOf } from '../../game/creaturecrate';
@@ -80,7 +81,7 @@ export class InventoryPanel {
     // How the list is put in order, and whether it is grouped by kind.
     const bar = document.createElement('div');
     bar.className = 'panel-bar';
-    const sortSel = sortSelect('How to order the list', (key) => {
+    const sortSel = sortSelect('Sort order', (key) => {
       this.sort = key;
       this.render();
     });
@@ -88,7 +89,7 @@ export class InventoryPanel {
     groupBtn.type = 'button';
     groupBtn.className = 'tb-btn tb-small';
     groupBtn.textContent = 'Grouped';
-    groupBtn.title = 'Group by kind, or run everything together in one list';
+    groupBtn.title = 'Group by kind or show one list';
     groupBtn.setAttribute('aria-pressed', 'true');
     groupBtn.addEventListener('click', () => {
       this.grouped = !this.grouped;
@@ -103,10 +104,10 @@ export class InventoryPanel {
     awayBtn.type = 'button';
     awayBtn.className = 'tb-btn tb-small';
     awayBtn.textContent = 'Put away';
-    awayBtn.title = `Put each stack into a crate, chest or cart within ${STORE_REACH} tiles that already holds the same thing`;
+    awayBtn.title = `Each stack into a crate, chest or cart within ${STORE_REACH} tiles already holding it`;
     awayBtn.addEventListener('click', () => putAway(this.game));
     bar.append(sortSel, groupBtn, awayBtn);
-    const head = headRow({ label: 'Wt', className: 'inv-wt', title: 'Weight of the whole stack, in kg' });
+    const head = headRow({ label: 'Wt', className: 'inv-wt', title: 'Stack weight, kg' });
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
     this.footer = document.createElement('div');
@@ -173,8 +174,8 @@ export class InventoryPanel {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
       empty.textContent = items.length
-        ? `Nothing you are carrying answers to “${this.search.value.trim()}”. Press Escape in the box to clear it.`
-        : 'Your pack is empty. What you pick up, make, or take out of a store comes here.';
+        ? `No match: “${this.search.value.trim()}”. Esc clears.`
+        : 'Pack empty.';
       this.list.append(empty);
     }
     this.drawPickBar();
@@ -186,19 +187,19 @@ export class InventoryPanel {
     // you are in rather than only that you are over.
     const stuck = this.game.stalled();
     const stop = limit * CARRY_STOP;
-    const all = `${items.reduce((n, it) => n + it.count, 0)} items · ${weight.toFixed(1)} / ${limit.toFixed(0)} kg${stuck ? ' · too heavy to walk properly' : ''}`;
+    const all = `${items.reduce((n, it) => n + it.count, 0)} items · ${weight.toFixed(1)} / ${limit.toFixed(0)} kg${stuck ? ' · overloaded' : ''}`;
     this.footer.textContent = this.query ? `${shown.reduce((n, it) => n + it.count, 0)} of ${all}` : all;
     this.footer.classList.toggle('inv-over', over > 0);
     this.footer.classList.toggle('inv-stuck', stuck);
     this.loadFill.style.width = `${Math.min(100, (weight / Math.max(0.001, stop)) * 100).toFixed(1)}%`;
     this.load.classList.toggle('inv-over', over > 0);
     this.load.classList.toggle('inv-stuck', stuck);
-    this.load.title = `${weight.toFixed(1)} kg of ${stop.toFixed(0)}. The mark is ${limit.toFixed(0)} kg, where the load starts to slow you and tire you faster; at the end, ${stop.toFixed(0)} kg, you are down to a twentieth of your pace.`;
+    this.load.title = `${weight.toFixed(1)}/${stop.toFixed(0)} kg. From ${limit.toFixed(0)} kg: slower, more stamina use. At ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}.`;
     this.footer.title = stuck
-      ? `${weight.toFixed(1)} kg on a back that takes ${limit.toFixed(0)}. Over ${stop.toFixed(0)} kg you are down to a twentieth of your pace: put ${(weight - stop).toFixed(1)} kg down, or into a cart or a crate.`
+      ? `Load ${weight.toFixed(1)} kg (limit ${limit.toFixed(0)}). Over ${stop.toFixed(0)} kg: speed ×${CARRY_CRAWL}. Drop ${(weight - stop).toFixed(1)} kg.`
       : over > 0
-        ? `${over.toFixed(1)} kg past what your back will take. You are slower and you tire faster; over ${stop.toFixed(0)} kg you are down to a crawl.`
-        : `${(limit - weight).toFixed(1)} kg to spare.`;
+        ? `Overload ${over.toFixed(1)} kg: slower, more stamina use; over ${stop.toFixed(0)} kg, speed ×${CARRY_CRAWL}.`
+        : `${(limit - weight).toFixed(1)} kg spare.`;
   }
 
   /** "3 picked", and the press that moves them all, when more than none are picked. */
@@ -208,15 +209,15 @@ export class InventoryPanel {
     if (!n) return;
     const say = document.createElement('span');
     say.textContent = `${n} picked`;
-    say.title = 'Ctrl-click a row to add it or take it off, Shift-click for every row from the last one picked. Drag any picked row to move them all.';
+    say.title = 'Ctrl-click: toggle row. Shift-click: range. Drag a picked row: move all picked.';
     const parts: HTMLElement[] = [say];
     const to = this.pickedTo?.();
     if (to) {
       const go = document.createElement('button');
       go.type = 'button';
       go.className = 'tb-btn tb-small';
-      go.textContent = `Put in the ${to.where}`;
-      go.title = `Every picked stack, whole, into the ${to.where}`;
+      go.textContent = `Put in ${to.where}`;
+      go.title = `All picked stacks into ${to.where}`;
       go.addEventListener('click', () => {
         to.go([...this.picking.uids]);
         this.picking.clear();
@@ -294,13 +295,13 @@ export class InventoryPanel {
     const rungs = [20, 40, 60, 70, 80, 90, 95];
     const reach = improveCeiling(this.game, improvable(item.id)?.skill ?? '', item);
     const worth = rungs.filter((q) => q > item.ql + 0.05);
-    if (!worth.length) return { label: 'Up to…', hint: 'It is past every mark worth aiming at.', disabled: true };
+    if (!worth.length) return { label: 'Up to…', hint: 'Above every target QL.', disabled: true };
     return {
       label: 'Up to…',
-      note: `it is at QL ${item.ql.toFixed(1)}`,
+      note: `now QL ${item.ql.toFixed(1)}`,
       children: worth.map((q) => ({
         label: `Quality ${q}`,
-        note: q > reach ? `your hands top out at ${reach.toFixed(0)}, so it will stop there` : undefined,
+        note: q > reach ? `stops at your max ${reach.toFixed(0)}` : undefined,
         onSelect: () => this.game.requestAction(def, { kind: 'item', uid: item.uid, upto: q }),
       })),
     };
@@ -317,7 +318,7 @@ export class InventoryPanel {
      * whole of what a map is for is looking at it, and "Dig it up" is a thing
      * you do once, at the end, somewhere else entirely.
      */
-    if (item.id === 'treasure_map') entries.push({ label: 'Read', note: 'Look at the country on it', onSelect: () => this.readMap?.(item.uid) });
+    if (item.id === 'treasure_map') entries.push({ label: 'Read', note: 'View map', onSelect: () => this.readMap?.(item.uid) });
     // A soul goes into something else, which is chosen here.
     const absorb = item.id === SOUL ? ACTION_BY_ID.get('absorb_soul') : undefined;
     if (absorb) {
@@ -390,12 +391,12 @@ export class InventoryPanel {
     if (isArrow(item.id)) {
       const first = this.game.settings.nock === item.id;
       entries.push({
-        label: first ? 'Shot first (now)' : 'Shoot these first',
+        label: first ? 'Shot first (set)' : 'Shoot these first',
         note: first ? 'a bow looses these while there are any' : undefined,
         disabled: first,
         onSelect: () => {
           this.game.settings.nock = item.id;
-          this.game.logMsg(`A bow looses ${itemName(item).toLowerCase()} first now, while you have any.`, 'info');
+          this.game.logMsg(`Shot first: ${itemName(item).toLowerCase()}.`, 'info');
         },
       });
     }
@@ -427,7 +428,7 @@ export class InventoryPanel {
     const hangable = this.game.actionsFor(target).filter((a) => pinnable(a.def));
     if (hangable.length && this.game.beltLoops()) {
       entries.push({
-        label: 'Hang a job on your belt',
+        label: 'Hang job on belt',
         children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id, item: item.id }).children })),
       });
     }

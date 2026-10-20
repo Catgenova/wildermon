@@ -127,9 +127,9 @@ raiseTile(...BANK_B, BASE + (RAMP_SLOPE + 1) * BANK_SPANS);
 same(`and ${RAMP_SLOPE + 1} a tile is refused in the same words, which say what that climb wants`,
   'wood', BANK_A, BANK_B, rampRefusal(0, 0, (RAMP_SLOPE + 1) * BANK_SPANS, BANK_SPANS));
 check('which are the numbers', rampRefusal(0, 0, (RAMP_SLOPE + 1) * BANK_SPANS, BANK_SPANS)
-  === `The two ends are ${(RAMP_SLOPE + 1) * BANK_SPANS} apart in height. A deck rises at most ${RAMP_SLOPE} a tile, so that wants ${BANK_SPANS + 1} tiles of deck; this one has ${BANK_SPANS}.`);
+  === `Ends ${(RAMP_SLOPE + 1) * BANK_SPANS} apart in height. Max rise ${RAMP_SLOPE}/tile: needs ${BANK_SPANS + 1} tiles of deck; has ${BANK_SPANS}.`);
 same('a drawbridge, whose deck stands on end over its hinge, is still carried level, as it was',
-  'draw', BANK_A, BANK_B, `The two ends are ${(RAMP_SLOPE + 1) * BANK_SPANS} apart in height. One deck will not meet both; level one of them.`);
+  'draw', BANK_A, BANK_B, `Ends ${(RAMP_SLOPE + 1) * BANK_SPANS} apart in height; max ${END_SLOP}. Level one.`);
 raiseTile(...BANK_B, BASE);
 {
   /*
@@ -184,7 +184,7 @@ same('and planned from the top down as well', 'wood', TOWER, FOOT, ALLOWED);
 same(`over ${NEED - 1} it is refused in the same words, which name the storeys and say it wants ${NEED}`,
   'wood', SHORT, TOWER, rampRefusal(0, TOP, CLIMB, NEED - 1));
 check('which are the numbers', rampRefusal(0, TOP, CLIMB, NEED - 1)
-  === `One end is on the ground and the other on storey ${TOP + 1}, ${CLIMB} apart in height. A deck rises at most ${RAMP_SLOPE} a tile, so that wants ${NEED} tiles of deck; this one has ${NEED - 1}.`);
+  === `Ends ${CLIMB} apart in height (the ground to storey ${TOP + 1}). Max rise ${RAMP_SLOPE}/tile: needs ${NEED} tiles of deck; has ${NEED - 1}.`);
 
 /* ---- set out, the same on both sides ----------------------------------------- */
 game.player.x = FOOT[0] + 0.5;
@@ -194,13 +194,13 @@ sql(`update player set x = ${FOOT[0] + 0.5}, y = ${FOOT[1] + 0.5}, level = 0 whe
 const TARGET = { kind: 'tile', x: TOWER[0], y: TOWER[1], cx: TOWER[0], cy: TOWER[1], material: 'wood' };
 game.log.length = 0;
 ACTION_BY_ID.get('plan_bridge')!.perform(TARGET as never, game);
-const saidMine = game.log.map((l) => l.text).find((s) => s.startsWith('You set out')) ?? 'NOTHING SAID';
+const saidMine = game.log.map((l) => l.text).find((s) => s.startsWith('Planned: ')) ?? 'NOTHING SAID';
 psql(`select perform_last(${W}, ${DANE}, 'plan_bridge', '${JSON.stringify(TARGET)}'::jsonb);`);
-const saidTheirs = psql(`select text from event where world_id = ${W} and uid = ${DANE} and text like 'You set out%' order by n desc limit 1;`) || 'NOTHING SAID';
+const saidTheirs = psql(`select text from event where world_id = ${W} and uid = ${DANE} and text like 'Planned: %' order by n desc limit 1;`) || 'NOTHING SAID';
 // What each span wants is named in the order each side keeps its bill in, which was so before ramps; the rest is the same.
-const upTo = (said: string): string => said.slice(0, said.indexOf(' Each one wants'));
+const upTo = (said: string): string => said.slice(0, said.indexOf(' Per span:'));
 check('set out, both sides say the same, the storeys and the rise among it', upTo(saidMine) === upTo(saidTheirs)
-  && saidMine.startsWith(`You set out a wooden bridge of ${NEED} spans across, the ground to storey ${TOP + 1}, its deck rising ${CLIMB} from this end to the far one.`),
+  && saidMine.startsWith(`Planned: wooden bridge, ${NEED} spans, the ground to storey ${TOP + 1}, deck rising ${CLIMB} toward the far end.`),
   `browser "${saidMine}", island "${saidTheirs}"`);
 const ramp = [...game.bridges.values()][0];
 {

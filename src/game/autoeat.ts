@@ -57,7 +57,7 @@ export class AutoEat {
     if (!eat || !food) {
       if (now - this.saidAt >= NOTHING_EVERY) {
         this.saidAt = now;
-        g.logMsg(`Food is under ${Math.round(under * 100)}% and there is nothing loose in your pack to eat.`, 'error');
+        g.logMsg(`Food under ${Math.round(under * 100)}%: nothing to eat in your pack.`, 'error');
       }
       return;
     }

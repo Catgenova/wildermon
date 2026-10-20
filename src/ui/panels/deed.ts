@@ -56,9 +56,9 @@ export interface DeedRoll {
 /** The Settlement window's tabs: the settlement at a glance, its notices, and the work it wants with its ledger. */
 export type DeedTab = 'overview' | 'notices' | 'work';
 const DEED_TABS: ReadonlyArray<[DeedTab, string, string]> = [
-  ['overview', 'Settlement', 'Its level, border, citizens and ranks, and everything standing on it.'],
-  ['notices', 'Notices', `What its people have posted, newest first. It keeps the newest ${NOTICE_KEEP}.`],
-  ['work', 'Work', `The work it wants, who has delivered toward it, and its ledger of the newest ${LEDGER_KEEP} lines.`],
+  ['overview', 'Settlement', 'Level, border, citizens, ranks, structures.'],
+  ['notices', 'Notices', `Posts, newest first. Keeps ${NOTICE_KEEP}.`],
+  ['work', 'Work', `Work wanted, deliveries, ledger (newest ${LEDGER_KEEP} lines).`],
 ];
 
 /** Every thing a deed crate takes, by its name in lower case: what a work may ask for. */
@@ -113,8 +113,8 @@ const STORE_LOG_EVERY = 10;
 function baublesFor(here: MyDeed | undefined): string {
   const who = here ? defsOf(here).filter((r) => (r.perms & powerBit('served')) !== 0).map((r) => r.name) : [];
   return who.length
-    ? `Applied to every action done on its land by its founder and by every ${andList(who)}: the ranks holding ${POWER.served.label}.`
-    : `Applied to every action its founder does on its land. No rank holds ${POWER.served.label}.`;
+    ? `Applies to every action on its land by the founder and ranks with ${POWER.served.label}: ${andList(who)}.`
+    : `Applies to the founder's actions on its land. No rank has ${POWER.served.label}.`;
 }
 
 /**
@@ -334,7 +334,7 @@ export class DeedPanel {
       } else {
         const pick = document.createElement('select');
         pick.className = 'panel-select deed-pick';
-        pick.title = `The rank ${who.name} holds at ${here.name}. Only ranks you may give are listed.`;
+        pick.title = `${who.name}'s rank at ${here.name}. Lists only ranks you can give.`;
         for (const r of give) {
           const o = document.createElement('option');
           o.value = r.name;
@@ -369,8 +369,8 @@ export class DeedPanel {
     const note = document.createElement('div');
     note.className = 'deed-note';
     note.textContent = edits
-      ? `Highest first. You, the founder, hold every permission. A rank may send away and set the rank only of those below it in this list. Click a rank for its permissions.`
-      : `Highest first. Its founder sets these. Click a rank for its permissions.`;
+      ? 'Highest first. Founder (you): all permissions. A rank sends away and sets ranks only below it. Click a rank: permissions.'
+      : 'Highest first. Set by the founder. Click a rank: permissions.';
     this.body.append(note);
     for (const [i, r] of defs.entries()) {
       const row = document.createElement('div');
@@ -386,7 +386,7 @@ export class DeedPanel {
         const tag = document.createElement('span');
         tag.className = 'deed-rank-tag';
         tag.textContent = 'newcomers';
-        tag.title = 'Newcomers join at this rank.';
+        tag.title = 'Newcomer rank.';
         name.append(tag);
       }
       name.addEventListener('click', () => {
@@ -396,7 +396,7 @@ export class DeedPanel {
       const held = document.createElement('span');
       held.className = 'deed-rank-held';
       held.textContent = `${r.held} held`;
-      held.title = `${r.held === 1 ? '1 citizen holds' : `${r.held} citizens hold`} it.${r.newcomer ? ' Newcomers join at it.' : ''}`;
+      held.title = `Held by ${r.held} ${r.held === 1 ? 'citizen' : 'citizens'}.${r.newcomer ? ' Newcomer rank.' : ''}`;
       row.append(name, held);
       if (edits) {
         const tools = document.createElement('span');
@@ -416,7 +416,7 @@ export class DeedPanel {
         tool('▲', `Move ${r.name} above ${defs[i - 1]?.name ?? ''}`, rankMoveRefusal(defs, r.id, -1), () => this.ask(roll.move(r.id, -1)));
         tool('▼', `Move ${r.name} below ${defs[i + 1]?.name ?? ''}`, rankMoveRefusal(defs, r.id, 1), () => this.ask(roll.move(r.id, 1)));
         tool('Rename', `Rename ${r.name}`, null, () => {
-          void g.hooks.prompt(`What should ${r.name} be called? At most ${RANK_NAME_MAX} characters.`, r.name).then((to) => {
+          void g.hooks.prompt(`Rename ${r.name} (max ${RANK_NAME_MAX} characters):`, r.name).then((to) => {
             if (to === null || to.trim() === r.name) return;
             const why = rankNameRefusal(here.name, defs, to, r.id);
             if (why) g.logMsg(why, 'error');
@@ -424,7 +424,7 @@ export class DeedPanel {
           });
         });
         tool('✕', `Delete ${r.name}`, rankDropRefusal(defs, r.id), () => {
-          void g.hooks.confirm(`Delete the rank ${r.name}? Nobody holds it.`).then((yes) => {
+          void g.hooks.confirm(`Delete rank ${r.name}? (held by nobody)`).then((yes) => {
             if (yes) this.ask(roll.drop(r.id));
           });
         }, true);
@@ -438,10 +438,10 @@ export class DeedPanel {
     const join = document.createElement('div');
     join.className = 'deed-row';
     const label = document.createElement('span');
-    label.textContent = 'Newcomers join as';
+    label.textContent = 'Newcomer rank';
     const pick = document.createElement('select');
     pick.className = 'panel-select deed-pick';
-    pick.title = 'The rank an invitation puts somebody on when they say yes.';
+    pick.title = 'Rank given on accepting an invitation.';
     for (const r of defs) {
       const o = document.createElement('option');
       o.value = String(r.id);
@@ -461,9 +461,9 @@ export class DeedPanel {
     add.textContent = 'New rank';
     const full = rankAddRefusal(here.name, defs, 'x');
     add.disabled = !!full;
-    add.title = full ?? `Added at the foot of the list with no permissions. At most ${RANK_CAP} ranks besides the founder.`;
+    add.title = full ?? `Added at the bottom, no permissions. Max ${RANK_CAP} ranks besides the founder.`;
     add.addEventListener('click', () => {
-      void g.hooks.prompt(`What should the new rank be called? At most ${RANK_NAME_MAX} characters.`, '').then((name) => {
+      void g.hooks.prompt(`New rank name (max ${RANK_NAME_MAX} characters):`, '').then((name) => {
         if (name === null) return;
         const why = rankAddRefusal(here.name, defs, name);
         if (why) g.logMsg(why, 'error');
@@ -493,7 +493,7 @@ export class DeedPanel {
       });
     }
     const seen = this.storeLogSeen?.founder === here.founder ? this.storeLogSeen : null;
-    this.body.append(this.head(`Store log${seen && !seen.why ? ` (${seen.log.length} of the last ${STORE_LOG_CAP})` : ''}`));
+    this.body.append(this.head(`Store log${seen && !seen.why ? ` (${seen.log.length}/${STORE_LOG_CAP})` : ''}`));
     const note = (text: string): void => {
       const el = document.createElement('div');
       el.className = 'deed-note';
@@ -501,7 +501,7 @@ export class DeedPanel {
       this.body.append(el);
     };
     if (!seen) {
-      note('Asking the island what went in and out…');
+      note('Loading…');
       return;
     }
     if (seen.why) {
@@ -509,7 +509,7 @@ export class DeedPanel {
       return;
     }
     if (!seen.log.length) {
-      note(`Nothing has been taken from or put into a store of ${here.name} yet. Open a crate or a piece of storage furniture on it and press Make it a settlement store.`);
+      note(`No store activity at ${here.name}. Make a store a settlement store from its window.`);
       return;
     }
     for (const e of seen.log) this.body.append(this.row(storeLogLine(e), agoWords(e.at), new Date(e.at * 1000).toLocaleString()));
@@ -548,7 +548,7 @@ export class DeedPanel {
     if (!d) {
       const none = document.createElement('div');
       none.className = 'deed-none';
-      none.textContent = 'You have founded no settlement. Plant a settlement token on ground you want to call your own, and this window fills.';
+      none.textContent = 'No settlement. Plant a settlement token to found one.';
       this.body.append(none);
       return;
     }
@@ -564,23 +564,23 @@ export class DeedPanel {
      */
     if (!isFounder(d)) {
       const holder = g.neighbourDeeds.find((n) => n.x === d.x && n.y === d.y)?.holder;
-      if (holder) this.body.append(this.row('Founded by', holder));
+      if (holder) this.body.append(this.row('Founder', holder));
       const standing = document.createElement('div');
       standing.className = 'deed-note';
       standing.textContent = standingWord(d);
       this.body.append(standing);
     }
     this.body.append(this.row('Level', `${level} of ${MAX_DEED_LEVEL}`));
-    this.body.append(this.row('Border', `${d.radius} tiles out · ${side} × ${side}`, `From the token at (${d.x}, ${d.y}).`));
-    this.body.append(this.row('Working', `${workers} of ${g.workerCap}`, 'Wildermon set to work the deed, of the number the settlement has work for at its level.'));
+    this.body.append(this.row('Border', `radius ${d.radius} tiles · ${side} × ${side}`, `Centred on the token at (${d.x}, ${d.y}).`));
+    this.body.append(this.row('Working', `${workers}/${g.workerCap}`, 'Wildermon working the deed / max at this level.'));
     // Each trade its workers are at, and whether there are enough of them at it for a specialty (`SPECIALTY_AT`).
     for (const { kind, n } of g.creatures.specialties()) {
       this.body.append(this.row(n >= SPECIALTY_AT ? 'Specialty' : 'Trade', specialtySays(kind, n).replace(/^Specialty: /, ''),
-        `With ${SPECIALTY_AT} or more deed workers of one trade, every one of them takes its task ${percent(SPECIALTY_BONUS)} faster.`));
+        `${SPECIALTY_AT}+ deed workers of one trade: task speed +${percent(SPECIALTY_BONUS)} each.`));
     }
-    this.body.append(this.row('In creature crates', String(crated), 'Yours, shut in creature crates: neither working nor following you.'));
-    this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'What every wildermon on the deed does when something walks in.'));
-    this.body.append(this.place('The token', d.x, d.y));
+    this.body.append(this.row('In creature crates', String(crated), 'Yours in creature crates: not working or following.'));
+    this.body.append(this.row('Orders', STANCE_NAMES[g.deedStance()], 'Deed wildermon response to intruders.'));
+    this.body.append(this.place('Token', d.x, d.y));
     // Who lives here and the settlement's ranks, from the island's social answer.
     this.roll?.prime();
     const here: MyDeed | undefined = this.roll?.known()?.deeds.find((e) => e.x === d.x && e.y === d.y);
@@ -588,7 +588,7 @@ export class DeedPanel {
       this.body.append(this.head('Citizens'));
       const wait = document.createElement('div');
       wait.className = 'deed-note';
-      wait.textContent = 'Asking the island who lives here…';
+      wait.textContent = 'Loading…';
       this.body.append(wait);
     } else if (here) {
       this.drawRoll(here);
@@ -597,7 +597,7 @@ export class DeedPanel {
     }
 
     // What the next level wants, and the button that buys it.
-    this.body.append(this.head(level < MAX_DEED_LEVEL ? `Growing to level ${level + 1}` : 'Fully grown'));
+    this.body.append(this.head(level < MAX_DEED_LEVEL ? `Next: level ${level + 1}` : 'Max level'));
     if (level < MAX_DEED_LEVEL) {
       const done = upgradeProgress(g, d);
       for (const r of done) {
@@ -611,7 +611,7 @@ export class DeedPanel {
       btn.className = 'tb-btn deed-upgrade';
       btn.textContent = `Upgrade · border ${d.radius + DEED_RADIUS_PER_LEVEL}, ${deedWorkersAt(level + 1)} workers`;
       btn.disabled = !!why;
-      btn.title = why ?? 'Everything is in place. Take the settlement up a level.';
+      btn.title = why ?? 'Requirements met: level up.';
       btn.addEventListener('click', () => {
         const def = DEED_ACTION_BY_ID.get('upgrade_deed');
         if (def) g.requestAction(def, { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y });
@@ -633,7 +633,7 @@ export class DeedPanel {
     });
     const pieces = on(g.furniture);
     const altars = pieces.filter((f) => furnitureDef(f.kind).altar);
-    this.body.append(this.head('What stands here'));
+    this.body.append(this.head('Structures'));
     const counts: Array<[string, number]> = [
       ['Buildings', buildings.length],
       ['Crates and bins', on(g.crates).length],
@@ -655,26 +655,26 @@ export class DeedPanel {
     if (!any) {
       const bare = document.createElement('div');
       bare.className = 'deed-note';
-      bare.textContent = 'Bare ground so far. Everything you build inside the border is counted here.';
+      bare.textContent = 'None. Lists everything built inside the border.';
       this.body.append(bare);
     }
 
     // What the baubles in its sockets give, added up, and how full the sockets are.
     const set = d.baubles ?? [];
     if (set.length || altars.length) {
-      this.body.append(this.head('Baubles in the altar'));
+      this.body.append(this.head('Altar baubles'));
       for (const t of BAUBLE_TIERS) {
         this.body.append(this.row(`${t.name} sockets`, `${socketsOf(d, t.id).filter(Boolean).length} of ${t.slots}`));
       }
       for (const line of baubleSummary(set)) {
         const cap = line.capped ? 'at the cap' : '';
-        this.body.append(this.row(line.text, cap, line.capped ? 'More is set than counts: the rest is lost to the cap until one is replaced.' : undefined));
+        this.body.append(this.row(line.text, cap, line.capped ? 'Over the cap: the excess has no effect.' : undefined));
       }
       const who = document.createElement('div');
       who.className = 'deed-note';
       who.textContent = set.length
         ? baublesFor(here)
-        : 'No bauble is set yet. Restore one and set it at the altar.';
+        : 'None set. Restore a bauble and set it at the altar.';
       this.body.append(who);
     }
 
@@ -720,14 +720,14 @@ export class DeedPanel {
         btn.type = 'button';
         btn.className = 'tb-btn tb-small tb-danger';
         btn.textContent = `Leave ${d.name}`;
-        btn.title = 'Takes you off its roll. You are asked first.';
+        btn.title = 'Leave (asks to confirm).';
         btn.addEventListener('click', () => leave(d));
         tail.append(btn);
       }
-      if (tail.childElementCount) this.body.append(this.head('The settlement itself'), tail);
+      if (tail.childElementCount) this.body.append(this.head('Settlement'), tail);
       return;
     }
-    this.body.append(this.head('Orders for everything kept here'));
+    this.body.append(this.head('Deed wildermon orders'));
     const stance = g.deedStance();
     const row = document.createElement('div');
     row.className = 'deed-buttons';
@@ -736,7 +736,7 @@ export class DeedPanel {
       b.type = 'button';
       b.className = 'tb-btn tb-small' + (st === stance ? ' tb-on' : '');
       b.textContent = STANCE_NAMES[st];
-      b.title = st === 'aggressive' ? 'Goes for anything wild that crosses the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights, whatever walks in';
+      b.title = st === 'aggressive' ? 'Attacks wild creatures inside the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights';
       b.addEventListener('click', () => {
         g.setDeedStance(st);
         this.render();
@@ -761,7 +761,7 @@ export class DeedPanel {
     if (!d) {
       const none = document.createElement('div');
       none.className = 'deed-none';
-      none.textContent = 'You have founded no settlement and are a citizen of none. Plant a settlement token, or say yes to an invitation, and this window fills.';
+      none.textContent = 'No settlement. Found one (settlement token) or accept an invitation.';
       this.body.replaceChildren(none);
       this.listKey = '';
       return;
@@ -778,10 +778,10 @@ export class DeedPanel {
     }
     form.hidden = !b || (this.tab === 'notices' ? !b.post : !b.set);
     if (this.tab === 'notices') {
-      this.boardHead.textContent = b ? `Notices at ${b.deed} (${b.notices.length} of ${NOTICE_KEEP})` : `Notices at ${d.name}`;
+      this.boardHead.textContent = b ? `Notices at ${b.deed} (${b.notices.length}/${NOTICE_KEEP})` : `Notices at ${d.name}`;
     } else {
       const open = b ? b.work.filter((w) => w.closed === null).length : 0;
-      this.boardHead.textContent = b ? `Work at ${b.deed} (${open} of ${WORK_OPEN_MAX} open)` : `Work at ${d.name}`;
+      this.boardHead.textContent = b ? `Work at ${b.deed} (${open}/${WORK_OPEN_MAX} open)` : `Work at ${d.name}`;
     }
     // What the list shows: the board, and for work, what you carry and where you stand.
     const held = b && this.tab === 'work' ? b.work.map((w) => this.heldFor(w)) : [];
@@ -792,7 +792,7 @@ export class DeedPanel {
     this.listKey = key;
     this.listHost.replaceChildren();
     if (!here || (!b && !why)) {
-      this.listHost.append(this.note('Asking the island…'));
+      this.listHost.append(this.note('Loading…'));
       return;
     }
     if (!b) {
@@ -826,7 +826,7 @@ export class DeedPanel {
     text.className = 'panel-select deed-text';
     text.rows = 3;
     text.maxLength = NOTICE_MAX;
-    text.placeholder = `A notice to every citizen, at most ${NOTICE_MAX} characters.`;
+    text.placeholder = `Notice to all citizens (max ${NOTICE_MAX} characters)`;
     const row = document.createElement('div');
     row.className = 'deed-row';
     const left = document.createElement('span');
@@ -835,7 +835,7 @@ export class DeedPanel {
     post.type = 'button';
     post.className = 'tb-btn tb-small';
     post.textContent = 'Post';
-    post.title = `Posted to every citizen. Those ashore see it in the log now; those away more than ${NOTICE_MAIL_DAYS} day${NOTICE_MAIL_DAYS === 1 ? '' : 's'} are sent it as a letter; everybody else sees it when they next come ashore. ${NOTICE_KEEP} are kept; one more drops the oldest.`;
+    post.title = `To all citizens: ashore, in the log now; away over ${NOTICE_MAIL_DAYS} day${NOTICE_MAIL_DAYS === 1 ? '' : 's'}, by letter; others, on next arrival. Keeps ${NOTICE_KEEP}; oldest dropped.`;
     const count = (): void => {
       left.textContent = `${[...cleanNotice(text.value)].length} of ${NOTICE_MAX} characters`;
     };
@@ -864,7 +864,7 @@ export class DeedPanel {
 
   private drawNotices(b: SettleBoard): void {
     if (!b.notices.length) {
-      this.listHost.append(this.note(b.post ? 'No notices yet. Write one above.' : 'No notices yet.'));
+      this.listHost.append(this.note(b.post ? 'No notices. Write one above.' : 'No notices.'));
       return;
     }
     for (const n of b.notices) {
@@ -882,7 +882,7 @@ export class DeedPanel {
         down.type = 'button';
         down.className = 'tb-btn tb-small deed-tool tb-danger';
         down.textContent = 'Take down';
-        down.title = 'Takes it off the board for everybody.';
+        down.title = 'Remove for everyone.';
         down.addEventListener('click', () => this.boardDo(this.roll!.unpost(b.founder, n.n)));
         head.append(down);
       }
@@ -909,28 +909,28 @@ export class DeedPanel {
     const thing = document.createElement('input');
     thing.className = 'panel-select deed-input';
     thing.setAttribute('list', list.id);
-    thing.placeholder = 'What is wanted';
-    thing.title = 'Any thing a deed crate takes: everything but coins and crates.';
+    thing.placeholder = 'Item wanted';
+    thing.title = 'Anything a deed crate takes (not coins or crates).';
     const count = document.createElement('input');
     count.className = 'panel-select deed-input deed-num';
     count.type = 'number';
     count.min = '1';
     count.max = String(WORK_COUNT_MAX);
-    count.placeholder = 'How many';
-    count.title = `At least one and at most ${WORK_COUNT_MAX}.`;
+    count.placeholder = 'Count';
+    count.title = `1 to ${WORK_COUNT_MAX}.`;
     const ql = document.createElement('input');
     ql.className = 'panel-select deed-input deed-num';
     ql.type = 'number';
     ql.min = '0';
     ql.max = String(WORK_QL_TOP);
     ql.placeholder = 'Least QL';
-    ql.title = `The lowest quality it takes, a whole number up to ${WORK_QL_TOP}. Empty or nought takes any.`;
+    ql.title = `Min QL, whole number up to ${WORK_QL_TOP}. Empty or 0: any.`;
     for (const el of [thing, count, ql]) el.addEventListener('keydown', (e) => e.stopPropagation());
     const set = document.createElement('button');
     set.type = 'button';
     set.className = 'tb-btn tb-small';
     set.textContent = 'Set work';
-    set.title = `Lists it for every citizen to deliver toward. Up to ${WORK_OPEN_MAX} open at once.`;
+    set.title = `Post for all citizens. Max ${WORK_OPEN_MAX} open.`;
     set.addEventListener('click', () => {
       const b = this.board;
       if (!b || !this.roll) return;
@@ -942,7 +942,7 @@ export class DeedPanel {
       const open = b.work.filter((w) => w.closed === null).length;
       const why = workSetRefusal(b.deed, known ? itemDef(known).name : null, !!def, n, least, open);
       if (why || !def) {
-        this.game.logMsg(why ?? 'There is no such thing to ask for.', 'error');
+        this.game.logMsg(why ?? 'Unknown item.', 'error');
         return;
       }
       this.boardDo(this.roll.setWork(b.founder, def, n, least), () => {
@@ -963,9 +963,9 @@ export class DeedPanel {
     const open = b.work.filter((w) => w.closed === null);
     const closed = b.work.filter((w) => w.closed !== null);
     this.listHost.append(this.note(
-      `Deliver standing within ${DELIVER_REACH} tiles of the token: what matches in your pack goes into the deed crate, lowest quality first, until the work has all it wants or the crate is full.`
-      + (b.room === null ? ' No deed crate stands here now.' : ` The deed crate has room for ${b.room} more.`)));
-    if (!open.length) this.listHost.append(this.note(b.set ? 'No work is wanted. Set some above.' : 'No work is wanted.'));
+      `Deliver within ${DELIVER_REACH} tiles of the token: matching pack items into the deed crate, lowest QL first, until filled or the crate is full.`
+      + (b.room === null ? ' No deed crate here.' : ` Deed crate room: ${b.room}.`)));
+    if (!open.length) this.listHost.append(this.note(b.set ? 'No work posted. Set some above.' : 'No work posted.'));
     for (const w of open) {
       const i = b.work.indexOf(w);
       const el = document.createElement('div');
@@ -993,7 +993,7 @@ export class DeedPanel {
       give.className = 'tb-btn tb-small';
       give.textContent = reasons[i] ? 'Deliver' : `Deliver ${going}`;
       give.disabled = !!reasons[i];
-      give.title = reasons[i] ?? `Puts ${going} × ${thingName(w.def)} from your pack into the deed crate, lowest quality first.`;
+      give.title = reasons[i] ?? `Deliver ${going} × ${thingName(w.def)} to the deed crate, lowest QL first.`;
       give.addEventListener('click', () => this.boardDo(this.roll!.deliver(b.founder, w.id)));
       tools.append(give);
       if (b.set) {
@@ -1001,9 +1001,9 @@ export class DeedPanel {
         down.type = 'button';
         down.className = 'tb-btn tb-small tb-danger';
         down.textContent = 'Take down';
-        down.title = 'Closes it. What was delivered stays in the deed crate.';
+        down.title = 'Close it. Deliveries stay in the deed crate.';
         down.addEventListener('click', () => {
-          void this.game.hooks.confirm(`Take down ${workLabel(w)}? The ${w.got} delivered stay in the deed crate.`).then((yes) => {
+          void this.game.hooks.confirm(`Close ${workLabel(w)}? ${w.got} delivered stay in the deed crate.`).then((yes) => {
             if (yes) this.boardDo(this.roll!.dropWork(b.founder, w.id));
           });
         });
@@ -1011,11 +1011,11 @@ export class DeedPanel {
       }
       el.append(head, bar, tools);
       const who = deliveredBy(b.ledger, w.id);
-      if (who.length) el.append(this.note(`Delivered by ${who.map((x) => `${x.by} ${x.count}`).join(', ')}.`));
+      if (who.length) el.append(this.note(`Delivered: ${who.map((x) => `${x.by} ${x.count}`).join(', ')}.`));
       this.listHost.append(el);
     }
     if (closed.length) {
-      this.listHost.append(this.head(`Finished and taken down (newest ${WORK_DONE_KEEP} kept)`));
+      this.listHost.append(this.head(`Done or closed (newest ${WORK_DONE_KEEP})`));
       for (const w of closed) {
         const el = this.row(workLabel(w), w.how === 'done' ? 'done' : `taken down at ${w.got}`, w.closed ? when(w.closed) : undefined);
         el.classList.add(w.how === 'done' ? 'deed-met' : 'deed-unmet');
@@ -1023,7 +1023,7 @@ export class DeedPanel {
       }
     }
     this.listHost.append(this.head(`Ledger (${b.ledger.length} of ${LEDGER_KEEP} kept)`));
-    if (!b.ledger.length) this.listHost.append(this.note('Nothing yet. Every work set, delivery, work done and work taken down is written here.'));
+    if (!b.ledger.length) this.listHost.append(this.note('Empty. Logs work set, deliveries, work done and work closed.'));
     for (const l of b.ledger) {
       const el = document.createElement('div');
       el.className = 'deed-ledger';

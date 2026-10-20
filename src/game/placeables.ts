@@ -1,3 +1,4 @@
+import { capital } from './words';
 import { INDOORS_REST } from './building';
 import { brewQl, drawnQl, keepsQl, pouredQl, wineAgeSays } from './ageing';
 import { drinkable, isBrew, isWorking } from './brewing';
@@ -138,8 +139,8 @@ export function barrelFor(g: Game, kind: LiquidKind): PlacedFurniture | undefine
  * (`no_mixing`).
  */
 export const noMixing = (from: LiquidKind, into: LiquidKind, vessel: string): string =>
-  `${LIQUID_NAME[from][0].toUpperCase()}${LIQUID_NAME[from].slice(1)} will not mix with ${LIQUID_NAME[into]}. The ${vessel} holds ${LIQUID_NAME[into]}: `
-  + `empty it, or use one that is empty or holds ${LIQUID_NAME[from]}.`;
+  `${LIQUID_NAME[from][0].toUpperCase()}${LIQUID_NAME[from].slice(1)} and ${LIQUID_NAME[into]} do not mix. The ${vessel} holds ${LIQUID_NAME[into]}: `
+  + `empty it, or use an empty one or one with ${LIQUID_NAME[from]}.`;
 
 /**
  * Why a bucket of `kind` has no barrel beside you to go into, where the
@@ -167,14 +168,14 @@ export const dyeInPiece = (f: PlacedFurniture): DyeLiquid | null => (f.liquid ==
  */
 export function dyeSourceFor(g: Game, bucket: Item): { from: PlacedFurniture } | { refusal: string } {
   const d = dyeIn(bucket);
-  if (!d) return { refusal: 'That is not a bucket of dye.' };
-  if (d.litres >= BUCKET_LITRES) return { refusal: 'It is already full.' };
+  if (!d) return { refusal: 'Not a bucket of dye.' };
+  if (d.litres >= BUCKET_LITRES) return { refusal: 'Already full.' };
   const from = vesselsNear(g, 'dye').find((v) => !isWorking(v));
   if (from) return { from };
   const other = vesselsNear(g).find((v) => !isWorking(v) && v.liquid);
   if (other?.liquid) return { refusal: noMixing(other.liquid, 'dye', 'bucket') };
   if (g.nearWater()) return { refusal: noMixing('water', 'dye', 'bucket') };
-  return { refusal: 'There is no barrel of dye beside you to fill it from.' };
+  return { refusal: 'No barrel of dye beside you.' };
 }
 
 /**
@@ -207,9 +208,9 @@ export function drawDye(g: Game, f: PlacedFurniture, bucket: Item): { n: number;
 export function vesselSays(f: PlacedFurniture, now = Date.now() / 1000): string {
   const litres = litresIn(f);
   const dye = dyeInPiece(f);
-  const held = litres <= 0 || !f.liquid ? 'It is empty.'
-    : dye ? `It holds ${dyeSays(dye, litres)}`
-      : `It holds ${litres.toFixed(0)} litres of ${LIQUID_NAME[f.liquid]}.`;
+  const held = litres <= 0 || !f.liquid ? 'Empty.'
+    : dye ? `Holds: ${dyeSays(dye, litres)}`
+      : `Holds: ${litres.toFixed(0)} litres of ${LIQUID_NAME[f.liquid]}.`;
   // And a wine kept in it, how long and what it has gained (`ageing.ts`).
   return `${furnitureName(f)}: QL ${f.ql.toFixed(2)}, ${litres.toFixed(0)} of ${liquidCapacity(f)} litres. ${held}${wineAgeSays(f, now)}`;
 }
@@ -259,11 +260,11 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const f = pieceOf(g, t);
-      if (!f || !isOven(f)) return 'That is not something you can light a fire in.';
+      if (!f || !isOven(f)) return 'Not an oven or hearth.';
       if (!nearPiece(g, f)) return `Stand next to the ${hearthName(f)}.`;
       const item = fuelAtHand(g, t.kind === 'furniture' ? t.itemUid : undefined)?.item;
-      if (!item) return `An oven takes what a fire takes: ${FUEL_SAID}.`;
-      if ((f.fuel ?? 0) >= hearthCapacity(f)) return 'It is packed as full as it will take.';
+      if (!item) return `Need fuel: ${FUEL_SAID}.`;
+      if ((f.fuel ?? 0) >= hearthCapacity(f)) return 'Fuel full.';
       return null;
     },
     perform: (t, g) => {
@@ -278,7 +279,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (!stack.spend(fits)) return;
       f.fuel = Math.min(hearthCapacity(f), (f.fuel ?? 0) + per * fits);
       g.events.emit('world', f.x, f.y);
-      g.logMsg(`You feed ${fits > 1 ? `${fits} × ` : 'a '}${itemDef(item.id).name.toLowerCase()} into the ${hearthName(f)}. ${ovenBurnsFor(f)} of fuel.`, 'event');
+      g.logMsg(`Fuelled: ${fits > 1 ? `${fits} × ` : ''}${itemDef(item.id).name.toLowerCase()}. ${capital(hearthName(f))}: ${ovenBurnsFor(f)} of fuel.`, 'event');
     },
   },
   {
@@ -294,8 +295,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
-      if (f.lit) return 'It is already burning.';
-      if ((f.fuel ?? 0) <= 0) return 'There is nothing in the firebox. Feed it some wood.';
+      if (f.lit) return 'Already lit.';
+      if ((f.fuel ?? 0) <= 0) return 'No fuel: add wood.';
       return null;
     },
     perform: (t, g) => {
@@ -303,12 +304,12 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (!f || f.lit || (f.fuel ?? 0) <= 0) return;
       f.lit = true;
       g.events.emit('world', f.x, f.y);
-      g.logMsg(`The ${hearthName(f)} draws and the fire takes hold. ${ovenBurnsFor(f)} of fuel.`, 'event');
+      g.logMsg(`Lit: ${hearthName(f)}, ${ovenBurnsFor(f)} of fuel.`, 'event');
     },
   },
   {
     id: 'put_out_oven',
-    label: 'Rake it out',
+    label: 'Put out',
     verb: 'raking out the oven',
     stamina: 0.02,
     baseTime: 2,
@@ -321,7 +322,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (!f || !f.lit) return;
       f.lit = false;
       g.events.emit('world', f.x, f.y);
-      g.logMsg(`You rake the fire out of the ${hearthName(f)}. It will keep its heat for nobody.`, 'event');
+      g.logMsg(`Put out: ${hearthName(f)}. Heat lost.`, 'event');
     },
   },
   {
@@ -338,7 +339,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearPiece(g, f)) return `Stand next to the ${hearthName(f)}.`;
-      return hasAshes(f) ? null : 'There are no ashes worth taking yet.';
+      return hasAshes(f) ? null : 'No ashes yet.';
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
@@ -348,7 +349,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
   // ---- The cart: storage that walks with you. ----
   {
     id: 'pull_cart',
-    label: 'Take hold of it',
+    label: 'Pull cart',
     verb: 'taking hold of the cart',
     stamina: 0.02,
     baseTime: 1.5,
@@ -359,23 +360,23 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
-      if (!nearPiece(g, f)) return 'Stand beside the shafts.';
+      if (!nearPiece(g, f)) return 'Stand beside it.';
       const shut = g.lockRefusal(f);
       if (shut) return shut;
-      for (const other of g.furniture.values()) if (other.hitched && other.id !== f.id) return 'You already have a cart behind you.';
+      for (const other of g.furniture.values()) if (other.hitched && other.id !== f.id) return 'Already pulling a cart.';
       return null;
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return;
       f.hitched = true;
-      g.logMsg(`You take up the shafts of the ${furnitureName(f).toLowerCase()}. It will follow you now, and what you gather goes into it.`, 'event');
+      g.logMsg(`Pulling: ${furnitureName(f).toLowerCase()}. It follows you; gathered items go into it.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
   {
     id: 'drop_cart',
-    label: 'Let go of it',
+    label: 'Let go',
     verb: 'setting the cart down',
     instant: true,
     stamina: 0,
@@ -385,7 +386,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return;
       f.hitched = false;
-      g.logMsg(`You set the ${furnitureName(f).toLowerCase()} down and let go of the shafts.`, 'event');
+      g.logMsg(`Let go: ${furnitureName(f).toLowerCase()}.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -409,25 +410,25 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       // Nobody takes the reins or the helm out of somebody else's hands.
-      if (f.helm) return isBoat(f) ? 'Somebody else has the helm.' : 'Somebody else has the reins.';
+      if (f.helm) return isBoat(f) ? 'Someone else has the helm.' : 'Someone else has the reins.';
       // Aboard her already, the helm is a step away; aboard anything else, it is not yours to reach.
       const here = g.player.aboard === f.id;
-      if (g.player.aboard !== null && !here) return 'You are aboard another vessel. Step ashore first.';
-      if (f.helmAway && isBoat(f) && !here) return 'Somebody else has the helm.';
+      if (g.player.aboard !== null && !here) return 'Aboard another vessel: step ashore first.';
+      if (f.helmAway && isBoat(f) && !here) return 'Someone else has the helm.';
       // A wagon driven up a wide staircase is beside you only on its own storey.
-      if (!here && (!nearPiece(g, f) || Math.max(0, f.level ?? 0) !== Math.max(0, g.player.level))) return 'Stand beside it first.';
-      if (g.driving()) return 'You are already driving something.';
+      if (!here && (!nearPiece(g, f) || Math.max(0, f.level ?? 0) !== Math.max(0, g.player.level))) return 'Stand beside it.';
+      if (g.driving()) return 'Already driving.';
       // A padlock on her keeps her helm, or the reins, to whoever has its key.
       const shut = g.lockRefusal(f);
       if (shut) return shut;
       // A hull asks nothing but that she is still floating.
-      if (isBoat(f)) return g.launchSpot(f.kind, f.x, f.y) ? null : 'She is aground. Push her off first.';
+      if (isBoat(f)) return g.launchSpot(f.kind, f.x, f.y) ? null : 'Aground: push off first.';
       const v = vehicleOf(f);
       const team = teamOf(f).length;
       if (v && team < v.needs) {
         return team === 0
-          ? `Nothing is in the yokes. ${furnitureName(f)} needs ${v.needs} to move.`
-          : `Only ${team} of ${v.yokes} yokes are filled. It needs ${v.needs}.`;
+          ? `Yokes empty: ${furnitureName(f)} needs ${v.needs} to move.`
+          : `Yokes ${team}/${v.yokes}: needs ${v.needs}.`;
       }
       return null;
     },
@@ -445,14 +446,14 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (isBoat(f)) {
         const boat = furnitureDef(f.kind).boat;
         g.logMsg(
-          `You push off and climb into the ${furnitureName(f).toLowerCase()}. ${boat?.sail ? 'The sail fills and she comes round.' : 'You ship the oars and take a stroke.'}`,
+          `At the helm: ${furnitureName(f).toLowerCase()}${boat?.sail ? ', under sail' : ', rowing'}.`,
           'event',
         );
         g.events.emit('world', f.x, f.y);
         return;
       }
       const team = g.team(f).map((c) => c.name);
-      g.logMsg(`You climb onto the ${furnitureName(f).toLowerCase()} and take the reins. ${team.join(' and ')} lean into the traces. What you gather from the seat goes into it.`, 'event');
+      g.logMsg(`Driving: ${furnitureName(f).toLowerCase()}, team ${team.join(', ')}. Gathered items go into it.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -480,11 +481,11 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
         g.player.x = shore.x + 0.5;
         g.player.y = shore.y + 0.5;
         g.player.stop();
-        g.logMsg(`You bring the ${furnitureName(f).toLowerCase()} alongside and step ashore.`, 'event');
+        g.logMsg(`Stepped ashore from the ${furnitureName(f).toLowerCase()}.`, 'event');
         return;
       }
       g.leaveVehicle(f);
-      g.logMsg(`You climb down off the ${furnitureName(f).toLowerCase()}.`, 'event');
+      g.logMsg(`Got down from the ${furnitureName(f).toLowerCase()}.`, 'event');
     },
   },
   /*
@@ -498,7 +499,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
    */
   {
     id: 'board_passenger',
-    label: 'Come aboard as a passenger',
+    label: 'Board as passenger',
     verb: 'climbing aboard',
     stamina: 0.01,
     baseTime: 1.5,
@@ -510,16 +511,16 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       const places = passengerPlaces(f);
-      if (!places) return 'She carries nobody but whoever steers her.';
-      if (g.player.aboard === f.id) return 'You are aboard her already.';
-      if (g.player.aboard !== null) return 'You are aboard another vessel. Step ashore first.';
-      if (g.driving()) return 'You are already driving something.';
-      if (g.mounted()) return 'Get down off your mount first.';
-      if (!nearPiece(g, f)) return 'Stand beside her first.';
+      if (!places) return 'No passenger places.';
+      if (g.player.aboard === f.id) return 'Already aboard.';
+      if (g.player.aboard !== null) return 'Aboard another vessel: step ashore first.';
+      if (g.driving()) return 'Already driving.';
+      if (g.mounted()) return 'Dismount first.';
+      if (!nearPiece(g, f)) return 'Stand beside it.';
       const shut = g.lockRefusal(f);
       if (shut) return shut;
-      if (!g.launchSpot(f.kind, f.x, f.y)) return 'She is aground. Push her off first.';
-      if (freeSeat(f) === null) return `Every one of her ${places} places is taken.`;
+      if (!g.launchSpot(f.kind, f.x, f.y)) return 'Aground: push off first.';
+      if (freeSeat(f) === null) return `All ${places} places taken.`;
       return null;
     },
     perform: (t, g) => {
@@ -528,8 +529,8 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (!f || seat === null) return;
       f.riders = [...ridersOf(f), { who: g.riderId(), seat }];
       g.boardAsPassenger(f, seat);
-      g.logMsg(`You climb aboard the ${furnitureName(f).toLowerCase()} and find a place on deck. `
-        + `${ridersOf(f).length} of ${passengerPlaces(f)} places are taken.`, 'event');
+      g.logMsg(`Aboard: ${furnitureName(f).toLowerCase()}. `
+        + `Places taken: ${ridersOf(f).length}/${passengerPlaces(f)}.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -548,7 +549,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
-      if (g.player.aboard !== f.id) return 'You are not aboard her.';
+      if (g.player.aboard !== f.id) return 'Not aboard.';
       return null;
     },
     perform: (t, g) => {
@@ -558,7 +559,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       f.riders = ridersOf(f).filter((r) => r.who !== g.riderId());
       if (shore) {
         g.leaveAsPassenger(shore.x + 0.5, shore.y + 0.5);
-        g.logMsg(`You step ashore from the ${furnitureName(f).toLowerCase()}.`, 'event');
+        g.logMsg(`Stepped ashore from the ${furnitureName(f).toLowerCase()}.`, 'event');
       } else {
         // Where she is, which is where the island keeps everybody aboard her.
         const [cx, cy] = furnitureCentre(f);
@@ -570,7 +571,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'unhitch_team',
-    label: 'Unhitch the team',
+    label: 'Unhitch team',
     verb: 'unhitching the team',
     stamina: 0.01,
     baseTime: 2,
@@ -581,20 +582,20 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
-      if (!nearPiece(g, f)) return 'Stand beside it first.';
+      if (!nearPiece(g, f)) return 'Stand beside it.';
       return tracesStoreyRefusal(f) ?? g.teamOutRefusal(f);
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
       if (!f || g.teamOutRefusal(f)) return;
       const { n, said } = g.teamOut(f);
-      g.logMsg(`You let ${n === 1 ? 'it' : 'them'} out of the traces of the ${furnitureName(f).toLowerCase()}.${said}`, 'event');
+      g.logMsg(`Unhitched: ${n} from the ${furnitureName(f).toLowerCase()}.${said}`, 'event');
     },
   },
   // ---- Wells and barrels. ----
   {
     id: 'drink_from_vessel',
-    label: 'Drink from it',
+    label: 'Drink',
     verb: 'drinking',
     stamina: 0,
     baseTime: 2,
@@ -606,10 +607,10 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (!drinkable(f.liquid)) return 'You would not want to drink that.';
-      if (isWorking(f)) return 'It is still working. Let it alone.';
-      if (litresIn(f) < 1) return 'It is dry.';
-      if (g.player.stats.thirst >= 0.999 && !isBrew(f.liquid)) return 'You are not thirsty.';
+      if (!drinkable(f.liquid)) return 'Not drinkable.';
+      if (isWorking(f)) return 'Still fermenting.';
+      if (litresIn(f) < 1) return 'Empty.';
+      if (g.player.stats.thirst >= 0.999 && !isBrew(f.liquid)) return 'Not thirsty.';
       return null;
     },
     perform: (t, g) => {
@@ -628,7 +629,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       // And for longer for its brewer's hand in it (a Cook's Strong Brew).
       const favour = brew ? g.grantBoon(brew, ql, knack) : null;
       const full = brew ? g.nourish(brew, ql) : null;
-      g.logMsg(`You drink your fill from the ${furnitureName(f).toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');
+      g.logMsg(`Drank from the ${furnitureName(f).toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');
     },
   },
   {
@@ -666,7 +667,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      return litresIn(f) > 0 ? null : 'It is already empty.';
+      return litresIn(f) > 0 ? null : 'Already empty.';
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
@@ -679,7 +680,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       delete f.agedFrom;
       g.events.emit('crate');
       g.events.emit('world', f.x, f.y);
-      g.logMsg(`You tip the ${what} out of the ${furnitureName(f).toLowerCase()}.`, 'event');
+      g.logMsg(`Emptied: ${what} from the ${furnitureName(f).toLowerCase()}.`, 'event');
     },
   },
   {
@@ -701,9 +702,9 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'item') return null;
       const item = nextVessel(g, t.uid);
       const vessel = item && VESSELS[item.id];
-      if (!vessel) return 'That is not a bucket of anything.';
+      if (!vessel) return 'Not a filled bucket.';
       const barrel = barrelFor(g, vessel.liquid);
-      if (!barrel) return mixRefusal(g, vessel.liquid) ?? `There is no barrel beside you with room for ${LIQUID_NAME[vessel.liquid]}.`;
+      if (!barrel) return mixRefusal(g, vessel.liquid) ?? `No barrel beside you with room for ${LIQUID_NAME[vessel.liquid]}.`;
       return null;
     },
     maxRepeat: (t, g) => {
@@ -740,7 +741,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
         delete barrel.knack;
         g.events.emit('crate');
         g.events.emit('world', barrel.x, barrel.y);
-        g.logMsg(`You pour ${poured} ${poured === 1 ? 'litre' : 'litres'} of dye into the ${furnitureName(barrel).toLowerCase()}. It holds ${dyeSays(mixed, had + poured)}`, 'event');
+        g.logMsg(`Poured: ${poured} ${poured === 1 ? 'litre' : 'litres'} of dye into the ${furnitureName(barrel).toLowerCase()}. Holds: ${dyeSays(mixed, had + poured)}`, 'event');
         if (t.count !== undefined && t.count <= 1) return false;
         if (t.count !== undefined) t.count -= 1;
         return nextVessel(g, t.uid) !== undefined;
@@ -762,7 +763,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       g.events.emit('crate');
       g.events.emit('world', barrel.x, barrel.y);
       g.logMsg(
-        `You pour ${poured.toFixed(0)} litres of ${LIQUID_NAME[vessel.liquid]} into the ${furnitureName(barrel).toLowerCase()}. ${litresIn(barrel).toFixed(0)} of ${liquidCapacity(barrel)}.`,
+        `Poured: ${poured.toFixed(0)} litres of ${LIQUID_NAME[vessel.liquid]} into the ${furnitureName(barrel).toLowerCase()}. ${litresIn(barrel).toFixed(0)}/${liquidCapacity(barrel)}.`,
         'event',
       );
       // Keep pouring while there are full buckets left and room to take them.
@@ -774,7 +775,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
   // ---- The trash crate: asked for, never assumed. ----
   {
     id: 'throw_away',
-    label: 'Throw it in the trash',
+    label: 'Trash',
     verb: 'throwing it out',
     instant: true,
     quantity: true,
@@ -783,9 +784,9 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'item' && trashNear(g) !== undefined,
     check: (t, g) => {
       const bin = trashNear(g);
-      if (!bin) return 'There is no trash crate beside you.';
+      if (!bin) return 'No trash crate beside you.';
       if (t.kind === 'item' && (t.count ?? 1) + bin.items.reduce((n, it) => n + it.count, 0) > (furnitureDef(bin.kind).capacity ?? 0)) {
-        return 'The trash crate is full. Wait for it to rot down.';
+        return 'Trash crate full. Wait for it to rot down.';
       }
       return null;
     },
@@ -798,10 +799,10 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
       if (!item) return;
       if (!g.furnitureAdd(bin, item)) {
         g.inventory.addItem(item);
-        g.logMsg('The trash crate is full.', 'error');
+        g.logMsg('Trash crate full.', 'error');
         return;
       }
-      g.logMsg(`You throw ${item.count > 1 ? `${item.count} \u00d7 ` : 'the '}${itemDef(item.id).name.toLowerCase()} in the trash crate. It will not last long in there.`, 'event');
+      g.logMsg(`Trashed: ${item.count > 1 ? `${item.count} \u00d7 ` : ''}${itemDef(item.id).name.toLowerCase()}.`, 'event');
     },
   },
   // ---- The bed. ----
@@ -817,9 +818,9 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const f = pieceOf(g, t);
-      if (!f || !isBed(f)) return 'That is not a bed.';
+      if (!f || !isBed(f)) return 'Not a bed.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (!g.isNight()) return `It is ${g.clock()} and broad daylight. Sleep when it is dark.`;
+      if (!g.isNight()) return `${g.clock()}: night only.`;
       return null;
     },
     perform: (t, g) => {
@@ -841,7 +842,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'set_home',
-    label: 'Make this your home',
+    label: 'Set as home',
     verb: 'making your bed',
     instant: true,
     stamina: 0,
@@ -852,22 +853,22 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const f = pieceOf(g, t);
-      if (!f || !isBed(f)) return 'That is not a bed.';
+      if (!f || !isBed(f)) return 'Not a bed.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (g.spawn.x === f.x && g.spawn.y === f.y) return 'You already wake up here.';
+      if (g.spawn.x === f.x && g.spawn.y === f.y) return 'Already your home.';
       return null;
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return;
       g.spawn = { x: f.x, y: f.y };
-      g.logMsg(`You make up the ${furnitureName(f).toLowerCase()}. This is where you will wake, whatever happens to you.`, 'event');
+      g.logMsg(`Home set: ${furnitureName(f).toLowerCase()}. You respawn here.`, 'event');
     },
   },
   // ---- The bell. ----
   {
     id: 'ring_bell',
-    label: 'Ring the bell',
+    label: 'Ring bell',
     verb: 'ringing the bell',
     stamina: 0.02,
     baseTime: 3,
@@ -877,9 +878,9 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const f = pieceOf(g, t);
-      if (!f || !furnitureDef(f.kind).bell) return 'That is not a bell.';
+      if (!f || !furnitureDef(f.kind).bell) return 'Not a bell.';
       if (!nearPiece(g, f)) return 'Stand next to it.';
-      if (!g.onDeed(f.x, f.y)) return 'Ring it on a settlement of yours; a bell in the wild calls nobody.';
+      if (!g.onDeed(f.x, f.y)) return 'Only on your settlement.';
       return null;
     },
     perform: (t, g) => {
@@ -896,7 +897,7 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
         came++;
       }
       g.note('rang');
-      g.logMsg(`You ring the ${furnitureName(f).toLowerCase()} and it sounds over ${g.deed.name}. ${came ? `${came} wildermon ${came === 1 ? 'comes' : 'come'} at the sound` : 'Nothing is working the deed to come'}, and every citizen hears where it hangs: ${f.x}, ${f.y}.`, 'event');
+      g.logMsg(`Rang: ${furnitureName(f).toLowerCase()} at ${f.x}, ${f.y}. Deed workers called: ${came}. Citizens of ${g.deed.name} notified.`, 'event');
     },
   },
 ];
@@ -907,7 +908,7 @@ export const PLACEABLE_ACTION_BY_ID = new Map(PLACEABLE_ACTIONS.map((a) => [a.id
 export const OVER_THE_SIDE = 'Go over the side';
 /** Leaving a hull with no land in reach: into the water where she is, to swim. She stays where she is. The island's words too. */
 export const overTheSide = (f: PlacedFurniture): string =>
-  `You go over the side of the ${furnitureName(f).toLowerCase()} into the water. She stays where she is.`;
+  `Over the side of the ${furnitureName(f).toLowerCase()}: swimming. The boat stays.`;
 
 /** How far off, in tiles each way, dry ground is stepped onto from a hull (`shore_near`'s own default). */
 export const SHORE_REACH = 2;

@@ -126,8 +126,6 @@ const species = Object.values(SPECIES).map((d) => {
     butcher: BUTCHER_PARTS.filter(([p]) => (d.butcher[p] ?? 0) > 0)
       .map(([p, item]) => ({ part: p, name: itemName(item), n: d.butcher[p] as number })),
     variants: d.variants.map(([body, belly]) => ({ body, belly })),
-    tameFail: d.tameFail,
-    leaves: d.leaves,
   };
 });
 
@@ -146,7 +144,6 @@ const traits = TRAITS.map((t) => ({
   tier: t.tier,
   family: t.family ?? null,
   aura: !!t.aura,
-  note: t.note,
   effects: effects(t),
 }));
 

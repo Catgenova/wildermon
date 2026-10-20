@@ -28,19 +28,19 @@ export interface GemDef {
 
 /** In the order the island draws them, rarest first. */
 export const GEMS: GemDef[] = [
-  { id: 'diamond', name: 'Diamond', skill: 'mining', weight: 1, flavour: 'Clear as water and harder than anything else out of the ground.' },
-  { id: 'ruby', name: 'Ruby', skill: 'fighting', weight: 2, flavour: 'Red as a coal, and as warm in the hand.' },
-  { id: 'sapphire', name: 'Sapphire', skill: 'fishing', weight: 2, flavour: 'Blue as deep water.' },
-  { id: 'emerald', name: 'Emerald', skill: 'forestry', weight: 3, flavour: 'Green as a leaf with the sun behind it.' },
-  { id: 'garnet', name: 'Garnet', skill: 'blacksmithing', weight: 4, flavour: 'Dark red, the colour of iron in the fire.' },
-  { id: 'topaz', name: 'Topaz', skill: 'carpentry', weight: 4, flavour: 'Yellow as new-cut pine.' },
+  { id: 'diamond', name: 'Diamond', skill: 'mining', weight: 1, flavour: '' },
+  { id: 'ruby', name: 'Ruby', skill: 'fighting', weight: 2, flavour: '' },
+  { id: 'sapphire', name: 'Sapphire', skill: 'fishing', weight: 2, flavour: '' },
+  { id: 'emerald', name: 'Emerald', skill: 'forestry', weight: 3, flavour: '' },
+  { id: 'garnet', name: 'Garnet', skill: 'blacksmithing', weight: 4, flavour: '' },
+  { id: 'topaz', name: 'Topaz', skill: 'carpentry', weight: 4, flavour: '' },
   // An Artisan's More Stones: six more, which the rock gives up only to a miner who has it.
-  { id: 'opal', name: 'Opal', skill: 'taming', weight: 2, flavour: 'Every colour in it, moving as it turns.', perk: 'more_stones' },
-  { id: 'peridot', name: 'Peridot', skill: 'farming', weight: 3, flavour: 'Green as wheat before it turns.', perk: 'more_stones' },
-  { id: 'amethyst', name: 'Amethyst', skill: 'tailoring', weight: 3, flavour: 'The purple of a dyed robe.', perk: 'more_stones' },
-  { id: 'jasper', name: 'Jasper', skill: 'pottery', weight: 3, flavour: 'Red-brown as a fired pot.', perk: 'more_stones' },
-  { id: 'onyx', name: 'Onyx', skill: 'masonry', weight: 4, flavour: 'Black, banded with white like a course of stone.', perk: 'more_stones' },
-  { id: 'amber', name: 'Amber', skill: 'cooking', weight: 4, flavour: 'Honey gone hard, warm in the hand.', perk: 'more_stones' },
+  { id: 'opal', name: 'Opal', skill: 'taming', weight: 2, flavour: '', perk: 'more_stones' },
+  { id: 'peridot', name: 'Peridot', skill: 'farming', weight: 3, flavour: '', perk: 'more_stones' },
+  { id: 'amethyst', name: 'Amethyst', skill: 'tailoring', weight: 3, flavour: '', perk: 'more_stones' },
+  { id: 'jasper', name: 'Jasper', skill: 'pottery', weight: 3, flavour: '', perk: 'more_stones' },
+  { id: 'onyx', name: 'Onyx', skill: 'masonry', weight: 4, flavour: '', perk: 'more_stones' },
+  { id: 'amber', name: 'Amber', skill: 'cooking', weight: 4, flavour: '', perk: 'more_stones' },
 ];
 export const GEM_BY_NAME = new Map(GEMS.map((g) => [g.name.toLowerCase(), g]));
 

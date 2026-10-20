@@ -179,7 +179,7 @@ check('a fed worker\'s card says nothing of it', unfedSays({ species: 'sedra', u
 {
   const says = unfedSays({ species: 'sedra', unfed: UPKEEP_FOR + 1800 });
   check('an unfed one\'s card says how long, what it does to its pace, off the rule, and that there is no food it eats in your stores',
-    says.startsWith(`Unfed for ${timeWords(UPKEEP_FOR + 1800)}: works at ${percent(UNFED_PACE)} until it eats.`) && says.includes('No food in your stores on the settlement'), says);
+    says.startsWith(`Unfed for ${timeWords(UPKEEP_FOR + 1800)}: work pace ${percent(UNFED_PACE)} until fed.`) && says.includes('No food it eats in your settlement stores'), says);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

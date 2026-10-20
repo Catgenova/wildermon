@@ -29,7 +29,6 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, GRASS_PER_CUT, GRASS_PLANT, MOSS_PER_CUT, MOSS_PLANT, type Target } from '../../src/game/actions';
 import { itemDef } from '../../src/game/items';
-import { numberWord } from '../../src/game/words';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -131,7 +130,7 @@ begin
   insert into said values ('CUT_REF', ${refused('cut_moss', MOSS)});
   perform perform_ground(w, u, 'cut_moss', ${tileT(MOSS)});
   insert into said values ('CUT', ${count('moss')} || '|' || ${count('mixed_grass')} || '|' || land_tile(w, ${MOSS[0]}, ${MOSS[1]}));
-  insert into said values ('CUT_SAID', ${lastSaid('You cut')});
+  insert into said values ('CUT_SAID', ${lastSaid('Cut: ')});
   insert into said values ('SHORT', ${refused('cut_moss', MOSS)});
   ${stand(GRASS)}
   insert into said values ('NO_MOSS', ${refused('cut_moss', GRASS)});
@@ -148,7 +147,7 @@ begin
   insert into said values ('PLANT_REF', ${refused('plant_moss', DIRT)});
   perform perform_farm(w, u, 'plant_moss', ${tileT(DIRT)});
   insert into said values ('PLANTED', land_tile(w, ${DIRT[0]}, ${DIRT[1]}) || '|' || ${count('moss')});
-  insert into said values ('SAID', ${lastSaid('You plant')});
+  insert into said values ('SAID', ${lastSaid('Planted: ')});
 
   /* Plant grass: a cut's worth of mixed grass is too little, then the wrong ground, under water, and done. */
   perform land_set_tile(w, ${PATCH[0]}, ${PATCH[1]}, tile_id('Dirt'));
@@ -164,7 +163,7 @@ begin
   insert into said values ('G_REF', ${refused('plant_grass', PATCH)});
   perform perform_farm(w, u, 'plant_grass', ${tileT(PATCH)});
   insert into said values ('G_PLANTED', land_tile(w, ${PATCH[0]}, ${PATCH[1]}) || '|' || land_data(w, ${PATCH[0]}, ${PATCH[1]}) || '|' || ${count('mixed_grass')});
-  insert into said values ('G_SAID', ${lastSaid('You plant')});
+  insert into said values ('G_SAID', ${lastSaid('Planted: ')});
 end $$;
 select k || E'\\t' || coalesce(v, 'null') from said;
 rollback;
@@ -190,35 +189,35 @@ check('on the island a tile of dirt dug bare shows the rock, and a bed of sand d
 const [dirt1, dirtTile] = say('DIRT').split('|');
 check('Collect on dirt fills a shovel with dirt on the island, and the tile stays dirt',
   say('DIRT_REF') === 'ALLOWED' && dirt1 === '1' && Number(dirtTile) === TileType.Dirt, `${say('DIRT_REF')} / ${say('DIRT')}`);
-check('moss has no bed to collect off', say('MOSS_REF') === 'There is no bed of anything here.', say('MOSS_REF'));
-check('nor has grass', say('GRASS_REF') === 'There is no bed of anything here.', say('GRASS_REF'));
+check('moss has no bed to collect off', say('MOSS_REF') === 'Nothing to collect here.', say('MOSS_REF'));
+check('nor has grass', say('GRASS_REF') === 'Nothing to collect here.', say('GRASS_REF'));
 
 const [moss1, grass1, mossTile] = say('CUT').split('|');
 check(`Cut moss gives ${MOSS_PER_CUT} moss on the island, no mixed grass, and the tile stays moss`,
   say('CUT_REF') === 'ALLOWED' && moss1 === String(MOSS_PER_CUT) && grass1 === '0' && Number(mossTile) === TileType.Moss,
   `${say('CUT_REF')} / ${say('CUT')}`);
-check('and says so', say('CUT_SAID') === `You cut ${numberWord(MOSS_PER_CUT)} clumps of moss.`, say('CUT_SAID'));
-check('cut once, the tile is short until it grows back', say('SHORT') === 'The moss here is still short.', say('SHORT'));
+check('and says so', say('CUT_SAID') === `Cut: ${MOSS_PER_CUT} moss.`, say('CUT_SAID'));
+check('cut once, the tile is short until it grows back', say('SHORT') === 'Moss too short. Try later.', say('SHORT'));
 check('and there is no moss to cut on grass', say('NO_MOSS') === 'There is no moss here to cut.', say('NO_MOSS'));
 
 check(`Plant moss with ${MOSS_PER_CUT} moss is refused for want of ${MOSS_PLANT}`,
-  say('FEW') === `It takes ${MOSS_PLANT} moss to plant a tile; you have ${MOSS_PER_CUT}.`, say('FEW'));
-check('and on grass, for it is not dirt', say('NOT_DIRT') === 'Moss is planted on a tile of dirt.', say('NOT_DIRT'));
-check('and under water', say('WET') === 'You cannot plant moss underwater.', say('WET'));
+  say('FEW') === `Need ${MOSS_PLANT} moss; have ${MOSS_PER_CUT}.`, say('FEW'));
+check('and on grass, for it is not dirt', say('NOT_DIRT') === 'Needs a dirt tile.', say('NOT_DIRT'));
+check('and under water', say('WET') === 'Not under water.', say('WET'));
 const [plantedTile, left] = say('PLANTED').split('|');
 check(`with ${MOSS_PLANT} moss the dirt turns to moss and the moss is used up`,
   say('PLANT_REF') === 'ALLOWED' && Number(plantedTile) === TileType.Moss && left === '0', `${say('PLANT_REF')} / ${say('PLANTED')}`);
-check('and it says so', say('SAID') === `You plant ${MOSS_PLANT} moss and the dirt is moss now.`, say('SAID'));
+check('and it says so', say('SAID') === `Planted: ${MOSS_PLANT} moss. Tile: moss.`, say('SAID'));
 
 check(`Plant grass with ${GRASS_PER_CUT} mixed grass is refused for want of ${GRASS_PLANT}`,
-  say('G_FEW') === `It takes ${GRASS_PLANT} mixed grass to plant a tile; you have ${GRASS_PER_CUT}.`, say('G_FEW'));
-check('and on grass, for it is not dirt', say('G_NOT_DIRT') === 'Grass is planted on a tile of dirt.', say('G_NOT_DIRT'));
-check('and under water', say('G_WET') === 'You cannot plant grass underwater.', say('G_WET'));
+  say('G_FEW') === `Need ${GRASS_PLANT} mixed grass; have ${GRASS_PER_CUT}.`, say('G_FEW'));
+check('and on grass, for it is not dirt', say('G_NOT_DIRT') === 'Needs a dirt tile.', say('G_NOT_DIRT'));
+check('and under water', say('G_WET') === 'Not under water.', say('G_WET'));
 const [grassTile, grassData, grassLeft] = say('G_PLANTED').split('|');
 check(`with ${GRASS_PLANT} mixed grass the dirt turns to grass, uncut and unpicked, and the mixed grass is used up`,
   say('G_REF') === 'ALLOWED' && Number(grassTile) === TileType.Grass && grassData === '0' && grassLeft === '0',
   `${say('G_REF')} / ${say('G_PLANTED')}`);
-check('and it says so', say('G_SAID') === `You plant ${GRASS_PLANT} mixed grass and the dirt is grass now.`, say('G_SAID'));
+check('and it says so', say('G_SAID') === `Planted: ${GRASS_PLANT} mixed grass. Tile: grass.`, say('G_SAID'));
 
 /* ---- the browser ----------------------------------------------------------- */
 const game = Game.create(4405);
@@ -295,7 +294,7 @@ check(`the browser turns the dirt to grass, uncut and unpicked, and uses up ${GR
 check('and says so in the island\'s words', game.log.slice(before).some((l) => l.text === say('G_SAID')),
   game.log.slice(before).map((l) => l.text).join(' | '));
 check('mixed grass says what it plants', itemDef('mixed_grass').description
-  === `Cutting a grass tile gives ${numberWord(GRASS_PER_CUT)}; plant ${GRASS_PLANT} of it on a tile of dirt and the tile is grass.`,
+  === `Cutting a grass tile gives ${GRASS_PER_CUT}. Plant ${GRASS_PLANT} on a dirt tile: the tile becomes grass.`,
   String(itemDef('mixed_grass').description));
 
 for (const line of [...ok, ...bad]) console.log(line);

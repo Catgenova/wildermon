@@ -60,11 +60,11 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 };
 
 /** The words asked for, as they were asked for. */
-const ASKED = 'You have died. What you carried is in a grave where you fell; only you can open it, and it crumbles in an hour.';
+const ASKED = 'You have died. What you carried is in a grave where you fell; only you can open it, and it crumbles in 1 hour.';
 
 /* ---- the rule and its words ---------------------------------------------------- */
 console.log('--- the rule');
-check('an hour of real time, said as an hour', GRAVE_KEEPS === 3600 && spanWords(GRAVE_KEEPS) === 'an hour', spanWords(GRAVE_KEEPS));
+check('an hour of real time, said as an hour', GRAVE_KEEPS === 3600 && spanWords(GRAVE_KEEPS) === '1 hour', spanWords(GRAVE_KEEPS));
 check('the death line is the one asked for, with the hour put in from the rule', deathSaid('here') === ASKED, deathSaid('here'));
 check('nobody builds a grave', !RECIPE_BY_ID.has('make_grave') && !!furnitureDef('grave').grave);
 const rule = psql(`select grave_keeps() || '|' || grave_keeps_said() || '|' || grave_reach() || '|'
@@ -147,7 +147,7 @@ check('anybody else is told whose it is, whatever they try',
   ['furniture_take_all', 'pick_up_furniture', 'turn_furniture'].every((id) => graveRefusal(game, id, ft) === notYours)
     && graveRefusal(game, 'take_from_store', inIt) === notYours,
   graveRefusal(game, 'furniture_take_all', ft) ?? 'ALLOWED');
-check('in plain words', notYours === "That is Dane's grave. Nobody but Dane can open it, take from it or move it.", notYours);
+check('in plain words', notYours === "Dane's grave: only Dane can open, take from or move it.", notYours);
 check('and is offered nothing at it', game.actionsFor(ft).length === 0, game.actionsFor(ft).map((a) => a.def.id).join(', '));
 at(first.x + 0.5, first.y + 1.5);
 const takeAll = ACTION_BY_ID.get('furniture_take_all')!;

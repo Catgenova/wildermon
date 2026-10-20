@@ -308,7 +308,7 @@ end $b$;
 select string_agg(k || '=' || coalesce(v, 'null'), E'\n~~\n' order by k) from said;
 rollback;`));
 check('nobody takes the reins of a wagon a storey up from the ground under it, on both sides',
-  boardBelow === 'Stand beside it first.' && boardBelow === wheels.get('boardBelow'), `browser "${boardBelow}", island "${wheels.get('boardBelow')}"`);
+  boardBelow === 'Stand beside it.' && boardBelow === wheels.get('boardBelow'), `browser "${boardBelow}", island "${wheels.get('boardBelow')}"`);
 check('and its team is not taken out of the traces up there, in the same words on both sides',
   unhitchUp === tracesStoreyRefusal(wagon) && unhitchUp === wheels.get('unhitchUp'), `browser "${unhitchUp}", island "${wheels.get('unhitchUp')}"`);
 check('on the island a driven wagon stands on the storey its driver drove it to, and on the ground again after',

@@ -641,24 +641,24 @@ check(`${P('Level Hand').name}: a flatten moves ${step} units where it moved ${F
   say('LEVEL') === `43,1|${43 - step},${1 + step}|40,${1 + step + (43 - step - 40)}|${37 + step},${1 + step + (43 - step - 40) - step}`,
   say('LEVEL'));
 
-const deepDig = 'The water is too deep here to work in.';
+const deepDig = 'Water too deep.';
 check(`${P('Wader').name}: digging and flattening are refused at twelve deep without it`,
   say('DEEP') === `${deepDig}|${deepDig}`, say('DEEP'));
 check(`and allowed with it, to ${P('Wader').fx['depth:dig']}`,
   say('WADED') === 'ALLOWED|That ground is already flat.', say('WADED'));
 check(`${P('Dredger').name}: a bottom at forty is out of reach without it and in reach with it`,
-  say('DREDGE') === 'The bottom is too deep to reach from a boat.' && say('DREDGED') === 'ALLOWED',
+  say('DREDGE') === 'Bottom too deep.' && say('DREDGED') === 'ALLOWED',
   `${say('DREDGE')} / ${say('DREDGED')}`);
 
 const [capA, sentA] = say('SLOPE').split('|');
 const [capB, sentB] = say('STEEP').split('|');
-const would = Number(sentA.match(/slope of (\d+)/)?.[1] ?? NaN);
+const would = Number(sentA.match(/Slope would be (\d+)/)?.[1] ?? NaN);
 const per = P('Steep Cut').fx['slope:digging'];
 check(`${P('Steep Cut').name}: the steepest a spade leaves is ${per} times digging, not ${SLOPE_PER_SKILL}`,
   Number(capA) === Math.max(SLOPE_FLOOR, Math.floor(50 * SLOPE_PER_SKILL)) && Number(capB) === Math.max(SLOPE_FLOOR, Math.floor(50 * per)),
   `${capA}, then ${capB}`);
 check('and a cut between the two is refused in numbers without it and allowed with it',
-  sentA === `That would leave a slope of ${would}. Your digging allows ${capA}; it would take digging ${slopeNeeds(would, SLOPE_PER_SKILL).toFixed(1)}.`
+  sentA === `Slope would be ${would}; digging allows ${capA}, needs digging ${slopeNeeds(would, SLOPE_PER_SKILL).toFixed(1)}.`
     && sentB === 'ALLOWED', `${sentA} / ${sentB}`);
 
 const [sA, sB, sC, sBase] = say('ROAD').split('|').map(Number);
@@ -685,7 +685,7 @@ const [stumpA, stumpB, kind, tree] = say('STUMP').split('|');
 check(`${P('Stump Puller').name}: a stump gives nothing but the ground without it, and ${P('Stump Puller').fx['stump:log']} log of its tree with it`,
   stumpA === '1,0' && stumpB === `1,${P('Stump Puller').fx['stump:log']}` && kind === tree, say('STUMP'));
 check(`${P('Dig Out the Tile').name}: refused without it, in the island's words`,
-  say('TILE_NO') === 'That wants a Terraformer who has learned to dig out a whole tile.', say('TILE_NO'));
+  say('TILE_NO') === 'Needs perk: Dig Out the Tile (Terraformer).', say('TILE_NO'));
 check('and allowed with it', say('TILE_YES') === 'ALLOWED', say('TILE_YES'));
 check(`and done through the clock: all ${TILE_CORNERS} corners down one, and ${TILE_CORNERS} of the dirt`,
   say('DUG') === `39,39,39,39|${TILE_CORNERS}`, say('DUG'));

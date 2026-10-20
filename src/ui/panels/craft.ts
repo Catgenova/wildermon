@@ -1,3 +1,4 @@
+import { capital } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
@@ -90,7 +91,7 @@ export class CraftPanel {
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
-    this.search.placeholder = 'Search recipes: a thing, a skill, a material…';
+    this.search.placeholder = 'Search recipes: item, skill, material…';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.only = null;
@@ -119,7 +120,7 @@ export class CraftPanel {
       this.readyOnly = box.checked;
       this.render();
     });
-    toggle.append(box, document.createTextNode('Only what I can make'));
+    toggle.append(box, document.createTextNode('Makeable only'));
     head.append(hint, toggle);
     this.list = document.createElement('div');
     this.list.className = 'inv-list';
@@ -261,10 +262,10 @@ export class CraftPanel {
     // What the counts count, which Settings decides.
     const atHand = fromStores ? `what you carry and what is in your stores within ${CRAFT_REACH} tiles` : 'what you carry';
     this.hint.textContent = fromStores ? `At hand: pack, bags, stores within ${CRAFT_REACH} tiles` : 'At hand: pack and bags';
-    this.hint.title = `Materials count ${fromStores
-      ? `what you carry, in your pack and your bags, and what is in your stores within ${CRAFT_REACH} tiles. The pack is used first, then the bags, then the nearest store.`
-      : 'what you carry, in your pack and your bags: Settings keeps your stores out. The pack is used first, then the bags.'}${spareRare
-      ? ' Rare stock is left out of the counts, as Settings asks; right-click a rare stack to make something from it.'
+    this.hint.title = `Materials counted: ${fromStores
+      ? `pack, bags and stores within ${CRAFT_REACH} tiles. Used in order: pack, bags, nearest store.`
+      : 'pack and bags (stores off in Settings). Used in order: pack, bags.'}${spareRare
+      ? ' Rare stock excluded (Settings); right-click a rare stack to craft from it.'
       : ''}`;
     this.list.replaceChildren();
     // The part a tree was popped out of is gone with the old rows.
@@ -280,7 +281,7 @@ export class CraftPanel {
      * thing, which is a question with one answer.
      */
     if (!this.only) {
-      for (const [title, ids] of [['Pinned', this.kept.pinned], ['Made lately', this.kept.recent.filter((id) => !this.kept.pinned.includes(id))]] as Array<[string, string[]]>) {
+      for (const [title, ids] of [['Pinned', this.kept.pinned], ['Recent', this.kept.recent.filter((id) => !this.kept.pinned.includes(id))]] as Array<[string, string[]]>) {
         const rows = ids.map((id) => RECIPE_BY_ID.get(id)).filter((r): r is Recipe => !!r && wanted(r));
         if (!rows.length) continue;
         const header = document.createElement('div');
@@ -310,13 +311,13 @@ export class CraftPanel {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
       empty.textContent = this.query || this.only
-        ? `No recipe answers to “${this.search.value.trim()}”${this.readyOnly ? ' that you can make right now' : ''}. Esc in the search box clears it.`
-        : `Nothing can be made with ${atHand}. Untick "Only what I can make" to see what each thing needs.`;
+        ? `No recipe matches “${this.search.value.trim()}”${this.readyOnly ? ' (makeable only)' : ''}. Esc clears.`
+        : `Nothing makeable with ${atHand}. Untick "Makeable only" to see requirements.`;
       this.list.append(empty);
     }
     // What is at hand is said in the head; the foot only counts.
     this.footer.textContent = this.only
-      ? `${shown === 1 ? 'One recipe makes' : `${shown} recipes make`} this · ${ready} you can make now`
+      ? `Recipes: ${shown} · makeable now: ${ready}`
       : this.query
         ? `${shown} ${shown === 1 ? 'recipe matches' : 'recipes match'} · ${ready} you can make now`
         : `${ready} of ${RECIPES.length} recipes you can make now`;
@@ -367,19 +368,19 @@ export class CraftPanel {
      */
     worth.textContent = pr.fromInputs
       ? pr.partsInHand
-        ? `QL ${pr.ceiling.toFixed(0)}, out of the parts at hand`
-        : `${Math.round(pr.keep * 100)}% of what the parts are worth`
+        ? `QL ${pr.ceiling.toFixed(0)} from the parts at hand`
+        : `${Math.round(pr.keep * 100)}% of the parts' QL`
       : !pr.tooled
         ? `up to QL ${pr.ceiling.toFixed(0)}`
         // A miss that comes out at the same whole QL as a hit is no miss worth naming.
         : pr.reach >= 0.9 || pr.short.toFixed(0) === pr.ceiling.toFixed(0)
-          ? `QL ${pr.ceiling.toFixed(0)}, near enough every time`
-          : `up to QL ${pr.ceiling.toFixed(0)}, about ${Math.round(pr.reach * 100)}% of goes; the rest near QL ${pr.short.toFixed(0)}`;
+          ? `QL ${pr.ceiling.toFixed(0)}, nearly every go`
+          : `up to QL ${pr.ceiling.toFixed(0)} on ~${Math.round(pr.reach * 100)}% of goes; otherwise ~QL ${pr.short.toFixed(0)}`;
     worth.title = pr.fromInputs
-      ? `The parts decide this, not a roll: what goes in, weighed by how much of each of it goes in, and your ${r.skill.replace(/_/g, ' ')} keeps ${Math.round(pr.keep * 100)}% of it. A better part is the only way to a better one.`
+      ? `QL from parts, no roll: weighted average of input QL by amount; your ${r.skill.replace(/_/g, ' ')} keeps ${Math.round(pr.keep * 100)}% of it. Better parts only.`
       : pr.toolBound
-        ? `Your ${lower(r.tool as string)} is what is holding this back, not your hands. A better one reaches your skill more often.`
-        : 'Your skill is the ceiling; the tool decides how often a go reaches it.';
+        ? `Limited by your ${lower(r.tool as string)}: a better one reaches your skill more often.`
+        : 'Max QL: your skill. Tool QL: how often a go reaches it.';
     name.append(worth);
     // What the name does not say: for a mould, the piece it is the only way to.
     if (r.note) {
@@ -404,12 +405,12 @@ export class CraftPanel {
        */
       const name = stationName(r.station);
       const carried = !st.station && isFurniture(r.station) && this.game.inventory.has(r.station);
-      station.textContent = st.station ? name : carried ? `${name}: set yours down` : `${name}: stand at one`;
+      station.textContent = st.station ? name : carried ? `${name}: place yours` : `${name}: needed`;
       station.title = st.station
-        ? 'You are standing at one'
+        ? 'At one'
         : carried
-          ? `Yours is in your pack. Right-click the ground beside you, choose Set furniture down and your ${name}, and stand beside it.`
-          : `Stand beside a ${name} that is on the ground.`;
+          ? `In your pack: place it (right-click the ground, Set furniture down) and stand beside it.`
+          : `Stand beside a placed ${name}.`;
       parts.push(station);
     }
     // Where it may be built at all: an altar goes up on a settlement of yours or nowhere.
@@ -417,7 +418,7 @@ export class CraftPanel {
       const deed = document.createElement('span');
       deed.className = st.deed ? 'have' : 'lack';
       deed.textContent = 'on your settlement';
-      deed.title = st.deed ? 'You are standing on a settlement of yours' : DEED_ONLY;
+      deed.title = st.deed ? 'On your settlement' : DEED_ONLY;
       parts.push(deed);
     }
     // And one altar to a settlement: none built where one already stands.
@@ -444,7 +445,7 @@ export class CraftPanel {
       // a surprise: what is on you goes first, then the nearest store.
       const stored = i.have - i.carried;
       span.title = stored > 0
-        ? `Have ${i.have}: ${i.carried} carried, ${stored} in your stores within ${reachFor(this.game, r)} tiles. What you carry is used first.`
+        ? `Have ${i.have}: ${i.carried} carried, ${stored} in stores within ${reachFor(this.game, r)} tiles. Carried used first.`
         : `Have ${i.have}, carried`;
       // How many, and how many of those are in a store rather than on you.
       const have = document.createElement('em');
@@ -467,7 +468,7 @@ export class CraftPanel {
     if (st.material && choices.length > 1) {
       const pick = document.createElement('select');
       pick.className = 'craft-of';
-      pick.title = 'What to make it of';
+      pick.title = 'Material';
       for (const m of choices) {
         const o = document.createElement('option');
         o.value = m;
@@ -484,7 +485,7 @@ export class CraftPanel {
       const made = document.createElement('span');
       made.className = 'have';
       made.textContent = `of ${st.material.toLowerCase()}`;
-      made.title = r.wood ? `A ${lower(r.result)} is made of ${r.wood.toLowerCase()} and nothing else` : `Carry another kind, or keep one in a store within ${reachFor(this.game, r)} tiles, and you can choose between them here`;
+      made.title = r.wood ? `${capital(lower(r.result))}: ${r.wood.toLowerCase()} only` : `Choice appears with another kind carried or in a store within ${reachFor(this.game, r)} tiles`;
       parts.push(made);
     }
     parts.forEach((p, k) => {
@@ -498,7 +499,7 @@ export class CraftPanel {
     pin.type = 'button';
     pin.className = 'tb-btn tb-small craft-pin' + (pinned ? ' tb-on' : '');
     pin.textContent = pinned ? '★' : '☆';
-    pin.title = pinned ? 'Unpin: take it out of Pinned at the top of the book' : 'Pin: keep it at the top of the book, under Pinned';
+    pin.title = pinned ? 'Unpin' : 'Pin to top';
     pin.setAttribute('aria-pressed', String(pinned));
     pin.addEventListener('click', () => this.togglePin(r.id));
     buttons.append(pin);
@@ -516,7 +517,7 @@ export class CraftPanel {
     listBtn.type = 'button';
     listBtn.className = 'tb-btn tb-small';
     listBtn.textContent = 'List';
-    listBtn.title = `Put it on the shopping list: everything it takes, down to what is gathered, against your pack and the stores within ${CRAFT_REACH} tiles`;
+    listBtn.title = `Add to shopping list: full bill down to raw materials, against pack and stores within ${CRAFT_REACH} tiles`;
     listBtn.addEventListener('click', () => void this.askList(r));
     buttons.append(listBtn);
     if (st.ready) {
@@ -524,7 +525,7 @@ export class CraftPanel {
       to.type = 'button';
       to.className = 'tb-btn tb-small';
       to.textContent = 'To…';
-      to.title = `Make until you hold so many ${lower(r.result)}, counting your pack, bags and stores within ${reachFor(this.game, r)} tiles; it stops early if what it takes runs out`;
+      to.title = `Make until you hold N ${lower(r.result)} (pack, bags and stores within ${reachFor(this.game, r)} tiles); stops when materials run out`;
       to.addEventListener('click', () => void this.askTarget(r));
       buttons.append(to);
     }
@@ -533,7 +534,7 @@ export class CraftPanel {
       all.type = 'button';
       all.className = 'tb-btn tb-small';
       all.textContent = `× ${st.max}`;
-      all.title = `Make ${st.max}, one after another`;
+      all.title = `Make ${st.max} in a row`;
       all.addEventListener('click', () => this.craft(r, st.max));
       buttons.append(all);
     }
@@ -552,8 +553,8 @@ export class CraftPanel {
     el.tabIndex = 0;
     el.setAttribute('role', 'button');
     el.title += makes
-      ? `. Click for ${makes === 1 ? 'the recipe that makes it' : `the ${makes} recipes that make it`}.`
-      : '. Nothing makes it at a bench: click to see what the help says about where it comes from.';
+      ? `. Click: ${makes} ${makes === 1 ? 'recipe' : 'recipes'}.`
+      : '. No recipe: click for its source in the help.';
     const go = (): void => this.jump(item);
     // And how it is made, down to what is gathered, on hover or focus. The
     // tree says what the hover note said, so the note is read out instead of
@@ -580,11 +581,11 @@ export class CraftPanel {
   /** Ask how many to put on the shopping list. */
   private async askList(r: Recipe): Promise<void> {
     const per = this.game.madeAGo(r);
-    const said = await this.game.hooks.prompt(`How many ${lower(r.result)} to put on the shopping list? One go makes ${per}.`, String(per));
+    const said = await this.game.hooks.prompt(`Count of ${lower(r.result)} for the shopping list (${per} per go):`, String(per));
     if (said === null) return;
     const n = Math.floor(Number(said.trim()));
     if (!Number.isFinite(n) || n <= 0) {
-      this.game.logMsg('Give a whole number of them.', 'error');
+      this.game.logMsg('Need a whole number.', 'error');
       return;
     }
     this.onList?.(r.id, n);
@@ -600,15 +601,15 @@ export class CraftPanel {
   private async askTarget(r: Recipe): Promise<void> {
     const name = lower(r.result);
     const had = this.holding(r);
-    const said = await this.game.hooks.prompt(`Make ${name} until you hold how many? You hold ${had}, counting your pack, bags and stores within ${reachFor(this.game, r)} tiles.`, String(had + 10 * this.game.madeAGo(r)));
+    const said = await this.game.hooks.prompt(`Make ${name} until you hold (have ${had}, pack, bags and stores within ${reachFor(this.game, r)} tiles):`, String(had + 10 * this.game.madeAGo(r)));
     if (said === null) return;
     const want = Math.floor(Number(said.trim()));
     if (!Number.isFinite(want) || want <= 0) {
-      this.game.logMsg('Give a whole number of them to hold.', 'error');
+      this.game.logMsg('Need a whole number.', 'error');
       return;
     }
     if (want <= had) {
-      this.game.logMsg(`You hold ${had} ${name} already.`, 'info');
+      this.game.logMsg(`Already held: ${had} ${name}.`, 'info');
       return;
     }
     this.target = { r, want, had, started: false };
@@ -643,13 +644,13 @@ export class CraftPanel {
     const have = this.holding(t.r);
     if (have >= t.want) {
       this.target = null;
-      this.game.logMsg(`You hold ${have} ${name}, the ${t.want} you set out to.`, 'event');
+      this.game.logMsg(`Target reached: ${have}/${t.want} ${name}.`, 'event');
       return;
     }
     const why = recipeReason(t.r, this.game, undefined, this.game.craftStock(undefined, false, reachFor(this.game, t.r)));
     if (have <= t.had || why) {
       this.target = null;
-      this.game.logMsg(`Stopped at ${have} of the ${t.want} ${name} you set out to hold${why ? `: ${why}` : '.'}`, 'error');
+      this.game.logMsg(`Stopped at ${have}/${t.want} ${name}${why ? `: ${why}` : '.'}`, 'error');
       return;
     }
     t.had = have;

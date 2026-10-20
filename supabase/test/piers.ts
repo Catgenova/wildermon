@@ -652,11 +652,11 @@ rollback;`));
   const examine = (x: number, y: number): string => {
     ACTION_BY_ID.get('examine')!.perform(tile(x, y), g);
     const text = g.log[g.log.length - 1]?.text ?? '';
-    return text.slice(text.indexOf(' It belongs to'));
+    return text.slice(text.indexOf(' Building: '));
   };
   for (const [tag, x, y, what] of [['xBuilt', 4, 44, 'Examine on the jetty\'s deck'], ['xBare', 2, 44, 'on its deck not built'], ['xBank', 27, 58, 'on the bank house, no deck planned']] as Array<[string, number, number, string]>) {
     const theirs = island.get(tag) ?? '';
-    const tail = theirs.slice(theirs.indexOf(' It belongs to'));
+    const tail = theirs.slice(theirs.indexOf(' Building: '));
     const mine = examine(x, y);
     say(mine === tail && mine.includes('piers'), `${what}:${mine}${mine === tail ? '' : ` -- island:${tail}`}`);
   }
@@ -1000,7 +1000,7 @@ rollback;`));
   const risen = g.pierSays(4, 44);
   jetty.deck = 0;
   const over = g.pierSays(4, 44);
-  say(risen === island.get('risen') && risen.includes('risen'), `Examine on the jetty, its deck let down to within ${metres(PIER_CLEAR)} m of the sea:${risen}${risen === island.get('risen') ? '' : ` -- island:${island.get('risen')}`}`);
+  say(risen === island.get('risen') && risen.includes('Water under it: '), `Examine on the jetty, its deck let down to within ${metres(PIER_CLEAR)} m of the sea:${risen}${risen === island.get('risen') ? '' : ` -- island:${island.get('risen')}`}`);
   say(over === island.get('over'), `and let down to the sea itself:${over}${over === island.get('over') ? '' : ` -- island:${island.get('over')}`}`);
 }
 

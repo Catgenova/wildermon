@@ -67,5 +67,5 @@ export function priceLine(days: readonly SaleDay[] | undefined): string | null {
   const s = summarise(days);
   if (!s) return null;
   const range = s.lo === s.hi ? `${silverEach(s.lo)} silver each` : `${silverEach(s.lo)} to ${silverEach(s.hi)} silver each, ${silverEach(s.each)} on average`;
-  return `Sold on the island in ${SALE_DAYS} days: ${s.n}, ${range}.`;
+  return `Island sales, last ${SALE_DAYS} days: ${s.n}, ${range}.`;
 }

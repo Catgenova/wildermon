@@ -34,6 +34,8 @@
  * either side of the sun -- so this deliberately took a different one.
  */
 
+import { fill } from './words';
+
 /** The stone a spell is cast out of, by the kind it must be. */
 export type Stone = 'ruby' | 'garnet' | 'sapphire' | 'diamond' | 'emerald' | 'topaz';
 
@@ -58,15 +60,15 @@ export interface SchoolDef {
 export const SCHOOLS: SchoolDef[] = [
   {
     id: 'kindling', name: 'Kindling', skill: 'kindling', stones: ['garnet', 'ruby'],
-    note: 'Heat, out of the warm stones. What it touches burns, and goes on burning.',
+    note: 'Burn wounds. Cast from a garnet or ruby focus.',
   },
   {
     id: 'binding', name: 'Binding', skill: 'binding', stones: ['sapphire', 'diamond'],
-    note: 'Stillness, out of the clear stones. What it touches stops, and stays stopped.',
+    note: 'Holds creatures in place. Cast from a sapphire or diamond focus.',
   },
   {
     id: 'warding', name: 'Warding', skill: 'warding', stones: ['topaz', 'emerald'],
-    note: 'A skin, out of the soft stones. It stands between a blow and whoever it was aimed at.',
+    note: 'Shields that absorb damage. Cast from a topaz or emerald focus.',
   },
 ];
 
@@ -114,40 +116,43 @@ export const SPELLS: SpellDef[] = [
   {
     id: 'ember', school: 'kindling', name: 'Ember', level: 1, gem: 'garnet',
     wear: 3, power: 12, secs: 0, range: 5, at: 'creature',
-    note: 'A coal out of the stone, put where you are looking.',
-    done: 'The garnet goes cold in your hand and the {t} is burning. ({n})',
+    note: 'Burn wound on a creature within {range} tiles: {power} base damage.',
+    done: 'Burning: {t}, {n} damage.',
   },
   {
     id: 'pyre', school: 'kindling', name: 'Pyre', level: 30, gem: 'ruby',
     wear: 7, power: 9, secs: 0, range: 3, at: 'around',
-    note: 'Everything close enough to feel it, at once.',
-    done: 'The air goes white and everything near you is alight. ({n})',
+    note: 'Burn wound on every creature within {range} tiles: {power} base damage each.',
+    done: 'Creatures burning: {n}.',
   },
   {
     id: 'snare', school: 'binding', name: 'Snare', level: 1, gem: 'sapphire',
     wear: 3, power: 0, secs: 8, range: 5, at: 'creature',
-    note: 'One thing, standing exactly where it is.',
-    done: 'The {t} puts a foot down and does not pick it up again. ({n})',
+    note: 'Holds a creature within {range} tiles in place: {secs} s base.',
+    done: 'Held: {t}, {n} s.',
   },
   {
     id: 'stillfield', school: 'binding', name: 'Still field', level: 30, gem: 'diamond',
     wear: 7, power: 0, secs: 5, range: 3, at: 'around',
-    note: 'Everything close enough, for rather less time each.',
-    done: 'Everything around you stops where it stands. ({n})',
+    note: 'Holds every creature within {range} tiles in place: {secs} s base each.',
+    done: 'Creatures held: {n}.',
   },
   {
     id: 'aegis', school: 'warding', name: 'Aegis', level: 1, gem: 'topaz',
     wear: 4, power: 20, secs: 0, range: 0, at: 'self',
-    note: 'A skin over you that takes the blows instead, until it is used up.',
-    done: 'Something closes over you, a half inch out from the skin. ({n})',
+    note: 'Shield on you: absorbs {power} base damage, then breaks.',
+    done: 'Shield on you: {n}.',
   },
   {
     id: 'bulwark', school: 'warding', name: 'Bulwark', level: 30, gem: 'emerald',
     wear: 8, power: 16, secs: 0, range: 3, at: 'around',
-    note: 'The same skin, over everybody standing near you.',
-    done: 'It closes over everybody within reach of you. ({n})',
+    note: 'Shield on everybody within {range} tiles: absorbs {power} base damage each.',
+    done: 'People shielded: {n}.',
   },
 ];
+
+// A spell's note counts off its own numbers: `{range}`, `{power}`, `{secs}`.
+for (const s of SPELLS) s.note = fill(s.note, s);
 
 export const spellDef = (id: string): SpellDef | undefined => SPELLS.find((s) => s.id === id);
 export const spellsOf = (school: string): SpellDef[] => SPELLS.filter((s) => s.school === school);

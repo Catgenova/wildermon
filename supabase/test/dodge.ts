@@ -114,7 +114,7 @@ begin
     perform mark_attacker(w.world_id, w.uid, g);
     perform hurt_player(w.world_id, w.uid, 0.001, 'The goblin is on you', 'cut');
   end loop;
-  insert into said values ('DODGED', (select count(*) from event where uid = w.uid and text = 'You dodge the goblin.')::text);
+  insert into said values ('DODGED', (select count(*) from event where uid = w.uid and text = 'Dodged: goblin.')::text);
   insert into skill (world_id, uid, id, value) values (w.world_id, w.uid, 'body_control', 0)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   update player set stats = jsonb_set(stats, '{aegis}', '0') where world_id = w.world_id and uid = w.uid;
@@ -129,8 +129,8 @@ begin
   for i in 1..100 loop
     perform perform_fight(w.world_id, w.uid, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', g));
   end loop;
-  insert into said values ('CRITS', (select count(*) from event where uid = w.uid and text like '%, a critical blow.%')::text
-    || '|' || (select count(*) from event where uid = w.uid and text like 'You strike the goblin%')::text);
+  insert into said values ('CRITS', (select count(*) from event where uid = w.uid and text like 'Hit, critical: %')::text
+    || '|' || (select count(*) from event where uid = w.uid and text like 'Hit%: goblin%')::text);
   update creature set hunting = null, brawl = null where world_id = w.world_id and hunting = w.uid;
 
   -- Arrows: five of each, a bow, and a goblin at four tiles.
@@ -227,7 +227,7 @@ begin
   delete from event where uid = w.uid;
   perform creature_attack(w.world_id, pet, g);
   insert into said select 'TURNED', coalesce((brawl = pet)::text, 'none') || '|'
-    || (select count(*) from event where uid = w.uid and text like 'The goblin turns on %')
+    || (select count(*) from event where uid = w.uid and text like 'Goblin attacks %')
     from creature where world_id = w.world_id and id = g;
   -- Your blow within the hold: it stays on the companion, and is after you still.
   perform engage_beast(w.world_id, g, w.uid);
@@ -237,7 +237,7 @@ begin
   update creature set threat_at = now() - interval '1 minute' where world_id = w.world_id and id = g;
   perform engage_beast(w.world_id, g, w.uid);
   insert into said select 'BACK', coalesce(brawl::text, 'none') || '|' || coalesce((hunting = w.uid)::text, 'none') || '|'
-    || (select count(*) from event where uid = w.uid and text = 'The goblin turns back on you.')
+    || (select count(*) from event where uid = w.uid and text = 'Goblin attacks you again.')
     from creature where world_id = w.world_id and id = g;
   -- A defensive companion's bite within the hold does not pull it; a guarding one's does.
   perform creature_attack(w.world_id, pet, g);
@@ -364,7 +364,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   g.rand = () => 0;
   g.skills.values.set('body_control', 100);
   g.hurtPlayer(0.05, 'The goblin is on you', 'cut');
-  const dodged = lines(g).includes('You dodge the goblin.') && g.player.stats.health === 1;
+  const dodged = lines(g).includes('Dodged: goblin.') && g.player.stats.health === 1;
   g.rand = () => 0.99;
   g.hurtPlayer(0.05, 'The goblin is on you', 'cut');
   check('a blow under the chance is dodged and costs nothing; one over it lands', dodged && g.player.stats.health < 1, `health ${g.player.stats.health}`);
@@ -376,7 +376,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   g.equip('weapon', g.inventory.add('hunting_knife', { ql: 40 }).uid);
   const attack = ACTION_BY_ID.get('attack_creature');
   attack?.perform({ kind: 'creature', id: gob.id }, g);
-  check('a blow under the critical chance is critical, and says so', lines(g).some((t) => t.includes(', a critical blow.')), lines(g).slice(-1)[0]);
+  check('a blow under the critical chance is critical, and says so', lines(g).some((t) => t.startsWith('Hit, critical: ')), lines(g).slice(-1)[0]);
 }
 {
   const g = field();
@@ -442,12 +442,12 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   // A moment on, so its being struck by you is past the hold.
   g.time += THREAT_HOLD + 1;
   g.creatures.attack(g, pet, gob);
-  const turned = gob.brawl === pet.id && lines(g).includes(`The goblin turns on ${pet.name}.`);
+  const turned = gob.brawl === pet.id && lines(g).includes(`Goblin attacks ${pet.name}.`);
   g.creatures.engage(g, gob);
   const held = gob.brawl === pet.id;
   g.time += THREAT_HOLD + 1;
   g.creatures.engage(g, gob);
-  const back = gob.brawl === null && lines(g).includes('The goblin turns back on you.');
+  const back = gob.brawl === null && lines(g).includes('Goblin attacks you again.');
   g.creatures.attack(g, pet, gob);
   const defensive = gob.brawl;
   pet.stance = 'guard';

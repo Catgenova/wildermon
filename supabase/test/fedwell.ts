@@ -217,7 +217,7 @@ check('a wild one gets nothing from a meal, and grazing puts nothing on it', at(
   heard.creatures.sawAll([row], heard.time);
   const c = heard.creatures.get(row.id);
   check('a browser on the island takes what is on one of yours, and its card says it',
-    !!c && near(fedNow(c, heard.time), FULL) && near((c.fedUntil ?? 0) - heard.time, FED_FOR, 1e-3) && wellFedSays(c, heard.time).startsWith('Well fed: +32% learning for 2 hours and 30 minutes'),
+    !!c && near(fedNow(c, heard.time), FULL) && near((c.fedUntil ?? 0) - heard.time, FED_FOR, 1e-3) && wellFedSays(c, heard.time).startsWith('Well fed: learning +32%, 2 hours and 30 minutes'),
     c ? wellFedSays(c, heard.time) : 'not heard');
 }
 
@@ -242,8 +242,8 @@ feed(a, FAV, Q);
 check(`in a game of your own its favourite at quality ${Q} from your hand puts ${(FULL * 100).toFixed(0)}% on its learning for ${FED_FOR} seconds and ${CARE} on its care, and is eaten`,
   near(a.fedBonus ?? 0, FULL) && near((a.fedUntil ?? 0) - game.time, FED_FOR) && near(a.care, CARE) && near(game.creatures.learnMul(a, game.time) / base, (1 + FULL) * CARED)
     && !game.inventory.items.some((it) => it.id === FAV), `${a.fedBonus} until +${(a.fedUntil ?? 0) - game.time}, care ${a.care}`);
-check('its card says so', wellFedSays(a, game.time) === `Well fed: +32% learning for 2 hours and 30 minutes more`, wellFedSays(a, game.time));
-check('and its card and its page say what its favourite is worth', favouriteSays(def) === `Favourite: reed, +40% learning for two and a half hours at quality ${QL_TOP}`, favouriteSays(def));
+check('its card says so', wellFedSays(a, game.time) === `Well fed: learning +32%, 2 hours and 30 minutes left`, wellFedSays(a, game.time));
+check('and its card and its page say what its favourite is worth', favouriteSays(def) === `Favourite: reed, learning +40% for 2 hours and 30 minutes at QL ${QL_TOP}`, favouriteSays(def));
 // A gain it makes while it lasts, at the same roll, against one with nothing on it.
 {
   const roll = game.rand;

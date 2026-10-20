@@ -55,7 +55,7 @@ check('ore, a log, dirt, shards, wool, clay, coal and a hide go in', taken.every
 const refused = ['plank', 'stone_brick', 'iron_lump', 'wheat', 'hatchet', 'nail', 'casting', 'wax', 'ash'];
 check('a plank, a brick, a lump, wheat, a hatchet, nails, a casting, wax and ash do not', refused.every((id) => said(id) === RAW_BIN_REFUSAL),
   refused.map((id) => `${id}: ${said(id) === RAW_BIN_REFUSAL ? 'refused' : said(id)}`).join(' | '));
-check('in the same words the island uses', RAW_BIN_REFUSAL === 'A raw material bin takes raw materials — ore, logs, dirt, shards, wool — and nothing a bench has touched.', RAW_BIN_REFUSAL);
+check('in the same words the island uses', RAW_BIN_REFUSAL === 'Raw material bin: raw materials only (ore, logs, dirt, shards, wool).', RAW_BIN_REFUSAL);
 
 const raw = Object.entries(ITEM_DEFS).filter(([, d]) => d.raw).map(([id]) => id);
 const made = new Set(RECIPES.map((r) => r.result));
@@ -104,7 +104,7 @@ check('ore, a log, dirt, wool, a hatchet, bread, sage and a coin do not',
   notWorked.every((id) => csaid(id) === CRAFT_BIN_REFUSAL),
   notWorked.map((id) => `${id}: ${csaid(id) === CRAFT_BIN_REFUSAL ? 'refused' : csaid(id)}`).join(' | '));
 check('in the same words the island uses',
-  CRAFT_BIN_REFUSAL === 'A craft material bin takes worked materials — planks, nails, ribbons, hinges — and nothing that has not been through a bench.',
+  CRAFT_BIN_REFUSAL === 'Craft material bin: worked materials only (planks, nails, ribbons, hinges).',
   CRAFT_BIN_REFUSAL);
 
 /*

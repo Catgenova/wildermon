@@ -10,15 +10,15 @@ import type { MenuItem } from './contextmenu';
  */
 export function pinEntry(g: Game, pin: BeltPin): MenuItem {
   const loops = g.beltLoops();
-  if (!loops) return { label: 'Hang on your belt', hint: 'You are wearing no toolbelt. Stitch one and put it on.', disabled: true };
+  if (!loops) return { label: 'Hang on belt', hint: 'Need a worn toolbelt.', disabled: true };
   const free = g.freeLoop();
   return {
-    label: 'Hang on your belt',
+    label: 'Hang on belt',
     children: Array.from({ length: loops }, (_, i) => {
       const there = g.player.belt[i];
       return {
         label: `Loop ${i + 1}`,
-        note: there ? `replaces ${pinLabel(there, ACTION_BY_ID.get(there.action))}` : i === free ? 'empty — the first free one' : 'empty',
+        note: there ? `replaces ${pinLabel(there, ACTION_BY_ID.get(there.action))}` : i === free ? 'empty (first free)' : 'empty',
         onSelect: () => g.pinToBelt(i, pin),
       };
     }),

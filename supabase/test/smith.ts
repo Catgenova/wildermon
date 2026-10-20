@@ -220,7 +220,7 @@ begin
   end loop;
   insert into said values ('WEAR', (select string_agg(dmg || ':' || mould_uses_left(ql, dmg, mark_of(mark, 'last')), ',' order by id)
     from item where world_id = w and holder = 'player' and holder_uid = u and def = 'shovel_head_mould')
-    || '|' || coalesce(${last('You pour a lump of copper into the shovel head mould.%')}, 'unsaid'));
+    || '|' || coalesce(${last('Poured: 1 × copper lump into the shovel head mould.%')}, 'unsaid'));
   ${emptyFurnace};
 
   /* ---- Clean Pour: a worn mould pours as a new one. ---- */
@@ -257,7 +257,7 @@ begin
   ${hold('Second Heat')};
   ${casting('rake_head', 1)};
   perform act_perform(w, u, 'smith', ${atAnvil('v_cast')});
-  insert into said values ('HEAT', ${count('casting')} || '|' || coalesce(${last('The rake head comes out misshapen%')}, 'unsaid'));
+  insert into said values ('HEAT', ${count('casting')} || '|' || coalesce(${last('Failed: rake head.%')}, 'unsaid'));
   ${clear('casting')};
   ${checks(true)};
 
@@ -269,7 +269,7 @@ begin
   ${clear('nail')};
   ${hold('Nail Maker')};
   perform act_perform(w, u, 'smith', ${atAnvil('v_cast')});
-  insert into said values ('NAILS', v_t || '|' || ${count('nail')} || '|' || coalesce(${last('You beat out % iron nails%')}, 'unsaid'));
+  insert into said values ('NAILS', v_t || '|' || ${count('nail')} || '|' || coalesce(${last('Smithed: % × iron nails%')}, 'unsaid'));
   ${clear('nail', 'casting')};
 
   /* ---- Toolsmith: a rake head, with the hands held still -- and the skill, which the first go raises. ---- */
@@ -384,7 +384,7 @@ begin
   ${clear('coin')};
   perform give(w, u, 'gold_lump', 60, 0);
   perform act_perform(w, u, 'strike_coins', ${atAnvil(newest('gold_lump'))}) from generate_series(1, 60);
-  insert into said values ('PURE', v_t || '|' || ${count('coin')} || ':' || ${count('gold_lump')} || '|' || coalesce(${last('The gold is too poor%')}, 'unsaid'));
+  insert into said values ('PURE', v_t || '|' || ${count('coin')} || ':' || ${count('gold_lump')} || '|' || coalesce(${last('Failed: coins, gold too poor%')}, 'unsaid'));
   ${clear('coin', 'gold_lump', 'coin_die')};
 
   /* ---- Metal Polisher: a pass of Improve on an iron hatchet, from an iron bar. ---- */
@@ -475,7 +475,7 @@ const [plainWear, hardWear] = wearList.split(',').map((s) => s.split(':').map(Nu
 check('and it takes that much less wear a filling, and has that many more fillings left',
   near(hardWear[0] * lastBy, plainWear[0], 1e-4) && hardWear[1] === mouldUsesLeft(50, hardWear[0], lastBy)
     && plainWear[1] === mouldUsesLeft(50, plainWear[0]), say('WEAR'));
-check('and the pour says what is left of it', pourSaid.includes(`has ${hardWear[1]} fillings left`), pourSaid);
+check('and the pour says what is left of it', pourSaid.includes(`Mould: ${hardWear[1]} fillings left`), pourSaid);
 
 const [pourA, pourB] = say('POUR').split('|').map(Number);
 check(`${P('Clean Pour').name}: a QL 60 mould at 40 damage pours as ${60 - 40 * MOULD_DENT} without it and 60 with it`,
@@ -488,12 +488,12 @@ check(`${P('Sure Hammer').name}: Smith and Strike coins fail every time without 
   hamA[0] === 0 && hamA[1] === 1 && hamA[2] === 0 && hamB[0] === 1 && hamB[1] > 0, say('HAMMER'));
 const [heatLeft, heatSaid] = say('HEAT').split('|');
 check(`${P('Second Heat').name}: a failed go keeps its casting, and says so`,
-  Number(heatLeft) === 1 && heatSaid.includes('the casting is kept'), say('HEAT'));
+  Number(heatLeft) === 1 && heatSaid.includes('Second Heat: casting kept.'), say('HEAT'));
 const nailMould = MOULD_BY_ID.get('nail_mould')!;
 const [nailsA, nailsB, nailsSaid] = say('NAILS').split('|');
 check(`${P('Nail Maker').name}: a filling of nails is ${P('Nail Maker').fx['count:nail']} with it, ${nailMould.per} without, and the go says so`,
   Number(nailsA) === nailMould.per && Number(nailsB) === P('Nail Maker').fx['count:nail']
-    && nailsSaid.startsWith(`You beat out ${P('Nail Maker').fx['count:nail']} iron nails`), say('NAILS'));
+    && nailsSaid.startsWith(`Smithed: ${P('Nail Maker').fx['count:nail']} × iron nails`), say('NAILS'));
 const [toolA, toolB] = say('TOOLSMITH').split('|').map(Number);
 check(`${P('Toolsmith').name}: a rake head comes out ${P('Toolsmith').fx['ql:rake_head']} times as good with it`,
   near(toolB / toolA, P('Toolsmith').fx['ql:rake_head'], 1e-4), say('TOOLSMITH'));
@@ -514,12 +514,12 @@ check('which hits that much harder and lands that much more often, as the island
 const [temperMark, temperNoWater] = say('TEMPERED').split('|');
 check(`${P('Temper Bath').name}: a sword finished with it carries a quench of +${P('Temper Bath').fx['temper:sword']} QL`,
   JSON.parse(temperMark).temper === P('Temper Bath').fx['temper:sword'], say('TEMPERED'));
-check('which wants water', temperNoWater === 'You need water to quench it in: stand at the water, or beside a barrel or a well of it.', temperNoWater);
+check('which wants water', temperNoWater === 'Need water: stand at water, or beside a barrel or well of it.', temperNoWater);
 const [qNoPerk, qOk, qBefore, qAfter, qMark, qAgain] = say('QUENCH').split('|');
-check('and the perk', qNoPerk === 'That wants a Smith who has learned to temper.' && qOk === 'ALLOWED', say('QUENCH'));
+check('and the perk', qNoPerk === 'Needs perk: Temper Bath (Smith).' && qOk === 'ALLOWED', say('QUENCH'));
 check(`and quenched at a barrel of water it is ${P('Temper Bath').fx['temper:sword']} QL better, once`,
   near(Number(qAfter) - Number(qBefore), P('Temper Bath').fx['temper:sword'], 1e-4) && !qMark.includes('temper')
-    && qAgain === 'There is no quench left in it.', say('QUENCH'));
+    && qAgain === 'Already quenched.', say('QUENCH'));
 
 const [mailMark, mailSoak, mailPlain] = say('MAIL').split('|');
 check(`${P('Mail Maker').name}: a hauberk beaten out with it turns aside ${P('Mail Maker').fx['soak:chain_hauberk']} times as much`,
@@ -535,7 +535,7 @@ check(`${P('Plate Maker').name}: and a breastplate with it`,
 const [barNo, barYes, bars] = say('INGOT').split('|');
 const [ingots, lumpsLeft, barQl, barKg, lumpKg] = bars.split(':').map(Number);
 check(`${P('Ingots').name}: pouring an ingot is refused without it, in the browser's words`,
-  barNo === 'That wants a Smith who has learned to pour ingots.' && barYes === 'ALLOWED', `${barNo} / ${barYes}`);
+  barNo === 'Need perk: Ingots (Smith).' && barYes === 'ALLOWED', `${barNo} / ${barYes}`);
 check(`and with it ${INGOT_LUMPS} lumps pour one bar at their quality, which weighs ${INGOT_WEIGHT} of what they did`,
   ingots === 1 && lumpsLeft === 12 - INGOT_LUMPS && near(barQl, 45) && near(barKg, lumpKg * INGOT_LUMPS * INGOT_WEIGHT), bars);
 const [pourOk, pourAfter] = say('BARPOUR').split('|');
@@ -558,7 +558,7 @@ const [lowCoins, lowLeft] = pureLow.split(':').map(Number);
 const lowShare = lowCoins / COINS_PER_LUMP / 60;
 check(`gold at QL 100 takes the die every time, at QL 0 about ${coinPurity(0)} of the time (${lowShare.toFixed(2)}), and a strike that fails loses the lump`,
   topCoins === 20 * COINS_PER_LUMP && topLeft === 0 && lowLeft === 0 && lowShare > coinPurity(0) - 0.2 && lowShare < coinPurity(0) + 0.2
-    && pureSaid.endsWith('the lump is lost.'), say('PURE'));
+    && pureSaid.endsWith('Lump lost.'), say('PURE'));
 const kgs = say('KG').split(',').map((s) => s.split(':'));
 check('every metal has an ingot on the island, weighing what the browser says',
   kgs.length === Object.keys(ITEM_DEFS).filter((id) => id.endsWith('_ingot')).length
@@ -575,7 +575,7 @@ check('and a pass from an iron bar breaks it for its one lump', polLeft === `${I
 
 const [reachNo, reachYes, reachGo, reachNow] = say('REACH').split('|');
 check(`${P('Forge Reach').name}: lumps in a chest five tiles off are out of reach for a mould without it`,
-  reachNo.startsWith('You have no metal to pour.:0'), reachNo);
+  reachNo.startsWith('Need metal.:0'), reachNo);
 check(`and in reach with it, for the refusal and the go, while anything else still reaches ${CRAFT_REACH}`,
   reachYes.startsWith('ALLOWED:0') && reachGo === `1:${3 - MOULD_BY_ID.get('shovel_head_mould')!.lumps}` && Number(reachNow) === CRAFT_REACH,
   say('REACH'));
@@ -607,7 +607,7 @@ check('the browser marks a blade as the island does', bladeMark?.damage === swor
 check('and a thing fitted from marked parts keeps the larger of each, and never their temper',
   JSON.stringify(partsMark([{ mark: { damage: 1.1, temper: 5 } }, { mark: { damage: 1.2, aim: 1.05 } }])) === JSON.stringify({ damage: 1.2, aim: 1.05 }));
 check('the browser says each new mark', /turns aside 10% more of a blow/.test(markSays({ soak: 1.1 }))
-  && /lands 5% more often/.test(markSays({ aim: 1.05 })) && /lasts twice as many fillings/.test(markSays({ last: 2 }))
+  && /lands 5% more often/.test(markSays({ aim: 1.05 })) && /lasts 2× the fillings/.test(markSays({ last: 2 }))
   && /can be quenched once, for \+5 QL/.test(markSays({ temper: 5 })) && temperOf({}) === 0,
   markSays({ soak: 1.1, aim: 1.05, last: 2, temper: 5 }));
 const sword = WEAPON_BY_ID.get('sword')!;

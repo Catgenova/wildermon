@@ -1,3 +1,4 @@
+import { capital } from '../../game/words';
 import { crateCentre, crateName, crateCapacity, crateSpare, STORE_REACH } from '../../game/crates';
 import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits } from '../../game/furniture';
 import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
@@ -158,19 +159,19 @@ export class CratePanel {
     takeAll.type = 'button';
     takeAll.className = 'tb-btn tb-small';
     takeAll.textContent = 'Take all';
-    takeAll.title = 'Empty it into your pack, as far as your back will take';
+    takeAll.title = 'Empty into your pack, up to your carry limit';
     takeAll.addEventListener('click', () => this.takeAll());
     const putAll = document.createElement('button');
     putAll.type = 'button';
     putAll.className = 'tb-btn tb-small';
     putAll.textContent = 'Put all in';
-    putAll.title = 'Put everything loose in your pack into it';
+    putAll.title = 'Put all loose pack items in';
     putAll.addEventListener('click', () => this.putAll());
     const putKind = this.putKind = document.createElement('button');
     putKind.type = 'button';
     putKind.className = 'tb-btn tb-small';
-    putKind.textContent = 'Put in what it holds';
-    putKind.title = 'Put in only the kinds already in it — top the store up without emptying your pack';
+    putKind.textContent = 'Top up';
+    putKind.title = 'Put in only the kinds already inside';
     putKind.addEventListener('click', () => this.putAll(true));
     this.waysIn = [putAll, putKind];
     this.wayOut = takeAll;
@@ -191,7 +192,7 @@ export class CratePanel {
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
-    this.search.placeholder = 'Search what is inside\u2026';
+    this.search.placeholder = 'Search contents\u2026';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -206,7 +207,7 @@ export class CratePanel {
     // The order beside the box, as both are about which rows show where; the bar below is for moving them.
     this.find = document.createElement('div');
     this.find.className = 'items-find';
-    this.find.append(this.search, sortSelect('How to order what is inside', (key) => {
+    this.find.append(this.search, sortSelect('Sort order', (key) => {
       this.sort = key;
       this.render();
     }));
@@ -275,7 +276,7 @@ export class CratePanel {
         what: 'panniers',
         kind: 'carried',
         take: (uid) => this.game.pannierTake(beast, uid),
-        refuses: () => (units() >= cap ? `${beast.name} is loaded as it is.` : null),
+        refuses: () => (units() >= cap ? `${beast.name}: full.` : null),
         fits: (item) => Math.min(item.count, Math.max(0, cap - units())),
         add: (item) => this.game.pannierAdd(beast, item),
       };
@@ -380,10 +381,10 @@ export class CratePanel {
     this.markBtn.hidden = why !== null;
     if (why !== null || !kept) return;
     const deed = deedAt(this.game, kept.thing.x, kept.thing.y)?.name ?? 'the settlement';
-    this.markBtn.textContent = on ? 'Make it a settlement store' : 'Stop it being a settlement store';
+    this.markBtn.textContent = on ? 'Set as settlement store' : 'Unset settlement store';
     this.markBtn.title = on
-      ? `Its founder and the ranks of ${deed} holding Use the stores take from it and put into it, padlocked or not; nobody else opens it; every take and put is logged`
-      : 'Its padlock and whose it is decide again who opens it';
+      ? `Access: founder and ${deed} ranks with Use the stores, padlock ignored; nobody else. Every take and put logged.`
+      : 'Access: by owner and padlock again.';
   }
 
   private toggleMark(): void {
@@ -410,12 +411,12 @@ export class CratePanel {
     if (!n) return;
     const say = document.createElement('span');
     say.textContent = `${n} picked`;
-    say.title = 'Ctrl-click a row to add it or take it off, Shift-click for every row from the last one picked. Drag any picked row to move them all.';
+    say.title = 'Ctrl-click: toggle row. Shift-click: range. Drag a picked row: move all picked.';
     const take = document.createElement('button');
     take.type = 'button';
     take.className = 'tb-btn tb-small';
-    take.textContent = 'Take them out';
-    take.title = `Every picked stack, whole, out of the ${store.what} into your pack`;
+    take.textContent = 'Take out';
+    take.title = `All picked stacks from the ${store.what} into your pack`;
     take.addEventListener('click', () => {
       for (const it of store.items.filter((i) => this.picking.uids.has(i.uid))) this.takeOne(it);
       this.picking.clear();
@@ -448,7 +449,7 @@ export class CratePanel {
     const store = this.store();
     if (!store) return;
     if (!this.withinReach()) {
-      this.game.logMsg(`Stand next to the ${store.what} to take things out.`, 'error');
+      this.game.logMsg(`Too far from the ${store.what}.`, 'error');
       return;
     }
     const def = ACTION_BY_ID.get(store.doors?.out ?? 'take_from_store');
@@ -474,7 +475,7 @@ export class CratePanel {
     const total = same.reduce((n, it) => n + it.count, 0);
     if (same.length < 2) return null;
     return {
-      label: `Take every ${itemDef(item.id).name.toLowerCase()}`,
+      label: `Take all ${itemDef(item.id).name.toLowerCase()}`,
       note: `${same.length} stacks, ${total} in all`,
       onSelect: () => {
         for (const it of same) this.takeOne(it);
@@ -495,7 +496,7 @@ export class CratePanel {
     if (!loose.length) return null;
     const total = loose.reduce((n, it) => n + it.count, 0);
     return {
-      label: `Put every ${itemDef(item.id).name.toLowerCase()} in the ${store.what}`,
+      label: `Put all ${itemDef(item.id).name.toLowerCase()} in the ${store.what}`,
       note: `${loose.length === 1 ? 'one stack' : `${loose.length} stacks`}, ${total} in all`,
       onSelect: () => this.putAll(false, item.id),
     };
@@ -506,7 +507,7 @@ export class CratePanel {
     const store = this.store();
     if (!store) return;
     if (!this.withinReach()) {
-      this.game.logMsg(`Stand next to the ${store.what} to take things out.`, 'error');
+      this.game.logMsg(`Too far from the ${store.what}.`, 'error');
       return;
     }
     const door = this.door(store, 'out');
@@ -530,7 +531,7 @@ export class CratePanel {
       this.game.inventory.addItem(it);
       moved += it.count;
     }
-    this.game.logMsg(moved ? `You empty the ${store.what}: ${moved} things into your pack.` : `The ${store.what} is empty.`, 'event');
+    this.game.logMsg(moved ? `Taken from the ${store.what}: ${moved} things.` : `${capital(store.what)} empty.`, 'event');
     this.render();
   }
 
@@ -544,7 +545,7 @@ export class CratePanel {
     const store = this.store();
     if (!store) return;
     if (!this.withinReach()) {
-      this.game.logMsg(`Stand next to the ${store.what} to put things in.`, 'error');
+      this.game.logMsg(`Too far from the ${store.what}.`, 'error');
       return;
     }
     const kinds = new Set(store.items.map((it) => it.id));
@@ -564,7 +565,7 @@ export class CratePanel {
         asked++;
         this.game.requestAction(door, { kind: 'item', uid: item.uid, count: item.count, into: store.id });
       }
-      if (!asked) this.game.logMsg(`There is nothing loose to put in the ${store.what}.`, 'error');
+      if (!asked) this.game.logMsg('Nothing loose to put in.', 'error');
       return;
     }
     let moved = 0;
@@ -593,10 +594,10 @@ export class CratePanel {
         left += item.count - taken.count;
       } else this.game.inventory.addItem(taken);
     }
-    if (left && !refused) refused = `${left} of them would not fit.`;
+    if (left && !refused) refused = `Did not fit: ${left}.`;
     this.game.events.emit('inventory');
     this.game.logMsg(
-      moved ? `You put ${moved} things into the ${store.what}.${refused ? ` ${refused}` : ''}` : refused || `There is nothing loose to put in the ${store.what}.`,
+      moved ? `Put in the ${store.what}: ${moved} things.${refused ? ` ${refused}` : ''}` : refused || 'Nothing loose to put in.',
       moved ? 'event' : 'error',
     );
     this.render();
@@ -615,7 +616,7 @@ export class CratePanel {
     if (!store) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'Nothing is open. Right-click a crate, chest or cart and choose Open, or open a bag from your pack.';
+      empty.textContent = 'Nothing open. Open a crate, chest or cart (right-click), or a bag in your pack.';
       this.list.append(empty);
       this.footer.textContent = '';
       this.footer.classList.remove('inv-full');
@@ -645,12 +646,12 @@ export class CratePanel {
     const bare = !store.items.length;
     if (this.wayOut) {
       this.wayOut.disabled = bare;
-      this.wayOut.title = bare ? `The ${store.what} is empty` : 'Empty it into your pack, as far as your back will take';
+      this.wayOut.title = bare ? `${capital(store.what)} empty` : 'Empty into your pack, up to your carry limit';
     }
     this.putKind.disabled = bare;
     this.putKind.title = bare
-      ? `The ${store.what} is empty, so there are no kinds in it to match: use Put all in`
-      : 'Put in only the kinds already in it — top the store up without emptying your pack';
+      ? `${capital(store.what)} empty: nothing to top up. Use Put all in.`
+      : 'Put in only the kinds already inside';
     for (const b of this.waysIn) b.hidden = store.grave !== undefined || !!store.sell;
     if (this.wayOut) this.wayOut.hidden = !!store.sell;
     if (!store.items.length || !store.items.some((it) => this.matches(it))) {
@@ -659,10 +660,10 @@ export class CratePanel {
       // Two different emptinesses, and saying the wrong one is how somebody
       // comes to believe a full crate has been robbed.
       empty.textContent = store.items.length
-        ? `Nothing in the ${store.what} answers to “${this.search.value.trim()}”. Press Escape in the box to clear it.`
+        ? `No match: “${this.search.value.trim()}”. Esc clears.`
         : store.grave !== undefined || store.sell
           ? `The ${store.what} is empty.`
-          : `The ${store.what} is empty. Drag things here from your pack, or press Put all in.`;
+          : `${capital(store.what)} empty. Drag from your pack, or Put all in.`;
       this.list.append(empty);
     }
     const listed = orderBy(store.items.filter((it) => this.matches(it)), this.sort);
@@ -704,7 +705,7 @@ export class CratePanel {
           return;
         }
         if (!this.withinReach()) {
-          this.game.logMsg(`Stand next to the ${store.what} to take things out.`, 'error');
+          this.game.logMsg(`Too far from the ${store.what}.`, 'error');
           return;
         }
         /*

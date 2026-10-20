@@ -3,7 +3,8 @@ import type { Game } from './game';
 import { DAY_SECONDS, world } from './pace';
 import { wellCap } from './wells';
 import { windAt, windFrom, windWord } from './wind';
-import { article, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times, timeWords } from './words';
+import { listed, listedOr, percent, timeWords } from './words';
+import { durationSaid } from './boons';
 import { COMPANION_LEASH, GUARD_RANGE, HEAVY_HIT } from './fight';
 import { HAND_WINTER, SPRING_GROWTH } from './growth';
 import { lastDawn, TREE_AGES } from '../world/tiles';
@@ -79,21 +80,21 @@ export const PATHS: Record<PathId, PathDef> = {
   love: {
     id: 'love',
     name: 'Love',
-    note: 'The living island: companions, taming, breeding and growing.',
+    note: 'Companions, taming, breeding, growing.',
     moved: true,
     steps: [],
   },
   knowledge: {
     id: 'knowledge',
     name: 'Knowledge',
-    note: 'The reader’s way: senses and information.',
+    note: 'Senses and information.',
     moved: true,
     steps: [],
   },
   power: {
     id: 'power',
     name: 'Power',
-    note: 'The body itself: endurance, carrying, moving and shrugging things off.',
+    note: 'Endurance, carrying, movement, resistance.',
     moved: true,
     steps: [],
   },
@@ -152,7 +153,7 @@ export const calmCap = (meditation: number, deep = 1): number => wellCap(meditat
 
 /** Why a technique cannot be paid for: `cost` Calm wanted and `held` banked. The island's `spell_cast_refusal` says the same. */
 export const calmRefusal = (name: string, cost: number, held: number): string =>
-  `${name} costs ${cost} calm; you hold ${Math.floor(held)}. Sit somewhere quiet.`;
+  `${name}: need ${cost} calm (have ${Math.floor(held)}).`;
 
 /* ---- Where a sitting is worth most ------------------------------------------- */
 
@@ -207,55 +208,58 @@ export interface SitFacts {
  */
 export function sitPlace(f: SitFacts): { place: number; where: string } {
   let place = 1;
-  let where = 'You sit down and let the day go past.';
+  // Every multiplier that applies, by name and number, in the order they multiply.
+  const by: string[] = [];
   if (f.onDeed) {
     place *= SIT_WORTH.yard;
-    where = 'You sit in your own yard. It is hard to empty your head where there is so much to do.';
+    by.push(SIT_YARD_SAID);
   }
   // High, wild ground is what the paths are walked on.
   if (f.height > SIT_WORTH.thinAt) {
     place *= SIT_WORTH.thin;
-    where = 'You sit where the ground runs out and the air is thin, and the day goes past a long way below.';
+    by.push(SIT_THIN_SAID);
   } else if (f.height > SIT_WORTH.highAt && !f.onDeed) {
     place *= SIT_WORTH.high;
-    where = 'You sit on the high ground with your back to a stone.';
+    by.push(SIT_HIGH_SAID);
   }
   if (f.water) {
     place *= SIT_WORTH.water;
-    where = 'You sit with your feet in the water and let it go past.';
+    by.push(SIT_WATER_SAID);
   }
   if (f.swirl) {
     place *= SIT_WORTH.swirl;
-    where += ` ${SIT_SWIRL_SAID}`;
+    by.push(SIT_SWIRL_SAID);
   }
   if (f.stone) {
     place *= SIT_WORTH.stone;
-    where += ` ${SIT_STONE_SAID}`;
+    by.push(SIT_STONE_SAID);
   }
   if (f.stale) {
     place *= SIT_WORTH.stale;
-    where += ` ${SIT_STALE_SAID}`;
+    by.push(SIT_STALE_SAID);
   }
-  return { place, where };
+  return { place, where: `Sitting: ${by.length ? by.join(', ') : 'no place modifier'}.` };
 }
 
-/** What a sitting beside a swirl says, after where it was sat. The island's `sit_swirl_said`. */
-export const SIT_SWIRL_SAID = `A mote swirl turns within ${numberWord(SIT_WORTH.swirlReach)} tiles: ${share(SIT_WORTH.swirl - 1)} more.`;
-/** And one beside a Runestone. The island's `sit_stone_said`. */
-export const SIT_STONE_SAID = `A Runestone stands within ${numberWord(SIT_WORTH.stoneReach)} tiles: ${times(SIT_WORTH.stone)} as much.`;
-/** And one near where you have sat today. The island's `sit_stale_said`. */
-export const SIT_STALE_SAID = `You have sat within ${numberWord(SIT_WORTH.staleReach)} tiles of here since the woods last turned: ${share(SIT_WORTH.stale)} as much.`;
+/** Each place multiplier as a sitting names it: the island's `sit_place`. */
+export const SIT_YARD_SAID = `own yard ×${SIT_WORTH.yard}`;
+export const SIT_THIN_SAID = `over ${SIT_WORTH.thinAt} high ×${SIT_WORTH.thin}`;
+export const SIT_HIGH_SAID = `over ${SIT_WORTH.highAt} high, off your settlement ×${SIT_WORTH.high}`;
+export const SIT_WATER_SAID = `feet in water ×${SIT_WORTH.water}`;
+/** A swirl within reach. The island's `sit_swirl_said`. */
+export const SIT_SWIRL_SAID = `mote swirl within ${SIT_WORTH.swirlReach} tiles ×${SIT_WORTH.swirl}`;
+/** And a Runestone. The island's `sit_stone_said`. */
+export const SIT_STONE_SAID = `Runestone within ${SIT_WORTH.stoneReach} tiles ×${SIT_WORTH.stone}`;
+/** And near where you have sat today. The island's `sit_stale_said`. */
+export const SIT_STALE_SAID = `sat within ${SIT_WORTH.staleReach} tiles since the trees last grew ×${SIT_WORTH.stale}`;
 
 /**
  * Every place multiplier in one line, in `sitPlace`'s order, for the Faith
  * window's Path tab.
  */
-export const SIT_PLACES_SAID = 'Where you sit multiplies the meditation and Calm a sitting gives: '
-  + `your own yard ×${SIT_WORTH.yard}; ground over ${SIT_WORTH.highAt} high, off your settlement, ×${SIT_WORTH.high}, and over ${SIT_WORTH.thinAt} anywhere ×${SIT_WORTH.thin} instead; `
-  + `your feet in the water ×${SIT_WORTH.water}; a mote swirl within ${numberWord(SIT_WORTH.swirlReach)} tiles ×${SIT_WORTH.swirl}; `
-  + `a Runestone within ${numberWord(SIT_WORTH.stoneReach)} tiles ×${SIT_WORTH.stone}; `
-  + `within ${numberWord(SIT_WORTH.staleReach)} tiles of anywhere you have sat since the woods last turned ×${SIT_WORTH.stale}. `
-  + 'Every one that applies multiplies the others.';
+export const SIT_PLACES_SAID = 'Sitting multipliers, on meditation and Calm gained; all that apply multiply: '
+  + `${SIT_YARD_SAID}; ${SIT_HIGH_SAID}, or ${SIT_THIN_SAID} anywhere instead; ${SIT_WATER_SAID}; `
+  + `${SIT_SWIRL_SAID}; ${SIT_STONE_SAID}; ${SIT_STALE_SAID}.`;
 
 /** Whether a spot is within `SIT_WORTH.staleReach` of any of these. */
 export const satNear = (spots: ReadonlyArray<readonly [number, number]>, x: number, y: number): boolean =>
@@ -297,7 +301,7 @@ export function sittingWorth(g: Game): { gain: number; calm: number; place: numb
 }
 
 /** What a sitting says when a blow lands in the middle of it (`stillness`). The island's `sitting_struck` says the same. */
-export const STRUCK_SAID = 'You are struck, and the stillness goes. The sitting is over, and nothing comes of it.';
+export const STRUCK_SAID = 'Sitting interrupted: struck. No gain.';
 
 /* ---- What a moved path offers -------------------------------------------- */
 
@@ -382,39 +386,39 @@ export const LAND_GROWS_SAID = listed(LAND_GROWS.map(([a, b]) => `${ageName(a)} 
  */
 export const PATH_PICKS: PathPickDef[] = [
   knowledge(1, 'technique', 'seek', 'Seek', 10, 5 * 60, { reach: 200 },
-    (fx) => `The nearest mote swirl within ${fx.reach} tiles of you is marked on your map and minimap until somebody collects it.`),
+    (fx) => `Marks the nearest mote swirl within ${fx.reach} tiles on your map and minimap until collected.`),
   knowledge(1, 'discipline', 'attentive', 'Attentive', 0, 0, { learn: 0.05 },
-    (fx) => `Every skill gain you make is ${percent(fx.learn)} larger, added to your other bonuses rather than multiplying them.`),
+    (fx) => `Skill gain +${percent(fx.learn)}, added to other bonuses (not multiplied).`),
   knowledge(1, 'discipline', 'reader', 'Reader', 0, 0, { blood: 1 },
-    () => 'You read every trait in a wildermon’s blood at a glance, whatever your husbandry.'),
+    () => 'Read every trait in a wildermon’s blood at a glance, at any husbandry.'),
 
   knowledge(2, 'technique', 'sky', 'Read the Sky', 10, 10 * 60, { hours: 3 },
-    (fx) => `Says where the wind will come from and how hard it will blow, as sails take it, at each of the next ${numberWord(fx.hours)} hours of the island’s clock. An hour of the island’s clock is ${spanWords(GAME_HOUR)}.`),
+    (fx) => `Wind direction and strength (as sails take it) for each of the next ${fx.hours} island-clock hours. One island-clock hour: ${durationSaid(GAME_HOUR)}.`),
   knowledge(2, 'discipline', 'keen', 'Keen Sight', 0, 0, { sight: 1.25 },
-    (fx) => `You see ${share(fx.sight - 1)} further, and the furthest anybody can see is ${share(fx.sight - 1)} further for you.`),
+    (fx) => `Sight range +${percent(fx.sight - 1)}; max sight range +${percent(fx.sight - 1)} for you.`),
   knowledge(2, 'discipline', 'deep_calm', 'Deep Calm', 0, 0, { calm: 1.25 },
-    (fx) => `The most Calm you can hold is ${share(fx.calm - 1)} higher: ${Math.floor(calmCap(PATH_TIER_AT[PATH_TIER_AT.length - 1], fx.calm))} at ${PATH_TIER_AT[PATH_TIER_AT.length - 1]} meditation rather than ${Math.floor(calmCap(PATH_TIER_AT[PATH_TIER_AT.length - 1]))}.`),
+    (fx) => `Max Calm +${percent(fx.calm - 1)}: ${Math.floor(calmCap(PATH_TIER_AT[PATH_TIER_AT.length - 1], fx.calm))} at meditation ${PATH_TIER_AT[PATH_TIER_AT.length - 1]} (base ${Math.floor(calmCap(PATH_TIER_AT[PATH_TIER_AT.length - 1]))}).`),
 
   knowledge(3, 'technique', 'trace', 'Trace', 25, 30 * 60, { reach: 40 },
-    (fx) => `The nearest hoard buried for a treasure map in your pack, within ${fx.reach} tiles of you, is marked on your map and minimap until it is dug up.`),
+    (fx) => `Marks the nearest hoard of a treasure map in your pack, within ${fx.reach} tiles, on your map and minimap until dug up.`),
   knowledge(3, 'discipline', 'quick_study', 'Quick Study', 0, 0, { first: 2 },
-    (fx) => `The first gain in each skill on each day of the island’s clock is ${times(fx.first)} what it would be. A day of the island’s clock is ${spanWords(DAY_SECONDS)}.`),
+    (fx) => `First gain in each skill each island-clock day ×${fx.first}. One island-clock day: ${durationSaid(DAY_SECONDS)}.`),
   knowledge(3, 'discipline', 'lore', 'Elemental Lore', 0, 0, { motes: 1 },
-    (fx) => `Collect motes gives ${numberWord(fx.motes)} more mote than your Elementalism would.`),
+    (fx) => `Collect motes: +${fx.motes} mote.`),
 
   knowledge(4, 'technique', 'foreknow', 'Foreknow', 40, 40 * 60, { goes: 5 },
-    (fx) => `Your next ${numberWord(fx.goes)} goes at any job that rolls for success succeed: the roll is taken as a success.`),
+    (fx) => `Your next ${fx.goes} goes at any job with a success roll succeed.`),
   knowledge(4, 'discipline', 'cartographer', 'Cartographer', 0, 0, { reveal: 2 },
-    (fx) => `Your map remembers the ground out to ${times(fx.reveal)} as far as you can see, round you as you walk.`),
+    (fx) => `Map reveal radius ×${fx.reveal} your sight range, as you walk.`),
   knowledge(4, 'discipline', 'deep_reading', 'Deep Reading', 0, 0, { further: 3 },
-    (fx) => `Prospecting reads the ground ${numberWord(fx.further)} tiles further round you.`),
+    (fx) => `Prospecting range +${fx.further} tiles.`),
 
   knowledge(5, 'technique', 'clarity', 'Clarity', 60, 4 * 3600, { more: 0.5, secs: 600 },
-    (fx) => `For ${spanWords(fx.secs)} every skill gain you make is ${percent(fx.more)} larger, added to your other bonuses rather than multiplying them.`),
+    (fx) => `Skill gain +${percent(fx.more)} for ${durationSaid(fx.secs)}, added to other bonuses (not multiplied).`),
   knowledge(5, 'discipline', 'night_eyes', 'Night Eyes', 0, 0, { dark: 0 },
-    () => 'The dark takes nothing off how far you see.'),
+    () => 'Darkness does not reduce sight range.'),
   knowledge(5, 'discipline', 'polymath', 'Polymath', 0, 0, { knack: 1.5 },
-    (fx) => `The chance that a go leaves a knack behind is ${times(fx.knack)} what it would be.`),
+    (fx) => `Knack chance per go ×${fx.knack}.`),
 
   /*
    * Love's are the living island: what follows you and what you keep, what
@@ -426,39 +430,39 @@ export const PATH_PICKS: PathPickDef[] = [
    * kind already tamed certain and grow the trees round a sitting.
    */
   love(1, 'technique', 'refresh', 'Refresh', 15, 20 * 60, {},
-    () => 'Your hunger and thirst are both full at once.'),
+    () => 'Hunger and thirst full at once.'),
   love(1, 'discipline', 'green_thumb', 'Green Thumb', 0, 0, { grow: 0.8 },
-    (fx) => `A stage of anything sown on your settlement takes ${percent(1 - fx.grow)} less time.`),
+    (fx) => `Crop stage time on your settlement −${percent(1 - fx.grow)}.`),
   love(1, 'discipline', 'gentle_hand', 'Gentle Hand', 0, 0, { tame: 1.25 },
-    (fx) => `Your chance to tame a wildermon is ${percent(fx.tame - 1)} higher: ${times(fx.tame)} what it would be.`),
+    (fx) => `Tame chance ×${fx.tame}.`),
 
   love(2, 'technique', 'bond', 'Bond', 20, 10 * 60, { reach: 10, heal: 0.4 },
-    (fx) => `Your companion, the wildermon following you, regains ${percent(fx.heal)} of its health, if it is within ${fx.reach} tiles of you.`),
+    (fx) => `Companion within ${fx.reach} tiles: health +${percent(fx.heal)}.`),
   love(2, 'discipline', 'kin', 'Kin', 0, 0, { 'kept:age': 0.75 },
-    (fx) => `Wildermon you keep age ${percent(1 - fx['kept:age'])} slower: they stay young, and then grown, ${share(1 / fx['kept:age'] - 1)} longer.`),
+    (fx) => `Ageing of wildermon you keep −${percent(1 - fx['kept:age'])}: young and grown stages last +${percent(1 / fx['kept:age'] - 1)}.`),
   love(2, 'discipline', 'abundance', 'Abundance', 0, 0, { harvest: 1.25 },
-    (fx) => `A crop harvested off a field or a planter, and fruit picked off a tree, comes to ${percent(fx.harvest - 1)} more.`),
+    (fx) => `Harvest from fields and planters, and fruit picked from trees, +${percent(fx.harvest - 1)}.`),
 
   love(3, 'technique', 'gather', 'Gather', 15, 5 * 60, { reach: 30 },
-    (fx) => `Every wildermon of yours within ${fx.reach} tiles of you, the one following you and those working your settlement, is beside you at once, as a call brings one. Those at work go back to it.`),
+    (fx) => `Every wildermon of yours within ${fx.reach} tiles (following or working your settlement) comes to your side, as a call does. Workers return to work after.`),
   love(3, 'discipline', 'steady_herd', 'Steady Herd', 0, 0, { steady: 1 },
-    () => `Your companion never gives up a fight for how far from you it has gone: another gives one up ${COMPANION_LEASH} tiles from its keeper, or ${GUARD_RANGE} when it is guarding.`),
+    () => `Your companion never breaks off a fight for distance from you (base: ${COMPANION_LEASH} tiles, ${GUARD_RANGE} when guarding).`),
   love(3, 'discipline', 'long_table', 'Long Table', 0, 0, { table: 1.25 },
-    (fx) => `A knack from food or drink lasts ${percent(fx.table - 1)} longer.`),
+    (fx) => `Food and drink knack duration +${percent(fx.table - 1)}.`),
 
   love(4, 'technique', 'lull', 'Lull', 40, 30 * 60, { reach: 8, secs: 60 },
-    (fx) => `Every creature within ${fx.reach} tiles of you that is hunting you stops, and starts no hunt for ${fx.secs} seconds unless you strike it.`),
+    (fx) => `Every creature within ${fx.reach} tiles hunting you stops; no new hunt for ${fx.secs} s unless you strike it.`),
   love(4, 'discipline', 'good_stock', 'Good Stock', 0, 0, { up: 0.1 },
-    (fx) => `A young one you breed has ${Math.round(fx.up * 100)} points more chance, on each of its traits, to come out a grade better than it went in.`),
+    (fx) => `Young you breed: chance each trait comes out a grade better +${Math.round(fx.up * 100)} percentage points.`),
   love(4, 'discipline', 'seasons_hand', 'Season’s Hand', 0, 0, { winter: HAND_WINTER },
-    (fx) => `A field you sow grows through winter at ${percent(fx.winter / SPRING_GROWTH)} of a spring field’s pace, where any other stands still until spring.`),
+    (fx) => `Fields you sow grow in winter at ${percent(fx.winter / SPRING_GROWTH)} of spring speed (base: no growth until spring).`),
 
   love(5, 'technique', 'herd_heart', 'Heart of the Herd', 60, 3600, { secs: 600, reach: 10, cut: 0.3, more: 0.2 },
-    (fx) => `For ${spanWords(fx.secs)}, your companion takes ${percent(fx.cut)} less damage and deals ${percent(fx.more)} more while it is within ${fx.reach} tiles of you.`),
+    (fx) => `For ${durationSaid(fx.secs)}, companion within ${fx.reach} tiles of you: damage taken −${percent(fx.cut)}, damage dealt +${percent(fx.more)}.`),
   love(5, 'discipline', 'old_friend', 'Old Friend', 0, 0, { sure: 1 },
-    () => 'Taming a kind of wildermon you have tamed before never fails: the first offering is taken.'),
+    () => 'Taming a kind of wildermon you have tamed before never fails: first offering accepted.'),
   love(5, 'discipline', 'bloom', 'Bloom', 0, 0, { bloom: 5 },
-    (fx) => `Once a day of the island’s clock, the first sitting you finish with a tree within ${fx.bloom} tiles of you grows every tree there a stage: ${LAND_GROWS_SAID}. One that would grow into dying, and one that is clipped, stays as it is. A day of the island’s clock is ${spanWords(DAY_SECONDS)}.`),
+    (fx) => `Once per island-clock day, your first finished sitting grows every tree within ${fx.bloom} tiles one stage: ${LAND_GROWS_SAID}. Not into dying, not clipped trees. One island-clock day: ${durationSaid(DAY_SECONDS)}.`),
 
   /*
    * Power's are the body itself. Its techniques bring the wind back, make
@@ -470,39 +474,39 @@ export const PATH_PICKS: PathPickDef[] = [
    * trade's.
    */
   power(1, 'technique', 'second_wind', 'Second Wind', 15, 12 * 60, {},
-    () => 'Your stamina is full at once.'),
+    () => 'Stamina full at once.'),
   power(1, 'discipline', 'strong_back', 'Strong Back', 0, 0, { burden: 0.8 },
-    (fx) => `Armour, and a load past what your back will take, burden you ${percent(1 - fx.burden)} less.`),
+    (fx) => `Burden from armour and overload −${percent(1 - fx.burden)}.`),
   power(1, 'discipline', 'long_stride', 'Long Stride', 0, 0, { stride: 1.05 },
-    (fx) => `You walk ${percent(fx.stride - 1)} faster on your own feet.`),
+    (fx) => `Walk speed on foot +${percent(fx.stride - 1)}.`),
 
   power(2, 'technique', 'deep_lungs', 'Deep Lungs', 20, 20 * 60, { secs: 300 },
-    (fx) => `For ${spanWords(fx.secs)} swimming costs you no stamina.`),
+    (fx) => `Swimming costs no stamina for ${durationSaid(fx.secs)}.`),
   power(2, 'discipline', 'sure_feet', 'Sure Feet', 0, 0, { climb: 1.25 },
-    (fx) => `The steepest step between tiles you can take on your own feet, up or down, is ${percent(fx.climb - 1)} higher, whatever your climbing.`),
+    (fx) => `Max step between tiles on foot, up or down, +${percent(fx.climb - 1)}, at any climbing.`),
   power(2, 'discipline', 'hard_breath', 'Hard Breath', 0, 0, { swim: 0.7 },
-    (fx) => `Swimming costs you ${percent(1 - fx.swim)} less stamina.`),
+    (fx) => `Swimming stamina −${percent(1 - fx.swim)}.`),
 
   power(3, 'technique', 'shrug', 'Shrug', 25, 15 * 60, {},
-    () => 'Every wound on you stops bleeding, a burn stops weeping, and the venom in any of them is gone. The wounds stay open until they are seen to.'),
+    () => 'Every wound stops bleeding, burns stop weeping, venom removed. Wounds stay open until treated.'),
   power(3, 'discipline', 'ironhide', 'Ironhide', 0, 0, { hide: 1.1 },
-    (fx) => `What you wear turns ${percent(fx.hide - 1)} more of every blow.`),
+    (fx) => `Damage stopped by what you wear +${percent(fx.hide - 1)}.`),
   power(3, 'discipline', 'unshaken', 'Unshaken', 0, 0, { heavy: 0.5 },
-    (fx) => `A creature’s heavy blow lands on you with ${share(fx.heavy)} its extra weight: ${1 + (HEAVY_HIT - 1) * fx.heavy} times an ordinary blow rather than ${HEAVY_HIT} times.`),
+    (fx) => `Creature heavy blows on you: extra damage ×${fx.heavy}, ×${1 + (HEAVY_HIT - 1) * fx.heavy} an ordinary blow (base ×${HEAVY_HIT}).`),
 
   power(4, 'technique', 'surge', 'Surge', 40, 30 * 60, { secs: 60, pace: 1.3 },
-    (fx) => `For ${spanWords(fx.secs)} you walk ${percent(fx.pace - 1)} faster on your own feet, and nothing slows you: not a load, not the ground, a slope or a wounded leg, and not being out of wind.`),
+    (fx) => `For ${durationSaid(fx.secs)}: walk speed on foot +${percent(fx.pace - 1)}; ignores slowing from load, ground, slope, leg wounds and low stamina.`),
   power(4, 'discipline', 'pack_mule', 'Pack Mule', 0, 0, { mule: 15 },
-    (fx) => `You can carry ${fx.mule} kg more before a load weighs on you.`),
+    (fx) => `Carry weight +${fx.mule} kg.`),
   power(4, 'discipline', 'hard_to_kill', 'Hard to Kill', 0, 0, { kill: 0.1, every: 3600 },
-    (fx) => `At most once in ${spanWords(fx.every)}, a blow that would kill you leaves you at ${percent(fx.kill)} of your health instead.`),
+    (fx) => `A killing blow leaves you at ${percent(fx.kill)} health instead; once per ${durationSaid(fx.every)}.`),
 
   power(5, 'technique', 'unbroken', 'Unbroken', 60, 3600, { secs: 300 },
-    (fx) => `For ${spanWords(fx.secs)} nothing costs you stamina: not work, a fight, swimming or a fighting trade’s spell.`),
+    (fx) => `For ${durationSaid(fx.secs)}: nothing costs stamina (work, fighting, swimming, fighting class spells).`),
   power(5, 'discipline', 'sure_fall', 'Sure Fall', 0, 0, { drop: 1 },
-    () => 'On your own feet you can step down a drop of any height. A step up is still held to how steep you can climb.'),
+    () => 'On foot, step down any drop. Steps up still limited by climbing.'),
   power(5, 'discipline', 'enduring', 'Enduring', 0, 0, { upkeep: 0.75 },
-    (fx) => `Your hunger and thirst fall ${percent(1 - fx.upkeep)} slower.`),
+    (fx) => `Hunger and thirst rate −${percent(1 - fx.upkeep)}.`),
 ];
 export const PATH_PICK_BY_ID = new Map(PATH_PICKS.map((p) => [p.id, p]));
 export const picksOf = (path: PathId, tier: number): PathPickDef[] => PATH_PICKS.filter((p) => p.path === path && p.tier === tier);
@@ -522,14 +526,14 @@ export const pathTierAt = (tier: number): number => PATH_TIER_AT[tier - 1];
 export function pathPickRefusal(
   p: PathPickDef, way: PathId | null, taken: readonly string[], meditation: number, picks: readonly PathPickDef[] = PATH_PICKS,
 ): string | null {
-  if (!way) return `Choose a path first, at ${CHOOSE_AT} meditation.`;
-  if (p.path !== way) return `That is ${PATHS[p.path].name}’s, and you walk ${PATHS[way].name}.`;
-  if (!PATHS[way].moved) return `${PATHS[way].name} is still walked by its steps.`;
-  if (taken.includes(p.id)) return 'You have that already.';
+  if (!way) return `Choose a path first (opens at meditation ${CHOOSE_AT}).`;
+  if (p.path !== way) return `Not your path: ${PATHS[p.path].name} (yours: ${PATHS[way].name}).`;
+  if (!PATHS[way].moved) return `${PATHS[way].name}: still on steps, not tiers.`;
+  if (taken.includes(p.id)) return 'Already taken.';
   const other = picks.find((o) => o.path === p.path && o.tier === p.tier && taken.includes(o.id));
-  if (other) return `You took ${other.name} at this tier.`;
+  if (other) return `Tier already taken: ${other.name}.`;
   const at = pathTierAt(p.tier);
-  if (meditation < at) return `This tier opens at ${at} meditation; you have ${Math.floor(meditation)}.`;
+  if (meditation < at) return `Tier opens at meditation ${at} (have ${Math.floor(meditation)}).`;
   return null;
 }
 
@@ -538,23 +542,23 @@ export const tookSaid = (p: PathPickDef): string => `${p.name}. ${p.note}`;
 
 /** What reaching a tier says, at the rug. */
 export const tierSaid = (path: PathId, tier: number): string =>
-  `${PATHS[path].name}: tier ${tier} is open. Take one of ${listedOr(picksOf(path, tier).map((p) => p.name))} in the Faith window.`;
+  `${PATHS[path].name}: tier ${tier} open. Pick one: ${listedOr(picksOf(path, tier).map((p) => p.name))} (Faith window).`;
 
 /* ---- What the techniques say ---------------------------------------------------------- */
 
 /** Seek, finding one. */
 export const seekSaid = (element: string, dist: number): string =>
-  `The nearest mote swirl is ${dist} tiles off, ${article(element)} ${element} mote swirl. It is marked on your map.`;
+  `Nearest mote swirl: ${element}, ${dist} tiles. Marked on your map.`;
 /** And finding none, which costs nothing. */
-export const seekNone = (reach: number): string => `There is no mote swirl within ${reach} tiles of you.`;
+export const seekNone = (reach: number): string => `No mote swirl within ${reach} tiles.`;
 /** Trace, finding one. */
-export const traceSaid = (dist: number): string => `A hoard buried for a map in your pack is ${dist} tiles off. It is marked on your map.`;
+export const traceSaid = (dist: number): string => `Hoard of a map in your pack: ${dist} tiles. Marked on your map.`;
 /** And finding none, which costs nothing. */
-export const traceNone = (reach: number): string => `No hoard of a map in your pack is buried within ${reach} tiles of you.`;
+export const traceNone = (reach: number): string => `No hoard of a map in your pack within ${reach} tiles.`;
 /** Foreknow. */
-export const foreknowSaid = (goes: number): string => `Your next ${numberWord(goes)} goes that roll for success will succeed.`;
+export const foreknowSaid = (goes: number): string => `Next ${goes} goes with a success roll: success.`;
 /** Clarity. */
-export const claritySaid = (secs: number, more: number): string => `For ${timeWords(secs)} every skill gain you make is ${percent(more)} larger.`;
+export const claritySaid = (secs: number, more: number): string => `Skill gain +${percent(more)} for ${timeWords(secs)}.`;
 
 /*
  * Love's and Power's, each said the same by the island's
@@ -562,12 +566,12 @@ export const claritySaid = (secs: number, more: number): string => `For ${timeWo
  * and costs nothing, as a Seek that finds no swirl is.
  */
 /** Refresh. */
-export const REFRESH_SAID = 'You are neither hungry nor thirsty.';
+export const REFRESH_SAID = 'Hunger and thirst full.';
 /** Bond, mending a companion. */
-export const bondSaid = (name: string, heal: number): string => `${name} regains ${percent(heal)} of its health.`;
+export const bondSaid = (name: string, heal: number): string => `${name}: health +${percent(heal)}.`;
 /** And with none near, or one that is whole. */
-export const bondNone = (reach: number): string => `No companion of yours is within ${reach} tiles of you.`;
-export const bondWhole = (name: string): string => `${name} is not hurt.`;
+export const bondNone = (reach: number): string => `No companion within ${reach} tiles.`;
+export const bondWhole = (name: string): string => `${name}: not hurt.`;
 /** How far from you Gather sets your wildermon down, round you in a ring. */
 export const GATHER_RING = 0.8;
 /** Where the `i`th of `n` wildermon a Gather brings stands, round (`x`, `y`): the island's `gather_spot`. */
@@ -575,32 +579,31 @@ export const gatherSpot = (x: number, y: number, i: number, n: number): [number,
   [x + Math.cos((2 * Math.PI * i) / n) * GATHER_RING, y + Math.sin((2 * Math.PI * i) / n) * GATHER_RING];
 /** Gather. */
 export const gatherSaid = (n: number, name: string): string =>
-  (n === 1 ? `${name} is beside you.` : `${NumberWord(n)} of your wildermon are beside you.`);
-export const gatherNone = (reach: number): string => `No wildermon of yours is within ${reach} tiles of you.`;
+  (n === 1 ? `Gathered: ${name}.` : `Gathered: ${n} wildermon.`);
+export const gatherNone = (reach: number): string => `No wildermon of yours within ${reach} tiles.`;
 /** Lull. */
 export const lullSaid = (n: number, secs: number): string =>
-  (n === 1 ? `The one creature hunting you stops, and starts no hunt for ${secs} seconds unless you strike it.`
-    : `The ${numberWord(n)} creatures hunting you stop, and start no hunt for ${secs} seconds unless you strike them.`);
-export const lullNone = (reach: number): string => `Nothing within ${reach} tiles of you is hunting you.`;
+  `Lulled: ${n} ${n === 1 ? 'creature' : 'creatures'}. No new hunt for ${secs} s unless struck.`;
+export const lullNone = (reach: number): string => `Nothing within ${reach} tiles is hunting you.`;
 /** Heart of the Herd. */
 export const herdSaid = (name: string, secs: number, cut: number, more: number, reach: number): string =>
-  `For ${timeWords(secs)} ${name} takes ${percent(cut)} less damage and deals ${percent(more)} more while it is within ${reach} tiles of you.`;
-export const HERD_NONE = 'No companion follows you.';
+  `${name}, for ${timeWords(secs)} within ${reach} tiles of you: damage taken −${percent(cut)}, damage dealt +${percent(more)}.`;
+export const HERD_NONE = 'No companion following you.';
 /** Second Wind. */
-export const SECOND_WIND_SAID = 'Your wind comes back all at once.';
+export const SECOND_WIND_SAID = 'Stamina full.';
 /** Deep Lungs. */
-export const deepLungsSaid = (secs: number): string => `For ${timeWords(secs)} swimming costs you no stamina.`;
+export const deepLungsSaid = (secs: number): string => `Swimming costs no stamina for ${timeWords(secs)}.`;
 /** Shrug, and with nothing to shrug off. */
-export const SHRUG_SAID = 'Nothing on you is bleeding, weeping or carrying venom now.';
-export const SHRUG_NONE = 'Nothing on you is bleeding, weeping or carrying venom.';
+export const SHRUG_SAID = 'Bleeding, weeping and venom stopped.';
+export const SHRUG_NONE = 'No bleeding, weeping or venom.';
 /** Surge. */
-export const surgeSaid = (secs: number, pace: number): string => `For ${secs} seconds you walk ${percent(pace - 1)} faster, and nothing slows you.`;
+export const surgeSaid = (secs: number, pace: number): string => `Walk speed +${percent(pace - 1)} for ${secs} s, no slowing.`;
 /** Unbroken. */
-export const unbrokenSaid = (secs: number): string => `For ${timeWords(secs)} nothing costs you stamina.`;
+export const unbrokenSaid = (secs: number): string => `No stamina cost for ${timeWords(secs)}.`;
 /** Hard to Kill, taking a killing blow. */
-export const hardToKillSaid = (heal: number): string => `You should be dead. You are not: you stand at ${percent(heal)} of your health.`;
+export const hardToKillSaid = (heal: number): string => `Hard to Kill: killing blow survived at ${percent(heal)} health.`;
 /** Bloom, after a sitting. */
-export const bloomSaid = (n: number): string => `The trees round you grow while you sit: ${n} of them, a stage each.`;
+export const bloomSaid = (n: number): string => `Bloom: ${n} ${n === 1 ? 'tree' : 'trees'} grew a stage.`;
 
 /**
  * Read the Sky: the wind at each of the next `hours` game-hours from `time`,
@@ -611,7 +614,7 @@ export function skySaid(seed: number, time: number, hours: number): string {
   const parts: string[] = [];
   for (let h = 1; h <= hours; h++) {
     const w = windAt(seed, time + h * GAME_HOUR);
-    parts.push(`In ${h === 1 ? 'an hour' : `${numberWord(h)} hours`} the wind is from the ${windFrom(w)}: ${windWord(w.force)}, ${Math.round(w.force * 100)}% of a gale.`);
+    parts.push(`Wind in ${h} h: from the ${windFrom(w)}, ${windWord(w.force)}, ${Math.round(w.force * 100)}% of a gale.`);
   }
   return parts.join(' ');
 }
@@ -666,16 +669,16 @@ const rugDown = (g: Game): boolean => g.inventory.has('rug');
 export const MEDITATION_ACTIONS: ActionDef[] = [
   {
     id: 'meditate',
-    label: 'Sit and think about nothing',
+    label: 'Meditate',
     verb: 'sitting',
     skill: MEDITATION,
     stamina: 0,
     baseTime: 25,
     applies: (t, g) => t.kind === 'tile' && rugDown(g),
     check: (t, g) => {
-      if (!rugDown(g)) return 'You need a rug to sit on.';
+      if (!rugDown(g)) return 'Need a rug.';
       const rest = g.player.satAt + SIT_REST - g.time;
-      if (rest > 0) return `You have sat today and got what there was to get. ${Math.ceil(rest / 60)} minutes.`;
+      if (rest > 0) return `Sat already: next sitting in ${Math.ceil(rest / 60)} min.`;
       return null;
     },
     perform: (t, g) => {
@@ -688,12 +691,12 @@ export const MEDITATION_ACTIONS: ActionDef[] = [
       const now = g.skills.get(MEDITATION);
       const cap = g.calmCap();
       g.player.calm = Math.min(cap, g.player.calm + calm);
-      g.logMsg(`${where} Calm ${Math.floor(g.player.calm)} of ${Math.floor(cap)}.`, 'event');
+      g.logMsg(`${where} Calm ${Math.floor(g.player.calm)}/${Math.floor(cap)}.`, 'event');
       // And the trees round you, once a day, for Love's Bloom.
       const bloomed = g.bloomSitting();
       if (bloomed) g.logMsg(bloomSaid(bloomed), 'event');
       if (!g.player.way && now >= CHOOSE_AT && before < CHOOSE_AT) {
-        g.logMsg(`Something settles. ${NumberWord(PATH_LIST.length)} ways of looking at all this have become clear, and you may walk exactly one of them. Choose from the rug.`, 'system');
+        g.logMsg(`Paths open: choose one of ${PATH_LIST.length} from the rug.`, 'system');
       }
       const path = g.player.way;
       if (path && PATHS[path].moved) {
@@ -723,10 +726,10 @@ export const MEDITATION_ACTIONS: ActionDef[] = [
     baseTime: 0,
     applies: (t, g) => !g.player.way && g.skills.get(MEDITATION) >= CHOOSE_AT,
     check: (t, g) => {
-      if (g.player.way) return 'You have chosen, and it is not the sort of thing that is chosen twice.';
-      if (g.skills.get(MEDITATION) < CHOOSE_AT) return `Sit until you have ${CHOOSE_AT} meditation behind you.`;
+      if (g.player.way) return 'Path already chosen.';
+      if (g.skills.get(MEDITATION) < CHOOSE_AT) return `Need meditation ${CHOOSE_AT}.`;
       const id = t.kind === 'tile' ? (t.material as PathId | undefined) : undefined;
-      if (!id || !PATHS[id]) return 'Choose one of the three.';
+      if (!id || !PATHS[id]) return 'Choose a path.';
       return null;
     },
     perform: (t, g) => {
@@ -734,13 +737,13 @@ export const MEDITATION_ACTIONS: ActionDef[] = [
       if (!id || !PATHS[id] || g.player.way) return;
       g.player.way = id;
       g.note('path');
-      g.logMsg(`You take the path of ${PATHS[id].name}. ${PATHS[id].note}`, 'system');
+      g.logMsg(`Path taken: ${PATHS[id].name}. ${PATHS[id].note}`, 'system');
     },
   },
   {
     id: 'use_ability',
-    label: 'Call on what you know',
-    verb: 'calling on it',
+    label: 'Use path ability',
+    verb: 'using it',
     hidden: true,
     instant: true,
     stamina: 0,
@@ -749,14 +752,14 @@ export const MEDITATION_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const id = t.kind === 'tile' ? t.material : undefined;
       const step = abilitiesOf(g.player.way, g.skills.get(MEDITATION)).find((s) => s.ability?.id === id);
-      return step ? step.name : 'Call on what you know';
+      return step ? step.name : 'Use path ability';
     },
     check: (t, g) => {
       const id = t.kind === 'tile' ? t.material : undefined;
       const step = abilitiesOf(g.player.way, g.skills.get(MEDITATION)).find((s) => s.ability?.id === id);
-      if (!step?.ability) return 'That is not something you know.';
+      if (!step?.ability) return 'Not known.';
       const rest = (g.player.usedAt[step.ability.id] ?? -1e9) + step.ability.rest - g.time;
-      if (rest > 0) return `${step.name} again in ${Math.ceil(rest / 60)} minutes.`;
+      if (rest > 0) return `${step.name}: ready in ${Math.ceil(rest / 60)} min.`;
       return null;
     },
     perform: (t, g) => {

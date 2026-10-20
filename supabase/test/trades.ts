@@ -252,8 +252,8 @@ check('and the two sides describe them identically, name, note and lever',
 
 const artisan = CLASSES.find((c) => c.id === 'artisan')!;
 const browserWhy = classRefusal(artisan, () => 0);
-check('an artisan is an artisan on the island', say('WHY').startsWith('You are not an artisan'), say('WHY'));
-check('and on the browser', !!browserWhy?.startsWith('You are not an artisan'), browserWhy ?? 'none');
+check('an artisan is an artisan on the island', say('WHY').startsWith('Opens at '), say('WHY'));
+check('and on the browser', browserWhy === say('WHY'), browserWhy ?? 'none');
 check('word for word, both of them', say('WHY') === browserWhy, `island: ${say('WHY')}`);
 
 /* A fighting trade asks for no skill: open, and nothing to refuse, with every skill at nothing. */

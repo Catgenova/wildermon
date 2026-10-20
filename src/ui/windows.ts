@@ -297,8 +297,8 @@ export class UIWindow implements Piece {
       this.seeBtn.classList.toggle('win-btn-on', on);
       this.seeBtn.setAttribute('aria-pressed', String(on));
       this.seeBtn.title = on
-        ? 'Solid again. While it is see-through, hold Alt to click in it.'
-        : 'See-through: dimmed, and clicks on it go to the island. Hold Alt to click in it.';
+        ? 'Solid. When see-through, hold Alt to click in it.'
+        : 'See-through: dimmed, clicks pass to the world. Hold Alt to click in it.';
     }
     if (persist) this.mgr.persist();
   }

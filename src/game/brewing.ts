@@ -52,11 +52,11 @@ export const BREW_GAIN = 0.6;
 export const GRAPE_WINE_GRAPES = 24;
 
 export const BREWS: BrewDef[] = [
-  { id: 'ale', name: 'Ale', input: 'wheat', count: 12, litres: 15, time: world(15 * 60), difficulty: 12, done: 'You mash the wheat into the water and leave it to work. It will be ale.' },
-  { id: 'cider', name: 'Cider', input: 'apple', count: 20, litres: 15, time: world(30 * 60), difficulty: 18, done: 'You break the apples into the water and bung the barrel. It will be cider.' },
-  { id: 'mead', name: 'Mead', input: 'honey', count: 12, litres: 15, time: world(40 * 60), difficulty: 24, done: 'You stir the honey through until it goes. It will be mead, in its own time.', ages: MEAD_AGEING },
-  { id: 'wine', name: 'Wine', input: 'cherry', count: 30, litres: 15, time: world(45 * 60), difficulty: 30, done: 'You crush the cherries into the water and seal it. It will be wine.', ages: WINE_AGEING },
-  { id: 'grape_wine', name: 'Grape wine', input: 'grape', count: GRAPE_WINE_GRAPES, litres: 15, time: world(45 * 60), difficulty: 30, done: 'You tread the grapes into the water and seal it. It will be grape wine.', ages: WINE_AGEING },
+  { id: 'ale', name: 'Ale', input: 'wheat', count: 12, litres: 15, time: world(15 * 60), difficulty: 12, done: 'Brewing: ale.' },
+  { id: 'cider', name: 'Cider', input: 'apple', count: 20, litres: 15, time: world(30 * 60), difficulty: 18, done: 'Brewing: cider.' },
+  { id: 'mead', name: 'Mead', input: 'honey', count: 12, litres: 15, time: world(40 * 60), difficulty: 24, done: 'Brewing: mead.', ages: MEAD_AGEING },
+  { id: 'wine', name: 'Wine', input: 'cherry', count: 30, litres: 15, time: world(45 * 60), difficulty: 30, done: 'Brewing: wine.', ages: WINE_AGEING },
+  { id: 'grape_wine', name: 'Grape wine', input: 'grape', count: GRAPE_WINE_GRAPES, litres: 15, time: world(45 * 60), difficulty: 30, done: 'Brewing: grape wine.', ages: WINE_AGEING },
 ];
 
 export const BREW_BY_ID = new Map(BREWS.map((b) => [b.id, b]));
@@ -91,13 +91,13 @@ export function brewBarrel(g: Game, t: Target): PlacedFurniture | undefined {
 export function brewReason(g: Game, f: PlacedFurniture | undefined, brew: BrewDef): string | null {
   if (!f) return 'Stand at a barrel.';
   if (!holdsLiquid(f)) return 'That holds no liquid.';
-  if (isWorking(f)) return 'It is already working. Leave it alone.';
-  if (f.liquid !== 'water') return `A brew is started in water. Empty the ${furnitureName(f).toLowerCase()} and fill it from a well.`;
-  if (litresIn(f) < brew.litres) return `That takes ${brew.litres} litres of water; there are ${litresIn(f).toFixed(0)} in it.`;
+  if (isWorking(f)) return 'Already brewing.';
+  if (f.liquid !== 'water') return `Needs water: empty the ${furnitureName(f).toLowerCase()} and fill it from a well.`;
+  if (litresIn(f) < brew.litres) return `Need ${brew.litres} litres of water; has ${litresIn(f).toFixed(0)}.`;
   // What goes in comes from the same stock a craft spends: the pack, a bag on
   // your back, and your stores within reach.
   const have = g.stockCount(brew.input);
-  if (have < brew.count) return `That takes ${brew.count} × ${itemDef(brew.input).name.toLowerCase()}; you have ${have}.`;
+  if (have < brew.count) return `Need ${brew.count} × ${itemDef(brew.input).name.toLowerCase()}; have ${have}.`;
   return null;
 }
 
@@ -131,7 +131,7 @@ export const BREWING_ACTIONS: ActionDef[] = [
         delete f.knack;
         delete f.agedFrom;
         g.gainSkill('brewing', tryGain(false, BREW_GAIN));
-        g.logMsg(`It will not take. You tip the whole soured lot out of the ${furnitureName(f).toLowerCase()}.`, 'event');
+        g.logMsg(`Brew failed: ${furnitureName(f).toLowerCase()} emptied.`, 'event');
         g.events.emit('crate');
         return;
       }
@@ -149,7 +149,7 @@ export const BREWING_ACTIONS: ActionDef[] = [
       g.gainSkill('brewing', tryGain(true, BREW_GAIN));
       g.note('brew');
       g.note(`brew:${brew.id}`);
-      g.logMsg(`${brew.done} (about ${Math.round(brew.time / 60)} minutes)`, 'event');
+      g.logMsg(`${brew.done} Ready in about ${Math.round(brew.time / 60)} minutes.`, 'event');
       g.events.emit('crate');
     },
   },

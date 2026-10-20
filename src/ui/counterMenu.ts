@@ -120,7 +120,7 @@ export function counterEntries(g: Game, pick: Pick, ways: CounterWays): MenuItem
     // Too far off for what is on it to have been sent, with something on it to see.
     const unseen = !c.items.length && counterHeld(c) > 0;
     entries.push({
-      label: keeps(c) ? 'Look at your shop counter' : `Look at ${c.keeper ? `${c.keeper}'s` : 'the'} shop counter`,
+      label: keeps(c) ? 'Open your shop counter' : `Open ${c.keeper ? `${c.keeper}'s` : 'the'} shop counter`,
       note: `${counterHeld(c)} / ${COUNTER_HOLDS} things on it`,
       hint: unseen ? COUNTER_TOO_FAR_TO_SEE : undefined,
       disabled: unseen,
@@ -130,14 +130,14 @@ export function counterEntries(g: Game, pick: Pick, ways: CounterWays): MenuItem
       if (ways.takings && c.till !== undefined) {
         const till = c.till;
         entries.push({
-          label: 'Take the takings',
+          label: 'Collect takings',
           note: till > 0 ? priceWords(till) : undefined,
-          hint: till > 0 ? counterReach(g, c, g.player.x, g.player.y, false) ?? undefined : 'The till is empty.',
+          hint: till > 0 ? counterReach(g, c, g.player.x, g.player.y, false) ?? undefined : 'Till empty.',
           disabled: till <= 0 || counterReach(g, c, g.player.x, g.player.y, false) !== null,
           onSelect: () => ways.takings?.(c.id),
         });
       }
-      if (ways.prices) entries.push({ label: 'Set prices', note: 'in the Market window, Stall tab', onSelect: () => ways.prices?.() });
+      if (ways.prices) entries.push({ label: 'Set prices', note: 'Market window, Stall tab', onSelect: () => ways.prices?.() });
       continue;
     }
     if (!ways.buy) continue;
@@ -150,7 +150,7 @@ export function counterEntries(g: Game, pick: Pick, ways: CounterWays): MenuItem
       continue;
     }
     if (!priced.length) {
-      entries.push({ label, hint: c.items.length ? 'Nothing on it has a price yet.' : 'There is nothing on it.', disabled: true });
+      entries.push({ label, hint: c.items.length ? 'No prices set.' : 'Empty.', disabled: true });
       continue;
     }
     entries.push({
@@ -186,7 +186,7 @@ export function dropOnCounter(g: Game, p: DragPayload, pick: Pick | null): boole
   const def = ACTION_BY_ID.get('set_out_goods');
   if (!held || !def) return true;
   if (g.isEquipped(held.uid)) {
-    g.logMsg(`Take the ${p.name.toLowerCase()} off first.`, 'error');
+    g.logMsg(`Remove the ${p.name.toLowerCase()} first.`, 'error');
     return true;
   }
   g.requestAction(def, { kind: 'item', uid: held.uid, count: held.count, into: c.id });

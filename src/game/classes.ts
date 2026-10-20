@@ -32,7 +32,6 @@
  * it up.
  */
 
-import { numberWord } from './words';
 
 /** Fifty in any skill a craft trade covers, and its card is on the table. A fighting trade asks nothing. */
 export const CLASS_AT = 50;
@@ -289,8 +288,7 @@ export const classOpen = (c: ClassDef, at: (skill: string) => number): boolean =
  */
 export const classRefusal = (c: ClassDef, at: (skill: string) => number): string | null =>
   classOpen(c, at) ? null
-    : `You are not ${/^[aeiou]/i.test(c.name) ? 'an' : 'a'} ${c.name.toLowerCase()} yet. `
-      + `That wants ${CLASS_AT} in one of ${[...c.skills].sort().map((s) => s.replace(/_/g, ' ')).join(', ')}.`;
+    : `Opens at ${CLASS_AT} in one of: ${[...c.skills].sort().map((s) => s.replace(/_/g, ' ')).join(', ')}.`;
 
 /*
  * ---------------------------------------------------------------------------
@@ -628,18 +626,17 @@ const skillWords = (id: string): string => id.replace(/_/g, ' ');
 for (const c of CLASSES) {
   if (PERK_CLASSES.has(c.id) && c.kind === 'combat') {
     const later = CLASS_TIER_AT.slice(1);
-    c.note = `A spell or a passive to take at each of ${numberWord(CLASS_TIER_AT.length)} tiers: the first with the trade, `
-      + `then at class levels ${listed(later.map(String))}. The class level rises as you land blows and kills while you hold the trade.`;
-    c.lever = `Each tier offers ${numberWord(PERKS_PER_TIER - 1)} spells and a passive and you take one of them: `
-      + `${numberWord(CLASS_TIER_AT.length)} in all, out of ${numberWord(CLASS_TIER_AT.length * PERKS_PER_TIER)}.`;
+    c.note = `Tiers: on taking the class, then at class level ${listed(later.map(String))}. `
+      + 'Class level rises with blows and kills landed while held.';
+    c.lever = `Per tier: pick one of ${PERKS_PER_TIER - 1} spells and a passive. `
+      + `${CLASS_TIER_AT.length} picks of ${CLASS_TIER_AT.length * PERKS_PER_TIER}.`;
     continue;
   }
   if (PERK_CLASSES.has(c.id)) {
     const later = PERK_TIER_AT.slice(1);
-    c.note = `A perk to take at each of ${numberWord(PERK_TIER_AT.length)} tiers: the first with the trade, `
-      + `then at ${listed(later.map(String))} in ${skillWords(c.main)}.`;
-    c.lever = `Each tier offers ${numberWord(PERKS_PER_TIER)} perks and you take one of them: `
-      + `${numberWord(PERK_TIER_AT.length)} in all, out of ${numberWord(PERK_TIER_AT.length * PERKS_PER_TIER)}.`;
+    c.note = `Tiers: on taking the class, then at ${skillWords(c.main)} ${listed(later.map(String))}.`;
+    c.lever = `Per tier: pick one of ${PERKS_PER_TIER} perks. `
+      + `${PERK_TIER_AT.length} picks of ${PERK_TIER_AT.length * PERKS_PER_TIER}.`;
     continue;
   }
   const chans = CLASS_COLUMNS[c.id].map((col) => col.channel);
@@ -711,15 +708,13 @@ export const classSpent = (taken: readonly string[]): number =>
 export function nodeRefusal(
   n: NodeDef, mine: string | null, taken: readonly string[], points: number,
 ): string | null {
-  if (n.class !== mine) {
-    return `That is the ${(classDef(n.class)?.name ?? n.class).toLowerCase()}’s, and you are not one.`;
-  }
-  if (taken.includes(n.id)) return 'You have that already.';
-  if (n.needs && !taken.includes(n.needs)) return `${nodeDef(n.needs)?.name ?? n.needs} comes first.`;
+  if (n.class !== mine) return `Not your class: ${classDef(n.class)?.name ?? n.class}.`;
+  if (taken.includes(n.id)) return 'Already taken.';
+  if (n.needs && !taken.includes(n.needs)) return `Needs ${nodeDef(n.needs)?.name ?? n.needs} first.`;
   const left = points - classSpent(taken);
   if (left < n.cost) {
-    return `${n.name} wants ${n.cost} point${n.cost === 1 ? '' : 's'} and you have ${left}.`
-      + ` Every ${CLASS_POINT_STEP} in the trade is another one.`;
+    return `${n.name}: need ${n.cost} ${n.cost === 1 ? 'point' : 'points'} (have ${left}). `
+      + `One point per ${CLASS_POINT_STEP} skill.`;
   }
   return null;
 }
@@ -763,7 +758,7 @@ export interface RiteDef {
   rest: number;
   /** What it multiplies while it holds, on the class's own skills. */
   muls: Partial<Record<Channel, number>>;
-  /** What the island says when it takes. */
+  /** What the island says when it takes: its name and what it does, from `muls`. */
   said: string;
   note: string;
 }
@@ -777,71 +772,67 @@ export interface RiteDef {
  * may be called again. A rite that trades one channel away for another says so
  * in the sign, because `channelSays` takes the sign off the multiplier.
  */
-const riteNote = (r: Omit<RiteDef, 'note'>): string => {
-  const what = Object.entries(r.muls)
-    .map(([ch, mul]) => `${CHANNELS[ch as Channel].note.toLowerCase()} ${channelSays(mul)}`)
-    .join(', ');
-  return `${what[0].toUpperCase()}${what.slice(1)} for ${r.secs}s. `
-    + `${Math.round(r.rest / 60)}m before it may be called again.`;
+const riteWhat = (r: Omit<RiteDef, 'note' | 'said'>): string => Object.entries(r.muls)
+  .map(([ch, mul]) => `${CHANNELS[ch as Channel].note.toLowerCase()} ${channelSays(mul)}`)
+  .join(', ');
+const riteNote = (r: Omit<RiteDef, 'note' | 'said'>): string => {
+  const what = riteWhat(r);
+  return `${what[0].toUpperCase()}${what.slice(1)} for ${r.secs} s. Cooldown ${Math.round(r.rest / 60)} min.`;
 };
 
-const rite = (r: Omit<RiteDef, 'note'>): RiteDef => ({ ...r, note: riteNote(r) });
+/*
+ * And what the island says when it takes, which was a line of mood -- "you set
+ * your feet and the shield stops being a thing you are holding" -- and is now
+ * the rite's name and what it does for how long, from the same map.
+ */
+const rite = (r: Omit<RiteDef, 'note' | 'said'>): RiteDef =>
+  ({ ...r, note: riteNote(r), said: `${r.name}: ${riteWhat(r)} for ${r.secs} s.` });
 
 export const RITES: RiteDef[] = ([
   {
     id: 'ward', class: 'blade', name: 'Ward', cost: 20, level: 10, secs: 30, rest: 900,
     muls: { guard: 1.6 },
-    said: 'You set your feet and the shield stops being a thing you are holding.',
   },
   {
     id: 'redhour', class: 'berserker', name: 'Red Hour', cost: 24, level: 12, secs: 30, rest: 1200,
     muls: { edge: 1.5, guard: 0.7 },
-    said: 'It goes red at the edges, and you stop minding what lands on you.',
   },
   {
     id: 'set', class: 'pikeman', name: 'Set', cost: 20, level: 10, secs: 45, rest: 900,
     muls: { guard: 1.4, aim: 1.15 },
-    said: 'You set the butt of it in the ground and the line stops where you are.',
   },
   {
     id: 'farsight', class: 'archer', name: 'Farsight', cost: 22, level: 14, secs: 45, rest: 900,
     muls: { aim: 1.3, edge: 1.2 },
-    said: 'The far end of the field comes close enough to touch.',
   },
   {
     id: 'quickhand', class: 'skirmisher', name: 'Quick Hand', cost: 18, level: 8, secs: 30, rest: 720,
     muls: { hands: 0.7 },
-    said: 'Your hands get ahead of you and you let them.',
   },
   {
     id: 'staunch', class: 'chirurgeon', name: 'Staunch', cost: 26, level: 16, secs: 60, rest: 1200,
     muls: { knit: 3 },
-    said: 'You get your hands on it and it begins closing under them.',
   },
   {
     id: 'pack', class: 'beastmaster', name: 'Call the Pack', cost: 28, level: 18, secs: 60, rest: 1200,
     muls: { fang: 1.5, hide: 1.3 },
-    said: 'You say the word and everything that answers to you stops being tame.',
   },
-] as Array<Omit<RiteDef, 'note'>>).map(rite);
+] as Array<Omit<RiteDef, 'note' | 'said'>>).map(rite);
 
 RITES.push(...([
   {
     id: 'whiteheat', class: 'kindler', name: 'White Heat', cost: 22, level: 12, secs: 30, rest: 900,
     muls: { force: 1.6 },
-    said: 'The stone goes hot enough to hurt and you hold on to it anyway.',
   },
   {
     id: 'longhold', class: 'binder', name: 'Long Hold', cost: 24, level: 14, secs: 45, rest: 900,
     muls: { force: 1.4, reach: 1.4 },
-    said: 'The air goes thick and slow as far out as you can see.',
   },
   {
     id: 'deepstone', class: 'warder', name: 'Deep Stone', cost: 26, level: 16, secs: 60, rest: 1200,
     muls: { thrift: 0.35 },
-    said: 'You reach further into it than you have any business reaching, and it lets you.',
   },
-] as Array<Omit<RiteDef, 'note'>>).map(rite));
+] as Array<Omit<RiteDef, 'note' | 'said'>>).map(rite));
 
 export const riteOf = (classId: string | null): RiteDef | undefined =>
   classId ? RITES.find((r) => r.class === classId) : undefined;
@@ -857,17 +848,9 @@ export const riteDef = (id: string): RiteDef | undefined => RITES.find((r) => r.
 export function riteRefusal(
   r: RiteDef, mine: string | null, prayer: number, favour: number, restLeft: number,
 ): string | null {
-  if (r.class !== mine) {
-    return `That is the ${(classDef(r.class)?.name ?? r.class).toLowerCase()}’s to call, and you are not one.`;
-  }
-  if (prayer < r.level) {
-    return `${r.name} takes ${r.level} faith; you have ${Math.floor(prayer)}.`;
-  }
-  if (favour < r.cost) {
-    return `${r.name} costs ${r.cost} favour; you hold ${Math.floor(favour)}. Pray at an altar.`;
-  }
-  if (restLeft > 0) {
-    return `${r.name} again in ${Math.ceil(restLeft / 60)} minutes.`;
-  }
+  if (r.class !== mine) return `Not your class: ${classDef(r.class)?.name ?? r.class}.`;
+  if (prayer < r.level) return `${r.name}: need ${r.level} faith (have ${Math.floor(prayer)}).`;
+  if (favour < r.cost) return `${r.name}: need ${r.cost} favour (have ${Math.floor(favour)}).`;
+  if (restLeft > 0) return `${r.name}: ready in ${Math.ceil(restLeft / 60)} min.`;
   return null;
 }

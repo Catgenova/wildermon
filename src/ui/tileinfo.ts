@@ -9,7 +9,7 @@ import {
 } from '../world/tiles';
 import { fruitingSeasons, fruitSeason, fruitsIn, nextFruiting } from '../game/fruiting';
 import { STONE_STEPS_BILL, TIMBER_STEPS_BILL, stepsBack } from '../game/steps';
-import { listed, numberWord } from '../game/words';
+import { listed } from '../game/words';
 import { flowersHere } from '../game/wildflowers';
 import { SLOW_SLOPE } from '../game/player';
 
@@ -87,50 +87,49 @@ export function tileUses(g: Game, x: number, y: number): string[] {
   const w = g.world;
   const type = w.getTile(x, y);
   const def = TILE_DEFS[type];
-  const lines: string[] = [`${def.name} — what it is good for`];
+  const lines: string[] = [`${def.name}: uses`];
 
   // Getting about on it, on foot and under a load.
-  if (def.blocks) lines.push('Cannot be walked at all.');
+  if (def.blocks) lines.push('Not walkable.');
   else {
     const pace = Math.round(def.speed * 100);
     const laden = Math.round(groundRoll(def.roll, 1) * 100);
-    const word = pace > 100 ? ', better than open ground' : pace < 70 ? ', heavy going' : pace < 100 ? ', slow' : '';
-    lines.push(`On foot: ${pace}% pace${word} · a full cart keeps ${laden}% of its own`);
+    lines.push(`Walk speed ${pace}% · laden cart speed ${laden}%`);
     // And whether it can be stood on at all, which is the one thing about a
     // dug tile you otherwise find out by walking into it.
     const slope = w.slope(x, y);
     // A flight of steps is stood on at any slope a flight is laid on.
     const cap = standCap(type, g.standSlope());
-    if (slope > cap) lines.push(`Slope ${slope}: too steep to stand on. You manage ${Math.floor(cap)}, and climbing raises it`);
-    else if (slope > SLOW_SLOPE) lines.push(`Slope ${slope}: slow going, ${Math.round((100 * SLOW_SLOPE) / slope)}% pace across it`);
+    if (slope > cap) lines.push(`Slope ${slope}: too steep (your max ${Math.floor(cap)}, raised by climbing)`);
+    else if (slope > SLOW_SLOPE) lines.push(`Slope ${slope}: walk speed ${Math.round((100 * SLOW_SLOPE) / slope)}%`);
   }
 
   // Working it with a tool.
   if (def.digYield) {
     const gives = itemDef(def.digYield).name.toLowerCase();
-    lines.push(`Shovel: ${def.collect ? `fill from the top for ${gives}, and the ground is as it was after` : `digs ${gives}${def.turnsToDirt ? ', and the tile turns to dirt' : ''}`}`);
+    lines.push(`Shovel: ${def.collect ? `collect ${gives}, ground unchanged` : `dig ${gives}${def.turnsToDirt ? ', tile becomes dirt' : ''}`}`);
   }
-  if (def.mineable) lines.push('Pickaxe: worked for what is in the rock, and cut back corner by corner');
+  if (def.mineable) lines.push('Pickaxe: mine for its contents; lowers corner by corner');
 
   // What grows on it.
   const grows: string[] = [];
-  if (def.forage) grows.push('foraged for food');
-  if (def.botanize) grows.push('botanized for herbs');
+  if (def.forage) grows.push('forage (food)');
+  if (def.botanize) grows.push('botanize (herbs)');
   if (grows.length) {
-    const held = [def.forage && !g.isForaged(x, y, 'forage') ? 'something to pick' : null, def.botanize && !g.isForaged(x, y, 'botanize') ? 'something to gather' : null].filter(Boolean);
-    lines.push(`Can be ${grows.join(' and ')} · ${held.length ? `${held.join(' and ')} on it now` : 'picked clean for the moment'}`);
+    const held = [def.forage && !g.isForaged(x, y, 'forage') ? 'forage ready' : null, def.botanize && !g.isForaged(x, y, 'botanize') ? 'botanize ready' : null].filter(Boolean);
+    lines.push(`${grows.join(', ')} · ${held.length ? held.join(', ') : 'picked clean for now'}`);
   }
   // What feet do to it. The wear itself is the island's to count on an island, and only
   // said here where this browser keeps it (`World.wear`).
-  const worn = g.ask ? '' : ` · ${w.wearAt(x, y)} on it now`;
+  const worn = g.ask ? '' : ` · wear ${w.wearAt(x, y)}`;
   if (type === TileType.Trail) {
     const was = TILE_DEFS[trailGround(w.getData(x, y))].name.toLowerCase();
-    lines.push(`Worn bare by feet: ${was} again once its wear is gone, at ${WEAR_FALL} a day and ${WEAR_MOST} at most${worn}`);
+    lines.push(`Trail: back to ${was} when wear reaches 0 (−${WEAR_FALL} per day, max ${WEAR_MOST})${worn}`);
   } else if (WEARS.has(type)) {
-    lines.push(`Feet wear it: a point a step, a trail at ${WEAR_TRAIL}, ${WEAR_FALL} off a day${worn}`);
+    lines.push(`Wear: +1 per step, trail at ${WEAR_TRAIL}, −${WEAR_FALL} per day${worn}`);
   }
   const blooms = type === TileType.Grass ? flowersHere(g, x, y) : 0;
-  if (blooms) lines.push(`In flower: Pick flowers for ${blooms === 1 ? 'a wildflower' : `${blooms} wildflowers`}`);
+  if (blooms) lines.push(`In flower: Pick flowers for ${blooms} ${blooms === 1 ? 'wildflower' : 'wildflowers'}`);
   // What a fruit tree bears or a bush is cut for, in which seasons, and whether now (`fruiting.ts`).
   const borne = type === TileType.Tree ? TREE_DEFS[treeSpecies(w.getData(x, y))].fruit
     : type === TileType.Bush ? BUSH_DEFS[bushSpecies(w.getData(x, y))].yields : undefined;
@@ -138,28 +137,28 @@ export function tileUses(g: Game, x: number, y: number): string[] {
     const season = fruitSeason(g.wallNow());
     lines.push(`${itemDef(borne).name} in ${listed(fruitingSeasons(borne))} · ${fruitsIn(borne, season) ? 'in season now' : `out of season until ${nextFruiting(borne, season ?? 'spring')}`}`);
   }
-  if (TILLABLE.has(type)) lines.push('Rake: turns into a field, ready for sowing');
-  if (type === TileType.Field) lines.push('Sow it, tend it and reap it. An untended field gives back only its seed.');
+  if (TILLABLE.has(type)) lines.push('Rake: becomes a field');
+  if (type === TileType.Field) lines.push('Sow, tend, harvest. Untended: harvest returns only the seed.');
 
   // What can be laid over it or built on it. Saying a road will not take a
   // road, or that bare rock will not take one, is not worth a line.
   const paved = type === TileType.Cobblestone || type === TileType.Slabs;
   if (type === TileType.Steps) {
-    lines.push(`A flight of ${w.tileName(x, y).toLowerCase()}: stood on and walked at any slope up to ${STEPS_MOST}, and no wheel takes it`);
-    lines.push(`Pickaxe: takes it up, keeping ${stepsTimber(w.getData(x, y)) ? `${numberWord(stepsBack(STEPS_PLANKS))} of its ${numberWord(STEPS_PLANKS)} planks` : `${numberWord(stepsBack(STEPS_SLABS))} of its ${numberWord(STEPS_SLABS)} slabs and ${numberWord(stepsBack(STEPS_BRICKS))} of its ${numberWord(STEPS_BRICKS)} bricks`}, and leaves packed dirt`);
+    lines.push(`${w.tileName(x, y)}: walkable at any slope up to ${STEPS_MOST}; no wheels`);
+    lines.push(`Pickaxe: remove; returns ${stepsTimber(w.getData(x, y)) ? `${stepsBack(STEPS_PLANKS)}/${STEPS_PLANKS} planks` : `${stepsBack(STEPS_SLABS)}/${STEPS_SLABS} slabs and ${stepsBack(STEPS_BRICKS)}/${STEPS_BRICKS} bricks`}; leaves packed dirt`);
   } else if (type === TileType.PackedDirt) {
     const why = stepsGroundRefusal(w.corners(x, y, [0, 0, 0, 0]));
-    lines.push(why ? `Garden steps: not here. ${why}` : `Takes garden steps: ${STONE_STEPS_BILL} with a trowel, or ${TIMBER_STEPS_BILL} with a mallet`);
+    lines.push(why ? `Garden steps: not here. ${why}` : `Garden steps: ${STONE_STEPS_BILL} with a trowel, or ${TIMBER_STEPS_BILL} with a mallet`);
   }
-  if (paved) lines.push('This is paving already. Break it up with a pickaxe and it goes back to dirt.');
-  else if (def.pavable) lines.push('Takes paving: cobblestone or slabs, once it is packed hard');
-  else if (!def.blocks && type !== TileType.Rock) lines.push('Will not take paving');
+  if (paved) lines.push('Paved. Pickaxe: break up to dirt.');
+  else if (def.pavable) lines.push('Pavable: cobblestone or slabs, after packing');
+  else if (!def.blocks && type !== TileType.Rock) lines.push('Not pavable');
 
   // What it does underfoot, which is the one thing about ground you notice.
   const dust = dustiness(type);
-  if (dust >= 0.8) lines.push('Loose and dry: it goes up in a cloud behind you');
-  else if (dust === 0) lines.push('Too wet to raise anything underfoot');
-  else if (dust <= 0.12) lines.push('Holds together underfoot and barely marks');
+  if (dust >= 0.8) lines.push('Dust: heavy');
+  else if (dust === 0) lines.push('Dust: none');
+  else if (dust <= 0.12) lines.push('Dust: light');
 
   return lines;
 }

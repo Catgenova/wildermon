@@ -419,7 +419,7 @@ begin
   perform act_perform(w, u, 'plant_seed', jsonb_build_object('kind', 'tile', 'x', tx + 4, 'y', ty + 2, 'itemUid',
     (select id from item where world_id = w and holder_uid = u and def = 'wheat_seed' order by id desc limit 1)));
   insert into said values ('SOWN', coalesce((select hand::text from crop where world_id = w and x = tx + 4 and y = ty + 2), 'not sown') || '|'
-    || coalesce((select text from event where uid = u and text like 'You sow%' order by n desc limit 1), 'nothing said'));
+    || coalesce((select text from event where uid = u and text like 'Sown:%' order by n desc limit 1), 'nothing said'));
   perform set_config('wurm.season', '', true);
   delete from crop where world_id = w and x between tx - 12 and tx + 45 and y between ty - 12 and ty + 45;
   delete from item where world_id = w and holder = 'player' and holder_uid = u;
@@ -436,7 +436,7 @@ begin
   perform perform_faith(w, u, 'meditate', jsonb_build_object('kind', 'tile', 'x', tx, 'y', ty));
   insert into said values ('BLOOM', (select string_agg(tree_age(land_data(w, x, y))::text, ',' order by n)
       from unnest(array[tx + 1, tx, tx - 1, tx, tx + ${P('bloom').fx.bloom + 2}], array[ty, ty + 2, ty, ty - 1, ty]) with ordinality z(x, y, n))
-    || '|' || coalesce((select text from event where uid = u and text like 'The trees round you%' order by n desc limit 1), 'nothing said')
+    || '|' || coalesce((select text from event where uid = u and text like 'Bloom:%' order by n desc limit 1), 'nothing said')
     || '|' || ((select bloom_day from player where world_id = w and uid = u) = floor(world_time(w) / day_seconds()))::text);
   perform perform_faith(w, u, 'meditate', jsonb_build_object('kind', 'tile', 'x', tx, 'y', ty));
   insert into said values ('BLOOMAGAIN', (select string_agg(tree_age(land_data(w, x, y))::text, ',' order by n)
@@ -474,7 +474,7 @@ check('and the others of that tier close, ditto', at('SHUT') === pathPickRefusal
 {
   const k = P('refresh');
   check(`Refresh fills hunger and thirst, for ${k.cost} Calm, resting ${k.rest} seconds`, at('REFRESH') === `${REFRESH_SAID}|${CALM - k.cost}|${k.rest}|1:1`, at('REFRESH'));
-  check('and is refused while it rests', part('RESTING', 0) === `${k.name} can be called again in ${k.rest} seconds.`, at('RESTING'));
+  check('and is refused while it rests', part('RESTING', 0) === `${k.name}: cooldown ${k.rest} s.`, at('RESTING'));
   check('and short of Calm, in the browser\'s words', part('POOR', 0) === calmRefusal(k.name, k.cost, 2), at('POOR'));
 }
 {
@@ -541,11 +541,11 @@ check('and the others of that tier close, ditto', at('SHUT') === pathPickRefusal
     at('HAND') === 'false:0,true:1', at('HAND'));
   const [flag, grown] = part('HANDREAD', 0).split(':');
   check('and sown through the door it is stamped, and says when it sprouts on its clock, which never waits for spring',
-    part('SOWN', 0) === 'true' && /^You sow wheat\. Sprouting in \d/.test(part('SOWN', 1)), at('SOWN'));
+    part('SOWN', 0) === 'true' && /^Sown: wheat\. Sprouting in \d/.test(part('SOWN', 1)), at('SOWN'));
   check('and the ground read says so, with how far it has grown on its clock', flag === 'true' && Math.abs(Number(grown) - Number(part('HANDREAD', 1))) <= 1, at('HANDREAD'));
   const grows = new Map(LAND_GROWS);
   check(`Bloom: a sitting grows the trees within ${P('bloom').fx.bloom} tiles a stage, and not a very old one, a clipped one or one beyond reach`,
-    at('BLOOM') === `${grows.get(3)},${grows.get(1)},4,6,3|The trees round you grow while you sit: 2 of them, a stage each.|true`, at('BLOOM'));
+    at('BLOOM') === `${grows.get(3)},${grows.get(1)},4,6,3|Bloom: 2 trees grew a stage.|true`, at('BLOOM'));
   check('and only once a day of the island\'s clock', at('BLOOMAGAIN') === `${grows.get(3)},${grows.get(1)}`, at('BLOOMAGAIN'));
   check('and again the next', at('BLOOMNEXT') === `${grows.get(grows.get(3) as number)},${grows.get(grows.get(1) as number)}`, at('BLOOMNEXT'));
 }
@@ -580,7 +580,7 @@ const hold = (...ids: string[]): void => {
   p.stats.thirst = 0.1;
   const why = g.castTechnique(P('refresh').id);
   check('Refresh in the browser: hunger and thirst full, its Calm paid and its rest begun', why === null && p.stats.hunger === 1 && p.stats.thirst === 1
-    && p.calm === CALM - P('refresh').cost && g.techniqueRefusal(P('refresh').id) === `Refresh can be called again in ${P('refresh').rest} seconds.`, `${why}`);
+    && p.calm === CALM - P('refresh').cost && g.techniqueRefusal(P('refresh').id) === `Refresh: cooldown ${P('refresh').rest} s.`, `${why}`);
   p.calm = 3;
   p.usedAt = {};
   check('and short of Calm it is refused in the island\'s words', g.techniqueRefusal(P('bond').id) === calmRefusal('Bond', P('bond').cost, 3));

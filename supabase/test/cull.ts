@@ -170,7 +170,7 @@ check('and asks before it happens', (cull.confirms?.(target, game) ?? '').includ
 const wild = game.creatures.spawn('rabba', 33.5, 30.5, 'wild', game.rand, game.time - 3600);
 check('and never to something wild', !cull.applies({ kind: 'creature', id: wild.id }, game));
 check('which it says in so many words',
-  (cull.check?.({ kind: 'creature', id: wild.id }, game) ?? '').includes('Fight it'),
+  (cull.check?.({ kind: 'creature', id: wild.id }, game) ?? '') === 'Not yours.',
   `${cull.check?.({ kind: 'creature', id: wild.id }, game)}`);
 
 cull.perform(target, game);
@@ -217,7 +217,7 @@ check('one action and it is gone',
 check('with a carcass on the tile it stood on',
   psql(`select count(*) from item where world_id = ${W} and holder = 'ground' and gx = 31 and gy = 30 and def = 'corpse'`) === '1');
 check('and the line said so rather than calling it a wild kill',
-  psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1`).includes('You put Nubbin down'),
+  psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1`).includes('Culled: Nubbin.'),
   psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1`));
 
 for (const line of [...ok, ...bad]) console.log(line);

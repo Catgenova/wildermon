@@ -91,26 +91,26 @@ export function creatureLines(g: Game, c: Creature): string[] {
   // A monster is not a wildermon and nothing about it is negotiable.
   if (def.monster) {
     lines.push(`${def.name} · hostile`);
-    lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · hits for ${attackOf(c, def).toFixed(0)}`);
-    lines.push('It cannot be tamed. Kill it and butcher it, or keep well clear.');
+    lines.push(`Health ${Math.ceil(c.health)}/${maxHealth(c, def)} ${bar(c.health / maxHealth(c, def))} · blow ${attackOf(c, def).toFixed(0)}`);
+    lines.push('Cannot be tamed.');
     return lines;
   }
 
   if (c.mode === 'wild') {
     lines.push(`Wild ${kindName(c)} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''}`);
     if (c.rare) lines.push(...rarityLines(c));
-    lines.push(`Eats ${baitHint(c)}`);
+    lines.push(`Eats: ${baitHint(c)}`);
     // What taming it asks at its stage (`tameNeeds`), and for one past its first, what that adds over its kind's.
     const taming = g.skills.get('taming');
     const needs = tameNeeds(c).level;
-    if (taming < needs) lines.push(`Taming ${needs} to try · you have ${taming.toFixed(1)}`);
-    else lines.push(`Taming ${needs} to try · you have ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% chance per offering`);
+    if (taming < needs) lines.push(`Taming needed ${needs} · yours ${taming.toFixed(1)}`);
+    else lines.push(`Taming needed ${needs} · yours ${taming.toFixed(1)} · ${pct(tameChance(g, c))}% chance per offering`);
     const evolved = stageTameSays(c);
     if (evolved) lines.push(evolved);
     // At the step the chance itself is worked out with, a Herdsman's Patient Coax and all.
     const warm = coaxBonus(c, g.time, coaxStep(g));
-    if (warm > 0) lines.push(`It has taken ${c.coaxed} offering${c.coaxed === 1 ? '' : 's'} from your hand · +${pct(warm)} points of that chance`);
-    if (c.trapped !== null) lines.push('Held in a trap. Take it out, or let it go.');
+    if (warm > 0) lines.push(`Offerings taken: ${c.coaxed} · chance +${pct(warm)} points`);
+    if (c.trapped !== null) lines.push('Held in a trap.');
     return lines;
   }
 
@@ -127,18 +127,18 @@ export function creatureLines(g: Game, c: Creature): string[] {
   if (favourite) lines.push(favourite);
 
   // What it is doing, and how well it does it.
-  if (c.ridden) lines.push('Under the saddle');
+  if (c.ridden) lines.push('Ridden');
   else if (c.hitchedTo !== null) lines.push('In the traces');
   else if (c.mode === 'stored') {
     // Where the crate is: standing somewhere, or on your back.
     const h = crateOf(g, c.id);
     const where = h && 'piece' in h ? ` at (${h.piece.x}, ${h.piece.y})` : h?.carried ? ' in your pack' : '';
-    lines.push(`In a creature crate${where} · does not get hungry in there`);
+    lines.push(`In a creature crate${where} · no hunger`);
   } else if (c.mode === 'deed') {
     // A reach means nothing to something with no trade to range out and do.
-    if (def.gathers) lines.push(`Deed worker · ${GATHER_VERB[def.gathers]} at ${taskSkill(c, def).toFixed(1)} · reaches ${workRangeOf(c, def)} tiles`);
-    else lines.push(`Deed worker · no trade of its own, so it keeps the deed company`);
-    if (c.carrying) lines.push(`Carrying ${itemDef(c.carrying.id).name.toLowerCase()} home`);
+    if (def.gathers) lines.push(`Deed worker · ${GATHER_VERB[def.gathers]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
+    else lines.push(`Deed worker · no trade`);
+    if (c.carrying) lines.push(`Carrying: ${itemDef(c.carrying.id).name.toLowerCase()}`);
     // Its stamina and its settlement's specialty in its trade, for a trade with goes to tire it and to quicken.
     const kind = c.trade ?? def.gathers;
     if (specialtyTrade(kind)) {
@@ -151,14 +151,14 @@ export function creatureLines(g: Game, c: Creature): string[] {
     // Why it is standing about, and what it did this island day and the one before.
     if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
     lines.push(...ledgerLines(c.ledger, g.islandDay()));
-  } else lines.push(`Your companion · ${STANCE_NAMES[c.stance].toLowerCase()} · hits for ${attackOf(c, def).toFixed(0)}`);
+  } else lines.push(`Companion · ${STANCE_NAMES[c.stance].toLowerCase()} · blow ${attackOf(c, def).toFixed(0)}`);
 
   // Blood, which is the whole of what breeding is for.
   const husbandry = g.skills.get('animal_husbandry');
   const traits = c.traits.map((id) => {
     const t = traitOf(id);
     if (!t) return null;
-    if (husbandry < 1 + TIER_LEVEL[t.tier]) return 'something unread';
+    if (husbandry < 1 + TIER_LEVEL[t.tier]) return 'unread';
     // Nearly everything is common, so only what is better than common says so.
     // A fighting trait's grade is already in its name: "fanged (rare)".
     return t.tier === 'common' || t.family ? t.name : `${t.name} (${t.tier})`;
@@ -182,13 +182,13 @@ export function creatureLines(g: Game, c: Creature): string[] {
  */
 export function creatureSkills(g: Game, c: Creature): string[] {
   const def = SPECIES[c.species] ?? SPECIES.rabba;
-  const lines: string[] = [`${c.mode === 'wild' ? `Wild ${def.name}` : c.name} — what it can do`];
+  const lines: string[] = [`${c.mode === 'wild' ? `Wild ${def.name}` : c.name}: skills`];
   const known = Object.entries(c.skills).sort((a, b) => b[1] - a[1]);
   const trade = workSkill(def);
   if (!known.length) {
-    if (def.monster) lines.push('It has no trade. It has teeth.');
-    else if (trade) lines.push('It has learned nothing yet.');
-    else lines.push('It has no trade and never will: it is kept for its blood, its fleece or its company.');
+    if (def.monster) lines.push('No trade.');
+    else if (trade) lines.push('No skills yet.');
+    else lines.push('No trade.');
     return lines;
   }
   for (const [id, value] of known) {
@@ -196,10 +196,10 @@ export function creatureSkills(g: Game, c: Creature): string[] {
     // A skill is worth the same to a beast as to you: what it can attempt and
     // how well it does it.
     // What it keeps in the traces is climbing, or a Roxxen's driving (`tracesSkill`).
-    const note = id === trade ? 'its trade' : (id === 'climbing' || id === tracesSkill(def)) ? 'in the traces, and so the pace of any cart' : id === 'fighting' ? 'what it hits for' : '';
+    const note = id === trade ? 'trade' : (id === 'climbing' || id === tracesSkill(def)) ? 'team pace in the traces' : id === 'fighting' ? 'blow damage' : '';
     lines.push(`${name} ${value.toFixed(1)} ${bar(value / 100)}${note ? ` · ${note}` : ''}`);
   }
-  if (trade && c.mode === 'deed') lines.push(`Working, it reaches ${workRangeOf(c, def)} tiles from where it takes its orders.`);
-  else if (trade) lines.push('Set it to work for the settlement and it will use its trade.');
+  if (trade && c.mode === 'deed') lines.push(`Work range: ${workRangeOf(c, def)} tiles from its orders.`);
+  else if (trade) lines.push('Trade used when assigned to a settlement.');
   return lines;
 }

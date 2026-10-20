@@ -60,9 +60,9 @@ const many: Away = {
   tally: ['log', 'plank', 'clay', 'sand', 'dirt', 'reed', 'peat', 'tar'].map((def, i) => ({ what: 'haul', def, n: 20 - i, silver: 0 })),
 };
 const manyLines = awayLines(many);
-check('the first line says for how long', manyLines[0] === 'You were away 3 hours and 12 minutes.', manyLines[0]);
+check('the first line says for how long', manyLines[0] === 'Away for 3 hours and 12 minutes.', manyLines[0]);
 check(`a line names ${AWAY_NAMED} sorts, most first, and counts the rest`,
-  manyLines[1] === 'Your workers put 20 × log, 19 × plank, 18 × clay, 17 × sand, 16 × dirt, 15 × reed and 2 more sorts into the stores.',
+  manyLines[1] === 'Workers stored: 20 × log, 19 × plank, 18 × clay, 17 × sand, 16 × dirt, 15 × reed and 2 more sorts.',
   manyLines[1]);
 
 const sales: Away = {
@@ -75,8 +75,8 @@ const sales: Away = {
 };
 const saleLines = awayLines(sales);
 check('sales are summed into one price, in coins',
-  saleLines[1] === `Your stalls sold 2 × plank and 1 × hatchet for ${priceWords(23)}. It is in their tills.`, saleLines[1]);
-check('one parcel is one parcel, and who from', saleLines[2] === 'A parcel from Bryn waits for you at any mailbox.', saleLines[2]);
+  saleLines[1] === `Stalls sold: 2 × plank and 1 × hatchet for ${priceWords(23)}, in their tills.`, saleLines[1]);
+check('one parcel is one parcel, and who from', saleLines[2] === 'Parcel from Bryn: collect at any mailbox.', saleLines[2]);
 
 console.log('--- the island');
 const out = psql(`
@@ -196,12 +196,12 @@ check('and then it is forgotten', said('LEFT') === '0', said('LEFT'));
 check('so a second join straight after has nothing to say', said('AGAIN') === 'null', said('AGAIN'));
 
 const lines = away ? awayLines(away) : [];
-check('the browser says how long', lines[0] === 'You were away 3 hours.', lines[0]);
+check('the browser says how long', lines[0] === 'Away for 3 hours.', lines[0]);
 check('and all five of them', lines.length === 6, lines.join(' / '));
-check('the loads', lines.includes('Your workers put 3 × log into the stores.'), lines[1]);
+check('the loads', lines.includes('Workers stored: 3 × log.'), lines[1]);
 check('the young', lines.includes(`Born to your wildermon: 1 ${SPECIES.rabba.name.toLowerCase()}.`), lines[2]);
-check('the sales, summed', lines.includes(`Your stalls sold 3 × shaft and 1 × plank for ${priceWords(10)}. It is in their tills.`), lines[4]);
-check('and the parcel', lines.includes('A parcel from Cato waits for you at any mailbox.'), lines[5]);
+check('the sales, summed', lines.includes(`Stalls sold: 3 × shaft and 1 × plank for ${priceWords(10)}, in their tills.`), lines[4]);
+check('and the parcel', lines.includes('Parcel from Cato: collect at any mailbox.'), lines[5]);
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

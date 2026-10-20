@@ -138,6 +138,9 @@ export function sailTrim(heading: number, w: Wind): number {
   return (wrapped < 0 ? -1 : 1) * Math.max(0.3, Math.min(1, Math.abs(wrapped) / (Math.PI / 2)));
 }
 
+/** The least wind force a beam reach counts for the journal's "Sail a beam reach in a fresh wind". */
+export const REACH_FORCE = 0.5;
+
 /** How the point of sail reads on the hud. */
 export function sailWord(heading: number, w: Wind): string {
   const upwind = offWind(heading, w);

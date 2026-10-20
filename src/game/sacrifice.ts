@@ -52,29 +52,29 @@ const anyRare = `${RARE_NAMES.slice(0, -1).join(', ')} or ${RARE_NAMES[RARE_NAME
 
 /** Why a sacrifice or an absorbing will not go ahead, in the words both sides say. */
 export const SACRIFICE_SAID = {
-  notAltar: 'That is not an altar.',
-  reach: 'Kneel at the altar.',
-  pick: `Choose a ${anyRare} thing to give up.`,
-  soul: 'A soul is not given up. Absorb it into something instead.',
-  notRare: `Only a ${anyRare} thing may be given up.`,
-  locked: 'It is kept back. Put it back in the pack first.',
+  notAltar: 'Not an altar.',
+  reach: 'Stand at the altar.',
+  pick: `Choose a ${anyRare} item.`,
+  soul: 'Souls cannot be sacrificed: absorb it into an item.',
+  notRare: `Only ${anyRare} items.`,
+  locked: 'Set aside: return it to the pack first.',
   worn: 'Take it off first.',
   full: 'Empty it first.',
-  creature: 'Let the wildermon out first.',
+  creature: 'Release the wildermon first.',
 } as const;
 
 export const ABSORB_SAID = {
   pickSoul: 'Choose a soul to absorb.',
-  pickItem: 'Choose something to absorb it into.',
-  intoSoul: 'A soul will not go into another soul.',
-  bauble: 'A bauble\'s rarity is rolled when it is restored.',
+  pickItem: 'Choose an item.',
+  intoSoul: 'Not into another soul.',
+  bauble: 'Not on a bauble: its rarity is rolled when restored.',
 } as const;
 /** Why a thing that is already rare takes no soul. */
 export const alreadyRare = (item: Pick<Item, 'rare'>): string =>
-  `Only an ordinary thing takes a soul, and this is ${RARITIES[item.rare ?? 0].name} already.`;
+  `Only ordinary items take a soul; this is ${RARITIES[item.rare ?? 0].name}.`;
 
 /** What a sacrifice does for the one who makes it, in so many words: every nutrient named, and full. */
-export const FED_SAID = `${capital(listed(NUTRIENTS.map((k) => NUTRIENT_NAMES[k].toLowerCase())))} are all at their fullest.`;
+export const FED_SAID = `${capital(listed(NUTRIENTS.map((k) => NUTRIENT_NAMES[k].toLowerCase())))}: full.`;
 
 const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get(t.id) : undefined);
 const kneeling = (g: Game, f: PlacedFurniture): boolean => {
@@ -139,10 +139,10 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
       const ql = item.ql;
       if (!g.inventory.remove(item.uid, 1)) return;
       for (const k of NUTRIENTS) g.player.nutrition[k] = 1;
-      g.logMsg(`You give up the ${name} at the altar. ${FED_SAID}`, 'event');
+      g.logMsg(`Sacrificed: ${name}. ${FED_SAID}`, 'event');
       if (g.rand() < SOUL_CHANCE) {
         g.inventory.addItem({ uid: g.inventory.nextUid++, id: SOUL, ql, dmg: 0, count: 1, rare });
-        g.logMsg(`A ${RARITIES[rare].name} soul is left where the ${name} was.`, 'event');
+        g.logMsg(`Got: ${RARITIES[rare].name} soul.`, 'event');
       }
       g.events.emit('inventory');
     },
@@ -176,7 +176,7 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
         item.rare = rare;
       }
       g.inventory.remove(soul.uid, 1);
-      g.logMsg(`The ${soulName} sinks into the ${name}, and it is ${RARITIES[rare].name} now.`, 'event');
+      g.logMsg(`Absorbed: ${soulName} into ${name}. Now ${RARITIES[rare].name}.`, 'event');
       g.events.emit('inventory');
     },
   },

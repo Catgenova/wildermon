@@ -243,7 +243,7 @@ select string_agg(k || '=' || coalesce(v, 'null'), E'\\n' order by k) from said;
 rollback;`);
 const said = new Map(island.split('\n').map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]));
 const chain = JSON.parse(said.get('chain') ?? 'null') as IslandSpring['chain'] | null;
-say(/run straight off downhill/.test(said.get('flat') ?? ''), `island: level ground holds no spring -- "${said.get('flat')}"`);
+say(/run off downhill/.test(said.get('flat') ?? ''), `island: level ground holds no spring -- "${said.get('flat')}"`);
 say(said.get('ok') === 'none', `island: the bottom of a hollow does -- ${said.get('ok')}`);
 say(!!chain && chain.ponds[0]?.level === PLATEAU && chain.ponds[0]?.floor === PLATEAU - 20,
   `island: digging it fills the bowl to its rim, ${PLATEAU} over a floor of ${PLATEAU - 20}: ${chain ? `level ${chain.ponds[0]?.level}, floor ${chain.ponds[0]?.floor}, ${chain.ponds.length} pond(s), ${chain.streams.length} stream(s)` : 'nothing'}`);
@@ -252,18 +252,18 @@ say(Number(said.get('tiles')) >= 4, `island: the tiles it covers are kept for th
 const [wet, surface, depth] = (said.get('wet') ?? '').split(' ');
 say(wet === 'true' && Number(surface) === PLATEAU && Number(depth) > 0, `island: a pond is water, with its own surface and a depth under it -- ${said.get('wet')}`);
 say(said.get('dry')?.startsWith('false') === true, `island: and the plateau round it is not -- ${said.get('dry')}`);
-say(said.get('again') === 'There is water here already.', `island: a second spring is not dug in a pond -- ${said.get('again')}`);
-say(/Water wells up/.test(said.get('told') ?? ''), `island: the digger is told how deep it will stand and where it runs -- "${said.get('told')}"`);
+say(said.get('again') === 'Already water here.', `island: a second spring is not dug in a pond -- ${said.get('again')}`);
+say(/^Spring: pond /.test(said.get('told') ?? ''), `island: the digger is told how deep it will stand and where it runs -- "${said.get('told')}"`);
 say(said.get('swim') === 'true', 'island: out of your depth in a pond, you swim');
 say(/"id"/.test(said.get('sent') ?? '') && said.get('sent')?.endsWith(' 1') === true && said.get('resent') === '0',
   `island: a browser is sent the springs near it, and a chain only when it has not got it -- ${said.get('sent')}, then ${said.get('resent')}`);
 const [notched, notchVer, notchTile] = (said.get('notched') ?? '').split(' ');
 say(Number(notched) === PLATEAU - 10 && Number(notchVer) > 1 && Number(notchTile) === PLATEAU - 10,
   `island: a notch cut in the rim lets the pond down to the lowest of the ring, ${PLATEAU - 10} -- ${said.get('notched')}`);
-say(said.get('theirs') === 'Only whoever dug this spring may stop it up.', `island: somebody else cannot stop it up on open ground -- ${said.get('theirs')}`);
+say(said.get('theirs') === 'Only its digger, or builders of this settlement, may stop it up.', `island: somebody else cannot stop it up on open ground -- ${said.get('theirs')}`);
 say(said.get('mine') === 'none' && said.get('stopped') === '0 false', `island: whoever dug it can, and its water goes with it -- ${said.get('stopped')}`);
 say(said.get('filled') === '0 0', `island: filling the hollow in stops the spring and takes its water -- ${said.get('filled')}`);
-say(/You keep \d+ springs already/.test(said.get('many') ?? ''), `island: no more than a few springs to a person -- ${said.get('many')}`);
+say(/Max \d+ springs: stop one up first/.test(said.get('many') ?? ''), `island: no more than a few springs to a person -- ${said.get('many')}`);
 
 /* ---- The browser: the same rules, on a game of its own -------------------------------------- */
 
@@ -286,13 +286,13 @@ async function browser(): Promise<void> {
   const ok = act('dig_spring').check?.(here, g) ?? null;
   act('dig_spring').perform(here, g);
   const s = [...g.springs.list.values()][0];
-  say(/run straight off downhill/.test(flat ?? '') && ok === null && !!s && s.chain.ponds[0].level === PLATEAU,
+  say(/run off downhill/.test(flat ?? '') && ok === null && !!s && s.chain.ponds[0].level === PLATEAU,
     `browser: level ground holds no spring, the bottom of a hollow does, and it fills to the rim at ${PLATEAU}: ${s ? `level ${s.chain.ponds[0].level}` : `refused "${ok}"`}`);
   const deep = waterDepth(g, bx - 1, by - 1);
   say(w.hasWater(bx - 1, by - 1) && w.surfaceAt(bx - 1, by - 1) === PLATEAU && deep > 0 && fishable(g, bx - 1, by - 1) && !w.hasWater(bx - 5, by - 5),
     `browser: a pond is water, with a surface and a depth to fish (${deep}), and the plateau is not`);
   say(!w.hasSea(bx - 1, by - 1) && !g.launchSpot('rowboat', bx - 1, by - 1), 'browser: but it is not the sea, and no hull is launched into it');
-  say((act('dig_spring').check?.(here, g) ?? null) === 'There is water here already.', 'browser: a second spring is not dug in a pond');
+  say((act('dig_spring').check?.(here, g) ?? null) === 'Already water here.', 'browser: a second spring is not dug in a pond');
   // Standing in it, out of your depth.
   g.player.x = bx - 0.5;
   g.player.y = by - 0.5;

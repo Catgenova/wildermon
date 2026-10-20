@@ -62,8 +62,6 @@ export const anvilName = (a: PlacedAnvil): string => {
 type AnvilTarget = Extract<Target, { kind: 'anvil' }>;
 const anvilOf = (g: Game, t: Target): PlacedAnvil | undefined => (t.kind === 'anvil' ? g.anvils.get((t as AnvilTarget).id) : undefined);
 
-/** A name said of more than one, without doubling an s that is already there. */
-const plural = (name: string, n: number): string => (n > 1 && !name.endsWith('s') ? `${name}s` : name);
 
 /**
  * The casting to beat out: the one the player chose, or the first there is
@@ -124,7 +122,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('anvil');
-      if (!item || item.id !== 'anvil') return 'You have no anvil to set down.';
+      if (!item || item.id !== 'anvil') return 'Need an anvil.';
       return g.anvilPlaceReason(t.x, t.y, t.sx, t.sy);
     },
     perform: (t, g) => {
@@ -137,7 +135,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
       if (item.enchant) a.enchant = item.enchant;
       if (item.dmg) a.dmg = item.dmg;
-      g.logMsg(`You set the ${anvilName(a).toLowerCase()} down. Bring a casting to it.`, 'event');
+      g.logMsg(`Set down: ${anvilName(a).toLowerCase()}.`, 'event');
       g.events.emit('world', a.x, a.y);
     },
   },
@@ -156,7 +154,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (a.rare) back.rare = a.rare;
       if (a.enchant) back.enchant = a.enchant;
       if (a.dmg) back.dmg = a.dmg;
-      g.logMsg(`You heave the ${anvilName(a).toLowerCase()} up onto your shoulder.`, 'event');
+      g.logMsg(`Picked up: ${anvilName(a).toLowerCase()}.`, 'event');
       g.events.emit('world', a.x, a.y);
     },
   },
@@ -173,9 +171,9 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (!a) return 'It is gone.';
       const [cx, cy] = anvilCentre(a);
       if (Math.hypot(cx - g.player.x, cy - g.player.y) > 2.4) return 'Stand at the anvil.';
-      if (!g.inventory.has('coin_die')) return 'You need a coin die.';
+      if (!g.inventory.has('coin_die')) return 'Need a coin die.';
       const lump = lumpFor(g, t.kind === 'anvil' ? t.itemUid : undefined)?.item;
-      if (!lump) return 'You have no metal to strike.';
+      if (!lump) return 'Need metal.';
       if (!COIN_METALS.includes(metalOfBar(lump.id)?.id ?? '')) return COIN_REFUSAL;
       return null;
     },
@@ -205,7 +203,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const pure = g.rand() < coinPurity(lumpQl);
       if (!sureHand(g, 'strike_coins', struck && pure)) {
         g.gainSkill('blacksmithing', tryGain(false, SMITH_GAIN));
-        g.logMsg(`${struck ? 'The gold is too poor to take the die and the blanks crack' : 'The blanks come out smeared'}; the lump is lost.${broke ? ' The die is worn through.' : ''}`, 'event');
+        g.logMsg(`Failed: coins, ${struck ? 'gold too poor for the die' : 'skill check'}. Lump lost.${broke ? ' Coin die worn out.' : ''}`, 'event');
         return;
       }
       // And higher for a Masterwork on the anvil (`enchanting.ts`).
@@ -224,8 +222,8 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       g.note('minted');
       g.madeIt('coin', made.ql, COINS_PER_LUMP, rare);
       g.logMsg(
-        `You strike ${COINS_PER_LUMP} ${metal.name.toLowerCase()} coins on the ${anvilName(a).toLowerCase()}. (QL ${made.ql.toFixed(1)})${
-          broke ? ' The die is worn through and done.' : ` The die has ${Math.ceil((100 - die.dmg) / DIE_WEAR)} strikes left.`
+        `Struck: ${COINS_PER_LUMP} × ${metal.name.toLowerCase()} coin, QL ${made.ql.toFixed(1)}.${
+          broke ? ' Coin die worn out.' : ` Coin die: ${Math.ceil((100 - die.dmg) / DIE_WEAR)} strikes left.`
         }`,
         'event',
       );
@@ -247,7 +245,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       // A casting poured at the smelter, which is the only thing an anvil takes.
       const named = t.kind === 'anvil' ? t.itemUid : undefined;
       const casting = castingFor(g, named)?.item;
-      if (!casting) return named !== undefined ? 'Choose a casting.' : 'Pour a mould at the smelter first.';
+      if (!casting) return named !== undefined ? 'Choose a casting.' : 'Need a casting (pour a mould at a smelter).';
       if (!MOULD_BY_MAKES.has(casting.piece as string)) return 'Choose a casting.';
       return null;
     },
@@ -269,7 +267,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
         if (!kept && !stack.spend(1)) return;
         g.events.emit('inventory');
         g.gainSkill(def.skill, tryGain(false, SMITH_GAIN));
-        g.logMsg(`The ${itemDef(def.makes).name.toLowerCase()} comes out misshapen and ${kept ? 'goes back into the fire: the casting is kept' : 'you throw the metal back'}.`, 'event');
+        g.logMsg(`Failed: ${itemDef(def.makes).name.toLowerCase()}. ${kept ? 'Second Heat: casting kept.' : 'Casting lost.'}`, 'event');
         return;
       }
       // The one casting is all that goes into it, for what a rare one puts on
@@ -306,7 +304,7 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       g.madeIt(def.makes, made.ql, per, rare);
       if (metal && ['adamantine', 'glimmersteel', 'mithril', 'seryll'].includes(metal.id)) g.note('moonmetal');
       g.logMsg(
-        `You beat out ${per > 1 ? `${per} ` : 'a '}${metalWord} ${plural(itemDef(def.makes).name.toLowerCase(), per)} on the ${anvilName(a).toLowerCase()}. (QL ${made.ql.toFixed(1)})`,
+        `Smithed: ${per > 1 ? `${per} × ` : ''}${metalWord} ${itemDef(def.makes).name.toLowerCase()}, QL ${made.ql.toFixed(1)}.`,
         'event',
       );
     },

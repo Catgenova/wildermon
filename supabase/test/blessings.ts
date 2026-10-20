@@ -186,13 +186,13 @@ const rowSays = (how: string, game: Game, spells: SpellsOnYou, held: Record<stri
   }
   const thick = mark(row, 'spell:warder_thicken');
   check(`${how}: the Thicken says its multiplier, ×${MORE}, ${percent(MORE - 1)} larger`,
-    !!thick?.does.some((d) => d.includes(`×${MORE} on the next skin you lay, ${percent(MORE - 1)} larger`)), thick?.does.join(' '));
-  check(`${how}: the Thicken is yours, which only you can cast on you`, thick?.from === 'Cast by you: a Warder spell.', thick?.from);
+    !!thick?.does.some((d) => d.includes(`Next skin: ×${MORE} (+${percent(MORE - 1)})`)), thick?.does.join(' '));
+  check(`${how}: the Thicken is yours, which only you can cast on you`, thick?.from === 'Cast by you: Warder spell.', thick?.from);
   const skin = mark(row, 'skin');
   check(`${how}: the row lists the skin over you at ${skinSaid(SKIN)}`, skin?.caption === skinSaid(SKIN) && skin?.name === `Skin of ${skinSaid(SKIN)}`,
     skin ? `${skin.name} (${skin.caption})` : 'not listed');
   check(`${how}: the skin says who laid it${layer ? `, ${layer}` : ', where nobody has said'}`,
-    skin?.from === (layer ? `Laid by ${layer}.` : 'A Warder\'s spell, an Aegis or a Bulwark.'), skin?.from);
+    skin?.from === (layer ? `Laid by ${layer}.` : 'Source: Warder spell, Aegis or Bulwark.'), skin?.from);
   check(`${how}: nothing of anybody else's is on the row`, !mark(row, 'spell:warder_unbreakable'));
 };
 

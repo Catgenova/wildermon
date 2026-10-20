@@ -66,7 +66,7 @@ export class FaithBook {
   }
 
   private answer(s: FaithSaid | null): string | null {
-    if (!s) return this.island ? 'The island did not answer.' : 'Playing by yourself there is no island to keep a patron.';
+    if (!s) return this.island ? 'No answer from the island.' : 'Patrons: island only.';
     if (s.why) return s.why;
     this.take(s);
     return null;

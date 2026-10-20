@@ -68,7 +68,7 @@ import { jobName, smelterAnchor, smelterState, type PlacedSmelter } from '../gam
 import { isGreenware, kilnAnchor, kilnState, type PlacedKiln } from '../game/kiln';
 import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
 import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
-import { CROP_BY_SEED, cropDef, describeCrop, emptyFields, growthWords, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
+import { CROP_BY_SEED, cropDef, describeCrop, emptyFields, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
 import { swirlName } from '../game/motes';
@@ -189,7 +189,7 @@ function gateEntries(g: Game, t: Extract<Target, { kind: 'tile' }>): MenuItem[] 
  * cellar tile.
  */
 /** What Q and E do to a single staircase being placed (`rotatePlacing`). */
-const SINGLE_TURNS = 'Q and E choose the side to climb from and the half of the tile';
+const SINGLE_TURNS = 'Q/E: climbing side and tile half';
 
 function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: Side, place: (material: string, kind: 'stairs' | 'ladder', hand?: StairHand) => void): MenuItem[] {
   const bld = g.buildings;
@@ -229,7 +229,7 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
     label: 'Plan staircase down',
     children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
       label: m.name,
-      note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q and E choose the side`,
+      note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q/E: side`,
       onSelect: () => place(m.id, 'stairs'),
     })),
   });
@@ -243,7 +243,7 @@ function cellarEntries(g: Game, base: Extract<Target, { kind: 'tile' }>, side: S
   });
   entries.push({
     label: 'Plan ladder down',
-    note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q and E choose the side`,
+    note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
     onSelect: () => place('plank', 'ladder'),
   });
   return entries;
@@ -286,7 +286,7 @@ function creatorPage(): string {
 
 /** What a station's menu says when nothing it takes is at hand: on you, and in your stores too unless Settings keeps them out. */
 const noneAtHand = (g: Game, what: string, reach = CRAFT_REACH): string =>
-  g.settings.fromStores ? `You have ${what} on you or in your stores within ${reach} tiles.` : `You have ${what} on you.`;
+  g.settings.fromStores ? `Have ${what} (carried or in stores within ${reach} tiles).` : `Have ${what} (carried).`;
 
 export class UI {
   readonly windows: WindowManager;
@@ -453,7 +453,7 @@ export class UI {
     // Somebody else's shop counter: what is on it is bought, on an island.
     if (this.island) this.cratePanel.buyer = (it) => void this.buyOffCounter(it);
     // Marking a store as one of its settlement's (`stores.ts`), on an island.
-    if (this.island) this.cratePanel.mark = (kind, id, on) => this.island?.markStore(kind, id, on) ?? Promise.resolve({ why: 'You are not on an island.' });
+    if (this.island) this.cratePanel.mark = (kind, id, on) => this.island?.markStore(kind, id, on) ?? Promise.resolve({ why: 'Island only.' });
     const journal = this.windows.create({ id: 'journal', title: 'Journal', x: 12, y: 56, width: 440, height: 460, anchor: 'tr', open: false });
     this.journalPanel = new JournalPanel(journal, game);
     // The trades you are watching: the journal's Tracker tab, redrawn as skills move only while it shows.
@@ -491,21 +491,21 @@ export class UI {
       prime: () => this.social.prime(),
       again: () => this.social.again(),
       me: () => this.island?.uid ?? '',
-      rank: (founder, uid, rank) => this.island?.rank(founder, uid, rank) ?? Promise.resolve('You are not on an island.'),
-      add: (name) => this.island?.rankAdd(name) ?? Promise.resolve('You are not on an island.'),
-      rename: (id, name) => this.island?.rankRename(id, name) ?? Promise.resolve('You are not on an island.'),
-      move: (id, dir) => this.island?.rankMove(id, dir) ?? Promise.resolve('You are not on an island.'),
-      drop: (id) => this.island?.rankDrop(id) ?? Promise.resolve('You are not on an island.'),
-      allow: (id, power, on) => this.island?.rankAllow(id, power, on) ?? Promise.resolve('You are not on an island.'),
-      newcomers: (id) => this.island?.rankNewcomers(id) ?? Promise.resolve('You are not on an island.'),
+      rank: (founder, uid, rank) => this.island?.rank(founder, uid, rank) ?? Promise.resolve('Island only.'),
+      add: (name) => this.island?.rankAdd(name) ?? Promise.resolve('Island only.'),
+      rename: (id, name) => this.island?.rankRename(id, name) ?? Promise.resolve('Island only.'),
+      move: (id, dir) => this.island?.rankMove(id, dir) ?? Promise.resolve('Island only.'),
+      drop: (id) => this.island?.rankDrop(id) ?? Promise.resolve('Island only.'),
+      allow: (id, power, on) => this.island?.rankAllow(id, power, on) ?? Promise.resolve('Island only.'),
+      newcomers: (id) => this.island?.rankNewcomers(id) ?? Promise.resolve('Island only.'),
       // Its notices, the work it wants and its ledger (`noticeboard.ts`).
-      board: (founder, seen) => this.island?.settlement(founder, seen) ?? Promise.resolve('You are not on an island.'),
-      post: (founder, text) => this.island?.noticePost(founder, text) ?? Promise.resolve('You are not on an island.'),
-      unpost: (founder, n) => this.island?.noticeDrop(founder, n) ?? Promise.resolve('You are not on an island.'),
-      setWork: (founder, def, count, minQl) => this.island?.workSet(founder, def, count, minQl) ?? Promise.resolve('You are not on an island.'),
-      dropWork: (founder, id) => this.island?.workDrop(founder, id) ?? Promise.resolve('You are not on an island.'),
-      deliver: (founder, id) => this.island?.workDeliver(founder, id) ?? Promise.resolve('You are not on an island.'),
-      storeLog: (founder) => this.island?.storeLog(founder) ?? Promise.resolve({ why: 'You are not on an island.' }),
+      board: (founder, seen) => this.island?.settlement(founder, seen) ?? Promise.resolve('Island only.'),
+      post: (founder, text) => this.island?.noticePost(founder, text) ?? Promise.resolve('Island only.'),
+      unpost: (founder, n) => this.island?.noticeDrop(founder, n) ?? Promise.resolve('Island only.'),
+      setWork: (founder, def, count, minQl) => this.island?.workSet(founder, def, count, minQl) ?? Promise.resolve('Island only.'),
+      dropWork: (founder, id) => this.island?.workDrop(founder, id) ?? Promise.resolve('Island only.'),
+      deliver: (founder, id) => this.island?.workDeliver(founder, id) ?? Promise.resolve('Island only.'),
+      storeLog: (founder) => this.island?.storeLog(founder) ?? Promise.resolve({ why: 'Island only.' }),
     } : undefined);
     // Everybody, and what they are to you: who is waiting on an answer, who
     // you know and where they are, and what has been written.
@@ -686,8 +686,8 @@ export class UI {
     this.journalPanel.open('help');
     const hit = pages.search(name);
     this.game.logMsg(hit
-      ? `Nothing makes ${name.toLowerCase()} at a bench. The help is open at what it says about it.`
-      : `Nothing makes ${name.toLowerCase()} at a bench, and the help says nothing about it by that name.`, 'info');
+      ? `No recipe makes ${name.toLowerCase()}. Help opened at its entry.`
+      : `No recipe makes ${name.toLowerCase()}; no help entry by that name.`, 'info');
   }
 
   /** A weapon or armour under the pointer in the pack or a store, set against what you have on; anything else, what it is and is for (`itemCard`). */
@@ -716,10 +716,10 @@ export class UI {
     const name = this.windows.layoutName(slot);
     if (keep) {
       this.windows.saveLayout(slot);
-      this.game.logMsg(`The windows as they are now are kept as layout ${slot + 1}, “${name}”.`, 'info');
+      this.game.logMsg(`Layout ${slot + 1} saved: “${name}”.`, 'info');
     } else if (!this.windows.useLayout(slot)) {
       const k = this.keys.label(`layout_${slot + 1}`);
-      this.game.logMsg(`Nothing is kept as layout ${slot + 1}, “${name}”, yet. Arrange the windows and press ${k === 'unbound' ? 'Keep in Settings, under Windows' : `Shift+${k}`}.`, 'info');
+      this.game.logMsg(`Layout ${slot + 1} “${name}” is empty. Save with ${k === 'unbound' ? 'Keep in Settings, Windows' : `Shift+${k}`}.`, 'info');
     }
     this.settings.drawLayouts();
     this.settings.refresh();
@@ -752,8 +752,8 @@ export class UI {
     for (let slot = 0; slot < LAYOUT_SLOTS; slot++) {
       const name = this.windows.layoutName(slot);
       const k = key(`layout_${slot + 1}`);
-      if (this.windows.layoutKept(slot)) out.push({ label: `Use layout: ${name}`, kind: 'Layout', hint: `Every window where layout ${slot + 1} keeps it`, key: k, run: () => this.layout(slot, false) });
-      out.push({ label: `Keep layout: ${name}`, kind: 'Layout', hint: `Store the windows as they are now as layout ${slot + 1}`, key: k ? `Shift+${k}` : undefined, run: () => this.layout(slot, true) });
+      if (this.windows.layoutKept(slot)) out.push({ label: `Use layout: ${name}`, kind: 'Layout', hint: `Restore layout ${slot + 1}`, key: k, run: () => this.layout(slot, false) });
+      out.push({ label: `Keep layout: ${name}`, kind: 'Layout', hint: `Save current windows as layout ${slot + 1}`, key: k ? `Shift+${k}` : undefined, run: () => this.layout(slot, true) });
     }
     for (const r of RECIPES) {
       const made = itemDef(r.result).name;
@@ -821,7 +821,7 @@ export class UI {
     const held = g.inventory.get(p.uid);
     if (!held) return true;
     if (g.isEquipped(held.uid)) {
-      g.logMsg(`Take the ${p.name.toLowerCase()} off first.`, 'error');
+      g.logMsg(`Remove the ${p.name.toLowerCase()} first.`, 'error');
       return true;
     }
     const def = ACTION_BY_ID.get(at.kind === 'crate' ? 'store_in_crate' : at.kind === 'rack' ? 'rack_put' : 'store_in_furniture');
@@ -861,7 +861,7 @@ export class UI {
     const held = to === 'inventory' ? store?.items.find((it) => it.uid === p.uid) : this.game.inventory.get(p.uid);
     const ask = this.game.hooks.count;
     if (p.split && held && held.count > 1 && ask) {
-      void ask(`${p.name}: how many of the ${held.count} to move?`, held.count, Math.ceil(held.count / 2)).then((n) => {
+      void ask(`${p.name}: count to move (of ${held.count})?`, held.count, Math.ceil(held.count / 2)).then((n) => {
         if (n) this.moveDraggedN(p, to, n);
       });
       return;
@@ -875,7 +875,7 @@ export class UI {
     const store = this.cratePanel.currentStore();
     if (!store) return;
     if (!this.cratePanel.withinReach()) {
-      g.logMsg(`Stand next to the ${store.what} to move things in and out of it.`, 'error');
+      g.logMsg(`Too far from the ${store.what}.`, 'error');
       return;
     }
     /*
@@ -912,13 +912,13 @@ export class UI {
       const item = store.take(p.uid);
       if (!item) return;
       g.inventory.addItem(item);
-      g.logMsg(`You take the ${p.name.toLowerCase()} out of the ${store.what}.`, 'event');
+      g.logMsg(`Taken from the ${store.what}: ${p.name.toLowerCase()}.`, 'event');
       return;
     }
     const held = g.inventory.get(p.uid);
     if (!held) return;
     if (g.isEquipped(held.uid)) {
-      g.logMsg(`Take the ${p.name.toLowerCase()} off first.`, 'error');
+      g.logMsg(`Remove the ${p.name.toLowerCase()} first.`, 'error');
       return;
     }
     const occupied = occupiedRefusal(g, 'store_in_furniture', { kind: 'item', uid: held.uid });
@@ -1062,8 +1062,8 @@ export class UI {
     this.placing = { kind: 'furniture', itemUid: item.uid, piece: item.id, material: item.extra, facing: 's' };
     // A trellis turns itself to the wall it goes against (`placingFacing`).
     this.game.logMsg(furnitureDef(item.id).vine
-      ? `The ${itemName(item).toLowerCase()} follows the cursor and stands against the wall on the side of the tile nearest it: a click sets it down, Escape keeps it.`
-      : `The ${itemName(item).toLowerCase()} follows the cursor: Q and E turn it, a click sets it down, Escape keeps it.`, 'info');
+      ? `Placing ${itemName(item).toLowerCase()}: snaps to the nearest wall side. Click: place. Esc: cancel.`
+      : `Placing ${itemName(item).toLowerCase()}: Q/E rotate. Click: place. Esc: cancel.`, 'info');
   }
 
   /**
@@ -1087,7 +1087,7 @@ export class UI {
     const single = floorKind === 'stairs' ? hand : undefined;
     // Out past the footprint, an outside staircase: for the building the job names, on the storey it names (`outsideStairReason`).
     this.placing = { kind: 'stairs', x: base.x, y: base.y, cx: base.cx, cy: base.cy, level, material, floorKind, side, down, hand: single, buildingId: base.buildingId };
-    this.game.logMsg(single ? `${SINGLE_TURNS}, a click plans it, Escape lets it go.` : 'Q and E choose the side to climb from, a click plans it, Escape lets it go.', 'info');
+    this.game.logMsg(single ? `${SINGLE_TURNS}. Click: plan. Esc: cancel.` : 'Q/E: climbing side. Click: plan. Esc: cancel.', 'info');
   }
 
   /** A quarter turn of what is being placed: to the right for +1, to the left for -1. */
@@ -1207,7 +1207,7 @@ export class UI {
       // A lantern post's lantern, what it throws and its candle, as its menu says them (`lamps.ts`).
       if (isLampPiece(fu)) lines.push(lampState(fu));
       if (rackSpots(fu)) lines.push(this.rackLine(fu));
-      if (furnitureHolds(fu)) lines.push('Stand next to it to put things away.');
+      if (furnitureHolds(fu)) lines.push('Storage: use from adjacent.');
       if (isPlanter(fu)) lines.push(this.planterLine(fu));
       this.tooltip.show(sx, sy, lines);
       return;
@@ -1231,7 +1231,7 @@ export class UI {
     if (fire) {
       lines.push('Campfire');
       lines.push(fireState(fire));
-      if (fire.lit) lines.push('Stand here to cook.');
+      if (fire.lit) lines.push('Lit: cook here.');
       this.tooltip.show(sx, sy, lines);
       return;
     }
@@ -1281,7 +1281,7 @@ export class UI {
       const who = 'holder' in here && here.holder ? `, ${here.holder}\u2019s` : '';
       const level = here.level && here.level > 1 ? ` \u00b7 level ${here.level}` : '';
       lines.push(`${token ? 'Settlement token of' : 'Part of'} ${here.name}${who}${level}`);
-      lines.push(mine ? standingWord(mine) : 'You are a stranger here: you may walk it and shape nothing.');
+      lines.push(mine ? standingWord(mine) : 'Not a citizen: walk only, no building or terraforming.');
     }
     // A drawbridge says whether it is up (`gates.ts`).
     const span = pick.bridge !== undefined ? this.game.bridges.get(pick.bridge) : undefined;
@@ -1293,7 +1293,7 @@ export class UI {
     if (gateLine && !b) lines.push(gateLine);
     if (b) {
       const level = workLevel(b);
-      lines.push(`${b.name} · ${b.levels === 1 ? 'one storey' : `${b.levels} storeys, working on storey ${level + 1}`}${isGlasshouse(this.game.buildings, b) ? ' · a glasshouse' : ''}`);
+      lines.push(`${b.name} · ${b.levels === 1 ? '1 storey' : `${b.levels} storeys, working on storey ${level + 1}`}${isGlasshouse(this.game.buildings, b) ? ' · glasshouse' : ''}`);
       if (gateLine) lines.push(gateLine);
       const side = nearestSide(pick.x, pick.y, pick.wx, pick.wy);
       const wall = gateLine && level === 0 ? undefined : this.game.buildings.wall(level, pick.x, pick.y, side);
@@ -1388,8 +1388,8 @@ export class UI {
       // down with it was reported as the game locking up.
       const why = e instanceof Error ? e.message : String(e);
       console.error('The menu for this could not be built', e);
-      this.game.logMsg(`The menu for this could not be built: ${why}`, 'error');
-      built = { title: 'Something here', entries: [{ label: `Could not list what can be done here: ${why}`, disabled: true }] };
+      this.game.logMsg(`Menu failed: ${why}`, 'error');
+      built = { title: 'Error', entries: [{ label: `Menu failed: ${why}`, disabled: true }] };
     }
     this.menu.show(sx, sy, built.title, built.entries, built.facts);
   }
@@ -1416,9 +1416,9 @@ export class UI {
     if (pick.ground === undefined) return [];
     const named = (p: Pick): string => `${this.game.world.tileName(p.x, p.y)} (${p.x}, ${p.y})`;
     const under: Pick = { x: pick.x, y: pick.y, wx: pick.wx, wy: pick.wy, cx: pick.cx, cy: pick.cy };
-    const out: MenuItem[] = [{ label: 'The ground under it', note: named(under), onSelect: () => go(under) }];
+    const out: MenuItem[] = [{ label: 'Ground under it', note: named(under), onSelect: () => go(under) }];
     const behind = pick.ground;
-    if (behind.x !== pick.x || behind.y !== pick.y || behind.down) out.push({ label: 'The ground behind it', note: named(behind), onSelect: () => go(behind) });
+    if (behind.x !== pick.x || behind.y !== pick.y || behind.down) out.push({ label: 'Ground behind it', note: named(behind), onSelect: () => go(behind) });
     return out;
   }
 
@@ -1539,8 +1539,8 @@ export class UI {
       const why = sit.check?.(target, g) ?? null;
       const worth = sittingWorth(g);
       entries.push({
-        label: 'Sit and think about nothing',
-        note: why ? undefined : `meditation ${med.toFixed(1)} · this spot is worth ${worth.place.toFixed(2)}× · ${Math.floor(worth.calm)} Calm`,
+        label: 'Meditate',
+        note: why ? undefined : `meditation ${med.toFixed(1)} · spot ×${worth.place.toFixed(2)} · +${Math.floor(worth.calm)} Calm`,
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => g.requestAction(sit, target),
@@ -1550,7 +1550,7 @@ export class UI {
         const ready = med >= CHOOSE_AT;
         entries.push({
           label: 'Choose a path',
-          hint: ready ? 'Chosen once, and never again.' : `Sit until you have ${CHOOSE_AT} meditation behind you.`,
+          hint: ready ? 'Permanent.' : `Need meditation ${CHOOSE_AT}.`,
           disabled: !ready,
           children: ready
             ? PATH_LIST.map((path) => ({
@@ -1569,7 +1569,7 @@ export class UI {
         const way = PATHS[g.player.way];
         const next = PATH_TIER_AT.find((at) => med < at);
         entries.push({
-          label: `The path of ${way.name}`,
+          label: `Path: ${way.name}`,
           note: `Calm ${Math.floor(g.player.calm)} of ${Math.floor(g.calmCap())} · ${next !== undefined ? `next tier at ${next}` : 'every tier open'}`,
           onSelect: () => this.windows.get('faith')?.open(),
         });
@@ -1577,7 +1577,7 @@ export class UI {
         const mine = g.player.picks.filter((id) => PATH_PICK_BY_ID.get(id)?.kind === 'technique' && g.holds(id));
         if (!this.island && mine.length) {
           entries.push({
-            label: 'Call on what you know',
+            label: 'Use path ability',
             children: mine.map((id) => {
               const k = PATH_PICK_BY_ID.get(id);
               const reason = g.techniqueRefusal(id);
@@ -1594,12 +1594,12 @@ export class UI {
       } else if (g.player.way) {
         const way = PATHS[g.player.way];
         const next = nextStep(g.player.way, med);
-        entries.push({ label: `The path of ${way.name}`, note: next ? `next: ${next.name} at ${next.at}` : 'walked to the end', disabled: true });
+        entries.push({ label: `Path: ${way.name}`, note: next ? `next: ${next.name} at ${next.at}` : 'complete', disabled: true });
         const use = ACTION_BY_ID.get('use_ability');
         const able = abilitiesOf(g.player.way, med);
         if (use && able.length) {
           entries.push({
-            label: 'Call on what you know',
+            label: 'Use path ability',
             children: able.map((st) => {
               const t: Target = { ...target, material: st.ability?.id };
               const reason = use.check?.(t, g) ?? null;
@@ -1618,7 +1618,7 @@ export class UI {
         .filter((o) => o.reason === null || !/runs straight|nothing between|a gap, it is ground|dry, solid ground/.test(o.reason));
       if (options.length) {
         entries.push({
-          label: 'Throw a bridge across from here',
+          label: 'Build bridge from here',
           children: options.map((o) => ({
             label: o.def.name,
             note: o.reason ? undefined : `${o.def.bill.map(([id, n]) => `${n} ${itemName({ uid: 0, id, ql: 1, dmg: 0, count: 1 }).toLowerCase()}`).join(', ')} a span${
@@ -1659,7 +1659,7 @@ export class UI {
         label: 'Set furniture down',
         children: carried.map((it) => ({
           label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
-          note: 'follows the cursor · Q and E turn it · click to set down',
+          note: 'follows the cursor · Q/E rotate · click to place',
           onSelect: () => this.startPlacing(it),
         })),
       });
@@ -1671,7 +1671,7 @@ export class UI {
       entries.push({
         label,
         disabled: !seedsCarried.length,
-        hint: seedsCarried.length ? undefined : 'You carry no seeds. Forage and botanize for them.',
+        hint: seedsCarried.length ? undefined : 'No seeds carried (from foraging and botanizing).',
         children: seedsCarried.length
           ? seedsCarried.map((it) => {
               const crop = CROP_BY_SEED.get(it.id)!;
@@ -1762,7 +1762,7 @@ export class UI {
       const { x, y } = pick;
       entries.push({
         label: 'Clear this pile',
-        note: `Deletes ${things} ${things === 1 ? 'thing' : 'things'} in ${pile.length} ${pile.length === 1 ? 'stack' : 'stacks'}, and what is inside them`,
+        note: `Deletes ${things} ${things === 1 ? 'thing' : 'things'} in ${pile.length} ${pile.length === 1 ? 'stack' : 'stacks'}, contents included`,
         onSelect: () => void (async () => {
           if (!(await this.game.hooks.confirm(clearQuestion(x, y, pile.length, things)))) return;
           const why = await isle.keeperClear(x, y);
@@ -1862,13 +1862,13 @@ export class UI {
         label: `Mark: ${here.name}`,
         children: [
           {
-            label: 'Rename it',
+            label: 'Rename',
             onSelect: () => void (async () => {
-              const said = await this.game.hooks.prompt('What is this spot called?', here.name);
+              const said = await this.game.hooks.prompt('Mark name:', here.name);
               if (said !== null) this.game.renameMark(here.id, said);
             })(),
           },
-          { label: 'Rub it off the map', onSelect: () => this.game.removeMark(here.id) },
+          { label: 'Delete mark', onSelect: () => this.game.removeMark(here.id) },
           ...MARK_COLOURS.map((c) => ({
             label: c.name,
             note: c.note,
@@ -1880,12 +1880,12 @@ export class UI {
       });
     } else {
       entries.push({
-        label: 'Mark this spot on the map',
+        label: 'Mark on map',
         children: MARK_COLOURS.map((c) => ({
           label: c.name,
           note: c.note,
           onSelect: () => void (async () => {
-            const said = await this.game.hooks.prompt(`Name this spot (${pick.x}, ${pick.y}):`, '');
+            const said = await this.game.hooks.prompt(`Mark name (${pick.x}, ${pick.y}):`, '');
             if (said !== null) this.game.addMark(pick.x, pick.y, said, c.id);
           })(),
         })),
@@ -1895,7 +1895,7 @@ export class UI {
     const hangable = this.game.actionsFor(target).filter((a) => pinnable(a.def));
     if (hangable.length && this.game.beltLoops()) {
       entries.push({
-        label: 'Hang a job on your belt',
+        label: 'Hang job on belt',
         children: hangable.map(({ def }) => ({ label: def.label, children: pinEntry(this.game, { action: def.id }).children })),
       });
     }
@@ -1949,7 +1949,7 @@ export class UI {
         label: 'Set furniture down',
         children: carried.map((it) => ({
           label: it.count > 1 ? `${itemName(it)} (${it.count})` : itemName(it),
-          note: 'follows the cursor · Q and E turn it · click to set down',
+          note: 'follows the cursor · Q/E rotate · click to place',
           onSelect: () => this.startPlacing(it),
         })),
       });
@@ -2108,7 +2108,7 @@ export class UI {
       entries.push({
         label: 'Pour a mould',
         disabled: !moulds.length || !lumps.length,
-        hint: !moulds.length ? 'You carry no moulds.' : !lumps.length ? noneAtHand(g, 'no metal', reach) : undefined,
+        hint: !moulds.length ? 'No moulds carried.' : !lumps.length ? noneAtHand(g, 'no metal', reach) : undefined,
         children:
           moulds.length && lumps.length
             ? moulds.map((mould) => {
@@ -2157,7 +2157,7 @@ export class UI {
     }
     if (s.jobs.length) {
       const job = s.jobs[0];
-      entries.push({ label: `In the furnace: ${jobName(job)}`, note: `${Math.ceil(job.left)}s left, ${s.jobs.length} in all`, disabled: true });
+      entries.push({ label: `In the furnace: ${jobName(job)}`, note: `${Math.ceil(job.left)} s left, ${s.jobs.length} total`, disabled: true });
     }
     if (s.output.length) entries.push({ label: `Finished: ${s.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${itemName(o).toLowerCase()}`).join(', ')}`, disabled: true });
     return entries;
@@ -2171,7 +2171,7 @@ export class UI {
    */
   private rackLine(f: PlacedFurniture): string {
     const load = this.game.rackLoad(f);
-    if (!load.crates) return `no crates on it · room for ${load.spots}`;
+    if (!load.crates) return `no crates · room ${load.spots}`;
     return `${load.crates} of ${load.spots} spots · ${load.units} / ${load.capacity} things`;
   }
 
@@ -2184,7 +2184,7 @@ export class UI {
   /** What a planter has in it, or that it is empty and grows at its rate in every season. */
   private planterLine(f: PlacedFurniture): string {
     const c = this.game.planted.get(f.id);
-    return c ? this.cropLine(c) : `Empty: sow any seed in it. It grows a crop ${growthWords(PLANTER_GROWTH)} in every season.`;
+    return c ? this.cropLine(c) : `Empty: any seed. Growth ×${PLANTER_GROWTH}, every season.`;
   }
 
   /**
@@ -2202,7 +2202,7 @@ export class UI {
       entries.push({
         label: 'Sow',
         disabled: !seeds.length,
-        hint: seeds.length ? undefined : 'You carry no seeds. Forage and botanize for them.',
+        hint: seeds.length ? undefined : 'No seeds carried (from foraging and botanizing).',
         children: seeds.length
           ? seeds.map((it) => {
               const crop = CROP_BY_SEED.get(it.id)!;
@@ -2303,7 +2303,7 @@ export class UI {
             const no = setDef.check?.(t, g) ?? null;
             return [{
               label: `In place of ${tier.name.toLowerCase()} ${slot + 1}: ${socketText(held)}`,
-              hint: no ?? 'What is in it now is lost.',
+              hint: no ?? 'Current bauble is destroyed.',
               disabled: !!no,
               onSelect: () => g.requestAction(setDef, t),
             }];
@@ -2314,7 +2314,7 @@ export class UI {
         hint: b ? undefined : why ?? undefined,
         disabled: !b,
         children: b
-          ? [{ label: 'Into the next empty socket', hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(setDef, next) }, ...over]
+          ? [{ label: 'Next empty socket', hint: why ?? undefined, disabled: !!why, onSelect: () => g.requestAction(setDef, next) }, ...over]
           : undefined,
       };
     });
@@ -2407,7 +2407,7 @@ export class UI {
       if (placeDef) {
         for (const it of carried) {
           const pt: Target = { kind: 'tile', x: f.x, y: f.y, cx: f.x, cy: f.y, sx: free?.[0] ?? 0, sy: free?.[1] ?? 0, itemUid: it.uid };
-          const reason = free ? placeDef.check?.(pt, g) ?? null : 'Every spot on it is taken.';
+          const reason = free ? placeDef.check?.(pt, g) ?? null : 'All spots taken.';
           entries.push({
             label: `Put ${itemName(it).toLowerCase()} on it`,
             note: reason ? undefined : `spot ${on.length + 1} of ${rackSpots(f)}`,
@@ -2441,7 +2441,7 @@ export class UI {
     const brewDef = ACTION_BY_ID.get('start_brew');
     if (brewDef && brewDef.applies(ft, g) && !(f.ferment ?? 0)) {
       entries.push({
-        label: 'Set a brew going',
+        label: 'Start a brew',
         children: BREWS.map((b) => {
           const bt: Target = { ...ft, brew: b.id } as Target;
           const reason = brewDef.check?.(bt, g) ?? null;
@@ -2522,7 +2522,7 @@ export class UI {
     }
     if (k.jobs.length) {
       const job = k.jobs[0];
-      entries.push({ label: `In the kiln: ${itemDef(job.makes).name.toLowerCase()}`, note: `${Math.ceil(job.left)}s left, ${k.jobs.length} in all`, disabled: true });
+      entries.push({ label: `In the kiln: ${itemDef(job.makes).name.toLowerCase()}`, note: `${Math.ceil(job.left)} s left, ${k.jobs.length} total`, disabled: true });
     }
     if (k.output.length) entries.push({ label: `Fired: ${k.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${itemName(o).toLowerCase()}`).join(', ')}`, disabled: true });
     return entries;
@@ -2545,9 +2545,9 @@ export class UI {
       const candidates = postCandidates(g);
       if (assign) {
         entries.push({
-          label: 'Set a wildermon to it',
+          label: 'Assign a wildermon',
           disabled: !candidates.length,
-          hint: candidates.length ? undefined : 'You have no wildermon free to set to it.',
+          hint: candidates.length ? undefined : 'No free wildermon.',
           children: candidates.length
             ? candidates.map((c) => {
                 const ct: Target = { kind: 'post', id: p.id, creatureId: c.id };
@@ -2583,7 +2583,7 @@ export class UI {
     const entries: MenuItem[] = [];
     const open = b.spans.find((s) => !isDone(s));
     entries.push({ label: `${b.spans.length} spans · ${def.carts ? 'carries a cart' : 'foot traffic only'}`, disabled: true });
-    if (open) entries.push({ label: `The open span wants ${spanWants(open)}`, disabled: true });
+    if (open) entries.push({ label: `Open span needs: ${spanWants(open)}`, disabled: true });
     if (isDrawbridge(b) && !open) entries.push({ label: capital(drawbridgeState(b)), disabled: true });
     for (const id of ['build_bridge', 'raise_drawbridge', 'lower_drawbridge', 'fit_lock', 'take_off_lock', 'scrub_moss', 'demolish_bridge']) {
       const a = ACTION_BY_ID.get(id);
@@ -2614,7 +2614,7 @@ export class UI {
       const choices = baitInPack(g);
       const reason = bait.check?.(tt, g) ?? null;
       entries.push({
-        label: t.bait ? `Change the bait (${itemName(t.bait).toLowerCase()})` : 'Bait it',
+        label: t.bait ? `Change bait (${itemName(t.bait).toLowerCase()})` : 'Bait',
         disabled: !!reason,
         hint: reason ?? undefined,
         children: choices.length
@@ -2661,7 +2661,7 @@ export class UI {
       entries.push({
         label: 'Smith',
         disabled: !castings.length,
-        hint: castings.length ? undefined : 'Pour a mould at the smelter first.',
+        hint: castings.length ? undefined : 'Need a casting (pour a mould at the smelter).',
         children: castings.length
           ? castings.map((s) => {
               const c = s.item;
@@ -2688,7 +2688,7 @@ export class UI {
       entries.push({
         label: 'Strike coins',
         disabled: !die || !precious.length,
-        hint: !die ? 'You need a coin die.' : !precious.length ? COIN_REFUSAL : undefined,
+        hint: !die ? 'Need a coin die.' : !precious.length ? COIN_REFUSAL : undefined,
         note: die ? `${Math.ceil((100 - die.dmg) / DIE_WEAR)} strikes left in the die` : undefined,
         children:
           die && precious.length
@@ -2727,7 +2727,7 @@ export class UI {
         ...this.deliverEntry(),
         {
           label: `Leave ${d.name}`,
-          note: 'Takes you off its roll',
+          note: 'Leave the settlement',
           hint: this.island ? undefined : 'Only on an island.',
           disabled: !this.island,
           onSelect: () => void this.leaveSettlement(d),
@@ -2745,7 +2745,7 @@ export class UI {
     if (upgrade && !lacks(d, 'upgrade')) {
       const reason = upgradeReason(g, d);
       out.push({
-        label: (d.level ?? 1) < MAX_DEED_LEVEL ? `Upgrade to level ${(d.level ?? 1) + 1}` : `Level ${d.level ?? 1}, fully grown`,
+        label: (d.level ?? 1) < MAX_DEED_LEVEL ? `Upgrade to level ${(d.level ?? 1) + 1}` : `Level ${d.level ?? 1} (max)`,
         hint: reason ?? undefined,
         disabled: !!reason,
         onSelect: () => g.requestAction(upgrade, t),
@@ -2802,7 +2802,7 @@ export class UI {
     children.push({
       label: `Wildermon (${workers} of ${g.workerCap} working)`,
       disabled: !kept.length,
-      hint: kept.length ? undefined : 'None working here yet.',
+      hint: kept.length ? undefined : 'None working here.',
       children: kept.length ? kept.map((c) => ({ label: `${c.name} (${g.creatures.describe(c)})`, children: this.creatureEntries(c.id) })) : undefined,
     });
     const upgrade = DEED_ACTION_BY_ID.get('upgrade_deed');
@@ -2811,7 +2811,7 @@ export class UI {
       const progress = upgradeProgress(g);
       const t: Target = { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y };
       children.push({
-        label: level < MAX_DEED_LEVEL ? `Upgrade to level ${level + 1}` : `Level ${level}, fully grown`,
+        label: level < MAX_DEED_LEVEL ? `Upgrade to level ${level + 1}` : `Level ${level} (max)`,
         note: level < MAX_DEED_LEVEL ? `Border ${d.radius + 2} tiles, ${deedWorkersAt(level + 1)} workers` : undefined,
         hint: reason ?? undefined,
         disabled: !!reason,
@@ -2826,7 +2826,7 @@ export class UI {
       note: 'Applies to every wildermon on the deed',
       children: STANCES.map((st) => ({
         label: st === stance ? `${STANCE_NAMES[st]} (current)` : STANCE_NAMES[st],
-        note: st === 'aggressive' ? 'Goes for anything wild that crosses the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights, whatever walks in',
+        note: st === 'aggressive' ? 'Attacks wild creatures inside the border' : st === 'defensive' ? 'Fights back when it or you are attacked' : 'Never fights',
         onSelect: () => g.setDeedStance(st),
       })),
     });
@@ -2912,7 +2912,7 @@ export class UI {
       } else push(item('feed'));
     }
     if ((SPECIES[c.species].pannier ?? 0) > 0 && c.mode !== 'wild' && c.mode !== 'stored') {
-      entries.push({ label: 'Open the panniers', onSelect: () => this.cratePanel.openPannier(c.id) });
+      entries.push({ label: 'Open panniers', onSelect: () => this.cratePanel.openPannier(c.id) });
     }
     /*
      * Brushing, pairing and looking one over: the husbandry, which the rules
@@ -2967,7 +2967,7 @@ export class UI {
     // Its kind's page, wherever a creature's actions are listed: the menu, the
     // Tile window and the card of one of your own. Last, so the number keys
     // the Tile window hands out are the ones they always were.
-    entries.push({ label: 'Field guide', note: `The ${SPECIES[c.species]?.name ?? 'kind'}'s page`, onSelect: () => this.guide.openAt(c.species) });
+    entries.push({ label: 'Field guide', note: `${SPECIES[c.species]?.name ?? 'Kind'} page`, onSelect: () => this.guide.openAt(c.species) });
     return entries;
   }
 
@@ -3003,7 +3003,7 @@ export class UI {
     const reason = def.check?.(t, g) ?? null;
     return [{
       label: 'Found a settlement here',
-      note: reason ? undefined : here ? 'Drives the stake where you stand' : 'Walks you there, then drives the stake in',
+      note: reason ? undefined : here ? 'Places the token here' : 'Walks there, then places the token',
       hint: reason ?? undefined,
       disabled: !!reason,
       // The name is asked for by `requestAction`, which every other way of
@@ -3031,7 +3031,7 @@ export class UI {
     const name = who?.name ?? 'Somebody';
     const isle = this.island;
     if (!isle) {
-      return { title: name, entries: [{ label: 'Nothing to be done', disabled: true, hint: 'There is no island here to ask.', onSelect: () => {} }] };
+      return { title: name, entries: [{ label: 'Nothing to be done', disabled: true, hint: 'Island only.', onSelect: () => {} }] };
     }
     const said = (what: Promise<string | null>): void => {
       void what.then((why) => {
@@ -3048,7 +3048,7 @@ export class UI {
     const after = this.game.following(uid);
     entries.push({
       label: after ? `Stop following ${name}` : `Follow ${name}`,
-      note: after ? 'You are walking after them' : 'Walk after them until you go somewhere else',
+      note: after ? 'Following' : 'Follow until you walk elsewhere',
       onSelect: () => this.game.follow(uid, name),
     });
     // Their wounds, at your first aid and out of your pack: anybody may.
@@ -3058,7 +3058,7 @@ export class UI {
       const why = dress.check?.(patient, this.game) ?? null;
       entries.push({
         label: dress.labelFor?.(patient, this.game) ?? dress.label,
-        note: 'At your first aid, with your dressings',
+        note: 'Your first aid and dressings',
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => this.game.requestAction(dress, patient),
@@ -3081,7 +3081,7 @@ export class UI {
       const why = inviteRefusal(known!, uid, name, d.founder);
       entries.push({
         label: `Invite ${name} to ${d.name}`,
-        note: why ? undefined : `They join as ${defsOf(d).find((r) => r.newcomer)?.name ?? 'its rank for newcomers'}`,
+        note: why ? undefined : `Joins as: ${defsOf(d).find((r) => r.newcomer)?.name ?? 'newcomer rank'}`,
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => said(isle.invite(uid, d.founder)),
@@ -3091,7 +3091,7 @@ export class UI {
       const why = lacks(deed, 'invite');
       entries.push({
         label: `Invite ${name} to ${deed.name}`,
-        note: why ? undefined : 'They join at its rank for newcomers',
+        note: why ? undefined : 'Joins as: newcomer rank',
         hint: why ?? undefined,
         disabled: !!why,
         onSelect: () => said(isle.inviteAt(uid, deed.x, deed.y)),
@@ -3106,25 +3106,25 @@ export class UI {
     const far = apart > BARTER_REACH ? BARTER_SAID.far : null;
     entries.push({
       label: `Trade with ${name}`,
-      note: far ? undefined : 'Each puts in things and silver; both accept, then everything changes hands',
+      note: far ? undefined : 'Both add items and silver; exchanged when both accept',
       hint: far ?? undefined,
       disabled: !!far,
       onSelect: () => void this.barter.ask(uid),
     });
     entries.push({
       label: `Ask ${name} to be a friend`,
-      note: 'You will see where each other are',
+      note: 'Shows each other on the map',
       onSelect: () => said(isle.befriend(uid)),
     });
     entries.push({
       label: `Write to ${name}`,
-      note: 'Kept, and read whenever they next look',
+      note: 'Delivered to their letters',
       onSelect: () => this.social.openOn(uid, 'letters'),
     });
     entries.push({ label: 'Everybody…', onSelect: () => this.social.openOn(uid, 'friends') });
     return {
       title: name,
-      facts: [who ? `${name} is standing at ${Math.floor(who.x)}, ${Math.floor(who.y)}.` : `${name} is on this island.`],
+      facts: [who ? `${name}: at ${Math.floor(who.x)}, ${Math.floor(who.y)}.` : `${name}: on this island.`],
       entries,
     };
   }
@@ -3264,12 +3264,12 @@ export class UI {
     if (glazing(bld, b)) {
       entries.push({
         label: isGlasshouse(bld, b)
-          ? `A glasshouse: its ground is tilled, and a crop in it grows ${growthWords(GLASSHOUSE_GROWTH)} in every season`
+          ? `Glasshouse: tilled ground, crop growth ×${GLASSHOUSE_GROWTH}, every season`
           : b.levels !== 1
-            ? `Roofed in glass over ${b.levels} storeys: a glasshouse is one storey`
+            ? `Glass roof over ${b.levels} storeys: glasshouse must be 1 storey`
             : glassDone(bld, b) < b.tiles.length
-              ? `${glassDone(bld, b)} of ${b.tiles.length} tiles under finished glass: a glasshouse when all ${b.tiles.length} are`
-              : 'Roofed in glass, with a wall down, unfinished or low: a glasshouse is walled all round to full height',
+              ? `Finished glass: ${glassDone(bld, b)}/${b.tiles.length} tiles (glasshouse at ${b.tiles.length})`
+              : 'Not a glasshouse: needs full-height walls all round',
         disabled: true,
       });
     }
@@ -3374,7 +3374,7 @@ export class UI {
               label: 'Plan staircase',
               children: MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' })).map((m) => ({
                 label: m.name,
-                note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q and E choose the side`,
+                note: `${describeNeeds(floorBill(m.id, 'stairs'), materialName)} · Q/E: side`,
                 onSelect: () => this.startPlacingStairs(base, level, m.id, 'stairs', side),
               })),
             });
@@ -3389,7 +3389,7 @@ export class UI {
             });
             entries.push({
               label: 'Plan ladder',
-              note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q and E choose the side`,
+              note: `${describeNeeds(floorBill('plank', 'ladder'), materialName)} · Q/E: side`,
               onSelect: () => this.startPlacingStairs(base, level, 'plank', 'ladder', side),
             });
           }
@@ -3432,8 +3432,8 @@ export class UI {
               onSelect: () => g.requestAction(plan, glassAt),
             },
             // What glass is for, in full, where it is chosen: a note is cut to its slot, a line is not.
-            { label: 'A glasshouse: one storey, walled all round to full height, roofed wholly in glass', disabled: true },
-            { label: `A crop in it grows ${growthWords(GLASSHOUSE_GROWTH)} in every season`, disabled: true },
+            { label: 'Glasshouse: 1 storey, full-height walls all round, all-glass roof', disabled: true },
+            { label: `Crop growth ×${GLASSHOUSE_GROWTH}, every season`, disabled: true },
           ];
         };
         entries.push({

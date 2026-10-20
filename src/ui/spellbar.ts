@@ -82,9 +82,6 @@ export function castAtOf(g: Game, aim: SpellAim): CastAt {
  */
 const MOVED_BY_CAST = 0.6;
 
-/** "8% stamina" as the start of a sentence. */
-const capitalFirst = (t: string): string => (t ? t[0].toUpperCase() + t.slice(1) : t);
-
 /** Whether a spell takes this sort of thing at all, before the island is asked about this one. */
 const takes = (def: BarSpell, aim: SpellAim): boolean => {
   switch (aim.kind) {
@@ -270,12 +267,12 @@ export class SpellBar {
     const g = this.game;
     const p = g.player;
     const far = (x: number, y: number): number => Math.hypot(x - p.x, y - p.y);
-    const tiles = (d: number): string => `${Math.round(d)} tiles off`;
+    const tiles = (d: number): string => `${Math.round(d)} tiles`;
     const items: MenuItem[] = [];
     const at = (aim: SpellAim) => () => void this.castAt(i, aim);
     if (def.on.includes('self')) items.push({ label: 'Yourself', onSelect: at({ kind: 'self' }) });
     if (def.on.includes('area')) {
-      items.push({ label: 'Where you stand', note: `everything within ${def.radius ?? 0} tiles`, onSelect: at({ kind: 'area' }) });
+      items.push({ label: 'Area', note: `radius ${def.radius ?? 0} tiles`, onSelect: at({ kind: 'area' }) });
     }
     if (def.on.includes('player')) {
       for (const peer of g.roster.list()) {
@@ -293,8 +290,8 @@ export class SpellBar {
         items.push({ label: `${c.name} (${g.creatures.species(c).name.toLowerCase()})`, note: tiles(far(c.x, c.y)), onSelect: at({ kind: 'creature', id: c.id }) });
       }
     }
-    if (def.on.includes('object')) items.push({ label: 'A thing: right-click it in your pack, or where it stands', disabled: true });
-    if (!items.length) items.push({ label: `Nothing it can be cast on is within ${SPELL_REACH} tiles`, disabled: true });
+    if (def.on.includes('object')) items.push({ label: 'Object: right-click it in your pack or the world', disabled: true });
+    if (!items.length) items.push({ label: `No target within ${SPELL_REACH} tiles`, disabled: true });
     return items;
   }
 
@@ -326,7 +323,7 @@ export class SpellBar {
       name.textContent = def?.name ?? id ?? 'Empty';
       btn.classList.toggle('spell-empty', !id);
       btn.title = def
-        ? `${def.name}: ${def.note} Cast on ${spellOnText(def)}. ${capitalFirst(def.costs)}, rests ${def.rest} s. Shift+${i + 1}; right-click to change.`
+        ? `${def.name}: ${def.note} Target: ${spellOnText(def)}. Cost: ${def.costs}. Cooldown ${def.rest} s. Shift+${i + 1}; right-click to change.`
         : `${SCHOOL_NAMES[school]} slot. ${this.emptyWhy(i)}`;
     });
   }
@@ -335,16 +332,16 @@ export class SpellBar {
   private emptyWhy(i: number): string {
     const school = SPELL_BAR[i];
     if (school === 'class') {
-      if (!this.book.said?.classSpells?.length) return 'Take a spell of your fighting trade’s in the Trades window, and it goes here.';
-      return 'Right-click to put one of your trade’s spells here.';
+      if (!this.book.said?.classSpells?.length) return 'Fighting class spells: take one in the Trades window.';
+      return 'Right-click: choose a class spell.';
     }
     if (school === 'path') {
-      if (!this.book.said?.pathSpells?.length) return `A path’s techniques are taken in the Faith window, under Path, from ${CHOOSE_AT} meditation, and go here.`;
-      return 'Right-click to put one of your path’s techniques here.';
+      if (!this.book.said?.pathSpells?.length) return `Path techniques: Faith window, Path tab, from meditation ${CHOOSE_AT}.`;
+      return 'Right-click: choose a path technique.';
     }
-    if (!this.book.said?.patron) return `Faith spells come from a patron, taken at ${PATRON_AT} faith in the Faith window.`;
-    if (!this.book.said.taken.length) return 'Take a spell of your patron’s in the Faith window, and it goes here.';
-    return 'Right-click to put one of your patron’s spells here.';
+    if (!this.book.said?.patron) return `Faith spells: take a patron at faith ${PATRON_AT} in the Faith window.`;
+    if (!this.book.said.taken.length) return 'Faith spells: take one in the Faith window.';
+    return 'Right-click: choose a faith spell.';
   }
 
   /** What the spell in a slot can be cast on, then what can go in it: the spells of its school you have, and nothing. */
@@ -361,16 +358,16 @@ export class SpellBar {
         const def = barSpell(id);
         items.push({
           label: def?.name ?? id,
-          note: def ? `${def.costs} · rests ${def.rest} s` : undefined,
+          note: def ? `${def.costs} · cooldown ${def.rest} s` : undefined,
           disabled: s.bar[i] === id,
           onSelect: () => void this.put(i, id),
         });
       }
     }
-    if (s?.bar[i]) items.push({ label: 'Empty this slot', onSelect: () => void this.put(i, null) });
+    if (s?.bar[i]) items.push({ label: 'Clear slot', onSelect: () => void this.put(i, null) });
     if (!items.length) items.push({ label: this.emptyWhy(i), disabled: true });
-    if (school === 'class') items.push({ label: 'Open the Trades window', onSelect: () => this.openTrades() });
-    else items.push({ label: 'Open the Faith window', onSelect: () => this.openFaith() });
+    if (school === 'class') items.push({ label: 'Open Trades window', onSelect: () => this.openTrades() });
+    else items.push({ label: 'Open Faith window', onSelect: () => this.openFaith() });
     this.menu(x, y, `${SCHOOL_NAMES[school]} slot ${i + 1}`, items);
   }
 

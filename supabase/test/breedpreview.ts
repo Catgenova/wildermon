@@ -161,32 +161,32 @@ const said = (x: number): string => {
   const n = x * 100;
   return `${n >= 1 || n === 0 ? Math.round(n) : n >= 0.1 ? n.toFixed(1) : n.toFixed(2)}%`;
 };
-check('pairing through the door asks first, with the preview and a question', lines.length > 6 && lines[lines.length - 1] === 'Put them together?', lines[lines.length - 1]);
-check('it is the preview of this pair, the sire put to the dam', asked.startsWith(breedPreview(game, dam, sire)) && lines[0].startsWith('Put Horn to Snow'), lines[0]);
-check('it says how often it takes, off the rule', line('It takes ') === `It takes ${Math.round(breedChance(HUSBANDRY, CARE) * 100)}% of the time.`, line('It takes '));
+check('pairing through the door asks first, with the preview and a question', lines.length > 6 && lines[lines.length - 1] === 'Pair them?', lines[lines.length - 1]);
+check('it is the preview of this pair, the sire put to the dam', asked.startsWith(breedPreview(game, dam, sire)) && lines[0].startsWith('Pair Horn with Snow'), lines[0]);
+check('it says how often it takes, off the rule', line('Success: ') === `Success: ${Math.round(breedChance(HUSBANDRY, CARE) * 100)}%.`, line('Success: '));
 check('and how often each trait is drawn from their blood and comes out a tier better',
-  line('Each of the young').includes(`${Math.round(inheritChance(HUSBANDRY, CARE) * 100)}% of the time`)
-    && line('Each of the young').includes(`a tier better ${Math.round(upgradeChance(HUSBANDRY, CARE) * 100)}% of the time`), line('Each of the young'));
+  line('Each of ').includes(`inherited ${Math.round(inheritChance(HUSBANDRY, CARE) * 100)}%`)
+    && line('Each of ').includes(`tier-up ${Math.round(upgradeChance(HUSBANDRY, CARE) * 100)}%`), line('Each of '));
 {
   const want = Object.keys(preview.carry).sort((a, b) => preview.carry[b] - preview.carry[a]).map((id) => `${traitName(id)} ${said(preview.carry[id])}`).join(', ');
   check('each trait either parent carries, with the share of young born carrying it', line('Born carrying: ') === `Born carrying: ${want}.`, line('Born carrying: '));
-  check('the share whose best trait comes out at each tier', line('Its best trait: ') === `Its best trait: ${TIERS.map((t) => `${t} ${said(preview.best[t])}`).join(', ')}.`,
-    line('Its best trait: '));
+  check('the share whose best trait comes out at each tier', line('Best trait tier: ') === `Best trait tier: ${TIERS.map((t) => `${t} ${said(preview.best[t])}`).join(', ')}.`,
+    line('Best trait tier: '));
   const tier = mutationTier(SIRE, DAM);
   check(`one in ${MUTATION_ODDS} a mutation, at the tier above the best of theirs (${tier})`,
-    line('Mutation: ') === `Mutation: 1 in ${MUTATION_ODDS} (${said(1 / MUTATION_ODDS)}), a ${tier} trait neither of them carries, in its lowest slot.`
+    line('Mutation: ') === `Mutation: 1 in ${MUTATION_ODDS} (${said(1 / MUTATION_ODDS)}): a ${tier} trait in neither parent, in its lowest slot.`
       && TIERS.indexOf(tier) === TIERS.indexOf(bestTier([...SIRE, ...DAM])) + 1, line('Mutation: '));
   const parents = [{ traits: DAM, line: DAM_LINE }, { traits: SIRE }] as const;
   const wantLines = CHANNELS.filter((ch) => lineIfCarried(parents[0], parents[1], ch.id) > 1 && preview.on[ch.id] > 0).map((ch) => {
     const d = lineIfCarried(parents[0], parents[1], ch.id);
-    return `Line: ${d} generations bred for ${ch.label}, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a trait on ${ch.label} (${said(preview.on[ch.id])}).`;
+    return `Line (${ch.label}): ${d} generations, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a ${ch.label} trait (${said(preview.on[ch.id])}).`;
   });
   check('the line it would start with on each channel either of them carries, what it is worth, and how often it carries a trait there',
-    JSON.stringify(lines.filter((l) => l.startsWith('Line: '))) === JSON.stringify(wantLines) && wantLines.some((l) => l.startsWith('Line: 5 generations bred for work, +8% work')),
-    lines.filter((l) => l.startsWith('Line: ')).join(' | '));
+    JSON.stringify(lines.filter((l) => l.startsWith('Line ('))) === JSON.stringify(wantLines) && wantLines.some((l) => l.startsWith('Line (work): 5 generations, +8% work')),
+    lines.filter((l) => l.startsWith('Line (')).join(' | '));
   const rare = rarityShares();
-  check('its own rarity, at the odds anything is born at', line('Its own rarity') === `Its own rarity, rolled as any wildermon's: ${rare.map((p, i) => `${RARITIES[i + 1].name} ${said(p)}`).join(', ')}.`
-    && Math.abs(rare.reduce((a, b) => a + b, 0) - 0.01) < 1e-9, line('Its own rarity'));
+  check('its own rarity, at the odds anything is born at', line('Rarity, as any wildermon') === `Rarity, as any wildermon: ${rare.map((p, i) => `${RARITIES[i + 1].name} ${said(p)}`).join(', ')}.`
+    && Math.abs(rare.reduce((a, b) => a + b, 0) - 0.01) < 1e-9, line('Rarity, as any wildermon'));
 }
 {
   // A trait too good to read is counted and not named.
@@ -195,7 +195,7 @@ check('and how often each trait is drawn from their blood and comes out a tier b
   const carrying = blind.split('\n').find((l) => l.startsWith('Born carrying: ')) ?? '';
   const unread = [...new Set([...SIRE, ...DAM])].filter((id) => TIER_LEVEL.rare < 1 + TIER_LEVEL[traitTier(id)]).length;
   check(`at ${TIER_LEVEL.rare} husbandry the rare ones are counted and not named`, !carrying.includes('fanged (rare)') && !carrying.includes('fleet')
-    && carrying.includes(`; ${unread} more you cannot read yet`) && unread === 2 && carrying.includes('willing'), carrying);
+    && carrying.includes(`; ${unread} more unreadable`) && unread === 2 && carrying.includes('willing'), carrying);
   game.skills.values.set('animal_husbandry', HUSBANDRY);
 }
 {

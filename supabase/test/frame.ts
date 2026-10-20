@@ -264,42 +264,42 @@ const JETTY = { x: 18, y: 24, material: 'plank', floorKind: 'floor', buildingId:
 
 setLevels(1, 2, 0);
 same('a jetty is never floored out from the ground floor, and working on it you are told to work a storey up', 'plan_floor', JETTY,
-  'Work on storey 2 or above to floor a jetty here.');
+  'Floor a jetty from storey 2 or above.');
 setLevels(1, 1, 0);
 same('while a building of one storey is told to plan another', 'plan_floor', JETTY,
-  'A jetty is floored out from a storey above the ground: plan another storey and work on it.');
+  'Jetties need an upper storey: plan one first.');
 setLevels(1, 2, 1);
 
 same('a ladder stays inside the footprint', 'plan_floor', { ...JETTY, floorKind: 'ladder', material: 'plank', side: 's' },
-  'A ladder goes inside the footprint, not out on a jetty.');
+  'Ladders: inside the footprint only, not on a jetty.');
 same('and a staircase out past it is an outside staircase, its head against the building (`outstairs.ts`)', 'plan_floor',
   { ...JETTY, floorKind: 'stairs', side: 'n' },
-  'Its head goes against Tower and its foot out on the ground: turn it to climb toward the building.');
+  'Must climb toward Tower: turn it.');
 
 wall(1, 0, 18, 23, 's', 'half_wall', 'log');
 same('it rests on a full-height wall of the storey below, and a half wall is not one', 'plan_floor', JETTY,
-  'A jetty rests on a finished full-height wall of storey 1: build one on a side this tile shares with Tower first.');
+  'Jetty needs a finished full-height storey 1 wall on a side shared with Tower.');
 wall(1, 0, 18, 23, 's', 'solid', 'log', 2);
 same('nor is a wall still going up', 'plan_floor', JETTY,
-  'A jetty rests on a finished full-height wall of storey 1: build one on a side this tile shares with Tower first.');
+  'Jetty needs a finished full-height storey 1 wall on a side shared with Tower.');
 wall(1, 0, 18, 23, 's', 'door', 'log');
 same('a door is a wall to rest on: the joists go over it', 'plan_floor', JETTY, 'ALLOWED');
 wall(1, 0, 18, 23, 's', 'solid', 'log');
 
 setTile(18, 24, TileType.Tree, 'Tree');
 same('it is built over open ground, and not over a tree', 'plan_floor', JETTY,
-  'A jetty is built over open ground: clear the tree or the bush from under it first.');
+  'Needs open ground under it: clear the tree or bush first.');
 setTile(18, 24, TileType.Bush, 'Bush');
-same('nor over a bush', 'plan_floor', JETTY, 'A jetty is built over open ground: clear the tree or the bush from under it first.');
+same('nor over a bush', 'plan_floor', JETTY, 'Needs open ground under it: clear the tree or bush first.');
 setTile(18, 24, TileType.Grass, 'Grass');
 
 setCorner(19, 25, BASE + 3);
 same('and never lower over the ground than the storey under it stands', 'plan_floor', JETTY,
-  'The ground under it rises above the floor of storey 1: dig it down, or floor the jetty out a storey higher.');
+  'Ground under it above storey 1 floor: dig it down, or build the jetty a storey higher.');
 setCorner(19, 25, BASE);
 
 same('marble will not go out past log walls', 'plan_floor', { ...JETTY, material: 'marble' },
-  'Marble is too heavy to lay out past the walls. The walls under it carry timber, no more.');
+  'Marble too heavy past the walls: they carry timber at most.');
 same('while planks will, on both sides', 'plan_floor', JETTY, 'ALLOWED');
 
 /* The same out past the edge of the settlement: a jetty is built on your own ground. */
@@ -307,11 +307,11 @@ building(2, 'Edge', [[16, 28]], 2, 1);
 for (const side of ['n', 'e', 's', 'w'] as Side[]) wall(2, 0, 16, 28, side, 'solid', 'log');
 floor(2, 1, 16, 28, 'plank');
 same('and only over your own settlement', 'plan_floor', { x: 15, y: 28, material: 'plank', floorKind: 'floor', buildingId: 2 },
-  'You may only build on your own deed.');
+  'Only on your own deed.');
 
 /* Planned, on both sides, in the same words. */
-const [planMine, planTheirs] = both('plan_floor', JETTY, 'You plan');
-check('planning one is said the same on both sides', planMine === planTheirs && planMine.startsWith('You plan a plank floor'),
+const [planMine, planTheirs] = both('plan_floor', JETTY, 'Planned: ');
+check('planning one is said the same on both sides', planMine === planTheirs && planMine.startsWith('Planned: plank floor'),
   `browser "${planMine}", island "${planTheirs}"`);
 check('and it is a floor of storey 2 on the tile out past the tower, on both sides',
   bld.floor(1, 18, 24)?.building === 1 && bld.jettyAt(18, 24)?.id === 1
@@ -319,26 +319,26 @@ check('and it is a floor of storey 2 on the tile out past the tower, on both sid
     && psql(`select frame_jetty_of(${W}, 18, 24);`) === '1',
   `island ${psql(`select building || '|' || kind from floor_tile where world_id = ${W} and level = 1 and x = 18 and y = 24;`)}`);
 says('Examine on the ground under it names the jetty planned over it, on both sides', 18, 24,
-  "A jetty of Tower's storey 2 is planned over it.");
+  'Jetty planned over it: Tower storey 2.');
 floor(1, 1, 18, 24, 'plank');
 
 /* Nothing else goes on or under it. */
 building(3, 'Shed', [[18, 25]], 2, 1);
 for (const side of ['n', 'e', 's', 'w'] as Side[]) wall(3, 0, 18, 25, side, 'solid', 'log');
-same('another building cannot floor out over it', 'plan_floor', { ...JETTY, buildingId: 3 }, "That tile is under Tower's jetty.");
-same('nor plan a building under it', 'plan_building', { x: 18, y: 24, name: 'Lean-to' }, "That tile is under Tower's jetty.");
-same('nor add the ground under it to a building', 'add_to_building', { x: 18, y: 24 }, "That tile is under Tower's jetty.");
+same('another building cannot floor out over it', 'plan_floor', { ...JETTY, buildingId: 3 }, 'Under Tower jetty.');
+same('nor plan a building under it', 'plan_building', { x: 18, y: 24, name: 'Lean-to' }, 'Under Tower jetty.');
+same('nor add the ground under it to a building', 'add_to_building', { x: 18, y: 24 }, 'Under Tower jetty.');
 
 /* The wall it rests on stays up while it does, unless a column at each end of it carries that side. */
 setLevels(1, 2, 0);
 same('the last wall a jetty rests on is not taken down from under it', 'remove_wall', { x: 18, y: 23, side: 's' },
-  'A jetty of storey 2 rests on this wall: raise a column at each end of it, or tear the jetty up, first.');
+  'Storey 2 jetty rests on this wall: add a column at each end, or remove the jetty, first.');
 column(1, 0, 18, 24, 'log');
 same('nor with a column at one end of it only', 'remove_wall', { x: 18, y: 23, side: 's' },
-  'A jetty of storey 2 rests on this wall: raise a column at each end of it, or tear the jetty up, first.');
+  'Storey 2 jetty rests on this wall: add a column at each end, or remove the jetty, first.');
 column(1, 0, 19, 24, 'log', 1);
 same('nor while the other is still going up', 'remove_wall', { x: 18, y: 23, side: 's' },
-  'A jetty of storey 2 rests on this wall: raise a column at each end of it, or tear the jetty up, first.');
+  'Storey 2 jetty rests on this wall: add a column at each end, or remove the jetty, first.');
 column(1, 0, 19, 24, 'log');
 same('with a finished column at each end it comes down: the columns carry the jetty\'s side, so a door can go in its place', 'remove_wall',
   { x: 18, y: 23, side: 's' }, 'ALLOWED');
@@ -351,16 +351,16 @@ setLevels(1, 2, 1);
 same('a railing goes on its edge', 'plan_wall', { x: 18, y: 24, side: 'e', wallType: 'railing', material: 'log', buildingId: 1 }, 'ALLOWED');
 setLevels(1, 2, 0);
 same('but never on the ground floor', 'plan_wall', { x: 18, y: 23, side: 'n', wallType: 'railing', material: 'log' },
-  'A railing goes on the edge of a storey above the ground, of a deck on piers, or round a terrace. On the ground, plan a fence.');
+  'Railings: upper storey edges, decks on piers or terraces. On the ground, plan a fence.');
 setLevels(1, 2, 1);
-const [railMine, railTheirs] = both('plan_wall', { x: 18, y: 24, side: 'e', wallType: 'railing', material: 'log', buildingId: 1 }, 'You plan');
+const [railMine, railTheirs] = both('plan_wall', { x: 18, y: 24, side: 'e', wallType: 'railing', material: 'log', buildingId: 1 }, 'Planned: ');
 check('and planning one on a jetty is said the same, as a railing, and stands on storey 2 on both sides',
-  railMine === railTheirs && railMine === `You plan a log railing on the east side. It needs ${wallBillOf('log', 'railing')}.` && !!bld.wall(1, 18, 24, 'e')
+  railMine === railTheirs && railMine === `Planned: log railing, east side. Needs ${wallBillOf('log', 'railing')}.` && !!bld.wall(1, 18, 24, 'e')
     && psql(`select type from wall where world_id = ${W} and level = 1 and dir = 'v' and x = 19 and y = 24;`) === 'railing',
   `browser "${railMine}", island "${railTheirs}"`);
 {
   const [needMine, needTheirs] = say('build_wall', { x: 18, y: 24, side: 'e', buildingId: 1 });
-  check('and building it is asked of the railing on storey 2, on both sides', needMine === needTheirs && needMine.startsWith('You need'),
+  check('and building it is asked of the railing on storey 2, on both sides', needMine === needTheirs && needMine.startsWith('Need '),
     `browser "${needMine}", island "${needTheirs}"`);
 }
 check('a railing stops a body stepping across it', game.buildings.blocksAt(1, 18, 24, 19, 24) === false, 'not until it is finished');
@@ -377,10 +377,10 @@ const gapTheirs = psql(`select coalesce(level_gap(${W}, 1, 1, 18.5, 23.5), 'CLOS
 check('open to its storey, a jetty is part of it, and its railings close it in, on both sides',
   gapMine === null && gapTheirs === 'CLOSED IN', `browser ${gapMine ?? 'CLOSED IN'}, island ${gapTheirs}`);
 says('and, open to the storey, names it a jetty and what it wants', 18, 24,
-  "Over it is a jetty of Tower's storey 2, part of that storey: its open sides want a wall, a railing or columns to close the storey in, and a roof over it rests on walls or columns, never on a railing.");
+  'Jetty over it: Tower storey 2, part of that storey. Open sides need a wall, railing or columns to enclose it; a roof over it needs walls or columns, not railings.');
 const ROOF_J = { x: 18, y: 24, material: 'plank', floorKind: 'roof', buildingId: 1 };
 same('but a roof over the jetty does not rest on its railings, only on the end of a wall at the house', 'plan_floor', ROOF_J,
-  'A roof over the jetty rests on walls or columns: raise a column on its south-east corner first. A railing carries nothing.');
+  'Jetty roof needs walls or columns: add a column on its south-east corner first. Railings carry nothing.');
 for (const [cx, cy] of [[18, 24], [19, 24], [18, 25], [19, 25]]) column(1, 1, cx, cy, 'plank');
 same('so with a post at each corner of it the roof may go over the jetty with the rest', 'plan_floor', ROOF_J, 'ALLOWED');
 for (const [cx, cy] of [[18, 24], [19, 24], [18, 25], [19, 25]]) uncolumn(1, cx, cy);
@@ -398,16 +398,16 @@ sql(`insert into item (world_id, holder, holder_uid, def, ql, count, extra) valu
   const t = { kind: 'tile', x: 18, y: 24 };
   const mine = ACTION_BY_ID.get('plant')?.check?.(t as never, game) ?? 'ALLOWED';
   const theirs = psql(`select coalesce(act_refusal(${W}, ${DANE}, 'plant', '${JSON.stringify(t)}'::jsonb), 'ALLOWED');`);
-  check('and no sprout is planted under one, on both sides', mine === "That tile is under Tower's jetty." && theirs === mine,
+  check('and no sprout is planted under one, on both sides', mine === 'Under Tower jetty.' && theirs === mine,
     `browser "${mine}", island "${theirs}"`);
 }
 same('but nothing rests on its railings', 'add_floor', { x: 18, y: 23 },
-  'Nothing rests on a fence, a half wall or a railing: the storey below needs walls, or finished columns at both ends of every open side.');
+  'Storey below needs walls, or finished columns at both ends of each open side. Fences, half walls and railings carry nothing.');
 unwall(1, 18, 24, 's');
 const openMine = gapText(2, bld.levelGaps(bld.list.get(1)!, 1, 18.5, 23.5));
 const openTheirs = psql(`select coalesce(level_gap(${W}, 1, 1, 18.5, 23.5), 'CLOSED IN');`);
 check('and a jetty open to its storey with a side left bare leaves the storey open, the same words on both sides',
-  openMine === 'Storey 2 is not closed in: 1 side with no wall or columns, nearest the south side of 18,24.' && openTheirs === openMine,
+  openMine === 'Storey 2 not enclosed: 1 side with no wall or columns, nearest the south side of 18,24.' && openTheirs === openMine,
   `browser "${openMine}", island "${openTheirs}"`);
 wall(1, 1, 18, 24, 's', 'railing', 'plank');
 
@@ -418,10 +418,10 @@ check('shut off behind a door it is a balcony, outside the storey, on both sides
     && psql(`select count(*) from frame_storey(${W}, 1, 1) where x = 18 and y = 24;`) === '0',
   `the storey is ${[...bld.storeyArea(bld.list.get(1)!, 1)].join(' ')}`);
 says('and, shut off, names it a balcony', 18, 24,
-  "Over it is a balcony of Tower's storey 2, shut off from the storey by a wall or a door: it takes a railing, and no roof.");
+  'Balcony over it: Tower storey 2, walled off from the storey. Railing only, no roof.');
 same('and a storey over it asks nothing of the balcony railing', 'add_floor', { x: 18, y: 23 }, 'ALLOWED');
 same('and a balcony takes no roof', 'plan_floor', { x: 18, y: 24, material: 'plank', floorKind: 'roof', buildingId: 1 },
-  'That jetty is shut off from storey 2 by a wall or a door, which makes it a balcony, and a balcony takes no roof.');
+  'Jetty walled off from storey 2: balcony, no roof.');
 
 /* ---- the edge of it -------------------------------------------------------- */
 /*
@@ -460,19 +460,19 @@ sql(`update building set roof = 'hip' where world_id = w and id = 1;`);
 floor(1, 2, 18, 23, 'plank', 'roof');
 floor(1, 2, 19, 23, 'plank', 'roof', 2);
 const TERRACE = { x: 18, y: 23, side: 'n', wallType: 'railing', material: 'log', terrace: true };
-same('a pitched roof is no terrace', 'plan_wall', TERRACE, 'Only a flat roof is a terrace.');
+same('a pitched roof is no terrace', 'plan_wall', TERRACE, 'Terraces: flat roofs only.');
 tower.roof = 'flat';
 sql(`update building set roof = 'flat' where world_id = w and id = 1;`);
 same('a flat one takes a railing round it', 'plan_wall', TERRACE, 'ALLOWED');
-same('and nothing else', 'plan_wall', { ...TERRACE, wallType: 'solid' }, 'Only a railing goes round a terrace.');
-same('and only where the roof is finished', 'plan_wall', { ...TERRACE, x: 19, side: 'e' }, 'Finish the roof on this tile first.');
-const [terMine, terTheirs] = both('plan_wall', TERRACE, 'You plan');
+same('and nothing else', 'plan_wall', { ...TERRACE, wallType: 'solid' }, 'Terraces: railings only.');
+same('and only where the roof is finished', 'plan_wall', { ...TERRACE, x: 19, side: 'e' }, 'Finish this tile\'s roof first.');
+const [terMine, terTheirs] = both('plan_wall', TERRACE, 'Planned: ');
 check('planned, it stands on the roof\'s own level on both sides',
   terMine === terTheirs && bld.wall(2, 18, 23, 'n')?.type === 'railing'
     && psql(`select type from wall where world_id = ${W} and level = 2 and dir = 'h' and x = 18 and y = 23;`) === 'railing',
   `browser "${terMine}", island "${terTheirs}"`);
 same('and the roof under a railing is not torn up from under it', 'remove_floor', { x: 18, y: 23, floorKind: 'roof' },
-  'Take down the railing standing on it first.');
+  'Remove the railing on it first.');
 check('and a flat roof is walked on to its edge and no further, on both sides',
   game.standable(18, 23, 2) && psql(`select frame_stands(${W}, 18, 23, 2);`) === 't'
     && !game.standable(18, 22, 2) && psql(`select frame_stands(${W}, 18, 22, 2);`) === 'f');
@@ -493,21 +493,21 @@ building(4, 'Hall', [[23, 29]], 1, 0);
 stand(23.5, 29.5, 0);
 const COL = { x: 23, y: 29, cx: 23, cy: 29, material: 'log' };
 same('a column goes on a corner of the tile', 'plan_column', COL, 'ALLOWED');
-same('and only on a corner of it', 'plan_column', { ...COL, cx: 25 }, 'Choose a corner of the tile.');
-const [colMine, colTheirs] = both('plan_column', COL, 'You plan');
+same('and only on a corner of it', 'plan_column', { ...COL, cx: 25 }, 'Choose a corner.');
+const [colMine, colTheirs] = both('plan_column', COL, 'Planned: ');
 check('planning one is said the same on both sides, with its bill',
-  colMine === colTheirs && colMine === `You plan a log column on the north-west corner. It needs ${columnBill('log').needed.log} logs.`,
+  colMine === colTheirs && colMine === `Planned: log column, north-west corner. Needs ${columnBill('log').needed.log} logs.`,
   `browser "${colMine}", island "${colTheirs}"`);
-same('and one is all a corner takes', 'plan_column', COL, 'There is already a column on that corner.');
-same('building it wants its logs', 'build_column', COL, `You need ${columnBill('log').needed.log} logs.`);
+same('and one is all a corner takes', 'plan_column', COL, 'Already a column on that corner.');
+same('building it wants its logs', 'build_column', COL, `Need ${columnBill('log').needed.log} logs.`);
 check('and the island hears of the column job as one of the building jobs',
   psql(`select coalesce(act_refusal(${W}, ${DANE}, 'build_column', '${JSON.stringify({ kind: 'tile', ...COL })}'::jsonb), 'ALLOWED');`)
-    === `You need ${columnBill('log').needed.log} logs.`);
+    === `Need ${columnBill('log').needed.log} logs.`);
 // Logs to hand, and a unit laid on each side.
 game.inventory.add('log', { ql: 30, count: 2 });
 sql(`insert into item (world_id, holder, holder_uid, def, ql, count) values (w, 'player', u, 'log', 30, 2);`);
-const [layMine, layTheirs] = both('build_column', COL, 'You fit');
-check('and a unit laid in it is said the same on both sides', layMine === layTheirs && layMine.startsWith('You fit log into the column'),
+const [layMine, layTheirs] = both('build_column', COL, 'Added: ');
+check('and a unit laid in it is said the same on both sides', layMine === layTheirs && layMine.startsWith('Added: log.'),
   `browser "${layMine}", island "${layTheirs}"`);
 
 /* Four columns, finished: an open hall. */
@@ -523,7 +523,7 @@ says('Examine lists the columns on a tile\'s corners and what one going up still
 const oneShort = gapText(1, bld.levelGaps(bld.list.get(4)!, 0, 23.5, 29.5));
 const oneShortTheirs = psql(`select coalesce(level_gap(${W}, 4, 0, 23.5, 29.5), 'CLOSED IN');`);
 check('and a column still going up leaves both its sides open, in the same words',
-  oneShort === 'Storey 1 is not closed in: 2 sides with no wall or columns, nearest the east side of 23,29.' && oneShortTheirs === oneShort,
+  oneShort === 'Storey 1 not enclosed: 2 sides with no wall or columns, nearest the east side of 23,29.' && oneShortTheirs === oneShort,
   `browser "${oneShort}", island "${oneShortTheirs}"`);
 column(4, 0, 24, 30, 'log');
 
@@ -531,14 +531,14 @@ column(4, 0, 24, 30, 'log');
 floor(4, 1, 23, 29, 'log', 'roof');
 says('and under a roof on columns says what the roof is worth and what it is not', 23, 29,
   'Columns: log on the north-west corner; log on the north-east corner; log on the south-west corner; log on the south-east corner.'
-  + ` Under a roof on columns: what is left here decays at ${Math.round(INDOORS_DECAY * 100)}% of the rate in the open, but a bed here is in the open: the ×${INDOORS_REST} rest of a bed indoors wants walls all round.`);
+  + ` Under a roof on columns: decay ×${INDOORS_DECAY}. Beds here count as outdoors (indoor rest ×${INDOORS_REST} needs walls all round).`);
 const keepMine = game.decayMultiplier(23, 29), keepTheirs = Number(psql(`select decay_multiplier(${W}, 23, 29);`));
 const openMine2 = game.decayMultiplier(26, 29), openTheirs2 = Number(psql(`select decay_multiplier(${W}, 26, 29);`));
 check('under a roof on columns things rot at a tenth of what they would beside it, on both sides',
   Math.abs(keepMine / openMine2 - 0.1) < 1e-9 && Math.abs(keepTheirs / openTheirs2 - 0.1) < 1e-9 && Math.abs(keepMine - keepTheirs) < 1e-9,
   `browser ${keepMine} against ${openMine2}, island ${keepTheirs} against ${openTheirs2}`);
 same('and a column carrying a side under the roof comes down only after the roof, and says which side', 'remove_column', { x: 23, y: 29, cx: 24, cy: 30 },
-  'The south side of 23,29 is carried on this column: wall it, or take off what is over it, first.');
+  'South side of 23,29 rests on this column: wall it, or remove what is above, first.');
 check('but it is no room to sleep in: indoors is walls all round, on both sides',
   !bld.indoors(0, 23, 29) && psql(`select indoors(${W}, 0, 23, 29);`) === 'f' && bld.sheltered(0, 23, 29)
     && psql(`select sheltered(${W}, 0, 23, 29);`) === 't');
@@ -555,27 +555,27 @@ same('a storey goes up on four columns', 'add_floor', { x: 23, y: 29 }, 'ALLOWED
 setLevels(4, 2, 1);
 floor(4, 1, 23, 29, 'plank', 'floor', 2);
 same('and a column is raised on the finished floor of its storey', 'plan_column', { ...COL, material: 'plank' },
-  'Build the floor of this storey first.');
+  'Build this storey\'s floor first.');
 floor(4, 1, 23, 29, 'plank');
 check('and what is over them may be no heavier than they are, on both sides',
   bld.bearing(bld.list.get(4)!, 1) === 1 && psql(`select bearing(${W}, 4, 1);`) === '1');
 same('so marble will not go up over log columns', 'plan_wall', { x: 23, y: 29, side: 'n', wallType: 'solid', material: 'marble' },
-  'Marble is too heavy to raise over what is under it. This storey carries timber, no more.');
+  'Marble too heavy for what is under it: this storey carries timber at most.');
 same('nor a marble column', 'plan_column', { ...COL, material: 'marble' },
-  'Marble is too heavy to raise over what is under it. This storey carries timber, no more.');
+  'Marble too heavy for what is under it: this storey carries timber at most.');
 setLevels(4, 3, 2);
-same('and log columns will not stand a fourth storey', 'add_floor', { x: 23, y: 29 }, 'Log will not stand 4 storeys. 3 is as high as it goes.');
+same('and log columns will not stand a fourth storey', 'add_floor', { x: 23, y: 29 }, 'Log: max 3 storeys.');
 setLevels(4, 2, 1);
 bld.removeFloor(1, 23, 29);
 sql(`delete from floor_tile where world_id = w and level = 1 and x = 23 and y = 29;`);
 column(4, 1, 23, 29, 'plank');
-same('columns on the top storey come down before it does', 'remove_storey', { x: 23, y: 29 }, 'Take down the columns of the top storey first.');
+same('columns on the top storey come down before it does', 'remove_storey', { x: 23, y: 29 }, 'Remove the top storey\'s columns first.');
 uncolumn(1, 23, 29);
 setLevels(4, 1, 0);
 same('and the columns on its corners before a tile leaves the plan', 'remove_from_plan', { x: 23, y: 29 },
-  'Take down the columns on its corners first.');
-const [downMine, downTheirs] = both('remove_column', { x: 23, y: 29, cx: 24, cy: 30 }, 'You take down');
-check('taking one down is said the same on both sides', downMine === downTheirs && downMine === 'You take down the column on the south-east corner.',
+  'Remove the corner columns first.');
+const [downMine, downTheirs] = both('remove_column', { x: 23, y: 29, cx: 24, cy: 30 }, 'Removed: ');
+check('taking one down is said the same on both sides', downMine === downTheirs && downMine === 'Removed: column, south-east corner.',
   `browser "${downMine}", island "${downTheirs}"`);
 
 /* ---- what a floor up a storey holds up ---------------------------------------
@@ -591,12 +591,12 @@ const LOFT_JETTY = { x: 22, y: 24, buildingId: 5 };
 column(5, 1, 22, 24, 'plank');
 same('a column with the storey\'s own floor still under it is no bar to tearing up the jetty', 'remove_floor', LOFT_JETTY, 'ALLOWED');
 column(5, 1, 23, 25, 'plank');
-same('but one standing on the jetty and nothing else is', 'remove_floor', LOFT_JETTY, 'Take down the column on its south-east corner first.');
+same('but one standing on the jetty and nothing else is', 'remove_floor', LOFT_JETTY, 'Remove the south-east corner column first.');
 uncolumn(1, 22, 24);
 uncolumn(1, 23, 25);
 floor(5, 2, 22, 23, 'plank', 'roof');
 floor(5, 2, 22, 24, 'plank', 'roof');
-same('and a jetty with the roof over it comes up only after the roof', 'remove_floor', LOFT_JETTY, 'Take the roof over it off first.');
+same('and a jetty with the roof over it comes up only after the roof', 'remove_floor', LOFT_JETTY, 'Remove the roof above first.');
 same('which itself comes off', 'remove_floor', { ...LOFT_JETTY, floorKind: 'roof' }, 'ALLOWED');
 
 /*
@@ -609,21 +609,21 @@ for (const side of ['n', 'e', 'w'] as Side[]) wall(5, 1, 22, 23, side, 'solid', 
 for (const side of ['e', 's', 'w'] as Side[]) wall(5, 1, 22, 24, side, 'railing', 'plank');
 const LOFT_ROOF = { ...LOFT_JETTY, material: 'plank', floorKind: 'roof' };
 same('a roof over a railed jetty: a railing carries nothing, and the first corner short of a post is named', 'plan_floor', LOFT_ROOF,
-  'A roof over the jetty rests on walls or columns: raise a column on its south-east corner first. A railing carries nothing.');
+  'Jetty roof needs walls or columns: add a column on its south-east corner first. Railings carry nothing.');
 column(5, 1, 23, 25, 'plank');
 same('and then the next', 'plan_floor', LOFT_ROOF,
-  'A roof over the jetty rests on walls or columns: raise a column on its south-west corner first. A railing carries nothing.');
+  'Jetty roof needs walls or columns: add a column on its south-west corner first. Railings carry nothing.');
 column(5, 1, 22, 25, 'plank');
 same('with a post at each outer corner the roof goes over the jetty, its inner corners carried by the ends of the loft\'s walls', 'plan_floor', LOFT_ROOF, 'ALLOWED');
 floor(5, 2, 22, 23, 'plank', 'roof');
 floor(5, 2, 22, 24, 'plank', 'roof');
 same('and a post a side under it rests on stays up, naming the side', 'remove_column', { ...LOFT_JETTY, cx: 23, cy: 25 },
-  'The south side of 22,24 is carried on this column: wall it, or take off what is over it, first.');
+  'South side of 22,24 rests on this column: wall it, or remove what is above, first.');
 /* Walls for the railings: the roof on its walls, and the one wall a side of it rests on stays up. */
 for (const side of ['e', 's', 'w'] as Side[]) wall(5, 1, 22, 24, side, 'solid', 'plank');
 for (const [cx, cy] of [[23, 25], [22, 25]]) uncolumn(1, cx, cy);
 same('a wall a roof over the jetty rests on stays up', 'remove_wall', { ...LOFT_JETTY, side: 's' },
-  'The roof over the jetty rests on this wall: raise a column at each end of it, or take the roof off, first.');
+  'Jetty roof rests on this wall: add a column at each end, or remove the roof, first.');
 column(5, 1, 22, 25, 'plank');
 column(5, 1, 23, 25, 'plank');
 same('while with a post at each end of it, it comes down', 'remove_wall', { ...LOFT_JETTY, side: 's' }, 'ALLOWED');
@@ -631,7 +631,7 @@ uncolumn(1, 22, 25);
 uncolumn(1, 23, 25);
 /* And no wall or door shuts a roofed jetty off from its storey: it would be a balcony under a roof. */
 same('no wall goes between a storey and its roofed jetty', 'plan_wall', { x: 22, y: 23, side: 's', wallType: 'door', material: 'plank' },
-  'The roof is over that jetty: take it off first. A balcony takes no roof.');
+  'Roof over that jetty: remove it first. Balconies take no roof.');
 /* A column on a corner walls carry carries nothing, and comes down under a floor: named by its storey (`level`). */
 column(5, 0, 22, 23, 'log');
 column(5, 0, 23, 23, 'log');
@@ -655,14 +655,14 @@ const OVER = { x: 25, y: 26, material: 'plank', floorKind: 'floor', buildingId: 
 same('a floor of storey 3 goes over the jetty of storey 2 inside that storey', 'plan_floor', OVER, 'ALLOWED');
 floor(6, 1, 25, 26, 'plank', 'floor', 2);
 same('but not over one still being laid', 'plan_floor', OVER,
-  'A jetty rests on a finished full-height wall of storey 2: build one on a side this tile shares with Tall first.');
+  'Jetty needs a finished full-height storey 2 wall on a side shared with Tall.');
 floor(6, 1, 25, 26, 'plank');
 floor(6, 2, 25, 26, 'plank');
 same('and the jetty under it does not come up from under it', 'remove_floor', { x: 25, y: 26, buildingId: 6, level: 1 },
-  'The floor of storey 3 rests on it: take that up first.');
+  'Storey 3 floor rests on it: remove that first.');
 /* A job names its storey, and both sides put it there: a column on storey 2 asked while storey 3 is worked. */
 {
-  const [mine, theirs] = both('plan_column', { x: 25, y: 25, cx: 26, cy: 26, material: 'log', level: 1 }, 'You plan');
+  const [mine, theirs] = both('plan_column', { x: 25, y: 25, cx: 26, cy: 26, material: 'log', level: 1 }, 'Planned: ');
   check('a column planned for storey 2 from storey 3 stands on storey 2, on both sides',
     mine === theirs && !!bld.column(1, 26, 26)
       && psql(`select level from building_column where world_id = ${W} and x = 26 and y = 26;`) === '1',
@@ -687,7 +687,7 @@ same('a column on a joint in its walls comes down under the roof they carry: the
 unwall(0, 21, 28, 's');
 column(7, 0, 22, 29, 'log');
 same('but with a wall gone for a column at its far end, the side they close is the storey\'s edge, and it stays up',
-  'remove_column', { x: 21, y: 28, cx: 21, cy: 29 }, 'The south side of 21,28 is carried on this column: wall it, or take off what is over it, first.');
+  'remove_column', { x: 21, y: 28, cx: 21, cy: 29 }, 'South side of 21,28 rests on this column: wall it, or remove what is above, first.');
 for (const [cx, cy] of [[21, 28], [21, 29], [22, 29]]) uncolumn(0, cx, cy);
 
 /*
@@ -726,14 +726,14 @@ const floorStoreys = (x: number, y: number): [string, string] => [
 // The ground floor's own floor, laid and torn up again from storey 3, before any wall stands on it.
 same('a floor planned for storey 1 while storey 3 is worked is allowed', 'plan_floor', { ...THREE, material: 'plank', level: 0 }, 'ALLOWED');
 {
-  const [mine, theirs] = both('plan_floor', { ...THREE, material: 'plank', level: 0 }, 'You plan');
+  const [mine, theirs] = both('plan_floor', { ...THREE, material: 'plank', level: 0 }, 'Planned: ');
   const [onMine, onTheirs] = floorStoreys(23, 31);
   check('and it goes down on storey 1, on both sides', mine === theirs && onMine === '0:floor' && onTheirs === onMine,
     `browser "${mine}" on ${onMine}, island "${theirs}" on ${onTheirs}`);
 }
 same('and it comes up from storey 1 again', 'remove_floor', { ...THREE, level: 0 }, 'ALLOWED');
 {
-  const [mine, theirs] = both('remove_floor', { ...THREE, level: 0 }, 'You remove');
+  const [mine, theirs] = both('remove_floor', { ...THREE, level: 0 }, 'Removed: ');
   const [onMine, onTheirs] = floorStoreys(23, 31);
   check('and it is gone from storey 1, on both sides', mine === theirs && onMine === '' && onTheirs === '',
     `browser "${mine}" leaving ${onMine || 'nothing'}, island "${theirs}" leaving ${onTheirs || 'nothing'}`);
@@ -746,15 +746,15 @@ floor(8, 2, 23, 31, 'plank');
 floor(8, 2, 24, 31, 'plank');
 // Stairs on storey 1 are refused, naming the storeys to work on; on storey 2 they go there, not up on storey 3.
 same('stairs asked for storey 1 of a building with storeys over it say to work a storey up', 'plan_floor',
-  { ...THREE, material: 'plank', floorKind: 'stairs', side: 's', level: 0 }, 'Work on storey 2 or above to plan stairs here.');
+  { ...THREE, material: 'plank', floorKind: 'stairs', side: 's', level: 0 }, 'Plan stairs from storey 2 or above.');
 same('and so does a ladder', 'plan_floor', { ...THREE, material: 'plank', floorKind: 'ladder', side: 's', level: 0 },
-  'Work on storey 2 or above to plan a ladder here.');
+  'Plan a ladder from storey 2 or above.');
 same('while in a building of one storey they ask for another storey first', 'plan_floor',
-  { x: 20, y: 28, material: 'plank', floorKind: 'stairs', side: 's' }, 'Stairs and ladders belong to an upper storey; plan another storey first.');
+  { x: 20, y: 28, material: 'plank', floorKind: 'stairs', side: 's' }, 'Stairs and ladders need an upper storey: plan one first.');
 {
   const stairs = { ...THREE, material: 'plank', floorKind: 'stairs', side: 's', level: 1 };
   same('stairs planned for storey 2 while storey 3 is worked are allowed', 'plan_floor', stairs, 'ALLOWED');
-  const [mine, theirs] = both('plan_floor', stairs, 'You plan');
+  const [mine, theirs] = both('plan_floor', stairs, 'Planned: ');
   const [onMine, onTheirs] = floorStoreys(23, 31);
   check('and they go in on storey 2, on both sides', mine === theirs && onMine === '1:stairs,2:floor' && onTheirs === onMine,
     `browser "${mine}" on ${onMine}, island "${theirs}" on ${onTheirs}`);
@@ -763,7 +763,7 @@ same('while in a building of one storey they ask for another storey first', 'pla
 {
   const plan = { ...THREE, side: 'e', wallType: 'solid', material: 'log', level: 0 };
   same('a wall planned for storey 1 is allowed', 'plan_wall', plan, 'ALLOWED');
-  const [mine, theirs] = both('plan_wall', plan, 'You plan');
+  const [mine, theirs] = both('plan_wall', plan, 'Planned: ');
   const [onMine, onTheirs] = wallStoreys(23, 31, 'e');
   check('and it goes up on storey 1 alone, on both sides', mine === theirs && onMine === '0' && onTheirs === '0',
     `browser "${mine}" on ${onMine}, island "${theirs}" on ${onTheirs}`);
@@ -776,7 +776,7 @@ sql(`insert into item (world_id, holder, holder_uid, def, ql, count, dye) values
 {
   const paint = { ...THREE, side: 'n', level: 0 };
   same('storey 1\'s north wall is painted from storey 3', 'paint_wall', paint, 'ALLOWED');
-  const [mine, theirs] = both('paint_wall', paint, 'You brush');
+  const [mine, theirs] = both('paint_wall', paint, 'Painted: ');
   const dyedMine = [0, 1, 2].map((l) => bld.wall(l, 23, 31, 'n')?.dye ?? '-').join(',');
   const dyedTheirs = psql(`select string_agg(coalesce(dye, '-'), ',' order by level) from wall where world_id = ${W} and dir = 'h' and x = 23 and y = 31;`);
   check('and the paint goes on storey 1\'s wall only, on both sides', mine === theirs && dyedMine === `${dyeHex(pureDye('blue', 50))},-,-` && dyedTheirs === dyedMine,
@@ -784,13 +784,13 @@ sql(`insert into item (world_id, holder, holder_uid, def, ql, count, dye) values
 }
 // The storeys over a wall stand on it: taken down from the top, or carried on columns first.
 same('storey 1\'s wall under storey 2\'s stays up', 'remove_wall', { ...THREE, side: 'n', level: 0 },
-  'Storey 2 stands on this wall: raise a column at each end of it, or take down the wall over it, first.');
+  'Storey 2 rests on this wall: add a column at each end, or remove the wall above, first.');
 same('and storey 2\'s under storey 3\'s', 'remove_wall', { ...THREE, side: 'n', level: 1 },
-  'Storey 3 stands on this wall: raise a column at each end of it, or take down the wall over it, first.');
+  'Storey 3 rests on this wall: add a column at each end, or remove the wall above, first.');
 same('storey 3\'s comes down', 'remove_wall', { ...THREE, side: 'n', level: 2 }, 'ALLOWED');
 for (const level of [2, 1, 0]) {
   if (level < 2) same(`and then storey ${level + 1}'s`, 'remove_wall', { ...THREE, side: 'n', level }, 'ALLOWED');
-  const [mine, theirs] = both('remove_wall', { ...THREE, side: 'n', level }, 'You take down');
+  const [mine, theirs] = both('remove_wall', { ...THREE, side: 'n', level }, 'Removed: ');
   const [onMine, onTheirs] = wallStoreys(23, 31, 'n');
   const left = [0, 1, 2].filter((l) => l < level).join(',');
   check(`taking storey ${level + 1}'s down leaves the storeys under it, on both sides`, mine === theirs && onMine === left && onTheirs === left,
@@ -818,7 +818,7 @@ same('a wall of storey 2 planned over it, with nothing in it yet, stands on noth
   sql(`update wall set needed = jsonb_set(needed, '{${first}}', to_jsonb(${up.needed[first]})) where world_id = w and level = 1 and dir = 'h' and x = 23 and y = 31;`);
 }
 same('one with any of its materials in stands on it', 'remove_wall', { ...THREE, side: 'n', level: 0 },
-  'Storey 2 stands on this wall: raise a column at each end of it, or take down the wall over it, first.');
+  'Storey 2 rests on this wall: add a column at each end, or remove the wall above, first.');
 unwall(1, 23, 31, 'n');
 
 /*
@@ -836,16 +836,16 @@ for (const x of [25, 26]) { floor(9, 1, x, 21, 'plank'); floor(9, 1, x, 22, 'pla
 for (const [x, side] of [[25, 'w'], [25, 's'], [26, 's'], [26, 'e']] as Array<[number, Side]>) wall(9, 1, x, 22, side, 'railing', 'plank');
 const PORCH_ROOF = { x: 25, y: 22, buildingId: 9, material: 'plank', floorKind: 'roof' };
 same('a roof over a loggia asks first for the post at its outer corner', 'plan_floor', PORCH_ROOF,
-  'A roof over the jetty rests on walls or columns: raise a column on its south-west corner first. A railing carries nothing.');
+  'Jetty roof needs walls or columns: add a column on its south-west corner first. Railings carry nothing.');
 for (const cx of [25, 26, 27]) column(9, 1, cx, 23, 'plank');
 same('and with a post at each outer corner the ends of the house\'s walls carry the rest', 'plan_floor', PORCH_ROOF, 'ALLOWED');
 same('over both tiles of it', 'plan_floor', { ...PORCH_ROOF, x: 26 }, 'ALLOWED');
 // Roofed, the end of the house's wall a side of the loggia rests on stays up, unless a column takes that corner.
 for (const [x, y] of [[25, 21], [26, 21], [25, 22], [26, 22]]) floor(9, 2, x, y, 'plank', 'roof');
 same('the house\'s wall whose end is all that carries the loggia\'s side stays up, naming that end', 'remove_wall', { x: 25, y: 21, side: 'w' },
-  'The roof over the jetty rests on the south end of this wall: raise a column there, or take the roof off, first.');
+  'Jetty roof rests on this wall\'s south end: add a column there, or remove the roof, first.');
 same('and so does the one on the other side', 'remove_wall', { x: 26, y: 21, side: 'e' },
-  'The roof over the jetty rests on the south end of this wall: raise a column there, or take the roof off, first.');
+  'Jetty roof rests on this wall\'s south end: add a column there, or remove the roof, first.');
 column(9, 1, 25, 22, 'plank');
 same('with a column on that corner it comes down', 'remove_wall', { x: 25, y: 21, side: 'w' }, 'ALLOWED');
 /*
@@ -858,7 +858,7 @@ wall(9, 1, 25, 22, 's', 'solid', 'plank');
 uncolumn(1, 25, 23);
 const LOGGIA_POST = { x: 25, y: 22, cx: 25, cy: 22, buildingId: 9 };
 same('the column that alone carries the end of the loggia\'s open side stays up, naming the side', 'remove_column', LOGGIA_POST,
-  'The roof over the jetty rests on this column: wall the west side of 25,22, or take the roof off, first.');
+  'Jetty roof rests on this column: wall the west side of 25,22, or remove the roof, first.');
 wall(9, 1, 25, 22, 'w', 'solid', 'plank');
 same('and with that side walled it comes down', 'remove_column', LOGGIA_POST, 'ALLOWED');
 wall(9, 1, 25, 21, 'w', 'solid', 'log');
@@ -883,7 +883,7 @@ floor(10, 1, 18, 21, 'plank');
 wall(10, 1, 18, 21, 'e', 'solid', 'plank');
 same('Right\'s wall under Left\'s jetty wall is its own: it comes down', 'remove_wall', { x: 19, y: 21, side: 'w', level: 0 }, 'ALLOWED');
 same('while the wall Left\'s jetty rests on stays up', 'remove_wall', { x: 17, y: 21, side: 'e', level: 0 },
-  'A jetty of storey 2 rests on this wall: raise a column at each end of it, or tear the jetty up, first.');
+  'Storey 2 jetty rests on this wall: add a column at each end, or remove the jetty, first.');
 
 /*
  * The ground under a jetty is its building's, as the ground under the
@@ -898,13 +898,13 @@ stand(22.5, 25.5, 0);
   const t = { kind: 'tile', x: 22, y: 25, cx: 23, cy: 25 };
   const mine = ACTION_BY_ID.get('drop_dirt')?.check?.(t as never, game) ?? 'ALLOWED';
   const theirs = psql(`select coalesce(act_refusal(${W}, ${DANE}, 'drop_dirt', '${JSON.stringify(t)}'::jsonb), 'ALLOWED');`);
-  check('a corner under a jetty is not dug or raised, on both sides', mine === 'You cannot dig under a building.' && theirs === mine,
+  check('a corner under a jetty is not dug or raised, on both sides', mine === 'Not under a building.' && theirs === mine,
     `browser "${mine}", island "${theirs}"`);
   // A corner a tile further out has nothing over it.
   const clear = { ...t, cy: 26 };
   const mineClear = ACTION_BY_ID.get('drop_dirt')?.check?.(clear as never, game) ?? 'ALLOWED';
   const theirsClear = psql(`select coalesce(corner_under_building(${W}, 23, 26), 'CLEAR');`);
-  check('while one a tile past it is open ground, on both sides', mineClear !== 'You cannot dig under a building.' && theirsClear === 'CLEAR',
+  check('while one a tile past it is open ground, on both sides', mineClear !== 'Not under a building.' && theirsClear === 'CLEAR',
     `browser "${mineClear}", island "${theirsClear}"`);
 }
 
@@ -963,7 +963,7 @@ same('a jetty off a building on piers is floored a storey over its deck, over gr
   'plan_floor', STILTS_JETTY, 'ALLOWED');
 for (const x of [17, 18]) setCorner(x, 33, DECK + 5);
 same('and refused where the ground under it rises over the deck', 'plan_floor', STILTS_JETTY,
-  'The ground under it rises above the floor of storey 1: dig it down, or floor the jetty out a storey higher.');
+  'Ground under it above storey 1 floor: dig it down, or build the jetty a storey higher.');
 for (const x of [17, 18]) setCorner(x, 33, BASE + 5);
 
 // Not over an aqueduct's span, in the aqueduct's own words; over a bridge's end, which is its bank, as over any ground.
@@ -1018,7 +1018,7 @@ same('and glass is no floor out on a jetty, which is said before the storey the 
 
 // A column on piers stands on a built deck, carried by the lightest deck under the building; none is glass.
 same('a column on a tile on piers wants its deck built first', 'plan_column', { x: 16, y: 31, cx: 16, cy: 31, material: 'plank', level: 0 },
-  'Build the floor of this storey first.');
+  'Build this storey\'s floor first.');
 same('and no column is glass', 'plan_column', { x: 17, y: 31, cx: 18, cy: 31, material: 'glass', level: 0 }, GLASS_ROOF_ONLY);
 same('a marble column stands on a stone-brick deck', 'plan_column', { x: 17, y: 31, cx: 18, cy: 31, material: 'marble', level: 0 }, 'ALLOWED');
 column(12, 0, 18, 31, 'marble');
@@ -1037,7 +1037,7 @@ same('a railing goes on the edge of a deck on piers', 'plan_wall', { x: 16, y: 3
 // A deck holds up a column standing on it alone, and whoever is on it.
 column(12, 0, 16, 31, 'plank');
 same('a deck with a column on it and on nothing else stays down', 'remove_floor', { x: 16, y: 31, level: 0 },
-  'Take down the column on its north-west corner first.');
+  'Remove the north-west corner column first.');
 uncolumn(0, 16, 31);
 stand(16.5, 31.5, 0);
 same('and one with you on it, as the piers have it on both sides', 'remove_floor', { x: 16, y: 31, level: 0 }, 'Step off the deck first.');
@@ -1048,7 +1048,7 @@ building(13, 'Cellared', [[19, 31]], 1, 0);
 column(13, 0, 19, 31, 'plank');
 bld.setCellar(13, 19, 31, CELLAR_DEPTH);
 sql(`insert into cellar_tile (world_id, x, y, building, dug) values (w, 19, 31, 13, ${CELLAR_DEPTH});`);
-same('a building over a cellar says the cellar first, its columns after', 'remove_from_plan', { x: 19, y: 31 }, 'Fill in the cellar under it first.');
+same('a building over a cellar says the cellar first, its columns after', 'remove_from_plan', { x: 19, y: 31 }, 'Fill in the cellar first.');
 same('and glass is no railing, which is said before where a railing goes', 'plan_wall',
   { x: 19, y: 31, side: 'n', wallType: 'railing', material: 'glass' }, GLASS_ROOF_ONLY);
 bld.setCellar(13, 19, 31, 0);
@@ -1074,7 +1074,7 @@ sql(`delete from cellar_tile where world_id = w;`);
   const standing = game.addFurniture('lamp_post', 20, 31, 0, 0, 50);
   sql(`insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql) values (w, 'furniture', 'lamp_post', 20, 31, 0, 0, 20.125, 31.125, 50);`);
   same('nor a column planned over a piece standing in its corner', 'plan_column', { x: 19, y: 31, cx: 20, cy: 31, material: 'plank' },
-    'Move what stands in that corner first.');
+    'Something placed in that corner: move it first.');
   game.removeFurniture(standing.id);
   sql(`delete from placed where world_id = w and kind = 'furniture' and sub = 'lamp_post';`);
 }
@@ -1087,7 +1087,7 @@ floor(14, 1, 22, 33, 'plank');
 game.counters.open(22, 32, 's').till = 5;
 sql(`insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, till) values (w, 'counter', 's', 22, 32, 0, 0, 22.5, 32.5, 5);`);
 same('a shop counter a jetty rests on says the jetty first, on both sides', 'remove_wall', { x: 22, y: 32, side: 's', level: 0 },
-  'A jetty of storey 2 rests on this wall: raise a column at each end of it, or tear the jetty up, first.');
+  'Storey 2 jetty rests on this wall: add a column at each end, or remove the jetty, first.');
 unfloor(1, 22, 33);
 same('and with the jetty up, its goods', 'remove_wall', { x: 22, y: 32, side: 's', level: 0 }, COUNTER_EMPTY_FIRST);
 game.counters.close(22, 32, 's');
@@ -1096,13 +1096,13 @@ sql(`delete from placed where world_id = w and kind = 'counter';`);
 // Stairs on the ground floor of a building with a storey over it: a way up is asked for a storey up, a way down is the cellar's to say.
 const SHOP_STAIRS = { x: 22, y: 32, material: 'plank', floorKind: 'stairs', side: 'n', level: 0 };
 same('stairs on the ground floor of two storeys, over no cellar, are a storey up', 'plan_floor', SHOP_STAIRS,
-  'Work on storey 2 or above to plan stairs here.');
+  'Plan stairs from storey 2 or above.');
 same('and a way down asked for over no cellar is the cellar\'s to refuse', 'plan_floor', { ...SHOP_STAIRS, down: true },
-  `Dig the cellar out under it first: it is 0 of ${CELLAR_DEPTH} down.`);
+  `Dig the cellar first: 0/${CELLAR_DEPTH}.`);
 bld.setCellar(14, 22, 32, CELLAR_DEPTH);
 sql(`insert into cellar_tile (world_id, x, y, building, dug) values (w, 22, 32, 14, ${CELLAR_DEPTH});`);
 same('as are stairs over a cellar dug out under the tile', 'plan_floor', SHOP_STAIRS,
-  'Its foot would come down on 22,31, and there is no cellar dug out there to come down on.');
+  'Foot would land on 22,31: no cellar dug there.');
 bld.setCellar(14, 22, 32, 0);
 sql(`delete from cellar_tile where world_id = w;`);
 

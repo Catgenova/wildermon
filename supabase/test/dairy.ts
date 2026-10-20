@@ -85,7 +85,7 @@ check('milk, the part bucket, cheese, butter, pastry and the churn are the same 
 const milkDecay = ITEM_DEFS.milk_bucket.decay ?? 0;
 check(`cheese (${ITEM_DEFS.cheese.decay}) and butter (${ITEM_DEFS.butter.decay}) rot slower than milk (${milkDecay}), and say by how much`,
   (ITEM_DEFS.cheese.decay ?? 99) < milkDecay && (ITEM_DEFS.butter.decay ?? 99) < milkDecay
-    && !!ITEM_DEFS.cheese.description?.includes('the pace of a bucket of milk') && !!ITEM_DEFS.butter.description?.includes('the pace of a bucket of milk'),
+    && !!ITEM_DEFS.cheese.description?.includes('the rate of a bucket of milk') && !!ITEM_DEFS.butter.description?.includes('the rate of a bucket of milk'),
   `${ITEM_DEFS.cheese.description} / ${ITEM_DEFS.butter.description}`);
 const feedsOf = (id: string): string => Object.entries(ITEM_DEFS[id].feeds ?? {}).sort().map(([n, v]) => `${n}:${v}`).join(',');
 const feedsIsle = psql(`select string_agg(f.item || '=' || f.nutrient || ':' || f.amount, ',' order by f.item, f.nutrient) from item_feeds f where f.item in ('butter', 'pastry')`);
@@ -108,7 +108,7 @@ const charges = (def: string): string =>
   `coalesce((select string_agg(coalesce(charges::int::text, '-'), ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
 const ql = (def: string): string =>
   `coalesce((select string_agg(round(ql::numeric, 2)::text, ',' order by id) from item where world_id = w and holder_uid = u and def = '${def}'), '-')`;
-const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' and e.text like 'You milk%' order by e.n desc limit 1)";
+const lastSaid = "(select e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' and e.text like 'Milked %' order by e.n desc limit 1)";
 const milkAt = (v: string): string => `jsonb_build_object('kind', 'creature', 'id', ${v})`;
 const refusal = (v: string): string => `coalesce(act_refusal(w, u, 'milk_creature', ${milkAt(v)}), 'none')`;
 const feed = (v: string, fleece: number, hunger: number): string =>
@@ -229,7 +229,7 @@ for (const s of ['cooking', 'carpentry', 'farming']) g.skills.values.set(s, 60);
 const said: string[] = [];
 const logOf = g.logMsg.bind(g);
 g.logMsg = (m: string, k?: Parameters<typeof logOf>[1]) => { said.push(m); logOf(m, k); };
-const lastMilk = (): string => [...said].reverse().find((m) => m.startsWith('You milk')) ?? '';
+const lastMilk = (): string => [...said].reverse().find((m) => m.startsWith('Milked ')) ?? '';
 g.rand = () => 0.01;
 const held = (id: string): number => g.inventory.items.filter((it) => it.id === id).reduce((n, it) => n + it.count, 0);
 const one = (id: string): Item | undefined => g.inventory.items.find((it) => it.id === id);
@@ -260,7 +260,7 @@ const cAsk = ask(cudda);
 milk(cudda, 1, HUNGERS[0]);
 const cSaid = lastMilk();
 check(`a Cudda fills a bucket, the same on both sides: ${cSaid}`,
-  cNone === 'You need an empty bucket.' && isle.get('C:none') === cNone && cAsk === 'none' && isle.get('C:ask') === 'none'
+  cNone === 'Need an empty bucket.' && isle.get('C:none') === cNone && cAsk === 'none' && isle.get('C:ask') === 'none'
     && part('C', 0) === '1' && part('C', 1) === '0' && held('milk_bucket') === 1 && held('bucket') === 0
     && cSaid === milkedSays(cudda.name, BUCKET_LITRES, qlOf(1, HUNGERS[0])) && part('C', 3) === milkedSays(isleCudda, BUCKET_LITRES, qlOf(1, HUNGERS[0])),
   `${isle.get('C:none')} ${isle.get('C:ask')} ${isle.get('C')} / ${cNone} ${cAsk} ${cSaid}`);
@@ -273,17 +273,17 @@ milk(gorral, 1, HUNGERS[0]);
 const g1 = one(MILK_PART);
 const q1 = qlOf(1, HUNGERS[0]);
 check(`a Gorral gives ${GORRAL_MILK} litres a milking into the bucket, which is a part bucket of milk, on both sides: ${lastMilk()}`,
-  gNone === 'You need an empty bucket.' && isle.get('G:none') === gNone
+  gNone === 'Need an empty bucket.' && isle.get('G:none') === gNone
     && part('G1', 0) === '1' && part('G1', 1) === '0' && part('G1', 2) === String(GORRAL_MILK) && near(part('G1', 3), q1)
     && g1?.charges === GORRAL_MILK && held('bucket') === 0 && near(g1.ql, q1)
     && lastMilk() === milkedSays(gorral.name, GORRAL_MILK, q1) && part('G1', 4) === milkedSays(isleGorral, GORRAL_MILK, Number(part('G1', 3)))
-    && lastMilk().includes(`It holds ${GORRAL_MILK} of ${BUCKET_LITRES} litres.`),
+    && lastMilk().includes(`bucket ${GORRAL_MILK}/${BUCKET_LITRES} litres.`),
   `${isle.get('G1')} / ${g1?.charges} ${g1?.ql} ${lastMilk()}`);
 const gAgain = ask(gorral);
 gorral.fleece = 1;
 const gPartOnly = ask(gorral);
 check(`it will not be milked again until ${MILK_READY * 100}% of its milk is back, and then the part bucket is all it needs`,
-  gAgain === `${gorral.name} has nothing to give yet.` && isle.get('G:again') === `${isleGorral} has nothing to give yet.`
+  gAgain === `${gorral.name}: no milk yet.` && isle.get('G:again') === `${isleGorral}: no milk yet.`
     && gPartOnly === 'none' && isle.get('G:partonly') === 'none',
   `${isle.get('G:again')} ${isle.get('G:partonly')} / ${gAgain} ${gPartOnly}`);
 milk(gorral, 1, HUNGERS[1]);
@@ -305,7 +305,7 @@ g.inventory.items.length = 0;
 thing(MILK_PART, 30);
 cudda.fleece = 1;
 const cPart = ask(cudda);
-check('a Cudda wants an empty bucket, a part bucket of milk will not do, on both sides', cPart === 'You need an empty bucket.' && isle.get('C:part') === cPart,
+check('a Cudda wants an empty bucket, a part bucket of milk will not do, on both sides', cPart === 'Need an empty bucket.' && isle.get('C:part') === cPart,
   `${isle.get('C:part')} / ${cPart}`);
 g.inventory.items.length = 0;
 const bucketOfMilk = thing('milk_bucket', 40);

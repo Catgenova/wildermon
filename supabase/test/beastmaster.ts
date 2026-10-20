@@ -479,14 +479,14 @@ const parts = (k: string): string[] => island(k).split('|');
 }
 check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
 check('a spell through a companion is refused with none following you, in the words its note uses',
-  island('NEEDS:NONE') === `Sic wants ${NEEDS_SAID.companion.wants}.`, island('NEEDS:NONE'));
+  island('NEEDS:NONE') === `Sic: needs ${NEEDS_SAID.companion.wants}.`, island('NEEDS:NONE'));
 check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD') === 'ready',
   `${island('NEEDS:KIN')} / ${island('NEEDS:WILD')}`);
 {
   const [ratio, line] = parts('SIC');
   check(`Sic: its own blow at ${pct(fx('sic', 'more'))}, the same roll asked of two ogres alike`,
-    near(Number(ratio), fx('sic', 'more'), 1e-4) && /^Sic: .+ strikes the ogre\. It is down to \d+ of 170\.$/.test(line), island('SIC'));
-  check('and only on what is within its reach', /is not close enough to the ogre to strike it\.$/.test(island('SIC:FAR')), island('SIC:FAR'));
+    near(Number(ratio), fx('sic', 'more'), 1e-4) && /^Sic: .+ hit ogre \d+\/170\.$/.test(line), island('SIC'));
+  check('and only on what is within its reach', /: out of reach of the ogre\.$/.test(island('SIC:FAR')), island('SIC:FAR'));
 }
 {
   const [learned, others] = parts('LEARN');
@@ -496,62 +496,62 @@ check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD
 {
   const [share, line] = parts('LICK');
   check(`Lick Wounds: ${pct(fx('lick_wounds', 'heal'))} of its health back`, near(Number(share), 0.5 + fx('lick_wounds', 'heal'), 0.02)
-    && /^Lick Wounds heals .+ by 15%\.$/.test(line), island('LICK'));
-  check('and refused on one unhurt', / is not hurt\.$/.test(island('LICK:WHOLE')), island('LICK:WHOLE'));
+    && /^Lick Wounds: .+ health \+15%\.$/.test(line), island('LICK'));
+  check('and refused on one unhurt', /: not hurt\.$/.test(island('LICK:WHOLE')), island('LICK:WHOLE'));
 }
 {
   const [ratio, beside, onIt, back, line] = parts('POUNCE');
   check(`Pounce: a leap onto it, its own blow at ${pct(fx('pounce', 'more'))}, and its next blow put back ${fx('pounce', 'back')} s`,
     near(Number(ratio), fx('pounce', 'more'), 1e-4) && beside === 'true' && onIt === 'true' && near(Number(back), fx('pounce', 'back'), 1e-6)
-      && / Its next blow is put back 0\.5 s\.$/.test(line), island('POUNCE'));
-  check(`and no further than ${fx('pounce', 'reach')} tiles`, / is more than 5 tiles from the ogre\.$/.test(island('POUNCE:FAR')), island('POUNCE:FAR'));
+      && / Next blow delayed 0\.5 s\.$/.test(line), island('POUNCE'));
+  check(`and no further than ${fx('pounce', 'reach')} tiles`, /: over 5 tiles from the ogre\.$/.test(island('POUNCE:FAR')), island('POUNCE:FAR'));
 }
 {
   const [ratio, held, still, line] = parts('DRAG');
   check(`Drag Down: its own blow at ${pct(fx('drag_down', 'more'))}, and held where it stands for ${fx('drag_down', 'hold')} s`,
     near(Number(ratio), fx('drag_down', 'more'), 1e-4) && near(Number(held), fx('drag_down', 'hold'), 1e-6) && still === 'true'
-      && / It is held where it stands for 4 s\.$/.test(line), island('DRAG'));
+      && / Held for 4 s\.$/.test(line), island('DRAG'));
 }
 {
   const [ratio, bleed, secs, line] = parts('GUT');
   check(`Disembowel: its own blow, and ${pct(fx('disembowel', 'each'))} of the blow a second for ${fx('disembowel', 'secs')} s`,
     near(Number(ratio), fx('disembowel', 'more'), 1e-4) && near(Number(bleed), fx('disembowel', 'each'), 1e-6)
-      && near(Number(secs), fx('disembowel', 'secs'), 1e-6) && / It bleeds 30% of the blow a second for 8 s\.$/.test(line), island('GUT'));
+      && near(Number(secs), fx('disembowel', 'secs'), 1e-6) && / Bleeding: 30% of the blow per second for 8 s\.$/.test(line), island('GUT'));
 }
 {
   const [ratio, secs, line] = parts('LUST');
   check(`Bloodlust: its blows ${pct(fx('bloodlust', 'more') - 1)} larger for ${fx('bloodlust', 'secs')} s, the same roll asked with and without`,
     near(Number(ratio), fx('bloodlust', 'more'), 1e-4) && near(Number(secs), fx('bloodlust', 'secs'), 1e-6)
-      && /blows are 40% larger\.$/.test(line), island('LUST'));
+      && / damage \+40% for 15 s\.$/.test(line), island('LUST'));
 }
 {
   const [ratio, next, secs, line] = parts('FURY');
   check(`Primal Fury: its blows ${pct(fx('primal_fury', 'more') - 1)} larger, and its next one ${COMPANION_BLOW / fx('primal_fury', 'quick')} s off `
     + `rather than ${COMPANION_BLOW}`,
     near(Number(ratio), fx('primal_fury', 'more'), 1e-4) && near(Number(next), COMPANION_BLOW / fx('primal_fury', 'quick'), 1e-6)
-      && near(Number(secs), fx('primal_fury', 'secs'), 1e-6) && /larger and come 50% more often\.$/.test(line), island('FURY'));
+      && near(Number(secs), fx('primal_fury', 'secs'), 1e-6) && / damage \+75%, attack rate \+50%, for 20 s\.$/.test(line), island('FURY'));
   check('and as often as ever once it is over', near(Number(island('PACE')), COMPANION_BLOW, 1e-6), island('PACE'));
 }
 {
   const [snarlLine, said2] = [island('SNARL').split('|'), island('SNARL')];
   const turned = snarlLine[0].split(',').map((x) => x.split(':')[1]);
   check(`Snarl: every wild thing within ${fx('snarl', 'reach')} tiles of your companion turns on it, and nothing further`,
-    turned.join() === 'true,true,true,false' && /3 creatures turn on .+\.$/.test(snarlLine[1] ?? ''), said2);
-  check('and it is refused with nothing near it', /^Nothing wild is within 4 tiles of .+\.$/.test(island('SNARL:NONE')), island('SNARL:NONE'));
+    turned.join() === 'true,true,true,false' && /: 3 creatures now fighting .+\.$/.test(snarlLine[1] ?? ''), said2);
+  check('and it is refused with nothing near it', /^No wild creature within 4 tiles of .+\.$/.test(island('SNARL:NONE')), island('SNARL:NONE'));
 }
 {
   const [atSide, turnedAll, line] = parts('GUARD');
   const turned = turnedAll.split(',').map((x) => x.split(':')[1]);
   check(`Guard Me: at your side, and everything hunting you within ${fx('guard_me', 'reach')} tiles on it -- not one further, not one not hunting you`,
-    atSide === 'true' && turned.join() === 'true,true,false,false' && /is at your side, and 2 creatures turn on it\.$/.test(line), island('GUARD'));
-  check('and it is refused with nothing hunting you', island('GUARD:NONE') === 'Nothing within 6 tiles of you is hunting you.', island('GUARD:NONE'));
+    atSide === 'true' && turned.join() === 'true,true,false,false' && / at your side, 2 creatures now fighting it\.$/.test(line), island('GUARD'));
+  check('and it is refused with nothing hunting you', island('GUARD:NONE') === 'Nothing hunting you within 6 tiles.', island('GUARD:NONE'));
 }
 {
   const [owed, val] = parts('VENGE:OWED');
   const [ratio, secs, line] = parts('VENGE');
   check(`Vengeance: a blow that lands on you is owed an answer, and paid at ${pct(fx('vengeance', 'more'))} of its own blow once its turn is written`,
     owed === '1' && near(Number(val), fx('vengeance', 'more'), 1e-9) && near(Number(ratio), fx('vengeance', 'more'), 1e-4)
-      && near(Number(secs), fx('vengeance', 'secs'), 1e-6) && /answers every creature that lands a blow on you\.$/.test(line),
+      && near(Number(secs), fx('vengeance', 'secs'), 1e-6) && / strikes back at every creature that hits you, for 20 s\.$/.test(line),
     `${island('VENGE:OWED')} / ${island('VENGE')}`);
   check(`and not from more than ${fx('vengeance', 'reach')} tiles off`, island('VENGE:FAR') === '0', island('VENGE:FAR'));
 }
@@ -560,7 +560,7 @@ check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD
   const [itTook, youTook] = parts('BOND:IT');
   check(`Feral Bond: a blow on you, ${pct(fx('feral_bond', 'share'))} of it on your companion, in its own health at what a blow is to yours`,
     near(Number(left), 0.1 * (1 - fx('feral_bond', 'share')), 1e-9) && near(Number(took), (0.1 * fx('feral_bond', 'share')) / 0.012, 1e-4)
-      && /every blow on you or on .+ is split between you\.$/.test(line), island('BOND:ME'));
+      && /: blows on you or .+ split between you, for 30 s\.$/.test(line), island('BOND:ME'));
   check('and a blow on it, your share of it off your health', near(Number(itTook), 10 * (1 - fx('feral_bond', 'share')), 1e-4)
     && near(Number(youTook), 10 * fx('feral_bond', 'share') * 0.012, 1e-9), island('BOND:IT'));
 }
@@ -594,8 +594,8 @@ check('the six passives fold on the island to what they fold to in the browser',
     island('SIGHT:BEFORE') === 'none' && found === wanted, `${island('SIGHT:BEFORE')} / ${island('SIGHT')}`);
   check(`and keeps up a fight ${(COMPANION_LEASH + 14) / 2} tiles from you, which it gave up`,
     island('LEASH:BEFORE') === 'none' && kept === fighting, `${island('LEASH:BEFORE')} / ${island('LEASH')}`);
-  check('and an order says the new reach', island('ORDER:BEFORE') === `It is more than ${COMPANION_LEASH} tiles from you.`
-    && island('ORDER') === `It is more than ${FOLD['leash:companion']} tiles from you.`, `${island('ORDER:BEFORE')} / ${island('ORDER')}`);
+  check('and an order says the new reach', island('ORDER:BEFORE') === `Too far: max ${COMPANION_LEASH} tiles.`
+    && island('ORDER') === `Too far: max ${FOLD['leash:companion']} tiles.`, `${island('ORDER:BEFORE')} / ${island('ORDER')}`);
 }
 {
   const [left, took] = parts('SHARED').map(Number);
@@ -606,24 +606,24 @@ check('the six passives fold on the island to what they fold to in the browser',
   check('and none beyond them', near(leftFar, 0.1, 1e-12) && tookFar === 0, island('SHARED:FAR'));
   check('and on the way in, a blow that lands on you', island('SHARED:BLOW') === 'true|true', island('SHARED:BLOW'));
 }
-check('Call of the Wild: never a monster', island('WILD:MONSTER') === 'The ogre cannot be tamed.', island('WILD:MONSTER'));
-check(`and no further than ${fx('call_of_the_wild', 'reach')} tiles`, island('WILD:FAR') === 'The rowl is more than 4 tiles away.', island('WILD:FAR'));
-check('and never above your taming', island('WILD:SKILL') === 'The rowl wants 35 taming; you have 10.', island('WILD:SKILL'));
-check('and never without room for it', /already follows you\. Carry an empty creature crate to tame another: it goes into the crate\.$/.test(island('WILD:ROOM')),
+check('Call of the Wild: never a monster', island('WILD:MONSTER') === 'The ogre: untameable.', island('WILD:MONSTER'));
+check(`and no further than ${fx('call_of_the_wild', 'reach')} tiles`, island('WILD:FAR') === 'Too far: max 4 tiles.', island('WILD:FAR'));
+check('and never above your taming', island('WILD:SKILL') === 'The rowl: need 35 taming (have 10).', island('WILD:SKILL'));
+check('and never without room for it', /already follows you\. Need an empty creature crate\.$/.test(island('WILD:ROOM')),
   island('WILD:ROOM'));
 {
   const [mode, mine, line] = parts('WILD:CRATED');
   check('into the crate in your pack when something follows you already', mode === 'stored' && mine === 'true'
-    && /the rowl trusts you\. It goes into the creature crate in your pack\.$/.test(line), island('WILD:CRATED'));
+    && /^Tamed: .+\. In the creature crate in your pack\.$/.test(line), island('WILD:CRATED'));
   const [mode2, mine2, line2] = parts('WILD:FOLLOWS');
-  check('and to follow you when nothing does', mode2 === 'active' && mine2 === 'true' && /the ulva trusts you\. .+ now follows you\.$/.test(line2),
+  check('and to follow you when nothing does', mode2 === 'active' && mine2 === 'true' && /^Tamed: .+\. Follows you\.$/.test(line2),
     island('WILD:FOLLOWS'));
 }
 {
   const [cast, stamina, rest] = parts('PAID');
   check(`the door charges ${pct(spell('lick_wounds').cost)} of your stamina and rests it ${spell('lick_wounds').rest} s`,
     cast === 'beastmaster_lick_wounds' && near(Number(stamina), 1 - spell('lick_wounds').cost, 1e-9) && rest !== 'none', island('PAID'));
-  check('and will not call it again until it has rested', /can be called again in \d+ seconds\.$/.test(island('RESTING')), island('RESTING'));
+  check('and will not call it again until it has rested', /: cooldown \d+ s\.$/.test(island('RESTING')), island('RESTING'));
 }
 check('no function is open to a player but the doors', island('OPEN') === '0', island('OPEN'));
 

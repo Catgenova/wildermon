@@ -66,7 +66,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     skill: 'carpentry',
     difficulty: 18,
     carts: false,
-    note: '{bill.thick_rope:W} hawsers and a plank walkway. It goes a long way for very little and it sways the whole time; nothing with a wheel on it is crossing.',
+    note: 'Longest span: {span} tiles. Foot traffic only.',
   },
   wood: {
     id: 'wood',
@@ -77,7 +77,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     skill: 'carpentry',
     difficulty: 30,
     carts: true,
-    note: 'Trestles under a plank deck, braced and pinned. A cart crosses it without anybody holding their breath.',
+    note: 'Longest span: {span} tiles. Carts may cross.',
   },
   stone: {
     id: 'stone',
@@ -88,7 +88,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     skill: 'masonry',
     difficulty: 44,
     carts: true,
-    note: 'Voussoirs turned over a centring and a slab road laid on the fill. It is the work of a season and it will outlast everybody who used it.',
+    note: 'Longest span: {span} tiles. Carts may cross.',
   },
   /*
    * A stone arch whose deck is a water channel (`./aqueducts`). Set out from
@@ -122,7 +122,7 @@ export const BRIDGES: Record<BridgeKind, BridgeDef> = {
     carts: true,
     winch: [['timber', 6], ['hinge', 4], ['ribbon', 8]],
     grounded: true,
-    note: 'Its first span also takes {winch.timber:w} timbers, {winch.hinge:w} hinges and {winch.ribbon:w} metal ribbons: the hinge, the gallows, the winch and its chains. Both ends outside, on open ground, with at most {span:w} tiles of deck between them. Raised or lowered, standing at the end it was set out from, by anyone its padlock admits, or by anybody at all without one, and pulled down by them too, within {reach} tiles of the middle of either end, on a settlement only by those of them who are its builders. Raised, nothing crosses it and it stops the eye over its hinge; lowered, a cart crosses it.',
+    note: 'First span also needs {winch.timber} timbers, {winch.hinge} hinges and {winch.ribbon} metal ribbons. Both ends outdoors on open ground, at most {span} tiles of deck. Raised or lowered from the end it was set out from, by anyone its padlock admits (anyone, unlocked); pulled down by the same within {reach} tiles of either end, on a settlement by its builders only. Raised: blocks crossing and sight over its hinge. Lowered: carts may cross.',
   },
 };
 
@@ -143,7 +143,7 @@ export const CHANNEL_LINING: Array<[string, number]> = [['mortar', 10], ['stone_
   a.tool = s.tool;
   a.skill = s.skill;
   a.difficulty = s.difficulty;
-  a.note = `A stone arch whose deck is a channel ${CHANNEL_WIDE * TILE_METRES} m wide, carrying ${AQUEDUCT_FLOW} litres a minute of a spring's water from the pond or pool at its head to the basin at its foot. Nobody walks it.`;
+  a.note = `Channel ${CHANNEL_WIDE * TILE_METRES} m wide: ${AQUEDUCT_FLOW} litres/min of spring water from the pond or pool at its head to the basin at its foot. Not walkable.`;
 }
 
 // A bridge's note counts what it is made of off its own bill: `{bill.thick_rope:W}`, and a drawbridge's winch off its own.
@@ -296,8 +296,8 @@ const storeyNamed = (level: number): string => (level ? `storey ${level + 1}` : 
  * it has. The island's `ramp_refusal`.
  */
 export function rampRefusal(la: number, lb: number, apart: number, n: number): string {
-  const ends = la !== lb ? `One end is on ${storeyNamed(la)} and the other on ${storeyNamed(lb)},` : 'The two ends are';
-  return `${ends} ${apart.toFixed(0)} apart in height. A deck rises at most ${RAMP_SLOPE} a tile, so that wants ${rampTiles(apart)} tiles of deck; this one has ${n}.`;
+  const ends = la !== lb ? ` (${storeyNamed(la)} to ${storeyNamed(lb)})` : '';
+  return `Ends ${apart.toFixed(0)} apart in height${ends}. Max rise ${RAMP_SLOPE}/tile: needs ${rampTiles(apart)} tiles of deck; has ${n}.`;
 }
 
 /**
@@ -309,7 +309,7 @@ export function setOutWords(b: Bridge): string {
   const [la, lb] = bridgeLevels(b);
   const storeys = la || lb ? `, ${storeyNamed(la)} to ${storeyNamed(lb)}` : '';
   const rise = b.rise ?? 0;
-  const slope = rise ? `, its deck ${rise > 0 ? 'rising' : 'falling'} ${Math.abs(rise)} from this end to the far one` : '';
+  const slope = rise ? `, deck ${rise > 0 ? 'rising' : 'falling'} ${Math.abs(rise)} toward the far end` : '';
   return `${storeys}${slope}`;
 }
 
@@ -319,7 +319,7 @@ export const bridgeState = (b: Bridge): string => {
   const size = b.kind === 'aqueduct' ? `${n} span${n === 1 ? '' : 's'}` : `${n} tiles`;
   if (bridgeDone(b)) return `${size} · finished`;
   const left = b.spans.filter((s) => !isDone(s)).length;
-  return `${size} · ${Math.round(bridgeProgress(b) * 100)}% · ${left} still open`;
+  return `${size} · ${Math.round(bridgeProgress(b) * 100)}% · ${left} open`;
 };
 
 /** What one tile of deck still wants, written out. */
@@ -349,7 +349,7 @@ export function pullDownRefusal(g: Game, b: Bridge, job = BRIDGE_ACTIONS.find((a
     const rank = mine ? lacks(mine, 'shape') : null;
     if (rank) return rank;
     const d = mine ? null : g.deedAt(x, y);
-    if (d) return `That is part of ${d.name}. Only its builders may ${label} there.`;
+    if (d) return `Part of ${d.name}: only builders may ${label} there.`;
   }
   return null;
 }
@@ -369,7 +369,7 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile') return 'Choose the far side.';
       const kind = (t.material ?? 'rope') as BridgeKind;
-      if (!BRIDGES[kind]) return 'Choose what to build it out of.';
+      if (!BRIDGES[kind]) return 'Choose a material.';
       const [ax, ay] = [g.player.tileX, g.player.tileY];
       return g.bridgeReason(kind, ax, ay, t.x, t.y);
     },
@@ -393,7 +393,7 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       g.gainSkill(def.skill, 0.4);
       g.note('planned_bridge');
       g.logMsg(
-        `You set out a ${def.name.toLowerCase()} of ${b.spans.length} span${b.spans.length > 1 ? 's' : ''} across${setOutWords(b)}. Each one wants ${def.bill.map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase()}`).join(', ')}. ${def.note}`,
+        `Planned: ${def.name.toLowerCase()}, ${b.spans.length} span${b.spans.length > 1 ? 's' : ''}${setOutWords(b)}. Per span: ${def.bill.map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase()}`).join(', ')}. ${def.note}`,
         'system',
       );
       for (const sp of b.spans) g.events.emit('world', sp.x, sp.y);
@@ -411,19 +411,19 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const b = bridgeOf(g, t);
       const s = b && b.spans.find((x) => !isDone(x));
-      return s ? `Work on the bridge (wants ${spanWants(s)})` : 'Work on the bridge';
+      return s ? `Work on the bridge (needs ${spanWants(s)})` : 'Work on the bridge';
     },
     check: (t, g) => {
       const b = bridgeOf(g, t);
       if (!b) return 'It is gone.';
       const def = bridgeDef(b);
       const s = b.spans.find((x) => !isDone(x));
-      if (!s) return 'It is finished.';
-      if (!g.inventory.has(def.tool)) return `You need a ${itemDef(def.tool).name.toLowerCase()}.`;
-      if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Work from one end. Walk to the open part of the span.';
+      if (!s) return 'Finished.';
+      if (!g.inventory.has(def.tool)) return `Need a ${itemDef(def.tool).name.toLowerCase()}.`;
+      if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Stand by the open span.';
       // What it wants comes out of the pack, a crate on the span or the stores within reach, as a wall's does (`toHand`).
       const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && toHand(g, id, undefined, s) < 1);
-      if (short.length) return `That span wants ${spanWants(s)}; you have no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
+      if (short.length) return `Span needs ${spanWants(s)}; no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
       return null;
     },
     perform: (t, g) => {
@@ -440,13 +440,13 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
       g.wearTool(def.tool, 0.4);
       if (isDone(s)) {
         const left = b.spans.filter((x) => !isDone(x)).length;
-        if (left) g.logMsg(`That span is decked. ${left} still open.`, 'event');
+        if (left) g.logMsg(`Span decked. ${left} open.`, 'event');
         else {
           g.note('bridged');
-          g.logMsg(`The last span is decked and the ${bridgeName(b).toLowerCase()} is open. ${def.carts ? 'A cart will cross it.' : 'Foot traffic only; nothing with a wheel.'}`, 'system');
+          g.logMsg(`Last span decked: ${bridgeName(b).toLowerCase()} open. ${def.carts ? 'Carts may cross.' : 'Foot traffic only.'}`, 'system');
         }
       } else {
-        g.logMsg(`You work a ${itemDef(id).name.toLowerCase()} into the span. It still wants ${spanWants(s)}.`, 'event');
+        g.logMsg(`Added: ${itemDef(id).name.toLowerCase()}. Span needs ${spanWants(s)}.`, 'event');
       }
       return !!b.spans.find((x) => !isDone(x));
     },
@@ -490,7 +490,7 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
         }
       }
       g.removeBridge(b.id);
-      g.logMsg(parts.length ? `You take the ${bridgeName(b).toLowerCase()} down and save ${parts.join(', ')}.` : `You take the ${bridgeName(b).toLowerCase()} down.`, 'event');
+      g.logMsg(parts.length ? `Removed: ${bridgeName(b).toLowerCase()}. Salvaged: ${parts.join(', ')}.` : `Removed: ${bridgeName(b).toLowerCase()}.`, 'event');
     },
   },
 ];

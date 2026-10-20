@@ -74,7 +74,7 @@ export function butcherPreview(g: Game, item: Item): string {
   const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0).map(([, id]) => itemDef(id).name.toLowerCase());
   const [lo, hi] = productQlRange(g.skills.get('butchering'), knife ? knife.ql : 0);
   const ql = Math.round(lo) === Math.round(hi) ? `QL ${Math.round(hi)}` : `QL ${Math.round(lo)}–${Math.round(hi)}`;
-  return `about ${Math.round(share * 100)}% of its ${parts.join(', ')}, at ${ql}`;
+  return `about ${Math.round(share * 100)}% of its ${parts.join(', ')}, ${ql}`;
 }
 
 export const BUTCHER_ACTIONS: ActionDef[] = [
@@ -89,8 +89,8 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
     applies: (t, g) => corpse(g, t) !== undefined,
     check: (t, g) => {
       const item = corpse(g, t);
-      if (!item) return 'There is nothing to butcher.';
-      if (!corpseSpecies(item)) return 'You cannot make sense of this carcass.';
+      if (!item) return 'Nothing to butcher.';
+      if (!corpseSpecies(item)) return 'Unknown carcass.';
       return null;
     },
     perform: (t, g) => {
@@ -112,7 +112,7 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
         }
         if (lumps.length) {
           g.note('hoard');
-          g.logMsg(`Something rattles as the belly opens: ${lumps.length} lumps of what it had been sleeping on. ${[...new Set(lumps)].join(', ')}.`, 'event');
+          g.logMsg(`In its belly: ${lumps.length} lumps. ${[...new Set(lumps)].join(', ')}.`, 'event');
         }
       }
       for (const [part, id] of BUTCHER_PARTS) {
@@ -135,10 +135,10 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
       }
       removeCorpse(g, t, item);
       if (!taken.length) {
-        g.logMsg(`You make a mess of the ${def.name.toLowerCase()} carcass and salvage nothing.`, 'event');
+        g.logMsg(`Butchering failed: ${def.name.toLowerCase()} carcass lost.`, 'event');
         return;
       }
-      g.logMsg(`You butcher the ${def.name.toLowerCase()} and take ${taken.join(', ')} (QL ${ql.toFixed(1)}).${knife ? '' : ' Bare hands waste most of a carcass.'}`, 'event');
+      g.logMsg(`Butchered: ${def.name.toLowerCase()}. Got ${taken.join(', ')}, QL ${ql.toFixed(1)}.${knife ? '' : ' No knife: most of the carcass wasted.'}`, 'event');
     },
   },
 ];

@@ -55,13 +55,13 @@ export class JournalPanel {
     const bar = document.createElement('div');
     bar.className = 'log-tabs journal-tabs';
     for (const [id, label, title] of [
-      ['goals', 'Goals', 'Everything worth doing here, ticking itself off'],
-      ['ledger', 'Ledger', 'Everything you have ever made: how many, how many rare, and the best'],
-      ['help', 'Help', 'How any of this works'],
-      ['news', "What's new", 'What changed on the island, newest first, with what you had not read yet marked'],
-      ['boards', 'Leaderboards', 'Who holds each skill highest on the island, its best-bred wildermon and its biggest settlements'],
-      ['guide', 'Field guide', 'A page for every kind of creature: which you have seen, tamed and bred, where each lives and what it gives'],
-      ['tracker', 'Tracker', 'The few trades you are watching, with a bar apiece toward the next level'],
+      ['goals', 'Goals', 'Goals, ticked off when done'],
+      ['ledger', 'Ledger', 'Everything made: count, rare count, best QL'],
+      ['help', 'Help', 'Rules and numbers'],
+      ['news', "What's new", 'Changes, newest first; unread marked'],
+      ['boards', 'Leaderboards', 'Top skill holders, best-bred wildermon, largest settlements'],
+      ['guide', 'Field guide', 'Every creature kind: seen, tamed, bred, habitat, yield'],
+      ['tracker', 'Tracker', 'Tracked skills: progress to next level'],
     ] as Array<[JournalTab, string, string]>) {
       const b = document.createElement('button');
       b.type = 'button';
@@ -154,7 +154,7 @@ export class JournalPanel {
         how.hidden = true;
         row.setAttribute('aria-expanded', 'false');
         row.setAttribute('aria-controls', how.id);
-        row.title = 'How to do it';
+        row.title = 'How';
         row.addEventListener('click', () => this.openHow(goal.id, how.hidden === true));
         goals.append(row, how);
         this.rows.set(goal.id, row);
@@ -190,7 +190,7 @@ export class JournalPanel {
   /** The button says what it will do: open them all while any is shut. */
   private sayAll(): void {
     const all = [...this.hows.values()].every((h) => !h.hidden);
-    this.allBtn.textContent = all ? 'Hide every how-to' : 'Show every how-to';
+    this.allBtn.textContent = all ? 'Hide all how-tos' : 'Show all how-tos';
   }
 
   /** Turn to a tab. */
@@ -226,12 +226,12 @@ export class JournalPanel {
       const tick = row.firstElementChild as HTMLElement;
       tick.textContent = met ? '✔' : '·';
     }
-    this.count.textContent = `${done.size} of ${ALL_GOALS.length} done · click a goal for how to do it`;
+    this.count.textContent = `${done.size}/${ALL_GOALS.length} done · click a goal for how`;
     this.sayAll();
     this.next.replaceChildren();
     const up = nextGoals(done, 3);
     if (!up.length) {
-      this.next.textContent = 'Everything anybody thought worth doing here, done.';
+      this.next.textContent = 'All goals done.';
       return;
     }
     const head = document.createElement('div');

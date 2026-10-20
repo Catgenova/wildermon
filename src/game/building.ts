@@ -3,7 +3,7 @@
  * walls that sit on tile borders, and stacked floors. Walls and floors are
  * planned first, then built by feeding them materials one unit at a time.
  */
-import { article, capital, fill, listedOr } from './words';
+import { capital, fill, listedOr } from './words';
 
 export type WallType = 'solid' | 'window' | 'bay' | 'door' | 'double_door' | 'arch' | 'fence' | 'fence_gate' | 'half_wall' | 'iron_gate'
   | 'counter' | 'railing'
@@ -259,10 +259,10 @@ MATERIAL_BY_ID.set(GLASS_ROOF.id, GLASS_ROOF);
 const FLOOR_WORDS: Record<FloorKind, string> = { floor: 'a floor', stairs: 'a flight of stairs', ladder: 'a ladder', roof: 'a roof' };
 /** What is said of a material laid as something it is not: "Stained glass is laid as a solid wall, a floor or a roof, and nothing else." The island holds the same sentence. */
 export const onlySaid = (m: MaterialDef): string =>
-  `${m.name} is laid as ${listedOr([
+  `${m.name}: only as ${listedOr([
     ...(m.only?.walls ?? []).map((w) => `a ${(WALL_TYPE_BY_ID.get(w)?.name ?? w).toLowerCase()} wall`),
     ...(m.only?.floors ?? []).map((k) => FLOOR_WORDS[k]),
-  ])}, and nothing else.`;
+  ])}.`;
 /**
  * Why a material will not be laid as this wall type, this floor kind or a
  * column, or null: a material with an `only` is laid as that and nothing
@@ -289,7 +289,7 @@ export function onlyRefusal(material: string | undefined, as: { wall?: string; f
 export const laidInSaid = (w: WallTypeDef): string => {
   const name = w.name.toLowerCase();
   const mat = (MATERIAL_BY_ID.get(w.laidIn ?? '')?.name ?? w.laidIn ?? '').toLowerCase();
-  return `${capital(article(name))} ${name} is laid in ${mat} and nothing else.`;
+  return `${capital(name)}: ${mat} only.`;
 };
 /** Whether a menu offers this material for this wall type or floor kind at all. */
 export const takesAs = (m: MaterialDef, as: { wall?: string; floor?: string; column?: boolean }): boolean => onlyRefusal(m.id, as) === null;
@@ -541,11 +541,11 @@ export interface RoofShapeDef {
 }
 export const ROOF_SHAPES: RoofShapeDef[] = [
   { id: 'gable', name: 'Gabled', rise: 1, factor: 0.3, walkable: false,
-    note: 'One ridge down the length of it, falling to the eaves on the long sides; the ends are wall carried up in a triangle rather than roof. A tile of it takes {factor:share} of what a solid wall of the same stuff does.' },
+    note: 'Ridge along its length; the ends are gable walls. Cost per tile: {factor:pct} of a solid wall of the same material.' },
   { id: 'hip', name: 'Hipped', rise: 1, factor: 0.5, walkable: false,
-    note: 'Falling away on every side, with no gable ends to raise, and it sheds weather off every wall. A tile of it takes {factor:share} of what a solid wall of the same stuff does.' },
+    note: 'Slopes on every side; no gable walls. Cost per tile: {factor:pct} of a solid wall of the same material.' },
   { id: 'flat', name: 'Flat', rise: 0, factor: 0.85, walkable: true,
-    note: 'A deck rather than a roof: laid heavy enough to walk out onto, and what you get for it is a terrace. A tile of it takes {factor:share} of what a solid wall of the same stuff does.' },
+    note: 'Walkable: makes a terrace. Cost per tile: {factor:pct} of a solid wall of the same material.' },
 ];
 // What a roof costs is said off its own `factor`, so the three can be weighed against each other.
 for (const r of ROOF_SHAPES) r.note = fill(r.note, r);
@@ -636,7 +636,7 @@ export function gapText(storey: number, gap: LevelGap): string | null {
   if (gap.bare) parts.push(`${gap.bare} side${gap.bare === 1 ? '' : 's'} with no wall or columns`);
   if (gap.unfinished) parts.push(`${gap.unfinished} still going up`);
   const where = gap.at ? `, nearest the ${SIDE_NAMES[gap.at.side]} side of ${gap.at.x},${gap.at.y}` : '';
-  return `Storey ${storey} is not closed in: ${parts.join(' and ')}${where}.`;
+  return `Storey ${storey} not enclosed: ${parts.join(' and ')}${where}.`;
 }
 
 export function progressOf(b: Bill): number {

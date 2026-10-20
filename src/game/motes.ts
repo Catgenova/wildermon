@@ -34,7 +34,7 @@ import type { LightSource } from './light';
 import { REGIONS } from '../world/regions';
 import { chartRegion } from '../world/chart';
 import { TILE_DEFS } from '../world/tiles';
-import { article, capital, listed, numberWord } from './words';
+import { capital, listed } from './words';
 import { runestoneAt } from './runestones';
 
 /** The skill a mote swirl is collected with, and the only thing that trains it. */
@@ -219,15 +219,15 @@ export function swirlRefusal(g: Game, t: Target): string | null {
 
 /** "a fire mote", "three ice motes": what a swirl gave. */
 export const motesWord = (n: number, e: MoteElement): string =>
-  n === 1 ? `${article(e)} ${e} mote` : `${numberWord(n)} ${e} motes`;
+  `${n} ${e} mote${n === 1 ? '' : 's'}`;
 
 /** What collecting says. The island's `perform_swirl` says the same. */
 export const collectedSays = (n: number, e: MoteElement): string =>
-  `You collect ${motesWord(n, e)} from the swirl, and it is gone.`;
+  `Collected: ${motesWord(n, e)}. Swirl gone.`;
 
 /** What Examine says of a swirl over a tile. The island's `ground_says` says the same. */
 export const swirlSays = (e: MoteElement): string =>
-  ` ${capital(article(e))} ${e} mote swirl turns over it until the next turn of the woods.`;
+  ` Mote swirl: ${e}, until the woods next turn.`;
 
 export const MOTE_ACTIONS: ActionDef[] = [
   {

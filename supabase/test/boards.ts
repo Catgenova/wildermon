@@ -269,7 +269,7 @@ check('and the wildermon line prints each of them as the island counts it',
 const slots = Number(said('SLOTS'));
 const most = slots * Number(steps.get(TIERS[TIERS.length - 1]));
 check('and the most a wildermon can score is its trait slots at the top grade',
-  slots === TRAIT_SLOTS && most === BRED_MAX && BOARD_RULES.wildermon.includes(`${figure(most)} at most for ${slots} traits`),
+  slots === TRAIT_SLOTS && most === BRED_MAX && BOARD_RULES.wildermon.includes(`max ${figure(most)} for ${slots} traits`),
   `${figure(most)} of ${slots} slots`);
 const top = Number(said('TOP'));
 check('every line gives the board the size the island cuts it at',
@@ -283,8 +283,8 @@ check('and the settlement line the top level there is',
 const game = Game.create(4242);
 const alone = soloStanding(game);
 check('alone, before anything: no skill raised, no wildermon tamed, no settlement',
-  alone.skills.startsWith('You have not raised') && alone.wildermon === 'You have no tamed wildermon.'
-    && alone.settlements === 'You have not founded a settlement.',
+  alone.skills === 'No skill raised yet (characteristics excluded).' && alone.wildermon === 'No tamed wildermon.'
+    && alone.settlements === 'No settlement founded.',
   Object.values(alone).join(' / '));
 game.skills.values.set('body_strength', 40);
 game.skills.values.set('mining', 12.5);
@@ -297,11 +297,11 @@ for (const b of BEASTS.filter((b) => b.world === W && ['Stormcaller', 'Twin High
 game.deed = { name: 'Hearth', x: Math.floor(x), y: Math.floor(y), radius: 7, level: 2 };
 const mine = soloStanding(game);
 check('your best skill, a characteristic higher than it not counted',
-  mine.skills === 'Your best skill, characteristics not counted: Mining 12.50.', mine.skills);
+  mine.skills === 'Your best skill (characteristics excluded): Mining 12.50.', mine.skills);
 check('your best-bred wildermon, by the board\'s own score, the wild one left out',
-  mine.wildermon === `Your best-bred wildermon: Stormcaller, ${SPECIES.rabba.name}, at 14 of ${figure(BRED_MAX)}, level 1.`, mine.wildermon);
+  mine.wildermon === `Your best-bred wildermon: Stormcaller, ${SPECIES.rabba.name}, 14/${figure(BRED_MAX)}, level 1.`, mine.wildermon);
 check('and your settlement, with its level of the most there is',
-  mine.settlements === `Your settlement: Hearth, level 2 of ${MAX_DEED_LEVEL}, 1 citizen: you.`, mine.settlements);
+  mine.settlements === `Your settlement: Hearth, level 2/${MAX_DEED_LEVEL}, 1 citizen: you.`, mine.settlements);
 
 for (const l of [...ok, ...bad]) console.log(l);
 if (bad.length) {

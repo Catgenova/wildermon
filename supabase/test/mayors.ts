@@ -62,7 +62,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 console.log('--- the browser');
 check('a settlement starts with three ranks besides its founder, highest first',
   SETTABLE.join(',') === 'mayor,builder,guest', SETTABLE.join(','));
-check('a mayor is told what a mayor may do', standingWord({ role: 'mayor' }) === `You are a Mayor here: you may ${rankMay(permsNamed('mayor'))}.`,
+check('a mayor is told what a mayor may do', standingWord({ role: 'mayor' }) === `Rank: Mayor. You may ${rankMay(permsNamed('mayor'))}.`,
   standingWord({ role: 'mayor' }));
 
 /* ---- the island, and the browser over its answers -------------------------- */

@@ -147,7 +147,7 @@ begin
     perform mark_attacker(w.world_id, w.uid, g);
     perform hurt_player(w.world_id, w.uid, ${TINY}, 'The goblin is on you', 'cut');
   end loop;
-  insert into said values ('FIRST', (select count(*) from event where uid = w.uid and text = 'You dodge the goblin.')
+  insert into said values ('FIRST', (select count(*) from event where uid = w.uid and text = 'Dodged: goblin.')
     || '|' || (select count(*) from event where uid = w.uid and text = '${BLOCKED_SAID}'));
   delete from creature where world_id = w.world_id and id = g;
 end $b$;
@@ -246,7 +246,7 @@ const lastLine = (g: Game): string => g.log[g.log.length - 1]?.text ?? '';
   // Every roll under both chances: the dodge has it, and the shield is never asked.
   g.rand = () => 0;
   g.hurtPlayer(TINY, 'The goblin is on you', 'cut');
-  const dodgedFirst = lastLine(g) === 'You dodge the goblin.' && shield.dmg === 0 && !lines(g).includes(BLOCKED_SAID);
+  const dodgedFirst = lastLine(g) === 'Dodged: goblin.' && shield.dmg === 0 && !lines(g).includes(BLOCKED_SAID);
   // The dodge's roll over its chance, and every roll after it under: the shield's has it.
   let first = true;
   g.rand = () => (first ? ((first = false), 0.99) : 0);
@@ -262,7 +262,7 @@ const lastLine = (g: Game): string => g.log[g.log.length - 1]?.text ?? '';
     const card = (compareLines(g, it) ?? []).map((l) => (typeof l === 'string' ? l : l.text));
     const chance = blockChance(sh.block, 40, 50, none);
     check(`the ${itemDef(sh.id).name.toLowerCase()}'s card says it blocks ${finePercent(chance)} at QL 40 and shields 50, and how`,
-      card.includes(`Blocks ${finePercent(chance)} of blows`) && card.some((l) => l.startsWith(`Its own ${percent(sh.block)} × `) && l.includes('for shields 50')),
+      card.includes(`Blocks ${finePercent(chance)} of blows`) && card.some((l) => l.startsWith(`Block: ${percent(sh.block)} × `) && l.includes('(shields 50)')),
       card.join(' / '));
     const text = itemDef(sh.id).description ?? '';
     check(`and its description the chance at QL 1 and QL 100`,

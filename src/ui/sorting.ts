@@ -22,7 +22,7 @@ export const SORTS: Array<[SortKey, string]> = [
   ['ql', 'Quality'],
   ['weight', 'Weight'],
   ['dmg', 'Damage'],
-  ['count', 'How many'],
+  ['count', 'Count'],
 ];
 
 const BY: Record<SortKey, (a: Item, b: Item) => number> = {

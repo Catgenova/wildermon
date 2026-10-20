@@ -277,7 +277,7 @@ export class RecipeTree {
     line.append(mark, name, have);
     line.title = n.recipes
       ? `Open ${n.recipes === 1 ? 'the recipe that makes' : `the ${n.recipes} recipes that make`} ${lower(n.item)}`
-      : `Nothing makes ${lower(n.item)} at a bench: open what the help says about where it comes from`;
+      : `No recipe makes ${lower(n.item)}: click for its source in the help`;
     line.addEventListener('click', () => {
       const item = n.item;
       this.hide();
@@ -292,18 +292,18 @@ export class RecipeTree {
       const bits = [`${r.label} × ${n.goes}`, skillName(r.skill)];
       if (made > 1) bits.push(`makes ${made} a go`);
       if (r.station) bits.push(`at a ${stationName(r.station)}`);
-      if (n.recipes > 1) bits.push(n.ready ? `first of ${n.recipes} recipes you can make now` : `first of ${n.recipes} recipes; none can be made now`);
+      if (n.recipes > 1) bits.push(n.ready ? `first of ${n.recipes} recipes; makeable now` : `first of ${n.recipes} recipes; none makeable now`);
       how.textContent = bits.join(' · ');
       li.append(how);
     } else if (!n.recipes && !(n.tool ? n.have > 0 : n.have >= n.need)) {
       const how = document.createElement('div');
       how.className = 'rtree-how';
-      how.textContent = 'No recipe here makes it: click for where it comes from';
+      how.textContent = 'No recipe: click for its source';
       li.append(how);
     } else if (n.cut) {
       const how = document.createElement('div');
       how.className = 'rtree-how';
-      how.textContent = n.cut === 'cycle' ? `… made from ${lower(n.item)} further up; not followed again` : `… ${TREE_DEPTH} recipes deep; open its recipe for the rest`;
+      how.textContent = n.cut === 'cycle' ? `… made from ${lower(n.item)} above; not repeated` : `… depth ${TREE_DEPTH} reached; open its recipe for more`;
       li.append(how);
     }
     if (n.parts.length) {
@@ -320,7 +320,7 @@ export class RecipeTree {
     const foot = document.createElement('div');
     foot.className = 'rtree-foot';
     foot.textContent = `Have: ${this.game.settings.fromStores ? `pack, bags and stores within ${reach} tiles` : 'pack and bags'}. `
-      + 'A part you have enough of is not followed. Click a line for its recipe.';
+      + 'Parts you have enough of are not expanded. Click a line: its recipe.';
     return foot;
   }
 }

@@ -223,7 +223,7 @@ begin
   ${onTile('botanize', 4, 1)};
   ${nodice};
   insert into said values ('PASSES', (select string_agg(e.text, '#' order by e.n) from (
-    select text, n from event where world_id = w and uid = u and text like 'You go over the ground%' order by n desc limit 4) e));
+    select text, n from event where world_id = w and uid = u and text like 'Found nothing (%' order by n desc limit 4) e));
 
   /* ---- Sure Find: a look empty by chance below its number, and not above it, and never for the perk. ---- */
   perform pg_temp.hold(w, u, '{}');
@@ -253,7 +253,7 @@ begin
   ${dice(RARE_BELOW)};
   ${onTile('forage', 2, 3)};
   v_t := v_t || ':' || (select coalesce(string_agg(distinct rare, ','), 'none') from item where world_id = w and holder = 'player' and holder_uid = u)
-    || ':' || coalesce(${last('You find some %')}, 'unsaid');
+    || ':' || coalesce(${last('Found: %')}, 'unsaid');
   ${clearAll};
   ${dice(RARE_ABOVE)};
   ${onTile('botanize', 3, 3)};
@@ -264,11 +264,11 @@ begin
   ${clearAll};
   perform pg_temp.hold(w, u, '{}');
   ${onTile('cut_grass', 1, 4)};
-  v_t := ${count('mixed_grass')} || ':' || coalesce(${last('You cut % bundles%')}, 'unsaid');
+  v_t := ${count('mixed_grass')} || ':' || coalesce(${last('Cut: % mixed grass%')}, 'unsaid');
   ${clearAll};
   ${hold('Hay Cutter')};
   ${onTile('cut_grass', 2, 4)};
-  v_t := v_t || '#' || ${count('mixed_grass')} || ':' || coalesce(${last('You cut % bundles%')}, 'unsaid');
+  v_t := v_t || '#' || ${count('mixed_grass')} || ':' || coalesce(${last('Cut: % mixed grass%')}, 'unsaid');
   ${clearAll};
   perform land_set_tile(w, 3, 4, tile_id('Reed')); perform land_set_tile(w, 4, 4, tile_id('Reed'));
   perform give(w, u, 'carving_knife', 1, 40);
@@ -280,7 +280,7 @@ begin
   ${hold('Reed Cutter')};
   ${onTile('cut_reeds', 4, 4)};
   ${nodice};
-  insert into said values ('CUT', v_t || ':' || ${count('reed')} || ':' || coalesce(${last('You cut % reeds%')}, 'unsaid'));
+  insert into said values ('CUT', v_t || ':' || ${count('reed')} || ':' || coalesce(${last('Cut: % reeds%')}, 'unsaid'));
   ${clearAll};
 
   /* ---- The pot: Quick Lye's time; Double Boil's weight; Thrifty Dyer's dyestuff; Ink Maker; Cover Maker. ---- */
@@ -442,7 +442,7 @@ begin
   update player set stats = stats || jsonb_build_object('stamina', 0.5) where world_id = w and uid = u;
   ${onItem('drink_tea', newest('herb_tea'))};
   insert into said values ('TEA', v_t || '|' || (select stats->>'stamina' from player where world_id = w and uid = u)
-    || '|' || coalesce(${last('You drink the %')}, 'unsaid'));
+    || '|' || coalesce(${last('Drank: %')}, 'unsaid'));
 
   /* ---- A salve: refused with nothing dressed, rubbed into a dressing under cloth, and it never goes bad. ---- */
   update player set wounds = jsonb_build_array(${jsonSql(CUT)}), stats = stats || jsonb_build_object('hurtSettled', now()) where world_id = w and uid = u;
@@ -455,7 +455,7 @@ begin
   ${onItem('apply_salve', newest('salve'))};
   v_t := v_t || '#' || coalesce((select w0->>'salved' from player, jsonb_array_elements(wounds) w0 where world_id = w and uid = u), 'none')
     || '#' || (select fester_chance(w0) from player, jsonb_array_elements(wounds) w0 where world_id = w and uid = u)
-    || '#' || coalesce(${last('You rub the salve%')}, 'unsaid');
+    || '#' || coalesce(${last('Salved:%')}, 'unsaid');
   -- Gone bad anyway (it was salved after it turned, say), scoured out: no salve and no quick hands left on it.
   update player set wounds = jsonb_build_array(${jsonSql({ ...CUT, infected: true, salved: true, mend: 1.5 })}), stats = stats || jsonb_build_object('hurtSettled', now()) where world_id = w and uid = u;
   perform give(w, u, 'lye_bucket', 1, 40);
@@ -472,7 +472,7 @@ begin
   insert into said values ('TINCTURE', (select string_agg(b->>'skill' || '/' || coalesce(b->>'kind', 'dish') || '/' || (b->>'bonus')
       || '/' || round(((b->>'until')::double precision - world_time(w))::numeric), ',' order by b->>'skill', coalesce(b->>'kind', 'dish'))
     from player, jsonb_array_elements(boons) b where world_id = w and uid = u)
-    || '|' || skill_mult(w, u, '${TINCTURE_SKILLS[0]}') || '|' || coalesce(${last('You take the tincture%')}, 'unsaid'));
+    || '|' || skill_mult(w, u, '${TINCTURE_SKILLS[0]}') || '|' || coalesce(${last('Tincture taken:%')}, 'unsaid'));
   -- And a dish of the same trade now puts the clock back on the dish's, not the tincture's.
   update player set boons = (select jsonb_agg(case when b->>'kind' = 'tincture' then b || jsonb_build_object('until', world_time(w) + 10) else b end)
     from player, jsonb_array_elements(boons) b where world_id = w and uid = u) where world_id = w and uid = u;
@@ -526,7 +526,7 @@ begin
   ${dice(0.5)};
   delete from foraged where world_id = w; ${onTile('forage', 1, 1)};
   insert into said values ('GOLD', v_t || ':' || (select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'coin' and i.extra = 'Gold') || '|' || coalesce((select e.text from event e where e.world_id = w and e.uid = u
-    and e.text like 'Something glints%' order by e.n desc limit 1), 'unsaid'));
+    and e.text like 'Found: gold coin%' order by e.n desc limit 1), 'unsaid'));
   ${nodice};
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def = 'coin';
 
@@ -552,8 +552,8 @@ const plainPasses = rollsAt(SKILL);
 const keen = fx('Keen Eye', 'passes:forage');
 const passes = say('PASSES').split('#');
 check(`${P('Keen Eye').name}: at ${SKILL} a go looks ${plainPasses} times, and ${plainPasses + keen} with it, foraging and botanizing`,
-  passes.length === 4 && passes[0].includes(`${plainPasses} times`) && passes[1].includes(`${plainPasses} times`)
-    && passes[2].includes(`${plainPasses + keen} times`) && passes[3].includes(`${plainPasses + keen} times`), passes.join(' / '));
+  passes.length === 4 && passes[0].includes(`${plainPasses} passes`) && passes[1].includes(`${plainPasses} passes`)
+    && passes[2].includes(`${plainPasses + keen} passes`) && passes[3].includes(`${plainPasses + keen} passes`), passes.join(' / '));
 const [emptyBelow, emptyAbove, emptyPerk] = say('EMPTY').split(':').map(Number);
 check(`${P('Sure Find').name}: under ${EMPTY_CHANCE} every look is empty by chance, over it none is, and with it none is`,
   emptyBelow === 0 && emptyAbove === plainPasses && emptyPerk === 2 * plainPasses, say('EMPTY'));
@@ -567,9 +567,9 @@ check('and over it, none', rareAbove === '0', rareAbove);
 /* ---- a cut ----------------------------------------------------------------------------- */
 
 const [grassPlain, grassPerk, reeds] = say('CUT').split('#');
-check(`a cut of grass gives ${GRASS_PER_CUT} bundles, and says so`, grassPlain.startsWith(`${GRASS_PER_CUT}:`) && grassPlain.includes('two bundles'), grassPlain);
+check(`a cut of grass gives ${GRASS_PER_CUT} bundles, and says so`, grassPlain.startsWith(`${GRASS_PER_CUT}:`) && grassPlain.includes(`Cut: ${GRASS_PER_CUT} mixed grass`), grassPlain);
 check(`${P('Hay Cutter').name}: ${fx('Hay Cutter', 'count:mixed_grass')} with it, and says so`,
-  grassPerk.startsWith(`${fx('Hay Cutter', 'count:mixed_grass')}:`) && grassPerk.includes('three bundles'), grassPerk);
+  grassPerk.startsWith(`${fx('Hay Cutter', 'count:mixed_grass')}:`) && grassPerk.includes(`Cut: ${fx('Hay Cutter', 'count:mixed_grass')} mixed grass`), grassPerk);
 const [reedPlain, reedPerk, ...reedSaid] = reeds.split(':');
 check(`${P('Reed Cutter').name}: with the dice against a third, ${REED_CUT} reeds without it and ${fx('Reed Cutter', 'count:reed')} with it`,
   Number(reedPlain) === REED_CUT && Number(reedPerk) === fx('Reed Cutter', 'count:reed')
@@ -587,7 +587,7 @@ check(`${P('Double Boil').name}: each kilo makes ${fx('Double Boil', 'litres:dye
   + `${DYE_STUFF} where it wanted ${dyeRecipe.inputs[0].count}; that is enough with it and not without, and it still makes ${BOIL_LITRES} litres, all of them used`,
   Number(plainLitres) === BOIL_LITRES && Number(doubleNeed) === DOUBLE_NEED && DOUBLE_NEED * 2 >= (dyeRecipe.inputs[0].count ?? 0) - 1
     && DOUBLE_NEED < (dyeRecipe.inputs[0].count ?? 0) && doubleYes === 'ALLOWED'
-    && doubleRest.slice(0, -2).join(':') !== 'ALLOWED' && doubleRest.slice(0, -2).join(':').startsWith('It takes ')
+    && doubleRest.slice(0, -2).join(':') !== 'ALLOWED' && doubleRest.slice(0, -2).join(':').startsWith('Need ')
     && doubleRest.slice(-2).join(':') === `${BOIL_LITRES}:0`, dyeMade);
 const thrifty = countForGrams(DYE_STUFF, dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG, fx('Thrifty Dyer', `need:${DYE}`)));
 const [needPlain, needPerk, dyeYes, ...dyeNo] = dyeNeed.split(':');
@@ -616,7 +616,7 @@ check('and a dressing by hands without it takes the quick hands off', mendOff ==
 const [medicYes, medicDone, medicMore, medicFar] = say('MEDIC').split('#');
 const [used, theirs, better, ...told] = medicDone.split(':');
 check('somebody else\'s wounds are dressed by anybody, out of your pack, and they are told who did it',
-  medicYes === 'ALLOWED' && used === '1' && theirs === '/false' && better === 'true' && told.join(':').includes('dresses the cut on your arm'),
+  medicYes === 'ALLOWED' && used === '1' && theirs === '/false' && better === 'true' && told.join(':').includes('dressed the cut on your arm'),
   `${medicYes} / ${medicDone}`);
 const [healPlain, healMedic] = medicMore.split('|').map(Number);
 check(`${P('Field Medic').name}: a dressing on somebody else puts back ${fx('Field Medic', 'heal:others')} times as much`,
@@ -635,14 +635,14 @@ check(`${P('Herb Tea').name}, ${P('Salve').name}, ${P('Tincture').name}: and mad
 const stamina = ITEM_DEFS.herb_tea.stamina ?? 0;
 const [teaFull, teaAfter, teaSaid] = say('TEA').split('|');
 check(`a cup of herb tea puts back ${percent(stamina)} of your stamina, and is refused when you are not tired`,
-  teaFull === 'You are not tired.' && near(Number(teaAfter), 0.5 + stamina) && teaSaid === `You drink the herb tea. It puts back ${percent(stamina)} of your stamina.`,
+  teaFull === 'Stamina already full.' && near(Number(teaAfter), 0.5 + stamina) && teaSaid === `Drank: herb tea. Stamina +${percent(stamina)}.`,
   say('TEA'));
 const salve = say('SALVE').split('#');
 check('a salve is refused on an undressed wound and on one the right herb covers, in the browser\'s words',
   salve[0] === salveRefusal([{ ...CUT, dressing: null } as unknown as Wound]) && salve[1] === salveRefusal([{ ...CUT, dressing: 'thyme', bleeding: false } as unknown as Wound]),
   `${salve[0]} / ${salve[1]}`);
 check('and rubbed in over cloth, the wound under it never goes bad',
-  salve[2] === 'ALLOWED' && Number(salve[3]) > 0 && salve[4] === 'true' && Number(salve[5]) === 0 && salve[6].startsWith('You rub the salve into the cut'),
+  salve[2] === 'ALLOWED' && Number(salve[3]) > 0 && salve[4] === 'true' && Number(salve[5]) === 0 && salve[6].startsWith('Salved: cut'),
   salve.slice(2, 7).join(' / '));
 check('and a wound scoured out has neither salve nor quick hands left on it', salve[7] === 'false/false/false', salve[7]);
 const [boons, mult, tinctureSaid] = say('TINCTURE').split('|');
@@ -652,7 +652,7 @@ check(`${P('Tincture').name}: taken, ${TINCTURE_NAMES} each go in ${percent(TINC
   TINCTURE_SKILLS.every((s) => boons.includes(`${s}/tincture/${TINCTURE_BONUS}/${secs}`)) && boons.includes(`${TINCTURE_SKILLS[0]}/dish/`), boons);
 check('and both count', Number(mult) >= 1 + TINCTURE_BONUS + 0.5 - 1e-6, mult);
 check('and it says so, in the browser\'s words',
-  tinctureSaid.startsWith(`You take the tincture. ${TINCTURE_NAMES.charAt(0).toUpperCase()}${TINCTURE_NAMES.slice(1)} each go in ${percent(TINCTURE_BONUS)} faster for the next `),
+  tinctureSaid.startsWith(`Tincture taken: ${TINCTURE_NAMES} ${percent(TINCTURE_BONUS)} faster for `),
   tinctureSaid);
 check('and a dish of one of its trades puts back the clock on the dish\'s knack, not on the tincture\'s', Number(say('DISH')) <= 10, say('DISH'));
 void want;
@@ -724,7 +724,7 @@ ACTION_BY_ID.get('drink_tea')!.perform?.({ kind: 'item', uid: tea.uid }, game);
 const [goldNums, goldSaid] = say('GOLD').split('|');
 const [goldDay, goldNext, goldOver] = goldNums.split(':').map(Number);
 check(`foraging finds a gold coin one go in ${COIN_FIND_ONE_IN}, no more than ${COIN_FINDS_A_DAY} a day, and the count starts again at the next dawn`,
-  goldDay === COIN_FINDS_A_DAY && goldNext === COIN_FINDS_A_DAY + 1 && goldOver === COIN_FINDS_A_DAY + 1 && goldSaid.startsWith('Something glints'), say('GOLD'));
+  goldDay === COIN_FINDS_A_DAY && goldNext === COIN_FINDS_A_DAY + 1 && goldOver === COIN_FINDS_A_DAY + 1 && goldSaid.startsWith('Found: gold coin'), say('GOLD'));
 check('its herb tea puts back as much', near(game.player.stats.stamina, 0.5 + stamina));
 game.player.boons = [];
 const drop = game.inventory.add('tincture', { ql: 40 });

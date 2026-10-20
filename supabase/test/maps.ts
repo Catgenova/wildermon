@@ -53,7 +53,7 @@ const item = ITEM_DEFS[CHART_ITEM];
 const itemIsle = psql(`select d.name || '|' || d.weight || '|' || d.decay || '|' || d.stackable || '|' || d.description from item_def d where d.id = '${CHART_ITEM}'`);
 check('the map is the same item on both sides', itemIsle === `${item?.name}|${item?.weight}|${item?.decay}|${!!item?.stackable}|${item?.description}`, itemIsle);
 check(`its description says how far it reaches off the rule: ${CHART_LEAST} each way and one more every ${CHART_QL_PER_TILE} QL, ${chartReach(QL_TOP)} at QL ${QL_TOP}`,
-  !!item?.description?.includes(`${CHART_LEAST} tiles each way, and one tile further for every ${CHART_QL_PER_TILE} QL, so ${chartReach(QL_TOP)} each way at QL ${QL_TOP}`)
+  !!item?.description?.includes(`${CHART_LEAST} tiles each way and one tile further for every ${CHART_QL_PER_TILE} QL, so ${chartReach(QL_TOP)} each way at QL ${QL_TOP}`)
     && !item?.description?.includes('{'), item?.description);
 const JOBS = [COPY_MAP, DRAW_MAP, STUDY_MAP];
 const jobsIsle = psql(`select string_agg(id || ':' || label || ':' || coalesce(skill, '-') || ':' || base_time || ':' || stamina, '|' order by id)
@@ -76,7 +76,7 @@ const wordsHere = [...SQ.flatMap((c) => [chartExtra(c), chartItemSays({ id: CHAR
   `{${[512, 300, 14].join(',')}}`, CHART_SAID.noSheet, CHART_SAID.notMap, CHART_SAID.blank, CHART_SAID.noCopySheet].join('#');
 check('every sentence it says, and what it writes on the map, is the same on both sides', wordsIsle === wordsHere, `${wordsIsle}\n     / ${wordsHere}`);
 check('and Examine says exactly the square it holds and how many tiles studying it adds',
-  chartItemSays({ id: CHART_ITEM, extra: '14 tiles round 512, 300' }) === ' It holds the 29 by 29 tiles round 512, 300, 14 each way from where it was drawn. Study it and all 841 of them go on your own map.'
+  chartItemSays({ id: CHART_ITEM, extra: '14 tiles round 512, 300' }) === ' Map: 29×29 tiles round 512, 300. Study it to add all 841 tiles to your map.'
     && JSON.stringify(chartOf({ id: CHART_ITEM, extra: '14 tiles round 512, 300' })) === JSON.stringify({ r: 14, x: 512, y: 300 }));
 
 /* ---- on the island --------------------------------------------------------------- */
@@ -262,13 +262,13 @@ const wantDrawn = { x: 10, y: 10, r: chartReach(drawnQl) };
 check(`Draw a map records the square round where you stand, its reach off its QL: ${row(map)}`,
   isle.get('DRAWN') === row(map) && map?.extra === chartExtra(wantDrawn) && Math.abs((map?.ql ?? 0) - drawnQl) < 1e-9,
   `island ${isle.get('DRAWN')} / browser ${row(map)}`);
-check(`and says so in the same words: ${drawnSaid(wantDrawn, drawnQl)}`, isle.get('DRAWNSAID') === said.find((s) => s.startsWith('You draw')) && said.includes(drawnSaid(wantDrawn, drawnQl)),
-  `${isle.get('DRAWNSAID')} / ${said.find((s) => s.startsWith('You draw'))}`);
+check(`and says so in the same words: ${drawnSaid(wantDrawn, drawnQl)}`, isle.get('DRAWNSAID') === said.find((s) => s.startsWith('Drawn: ')) && said.includes(drawnSaid(wantDrawn, drawnQl)),
+  `${isle.get('DRAWNSAID')} / ${said.find((s) => s.startsWith('Drawn: '))}`);
 check('a sheet is used up and papyrusmaking is trained, on both sides',
   finished && part('SHEETS', 0) === '1' && sheets() === 1 && part('SHEETS', 1) === 'true' && g.skills.get(CHART_SKILL) > skillBefore, `${isle.get('SHEETS')} / ${sheets()}`);
 act('examine_item').perform(at(map?.uid ?? -1), g);
 const tail = chartItemSays(map as Item);
-check(`Examine on it says the square it holds: ${tail.trim()}`, (isle.get('EXAMINE') ?? '').includes(tail) && lastHere().includes(tail) && tail.includes('21 by 21'),
+check(`Examine on it says the square it holds: ${tail.trim()}`, (isle.get('EXAMINE') ?? '').includes(tail) && lastHere().includes(tail) && tail.includes('21×21'),
   isle.get('EXAMINE'));
 
 /* 3. Drawn on a fine sheet, capped by the skill. */

@@ -197,10 +197,10 @@ function rows(): RowOut[] {
 /** Every trait, a plain one at its one grade and fighting blood at all four, each as a card prints it. */
 function traits(): TraitOut[] {
   const plain = TRAITS.filter((t) => !t.family).map((t): TraitOut => ({
-    name: t.name, note: t.note, aura: !!t.aura, fighting: false, grades: { [t.tier]: traitSays(t) },
+    name: t.name, note: '', aura: !!t.aura, fighting: false, grades: { [t.tier]: traitSays(t) },
   }));
   const fighting = FIGHTING.map((f): TraitOut => ({
-    name: f.name, note: f.note, aura: !!f.aura, fighting: true,
+    name: f.name, note: '', aura: !!f.aura, fighting: true,
     grades: Object.fromEntries(TIERS.map((tier) => [tier, traitSays(TRAIT_BY_ID.get(gradeId(f.id, tier))!)])),
   }));
   return [...plain, ...fighting];

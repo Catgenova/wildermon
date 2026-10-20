@@ -173,12 +173,12 @@ begin
   perform pg_temp.hold(w, u, '{}');
   v_t := v_t || '|' || tame_chance(w, u, ${row('v_c')}) || ':' || coax_bonus(${row('v_c')});
   ${beast('examine_creature')};
-  v_u := coalesce(${last(`A wild ${SPECIES.rabba.name.toLowerCase()}:%`)}, 'unsaid');
+  v_u := coalesce(${last(`Wild ${SPECIES.rabba.name.toLowerCase()}:%`)}, 'unsaid');
   ${hold('Patient Coax')};
   v_t := v_t || ':' || tame_chance(w, u, ${row('v_c')});
   ${beast('examine_creature')};
   insert into said values ('TAME', v_t);
-  insert into said values ('COAXSAID', v_u || '#' || coalesce(${last(`A wild ${SPECIES.rabba.name.toLowerCase()}:%`)}, 'unsaid'));
+  insert into said values ('COAXSAID', v_u || '#' || coalesce(${last(`Wild ${SPECIES.rabba.name.toLowerCase()}:%`)}, 'unsaid'));
   update creature set coaxed = 0, coaxed_at = null where world_id = w and id = v_c;
 
   /* ---- Any Offering: a bowl of stew is no rabba's food, and it is for a Herdsman who has it. ---- */
@@ -264,7 +264,7 @@ begin
   ${nodice};
   v_t := (select extract(epoch from due - now())::int || ':' || (breed_rest() - extract(epoch from now() - bred_at))::int || ':'
            || (unborn->>'sex') || ':' || (unborn ? 'twin') from creature where world_id = w and id = v_dam)
-    || ':' || coalesce(${last('Horn is put to Snow%')}, 'unsaid');
+    || ':' || coalesce(${last('Paired: Horn with Snow%')}, 'unsaid');
   update creature set due = null, unborn = null, bred_at = null where world_id = w and id in (v_dam, v_sire);
   -- A breeder with all six: a quarter of an hour's carrying, twenty-five minutes' rest, twins, and the sex asked for.
   ${hold('Short Rest', 'Quick Gestation', 'Twins', 'Choose the Sex')};
@@ -274,7 +274,7 @@ begin
   v_t := v_t || '|' || (select extract(epoch from due - now())::int || ':' || (breed_rest() - extract(epoch from now() - bred_at))::int || ':'
            || (unborn->>'sex') || ':' || (unborn ? 'twin') || ':' || coalesce(unborn->'twin'->>'sex', 'none') from creature where world_id = w and id = v_dam)
     || ':' || (select (breed_rest() - extract(epoch from now() - bred_at))::int from creature where world_id = w and id = v_sire)
-    || ':' || coalesce(${last('Horn is put to Snow%')}, 'unsaid');
+    || ':' || coalesce(${last('Paired: Horn with Snow%')}, 'unsaid');
   -- The hour comes with the dam at work on the settlement and nothing following: two young, the first
   -- following and the second where a second one goes, into the empty crate in the pack.
   perform give(w, u, 'creature_crate', 1, 40);
@@ -363,11 +363,11 @@ check(`${P('Patient Coax').name}: three refused offerings are worth ${Math.round
   near(coaxBonusPlain, 3 * COAX_STEP) && near(coaxPerk - coaxPlain, 3 * (step - COAX_STEP)), tameCoax);
 const [coaxSaid0, coaxSaid1] = say('COAXSAID').split('#');
 check('and examining it says so, in the step of whoever looks',
-  coaxSaid0.includes(`${Math.round(3 * COAX_STEP * 100)}% readier`) && coaxSaid1.includes(`${Math.round(3 * step * 100)}% readier`), say('COAXSAID'));
+  coaxSaid0.includes(`next +${Math.round(3 * COAX_STEP * 100)}% chance`) && coaxSaid1.includes(`next +${Math.round(3 * step * 100)}% chance`), say('COAXSAID'));
 const [baitAsk, baitGone] = say('ANYBAIT').split('|');
 const [baitNo, baitNone, baitYes, baitAny] = baitAsk.split('#');
 check(`${P('Any Offering').name}: a bowl of stew is refused for a rabba without it and offered with it`,
-  baitNo.startsWith(`${SPECIES.rabba.name}s take`) && baitNone === 'none' && baitYes === 'ALLOWED' && baitAny === 'stew', baitAsk);
+  baitNo.startsWith('Need an offering: ') && baitNone === 'none' && baitYes === 'ALLOWED' && baitAny === 'stew', baitAsk);
 check('and the rabba takes it and is kept', baitGone === '0:active:true', baitGone);
 
 /* ---- A beast you keep --------------------------------------------------------------------- */
@@ -422,7 +422,7 @@ check(`${P('Quick Gestation').name}: carried for ${GESTATION * gest} seconds`, N
 check(`${P('Short Rest').name}: both rest ${BREED_REST * rest} seconds`, Number(pk[1]) === BREED_REST * rest && Number(pk[5]) === BREED_REST * rest, pairPerk);
 check(`${P('Choose the Sex').name}: the sex asked for, twin and all`, pk[2] === 'female' && pk[4] === 'female', pairPerk);
 check(`${P('Twins').name}: with the dice under ${fx('Twins', 'breed:twins')}, a second young at the covering`, pk[3] === 'true', pairPerk);
-check('and the words say the time she carries', pk.slice(6).join(':').includes('drop in about'), pk.slice(6).join(':'));
+check('and the words say the time she carries', pk.slice(6).join(':').includes('. Due in '), pk.slice(6).join(':'));
 const [bornN, bornWho, bornSired] = births.split(':');
 check('the hour comes and two are dropped, each with its pedigree, the first following and the second into the crate in the pack',
   bornN === '2' && bornSired === '2' && bornWho === 'female/active,female/stored', births);
@@ -446,9 +446,9 @@ check(`${P('Light Crate').name}: an empty creature crate weighs ${crateKg * fx('
   near(crateNo - crateYes, crateKg * (1 - fx('Light Crate', 'weight:creature_crate'))), `${crateNo} → ${crateYes}`);
 const [studNo, studYes] = say('STUD').split('#');
 const care = 0.5;
-const studWant = ` Put to Horn, it takes ${Math.round(breedChance(SKILL, care) * 100)}% of the time; each of the young's ${TRAIT_SLOTS} traits is `
-  + `drawn from their blood ${Math.round(inheritChance(SKILL, care) * 100)}% of the time and comes out a tier better `
-  + `${Math.round(upgradeChance(SKILL, care) * 100)}% of the time.`;
+const studWant = ` Paired with Horn: success ${Math.round(breedChance(SKILL, care) * 100)}%; each of ${TRAIT_SLOTS} traits `
+  + `inherited ${Math.round(inheritChance(SKILL, care) * 100)}%, tier-up `
+  + `${Math.round(upgradeChance(SKILL, care) * 100)}%.`;
 check(`${P('Stud Book').name}: examining one of yours says the odds, in the browser's words, and nothing without it`,
   studYes.endsWith(studWant) && !studNo.includes('Put to'), `${studYes.slice(-160)} // ${studWant}`);
 check('and the Herdsman\'s tree is gone', say('NODES') === '0:0', say('NODES'));

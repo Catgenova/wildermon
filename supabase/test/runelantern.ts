@@ -95,11 +95,11 @@ check(`it is built with masonry and a trowel from ${recipe?.inputs.map((i) => `$
 const isleItem = psql(`select name || '|' || weight || '|' || description from item_def where id = '${KIND}'`);
 check('its item is called, weighs and is described the same on both sides', isleItem === `${item.name}|${item.weight}|${item.description}`, `island ${isleItem}`);
 check(`and the description says what it lights off the lantern's rule: ${numberWord(lanternReach(1))} tiles at the roughest, ${numberWord(lanternReach(100))} at the best, no lantern, no candle, never out`,
-  !!item.description?.includes(`${numberWord(lanternReach(1))} tiles at the roughest and ${numberWord(lanternReach(100))} at the best`)
-    && !!item.description?.includes('no lantern and no candle, and never goes out') && !item.description.includes('{'), item.description);
+  !!item.description?.includes(`${lanternReach(1)} tiles at lowest QL, ${lanternReach(100)} at best`)
+    && !!item.description?.includes('No lantern, no candle; never goes out') && !item.description.includes('{'), item.description);
 const isleDef = psql(`select mossy || '|' || w || '|' || h || '|' || cellar_outdoor(id) from furniture_def where id = '${KIND}'`);
 check('its piece gathers moss and stands on a subtile on the island too', isleDef === 'true|1|1|true', isleDef);
-same('it is kept out of a cellar in the same words', cellarPieceReason(def), psql(`select cellar_piece_reason('${KIND}')`), 'A rune lantern post does not go down into a cellar.');
+same('it is kept out of a cellar in the same words', cellarPieceReason(def), psql(`select cellar_piece_reason('${KIND}')`), 'Rune lantern post: not in a cellar.');
 const QLS = [1, 12, 13, 37, 38, 62, 63, 87, 88, 100];
 const isleReach = psql(`select string_agg(lantern_reach(q)::text, ',' order by q) from unnest(array[${QLS.join(',')}]::double precision[]) q`);
 const mineReach = QLS.map((q) => runeLanternReach({ ql: q })).join(',');
@@ -194,7 +194,7 @@ const short = act(MAKE).check?.({ kind: 'item', uid: bricks.uid }, g) ?? null;
  * is held to the same words.
  */
 const shortHead = (short ?? 'ALLOWED').replace(/ \([^)]*\)\.$/, '.');
-same('short of a light mote it is refused in the same words, the browser\'s whole bill after it aside', shortHead, isle.get('SHORT'), `${item.name} takes ${recipe?.inputs.find((i) => i.item === 'light_mote')?.count} light motes.`);
+same('short of a light mote it is refused in the same words, the browser\'s whole bill after it aside', shortHead, isle.get('SHORT'), `Need ${recipe?.inputs.find((i) => i.item === 'light_mote')?.count} light motes.`);
 g.gather('light_mote', { count: 1, ql: 40 });
 same('with three it is allowed on both sides', act(MAKE).check?.({ kind: 'item', uid: bricks.uid }, g) ?? null, isle.get('ASK'), null);
 act(MAKE).perform({ kind: 'item', uid: bricks.uid }, g);

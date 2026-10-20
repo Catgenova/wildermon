@@ -235,7 +235,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
-      if (!item || !(item.id in TRAPS)) return 'You have no trap to set.';
+      if (!item || !(item.id in TRAPS)) return 'Need a trap.';
       return g.trapPlaceReason(t.x, t.y, t.sx, t.sy, item.id as TrapKind);
     },
     perform: (t, g) => {
@@ -250,8 +250,8 @@ export const TRAP_ACTIONS: ActionDef[] = [
       const mins = Math.round(trapLife(trap.kind, trap.ql) * trapKeep(g, trap.kind) / 60);
       g.logMsg(
         trapDef(trap).water
-          ? `You sink the ${trapName(trap).toLowerCase()} and make the line fast. It will fish about ${mins} minutes and holds ${creelHold(trap)}. Bait it.`
-          : `You set the ${trapName(trap).toLowerCase()} and cover the sign of it. It will stand about ${mins} minutes and will hold anything up to taming ${trapHolds(trap)}. Bait it.`,
+          ? `Set: ${trapName(trap).toLowerCase()}, about ${mins} minutes, holds ${creelHold(trap)}. Needs bait.`
+          : `Set: ${trapName(trap).toLowerCase()}, about ${mins} minutes, holds up to taming ${trapHolds(trap)}. Needs bait.`,
         'event',
       );
       g.events.emit('world', trap.x, trap.y);
@@ -274,10 +274,10 @@ export const TRAP_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const trap = trapOf(g, t);
-      if (!trap) return 'It is gone.';
-      if (trap.caught !== null) return 'There is something in it already.';
+      if (!trap) return 'Gone.';
+      if (trap.caught !== null) return 'Already holds a catch.';
       if (!nearTrap(g, trap)) return 'Stand at the trap.';
-      if (!baitInPack(g, trap).length) return trapDef(trap).water ? 'You have nothing a fish would come to. Dig worms, or use corn, meat or a small fish.' : 'You have nothing anything would come to. Carry a berry, a vegetable, a nut, a spice.';
+      if (!baitInPack(g, trap).length) return trapDef(trap).water ? 'Need bait: worms, corn, meat or a small fish.' : 'Need bait: a berry, vegetable, nut or spice.';
       return null;
     },
     perform: (t, g) => {
@@ -292,11 +292,11 @@ export const TRAP_ACTIONS: ActionDef[] = [
       trap.checkAt = g.time + CHECK_EVERY;
       if (trapDef(trap).water) {
         const b = BAIT_BY_ID.get(one.id);
-        g.logMsg(`You put the ${itemName(one).toLowerCase()} in the creel and sink it again. ${b ? b.note : ''}`, 'event');
+        g.logMsg(`Baited: creel, ${itemName(one).toLowerCase()}.${b ? ` ${b.note}` : ''}`, 'event');
       } else {
         const comers = Object.values(SPECIES).filter((s) => isBaitFor(s, one.id) && s.tameLevel <= trapHolds(trap));
         g.logMsg(
-          `You lay the ${itemName(one).toLowerCase()} in the ${trapName(trap).toLowerCase()}. ${comers.length ? `${comers.length === 1 ? 'One sort' : `${comers.length} sorts`} would come to that.` : 'Nothing this trap will hold eats that.'}`,
+          `Baited: ${trapName(trap).toLowerCase()}, ${itemName(one).toLowerCase()}. ${comers.length ? `Kinds it draws: ${comers.length}.` : 'No kind this trap holds eats it.'}`,
           'event',
         );
       }
@@ -318,14 +318,14 @@ export const TRAP_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const trap = trapOf(g, t);
-      if (!trap) return 'It is gone.';
-      if (trap.caught === null) return 'There is nothing in it.';
+      if (!trap) return 'Gone.';
+      if (trap.caught === null) return 'Empty.';
       const c = g.creatures.get(trap.caught);
-      if (!c) return 'Whatever was in it is gone.';
+      if (!c) return 'Catch gone.';
       if (!nearTrap(g, trap)) return 'Stand at the trap.';
       const s = SPECIES[c.species];
       const needs = tameNeeds(c).level;
-      if (s && g.skills.get('taming') < needs) return `A ${s.name.toLowerCase()} takes taming ${needs} to handle, trapped or not. It is held; come back when you can.`;
+      if (s && g.skills.get('taming') < needs) return `Need taming ${needs} to handle a ${s.name.toLowerCase()}. Still held.`;
       // The same rule as taming: the first follows you, and every one after that goes into a crate.
       return tameRoomRefusal(g);
     },
@@ -344,7 +344,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
       const clean = g.skillCheck('taming', s ? tameNeeds(c).level + 10 : 10, trap.ql, g.mindEase());
       g.gainSkill('taming', tryGain(clean, FREE_GAIN));
       if (!clean) {
-        g.logMsg(`The ${s?.name.toLowerCase() ?? 'thing'} thrashes and you cannot get a hand on it. It is still held.`, 'error');
+        g.logMsg(`Handling failed: ${s?.name.toLowerCase() ?? 'catch'} still held.`, 'error');
         return;
       }
       c.trapped = null;
@@ -355,10 +355,10 @@ export const TRAP_ACTIONS: ActionDef[] = [
       const crate = g.creatures.active() ? emptyCrate(g) : undefined;
       if (crate) {
         shutIn(g, c, crate);
-        g.logMsg(`You get the noose off the ${s?.name.toLowerCase() ?? 'thing'} and put it straight into the creature crate in your pack.`, 'event');
+        g.logMsg(`Taken: ${s?.name.toLowerCase() ?? 'catch'}, into the creature crate in your pack.`, 'event');
       } else {
         c.mode = 'active';
-        g.logMsg(`You get the noose off the ${s?.name.toLowerCase() ?? 'thing'} and it stays. It comes with you.`, 'event');
+        g.logMsg(`Taken: ${s?.name.toLowerCase() ?? 'catch'}. Follows you.`, 'event');
       }
       g.note('trapped');
       // Won over as surely as by hand, and by the same taming: the field guide
@@ -381,14 +381,15 @@ export const TRAP_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const trap = trapOf(g, t);
-      if (!trap || trap.caught === null) return 'There is nothing in it.';
+      if (!trap || trap.caught === null) return 'Empty.';
       if (!nearTrap(g, trap)) return 'Stand at the trap.';
       return null;
     },
     perform: (t, g) => {
       const trap = trapOf(g, t);
       if (!trap || trap.caught === null) return;
-      g.springTrap(trap, 'You lift the board and it is gone into the grass before you have straightened up.');
+      const freed = SPECIES[g.creatures.get(trap.caught)?.species ?? '']?.name.toLowerCase();
+      g.springTrap(trap, freed ? `Released: ${freed}.` : 'Released.');
     },
   },
   {
@@ -408,8 +409,8 @@ export const TRAP_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const trap = trapOf(g, t);
-      if (!trap) return 'It is gone.';
-      if (!(trap.fish ?? []).length) return 'There is nothing in it yet.';
+      if (!trap) return 'Gone.';
+      if (!(trap.fish ?? []).length) return 'Empty.';
       if (!nearTrap(g, trap)) return 'Stand at the creel.';
       return null;
     },
@@ -424,7 +425,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
       trap.fish = [];
       g.note('creeled');
       g.gainSkill('fishing', 0.5);
-      g.logMsg(`You lift the creel and tip it out: ${parts.join(', ')}.`, 'event');
+      g.logMsg(`Creel emptied: ${parts.join(', ')}.`, 'event');
       g.events.emit('world', trap.x, trap.y);
     },
   },
@@ -437,8 +438,8 @@ export const TRAP_ACTIONS: ActionDef[] = [
     applies: (t, g) => trapOf(g, t) !== undefined,
     check: (t, g) => {
       const trap = trapOf(g, t);
-      if (!trap) return 'It is gone.';
-      if (trap.caught !== null) return 'Deal with what is in it first.';
+      if (!trap) return 'Gone.';
+      if (trap.caught !== null) return 'Holds a catch: take it or let it go first.';
       if (!nearTrap(g, trap)) return 'Stand at the trap.';
       return null;
     },
@@ -451,7 +452,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
       back.dmg = trap.dmg;
       if (trap.enchant) back.enchant = trap.enchant;
       g.removeTrap(trap.id);
-      g.logMsg(`You take the ${trapName(trap).toLowerCase()} up${trap.bait ? ' and pocket the bait' : ''}.`, 'event');
+      g.logMsg(`Taken up: ${trapName(trap).toLowerCase()}${trap.bait ? ', bait returned' : ''}.`, 'event');
       g.events.emit('world', trap.x, trap.y);
     },
   },

@@ -29,7 +29,6 @@ import { describeNeeds, MATERIAL_BY_ID, MAX_LEVELS, TALL_STOREYS, TOP_LEVELS } f
 import { BRIDGES } from '../../src/game/bridges';
 import { ITEM_DEFS } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
-import { numberWord } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -197,7 +196,7 @@ begin
   perform give(w, u, 'stone_brick', 24, 30); perform give(w, u, 'mortar', 8, 30);
   perform perform_craft(w, u, 'make_kiln', '{}'::jsonb);
   insert into said values ('KILN', v_t || '|' || ${count('stone_brick')} || ',' || ${count('mortar')}
-    || '|' || coalesce(${last('Nothing that went into it%')}, 'unsaid'));
+    || '|' || coalesce(${last('Nothing Wasted:%')}, 'unsaid'));
   ${clear('stone_brick', 'mortar', 'kiln')};
 
   /* ---- From here every check passes: what is measured is what a go makes. ---- */
@@ -207,12 +206,12 @@ begin
   perform pg_temp.hold(w, u, '{}');
   v_shard := give(w, u, 'rock_shards', 1, 30);
   perform perform_craft(w, u, 'make_stone_brick', jsonb_build_object('kind', 'item', 'uid', v_shard));
-  v_t := ${count('stone_brick')} || ':' || coalesce(${last('You chisel % stone bricks%')}, 'unsaid');
+  v_t := ${count('stone_brick')} || ':' || coalesce(${last('Made: % × stone brick%')}, 'unsaid');
   ${clear('stone_brick')};
   ${hold('Three from a Shard')};
   v_shard := give(w, u, 'rock_shards', 1, 30);
   perform perform_craft(w, u, 'make_stone_brick', jsonb_build_object('kind', 'item', 'uid', v_shard));
-  insert into said values ('SHARD', v_t || '|' || ${count('stone_brick')} || ':' || coalesce(${last('You chisel % stone bricks%')}, 'unsaid'));
+  insert into said values ('SHARD', v_t || '|' || ${count('stone_brick')} || ':' || coalesce(${last('Made: % × stone brick%')}, 'unsaid'));
   ${clear('stone_brick', 'rock_shards')};
 
   /* ---- Good Mix: a go of Mix concrete. ---- */
@@ -272,7 +271,7 @@ begin
   ${hold('Two at a Time')};
   perform perform_building(w, u, 'build_wall', ${side('n')});
   insert into said values ('LAY', v_t || '|' || (24 - ${needed('n', 'stone_brick')} - v_t::int)
-    || '|' || coalesce(${last('You fit % into the wall.%')}, 'unsaid'));
+    || '|' || coalesce(${last('Added: %')}, 'unsaid'));
   ${clear('stone_brick')};
 
   /* ---- Hod Carrier: nothing in the pack, five bricks in a chest of the Mason's four tiles off, past where anybody's building reaches. ---- */
@@ -298,7 +297,7 @@ begin
   ${wall('s', 'stone_brick', true)};
   ${hold('Salvage')};
   perform perform_building(w, u, 'remove_wall', ${side('s')});
-  insert into said values ('SALVAGE', v_t || '|' || ${count('stone_brick')} || '|' || coalesce(${last('You take down the wall%')}, 'unsaid'));
+  insert into said values ('SALVAGE', v_t || '|' || ${count('stone_brick')} || '|' || coalesce(${last('Removed: wall%')}, 'unsaid'));
   ${clear('stone_brick')};
 
   /* ---- Repoint: a finished stone-brick wall laid again in marble. ---- */
@@ -315,7 +314,7 @@ begin
   perform perform_building(w, u, 'repoint_wall', ${side('e')} || jsonb_build_object('material', 'marble'));
   insert into said select 'RP_DONE', (wall_at(w, 9, 9, 'e')).material || '|' || bill_done((wall_at(w, 9, 9, 'e')).needed)
     || '|' || ((wall_at(w, 9, 9, 'e')).total = wall_bill('marble', 'solid')) || '|' || ${count('marble_brick')}
-    || ',' || ${count('mortar')} || ',' || ${count('stone_brick')} || '|' || coalesce(${last('You take the stone brick out%')}, 'unsaid');
+    || ',' || ${count('mortar')} || ',' || ${count('stone_brick')} || '|' || coalesce(${last('Repointed: %')}, 'unsaid');
   ${clear('stone_brick', 'marble_brick', 'mortar')};
 
   /* ---- Tall Walls: how tall the stone building may go, and what the doors say at ten. ---- */
@@ -378,7 +377,7 @@ begin
   ${hold('Double Lift')};
   n := ${height};
   perform perform_ground(w, u, 'raise_rock', ${CORNER});
-  v_u := (${height} - n) || ',' || coalesce(${last('You lay concrete on the%')}, 'unsaid');
+  v_u := (${height} - n) || ',' || coalesce(${last('Concrete laid: %')}, 'unsaid');
   perform land_set_height(w, 4, 4, 40);
   update player set level_h = 41 where world_id = w and uid = u;
   n := ${height};
@@ -421,7 +420,7 @@ begin
   n := ${height};
   perform perform_ground(w, u, 'rubble_fill', ${CORNER});
   insert into said values ('RUBBLED', (${height} - n) || '|' || ${count('rock_shards')} || '|'
-    || coalesce(${last('You pack rubble%')}, 'unsaid'));
+    || coalesce(${last('Rubble packed: %')}, 'unsaid'));
   perform land_set_height(w, 4, 4, 40);
 end $$;
 
@@ -458,7 +457,7 @@ check(`${P('Careful Builder').name}: a kiln that fails keeps its 24 bricks and 8
 const three = P('Three from a Shard').fx['count:stone_brick'];
 const [shardA, shardB] = say('SHARD').split('|');
 check(`${P('Three from a Shard').name}: a shard chisels into ${three} stone bricks with it, and two without, and the go says so`,
-  shardA.startsWith('2:You chisel two stone bricks') && shardB.startsWith(`${three}:You chisel ${numberWord(three)} stone bricks`),
+  shardA.startsWith('2:Made: 2 × stone brick,') && shardB.startsWith(`${three}:Made: ${three} × stone brick,`),
   say('SHARD'));
 check(`${P('Good Mix').name}: Mix concrete makes ${P('Good Mix').fx['count:concrete']} with it, one without`,
   say('MIX') === `1|${P('Good Mix').fx['count:concrete']}`, say('MIX'));
@@ -479,37 +478,37 @@ check(`${P('Quick Mason').name}: a go of Build wall on stone is started with ${P
 check('and one on timber with all of it', near(woodB, woodA), `${woodA} s, then ${woodB} s`);
 const [layA, layB, laid] = say('LAY').split('|');
 check(`${P('Two at a Time').name}: a go lays ${P('Two at a Time').fx['lay:build_stone']} stone bricks with it, one without, and says so`,
-  layA === '1' && Number(layB) === P('Two at a Time').fx['lay:build_stone'] && laid.startsWith('You fit two stone bricks into the wall.'),
+  layA === '1' && Number(layB) === P('Two at a Time').fx['lay:build_stone'] && laid.startsWith('Added: 2 stone bricks.'),
   say('LAY'));
 const [hodA, hodB, hodLeft, hodLaid] = say('HOD').split('|');
 check(`${P('Hod Carrier').name}: with nothing in the pack, a wall is refused without it and built out of a chest four tiles off with it`,
-  hodA.startsWith('You need ') && hodB === 'ALLOWED' && hodLeft === '4' && hodLaid === '1', say('HOD'));
+  hodA.startsWith('Need ') && hodB === 'ALLOWED' && hodLeft === '4' && hodLaid === '1', say('HOD'));
 const stoneWall = MATERIAL_BY_ID.get('stone_brick')!;
 const back = Math.floor(stoneWall.bill[0][1] * P('Salvage').fx['salvage:build_stone']);
 const [salA, salB, salSaid] = say('SALVAGE').split('|');
 check(`${P('Salvage').name}: a stone-brick wall taken down gives back ${back} of its ${stoneWall.bill[0][1]} bricks with it, none without`,
-  salA === '0' && Number(salB) === back && salSaid === `You take down the wall on the south side and save ${back} stone bricks.`,
+  salA === '0' && Number(salB) === back && salSaid === `Removed: wall, south side. Returned: ${back} stone bricks.`,
   say('SALVAGE'));
 check(`${P('Repoint').name}: refused without the perk, in the browser's words`,
-  say('RP_NO') === 'That wants a Mason who has learned to repoint.', say('RP_NO'));
+  say('RP_NO') === 'Needs perk: Repoint (Mason).', say('RP_NO'));
 check('and, with it, refused short of the new stone, saying what it takes',
-  say('RP_SHORT') === `You need ${describeNeeds(layingBill('marble', 'solid'), materialName)}.`, say('RP_SHORT'));
+  say('RP_SHORT') === `Need ${describeNeeds(layingBill('marble', 'solid'), materialName)}.`, say('RP_SHORT'));
 check('and in the stone it is already, and on timber',
-  say('RP_SAME') === 'It is stone brick already.' && say('RP_LOG') === 'Only a wall of stone is repointed.',
+  say('RP_SAME') === 'Already stone brick.' && say('RP_LOG') === 'Stone walls only.',
   `${say('RP_SAME')} / ${say('RP_LOG')}`);
 check('and allowed with the marble to hand', say('RP_YES') === 'ALLOWED', say('RP_YES'));
 const repBack = Math.floor(stoneWall.bill[0][1] * REPOINT_BACK);
 const [rpMat, rpDone, rpBill, rpPack, rpSaid] = say('RP_DONE').split('|');
 check(`and the wall is marble, finished, with marble's bill; the marble and mortar are spent and ${repBack} stone bricks come back`,
   rpMat === 'marble' && rpDone === 'true' && rpBill === 'true' && rpPack === `0,0,${repBack}`
-    && rpSaid === `You take the stone brick out of the wall on the east side and lay it again in marble, and save ${repBack} stone bricks.`,
+    && rpSaid === `Repointed: east wall, stone brick to marble. Returned: ${repBack} stone bricks.`,
   say('RP_DONE'));
 const tall = P('Tall Walls').fx['storeys:build_stone'];
 const [tallA, tallB, tallLog, tallLevels] = say('TALL').split('|');
 check(`${P('Tall Walls').name}: a stone-brick building stands ${MAX_LEVELS} storeys without it, and a ${MAX_LEVELS + 1}th is refused`,
-  tallA === `${MAX_LEVELS},Buildings cannot be taller than ${MAX_LEVELS} storeys.`, tallA);
+  tallA === `${MAX_LEVELS},Max ${MAX_LEVELS} storeys.`, tallA);
 check(`and ${MAX_LEVELS + tall} with it, where the ${MAX_LEVELS + 1}th is not refused for its height`,
-  tallB.startsWith(`${MAX_LEVELS + tall},`) && !tallB.includes('taller than') && !tallB.includes('will not stand'), tallB);
+  tallB.startsWith(`${MAX_LEVELS + tall},`) && !tallB.includes('Max ') && !tallB.includes(': max'), tallB);
 check('and timber in it still stops it where the timber does, whose storeys it does not raise',
   tallLog === String(MATERIAL_BY_ID.get('log')!.storeys), tallLog);
 check(`and the island keeps a building of ${TOP_LEVELS} storeys`, tallLevels === String(TOP_LEVELS), tallLevels);
@@ -521,8 +520,8 @@ const bm = P('Bridge Mason');
 check(`${bm.name}: a go on a stone arch takes ${bm.fx['time:bridge_stone']} of the time with it, and a wooden bridge all of it`,
   archA[0] === '1' && archA[1] === '1' && near(Number(archB[0]), bm.fx['time:bridge_stone']) && archB[1] === '1', say('ARCH'));
 check(`and a stone arch spans ${bm.fx['span:bridge_stone']} tiles with it, ${BRIDGES.stone.span} without`,
-  archA[2] === `A stone arch spans ${BRIDGES.stone.span} tiles; that is 9.` && !archB[2].includes('spans')
-    && archB[3] === `A stone arch spans ${bm.fx['span:bridge_stone']} tiles; that is 11.`, say('ARCH'));
+  archA[2] === `${BRIDGES.stone.name}: max span ${BRIDGES.stone.span} tiles; this is 9.` && !archB[2].includes('max span')
+    && archB[3] === `${BRIDGES.stone.name}: max span ${bm.fx['span:bridge_stone']} tiles; this is 11.`, say('ARCH'));
 
 /* ---- the rock ------------------------------------------------------------------------ */
 
@@ -531,15 +530,15 @@ check(`${P('Concrete Hand').name}: with every check failing, the concrete is los
 const lift = P('Double Lift').fx['lift:raise_rock'];
 const [liftA, liftB, liftC] = say('LIFT').split('|');
 check(`${P('Double Lift').name}: a concrete raises the corner ${lift} steps with it, one without, and says so`,
-  liftA === '1' && liftB === `${lift},You lay concrete on the south-east corner and the rock stands ${numberWord(lift)} steps higher.`,
+  liftA === '1' && liftB === `${lift},Concrete laid: south-east corner raised ${lift} steps.`,
   say('LIFT'));
 check('and one where the level stands a step up', liftC === '1', liftC);
 const deep = P('Wet Set').fx['depth:raise_rock'];
 const [wetA, wetB, wetC] = say('WET').split('|');
 check(`${P('Wet Set').name}: rock under five of water is refused without it and not for the water with it`,
-  wetA === 'Concrete will not set under water.' && !wetB.includes('water'), say('WET'));
+  wetA === 'Concrete: not under water.' && !wetB.includes('water'), say('WET'));
 check(`and under fifteen, past its ${deep}, refused with it in its own words`,
-  wetC === `Concrete will not set under more than ${deep} of water.`, wetC);
+  wetC === `Concrete: not under more than ${deep} of water.`, wetC);
 const [steepA, steepB] = say('STEEP').split('|');
 const allows = (s: string): number => Number(s.match(/allows (\d+)/)?.[1] ?? NaN);
 check(`${P('Steep Stone').name}: at masonry 20 the steepest slope is ${20 * P('Steep Stone').fx['slope:masonry']} with it, 60 without`,
@@ -547,10 +546,10 @@ check(`${P('Steep Stone').name}: at masonry 20 the steepest slope is ${20 * P('S
 const shards = P('Rubble Fill').fx.rubble;
 const [rubA, rubB, rubC] = say('RUBBLE').split('|');
 check(`${P('Rubble Fill').name}: refused without the perk, short of ${shards} shards with it, and allowed with them`,
-  rubA === 'That wants a Mason who has learned to fill with rubble.' && rubB === `You need ${numberWord(shards)} rock shards.`
+  rubA === 'Needs perk: Rubble Fill (Mason).' && rubB === `Need ${shards} rock shards.`
     && rubC === 'ALLOWED', say('RUBBLE'));
 check('and a go spends them and raises the corner a step',
-  say('RUBBLED') === '1|0|You pack rubble into the south-east corner and the rock stands a step higher.', say('RUBBLED'));
+  say('RUBBLED') === '1|0|Rubble packed: south-east corner raised.', say('RUBBLED'));
 
 /* ---- the browser's half ------------------------------------------------------------ */
 
@@ -565,7 +564,7 @@ game.setPerks({ rubble: shards });
 check('and is with it, and the shards', rubble.applies(at, game) === true);
 game.world.setDirt(px, py, 0);
 game.world.setHeight(px, py, -5);
-check('the browser refuses concrete under water without Wet Set', rockRaiseRefusal(game, px, py, 'Concrete') === 'Concrete will not set under water.',
+check('the browser refuses concrete under water without Wet Set', rockRaiseRefusal(game, px, py, 'Concrete') === 'Concrete: not under water.',
   String(rockRaiseRefusal(game, px, py, 'Concrete')));
 game.setPerks({ 'depth:raise_rock': deep });
 check('and not for the water with it', !String(rockRaiseRefusal(game, px, py, 'Concrete')).includes('water'),

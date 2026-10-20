@@ -33,7 +33,7 @@ export function lampEntries(g: Game, f: PlacedFurniture): MenuItem[] {
           const why = def.check?.(t, g) ?? null;
           return {
             label: `${itemName(it)} (QL ${it.ql.toFixed(0)})`,
-            note: `throws ${lanternReach(it.ql)} tiles · a candle in it lasts ${timeWords(candleBurn(it.ql))}`,
+            note: `light ${lanternReach(it.ql)} tiles · candle lasts ${timeWords(candleBurn(it.ql))}`,
             hint: why ?? undefined,
             disabled: !!why,
             onSelect: () => g.requestAction(def, t),

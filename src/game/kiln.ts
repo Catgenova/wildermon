@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { enchantTail, furnaceBurn, type Enchant } from './enchant';
-import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
+import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, fuelledSaid, hasAshes, rakeAshes } from './campfire';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { itemDef, itemName, rarityOf, roomFor, type Item } from './items';
@@ -116,9 +116,9 @@ export const kilnBurnsFor = (k: PlacedKiln): string => {
 };
 
 export function kilnState(k: PlacedKiln): string {
-  const heat = k.lit ? `firing, ${kilnBurnsFor(k)} of fuel` : k.fuel > 0 ? `laid and cold, ${kilnBurnsFor(k)} of fuel` : 'cold and empty';
-  const work = k.jobs.length ? ` · ${k.jobs.length} inside` : '';
-  const out = k.output.length ? ` · ${k.output.length} waiting` : '';
+  const heat = k.lit ? `lit, fuel ${kilnBurnsFor(k)}` : k.fuel > 0 ? `unlit, fuel ${kilnBurnsFor(k)}` : 'unlit, no fuel';
+  const work = k.jobs.length ? ` · ${k.jobs.length} firing` : '';
+  const out = k.output.length ? ` · ${k.output.length} ready` : '';
   return `QL ${k.ql.toFixed(0)} · ${heat}${work}${out}${enchantTail(k)}`;
 }
 
@@ -141,7 +141,7 @@ export const KILN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('kiln');
-      if (!item || item.id !== 'kiln') return 'You are not carrying a kiln. Build one at the crafting window.';
+      if (!item || item.id !== 'kiln') return 'Need a kiln (crafting window).';
       return g.kilnPlaceReason(t.x, t.y, t.sx, t.sy);
     },
     perform: (t, g) => {
@@ -154,7 +154,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
       if (item.enchant) k.enchant = item.enchant;
       if (item.dmg) k.dmg = item.dmg;
-      g.logMsg(`You set the ${kilnName(k).toLowerCase()} down on level ground. (QL ${k.ql.toFixed(1)}, holds ${kilnCapacity(k)}) Fill it with green ware, feed it and light it.`, 'event');
+      g.logMsg(`Set down: ${kilnName(k).toLowerCase()}, QL ${k.ql.toFixed(1)}, holds ${kilnCapacity(k)}.`, 'event');
       g.events.emit('world', k.x, k.y);
     },
   },
@@ -168,7 +168,7 @@ export const KILN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const k = kilnOf(g, t);
       if (!k) return 'It is gone.';
-      if (k.lit) return 'Not while it is alight.';
+      if (k.lit) return 'Put it out first.';
       if (k.jobs.length || k.output.length) return 'Empty it first.';
       if (Math.floor(k.ash ?? 0) >= 1) return 'Rake the ashes out first.';
       return null;
@@ -181,7 +181,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       if (k.rare) back.rare = k.rare;
       if (k.enchant) back.enchant = k.enchant;
       if (k.dmg) back.dmg = k.dmg;
-      g.logMsg('You lift the kiln off its base and carry it away whole.', 'event');
+      g.logMsg(`Picked up: ${kilnName(k).toLowerCase()}.`, 'event');
       g.events.emit('world', k.x, k.y);
     },
   },
@@ -199,8 +199,8 @@ export const KILN_ACTIONS: ActionDef[] = [
       if (!k) return 'It is gone.';
       if (!nearKiln(g, k)) return 'Stand next to the kiln.';
       const item = fuelAtHand(g, t.kind === 'kiln' ? t.itemUid : undefined)?.item;
-      if (!item) return `A kiln burns ${FUEL_SAID}.`;
-      if (k.fuel >= FIRE_CAPACITY) return 'The firebox is full.';
+      if (!item) return `Need fuel: ${FUEL_SAID}.`;
+      if (k.fuel >= FIRE_CAPACITY) return 'Fuel full.';
       return null;
     },
     perform: (t, g) => {
@@ -214,7 +214,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       if (!stack.spend(fits)) return;
       k.fuel = Math.min(FIRE_CAPACITY, k.fuel + per * fits);
       g.events.emit('smelter');
-      g.logMsg(`You feed ${fits > 1 ? `${fits} × ` : 'a '}${itemDef(item.id).name.toLowerCase()} into the kiln. ${kilnBurnsFor(k)} of fuel.`, 'event');
+      g.logMsg(fuelledSaid(fits, itemDef(item.id).name, kilnBurnsFor(k)), 'event');
     },
   },
   {
@@ -233,8 +233,8 @@ export const KILN_ACTIONS: ActionDef[] = [
       if (!k) return 'It is gone.';
       if (!nearKiln(g, k)) return 'Stand next to the kiln.';
       const item = greenwareAtHand(g, t.kind === 'kiln' ? t.itemUid : undefined)?.item;
-      if (!item) return 'A kiln takes unfired clay.';
-      if (k.jobs.length >= kilnCapacity(k)) return 'The kiln is packed as full as it will go.';
+      if (!item) return 'Unfired clay only.';
+      if (k.jobs.length >= kilnCapacity(k)) return 'Kiln full.';
       return null;
     },
     perform: (t, g) => {
@@ -250,7 +250,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       const seconds = fireSeconds(def, k.ql);
       for (let i = 0; i < n; i++) k.jobs.push({ item: { ...taken, count: 1 }, makes: def.fired, left: seconds, total: seconds, ql: firedQl(taken.ql, k.ql) });
       g.events.emit('smelter');
-      g.logMsg(`You pack ${n > 1 ? `${n} × ` : ''}${itemDef(taken.id).name.toLowerCase()} into the kiln. Each needs about ${Math.round(seconds)} seconds of heat.`, 'event');
+      g.logMsg(`Packed: ${n > 1 ? `${n} × ` : ''}${itemDef(taken.id).name.toLowerCase()}. About ${Math.round(seconds)} seconds of heat each.`, 'event');
     },
   },
   {
@@ -263,8 +263,8 @@ export const KILN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const k = kilnOf(g, t);
       if (!k) return 'It is gone.';
-      if (k.lit) return 'It is already firing.';
-      if (k.fuel <= 0) return 'There is nothing in the firebox.';
+      if (k.lit) return 'Already lit.';
+      if (k.fuel <= 0) return 'No fuel.';
       return null;
     },
     perform: (t, g) => {
@@ -273,7 +273,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       k.lit = true;
       g.events.emit('smelter');
       g.events.emit('world', k.x, k.y);
-      g.logMsg(`The kiln catches and begins to draw. It has ${kilnBurnsFor(k)} of fuel.`, 'event');
+      g.logMsg(`Lit: kiln. Fuel: ${kilnBurnsFor(k)}.`, 'event');
     },
   },
   {
@@ -289,7 +289,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       k.lit = false;
       g.events.emit('smelter');
       g.events.emit('world', k.x, k.y);
-      g.logMsg(`You close the kiln down and let it cool. Its ${kilnBurnsFor(k)} of fuel keeps for later.`, 'event');
+      g.logMsg(`Put out: kiln. Fuel kept: ${kilnBurnsFor(k)}.`, 'event');
     },
   },
   {
@@ -302,7 +302,7 @@ export const KILN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const k = kilnOf(g, t);
       if (!k) return 'It is gone.';
-      return k.output.length ? null : 'Nothing is fired yet.';
+      return k.output.length ? null : 'Nothing fired yet.';
     },
     perform: (t, g) => {
       const k = kilnOf(g, t);
@@ -311,7 +311,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       for (const it of taken) g.inventory.addItem(it);
       g.events.emit('smelter');
       const names = taken.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
-      g.logMsg(`You unpack ${names.join(', ')} from the kiln.`, 'event');
+      g.logMsg(`Taken from kiln: ${names.join(', ')}.`, 'event');
     },
   },
   {
@@ -328,7 +328,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       const h = kilnOf(g, t);
       if (!h) return 'It is gone.';
       if (!nearKiln(g, h)) return 'Stand next to the kiln.';
-      return hasAshes(h) ? null : 'There are no ashes worth taking yet.';
+      return hasAshes(h) ? null : 'No ashes yet.';
     },
     perform: (t, g) => {
       const h = kilnOf(g, t);

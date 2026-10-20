@@ -21,13 +21,13 @@ export interface SeenJob {
 }
 
 /** The list changed between being drawn and being reordered. */
-export const QUEUE_MOVED = 'The jobs waiting changed before that arrived: nothing was moved.';
+export const QUEUE_MOVED = 'Queue changed first: nothing moved.';
 /** An order that is not a set of places in the list: one out of range, or one twice. */
-export const QUEUE_NO_ORDER = 'That is not an order of the jobs waiting: nothing was moved.';
+export const QUEUE_NO_ORDER = 'Not an order of the queued jobs: nothing moved.';
 
 /** What a dropped job is said as, in the log: the same line `clearQueue` says for the lot. */
 export const queueDropped = (labels: readonly string[]): string =>
-  labels.length === 1 ? `You put ${labels[0].toLowerCase()} out of your mind.` : `You put ${labels.length} jobs out of your mind.`;
+  labels.length === 1 ? `Dropped from queue: ${labels[0].toLowerCase()}.` : `Dropped from queue: ${labels.length} jobs.`;
 
 /** The list as it is seen: each job's action and its goes, never under one. */
 export const seenOf = (queue: ReadonlyArray<{ def: { id: string }; goes?: number }>): SeenJob[] =>

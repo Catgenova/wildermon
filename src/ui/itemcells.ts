@@ -40,7 +40,7 @@ export function nameCell(item: Item, opts: { worn?: boolean; occupant?: string }
     + (marks.length ? ` · ${marks.join(' · ')}` : '');
   name.textContent = full;
   // The column is narrow and some of these names are long.
-  name.title = item.locked ? `${full}. Kept back: nothing will spend, drop or feed it away.` : full;
+  name.title = item.locked ? `${full}. Kept back: never spent, dropped or fed away.` : full;
   // A swatch of its colour, for a thing dyed and a bucket of dye, and the hex beside the name on hover.
   const hex = dyeHexOf(item.dye);
   if (hex) {
@@ -78,7 +78,7 @@ export function qualityCell(game: Game, item: Item): HTMLSpanElement {
    */
   if (!isJobTool(item.id)) return ql;
   const worth = game.toolWorth(item);
-  ql.title = `Made at QL ${item.ql.toFixed(1)}; with its damage, metal, rarity and blessing counted it works as QL ${worth.toFixed(1)} today.`;
+  ql.title = `QL ${item.ql.toFixed(1)}; effective QL ${worth.toFixed(1)} (damage, metal, rarity and blessing counted).`;
   if (worth < item.ql - 0.05) {
     ql.classList.add('inv-blunt');
     ql.textContent = `${item.ql.toFixed(1)}→${worth.toFixed(0)}`;
@@ -98,9 +98,9 @@ export function headRow(last: { label: string; title?: string; className?: strin
   const head = document.createElement('div');
   head.className = 'inv-head';
   const cols: Array<[string, string, string]> = [
-    ['Item', '', 'Name, and how many there are in the stack'],
-    ['QL', 'inv-ql', 'Quality, out of 100. A tool shows after the arrow what it works as today.'],
-    ['Dmg', 'inv-dmg', 'Damage, out of 100. A repair takes it off; at 100 the thing is gone.'],
+    ['Item', '', 'Name and stack count'],
+    ['QL', 'inv-ql', 'Quality (max 100). Tools: effective QL after the arrow.'],
+    ['Dmg', 'inv-dmg', 'Damage (max 100). Repair removes it; destroyed at 100.'],
     [last.label, last.className ?? '', last.title ?? ''],
   ];
   for (const [label, cls, title] of cols) {
@@ -122,10 +122,10 @@ export function damageCell(item: Item): HTMLSpanElement {
   if (item.dmg <= 0) dmg.classList.add('inv-nil');
   if (item.dmg >= DAMAGE_BREAKING) {
     dmg.classList.add('inv-breaking');
-    dmg.title = 'About to go to pieces. Repair it now.';
+    dmg.title = 'Near breaking. Repair now.';
   } else if (item.dmg >= DAMAGE_WARN) {
     dmg.classList.add('inv-worn-out');
-    dmg.title = 'Getting badly worn. Repair it before it breaks.';
+    dmg.title = 'Badly worn. Repair soon.';
   }
   return dmg;
 }

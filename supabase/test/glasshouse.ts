@@ -399,7 +399,7 @@ begin
     perform act_perform(w, u, 'build_floor', ${tileT(LAST[0], LAST[1], { floorKind: 'roof' })});
     v_n := v_n + 1;
   end loop;
-  insert into said values ('ROOFED', v_n || '|' || glasshouse(w, 1) || '|' || coalesce(pg_temp.said(w, u, 'You finish%'), 'unsaid'));
+  insert into said values ('ROOFED', v_n || '|' || glasshouse(w, 1) || '|' || coalesce(pg_temp.said(w, u, 'Built: %'), 'unsaid'));
 
   -- Tilled, and not where a floor is planned; and no floor over a field.
   update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
@@ -421,7 +421,7 @@ begin
   insert into said values ('SOWASK', coalesce(act_refusal(w, u, 'plant_seed', ${tileT(20, 26)}::jsonb || jsonb_build_object('itemUid', v_seed)), 'ALLOWED'));
   perform act_perform(w, u, 'plant_seed', ${tileT(20, 26)}::jsonb || jsonb_build_object('itemUid', v_seed));
   insert into said select 'SOWN', c.id || ':' || c.stage || ':' || c.glass || ':' || c.pace from crop c where c.world_id = w and c.x = 20 and c.y = 26;
-  insert into said values ('SOWSAID', coalesce(pg_temp.said(w, u, 'You sow %'), 'unsaid'));
+  insert into said values ('SOWSAID', coalesce(pg_temp.said(w, u, 'Sown: %'), 'unsaid'));
   perform act_perform(w, u, 'tend_crop', ${tileT(20, 26)});
   insert into said select 'TENDED', c.tended || ':' || c.tended_now from crop c where c.world_id = w and c.x = 20 and c.y = 26;
 
@@ -522,7 +522,7 @@ begin
   insert into said values ('HARVEST', (select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder_uid = u and i.def = 'wheat')
       || ':' || (select coalesce(sum(i.count), 0) from item i where i.world_id = w and i.holder_uid = u and i.def = 'wheat_seed')
       || ':' || (select count(*) from crop c where c.world_id = w and c.x = 20 and c.y = 26) || ':' || (land_tile(w, 20, 26) = tile_id('Field')));
-  insert into said values ('HARVESTSAID', coalesce(pg_temp.said(w, u, 'You harvest %'), 'unsaid'));
+  insert into said values ('HARVESTSAID', coalesce(pg_temp.said(w, u, 'Harvested: %'), 'unsaid'));
 
   -- A Farmer's Fast Growth stamped on a sowing under glass, and Tend a Patch over the glasshouse.
   perform pg_temp.hold(w, u, array[${q(FAST.id)}, ${q(TEND.id)}]);
@@ -533,7 +533,7 @@ begin
   update crop set stage = 0, stage_at = now(), tended_now = false where world_id = w and x = 20 and y = 27;
   perform act_perform(w, u, 'tend_patch', ${tileT(20, 26)});
   insert into said values ('PATCH', (select count(*) from crop c where c.world_id = w and c.x between 19 and 21 and c.y between 25 and 27 and c.tended_now)
-      || '|' || coalesce(pg_temp.said(w, u, 'You weed and water %'), 'unsaid'));
+      || '|' || coalesce(pg_temp.said(w, u, 'Tended: %'), 'unsaid'));
   perform pg_temp.hold(w, u, '{}');
 
   -- And through the whole door: asked of \`rpc_act\` as a browser asks it, and finished by the clock in \`settle\`.
@@ -574,7 +574,7 @@ begin
   update player set x = 20.5, y = 26.5 where world_id = w and uid = u;
   insert into said values ('CLEARASK', coalesce(act_refusal(w, u, 'clear_field', ${tileT(20, 26)}), 'ALLOWED'));
   perform act_perform(w, u, 'clear_field', ${tileT(20, 26)});
-  insert into said values ('CLEARSAID', coalesce(pg_temp.said(w, u, 'You %'), 'unsaid'));
+  insert into said values ('CLEARSAID', coalesce(pg_temp.said(w, u, 'Cleared%'), 'unsaid'));
   perform act_perform(w, u, 'clear_field', ${tileT(20, 27)});
   perform act_perform(w, u, 'clear_field', ${tileT(21, 26)});
   insert into said values ('CLEARED', (select count(*) from building_tile bt where bt.world_id = w and bt.building = 1 and land_tile(w, bt.x, bt.y) = tile_id('Field'))
@@ -601,12 +601,12 @@ check('and a till in a building roofed in glass until the last of it is in', say
   const [goes, roofed, line] = say('ROOFED').split('|');
   const bill = floorBill(GLASS, 'roof', 'hip').total;
   check(`the last tile of glass goes in through the door a unit a go, ${bill.glass + bill.timber} of them, and makes a glasshouse`,
-    say('BUILDASK') === 'ALLOWED' && Number(goes) === bill.glass + bill.timber && roofed === 'true' && line === 'You finish the glass roof.', say('ROOFED'));
+    say('BUILDASK') === 'ALLOWED' && Number(goes) === bill.glass + bill.timber && roofed === 'true' && line === 'Built: glass roof.', say('ROOFED'));
 }
 check('then its ground tills into fields, and not under a floor, and no floor goes over a field',
   say('TILLASK') === 'ALLOWED' && say('TILLED') === 'true|true' && say('FLOORED') === GLASS_FLOORED && say('FIELDFLOOR') === FIELD_UNFLOORED,
   `${say('TILLASK')} / ${say('TILLED')} / ${say('FLOORED')} / ${say('FIELDFLOOR')}`);
-check('and ground that is a field already is not tilled again', say('AGAIN') === 'That ground will not rake into a field.', say('AGAIN'));
+check('and ground that is a field already is not tilled again', say('AGAIN') === 'Cannot be tilled.', say('AGAIN'));
 check('and asked through the door a browser uses, the clock finishing the go, it is sown under glass just the same', say('DOOR') === 'taken:wheat:true', say('DOOR'));
 check('and it is sown under glass through the doors, and tended', say('SOWASK') === 'ALLOWED' && say('SOWN') === 'wheat:0:true:1' && say('TENDED') === '1:true',
   `${say('SOWN')} / ${say('TENDED')}`);
@@ -626,8 +626,8 @@ check('Bounty brings it on a stage, the new one begun now and untended', say('BO
 check(`a night slept in autumn moves it the whole night, ${600 * GLASSHOUSE_GROWTH} growing seconds, and the field outside ${600 * SEASON_GROWTH.autumn}`,
   say('SLEPT') === `${(600 * GLASSHOUSE_GROWTH).toFixed(3)}:${(600 * SEASON_GROWTH.autumn).toFixed(3)}`, say('SLEPT'));
 check(`ripe by the glass clock alone, it harvests as a field does: ${cropYield(1).produce} wheat and ${cropYield(1).seeds} seed for one tending, and the field ready to sow again`,
-  say('RIPE') === 'It is ripe. Harvest it.|ALLOWED' && say('HARVEST') === `${cropYield(1).produce}:${cropYield(1).seeds}:0:true`
-    && say('HARVESTSAID').includes('The field is ready to sow again.'), `${say('RIPE')} / ${say('HARVEST')} / ${say('HARVESTSAID')}`);
+  say('RIPE') === 'Ripe: harvest it.|ALLOWED' && say('HARVEST') === `${cropYield(1).produce}:${cropYield(1).seeds}:0:true`
+    && say('HARVESTSAID').includes('Field ready to sow.'), `${say('RIPE')} / ${say('HARVEST')} / ${say('HARVESTSAID')}`);
 check(`a Farmer's Fast Growth goes into a sowing under glass, ${FAST.fx['grow:plant_seed']}, and Tend a Patch tends the glasshouse`,
   Math.abs(Number(say('PACE').split(':')[0]) - (FAST.fx['grow:plant_seed'] ?? 0)) < 1e-9 && say('PACE').endsWith(':true') && say('PATCH').startsWith('2|'),
   `${say('PACE')} / ${say('PATCH')}`);
@@ -636,14 +636,14 @@ check(`a Farmer's Fast Growth goes into a sowing under glass, ${FAST.fx['grow:pl
   check(`what is left in it rots at ${INDOORS_DECAY} of what it would in the open`, Math.abs(inside / outside - INDOORS_DECAY) < 1e-9, say('DECAY'));
 }
 check(`Examine says what it is and does: "${glassExamine().trim()}", and of the shed nothing of the kind`,
-  say('EXAMINE').includes(`It belongs to Glasshouse, a single-storey building.${glassExamine()}`)
-    && say('EXAMINESHED').includes('It belongs to Shed, a single-storey building.') && !say('EXAMINESHED').includes(glassExamine()),
+  say('EXAMINE').includes(`Building: Glasshouse, 1 storey.${glassExamine()}`)
+    && say('EXAMINESHED').includes('Building: Shed, 1 storey.') && !say('EXAMINESHED').includes(glassExamine()),
   `${say('EXAMINE')} / ${say('EXAMINESHED')}`);
 check('with fields in it, a roof tile taken off goes back on in glass and in nothing else, and no storey goes over it',
   say('SLATE') === FIELD_GLASS_ONLY && say('GLASSAGAIN') === 'ALLOWED' && say('STOREY') === FIELD_NO_STOREY,
   `${say('SLATE')} / ${say('GLASSAGAIN')} / ${say('STOREY')}`);
 check('and its fields clear back to packed earth, crops and all, as those refusals say to, and then any roof goes on',
-  say('CLEARASK') === 'ALLOWED' && say('CLEARED') === '0:0:true' && say('SLATECLEAR') === 'ALLOWED' && say('STOREYCLEAR') === 'Take the roof off first.'
+  say('CLEARASK') === 'ALLOWED' && say('CLEARED') === '0:0:true' && say('SLATECLEAR') === 'ALLOWED' && say('STOREYCLEAR') === 'Remove the roof first.'
     && say('CLEARSAID') === clearedSaid('wheat', true),
   `${say('CLEARASK')} / ${say('CLEARED')} / ${say('SLATECLEAR')} / ${say('STOREYCLEAR')} / ${say('CLEARSAID')}`);
 check('a wall taken down takes it off the glass clock as far along and refuses Till in the island\'s words; a fence in the gap is too low to make it a glasshouse; and a full wall built back up a unit a go puts it back',
@@ -721,8 +721,8 @@ let goes = 0;
 while (goes < 40 && run('build_floor', at(LAST[0], LAST[1], { floorKind: 'roof' })) !== false) goes++;
 goes++;
 check('and the last tile goes in a unit a go, as many as on the island, and the browser calls it a glasshouse too',
-  buildAsk === say('BUILDASK') && `${goes}|${isGlasshouse(bld, gh)}|${heard('You finish')}` === say('ROOFED'),
-  `${goes}|${isGlasshouse(bld, gh)}|${heard('You finish')}`);
+  buildAsk === say('BUILDASK') && `${goes}|${isGlasshouse(bld, gh)}|${heard('Built: ')}` === say('ROOFED'),
+  `${goes}|${isGlasshouse(bld, gh)}|${heard('Built: ')}`);
 stand(20, 26);
 const tillAsk = ask('till', at(20, 26));
 run('till', at(20, 26));
@@ -743,8 +743,8 @@ run('plant_seed', at(20, 26, { itemUid: seeds.uid }));
 const crop = game.cropAt(20, 26);
 run('tend_crop', at(20, 26));
 check('and sows it under glass, tends it, and says the island\'s line',
-  sowAsk === say('SOWASK') && `${crop?.id}:${crop?.stage}:${!!crop?.glass}:${crop?.pace ?? 1}` === say('SOWN') && heard('You sow ') === say('SOWSAID')
-    && `${crop?.tended}:${crop?.tendedNow}` === say('TENDED'), `${crop?.id}:${crop?.stage}:${!!crop?.glass} / ${heard('You sow ')}`);
+  sowAsk === say('SOWASK') && `${crop?.id}:${crop?.stage}:${!!crop?.glass}:${crop?.pace ?? 1}` === say('SOWN') && heard('Sown: ') === say('SOWSAID')
+    && `${crop?.tended}:${crop?.tendedNow}` === say('TENDED'), `${crop?.id}:${crop?.stage}:${!!crop?.glass} / ${heard('Sown: ')}`);
 
 // A winter: the glass crop comes on a stage; a field in the open stands still.
 game.world.setTile(OPEN[0], OPEN[1], TileType.Field);
@@ -840,7 +840,7 @@ for (const id of ['wheat', 'wheat_seed']) for (const it of game.inventory.items.
 run('harvest_crop', at(20, 26));
 check('ripe by the glass clock, it harvests to the same yield and the same line',
   ripe === say('RIPE') && `${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')}:${game.cropAt(20, 26) ? 1 : 0}:${game.world.getTile(20, 26) === TileType.Field}` === say('HARVEST')
-    && heard('You harvest ') === say('HARVESTSAID'), `${ripe} / ${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')} / ${heard('You harvest ')}`);
+    && heard('Harvested: ') === say('HARVESTSAID'), `${ripe} / ${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')} / ${heard('Harvested: ')}`);
 game.setPerks({ ...FAST.fx, ...TEND.fx });
 run('plant_seed', at(20, 26, { itemUid: game.inventory.find('wheat_seed')!.uid }));
 const paced = game.cropAt(20, 26);
@@ -850,8 +850,8 @@ worker.tendedNow = false;
 run('tend_patch', at(20, 26));
 const tended = [game.cropAt(20, 26), game.cropAt(20, 27)].filter((c) => c?.tendedNow).length;
 check('and a Farmer\'s Fast Growth and Tend a Patch work there as on the island',
-  `${paced?.pace}:${!!paced?.glass}` === say('PACE') && `${tended}|${heard('You weed and water ')}` === say('PATCH'),
-  `${paced?.pace}:${!!paced?.glass} / ${tended}|${heard('You weed and water ')}`);
+  `${paced?.pace}:${!!paced?.glass}` === say('PACE') && `${tended}|${heard('Tended: ')}` === say('PATCH'),
+  `${paced?.pace}:${!!paced?.glass} / ${tended}|${heard('Tended: ')}`);
 game.setPerks({});
 {
   // A poured slab under a tile of it: Till not offered there, and refused as the island refuses it.
@@ -939,12 +939,12 @@ game.setPerks({});
 {
   // What Examine says, in the island's words.
   run('examine', at(20, 26));
-  const seen = heard('You see ');
+  const seen = ([...game.log].reverse().find((l) => l.text.includes(' at ('))?.text ?? 'unsaid');
   run('examine', at(FLAT[0], FLAT[1]));
-  const shedSeen = heard('You see ');
+  const shedSeen = ([...game.log].reverse().find((l) => l.text.includes(' at ('))?.text ?? 'unsaid');
   check('Examine says the same of the glasshouse and of the shed in the browser',
-    seen.includes(`It belongs to Glasshouse, a single-storey building.${glassExamine()}`)
-      && shedSeen.includes('It belongs to Shed, a single-storey building.') && !shedSeen.includes(glassExamine()),
+    seen.includes(`Building: Glasshouse, 1 storey.${glassExamine()}`)
+      && shedSeen.includes('Building: Shed, 1 storey.') && !shedSeen.includes(glassExamine()),
     `${seen} / ${shedSeen}`);
   // A roof tile off, with fields in it; then the fields cleared.
   stand(LAST[0], LAST[1]);
@@ -957,7 +957,7 @@ game.setPerks({});
   stand(20, 26);
   const clearAsk = ask('clear_field', at(20, 26));
   run('clear_field', at(20, 26));
-  const clearSaid = heard('You ');
+  const clearSaid = heard('Cleared');
   for (const [x, y] of [[20, 27], [21, 26]]) if (game.world.getTile(x, y) === TileType.Field) run('clear_field', at(x, y));
   const cleared = `${gh.tiles.filter((k) => { const [x, y] = k.split(',').map(Number); return game.world.getTile(x, y) === TileType.Field; }).length}`
     + `:${[[20, 26], [20, 27], [21, 26], [21, 27]].filter(([x, y]) => game.cropAt(x, y)).length}:${game.world.getTile(20, 26) === TileType.PackedDirt}`;

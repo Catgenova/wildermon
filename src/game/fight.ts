@@ -195,17 +195,17 @@ export function armourSwingSays(): string {
   const families = SWING_FAMILIES.map((c) => `${c} ${timesSaid(ARMOUR_SWING_BY[c])}`);
   const sets = SWING_FAMILIES.map((c) => {
     const s = setOf(c);
-    return `${c} (${kgSaid(s.kg)}, counting ${kgSaid(s.counted)}) ${percent(s.counted * armourSwingKg())}`;
+    return `${c} (${kgSaid(s.kg)}, counted ${kgSaid(s.counted)}) +${percent(s.counted * armourSwingKg())}`;
   });
-  return `Armour makes every swing or draw ${finePercent(armourSwingKg())} longer for each kilogram it counts for, a shield in the off hand included. `
-    + `Each piece counts its make's own weight, whatever it is made of, times its family's share: ${listed(families)}, and a shield ${timesSaid(SHIELD_SWING_BY)}. `
-    + `A full set of ${listed(sets)} longer, and the heaviest set there is, `
-    + `${listed(set.pieces.map((id) => itemDef(id)?.name.toLowerCase() ?? id))} (${kgSaid(set.kg)}, counting ${kgSaid(set.counted)}), ${percent(ARMOUR_SWING_FULL)} longer.`;
+  return `Armour: swing and draw time +${finePercent(armourSwingKg())} per counted kg, off-hand shield included. `
+    + `Counted kg: the piece's base weight (any material) × family share: ${families.join(', ')}; shield ${timesSaid(SHIELD_SWING_BY)}. `
+    + `Full sets: ${sets.join(', ')}. Heaviest set: `
+    + `${set.pieces.map((id) => itemDef(id)?.name.toLowerCase() ?? id).join(', ')} (${kgSaid(set.kg)}, counted ${kgSaid(set.counted)}): +${percent(ARMOUR_SWING_FULL)}.`;
 }
 /** And the pack's, which is all or nothing at the limit. */
 export const overburdenSwingSays = (): string =>
-  `Carrying more than your back takes (Overloaded on the status panel) makes every swing or draw ${percent(OVERBURDEN_SWING)} longer; `
-  + 'at or under it, what you carry changes nothing, and a cart\'s or a wagon\'s load, hitched or driven, is not carried.';
+  `Overloaded (over carry limit; shown on the status panel): swing and draw time +${percent(OVERBURDEN_SWING)}. `
+  + 'At or under the limit: no effect. Cart and wagon loads, hitched or driven, do not count.';
 
 /** What a go of a fight costs in stamina, before the body's own share; null for every other job. */
 export function fightWind(g: Game, def: Pick<ActionDef, 'id'>): number | null {
@@ -240,9 +240,9 @@ export const isFightStance = (s: unknown): s is FightStance => FIGHT_STANCES.inc
 export function stanceSays(s: FightStance): string {
   const dealt = STANCE_DEALT[s] - 1;
   const taken = STANCE_TAKEN[s] - 1;
-  if (dealt === 0 && taken === 0) return 'Damage dealt and taken as they are.';
-  const word = (d: number): string => `${percent(Math.abs(d))} ${d > 0 ? 'more' : 'less'}`;
-  return `${word(dealt)} damage dealt, ${word(taken)} damage taken.`;
+  if (dealt === 0 && taken === 0) return 'Damage dealt and taken ×1.';
+  const word = (d: number): string => `${d > 0 ? '+' : '−'}${percent(Math.abs(d))}`;
+  return `Damage dealt ${word(dealt)}, damage taken ${word(taken)}.`;
 }
 
 /** A perk lookup: one number off what somebody's perks fold to, or the rule's own (`Game.perk`). */
@@ -302,12 +302,12 @@ export function reachSays(): string {
   const families = [...byReach.entries()].sort((a, b) => a[0] - b[0])
     .map(([t, ks]) => `${listed(ks.map((k) => (k === 'knives' && t === FIST_REACH ? 'knives and bare hands' : k)))} ${tilesSaid(t)} tiles`);
   const thrown = WEAPONS.filter((w) => w.thrown).sort((a, b) => reachOf(a) - reachOf(b))
-    .map((w) => `a ${itemDef(w.id).name.toLowerCase()} ${tilesSaid(reachOf(w))}`);
+    .map((w) => `${itemDef(w.id).name.toLowerCase()} ${tilesSaid(reachOf(w))}`);
   const past = +(WEAPON_REACH.polearms - WEAPON_REACH.swords).toFixed(1);
-  return `A swing reaches as far as its weapon's family: ${listed(families)}, so a polearm reaches ${tilesSaid(past)} `
-    + `tile${past === 1 ? '' : 's'} further than a sword, and a bow in the hand is swung with the fists. `
-    + `A thrown weapon reaches its own range and ${tilesSaid(THROWN_PAST)} tiles past it: ${listed(thrown)}. `
-    + 'Anything further off is out of reach, and you walk in until it is not.';
+  return `Melee reach by family: ${families.join(', ')}. Polearm: ${tilesSaid(past)} `
+    + `tile${past === 1 ? '' : 's'} more than a sword. A bow in hand strikes as bare hands. `
+    + `Thrown weapons: own range + ${tilesSaid(THROWN_PAST)} tiles: ${thrown.join(', ')}. `
+    + 'Target out of reach: you walk closer.';
 }
 
 /** Nearer than this, a bow cannot be drawn on it. */
@@ -339,7 +339,7 @@ export function armsRefusal(g: Game, job: string): string | null {
   const held = g.worn('weapon');
   const bow = held && WEAPON_BY_ID.get(held.id);
   if (!held || !bow?.ammo) return 'You have no bow in your hands.';
-  if (!nockedArrow(g)) return 'You are out of arrows.';
+  if (!nockedArrow(g)) return 'Out of arrows.';
   return null;
 }
 
@@ -454,7 +454,7 @@ export const BLOCK_PER_SKILL = 0.0025;
  */
 export const SHIELD_WEAR = 3;
 /** What the fight log says of a blocked blow, on both sides. */
-export const BLOCKED_SAID = 'You block the blow with your shield.';
+export const BLOCKED_SAID = 'Blocked with shield.';
 /** What a shield's quality makes of its own share: ×0.6 at QL 0, ×1 at QL 64. */
 export const blockQl = (ql: number): number => BLOCK_QL_FROM + ql / BLOCK_QL_SPAN;
 /**
@@ -479,25 +479,25 @@ const shieldsByWeight = (): string[] => Object.keys(SHIELDS).sort((a, b) => (ite
 export function blockSays(): string {
   const each = shieldsByWeight().map((id) => {
     const sh = SHIELDS[id];
-    return `a ${itemDef(id)?.name.toLowerCase() ?? id} (${+(itemDef(id)?.weight ?? 0).toFixed(1)} kg) ${percent(sh.block)}: `
-      + `${percent(blockChance(sh.block, SAID_QL_LOW, 0, NO_PERK))} at QL ${SAID_QL_LOW} and ${percent(blockChance(sh.block, QL_TOP, 0, NO_PERK))} at QL ${QL_TOP} with no shields skill, `
+    return `${itemDef(id)?.name.toLowerCase() ?? id} (${+(itemDef(id)?.weight ?? 0).toFixed(1)} kg) ${percent(sh.block)}: `
+      + `${percent(blockChance(sh.block, SAID_QL_LOW, 0, NO_PERK))} at QL ${SAID_QL_LOW}, ${percent(blockChance(sh.block, QL_TOP, 0, NO_PERK))} at QL ${QL_TOP} (shields 0), `
       + `${percent(blockChance(sh.block, QL_TOP, SAID_SKILL_TOP, NO_PERK))} at QL ${QL_TOP} and shields ${SAID_SKILL_TOP}`;
   });
-  return `A shield in the off hand blocks a blow outright, rolled after your dodge and before your armour. `
-    + `Its chance is its own share × (${BLOCK_QL_FROM} + its QL ÷ ${BLOCK_QL_SPAN}), and ${finePercent(BLOCK_PER_SKILL)} more for every point of shields skill, `
-    + `never over ${percent(BLOCK_MOST)}: ${each.join('; ')}. `
-    + `Every other thing on you takes ${percent(CROWD_BLOCK)} off it. A blocked blow takes nothing off you, trains shields, `
-    + `and wears the shield ${SHIELD_WEAR} damage for every whole health it would have taken (${+(SHIELD_WEAR / 10).toFixed(2)} for a blow of a tenth of your health). `
-    + `It stops a thrown stone the same way.`;
+  return `Off-hand shield: chance to block a blow fully, rolled after dodge, before armour. `
+    + `Chance: shield share × (${BLOCK_QL_FROM} + QL ÷ ${BLOCK_QL_SPAN}) + ${finePercent(BLOCK_PER_SKILL)} per shields skill point, `
+    + `max ${percent(BLOCK_MOST)}: ${each.join('; ')}. `
+    + `Each other attacker on you: −${percent(CROWD_BLOCK)}. Blocked: no damage, trains shields, `
+    + `shield wear ${SHIELD_WEAR} damage per whole health the blow would have taken (${+(SHIELD_WEAR / 10).toFixed(2)} for a tenth of your health). `
+    + `Blocks thrown stones too.`;
 }
 /** One shield's chance in your hands, and how it came to that, for its card: "16% × 0.85 for QL 40, + 12.5% for shields 50". */
 export function blockNote(block: number, ql: number, shields: number, perk: PerkOf): string {
   const plain = block * blockQl(ql) + shields * BLOCK_PER_SKILL;
   const extra = perk('block:shield', 0);
   const cap = perk('blockcap:shield', BLOCK_MOST);
-  return `Its own ${percent(block)} × ${+blockQl(ql).toFixed(3)} for QL ${+ql.toFixed(1)}, + ${finePercent(shields * BLOCK_PER_SKILL)} for shields ${+shields.toFixed(1)}`
-    + `${extra ? `, + ${finePercent(extra)} for your perks` : ''}, never over ${percent(cap)}`
-    + `${plain + extra > cap ? ' (held there)' : ''}. Rolled after your dodge. A block takes nothing off you, and wears the shield ${SHIELD_WEAR} damage for every whole health the blow would have taken.`;
+  return `Block: ${percent(block)} × ${+blockQl(ql).toFixed(3)} (QL ${+ql.toFixed(1)}) + ${finePercent(shields * BLOCK_PER_SKILL)} (shields ${+shields.toFixed(1)})`
+    + `${extra ? ` + ${finePercent(extra)} (perks)` : ''}, max ${percent(cap)}`
+    + `${plain + extra > cap ? ' (capped)' : ''}. Rolled after dodge. Blocked: no damage; shield wear ${SHIELD_WEAR} damage per whole health the blow would have taken.`;
 }
 /** A blow at something whose mind is on another fight lands this much harder. */
 export const BLINDSIDE = 1.25;
@@ -523,9 +523,9 @@ export const KNIFE_BLEED_SECS = 6;
 export const STUN_SECS = 2;
 /** What a landed blow of this weapon does besides its damage, in the game's words. */
 export function sideOf(w: WeaponDef): string | null {
-  if (w.kind === 'mauls') return `knocks a heavy blow off its stroke and puts the next blow back ${STAGGER_MAUL} second${STAGGER_MAUL === 1 ? '' : 's'}`;
-  if (w.kind === 'polearms') return `puts the next blow back ${STAGGER_POLE} seconds`;
-  if (w.kind === 'knives') return `bleeds it ${percent(KNIFE_BLEED)} of the blow a second for ${KNIFE_BLEED_SECS} seconds`;
+  if (w.kind === 'mauls') return `cancels a heavy blow and delays the next blow ${STAGGER_MAUL} s`;
+  if (w.kind === 'polearms') return `delays the next blow ${STAGGER_POLE} s`;
+  if (w.kind === 'knives') return `bleeds ${percent(KNIFE_BLEED)} of the blow per second for ${KNIFE_BLEED_SECS} s`;
   return null;
 }
 
@@ -747,9 +747,9 @@ export interface FightRecord {
   /** What each skill came up by while it lasted. */
   skills: Map<string, number>;
 }
-/** "Fighting increased by 0.1150 to 1.1150." read back into its skill and its gain, or null. */
+/** "Fighting 1.1150 (+0.1150)." read back into its skill and its gain, or null. */
 export function skillLine(text: string): { skill: string; gain: number } | null {
-  const m = /^(.+) increased by ([0-9.]+) to [0-9.]+\.$/.exec(text);
+  const m = /^(.+) [0-9.]+ \(\+([0-9.]+)\)\.$/.exec(text);
   return m ? { skill: m[1], gain: Number(m[2]) } : null;
 }
 
@@ -758,14 +758,14 @@ export function skillLine(text: string): { skill: string; gain: number } | null 
 const BLOW_WORDS: Record<WoundKind, string> = { cut: 'cuts', pierce: 'punctures', crush: 'crushes', bite: 'bites', burn: 'burns' };
 /** A kind of blow, as more than one of them: "cuts", "punctures", "crushes". */
 export const blowWords = (k: WoundKind): string => BLOW_WORDS[k];
-const changeOf = (f: number): string => `${percent(Math.abs(f - 1))} ${f > 1 ? 'more' : 'less'}`;
+const changeOf = (f: number): string => `${f > 1 ? '+' : '−'}${percent(Math.abs(f - 1))}`;
 /** What a hide makes of each kind of blow: "takes 40% less from cuts and 40% more from crushes". */
 export const hideSays = (h: Hide): string =>
-  `takes ${listed(BLOW_KINDS.filter((b) => HIDE_TAKES[h][b] !== 1).map((b) => `${changeOf(HIDE_TAKES[h][b])} from ${BLOW_WORDS[b]}`))}`;
+  `damage taken: ${BLOW_KINDS.filter((b) => HIDE_TAKES[h][b] !== 1).map((b) => `${BLOW_WORDS[b]} ${changeOf(HIDE_TAKES[h][b])}`).join(', ')}`;
 /** What a class of armour makes of each kind of blow it is struck with: "turns 25% more of cuts and 30% less of crushes". */
 export const armourSays = (cls: ArmourClass): string => {
   const t = ARMOUR_VS[cls];
-  return `turns ${listed((Object.keys(t) as WoundKind[]).filter((k) => t[k] !== 1).map((k) => `${changeOf(t[k])} of ${BLOW_WORDS[k]}`))}`;
+  return `absorbs: ${(Object.keys(t) as WoundKind[]).filter((k) => t[k] !== 1).map((k) => `${BLOW_WORDS[k]} ${changeOf(t[k])}`).join(', ')}`;
 };
 /** Which weapons strike which kind of blow, by their kinds: "swords, axes and knives cut". */
 export const blowSays = (b: BlowKind): string => {

@@ -84,13 +84,13 @@ export function upgradeProgress(g: Game, d: Deed | null = g.deed): Array<{ label
  * first, for a citizen whose rank its founder did not let upgrade.
  */
 export function upgradeReason(g: Game, d: Deed | null = g.deed): string | null {
-  if (!d) return 'You have no settlement.';
+  if (!d) return 'No settlement.';
   const rank = lacks(d, 'upgrade');
   if (rank) return rank;
   const next = nextDeedLevel(d);
-  if (!next) return `${d.name} is as grand as a settlement gets.`;
+  if (!next) return `${d.name}: max level.`;
   const missing = upgradeProgress(g, d).filter((r) => !r.met);
-  if (missing.length) return `Still wanted: ${missing.map((r) => r.label.toLowerCase()).join(', ')}.`;
+  if (missing.length) return `Still needed: ${missing.map((r) => r.label.toLowerCase()).join(', ')}.`;
   return null;
 }
 
@@ -99,8 +99,8 @@ export function upgradeReason(g: Game, d: Deed | null = g.deed): string | null {
  * powers your rank holds, said as the island says them when you are ranked.
  */
 export function standingWord(d: Pick<Deed, 'role' | 'rank' | 'perms'> & { name?: string }): string {
-  if (isFounder(d)) return 'You founded this one: everything here is yours, locks included.';
-  return `You are a ${rankName({ name: d.name ?? '', ...d })} here: you may ${rankMay(permsHeld({ name: d.name ?? '', ...d }))}.`;
+  if (isFounder(d)) return 'Founder: every power, locks included.';
+  return `Rank: ${rankName({ name: d.name ?? '', ...d })}. You may ${rankMay(permsHeld({ name: d.name ?? '', ...d }))}.`;
 }
 
 /**
@@ -109,9 +109,9 @@ export function standingWord(d: Pick<Deed, 'role' | 'rank' | 'perms'> & { name?:
  * nothing but a fresh invitation puts you back on it.
  */
 export const leaveQuestion = (d: Deed, holder?: string | null): string =>
-  `Leave ${d.name}? You come off its roll at once and are a stranger there: you may walk it and `
-  + `shape nothing, and of the stores on it only the ones you made yourself still open for you. `
-  + `${holder ? `${holder} is` : 'Its founder is'} told, and only an invitation puts you back on it.`;
+  `Leave ${d.name}? You leave its roll at once and become a stranger: no shaping, `
+  + `and only stores you made still open for you. `
+  + `${holder ? `${holder} is` : 'Its founder is'} told; only a new invitation brings you back.`;
 
 /**
  * The settlement a settlement job is aimed at: the one of yours whose token
@@ -143,7 +143,7 @@ export const DEED_ACTIONS: ActionDef[] = [
       d.level = level;
       d.radius = deedRadiusAt(level);
       g.logMsg(
-        `${d.name} grows to level ${level}. The border reaches ${d.radius} tiles from the token and ${deedWorkersAt(level)} wildermon may work here.`,
+        `${d.name}: level ${level}. Border ${d.radius} tiles from the token; ${deedWorkersAt(level)} wildermon may work here.`,
         'system',
       );
       g.events.emit('world', d.x, d.y);

@@ -34,9 +34,8 @@ import { tackSpeed } from '../../src/game/creatures';
 import { furnitureDef } from '../../src/game/furniture';
 import { bagRoom, ITEM_DEFS, markSays, RARITY_ODDS, type Item, type Mark } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
-import { CRAFT_REACH, needOf, RECIPE_BY_ID, RECIPE_PERK_SAYS, reachFor, recipeReason } from '../../src/game/recipes';
+import { CRAFT_REACH, madeSaid, SPARED, needOf, RECIPE_BY_ID, RECIPE_PERK_SAYS, reachFor, recipeReason } from '../../src/game/recipes';
 import { creelOdds, TRAPS } from '../../src/game/traps';
-import { countSaid } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -249,7 +248,7 @@ begin
   update creature set fleece = 1 where world_id = w and id = v_c;
   ${hold('Full Fleece')};
   ${beast('shear')};
-  insert into said values ('SHEAR', v_t || '|' || ${count('wool')} || '|' || coalesce(${last('You shear %')}, 'unsaid'));
+  insert into said values ('SHEAR', v_t || '|' || ${count('wool')} || '|' || coalesce(${last('Sheared %')}, 'unsaid'));
   ${clear('wool')};
   delete from creature where world_id = w and id = v_c;
 
@@ -324,7 +323,7 @@ ${SURE.map(([name, recipe, makes], i) => `
   ${dice(0.99)};
   ${craft('make_sack')};
   insert into said values ('SPARE', v_t || '|' || ${count('cloth')} || ':' || ${count('sack')}
-    || '|' || coalesce(${last('Nothing that went into it%')}, 'unsaid'));
+    || '|' || coalesce(${last('Nothing Wasted:%')}, 'unsaid'));
   ${nodice};
   ${clear('cloth', 'sack')};
   ${checks(true)};
@@ -370,7 +369,7 @@ ${SURE.map(([name, recipe, makes], i) => `
   ${dice(LYE - 0.01)};
   ${craft('tan_hide')};
   v_t := v_t || '|' || ${count('leather')} || ':' || ${count('lye_bucket')} || ':' || ${count('bucket')}
-    || '|' || coalesce(${last('There is enough left%')}, 'unsaid');
+    || '|' || coalesce(${last('Lye Saver:%')}, 'unsaid');
   ${nodice};
   ${clear('leather', 'lye_bucket', 'bucket', 'hide')};
   perform give(w, u, 'hide', 1, 30); perform give(w, u, 'lye_bucket', 1, 30);
@@ -528,7 +527,7 @@ ${NET_DICE.map((r, i) => `
   v_t := v_t || '#' || ${patchRefused('v_it')};
   ${onItem('patch_item', 'v_it')};
   v_t := v_t || '|' || (select round(dmg::numeric, 2) || ':' || round(ql::numeric, 2) from item where id = v_it) || ':' || ${count('cloth')}
-    || '|' || coalesce(${last('You patch the %')}, 'unsaid');
+    || '|' || coalesce(${last('Patched: %')}, 'unsaid');
   update item set dmg = 0 where id = v_it;
   v_t := v_t || '|' || ${patchRefused('v_it')};
   -- A leather cap less worn than a patch mends, with leather.
@@ -561,7 +560,7 @@ ${NET_DICE.map((r, i) => `
   update player set rested = 0, rested_at = now() where world_id = w and uid = u;
   perform act_perform(w, u, 'sleep', jsonb_build_object('kind', 'furniture', 'id', v_p));
   v_t := (select round(rested::numeric, 4)::text from player where world_id = w and uid = u)
-    || '|' || coalesce(${last('You sleep in the %')}, 'unsaid');
+    || '|' || coalesce(${last('Slept in the %')}, 'unsaid');
   -- And the same night in a bed of the same QL beside it.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)
     values (w, 'furniture', 'bed', 8, 9, 0, 0, 8.5, 10, ${HANDS}, 'Pine', u) returning id into v_bed;
@@ -569,7 +568,7 @@ ${NET_DICE.map((r, i) => `
   update player set rested = 0, rested_at = now() where world_id = w and uid = u;
   perform act_perform(w, u, 'sleep', jsonb_build_object('kind', 'furniture', 'id', v_bed));
   insert into said values ('NIGHT', v_t || '|' || (select round(rested::numeric, 4)::text from player where world_id = w and uid = u)
-    || '|' || coalesce(${last('You sleep in the %')}, 'unsaid'));
+    || '|' || coalesce(${last('Slept in the %')}, 'unsaid'));
   delete from placed where id in (v_p, v_bed);
   ${clear('needle', 'tent')};
 
@@ -601,7 +600,7 @@ const fleece = Math.max(1, Math.round(1 * SHEAR_WOOL));
 const plusWool = fx('Full Fleece', 'plus:wool');
 check(`a full fleece is ${fleece} wool without the perk`, shorn0 === String(fleece), shorn0);
 check(`${P('Full Fleece').name}: ${plusWool} more with it, and said`, shorn1 === String(fleece + plusWool)
-  && shornSaid.includes(`come away with ${fleece + plusWool} wool`), `${shorn1} | ${shornSaid}`);
+  && shornSaid.includes(`: ${fleece + plusWool} wool,`), `${shorn1} | ${shornSaid}`);
 
 /* ---- The spindle and the loom -------------------------------------------------------------- */
 
@@ -613,8 +612,10 @@ const [yarn0, yarn1, woolLeft, spunSaid] = say('THREAD').split('|');
 const thread = fx('Even Thread', 'count:yarn');
 check(`${P('Even Thread').name}: ${thread} yarn from the two wool, where it was ${spin.count}`,
   yarn0 === String(spin.count) && yarn1 === String(thread) && woolLeft === '0', say('THREAD'));
-check('and the words say the count made, as the browser says them', spunSaid.startsWith(countSaid(spin.done, spin.count ?? 1, thread))
-  && spunSaid !== spin.done, `${spunSaid} // ${countSaid(spin.done, spin.count ?? 1, thread)}`);
+// The line up to its QL, which is the roll's: "Made: 3 × yarn, QL ".
+const spunHere = madeSaid(spin.result, thread, undefined, 0, spin.done).replace(/QL .*$/, 'QL ');
+check('and the words say the count made, as the browser says them', spunSaid.startsWith(spunHere)
+  && spunSaid.endsWith(`.${spin.done ? ` ${spin.done}` : ''}`), `${spunSaid} // ${spunHere}`);
 const [weaveAsk, weaveLeft] = say('WEAVE').split('|');
 const [weaveNo, needPlain, weaveYes, needPerk] = weaveAsk.split('#');
 const weave = RECIPE_BY_ID.get('weave_cloth')!;
@@ -636,7 +637,7 @@ SURE.forEach(([name, recipe, makes], i) => {
 });
 const [sparePlain, spareKept, spareSaid] = say('SPARE').split('|');
 check(`${P('Nothing Wasted').name}: a failed sack loses its cloth without it and keeps it with it, and says so`,
-  sparePlain === '0' && spareKept === '2:0' && spareSaid === 'Nothing that went into it is lost.', say('SPARE'));
+  sparePlain === '0' && spareKept === '2:0' && spareSaid === SPARED, say('SPARE'));
 const [rarePlain, rarePerk] = say('RARE').split('|');
 check(`${P('Master Tailor').name}: with the dice at ${RARE_AT}, a wool cap is plain without it and rare with it`,
   rarePlain === 'plain' && rarePerk === 'rare', say('RARE'));
@@ -662,7 +663,7 @@ check(`${P('Sack Maker').name} and ${P('Deep Pockets').name}: marked ${sackHold}
 const [lyePlain, lyeKept, lyeSaid, lyeOver] = say('LYE').split('|');
 check('a hide tanned without it takes the lye and gives back the bucket', lyePlain === '1:0:1', lyePlain);
 check(`${P('Lye Saver').name}: with the dice under ${LYE}, the lye is still in the bucket, and said; at ${LYE}, it is spent`,
-  lyeKept === '1:1:0' && lyeSaid === 'There is enough left in the bucket for another.' && lyeOver === '1:0:1', say('LYE'));
+  lyeKept === '1:1:0' && lyeSaid === 'Lye Saver: bucket not used up.' && lyeOver === '1:0:1', say('LYE'));
 
 /* ---- Tack and yokes ------------------------------------------------------------------------ */
 
@@ -728,21 +729,21 @@ const [patchNo, patchPlank, patchNoCloth, patchYes] = patchAsk.split('#');
 const mends = fx('Patch', 'patch_item');
 check(`${P('Patch').name}: refused without it, in the browser's words`, patchNo === PATCH_PERK, patchNo);
 check('and with it, a plank is not cloth, and a tunic wants cloth to mend it with until there is some',
-  patchPlank === 'Only cloth or leather takes a patch.' && patchNoCloth === 'You need cloth to patch it with.' && patchYes === 'ALLOWED', patchAsk);
+  patchPlank === 'Cloth or leather only.' && patchNoCloth === 'Need cloth.' && patchYes === 'ALLOWED', patchAsk);
 check(`a tunic at damage ${PATCH_DMG} comes off it at ${PATCH_DMG - mends}, for one cloth, and nothing off its QL`,
   patched === `${(PATCH_DMG - mends).toFixed(2)}:${HANDS.toFixed(2)}:0`, patched);
-check('and a whole one has nothing to patch', patchWhole === 'There is nothing wrong with it.', patchWhole);
+check('and a whole one has nothing to patch', patchWhole === 'Not damaged.', patchWhole);
 check(`a leather cap at ${PATCH_SMALL} is mended whole, with leather`, patchLeather === '0.00:0', patchLeather);
 const [tentAsk, tentMade, tentPlaced] = say('TENT').split('|');
 const [tentNo, tentYes] = tentAsk.split('#');
 check(`${P('Tent').name}: refused without it in the browser's words, and allowed with it`,
   tentNo === RECIPE_PERK_SAYS.tent && tentYes === 'ALLOWED', tentAsk);
 check('and made of its bill, and set down', tentMade === `1:0:${HANDS.toFixed(2)}` && tentPlaced === `tent:${HANDS.toFixed(2)}`, `${tentMade} | ${tentPlaced}`);
-check('at noon it will not be slept in, as a bed will not', say('NOON').includes('broad daylight'), say('NOON'));
+check('at noon it will not be slept in, as a bed will not', say('NOON').includes('night only'), say('NOON'));
 const [tentRest, tentSaid, bedRest, bedSaid] = say('NIGHT').split('|');
 const ofBed = (furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1);
 check(`and a night in it rests ${ofBed} of what the same night in a bed of its QL does`,
-  Number(bedRest) > 0 && near(Number(tentRest) / Number(bedRest), ofBed, 1e-3) && tentSaid.startsWith('You sleep in the tent') && bedSaid.startsWith('You sleep in the bed'),
+  Number(bedRest) > 0 && near(Number(tentRest) / Number(bedRest), ofBed, 1e-3) && tentSaid.startsWith('Slept in the tent') && bedSaid.startsWith('Slept in the bed'),
   say('NIGHT'));
 check('and the Tailor\'s tree is gone', say('NODES') === '0:0', say('NODES'));
 

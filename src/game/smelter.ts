@@ -1,6 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import { enchantTail, furnaceBurn, type Enchant } from './enchant';
-import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, hasAshes, rakeAshes } from './campfire';
+import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, fuelledSaid, hasAshes, rakeAshes } from './campfire';
+import { DEED_PLACE } from './furniture';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { itemDef, itemName, markOf, rarityOf, roomFor, type Item } from './items';
@@ -109,9 +110,9 @@ export const jobName = (job: SmeltJob): string =>
   job.makes === 'casting' && job.piece ? `${itemDef(job.piece).name.toLowerCase()} casting` : itemDef(job.makes).name.toLowerCase();
 
 export function smelterState(s: PlacedSmelter): string {
-  const heat = s.lit ? `hot, ${smelterBurnsFor(s)} of fuel` : s.fuel > 0 ? `banked and cold, ${smelterBurnsFor(s)} of fuel` : 'cold and empty';
-  const work = s.jobs.length ? ` · ${s.jobs.length} in the furnace` : '';
-  const out = s.output.length ? ` · ${s.output.length} waiting` : '';
+  const heat = s.lit ? `lit, fuel ${smelterBurnsFor(s)}` : s.fuel > 0 ? `unlit, fuel ${smelterBurnsFor(s)}` : 'unlit, no fuel';
+  const work = s.jobs.length ? ` · ${s.jobs.length} smelting` : '';
+  const out = s.output.length ? ` · ${s.output.length} ready` : '';
   return `QL ${s.ql.toFixed(0)} · ${heat}${work}${out}${enchantTail(s)}`;
 }
 
@@ -141,8 +142,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('smelter');
-      if (!item || item.id !== 'smelter') return 'You are not carrying a smelter. Build one at the crafting window.';
-      if (!g.onDeed(t.x, t.y)) return 'Smelters stand on a settlement of yours.';
+      if (!item || item.id !== 'smelter') return 'Need a smelter (crafting window).';
+      if (!g.onDeed(t.x, t.y)) return DEED_PLACE;
       return g.smelterPlaceReason(t.x, t.y, t.sx, t.sy);
     },
     perform: (t, g) => {
@@ -155,7 +156,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).
       if (item.enchant) s.enchant = item.enchant;
       if (item.dmg) s.dmg = item.dmg;
-      g.logMsg(`You set the ${smelterName(s).toLowerCase()} down and bed it in. (QL ${s.ql.toFixed(1)}, holds ${smelterCapacity(s)}) Feed it fuel and light it.`, 'event');
+      g.logMsg(`Set down: ${smelterName(s).toLowerCase()}, QL ${s.ql.toFixed(1)}, holds ${smelterCapacity(s)}.`, 'event');
       g.events.emit('world', s.x, s.y);
     },
   },
@@ -169,7 +170,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const s = smelterOf(g, t);
       if (!s) return 'It is gone.';
-      if (s.lit) return 'Not while it is alight.';
+      if (s.lit) return 'Put it out first.';
       if (s.jobs.length || s.output.length) return 'Empty it first.';
       if (Math.floor(s.ash ?? 0) >= 1) return 'Rake the ashes out first.';
       return null;
@@ -182,7 +183,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (s.rare) back.rare = s.rare;
       if (s.enchant) back.enchant = s.enchant;
       if (s.dmg) back.dmg = s.dmg;
-      g.logMsg('You take the smelter apart and carry it off in one piece.', 'event');
+      g.logMsg(`Picked up: ${smelterName(s).toLowerCase()}.`, 'event');
       g.events.emit('world', s.x, s.y);
     },
   },
@@ -200,8 +201,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!s) return 'It is gone.';
       if (!nearSmelter(g, s)) return 'Stand next to the smelter.';
       const item = fuelAtHand(g, t.kind === 'smelter' ? t.itemUid : undefined, g.forgeReach())?.item;
-      if (!item) return `A smelter burns ${FUEL_SAID}.`;
-      if (s.fuel >= FIRE_CAPACITY) return 'The firebox is full.';
+      if (!item) return `Need fuel: ${FUEL_SAID}.`;
+      if (s.fuel >= FIRE_CAPACITY) return 'Fuel full.';
       return null;
     },
     perform: (t, g) => {
@@ -215,7 +216,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!stack.spend(fits)) return;
       s.fuel = Math.min(FIRE_CAPACITY, s.fuel + per * fits);
       g.events.emit('smelter');
-      g.logMsg(`You feed ${fits > 1 ? `${fits} × ` : 'a '}${itemDef(item.id).name.toLowerCase()} into the smelter. ${smelterBurnsFor(s)} of fuel.`, 'event');
+      g.logMsg(fuelledSaid(fits, itemDef(item.id).name, smelterBurnsFor(s)), 'event');
     },
   },
   {
@@ -228,8 +229,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const s = smelterOf(g, t);
       if (!s) return 'It is gone.';
-      if (s.lit) return 'It is already hot.';
-      if (s.fuel <= 0) return 'There is nothing in the firebox.';
+      if (s.lit) return 'Already lit.';
+      if (s.fuel <= 0) return 'No fuel.';
       return null;
     },
     perform: (t, g) => {
@@ -238,7 +239,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       s.lit = true;
       g.events.emit('smelter');
       g.events.emit('world', s.x, s.y);
-      g.logMsg(`The smelter draws and comes up to heat. It has ${smelterBurnsFor(s)} of fuel.`, 'event');
+      g.logMsg(`Lit: smelter. Fuel: ${smelterBurnsFor(s)}.`, 'event');
     },
   },
   {
@@ -254,7 +255,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       s.lit = false;
       g.events.emit('smelter');
       g.events.emit('world', s.x, s.y);
-      g.logMsg(`You damp the smelter down. Its ${smelterBurnsFor(s)} of fuel keeps for later.`, 'event');
+      g.logMsg(`Put out: smelter. Fuel kept: ${smelterBurnsFor(s)}.`, 'event');
     },
   },
   {
@@ -273,10 +274,10 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!s) return 'It is gone.';
       if (!nearSmelter(g, s)) return 'Stand next to the smelter.';
       const item = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
-      if (!item || !isOreItem(item.id)) return 'Smelters take ore.';
+      if (!item || !isOreItem(item.id)) return 'Ore only.';
       // A charge is one ore, which comes out as one lump.
-      if (item.count < ORE_PER_LUMP) return `A charge is ${ORE_PER_LUMP} ore; you have ${item.count}.`;
-      if (s.jobs.length >= smelterCapacity(s)) return 'The furnace is charged as full as it will go.';
+      if (item.count < ORE_PER_LUMP) return `Need ${ORE_PER_LUMP} ore; have ${item.count}.`;
+      if (s.jobs.length >= smelterCapacity(s)) return 'Smelter full.';
       return null;
     },
     perform: (t, g) => {
@@ -303,9 +304,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       g.events.emit('smelter');
       // Smelting, for the journal: ore into the fire, which is the job; the lump is the furnace's to hand back later.
       g.note('smelted');
-      g.logMsg(`You charge the smelter with ${n * ORE_PER_LUMP} × ${itemDef(taken.id).name.toLowerCase()}`
-        + `${n > 1 ? `, ${n} charges of it` : ''}. Each charge is about ${Math.round(seconds)} seconds of heat`
-        + ` and comes out as one lump.`, 'event');
+      g.logMsg(`Charged: ${n * ORE_PER_LUMP} × ${itemDef(taken.id).name.toLowerCase()}`
+        + `${n > 1 ? `, ${n} charges` : ''}. Per charge: about ${Math.round(seconds)} seconds of heat, one lump.`, 'event');
     },
   },
   {
@@ -328,7 +328,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const why = meltRefusal(item);
       if (why) return why;
       const n = Math.min(Math.max(1, (t.kind === 'smelter' ? t.count : undefined) ?? 1), item.count);
-      if (s.jobs.length + meltLumps(item, n, g.perk('melt:share', MELT_SHARE)) > smelterCapacity(s)) return 'The furnace is charged as full as it will go.';
+      if (s.jobs.length + meltLumps(item, n, g.perk('melt:share', MELT_SHARE)) > smelterCapacity(s)) return 'Smelter full.';
       return null;
     },
     perform: (t, g) => {
@@ -351,8 +351,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
         s.jobs.push({ item: { ...taken, count: n }, makes: metal.lump, left: seconds, total: seconds, ql });
       }
       g.events.emit('smelter');
-      g.logMsg(`You put ${n > 1 ? `${n} × ` : 'the '}${itemDef(item.id).name.toLowerCase()} into the smelter to melt down.`
-        + ` It will come back as ${lumps} ${metal.name.toLowerCase()} lump${lumps > 1 ? 's' : ''}, at about ${Math.round(ql)} quality.`, 'event');
+      g.logMsg(`Melting: ${n > 1 ? `${n} × ` : ''}${itemDef(item.id).name.toLowerCase()}.`
+        + ` Gives ${lumps} × ${metal.name.toLowerCase()} lump, about QL ${Math.round(ql)}.`, 'event');
     },
   },
   {
@@ -369,15 +369,15 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (!s) return 'It is gone.';
       if (!nearSmelter(g, s)) return 'Stand next to the smelter.';
       const mould = g.inventory.find('anvil_mould');
-      if (!mould) return 'You need an anvil mould.';
+      if (!mould) return 'Need an anvil mould.';
       const def = MOULD_BY_ID.get('anvil_mould');
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       if (!lump || !isMetalStock(lump.id)) return 'Choose the metal to pour.';
       const metal = metalOfBar(lump.id) as { id: string; name: string };
       const need = def ? mouldLumps(def, metal.id) : 0;
-      if (!need) return 'You need an anvil mould.';
+      if (!need) return 'Need an anvil mould.';
       // An ingot counts as its lumps (a Smith's Ingots).
-      if (lumpsIn(lump) < need) return `An anvil takes ${need} lumps of ${metal.name.toLowerCase()}.`;
+      if (lumpsIn(lump) < need) return `Need ${need} lumps of ${metal.name.toLowerCase()}.`;
       return null;
     },
     perform: (t, g) => {
@@ -397,7 +397,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const seconds = castSeconds(metal.id, ql);
       s.jobs.push({ item: { ...lump, count: need }, makes: 'anvil', left: seconds, total: seconds, ql });
       g.events.emit('smelter');
-      g.logMsg(`You pour ${need} lumps of ${metal.name.toLowerCase()} into the anvil mould. It needs about ${Math.round(seconds)} seconds to cool.`, 'event');
+      g.logMsg(`Poured: ${need} × ${metal.name.toLowerCase()} lump into the anvil mould. Cools in about ${Math.round(seconds)} seconds.`, 'event');
     },
   },
   {
@@ -417,16 +417,16 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const mould = t.kind === 'smelter' && t.mouldUid !== undefined ? g.inventory.get(t.mouldUid) : undefined;
       const def = mould && MOULD_BY_ID.get(mould.id);
       if (!mould || !def) return 'Choose a mould.';
-      if (def.makes === 'anvil') return 'An anvil is cast whole: pour it with Cast an anvil.';
+      if (def.makes === 'anvil') return 'Use Cast an anvil.';
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       const metal = lump && metalOfBar(lump.id);
-      if (!lump || !metal) return 'You have no metal to pour.';
+      if (!lump || !metal) return 'Need metal.';
       // A mould wants a weight of metal, and a lump of the rare six weighs a
       // tenth of what an iron one does, so it takes ten times as many of them.
       // An ingot counts as its lumps (a Smith's Ingots).
       const need = mouldLumps(def, metal.id);
-      if (lumpsIn(lump) < need) return `That takes ${need} lumps.`;
-      if (s.jobs.length >= smelterCapacity(s)) return 'The furnace is charged as full as it will go.';
+      if (lumpsIn(lump) < need) return `Need ${need} lumps.`;
+      if (s.jobs.length >= smelterCapacity(s)) return 'Smelter full.';
       return null;
     },
     perform: (t, g) => {
@@ -459,8 +459,8 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       });
       g.events.emit('smelter');
       g.logMsg(
-        `You pour ${need > 1 ? `${need} lumps` : 'a lump'} of ${metal.name.toLowerCase()} into the ${itemDef(mould.id).name.toLowerCase()}. It needs about ${Math.round(seconds)} seconds to cool.${
-          broke ? ' The mould cracks through and is done.' : ` The mould has ${mouldUsesLeft(mould.ql, mould.dmg, markOf(mould, 'last'))} fillings left.`
+        `Poured: ${need} × ${metal.name.toLowerCase()} lump into the ${itemDef(mould.id).name.toLowerCase()}. Cools in about ${Math.round(seconds)} seconds.${
+          broke ? ' Mould broken.' : ` Mould: ${mouldUsesLeft(mould.ql, mould.dmg, markOf(mould, 'last'))} fillings left.`
         }`,
         'event',
       );
@@ -487,10 +487,10 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const s = smelterOf(g, t);
       if (!s) return 'It is gone.';
       if (!nearSmelter(g, s)) return 'Stand next to the smelter.';
-      if (g.perk('ingot', 0) <= 0) return 'That wants a Smith who has learned to pour ingots.';
+      if (g.perk('ingot', 0) <= 0) return 'Need perk: Ingots (Smith).';
       const lump = t.kind === 'smelter' && t.itemUid !== undefined ? g.stockEntry(t.itemUid, g.forgeReach())?.item : undefined;
       if (!lump || !METAL_BY_LUMP.has(lump.id)) return 'Choose the metal to pour.';
-      if (lump.count < INGOT_LUMPS) return `An ingot takes ${INGOT_LUMPS} lumps; you have ${lump.count}.`;
+      if (lump.count < INGOT_LUMPS) return `Need ${INGOT_LUMPS} lumps; have ${lump.count}.`;
       return null;
     },
     perform: (t, g) => {
@@ -508,7 +508,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       if (maker) bar.maker = maker;
       g.inventory.addItem(bar);
       g.events.emit('inventory');
-      g.logMsg(`You pour ${INGOT_LUMPS} lumps of ${metal.name.toLowerCase()} into an ingot. (QL ${ql.toFixed(1)})`, 'event');
+      g.logMsg(`Poured: ${INGOT_LUMPS} × ${metal.name.toLowerCase()} lump into an ingot, QL ${ql.toFixed(1)}.`, 'event');
     },
   },
   {
@@ -521,7 +521,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const s = smelterOf(g, t);
       if (!s) return 'It is gone.';
-      return s.output.length ? null : 'Nothing is finished yet.';
+      return s.output.length ? null : 'Nothing finished yet.';
     },
     perform: (t, g) => {
       const s = smelterOf(g, t);
@@ -530,7 +530,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       for (const it of taken) g.inventory.addItem(it);
       g.events.emit('smelter');
       const names = taken.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
-      g.logMsg(`You draw ${names.join(', ')} from the smelter.`, 'event');
+      g.logMsg(`Taken from smelter: ${names.join(', ')}.`, 'event');
     },
   },
   {
@@ -547,7 +547,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       const h = smelterOf(g, t);
       if (!h) return 'It is gone.';
       if (!nearSmelter(g, h)) return 'Stand next to the smelter.';
-      return hasAshes(h) ? null : 'There are no ashes worth taking yet.';
+      return hasAshes(h) ? null : 'No ashes yet.';
     },
     perform: (t, g) => {
       const h = smelterOf(g, t);

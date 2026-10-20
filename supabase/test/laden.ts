@@ -96,7 +96,7 @@ const inWagon = count(wagon.items, 'dirt');
 const heard = game.log.length;
 game.gather('dirt', { count: 5, ql: 30 });
 game.gather('dirt', { count: 5, ql: 30 });
-const full = game.log.slice(heard).filter((l) => l.text === 'The wagon (pine) is full. What does not fit goes in your pack.');
+const full = game.log.slice(heard).filter((l) => l.text === 'Wagon (pine) full: the rest goes to your pack.');
 check('a wagon two short of full takes two, and the rest goes in the pack',
   count(wagon.items, 'dirt') === inWagon + 2 && count(pack.items, 'dirt') === 8,
   `${count(wagon.items, 'dirt') - inWagon} into the wagon, ${count(pack.items, 'dirt')} into the pack`);
@@ -174,7 +174,7 @@ begin
   insert into said values ('FULL|' || ((select coalesce(sum(count), 0) from item where placed = v_wagon and def = 'dirt') - v_dirt)
     || ',' || pack_count(w, me, 'dirt'));
   insert into said select 'SAID|' || count(*) from event where world_id = w and uid = me and kind = 'error'
-    and text = 'The wagon (pine) is full. What does not fit goes in your pack.';
+    and text = 'Wagon (pine) full: the rest goes to your pack.';
   delete from item where placed = v_wagon and def = 'rock_shards';
 
   -- A creel's catch.
@@ -224,7 +224,7 @@ check('a wagon two short of full takes two, and the rest goes in the pack', said
 check('and it says the wagon is full once, not once a swing', said('SAID') === '1', said('SAID'));
 check('a creel\'s catch goes the same way', said('CREEL') === '4,0', said('CREEL'));
 check('taking hold of a small cart says what you gather goes into it',
-  said('SHAFTS').includes('It will follow you now, and what you gather goes into it.'), said('SHAFTS'));
+  said('SHAFTS').includes('It follows you; gathered items go into it.'), said('SHAFTS'));
 check('pulling a small cart, what you gather goes into it', said('PULLED') === '3,0', said('PULLED'));
 check('in a boat it goes in the pack', said('BOAT') === '0,2', said('BOAT'));
 check('and on foot, as it always did', said('FOOT') === '3', said('FOOT'));

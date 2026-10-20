@@ -129,7 +129,7 @@ if (job) {
   said.length = 0;
   game.action = null;
   game.requestAction(job, yonder);
-  say(game.action === null && (said.at(-1) ?? '').includes('too far to reach'),
+  say(game.action === null && (said.at(-1) ?? '').includes('cannot walk there'),
     `and one nine tiles off is refused there and then: ${said.at(-1) ?? '(nothing said)'}`);
 }
 

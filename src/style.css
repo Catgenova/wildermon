@@ -3544,6 +3544,23 @@ button.goal-row:focus-visible {
   color: var(--t-text, #c9c1ad);
 }
 
+/* A section's sub-heading and its list of rules. */
+.help-body h4 {
+  margin: 8px 0 2px;
+  color: var(--t-strong, #fff);
+  font-size: 12px;
+}
+
+.help-body ul {
+  margin: 2px 0 6px;
+  padding-left: 16px;
+  color: var(--t-text, #c9c1ad);
+}
+
+.help-body li {
+  margin: 2px 0;
+}
+
 /* A wildermon's care, and the three traits it was born with. */
 .hud-bar-fill.bar-care { background: var(--t-fill-care, linear-gradient(90deg, #6f9a6a, #a8d08a)); }
 .pal-traits { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 2px; }

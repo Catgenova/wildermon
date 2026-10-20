@@ -237,11 +237,11 @@ check('and a slot is emptied', island('EMPTIED') === '[null, null, null, null, n
 
 check('an empty slot calls nothing', island('EMPTY') === 'Nothing is in that slot.', island('EMPTY'));
 check('a spell with nothing written behind it says so and costs nothing',
-  island('UNWRITTEN') === 'Nothing is written behind that spell yet.|40', island('UNWRITTEN'));
+  island('UNWRITTEN') === 'Spell has no effect yet.|40', island('UNWRITTEN'));
 check(`short of favour it is refused`, island('POOR') === `${SPELL_A.name} costs ${SPELL_A.cost} favour; you hold 2. Pray at an altar.`, island('POOR'));
 check(`a call costs its ${SPELL_A.cost} favour, rests ${SPELL_A.rest} seconds and says what it did`,
   island('CAST') === `${SPELL_A.id}|Test A answers.|${40 - SPELL_A.cost}|${SPELL_A.rest}|1`, island('CAST'));
-check('and while it rests it is refused', island('RESTING') === `${SPELL_A.name} can be called again in ${SPELL_A.rest} seconds.`, island('RESTING'));
+check('and while it rests it is refused', island('RESTING') === `${SPELL_A.name}: cooldown ${SPELL_A.rest} s.`, island('RESTING'));
 
 const why = (s: FaithSpellDef, t: PointedAt): string => spellTargetRefusal(s, t) ?? 'null';
 check('a spell pointed at nothing at all is cast on yourself', island('T:SELF') === 'self', island('T:SELF'));

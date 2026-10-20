@@ -118,11 +118,11 @@ function terraceRows(g: Game, b: Building, pick: Pick, base: TileTarget): MenuIt
   const standing = g.buildings.wall(b.levels, base.x, base.y, side);
   if (standing) {
     const out: MenuItem[] = [];
-    if (!isDone(standing)) out.push(build(g, act('build_wall'), t, `Build railing round the roof (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`, standing));
-    out.push(entry(g, act('remove_wall'), t, `Remove railing round the roof (${SIDE_NAMES[side]})`));
+    if (!isDone(standing)) out.push(build(g, act('build_wall'), t, `Build roof railing (${SIDE_NAMES[side]}) · needs ${describeNeeds(standing, materialName)}`, standing));
+    out.push(entry(g, act('remove_wall'), t, `Remove roof railing (${SIDE_NAMES[side]})`));
     return out;
   }
-  return [materials(g, act('plan_wall'), { ...t, wallType: 'railing' }, `Plan railing round the roof (${SIDE_NAMES[side]})`, (m) => wallBill(m, 'railing'))];
+  return [materials(g, act('plan_wall'), { ...t, wallType: 'railing' }, `Plan roof railing (${SIDE_NAMES[side]})`, (m) => wallBill(m, 'railing'))];
 }
 
 /** The rows for a tile of a building: its columns, and the railing round its roof. */
@@ -175,7 +175,7 @@ function outsideStairRows(g: Game, b: Building, base: TileTarget, place?: PlaceS
         const why = plan.check?.({ ...asked, material: m.id }, g) ?? null;
         return {
           label: m.name,
-          note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, hand), materialName)} · Q and E turn it`,
+          note: `${describeNeeds(floorBill(m.id, 'stairs', undefined, hand), materialName)} · Q/E rotate`,
           hint: why ?? undefined,
           disabled: !!why,
           onSelect: () => place(t, OUTSIDE_STAIR_LEVEL, m.id, side, hand),
@@ -267,12 +267,12 @@ export function frameJettyEntries(g: Game, pick: Pick, place?: PlaceStairs): Men
       const roof = bld.floor(b.levels, x, y);
       const roofTarget: TileTarget = { ...base, floorKind: 'roof' };
       if (roof) {
-        if (!isDone(roof)) rows.push(build(g, act('build_floor'), roofTarget, `Build roof over the jetty · needs ${describeNeeds(roof, materialName)}`, roof));
-        rows.push(entry(g, act('remove_floor'), roofTarget, 'Remove roof over the jetty'));
+        if (!isDone(roof)) rows.push(build(g, act('build_floor'), roofTarget, `Build jetty roof · needs ${describeNeeds(roof, materialName)}`, roof));
+        rows.push(entry(g, act('remove_floor'), roofTarget, 'Remove jetty roof'));
       } else {
         const shapes = roofShapeMenu(g, b, roofTarget);
-        if (shapes) rows.push({ label: 'Plan roof over the jetty', children: shapes });
-        else rows.push(materials(g, act('plan_floor'), roofTarget, 'Plan roof over the jetty', (m) => floorBill(m, 'roof', roofShapeOf(b))));
+        if (shapes) rows.push({ label: 'Plan jetty roof', children: shapes });
+        else rows.push(materials(g, act('plan_floor'), roofTarget, 'Plan jetty roof', (m) => floorBill(m, 'roof', roofShapeOf(b))));
       }
     }
     out.push(hosts.length > 1 ? { label: `${b.name}'s jetty`, children: rows } : { label: `Jetty of ${b.name} (storey ${level + 1})`, children: rows });

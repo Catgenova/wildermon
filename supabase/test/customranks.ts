@@ -353,7 +353,7 @@ check('and then the island refuses the dig', got('DIG_OFF').endsWith('|false'), 
 same('naming the rank and what it lacks', foreignGround(game, dig, digAt), got('DIG_OFF').split('|')[0]);
 check('which is the sentence every power refused says', got('DIG_OFF').split('|')[0] === lacksSaid(deed, 'Builder', 'shape'), got('DIG_OFF'));
 check('a stranger is told whose ground it is, and the founder is never refused',
-  got('DIG_STRANGER') === `That ground is part of ${deed}. Only its citizens may shape it.` && got('DIG_FOUNDER') === 'ALLOWED',
+  got('DIG_STRANGER') === `Part of ${deed}: citizens only.` && got('DIG_FOUNDER') === 'ALLOWED',
   `${got('DIG_STRANGER')}; ${got('DIG_FOUNDER')}`);
 game.deed = null;
 game.neighbourDeeds = [{ name: deed, x: dx, y: dy, radius: 5, level: 1, holder: nBoss }];
@@ -438,7 +438,7 @@ check('but to a rank below their own, for somebody below', got('RANK_DOWN') === 
 check('the one ranked is told what the rank may do, in the browser\'s words',
   got('RANK_TOLD') === rankedLine(got('N_BLD'), 'Keeper', deed, keeper.perms) && got('RANK_ROLE') === 'keeper', got('RANK_TOLD'));
 check('a rank renamed keeps everybody on it, under its new name', got('RENAMED_ROLE') === 'steward|true', got('RENAMED_ROLE'));
-check('and one somebody holds is not deleted', got('DROP_KEEP') === `1 citizen holds Steward. Give them another rank first.`, got('DROP_KEEP'));
+check('and one somebody holds is not deleted', got('DROP_KEEP') === `Steward held by 1 citizen: give them another rank first.`, got('DROP_KEEP'));
 check('the browser knows which rank everybody holds, by id', defOf(sRank, gst)?.name === 'Guest' && defOf(sRank, may)?.name === 'Mayor'
   && asRanked(sRank).rank === 'Builder', JSON.stringify(sRank.held));
 

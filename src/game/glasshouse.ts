@@ -50,32 +50,32 @@ type TileTarget = Extract<Target, { kind: 'tile' }>;
 export const GLASS = GLASS_ROOF.id;
 
 /** Why glass is not laid as a wall, a fence, a floor or a stair. */
-export const GLASS_ROOF_ONLY = 'Glass is laid on a roof and nowhere else.';
+export const GLASS_ROOF_ONLY = 'Glass: roofs only.';
 /** Why a flat roof is not laid in glass. */
-export const GLASS_PITCHED = 'A glass roof is pitched, gabled or hipped: a flat roof is a deck for walking on.';
+export const GLASS_PITCHED = 'Glass roofs: pitched, gabled or hipped only (flat roofs are walkable decks).';
 /** Why a floor is not planned over a field. */
-export const FIELD_UNFLOORED = 'There is a field here: clear the field before you floor it.';
+export const FIELD_UNFLOORED = 'Field here: clear it first.';
 /** Why a roof of anything but glass is not planned on a building with a field in it. */
-export const FIELD_GLASS_ONLY = 'There is a field in this building, and only glass roofs a field: plan glass, or clear the field first.';
+export const FIELD_GLASS_ONLY = 'Field in this building: roof must be glass, or clear the field first.';
 /** Why no storey is raised over a building with a field in it. */
-export const FIELD_NO_STOREY = 'There is a field in this building: clear the field before you raise a storey over it.';
+export const FIELD_NO_STOREY = 'Field in this building: clear it before adding a storey.';
 /** Why the ground in a building that is not a glasshouse does not rake into a field. */
-export const NOT_A_GLASSHOUSE = 'Only a glasshouse is tilled: one storey, walled all round to full height, with every tile of it under a finished roof of glass.';
+export const NOT_A_GLASSHOUSE = 'Indoors, glasshouses only: 1 storey, full-height walls all round, every tile under finished glass roof.';
 /** What clearing a field inside a footprint says: it goes back to packed earth, as the rest of the footprint is. */
-export const FIELD_PACKED = 'You clear the field and pack the ground flat again.';
+export const FIELD_PACKED = 'Field cleared; ground packed.';
 /**
  * What clearing a field says: the crop turned back into the soil if there was
  * one, and inside a footprint the ground packed flat again. The island's
  * `clear_field` in `perform_farm`, in the same words.
  */
 export const clearedSaid = (crop: string | null, packed: boolean): string =>
-  crop ? `You turn the ${crop} back into the soil${packed ? ' and pack the ground flat again' : ''}.` : packed ? FIELD_PACKED : 'You break the field back up into plain dirt.';
+  crop ? `Cleared: ${crop}${packed ? '; ground packed' : ''}.` : packed ? FIELD_PACKED : 'Field cleared: tile is dirt.';
 /** Why a glasshouse's ground does not rake into a field where a floor is planned on it. */
-export const GLASS_FLOORED = 'There is a floor here: take it up before you till.';
+export const GLASS_FLOORED = 'Floor here: remove it first.';
 /** Why a glasshouse's ground does not rake into a field where it stands on a foundation: a pour of concrete, packed over and with no soil in it. */
-export const GLASS_SLAB = 'That is a poured slab: there is no soil in it to till. Till where the glasshouse stands on earth.';
+export const GLASS_SLAB = 'Poured slab: no soil. Till where the glasshouse stands on earth.';
 /** Why ground that is not bare earth does not. The island's words for it anywhere (`farm_refusal`). */
-export const NOT_TILLABLE = 'That ground will not rake into a field.';
+export const NOT_TILLABLE = 'Cannot be tilled.';
 
 /**
  * Whether a building is walled all round on its ground floor: a finished wall

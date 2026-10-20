@@ -376,7 +376,7 @@ same('a piece of furniture is set down, not laid out', setOut?.check?.({ ...into
 same('its keeper sets goods out from behind it', setOut?.check?.(into, game) ?? null, said('OUT_OK'), null);
 game.log.length = 0;
 setOut?.perform?.(into, game);
-const mineSaid = game.log.map((l) => l.text).find((t) => t.startsWith('You set')) ?? 'NOTHING';
+const mineSaid = game.log.map((l) => l.text).find((t) => t.startsWith('On the counter: ')) ?? 'NOTHING';
 check('and it is said the same way on both sides', mineSaid === said('OUT_SAID'), `browser "${mineSaid}", island "${said('OUT_SAID')}"`);
 const onIt = store?.items.reduce((n, it) => n + it.count, 0) ?? 0;
 check('three on the counter and two left in the pack, on both sides',
@@ -410,7 +410,7 @@ const at = (x: number, y: number): string | null => {
 same('not bought from inside the shop', at(X + 1.5, Y + 0.5), said('BUY_INSIDE'), COUNTER_FROM_STREET);
 same('nor from beside the house', at(X - 1.5, Y + 0.5), said('BUY_BESIDE'), COUNTER_FROM_STREET);
 same('nor from across the road', at(X + 0.5, Y - 4.5), said('BUY_FAR'), COUNTER_TOO_FAR);
-same('nor short of the coins', at(X + 0.5, Y - 0.5), said('BUY_BROKE'), 'You cannot afford it. It is 5 silver.');
+same('nor short of the coins', at(X + 0.5, Y - 0.5), said('BUY_BROKE'), 'Cannot afford: 5 silver.');
 {
   // A wing of the same house reaching round into the street: past the wall's line, and indoors.
   const shopCopy = [...buyer.buildings.list.values()].find((b) => b.name === 'Shop');
@@ -423,7 +423,7 @@ check(`from further off than ${COUNTER_SEEN} tiles a buyer is sent how many thin
 {
   // Its keeper does not buy off their own counter, on either side.
   if (seen) seen.mine = true;
-  same('nor by its keeper', at(X + 0.5, Y - 0.5), said('BUY_OWN'), 'It is your own counter. Take it back off the counter instead.');
+  same('nor by its keeper', at(X + 0.5, Y - 0.5), said('BUY_OWN'), 'Your own counter: take it back off instead.');
   if (seen) seen.mine = false;
 }
 buyer.inventory.add('coin', { count: 20, extra: 'Silver' });

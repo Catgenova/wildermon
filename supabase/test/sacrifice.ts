@@ -166,10 +166,10 @@ check('nor a bag with something in it', say('FULL') === SACRIFICE_SAID.full, say
 check('a rare hatchet may be given up', say('AXE') === 'null', say('AXE'));
 check('and is gone', say('AXEGONE') === '0', say('AXEGONE'));
 check('and every nutrient is full', say('FED') === NUTRIENTS.map((k) => `${k}=1`).join(','), say('FED'));
-check('said as the browser says it', say('AXESAID') === `You give up the rare hatchet at the altar. ${FED_SAID}`, say('AXESAID'));
+check('said as the browser says it', say('AXESAID') === `Sacrificed: rare hatchet. ${FED_SAID}`, say('AXESAID'));
 check('of a stack, one is given up', say('PLANKSLEFT') === '2', say('PLANKSLEFT'));
 check('and a soul left is of the rarity of what was given up', say('SOULS') === 'rare x1,supreme x1', say('SOULS'));
-check('and says so', say('SOULSAID') === 'A supreme soul is left where the supreme plank was.', say('SOULSAID'));
+check('and says so', say('SOULSAID') === 'Got: supreme soul.', say('SOULSAID'));
 check('every nutrient full again from empty', say('FEDAGAIN') === 'true', say('FEDAGAIN'));
 check('a soul is absorbed only from a soul', say('PICKSOUL') === ABSORB_SAID.pickSoul, say('PICKSOUL'));
 check('into something', say('PICKITEM') === ABSORB_SAID.pickItem, say('PICKITEM'));
@@ -179,7 +179,7 @@ check('nor a thing already rare', say('ALREADY') === alreadyRare({ rare: 1 }), s
 check('an ordinary stack takes it', say('ABSORB') === 'null', say('ABSORB'));
 check('one of it, and the rest stay as they were', say('SPLIT') === 'plain x4,supreme x2,supreme x1' || say('SPLIT') === 'plain x4,supreme x1,supreme x2', say('SPLIT'));
 check('and the soul is used up', say('SOULUSED') === '0', say('SOULUSED'));
-check('said as the browser says it', say('ABSORBSAID') === 'The supreme soul sinks into the plank, and it is supreme now.', say('ABSORBSAID'));
+check('said as the browser says it', say('ABSORBSAID') === 'Absorbed: supreme soul into plank. Now supreme.', say('ABSORBSAID'));
 check('a thing on its own takes it where it is', say('SINGLE') === 'fantastic', say('SINGLE'));
 
 /* ---- the browser ------------------------------------------------------------ */

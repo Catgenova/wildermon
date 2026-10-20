@@ -58,7 +58,7 @@ begin
   for i in 1..40 loop perform skill_raise(w, u, 'mining', 2000); end loop;
   insert into said select 'RAISED', skill_standing(w, u, 'mining') || '|' || skill_of(w, u, 'mining');
   insert into said select 'BOARD', b->'skills'->'mining'->0->>'value' from rpc_boards(w) b;
-  insert into said select 'TOLD', text from event where world_id = w and uid = u and text like 'Mining increased%' order by n desc limit 1;
+  insert into said select 'TOLD', text from event where world_id = w and uid = u and text like 'Mining %(+%).' order by n desc limit 1;
 end $t$;
 select k || '=' || v from said order by k;
 rollback;`);
@@ -75,7 +75,7 @@ check(`and past the top each point halves it: ${PAST_TOP} times less at 101.5 th
 const [standing, used] = at('RAISED').split('|').map(Number);
 check(`on the island a skill raised at the top goes on past it, and what uses it reads ${SKILL_TOP}`, standing > SKILL_TOP && used === SKILL_TOP, at('RAISED'));
 check('the board reads the whole of it', Number(at('BOARD')) === standing, `${at('BOARD')} vs ${standing}`);
-check('and a raise says what it came to', at('TOLD').includes(` to ${standing.toFixed(4)}.`), at('TOLD'));
+check('and a raise says what it came to', at('TOLD').includes(` ${standing.toFixed(4)} (+`), at('TOLD'));
 
 /* ---- in the browser ---------------------------------------------------------------- */
 
@@ -85,7 +85,7 @@ for (let i = 0; i < 40; i++) g.gainSkill('mining', 2000);
 check(`in the browser a skill raised at the top goes on past it, and what uses it reads ${SKILL_TOP}`,
   g.skills.standing('mining') > SKILL_TOP && g.skills.get('mining') === SKILL_TOP, `${g.skills.standing('mining')} ${g.skills.get('mining')}`);
 check('and is saved whole', (g.skills.toJSON().mining ?? 0) > SKILL_TOP);
-check('and a raise says what it came to', g.log.some((e) => e.text.includes(` to ${g.skills.standing('mining').toFixed(4)}.`)));
+check('and a raise says what it came to', g.log.some((e) => e.text.includes(` ${g.skills.standing('mining').toFixed(4)} (+`)));
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nskills past a hundred — ${ok.length} of ${ok.length + bad.length}`);

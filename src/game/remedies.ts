@@ -27,8 +27,8 @@ export const salveFor = (wounds: Wound[]): Wound | null => worstWound(wounds.fil
 export const salveRefusal = (wounds: Wound[]): string | null => {
   if (salveFor(wounds)) return null;
   return wounds.some((w) => !w.infected && w.dressing === null)
-    ? 'A salve goes on over a dressing. Dress the wound first.'
-    : 'Nothing dressed on you can go bad.';
+    ? 'Dress the wound first: a salve goes over a dressing.'
+    : 'No dressed wound that can go bad.';
 };
 
 /**
@@ -38,10 +38,10 @@ export const salveRefusal = (wounds: Wound[]): string | null => {
 export function salveRefusalFor(w: Wound | null): string | null {
   if (!w) return WOUND_CLOSED;
   const on = onYour(w), On = on.charAt(0).toUpperCase() + on.slice(1);
-  if (w.infected) return `${On} has gone bad. Clean it out before anything will hold on it.`;
-  if (w.dressing === null) return 'A salve goes on over a dressing. Dress the wound first.';
-  if (w.salved) return `${On} has a salve on it already.`;
-  if (w.dressing === WOUND_KINDS[w.kind].herb) return `${On} is under the ${w.dressing} that suits it, and cannot go bad.`;
+  if (w.infected) return `${On}: infected. Clean it with lye first.`;
+  if (w.dressing === null) return 'Dress the wound first: a salve goes over a dressing.';
+  if (w.salved) return `${On}: already salved.`;
+  if (w.dressing === WOUND_KINDS[w.kind].herb) return `${On}: under its right herb (${w.dressing}), cannot go bad.`;
   return null;
 }
 
@@ -62,7 +62,7 @@ export const REMEDY_ACTIONS: ActionDef[] = [
     applies: (t, g) => (itemDef(held(g, t)?.id ?? '').stamina ?? 0) > 0,
     check: (t, g) => {
       if (!held(g, t)) return 'It is gone.';
-      if (g.player.stats.stamina >= 0.999) return 'You are not tired.';
+      if (g.player.stats.stamina >= 0.999) return 'Stamina already full.';
       return null;
     },
     perform: (t, g) => {
@@ -72,7 +72,7 @@ export const REMEDY_ACTIONS: ActionDef[] = [
       if (!g.inventory.remove(it.uid, 1)) return;
       g.player.stats.stamina = Math.min(1, g.player.stats.stamina + lift);
       g.events.emit('stats');
-      g.logMsg(`You drink the ${itemDef(it.id).name.toLowerCase()}. It puts back ${percent(lift)} of your stamina.`, 'event');
+      g.logMsg(`Drank: ${itemDef(it.id).name.toLowerCase()}. Stamina +${percent(lift)}.`, 'event');
     },
   },
   {
@@ -97,7 +97,7 @@ export const REMEDY_ACTIONS: ActionDef[] = [
       if (!it || !w || !g.inventory.remove(it.uid, 1)) return;
       w.salved = true;
       g.events.emit('stats');
-      g.logMsg(`You rub the salve into the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}. It will not go bad under it.`, 'event');
+      g.logMsg(`Salved: ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}. It cannot go bad.`, 'event');
     },
   },
   {
@@ -112,7 +112,7 @@ export const REMEDY_ACTIONS: ActionDef[] = [
       const it = held(g, t);
       if (!it || !g.inventory.remove(it.uid, 1)) return;
       g.takeTincture();
-      g.logMsg(`You take the tincture. ${TINCTURE_NAMES.charAt(0).toUpperCase()}${TINCTURE_NAMES.slice(1)} each go in ${percent(TINCTURE_BONUS)} faster for the next ${clockLeft(TINCTURE_SECONDS)}.`, 'event');
+      g.logMsg(`Tincture taken: ${TINCTURE_NAMES} ${percent(TINCTURE_BONUS)} faster for ${clockLeft(TINCTURE_SECONDS)}.`, 'event');
     },
   },
 ];

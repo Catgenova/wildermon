@@ -408,7 +408,7 @@ const burnOf = (k: string, at = 0): { each: number; secs: number; burning: boole
 }
 check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
 check('a Kindler spell is refused with no focus in your pack, in the words its note uses',
-  island('NEEDS:NONE') === `Scorch wants ${NEEDS_SAID.kindling.wants}.`, island('NEEDS:NONE'));
+  island('NEEDS:NONE') === `Scorch: needs ${NEEDS_SAID.kindling.wants}.`, island('NEEDS:NONE'));
 check('and with a focus of another school\'s stone, or one worn through',
   island('NEEDS:SAPPHIRE') === island('NEEDS:NONE') && island('NEEDS:SPENT') === island('NEEDS:NONE'),
   `${island('NEEDS:SAPPHIRE')} / ${island('NEEDS:SPENT')}`);
@@ -418,16 +418,16 @@ check(`fire at 100% is an Ember out of it, to the last bit on both sides (${KIND
   near(Number(island('FORCE')), spellForce(EMBER, KINDLING, CUT, 1)) && near(Number(island('FIRE_AT')), Number(island('FORCE'))),
   `island ${island('FORCE')}, browser ${spellForce(EMBER, KINDLING, CUT, 1)}`);
 check('a Heat Seeker and a Firestorm with nothing near are refused',
-  island('SEEK:NONE') === `Nothing is within ${fx('heat_seeker', 'reach')} tiles of you to strike.`
-    && island('STORM:NONE') === `Nothing is within ${fx('firestorm', 'reach')} tiles of you to strike.`,
+  island('SEEK:NONE') === `No target within ${fx('heat_seeker', 'reach')} tiles.`
+    && island('STORM:NONE') === `No target within ${fx('firestorm', 'reach')} tiles.`,
   `${island('SEEK:NONE')} / ${island('STORM:NONE')}`);
 const [A, B, C, E, G, H] = island('IDS').split(',');
 {
   const [ratio, line] = parts('FLASH');
   check(`Flash Fire: fire at ${pct(fx('flash_fire', 'fire'))}`,
-    near(Number(ratio), fx('flash_fire', 'fire'), 1e-4) && /^Flash Fire: the fire takes \d+ off the ogre\. It is down to \d+ of 170\.$/.test(line),
+    near(Number(ratio), fx('flash_fire', 'fire'), 1e-4) && /^Flash Fire: ogre −\d+ fire, \d+\/170\.$/.test(line),
     island('FLASH'));
-  check(`and no further than ${fx('flash_fire', 'reach')} tiles`, island('FLASH:FAR') === `The ogre is more than ${fx('flash_fire', 'reach')} tiles away.`,
+  check(`and no further than ${fx('flash_fire', 'reach')} tiles`, island('FLASH:FAR') === `Too far: max ${fx('flash_fire', 'reach')} tiles.`,
     island('FLASH:FAR'));
 }
 check('the fire teaches the Kindler\'s trade, and the cast the school', island('LEARN') === 'true|true', island('LEARN'));
@@ -437,8 +437,8 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   check(`Scorch: fire at ${pct(fx('scorch', 'fire'))}, and a burn of ${pct(fx('scorch', 'each'))} of its health a second for ${fx('scorch', 'secs')} s `
     + 'that marks it burning',
     near(ratio, fx('scorch', 'fire'), 1e-4) && near(burn.each, fx('scorch', 'each'), 1e-6) && near(burn.secs, fx('scorch', 'secs'), 1e-6) && burn.burning
-      && / It burns 1% of its health a second for 8 s\.$/.test(parts('SCORCH')[4]), island('SCORCH'));
-  check(`and no further than ${fx('scorch', 'reach')} tiles`, island('SCORCH:FAR') === `The ogre is more than ${fx('scorch', 'reach')} tiles away.`,
+      && / Burning: 1% health per second for 8 s\.$/.test(parts('SCORCH')[4]), island('SCORCH'));
+  check(`and no further than ${fx('scorch', 'reach')} tiles`, island('SCORCH:FAR') === `Too far: max ${fx('scorch', 'reach')} tiles.`,
     island('SCORCH:FAR'));
 }
 {
@@ -446,26 +446,26 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   check(`Heat Seeker: fire at ${pct(fx('heat_seeker', 'fire'))} on the one with the least of its health left within ${fx('heat_seeker', 'reach')} tiles, `
     + 'and not a worse-hurt one beyond them',
     near(Number(ratio), fx('heat_seeker', 'fire'), 1e-4) && near(Number(aLeft), 0.8, 1e-6) && near(Number(eLeft), 0.2, 1e-6)
-      && /^Heat Seeker: the fire takes \d+ off the ogre\./.test(line), island('SEEK'));
+      && /^Heat Seeker: ogre −\d+ fire, /.test(line), island('SEEK'));
 }
 {
   const [ratio, slow, secs, line] = parts('SCALD');
   check(`Scald: fire at ${pct(fx('scald', 'fire'))}, and ${pct(fx('scald', 'pace'))} of its pace for ${fx('scald', 'secs')} s`,
     near(Number(ratio), fx('scald', 'fire'), 1e-4) && near(Number(slow), fx('scald', 'pace'), 1e-6) && near(Number(secs), fx('scald', 'secs'), 1e-6)
-      && / For 6 s it goes at 60% of its pace\.$/.test(line), island('SCALD'));
+      && / Pace 60% for 6 s\.$/.test(line), island('SCALD'));
 }
 {
   const lost = Number(parts('IMMOLATE')[0]);
   const burn = burnOf('IMMOLATE', 1);
   check(`Immolate: no fire, and a burn of ${pct(fx('immolate', 'each'))} of its health a second for ${fx('immolate', 'secs')} s`,
     lost === 0 && near(burn.each, fx('immolate', 'each'), 1e-6) && near(burn.secs, fx('immolate', 'secs'), 1e-6) && burn.burning
-      && parts('IMMOLATE')[4] === 'Immolate: the ogre catches. It burns 2% of its health a second for 15 s.', island('IMMOLATE'));
+      && parts('IMMOLATE')[4] === 'Immolate: ogre caught fire. Burning: 2% health per second for 15 s.', island('IMMOLATE'));
 }
 {
   const [ratio, waiting] = parts('STOKE');
   check(`Stoke: the next fire ${pct(fx('stoke', 'more') - 1)} larger, waiting through a spell with no fire and spent by the one with`,
     island('STOKE:WAITS') === 'true' && near(Number(ratio), fx('flash_fire', 'fire') * fx('stoke', 'more'), 1e-4) && waiting === 'false'
-      && island('STOKE:SAID') === 'Stoke: the next spell of yours within 60 s that deals fire deals 50% more of it.',
+      && island('STOKE:SAID') === 'Stoke: next fire spell within 60 s: fire damage +50%.',
     `${island('STOKE:SAID')} / ${island('STOKE:WAITS')} / ${island('STOKE')}`);
 }
 {
@@ -473,14 +473,14 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   const left = SPECIES[FOE].health * fx('immolate', 'each') * fx('immolate', 'secs');
   check(`Combust: ${pct(fx('combust', 'more'))} of what the burn had left (${left} of ${SPECIES[FOE].health}) at once, and out, bleeding and all`,
     near(Number(lost), left * fx('combust', 'more'), 1e-3) && bleed === 'none' && burning === 'false'
-      && /^Combust: the burn on the ogre goes up at once, \d+ of it\. It is down to \d+ of 170\.$/.test(line), island('COMBUST'));
-  check('and refused on one not burning', island('COMBUST:COLD') === 'The ogre is not burning.', island('COMBUST:COLD'));
+      && /^Combust: burn spent at once, ogre −\d+, \d+\/170\.$/.test(line), island('COMBUST'));
+  check('and refused on one not burning', island('COMBUST:COLD') === 'The ogre: not burning.', island('COMBUST:COLD'));
 }
 {
   const burn = burnOf('BRAND');
   check(`Firebrand: a burn you start lasts ${fx('firebrand', 'long')} times as long while it holds`,
     near(burn.secs, fx('immolate', 'secs') * fx('firebrand', 'long'), 1e-6)
-      && parts('BRAND')[3] === 'Firebrand: for 30 s every burn you start lasts twice as long.', island('BRAND'));
+      && parts('BRAND')[3] === 'Firebrand: burns you start last ×2, for 30 s.', island('BRAND'));
 }
 {
   const ratio = Number(parts('INFERNO')[0]);
@@ -495,7 +495,7 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   check(`Meteor: fire at ${pct(fx('meteor', 'fire'))} on the one cast at, ${pct(fx('meteor', 'splash'))} on every other within `
     + `${fx('meteor', 'wide')} tiles of it, and none further`,
     near(Number(onIt), fx('meteor', 'fire'), 1e-4) && near(Number(nearA), fx('meteor', 'splash'), 1e-4) && near(Number(nearG), fx('meteor', 'splash'), 1e-4)
-      && Number(farH) === 0 && Number(farC) === 0 && / 2 more creatures are caught in it\.$/.test(line), island('METEOR'));
+      && Number(farH) === 0 && Number(farC) === 0 && / Splash: 2 more hit\.$/.test(line), island('METEOR'));
 }
 {
   const [list, line] = [island('STORM').split('|')[0], island('STORM').split('|')[1]];
@@ -504,7 +504,7 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   const outside = [C, E].every((id) => by.get(id)!.ratio === 0 && by.get(id)!.each === '-');
   check(`Firestorm: fire at ${pct(fx('firestorm', 'fire'))} and a burn of ${pct(fx('firestorm', 'each'))} on every enemy within `
     + `${fx('firestorm', 'reach')} tiles of you, and on nothing further`,
-    inside && outside && line === 'Firestorm: 4 creatures are caught in it. They burn 2% of their health a second for 10 s.', island('STORM'));
+    inside && outside && line === 'Firestorm: 4 creatures hit. Survivors burning: 2% health per second for 10 s.', island('STORM'));
 }
 {
   const [inside, outside, written] = parts('AURA');
@@ -512,7 +512,7 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   check(`Blaze Aura: fire at ${pct(fx('blaze_aura', 'fire'))} a second on every enemy within ${fx('blaze_aura', 'reach')} tiles, `
     + 'a round at a time on the clock',
     island('AURA:N') === '1' && near(Number(inside), fx('blaze_aura', 'fire') * 2, 1e-4) && Number(outside) === 0 && written === 'true'
-      && island('AURA:CLOCK') === 'true' && /^Blaze Aura: for 15 s everything wild within 2 tiles of you takes [\d.]+ of fire a second\.$/.test(island('AURA:SAID')),
+      && island('AURA:CLOCK') === 'true' && /^Blaze Aura: fire [\d.]+ per second on everything wild within 2 tiles, for 15 s\.$/.test(island('AURA:SAID')),
     `${island('AURA:SAID')} / ${island('AURA:N')} / ${island('AURA')} / clock ${island('AURA:CLOCK')}`);
   check('and nothing once its time is up, and gone', gone === 'false' && still === 'true', island('AURA:GONE'));
 }
@@ -520,7 +520,7 @@ check('the fire teaches the Kindler\'s trade, and the cast the school', island('
   const [cast, stamina, momentum] = parts('PAID');
   check(`the door charges ${pct(spell('firebrand').cost)} of your stamina and rests it ${spell('firebrand').rest} s, with no momentum but a Kindler's`,
     cast === 'kindler_firebrand' && near(Number(stamina), 1 - spell('firebrand').cost, 1e-9) && momentum === 'false', island('PAID'));
-  check('and will not call it again until it has rested', /can be called again in \d+ seconds\.$/.test(island('RESTING')), island('RESTING'));
+  check('and will not call it again until it has rested', /: cooldown \d+ s\.$/.test(island('RESTING')), island('RESTING'));
 }
 check('the six passives fold on the island to what they fold to in the browser',
   island('FOLDED') === Object.keys(FOLD).filter((k) => /^(retort|cast|momentum|burn|ward):/.test(k)).sort()
@@ -550,7 +550,7 @@ check('the six passives fold on the island to what they fold to in the browser',
   const cost = spell('firebrand').cost * FOLD['cast:cost'];
   check(`Deep Breath: the door charges ${pct(cost)} rather than ${pct(spell('firebrand').cost)}, and a refusal says so`,
     cast === 'kindler_firebrand' && near(Number(stamina), 1 - cost, 1e-9)
-      && island('BREATH:SHORT') === `Firebrand costs ${pct(cost)} of your stamina; you have 10%.`, `${island('BREATH')} / ${island('BREATH:SHORT')}`);
+      && island('BREATH:SHORT') === `Firebrand: need ${pct(cost)} stamina (have 10%).`, `${island('BREATH')} / ${island('BREATH:SHORT')}`);
 }
 {
   const [more, secs, fireAt] = parts('MOMENTUM').map(Number);

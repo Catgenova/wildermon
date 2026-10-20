@@ -105,7 +105,7 @@ begin
   insert into said select 'WHOLE', count(*) || '|' || coalesce(min(i.ql) >= 1 and max(i.ql) <= 100, false) || '|'
     || coalesce(bool_and(i.dmg = 0), false)
     from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = '${REGRET}';
-  insert into said select 'FOUNDSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Your trowel turns up a Bauble%'
+  insert into said select 'FOUNDSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Found: Bauble%'
     order by e.n desc limit 1;
   insert into said select 'NOTARNISHED', count(*)::text from item i
    where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def in ('tarnished_bauble', 'fragment');
@@ -181,7 +181,7 @@ check(`and a tarnished bauble for about ${pct(BAUBLE_SHARE)} still`,
   Math.abs(iTarnished / iFinds - BAUBLE_SHARE) < 0.04, `${iTarnished} of ${iFinds} (${pct(iTarnished / iFinds)})`);
 check('one comes up whole, of a quality, and nothing else with it', say('WHOLE') === '1|true|true' && say('NOTARNISHED') === '0',
   `${say('WHOLE')} / ${say('NOTARNISHED')}`);
-const FOUND = /^Your trowel turns up a Bauble of Regret, whole\. It undoes one of your trades, in the Trades window\. \(QL \d+\.\d\)$/;
+const FOUND = /^Found: Bauble of Regret, QL \d+\.\d\. Undoes one trade \(Trades window\)\.$/;
 check('and says so', FOUND.test(say('FOUNDSAID')), say('FOUNDSAID'));
 check('a trade that is not a slot is refused', say('KIND') === REGRET_SAID.kind, say('KIND'));
 check('as is breaking one without one', say('NONE') === REGRET_SAID.none, say('NONE'));
@@ -232,9 +232,9 @@ check(`the browser turns one up for about ${pct(REGRET_SHARE)} of finds too`,
 check(`and a tarnished bauble for about ${pct(BAUBLE_SHARE)} still`,
   Math.abs(bTarnished / bFinds - BAUBLE_SHARE) < 0.03, `${bTarnished} of ${bFinds} (${pct(bTarnished / bFinds)})`);
 check('whole, every one of them', game.inventory.items.filter((i) => i.id === REGRET).every((i) => i.dmg === 0 && i.ql >= 1 && i.ql <= 100));
-const logged = game.log.filter((l) => l.text.startsWith('Your trowel turns up a Bauble')).map((l) => l.text);
+const logged = game.log.filter((l) => l.text.startsWith('Found: Bauble')).map((l) => l.text);
 check('said as the island says it', logged.length > 0 && logged.every((t) => FOUND.test(t))
-  && logged[0].replace(/\(QL .*$/, '') === say('FOUNDSAID').replace(/\(QL .*$/, ''), logged[0] ?? '(nothing)');
+  && logged[0].replace(/QL [\d.]+/, 'QL') === say('FOUNDSAID').replace(/QL [\d.]+/, 'QL'), logged[0] ?? '(nothing)');
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\n${ok.length} passed, ${bad.length} failed`);

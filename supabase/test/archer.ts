@@ -460,22 +460,22 @@ for (const sh of SHOTS) {
   const [slow, secs, line] = parts('CRIPPLE');
   check(`Crippling Shot: for ${fx('crippling_shot', 'secs')} s it goes at ${pct(fx('crippling_shot', 'pace'))} of its pace`,
     near(Number(slow), fx('crippling_shot', 'pace'), 1e-6) && near(Number(secs), fx('crippling_shot', 'secs'), 1e-6)
-      && line.endsWith(`it goes at ${pct(fx('crippling_shot', 'pace'))} of its pace.`), island('CRIPPLE'));
+      && line.endsWith(`Pace ${pct(fx('crippling_shot', 'pace'))} for ${fx('crippling_shot', 'secs')} s.`), island('CRIPPLE'));
 }
 {
   const [secs, still, line] = parts('PIN');
   check(`Pinning Shot holds it where it stands for ${fx('pinning_shot', 'hold') * fx('pinning_shot', 'monster')} s, a monster as an ogre is`,
-    near(Number(secs), fx('pinning_shot', 'hold') * fx('pinning_shot', 'monster'), 1e-6) && still === 'true' && /held where it stands/.test(line), island('PIN'));
+    near(Number(secs), fx('pinning_shot', 'hold') * fx('pinning_shot', 'monster'), 1e-6) && still === 'true' && line.endsWith(` Held for ${fx('pinning_shot', 'hold') * fx('pinning_shot', 'monster')} s.`), island('PIN'));
 }
 {
   const [long, aimed] = parts('RANGE:LONG');
   check(`Long Shot reaches ${fx('long_shot', 'range')} times your bow's range, where a shot within it is refused`,
-    long === 'loosed' && aimed === `The ogre is more than ${RANGE} tiles away.`, island('RANGE:LONG'));
-  check('and no further', island('RANGE:BEYOND') === `The ogre is more than ${RANGE * fx('long_shot', 'range')} tiles away.`, island('RANGE:BEYOND'));
+    long === 'loosed' && aimed === `Too far: max ${RANGE} tiles.`, island('RANGE:LONG'));
+  check('and no further', island('RANGE:BEYOND') === `Too far: max ${RANGE * fx('long_shot', 'range')} tiles.`, island('RANGE:BEYOND'));
   const [blank, near1] = parts('RANGE:NEAR');
   check(`Point Blank looses nearer than a draw can be made (${DRAW_CLOSEST} tiles), where another shot is refused`,
-    blank === 'loosed' && near1 === 'The ogre is too close to draw on.', island('RANGE:NEAR'));
-  check(`and no further than ${fx('point_blank', 'reach')} tiles`, island('RANGE:BLANK') === `The ogre is more than ${fx('point_blank', 'reach')} tiles away.`,
+    blank === 'loosed' && near1 === 'Too close to draw.', island('RANGE:NEAR'));
+  check(`and no further than ${fx('point_blank', 'reach')} tiles`, island('RANGE:BLANK') === `Too far: max ${fx('point_blank', 'reach')} tiles.`,
     island('RANGE:BLANK'));
 }
 {
@@ -486,12 +486,12 @@ for (const sh of SHOTS) {
 {
   const [ratio, line, used] = parts('TWIN');
   check(`Twin Arrows: ${fx('twin_arrows', 'arrows')} arrows at ${pct(fx('twin_arrows', 'more'))} each, the very rolls of two draws, an arrow for each`,
-    near(Number(ratio), 1, 1e-5) && /^Twin Arrows: \d of 2 arrows land/.test(line) && used === '2', island('TWIN'));
+    near(Number(ratio), 1, 1e-5) && /^Twin Arrows: \d\/2 arrows hit/.test(line) && used === '2', island('TWIN'));
 }
 {
   const [secs, line] = parts('SOONER');
   check(`Quick Shot puts your own next draw ${fx('quick_shot', 'sooner')} s sooner`,
-    near(Number(secs), 2 - fx('quick_shot', 'sooner'), 1e-6) && line.endsWith(`Your next draw comes ${fx('quick_shot', 'sooner')} s sooner.`), island('SOONER'));
+    near(Number(secs), 2 - fx('quick_shot', 'sooner'), 1e-6) && line.endsWith(`Next draw ${fx('quick_shot', 'sooner')} s sooner.`), island('SOONER'));
 }
 {
   const [plain, wind, lost] = parts('WIND:CRIT').map(Number);
@@ -502,17 +502,17 @@ for (const sh of SHOTS) {
   check('and sure, with a hand that misses most shots, and spent on it', sure === '20' && left === 'false', island('WIND:SURE'));
   const [drawn, plainDraw] = parts('WIND:DRAW').map(Number);
   check('a draw spends it as a spell\'s shot does', drawn === 20 && plainDraw < 20, island('WIND:DRAW'));
-  check('and it says so', island('WIND:SAID') === `Read the Wind: your next shot within ${fx('read_the_wind', 'secs')} s cannot miss, and is critical twice as often.`,
+  check('and it says so', island('WIND:SAID') === `Read the Wind: next shot within ${fx('read_the_wind', 'secs')} s cannot miss, critical chance ×${fx('read_the_wind', 'crit')}.`,
     island('WIND:SAID'));
 }
 {
   const [before, mine, theirs, secs, line] = parts('EXPOSE');
   check(`Expose: for ${fx('expose', 'secs')} s every blow and shot on it ${pct(fx('expose', 'more') - 1)} harder, yours and anybody's`,
     near(Number(before), 1) && near(Number(mine), fx('expose', 'more'), 1e-9) && near(Number(theirs), fx('expose', 'more'), 1e-9)
-      && near(Number(secs), fx('expose', 'secs'), 1e-6) && line.startsWith('Expose: for 15 s'), island('EXPOSE'));
-  check('and no further than a spell reaches', island('EXPOSE:FAR') === 'The ogre is more than 12 tiles away.', island('EXPOSE:FAR'));
+      && near(Number(secs), fx('expose', 'secs'), 1e-6) && line === `Expose: damage on ogre +${pct(fx('expose', 'more') - 1)} from every blow and shot, for ${fx('expose', 'secs')} s.`, island('EXPOSE'));
+  check('and no further than a spell reaches', island('EXPOSE:FAR') === 'Too far: max 12 tiles.', island('EXPOSE:FAR'));
 }
-check('Snipe is refused on a creature already after somebody', island('SNIPE:HUNTING') === 'The ogre is already after somebody.', island('SNIPE:HUNTING'));
+check('Snipe is refused on a creature already after somebody', island('SNIPE:HUNTING') === 'The ogre: already hunting someone.', island('SNIPE:HUNTING'));
 {
   const [health, told, secs] = parts('DECOY');
   check(`Decoy: for ${fx('decoy', 'secs')} s a creature's blow lands on the decoy and not on you, and you are told`,
@@ -522,18 +522,18 @@ check('Snipe is refused on a creature already after somebody', island('SNIPE:HUN
 {
   const [draw, swing, line] = parts('DEADEYE');
   check(`Deadeye: a draw ${pct(1 - fx('deadeye', 'time'))} quicker, and a swing as it was`,
-    near(Number(draw), fx('deadeye', 'time')) && near(Number(swing), 1) && line.startsWith('Deadeye: for 10 s'), island('DEADEYE'));
+    near(Number(draw), fx('deadeye', 'time')) && near(Number(swing), 1) && line === `Deadeye: draw time −${pct(1 - fx('deadeye', 'time'))} for ${fx('deadeye', 'secs')} s.`, island('DEADEYE'));
 }
-check('a shot is refused without a bow in your hands', island('NEEDS:BOW') === `Aimed Shot wants ${NEEDS_SAID.archery.wants}.`, island('NEEDS:BOW'));
+check('a shot is refused without a bow in your hands', island('NEEDS:BOW') === `Aimed Shot: needs ${NEEDS_SAID.archery.wants}.`, island('NEEDS:BOW'));
 check('and loosed with one', island('NEEDS:HAS') === 'ready', island('NEEDS:HAS'));
-check('Twin Arrows is refused with one arrow in the pack', island('NEEDS:TWO') === `Twin Arrows wants ${fx('twin_arrows', 'arrows')} arrows in your pack.`, island('NEEDS:TWO'));
-check('and a shot with none', island('NEEDS:ARROWS') === 'You are out of arrows.', island('NEEDS:ARROWS'));
+check('Twin Arrows is refused with one arrow in the pack', island('NEEDS:TWO') === `Twin Arrows: needs ${fx('twin_arrows', 'arrows')} arrows in your pack.`, island('NEEDS:TWO'));
+check('and a shot with none', island('NEEDS:ARROWS') === 'Out of arrows.', island('NEEDS:ARROWS'));
 {
   const [cast, stamina, rest] = parts('PAID');
   const s = spell('read_the_wind');
   check(`a spell called through the door costs its ${pct(s.cost)} of a full bar and rests ${s.rest} s`,
     cast === s.id && near(Number(stamina), 1 - s.cost) && near(Number(rest), s.rest, 1e-6), island('PAID'));
-  check('and is refused while it rests', island('RESTING') === `${s.name} can be called again in ${s.rest} seconds.`, island('RESTING'));
+  check('and is refused while it rests', island('RESTING') === `${s.name}: cooldown ${s.rest} s.`, island('RESTING'));
 }
 
 /* ---- The passives ------------------------------------------------------------ */
@@ -551,7 +551,7 @@ check('the six passives fold on the island to what they fold to in the browser',
 {
   const [nearest, drawn] = parts('CLOSE');
   check(`Close Quarters: a draw from ${DRAW_CLOSEST * FOLD['closest:draw']} tiles instead of ${DRAW_CLOSEST}`,
-    near(Number(nearest), DRAW_CLOSEST * FOLD['closest:draw'], 1e-9) && drawn === 'drawn' && island('REFUSED:NEAR') === 'It is too close to draw on.',
+    near(Number(nearest), DRAW_CLOSEST * FOLD['closest:draw'], 1e-9) && drawn === 'drawn' && island('REFUSED:NEAR') === 'Too close to draw.',
     `${island('REFUSED:NEAR')} ${island('CLOSE')}`);
 }
 {

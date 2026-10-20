@@ -11,7 +11,7 @@ import {
 import type { ClassDef } from '../../game/classes';
 import { perksOf } from '../../game/perks';
 import { CLASS_LEVEL_START } from '../../game/talents';
-import { article, listed, numberWord } from '../../game/words';
+import { listed } from '../../game/words';
 import type { UIWindow } from '../windows';
 
 /**
@@ -198,15 +198,15 @@ export class TradesPanel {
   private drawPage(): void {
     if (!this.island) {
       if (this.tab === 'tree') {
-        this.page.append(this.note('Playing by yourself in this browser there is no trade to hold, so there is no tree to spend. The Trades tab has what every trade offers.'));
+        this.page.append(this.note('Classes: island only. Single-player: no tree. See the Trades tab.'));
         return;
       }
-      this.page.append(this.note('Trades are the island’s to keep. Playing by yourself in this browser there is nobody holding the ledger, so none can be taken up, but what each one offers is here to read.'));
+      this.page.append(this.note('Classes: island only. Single-player: read only.'));
       this.drawBook();
       return;
     }
     if (!this.said) {
-      this.page.append(this.note('Asking the island what you may take up…'));
+      this.page.append(this.note('Loading classes…'));
       return;
     }
     if (this.said.why) {
@@ -239,8 +239,8 @@ export class TradesPanel {
     head.className = 'trade-head';
     const taken = [said.taken.craft, said.taken.combat].filter(Boolean).length;
     head.textContent = taken === 2
-      ? `A trade of each. Putting one down for another costs ${said.change_cost} silver; you have ${Math.floor(said.purse)}.`
-      : `A craft trade opens at ${said.at} in any skill it covers; a fighting trade is open from the start. You may hold one craft and one fighting trade at once.`;
+      ? `Both classes held. Class change: ${said.change_cost} silver (have ${Math.floor(said.purse)}).`
+      : `Craft class: opens at ${said.at} in any of its skills. Fighting class: open from the start. Max: 1 craft + 1 fighting.`;
     this.page.append(head);
 
     for (const [kind, title] of GROUPS) {
@@ -328,7 +328,7 @@ export class TradesPanel {
       worn.className = 'trade-worn';
       worn.textContent = 'Yours.';
       // Your own trade is drawn on the Tree tab, with what you have taken of it.
-      const tree = button('Open the Tree tab', 'trade-take');
+      const tree = button('Open Tree tab', 'trade-take');
       tree.addEventListener('click', () => this.show('tree'));
       acts.append(worn, tree);
       /*
@@ -340,8 +340,8 @@ export class TradesPanel {
        */
       const carried = this.game.inventory.items.some((it) => it.id === REGRET || it.inside?.some((b) => b.id === REGRET));
       if (carried && said) {
-        const undo = button('Undo, breaking the Bauble of Regret', 'trade-take');
-        undo.title = `Puts the ${c.name.toLowerCase()}’s trade down and clears ${PERK_CLASSES.has(c.id) ? 'the perks taken for it' : 'its tree'}. The next trade you take up in its place costs nothing, not ${said.change_cost} silver.`;
+        const undo = button('Undo (uses Bauble of Regret)', 'trade-take');
+        undo.title = `Removes ${c.name} and ${PERK_CLASSES.has(c.id) ? 'its perks' : 'its tree'}. Next class in this slot: free (base ${said.change_cost} silver).`;
         undo.addEventListener('click', () => void this.doorway(this.island!.regretClass(c.kind)));
         acts.append(undo);
       }
@@ -349,7 +349,7 @@ export class TradesPanel {
     }
 
     const open = this.opened.has(c.id);
-    const look = button(open ? 'Hide what it offers' : 'What it offers', 'trade-take');
+    const look = button(open ? 'Hide details' : 'Details', 'trade-take');
     look.setAttribute('aria-expanded', String(open));
     look.addEventListener('click', () => {
       if (open) this.opened.delete(c.id);
@@ -362,7 +362,7 @@ export class TradesPanel {
     const asking = this.confirming === `class:${c.id}` && !c.why;
     if (said && !asking) {
       const had = c.kind === 'craft' ? said.taken.craft : said.taken.combat;
-      const take = button(had ? `Take up, for ${said.change_cost} silver` : 'Take up', 'trade-take');
+      const take = button(had ? `Take (${said.change_cost} silver)` : 'Take', 'trade-take');
       take.disabled = !!c.why;
       take.addEventListener('click', () => this.ask2(`class:${c.id}`));
       acts.append(take);
@@ -386,12 +386,12 @@ export class TradesPanel {
    * where every one starts until it is taken up.
    */
   private standing(c: ClassCard, mine: boolean): string {
-    if (!PERK_CLASSES.has(c.id)) return mine ? `${c.points} points` : `would be ${c.points}`;
+    if (!PERK_CLASSES.has(c.id)) return mine ? `${c.points} points` : `${c.points} points if taken`;
     const at = tiersAtFor(c.kind);
     const reach = c.kind === 'combat' ? this.classLevel(c.id, mine) : this.game.skills.get(c.main);
     const open = c.open || mine ? at.filter((x, i) => i === 0 || reach >= x).length : 0;
-    if (mine && c.kind === 'combat') return `level ${Math.floor(reach)} · ${open} of ${at.length} tiers open`;
-    return mine ? `${open} of ${at.length} tiers open` : `would open ${open} of ${at.length}`;
+    if (mine && c.kind === 'combat') return `level ${Math.floor(reach)} · tiers ${open}/${at.length}`;
+    return mine ? `tiers ${open}/${at.length}` : `tiers ${open}/${at.length} if taken`;
   }
 
   /** A fighting trade's level: the island's word for your own, and where it starts for one not yet taken up. */
@@ -419,23 +419,22 @@ export class TradesPanel {
     const had = c.kind === 'craft' ? said.taken.craft : said.taken.combat;
     const lines: string[] = [];
     if (had) {
-      lines.push(`This puts the ${(classDef(had)?.name ?? had).toLowerCase()}’s trade down, and every `
-        + `${PERK_CLASSES.has(had) ? 'perk you took' : 'node you bought'} for it goes with it. `
-        + `It costs ${said.change_cost} silver; you have ${Math.floor(said.purse)}.`);
+      lines.push(`Removes ${classDef(had)?.name ?? had} and all its ${PERK_CLASSES.has(had) ? 'perks' : 'nodes'}. `
+        + `Cost: ${said.change_cost} silver (have ${Math.floor(said.purse)}).`);
     } else {
-      lines.push(`Putting it down later for another trade costs ${said.change_cost} silver, or a Bauble of Regret.`);
+      lines.push(`Later class change: ${said.change_cost} silver or a Bauble of Regret.`);
     }
     if (PERK_CLASSES.has(c.id)) {
       const first = perksOf(c.id).filter((p) => p.tier === 1).map((p) => p.name);
-      lines.push(`Its first tier opens at once, and you take one of ${either(first)} on the Tree tab.`);
+      lines.push(`Tier 1 opens at once: pick ${either(first)} on the Tree tab.`);
       if (c.kind === 'combat') {
-        lines.push(`It starts at class level ${CLASS_LEVEL_START}, and its other tiers open at class levels `
-          + `${listed(CLASS_TIER_AT.slice(1).map(String))}, as you land blows and kills while you hold it.`);
+        lines.push(`Starts at class level ${CLASS_LEVEL_START}; later tiers at class level `
+          + `${listed(CLASS_TIER_AT.slice(1).map(String))}. Class level rises with blows and kills landed.`);
       }
     } else {
-      lines.push(`You would have ${c.points} point${c.points === 1 ? '' : 's'} to spend in its tree now, and at most ${CLASS_POINTS_MAX}.`);
+      lines.push(`Tree points now: ${c.points} (max ${CLASS_POINTS_MAX}).`);
     }
-    return this.confirm(`Take up the ${c.name.toLowerCase()}’s trade?`, lines, `Take up the ${c.name}`,
+    return this.confirm(`Take ${c.name}?`, lines, `Take ${c.name}`,
       () => this.island!.takeClass(c.id));
   }
 
@@ -465,7 +464,7 @@ export class TradesPanel {
       this.confirming = null;
       void this.doorway(act());
     });
-    const no = button('Not yet', 'trade-take');
+    const no = button('Cancel', 'trade-take');
     no.addEventListener('click', () => {
       this.confirming = null;
       this.draw();
@@ -498,13 +497,13 @@ export class TradesPanel {
         cap.className = 'trade-card-top';
         const says = document.createElement('span');
         says.className = 'trade-col-head';
-        says.textContent = i === 0 ? `Tier ${i + 1} · with the trade`
-          : combat ? `Tier ${i + 1} · at class level ${at}` : `Tier ${i + 1} · at ${at} in ${skillName(c.main).toLowerCase()}`;
+        says.textContent = i === 0 ? `Tier ${i + 1} · on taking`
+          : combat ? `Tier ${i + 1} · class level ${at}` : `Tier ${i + 1} · ${skillName(c.main).toLowerCase()} ${at}`;
         cap.append(says);
         if (!reached && i > 0 && !combat) {
           const have = document.createElement('span');
           have.className = 'trade-points';
-          have.textContent = `you have ${Math.floor(main)}`;
+          have.textContent = `have ${Math.floor(main)}`;
           cap.append(have);
         }
         const row = document.createElement('div');
@@ -524,8 +523,8 @@ export class TradesPanel {
     box.append(this.caption('Tree'));
     const sums = document.createElement('div');
     sums.className = 'trade-covers';
-    sums.textContent = `All ${numberWord(nodes.length)} nodes cost ${whole} points, and a trade earns at most ${CLASS_POINTS_MAX}. `
-      + 'Each column is bought from the top down.';
+    sums.textContent = `All ${nodes.length} nodes: ${whole} points. Max points: ${CLASS_POINTS_MAX}. `
+      + 'Columns are bought top down.';
     box.append(sums);
     const grid = document.createElement('div');
     grid.className = 'trade-grid';
@@ -601,11 +600,11 @@ export class TradesPanel {
   private drawTree(): void {
     const tree = this.tree;
     if (!tree) {
-      this.page.append(this.note('Asking the island what you have bought…'));
+      this.page.append(this.note('Loading tree…'));
       return;
     }
     if (!tree.trades.length) {
-      this.page.append(this.note('No trade yet, so no tree. Take one up on the other tab.'));
+      this.page.append(this.note('No class taken. Take one on the Trades tab.'));
       return;
     }
     const chans = new Map(tree.channels.map((ch) => [ch.id, ch]));
@@ -636,7 +635,7 @@ export class TradesPanel {
     const left = document.createElement('span');
     left.className = 'trade-points';
     left.textContent = (t.level != null ? `level ${Math.floor(t.level)} · ` : '')
-      + (open ? `${open} to choose` : `${tiers.filter((x) => x.perks.some((p) => p.taken)).length} of ${tiers.length} chosen`);
+      + (open ? `${open} to choose` : `${tiers.filter((x) => x.perks.some((p) => p.taken)).length}/${tiers.length} chosen`);
     if (open) left.classList.add('trade-spare');
     head.append(name, left);
     return head;
@@ -655,9 +654,9 @@ export class TradesPanel {
     const cap = document.createElement('div');
     cap.className = 'trade-col-head';
     const main = classDef(t.class)?.main;
-    cap.textContent = tier.tier === 1 ? `Tier ${tier.tier} · with the trade`
-      : t.kind === 'combat' ? `Tier ${tier.tier} · at class level ${tier.at}`
-        : `Tier ${tier.tier} · at ${tier.at}${main ? ` in ${skillName(main).toLowerCase()}` : ''}`;
+    cap.textContent = tier.tier === 1 ? `Tier ${tier.tier} · on taking`
+      : t.kind === 'combat' ? `Tier ${tier.tier} · class level ${tier.at}`
+        : `Tier ${tier.tier} · ${main ? `${skillName(main).toLowerCase()} ` : ''}${tier.at}`;
     box.append(cap);
     // The island's reason, said once under the tier when it is the same for every perk still to take.
     const shared = sharedWhy(tier.perks);
@@ -695,7 +694,7 @@ export class TradesPanel {
     box.append(top, note);
     // Only a perk that can be taken has a button: one that cannot has the island's reason instead, here or on its tier.
     if (!p.taken && !asked && !p.why) {
-      const take = button('Take this one', 'trade-buy');
+      const take = button('Take', 'trade-buy');
       take.addEventListener('click', () => this.ask2(`perk:${p.id}`));
       box.append(take);
     }
@@ -709,8 +708,8 @@ export class TradesPanel {
     const cost = this.said?.change_cost ?? CLASS_CHANGE_COST;
     return this.confirm(`Take ${p.name}?`, [
       p.note,
-      `A tier gives one perk: ${listed(others)} ${others.length === 1 ? 'closes' : 'close'} for as long as you are ${article(t.name)} ${t.name.toLowerCase()}.`,
-      `Choosing again means putting the whole trade down, and every perk taken for it: a Bauble of Regret does that, or taking up another trade for ${cost} silver.`,
+      `One perk per tier: ${listed(others)} ${others.length === 1 ? 'closes' : 'close'} while you hold ${t.name}.`,
+      `To choose again: remove the class and all its perks (Bauble of Regret, or a class change for ${cost} silver).`,
     ], `Take ${p.name}`, () => this.island!.takePerk(p.id));
   }
 
@@ -723,7 +722,7 @@ export class TradesPanel {
     const left = document.createElement('span');
     left.className = 'trade-points';
     const spare = t.points - t.spent;
-    left.textContent = `${spare} of ${t.points} to spend`;
+    left.textContent = `${spare}/${t.points} points to spend`;
     if (spare > 0) left.classList.add('trade-spare');
     head.append(name, left);
     return head;
@@ -746,14 +745,14 @@ export class TradesPanel {
     name.textContent = r.name;
     const cost = document.createElement('span');
     cost.className = 'trade-points';
-    cost.textContent = `${r.cost} favour · ${r.secs}s · then ${Math.round(r.rest / 60)}m`;
+    cost.textContent = `${r.cost} favour · ${r.secs} s · cooldown ${Math.round(r.rest / 60)} min`;
     top.append(name, cost);
 
     const note = document.createElement('div');
     note.className = 'trade-card-note';
     note.textContent = r.note;
 
-    const call = button('Call it', 'trade-call');
+    const call = button('Call', 'trade-call');
     call.disabled = !!r.why;
     call.addEventListener('click', () => void this.doorway(this.island!.callRite(r.id)));
 

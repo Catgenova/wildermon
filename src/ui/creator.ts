@@ -74,7 +74,7 @@ export class Creator {
     this.mirror.width = 240;
     this.mirror.height = 380;
     this.mirror.tabIndex = 0;
-    this.mirror.setAttribute('aria-label', 'How you will look. Drag, or use the arrow keys, to turn.');
+    this.mirror.setAttribute('aria-label', 'Preview. Drag or arrow keys to turn.');
 
     /*
      * The mirror walks, and turns, and looks close.
@@ -90,7 +90,7 @@ export class Creator {
     turn.className = 'cr-turn';
     const left = button('', '◀', 'Turn left');
     this.closeUp = button('cr-close', 'Face');
-    this.closeUp.title = 'Bring the head up to fill the mirror';
+    this.closeUp.title = 'Zoom to head';
     this.closeUp.setAttribute('aria-pressed', 'false');
     const right = button('', '▶', 'Turn right');
     left.addEventListener('click', () => this.turn(-1));
@@ -104,7 +104,7 @@ export class Creator {
     const motions = document.createElement('div');
     motions.className = 'cr-motions';
     motions.setAttribute('role', 'group');
-    motions.setAttribute('aria-label', 'What the mirror shows you doing');
+    motions.setAttribute('aria-label', 'Preview animation');
     for (const [id, label] of MOTIONS) {
       const b = button('', label);
       b.dataset.motion = id;
@@ -121,7 +121,7 @@ export class Creator {
     }
     this.showMotion(this.motion);
 
-    const roll = button('cr-roll', 'Roll me one');
+    const roll = button('cr-roll', 'Random');
     roll.addEventListener('click', () => {
       this.look = randomLook();
     });

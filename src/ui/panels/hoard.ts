@@ -6,7 +6,7 @@ import { MAP_SNIPPET, TREASURE_TIERS, UNEARTH_REACH, hoardOf, warmthOf } from '.
 import { ACTION_BY_ID } from '../../game/actions';
 import type { UIWindow } from '../windows';
 import { CONTOUR_INDEX, CONTOUR_STEP } from './minimap';
-import { article, capital } from '../../game/words';
+import { capital } from '../../game/words';
 
 /** How often the warm line asks again while the map is open. */
 const REFRESH = 1.5;
@@ -57,7 +57,7 @@ export class HoardPanel {
     this.dig = document.createElement('button');
     this.dig.type = 'button';
     this.dig.className = 'tb-btn hoard-dig';
-    this.dig.textContent = 'Dig it up';
+    this.dig.textContent = 'Dig up';
     this.dig.addEventListener('click', () => {
       const def = ACTION_BY_ID.get('unearth');
       if (def) this.game.requestAction(def, { kind: 'item', uid: this.uid });
@@ -151,8 +151,8 @@ export class HoardPanel {
     if (!m) {
       // Said as what happened and what comes next, not as a riddle about the hide.
       this.caption.textContent = this.island
-        ? `No picture yet: the island has not answered for this map. It is asked again every ${REFRESH} seconds while the map is open.`
-        : 'No picture: this map no longer leads anywhere.';
+        ? `No map image yet: island has not answered. Retry every ${REFRESH} s while open.`
+        : 'No map image: hoard already gone.';
       this.dig.style.display = 'none';
       return;
     }
@@ -208,13 +208,13 @@ export class HoardPanel {
 
     const tier = TREASURE_TIERS.find((k) => k.id === m.tier);
     const name = tier?.name ?? 'map';
-    this.caption.textContent = `${capital(article(name))} ${name}, QL ${m.ql.toFixed(0)}: `
-      + `${n} by ${n} tiles of country with the hoard at the cross.`
-      + (tier ? ` In it: ${tier.lumps} ${tier.lumps === 1 ? 'lump' : 'lumps'} of deep or precious metal and ${tier.things} other ${tier.things === 1 ? 'thing' : 'things'}.`
-        + ` Guarding it: ${tier.guards > 1 ? `${tier.guards} ${tier.guard}s` : `${article(tier.guard)} ${tier.guard}`}.` : '');
+    this.caption.textContent = `${capital(name)}, QL ${m.ql.toFixed(0)}: `
+      + `${n}×${n} tiles, hoard at the cross.`
+      + (tier ? ` Contents: ${tier.lumps} ${tier.lumps === 1 ? 'lump' : 'lumps'} of deep or precious metal, ${tier.things} other ${tier.things === 1 ? 'thing' : 'things'}.`
+        + ` Guards: ${tier.guards} ${tier.guards > 1 ? `${tier.guard}s` : tier.guard}.` : '');
     // Always there, so the map says how it ends; it can be pressed once you stand on the cross.
     this.dig.style.display = '';
     this.dig.disabled = !this.here;
-    this.dig.title = this.here ? 'Dig up the hoard under your feet' : `Stand within ${UNEARTH_REACH} tiles of the cross to dig`;
+    this.dig.title = this.here ? 'Dig up the hoard here' : `Need to be within ${UNEARTH_REACH} tiles of the cross`;
   }
 }

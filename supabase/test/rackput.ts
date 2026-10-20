@@ -148,7 +148,7 @@ check('twenty fill the crates in the rack\'s order, passing over the one that is
 check('and nothing is left in the pack of the twenty', game.inventory.count('iron_ore') === 40 && theirPack() === '40',
   `browser ${game.inventory.count('iron_ore')}, island ${theirPack()}`);
 check('and one line says how many went into how many crates', said[said.length - 1] === theirLine()
-  && theirLine() === `You put 20 × iron ore into 3 crates on the ${rackName}.`,
+  && theirLine() === `Stored: 20 × iron ore in 3 crates on ${rackName}.`,
   `browser "${said[said.length - 1]}", island "${theirLine()}"`);
 
 /* ---- forty: more than all the room left ----------------------------------- */
@@ -159,7 +159,7 @@ check('and the other thirty-two stay in the pack', game.inventory.count('iron_or
   `browser ${game.inventory.count('iron_ore')}, island ${theirPack()}`);
 check('and the line says how many of how many, the one crate by name, and what did not fit',
   said[said.length - 1] === theirLine()
-  && theirLine() === `You put 8 of 40 × iron ore into the ${name} on the ${rackName}. The other 32 would not fit.`,
+  && theirLine() === `Stored: 8 of 40 × iron ore in ${name} on ${rackName}. 32 did not fit.`,
   `browser "${said[said.length - 1]}", island "${theirLine()}"`);
 
 /* ---- and the refusals ----------------------------------------------------- */
@@ -169,7 +169,7 @@ const refused = (what: string, mine: string, theirs: string, want: string): void
 const ask = (t: Target): string => def.check?.(t, game) ?? 'ALLOWED';
 refused('every crate it may go in is full, and the one it may not is named',
   ask({ kind: 'item', uid: ore.uid, count: 32, into: rack.id }), theirRefusal('iron_ore', 32, RACK),
-  `The ${crateName(crates[THEIRS]).toLowerCase()} is not yours to put anything in. The others are full.`);
+  `Not yours: ${crateName(crates[THEIRS]).toLowerCase()}, nothing goes in. Others full.`);
 
 // Nobody's crate is somebody else's now: every one of them simply full.
 crates[THEIRS].mine = undefined;
@@ -178,17 +178,17 @@ psql(`update crate set made_by = ${DANE} where world_id = ${W} and id = ${THEIRS
   update item set count = count + ${ROOM[THEIRS]} where world_id = ${W} and holder = 'crate' and crate = ${THEIRS + 1};`);
 refused('a rack whose crates are all full says so',
   ask({ kind: 'item', uid: ore.uid, count: 32, into: rack.id }), theirRefusal('iron_ore', 32, RACK),
-  `Every crate on the ${rackName} is full.`);
+  `All crates on ${rackName} full.`);
 
 refused('a rack with no crates on it says so',
   ask({ kind: 'item', uid: ore.uid, count: 32, into: bare.id }), theirRefusal('iron_ore', 32, BARE),
-  `There are no crates on the ${rackName}.`);
+  `No crates on ${rackName}.`);
 
 const crateItem = game.inventory.add('crate_plank', { ql: 20, extra: 'pine' });
 psql(`insert into item (world_id, holder, holder_uid, def, ql, count, extra) values (${W}, 'player', ${DANE}, 'crate_plank', 20, 1, 'pine');`);
 refused('a crate does not go in the crates on a rack',
   ask({ kind: 'item', uid: crateItem.uid, count: 1, into: rack.id }), theirRefusal('crate_plank', 1, RACK),
-  'A crate does not go in a crate.');
+  'No crates inside crates.');
 
 game.player.x = X + 5.5;
 game.player.y = Y + 0.5;

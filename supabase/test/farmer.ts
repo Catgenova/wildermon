@@ -191,7 +191,7 @@ begin
   v_seed := ${newest('wheat_seed')};
   ${act('plant_seed', 10, 9, 'v_seed')};
   insert into said values ('SAVER', v_t || '|' || ${count('wheat_seed')} || ':' || ${paceAt(10, 9)}
-    || '|' || coalesce(${last('You sow wheat.%')}, 'unsaid'));
+    || '|' || coalesce(${last('Sown: wheat.%')}, 'unsaid'));
   ${clear('wheat_seed')};
   ${unsow(10, 9)};
   delete from crop_last where world_id = w and x = 10 and y = 9;
@@ -264,7 +264,7 @@ begin
   -- And what tending says it will give, with the one tending it's own Bumper Crop.
   ${crop(10, 9, 'wheat', RIPE - 1, RIPE - 1)};
   ${act('tend_crop', 10, 9)};
-  insert into said values ('TENDSAID', coalesce(${last('You weed and water the wheat.%')}, 'unsaid'));
+  insert into said values ('TENDSAID', coalesce(${last('Tended: wheat.%')}, 'unsaid'));
   ${unsow(10, 9)};
   v_t := '';
   perform pg_temp.hold(w, u, '{}');
@@ -293,7 +293,7 @@ begin
   ${crop(10, 9, 'wheat', RIPE, 0)}; ${act('harvest_crop', 10, 9)};
   insert into said values ('RARE', v_t || '|' || (select coalesce(rare, '-') from item where id = ${newest('wheat')}) || ':'
     || (select coalesce(rare, '-') from item where id = ${newest('wheat_seed')}) || '|'
-    || coalesce(${last('You harvest %')}, 'unsaid'));
+    || coalesce(${last('Harvested: %')}, 'unsaid'));
   ${clear('wheat', 'wheat_seed')};
 
   /* ---- Barn Reach: a chest of the farmer's three tiles off, and a go the clock finishes. ---- */
@@ -366,7 +366,7 @@ begin
   perform give(w, u, 'bucket', 1, 30);
   perform act_perform(w, u, 'milk_creature', jsonb_build_object('kind', 'creature', 'id', v_c));
   v_u := v_u || '|' || ${count('milk_bucket')} || ':' || ${count('bucket')};
-  insert into said values ('MILK', v_t || '#' || v_u || '#' || coalesce(${last('You milk %')}, 'unsaid'));
+  insert into said values ('MILK', v_t || '#' || v_u || '#' || coalesce(${last('Milked %')}, 'unsaid'));
   ${clear('milk_bucket', 'bucket')};
   delete from creature where world_id = w and id = v_c;
 
@@ -409,12 +409,12 @@ begin
     || ${count('wheat_seed')} || ':' || coalesce((select id from crop where world_id = w and x = 9 and y = 8), 'none') || ':'
     || (select count(*) from crop where world_id = w and x = 11 and y = 10);
   v_t := v_t || '#' || ${refused('sow_patch', 10, 9, 'v_seed')};
-  insert into said values ('SOWPATCH', v_t || '|' || v_u || '|' || coalesce(${last('You sow % with wheat.%')}, 'unsaid'));
+  insert into said values ('SOWPATCH', v_t || '|' || v_u || '|' || coalesce(${last('Sown: % of wheat.%')}, 'unsaid'));
   -- With three seeds left for the seven fields: three sown, and the go stops.
   delete from crop where world_id = w and x between 9 and 11 and y between 8 and 10 and id = 'wheat';
   ${act('sow_patch', 10, 9, newest('wheat_seed'))};
   insert into said values ('SOWSHORT', (select count(*) from crop where world_id = w and x between 9 and 11 and y between 8 and 10
-    and id = 'wheat') || ':' || ${count('wheat_seed')} || '|' || coalesce(${last('You sow % with wheat.%')}, 'unsaid'));
+    and id = 'wheat') || ':' || ${count('wheat_seed')} || '|' || coalesce(${last('Sown: % of wheat.%')}, 'unsaid'));
   delete from crop where world_id = w and x between 9 and 11 and y between 8 and 10;
   ${clear('wheat_seed')};
 
@@ -429,7 +429,7 @@ begin
   ${act('tend_patch', 10, 9)};
   insert into said values ('TENDPATCH', v_t || '|' || (select string_agg(x || ',' || y || '=' || tended || ':' || tended_now, ' ' order by y, x)
     from crop where world_id = w and x between 9 and 11 and y between 8 and 10) || '|' || ${refused('tend_patch', 10, 9)}
-    || '|' || coalesce(${last('You weed and water % crops.')}, 'unsaid'));
+    || '|' || coalesce(${last('Tended: % crops.')}, 'unsaid'));
   delete from crop where world_id = w and x between 9 and 11 and y between 8 and 10;
 
   /* ---- Harvest a Patch: three ripe, one not. ---- */
@@ -444,7 +444,7 @@ begin
   ${act('harvest_patch', 10, 9)};
   insert into said values ('HARVESTPATCH', v_t || '|' || ${count('wheat')} || ':' || ${count('wheat_seed')} || ':' || ${count('carrot')}
     || ':' || ${count('carrot_seed')} || ':' || (select count(*) from crop where world_id = w and x between 9 and 11 and y between 8 and 10)
-    || '|' || coalesce(${last('You harvest % fields:%')}, 'unsaid'));
+    || '|' || coalesce(${last('Harvested: % fields:%')}, 'unsaid'));
   delete from crop where world_id = w and x between 9 and 11 and y between 8 and 10;
   ${clear('wheat', 'wheat_seed', 'carrot', 'carrot_seed')};
 
@@ -482,7 +482,7 @@ const say = (k: string): string => said.get(k) ?? 'unsaid';
 
 const [saverPlain, saverPerk, saverSaid] = say('SAVER').split('|');
 check(`${P('Seed Saver').name}: a sowing spends the seed without it, and keeps it with its chance put at one`,
-  saverPlain === '0:1' && saverPerk === '1:1' && saverSaid.endsWith('It cost you no seed.'), say('SAVER'));
+  saverPlain === '0:1' && saverPerk === '1:1' && saverSaid.endsWith('Seed kept.'), say('SAVER'));
 const [fresh, fast, same, rotated, both, never] = say('PACE').split('#');
 const fg = P('Fast Growth').fx['grow:plant_seed'];
 const cr = P('Crop Rotation').fx['rotate:plant_seed'];
@@ -512,7 +512,7 @@ check(`${P('Fodder').name}: ${P('Fodder').fx['fodder:harvest_crop']} mixed grass
   bumpPerk.endsWith(`:${P('Fodder').fx['fodder:harvest_crop']}:${HANDS}`), bumpPerk);
 check('and a crop tended at two stages of three gets no bumper', bumpTwo === String(cropYield(RIPE - 1).produce), bumpTwo);
 check('and tending says what the one tending it would harvest, their own Bumper Crop counted',
-  say('TENDSAID').includes(`It should give ${bumped.produce} wheat`), say('TENDSAID'));
+  say('TENDSAID').includes(`Expected yield: ${bumped.produce} wheat`), say('TENDSAID'));
 const [plusPlain, plusPerk] = say('PLUS').split('|');
 const plus = (name: string, crop: string): number => P(name).fx[`plus:${crop}`];
 check('untended sage, wheat, cotton and onion give one each without the perks', plusPlain === '1:1:1:1', plusPlain);
@@ -548,7 +548,7 @@ const [milkA, milkB] = milkTimes.split('|').map((s) => Number(s.split(':')[0]));
 check(`${P('Milkmaid').name}: milking takes ${P('Milkmaid').fx['time:milk_creature']} of the time`,
   near(milkB / milkA, P('Milkmaid').fx['time:milk_creature'], 1e-3), milkTimes);
 check('and fills a second bucket with its chance put at one, and one with only the one bucket',
-  milkCounts === '1:1|2:0|1:0' && milkSaid.includes('into the bucket.'), `${milkCounts} | ${milkSaid}`);
+  milkCounts === '1:1|2:0|1:0' && milkSaid.includes(': bucket '), `${milkCounts} | ${milkSaid}`);
 const [sackPlain, sackPerk] = say('SACK').split('|').map(Number);
 check(`${P('Sack Porter').name}: ten potatoes weigh ${P('Sack Porter').fx['weight:potato']} of what they did`,
   near(sackPerk, sackPlain * P('Sack Porter').fx['weight:potato']), say('SACK'));
@@ -567,32 +567,32 @@ check('and never better than the best a rake can be', near(Number(rake90perk.spl
 const [sowAsk, sowAfter, sowSaid] = say('SOWPATCH').split('|');
 const [sowNoPerk, sowNoSeed, sowOk, sowFull] = sowAsk.split('#');
 check(`${P('Sow a Patch').name}: refused without the perk and without a seed, and refused once every field is sown, in its own words`,
-  sowNoPerk === 'That wants a Farmer who has learned to sow a patch.' && sowNoSeed === 'Choose a seed to sow.' && sowOk === 'ALLOWED'
-    && sowFull === 'There is no empty field in the patch to sow.', sowAsk);
+  sowNoPerk === 'Needs perk: Sow a Patch (Farmer).' && sowNoSeed === 'Choose a seed.' && sowOk === 'ALLOWED'
+    && sowFull === 'No empty field in the patch.', sowAsk);
 check('and every empty field in the three by three is sown, one seed each, and the crop and the grass left alone',
-  sowAfter === '7:3:carrot:0' && sowSaid === 'You sow 7 fields with wheat.', `${sowAfter} | ${sowSaid}`);
+  sowAfter === '7:3:carrot:0' && sowSaid === 'Sown: 7 fields of wheat.', `${sowAfter} | ${sowSaid}`);
 const [shortAfter, shortSaid] = say('SOWSHORT').split('|');
-check('and with seed for three of seven, three are sown and the go stops there', shortAfter === '3:0' && shortSaid === 'You sow 3 fields with wheat.',
+check('and with seed for three of seven, three are sown and the go stops there', shortAfter === '3:0' && shortSaid === 'Sown: 3 fields of wheat.',
   say('SOWSHORT'));
 const [tendAsk, tendAfter, tendAgain, tendSaid] = say('TENDPATCH').split('|');
 const [tendNoPerk, tendOk, tendNone] = tendAsk.split('#');
 check(`${P('Tend a Patch').name}: refused without the perk and where nothing wants it, in its own words`,
-  tendNoPerk === 'That wants a Farmer who has learned to tend a patch.' && tendOk === 'ALLOWED'
-    && tendNone === 'Nothing in the patch wants tending.', tendAsk);
+  tendNoPerk === 'Needs perk: Tend a Patch (Farmer).' && tendOk === 'ALLOWED'
+    && tendNone === 'Nothing in the patch needs tending.', tendAsk);
 check('and the two that wanted it are tended, the one tended already and the ripe one not',
-  tendAfter === '9,8=1:true 10,8=0:true 11,8=1:false 9,10=1:true' && tendAgain === 'Nothing in the patch wants tending.'
-    && tendSaid === 'You weed and water 2 crops.', `${tendAfter} | ${tendAgain} | ${tendSaid}`);
+  tendAfter === '9,8=1:true 10,8=0:true 11,8=1:false 9,10=1:true' && tendAgain === 'Nothing in the patch needs tending.'
+    && tendSaid === 'Tended: 2 crops.', `${tendAfter} | ${tendAgain} | ${tendSaid}`);
 const [harvAsk, harvAfter, harvSaid] = say('HARVESTPATCH').split('|');
 const [harvNoPerk, harvNone, harvOk] = harvAsk.split('#');
 check(`${P('Harvest a Patch').name}: refused without the perk and where nothing is ripe, in its own words`,
-  harvNoPerk === 'That wants a Farmer who has learned to harvest a patch.' && harvNone === 'Nothing in the patch is ripe.'
+  harvNoPerk === 'Needs perk: Harvest a Patch (Farmer).' && harvNone === 'Nothing in the patch is ripe.'
     && harvOk === 'ALLOWED', harvAsk);
 const wheatFull = cropYield(RIPE);
 const wheatBare = cropYield(0);
 check('and the three ripe ones are harvested, each for its own tending, and the green one left',
   harvAfter === `${wheatFull.produce + wheatBare.produce}:${wheatFull.seeds + wheatBare.seeds}:${wheatFull.produce}:${wheatFull.seeds}:1`
-    && harvSaid === `You harvest 3 fields: ${wheatFull.produce + wheatBare.produce} × wheat, ${wheatFull.seeds + wheatBare.seeds} × wheat seeds, `
-      + `${wheatFull.produce} × carrot, ${wheatFull.seeds} × carrot seeds. The fields are ready to sow again.`,
+    && harvSaid === `Harvested: 3 fields: ${wheatFull.produce + wheatBare.produce} × wheat, ${wheatFull.seeds + wheatBare.seeds} × wheat seeds, `
+      + `${wheatFull.produce} × carrot, ${wheatFull.seeds} × carrot seeds. Fields ready to sow.`,
   `${harvAfter} | ${harvSaid}`);
 check('a worker brings home the produce and leaves the seed in the furrow, and the field remembers nothing it did not sow',
   say('WORKER') === `wheat:${cropYield(RIPE).produce}:${cropYield(RIPE).seeds}:none`, say('WORKER'));

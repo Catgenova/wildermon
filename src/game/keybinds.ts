@@ -22,15 +22,14 @@ import { SIDE_NAMES } from './building';
 import { NODES_PER_TRADE, PERK_TIER_AT, PERKS_PER_TIER } from './classes';
 import { FAITH_TIER_AT, PATRONS, SPELLS_PER_TIER } from './patrons';
 import { TURNS } from '../render/view';
-import { capital, numberWord, share } from './words';
 import { FALL_BACK, FIGHT_STANCE_NAMES, FIGHT_STANCES, FOLLOW_RANGE, stanceSays, TARGET_RANGE } from './fight';
 
 /** What each kept arrangement of windows is called until it is renamed: what most people keep a screen for, and a spare. */
 export const LAYOUT_NAMES = ['Crafting', 'Fighting', 'Building', 'Travelling'];
 
 /** What a turn key turns by: the view one of its viewpoints, a piece being set down one of its sides. */
-const VIEW_TURN = share(1 / TURNS);
-const PIECE_TURN = share(1 / Object.keys(SIDE_NAMES).length);
+const VIEW_TURN = `1/${TURNS}`;
+const PIECE_TURN = `1/${Object.keys(SIDE_NAMES).length}`;
 
 /** What a key can be set to do. */
 export interface BindDef {
@@ -54,79 +53,79 @@ export const BIND_GROUPS = ['Moving the view', 'Windows', 'Doing things'] as con
  * hand on either side of the keyboard can shift the view.
  */
 export const BINDS: BindDef[] = [
-  { id: 'pan_up', label: 'Push the view up', hint: 'Slides the view away from you; the camera stops following while it does.', group: 'Moving the view', keys: ['KeyW', 'ArrowUp'] },
-  { id: 'pan_down', label: 'Push the view down', hint: 'As above, the other way.', group: 'Moving the view', keys: ['KeyS', 'ArrowDown'] },
-  { id: 'pan_left', label: 'Push the view left', hint: 'As above.', group: 'Moving the view', keys: ['KeyA', 'ArrowLeft'] },
-  { id: 'pan_right', label: 'Push the view right', hint: 'As above.', group: 'Moving the view', keys: ['KeyD', 'ArrowRight'] },
-  { id: 'centre', label: 'Centre on yourself', hint: 'Bring the view back to your own feet and have it follow again.', group: 'Moving the view', keys: ['KeyC'] },
-  { id: 'turn_left', label: 'Turn the view left', hint: `${capital(VIEW_TURN)} of a turn. The compass shows where north went. While something is being set down, it turns that instead, ${PIECE_TURN} of a turn at a time.`, group: 'Moving the view', keys: ['KeyQ'] },
-  { id: 'turn_right', label: 'Turn the view right', hint: 'The same the other way, of the view or of what is being set down.', group: 'Moving the view', keys: ['KeyE'] },
-  { id: 'zoom_in', label: 'Zoom in', hint: 'The same as scrolling up, for a hand that is not on the mouse.', group: 'Moving the view', keys: ['Equal', 'NumpadAdd'] },
-  { id: 'zoom_out', label: 'Zoom out', hint: 'The same as scrolling down.', group: 'Moving the view', keys: ['Minus', 'NumpadSubtract'] },
-  { id: 'storey_up', label: 'Look at the storey above', hint: 'Inside a building with more than one floor.', group: 'Moving the view', keys: ['PageUp'] },
-  { id: 'storey_down', label: 'Look at the storey below', hint: 'As above, downwards.', group: 'Moving the view', keys: ['PageDown'] },
-  { id: 'cutaway', label: 'Cut away the walls facing you', hint: 'Take away the walls between you and the inside of a building.', group: 'Moving the view', keys: ['KeyX'] },
+  { id: 'pan_up', label: 'Push the view up', hint: 'Pan the view up; stops camera follow.', group: 'Moving the view', keys: ['KeyW', 'ArrowUp'] },
+  { id: 'pan_down', label: 'Push the view down', hint: 'Pan the view down.', group: 'Moving the view', keys: ['KeyS', 'ArrowDown'] },
+  { id: 'pan_left', label: 'Push the view left', hint: 'Pan the view left.', group: 'Moving the view', keys: ['KeyA', 'ArrowLeft'] },
+  { id: 'pan_right', label: 'Push the view right', hint: 'Pan the view right.', group: 'Moving the view', keys: ['KeyD', 'ArrowRight'] },
+  { id: 'centre', label: 'Centre on yourself', hint: 'Centre the view on you; camera follows again.', group: 'Moving the view', keys: ['KeyC'] },
+  { id: 'turn_left', label: 'Turn the view left', hint: `Rotate the view ${VIEW_TURN} turn; the compass shows north. While placing something: rotate it ${PIECE_TURN} turn.`, group: 'Moving the view', keys: ['KeyQ'] },
+  { id: 'turn_right', label: 'Turn the view right', hint: 'Rotate the other way (view, or the piece being placed).', group: 'Moving the view', keys: ['KeyE'] },
+  { id: 'zoom_in', label: 'Zoom in', hint: 'Same as scroll up.', group: 'Moving the view', keys: ['Equal', 'NumpadAdd'] },
+  { id: 'zoom_out', label: 'Zoom out', hint: 'Same as scroll down.', group: 'Moving the view', keys: ['Minus', 'NumpadSubtract'] },
+  { id: 'storey_up', label: 'Look at the storey above', hint: 'Inside multi-storey buildings.', group: 'Moving the view', keys: ['PageUp'] },
+  { id: 'storey_down', label: 'Look at the storey below', hint: 'Inside multi-storey buildings.', group: 'Moving the view', keys: ['PageDown'] },
+  { id: 'cutaway', label: 'Cut away the walls facing you', hint: 'Hide walls between you and a building interior.', group: 'Moving the view', keys: ['KeyX'] },
   { id: 'grid', label: 'Show the tile grid', hint: 'Outline every tile.', group: 'Moving the view', keys: ['KeyG'] },
 
-  { id: 'win_inventory', label: 'Inventory', hint: 'Everything you are carrying.', group: 'Windows', keys: ['KeyI'] },
-  { id: 'win_craft', label: 'Crafting', hint: 'Everything you could make with what you have.', group: 'Windows', keys: ['KeyR'] },
-  { id: 'win_tile', label: 'Tile', hint: 'Everything you could do to whatever you last clicked.', group: 'Windows', keys: ['KeyT'] },
-  { id: 'win_skills', label: 'Skills', hint: 'What you know and how well.', group: 'Windows', keys: ['KeyK'] },
+  { id: 'win_inventory', label: 'Inventory', hint: 'Carried items.', group: 'Windows', keys: ['KeyI'] },
+  { id: 'win_craft', label: 'Crafting', hint: 'Recipes you can make.', group: 'Windows', keys: ['KeyR'] },
+  { id: 'win_tile', label: 'Tile', hint: 'Actions on the last thing clicked.', group: 'Windows', keys: ['KeyT'] },
+  { id: 'win_skills', label: 'Skills', hint: 'Skill levels.', group: 'Windows', keys: ['KeyK'] },
   // Every letter is spoken for, and the comma is nobody's.
-  { id: 'win_equipment', label: 'Equipment', hint: 'What you have on, on a figure of you, to drag things onto and off; every number a fight reads off you, and what each skill behind them does for you.', group: 'Windows', keys: ['BracketLeft'] },
-  { id: 'win_health', label: 'Health', hint: 'Your wounds on a figure of you, and what each needs carried to be dressed, cleaned out or salved, with a button that does it; what is against you and for you; and what you have been eating.', group: 'Windows', keys: ['Comma'] },
-  { id: 'win_trades', label: 'Trades', hint: `The trade you have taken up, the ${numberWord(NODES_PER_TRADE)} nodes or ${numberWord(PERK_TIER_AT.length * PERKS_PER_TIER)} perks behind it, and its rite.`, group: 'Windows', keys: ['KeyF'] },
-  { id: 'win_faith', label: 'Faith', hint: `Your faith and favour, the ${numberWord(PATRONS.length)} patrons, and the spells your patron gives: ${numberWord(SPELLS_PER_TIER)} at each of ${numberWord(FAITH_TIER_AT.length)} tiers, one taken at each. The spell bar along the bottom is called with Shift and a slot's number.`, group: 'Windows', keys: [] },
-  { id: 'win_tracker', label: 'Tracker', hint: 'The journal open at its Tracker tab: the few trades you are watching today, with a bar apiece.', group: 'Windows', keys: ['KeyV'] },
-  { id: 'win_events', label: 'Event log', hint: 'What has been happening, and the box you talk in.', group: 'Windows', keys: ['KeyL'] },
-  { id: 'win_map', label: 'Map', hint: 'The island as far as you have seen it.', group: 'Windows', keys: ['KeyM'] },
-  { id: 'win_wildermon', label: 'Wildermon', hint: 'Your tamed creatures, what they carry and what they are set to.', group: 'Windows', keys: ['KeyP'] },
+  { id: 'win_equipment', label: 'Equipment', hint: 'Worn items on a figure (drag on and off); every combat number and the skills behind them.', group: 'Windows', keys: ['BracketLeft'] },
+  { id: 'win_health', label: 'Health', hint: 'Wounds on a figure, what each needs to dress, clean or salve (with buttons); effects on you; nutrition.', group: 'Windows', keys: ['Comma'] },
+  { id: 'win_trades', label: 'Trades', hint: `Your trade: its ${NODES_PER_TRADE} nodes or ${PERK_TIER_AT.length * PERKS_PER_TIER} perks, and its rite.`, group: 'Windows', keys: ['KeyF'] },
+  { id: 'win_faith', label: 'Faith', hint: `Faith and favour; ${PATRONS.length} patrons; your patron's spells, ${SPELLS_PER_TIER} per tier at ${FAITH_TIER_AT.length} tiers, pick one per tier. Spell bar: Shift + slot number.`, group: 'Windows', keys: [] },
+  { id: 'win_tracker', label: 'Tracker', hint: 'Journal, Tracker tab: watched trades, a bar each.', group: 'Windows', keys: ['KeyV'] },
+  { id: 'win_events', label: 'Event log', hint: 'Event log and chat box.', group: 'Windows', keys: ['KeyL'] },
+  { id: 'win_map', label: 'Map', hint: 'Explored map.', group: 'Windows', keys: ['KeyM'] },
+  { id: 'win_wildermon', label: 'Wildermon', hint: 'Your tamed creatures: loads and assignments.', group: 'Windows', keys: ['KeyP'] },
   // F3 is the browser's own Find in every one of them, and F4 is nobody's.
-  { id: 'win_guide', label: 'Field guide', hint: 'The journal open at its Field guide tab: a page for every kind of creature, which you have seen, tamed and bred, where each lives and what it gives.', group: 'Windows', keys: ['F4'] },
-  { id: 'win_deed', label: 'Settlement', hint: 'Your deed at a glance.', group: 'Windows', keys: ['KeyN'] },
-  { id: 'win_market', label: 'Market', hint: 'Every stall and buy order on the board, your own orders, deals offered and taken, what your stall has sold, and parcels waiting in the post.', group: 'Windows', keys: ['KeyU'] },
-  { id: 'win_social', label: 'Social', hint: 'Who is waiting on you, who you know and where they are, and what has been written to you.', group: 'Windows', keys: ['KeyY'] },
+  { id: 'win_guide', label: 'Field guide', hint: 'Journal, Field guide tab: every creature kind; seen, tamed, bred; habitat and yields.', group: 'Windows', keys: ['F4'] },
+  { id: 'win_deed', label: 'Settlement', hint: 'Settlement overview.', group: 'Windows', keys: ['KeyN'] },
+  { id: 'win_market', label: 'Market', hint: 'Stalls and buy orders, your orders, deals, stall sales, parcels in the post.', group: 'Windows', keys: ['KeyU'] },
+  { id: 'win_social', label: 'Social', hint: 'Requests, contacts and locations, letters.', group: 'Windows', keys: ['KeyY'] },
   // Every letter is spoken for, and no browser takes F2 for itself.
-  { id: 'win_boards', label: 'Leaderboards', hint: 'The journal open at its Leaderboards tab: who holds each skill highest on the island, its best-bred wildermon and its biggest settlements.', group: 'Windows', keys: ['F2'] },
-  { id: 'win_ledger', label: 'Ledger', hint: 'The journal open at its Ledger tab: everything you have ever made.', group: 'Windows', keys: [] },
-  { id: 'win_shopping', label: 'Shopping list', hint: 'What you set out to make, from Crafting\'s List, and everything it takes down to what is gathered, against your pack and the stores within reach.', group: 'Windows', keys: [] },
-  { id: 'win_stores', label: 'Stores', hint: 'What is in every crate and cupboard on your deed, in one list.', group: 'Windows', keys: ['KeyU'] },
-  { id: 'win_journal', label: 'Journal', hint: 'Everything worth doing, ticking itself off.', group: 'Windows', keys: ['KeyJ'] },
+  { id: 'win_boards', label: 'Leaderboards', hint: 'Journal, Leaderboards tab: top skills, best-bred wildermon, biggest settlements.', group: 'Windows', keys: ['F2'] },
+  { id: 'win_ledger', label: 'Ledger', hint: 'Journal, Ledger tab: everything you have made.', group: 'Windows', keys: [] },
+  { id: 'win_shopping', label: 'Shopping list', hint: 'Crafting List targets and all inputs down to raw materials, against your pack and nearby stores.', group: 'Windows', keys: [] },
+  { id: 'win_stores', label: 'Stores', hint: 'Contents of every crate and cupboard on your deed.', group: 'Windows', keys: ['KeyU'] },
+  { id: 'win_journal', label: 'Journal', hint: 'Goals; tick themselves off.', group: 'Windows', keys: ['KeyJ'] },
   // No key out of the box: it is for the few who keep an island, and every letter is spoken for.
-  { id: 'win_keeper', label: 'Island keeper', hint: 'Everybody with a body on the island, where they stand and whether they are muted, and a Move, Mute and Unmute for each.', group: 'Windows', keys: [], keeper: true },
+  { id: 'win_keeper', label: 'Island keeper', hint: 'Everyone on the island: position, muted or not; Move, Mute, Unmute.', group: 'Windows', keys: [], keeper: true },
   { id: 'win_settings', label: 'Settings', hint: 'This window.', group: 'Windows', keys: ['KeyO'] },
-  { id: 'win_help', label: 'Help', hint: 'The journal open at its Help tab: how any of this works.', group: 'Windows', keys: ['F1', 'KeyH'] },
+  { id: 'win_help', label: 'Help', hint: 'Journal, Help tab.', group: 'Windows', keys: ['F1', 'KeyH'] },
   // No key out of the box: every letter is spoken for, and it opens by itself when there is something new.
-  { id: 'win_news', label: "What's new", hint: "The journal open at its What's new tab: what changed on the island, newest first, with what you had not read yet marked.", group: 'Windows', keys: [] },
+  { id: 'win_news', label: "What's new", hint: "Journal, What's new tab: island changes, newest first; unread marked.", group: 'Windows', keys: [] },
   // Ctrl+K and ⌘K open it too, wherever they are not taken by something you are typing in.
-  { id: 'palette', label: 'Find anything', hint: 'A box to type in that finds any window, recipe, setting, help page, layout or key by name, and opens it. Ctrl+K opens it as well.', group: 'Windows', keys: ['Slash'] },
+  { id: 'palette', label: 'Find anything', hint: 'Search windows, recipes, settings, help, layouts and keys by name; opens the match. Also Ctrl+K.', group: 'Windows', keys: ['Slash'] },
   // F6 to F9: the letters are spoken for, and F1, F2 and F4 already open windows.
   ...LAYOUT_NAMES.map((name, i) => ({
     id: `layout_${i + 1}`,
     label: `Window layout ${i + 1} (${name} until renamed)`,
-    hint: `Put every window where layout ${i + 1} keeps it: its place, its size, and open or shut. With Shift, keep the windows as they are now as layout ${i + 1}. Named and kept in Settings, under Windows.`,
+    hint: `Restore layout ${i + 1}: window positions, sizes, open or shut. Shift: save the current windows as layout ${i + 1}. Rename in Settings, Windows.`,
     group: 'Windows',
     keys: [`F${6 + i}`],
   })),
 
-  { id: 'walk_home', label: 'Walk home', hint: 'Set off for your settlement token, or your bed.', group: 'Doing things', keys: ['Home'] },
+  { id: 'walk_home', label: 'Walk home', hint: 'Walk to your settlement token or bed.', group: 'Doing things', keys: ['Home'] },
   /*
    * One key for all of them rather than one each. Two emotes is a pair of
    * keybindings; five is a keyboard nobody can remember, and the menu costs
    * one keypress more than a bind and never runs out of room.
    */
-  { id: 'emotes', label: 'Emotes', hint: 'Wave, hop, and whatever else there is to do with your hands.', group: 'Doing things', keys: ['KeyZ'] },
-  { id: 'stop', label: 'Stop', hint: 'Drop the current job and forget what is queued behind it. Closes an open menu first.', group: 'Doing things', keys: ['Escape'] },
+  { id: 'emotes', label: 'Emotes', hint: 'Emote menu.', group: 'Doing things', keys: ['KeyZ'] },
+  { id: 'stop', label: 'Stop', hint: 'Cancel the current job and the queue. Closes an open menu first.', group: 'Doing things', keys: ['Escape'] },
   // Full stop is Vim's repeat, and no letter was left.
-  { id: 'repeat', label: 'Do it again', hint: 'Ask for the last job you asked for once more: the same thing to the same target, as many times as before. When the stack it used is gone, another of the same kind in your pack stands in.', group: 'Doing things', keys: ['Period'] },
-  { id: 'carry_on', label: 'Carry on', hint: 'Take up the jobs a walk put down. Walking no longer forgets them; this is how you get them back.', group: 'Doing things', keys: ['KeyB'] },
-  { id: 'chat', label: 'Talk', hint: 'Put the cursor in the box at the bottom of the event log.', group: 'Doing things', keys: ['Enter'] },
+  { id: 'repeat', label: 'Do it again', hint: 'Repeat the last job: same action, same target, same count. Uses another stack of the same kind if the old one is gone.', group: 'Doing things', keys: ['Period'] },
+  { id: 'carry_on', label: 'Carry on', hint: 'Resume jobs put down by walking.', group: 'Doing things', keys: ['KeyB'] },
+  { id: 'chat', label: 'Talk', hint: 'Focus the chat box (event log).', group: 'Doing things', keys: ['Enter'] },
   // Tab and Space are nobody else's, and a key a hand finds without looking is what a fight wants.
-  { id: 'fight_mark', label: 'Mark the nearest foe', hint: `The nearest wild thing within ${TARGET_RANGE} tiles that is after you or hunts on sight; again for the next nearest.`, group: 'Doing things', keys: ['Tab'] },
-  { id: 'fight', label: 'Attack', hint: `Fight what you marked or last clicked, or else the nearest foe: a swing, or a shot with a bow in hand. When it steps out of reach you go after it, up to ${FOLLOW_RANGE} tiles.`, group: 'Doing things', keys: ['Space'] },
+  { id: 'fight_mark', label: 'Mark the nearest foe', hint: `Target the nearest hostile wild creature within ${TARGET_RANGE} tiles; again for the next.`, group: 'Doing things', keys: ['Tab'] },
+  { id: 'fight', label: 'Attack', hint: `Attack the target, last-clicked creature, or nearest foe (melee, or bow shot). Follows out of reach up to ${FOLLOW_RANGE} tiles.`, group: 'Doing things', keys: ['Space'] },
   { id: 'fight_stance', label: 'Change stance', hint: `${FIGHT_STANCES.map((s) => `${FIGHT_STANCE_NAMES[s]}: ${stanceSays(s)}`).join(' ')}`, group: 'Doing things', keys: ['Backquote'] },
-  { id: 'pet_attack', label: 'Companion: attack my target', hint: 'Your companion goes for what you are fighting or have marked, or else the nearest foe, whatever its stance.', group: 'Doing things', keys: ['Semicolon'] },
-  { id: 'pet_back', label: 'Companion: fall back', hint: `Your companion leaves its fight, comes to your side, and starts no fight for ${FALL_BACK} seconds.`, group: 'Doing things', keys: ['Quote'] },
+  { id: 'pet_attack', label: 'Companion: attack my target', hint: 'Companion attacks your target, or else the nearest foe, regardless of stance.', group: 'Doing things', keys: ['Semicolon'] },
+  { id: 'pet_back', label: 'Companion: fall back', hint: `Companion leaves its fight, returns to you, starts no fight for ${FALL_BACK} s.`, group: 'Doing things', keys: ['Quote'] },
 ];
 
 export const BIND_BY_ID = new Map(BINDS.map((b) => [b.id, b]));
@@ -173,8 +172,8 @@ export function keyName(code: string): string {
  * keys anybody presses on their own.
  */
 export function keyReserved(code: string): string | null {
-  if (/^Digit[0-9]$/.test(code)) return 'The number keys belong to the selection window and the toolbelt.';
-  if (/^(Shift|Control|Alt|Meta)(Left|Right)$/.test(code)) return 'That is a modifier, not a key.';
+  if (/^Digit[0-9]$/.test(code)) return 'Number keys are reserved for the selection window and toolbelt.';
+  if (/^(Shift|Control|Alt|Meta)(Left|Right)$/.test(code)) return 'Modifier keys cannot be bound.';
   return null;
 }
 

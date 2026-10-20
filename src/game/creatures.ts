@@ -39,7 +39,7 @@ import { describeWith, itemDef, markOf, RARITIES, rarityOf, rarityStep, rollRari
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
-import { article, capital, daySays, fill, listed, numberWord, percent, share, spanWords, timeWords, times } from './words';
+import { article, capital, daySays, fill, listed, percent, share, timeWords } from './words';
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { DRIVING, DRIVING_LEARN } from './travel';
@@ -335,18 +335,18 @@ export const RESIN_TAPPED = 1;
 
 
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying' };
-export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'working the fields', mine: 'working the seams', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'keeping the fires in', fetch: 'clearing up', guard: 'keeping watch', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'reading the ground', plant: 'planting', hod: 'carrying the hod', mend: 'mending', compost: 'clearing up', seek: 'nosing about', fish: 'fishing', prune: 'pruning the wood', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending the hives', groom: 'brushing the herd', dairy: 'milking and shearing', heal: 'dressing hurts', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'keeping the lanterns', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging the smelters', kiln: 'loading the kilns', ash: 'raking out ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'keeping the planters', worm: 'digging for worms', sprout: 'picking sprouts', resin: 'tapping the pines', flower: 'picking wildflowers', scrub: 'scrubbing the stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'laying up rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets' };
+export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest the fields', mine: 'mine the ore', sand: 'dig sand and carry it home', clay: 'dig clay and carry it home', quarry: 'cut stone and carry it home', stoke: 'keep the fires and furnaces fed', fetch: 'pick up what is lying about', guard: 'keep watch over the deed', hunt: 'hunt the country round the deed and bring the carcasses home', peat: 'cut peat and tar and carry them home', reed: 'cut reeds and carry them home', water: 'carry water from the shore or the well to your barrels', prospect: 'read the ground for metal and mark what it finds', plant: 'plant sprouts where the trees have been cut', hod: 'carry to your planned building work what it wants out of your stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend the damaged gear in your stores', compost: 'clear away what is rotting and turn it into compost', seek: 'smell out buried relics and mark where to dig', fish: 'fish the water round the deed and carry the catch home', prune: 'prune what would otherwise die', stump: 'dig out stumps', fruit: 'pick what the fruit trees have on them and carry it home' , hive: 'tend the hives', groom: `brush down your wildermon whose care is under ${percent(CARE_WANTING)}`, dairy: `milk your cudda into the empty buckets in your stores and shear or pluck your others, each once it is ${percent(DAIRY_FULL)} grown back, and put what comes off in your stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} of their health with a bandage or a cover out of your stores`, butcher: 'butcher the carcasses in your stores and put what comes off them back in', tan: 'tan the hides in your stores in its lye, with a carving knife kept in them', mill: 'grind the wheat and corn and press the olives in your stores, on a quern kept in them', lamp: 'put a candle out of your stores in every lantern post and pillar of yours that has none, light them after dark and put them out by day', bush: 'pick the bushes and the vines on your trellises and carry it home', grass: 'cut grass and moss and carry it home', pan: 'pan the sand at the water\'s edge and carry home what settles in the pan', smelt: 'charge your smelters with the ore in your stores and take out what they have made', kiln: 'load your kilns with the unfired pottery in your stores and take out what they have fired', ash: 'rake the ashes out of your campfires, ovens, smelters and kilns into your stores and leach them with buckets of water from your stores into lye', brew: 'set a brew going in every barrel of water of yours whose makings are in your stores', cook: 'cook what is in your stores at your lit campfires and ovens', restore: 'restore every relic whose pieces are all in your stores', patch: 'sow, tend and harvest your planters out of your stores', worm: 'dig for worms and carry them home', sprout: 'pick sprouts off the trees and carry them home', resin: 'tap the pines for tar, once a day each, and carry it home', flower: 'pick wildflowers, leaving the ones a skep feeds on, and carry them home', scrub: 'scrub the moss off your paving, foundations and statues and clear the ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items', guard: 'guard the deed', hunt: 'hunt round the deed and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the deed and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'tend the hives', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your stores`, butcher: 'butcher carcasses in your stores; output to your stores', tan: 'tan hides in your stores with lye; needs a carving knife in your stores', mill: 'grind wheat and corn and press olives in your stores; needs a quern in your stores', lamp: 'put candles from your stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your stores and empty them', kiln: 'load your kilns with unfired pottery from your stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your stores; leach ash and buckets of water from your stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your stores', cook: 'cook from your stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your stores', patch: 'sow, tend and harvest your planters from your stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
-  get saw() { return `saw the logs in your stores into planks, ${numberWord(recipeMakes('make_planks'))} to a log, with a saw kept in them`; },
-  get chisel() { return `chisel the rock shards in your stores into stone brick, ${numberWord(recipeMakes('make_stone_brick'))} bricks to a shard, with a chisel kept in them`; },
-  get brick() { return `shape the clay in your stores into unfired clay brick, ${numberWord(recipeMakes('make_clay_brick'))} to a lump`; },
-  get rope() { return `lay up the wemp in your stores into rope, ${numberWord(recipeTakes('make_rope', 'wemp'))} wemp fibres to a rope, on a rope tool kept in them`; },
-  get fletch() { return `fletch the shafts, arrowheads and feathers in your stores into arrows, ${numberWord(recipeMakes('make_arrows'))} to a shaft, ${numberWord(recipeTakes('make_arrows', 'arrow_head'))} heads and ${numberWord(recipeTakes('make_arrows', 'feather'))} feathers, with a carving knife kept in them`; },
-  get paper() { return `press the reeds in your stores into papyrus at your paper presses, ${numberWord(recipeMakes('make_papyrus'))} sheets to ${numberWord(recipeTakes('make_papyrus', 'reed'))} reeds and a bucket of water, and put the empty bucket back in your stores`; },
-  get glaze() { return `glaze every fired pot, bowl, jar and amphora in your stores with ${GLAZE_ASH === 1 ? 'an ash' : `${numberWord(GLAZE_ASH)} ashes`} out of them each, after which it never decays`; },
-  fill: 'fill the empty buckets in your stores with water at the shore or a well and put them back in your stores',
+  get saw() { return `saw logs in your stores into planks, ${recipeMakes('make_planks')} a log; needs a saw in your stores`; },
+  get chisel() { return `chisel rock shards in your stores into stone brick, ${recipeMakes('make_stone_brick')} a shard; needs a chisel in your stores`; },
+  get brick() { return `shape clay in your stores into unfired clay brick, ${recipeMakes('make_clay_brick')} a lump`; },
+  get rope() { return `make rope from wemp in your stores, ${recipeTakes('make_rope', 'wemp')} fibres a rope; needs a rope tool in your stores`; },
+  get fletch() { return `fletch arrows from shafts, arrowheads and feathers in your stores, ${recipeMakes('make_arrows')} a shaft, ${recipeTakes('make_arrows', 'arrow_head')} heads and ${recipeTakes('make_arrows', 'feather')} feathers; needs a carving knife in your stores`; },
+  get paper() { return `press reeds in your stores into papyrus at your paper presses, ${recipeMakes('make_papyrus')} sheets per ${recipeTakes('make_papyrus', 'reed')} reeds and a bucket of water; the empty bucket goes back to your stores`; },
+  get glaze() { return `glaze fired pots, bowls, jars and amphorae in your stores with ${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'ash' : 'ashes'} each from your stores; glazed pottery never decays`; },
+  fill: 'fill empty buckets from your stores with water at the shore or a well; output to your stores',
 };
 const GATHER_TABLE: Record<GatherKind, Array<[string, number]>> = { forage: FORAGE_TABLE, botanize: BOTANIZE_TABLE, woodcut: [], farm: [], mine: [], sand: [], clay: [], quarry: [], stoke: [], fetch: [], guard: [], hunt: [], peat: [], reed: [], water: [], prospect: [], plant: [], hod: [], mend: [], compost: [], seek: [], fish: [], prune: [], stump: [], fruit: [] , hive: [], groom: [], dairy: [], heal: [], butcher: [], tan: [], mill: [], lamp: [], bush: [], grass: [], pan: [], smelt: [], kiln: [], ash: [], brew: [], cook: [], restore: [], patch: [], worm: [], sprout: [], resin: [], flower: [], scrub: [], saw: [], chisel: [], brick: [], rope: [], fletch: [], paper: [], glaze: [], fill: [] };
 export type ButcherPart = 'meat' | 'fur' | 'leather' | 'bone' | 'gland' | 'feather' | 'clay' | 'tusk' | 'sinew' | 'scale' | 'hoard';
@@ -376,9 +376,9 @@ export const BLOW_MEMORY = 8;
 export const FIGHT_BACK_GOES = 100;
 export const STANCE_HINTS: Record<Stance, string> = {
   passive: 'Never attacks.',
-  defensive: 'Fights back when it or you are attacked.',
-  aggressive: `Hunts other wildermon within ${COMPANION_SIGHT} tiles of you.`,
-  guard: `Goes for anything hunting you within ${COMPANION_SIGHT} tiles of you before it lands a blow, as well as what strikes it or you; gives up a fight ${GUARD_RANGE} tiles from you rather than ${COMPANION_LEASH}.`,
+  defensive: 'Attacks what attacks it or you.',
+  aggressive: `Attacks wildermon within ${COMPANION_SIGHT} tiles of you.`,
+  guard: `Attacks what hunts you within ${COMPANION_SIGHT} tiles before it strikes, and what attacks it or you. Breaks off ${GUARD_RANGE} tiles from you (other stances: ${COMPANION_LEASH}).`,
 };
 
 export interface SpeciesDef {
@@ -413,10 +413,6 @@ export interface SpeciesDef {
   variants: Array<[string, string]>;
   /** What a full butchering of its corpse can yield. */
   butcher: Partial<Record<ButcherPart, number>>;
-  /** How it shrugs off a failed taming attempt. */
-  tameFail: string;
-  /** How it leaves when released. */
-  leaves: string;
   /** Only settles within a few tiles of open water. */
   nearWater?: boolean;
   /** Only settles among trees. */
@@ -647,23 +643,23 @@ export const specialtyMul = (n: number): number => (n >= SPECIALTY_AT ? 1 + SPEC
 export const specialtyTrade = (kind: GatherKind | null | undefined): kind is GatherKind => !!kind && kind !== 'guard' && kind !== 'hunt';
 /** Its stamina, for its card: "Stamina: 21 of 30 goes left before it rests." */
 export const staminaSays = (c: Pick<Creature, 'worn'>): string =>
-  `Stamina: ${Math.max(0, TIRE_GOES - (c.worn ?? 0))} of ${TIRE_GOES} goes left before it rests ${spanWords(restFor(false))}, or ${spanWords(restFor(true))} in a bed of its size on the settlement.`;
+  `Stamina: ${Math.max(0, TIRE_GOES - (c.worn ?? 0))}/${TIRE_GOES} goes. Rest: ${timeWords(restFor(false))}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`;
 /** For its card, once it has gone `UPKEEP_FOR` without a meal: "Unfed for 1 hour and 12 minutes: works at 50% until it eats." */
 export function unfedSays(c: Pick<Creature, 'unfed' | 'species'>): string {
   if (!unfedNow(c)) return '';
   const def = SPECIES[c.species];
-  return `Unfed for ${timeWords(c.unfed ?? 0)}: works at ${percent(UNFED_PACE)} until it eats. No food in your stores on the settlement${def ? ` that it eats (${def.baitHint})` : ''}.`;
+  return `Unfed for ${timeWords(c.unfed ?? 0)}: work pace ${percent(UNFED_PACE)} until fed. No food it eats in your settlement stores${def ? ` (${def.baitHint})` : ''}.`;
 }
 /** A trade's specialty on a settlement, for a card and the settlement window: "Specialty: cutting reeds, 4 workers: +10% speed at its task." */
 export function specialtySays(kind: GatherKind, n: number): string {
-  if (n >= SPECIALTY_AT) return `Specialty: ${GATHER_VERB[kind]}, ${n} workers: +${percent(SPECIALTY_BONUS)} speed at its task.`;
-  return `${capital(GATHER_VERB[kind])}: ${n} of the ${SPECIALTY_AT} workers that make it a specialty, +${percent(SPECIALTY_BONUS)} speed at its task.`;
+  if (n >= SPECIALTY_AT) return `Specialty: ${GATHER_VERB[kind]}, ${n} workers: task speed +${percent(SPECIALTY_BONUS)}.`;
+  return `${capital(GATHER_VERB[kind])}: ${n}/${SPECIALTY_AT} workers for a specialty (task speed +${percent(SPECIALTY_BONUS)}).`;
 }
 // What a wildermon bed does and for whom (`den` in `furniture.ts`), off the stages, the health bands and the rest.
 describeWith({
   den: {
     first: EVOLVE_AT[0], secondLast: EVOLVE_AT[1] - 1, second: EVOLVE_AT[1], small: DEN_HEALTH[0], large: DEN_HEALTH[1],
-    tire: TIRE_GOES, share: share(BED_REST), bed: spanWords(restFor(true)), rest: spanWords(restFor(false)),
+    tire: TIRE_GOES, share: share(BED_REST), bed: timeWords(restFor(true)), rest: timeWords(restFor(false)),
   },
 });
 /**
@@ -700,21 +696,21 @@ export const HANDS_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
 export const TEND_REACH = 3;
 /** What a stage lets a trade do at once, as a verb and the rest, for its stages' words (`lineSays`): "carries", "2 loads home a trip". */
 const STAGE_WORK: Partial<Record<GatherKind, [verb: string, rest: (n: number) => string]>> = {
-  water: ['carries', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} of water a trip, ${n * BUCKET_LITRES} litres,`],
-  hod: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} a trip, as many as the work it takes them to still wants, and fits them in one go,`],
-  stoke: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} of fuel a trip, as many as the hearth has room for, and feeds them in one go,`],
+  water: ['carries', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} of water a trip (${n * BUCKET_LITRES} litres)`],
+  hod: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} a trip, up to what the work still wants, fitted in one go`],
+  stoke: ['carries', (n) => `up to ${n} ${n === 1 ? 'piece' : 'pieces'} of fuel a trip, up to the hearth's room, fed in one go`],
   plant: ['carries', (n) => `${n} ${n === 1 ? 'sprout' : 'sprouts'} a trip`],
   lamp: ['carries', (n) => `${n} ${n === 1 ? 'candle' : 'candles'} a trip`],
   patch: ['carries', (n) => `${n} ${n === 1 ? 'seed' : 'seeds'} a trip`],
   fill: ['fills', (n) => `${n} ${n === 1 ? 'bucket' : 'buckets'} a trip`],
-  mend: ['mends', (n) => `the ${n} most damaged ${n === 1 ? 'thing' : 'things'} in your stores a go`],
+  mend: ['mends', (n) => `the ${n} most damaged ${n === 1 ? 'item' : 'items'} in your stores a go`],
   butcher: ['butchers', (n) => `${n} ${n === 1 ? 'carcass' : 'carcasses'} a go`],
   restore: ['restores', (n) => `${n} ${n === 1 ? 'relic' : 'relics'} a go`],
   glaze: ['glazes', (n) => `${n} ${n === 1 ? 'piece' : 'pieces'} a go`],
-  ash: ['does', (n) => `${n} of its jobs a go, a hearth raked out or a batch of lye leached,`],
-  groom: ['brushes', (n) => `up to ${n} of your wildermon a go, those within ${TEND_REACH} tiles of it,`],
-  dairy: ['milks or shears', (n) => `up to ${n} of your wildermon a go, those within ${TEND_REACH} tiles of it, with a bucket out of the stores for each it milks,`],
-  heal: ['dresses', (n) => `up to ${n} of your wildermon a go, those within ${TEND_REACH} tiles of it, with a dressing out of the stores for each,`],
+  ash: ['does', (n) => `${n} ${n === 1 ? 'job' : 'jobs'} a go (a hearth raked out or a batch of lye)`],
+  groom: ['brushes', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a go`],
+  dairy: ['milks or shears', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a go, a bucket from the stores per milking`],
+  heal: ['dresses', (n) => `up to ${n} of your wildermon within ${TEND_REACH} tiles a go, a dressing from the stores each`],
 };
 /**
  * What its stage lets a trade do at once, in words, for a stage's words: "carries 2 loads home a trip". Null for a
@@ -724,8 +720,8 @@ export function stageWorkSays(kind: GatherKind | null | undefined, n: number): [
   if (!kind) return null;
   const own = STAGE_WORK[kind];
   if (own) return [own[0], own[1](n)];
-  if (STORE_RECIPES[kind] || kind === 'cook' || kind === 'paper') return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a go, while the stores hold the makings,`];
-  if (LOAD_TRADES.has(kind)) return ['carries', `${n} ${n === 1 ? 'load' : 'loads'} home a trip`];
+  if (STORE_RECIPES[kind] || kind === 'cook' || kind === 'paper') return ['works', `${n} ${n === 1 ? 'batch' : 'batches'} a go, while the stores hold the makings`];
+  if (LOAD_TRADES.has(kind)) return ['carries', `${n} ${n === 1 ? 'load' : 'loads'} a trip`];
   return null;
 }
 /** Everything in its arms, and its arms emptied: what it puts down when it stops working, the loads of a trip and all. */
@@ -834,12 +830,12 @@ export function fedOn(c: Creature, item: string, ql: number, time: number): void
 /** Its favourite and what it is worth, for its card and its page: "Favourite: reed, +40% learning for two and a half hours at quality 100". */
 export function favouriteSays(def: SpeciesDef): string {
   const fav = favouriteOf(def);
-  return fav ? `Favourite: ${itemDef(fav).name.toLowerCase()}, +${percent(fedBonus(def, fav, QL_TOP))} learning for ${spanWords(FED_FOR)} at quality ${QL_TOP}` : '';
+  return fav ? `Favourite: ${itemDef(fav).name.toLowerCase()}, learning +${percent(fedBonus(def, fav, QL_TOP))} for ${timeWords(FED_FOR)} at QL ${QL_TOP}` : '';
 }
 /** A meal's learning still on it, for its card: "Well fed: +14% learning for 38 minutes more"; nothing once it is out. */
 export function wellFedSays(c: Pick<Creature, 'fedBonus' | 'fedUntil'>, time: number): string {
   const fed = fedNow(c, time);
-  return fed > 0 ? `Well fed: +${percent(fed)} learning for ${timeWords((c.fedUntil ?? time) - time)} more` : '';
+  return fed > 0 ? `Well fed: learning +${percent(fed)}, ${timeWords((c.fedUntil ?? time) - time)} left` : '';
 }
 /**
  * What a wild one past its first stage asks over its kind's, for its card: "Already a Reedweaver: 15 more taming than a
@@ -849,7 +845,7 @@ export function stageTameSays(c: Pick<Creature, 'species' | 'skills'>): string {
   const def = SPECIES[c.species];
   const stage = stageOf(c);
   if (!def || !stage) return '';
-  return `Already ${article(kindName(c))} ${kindName(c)}: ${WILD_STAGE_TAME * stage} more taming than ${article(def.name)} ${def.name} and ${percent(WILD_STAGE_CHANCE ** stage)} of its base chance an offering`;
+  return `${kindName(c)}: taming needed +${WILD_STAGE_TAME * stage}, chance per offering ${percent(WILD_STAGE_CHANCE ** stage)} of a ${def.name}'s`;
 }
 
 /**
@@ -925,18 +921,18 @@ export function learnPace(c: Pick<Creature, 'species' | 'trade'>, skill: string)
 }
 /** What a kind that learns its own skill does to learn it, for its card and the help. */
 export const LEARNS_SAYS: Record<LearnsBy, string> = {
-  tended: 'each time it is sheared, plucked or milked',
-  spar: 'each time a spar swing of yours lands on it',
-  out: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement`,
-  dark: `for every ${OUT_EVERY} seconds it is out at your heel or keeping a settlement after dark`,
-  pull: `for every tile a large cart or a wagon it is hitched to goes into while you drive it, ${LEARN_PACE.pull === 1 ? 'as much as' : `${percent(LEARN_PACE.pull)} of what`} the same tile teaches you at the reins`,
+  tended: 'per shearing, plucking or milking',
+  spar: 'per spar swing of yours that lands on it',
+  out: `per ${OUT_EVERY} seconds out at your heel or keeping a settlement`,
+  dark: `per ${OUT_EVERY} seconds out at your heel or keeping a settlement after dark`,
+  pull: `per tile driven in the traces of a large cart or wagon, ${percent(LEARN_PACE.pull)} of what the tile teaches you at the reins`,
 };
 /** What a kind with no trade learns by, as a trade is named (`GATHER_VERB`), for the help. */
 const LEARNS_VERB: Record<LearnsBy, string> = {
-  tended: 'being shorn, plucked or milked', spar: 'sparring', out: 'being out', dark: 'being out after dark', pull: 'pulling a cart or a wagon',
+  tended: 'shorn, plucked or milked', spar: 'sparring', out: 'out', dark: 'out after dark', pull: 'pulling a cart or wagon',
 };
 /** And the two trades `GATHER_VERB` calls the same, told apart. */
-const PACE_VERB: Partial<Record<GatherKind, string>> = { fetch: 'picking up what lies about', compost: 'turning what rots into compost', dairy: 'milking or shearing' };
+const PACE_VERB: Partial<Record<GatherKind, string>> = { fetch: 'fetching', compost: 'composting', dairy: 'milking or shearing' };
 /**
  * Every trade's factor and every way of learning's (`LEARN_PACE`), the ones at the same factor together, least first:
  * "33% for sparring; 67% for butchering and restoring; ...". Leaves out a keeping watch and a hunt, which are 1.
@@ -947,7 +943,7 @@ export function learnPaceSays(): string {
     if (at === 'guard' || at === 'hunt') continue;
     by.set(f, [...(by.get(f) ?? []), PACE_VERB[at as GatherKind] ?? (at in GATHER_VERB ? GATHER_VERB[at as GatherKind] : LEARNS_VERB[at as LearnsBy])]);
   }
-  return [...by].sort((a, b) => a[0] - b[0]).map(([f, names]) => `${percent(f)} for ${listed(names)}`).join('; ');
+  return [...by].sort((a, b) => a[0] - b[0]).map(([f, names]) => `${listed(names)} ${percent(f)}`).join('; ');
 }
 
 /**
@@ -976,13 +972,13 @@ export type FightStyle = 'shield' | 'flank' | 'bleed' | 'stun' | 'venom' | 'bore
 export const SPAR_YIELD = 0.5;
 /** What each way of fighting does, in the game's own terms, for a species' words and the help. */
 export const STYLE_SAYS: Record<FightStyle, string> = {
-  shield: `every blow it lands turns each wild thing within ${GUARD_RANGE} tiles of it that is after you or another of yours onto it instead`,
-  flank: `its blows land ${percent(BLINDSIDE - 1)} harder on anything fighting you or another of yours rather than it`,
-  bleed: `every bite it lands on another creature bleeds it ${percent(KNIFE_BLEED)} of the bite a second for ${KNIFE_BLEED_SECS} seconds, as a knife does`,
-  stun: `the last of every ${numberWord(HEAVY_EVERY)} blows it lands on another creature stuns it for ${STUN_SECS} seconds, in which it neither moves nor strikes`,
-  venom: `its bite leaves venom in other creatures, taking ${percent(VENOM_DRAIN)} of their health a second for ${VENOM_SECS} seconds, as it would take yours`,
-  bore: `its blows land ${percent(BODKIN_HIDE - 1)} harder on anything with a thick hide, a shell or scales, as a bodkin does`,
-  spar: `you may Spar with it while it is out with you: each swing teaches the fighting, the weapon skill and the body strength a swing at a wild thing teaches, and wears your weapon as much, but your blows take it no lower than ${percent(SPAR_YIELD)} of its health, where it yields until it is back above it, and it never strikes back`,
+  shield: `each blow it lands turns every wild creature within ${GUARD_RANGE} tiles that is after you or yours onto it`,
+  flank: `blow +${percent(BLINDSIDE - 1)} on a target fighting you or another of yours rather than it`,
+  bleed: `bites bleed the target ${percent(KNIFE_BLEED)} of the bite per second for ${KNIFE_BLEED_SECS} seconds (as a knife)`,
+  stun: `1 blow in ${HEAVY_EVERY} stuns the target ${STUN_SECS} seconds: no moving or striking`,
+  venom: `bite poisons other creatures: ${percent(VENOM_DRAIN)} of their health per second for ${VENOM_SECS} seconds`,
+  bore: `blow +${percent(BODKIN_HIDE - 1)} on thick hide, shell or scales (as a bodkin)`,
+  spar: `Spar with it while it is out with you: a swing teaches fighting, the weapon skill and body strength as a swing at a wild creature does, and wears the weapon as much; your blows stop at ${percent(SPAR_YIELD)} of its health, where it yields until above it; never strikes back`,
 };
 /**
  * What one of yours does in a fight once every so often, instead of a blow, wherever it fights -- at your heel or
@@ -1018,26 +1014,26 @@ export const abilityName = (id: AbilityId): string =>
 export function abilitySays(id: AbilityId): string {
   const f = (k: string): number => abilityFx(id, k);
   const said: Record<AbilityId, () => string> = {
-    beastmaster_pounce: () => `when what it is going for is within ${f('reach')} tiles of it, it leaps to it and strikes at ${percent(f('more'))} of a blow, and puts its next blow back ${f('back')} seconds`,
-    blade_hamstring: () => `a blow at ${percent(f('more'))} after which what it strikes goes at ${percent(f('pace'))} of its pace for ${f('secs')} seconds`,
-    berserker_skull_crack: () => `a blow at ${percent(f('more'))} that holds what it strikes where it stands, neither moving nor striking, for ${f('hold')} seconds, a monster for ${f('hold') * f('monster')}`,
-    blade_shield_bash: () => `a blow at ${percent(f('more'))} that knocks a heavy blow off its stroke and puts the next blow of what it strikes back ${f('back')} seconds`,
-    berserker_execute: () => `a blow at ${percent(f('more'))} on anything below ${percent(f('low'))} of its health`,
-    berserker_whirlwind: () => `${numberWord(f('blows'))} blows at ${percent(f('more'))} on every wild thing within ${f('reach')} tiles of it`,
-    kindler_scorch: () => `a blow at ${percent(f('fire'))} that sets what it strikes burning, ${percent(f('each'))} of its health a second for ${f('secs')} seconds`,
-    frost_breath: () => `a blow that leaves what it strikes going at ${percent(FROST_PACE)} of its pace for ${FROST_SECS} seconds, as a Frostbite does`,
-    binder_root: () => `roots what it fights where it stands for ${f('secs')} seconds: it may strike but not move`,
-    binder_dull_claws: () => `for ${f('secs')} seconds what it fights lands its blows ${percent(1 - f('dealt'))} smaller`,
-    binder_brittle: () => `for ${f('secs')} seconds what it fights takes ${percent(f('taken') - 1)} more from everything that strikes it`,
-    pikeman_keep_away: () => `for ${f('secs')} seconds every blow it lands pushes what it lands on ${f('push')} ${f('push') === 1 ? 'tile' : 'tiles'} further from it`,
-    blade_guardians_call: () => `every wild thing within ${f('reach')} tiles of it that is after anybody turns on it, and stays on it for ${f('secs')} seconds`,
-    skirmisher_marked_for_death: () => `for ${f('secs')} seconds every blow, throw and shot of yours that lands on what it fights is critical ${times(f('crit'))} as often`,
-    warder_ward: () => `while it is at your heel, lays a skin over you that takes the next ${percent(WARD_SKIN)} of your health of the blows that come at you, when the skin over you is smaller`,
-    warder_stoneskin: () => `for ${f('secs')} seconds it takes ${percent(f('cut'))} less from every blow`,
-    chirurgeon_leech: () => `a blow at ${percent(f('more'))}, and it gets back the share of its own health that the blow took of the other's`,
-    fear: () => `it frightens what it fights unless that is a monster, so that for ${f('secs')} seconds, or until you strike it, the thing runs from it and strikes nothing`,
+    beastmaster_pounce: () => `leaps to a target within ${f('reach')} tiles: blow ×${percent(f('more'))}, target's next blow ${f('back')} seconds later`,
+    blade_hamstring: () => `blow ×${percent(f('more'))}; target pace ${percent(f('pace'))} for ${f('secs')} seconds`,
+    berserker_skull_crack: () => `blow ×${percent(f('more'))}; target held, no moving or striking, ${f('hold')} seconds (a monster ${f('hold') * f('monster')})`,
+    blade_shield_bash: () => `blow ×${percent(f('more'))}; cancels a heavy blow; target's next blow ${f('back')} seconds later`,
+    berserker_execute: () => `blow ×${percent(f('more'))} on a target under ${percent(f('low'))} health`,
+    berserker_whirlwind: () => `${f('blows')} blows ×${percent(f('more'))} on every wild creature within ${f('reach')} tiles`,
+    kindler_scorch: () => `blow ×${percent(f('fire'))}; target burns ${percent(f('each'))} of its health per second for ${f('secs')} seconds`,
+    frost_breath: () => `blow; target pace ${percent(FROST_PACE)} for ${FROST_SECS} seconds (as Frostbite)`,
+    binder_root: () => `target rooted ${f('secs')} seconds: can strike, cannot move`,
+    binder_dull_claws: () => `target's blows −${percent(1 - f('dealt'))} for ${f('secs')} seconds`,
+    binder_brittle: () => `target takes +${percent(f('taken') - 1)} from every blow for ${f('secs')} seconds`,
+    pikeman_keep_away: () => `for ${f('secs')} seconds each blow it lands pushes the target ${f('push')} ${f('push') === 1 ? 'tile' : 'tiles'} back`,
+    blade_guardians_call: () => `every wild creature within ${f('reach')} tiles that is after anybody turns on it for ${f('secs')} seconds`,
+    skirmisher_marked_for_death: () => `for ${f('secs')} seconds your blows, throws and shots on its target crit chance ×${f('crit')}`,
+    warder_ward: () => `while at your heel, a skin on you that absorbs damage up to ${percent(WARD_SKIN)} of your health, when your skin is smaller`,
+    warder_stoneskin: () => `damage taken −${percent(f('cut'))} for ${f('secs')} seconds`,
+    chirurgeon_leech: () => `blow ×${percent(f('more'))}; heals the share of its health that the blow took of the target's`,
+    fear: () => `target (not a monster) flees and strikes nothing for ${f('secs')} seconds or until you strike it`,
   };
-  return `${said[id]()}, once every ${abilityRest(id)} seconds`;
+  return `${said[id]()}; cooldown ${abilityRest(id)} seconds`;
 }
 /** A mark on a creature while it holds, or `none` once it has run out. The island's `beast_mark`. */
 export const markOn = (game: { time: number }, c: Creature | undefined, kind: MarkKind, none = 1): number => {
@@ -1059,7 +1055,7 @@ export const sparring = (c: Creature | undefined): boolean => !!c && c.mode !== 
 export const yielded = (c: Creature): boolean => c.health <= sparFloor(c) + SPAR_SLACK;
 /** What a blow that lands on a sparring partner says. The island's `spar_said`. */
 export const sparSaid = (c: Creature): string =>
-  `You land one on ${c.name}. It is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', and yields' : ''}.`;
+  `Hit: ${c.name} ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', yields' : ''}.`;
 
 /**
  * What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task,
@@ -1067,10 +1063,10 @@ export const sparSaid = (c: Creature): string =>
  */
 export function stageSays(stage: number, task = true, fleece = false): string {
   const more = (ch: TraitChannel): string => percent((STAGE_MUL[ch] ?? 1) ** stage - 1);
-  const parts = [`${more('hardy')} more health`, `a ${more('tough')} harder blow`, `${more('speed')} faster on its feet`];
-  if (task) parts.push(`${more('work')} quicker at each go of its task`);
-  if (fleece) parts.push(`its fleece grows back ${more('grow')} faster`);
-  return `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`;
+  const parts = [`health +${more('hardy')}`, `blow +${more('tough')}`, `speed +${more('speed')}`];
+  if (task) parts.push(`task speed +${more('work')}`);
+  if (fleece) parts.push(`fleece regrowth +${more('grow')}`);
+  return parts.join(', ');
 }
 
 /**
@@ -1078,12 +1074,12 @@ export function stageSays(stage: number, task = true, fleece = false): string {
  * every number read off the rule it describes.
  */
 function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null): string {
-  if (stage === 0) return `${job} ${level} At level ${EVOLVE_AT[0]} it evolves into ${article(names[1])} ${names[1]}.`;
-  const next = stage === 1 ? ` At level ${EVOLVE_AT[1]} it evolves into ${article(names[2])} ${names[2]}.` : '';
+  if (stage === 0) return `${job} ${level} Evolves at level ${EVOLVE_AT[0]}: ${names[1]}.`;
+  const next = stage === 1 ? ` Evolves at level ${EVOLVE_AT[1]}: ${names[2]}.` : '';
   // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of.
   const work = stageWorkSays(kind, STAGE_LOADS[stage]);
-  const more = work ? ` It ${work[0]} ${work[1]} where ${article(names[0])} ${names[0]} ${work[0]} ${STAGE_LOADS[0]}.` : '';
-  return `${capital(article(names[0]))} ${names[0]} at level ${EVOLVE_AT[stage - 1]} and over: ${stageSays(stage, task, fleece)} than ${article(names[0])} ${names[0]}.${more} ${job}${next}`;
+  const more = work ? ` It ${work[0]} ${work[1]} (${names[0]}: ${STAGE_LOADS[0]}).` : '';
+  return `Stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more} ${job}${next}`;
 }
 
 /** Seconds between chances for an unruly companion to turn on its keeper. */
@@ -1139,8 +1135,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#fdfbf7', '#f2cdd2'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 3, gland: 1 },
-    tameFail: 'nibbles the {food}, twitches its nose, and hops off unconvinced',
-    leaves: 'bounds off into the wild',
   },
   vola: {
     id: 'vola',
@@ -1171,8 +1165,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#ddd6cb', '#b48ad0'],
     ],
     butcher: { meat: 2, fur: 3, leather: 2, bone: 2, gland: 1 },
-    tameFail: 'snuffles the {food} out of your palm, then shuffles away and buries itself in the leaf litter',
-    leaves: 'shuffles off and burrows out of sight',
   },
   bevere: {
     id: 'bevere',
@@ -1203,8 +1195,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#c8914a', '#f2e2c2'],
     ],
     butcher: { meat: 3, fur: 3, leather: 3, bone: 2, gland: 1 },
-    tameFail: 'takes the {food} in both paws, eats it without hurry, and slips back into the water',
-    leaves: 'slaps its tail and slides into the water',
     nearWater: true,
     defaultStance: 'passive',
   },
@@ -1241,8 +1231,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#d9727f', '#f7e4c4'],
     ],
     butcher: { meat: 3, leather: 1, bone: 4, gland: 1 },
-    tameFail: 'takes the {food} in one claw, waves the other at you, and backs off sideways',
-    leaves: 'scuttles off sideways and buries itself in the sand',
     onSand: true,
     defensive: true,
     defaultStance: 'defensive',
@@ -1279,8 +1267,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     ],
     // The clay caked in its coat and packed in its armour comes off with it.
     butcher: { meat: 3, leather: 2, bone: 2, gland: 1, clay: 4 },
-    tameFail: 'packs the {food} into a ball of clay, buries it, and trundles off',
-    leaves: 'trundles back to the nearest clay pit and digs itself in',
     nearClay: true,
   },
   embra: {
@@ -1313,8 +1299,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#e4e0da', '#eca83e'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 2 },
-    tameFail: 'sniffs at the {food}, finds it cold, and turns its back on you',
-    leaves: 'settles into the warm ash and pays you no more attention',
     nearTar: true,
   },
   quarra: {
@@ -1350,8 +1334,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7e7774', '#d77a34'],
     ],
     butcher: { meat: 4, leather: 3, bone: 4, gland: 1 },
-    tameFail: 'takes the {food} in one bite, considers you, and goes back to the rock',
-    leaves: 'lumbers off and settles against the nearest stone face',
     onStone: true,
   },
   woola: {
@@ -1383,8 +1365,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7f8494', '#a6c0e0'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
-    tameFail: 'eats the {food} without appearing to notice you at all',
-    leaves: 'wanders off grazing and does not look back',
     fleece: 1 / 900,
     learns: { skill: 'animal_husbandry', by: 'tended' },
   },
@@ -1392,7 +1372,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'ulva',
     wound: 'cut',
     name: 'Ulva',
-    description: 'Grey, lean and long in the leg, and the first thing on this island that will come at you without being struck first. Tame one and it will do the same for everything that comes near your border.',
+    description: 'Wild: attacks on sight. Deed job: guard the deed; attacks wild creatures that come onto it.',
     health: 34,
     attack: 9,
     speed: 2.1,
@@ -1410,8 +1390,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5a5f66', '#bcc2c8'],
     ],
     butcher: { meat: 5, fur: 4, leather: 4, bone: 4, gland: 2 },
-    tameFail: 'takes the {food} off your palm with its teeth and watches you back away',
-    leaves: 'trots to the edge of the field, looks back once, and is gone',
     hunter: true,
     defensive: true,
     defaultStance: 'aggressive',
@@ -1420,7 +1398,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'magga',
     wound: 'cut',
     name: 'Magga',
-    description: 'A sharp-eyed black and white bird that lives in the treetops and cannot leave anything shiny where it lies. Tamed, it clears a settlement of everything dropped and forgotten; wild, it is the reason your things are not where you left them.',
+    description: 'Deed job: carry items lying on the settlement home.',
     health: 16,
     attack: 3,
     speed: 2,
@@ -1439,8 +1417,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#332a26', '#efe6d8'],
     ],
     butcher: { meat: 1, leather: 1, bone: 1, gland: 1, feather: 6 },
-    tameFail: 'snatches the {food} and is twenty feet up a tree before you can blink',
-    leaves: 'lifts off with a rattle of wings and is gone over the trees',
     nearTrees: true,
   },
   mola: {
@@ -1474,8 +1450,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#2a2422', '#a8452c'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 2 },
-    tameFail: 'noses the {food} over, thinks better of you, and digs itself out of sight',
-    leaves: 'digs straight down and is gone',
     onOre: true,
   },
   seavic: {
@@ -1507,8 +1481,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#dcbf96', '#fbf6ec'],
     ],
     butcher: { meat: 1, fur: 2, leather: 1, bone: 1, gland: 1 },
-    tameFail: 'roots the {food} out of your hand, grunts, and trots off with it',
-    leaves: 'grunts, turns its rump to you and trots off into the trees',
     nearTrees: true,
     defaultStance: 'passive',
   },
@@ -1543,8 +1515,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#9e7a4e', '#e2d2b0'],
     ],
     butcher: { meat: 26, fur: 4, leather: 14, bone: 18, gland: 1 },
-    tameFail: 'chews through the {food} without once looking up, and goes back to the grass',
-    leaves: 'walks off at its own pace and does not look back',
     defensive: true,
     draught: true,
     pull: 0.3,
@@ -1579,8 +1549,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#e9e2ea', '#a68fc4'],
     ],
     butcher: { meat: 14, fur: 3, leather: 10, bone: 12, gland: 1 },
-    tameFail: 'lips the {food} out of your hand, tosses its head, and moves off a few lengths',
-    leaves: 'wheels away at a canter and is over the rise before you can call it',
     defensive: true,
     draught: true,
     mount: 16,
@@ -1589,7 +1557,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'rowl',
     wound: 'cut',
     name: 'Rowl',
-    description: 'A deep-chested hunter that runs the treeline in the half-light. It hunts the moment it sees you, and tamed it will hunt for you instead: give it a settlement and it works a circuit of it, and the more it fights the wider that circuit gets.',
+    description: 'Wild: attacks on sight. Deed job: hunt round the settlement and bring carcasses home; range grows with its fighting.',
     health: 46,
     attack: 14,
     speed: 2.5,
@@ -1608,8 +1576,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7a5b40', '#c8ac8c'],
     ],
     butcher: { meat: 8, fur: 6, leather: 5, bone: 6, gland: 2 },
-    tameFail: 'takes the {food} and keeps its shoulder to you the whole while, unconvinced',
-    leaves: 'goes off at a long easy lope and is lost in the trees',
     nearTrees: true,
     hunter: true,
     pack: true,
@@ -1621,7 +1587,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   bogga: {
     id: 'bogga',
     name: 'Bogga',
-    description: 'A flat-tailed wallower, black to the shoulder and never far from the black ground. It works peat and tar out of the bog with its forepaws and thinks nothing of the smell.',
+    description: 'Deed job: cut peat and tar from the bog; output home.',
     health: 30,
     attack: 4,
     speed: 1.4,
@@ -1639,8 +1605,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#221f1d', '#4f4a44'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3, gland: 1 },
-    tameFail: 'takes the {food} in both paws, eats it where it stands, and wallows off',
-    leaves: 'slides back into the peat and is gone',
     nearTar: true,
   },
   sedra: {
@@ -1671,8 +1635,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5e4334', '#dccbb0'],
     ],
     butcher: { meat: 3, fur: 2, leather: 1, bone: 2 },
-    tameFail: 'sniffs the {food}, and slips back into the reeds',
-    leaves: 'slides into the water and is away',
     nearWater: true,
   },
   holla: {
@@ -1703,14 +1665,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5e8a44', '#5197bf'],
     ],
     butcher: { meat: 6, leather: 4, bone: 4, gland: 1 },
-    tameFail: 'gulps the {food} down, blinks, and hops off',
-    leaves: 'hops into the water and is gone',
     nearWater: true,
   },
   dowse: {
     id: 'dowse',
     name: 'Dowse',
-    description: 'A whiskered burrower that will not settle anywhere there is no metal under it. Put one on a deed and it spends its days reading the ground and telling you what is down there.',
+    description: 'Found only on ground with metal under it. Deed job: prospect the deed and mark the metal found.',
     health: 20,
     attack: 3,
     speed: 1.8,
@@ -1729,14 +1689,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7c6a6a', '#cbb9b4'],
     ],
     butcher: { meat: 2, fur: 3, leather: 2, bone: 2, gland: 2 },
-    tameFail: 'sniffs the {food}, sniffs the ground, and decides the ground is more interesting',
-    leaves: 'goes down a hole that was not there a moment ago',
     onOre: true,
   },
   sappa: {
     id: 'sappa',
     name: 'Sappa',
-    description: 'A moss-backed browser of the deep woods that buries more seed than it eats and forgets where. Kept on a deed it plants the ground back up behind your axe.',
+    description: 'Deed job: plant sprouts where trees were cut.',
     health: 26,
     attack: 3,
     speed: 1.7,
@@ -1754,14 +1712,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7a6f4e', '#d3c8a0'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2, gland: 1 },
-    tameFail: 'buries the {food} instead of eating it and wanders off pleased with itself',
-    leaves: 'goes up the nearest trunk and out of sight among the leaves',
     nearTrees: true,
   },
   snedda: {
     id: 'snedda',
     name: 'Snedda',
-    description: 'A long-necked browser of the wood\'s edge with a mouth like a pair of shears. It nips the dead wood out of a tree and leaves the live, and kept on a deed it prunes what would otherwise die, and nothing else.',
+    description: 'Deed job: prune tree stages that would otherwise die; nothing else.',
     health: 24,
     attack: 2,
     speed: 1.6,
@@ -1779,14 +1735,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8a7f5c', '#e2d8b2'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 2, gland: 1 },
-    tameFail: 'takes the {food} at the very tips of its teeth, chews it a long while, and goes back to nipping at a branch',
-    leaves: 'reaches up into the branches and is a branch itself by the time you look again',
     nearTrees: true,
   },
   grubba: {
     id: 'grubba',
     name: 'Grubba',
-    description: 'A squat, hump-shouldered rooter with claws like mattock blades. It digs for what lives under old stumps and takes the stump with it; kept on a deed it clears the ground behind your axe.',
+    description: 'Deed job: dig out stumps.',
     health: 30,
     attack: 4,
     speed: 1.4,
@@ -1804,14 +1758,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7a5a3e', '#c9a880'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3, gland: 1 },
-    tameFail: 'snuffles the {food} out of your hand and goes straight back to its digging',
-    leaves: 'shoulders into the undergrowth and is gone',
     nearTrees: true,
   },
   plucka: {
     id: 'plucka',
     name: 'Plucka',
-    description: 'A long-armed climber of the orchard\'s edge with hands like a child\'s and a tail it hangs by. It goes up a bearing tree and comes down with the fruit, and kept on a deed it picks what the trees have on them and carries it home to the crate.',
+    description: 'Deed job: pick what the fruit trees bear; output to the crate.',
     health: 18,
     attack: 1,
     speed: 1.7,
@@ -1829,8 +1781,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4e4238', '#b8a88a'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 2, gland: 1 },
-    tameFail: 'takes the {food} in both hands, eats it in three bites and is back up the tree before you have moved',
-    leaves: 'swings up into the canopy and is gone hand over hand',
     nearTrees: true,
   },
   cobbe: {
@@ -1862,8 +1812,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7e3a25', '#d8c09e'],
     ],
     butcher: { meat: 6, fur: 1, leather: 5, bone: 6 },
-    tameFail: 'eats the {food} in one, looks at you, and goes back to shoving rocks about',
-    leaves: 'walks off with its head down and does not look back',
     defensive: true,
   },
   tinka: {
@@ -1894,13 +1842,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6e6660', '#ddd3c4'],
     ],
     butcher: { meat: 1, fur: 2, leather: 1, bone: 1, gland: 2 },
-    tameFail: 'turns the {food} over twice looking for a seam in it, then puts it down',
-    leaves: 'pockets something of yours and is gone before you can see which',
   },
   middun: {
     id: 'middun',
     name: 'Middun',
-    description: 'A low, patient scavenger that eats what everything else has given up on. What comes out the other end is the best thing that ever happened to a field.',
+    description: 'Deed job: turn rotting items on the deed into compost.',
     health: 24,
     attack: 3,
     speed: 1.5,
@@ -1918,15 +1864,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#332e2a', '#665f57'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 3, gland: 1 },
-    tameFail: 'eats the {food} and everything within a foot of where it fell',
-    leaves: 'shuffles into the undergrowth after something it can smell and you cannot',
   },
   // ---- The settlement's own hands. ----
   // Each says what it does on a settlement in the game's own terms; the numbers are the trades' (`TEND_JOBS`, `GATHER_DO`).
   kemma: {
     id: 'kemma',
     name: 'Kemma',
-    description: 'A soft, round grazer with a broad tongue and a coat that is always clean. Set to work on a settlement it brushes down every wildermon of yours within its reach whose care is under {careWanting:pct}, as a keeper of its skill with a brush of the same quality would.',
+    description: 'Deed job: brush your wildermon within its reach under {careWanting:pct} care, as a keeper of its skill with a brush of the same QL.',
     health: 18,
     attack: 2,
     speed: 2,
@@ -1944,13 +1888,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8f9a86', '#d8e0cf'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
-    tameFail: 'licks the {food} clean and leaves it',
-    leaves: 'wanders off grooming its own shoulder',
   },
   sheela: {
     id: 'sheela',
     name: 'Sheela',
-    description: 'A short, deft creature with clever forepaws and shears for teeth. Set to work on a settlement it milks your cudda into the empty buckets in your stores, and shears or plucks every other of yours with a fleece or feathers, each once it is {dairyFull:pct} grown back; what comes off goes in your stores.',
+    description: 'Deed job: milk your cudda into empty buckets in your stores; shear or pluck your other fleeced or feathered wildermon at {dairyFull:pct} regrowth. Output: your stores.',
     health: 20,
     attack: 2,
     speed: 2.2,
@@ -1968,13 +1910,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#e1d9c8', '#857462'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
-    tameFail: 'snips the {food} in half and walks off with the bigger piece',
-    leaves: 'trots away clicking its teeth',
   },
   salva: {
     id: 'salva',
     name: 'Salva',
-    description: 'A long-fingered, careful creature that smells of crushed leaves. Set to work on a settlement it dresses any wildermon of yours within its reach that is bleeding or under {healBelow:pct} of its health, with a bandage or a herb cover out of your stores: the bleeding stops, and it puts back the share of a life a dressing of that quality at its first aid would.',
+    description: 'Deed job: dress your wildermon within its reach that are bleeding or under {healBelow:pct} health, with a bandage or herb cover from your stores: stops bleeding, heals as a dressing of that QL at its first aid.',
     health: 16,
     attack: 1,
     speed: 2,
@@ -1992,14 +1932,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#9a7f8c', '#eadbe2'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1, gland: 2 },
-    tameFail: 'sniffs the {food}, decides you are the one who needs looking after, and pats your hand',
-    leaves: 'goes off into the long grass looking for something to put on a cut',
     nearTrees: true,
   },
   carra: {
     id: 'carra',
     name: 'Carra',
-    description: 'A heavy-jawed scavenger with a cleaver of a beak, which goes where the hunters have been. Set to work on a settlement it butchers the carcasses in your stores, taking as much of each as a butcher of its skill with a knife of the same quality would, and puts what comes off back in your stores.',
+    description: 'Deed job: butcher carcasses in your stores, yield as a butcher of its skill with a knife of the same QL. Output: your stores.',
     health: 30,
     attack: 5,
     speed: 2,
@@ -2017,14 +1955,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#614a3f', '#d8c0ae'],
     ],
     butcher: { meat: 4, fur: 2, leather: 2, bone: 3, feather: 4 },
-    tameFail: 'takes the {food} apart into neat pieces and eats none of them',
-    leaves: 'lopes off toward wherever something last died',
     nearTrees: true,
   },
   tanna: {
     id: 'tanna',
     name: 'Tanna',
-    description: 'A sleek, bark-brown wader with hands stained to the wrist. Set to work on a settlement it tans the hides in your stores, a hide and a bucket of lye to each piece of leather, so long as a carving knife is kept in your stores; the bucket goes back in with the leather.',
+    description: 'Deed job: tan hides in your stores, a hide and a bucket of lye per leather; needs a carving knife in your stores. The bucket goes back with the leather.',
     health: 22,
     attack: 3,
     speed: 2,
@@ -2042,14 +1978,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4d3b2c', '#b39878'],
     ],
     butcher: { meat: 3, fur: 3, leather: 3, bone: 2 },
-    tameFail: 'dunks the {food} in the nearest water and forgets about it',
-    leaves: 'slides off toward the water',
     nearWater: true,
   },
   grista: {
     id: 'grista',
     name: 'Grista',
-    description: 'A stout, dusty creature with jaws like millstones and a tail it sweeps the floor with. Set to work on a settlement it grinds the wheat and corn and presses the olives in your stores, so long as a quern is kept in your stores, and puts the flour, cornmeal and oil back in.',
+    description: 'Deed job: grind wheat and corn and press olives in your stores; needs a quern in your stores. Output: flour, cornmeal and oil to your stores.',
     health: 26,
     attack: 3,
     speed: 1.6,
@@ -2067,13 +2001,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#b7aa94', '#6e604c'],
     ],
     butcher: { meat: 4, fur: 3, leather: 2, bone: 3 },
-    tameFail: 'grinds the {food} to dust and blows it away',
-    leaves: 'shuffles off in a small cloud of flour',
   },
   wicka: {
     id: 'wicka',
     name: 'Wicka',
-    description: 'A small, moth-winged thing that comes out at dusk and goes to every light it can see. Set to work on a settlement it puts a candle out of your stores in every lantern post and pillar of yours that has none, lights them once it is dark and puts them out by day, so no candle burns while the sun is up.',
+    description: 'Deed job: put a candle from your stores in each of your lantern posts and pillars without one; lights them after dark, puts them out by day.',
     health: 10,
     attack: 1,
     speed: 2.6,
@@ -2091,14 +2023,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4f5b56', '#dfe3a0'],
     ],
     butcher: { meat: 1, fur: 1, leather: 1, gland: 2 },
-    tameFail: 'flutters round the {food} twice and settles on your lantern instead',
-    leaves: 'flits off toward the nearest light',
     nocturnal: true,
   },
   brambo: {
     id: 'brambo',
     name: 'Brambo',
-    description: 'A burr-coated rummager of the hedges with a mouth that strips a bush clean. Set to work on a settlement it picks the bushes in their season, as many off each as your hands would at its forestry, and the ripe vines on your trellises, and carries it home.',
+    description: 'Deed job: pick bushes in season, as many as your hands would at its forestry, and ripe trellis vines; output home.',
     health: 22,
     attack: 3,
     speed: 2,
@@ -2116,14 +2046,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5a4a5e', '#b49ab8'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
-    tameFail: 'eats the {food} and then the bush you were standing by',
-    leaves: 'pushes off into the nearest hedge',
     nearTrees: true,
   },
   grazza: {
     id: 'grazza',
     name: 'Grazza',
-    description: 'A low, wide grazer that crops the ground as it goes, flat as a scythe. Set to work on a settlement it cuts grass, {grassPerCut:w} bundles of mixed grass a cut, and moss, {mossPerCut:w} clumps a cut, and carries it home; grass it keeps cut on your settlement turns to lawn as it does for you.',
+    description: 'Deed job: cut grass, {grassPerCut} mixed grass a cut, and moss, {mossPerCut} a cut; output home. Grass it keeps cut on your settlement turns to lawn.',
     health: 24,
     attack: 2,
     speed: 1.8,
@@ -2141,13 +2069,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6a7a5a', '#bfcaae'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
-    tameFail: 'eats the {food} and the grass under it',
-    leaves: 'grazes its way off in a straight line',
   },
   siffa: {
     id: 'siffa',
     name: 'Siffa',
-    description: 'A long-legged shore wader with a scoop of a bill it swirls the wet sand in. Set to work on a settlement it pans the sand at the water\u2019s edge and carries home what settles: something {panLeast:pct} of the time at no skill, rising to {panMost:pct} at {skillTop} prospecting.',
+    description: 'Deed job: pan sand at the water\u2019s edge; output home. Find chance: {panLeast:pct} unskilled, {panMost:pct} at {skillTop} prospecting.',
     health: 16,
     attack: 2,
     speed: 2.2,
@@ -2165,8 +2091,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7f8b7a', '#d4dccd'],
     ],
     butcher: { meat: 2, fur: 1, leather: 1, bone: 2, feather: 5 },
-    tameFail: 'washes the {food} in the shallows until there is nothing left of it',
-    leaves: 'stalks off along the waterline',
     onSand: true,
     nearWater: true,
   },
@@ -2174,7 +2098,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   forga: {
     id: 'forga',
     name: 'Forga',
-    description: 'A squat, soot-streaked thing with a bellows of a chest and hands that do not feel heat. Set to work on a settlement it takes what your smelters have made out into your stores and charges them with the ore in your stores, a charge to an ore as yours are, up to what each will hold. It neither lights nor fuels them.',
+    description: 'Deed job: empty your smelters into your stores and charge them with ore from your stores, a charge per ore, up to capacity. Does not light or fuel them.',
     health: 28,
     attack: 4,
     speed: 1.8,
@@ -2192,14 +2116,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#3f4448', '#b8865a'],
     ],
     butcher: { meat: 3, fur: 2, leather: 3, bone: 3 },
-    tameFail: 'sniffs the {food}, finds it not hot enough and drops it',
-    leaves: 'stumps off toward the nearest smoke',
     onStone: true,
   },
   potta: {
     id: 'potta',
     name: 'Potta',
-    description: 'A round, clay-caked creature with a wide flat tail it smooths things with. Set to work on a settlement it takes what your kilns have fired out into your stores and packs them with the unfired pottery in your stores, up to what each will hold. It neither lights nor fuels them.',
+    description: 'Deed job: empty your kilns into your stores and load them with unfired pottery from your stores, up to capacity. Does not light or fuel them.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2217,14 +2139,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8c6a50', '#d0b498'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
-    tameFail: 'presses the {food} into a little pot and leaves it to dry',
-    leaves: 'waddles off to the nearest clay',
     nearClay: true,
   },
   cindra: {
     id: 'cindra',
     name: 'Cindra',
-    description: 'A small grey creature soft as ash, with a dustpan of a tail. Set to work on a settlement it rakes every whole ash out of your campfires, ovens, smelters and kilns into your stores, and with none to rake it leaches ash and a bucket of water from your stores into lye, as the lye recipe takes them.',
+    description: 'Deed job: rake whole ashes from your campfires, ovens, smelters and kilns into your stores; with none to rake, leach ash and a bucket of water from your stores into lye, per the lye recipe.',
     health: 18,
     attack: 2,
     speed: 2,
@@ -2242,14 +2162,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7c7a74', '#cac6bc'],
     ],
     butcher: { meat: 2, fur: 3, leather: 1, bone: 1 },
-    tameFail: 'buries the {food} in the cinders and forgets it',
-    leaves: 'drifts off like smoke',
     nearTar: true,
   },
   hoppa: {
     id: 'hoppa',
     name: 'Hoppa',
-    description: 'A cheerful, round-bellied creature with a cork of a nose and a smell of malt. Set to work on a settlement it sets a brew going in every barrel of yours that holds water enough and is not working, with makings from your stores, trying the brews in the order they are listed. It never spoils a brew, and what it brews is half the quality of what went in and half its brewing.',
+    description: 'Deed job: start a brew in each idle barrel of yours with enough water, from makings in your stores, brews tried in list order. Never spoils a brew. Brew QL: half the makings\' QL plus half its brewing.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2267,13 +2185,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8a6c48', '#d6bc8c'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
-    tameFail: 'sniffs the {food}, decides it is not ready yet and sets it aside',
-    leaves: 'rolls off whistling',
   },
   simma: {
     id: 'simma',
     name: 'Simma',
-    description: 'A plump creature with a spoon of a tail and a nose for anything on the fire. Set to work on a settlement it cooks what your stores hold the makings of at your lit campfires and ovens, trying the recipes in the order they are listed, with any bowl, pot or pan a recipe wants kept in your stores, and puts what it cooks back in your stores. It never burns anything.',
+    description: 'Deed job: cook from your stores at your lit campfires and ovens, recipes tried in list order, with any bowl, pot or pan a recipe needs from your stores. Output: your stores. Never burns.',
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2291,13 +2207,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#b08060', '#e4c8ac'],
     ],
     butcher: { meat: 4, fur: 2, leather: 2, bone: 2 },
-    tameFail: 'cooks the {food} on nothing at all and eats it',
-    leaves: 'waddles off toward a smell of supper',
   },
   relka: {
     id: 'relka',
     name: 'Relka',
-    description: 'A careful, whiskered creature with fine fingers and a magnifying lens of an eye. Set to work on a settlement it restores every relic all of whose pieces are in your stores, at what the pieces were worth less their damage and at its restoration, as your own hands would, and puts the relic in your stores. It never fails.',
+    description: 'Deed job: restore each relic whose pieces are all in your stores, at the pieces\' worth less their damage and at its restoration, as your hands would. Output: your stores. Never fails.',
     health: 16,
     attack: 1,
     speed: 1.8,
@@ -2315,13 +2229,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6e6a60', '#cec8bc'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 2, gland: 1 },
-    tameFail: 'turns the {food} over looking for where it was mended',
-    leaves: 'scuttles off with its nose to the ground',
   },
   bedda: {
     id: 'bedda',
     name: 'Bedda',
-    description: 'A small, mossy-backed creature with a trowel of a nose. Set to work on a settlement it harvests the ripe crops in your planters into your stores, tends the growing ones, and sows the empty ones with seed from your stores.',
+    description: 'Deed job: harvest ripe crops in your planters into your stores, tend growing ones, sow empty ones with seed from your stores.',
     health: 18,
     attack: 2,
     speed: 1.8,
@@ -2339,13 +2251,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8c8064', '#e4dcc0'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
-    tameFail: 'plants the {food} and waits for it to grow',
-    leaves: 'burrows off under the nearest hedge',
   },
   wurla: {
     id: 'wurla',
     name: 'Wurla',
-    description: 'A long, low, damp-nosed digger with a spade of a snout. Set to work on a settlement it digs for worms on dry grass, dirt, marsh and moss as your spade would, more in a marsh or under moss and now and then none, and carries them home; a tile it has dug rests as long as a forage bed.',
+    description: 'Deed job: dig worms on dry grass, dirt, marsh and moss as your spade would, more in marsh or moss, sometimes none; output home. A dug tile rests as long as a forage bed.',
     health: 18,
     attack: 2,
     speed: 1.8,
@@ -2363,14 +2273,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c5c52', '#c8b4a8'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
-    tameFail: 'eats the {food} and the soil it was lying on',
-    leaves: 'noses off into the soft ground',
     nearWater: true,
   },
   sprigga: {
     id: 'sprigga',
     name: 'Sprigga',
-    description: 'A slim, leaf-eared climber that strips a tree of its shoots without hurting it. Set to work on a settlement it picks a sprout off a living tree, one at a time, named for the tree it came off, and carries it home; a tree it has picked rests as long as a forage bed.',
+    description: 'Deed job: pick sprouts off living trees, each named for its tree; output home. A picked tree rests as long as a forage bed.',
     health: 16,
     attack: 2,
     speed: 2.2,
@@ -2388,14 +2296,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8a8a5a', '#e6e6c0'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
-    tameFail: 'plants the {food} in the nearest crack and waits',
-    leaves: 'runs up the nearest trunk',
     nearTrees: true,
   },
   ambra: {
     id: 'ambra',
     name: 'Ambra',
-    description: 'A sticky-pawed, honey-coloured climber of the pinewoods. Set to work on a settlement it taps every pine big enough to tap, {resinTapped:w} tar a pine a day, and carries it home.',
+    description: 'Deed job: tap each pine big enough to tap, {resinTapped} tar per pine per day; output home.',
     health: 18,
     attack: 2,
     speed: 2,
@@ -2413,14 +2319,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#946a2c', '#dcbc84'],
     ],
     butcher: { meat: 2, fur: 3, leather: 1, bone: 1 },
-    tameFail: 'gets the {food} stuck to its paws and gives up',
-    leaves: 'climbs off into the pines',
     nearTrees: true,
   },
   petta: {
     id: 'petta',
     name: 'Petta',
-    description: 'A light, petal-eared creature that floats from flower to flower. Set to work on a settlement it picks wildflowers, one for each clump on a tile, and carries them home, leaving the flowers in reach of a skep to the skep.',
+    description: 'Deed job: pick wildflowers, a flower per clump on a tile; output home. Flowers within a skep\'s reach are left to the skep.',
     health: 12,
     attack: 1,
     speed: 2.4,
@@ -2438,13 +2342,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a0c0d6', '#e4f0f8'],
     ],
     butcher: { meat: 1, fur: 2, leather: 1 },
-    tameFail: 'smells the {food} and goes back to the flowers',
-    leaves: 'drifts off across the meadow',
   },
   scurra: {
     id: 'scurra',
     name: 'Scurra',
-    description: 'A stiff-bristled, stone-grey creature that cannot leave anything green alone. Set to work on a settlement it scrubs the moss off your paving, poured foundations and statues and clears the ivy off your stone walls once any of it has greened a day, which leaves it bare stone again. It carries nothing home.',
+    description: 'Deed job: scrub moss off your paving, poured foundations and statues and ivy off your stone walls once greened a day, back to bare stone. Carries nothing home.',
     health: 22,
     attack: 3,
     speed: 1.8,
@@ -2462,14 +2364,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#747874', '#c4c8c0'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
-    tameFail: 'scrubs the {food} clean and leaves it',
-    leaves: 'shuffles off scrubbing a stone as it goes',
     onStone: true,
   },
   rippa: {
     id: 'rippa',
     name: 'Rippa',
-    description: 'A long-armed, sawdust-coloured creature with a toothed ridge down its back. Set to work on a settlement it saws every log in your stores into planks, as many to a log as your own saw gets, with a saw kept in your stores, and puts the planks in your stores. It never spoils a log.',
+    description: 'Deed job: saw each log in your stores into planks, as many as your saw gets; needs a saw in your stores. Output: your stores. Never spoils a log.',
     health: 24,
     attack: 3,
     speed: 1.8,
@@ -2487,13 +2387,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a07c50', '#dcc0a0'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 2 },
-    tameFail: 'saws the {food} in two and leaves both halves',
-    leaves: 'lopes off with a rasp of its back on the brush',
   },
   chissa: {
     id: 'chissa',
     name: 'Chissa',
-    description: 'A squat, dusty-grey creature with a chisel of a front tooth. Set to work on a settlement it chisels every rock shard in your stores into stone brick, as many to a shard as your own chisel gets, with a chisel kept in your stores, and puts the bricks in your stores. It never splits a shard the wrong way.',
+    description: 'Deed job: chisel each rock shard in your stores into stone brick, as many as your chisel gets; needs a chisel in your stores. Output: your stores. Never spoils a shard.',
     health: 28,
     attack: 3,
     speed: 1.8,
@@ -2511,13 +2409,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7c7c7c', '#c8c8c4'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3 },
-    tameFail: 'chips the {food} into little cubes and leaves them',
-    leaves: 'trundles off tapping at the stones',
   },
   mudda: {
     id: 'mudda',
     name: 'Mudda',
-    description: 'A round, clay-red creature with wide flat paws. Set to work on a settlement it shapes every lump of clay in your stores into an unfired clay brick, and puts the bricks in your stores for a kiln. It never lets a brick slump.',
+    description: 'Deed job: shape each lump of clay in your stores into an unfired clay brick. Output: your stores. Never spoils a brick.',
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2535,13 +2431,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8c5038', '#d0a088'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
-    tameFail: 'pats the {food} flat and leaves it to dry',
-    leaves: 'plods off leaving square prints',
   },
   cordra: {
     id: 'cordra',
     name: 'Cordra',
-    description: 'A lean, straw-coloured creature with a long twisted tail. Set to work on a settlement it lays up the wemp in your stores into rope, as many fibres to a rope as your own hands take, on a rope tool kept in your stores, and puts the rope in your stores. It never lets a lay unspool.',
+    description: 'Deed job: make rope from wemp in your stores, as many fibres a rope as your hands take; needs a rope tool in your stores. Output: your stores. Never fails.',
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2559,13 +2453,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#b49864', '#e0ccac'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2 },
-    tameFail: 'twists the {food} into a knot and leaves it',
-    leaves: 'winds off through the grass',
   },
   flecha: {
     id: 'flecha',
     name: 'Flecha',
-    description: 'A sharp-eyed, slender creature with a crest of stiff barred feathers. Set to work on a settlement it fletches arrows out of the shafts, arrowheads and feathers in your stores, with a carving knife kept in your stores, and puts the arrows in your stores. It never spoils a shaft.',
+    description: 'Deed job: fletch arrows from shafts, arrowheads and feathers in your stores; needs a carving knife in your stores. Output: your stores. Never spoils a shaft.',
     health: 18,
     attack: 3,
     speed: 1.8,
@@ -2583,13 +2475,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5c5450', '#bcb4ac'],
     ],
     butcher: { meat: 3, feather: 4, leather: 2, bone: 2 },
-    tameFail: 'splits the {food} down the middle and leaves it',
-    leaves: 'darts off with its crest flat',
   },
   papra: {
     id: 'papra',
     name: 'Papra',
-    description: 'A flat, pale creature that folds itself in sheets when it sleeps. Set to work on a settlement it presses the reeds and the buckets of water in your stores into papyrus at your paper presses, and puts the sheets and the empty bucket back in your stores. It never tears a sheet.',
+    description: 'Deed job: press reeds and buckets of water from your stores into papyrus at your paper presses. Output: sheets and the empty bucket to your stores. Never fails.',
     health: 16,
     attack: 1,
     speed: 1.8,
@@ -2607,13 +2497,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#ccc0a0', '#ece4cc'],
     ],
     butcher: { meat: 2, fur: 2, leather: 2, bone: 1 },
-    tameFail: 'presses the {food} flat between its paws and leaves it',
-    leaves: 'flutters off like a loose page',
   },
   glossa: {
     id: 'glossa',
     name: 'Glossa',
-    description: 'A smooth creature whose hide shines as if it had been fired. Set to work on a settlement it glazes every fired pot, bowl, jar and amphora in your stores with the ash in your stores, after which none of them ever decays, as an Artisan\'s glaze does. It never needs the Artisan\'s learning.',
+    description: 'Deed job: glaze each fired pot, bowl, jar and amphora in your stores with ash from your stores; glazed pottery never decays, as with an Artisan\'s glaze. Needs no Artisan learning.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2631,13 +2519,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c6c8c', '#ccccdc'],
     ],
     butcher: { meat: 3, scale: 3, leather: 2, bone: 2 },
-    tameFail: 'licks the {food} until it shines and leaves it',
-    leaves: 'slides off with a gleam',
   },
   dippa: {
     id: 'dippa',
     name: 'Dippa',
-    description: 'A plump, web-footed creature with a deep pouch of a chin. Set to work on a settlement it takes the empty buckets out of your stores, fills them with water at the shore or out of a well, and puts them back in your stores full. It never spills a drop.',
+    description: 'Deed job: fill empty buckets from your stores with water at the shore or a well; output to your stores. Never spills.',
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2655,13 +2541,11 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4c7484', '#acc4d0'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 2 },
-    tameFail: 'dunks the {food} in a puddle and leaves it',
-    leaves: 'waddles off toward the water',
   },
   testa: {
     id: 'testa',
     name: 'Testa',
-    description: `A broad, low creature under a domed shell, slow and very hard to put down. Tamed, ${STYLE_SAYS.shield}, and it guards you unless you tell it otherwise.`,
+    description: `Tamed: ${STYLE_SAYS.shield}. Default stance: guarding you.`,
     health: 80,
     attack: 3,
     speed: 1.4,
@@ -2679,8 +2563,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5c5444', '#bcb09c'],
     ],
     butcher: { meat: 6, scale: 4, leather: 3, bone: 4 },
-    tameFail: 'draws its head in over the {food} and does not come out',
-    leaves: 'plods off with its head held low',
     hide: 'shell',
     defensive: true,
     defaultStance: 'guard',
@@ -2689,7 +2571,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   skulka: {
     id: 'skulka',
     name: 'Skulka',
-    description: `A low, long-bodied creature that slips round behind whatever it is fighting. Tamed, ${STYLE_SAYS.flank}.`,
+    description: `Tamed: ${STYLE_SAYS.flank}.`,
     health: 30,
     attack: 8,
     speed: 2.2,
@@ -2707,8 +2589,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#64584c', '#c4b8a8'],
     ],
     butcher: { meat: 4, fur: 4, leather: 3, bone: 3 },
-    tameFail: 'snatches the {food} and is behind you before you see it go',
-    leaves: 'slinks off along the nearest shadow',
     wound: 'bite',
     defensive: true,
     style: 'flank',
@@ -2716,7 +2596,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   gasha: {
     id: 'gasha',
     name: 'Gasha',
-    description: `A wiry, rust-red creature with a mouthful of hooked teeth. Tamed, ${STYLE_SAYS.bleed}.`,
+    description: `Tamed: ${STYLE_SAYS.bleed}.`,
     health: 28,
     attack: 7,
     speed: 2.0,
@@ -2734,8 +2614,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#743424', '#c48470'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3, tusk: 1 },
-    tameFail: 'tears the {food} to strips and leaves them',
-    leaves: 'lopes off licking its teeth',
     wound: 'cut',
     defensive: true,
     style: 'bleed',
@@ -2743,7 +2621,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   thumpa: {
     id: 'thumpa',
     name: 'Thumpa',
-    description: `A heavy-shouldered creature with a club of a tail. Tamed, ${STYLE_SAYS.stun}.`,
+    description: `Tamed: ${STYLE_SAYS.stun}.`,
     health: 44,
     attack: 9,
     speed: 1.6,
@@ -2761,8 +2639,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4c4840', '#aca89c'],
     ],
     butcher: { meat: 6, fur: 3, leather: 4, bone: 5 },
-    tameFail: 'flattens the {food} with its tail and walks off',
-    leaves: 'stamps off shaking the ground',
     wound: 'crush',
     defensive: true,
     style: 'stun',
@@ -2770,7 +2646,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   spitta: {
     id: 'spitta',
     name: 'Spitta',
-    description: `A slim, bright-banded creature with a forked tongue. Wild, its bite leaves venom in you. Tamed, ${STYLE_SAYS.venom}.`,
+    description: `Wild: venomous bite. Tamed: ${STYLE_SAYS.venom}.`,
     health: 24,
     attack: 6,
     speed: 2.0,
@@ -2788,8 +2664,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7c5c2c', '#dcc49c'],
     ],
     butcher: { meat: 3, scale: 4, leather: 2, bone: 2, gland: 2 },
-    tameFail: 'tastes the {food} with its tongue and leaves it',
-    leaves: 'slides off through the grass',
     wound: 'pierce',
     defensive: true,
     venom: true,
@@ -2798,7 +2672,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   awla: {
     id: 'awla',
     name: 'Awla',
-    description: `A narrow-headed creature with a horn like an awl. Tamed, ${STYLE_SAYS.bore}.`,
+    description: `Tamed: ${STYLE_SAYS.bore}.`,
     health: 30,
     attack: 8,
     speed: 1.9,
@@ -2816,8 +2690,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c6050', '#c4b8a4'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3, tusk: 1 },
-    tameFail: 'spears the {food} on its horn and shakes it off',
-    leaves: 'trots off with its horn down',
     wound: 'pierce',
     defensive: true,
     style: 'bore',
@@ -2825,7 +2697,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   sparra: {
     id: 'sparra',
     name: 'Sparra',
-    description: `A sturdy, good-natured creature that circles anyone it likes with its fists up. Tamed, ${STYLE_SAYS.spar}.`,
+    description: `Tamed: ${STYLE_SAYS.spar}.`,
     health: 60,
     attack: 2,
     speed: 1.9,
@@ -2843,8 +2715,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a07c58', '#dcc4a8'],
     ],
     butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
-    tameFail: 'boxes the {food} out of your hand and grins',
-    leaves: 'bounces off with its fists still up',
     wound: 'crush',
     style: 'spar',
     learns: { skill: 'fighting', by: 'spar' },
@@ -2852,7 +2722,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   lungra: {
     id: 'lungra',
     name: 'Lungra',
-    description: `A long-legged, deep-chested creature that never runs at anything when it can jump at it. Tamed, ${abilitySays('beastmaster_pounce')}.`,
+    description: `Tamed, ${abilityName('beastmaster_pounce')}: ${abilitySays('beastmaster_pounce')}.`,
     health: 30,
     attack: 8,
     speed: 2.3,
@@ -2870,8 +2740,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c5038', '#c8ac8c'],
     ],
     butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
-    tameFail: 'leaps on the {food} and is gone with it',
-    leaves: 'bounds off in great leaps',
     wound: 'bite',
     defensive: true,
     ability: 'beastmaster_pounce',
@@ -2879,7 +2747,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   hamma: {
     id: 'hamma',
     name: 'Hamma',
-    description: `A low, quick creature that goes for the back of the leg and nothing else. Tamed, ${abilitySays('blade_hamstring')}.`,
+    description: `Tamed, ${abilityName('blade_hamstring')}: ${abilitySays('blade_hamstring')}.`,
     health: 28,
     attack: 7,
     speed: 2.2,
@@ -2897,8 +2765,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4c4844', '#aca8a0'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
-    tameFail: 'nips the {food} at the heel and leaves it',
-    leaves: 'slips off low through the grass',
     wound: 'cut',
     defensive: true,
     ability: 'blade_hamstring',
@@ -2906,7 +2772,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   crakka: {
     id: 'crakka',
     name: 'Crakka',
-    description: `A heavy-browed creature with a skull like a boulder, which it uses. Tamed, ${abilitySays('berserker_skull_crack')}.`,
+    description: `Tamed, ${abilityName('berserker_skull_crack')}: ${abilitySays('berserker_skull_crack')}.`,
     health: 40,
     attack: 9,
     speed: 1.7,
@@ -2924,8 +2790,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5c5650', '#b4ada4'],
     ],
     butcher: { meat: 6, fur: 3, leather: 4, bone: 5 },
-    tameFail: 'butts the {food} across the ground and leaves it',
-    leaves: 'plods off rubbing its brow on a stone',
     wound: 'crush',
     defensive: true,
     ability: 'berserker_skull_crack',
@@ -2933,7 +2797,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   bashka: {
     id: 'bashka',
     name: 'Bashka',
-    description: `A broad creature with a flat plate of bone across its forehead. Tamed, ${abilitySays('blade_shield_bash')}.`,
+    description: `Tamed, ${abilityName('blade_shield_bash')}: ${abilitySays('blade_shield_bash')}.`,
     health: 38,
     attack: 8,
     speed: 1.7,
@@ -2951,8 +2815,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c6460', '#bcb4ac'],
     ],
     butcher: { meat: 5, fur: 2, leather: 4, bone: 5 },
-    tameFail: 'shoves the {food} away with its plate',
-    leaves: 'shoulders its way off through the brush',
     wound: 'crush',
     defensive: true,
     ability: 'blade_shield_bash',
@@ -2960,7 +2822,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   executa: {
     id: 'executa',
     name: 'Executa',
-    description: `A gaunt, patient creature that hangs back until something is nearly finished. Tamed, ${abilitySays('berserker_execute')}.`,
+    description: `Tamed, ${abilityName('berserker_execute')}: ${abilitySays('berserker_execute')}.`,
     health: 30,
     attack: 8,
     speed: 2.0,
@@ -2978,8 +2840,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#34343c', '#8c8c98'],
     ],
     butcher: { meat: 4, fur: 4, leather: 3, bone: 3 },
-    tameFail: 'watches the {food} until it gives up, then leaves it',
-    leaves: 'is simply not there any more',
     wound: 'cut',
     defensive: true,
     ability: 'berserker_execute',
@@ -2987,7 +2847,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   whirla: {
     id: 'whirla',
     name: 'Whirla',
-    description: `A wiry creature with a long whip of a tail it spins about itself. Tamed, ${abilitySays('berserker_whirlwind')}.`,
+    description: `Tamed, ${abilityName('berserker_whirlwind')}: ${abilitySays('berserker_whirlwind')}.`,
     health: 32,
     attack: 7,
     speed: 2.1,
@@ -3005,8 +2865,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7c5c3c', '#ccb090'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
-    tameFail: 'spins round the {food} three times and leaves it',
-    leaves: 'spins off in a cloud of dust',
     wound: 'cut',
     defensive: true,
     ability: 'berserker_whirlwind',
@@ -3014,7 +2872,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   scorcha: {
     id: 'scorcha',
     name: 'Scorcha',
-    description: `A sooty creature that smells of burning and breathes out sparks. Tamed, ${abilitySays('kindler_scorch')}.`,
+    description: `Tamed, ${abilityName('kindler_scorch')}: ${abilitySays('kindler_scorch')}.`,
     health: 30,
     attack: 7,
     speed: 1.9,
@@ -3032,8 +2890,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#3c2c24', '#b47c50'],
     ],
     butcher: { meat: 4, scale: 3, leather: 3, bone: 3 },
-    tameFail: 'chars the {food} black and leaves it',
-    leaves: 'trots off trailing a thread of smoke',
     wound: 'burn',
     defensive: true,
     ability: 'kindler_scorch',
@@ -3041,7 +2897,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   frosta: {
     id: 'frosta',
     name: 'Frosta',
-    description: `A pale, thick-furred creature whose breath hangs white in the air even in summer. Tamed, ${abilitySays('frost_breath')}.`,
+    description: `Tamed, ${abilityName('frost_breath')}: ${abilitySays('frost_breath')}.`,
     health: 32,
     attack: 7,
     speed: 1.9,
@@ -3059,8 +2915,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a8b8c8', '#e0ecf4'],
     ],
     butcher: { meat: 4, fur: 5, leather: 3, bone: 3 },
-    tameFail: 'breathes on the {food} until it is frozen and leaves it',
-    leaves: 'pads off leaving frost in its footprints',
     wound: 'bite',
     defensive: true,
     ability: 'frost_breath',
@@ -3068,7 +2922,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   rootle: {
     id: 'rootle',
     name: 'Rootle',
-    description: `A gnarled, bark-brown creature with tendrils that creep along the ground about it. Tamed, ${abilitySays('binder_root')}.`,
+    description: `Tamed, ${abilityName('binder_root')}: ${abilitySays('binder_root')}.`,
     health: 34,
     attack: 5,
     speed: 1.6,
@@ -3086,8 +2940,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4c4030', '#a89878'],
     ],
     butcher: { meat: 3, fur: 2, leather: 3, bone: 2 },
-    tameFail: 'wraps the {food} in tendrils and leaves it',
-    leaves: 'creeps off, its tendrils last to go',
     wound: 'pierce',
     defensive: true,
     ability: 'binder_root',
@@ -3095,7 +2947,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   dulla: {
     id: 'dulla',
     name: 'Dulla',
-    description: `A soft-pawed, grey-blue creature that leaves everything it touches slower and blunter. Tamed, ${abilitySays('binder_dull_claws')}.`,
+    description: `Tamed, ${abilityName('binder_dull_claws')}: ${abilitySays('binder_dull_claws')}.`,
     health: 30,
     attack: 5,
     speed: 1.8,
@@ -3113,8 +2965,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4c5c6c', '#a8b8c8'],
     ],
     butcher: { meat: 4, fur: 4, leather: 3, bone: 2 },
-    tameFail: 'paws the {food} until it is dull and leaves it',
-    leaves: 'ambles off unhurried',
     wound: 'bite',
     defensive: true,
     ability: 'binder_dull_claws',
@@ -3122,7 +2972,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   brittla: {
     id: 'brittla',
     name: 'Brittla',
-    description: `A glassy-eyed creature with a cracked, crystalline sheen to its hide. Tamed, ${abilitySays('binder_brittle')}.`,
+    description: `Tamed, ${abilityName('binder_brittle')}: ${abilitySays('binder_brittle')}.`,
     health: 28,
     attack: 6,
     speed: 1.9,
@@ -3140,8 +2990,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c8494', '#bccce0'],
     ],
     butcher: { meat: 3, scale: 4, leather: 2, bone: 3 },
-    tameFail: 'taps the {food} until it cracks and leaves it',
-    leaves: 'tinkles off into the long grass',
     wound: 'cut',
     defensive: true,
     ability: 'binder_brittle',
@@ -3149,7 +2997,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   shova: {
     id: 'shova',
     name: 'Shova',
-    description: `A thick-necked creature that shoulders everything out of its way. Tamed, ${abilitySays('pikeman_keep_away')}.`,
+    description: `Tamed, ${abilityName('pikeman_keep_away')}: ${abilitySays('pikeman_keep_away')}.`,
     health: 40,
     attack: 7,
     speed: 1.8,
@@ -3167,8 +3015,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#5c4c38', '#b49c80'],
     ],
     butcher: { meat: 6, fur: 3, leather: 4, bone: 4 },
-    tameFail: 'shoves the {food} back at you and leaves it',
-    leaves: 'shoulders off through the herd',
     wound: 'crush',
     defensive: true,
     ability: 'pikeman_keep_away',
@@ -3176,7 +3022,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   howla: {
     id: 'howla',
     name: 'Howla',
-    description: `A shaggy, big-voiced creature whose call carries right across a valley. Tamed, ${abilitySays('blade_guardians_call')}.`,
+    description: `Tamed, ${abilityName('blade_guardians_call')}: ${abilitySays('blade_guardians_call')}.`,
     health: 44,
     attack: 6,
     speed: 1.8,
@@ -3194,8 +3040,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#3c3834', '#9c9890'],
     ],
     butcher: { meat: 6, fur: 5, leather: 4, bone: 4 },
-    tameFail: 'howls at the {food} and leaves it',
-    leaves: 'lopes off howling',
     wound: 'bite',
     defensive: true,
     ability: 'blade_guardians_call',
@@ -3203,7 +3047,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   marka: {
     id: 'marka',
     name: 'Marka',
-    description: `A sharp-eyed creature that marks what it hunts with a smear of something that will not wash off. Tamed, ${abilitySays('skirmisher_marked_for_death')}.`,
+    description: `Tamed, ${abilityName('skirmisher_marked_for_death')}: ${abilitySays('skirmisher_marked_for_death')}.`,
     health: 26,
     attack: 6,
     speed: 2.1,
@@ -3221,8 +3065,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c2c2c', '#c48484'],
     ],
     butcher: { meat: 3, fur: 3, leather: 2, bone: 2, gland: 1 },
-    tameFail: 'smears the {food} red and leaves it',
-    leaves: 'slinks off, watching you',
     wound: 'cut',
     defensive: true,
     ability: 'skirmisher_marked_for_death',
@@ -3230,7 +3072,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   wardo: {
     id: 'wardo',
     name: 'Wardo',
-    description: `A calm creature with a faint shimmer about its fur, as if the air near it were thicker. Tamed, ${abilitySays('warder_ward')}.`,
+    description: `Tamed, ${abilityName('warder_ward')}: ${abilitySays('warder_ward')}.`,
     health: 30,
     attack: 4,
     speed: 1.8,
@@ -3248,8 +3090,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a498b4', '#dcd4e8'],
     ],
     butcher: { meat: 3, fur: 4, leather: 2, bone: 2 },
-    tameFail: 'holds the {food} in its shimmer and leaves it',
-    leaves: 'fades off into the haze',
     wound: 'bite',
     defensive: true,
     ability: 'warder_ward',
@@ -3257,7 +3097,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   stona: {
     id: 'stona',
     name: 'Stona',
-    description: `A squat creature whose hide goes grey and hard as stone when it is struck. Tamed, ${abilitySays('warder_stoneskin')}.`,
+    description: `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('warder_stoneskin')}.`,
     health: 46,
     attack: 6,
     speed: 1.5,
@@ -3275,8 +3115,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6c6c68', '#bcbcb4'],
     ],
     butcher: { meat: 5, scale: 4, leather: 3, bone: 4 },
-    tameFail: 'sets like stone over the {food} and leaves it',
-    leaves: 'grinds off over the rocks',
     wound: 'crush',
     defensive: true,
     ability: 'warder_stoneskin',
@@ -3284,7 +3122,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   leecha: {
     id: 'leecha',
     name: 'Leecha',
-    description: `A sleek, dark creature with a round sucking mouth. Tamed, ${abilitySays('chirurgeon_leech')}.`,
+    description: `Tamed, ${abilityName('chirurgeon_leech')}: ${abilitySays('chirurgeon_leech')}.`,
     health: 28,
     attack: 6,
     speed: 2.0,
@@ -3302,8 +3140,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#2c242c', '#847484'],
     ],
     butcher: { meat: 3, leather: 4, bone: 2, gland: 2 },
-    tameFail: 'drains the {food} dry and leaves it',
-    leaves: 'slides off licking its lips',
     wound: 'pierce',
     defensive: true,
     ability: 'chirurgeon_leech',
@@ -3338,8 +3174,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
     ],
     // Nothing in it but what a gland is made of: no meat, hide, bone or fur on a ghost.
     butcher: { gland: 3 },
-    tameFail: 'passes straight through the {food} and leaves it',
-    leaves: 'fades out from the bottom up',
     wound: 'crush',
     defensive: true,
     nocturnal: true,
@@ -3352,7 +3186,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     hide: 'thick',
     wound: 'crush',
     name: 'Bura',
-    description: 'A broad, slow, endlessly patient creature that was clearly made to have things strapped to it. {pannier:W} things ride on its back, and it neither hurries nor complains.',
+    description: 'Panniers: {pannier} items on its back.',
     health: 55,
     attack: 6,
     speed: 1.5,
@@ -3370,8 +3204,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8a6a58', '#cfae99'],
     ],
     butcher: { meat: 14, fur: 4, leather: 9, bone: 10, gland: 1 },
-    tameFail: 'accepts the {food}, considers it, and goes back to standing still',
-    leaves: 'ambles away at exactly the pace it does everything else',
     defensive: true,
     pannier: 200,
     learns: { skill: 'body_strength', by: 'out' },
@@ -3380,7 +3212,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'gorral',
     wound: 'crush',
     name: 'Gorral',
-    description: 'A horned cliff-goat that stands on ground you would not put a ladder against. Under a saddle it goes up what a Thistlekit turns away from, and the more it is worked the worse the ground it will take.',
+    description: 'Mount: climbing counts ×{pitch} toward the slopes it takes a rider up.',
     health: 44,
     attack: 7,
     speed: 2.4,
@@ -3398,8 +3230,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#3f3d3b', '#8a8681'],
     ],
     butcher: { meat: 10, fur: 5, leather: 7, bone: 8, gland: 1 },
-    tameFail: 'takes the {food} off the flat of your hand and is four lengths up the rock before you blink',
-    leaves: 'goes up the face in three bounds and looks down at you from the top',
     onStone: true,
     defensive: true,
     draught: true,
@@ -3413,7 +3243,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'wadd',
     wound: 'crush',
     name: 'Wadd',
-    description: 'A slick-furred swimmer with webbed feet and a rudder of a tail. It is the one thing on the island that will take a rider across deep water instead of drowning them.',
+    description: 'Mount: crosses deep water with a rider.',
     health: 40,
     attack: 6,
     speed: 2.2,
@@ -3429,8 +3259,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#2e3a38', '#84968e'],
     ],
     butcher: { meat: 9, fur: 6, leather: 6, bone: 7, gland: 2 },
-    tameFail: 'slides the {food} into the water, eats it there, and looks back at you',
-    leaves: 'goes into the water without a sound and surfaces a long way out',
     nearWater: true,
     defensive: true,
     draught: true,
@@ -3445,7 +3273,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     heavy: true,
     wound: 'crush',
     name: 'Shaggan',
-    description: 'A mountain of hair, slower than anything else that pulls and stronger than all of them: in the traces it adds {pull:pct} to its team\'s pace, where most beasts add {pullDefault:pct}.',
+    description: 'Traces: team pace +{pull:pct} (most beasts: +{pullDefault:pct}). Slowest of the draught beasts.',
     health: 90,
     attack: 12,
     speed: 1,
@@ -3463,8 +3291,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#585a56', '#a2a49e'],
     ],
     butcher: { meat: 30, fur: 10, leather: 16, bone: 20, gland: 1 },
-    tameFail: 'eats the {food}, and the grass around it, and stands there',
-    leaves: 'turns and walks into the wind, which is where it was going anyway',
     defensive: true,
     draught: true,
     pull: 0.45,
@@ -3500,8 +3326,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6a5c52', '#cdcac4'],
     ],
     butcher: { meat: 4, feather: 5, leather: 2, bone: 3, gland: 1 },
-    tameFail: 'takes the {food} without once taking its eyes off the horizon',
-    leaves: 'lifts, circles once to see everything, and is a speck',
     defensive: true,
     sight: 18,
     learns: { skill: 'awareness', by: 'out' },
@@ -3510,7 +3334,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'quill',
     wound: 'pierce',
     name: 'Quill',
-    description: 'A heavy ground-bird that would rather run than fly and would rather eat than run. Its long wing feathers grow back as fast as you can take them, which is what keeps an archer in arrows.',
+    description: 'Pluck with a carving knife for feathers.',
     health: 26,
     attack: 4,
     speed: 1.9,
@@ -3528,8 +3352,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4f5a44', '#a8b894'],
     ],
     butcher: { meat: 5, feather: 8, leather: 2, bone: 3 },
-    tameFail: 'bolts with the {food} and eats it at a safe distance, watching you',
-    leaves: 'runs off with its neck out, going faster than looks possible',
     fleece: 1 / 700,
     shearYield: 'feather',
     learns: { skill: 'animal_husbandry', by: 'tended' },
@@ -3538,7 +3360,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'cudda',
     wound: 'crush',
     name: 'Cudda',
-    description: 'A placid, deep-bellied grazer that chews whatever it is given and gives milk back for it. Bring a bucket.',
+    description: 'Milk a female into an empty bucket.',
     health: 48,
     attack: 4,
     speed: 1.2,
@@ -3556,8 +3378,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#b0705a', '#e8bfa6'],
     ],
     butcher: { meat: 18, fur: 4, leather: 10, bone: 12, gland: 1 },
-    tameFail: 'chews the {food} at you for a while and then chews something else',
-    leaves: 'walks to the far side of the field and carries on chewing',
     fleece: 1 / 600,
     milk: true,
     learns: { skill: 'animal_husbandry', by: 'tended' },
@@ -3567,7 +3387,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     wound: 'pierce',
     venom: true,
     name: 'Vesp',
-    description: 'Not one creature so much as a small furious cloud of them, which settles where there are flowers. Give the swarm a hive on your deed and it will fill it with honey and wax and defend it from anything foolish.',
+    description: 'Deed job: tend a hive on your deed; fills it with honey and wax and defends it.',
     health: 12,
     attack: 3,
     speed: 2.4,
@@ -3586,15 +3406,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8a6a24', '#241f18'],
     ],
     butcher: { meat: 1, gland: 3 },
-    tameFail: 'lifts off the {food} in a body, hangs in the air a moment, and settles again',
-    leaves: 'rises all at once and pours away over the hedge',
     defensive: true,
     hives: true,
   },
   snout: {
     id: 'snout',
     name: 'Snout',
-    description: 'Wrinkled, half blind, and the finest nose on the island. It smells what is under the ground, and what is under the ground on this island is other people\'s lives.',
+    description: 'Deed job: find buried relics and mark dig sites.',
     health: 24,
     attack: 4,
     speed: 1.6,
@@ -3613,14 +3431,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4f4844', '#98908a'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3, gland: 3 },
-    tameFail: 'works its way over the {food}, over your boots, and over the ground you are standing on',
-    leaves: 'follows its nose away and is not seen again',
   },
   lume: {
     id: 'lume',
     wound: 'burn',
     name: 'Lume',
-    description: 'A pale slow drifter that is only ever out after dark, and glows with a light that has nothing to do with fire. Keep one and it lights {glow:w} tiles round itself however dark the night.',
+    description: 'Lights {glow} tiles round itself at any hour. Out only after dark.',
     health: 10,
     attack: 1,
     speed: 1.3,
@@ -3638,8 +3454,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#d0c8e6', '#eee8f8'],
     ],
     butcher: { meat: 1, gland: 4 },
-    tameFail: 'drifts around the {food} twice, dims, and drifts away',
-    leaves: 'goes out like a blown candle and is not there when the light comes back',
     glow: 8,
     nocturnal: true,
     learns: { skill: 'awareness', by: 'dark' },
@@ -3657,7 +3471,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     notice: 11,
     wound: 'cut',
     name: 'Goblin',
-    description: 'Knee-high, green-grey and entirely malice, in a jerkin of somebody else\u2019s leather with a notched blade it did not make. The commonest of the bad things, and the only one a careful beginner survives meeting.',
+    description: '',
     health: 40,
     attack: 14,
     speed: 2.3,
@@ -3674,8 +3488,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#7c8a5e', '#d0daa9'],
     ],
     butcher: { meat: 2, leather: 3, bone: 4, sinew: 2 },
-    tameFail: 'spits at your hand',
-    leaves: 'slinks off into the undergrowth',
     hunter: true,
     pack: true,
     throws: true,
@@ -3690,7 +3502,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     notice: 13,
     wound: 'cut',
     name: 'Orc',
-    description: 'A head taller than you, grey-skinned, tusked, and carrying iron it took the trouble to sharpen. Orcs come down out of the high ground in ones and twos and they do not run from anything.',
+    description: '',
     health: 95,
     attack: 22,
     speed: 2.5,
@@ -3707,8 +3519,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#6d7a6f', '#c2cbc0'],
     ],
     butcher: { meat: 5, leather: 6, bone: 7, sinew: 4, tusk: 2 },
-    tameFail: 'laughs at you',
-    leaves: 'turns and walks away without hurrying',
     hunter: true,
     pack: true,
     defensive: true,
@@ -3722,7 +3532,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     notice: 12,
     wound: 'crush',
     name: 'Ogre',
-    description: 'A hill of shoulder with a tree in one fist and very little behind the eyes. It is slow, it is stupid, and if it gets a hand on you none of that matters.',
+    description: '',
     health: 170,
     attack: 34,
     speed: 1.8,
@@ -3739,8 +3549,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#9a8464', '#e4d3b3'],
     ],
     butcher: { meat: 14, leather: 10, bone: 14, sinew: 8, tusk: 4, gland: 2 },
-    tameFail: 'looks at the {food}, then at you',
-    leaves: 'lumbers off, flattening everything in its way',
     hunter: true,
     defensive: true,
     defaultStance: 'aggressive',
@@ -3753,7 +3561,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     notice: 20,
     wound: 'burn',
     name: 'Dragon',
-    description: 'There is one. Nobody agrees where, everybody agrees it is real, and the few who have seen it and come back describe the same thing: scales like roof slates, a smell of hot metal, and the ground going by underneath very fast.',
+    description: '',
     health: 700,
     attack: 70,
     speed: 2.9,
@@ -3771,8 +3579,6 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#4a3f5f', '#a98ad9'],
     ],
     butcher: { meat: 40, leather: 24, bone: 30, sinew: 20, scale: 24, gland: 6, hoard: 1 },
-    tameFail: 'does not appear to have noticed',
-    leaves: 'is simply not there any more',
     hunter: true,
     defensive: true,
     glow: 5,
@@ -4093,42 +3899,42 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
   return id ? (c.skills[id] ?? 1) : 0;
 }
 // The words of each line that evolves, and its stages', now that every number they read is here.
-sayLine('rabba', `Set to work on a settlement it forages within ${SPECIES.rabba.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`,
-  'Its level is its foraging.');
-sayLine('vola', `Set to work on a settlement it botanizes within ${SPECIES.vola.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, and brings what it finds to the crate.`,
-  'Its level is its botanizing.');
-sayLine('woola', `Shear it with a carving knife once its fleece is ${percent(SHEAR_FROM)} grown back, for up to ${SHEAR_WOOL} wool when it is full; a grown one grows it back in ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
-  'Its level is its animal husbandry, which it learns by being shorn, plucked or milked.');
-sayLine('seavic', `Set to work on a settlement it sows, tends and harvests the fields you have tilled within ${SPECIES.seavic.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, sowing seed from the crate and carrying the harvest and the seed it has no field for back to it. It does not till.`,
-  'Its level is its farming.');
-sayLine('quarra', `Set to work on a settlement it cuts a shard at a time out of bare rock with no seam in it, within ${SPECIES.quarra.workRange} tiles of the token and ${SPECIES.quarra.rangePerStep} further for every ${SKILL_STEP} levels, and carries it home.`,
-  'Its level is its mining.');
-sayLine('mola', `Set to work on a settlement it mines the nearest ore seam within ${SPECIES.mola.workRange} tiles of the token, ${SPECIES.mola.rangePerStep} further for every ${SKILL_STEP} levels, at a quality of its mining up to what the seam holds, and carries the ore home. It leaves any metal its mining has not reached: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} at ${m.level}`))}.`,
-  'Its level is its mining.');
-sayLine('bevere', `Set to work on a settlement it fells the trees within ${SPECIES.bevere.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, as many bites to a tree as a person's swings, leaving a stump where the tree had timber in it. Each log is at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its woodcutting, raised by any yield trait it has and never over 100; it carries one to the crate and leaves the rest at the stump.`,
-  'Its level is its woodcutting.');
-sayLine('orse', `Saddled and bridled, it carries you at its own pace: a grown one, fed and with no climbing, at ${+(SPECIES.orse.speed * footing(0)).toFixed(2)} tiles a second, ${percent(1 / 140 / footing(0))} faster for every level of climbing, never over ${MAX_MOUNT_SPEED} tiles a second but for what a Saddler's tack adds; and the higher its climbing the steeper the ground it takes you up. In the traces of a large cart or a wagon it adds ${percent(SPECIES.orse.pull ?? PULL_DEFAULT)} to its team's pace.`,
-  'Its level is its climbing, which it learns under a rider and in the traces.');
-sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart or a wagon. In the traces it adds ${percent(SPECIES.roxxen.pull!)} to its team's pace, where a beast not bred for the traces adds ${percent(PULL_DEFAULT)}, and its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take.`,
-  `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
-sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go taking it ${Math.round(workDuration(1))} seconds at level 1 and ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP} as a go at any trade does, less for its care: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,
-  'Its level is its repair.');
-sayLine('holla', `Set to work on a settlement it fills a bladder at the shore or a well within ${SPECIES.holla.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, ${BUCKET_LITRES} litres a bucket, and pours it into whichever barrel on the settlement has room for water.`,
-  'Its level is its carrying.');
-sayLine('sedra', `Set to work on a settlement it cuts the reed beds within ${SPECIES.sedra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, from the bank beside them: 1 reed a cut and 1 more for every ${REED_LEVELS} levels, each at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its foraging and 1 more, never over 100, and carries them to the crate.`,
-  'Its level is its foraging.');
-sayLine('cobbe', `Set to work on a settlement it carries what a planned wall on any storey, floor, roof, staircase, ladder, column, the open span of a bridge or an aqueduct, or a foundation within ${SPECIES.cobbe.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it as a builder's go would: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, and of what that work wants whatever is furthest behind its bill.`,
-  'Its level is its masonry.');
-sayLine('embra', `Set to work on a settlement it keeps your campfires, smelters and kilns within ${SPECIES.embra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, fed and lit: whenever one holds under ${HEARTH_FULL / 60} minutes of fuel, it carries a piece of fuel from your stores to the nearest such, one at a time, and lights it if it has gone out. It eats only what has been cooked.`,
-  'Its level is its smelting.');
-sayLine('noot', `Set to work on a settlement it digs clay off the clay ground within ${SPECIES.noot.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a lump a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate.`,
-  'Its level is its digging.');
-sayLine('crawler', `Set to work on a settlement it digs sand off the sandy ground within ${SPECIES.crawler.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, a heap a dig at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its digging, raised by any yield trait it has and never over 100, and carries it to the crate. Wild, its bite leaves venom in you, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless the wound is dressed. Kept, it rounds on you when you stand beside it, at ${percent(SPECIES.crawler.unruly!)} odds every ${NIP_EVERY} seconds. Struck, it strikes back every time.`,
-  'Its level is its digging.');
-sayLine('whispet', `Tamed, ${abilitySays('fear')}. Struck, it strikes back every time. Wild, it comes out only after dark and only from ${seasonSays(SPECIES.whispet.season!)} by the calendar in UTC; on every other day none comes out and the wild ones are gone, while one you have tamed, kept or bred stays all year.`,
-  `Its level is its body strength, which it learns each time it goes for something wild while it keeps watch over a settlement.`);
-sayLine('warda', `Out at your heel or keeping a settlement it sees ${SPECIES.warda.sight} tiles round itself for you, where most of yours see ${KEPT_SIGHT}, and ${percent(KEPT_NIGHT_LOSS / 2)} less at the dead of night. Struck, it strikes back every time.`,
-  `Its level is its awareness, which it learns ${LEARNS_SAYS.out}.`);
+const reach = (id: string): string =>
+  `within ${SPECIES[id].workRange} tiles of the token, +${SPECIES[id].rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels`;
+const yieldQl = (skill: string): string => `${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its ${skill}, raised by yield traits, max 100`;
+sayLine('rabba', `Deed job: forage ${reach('rabba')}; output to the crate.`, 'Level: foraging.');
+sayLine('vola', `Deed job: botanize ${reach('vola')}; output to the crate.`, 'Level: botanizing.');
+sayLine('woola', `Shear with a carving knife from ${percent(SHEAR_FROM)} fleece regrowth: up to ${SHEAR_WOOL} wool when full. Regrowth, grown: ${Math.round(1 / SPECIES.woola.fleece! / 60)} minutes.`,
+  `Level: animal husbandry, learned ${LEARNS_SAYS.tended}.`);
+sayLine('seavic', `Deed job: sow, tend and harvest your tilled fields ${reach('seavic')}; seed from the crate, harvest and unused seed back to it. Does not till.`,
+  'Level: farming.');
+sayLine('quarra', `Deed job: cut rock shards from bare rock with no seam ${reach('quarra')}; output home.`, 'Level: mining.');
+sayLine('mola', `Deed job: mine the nearest ore seam ${reach('mola')}, QL up to its mining and the seam's; output home. Skips metals above its mining: ${listed(METALS.filter((m) => m.level > 1).map((m) => `${m.name.toLowerCase()} ${m.level}`))}.`,
+  'Level: mining.');
+sayLine('bevere', `Deed job: fell trees ${reach('bevere')}, as many bites a tree as a person's swings; a stump is left where the tree had timber. Log QL: ${yieldQl('woodcutting')}. 1 log to the crate, the rest left at the stump.`,
+  'Level: woodcutting.');
+sayLine('orse', `Mount, saddled and bridled: ${+(SPECIES.orse.speed * footing(0)).toFixed(2)} tiles a second grown and fed at 0 climbing, +${percent(1 / 140 / footing(0))} per climbing level, max ${MAX_MOUNT_SPEED} tiles a second before a Saddler's tack. Higher climbing: steeper ground. Traces of a large cart or wagon: team pace +${percent(SPECIES.orse.pull ?? PULL_DEFAULT)}.`,
+  'Level: climbing, learned under a rider and in the traces.');
+sayLine('roxxen', `No deed job. Traces of a large cart or wagon: team pace +${percent(SPECIES.roxxen.pull!)} (beasts not bred for it: +${percent(PULL_DEFAULT)}); its driving counts as climbing for team pace and the steepest step the wheels take.`,
+  `Level: driving, learned ${LEARNS_SAYS.pull}.`);
+sayLine('tinka', `Deed job: mend damaged gear in your stores on the deed, most damaged first. Time per go: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per go: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,
+  'Level: repair.');
+sayLine('holla', `Deed job: fill a bladder at the shore or a well ${reach('holla')}, ${BUCKET_LITRES} litres a bucket; poured into a settlement barrel with room for water.`,
+  'Level: carrying.');
+sayLine('sedra', `Deed job: cut reed beds ${reach('sedra')}, from the bank. Reeds per cut: 1, +1 per ${REED_LEVELS} levels. QL: ${percent(DIG_QL[0])}–${percent(DIG_QL[1])} of its foraging +1, max 100. Output to the crate.`,
+  'Level: foraging.');
+sayLine('cobbe', `Deed job: carry what planned building work still wants from your stores on the deed, crates and furniture, ${reach('cobbe')}, 1 piece a trip, and fit it as a builder's go: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations. Order: where the carried piece is wanted, else the nearest work wanting something in your stores; of that work's wants, the one furthest behind its bill.`,
+  'Level: masonry.');
+sayLine('embra', `Deed job: keep your campfires, smelters and kilns fuelled and lit, ${reach('embra')}: under ${HEARTH_FULL / 60} minutes of fuel, it carries 1 piece of fuel from your stores to the nearest, and relights it if out. Eats only cooked food.`,
+  'Level: smelting.');
+sayLine('noot', `Deed job: dig clay off clay ground ${reach('noot')}, 1 lump a dig. QL: ${yieldQl('digging')}. Output to the crate.`,
+  'Level: digging.');
+sayLine('crawler', `Deed job: dig sand off sandy ground ${reach('crawler')}, 1 heap a dig. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
+  'Level: digging.');
+sayLine('whispet', `Tamed, ${abilityName('fear')}: ${abilitySays('fear')}. Strikes back every time. Wild: after dark only, ${seasonSays(SPECIES.whispet.season!)} (UTC); none wild on other days. Tamed, kept or bred ones stay all year.`,
+  'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
+sayLine('warda', `Sight for you, at your heel or keeping a settlement: ${SPECIES.warda.sight} tiles (most: ${KEPT_SIGHT}), −${percent(KEPT_NIGHT_LOSS / 2)} at the dead of night. Strikes back every time.`,
+  `Level: awareness, learned ${LEARNS_SAYS.out}.`);
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {
@@ -4283,7 +4089,7 @@ export const CARE_BONUS = 0.25;
 export const careMul = (c: Creature): number => 1 + Math.max(0, Math.min(1, c.care)) * keptOf(c, 'kept:care_bonus', CARE_BONUS);
 /** How it reads on a card: groomed, kept, or let go. */
 export const careWord = (care: number): string =>
-  care >= 0.75 ? 'well looked after' : care >= CARE_WANTING ? 'kept' : care >= 0.12 ? 'wanting a brush' : 'neglected';
+  care >= 0.75 ? 'well kept' : care >= CARE_WANTING ? 'kept' : care >= 0.12 ? 'needs brushing' : 'neglected';
 
 /**
  * What its rarity makes of one channel: `RARITIES[rare].blood` times as good,
@@ -4311,14 +4117,14 @@ export function rarityEffects(c: Pick<Creature, 'rare'>): string {
 export function rarityLine(c: Pick<Creature, 'rare'>): string {
   if (!c.rare) return '';
   const r = rarityOf(c);
-  return `${r.name[0].toUpperCase()}${r.name.slice(1)} · ${times(r.size)} the size of its kind · ${rarityEffects(c)}`;
+  return `${r.name[0].toUpperCase()}${r.name.slice(1)} · size ×${r.size} · ${rarityEffects(c)}`;
 }
 
 /** And as a sentence, for what is said when you look it over. */
 export function raritySays(c: Pick<Creature, 'rare'>): string {
   if (!c.rare) return '';
   const r = rarityOf(c);
-  return ` It came into the world ${r.name}: ${times(r.size)} the size of its kind, ${rarityEffects(c)}.`;
+  return ` Rarity: ${r.name}, size ×${r.size}, ${rarityEffects(c)}.`;
 }
 
 /**
@@ -4336,10 +4142,10 @@ export function raritySays(c: Pick<Creature, 'rare'>): string {
  */
 export type BaseStat = 'hardy' | 'tough' | 'speed' | 'work';
 export const BASE_STATS: ReadonlyArray<{ id: BaseStat; name: string; says: string }> = [
-  { id: 'hardy', name: 'Health', says: 'the health it can carry' },
-  { id: 'tough', name: 'Attack', says: 'what each of its blows lands for' },
-  { id: 'speed', name: 'Speed', says: 'its pace on its feet, under a rider and in the traces' },
-  { id: 'work', name: 'Work', says: 'the pace it gets each go of its task done at' },
+  { id: 'hardy', name: 'Health', says: 'max health' },
+  { id: 'tough', name: 'Attack', says: 'blow damage' },
+  { id: 'speed', name: 'Speed', says: 'pace on foot, under a rider and in the traces' },
+  { id: 'work', name: 'Work', says: 'task speed' },
 ];
 /** What each point an ancient pot puts into a stat is worth, over what its kind and blood give it. */
 export const POT_STEP = 0.03;
@@ -4438,7 +4244,7 @@ export function mutationSaid(from: Record<string, TraitSource> | undefined): str
   const id = mutationOf(from);
   const t = id ? traitOf(id) : undefined;
   // A fighting trait's grade is already in its name: "heavy-pawed (fantastic)".
-  return t ? ` It is born with a mutation: ${t.family ? t.name : `${t.name} (${t.tier})`}, which neither parent carries: ${traitSays(t)}.` : '';
+  return t ? ` Mutation, in neither parent: ${t.family ? t.name : `${t.name} (${t.tier})`}, ${traitSays(t)}.` : '';
 }
 
 /** What a draught beast trains by pulling, and a mount by being ridden. */
@@ -6224,7 +6030,7 @@ export class Creatures {
     if (Math.hypot(p.x - c.x, p.y - c.y) > 2 || game.rand() >= (def.unruly ?? 0)) return;
     p.attackedBy = c.id;
     p.attackedAt = game.time;
-    game.hurtPlayer(attackOf(c, def) * BLOW_SHARE, `${c.name} rounds on you and gets a claw in`, def.wound ?? 'bite');
+    game.hurtPlayer(attackOf(c, def) * BLOW_SHARE, `${c.name} turns on you`, def.wound ?? 'bite');
   }
 
   private stepToward(game: Game, c: Creature, tx: number, ty: number, dt: number, speedMul = 1): MoveResult {
@@ -8089,7 +7895,7 @@ export class Creatures {
       const now = Math.min(FIRE_CAPACITY, fuel + per);
       set(now, lit || now > 0);
       this.gainSkill(game, c, GATHER_SKILL.stoke, 0.2);
-      if (!lit) game.logMsg(`${c.name} gets the ${what} going again.`, 'event');
+      if (!lit) game.logMsg(`${c.name} relit the ${what}.`, 'event');
     };
     if (c.job === 'campfire') {
       const f = [...game.campfires.values()].find((k) => Math.floor(fireCentre(k)[0]) === c.workX && Math.floor(fireCentre(k)[1]) === c.workY);
@@ -8159,7 +7965,7 @@ export class Creatures {
     }
     if (!best) return false;
     c.enemy = best.id;
-    game.logMsg(`${c.name} breaks off and goes for the ${this.species(best).name.toLowerCase()} on the deed.`, 'fight');
+    game.logMsg(`${c.name} attacks: ${this.species(best).name.toLowerCase()} on the deed.`, 'fight');
     return true;
   }
 
@@ -8371,15 +8177,15 @@ export class Creatures {
     } else if (!this.active()) {
       mode = 'active';
       at = [game.player.x, game.player.y];
-      where = ' It follows you.';
+      where = ' Follows you.';
     } else if (crate && 'kind' in crate) {
       mode = 'stored';
-      where = ` It goes into the empty creature crate at (${crate.x}, ${crate.y}) on ${game.deed?.name ?? 'your settlement'}.`;
+      where = ` In the empty creature crate at (${crate.x}, ${crate.y}) on ${game.deed?.name ?? 'your settlement'}.`;
     } else if (crate) {
       mode = 'stored';
-      where = ' It goes into the creature crate in your pack.';
+      where = ' In the creature crate in your pack.';
     } else {
-      where = ' Something already follows you and there is no empty creature crate in your pack or standing on your settlement, so it goes off into the wild.';
+      where = ' No free companion slot or empty creature crate in your pack or on your settlement: released into the wild.';
     }
     const c = this.spawn(dam.species, at[0], at[1], mode, game.rand, game.time);
     c.traits = coming.traits;
@@ -8395,7 +8201,7 @@ export class Creatures {
     c.care = 0.5;
     c.health = maxHealth(c, def);
     if (crate) shutIn(game, c, crate);
-    game.logMsg(`${dam.name} drops a young ${def.name.toLowerCase()} (${SEX_NAMES[c.sex]}): ${traitList(c.traits)}.${mutationSaid(coming.from)}${where}`, 'event');
+    game.logMsg(`Born to ${dam.name}: ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${traitList(c.traits)}.${mutationSaid(coming.from)}${where}`, 'event');
     game.note('bred');
     // A page of the field guide, for a young one born to a dam somebody keeps:
     // one let go before her hour drops hers in the wild, and it is nobody's.
@@ -8424,12 +8230,12 @@ export class Creatures {
     c.xp += gain;
     // What a worker learns at work is counted to its ledger (`worker_learn`).
     if (c.mode === 'deed' && c.skills[id] > v) this.toLedger(game, c, { skill: c.skills[id] - v });
-    if (creatureLevel(c) > before) game.logMsg(`${c.name} reaches level ${creatureLevel(c)}.`, 'skill');
+    if (creatureLevel(c) > before) game.logMsg(`${c.name}: level ${creatureLevel(c)}.`, 'skill');
     // And evolves, at a level a stage begins at: what it can take grows with it, as full as it was (`EVOLVE_AT`).
     const stage = stageOf(c);
     if (stage > stageOf({ species: c.species, skills: { ...c.skills, [id]: v } })) {
       c.health *= STAGE_MUL.hardy ?? 1;
-      if (c.mode !== 'wild') game.logMsg(`${c.name} evolves into ${article(kindName(c))} ${kindName(c)}!`, 'skill');
+      if (c.mode !== 'wild') game.logMsg(`${c.name} evolved: ${kindName(c)}.`, 'skill');
       // And one nobody has named is called what it has become (`kindNamed`).
       if (kindNamed(c)) c.name = kindName(c);
       game.events.emit('evolve', c.id, stage);
@@ -8437,7 +8243,7 @@ export class Creatures {
     }
     const def = this.species(c);
     if (c.mode === 'deed' && id === workSkill(def) && rangeSteps(c.skills[id]) > beforeSteps) {
-      game.logMsg(`${c.name} knows the land better and will now work up to ${workRangeOf(c, def)} tiles from where it is set to work.`, 'skill');
+      game.logMsg(`${c.name}: work range ${workRangeOf(c, def)} tiles.`, 'skill');
     }
     return gain;
   }
@@ -8515,7 +8321,7 @@ export class Creatures {
      * on that, and comes for you after.
      */
     if (c.brawl === null || game.time - c.threatAt >= THREAT_HOLD) {
-      if (c.brawl !== null) game.logMsg(`The ${this.species(c).name.toLowerCase()} turns back on you.`, 'fight');
+      if (c.brawl !== null) game.logMsg(`${this.species(c).name} attacks you again.`, 'fight');
       c.brawl = null;
       c.threatAt = game.time;
     }
@@ -8596,7 +8402,7 @@ export class Creatures {
       c.blows = 0;
       c.windup = 0;
       c.packLead = !def.pack ? null : mate ? (mate.packLead ?? mate.id) : c.id;
-      game.logMsg(mate ? `Another ${def.name.toLowerCase()} comes with it.` : `A ${def.name.toLowerCase()} has your scent.`, 'fight');
+      game.logMsg(mate ? `Another ${def.name.toLowerCase()} joins.` : `${def.name} hunting you.`, 'fight');
     }
     const name = def.name.toLowerCase();
     /*
@@ -8615,7 +8421,7 @@ export class Creatures {
         p.attackedAt = game.time;
         // With less of its extra weight on Power's Unshaken (`heavy_on`).
         game.hurtPlayer(attackOf(c, def) * BLOW_SHARE * (1 + (HEAVY_HIT - 1) * game.pathFx('heavy', 1)), `The ${name}'s heavy blow lands`, def.wound ?? 'bite');
-      } else game.logMsg(`The ${name}'s heavy blow falls short.`, 'fight');
+      } else game.logMsg(`${capital(name)} heavy blow: missed.`, 'fight');
       return true;
     }
     if (def.throws && this.throwStep(game, c, def, d, dt)) return true;
@@ -8624,7 +8430,7 @@ export class Creatures {
         // Every `HEAVY_EVERY`th blow of a kind that hits heavy is drawn back for first.
         if (def.heavy && (c.blows + 1) % HEAVY_EVERY === 0) {
           c.windup = WIND_UP;
-          game.logMsg(`The ${name} draws back for a heavy blow. Step out of its reach.`, 'fight');
+          game.logMsg(`${capital(name)} winding up a heavy blow: step out of reach.`, 'fight');
           return true;
         }
         c.blows += 1;
@@ -8775,7 +8581,7 @@ export class Creatures {
     c.tx = c.x + ((c.x - p.x) / d) * run;
     c.ty = c.y + ((c.y - p.y) / d) * run;
     c.until = game.time + FLEE_SECS;
-    game.logMsg(`The ${def.name.toLowerCase()} turns tail.`, 'fight');
+    game.logMsg(`${def.name} fled.`, 'fight');
   }
 
   /**
@@ -8851,7 +8657,7 @@ export class Creatures {
       }
       if (found) {
         c.enemy = found.id;
-        game.logMsg(`${c.name} goes for the ${this.species(found).name.toLowerCase()}.`, 'fight');
+        game.logMsg(`${c.name} attacks: ${this.species(found).name.toLowerCase()}.`, 'fight');
       }
     }
     if (c.enemy !== null) {
@@ -9155,7 +8961,7 @@ export class Creatures {
         this.why(c, 'full');
         if (game.time - c.noRoomAt > 60) {
           c.noRoomAt = game.time;
-          game.logMsg(`${c.name} is holding ${itemDef(c.carrying.id).name.toLowerCase()} with nowhere on the deed to put it. Empty something, or build more storage.`, 'error');
+          game.logMsg(`${c.name} holding ${itemDef(c.carrying.id).name.toLowerCase()}: settlement storage full.`, 'error');
         }
         this.wanderTarget(game, c, 2, deed.x + 0.5, deed.y + 0.5);
         c.state = 'wander';
@@ -9214,7 +9020,7 @@ export class Creatures {
             if (it.count <= 0) larder.items.splice(idx, 1);
             larder.changed();
             c.hunger = Math.min(1, c.hunger + 0.5);
-            game.logMsg(`${c.name} helps itself to ${itemDef(it.id).name.toLowerCase()} from the ${larder.name.toLowerCase()}.`, 'event');
+            game.logMsg(`${c.name} ate ${itemDef(it.id).name.toLowerCase()} from the ${larder.name.toLowerCase()}.`, 'event');
           }
         } else this.stepToward(game, c, lx, ly, dt);
         return;
@@ -9625,7 +9431,7 @@ export class Creatures {
         o.brawl = a.id;
         o.threatAt = game.time;
         o.windup = 0;
-        if (a.mode === 'active') game.logMsg(`The ${this.species(o).name.toLowerCase()} turns on ${a.name}.`, 'fight');
+        if (a.mode === 'active') game.logMsg(`${this.species(o).name} attacks ${a.name}.`, 'fight');
       }
     }
   }
@@ -9645,7 +9451,7 @@ export class Creatures {
     t.brawl = by.id;
     t.threatAt = game.time;
     t.windup = 0;
-    if (by.mode === 'active') game.logMsg(`The ${this.species(t).name.toLowerCase()} turns on ${by.name}.`, 'fight');
+    if (by.mode === 'active') game.logMsg(`${this.species(t).name} attacks ${by.name}.`, 'fight');
   }
 
   /** Deal damage from a creature or the player; timid wild creatures bolt, and a kill leaves a corpse. */
@@ -9672,7 +9478,7 @@ export class Creatures {
       t.state = 'flee';
       t.until = game.time + 3;
     }
-    if (t.mode === 'active' && by !== 'player' && game.time - (t.busyUntil ?? 0) > 0) game.logMsg(`${t.name} is hurt by a ${this.species(by).name.toLowerCase()}!`, 'fight');
+    if (t.mode === 'active' && by !== 'player' && game.time - (t.busyUntil ?? 0) > 0) game.logMsg(`${t.name} hurt by a ${this.species(by).name.toLowerCase()}.`, 'fight');
     if (t.health <= 0) this.kill(game, t, by);
   }
 
@@ -9701,7 +9507,7 @@ export class Creatures {
     // Killing one of the bad things is worth writing down.
     if (def.monster && killer === 'player') {
       game.note(`slew:${def.id}`);
-      if (!quiet) game.logMsg(`The ${def.name.toLowerCase()} goes down. Butcher it before it rots: there is a great deal on it.`, 'fight');
+      if (!quiet) game.logMsg(`Killed: ${def.name.toLowerCase()}. Butcher it before it rots.`, 'fight');
     }
     const x = Math.floor(t.x);
     const y = Math.floor(t.y);
@@ -9716,15 +9522,15 @@ export class Creatures {
      */
     if (killer === 'player' && def.monster) mapFromBeast(game, def.health, x, y);
     if (quiet) return;
-    if (killer === 'player') game.logMsg(`You kill the wild ${def.name.toLowerCase()}. Its corpse lies where it fell.`, 'fight');
-    else if (t.mode === 'active' || t.mode === 'deed') game.logMsg(`${t.name} has died.`, 'fight');
+    if (killer === 'player') game.logMsg(`Killed: wild ${def.name.toLowerCase()}.`, 'fight');
+    else if (t.mode === 'active' || t.mode === 'deed') game.logMsg(`${t.name} died.`, 'fight');
     else if (killer && killer.mode !== 'wild') game.logMsg(`${killer.name} killed a wild ${def.name.toLowerCase()}.`, 'fight');
   }
 
   describe(c: Creature): string {
     const job = c.trade ?? this.species(c).gathers;
     const verb = job ? GATHER_VERB[job] : 'busy';
-    if (c.ridden) return 'under the saddle';
+    if (c.ridden) return 'ridden';
     if (c.hitchedTo !== null) return 'in the traces';
     switch (c.mode) {
       case 'active':

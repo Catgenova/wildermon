@@ -62,7 +62,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
   (passed ? ok : bad).push(`${passed ? 'ok  ' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`);
 };
 
-const HELD = 'You already hold a settlement. Disband it first.';
+const HELD = 'Already founded a settlement. Disband it first.';
 
 /* ---- the browser ----------------------------------------------------------- */
 
@@ -181,7 +181,7 @@ check(`and on ${DEEDS_JOINED} rolls the cap is what refuses, and says so`,
 check('an island that does not count rolls yet leaves it to the island',
   inviteRefusal(social({ joined: undefined }), deedmate.uid, deedmate.name) === null);
 check('with none of your own there is nobody to ask anybody onto',
-  inviteRefusal(social({ deeds: [theirs] }), stranger.uid, stranger.name) === 'You hold no settlement to invite anybody to.');
+  inviteRefusal(social({ deeds: [theirs] }), stranger.uid, stranger.name) === 'No settlement to invite to.');
 check('with room, Move in is not refused', moveInRefusal(social()) === null);
 
 const asking = psql(`

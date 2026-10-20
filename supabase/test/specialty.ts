@@ -189,8 +189,8 @@ check('the rule is the same multiplier', specialtyMul(SPECIALTY_AT - 1) === 1 &&
 /* ---- the words ---------------------------------------------------------------------------------------------------- */
 
 check('a specialty says its trade, its workers and what it adds, off the rule',
-  specialtySays('reed', 4) === `Specialty: ${GATHER_VERB.reed}, 4 workers: +${percent(SPECIALTY_BONUS)} speed at its task.`, specialtySays('reed', 4));
-check('and a trade short of one says how many of how many', specialtySays('water', 1).includes(`1 of the ${SPECIALTY_AT} workers that make it a specialty`), specialtySays('water', 1));
+  specialtySays('reed', 4) === `Specialty: ${GATHER_VERB.reed}, 4 workers: task speed +${percent(SPECIALTY_BONUS)}.`, specialtySays('reed', 4));
+check('and a trade short of one says how many of how many', specialtySays('water', 1).includes(`1/${SPECIALTY_AT} workers for a specialty`), specialtySays('water', 1));
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nthree of a trade make a specialty — ${ok.length} of ${ok.length + bad.length}`);

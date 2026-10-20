@@ -54,7 +54,7 @@ import {
 import { GUIDE_BATCH, MOBS_RANGE, PEACE_REACH } from '../../src/game/keep';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { TILE_DEFS } from '../../src/world/tiles';
-import { numberWord, percent, spanWords } from '../../src/game/words';
+import { percent, timeWords } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -95,27 +95,27 @@ const where: string[] = [];
 for (const d of KINDS) {
   const lines = whereItLives(d).join(' | ');
   const want: Array<[string, boolean, boolean]> = [
-    ['over a seam', !!d.onOre, lines.includes('vein or a coal seam')],
-    ['on sand', !!d.onSand, / on sand/.test(lines)],
+    ['over a seam', !!d.onOre, lines.includes('vein or coal seam')],
+    ['on sand', !!d.onSand, /on: sand/.test(lines)],
     ['on bare rock', !!d.onStone, lines.includes('bare rock')],
     ['on the grazing ground', !d.onOre && !d.onSand && !d.onStone, GRAZING.every((t) => lines.includes(t))],
-    [`within ${WATER_RANGE} tiles of something`, !!(d.nearWater || d.nearTrees || d.nearClay || d.nearTar), lines.includes(`Within ${WATER_RANGE} tiles of`)],
+    [`within ${WATER_RANGE} tiles of something`, !!(d.nearWater || d.nearTrees || d.nearClay || d.nearTar), lines.includes(`Within ${WATER_RANGE} tiles of:`)],
     ['by water', !!d.nearWater, /tiles of[^|]*water/.test(lines)],
     ['by trees', !!d.nearTrees, /tiles of[^|]*tree/.test(lines)],
     ['by clay', !!d.nearClay, /tiles of[^|]*clay/.test(lines)],
     ['by the black ground', !!d.nearTar, /tiles of[^|]*tar, peat or marsh/.test(lines)],
-    ['only at night', !!d.nocturnal, lines.includes('only at night')],
-    ['only in its season', !!d.season, !!d.season && lines.includes(`Found wild only from ${seasonSays(d.season)}`)],
-    [`in herds within ${HERD_REACH}`, !d.hunter, lines.includes(`In herds: one put down within ${HERD_REACH} tiles`)],
-    ['alone, a hunter', !!d.hunter, lines.includes('Alone: a hunter')],
-    [`home within ${WILD_RANGE}`, true, lines.includes(`Keeps within ${WILD_RANGE} tiles of its home ground`)],
-    [`1 in ${Math.round(1 / wildShare(d))}`, true, lines.includes(`1 in ${Math.round(1 / wildShare(d))} of what the wild puts down`)],
-    [`off a token by ${MONSTER_KEEP_OFF[d.id]}`, !!d.monster, lines.includes(`Never within ${MONSTER_KEEP_OFF[d.id]} tiles of a settlement's token`)],
-    [`no more than ${MONSTER_CAP[d.id]}`, !!d.monster, lines.includes(`No more than ${numberWord(MONSTER_CAP[d.id] ?? 0)} on the island at once`)],
-    ['no quiet beach alone', false, lines.includes('comes ashore')],
+    ['only at night', !!d.nocturnal, lines.includes('Spawns only at night')],
+    ['only in its season', !!d.season, !!d.season && lines.includes(`Wild only ${seasonSays(d.season)} (UTC)`)],
+    [`in herds within ${HERD_REACH}`, !d.hunter, lines.includes(`Herds: one spawned within ${HERD_REACH} tiles`)],
+    ['alone, a hunter', !!d.hunter, lines.includes('Solitary: a home ground of its own')],
+    [`home within ${WILD_RANGE}`, true, lines.includes(`Home range: ${WILD_RANGE} tiles`)],
+    [`1 in ${Math.round(1 / wildShare(d))}`, true, lines.includes(`Spawn share: 1 in ${Math.round(1 / wildShare(d))}`)],
+    [`off a token by ${MONSTER_KEEP_OFF[d.id]}`, !!d.monster, lines.includes(`Never within ${MONSTER_KEEP_OFF[d.id]} tiles of a settlement token`)],
+    [`no more than ${MONSTER_CAP[d.id]}`, !!d.monster, lines.includes(`Island cap: ${MONSTER_CAP[d.id] ?? 0} at once`)],
+    ['no quiet beach alone', false, lines.includes('landing beach')],
   ];
   for (const [what, should, is] of want) if (should !== is) where.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);
-  const ashore = whereItLives(d, true).some((l) => l === `Never within ${PEACE_REACH} tiles of where everybody comes ashore`);
+  const ashore = whereItLives(d, true).some((l) => l === `Never within ${PEACE_REACH} tiles of the landing beach`);
   if (ashore !== !!d.monster) where.push(`${d.id} ${d.monster ? 'lacks' : 'has'} the quiet beach on an island`);
 }
 check('where each kind lives is its own rules read out: every line is there for its rule and none without one, every number the rule\'s',
@@ -127,20 +127,20 @@ const kept: string[] = [];
 for (const d of KINDS) {
   const text = says(d);
   const want: Array<[string, boolean, boolean]> = [
-    ['a fleece', !!d.fleece, /(Shorn|Plucked) with a carving knife/.test(text)],
-    ['what it grows back in', !!d.fleece, !!d.fleece && text.includes(`back in full in ${spanWords(1 / d.fleece)}`)],
-    ['milk', !!d.milk, text.includes('is milked into an empty bucket')],
+    ['a fleece', !!d.fleece, /(Shear|Pluck) with a carving knife: /.test(text)],
+    ['what it grows back in', !!d.fleece, !!d.fleece && text.includes(`regrowth, grown: ${timeWords(1 / d.fleece)}`)],
+    ['milk', !!d.milk, text.includes('Milk a female into an empty bucket')],
     ['a hive', !!d.hives, text.includes('fills a hive')],
-    ['a saddle', !!d.mount, text.includes('Carries a rider once it wears a saddle and a bridle')],
-    ['deep water', !!d.swims, text.includes('across deep water')],
-    ['the traces', !!d.draught, text.includes(`In the traces it adds ${percent(d.pull ?? PULL_DEFAULT)} to a team's pull`)],
-    ['panniers', !!d.pannier, text.includes(`Carries ${d.pannier} things in panniers`)],
-    ['a watcher\'s eyes', !!d.sight, text.includes(`Sees ${d.sight} tiles for you`)],
+    ['a saddle', !!d.mount, text.includes('Mount: needs a saddle and a bridle')],
+    ['deep water', !!d.swims, text.includes('crosses deep water')],
+    ['the traces', !!d.draught, text.includes(`Traces: team pull +${percent(d.pull ?? PULL_DEFAULT)}`)],
+    ['panniers', !!d.pannier, text.includes(`Panniers: ${d.pannier} items`)],
+    ['a watcher\'s eyes', !!d.sight, text.includes(`Sight for you: ${d.sight} tiles`)],
     ['a light', !!d.glow, text.includes(`Lights ${d.glow} tiles round itself`)],
-    ['its temper', !!d.unruly, !!d.unruly && text.includes(`${percent(d.unruly)} odds`)],
-    ['its taming', !d.monster, text.includes(`Taming ${d.tameLevel} to try, and at that a base ${percent(d.tameChance)} chance`)],
-    ['that it is not a wildermon', !!d.monster, text.includes('cannot be tamed, trapped, bred or kept')],
-    ['its body', true, text.includes(`Grown: ${d.health} health, hits for ${d.attack}`)],
+    ['its temper', !!d.unruly, !!d.unruly && text.includes(`${percent(d.unruly)} chance every`)],
+    ['its taming', !d.monster, text.includes(`Taming ${d.tameLevel}, base chance ${percent(d.tameChance)} per offering`)],
+    ['that it is not a wildermon', !!d.monster, text.includes('Cannot be tamed, trapped, bred or kept')],
+    ['its body', true, text.includes(`Grown: ${d.health} health, blow ${d.attack}`)],
     ['its carcass', Object.values(d.butcher).some((n) => !!n), Object.entries(d.butcher).filter(([p]) => p !== 'hoard').every(([, n]) => text.includes(`${n} × `))],
   ];
   for (const [what, should, is] of want) if (should !== is) kept.push(`${d.id} ${should ? 'lacks' : 'has'} ${what}`);
@@ -157,11 +157,11 @@ const soloOnly: string[] = [];
 for (const d of KINDS) {
   const island = guidePage(d, true).flatMap((sec) => sec.lines);
   const alone = guidePage(d).flatMap((sec) => sec.lines);
-  for (const [what, has, bit] of [['a hive', !!d.hives, 'fills a hive'], ['panniers', !!d.pannier, 'things in panniers'],
-    ['its temper', !!d.unruly, 'odds every']] as Array<[string, boolean, string]>) {
+  for (const [what, has, bit] of [['a hive', !!d.hives, 'fills a hive'], ['panniers', !!d.pannier, 'Panniers: '],
+    ['its temper', !!d.unruly, 'chance every']] as Array<[string, boolean, string]>) {
     if (!has) continue;
-    if (!island.find((l) => l.includes(bit))?.startsWith('In a game of your own only: ')) soloOnly.push(`${d.id}: ${what} unmarked on an island`);
-    if (alone.find((l) => l.includes(bit))?.startsWith('In a game')) soloOnly.push(`${d.id}: ${what} marked in a game of your own`);
+    if (!island.find((l) => l.includes(bit))?.startsWith('Single-player only: ')) soloOnly.push(`${d.id}: ${what} unmarked on an island`);
+    if (alone.find((l) => l.includes(bit))?.startsWith('Single-player')) soloOnly.push(`${d.id}: ${what} marked in a game of your own`);
   }
 }
 check('on an island, a hive, panniers and a temper are said to be for a game of your own only', !soloOnly.length, soloOnly.slice(0, 4).join('; '));
@@ -255,7 +255,7 @@ check('on an island a kind in view is handed over, once a look however many of i
 isle.guideHeard(['woola'], ['rabba']);
 check('what the island wrote down just now goes in the book with its line; what it had already, without one',
   isle.guide.seen.has('woola') && isle.guide.seen.has('rabba')
-    && isle.log.filter((l) => l.text.startsWith('The first ')).map((l) => l.text).join() === seenLine(SPECIES.woola, isle.guide),
+    && isle.log.filter((l) => l.text.startsWith('First ')).map((l) => l.text).join() === seenLine(SPECIES.woola, isle.guide),
   isle.log.map((l) => l.text).join(' | '));
 handed.length = 0;
 isle.update(1.1);

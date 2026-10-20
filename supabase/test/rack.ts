@@ -56,7 +56,7 @@ const spot = (n: number, uid: number): Target =>
 /* A log crate will not sit on the runners; a plank crate will. */
 const log = game.inventory.add('crate_log', { ql: 20 });
 const logWhy = place.check?.(spot(0, log.uid), game) ?? null;
-say(!!logWhy && logWhy.includes('will not sit on the runners'), `a log crate on the deck: ${logWhy ?? 'ALLOWED'}`);
+say(!!logWhy && logWhy === 'Plank crates only on a rack.', `a log crate on the deck: ${logWhy ?? 'ALLOWED'}`);
 game.inventory.remove(log.uid, 1);
 
 /* Eight plank crates, put up one at a time, and the ninth with nowhere to go. */

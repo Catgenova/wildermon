@@ -317,14 +317,14 @@ check('the bar says what is tracked', track.doing?.(T, g) === `Tracking a ${DEF.
 /* ---- the goes ------------------------------------------------------------------------------------------------- */
 
 const want: Record<string, string> = {
-  low: `You pick up the trail of a ${DEF.name}: somewhere to the east, not far off.`,
-  eight: `Tracks of a ${DEF.name} lead north-east, about 50 tiles.`,
-  sixteen: `Tracks of a ${STAGE1} lead east-north-east, about 20 tiles.`,
-  degree: `Fresh tracks: a ${STAGE2}, level 54, bearing 67°, about 25 tiles, standing still.`,
-  degree_low: `Fresh tracks: a ${STAGE2}, level 54, bearing 61°, about 25 tiles, standing still.`,
-  degree_high: `Fresh tracks: a ${STAGE2}, level 54, bearing 73°, about 25 tiles, standing still.`,
-  nosign: `You find no sign of a ${DEF.name} within ${trackRange(1)} tiles.`,
-  south: `You pick up the trail of a ${DEF.name}: somewhere to the south, not far off.`,
+  low: `Tracks: ${DEF.name}, east, not far off.`,
+  eight: `Tracks: ${DEF.name}, north-east, about 50 tiles.`,
+  sixteen: `Tracks: ${STAGE1}, east-north-east, about 20 tiles.`,
+  degree: `Tracks: ${STAGE2}, level 54, bearing 67°, about 25 tiles, still.`,
+  degree_low: `Tracks: ${STAGE2}, level 54, bearing 61°, about 25 tiles, still.`,
+  degree_high: `Tracks: ${STAGE2}, level 54, bearing 73°, about 25 tiles, still.`,
+  nosign: `No ${DEF.name.toLowerCase()} within ${trackRange(1)} tiles.`,
+  south: `Tracks: ${DEF.name}, south, not far off.`,
 };
 /*
  * Alone, the wild past what is out (`CULL_RANGE`) is a count and not creatures, so a track there reaches no further:
@@ -397,8 +397,8 @@ check('the arrow is labelled with the name the line used and the distance as sai
   const [short, long] = trackingSays(50);
   check('the Skills window says the reach, the spread and the points at the level you are at',
     short === '300 tiles · ±30° · 16 points' && long.includes('(300 now)') && long.includes('(±30° now)'), short);
-  check('and every band, off the table', TRACK_BANDS.every((b) => long.includes(`at ${b.at}`)) && long.includes(`over ${TRACK_FAR} tiles`)
-    && long.includes('to the degree') && long.includes('nearest 5 tiles'), long);
+  check('and every band, off the table', TRACK_BANDS.every((b) => long.includes(`${b.at} `)) && long.includes(`over ${TRACK_FAR} tiles`)
+    && long.includes('to 1°') && long.includes('nearest 5 tiles'), long);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

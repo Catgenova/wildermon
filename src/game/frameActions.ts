@@ -29,7 +29,7 @@ export const FRAME_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t) || !t.material || !MATERIAL_BY_ID.get(t.material)) return 'Choose a material.';
       const corner = cornerOf(t);
-      if (!corner) return 'Choose a corner of the tile.';
+      if (!corner) return 'Choose a corner.';
       // Glass goes on a roof and nowhere else (`glasshouse.ts`), and no material with an `only` makes a column.
       if (t.material === GLASS) return GLASS_ROOF_ONLY;
       const only = onlyRefusal(t.material, { column: true });
@@ -39,16 +39,16 @@ export const FRAME_ACTIONS: ActionDef[] = [
       const b = storeyOf(g, t);
       if (!b) return 'No building here.';
       const level = jobLevel(b, t);
-      if (!columnFooting(g, b, level, corner[0], corner[1])) return 'Build the floor of this storey first.';
-      if (g.buildings.column(level, corner[0], corner[1])) return 'There is already a column on that corner.';
+      if (!columnFooting(g, b, level, corner[0], corner[1])) return 'Build this storey\'s floor first.';
+      if (g.buildings.column(level, corner[0], corner[1])) return 'Already a column on that corner.';
       // On the ground floor it takes the corner spot of every tile round it (`Game.columnInBlock`): none with a piece in it.
-      if (level === 0 && pieceInCorner(g, corner[0], corner[1])) return 'Move what stands in that corner first.';
+      if (level === 0 && pieceInCorner(g, corner[0], corner[1])) return 'Something placed in that corner: move it first.';
       // What is under it has to carry it, as it would a wall: on piers its decks first (`piers.ts`).
       const mat = MATERIAL_BY_ID.get(t.material);
       const deck = mat && b.deck != null ? deckCarries(mat, g.buildings.deckUnder(b), b.name) : null;
       if (deck) return deck;
       const bears = g.buildings.bearing(b, level);
-      if (mat && mat.heft > bears) return `${mat.name} is too heavy to raise over what is under it. This storey carries ${heftWord(bears)}, no more.`;
+      if (mat && mat.heft > bears) return `${mat.name} too heavy for what is under it: this storey carries ${heftWord(bears)} at most.`;
       return null;
     },
     perform: (t, g) => {
@@ -58,7 +58,7 @@ export const FRAME_ACTIONS: ActionDef[] = [
       const mat = MATERIAL_BY_ID.get(t.material);
       if (!b || !corner || !mat) return;
       const c = g.buildings.setColumn(b, jobLevel(b, t), corner[0], corner[1], mat.id);
-      g.logMsg(`You plan a ${mat.name.toLowerCase()} column on the ${cornerName(t, corner[0], corner[1])} corner. It needs ${needsText(c)}.`, 'event');
+      g.logMsg(`Planned: ${mat.name.toLowerCase()} column, ${cornerName(t, corner[0], corner[1])} corner. Needs ${needsText(c)}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -73,14 +73,14 @@ export const FRAME_ACTIONS: ActionDef[] = [
     baseTime: 5,
     applies: (t, g) => isTile(t) && !!columnAt(g, t),
     check: (t, g) => {
-      if (!isTile(t) || !cornerOf(t)) return 'Choose a corner of the tile.';
+      if (!isTile(t) || !cornerOf(t)) return 'Choose a corner.';
       const c = columnAt(g, t);
-      if (!c) return 'There is no column planned there.';
-      if (isDone(c)) return 'That column is finished.';
+      if (!c) return 'No column planned there.';
+      if (isDone(c)) return 'Column finished.';
       const mat = MATERIAL_BY_ID.get(c.material);
       const tool = mat ? needTool(g, mat.tool) : null;
       if (tool) return tool;
-      if (!nextAvailable(g, c, t)) return `You need ${needsText(c)}.`;
+      if (!nextAvailable(g, c, t)) return `Need ${needsText(c)}.`;
       return null;
     },
     perform: (t, g) => {
@@ -93,10 +93,10 @@ export const FRAME_ACTIONS: ActionDef[] = [
       g.gainSkill(mat.skill, 0.4);
       g.events.emit('world', t.x, t.y);
       if (isDone(c)) {
-        g.logMsg(`You finish the ${mat.name.toLowerCase()} column.`, 'event');
+        g.logMsg(`Built: ${mat.name.toLowerCase()} column.`, 'event');
         return false;
       }
-      g.logMsg(`You fit ${materialName(used, 1)} into the column. Still needed: ${needsText(c)}.`, 'event');
+      g.logMsg(`Added: ${materialName(used, 1)}. Still needed: ${needsText(c)}.`, 'event');
       return nextAvailable(g, c, t) !== null;
     },
   },
@@ -110,9 +110,9 @@ export const FRAME_ACTIONS: ActionDef[] = [
     baseTime: 4,
     applies: (t, g) => isTile(t) && !!columnAt(g, t),
     check: (t, g) => {
-      if (!isTile(t) || !cornerOf(t)) return 'Choose a corner of the tile.';
+      if (!isTile(t) || !cornerOf(t)) return 'Choose a corner.';
       const c = columnAt(g, t);
-      if (!c) return 'There is no column there.';
+      if (!c) return 'No column there.';
       // What it carries, if it carries anything, comes down first, or a wall goes up to take it.
       return columnCarries(g, c);
     },
@@ -121,7 +121,7 @@ export const FRAME_ACTIONS: ActionDef[] = [
       const c = columnAt(g, t);
       if (!c) return;
       g.buildings.removeColumn(c.level, c.x, c.y);
-      g.logMsg(`You take down the column on the ${cornerName(t, c.x, c.y)} corner.`, 'event');
+      g.logMsg(`Removed: column, ${cornerName(t, c.x, c.y)} corner.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -153,13 +153,13 @@ export function frameSays(g: Game, x: number, y: number): string {
       if (!f || f.building !== j.id) continue;
       // An outside staircase, up from the ground on it (`outsideStair`).
       if (floorKind(f) === 'stairs') {
-        out += isDone(f) ? ` On it is an outside staircase up to ${j.name}'s storey ${level + 1}, climbed from the ${SIDE_NAMES[f.facing ?? 's']}.`
-          : ` An outside staircase up to ${j.name}'s storey ${level + 1} is planned on it.`;
-      } else if (!isDone(f)) out += ` A jetty of ${j.name}'s storey ${level + 1} is planned over it.`;
+        out += isDone(f) ? ` Outside staircase: up to ${j.name} storey ${level + 1}, climbed from the ${SIDE_NAMES[f.facing ?? 's']}.`
+          : ` Outside staircase planned: up to ${j.name} storey ${level + 1}.`;
+      } else if (!isDone(f)) out += ` Jetty planned over it: ${j.name} storey ${level + 1}.`;
       else if (bld.storeyArea(j, level).has(`${x},${y}`)) {
-        out += ` Over it is a jetty of ${j.name}'s storey ${level + 1}, part of that storey: its open sides want a wall, a railing or columns to close the storey in, and a roof over it rests on walls or columns, never on a railing.`;
+        out += ` Jetty over it: ${j.name} storey ${level + 1}, part of that storey. Open sides need a wall, railing or columns to enclose it; a roof over it needs walls or columns, not railings.`;
       } else {
-        out += ` Over it is a balcony of ${j.name}'s storey ${level + 1}, shut off from the storey by a wall or a door: it takes a railing, and no roof.`;
+        out += ` Balcony over it: ${j.name} storey ${level + 1}, walled off from the storey. Railing only, no roof.`;
       }
       break;
     }
@@ -179,7 +179,7 @@ export function frameSays(g: Game, x: number, y: number): string {
   }
   // A roof on columns: shelter for what lies there, and not a room.
   if (bld.sheltered(0, x, y) && !bld.indoors(0, x, y)) {
-    out += ` Under a roof on columns: what is left here decays at ${Math.round(INDOORS_DECAY * 100)}% of the rate in the open, but a bed here is in the open: the ×${INDOORS_REST} rest of a bed indoors wants walls all round.`;
+    out += ` Under a roof on columns: decay ×${INDOORS_DECAY}. Beds here count as outdoors (indoor rest ×${INDOORS_REST} needs walls all round).`;
   }
   return out;
 }

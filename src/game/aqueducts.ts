@@ -42,37 +42,37 @@ export interface AqueductPlan {
   level: number;
 }
 
-export const AQ_STRAIGHT = 'An aqueduct runs straight: its head due north, south, east or west of the tile it pours into.';
-export const AQ_BESIDE = 'That water is right beside it: there is nothing for an aqueduct to carry it over.';
-export const AQ_SEA_HEAD = 'The sea is below everything: an aqueduct carries a spring\'s water, from a pond or a pool.';
-export const AQ_DRY_HEAD = 'There is no pond or pool there for an aqueduct to draw from.';
-export const AQ_SLAB_FOOT = 'Dig a pool in the foundation first: the water would run straight off its top.';
-export const AQ_SEA_FOOT = 'An aqueduct pours into a pool, a pond, a fountain or a hollow, not the sea.';
-export const AQ_FLAT = `Water poured here would run straight off downhill: the foot of an aqueduct wants a pool, a pond, a fountain, or a hollow that holds ${(SPRING_DEPTH / 10).toFixed(1)} m of water or more.`;
-export const AQ_WIDE = `That hollow is too wide ever to fill: a pond spreads over ${POND_MOST} corners at most.`;
-export const AQ_SAME = 'That is the water it would draw from.';
-export const AQ_END_BRIDGED = 'A bridge is carried over one end of it already.';
+export const AQ_STRAIGHT = 'Aqueduct head must be due north, south, east or west of its foot.';
+export const AQ_BESIDE = 'Water is adjacent: nothing to span.';
+export const AQ_SEA_HEAD = 'Not from the sea: draw from a pond or pool.';
+export const AQ_DRY_HEAD = 'No pond or pool there to draw from.';
+export const AQ_SLAB_FOOT = 'Dig a pool in the foundation first.';
+export const AQ_SEA_FOOT = 'Not into the sea: pour into a pool, pond, fountain or hollow.';
+export const AQ_FLAT = `Foot needs a pool, pond, fountain, or a hollow holding ${(SPRING_DEPTH / 10).toFixed(1)} m of water or more.`;
+export const AQ_WIDE = `Hollow too wide: a pond covers ${POND_MOST} corners at most.`;
+export const AQ_SAME = 'That is the water it draws from.';
+export const AQ_END_BRIDGED = 'A bridge already spans one end.';
 /** Why "Throw a bridge across" will not make one: an aqueduct is set out from where it pours. */
-export const AQ_NOT_THROWN = 'An aqueduct is set out from the pool, pond, fountain or hollow it pours into, not thrown from a bank.';
-export const aqSpan = (n: number): string => `An aqueduct spans ${AQUEDUCT.span} tiles; that is ${n}.`;
-export const aqDeed = (name: string): string => `That is part of ${name}. Only its builders may lead water from it or to it.`;
+export const AQ_NOT_THROWN = 'Aqueducts are set out from the pool, pond, fountain or hollow they pour into.';
+export const aqSpan = (n: number): string => `Aqueduct: max span ${AQUEDUCT.span} tiles; this is ${n}.`;
+export const aqDeed = (name: string): string => `Part of ${name}: builders only.`;
 export const aqUphill = (level: number, height: number): string =>
-  `The water there stands at ${level}, over the ${height} its head stands at: water only runs downhill.`;
+  `Water there at ${level}, above the head at ${height}: water runs downhill only.`;
 /** What stands too high under a span: the ground, a foundation's top, or the water in a pool dug in one. */
 export type UnderKind = 'ground' | 'foundation' | 'pool';
 const UNDER_WORD: Record<UnderKind, [string, string]> = {
   ground: ['The ground', 'the ground'], foundation: ['The foundation', 'a foundation'], pool: ['The water in the pool', 'the water'],
 };
 export const aqGround = (x: number, y: number, what: UnderKind = 'ground'): string =>
-  `${UNDER_WORD[what][0]} at ${x}, ${y} stands within ${(CLEARANCE / 10).toFixed(1)} m of the channel's bed: an aqueduct is carried over ${UNDER_WORD[what][1]}, not through it.`;
+  `${UNDER_WORD[what][0]} at ${x}, ${y} is within ${(CLEARANCE / 10).toFixed(1)} m of the channel bed.`;
 /** A tree or a bush where a span would stand over it: it would grow up through the arches. */
-export const aqGrowing = (x: number, y: number, what: 'tree' | 'bush'): string => `A ${what} stands at ${x}, ${y}, under where a span would go. Cut it down first.`;
+export const aqGrowing = (x: number, y: number, what: 'tree' | 'bush'): string => `${what === 'tree' ? 'Tree' : 'Bush'} at ${x}, ${y} under a span: cut it down first.`;
 /** The water at the head drawn from by another aqueduct already, which takes all of it: by the tile that one draws from. */
-export const aqTaken = (x: number, y: number): string => `The aqueduct from ${x}, ${y} draws from that water already.`;
+export const aqTaken = (x: number, y: number): string => `Already drawn by the aqueduct from ${x}, ${y}.`;
 /** The head and the foot of an aqueduct that is there already. */
-export const AQ_THERE = 'An aqueduct already runs from there to here.';
+export const AQ_THERE = 'Already an aqueduct from there to here.';
 /** What is said of a tile an aqueduct's span is carried over, where a building, a pour, a pool or a tree would stand. */
-export const AQ_OVER = 'An aqueduct is carried over that tile.';
+export const AQ_OVER = 'Aqueduct over that tile.';
 
 /** A number of seconds as a fill is said: to the second under a minute and a half, and to the minute from there. The island's `fill_words`. */
 export function fillWords(secs: number): string {
@@ -170,7 +170,7 @@ export function aqueductPlan(g: Game, sx: number, sy: number, tx: number, ty: nu
   if (level > top) return aqUphill(level, top);
   if (g.bridgeAt(sx, sy) || g.bridgeAt(tx, ty)) return AQ_END_BRIDGED;
   for (const [x, y] of span) {
-    if (g.bridgeAt(x, y)) return 'Something is already bridged across there.';
+    if (g.bridgeAt(x, y)) return 'Already bridged there.';
     if (g.buildings.buildingAt(x, y)) return 'Not over a building.';
     // Nor through a building's jetty, as a bridge is not (`frame.ts`).
     if (g.buildings.jettyAt(x, y)) return "Not over a building's jetty.";
@@ -269,9 +269,9 @@ export function waterAlong(g: Game, id: number): { chain: Chain; stream: Stream;
 export function aqueductSays(g: Game, b: Bridge): string {
   const foot = footSays(g, b);
   if (!foot) {
-    return `The last span is laid. No spring's water stands at its head at ${b.height} or over, so the channel stays dry until some does.`;
+    return `Last span laid. Channel dry: no spring water at its head at ${b.height} or over.`;
   }
-  return `The last span is laid and water runs along the channel, ${AQUEDUCT_FLOW} litres a minute, out of its head instead of over that water's lip. ${foot}`;
+  return `Last span laid. Flow ${AQUEDUCT_FLOW} litres/min out of its head, not over its lip. ${foot}`;
 }
 
 /**
@@ -284,19 +284,19 @@ export function footSays(g: Game, b: Bridge, now?: number): string | null {
   if (!along) return null;
   const { chain, stream } = along;
   const into = typeof stream.to === 'number' ? chain.ponds[stream.to] : undefined;
-  if (stream.fountain) return 'It keeps the fountain at its foot full.';
+  if (stream.fountain) return 'Keeps the fountain at its foot full.';
   // Onto a foundation with no pool in it: off its top over its lowest edge (`settleChain`'s `pour`).
   const slab = g.slabAt(b.bx, b.by);
-  if (slab && !slab.pool) return 'It pours onto the foundation at its foot and runs off its lowest edge.';
-  if (into?.tiles) return into.spill ? 'The pool at its foot is full already, and spills over its lowest edge.' : 'The pool at its foot is full already, and nothing beside it is lower: it keeps the water.';
+  if (slab && !slab.pool) return 'Pours onto the foundation; runs off its lowest edge.';
+  if (into?.tiles) return into.spill ? 'Pool at its foot full; spills over its lowest edge.' : 'Pool at its foot full; nothing lower beside it, so it holds.';
   if (into?.volume) {
     // Standing at its level already -- another spring's pond, or this one's own water there before -- or risen to it since.
     const f = along.fill[stream.to as number];
     const full = f && (f.from >= into.level || (now !== undefined && pondFull({ from: f.from, level: into.level, since: f.since, rate: pondRate(into) }) <= now));
-    if (full) return 'The pond at its foot is full already, and spills over its lip.';
-    return `It fills the hollow it runs into to ${into.level} in ${fillWords(fillSeconds(into.volume))}, and then spills over its lip and runs on.`;
+    if (full) return 'Pond at its foot full; spills over its lip.';
+    return `Fills the hollow to ${into.level} in ${fillWords(fillSeconds(into.volume))}, then spills over its lip.`;
   }
-  return 'It pours out onto the ground at its foot and runs away downhill.';
+  return 'Pours onto the ground; runs downhill.';
 }
 
 type BridgeTarget = Extract<Target, { kind: 'bridge' }>;
@@ -339,8 +339,8 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       g.gainSkill(AQUEDUCT.skill, 0.4);
       const n = b.spans.length;
       g.logMsg(
-        `You set out an aqueduct of ${n} span${n > 1 ? 's' : ''} from the ${HEAD_WORD[plan.head]} to the ${FOOT_WORD[plan.foot]}, its channel at ${plan.height}. `
-        + `Each span wants ${spanWants(b.spans[0])}. ${AQUEDUCT.note}`,
+        `Aqueduct planned: ${n} span${n > 1 ? 's' : ''}, ${HEAD_WORD[plan.head]} to ${FOOT_WORD[plan.foot]}, channel at ${plan.height}. `
+        + `Per span: ${spanWants(b.spans[0])}. ${AQUEDUCT.note}`,
         'system',
       );
       for (const sp of b.spans) g.events.emit('world', sp.x, sp.y);
@@ -357,18 +357,18 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const b = aqueductOf(g, t);
       const s = b && b.spans.find((x) => !isDone(x));
-      return s ? `Work on the aqueduct (wants ${spanWants(s)})` : 'Work on the aqueduct';
+      return s ? `Work on the aqueduct (needs ${spanWants(s)})` : 'Work on the aqueduct';
     },
     check: (t, g) => {
       const b = aqueductOf(g, t);
       if (!b) return 'It is gone.';
       const s = b.spans.find((x) => !isDone(x));
-      if (!s) return 'It is finished.';
-      if (!g.inventory.has(AQUEDUCT.tool)) return `You need a ${itemDef(AQUEDUCT.tool).name.toLowerCase()}.`;
-      if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Work from one end. Walk to the open part of the span.';
+      if (!s) return 'Finished.';
+      if (!g.inventory.has(AQUEDUCT.tool)) return `Need a ${itemDef(AQUEDUCT.tool).name.toLowerCase()}.`;
+      if (Math.hypot(s.x + 0.5 - g.player.x, s.y + 0.5 - g.player.y) > 4.5) return 'Stand by the open span.';
       // Out of the pack, a crate on the span or the stores within reach, as a wall's does (`toHand`).
       const short = Object.keys(s.needed).sort().filter((id) => s.needed[id] > 0 && toHand(g, id, undefined, s) < 1);
-      if (short.length) return `That span wants ${spanWants(s)}; you have no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
+      if (short.length) return `Span needs ${spanWants(s)}; no ${itemDef(short[0]).name.toLowerCase()} to hand.`;
       return null;
     },
     perform: (t, g) => {
@@ -383,12 +383,12 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       g.gainSkill(AQUEDUCT.skill, 0.5);
       g.wearTool(AQUEDUCT.tool, 0.4);
       if (!isDone(s)) {
-        g.logMsg(`You work a ${itemDef(id).name.toLowerCase()} into the span. It still wants ${spanWants(s)}.`, 'event');
+        g.logMsg(`Added: ${itemDef(id).name.toLowerCase()}. Span needs ${spanWants(s)}.`, 'event');
         return true;
       }
       const left = b.spans.filter((x) => !isDone(x)).length;
       if (left) {
-        g.logMsg(`That span is laid. ${left} still open.`, 'event');
+        g.logMsg(`Span laid. ${left} open.`, 'event');
         return true;
       }
       g.logMsg(aqueductSays(g, b), 'system');
@@ -437,8 +437,8 @@ export const AQUEDUCT_ACTIONS: ActionDef[] = [
       g.springs.channelChanged(channel);
       g.springs.update(Date.now());
       g.logMsg(
-        (parts.length ? `You take the aqueduct down and save ${parts.join(', ')}.` : 'You take the aqueduct down.')
-        + (ran ? ' The water at its head goes over its own lip again.' : ''),
+        (parts.length ? `Aqueduct removed. Salvaged: ${parts.join(', ')}.` : 'Aqueduct removed.')
+        + (ran ? ' Head spills over its lip again.' : ''),
         'event',
       );
     },

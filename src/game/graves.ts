@@ -67,7 +67,7 @@ export function graveLine(g: Game, f: PlacedFurniture): string {
   const when = left >= 1 ? `crumbles in ${spanWords(left)}` : 'crumbling';
   if (!graveMine(g, f)) return when;
   const n = graveUnits(f);
-  return `${n} ${n === 1 ? 'thing' : 'things'} in it · ${when}`;
+  return `${n} ${n === 1 ? 'item' : 'items'} · ${when}`;
 }
 
 /* ---- who may do what at a grave --------------------------------------------- */
@@ -82,10 +82,10 @@ export const GRAVE_OPENS: ReadonlySet<string> = new Set(['furniture_take_all', '
 
 /** What anybody but its owner is told at a grave, whatever they try. The island says it in the same words. */
 export const graveNotYours = (name: string): string =>
-  `That is ${name}'s grave. Nobody but ${name} can open it, take from it or move it.`;
+  `${name}'s grave: only ${name} can open, take from or move it.`;
 
 /** What its owner is told for anything but taking things out. The island says the same. */
-export const GRAVE_SHUT = 'Nothing goes into a grave and nothing moves it. Take what is in it out before it crumbles.';
+export const GRAVE_SHUT = 'Graves take nothing in and cannot be moved: empty it before it crumbles.';
 
 /**
  * The grave an action is aimed at, if it is aimed at one: the piece itself, a
@@ -130,7 +130,7 @@ export function deathSaid(grave: 'here' | 'shore' | null): string {
 
 /** What its owner is told when a grave crumbles with something still in it. The island says the same. */
 export const crumbledSaid = (x: number, y: number, n: number): string =>
-  `Your grave at ${x}, ${y} has crumbled. ${n === 1 ? 'The one thing still in it is lost.' : `The ${n} things still in it are lost.`}`;
+  `Your grave at ${x}, ${y} crumbled. Lost: ${n} ${n === 1 ? 'item' : 'items'}.`;
 
 /**
  * Where a grave goes for a body that fell at (`x`, `y`): the tile it fell on,

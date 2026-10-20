@@ -192,12 +192,12 @@ check(`a Whispet, a Lanternveil at ${EVOLVE_AT[0]} and a Hallowmire at ${EVOLVE_
   W.name === 'Whispet' && W.stages?.map((s) => s.name).join(',') === 'Lanternveil,Hallowmire' && W.season === HALLOW_SEASON && !!W.nocturnal && W.ability === 'fear'
     && at('ROW') === `Whispet|Lanternveil,Hallowmire|${seasonDay(HALLOW_SEASON.from)}|${seasonDay(HALLOW_SEASON.to)}|fear|true|${FEAR_REST}|${FEAR_SECS}|Fear`, at('ROW'));
 check('its words are the same on both sides, and say its Fear, its rest and its season in their own numbers',
-  at('WORDS') === W.description && W.description.includes(`for ${FEAR_SECS} seconds`) && W.description.includes(`once every ${FEAR_REST} seconds`)
-    && W.description.includes('from 15 October to 15 November') && !/[{}]/.test(W.description), W.description);
+  at('WORDS') === W.description && W.description.includes(`for ${FEAR_SECS} seconds`) && W.description.includes(`cooldown ${FEAR_REST} seconds`)
+    && W.description.includes('15 October to 15 November (UTC)') && !/[{}]/.test(W.description), W.description);
 const cut = BUTCHER_PARTS.filter(([p]) => (W.butcher[p] ?? 0) > 0).map(([p, item]) => `${item}:${W.butcher[p]}`).join(',');
 check('butchered it gives glands and nothing else, the same on both sides', cut === `gland:${W.butcher.gland}` && at('CUT') === cut, `browser ${cut}, island ${at('CUT')}`);
 check('and the wild roll has it at the same weight on both sides', at('WILDTABLE') !== '(not said)' && Number(at('WILDTABLE')) === 4, at('WILDTABLE'));
-check('its guide page says when it is found wild', whereItLives(W).some((l) => l.startsWith('Found wild only from 15 October to 15 November')));
+check('its guide page says when it is found wild', whereItLives(W).some((l) => l.startsWith('Wild only 15 October to 15 November')));
 
 /* ---- the season -------------------------------------------------------------------- */
 

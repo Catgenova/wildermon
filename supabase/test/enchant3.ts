@@ -85,7 +85,7 @@ const QLS = [0.4, 37.48, 50, 100, 140];
 const saysIsle = psql(`select string_agg(enchant_says(jsonb_build_object('id', e.id, 'ql', q)), '#' order by e.ord, o)
   from enchantments() e, unnest(array[${QLS.join(',')}]::float8[]) with ordinality u(q, o) where e.id in (${PART3.map((e) => `'${e.id}'`).join(', ')})`);
 const saysHere = PART3.flatMap((e) => QLS.map((q) => enchantSays({ enchant: { id: e.id, ql: q } }))).join('#').trim();
-check('Examine says each at its quality in the same words on both sides, a Packmule\'s in kilos', saysIsle === saysHere && saysHere.includes('you carry 3.7 kg more') && saysHere.includes('you carry 10 kg more'),
+check('Examine says each at its quality in the same words on both sides, a Packmule\'s in kilos', saysIsle === saysHere && saysHere.includes('carry weight +3.7 kg') && saysHere.includes('carry weight +10 kg'),
   saysIsle === saysHere ? '' : (() => { const i = [...saysIsle].findIndex((ch, k) => ch !== saysHere[k]); return `at ${i}: ${saysIsle.slice(i - 40, i + 60)} / ${saysHere.slice(i - 40, i + 60)}`; })());
 check(`and the figures at QL 100 are the owner's: Scholar's Band 5% more skill, Knackstone half again the chance of a knack, Steady Heart 20% faster wind, Hearthbound 20% slower hunger and thirst, Favoured and Stillwater 10% more`,
   near(enchantValue(SCHOLAR, 100), 0.05) && near(enchantValue(KNACK, 100), 0.5) && near(enchantValue(HEART, 100), 0.2)
@@ -569,7 +569,7 @@ g.putBody(46.5, 40.5, 0);
 placedRefusals.push(['R:far', placedAsk(EMBER, { kind: 'smelter', id: sm.id }), ENCHANT_SAID.reach]);
 g.putBody(40.5, 40.5, 0);
 loom.lock = 999999;
-placedRefusals.push(['R:lock', placedAsk(MASTER, { kind: 'furniture', id: loom.id }), 'It is locked, and you have no key to it.']);
+placedRefusals.push(['R:lock', placedAsk(MASTER, { kind: 'furniture', id: loom.id }), 'Locked: no key.']);
 loom.lock = undefined;
 check(`Ember Heart goes on ${ON_WORDS.furnace} and Masterwork on ${ON_WORDS.station}, enchanted where they stand: each refused on the other kind, out of reach, and past a padlock you have no key to, in the same words on both sides`,
   placedRefusals.every(([k, here, want]) => isle.get(k) === want && here === want),
@@ -581,7 +581,7 @@ const placedGo = (e: EnchantmentDef, t: Target, ...rolls: number[]): string => {
 };
 const took = placedGo(EMBER, { kind: 'smelter', id: sm.id }, 0.01, 0.5);
 check('a scroll that takes on a smelter where it stands: the same quality, held to the smelter\'s, and the same words on both sides',
-  took === part('EMB', 1) && near(sm.enchant?.ql ?? -1, num('EMB', 0)) && took.includes('held to the smelter\'s QL 60.0'), `${isle.get('EMB')} / ${sm.enchant?.ql} ${took}`);
+  took === part('EMB', 1) && near(sm.enchant?.ql ?? -1, num('EMB', 0)) && took.includes('(capped at smelter QL 60.0)'), `${isle.get('EMB')} / ${sm.enchant?.ql} ${took}`);
 const miss = placedGo(EMBER, { kind: 'smelter', id: sm2.id }, 0.99, 0.01);
 sm2.dmg = 90;
 const miss2 = placedGo(EMBER, { kind: 'smelter', id: sm2.id }, 0.99, 0.01);

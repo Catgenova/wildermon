@@ -71,7 +71,7 @@ check('a piece two subtiles each way that gathers moss as a statue does, on both
 const isleNames = psql(`select station_name('${ENCHANTERS_PLINTH}') || '|' || enchant_said('plinth') || '|' || (select name from item_def where id = '${ENCHANTERS_PLINTH}')`);
 check(`the station is called the same and refuses in the station rule's words on both sides: "${ENCHANT_SAID.plinth}"`,
   isleNames === `${STATION_NAME[ENCHANTERS_PLINTH]}|${ENCHANT_SAID.plinth}|${itemDef(ENCHANTERS_PLINTH).name}`
-    && STATION_NAME[ENCHANTERS_PLINTH] === PLINTH_NAME && ENCHANT_SAID.plinth === `You need to stand at an ${PLINTH_NAME}.`, isleNames);
+    && STATION_NAME[ENCHANTERS_PLINTH] === PLINTH_NAME && ENCHANT_SAID.plinth === `Need an ${PLINTH_NAME}.`, isleNames);
 const isleText = psql(`select description from item_def where id = '${ENCHANTERS_PLINTH}'`);
 check(`its description states the reach from the rule (${STATION_REACH} tiles), the same on both sides`,
   isleText === itemDef(ENCHANTERS_PLINTH).description && isleText.includes(`within ${STATION_REACH} tiles of the middle`) && !isleText.includes('{'), isleText);

@@ -418,12 +418,12 @@ begin
     update player set stats = jsonb_set(stats, '{health}', '1'), wounds = '[]'::jsonb where world_id = w.world_id and uid = w.uid;
     perform hurt_player(w.world_id, w.uid, 0.01, 'A test blow', 'bite');
   end loop;
-  select count(*) into n1 from event where uid = w.uid and text like 'You dodge the%';
+  select count(*) into n1 from event where uid = w.uid and text like 'Dodged: %';
   select coalesce((select cm.n from class_mark cm where cm.world_id = w.world_id and cm.creature_id = a and cm.kind = 'riposte'), 0) into n2;
   select health into h0 from creature where world_id = w.world_id and id = a;
   update item set dmg = 0 where id = v_jav;
   perform class_owed_pay(w.world_id, a);
-  select count(*) into n3 from event where uid = w.uid and text like 'You answer the%';
+  select count(*) into n3 from event where uid = w.uid and text like 'Riposte%';
   insert into said select 'RIPOSTE', n1 || '|' || n2 || '|' || n3 || '|' || (h0 - health)::text || '|'
       || (select count(*) from class_mark cm where cm.world_id = w.world_id and cm.kind = 'riposte')
     from creature where world_id = w.world_id and id = a;
@@ -474,55 +474,55 @@ for (const th of THROWS) {
   const line = parts('THROW:hit_and_run')[2];
   check(`Hit and Run: for ${fx('hit_and_run', 'secs')} s a walk ${pct(fx('hit_and_run', 'pace') - 1)} faster, and it says so`,
     near(secs, fx('hit_and_run', 'secs'), 1e-6) && near(pace, fx('hit_and_run', 'pace'))
-      && line.endsWith(`For ${fx('hit_and_run', 'secs')} s you walk ${pct(fx('hit_and_run', 'pace') - 1)} faster.`), island('RUN'));
+      && line.endsWith(` Walk speed +${pct(fx('hit_and_run', 'pace') - 1)} for ${fx('hit_and_run', 'secs')} s.`), island('RUN'));
   check('on the island\'s pace for a walk on foot', near(Number(island('PACE')), fx('hit_and_run', 'pace'), 1e-9), island('PACE'));
 }
 {
   const [secs, knocked, line] = parts('STAGGER');
   check(`Heavy Throw knocks a heavy blow off its stroke and puts its next blow back ${STAGGER_MAUL} s`,
-    near(Number(secs), 5 + STAGGER_MAUL, 1e-6) && knocked === 'true' && line.endsWith(`Its next blow is put back ${STAGGER_MAUL} s.`), island('STAGGER'));
+    near(Number(secs), 5 + STAGGER_MAUL, 1e-6) && knocked === 'true' && line.endsWith(` Next blow delayed ${STAGGER_MAUL} s.`), island('STAGGER'));
 }
 {
   const [long, snap] = parts('RANGE:LONG');
   check(`Long Throw reaches ${fx('long_throw', 'past')} tiles past your reach, where another throw is refused`,
-    long === 'thrown' && snap === `The ogre is more than ${REACH} tiles away.`, island('RANGE:LONG'));
-  check('and no further', island('RANGE:BEYOND') === `The ogre is more than ${REACH + fx('long_throw', 'past')} tiles away.`, island('RANGE:BEYOND'));
+    long === 'thrown' && snap === `Too far: max ${REACH} tiles.`, island('RANGE:LONG'));
+  check('and no further', island('RANGE:BEYOND') === `Too far: max ${REACH + fx('long_throw', 'past')} tiles.`, island('RANGE:BEYOND'));
 }
 {
   const [secs, line] = parts('SOONER');
   check(`Snap Throw puts your own next swing ${fx('snap_throw', 'sooner')} s sooner`,
-    near(Number(secs), 2 - fx('snap_throw', 'sooner'), 1e-6) && line.endsWith(`Your next swing comes ${fx('snap_throw', 'sooner')} s sooner.`),
+    near(Number(secs), 2 - fx('snap_throw', 'sooner'), 1e-6) && line.endsWith(` Next swing ${fx('snap_throw', 'sooner')} s sooner.`),
     island('SOONER'));
 }
 {
   const [ratio, line] = parts('DOUBLE');
   check(`Double Throw: ${fx('double_throw', 'throws')} throws at ${pct(fx('double_throw', 'more'))} each, the very rolls of two swings`,
-    near(Number(ratio), 1, 1e-5) && /^Double Throw: \d of 2 throws land/.test(line), island('DOUBLE'));
+    near(Number(ratio), 1, 1e-5) && /^Double Throw: \d\/2 throws hit/.test(line), island('DOUBLE'));
 }
 {
   const [first, glance, spared, line] = parts('RICOCHET');
   check(`Ricochet: a throw at ${pct(fx('ricochet', 'more'))}, glancing on at ${pct(fx('ricochet', 'glance'))} to the nearest other within `
     + `${fx('ricochet', 'reach')} tiles, and no further`,
-  near(Number(first), 1, 1e-9) && near(Number(glance), 1, 1e-5) && spared === 'true' && /It glances on to the ogre/.test(line), island('RICOCHET'));
+  near(Number(first), 1, 1e-9) && near(Number(glance), 1, 1e-5) && spared === 'true' && / Glance: ogre \d+\/170\.$/.test(line), island('RICOCHET'));
 }
 {
   const [ratio, hit, line] = parts('FAN');
   check(`Fan of Blades: a throw at ${pct(fx('fan_of_blades', 'more'))} at the one aimed at and at every other within ${fx('fan_of_blades', 'reach')} tiles of it, `
     + 'and none past',
-  near(Number(ratio), 1, 1e-5) && hit === 'true,true,false' && line === 'Fan of Blades: you throw at 3 creatures.', island('FAN'));
+  near(Number(ratio), 1, 1e-5) && hit === 'true,true,false' && line === 'Fan of Blades: 3 creatures hit.', island('FAN'));
 }
 {
   const [before, after, line] = parts('OPPORTUNIST');
   const [mine, theirs, brawl] = after.split(',').map(Number);
   check(`Opportunist: a blow ${pct(fx('opportunist', 'more') - 1)} harder on one fighting somebody else, a person or a creature, and not on one after you`,
     near(Number(before), 3) && near(mine, 1) && near(theirs, fx('opportunist', 'more')) && near(brawl, fx('opportunist', 'more'))
-      && line.startsWith(`Opportunist: for ${fx('opportunist', 'secs')} s`), island('OPPORTUNIST'));
+      && line === `Opportunist: damage +${pct(fx('opportunist', 'more') - 1)} on creatures fighting someone else (blows, throws, shots), for ${fx('opportunist', 'secs')} s.`, island('OPPORTUNIST'));
 }
 {
   const [who, marks, line] = parts('FADE');
   check(`Fade: everything hunting you loses you and is warned off you for ${fx('fade', 'secs')} s, and one after somebody else is left be`,
     who === 'false:false,false:false,false:true' && marks === `${fx('fade', 'secs')},${fx('fade', 'secs')}`
-      && line === `Fade: 2 creatures lose you, and will not come for you again for ${fx('fade', 'secs')} s unless you strike them.`, island('FADE'));
+      && line === `Fade: 2 creatures lost you, no attack on you for ${fx('fade', 'secs')} s, until you strike them.`, island('FADE'));
   check('and none takes you up again while it holds', island('FADE:AFTER') === 'false', island('FADE:AFTER'));
   check('and it is refused when nothing is hunting you', island('FADE:NONE') === 'Nothing is hunting you.', island('FADE:NONE'));
 }
@@ -534,17 +534,17 @@ for (const th of THROWS) {
   const [on, off, secs, line] = parts('MARKED');
   check(`and the spell marks it for ${fx('marked_for_death', 'secs')} s, it alone`,
     near(Number(on), fx('marked_for_death', 'crit')) && near(Number(off), 1) && near(Number(secs), fx('marked_for_death', 'secs'), 1e-6)
-      && line.startsWith('Marked for Death: for 15 s'), island('MARKED'));
-  check('as far as any spell and no further', island('MARKED:FAR') === 'The ogre is more than 12 tiles away.', island('MARKED:FAR'));
+      && line === `Marked for Death: critical chance ×${fx('marked_for_death', 'crit')} on ogre (blows, throws, shots), for ${fx('marked_for_death', 'secs')} s.`, island('MARKED'));
+  check('as far as any spell and no further', island('MARKED:FAR') === 'Too far: max 12 tiles.', island('MARKED:FAR'));
 }
 {
   const [snap, run] = parts('NEEDS:SWORD');
   check('a throw is refused with a sword in your hand, and a Hit and Run too',
-    snap === `Snap Throw wants ${NEEDS_SAID.throwing.wants}.` && run === `Hit and Run wants ${NEEDS_SAID.skirmish.wants}.`, island('NEEDS:SWORD'));
+    snap === `Snap Throw: needs ${NEEDS_SAID.throwing.wants}.` && run === `Hit and Run: needs ${NEEDS_SAID.skirmish.wants}.`, island('NEEDS:SWORD'));
   const [snapKnife, runKnife] = parts('NEEDS:KNIFE');
   check('with a knife a Hit and Run is made, and a throw still refused',
-    snapKnife === `Snap Throw wants ${NEEDS_SAID.throwing.wants}.` && runKnife === 'ready', island('NEEDS:KNIFE'));
-  check('and with bare hands, a Hit and Run is refused', island('NEEDS:HANDS') === `Hit and Run wants ${NEEDS_SAID.skirmish.wants}.`, island('NEEDS:HANDS'));
+    snapKnife === `Snap Throw: needs ${NEEDS_SAID.throwing.wants}.` && runKnife === 'ready', island('NEEDS:KNIFE'));
+  check('and with bare hands, a Hit and Run is refused', island('NEEDS:HANDS') === `Hit and Run: needs ${NEEDS_SAID.skirmish.wants}.`, island('NEEDS:HANDS'));
   check('a throwing axe throws as a javelin does', island('NEEDS:AXE') === 'ready|ready', island('NEEDS:AXE'));
 }
 {
@@ -553,7 +553,7 @@ for (const th of THROWS) {
   check(`a spell called through the door costs its ${pct(s.cost)} of a full bar and rests ${s.rest} s`,
     cast === s.id && near(Number(stamina), 1 - s.cost) && near(Number(rest), s.rest, 1e-6), island('PAID'));
   check('and hands the browser the quicker walk to walk at', near(Number(mul), s.fx.pace) && near(Number(secs), s.fx.secs), island('PAID'));
-  check('and is refused while it rests', island('RESTING') === `${s.name} can be called again in ${s.rest} seconds.`, island('RESTING'));
+  check('and is refused while it rests', island('RESTING') === `${s.name}: cooldown ${s.rest} s.`, island('RESTING'));
 }
 
 /* ---- The passives ------------------------------------------------------------ */
@@ -565,7 +565,7 @@ check('the six passives fold on the island to what they fold to in the browser',
   const [before, after, struck] = parts('LONG');
   check(`Long Arm: a javelin reaches ${FOLD['length:throwing']} tile further, ${REACH} tiles to ${REACH + FOLD['length:throwing']}`,
     near(Number(before), REACH, 1e-9) && near(Number(after), REACH + FOLD['length:throwing'], 1e-9) && struck === 'struck'
-      && island('REACH:BEFORE') === 'It is out of reach.', `${island('REACH:BEFORE')} ${island('LONG')}`);
+      && island('REACH:BEFORE') === 'Out of reach.', `${island('REACH:BEFORE')} ${island('LONG')}`);
 }
 check(`Light Throw: a swing of a javelin costs ${pct(1 - FOLD['wind:throwing'])} less stamina`, near(Number(island('LIGHT')), FOLD['wind:throwing'], 1e-9),
   island('LIGHT'));

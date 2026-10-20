@@ -46,15 +46,15 @@ export const signableKind = (id: string): boolean => !itemDef(id).stackable && !
 
 /** What a refused signing says. The island says the same (`sign_said`, `sign_not_yours_said`). */
 export const SIGN_SAID = {
-  notMade: `Only one thing made at QL ${SIGN_QL} or better, and not a pile or a piece of furniture, carries its maker's name to sign.`,
-  signed: 'It is signed already. A thing is signed once.',
-  nothing: 'There is nothing to sign. Say what it should read.',
+  notMade: `Only single items made at QL ${SIGN_QL} or better carry a maker's name to sign; not piles or furniture.`,
+  signed: 'Already signed: once only.',
+  nothing: 'Signature is empty.',
 };
 /** And to somebody who did not make it. */
-export const signNotYours = (maker: string): string => `${maker} made this, and only ${maker} may sign it.`;
+export const signNotYours = (maker: string): string => `Made by ${maker}: only ${maker} may sign it.`;
 
 /** What signing says. The island's `signed_said`. */
-export const signedSaid = (text: string): string => `You sign it: “${text}”.`;
+export const signedSaid = (text: string): string => `Signed: “${text}”.`;
 
 /**
  * What Examine says of who made a thing: its maker, and the line they signed
@@ -65,7 +65,7 @@ export const makerSays = (it: Pick<Item, 'id' | 'maker' | 'engraving'>): string 
   makerLine(it.maker, signableKind(it.id) ? it.engraving : undefined);
 /** The words of it, off the maker's name and the line signed, if any. The island's `maker_says`. */
 export const makerLine = (maker: string | null | undefined, signed: string | null | undefined): string =>
-  !maker ? '' : signed ? ` Made and signed by ${maker}: “${signed}”.` : ` Made by ${maker}.`;
+  !maker ? '' : signed ? ` Made by ${maker}, signed: “${signed}”.` : ` Made by ${maker}.`;
 
 type ItemTarget = Extract<Target, { kind: 'item' }>;
 const itemOf = (g: Game, t: Target): Item | undefined => (t.kind === 'item' ? g.inventory.get((t as ItemTarget).uid) : undefined);
@@ -95,7 +95,7 @@ export const SIGN_ACTIONS: ActionDef[] = [
     baseTime: SIGN_TIME,
     asks: {
       question: `What should it say? Up to ${SIGN_MAX} characters, once: it cannot be signed again.`,
-      declined: 'You leave it unsigned.',
+      declined: 'Left unsigned.',
       max: SIGN_MAX,
     },
     applies: (t, g) => {

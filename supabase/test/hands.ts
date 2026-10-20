@@ -92,7 +92,7 @@ function digger(): { g: Game; spots: Array<[number, number]> } {
     if (g.player.moving) walking++;
     g.update(0.2);
   }
-  const digs = g.log.filter((l) => /^You (dig up|fail to dig)/.test(l.text)).length;
+  const digs = g.log.filter((l) => /^(Dug: |Dig failed)/.test(l.text)).length;
   check('a queued job walks you to it, and the next one, and the one after',
     digs >= 3 && walking > 0, `${digs} spadefuls out of three corners, ${walking} turns of it spent walking`);
 }
@@ -162,7 +162,7 @@ const smith = (ql: number): { g: Game; item: Item } => {
   const { g, item } = smith(62);
   const why = improve.check?.({ kind: 'item', uid: item.uid, upto: 60 }, g) ?? null;
   check('and one already past it is refused, in so many words',
-    why !== null && why.includes('which is what you asked for'), why ?? 'allowed');
+    why !== null && why.includes('target reached'), why ?? 'allowed');
   check('while the same piece with no mark on it is worked on as before',
     (improve.check?.({ kind: 'item', uid: item.uid }, g) ?? null) === null,
     improve.check?.({ kind: 'item', uid: item.uid }, g) ?? 'allowed');
@@ -198,7 +198,7 @@ const smith = (ql: number): { g: Game; item: Item } => {
   check('so "take it to fifty" takes it to fifty and stops there, with no count named',
     item.ql >= 50 && item.ql < 53, `QL ${item.ql.toFixed(1)} from 20, and nothing in hand after`);
   check('and it is the mark that stopped it rather than the job running out',
-    g.action === null && (improve.check?.({ kind: 'item', uid: item.uid, upto: 50 }, g) ?? '').includes('what you asked for'),
+    g.action === null && (improve.check?.({ kind: 'item', uid: item.uid, upto: 50 }, g) ?? '').includes('target reached'),
     improve.check?.({ kind: 'item', uid: item.uid, upto: 50 }, g) ?? 'still allowed');
 }
 

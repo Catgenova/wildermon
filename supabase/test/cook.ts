@@ -198,7 +198,7 @@ begin
   perform give(w, u, 'cooked_meat', 1, 33); perform give(w, u, 'potato', 1, 30); perform give(w, u, 'onion', 1, 30);
   ${craft('make_stew')};
   insert into said values ('FRUGAL', v_t || '|' || ${count('cooked_meat')} || ':' || ${qls('cooked_meat')} || ':' || ${count('potato')}
-    || '|' || coalesce(${last('You save %')}, 'unsaid'));
+    || '|' || coalesce(${last('Frugal Cook: %')}, 'unsaid'));
   ${clear('stew', 'cooked_meat')};
 
   /* ---- Broth and Distil: refused without them, made with them; and Frugal Cook never gives back the water. ---- */
@@ -219,7 +219,7 @@ begin
   perform give(w, u, 'bone', 2, 35); perform give(w, u, 'water_bucket', 1, 30);
   ${craft('make_broth')};
   insert into said values ('FRUGALBROTH', ${count('bone')} || ':' || ${qls('bone')} || ':' || ${count('water_bucket')} || ':' || ${count('bucket')}
-    || '|' || coalesce(${last('You save %')}, 'unsaid'));
+    || '|' || coalesce(${last('Frugal Cook: %')}, 'unsaid'));
   ${clear('broth', 'bone', 'bucket', 'clay_pot', 'clay_bowl')};
 
   /* ---- Eating: a plain stew and a marked one, of the same QL, each on an empty stomach. ---- */
@@ -245,13 +245,13 @@ begin
          stats = stats || '{"hunger": 0}'::jsonb where world_id = w and uid = u;
   v_it := give(w, u, 'stew', 1, ${HANDS});
   ${item('eat', 'v_it')};
-  v_u := coalesce(${last('You eat the stew.%')}, 'unsaid');
+  v_u := coalesce(${last('Ate: stew.%')}, 'unsaid');
   perform pg_temp.hold(w, u, '{}');
   update player set boons = '[]'::jsonb, nutrition = '{"starch": 1, "flesh": 0.99, "fat": 1, "greens": 1}'::jsonb,
          stats = stats || '{"hunger": 0}'::jsonb where world_id = w and uid = u;
   v_it := give(w, u, 'stew', 1, ${HANDS});
   ${item('eat', 'v_it')};
-  insert into said values ('TABLE', v_t || '|' || v_u || '|' || coalesce(${last('You eat the stew.%')}, 'unsaid'));
+  insert into said values ('TABLE', v_t || '|' || v_u || '|' || coalesce(${last('Ate: stew.%')}, 'unsaid'));
   ${clear('stew')};
   update player set nutrition = '{}'::jsonb, boons = '[]'::jsonb where world_id = w and uid = u;
 
@@ -299,7 +299,7 @@ begin
   perform act_perform(w, u, 'butcher', jsonb_build_object('kind', 'ground', 'x', 9, 'y', 9));
   v_t := v_t || '|' || ${count('meat')} || ':' || ${count('bone')} || ':' || ${count('hide')} || ':' || ${count('fur')} || ':' || ${count('offal')}
     || '|' || ${qls('meat')} || ':' || ${qls('bone')} || ':' || ${qls('hide')} || ':' || ${qls('fur')} || ':' || ${qls('offal')}
-    || '|' || coalesce(${last(`You butcher the ${SPECIES.cobbe.name.toLowerCase()}%`)}, 'unsaid');
+    || '|' || coalesce(${last(`Butchered: ${SPECIES.cobbe.name.toLowerCase()}%`)}, 'unsaid');
   ${clear('meat', 'bone', 'hide', 'fur', 'offal')};
   ${patch('Full Carcass', { 'share:butcher': 3 })};
   ${hold('Full Carcass')};
@@ -445,7 +445,7 @@ const [frugalPlain, frugalPerk, frugalSaid] = say('FRUGAL').split('|');
 const meatName = ITEM_DEFS.cooked_meat.name.toLowerCase();
 check(`${P('Frugal Cook').name}: a stew spends its meat without it, and gives one back at its own QL with its chance put at one`,
   frugalPlain === '0' && frugalPerk === '1:33.00:0'
-    && frugalSaid === `You save ${/^[aeiou]/.test(meatName) ? 'an' : 'a'} ${meatName} from the pot.`, say('FRUGAL'));
+    && frugalSaid === `Frugal Cook: ${/^[aeiou]/.test(meatName) ? 'an' : 'a'} ${meatName} kept.`, say('FRUGAL'));
 const [gates, gatesMade] = say('GATES').split('|');
 const [brothNo, distilNo, brothYes, distilYes] = gates.split('#');
 check(`${P('Broth').name} and ${P('Distil').name}: refused without them, in the browser's words, and allowed with them`,
@@ -457,7 +457,7 @@ check('a broth takes its two bones and the water, and gives back the bucket; a s
   gatesMade);
 const [frugalBroth, frugalBrothSaid] = say('FRUGALBROTH').split('|');
 check('and Frugal Cook gives back a bone from a broth, never the water',
-  frugalBroth === '1:35.00:0:1' && frugalBrothSaid === 'You save a bone from the pot.', say('FRUGALBROTH'));
+  frugalBroth === '1:35.00:0:1' && frugalBrothSaid === 'Frugal Cook: a bone kept.', say('FRUGALBROTH'));
 
 /* ---- Eating ------------------------------------------------------------------------------ */
 
@@ -478,8 +478,8 @@ const best = P('Balanced Diet').fx['table:best'];
 check(`${P('Balanced Diet').name}: a full table is worth ${best} on what you learn, where it was ${TABLE_BEST}`,
   near(multPerk / multPlain, (1 + best) / (1 + TABLE_BEST), 1e-6), tableMult);
 check('and the helping that fills the table says what it is worth to the one eating it',
-  tableWith.endsWith(`Everything you do goes in ${Math.round(best * 100)}% faster while it lasts.`)
-    && tableWithout.endsWith(`Everything you do goes in ${Math.round(TABLE_BEST * 100)}% faster while it lasts.`),
+  tableWith.endsWith(`All nutrients full: skill gain +${Math.round(best * 100)}% while it lasts.`)
+    && tableWithout.endsWith(`All nutrients full: skill gain +${Math.round(TABLE_BEST * 100)}% while it lasts.`),
   `${tableWith} / ${tableWithout}`);
 
 /* ---- The ground -------------------------------------------------------------------------- */
@@ -535,7 +535,7 @@ const [pantryAsk, pantryReach] = say('PANTRY').split('|');
 const [pantryNo, pantryYes] = pantryAsk.split('#');
 const reach = P('Pantry Reach').fx['reach:cook'];
 check(`${P('Pantry Reach').name}: a potato five tiles off is out of reach for a stew without it, and in reach with it`,
-  pantryNo === 'Stew takes 1 potato.' && pantryYes === 'ALLOWED', pantryAsk);
+  pantryNo === 'Need 1 potato.' && pantryYes === 'ALLOWED', pantryAsk);
 check(`and it reaches ${reach} for cooking and ${CRAFT_REACH} for anything else`, pantryReach === `${reach}:${CRAFT_REACH}`, pantryReach);
 
 /* ---- Taste ------------------------------------------------------------------------------- */
@@ -545,10 +545,10 @@ const tongue = { seed } as unknown as Game;
 const taste = (id: string, ql: number, mark?: Mark): string =>
   tasteSays(tongue, { uid: 0, id, ql, dmg: 0, count: 1, ...(mark ? { mark } : {}) } as Item);
 check('a marked stew examined says its maker\'s hand in it, in the browser\'s words, and nothing of its taste without Taste',
-  say('TASTE0').includes(markSays(MARKED)) && !say('TASTE0').includes('To your taste'), say('TASTE0'));
+  say('TASTE0').includes(markSays(MARKED)) && !say('TASTE0').includes('Per helping'), say('TASTE0'));
 check(`${P('Taste').name}: and with it, what a helping does, in the browser's words`,
   say('TASTE1').endsWith(taste('stew', HANDS, MARKED)), `${say('TASTE1')} // ${taste('stew', HANDS, MARKED)}`);
-check('and a drink says what it quenches', say('TASTE2').endsWith(taste('spirit_bucket', 50)) && taste('spirit_bucket', 50).includes('quenches'),
+check('and a drink says what it quenches', say('TASTE2').endsWith(taste('spirit_bucket', 50)) && taste('spirit_bucket', 50).includes('thirst bar'),
   `${say('TASTE2')} // ${taste('spirit_bucket', 50)}`);
 check('the island says every maker\'s mark as the browser does', say('MARKSAYS') === MARKS.map((m) => markSays(m)).join('#'),
   `${say('MARKSAYS')} // ${MARKS.map((m) => markSays(m)).join('#')}`);

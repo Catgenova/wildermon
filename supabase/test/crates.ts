@@ -100,7 +100,7 @@ act('tame').perform(at(first), game);
 check('the first one tamed follows you', first.mode === 'active', first.mode);
 const second = beside();
 const refused = act('tame').check?.(at(second), game) ?? null;
-check('the next is refused without a crate', refused === `${SPECIES.rabba.name} already follows you. Carry an empty creature crate to tame another: it goes into the crate.`, refused ?? 'allowed');
+check('the next is refused without a crate', refused === `${SPECIES.rabba.name} already follows you. Need an empty creature crate.`, refused ?? 'allowed');
 const crate = game.inventory.add(CREATURE_CRATE, { ql: 30 });
 check('and allowed with one', (act('tame').check?.(at(second), game) ?? null) === null);
 act('tame').perform(at(second), game);
@@ -109,7 +109,7 @@ check('and goes into the crate', second.mode === 'stored' && crate.creature === 
 const held: Target = { kind: 'item', uid: crate.uid };
 const offered = game.actionsFor(held).map((a) => a.def.id);
 check('an occupied crate is not offered to be dropped or put away', !offered.includes('drop') && !offered.includes('stow_item'), offered.join(','));
-check('and says why when asked', occupiedRefusal(game, 'drop', held) === `${SPECIES.rabba.name} is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.`);
+check('and says why when asked', occupiedRefusal(game, 'drop', held) === `${SPECIES.rabba.name} is in that crate. An occupied crate can only be carried, set down, opened or traded.`);
 check('nothing takes it out of the pack', game.inventory.take(crate.uid) === null);
 
 // Set down beside you, on the first spot that will have it.
@@ -139,7 +139,7 @@ const back = game.inventory.items.find((it) => it.id === CREATURE_CRATE);
 check('picked up, it goes back in the pack with the wildermon in it', !game.furniture.has(piece!.id) && back?.creature === first.id, `holds ${back?.creature}`);
 
 const carried: Target = { kind: 'item', uid: back!.uid };
-check('opened to work with no settlement, it is refused', (act('crate_work').check?.(carried, game) ?? null) === 'You have no settlement to set it to work on.');
+check('opened to work with no settlement, it is refused', (act('crate_work').check?.(carried, game) ?? null) === 'No settlement.');
 game.deed = { name: 'Hearth', x: game.player.tileX + 4, y: game.player.tileY + 4, radius: 5, level: 3 };
 act('crate_work').perform(carried, game);
 check('opened to work the deed, it is a worker', first.mode === 'deed' && back?.creature === undefined, first.mode);
@@ -160,10 +160,10 @@ const born = (): { c: Creature | null; said: string } => {
   second.unborn = { traits: [], sex: 'female' };
   second.due = game.time;
   const c = game.creatures.giveBirth(game, second);
-  return { c, said: game.log.slice(seen).map((l) => l.text).find((t) => t.includes('drops a young')) ?? '' };
+  return { c, said: game.log.slice(seen).map((l) => l.text).find((t) => t.startsWith('Born to ')) ?? '' };
 };
 const alone = born();
-check('a young one follows you when nothing does', alone.c?.mode === 'active' && alone.said.endsWith('It follows you.'), `${alone.c?.mode}; ${alone.said}`);
+check('a young one follows you when nothing does', alone.c?.mode === 'active' && alone.said.endsWith(' Follows you.'), `${alone.c?.mode}; ${alone.said}`);
 const nursery = game.inventory.add(CREATURE_CRATE, { ql: 30 });
 let standingSpot: Target | null = null;
 for (let dy = -1; dy <= 1 && !standingSpot; dy++) {
@@ -177,14 +177,14 @@ const onDeed = [...game.furniture.values()].find((f) => f.kind === CREATURE_CRAT
 const crated2 = born();
 check('with one following you and no empty crate in the pack, it goes into an empty crate standing on the settlement',
   crated2.c?.mode === 'stored' && onDeed?.creature === crated2.c.id
-  && crated2.said.endsWith(`It goes into the empty creature crate at (${onDeed.x}, ${onDeed.y}) on Hearth.`), `${crated2.c?.mode}; ${crated2.said}`);
+  && crated2.said.endsWith(`In the empty creature crate at (${onDeed.x}, ${onDeed.y}) on Hearth.`), `${crated2.c?.mode}; ${crated2.said}`);
 const spare = game.inventory.add(CREATURE_CRATE, { ql: 30 });
 const packed2 = born();
 check('an empty crate in the pack comes before one standing on the settlement', packed2.c?.mode === 'stored' && spare.creature === packed2.c.id,
   `${packed2.c?.mode}; ${packed2.said}`);
 const lost = born();
 check('and with none of those, it goes off into the wild', lost.c?.mode === 'wild'
-  && lost.said.endsWith('Something already follows you and there is no empty creature crate in your pack or standing on your settlement, so it goes off into the wild.'),
+  && lost.said.endsWith('No free companion slot or empty creature crate in your pack or on your settlement: released into the wild.'),
   `${lost.c?.mode}; ${lost.said}`);
 
 // An old save's wildermon kept at the token.
@@ -299,7 +299,7 @@ begin
   v_young := give_birth(w, v_third);
   insert into said values ('BORN|' || (select mode || ',' || (keeper = me) from creature where world_id = w and id = v_young));
   insert into said values ('BORNSAID|' || coalesce((select e.text from event e where e.world_id = w and e.uid = me
-    and e.text like '%drops a young%' order by e.n desc limit 1), 'nothing'));
+    and e.text like 'Born to %' order by e.n desc limit 1), 'nothing'));
   -- Then, with that one following him and his only crate set down on his settlement, into the crate.
   select * into v_spot from crate_spot_near(w, (my_deed(w, me)).x, (my_deed(w, me)).y, (my_deed(w, me)).radius);
   perform act_perform(w, me, 'place_furniture', jsonb_build_object('kind', 'tile',
@@ -312,7 +312,7 @@ begin
   insert into said values ('NURSERY|' || (select mode from creature where world_id = w and id = v_young)
     || ',' || coalesce((select creature from placed where id = v_placed) = v_young, false));
   insert into said values ('NURSERYSAID|' || coalesce((select e.text from event e where e.world_id = w and e.uid = me
-    and e.text like '%drops a young%' order by e.n desc limit 1), 'nothing')
+    and e.text like 'Born to %' order by e.n desc limit 1), 'nothing')
     || '|' || v_spot.x || ',' || v_spot.y);
   -- And with no crate anywhere, into the wild.
   update creature set unborn = jsonb_build_object('traits', '[]'::jsonb, 'sex', 'male'), due = now() - interval '1 second'
@@ -331,7 +331,7 @@ check('the next is refused without a crate, in the browser\'s words', said('NOCR
 check('and allowed with one', said('WITHCRATE') === 'allowed', said('WITHCRATE'));
 check('and goes into the crate', said('CRATED') === 'stored,true', said('CRATED'));
 check('an occupied crate is not dropped, in the browser\'s words',
-  said('DROP') === `${SPECIES.rabba.name} is in that crate. A crate with a wildermon in it can be carried, set down, opened or traded, and nothing else.`, said('DROP'));
+  said('DROP') === `${SPECIES.rabba.name} is in that crate. An occupied crate can only be carried, set down, opened or traded.`, said('DROP'));
 check('and nothing moves it anywhere else, past any door', said('STAYS') === 'A creature crate with a wildermon in it is carried, set down, opened or traded, and nothing else.', said('STAYS'));
 check('it may be set down', said('PLACEOK') === 'allowed', said('PLACEOK'));
 check('set down, it stands with the wildermon in it, which stands where it does', said('PLACED') === 'true,true,0.00', said('PLACED'));
@@ -345,11 +345,11 @@ check('the one following you goes into an empty crate you carry', said('CRATEOK'
 check('your own in a crate come down with the wildlife wherever they are', said('FAR') === 'stored', said('FAR'));
 check('out of its crate by any road, the crate forgets it', said('LEFT') === 'true', said('LEFT'));
 check('a young one follows its keeper when nothing does, with the keeper\'s name on it', said('BORN') === 'active,true', said('BORN'));
-check('and its keeper is told where it went', said('BORNSAID').endsWith('It follows you.'), said('BORNSAID'));
+check('and its keeper is told where it went', said('BORNSAID').endsWith(' Follows you.'), said('BORNSAID'));
 const [nurserySaid, nurseryAt] = said('NURSERYSAID').split('|');
 const [nx, ny] = (nurseryAt ?? ',').split(',');
 check('with one following and no empty crate in the pack, it goes into an empty crate standing on the settlement', said('NURSERY') === 'stored,true', said('NURSERY'));
-check('in the browser\'s words', nurserySaid.endsWith(`It goes into the empty creature crate at (${nx}, ${ny}) on ${said('DEED')}.`), nurserySaid);
+check('in the browser\'s words', nurserySaid.endsWith(`In the empty creature crate at (${nx}, ${ny}) on ${said('DEED')}.`), nurserySaid);
 check('and with none of those, it goes off into the wild, nobody\'s', said('WILD') === 'wild,true', said('WILD'));
 
 for (const line of [...ok, ...bad]) console.log(line);

@@ -108,10 +108,10 @@ game.deed = { ...oceanport, mine: true, role: 'builder' };
 check('a citizen is told their rank may not upgrade it', upgradeReason(game) === lacksSaid('Oceanport', 'Builder', 'upgrade'), upgradeReason(game) ?? 'none');
 game.deed = { ...oceanport, name: 'Hearth', mine: true, role: 'founder' };
 check('and the founder is not', !(upgradeReason(game) ?? '').startsWith('Your rank at'), upgradeReason(game) ?? 'none');
-check('what a builder is on it', standingWord({ role: 'builder' }) === `You are a Builder here: you may ${rankMay(permsOf(DEFAULT_RANKS[1].powers))}.`, standingWord({ role: 'builder' }));
+check('what a builder is on it', standingWord({ role: 'builder' }) === `Rank: Builder. You may ${rankMay(permsOf(DEFAULT_RANKS[1].powers))}.`, standingWord({ role: 'builder' }));
 const q = leaveQuestion({ ...oceanport, role: 'builder' }, 'Somebody');
 check('leaving asks first, naming the settlement and who is told',
-  q.startsWith('Leave Oceanport? ') && q.includes('Somebody is told') && q.includes('only an invitation puts you back'), q);
+  q.startsWith('Leave Oceanport? ') && q.includes('Somebody is told') && q.includes('only a new invitation brings you back'), q);
 
 /* ---- the island, leaving -------------------------------------------------- */
 
@@ -123,7 +123,7 @@ check('and the settlement is no longer handed to you as yours', said('HANDED_AFT
 check('you are told', said('TOLD') === `You are no longer a citizen of ${deed.name}.`, said('TOLD'));
 check('and so is its founder', said('FOUNDER_TOLD').endsWith(` has left ${deed.name}.`), said('FOUNDER_TOLD'));
 check('asked again, the social answer has nothing there to leave', rollAt(after, deed.x, deed.y) === undefined, `${after.length} settlements`);
-check('and the door says there is nobody to send away', (JSON.parse(said('AGAIN')) as { why?: string }).why === 'Nobody there to send away.', said('AGAIN'));
+check('and the door says there is nobody to send away', (JSON.parse(said('AGAIN')) as { why?: string }).why === 'Not on the roll.', said('AGAIN'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

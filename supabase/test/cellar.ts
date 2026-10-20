@@ -224,34 +224,34 @@ const same = (what: string, id: string, t: Record<string, unknown>, want?: strin
 /* ---- what stops one being dug --------------------------------------------- */
 put(25, 47, 0);
 same('a cellar is dug out under a building, and nowhere else', 'dig_cellar', tile(25, 46),
-  'A cellar is dug out under a building.');
+  'Cellars go under a building.');
 put(34, 44, 0);
 same('nor under one that is not closed in: the ground floor is not a floor yet', 'dig_cellar', tile(34, 44));
 put(26, 44, 0);
 same(`nor where the rock comes within ${CELLAR_SOIL} of the ground floor at a corner`, 'dig_cellar', tile(26, 44),
-  `The rock lies 2 under the ground floor at the shallowest corner here. A cellar is begun in soil, ${CELLAR_SOIL} of it at every corner.`);
+  `Rock 2 under the ground floor at the shallowest corner; needs ${CELLAR_SOIL} of soil at every corner.`);
 put(30, 44, 0);
 same(`nor where a cellar ${CELLAR_DEPTH} down would lie under the sea`, 'dig_cellar', tile(30, 44));
 put(20, 45, 0);
 same('nor by anybody outside the building, through its wall', 'dig_cellar', tile(20, 44),
-  'Dig it out from inside that building, on its ground floor or down in its cellar.');
+  'Stand inside that building: ground floor or cellar.');
 put(21, 44, 0);
 same('and a pick has nothing to cut while there is soil over the rock', 'mine_cellar', tile(20, 44),
-  `There is soil to dig out here first, ${S} of it, for a shovel.`);
-same('and nothing to fill in where nothing is dug', 'fill_cellar', tile(20, 44), 'There is no cellar dug out under this tile.');
+  `Dig the soil first: ${S} left, with a shovel.`);
+same('and nothing to fill in where nothing is dug', 'fill_cellar', tile(20, 44), 'No cellar under this tile.');
 same('and no flight goes down where there is no cellar to go down to', 'plan_floor',
   tile(20, 44, { material: 'plank', floorKind: 'stairs', side: 'e', down: true }),
-  `Dig the cellar out under it first: it is 0 of ${CELLAR_DEPTH} down.`);
+  `Dig the cellar first: 0/${CELLAR_DEPTH}.`);
 put(PIER[0], PIER[1] - 1, 0);
 same('nor is one dug under a deck on piers, whose ground is not dug while the building stands', 'dig_cellar', tile(PIER[0], PIER[1]),
-  'A cellar is not dug out under a deck on piers.');
+  'Not under a deck on piers.');
 // Next door's cellar is dug out; one of its tiles is raked into a field for as long as this asks, as a glasshouse's is.
 w.setTile(24, 45, TileType.Field);
 psql(`select land_set_tile(${W}, 24, 45, tile_id('Field'));`);
 put(23, 45, 0);
 same('and no way down goes in over a field until the field is cleared', 'plan_floor',
   tile(24, 45, { material: 'plank', floorKind: 'stairs', side: 'w', down: true }),
-  'There is a field here: clear the field before you plan a way down through it.');
+  'Field here: clear it first.');
 w.setTile(24, 45, TileType.PackedDirt);
 psql(`select land_set_tile(${W}, 24, 45, tile_id('Packed dirt'));`);
 
@@ -311,7 +311,7 @@ check(`a tile dug out gives ${S} dirt for the soil and ${CELLAR_DEPTH - S} rock 
   `browser ${mineFirst.dirt} dirt and ${mineFirst.rock} shards, island ${theirFirst.dirt} and ${theirFirst.rock}`);
 check('and then it is a cellar, the whole storey down, on both sides',
   game.buildings.cellarDone(20, 44) && val(`cellar_done(${W}, 20, 44)`) === 't'
-    && mineFirst.refused === theirFirst.refused && mineFirst.refused === `The cellar is dug out here, the whole ${CELLAR_DEPTH} down.`,
+    && mineFirst.refused === theirFirst.refused && mineFirst.refused === `Cellar fully dug: ${CELLAR_DEPTH} down.`,
   `browser "${mineFirst.refused}", island "${theirFirst.refused}"`);
 
 mineDig(21, 44);
@@ -322,10 +322,10 @@ psql(`update skill set value = 5 where world_id = ${W} and uid = ${DANE} and id 
 const mineTin = mineDig(22, 44);
 const theirTin = theirDig(22, 44);
 check('a seam under the house stops a pick that cannot work it, at the rock, in the same words',
-  mineTin.refused === theirTin.refused && mineTin.refused === 'Tin vein needs mining 10 to work. Yours is 5.0.' && mineTin.dirt === S,
+  mineTin.refused === theirTin.refused && mineTin.refused === 'Tin vein: needs mining 10; have 5.0.' && mineTin.dirt === S,
   `browser "${mineTin.refused}" after ${mineTin.dirt} dirt, island "${theirTin.refused}" after ${theirTin.dirt}`);
 same('and a shovel says where the soil gives out', 'dig_cellar', tile(22, 44),
-  `The soil is dug through here, ${S} down. The rest is rock, for a pickaxe.`);
+  `Soil dug through at ${S} down. Rock below: use a pickaxe.`);
 game.skills.values.set('mining', 90);
 psql(`update skill set value = 90 where world_id = ${W} and uid = ${DANE} and id = 'mining';`);
 const mineOre = mineDig(22, 44);
@@ -340,15 +340,15 @@ check('and the ground over the cellar is left exactly as it was, on both sides',
   `corners ${heightsBefore}`);
 put(20, 45, 0);
 same('nor is it dug while the cellar is there', 'dig', tile(21, 45),
-  'There is a cellar dug out under that ground. The ground over a cellar is not dug, raised or levelled while the cellar is there.');
+  'Cellar under this ground: no digging, raising or levelling over it.');
 same('nor is a building with a cellar under it taken off the plan', 'remove_from_plan', tile(20, 44),
-  'Fill in the cellar under it first.');
+  'Fill in the cellar first.');
 
 /* ---- a way down ------------------------------------------------------------- */
 // The house's tile at the west end takes a flight climbed from the east: its foot is on the middle tile.
 same('a flight down whose foot would come down on solid ground is refused', 'plan_floor',
   tile(21, 44, { material: 'plank', floorKind: 'stairs', side: 's', down: true }),
-  'Its foot would come down on 21,45, and there is no cellar dug out there to come down on.');
+  'Foot would land on 21,45: no cellar dug there.');
 same('and one coming down on the cellar floor is not', 'plan_floor',
   tile(20, 44, { material: 'plank', floorKind: 'stairs', side: 'e', down: true }), 'ALLOWED');
 const flight = bld.setFloor(house, 0, 20, 44, 'plank', 'stairs', 'e');
@@ -477,7 +477,7 @@ const theirOven = val(`(select id from item where world_id = ${W} and holder = '
 const mineOvenSay = mineSay('place_furniture', { ...bedTarget, itemUid: oven.uid });
 const theirOvenSay = theirSay('place_furniture', { ...bedTarget, itemUid: Number(theirOven) });
 check('nothing that burns an open fire is set down in a cellar, in the same words',
-  mineOvenSay === theirOvenSay && mineOvenSay === 'Nothing that burns an open fire goes down into a cellar.',
+  mineOvenSay === theirOvenSay && mineOvenSay === 'No open fires in a cellar.',
   `browser "${mineOvenSay}", island "${theirOvenSay}"`);
 game.inventory.add('chest', { ql: 30 });
 const chest = game.inventory.items.find((it) => it.id === 'chest')!;
@@ -499,10 +499,10 @@ const pieceSay = (id: string): [string, string] => {
 };
 const pieces: Array<[string, string]> = [
   ['table', 'ALLOWED'], ['chair', 'ALLOWED'], ['crate_shelf', 'ALLOWED'],
-  ['stall', 'A market stall does not go down into a cellar.'],
-  ['lamp_post', 'A lantern post does not go down into a cellar.'],
-  ['lamp_pillar', 'A lantern pillar does not go down into a cellar.'],
-  ['cart', 'Nothing on wheels or afloat goes down into a cellar.'],
+  ['stall', 'Market stall: not in a cellar.'],
+  ['lamp_post', 'Lantern post: not in a cellar.'],
+  ['lamp_pillar', 'Lantern pillar: not in a cellar.'],
+  ['cart', 'No carts, vehicles or boats in a cellar.'],
 ];
 const piecesSaid = pieces.map(([id]) => [id, ...pieceSay(id)]);
 check('every piece goes down into a cellar but those named, in the same words: a table and a chair do; a stall, a lantern post or pillar and a cart do not',
@@ -562,15 +562,15 @@ put(22, 44, 0);
 const upMine = cellarGate(game, 'pick_up_furniture', mineChestTarget as never);
 const upTheirs = theirSay('pick_up_furniture', theirChestTarget);
 check('a piece down in the cellar is not reached from the floor over it, in the same words',
-  upMine === upTheirs && upMine === 'That is down in the cellar.', `browser "${upMine}", island "${upTheirs}"`);
+  upMine === upTheirs && upMine === 'Down in the cellar.', `browser "${upMine}", island "${upTheirs}"`);
 const pileMine = mineSay('pick_up', { kind: 'ground', x: 21, y: 44, uid: null, down: true });
 const pileTheirs = theirSay('pick_up', { kind: 'ground', x: 21, y: 44, uid: null, down: true });
-check('nor what lies down there', pileMine === pileTheirs && pileMine === 'That is down in the cellar.', `browser "${pileMine}", island "${pileTheirs}"`);
+check('nor what lies down there', pileMine === pileTheirs && pileMine === 'Down in the cellar.', `browser "${pileMine}", island "${pileTheirs}"`);
 put(21, 44, CELLAR_LEVEL);
-same('and from down there a tree up top is out of reach too', 'cut_down', tile(21, 45), 'You are down in the cellar. Go up to do that.');
+same('and from down there a tree up top is out of reach too', 'cut_down', tile(21, 45), 'Go up out of the cellar first.');
 // A shop counter is set in a wall of the ground floor: whatever is in reach of it, nothing goes onto it or comes off it from down here.
-same('and so is a shop counter, to set goods out on', 'set_out_goods', { kind: 'item', uid: 1, into: 1 }, 'You are down in the cellar. Go up to do that.');
-same('or to take them back off it', 'take_off_counter', { kind: 'item', uid: 1 }, 'You are down in the cellar. Go up to do that.');
+same('and so is a shop counter, to set goods out on', 'set_out_goods', { kind: 'item', uid: 1, into: 1 }, 'Go up out of the cellar first.');
+same('or to take them back off it', 'take_off_counter', { kind: 'item', uid: 1 }, 'Go up out of the cellar first.');
 same('while what lies down there is picked up from down there', 'pick_up', { kind: 'ground', x: 21, y: 44, uid: null, down: true }, 'ALLOWED');
 
 // The cellar of the building next door is the far side of solid ground: nothing in it is reached, swept or dug from this one.
@@ -580,9 +580,9 @@ game.dropOnGround(23, 44, { ...nextLoaf, count: 2 }, CELLAR_LEVEL);
 psql(`insert into item (world_id, holder, gx, gy, def, ql, count) values (${W}, 'cellar', 23, 44, 'bread', 40, 2);`);
 put(22, 44, CELLAR_LEVEL);
 same('from the cellar beside it, nothing lying in the cellar next door is picked up', 'pick_up', { kind: 'ground', x: 23, y: 44, uid: null, down: true },
-  "That is in another building's cellar.");
-same('nor swept up with what lies in this one', 'pick_up_all', tile(23, 44), 'There is nothing lying about here.');
-same('nor is a tile of it dug out from this one', 'dig_cellar', tile(23, 44), 'Dig it out from inside that building, on its ground floor or down in its cellar.');
+  "In another building's cellar.");
+same('nor swept up with what lies in this one', 'pick_up_all', tile(23, 44), 'Nothing here to pick up.');
+same('nor is a tile of it dug out from this one', 'dig_cellar', tile(23, 44), 'Stand inside that building: ground floor or cellar.');
 const sideMine = [game.onMySide(CELLAR_LEVEL, 23, 44), game.onMySide(CELLAR_LEVEL, 22, 44)].join(',');
 const sideTheirs = psql(`select set_config('wurm.floor', floor_said(${W}, -1, 22.5, 44.5), false) \\g /dev/null
   select same_floor(-1, ${W}, 23, 44)::text || ',' || same_floor(-1, ${W}, 22, 44)::text;`).split('\n').pop();
@@ -593,12 +593,12 @@ psql(`delete from item where world_id = ${W} and holder = 'cellar' and gx = 23 a
 
 /* ---- filling one in ---------------------------------------------------------------- */
 put(21, 44, 0);
-same('a cellar tile with something lying on it is not filled in', 'fill_cellar', tile(21, 44), 'Clear away what is lying down there first.');
-same('nor one with a piece standing on it', 'fill_cellar', tile(22, 44), 'Carry out what stands down there first.');
+same('a cellar tile with something lying on it is not filled in', 'fill_cellar', tile(21, 44), 'Pick up what lies down there first.');
+same('nor one with a piece standing on it', 'fill_cellar', tile(22, 44), 'Remove the furniture down there first.');
 game.takeFromGround(21, 44, null, CELLAR_LEVEL);
 psql(`delete from item where world_id = ${W} and holder = 'cellar' and gx = 21 and gy = 44;`);
 same('and once it is cleared, the flight down that comes down on it still holds it', 'fill_cellar', tile(21, 44),
-  'The staircase down to the cellar stands on it. Take it out first.');
+  'Remove the staircase to the cellar first.');
 // Somebody else down there, on both sides: the way up is not taken out from over them.
 const crowdWas = val(`(select x || ', y = ' || y || ', level = ' || level from player where world_id = ${W} and name = 'Crowd1')`);
 put(19, 44, 0);
@@ -606,7 +606,7 @@ game.roster.saw({ id: 9001, name: 'Crowd1', x: 21.5, y: 44.5, dirX: 1, dirY: 0, 
   moving: false, swimming: false, working: false } as never);
 psql(`update player set x = 21.5, y = 44.5, level = -1 where world_id = ${W} and name = 'Crowd1';`);
 same('nobody takes the way up out from over somebody down there', 'remove_floor',
-  tile(20, 44, { floorKind: 'stairs', down: true }), 'Somebody is down in the cellar, and this is a way up out of it.');
+  tile(20, 44, { floorKind: 'stairs', down: true }), 'Someone is in the cellar: this is its way out.');
 
 // The far tile: the chest carried out, and filled back in a slice at a time out of the dirt dug from it.
 for (const f of [...game.furniture.values()].filter((p) => p.kind === 'chest')) game.removeFurniture(f.id);
@@ -657,10 +657,10 @@ check(`a tile is filled back in a slice a go, ${CELLAR_DEPTH} of them, and is gr
 /* ---- what is said, and what a browser is told ----------------------------------------- */
 game.log.length = 0;
 ACTION_BY_ID.get('examine')?.perform(tile(20, 44) as never, game);
-const mineLook = game.log.map((l) => l.text).find((t) => t.startsWith('You see')) ?? '';
+const mineLook = game.log.map((l) => l.text).find((t) => t.includes(' at (20, 44)')) ?? '';
 const theirLook = val(`examine_tile_text(${W}, 20, 44, ${DANE})`);
 check('an examine says a cellar is dug out under the tile, in the same words',
-  mineLook.includes(`A cellar is dug out under it, ${CELLAR_DEPTH} deep.`) && theirLook.includes(`A cellar is dug out under it, ${CELLAR_DEPTH} deep.`),
+  mineLook.includes(`Cellar under it: ${CELLAR_DEPTH} deep.`) && theirLook.includes(`Cellar under it: ${CELLAR_DEPTH} deep.`),
   theirLook);
 
 island(`insert into item (world_id, holder, gx, gy, def, ql, count) values (w, 'cellar', 21, 44, 'bread', 40, 2);`);
@@ -676,11 +676,11 @@ check('a browser told about the island hears of the cellar and what lies in it',
 // And from down there, a tile of the cellar is its floor: what it is cut in, how deep, and what lies on it.
 game.log.length = 0;
 ACTION_BY_ID.get('examine')?.perform(tile(21, 44) as never, game);
-const mineBelow = game.log.map((l) => l.text).find((t) => t.startsWith('You see')) ?? '';
+const mineBelow = game.log.map((l) => l.text).find((t) => t.startsWith('Cellar floor ')) ?? '';
 const theirBelow = psql(`select set_config('wurm.floor', floor_said(${W}, -1, 21.5, 44.5), false) \\g /dev/null
   select examine_tile_text(${W}, 21, 44, ${DANE});`).split('\n').pop() ?? '';
 check('an examine from down in the cellar says its floor, in the same words',
-  mineBelow === theirBelow && mineBelow === `You see the floor of the cellar under Cellar house at (21, 44): rock, ${CELLAR_DEPTH} under the ground floor, at height ${(H - CELLAR_DEPTH).toFixed(1)}. 2 things lie on it.`,
+  mineBelow === theirBelow && mineBelow === `Cellar floor under Cellar house at (21, 44): rock, ${CELLAR_DEPTH} under the ground floor, height ${(H - CELLAR_DEPTH).toFixed(1)}. Items on it: 2.`,
   `browser "${mineBelow}", island "${theirBelow}"`);
 
 /* ---- a way down where the ground floor is floored ------------------------------------------ */
@@ -746,12 +746,12 @@ nextNow.workLevel = 1;
 psql(`update building set levels = 2, work_level = 1 where world_id = ${W} and id = ${next.id};`);
 put(24, 45, 0);
 same('a staircase up is not planned over the way down to the cellar', 'plan_floor',
-  tile(24, 44, { material: 'plank', floorKind: 'stairs', side: 'w' }), 'The staircase down to the cellar is there.');
+  tile(24, 44, { material: 'plank', floorKind: 'stairs', side: 'w' }), 'Staircase down to the cellar is there.');
 const upstairs = bld.setFloor(nextNow, 1, 24, 45, 'plank', 'stairs', 'n');
 psql(`insert into floor_tile (world_id, level, x, y, building, material, kind, facing, needed, total)
       values (${W}, 1, 24, 45, ${next.id}, 'plank', 'stairs', 'n', '{"plank": 12}', '{"plank": 12}');`);
 same('nor a way down under a staircase up', 'plan_floor',
-  tile(24, 45, { material: 'plank', floorKind: 'stairs', side: 'n', down: true }), 'The staircase up to the next storey is there.');
+  tile(24, 45, { material: 'plank', floorKind: 'stairs', side: 'n', down: true }), 'Staircase up to the next storey is there.');
 bld.removeFloor(1, upstairs.x, upstairs.y);
 
 /* ---- and tidied away, so nothing after this finds a cellar under it ---------------------- */

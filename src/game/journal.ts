@@ -10,7 +10,8 @@ import { BLESS_CAP } from './faith';
 import { FURNITURE_BY_ID } from './furniture';
 import { ENCHANTMENTS } from './enchant';
 import { GOAL_HOW } from './journalhow';
-import { capital, fill, listed, NumberWord, numberWord, times } from './words';
+import { capital, fill, listed } from './words';
+import { REACH_FORCE } from './wind';
 
 /**
  * A journal of goals. There is a great deal to do on this island and nothing
@@ -102,13 +103,13 @@ export const JOURNAL: Chapter[] = [
   {
     name: 'Ashore',
     goals: [
-      { id: 'tree', text: 'Fell a tree', how: 'Right-click any tree and choose Cut down. The hatchet you came ashore with is already in your pack — every job here takes the right tool and refuses without it, and it says which.', met: did('tree') },
+      { id: 'tree', text: 'Fell a tree', how: 'Right-click a tree: Cut down. Needs a hatchet (in your starting pack). Every job needs its tool and names it when missing.', met: did('tree') },
       // Planks made, not a carpentry level: a crate or a shaft raised the skill as far, and a slow saw never got there.
-      { id: 'plank', text: 'Saw a log into planks', how: 'A felled tree\'s logs go into your pack. Open Crafting (R) and make Saw into planks: {recipe.make_planks.log:w} log and the saw in your kit make {recipe.make_planks.count:w} planks. Crafting lists everything there is to make, with what each needs in green if you have it and red if you do not.', met: did('made:plank') },
-      { id: 'fire', text: 'Light a campfire', hint: `${NumberWord(FIRE_COST)} shafts, placed and lit`, how: `Crafting (R) makes shafts from a log. With ${numberWord(FIRE_COST)} in your pack, right-click the ground and choose Build campfire, then right-click the fire and Light. Feed it wood to keep it in.`, met: did('fire') },
-      { id: 'cook', text: 'Cook food on a campfire', how: 'Stand next to a lit fire with meat, a fish or a potato in your pack, and it will be among the things Crafting offers. A fire is a place as much as a thing: some recipes only appear when you are standing at one.', met: (g) => [...CAMPFIRE_FOOD].some((id) => (g.tally[`made:${id}`] ?? 0) > 0) },
-      { id: 'crate', text: 'Build a crate and place it', how: '{recipe.make_log_crate.log:W} logs and a mallet make a log crate; {recipe.make_plank_crate.plank:w} planks and {recipe.make_plank_crate.nail:w} nails make a better one. Right-click the ground to place it. Everything on this island rots where it lies, and a crate slows that down a great deal.', met: did('crate') },
-      { id: 'deed', text: 'Plant a stake to found a settlement', how: `You came ashore with a settlement stake. Stand where you want the middle of your land and right-click the ground: Found settlement. Inside its border, things rot ${times(1 / DEED_DECAY)} slower and nobody else may dig.`, met: (g) => founded(g) },
+      { id: 'plank', text: 'Saw a log into planks', how: 'Crafting (R): Saw into planks. {recipe.make_planks.log} log + saw = {recipe.make_planks.count} planks. Crafting lists every recipe; inputs in green if you have them, red if not.', met: did('made:plank') },
+      { id: 'fire', text: 'Light a campfire', hint: `${FIRE_COST} shafts, placed and lit`, how: `Crafting (R): shafts from a log. With ${FIRE_COST} in your pack, right-click the ground: Build campfire; right-click the fire: Light. Add wood to keep it burning.`, met: did('fire') },
+      { id: 'cook', text: 'Cook food on a campfire', how: 'Stand next to a lit fire with meat, fish or a potato in your pack: Crafting offers cooking. Some recipes only show next to their station.', met: (g) => [...CAMPFIRE_FOOD].some((id) => (g.tally[`made:${id}`] ?? 0) > 0) },
+      { id: 'crate', text: 'Build a crate and place it', how: 'Log crate: {recipe.make_log_crate.log} logs + mallet. Plank crate: {recipe.make_plank_crate.plank} planks + {recipe.make_plank_crate.nail} nails. Right-click the ground to place it. Items on the ground decay; a crate slows decay.', met: did('crate') },
+      { id: 'deed', text: 'Plant a stake to found a settlement', how: `Starting pack has a settlement stake. Stand at the centre you want and right-click the ground: Found settlement. Inside its border: decay ×${+DEED_DECAY.toFixed(3)}; only citizens may dig.`, met: (g) => founded(g) },
     ],
   },
   {
@@ -133,7 +134,7 @@ export const JOURNAL: Chapter[] = [
         met: (g) => did('smelted')(g) || METALS.some((m) => m.ore !== null && (g.tally[`made:${m.lump}`] ?? 0) > 0) },
       { id: 'anvil', text: 'Cast an anvil and place it', met: (g) => ours(g.anvils.values()).length > 0 },
       { id: 'smith', text: 'Smith a casting at an anvil', met: did('smithed') },
-      { id: 'bronze', text: 'Smelt a bronze lump', hint: 'Copper and tin together in a smelter', met: did('made:bronze_lump') },
+      { id: 'bronze', text: 'Smelt a bronze lump', hint: 'Copper + tin in a smelter', met: did('made:bronze_lump') },
       { id: 'moon', text: 'Smith a piece of adamantine, glimmersteel, mithril or seryll', met: did('moonmetal') },
       // A pass of yours that leaves a thing there, not anything that good in the pack: a bought one, or one made that good, is not improved.
       { id: 'improve', text: 'Improve an item to quality 50', met: did('improved50') },
@@ -177,7 +178,7 @@ export const JOURNAL: Chapter[] = [
       {
         id: 'wagon',
         get text() {
-          return `Hitch ${numberWord(wagonTeam())} wildermon to a wagon`;
+          return `Hitch ${wagonTeam()} wildermon to a wagon`;
         },
         met: did('team:wagon'),
       },
@@ -185,12 +186,12 @@ export const JOURNAL: Chapter[] = [
       { id: 'hive', text: 'Take honey from a hive or a skep', met: did('honey') },
       { id: 'post', text: 'Set a wildermon to a work post', met: did('posted') },
       { id: 'worms', text: 'Dig up worms with a shovel', met: did('worms') },
-      { id: 'sat', text: 'Sit on a rug and meditate', hint: 'Weave a rug on a loom', met: did('sat') },
-      { id: 'path', text: 'Choose a meditation path', hint: `Offered at meditation ${CHOOSE_AT}, at the rug; the choice is for good`, met: (g) => !!g.player.way },
+      { id: 'sat', text: 'Sit on a rug and meditate', hint: 'Rug: weave on a loom', met: did('sat') },
+      { id: 'path', text: 'Choose a meditation path', hint: `At meditation ${CHOOSE_AT}, on the rug. Permanent`, met: (g) => !!g.player.way },
       { id: 'walked', text: `Walk your path to its end: meditation ${listed(PATH_ENDS)}`, met: (g) => !!g.player.way && g.skills.get('meditation') >= pathEnd(g.player.way) },
       {
         id: 'tiered', text: 'Take a pick at every tier of your path',
-        hint: `A technique or a discipline at each of ${listed(PATH_TIER_AT.map(String))} meditation, in the Faith window's Path tab, on a path moved onto tiers`,
+        hint: `A technique or discipline at meditation ${PATH_TIER_AT.join(', ')}: Faith window, Path tab (tiered paths)`,
         met: (g) => !!g.player.way && PATHS[g.player.way].moved && PATH_TIER_AT.every((_, i) => g.player.picks.some((id) => id.startsWith(`${g.player.way}_`) && PATH_PICK_TIER(id) === i + 1)),
       },
       {
@@ -198,34 +199,34 @@ export const JOURNAL: Chapter[] = [
         text: 'Build an altar',
         // What it takes, off its own bill.
         get hint() {
-          return `${capital(billWords(FURNITURE_BY_ID.get('altar')?.bill ?? []))}, standing on a settlement of yours`;
+          return `${capital(billWords(FURNITURE_BY_ID.get('altar')?.bill ?? []))}, on your settlement`;
         },
         met: (g) => ours(g.furniture.values()).some((f) => f.kind === 'altar'),
       },
       { id: 'prayed', text: 'Pray at an altar', met: did('prayed') },
-      { id: 'cunning', text: 'Cast a circle of cunning on a tool', hint: 'A favour bought at an altar', met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) > 0) },
-      { id: 'thrice', text: `Cast ${numberWord(BLESS_CAP)} circles of cunning on one tool`, met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) >= BLESS_CAP) },
+      { id: 'cunning', text: 'Cast a circle of cunning on a tool', hint: 'Favour bought at an altar', met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) > 0) },
+      { id: 'thrice', text: `Cast ${BLESS_CAP} circles of cunning on one tool`, met: (g) => g.inventory.items.some((it) => (it.bless ?? 0) >= BLESS_CAP) },
       // A scroll written at the crafting window and put into a weapon (`enchant.ts`): held, not counted, so the island has nothing to note.
       // A melee weapon, as it says: any enchanted thing in the pack did, a ring or a bow among them.
-      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Write a scroll from papyrus and motes, then Enchant, on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant && ENCHANTMENTS[it.enchant.id]?.on === 'melee') },
+      { id: 'enchanted', text: 'Enchant a melee weapon', hint: 'Scroll from papyrus and motes, then Enchant on the scroll', met: (g) => g.inventory.items.some((it) => !!it.enchant && ENCHANTMENTS[it.enchant.id]?.on === 'melee') },
       { id: 'goblin', text: 'Kill a goblin', met: did('slew:goblin') },
       { id: 'orc', text: 'Kill an orc', met: did('slew:orc') },
       { id: 'ogre', text: 'Kill an ogre', met: did('slew:ogre') },
-      { id: 'dragon', text: 'Kill a dragon', hint: 'There is one on the island', met: did('slew:dragon') },
-      { id: 'hoard', text: 'Open a hoard', hint: 'Dig one up with a treasure map, or butcher a dragon', met: did('hoard') },
+      { id: 'dragon', text: 'Kill a dragon', hint: 'Only one on the island', met: did('slew:dragon') },
+      { id: 'hoard', text: 'Open a hoard', hint: 'Dig with a treasure map, or butcher a dragon', met: did('hoard') },
       { id: 'scaled', text: 'Wear a full suit of dragon scale armour', met: (g) => ['head', 'chest', 'arms', 'legs', 'feet'].every((sl) => g.worn(sl as never)?.id.startsWith('scale_')) },
-      { id: 'composite', text: 'Make a composite bow', hint: 'Tusk and sinew from an orc or an ogre', met: did('made:composite_bow') },
-      { id: 'bridged', text: 'Build a bridge', hint: 'Start it on one bank and finish it on the other', met: did('bridged') },
-      { id: 'reach', text: 'Sail a beam reach in a fresh wind', hint: 'Wind from the side, at half force or more', met: did('reach') },
+      { id: 'composite', text: 'Make a composite bow', hint: 'Tusk and sinew: orc or ogre', met: did('made:composite_bow') },
+      { id: 'bridged', text: 'Build a bridge', hint: 'Plan from one bank to the other', met: did('bridged') },
+      { id: 'reach', text: 'Sail a beam reach in a fresh wind', hint: `Wind from the side, force ${REACH_FORCE} or more`, met: did('reach') },
       { id: 'laden', text: 'Sail a sailing boat with its hold more than half full', met: did('laden') },
       { id: 'baited', text: 'Catch a fish with bait on the hook', met: did('baited') },
       { id: 'netted', text: 'Haul in a fishing net', met: did('netted') },
-      { id: 'creeled', text: 'Empty a creel', hint: 'Weave one from reed, bait it and sink it in water', met: did('creeled') },
-      { id: 'caught', text: 'Catch a wildermon in a trap', hint: 'A baited snare or deadfall in the wild', met: did('caught') },
+      { id: 'creeled', text: 'Empty a creel', hint: 'Weave from reed, bait, sink in water', met: did('creeled') },
+      { id: 'caught', text: 'Catch a wildermon in a trap', hint: 'Baited snare or deadfall, outside your deed', met: did('caught') },
       { id: 'trapped', text: 'Take a live wildermon out of a trap', met: did('trapped') },
-      { id: 'groom', text: 'Brush a wildermon', hint: 'A brush is a plank and {recipe.make_brush.nail:w} nails', met: did('groom') },
-      { id: 'groomfull', text: 'Brush a wildermon until its care is full', hint: 'Several brushings', met: did('groomfull') },
-      { id: 'bred', text: 'Breed two wildermon', hint: 'A grown male and female of one species, fed, side by side', met: did('bred') },
+      { id: 'groom', text: 'Brush a wildermon', hint: 'Brush: {recipe.make_brush.plank} plank + {recipe.make_brush.nail} nails', met: did('groom') },
+      { id: 'groomfull', text: 'Brush a wildermon until its care is full', hint: 'Brush repeatedly', met: did('groomfull') },
+      { id: 'bred', text: 'Breed two wildermon', hint: 'Adult male + female, same species, fed, adjacent', met: did('bred') },
       { id: 'goodblood', text: 'Breed a wildermon with a supreme trait', met: did('goodblood') },
       // Born to a dam of yours, as the line says: a bought or traded one with the trait is not bred.
       { id: 'fantastic_blood', text: 'Breed a wildermon with a fantastic trait', met: did('fantasticblood') },
@@ -257,7 +258,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'fifty', text: 'Reach 50 in any skill', met: (g) => g.skills.values.size > 0 && [...g.skills.values.values()].some((v) => v >= 50) },
       { id: 'ninety', text: 'Reach 90 in any skill', met: (g) => [...g.skills.values.values()].some((v) => v >= 90) },
       { id: 'fivetrades', text: 'Reach 30 in five skills', met: (g) => [...g.skills.values.values()].filter((v) => v >= 30).length >= 5 },
-      { id: 'fantastic', text: 'Make a fantastic item', hint: `One in ${numberWord(Math.round(1 / rarityChance(3)))}`, met: did('fantastic') },
+      { id: 'fantastic', text: 'Make a fantastic item', hint: `Chance per item: ${+(rarityChance(3) * 100).toFixed(2)}%`, met: did('fantastic') },
       { id: 'hundred', text: `Reach ${LEGEND_AT} in any skill`, met: (g) => [...g.skills.values.values()].some((v) => v >= LEGEND_AT) },
       { id: 'dressed', text: 'Dress a wound with cloth', met: did('dressed') },
       { id: 'covered', text: 'Dress a wound with the right herb', hint: 'Thyme on a cut, sage on a burn', met: did('covered') },
@@ -268,8 +269,8 @@ export const JOURNAL: Chapter[] = [
       { id: 'colours', text: 'Plant a dyed banner on your settlement', met: (g) => founded(g) && ours(g.furniture.values()).some((f) => f.kind === 'banner' && !!f.dye && onDeed(g, f)) },
       { id: 'title', text: 'Earn a title', hint: `Reach ${TITLE_STEPS[0]} in a skill that has titles`, met: (g) => g.player.titles.length > 0 },
       { id: 'master', text: 'Earn a master title', hint: `Reach ${MASTER_AT} in a skill that has titles`, met: (g) => g.player.titles.some((t) => TITLE_STEPS.some((at) => at >= MASTER_AT && t.endsWith(`:${at}`))) },
-      { id: 'knack', text: 'Gain a knack', hint: `One go in ${numberWord(KNACK_ODDS)} leaves one, at any trade`, met: did('knack') },
-      { id: 'knack5', text: `Gain ${numberWord(KNACK_CAP)} knacks in one skill`, met: (g) => Object.values(g.player.knacks).some((n) => n >= KNACK_CAP) },
+      { id: 'knack', text: 'Gain a knack', hint: `Chance per go: ${+(100 / KNACK_ODDS).toFixed(2)}%, any trade`, met: did('knack') },
+      { id: 'knack5', text: `Gain ${KNACK_CAP} knacks in one skill`, met: (g) => Object.values(g.player.knacks).some((n) => n >= KNACK_CAP) },
     ],
   },
 ];

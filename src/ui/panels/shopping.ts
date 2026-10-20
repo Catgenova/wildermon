@@ -81,7 +81,7 @@ export class ShoppingPanel {
     if (!this.entries.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'Nothing on the list. In Crafting (R), press List on a recipe: what it takes, down to what is gathered, comes up here against what you hold and what is in the stores within reach.';
+      empty.textContent = 'Empty. Crafting (R): press List on a recipe to add its full bill, down to raw materials, against what you hold and nearby stores.';
       this.body.append(empty);
       return;
     }
@@ -115,7 +115,7 @@ export class ShoppingPanel {
         this.save();
         this.render();
       });
-      const off = btn('×', 'Take it off the list', () => {
+      const off = btn('×', 'Remove from list', () => {
         this.entries = this.entries.filter((x) => x !== e);
         this.save();
         this.repaint.force();
@@ -127,19 +127,19 @@ export class ShoppingPanel {
     }
 
     const at = `in your pack${this.game.settings.fromStores ? ` and the stores within ${CRAFT_REACH} tiles` : ''}`;
-    const gather = this.section('To fetch', `Nothing makes these: gathered, found or bought. Have is what is ${at}.`);
+    const gather = this.section('To fetch', `Raw: gathered, found or bought. Have: ${at}.`);
     if (!list.gather.length) gather.append(this.note('Nothing to fetch.'));
     for (const g of list.gather) gather.append(this.line(itemDef(g.item).name, g.have, g.need));
     if (list.cast.length) {
-      const cast = this.section('To cast', 'Poured at a smelter and beaten out on an anvil; the lumps are of any one metal.');
+      const cast = this.section('To cast', 'Smelter pour, then anvil; lumps of any one metal.');
       for (const c of list.cast) cast.append(this.text(`${c.count} × ${lower(c.item)}: ${c.mould.name.toLowerCase()}, ${c.lumps} ${c.lumps === 1 ? 'lump' : 'lumps'}`));
     }
     if (list.make.length) {
-      const make = this.section('To make on the way', 'Short, and made from what is above.');
+      const make = this.section('Intermediates', 'Short; made from the above.');
       for (const m of list.make) make.append(this.text(`${m.count} × ${lower(m.item)}: ${m.recipe.label}`));
     }
     if (list.tools.length || list.stations.length) {
-      const need = this.section('To have');
+      const need = this.section('Tools and stations');
       if (list.tools.length) need.append(this.text(`In your pack: ${list.tools.map(lower).join(', ')}`));
       if (list.stations.length) need.append(this.text(`Worked at: ${list.stations.map((s) => stationName(s as never).toLowerCase()).join(', ')}`));
     }
@@ -187,7 +187,7 @@ export class ShoppingPanel {
     const count = document.createElement('span');
     count.className = 'shop-count';
     count.textContent = `${have} / ${need}`;
-    count.title = done ? 'Enough at hand' : `${need - have} more to fetch`;
+    count.title = done ? 'Enough' : `${need - have} more needed`;
     row.append(n, bar, count);
     return row;
   }

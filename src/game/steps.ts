@@ -22,7 +22,6 @@ import {
   SLAB_BY_ITEM, SLAB_VARIANTS, STEPS_BRICKS, STEPS_MORTAR, STEPS_NAILS, STEPS_PLANKS, STEPS_SLABS, STEPS_TIMBER,
   TREE_DEFS, TileType, stepsBrick, stepsGroundRefusal, stepsKind, stepsName, stepsTimber,
 } from '../world/tiles';
-import { numberWord } from './words';
 
 /** What comes back whole when a flight is taken up: half of each of its slabs, bricks and planks, rounded down. */
 export const STEPS_BACK = 0.5;
@@ -39,8 +38,8 @@ const cornersOf = (g: Game, x: number, y: number): number[] => g.world.corners(x
 
 /** Why the ground itself will not take a flight: a building on it, loose ground, water, or the wrong shape. */
 function groundWhyNot(g: Game, t: TileTarget): string | null {
-  if (g.buildings.buildingAt(t.x, t.y)) return 'You cannot do that inside a building.';
-  if (g.world.getTile(t.x, t.y) !== TileType.PackedDirt) return 'The ground has to be packed flat before anything is laid on it.';
+  if (g.buildings.buildingAt(t.x, t.y)) return 'Not inside a building.';
+  if (g.world.getTile(t.x, t.y) !== TileType.PackedDirt) return 'Need packed dirt.';
   if (g.world.hasWater(t.x, t.y)) return 'Not under water.';
   return stepsGroundRefusal(cornersOf(g, t.x, t.y));
 }
@@ -85,8 +84,8 @@ export const woodIndex = (extra: string | undefined): number => {
   return i >= 0 ? i : TREE_DEFS.findIndex((d) => d.name === 'Pine');
 };
 
-export const STONE_STEPS_BILL = `${numberWord(STEPS_SLABS)} cut slabs of one stone, ${numberWord(STEPS_BRICKS)} bricks of the same stone and ${numberWord(STEPS_MORTAR)} mortar`;
-export const TIMBER_STEPS_BILL = `${numberWord(STEPS_PLANKS)} planks of one wood and ${numberWord(STEPS_NAILS)} nails`;
+export const STONE_STEPS_BILL = `${STEPS_SLABS} cut slabs of one stone, ${STEPS_BRICKS} bricks of the same stone and ${STEPS_MORTAR} mortar`;
+export const TIMBER_STEPS_BILL = `${STEPS_PLANKS} planks of one wood and ${STEPS_NAILS} nails`;
 
 export const STEPS_ACTIONS: ActionDef[] = [
   {
@@ -105,12 +104,12 @@ export const STEPS_ACTIONS: ActionDef[] = [
     applies: (t, g) => onTile(t) && g.world.getTile(t.x, t.y) === TileType.PackedDirt,
     check: (t, g) => {
       if (!onTile(t)) return null;
-      if (!g.inventory.has('trowel')) return 'You need a trowel to lay stone steps.';
+      if (!g.inventory.has('trowel')) return 'Need a trowel.';
       const ground = groundWhyNot(g, t);
       if (ground) return ground;
       const slab = stepsSlab(g, t);
       if (!slab || loose(g, slab.id) < STEPS_SLABS || loose(g, stepsBrick(slab.id)) < STEPS_BRICKS || loose(g, 'mortar') < STEPS_MORTAR) {
-        return `A flight of stone steps takes ${STONE_STEPS_BILL}.`;
+        return `Need ${STONE_STEPS_BILL}.`;
       }
       return null;
     },
@@ -122,7 +121,7 @@ export const STEPS_ACTIONS: ActionDef[] = [
       const kind = SLAB_BY_ITEM.get(slab.id) ?? 0;
       if (!g.skillCheck('masonry', STONE_DIFFICULTY, g.toolQl('trowel'))) {
         g.missed();
-        g.logMsg('The treads rock on their bed however you set them. You take them up again.', 'event');
+        g.logMsg('Steps failed: materials kept.', 'event');
         return;
       }
       const slabId = slab.id;
@@ -132,7 +131,7 @@ export const STEPS_ACTIONS: ActionDef[] = [
       if (fromNamed < STEPS_SLABS && !g.inventory.consume(slabId, STEPS_SLABS - fromNamed)) return;
       if (!g.inventory.consume(stepsBrick(slabId), STEPS_BRICKS) || !g.inventory.consume('mortar', STEPS_MORTAR)) return;
       g.world.setTile(t.x, t.y, TileType.Steps, kind);
-      g.logMsg(`You lay a flight of ${stepsName(kind).toLowerCase()} up the slope.`, 'event');
+      g.logMsg(`Laid: ${stepsName(kind).toLowerCase()}.`, 'event');
     },
   },
   {
@@ -151,12 +150,12 @@ export const STEPS_ACTIONS: ActionDef[] = [
     applies: (t, g) => onTile(t) && g.world.getTile(t.x, t.y) === TileType.PackedDirt,
     check: (t, g) => {
       if (!onTile(t)) return null;
-      if (!g.inventory.has('mallet')) return 'You need a mallet to lay timber steps.';
+      if (!g.inventory.has('mallet')) return 'Need a mallet.';
       const ground = groundWhyNot(g, t);
       if (ground) return ground;
       const planks = stepsPlanks(g, t);
       if (!planks || planksOf(g, planks.extra).reduce((n, it) => n + it.count, 0) < STEPS_PLANKS || loose(g, 'nail') < STEPS_NAILS) {
-        return `A flight of timber steps takes ${TIMBER_STEPS_BILL}.`;
+        return `Need ${TIMBER_STEPS_BILL}.`;
       }
       return null;
     },
@@ -167,14 +166,14 @@ export const STEPS_ACTIONS: ActionDef[] = [
       const wood = planks.extra;
       if (!g.skillCheck('carpentry', TIMBER_DIFFICULTY, g.toolQl('mallet'))) {
         g.missed();
-        g.logMsg('The boards will not sit square on their bearers. You knock them loose again.', 'event');
+        g.logMsg('Steps failed: materials kept.', 'event');
         return;
       }
       if (g.inventory.count('nail') < STEPS_NAILS || !takePlanks(g, planks, STEPS_PLANKS)) return;
       if (!g.inventory.consume('nail', STEPS_NAILS)) return;
       const data = STEPS_TIMBER | woodIndex(wood);
       g.world.setTile(t.x, t.y, TileType.Steps, data);
-      g.logMsg(`You lay a flight of ${stepsName(data).toLowerCase()} up the slope.`, 'event');
+      g.logMsg(`Laid: ${stepsName(data).toLowerCase()}.`, 'event');
     },
   },
   {
@@ -188,9 +187,9 @@ export const STEPS_ACTIONS: ActionDef[] = [
     applies: (t, g) => onTile(t) && g.world.getTile(t.x, t.y) === TileType.Steps,
     check: (t, g) => {
       if (!onTile(t)) return null;
-      if (!g.inventory.has('pickaxe')) return 'You need a pickaxe to take up the steps.';
-      if (g.world.getTile(t.x, t.y) !== TileType.Steps) return 'There are no steps here.';
-      if (g.buildings.buildingAt(t.x, t.y)) return 'You cannot do that inside a building.';
+      if (!g.inventory.has('pickaxe')) return 'Need a pickaxe.';
+      if (g.world.getTile(t.x, t.y) !== TileType.Steps) return 'No steps here.';
+      if (g.buildings.buildingAt(t.x, t.y)) return 'Not inside a building.';
       return null;
     },
     perform: (t, g) => {
@@ -203,15 +202,15 @@ export const STEPS_ACTIONS: ActionDef[] = [
       if (stepsTimber(data)) {
         const wood = TREE_DEFS[stepsKind(data)].name;
         g.gather('plank', { count: stepsBack(STEPS_PLANKS), ql, extra: wood });
-        kept.push(`${numberWord(stepsBack(STEPS_PLANKS))} planks`);
+        kept.push(`${stepsBack(STEPS_PLANKS)} planks`);
       } else {
         const slab = SLAB_VARIANTS[stepsKind(data)].item;
         g.gather(slab, { count: stepsBack(STEPS_SLABS), ql });
         g.gather(stepsBrick(slab), { count: stepsBack(STEPS_BRICKS), ql });
-        kept.push(`${numberWord(stepsBack(STEPS_SLABS))} ${itemDef(slab).name.toLowerCase()}${stepsBack(STEPS_SLABS) === 1 ? '' : 's'}`,
-          `${numberWord(stepsBack(STEPS_BRICKS))} ${itemDef(stepsBrick(slab)).name.toLowerCase()}s`);
+        kept.push(`${stepsBack(STEPS_SLABS)} ${itemDef(slab).name.toLowerCase()}${stepsBack(STEPS_SLABS) === 1 ? '' : 's'}`,
+          `${stepsBack(STEPS_BRICKS)} ${itemDef(stepsBrick(slab)).name.toLowerCase()}s`);
       }
-      g.logMsg(`You take up the ${name} and keep ${kept.join(' and ')} whole. The ground under them is packed dirt.`, 'event');
+      g.logMsg(`Removed: ${name}. Got ${kept.join(' and ')}. Tile: packed dirt.`, 'event');
     },
   },
 ];

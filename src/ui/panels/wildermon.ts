@@ -27,9 +27,9 @@ import { idleSays, ledgerLines } from '../../game/workerlog';
 type Place = Creature['mode'] | 'saddle' | 'traces';
 const placeOf = (c: Creature): Place => (c.ridden ? 'saddle' : c.hitchedTo !== null ? 'traces' : c.mode);
 const GROUPS: Array<[Place, string]> = [
-  ['saddle', 'Under the saddle'],
+  ['saddle', 'Ridden'],
   ['traces', 'In the traces'],
-  ['active', 'Travelling with you'],
+  ['active', 'Companion'],
   ['deed', 'Working the deed'],
   ['stored', 'In creature crates'],
 ];
@@ -81,8 +81,8 @@ export function baseStatTags(g: Game, c: Creature): Array<{ stat: BaseStat; text
     return {
       stat: s.id,
       text: `${s.name} ${figure[s.id]}${n ? ` (+${n} of ${POT_MOST} from ancient pots)` : ''}`,
-      title: `${s.name}: ${s.says}.${n ? ` ${n} of ${POT_MOST} points from ancient pots, ${percent(POT_STEP * n)} more than its kind and blood give it.` : ''}`
-        + ` Each ancient pot used on it puts a point into one of its base stats, ${percent(POT_STEP)} more of that stat, up to ${POT_MOST} a stat.`,
+      title: `${s.name}: ${s.says}.${n ? ` Ancient pots: ${n}/${POT_MOST} points, +${percent(POT_STEP * n)}.` : ''}`
+        + ` Ancient pot: +1 point to a random base stat, +${percent(POT_STEP)} each, max ${POT_MOST} a stat.`,
     };
   });
 }
@@ -148,7 +148,7 @@ export class WildermonPanel {
     bar.className = 'panel-bar';
     const sortSel = document.createElement('select');
     sortSel.className = 'panel-select';
-    sortSel.title = 'How to order the herd';
+    sortSel.title = 'Sort';
     for (const [key, label] of SORTS) {
       const opt = document.createElement('option');
       opt.value = key;
@@ -165,7 +165,7 @@ export class WildermonPanel {
     groupBtn.type = 'button';
     groupBtn.className = 'tb-btn tb-small tb-on';
     groupBtn.textContent = 'Grouped';
-    groupBtn.title = 'Group by where each one is, or run the whole herd together in one list';
+    groupBtn.title = 'Group by location, or one list';
     groupBtn.addEventListener('click', () => {
       this.grouped = !this.grouped;
       groupBtn.textContent = this.grouped ? 'Grouped' : 'Flat';
@@ -178,7 +178,7 @@ export class WildermonPanel {
     attentionBtn.className = 'tb-btn tb-small';
     attentionBtn.textContent = 'Needs attention';
     attentionBtn.title = `Only those under ${Math.round(HUNGRY_AT * 100)}% fed, under ${Math.round(HURT_AT * 100)}% health, `
-      + `under ${Math.round(CARE_WANTING * 100)}% care (wanting a brush), or due to give birth within ${clockLeft(DUE_SOON)}`;
+      + `under ${Math.round(CARE_WANTING * 100)}% care, or due within ${clockLeft(DUE_SOON)}`;
     attentionBtn.setAttribute('aria-pressed', 'false');
     attentionBtn.addEventListener('click', () => this.showAttention(!this.attention));
     bar.append(sortSel, groupBtn, attentionBtn);
@@ -271,7 +271,7 @@ export class WildermonPanel {
     const owned = this.game.creatures.yours();
     const shown = owned.filter((c) => this.matches(c) && (!this.attention || this.wants(c)));
     if (!owned.length) {
-      this.place([this.note('none', `You have no tamed wildermon yet. Carry a berry for a ${SPECIES.rabba.name} or a spice for a ${SPECIES.vola.name}, then try Tame on a wild one.`)]);
+      this.place([this.note('none', `No tamed wildermon. Tame: a berry for a ${SPECIES.rabba.name}, a spice for a ${SPECIES.vola.name}.`)]);
       this.footer.replaceChildren();
       this.footerKey = '';
       return;
@@ -297,8 +297,8 @@ export class WildermonPanel {
     }
     if (!shown.length) {
       want.push(this.attention
-        ? this.note('search', `None of your ${owned.length} wildermon wants anything doing.${this.query ? ` (Only those that answer to “${this.search.value.trim()}”.)` : ''}`)
-        : this.note('search', `None of your wildermon answer to “${this.search.value.trim()}”.`));
+        ? this.note('search', `None of your ${owned.length} wildermon need attention.${this.query ? ` (Search: “${this.search.value.trim()}”.)` : ''}`)
+        : this.note('search', `No wildermon match “${this.search.value.trim()}”.`));
     }
     this.place(want);
     // Cards for wildermon that are no longer any of ours are let go, so a herd
@@ -331,7 +331,7 @@ export class WildermonPanel {
         b.type = 'button';
         b.className = `pal-jump pal-flag-${what}`;
         b.textContent = `${n} ${what}`;
-        b.title = `Show them: worst first, every group together, nothing filtered out`;
+        b.title = `Show all: worst first, ungrouped, unfiltered`;
         b.addEventListener('click', () => this.findThose(sort));
         this.footer.append(b);
       };
@@ -495,7 +495,7 @@ export class WildermonPanel {
       // Only the young are growing: what was walking about before the clock started is grown however the sum comes out.
       const growing = age === 'young' ? growsAt(c, this.game.time) : 0;
       set(level, `${age === 'grown' ? '' : `${age} · `}Lv ${creatureLevel(c)}`,
-        growing > 0 ? `Grown in ${clockLeft(growing)}` : age === 'old' ? 'Slower, but a better carcass' : 'Grown');
+        growing > 0 ? `Grown in ${clockLeft(growing)}` : age === 'old' ? 'Old: slower, bigger carcass' : 'Grown');
       // Which one it is, not just that one of them is: the card is marked and
       // the reason is written beside the name.
       const wants: string[] = [];
@@ -508,7 +508,7 @@ export class WildermonPanel {
           const tag = document.createElement('span');
           tag.className = `pal-flag pal-flag-${what}`;
           tag.textContent = what;
-          tag.title = what === 'hurt' ? `Under ${Math.round(HURT_AT * 100)}% of the health it can carry. Herbs and a cover, or leave it somewhere quiet.` : `Under ${Math.round(HUNGRY_AT * 100)}% fed. A hungry wildermon works slowly and learns nothing.`;
+          tag.title = what === 'hurt' ? `Under ${Math.round(HURT_AT * 100)}% health.` : `Under ${Math.round(HUNGRY_AT * 100)}% fed.`;
           flags.append(tag);
         }
       }
@@ -529,7 +529,7 @@ export class WildermonPanel {
       care.value.textContent = `${Math.round(c.care * 100)}%`;
       // What brushing is worth, said as the figure the rules read rather than
       // as “a quarter”, which was a number written in prose and never checked.
-      care.row.title = `${careWord(c.care)} \u2014 work and learning \u00d7${careMul(c).toFixed(2)} at this much care, up to \u00d7${(1 + CARE_BONUS).toFixed(2)} brushed to a shine, and it throws better young`;
+      care.row.title = `${careWord(c.care)} \u2014 work and learning \u00d7${careMul(c).toFixed(2)}, max \u00d7${(1 + CARE_BONUS).toFixed(2)} at full care; better young`;
 
       // Who it was bred from, over the traits it had from them, and how deep its
       // line runs on each channel it runs past one on (`lineLines`). Nothing at
@@ -548,7 +548,7 @@ export class WildermonPanel {
         const label = document.createElement('span');
         label.className = 'worth-label';
         label.textContent = 'Stats';
-        label.title = 'Its base stats as the rules read them now, with what ancient pots have put into each';
+        label.title = 'Base stats now, ancient pot points included';
         statBox.replaceChildren(label, ...tags.map((t) => {
           const tag = document.createElement('span');
           tag.className = 'worth-tag';
@@ -562,10 +562,10 @@ export class WildermonPanel {
       // Which vehicle, since a herd can be spread over more than one.
       const vehicle = this.game.vehicleOfCreature(c);
       const place = placeOf(c);
-      if (place === 'saddle') parts.push('Under the saddle');
+      if (place === 'saddle') parts.push('Ridden');
       else if (place === 'traces') parts.push(vehicle ? `In the traces of the ${furnitureDef(vehicle.kind).name.toLowerCase()}` : 'In the traces');
       else if (c.tacked) parts.push('Saddled and bridled');
-      if (isShod(this.game.time, c)) parts.push(`Shod, for ${Math.max(1, Math.ceil((SHOE_DAYS * DAY_SECONDS - (this.game.time - c.shodAt)) / DAY_SECONDS))} more day${Math.ceil((SHOE_DAYS * DAY_SECONDS - (this.game.time - c.shodAt)) / DAY_SECONDS) === 1 ? '' : 's'}`);
+      if (isShod(this.game.time, c)) parts.push(`Shod, ${Math.max(1, Math.ceil((SHOE_DAYS * DAY_SECONDS - (this.game.time - c.shodAt)) / DAY_SECONDS))} day${Math.ceil((SHOE_DAYS * DAY_SECONDS - (this.game.time - c.shodAt)) / DAY_SECONDS) === 1 ? '' : 's'} left`);
       if (c.due > 0) parts.push(`In young, due in ${clockLeft(Math.max(0, c.due - this.game.time))}`);
       // A stance and a round of work are for one that is following you or
       // working, not one in the traces or under a rider.
@@ -573,8 +573,8 @@ export class WildermonPanel {
       if (place === 'deed') {
         const verb = def.gathers ? GATHER_VERB[def.gathers] : 'working';
         // Resting (`REST_FOR`) before anything it holds: a tired water carrier rests with its bucket.
-        const rest = c.idle?.why === 'bed' ? 'Asleep in its bed' : c.idle?.why === 'rest' ? 'Resting' : c.idle?.why === 'tired' ? 'Going to its bed to rest' : '';
-        parts.push(rest || (c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the crate` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Heading out to ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Looking for work'));
+        const rest = c.idle?.why === 'bed' ? 'Asleep in its bed' : c.idle?.why === 'rest' ? 'Resting' : c.idle?.why === 'tired' ? 'Walking to its bed' : '';
+        parts.push(rest || (c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the crate` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Walking out: ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Finding work'));
       }
       if (c.mode === 'deed' && def.gathers) {
         const toNext = SKILL_STEP - (taskSkill(c, def) % SKILL_STEP);
@@ -647,12 +647,12 @@ export class WildermonPanel {
         const says = CHANNELS.filter((ch) => t.effects[ch.id] !== undefined)
           .map((ch) => `${pct(t.effects[ch.id] as number)} ${ch.label}: ${ch.note}`);
         if (came) says.push(`${came.label[0].toUpperCase()}${came.label.slice(1)}: ${came.means}.`);
-        chip.title = `${t.tier}${t.aura ? ', communal: what it lifts, it lifts for every wildermon on the same deed or post, itself included' : ''}`
-          + ` — ${t.note}\n${says.join('\n')}`;
+        chip.title = `${t.tier}${t.aura ? ', communal: applies to every wildermon on the same deed or post, itself included' : ''}`
+          + `\n${says.join('\n')}`;
       } else {
         chip.textContent = 'something';
         chip.classList.add('trait-unread');
-        chip.title = `You can see there is something in it. ${1 + TIER_LEVEL[t.tier]} animal husbandry would tell you what.`;
+        chip.title = `Unread: needs ${1 + TIER_LEVEL[t.tier]} animal husbandry.`;
       }
       row.append(chip);
     }
@@ -687,7 +687,7 @@ export class WildermonPanel {
     const label = document.createElement('span');
     label.className = 'worth-label';
     label.textContent = 'In all';
-    label.title = 'The three traits multiplied together, with the herd it stands in and the brush it has had';
+    label.title = 'Traits multiplied together, with herd auras and care';
     row.append(label);
     let any = false;
     for (const ch of CHANNELS) {

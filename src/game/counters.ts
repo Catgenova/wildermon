@@ -6,7 +6,6 @@ import { furnitureDef, isFurniture } from './furniture';
 import type { Game } from './game';
 import { foldInto, itemName, rarityStep, sameStack, type Item } from './items';
 import { purse } from './money';
-import { numberWord } from './words';
 
 /**
  * A shop counter: a stall set into the wall of a house.
@@ -40,11 +39,11 @@ export const COUNTER_HOLDS = furnitureDef('stall').capacity ?? 0;
 export const COUNTER_REACH = STORE_REACH;
 
 /** What is said to a counter planned anywhere but the ground floor. */
-export const COUNTER_GROUND = 'A shop counter goes in a wall of the ground floor.';
+export const COUNTER_GROUND = 'Shop counter: ground-floor walls only.';
 /** And to one planned on a border with no street on its far side. */
-export const COUNTER_STREET_ONLY = 'A shop counter goes in an outside wall, with open ground on its far side: that side is the street it sells to.';
+export const COUNTER_STREET_ONLY = 'Shop counter: outside walls only, with open ground beyond (the street it sells to).';
 /** Standing inside a house, or off to the side of the shop, and asking to buy. */
-export const COUNTER_FROM_STREET = 'Buy from the street side of the counter: the side away from the house.';
+export const COUNTER_FROM_STREET = 'Buy from the street side (away from the house).';
 /**
  * Too far off to buy from a stall or a counter, or to tend one: how far, off
  * the reach itself. The island says it of both, by which it is (`sells_word`).
@@ -54,7 +53,7 @@ export const COUNTER_TOO_FAR = sellsTooFar('counter');
 /** Where a buyer stands, in a word: what the two refusals above ask between them. */
 export const COUNTER_BUY_FROM = `Stand in the street within ${COUNTER_REACH} tiles of the counter.`;
 /** A counter with no room left on it, and how much room there ever is. */
-export const COUNTER_FULL = `A counter holds ${numberWord(COUNTER_HOLDS)} things, and this one is full.`;
+export const COUNTER_FULL = `Counter full: ${COUNTER_HOLDS} items.`;
 /**
  * How near a counter you must be to be sent what is on it, one by one and at
  * what price (`counter_json` on the island): further off, only how many
@@ -62,13 +61,13 @@ export const COUNTER_FULL = `A counter holds ${numberWord(COUNTER_HOLDS)} things
  */
 export const COUNTER_SEEN = 6;
 /** Said to somebody looking at a counter from further off than that. */
-export const COUNTER_TOO_FAR_TO_SEE = `Too far off to see what is on it: come within ${numberWord(COUNTER_SEEN)} tiles.`;
+export const COUNTER_TOO_FAR_TO_SEE = `Too far to see its goods: within ${COUNTER_SEEN} tiles.`;
 /** Setting goods out on somebody else's counter. */
-export const COUNTER_NOT_KEEPER = 'Only whoever planned a counter sets goods out on it.';
+export const COUNTER_NOT_KEEPER = 'Only the counter\'s planner sets goods out.';
 /** A piece of furniture, which is set down rather than laid out, but for a creature crate. */
-export const COUNTER_NO_PIECES = 'A piece of furniture is set down, not laid out on a counter. A creature crate goes on one.';
+export const COUNTER_NO_PIECES = 'No furniture on a counter (creature crates allowed).';
 /** Taking the counter down with anything on it or in its till. */
-export const COUNTER_EMPTY_FIRST = 'Take the goods off the counter and the takings out of its till first.';
+export const COUNTER_EMPTY_FIRST = 'Remove the goods and the till takings first.';
 
 /** A counter's store, as this browser has it. */
 export interface Counter {
@@ -178,7 +177,7 @@ export function counterPlanRefusal(g: Game, b: Building, level: number, x: numbe
 }
 
 /** What is said to a building planned, or a building's footprint pushed, over the street a counter sells onto. */
-export const COUNTER_STREET_TAKEN = 'A shop counter sells onto this tile. Take the counter out first.';
+export const COUNTER_STREET_TAKEN = 'A shop counter sells onto this tile: remove it first.';
 
 /**
  * Why a tile will not go into a building, or null: a shop counter on one of
@@ -224,14 +223,14 @@ export const counterSpare = (c: Counter): number => Math.max(0, COUNTER_HOLDS - 
 
 /** What is said as goods go out on a counter, on both sides. */
 export const setOutLine = (count: number, what: string, left: number): string =>
-  `You set ${count > 1 ? `${count} × ` : 'the '}${what.toLowerCase()} out on the counter.`
-  + (left > 0 ? ` The other ${left} would not fit.` : '');
+  `On the counter: ${count > 1 ? `${count} × ` : ''}${what.toLowerCase()}.`
+  + (left > 0 ? ` No room for ${left}.` : '');
 /** And as they come back off it. */
 export const takeBackLine = (count: number, what: string): string =>
-  `You take ${count > 1 ? `${count} × ` : 'the '}${what.toLowerCase()} back off the counter.`;
+  `Off the counter: ${count > 1 ? `${count} × ` : ''}${what.toLowerCase()}.`;
 /** What a buyer is told as a sale goes through. */
 export const boughtLine = (count: number, what: string, price: number): string =>
-  `You buy ${count > 1 ? `${count} × ` : 'the '}${what.toLowerCase()} for ${price} silver.`;
+  `Bought: ${count > 1 ? `${count} × ` : ''}${what.toLowerCase()}, ${price} silver.`;
 /** What somebody else is told who reaches for a thing on a counter: the stall's own words. */
 export const COUNTER_BOUGHT_NOT_TAKEN = "That is on somebody else's counter. Buy it at the counter.";
 
@@ -241,11 +240,11 @@ export const COUNTER_BOUGHT_NOT_TAKEN = "That is on somebody else's counter. Buy
  * last say: it is the one holding the coins.
  */
 export function buyRefusal(g: Game, c: Counter, good: Item): string | null {
-  if (!c.items.some((it) => it.uid === good.uid) || good.price === undefined) return 'That is not for sale.';
-  if (keeps(c)) return 'It is your own counter. Take it back off the counter instead.';
+  if (!c.items.some((it) => it.uid === good.uid) || good.price === undefined) return 'Not for sale.';
+  if (keeps(c)) return 'Your own counter: take it back off instead.';
   const far = counterReach(g, c, g.player.x, g.player.y, true);
   if (far) return far;
-  if (purse(g.inventory.items) < good.price) return `You cannot afford it. It is ${good.price} silver.`;
+  if (purse(g.inventory.items) < good.price) return `Cannot afford: ${good.price} silver.`;
   return null;
 }
 
@@ -453,7 +452,7 @@ export function setOutRefusal(g: Game, t: ItemTarget): string | null {
   const item = g.inventory.get(t.uid);
   if (!item) return 'It is gone.';
   const c = counterInto(g, t);
-  if (!c || !counterWall(g, c)) return 'Stand at a counter of yours.';
+  if (!c || !counterWall(g, c)) return 'Stand at your counter.';
   if (!keeps(c)) return COUNTER_NOT_KEEPER;
   const far = counterReach(g, c, g.player.x, g.player.y, false);
   if (far) return far;
@@ -474,7 +473,7 @@ export function takeBackRefusal(g: Game, t: ItemTarget): string | null {
 export const COUNTER_ACTIONS: ActionDef[] = [
   {
     id: 'set_out_goods',
-    label: 'Set out on the counter',
+    label: 'Set out on counter',
     verb: 'setting goods out',
     instant: true,
     quantity: true,
@@ -507,7 +506,7 @@ export const COUNTER_ACTIONS: ActionDef[] = [
   },
   {
     id: 'take_off_counter',
-    label: 'Take back off the counter',
+    label: 'Take off counter',
     verb: 'taking it back',
     hidden: true,
     instant: true,

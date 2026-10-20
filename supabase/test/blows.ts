@@ -105,7 +105,7 @@ begin
     where world_id = w.world_id and id = v_ogre;
   delete from event where uid = w.uid;
   perform creature_settle(w.world_id, v_ogre);
-  insert into said values ('HEAVY', (select count(*) from event where uid = w.uid and text like '%draws back for a heavy blow%')::text
+  insert into said values ('HEAVY', (select count(*) from event where uid = w.uid and text like '%winding up a heavy blow%')::text
     || '|' || (select count(*) from event where uid = w.uid and text like '%heavy blow lands%')::text
     || '|' || (select count(*) from event where uid = w.uid and text like '%is on you%')::text);
 
@@ -116,7 +116,7 @@ begin
   update player set x = v_px - 2.3 where world_id = w.world_id and uid = w.uid;
   delete from event where uid = w.uid;
   perform creature_settle(w.world_id, v_ogre);
-  insert into said values ('SHORT', (select count(*) from event where uid = w.uid and text like '%heavy blow falls short%')::text
+  insert into said values ('SHORT', (select count(*) from event where uid = w.uid and text like '%heavy blow: missed%')::text
     || '|' || (select count(*) from event where uid = w.uid and text like '%heavy blow lands%')::text);
   update player set x = v_px where world_id = w.world_id and uid = w.uid;
 
@@ -232,7 +232,7 @@ const body = (): Game => {
     g.player.x = 20.5;
     g.player.y = 20.5;
   }
-  const drawn = lines().filter((t) => t.includes('draws back for a heavy blow')).length;
+  const drawn = lines().filter((t) => t.includes('winding up a heavy blow')).length;
   const landed = lines().filter((t) => t.includes('heavy blow lands')).length;
   const plain = lines().filter((t) => t.includes('is on you')).length;
   check('in the browser, the same', drawn >= 1 && landed >= 1 && plain >= 2, `${drawn} drawn, ${landed} landed, ${plain} plain`);
@@ -246,7 +246,7 @@ const body = (): Game => {
   }
   const after = lines().slice(before);
   check('and one drawn back while you step three tiles off falls short',
-    after.some((t) => t.includes('heavy blow falls short')) && !after.some((t) => t.includes('heavy blow lands')), after.join(' | '));
+    after.some((t) => t.includes('heavy blow: missed')) && !after.some((t) => t.includes('heavy blow lands')), after.join(' | '));
   check(`a heavy blow is ${HEAVY_HIT} times a plain one`, HEAVY_HIT > 1);
 }
 

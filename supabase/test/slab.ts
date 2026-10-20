@@ -172,11 +172,11 @@ check('and exactly enough of it goes through on both',
 /* ---- the refusals that are not about skill ------------------------------- */
 setShape([9, 9, 9, 9]);
 check('level ground has nothing to fill, and both sides say so',
-  (game.foundationReason(TX, TY, 9) ?? '') === 'That tile is already level. A foundation is for ground that is not.',
+  (game.foundationReason(TX, TY, 9) ?? '') === 'Tile already level.',
   `"${game.foundationReason(TX, TY, 9)}"`);
 setShape([10, 10, 4, 4]);
 check('and a foundation fills a tile up, never down',
-  (game.foundationReason(TX, TY, 7) ?? '').startsWith('A foundation fills a tile up, never down.'),
+  (game.foundationReason(TX, TY, 7) ?? '').startsWith('Foundations fill up only.'),
   `"${game.foundationReason(TX, TY, 7)}"`);
 
 /* A building a tile away, which is exactly one tile too close. */
@@ -191,7 +191,7 @@ const twoOff = game.foundationReason(TX, TY, 10) ?? 'ALLOWED';
 game.buildings.list.clear();
 game.buildings.tileIndex.clear();
 check('a building one tile off is too close, and the refusal names it',
-  nextDoor.startsWith('Oceanport is too close.'), `"${nextDoor}"`);
+  nextDoor.startsWith('Oceanport too close:'), `"${nextDoor}"`);
 check('and two tiles off is far enough', twoOff === 'ALLOWED', `"${twoOff}"`);
 
 /* ---- bare rock, a seam or an ore, and nothing with soil left on it -------- */
@@ -385,7 +385,7 @@ rollback;
 check('a sloping tile takes a building on the island only on piers, under a deck at its top',
   field('BARE', island2) === 'ALLOWED|10', `"${field('BARE', island2)}"`);
 check('shuttering over it is not enough',
-  field('SHUTTERED', island2) === 'The foundation here is only shuttered. Pour it first.', `"${field('SHUTTERED', island2)}"`);
+  field('SHUTTERED', island2) === 'Foundation not poured yet.', `"${field('SHUTTERED', island2)}"`);
 check('and the poured slab takes the building', field('POURED', island2) === 'ALLOWED', `"${field('POURED', island2)}"`);
 check('on the slab itself, not on piers', field('ONSLAB', island2) === 'false|no deck', `"${field('ONSLAB', island2)}"`);
 const [slabTop, groundTop] = field('SURFACE', island2).split('|');

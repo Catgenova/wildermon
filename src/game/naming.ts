@@ -65,11 +65,11 @@ export const NAMING_ACTIONS: ActionDef[] = [
         // An empty answer takes the name off again rather than leaving a blank.
         if (thing.name) {
           delete thing.name;
-          g.logMsg(`It goes back to being a ${(nameOf(g, t) ?? 'thing').toLowerCase()}.`, 'info');
+          g.logMsg(`Name removed: ${(nameOf(g, t) ?? 'thing').toLowerCase()}.`, 'info');
         }
       } else {
         thing.name = name;
-        g.logMsg(`The ${was.toLowerCase()} is called ${name} from now on.`, 'info');
+        g.logMsg(`Named: ${was.toLowerCase()} is now ${name}.`, 'info');
       }
       g.events.emit('world', 0, 0);
       g.events.emit('crate');

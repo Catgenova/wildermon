@@ -162,11 +162,11 @@ check(`an awla lands ${BODKIN_HIDE} on a bura's hide and 1 on a rabba`, at('BORE
 check(`a skulka lands ${BLINDSIDE} on one after you and 1 on one fighting it`, at('FLANK') === `${BLINDSIDE}|1`, at('FLANK'));
 check(`a testa's blow turns the two hunters after you within ${GUARD_RANGE} tiles onto it, and not the one further off`, at('SHIELD') === 'on,on,off', at('SHIELD'));
 const [sparAsk, tameAsk] = at('SPARASK').split('|');
-check('a sparra of yours may be attacked; another of yours may not', sparAsk === 'none' && tameAsk.startsWith('That one is tame'), at('SPARASK'));
+check('a sparra of yours may be attacked; another of yours may not', sparAsk === 'none' && tameAsk.startsWith('Tame: release it first'), at('SPARASK'));
 const [sh, smax, shunt, slearnt, sAfter] = at('SPAR').split('|');
 check(`sparred with, it goes no lower than ${SPAR_YIELD} of its health, never comes for you, and the swings teach fighting`,
   Number(sh) === Number(smax) * SPAR_YIELD && shunt === 'true' && slearnt === 'true', at('SPAR'));
-check('and then it has yielded', sAfter.endsWith('has yielded. Let it get its breath back first.') && at('SPARSAID').endsWith(', and yields.'), `${sAfter} / ${at('SPARSAID')}`);
+check('and then it has yielded', sAfter.endsWith('has yielded: wait.') && at('SPARSAID').endsWith(', yields.'), `${sAfter} / ${at('SPARSAID')}`);
 
 /* ---- in the browser ---------------------------------------------------------------- */
 
@@ -249,13 +249,13 @@ const clear = (): void => { for (const c of [...g.creatures.list.values()]) g.cr
   const target = (c: Creature) => ({ kind: 'creature' as const, id: c.id });
   check('a sparra of yours may be sparred with, and is offered as Spar; another of yours may not be attacked',
     ATTACK.applies(target(s), g) && ATTACK.labelFor?.(target(s), g) === 'Spar' && ATTACK.check?.(target(s), g) === null
-    && !ATTACK.applies(target(other), g) && ATTACK.check?.(target(other), g)?.startsWith('That one is tame') === true);
+    && !ATTACK.applies(target(other), g) && ATTACK.check?.(target(other), g)?.startsWith('Tame: release it first') === true);
   const before = g.skills.get('fighting') ?? 0;
   for (let n = 0; n < 300 && ATTACK.check?.(target(s), g) === null; n++) ATTACK.perform(target(s), g);
   const top = maxHealth(s, SPECIES.sparra);
   check(`sparred with, it goes no lower than ${SPAR_YIELD} of its health and has yielded, and the swings teach fighting`,
     s.health >= top * SPAR_YIELD && s.health <= top * SPAR_YIELD + SPAR_SLACK && g.creatures.list.has(s.id) && (g.skills.get('fighting') ?? 0) > before
-    && ATTACK.check?.(target(s), g)?.endsWith('has yielded. Let it get its breath back first.') === true,
+    && ATTACK.check?.(target(s), g)?.endsWith('has yielded: wait.') === true,
     `${s.health} of ${top}, ${ATTACK.check?.(target(s), g)}`);
 }
 

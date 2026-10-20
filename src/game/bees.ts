@@ -6,6 +6,7 @@ import { lampTooFar } from './lamps';
 import { DAY_SECONDS } from './pace';
 import { SEASON_DAYS, SEASONS, seasonAt, seasonBegan, type Season } from '../world/calendar';
 import { flowersHere } from './wildflowers';
+import { capital } from './words';
 
 /**
  * Bees: a skep, a coiled straw hive woven with a carving knife and set down
@@ -115,13 +116,13 @@ export const skepMade = (g: Game, f: PlacedFurniture, now = g.wallNow()): number
 
 /** What a refused Take honey says. The island says the same (`skep_said`). */
 export const SKEP_SAID = {
-  get notYours(): string { return `Only whoever set this ${word()} down, or somebody of the settlement it stands on, may take from it.`; },
-  get empty(): string { return `There is not a whole ${honeyWord()} in the ${word()} yet.`; },
+  get notYours(): string { return `Only whoever set this ${word()} down, or a citizen of its settlement, may take from it.`; },
+  get empty(): string { return `Less than 1 ${honeyWord()} in the ${word()}.`; },
 };
 
 /** What taking from it says. The island's `skep_took_said`. */
 export const skepTookSaid = (honey: number, wax: number): string =>
-  `You take ${honey} ${honeyWord()}${wax > 0 ? ` and ${wax} ${waxWord()}` : ''} from the ${word()}. It starts filling again from empty.`;
+  `Took: ${honey} ${honeyWord()}${wax > 0 ? `, ${wax} ${waxWord()}` : ''}. ${capital(word())} empty.`;
 
 /**
  * What Examine says of a skep: the clumps in reach this season and the rate
@@ -132,15 +133,15 @@ export function skepSays(flowers: number, season: Season, made: number): string 
   const honey = Math.floor(made);
   let rate: string;
   if (season === SKEP_IDLE) {
-    rate = `It is ${season}: the ${word()} makes nothing until ${SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length]}.`;
+    rate = `${capital(season)}: no honey until ${SEASONS[(SEASONS.indexOf(season) + 1) % SEASONS.length]}.`;
   } else if (flowers <= 0) {
-    rate = `No wildflowers are in flower within ${SKEP_REACH} tiles of the ${word()} this ${season}: it makes nothing.`;
+    rate = `No wildflowers within ${SKEP_REACH} tiles this ${season}: no honey.`;
   } else {
-    rate = `${flowers} ${flowers === 1 ? 'clump' : 'clumps'} of wildflowers within ${SKEP_REACH} tiles this ${season}: it makes `
-      + `${skepRateSaid(flowers, season)} ${honeyWord()} an hour, a ${honeyWord()} every ${SKEP_CLUMP_HOURS} hours for each clump.`;
+    rate = `Wildflowers within ${SKEP_REACH} tiles: ${flowers} ${flowers === 1 ? 'clump' : 'clumps'}. Rate: `
+      + `${skepRateSaid(flowers, season)} ${honeyWord()}/hour (1 per ${SKEP_CLUMP_HOURS} hours per clump).`;
   }
-  return `${rate} In it: ${honey} ${honeyWord()} and ${skepWax(honey)} ${waxWord()}, of the ${SKEP_HOLDS} ${honeyWord()} it holds `
-    + `(a ${waxWord()} for every ${SKEP_WAX_EVERY} ${honeyWord()}).`;
+  return `${rate} In it: ${honey}/${SKEP_HOLDS} ${honeyWord()}, ${skepWax(honey)} ${waxWord()} `
+    + `(1 ${waxWord()} per ${SKEP_WAX_EVERY} ${honeyWord()}).`;
 }
 
 type PieceTarget = Extract<Target, { kind: 'furniture' }>;

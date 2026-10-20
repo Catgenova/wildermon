@@ -3,7 +3,7 @@
 import { spellDef, spellForce, spellSecs } from './arcane';
 import { COMPANION_REACH, DRAW_CLOSEST, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, TARGET_RANGE as SPELL_REACH, THROW_REACH } from './fight';
 import type { SpellOn } from './patrons';
-import { capital, numberWord, percent, share, times } from './words';
+import { capital, percent } from './words';
 
 /**
  * What a fighting trade gives: two spells and a passive at each of six tiers.
@@ -55,23 +55,26 @@ export const GUARDIAN_REACH = 2;
  */
 export type SpellNeeds = 'shield' | 'axes' | 'mauls' | 'archery' | 'throwing' | 'skirmish' | 'knives' | 'companion' | 'kindling'
   | 'binding' | 'warding';
-/** As the spell's note says it first, and as its refusal says it is missing. */
-export const NEEDS_SAID: Record<SpellNeeds, { has: string; wants: string }> = {
-  shield: { has: 'With a shield in your off hand', wants: 'a shield in your off hand' },
-  axes: { has: 'With an axe in hand', wants: 'an axe in your hand' },
-  mauls: { has: 'With a maul in hand', wants: 'a maul in your hand' },
+/** As its refusal says it is missing, and as the spell's note says it first (`Needs ...:`). */
+const NEEDS_WANTS: Record<SpellNeeds, string> = {
+  shield: 'a shield in the off hand',
+  axes: 'an axe in hand',
+  mauls: 'a maul in hand',
   // A shot also wants an arrow to loose, which its refusal says when there is none.
-  archery: { has: 'With a bow in hand', wants: 'a bow in your hands' },
-  throwing: { has: 'With a javelin or a throwing axe in hand', wants: 'a javelin or a throwing axe in your hand' },
-  skirmish: { has: 'With a javelin, a throwing axe or a knife in hand', wants: 'a javelin, a throwing axe or a knife in your hand' },
-  knives: { has: 'With a knife in hand', wants: 'a knife in your hand' },
+  archery: 'a bow in hand',
+  throwing: 'a javelin or throwing axe in hand',
+  skirmish: 'a javelin, throwing axe or knife in hand',
+  knives: 'a knife in hand',
   // A creature you keep that is following you: not in a crate, not working a deed, not in the traces or under a rider.
-  companion: { has: 'With a companion following you', wants: 'a companion following you' },
+  companion: 'a companion following you',
   // Any focus of a stone kindling works that is not worn through (`focus_for`), and casting a trade's spell does not wear it.
-  kindling: { has: 'With a garnet or ruby focus in your pack', wants: 'a garnet or ruby focus in your pack' },
-  binding: { has: 'With a sapphire or diamond focus in your pack', wants: 'a sapphire or diamond focus in your pack' },
-  warding: { has: 'With a topaz or emerald focus in your pack', wants: 'a topaz or emerald focus in your pack' },
+  kindling: 'a garnet or ruby focus in your pack',
+  binding: 'a sapphire or diamond focus in your pack',
+  warding: 'a topaz or emerald focus in your pack',
 };
+export const NEEDS_SAID: Record<SpellNeeds, { has: string; wants: string }> = Object.fromEntries(
+  Object.entries(NEEDS_WANTS).map(([k, wants]) => [k, { has: `Needs ${wants}`, wants }]),
+) as Record<SpellNeeds, { has: string; wants: string }>;
 
 export interface ClassSpellDef {
   /** The id of the perk it is taken under, `<class>_<name>`, which is what the island keeps. */
@@ -133,9 +136,9 @@ export const FIRE_TOP = 100;
  */
 const EMBER = spellDef('ember')!;
 const emberIs = (at100: string, skill: string): string =>
-  `${capital(at100)} does ${Math.round(spellForce(EMBER, FIRE_LOW, FIRE_LOW, 1))} damage at ${FIRE_LOW} ${skill} with a QL `
-  + `${FIRE_LOW} focus, up to ${Math.round(spellForce(EMBER, FIRE_TOP, FIRE_TOP, 1))} at ${FIRE_TOP} ${skill} with a QL ${FIRE_TOP} `
-  + 'focus, rising evenly with each.';
+  `${capital(at100)}: ${Math.round(spellForce(EMBER, FIRE_LOW, FIRE_LOW, 1))} damage (${skill} ${FIRE_LOW}, focus QL `
+  + `${FIRE_LOW}) to ${Math.round(spellForce(EMBER, FIRE_TOP, FIRE_TOP, 1))} (${skill} ${FIRE_TOP}, focus QL ${FIRE_TOP}), `
+  + 'linear in each.';
 const FIRE_IS = emberIs(fire(1), 'kindling');
 const SHATTER_IS = emberIs(shatter(1), 'binding');
 /**
@@ -143,10 +146,10 @@ const SHATTER_IS = emberIs(shatter(1), 'binding');
  * Held is neither moving nor striking; rooted, not moving but striking anything within its reach.
  */
 const SNARE = spellDef('snare')!;
-const held = (m: number): string => `held at ${ofBlow(m)}, neither moving nor striking`;
-const HOLD_IS = `A hold at ${ofBlow(1)} lasts ${Number(spellSecs(SNARE, FIRE_LOW, 1).toFixed(1))} s at ${FIRE_LOW} binding, up to `
-  + `${Number(spellSecs(SNARE, FIRE_TOP, 1).toFixed(1))} s at ${FIRE_TOP} binding, rising evenly with it.`;
-const ROOTED = 'it cannot move, but strikes and throws at anything within its reach';
+const held = (m: number): string => `held at ${ofBlow(m)} (no moving or striking)`;
+const HOLD_IS = `Hold at ${ofBlow(1)}: ${Number(spellSecs(SNARE, FIRE_LOW, 1).toFixed(1))} s (binding ${FIRE_LOW}) to `
+  + `${Number(spellSecs(SNARE, FIRE_TOP, 1).toFixed(1))} s (binding ${FIRE_TOP}), linear.`;
+const ROOTED = 'no moving; still strikes and throws within its reach';
 /**
  * "a skin of 40%": that share of an Aegis out of your focus at your warding (`spellForce`), which is a skin of a
  * hundredth of full health for every point of its force (`skinOf`, `warder_skin_at`), from the bottom of both to the top.
@@ -154,13 +157,13 @@ const ROOTED = 'it cannot move, but strikes and throws at anything within its re
 const AEGIS = spellDef('aegis')!;
 export const skinOf = (force: number): number => force / 100;
 const skin = (m: number): string => `skin of ${ofBlow(m)}`;
-const SKIN_IS = `A ${skin(1)} is ${percent(skinOf(spellForce(AEGIS, FIRE_LOW, FIRE_LOW, 1)))} of full health at ${FIRE_LOW} warding `
-  + `with a QL ${FIRE_LOW} focus, up to ${percent(skinOf(spellForce(AEGIS, FIRE_TOP, FIRE_TOP, 1)))} at ${FIRE_TOP} warding with a QL `
-  + `${FIRE_TOP} focus, rising evenly with each. Every blow takes what it can out of a skin before the shield and the armour, and a `
-  + 'new skin goes over an old one only where it is the larger.';
+const SKIN_IS = `Skin of ${ofBlow(1)}: ${percent(skinOf(spellForce(AEGIS, FIRE_LOW, FIRE_LOW, 1)))} of max health (warding `
+  + `${FIRE_LOW}, focus QL ${FIRE_LOW}) to ${percent(skinOf(spellForce(AEGIS, FIRE_TOP, FIRE_TOP, 1)))} (warding ${FIRE_TOP}, `
+  + `focus QL ${FIRE_TOP}), linear in each. Absorbs blows before shield and armour; a new skin replaces an old one only `
+  + 'if larger.';
 /** "burns 1% of its full health a second for 8 s": a burn, which is a bleed that a Kindler started (`class_burn`). */
-const burns = (each: number, secs: number): string => `burns ${percent(each)} of its full health a second for ${span(secs)}`;
-const BURN_LAST = 'a burn never takes the last of its health';
+const burns = (each: number, secs: number): string => `burn ${percent(each)} of max health per second for ${span(secs)}`;
+const BURN_LAST = 'burns never take the last of its health';
 
 /**
  * Every class spell there is, trade by trade, by the number each was picked
@@ -193,317 +196,313 @@ const BURN_LAST = 'a burn never takes the last of its health';
 export const CLASS_SPELLS: ClassSpellDef[] = [
   /* ---- The Sworn Blade ---- */
   blade(1, 'Measured Cut', 0.08, 6, ['enemy'], { more: 1.3 },
-    (fx) => `A blow at ${ofBlow(fx.more)} that cannot miss, on an enemy within your reach.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}, cannot miss. Target: enemy within reach.`),
   blade(32, 'Challenge', 0.08, 15, ['enemy'], { secs: 10 },
-    (fx) => `The creature turns on you at once and hunts only you for ${span(fx.secs)}.`),
+    (fx) => `Target hunts only you for ${span(fx.secs)}.`),
   blade(2, 'Lunge', 0.1, 10, ['enemy'], { reach: 4, more: 1.5 },
-    (fx) => `You stride to an enemy up to ${fx.reach} tiles off, over ground you could walk, and strike it at ${ofBlow(fx.more)}.`),
+    (fx) => `Leap to an enemy up to ${fx.reach} tiles away over walkable ground; blow at ${ofBlow(fx.more)}.`),
   blade(11, 'Hamstring', 0.1, 20, ['enemy'], { more: 0.8, pace: 0.5, secs: 10 },
-    (fx) => `A blow at ${ofBlow(fx.more)}; for ${span(fx.secs)} it walks, hunts and flees at ${percent(fx.pace)} of its pace.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}. Target move speed ${percent(fx.pace)} for ${span(fx.secs)}.`),
   blade(15, 'Shield Bash', 0.1, 12, ['enemy'], { more: 0.7, back: 2 },
-    (fx) => `a crushing blow at ${ofBlow(fx.more)} that knocks a heavy blow off its stroke and puts its next blow back ${span(fx.back)}.`, 'shield'),
+    (fx) => `crushing blow at ${ofBlow(fx.more)}; interrupts a heavy blow, delays the target's next blow ${span(fx.back)}.`, 'shield'),
   blade(29, 'Second Breath', 0, 180, ['self'], { stamina: 0.4 },
-    (fx) => `Costs no stamina. ${percent(fx.stamina)} of a full bar of stamina back at once.`),
+    (fx) => `No stamina cost. Stamina +${percent(fx.stamina)} of max.`),
   blade(19, 'Deflect', 0.1, 25, ['self'], { share: 0.5, secs: 6 },
-    (fx) => `For ${span(fx.secs)}, every blow you block lands back on what struck at ${percent(fx.share)} of the blow.`),
+    (fx) => `For ${span(fx.secs)}: each blocked blow hits its attacker for ${percent(fx.share)} of the blow.`),
   blade(26, 'Hold the Line', 0.15, 90, ['self'], { bleed: 0.5, secs: 15 },
-    (fx) => `For ${span(fx.secs)} your wounds bleed ${percent(1 - fx.bleed)} less, and those on your arms do not slow your swing.`),
+    (fx) => `For ${span(fx.secs)}: bleeding −${percent(1 - fx.bleed)}; arm wounds do not slow your swing.`),
   blade(12, 'Disarming Cut', 0.12, 30, ['enemy'], { more: 0.7, cut: 0.4, blows: 3, secs: 30 },
-    (fx) => `A blow at ${ofBlow(fx.more)}; its next ${fx.blows} blows within ${span(fx.secs)} do ${percent(fx.cut)} less damage.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}. Target's next ${fx.blows} blows within ${span(fx.secs)}: damage −${percent(fx.cut)}.`),
   blade(31, 'Measured Breathing', 0.1, 60, ['self'], { secs: 20 },
-    (fx) => `For ${span(fx.secs)} a swing or a draw costs no stamina.`),
+    (fx) => `For ${span(fx.secs)}: swings and draws cost no stamina.`),
   blade(33, 'Guardian’s Call', 0.18, 45, ['self'], { reach: 5, secs: 8 },
-    (fx) => `Every creature within ${fx.reach} tiles of you that is hunting somebody turns on you and hunts only you for ${span(fx.secs)}.`),
+    (fx) => `Every creature within ${fx.reach} tiles hunting anyone hunts only you for ${span(fx.secs)}.`),
   blade(28, 'Last Stand', 0, 600, ['self'], { below: 0.25, cut: 0.6, secs: 10 },
-    (fx) => `Costs no stamina. Only below ${percent(fx.below)} of your health: for ${span(fx.secs)} you take ${percent(fx.cut)} less damage.`),
+    (fx) => `No stamina cost. Only below ${percent(fx.below)} health. For ${span(fx.secs)}: damage taken −${percent(fx.cut)}.`),
 
   /* ---- The Berserker ---- */
   berserker(18, 'Wild Swing', 0.05, 5, ['enemy'], { more: 1.4, miss: 2 },
-    (fx) => `A blow at ${ofBlow(fx.more)} that misses ${times(fx.miss)} as often as a swing does.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}, miss chance ×${fx.miss} a swing's.`),
   berserker(30, 'Shrug It Off', 0.1, 60, ['self'], { severity: 0.5 },
-    (fx) => `Your worst wound is ${percent(1 - fx.severity)} less severe, and it stops bleeding.`),
+    (fx) => `Worst wound: severity −${percent(1 - fx.severity)}, bleeding stopped.`),
   berserker(2, 'Rending Chop', 0.1, 12, ['enemy'], { more: 1.1 },
-    (fx) => `a blow at ${ofBlow(fx.more)} that bleeds it as a knife does, ${percent(KNIFE_BLEED)} of the blow a second for ${span(KNIFE_BLEED_SECS)}.`, 'axes'),
+    (fx) => `blow at ${ofBlow(fx.more)}; knife bleed: ${percent(KNIFE_BLEED)} of the blow per second for ${span(KNIFE_BLEED_SECS)}.`, 'axes'),
   berserker(3, 'Skull Crack', 0.12, 15, ['enemy'], { more: 1.2, hold: 2, monster: 0.5 },
-    (fx) => `a blow at ${ofBlow(fx.more)} that holds it where it stands, neither moving nor striking, for ${span(fx.hold)}; a monster for ${span(fx.hold * fx.monster)}.`, 'mauls'),
+    (fx) => `blow at ${ofBlow(fx.more)}; target held (no moving or striking) for ${span(fx.hold)}, monsters ${span(fx.hold * fx.monster)}.`, 'mauls'),
   berserker(21, 'Battle Rage', 0.15, 90, ['self'], { dealt: 1.3, taken: 1.2, secs: 15 },
-    (fx) => `For ${span(fx.secs)} you deal ${percent(fx.dealt - 1)} more damage and take ${percent(fx.taken - 1)} more.`),
+    (fx) => `For ${span(fx.secs)}: damage dealt +${percent(fx.dealt - 1)}, damage taken +${percent(fx.taken - 1)}.`),
   berserker(29, 'Adrenaline', 0, 120, ['self'], { time: 0.85, secs: 10 },
-    (fx) => `Costs no stamina. For ${span(fx.secs)} a swing or a draw costs no stamina and takes ${percent(1 - fx.time)} less time.`),
+    (fx) => `No stamina cost. For ${span(fx.secs)}: swings and draws cost no stamina, swing time −${percent(1 - fx.time)}.`),
   berserker(20, 'Blood Price', 0, 30, ['enemy'], { health: 0.1, more: 2.5 },
-    (fx) => `Costs no stamina but ${percent(fx.health)} of your health: a blow at ${ofBlow(fx.more)}.`),
+    (fx) => `No stamina cost; costs ${percent(fx.health)} health. Blow at ${ofBlow(fx.more)}.`),
   berserker(6, 'Execute', 0.15, 30, ['enemy'], { low: 0.25, more: 3, whole: 1 },
-    (fx) => `A blow at ${ofBlow(fx.more)} on a creature below ${percent(fx.low)} of its health, and at ${ofBlow(fx.whole)} on one above it.`),
+    (fx) => `Blow at ${ofBlow(fx.more)} on a creature below ${percent(fx.low)} health, ${ofBlow(fx.whole)} otherwise.`),
   berserker(8, 'Overhead Smash', 0.15, 20, ['enemy'], { more: 2.5, wind: 1.5 },
-    (fx) => `A crushing blow at ${ofBlow(fx.more)} that cannot miss; your own next swing comes ${span(fx.wind)} later.`),
+    (fx) => `Crushing blow at ${ofBlow(fx.more)}, cannot miss. Your next swing delayed ${span(fx.wind)}.`),
   berserker(14, 'Whirlwind', 0.25, 45, ['self'], { more: 0.9, blows: 2, reach: 2 },
-    (fx) => `${numberWord(fx.blows)} blows at ${ofBlow(fx.more)} on every enemy within ${fx.reach} tiles of you.`),
+    (fx) => `${fx.blows} blows at ${ofBlow(fx.more)} on every enemy within ${fx.reach} tiles.`),
   berserker(45, 'Earthshaker', 0.25, 60, ['self'], { more: 1, reach: 3, hold: 1 },
-    (fx) => `a blow at ${ofBlow(fx.more)} on every enemy within ${fx.reach} tiles of you, and each one held where it stands for ${span(fx.hold)}.`, 'mauls'),
+    (fx) => `blow at ${ofBlow(fx.more)} on every enemy within ${fx.reach} tiles; each held for ${span(fx.hold)}.`, 'mauls'),
   berserker(50, 'Last Rage', 0, 600, ['self'], { below: 0.25, secs: 10 },
-    (fx) => `Costs no stamina. Only below ${percent(fx.below)} of your health: for ${span(fx.secs)} every blow you land is critical.`),
+    (fx) => `No stamina cost. Only below ${percent(fx.below)} health. For ${span(fx.secs)}: every blow landed is critical.`),
 
   /* ---- The Pikeman ---- */
   pikeman(38, 'Warning Thrust', 0.06, 10, ['enemy'], { secs: 30 },
-    (fx) => `A creature within your reach that is not fighting you will not come for you for ${span(fx.secs)}, alone or with its pack, `
+    (fx) => `A creature within reach not fighting you, and its pack, will not attack you for ${span(fx.secs)} `
       + 'unless you strike it first.'),
   pikeman(13, 'Overreach', 0.08, 8, ['enemy'], { more: 1.1, past: 2, wind: 1 },
-    (fx) => `A blow at ${ofBlow(fx.more)} on an enemy up to ${fx.past} tiles past your reach; your own next swing comes ${span(fx.wind)} later.`),
+    (fx) => `Blow at ${ofBlow(fx.more)} on an enemy up to ${fx.past} tiles past your reach. Your next swing delayed ${span(fx.wind)}.`),
   pikeman(6, 'Sweep the Legs', 0.1, 15, ['enemy'], { more: 0.8, pace: 0.5, secs: 8 },
-    (fx) => `A blow at ${ofBlow(fx.more)}; for ${span(fx.secs)} it walks, hunts and flees at ${percent(fx.pace)} of its pace.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}. Target move speed ${percent(fx.pace)} for ${span(fx.secs)}.`),
   pikeman(5, 'Vital Thrust', 0.12, 20, ['enemy'], { more: 1.2, crit: 2 },
-    (fx) => `A blow at ${ofBlow(fx.more)} that is critical ${times(fx.crit)} as often as a swing is.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}, critical chance ×${fx.crit} a swing's.`),
   pikeman(33, 'Hook', 0.1, 15, ['enemy'], { reach: 4, pull: 2, least: 1 },
-    (fx) => `An enemy up to ${fx.reach} tiles off is dragged ${fx.pull} tiles towards you, no nearer than ${fx.least} tile${fx.least === 1 ? '' : 's'}, `
-      + 'over ground it could walk, and turns on you as if struck.'),
+    (fx) => `Pull an enemy up to ${fx.reach} tiles away ${fx.pull} tiles towards you, min ${fx.least} ${fx.least === 1 ? 'tile' : 'tiles'} away, `
+      + 'over walkable ground. It turns on you.'),
   pikeman(32, 'Rally the Line', 0.15, 90, ['self'], { reach: 5, stamina: 0.2 },
-    (fx) => `You and everybody within ${fx.reach} tiles of you get ${percent(fx.stamina)} of a full bar of stamina back.`),
+    (fx) => `You and everyone within ${fx.reach} tiles: stamina +${percent(fx.stamina)} of max.`),
   pikeman(14, 'Twin Thrust', 0.14, 20, ['enemy'], { more: 0.7, blows: 2 },
-    (fx) => `${numberWord(fx.blows)} blows at ${ofBlow(fx.more)} each, one after the other.`),
+    (fx) => `${fx.blows} blows at ${ofBlow(fx.more)}, one after the other.`),
   pikeman(19, 'Reach Advantage', 0.08, 15, ['enemy'], { more: 1.5, whole: 1 },
-    (fx) => `A blow at ${ofBlow(fx.more)} on a creature not yet within its own reach of you (${HUNT_REACH} tiles, or ${THROW_REACH} for one `
-      + `that throws), and at ${ofBlow(fx.whole)} on one that is.`),
+    (fx) => `Blow at ${ofBlow(fx.more)} on a creature outside its own reach of you (${HUNT_REACH} tiles, ${THROW_REACH} for throwers), `
+      + `${ofBlow(fx.whole)} otherwise.`),
   pikeman(2, 'Skewer', 0.12, 15, ['enemy'], { more: 1.5, behind: 2, width: 0.5, through: 0.6 },
-    (fx) => `A blow at ${ofBlow(fx.more)}, and one at ${ofBlow(fx.through)} on every enemy up to ${fx.behind} tiles behind it and within `
-      + `${fx.width} tiles of the line of the thrust.`),
+    (fx) => `Blow at ${ofBlow(fx.more)}; blow at ${ofBlow(fx.through)} on every enemy up to ${fx.behind} tiles behind it, within `
+      + `${fx.width} tiles of the line.`),
   pikeman(17, 'Keep Away', 0.1, 20, ['self'], { secs: 10, push: 1 },
-    (fx) => `For ${span(fx.secs)} every blow you land pushes what it lands on ${fx.push} tile${fx.push === 1 ? '' : 's'} further from you, `
-      + 'over ground it could walk.'),
+    (fx) => `For ${span(fx.secs)}: every blow you land pushes the target ${fx.push} ${fx.push === 1 ? 'tile' : 'tiles'} away, `
+      + 'over walkable ground.'),
   pikeman(35, 'Fend Off', 0.1, 20, ['self'], { secs: 8, push: 2 },
-    (fx) => `For ${span(fx.secs)} anything that comes within ${HUNT_REACH} tiles of you to strike is pushed ${fx.push} tiles back instead, `
-      + 'over ground it could walk.'),
+    (fx) => `For ${span(fx.secs)}: anything coming within ${HUNT_REACH} tiles to strike is pushed ${fx.push} tiles back, `
+      + 'over walkable ground.'),
   pikeman(3, 'Brace for the Charge', 0.1, 20, ['self'], { secs: 6, more: 2, back: 2 },
-    (fx) => `For ${span(fx.secs)} the first creature that comes at you from outside your reach is stopped at the edge of it by a blow at `
-      + `${ofBlow(fx.more)}, and its next blow is put back ${span(fx.back)}.`),
+    (fx) => `For ${span(fx.secs)}: the first creature charging from outside your reach is stopped at its edge by a blow at `
+      + `${ofBlow(fx.more)}; its next blow delayed ${span(fx.back)}.`),
 
   /* ---- The Archer ---- */
   archer(2, 'Quick Shot', 0.06, 6, ['enemy'], { more: 0.8, sooner: 1 },
-    (fx) => `a shot at ${ofBlow(fx.more)}; your own next draw comes ${span(fx.sooner)} sooner.`, 'archery'),
+    (fx) => `shot at ${ofBlow(fx.more)}; your next draw ${span(fx.sooner)} sooner.`, 'archery'),
   archer(1, 'Aimed Shot', 0.08, 8, ['enemy'], { more: 1.4 },
-    (fx) => `a shot at ${ofBlow(fx.more)} that cannot miss.`, 'archery'),
+    (fx) => `shot at ${ofBlow(fx.more)}, cannot miss.`, 'archery'),
   archer(29, 'Read the Wind', 0.06, 30, ['self'], { secs: 30, crit: 2 },
-    (fx) => `Your next shot within ${span(fx.secs)}, a draw's or a spell's, cannot miss and is critical ${times(fx.crit)} as often.`),
+    (fx) => `Your next shot within ${span(fx.secs)} (draw or spell): cannot miss, critical chance ×${fx.crit}.`),
   archer(9, 'Long Shot', 0.1, 15, ['enemy'], { more: 1.1, range: 1.5 },
-    (fx) => `a shot at ${ofBlow(fx.more)} on an enemy up to ${times(fx.range)} your bow's range off, landing as often as one at the near end does.`,
+    (fx) => `shot at ${ofBlow(fx.more)} on an enemy up to ×${fx.range} your bow's range, hit chance as at near range.`,
     'archery'),
   archer(6, 'Crippling Shot', 0.1, 15, ['enemy'], { more: 0.8, pace: 0.5, secs: 8 },
-    (fx) => `a shot at ${ofBlow(fx.more)}; for ${span(fx.secs)} it walks, hunts and flees at ${percent(fx.pace)} of its pace.`, 'archery'),
+    (fx) => `shot at ${ofBlow(fx.more)}. Target move speed ${percent(fx.pace)} for ${span(fx.secs)}.`, 'archery'),
   archer(10, 'Point Blank', 0.08, 10, ['enemy'], { more: 1.6, reach: 2 },
-    (fx) => `a shot at ${ofBlow(fx.more)} on an enemy within ${fx.reach} tiles of you, nearer than a draw can be made (${DRAW_CLOSEST} tiles) as well.`,
+    (fx) => `shot at ${ofBlow(fx.more)} on an enemy within ${fx.reach} tiles, including inside min draw distance (${DRAW_CLOSEST} tiles).`,
     'archery'),
   archer(3, 'Twin Arrows', 0.14, 20, ['enemy'], { more: 0.75, arrows: 2 },
-    (fx) => `${numberWord(fx.arrows)} arrows loosed at once, each a shot at ${ofBlow(fx.more)}.`, 'archery'),
+    (fx) => `${fx.arrows} arrows at once, each a shot at ${ofBlow(fx.more)}.`, 'archery'),
   archer(7, 'Pinning Shot', 0.14, 25, ['enemy'], { more: 0.9, hold: 2, monster: 0.5 },
-    (fx) => `a shot at ${ofBlow(fx.more)} that holds it where it stands, neither moving nor striking, for ${span(fx.hold)}; a monster for `
+    (fx) => `shot at ${ofBlow(fx.more)}; target held (no moving or striking) for ${span(fx.hold)}, monsters `
       + `${span(fx.hold * fx.monster)}.`, 'archery'),
   archer(14, 'Expose', 0.15, 60, ['enemy'], { more: 1.15, secs: 15 },
-    (fx) => `An enemy within ${SPELL_REACH} tiles: for ${span(fx.secs)} every blow and shot a person lands on it does ${percent(fx.more - 1)} more damage.`),
+    (fx) => `Enemy within ${SPELL_REACH} tiles: damage taken from players' blows and shots +${percent(fx.more - 1)} for ${span(fx.secs)}.`),
   archer(25, 'Decoy', 0.12, 45, ['self'], { secs: 6 },
-    (fx) => `For ${span(fx.secs)} every creature that strikes at you strikes a decoy at your feet instead, and nothing lands on you.`),
+    (fx) => `For ${span(fx.secs)}: every creature attacking you hits a decoy instead; no damage to you.`),
   archer(48, 'Snipe', 0.2, 60, ['enemy'], { more: 3 },
-    (fx) => `a shot at ${ofBlow(fx.more)} on a creature that is not after anybody.`, 'archery'),
+    (fx) => `shot at ${ofBlow(fx.more)} on a creature not hunting anyone.`, 'archery'),
   archer(49, 'Deadeye', 0.3, 300, ['self'], { time: 0.6, secs: 10 },
-    (fx) => `For ${span(fx.secs)} a draw takes ${percent(1 - fx.time)} less time.`),
+    (fx) => `For ${span(fx.secs)}: draw time −${percent(1 - fx.time)}.`),
 
   /* ---- The Skirmisher ---- */
   skirmisher(2, 'Snap Throw', 0.05, 5, ['enemy'], { more: 0.8, sooner: 1 },
-    (fx) => `a throw at ${ofBlow(fx.more)}; your own next swing comes ${span(fx.sooner)} sooner.`, 'throwing'),
+    (fx) => `throw at ${ofBlow(fx.more)}; your next swing ${span(fx.sooner)} sooner.`, 'throwing'),
   skirmisher(3, 'Long Throw', 0.1, 15, ['enemy'], { more: 1.1, past: 2 },
-    (fx) => `a throw at ${ofBlow(fx.more)} on an enemy up to ${fx.past} tiles past your reach.`, 'throwing'),
+    (fx) => `throw at ${ofBlow(fx.more)} on an enemy up to ${fx.past} tiles past your reach.`, 'throwing'),
   skirmisher(31, 'Hit and Run', 0.12, 30, ['enemy'], { more: 1, pace: 1.4, secs: 5 },
-    (fx) => `a throw or a knife blow at ${ofBlow(fx.more)}, and for ${span(fx.secs)} you walk ${percent(fx.pace - 1)} faster.`, 'skirmish'),
+    (fx) => `throw or knife blow at ${ofBlow(fx.more)}; your walk speed +${percent(fx.pace - 1)} for ${span(fx.secs)}.`, 'skirmish'),
   skirmisher(7, 'Heavy Throw', 0.12, 20, ['enemy'], { more: 1.4 },
-    (fx) => `a throw at ${ofBlow(fx.more)} that staggers it as a maul does: a heavy blow knocked off its stroke, and its next blow `
-      + `put back ${span(STAGGER_MAUL)}.`, 'throwing'),
+    (fx) => `throw at ${ofBlow(fx.more)} with a maul's stagger: interrupts a heavy blow, delays the target's next blow `
+      + `${span(STAGGER_MAUL)}.`, 'throwing'),
   skirmisher(8, 'Gut Throw', 0.12, 20, ['enemy'], { more: 0.9 },
-    (fx) => `a throw at ${ofBlow(fx.more)} that bleeds it as a knife does, ${percent(KNIFE_BLEED)} of the throw a second for `
+    (fx) => `throw at ${ofBlow(fx.more)}; knife bleed: ${percent(KNIFE_BLEED)} of the throw per second for `
       + `${span(KNIFE_BLEED_SECS)}.`, 'throwing'),
   skirmisher(12, 'Parting Throw', 0.1, 20, ['enemy'], { more: 1, leap: 3 },
-    (fx) => `a throw at ${ofBlow(fx.more)}, and you leap ${fx.leap} tiles straight back from it, over ground you could walk.`, 'throwing'),
+    (fx) => `throw at ${ofBlow(fx.more)}; you leap ${fx.leap} tiles straight back over walkable ground.`, 'throwing'),
   skirmisher(4, 'Double Throw', 0.14, 20, ['enemy'], { more: 0.7, throws: 2 },
-    (fx) => `${numberWord(fx.throws)} throws at ${ofBlow(fx.more)} each, one after the other.`, 'throwing'),
+    (fx) => `${fx.throws} throws at ${ofBlow(fx.more)}, one after the other.`, 'throwing'),
   skirmisher(9, 'Ricochet', 0.15, 25, ['enemy'], { more: 1, reach: 3, glance: 0.6 },
-    (fx) => `a throw at ${ofBlow(fx.more)} that, when it lands, glances on to the nearest other enemy within ${fx.reach} tiles of it `
+    (fx) => `throw at ${ofBlow(fx.more)}; on a hit, bounces to the nearest other enemy within ${fx.reach} tiles `
       + `at ${ofBlow(fx.glance)}.`, 'throwing'),
   skirmisher(44, 'Opportunist', 0.1, 30, ['self'], { more: 1.3, secs: 10 },
-    (fx) => `For ${span(fx.secs)} every blow, throw and shot of yours on a creature fighting somebody else does `
-      + `${percent(fx.more - 1)} more damage.`),
+    (fx) => `For ${span(fx.secs)}: your blows, throws and shots on a creature fighting someone else +${percent(fx.more - 1)} damage.`),
   skirmisher(36, 'Fade', 0.1, 45, ['self'], { secs: 10 },
-    (fx) => `Every creature hunting you loses you, and will not come for you again for ${span(fx.secs)} unless you strike it.`),
+    (fx) => `Every creature hunting you loses you; no new hunt on you for ${span(fx.secs)} unless you strike it.`),
   skirmisher(10, 'Fan of Blades', 0.22, 45, ['enemy'], { more: 0.6, reach: 3 },
-    (fx) => `a throw at ${ofBlow(fx.more)} at the enemy you aim at and at every other enemy within ${fx.reach} tiles of it.`, 'throwing'),
+    (fx) => `throw at ${ofBlow(fx.more)} at the target and every other enemy within ${fx.reach} tiles of it.`, 'throwing'),
   skirmisher(49, 'Marked for Death', 0.15, 60, ['enemy'], { crit: 2, secs: 15 },
-    (fx) => `An enemy within ${SPELL_REACH} tiles: for ${span(fx.secs)} every blow, throw and shot a person lands on it is critical `
-      + `${times(fx.crit)} as often.`),
+    (fx) => `Enemy within ${SPELL_REACH} tiles: critical chance of players' blows, throws and shots on it ×${fx.crit} `
+      + `for ${span(fx.secs)}.`),
 
   /* ---- The Chirurgeon ---- */
   chirurgeon(1, 'Field Dressing', 0.06, 8, ['self', 'player'], { heal: 0.1, reach: 2 },
-    (fx) => `You or somebody within ${fx.reach} tiles of you gets ${percent(fx.heal)} of their health back, and their worst bleeding `
-      + 'wound stops bleeding.'),
+    (fx) => `You or a player within ${fx.reach} tiles: health +${percent(fx.heal)}; worst bleeding wound stops bleeding.`),
   chirurgeon(2, 'Quick Stitch', 0.08, 10, ['self', 'player'], { close: 0.3, reach: 2 },
-    (fx) => `The worst wound on you or on somebody within ${fx.reach} tiles of you closes by ${percent(fx.close)} of its severity.`),
+    (fx) => `You or a player within ${fx.reach} tiles: worst wound severity −${percent(fx.close)}.`),
   chirurgeon(49, 'Leech', 0.12, 20, ['enemy'], { more: 0.8 },
-    (fx) => `a knife blow at ${ofBlow(fx.more)}, and you get back as large a share of your health as it takes of the creature's.`, 'knives'),
+    (fx) => `knife blow at ${ofBlow(fx.more)}; you regain the share of your health equal to the share it takes of the creature's.`, 'knives'),
   chirurgeon(4, 'Regenerate', 0.15, 45, ['self', 'player'], { each: 0.02, secs: 15, reach: 4 },
-    (fx) => `You or somebody within ${fx.reach} tiles of you gets ${percent(fx.each)} of their health back a second for ${span(fx.secs)}.`),
+    (fx) => `You or a player within ${fx.reach} tiles: health +${percent(fx.each)} per second for ${span(fx.secs)}.`),
   chirurgeon(43, 'Toxin', 0.12, 30, ['enemy'], { each: 0.01, secs: 20, reach: 4 },
-    (fx) => `An enemy within ${fx.reach} tiles of you bleeds ${percent(fx.each)} of its full health a second for ${span(fx.secs)}; `
-      + 'a bleed never takes the last of it.'),
+    (fx) => `Enemy within ${fx.reach} tiles: bleed ${percent(fx.each)} of max health per second for ${span(fx.secs)}; `
+      + 'bleeds never take the last of it.'),
   chirurgeon(17, 'Surgeon’s Hands', 0.12, 60, ['self'], { more: 2, secs: 20 },
-    (fx) => `For ${span(fx.secs)} every dressing you put on puts back ${times(fx.more)} as much health.`),
+    (fx) => `For ${span(fx.secs)}: health restored by your dressings ×${fx.more}.`),
   chirurgeon(6, 'Healing Circle', 0.25, 60, ['self'], { heal: 0.15, reach: 4 },
-    (fx) => `You and everybody within ${fx.reach} tiles of you each get back ${percent(fx.heal)} of their own full health.`),
+    (fx) => `You and everyone within ${fx.reach} tiles: health +${percent(fx.heal)} of max.`),
   chirurgeon(19, 'Mass Dressing', 0.25, 60, ['self'], { close: 0.2, reach: 3 },
-    (fx) => `On you and everybody within ${fx.reach} tiles of you, the worst wound stops bleeding and closes by ${percent(fx.close)} of `
-      + 'its severity.'),
+    (fx) => `You and everyone within ${fx.reach} tiles: worst wound stops bleeding, severity −${percent(fx.close)}.`),
   chirurgeon(46, 'Plague', 0.2, 60, ['self'], { each: 0.01, secs: 10, reach: 4 },
-    (fx) => `Every enemy within ${fx.reach} tiles of you bleeds ${percent(fx.each)} of its full health a second for ${span(fx.secs)}; `
-      + 'a bleed never takes the last of it.'),
+    (fx) => `Every enemy within ${fx.reach} tiles: bleed ${percent(fx.each)} of max health per second for ${span(fx.secs)}; `
+      + 'bleeds never take the last of it.'),
   chirurgeon(15, 'Battlefield Surgery', 0.3, 120, ['self', 'player'], { close: 0.5, heal: 0.2, reach: 2 },
-    (fx) => `Every wound on you or on somebody within ${fx.reach} tiles of you closes by ${percent(fx.close)} of its severity, and they `
-      + `get ${percent(fx.heal)} of their health back.`),
+    (fx) => `You or a player within ${fx.reach} tiles: every wound severity −${percent(fx.close)}, `
+      + `health +${percent(fx.heal)}.`),
   chirurgeon(50, 'Restoration', 0.3, 300, ['self'], { heal: 0.3 },
-    (fx) => `Every wound on you closes, and you get ${percent(fx.heal)} of your health back.`),
+    (fx) => `Every wound on you closes; health +${percent(fx.heal)}.`),
   chirurgeon(20, 'Miracle Worker', 0.4, 600, ['self', 'player'], { heal: 0.5, reach: 4 },
-    (fx) => `Every wound on you or on somebody within ${fx.reach} tiles of you closes, with whatever bleeding and venom was in it, and `
-      + `they get ${percent(fx.heal)} of their health back.`),
+    (fx) => `You or a player within ${fx.reach} tiles: every wound closes with its bleeding and venom; `
+      + `health +${percent(fx.heal)}.`),
 
   /* ---- The Beastmaster ---- */
   beastmaster(1, 'Sic', 0.05, 6, ['enemy'], { more: 1.3 },
-    (fx) => `your companion strikes an enemy within its reach (${COMPANION_REACH} tiles of it) at once, a blow at ${ofBlow(fx.more)} of its `
-      + 'own.', 'companion'),
+    (fx) => `companion strikes an enemy within its reach (${COMPANION_REACH} tiles) at once, at ${ofBlow(fx.more)} of `
+      + 'its blow.', 'companion'),
   beastmaster(15, 'Lick Wounds', 0.06, 15, ['self'], { heal: 0.15 },
-    (fx) => `your companion gets ${percent(fx.heal)} of its health back.`, 'companion'),
+    (fx) => `companion health +${percent(fx.heal)}.`, 'companion'),
   beastmaster(2, 'Pounce', 0.08, 12, ['enemy'], { reach: 5, more: 1, back: 0.5 },
-    (fx) => `your companion leaps onto an enemy up to ${fx.reach} tiles from it, over ground it could run, and strikes it at `
-      + `${ofBlow(fx.more)} of its own blow; the enemy's next blow is put back ${span(fx.back)}.`, 'companion'),
+    (fx) => `companion leaps onto an enemy up to ${fx.reach} tiles from it over runnable ground and strikes at `
+      + `${ofBlow(fx.more)} of its blow; the enemy's next blow delayed ${span(fx.back)}.`, 'companion'),
   beastmaster(28, 'Snarl', 0.08, 15, ['self'], { reach: 4 },
-    (fx) => `every wild creature within ${fx.reach} tiles of your companion turns on it.`, 'companion'),
+    (fx) => `every wild creature within ${fx.reach} tiles of your companion targets it.`, 'companion'),
   beastmaster(27, 'Guard Me', 0.1, 30, ['self'], { reach: 6 },
-    (fx) => `your companion leaps to your side, and every creature within ${fx.reach} tiles of you that is hunting you turns on it.`,
+    (fx) => `companion leaps to your side; every creature within ${fx.reach} tiles hunting you targets it.`,
     'companion'),
   beastmaster(8, 'Drag Down', 0.15, 40, ['enemy'], { more: 0.5, hold: 4 },
-    (fx) => `your companion strikes an enemy within its reach at ${ofBlow(fx.more)} of its own blow, and holds it where it stands, `
-      + `neither moving nor striking, for ${span(fx.hold)}.`, 'companion'),
+    (fx) => `companion strikes an enemy within its reach at ${ofBlow(fx.more)} of its blow; target held `
+      + `(no moving or striking) for ${span(fx.hold)}.`, 'companion'),
   beastmaster(13, 'Disembowel', 0.18, 60, ['enemy'], { more: 1, each: 0.3, secs: 8 },
-    (fx) => `your companion strikes an enemy within its reach at ${ofBlow(fx.more)} of its own blow, and the enemy bleeds `
-      + `${percent(fx.each)} of the blow a second for ${span(fx.secs)}; a bleed never takes the last of it.`, 'companion'),
+    (fx) => `companion strikes an enemy within its reach at ${ofBlow(fx.more)} of its blow; target bleeds `
+      + `${percent(fx.each)} of the blow per second for ${span(fx.secs)}; bleeds never take the last of it.`, 'companion'),
   beastmaster(18, 'Bloodlust', 0.15, 60, ['self'], { more: 1.4, secs: 15 },
-    (fx) => `for ${span(fx.secs)} your companion's blows are ${percent(fx.more - 1)} larger.`, 'companion'),
+    (fx) => `companion damage +${percent(fx.more - 1)} for ${span(fx.secs)}.`, 'companion'),
   beastmaster(32, 'Vengeance', 0.15, 90, ['self'], { more: 0.6, reach: 5, secs: 20 },
-    (fx) => `for ${span(fx.secs)}, every creature that lands a blow on you is struck back by your companion at ${ofBlow(fx.more)} of `
-      + `its own blow, when it is within ${fx.reach} tiles of it.`, 'companion'),
+    (fx) => `for ${span(fx.secs)}: every creature that hits you is struck back by your companion at ${ofBlow(fx.more)} of `
+      + `its blow, if within ${fx.reach} tiles of it.`, 'companion'),
   beastmaster(50, 'Feral Bond', 0.25, 600, ['self'], { share: 0.5, secs: 30 },
-    (fx) => `for ${span(fx.secs)} every blow that lands on you or on your companion is split between you, ${percent(fx.share)} `
+    (fx) => `for ${span(fx.secs)}: every blow on you or your companion is split ${percent(fx.share)} `
       + 'to each.', 'companion'),
   beastmaster(48, 'Primal Fury', 0.3, 300, ['self'], { more: 1.75, quick: 1.5, secs: 20 },
-    (fx) => `for ${span(fx.secs)} your companion's blows are ${percent(fx.more - 1)} larger and come ${percent(fx.quick - 1)} more often.`,
+    (fx) => `for ${span(fx.secs)}: companion damage +${percent(fx.more - 1)}, attack rate +${percent(fx.quick - 1)}.`,
     'companion'),
   beastmaster(41, 'Call of the Wild', 0.4, 900, ['enemy'], { reach: 4 },
-    (fx) => `A wild creature within ${fx.reach} tiles of you whose tame level is no more than your taming is tamed outright, as a tame `
-      + 'that takes: it follows you, or goes into an empty creature crate in your pack if something follows you already. Never a '
-      + 'monster.'),
+    (fx) => `Wild creature within ${fx.reach} tiles with tame level up to your taming: tamed outright. It follows you, or goes `
+      + 'into an empty creature crate in your pack if something already follows you. Not monsters.'),
 
   /* ---- The Kindler ---- */
   kindler(3, 'Scorch', 0.08, 12, ['enemy'], { reach: 8, fire: 0.8, each: 0.01, secs: 8 },
-    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles of you, and it ${burns(fx.each, fx.secs)}; ${BURN_LAST}. ${FIRE_IS}`,
+    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles; ${burns(fx.each, fx.secs)}; ${BURN_LAST}. ${FIRE_IS}`,
     'kindling'),
   kindler(6, 'Heat Seeker', 0.1, 15, ['self'], { reach: 10, fire: 1 },
-    (fx) => `${fire(fx.fire)} on the enemy within ${fx.reach} tiles of you with the smallest share of its full health left, the `
-      + `nearest of two alike. ${FIRE_IS}`, 'kindling'),
+    (fx) => `${fire(fx.fire)} on the enemy within ${fx.reach} tiles with the lowest share of max health left, nearest on a `
+      + `tie. ${FIRE_IS}`, 'kindling'),
   kindler(11, 'Scald', 0.1, 20, ['enemy'], { reach: 8, fire: 0.7, pace: 0.6, secs: 6 },
-    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles of you; for ${span(fx.secs)} it walks, hunts and flees at `
-      + `${percent(fx.pace)} of its pace. ${FIRE_IS}`, 'kindling'),
+    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles; target move speed ${percent(fx.pace)} for `
+      + `${span(fx.secs)}. ${FIRE_IS}`, 'kindling'),
   kindler(5, 'Flash Fire', 0.1, 20, ['enemy'], { reach: 2, fire: 2 },
-    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles of you. ${FIRE_IS}`, 'kindling'),
+    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles. ${FIRE_IS}`, 'kindling'),
   kindler(44, 'Stoke', 0.05, 30, ['self'], { more: 1.5, secs: 60 },
-    (fx) => `the next spell of yours within ${span(fx.secs)} that deals fire deals ${percent(fx.more - 1)} more of it, on every `
-      + 'creature it lands on.', 'kindling'),
+    (fx) => `your next fire spell within ${span(fx.secs)}: fire +${percent(fx.more - 1)} on every creature it `
+      + 'hits.', 'kindling'),
   kindler(46, 'Firebrand', 0.2, 120, ['self'], { long: 2, secs: 30 },
-    (fx) => `for ${span(fx.secs)} every burn you start lasts ${times(fx.long)} as long.`, 'kindling'),
+    (fx) => `for ${span(fx.secs)}: duration of burns you start ×${fx.long}.`, 'kindling'),
   kindler(4, 'Immolate', 0.15, 30, ['enemy'], { reach: 8, each: 0.02, secs: 15 },
-    (fx) => `an enemy within ${fx.reach} tiles of you ${burns(fx.each, fx.secs)}; ${BURN_LAST}.`, 'kindling'),
+    (fx) => `enemy within ${fx.reach} tiles: ${burns(fx.each, fx.secs)}; ${BURN_LAST}.`, 'kindling'),
   kindler(10, 'Combust', 0.2, 45, ['enemy'], { reach: 8, more: 1.5 },
-    (fx) => `a burning enemy within ${fx.reach} tiles of you takes at once ${percent(fx.more)} of what its burn still had to do (its `
-      + 'burn a second times the seconds it had left), and stops burning and bleeding.', 'kindling'),
+    (fx) => `burning enemy within ${fx.reach} tiles takes ${percent(fx.more)} of its remaining burn at once (burn per `
+      + 'second × seconds left); burning and bleeding stop.', 'kindling'),
   kindler(24, 'Blaze Aura', 0.2, 90, ['self'], { reach: 2, fire: 0.3, secs: 15 },
-    (fx) => `for ${span(fx.secs)}, ${fire(fx.fire)} a second on every enemy within ${fx.reach} tiles of you, as large as your fire is `
-      + `when you cast it. ${FIRE_IS}`, 'kindling'),
+    (fx) => `for ${span(fx.secs)}: ${fire(fx.fire)} per second on every enemy within ${fx.reach} tiles, at your fire's size `
+      + `when cast. ${FIRE_IS}`, 'kindling'),
   kindler(13, 'Inferno Bolt', 0.3, 120, ['enemy'], { reach: 10, fire: 3, each: 0.03, secs: 10 },
-    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles of you, and it ${burns(fx.each, fx.secs)}; ${BURN_LAST}. ${FIRE_IS}`,
+    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles; ${burns(fx.each, fx.secs)}; ${BURN_LAST}. ${FIRE_IS}`,
     'kindling'),
   kindler(14, 'Meteor', 0.35, 180, ['enemy'], { reach: 12, fire: 4, splash: 1.5, wide: 3 },
-    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles of you, and ${fire(fx.splash)} on every other enemy within `
+    (fx) => `${fire(fx.fire)} on an enemy within ${fx.reach} tiles; ${fire(fx.splash)} on every other enemy within `
       + `${fx.wide} tiles of it. ${FIRE_IS}`, 'kindling'),
   kindler(26, 'Firestorm', 0.4, 300, ['self'], { reach: 6, fire: 1, each: 0.02, secs: 10 },
-    (fx) => `${fire(fx.fire)} on every enemy within ${fx.reach} tiles of you, and each ${burns(fx.each, fx.secs)}; ${BURN_LAST}. `
+    (fx) => `${fire(fx.fire)} on every enemy within ${fx.reach} tiles; each: ${burns(fx.each, fx.secs)}; ${BURN_LAST}. `
       + FIRE_IS, 'kindling'),
 
   /* ---- The Binder ---- */
   binder(1, 'Bind', 0.05, 8, ['enemy'], { reach: 8, hold: 0.4, monster: 0.5 },
-    (fx) => `an enemy within ${fx.reach} tiles of you is ${held(fx.hold)}; a monster for ${share(fx.monster)} as long. ${HOLD_IS}`,
+    (fx) => `enemy within ${fx.reach} tiles ${held(fx.hold)}; monsters ×${fx.monster} duration. ${HOLD_IS}`,
     'binding'),
   binder(29, 'Shatter', 0.1, 15, ['enemy'], { reach: 8, shatter: 1, held: 2 },
-    (fx) => `${shatter(fx.shatter)} on an enemy within ${fx.reach} tiles of you, or ${shatter(fx.held)} on one that is held. ${SHATTER_IS}`,
+    (fx) => `${shatter(fx.shatter)} on an enemy within ${fx.reach} tiles, ${shatter(fx.held)} if held. ${SHATTER_IS}`,
     'binding'),
   binder(6, 'Root', 0.06, 10, ['enemy'], { reach: 8, secs: 8 },
-    (fx) => `an enemy within ${fx.reach} tiles of you is rooted for ${span(fx.secs)}: ${ROOTED}.`, 'binding'),
+    (fx) => `enemy within ${fx.reach} tiles rooted for ${span(fx.secs)}: ${ROOTED}.`, 'binding'),
   binder(36, 'Stillness', 0.08, 30, ['self'], {},
     () => 'every wound on you stops bleeding.', 'binding'),
   binder(20, 'Heavy Limbs', 0.1, 20, ['enemy'], { reach: 8, often: 0.7, secs: 10 },
-    (fx) => `for ${span(fx.secs)} an enemy within ${fx.reach} tiles of you strikes ${percent(1 - fx.often)} less often.`, 'binding'),
+    (fx) => `enemy within ${fx.reach} tiles: attack rate −${percent(1 - fx.often)} for ${span(fx.secs)}.`, 'binding'),
   binder(21, 'Dull Claws', 0.1, 20, ['enemy'], { reach: 8, dealt: 0.7, secs: 10 },
-    (fx) => `for ${span(fx.secs)} every blow an enemy within ${fx.reach} tiles of you lands, on you or on anything else, is `
-      + `${percent(1 - fx.dealt)} smaller.`, 'binding'),
+    (fx) => `enemy within ${fx.reach} tiles: damage of its blows on anything −${percent(1 - fx.dealt)} `
+      + `for ${span(fx.secs)}.`, 'binding'),
   binder(8, 'Tether', 0.08, 20, ['enemy'], { reach: 8, leash: 3, secs: 15 },
-    (fx) => `for ${span(fx.secs)} an enemy within ${fx.reach} tiles of you cannot go more than ${fx.leash} tiles from where it stood.`,
+    (fx) => `enemy within ${fx.reach} tiles cannot move more than ${fx.leash} tiles from where it stood, for ${span(fx.secs)}.`,
     'binding'),
   binder(27, 'Brittle', 0.12, 30, ['enemy'], { reach: 8, taken: 1.25, secs: 10 },
-    (fx) => `for ${span(fx.secs)} an enemy within ${fx.reach} tiles of you takes ${percent(fx.taken - 1)} more from everything that `
-      + 'strikes it: blows, shots, throws, fire and shatter.', 'binding'),
+    (fx) => `enemy within ${fx.reach} tiles: damage taken +${percent(fx.taken - 1)} from blows, shots, throws, fire and `
+      + `shatter for ${span(fx.secs)}.`, 'binding'),
   binder(2, 'Lock', 0.1, 20, ['enemy'], { reach: 8, hold: 1, monster: 0.5 },
-    (fx) => `an enemy within ${fx.reach} tiles of you is ${held(fx.hold)}; a monster for ${share(fx.monster)} as long. ${HOLD_IS}`,
+    (fx) => `enemy within ${fx.reach} tiles ${held(fx.hold)}; monsters ×${fx.monster} duration. ${HOLD_IS}`,
     'binding'),
   binder(35, 'Still Skin', 0.12, 45, ['self'], { cut: 0.2, secs: 10 },
-    (fx) => `for ${span(fx.secs)} you take ${percent(fx.cut)} less from every blow.`, 'binding'),
+    (fx) => `damage taken from every blow −${percent(fx.cut)} for ${span(fx.secs)}.`, 'binding'),
   binder(16, 'Mire', 0.15, 30, ['self'], { reach: 4, pace: 0.6, secs: 10 },
-    (fx) => `every enemy within ${fx.reach} tiles of you walks, hunts and flees at ${percent(fx.pace)} of its pace for ${span(fx.secs)}.`,
+    (fx) => `every enemy within ${fx.reach} tiles: move speed ${percent(fx.pace)} for ${span(fx.secs)}.`,
     'binding'),
   binder(15, 'Mass Root', 0.18, 40, ['self'], { reach: 4, secs: 6 },
-    (fx) => `every enemy within ${fx.reach} tiles of you is rooted for ${span(fx.secs)}: ${ROOTED}.`, 'binding'),
+    (fx) => `every enemy within ${fx.reach} tiles rooted for ${span(fx.secs)}: ${ROOTED}.`, 'binding'),
 
   /* ---- The Warder ---- */
   warder(1, 'Ward', 0.05, 10, ['self'], { skin: 0.4 },
-    (fx) => `a ${skin(fx.skin)} over you. ${SKIN_IS}`, 'warding'),
+    (fx) => `${skin(fx.skin)} on you. ${SKIN_IS}`, 'warding'),
   warder(11, 'Ward Other', 0.06, 10, ['player'], { skin: 0.4, reach: 6 },
-    (fx) => `a ${skin(fx.skin)} over somebody within ${fx.reach} tiles of you. ${SKIN_IS}`, 'warding'),
+    (fx) => `${skin(fx.skin)} on a player within ${fx.reach} tiles. ${SKIN_IS}`, 'warding'),
   warder(2, 'Greater Ward', 0.1, 20, ['self'], { skin: 1 },
-    (fx) => `a ${skin(fx.skin)} over you. ${SKIN_IS}`, 'warding'),
+    (fx) => `${skin(fx.skin)} on you. ${SKIN_IS}`, 'warding'),
   warder(47, 'Thicken', 0.06, 30, ['self'], { more: 1.5, secs: 60 },
-    (fx) => `the next skin you lay within ${span(fx.secs)}, over anybody, is ${percent(fx.more - 1)} larger.`, 'warding'),
+    (fx) => `your next skin within ${span(fx.secs)}, on anyone: size +${percent(fx.more - 1)}.`, 'warding'),
   warder(12, 'Greater Ward Other', 0.12, 20, ['player'], { skin: 1, reach: 6 },
-    (fx) => `a ${skin(fx.skin)} over somebody within ${fx.reach} tiles of you. ${SKIN_IS}`, 'warding'),
+    (fx) => `${skin(fx.skin)} on a player within ${fx.reach} tiles. ${SKIN_IS}`, 'warding'),
   warder(20, 'Ward Link', 0.15, 60, ['self'], { secs: 30, reach: 8, skin: 0.3 },
-    (fx) => `for ${span(fx.secs)}, when a skin of yours over somebody within ${fx.reach} tiles of you is used up, a ${skin(fx.skin)} `
-      + `goes back over them, once each. ${SKIN_IS}`, 'warding'),
+    (fx) => `for ${span(fx.secs)}: when your skin on anyone within ${fx.reach} tiles is used up, a ${skin(fx.skin)} `
+      + `replaces it, once each. ${SKIN_IS}`, 'warding'),
   warder(7, 'Stoneskin', 0.12, 45, ['self'], { cut: 0.25, secs: 10 },
-    (fx) => `for ${span(fx.secs)} you take ${percent(fx.cut)} less from every blow.`, 'warding'),
+    (fx) => `damage taken from every blow −${percent(fx.cut)} for ${span(fx.secs)}.`, 'warding'),
   warder(32, 'Ward Burst', 0.15, 30, ['self'], { reach: 3, dmg: 1 },
-    (fx) => `the skin over you breaks, and every enemy within ${fx.reach} tiles of you takes ${fx.dmg} damage for every hundredth of `
+    (fx) => `your skin breaks; every enemy within ${fx.reach} tiles takes ${fx.dmg} damage per hundredth of `
       + 'your health it held.', 'warding'),
   warder(3, 'Deep Ward', 0.2, 60, ['self'], { skin: 2 },
-    (fx) => `a ${skin(fx.skin)} over you. ${SKIN_IS}`, 'warding'),
+    (fx) => `${skin(fx.skin)} on you. ${SKIN_IS}`, 'warding'),
   warder(14, 'Sanctuary', 0.25, 60, ['self'], { skin: 0.8, reach: 6 },
-    (fx) => `a ${skin(fx.skin)} over you and over everybody within ${fx.reach} tiles of you. ${SKIN_IS}`, 'warding'),
+    (fx) => `${skin(fx.skin)} on you and everyone within ${fx.reach} tiles. ${SKIN_IS}`, 'warding'),
   warder(42, 'Bastion of Stone', 0.35, 300, ['self'], { cut: 0.4, secs: 10, reach: 4 },
-    (fx) => `for ${span(fx.secs)} you and everybody within ${fx.reach} tiles of you take ${percent(fx.cut)} less from every blow.`,
+    (fx) => `you and everyone within ${fx.reach} tiles: damage taken from every blow −${percent(fx.cut)} for ${span(fx.secs)}.`,
     'warding'),
   warder(44, 'Unbreakable', 0.45, 900, ['self'], { secs: 6 },
-    (fx) => `for ${span(fx.secs)} no blow aimed at you lands.`, 'warding'),
+    (fx) => `for ${span(fx.secs)}: no blow aimed at you lands.`, 'warding'),
 ];
 export const CLASS_SPELL_BY_ID = new Map(CLASS_SPELLS.map((s) => [s.id, s]));
 export const classSpellsOf = (cls: string): ClassSpellDef[] => CLASS_SPELLS.filter((s) => s.class === cls);
 
 /** What a class spell costs and how long it rests, as the perk that grants it says first. */
 export const spellTerms = (s: ClassSpellDef): string =>
-  `Spell${s.cost > 0 ? `, ${percent(s.cost)} of your stamina` : ''}, ${span(s.rest)} before it can be called again.`;
+  `Spell. ${s.cost > 0 ? `Stamina ${percent(s.cost)}. ` : ''}Cooldown ${span(s.rest)}.`;

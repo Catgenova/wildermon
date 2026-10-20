@@ -8,7 +8,7 @@ import { world } from './pace';
 import { clockNamed, cropClockOf, fieldClock, fieldMoment, fieldRate, fieldStops, fieldWakes, GLASSHOUSE_GROWTH, handClock, handMoment, handRate, PLANTER_GROWTH, steadyRate, type CropClock } from './growth';
 import { clearedSaid, clearedTo, glassTillRefusal, glazing, isGlasshouse } from './glasshouse';
 import type { Building, Buildings } from './building';
-import { capital, share, timeWords, times } from './words';
+import { capital, timeWords } from './words';
 
 /**
  * Farming: rake a field out of grass or dirt, sow a seed, tend it through
@@ -230,17 +230,13 @@ export function stageNote(name: string, per: number, clock: boolean | CropClock,
   if (k === 'glass') return `${name}, ${Math.round(per / steadyRate(k))}s a stage in any season`;
   const rate = k === 'hand' ? handRate(wall) : fieldRate(wall);
   const season = seasonAt(wall).season;
-  if (rate <= 0) return `${name}, nothing until ${seasonAt(fieldWakes(wall)).season}: a field does not grow in ${season}`;
+  if (rate <= 0) return `${name}, no growth until ${seasonAt(fieldWakes(wall)).season} (fields do not grow in ${season})`;
   return `${name}, ${Math.round(per / rate)}s a stage${wall >= YEAR_FROM ? ` in ${season}` : ''}`;
 }
 
 /** A share of a crop's pace as a line says it: "at its own pace", "half again as fast", "at half its pace", "at a quarter of its pace", "not at all". */
 export function growthWords(r: number): string {
-  if (r <= 0) return 'not at all';
-  if (r === 1) return 'at its own pace';
-  if (r > 1) return `${times(r)} as fast`;
-  const part = share(r);
-  return part === 'half' ? 'at half its pace' : `at ${part} of its pace`;
+  return `at ×${+Math.max(0, r).toFixed(2)} speed`;
 }
 
 /**
@@ -250,7 +246,7 @@ export function growthWords(r: number): string {
  * definitions, and `glass_examine`).
  */
 export const glassExamine = (): string =>
-  ` It is a glasshouse, walled all round to full height and roofed wholly in glass: its ground tills into fields, and a crop in it grows ${growthWords(GLASSHOUSE_GROWTH)} in every season, winter too.`;
+  ` Glasshouse: full-height walls all round, glass roof. Ground tills into fields; crops grow ${growthWords(GLASSHOUSE_GROWTH)} in every season, winter included.`;
 
 /** Examine's line for a building: `glassExamine` for a glasshouse, nothing for any other. */
 export const glassSays = (bld: Buildings, b: Building | undefined): string => (isGlasshouse(bld, b) ? glassExamine() : '');
@@ -263,7 +259,7 @@ export const glassSays = (bld: Buildings, b: Building | undefined): string => (i
  */
 export const sownSaid = (name: string, clock: boolean | CropClock, when: string): string => {
   const k = clockNamed(clock);
-  return `You sow ${name.toLowerCase()}${k === 'planter' ? ' in the planter' : k === 'glass' ? ' under glass' : ''}. ${capital(when)}.`;
+  return `Sown: ${name.toLowerCase()}${k === 'planter' ? ', planter' : k === 'glass' ? ', under glass' : ''}. ${capital(when)}.`;
 };
 
 /**
@@ -277,7 +273,7 @@ export function describeCrop(c: Crop, per: number, now: number, wall: number, bu
   const def = cropDef(c.id);
   const when = cropReady(c) ? 'ready to harvest' : cropWhen(STAGE_NAMES[c.stage + 1], cropGrowthLeft(c, per, now), cropClockOf(c), wall);
   const y = cropYield(c.tended, bumper);
-  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when} · tended ${c.tended} of ${RIPE} times, for ${y.produce} ${itemDef(def.produce).name.toLowerCase()} and ${y.seeds} seed${y.seeds > 1 ? 's' : ''}`;
+  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${y.seeds} seed${y.seeds > 1 ? 's' : ''}`;
 }
 
 // The planter says what it grows at, off the rule.
@@ -391,7 +387,7 @@ function reapOne(g: Game, c: Crop): { produce: Item; got: number; seeds: number;
 }
 
 /** "That wants a Farmer who has learned to sow a patch." */
-const unlearned = (what: string): string => `That wants a Farmer who has learned to ${what}.`;
+const unlearned = (what: string): string => `Needs perk: ${what} (Farmer).`;
 
 export const FARM_ACTIONS: ActionDef[] = [
   {
@@ -406,18 +402,18 @@ export const FARM_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && (TILLABLE.has(g.world.getTile(t.x, t.y)) || glassTillable(g, t.x, t.y)),
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
-      if (!g.inventory.has('rake')) return 'You need a rake to till the ground.';
+      if (!g.inventory.has('rake')) return 'Need a rake.';
       // In a building, only a glasshouse's ground, and only where no floor is planned on it.
       const inside = glassTillRefusal(g, t.x, t.y, TILLABLE);
       if (inside) return inside;
-      if (g.world.hasWater(t.x, t.y)) return 'You cannot till underwater.';
-      if (g.world.slope(t.x, t.y) > 20) return 'The ground is too steep to work.';
+      if (g.world.hasWater(t.x, t.y)) return 'Not under water.';
+      if (g.world.slope(t.x, t.y) > 20) return 'Too steep: slope over 20.';
       return null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       g.world.setTile(t.x, t.y, TileType.Field);
-      g.logMsg('You rake the ground into a field, ready for sowing.', 'event');
+      g.logMsg('Tilled: field ready to sow.', 'event');
     },
   },
   {
@@ -434,15 +430,15 @@ export const FARM_ACTIONS: ActionDef[] = [
       if (box) {
         const far = planterReach(g, box);
         if (far) return far;
-        if (g.planted.has(box.id)) return 'Something is already growing there.';
+        if (g.planted.has(box.id)) return 'Already growing a crop.';
       } else {
         if (t.kind !== 'tile') return 'Choose a field.';
-        if (g.world.getTile(t.x, t.y) !== TileType.Field) return 'Sow on a tilled field.';
-        if (g.cropAt(t.x, t.y)) return 'Something is already growing there.';
+        if (g.world.getTile(t.x, t.y) !== TileType.Field) return 'Needs a tilled field.';
+        if (g.cropAt(t.x, t.y)) return 'Already growing a crop.';
       }
       const uid = t.kind === 'tile' || t.kind === 'furniture' ? t.itemUid : undefined;
       const seed = uid !== undefined ? g.inventory.get(uid) : undefined;
-      if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed to sow.';
+      if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed.';
       return null;
     },
     perform: (t, g) => {
@@ -459,7 +455,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       // When it will be sprouting, in real time, from the season it was sown in -- or in any, in a planter or under glass.
       const clock: CropClock = c ? cropClockOf(c) : box ? 'planter' : 'field';
       const when = c ? cropWhen(STAGE_NAMES[1], g.cropPer(c), clock, g.wallNow()) : `${STAGE_NAMES[1]} soon`;
-      g.logMsg(`${sownSaid(def.name, clock, when)}${sown === 'kept' ? ' It cost you no seed.' : ''}`, 'event');
+      g.logMsg(`${sownSaid(def.name, clock, when)}${sown === 'kept' ? ' Seed kept.' : ''}`, 'event');
     },
   },
   {
@@ -474,9 +470,9 @@ export const FARM_ACTIONS: ActionDef[] = [
       const far = box ? planterReach(g, box) : null;
       if (far) return far;
       const c = cropOf(g, t);
-      if (!c) return 'Nothing is growing there.';
-      if (cropReady(c)) return 'It is ripe. Harvest it.';
-      if (c.tendedNow) return 'You have already tended it at this stage. Wait for it to grow on.';
+      if (!c) return 'No crop there.';
+      if (cropReady(c)) return 'Ripe: harvest it.';
+      if (c.tendedNow) return 'Already tended at this stage.';
       return null;
     },
     perform: (t, g) => {
@@ -485,7 +481,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       tendOne(g, c);
       const y = cropYield(c.tended, g.perk('bumper:harvest_crop', 0));
       const what = itemDef(cropDef(c.id).produce).name.toLowerCase();
-      g.logMsg(`You weed and water the ${cropDef(c.id).name.toLowerCase()}. It should give ${y.produce} ${what} and ${y.seeds} seed${y.seeds > 1 ? 's' : ''}.`, 'event');
+      g.logMsg(`Tended: ${cropDef(c.id).name.toLowerCase()}. Expected yield: ${y.produce} ${what}, ${y.seeds} seed${y.seeds > 1 ? 's' : ''}.`, 'event');
     },
   },
   {
@@ -500,8 +496,8 @@ export const FARM_ACTIONS: ActionDef[] = [
       const far = box ? planterReach(g, box) : null;
       if (far) return far;
       const c = cropOf(g, t);
-      if (!c) return 'Nothing is growing there.';
-      if (!cropReady(c)) return `It is only ${cropStageName(c)}. Let it grow.`;
+      if (!c) return 'No crop there.';
+      if (!cropReady(c)) return `Not ripe: ${cropStageName(c)}.`;
       return null;
     },
     perform: (t, g) => {
@@ -510,7 +506,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       const def = cropDef(c.id);
       const r = reapOne(g, c);
       g.logMsg(
-        `You harvest ${r.got} × ${itemName(r.produce).toLowerCase()} and ${r.seeds} ${itemDef(def.seed).name.toLowerCase()}. The ${c.planter !== undefined ? 'planter' : 'field'} is ready to sow again. (QL ${r.ql.toFixed(1)})`,
+        `Harvested: ${r.got} × ${itemName(r.produce).toLowerCase()}, ${r.seeds} ${itemDef(def.seed).name.toLowerCase()}, QL ${r.ql.toFixed(1)}. ${c.planter !== undefined ? 'Planter' : 'Field'} ready to sow.`,
         'event',
       );
     },
@@ -518,8 +514,8 @@ export const FARM_ACTIONS: ActionDef[] = [
   {
     // A field broken back up; and in a planter, what is growing turned back into the soil so the planter can be sown again or picked up.
     id: 'clear_field',
-    label: 'Clear the field',
-    labelFor: (t, g) => (planterOf(g, t) ? 'Pull it up' : 'Clear the field'),
+    label: 'Clear field',
+    labelFor: (t, g) => (planterOf(g, t) ? 'Pull up crop' : 'Clear field'),
     verb: 'clearing the field',
     skill: 'farming',
     stamina: 0.03,
@@ -528,7 +524,7 @@ export const FARM_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const box = planterOf(g, t);
       if (!box) return null;
-      return planterReach(g, box) ?? (g.planted.has(box.id) ? null : 'Nothing is growing there.');
+      return planterReach(g, box) ?? (g.planted.has(box.id) ? null : 'No crop there.');
     },
     perform: (t, g) => {
       const box = planterOf(g, t);
@@ -536,7 +532,7 @@ export const FARM_ACTIONS: ActionDef[] = [
         const c = g.planted.get(box.id);
         if (!c) return;
         g.uproot(c);
-        g.logMsg(`You turn the ${cropDef(c.id).name.toLowerCase()} back into the soil.`, 'event');
+        g.logMsg(`Cleared: ${cropDef(c.id).name.toLowerCase()}.`, 'event');
         return;
       }
       if (t.kind !== 'tile') return;
@@ -561,10 +557,10 @@ export const FARM_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && g.perk('sow_patch', 0) > 0 && g.world.getTile(t.x, t.y) === TileType.Field,
     check: (t, g) => {
       if (t.kind !== 'tile') return 'Choose a field.';
-      if (g.perk('sow_patch', 0) <= 0) return unlearned('sow a patch');
+      if (g.perk('sow_patch', 0) <= 0) return unlearned('Sow a Patch');
       const seed = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : undefined;
-      if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed to sow.';
-      if (!emptyFields(g, t.x, t.y, g.perk('sow_patch', 0)).length) return 'There is no empty field in the patch to sow.';
+      if (!seed || !CROP_BY_SEED.has(seed.id)) return 'Choose a seed.';
+      if (!emptyFields(g, t.x, t.y, g.perk('sow_patch', 0)).length) return 'No empty field in the patch.';
       return null;
     },
     perform: (t, g) => {
@@ -583,40 +579,40 @@ export const FARM_ACTIONS: ActionDef[] = [
         if (how === 'kept') kept += 1;
       }
       if (!sown) return;
-      g.logMsg(`You sow ${sown} ${sown === 1 ? 'field' : 'fields'} with ${def.name.toLowerCase()}.`
-        + `${kept ? ` ${kept === sown ? (sown === 1 ? 'It' : 'They') : `${kept} of them`} cost you no seed.` : ''}`, 'event');
+      g.logMsg(`Sown: ${sown} ${sown === 1 ? 'field' : 'fields'} of ${def.name.toLowerCase()}.`
+        + `${kept ? ` Seed kept: ${kept}.` : ''}`, 'event');
     },
   },
   {
     id: 'tend_patch',
-    label: 'Tend a patch',
+    label: 'Tend patch',
     verb: 'tending a patch',
     skill: 'farming',
     ...patchOf(TEND),
     applies: (t, g) => t.kind === 'tile' && g.perk('tend_patch', 0) > 0 && g.cropAt(t.x, t.y) !== undefined,
     check: (t, g) => {
       if (t.kind !== 'tile') return 'Choose a field.';
-      if (g.perk('tend_patch', 0) <= 0) return unlearned('tend a patch');
-      if (!wantTending(g, t.x, t.y, g.perk('tend_patch', 0)).length) return 'Nothing in the patch wants tending.';
+      if (g.perk('tend_patch', 0) <= 0) return unlearned('Tend a Patch');
+      if (!wantTending(g, t.x, t.y, g.perk('tend_patch', 0)).length) return 'Nothing in the patch needs tending.';
       return null;
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       const crops = wantTending(g, t.x, t.y, g.perk('tend_patch', 0));
       for (const c of crops) tendOne(g, c);
-      if (crops.length) g.logMsg(`You weed and water ${crops.length} ${crops.length === 1 ? 'crop' : 'crops'}.`, 'event');
+      if (crops.length) g.logMsg(`Tended: ${crops.length} ${crops.length === 1 ? 'crop' : 'crops'}.`, 'event');
     },
   },
   {
     id: 'harvest_patch',
-    label: 'Harvest a patch',
+    label: 'Harvest patch',
     verb: 'harvesting a patch',
     skill: 'farming',
     ...patchOf(HARVEST),
     applies: (t, g) => t.kind === 'tile' && g.perk('harvest_patch', 0) > 0 && g.cropAt(t.x, t.y) !== undefined,
     check: (t, g) => {
       if (t.kind !== 'tile') return 'Choose a field.';
-      if (g.perk('harvest_patch', 0) <= 0) return unlearned('harvest a patch');
+      if (g.perk('harvest_patch', 0) <= 0) return unlearned('Harvest a Patch');
       if (!ripeIn(g, t.x, t.y, g.perk('harvest_patch', 0)).length) return 'Nothing in the patch is ripe.';
       return null;
     },
@@ -632,9 +628,9 @@ export const FARM_ACTIONS: ActionDef[] = [
         tally.set(def.seed, (tally.get(def.seed) ?? 0) + r.seeds);
       }
       if (!crops.length) return;
-      g.logMsg(`You harvest ${crops.length} ${crops.length === 1 ? 'field' : 'fields'}: `
+      g.logMsg(`Harvested: ${crops.length} ${crops.length === 1 ? 'field' : 'fields'}: `
         + `${[...tally].map(([id, n]) => `${n} × ${itemDef(id).name.toLowerCase()}`).join(', ')}. `
-        + `${crops.length === 1 ? 'The field is' : 'The fields are'} ready to sow again.`, 'event');
+        + `${crops.length === 1 ? 'Field' : 'Fields'} ready to sow.`, 'event');
     },
   },
 ];

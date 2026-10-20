@@ -183,7 +183,7 @@ game.damageItem(f2, DAMAGE_MAX - DMG);
 check(`a find that reaches ${DAMAGE_MAX} damage in the browser is gone`, game.inventory.get(f2.uid) === undefined);
 
 check('both finds say so where they are looked at',
-  [...UNRESTORED].every((id) => itemDef(id).description?.includes('Nothing repairs it before then, and if it breaks first it is gone.')));
+  [...UNRESTORED].every((id) => itemDef(id).description?.includes('Cannot be repaired before then; gone if it breaks.')));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

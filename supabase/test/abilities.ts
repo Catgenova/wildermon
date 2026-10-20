@@ -213,7 +213,7 @@ for (const [id, ab] of KINDS) {
   const rest = abilityRest(ab);
   check(`a ${id} uses ${ab} once every ${rest} seconds on both sides`,
     SPECIES[id]?.ability === ab && at(`AB:${id}`) === `${ab}|${rest}` && rest === (ab === 'frost_breath' ? FROST_BREATH_REST : CLASS_SPELL_BY_ID.get(ab)?.rest), at(`AB:${id}`));
-  check(`a ${id}'s description is filled in`, !!SPECIES[id] && !/[{}]/.test(SPECIES[id].description) && SPECIES[id].description.includes(`once every ${rest} seconds`), SPECIES[id]?.description);
+  check(`a ${id}'s description is filled in`, !!SPECIES[id] && !/[{}]/.test(SPECIES[id].description) && SPECIES[id].description.includes(`cooldown ${rest} seconds`), SPECIES[id]?.description);
 }
 
 /* ---- on the island ----------------------------------------------------------------- */

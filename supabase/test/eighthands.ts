@@ -20,7 +20,6 @@ import { RECIPE_BY_ID } from '../../src/game/recipes';
 import { PAPER_PRESS } from '../../src/game/enchant';
 import { GLAZE_ASH } from '../../src/game/actions';
 import { TileType } from '../../src/world/tiles';
-import { numberWord } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -143,7 +142,7 @@ for (const [id] of HANDS) {
   const c = g0.creatures.spawn(id, g0.player.x + 1, g0.player.y, 'active', g0.rand, g0.time - 3600 * 24 * 30);
   c.mode = 'deed';
   check(`a ${id} says what it will do in the island's words, and nothing of the crate`,
-    words(deedJobLine(c)) === words(at(`LINE:${id}`)) && !deedJobLine(c).endsWith(' and bring what it finds to the crate'), `${deedJobLine(c)} / ${at(`LINE:${id}`)}`);
+    words(deedJobLine(c)) === words(at(`LINE:${id}`)) && !deedJobLine(c).endsWith('; output to the crate'), `${deedJobLine(c)} / ${at(`LINE:${id}`)}`);
 }
 for (const [k, list] of [...Object.entries(STORE_RECIPES), ['paper', PAPER_RECIPES]] as Array<[string, readonly string[]]>) {
   check(`a ${k} trade works the same recipes on both sides: ${list.join(', ')}`, at(`RECIPES:${k}`) === list.join(','), at(`RECIPES:${k}`));
@@ -151,12 +150,12 @@ for (const [k, list] of [...Object.entries(STORE_RECIPES), ['paper', PAPER_RECIP
 const made = (id: string): number => RECIPE_BY_ID.get(id)?.count ?? 1;
 const takes = (id: string, item: string): number => RECIPE_BY_ID.get(id)?.inputs.find((i) => i.item === item)?.count ?? 1;
 check('the words give the numbers the recipes use',
-  GATHER_DO.saw.includes(`${numberWord(made('make_planks'))} to a log`)
-  && GATHER_DO.chisel.includes(`${numberWord(made('make_stone_brick'))} bricks to a shard`)
-  && GATHER_DO.rope.includes(`${numberWord(takes('make_rope', 'wemp'))} wemp fibres to a rope`)
-  && GATHER_DO.fletch.includes(`${numberWord(made('make_arrows'))} to a shaft, ${numberWord(takes('make_arrows', 'arrow_head'))} heads`)
-  && GATHER_DO.paper.includes(`${numberWord(made('make_papyrus'))} sheets to ${numberWord(takes('make_papyrus', 'reed'))} reeds`)
-  && GATHER_DO.glaze.includes(GLAZE_ASH === 1 ? 'an ash' : `${numberWord(GLAZE_ASH)} ashes`),
+  GATHER_DO.saw.includes(`${made('make_planks')} a log`)
+  && GATHER_DO.chisel.includes(`${made('make_stone_brick')} a shard`)
+  && GATHER_DO.rope.includes(`${takes('make_rope', 'wemp')} fibres a rope`)
+  && GATHER_DO.fletch.includes(`${made('make_arrows')} a shaft, ${takes('make_arrows', 'arrow_head')} heads`)
+  && GATHER_DO.paper.includes(`${made('make_papyrus')} sheets per ${takes('make_papyrus', 'reed')} reeds`)
+  && GATHER_DO.glaze.includes(`${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'ash' : 'ashes'} each`),
   [GATHER_DO.saw, GATHER_DO.fletch, GATHER_DO.paper].join(' / '));
 
 /* ---- what each does, on the island --------------------------------------------------- */

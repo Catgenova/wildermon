@@ -27,6 +27,7 @@ import {
   jobLevel,
 } from './building';
 import { dyeChoice, dyeEnough, dyeReason, litresWord, paneTint, pickDye, spendDye, TINTED_PANE } from './dyes';
+import { capital } from './words';
 import { colourWord, DYE_LITRES } from './dyestuffs';
 import type { Game } from './game';
 import { gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
@@ -43,7 +44,7 @@ type TileTarget = Extract<Target, { kind: 'tile' }>;
 const isTile = (t: Target): t is TileTarget => t.kind === 'tile';
 
 const TOOL_NAMES: Record<string, string> = { mallet: 'a mallet', trowel: 'a trowel' };
-export const needTool = (g: Game, tool: string): string | null => (g.inventory.has(tool) ? null : `You need ${TOOL_NAMES[tool] ?? tool} for that.`);
+export const needTool = (g: Game, tool: string): string | null => (g.inventory.has(tool) ? null : `Need ${TOOL_NAMES[tool] ?? tool}.`);
 
 /** Plural-ish item names for material lists. */
 export function materialName(id: string, n: number): string {
@@ -81,16 +82,16 @@ export const REPOINT_TIME = 30;
 export const layingBill = (mat: string, type: Wall['type']): Bill => scaledBill(mat, WALL_TYPE_BY_ID.get(type)?.factor ?? 1);
 
 function repointReason(g: Game, t: TileTarget): string | null {
-  if (g.perk('repoint', 0) <= 0) return 'That wants a Mason who has learned to repoint.';
+  if (g.perk('repoint', 0) <= 0) return 'Needs perk: Repoint (Mason).';
   if (!t.side) return 'Choose a side.';
   const wall = wallAt(g, t);
-  if (!wall) return 'There is no wall there.';
+  if (!wall) return 'No wall there.';
   const was = material(wall.material);
-  if (was?.kind !== 'stone') return 'Only a wall of stone is repointed.';
-  if (!isDone(wall)) return 'Finish it before you repoint it.';
+  if (was?.kind !== 'stone') return 'Stone walls only.';
+  if (!isDone(wall)) return 'Finish it first.';
   const mat = material(t.material);
-  if (!mat || mat.kind !== 'stone') return 'Choose the stone to lay it in.';
-  if (mat.id === was.id) return `It is ${mat.name.toLowerCase()} already.`;
+  if (!mat || mat.kind !== 'stone') return 'Choose a stone.';
+  if (mat.id === was.id) return `Already ${mat.name.toLowerCase()}.`;
   const only = onlyRefusal(mat.id, { wall: wall.type });
   if (only) return only;
   const tool = needTool(g, mat.tool);
@@ -103,18 +104,18 @@ function repointReason(g: Game, t: TileTarget): string | null {
     const deck = b.deck != null ? deckCarries(mat, g.buildings.deckUnder(b), b.name) : null;
     if (deck) return deck;
     const bears = g.buildings.bearing(b, wall.level);
-    if (mat.heft > bears) return `${mat.name} is too heavy to raise over what is under it. This storey carries ${heftWord(bears)}, no more.`;
+    if (mat.heft > bears) return `${mat.name} too heavy for what is under it: this storey carries ${heftWord(bears)} at most.`;
     let over = 0;
     for (const w of g.buildings.walls.values()) {
       if (w.building === b.id && w.level > wall.level) over = Math.max(over, material(w.material)?.heft ?? 0);
     }
-    if (mat.heft < over) return `${mat.name} will not carry the ${heftWord(over)} standing on it.`;
+    if (mat.heft < over) return `${mat.name} cannot carry the ${heftWord(over)} above it.`;
     const stands = mat.storeys + g.perk(`storeys:${buildWork(mat)}`, 0);
-    if (b.levels > stands) return `${mat.name} will not stand ${b.levels} storeys. ${stands} is as high as it goes.`;
+    if (b.levels > stands) return `${mat.name}: max ${stands} storeys; this is ${b.levels}.`;
   }
   const bill = layingBill(mat.id, wall.type);
   const short = Object.entries(bill.needed).filter(([id, n]) => toHand(g, id, mat, t) < n);
-  if (short.length) return `You need ${needsText(bill)}.`;
+  if (short.length) return `Need ${needsText(bill)}.`;
   return null;
 }
 
@@ -151,17 +152,17 @@ function flightDownReason(g: Game, t: TileTarget, b: Building): string | null {
   const c = g.buildings.cellar(t.x, t.y);
   if (!c && !t.down) {
     // Not a way down, so a way up: jobs go to the storey being worked on (`jobLevel`), and in a building with one over the ground it is that storey to work on.
-    return b.levels > 1 ? `Work on storey 2 or above to plan ${t.floorKind === 'ladder' ? 'a ladder' : 'stairs'} here.`
-      : 'Stairs and ladders belong to an upper storey; plan another storey first.';
+    return b.levels > 1 ? `Plan ${t.floorKind === 'ladder' ? 'a ladder' : 'stairs'} from storey 2 or above.`
+      : 'Stairs and ladders need an upper storey: plan one first.';
   }
   const dug = c?.dug ?? 0;
-  if (dug < CELLAR_DEPTH) return `Dig the cellar out under it first: it is ${dug} of ${CELLAR_DEPTH} down.`;
+  if (dug < CELLAR_DEPTH) return `Dig the cellar first: ${dug}/${CELLAR_DEPTH}.`;
   // A glasshouse's field is cleared before anything is planned over it (`glasshouse.ts`).
-  if (g.world.getTile(t.x, t.y) === TileType.Field) return 'There is a field here: clear the field before you plan a way down through it.';
+  if (g.world.getTile(t.x, t.y) === TileType.Field) return 'Field here: clear it first.';
   if (!t.side) return 'Choose the side to climb from.';
   const [fx, fy] = across(t.x, t.y, t.side);
   if (g.buildings.cellar(fx, fy)?.building !== b.id || !g.buildings.cellarDone(fx, fy)) {
-    return `Its foot would come down on ${fx},${fy}, and there is no cellar dug out there to come down on.`;
+    return `Foot would land on ${fx},${fy}: no cellar dug there.`;
   }
   return null;
 }
@@ -176,15 +177,13 @@ function stackedFlightReason(g: Game, t: TileTarget, level: number): string | nu
   const other = level === 1 ? g.buildings.floor(0, t.x, t.y) : level === 0 ? g.buildings.floor(1, t.x, t.y) : undefined;
   if (!other || (floorKind(other) !== 'stairs' && floorKind(other) !== 'ladder')) return null;
   const what = FLOOR_KIND_NAMES[floorKind(other)];
-  return level === 1 ? `The ${what} down to the cellar is there.` : `The ${what} up to the next storey is there.`;
+  return level === 1 ? `${capital(what)} down to the cellar is there.` : `${capital(what)} up to the next storey is there.`;
 }
 /** The storey wall work happens on: a building's working one, a jetty's, round a flat roof, or the ground (`wallLevelOf`). */
 const wallLevel = (g: Game, t: TileTarget): number => wallLevelOf(g, t);
 /** The wall or fence on the side of a tile that is being worked on. */
 const wallAt = (g: Game, t: TileTarget) => (t.side ? g.buildings.wall(wallLevel(g, t), t.x, t.y, t.side) : undefined);
 const material = (id: string | undefined): MaterialDef | undefined => (id ? MATERIAL_BY_ID.get(id) : undefined);
-/** "second", "third": the ordinal ending, for the sentence that names a storey. */
-const nth = (n: number): string => (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th');
 
 /** Building work. These are hidden from the generic menu; the UI composes them with sides and materials. */
 export const BUILD_ACTIONS: ActionDef[] = [
@@ -194,9 +193,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
     verb: 'planning a building',
     hidden: true,
     asks: {
-      question: 'What is the building called?',
+      question: 'Building name:',
       fallback: () => 'House',
-      declined: 'You put the mallet away without planning anything.',
+      declined: 'Nothing planned.',
     },
     stamina: 0.02,
     baseTime: 3,
@@ -213,10 +212,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // Nothing walks under a deck: a creature standing there is moved off (`Creatures.shoo`).
       if (deck !== undefined) g.creatures.shoo(g, t.x, t.y);
       if (site && deck !== undefined) {
-        g.logMsg(`You plan ${b.name} here on piers: its deck at ${deck}, ${metres(pierDrop(site.ground, deck))} m over the lowest ground under it.`
-          + ' Plan the deck to build it and the piers under it, then plan walls on it.', 'event');
+        g.logMsg(`Planned: ${b.name}, on piers. Deck at ${deck}, ${metres(pierDrop(site.ground, deck))} m over the lowest ground.`
+          + ' Next: plan the deck (builds the piers), then walls.', 'event');
       } else {
-        g.logMsg(`You plan ${b.name} here. Extend it onto neighbouring flat packed tiles, then plan walls on its borders.`, 'event');
+        g.logMsg(`Planned: ${b.name}. Next: extend onto adjacent packed tiles, then plan walls on its borders.`, 'event');
       }
       g.events.emit('world', t.x, t.y);
     },
@@ -236,8 +235,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const tool = needTool(g, 'mallet');
       if (tool) return tool;
       const b = g.buildings.neighbourBuilding(t.x, t.y);
-      if (!b) return 'There is no building next to this tile.';
-      if (b.levels > 1) return 'The footprint cannot change once upper floors are planned.';
+      if (!b) return 'No building next to this tile.';
+      if (b.levels > 1) return 'Footprint fixed once upper storeys are planned.';
       return g.planReason(t.x, t.y, b) ?? counterStreetRefusal(g, t.x, t.y);
     },
     perform: (t, g) => {
@@ -252,9 +251,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // A tile with no glass over it: a glasshouse is one no longer, and what grows in it goes back on the field's clock.
       glassResync(g);
       if (site && deck !== undefined) {
-        g.logMsg(`You add the tile to ${b.name} on piers: under its deck at ${deck}, ${metres(pierDrop(site.ground, deck))} m over the lowest ground under it.`, 'event');
+        g.logMsg(`Added to ${b.name}, on piers: deck at ${deck}, ${metres(pierDrop(site.ground, deck))} m over the lowest ground.`, 'event');
       } else {
-        g.logMsg(`You add the tile to ${b.name}.`, 'event');
+        g.logMsg(`Added to ${b.name}.`, 'event');
       }
       g.events.emit('world', t.x, t.y);
     },
@@ -271,13 +270,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return null;
       const b = buildingOf(g, t);
       if (!b) return 'No building here.';
-      if (b.levels > 1) return 'Remove the upper floors first.';
+      if (b.levels > 1) return 'Remove the upper storeys first.';
       // A building with a cellar under it comes down only once the cellar is filled in: see `cellar.ts`.
-      if (g.buildings.cellar(t.x, t.y)) return 'Fill in the cellar under it first.';
-      if (g.buildings.tileHasStructures(t.x, t.y)) return 'Remove the walls and floor on this tile first.';
+      if (g.buildings.cellar(t.x, t.y)) return 'Fill in the cellar first.';
+      if (g.buildings.tileHasStructures(t.x, t.y)) return 'Remove this tile\'s walls and floor first.';
       // And the columns on its corners, which would be left standing on nothing.
       for (const [cx, cy] of [[t.x, t.y], [t.x + 1, t.y], [t.x + 1, t.y + 1], [t.x, t.y + 1]]) {
-        if (g.buildings.column(0, cx, cy)) return 'Take down the columns on its corners first.';
+        if (g.buildings.column(0, cx, cy)) return 'Remove the corner columns first.';
       }
       return null;
     },
@@ -287,7 +286,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!b) return;
       g.buildings.removeTile(b, t.x, t.y);
       glassResync(g);
-      g.logMsg(b.tiles.length ? `You remove the tile from ${b.name}.` : `You remove the last of ${b.name}'s plan.`, 'event');
+      g.logMsg(b.tiles.length ? `Removed from ${b.name}.` : `Plan removed: ${b.name}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -300,7 +299,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     baseTime: 2,
     applies: (t, g) => isTile(t) && !!storeyOf(g, t),
     check: (t, g) => {
-      if (!isTile(t) || !t.side || !t.wallType || !t.material) return 'Choose a side, a wall type and a material.';
+      if (!isTile(t) || !t.side || !t.wallType || !t.material) return 'Choose a side, wall type and material.';
       // Glass goes on a roof and nowhere else (`glasshouse.ts`).
       const glass = glassPlanRefusal(g, t, 'plan_wall');
       if (glass) return glass;
@@ -315,9 +314,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // On an upper storey, and on the ground floor of a tile on piers, which is its deck.
       if (level > 0 || g.buildings.onPiers(t.x, t.y)) {
         const floor = g.buildings.floor(level, t.x, t.y);
-        if (!floor || !isDone(floor)) return 'Build the floor of this storey first.';
+        if (!floor || !isDone(floor)) return 'Build this storey\'s floor first.';
       }
-      if (g.buildings.wall(level, t.x, t.y, t.side)) return 'There is already a wall on that side.';
+      if (g.buildings.wall(level, t.x, t.y, t.side)) return 'Already a wall on that side.';
       // A shop counter faces the street from the ground floor (`counters.ts`).
       if (t.wallType === 'counter') {
         const street = counterPlanRefusal(g, b, level, t.x, t.y, t.side);
@@ -338,7 +337,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (deck) return deck;
       const bears = g.buildings.bearing(b, level);
       if (mat && mat.heft > bears) {
-        return `${mat.name} is too heavy to raise over what is under it. This storey carries ${heftWord(bears)}, no more.`;
+        return `${mat.name} too heavy for what is under it: this storey carries ${heftWord(bears)} at most.`;
       }
       // A portcullis in stone on the ground floor; a hidden door's padlock and hinges in hand (`gates.ts`).
       return gatePlanRefusal(t.wallType, mat, level, !g.buildings.buildingAt(t.x, t.y));
@@ -355,7 +354,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const gate = planGate(g, wall);
       // A glasshouse is walled all round (`glasshouse.ts`).
       glassResync(g);
-      g.logMsg(`${planLine(t.wallType, material(t.material)?.name ?? t.material, SIDE_NAMES[t.side])} It needs ${needsText(wall)}.${
+      g.logMsg(`${planLine(t.wallType, material(t.material)?.name ?? t.material, SIDE_NAMES[t.side])} Needs ${needsText(wall)}.${
         gate ? ` ${gate}` : ''}`, 'event');
       g.events.emit('world', t.x, t.y);
     },
@@ -369,23 +368,23 @@ export const BUILD_ACTIONS: ActionDef[] = [
     baseTime: 2,
     applies: (t, g) => isTile(t) && !buildingOf(g, t),
     check: (t, g) => {
-      if (!isTile(t) || !t.side || !t.wallType || !t.material) return 'Choose a side, a kind and a material.';
+      if (!isTile(t) || !t.side || !t.wallType || !t.material) return 'Choose a side, kind and material.';
       const glass = glassPlanRefusal(g, t, 'plan_fence');
       if (glass) return glass;
       const type = WALL_TYPE_BY_ID.get(t.wallType);
-      if (!type?.standalone) return 'Only fences and half walls stand on their own.';
+      if (!type?.standalone) return 'Only fences and half walls stand alone.';
       const mat = material(t.material);
       const tool = mat ? needTool(g, mat.tool) : 'Choose a material.';
       if (tool) return tool;
-      if (buildingOf(g, t)) return 'That is part of a building: plan a wall instead.';
+      if (buildingOf(g, t)) return 'Part of a building: plan a wall.';
       const border = borderOf(t.x, t.y, t.side);
       // The border is shared, so the tile on the other side of it has a say.
       const [ax, ay] = t.side === 'n' ? [t.x, t.y - 1] : t.side === 's' ? [t.x, t.y + 1] : t.side === 'w' ? [t.x - 1, t.y] : [t.x + 1, t.y];
-      if (g.buildings.buildingAt(ax, ay)) return 'A building stands on the other side of that border.';
-      if (!g.world.inBounds(ax, ay)) return 'That border is the edge of the world.';
-      if (g.world.hasWater(t.x, t.y) || g.world.hasWater(ax, ay)) return 'Fences do not stand in water.';
-      if (!g.world.isPassable(t.x, t.y) || !g.world.isPassable(ax, ay)) return 'There is no room for posts there.';
-      if (g.buildings.wallOnBorder(0, border)) return 'There is already something on that border.';
+      if (g.buildings.buildingAt(ax, ay)) return 'Building on the other side of that border.';
+      if (!g.world.inBounds(ax, ay)) return 'Map edge.';
+      if (g.world.hasWater(t.x, t.y) || g.world.hasWater(ax, ay)) return 'Not in water.';
+      if (!g.world.isPassable(t.x, t.y) || !g.world.isPassable(ax, ay)) return 'No room for posts.';
+      if (g.buildings.wallOnBorder(0, border)) return 'Border already taken.';
       return null;
     },
     perform: (t, g) => {
@@ -393,7 +392,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // For less of the material, for a Carpenter's Fence Builder, as `perform_building` has it.
       const wall = g.buildings.setFence(t.x, t.y, t.side, t.wallType, t.material, fenceScale(g, t.wallType));
       const type = WALL_TYPE_BY_ID.get(t.wallType)?.name.toLowerCase() ?? 'fence';
-      g.logMsg(`You mark out a ${material(t.material)?.name.toLowerCase()} ${type} on the ${SIDE_NAMES[t.side]} border. It needs ${needsText(wall)}.`, 'event');
+      g.logMsg(`Planned: ${material(t.material)?.name.toLowerCase()} ${type}, ${SIDE_NAMES[t.side]} border. Needs ${needsText(wall)}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -409,15 +408,15 @@ export const BUILD_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
-      if (!wall) return 'There is no wall planned there.';
-      if (isDone(wall)) return 'That wall is finished.';
+      if (!wall) return 'No wall planned there.';
+      if (isDone(wall)) return 'Wall finished.';
       // Nor is one raised over a lantern post's arm (`lamps.ts`).
       const arm = lampWallRefusal(g, wall.level, t.x, t.y, t.side, wall.type);
       if (arm) return arm;
       const mat = material(wall.material);
       const tool = mat ? needTool(g, mat.tool) : null;
       if (tool) return tool;
-      if (!nextAvailable(g, wall, t)) return `You need ${needsText(wall)}.`;
+      if (!nextAvailable(g, wall, t)) return `Need ${needsText(wall)}.`;
       return null;
     },
     perform: (t, g) => {
@@ -442,10 +441,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
         const what = low ? WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() : 'wall';
         // A wall of a building finished, for the journal; a fence is not one (the island's `perform_building` the same).
         if (!low) g.note('walled');
-        g.logMsg(`You finish the ${mat.name.toLowerCase()} ${what}.`, 'event');
+        g.logMsg(`Built: ${mat.name.toLowerCase()} ${what}.`, 'event');
         return false;
       }
-      g.logMsg(`You fit ${materialName(used, 1)} into the wall. Still needed: ${needsText(wall)}.`, 'event');
+      g.logMsg(`Added: ${materialName(used, 1)}. Still needed: ${needsText(wall)}.`, 'event');
       return nextAvailable(g, wall, t) !== null;
     },
   },
@@ -462,7 +461,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
    */
   {
     id: 'paint_wall',
-    label: 'Paint the wall',
+    label: 'Paint wall',
     verb: 'painting',
     hidden: true,
     skill: 'alchemy',
@@ -472,13 +471,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
     dyeLitres: () => DYE_LITRES.wall,
     labelFor: (t, g) => {
       const all = dyeEnough(g, DYE_LITRES.wall);
-      return all.length === 1 ? `Paint it ${colourWord(all[0].hex)}` : 'Paint the wall';
+      return all.length === 1 ? `Paint wall ${colourWord(all[0].hex)}` : 'Paint wall';
     },
     check: (t, g) => {
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
-      if (!wall) return 'There is no wall there.';
-      if (!isDone(wall)) return 'Finish it before you paint it.';
+      if (!wall) return 'No wall there.';
+      if (!isDone(wall)) return 'Finish it first.';
       return dyeReason(g, DYE_LITRES.wall, dyeChoice(t), wall.dye, g.dyeReach());
     },
     perform: (t, g) => {
@@ -488,13 +487,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!wall || !d || !spendDye(g, d, DYE_LITRES.wall)) return;
       wall.dye = d.hex;
       g.gainSkill('alchemy', 0.3);
-      g.logMsg(`You brush ${litresWord(DYE_LITRES.wall)} of ${colourWord(d.hex)} dye over the wall on the ${SIDE_NAMES[t.side]} side. It comes up ${colourWord(d.hex)}, ${d.hex}.`, 'event');
+      g.logMsg(`Painted: ${SIDE_NAMES[t.side]} wall, ${colourWord(d.hex)} (${d.hex}). Dye used: ${litresWord(DYE_LITRES.wall)}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
   {
     id: 'strip_wall_paint',
-    label: 'Scrub the paint off',
+    label: 'Remove paint',
     verb: 'scrubbing',
     hidden: true,
     skill: 'alchemy',
@@ -504,8 +503,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
-      if (!wall?.dye) return 'It has taken no colour.';
-      if (!g.inventory.has('lye_bucket')) return 'You need a bucket of lye to scrub it back.';
+      if (!wall?.dye) return 'No colour to remove.';
+      if (!g.inventory.has('lye_bucket')) return 'Need a bucket of lye.';
       return null;
     },
     perform: (t, g) => {
@@ -517,13 +516,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
       g.inventory.add('bucket', { ql: lye.ql });
       delete wall.dye;
       g.gainSkill('alchemy', 0.2);
-      g.logMsg(`You scrub the wall back to bare ${material(wall.material)?.name.toLowerCase() ?? 'stone'}.`, 'event');
+      g.logMsg(`Paint removed: bare ${material(wall.material)?.name.toLowerCase() ?? 'stone'}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
   {
     id: 'repoint_wall',
-    label: 'Repoint the wall',
+    label: 'Repoint wall',
     verb: 'repointing',
     hidden: true,
     skill: 'masonry',
@@ -531,7 +530,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
     stamina: 0.06,
     baseTime: REPOINT_TIME,
     applies: (t, g) => isTile(t) && g.perk('repoint', 0) > 0 && material(wallAt(g, t)?.material)?.kind === 'stone',
-    labelFor: (t) => (isTile(t) && t.material ? `Repoint in ${material(t.material)?.name.toLowerCase()}` : 'Repoint the wall'),
+    labelFor: (t) => (isTile(t) && t.material ? `Repoint in ${material(t.material)?.name.toLowerCase()}` : 'Repoint wall'),
     check: (t, g) => (isTile(t) ? repointReason(g, t) : null),
     perform: (t, g) => {
       if (!isTile(t) || !t.side || repointReason(g, t)) return;
@@ -555,14 +554,14 @@ export const BUILD_ACTIONS: ActionDef[] = [
       // New stone, and bare: whatever grew on the old went with it.
       wall.greenSince = greenNow();
       g.gainSkill('masonry', 1);
-      g.logMsg(`You take the ${was.name.toLowerCase()} out of the wall on the ${SIDE_NAMES[t.side]} side and lay it again in ${mat.name.toLowerCase()}`
-        + `${back > 0 ? `, and save ${back} ${materialName(stone, back)}` : ''}.`, 'event');
+      g.logMsg(`Repointed: ${SIDE_NAMES[t.side]} wall, ${was.name.toLowerCase()} to ${mat.name.toLowerCase()}`
+        + `${back > 0 ? `. Returned: ${back} ${materialName(stone, back)}` : ''}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
   {
     id: 'paint_floor',
-    label: 'Paint the floor',
+    label: 'Paint floor',
     verb: 'painting',
     hidden: true,
     skill: 'alchemy',
@@ -576,14 +575,14 @@ export const BUILD_ACTIONS: ActionDef[] = [
     dyeLitres: () => DYE_LITRES.floor,
     labelFor: (t, g) => {
       const all = dyeEnough(g, DYE_LITRES.floor);
-      return all.length === 1 ? `Paint the floor ${colourWord(all[0].hex)}` : 'Paint the floor';
+      return all.length === 1 ? `Paint floor ${colourWord(all[0].hex)}` : 'Paint floor';
     },
     check: (t, g) => {
       if (!isTile(t)) return null;
       const b = storeyOf(g, t);
       const floor = b && g.buildings.floor(topLevel(b, t), t.x, t.y);
-      if (!floor) return 'There is no floor here.';
-      if (!isDone(floor)) return 'Finish it before you paint it.';
+      if (!floor) return 'No floor here.';
+      if (!isDone(floor)) return 'Finish it first.';
       return dyeReason(g, DYE_LITRES.floor, dyeChoice(t), floor.dye, g.dyeReach());
     },
     perform: (t, g) => {
@@ -594,7 +593,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!floor || !d || !spendDye(g, d, DYE_LITRES.floor)) return;
       floor.dye = d.hex;
       g.gainSkill('alchemy', 0.3);
-      g.logMsg(`You work ${litresWord(DYE_LITRES.floor)} of ${colourWord(d.hex)} dye into the boards. The floor comes up ${colourWord(d.hex)}, ${d.hex}.`, 'event');
+      g.logMsg(`Painted: floor, ${colourWord(d.hex)} (${d.hex}). Dye used: ${litresWord(DYE_LITRES.floor)}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -609,10 +608,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
-      if (!wall) return 'There is no wall there.';
+      if (!wall) return 'No wall there.';
       // A jetty resting on it alone would be left in the air, and so would a roof over one, or the storey over it (`frame.ts`).
       const jetty = jettyOnWall(g, wall);
-      if (jetty !== null) return `A jetty of storey ${jetty + 1} rests on this wall: raise a column at each end of it, or tear the jetty up, first.`;
+      if (jetty !== null) return `Storey ${jetty + 1} jetty rests on this wall: add a column at each end, or remove the jetty, first.`;
       const over = jettyRoofOnWall(g, wall) ?? storeyOnWall(g, wall);
       if (over) return over;
       // And a shop counter comes down empty, till and all (`counters.ts`).
@@ -630,7 +629,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       g.buildings.removeWall(wallLevel(g, t), t.x, t.y, t.side);
       // A glasshouse with a wall down is open to the weather (`glasshouse.ts`).
       glassResync(g);
-      g.logMsg(`You take down the ${what} on the ${SIDE_NAMES[t.side]} side.`, 'event');
+      g.logMsg(`Removed: ${what}, ${SIDE_NAMES[t.side]} side.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -653,7 +652,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!b) return 'No building here.';
       // A Mason's Tall Walls: stone stands higher in a building of theirs.
       const tall = g.perk('storeys:build_stone', 0);
-      if (b.levels >= MAX_LEVELS + tall) return `Buildings cannot be taller than ${MAX_LEVELS + tall} storeys.`;
+      if (b.levels >= MAX_LEVELS + tall) return `Max ${MAX_LEVELS + tall} storeys.`;
       /*
        * And no taller than what it is made of will stand.
        *
@@ -665,17 +664,17 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (b.levels >= cap) {
         const stands = (m: MaterialDef): number => m.storeys + (m.kind === 'stone' ? tall : 0);
         const worst = g.buildings.materialsIn(b).reduce((a, m) => (a && stands(a) <= stands(m) ? a : m), undefined as MaterialDef | undefined);
-        return `${worst?.name ?? 'What this is built of'} will not stand ${cap + 1} storeys. ${cap} is as high as it goes.`;
+        return `${worst?.name ?? 'Its material'}: max ${cap} storeys.`;
       }
       // And the hands to raise it: ten a storey in the trade of the one below.
       const under = g.buildings.storeyMaterial(b, b.levels - 1);
       const want = storeySkill(b.levels);
       if (under && g.skills.get(under.skill) < want) {
-        return `Raising a ${b.levels + 1}${nth(b.levels + 1)} storey over ${under.name.toLowerCase()} takes ${under.skill} ${want}. You have ${g.skills.get(under.skill).toFixed(1)}.`;
+        return `Storey ${b.levels + 1} over ${under.name.toLowerCase()} needs ${under.skill} ${want}; have ${g.skills.get(under.skill).toFixed(1)}.`;
       }
-      if (g.buildings.hasRoof(b)) return 'Take the roof off first.';
+      if (g.buildings.hasRoof(b)) return 'Remove the roof first.';
       if (g.buildings.hasLowWall(b, b.levels - 1)) {
-        return 'Nothing rests on a fence, a half wall or a railing: the storey below needs walls, or finished columns at both ends of every open side.';
+        return 'Storey below needs walls, or finished columns at both ends of each open side. Fences, half walls and railings carry nothing.';
       }
       const below = gapText(b.levels, g.buildings.levelGaps(b, b.levels - 1, g.player.x, g.player.y));
       if (below) return below;
@@ -688,7 +687,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       b.levels += 1;
       b.workLevel = b.levels - 1;
       glassResync(g);
-      g.logMsg(`You plan storey ${b.levels} of ${b.name}. Plan and build its floor tiles, then raise walls on them.`, 'event');
+      g.logMsg(`Planned: ${b.name} storey ${b.levels}. Next: floor tiles, then walls.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -730,13 +729,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
         }
         if (!t.side) return 'Choose the side to climb from.';
         // A flight or a ladder up from a tile on piers stands on its deck.
-        if ((level > 1 || g.buildings.onPiers(t.x, t.y)) && !g.buildings.floor(level - 1, t.x, t.y)) return 'Plan the floor of the storey below first.';
+        if ((level > 1 || g.buildings.onPiers(t.x, t.y)) && !g.buildings.floor(level - 1, t.x, t.y)) return 'Plan the floor below first.';
         const stacked = stackedFlightReason(g, t, level);
         if (stacked) return stacked;
       }
       // A flight or a ladder down takes up the ground floor's flooring where it goes (`flooringUnder`).
       if (g.buildings.floor(level, t.x, t.y) && !flooringUnder(g, t, level, kind)) {
-        return kind === 'roof' ? 'There is already roof planned here.' : 'There is already a floor planned here.';
+        return kind === 'roof' ? 'Roof already planned here.' : 'Floor already planned here.';
       }
       // A deck on piers carries what it is laid in, and the building standing on it is as heavy as its heaviest wall.
       const mat = material(t.material);
@@ -755,7 +754,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
        * is what changing your mind about a roof means anywhere.
        */
       if (kind === 'roof' && !b.roof) b.roof = t.roofShape ?? 'hip';
-      if (flooringUnder(g, t, level, kind)) g.logMsg('You take up the flooring there.', 'event');
+      if (flooringUnder(g, t, level, kind)) g.logMsg('Flooring removed.', 'event');
       const floor = g.buildings.setFloor(b, level, t.x, t.y, t.material, kind, kind === 'stairs' || kind === 'ladder' ? t.side : undefined,
         kind === 'stairs' ? t.hand : undefined);
       glassResync(g);
@@ -764,7 +763,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (piers) Object.assign(floor, billPlus(floor, pierBill(t.material, g.pierDropAt(t.x, t.y))));
       const shape = kind === 'roof' ? `${roofShapeDef(b).name.toLowerCase()} ` : '';
       const what = kind === 'ladder' ? 'ladder' : `${shape}${material(t.material)?.name.toLowerCase()} ${piers ? 'deck on piers' : floorName(floor)}`;
-      g.logMsg(`You plan a ${what}. It needs ${needsText(floor)}.`, 'event');
+      g.logMsg(`Planned: ${what}. Needs ${needsText(floor)}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -781,12 +780,12 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return null;
       const b = storeyOf(g, t);
       const floor = b && g.buildings.floor(slotLevel(t, b), t.x, t.y);
-      if (!floor) return 'There is nothing planned here.';
-      if (isDone(floor)) return 'That is already finished.';
+      if (!floor) return 'Nothing planned here.';
+      if (isDone(floor)) return 'Already finished.';
       const mat = material(floor.material);
       const tool = floorKind(floor) === 'ladder' ? needTool(g, 'mallet') : mat ? needTool(g, mat.tool) : null;
       if (tool) return tool;
-      if (!nextAvailable(g, floor, t)) return `You need ${needsText(floor)}.`;
+      if (!nextAvailable(g, floor, t)) return `Need ${needsText(floor)}.`;
       return null;
     },
     perform: (t, g) => {
@@ -807,10 +806,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (isDone(floor)) {
         // A floor finished on a second storey or higher, for the journal (the island's `perform_building` the same).
         if (kind === 'floor' && slotLevel(t, b) >= 1) g.note('storey');
-        g.logMsg(`You finish the ${what}.`, 'event');
+        g.logMsg(`Built: ${what}.`, 'event');
         return false;
       }
-      g.logMsg(`You work ${materialName(used, 1)} into the ${floorName(floor)}. Still needed: ${needsText(floor)}.`, 'event');
+      g.logMsg(`Added: ${materialName(used, 1)}. Still needed: ${needsText(floor)}.`, 'event');
       return nextAvailable(g, floor, t) !== null;
     },
   },
@@ -828,19 +827,19 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!b) return 'No building here.';
       const level = slotLevel(t, b);
       const floor = g.buildings.floor(level, t.x, t.y);
-      if (!floor) return 'There is nothing here to remove.';
+      if (!floor) return 'Nothing to remove.';
       // A flight down is let into the ground floor, and the walls round it stand on the ground;
       // and a way down is a way up too, for whoever is down there.
       if (level === 0 && (floorKind(floor) === 'stairs' || floorKind(floor) === 'ladder')) {
-        return g.buildings.cellar(t.x, t.y) && g.cellarOccupied(b) ? 'Somebody is down in the cellar, and this is a way up out of it.' : null;
+        return g.buildings.cellar(t.x, t.y) && g.cellarOccupied(b) ? 'Someone is in the cellar: this is its way out.' : null;
       }
       // A railing round a flat roof stands on it (`frame.ts`).
-      if (floorKind(floor) === 'roof' && terraceRailed(g, b, t.x, t.y)) return 'Take down the railing standing on it first.';
+      if (floorKind(floor) === 'roof' && terraceRailed(g, b, t.x, t.y)) return 'Remove the railing on it first.';
       if (floorKind(floor) !== 'roof') {
         // A wall stands on a floor only where it may not go up without a finished one (`plan_wall`): a storey up, or a
         // deck on piers. On the ground floor it stands on the ground, and a floor still planned carries nothing.
         if (isDone(floor) && (level > 0 || g.buildings.onPiers(t.x, t.y))) {
-          for (const side of ['n', 'e', 's', 'w'] as const) if (g.buildings.wall(level, t.x, t.y, side)) return 'Take down the walls standing on it first.';
+          for (const side of ['n', 'e', 's', 'w'] as const) if (g.buildings.wall(level, t.x, t.y, side)) return 'Remove the walls on it first.';
         }
         // A column on it, or the roof over a jetty (`frame.ts`).
         const holds = floorHolds(g, b, level, t.x, t.y);
@@ -848,11 +847,11 @@ export const BUILD_ACTIONS: ActionDef[] = [
       }
       // A deck on piers holds up whatever stands or lies on it, and whoever is taking it up (`deck_refusal`).
       if (level === 0 && g.buildings.onPiers(t.x, t.y)) {
-        if (g.anythingPlaced(t.x, t.y) || g.groundAt(t.x, t.y).length) return 'Clear what stands or lies on the deck first.';
-        if (g.bridges.size && g.bridgeEndAt(t.x, t.y)) return 'A bridge lands on the deck. Take the bridge down first.';
+        if (g.anythingPlaced(t.x, t.y) || g.groundAt(t.x, t.y).length) return 'Clear the deck first.';
+        if (g.bridges.size && g.bridgeEndAt(t.x, t.y)) return 'Bridge end on the deck: remove the bridge first.';
         const p = g.player;
         if (p.level === 0 && p.tileX === t.x && p.tileY === t.y) return 'Step off the deck first.';
-        if (g.peerOn(t.x, t.y)) return 'Somebody is standing on the deck.';
+        if (g.peerOn(t.x, t.y)) return 'Someone is on the deck.';
       }
       return null;
     },
@@ -868,7 +867,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       glassResync(g);
       const p = g.player;
       if (p.tileX === t.x && p.tileY === t.y && p.level >= level && level > 0) p.level = level - 1;
-      g.logMsg(`You remove the ${floorName(floor)}.`, 'event');
+      g.logMsg(`Removed: ${floorName(floor)}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
@@ -883,12 +882,12 @@ export const BUILD_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!isTile(t)) return null;
       const b = buildingOf(g, t);
-      if (!b || b.levels <= 1) return 'There is no upper storey.';
+      if (!b || b.levels <= 1) return 'No upper storey.';
       const level = b.levels - 1;
-      if (g.buildings.hasRoof(b)) return 'Take the roof off first.';
-      for (const w of g.buildings.walls.values()) if (w.building === b.id && w.level === level) return 'Take down the walls of the top storey first.';
-      for (const f of g.buildings.floors.values()) if (f.building === b.id && f.level === level) return 'Tear up the floors of the top storey first.';
-      for (const c of g.buildings.columns.values()) if (c.building === b.id && c.level === level) return 'Take down the columns of the top storey first.';
+      if (g.buildings.hasRoof(b)) return 'Remove the roof first.';
+      for (const w of g.buildings.walls.values()) if (w.building === b.id && w.level === level) return 'Remove the top storey\'s walls first.';
+      for (const f of g.buildings.floors.values()) if (f.building === b.id && f.level === level) return 'Remove the top storey\'s floors first.';
+      for (const c of g.buildings.columns.values()) if (c.building === b.id && c.level === level) return 'Remove the top storey\'s columns first.';
       return null;
     },
     perform: (t, g) => {
@@ -898,14 +897,14 @@ export const BUILD_ACTIONS: ActionDef[] = [
       b.levels -= 1;
       b.workLevel = b.levels - 1;
       glassResync(g);
-      g.logMsg(`${b.name} is back to ${b.levels === 1 ? 'a single storey' : `${b.levels} storeys`}.`, 'event');
+      g.logMsg(`${b.name}: ${b.levels} ${b.levels === 1 ? 'storey' : 'storeys'}.`, 'event');
       g.events.emit('world', t.x, t.y);
     },
   },
   {
     id: 'rename_building',
     asks: {
-      question: 'What should the building be called?',
+      question: 'New building name:',
       fallback: (t, g) => (isTile(t) ? buildingOf(g, t)?.name ?? '' : ''),
     },
     label: 'Rename building',
@@ -922,7 +921,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const name = ((t as { name?: string }).name ?? '').trim();
       if (!name) return;
       b.name = name.slice(0, 32);
-      g.logMsg(`The building is now called ${b.name}.`, 'event');
+      g.logMsg(`Building renamed: ${b.name}.`, 'event');
     },
   },
 ];

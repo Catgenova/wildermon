@@ -55,12 +55,12 @@ export interface BaitDef {
 }
 
 export const BAITS: BaitDef[] = [
-  { id: 'worm', favours: ['perch', 'minnow'], note: 'Worms out of turned dirt. Everything small comes to them.' },
-  { id: 'corn', favours: ['minnow', 'perch'], note: 'Corn, which is what you use when you have nothing better.' },
-  { id: 'minnow', favours: ['pike', 'trout'], note: 'A live minnow. Nothing small enough to be eaten swims like that.' },
-  { id: 'meat', favours: ['pike', 'trout'], note: 'Raw meat. A pike will come up out of the weed for it.' },
-  { id: 'perch', favours: ['sturgeon', 'pike'], note: 'A whole perch on a hook, which is a lot of fish to give away for one that may not come.' },
-  { id: 'offal', favours: ['trout', 'pike'], note: 'Offal cut from a carcass. Trout and pike come to it.' },
+  { id: 'worm', favours: ['perch', 'minnow'], note: '' },
+  { id: 'corn', favours: ['minnow', 'perch'], note: '' },
+  { id: 'minnow', favours: ['pike', 'trout'], note: '' },
+  { id: 'meat', favours: ['pike', 'trout'], note: '' },
+  { id: 'perch', favours: ['sturgeon', 'pike'], note: '' },
+  { id: 'offal', favours: ['trout', 'pike'], note: '' },
 ];
 export const BAIT_BY_ID = new Map(BAITS.map((b) => [b.id, b]));
 export const isBait = (id: string): boolean => BAIT_BY_ID.has(id);
@@ -68,6 +68,11 @@ export const isBait = (id: string): boolean => BAIT_BY_ID.has(id);
 export const BAIT_PULL = 8;
 /** And how much less readily a fish comes to a bait it does not favour. */
 export const BAIT_SHY = 0.35;
+// A bait's note says what it does, off its own numbers.
+for (const b of BAITS) {
+  const pulls = b.favours.map((id, rank) => `×${BAIT_PULL / (rank + 1)} ${FISH.find((f) => f.id === id)?.name.toLowerCase() ?? id}`);
+  b.note = `Bite weight: ${pulls.join(', ')}; ×${BAIT_SHY} other fish.`;
+}
 /**
  * What counts as food here: anything that fills you. A Fisher with Any Bait
  * puts the first of it they carry on the hook, or in a creel, when no bait
@@ -235,7 +240,7 @@ export function fishJournal(g: Game, x: number, y: number): string {
   const skill = g.skills.get('fishing');
   const pool = fishHere(depth, skill);
   const deep = `Depth ${Math.floor(depth + 0.5)}.`;
-  if (!pool.length) return ` ${deep} Nothing you could land runs here.`;
+  if (!pool.length) return ` ${deep} No fish here at your fishing skill.`;
   const bait = baitFor(g, depth);
   const perk: PerkOf = (k, d) => g.perk(k, d);
   const w = pool.map((f) => ({ f, w: biteWeight(f, bait?.def, perk) }));
@@ -243,8 +248,8 @@ export function fishJournal(g: Game, x: number, y: number): string {
   const pc = (x: number): string => `${Math.floor(x * 100 + 0.5)}%`;
   const shares = w.sort((a, b) => b.w - a.w || (a.f.id < b.f.id ? -1 : 1)).map((x) => `${pc(x.w / total)} ${x.f.name.toLowerCase()}`);
   const on = staysOn(skill, g.toolQl('fishing_rod'), !!bait, g.perk('hook:fish', 0));
-  return ` ${deep} ${bait ? `With the ${itemDef(bait.id).name.toLowerCase()} you carry` : 'With a bare hook'}, the bites here are `
-    + `${shares.length < 2 ? shares[0] : `${shares.slice(0, -1).join(', ')} and ${shares[shares.length - 1]}`}, and ${pc(on)} of them stay on.`;
+  return ` ${deep} Bites (${bait ? itemDef(bait.id).name.toLowerCase() : 'bare hook'}): `
+    + `${shares.join(', ')}. Stay on: ${pc(on)}.`;
 }
 
 /** How far a line will go from where you are standing. */
@@ -274,10 +279,10 @@ export const FISHING_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && g.inventory.has('fishing_net') && (fishable(g, t.x, t.y) || bestWaterNear(g, Math.floor(netReach(g))) !== null),
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
-      if (!g.inventory.has('fishing_net')) return 'You need a net.';
+      if (!g.inventory.has('fishing_net')) return 'Need a fishing net.';
       const spot = castAt(g, t.x, t.y, netReach(g));
-      if (!spot) return 'There is no water close enough to drag a net through. Wade in.';
-      if (spot.depth < NET_MIN_DEPTH) return 'The water is too thin to drag a net through.';
+      if (!spot) return 'No water in net reach: wade in.';
+      if (spot.depth < NET_MIN_DEPTH) return 'Water too shallow for a net.';
       return null;
     },
     perform: (t, g) => {
@@ -288,7 +293,7 @@ export const FISHING_ACTIONS: ActionDef[] = [
       const pool = fishHere(spot.depth, g.skills.get('fishing'));
       if (!pool.length) {
         g.gainSkill('fishing', tryGain(false, NET_GAIN));
-        g.logMsg('The net comes up with nothing in it but weed.', 'event');
+        g.logMsg('Net: no fish here at your fishing skill.', 'event');
         return true;
       }
       // A Fisher's Full Net hauls more before anything else is counted in.
@@ -316,7 +321,7 @@ export const FISHING_ACTIONS: ActionDef[] = [
       }
       if (!got.size) {
         g.gainSkill('fishing', tryGain(false, NET_GAIN));
-        g.logMsg('The net comes up empty.', 'event');
+        g.logMsg('Net came up empty.', 'event');
         return true;
       }
       g.gainSkill('fishing', tryGain(true, NET_GAIN));
@@ -332,7 +337,7 @@ export const FISHING_ACTIONS: ActionDef[] = [
           g.logMsg(RARITY_WORD[rare], 'skill');
         }
       }
-      g.logMsg(`You walk the net round and haul it in: ${parts.join(', ')}.`, 'event');
+      g.logMsg(`Netted: ${parts.join(', ')}.`, 'event');
       return true;
     },
   },
@@ -361,10 +366,10 @@ export const FISHING_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
-      if (!g.inventory.has('fishing_rod')) return 'You need a fishing rod.';
+      if (!g.inventory.has('fishing_rod')) return 'Need a fishing rod.';
       const spot = castAt(g, t.x, t.y);
-      if (!spot) return 'There is no water within reach deep enough to hold anything. Walk to the bank.';
-      if (!fishHere(spot.depth, g.skills.get('fishing')).length) return 'Nothing you could land runs in water this shallow.';
+      if (!spot) return 'No fishable water in reach: walk to the bank.';
+      if (!fishHere(spot.depth, g.skills.get('fishing')).length) return 'No fish here at your fishing skill.';
       return null;
     },
     perform: (t, g) => {
@@ -386,7 +391,7 @@ export const FISHING_ACTIONS: ActionDef[] = [
       // used to teach exactly what a landed fish taught.
       g.gainSkill('fishing', tryGain(!!got, ROD_GAIN));
       if (!got) {
-        g.logMsg(bait ? `Something takes the ${itemDef(bait.id).name.toLowerCase()} and comes off again.` : 'Something takes it and comes off again.', 'event');
+        g.logMsg(bait ? `Bite lost: ${itemDef(bait.id).name.toLowerCase()} taken.` : 'Bite lost.', 'event');
         return true;
       }
       // And now and then a rare one, for a Fisher's Rare Catch.
@@ -396,8 +401,8 @@ export const FISHING_ACTIONS: ActionDef[] = [
       g.note(`fish:${got.id}`);
       if (bait) g.note('baited');
       g.logMsg(
-        `You land ${rare ? `${/^[aeiou]/i.test(RARITIES[rare].name) ? 'an' : 'a'} ${RARITIES[rare].name}` : /^[aeiou]/i.test(got.name) ? 'an' : 'a'} `
-          + `${got.name.toLowerCase()}${bait ? ` on the ${itemDef(bait.id).name.toLowerCase()}` : ''}. (QL ${item.ql.toFixed(1)})`,
+        `Caught: ${rare ? `${RARITIES[rare].name} ` : ''}${got.name.toLowerCase()}, QL ${item.ql.toFixed(1)}.`
+          + `${bait ? ` Bait: ${itemDef(bait.id).name.toLowerCase()}.` : ''}`,
         'event',
       );
       if (rare) {

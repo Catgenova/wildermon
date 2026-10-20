@@ -45,10 +45,10 @@ const chisel = (): string => itemDef(ENGRAVE_TOOL).name.toLowerCase();
 
 /** What a refused cutting says. The island says the same (`memorial_said`). */
 export const MEMORIAL_SAID = {
-  notYours: 'Only whoever set this stone down, or somebody of the settlement it stands on, may cut words into it.',
-  get noChisel(): string { return `You need a ${chisel()} to engrave it.`; },
-  nothing: 'There is nothing to cut. Say what it should read.',
-  same: 'It reads that already.',
+  notYours: 'Only whoever set this stone down, or a citizen of its settlement, may engrave it.',
+  get noChisel(): string { return `Need a ${chisel()}.`; },
+  nothing: 'Text is empty.',
+  same: 'Already reads that.',
 };
 
 /** The words, as they are quoted back. */
@@ -59,16 +59,16 @@ export const quoted = (text: string): string => `“${text}”`;
  * is cut into it yet and what will be. The island's `memorial_says`.
  */
 export const memorialSays = (text: string | undefined): string => (text
-  ? `The memorial stone reads: ${quoted(text)}`
-  : `Nothing is cut into the memorial stone yet. Engrave it with a ${chisel()}: a line of up to ${ENGRAVE_MAX} characters.`);
+  ? `Memorial stone: ${quoted(text)}`
+  : `Memorial stone: blank. Engrave it with a ${chisel()}, up to ${ENGRAVE_MAX} characters.`);
 
 /** What cutting it says: a first line, or a new line where an old one was. The island's `engraved_said`. */
 export const engravedSaid = (text: string, recut: boolean): string => (recut
-  ? `You dress the old line off the memorial stone and cut ${quoted(text)} into it.`
-  : `You cut ${quoted(text)} into the memorial stone.`);
+  ? `Re-engraved: ${quoted(text)}.`
+  : `Engraved: ${quoted(text)}.`);
 
 /** What Examine adds of a stone in the pack with words on it. The island's `engraved_item_says`. */
-export const engravedItemSays = (it: { engraving?: string }): string => (it.engraving ? ` It reads: ${quoted(it.engraving)}.` : '');
+export const engravedItemSays = (it: { engraving?: string }): string => (it.engraving ? ` Engraved: ${quoted(it.engraving)}.` : '');
 
 type PieceTarget = Extract<Target, { kind: 'furniture' }>;
 const memorialOf = (g: Game, t: Target): PlacedFurniture | undefined => {
@@ -113,7 +113,7 @@ export const MEMORIAL_ACTIONS: ActionDef[] = [
     asks: {
       question: `What should it read? Up to ${ENGRAVE_MAX} characters.`,
       fallback: (t, g) => memorialOf(g, t)?.engraving ?? '',
-      declined: 'You leave the stone as it is.',
+      declined: 'Left unchanged.',
       max: ENGRAVE_MAX,
     },
     applies: (t, g) => !!memorialOf(g, t),

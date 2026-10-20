@@ -103,7 +103,7 @@ begin
   delete from event where uid = w.uid;
   perform creature_settle(w.world_id, b);
   insert into said select 'CALL', coalesce((hunting = w.uid)::text, 'none') || '|' || coalesce((pack_lead = a)::text, 'none')
-    || '|' || (select count(*) from event where uid = w.uid and text = 'Another goblin comes with it.')
+    || '|' || (select count(*) from event where uid = w.uid and text = 'Another goblin joins.')
     from creature where world_id = w.world_id and id = b;
   delete from creature where world_id = w.world_id and id in (a, b);
 
@@ -149,7 +149,7 @@ begin
   delete from event where uid = w.uid;
   perform creature_settle(w.world_id, g);
   insert into said select 'COWARD', coalesce(hunting::text, 'none') || '|' || (hunt_again > now())::text
-    || '|' || (select count(*) from event where uid = w.uid and text = 'The goblin turns tail.')
+    || '|' || (select count(*) from event where uid = w.uid and text = 'Goblin fled.')
     || '|' || sqrt((to_x - v_px) ^ 2 + (to_y - v_py) ^ 2)
     from creature where world_id = w.world_id and id = g;
   -- And another, at seven tenths of itself, beside the one that ran; and a third, whole.
@@ -177,7 +177,7 @@ begin
   delete from event where uid = w.uid;
   perform creature_settle(w.world_id, b);
   insert into said select 'LEADER', coalesce(hunting::text, 'none') || '|'
-    || (select count(*) from event where uid = w.uid and text = 'The orc turns tail.')
+    || (select count(*) from event where uid = w.uid and text = 'Orc fled.')
     from creature where world_id = w.world_id and id = b;
   delete from creature where world_id = w.world_id and id = b;
 
@@ -227,7 +227,7 @@ begin
   perform perform_creature(w.world_id, w.uid, 'set_stance', jsonb_build_object('kind', 'creature', 'id', pet, 'stance', 'guard'));
   select * into q from creature where world_id = w.world_id and id = pet;
   insert into said values ('GUARD', q.stance || '|' || coalesce((companion_target(w.world_id, q, (select pl from player pl where pl.world_id = w.world_id and pl.uid = w.uid))).id = g, false)
-    || '|' || (select count(*) from event where uid = w.uid and text like '% will be guarding you.'));
+    || '|' || (select count(*) from event where uid = w.uid and text like '% stance: guarding you.'));
   -- Passive, and told to go for it.
   update creature set stance = 'passive', enemy = null where world_id = w.world_id and id = pet;
   insert into said values ('ORDER:none', coalesce(creature_refusal(w.world_id, w.uid, 'order_attack',
@@ -315,7 +315,7 @@ check(`on the island, one of a pack within ${PACK_CALL} tiles of another on you 
 check('a defensive companion leaves alone what has not struck yet', island('DEFENSIVE') === 'none', island('DEFENSIVE'));
 check('one set to guard you goes for what is hunting you, and says it will',
   island('GUARD:refusal') === 'none' && island('GUARD') === 'guard|true|1', `${island('GUARD:refusal')} / ${island('GUARD')}`);
-check('told to attack with nothing marked, it is refused', island('ORDER:none') === 'Mark something wild first, or fight it.', island('ORDER:none'));
+check('told to attack with nothing marked, it is refused', island('ORDER:none') === 'No target: mark a wild one or fight it.', island('ORDER:none'));
 check('a passive one told to attack goes, and keeps at it', island('ORDER:refusal') === 'none' && island('ORDER') === 'true|true',
   `${island('ORDER:refusal')} / ${island('ORDER')}`);
 check(`fallen back, it drops its fight and starts none for ${FALL_BACK} seconds, guarding or not`,
@@ -361,7 +361,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   g.creatures.engage(g, a);
   step(g, 0.3);
   check('in the browser, one of a pack within reach of another on you comes too, and follows the first',
-    b.enemy !== null && b.packLead === a.id && lines(g).includes('Another goblin comes with it.'),
+    b.enemy !== null && b.packLead === a.id && lines(g).includes('Another goblin joins.'),
     `enemy ${b.enemy}, lead ${b.packLead}`);
 }
 {
@@ -403,7 +403,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   gob.x = 24.5;
   step(g, 0.2);
   check(`a coward turns tail below ${COWARD_AT} of itself, runs, and rests`,
-    gob.enemy === null && gob.state === 'flee' && gob.huntRest > g.time && lines(g).includes('The goblin turns tail.'),
+    gob.enemy === null && gob.state === 'flee' && gob.huntRest > g.time && lines(g).includes('Goblin fled.'),
     `enemy ${gob.enemy}, state ${gob.state}`);
   const hurt = beast(g, 'goblin', 25, 21.5);
   const whole = beast(g, 'goblin', 25, 19.5);
@@ -424,7 +424,7 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   b.packLead = a.id;
   g.creatures.remove(a.id);
   step(g, 0.2);
-  check('a pack whose leader is dead turns tail', b.enemy === null && lines(g).includes('The orc turns tail.'), `enemy ${b.enemy}`);
+  check('a pack whose leader is dead turns tail', b.enemy === null && lines(g).includes('Orc fled.'), `enemy ${b.enemy}`);
 }
 {
   const g = field();
@@ -450,14 +450,14 @@ const lines = (g: Game): string[] => g.log.map((l) => l.text);
   g.requestAction(stance, { kind: 'creature', id: pet.id, stance: 'guard' });
   step(g, 0.1);
   check('in the browser, a defensive companion leaves alone what has not struck; one set to guard goes for it, and says so',
-    defensive === null && pet.enemy === gob.id && lines(g).includes(`${pet.name} will be guarding you.`), `defensive ${defensive}, guarding ${pet.enemy}`);
+    defensive === null && pet.enemy === gob.id && lines(g).includes(`${pet.name} stance: guarding you.`), `defensive ${defensive}, guarding ${pet.enemy}`);
   pet.stance = 'passive';
   pet.enemy = null;
   const none = attack.check?.({ kind: 'creature', id: pet.id }, g) ?? null;
   g.requestAction(attack, { kind: 'creature', id: pet.id, foe: gob.id });
   step(g, 0.1);
   check('a passive one told to attack goes, and keeps at it; with nothing marked it is refused',
-    pet.enemy === gob.id && !!none && none.startsWith('Mark something wild first'), `enemy ${pet.enemy}, ${none}`);
+    pet.enemy === gob.id && !!none && none.startsWith('No target: mark a wild one'), `enemy ${pet.enemy}, ${none}`);
   pet.stance = 'guard';
   g.requestAction(heel, { kind: 'creature', id: pet.id });
   step(g, FALL_BACK - 1);

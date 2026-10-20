@@ -150,8 +150,8 @@ const wasRare = seen.get(900001)?.rare;
 seen.sawAll([row()]);
 say(wasRare === 3 && seen.get(900001)?.rare === 0, 'the browser takes how rare it is off the island, and nothing said is an ordinary one');
 const line = rarityLine({ rare: 1 }) + ' | ' + raritySays({ rare: 3 });
-say(line.includes('half again the size') && line.includes('+20% speed') && line.includes('−17% upkeep')
-  && line.includes('three times the size') && line.includes('+60% speed') && line.includes('−37% upkeep') && rarityLine({ rare: 0 }) === '',
+say(line.includes('size ×1.5') && line.includes('+20% speed') && line.includes('−17% upkeep')
+  && line.includes('size ×3') && line.includes('+60% speed') && line.includes('−37% upkeep') && rarityLine({ rare: 0 }) === '',
   `and says what it is worth in the table's own numbers, stat by stat: ${line}`);
 
 /* ---- The island ------------------------------------------------------------------------------- */

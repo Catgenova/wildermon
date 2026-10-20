@@ -234,11 +234,11 @@ for (const [id] of HANDS) {
   c.mode = 'deed';
   check(`a ${id} says what it will do in the island's words`, words(deedJobLine(c)) === words(at(`LINE:${id}`)), `${deedJobLine(c)} / ${at(`LINE:${id}`)}`);
   const quiet = TEND_JOBS.has(SPECIES[id].gathers!) || SPECIES[id].gathers === 'scrub';
-  check(`and ${quiet ? 'says nothing of the crate' : 'brings what it finds to the crate'}`, deedJobLine(c).endsWith(' and bring what it finds to the crate') === !quiet, deedJobLine(c));
+  check(`and ${quiet ? 'says nothing of the crate' : 'brings what it finds to the crate'}`, deedJobLine(c).endsWith('; output to the crate') === !quiet, deedJobLine(c));
 }
 check('a simma cooks the same recipes in the same order on both sides', at('COOKS') === cookRecipes().join(','), `${at('COOKS')} / ${cookRecipes().join(',')}`);
 check('a hoppa tries the same brews in the same order on both sides', at('BREWS') === BREWS.map((b) => b.id).join(','), at('BREWS'));
-check(`an ambra's tap is ${RESIN_TAPPED} tar, and its words say so`, SPECIES.ambra.description.includes(`${RESIN_TAPPED === 1 ? 'one' : RESIN_TAPPED} tar a pine a day`), SPECIES.ambra.description);
+check(`an ambra's tap is ${RESIN_TAPPED} tar, and its words say so`, SPECIES.ambra.description.includes(`${RESIN_TAPPED} tar per pine per day`), SPECIES.ambra.description);
 check('the words of the trades that work at the stores say where what they make goes', ['smelt', 'kiln', 'ash', 'restore', 'patch'].every((k) => /stores/.test(GATHER_DO[k as keyof typeof GATHER_DO])));
 
 /* ---- what each does, on the island --------------------------------------------------- */

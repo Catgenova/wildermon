@@ -5,7 +5,7 @@ import { STORE_REACH, SUBTILES } from './crates';
 import { CROP_BY_SEED } from './farming';
 import type { Game } from './game';
 import { describeFrom, describeWith, isWorked, ITEM_DEFS, itemDef, itemName, markOf, rarityOf, roomFor, storedLine, type Item, type Mark } from './items';
-import { fill, numberWord } from './words';
+import { fill } from './words';
 import { matOf } from './materials';
 import { roseSays, ROSES_RULE } from './roses';
 import { STATE_TAILS } from './pieceTails';
@@ -290,23 +290,23 @@ const piece = (
  * builds here is nailed rather than pegged, so every one of them takes nails.
  */
 /** Why a piece built only on a settlement of yours will not stand anywhere else; the island says the same (`fire_refusal`). */
-export const DEED_PLACE = 'You can only set this down on a settlement of yours.';
+export const DEED_PLACE = 'Set down only on a settlement of yours.';
 /**
  * Why a second altar will not go up or down on a settlement: it has its one.
  * The island says the same, off the same `altar` flag, and it is the one it
  * refuses both a building and a setting down of with.
  */
-export const ONE_ALTAR = 'This settlement already has an altar, and a settlement may have only one.';
+export const ONE_ALTAR = 'Settlement already has an altar; one per settlement.';
 
 export const FURNITURE: FurnitureDef[] = [
-  piece('stool', 'Stool', 1, 1, [['plank', 4], ['shaft', 3], ['nail', 12]], 8, 6, 'You nail up a {bill.shaft:w}-legged stool.'),
-  piece('chair', 'Chair', 1, 1, [['plank', 8], ['shaft', 4], ['nail', 20]], 12, 8, 'You nail up a chair with a proper back to it.'),
-  piece('bench', 'Bench', 2, 1, [['plank', 16], ['shaft', 4], ['nail', 28]], 12, 9, 'You nail up a long bench.'),
-  piece('table', 'Table', 2, 2, [['plank', 24], ['shaft', 4], ['nail', 32]], 14, 11, 'You nail up a square table.'),
-  piece('long_table', 'Long table', 3, 2, [['plank', 40], ['timber', 8], ['shaft', 4], ['nail', 52]], 20, 16, 'You nail up a long table, the sort a hall is built around.'),
-  piece('desk', 'Writing desk', 2, 2, [['plank', 32], ['timber', 8], ['nail', 40]], 22, 14, 'You nail up a writing desk, drawers and all.', 20),
-  piece('bed', 'Bed', 3, 2, [['plank', 24], ['timber', 16], ['cloth', 8], ['nail', 40]], 18, 15, 'You nail up a bed and stuff the mattress.', undefined, { bed: 1 }),
-  piece('cot', 'Cot', 2, 2, [['plank', 16], ['timber', 8], ['cloth', 4], ['nail', 24]], 12, 10, 'You nail up a narrow cot.', undefined, { bed: 0.7 }),
+  piece('stool', 'Stool', 1, 1, [['plank', 4], ['shaft', 3], ['nail', 12]], 8, 6, ''),
+  piece('chair', 'Chair', 1, 1, [['plank', 8], ['shaft', 4], ['nail', 20]], 12, 8, ''),
+  piece('bench', 'Bench', 2, 1, [['plank', 16], ['shaft', 4], ['nail', 28]], 12, 9, ''),
+  piece('table', 'Table', 2, 2, [['plank', 24], ['shaft', 4], ['nail', 32]], 14, 11, ''),
+  piece('long_table', 'Long table', 3, 2, [['plank', 40], ['timber', 8], ['shaft', 4], ['nail', 52]], 20, 16, ''),
+  piece('desk', 'Writing desk', 2, 2, [['plank', 32], ['timber', 8], ['nail', 40]], 22, 14, '', 20),
+  piece('bed', 'Bed', 3, 2, [['plank', 24], ['timber', 16], ['cloth', 8], ['nail', 40]], 18, 15, '', undefined, { bed: 1 }),
+  piece('cot', 'Cot', 2, 2, [['plank', 16], ['timber', 8], ['cloth', 4], ['nail', 24]], 12, 10, '', undefined, { bed: 0.7 }),
   // A Tailor's tent: cloth over a ridge pole, light enough to carry and set down wherever the night finds you.
   /*
    * Wildermon beds, one to a stage (`den`): a woven basket nest of reed on
@@ -316,25 +316,25 @@ export const FURNITURE: FurnitureDef[] = [
    * two for the next and three for the last, by how big each stage is drawn.
    */
   piece('den_small', 'Small wildermon bed', 1, 1, [['plank', 1], ['reed', 12], ['shaft', 2], ['cloth', 2], ['moss', 2], ['wildflowers', 3]], 10, 8,
-    'You weave the reed round the shafts into a basket, stuff a flower of cloth for its cushion and set moss and flowers round the rim.', undefined,
+    '', undefined,
     { skill: 'carpentry', tool: 'carving_knife', den: 0 }),
   piece('den_medium', 'Medium wildermon bed', 2, 2, [['plank', 2], ['reed', 24], ['shaft', 6], ['cloth', 4], ['fur', 1], ['moss', 4], ['wildflowers', 6], ['lavender', 3]], 16, 12,
-    'You weave the reed round the shafts into a basket, bend a hood of vine over its back, stuff a flower of cloth and fur for its cushion and hang lavender from the hood.', undefined,
+    '', undefined,
     { skill: 'carpentry', tool: 'carving_knife', den: 1 }),
   piece('den_large', 'Large wildermon bed', 3, 3, [['plank', 4], ['reed', 40], ['shaft', 12], ['cloth', 8], ['fur', 2], ['moss', 6], ['wildflowers', 10], ['lavender', 6]], 22, 16,
-    'You weave the reed round the shafts into a broad basket, bend a hood of vine right over it, stuff a flower of cloth and fur for its cushion and hang lavender all along the hood.', undefined,
+    '', undefined,
     { skill: 'carpentry', tool: 'carving_knife', den: 2 }),
-  piece('tent', 'Tent', 2, 2, [['cloth', 8], ['rope', 2], ['shaft', 3]], 16, 14, 'You stitch the cloth into a fly, cut the poles and tie in the guy ropes.', undefined, { bed: 0.5, skill: 'tailoring', tool: 'needle', perk: 'tent' }),
-  piece('chest', 'Chest', 2, 2, [['plank', 32], ['timber', 8], ['nail', 36]], 16, 12, 'You nail up a banded chest.', 60),
-  piece('coffer', 'Coffer', 1, 1, [['plank', 16], ['nail', 20]], 14, 8, 'You nail up a small coffer.', 25),
-  piece('cupboard', 'Cupboard', 2, 1, [['plank', 40], ['timber', 8], ['nail', 44]], 20, 14, 'You nail up a cupboard and hang its doors.', 80),
-  piece('wardrobe', 'Wardrobe', 2, 2, [['plank', 56], ['timber', 16], ['nail', 60]], 24, 18, 'You nail up a wardrobe tall enough to hang a cloak in.', 100),
-  piece('shelves', 'Shelves', 3, 1, [['plank', 48], ['timber', 8], ['nail', 52]], 18, 15, 'You nail up a long rack of shelves.', 120),
-  piece('bookshelf', 'Bookshelf', 2, 1, [['plank', 40], ['timber', 8], ['nail', 44]], 20, 14, 'You nail up a bookshelf with a cornice on top.', 90),
+  piece('tent', 'Tent', 2, 2, [['cloth', 8], ['rope', 2], ['shaft', 3]], 16, 14, '', undefined, { bed: 0.5, skill: 'tailoring', tool: 'needle', perk: 'tent' }),
+  piece('chest', 'Chest', 2, 2, [['plank', 32], ['timber', 8], ['nail', 36]], 16, 12, '', 60),
+  piece('coffer', 'Coffer', 1, 1, [['plank', 16], ['nail', 20]], 14, 8, '', 25),
+  piece('cupboard', 'Cupboard', 2, 1, [['plank', 40], ['timber', 8], ['nail', 44]], 20, 14, '', 80),
+  piece('wardrobe', 'Wardrobe', 2, 2, [['plank', 56], ['timber', 16], ['nail', 60]], 24, 18, '', 100),
+  piece('shelves', 'Shelves', 3, 1, [['plank', 48], ['timber', 8], ['nail', 52]], 18, 15, '', 120),
+  piece('bookshelf', 'Bookshelf', 2, 1, [['plank', 40], ['timber', 8], ['nail', 44]], 20, 14, '', 90),
   piece('larder', 'Larder', 2, 2, [['plank', 64], ['timber', 16], ['nail', 68]], 26, 20,
-    'You nail up a deep larder and slate the floor of it cold. Food, drink, flour and dough go in it, and nothing else.', 250,
+    '', 250,
     { takes: 'food' }),
-  piece('barrel', 'Barrel', 1, 1, [['plank', 24], ['shaft', 2], ['nail', 20]], 18, 10, 'You raise the staves and hoop a barrel.', undefined, { liquid: 80 }),
+  piece('barrel', 'Barrel', 1, 1, [['plank', 24], ['shaft', 2], ['nail', 20]], 18, 10, '', undefined, { liquid: 80 }),
   /*
    * The two pieces that exist for other people.
    *
@@ -350,20 +350,20 @@ export const FURNITURE: FurnitureDef[] = [
    * to somebody into sending them something.
    */
   piece('stall', 'Market stall', 3, 2, [['plank', 48], ['timber', 16], ['cloth', 16], ['nail', 52]], 22, 18,
-    'You nail up a counter, stretch the awning over it and stand back. Set a price on anything you lay out and it sells whether you are here or not.', 60,
+    'Set a price on what you lay out: it sells while you are away.', 60,
     { stall: true }),
   piece('mailbox', 'Mailbox', 1, 1, [['plank', 16], ['ribbon', 4], ['nail', 16]], 18, 10,
-    'You nail up a box with a slot in it and a door on the back. A parcel goes in at one and comes out at any other.', 30,
+    'A parcel put in at one comes out at any other.', 30,
     { post: true }),
   // One wildermon, shut in to be carried or set down: see `creaturecrate.ts`.
   piece('creature_crate', 'Creature crate', 2, 2, [['plank', 32], ['nail', 8], ['ribbon', 4]], 16, 10,
-    'You nail up a creature crate. It holds one wildermon.'),
-  piece('lectern', 'Lectern', 1, 1, [['plank', 16], ['shaft', 2], ['nail', 16]], 16, 9, 'You nail up a lectern with a good slant on it.'),
-  piece('coat_rack', 'Coat rack', 1, 1, [['plank', 4], ['shaft', 4], ['nail', 12]], 10, 6, 'You nail up a rack of pegs for the door.'),
-  piece('planter', 'Planter', 2, 1, [['plank', 24], ['nail', 20]], 10, 7, 'You nail up a planter and fill it with earth.', undefined, { planter: true }),
+    ''),
+  piece('lectern', 'Lectern', 1, 1, [['plank', 16], ['shaft', 2], ['nail', 16]], 16, 9, ''),
+  piece('coat_rack', 'Coat rack', 1, 1, [['plank', 4], ['shaft', 4], ['nail', 12]], 10, 6, ''),
+  piece('planter', 'Planter', 2, 1, [['plank', 24], ['nail', 20]], 10, 7, '', undefined, { planter: true }),
   // A grapevine climbs it, planted at its foot: see `vineyard.ts`.
-  piece('trellis', 'Trellis', SUBTILES, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 8, 'You nail {bill.plank:w} laths across {bill.shaft:w} uprights: a trellis for a vine.', undefined, { vine: true }),
-  piece('firewood_rack', 'Firewood rack', 2, 1, [['plank', 8], ['shaft', 6], ['nail', 20]], 12, 8, 'You nail up a rack to keep firewood off the wet.', 40),
+  piece('trellis', 'Trellis', SUBTILES, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 8, '', undefined, { vine: true }),
+  piece('firewood_rack', 'Firewood rack', 2, 1, [['plank', 8], ['shaft', 6], ['nail', 20]], 12, 8, '', 40),
   /*
    * The biggest thing a carpenter builds, and the only one whose footprint is
    * the point of it: two subtiles across and four deep, and every one of the
@@ -377,28 +377,28 @@ export const FURNITURE: FurnitureDef[] = [
    */
   piece('crate_shelf', 'Crate shelf', 2, 4,
     [['plank', 80], ['timber', 32], ['nail', 88]], 24, 22,
-    'You frame the rack, deck it over and set the runners. It will take {crates:w} crates.',
+    '',
     undefined, { crates: 8 }),
-  piece('bell', 'Bell', 1, 1, [['bell_casting', 1], ['timber', 8], ['thick_rope', 1], ['nail', 16]], 22, 18, 'You hang the bell in its frame and knot the rope to the tongue. Rung on your settlement, every wildermon of the deed comes and every citizen hears where it hangs.', undefined, { bell: true, material: 'metal' }),
-  piece('statue', 'Statue', 1, 1, [['statue_casting', 1], ['stone_slab', 1]], 24, 20, 'You set the casting on its slab and it stands, and will go on standing. It is on the map from here on.', undefined, { landmark: true, material: 'metal', skill: 'masonry', tool: 'trowel', mossy: true }),
-  piece('hive', 'Hive', 2, 1, [['plank', 24], ['shaft', 2], ['cloth', 4], ['nail', 24]], 18, 13, 'You nail up a hive of shallow boxes and turn the mouth of it south. Now it wants a swarm.', undefined, { hive: 40 }),
+  piece('bell', 'Bell', 1, 1, [['bell_casting', 1], ['timber', 8], ['thick_rope', 1], ['nail', 16]], 22, 18, 'Rung on your settlement: every wildermon of the deed comes; every citizen hears where it hangs.', undefined, { bell: true, material: 'metal' }),
+  piece('statue', 'Statue', 1, 1, [['statue_casting', 1], ['stone_slab', 1]], 24, 20, 'Shown on the map.', undefined, { landmark: true, material: 'metal', skill: 'masonry', tool: 'trowel', mossy: true }),
+  piece('hive', 'Hive', 2, 1, [['plank', 24], ['shaft', 2], ['cloth', 4], ['nail', 24]], 18, 13, '', undefined, { hive: 40 }),
   /*
    * A skep (`bees.ts`): coils of thatch bound into a dome with split reed, a
    * mouth cut at its foot. Woven with a carving knife as a creel is, by
    * ropemaking.
    */
   piece('skep', 'Skep', 1, 1, [['thatch', 6], ['reed', 4]], 12, 10,
-    'You coil the thatch up into a dome, bind each coil to the one under it with split reed and cut a mouth at its foot.',
+    '',
     undefined, { skill: 'ropemaking', tool: 'carving_knife', skep: true }),
   // A Fisher's pond: dug and puddled with clay, a ring of stones round it and reeds at the edge. It stocks itself.
-  piece('fish_pond', 'Fish pond', 2, 2, [['clay', 20], ['rock_shards', 12], ['reed', 8]], 20, 20, 'You dig the pond out, puddle the floor of it with clay, set stones round the rim and plant the reeds at its edge.', undefined, { pond: 10, skill: 'fishing', tool: 'shovel', perk: 'fish_pond', deed: true }),
+  piece('fish_pond', 'Fish pond', 2, 2, [['clay', 20], ['rock_shards', 12], ['reed', 8]], 20, 20, '', undefined, { pond: 10, skill: 'fishing', tool: 'shovel', perk: 'fish_pond', deed: true }),
   // An Artisan's potter's wheel: a stone flywheel on a spindle in a plank frame, and anybody's pottery near it goes quicker.
   piece('potters_wheel', 'Potter\'s wheel', 1, 1, [['plank', 12], ['shaft', 2], ['stone_slab', 1], ['nail', 12]], 18, 12,
-    'You true a stone wheel on a spindle over a kick wheel, and set a seat behind it.', undefined,
+    '', undefined,
     { skill: 'pottery', perk: 'potters_wheel', pace: { skill: 'pottery', by: 0.7, reach: 2.4 } }),
   // The two the cloth trade is built on. Stand at one to spin or weave.
-  piece('spindle', 'Spindle', 1, 1, [['plank', 8], ['shaft', 3], ['nail', 16]], 14, 9, 'You turn a spindle and set it on its stand.'),
-  piece('loom', 'Loom', 2, 2, [['plank', 32], ['timber', 16], ['shaft', 6], ['nail', 48]], 22, 18, 'You build a loom and thread the warp.'),
+  piece('spindle', 'Spindle', 1, 1, [['plank', 8], ['shaft', 3], ['nail', 16]], 14, 9, ''),
+  piece('loom', 'Loom', 2, 2, [['plank', 32], ['timber', 16], ['shaft', 6], ['nail', 48]], 22, 18, ''),
   /*
    * Where reed is pressed into papyrus, and nowhere else (`enchant.ts`): a
    * screw press, built with carpentry. Between a spindle and a loom in what
@@ -406,7 +406,7 @@ export const FURNITURE: FurnitureDef[] = [
    * footing -- since it is a bench of one job as each of those is.
    */
   piece('paper_press', 'Paper press', 1, 1, [['plank', 24], ['timber', 12], ['shaft', 4], ['nail', 36]], 20, 16,
-    'You raise the frame, thread the screw through its head beam and hang the platen under it. Stand at it to press reed into papyrus.', undefined,
+    '', undefined,
     { skill: 'carpentry' }),
   /*
    * Where a bucket of milk is churned into butter, and nowhere else
@@ -414,10 +414,10 @@ export const FURNITURE: FurnitureDef[] = [
    * the lid. A bucket's staves and hoops, more of them, on a spindle's footing.
    */
   piece('butter_churn', 'Butter churn', 1, 1, [['plank', 12], ['shaft', 2], ['ribbon', 2], ['nail', 12]], 16, 10,
-    'You raise the staves, hoop the tub and fit the dasher through its lid. Stand at it to churn a bucket of milk into butter.', undefined,
+    '', undefined,
     { skill: 'carpentry' }),
   // Masonry, not carpentry: these two are laid in brick and mortar.
-  piece('oven', 'Oven', 2, 2, [['stone_brick', 40], ['mortar', 16]], 24, 18, 'You lay the courses, turn an arch over the mouth and leave it to set. An oven.', undefined, { skill: 'masonry', tool: 'trowel', hearth: true }),
+  piece('oven', 'Oven', 2, 2, [['stone_brick', 40], ['mortar', 16]], 24, 18, '', undefined, { skill: 'masonry', tool: 'trowel', hearth: true }),
   /*
    * A fire you can put where you want one, which an oven is not.
    *
@@ -428,7 +428,7 @@ export const FURNITURE: FurnitureDef[] = [
    * itself at dusk, goes out at dawn, and shows the ground around it while it
    * burns.
    */
-  piece('brazier', 'Brazier', 1, 1, [['stone_brick', 24], ['mortar', 8], ['ribbon', 4]], 20, 12, 'You lay a shallow bowl of brick and band it with iron. A brazier.', undefined, { skill: 'masonry', tool: 'trowel', hearth: true }),
+  piece('brazier', 'Brazier', 1, 1, [['stone_brick', 24], ['mortar', 8], ['ribbon', 4]], 20, 12, '', undefined, { skill: 'masonry', tool: 'trowel', hearth: true }),
   /*
    * And two that burn a lantern rather than a fire (`lamps.ts`): a squared
    * post with an iron arm off its head for the lantern to hang from, and a
@@ -436,10 +436,10 @@ export const FURNITURE: FurnitureDef[] = [
    * comes with a lantern: the one fitted is the one you carry.
    */
   piece('lamp_post', 'Lantern post', 1, 1, [['timber', 1], ['ribbon', 2], ['nail', 6]], 14, 10,
-    'You stand the post up, bolt the iron arm across its head and hang a hook off the end. Hang a lantern on it.', undefined,
+    '', undefined,
     { skill: 'carpentry', lamp: 'arm' }),
   piece('lamp_pillar', 'Lantern pillar', 1, 1, [['stone_brick', 8], ['mortar', 4], ['ribbon', 2]], 20, 16,
-    'You lay the courses up to a capital and band an iron cage into its top. Set a lantern in it.', undefined,
+    '', undefined,
     { skill: 'masonry', tool: 'trowel', lamp: 'top' }),
   /*
    * Where a scroll is put into a thing, and nowhere else (`enchant.ts`): a
@@ -449,7 +449,7 @@ export const FURNITURE: FurnitureDef[] = [
    * one for its runes. Moss gathers on it as on a statue (`greening.ts`).
    */
   piece(ENCHANTERS_PLINTH, 'Enchanter\'s plinth', 2, 2, [['stone_brick', 32], ['mortar', 12], ['stone_slab', 2], ['light_mote', 1], ['dark_mote', 1]], 26, 24,
-    'You lay a coursed foot, set a shaft on it and bed a dished slab across its head, then cut the runes round its rim with a light mote and a dark one in them. Stand at it to enchant.',
+    '',
     undefined, { skill: 'masonry', tool: 'trowel', mossy: true }),
   /*
    * And one that needs no lantern (`runelantern.ts`): a squat stone pillar
@@ -459,7 +459,7 @@ export const FURNITURE: FurnitureDef[] = [
    * statue does.
    */
   piece('rune_lantern', 'Rune lantern post', 1, 1, [['stone_brick', 8], ['light_mote', 3]], 24, 20,
-    'You lay the courses, cut a band of runes round the head and set the light motes into them. It lights itself at night and burns nothing.', undefined,
+    '', undefined,
     { skill: 'masonry', tool: 'trowel', runes: true, mossy: true }),
   /*
    * A memorial stone: a carved stone on a plinth with a line of somebody's
@@ -468,29 +468,29 @@ export const FURNITURE: FurnitureDef[] = [
    * mortar for its plinth -- on a two-by-two block, room round its foot.
    */
   piece('memorial_stone', 'Memorial stone', 2, 2, [['stone_slab', 2], ['stone_brick', 8], ['mortar', 4]], 22, 18,
-    'You bed the plinth, set the stone up on it and dress its face. Engrave it with a stone chisel.', undefined,
+    '', undefined,
     { skill: 'masonry', tool: 'trowel' }),
-  piece('altar', 'Altar', 2, 2, [['stone_brick', 64], ['mortar', 32], ['stone_slab', 4]], 40, 40, 'You lay the courses and bed the slab on top. Kneel here at dawn.', undefined, { skill: 'masonry', tool: 'trowel', altar: true, deed: true }),
-  piece('banner', 'Banner', 1, 1, [['cloth', 16], ['shaft', 2], ['rope', 1], ['nail', 12]], 10, 10, 'You hem the cloth, lash it to the staff and run it up. Dye it and it is your colour.', undefined, { skill: 'tailoring' }),
+  piece('altar', 'Altar', 2, 2, [['stone_brick', 64], ['mortar', 32], ['stone_slab', 4]], 40, 40, 'Kneel here at dawn.', undefined, { skill: 'masonry', tool: 'trowel', altar: true, deed: true }),
+  piece('banner', 'Banner', 1, 1, [['cloth', 16], ['shaft', 2], ['rope', 1], ['nail', 12]], 10, 10, '', undefined, { skill: 'tailoring' }),
   /*
    * A pole twice a banner's height with a flag on a halyard at the top of it,
    * which streams out down the wind (`render/furniture.ts`). Dyed as cloth is,
    * before it is set down, and on a settlement it carries the settlement's
    * device as a banner does.
    */
-  piece('flagpole', 'Flagpole', 1, 1, [['cloth', 12], ['timber', 2], ['rope', 2], ['nail', 8]], 14, 12, 'You hem the flag, raise the pole and run the flag up it on its halyard. Dye it and it flies your colour.', undefined, { skill: 'tailoring' }),
+  piece('flagpole', 'Flagpole', 1, 1, [['cloth', 12], ['timber', 2], ['rope', 2], ['nail', 8]], 14, 12, '', undefined, { skill: 'tailoring' }),
   /*
    * An arch over a path, a tile across and a subtile deep, walked through like
    * any piece: a timber one a carpenter builds and a stone one a mason lays,
    * each with a climbing rose planted at its feet (`roses.ts`).
    */
   piece('rose_arch', 'Rose arch', 4, 1, [['plank', 24], ['shaft', 6], ['nail', 36]], 16, 16,
-    `You raise the arch, trellis its sides and plant a climbing rose at the foot of each. ${ROSES_RULE}`, undefined,
+    '', undefined,
     { skill: 'carpentry', roses: true }),
   piece('stone_rose_arch', 'Stone rose arch', 4, 1, [['stone_brick', 36], ['mortar', 12]], 24, 22,
-    `You lay the piers, turn the arch over them and plant a climbing rose at the foot of each. ${ROSES_RULE}`, undefined,
+    '', undefined,
     { skill: 'masonry', tool: 'trowel', roses: true }),
-  piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16]], 30, 24, 'You line the shaft, cap it with a kerb and hang a windlass over it. It will find its own water.', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
+  piece('well', 'Well', 2, 2, [['stone_brick', 48], ['mortar', 16], ['shaft', 4], ['thick_rope', 1], ['nail', 16]], 30, 24, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   /*
    * A tiered fountain: basins of cut slab, each smaller than the one under
    * it, on a coursed column, the water welling over the top one and spilling
@@ -500,9 +500,9 @@ export const FURNITURE: FurnitureDef[] = [
    * the whole of what makes a thing a well, on both sides. Its cost is a
    * well's, in dressed stone rather than a windlass.
    */
-  piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16]], 32, 26, 'You set {bill.stone_slab:w} basins one over another on a coursed column, each smaller than the one under it, and lead the water up through the middle. It will find its own water, as a well does.', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
+  piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
   // Storage of a different sort: raw materials, rubbish, and something to pull it in.
-  piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, 'You build a deep bin with a hinged lid, the sort a cartload of ore goes into.', 400, { takes: 'raw' }),
+  piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 400, { takes: 'raw' }),
   /*
    * Its opposite number, off the same bill of materials.
    *
@@ -516,7 +516,7 @@ export const FURNITURE: FurnitureDef[] = [
    * two hundred and fifty thousand nails or twelve hundred planks. There is
    * no count limit on it at all.
    */
-  piece('craft_bin', 'Craft material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, 'You build a deep bin with a partitioned lid, the sort a morning at the anvil goes into.', undefined, { heft: 2500, takes: 'worked' }),
+  piece('craft_bin', 'Craft material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', undefined, { heft: 2500, takes: 'worked' }),
   /*
    * And the two small ones, for the two things a farmer and a forester carry
    * home by the handful.
@@ -527,36 +527,36 @@ export const FURNITURE: FurnitureDef[] = [
    * would have been right for both.
    */
   piece('seed_bin', 'Seed bin', 1, 1, [['plank', 20], ['nail', 20]], 12, 9,
-    'You build a bin with a tight lid and a scoop, the sort a season\'s seed keeps dry in.',
+    '',
     undefined, { heft: 100, takes: 'seed' }),
   piece('sprout_bin', 'Sprout bin', 1, 1, [['plank', 20], ['nail', 20]], 12, 9,
-    'You build a bin with a damp cloth under the lid. Sprouts wilt in the open; they will keep in this.',
+    '',
     undefined, { heft: 100, takes: 'sprout' }),
-  piece('trash_crate', 'Trash crate', 1, 1, [['plank', 12], ['nail', 12]], 8, 5, 'You knock together an open crate with a rotten bottom. Nothing lasts in it.', 30, { trash: 30 }),
-  piece('cart', 'Small cart', 2, 1, [['plank', 32], ['shaft', 4], ['nail', 32]], 18, 14, 'You build a small cart, light enough for one person to pull.', 100, { cart: true }),
+  piece('trash_crate', 'Trash crate', 1, 1, [['plank', 12], ['nail', 12]], 8, 5, '', 30, { trash: 30 }),
+  piece('cart', 'Small cart', 2, 1, [['plank', 32], ['shaft', 4], ['nail', 32]], 18, 14, '', 100, { cart: true }),
   // The two that are driven rather than carried. A wheelwright's bill: wheels
   // on cast axles, a body banded with metal ribbon, and a yoke a wildermon is
   // hitched into.
-  piece('large_cart', 'Large cart', 3, 2, [['plank', 80], ['timber', 24], ['large_wheel', 2], ['big_axle', 1], ['ribbon', 16], ['yoke', 2], ['nail', 80]], 30, 40, 'You build a large cart: box body, seat over the axle and a yoke to each side.', 1000, { skill: 'carpentry', vehicle: { yokes: 2, needs: 1, seat: 15 } }),
-  piece('wagon', 'Wagon', 4, 3, [['plank', 160], ['timber', 48], ['large_wheel', 4], ['big_axle', 2], ['ribbon', 32], ['yoke', 4], ['nail', 160]], 45, 75, 'You build a wagon: {bill.large_wheel:w} wheels under a long bed, a driver\'s box at the front and {vehicle.yokes:w} yokes ahead of it.', 10000, { skill: 'carpentry', vehicle: { yokes: 4, needs: 4, seat: 19 } }),
+  piece('large_cart', 'Large cart', 3, 2, [['plank', 80], ['timber', 24], ['large_wheel', 2], ['big_axle', 1], ['ribbon', 16], ['yoke', 2], ['nail', 80]], 30, 40, '', 1000, { skill: 'carpentry', vehicle: { yokes: 2, needs: 1, seat: 15 } }),
+  piece('wagon', 'Wagon', 4, 3, [['plank', 160], ['timber', 48], ['large_wheel', 4], ['big_axle', 2], ['ribbon', 32], ['yoke', 4], ['nail', 160]], 45, 75, '', 10000, { skill: 'carpentry', vehicle: { yokes: 4, needs: 4, seat: 19 } }),
   // The two that float. Built on the bank and launched into water with a
   // couple of feet under it; they carry their load and their crew and will
   // not be dragged up a beach.
-  piece('rowing_boat', 'Rowing boat', 3, 2, [['plank', 200], ['timber', 60], ['shaft', 2], ['rope', 4], ['nail', 150]], 28, 34, 'You lay the strakes over the ribs, caulk the seams and set a pair of oars in her.', 300, { skill: 'carpentry', boat: { speed: 1.9, draught: 2, seat: 9 } }),
-  piece('sailing_boat', 'Sailing boat', 4, 3, [['plank', 480], ['timber', 168], ['shaft', 6], ['cloth', 72], ['rope', 24], ['thick_rope', 6], ['ribbon', 24], ['nail', 420]], 42, 70, 'You plank her, step the mast, bend the sail on and hang a rudder off the stern.', 1500, { skill: 'carpentry', boat: { speed: 3.4, draught: 4, seat: 13, sail: true } }),
+  piece('rowing_boat', 'Rowing boat', 3, 2, [['plank', 200], ['timber', 60], ['shaft', 2], ['rope', 4], ['nail', 150]], 28, 34, '', 300, { skill: 'carpentry', boat: { speed: 1.9, draught: 2, seat: 9 } }),
+  piece('sailing_boat', 'Sailing boat', 4, 3, [['plank', 480], ['timber', 168], ['shaft', 6], ['cloth', 72], ['rope', 24], ['thick_rope', 6], ['ribbon', 24], ['nail', 420]], 42, 70, '', 1500, { skill: 'carpentry', boat: { speed: 3.4, draught: 4, seat: 13, sail: true } }),
   /*
    * And the ship. Every line of her bill is at least three times the sailing
    * boat's, she takes the whole of a tile, she wants deeper water under her,
    * and she is the one hull that carries anybody besides whoever is steering.
    */
-  piece('caravel', 'Caravel', 4, 4, [['plank', 1500], ['timber', 520], ['shaft', 18], ['cloth', 220], ['rope', 80], ['thick_rope', 20], ['ribbon', 80], ['nail', 1300]], 60, 180, 'You lay her keel, raise the frames, plank her up to a castle at either end and step her masts.', 5000, { skill: 'carpentry', boat: { speed: 4, draught: 5, seat: 33, helm: [-0.65, 0], waist: 18, sail: true, passengers: 3, deck: [[-0.3, 0], [-0.05, 0], [0.3, 0]] } }),
+  piece('caravel', 'Caravel', 4, 4, [['plank', 1500], ['timber', 520], ['shaft', 18], ['cloth', 220], ['rope', 80], ['thick_rope', 20], ['ribbon', 80], ['nail', 1300]], 60, 180, '', 5000, { skill: 'carpentry', boat: { speed: 4, draught: 5, seat: 33, helm: [-0.65, 0], waist: 18, sail: true, passengers: 3, deck: [[-0.3, 0], [-0.05, 0], [0.3, 0]] } }),
   // Barrels hold liquid and nothing else, in three sizes.
-  piece('small_barrel', 'Small barrel', 1, 1, [['plank', 12], ['shaft', 1], ['nail', 12]], 12, 7, 'You raise a small barrel and hoop it tight.', undefined, { liquid: 30 }),
-  piece('large_barrel', 'Large barrel', 2, 2, [['plank', 56], ['shaft', 4], ['nail', 52]], 26, 20, 'You raise a great barrel, as tall as you are.', undefined, { liquid: 250 }),
+  piece('small_barrel', 'Small barrel', 1, 1, [['plank', 12], ['shaft', 1], ['nail', 12]], 12, 7, '', undefined, { liquid: 30 }),
+  piece('large_barrel', 'Large barrel', 2, 2, [['plank', 56], ['shaft', 4], ['nail', 52]], 26, 20, '', undefined, { liquid: 250 }),
   // A board on a post, made to carry writing. Name it and the name stands in
   // the world where anyone walking past can read it.
-  piece('sign', 'Sign', 1, 1, [['plank', 8], ['shaft', 2], ['nail', 12]], 10, 7, 'You nail a board across {bill.shaft:w} posts and set it up straight.', undefined, { sign: true }),
-  piece('great_sign', 'Signboard', 2, 1, [['plank', 20], ['timber', 4], ['shaft', 2], ['nail', 24]], 18, 12, 'You nail up a board wide enough to write a sentence on.', undefined, { sign: true }),
+  piece('sign', 'Sign', 1, 1, [['plank', 8], ['shaft', 2], ['nail', 12]], 10, 7, '', undefined, { sign: true }),
+  piece('great_sign', 'Signboard', 2, 1, [['plank', 20], ['timber', 4], ['shaft', 2], ['nail', 24]], 18, 12, '', undefined, { sign: true }),
   /*
    * And the one nobody builds: a mound of earth with a marker at its head,
    * dug where somebody fell and holding what they were carrying. It is a
@@ -764,7 +764,7 @@ export const isPlanter = (f: { kind: string }): boolean => !!furnitureDef(f.kind
  * Why a planter will not be picked up while something grows in it. The
  * island says the same (`planter_growing_said`, off this).
  */
-export const PLANTER_GROWING = 'Something is growing in it. Harvest it, or pull it up, first.';
+export const PLANTER_GROWING = 'Harvest or pull up the crop first.';
 /**
  * Why a lantern post or pillar with its lantern in will not be picked up: the
  * lantern comes down first (`lamps.ts`). The island says the same.
@@ -804,7 +804,7 @@ export const BUCKET_OF: Record<LiquidKind, string> = { water: 'water_bucket', ly
  * they are put in here, so the words and the rule are one number.
  */
 export const teamSaid = (v: VehicleDef): string =>
-  v.needs === v.yokes ? `all ${numberWord(v.yokes)}` : `${numberWord(v.needs)} of its ${numberWord(v.yokes)}`;
+  v.needs === v.yokes ? `all ${v.yokes}` : `${v.needs} of its ${v.yokes}`;
 for (const f of FURNITURE) {
   const said = {
     ...f,
@@ -960,7 +960,7 @@ export const isVehicle = (f: { kind: string }): boolean => !!furnitureDef(f.kind
  * `ride_refusal` says the same.
  */
 export const tracesStoreyRefusal = (f: PlacedFurniture): string | null =>
-  (f.level ?? 0) > 0 ? `Bring the ${furnitureName(f).toLowerCase()} down to the ground floor first: a team goes into and out of the traces on the ground.` : null;
+  (f.level ?? 0) > 0 ? `Bring the ${furnitureName(f).toLowerCase()} to the ground floor first: teams yoke and unyoke on the ground only.` : null;
 /** The boat a piece is, if it is one. */
 export const boatOf = (f: { kind: string }): BoatDef | undefined => furnitureDef(f.kind).boat;
 export const isBoat = (f: { kind: string }): boolean => !!furnitureDef(f.kind).boat;
@@ -1027,17 +1027,17 @@ describeFrom('fish_pond', { every: POND_EVERY });
  * What a raw material bin says to anything a bench has touched. The island
  * says it in the same words (`furniture_refuses`).
  */
-export const RAW_BIN_REFUSAL = 'A raw material bin takes raw materials — ore, logs, dirt, shards, wool — and nothing a bench has touched.';
+export const RAW_BIN_REFUSAL = 'Raw material bin: raw materials only (ore, logs, dirt, shards, wool).';
 
 /**
  * And what the other bin says to anything straight out of the ground. The
  * island says it in the same words (`furniture_refuses`).
  */
-export const CRAFT_BIN_REFUSAL = 'A craft material bin takes worked materials — planks, nails, ribbons, hinges — and nothing that has not been through a bench.';
+export const CRAFT_BIN_REFUSAL = 'Craft material bin: worked materials only (planks, nails, ribbons, hinges).';
 
-export const LARDER_REFUSAL = 'A larder takes food and drink, and the flour, dough and cornmeal a kitchen bakes from — and nothing else.';
-export const SEED_BIN_REFUSAL = 'A seed bin takes seeds and nothing else.';
-export const SPROUT_BIN_REFUSAL = 'A sprout bin takes sprouts and nothing else.';
+export const LARDER_REFUSAL = 'Larder: food, drink, flour, dough and cornmeal only.';
+export const SEED_BIN_REFUSAL = 'Seed bin: seeds only.';
+export const SPROUT_BIN_REFUSAL = 'Sprout bin: sprouts only.';
 
 /**
  * The five restricted stores: what each takes, and what it says to the rest.
@@ -1070,13 +1070,13 @@ export const TAKES: Record<Takes, { is: (id: string) => boolean; refusal: string
  */
 export function furnitureRefuses(f: PlacedFurniture, item: Item): string | null {
   const def = furnitureDef(f.kind);
-  const it = `${/^[aeiou]/i.test(def.name) ? 'An' : 'A'} ${def.name.toLowerCase()}`;
-  if (holdsLiquid(f)) return `${it} holds liquid and nothing else.`;
-  if (def.hive) return `${it} is the swarm's, not yours. Take what is in it; do not put anything back.`;
-  if (def.pond) return `${it} stocks itself. Take the fish out of it; do not put anything back.`;
-  if (!furnitureHolds(f)) return `${it} does not hold things.`;
+  const it = def.name;
+  if (holdsLiquid(f)) return `${it}: liquids only.`;
+  if (def.hive) return `${it}: take only; nothing goes in.`;
+  if (def.pond) return `${it}: take fish only; nothing goes in.`;
+  if (!furnitureHolds(f)) return `${it}: holds nothing.`;
   // Its id is spelled out rather than imported: creaturecrate.ts imports this file.
-  if (item.id === 'creature_crate' && !def.stall) return 'A creature crate goes on a stall, and in no other store.';
+  if (item.id === 'creature_crate' && !def.stall) return 'Creature crates go on a stall only.';
   const takes = def.takes && TAKES[def.takes];
   if (takes && !takes.is(item.id)) return takes.refusal;
   return null;
@@ -1192,8 +1192,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
         g.events.emit('creature');
       }
       g.logMsg(inside?.mode === 'stored'
-        ? `You set the ${furnitureName(f).toLowerCase()} down with ${inside.name} in it.`
-        : `You set the ${furnitureName(f).toLowerCase()} down.`, 'event');
+        ? `Set down: ${furnitureName(f).toLowerCase()}, with ${inside.name}.`
+        : `Set down: ${furnitureName(f).toLowerCase()}.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -1217,7 +1217,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.hitched) return 'Let go of it first.';
       if (teamOf(f).length) return 'Unhitch the team first.';
       if (f.driven) return 'Get down off it first.';
-      if (ridersOf(f).length) return 'There are people aboard her.';
+      if (ridersOf(f).length) return 'Passengers aboard.';
       if (rackSpots(f) && g.cratesOn(f).length) return 'Take the crates off it first.';
       // A trellis goes round to the next side of its tile with a wall it stands against, and stays put with none (`vineyard.ts`).
       const stuck = g.trellisTurnRefusal(f);
@@ -1226,7 +1226,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       const facing = g.pieceTurnsTo(f);
       const [ax, ay] = furnitureAnchor(f.kind, f.sx, f.sy, facing);
       const why = g.furniturePlaceReason(f.kind, f.x, f.y, ax, ay, facing, f.id, f.level ?? 0);
-      return why ? 'Something is in the way of turning it.' : null;
+      return why ? 'Blocked.' : null;
     },
     perform: (t, g) => {
       const f = pieceOf(g, t);
@@ -1237,7 +1237,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       f.facing = facing;
       f.sx = ax;
       f.sy = ay;
-      g.logMsg(`You turn the ${furnitureName(f).toLowerCase()} to face ${SIDE_NAMES[facing]}.`, 'event');
+      g.logMsg(`Turned: ${furnitureName(f).toLowerCase()}, facing ${SIDE_NAMES[facing]}.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -1271,12 +1271,12 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
         const on = g.cratesOn(f).length;
         if (on) return `Take the ${on === 1 ? 'crate' : `${on} crates`} off it first.`;
       }
-      if (f.lit) return 'Not while it is alight.';
+      if (f.lit) return 'Put it out first.';
       if (litresIn(f) > 0) return 'Empty it out first.';
       if (f.hitched) return 'Let go of it first.';
       if (teamOf(f).length) return 'Unhitch the team first.';
       if (f.driven) return 'Get down off it first.';
-      if (ridersOf(f).length) return 'There are people aboard her.';
+      if (ridersOf(f).length) return 'Passengers aboard.';
       return null;
     },
     perform: (t, g) => {
@@ -1302,8 +1302,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
         g.events.emit('creature');
       }
       g.logMsg(inside?.mode === 'stored'
-        ? `You pick the ${furnitureName(f).toLowerCase()} up with ${inside.name} in it.`
-        : `You pick the ${furnitureName(f).toLowerCase()} up.`, 'event');
+        ? `Picked up: ${furnitureName(f).toLowerCase()}, with ${inside.name}.`
+        : `Picked up: ${furnitureName(f).toLowerCase()}.`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },
@@ -1332,7 +1332,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       if (f.kind === 'hive' && items.some((it) => it.id === 'honey')) g.note('honey');
       g.events.emit('crate');
       const names = items.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
-      g.logMsg(`You take ${names.join(', ')} out of the ${furnitureName(f).toLowerCase()}.`, 'event');
+      g.logMsg(`Taken from ${furnitureName(f).toLowerCase()}: ${names.join(', ')}.`, 'event');
     },
   },
   {
@@ -1362,7 +1362,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
           const why = pieceShut(g, other) ?? furnitureRefuses(other, item);
           if (why) return why;
         }
-        return 'Stand next to something that will take it.';
+        return 'No store in reach takes it.';
       }
       // A settlement store by its rule, anything else by its padlock.
       const shut = pieceShut(g, f);
@@ -1370,7 +1370,7 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       const refused = furnitureRefuses(f, item);
       if (refused) return refused;
       // Room for some of it is enough; what will not fit stays in the pack.
-      if (furnitureRoom(f, item) <= 0) return `The ${furnitureName(f).toLowerCase()} is full.`;
+      if (furnitureRoom(f, item) <= 0) return `${furnitureName(f)} full.`;
       return null;
     },
     perform: (t, g) => {
@@ -1381,14 +1381,14 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       const want = t.count ?? 1;
       const fits = Math.min(want, furnitureRoom(f, held));
       if (fits <= 0) {
-        g.logMsg(`The ${furnitureName(f).toLowerCase()} is full.`, 'error');
+        g.logMsg(`${furnitureName(f)} full.`, 'error');
         return;
       }
       const item = g.inventory.take(t.uid, fits);
       if (!item) return;
       if (!g.furnitureAdd(f, item)) {
         g.inventory.addItem(item);
-        g.logMsg(`The ${furnitureName(f).toLowerCase()} is full.`, 'error');
+        g.logMsg(`${furnitureName(f)} full.`, 'error');
         return;
       }
       g.logMsg(storedLine(item.count, itemName(item), furnitureName(f), want - item.count), 'event');

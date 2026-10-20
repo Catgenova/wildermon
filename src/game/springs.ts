@@ -137,18 +137,18 @@ export class Springs {
   /** What stops a spring being dug in a tile, or null: water already there, a hollow too shallow to hold a pond, or one too wide to fill. */
   refusal(x: number, y: number): string | null {
     const slab = this.slabs(x, y);
-    if (slab && !slab.pool) return 'Dig a pool in the foundation first: a spring under a slab has nowhere to rise.';
-    if (!slab && this.world.hasWater(x, y)) return 'There is water here already.';
+    if (slab && !slab.pool) return 'Dig a pool in the foundation first.';
+    if (!slab && this.world.hasWater(x, y)) return 'Already water here.';
     const [cx, cy] = springCorner((a, b) => this.world.getHeight(a, b), x, y);
     const r = settleChain(this.height, cx, cy, this.slabs, [x, y], { shut: this.shut() });
     if (slab && typeof r !== 'string') {
       // One spring to a pool: a second would only send the same water over the same edge.
       const tiles = r.ponds[0].tiles ?? [];
-      for (let k = 0; k < tiles.length; k += 2) if (this.at(tiles[k], tiles[k + 1])) return 'A spring rises in this pool already.';
+      for (let k = 0; k < tiles.length; k += 2) if (this.at(tiles[k], tiles[k + 1])) return 'Pool already has a spring.';
       return null;
     }
-    if (r === 'flat') return `Water here would run straight off downhill. Dig a spring at the bottom of a hollow that holds ${(SPRING_DEPTH / 10).toFixed(1)} m of water or more.`;
-    if (r === 'wide') return `This hollow is too wide for a spring ever to fill: a pond spreads over ${POND_MOST} corners at most.`;
+    if (r === 'flat') return `Water would run off downhill: dig in a hollow holding ${(SPRING_DEPTH / 10).toFixed(1)} m of water or more.`;
+    if (r === 'wide') return `Hollow too wide: a pond covers ${POND_MOST} corners at most.`;
     return null;
   }
 
@@ -360,13 +360,13 @@ export function aqueductSpringSays(chain: Chain, head: (id: number) => readonly 
   if (!along || !at) return null;
   const first = chain.ponds[0];
   const k = along.from;
-  const go = `along the aqueduct from ${at[0]}, ${at[1]}, ${AQUEDUCT_FLOW} litres a minute`;
-  const more = `${k} more pond${k === 1 ? '' : 's'} below it, and from the last of those`;
+  const go = `along the aqueduct from ${at[0]}, ${at[1]}, ${AQUEDUCT_FLOW} litres/min`;
+  const more = `${k} more pond${k === 1 ? '' : 's'} below, then from the last`;
   if (first.tiles) {
-    return k ? `Water wells up in the pool. It runs down into ${more} ${go}.` : `Water wells up in the pool. It goes ${go}, instead of over its edge.`;
+    return k ? `Spring in the pool: flows into ${more} ${go}.` : `Spring in the pool: flows ${go}, not over its edge.`;
   }
-  const stand = `Water wells up at the bottom of the hollow. It will stand ${((first.level - first.floor) / 10).toFixed(1)} m deep over ${first.wet.length / 2} corners`;
-  return k ? `${stand}, then spill over the lowest point of its rim and run down into ${more} ${go}.` : `${stand}, then go ${go}, instead of over its rim.`;
+  const stand = `Spring: pond ${((first.level - first.floor) / 10).toFixed(1)} m deep over ${first.wet.length / 2} corners`;
+  return k ? `${stand}, then spills over its rim into ${more} ${go}.` : `${stand}, then flows ${go}, not over its rim.`;
 }
 
 /** What is said when a spring is dug: how deep its pond will stand, and where its water goes after that. */
@@ -376,20 +376,20 @@ export function springSays(s: Spring, head: (id: number) => readonly [number, nu
   const [first, ...rest] = s.chain.ponds;
   const last = s.chain.streams[s.chain.streams.length - 1];
   const deep = ((first.level - first.floor) / 10).toFixed(1);
-  const on = rest.length ? `down into ${rest.length} more pond${rest.length === 1 ? '' : 's'} below it, and from the last of those ` : '';
-  const end = last?.to === 'sea' ? 'on into the sea' : last?.to === 'lost' ? 'away into the ground' : 'back into a pond of its own';
+  const on = rest.length ? `into ${rest.length} more pond${rest.length === 1 ? '' : 's'} below, then from the last ` : '';
+  const end = last?.to === 'sea' ? 'into the sea' : last?.to === 'lost' ? 'into the ground' : 'back into a pond of its own';
   if (first.tiles) {
-    if (!first.spill) return 'Water wells up in the pool. Nothing beside it is lower than its water, so it stays full and goes nowhere.';
+    if (!first.spill) return 'Spring in the pool: stays full, no outflow (nothing lower beside it).';
     const fall = ((first.level - first.spill.to) / 10).toFixed(1);
     const onto = rest[0]?.tiles && first.spill.to === rest[0].level ? 'into the pool below' : 'to the ground';
     // The last of them a pool with nothing lower beside it: the water stops there.
     const bottom = s.chain.ponds[s.chain.ponds.length - 1];
     if (bottom.tiles && !bottom.spill) {
-      return `Water wells up in the pool and spills over its lowest edge, falling ${fall} m ${onto}, and runs down into ${rest.length} more pond${rest.length === 1 ? '' : 's'} below it, where it stays.`;
+      return `Spring in the pool: spills over its lowest edge, falls ${fall} m ${onto}, then flows into ${rest.length} more pond${rest.length === 1 ? '' : 's'} below and stays.`;
     }
-    return `Water wells up in the pool and spills over its lowest edge, falling ${fall} m ${onto}, and runs ${on}${end}.`;
+    return `Spring in the pool: spills over its lowest edge, falls ${fall} m ${onto}, then flows ${on}${end}.`;
   }
-  return `Water wells up at the bottom of the hollow. It will stand ${deep} m deep over ${first.wet.length / 2} corners, then spill over the lowest point of its rim and run ${on}${end}.`;
+  return `Spring: pond ${deep} m deep over ${first.wet.length / 2} corners, then spills over its rim and flows ${on}${end}.`;
 }
 
 export const SPRING_ACTIONS: ActionDef[] = [
@@ -405,10 +405,10 @@ export const SPRING_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && (!g.world.hasWater(t.x, t.y) || !!g.slabAt(t.x, t.y)?.pool) && !g.springs.at(t.x, t.y),
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
-      if (!g.inventory.has('shovel')) return 'You need a shovel to dig for a spring.';
-      if (g.buildings.buildingAt(t.x, t.y)) return 'You cannot do that inside a building.';
+      if (!g.inventory.has('shovel')) return 'Need a shovel.';
+      if (g.buildings.buildingAt(t.x, t.y)) return 'Not inside a building.';
       // On an island the island counts whose springs are whose; here every one is yours.
-      if (!g.springs.fromIsland && g.springs.keptBy(null) >= SPRINGS_EACH) return `You keep ${SPRINGS_EACH} springs already. Stop one up before you dig another.`;
+      if (!g.springs.fromIsland && g.springs.keptBy(null) >= SPRINGS_EACH) return `Max ${SPRINGS_EACH} springs: stop one up first.`;
       return g.springs.refusal(t.x, t.y);
     },
     perform: (t, g) => {
@@ -431,15 +431,15 @@ export const SPRING_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && !!g.springs.at(t.x, t.y),
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
-      if (!g.inventory.has('shovel')) return 'You need a shovel to stop up a spring.';
-      return g.springs.at(t.x, t.y) ? null : 'There is no spring here.';
+      if (!g.inventory.has('shovel')) return 'Need a shovel.';
+      return g.springs.at(t.x, t.y) ? null : 'No spring here.';
     },
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       const s = g.springs.at(t.x, t.y);
       if (!s) return;
       g.springs.stop(s.id);
-      g.logMsg('You pack the spring shut. Its water sinks away, and the ponds it kept go dry.', 'event');
+      g.logMsg('Spring stopped: its ponds drain.', 'event');
       g.events.emit('world', t.x, t.y);
     },
   },

@@ -13,7 +13,7 @@
  */
 import { seasonAt, type Season } from '../world/calendar';
 import { DAY_SECONDS } from './pace';
-import { numberWord, spanWords } from './words';
+import { spanWords } from './words';
 
 /** Days of the island's year after it is set down that an arch's roses are in leaf, in bud and in flower. */
 export const ROSE_LEAFY = 1;
@@ -55,4 +55,4 @@ export function roseSays(setAt: number | undefined, now: number): string {
 }
 
 /** The rule, said once: for a piece's description and the help. */
-export const ROSES_RULE = `An arch's roses are in leaf ${numberWord(ROSE_LEAFY)} day after it is set down, in bud ${numberWord(ROSE_BUD)} days after and in flower ${numberWord(ROSE_FLOWER)} days after, in spring and summer; the rest of the year a grown arch is in leaf. Picking an arch up and setting it down again starts its roses again.`;
+export const ROSES_RULE = `Roses: in leaf ${ROSE_LEAFY} ${ROSE_LEAFY === 1 ? 'day' : 'days'} after it is set down, in bud after ${ROSE_BUD} days, in flower after ${ROSE_FLOWER} days, in spring and summer; in leaf the rest of the year. Picking it up and setting it down restarts its roses.`;

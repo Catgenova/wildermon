@@ -92,7 +92,7 @@ import { BOARD_TOP } from '../../game/boards';
 import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
-import { article, capital, finePercent, listed, listedOr, NumberWord, numberWord, percent, share, spanWords, times } from '../../game/words';
+import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
 import { SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
@@ -202,6 +202,22 @@ const counterType = () => WALL_TYPE_BY_ID.get(COUNTER_WALL);
 /** The skill a recipe is worked at, by name. */
 const skillOf = (id: string): string => (SKILL_BY_ID.get(RECIPE_BY_ID.get(id)?.skill ?? '')?.name ?? '').toLowerCase();
 
+/** A count or quantity in figures: 1500 is "1,500". */
+const num = (n: number): string => n.toLocaleString('en');
+/** A share in figures: 0.2 is "1/5", 0.75 "3/4"; one that is no simple fraction is a percentage. */
+const frac = (x: number): string => {
+  for (const d of [2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 20, 100]) {
+    const n = Math.round(x * d);
+    // As `share` has it: past a tenth, only one part of the whole (7/20 is 35%).
+    if (n >= 1 && n < d && !(n > 1 && d > 10) && Math.abs(x * d - n) < 1e-6) return `${n}/${d}`;
+  }
+  return percent(x);
+};
+/** A multiplier in figures: "×2", "×1.5". */
+const mult = (m: number): string => `×${Number(m.toFixed(2))}`;
+/** A stretch of time in figures: "45 s", "1 hour and 15 minutes", "2 days". */
+const dur = (secs: number): string => (Math.round(secs) < 90 ? `${Math.round(secs)} s` : timeWords(secs));
+
 /** What a boil made and a dyeing took the day dye became a liquid (111), before it went by weight (117). */
 const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, floor: 1 } as const;
 
@@ -210,14 +226,15 @@ export const NEWS: News[] = [
     n: 1,
     day: '2026-09-25',
     lines: () => [
-      'Creature crates: a crate holds one wildermon. With one already following you, another is tamed only into an empty crate in your pack. Nothing is kept at the token any more: what was is in crates set down beside it, or in its keeper\'s pack where there was no room.',
-      'A young one follows its keeper when nothing else does; otherwise it goes into an empty crate in their pack, then into an empty crate of theirs standing on their settlement, the nearest its dam; with none of those it goes wild.',
-      'Butchering is raised by butchering on an island as well as by yourself, and what comes off a carcass is made at your Butchering and your knife, the way every trade makes its work. The carcass\'s own quality no longer lowers it.',
-      'A citizen may leave a settlement they were asked onto, from its menu on its land or from the Settlement window, and may found one of their own.',
-      'The market board, in the Market window at a settlement token or a mailbox: every stall on the island, what is priced on it, where it stands and whose it is. A wildermon in its crate can be offered in a deal, sold off a stall or posted, and whoever the crate goes to keeps it.',
-      `Leaderboards: the ${BOARD_TOP} highest in each skill, the ${BOARD_TOP} best-bred wildermon and the ${BOARD_TOP} biggest settlements on the island.`,
-      'A young one\'s creature window names its dam and its sire, and says which of them each trait you can read came from.',
-      `While you were away: coming back ashore, a window lists what your workers put into the stores, the young your wildermon had, what your stalls sold and the parcels posted to you, counted from ${IDLE_LOGOUT / 60} minutes after your browser was last heard from.`,
+      'Added: creature crates, 1 wildermon each. With one already following you, another is tamed only into an empty crate in your pack.',
+      'Removed: keeping wildermon at the token. Those kept there: in crates set down beside it, or in the keeper\'s pack where there was no room.',
+      'Changed: a newborn follows its keeper when nothing else does; else goes into an empty crate in their pack; else an empty crate of theirs on their settlement, nearest its dam first; else goes wild.',
+      'Changed: Butchering trains on an island as well as solo. Carcass yield made at your Butchering and knife quality; the carcass\'s own quality no longer lowers it.',
+      'Added: a citizen may leave a settlement they joined (its menu on its land, or the Settlement window) and may found one of their own.',
+      'Added: market board (Market window at a settlement token or a mailbox): every stall on the island, its prices, location and owner. A crated wildermon can be offered in a deal, sold off a stall or posted; the crate\'s new owner keeps it.',
+      `Added: leaderboards: top ${BOARD_TOP} in each skill, top ${BOARD_TOP} best-bred wildermon, top ${BOARD_TOP} biggest settlements.`,
+      'Added: creature window names a newborn\'s dam and sire and which parent each readable trait came from.',
+      `Added: While you were away window on coming ashore: workers' deliveries to stores, newborns, stall sales, parcels posted to you; counted from ${IDLE_LOGOUT / 60} min after your browser was last heard from.`,
     ],
   },
   {
@@ -226,11 +243,11 @@ export const NEWS: News[] = [
     lines: () => {
       const caravel = furnitureDef('caravel'), sailer = furnitureDef('sailing_boat');
       return [
-        `Walls cost more, to the scale of the cobblestone wall's ${wallBill('cobblestone')}: a log wall is ${wallBill('log')}, a plank wall ${wallBill('plank')}, a marble wall ${wallBill('marble')}. Floors, stairs, roofs and fences rise with their material. What was already planned keeps the bill it was planned with.`,
-        `Furniture's planks, timber, cloth, stone bricks and mortar went up four times and its nails and metal ribbon twice; legs, wheels, ropes, castings and the other parts you count did not. A chest is ${pieceBill('chest')}.`,
-        `A smelter is ${recipeBill('make_smelter')}, a kiln ${recipeBill('make_kiln')}, and an anvil is poured from ${MOULD_BY_ID.get('anvil_mould')?.lumps ?? 0} lumps. Traps went up the way furniture did.`,
-        `A rowing boat is ${pieceBill('rowing_boat')}; a sailing boat ${pieceBill('sailing_boat')}.`,
-        `The caravel, a third hull: ${pieceBill('caravel')}. She holds ${caravel.capacity} things, carries ${caravel.boat?.passengers} passengers as well as whoever has her helm, sails at ${caravel.boat?.speed} tiles a second against the sailing boat's ${sailer.boat?.speed}, and wants ${numberWord(caravel.boat?.draught ?? 0)} deep of water under her.`,
+        `Changed: wall bills, scaled to the cobblestone wall's ${wallBill('cobblestone')}: log wall ${wallBill('log')}, plank wall ${wallBill('plank')}, marble wall ${wallBill('marble')}. Floors, stairs, roofs and fences rise with their material. Already-planned work keeps its old bill.`,
+        `Changed: furniture planks, timber, cloth, stone bricks and mortar ×4; nails and metal ribbon ×2; legs, wheels, ropes, castings and other counted parts unchanged. Chest: ${pieceBill('chest')}.`,
+        `Changed: smelter ${recipeBill('make_smelter')}; kiln ${recipeBill('make_kiln')}; anvil poured from ${MOULD_BY_ID.get('anvil_mould')?.lumps ?? 0} lumps. Traps rose as furniture did.`,
+        `Changed: rowing boat ${pieceBill('rowing_boat')}; sailing boat ${pieceBill('sailing_boat')}.`,
+        `Added: caravel: ${pieceBill('caravel')}. Holds ${caravel.capacity} items; ${caravel.boat?.passengers} passengers plus the helmsman; speed ${caravel.boat?.speed} tiles/s (sailing boat ${sailer.boat?.speed}); draught ${num(caravel.boat?.draught ?? 0)}.`,
       ];
     },
   },
@@ -238,37 +255,37 @@ export const NEWS: News[] = [
     n: 3,
     day: '2026-09-25',
     lines: () => [
-      'A padlock on a ship, a wagon or a cart: without its key nobody takes her helm or the reins, comes aboard, takes hold of the shafts or picks her up. Stepping ashore and getting down are never refused.',
-      `Settings, Display: text and window size, from ${pct(UI_SIZE_MIN)} to ${pct(UI_SIZE_MAX)}. Every window, menu and bar and the writing in them; the island itself is not scaled.`,
-      `A worker with nothing to do looks for work again after ${WORKER_REST_FIRST} seconds, a second later for every ${WORKER_REST_EVERY} it has stood idle, and never less often than every ${WORKER_REST_MOST} seconds.`,
-      `Something that goes wrong in your browser is sent to the island, each different thing once and at most ${REPORTS_A_SESSION} a session, with the version of the game it happened in, so it can be found and fixed.`,
+      'Added: padlock on a ship, wagon or cart. Without its key: no helm, reins, boarding, taking the shafts or picking up. Stepping ashore and getting down always allowed.',
+      `Added: Settings, Display: text and window size ${pct(UI_SIZE_MIN)} to ${pct(UI_SIZE_MAX)}. Scales every window, menu and bar and their text; not the island.`,
+      `Changed: an idle worker looks for work again after ${WORKER_REST_FIRST} s, +1 s per ${WORKER_REST_EVERY} s idle, at most every ${WORKER_REST_MOST} s.`,
+      `Added: browser errors reported to the island, each distinct error once, at most ${REPORTS_A_SESSION} a session, with the game version.`,
     ],
   },
   {
     n: 4,
     day: '2026-09-25',
     lines: () => [
-      'People on a caravel are drawn among her sails: a sail nearer you than they are is drawn over them, and one further off behind them.',
-      'A piece is clicked anywhere it is drawn, where that is bigger than the tile it stands on: a caravel at her bow and her stern.',
-      `Buy orders, in the Market window at a settlement token or a mailbox: name a thing, the least quality that will do, how many and the silver for each, and the whole price is held out of your purse. Anybody else there can fill some or all of it from their pack and is paid at once; what they bring comes to you by the post. Take an order back whenever you like; one left open for ${ORDER_LIFE / 86400} days takes itself back, with what it still holds.`,
-      `The Field guide (${defaultKey('win_guide')}): a page for each of the ${guidePages().length} kinds of creature, marking whether you have seen, tamed and bred it, where it lives and what it gives.`,
-      'What\'s new: this window, opened as you come ashore when something has changed since you last read it, and from the UI Menu at any time.',
+      'Fixed: people on a caravel drawn in depth order with her sails.',
+      'Changed: a piece is clickable anywhere it is drawn beyond its tile (caravel: bow and stern).',
+      `Added: buy orders (Market window at a settlement token or a mailbox): item, minimum quality, count, silver each; full price held from your purse. Anyone there can fill some or all from their pack and is paid at once; goods come to you by post. Cancel any time; open ${ORDER_LIFE / 86400} days: cancels itself, returning what it holds.`,
+      `Added: Field guide (${defaultKey('win_guide')}): a page per creature kind, ${guidePages().length} kinds: seen, tamed, bred, habitat, yields.`,
+      'Added: What\'s new window: opens on coming ashore when there are unread entries; also in the UI Menu.',
     ],
   },
   {
     n: 5,
     day: '2026-09-25',
     lines: () => [
-      `Dying: your pack, what is in your hands, your toolbelt and every bag with what is in it go into a grave where you fell, or on the nearest dry ground within ${GRAVE_REACH} tiles if you fell in deep water. Only you can open it or take from it, and ${spanWords(GRAVE_KEEPS)} after you fell it crumbles with whatever is still in it. What you wear stays on you, and so does a crate with a wildermon in it.`,
-      'Two payments out of one purse at the same moment no longer both go through: the second waits for the first, and is refused if what is left will not cover it.',
+      `Added: graves. On death your pack, hands, toolbelt and every bag with contents go into a grave where you fell, or nearest dry ground within ${GRAVE_REACH} tiles if in deep water. Only you can open or take from it. Crumbles with its contents ${dur(GRAVE_KEEPS)} after death. Worn gear and crated wildermon stay on you.`,
+      'Fixed: 2 simultaneous payments from 1 purse both going through. The second waits for the first and is refused if the remainder cannot cover it.',
     ],
   },
   {
     n: 6,
     day: '2026-09-26',
     lines: () => [
-      'An island has keepers: whoever founded it, and whoever keeps every island. A keeper sees everybody on the island, can move a body that is stuck to the token of the settlement it founded, or to where newcomers come ashore if it founded none, and can clear everything lying on a tile.',
-      `A keeper can mute somebody ${either(MUTE_FOR.map((secs) => (secs === null ? 'until a keeper lifts it' : `for ${awayFor(secs)}`)))}. Until then the island refuses ${MUTE_SHUTS}, and says until when.`,
+      'Added: island keepers: the founder, and the all-islands keeper. A keeper sees everyone on the island, can move a stuck body to the token of the settlement it founded (or the newcomer landing if none), and can clear a tile.',
+      `Added: keeper mute ${either(MUTE_FOR.map((secs) => (secs === null ? 'until a keeper lifts it' : `for ${awayFor(secs)}`)))}. While muted, the island refuses ${MUTE_SHUTS} and gives the end time.`,
     ],
   },
   {
@@ -277,9 +294,9 @@ export const NEWS: News[] = [
     lines: () => {
       const shine = RARITIES.slice(1).map((r) => r.name);
       return [
-        `What you wear and hold is drawn on you, on everybody else and on you as they see you: each of the ${ARMOUR.length} pieces of armour, ${WEAPONS.length} weapons, ${Object.keys(SHIELDS).length} shields, the toolbelt and the ${JEWEL_PIECES.length} jewels is a model of its own, in the metal, wood or stone it was made of and the colour it was dyed, and any of them can be worn with any other.`,
-        'A weapon is held in the hand, a bow in the other and a shield on the arm.',
-        `${either(shine).replace(/^./, (c) => c.toUpperCase())} things shine where they are worn, each in its own colour: a glint crosses everything of one rarity together, a ${shine[1]} one's colour comes and goes, and a ${shine[2]} one sparkles.`,
+        `Added: worn and held gear drawn on everyone: ${ARMOUR.length} armour pieces, ${WEAPONS.length} weapons, ${Object.keys(SHIELDS).length} shields, the toolbelt and ${JEWEL_PIECES.length} jewels, each its own model in its material and dye, in any combination.`,
+        'Added: weapon drawn in the hand, bow in the other, shield on the arm.',
+        `Added: ${either(shine)} items shine when worn, each in its rarity colour: a glint crosses all of one rarity together; ${shine[1]} colour pulses; ${shine[2]} sparkles.`,
       ];
     },
   },
@@ -292,9 +309,9 @@ export const NEWS: News[] = [
       const held = (pick: (c: { carry: string; stow: string }) => boolean): string =>
         either(WEAPONS.filter((w) => { const c = weaponCarry(w.id); return !!c && pick(c); }).map((w) => itemDef(w.id).name.toLowerCase()));
       return [
-        `A ${held((c) => c.carry === 'shoulder')} is carried over your shoulder.`,
-        `While you work, swim, hold the reins, wave or hop, what you hold is put away: a ${held((c) => c.stow === 'hip')} into its scabbard at your left hip, a ${held((c) => c.stow === 'belt')} through your belt at the right, and anything else across your back on a strap, with a shield over it.`,
-        `A ${either(shine)} piece is edged in its colour on the side away from the light, and whatever is worn over it covers its shine as well as the piece.`,
+        `Added: ${held((c) => c.carry === 'shoulder')} carried over the shoulder.`,
+        `Added: held items stowed while working, swimming, driving, waving or hopping: ${held((c) => c.stow === 'hip')} in a scabbard at the left hip; ${held((c) => c.stow === 'belt')} through the belt at the right; anything else on a back strap, shield over it.`,
+        `Added: ${either(shine)} pieces edged in their colour on the shaded side; anything worn over a piece covers its shine.`,
       ];
     },
   },
@@ -305,8 +322,8 @@ export const NEWS: News[] = [
       const carried = (how: string): string[] => WEAPONS.filter((w) => weaponCarry(w.id)?.carry === how).map((w) => itemDef(w.id).name.toLowerCase());
       const shouldered = carried('shoulder');
       return [
-        'Each class of armour has an outline of its own: cloth is padded to the knee and split for the stride, leather has a tall collar, shoulder caps and a skirt in four flared panels, mail is split front and back, and dragon scale lies in overlapping courses from the head to the feet.',
-        `A ${either(shouldered)} goes over whichever shoulder keeps it clear of your head from where you are seen. A bow is held upright at your side, higher the longer it is and higher again at a run, so its lower tip never reaches the ground, and a ${either(carried('staff'))} leans out past your face.`,
+        'Changed: armour class outlines: cloth padded to the knee, split skirt; leather tall collar, shoulder caps, 4-panel flared skirt; mail split front and back; dragon scale in overlapping courses head to feet.',
+        `Changed: ${either(shouldered)} goes over the shoulder that keeps it clear of the head from the viewer. Bow held upright at the side, higher the longer it is and higher at a run, lower tip off the ground. ${either(carried('staff'))} leans out past the face.`,
       ];
     },
   },
@@ -317,10 +334,10 @@ export const NEWS: News[] = [
       const shine = RARITIES.slice(1).map((r) => r.name);
       const carried = (how: string): string[] => WEAPONS.filter((w) => weaponCarry(w.id)?.carry === how).map((w) => itemDef(w.id).name.toLowerCase());
       return [
-        `A ${either(carried('fist'))} in your hand turns out to your side wherever it would otherwise point at whoever is looking or hide behind you, so it shows from every side. A ${either(['bow', ...carried('staff')])} leans back rather than forward where forward would cross your head, and a ${either(carried('shoulder'))} is carried more upright seen from behind.`,
-        `A ${either(shine)} piece keeps its own metal, wood or dye: its rarity's colour is in the line along its edges, the glint that crosses it and the stars, and nowhere else.`,
-        'Mail is drawn as rows of rings and dragon scale as overlapping scales at the size the island is played at. Cloth and leather show a lit side and a shaded side as the body does, and a cap, a coat and breeches of one dye are each a step lighter or darker.',
-        'The toolbelt carries a claw hammer behind your left hip and a pocket of chisel and awl handles at your right.',
+        `Changed: ${either(carried('fist'))} turns out to the side where it would point at the viewer or hide behind you; visible from every side. ${either(['bow', ...carried('staff')])} leans back where forward would cross the head. ${either(carried('shoulder'))} carried more upright seen from behind.`,
+        `Changed: ${either(shine)} pieces keep their metal, wood or dye; rarity colour only in the edge line, the glint and the stars.`,
+        'Changed: mail drawn as ring rows, dragon scale as overlapping scales at play scale. Cloth and leather shaded lit/dark like the body; cap, coat and breeches of one dye each a step lighter or darker.',
+        'Added: toolbelt shows a claw hammer behind the left hip and chisel and awl handles at the right.',
       ];
     },
   },
@@ -332,10 +349,10 @@ export const NEWS: News[] = [
       const named = (id: string): string => itemDef(id).name.toLowerCase();
       const knives = WEAPONS.filter((w) => weaponCarry(w.id)?.front).map((w) => named(w.id));
       return [
-        `Your hair shows below the rim of a ${either(['wool_cap', 'leather_cap', 'helm', 'scale_helm'].map(named))}, and long hair hangs down below a ${named('wool_cap')} or a ${named('leather_cap')} as it is cut. A ${named('chain_coif')} covers all of it.`,
-        `A ${either(knives)} is put away upright at the front of your belt, right of the buckle, rather than at your hip.`,
-        `The ${named('hatchet')} has a square bit with a hammer's poll behind it, the ${named('throwing_axe')} a head sweeping up above a haft bowed toward it, the ${named('javelin')} vanes at its tail and the ${named('carving_knife')} a guard for the fingers. A ${named('chain_hauberk')} hangs longer and flares out past the hips.`,
-        `Dragon scale's scales end in a broad U rather than a point, each hanging over the course below. A ${either(shine)} piece of it shows its colour on the lit tips of its scales rather than in a line round its edge.`,
+        `Changed: hair shows below the rim of a ${either(['wool_cap', 'leather_cap', 'helm', 'scale_helm'].map(named))}; long hair hangs below a ${named('wool_cap')} or ${named('leather_cap')} as cut. ${named('chain_coif')} covers all hair.`,
+        `Changed: ${either(knives)} stowed upright at the front of the belt, right of the buckle, not at the hip.`,
+        `Changed: ${named('hatchet')}: square bit, hammer poll. ${named('throwing_axe')}: swept-up head, bowed haft. ${named('javelin')}: tail vanes. ${named('carving_knife')}: finger guard. ${named('chain_hauberk')}: longer, flared past the hips.`,
+        `Changed: dragon scales end in a broad U, each over the course below. ${either(shine)} dragon scale shows its colour on lit scale tips, not an edge line.`,
       ];
     },
   },
@@ -346,10 +363,10 @@ export const NEWS: News[] = [
       const shine = RARITIES.slice(1).map((r) => r.name);
       const named = (id: string): string => itemDef(id).name.toLowerCase();
       return [
-        `Under a ${either(['wool_cap', 'leather_cap', 'helm', 'scale_helm'].map(named))} your hair is cut off at the rim: what shows is what hangs below it, and none of it through the crown. The ${named('helm')} and the ${named('scale_helm')} stand clear of the hair, with a guard over the back of the neck, and the ${named('leather_cap')} is sewn from four panels of a darker, redder hide than the coat.`,
-        `A ${either(shine)} piece shows its colour as a sheen over the side of it the light falls on, rather than as a line round its edges. Its glint crosses it nearly all the time instead of most of it, and a ${shine[2]} one's glint is paler and its stars bigger.`,
-        `A ${named('maul')} is slung head up; a ${named('spear')} or ${named('javelin')} is slung higher, so its butt is off the ground; a ${named('throwing_axe')} leans out from the belt, so its haft shows; and a sword in its scabbard hangs out from the leg, where it can be seen from the front.`,
-        "Dragon scale's lower edges are pale where the light is on them and a mid green where it is not, instead of a dark line under every course.",
+        `Changed: hair under a ${either(['wool_cap', 'leather_cap', 'helm', 'scale_helm'].map(named))} cut at the rim; only what hangs below shows. ${named('helm')} and ${named('scale_helm')} stand clear of the hair, with a neck guard. ${named('leather_cap')}: 4 panels, darker redder hide than the coat.`,
+        `Changed: ${either(shine)} colour shown as a sheen on the lit side, not an edge line. Glint crosses it nearly all the time; ${shine[2]} glint paler, stars bigger.`,
+        `Changed: ${named('maul')} slung head up; ${named('spear')} and ${named('javelin')} slung higher, butt off the ground; ${named('throwing_axe')} leans out from the belt, haft visible; scabbarded sword hangs out from the leg, visible from the front.`,
+        'Changed: dragon scale lower edges pale where lit, mid green where not; no dark line under each course.',
       ];
     },
   },
@@ -359,8 +376,8 @@ export const NEWS: News[] = [
     lines: () => {
       const named = (id: string): string => itemDef(id).name.toLowerCase();
       return [
-        `A ${named('leather_jerkin')} is studded with rivets over the chest and down its skirt.`,
-        `A ${named('chain_hauberk')} bells out wider below the hips, and every skirt swings out wider the longer the stride.`,
+        `Changed: ${named('leather_jerkin')} studded with rivets over the chest and skirt.`,
+        `Changed: ${named('chain_hauberk')} wider below the hips; every skirt swings wider with longer strides.`,
       ];
     },
   },
@@ -373,13 +390,13 @@ export const NEWS: News[] = [
       const onBack = WEAPONS.filter((w) => weaponCarry(w.id)?.stow === 'back').map((w) => named(w.id));
       const bows = WEAPONS.filter((w) => weaponCarry(w.id)?.carry === 'bow').map((w) => named(w.id));
       return [
-        `A ${either(onBack)} put away on your back goes up over whichever shoulder shows it from where you are seen, with an axe's bit and a bow's bend turned to face you. A ${named('battle_axe')} or ${named('maul')} carried on the shoulder rises back over it, its head above and behind.`,
-        `A ${either(bows)} is held upright at your side with its lower tip clear of your boots.`,
-        `A ${named('chain_coif')} closes under the chin and over the ears, leaving the face framed in mail.`,
-        `A ${shine[2]} piece's sheen is gold, and its glint gold rather than white. The colour of any ${either(shine)} piece goes under the rings of mail and the edges of scale rather than over them, and none of it goes on a thin rim.`,
-        `Leather is lighter in colour. A ${named('leather_jerkin')} has a strap and buckle across the chest, stitching down the front and a pale collar and shoulders; a ${named('leather_cap')} has a rolled rim, seams from the rim to the crown and narrower ear flaps.`,
-        `The ${named('hatchet')} has a bearded bit, and put away it and the ${named('throwing_axe')} turn their blades out from the hip. The ${named('butchering_knife')} has a broad sheath, scabbards are dark leather, and seated, a sword's lies back along the seat. A ${named('jewelled_ring')} is a band on one finger.`,
-        `Plate arms have one domed plate over two lames at the shoulder, a ${named('helm')}'s cheek plates curve round the jaw, and a ${named('scale_helm')}'s spines are fins. Long hair narrows in under a cap or helm.`,
+        `Changed: ${either(onBack)} stowed on the back goes over the shoulder visible to the viewer, axe bit and bow bend facing the viewer. ${named('battle_axe')} or ${named('maul')} on the shoulder rises back over it, head above and behind.`,
+        `Changed: ${either(bows)} held upright at the side, lower tip clear of the boots.`,
+        `Changed: ${named('chain_coif')} closes under the chin and over the ears.`,
+        `Changed: ${shine[2]} sheen and glint gold. ${either(shine)} colour goes under mail rings and scale edges, not over; none on thin rims.`,
+        `Changed: leather lighter. ${named('leather_jerkin')}: chest strap and buckle, front stitching, pale collar and shoulders. ${named('leather_cap')}: rolled rim, rim-to-crown seams, narrower ear flaps.`,
+        `Changed: ${named('hatchet')} bearded bit; stowed, it and ${named('throwing_axe')} turn blades out from the hip. ${named('butchering_knife')} broad sheath; scabbards dark leather; seated, a scabbard lies back along the seat. ${named('jewelled_ring')}: a band on 1 finger.`,
+        `Changed: plate arms: 1 domed shoulder plate over 2 lames. ${named('helm')} cheek plates curve round the jaw. ${named('scale_helm')} spines are fins. Long hair narrows under a cap or helm.`,
       ];
     },
   },
@@ -389,8 +406,8 @@ export const NEWS: News[] = [
     lines: () => {
       const named = (id: string): string => itemDef(id).name.toLowerCase();
       return [
-        `Dragon scale is laid in fewer, larger scales, mail's rows of rings are further apart, and a ${named('chain_hauberk')} flares wider below the hips.`,
-        `A ${either(Object.keys(SHIELDS).map(named))} is thicker at the rim, so seen edge on it is a band rather than a line. A blade in full light is pale steel rather than white, and bare arms are outlined as darkly as armour is.`,
+        `Changed: dragon scale in fewer, larger scales; mail ring rows further apart; ${named('chain_hauberk')} flares wider below the hips.`,
+        `Changed: ${either(Object.keys(SHIELDS).map(named))} thicker at the rim (a band edge on). Fully lit blades pale steel, not white. Bare arms outlined as dark as armour.`,
       ];
     },
   },
@@ -400,7 +417,7 @@ export const NEWS: News[] = [
     lines: () => {
       const named = (id: string): string => itemDef(id).name.toLowerCase();
       return [
-        `Filling, emptying or pouring out one ${named('bucket')} of several you got at once takes that one off the pile, in your pack or the same bag. It used to do nothing, and filling still drew the water out of the well or barrel.`,
+        `Fixed: filling, emptying or pouring 1 ${named('bucket')} from a stack (pack or bag) did nothing while filling still drew the water. It now splits that one off the stack.`,
       ];
     },
   },
@@ -415,15 +432,15 @@ export const NEWS: News[] = [
       const slungHeavy = WEAPONS.filter((w) => { const c = weaponCarry(w.id); return c?.carry === 'shoulder' && c.stow === 'back' && c.headUp; }).map((w) => named(w.id));
       const slungPoles = WEAPONS.filter((w) => weaponCarry(w.id)?.carry === 'staff' && weaponCarry(w.id)?.stow === 'back').map((w) => named(w.id));
       return [
-        `A ${either(shine)} piece is its rarity's colour over the whole of its lit side, wood and leather as well as metal, and keeps it between glints.`,
-        `A ${either(bows)} is held out past the hip, where it shows from every side, and turned so its bend shows rather than its edge.`,
-        `Seen from behind, a ${either(shouldered)} carried on the shoulder rises from behind it, its haft showing under an axe's or a maul's head, and the arm that carries it goes round the far side of the body.`,
-        `While you work, a ${either(slungHeavy)} on your back hangs head down, and a ${either(slungPoles)} hangs lower, clear of the hammer.`,
-        `Leather is red-brown, apart from the colour of skin, with a sheen on its lit side. The knee pads on ${named('leather_trousers')} are flat and darker.`,
-        `${itemDef('cloth_sleeves').name} run into the coat at the shoulder and bend at the elbow without a joint showing. A ${named('cloth_tunic')}'s collar, hem and cuffs are faced in a lighter shade of its cloth.`,
-        `A ${named('helm')}'s cheek plates narrow toward the chin and its neck guard flares; a ${named('scale_helm')} has a crest of splayed fins and cheek plates of scale. Long hair under a cap or helm is drawn in at the nape and falls in locks.`,
-        `A ${named('chain_coif')}'s face opening narrows at the chin and is cut back at the cheek, so the face shows side on.`,
-        `The hammer on a ${named('toolbelt')} hangs head down from a loop with its handle above the belt; a ${named('jewelled_ring')} shows a point of gold from every side; a ${named('wooden_shield')} has weathered boards and a dark rawhide rim; a ${named('chain_hauberk')}'s skirt flies out behind at a run; and an axe through the belt shows its blade from three-quarters on.`,
+        `Changed: ${either(shine)} colour covers the whole lit side, wood and leather included, and stays between glints.`,
+        `Changed: ${either(bows)} held out past the hip, bend facing the viewer.`,
+        `Changed: from behind, ${either(shouldered)} on the shoulder rises behind it, haft visible under the head; carrying arm on the far side.`,
+        `Changed: while working, ${either(slungHeavy)} on the back hangs head down; ${either(slungPoles)} hangs lower, clear of the hammer.`,
+        `Changed: leather red-brown except skin-coloured, sheen on the lit side. ${named('leather_trousers')} knee pads flat and darker.`,
+        `Changed: ${itemDef('cloth_sleeves').name} join the coat at the shoulder and bend at the elbow with no visible joint. ${named('cloth_tunic')} collar, hem and cuffs faced a lighter shade.`,
+        `Changed: ${named('helm')} cheek plates narrow to the chin, neck guard flares. ${named('scale_helm')}: crest of splayed fins, scale cheek plates. Long hair under a cap or helm drawn in at the nape, falls in locks.`,
+        `Changed: ${named('chain_coif')} face opening narrows at the chin, cut back at the cheek (face visible side on).`,
+        `Changed: ${named('toolbelt')} hammer hangs head down from a loop; ${named('jewelled_ring')} shows a gold point from every side; ${named('wooden_shield')}: weathered boards, dark rawhide rim; ${named('chain_hauberk')} skirt flies out behind at a run; belted axe shows its blade three-quarters on.`,
       ];
     },
   },
@@ -434,12 +451,12 @@ export const NEWS: News[] = [
       const shine = RARITIES.slice(1).map((r) => r.name);
       const named = (id: string): string => itemDef(id).name.toLowerCase();
       return [
-        `A ${either(shine)} piece is tinted its rarity's colour all over, on the side turned from the light as well as the lit side, and still shows what it is made of; the line round it is a dark of that colour.`,
-        `Dragon scale is laid in courses of overlapping scales, its edges cut in points at the shoulders, elbows, knees, hem and boot tops, and its gauntlets are of the dark scale.`,
-        `${itemDef('chain_sleeves').name} flare over the back of the hand and ${named('chain_leggings')} hang over the knee in ragged points; a ${named('chain_hauberk')}'s hem is a band of bright rings of its own metal.`,
-        `Leather is a browner red, and dyed leather keeps the colour of its dye. ${itemDef('leather_sleeves').name} have no knob at the elbow. The pieces of a cloth or leather suit step further apart in shade from cap to shoes, and quilting is in wider channels. Copper is warmer, with pale edges and a green shadow.`,
-        `Whatever is slung on your back hangs from a strap over the same shoulder, and while you work left-handed both are on the other shoulder. A ${named('long_bow')} is longer, and held further out in front at a run; a ${named('throwing_axe')} is held head up.`,
-        `A ${named('chain_coif')}'s face opening comes to a point under the chin; a ${named('scale_helm')}'s fins stand on its crown; long hair under a cap or helm falls as one curtain.`,
+        `Changed: ${either(shine)} pieces tinted their rarity colour all over, lit and shaded, material still visible; outline a dark of that colour.`,
+        'Changed: dragon scale in overlapping courses, edges pointed at shoulders, elbows, knees, hem and boot tops; gauntlets dark scale.',
+        `Changed: ${itemDef('chain_sleeves').name} flare over the hand back; ${named('chain_leggings')} hang over the knee in ragged points; ${named('chain_hauberk')} hem a band of bright rings of its metal.`,
+        `Changed: leather browner red; dyed leather keeps its dye. ${itemDef('leather_sleeves').name}: no elbow knob. Cloth and leather suit pieces step further apart in shade cap to shoes; wider quilting channels. Copper warmer, pale edges, green shadow.`,
+        `Changed: back-slung items hang from a strap over the same shoulder; working left-handed, both on the other shoulder. ${named('long_bow')} longer, held further forward at a run. ${named('throwing_axe')} held head up.`,
+        `Changed: ${named('chain_coif')} face opening pointed under the chin; ${named('scale_helm')} fins on the crown; long hair under a cap or helm falls as one curtain.`,
       ];
     },
   },
@@ -447,71 +464,71 @@ export const NEWS: News[] = [
     n: 19,
     day: '2026-09-26',
     lines: () => [
-      'Climbing is kept. It went up as you walked and then back to where the island had it at its next update or when you reloaded, because only your browser was raising it; the island raises it now.',
-      `A step between tiles of more than ${share(CLIMB_LEARN_FROM)} of ${MAX_STEP} up or down trains it on your own feet only: not in a saddle, on a cart or a boat, on a bridge or on an upper floor.`,
+      'Fixed: Climbing gains reverting at the next island update or reload. The island now raises it.',
+      `Changed: Climbing trains on a step between tiles of more than ${frac(CLIMB_LEARN_FROM)} of ${MAX_STEP} up or down, on foot only: not mounted, on a cart or boat, on a bridge or upper floor.`,
     ],
   },
   {
     n: 20,
     day: '2026-09-26',
     lines: () => [
-      'An altar is a coursed stone pedestal with the gold sun in its face and a gold dish on top. Over the dish a figure of stars joined by lines turns, with a ring of light round it, and at night the stars shine through the dark.',
+      'Changed: altar model: coursed stone pedestal, gold sun on its face, gold dish on top; above the dish a turning figure of stars joined by lines in a ring of light; stars shine at night.',
     ],
   },
   {
     n: 21,
     day: '2026-09-26',
     lines: () => [
-      'An altar can only be built while you stand on a settlement of yours: one you founded or one you are a citizen of.',
+      'Changed: an altar can only be built while standing on your settlement (founded or citizen of).',
     ],
   },
   {
     n: 22,
     day: '2026-09-26',
     lines: () => [
-      'An altar can only be set down on a settlement of yours as well. Altars already standing elsewhere stay where they are.',
+      'Changed: an altar can only be set down on your settlement. Altars already elsewhere stay.',
     ],
   },
   {
     n: 23,
     day: '2026-09-26',
     lines: () => [
-      `Baubles: ${percent(BAUBLE_SHARE)} of what archaeology turns up is now a tarnished bauble, ${listed(BAUBLE_TIERS.map((t) => `${percent(t.odds)} ${t.name.toLowerCase()}`))}. Restore it as you would a relic, and what it gives is rolled and written on it.`,
-      `Set it into an altar on a settlement of yours, from Baubles on the altar's menu. A settlement has ${listed(BAUBLE_TIERS.map((t) => `${numberWord(t.slots)} ${t.name.toLowerCase()}`))} sockets, and its founder, mayors and builders get what is in them on every action they do on its land.`,
-      `Minor: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% less time per action, or ${BAUBLE_LOW} to ${BAUBLE_HIGH}% more skill gained, in one skill. Major: a ${BAUBLE_LOW} to ${BAUBLE_HIGH}% chance of ${times(YIELD_TIMES)} the yield of each action in one skill. Ancient: +${ANCIENT_PLUS} to every yield of one action, such as ${ANCIENT_EFFECTS[1].said}.`,
-      `Rarity multiplies what it rolled: ${listed(RARITIES.slice(1).map((r, i) => `${times(baubleTimes(i + 1))} for ${article(r.name)} ${r.name} one`))}.`,
-      'A bauble set into an altar stays there. Another can take its socket, and the one it replaces is destroyed.',
+      `Added: baubles: ${percent(BAUBLE_SHARE)} of archaeology finds are a tarnished bauble: ${listed(BAUBLE_TIERS.map((t) => `${percent(t.odds)} ${t.name.toLowerCase()}`))}. Restore as a relic; its effect is rolled and written on it.`,
+      `Added: set into an altar on your settlement (Baubles on the altar menu). Sockets per settlement: ${listed(BAUBLE_TIERS.map((t) => `${num(t.slots)} ${t.name.toLowerCase()}`))}. Applies to the founder, mayors and builders on every action on its land.`,
+      `Added: Minor: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% less time per action, or ${BAUBLE_LOW} to ${BAUBLE_HIGH}% more skill gain, in 1 skill. Major: ${BAUBLE_LOW} to ${BAUBLE_HIGH}% chance of ${mult(YIELD_TIMES)} yield per action in 1 skill. Ancient: +${ANCIENT_PLUS} to every yield of 1 action, e.g. ${ANCIENT_EFFECTS[1].said}.`,
+      `Added: rarity multiplies the roll: ${listed(RARITIES.slice(1).map((r, i) => `${mult(baubleTimes(i + 1))} for ${article(r.name)} ${r.name} one`))}.`,
+      'Added: a set bauble cannot be removed. Setting another in its socket destroys the old one.',
     ],
   },
   {
     n: 24,
     day: '2026-09-26',
     lines: () => [
-      'A settlement has one altar. A second cannot be built or set down on a settlement that already has one standing; turning the one that stands still works.',
-      'A settlement that already had more than one keeps them, but it cannot get another. Its bauble sockets were always the settlement\'s, so an altar picked up and set down again keeps what is set in it.',
+      'Changed: 1 altar per settlement. A second cannot be built or set down there; turning the existing one still works.',
+      'Changed: settlements with several altars keep them but cannot get more. Bauble sockets belong to the settlement: an altar picked up and set down again keeps its baubles.',
     ],
   },
   {
     n: 25,
     day: '2026-09-26',
     lines: () => [
-      `An altar no longer takes a gold lump. It takes ${billWords(furnitureDef('altar').bill)}.`,
+      `Changed: altar bill from a gold lump to ${billWords(furnitureDef('altar').bill, true)}.`,
     ],
   },
   {
     n: 26,
     day: '2026-09-26',
     lines: () => [
-      `Sacrifice, on an altar's menu, gives up one rare, supreme or fantastic thing from your pack. ${FED_SAID}`,
-      `${percent(SOUL_CHANCE)} of sacrifices leave a mote of the same rarity. Absorb it into an ordinary thing in your pack (Absorb into, on the mote) and that thing takes the mote's rarity.`,
+      `Added: Sacrifice (altar menu): gives up 1 rare, supreme or fantastic item from your pack. ${FED_SAID}`,
+      `Added: ${percent(SOUL_CHANCE)} of sacrifices leave a mote of the same rarity. Absorb into (on the mote) gives an ordinary item in your pack the mote's rarity.`,
     ],
   },
   {
     n: 27,
     day: '2026-09-26',
     lines: () => [
-      `A Bauble of Regret is ${percent(REGRET_SHARE)} of what archaeology turns up, whole. A tarnished bauble is still ${percent(BAUBLE_SHARE)}.`,
-      `With one in your pack, Undo on a trade you hold in the Trades window breaks the bauble and puts that trade down with the nodes you bought or the perks you took for it. The next trade you take up in that slot costs nothing, where a change costs ${CLASS_CHANGE_COST} silver.`,
+      `Added: Bauble of Regret: ${percent(REGRET_SHARE)} of archaeology finds, already whole. Tarnished bauble still ${percent(BAUBLE_SHARE)}.`,
+      `Added: with one in your pack, Undo on a held trade (Trades window) breaks the bauble and drops the trade with its bought nodes or perks. The next trade in that slot costs nothing (normally ${CLASS_CHANGE_COST} silver).`,
     ],
   },
   {
@@ -520,8 +537,8 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'terraformer')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Terraformer has perks instead of a tree: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}. The first tier opens with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}, and at each tier you take one of the ${numberWord(PERKS_PER_TIER)} in the Trades window, where every card says what it changes and by how much.`,
-        'The nodes a Terraformer had bought went with the tree. Putting the trade down, for silver or with a Bauble of Regret, takes its perks with it the same way.',
+        `Changed: Terraformer from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Pick 1 of ${num(PERKS_PER_TIER)} per tier in the Trades window; each card states its effect.`,
+        'Removed: Terraformer tree nodes. Dropping the trade (silver or Bauble of Regret) drops its perks too.',
       ];
     },
   },
@@ -531,8 +548,8 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'miner')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Miner has perks instead of a tree too: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. Among them a new job, Pan, on sand with water at a corner.`,
-        'The nodes a Miner had bought went with the tree.',
+        `Changed: Miner from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Added job: Pan, on sand with water at a corner.`,
+        'Removed: Miner tree nodes.',
       ];
     },
   },
@@ -540,14 +557,14 @@ export const NEWS: News[] = [
     n: 30,
     day: '2026-09-27',
     lines: () => [
-      'The Terraformer’s perks are set out in their final tiers. A perk you had taken that moved to another tier is cleared, and yours to choose again in the Trades window; the Wader and the Dredger stayed where they were.',
+      'Changed: Terraformer perks set in final tiers. Taken perks that moved tier are cleared to choose again in the Trades window; Wader and Dredger unmoved.',
     ],
   },
   {
     n: 31,
     day: '2026-09-27',
     lines: () => [
-      'The Miner’s perks are set out in their final tiers too. A perk you had taken that moved is cleared, and yours to choose again in the Trades window; only Pan stayed where it was.',
+      'Changed: Miner perks set in final tiers. Taken perks that moved are cleared to choose again in the Trades window; only Pan unmoved.',
     ],
   },
   {
@@ -556,8 +573,8 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'mason')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Mason has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. Among them two new jobs, Repoint, which lays a finished stone wall again in another stone, and Raise the rock with rubble.`,
-        'The nodes a Mason had bought went with the tree.',
+        `Changed: Mason from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Added jobs: Repoint (relay a finished stone wall in another stone) and Raise the rock with rubble.`,
+        'Removed: Mason tree nodes.',
       ];
     },
   },
@@ -565,8 +582,8 @@ export const NEWS: News[] = [
     n: 33,
     day: '2026-09-27',
     lines: () => [
-      `Every card in the Trades window has What it offers: the trade’s ${numberWord(PERK_TIER_AT.length)} tiers of perks, or its rite and its tree, laid out before you take it up, with the skill each tier opens at and what you have. Playing by yourself, the window shows the same for every trade.`,
-      'Taking up a trade and taking a perk now ask a second time, saying what goes, what it costs and which perks close.',
+      `Added: What it offers on every Trades window card: the trade's ${num(PERK_TIER_AT.length)} perk tiers, or its rite and tree, before taking it up, with each tier's skill threshold and your skill. Solo: shown for every trade.`,
+      'Added: confirmation on taking up a trade or a perk, stating what is lost, the cost and which perks close.',
     ],
   },
   {
@@ -575,9 +592,9 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'carpenter')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Carpenter has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Carpenter had bought went with the tree.`,
-        'Some of them go into what a Carpenter makes and stay there: a chest that holds more, a boat or a wagon that goes faster, a bow that hits harder or reaches further, whoever owns it after. Examine a thing to see what its maker put into it.',
-        'On an island the bench now wears its tool with every go, as it always did playing by yourself: saws, carving knives, mallets, files and the rest.',
+        `Changed: Carpenter from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Carpenter tree nodes.`,
+        'Added: some perks are built into the item for any later owner: chest capacity, boat or wagon speed, bow damage or range. Examine shows what its maker put in.',
+        'Fixed: on an island the bench wears its tool each go (saws, carving knives, mallets, files, etc.), as solo.',
       ];
     },
   },
@@ -588,8 +605,8 @@ export const NEWS: News[] = [
       const barrel = (material: string): number =>
         liquidCapacity({ id: 0, x: 0, y: 0, sx: 0, sy: 0, kind: 'barrel', ql: 20, items: [], material } as PlacedFurniture);
       return [
-        `On an island a barrel holds what its wood holds, as the barrel always said: ${barrel('Oak')} litres of oak and ${barrel('Pine')} of pine where every barrel held ${furnitureDef('barrel').liquid}. A barrel already fuller than its wood allows keeps what is in it and takes no more until it is drawn below the line.`,
-        'And a few other pieces hold one more or one less than they did, mostly rare ones and ones of pine, willow or fig: what the island lets in is now exactly the number the window shows.',
+        `Fixed: island barrel capacity by wood: oak ${barrel('Oak')} L, pine ${barrel('Pine')} L (was ${furnitureDef('barrel').liquid} for all). An overfull barrel keeps its contents and takes no more until below the line.`,
+        'Fixed: island capacity of some pieces off by 1 (mostly rare ones and pine, willow or fig); now exactly what the window shows.',
       ];
     },
   },
@@ -600,10 +617,10 @@ export const NEWS: News[] = [
       const main = (CLASSES.find((c) => c.id === 'smith')?.main ?? '').replace(/_/g, ' ');
       const hauberk = { uid: 0, id: 'chain_hauberk', ql: 50, dmg: 0, count: 1, extra: 'Iron' } as Item;
       return [
-        `The Smith has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Smith had bought went with the tree.`,
-        'Some of them go into what a Smith beats out and stay there: a blade that hits harder or lands more often goes into the weapon whoever fits it, chain and plate that turn aside more, a mould that lasts longer, and a weapon or tool that can be quenched once for more quality. Examine a thing to see what its maker put into it.',
-        `A Smith with Ingots pours ${INGOT_LUMPS} lumps into a bar that weighs ${share(INGOT_WEIGHT)} what they did and counts as all ${numberWord(INGOT_LUMPS)} at the smelter, the anvil, the bench and the file.`,
-        `And melting down takes a half up on an island as it always did playing alone: a chain hauberk gives back ${meltLumps(hauberk, 1)} lumps, not one fewer.`,
+        `Changed: Smith from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Smith tree nodes.`,
+        'Added: some perks are built into the item: blade damage or hit chance (for whoever fits the weapon), chain and plate deflection, mould life, and 1 quench of a weapon or tool for quality. Examine shows what its maker put in.',
+        `Added: Ingots perk: ${INGOT_LUMPS} lumps into a bar weighing ${frac(INGOT_WEIGHT)} as much, counted as ${num(INGOT_LUMPS)} lumps at smelter, anvil, bench and file.`,
+        `Fixed: island melting rounds .5 up, as solo: chain hauberk returns ${meltLumps(hauberk, 1)} lumps, not 1 fewer.`,
       ];
     },
   },
@@ -613,9 +630,9 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'forester')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Forester has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Forester had bought went with the tree.`,
-        'Three of them are new jobs: Coppice cuts a grown tree back to young for its logs and leaves it standing, Tap Resin takes tar from a living pine once a day, and Clear Brush clears the bushes and reeds around a tile in one go.',
-        'And Look on a tree with strokes in it counts them as you would fell it, for a Forester who fells in fewer.',
+        `Changed: Forester from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Forester tree nodes.`,
+        'Added jobs: Coppice (grown tree back to young, yields its logs, tree stays); Tap Resin (tar from a living pine, once a day); Clear Brush (bushes and reeds around a tile in one go).',
+        'Changed: Look on a partly cut tree counts strokes left at your felling rate.',
       ];
     },
   },
@@ -625,10 +642,10 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'farmer')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Farmer has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Farmer had bought went with the tree.`,
-        'Three of them are new jobs: Sow a patch, Tend a patch and Harvest a patch work every field in the square around the one you choose as one job.',
-        'A crop keeps the pace it was sown at, so a field a Farmer sowed faster grows faster whoever harvests it.',
-        'And a wildermon set to farm brings home the harvest and leaves the seed in the furrow. It had them the wrong way round on an island.',
+        `Changed: Farmer from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Farmer tree nodes.`,
+        'Added jobs: Sow a patch, Tend a patch, Harvest a patch: every field in the square around the chosen one, as 1 job.',
+        'Changed: a crop keeps the growth pace it was sown at, whoever harvests it.',
+        'Fixed: island farming wildermon brought home the seed and left the harvest; now the reverse.',
       ];
     },
   },
@@ -638,10 +655,10 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'cook')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Cook has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Cook had bought went with the tree.`,
-        'What a Cook puts into a dish stays with it whoever eats it, and examining a thing on an island now says what its maker put into it, as it always did offline.',
-        'Two new things to make, broth and spirit, and a new bait, offal, for a Cook who has learned them.',
-        'And part of a pile set down on an island keeps what the pile had: its maker\'s marks, its rarity, its colour and its blessing.',
+        `Changed: Cook from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Cook tree nodes.`,
+        'Added: Cook perks stay in the dish for whoever eats it. Fixed: island Examine shows what the maker put in, as solo.',
+        'Added: broth, spirit and offal bait, for a Cook who has learned them.',
+        'Fixed: part of a pile set down on an island keeps maker marks, rarity, colour and blessing.',
       ];
     },
   },
@@ -654,12 +671,12 @@ export const NEWS: News[] = [
       const mends = perksOf('tailor').find((p) => p.fx.patch_item)?.fx.patch_item ?? 0;
       const sprouts = perksOf('forester').find((p) => p.fx['count:sprout']);
       return [
-        `The Tailor has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Tailor had bought went with the tree.`,
-        `Two new things for a Tailor who has learned them: a tent (${billWords(tent.bill, false)}), a night in which rests you ${percent((tent.bed ?? 0) / (furnitureDef('bed').bed ?? 1))} as well as a night in a bed, `
-          + `and Patch, which takes ${mends} damage off a cloth or leather piece for one cloth or one leather.`,
-        'Offline, every perk that makes a job fail less often now works as it does on an island, where before only the anvil\'s did; and so does Nothing Wasted, which keeps what a failed craft used.',
-        ...(sprouts ? [`Offline, ${sprouts.name} gives its ${numberWord(sprouts.fx['count:sprout'])} sprouts, as it does on an island.`] : []),
-        'Offline, a go that makes more than its recipe says now says how many it made, as it did on an island.',
+        `Changed: Tailor from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Tailor tree nodes.`,
+        `Added: tent (${billWords(tent.bill, true)}): a night's rest ${percent((tent.bed ?? 0) / (furnitureDef('bed').bed ?? 1))} of a bed's; `
+          + `and Patch: −${mends} damage on a cloth or leather piece for 1 cloth or 1 leather. Both for a Tailor who has learned them.`,
+        'Fixed: offline, every fail-chance perk works as on an island (was only the anvil\'s), and so does Nothing Wasted (a failed craft keeps its inputs).',
+        ...(sprouts ? [`Fixed: offline, ${sprouts.name} gives its ${num(sprouts.fx['count:sprout'])} sprouts, as on an island.`] : []),
+        'Fixed: offline, a go that makes more than its recipe count reports how many, as on an island.',
       ];
     },
   },
@@ -670,9 +687,9 @@ export const NEWS: News[] = [
       const main = (CLASSES.find((c) => c.id === 'herdsman')?.main ?? '').replace(/_/g, ' ');
       const kept = perksOf('herdsman').filter((p) => Object.keys(p.fx).some((k) => k.startsWith('kept:'))).map((p) => p.name);
       return [
-        `The Herdsman has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Herdsman had bought went with the tree.`,
-        `${listed(HUSBANDRY_ACTIONS.map((a) => a.label))} are on a wildermon's menu now. The rules had them and no menu offered them.`,
-        `${listed(kept)} work on every wildermon their Herdsman keeps, on an island and off it. One that changes hands takes its new keeper's.`,
+        `Changed: Herdsman from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Herdsman tree nodes.`,
+        `Fixed: ${listed(HUSBANDRY_ACTIONS.map((a) => a.label))} were missing from the wildermon menu.`,
+        `Added: ${listed(kept)} apply to every wildermon the Herdsman keeps, island and offline. On a change of hands it takes its new keeper's.`,
       ];
     },
   },
@@ -682,12 +699,12 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'naturalist')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Naturalist has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Naturalist had bought went with the tree.`,
-        `Three new things for a Naturalist who has learned them, and for anybody to use: herb tea, a cup of which puts back ${percent(itemDef('herb_tea').stamina ?? 0)} of your stamina; `
-          + `a salve, which keeps a dressed wound from going bad; and a tincture, which makes ${TINCTURE_NAMES} each go in ${percent(TINCTURE_BONUS)} faster for ${spanWords(TINCTURE_SECONDS)}.`,
-        'A Naturalist with Field Medic can dress somebody else\'s wounds, from that person\'s menu.',
-        'On an island a hive now fills with honey and beeswax for the Vesp kept on its settlement, as it always did offline. Nothing on an island gave beeswax before.',
-        'Offline, a rare thing made at a bench no longer makes the whole pile it goes onto rare.',
+        `Changed: Naturalist from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Naturalist tree nodes.`,
+        `Added (made by a Naturalist who has learned them, usable by anyone): herb tea: +${percent(itemDef('herb_tea').stamina ?? 0)} stamina a cup; `
+          + `salve: a dressed wound cannot go bad; tincture: ${TINCTURE_NAMES} each go ${percent(TINCTURE_BONUS)} faster for ${dur(TINCTURE_SECONDS)}.`,
+        'Added: Field Medic: dress another person\'s wounds from their menu.',
+        'Fixed: island hives fill with honey and beeswax for Vesp kept on their settlement, as offline. First island source of beeswax.',
+        'Fixed: offline, a rare item made at a bench made its whole stack rare.',
       ];
     },
   },
@@ -698,12 +715,12 @@ export const NEWS: News[] = [
       const main = (CLASSES.find((c) => c.id === 'fisher')?.main ?? '').replace(/_/g, ' ');
       const smoked = perksOf('fisher').find((p) => p.name === 'Smoke Fish')?.fx['rot:trout'] ?? 1;
       return [
-        `The Fisher has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Fisher had bought went with the tree.`,
-        `New for a Fisher who has learned them: smoked fish, which rot ${percent(1 - smoked)} slower wherever they are left; a fish pond, set down on your settlement, `
-          + `which stocks itself at a fish in ${spanWords(POND_EVERY)} until it holds ${furnitureDef('fish_pond').pond}; and a Fishing Journal, which says what the water holds for you when you examine it.`,
-        'A net clicked on water out of its reach goes into the deepest water within the whole tiles of its reach, as a line does. On an island it used to look further round you than offline.',
-        'Offline a rod, a net and a spadeful turned for worms wore their tool as much again on top of their own wear; they wear as they do on an island now.',
-        'Offline a net let the deep fish in all together or not at all; each deep fish in a haul is its own chance now, as on an island.',
+        `Changed: Fisher from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Fisher tree nodes.`,
+        `Added (for a Fisher who has learned them): smoked fish: rot ${percent(1 - smoked)} slower anywhere; fish pond (on your settlement): `
+          + `stocks 1 fish every ${dur(POND_EVERY)} up to ${furnitureDef('fish_pond').pond}; Fishing Journal: Examine on water lists what it holds for you.`,
+        'Changed: a net clicked on water out of reach goes into the deepest water within whole tiles of its reach, as a line does. Fixed: island searched further than offline.',
+        'Fixed: offline, rod, net and digging for worms wore the tool ×2; now as on an island.',
+        'Fixed: offline, a net\'s deep fish came all or none; now each deep fish in a haul rolls separately, as on an island.',
       ];
     },
   },
@@ -713,13 +730,13 @@ export const NEWS: News[] = [
     lines: () => {
       const main = (CLASSES.find((c) => c.id === 'mender')?.main ?? '').replace(/_/g, ' ');
       return [
-        `The Mender has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes a Mender had bought went with the tree.`,
-        `New for a Mender who has learned them, and for anybody to use: a repair kit, which takes ${KIT_MEND} damage off anything, anywhere, and none of its quality; and sealant, which stops a thing decaying wherever it is left, one to a thing.`,
-        'A perk that takes time off a job takes it off after the shortest time a job may take, where it had taken it off before: it is what it says at any skill now, and a go of Repair, which is always that short, takes less for a Mender\'s Quick Hands.',
-        `On an island the roughest work post stands ${spanWords(POST_LIFE_MIN)} now, as it does offline; it had fallen over in well under half that.`,
-        'Offline, brushing a wildermon wears the brush by its quality, as on an island, where it had taken a sliver off whatever the brush.',
-        `A hammer: a head cast in a hammer head mould at a smelter, beaten true on an anvil and fitted to a shaft. There had been none, so nothing that asks for one could be made; `
-          + `${listed(RECIPES.filter((r) => r.tool === 'hammer').map((r) => itemDef(r.result).name.toLowerCase()))} can be now.`,
+        `Changed: Mender from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Mender tree nodes.`,
+        `Added (made by a Mender who has learned them, usable by anyone): repair kit: −${KIT_MEND} damage on anything, anywhere, no quality loss; sealant: 1 item stops decaying wherever left.`,
+        'Changed: job-time perks apply after the minimum job time, not before; each now gives its stated amount at any skill, and Quick Hands shortens a Repair go.',
+        `Fixed: island lowest-quality work post lasts ${dur(POST_LIFE_MIN)}, as offline (fell in well under 1/2 of that).`,
+        'Fixed: offline, brushing a wildermon wears the brush by its quality, as on an island.',
+        `Added: hammer: head cast in a hammer head mould at a smelter, trued on an anvil, fitted to a shaft. `
+          + `Now makeable: ${listed(RECIPES.filter((r) => r.tool === 'hammer').map((r) => itemDef(r.result).name.toLowerCase()))}.`,
       ];
     },
   },
@@ -731,12 +748,12 @@ export const NEWS: News[] = [
       const wheel = furnitureDef('potters_wheel').pace;
       const more = GEMS.filter((g) => g.perk);
       return [
-        `The Artisan has perks instead of a tree now: ${numberWord(PERK_TIER_AT.length)} tiers of ${numberWord(PERKS_PER_TIER)}, the first with the trade and the others at ${listed(PERK_TIER_AT.slice(1).map(String))} in ${main}. The nodes an Artisan had bought went with the tree, and no craft trade has a tree now.`,
-        `New for an Artisan who has learned them: a gold circlet, worn on the head, that takes ${numberWord(CIRCLET_STONES)} stones at ${share(CIRCLET_SHARE)} of a ring's each, set by anybody; an amphora, which holds ${itemDef('amphora').holds} of one food or drink; a potter's wheel, which takes ${percent(1 - (wheel?.by ?? 1))} off a go at pottery for anybody within ${wheel?.reach} tiles of it; a glaze of ${numberWord(GLAZE_ASH)} lot of ashes, after which a pot never decays; and a book on any craft trade the writer has ${TRADE_BOOK_AT} of, which teaches that trade.`,
-        `${NumberWord(more.length)} more stones in the rock for an Artisan with More Stones: ${listed(more.map((g) => g.name.toLowerCase()))}.`,
-        'Jewellery is a heading in the crafting window: a ring, a pendant and a focus had only been set from the stone\'s own menu.',
-        'A pot, a bowl or a jar keeps what its maker put into it through the kiln, where the fire had dropped it.',
-        'On an island, what is in a bag left lying about rots at the share of the weather the bag keeps off, as it always has offline, where it had not rotted at all; and a thing set down is not charged for the time it spent in a pack.',
+        `Changed: Artisan from a tree to perks: ${num(PERK_TIER_AT.length)} tiers of ${num(PERKS_PER_TIER)}; tier 1 with the trade, the rest at ${listed(PERK_TIER_AT.slice(1).map(String))} ${main}. Removed: Artisan tree nodes; no craft trade has a tree.`,
+        `Added (for an Artisan who has learned them): gold circlet (head slot): ${num(CIRCLET_STONES)} stones at ${frac(CIRCLET_SHARE)} of a ring's each, set by anyone; amphora: holds ${itemDef('amphora').holds} of 1 food or drink; potter's wheel: pottery go −${percent(1 - (wheel?.by ?? 1))} for anyone within ${wheel?.reach} tiles; glaze of ${num(GLAZE_ASH)} lot of ashes: pot never decays; book on a craft trade the writer has at ${TRADE_BOOK_AT}: teaches that trade.`,
+        `Added: More Stones: ${num(more.length)} more stones in rock: ${listed(more.map((g) => g.name.toLowerCase()))}.`,
+        'Added: Jewellery heading in the crafting window (ring, pendant, focus were only on the stone menu).',
+        'Fixed: pot, bowl or jar kept its maker\'s perks through the kiln.',
+        'Fixed: island bags left lying rot their contents at the share of weather the bag keeps off (did not rot); a set-down item is no longer charged for time spent in a pack.',
       ];
     },
   },
@@ -744,14 +761,14 @@ export const NEWS: News[] = [
     n: 46,
     day: '2026-09-27',
     lines: () => [
-      `On an island, restoring a relic or a bauble raises Restoration: a whole go when it comes off and ${percent(TRY_LEARN)} of one when it does not, as offline. It had raised only Mind Logic, so Restoration stood where it started however much you restored.`,
+      `Fixed: island relic and bauble restoring trains Restoration: a full go on success, ${percent(TRY_LEARN)} of 1 go on failure, as offline (trained only Mind Logic).`,
     ],
   },
   {
     n: 47,
     day: '2026-09-27',
     lines: () => [
-      `On an island, the Wildermon window lists the wildermon you have tamed and nobody else's. It had listed every tame one near you, so somebody new was shown their neighbours' before taming any. "${ALL_GOALS.find((g) => g.id === 'five')?.text}", the wildermon you can set to a post and your herd's best tier had counted the same way, and count only yours now.`,
+      `Fixed: island Wildermon window lists only wildermon you tamed (listed every tame one near you). "${ALL_GOALS.find((g) => g.id === 'five')?.text}", post-assignable wildermon and herd best tier count only yours.`,
     ],
   },
   {
@@ -760,8 +777,8 @@ export const NEWS: News[] = [
     lines: () => {
       const kinds = ['rabba', 'woola', 'noot', 'seavic', 'vola', 'dowse', 'cudda', 'bura', 'sappa', 'cobbe', 'quarra', 'embra', 'bogga', 'wadd', 'holla', 'middun', 'sedra', 'warda', 'quill', 'lume'];
       return [
-        `${NumberWord(kinds.length)} wildermon are drawn as models, each animated standing, walking, running and foraging: ${listed(kinds.map((k) => SPECIES[k]?.name ?? k))}. The rest are drawn as they were until theirs are done.`,
-        'One drawn as a model is clicked anywhere on it, its head as well as its feet, and its name and health sit over the top of it.',
+        `Added: animated models (stand, walk, run, forage) for ${num(kinds.length)} wildermon: ${listed(kinds.map((k) => SPECIES[k]?.name ?? k))}. Others unchanged for now.`,
+        'Changed: a modelled wildermon is clickable anywhere on it; name and health shown above it.',
       ];
     },
   },
@@ -784,11 +801,11 @@ export const NEWS: News[] = [
       const up = CHANNELS.filter((ch) => ch.up).map((ch) => ch.label);
       const down = CHANNELS.filter((ch) => !ch.up).map((ch) => ch.label);
       return [
-        `A wildermon can come into the world rare, at the odds a made thing has: ${listed(steps.map((s) => `one in ${numberWord(Math.round(1 / rarityChance(s)))} ${name(s)}`))}. A monster never does, and a young one is rolled for as it is born, whatever its parents were.`,
-        `${capital(article(name(1)))} ${name(1)} one is ${times(RARITIES[1].size)} the size of its kind, ${listed(steps.slice(1).map((s) => `${article(name(s))} ${name(s)} one ${times(RARITIES[s].size)}`))}.`,
-        `Its ${listed(up)} go up by ${each((s) => by(RARITIES[s].blood))}, and its ${listed(down)} go down by ${each((s) => by(1 / RARITIES[s].blood))}.`,
-        `One out of the wild rolls its traits on better odds: ${listed(steps.map((s) => `${better(s)} of ${article(name(s))} ${name(s)} one's`))} come out better than common, where ${better(0)} of an ordinary one's do.`,
-        'The whole beast shimmers in its rarity\'s colour the way rare gear does, and its card, the Wildermon window and Look it over say how rare it is and what that does.',
+        `Added: rare wildermon, at made-item odds: ${listed(steps.map((s) => `1 in ${num(Math.round(1 / rarityChance(s)))} ${name(s)}`))}. Never monsters. Newborns rolled at birth regardless of parents.`,
+        `Added: size vs its kind: ${name(1)} ${mult(RARITIES[1].size)}, ${listed(steps.slice(1).map((s) => `${name(s)} ${mult(RARITIES[s].size)}`))}.`,
+        `Added: ${listed(up)} up by ${each((s) => by(RARITIES[s].blood))}; ${listed(down)} down by ${each((s) => by(1 / RARITIES[s].blood))}.`,
+        `Added: wild-caught trait odds: better than common for ${listed(steps.map((s) => `${better(s)} of ${article(name(s))} ${name(s)} one's`))}; ordinary: ${better(0)}.`,
+        'Added: rare wildermon shimmer in their rarity colour; card, Wildermon window and Look it over state rarity and its effect.',
       ];
     },
   },
@@ -800,8 +817,8 @@ export const NEWS: News[] = [
       let age = TREE_AGES.find((a) => !TREE_AGES.some((b) => b.next === a.id));
       while (age && !age.logs && age.next !== null) age = TREE_AGES.find((a) => a.id === age?.next);
       return [
-        `A tree that dies of age leaves grass where it stood, not a stump. A stump is only left by felling a tree with timber in it, ${(age?.name ?? 'Young').toLowerCase()} or older.`,
-        `Every stump goes at the next turn of the woods, at ${TREE_DAWN_UTC}:00 UTC, and goes for everybody: one you had seen stayed in your view until you next loaded the island.`,
+        `Changed: a tree dying of age leaves grass, not a stump. Stumps only from felling a tree with timber: ${(age?.name ?? 'Young').toLowerCase()} or older.`,
+        `Changed: every stump goes at the next turn of the woods (${TREE_DAWN_UTC}:00 UTC), for everyone. Fixed: seen stumps stayed until reload.`,
       ];
     },
   },
@@ -811,11 +828,11 @@ export const NEWS: News[] = [
     lines: () => {
       const m = (units: number): string => (units / 10).toFixed(1);
       return [
-        `Dig a spring with a shovel at the bottom of a hollow that holds ${m(SPRING_DEPTH)} m of water or more: it fills the hollow to the lowest point of its rim, rising ${m(FILL_RATE)} m a second, at any height above the sea.`,
-        `Full, it spills over that point and runs downhill to the next hollow and fills that too, and so on to the sea, up to ${numberWord(CHAIN_MOST)} ponds. Hollows dug one below another down a slope are a stream of ponds, and wherever the water drops ${m(FALL_DROP)} m or more it falls.`,
-        `A pond is water to everything: a bucket fills from it, a line is cast into it, nothing is built in it, and deeper than ${m(SWIM_DEPTH)} m you swim. A notch cut in its rim lets it down to the notch; filling the hollow in, or Stop up the spring, takes its water away.`,
-        `Each of us keeps ${numberWord(SPRINGS_EACH)} springs at most. Off a settlement only whoever dug a spring may stop it up; on one, whoever may shape its ground may dig a spring or stop any there, and nobody else may.`,
-        `Dig a pool in a poured foundation with a pickaxe: it holds water ${m(POOL_DEPTH - POOL_LIP)} m deep, ${m(POOL_LIP)} m under the top of the slab, with or without a spring, and pools side by side poured to the same top are one pool. A spring dug in one goes over its lowest edge, down the slab to the ground or into a lower pool, and runs on from there. Filling a pool in takes ${POOL_FILL} concrete.`,
+        `Added: springs: dig with a shovel at the bottom of a hollow holding ${m(SPRING_DEPTH)} m of water or more. Fills to the lowest rim point at ${m(FILL_RATE)} m/s, at any height.`,
+        `Added: a full pond spills from that point downhill to the next hollow, and on to the sea, up to ${num(CHAIN_MOST)} ponds. A drop of ${m(FALL_DROP)} m or more is a waterfall.`,
+        `Added: ponds are water for everything: buckets, fishing, no building; swim deeper than ${m(SWIM_DEPTH)} m. A rim notch lowers it to the notch; filling the hollow or Stop up the spring removes the water.`,
+        `Added: at most ${num(SPRINGS_EACH)} springs each. Off a settlement only the digger may stop one; on one, only those allowed to shape its ground may dig or stop any.`,
+        `Added: pools: dig in a poured foundation with a pickaxe: water ${m(POOL_DEPTH - POOL_LIP)} m deep, ${m(POOL_LIP)} m below the slab top, spring or not; adjacent pools of the same top are one. A spring in one spills over its lowest edge to the ground or a lower pool. Filling a pool: ${POOL_FILL} concrete.`,
       ];
     },
   },
@@ -823,23 +840,23 @@ export const NEWS: News[] = [
     n: 52,
     day: '2026-09-27',
     lines: () => [
-      'A foundation is set out on bare rock only: plain stone, a seam or an ore. Dig the soil off every corner of the tile first. Set out a foundation is no longer offered on grass, dirt or any tile with soil left on a corner.',
-      'A poured slab stays packed ground to build or pave on when a corner it shares is dug or mined. Foundations already set out or poured stay as they are.',
+      'Changed: foundations set out on bare rock only (plain stone, seam or ore); dig soil off every corner first. Not offered on grass, dirt or a tile with soil on any corner.',
+      'Changed: a poured slab stays packed ground when a shared corner is dug or mined. Existing foundations unchanged.',
     ],
   },
   {
     n: 53,
     day: '2026-09-28',
     lines: () => [
-      'Yarn is spun and cloth woven standing at a spindle or a loom set down on the ground; one in your pack does not count. The crafting window now says so in the row: "spindle: set yours down" when you carry one, "stand at one" when you do not. Right-click the ground, choose Set furniture down and pick it.',
+      'Changed: crafting window row for spindle/loom work: "spindle: set yours down" if carried, "stand at one" if not. Yarn and cloth need one set down on the ground (Set furniture down); one in the pack does not count.',
     ],
   },
   {
     n: 54,
     day: '2026-09-28',
     lines: () => [
-      `Nothing repairs a fragment or a tarnished bauble until it is restored: not Repair, not a repair kit, not Mend, not a worker mending the stores. Its damage only goes up, and one that reaches ${DAMAGE_MAX} before it is restored breaks and is gone.`,
-      `Restore is tried at any damage short of that now, rather than refusing a badly damaged piece and sending you to repair it first. A failure puts ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on every piece.`,
+      `Changed: fragments and tarnished baubles cannot be repaired before restoring (Repair, repair kit, Mend, workers). Damage only rises; at ${DAMAGE_MAX} it breaks.`,
+      `Changed: Restore allowed at any damage below that (was refused when badly damaged). Failure: +${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} damage on every piece.`,
     ],
   },
   {
@@ -850,9 +867,9 @@ export const NEWS: News[] = [
       const bloom = (['deep pink', 'pale pink', 'white'] as const).map((family) =>
         `${family} on ${listed(TREE_DEFS.filter((t) => BLOOMS[t.fruit ?? '']?.family === family).map((t) => t.name.toLowerCase()))}`);
       return [
-        `The woods follow the island's year. ${capital(listed(keep))} keep their leaves; every other tree comes into leaf over the first ${numberWord(LEAF_DAYS)} days of spring, turns its own colour over the first ${numberWord(TURN_DAYS)} days of autumn, drops its leaves over the last ${numberWord(SHED_DAYS)}, and stands bare through winter. Roses and thorns do the same and lavender keeps its leaves.`,
-        `Every tree old enough to fruit is in flower for all ${numberWord(SEASON_DAYS)} days of spring (${bloom.join('; ')}), and drops its petals on the wind and on any water under it. Roses and lavender flower from day ${BUSH_FLOWER_FROM} of spring to the end of summer. The look only: trees and bushes give what they gave.`,
-        `Butterflies come out at whatever is in flower by day, dragonflies over ponds, pools and streams from morning to dusk, and fireflies over the grass by trees and water at night: ${lifeSeasons()}. Only to look at.`,
+        `Added: seasonal foliage. Evergreen: ${listed(keep)}. Others leaf over the first ${num(LEAF_DAYS)} days of spring, colour over the first ${num(TURN_DAYS)} days of autumn, drop over the last ${num(SHED_DAYS)}, bare in winter. Roses and thorns likewise; lavender evergreen.`,
+        `Added: fruiting-age trees flower all ${num(SEASON_DAYS)} days of spring (${bloom.join('; ')}), shedding petals on wind and water. Roses and lavender flower from spring day ${BUSH_FLOWER_FROM} to end of summer. Visual only; yields unchanged.`,
+        `Added: butterflies at flowers by day, dragonflies over ponds, pools and streams morning to dusk, fireflies over grass near trees and water at night: ${lifeSeasons()}. Visual only.`,
       ];
     },
   },
@@ -860,12 +877,12 @@ export const NEWS: News[] = [
     n: 56,
     day: '2026-09-28',
     lines: () => {
-      const bill = (id: string): string => billWords((RECIPE_BY_ID.get(`make_${id}`)?.inputs ?? []).map((i) => [i.item, i.count ?? 1] as const));
+      const bill = (id: string): string => billWords((RECIPE_BY_ID.get(`make_${id}`)?.inputs ?? []).map((i) => [i.item, i.count ?? 1] as const), true);
       return [
-        `Garden steps: lay a flight up a tile of packed dirt whose slope is ${STEPS_LEAST} to ${STEPS_MOST}, with the corners at each end within ${STEPS_TWIST} of each other. In stone with a trowel (masonry), ${STONE_STEPS_BILL}; in timber with a mallet (carpentry), ${TIMBER_STEPS_BILL}.`,
-        `A tile of steps is stood on at any slope up to ${STEPS_MOST}, where bare ground stops at ${MAX_STAND}, and a step onto it or off it is not held to the ${MAX_STEP} between tile centres that bare ground is. No cart or wagon goes onto one. Taking it up with a pickaxe keeps ${share(STEPS_BACK)} of it whole: ${numberWord(stepsBack(STEPS_SLABS))} of ${numberWord(STEPS_SLABS)} slabs and ${numberWord(stepsBack(STEPS_BRICKS))} of ${numberWord(STEPS_BRICKS)} bricks, or ${numberWord(stepsBack(STEPS_PLANKS))} of ${numberWord(STEPS_PLANKS)} planks.`,
-        `A rose arch (carpentry: ${bill('rose_arch')}) or a stone rose arch (masonry: ${bill('stone_rose_arch')}), set down over a path and walked through. ${ROSES_RULE}`,
-        `A flagpole (tailoring: ${bill('flagpole')}) flies its flag down the wind, straight out at its full force and hanging in a calm, and a banner's cloth swings down the same wind. Either takes dye, and on a settlement carries its device, one of ${numberWord(DEVICE_COUNT)} chosen by the settlement's name. A banner or a sail set down on the island keeps its dye now; it used to come out undyed.`,
+        `Added: garden steps on packed dirt, slope ${STEPS_LEAST} to ${STEPS_MOST}, end corners within ${STEPS_TWIST}. Stone (trowel, masonry): ${STONE_STEPS_BILL}; timber (mallet, carpentry): ${TIMBER_STEPS_BILL}.`,
+        `Added: steps standable at slope up to ${STEPS_MOST} (bare ground ${MAX_STAND}); steps on or off ignore the ${MAX_STEP} tile-centre limit. No carts or wagons. Pickaxe removal returns ${frac(STEPS_BACK)}: ${num(stepsBack(STEPS_SLABS))} of ${num(STEPS_SLABS)} slabs and ${num(stepsBack(STEPS_BRICKS))} of ${num(STEPS_BRICKS)} bricks, or ${num(stepsBack(STEPS_PLANKS))} of ${num(STEPS_PLANKS)} planks.`,
+        `Added: rose arch (carpentry: ${bill('rose_arch')}) and stone rose arch (masonry: ${bill('stone_rose_arch')}), walk-through over a path. ${ROSES_RULE}`,
+        `Added: flagpole (tailoring: ${bill('flagpole')}); flag and banner cloth follow the wind. Both take dye; on a settlement they show its device, 1 of ${num(DEVICE_COUNT)}, chosen by settlement name. Fixed: banners and sails set down lost their dye.`,
       ];
     },
   },
@@ -873,8 +890,8 @@ export const NEWS: News[] = [
     n: 57,
     day: '2026-09-28',
     lines: () => [
-      `Collect works on dirt now, as it does on sand and clay: stand on a tile of dirt with a shovel and choose Collect dirt, and you fill a shovel off the top of it while the tile keeps its type and its height.`,
-      `Cut moss on a moss tile gives ${numberWord(MOSS_PER_CUT)} moss, as Cut grass gives mixed grass, and the tile stays moss. Plant moss on a tile of dirt with ${MOSS_PLANT} moss in your pack and the tile turns to moss.`,
+      'Added: Collect dirt (shovel, on dirt): fills a shovel; tile type and height unchanged, as on sand and clay.',
+      `Added: Cut moss on moss: ${num(MOSS_PER_CUT)} moss, tile stays moss. Plant moss on dirt with ${MOSS_PLANT} moss in pack: tile becomes moss.`,
     ],
   },
   {
@@ -884,10 +901,10 @@ export const NEWS: News[] = [
       // As it was then: a pot of orange, before dye was mixed (`LEGACY_DYES`).
       const dye = LEGACY_DYES.find((d) => d.id === 'wildflowers');
       return [
-        `${capital(listed([...WEARS].map((t) => GROUNDS[t as Ground].name.toLowerCase())))} wear where people walk: a step on your own feet puts one wear on a tile, up to ${WEAR_MOST}, and at ${WEAR_TRAIL} it is a trail of bare earth, walked and rolled like packed dirt. Each tile loses ${WEAR_FALL} at every turn of the woods, at ${TREE_DAWN_UTC}:00 UTC, and a trail with none left is what it was again. Paved, built on, tilled or planted ground never wears.`,
-        `Grass flowers in ${listed(FLOWER_SEASONS)}, in drifts: up to ${numberWord(FLOWER_MOST.summer)} clumps a tile in summer and ${numberWord(FLOWER_MOST.spring)} in spring. Pick flowers gives a wildflower a clump, at your foraging quality, and the tile has none again until next spring.`,
-        `Wildflowers are for dye: ${billWords([[dye?.from ?? 'wildflowers', dye?.count ?? 1], ['lye_bucket', 1]])} boil into ${numberWord(LEGACY_POTS)} pots of ${dye?.word ?? 'orange'}, at alchemy ${dye?.difficulty ?? 0}.`,
-        'Steep rock is drawn with the grass above it hanging over its top edge, moss down its upper face, ferns and tufts in its cracks and the damp dark over water at its foot. Drawing only: nothing about the ground changes.',
+        `Added: trail wear on ${listed([...WEARS].map((t) => GROUNDS[t as Ground].name.toLowerCase()))}: +1 per step on foot, up to ${WEAR_MOST}; at ${WEAR_TRAIL} it is a bare-earth trail (as packed dirt). −${WEAR_FALL} per tile at each turn of the woods (${TREE_DAWN_UTC}:00 UTC); at zero it reverts. Paved, built, tilled or planted ground never wears.`,
+        `Added: grass flowers in ${listed(FLOWER_SEASONS)}: up to ${num(FLOWER_MOST.summer)} clumps a tile in summer, ${num(FLOWER_MOST.spring)} in spring. Pick flowers: 1 wildflower per clump at your foraging quality; none again until next spring.`,
+        `Added: wildflower dye: ${billWords([[dye?.from ?? 'wildflowers', dye?.count ?? 1], ['lye_bucket', 1]], true)} boil into ${num(LEGACY_POTS)} pots of ${dye?.word ?? 'orange'}, alchemy ${dye?.difficulty ?? 0}.`,
+        'Changed: steep rock drawn with overhanging grass, moss on the upper face, ferns in cracks, damp at the foot over water. Visual only.',
       ];
     },
   },
@@ -898,10 +915,10 @@ export const NEWS: News[] = [
       const [clear, scrub] = GREEN_ACTIONS;
       const a = (name: string): string => `${article(name)} ${name.toLowerCase()}`;
       return [
-        `Stone greens over as it stands. Ivy climbs every finished wall, fence and half wall of stone or brick, and moss gathers on paving, on a poured foundation, on ${listed([...FURNITURE.filter((f) => f.mossy).map((f) => a(f.name)), a(BRIDGES.stone.name)])}. Each is bare the day it is built, laid, set down or poured and greens a day at a time for ${GREEN_DAYS} days; everything already standing starts from bare stone today.`,
-        `How much shows is its days over ${GREEN_DAYS} times a pace: ${GREEN_SUN} on tops and on south and east faces, ${+(GREEN_SUN + GREEN_SHADE).toFixed(2)} on north and west faces, which the sun never reaches, and up to ${GREEN_WET} more beside water.`,
-        `${clear.label} with ${a(itemDef(clear.tool ?? '').name)}, a side of a wall at a time and every storey of it at once; ${scrub.label} with ${a(itemDef(scrub.tool ?? '').name)}, on paving, a foundation, a statue or an arch. Either starts it again from bare stone. On a settlement only its builders may; anywhere else anybody may. On an island the island keeps the clock, so everybody sees the same green.`,
-        'A bridge on an island is drawn and walked by everybody now. The island kept them and never said so, so nobody saw one or could cross it.',
+        `Added: greening. Ivy on finished stone or brick walls, fences and half walls; moss on paving, poured foundations, ${listed([...FURNITURE.filter((f) => f.mossy).map((f) => a(f.name)), a(BRIDGES.stone.name)])}. Bare when made; greens daily for ${GREEN_DAYS} days. Everything existing starts bare today.`,
+        `Added: shown amount = days / ${GREEN_DAYS} × pace: ${GREEN_SUN} on tops and south/east faces, ${+(GREEN_SUN + GREEN_SHADE).toFixed(2)} on north/west faces, up to +${GREEN_WET} beside water.`,
+        `Added: ${clear.label} (${a(itemDef(clear.tool ?? '').name)}): 1 wall side, every storey; ${scrub.label} (${a(itemDef(scrub.tool ?? '').name)}): paving, foundation, statue or arch. Both reset to bare. On a settlement builders only; elsewhere anyone. Island keeps the clock for everyone.`,
+        'Fixed: island bridges were invisible and uncrossable; now drawn and walkable for everyone.',
       ];
     },
   },
@@ -911,10 +928,10 @@ export const NEWS: News[] = [
     lines: () => {
       const rotation = perksOf('farmer').find((p) => 'rotate:plant_seed' in p.fx)?.name ?? 'Crop Rotation';
       return [
-        `A crop in a field grows with the year: ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}. In winter it keeps its stage and waits for spring; nothing dies, and a field can still be sown, tended and harvested.`,
-        `A planter grows one crop ${growthWords(PLANTER_GROWTH)} in every season, winter too, indoors or out: a stage of cotton takes ${spanWords(CROPS.cotton.stageSeconds / PLANTER_GROWTH)} in one. Sow, tend, harvest or pull it up from its menu, with the same seeds, stages and yields as a field; the Farmer's perks on a sowing or a harvest work on it, and ${rotation} reads the planter's own last crop. A planter with something growing in it will not be picked up, and an empty one is bare earth.`,
-        'Hovering over a field or a planter, and sowing one, says when the next stage comes in real time, and a field in winter how long it waits for spring.',
-        'Bounty brings on the crops on your own settlements, the planters standing on them included, and no longer those on everybody else\'s.',
+        `Added: seasonal crop growth: ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}. Winter: holds its stage until spring; no dying; sowing, tending and harvesting still allowed.`,
+        `Added: planter: 1 crop ${growthWords(PLANTER_GROWTH)} every season incl. winter, indoors or out (cotton stage: ${dur(CROPS.cotton.stageSeconds / PLANTER_GROWTH)}). Sow, tend, harvest, pull up from its menu; same seeds, stages, yields as a field; Farmer sow/harvest perks apply; ${rotation} reads the planter's last crop. Cannot be picked up while growing; empty: bare earth.`,
+        'Added: hovering over or sowing a field or planter shows real time to the next stage; a wintering field shows the wait for spring.',
+        'Changed: Bounty affects crops (incl. planters) on your own settlements only, not others\'.',
       ];
     },
   },
@@ -927,9 +944,9 @@ export const NEWS: News[] = [
       const dyeWord = (item: string): string => LEGACY_DYES.find((d) => d.from === item)?.word ?? '';
       const metres = (units: number): string => (units / 10).toFixed(1);
       return [
-        `Lay stepping stones across shallow water — the sea's edge, a pond, or where a stream runs — with a trowel and ${numberWord(STONES_SLABS)} cut slab a tile, where the water is ${metres(STONES_DEPTH)} m deep or less (you swim from ${metres(SWIM_DEPTH)} m). On them you walk at ${percent(TILE_DEFS[TileType.SteppingStones].speed / TILE_DEFS[TileType.Grass].speed)} of your pace on grass and neither wade nor swim. Take up the stepping stones gives the slab back.`,
-        `A tiered fountain (masonry: ${pieceBill('fountain')}) is a well to every rule: it draws its own water, ${(WELL_TRICKLE * 60).toFixed(1)} to ${((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1)} litres a minute by its quality, up to ${furnitureDef('fountain').well} litres; fill a bucket or a skin at it or drink from it.`,
-        `Botanizing at the water's edge turns up ${itemDef(lily.from).name.toLowerCase()}s and ${itemDef(lotus.from).name.toLowerCase()}. Plant them in still water ${metres(WATER_PLANT_SHALLOWEST)} to ${metres(WATER_PLANT_DEEPEST)} m deep; they root in ${spanWords(WATER_ROOTING)} and keep the island's year: a water lily ${yearSays(lily)}, a lotus ${yearSays(lotus)}. Water lily flowers boil into ${dyeWord(lily.flower)} dye and lotus flowers into ${dyeWord(lotus.flower)}; a seed head gives ${numberWord(lotus.seedCount ?? 0)} lotus seeds to eat or plant.`,
+        `Added: stepping stones: trowel and ${num(STONES_SLABS)} cut slab a tile, in water ${metres(STONES_DEPTH)} m deep or less (sea edge, pond, stream; swimming from ${metres(SWIM_DEPTH)} m). Walk speed ${percent(TILE_DEFS[TileType.SteppingStones].speed / TILE_DEFS[TileType.Grass].speed)} of grass; no wading or swimming. Take up the stepping stones returns the slab.`,
+        `Added: tiered fountain (masonry: ${pieceBill('fountain')}): a well in every rule: ${(WELL_TRICKLE * 60).toFixed(1)} to ${((WELL_TRICKLE + WELL_TRICKLE_QL) * 60).toFixed(1)} L/min by quality, up to ${furnitureDef('fountain').well} L; fill a bucket or skin, or drink.`,
+        `Added: botanizing at the water's edge finds ${itemDef(lily.from).name.toLowerCase()}s and ${itemDef(lotus.from).name.toLowerCase()}. Plant in still water ${metres(WATER_PLANT_SHALLOWEST)} to ${metres(WATER_PLANT_DEEPEST)} m deep; roots in ${dur(WATER_ROOTING)}; seasons: water lily ${yearSays(lily)}, lotus ${yearSays(lotus)}. Dye: water lily flowers ${dyeWord(lily.flower)}, lotus flowers ${dyeWord(lotus.flower)}. Seed head: ${num(lotus.seedCount ?? 0)} lotus seeds (eat or plant).`,
       ];
     },
   },
@@ -937,15 +954,15 @@ export const NEWS: News[] = [
     n: 62,
     day: '2026-09-28',
     lines: () => [
-      `A day of the island's year is as long as a day and night of the clock, ${spanWords(DAY_SECONDS)} of real time, where it was a whole real day: a season is ${numberWord(SEASON_DAYS)} of them, ${spanWords(SEASON_SECONDS)}, and a year ${numberWord(YEAR_DAYS)}, ${spanWords(YEAR_SECONDS)}. The line beside your position counts them: "${seasonLine(YEAR_FROM + DAY_SECONDS)}".`,
-      `Everything that keeps the year keeps it in those days. The woods come into leaf over the first ${numberWord(LEAF_DAYS)} days of spring, turn over the first ${numberWord(TURN_DAYS)} of autumn and drop their leaves over the last ${numberWord(SHED_DAYS)}; roses and lavender flower from day ${BUSH_FLOWER_FROM} of spring. An arch's roses are in leaf ${numberWord(ROSE_LEAFY)} day after it is set down, in bud ${numberWord(ROSE_BUD)} and in flower ${numberWord(ROSE_FLOWER)}; a water plant roots in ${spanWords(WATER_ROOTING)}; and a crop in a field grows ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}: ${spanWords(SEASON_SECONDS)} of each.`,
+      `Changed: island year day from 1 real day to 1 clock day and night, ${dur(DAY_SECONDS)}. Season: ${num(SEASON_DAYS)} days, ${dur(SEASON_SECONDS)}. Year: ${num(YEAR_DAYS)} days, ${dur(YEAR_SECONDS)}. Shown beside your position: "${seasonLine(YEAR_FROM + DAY_SECONDS)}".`,
+      `Changed: seasonal timings now in those days: leaf over the first ${num(LEAF_DAYS)} days of spring, turn over the first ${num(TURN_DAYS)} of autumn, drop over the last ${num(SHED_DAYS)}; roses and lavender flower from spring day ${BUSH_FLOWER_FROM}; arch roses, days after set down: leaf ${num(ROSE_LEAFY)}, bud ${num(ROSE_BUD)}, flower ${num(ROSE_FLOWER)}; water plants root in ${dur(WATER_ROOTING)}; field crops ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}, ${dur(SEASON_SECONDS)} each.`,
     ],
   },
   {
     n: 63,
     day: '2026-09-28',
     lines: () => [
-      `The last of a trade's ${numberWord(PERK_TIER_AT.length)} tiers of perks opens at ${PERK_TIER_AT[PERK_TIER_AT.length - 1]} in its main skill, where it was 100. After the first, which comes with the trade, the tiers open at ${listed(PERK_TIER_AT.slice(1).map(String))}.`,
+      `Changed: last of a trade's ${num(PERK_TIER_AT.length)} perk tiers from 100 to ${PERK_TIER_AT[PERK_TIER_AT.length - 1]} main skill. Tiers after the first: ${listed(PERK_TIER_AT.slice(1).map(String))}.`,
     ],
   },
   {
@@ -954,13 +971,13 @@ export const NEWS: News[] = [
     lines: () => {
       const bill = (b: { needed: Record<string, number> }): string => billWords(Object.entries(b.needed), true);
       return [
-        `Jetties: on a storey above the ground, Plan jetty floor lays a floor ${numberWord(JETTY_REACH)} tile out past the footprint, over open ground on your own settlement, resting on a finished full-height wall of the storey below on the side it shares with the building (a door counts; a half wall, a fence or a railing does not). It costs what a floor inside does and may be no heavier than the lightest wall or column under it carries. A storey over a jettied room floors out over the room as far as it goes, on the room's walls. The ground under a jetty stays open: nothing is planned or planted there, no bridge or aqueduct crosses it, its corners are not dug or raised, and you walk under it. Off a building on piers the storeys count from its deck.`,
-        'Open to its storey, a jetty is part of it: walls, railings or columns on its outer sides close the storey in. The roof may go out over it on walls or columns only: every side of it out of the storey wants a finished full-height wall, or at each end a finished column or the end of a finished full-height wall, since a railing carries nothing. The wall a side of it rests on, and a wall whose end is all that carries an end of one, stay up until columns take the roof; a column that is all that carries an end of one stays up until that side is walled or the roof is off. Behind a wall or a door it is a balcony, outside the storey, and takes no roof.',
-        'The jetty and column rows name their storey (Jetty of ‹house› (storey N), Plan column (‹corner› corner, storey N)), and every job on a building goes to the storey you are working on, on the island too, so a storey below the top can be worked from it; stairs asked for on the ground floor of a building with a storey over it say to work on storey 2 or above. A finished full-height wall with a wall of its building\'s storey above on the same side, once any of that wall\'s materials are in, stays up until that wall comes down, or until a finished column at each end carries the side; so does the last wall a jetty rests on.',
-        `Railings: a wall type for the open edges of upper storeys, jetties, balconies, finished decks on piers and finished flat roofs (Plan railing round the roof), never on the ground. ${capital(share(WALL_TYPE_BY_ID.get('railing')?.factor ?? 0))} of a solid wall's bill (${bill(typeBill('log', 'railing'))} in log), ${metres(RAILING_HEIGHT * WALL_HEIGHT)} m high, see-through; a finished one stops anyone crossing it.`,
-        `Columns: Plan column on the corner of a tile of a building, ${share(COLUMN_SHARE)} of a solid wall's bill (${bill(columnBill('log'))} in log, ${bill(columnBill('marble'))} in marble), on the ground, on a finished deck on piers or on a finished floor of its storey; never in glass, and on piers no heavier than the lightest deck, which has to carry the heaviest column as it does the heaviest wall. On the ground it takes the corner spot of each tile round it: no piece of furniture, smelter or kiln is set down in one, and no column goes up over a piece of furniture standing in one. A side with a finished column at each end is closed as a wall closes it: a column on each corner of a tile and a roof over it are an open hall, a row of them a colonnade, and a storey can go up on them. A column counts in what may be raised over it and in how many storeys the building stands, as a wall of its material does. It comes down unless it carries a side on the edge of its storey with no full-height wall, under a floor or a roof; the refusal names that side. Where walls meet on its corner it is drawn as a pilaster.`,
-        `Under a roof on columns, what is left decays at ${share(INDOORS_DECAY)} of the rate in the open, as in a room. A bed there is still in the open: the ×${INDOORS_REST} rest of a bed indoors wants walls all round.`,
-        'Examine on a tile names the jetty or balcony over it, the columns on its corners and what one still going up needs.',
+        `Added: jetties: Plan jetty floor on an upper storey: floor ${num(JETTY_REACH)} tile past the footprint over open ground on your settlement, on a finished full-height wall of the storey below on the shared side (door counts; half wall, fence, railing do not). Costs as an inside floor; no heavier than the lightest wall or column under it carries. A storey above a jettied room floors out over it on the room's walls. Ground under a jetty stays open: no plans, planting, bridges, aqueducts, digging or raising; walkable. On piers, storeys count from the deck.`,
+        'Added: a jetty open to its storey is part of it; walls, railings or columns on its outer sides close the storey. Roof over it on walls or columns only: each outer side needs a finished full-height wall, or at each end a finished column or full-height wall end (railings carry nothing). The supporting wall, and a wall whose end alone carries an end, stay up until columns take the roof; a column alone carrying an end stays until that side is walled or the roof is off. Behind a wall or door it is a balcony: outside the storey, no roof.',
+        'Added: jetty and column rows name their storey (Jetty of ‹house› (storey N), Plan column (‹corner› corner, storey N)). Every building job goes to the storey you are working on, island too; lower storeys workable from above; ground-floor stairs under an upper storey say to work on storey 2 or above. A finished full-height wall with a same-side wall of the storey above (once any of its materials are in) stays up until that wall comes down or a finished column at each end carries the side; likewise the last wall a jetty rests on.',
+        `Added: railings: wall type for open edges of upper storeys, jetties, balconies, finished pier decks and finished flat roofs (Plan railing round the roof); never on the ground. ${capital(frac(WALL_TYPE_BY_ID.get('railing')?.factor ?? 0))} of a solid wall's bill (log: ${bill(typeBill('log', 'railing'))}); ${metres(RAILING_HEIGHT * WALL_HEIGHT)} m high; see-through; finished: blocks crossing.`,
+        `Added: columns: Plan column on a tile corner of a building, ${frac(COLUMN_SHARE)} of a solid wall's bill (log ${bill(columnBill('log'))}, marble ${bill(columnBill('marble'))}); on the ground, a finished pier deck or a finished floor of its storey; never glass; on piers no heavier than the lightest deck (which must carry the heaviest column and wall). On the ground it takes each adjacent tile's corner spot: no furniture, smelter or kiln there, no column over furniture there. A side with a finished column at each end is closed like a wall: columns on every corner plus a roof = open hall; a row = colonnade; storeys can rise on them. Counts toward what may be raised over it and storey count as a wall of its material. Comes down only if it does not carry a side with no full-height wall under a floor or roof; the refusal names that side. Drawn as a pilaster where walls meet.`,
+        `Added: under a roof on columns, decay ${frac(INDOORS_DECAY)} of outdoors, as in a room. Beds there count as outdoors: the ×${INDOORS_REST} indoor rest needs walls all round.`,
+        'Added: Examine on a tile names any jetty or balcony over it, its corner columns, and what an unfinished one needs.',
       ];
     },
   },
@@ -970,9 +987,9 @@ export const NEWS: News[] = [
     lines: () => {
       const full = deckBill('plank', PIER_DROP).needed;
       return [
-        `A tile that is not level and dry at a building's floor height — one that slopes, one lower than the floor, or one under at most ${metres(PIER_WATER)} m of water — takes the building on piers: a level deck at the floor height on timber posts braced across, or on stone piers with arches between them, up to ${metres(PIER_DROP)} m over the tile's lowest corner. Level, dry ground at the floor height is still packed first and built on as it stands.`,
-        `Planned on such a tile, a building's deck is set at its highest corner, ${metres(PIER_CLEAR)} m over the water, or a level you have taken, whichever is highest; every tile added must lie wholly under it. Plan deck on each: the floor's materials and ${share(10 / PIER_WALL_DROP)} of a solid wall more for every metre of drop, rounded up item by item — a plank deck ${metres(PIER_DROP)} m up takes ${full.plank} planks and ${full.timber} timbers. A deck carries no wall heavier than the material it is laid in, and the lightest deck under a building carries all of it.`,
-        `A deck is walked at its height once it is built, never in the water under it: you step onto or off it from ground up to ${metres(MAX_STEP)} m above or below it, and ${(CLIMB_PER_LEVEL / 10).toFixed(2)} m more for each level of climbing; a bridge lands on it as on a bank. Walls, stairs, furniture and crates go on it; no creature, cart, mount or boat goes onto it or under it. On an island, as offline, the ground under any building cannot now be dug at a corner, raised, mined, cut back, packed, cultivated, paved or planted.`,
+        `Added: piers. A tile not level and dry at floor height (sloped, lower than the floor, or under at most ${metres(PIER_WATER)} m of water) is built on piers: a level deck at floor height on braced timber posts, or stone piers with arches, up to ${metres(PIER_DROP)} m above the tile's lowest corner. Level dry ground at floor height still packed and built on directly.`,
+        `Added: deck height: highest corner of the first tile, ${metres(PIER_CLEAR)} m above water, or a level you took, whichever is highest; every added tile must lie wholly under it. Plan deck on each: floor materials plus ${frac(10 / PIER_WALL_DROP)} of a solid wall per metre of drop, each item rounded up (plank deck ${metres(PIER_DROP)} m up: ${full.plank} planks, ${full.timber} timbers). A deck carries no wall heavier than its material; the lightest deck carries the whole building.`,
+        `Added: a built deck is walked at its height, never in the water under it; step on or off from ground up to ${metres(MAX_STEP)} m above or below, +${(CLIMB_PER_LEVEL / 10).toFixed(2)} m per climbing level; bridges land on it as on a bank. Walls, stairs, furniture and crates allowed; no creatures, carts, mounts or boats on or under it. Changed: island and offline, ground under any building cannot be dug at a corner, raised, mined, cut back, packed, cultivated, paved or planted.`,
       ];
     },
   },
@@ -980,8 +997,8 @@ export const NEWS: News[] = [
     n: 66,
     day: '2026-10-02',
     lines: () => [
-      `A building whose ground-floor walls are all built can have a cellar dug out under it, a tile at a time, ${numberWord(CELLAR_DEPTH)} slices down to a storey, by somebody on its ground floor or down in its cellar: the soil with a shovel and Digging, a dirt a slice, and the rock under it with a pickaxe and Mining, a slice of that stone's own shards or the ore where a vein runs under the building. It is begun where there are ${numberWord(CELLAR_SOIL)} or more of soil at every corner of the tile, and its floor has to lie above the sea; not under a poured foundation or a deck on piers.`,
-      `What lies on a cellar's floor rots at ${share(CELLAR_DECAY)} of the rate out of doors, against ${share(INDOORS_DECAY)} in a closed room, and a bed down there rests you as one in a closed room does. Every piece of furniture goes down but what burns an open fire, what is on wheels or afloat, and the pieces the help names. A staircase down or a ladder down from the ground floor is the way in, climbed from its foot and from no other side, and nothing in tow and no mount goes down it; the cellar of the building next door is another room, with the ground between. It is dark down there at every hour but for what you carry alight and, by day, ${numberWord(CELLAR_DAYLIGHT)} tiles of daylight round the way in. The ground over a cellar is not dug while it is there, and the building is taken off the plan only once its cellar is filled in again.`,
+      `Added: cellars under a building with all ground-floor walls built: 1 tile at a time, ${num(CELLAR_DEPTH)} slices to a storey, from its ground floor or cellar. Soil: shovel, Digging, 1 dirt a slice. Rock: pickaxe, Mining, 1 slice of that stone's shards, or ore where a vein runs under. Needs ${num(CELLAR_SOIL)} or more soil at every tile corner to begin; floor must be above sea level; not under a poured foundation or pier deck.`,
+      `Added: cellar floor decay ${frac(CELLAR_DECAY)} of outdoors (closed room: ${frac(INDOORS_DECAY)}); beds rest as in a closed room. All furniture allowed except open fires, wheeled or floating pieces and those the help lists. Entry: a staircase down or ladder down from the ground floor, climbed from its foot only; no towing or mounts. A neighbouring building's cellar is a separate room. Dark at all hours except carried light and, by day, ${num(CELLAR_DAYLIGHT)} tiles of daylight round the entry. Ground above cannot be dug; the building can be unplanned only after the cellar is filled in.`,
     ],
   },
   {
@@ -991,9 +1008,9 @@ export const NEWS: News[] = [
       const shape = roofShapeOf(undefined);
       const tile = listed(Object.entries(floorBill(GLASS_ROOF.id, 'roof', shape).total).map(([id, n]) => `${n} ${materialName(id, n)}`));
       return [
-        `A roof can be laid in glass: Plan roof offers it, panes on timber glazing bars, ${tile} to a tile of the ${roofShapeDef(undefined).name.toLowerCase()} roof Plan roof lays, built with a mallet and trained as carpentry. It goes on a roof and on nothing else.`,
-        `A building of one storey, walled all round to full height, with every tile of its footprint under finished glass is a glasshouse. Till its ground-floor tiles where no floor is planned and no slab is poured, and sow, tend and harvest them as fields, a Farmer's patches and perks and Bounty included. A crop in one grows ${growthWords(GLASSHOUSE_GROWTH)} in every season, winter too: a stage of cotton takes ${spanWords(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} in one all year, where a field in winter waits for spring. While a building has a field in it, it takes no floor over the field, no roof but glass and no storey over it until Clear the field packs the ground flat again.`,
-        `When the last pane or the last wall goes in, whatever already grows in the building carries on from as far into its stage as it had grown, at the glasshouse's pace; take a tile of the roof or a wall down, or add a tile to the footprint, and it carries on at a field's pace from there. A glasshouse is indoors, and what is left lying in it rots at ${share(INDOORS_DECAY)} of the rate in the open.`,
+        `Added: glass roof in Plan roof: ${tile} per tile of the ${roofShapeDef(undefined).name.toLowerCase()} roof; mallet, carpentry. Roofs only.`,
+        `Added: glasshouse: 1 storey, walled all round at full height, every footprint tile under finished glass. Till ground-floor tiles with no floor planned or slab poured; sow, tend, harvest as fields (Farmer patches, perks and Bounty apply). Growth ${growthWords(GLASSHOUSE_GROWTH)} every season incl. winter: cotton stage ${dur(CROPS.cotton.stageSeconds / GLASSHOUSE_GROWTH)} all year. While it has a field: no floor over the field, no roof but glass, no storey above, until Clear the field packs the ground.`,
+        `Added: on the last pane or wall, crops carry on from their progress at glasshouse pace; removing a roof tile or wall, or adding a footprint tile, returns them to field pace. A glasshouse is indoors: decay ${frac(INDOORS_DECAY)} of outdoors.`,
       ];
     },
   },
@@ -1001,10 +1018,10 @@ export const NEWS: News[] = [
     n: 68,
     day: '2026-10-02',
     lines: () => [
-      `Aqueducts. Right-click a pool, a pond, a tiered fountain or a hollow that would hold ${metres(SPRING_DEPTH)} m of water, and Lead an aqueduct here from the first pond or pool straight out from it, up to ${numberWord(AQUEDUCT.span)} tiles off: a stone arcade built a span at a time with a trowel, ${billWords(AQUEDUCT.bill)} a span. Its channel is carried at the height of the water at its head, which must stand no lower than the water at its foot, with everything under it ${metres(CLEARANCE)} m or more below its bed.`,
-      `Finished, it takes all the water that went over that pond's lip or that pool's edge — a channel ${CHANNEL_WIDE * TILE_METRES} m wide and ${metres(CHANNEL_DEEP)} m deep running ${RUN_RATE} tiles a second, ${AQUEDUCT_FLOW} litres a minute — and the stream it fed dries up. A pool at its foot goes over its lowest edge; a hollow fills at that rate and then spills on; a fountain takes ${AQUEDUCT_LPS} litres a second on top of its own well's; bare ground sends it downhill.`,
-      'When the water at its head stands lower than the channel, the channel runs dry and whatever only it kept goes dry with it; take the fountain away and the water runs off downhill there, fill the pool in and it goes off the foundation over its lowest edge. One pond or pool feeds one aqueduct. Nobody walks along one, and pulling it down gives back half of what went into it.',
-      'Under one you go through its arches, and its piers stand in the way along it; the ground there is walked, worn and climbed as it was. Nothing is planted, built, poured or dug under a span, and none is set out over a tree or a bush. Its stone takes moss as a stone arch\'s does.',
+      `Added: aqueducts. Right-click a pool, pond, tiered fountain or hollow that would hold ${metres(SPRING_DEPTH)} m of water: Lead an aqueduct here from the first pond or pool straight out, up to ${num(AQUEDUCT.span)} tiles. Stone arcade, built a span at a time with a trowel, ${billWords(AQUEDUCT.bill, true)} a span. Channel at the head's water height, which must be no lower than the foot's water; everything under it ${metres(CLEARANCE)} m or more below its bed.`,
+      `Added: finished, it takes all water spilling over the source's lip or edge: channel ${CHANNEL_WIDE * TILE_METRES} m wide, ${metres(CHANNEL_DEEP)} m deep, ${RUN_RATE} tiles/s, ${AQUEDUCT_FLOW} L/min; the stream it fed dries up. At the foot: a pool spills over its lowest edge; a hollow fills at that rate then spills; a fountain gets +${AQUEDUCT_LPS} L/s on top of its own; bare ground sends it downhill.`,
+      'Added: head water below the channel: channel runs dry, and what only it fed dries too. Fountain removed: water runs downhill there; pool filled in: water leaves the foundation over its lowest edge. 1 aqueduct per pond or pool. Not walkable. Demolishing returns 1/2 of its materials.',
+      'Added: walk under it through the arches; piers block. Ground under it walks, wears and climbs as before. No planting, building, pouring or digging under a span; none set out over a tree or bush. Takes moss like a stone arch.',
     ],
   },
   {
@@ -1017,12 +1034,12 @@ export const NEWS: News[] = [
       const planWall = ACTION_BY_ID.get('plan_wall');
       const pull = ACTION_BY_ID.get('demolish_bridge')?.label;
       return [
-        `A portcullis is a new wall type for a ground-floor wall of ${listed(stones)}: a gateway as wide as a double door with an iron grille of ${billWords(WALL_TYPE_BY_ID.get('portcullis')?.fittings ?? [])} over the stone's own bill. Raise the portcullis takes ${gateJobWords('raise_portcullis', goSeconds)} and Lower the portcullis ${gateJobWords('lower_portcullis', goSeconds)}, from either side, within ${numberWord(portReach)} tile${portReach === 1 ? '' : 's'} of the tile beside it. Down, nothing passes it, no person, cart or wildermon, and it is still seen through; up, everything passes, carts included.`,
-        `A drawbridge is a new bridge of planks from open ground to open ground with at most ${numberWord(BRIDGES.draw.span)} tiles of deck, each span taking ${billWords(BRIDGES.draw.bill)} and its first ${billWords(BRIDGES.draw.winch ?? [])} more for its gallows and winch. ${winchReach === 0 ? 'Standing on the tile it was set out from' : `Within ${numberWord(winchReach)} tiles of the tile it was set out from`}, Raise the drawbridge takes ${gateJobWords('raise_drawbridge', goSeconds)} and Lower the drawbridge ${gateJobWords('lower_drawbridge', goSeconds)}. Up, it stands on end over its hinge: nothing crosses it or sees past it, and anybody out on its deck is left in whatever is under it; down, ${BRIDGES.draw.carts ? 'a cart crosses it' : 'it carries foot traffic'}. Its winch is not set on the ground under a jetty, nor a jetty floored out over its winch: its gallows rise there higher than a storey.`,
-        `A hidden door is built of exactly a solid wall's bill and drawn exactly as one. Plan wall, Hidden door plans a solid wall there in every way anybody else can see or read, ${spanWords(goSeconds(planWall?.baseTime ?? 0))} and ${percent(planWall?.stamina ?? 0)} of your stamina; as the plan is finished it takes ${billWords(HIDDEN_DOOR_IRON)} and the padlock becomes its key. Each is asked for with its own plan, for that side of that tile, and kept only if the plan is started or lined up; then for as long as a plan of a wall on that side is in hand or lined up, so several may be lined up. Walking away puts the work down and keeps the ask; Esc forgets it with the jobs. The next solid wall you plan on that side, on whichever storey you are working, is the door. One still waiting ${spanWords(HIDDEN_DOOR_LAPSE)} after it was asked for lapses, and its plan is a solid wall. To whoever holds that key, and to the founder of the settlement it stands on, it is a door with a dashed seam and a keyhole on its face; to everybody else it is a solid wall in every way, and on an island their browser is told nothing else.`,
-        'Fit a padlock to a portcullis or to a drawbridge\'s winch and only its key, and the founder of the settlement it stands on, raise it, lower it, or take it down.',
-        'Every bridge thrown across now starts and ends on open ground, on a finished deck on piers or on a finished upper floor, a jetty\'s among them, never inside a building on a ground floor laid on the ground nor on another bridge\'s end, and never meets its deck through a wall: from a storey or a deck it goes out through a doorway, an archway or an open side. Nothing is built on a tile a bridge comes ashore on.',
-        `${pull} works on a bridge on an island again: it had been answering with an error. Where either end of the bridge stands on a settlement, only its builders may ${pull?.toLowerCase()}, as only they may take down a building's wall there, and a guest may not; anywhere else, anybody may. It is done within ${PULL_REACH} tiles of the middle of either end. ${ACTION_BY_ID.get('demolish_aqueduct')?.label} goes by the same two rules.`,
+        `Added: portcullis: wall type for a ground-floor wall of ${listed(stones)}; double-door-wide gateway; iron grille ${billWords(WALL_TYPE_BY_ID.get('portcullis')?.fittings ?? [], true)} on top of the stone bill. Raise the portcullis ${gateJobWords('raise_portcullis', goSeconds)}, Lower the portcullis ${gateJobWords('lower_portcullis', goSeconds)}, either side, within ${num(portReach)} tile${portReach === 1 ? '' : 's'} of the adjacent tile. Down: blocks people, carts and wildermon; see-through. Up: everything passes, carts included.`,
+        `Added: drawbridge: plank bridge, open ground to open ground, at most ${num(BRIDGES.draw.span)} tiles of deck; ${billWords(BRIDGES.draw.bill, true)} a span, first span +${billWords(BRIDGES.draw.winch ?? [], true)} for gallows and winch. ${winchReach === 0 ? 'On the tile it was set out from' : `Within ${num(winchReach)} tiles of the tile it was set out from`}: Raise the drawbridge ${gateJobWords('raise_drawbridge', goSeconds)}, Lower the drawbridge ${gateJobWords('lower_drawbridge', goSeconds)}. Up: no crossing or seeing past; anyone on the deck drops to what is under it. Down: ${BRIDGES.draw.carts ? 'carts can cross' : 'foot traffic only'}. No winch under a jetty and no jetty over a winch (the gallows exceed a storey).`,
+        `Added: hidden door: exactly a solid wall's bill and look. Plan wall, Hidden door plans what everyone else sees as a solid wall: ${dur(goSeconds(planWall?.baseTime ?? 0))}, ${percent(planWall?.stamina ?? 0)} stamina; on finishing it takes ${billWords(HIDDEN_DOOR_IRON, true)} and the padlock becomes its key. Each request is for 1 side of 1 tile, kept only if its plan is started or queued, then while a wall plan on that side is in hand or queued (several can queue). Walking away pauses it and keeps the request; Esc clears it with the jobs. The next solid wall you plan on that side, on your working storey, is the door. Unused after ${dur(HIDDEN_DOOR_LAPSE)}: lapses, the plan is a solid wall. Key holder and settlement founder see a door with a dashed seam and keyhole; to everyone else it is a solid wall, and their island browser is told nothing else.`,
+        'Added: padlock on a portcullis or drawbridge winch: only the key holder and the settlement founder can raise, lower or demolish it.',
+        'Changed: every new bridge starts and ends on open ground, a finished pier deck or a finished upper floor (jetties included); never inside a ground-floor building on the ground, never on another bridge\'s end, never through a wall (from a storey or deck it exits through a doorway, archway or open side). No building on a tile a bridge lands on.',
+        `Fixed: ${pull} on an island returned an error. Changed: if either end is on a settlement, only its builders may ${pull?.toLowerCase()} (not guests); elsewhere anyone. Within ${PULL_REACH} tiles of the middle of either end. ${ACTION_BY_ID.get('demolish_aqueduct')?.label}: same 2 rules.`,
       ];
     },
   },
@@ -1030,102 +1047,102 @@ export const NEWS: News[] = [
     n: 70,
     day: '2026-10-02',
     lines: () => [
-      `Shop counters: a wall type with a market stall in it, planned and built like any wall at ${share(counterType()?.factor ?? 1)} of a solid wall's material and ${countOf('hinge', counterType()?.fittings?.find(([id]) => id === 'hinge')?.[1] ?? 0)}. It goes in an outside wall of the ground floor with no building across it, holds ${numberWord(COUNTER_HOLDS)} things priced on the Market window's Stall tab, and sells to the street only, within ${COUNTER_REACH} tiles of its middle and not to anybody inside a building; the silver waits in its till for whoever planned it.`,
-      `Lantern posts and lantern pillars: a lantern hung on a timber post (${skillOf('make_lamp_post')}) or set in a stone pillar (${skillOf('make_lamp_pillar')}) stays where it is put, takes candles, is lit and put out as it is in your hand, and at night lights the ground round it out to the lantern's reach, ${numberWord(lanternReach(1))} to ${numberWord(lanternReach(100))} tiles, for everybody. A padlock on one keeps its lantern for the key; lighting it is anybody's.`,
-      `On an island a candle in a lantern burned ${times(WORLD_PACE)} too fast. It lasts what it does here now, ${spanWords(candleBurn(1))} to ${spanWords(candleBurn(100))} by the lantern's quality. A light taken off a brazier or a lit lantern post says which it came off, where it said an oven, and a lantern with nothing burning near it names what it can be lit at: a burning ${flameSources()}.`,
-      `Where the warm glow of two lights overlaps at night, the stronger of the two is drawn there rather than both added together.`,
+      `Added: shop counter: wall type with a market stall, ${frac(counterType()?.factor ?? 1)} of a solid wall's material plus ${countOf('hinge', counterType()?.fittings?.find(([id]) => id === 'hinge')?.[1] ?? 0, true)}. Outside ground-floor wall with no building across it. Holds ${num(COUNTER_HOLDS)} items priced on the Market window's Stall tab; sells to the street only, within ${COUNTER_REACH} tiles of its middle, not to anyone inside a building; silver held in its till for the planner.`,
+      `Added: lantern post (${skillOf('make_lamp_post')}) and lantern pillar (${skillOf('make_lamp_pillar')}): fixed lantern; takes candles; light and put out as in hand; at night lights the ground to the lantern's reach, ${num(lanternReach(1))} to ${num(lanternReach(100))} tiles, for everyone. Padlock: lantern removable by key holder only; anyone may light it.`,
+      `Fixed: island lantern candles burned at ${mult(WORLD_PACE)} speed; now ${dur(candleBurn(1))} to ${dur(candleBurn(100))} by lantern quality. Fixed: a light taken off a brazier or lantern post said "oven". Added: an unlit lantern with no flame near names what lights it: a burning ${flameSources()}.`,
+      'Changed: overlapping night light glows draw the stronger, not the sum.',
     ],
   },
   {
     n: 71,
     day: '2026-10-03',
     lines: () => [
-      `A swing takes its weapon's own time before skill, ${[...WEAPONS].filter((w) => !w.ammo).sort((a, b) => a.swing - b.swing).map((w) => `${itemDef(w.id).name.toLowerCase()} ${w.swing}`).join(', ')} seconds and bare hands ${FIST.swing}. A bow draws at its own pace the same way.`,
-      `Every swing or draw costs ${pct(SWING_WIND)} of your stamina and ${pct(SWING_WIND_KG)} more for every kilogram in your hand. Below ${pct(TIRED_AT)} stamina every swing is slower, up to ${pct(TIRED_SLOW)} slower with none left.`,
-      `What you strike that does not run fights back on its own clock, swinging or not: a hunter or a monster every ${BLOW_HUNTER} seconds, a kind that stands up for itself every ${BLOW_DEFENSIVE}, anything else every ${BLOW_PREY}. It follows you up to ${FIGHT_LEASH} tiles from where it was struck and lets you go ${FIGHT_GIVE_UP} tiles off. It no longer answers each of your swings with a roll.`,
-      `Stances, on the button beside your health bar or the \` key: ${FIGHT_STANCES.map((st) => `${FIGHT_STANCE_NAMES[st]}, ${stanceSays(st).toLowerCase()}`).join(' ')}`,
-      `Left-click something that is after you, or a kind that hunts on sight, to fight it, and you follow it up to ${FOLLOW_RANGE} tiles when it steps away. Tab marks the nearest foe within ${TARGET_RANGE} tiles and Space attacks what is marked. A fight never waits behind work: the job in hand goes to the front of the line.`,
-      `Walking leaves a fight: a click on the ground no longer keeps the swing-back for later, and a bite while you walk does not turn you round. A bite turns you on what bit you once your feet have been still ${FIGHT_BACK_STILL} seconds, and Settings, Fighting turns that off.`,
+      `Changed: swing time per weapon before skill (s): ${[...WEAPONS].filter((w) => !w.ammo).sort((a, b) => a.swing - b.swing).map((w) => `${itemDef(w.id).name.toLowerCase()} ${w.swing}`).join(', ')}; bare hands ${FIST.swing}. Bows draw at their own pace likewise.`,
+      `Added: each swing or draw costs ${pct(SWING_WIND)} stamina +${pct(SWING_WIND_KG)} per kg in hand. Below ${pct(TIRED_AT)} stamina swings slow, up to ${pct(TIRED_SLOW)} slower at zero.`,
+      `Changed: targets that do not flee fight back on their own clock: hunters and monsters every ${BLOW_HUNTER} s, defensive kinds every ${BLOW_DEFENSIVE} s, others every ${BLOW_PREY} s. They follow up to ${FIGHT_LEASH} tiles from where struck, and give up at ${FIGHT_GIVE_UP} tiles. Removed: a counter-roll on each of your swings.`,
+      `Added: stances (button beside the health bar, or \`): ${FIGHT_STANCES.map((st) => `${FIGHT_STANCE_NAMES[st]}, ${stanceSays(st).toLowerCase()}`).join(' ')}`,
+      `Added: left-click a creature after you, or a hunt-on-sight kind, to fight it; you follow up to ${FOLLOW_RANGE} tiles. Tab marks the nearest foe within ${TARGET_RANGE} tiles; Space attacks it. Fights jump to the front of the job queue.`,
+      `Changed: walking leaves a fight: a ground click cancels the queued swing-back; a bite while walking does not turn you. A bite turns you to the biter after ${FIGHT_BACK_STILL} s standing still; toggle in Settings, Fighting.`,
     ],
   },
   {
     n: 72,
     day: '2026-10-03',
     lines: () => [
-      `Heavy blows: ${Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`).join(', ')} draw back every ${HEAVY_EVERY} blows. A red ring shows the reach for ${WIND_UP} second; anything still inside it takes ${HEAVY_HIT} times the blow.`,
-      `Blows cut, puncture or crush: ${blowSays('cut')} cut, ${blowSays('pierce')} puncture, ${blowSays('crush')} crush. ${HIDES.map((h) => `A ${HIDE_NAMES[h].toLowerCase()} (${Object.values(SPECIES).filter((d) => d.hide === h).map((d) => d.name.toLowerCase()).join(', ')}) ${hideSays(h)}.`).join(' ')}`,
-      `Armour against each kind: ${(Object.keys(ARMOUR_VS) as Array<keyof typeof ARMOUR_VS>).map((c) => `${c} ${armourSays(c)}`).join('; ')}.`,
-      `A landed maul ${sideOf(WEAPON_BY_ID.get('maul')!)}; a spear ${sideOf(WEAPON_BY_ID.get('spear')!)}; a knife ${sideOf(WEAPON_BY_ID.get('hunting_knife')!)}, never taking the last of it.`,
-      `Wounds to an arm or a hand slow every swing, up to ${pct(ARM_SLOW_MOST)}; wounds to a leg or a foot slow your walking, up to ${pct(LEG_SLOW_MOST)}.`,
-      `A blow from something that is not what you are fighting lands ${pct(FLANK_HIT - 1)} harder; each other thing on you takes ${pct(CROWD_BLOCK)} off a shield's chance to block; and your blow at something fighting somebody else lands ${pct(BLINDSIDE - 1)} harder.`,
-      'A panel at the top of the screen shows what you are fighting or have marked: its health, what it is doing, and what its hide makes of the blow in your hand.',
-      'A health bar over everything after you, a ring at your feet that fills as your swing comes, arrows at the edge of the view pointing at anything after you out of sight, and a red edge to the view when you are struck.',
-      `With the cursor on a hunter not yet after you, a dashed ring shows how far off it will notice you.`,
-      `Settings, Fighting, One line for a whole fight: skill gains in a fight are said once, ${FIGHT_QUIET} seconds after the last blow, with how long it lasted, what you dealt and what you took. On by default.`,
+      `Added: heavy blows: ${Object.values(SPECIES).filter((d) => d.heavy).map((d) => `${d.name.toLowerCase()}s`).join(', ')} every ${HEAVY_EVERY} blows. Red ring shows the reach for ${WIND_UP} s; anything inside takes ${HEAVY_HIT}× the blow.`,
+      `Added: blow types: ${blowSays('cut')} cut, ${blowSays('pierce')} puncture, ${blowSays('crush')} crush. ${HIDES.map((h) => `${HIDE_NAMES[h]} (${Object.values(SPECIES).filter((d) => d.hide === h).map((d) => d.name.toLowerCase()).join(', ')}): ${hideSays(h)}.`).join(' ')}`,
+      `Added: armour by blow type: ${(Object.keys(ARMOUR_VS) as Array<keyof typeof ARMOUR_VS>).map((c) => `${c} ${armourSays(c)}`).join('; ')}.`,
+      `Added: maul hit ${sideOf(WEAPON_BY_ID.get('maul')!)}; spear ${sideOf(WEAPON_BY_ID.get('spear')!)}; knife ${sideOf(WEAPON_BY_ID.get('hunting_knife')!)}, never taking the last of it.`,
+      `Added: arm or hand wounds slow swings, up to ${pct(ARM_SLOW_MOST)}; leg or foot wounds slow walking, up to ${pct(LEG_SLOW_MOST)}.`,
+      `Added: a blow from something other than your target +${pct(FLANK_HIT - 1)}; each extra attacker −${pct(CROWD_BLOCK)} shield block chance; your blow on something fighting someone else +${pct(BLINDSIDE - 1)}.`,
+      'Added: target panel (top of screen): health, current action, and its hide versus your weapon\'s blow.',
+      'Added: health bars over attackers, a swing-timer ring at your feet, edge arrows to off-screen attackers, red screen edge when struck.',
+      'Added: cursor on a hunter not yet after you: dashed ring shows its notice range.',
+      `Added: Settings, Fighting, One line for a whole fight (default on): fight skill gains reported once, ${FIGHT_QUIET} s after the last blow, with duration, damage dealt and taken.`,
     ],
   },
   {
     n: 73,
     day: '2026-10-03',
     lines: () => [
-      `Packs: ${listed(Object.values(SPECIES).filter((d) => d.pack).map((d) => `${d.name.toLowerCase()}s`))} share a home, up to ${PACK_MOST} to one. When one has your scent, every other of its kind within ${PACK_CALL} tiles comes too, and they spread round you ${CIRCLE_R} tiles out before coming in from their own sides.`,
-      `Throwers: ${listed(Object.values(SPECIES).filter((d) => d.throws).map((d) => `${d.name.toLowerCase()}s`))} stand off ${KEEP_OFF} tiles and throw from up to ${THROW_REACH}, ${pct(THROW_HIT)} of a blow; closer than ${KEEP_OFF - BACK_SLACK} they back away at ${pct(BACK_PACE)} of their walk.`,
-      `Nerve: a hunter turns tail below ${pct(HUNTER_TURN)} health, a monster below ${pct(MONSTER_TURN)}, ${listed(Object.values(SPECIES).filter((d) => d.coward).map((d) => `${d.name.toLowerCase()}s`))} below ${pct(COWARD_AT)}, or ${pct(COWARD_DRAG)} once one of their kind nearby has run. Kill or rout the one leading a pack and the whole pack runs.`,
-      `Companion orders, from wherever you stand: Attack my target (${defaultKey('pet_attack')}, or Set … on it from a wild one's menu), whatever its stance; Fall back (${defaultKey('pet_back')}), no fight of its own for ${FALL_BACK} seconds; and a Guarding you stance that goes for anything hunting you within ${COMPANION_SIGHT} tiles and stays within ${GUARD_RANGE} tiles of you. A dashed blue line shows what it is fighting.`,
-      `Bows on the move: walking keeps a draw going at ${pct(DRAW_WALK)} of your pace, and it keeps loosing while the target is in range. A line to the target fills with the draw, amber in range and grey out of it.`,
+      `Added: packs: ${listed(Object.values(SPECIES).filter((d) => d.pack).map((d) => `${d.name.toLowerCase()}s`))} share a home, up to ${PACK_MOST}. When one has your scent, all of its kind within ${PACK_CALL} tiles come; they circle at ${CIRCLE_R} tiles then close in from their sides.`,
+      `Added: throwers: ${listed(Object.values(SPECIES).filter((d) => d.throws).map((d) => `${d.name.toLowerCase()}s`))} keep ${KEEP_OFF} tiles off, throw from up to ${THROW_REACH} for ${pct(THROW_HIT)} of a blow; closer than ${KEEP_OFF - BACK_SLACK} they back off at ${pct(BACK_PACE)} of walk speed.`,
+      `Added: fleeing: hunters below ${pct(HUNTER_TURN)} health, monsters below ${pct(MONSTER_TURN)}, ${listed(Object.values(SPECIES).filter((d) => d.coward).map((d) => `${d.name.toLowerCase()}s`))} below ${pct(COWARD_AT)}, or ${pct(COWARD_DRAG)} once a nearby one of their kind has fled. Killing or routing a pack leader routs the pack.`,
+      `Added: companion orders, any distance: Attack my target (${defaultKey('pet_attack')}, or Set … on it from a wild one's menu), any stance; Fall back (${defaultKey('pet_back')}): no fighting for ${FALL_BACK} s; Guarding you stance: attacks anything hunting you within ${COMPANION_SIGHT} tiles, stays within ${GUARD_RANGE} tiles. Dashed blue line to its target.`,
+      `Added: bows while moving: walking continues a draw at ${pct(DRAW_WALK)} speed; keeps loosing while in range. Target line fills with the draw: amber in range, grey out.`,
     ],
   },
   {
     n: 74,
     day: '2026-10-03',
     lines: () => [
-      `Dodge: every blow a creature lands on you is first rolled against ${finePercent(DODGE_PER_CONTROL)} for every point of body control past the ${DODGE_FROM} everyone starts with, less ${finePercent(DODGE_PER_KG)} for every kilogram of armour you wear. A dodged blow takes nothing and trains body control.`,
-      `Critical hits: a blow or shot that lands is critical ${percent(CRIT_BASE)} of the time plus ${finePercent(CRIT_PER_SKILL)} for every point of the weapon's subskill, ${times(CRIT_KNIFE)} as often with a knife, and lands ${percent(CRIT_HIT - 1)} harder. Its number rises larger and in orange.`,
-      `Arrow heads, fletched like arrows: broadheads bleed ${percent(KNIFE_BLEED)} of the shot a second for ${KNIFE_BLEED_SECS} seconds; bodkins land ${percent(BODKIN_HIDE - 1)} harder on a thick hide, shell or scales; blunts crush, knock a heavy blow off its stroke and put the next back ${STAGGER_MAUL} second. Shoot these first on a stack of arrows picks the kind a shot takes.`,
-      `Venom: ${listed(Object.values(SPECIES).filter((d) => d.venom).map((d) => `${d.name.toLowerCase()}`))} bites take ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds while the wound is undressed. Burns wear the armour they land on ${times(BURN_WEAR)} as fast.`,
-      `Threat: a creature turns on your companion when it strikes, once you have not hurt it for ${THREAT_HOLD} seconds, or at once for a companion Guarding you, and back to you the same way. While it fights your companion it strikes at your companion and does not count among those on you.`,
-      `Consider: Examine on a wild creature, and the target panel, say about how many of your blows would down it and how many of its would down you, and rate it Easy (it would take it ${times(CONSIDER_EASY)} as long or more to down you), Hard (less than ${percent(CONSIDER_HARD)} as long) or Even.`,
+      `Added: dodge: each creature hit is first rolled against ${finePercent(DODGE_PER_CONTROL)} per body control point above the starting ${DODGE_FROM}, −${finePercent(DODGE_PER_KG)} per kg of armour worn. Dodged: no damage; trains body control.`,
+      `Added: critical hits: ${percent(CRIT_BASE)} +${finePercent(CRIT_PER_SKILL)} per weapon subskill point, ${mult(CRIT_KNIFE)} with a knife; +${percent(CRIT_HIT - 1)} damage. Shown larger, in orange.`,
+      `Added: arrow heads (fletched like arrows): broadhead: bleed ${percent(KNIFE_BLEED)} of the shot/s for ${KNIFE_BLEED_SECS} s; bodkin: +${percent(BODKIN_HIDE - 1)} on thick hide, shell or scales; blunt: crush, interrupts a heavy blow, delays the next by ${STAGGER_MAUL} s. Shoot these first on an arrow stack picks the kind.`,
+      `Added: venom: ${listed(Object.values(SPECIES).filter((d) => d.venom).map((d) => `${d.name.toLowerCase()}`))} bites drain ${percent(VENOM_DRAIN)} health/s for ${VENOM_SECS} s while undressed. Armour wear from burns ${mult(BURN_WEAR)}.`,
+      `Added: threat: a creature switches to your companion when it strikes, after ${THREAT_HOLD} s without damage from you (at once if Guarding you), and back the same way. While on your companion it does not count as on you.`,
+      `Added: Consider (Examine on a wild creature, and the target panel): approx. your blows to down it and its blows to down you; Easy (it needs ${mult(CONSIDER_EASY)} the time or more), Hard (under ${percent(CONSIDER_HARD)} as long) or Even.`,
     ],
   },
   {
     n: 75,
     day: '2026-10-04',
     lines: () => [
-      `Patrons: at ${PATRON_AT} faith take ${PATRONS.map((p) => `${p.name} (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`).join(', ').replace(/, ([^,]*)$/, ' or $1')} as your patron, for good, in the new Faith window. Each offers ${SPELLS_PER_TIER} spells at each of ${FAITH_TIER_AT.length} tiers (${FAITH_TIER_AT.join(', ')} faith), one taken per tier. The first spells, the Blessing's, are next.`,
-      `The spell bar, bottom and middle: ${BAR_SLOTS} slots, ${(['class', 'faith', 'path'] as const).map((s) => `${slotsFor(s)} ${SCHOOL_NAMES[s].toLowerCase()}`).join(', ')}. Click a slot or press Shift and its number to call it; right-click to choose what goes in it.`,
-      `The Prayer skill is called Faith now. Nothing else about it has changed.`,
+      `Added: patrons: at ${PATRON_AT} faith take ${PATRONS.map((p) => `${p.name} (${ALIGNMENT_NAMES[p.alignment].toLowerCase()})`).join(', ').replace(/, ([^,]*)$/, ' or $1')}, permanently, in the Faith window. ${SPELLS_PER_TIER} spells at each of ${FAITH_TIER_AT.length} tiers (${FAITH_TIER_AT.join(', ')} faith), 1 per tier. Blessing's spells next.`,
+      `Added: spell bar (bottom middle): ${BAR_SLOTS} slots, ${(['class', 'faith', 'path'] as const).map((s) => `${slotsFor(s)} ${SCHOOL_NAMES[s].toLowerCase()}`).join(', ')}. Click or Shift+number to cast; right-click to assign.`,
+      'Changed: Prayer skill renamed Faith. No other change.',
     ],
   },
   {
     n: 76,
     day: '2026-10-04',
     lines: () => [
-      `Faith has ${FAITH_TIER_AT.length} tiers now, at ${FAITH_TIER_AT.join(', ')} faith, each still offering ${SPELLS_PER_TIER} spells of which you take one.`,
-      `Every spell says what it can be cast on: ${listedOr(SPELL_ONS.map((o) => SPELL_ON_WORDS[o]))}. Right-click a person, a creature, a thing or the ground to cast a spell from your bar on it; anything but you and what you carry has to be within ${SPELL_REACH} tiles.`,
+      `Changed: Faith tiers: ${FAITH_TIER_AT.length}, at ${FAITH_TIER_AT.join(', ')} faith; ${SPELLS_PER_TIER} spells each, 1 taken.`,
+      `Added: each spell lists its targets: ${listedOr(SPELL_ONS.map((o) => SPELL_ON_WORDS[o]))}. Right-click a person, creature, item or ground to cast from your bar; anything but you and your carried items within ${SPELL_REACH} tiles.`,
     ],
   },
   {
     n: 77,
     day: '2026-10-04',
     lines: () => [
-      `The Blessing's spells are written, ${SPELLS_PER_TIER} at each tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'blessing').map((s) => s.name))}. What each does, to the number, is in the Faith window.`,
-      `Take the Blessing as your patron at ${PATRON_AT} faith, take a spell at each tier as your faith reaches it, and put ${numberWord(slotsFor('faith'))} of them on the spell bar.`,
+      `Added: Blessing spells, ${SPELLS_PER_TIER} per tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'blessing').map((s) => s.name))}. Exact effects in the Faith window.`,
+      `Added: patron at ${PATRON_AT} faith; 1 spell per tier as faith reaches it; ${num(slotsFor('faith'))} on the spell bar.`,
     ],
   },
   {
     n: 78,
     day: '2026-10-04',
     lines: () => [
-      `Justice's spells are written, ${SPELLS_PER_TIER} at each tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'justice').map((s) => s.name))}. What each does, to the number, is in the Faith window.`,
-      `At each tier one judges what it is cast on, one keeps order in a fight, and one measures: an Oath binds only friends, and Restitution brings home whatever your latest grave holds.`,
+      `Added: Justice spells, ${SPELLS_PER_TIER} per tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'justice').map((s) => s.name))}. Exact effects in the Faith window.`,
+      'Added: per tier: 1 spell judges its target, 1 keeps order in a fight, 1 measures. Oath binds friends only; Restitution returns your latest grave\'s contents.',
     ],
   },
   {
     n: 79,
     day: '2026-10-04',
     lines: () => [
-      `Chaos's spells are written, ${SPELLS_PER_TIER} at each tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'chaos').map((s) => s.name))}. What each does, to the number, is in the Faith window.`,
-      `At each tier one ruins, one dreads, and one is a bargain paid for in your own health or your own things rather than favour. None of them is cast on another person.`,
+      `Added: Chaos spells, ${SPELLS_PER_TIER} per tier: ${listed(FAITH_SPELLS.filter((s) => s.patron === 'chaos').map((s) => s.name))}. Exact effects in the Faith window.`,
+      'Added: per tier: 1 spell ruins, 1 dreads, 1 is a bargain paid in your health or items instead of favour. None target another person.',
     ],
   },
   {
@@ -1134,16 +1151,16 @@ export const NEWS: News[] = [
     lines: () => {
       const job = (id: string): string => {
         const r = RECIPE_BY_ID.get(id);
-        return r ? `<b>${r.label}</b> (${billWords(r.inputs.map((i) => [i.item, i.count ?? 1] as const), true)} into ${countOf(r.result, r.count ?? 1, true)})` : id;
+        return r ? `${r.label} (${billWords(r.inputs.map((i) => [i.item, i.count ?? 1] as const), true)} into ${countOf(r.result, r.count ?? 1, true)})` : id;
       };
       const panes = (type: 'window' | 'bay'): number => WALL_TYPE_BY_ID.get(type)?.fittings?.find(([item]) => item === 'glass')?.[1] ?? 0;
       const stained = MATERIAL_BY_ID.get('stained_glass');
       const bottle = itemDef('bottle');
       return [
-        `Glassblowing is a new skill, and the Artisan's: at a hot smelter, ${listed(['make_glass', 'make_glass_panel', 'make_bottle', 'make_stained_glass'].map(job))}. A firing of stained glass that fails keeps the gem and the sand.`,
-        `Windows, bay windows and glasshouse roofs are glazed with glass panels: a window takes ${panes('window')} and a bay window ${panes('bay')}. Every pane you had is a glass panel now.`,
-        stained ? `A new material to build in, stained glass: ${billWords(stained.bill, true)} to a solid wall, as heavy as ${heftWord(stained.heft)} and up to ${stained.storeys} storeys tall. ${onlySaid(stained)}` : '',
-        `A bottle holds ${bottle.holds} of one food or drink, and what is in it rots at ${share(bottle.shelter ?? 1)} the rate if it is left lying about.`,
+        `Added: Glassblowing skill (Artisan), at a hot smelter: ${listed(['make_glass', 'make_glass_panel', 'make_bottle', 'make_stained_glass'].map(job))}. Failed stained glass keeps the gem and sand.`,
+        `Changed: windows, bay windows and glasshouse roofs glazed with glass panels: window ${panes('window')}, bay window ${panes('bay')}. Existing panes converted to glass panels.`,
+        stained ? `Added: stained glass material: ${billWords(stained.bill, true)} per solid wall, weight ${heftWord(stained.heft)}, up to ${stained.storeys} storeys. ${onlySaid(stained)}` : '',
+        `Added: bottle: holds ${bottle.holds} of 1 food or drink; contents left lying rot at ${frac(bottle.shelter ?? 1)} the rate.`,
       ].filter(Boolean);
     },
   },
@@ -1151,7 +1168,7 @@ export const NEWS: News[] = [
     n: 81,
     day: '2026-10-04',
     lines: () => [
-      `You may pray at an altar once every ${spanWords(PRAYER_REST)}, and each prayer trains Faith by about +${skillGain(1, PRAYER_GAIN, 1).toFixed(1)} at Faith 1, +${skillGain(20, PRAYER_GAIN, 1).toFixed(1)} at 20 and +${skillGain(50, PRAYER_GAIN, 1).toFixed(1)} at 50.`,
+      `Changed: altar prayer once every ${dur(PRAYER_REST)}; Faith gain per prayer approx. +${skillGain(1, PRAYER_GAIN, 1).toFixed(1)} at Faith 1, +${skillGain(20, PRAYER_GAIN, 1).toFixed(1)} at 20, +${skillGain(50, PRAYER_GAIN, 1).toFixed(1)} at 50.`,
     ],
   },
   {
@@ -1161,9 +1178,9 @@ export const NEWS: News[] = [
       const [low, high, altar] = [1, 100, 50];
       const banks = (v: number): number => Math.round(prayerWorth(altar, PRAYER_PEAKS[0], v));
       return [
-        `Prayer is a skill of its own, and everybody starts it at ${low}. Each prayer trains Prayer by about +${skillGain(low, tryGain(true), 1).toFixed(1)} and Faith by about +${skillGain(low, PRAYER_GAIN, 1).toFixed(1)}, at ${low}.`,
-        `Prayer sets the favour a prayer banks: at a quality ${altar} altar at ${String(PRAYER_PEAKS[0]).padStart(2, '0')}:00, ${banks(low)} at Prayer ${low} and ${banks(high)} at Prayer ${high}. Faith no longer adds to it.`,
-        `Faith sets the most favour you can hold: ${Math.floor(favourCap(low))} at Faith ${low} and ${Math.floor(favourCap(high))} at Faith ${high}.`,
+        `Added: Prayer skill, starting at ${low}. Per prayer at ${low}: Prayer approx. +${skillGain(low, tryGain(true), 1).toFixed(1)}, Faith approx. +${skillGain(low, PRAYER_GAIN, 1).toFixed(1)}.`,
+        `Changed: favour banked per prayer set by Prayer, not Faith: QL ${altar} altar at ${String(PRAYER_PEAKS[0]).padStart(2, '0')}:00: ${banks(low)} at Prayer ${low}, ${banks(high)} at Prayer ${high}.`,
+        `Changed: Faith sets max favour: ${Math.floor(favourCap(low))} at Faith ${low}, ${Math.floor(favourCap(high))} at Faith ${high}.`,
       ];
     },
   },
@@ -1173,9 +1190,9 @@ export const NEWS: News[] = [
     lines: () => {
       const mid = TRAVEL_TOP_AT / 2;
       return [
-        `Driving is a new skill: the team's pace on a cart or wagon you have the reins of is ${percent(drivingPace(mid) - 1)} faster at Driving ${mid} and ${percent(DRIVING_TOP)} faster at ${TRAVEL_TOP_AT}.`,
-        `Sailing is a new skill: any boat you have the helm of, rowed or sailed, goes ${percent(sailingPace(mid) - 1)} faster at Sailing ${mid} and ${percent(SAILING_TOP)} faster at ${TRAVEL_TOP_AT}.`,
-        'Each trains on every tile the cart or the boat goes into with you at the reins or the helm.',
+        `Added: Driving skill: cart or wagon team speed +${percent(drivingPace(mid) - 1)} at Driving ${mid}, +${percent(DRIVING_TOP)} at ${TRAVEL_TOP_AT}.`,
+        `Added: Sailing skill: boat speed at the helm, rowed or sailed, +${percent(sailingPace(mid) - 1)} at Sailing ${mid}, +${percent(SAILING_TOP)} at ${TRAVEL_TOP_AT}.`,
+        'Added: each trains per tile entered while at the reins or helm.',
       ];
     },
   },
@@ -1185,9 +1202,8 @@ export const NEWS: News[] = [
     lines: () => {
       const go = (v: number): string => skillGain(v, tryGain(true), 1).toFixed(v < 50 ? 2 : 3);
       return [
-        `Every skill now rises at ${share(GAIN_RATE)} of the pace it did: every gain, yours and your workers' and your wildermon's, is ${share(GAIN_RATE)} of what it was.`,
-        `A job that comes off is worth about +${go(1)} at level 1, +${go(50)} at 50 and +${go(90)} at 90, and the last point of a skill takes about ${numberWord(Math.round(1 / (MIN_GAIN * GAIN_RATE)))} goes.`,
-        'What you have already learned stays where it is.',
+        `Changed: all skill gain to ${frac(GAIN_RATE)} of before (players, workers, wildermon); skill already learned is kept.`,
+        `Changed: a successful go approx. +${go(1)} at level 1, +${go(50)} at 50, +${go(90)} at 90; the last point takes about ${num(Math.round(1 / (MIN_GAIN * GAIN_RATE)))} goes.`,
       ];
     },
   },
@@ -1195,8 +1211,8 @@ export const NEWS: News[] = [
     n: 85,
     day: '2026-10-06',
     lines: () => [
-      `Plant grass on a tile of dirt with ${GRASS_PLANT} mixed grass in your pack and the tile is grass. Dirt never grows grass back of itself.`,
-      `Cut grass gives ${numberWord(GRASS_PER_CUT)} mixed grass a cut.`,
+      `Added: Plant grass on dirt with ${GRASS_PLANT} mixed grass in pack: tile becomes grass. Dirt never regrows grass by itself.`,
+      `Changed: Cut grass gives ${num(GRASS_PER_CUT)} mixed grass a cut.`,
     ],
   },
   {
@@ -1206,12 +1222,12 @@ export const NEWS: News[] = [
       const blade = CLASSES.find((c) => c.id === 'blade');
       const first = perksOf('blade').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `The ${blade?.name} is the first fighting trade on spells and passives: ${numberWord(CLASS_TIER_AT.length)} tiers, each offering `
-          + `${numberWord(PERKS_PER_TIER - 1)} spells and a passive, of which you take one. Its tree and every node bought in it are gone; its rite stays, above its tiers.`,
-        `Its tiers open on its own class level: ${CLASS_LEVEL_START} when you take it up, then ${listed(CLASS_TIER_AT.slice(1).map(String))}. `
-          + `The level rises with every blow that lands while you hold the trade, on the curve a skill rises on, and a kill raises it ${numberWord(1 + CLASS_LEARN_KILL / CLASS_LEARN_BLOW)} times as much.`,
-        first ? `Its ${numberWord(classSpellsOf('blade').length)} spells go in the class slots of the spell bar and are paid for in stamina. ${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        'A creature a Summons or a Challenge turns on you is held on you for the whole of it, however often you strike it.',
+        `Changed: ${blade?.name} from a tree to spells and passives: ${num(CLASS_TIER_AT.length)} tiers, each offering `
+          + `${num(PERKS_PER_TIER - 1)} spells and a passive, take 1. Removed: its tree and bought nodes. Rite kept, above the tiers.`,
+        `Added: tiers open on class level: ${CLASS_LEVEL_START} on taking it up, then ${listed(CLASS_TIER_AT.slice(1).map(String))}. `
+          + `Class level rises per landed blow while you hold the trade, on the skill curve; a kill counts ${num(1 + CLASS_LEARN_KILL / CLASS_LEARN_BLOW)} times as much.`,
+        first ? `Added: ${num(classSpellsOf('blade').length)} spells in the spell bar's class slots, paid in stamina. ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Added: a creature turned on you by Summons or Challenge stays on you for its full duration however often you strike it.',
       ].filter(Boolean);
     },
   },
@@ -1223,11 +1239,11 @@ export const NEWS: News[] = [
       const first = perksOf('berserker').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       const wants = spells.filter((sp) => sp.needs).map((sp) => sp.name);
       return [
-        `The Berserker is on spells and passives too: ${numberWord(spells.length)} spells and ${numberWord(perksOf('berserker').length - spells.length)} passives `
-          + `in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class level, as the Sworn Blade's are. Its tree and every node bought in it are gone; its rite stays.`,
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        wants.length ? `${listed(wants)} want the weapon they name in your hand, and are refused without it.` : '',
-        'A blow a fighting trade\'s spell strikes does what a swing of the weapon does besides: a maul staggers, a spear holds it off, a knife opens it up.',
+        `Changed: Berserker from a tree to ${num(spells.length)} spells and ${num(perksOf('berserker').length - spells.length)} passives `
+          + `in ${num(CLASS_TIER_AT.length)} tiers on class level, as Sworn Blade. Removed: its tree and bought nodes. Rite kept.`,
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        wants.length ? `Added: ${listed(wants)} need the named weapon in hand; refused without it.` : '',
+        'Added: a fighting-trade spell blow also has its weapon\'s swing effect: maul staggers, spear holds off, knife opens it up.',
       ].filter(Boolean);
     },
   },
@@ -1238,11 +1254,11 @@ export const NEWS: News[] = [
       const spells = classSpellsOf('pikeman');
       const first = perksOf('pikeman').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `The Pikeman is on spells and passives too: ${numberWord(spells.length)} spells and ${numberWord(perksOf('pikeman').length - spells.length)} passives `
-          + `in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class level, as the Sworn Blade's and the Berserker's are. Its tree and every node bought `
-          + 'in it are gone; its rite stays.',
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        'In the game kept in this browser, a Berserker\'s Executioner and Pain Fuels now count on every blow you land, as they always did on an island.',
+        `Changed: Pikeman from a tree to ${num(spells.length)} spells and ${num(perksOf('pikeman').length - spells.length)} passives `
+          + `in ${num(CLASS_TIER_AT.length)} tiers on class level, as Sworn Blade and Berserker. Removed: its tree and bought nodes. `
+          + 'Rite kept.',
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Fixed: offline, Berserker\'s Executioner and Pain Fuels count on every landed blow, as on an island.',
       ].filter(Boolean);
     },
   },
@@ -1253,10 +1269,10 @@ export const NEWS: News[] = [
       const spells = classSpellsOf('archer');
       const first = perksOf('archer').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `The Archer is on spells and passives too: ${numberWord(spells.length)} spells and ${numberWord(perksOf('archer').length - spells.length)} passives `
-          + `in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class level, as the Sworn Blade's, the Berserker's and the Pikeman's are. Its tree and `
-          + 'every node bought in it are gone; its rite stays.',
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        `Changed: Archer from a tree to ${num(spells.length)} spells and ${num(perksOf('archer').length - spells.length)} passives `
+          + `in ${num(CLASS_TIER_AT.length)} tiers on class level, as Sworn Blade, Berserker and Pikeman. Removed: its tree and `
+          + 'bought nodes. Rite kept.',
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
       ].filter(Boolean);
     },
   },
@@ -1267,10 +1283,10 @@ export const NEWS: News[] = [
       const spells = classSpellsOf('skirmisher');
       const first = perksOf('skirmisher').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `The Skirmisher is on spells and passives too: ${numberWord(spells.length)} spells and `
-          + `${numberWord(perksOf('skirmisher').length - spells.length)} passives in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class level, `
-          + 'as the Sworn Blade’s, the Berserker’s, the Pikeman’s and the Archer’s are. Its tree and every node bought in it are gone; its rite stays.',
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        `Changed: Skirmisher from a tree to ${num(spells.length)} spells and `
+          + `${num(perksOf('skirmisher').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class level, `
+          + 'as Sworn Blade, Berserker, Pikeman and Archer. Removed: its tree and bought nodes. Rite kept.',
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
       ].filter(Boolean);
     },
   },
@@ -1281,12 +1297,12 @@ export const NEWS: News[] = [
       const spells = classSpellsOf('chirurgeon');
       const first = perksOf('chirurgeon').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `The Chirurgeon is on spells and passives too: ${numberWord(spells.length)} spells and `
-          + `${numberWord(perksOf('chirurgeon').length - spells.length)} passives in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class level, `
-          + 'as the Sworn Blade’s, the Berserker’s, the Pikeman’s, the Archer’s and the Skirmisher’s are. Its tree and every node bought in it are gone; '
-          + 'its rite stays.',
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        `A heal teaches the Chirurgeon only while whoever it is put on has something hunting them.`,
+        `Changed: Chirurgeon from a tree to ${num(spells.length)} spells and `
+          + `${num(perksOf('chirurgeon').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class level, `
+          + 'as Sworn Blade, Berserker, Pikeman, Archer and Skirmisher. Removed: its tree and bought nodes. '
+          + 'Rite kept.',
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Added: a heal trains Chirurgeon only while its target has something hunting them.',
       ].filter(Boolean);
     },
   },
@@ -1297,12 +1313,12 @@ export const NEWS: News[] = [
       const spells = classSpellsOf('beastmaster');
       const first = perksOf('beastmaster').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       return [
-        `The Beastmaster is on spells and passives too: ${numberWord(spells.length)} spells and `
-          + `${numberWord(perksOf('beastmaster').length - spells.length)} passives in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class `
-          + 'level, as the Sworn Blade’s, the Berserker’s, the Pikeman’s, the Archer’s, the Skirmisher’s and the Chirurgeon’s are. Its tree '
-          + 'and every node bought in it are gone; its rite stays.',
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        'Every blow your companion lands teaches a Beastmaster’s trade, as a blow of your own does.',
+        `Changed: Beastmaster from a tree to ${num(spells.length)} spells and `
+          + `${num(perksOf('beastmaster').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + 'level, as Sworn Blade, Berserker, Pikeman, Archer, Skirmisher and Chirurgeon. Removed: its tree '
+          + 'and bought nodes. Rite kept.',
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Added: each blow your companion lands trains Beastmaster class level, as your own blows do.',
       ].filter(Boolean);
     },
   },
@@ -1314,12 +1330,12 @@ export const NEWS: News[] = [
       const first = perksOf('kindler').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       const before = CLASSES.filter((c) => c.kind === 'combat' && c.id !== 'kindler' && PERK_CLASSES.has(c.id)).map((c) => `the ${c.name}’s`);
       return [
-        `The Kindler is on spells and passives too: ${numberWord(spells.length)} spells and `
-          + `${numberWord(perksOf('kindler').length - spells.length)} passives in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class `
-          + `level, as ${listed(before)} are. Its tree and every node bought in it are gone; its rite stays.`,
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        'A Kindler’s spell is cast out of the best garnet or ruby focus in your pack and does not wear it; every cast teaches kindling, '
-          + 'as an Ember does.',
+        `Changed: Kindler from a tree to ${num(spells.length)} spells and `
+          + `${num(perksOf('kindler').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept.`,
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Added: Kindler spells cast from the best garnet or ruby focus in your pack, no wear; each cast trains kindling, '
+          + 'as Ember does.',
       ].filter(Boolean);
     },
   },
@@ -1331,16 +1347,16 @@ export const NEWS: News[] = [
       const first = perksOf('binder').map((p) => CLASS_SPELL_BY_ID.get(p.id)).find((sp) => sp !== undefined);
       const before = CLASSES.filter((c) => c.kind === 'combat' && c.id !== 'binder' && PERK_CLASSES.has(c.id)).map((c) => `the ${c.name}’s`);
       return [
-        `The Binder is on spells and passives too: ${numberWord(spells.length)} spells and `
-          + `${numberWord(perksOf('binder').length - spells.length)} passives in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class `
-          + `level, as ${listed(before)} are. Its tree and every node bought in it are gone; its rite stays.`,
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        'A Binder’s spell is cast out of the best sapphire or diamond focus in your pack and does not wear it; every cast teaches binding, '
-          + 'as a Snare does.',
-        `A hold put on by ${listed([...CLASS_SPELLS.filter((sp) => 'hold' in sp.fx), ...spellsOf('binding')].map((sp) => sp.name))} `
-          + 'no longer ends when a blow turns the creature held on whoever struck it: it holds for as long as the spell says.',
-        'After a blow, a shot, a fire or a shatter, the sentence says what the creature is truly down to, counting everything that '
-          + 'made it take more than the blow.',
+        `Changed: Binder from a tree to ${num(spells.length)} spells and `
+          + `${num(perksOf('binder').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept.`,
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Added: Binder spells cast from the best sapphire or diamond focus in your pack, no wear; each cast trains binding, '
+          + 'as Snare does.',
+        `Fixed: a hold from ${listed([...CLASS_SPELLS.filter((sp) => 'hold' in sp.fx), ...spellsOf('binding')].map((sp) => sp.name))} `
+          + 'ended when a blow turned the held creature on its striker; now lasts its full stated duration.',
+        'Changed: after a blow, shot, fire or shatter, the message gives the creature\'s true remaining health, counting every '
+          + 'damage modifier.',
       ].filter(Boolean);
     },
   },
@@ -1353,16 +1369,16 @@ export const NEWS: News[] = [
       const before = CLASSES.filter((c) => c.kind === 'combat' && c.id !== 'warder' && PERK_CLASSES.has(c.id)).map((c) => `the ${c.name}’s`);
       const aegis = spellDef('aegis')!;
       return [
-        `The Warder is on spells and passives too: ${numberWord(spells.length)} spells and `
-          + `${numberWord(perksOf('warder').length - spells.length)} passives in ${numberWord(CLASS_TIER_AT.length)} tiers on its own class `
-          + `level, as ${listed(before)} are. Its tree and every node bought in it are gone; its rite stays. No trade is on a tree now.`,
-        first ? `${first.name}: ${spellTerms(first)} ${first.note}` : '',
-        'A Warder’s spell is cast out of the best topaz or emerald focus in your pack and does not wear it; every cast teaches warding, '
-          + 'as an Aegis does.',
-        `A skin is in hundredths of health now. An Aegis laid one of its whole force, so one cast took nearly every blow there was; it `
-          + `lays ${percent(skinOf(spellForce(aegis, FIRE_LOW, FIRE_LOW, 1)))} of full health at ${FIRE_LOW} warding with a QL ${FIRE_LOW} `
-          + `focus, up to ${percent(skinOf(spellForce(aegis, FIRE_TOP, FIRE_TOP, 1)))} at ${FIRE_TOP} with a QL ${FIRE_TOP} one, and every `
-          + 'skin already laid is brought down the same.',
+        `Changed: Warder from a tree to ${num(spells.length)} spells and `
+          + `${num(perksOf('warder').length - spells.length)} passives in ${num(CLASS_TIER_AT.length)} tiers on class `
+          + `level, as ${listed(before)}. Removed: its tree and bought nodes. Rite kept. No trade uses a tree now.`,
+        first ? `Added: ${first.name}: ${spellTerms(first)} ${first.note}` : '',
+        'Added: Warder spells cast from the best topaz or emerald focus in your pack, no wear; each cast trains warding, '
+          + 'as Aegis does.',
+        `Fixed: skins now in hundredths of health (Aegis laid its whole force, absorbing nearly every blow). Aegis `
+          + `skin ${percent(skinOf(spellForce(aegis, FIRE_LOW, FIRE_LOW, 1)))} of full health at ${FIRE_LOW} warding with a QL ${FIRE_LOW} `
+          + `focus, up to ${percent(skinOf(spellForce(aegis, FIRE_TOP, FIRE_TOP, 1)))} at ${FIRE_TOP} with QL ${FIRE_TOP}; `
+          + 'existing skins reduced the same.',
       ].filter(Boolean);
     },
   },
@@ -1371,13 +1387,13 @@ export const NEWS: News[] = [
     day: '2026-10-07',
     lines: () => {
       const staired = WALL_MATERIALS.filter((m) => takesAs(m, { floor: 'stairs' }));
-      const plank = (hand?: 'l'): string => billWords(Object.entries(floorBill('plank', 'stairs', undefined, hand).needed));
+      const plank = (hand?: 'l'): string => billWords(Object.entries(floorBill('plank', 'stairs', undefined, hand).needed), true);
       return [
-        `A second staircase, the ${SINGLE_STAIRS_NAME}, in all ${numberWord(staired.length)} materials a flight is built in: half the tile `
-          + `wide, up the half on your left or your right as you climb, with the stairwell beside it. Upper storey → `
-          + `Plan ${SINGLE_STAIRS_NAME}, and Q and E take it round the tile a half at a time.`,
-        `It costs ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials where the wide one costs ${percent(STAIRS_SHARE)}: `
-          + `${plank('l')} in plank, against ${plank()}. It takes you up and down as the wide one does.`,
+        `Added: ${SINGLE_STAIRS_NAME}, in all ${num(staired.length)} stair materials: 1/2 tile `
+          + `wide, left or right 1/2 as you climb, stairwell beside it. Upper storey → `
+          + `Plan ${SINGLE_STAIRS_NAME}; Q and E rotate it 1/2 tile at a time.`,
+        `Added: cost ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials (wide: ${percent(STAIRS_SHARE)}): `
+          + `plank ${plank('l')} vs ${plank()}. Climbs as the wide one.`,
       ];
     },
   },
@@ -1385,10 +1401,10 @@ export const NEWS: News[] = [
     n: 97,
     day: '2026-10-07',
     lines: () => [
-      'Carts and wagons go up wide staircases, indoors: drive onto a finished wide staircase from its foot, through an arch, '
-        + 'a double door or a gate, and you come off its head onto the storey over it, and drive on its finished floors.',
-      `No ${SINGLE_STAIRS_NAME}, ladder or roof takes wheels, nor does a staircase's side. The team goes up and down with its `
-        + 'wagon, and goes into and out of the traces on the ground floor only.',
+      'Added: carts and wagons climb finished wide staircases indoors: drive on from the foot through an arch, '
+        + 'double door or gate; exit at the head onto the storey above; drive on its finished floors.',
+      `Added: no wheels on a ${SINGLE_STAIRS_NAME}, ladder, roof or staircase side. The team moves with the `
+        + 'wagon; harness and unharness on the ground floor only.',
     ],
   },
   {
@@ -1402,15 +1418,15 @@ export const NEWS: News[] = [
         return `${cls.name}, ${p.name}, tier ${p.tier} (at ${cls.kind === 'combat' ? 'class level' : 'skill'} ${at}): ${p.note}`;
       };
       return [
-        'Some classes’ perks are changed. Anybody who had taken one that moved or went has that tier open to choose again.',
-        `New: ${said('smith_masters_mark')} It takes the place of Long Shift.`,
-        `New: ${said('cook_quick_kitchen')} It takes the place of the Cook’s Cool Pack.`,
-        `New: ${said('binder_hard_edges')} It takes the place of Unmoved.`,
-        `Moved: ${said('archer_bow_mastery')} ${said('archer_arrow_saver')}`,
-        `Better: ${said('artisan_gem_eye')}`,
-        'Renamed, where two trades had a perk of the same name: the Mason’s Nothing Wasted is Careful Builder, the Herdsman’s Any Bait '
-          + 'is Any Offering, and the Artisan’s Gem Eye is Gem Finder. Whoever had them keeps them.',
-        `${CLASS_SPELL_BY_ID.get('chirurgeon_healing_circle')!.name} now says what it does: ${CLASS_SPELL_BY_ID.get('chirurgeon_healing_circle')!.note}`,
+        'Changed: some class perks. A taken perk that moved or was removed reopens its tier.',
+        `Added: ${said('smith_masters_mark')} Replaces Long Shift.`,
+        `Added: ${said('cook_quick_kitchen')} Replaces the Cook’s Cool Pack.`,
+        `Added: ${said('binder_hard_edges')} Replaces Unmoved.`,
+        `Changed (moved): ${said('archer_bow_mastery')} ${said('archer_arrow_saver')}`,
+        `Changed (improved): ${said('artisan_gem_eye')}`,
+        'Changed (renamed, duplicate names): Mason’s Nothing Wasted to Careful Builder; Herdsman’s Any Bait '
+          + 'to Any Offering; Artisan’s Gem Eye to Gem Finder. Holders keep them.',
+        `Fixed: ${CLASS_SPELL_BY_ID.get('chirurgeon_healing_circle')!.name} description: ${CLASS_SPELL_BY_ID.get('chirurgeon_healing_circle')!.note}`,
       ];
     },
   },
@@ -1420,10 +1436,10 @@ export const NEWS: News[] = [
     lines: () => {
       const medic = PERK_BY_ID.get('naturalist_field_medic')!;
       return [
-        'Anybody can dress somebody else’s wounds: stand beside them, right-click them and choose Dress their wounds. It goes on '
-          + 'their worst wound, at your first aid and out of your pack.',
-        `The Naturalist’s ${medic.name} and the Chirurgeon’s ${PERK_BY_ID.get('chirurgeon_field_surgeon')!.name} now do this: ${medic.note} `
-          + 'Whoever had them keeps them.',
+        'Added: Dress their wounds (right-click a person beside you), for anyone: dresses their worst wound '
+          + 'at your first aid, from your pack.',
+        `Changed: Naturalist’s ${medic.name} and Chirurgeon’s ${PERK_BY_ID.get('chirurgeon_field_surgeon')!.name}: ${medic.note} `
+          + 'Holders keep them.',
       ];
     },
   },
@@ -1431,8 +1447,8 @@ export const NEWS: News[] = [
     n: 100,
     day: '2026-10-08',
     lines: () => [
-      `A better-made cart or wagon goes faster: ${percent(VEHICLE_QL_TOP)} faster at full quality, and that share of its quality `
-        + `below it (${percent(vehicleQlPace(QL_TOP / 2) - 1)} at half), whatever is pulling it, and past the top speed a team can reach.`,
+      `Added: cart and wagon speed by quality: +${percent(VEHICLE_QL_TOP)} at full quality, proportionally `
+        + `below (+${percent(vehicleQlPace(QL_TOP / 2) - 1)} at 1/2 quality), any team, beyond the team's top speed.`,
     ],
   },
   {
@@ -1446,11 +1462,11 @@ export const NEWS: News[] = [
       const east = island('EastIsle');
       const tundra = island('NortheastTundra');
       return [
-        `${capital(listed(skerry.ores.map(rock)))} is found on ${skerry.name} now, and nowhere else.`,
-        `${capital(listed(east.trees.filter((s) => TREE_DEFS[s].fruit).map(tree)))} grow on ${east.name}.`,
-        `The ${tundra.name} is bare plain rock. Its ${rock(tundra.stone)} and its ${listed((tundra.mountain ?? []).map(rock))} seams `
-          + 'lie only under its mountain, above the alpine line, and no other metal or seam is in its ground.',
-        'Islands founded before today have had the rock under those islands and their untouched trees changed to match.',
+        `Changed: ${listed(skerry.ores.map(rock))} only on ${skerry.name}.`,
+        `Changed: ${listed(east.trees.filter((s) => TREE_DEFS[s].fruit).map(tree))} grow on ${east.name}.`,
+        `Changed: ${tundra.name} is bare plain rock. Its ${rock(tundra.stone)} and ${listed((tundra.mountain ?? []).map(rock))} seams `
+          + 'only under its mountain, above the alpine line; no other metal or seam in its ground.',
+        'Changed: islands founded before today: rock under those regions and untouched trees converted to match.',
       ];
     },
   },
@@ -1458,98 +1474,96 @@ export const NEWS: News[] = [
     n: 102,
     day: '2026-10-08',
     lines: () => REGIONS.filter((R) => R.monsters || R.treeless).flatMap((R) => [
-      ...(R.treeless ? [`No tree grows of itself on the ${R.name.replace(/^The /, '')} any more, and none seeds there.`] : []),
-      ...(R.monsters ? [`Everything wild that stands up on the ${R.name.replace(/^The /, '')} is a monster, never a wildermon, and it holds ${times(R.monsters)} `
-        + `as many of each as the rest of the chart shares: ${listed(MONSTERS.map(([id]) => `${numberWord((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}.`] : []),
+      ...(R.treeless ? [`Changed: no trees grow or seed by themselves on the ${R.name.replace(/^The /, '')}.`] : []),
+      ...(R.monsters ? [`Changed: every wild creature that fights back on the ${R.name.replace(/^The /, '')} is a monster, never a wildermon, at ${mult(R.monsters)} `
+        + `the rest of the chart's share of each: ${listed(MONSTERS.map(([id]) => `${num((MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1))} ${SPECIES[id].name.toLowerCase()}${(MONSTER_CAP[id] ?? 1) * (R.monsters ?? 1) === 1 ? '' : 's'}`))}.`] : []),
     ]),
   },
   {
     n: 103,
     day: '2026-10-08',
     lines: () => [
-      `New coins are struck from ${COIN_METALS.join(' or ')} alone. Silver coins still change hands and come back as change.`,
-      `A strike of coins loses its lump when it fails, and past the smith's check the gold decides: it takes the die every time at QL ${QL_TOP} and `
-        + `${percent(coinPurity(0))} of the time at the bottom of the scale, in a straight line between.`,
-      `Gold comes out of the ground only under the mountain of the ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => R.name.replace(/^The /, '')).join(' and ')}. `
-        + 'No pan washes it and no hoard or chest holds it any more; gold seams anywhere else are iron now.',
-      `Foraging turns up a gold coin one go in ${numberWord(COIN_FIND_ONE_IN)}, up to ${numberWord(COIN_FINDS_A_DAY)} a day for each person. `
-        + 'A worker foraging for a deed never finds one.',
+      `Changed: new coins struck from ${COIN_METALS.join(' or ')} only. Silver coins still circulate and come back as change.`,
+      `Changed: a failed coin strike loses its lump. Past the smith's check, gold purity decides: takes the die always at QL ${QL_TOP}, `
+        + `${percent(coinPurity(0))} at the bottom of the scale, linear between.`,
+      `Changed: gold only from under the mountain of the ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => R.name.replace(/^The /, '')).join(' and ')}. `
+        + 'Removed: gold from panning, hoards and chests. Gold seams elsewhere are now iron.',
+      `Added: foraging finds a gold coin 1 go in ${num(COIN_FIND_ONE_IN)}, up to ${num(COIN_FINDS_A_DAY)} a day per person. `
+        + 'Deed foraging workers never find one.',
     ],
   },
   {
     n: 104,
     day: '2026-10-08',
     lines: () => [
-      'Trees and bushes are drawn from a picture kept at exactly their size on the screen, leaning as they grew, and the wind sways them a whole pixel at a time.',
-      `The swell on the sea is painted ${numberWord(SWELL_RATE)} times a second and moved with the view in between, instead of afresh every frame.`,
-      'People and wildermon seen close up are redrawn as often as they are from further out, no longer twice as often.',
-      `Settings has Show drawing times, which puts under the frame rate how many milliseconds each frame spends on the ground, ${listed(Object.keys(LAYERS))}, `
-        + `and Measure each layer, which leaves each of those out for ${numberWord(TRIAL_SECONDS)} second in turn and writes down the frame rate without it.`,
+      'Changed: trees and bushes drawn from a cached picture at exact screen size, leaning as grown; wind sway in whole pixels.',
+      `Changed: sea swell painted ${num(SWELL_RATE)} times a second, moved with the view between, not every frame.`,
+      'Changed: close-up people and wildermon redrawn as often as distant ones (was ×2 as often).',
+      `Added: Settings, Show drawing times: ms per frame under the frame rate for the ground, ${listed(Object.keys(LAYERS))}; `
+        + `Measure each layer: omits each for ${num(TRIAL_SECONDS)} second in turn and records the frame rate without it.`,
     ],
   },
   {
     n: 105,
     day: '2026-10-08',
     lines: () => [
-      `A person walking steadily one way is drawn from ${numberWord(WALK_FRAMES)} pictures a stride, kept from one stride to the next, instead of being drawn afresh `
-        + 'as they go; turning, starting, stopping or wearing something that shines, they are drawn as before.',
-      'Walking a path no longer stands still for a frame at every tile, so the body no longer eases to standing and back again at each step.',
-      'Only the part of the screen with sea on it takes the swell each frame.',
+      `Changed: a person walking steadily one way is drawn from ${num(WALK_FRAMES)} cached frames a stride; `
+        + 'turning, starting, stopping or wearing a shining item: drawn as before.',
+      'Fixed: path walking paused a frame at every tile (body eased to standing each step).',
+      'Changed: only the sea part of the screen takes the swell each frame.',
     ],
   },
   {
     n: 106,
     day: '2026-10-08',
     lines: () => [
-      'A woman\'s build has a fuller chest that shows from the side and at three-quarters, a narrower waist and wider hips; '
-        + 'finer, higher-arched brows, a lash line on each eye and fuller lips. Neither has half of the body\'s difference and none of the face\'s.',
-      `Roll me one gives a man a beard ${percent(BEARD_ODDS.man)} of the time, neither ${percent(BEARD_ODDS.neither)}, `
-        + `and a woman ${BEARD_ODDS.woman ? percent(BEARD_ODDS.woman) : 'never'}. Any build can still choose any beard.`,
+      'Changed: woman build: fuller chest visible side and three-quarter, narrower waist, wider hips; '
+        + 'finer, higher-arched brows, lash lines, fuller lips. Neither build: 1/2 the body difference, none of the face\'s.',
+      `Changed: Roll me one beard odds: man ${percent(BEARD_ODDS.man)}, neither ${percent(BEARD_ODDS.neither)}, `
+        + `woman ${BEARD_ODDS.woman ? percent(BEARD_ODDS.woman) : 'never'}. Any build can still choose any beard.`,
     ],
   },
   {
     n: 107,
     day: '2026-10-08',
     lines: () => [
-      'A leg is one tube from hip to ankle that bends at the knee, and an arm one from shoulder to wrist that bends at the elbow, with no separate knee or elbow cap.',
-      'Walking and running are keyed step by step: the foot on the ground stays put while the body passes over it, the knee is driven forward, and a turn is led by the head.',
-      'An arm holding a blade, spear or shield swings less than a free one and holds it off the leg.',
-      `Standing still shifts the weight from foot to foot; waving and hopping were redone, and a hop lasts ${EMOTE_BY_ID.get('hop')!.seconds} seconds.`,
-      'Swimming is a breaststroke with the body cut at the waterline, leaving rings behind; a driver sits on the seat of the cart, wagon or boat, holds the reins or pulls the oars.',
+      'Changed: legs 1 tube hip to ankle bending at the knee; arms 1 tube shoulder to wrist bending at the elbow; no separate knee or elbow caps.',
+      'Changed: walk and run keyed per step: planted foot stays put, knee driven forward, turns led by the head.',
+      'Changed: an arm holding a blade, spear or shield swings less and keeps it off the leg.',
+      `Changed: standing shifts weight foot to foot; wave and hop redone; hop lasts ${EMOTE_BY_ID.get('hop')!.seconds} s.`,
+      'Changed: swimming is a breaststroke, body cut at the waterline, rings behind; drivers sit on the cart, wagon or boat seat holding reins or oars.',
     ],
   },
   {
     n: 108,
     day: '2026-10-08',
     lines: () => [
-      `Every class, faith and arcane spell (${SPELL_VISUALS.size} of them) is drawn when the island accepts it: `
-        + 'the caster moves through a cast, and the spell shows on the way to its target, where it lands and for as long as it lasts. '
-        + 'Other people see your casts and you see theirs. A spell the island refuses draws nothing.',
+      `Added: visuals for all ${SPELL_VISUALS.size} class, faith and arcane spells, drawn on island acceptance: `
+        + 'cast animation, travel to target, impact, and duration. '
+        + 'Visible to others. Refused spells draw nothing.',
     ],
   },
   {
     n: 109,
     day: '2026-10-09',
     lines: () => [
-      `Walking on your own feet is ${Number(BASE_SPEED.toFixed(2))} tiles a second on open ground, down from 2.4: one stride of the legs drawn under you `
-        + 'for each stride\'s worth of ground, so a foot on the ground stays where it was put. Roads, wading, swimming, slopes, wounds, a load, '
-        + 'drawing a bow and Hit and Run are each the same share of this pace as they were of the old one.',
-      `Going faster than a walk on foot, a jog or a run takes longer strides as well as quicker ones, up to ${times(strideAt(1) / strideAt(0))} `
-        + 'a walking stride at a flat run, and its feet stay planted too.',
-      'Mounts, carts, wagons and boats go exactly as fast as they did, and so do wildermon and monsters.',
+      `Changed: walk speed on open ground from 2.4 to ${Number(BASE_SPEED.toFixed(2))} tiles/s, matching the drawn stride (planted feet stay put). Roads, wading, swimming, slopes, wounds, load, `
+        + 'drawing a bow and Hit and Run keep the same share of this pace.',
+      `Changed: jogging and running lengthen strides as well as quicken them, up to ${mult(strideAt(1) / strideAt(0))} `
+        + 'walking stride length at a flat run; feet stay planted. Mounts, carts, wagons, boats, wildermon and monsters unchanged.',
     ],
   },
   {
     n: 110,
     day: '2026-10-10',
     lines: () => [
-      `Mote swirls: at each turn of the woods the day's swirls go and ${numberWord(SWIRLS_A_DAY)} new ones are put down anywhere on the map, `
-        + 'land or water, none where a tree stands or inside a building.',
-      `A swirl on water is water. On land it is dark ${percent(SWIRL_DARK)} of the time, light ${percent(SWIRL_LIGHT)}, and otherwise `
-        + `the island's own element: ${listed(REGIONS.map((R) => `${ISLAND_ELEMENT[R.key]} on ${R.name.replace(/^The /, 'the ')}`))}.`,
-      `Elementalism is a new skill. Collect motes on a swirl gives ${numberWord(MOTES_LEAST)} mote of its element under Elementalism ${MOTES_STEP}, `
-        + `one more for every ${MOTES_STEP} points and ${numberWord(MOTES_MOST)} from ${MOTES_MOST_AT}, and the swirl is gone for everybody. `
-        + 'Each collect trains Elementalism, and nothing else does.',
+      `Added: mote swirls: at each turn of the woods the day's swirls go and ${num(SWIRLS_A_DAY)} new ones appear anywhere, `
+        + 'land or water, never on a tree or inside a building.',
+      `Added: swirl element: water on water; on land dark ${percent(SWIRL_DARK)}, light ${percent(SWIRL_LIGHT)}, else `
+        + `the island's element: ${listed(REGIONS.map((R) => `${ISLAND_ELEMENT[R.key]} on ${R.name.replace(/^The /, 'the ')}`))}.`,
+      `Added: Elementalism skill. Collect motes on a swirl: ${num(MOTES_LEAST)} mote of its element below Elementalism ${MOTES_STEP}, `
+        + `+1 per ${MOTES_STEP} points, ${num(MOTES_MOST)} from ${MOTES_MOST_AT}; the swirl is removed for everyone. `
+        + 'Only collecting trains Elementalism.',
     ],
   },
   {
@@ -1562,19 +1576,19 @@ export const NEWS: News[] = [
       // What this entry announced, which 117 changed: the litres a boil made and a dyeing took that day.
       const was = WAS_DYE;
       return [
-        `Dye is a liquid, kept in a bucket or a barrel, and is boiled in three colours only: ${listed(PRIMARIES.map((p) => `${p} from ${from(p)}`))}. `
-          + `A boil turns its bucket of lye into a bucket holding ${numberWord(was.boil)} litres of dye, at the QL the alchemy gives it, `
-          + `where it made ${numberWord(LEGACY_POTS)} pots of one of ${numberWord(LEGACY_DYES.length)} colours. ${capital(listed(gone))} no longer make dye, and do everything else they did.`,
-        'Every other colour is mixed by pouring: dye poured into a barrel that holds dye mixes with it, the share of each primary and the QL each the average of the two by litres. '
-          + 'Dye goes in with nothing but dye, and nothing else goes in with dye. A bucket fills from a barrel of dye, with less than a bucket if that is all there is, '
-          + 'and a bucket of dye with room in it tops up from one, mixing as it goes.',
-        `A dye's QL is its brightness: black at QL ${DYE_QL_BLACK}, the mix itself at ${DYE_QL_PURE} and white at ${DYE_QL_WHITE}, in a straight line either side. `
-          + `Red at QL ${DYE_QL_PURE} is ${dyeHex(pureDye('red', DYE_QL_PURE))}, and red and blue half and half is ${colourWord(dyeHex(purple))}, ${dyeHex(purple)}.`,
-        `A dyeing takes litres by the size of the thing: ${was.garment} for a garment, cloth, a bag, a saddle or a bridle; ${was.banner} for a banner or a flag; `
-          + `${was.sail} for a sailing boat; ${was.ship} for a caravel; ${was.wall} for a side of a wall or a tile of floor. `
-          + 'The thing takes exactly the dye\'s colour and is called by the nearest plain colour word. Examine on a dyed thing says its hex, and on a bucket or a barrel of dye its hex, QL, litres and mix.',
-        `Everything dyed before keeps the colour it had. Every pot of dye is now ${LEGACY_POT_LITRES} litre, in a bucket of dye of up to ${BUCKET_LITRES}, `
-          + `of the mix and QL whose colour comes nearest the pot's: ${LEGACY_DYES.map((d) => {
+        `Changed: dye is a liquid in a bucket or barrel, boiled in 3 primaries: ${listed(PRIMARIES.map((p) => `${p} from ${from(p)}`))}. `
+          + `A boil turns a bucket of lye into ${num(was.boil)} L of dye at the alchemy QL `
+          + `(was ${num(LEGACY_POTS)} pots of 1 of ${num(LEGACY_DYES.length)} colours). Removed: dye from ${listed(gone)}; their other uses unchanged.`,
+        'Added: mixing by pouring: dye into a barrel of dye mixes, primary shares and QL averaged by litres. '
+          + 'Dye mixes only with dye. A bucket fills from a dye barrel (less than full if that is all there is); '
+          + 'a part-full dye bucket tops up from one, mixing.',
+        `Added: dye QL is brightness: black at QL ${DYE_QL_BLACK}, the pure mix at ${DYE_QL_PURE}, white at ${DYE_QL_WHITE}, linear between. `
+          + `Red at QL ${DYE_QL_PURE}: ${dyeHex(pureDye('red', DYE_QL_PURE))}; red and blue 1:1: ${colourWord(dyeHex(purple))}, ${dyeHex(purple)}.`,
+        `Added: litres per dyeing: ${was.garment} garment, cloth, bag, saddle or bridle; ${was.banner} banner or flag; `
+          + `${was.sail} sailing boat; ${was.ship} caravel; ${was.wall} wall side or floor tile. `
+          + 'Takes the exact colour, named by the nearest plain colour word. Examine: hex on a dyed item; hex, QL, litres and mix on a dye bucket or barrel.',
+        `Changed: dyed items keep their colour. Each old pot is now ${LEGACY_POT_LITRES} L in a dye bucket (up to ${BUCKET_LITRES}), `
+          + `of the nearest mix and QL: ${LEGACY_DYES.map((d) => {
             const l = legacyLiquid(d.id) ?? pureDye('red', DYE_QL_PURE);
             return `${d.name.toLowerCase()} ${sharesSaid(l)} at QL ${l.ql}, ${dyeHex(l)}`;
           }).join('; ')}.`,
@@ -1585,22 +1599,22 @@ export const NEWS: News[] = [
     n: 112,
     day: '2026-10-10',
     lines: () => [
-      `${capital(listed(KNACK_BY_LEARNING.map((k) => SKILL_BY_ID.get(k)?.name.toLowerCase() ?? k)))} are raised a little at a time on the move, and every one of those raises `
-        + `rolled for a knack at a whole go's odds, one in ${numberWord(KNACK_ODDS)}. Each now rolls at the share of a go it teaches: `
-        + `a second in deep water ${percent(SWIM_LEARN / KNACK_GO)} of a go, a tile driven ${percent(DRIVING_LEARN / KNACK_GO)}, a tile sailed ${percent(SAILING_LEARN / KNACK_GO)}, `
+      `Changed: knack rolls for ${listed(KNACK_BY_LEARNING.map((k) => SKILL_BY_ID.get(k)?.name.toLowerCase() ?? k))} (raised in small steps while moving) from a whole go's odds (1 in ${num(KNACK_ODDS)}) `
+        + `to the share of a go each step teaches: `
+        + `a second in deep water ${percent(SWIM_LEARN / KNACK_GO)}, a tile driven ${percent(DRIVING_LEARN / KNACK_GO)}, a tile sailed ${percent(SAILING_LEARN / KNACK_GO)}, `
         + `a steep step climbed ${percent((CLIMB_LEARN + CLIMB_LEARN_FROM * CLIMB_LEARN_STEEP) / KNACK_GO)} to ${percent((CLIMB_LEARN + CLIMB_LEARN_STEEP) / KNACK_GO)}.`,
-      `That is one knack in ${Math.round(KNACK_ODDS * KNACK_GO / SWIM_LEARN).toLocaleString('en')} seconds of swimming, where it was one in ${numberWord(KNACK_ODDS)}, `
-        + `and one in ${Math.round(KNACK_ODDS * KNACK_GO / DRIVING_LEARN).toLocaleString('en')} tiles driven or sailed. Every other trade is as it was. Knacks already earned are kept.`,
+      `Changed: 1 knack per ${Math.round(KNACK_ODDS * KNACK_GO / SWIM_LEARN).toLocaleString('en')} s of swimming (was 1 in ${num(KNACK_ODDS)}); `
+        + `1 per ${Math.round(KNACK_ODDS * KNACK_GO / DRIVING_LEARN).toLocaleString('en')} tiles driven or sailed. Other trades unchanged. Earned knacks kept.`,
     ],
   },
   {
     n: 113,
     day: '2026-10-10',
     lines: () => [
-      `${defaultKey('repeat')} does the last job you asked for again: the same thing to the same target, as many times as you asked the first time. `
-        + 'It is asked for like any other job, so it lines up behind the one in hand, walks to its target, and is refused for the same reasons.',
-      'When the stack the last job used is gone, another of the same kind in your pack stands in. A name or a yes the job asked for the first time is asked for again. '
-        + 'The key can be changed in Settings, under Keys.',
+      `Added: repeat key (${defaultKey('repeat')}): repeats the last job: same action, same target, same count. `
+        + 'Queued like any job: lines up behind the current one, walks to its target, refused for the same reasons.',
+      'Added: if the last job\'s stack is gone, another of the same kind in your pack is used. Names or confirmations are asked again. '
+        + 'Rebind in Settings, Keys.',
     ],
   },
   {
@@ -1610,17 +1624,16 @@ export const NEWS: News[] = [
       // What this entry was about, which later entries moved past: Knowledge alone, with Love and Power still on their steps (115).
       const moved = [PATHS.knowledge];
       return [
-        `A meditation path is chosen at ${CHOOSE_AT} meditation, which is also where its first tier opens. Whoever has chosen already keeps their path, whatever their meditation.`,
-        `Every sitting banks Calm: ${SIT_CALM} times what the spot multiplies a sitting by. Calm is held to favour's curve off meditation, `
-          + `${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m}`))}, and does not come back on its own.`,
-        `A sitting within ${numberWord(SIT_WORTH.swirlReach)} tiles of a mote swirl is worth ${percent(SIT_WORTH.swirl - 1)} more, and one within ${numberWord(SIT_WORTH.staleReach)} tiles `
-          + `of anywhere you have sat since the woods last turned ${percent(SIT_WORTH.stale)} as much. A blow that lands on you while you sit ends the sitting with nothing come of it.`,
-        `${listed(moved.map((p) => p.name))} has moved onto tiers: ${numberWord(PICKS_PER_TIER)} picks at each of ${listed(PATH_TIER_AT.map(String))} meditation, `
-          + `a technique and ${numberWord(PICKS_PER_TIER - 1)} disciplines, one of which you take in the Faith window's new Path tab. `
-          + `A technique goes in the spell bar's path slot and costs Calm: ${listed(TECHNIQUES.filter((k) => moved.some((p) => p.id === k.path)).map((k) => `${k.name} ${k.cost}`))}. `
-          + `Its old steps are gone, Sense the Rock and Recall the Way with them; Attentive (now ${percent(picksOf('knowledge', 1).find((k) => k.name === 'Attentive')?.fx.learn ?? 0)}), `
-          + 'Reader and Keen Sight are disciplines to take.',
-        'Love and Power keep their steps and abilities exactly as they were, until they move too.',
+        `Changed: meditation path chosen at ${CHOOSE_AT} meditation, where its first tier opens. Existing choices kept regardless of meditation.`,
+        `Added: Calm: each sitting banks ${SIT_CALM}× the spot multiplier. Max Calm follows favour's curve on meditation, `
+          + `${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m}`))}; no regeneration.`,
+        `Added: sitting within ${num(SIT_WORTH.swirlReach)} tiles of a mote swirl +${percent(SIT_WORTH.swirl - 1)}; within ${num(SIT_WORTH.staleReach)} tiles `
+          + `of anywhere you sat since the woods last turned: ${percent(SIT_WORTH.stale)}. A blow landing on you ends the sitting with nothing gained.`,
+        `Changed: ${listed(moved.map((p) => p.name))} onto tiers: ${num(PICKS_PER_TIER)} picks at each of ${listed(PATH_TIER_AT.map(String))} meditation, `
+          + `a technique and ${num(PICKS_PER_TIER - 1)} disciplines, take 1 (Faith window, Path tab). `
+          + `Techniques go in the path slot and cost Calm: ${listed(TECHNIQUES.filter((k) => moved.some((p) => p.id === k.path)).map((k) => `${k.name} ${k.cost}`))}. `
+          + `Removed: old steps, incl. Sense the Rock and Recall the Way. Attentive (now ${percent(picksOf('knowledge', 1).find((k) => k.name === 'Attentive')?.fx.learn ?? 0)}), `
+          + 'Reader and Keen Sight are disciplines. Love and Power keep their steps and abilities for now.',
       ];
     },
   },
@@ -1631,14 +1644,14 @@ export const NEWS: News[] = [
       const fx = (id: string, key: string): number => PATH_PICK_BY_ID.get(id)?.fx[key] ?? 0;
       const tiers = (path: 'love' | 'power'): string => PATH_TIER_AT.map((at, i) => `${at}: ${listedOr(picksOf(path, i + 1).map((k) => k.name))}`).join('; ');
       return [
-        `Love and Power have moved onto tiers, as Knowledge did: ${numberWord(PICKS_PER_TIER)} picks at each tier, one taken, in the Faith window's Path tab. `
-          + 'Whoever walks either keeps their path and takes a pick at each tier their meditation has reached; the old steps stop.',
-        `Love, the living island: ${tiers('love')}.`,
-        `Power, the body: ${tiers('power')}.`,
-        `Green Thumb and Gentle Hand are as they were. Abundance is ${percent(fx('love_abundance', 'harvest') - 1)} more now, on fruit as well as crops. `
-          + `Strong Back is as it was, and Ironhide turns its ${percent(fx('power_ironhide', 'hide') - 1)} more on the island too, where it was not counted before.`,
-        'Fury, Hard Hands and Mend the Flesh are gone: damage is a fighting trade\'s, and healing the Blessing\'s.',
-        `Every technique costs Calm: ${listed(TECHNIQUES.filter((k) => k.path !== 'knowledge').map((k) => `${k.name} ${k.cost}`))}.`,
+        `Changed: Love and Power onto tiers, as Knowledge: ${num(PICKS_PER_TIER)} picks per tier, take 1 (Faith window, Path tab). `
+          + 'Walkers keep their path and pick at each tier reached; old steps stop.',
+        `Added: Love: ${tiers('love')}.`,
+        `Added: Power: ${tiers('power')}.`,
+        `Changed: Abundance +${percent(fx('love_abundance', 'harvest') - 1)}, on fruit as well as crops. Green Thumb, Gentle Hand, Strong Back unchanged. `
+          + `Fixed: Ironhide's +${percent(fx('power_ironhide', 'hide') - 1)} now counted on the island.`,
+        'Removed: Fury, Hard Hands, Mend the Flesh (damage belongs to fighting trades, healing to the Blessing).',
+        `Changed: every technique costs Calm: ${listed(TECHNIQUES.filter((k) => k.path !== 'knowledge').map((k) => `${k.name} ${k.cost}`))}.`,
       ];
     },
   },
@@ -1648,15 +1661,15 @@ export const NEWS: News[] = [
     lines: () => {
       const bill = recipeBill('make_telestone');
       return [
-        `${NumberWord(RUNESTONES.length)} Runestones stand on the shore of the Crescent's inner bay, ${numberWord(STONE_SPAN)} tiles by ${numberWord(STONE_SPAN)}, and on the map: `
-          + `${listed(RUNESTONES.map((s) => `${s.name} (${s.x}, ${s.y})`))}. Nothing walks through one, and nothing is dug, built, planted or set down on its tiles; `
-          + 'whatever stood on those tiles before is gone, and whoever stood there was moved beside the stone.',
-        `A sitting within ${numberWord(SIT_WORTH.stoneReach)} tiles of a Runestone is worth ${times(SIT_WORTH.stone)} as much, meditation and Calm, `
-          + 'multiplying whatever else the spot is worth.',
-        `A Telestone is cut with ${skillOf('make_telestone')} from ${bill}. Travel to a Runestone on it puts you beside any Runestone within its reach: `
-          + `${TELE_NEAR} tiles at QL ${TELE_QL_LOW} up to ${TELE_FAR} at QL ${TELE_QL_HIGH}.`,
-        `After a journey you wait ${spanWords(TELE_SLOW)} at QL ${TELE_QL_LOW} down to ${spanWords(TELE_FAST)} at QL ${TELE_QL_HIGH}, `
-          + 'set by the Telestone you used. The wait is yours, not the stone\'s, and the Telestone is not used up.',
+        `Added: ${num(RUNESTONES.length)} Runestones on the Crescent's inner bay shore, ${num(STONE_SPAN)} by ${num(STONE_SPAN)} tiles, on the map: `
+          + `${listed(RUNESTONES.map((s) => `${s.name} (${s.x}, ${s.y})`))}. Impassable; no digging, building, planting or setting down on their tiles. `
+          + 'Removed: whatever stood there; people there moved beside the stone.',
+        `Added: sitting within ${num(SIT_WORTH.stoneReach)} tiles of a Runestone: meditation and Calm ${mult(SIT_WORTH.stone)}, `
+          + 'multiplying other spot bonuses.',
+        `Added: Telestone (${skillOf('make_telestone')}: ${bill}). Travel to a Runestone: to any Runestone within reach, `
+          + `${TELE_NEAR} tiles at QL ${TELE_QL_LOW} to ${TELE_FAR} at QL ${TELE_QL_HIGH}.`,
+        `Added: cooldown after travel ${dur(TELE_SLOW)} at QL ${TELE_QL_LOW} down to ${dur(TELE_FAST)} at QL ${TELE_QL_HIGH}, `
+          + 'by the Telestone used. Cooldown is yours, not the stone\'s; the Telestone is not consumed.',
       ];
     },
   },
@@ -1672,19 +1685,19 @@ export const NEWS: News[] = [
       const thrift = thrifty ? Object.values(thrifty.fx)[0] : 1;
       const size = (k: keyof typeof DYE_LITRES): string => `${DYE_LITRES[k]} (was ${was[k]})`;
       return [
-        `A dye boil takes ${kgSaid(dyeGrams(1, DYE_LITRES_PER_KG))} kg of its dyestuff for every litre of lye in the bucket, by weight, and the bucket comes off holding as many litres `
-          + `of dye as it held of lye: ${numberWord(BOIL_LITRES)} litres from ${kg} kg, where it made ${numberWord(was.boil)} litres from a count of eight or ten. `
-          + `That is ${listed(DYESTUFFS.map((d) => `${countOf(d.from, boilCountPlain(d.from), true)} (${kgSaid(gramsOf(d.from))} kg each)`))}: `
-          + 'the fewest whole ones that weigh enough, and the boil says what it used. Short of the weight, it says how many kilos it takes and how many you have.',
-        `${double?.name ?? 'Double Boil'} (Naturalist): each kilo of dyestuff makes ${numberWord(perKg)} litres of dye, so a boil takes `
-          + `${kgSaid(dyeGrams(BOIL_LITRES, perKg))} kg and still makes ${numberWord(BOIL_LITRES)} litres; it used to leave ${numberWord(BUCKET_LITRES)} litres where a boil left ${numberWord(was.boil)}. `
-          + `${thrifty?.name ?? 'Thrifty Dyer'} takes ${percent(thrift)} of the weight: ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG, thrift))} kg, `
-          + `or ${kgSaid(dyeGrams(BOIL_LITRES, perKg, thrift))} kg with both. A bauble on alchemy adds nothing to a boil, whose bucket is full.`,
-        `A dyeing takes, in litres, a kilo each: ${size('garment')} for a garment, cloth, a bag, a saddle or a bridle; ${size('banner')} for a banner or a flag; `
-          + `${size('sail')} for a sailing boat; ${size('ship')} for a caravel; ${size('wall')} for a side of a wall or a tile of floor.`,
-        `It draws from one bucket of dye in your pack or one barrel of dye within ${CRAFT_REACH} tiles that is yours or on a settlement of yours, never from several at once. `
-          + 'Where more than one holds enough you choose which, from a list of each one\'s colour, hex, QL and litres; where one does, it is used. '
-          + 'The repeat key asks again. Where none holds enough, it says how many litres it takes and the most any one of them holds.',
+        `Changed: dye boil by weight: ${kgSaid(dyeGrams(1, DYE_LITRES_PER_KG))} kg dyestuff per litre of lye; litres of dye out = litres of lye in: `
+          + `${num(BOIL_LITRES)} L from ${kg} kg (was ${num(was.boil)} L from a count of 8 or 10). `
+          + `Per dyestuff: ${listed(DYESTUFFS.map((d) => `${countOf(d.from, boilCountPlain(d.from), true)} (${kgSaid(gramsOf(d.from))} kg each)`))}: `
+          + 'fewest whole items that weigh enough; the boil reports what it used. Short: reports kg needed and kg held.',
+        `Changed: ${double?.name ?? 'Double Boil'} (Naturalist): ${num(perKg)} L of dye per kg, so `
+          + `${kgSaid(dyeGrams(BOIL_LITRES, perKg))} kg for ${num(BOIL_LITRES)} L (was ${num(BUCKET_LITRES)} L where a boil gave ${num(was.boil)}). `
+          + `${thrifty?.name ?? 'Thrifty Dyer'}: ${percent(thrift)} of the weight: ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG, thrift))} kg, `
+          + `${kgSaid(dyeGrams(BOIL_LITRES, perKg, thrift))} kg with both. Alchemy baubles add nothing to a boil (bucket already full).`,
+        `Changed: litres per dyeing, a kilo each: ${size('garment')} garment, cloth, bag, saddle or bridle; ${size('banner')} banner or flag; `
+          + `${size('sail')} sailing boat; ${size('ship')} caravel; ${size('wall')} wall side or floor tile.`,
+        `Changed: dyeing draws from 1 dye bucket in your pack or 1 dye barrel within ${CRAFT_REACH} tiles (yours or on your settlement), never several. `
+          + 'Several with enough: choose from a list (colour, hex, QL, litres); exactly 1: used. '
+          + 'Repeat key asks again. None with enough: reports litres needed and the most any one holds.',
       ];
     },
   },
@@ -1692,60 +1705,60 @@ export const NEWS: News[] = [
     n: 118,
     day: '2026-10-10',
     lines: () => [
-      `Enchanting, a new skill. Papyrus is pressed standing at a paper press now (${recipeBill('make_paper_press')}, ${skillOf('make_paper_press')}), and nowhere else.`,
-      `A scroll is written at the crafting window with ${skillOf(`make_${ENCHANTMENT_LIST[0].scroll}`)}: ${listed(ENCHANTMENT_LIST.slice(0, 3).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}. `
-        + `It comes out no better than its sheet of papyrus. A scroll that fails loses its motes, and the sheet takes ${SCROLL_HARM} damage.`,
-      `Enchant, on a scroll, puts it into a melee weapon in your pack: it takes the average of your enchanting and the scroll's QL, as a percent, of the time, `
-        + `from ${percent(ENCHANT_LEAST)} to ${percent(ENCHANT_MOST)}, at a quality rolled about that average and held to the scroll's QL and the weapon's own. `
-        + `Otherwise the weapon takes ${ENCHANT_HARM} damage, and ${percent(ENCHANT_BREAK)} of the time goes to pieces. The scroll is used up either way, and a weapon holds one.`,
-      ...ENCHANTMENT_LIST.slice(0, 3).map((e) => `${e.name}: an ordinary melee swing that lands ${EFFECT_HEAD[e.effect]} ${percent(enchantHitChance(e, NEWS_QL_TOP))} of the time at QL ${NEWS_QL_TOP}, `
-        + `in proportion below. ${EFFECT_TAIL[e.effect]}`),
-      `A stun is new: for ${STUN_SECS} seconds the creature neither moves nor strikes, and loses a heavy blow it was drawing back for. Another stun starts it again rather than adding on, `
-        + `and the target panel says "stunned" while it lasts. The name of an enchanted weapon carries it, a Sword (${ENCHANTMENT_LIST[0].name}), and Examine says its quality and how often it works.`,
+      `Added: Enchanting skill. Changed: papyrus pressed only at a paper press (${recipeBill('make_paper_press')}, ${skillOf('make_paper_press')}).`,
+      `Added: scrolls (crafting window, ${skillOf(`make_${ENCHANTMENT_LIST[0].scroll}`)}): ${listed(ENCHANTMENT_LIST.slice(0, 3).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}. `
+        + `QL capped at the papyrus QL. Failure: motes lost, papyrus takes ${SCROLL_HARM} damage.`,
+      `Added: Enchant (on a scroll) into a melee weapon in your pack: success chance = average of enchanting and scroll QL as a percent, `
+        + `${percent(ENCHANT_LEAST)} to ${percent(ENCHANT_MOST)}; quality rolled around that average, capped at scroll and weapon QL. `
+        + `Failure: weapon takes ${ENCHANT_HARM} damage, ${percent(ENCHANT_BREAK)} chance it breaks. Scroll consumed either way; 1 enchantment per weapon.`,
+      ...ENCHANTMENT_LIST.slice(0, 3).map((e) => `Added: ${e.name}: a landed ordinary melee swing ${EFFECT_HEAD[e.effect]} ${percent(enchantHitChance(e, NEWS_QL_TOP))} of the time at QL ${NEWS_QL_TOP}, `
+        + `proportionally less below. ${EFFECT_TAIL[e.effect]}`),
+      `Added: stun: ${STUN_SECS} s with no moving or striking; cancels a heavy blow being drawn. A new stun restarts the timer, no stacking; `
+        + `target panel shows "stunned". Enchanted weapons are named with it, e.g. Sword (${ENCHANTMENT_LIST[0].name}); Examine gives its quality and proc chance.`,
     ],
   },
   {
     n: 119,
     day: '2026-10-11',
     lines: () => [
-      `A fighting trade (${listed(CLASSES.filter((c) => c.kind === 'combat').map((c) => c.name))}) no longer asks for ${CLASS_AT} in one of its skills: `
-        + `anybody can take one from the start. A craft trade still opens at ${CLASS_AT} in any skill it covers.`,
+      `Removed: the ${CLASS_AT} skill requirement for fighting trades (${listed(CLASSES.filter((c) => c.kind === 'combat').map((c) => c.name))}); `
+        + `available from the start. Craft trades still open at ${CLASS_AT} in any covered skill.`,
     ],
   },
   {
     n: 120,
     day: '2026-10-11',
     lines: () => [
-      `Six more enchantments for a melee weapon, written at the crafting window as the first three are: `
+      `Added: ${num(ENCHANTMENT_LIST.slice(3, 9).length)} more melee weapon enchantments (crafting window): `
         + `${listed(ENCHANTMENT_LIST.slice(3, 9).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
-      ...ENCHANTMENT_LIST.slice(3, 9).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
-      `A scroll put into the wrong kind of thing is refused in words that name the right one: "${wrongKind(ENCHANTMENT_LIST[4])}"`,
+      ...ENCHANTMENT_LIST.slice(3, 9).map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
+      `Changed: a scroll used on the wrong item kind is refused naming the right one: "${wrongKind(ENCHANTMENT_LIST[4])}"`,
     ],
   },
   {
     n: 121,
     day: '2026-10-11',
     lines: () => [
-      `Three enchantments for a bow: ${listed(ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
-      ...ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
-      'A slowed creature is said on the target panel, "slowed", as a stunned one is.',
+      `Added: ${num(ENCHANTMENT_LIST.slice(9, 12).length)} bow enchantments: ${listed(ENCHANTMENT_LIST.slice(9, 12).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}`))}.`,
+      ...ENCHANTMENT_LIST.slice(9, 12).map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
+      'Added: target panel shows "slowed", as for "stunned".',
     ],
   },
   {
     n: 122,
     day: '2026-10-11',
     lines: () => [
-      `Six enchantments for what you wear and hold: ${listed(ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
-      ...ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+      `Added: ${num(ENCHANTMENT_LIST.slice(12, 18).length)} enchantments for worn and held gear: ${listed(ENCHANTMENT_LIST.slice(12, 18).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+      ...ENCHANTMENT_LIST.slice(12, 18).map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
     ],
   },
   {
     n: 123,
     day: '2026-10-11',
     lines: () => [
-      `Four enchantments for tools: ${listed(ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
-      ...ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
-      'Where you carry more than one of a tool, the job uses the one worth most at the work, and its enchantment is the one that counts.',
+      `Added: ${num(ENCHANTMENT_LIST.slice(18, 22).length)} tool enchantments: ${listed(ENCHANTMENT_LIST.slice(18, 22).map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+      ...ENCHANTMENT_LIST.slice(18, 22).map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
+      'Changed: carrying several of a tool, the job uses the best one for the work, and its enchantment counts.',
     ],
   },
   {
@@ -1754,8 +1767,8 @@ export const NEWS: News[] = [
     lines: () => {
       const e = ENCHANTMENTS.lanterns_grace;
       return [
-        `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`,
-        `On an island a torch burned ${times(WORLD_PACE)} too fast, as a candle once did. It lasts what it does here now, ${spanWords(torchBurn(1))} to ${spanWords(torchBurn(100))} by how well it was wound.`,
+        `Added: ${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`,
+        `Fixed: island torches burned at ${mult(WORLD_PACE)} speed; now ${dur(torchBurn(1))} to ${dur(torchBurn(100))} by winding quality.`,
       ];
     },
   },  {
@@ -1764,8 +1777,8 @@ export const NEWS: News[] = [
     lines: () => {
       const jewel = ENCHANTMENT_LIST.filter((e) => e.on === 'ring' || e.on === 'amulet');
       return [
-        `Six enchantments for what is worn in the jewel slot, one at a time: ${listed(jewel.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
-        ...jewel.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+        `Added: ${num(jewel.length)} jewel-slot enchantments (1 worn at a time): ${listed(jewel.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...jewel.map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
       ];
     },
   },  {
@@ -1774,8 +1787,8 @@ export const NEWS: News[] = [
     lines: () => {
       const three = ['packmule', 'seals_coat', 'hawks_eye'].map((id) => ENCHANTMENTS[id]);
       return [
-        `Three more: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
-        ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+        `Added: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...three.map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
       ];
     },
   },  {
@@ -1784,10 +1797,10 @@ export const NEWS: News[] = [
     lines: () => {
       const two = ['ember_heart', 'masterwork'].map((id) => ENCHANTMENTS[id]);
       return [
-        `A scroll goes into a thing standing where it was set down now: under Enchant on the scroll, from within ${PLACED_REACH} tiles of it. `
-          + `One that does not take puts ${ENCHANT_HARM} damage on it but never breaks it, and its enchantment goes with it when it is picked up and set down again.`,
-        `Two to start: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
-        ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+        `Added: enchanting set-down items: Enchant on the scroll, within ${PLACED_REACH} tiles. `
+          + `Failure: ${ENCHANT_HARM} damage, never breaks. Enchantment kept through pick up and set down.`,
+        `Added: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}.`,
+        ...two.map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
       ];
     },
   },  {
@@ -1796,8 +1809,8 @@ export const NEWS: News[] = [
     lines: () => {
       const four = ['fair_wind', 'deep_hold', 'true_axle', 'bag_of_holding'].map((id) => ENCHANTMENTS[id]);
       return [
-        `Four for what carries and holds: ${listed(four.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. A crate takes one where it stands too.`,
-        ...four.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+        `Added: ${num(four.length)} carrying and storage enchantments: ${listed(four.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. Crates take one where they stand.`,
+        ...four.map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
       ];
     },
   },  {
@@ -1806,8 +1819,8 @@ export const NEWS: News[] = [
     lines: () => {
       const three = ['snarecraft', 'netmender', 'dreamweave'].map((id) => ENCHANTMENTS[id]);
       return [
-        `Three for traps, nets and beds: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. A trap and a bed take one where they stand.`,
-        ...three.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+        `Added: ${num(three.length)} enchantments for traps, nets and beds: ${listed(three.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. Traps and beds take one where they stand.`,
+        ...three.map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
       ];
     },
   },  {
@@ -1816,9 +1829,9 @@ export const NEWS: News[] = [
     lines: () => {
       const two = ['fleetfoot', 'tamers_bridle'].map((id) => ENCHANTMENTS[id]);
       return [
-        `Two for tack: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. `
-          + 'They ride on the mount with the tack, come back into the pack when it is taken off, and an enchanted saddle or bridle is a pile of its own.',
-        ...two.map((e) => `${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} In proportion below.`),
+        `Added: ${num(two.length)} tack enchantments: ${listed(two.map((e) => `${e.name} from ${recipeBill(`make_${e.scroll}`)}, on ${ON_WORDS[e.on]}`))}. `
+          + 'They apply on the mount with the tack and return to the pack when it is removed; an enchanted saddle or bridle does not stack.',
+        ...two.map((e) => `Added: ${e.name}: at QL ${NEWS_QL_TOP}, ${enchantLineAt(e, NEWS_QL_TOP)} Proportionally less below.`),
       ];
     },
   },
@@ -1826,20 +1839,20 @@ export const NEWS: News[] = [
     n: 131,
     day: '2026-10-11',
     lines: () => [
-      `The enchanter's plinth, a carved stone table: ${recipeBill(`make_${ENCHANTERS_PLINTH}`)}, ${skillOf(`make_${ENCHANTERS_PLINTH}`)} with a trowel. `
-        + `Enchant is done standing within ${STATION_REACH} tiles of the middle of one set down on the ground, and nowhere else; anywhere else it says "${ENCHANT_SAID.plinth}", `
-        + 'on the Enchant entry of a scroll before you choose what it goes on, and for a thing standing where it was set down as well as one in the pack. Writing a scroll needs none.',
-      `While somebody is enchanting at one its runes brighten and at night it lights ${PLINTH_BUSY_REACH} tiles round it, where it lights ${PLINTH_REACH} at rest. `
-        + 'Moss gathers on it as on a statue.',
+      `Added: enchanter's plinth: ${recipeBill(`make_${ENCHANTERS_PLINTH}`)}, ${skillOf(`make_${ENCHANTERS_PLINTH}`)}, trowel. `
+        + `Changed: Enchant only within ${STATION_REACH} tiles of the middle of one set down; elsewhere "${ENCHANT_SAID.plinth}", `
+        + 'shown on the scroll\'s Enchant entry before choosing a target, for set-down and pack items alike. Writing scrolls needs none.',
+      `Added: while in use its runes brighten; night light ${PLINTH_BUSY_REACH} tiles (idle: ${PLINTH_REACH}). `
+        + 'Takes moss like a statue.',
     ],
   },
   {
     n: 132,
     day: '2026-10-11',
     lines: () => [
-      `A rune lantern post (${recipeBill('make_rune_lantern')}, ${skillOf('make_rune_lantern')}): at night it lights the ground round it for everybody `
-        + `as a lantern of its own QL does, ${numberWord(lanternReach(1))} tiles at QL 1 to ${numberWord(lanternReach(100))} at QL 100, and that ground is in sight from as far off as you can see. `
-        + `It takes no lantern and no candle, burns nothing and never goes out. Moss gathers on it over ${GREEN_DAYS} days, as on a statue.`,
+      `Added: rune lantern post (${recipeBill('make_rune_lantern')}, ${skillOf('make_rune_lantern')}): night light for everyone `
+        + `as a lantern of its QL, ${num(lanternReach(1))} tiles at QL 1 to ${num(lanternReach(100))} at QL 100; lit ground visible from full sight range. `
+        + `No lantern or candle needed; burns nothing, never goes out. Moss over ${GREEN_DAYS} days, like a statue.`,
     ],
   },
   {
@@ -1849,11 +1862,11 @@ export const NEWS: News[] = [
       const def = WALL_TYPE_BY_ID.get(RUNE_GATE);
       const mat = (MATERIAL_BY_ID.get(def?.laidIn ?? '')?.name ?? '').toLowerCase();
       return [
-        `A ${runeGateName()}, for the way into a settlement: Plan fence, ${def?.name}, on the edge of a tile on the ground, in ${mat} and nothing else, `
-          + `${billWords(Object.entries(typeBill(def?.laidIn ?? '', RUNE_GATE).total), true)}. People, carts and wildermon pass it, it is seen through, and nothing locks it.`,
-        `Its runes light while a citizen of the settlement it stands on (its founder, a mayor or a builder) is within ${RUNE_GATE_REACH} of a tile of the middle of its opening, `
-          + `coming up over ${RUNE_GATE_RISE} seconds, and go out over ${RUNE_GATE_FADE} seconds once none is. Strangers and guests do not light it. `
-          + `Lit after dark, it throws pale gold ${RUNE_GATE_GLOW_REACH} tiles round its opening. The light is all it does.`,
+        `Added: ${runeGateName()} for settlement entrances: Plan fence, ${def?.name}, on a ground tile edge, ${mat} only, `
+          + `${billWords(Object.entries(typeBill(def?.laidIn ?? '', RUNE_GATE).total), true)}. People, carts and wildermon pass; see-through; cannot be locked.`,
+        `Added: runes light while a citizen of its settlement (founder, mayor or builder) is within ${RUNE_GATE_REACH} of a tile of its opening's middle, `
+          + `over ${RUNE_GATE_RISE} s; fade over ${RUNE_GATE_FADE} s when none is. Strangers and guests do not light it. `
+          + `Lit after dark: pale gold light ${RUNE_GATE_GLOW_REACH} tiles round the opening. Light only, no other effect.`,
       ];
     },
   },
@@ -1861,121 +1874,121 @@ export const NEWS: News[] = [
     n: 134,
     day: '2026-10-11',
     lines: () => [
-      `A memorial stone, built at the crafting window from ${recipeBill(`make_${MEMORIAL}`)} with ${skillOf(`make_${MEMORIAL}`)}, and set down like furniture.`,
-      `Engrave it with a ${itemDef(ENGRAVE_TOOL).name.toLowerCase()}: one line of up to ${ENGRAVE_MAX} characters, cleaned as talk is. `
-        + 'Whoever set it down may cut a new line over the old one, and so may anybody of the settlement it stands on; nobody else, and nobody muted. '
-        + 'Examine reads it back in quotes. Picked up and set down again, it keeps its line. It does not decay.',
+      `Added: memorial stone: crafting window, ${recipeBill(`make_${MEMORIAL}`)}, ${skillOf(`make_${MEMORIAL}`)}; set down like furniture.`,
+      `Added: engrave with a ${itemDef(ENGRAVE_TOOL).name.toLowerCase()}: 1 line, up to ${ENGRAVE_MAX} characters, filtered as chat. `
+        + 'Re-engravable by whoever set it down or anyone of its settlement; nobody else, nobody muted. '
+        + 'Examine shows it in quotes. Keeps its line when moved. No decay.',
     ],
   },
   {
     n: 135,
     day: '2026-10-11',
     lines: () => [
-      'Meditating is drawn sat cross-legged on the ground with the eyes shut and the hands on the knees, breathing slowly, '
-        + 'where it used to be drawn as the work at a bench. What it does is unchanged.',
+      'Changed: meditating drawn sitting cross-legged, eyes shut, hands on knees, slow breathing '
+        + '(was the bench-work animation). Effect unchanged.',
     ],
   },
   {
     n: 136,
     day: '2026-10-11',
     lines: () => [
-      `Find anything: ${defaultKey('palette')} or Ctrl+K opens a box that finds any window, recipe, setting, page of the help, `
-        + 'window layout or key by name and opens it.',
-      `Window layouts: ${LAYOUT_NAMES.length} of them, on ${defaultKey('layout_1')} to ${defaultKey(`layout_${LAYOUT_NAMES.length}`)}. `
-        + 'Shift and the key keeps the windows as they are; the key alone puts them back. Named in Settings, under Windows.',
-      `A window dragged within ${SNAP} pixels of the edge of the screen or of another window is put against it; hold Alt to place it freely.`,
-      'The event log, the tracker and the map can be made see-through with the ◐ on their title bars: dimmed, with clicks going '
-        + 'to the island underneath. Hold Alt to click in one.',
-      'Hovering a weapon, a piece of armour or a shield in the pack or a store shows its damage, swing, chance to land, share of '
-        + 'a blow turned aside or chance to block, each against what you have on in its place.',
-      'Shift and drag a stack to move part of it: it asks how many.',
-      'The pack has a bar for its load, marked where the weight starts to slow you and ending where you are down to a crawl.',
-      'Right-click a thing in a store for Take every one of it, stack by stack; the pack’s menu has Put every one of it in the store you have open.',
-      `The Crafting window keeps Pinned recipes (the ☆ on a row) and the ${RECENT} you made lately at the top. A material you are short of `
-        + 'is a link: to the recipes that make it, or to what the help says about it when nothing does.',
-      'A ring over every fire, smelter and kiln near you shows its fuel, the work in it and a dot when something is ready.',
-      'Notices near the top of the screen for a skill at a new whole number, a knack, a run of work done and a birth. Each '
-        + 'can be switched off in Settings.',
+      `Added: Find anything: ${defaultKey('palette')} or Ctrl+K: search and open any window, recipe, setting, help page, `
+        + 'window layout or key by name.',
+      `Added: ${LAYOUT_NAMES.length} window layouts on ${defaultKey('layout_1')} to ${defaultKey(`layout_${LAYOUT_NAMES.length}`)}. `
+        + 'Shift+key saves the current windows; the key restores. Named in Settings, Windows.',
+      `Added: windows snap to the screen edge or another window within ${SNAP} px; hold Alt to place freely.`,
+      'Added: ◐ on the event log, tracker and map title bars: see-through, clicks pass '
+        + 'to the island. Hold Alt to click in one.',
+      'Added: hovering a weapon, armour piece or shield in the pack or a store shows damage, swing, hit chance, '
+        + 'deflection share or block chance, each compared with what you wear in that slot.',
+      'Added: Shift+drag a stack to move part of it (asks how many).',
+      'Added: pack load bar, marked where weight starts to slow you, ending at crawl.',
+      'Added: Take every one of it (right-click in a store), stack by stack; pack menu: Put every one of it in the open store.',
+      `Added: Crafting window: Pinned recipes (☆ on a row) and the ${RECENT} most recent at the top. A missing material `
+        + 'links to recipes making it, or its help entry if none.',
+      'Added: ring over each nearby fire, smelter and kiln: fuel, contents, and a dot when something is ready.',
+      'Added: notices (top of screen) for a new whole skill level, a knack, a work run finished and a birth. Each '
+        + 'toggleable in Settings.',
     ],
   },
   {
     n: 137,
     day: '2026-10-11',
     lines: () => [
-      `The Market window has a Prices tab: everything bought off a stall or a counter, or brought to a buy order, in the last ${SALE_DAYS} days, `
-        + 'with how many sold, the cheapest, dearest and average price of one, and a bar a day. Hovering a thing in the pack or a store says the same of its kind.',
-      'Ctrl-click (⌘-click on a Mac) rows in the pack or a store to pick several, and Shift-click to pick every row from the last one picked. '
-        + 'Drag any picked row to move them all, or use Put in the store or Take them out on the bar under the list.',
+      `Added: Market window Prices tab: everything bought from a stall or counter, or delivered to a buy order, in the last ${SALE_DAYS} days: `
+        + 'count sold, lowest, highest and average unit price, a bar per day. Hovering an item in the pack or a store shows the same for its kind.',
+      'Added: Ctrl-click (⌘-click on Mac) to multi-select rows in the pack or a store; Shift-click selects a range from the last pick. '
+        + 'Drag any selected row to move all, or Put in the store / Take them out on the bar below.',
     ],
   },
   {
     n: 138,
     day: '2026-10-11',
     lines: () => [
-      'A new interface look, Runecut: every window, menu, tooltip and bar is pale carved stone with dark writing, its corners cut, '
-        + 'with the window\'s rune at the head of its title (lit on the window in front) and its title in Cormorant Unicase. '
-        + 'Writing is Alegreya Sans at 14 pixels, up from 13, with small labels in its small capitals.',
-      'The health, stamina, food and water bars are grooves filled red, green, amber and blue-grey. A rare, supreme or fantastic thing '
-        + 'has a diamond notch at the head of its row in its rarity\'s colour, a size larger at each step, as well as its name in that colour.',
-      `Settings, Display: Interface look switches between Runecut and Classic, the dark look as it was. Runecut light picks Day, Night `
-        + `(dark stone with pale writing) or Island clock, which shows Night from ${islandTime(NIGHT_STARTS)} to ${islandTime(NIGHT_ENDS)} island time.`,
-      'Each Runecut window is a slab of the runestones\' stone, painted with their own painters: its face in their skin with lichen, cracks and chipped edges, '
-        + 'a side and a foot in their shade, and its rune cut in a pointed niche at the head of the title, lit amber by day and, on the window in front after dark, breathing with motes rising off it.',
-      `Each window's border, ${RIM} pixels wide (${frameOddities(FRAME_RIM)}), is drawn as the stuff of what it holds, in ${FRAMES.length} kinds: the pack in a ${frameLabel('inventory').toLowerCase()}, `
-        + `the stores in a ${frameLabel('stores').toLowerCase()}, crafting on a ${frameLabel('craft').toLowerCase()}, events on a ${frameLabel('events').toLowerCase()}, the status panel in a ${frameLabel('hud').toLowerCase()} and the toolbar in a ${frameLabel('toolbar').toLowerCase()}. `
-        + `A knob, knot or seal stands up to ${FRAME_REACH} pixels past the window's edge (${frameOddities(FRAME_REACHES)}); clicks go through it, and the room inside a window is no smaller. Settings, Display, Window frames: Themed, or Stone for the plain stone rim on all.`,
+      'Added: Runecut interface look: pale carved stone windows, menus, tooltips and bars, dark text, cut corners, '
+        + 'window rune at the title head (lit on the front window), titles in Cormorant Unicase. '
+        + 'Text Alegreya Sans, from 13 to 14 px; small labels in its small caps.',
+      'Added: health, stamina, food and water bars as grooves filled red, green, amber and blue-grey. Rare, supreme and fantastic items '
+        + 'get a diamond notch at the row head in rarity colour, a size larger per step, plus the name in that colour.',
+      `Added: Settings, Display: Interface look: Runecut or Classic (the old dark look). Runecut light: Day, Night `
+        + `(dark stone, pale text) or Island clock (Night from ${islandTime(NIGHT_STARTS)} to ${islandTime(NIGHT_ENDS)} island time).`,
+      'Added: Runecut windows painted as runestone slabs: lichen, cracks, chipped edges, '
+        + 'shaded side and foot; rune in a pointed niche at the title head, lit amber by day; after dark on the front window it pulses with rising motes.',
+      `Added: themed window borders, ${RIM} px (${frameOddities(FRAME_RIM)}), in ${FRAMES.length} kinds: pack ${frameLabel('inventory').toLowerCase()}, `
+        + `stores ${frameLabel('stores').toLowerCase()}, crafting ${frameLabel('craft').toLowerCase()}, events ${frameLabel('events').toLowerCase()}, status panel ${frameLabel('hud').toLowerCase()}, toolbar ${frameLabel('toolbar').toLowerCase()}. `
+        + `Knobs, knots or seals extend up to ${FRAME_REACH} px past the edge (${frameOddities(FRAME_REACHES)}); click-through; inner space unchanged. Settings, Display, Window frames: Themed, or Stone (plain rim on all).`,
     ],
   },
   {
     n: 139,
     day: '2026-10-12',
     lines: () => [
-      `Windows go on a grid of ${CELL}-pixel cells, shown while a window is moved or resized: place and size land on whole cells. `
-        + 'Windows resize from a grip in their bottom-right corner. Edges no longer snap to each other within a few pixels, and Alt no longer places a window freely.',
-      'No window covers another, the status panel or the toolbar: they can only share an edge. One dropped on another goes to the nearest free room its size, and a resize stops at its neighbour.',
-      `A square round your character in the middle of the screen, ${CLEAR_CELLS} cells across (fewer on a small screen), is kept clear of windows.`,
-      'The status panel and the toolbar can be moved: press anywhere on one and drag. They take up whole cells, cannot be resized or closed, and are kept in window layouts.',
-      `In Runecut, where two share an edge their frames stop at it and one seam runs down it, capped in gold at each end: cloth, leather or paper to the same stitched every ${STITCH_EVERY} pixels, `
-        + `anything else to anything else mortared with a joint every ${JOINT_EVERY}, and one of each pinned in brass every ${PIN_EVERY}. A join you make glints along its length and clicks.`,
-      'A phone\'s screen has no grid; windows there are as they were.',
+      `Changed: windows on a ${CELL}-px cell grid (shown while moving or resizing); position and size in whole cells. `
+        + 'Resize from a bottom-right grip. Removed: edge snapping within a few pixels, and Alt free placement.',
+      'Changed: windows never overlap each other, the status panel or the toolbar; edges may touch. A window dropped on another moves to the nearest free space of its size; resizing stops at a neighbour.',
+      `Added: a square of ${CLEAR_CELLS} cells round your character (fewer on small screens) kept clear of windows.`,
+      'Changed: status panel and toolbar movable (press and drag anywhere on them); whole cells; not resizable or closable; saved in layouts.',
+      `Added: Runecut shared edges: frames stop at it, 1 seam, gold caps at each end: cloth, leather or paper to the same stitched every ${STITCH_EVERY} px; `
+        + `other pairs mortared with a joint every ${JOINT_EVERY}; mixed pairs pinned in brass every ${PIN_EVERY}. A new join glints and clicks.`,
+      'Changed: none on phones (no grid).',
     ],
   },
   {
     n: 140,
     day: '2026-10-12',
     lines: () => [
-      `Runecut's themed frames have small animals and lights going about them: ${lifeWords()}.`,
-      'They keep to the frame and never cross what is inside a window, and clicks go through them. Settings, Display, Frame life turns them off; '
-        + 'they are not shown on a phone\'s screen, with Fast graphics, or when your system asks for less motion.',
+      `Added: Runecut themed frames have small animals and lights: ${lifeWords()}.`,
+      'Added: they stay on the frame, never over window contents; click-through. Settings, Display, Frame life toggles them; '
+        + 'hidden on phones, with Fast graphics, or with reduced motion.',
     ],
   },
   {
     n: 141,
     day: '2026-10-12',
     lines: () => [
-      'A bandage or a cover goes on the worst wound it would close faster than what is on it now, on you or on somebody you dress, and says which wound it went on. '
-        + 'A wound gone bad used to be picked first and refuse the dressing, so none went on anything else; now it is passed over, and named only when nothing else will take a dressing.',
-      `Dressings rank by how fast they close a wound, slowest first: ${listed(DRESSING_RANK)}. A dressing goes only over one ranked below it: `
-        + 'cloth no longer goes over a cover and takes the herb off it, and a cover goes over cloth. Where every wound is already dressed as well, it is refused and says so.',
+      'Changed: a bandage or cover goes on the worst wound it would close faster than its current dressing, on you or whoever you dress, and names the wound. '
+        + 'Fixed: an infected wound was picked first and refused, blocking all dressing; now skipped, and named only when nothing else takes a dressing.',
+      `Changed: dressings ranked by closing speed, slowest first: ${listed(DRESSING_RANK)}. A dressing only replaces a lower-ranked one: `
+        + 'cloth no longer replaces a cover (and its herb); a cover replaces cloth. If every wound is dressed as well already, refused with a message.',
     ],
   },
   {
     n: 142,
     day: '2026-10-12',
     lines: () => [
-      'The Social window\'s Friends tab has Invite beside friends and beside people you share another settlement with, not only beside everybody else ashore. '
-        + `Living on a settlement is no bar: anybody may be a citizen of ${DEEDS_JOINED} other people's settlements.`,
-      `Invite reads Citizen of ${DEEDS_JOINED} and cannot be pressed for somebody already on ${DEEDS_JOINED}, and Asked for somebody who has not answered; `
-        + 'the right-click menu greys it out with the same reason. Move in on an invitation cannot be pressed while you are on as many as anybody may be.',
+      'Added: Social window Friends tab shows Invite beside friends and people sharing another settlement with you, not only everyone else ashore. '
+        + `Living on a settlement is no bar: anyone may be a citizen of ${DEEDS_JOINED} other people's settlements.`,
+      `Added: Invite reads Citizen of ${DEEDS_JOINED} (disabled) for someone already on ${DEEDS_JOINED}, and Asked for a pending invite; `
+        + 'right-click menu greys it with the same reason. Move in on an invitation is disabled while you are on the maximum.',
     ],
   },
   {
     n: 143,
     day: '2026-10-12',
     lines: () => [
-      'A window can be moved and resized flush against the right and bottom edges of the screen, which are seldom on a whole cell; before, the last strip of the screen could not be reached.',
-      'Every animal and light on Runecut\'s frames is redrawn and moves for itself: they land, look about, rest and go again, each frame its own way. '
-        + 'The mouse, ladybird, spider, snail and snow take the night\'s light after dark, as their frames do.',
+      'Fixed: windows could not be moved or resized flush to the right and bottom screen edges (rarely on a whole cell).',
+      'Changed: each Runecut frame animal and light redrawn with its own movement: land, look about, rest, move on, varied per frame. '
+        + 'Mouse, ladybird, spider, snail and snow take night lighting after dark, as their frames do.',
     ],
   },
   {
@@ -1983,28 +1996,28 @@ export const NEWS: News[] = [
     day: '2026-10-12',
     lines: () => [
       // As it was that day: the fixed ranks this describes are gone (145), so nothing here is read from them.
-      'Ranks can be set, in the Settlement window under Citizens. The founder may make anybody else on the roll a mayor, builder or guest; '
-        + 'a mayor may move a citizen between builder and guest. Only the founder makes or unmakes a mayor, and nobody changes the founder\'s rank or their own.',
-      'A mayor may build, invite people, send away its builders and guests, and make them builders or guests. Mayors invite from the Social window and the right-click menu, as the founder does; '
-        + 'founder or mayor of more than one settlement, you choose which one Invite asks people onto.',
-      'The founder may send anybody away; a mayor may send away builders and guests, not another mayor. '
-        + 'Upgrading, renaming and disbanding stay with the founder.',
+      'Added: ranks, in the Settlement window under Citizens. The founder may set anyone else on the roll to mayor, builder or guest; '
+        + 'a mayor may move a citizen between builder and guest. Only the founder makes or unmakes mayors; nobody changes the founder\'s rank or their own.',
+      'Added: mayors may build, invite, send away builders and guests, and make them builders or guests. Mayors invite from the Social window and right-click menu like the founder; '
+        + 'founder or mayor of several settlements: choose which one Invite is for.',
+      'Added: the founder may send anyone away; a mayor only builders and guests, not another mayor. '
+        + 'Upgrading, renaming and disbanding: founder only.',
     ],
   },
   {
     n: 145,
     day: '2026-10-13',
     lines: () => [
-      `A settlement's ranks are its founder's to make: up to ${numberWord(RANK_CAP)} besides the founder, each with a name of up to ${RANK_NAME_MAX} characters, `
-        + `a place in the settlement's list and any of ${numberWord(RANK_POWERS.length)} permissions: ${listed(RANK_POWERS.map((p) => p.label))}. `
-        + 'The Settlement window\'s Ranks section adds, renames, moves and deletes them and ticks what each may do; each permission\'s tooltip says its exact rule.',
-      `Every settlement, existing ones included, starts with ${listed(DEFAULT_RANKS.map((r) => r.name))}, holding exactly what each could do before: `
+      `Changed: settlement ranks made by the founder: up to ${num(RANK_CAP)} besides the founder, names up to ${RANK_NAME_MAX} characters, `
+        + `an order in the list and any of ${num(RANK_POWERS.length)} permissions: ${listed(RANK_POWERS.map((p) => p.label))}. `
+        + 'Settlement window, Ranks: add, rename, reorder, delete, and tick permissions; each permission\'s tooltip gives its exact rule.',
+      `Added: every settlement, existing ones included, starts with ${listed(DEFAULT_RANKS.map((r) => r.name))}, with their old abilities: `
         + `${DEFAULT_RANKS.map((r) => `${r.name} may ${rankMay(permsOf(r.powers))}`).join('; ')}. `
-        + `Newcomers join as ${NEWCOMER_RANK} until the founder chooses another rank for them.`,
-      `${POWER.send_away.label} and ${POWER.set_ranks.label} act only on citizens whose rank is below yours in the list, and ${POWER.set_ranks.label} gives only ranks below yours. `
-        + 'Upgrading and renaming may be given to a rank; disbanding may not, because it frees the founder\'s wildermon and tips out the founder\'s deed crate. '
-        + 'A rank somebody holds is not deleted until they hold another.',
-      `Refused for your rank, you are told the rank and what it may not do, in the same words wherever it is checked: "${lacksSaid('Hearth', 'Guest', 'locks')}"`,
+        + `Newcomers join as ${NEWCOMER_RANK} until the founder sets another rank.`,
+      `Added: ${POWER.send_away.label} and ${POWER.set_ranks.label} act only on citizens ranked below you; ${POWER.set_ranks.label} gives only ranks below yours. `
+        + 'Upgrading and renaming can be granted to a rank; disbanding cannot (it frees the founder\'s wildermon and empties the founder\'s deed crate). '
+        + 'A held rank cannot be deleted until its holders have another.',
+      `Added: rank refusals name the rank and what it lacks, worded the same everywhere: "${lacksSaid('Hearth', 'Guest', 'locks')}"`,
     ],
   },
   {
@@ -2018,15 +2031,14 @@ export const NEWS: News[] = [
       // The fighting from which the old clock (a job's, `goSeconds`) held a short sword on the job floor.
       const flat = Array.from({ length: 100 }, (_, i) => i + 1).find((f) => goSeconds(sword.swing, f) <= ACTION_FLOOR + 1e-9) ?? 100;
       return [
-        `A swing or a draw takes the seconds its weapon says, less skill: a ${name} ${sword.swing} seconds before skill, ${s(swingSeconds(sword.swing, 1))} at fighting 1 `
-          + `and ${s(swingSeconds(sword.swing, 30))} at fighting 30. A swing was timed as a job's weight, at ${s(ACTION_PACE)} seconds to the unit and never under `
-          + `${s(ACTION_FLOOR)} seconds: a ${name} took ${s(goSeconds(sword.swing, 1))} seconds at fighting 1 and ${s(goSeconds(sword.swing, 30))} at fighting 30, `
-          + `and from fighting ${flat} up it swung no quicker than a knife.`,
-        `Nothing swings or draws quicker than every ${SWING_FLOOR.toFixed(1)} seconds. Fighting (archery for a draw) and body control take the same share off as before, `
-          + 'and tired or wounded arms add the same.',
-        'Armour, what you carry and a wagon, driven or not, do not change how long a swing takes, and never did.',
-        'Hovering a weapon shows A swing every as the seconds a swing of it takes in your hands now, with its own seconds and each thing that changes them on the line under it. '
-          + 'Examine and the target panel weigh a fight up at that time.',
+        `Changed: swing and draw time from job timing to the weapon's own seconds less skill: ${name} ${sword.swing} s before skill, ${s(swingSeconds(sword.swing, 1))} at fighting 1, `
+          + `${s(swingSeconds(sword.swing, 30))} at fighting 30. Was: job weight at ${s(ACTION_PACE)} s per unit, minimum `
+          + `${s(ACTION_FLOOR)} s: ${name} ${s(goSeconds(sword.swing, 1))} s at fighting 1, ${s(goSeconds(sword.swing, 30))} at fighting 30, `
+          + `and from fighting ${flat} no quicker than a knife.`,
+        `Added: minimum swing or draw ${SWING_FLOOR.toFixed(1)} s. Fighting (archery for draws) and body control reduce it by the same share as before; `
+          + 'tired or wounded arms add the same. Armour, carried load and wagons (driven or not) do not affect swing time.',
+        'Changed: weapon hover A swing every shows your current swing seconds, with base seconds and each modifier on the line below. '
+          + 'Examine and the target panel use that time.',
       ];
     },
   },
@@ -2034,339 +2046,347 @@ export const NEWS: News[] = [
     n: 147,
     day: '2026-10-13',
     lines: () => [
-      'Every window, menu and bar was gone over for layout and wording, in Runecut by day and night, in Classic and on a phone. Among what changed: '
-        + 'the right-click menu, the toolbar list and every question box work from the keyboard (arrows, Enter, Esc); Drop, Send away, Leave, removing a map mark '
-        + 'and putting the keys back ask first; empty lists say what to do; and nothing is cut short with no way to read the rest on a phone.',
-      'Hovering anything in your pack or a store shows a card with its weight, its damage, what work it is a tool for, what it holds or what it feeds. '
-        + 'Armour, shields and weapons show their quality as it is, without the working-quality arrow, which only work tools have.',
-      'When there is no free room the size of a window you open, it opens as big as the room there is, and grows back once there is room, rather than lying over another window or a bar.',
+      'Changed: layout and wording of every window, menu and bar (Runecut day and night, Classic, phone). Includes: '
+        + 'right-click menu, toolbar list and every question box keyboard-operable (arrows, Enter, Esc); Drop, Send away, Leave, removing a map mark '
+        + 'and resetting keys ask for confirmation; empty lists say what to do; no unreadable truncation on phones.',
+      'Added: hover card on pack and store items: weight, damage, tool use, capacity or feed value. '
+        + 'Armour, shields and weapons show plain quality, no working-quality arrow (work tools only).',
+      'Changed: with no free space the size of a window, it opens at the space available and grows back when room appears, instead of overlapping a window or bar.',
     ],
   },
   {
     n: 148,
     day: '2026-10-13',
     lines: () => [
-      armourSwingSays(),
-      `${overburdenSwingSays()} Your back takes ${CARRY_BASE} kilos and ${CARRY_PER_STRENGTH} more for every point of body strength, with what a trade's perk, Power's Pack Mule and a Packmule on a pack add.`,
-      `Both come after the ${SWING_FLOOR.toFixed(1)}-second floor, on the island and in the browser alike, and multiply with tired and wounded arms. `
-        + 'Hovering a weapon names each on the line under A swing every, with its share.',
+      `Added: ${armourSwingSays()}`,
+      `Added: ${overburdenSwingSays()} Carry capacity ${CARRY_BASE} kg +${CARRY_PER_STRENGTH} per body strength point, plus trade perks, Power's Pack Mule and a Packmule enchantment on a pack.`,
+      `Added: both apply after the ${SWING_FLOOR.toFixed(1)} s floor, island and browser alike, multiplying with tired and wounded arms. `
+        + 'Weapon hover lists each under A swing every, with its share.',
     ],
   },
   {
     n: 149,
     day: '2026-10-13',
     lines: () => [
-      'The status panel has a row for everything on you: round marks on the left for what helps (rest, a meal\'s or a tincture\'s knack, favour, Calm, a spell or a technique, a lit light, a worn enchantment, your settlement\'s baubles), '
-        + 'square red marks on the right for what harms (wounds, bleeding, venom, a burn, hunger and thirst, being overloaded, winded or tired arms, the dark). '
-        + 'Under each is the time it has left; point at one, or tap it, for its exact effect and where it came from. It replaces the rest, meal, favour, light and Overloaded lines and the list of wounds.',
-      'A ring round the mouse pointer fills with the job in hand, as the action bar does; in a fight it fills once for every swing or draw. It shows only over the island, not over a window, a bar or a menu, and not on a touch screen. '
+      'Added: status panel effect row: round marks left for buffs (rest, meal or tincture knack, favour, Calm, spells and techniques, lit light, worn enchantments, settlement baubles), '
+        + 'square red marks right for harms (wounds, bleeding, venom, burns, hunger and thirst, overload, winded or tired arms, darkness). '
+        + 'Time left under each; hover or tap for exact effect and source. Removed: the separate rest, meal, favour, light and Overloaded lines and the wound list.',
+      'Added: progress ring at the mouse pointer for the current job, like the action bar; in a fight, once per swing or draw. Over the island only, not windows, bars or menus; not on touch screens. '
         + 'Settings, Display, Interface: Progress ring at the pointer.',
-      'Walking a tile inside a settlement\'s border brings its name up near the top of the screen, with your rank there or its founder under it; a tile back out says you are leaving it. '
+      'Added: entering a settlement\'s border shows its name near the top of the screen with your rank there or its founder; leaving shows a leaving notice. '
         + 'Settings, Display, Interface: Settlement names at the border.',
-      'The Crafting window lists every job you have lined up, the one in hand first: its goes left, its time at your pace, and for a craft what it will use up and whether from your pack, your bags or a named store, '
-        + 'once the jobs ahead have had theirs. Drag a waiting job by its grip, or use the up and down buttons, to change the order, and the cross to forget it; the job in hand never moves.',
-      'Point at a red tool or material in a recipe, tab to it, or long-press it, and a tree shows how to make it, down to what is gathered, with how many of each part and how many you have at hand. Click any line for that recipe.',
-      'Settings, Display, Interface: Colours switches every colour that means something to a red–green safe set or a blue–yellow safe one, in the windows and on the island. '
-        + 'Whatever the colours, better and worse, what you have and lack, a fight\'s odds, being overloaded and buttons that cannot be undone each carry a mark as well.',
-      `Runecut light offers Island clock, My computer's clock (dark stone from ${islandTime(LOCAL_NIGHT_STARTS)} to ${islandTime(LOCAL_NIGHT_ENDS)} by your computer's clock), Always day and Always night.`,
+      'Added: Crafting window job queue, current job first: goes left, time at your pace, and for crafts the inputs and their source (pack, bags or a named store), '
+        + 'after earlier jobs take theirs. Reorder by dragging the grip or with up/down buttons; × removes; the current job is fixed.',
+      'Added: hover, tab to or long-press a red tool or material in a recipe: a tree of how to make it down to gathered items, with counts needed and at hand. Click a line for that recipe.',
+      'Added: Settings, Display, Interface: Colours: red–green safe or blue–yellow safe palette for every meaningful colour, windows and island. '
+        + 'In every palette, better/worse, have/lack, fight odds, overload and irreversible buttons also carry a mark.',
+      `Added: Runecut light options: Island clock, My computer's clock (dark from ${islandTime(LOCAL_NIGHT_STARTS)} to ${islandTime(LOCAL_NIGHT_ENDS)} local), Always day, Always night.`,
     ],
   },
   {
     n: 150,
     day: '2026-10-13',
     lines: () => [
-      `Prospecting, taming, setting an enchantment scroll and digging up a treasure map's hoard now raise Mind logic: ${percent(PROSPECT_HEAD)} of a go for a prospect, `
-        + `${percent(TAME_HEAD)} for an offering to a wild creature, ${percent(ENCHANT_HEAD)} for a scroll and ${percent(HOARD_HEAD)} for a hoard, and ${percent(TRY_LEARN)} of that `
-        + 'when the offering is refused or the scroll does not take. The Skills window and Help (What the characteristics are for) say what raises every characteristic.',
-      armourSwingSays(),
-      'Spells on you keep their time left through a reload, and stay right on every beat. A Warder\'s skin over you has its own mark on the status panel, '
-        + 'with its size as a share of your health and who laid it; a waiting Thicken, Ward Link, Stoneskin and Bastion of Stone each have one too.',
-      `Trade with somebody within ${numberWord(BARTER_REACH)} tiles of you: right-click them, or press Trade beside their name in the Social window. Once they say yes, `
-        + 'each of you puts in things from your pack (part of a stack if you like) and silver, and both press Accept. Any change to either side takes both Accepts back, '
-        + `and then everything changes hands at once or nothing does. Walking more than ${numberWord(BARTER_REACH)} tiles apart, leaving, or ${spanWords(BARTER_IDLE)} with no change calls it off.`,
-      `Fruit, bushes and what foraging and botanizing find keep the island's seasons: ${SEASONS.map((season) => `in ${season}, ${listed(Object.entries(FRUITING)
+      `Added: Mind logic from prospecting ${percent(PROSPECT_HEAD)} of a go, `
+        + `taming offerings ${percent(TAME_HEAD)}, setting an enchantment scroll ${percent(ENCHANT_HEAD)}, digging a treasure hoard ${percent(HOARD_HEAD)}; ${percent(TRY_LEARN)} of that `
+        + 'on a refused offering or failed scroll. Skills window and Help (What the characteristics are for) list what raises each characteristic.',
+      `Added: ${armourSwingSays()}`,
+      'Fixed: spells on you keep their remaining time through a reload and stay in sync each beat. Added: status panel mark for a Warder skin on you '
+        + '(size as a share of your health, and caster); also for pending Thicken, Ward Link, Stoneskin and Bastion of Stone.',
+      `Added: trade with someone within ${num(BARTER_REACH)} tiles: right-click them or Trade in the Social window. Once accepted, `
+        + 'each adds pack items (part stacks allowed) and silver; both press Accept. Any change clears both Accepts; '
+        + `the exchange is all or nothing. Cancelled by moving more than ${num(BARTER_REACH)} tiles apart, leaving, or ${dur(BARTER_IDLE)} without change.`,
+      `Added: seasonal fruit, bushes and forage/botanize finds: ${SEASONS.map((season) => `${season}: ${listed(Object.entries(FRUITING)
         .filter(([, in_]) => in_.includes(season)).map(([id]) => itemDef(id).name.toLowerCase()))}`).join('; ')}. `
-        + 'Out of season, Pick fruit and Harvest say when it bears next; Examine and the tile window give its seasons, and everything else turns up all year.',
-      `A skep, woven with ropemaking and set down among wildflowers, makes a honey every ${SKEP_CLUMP_HOURS} hours for each clump in flower within ${numberWord(SKEP_REACH)} tiles of it `
-        + `and a beeswax for every ${numberWord(SKEP_WAX_EVERY)} honey, up to ${SKEP_HOLDS} honey, and nothing in ${SKEP_IDLE}. Take honey empties it and trains animal husbandry; Help: Bees.`,
-      `A butter churn, built with carpentry, churns a bucket of milk into ${numberWord(BUTTER_PATS)} pats of butter and gives the bucket back, and butter and dough bake into pastries. `
-        + `A female Gorral can be milked: ${numberWord(GORRAL_MILK)} litres a milking, into a part bucket that is a bucket of milk at ${numberWord(BUCKET_LITRES)}. Help: Milk, butter and cheese.`,
-      `Vineyards: build a trellis, cut a grape cutting off a thorn bush with a sickle and plant it at the trellis's foot. It bears from ${numberWord(VINE_BEARS)} days after planting, `
-        + `in ${GRAPE_SEASON} only, and ${numberWord(GRAPE_WINE_GRAPES)} grapes brew a barrel of grape wine. Wine and grape wine gain ${WINE_AGE_RATE} QL a day kept in their barrel `
-        + `once they finish, ${times(CELLAR_AGEING)} that in a cellar, up to ${WINE_AGE_CAP} QL more; a drink straight from the barrel is at the aged QL. Help: Vineyards.`,
-      `Maps: Draw a map, on a sheet of papyrus, records the tiles round where you stand, ${numberWord(CHART_LEAST)} each way and one more for every ${CHART_QL_PER_TILE} QL. `
-        + 'Study map puts that square on your own map for good, and Copy map makes another, no better than the map or the sheet. Help: Maps.',
+        + 'Out of season, Pick fruit and Harvest give the next bearing time; Examine and the tile window give seasons; everything else all year.',
+      `Added: skep (ropemaking), set among wildflowers: 1 honey per ${SKEP_CLUMP_HOURS} h per flowering clump within ${num(SKEP_REACH)} tiles, `
+        + `1 beeswax per ${num(SKEP_WAX_EVERY)} honey, up to ${SKEP_HOLDS} honey; nothing in ${SKEP_IDLE}. Take honey empties it, trains animal husbandry. Help: Bees.`,
+      `Added: butter churn (carpentry): a bucket of milk into ${num(BUTTER_PATS)} pats of butter, bucket returned; butter and dough bake into pastries. `
+        + `Female Gorral milkable: ${num(GORRAL_MILK)} L a milking into a part bucket, full at ${num(BUCKET_LITRES)}. Help: Milk, butter and cheese.`,
+      `Added: vineyards: build a trellis; cut a grape cutting from a thorn bush with a sickle; plant at the trellis foot. Bears from ${num(VINE_BEARS)} days after planting, `
+        + `${GRAPE_SEASON} only; ${num(GRAPE_WINE_GRAPES)} grapes brew a barrel of grape wine. Wine and grape wine +${WINE_AGE_RATE} QL a day in their barrel `
+        + `once finished, ${mult(CELLAR_AGEING)} in a cellar, up to +${WINE_AGE_CAP} QL; drinking from the barrel uses the aged QL. Help: Vineyards.`,
+      `Added: Draw a map (papyrus): records tiles round you, ${num(CHART_LEAST)} each way +1 per ${CHART_QL_PER_TILE} QL. `
+        + 'Study map adds that square to your map permanently; Copy map makes another, capped at the map and sheet QL. Help: Maps.',
     ],
   },
   {
     n: 151,
     day: '2026-10-13',
     lines: () => [
-      'A bucket drawn off a barrel of anything but water is at the barrel\'s QL, an ageing brew\'s gain included, so aged wine sells and trades at its aged QL. '
-        + 'A bucket poured into an empty barrel sets the barrel to its QL, and into a barrel of the same thing to the average of the two by litres; a brew poured into stops ageing.',
-      `Mead ages in its barrel too: ${MEAD_AGE_RATE} QL a day, ${times(CELLAR_AGEING)} that in a cellar, up to ${MEAD_AGE_CAP} QL more.`,
-      `Pressing a bucket of milk into cheese leaves the bucket full of whey. A bucket of whey fed to a creature you keep fills ${percent(WHEY_FEED)} of its hunger `
-        + `(one thing of its own diet fills ${percent(GRAZE_FILL)}) and comes back empty, and the feed button offers whey first so your better food is kept.`,
-      'Digging up a treasure map\'s hoard raises digging and wears your shovel on the island, as it did offline.',
-      `The Settlement window has Notices and Work tabs. The founder and any rank with Post notices post notices of up to ${NOTICE_MAX} characters; the newest ${NOTICE_KEEP} are kept, `
-        + `a citizen away sees the new ones once coming ashore, and one away more than ${numberWord(NOTICE_MAIL_DAYS)} days is sent each as a letter. `
-        + `The founder and any rank with Set work list up to ${numberWord(WORK_OPEN_MAX)} works wanted, a kind, how many and a lowest QL if they like; a citizen within ${numberWord(DELIVER_REACH)} tiles `
-        + 'of the token presses Deliver to move what matches from their pack into the deed crate, and every delivery goes in the settlement\'s ledger.',
-      'The founder or a rank with Keep the stores can make a crate or a storage piece on the settlement a settlement store from its Storage window. It opens for the founder and every rank '
-        + `with Use the stores, padlocked or not, and for nobody else, key or not; every take and put is logged, and the last ${STORE_LOG_CAP} are in the Settlement window.`,
-      `A thing you make at a bench or an anvil at QL ${SIGN_QL} or better carries your name, and you can Sign it once with a line of up to ${SIGN_MAX} characters, which Examine shows whoever has it. `
-        + `A glass panel takes dye at ${numberWord(DYE_PANE_LITRES)} litre a panel, and a window or bay window is tinted the colour of the last panel fitted, outside and in.`,
-      blockSays(),
-      reachSays(),
+      'Changed: a bucket drawn from a non-water barrel takes the barrel\'s QL incl. ageing gain (aged wine sells and trades at aged QL). '
+        + 'Pouring into an empty barrel sets its QL; into the same contents, the litre-weighted average; a brew poured into stops ageing.',
+      `Added: mead ageing: +${MEAD_AGE_RATE} QL a day in its barrel, ${mult(CELLAR_AGEING)} in a cellar, up to +${MEAD_AGE_CAP} QL.`,
+      `Added: pressing a bucket of milk into cheese leaves it full of whey. Whey fed to your creature fills ${percent(WHEY_FEED)} hunger `
+        + `(1 diet item: ${percent(GRAZE_FILL)}), bucket returned empty; feed button offers whey first.`,
+      'Fixed: island treasure hoard digging trains digging and wears the shovel, as offline.',
+      `Added: Settlement window Notices and Work tabs. Founder and ranks with Post notices post up to ${NOTICE_MAX} characters; newest ${NOTICE_KEEP} kept; `
+        + `absent citizens see new ones on coming ashore; absent more than ${num(NOTICE_MAIL_DAYS)} days: each sent as a letter. `
+        + `Founder and ranks with Set work list up to ${num(WORK_OPEN_MAX)} wanted works (kind, count, optional minimum QL); a citizen within ${num(DELIVER_REACH)} tiles `
+        + 'of the token presses Deliver to move matching pack items into the deed crate; deliveries go in the settlement ledger.',
+      'Added: founder or a rank with Keep the stores can make a settlement crate or storage piece a settlement store (its Storage window). Opens for the founder and ranks '
+        + `with Use the stores, padlocked or not, for nobody else, key or not; every take and put logged, last ${STORE_LOG_CAP} shown in the Settlement window.`,
+      `Added: bench or anvil work at QL ${SIGN_QL}+ carries your name; Sign once with up to ${SIGN_MAX} characters, shown on Examine. `
+        + `Glass panels take dye at ${num(DYE_PANE_LITRES)} L a panel; windows and bay windows tinted the last fitted panel's colour, both sides.`,
+      `Added: ${blockSays()}`,
+      `Added: ${reachSays()}`,
     ],
   },
   {
     n: 152,
     day: '2026-10-13',
     lines: () => [
-      `Trellises stand against the outside of a wall now, and run its whole width. ${TRELLIS_RULE()}`,
-      'Trellises side by side along the same wall join into one lattice. A trellis already standing keeps its vine; where two or more stood in one row, '
-        + 'the one with a vine (or else the oldest) stays and the rest are back in their owner\'s pack, a planted vine as a grape cutting.',
-      'Things of one kind keep one place in every list, the best first, instead of moving as you work with them; and the pour, smelt, melt-down and '
-        + 'cast menus give each thing its QL, a mould its damage too, so two nail moulds can be told apart.',
+      `Changed: trellises stand against a wall's outside, full width. ${TRELLIS_RULE()}`,
+      'Changed: adjacent trellises on 1 wall join into 1 lattice. Existing trellises keep their vines; where several stood in 1 row, '
+        + 'the one with a vine (else the oldest) stays and the rest return to their owner\'s pack, planted vines as grape cuttings.',
+      'Changed: items of 1 kind keep 1 place in every list, best first, not reordering as used; pour, smelt, melt-down and '
+        + 'cast menus show each item\'s QL, and moulds their damage.',
     ],
   },
   {
     n: 153,
     day: '2026-10-14',
     lines: () => [
-      `Shear is on a tame creature's menu at last, beside Milk: with a carving knife, once its fleece is ${percent(SHEAR_FROM)} grown back, `
-        + `for ${numberWord(SHEAR_WOOL)} wool from a full one. It was written and never put on the menu.`,
+      `Fixed: Shear missing from the tame creature menu; now beside Milk: carving knife, fleece ${percent(SHEAR_FROM)} regrown, `
+        + `${num(SHEAR_WOOL)} wool from a full fleece.`,
     ],
   },
   {
     n: 154,
     day: '2026-10-14',
     lines: () => [
-      'Favour no longer shows nought after logging out or reloading. The island always kept it; the status panel and the Faith window now read it '
-        + 'from the island when you come ashore and on every beat, with what has trickled in since.',
+      'Fixed: favour showed zero after logout or reload. Status panel and Faith window now read it '
+        + 'from the island on coming ashore and every beat, with accrued favour.',
     ],
   },
   {
     n: 155,
     day: '2026-10-14',
     lines: () => [
-      'A corner lowered by a slab breaking away while mining, a corner chipped back and dirt dropped at your feet show at their new height at once, to you and anyone watching, instead of after a reload.',
-      `These can be improved now: ${['brush', 'hammer', 'fishing_rod', 'rope_tool'].map((id) => {
+      'Fixed: corners lowered by a mining slab breaking away, chipped back, or by dropped dirt showed their new height only after reload; now at once for everyone.',
+      `Added: improvable: ${['brush', 'hammer', 'fishing_rod', 'rope_tool'].map((id) => {
         const how = improvable(id);
         return `${itemDef(id).name.toLowerCase()} (${how?.material.name}, ${(SKILL_BY_ID.get(how?.skill ?? '')?.name ?? how?.skill ?? '').toLowerCase()})`;
-      }).join(', ')}. A brush's QL adds to the care each grooming gives.`,
-      'Sacrifice, melt-down and the Bauble of Regret refuse a thing marked Keep this back with "It is kept back. Put it back in the pack first.", '
-        + 'the words the pack menu uses for it.',
+      }).join(', ')}. Brush QL adds to the care per grooming.`,
+      'Changed: Sacrifice, melt-down and Bauble of Regret refuse items marked Keep this back with "It is kept back. Put it back in the pack first." '
+        + '(the pack menu\'s wording).',
     ],
   },
   {
     n: 156,
     day: '2026-10-14',
     lines: () => [
-      'A cart or wagon with a yoke free has Hitch to the traces on its own menu, listing each of your wildermon that would go into it. '
-        + 'One standing under the vehicle could not be clicked, so it could not be hitched.',
+      'Fixed: a wildermon under a vehicle could not be clicked to hitch. Added: Hitch to the traces on a cart or wagon menu with a free yoke, '
+        + 'listing each of your wildermon that fits.',
     ],
   },
   {
     n: 157,
     day: '2026-10-15',
     lines: () => [
-      'A companion in the traces no longer counts as the one following you, so the next can be let out of its crate while it is hitched.',
-      'Hitch to the traces on a cart\'s or wagon\'s menu also lists your wildermon in a creature crate in your pack or standing within reach; each comes out of the crate straight into a yoke.',
-      'Taken out of the traces, one of yours follows you only if nothing else does. The rest go into the empty creature crates in your pack, and with too few there they stay in, and it says how many crates it needs.',
+      'Changed: a hitched companion no longer counts as following you; another can be let out of its crate.',
+      'Added: Hitch to the traces also lists your wildermon in creature crates in your pack or within reach; each goes straight from crate to yoke.',
+      'Changed: unhitched, one of yours follows you only if nothing else does; others go into empty creature crates in your pack; too few: they stay hitched, with the number of crates needed.',
     ],
   },
   {
     n: 158,
     day: '2026-10-15',
     lines: () => [
-      'A boat or a ship can be left with no land in reach: Step ashore becomes Go over the side, which puts you in the water where she is, to swim, and leaves her there. '
-        + `With dry ground within ${numberWord(SHORE_REACH)} tiles you still step onto it.`,
-      'Swimming beside her, you can climb aboard, come aboard as a passenger or take her empty helm, as from the shore.',
+      'Added: Go over the side (replaces Step ashore with no land in reach): puts you in the water beside the boat, which stays. '
+        + `Dry ground within ${num(SHORE_REACH)} tiles: Step ashore as before.`,
+      'Added: from the water beside a boat: climb aboard, board as passenger, or take an empty helm, as from shore.',
     ],
   },
   {
     n: 159,
     day: '2026-10-15',
     lines: () => [
-      'Your name keeps the capitals you type when you make your account: Alice, not alice. Signing in ignores capitals, so alice and Alice are still one account, '
-        + 'and signing in with different capitals changes how your name is written on every island. Only the capitals can change, not the letters.',
+      'Changed: names keep the capitals typed at account creation (Alice, not alice). Sign-in is case-insensitive (alice and Alice are 1 account); '
+        + 'signing in with different capitals changes your displayed name on every island. Capitals only, not letters.',
     ],
   },
   {
     n: 160,
     day: '2026-10-16',
     lines: () => [
-      'Dirt dropped on a kelp tile, at your feet or on one of its corners, turns it to a dirt tile, the way it does grass, sand or a reed bed. The kelp is gone with it.',
+      'Changed: dirt dropped on a kelp tile (at your feet or a corner) turns it to dirt, as on grass, sand or reed bed; kelp removed.',
     ],
   },
   {
     n: 161,
     day: '2026-10-16',
     lines: () => [
-      'The handful menus on a job offer Once and 5, 10, 25 or 50 times; Until you stop is gone from them.',
+      'Changed: job count menus offer Once and 5, 10, 25 or 50 times. Removed: Until you stop.',
     ],
   },
   {
     n: 162,
     day: '2026-10-16',
     lines: () => [
-      `Every mould is formed with ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, whatever it casts, and its QL is your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()} and never the sand's. `
-        + 'Sword, axe, armour, ring and pendant moulds were formed with the trade of the piece they cast.',
-      `Pouring a mould, and casting an anvil, teach ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}. On an island a pour used to teach nothing.`,
+      `Changed: every mould formed with ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}; QL = your ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}, never the sand's. `
+        + 'Was: sword, axe, armour, ring and pendant moulds used the cast piece\'s trade.',
+      `Changed: pouring a mould and casting an anvil train ${SKILL_BY_ID.get(MOULD_SKILL)?.name.toLowerCase()}. Fixed: island pours trained nothing.`,
     ],
   },
   {
     n: 163,
     day: '2026-10-16',
     lines: () => [
-      `A Vesp has a trade: ${GATHER_VERB.hive}. It can be set to work the deed, from its menu or out of its crate; it goes to the nearest hive in its reach `
-        + 'and works there, and the hive fills with honey and beeswax while it does. It brings nothing to the crate, and with no hive in reach it says so after an hour.',
+      `Added: Vesp deed job: ${GATHER_VERB.hive}. Set from its menu or crate; goes to the nearest hive in reach `
+        + 'and works it; the hive fills with honey and beeswax meanwhile. Brings nothing to the crate; no hive in reach: reports it after an hour.',
     ],
   },
   {
     n: 164,
     day: '2026-10-16',
     lines: () => [
-      'Windows come back where you left them and the size you left them, to the pixel, after a refresh or with the browser closed and opened again. '
-        + 'They used to be laid out again as the page loaded and could come back a cell off, or a cell smaller; the keeper\'s window lost its place to any other window saved before it was made.',
+      'Fixed: windows restored to exact position and size after refresh or browser restart. '
+        + 'Was: re-laid out on load, could be a cell off or smaller; the keeper\'s window lost its place to any window saved before it.',
     ],
   },
   {
     n: 165,
     day: '2026-10-16',
     lines: () => [
-      `Mote swirls: each turn of the woods now puts down ${numberWord(SWIRLS_A_DAY)} across the map, where it put down five hundred, from the next dawn.`,
+      `Changed: mote swirls per turn of the woods from 500 to ${num(SWIRLS_A_DAY)}, from the next dawn.`,
     ],
   },
   {
     n: 166,
     day: '2026-10-16',
     lines: () => [
-      'On an island, flattening wore no shovel at all, however many you carried; nor did bedding or taking up paving, cutting reeds or prospecting wear their tools. '
-        + 'Each go at any of them now wears the best of its tool in your pack by one use, as a dig does, so two of the same tool take turns.',
+      'Fixed: island flattening, bedding or taking up paving, cutting reeds and prospecting wore no tool. '
+        + 'Each go now wears the best such tool in your pack by 1 use, as digging does; 2 of a tool alternate.',
     ],
   },
   {
     n: 167,
     day: '2026-10-16',
     lines: () => [
-      `Hostile creatures are marked: every wild creature of a kind that hunts on sight, and any creature hunting you, is laid over in red on top of the trees and buildings in front of it, at ${percent(THREAT_SHADE)} strength or ${percent(THREAT_SHADE_HUNTING)} while it is hunting you, `
-        + 'with a red marker over its head that pulses while it is hunting you. Settings, Mark hostile creatures, turns it off.',
+      `Added: hostile marking: every hunt-on-sight wild creature, and any creature hunting you, overlaid in red above trees and buildings in front of it, ${percent(THREAT_SHADE)} strength, ${percent(THREAT_SHADE_HUNTING)} while hunting you, `
+        + 'with a red head marker that pulses while hunting you. Toggle: Settings, Mark hostile creatures.',
     ],
   },
   {
     n: 168,
     day: '2026-10-16',
     lines: () => [
-      `A Health window, on the menu and on ${keyName(BIND_BY_ID.get('win_health')?.keys[0] ?? '')}: your health in a heart that beats faster the less of it there is, `
-        + 'every wound on a figure of you and in a list, worst first, with how much it takes a minute and when it will have closed. '
-        + 'Click a wound and it says what can be done for it, what has to be carried for each (a dressing, a bucket of lye or a salve), '
-        + 'how many you carry and how to make one, and its button dresses, cleans or salves that wound and no other, or says why not. '
-        + 'Under them, what is against you and for you, and your nutrition with what each kind does. Framed in birch and linen, with a hedgehog asleep on it.',
+      `Added: Health window (menu, or key ${keyName(BIND_BY_ID.get('win_health')?.keys[0] ?? '')}): health as a heart beating faster as it drops; `
+        + 'every wound on a body figure and in a list, worst first, with damage per minute and time to close. '
+        + 'Clicking a wound shows treatments, what each needs carried (dressing, bucket of lye or salve), '
+        + 'how many you carry and how to make one; its button dresses, cleans or salves that wound only, or says why not. '
+        + 'Below: effects against and for you, and nutrition with each kind\'s effect. Birch and linen frame.',
     ],
   },
   {
     n: 169,
     day: '2026-10-17',
     lines: () => [
-      `Building a wall, a floor, a frame, a bridge or an aqueduct takes what it lays from crates, carts, wagons and containers within ${CRAFT_REACH} tiles, `
-        + 'the same stores a craft takes from, after your pack and a crate on the tile: draw the wagon up beside the wall and build out of it. '
-        + 'Settings, Use stores within reach, turns it off. A Mason\'s Hod Carrier still reaches further on stone, and with it off too.',
+      `Added: building walls, floors, frames, bridges and aqueducts takes materials from crates, carts, wagons and containers within ${CRAFT_REACH} tiles `
+        + '(the stores crafting uses), after your pack and a crate on the tile. '
+        + 'Toggle: Settings, Use stores within reach. Mason\'s Hod Carrier still reaches further on stone, also with it off.',
     ],
   },  {
     n: 170,
     day: '2026-10-17',
     lines: () => [
-      `An Equipment window, on the menu and on ${keyName(BIND_BY_ID.get('win_equipment')?.keys[0] ?? '')}: you on a turntable in everything you have on, with a socket for each of the ${numberWord(SLOTS.length)} places round you. `
-        + 'Drag a thing onto its socket or onto you to put it on, and back to the shelf of what is in your pack to take it off; the shelf says what each would change against what is on. '
-        + 'Its tabs give every number a fight reads off you, each from the rule the fight uses (a blow, a blow taken, what it costs to carry), '
-        + 'and each skill behind them with what it adds now and at its next level. The stance is chosen there too. Framed in oak and iron, with two swords crossed over a shield.',
+      `Added: Equipment window (menu, or key ${keyName(BIND_BY_ID.get('win_equipment')?.keys[0] ?? '')}): your figure on a turntable in worn gear, a socket for each of ${num(SLOTS.length)} slots. `
+        + 'Drag onto a socket or the figure to equip, back to the pack shelf to remove; the shelf shows each item\'s change versus what is worn. '
+        + 'Tabs give every fight number read off you, each from the fight rule (blow, blow taken, carry cost), '
+        + 'and each skill behind them with its contribution now and at its next level. Stance selectable there. Oak and iron frame.',
     ],
   },
   {
     n: 171,
     day: '2026-10-17',
     lines: () => [
-      'The journal counts only your own work. On an island another player\'s trap catching something, their finished walls and second storey, '
-        + 'or a settlement you are only a citizen of could tick your goals; none of them does now.',
-      'Goals that read the wrong thing count what they say: smelting is charging a smelter with ore (a lump was never counted), '
-        + 'Improve is a pass of yours that leaves the thing at QL 50 or 90, a field is seed sown, a hive is honey taken out (a skep counts), '
-        + 'a relic is one restored, a bed is one you built, a cart or a wagon is a whole team in its yokes, a fantastic trait is one bred, '
-        + 'and cooking on a campfire is anything Crafting cooks at one. An enchanted melee weapon is a melee weapon (any enchanted thing did), '
-        + 'a dyed banner is one on your settlement, a caravel is a sailing boat, and Make dye is Dye something, which is what it counted. '
-        + 'Something done before today under the old rule ticks the next time you do it.',
-      'Click any goal in the journal for how to do it, or Show every how-to above the list.',
+      'Fixed: island journal goals ticked from other players\' trap catches, walls and second storeys, '
+        + 'or a settlement you are only a citizen of. Only your own work counts.',
+      'Fixed: goals now count what they say: smelting = charging a smelter with ore (lumps never counted); '
+        + 'Improve = your pass leaving it at QL 50 or 90; field = seed sown; hive = honey taken out (skeps count); '
+        + 'relic = one restored; bed = one you built; cart or wagon = a full team yoked; fantastic trait = one bred; '
+        + 'campfire cooking = anything Crafting cooks at one; enchanted melee weapon = a melee weapon (any enchanted item counted); '
+        + 'dyed banner = one on your settlement; caravel = a sailing boat; Make dye renamed Dye something (what it counted). '
+        + 'Done before today under the old rule: ticks next time you do it.',
+      'Added: click a goal for how to do it, or Show every how-to above the list.',
     ],
   },
   {
     n: 172,
     day: '2026-10-18',
     lines: () => [
-      `Put away, in the Inventory: every loose stack goes into a crate, chest or cart within ${STORE_REACH} tiles that already holds the same thing. `
-        + `The Stores window says how many of what you searched for there are, all told, and Within ${CRAFT_REACH} tiles keeps to the stores a craft takes from.`,
-      'Crafting: List puts a recipe on the Shopping list window, with everything it takes down to what is gathered, cast or made on the way, against your pack and the stores within reach, '
-        + 'each thing counted once however many branches want it. To… makes until you hold so many, counting what you have, and tops up when a failed go leaves you short.',
-      `Map: double-click anywhere on it, or Go on a pin, and you walk there in legs of up to ${TRAVEL_LEG} tiles, however far. On an island your pins are kept in this browser now; they were lost on a refresh.`,
-      `Settings, Eating: eat by yourself when Food falls under ${AUTO_EAT_AT.filter((v) => v).map((v) => `${Math.round(v * 100)}%`).join(', ')} (your choice), after the job in hand, never from a locked stack. `
-        + `Notices: something you wear or hold at ${DAMAGE_WARN}% damage, and food on the ground near you with under ${Math.round(ROT_SOON / 60)} minutes before it rots; a thing on the ground says how long it has in its tooltip and Pick up menu.`,
-      'Wildermon: Needs attention shows only the hungry, the hurt, those wanting a brush and those about to give birth. The Equipment and Health keys open their windows again.',
+      `Added: Put away (Inventory): each loose stack goes into a crate, chest or cart within ${STORE_REACH} tiles already holding the same item. `
+        + `Stores window shows total count of the searched item; Within ${CRAFT_REACH} tiles limits it to the stores crafting uses.`,
+      'Added: Crafting: List adds a recipe to the Shopping list window, with every input down to gathered, cast or intermediate items, against your pack and stores in reach, '
+        + 'each item counted once across branches. To… crafts until you hold the target count, counting what you have, and tops up after a failed go.',
+      `Added: Map: double-click, or Go on a pin, to walk there in legs of up to ${TRAVEL_LEG} tiles, any distance. Fixed: island pins lost on refresh; now kept in this browser.`,
+      `Added: Settings, Eating: auto-eat when Food falls under ${AUTO_EAT_AT.filter((v) => v).map((v) => `${Math.round(v * 100)}%`).join(', ')} (choose), after the current job, never from a locked stack. `
+        + `Notices: a worn or held item at ${DAMAGE_WARN}% damage; food on the ground near you under ${Math.round(ROT_SOON / 60)} min from rotting; ground items show time left in their tooltip and Pick up menu.`,
+      'Changed: Wildermon Needs attention shows only hungry, hurt, needing a brush, or about to give birth. Fixed: Equipment and Health keys open their windows again.',
     ],
   },
   {
     n: 173,
     day: '2026-10-18',
-    lines: () => [
-      'Ten new wildermon, each with a trade to work on your settlement:',
-      ...['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa']
-        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
-    ],
+    lines: () => {
+      const ids = ['kemma', 'sheela', 'salva', 'carra', 'tanna', 'grista', 'wicka', 'brambo', 'grazza', 'siffa'];
+      return [
+        `Added: ${num(ids.length)} wildermon with settlement jobs:`,
+        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+      ];
+    },
   },
   {
     n: 174,
     day: '2026-10-18',
-    lines: () => [
-      'Twelve more wildermon, each with a trade to work on your settlement:',
-      ...['forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra']
-        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
-      'In a game of your own, a plucka set to work now finds the fruit trees round it; it had been passing every one by.',
-    ],
+    lines: () => {
+      const ids = ['forga', 'potta', 'cindra', 'hoppa', 'simma', 'relka', 'bedda', 'wurla', 'sprigga', 'ambra', 'petta', 'scurra'];
+      return [
+        `Added: ${num(ids.length)} more wildermon with settlement jobs:`,
+        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+        'Fixed: offline, a working plucka skipped every fruit tree round it.',
+      ];
+    },
   },
   {
     n: 175,
     day: '2026-10-18',
-    lines: () => [
-      'Eight more wildermon, each with a trade to work on your settlement:',
-      ...['rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa']
-        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
-      'None of them fails a go, and what each makes is at its own skill. A stack you have locked is left alone.',
-    ],
+    lines: () => {
+      const ids = ['rippa', 'chissa', 'mudda', 'cordra', 'flecha', 'papra', 'glossa', 'dippa'];
+      return [
+        `Added: ${num(ids.length)} more wildermon with settlement jobs:`,
+        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${GATHER_DO[SPECIES[id].gathers!]}.`),
+        'Added: they never fail a go; output QL at their own skill. Locked stacks untouched.',
+      ];
+    },
   },
   {
     n: 176,
     day: '2026-10-18',
-    lines: () => [
-      'Seven wildermon that fight in a way of their own, at your heel or keeping a settlement:',
-      ...['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra']
-        .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[SPECIES[id].style!]}.`),
-    ],
+    lines: () => {
+      const ids = ['testa', 'skulka', 'gasha', 'thumpa', 'spitta', 'awla', 'sparra'];
+      return [
+        `Added: ${num(ids.length)} wildermon with their own fighting style, as companion or settlement guard:`,
+        ...ids.map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}): ${STYLE_SAYS[SPECIES[id].style!]}.`),
+      ];
+    },
   },
   {
     n: 177,
     day: '2026-10-18',
     lines: () => [
-      `${NumberWord(ABLE_NEWS.length)} wildermon that use an ability of their own in a fight instead of a blow, then rest:`,
+      `Added: ${num(ABLE_NEWS.length)} wildermon that use an ability instead of a blow in a fight, then rest:`,
       ...ABLE_NEWS
         .map((id) => `${SPECIES[id].name} (taming ${SPECIES[id].tameLevel}), ${abilityName(SPECIES[id].ability!)}: ${abilitySays(SPECIES[id].ability!)}.`),
-      'In a game of your own, a skin over you now takes the blows that come at you, as it does on an island.',
+      'Fixed: offline, a skin over you now absorbs incoming blows, as on an island.',
     ],
   },
   {
     n: 178,
     day: '2026-10-18',
     lines: () => [
-      'A wildermon\'s level is its skill now, to the whole number below, where it was one more than a fifth of it.',
+      'Changed: wildermon level from 1 + 1/5 of its skill to its skill, rounded down.',
       // As it was that day: the Roxxen's, by pulling, came later (212).
       ...Object.values(SPECIES).filter((d) => d.learns && d.learns.by !== 'pull')
         .map((d) => `${d.name}: learns ${SKILL_BY_ID.get(d.learns!.skill)?.name.toLowerCase() ?? d.learns!.skill} ${LEARNS_SAYS[d.learns!.by]}.`),
@@ -2379,11 +2399,11 @@ export const NEWS: News[] = [
       const d = SPECIES.rabba;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into a ${one.name} at level ${EVOLVE_AT[0]} and a ${two.name} at level ${EVOLVE_AT[1]}.`,
-        `A ${one.name} has ${stageSays(1)} than a ${d.name}; a ${two.name}, ${stageSays(2)}.`,
-        'Each of the three is a new model, with its own walk, strike, rooting and voice, and evolving is seen and heard.',
-        `A ${d.was![0]} carcass from before still butchers as a ${d.name}.`,
-        'A carcass on the ground is drawn as a heap of hide and bones rather than a sack.',
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at level ${EVOLVE_AT[1]}.`,
+        `Added: ${one.name}: ${stageSays(1)} than a ${d.name}; ${two.name}: ${stageSays(2)}.`,
+        'Added: new models for all 3 (walk, strike, rooting, voice); evolving has a visual and a sound.',
+        `Changed: old ${d.was![0]} carcasses butcher as ${d.name}.`,
+        'Changed: carcasses drawn as a heap of hide and bones, not a sack.',
       ];
     },
   },
@@ -2391,8 +2411,8 @@ export const NEWS: News[] = [
     n: 180,
     day: '2026-10-18',
     lines: () => [
-      `A skill goes on past ${SKILL_TOP}, for the boards alone: past it, a go is worth ${percent(1 / PAST_TOP)} as much for every point already over, so each point past ${SKILL_TOP} takes ${PAST_TOP} times the goes of the point before it.`,
-      `Everything a skill does it does at ${SKILL_TOP} at most: what you make, how often it comes off and how fast are as they were. The Skills window and the boards show the whole of it.`,
+      `Added: skills continue past ${SKILL_TOP}, for leaderboards only: each go ×${percent(1 / PAST_TOP)} per point already over, so each point past ${SKILL_TOP} takes ${PAST_TOP}× the goes of the one before.`,
+      `Added: every skill effect caps at ${SKILL_TOP} (output, success chance, speed unchanged). Skills window and boards show the full value.`,
     ],
   },
   {
@@ -2402,7 +2422,7 @@ export const NEWS: News[] = [
       const d = SPECIES[id];
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own walk, strike, work and voice.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3 (walk, strike, work, voice).`,
       ];
     }),
   },
@@ -2412,9 +2432,9 @@ export const NEWS: News[] = [
     lines: () => {
       const storey = OUTSIDE_STAIR_LEVEL + 1;
       return [
-        `Outside staircases: a staircase, wide or single, now goes on a tile of open ground sharing a side with the footprint of a building of ${numberWord(storey)} storeys or more, and climbs from the ground straight to storey ${storey}. The tile's menu offers Plan outside staircase and Plan outside ${SINGLE_STAIRS_NAME}; it costs what the same staircase costs inside, ${percent(STAIRS_SHARE)} or ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials, and Q and E turn it.`,
-        `Its head goes against the building and its foot out on the ground. It is refused in water, on a tree or a bush, under a jetty or a bridge, off your deed, and on ground higher than the building's ground floor. A ladder still goes inside the footprint.`,
-        `Walk onto it from the ground, off its head onto storey ${storey} through a door, a double door, an arch or no wall, and off its sides or its foot back onto the ground. It is no part of the storey: no wall is asked round it, no roof goes over it, no wall below carries it, and nothing else is planned on its tile while it stands.`,
+        `Added: outside staircases, wide or single: on an open-ground tile sharing a side with the footprint of a building of ${num(storey)}+ storeys; climbs from the ground to storey ${storey}. Tile menu: Plan outside staircase, Plan outside ${SINGLE_STAIRS_NAME}; cost as indoors, ${percent(STAIRS_SHARE)} or ${percent(SINGLE_STAIRS_SHARE)} of a solid wall's materials; Q and E rotate.`,
+        'Added: head against the building, foot on the ground. Refused in water, on a tree or bush, under a jetty or bridge, off your deed, or on ground higher than the ground floor. Ladders still go inside the footprint.',
+        `Added: enter from the ground; exit at the head onto storey ${storey} through a door, double door, arch or no wall; leave by its sides or foot back to the ground. Not part of the storey: no walls needed round it, no roof over it, no wall below carries it; nothing else planned on its tile.`,
       ];
     },
   },
@@ -2422,7 +2442,7 @@ export const NEWS: News[] = [
     n: 183,
     day: '2026-10-18',
     lines: () => [
-      'A marble floor is now one polished white slab with grey veins running through it, with no joints, in place of white octagon tiles with dark diamonds between them. It costs and does what it did.',
+      'Changed: marble floor look from white octagons with dark diamonds to 1 jointless polished white slab with grey veins. Cost and effect unchanged.',
     ],
   },  {
     n: 184,
@@ -2431,11 +2451,11 @@ export const NEWS: News[] = [
       const line = (id: 'vola' | 'warda', task: boolean, moves: string): string => {
         const d = SPECIES[id];
         const [one, two] = d.stages!;
-        return `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, task)} at the first, ${stageSays(2, task)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own ${moves} and voice.`;
+        return `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1, task)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2, task)}); both vs ${article(d.name)} ${d.name}. New models for all 3 (${moves} voice).`;
       };
       return [
-        line('vola', true, 'walk, strike, botanizing'),
-        line('warda', false, 'walk, strike, look about while it stands,'),
+        line('vola', true, 'walk, strike, botanizing,'),
+        line('warda', false, 'walk, strike, idle look-about,'),
       ];
     },
   },  {
@@ -2445,8 +2465,8 @@ export const NEWS: News[] = [
       const d = SPECIES.woola;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false, true)} at the first, ${stageSays(2, false, true)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model with its own fleece of clouds from full to shorn, walk, strike, graze and shake, and voice.`,
-        `A digger's lump of clay or heap of sand is raised by its yield traits as well as its digging, in a game of your own as it already was on an island.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1, false, true)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2, false, true)}); both vs ${article(d.name)} ${d.name}. New models for all 3 (cloud fleece from full to shorn, walk, strike, graze, shake, voice).`,
+        'Fixed: offline, a digger\'s clay or sand yield raised by its yield traits as well as digging, as on an island.',
       ];
     },
   },
@@ -2457,7 +2477,7 @@ export const NEWS: News[] = [
       const d = SPECIES.crawler;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a hermit crab carrying a shell heaped with sand that grows into a crown of shells and coral, with its own walk, strike, digging and voice.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: hermit crab, sand-heaped shell to a crown of shells and coral (walk, strike, digging, voice).`,
       ];
     },
   },
@@ -2468,7 +2488,7 @@ export const NEWS: News[] = [
       const d = SPECIES.seavic;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a leaf-backed piglet that grows into a plough-snouted hog and then a great tusked boar, with its own walk, strike, field work and voice.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: leaf-backed piglet, plough-snouted hog, tusked boar (walk, strike, field work, voice).`,
       ];
     },
   },
@@ -2478,9 +2498,9 @@ export const NEWS: News[] = [
     lines: () => {
       const up = 2;
       return [
-        `Ramp bridges: where a bridge's two ends are more than ${END_SLOP} height units apart, its deck now rises evenly from one end to the other, at most ${RAMP_SLOPE} height units for every tile of deck. Its ends may be on different storeys, or one on the ground and one on a storey, or on two banks. A storey is ${WALL_HEIGHT} high: up one storey wants at least ${rampTiles(WALL_HEIGHT)} tiles of deck, and from the ground to storey ${up + 1} (${up * WALL_HEIGHT}) at least ${rampTiles(up * WALL_HEIGHT)}. One too steep for its length is refused, saying how many tiles that climb wants.`,
-        `You step onto a ramp at the storey of the end you step on from and off it at the storey of the end you step off onto. Each span costs what a span of that kind does on a level bridge, so a ramp costs one span's bill for every tile of its deck. A ramp of a kind that carries a cart carries one only with both its ends on the ground, and a drawbridge is still level.`,
-        `On an island, a bridge set out to a storey now keeps that storey and is carried at that storey's floor, as in a game of your own, where before it was carried at the ground under its ends.`,
+        `Added: ramp bridges: ends more than ${END_SLOP} height units apart: deck rises evenly, at most ${RAMP_SLOPE} per deck tile. Ends may be on different storeys, ground and a storey, or 2 banks. Storey height ${WALL_HEIGHT}: 1 storey up needs ${rampTiles(WALL_HEIGHT)}+ deck tiles; ground to storey ${up + 1} (${up * WALL_HEIGHT}) needs ${rampTiles(up * WALL_HEIGHT)}+. Too steep: refused, stating the tiles needed.`,
+        'Added: step on at the storey of the end you enter from, off at the storey of the end you leave onto. Each span costs as on a level bridge (1 span bill per deck tile). Cart-carrying kinds carry carts only with both ends on the ground; drawbridges stay level.',
+        'Fixed: island bridges set out to a storey were carried at the ground under their ends; now at that storey\'s floor, as offline.',
       ];
     },
   },
@@ -2491,8 +2511,8 @@ export const NEWS: News[] = [
       const d = SPECIES.noot;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a clay-caked burrower in teal-glazed armour that grows into a great mole carrying clay pots on its back, with its own walk, strike, digging and voice.`,
-        `Butchered, ${article(d.name)} ${d.name} gives up to ${d.butcher.clay} ${itemDef('clay').name.toLowerCase()} instead of feathers, as many as the share of the carcass your butchering takes, on an island as in a game of your own.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: clay-caked burrower in teal-glazed armour to a great mole carrying clay pots (walk, strike, digging, voice).`,
+        `Changed: butchering ${article(d.name)} ${d.name} gives up to ${d.butcher.clay} ${itemDef('clay').name.toLowerCase()} instead of feathers, by your butchering's share of the carcass, island and offline.`,
       ];
     },
   },
@@ -2504,9 +2524,9 @@ export const NEWS: News[] = [
       const [one, two] = d.stages!;
       const food = d.diet.map((id) => itemDef(id).name.toLowerCase());
       return [
-        `New, from ${seasonSays(d.season!)}: the ${d.name}, a wildermon found wild only ${d.nocturnal ? 'after dark and only ' : ''}on those days, by the calendar in UTC. On every other day none comes out and the wild ones are gone, on an island as in a game of your own; one you have tamed, kept or bred stays all year.`,
-        `Taming ${d.tameLevel} to try, at a base ${percent(d.tameChance)} chance an offering, and it takes ${listedOr(food)} from your hand. Tamed, it uses ${abilityName(d.ability!)} in a fight: ${abilitySays(d.ability!)}. A wild one fights as any other does, and struck, it strikes back every time.`,
-        `It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}. Its level is its body strength, which it learns keeping watch over a settlement. Butchered, it gives up to ${numberWord(d.butcher.gland ?? 0)} ${itemDef('gland').name.toLowerCase()}s and nothing else. Until it has a model of its own it is drawn as a Lume.`,
+        `Added: ${d.name}, wild only ${seasonSays(d.season!)}${d.nocturnal ? ', after dark' : ''}, by UTC calendar. Other days: none spawn and wild ones vanish, island and offline; tamed, kept or bred ones stay all year.`,
+        `Added: taming ${d.tameLevel}, base ${percent(d.tameChance)} per offering; takes ${listedOr(food)} from your hand. Tamed: uses ${abilityName(d.ability!)} in a fight: ${abilitySays(d.ability!)}. Wild: fights like any other and always strikes back when struck.`,
+        `Added: evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1, false)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2, false)}); both vs ${article(d.name)} ${d.name}. Level = body strength, learned keeping watch over a settlement. Butchering: up to ${num(d.butcher.gland ?? 0)} ${itemDef('gland').name.toLowerCase()}s only. Drawn as a Lume until it has its own model.`,
       ];
     },
   },
@@ -2517,8 +2537,8 @@ export const NEWS: News[] = [
       const d = SPECIES.bevere;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a beaver kit that grows a mantle of wood shingles and leaves and then a crest of split planks, with its own walk, strike, gnawing and voice.`,
-        `A log it fells is raised by its yield traits as well as its woodcutting, in a game of your own as it already was on an island.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: beaver kit, mantle of wood shingles and leaves, crest of split planks (walk, strike, gnawing, voice).`,
+        'Fixed: offline, felled log yield raised by its yield traits as well as woodcutting, as on an island.',
       ];
     },
   },
@@ -2529,9 +2549,9 @@ export const NEWS: News[] = [
       const d = SPECIES.embra;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a snail whose shell glows with fire inside it, larger and hotter at each stage, with its own glide, strike, stoking and voice.`,
-        `Its words now say what it does on a settlement: it keeps every campfire, smelter and kiln within its reach fed with fuel from your stores whenever one holds under ${HEARTH_FULL / 60} minutes of it, and lights it if it has gone out.`,
-        `Silver bites only what carries its own light ${times(BANE_BONUS)} as hard: ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} ${s.name}`))}. The help had said an Embra was one of them, and it never was.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: snail with a fire-lit shell, larger and hotter per stage (glide, strike, stoking, voice).`,
+        `Fixed: description now states its settlement job: keeps every campfire, smelter and kiln in reach fuelled from your stores when under ${HEARTH_FULL / 60} min of fuel, relighting if out.`,
+        `Fixed: help listed Embra as silver-vulnerable. Silver damage ${mult(BANE_BONUS)} only on light-carrying kinds: ${listedOr(Object.values(SPECIES).filter((s) => s.glow).map((s) => `${article(s.name)} ${s.name}`))}.`,
       ];
     },
   },
@@ -2542,7 +2562,7 @@ export const NEWS: News[] = [
       const d = SPECIES.whispet;
       const [one, two] = d.stages!;
       return [
-        `The ${d.name}, the ${one.name} and the ${two.name} are each drawn as their own model now, no longer as a Lume: a round pearly ghost, a sheet ghost in a purple witch hat with a jack-o'-lantern, and a tall tattered veil under a torn hat hung with lanterns. Each floats its own way, strikes, uses ${abilityName(d.ability!)} with a swell and a ring of violet wisps, evolves in a mist, and has its own voice.`,
+        `Added: own models for ${d.name}, ${one.name} and ${two.name} (were Lume): round pearly ghost; sheet ghost in a purple witch hat with a jack-o'-lantern; tall tattered veil under a torn lantern-hung hat. Each with its own float, strike, ${abilityName(d.ability!)} effect (swell, ring of violet wisps), evolve mist and voice.`,
       ];
     },
   },
@@ -2550,21 +2570,21 @@ export const NEWS: News[] = [
     n: 194,
     day: '2026-10-19',
     lines: () => [
-      `On an island, a wildermon of yours that uses its ability is now drawn and heard doing it, as in a game of your own. ${NumberWord(Object.values(SPECIES).filter((d) => d.ability).length)} kinds have one, the ${SPECIES.whispet.name}'s ${abilityName(SPECIES.whispet.ability!)} among them; before, it looked like an ordinary blow.`,
+      `Fixed: island wildermon ability use looked like an ordinary blow; now drawn and heard as offline. ${num(Object.values(SPECIES).filter((d) => d.ability).length)} kinds have one, incl. the ${SPECIES.whispet.name}'s ${abilityName(SPECIES.whispet.ability!)}.`,
     ],
   },
   {
     n: 195,
     day: '2026-10-19',
     lines: () => [
-      `Build wall, Build floor and every other row that builds a planned piece (stairs, a roof, a railing, a jetty's floor) now opens onto how many goes to take, a piece of material a go: one, ${listed(BUILD_COUNTS.map(String))} where the piece still needs more than that, or all it needs, up to ${MOST_GOES} a time. It stops early once the piece is finished or nothing it needs is to hand. On an island each Build used to fit one piece.`,
+      `Added: Build wall, Build floor and every row building a planned piece (stairs, roof, railing, jetty floor) open a go count, 1 material piece a go: 1, ${listed(BUILD_COUNTS.map(String))} where the piece needs more than that, or all it needs, up to ${MOST_GOES}. Stops early when finished or when nothing needed is at hand. Was: island Build fitted 1 piece.`,
     ],
   },
   {
     n: 196,
     day: '2026-10-19',
     lines: () => [
-      `What a sacrifice at an altar now and again leaves (${percent(SOUL_CHANCE)} of them) is a soul now, no longer a mote, so it is not taken for the motes a swirl gives. It does what it did: absorbed into an ordinary thing (Absorb into, on the soul), it gives that thing its rarity. The ones you hold are souls already.`,
+      `Changed: the occasional altar sacrifice drop (${percent(SOUL_CHANCE)}) from mote to soul, distinct from swirl motes. Same effect: Absorb into (on the soul) gives an ordinary item its rarity. Held ones converted.`,
     ],
   },
   {
@@ -2573,9 +2593,9 @@ export const NEWS: News[] = [
     lines: () => {
       const stitch = CLASS_SPELL_BY_ID.get('chirurgeon_quick_stitch')!, mass = CLASS_SPELL_BY_ID.get('chirurgeon_mass_dressing')!;
       return [
-        `On an island, ${stitch.name} closed the wound you took first rather than your worst one, and ${mass.name} stopped that one bleeding `
-          + `and closed it. Both take the worst wound now, as they say: ${stitch.name} closes it by ${percent(stitch.fx.close)} of its severity, `
-          + `${mass.name} stops it bleeding and closes it by ${percent(mass.fx.close)}.`,
+        `Fixed: island ${stitch.name} and ${mass.name} targeted your first wound, not your worst. `
+          + `Now the worst: ${stitch.name} closes it by ${percent(stitch.fx.close)} of its severity; `
+          + `${mass.name} stops its bleeding and closes it by ${percent(mass.fx.close)}.`,
       ];
     },
   },
@@ -2586,11 +2606,11 @@ export const NEWS: News[] = [
       const lair = REGIONS.find((R) => R.lair?.includes('dragon'))!;
       const grand = TREASURE_TIERS.find((t) => t.guard === 'dragon')!;
       return [
-        `The dragon stands up on ${lair.name} and on no other island; one stood up on the Crescent. A ${grand.name}'s hoard, which a dragon guards, `
-          + `is buried on ${lair.name} wherever the map turned up, and one you already hold that points somewhere else points there now.`,
-        `A wildermon that stood up before its kind was renamed kept the old name as its own, so one tamed since was still called a `
-          + `${['rabba', 'bevere'].map((id) => FORMER_NAME[id]).join(' or a ')}. Every one still called its kind's old name is called its kind's name now; `
-          + 'a name somebody gave one is kept.',
+        `Changed: dragons spawn only on ${lair.name} (1 spawned on the Crescent). ${capital(grand.name)} hoards (dragon-guarded) `
+          + `buried on ${lair.name} wherever the map was found; held maps pointing elsewhere now point there.`,
+        'Fixed: wildermon spawned before their kind was renamed kept the old name, so newly tamed ones were still called '
+          + `${['rabba', 'bevere'].map((id) => FORMER_NAME[id]).join(' or ')}. All still named their kind's old name renamed; `
+          + 'player-given names kept.',
       ];
     },
   },
@@ -2603,11 +2623,11 @@ export const NEWS: News[] = [
       // What each level asked for, as the settlement menu lists it.
       const asked = (level: number): string => listed((DEED_UPGRADES[level] ?? []).map((r) => r.label.toLowerCase()));
       return [
-        `A settlement's token is drawn as a carved stone totem now, one block taller for each level of the settlement up to level ${MAX_DEED_LEVEL}, `
-          + `each block with one lit rune in its front: the lit runes up its front are the settlement's level${workers ? ', which is also how many wildermon may work there' : ''}. `
-          + `Each block is carved for what its level asked for: a fire bowl for ${asked(2)}, iron bands for ${asked(3)}, a winged bird for ${asked(4)}, `
-          + `and a roofed crown with carved wildermon heads for ${asked(5)}. Before, every token was the same pillar. `
-          + 'It gives no light: its runes and the embers in its fire bowl glow, and light nothing round it.',
+        `Changed: settlement token from a plain pillar to a carved stone totem, 1 block per settlement level up to ${MAX_DEED_LEVEL}, `
+          + `each with 1 lit rune: lit runes = settlement level${workers ? ' = wildermon worker slots' : ''}. `
+          + `Block carvings by level requirement: fire bowl (${asked(2)}), iron bands (${asked(3)}), winged bird (${asked(4)}), `
+          + `roofed crown with carved wildermon heads (${asked(5)}). `
+          + 'No light: runes and fire-bowl embers glow but light nothing.',
       ];
     },
   },
@@ -2615,10 +2635,10 @@ export const NEWS: News[] = [
     n: 200,
     day: '2026-10-19',
     lines: () => [
-      `A ${SPECIES.cobbe.name.toLowerCase()} stood idle when the nearest planned wall wanted something your stores did not hold, and on an island `
-        + 'it never took from a bin, a chest or anything else but a crate. It now takes the nearest wall wanting something your stores hold, '
-        + 'from any store of yours on the deed, and brings whatever that wall is furthest behind on first, so brick and mortar go in together. '
-        + 'On an island a worker on any errand now takes only from your own stores.',
+      `Fixed: ${SPECIES.cobbe.name.toLowerCase()} idled when the nearest planned wall needed something not in your stores; on an island `
+        + 'it took only from crates. Now: nearest wall needing something your stores hold, '
+        + 'from any of your stores on the deed, bringing what that wall lacks most first (brick and mortar together). '
+        + 'Changed: island errand workers take only from your own stores.',
     ],
   },
   {
@@ -2627,10 +2647,9 @@ export const NEWS: News[] = [
     lines: () => {
       const lair = REGIONS.find((R) => R.lair?.includes('dragon'))!;
       return [
-        'A wildermon at its task, striking or using its ability while standing still was drawn from scratch every frame, and the newer models '
-          + 'take far longer to draw than the old ones, so a settlement with a few of them at work ran slowly and was slow to answer. Those '
-          + 'moments are drawn once and kept, as walking and standing already were. Evolving and a rare one\'s shine are still drawn each frame.',
-        `Every wild dragon that was standing anywhere but ${lair.name} is gone, on the island and in a game of your own; one caught in a trap stays.`,
+        'Fixed: slow frame rate and input with working wildermon: task, strike and stationary ability poses '
+          + 'now drawn once and cached, as walking and standing were. Evolving and rare shine still drawn per frame.',
+        `Removed: every wild dragon outside ${lair.name}, island and offline; trapped ones stay.`,
       ];
     },
   },
@@ -2638,27 +2657,27 @@ export const NEWS: News[] = [
     n: 202,
     day: '2026-10-19',
     lines: () => [
-      `A wildermon takes its kind's name as its own and kept it as it evolved, so a ${SPECIES.seavic.name} grown into a ${SPECIES.seavic.stages![1].name} was still `
-        + `called ${SPECIES.seavic.name}. One called only its kind's name, a stage's or the name its kind went by before is renamed for the stage it is at `
-        + 'as it evolves, and every one there is now has been: a name somebody gave it is kept.',
+      `Fixed: wildermon kept their kind's name after evolving (a ${SPECIES.seavic.name} grown into a ${SPECIES.seavic.stages![1].name} still `
+        + `named ${SPECIES.seavic.name}). One named only its kind's name, a stage name, or its kind's former name is renamed for its current stage `
+        + 'on evolving; all existing ones updated. Player-given names kept.',
     ],
   },
   {
     n: 203,
     day: '2026-10-19',
     lines: () => [
-      `A wildermon assigned to your settlement from far away now walks back to it before taking up its trade, ${numberWord(HOME_LEG)} tiles a leg, `
-        + `as soon as it is more than ${numberWord(HOME_SLACK)} tiles past the ground it works. One that mends, carries the hod, stokes or runs any other errand, `
-        + 'and found nothing to do from where it was assigned, used to stand there for good, and one walking home in a single long leg could not be seen or selected by anybody near it.',
+      `Fixed: a wildermon assigned to your settlement from afar walks back before starting its job, ${num(HOME_LEG)} tiles a leg, `
+        + `once more than ${num(HOME_SLACK)} tiles past its work area. Was: menders, hod carriers, stokers and other errand workers `
+        + 'with nothing to do from the assignment spot stood there forever; one walking home in 1 long leg was invisible and unselectable to those nearby.',
     ],
   },
   {
     n: 204,
     day: '2026-10-19',
     lines: () => [
-      'The island stood still from 16:57 UTC until this went in: every round of its clock ran out of time while a hod carrier chose its wall, '
-        + 'because it reckoned every piece of furniture on the island, once for every planned wall, to find what your settlement held. '
-        + 'Nothing moved, wildermon could not be acted on, and in the end the island would not load. It now reads only the stores on your settlement, once a choice.',
+      'Fixed: island frozen from 16:57 UTC until this fix: clock rounds timed out while a hod carrier chose its wall '
+        + '(it scanned every piece of furniture on the island once per planned wall). '
+        + 'Nothing moved, wildermon could not be used, finally the island would not load. Now reads only your settlement\'s stores, once per choice.',
     ],
   },
   {
@@ -2667,15 +2686,15 @@ export const NEWS: News[] = [
     lines: () => {
       const named = (action: string): string => itemDef(ARTIFACT_FOR[action]).name.toLowerCase();
       return [
-        `An old pot, a bone comb and an old file restore into ${article(named('use_ancient_pot'))} ${named('use_ancient_pot')}, ${article(named('use_ancient_comb'))} ${named('use_ancient_comb')} `
-          + `and ${article(named('use_ancient_file'))} ${named('use_ancient_file')}, used on a wildermon of yours from its menu and used up whatever comes of it. `
-          + 'An old pot or old file restored before this is still an ordinary clay pot or file, and a bone comb you held is an ancient comb.',
-        `The ${named('use_ancient_comb')} takes one stage off its age: an old one is grown again, as old as one only just grown, and a grown one is young, as one only just born.`,
-        `The ${named('use_ancient_file')} makes it one step rarer one time in ${FILE_RARITY_ODDS}, up to ${RARITIES[RARITIES.length - 1].name}: `
-          + `each step makes every figure its blood decides ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} over an ordinary one's at ${listed(RARITIES.slice(1).map((r) => r.name))}.`,
-        `The ${named('use_ancient_pot')} puts a point into one of its ${numberWord(BASE_STATS.length)} base stats, at random among those not yet at ${POT_MOST}: `
-          + `${listed(BASE_STATS.map((st) => st.name.toLowerCase()))}. Each point is ${percent(POT_STEP)} more of that stat than its kind and blood give it, up to ${POT_MOST} points a stat.`,
-        'Its card in the Wildermon window now says its base stats as the rules read them, with the points ancient pots have put into each: health, attack, its speed in tiles a second and its work as a multiplier.',
+        `Added: old pot, bone comb and old file restore into ${article(named('use_ancient_pot'))} ${named('use_ancient_pot')}, ${article(named('use_ancient_comb'))} ${named('use_ancient_comb')} `
+          + `and ${article(named('use_ancient_file'))} ${named('use_ancient_file')}: used on your wildermon from its menu, consumed regardless of outcome. `
+          + 'Old pots and files restored earlier stay ordinary clay pots and files; held bone combs became ancient combs.',
+        `Added: ${named('use_ancient_comb')}: 1 age stage younger: old to just grown, grown to just born.`,
+        `Added: ${named('use_ancient_file')}: 1 rarity step up, 1 time in ${FILE_RARITY_ODDS}, up to ${RARITIES[RARITIES.length - 1].name}; `
+          + `blood-set figures ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} over ordinary at ${listed(RARITIES.slice(1).map((r) => r.name))}.`,
+        `Added: ${named('use_ancient_pot')}: +1 point in a random one of ${num(BASE_STATS.length)} base stats not yet at ${POT_MOST}: `
+          + `${listed(BASE_STATS.map((st) => st.name.toLowerCase()))}. Each point +${percent(POT_STEP)} of that stat over kind and blood, up to ${POT_MOST} a stat.`,
+        'Added: Wildermon window card shows base stats as the rules read them, with ancient pot points: health, attack, speed in tiles/s, work as a multiplier.',
       ];
     },
   },
@@ -2686,7 +2705,7 @@ export const NEWS: News[] = [
       const d = SPECIES.cobbe;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}. Each of the three is a new model, a brick lizard that takes on a hod of mortar and a trowel and then a brick tower, with its own walk, strike, bricklaying and voice.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}. New models for all 3: brick lizard, then with a mortar hod and trowel, then a brick tower (walk, strike, bricklaying, voice).`,
       ];
     },
   },
@@ -2700,12 +2719,12 @@ export const NEWS: News[] = [
       const more = rarityBands(one)[s] - rarityBands(RARITIES.map((_, i) => (i === 0 ? 2 : 0)))[s];
       const top = RARITIES.length - 1;
       return [
-        `Rare ingredients make rare work more likely. Of the units a craft uses up, the share at each of ${listed(RARITIES.slice(1).map((r) => r.name))} `
-          + `is added to the chance that what comes out is that rare: two units, one of them supreme, have a +${percent(more)} chance of coming out supreme. `
-          + `The steps are rolled from ${RARITIES[top].name} down and the first that comes up wins.`,
-        'Tools, the station and a full bucket, which comes back empty, are not counted. At the anvil the one casting a piece is beaten from, '
-          + 'or the one lump a strike of coins takes, is the whole of it, so a rare one makes what comes out at least that rare.',
-        `A go with rare ingredients in it says what they added, as "${rareInputSaid(one)}"`,
+        `Added: rare ingredients raise output rarity chance: the share of consumed units at each of ${listed(RARITIES.slice(1).map((r) => r.name))} `
+          + `is added to the chance of that rarity (2 units, 1 supreme: +${percent(more)} supreme chance). `
+          + `Rolled from ${RARITIES[top].name} down; first hit wins.`,
+        'Added: tools, the station and a full bucket (returned empty) not counted. At the anvil the casting a piece is beaten from, '
+          + 'or a coin strike\'s 1 lump, is the whole input: a rare one makes the output at least that rare.',
+        `Added: a go with rare ingredients reports their effect, e.g. "${rareInputSaid(one)}"`,
       ];
     },
   },
@@ -2716,43 +2735,43 @@ export const NEWS: News[] = [
       const shelf = furnitureDef('crate_shelf');
       const brick = itemDef('stone_brick').name;
       return [
-        `A stack dragged out of the inventory and let go over a ${shelf.name.toLowerCase()} goes into the crates standing on it, in the order its ${numberWord(shelf.crates ?? 0)} spots fill: `
-          + 'the first crate with room takes as much as it has room for, then the next, until the stack is gone or every crate is full. What none of them has room for stays in your pack.',
-        'A crate on it that is shut to you (somebody else\'s, padlocked, or a settlement store your rank cannot use) is passed over and the rest are filled. '
-          + 'It is the same as putting the stack into each crate in turn: the same rules, all in one go.',
-        `One line says how much went where, as "${rackPutLine(12, 20, brick, 2, '', shelf.name)}"`,
+        `Added: drop a stack from the inventory onto a ${shelf.name.toLowerCase()}: fills its crates in spot order (${num(shelf.crates ?? 0)} spots), `
+          + 'each taking what it has room for, until the stack is gone or all are full. Remainder stays in your pack.',
+        'Added: crates closed to you (others\', padlocked, or a settlement store your rank cannot use) are skipped. '
+          + 'Same rules as putting into each crate in turn, in one go.',
+        `Added: 1 summary line, e.g. "${rackPutLine(12, 20, brick, 2, '', shelf.name)}"`,
       ];
     },
   },
   {
     n: 209,
     day: '2026-10-19',
-    lines: () => [`A brush is made of ${recipeBill('make_brush')} now, not a plank and wool.`],
+    lines: () => [`Changed: brush bill from a plank and wool to ${recipeBill('make_brush')}.`],
   },
   {
     n: 210,
     day: '2026-10-19',
-    lines: () => ['On an island your settlement counted a neighbour\'s wildermon at work within sight against its own places, and refused yours for room it had. It counts only yours now.'],
+    lines: () => ['Fixed: island settlement worker slots counted neighbours\' working wildermon within sight, refusing yours with room left. Counts only yours.'],
   },
   {
     n: 211,
     day: '2026-10-19',
     lines: () => [
-      `A wild creature now goes once it is between ${spanWords(WILD_STAY)} and ${spanWords(2 * WILD_STAY)} old, the next time the country it stands in is stocked, `
-        + `and new ones are rolled in its place from all ${WILD_SPECIES.length} kinds at their weights. Before, country was only topped up for what had been killed, `
-        + 'so kinds added since it was first stocked hardly ever came out.',
-      'Every wild creature on the island that nobody was fighting, taming, marking or keeping has gone now, and the country is stocked again '
-        + 'as people walk into it, starting with where you are standing.',
-      'One that is tamed or kept, in a fight, struck a moment ago, trapped, ridden, in the traces, tied to a post, stunned, marked, being offered food '
-        + 'or being acted on stays until that is over. Monsters keep their own rules.',
+      `Changed: wild creatures despawn between ${dur(WILD_STAY)} and ${dur(2 * WILD_STAY)} old, at the next restock of their area, `
+        + `replaced by new rolls from all ${WILD_SPECIES.length} kinds at their weights. Was: areas only refilled for kills, `
+        + 'so kinds added later rarely spawned.',
+      'Changed: every wild creature not being fought, tamed, marked or kept was removed; areas restock '
+        + 'as people enter them, starting where you stand.',
+      'Added: tamed or kept, fighting, just struck, trapped, ridden, hitched, tied to a post, stunned, marked, being offered food '
+        + 'or acted on: stays until that ends. Monsters keep their own rules.',
     ],
   },
   {
     n: 212,
     day: '2026-10-19',
     lines: () => [
-      `A ${SPECIES.roxxen.name}'s level is its driving now, where it was its climbing: it learns driving ${LEARNS_SAYS.pull}, and nothing standing still or out of the traces.`,
-      `In the traces its driving counts where another beast's climbing does, in the team's pace and the steepest step the wheels take. A ${SPECIES.roxxen.name} you already have keeps its level: its climbing is its driving now.`,
+      `Changed: ${SPECIES.roxxen.name} level from climbing to driving; learns driving ${LEARNS_SAYS.pull}, nothing while still or unhitched.`,
+      `Changed: hitched, its driving counts where other beasts' climbing does (team pace, steepest step the wheels take). Existing ${SPECIES.roxxen.name} keep their level: climbing converted to driving.`,
     ],
   },
   {
@@ -2762,8 +2781,8 @@ export const NEWS: News[] = [
       const d = SPECIES.roxxen;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}. In the traces it still adds ${percent(d.pull!)} to its team's pace.`,
-        `Each of the three is a new model, a cream calf in a leaf mane and a plain harness that takes on ram horns, a padded collar and a bell, then poles, a yoke and banners, with its own walk, trot, strike, haul and voice.`,
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1, false)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2, false)}); both vs ${article(d.name)} ${d.name}. Hitched: still +${percent(d.pull!)} team pace.`,
+        'Added: new models for all 3: cream calf in a leaf mane and plain harness; then ram horns, padded collar and bell; then poles, yoke and banners (walk, trot, strike, haul, voice).',
       ];
     },
   },
@@ -2771,20 +2790,20 @@ export const NEWS: News[] = [
     n: 214,
     day: '2026-10-20',
     lines: () => [
-      `A ${SPECIES.cobbe.name} at work on a settlement now carries the hod to all planned building work within its reach, not only to walls on the ground floor: `
-        + 'walls on any storey, floors, roofs, staircases, ladders, decks on piers, columns, the open span of a bridge or an aqueduct, and the concrete of a foundation.',
-      'Each piece goes in as a go of your own puts one in: the bill comes down by one, and the last piece does what yours would, '
-        + 'starting the moss or ivy, making a glasshouse under a glass roof, opening a shop counter\'s store, letting an aqueduct\'s water run, or packing a foundation\'s top.',
-      'It chooses as before: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, '
-        + 'and of what that work wants, whatever is furthest behind its bill.',
+      `Changed: a working ${SPECIES.cobbe.name} carries the hod to all planned building work in reach, not only ground-floor walls: `
+        + 'walls on any storey, floors, roofs, staircases, ladders, pier decks, columns, open bridge or aqueduct spans, and foundation concrete.',
+      'Added: each piece counts as 1 of your goes: bill −1; the last piece triggers what yours would '
+        + '(moss or ivy start, glasshouse under a glass roof, shop counter store opens, aqueduct water runs, foundation top packed).',
+      'Changed: none to target choice: the piece it carries wherever wanted, else the nearest work needing something your stores hold, '
+        + 'bringing whatever is furthest behind its bill.',
     ],
   },
   {
     n: 215,
     day: '2026-10-20',
     lines: () => [
-      'A wildermon you set to work on your settlement from far away now walks the whole way home whether or not you are near it. '
-        + 'It used to walk only while you stood near it, and stopped wherever you left it.',
+      'Fixed: a wildermon assigned to your settlement from afar walked only while you were near and stopped when you left. '
+        + 'Now walks the whole way home regardless.',
     ],
   },
   {
@@ -2794,8 +2813,8 @@ export const NEWS: News[] = [
       const d = SPECIES.tinka;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
-        'Each of the three is a new model, a tinker raccoon with a spanner that takes on goggles, a pack and a mallet, then a great pack with a lantern and a brass wrench, with its own walk, strike, mending and voice.',
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}.`,
+        'Added: new models for all 3: tinker raccoon with a spanner; then goggles, pack and mallet; then a great pack with lantern and brass wrench (walk, strike, mending, voice).',
       ];
     },
   },
@@ -2806,8 +2825,8 @@ export const NEWS: News[] = [
       const d = SPECIES.orse;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now, and still the mount. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}.`,
-        'Each of the three is a new model, a long-eared hare that grows from a fluffy kit to a courser and a great Moonhare with a flowing mane and two plumes, with its own walk, bounding gallop, kick and voice. You sit each one where its back is: knees up on a Thistlekit, astride further back on the bigger two.',
+        `Changed: ${d.was![0]} renamed ${d.name}; still the mount. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1, false)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2, false)}); both vs ${article(d.name)} ${d.name}.`,
+        'Added: new models for all 3: long-eared hare, fluffy kit to courser to great Moonhare with flowing mane and 2 plumes (walk, bounding gallop, kick, voice). Rider seat per size: knees up on a Thistlekit, astride further back on the larger 2.',
       ];
     },
   },
@@ -2818,9 +2837,9 @@ export const NEWS: News[] = [
       const d = SPECIES.sedra;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
-        `It cuts ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} reeds a cut at ${SKILL_TOP} foraging, 1 more for every ${REED_LEVELS} levels. Its carcass gives fur where the Sedra's gave feathers.`,
-        'Each of the three is a new model, a marsh otter with reeds down its back that grows into an upright Reedweaver with a bundle of pampas, then a great Marshreaper with a reed mantle, a plume fan and a sickle, with its own walk, strike, reed cutting and voice.',
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}.`,
+        `Changed: reeds per cut: 1 +1 per ${REED_LEVELS} foraging levels (${1 + Math.floor(SKILL_TOP / REED_LEVELS)} at ${SKILL_TOP}). Carcass gives fur instead of the Sedra's feathers.`,
+        'Added: new models for all 3: marsh otter with reeds down its back; upright Reedweaver with a pampas bundle; great Marshreaper with reed mantle, plume fan and sickle (walk, strike, reed cutting, voice).',
       ];
     },
   },
@@ -2831,10 +2850,10 @@ export const NEWS: News[] = [
       const lamp = itemDef(ARTIFACT_FOR.use_ancient_lamp).name.toLowerCase();
       const top = TIERS[TIERS.length - 1];
       return [
-        `An old lamp restores into ${article(lamp)} ${lamp}, and one you held is ${article(lamp)} ${lamp} now. Used on a wildermon of yours from its menu, it rerolls its lowest-tier trait, `
-          + `one of them at random where several share that tier, into one it does not carry: at that tier, or one time in ${LAMP_TIER_ODDS} at the tier above `
-          + `(${listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`))}), never lower. At ${top}, with no tier above, it is another ${top} trait. It is used up.`,
-        `One with fewer than ${numberWord(TRAIT_SLOTS)} traits has an empty slot, which the lamp fills first, with ${article(TIERS[0])} ${TIERS[0]} trait or one time in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one.`,
+        `Added: old lamp restores into ${article(lamp)} ${lamp}; held ones converted. Used on your wildermon from its menu: rerolls its lowest-tier trait `
+          + `(random among ties) into one it lacks, same tier, or 1 time in ${LAMP_TIER_ODDS} the tier above `
+          + `(${listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`))}), never lower. At ${top}: another ${top} trait. Consumed.`,
+        `Added: with fewer than ${num(TRAIT_SLOTS)} traits, the lamp fills an empty slot first: ${article(TIERS[0])} ${TIERS[0]} trait, or 1 time in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one.`,
       ];
     },
   },
@@ -2842,21 +2861,21 @@ export const NEWS: News[] = [
     n: 220,
     day: '2026-10-20',
     lines: () => [
-      `A deed worker with nothing to do says why on its card and when you point at it, until it next sets out: nothing of its trade within its range of the token at its level ("${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}"), `
-        + `nothing in your stores for it to work and what it wants there ("${idleSays({ why: 'stock', n: 0 }, 'mend')}"), "${idleSays({ why: 'room', n: 0 }, 'water')}", `
-        + `a load with nowhere on the settlement to put it, or walking home from more than ${HOME_SLACK} tiles past its range, with how far.`,
-      'On an island it also says when nothing is working it: its keeper is away, or nobody awake is near enough, with how near. And you are sent your own deed workers wherever they are, not only those near you.',
-      `Its card keeps a ledger of this island day and the one before (${spanWords(DAY_SECONDS)} each): its goes at its task, the skill it gained and the ${numberWord(LEDGER_SHOWN)} things it handled most of, of up to ${numberWord(LEDGER_ITEMS)} kinds a day.`,
+      `Added: idle deed workers show the reason on their card and hover until they next set out: nothing of their trade in range of the token at their level ("${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}"), `
+        + `nothing in your stores to work, with what is wanted ("${idleSays({ why: 'stock', n: 0 }, 'mend')}"), "${idleSays({ why: 'room', n: 0 }, 'water')}", `
+        + `a load with nowhere on the settlement to go, or walking home from more than ${HOME_SLACK} tiles past range, with distance.`,
+      'Added: island: also when nothing runs it: keeper away, or nobody awake near enough, with how near. Changed: you receive all your deed workers wherever they are, not only nearby ones.',
+      `Added: card ledger for this island day and the previous (${dur(DAY_SECONDS)} each): goes at its task, skill gained, and the top ${num(LEDGER_SHOWN)} items handled, of up to ${num(LEDGER_ITEMS)} kinds a day.`,
     ],
   },
   {
     n: 221,
     day: '2026-10-20',
     lines: () => [
-      `A new skill, Tracking, in the Naturalist's trade. Track, on the field guide page of a wildermon you have seen, finds the nearest wild one of that kind, at any stage, `
-        + `within ${TRACK_RANGE_BASE} tiles and ${TRACK_RANGE_PER} more a level of Tracking (${trackRange(SKILL_TOP)} at ${SKILL_TOP}), and says the way and the distance to it. A kept one is never tracked.`,
-      `The way it reads is off the true bearing by ${trackErrSays()}. Then it says ${trackBandsSays().join('; ')}.`,
-      `An arrow on the screen points the way it read, from where you stood, for ${TRACK_SHOW} seconds. In a game of your own a track reaches no further than ${CULL_RANGE} tiles, past which the wild is kept as a count and not as creatures.`,
+      `Added: Tracking skill (Naturalist). Track, on the field guide page of a seen wildermon: nearest wild one of that kind, any stage, `
+        + `within ${TRACK_RANGE_BASE} tiles +${TRACK_RANGE_PER} per Tracking level (${trackRange(SKILL_TOP)} at ${SKILL_TOP}); gives direction and distance. Kept ones never tracked.`,
+      `Added: direction error ${trackErrSays()}. Distance: ${trackBandsSays().join('; ')}.`,
+      `Added: on-screen arrow along the read direction from where you stood, for ${TRACK_SHOW} s. Offline, range capped at ${CULL_RANGE} tiles (wild beyond that is kept as a count).`,
     ],
   },
   {
@@ -2869,12 +2888,12 @@ export const NEWS: News[] = [
       const at = (lv: number) => tameNeeds({ species: e.id, skills: { [levelSkill(e)!]: lv } });
       const fav = favouriteOf(e)!;
       return [
-        `One time in ${WILD_STAGE_ODDS[0]} a wild one of a kind that evolves comes in already at its second stage, at a level from ${a} to ${b - 1}, and one time in ${WILD_STAGE_ODDS[1]} at its third, from ${c} to ${d - 1}: called, drawn and as strong as that stage.`
-          + ` Taming it asks ${WILD_STAGE_TAME} more taming for each stage past its first, at ${percent(WILD_STAGE_CHANCE)} of its kind's base chance an offering for each:`
-          + ` ${article(e.stages![0].name)} ${e.stages![0].name} asks taming ${at(a).level} at a base ${percent(at(a).chance)} and ${article(e.stages![1].name)} ${e.stages![1].name} ${at(c).level} at ${percent(at(c).chance)}, where ${article(e.name)} ${e.name} asks ${e.tameLevel} at ${percent(e.tameChance)}.`,
-        `Food quality matters. Each thing of its diet one of yours eats puts ${percent(FED_CARE)} care into it at quality ${NEWS_QL_TOP}, and has it learn ${percent(FED_LEARN)} faster for ${spanWords(FED_FOR)} at quality ${NEWS_QL_TOP},`
-          + ` ${times(FED_FAVOURITE)} that for its favourite, the first of its diet; both are as much less as the quality is under ${NEWS_QL_TOP}. A ${e.name}'s is ${itemDef(fav).name.toLowerCase()}, worth ${percent(fedBonus(e, fav, NEWS_QL_TOP))} faster learning at quality ${NEWS_QL_TOP}.`,
-        `A meal worth as much as or more than what is on it puts its own on and starts the ${spanWords(FED_FOR)} again; a lesser one leaves it be, and none adds to another. Grazing and a bucket of whey are worth nothing to either. Its card says what its favourite is worth and how long a meal has left, and a wild one's what its stage asks over its kind's.`,
+        `Added: wild evolved spawns: 1 time in ${WILD_STAGE_ODDS[0]} second stage, level ${a} to ${b - 1}; 1 time in ${WILD_STAGE_ODDS[1]} third stage, ${c} to ${d - 1}; named, drawn and as strong as that stage.`
+          + ` Taming +${WILD_STAGE_TAME} per stage past the first, base chance ×${percent(WILD_STAGE_CHANCE)} per stage:`
+          + ` ${e.stages![0].name} taming ${at(a).level} at base ${percent(at(a).chance)}, ${e.stages![1].name} ${at(c).level} at ${percent(at(c).chance)}; ${e.name} ${e.tameLevel} at ${percent(e.tameChance)}.`,
+        `Added: food quality: each diet item eaten gives ${percent(FED_CARE)} care at QL ${NEWS_QL_TOP} and +${percent(FED_LEARN)} learning for ${dur(FED_FOR)} at QL ${NEWS_QL_TOP},`
+          + ` ${mult(FED_FAVOURITE)} for its favourite (first in its diet); both proportionally less below QL ${NEWS_QL_TOP}. ${e.name} favourite: ${itemDef(fav).name.toLowerCase()}, +${percent(fedBonus(e, fav, NEWS_QL_TOP))} learning at QL ${NEWS_QL_TOP}.`,
+        `Added: a meal worth as much or more than the current one replaces it and restarts the ${dur(FED_FOR)}; a lesser one does nothing; no stacking. Grazing and whey give neither. Card shows favourite value and meal time left; wild ones show stage requirements over their kind's.`,
       ];
     },
   },
@@ -2889,12 +2908,12 @@ export const NEWS: News[] = [
           return `${article(d.stages![0].name)} ${d.stages![0].name} ${verb} ${rest.replace(/,$/, '')}`;
         });
       return [
-        `Every trade takes about as long to evolve now. A trade's go came round at its own rate, so some lines reached level ${EVOLVE_AT[0]} in a fraction of the time others took; every gain a deed worker makes at its level skill is multiplied by its trade's own share, `
-          + `worked out from each trade's go so that each takes about as long as the middle one to reach level ${EVOLVE_AT[0]} and to go on to ${EVOLVE_AT[1]}: ${learnPaceSays()}. Keeping watch and hunting are as they were.`,
-        `And each stage lets a deed worker do more at once: ${STAGE_LOADS[1]} things at its second stage and ${STAGE_LOADS[2]} at its third, where its first does ${STAGE_LOADS[0]}. `
-          + 'A trade that brings a load home carries that many a trip, going on to the next tile with room in its arms rather than home; the errands that carry water, pieces, fuel, sprouts, candles, seed and buckets carry that many; '
-          + `and a trade worked in place handles that many a go: things mended, batches made, carcasses butchered, relics restored, pieces glazed, and wildermon of yours brushed, milked or shorn, or dressed within ${TEND_REACH} tiles. `
-          + `At its second stage, ${lines.join('; ')}; at its third, ${STAGE_LOADS[2]} of each. A go still teaches what one go teaches.`,
+        `Changed: evolution time equalised across trades (some reached level ${EVOLVE_AT[0]} in a fraction of others' time). Each deed worker gain at its level skill ×its trade's share, `
+          + `set so each takes about as long as the median to reach level ${EVOLVE_AT[0]} and then ${EVOLVE_AT[1]}: ${learnPaceSays()}. Watch and hunting unchanged.`,
+        `Added: stage loads: ${STAGE_LOADS[1]} at the second stage, ${STAGE_LOADS[2]} at the third (first: ${STAGE_LOADS[0]}). `
+          + 'Gatherers carry that many a trip, moving to the next tile while arms have room; errands carrying water, pieces, fuel, sprouts, candles, seed and buckets carry that many; '
+          + `in-place trades handle that many a go: items mended, batches made, carcasses butchered, relics restored, pieces glazed, your wildermon brushed, milked, shorn or dressed within ${TEND_REACH} tiles. `
+          + `Second stage: ${lines.join('; ')}; third: ${STAGE_LOADS[2]} of each. Learning per go unchanged.`,
       ];
     },
   },
@@ -2905,15 +2924,15 @@ export const NEWS: News[] = [
       const top = TIERS[TIERS.length - 1];
       const deepest = depthMul(PEDIGREE_MOST, 'tough');
       return [
-        'Put it to a mate now shows what the pairing would throw before you say yes, counted off the covering\'s own draw at your husbandry, their care and your perks: '
-          + 'how often it takes, how often the young one is born carrying each trait either parent carries, how often its best trait comes out at each tier, '
-          + 'the chance of a mutation and its tier, how deep its line would run, and the odds of its own rarity.',
-        `Each wildermon's line runs on each thing a trait can lift: a generation deep for each generation in a row, itself included, that carried a trait on it, up to ${PEDIGREE_MOST}. `
-          + `Each generation past the first adds ${Math.round(PEDIGREE_STEP * 100)}% to what its blood does there, ${cardPct(deepest)} at ${PEDIGREE_MOST}, `
-          + `and as much less where less is better. Its card says so, a line for each. Every wildermon already on an island stands at 1 on each thing it carries a trait on.`,
-        `1 young in ${MUTATION_ODDS} is born with a mutation: a trait neither parent carries in any grade, 1 tier above the best of theirs (${top} at ${top}), `
-          + 'in its lowest-tier slot. Its birth says so and what came, and its card says mutation where that trait came from.',
-        'A wild trait roll that comes up with a name the animal already carries rolls again on the island as it does in the browser, so the two throw the same blood at the same odds.',
+        'Added: Put it to a mate preview before confirming, from the covering\'s own roll at your husbandry, their care and your perks: '
+          + 'success chance, chance the young carries each parent trait, best-trait tier odds, '
+          + 'mutation chance and tier, resulting line depth, and its rarity odds.',
+        `Added: pedigree per trait channel: 1 generation per consecutive generation (incl. itself) carrying a trait on it, up to ${PEDIGREE_MOST}. `
+          + `Each generation past the first +${Math.round(PEDIGREE_STEP * 100)}% to its blood effect there, ${cardPct(deepest)} at ${PEDIGREE_MOST}, `
+          + 'reversed where lower is better. Card shows a line each. Existing island wildermon start at 1 on each carried channel.',
+        `Added: mutation, 1 young in ${MUTATION_ODDS}: a trait neither parent carries at any grade, 1 tier above their best (${top} at ${top}), `
+          + 'in its lowest-tier slot. Birth message names it; card marks its source as mutation.',
+        'Fixed: island wild trait rolls repeating a carried name now reroll as in the browser; both sides roll the same odds.',
       ];
     },
   },
@@ -2924,9 +2943,9 @@ export const NEWS: News[] = [
       const d = SPECIES.holla;
       const [one, two] = d.stages!;
       return [
-        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
-        `It still carries water from the shore or a well to your barrels, ${BUCKET_LITRES} litres a bucket, and as it evolves it carries ${STAGE_LOADS[1]} and then ${STAGE_LOADS[2]} buckets a trip. Its carcass gives no fur.`,
-        'Each of the three is a new model, a frog with water bladders on its back in rope rings that grows into a Springcarrier with a bladder on each flank and a great Aquavoyager with a wooden yoke pipe, spouts and a leaf canopy, with its own hop, strike, pour and voice.',
+        `Changed: ${d.was![0]} renamed ${d.name}. Evolves into ${one.name} at level ${EVOLVE_AT[0]} (${stageSays(1)}) and ${two.name} at level ${EVOLVE_AT[1]} (${stageSays(2)}); both vs ${article(d.name)} ${d.name}.`,
+        `Changed: still carries water from shore or well to your barrels, ${BUCKET_LITRES} L a bucket; ${STAGE_LOADS[1]} then ${STAGE_LOADS[2]} buckets a trip as it evolves. Carcass gives no fur.`,
+        'Added: new models for all 3: frog with rope-ringed water bladders on its back; Springcarrier with a bladder each flank; great Aquavoyager with wooden yoke pipe, spouts and leaf canopy (hop, strike, pour, voice).',
       ];
     },
   },
@@ -2934,19 +2953,19 @@ export const NEWS: News[] = [
     n: 226,
     day: '2026-10-20',
     lines: () => [
-      `Deed workers tire: each has ${TIRE_GOES} goes at its task in it, a go being one gain, so a stage's extra loads and handlings cost nothing more. `
-        + `With none left, once its arms are empty or between the steps of an errand, it rests ${spanWords(restFor(false))} and gets up with its stamina full. Its card shows its stamina, and while it rests the seconds left.`,
-      `A wildermon bed of its own size standing free on your settlement shortens that: it walks to the nearest and sleeps in it for ${share(BED_REST)} as long, ${spanWords(restFor(true))}. `
-        + `A small bed fits one in its first stage (under level ${EVOLVE_AT[0]}), a medium one its second, a large one its third (level ${EVOLVE_AT[1]} and over); `
-        + `a kind that does not evolve fits the small one under ${DEN_HEALTH[0]} health, the medium one under ${DEN_HEALTH[1]}, and the large one at that and over. None sleeps in a bed of another size, and a bed holds one at a time.`,
-      `Upkeep: a deed worker that has been at work ${spanWords(UPKEEP_FOR)}, an island day, without a meal takes its task at ${percent(UNFED_PACE)} of its pace until it next eats, and its card says so. `
-        + 'It eats out of your stores on the settlement whenever it is hungry, as ever, so only one with nothing to eat there slows.',
-      `Specialties: with ${SPECIALTY_AT} or more deed workers of one trade on a settlement, each takes its task ${percent(SPECIALTY_BONUS)} faster. The settlement window lists your trades and how many work each, and a worker's card says its own.`,
-      `In a game of your own a mender, a water carrier, a hod carrier, a planter, a stoker and a prospector now take a go's work time over every go, `
-        + `${Math.round(workDuration(1))} seconds at level 1 and ${Math.round(workDuration(SKILL_TOP))} at ${SKILL_TOP} before care and stage, and wait as long after a fetch out of the stores as the island does; `
-        + 'a fetcher and a stoker learn what they learn on the island, and clearing up rot is a trade that walks out to a tile, as it is there. '
-        + `On the island a reed cutter now cuts 1 reed and 1 more for every ${REED_LEVELS} levels of its foraging, as its words say: ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} a cut at ${SKILL_TOP}.`,
-      `Every trade's share of learning was worked out again with its rest counted, so each still takes about as long as the middle one to evolve: ${learnPaceSays()}.`,
+      `Added: deed worker stamina: ${TIRE_GOES} goes at its task, 1 go = 1 gain (stage extra loads cost nothing more). `
+        + `At zero, once arms are empty or between errand steps, rests ${dur(restFor(false))}, then full stamina. Card shows stamina and rest seconds left.`,
+      `Added: a free wildermon bed of its size on your settlement: walks to the nearest and sleeps ${frac(BED_REST)} as long, ${dur(restFor(true))}. `
+        + `Small bed: first stage (under level ${EVOLVE_AT[0]}); medium: second; large: third (level ${EVOLVE_AT[1]}+). `
+        + `Non-evolving kinds: small under ${DEN_HEALTH[0]} health, medium under ${DEN_HEALTH[1]}, large at that and over. Only its own size; 1 per bed.`,
+      `Added: upkeep: a deed worker working ${dur(UPKEEP_FOR)} (an island day) without a meal works at ${percent(UNFED_PACE)} pace until it eats; card shows it. `
+        + 'Eats from your settlement stores when hungry, as before; only one with nothing to eat slows.',
+      `Added: specialties: ${SPECIALTY_AT}+ deed workers of 1 trade on a settlement: each works ${percent(SPECIALTY_BONUS)} faster. Settlement window lists your trades and counts; worker card shows its own.`,
+      `Fixed: offline, mender, water carrier, hod carrier, planter, stoker and prospector take a go's work time on every go, `
+        + `${Math.round(workDuration(1))} s at level 1, ${Math.round(workDuration(SKILL_TOP))} at ${SKILL_TOP} before care and stage, and wait after a store fetch as on the island; `
+        + 'fetcher and stoker learn as on the island; rot clearing walks out to a tile, as there. '
+        + `Fixed: island reed cutter cuts 1 reed +1 per ${REED_LEVELS} foraging levels, as described: ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} at ${SKILL_TOP}.`,
+      `Changed: trade learning shares recalculated with rest counted; each still evolves in about the median time: ${learnPaceSays()}.`,
     ],
   },
   {

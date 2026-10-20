@@ -345,7 +345,7 @@ check('then the next store out, and nothing out of reach, locked, thrown away, f
   said('LEFT') === '0,0,0,0,10,10,10,10,10', said('LEFT'));
 check('the stack put by is never spent', said('PUTBY') === '6', said('PUTBY'));
 check('fourteen logs made forty-two planks', said('PLANKS') === '42', said('PLANKS'));
-check('and it says so when there is nothing left in reach', /^Planks? takes 1 log\.$/.test(said('NOW')), said('NOW'));
+check('and it says so when there is nothing left in reach', /^Need 1 log\.$/.test(said('NOW')), said('NOW'));
 check('a padlocked crate opens for its key', said('KEY') === '10', said('KEY'));
 check('aimed at the oak in the chest, the island makes it of oak', said('MAT') === 'Oak', said('MAT'));
 check('and uses the chest\'s oak, not the pack\'s pine', said('OAK') === '3,2,2', said('OAK'));

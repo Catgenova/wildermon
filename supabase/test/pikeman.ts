@@ -504,16 +504,16 @@ for (const bl of BLOWS) {
   const [slow, secs, line] = parts('SWEEP');
   check(`Sweep the Legs: for ${fx('sweep_the_legs', 'secs')} s it goes at ${pct(fx('sweep_the_legs', 'pace'))} of its pace`,
     near(Number(slow), fx('sweep_the_legs', 'pace'), 1e-6) && near(Number(secs), fx('sweep_the_legs', 'secs'), 1e-6)
-      && line.endsWith(`it goes at ${pct(fx('sweep_the_legs', 'pace'))} of its pace.`), island('SWEEP'));
+      && line.endsWith(` Pace ${pct(fx('sweep_the_legs', 'pace'))} for ${fx('sweep_the_legs', 'secs')} s.`), island('SWEEP'));
 }
 {
   const [over, vital] = parts('REACH:PAST');
   check(`Overreach strikes up to ${fx('overreach', 'past')} tiles past your reach, where a blow within it is refused`,
-    over === 'struck' && vital === `The ogre is more than ${SPEAR_REACH} tiles away.`, island('REACH:PAST'));
-  check('and no further', island('REACH:BEYOND') === `The ogre is more than ${SPEAR_REACH + fx('overreach', 'past')} tiles away.`, island('REACH:BEYOND'));
+    over === 'struck' && vital === `Too far: max ${SPEAR_REACH} tiles.`, island('REACH:PAST'));
+  check('and no further', island('REACH:BEYOND') === `Too far: max ${SPEAR_REACH + fx('overreach', 'past')} tiles.`, island('REACH:BEYOND'));
   const [secs, line] = parts('REACH:WIND');
   check(`and puts your own next swing back ${fx('overreach', 'wind')} s`,
-    near(Number(secs), 1 + fx('overreach', 'wind'), 1e-6) && line.endsWith(`Your next swing comes ${fx('overreach', 'wind')} s later.`), island('REACH:WIND'));
+    near(Number(secs), 1 + fx('overreach', 'wind'), 1e-6) && line.endsWith(` Next swing delayed ${fx('overreach', 'wind')} s.`), island('REACH:WIND'));
 }
 {
   const [plain, vital, lost] = parts('VITAL').map(Number);
@@ -525,27 +525,27 @@ for (const bl of BLOWS) {
   const [ratio, line] = parts('TWIN');
   check(`Twin Thrust: ${fx('twin_thrust', 'blows')} blows at ${pct(fx('twin_thrust', 'more'))} each, the very rolls of two swings`,
     // To within what a creature's health holds as a real.
-    near(Number(ratio), 1, 1e-5) && /^Twin Thrust: \d of 2 blows land/.test(line), island('TWIN'));
+    near(Number(ratio), 1, 1e-5) && /^Twin Thrust: \d\/2 blows hit/.test(line), island('TWIN'));
 }
 {
   const [who, line] = parts('SKEWER');
   check(`Skewer goes through into what is up to ${fx('skewer', 'behind')} tiles behind it within ${fx('skewer', 'width')} of the line, and nothing else`,
-    who.split(',')[0] === 'true' && who.split(',').slice(2).every((x) => x === 'false') && /It goes through into 1 more behind/.test(line),
+    who.split(',')[0] === 'true' && who.split(',').slice(2).every((x) => x === 'false') && / Through: 1 more hit\.$/.test(line),
     island('SKEWER'));
 }
-check('Warning Thrust is refused on a creature already fighting you', island('WARN:FIGHTING') === 'The ulva is already fighting you.', island('WARN:FIGHTING'));
-check('and on one that never goes looking for a fight', island('WARN:PREY') === 'The bura never comes for anybody unless it is struck.', island('WARN:PREY'));
+check('Warning Thrust is refused on a creature already fighting you', island('WARN:FIGHTING') === 'The ulva: already fighting you.', island('WARN:FIGHTING'));
+check('and on one that never goes looking for a fight', island('WARN:PREY') === 'The bura: not aggressive.', island('WARN:PREY'));
 {
   const [who, secs, line] = parts('WARN');
   check(`and a hunter warned off does not come for you for ${fx('warning_thrust', 'secs')} s, where one alike does`,
-    who === 'none,true' && near(Number(secs), fx('warning_thrust', 'secs'), 1e-6) && /will not come for you for 30 s/.test(line), island('WARN'));
+    who === 'none,true' && near(Number(secs), fx('warning_thrust', 'secs'), 1e-6) && / will not attack you for 30 s, until you strike it\.$/.test(line), island('WARN'));
 }
-check(`Hook is refused past ${fx('hook', 'reach')} tiles`, island('HOOK:FAR') === `The ulva is more than ${fx('hook', 'reach')} tiles away.`, island('HOOK:FAR'));
-check('and on a creature at your feet', island('HOOK:FEET') === 'The ulva is already at your feet.', island('HOOK:FEET'));
+check(`Hook is refused past ${fx('hook', 'reach')} tiles`, island('HOOK:FAR') === `Too far: max ${fx('hook', 'reach')} tiles.`, island('HOOK:FAR'));
+check('and on a creature at your feet', island('HOOK:FEET') === 'The ulva: already adjacent.', island('HOOK:FEET'));
 {
   const [dist, on, line] = parts('HOOK');
   check(`Hook drags it ${fx('hook', 'pull')} tiles towards you, and it turns on you`,
-    near(Number(dist), 3.5 - fx('hook', 'pull'), 1e-6) && on === 'true' && line === `Hook: you drag the ulva ${fx('hook', 'pull')} tiles towards you.`, island('HOOK'));
+    near(Number(dist), 3.5 - fx('hook', 'pull'), 1e-6) && on === 'true' && line === `Hook: ulva pulled ${fx('hook', 'pull')} tiles toward you.`, island('HOOK'));
   const [least] = parts('HOOK:LEAST');
   check(`and never nearer than ${fx('hook', 'least')} tile`, near(Number(least), fx('hook', 'least'), 1e-6), island('HOOK:LEAST'));
 }
@@ -554,7 +554,7 @@ check('and on a creature at your feet', island('HOOK:FEET') === 'The ulva is alr
   const [mine, theirs] = both.split(',').map(Number);
   check(`Rally the Line gives you and everybody within ${fx('rally_the_line', 'reach')} tiles ${pct(fx('rally_the_line', 'stamina'))} of a bar of stamina`,
     near(mine, 0.5 + fx('rally_the_line', 'stamina'), 1e-9) && near(theirs, 0.5 + fx('rally_the_line', 'stamina'), 1e-9)
-      && line.endsWith('back for you and 1 other.'), island('RALLY'));
+      && line === `Rally the Line: stamina +${pct(fx('rally_the_line', 'stamina'))} for you and 1 other.`, island('RALLY'));
   check('and nobody further', near(Number(island('RALLY:FAR')), 0.5), island('RALLY:FAR'));
 }
 {
@@ -569,10 +569,10 @@ check('and on a creature at your feet', island('HOOK:FEET') === 'The ulva is alr
   const [lost, dist, told, line] = parts('FEND');
   check(`Fend Off: what comes within ${HUNT_REACH} tiles to strike is pushed ${fx('fend_off', 'push')} tiles back instead, and you are told`,
     island('FEND:NONE') === 'true' && near(Number(lost), 0) && near(Number(dist), 1 + fx('fend_off', 'push'), 1e-6) && told === '1'
-      && line.startsWith('Fend Off: for 8 s'), `${island('FEND:NONE')} ${island('FEND')}`);
+      && line === `Fend Off: creatures closing within 1.1 tiles to strike pushed ${fx('fend_off', 'push')} tiles back, for ${fx('fend_off', 'secs')} s.`, `${island('FEND:NONE')} ${island('FEND')}`);
 }
 check('Brace for the Charge waits for nothing already inside your reach',
-  island('BRACE:INSIDE') === '0|true' && island('BRACE:SAID').startsWith('Brace for the Charge: for 6 s'), `${island('BRACE:INSIDE')} ${island('BRACE:SAID')}`);
+  island('BRACE:INSIDE') === '0|true' && island('BRACE:SAID') === `Brace for the Charge: first creature closing from outside your reach within ${fx('brace_for_the_charge', 'secs')} s: blow at ${pct(fx('brace_for_the_charge', 'more'))} at the edge of your reach.`, `${island('BRACE:INSIDE')} ${island('BRACE:SAID')}`);
 {
   const [dists, mine, all, still] = parts('BRACE');
   const [first, second] = dists.split(',').map(Number);
@@ -590,7 +590,7 @@ check('Brace for the Charge waits for nothing already inside your reach',
   const s = spell('keep_away');
   check(`a spell called through the door costs its ${pct(s.cost)} of a full bar and rests ${s.rest} s`,
     cast === s.id && near(Number(stamina), 1 - s.cost) && near(Number(rest), s.rest, 1e-6), island('PAID'));
-  check('and is refused while it rests', island('RESTING') === `${s.name} can be called again in ${s.rest} seconds.`, island('RESTING'));
+  check('and is refused while it rests', island('RESTING') === `${s.name}: cooldown ${s.rest} s.`, island('RESTING'));
 }
 
 /* ---- The passives ------------------------------------------------------------ */

@@ -1,4 +1,5 @@
 import type { Slot } from './gear';
+import { percent } from './words';
 
 /**
  * Wounds.
@@ -30,12 +31,17 @@ export interface WoundKindDef {
 }
 
 export const WOUND_KINDS: Record<WoundKind, WoundKindDef> = {
-  cut: { id: 'cut', name: 'cut', bleed: 0.0015, fester: 0.1, herb: 'thyme', note: 'Open and bleeding. Thyme in the dressing keeps it clean.' },
-  pierce: { id: 'pierce', name: 'puncture', bleed: 0.0010, fester: 0.18, herb: 'basil', note: 'Deep and narrow. It bleeds less than it festers.' },
-  crush: { id: 'crush', name: 'bruise', bleed: 0.0002, fester: 0.05, herb: 'mint', note: 'Nothing open, and everything underneath it hurts. Mint takes the swelling down.' },
-  burn: { id: 'burn', name: 'burn', bleed: 0.0004, fester: 0.14, herb: 'sage', note: 'It weeps rather than bleeds. Sage and a cover, and keep it off the air.' },
-  bite: { id: 'bite', name: 'bite', bleed: 0.0012, fester: 0.26, herb: 'rosemary', note: 'Whatever was in its mouth is in you now. Rosemary, and quickly.' },
+  cut: { id: 'cut', name: 'cut', bleed: 0.0015, fester: 0.1, herb: 'thyme', note: '' },
+  pierce: { id: 'pierce', name: 'puncture', bleed: 0.0010, fester: 0.18, herb: 'basil', note: '' },
+  crush: { id: 'crush', name: 'bruise', bleed: 0.0002, fester: 0.05, herb: 'mint', note: '' },
+  burn: { id: 'burn', name: 'burn', bleed: 0.0004, fester: 0.14, herb: 'sage', note: '' },
+  bite: { id: 'bite', name: 'bite', bleed: 0.0012, fester: 0.26, herb: 'rosemary', note: '' },
 };
+
+// A wound's note says its own numbers: how fast it bleeds, how often it goes bad untreated, and its herb.
+for (const k of Object.values(WOUND_KINDS)) {
+  k.note = `Bleeds ${percent(k.bleed * 60)} health/min; untreated, ${percent(k.fester)} base chance/min to go bad. Herb: ${k.herb}.`;
+}
 
 /** Which herb goes on which wound, for the crafting window and the menus. */
 export const HERBS: string[] = [...new Set(Object.values(WOUND_KINDS).map((k) => k.herb))];

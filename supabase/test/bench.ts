@@ -121,7 +121,7 @@ for (const [x, y] of spots) {
     gw.update(0.25);
   }
 }
-const dug = gw.log.filter((l) => l.text.startsWith('You dig up') || l.text.startsWith('You fail to dig')).length;
+const dug = gw.log.filter((l) => l.text.startsWith('Dug: ') || l.text.startsWith('Dig failed')).length;
 check('and a spadeful out of each is a go at a real job', dug === spots.length, `${dug} of ${spots.length} went in`);
 check('while work that costs wind and takes time still teaches them', gw.skills.get('body_control') - before > 0,
   `${(gw.skills.get('body_control') - before).toFixed(6)} of body control off ${dug} spadefuls`);
@@ -184,7 +184,7 @@ check('so the browser lets you work one into a bronze anvil',
 /* And the wrong metal is still the wrong metal. */
 for (const it of [...gi.inventory.items]) if (it.id === 'bronze_lump') gi.inventory.remove(it.uid, it.count);
 gi.inventory.add('iron_lump', { ql: 40, count: 37 });
-check('and iron will not do instead', (imp.check?.({ kind: 'item', uid: anvil.uid }, gi) ?? '').includes('no bronze'),
+check('and iron will not do instead', (imp.check?.({ kind: 'item', uid: anvil.uid }, gi) ?? '').includes('Need bronze'),
   imp.check?.({ kind: 'item', uid: anvil.uid }, gi) ?? 'allowed');
 
 /* The island had this wrong, and it is the side it was reported from. */

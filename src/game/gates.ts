@@ -5,7 +5,7 @@ import type { Game } from './game';
 import { isFounder } from './ranks';
 import type { Lockable } from './locks';
 import { billWords, keyFromPadlock, padlockToFit } from './items';
-import { article, capital, numberWord, percent, spanWords } from './words';
+import { capital, percent } from './words';
 
 /**
  * Three ways to shut a way in: a portcullis, a drawbridge and a hidden door.
@@ -60,7 +60,7 @@ export const fitsMaterial = (type: WallType, mat: MaterialDef | undefined): bool
   !WALL_TYPE_BY_ID.get(type)?.stone || mat?.kind === 'stone';
 
 /** Why `plan_wall` will not take "hidden door" for a type: the menu plans one as a solid wall and says so beforehand. */
-export const HIDDEN_DOOR_ALONE = 'A hidden door is planned with Plan wall, then Hidden door.';
+export const HIDDEN_DOOR_ALONE = 'Plan a hidden door via Plan wall, then Hidden door.';
 
 /**
  * Why a wall of this type may not be planned here, over and above what any
@@ -70,16 +70,16 @@ export const HIDDEN_DOOR_ALONE = 'A hidden door is planned with Plan wall, then 
  */
 export function gatePlanRefusal(type: WallType, mat: MaterialDef | undefined, level: number, out = false): string | null {
   const def = WALL_TYPE_BY_ID.get(type);
-  if (!fitsMaterial(type, mat)) return `A ${def?.name.toLowerCase()} is laid in stone or brick, with a trowel.`;
-  if (def?.ground && level > 0) return `A ${def.name.toLowerCase()} stands in a wall on the ground floor.${out ? '' : ' Work on storey 1 to plan one.'}`;
+  if (!fitsMaterial(type, mat)) return `${def?.name}: stone or brick only, with a trowel.`;
+  if (def?.ground && level > 0) return `${def.name}: ground floor only.${out ? '' : ' Switch to storey 1.'}`;
   if (type === 'hidden_door') return HIDDEN_DOOR_ALONE;
   return null;
 }
 
 /** What a hidden door wants in the pack as it is planned, or null: the island's `hidden_door_wants`. */
 export function hiddenDoorWants(g: Game): string | null {
-  if (g.inventory.count('padlock') < 1) return 'A hidden door takes a padlock when it is planned. Forge one at a smelter.';
-  if (g.inventory.count('hinge') < HIDDEN_DOOR_HINGES) return `A hidden door takes ${numberWord(HIDDEN_DOOR_HINGES)} hinges when it is planned.`;
+  if (g.inventory.count('padlock') < 1) return 'Hidden door needs a padlock (cast at a smelter).';
+  if (g.inventory.count('hinge') < HIDDEN_DOOR_HINGES) return `Hidden door needs ${HIDDEN_DOOR_HINGES} hinges.`;
   return null;
 }
 
@@ -177,13 +177,13 @@ export function planHiddenDoor(g: Game, planWall: ActionDef, t: TileTarget): voi
 export function planLine(type: WallType, material: string, side: string): string {
   const name = (WALL_TYPE_BY_ID.get(type)?.name ?? type).toLowerCase();
   const mat = material.toLowerCase();
-  if (type === 'solid') return `You plan ${article(name)} ${name} ${mat} wall on the ${side} side.`;
-  if (type === 'railing') return `You plan ${article(mat)} ${mat} railing on the ${side} side.`;
-  return `You plan ${article(name)} ${name} in ${mat} on the ${side} side.`;
+  if (type === 'solid') return `Planned: ${name} ${mat} wall, ${side} side.`;
+  if (type === 'railing') return `Planned: ${mat} railing, ${side} side.`;
+  return `Planned: ${name}, ${mat}, ${side} side.`;
 }
 
 /** What planning one says when the padlock or the hinges went before the wall was planned: it is the solid wall it was asked as. */
-export const HIDDEN_DOOR_SHORT = `A padlock and ${numberWord(HIDDEN_DOOR_HINGES)} hinges were no longer in your pack, so it is a solid wall.`;
+export const HIDDEN_DOOR_SHORT = `No padlock and ${HIDDEN_DOOR_HINGES} hinges in pack: solid wall.`;
 
 /**
  * A solid wall just planned on a border its planner asked a hidden door on,
@@ -227,8 +227,8 @@ export function founderWord(g: Game, x: number, y: number): { own: boolean; deed
 
 /** What planning one says, as the island says it (`hidden_door_said`). */
 export const hiddenDoorSaid = (who: { own: boolean; deed: string | null }): string =>
-  `You set a padlock and ${numberWord(HIDDEN_DOOR_HINGES)} hinges in it and cut its key. It is a door to whoever holds that key${
-    who.own ? ' and to you, on your own land' : who.deed ? ` and to the founder of ${who.deed}` : ''}, and a solid wall to everybody else.`;
+  `Hidden door: padlock and ${HIDDEN_DOOR_HINGES} hinges fitted, key cut. Opens for the key holder${
+    who.own ? ' and you (your land)' : who.deed ? ` and the founder of ${who.deed}` : ''}; solid wall to everyone else.`;
 
 // ---------------------------------------------------------------------------
 // Where a bridge may start
@@ -236,22 +236,22 @@ export const hiddenDoorSaid = (who: { own: boolean; deed: string | null }): stri
 
 /** Why a drawbridge will not be set out from inside a building, or come down inside one. */
 export const drawbridgeEndsOut = (end: 0 | 1): string =>
-  end === 0 ? `A ${BRIDGES.draw.name.toLowerCase()}'s winch stands outside, on open ground.`
-    : `A ${BRIDGES.draw.name.toLowerCase()} comes down outside, on open ground.`;
+  end === 0 ? `${BRIDGES.draw.name} winch: open ground only, not inside.`
+    : `${BRIDGES.draw.name} lands on open ground only, not inside.`;
 /**
  * And why its winch is not set under a jetty (`frame.ts`), nor a jetty floored
  * over its winch: its gallows rise over that tile higher than a storey, and
  * its deck stands on end beside it.
  */
-export const DRAWBRIDGE_UNDER_JETTY = `A ${BRIDGES.draw.name.toLowerCase()}'s winch is not set under a jetty: its gallows rise over it.`;
-export const JETTY_OVER_WINCH = `A ${BRIDGES.draw.name.toLowerCase()}'s winch stands on that tile, and its gallows rise over it.`;
+export const DRAWBRIDGE_UNDER_JETTY = `${BRIDGES.draw.name} winch: not under a jetty.`;
+export const JETTY_OVER_WINCH = `${BRIDGES.draw.name} winch on that tile: no jetty over it.`;
 /** Whether a drawbridge's winch stands on this tile: the end it was set out from. The island's `drawbridge_winch_at`. */
 export function drawbridgeWinchAt(g: Game, x: number, y: number): boolean {
   for (const b of g.bridges.values()) if (b.kind === 'draw' && b.ax === x && b.ay === y) return true;
   return false;
 }
 /** And any other bridge from a ground floor laid on the ground: a finished deck on piers is landed on as a bank is (`piers.ts`). */
-export const BRIDGE_END_INSIDE = 'A bridge starts and ends on open ground, on a finished deck or on an upper storey, not inside on a ground floor.';
+export const BRIDGE_END_INSIDE = 'Bridge ends: open ground, a finished deck or an upper storey; not inside on a ground floor.';
 /**
  * And through a wall that nobody walks through, named as what stands there:
  * "A fence stands across one end of it.". A hidden door is the solid wall it
@@ -259,10 +259,10 @@ export const BRIDGE_END_INSIDE = 'A bridge starts and ends on open ground, on a 
  */
 export const bridgeEndWall = (type: WallType): string => {
   const what = type === 'solid' || type === 'hidden_door' ? 'solid wall' : (WALL_TYPE_BY_ID.get(type)?.name ?? type).toLowerCase();
-  return `${capital(article(what))} ${what} stands across one end of it. A bridge goes out through a doorway, an archway or an open side.`;
+  return `${capital(what)} across one end. Bridges exit through a doorway, archway or open side.`;
 };
 /** And a building planned over one end of a bridge. */
-export const BRIDGE_END_HERE = 'A bridge comes ashore on this tile. Build clear of its ends.';
+export const BRIDGE_END_HERE = 'Bridge end on this tile.';
 
 /** The side of a tile that faces the way `dx`, `dy` runs. */
 const sideTowards = (dx: number, dy: number): Side => (dx > 0 ? 'e' : dx < 0 ? 'w' : dy > 0 ? 's' : 'n');
@@ -324,10 +324,10 @@ export function portcullisAt(g: Game, t: Target): Wall | undefined {
 /** Why a portcullis will not go up, or down, or null. The island's `gate_refusal`, word for word. */
 function portcullisRefusal(g: Game, t: Target, up: boolean): string | null {
   const w = portcullisAt(g, t);
-  if (!w) return 'There is no portcullis there.';
+  if (!w) return 'No portcullis there.';
   if (!isDone(w)) return 'Finish the portcullis first.';
-  if (up && !w.lowered) return 'The portcullis is up already.';
-  if (!up && w.lowered) return 'The portcullis is down already.';
+  if (up && !w.lowered) return 'Portcullis already up.';
+  if (!up && w.lowered) return 'Portcullis already down.';
   return g.lockRefusal({ lock: w.lock, x: w.x, y: w.y });
 }
 
@@ -344,8 +344,8 @@ export function gateRemoveRefusal(g: Game, w: Wall): string | null {
 
 /** What raising or lowering one says. */
 export const portcullisSaid = (up: boolean): string => (up
-  ? 'You winch the portcullis up. People, carts and beasts pass under it.'
-  : 'You let the portcullis down. Nothing passes it until it is raised; it is still seen through.');
+  ? 'Portcullis raised: all pass.'
+  : 'Portcullis lowered: nothing passes; still see-through.');
 
 // ---------------------------------------------------------------------------
 // The drawbridge
@@ -394,10 +394,10 @@ export const drawbridgeAt = (g: Game, t: Target): Bridge | undefined => {
 function drawbridgeRefusal(g: Game, t: Target, up: boolean): string | null {
   if (t.kind !== 'bridge' || !g.bridges.get(t.id)) return 'It is gone.';
   const b = drawbridgeAt(g, t);
-  if (!b) return 'That is not a drawbridge.';
-  if (!bridgeDone(b)) return 'Deck every span of the drawbridge first.';
-  if (up && b.raised) return 'The drawbridge is up already.';
-  if (!up && !b.raised) return 'The drawbridge is down already.';
+  if (!b) return 'Not a drawbridge.';
+  if (!bridgeDone(b)) return 'Finish every span first.';
+  if (up && b.raised) return 'Drawbridge already up.';
+  if (!up && !b.raised) return 'Drawbridge already down.';
   return g.lockRefusal({ lock: b.lock, x: b.ax, y: b.ay });
 }
 
@@ -426,13 +426,13 @@ export function gateHoverLine(g: Game, x: number, y: number, side: Side, sideNam
   if (!isDone(w)) return `${head} · ${Math.round(progressOf(w) * 100)}% built`;
   if (seen === 'portcullis') return `${head} · ${portcullisState(w)}`;
   const key = g.inventory.items.some((it) => it.id === 'key' && it.keyed === w.lock);
-  return `${head} · ${key ? 'your key opens it' : 'it opens to you, on your own land'}`;
+  return `${head} · ${key ? 'your key opens it' : 'opens for you (your land)'}`;
 }
 
 /** What raising or lowering one says. */
 export const drawbridgeSaid = (up: boolean): string => (up
-  ? 'You winch the drawbridge up. Nothing crosses it until it is let down.'
-  : `You let the drawbridge down. It carries people and beasts${BRIDGES.draw.carts ? ', and carts' : ''}.`);
+  ? 'Drawbridge raised: nothing crosses.'
+  : `Drawbridge lowered: people and beasts${BRIDGES.draw.carts ? ' and carts' : ''} cross.`);
 
 /**
  * A portcullis or a drawbridge as something a padlock is fitted to: the
@@ -486,7 +486,7 @@ const setDrawbridge = (g: Game, t: Target, up: boolean): void => {
 export const GATE_ACTIONS: ActionDef[] = [
   {
     id: 'raise_portcullis',
-    label: 'Raise the portcullis',
+    label: 'Raise portcullis',
     verb: 'winching the portcullis up',
     hidden: true,
     range: 1,
@@ -498,7 +498,7 @@ export const GATE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'lower_portcullis',
-    label: 'Lower the portcullis',
+    label: 'Lower portcullis',
     verb: 'letting the portcullis down',
     hidden: true,
     range: 1,
@@ -510,7 +510,7 @@ export const GATE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'raise_drawbridge',
-    label: 'Raise the drawbridge',
+    label: 'Raise drawbridge',
     verb: 'winching the drawbridge up',
     hidden: true,
     range: 0,
@@ -522,7 +522,7 @@ export const GATE_ACTIONS: ActionDef[] = [
   },
   {
     id: 'lower_drawbridge',
-    label: 'Lower the drawbridge',
+    label: 'Lower drawbridge',
     verb: 'letting the drawbridge down',
     hidden: true,
     range: 0,
@@ -546,7 +546,7 @@ export const gateReach = (id: string): number => GATE_ACTION_BY_ID.get(id)?.rang
  */
 export const gateJobWords = (id: string, go: (baseTime: number) => number): string => {
   const a = GATE_ACTION_BY_ID.get(id);
-  return `${spanWords(go(a?.baseTime ?? 0))} and ${percent(a?.stamina ?? 0)} of your stamina`;
+  return `${+go(a?.baseTime ?? 0).toFixed(1)} s, ${percent(a?.stamina ?? 0)} stamina`;
 };
 
 /** What a hidden door's plan costs besides its wall, as a menu says it: "a padlock and four hinges". */

@@ -185,13 +185,13 @@ check('the steps behind you: three of Love at 25, five of Power at 70, none of K
   const stoneOnly = sitPlace({ onDeed: false, height: 0, water: false, swirl: false, stale: false, stone: true });
   const stoneWet = sitPlace({ onDeed: false, height: 0, water: true, swirl: true, stale: true, stone: true });
   check(`a swirl within reach is ${SIT_WORTH.swirl} times a sitting and one within reach of a spot sat at is ${SIT_WORTH.stale}, and both say so`,
-    near(swirlOnly.place, SIT_WORTH.swirl) && near(staleOnly.place, SIT_WORTH.stale) && swirlOnly.where.endsWith(SIT_SWIRL_SAID) && staleOnly.where.endsWith(SIT_STALE_SAID));
+    near(swirlOnly.place, SIT_WORTH.swirl) && near(staleOnly.place, SIT_WORTH.stale) && swirlOnly.where.endsWith(`${SIT_SWIRL_SAID}.`) && staleOnly.where.endsWith(`${SIT_STALE_SAID}.`));
   check(`a Runestone within ${SIT_WORTH.stoneReach} tiles is ${SIT_WORTH.stone} times a sitting (${rule('STONENUMS')} on the island), says so, `
     + 'and multiplies every other place multiplier, a swirl, the water and a spot sat at with it',
     SIT_WORTH.stone === 2 && SIT_WORTH.stoneReach === 5 && rule('STONENUMS') === `${SIT_WORTH.stone}|${SIT_WORTH.stoneReach}`
-      && near(stoneOnly.place, SIT_WORTH.stone) && stoneOnly.where.endsWith(SIT_STONE_SAID)
+      && near(stoneOnly.place, SIT_WORTH.stone) && stoneOnly.where.endsWith(`${SIT_STONE_SAID}.`)
       && near(stoneWet.place, SIT_WORTH.water * SIT_WORTH.swirl * SIT_WORTH.stone * SIT_WORTH.stale)
-      && stoneWet.where.endsWith(` ${SIT_SWIRL_SAID} ${SIT_STONE_SAID} ${SIT_STALE_SAID}`), `${stoneOnly.place} / ${stoneWet.place}: ${stoneWet.where}`);
+      && stoneWet.where.endsWith(`, ${SIT_SWIRL_SAID}, ${SIT_STONE_SAID}, ${SIT_STALE_SAID}.`), `${stoneOnly.place} / ${stoneWet.place}: ${stoneWet.where}`);
   const within = NEAR_STONES.map(([n, x, y]) => runestoneWithin(x, y, n, SIT_WORTH.stoneReach)?.id ?? '-').join(' ');
   check(`which tiles are within ${SIT_WORTH.stoneReach} of a Runestone is the same on both sides, ${NEAR_STONES.length} tiles round the stones on the island and on a 1024 world`,
     within === rule('WITHIN') && within.includes('-') && RUNESTONES.every((st) => within.includes(st.id)), within === rule('WITHIN') ? '' : rule('WITHIN').slice(0, 200));
@@ -533,10 +533,10 @@ for (const line of out.split('\n')) {
 const at = (k: string): string => isle.get(k) ?? '(nothing)';
 const part = (k: string, n: number): string => at(k).split('|')[n] ?? '(nothing)';
 
-check(`a path is not chosen at ${CHOOSE_AT - 1} meditation, in the browser's words`, at('CHOOSE19') === `Sit until you have ${CHOOSE_AT} meditation behind you.`, at('CHOOSE19'));
+check(`a path is not chosen at ${CHOOSE_AT - 1} meditation, in the browser's words`, at('CHOOSE19') === `Need meditation ${CHOOSE_AT}.`, at('CHOOSE19'));
 check(`and is at ${CHOOSE_AT}`, at('CHOOSE20') === 'ALLOWED' && at('WAY') === 'knowledge', `${at('CHOOSE20')} / ${at('WAY')}`);
 check('somebody who chose before keeps their path at five meditation, and may not choose again',
-  part('OLD', 0) === 'You have chosen, and it is not the sort of thing that is chosen twice.' && part('OLD', 1) === 'knowledge' && part('OLD', 2) === 'knowledge', at('OLD'));
+  part('OLD', 0) === 'Path already chosen.' && part('OLD', 1) === 'knowledge' && part('OLD', 2) === 'knowledge', at('OLD'));
 
 const seek = P('seek');
 check('and a pick at a tier not open to them yet is refused, in the same words on both sides',
@@ -572,15 +572,15 @@ check('a technique will not go in a class slot, in the same words on both sides'
     near(gain0, SIT_GAIN * place0) && near(calm0, SIT_CALM * place0) && calm0 < cap1 && near(calm1, calm0, 1e-4),
     at('WORTH0') + ' / ' + at('SAT1').slice(0, 80));
   check('and says what it banked out of what it holds',
-    part('SAT1', 2).endsWith(` Calm ${Math.floor(calm1)} of ${part('SAT1', 1)}.`), part('SAT1', 2));
+    part('SAT1', 2).endsWith(` Calm ${Math.floor(calm1)}/${part('SAT1', 1)}.`), part('SAT1', 2));
   check(`a second sitting within ${SIT_WORTH.staleReach} tiles of the first, before the woods turn, is worth ${SIT_WORTH.stale} of it`,
     near(Number(at('STALE')), place0 * SIT_WORTH.stale), `${at('STALE')} against ${place0}`);
   check(`and one ${SIT_WORTH.staleReach + 1} tiles off is not`, near(Number(at('AWAY')), place0), at('AWAY'));
   check('and once the woods have turned the spot is fresh again', near(Number(at('TURNED')), place0), at('TURNED'));
   check(`a mote swirl ${SIT_WORTH.swirlReach} tiles off is worth ${SIT_WORTH.swirl} times a sitting, and the sitting says so`,
-    near(Number(part('SWIRL', 0)), place0 * SIT_WORTH.swirl) && at('SWIRL').endsWith(SIT_SWIRL_SAID), at('SWIRL'));
+    near(Number(part('SWIRL', 0)), place0 * SIT_WORTH.swirl) && at('SWIRL').endsWith(`${SIT_SWIRL_SAID}.`), at('SWIRL'));
   check(`on the island, a sitting ${SIT_WORTH.stoneReach} tiles from the Crownstone is worth ${SIT_WORTH.stone} times one a tile further off, and says so`,
-    near(Number(part('STONE', 0)), Number(part('STONEOFF', 0)) * SIT_WORTH.stone) && at('STONE').endsWith(SIT_STONE_SAID) && !at('STONEOFF').includes(SIT_STONE_SAID)
+    near(Number(part('STONE', 0)), Number(part('STONEOFF', 0)) * SIT_WORTH.stone) && at('STONE').endsWith(`${SIT_STONE_SAID}.`) && !at('STONEOFF').includes(SIT_STONE_SAID)
       && runestoneWithin(STONE_X, STONE_Y + STONE_HALF + SIT_WORTH.stoneReach, STONE_CHART, SIT_WORTH.stoneReach)?.id === 'crownstone'
       && !runestoneWithin(STONE_X, STONE_Y + STONE_HALF + SIT_WORTH.stoneReach + 1, STONE_CHART, SIT_WORTH.stoneReach),
     `${at('STONE')} / ${at('STONEOFF')}`);
@@ -604,30 +604,30 @@ check('and with a job behind it, the sitting comes due at once and gives nothing
   const cl = P('clarity');
   const d = (x: number, y: number): number => Math.round(Math.hypot(x, y));
   check(`Seek finds the nearer swirl, ${d(...SWIRL_NEAR)} tiles off, costs its ${seek.cost} Calm, rests ${seek.rest} seconds and marks it`,
-    at('SEEK').startsWith(`The nearest mote swirl is ${d(...SWIRL_NEAR)} tiles off, an ice mote swirl. It is marked on your map.|${CALM - seek.cost}|${seek.rest}|`)
+    at('SEEK').startsWith(`Nearest mote swirl: ice, ${d(...SWIRL_NEAR)} tiles. Marked on your map.|${CALM - seek.cost}|${seek.rest}|`)
       && part('SEEK', 3) !== 'none', at('SEEK'));
-  check('and while it rests it is refused', at('RESTING') === `${seek.name} can be called again in ${seek.rest} seconds.`, at('RESTING'));
+  check('and while it rests it is refused', at('RESTING') === `${seek.name}: cooldown ${seek.rest} s.`, at('RESTING'));
   check('short of Calm it is refused, in the same words on both sides', at('POOR') === calmRefusal(seek.name, seek.cost, 2), at('POOR'));
   check('the mark goes once the swirl is collected', at('COLLECTED') === 'null', at('COLLECTED'));
   check(`with no swirl within ${seek.fx.reach} tiles it is refused, costs nothing and does not rest`,
-    at('SEEKNONE') === `There is no mote swirl within ${seek.fx.reach} tiles of you.|${CALM}|not rested`, at('SEEKNONE'));
+    at('SEEKNONE') === `No mote swirl within ${seek.fx.reach} tiles.|${CALM}|not rested`, at('SEEKNONE'));
   const [seed, time] = at('SKYAT').split('|').map(Number);
   check(`Read the Sky says the wind of the next ${sk.fx.hours} hours of the island's clock as the browser works it out, for ${sk.cost} Calm, resting ${sk.rest} seconds`,
     at('SKY') === `${skySaid(seed, time, sk.fx.hours)}|${CALM - sk.cost}|${sk.rest}`,
     `${at('SKY')} against ${skySaid(seed, time, sk.fx.hours)}`);
   check(`Trace finds the hoard of the map in the pack ${d(...HOARD_AT)} tiles off, not the nearer one of a map that is not, for ${tr.cost} Calm, resting ${tr.rest} seconds, and marks it`,
-    at('TRACE').startsWith(`A hoard buried for a map in your pack is ${d(...HOARD_AT)} tiles off. It is marked on your map.|${CALM - tr.cost}|${tr.rest}|`)
+    at('TRACE').startsWith(`Hoard of a map in your pack: ${d(...HOARD_AT)} tiles. Marked on your map.|${CALM - tr.cost}|${tr.rest}|`)
       && part('TRACE', 3) !== 'none', at('TRACE'));
   check('the mark goes once the hoard is dug up', at('DUG') === 'null', at('DUG'));
-  check('and with none within reach it is refused', at('TRACENONE') === `No hoard of a map in your pack is buried within ${tr.fx.reach} tiles of you.`, at('TRACENONE'));
+  check('and with none within reach it is refused', at('TRACENONE') === `No hoard of a map in your pack within ${tr.fx.reach} tiles.`, at('TRACENONE'));
   check(`Foreknow sets ${fk.fx.goes} goes, for ${fk.cost} Calm, resting ${fk.rest} seconds`,
-    at('FORE') === `Your next five goes that roll for success will succeed.|${CALM - fk.cost}|${fk.fx.goes}|${fk.rest}`, at('FORE'));
+    at('FORE') === `Next ${fk.fx.goes} goes with a success roll: success.|${CALM - fk.cost}|${fk.fx.goes}|${fk.rest}`, at('FORE'));
   check(`through the clock, each of ${fk.fx.goes} goes cannot fail a roll and spends one; the next is rolled again`,
     at('FOREGO') === `${Array.from({ length: fk.fx.goes }, () => 'on:true').join(',')},:-|0`, at('FOREGO'));
   check('and nothing of it is left set once the clock is done', at('FORESET') === '|', at('FORESET'));
   const [mA, mB] = [Number(part('CLARITY', 3)), Number(part('CLARITY', 4))];
   check(`Clarity adds ${cl.fx.more} to what every gain is multiplied by for ${cl.fx.secs} seconds, for ${cl.cost} Calm, resting ${cl.rest} seconds`,
-    part('CLARITY', 0) === `For 10 minutes every skill gain you make is 50% larger.` && Number(part('CLARITY', 1)) === CALM - cl.cost
+    part('CLARITY', 0) === `Skill gain +50% for 10 minutes.` && Number(part('CLARITY', 1)) === CALM - cl.cost
       && Number(part('CLARITY', 2)) === cl.rest && near(mB / mA, 1 + cl.fx.more, 1e-9) && near(Number(part('CLARITY', 5)), cl.fx.secs, 2), at('CLARITY'));
 }
 {
@@ -653,7 +653,7 @@ check('and with a job behind it, the sitting comes due at once and gives nothing
     new RegExp(`\\b${reach} tiles`).test(at('READING')), at('READING'));
 }
 check('Love keeps no step and no old ability: no Gentle hand at 25 by its steps, and Refresh is not called on the old way',
-  at('LOVE') === 'false|none|That is not something you know.', at('LOVE'));
+  at('LOVE') === 'false|none|Not known.', at('LOVE'));
 check('and Power none: no Ironhide at 70 by its steps, and no Fury', at('POWER') === 'false|none', at('POWER'));
 check('and Knowledge, moved, has no steps and no old abilities; Sense the Rock and Recall the Way are gone', at('KNOW') === 'false|none|none|Nothing happens.', at('KNOW'));
 check('no function is open to a player but the doors', at('OPEN') === '0', at('OPEN'));
@@ -681,7 +681,7 @@ const set = (ids: string[]): void => {
   const why = g.castTechnique(k.id);
   check('Seek, playing by yourself: the nearer swirl, marked, its Calm paid and its rest begun',
     why === null && p.calm === CALM - k.cost && g.marksNow().some((m) => m.kind === 'seek' && m.x === p.tileX + SWIRL_NEAR[0])
-      && g.techniqueRefusal(k.id) === `${k.name} can be called again in ${k.rest} seconds.`, `${why} ${p.calm}`);
+      && g.techniqueRefusal(k.id) === `${k.name}: cooldown ${k.rest} s.`, `${why} ${p.calm}`);
   g.takeSwirl(2);
   check('and the mark goes with the swirl', !g.marksNow().some((m) => m.kind === 'seek'));
 }
@@ -785,7 +785,7 @@ const set = (ids: string[]): void => {
   const swirled = sittingWorth(g);
   check('a sitting in the browser banks its Calm, and the spot is worth half until the woods turn, and a quarter more by a swirl',
     near(p.calm, Math.min(g.calmCap(), first.calm), 1e-9) && near(again.place, first.place * SIT_WORTH.stale) && near(swirled.place, again.place * SIT_WORTH.swirl)
-      && swirled.where.includes(SIT_SWIRL_SAID) && swirled.where.endsWith(SIT_STALE_SAID), `${first.place} → ${again.place} → ${swirled.place}, Calm ${p.calm}`);
+      && swirled.where.includes(SIT_SWIRL_SAID) && swirled.where.endsWith(`${SIT_STALE_SAID}.`), `${first.place} → ${again.place} → ${swirled.place}, Calm ${p.calm}`);
 }
 check(`the browser says a tier as it opens: ${tierSaid('knowledge', 1)}`, tierSaid('knowledge', 2).includes(P('sky').name));
 

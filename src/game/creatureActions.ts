@@ -2,9 +2,9 @@ import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { fedOn, tameNeeds, BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
+import { fedOn, tameNeeds, BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
-import { article, numberWord, percent } from './words';
+import { article, capital, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
 import type { Game } from './game';
 import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
@@ -68,7 +68,7 @@ function feedOf(g: Game, c: Creature, uid?: number) {
   return g.inventory.items.find((it) => feedable(def, it.id));
 }
 /** Why a kept creature has nothing to be fed. The island's `creature_refusal` says the same. */
-export const feedRefusal = (c: Creature): string => `It eats ${dietText(c)}, or drinks a bucket of whey.`;
+export const feedRefusal = (c: Creature): string => `Eats: ${dietText(c)}, or a bucket of whey.`;
 
 /** An offering to tame one: its own diet, or any food for a Herdsman's Any Offering. */
 const offering = (g: Game, c: Creature, uid?: number) => bait(g, c, uid, g.perk('bait:any', 0) > 0);
@@ -129,7 +129,7 @@ export function vehicleFor(g: Game, c: Creature) {
 export function tameRoomRefusal(g: Game): string | null {
   const with_ = g.creatures.active();
   if (!with_ || emptyCrate(g)) return null;
-  return `${with_.name} already follows you. Carry an empty creature crate to tame another: it goes into the crate.`;
+  return `${with_.name} already follows you. Need an empty creature crate.`;
 }
 
 /**
@@ -149,8 +149,8 @@ export function companionSwap(g: Game, taking: Creature): { current: Creature; t
   return {
     current,
     refused: g.deed
-      ? `${current.name} has nowhere to go: ${g.deed.name} has work for ${g.workerCap} wildermon at level ${g.deedLevel}, and you carry no empty creature crate.`
-      : `${current.name} has nowhere to go: you have no settlement to set it to work on, and you carry no empty creature crate.`,
+      ? `${current.name} has nowhere to go: ${g.deed.name} full (${g.workerCap} workers at level ${g.deedLevel}), no empty creature crate.`
+      : `${current.name} has nowhere to go: no settlement, no empty creature crate.`,
   };
 }
 
@@ -191,7 +191,7 @@ export function classDealt(g: Game, c: Creature): number {
  */
 function sideBlow(g: Game, c: Creature, kind: string, dmg: number): void {
   if (kind === 'mauls') {
-    if (c.windup > 0) g.logMsg(`You knock the ${SPECIES[c.species]?.name.toLowerCase() ?? 'thing'} off its stroke.`, 'fight');
+    if (c.windup > 0) g.logMsg(`Heavy blow broken: ${SPECIES[c.species]?.name.toLowerCase() ?? 'thing'}.`, 'fight');
     c.windup = 0;
     c.cooldown = Math.max(0, c.cooldown) + STAGGER_MAUL;
   } else if (kind === 'polearms') c.cooldown = Math.max(0, c.cooldown) + STAGGER_POLE;
@@ -213,7 +213,7 @@ export function riposte(g: Game, c: Creature, share: number): void {
   const def = SPECIES[c.species];
   const { def: usable, item } = swungWith(g);
   if (g.rand() > hitChance(g, usable, item) * bloodMul(c, 'evade')) {
-    g.logMsg(`You answer the ${def.name.toLowerCase()} and miss.`, 'fight');
+    g.logMsg(`Riposte missed: ${def.name.toLowerCase()}.`, 'fight');
     return;
   }
   const bane = banes(item) && def.glow ? BANE_BONUS : 1;
@@ -225,8 +225,8 @@ export function riposte(g: Game, c: Creature, share: number): void {
   if (c.health > 0 && usable.id !== FIST.id) sideBlow(g, c, usable.kind, dmg);
   if (item) g.damageItem(item, 0.35 * g.perk('worn:weapon', 1));
   g.logMsg(c.health > 0
-    ? `You answer the ${def.name.toLowerCase()}${crit ? ' with a critical blow' : ''}. It is down to ${Math.ceil(c.health)} of ${maxHealth(c, def)}.`
-    : `You answer the ${def.name.toLowerCase()}, and it dies.`, 'fight');
+    ? `Riposte${crit ? ', critical' : ''}: ${def.name.toLowerCase()} ${Math.ceil(c.health)}/${maxHealth(c, def)}.`
+    : `Riposte: ${def.name.toLowerCase()} killed.`, 'fight');
 }
 
 /**
@@ -255,40 +255,42 @@ const artifactOn = (c: Creature | undefined): boolean => !!c && c.mode !== 'wild
 
 /** Why an artifact would do nothing for this one, or null. The island's `artifact_refusal` says the same. */
 export function artifactRefusal(g: Game, c: Creature | undefined, action: string): string | null {
-  if (!c) return 'It is gone.';
-  if (!artifactOn(c)) return c.mode === 'wild' ? 'It is not yours.' : `${c.name} is not yours.`;
-  if (c.mode === 'stored') return `${c.name} is in a creature crate. Open the crate first.`;
+  if (!c) return 'Gone.';
+  if (!artifactOn(c)) return c.mode === 'wild' ? 'Not yours.' : `${c.name}: not yours.`;
+  if (c.mode === 'stored') return `${c.name} is in a creature crate: open it first.`;
   if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
   const name = artifactName(action);
-  if (!artifactIn(g, action)) return `You need ${article(name)} ${name}.`;
-  if (action === 'use_ancient_comb' && ageOf(c, g.time) === 'young') return `${c.name} is young already, and nothing is younger than young.`;
+  if (!artifactIn(g, action)) return `Need ${article(name)} ${name}.`;
+  if (action === 'use_ancient_comb' && ageOf(c, g.time) === 'young') return `${c.name} is already young.`;
   if (action === 'use_ancient_file' && c.rare >= RARITIES.length - 1) {
-    return `${c.name} is ${RARITIES[RARITIES.length - 1].name} already, as rare as there is.`;
+    return `${c.name} is already ${RARITIES[RARITIES.length - 1].name}, the top rarity.`;
   }
   if (action === 'use_ancient_pot' && !potRoom(c).length) {
-    return `Every base stat of ${c.name} has ${POT_MOST} points from ancient pots, the most one takes.`;
+    return `${c.name}: every base stat at ${POT_MOST} ancient pot points, the max.`;
   }
   return null;
 }
 
 /** What the points from ancient pots in one stat come to, in the game's terms: "3 of 10: the health it can carry is 9% more than ...". */
 export const potSays = (stat: BaseStat, points: number): string =>
-  `${points} of ${POT_MOST}: ${BASE_STATS.find((s) => s.id === stat)?.says ?? stat} is ${percent(POT_STEP * points)} more than its kind and blood give it`;
+  `${points}/${POT_MOST} points, ${BASE_STATS.find((s) => s.id === stat)?.says ?? stat} +${percent(POT_STEP * points)}`;
 
 /** A trait as an ancient lamp's line names it: "fleet, a rare trait (+20% speed)". The island's `lamp_kindled`. */
 const kindled = (id: string): string => {
   const t = traitOf(id);
   const says = t ? traitSays(t) : '';
-  return `${traitName(id)}, ${article(traitTier(id))} ${traitTier(id)} trait${says ? ` (${says})` : ''}`;
+  // A fighting trait's grade is in its name already: "fanged (rare)".
+  const tier = t?.family ? '' : traitTier(id);
+  return `${traitName(id)} (${[tier, says].filter(Boolean).join(', ')})`;
 };
 
 /** What an ancient lamp says it did, word for word as the island's `perform_artifact` says it. */
 export function lampSays(c: Pick<Creature, 'name'>, name: string, did: Rekindled): string {
   const up = did.up ? `, a tier above ${did.from}` : '';
-  const odds = !did.up && nextTier(did.from) ? `; one time in ${LAMP_TIER_ODDS} it kindles one a tier above` : '';
+  const odds = !did.up && nextTier(did.from) ? ` Tier-up chance: 1 in ${LAMP_TIER_ODDS}.` : '';
   return did.was
-    ? `You light the ${name} over ${c.name}: its ${traitName(did.was)}, ${article(did.from)} ${did.from} trait, goes out, and ${kindled(did.now)} is kindled in its place${up}. The lamp is used up${odds}.`
-    : `You light the ${name} over ${c.name}: ${kindled(did.now)} is kindled in an empty slot${up}. The lamp is used up${odds}.`;
+    ? `${capital(name)} used on ${c.name}: ${traitName(did.was)} (${did.from}) replaced by ${kindled(did.now)}${up}.${odds}`
+    : `${capital(name)} used on ${c.name}: ${kindled(did.now)} added to an empty slot${up}.${odds}`;
 }
 
 function artifactAction(id: string, label: string, verb: string): ActionDef {
@@ -315,29 +317,29 @@ function artifactAction(id: string, label: string, verb: string): ActionDef {
         const was = ageOf(c, g.time);
         c.born = born;
         g.logMsg(was === 'old'
-          ? `You comb ${c.name} with the ${name}, and it is grown again: as old as one only just grown, at its full pace and pull. The comb is used up.`
-          : `You comb ${c.name} with the ${name}, and it is young again: as young as one only just born, and it cannot be worked, ridden or put in the traces until it is grown. The comb is used up.`,
+          ? `${capital(name)} used on ${c.name}: now just grown, full pace and pull.`
+          : `${capital(name)} used on ${c.name}: now newborn; cannot be worked, ridden or put in the traces until grown.`,
         'event');
       } else if (id === 'use_ancient_file') {
         // One time in `FILE_RARITY_ODDS`, a step and no more.
         if (g.rand() < 1 / FILE_RARITY_ODDS) {
           c.rare = Math.min(RARITIES.length - 1, c.rare + 1);
-          g.logMsg(`You go over ${c.name} with the ${name}, and it comes up ${rarityOf(c).name}: every figure its blood decides is ${pct(rarityOf(c).blood)} over an ordinary one's. The file is used up.`, 'event');
+          g.logMsg(`${capital(name)} used on ${c.name}: now ${rarityOf(c).name}, blood figures ${pct(rarityOf(c).blood)}.`, 'event');
         } else {
-          g.logMsg(`You go over ${c.name} with the ${name}, and it is no rarer. The file is used up; one time in ${FILE_RARITY_ODDS} it makes one a step rarer.`, 'event');
+          g.logMsg(`${capital(name)} used on ${c.name}: no change. Rarity-up chance: ${percent(1 / FILE_RARITY_ODDS)}.`, 'event');
         }
       } else if (id === 'use_ancient_lamp') {
         // Its lowest-tier trait, or an empty slot, at that tier or one time in `LAMP_TIER_ODDS` the tier above.
         const lit = rekindle(c.traits, g.rand);
         if (lit) c.traits = lit.traits;
-        g.logMsg(lit ? lampSays(c, name, lit.did) : `You light the ${name} over ${c.name}, and nothing is kindled. The lamp is used up.`, 'event');
+        g.logMsg(lit ? lampSays(c, name, lit.did) : `${capital(name)} used on ${c.name}: nothing kindled.`, 'event');
       } else {
         // A stat not yet at the most it takes, any of them as likely as another.
         const room = potRoom(c);
         const stat = room[Math.floor(g.rand() * room.length)];
         const points = potPoints(c, stat) + 1;
         c.boosts = { ...c.boosts, [stat]: points };
-        g.logMsg(`You use the ${name} on ${c.name}: its ${BASE_STATS.find((s) => s.id === stat)?.name.toLowerCase()} takes a point, ${potSays(stat, points)}. The pot is used up.`, 'event');
+        g.logMsg(`${capital(name)} used on ${c.name}: ${BASE_STATS.find((s) => s.id === stat)?.name.toLowerCase()} ${potSays(stat, points)}.`, 'event');
       }
       g.events.emit('creature');
     },
@@ -359,24 +361,25 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const def = SPECIES[c.species];
       if (c.mode === 'wild') {
         if (def.monster) {
-          g.logMsg(`A ${def.name.toLowerCase()}: ${def.description} It has ${Math.ceil(c.health)} of ${maxHealth(c, def)} in it and hits for ${attackOf(c, def).toFixed(0)}. It cannot be tamed. Kill it and butcher it, or keep well clear.`, 'error');
+          g.logMsg(`${def.name}: ${def.description ? `${def.description} ` : ''}Health ${Math.ceil(c.health)}/${maxHealth(c, def)}, blow ${attackOf(c, def).toFixed(0)}. Cannot be tamed.`, 'error');
           return;
         }
         const warm = coaxBonus(c, g.time, coaxStep(g));
-        const used = warm > 0 ? ` It has taken ${c.coaxed === 1 ? 'an offering' : `${c.coaxed} offerings`} from your hand and is ${(warm * 100).toFixed(0)}% readier for the next.` : '';
-        g.logMsg(`A ${c.rare ? `${rarityOf(c).name} ` : ''}wild ${def.name.toLowerCase()}: ${def.description} It eats ${dietText(c)}.${used}${raritySays(c)} You would have to tame it to learn more.`, 'event');
+        const used = warm > 0 ? ` Offerings taken: ${c.coaxed}, next +${(warm * 100).toFixed(0)}% chance.` : '';
+        g.logMsg(`Wild ${c.rare ? `${rarityOf(c).name} ` : ''}${def.name.toLowerCase()}: ${def.description ? `${def.description} ` : ''}Eats: ${dietText(c)}.${used}${raritySays(c)}`, 'event');
         return;
       }
-      const mood = c.hunger < 0.3 ? 'It looks hungry.' : c.hunger < 0.6 ? 'It could eat.' : 'It looks well fed.';
+      const mood = c.hunger < 0.3 ? 'Hungry.' : c.hunger < 0.6 ? 'Peckish.' : 'Fed.';
       const skills = Object.entries(c.skills).map(([id, v]) => `${id} ${v.toFixed(1)}`).join(', ');
-      const range = c.mode === 'deed' && def.gathers ? ` It works up to ${workRangeOf(c, def)} tiles from the token.` : '';
-      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${kindDescription(c)} Level ${creatureLevel(c)}, ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. It is ${careWord(c.care)} and carries ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} It eats ${dietText(c)}.${studBook(g, c)}`, 'event');
+      const range = c.mode === 'deed' && def.gathers ? ` Range: ${workRangeOf(c, def)} tiles from the token.` : '';
+      const desc = kindDescription(c);
+      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'event');
     },
   },
   {
     id: 'tame',
     label: 'Tame',
-    verb: 'coaxing it closer',
+    verb: 'taming',
     skill: 'taming',
     stamina: 0.03,
     baseTime: 3.5,
@@ -386,12 +389,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
+      if (!c) return 'Gone.';
       const def = SPECIES[c.species];
-      if (def.monster) return `A ${def.name.toLowerCase()} is not a wildermon. There is nothing to be done with it but kill it.`;
+      if (def.monster) return `${def.name}: cannot be tamed.`;
       const needs = tameNeeds(c).level;
-      if (g.skills.get('taming') < needs) return `You need taming ${needs} to try.`;
-      if (!offering(g, c)) return `${def.name}s take ${dietText(c)}. Bring some.`;
+      if (g.skills.get('taming') < needs) return `Need taming ${needs}.`;
+      if (!offering(g, c)) return `Need an offering: ${dietText(c)}.`;
       return tameRoomRefusal(g);
     },
     perform: (t, g) => {
@@ -399,7 +402,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c || c.mode !== 'wild') return;
       const def = SPECIES[c.species];
       if (!nearPlayer(g, c)) {
-        g.logMsg(`The ${def.name.toLowerCase()} moved off before it noticed your offering.`, 'event');
+        g.logMsg(`${def.name} moved out of reach.`, 'event');
         return;
       }
       const food = offering(g, c);
@@ -410,7 +413,6 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.logMsg(full, 'error');
         return;
       }
-      const foodName = itemDef(food.id).name.toLowerCase();
       g.inventory.remove(food.uid, 1);
       const skill = g.skills.get('taming');
       // Something that has not yet learned to mistrust you is far easier won,
@@ -427,10 +429,10 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         const crate = g.creatures.active() ? emptyCrate(g) : undefined;
         if (crate) {
           shutIn(g, c, crate);
-          g.logMsg(`The ${def.name.toLowerCase()} takes the ${foodName} from your hand and trusts you. It goes into the creature crate in your pack: set the crate down, or open it to have it follow you or work the deed.`, 'system');
+          g.logMsg(`Tamed: ${c.name}. In the creature crate in your pack.`, 'system');
         } else {
           c.mode = 'active';
-          g.logMsg(`The ${def.name.toLowerCase()} takes the ${foodName} from your hand and trusts you. ${c.name} now follows you.`, 'system');
+          g.logMsg(`Tamed: ${c.name}. Follows you.`, 'system');
         }
         forgetCoaxing(c);
         g.note('tamed');
@@ -444,8 +446,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         c.coaxed += 1;
         c.coaxedAt = g.time;
         const won = coaxBonus(c, g.time, coaxStep(g));
-        const warming = won > 0 ? ` It is growing used to you: ${(won * 100).toFixed(0)}% readier than the first time.` : '';
-        g.logMsg(`The ${def.name.toLowerCase()} ${def.tameFail.replace('{food}', foodName)}.${warming}`, 'event');
+        const warming = won > 0 ? ` Next offering +${(won * 100).toFixed(0)}% chance.` : '';
+        g.logMsg(`Taming failed.${warming}`, 'event');
         g.gainSkill('taming', tryGain(false, TAME_GAIN));
         g.gainSkill('soul_strength', tryGain(false, TAME_NERVE));
         g.gainSkill('mind_logic', tryGain(false, TAME_HEAD));
@@ -472,18 +474,18 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (!SPECIES[c.species]?.fleece) return 'There is nothing on it worth shearing.';
-      if (c.mode === 'wild') return 'Tame it first; it will not stand still for you otherwise.';
-      if (!g.inventory.has('carving_knife')) return 'You need a knife to shear with.';
-      if (c.fleece < SHEAR_FROM) return `${c.name} has hardly any ${SPECIES[c.species].shearYield === 'feather' ? 'feathers' : 'fleece'} back yet.`;
+      if (!c) return 'Gone.';
+      if (!SPECIES[c.species]?.fleece) return 'Nothing to shear.';
+      if (c.mode === 'wild') return 'Tame it first.';
+      if (!g.inventory.has('carving_knife')) return 'Need a carving knife.';
+      if (c.fleece < SHEAR_FROM) return `${c.name}: ${SPECIES[c.species].shearYield === 'feather' ? 'feathers' : 'fleece'} under ${percent(SHEAR_FROM)} grown.`;
       return null;
     },
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (!c || c.fleece < SHEAR_FROM) return;
       if (!nearPlayer(g, c)) {
-        g.logMsg(`${c.name} moved off before you could start.`, 'event');
+        g.logMsg(`${c.name} moved out of reach.`, 'event');
         return;
       }
       // A full fleece is three, a half-grown one is one, and quality follows the fleece.
@@ -496,7 +498,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('tailoring', 0.4);
       g.gainSkill('taming', 0.1);
-      g.logMsg(`You ${yields === 'wool' ? 'shear' : 'pluck'} ${c.name} and come away with ${n} ${itemDef(yields).name.toLowerCase()}. (QL ${wool.ql.toFixed(1)}) It will grow back.`, 'event');
+      g.logMsg(`${yields === 'wool' ? 'Sheared' : 'Plucked'} ${c.name}: ${n} ${itemDef(yields).name.toLowerCase()}, QL ${wool.ql.toFixed(1)}.`, 'event');
     },
   },
   {
@@ -511,7 +513,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
+      if (!c) return 'Gone.';
       return feedOf(g, c, isCreature(t) ? t.itemUid : undefined) ? null : feedRefusal(c);
     },
     perform: (t, g) => {
@@ -521,7 +523,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!food || !nearPlayer(g, c)) return;
       // Read before it is drunk: a bucket of whey becomes the bucket in place.
       const whey = food.id === WHEY_BUCKET;
-      const said = whey ? wheyFedSays(c.name) : `${c.name} gobbles up the ${itemDef(food.id).name.toLowerCase()}.`;
+      const said = whey ? wheyFedSays(c.name) : `Fed ${c.name}: ${itemDef(food.id).name.toLowerCase()}.`;
       const fill = feedFill(food.id);
       // A bucket of whey is drunk out of the bucket, and the bucket is kept.
       if (whey) {
@@ -552,7 +554,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c || !isCreature(t) || !t.stance) return;
       c.stance = t.stance;
       c.enemy = null;
-      g.logMsg(`${c.name} will be ${STANCE_NAMES[t.stance].toLowerCase()}.`, 'info');
+      g.logMsg(`${c.name} stance: ${STANCE_NAMES[t.stance].toLowerCase()}.`, 'info');
     },
   },
   /*
@@ -571,12 +573,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     applies: (t, g) => creatureOf(g, t)?.mode === 'active',
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c || c.mode !== 'active') return 'Only a companion takes orders like that.';
+      if (!c || c.mode !== 'active') return 'Companions only.';
       const foe = isCreature(t) && typeof t.foe === 'number' ? g.creatures.get(t.foe) : undefined;
-      if (!foe || foe.mode !== 'wild' || foe.hitchedTo !== null) return `Mark something wild first (${defaultKey('fight_mark')}), or fight it.`;
+      if (!foe || foe.mode !== 'wild' || foe.hitchedTo !== null) return `No target: mark a wild one (${defaultKey('fight_mark')}) or fight it.`;
       // As far as it follows a fight: further for a Beastmaster's Long Leash.
       const leash = g.perk('leash:companion', COMPANION_LEASH);
-      if (Math.hypot(foe.x - g.player.x, foe.y - g.player.y) > leash) return `It is more than ${leash} tiles from you.`;
+      if (Math.hypot(foe.x - g.player.x, foe.y - g.player.y) > leash) return `Too far: max ${leash} tiles.`;
       return null;
     },
     perform: (t, g) => {
@@ -585,7 +587,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c || !foe) return;
       c.enemy = foe.id;
       c.heelUntil = -1e9;
-      g.logMsg(`${c.name} goes for the ${SPECIES[foe.species].name.toLowerCase()}.`, 'fight');
+      g.logMsg(`${c.name} attacks: ${SPECIES[foe.species].name.toLowerCase()}.`, 'fight');
     },
   },
   {
@@ -598,13 +600,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     stamina: 0,
     baseTime: 0,
     applies: (t, g) => creatureOf(g, t)?.mode === 'active',
-    check: (t, g) => (creatureOf(g, t)?.mode === 'active' ? null : 'Only a companion takes orders like that.'),
+    check: (t, g) => (creatureOf(g, t)?.mode === 'active' ? null : 'Companions only.'),
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return;
       c.enemy = null;
       c.heelUntil = g.time + FALL_BACK;
-      g.logMsg(`${c.name} falls back to your side, and starts no fight for ${FALL_BACK} seconds.`, 'info');
+      g.logMsg(`${c.name} falls back: no new fights for ${FALL_BACK} seconds.`, 'info');
     },
   },
   {
@@ -619,19 +621,19 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       return !!c && c.hitchedTo === null && !c.ridden && (c.mode === 'active' || c.post !== null);
     },
     check: (t, g) => {
-      if (!g.deed) return 'You have no settlement to assign it to.';
+      if (!g.deed) return 'No settlement.';
       const c = creatureOf(g, t);
       // One off a post takes a place as much as one off the road, since a post costs none.
       const working = g.creatures.workers().length;
       if (c && (c.mode !== 'deed' || c.post !== null) && working >= g.workerCap) {
-        return `${g.deed.name} has work for ${g.workerCap} wildermon at level ${g.deedLevel}. Upgrade the settlement to take on more.`;
+        return `${g.deed.name} full: ${g.workerCap} workers at level ${g.deedLevel}.`;
       }
       // A trade it was asked for by name has to be one of its own.
       const want = t.kind === 'creature' ? t.job : undefined;
       if (c && want) {
         const def = SPECIES[c.species];
         const trades: string[] = def.trades ?? (def.gathers ? [def.gathers] : []);
-        if (!trades.includes(want)) return `A ${def.name.toLowerCase()} cannot be set to that.`;
+        if (!trades.includes(want)) return `${def.name}: not one of its trades.`;
       }
       return null;
     },
@@ -648,7 +650,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;
-      g.logMsg(`${c.name} will ${deedJobLine(c)}.`, 'system');
+      g.logMsg(`${c.name} assigned: ${deedJobLine(c)}.`, 'system');
     },
   },
   {
@@ -664,7 +666,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
+      if (!c) return 'Gone.';
       const swap = companionSwap(g, c);
       return swap && 'refused' in swap ? swap.refused : null;
     },
@@ -681,7 +683,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       c.enemy = null;
       c.state = 'idle';
       c.until = g.time;
-      g.logMsg(`${c.name} now follows you.`, 'system');
+      g.logMsg(`${c.name} follows you.`, 'system');
       // The one that was following you takes its place, on the deed or in a crate.
       if (swap && swap.to === 'deed') {
         const was = swap.current;
@@ -690,12 +692,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         was.enemy = null;
         was.state = 'idle';
         was.until = g.time;
-        g.logMsg(`${was.name} stays behind in its place, and will ${deedJobLine(was)}.`, 'info');
+        g.logMsg(`${was.name} assigned in its place: ${deedJobLine(was)}.`, 'info');
       } else if (swap) {
         const into = emptyCrate(g);
         if (into) {
           shutIn(g, swap.current, into);
-          g.logMsg(`${swap.current.name} goes into the creature crate in your pack.`, 'info');
+          g.logMsg(`${swap.current.name}: into the creature crate in your pack.`, 'info');
         }
       }
     },
@@ -713,10 +715,10 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => (sparring(creatureOf(g, t)) ? 'Spar' : 'Attack'),
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is dead or gone.';
-      if (c.mode !== 'wild' && !sparring(c)) return 'That one is tame. Release it first if you mean it.';
-      if (c.mode !== 'wild' && yielded(c)) return `${c.name} has yielded. Let it get its breath back first.`;
-      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > meleeReach(g)) return 'It is out of reach.';
+      if (!c) return 'Gone.';
+      if (c.mode !== 'wild' && !sparring(c)) return 'Tame: release it first.';
+      if (c.mode !== 'wild' && yielded(c)) return `${c.name} has yielded: wait.`;
+      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > meleeReach(g)) return 'Out of reach.';
       return null;
     },
     perform: (t, g) => {
@@ -736,7 +738,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       let dealt = 0;
       const spar = c.mode !== 'wild';
       if (!landed) {
-        g.logMsg(`You swing at ${spar ? c.name : `the ${def.name.toLowerCase()}`}${item ? ` with your ${itemName(item).toLowerCase()}` : ''} and miss.`, 'fight');
+        g.logMsg(`Missed: ${spar ? c.name : def.name.toLowerCase()}.`, 'fight');
         if (spar) return Math.hypot(c.x - g.player.x, c.y - g.player.y) <= meleeReach(g);
       } else {
         // Silver's old virtue: what carries its own light hates a silver edge.
@@ -768,7 +770,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         // Less for a Mender's Armour Care, as `perform_fight` has it.
         if (item) g.damageItem(item, 0.35 * g.perk('worn:weapon', 1));
         g.logMsg(
-          `You strike the ${def.name.toLowerCase()}${item ? ` with your ${itemName(item).toLowerCase()}` : ''}${crit ? ', a critical blow' : ''}. ${before > c.health ? `It is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, def)}.` : ''}`,
+          `Hit${crit ? ', critical' : ''}: ${def.name.toLowerCase()}${before > c.health ? ` ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, def)}` : ''}.`,
           'fight',
         );
       }
@@ -803,7 +805,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
   {
     id: 'shoot_creature',
     label: 'Shoot',
-    verb: 'drawing the bow',
+    verb: 'shooting',
     skill: 'archery',
     range: 13,
     stamina: 0.05,
@@ -816,15 +818,15 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is dead or gone.';
+      if (!c) return 'Gone.';
       const arms = armsRefusal(g, 'shoot_creature');
       if (arms) return arms;
       const held = g.worn('weapon');
       const bow = held && WEAPON_BY_ID.get(held.id);
-      if (!held || !bow?.ammo) return 'You have no bow in your hands.';
+      if (!held || !bow?.ammo) return 'Need a bow in hand.';
       const d = Math.hypot(c.x - g.player.x, c.y - g.player.y);
       if (d > bowReach(g, bow, held)) return `Too far for a ${itemName(held).toLowerCase()}.`;
-      if (d < drawClosest(g)) return 'It is too close to draw on.';
+      if (d < drawClosest(g)) return 'Too close to draw.';
       return null;
     },
     perform: (t, g) => {
@@ -846,7 +848,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.gainSkill('fighting', tryGain(landed, SHOT_FIGHT));
       g.gainSkill('archery', tryGain(landed, SHOT_ARCHERY));
       if (!landed) {
-        g.logMsg(`Your arrow goes wide of the ${def.name.toLowerCase()}.`, 'fight');
+        g.logMsg(`Arrow missed: ${def.name.toLowerCase()}.`, 'fight');
       } else {
         // The stave throws it; the head is what goes in. Both have a say.
         const head = matOfItem(arrow);
@@ -870,7 +872,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         // And what is enchanted into the bow, now and then (`shotRoll`): a Flamearrow's burn, a Frostbite's slow.
         const e = c.health > 0 ? shotRoll(g, held, c) : null;
         if (e && held.enchant) enchantWorks(g, e, held.enchant.ql, c, dmg, { burn: () => g.burn(c, ENCHANT_BURN.each, ENCHANT_BURN.secs), bleed: () => {} });
-        g.logMsg(`Your arrow goes home${crit ? ', a critical hit' : ''}. The ${def.name.toLowerCase()} is down to ${Math.max(0, Math.ceil(c.health))} of ${maxHealth(c, def)}.`, 'fight');
+        g.logMsg(`Arrow hit${crit ? ', critical' : ''}: ${def.name.toLowerCase()} ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, def)}.`, 'fight');
       }
       if (c.health <= 0) return false;
       // Shot at, it comes for you, as anything struck does.
@@ -881,7 +883,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
   {
     id: 'rename_creature',
     asks: {
-      question: 'What should it answer to?',
+      question: 'New name:',
       fallback: (t, g) => creatureOf(g, t)?.name ?? '',
       max: 24,
     },
@@ -900,7 +902,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const name = ((t as { name?: string }).name ?? '').trim();
       if (!name) return;
       c.name = name.slice(0, 24);
-      g.logMsg(`It answers to ${c.name} now.`, 'info');
+      g.logMsg(`Renamed: ${c.name}.`, 'info');
     },
   },
   {
@@ -916,13 +918,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
+      if (!c) return 'Gone.';
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
       // Less than a bucket a milking goes on into a part bucket of milk, if there is one (`dairy.ts`).
       const part = milkLitres(c.species) < BUCKET_LITRES && g.inventory.has(MILK_PART);
-      if (!part && !g.inventory.has('bucket')) return 'You need an empty bucket.';
-      if (c.sex !== 'female') return `${c.name} is male. Nothing is coming out of him.`;
-      if (c.fleece < MILK_READY) return `${c.name} has nothing to give yet.`;
+      if (!part && !g.inventory.has('bucket')) return 'Need an empty bucket.';
+      if (c.sex !== 'female') return `${c.name} is male.`;
+      if (c.fleece < MILK_READY) return `${c.name}: no milk yet.`;
       return null;
     },
     perform: (t, g) => {
@@ -977,7 +979,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
   {
     id: 'tack_creature',
     label: 'Saddle and bridle it',
-    verb: 'tacking it up',
+    verb: 'saddling',
     stamina: 0.02,
     baseTime: 4,
     applies: (t, g) => {
@@ -986,11 +988,11 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
+      if (!c) return 'Gone.';
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
-      if (!ageDef(c, g.time).works) return `${c.name} is not grown. Nothing that young takes a saddle.`;
+      if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
       const want = TACK.filter((id) => !g.inventory.has(id));
-      if (want.length) return `You need ${want.map((id) => itemDef(id).name.toLowerCase()).join(' and ')}.`;
+      if (want.length) return `Need ${want.map((id) => itemDef(id).name.toLowerCase()).join(' and ')}.`;
       return null;
     },
     perform: (t, g) => {
@@ -1013,13 +1015,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       else delete c.tack;
       if (Object.keys(enchants).length) c.tackEnchant = enchants;
       else delete c.tackEnchant;
-      g.logMsg(`You saddle ${c.name} and slip the bit into its mouth. It stands for it.`, 'event');
+      g.logMsg(`Saddled and bridled: ${c.name}.`, 'event');
     },
   },
   {
     id: 'shoe_creature',
     label: 'Shoe it',
-    verb: 'shoeing it',
+    verb: 'shoeing',
     stamina: 0.03,
     baseTime: 6,
     applies: (t, g) => {
@@ -1028,11 +1030,11 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (!SPECIES[c.species].mount) return 'Only a mount takes shoes.';
+      if (!c) return 'Gone.';
+      if (!SPECIES[c.species].mount) return 'Mounts only.';
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
-      if (!ageDef(c, g.time).works) return `${c.name} is not grown. Nothing that young takes a shoe.`;
-      if (g.inventory.count('horseshoe') < SHOES_PER_MOUNT || !g.inventory.has('mallet')) return `You need ${numberWord(SHOES_PER_MOUNT)} horseshoes and a mallet.`;
+      if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
+      if (g.inventory.count('horseshoe') < SHOES_PER_MOUNT || !g.inventory.has('mallet')) return `Need ${SHOES_PER_MOUNT} horseshoes and a mallet.`;
       return null;
     },
     perform: (t, g) => {
@@ -1041,13 +1043,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const shoes = g.inventory.find('horseshoe');
       if (!shoes || !g.inventory.remove(shoes.uid, SHOES_PER_MOUNT)) return;
       c.shodAt = g.time;
-      g.logMsg(`You nail ${numberWord(SHOES_PER_MOUNT)} shoes onto ${c.name}'s hooves. They will hold a week: quicker on stone, and up what it would have baulked at.`, 'event');
+      g.logMsg(`Shod: ${c.name}, ${SHOE_DAYS} days. Faster on stone, climbs steeper.`, 'event');
     },
   },
   {
     id: 'untack_creature',
     label: 'Take the tack off',
-    verb: 'unsaddling it',
+    verb: 'unsaddling',
     stamina: 0.01,
     baseTime: 2,
     applies: (t, g) => {
@@ -1056,7 +1058,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
+      if (!c) return 'Gone.';
       return nearPlayer(g, c) ? null : `Stand next to ${c.name}.`;
     },
     perform: (t, g) => {
@@ -1066,13 +1068,13 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       for (const id of TACK) g.inventory.add(id, { ql: 40, ...(c.tack?.[id] ? { mark: c.tack[id] } : {}), ...(c.tackEnchant?.[id] ? { enchant: c.tackEnchant[id] } : {}) });
       delete c.tack;
       delete c.tackEnchant;
-      g.logMsg(`You strip the saddle and bridle off ${c.name}.`, 'event');
+      g.logMsg(`Tack removed: ${c.name}.`, 'event');
     },
   },
   {
     id: 'mount_creature',
     label: 'Mount',
-    verb: 'getting up',
+    verb: 'mounting',
     stamina: 0.02,
     baseTime: 1.5,
     applies: (t, g) => {
@@ -1081,12 +1083,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (!c.tacked) return `${c.name} has no saddle or bridle on.`;
-      if (!ageDef(c, g.time).works) return `${c.name} is not grown enough to carry you.`;
+      if (!c) return 'Gone.';
+      if (!c.tacked) return `${c.name}: no saddle and bridle.`;
+      if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
       if (c.hitchedTo !== null) return `${c.name} is in the traces.`;
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
-      if (g.driving()) return 'Get down off what you are driving first.';
+      if (g.driving()) return 'Stop driving first.';
       if (g.player.aboard !== null) return 'Step ashore first.';
       return null;
     },
@@ -1094,7 +1096,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c || !g.mount(c)) return;
       g.note('mounted');
-      g.logMsg(`You take a fistful of mane and swing up onto ${c.name}.`, 'event');
+      g.logMsg(`Mounted: ${c.name}.`, 'event');
     },
   },
   {
@@ -1109,14 +1111,14 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return;
       g.dismount();
-      g.logMsg(`You swing down off ${c.name}.`, 'event');
+      g.logMsg(`Dismounted: ${c.name}.`, 'event');
     },
   },
   // ---- The traces: a wildermon put to a cart or a wagon. ----
   {
     id: 'hitch_creature',
     label: 'Hitch to the traces',
-    verb: 'hitching it up',
+    verb: 'hitching',
     stamina: 0.02,
     baseTime: 2.5,
     // And one in a crate you carry or stand beside, which comes out of it straight into a yoke.
@@ -1126,17 +1128,17 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (c.mode === 'stored' && !crateToHand(g, c)) return `${c.name} is in a creature crate. Let it out first.`;
+      if (!c) return 'Gone.';
+      if (c.mode === 'stored' && !crateToHand(g, c)) return `${c.name} is in a creature crate: let it out first.`;
       const f = vehicleFor(g, c);
-      if (!f) return 'There is no cart or wagon here with an empty yoke.';
+      if (!f) return 'No cart or wagon with an empty yoke here.';
       const storey = tracesStoreyRefusal(f);
       if (storey) return storey;
       const [cx, cy] = furnitureCentre(f);
       if (Math.hypot(cx - g.player.x, cy - g.player.y) > 2.4) return `Stand by the ${furnitureName(f).toLowerCase()}.`;
-      if (c.mode !== 'stored' && Math.hypot(c.x - g.player.x, c.y - g.player.y) > 4) return `${c.name} is too far off. Call it over first.`;
-      if (!ageDef(c, g.time).works) return `${c.name} is not grown. A yearling is no use in the traces.`;
-      if (c.hunger < 0.15) return `${c.name} is too hungry to pull anything. Feed it first.`;
+      if (c.mode !== 'stored' && Math.hypot(c.x - g.player.x, c.y - g.player.y) > 4) return `${c.name} is too far.`;
+      if (!ageDef(c, g.time).works) return `${c.name} is not grown.`;
+      if (c.hunger < 0.15) return `${c.name} is too hungry: feed it first.`;
       return null;
     },
     perform: (t, g) => {
@@ -1155,24 +1157,24 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.logMsg(
           c.hitchedTo !== null ? `${c.name} is already in the traces.`
           : c.ridden ? `${c.name} has a rider on it.`
-          : 'There is no cart or wagon here with an empty yoke.',
+          : 'No cart or wagon with an empty yoke here.',
           'error',
         );
         return;
       }
       const v = vehicleOf(f);
       const filled = (f.team ?? []).length;
-      const short = v && filled < v.needs ? ` It needs ${v.needs - filled} more before it will move.` : '';
+      const short = v && filled < v.needs ? ` Needs ${v.needs - filled} more to move.` : '';
       g.note('hitched');
       // A whole team in it, for the journal's cart and wagon (the island's `perform_ride` the same).
       if (v && filled >= v.needs) g.note(`team:${f.kind}`);
-      g.logMsg(`${crated ? `${c.name} comes out of the crate. ` : ''}You back ${c.name} into a yoke of the ${furnitureName(f).toLowerCase()}. ${filled} of ${v?.yokes ?? 0} filled.${short}`, 'event');
+      g.logMsg(`Hitched${crated ? ' from the crate' : ''}: ${c.name} to the ${furnitureName(f).toLowerCase()}, ${filled}/${v?.yokes ?? 0} yokes.${short}`, 'event');
     },
   },
   {
     id: 'unhitch_creature',
     label: 'Take out of the traces',
-    verb: 'unhitching it',
+    verb: 'unhitching',
     instant: true,
     stamina: 0,
     baseTime: 0,
@@ -1188,7 +1190,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const f = g.vehicleOfCreature(c);
       const out = teamOut(g, [c]);
       g.unhitch(c);
-      g.logMsg(`You unbuckle ${c.name} from the ${f ? furnitureName(f).toLowerCase() : 'traces'}.${crateTheRest(g, out)}`, 'event');
+      g.logMsg(`Unhitched: ${c.name} from the ${f ? furnitureName(f).toLowerCase() : 'traces'}.${crateTheRest(g, out)}`, 'event');
     },
   },
   {
@@ -1204,11 +1206,11 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c) return null;
       const tier = bestTier(c.traits);
       return tier === 'supreme' || tier === 'fantastic'
-        ? `${c.name} carries ${tier} blood: ${traitList(c.traits)}. Cull it anyway? There is no getting that back.`
-        : `Cull ${c.name}? It dies where it stands and leaves a carcass.`;
+        ? `${c.name} carries ${tier} blood: ${traitList(c.traits)}. Cull anyway? Cannot be undone.`
+        : `Cull ${c.name}? Leaves a carcass.`;
     },
     label: 'Cull',
-    verb: 'culling it',
+    verb: 'culling',
     instant: true,
     stamina: 0,
     baseTime: 0,
@@ -1218,8 +1220,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is dead or gone.';
-      if (c.mode === 'wild') return 'That one is nobody\'s. Fight it if you mean it.';
+      if (!c) return 'Gone.';
+      if (c.mode === 'wild') return 'Not yours.';
       return null;
     },
     perform: (t, g) => {
@@ -1237,7 +1239,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const name = c.name;
       const what = SPECIES[c.species].name.toLowerCase();
       g.creatures.kill(g, c, 'player', true);
-      g.logMsg(`You put ${name} down. The ${what}'s carcass lies where it stood, ready for the knife.`, 'fight');
+      g.logMsg(`Culled: ${name}. ${capital(what)} carcass left.`, 'fight');
     },
   },
   {
@@ -1252,8 +1254,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c) return null;
       const tier = bestTier(c.traits);
       return tier === 'supreme' || tier === 'fantastic'
-        ? `${c.name} carries ${tier} blood: ${traitList(c.traits)}. Release it back into the wild? You will not get that back.`
-        : `Release ${c.name} back into the wild?`;
+        ? `${c.name} carries ${tier} blood: ${traitList(c.traits)}. Release anyway? Cannot be undone.`
+        : `Release ${c.name}?`;
     },
     label: 'Release',
     verb: 'releasing',
@@ -1272,8 +1274,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       c.mode = 'wild';
       c.stance = 'passive';
       c.enemy = null;
+      const was = c.name;
       c.name = SPECIES[c.species].name;
-      g.logMsg(`The ${c.name.toLowerCase()} ${SPECIES[c.species].leaves}.`, 'system');
+      g.logMsg(`Released: ${was}.`, 'system');
     },
   },
   artifactAction('use_ancient_comb', 'Comb it with the ancient comb', 'combing it'),

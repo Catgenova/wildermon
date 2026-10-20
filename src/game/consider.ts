@@ -7,6 +7,7 @@ import {
 import type { Game } from './game';
 import { hitChance, WEAPON_BY_ID, weaponDamage } from './gear';
 import { matOfItem } from './materials';
+import { capital } from './words';
 
 /**
  * How a fight with something would go, worked out from the rules rather than
@@ -66,5 +67,5 @@ export function consider(g: Game, c: Creature): Consider {
 export function considerSays(g: Game, c: Creature): string {
   const k = consider(g, c);
   const name = g.creatures.species(c).name.toLowerCase();
-  return `Against the ${name}: about ${k.mine} of your blows to down it, and about ${k.its} of its to down you. ${k.rating === 'easy' ? 'Easy' : k.rating === 'even' ? 'Even' : 'Hard'}.`;
+  return `${capital(name)}: about ${k.mine} of your blows to kill it; about ${k.its} of its to kill you. ${k.rating === 'easy' ? 'Easy' : k.rating === 'even' ? 'Even' : 'Hard'}.`;
 }

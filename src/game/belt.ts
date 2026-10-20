@@ -58,7 +58,7 @@ export function aimPin(g: Game, pin: BeltPin, def: ActionDef, where: Target | nu
     const it = bestFor(g, pin.item);
     if (!it) return null;
     const t: Target = { kind: 'item', uid: it.uid };
-    if (!def.applies(t, g)) return { target: t, reason: 'That is not something you can do to it now.' };
+    if (!def.applies(t, g)) return { target: t, reason: 'Not possible on that now.' };
     return { target: t, reason: def.check?.(t, g) ?? null };
   }
   const tries: Target[] = [];

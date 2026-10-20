@@ -103,19 +103,19 @@ export class MinimapPanel {
     dropBtn.type = 'button';
     dropBtn.className = 'tb-btn tb-small';
     dropBtn.textContent = 'Mark here';
-    dropBtn.title = 'Pin a name to the tile you are standing on';
+    dropBtn.title = 'Mark your tile with a name';
     dropBtn.addEventListener('click', () => this.drop(game.player.tileX, game.player.tileY));
     const homeBtn = document.createElement('button');
     homeBtn.type = 'button';
     homeBtn.className = 'tb-btn tb-small';
     homeBtn.textContent = 'Walk home';
-    homeBtn.title = 'Set off for the settlement token, or the bed you last woke in (Home). Double-click the map to walk anywhere on it.';
+    homeBtn.title = 'Walk to the settlement token or the last bed slept in (Home). Double-click the map: walk there.';
     homeBtn.addEventListener('click', () => game.walkHome());
     const nameBtn = document.createElement('button');
     nameBtn.type = 'button';
     nameBtn.className = 'tb-btn tb-small tb-on';
     nameBtn.textContent = 'Names';
-    nameBtn.title = 'Write the names beside the pins, or leave the pins bare';
+    nameBtn.title = 'Show or hide mark names';
     nameBtn.addEventListener('click', () => {
       this.names = !this.names;
       nameBtn.classList.toggle('tb-on', this.names);
@@ -176,7 +176,7 @@ export class MinimapPanel {
   /** Ask for a name and pin it to a tile. An empty answer drops nothing. */
   private async drop(x: number, y: number): Promise<void> {
     if (!this.game.world.inBounds(x, y)) return;
-    const said = await this.game.hooks.prompt(`Name this spot (${x}, ${y}):`, '');
+    const said = await this.game.hooks.prompt(`Mark name (${x}, ${y}):`, '');
     if (said === null) return;
     this.game.addMark(x, y, said);
     this.listMarks();
@@ -189,7 +189,7 @@ export class MinimapPanel {
     if (!g.marks.length) {
       const none = document.createElement('div');
       none.className = 'map-none';
-      none.textContent = 'No marks yet. Right-click the map, or press “Mark here”, to pin a name to a spot.';
+      none.textContent = 'No marks. Right-click the map or press “Mark here”.';
       this.marksEl.append(none);
       return;
     }
@@ -202,8 +202,8 @@ export class MinimapPanel {
       pip.type = 'button';
       pip.className = 'map-pip';
       pip.style.background = MARK_CSS(m.colour);
-      pip.title = 'Click for another colour';
-      pip.setAttribute('aria-label', `Colour of ${m.name}: click for the next one`);
+      pip.title = 'Click: next colour';
+      pip.setAttribute('aria-label', `Colour of ${m.name}: click for next`);
       pip.addEventListener('click', () => {
         const i = MARK_COLOURS.findIndex((c) => c.id === m.colour);
         this.game.recolourMark(m.id, MARK_COLOURS[(i + 1) % MARK_COLOURS.length].id);
@@ -214,9 +214,9 @@ export class MinimapPanel {
       name.className = 'map-mark-name';
       const away = Math.round(Math.hypot(m.x - g.player.x, m.y - g.player.y));
       name.textContent = m.name;
-      name.title = `(${m.x}, ${m.y}), ${away} tiles off. Click to rename.`;
+      name.title = `(${m.x}, ${m.y}), ${away} tiles away. Click to rename.`;
       name.addEventListener('click', () => void (async () => {
-        const said = await g.hooks.prompt('What is this spot called?', m.name);
+        const said = await g.hooks.prompt('Mark name:', m.name);
         if (said === null) return;
         g.renameMark(m.id, said);
         this.listMarks();
@@ -229,16 +229,16 @@ export class MinimapPanel {
       go.type = 'button';
       go.className = 'tb-btn tb-small';
       go.textContent = 'Go';
-      go.title = `Walk to (${m.x}, ${m.y}), a leg of up to ${TRAVEL_LEG} tiles at a time however far it is`;
+      go.title = `Walk to (${m.x}, ${m.y}), in legs of up to ${TRAVEL_LEG} tiles`;
       // However far: a long walk goes in legs (`travelTo`), where one path was all there was.
       go.addEventListener('click', () => g.travelTo(m.x, m.y, m.name));
       const off = document.createElement('button');
       off.type = 'button';
       off.className = 'tb-btn tb-small tb-danger';
       off.textContent = '×';
-      off.title = 'Rub this mark off the map';
+      off.title = 'Delete mark';
       // Asked first: a mark is a place you found and named, and nothing brings it back.
-      off.addEventListener('click', () => void g.hooks.confirm(`Rub “${m.name}” off the map?`).then((yes) => {
+      off.addEventListener('click', () => void g.hooks.confirm(`Delete mark “${m.name}”?`).then((yes) => {
         if (!yes) return;
         g.removeMark(m.id);
         this.listMarks();
@@ -542,7 +542,7 @@ export class MinimapPanel {
         ctx.lineWidth = 2;
         ctx.stroke();
       });
-      if (this.names) this.tag(kx, ky, k, 9, 0, m.kind === 'seek' ? 'Seek: a mote swirl' : 'Trace: a hoard', ink);
+      if (this.names) this.tag(kx, ky, k, 9, 0, m.kind === 'seek' ? 'Seek: mote swirl' : 'Trace: hoard', ink);
     }
     // Landmarks: a statue is on the map from the day it is set up, a stone
     // diamond with its name, drawn under the people and over the marks.

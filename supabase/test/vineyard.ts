@@ -557,7 +557,7 @@ same('C:none', ask(CUT_VINE, tile(11, 10)), 'none');
 dice(0.5);
 act(CUT_VINE).perform(tile(11, 10), g);
 check(`a thorn bush gives one cutting, said the same way on both sides: “${lastHere()}”`,
-  part('C:cut', 0) === '1' && held(GRAPE_CUTTING) === 1 && part('C:cut', 1).startsWith(cutVineSaid(0).split('(')[0]) && lastHere().startsWith(cutVineSaid(0).split('(')[0]),
+  part('C:cut', 0) === '1' && held(GRAPE_CUTTING) === 1 && part('C:cut', 1).startsWith(cutVineSaid(0).split(', QL')[0]) && lastHere().startsWith(cutVineSaid(0).split(', QL')[0]),
   isle.get('C:cut'));
 same('C:again', ask(CUT_VINE, tile(11, 10)), VINE_SAID.cut);
 
@@ -826,7 +826,7 @@ check('drawn dry it forgets its age; water poured in has none; a brew that does 
   check(`the rest go back to whoever set them down, a vine as a cutting -- ${isle.get('S:n')} on the island, one of them left on the ground of its tile, rare as it was, by one who has left`,
     isle.get('S:n') === '5' && isle.get('S:pack') === '4|1' && isle.get('S:ground') === `${TRELLIS}@44,40:rare`
       && held(TRELLIS) === 5 && held(GRAPE_CUTTING) === 1, `${isle.get('S:pack')} ${isle.get('S:ground')} / ${held(TRELLIS)} ${held(GRAPE_CUTTING)}`);
-  const toldHere = said.filter((m) => m.startsWith('Your ') && !m.includes(' at 44, 40 ')).join('#');
+  const toldHere = said.filter((m) => m.startsWith('Returned to your pack: ') && !m.includes(' at 44, 40')).join('#');
   check(`and are told why, in the same words: “${trellisReturnedSaid(42, 40, true)}”`,
     toldHere === isle.get('S:told') && toldHere.split('#').length === 4 && toldHere.includes(trellisReturnedSaid(42, 40, true)), `${isle.get('S:told')} / ${toldHere}`);
 }

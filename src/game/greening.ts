@@ -169,9 +169,9 @@ export function mossWords(m: Mossy): string {
 }
 
 /** The sentence both sides end a clearing with: what it starts again from, and how long it takes to come back. */
-export const GREEN_AGAIN = `It starts again from bare stone and is as green as it gets in ${GREEN_DAYS} days.`;
+export const GREEN_AGAIN = `Fully green again in ${GREEN_DAYS} days.`;
 /** Why there is nothing to clear yet. The island says the same (`green_refusal`). */
-export const NOTHING_YET = `Nothing has grown on it yet. It greens a day at a time, over ${GREEN_DAYS} days from when it was built, laid, set down or last cleared.`;
+export const NOTHING_YET = `Nothing grown yet. Greens over ${GREEN_DAYS} days from when built, laid, set down or last cleared.`;
 
 /**
  * Why a settlement's builders are the ones to do it: somebody else's garden
@@ -183,12 +183,12 @@ function notYours(g: Game, def: ActionDef, x: number, y: number): string | null 
   // A settlement of yours whose rank of yours lacks Shape and build says so (`lacks`); anybody else's, whose it is.
   if (mine) return lacks(mine, 'shape');
   const d = g.deedAt(x, y);
-  return d ? `That is part of ${d.name}. Only its builders may ${def.label.toLowerCase()} there.` : null;
+  return d ? `Part of ${d.name}: only builders may ${def.label.toLowerCase()} there.` : null;
 }
 
 /** The tool, as every job says it wants one. */
 const toolRefusal = (g: Game, def: ActionDef): string | null =>
-  def.tool && !g.inventory.has(def.tool) ? `You need a ${itemDef(def.tool).name.toLowerCase()} to ${def.label.toLowerCase()}.` : null;
+  def.tool && !g.inventory.has(def.tool) ? `Need a ${itemDef(def.tool).name.toLowerCase()}.` : null;
 
 /**
  * Why a clearing cannot be done, in the island's order: what is there, the
@@ -202,12 +202,12 @@ export function greenRefusal(g: Game, def: ActionDef, t: Target, now = greenNow(
   if (def.id === 'clear_ivy') {
     if (t.kind !== 'tile' || !t.side) return 'Choose a side.';
     const walls = ivyWalls(g, t.x, t.y, t.side);
-    if (!walls.length) return 'There is no finished wall of stone or brick there.';
+    if (!walls.length) return 'No finished stone or brick wall there.';
     days = Math.max(...walls.map((w) => wallGreen(g, w, now) ?? 0));
     [x, y] = [t.x, t.y];
   } else {
     const m = mossOn(g, t, now);
-    if (!m) return t.kind === 'tile' ? 'There is no paving or poured foundation here.' : 'No moss grows on that.';
+    if (!m) return t.kind === 'tile' ? 'No paving or poured foundation here.' : 'No moss grows on that.';
     days = m.days;
     [x, y] = [m.x, m.y];
   }
@@ -230,7 +230,7 @@ const CLEAR_IVY: ActionDef = {
     const now = greenNow();
     if (t.kind !== 'tile' || !t.side || greenRefusal(g, CLEAR_IVY, t, now)) return;
     for (const w of ivyWalls(g, t.x, t.y, t.side)) w.greenSince = now;
-    g.logMsg(`You clear the ivy off the ${SIDE_NAMES[t.side]} wall. ${GREEN_AGAIN}`, 'event');
+    g.logMsg(`Ivy cleared: ${SIDE_NAMES[t.side]} wall. ${GREEN_AGAIN}`, 'event');
     g.events.emit('world', t.x, t.y);
   },
 };
@@ -252,7 +252,7 @@ const SCRUB_MOSS: ActionDef = {
     if (m.slab) m.slab.greenSince = now;
     if (m.piece) m.piece.greenSince = now;
     if (m.bridge) m.bridge.greenSince = now;
-    g.logMsg(`You scrub the moss off ${mossWords(m)}. ${GREEN_AGAIN}`, 'event');
+    g.logMsg(`Moss scrubbed: ${mossWords(m)}. ${GREEN_AGAIN}`, 'event');
     g.events.emit('world', m.x, m.y);
   },
 };

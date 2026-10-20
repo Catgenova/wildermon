@@ -335,13 +335,13 @@ begin
   v_b := ${thing('tarnished_bauble', BAUBLE_QL, BAUBLE_DMG, "'minor'")};
   ${dice(HARM_ROLL)};
   perform restore_bauble(w, u, ${row('v_b')});
-  v_t := (select dmg from item where id = v_b) || ':' || ${last('The tarnish will not lift%')};
+  v_t := (select dmg from item where id = v_b) || ':' || ${last('Restore failed:%')};
   update item set dmg = ${BAUBLE_DMG} where id = v_b;
   ${hold('Gentle Hands')};
   ${dice(HARM_ROLL)};
   perform restore_bauble(w, u, ${row('v_b')});
   ${nodice};
-  insert into said values ('GENTLE', v_t || '|' || (select dmg from item where id = v_b) || ':' || ${last('The tarnish will not lift%')});
+  insert into said values ('GENTLE', v_t || '|' || (select dmg from item where id = v_b) || ':' || ${last('Restore failed:%')});
   ${clearAll};
   ${checks(true)};
 
@@ -380,7 +380,7 @@ begin
     perform restore_bauble(w, u, ${row('v_b')});
     ${nodice};
     insert into said values ('TIER' || coalesce(nullif(v_t, ''), 'plain'),
-      ${count('bauble_minor')} || ':' || ${count('bauble_major')} || ':' || ${last('The tarnish comes away%')});
+      ${count('bauble_minor')} || ':' || ${count('bauble_major')} || ':' || ${last('Restored:%')});
     ${clearAll};
   end loop;
 
@@ -415,7 +415,7 @@ begin
     perform perform_dig(w, u, 'restore_relic', ${itemT('v_it')});
     ${nodice};
     insert into said values ('PIECES' || coalesce(nullif(v_t, ''), 'plain'),
-      (select dmg from item where id = v_it) || ':' || (select dmg from item where id = v_b) || ':' || ${last('The pieces of the%')});
+      (select dmg from item where id = v_it) || ':' || (select dmg from item where id = v_b) || ':' || ${last('Restore failed:%')});
     ${clearAll};
   end loop;
   perform pg_temp.hold(w, u, array[${q(P('Sure Restore').id)}, ${q(P('Fine Restore').id)}, ${q(P('Age Undone').id)}]::text[]);
@@ -476,7 +476,7 @@ begin
   v_t := v_t || '#' || ${refused('mend_kit', 'v_it')};
   perform perform_item(w, u, 'mend_kit', ${itemT('v_it')});
   v_t := v_t || '#' || (select dmg || ':' || ql from item where id = v_it) || '#' || ${count('repair_kit')}
-    || '#' || ${last('You mend the%')} || '#' || ${refused('mend_kit', 'v_it')};
+    || '#' || ${last('Mended: %')} || '#' || ${refused('mend_kit', 'v_it')};
   update item set dmg = 0 where id = v_it;
   perform give(w, u, 'repair_kit', 1, 30);
   insert into said values ('KIT', v_t || '#' || ${refused('mend_kit', 'v_it')});
@@ -498,7 +498,7 @@ begin
   v_t := v_t || '#' || ${refused('seal_item', 'v_it')};
   perform perform_item(w, u, 'seal_item', ${itemT('v_it')});
   v_t := v_t || '#' || coalesce((select mark::text from item where id = v_it), 'none') || '#' || ${count('sealant')}
-    || '#' || ${last('You work the sealant%')} || '#' || ${refused('seal_item', 'v_it')}
+    || '#' || ${last('Sealed: %')} || '#' || ${refused('seal_item', 'v_it')}
     || '#' || ground_decay_rate(${row('v_it')}) || '#' || ground_decay_rate(${row('v_b')})
     || '#' || mark_says((select mark from item where id = v_it));
   insert into said values ('SEAL', v_t);
@@ -589,13 +589,15 @@ check('a post stands the browser\'s time, the roughest a world half hour where i
 /* ---- restoring ----------------------------------------------------------------------------- */
 
 check(`${P('Sure Restore').name}: the dice that fail a restoring without it pass it with it`, say('SURE') === '1:0|0:1', say('SURE'));
-const [harmedAt, harmedSaid] = say('GENTLE').split('|')[0].split(':');
-const [gentleAt, gentleSaid] = say('GENTLE').split('|')[1].split(':');
+const [harmedAt, ...harmedRest] = say('GENTLE').split('|')[0].split(':');
+const harmedSaid = harmedRest.join(':');
+const [gentleAt, ...gentleRest] = say('GENTLE').split('|')[1].split(':');
+const gentleSaid = gentleRest.join(':');
 check(`a restoring that fails marks the bauble by ${RESTORE_HARM} and up to ${RESTORE_HARM_SPREAD} more`,
-  near(Number(harmedAt), BAUBLE_DMG + RESTORE_HARM + HARM_ROLL * RESTORE_HARM_SPREAD) && harmedSaid === 'The tarnish will not lift from the minor bauble and you mark it trying.',
+  near(Number(harmedAt), BAUBLE_DMG + RESTORE_HARM + HARM_ROLL * RESTORE_HARM_SPREAD) && harmedSaid === 'Restore failed: minor bauble damaged.',
   say('GENTLE'));
 check(`${P('Gentle Hands').name}: and not at all with it, and says so`,
-  near(Number(gentleAt), BAUBLE_DMG) && gentleSaid === 'The tarnish will not lift from the minor bauble, and it takes no harm from the trying.', say('GENTLE'));
+  near(Number(gentleAt), BAUBLE_DMG) && gentleSaid === 'Restore failed: minor bauble, no damage.', say('GENTLE'));
 const restored = BAUBLE_QL * (1 - BAUBLE_DMG / RESTORE_AGE) * (0.72 + SKILL / 260);
 check('a bauble comes out at its quality, less what its damage took, at the restorer\'s skill', near(Number(say('QLplain')), restored, 1e-4), say('QLplain'));
 check(`${P('Fine Restore').name}: ${fx('Fine Restore', 'ql:restore_relic')} of that`,
@@ -610,20 +612,22 @@ const tierPlain = say('TIERplain').split(':');
 const tierUp = say(`TIER${P('Tier Up').id}`).split(':');
 check(`${P('Tier Up').name}: under its ${fx('Tier Up', 'tier:restore_relic')} a minor bauble comes out major, and says so`,
   tierPlain.slice(0, 2).join(':') === '1:0' && tierUp.slice(0, 2).join(':') === '0:1'
-    && tierUp.slice(2).join(':').startsWith('The tarnish comes away and the minor bauble is a major one: '), `${say('TIERplain')} / ${say(`TIER${P('Tier Up').id}`)}`);
+    && tierUp.slice(2).join(':').startsWith('Restored: ') && tierUp.slice(2).join(':').endsWith(' Tier up: minor to major.'), `${say('TIERplain')} / ${say(`TIER${P('Tier Up').id}`)}`);
 const [lookFirst, lookSecond] = say('LOOKplain').split('#');
 const [keptFirst, keptSecond] = say(`LOOK${P('Second Look').id}`).split('#');
 check(`${P('Second Look').name}: without it a bauble keeps the one roll it had, the smaller or the larger`,
   lookFirst.includes(ROLLS[0].toFixed(1)) && lookSecond.includes(ROLLS[1].toFixed(1)), say('LOOKplain'));
 check('with it, the larger of two, whichever came first', keptFirst.includes(ROLLS[1].toFixed(1)) && keptSecond.includes(ROLLS[1].toFixed(1)),
   say(`LOOK${P('Second Look').id}`));
-const [piecePlain1, piecePlain2, pieceSaid] = say('PIECESplain').split(':');
-const [pieceGentle1, pieceGentle2, pieceGentleSaid] = say(`PIECES${P('Gentle Hands').id}`).split(':');
+const [piecePlain1, piecePlain2, ...pieceRest] = say('PIECESplain').split(':');
+const pieceSaid = pieceRest.join(':');
+const [pieceGentle1, pieceGentle2, ...pieceGentleRest] = say(`PIECES${P('Gentle Hands').id}`).split(':');
+const pieceGentleSaid = pieceGentleRest.join(':');
 check('a relic that will not go together marks each piece, and not with Gentle Hands',
   near(Number(piecePlain1), BAUBLE_DMG + RESTORE_HARM + HARM_ROLL * RESTORE_HARM_SPREAD) && near(Number(piecePlain2), Number(piecePlain1))
-    && pieceSaid === 'The pieces of the old pot will not sit together and you mark them trying.'
+    && pieceSaid === 'Restore failed: old pot pieces damaged.'
     && near(Number(pieceGentle1), BAUBLE_DMG) && near(Number(pieceGentle2), BAUBLE_DMG)
-    && pieceGentleSaid === 'The pieces of the old pot will not sit together, and they take no harm from the trying.',
+    && pieceGentleSaid === 'Restore failed: old pot, no damage.',
   `${say('PIECESplain')} / ${say(`PIECES${P('Gentle Hands').id}`)}`);
 check('and a relic Sure Restore puts together comes out finer and with nothing off for its damage',
   near(Number(say('RELIC')), BAUBLE_QL * (0.72 + SKILL / 260) * fx('Fine Restore', 'ql:restore_relic'), 1e-4), say('RELIC'));
@@ -645,19 +649,19 @@ const kit = say('KIT').split('#');
 check(`${P('Repair Kit').name}: refused without it in the browser's words, made with it`,
   kit[0] === RECIPE_PERK_SAYS.repair_kit && kit[1] === 'ALLOWED' && kit[2] === '1', kit.slice(0, 3).join(' / '));
 check(`anybody may use one: it takes ${KIT_MEND} off a shovel and none of its quality, and is used up`,
-  kit[3] === 'ALLOWED' && kit[4] === `${80 - KIT_MEND}:${QL}` && kit[5] === '0' && kit[6] === `You mend the shovel with a repair kit. (damage ${(80 - KIT_MEND).toFixed(2)})`,
+  kit[3] === 'ALLOWED' && kit[4] === `${80 - KIT_MEND}:${QL}` && kit[5] === '0' && kit[6] === `Mended: shovel, damage ${(80 - KIT_MEND).toFixed(2)}.`,
   kit.slice(3, 7).join(' / '));
 check('and is refused with none left, and on a thing that wants nothing, in the browser\'s words',
-  kit[7] === 'You have no repair kit.' && kit[8] === 'There is nothing wrong with it.', kit.slice(7).join(' / '));
+  kit[7] === 'Need a repair kit.' && kit[8] === 'Not damaged.', kit.slice(7).join(' / '));
 
 /* ---- the sealant --------------------------------------------------------------------------- */
 
 const seal = say('SEAL').split('#');
 check(`${P('Sealant').name}: refused without it in the browser's words, made with it`,
   seal[0] === RECIPE_PERK_SAYS.sealant && seal[1] === 'ALLOWED' && seal[2] === '2', seal.slice(0, 3).join(' / '));
-check('a pile of three logs wants three', seal[3] === 'You need 3 sealant to seal all 3 of them; you have 2.' && seal[4] === 'ALLOWED', seal.slice(3, 5).join(' / '));
+check('a pile of three logs wants three', seal[3] === 'Need 3 sealant; have 2.' && seal[4] === 'ALLOWED', seal.slice(3, 5).join(' / '));
 check('and sealed, it carries the seal, the sealant is spent, and it will not be sealed twice',
-  seal[5] === '{"seal": 0}' && seal[6] === '0' && seal[7] === 'You work the sealant over the log. It will not decay now.' && seal[8] === 'It is sealed already.',
+  seal[5] === '{"seal": 0}' && seal[6] === '0' && seal[7] === 'Sealed: log. No decay.' && seal[8] === 'Already sealed.',
   seal.slice(5, 9).join(' / '));
 check('a sealed pile never decays on the ground, where a plank does', Number(seal[9]) === 0 && Number(seal[10]) > 0, seal.slice(9, 11).join(' / '));
 check('and says so in the browser\'s words', seal[11] === markSays({ seal: 0 }), `${seal[11]} // ${markSays({ seal: 0 })}`);
@@ -767,7 +771,7 @@ game.rand = () => TIER_ROLL;
 game.log.length = 0;
 restoreDef.perform(itemTarget(tarnished), game);
 check('its Tier Up makes a major bauble of a minor one under the same dice, and says so in the island\'s words',
-  game.inventory.count('bauble_major') === 1 && game.log.some((l) => l.text.startsWith('The tarnish comes away and the minor bauble is a major one: ')),
+  game.inventory.count('bauble_major') === 1 && game.log.some((l) => l.text.startsWith('Restored: ') && l.text.endsWith(' Tier up: minor to major.')),
   game.log.map((l) => l.text).join(' | '));
 game.setPerks({});
 game.skills.values.set('carpentry', LOW_SKILL);
@@ -780,7 +784,7 @@ check('its repair kit and sealant are refused in the island\'s words without the
 const kitDef = ACTION_BY_ID.get('mend_kit')!;
 const sealDef = ACTION_BY_ID.get('seal_item')!;
 const worn = shovelAt(80);
-check('its kit is refused with none carried, in the island\'s words', kitDef.check?.(itemTarget(worn), game) === 'You have no repair kit.');
+check('its kit is refused with none carried, in the island\'s words', kitDef.check?.(itemTarget(worn), game) === 'Need a repair kit.');
 game.inventory.add('repair_kit', { ql: 30 });
 game.log.length = 0;
 kitDef.perform(itemTarget(worn), game);

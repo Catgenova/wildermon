@@ -103,7 +103,7 @@ const [spot, off, carried] = at('AT').split('|');
 check('set to work, it goes to the hive and works there', spot === '19,16' && Number(off) < 1.5, at('AT'));
 check('carrying nothing home', carried === 'nothing', carried);
 check('and the hive fills while it does', Number(at('FILLED')) >= 1, at('FILLED'));
-check('with no hive in reach, it says so', at('IDLE').startsWith('Vesp can find no hive to tend within ') || / can find no hive to tend within /.test(at('IDLE')), at('IDLE'));
+check('with no hive in reach, it says so', at('IDLE').startsWith('Vesp idle: no hive to tend within ') || / idle: no hive to tend within /.test(at('IDLE')), at('IDLE'));
 
 /* ---- in the browser ---------------------------------------------------------------- */
 

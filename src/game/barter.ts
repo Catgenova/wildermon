@@ -43,51 +43,51 @@ export const BARTER_REFRESH = 3;
  */
 export const BARTER_SAID = {
   /** Asking yourself, or nobody. */
-  self: 'There is nobody there to trade with.',
+  self: 'Nobody there to trade with.',
   /** The other one is not on the island, or is away. */
   gone: '{who} is not ashore.',
   /** Too far apart to ask, to say yes or to accept. */
-  far: `Stand within ${BARTER_REACH} tiles of each other to trade.`,
+  far: `Too far: trade within ${BARTER_REACH} tiles.`,
   /** Already in a trade. */
-  busy: 'You are already trading. Finish or cancel that trade first.',
-  busyThem: '{who} is already trading with somebody.',
+  busy: 'Already trading: finish or cancel first.',
+  busyThem: '{who} is already trading.',
   /** A trade you are not in, or one that never was: the same answer, so it tells a stranger nothing. */
-  none: 'There is no such trade.',
+  none: 'No such trade.',
   /** One of yours, already finished. */
-  over: 'That trade is over.',
+  over: 'Trade over.',
   /** Putting things in, or accepting, before the one asked has said yes. */
-  notYet: '{who} has not agreed to trade yet.',
+  notYet: '{who} has not agreed yet.',
   /** Answering a trade you asked for. */
-  notYours: 'It is for {who} to answer.',
+  notYours: '{who} answers this.',
   /** A thing on a side that has left that side's pack: eaten, dropped, sold, posted or held in a deal. */
-  missing: 'The {what} is no longer in {who}\'s pack.',
+  missing: 'No longer in {who}\'s pack: {what}.',
   /** Fewer in the stack than were put in. */
-  fewer: 'There are fewer in {who}\'s stack of {what} than were put in.',
+  fewer: 'Fewer than were put in: {who}\'s {what}.',
   /** Worn or held in a hand. */
-  worn: '{who} is wearing or holding the {what}. Take it off to trade it.',
+  worn: 'Worn or held by {who}: {what}. Unequip it first.',
   /** Set aside with Keep this back. */
-  locked: '{who} has kept the {what} back. Put it back in the pack to trade it.',
+  locked: 'Set aside by {who}: {what}. Return it to the pack first.',
   /** Coins go by the sum, not by the stack. */
-  coin: 'Coins go in as a sum of silver, not as a stack.',
+  coin: 'Coins go in as a silver sum, not as a stack.',
   /** More silver on a side than its owner carries. */
-  coins: '{who} does not have {n} silver.',
+  coins: '{who} lacks {n} silver.',
   /** Too many things on one side. */
-  most: `One side of a trade holds ${BARTER_MOST} things at most.`,
+  most: `Max ${BARTER_MOST} items per side.`,
   /** An Accept sent against a side that has changed since it was drawn. */
-  changed: 'The trade changed before your Accept arrived. Look again, then accept.',
+  changed: 'Trade changed before your Accept: check it, then accept.',
   /** What each is told along the way. */
-  asked: '{who} asks to trade with you. Open the Trade window to answer.',
-  asking: 'You ask {who} to trade.',
-  opened: 'You and {who} are trading. Put in what you are giving, then Accept.',
-  declined: '{who} turns down the trade.',
-  youDeclined: 'You turn down the trade with {who}.',
-  cancelled: '{who} cancels the trade. Nothing changed hands.',
-  youCancelled: 'You cancel the trade with {who}. Nothing changed hands.',
-  apart: `The trade with {who} is off: you are more than ${BARTER_REACH} tiles apart. Nothing changed hands.`,
-  left: 'The trade with {who} is off: {who} is not ashore. Nothing changed hands.',
-  lapsed: `The trade with {who} lapsed: nothing changed in it for ${BARTER_IDLE} seconds. Nothing changed hands.`,
-  accepts: '{who} accepts the trade as it stands.',
-  done: 'The trade with {who} is done: everything on both sides has changed hands.',
+  asked: 'Trade request from {who}: answer in the Trade window.',
+  asking: 'Trade request sent: {who}.',
+  opened: 'Trading with {who}: add your side, then Accept.',
+  declined: 'Trade declined by {who}.',
+  youDeclined: 'Trade with {who} declined.',
+  cancelled: 'Trade cancelled by {who}. Nothing exchanged.',
+  youCancelled: 'Trade with {who} cancelled. Nothing exchanged.',
+  apart: `Trade with {who} off: more than ${BARTER_REACH} tiles apart. Nothing exchanged.`,
+  left: 'Trade with {who} off: {who} left. Nothing exchanged.',
+  lapsed: `Trade with {who} lapsed: idle ${BARTER_IDLE} s. Nothing exchanged.`,
+  accepts: '{who} accepted.',
+  done: 'Trade with {who} done: both sides exchanged.',
 } as const;
 export type BarterKey = keyof typeof BARTER_SAID;
 

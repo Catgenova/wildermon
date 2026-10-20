@@ -122,25 +122,24 @@ export class BarterPanel {
   private draw(): void {
     this.page.replaceChildren();
     if (!this.island) {
-      this.note('A trade is between two people on an island. There is nobody else in the game you play by yourself.');
+      this.note('Trading: island only.');
       return;
     }
     const b = this.shown;
     if (!b) {
       if (this.ended) this.note(this.ended, 'barter-ended');
-      this.note(`You are not trading with anybody. To ask somebody, right-click them, or press Trade beside their name in the `
-        + `Social window. You both have to stand within ${BARTER_REACH} tiles of each other.`);
+      this.note(`No trade open. Start one: right-click a player, or Trade in the Social window. Range: ${BARTER_REACH} tiles.`);
       return;
     }
     const them = b.theirs.name;
     if (b.state === 'asked') {
       if (b.asker) {
-        this.note(`You have asked ${them} to trade. Waiting for an answer.`);
-        this.bar(this.button('Cancel', 'Take the asking back', () => void this.act(this.island!.barterCancel(b.n))));
+        this.note(`Trade request sent to ${them}. Waiting.`);
+        this.bar(this.button('Cancel', 'Withdraw request', () => void this.act(this.island!.barterCancel(b.n))));
       } else {
-        this.note(`${them} asks to trade with you.`);
+        this.note(`Trade request from ${them}.`);
         this.bar(
-          this.button('Trade', `Open a trade with ${them}`, () => void this.act(this.island!.barterAnswer(b.n, true))),
+          this.button('Trade', `Open trade with ${them}`, () => void this.act(this.island!.barterAnswer(b.n, true))),
           this.button('No', `Turn ${them} down`, () => void this.act(this.island!.barterAnswer(b.n, false))),
         );
       }
@@ -154,13 +153,13 @@ export class BarterPanel {
     this.page.append(cols);
 
     const accept = this.button(b.mine.ok ? 'Accepted' : 'Accept',
-      b.mine.ok ? `Waiting for ${them} to accept` : `Accept: you get ${sideWords(b.theirs)} for ${sideWords(b.mine)}`,
+      b.mine.ok ? `Waiting for ${them}` : `Accept: get ${sideWords(b.theirs)} for ${sideWords(b.mine)}`,
       () => void this.act(this.island!.barterAccept(b.n, b.rev)));
     accept.disabled = b.mine.ok;
     accept.classList.add('barter-accept');
-    this.bar(accept, this.button('Cancel', 'Call the trade off. Nothing changes hands.', () => void this.act(this.island!.barterCancel(b.n))));
-    this.note(b.mine.ok && b.theirs.ok ? '' : b.mine.ok ? `You have accepted. Waiting for ${them}.`
-      : b.theirs.ok ? `${them} has accepted this trade as it stands.` : 'Neither of you has accepted yet. Any change to either side takes both Accepts back.',
+    this.bar(accept, this.button('Cancel', 'Cancel the trade. Nothing changes hands.', () => void this.act(this.island!.barterCancel(b.n))));
+    this.note(b.mine.ok && b.theirs.ok ? '' : b.mine.ok ? `Accepted. Waiting for ${them}.`
+      : b.theirs.ok ? `${them} accepted.` : 'Not accepted. Any change resets both Accepts.',
     'barter-status');
     this.footer(b);
   }
@@ -182,10 +181,10 @@ export class BarterPanel {
       const name = document.createElement('span');
       name.className = 'barter-name';
       name.textContent = `${t.count > 1 ? `${t.count} × ` : ''}${thingName(t)}`;
-      name.title = t.has < t.count ? 'No longer in the pack in that number: the trade will be refused while it stays on.' : `QL ${t.ql.toFixed(1)}`;
+      name.title = t.has < t.count ? 'Not enough in pack: trade refused while listed.' : `QL ${t.ql.toFixed(1)}`;
       row.append(name);
       if (mine) {
-        row.append(this.button('×', `Take the ${thingName(t).toLowerCase()} off your side`,
+        row.append(this.button('×', `Remove ${thingName(t).toLowerCase()}`,
           () => void this.send(b, side.things.filter((x) => x.id !== t.id).map((x) => ({ id: x.id, count: x.count })), side.coins)));
       }
       list.append(row);
@@ -216,7 +215,7 @@ export class BarterPanel {
     }
     const sel = document.createElement('select');
     sel.className = 'panel-select barter-pick';
-    sel.title = 'A thing from your pack, or drag one here from the Inventory window';
+    sel.title = 'Item from your pack, or drag from Inventory';
     for (const it of pack) {
       const o = document.createElement('option');
       o.value = String(it.uid);
@@ -228,7 +227,7 @@ export class BarterPanel {
     n.type = 'number';
     n.min = '1';
     n.className = 'panel-select barter-count';
-    n.title = 'How many of the stack';
+    n.title = 'Count';
     n.value = String(this.count);
     sel.addEventListener('change', () => {
       this.pick = Number(sel.value);
@@ -236,7 +235,7 @@ export class BarterPanel {
       n.value = String(this.count);
     });
     n.addEventListener('input', () => (this.count = Math.max(1, Math.floor(Number(n.value) || 1))));
-    const add = this.button('Put in', `Put it on your side. A side holds ${BARTER_MOST} things at most.`, () => {
+    const add = this.button('Add', `Add to your side. Max ${BARTER_MOST} things per side.`, () => {
       const it = this.game.inventory.get(this.pick);
       if (it) void this.put(b, it, Math.min(this.count, it.count));
     });
@@ -244,7 +243,7 @@ export class BarterPanel {
     const row1 = document.createElement('div');
     row1.className = 'barter-row';
     if (pack.length) row1.append(sel, n, add);
-    else row1.append(this.line('Nothing else in your pack can go: coins go as silver, and nothing worn, held or kept back goes.', 'barter-none'));
+    else row1.append(this.line('Nothing else tradeable: coins go as silver; worn, held or kept-back items excluded.', 'barter-none'));
 
     const coins = document.createElement('input');
     coins.type = 'number';
@@ -252,8 +251,8 @@ export class BarterPanel {
     coins.className = 'panel-select barter-silver';
     coins.value = String(side.coins);
     const have = purse(this.game.inventory.items);
-    coins.title = `Silver you give. You carry ${have}.`;
-    const set = this.button('Set silver', `Give this much silver. You carry ${have}.`,
+    coins.title = `Silver to give (have ${have}).`;
+    const set = this.button('Set silver', `Silver to give (have ${have}).`,
       () => void this.send(b, side.things.map((t) => ({ id: t.id, count: t.count })), Math.max(0, Math.floor(Number(coins.value) || 0))));
     coins.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') set.click();
@@ -283,8 +282,8 @@ export class BarterPanel {
   }
 
   private footer(b: Barter): void {
-    this.note(`You stand ${b.apart} tiles apart; further than ${BARTER_REACH} calls the trade off. `
-      + `It lapses after ${BARTER_IDLE} seconds with no change: ${Math.ceil(this.left)} left.`, 'barter-foot');
+    this.note(`Distance ${b.apart} tiles (cancels past ${BARTER_REACH}). `
+      + `Lapses after ${BARTER_IDLE} s idle: ${Math.ceil(this.left)} s left.`, 'barter-foot');
   }
 
   private note(text: string, cls = ''): void {

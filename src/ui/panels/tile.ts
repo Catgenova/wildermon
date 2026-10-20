@@ -68,7 +68,7 @@ export class TilePanel {
     this.info.className = 'tile-info';
     this.info.type = 'button';
     this.info.textContent = 'i';
-    this.info.title = 'What this is good for';
+    this.info.title = 'Uses';
     this.info.addEventListener('mouseenter', () => {
       this.noteOpen = true;
       this.showNote();
@@ -176,7 +176,7 @@ export class TilePanel {
       this.factsEl.hidden = true;
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'Click any tile and everything you can do to it is listed here.';
+      empty.textContent = 'Click a tile to list its actions.';
       this.list.append(empty);
       return;
     }
@@ -197,7 +197,7 @@ export class TilePanel {
     if (!entries.length) {
       const none = document.createElement('div');
       none.className = 'inv-empty';
-      none.textContent = 'Nothing to do here.';
+      none.textContent = 'No actions.';
       this.list.append(none);
       return;
     }

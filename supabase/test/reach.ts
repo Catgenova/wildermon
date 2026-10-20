@@ -48,7 +48,7 @@ const SWORD = WEAPON_BY_ID.get('sword')!;
 const SPEAR = WEAPON_BY_ID.get('spear')!;
 /** Where the goblin stands: past a sword's reach and inside a spear's. */
 const GAP = (reachOf(SWORD) + reachOf(SPEAR)) / 2;
-const OUT_OF_REACH = 'It is out of reach.';
+const OUT_OF_REACH = 'Out of reach.';
 
 /* ---- The island's half ------------------------------------------------- */
 
@@ -110,7 +110,7 @@ begin
   select health into v_h0 from creature where world_id = w.world_id and id = g;
   delete from event where uid = w.uid;
   i := 0;
-  while i < 10 and not exists (select 1 from event where uid = w.uid and text like 'You strike the goblin%') loop
+  while i < 10 and not exists (select 1 from event where uid = w.uid and text like 'Hit%: goblin%') loop
     i := i + 1;
     perform perform_fight(w.world_id, w.uid, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', g));
   end loop;

@@ -1,6 +1,6 @@
 import { BUCKET_LITRES, BUCKET_OF } from './furniture';
 import { describeFrom, ITEM_DEFS, itemDef } from './items';
-import { numberWord, NumberWord, percent } from './words';
+import { percent } from './words';
 
 /**
  * Milk, butter and cheese.
@@ -59,9 +59,9 @@ export const toppedQl = (had: number, hadQl: number, added: number, addedQl: num
  * `milked_says`.
  */
 export function milkedSays(name: string, litres: number, ql: number, another = false): string {
-  const q = `(QL ${ql.toFixed(1)})`;
-  if (litres >= BUCKET_LITRES) return `You milk ${name} into the bucket${another ? ' and fill another' : ''}. ${q}`;
-  return `You milk ${name} into the bucket. It holds ${litres} of ${BUCKET_LITRES} litres. ${q}`;
+  const q = `QL ${ql.toFixed(1)}.`;
+  if (litres >= BUCKET_LITRES) return `Milked ${name}: bucket full${another ? ', and another filled' : ''}. ${q}`;
+  return `Milked ${name}: bucket ${litres}/${BUCKET_LITRES} litres. ${q}`;
 }
 
 /** The bucket a bucket of milk pressed into cheese comes back as. */
@@ -73,16 +73,16 @@ export const WHEY_BUCKET = BUCKET_OF.whey;
 export const WHEY_FEED = 0.4;
 
 /** What feeding a creature a bucket of whey says. The island's `perform_creature` says the same. */
-export const wheyFedSays = (name: string): string => `${name} drinks the bucket of whey. The bucket comes back empty.`;
+export const wheyFedSays = (name: string): string => `Fed whey: ${name}. Bucket emptied.`;
 
 ITEM_DEFS[WHEY_BUCKET] ??= {
   name: 'Bucket of whey',
   category: 'food',
   weight: 6,
   decay: itemDef('milk_bucket').decay,
-  description: `${NumberWord(BUCKET_LITRES)} litres of whey, what is left in the bucket when a bucket of milk is pressed into cheese. `
-    + `Feed it to a creature you keep, of any kind: it fills ${percent(WHEY_FEED)} of its hunger and the bucket comes back empty. `
-    + 'It can be poured into a barrel or tipped out.',
+  description: `${BUCKET_LITRES} litres of whey (left over from pressing a bucket of milk into cheese). `
+    + `Feed to any creature you keep: hunger +${percent(WHEY_FEED)}; bucket emptied. `
+    + 'Can be poured into a barrel or emptied.',
 };
 
 ITEM_DEFS[MILK_PART] ??= {
@@ -91,8 +91,8 @@ ITEM_DEFS[MILK_PART] ??= {
   weight: 3,
   decay: itemDef('milk_bucket').decay,
   fills: BUCKET_LITRES,
-  description: `A bucket a Gorral has been milked into: ${numberWord(GORRAL_MILK)} litres to a milking. Milk a Gorral into it again `
-    + `and it is a bucket of milk once it holds ${numberWord(BUCKET_LITRES)} litres; what is over that is lost. It is not drunk from until it is full.`,
+  description: `Gorral milk: ${GORRAL_MILK} litres per milking. Milk a Gorral into it again; `
+    + `becomes a bucket of milk at ${BUCKET_LITRES} litres (excess lost). Not drinkable until full.`,
 };
 
 /**

@@ -331,7 +331,7 @@ check('every take and every put is logged, newest first: who, what, how many, wh
   && log.every((e) => e.at > 0), lines.join('; '));
 check('and read by a rank holding Keep the stores and by the founder', log.length === 6 && got('LOG_BOSS') === '6', got('LOG_BOSS'));
 check('not by a citizen without it', got('LOG_PLAIN') === lacksSaid(deed, 'Builder', 'keep_stores'), got('LOG_PLAIN'));
-check('nor by a stranger', got('LOG_STRANGER') === `You are not a citizen of ${deed}.`, got('LOG_STRANGER'));
+check('nor by a stranger', got('LOG_STRANGER') === `Not a citizen of ${deed}.`, got('LOG_STRANGER'));
 const [n, newest, oldest, cap] = got('CAP').split('|').map(Number);
 check(`it keeps the last ${STORE_LOG_CAP} and lets the rest go`, n === STORE_LOG_CAP && cap === STORE_LOG_CAP
   && newest === STORE_LOG_CAP + 7 && oldest === 8 && got('CAP_ROWS') === String(STORE_LOG_CAP), `${got('CAP')}; ${got('CAP_ROWS')}`);

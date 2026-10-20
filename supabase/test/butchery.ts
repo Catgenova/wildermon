@@ -67,7 +67,7 @@ const go = (skill: number, corpseQl: number): { before: number; after: number; q
   game.requestAction(butcher, here);
   for (let t = 0; t < 400 && game.action; t++) game.update(0.25);
   const qls = game.inventory.items.filter((it) => PARTS.includes(it.id)).map((it) => it.ql);
-  const said = game.log.slice(seen).map((l) => l.text).find((l) => l.startsWith('You butcher')) ?? '';
+  const said = game.log.slice(seen).map((l) => l.text).find((l) => l.startsWith('Butchered: ')) ?? '';
   return { before, after: game.skills.get('butchering'), qls, said };
 };
 
@@ -82,16 +82,16 @@ check('and off a carcass of QL 90, the same',
   high.qls.length > 0 && high.qls.every((q) => Math.abs(q - 40) < 1e-9), high.qls.map((q) => q.toFixed(1)).join(', '));
 check('a butcher at 80 takes it off at 80',
   master.qls.length > 0 && master.qls.every((q) => Math.abs(q - 80) < 1e-9), master.qls.map((q) => q.toFixed(1)).join(', '));
-check('the log line says the QL', / \(QL 80\.0\)\./.test(master.said), master.said);
+check('the log line says the QL', /, QL 80\.0\./.test(master.said), master.said);
 game.skills.values.set('butchering', 50);
 game.dropOnGround(x, y, { uid: game.inventory.nextUid++, id: 'corpse', ql: 30, dmg: 0, count: 1, extra: 'Rabba' });
 const corpse = game.groundAt(x, y).find((it) => it.id === 'corpse')!;
 check('the menu says the QL for the knife in hand: the skill exactly with this one',
-  butcherPreview(game, corpse).endsWith(', at QL 50'), butcherPreview(game, corpse));
+  butcherPreview(game, corpse).endsWith(', QL 50'), butcherPreview(game, corpse));
 for (const it of [...game.inventory.items]) if (it.id === 'butchering_knife') game.inventory.remove(it.uid, it.count);
 const [lo, hi] = productQlRange(50, 0);
 check('and bare-handed, 0.6 to 1.4 times the skill, plus 1',
-  lo === 31 && hi === 71 && butcherPreview(game, corpse).endsWith(', at QL 31–71'), butcherPreview(game, corpse));
+  lo === 31 && hi === 71 && butcherPreview(game, corpse).endsWith(', QL 31–71'), butcherPreview(game, corpse));
 
 /* ---- the island ------------------------------------------------------------ */
 
@@ -134,7 +134,7 @@ begin
   insert into said values ('MASTER|' || coalesce((select string_agg(distinct round(ql::numeric, 1)::text, ',') from item
     where world_id = w and holder = 'player' and holder_uid = me and def in ('meat', 'fur', 'hide', 'bone', 'gland')), 'nothing'));
   insert into said values ('SAID|' || coalesce((select e.text from event e where e.world_id = w and e.uid = me
-    and e.text like 'You butcher%' order by e.n desc limit 1), 'nothing'));
+    and e.text like 'Butchered: %' order by e.n desc limit 1), 'nothing'));
 end $$;
 select string_agg(k, E'\\n') from said;
 rollback;
@@ -147,7 +147,7 @@ check('a go raises Butchering, as it never did', now > was, said('GAIN'));
 check('what comes off a carcass of QL 10 comes off at the skill, 40', said('LOW') === '40.0', said('LOW'));
 check('and off a carcass of QL 90, the same', said('HIGH') === '40.0', said('HIGH'));
 check('a butcher at 80 takes it off at 80', said('MASTER') === '80.0', said('MASTER'));
-check('the log line says the QL, as the browser\'s does', / \(QL 80\.0\)\./.test(said('SAID')), said('SAID'));
+check('the log line says the QL, as the browser\'s does', /, QL 80\.0\./.test(said('SAID')), said('SAID'));
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

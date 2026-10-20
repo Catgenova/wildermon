@@ -84,10 +84,10 @@ export function mateFor(g: Game, c: Creature): Creature | undefined {
 export function pairRefuses(g: Game, a: Creature, b: Creature): string | null {
   for (const c of [a, b]) {
     if (ageOf(c, g.time) !== 'grown') {
-      return ageOf(c, g.time) === 'young' ? `${c.name} is not grown.` : `${c.name} is past it.`;
+      return ageOf(c, g.time) === 'young' ? `${c.name} is not grown.` : `${c.name} is too old.`;
     }
-    if (c.hunger < 0.5) return `${c.name} is too hungry to think about it. Feed it first.`;
-    if (g.time - c.bredAt < BREED_REST) return `${c.name} has been put to a mate lately and wants ${clockLeft(BREED_REST - (g.time - c.bredAt))} to itself.`;
+    if (c.hunger < 0.5) return `${c.name} is too hungry: feed it first.`;
+    if (g.time - c.bredAt < BREED_REST) return `${c.name} bred recently: ${clockLeft(BREED_REST - (g.time - c.bredAt))} left.`;
     if (c.due > 0) return `${c.name} is already in young.`;
   }
   return null;
@@ -111,8 +111,8 @@ export function studBook(g: Game, c: Creature): string {
   const care = (c.care + mate.care) / 2;
   const keep = Math.min(1, inheritChance(skill, care) + g.perk('breed:inherit', 0));
   const up = Math.min(1, upgradeChance(skill, care) + g.perk('breed:upgrade', 0));
-  return ` Put to ${mate.name}, it takes ${wholePct(breedChance(skill, care))} of the time; each of the young's `
-    + `${TRAIT_SLOTS} traits is drawn from their blood ${wholePct(keep)} of the time and comes out a tier better ${wholePct(up)} of the time.`;
+  return ` Paired with ${mate.name}: success ${wholePct(breedChance(skill, care))}; each of ${TRAIT_SLOTS} traits `
+    + `inherited ${wholePct(keep)}, tier-up ${wholePct(up)}.`;
 }
 
 /** A share as a percentage, to a whole one, or to the first figure that is not nought under one. */
@@ -148,25 +148,25 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   const theirs = Object.keys(odds.carry).sort((a, b) => odds.carry[b] - odds.carry[a]);
   const hidden = theirs.filter((id) => !readable(id)).length;
   const lines = [
-    `Put ${sire.name} to ${dam.name}, at ${Math.floor(skill)} animal husbandry and ${wholePct(care)} care between them:`,
-    `It takes ${wholePct(breedChance(skill, care))} of the time.`,
-    `Each of the young's ${TRAIT_SLOTS} traits is drawn from their blood ${wholePct(Math.min(1, inheritChance(skill, care) + keepPlus))} of the time`
-      + ` and comes out a tier better ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))} of the time.`,
-    `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${sharePct(odds.carry[id])}`).join(', ') || 'nothing you can read'}`
-      + `${hidden ? `; ${hidden} more you cannot read yet` : ''}.`,
-    `Its best trait: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
-    `Mutation: 1 in ${MUTATION_ODDS} (${sharePct(1 / MUTATION_ODDS)}), a ${mutationTier(sire.traits, dam.traits)} trait neither of them carries, in its lowest slot.`,
+    `Pair ${sire.name} with ${dam.name} (animal husbandry ${Math.floor(skill)}, care ${wholePct(care)}):`,
+    `Success: ${wholePct(breedChance(skill, care))}.`,
+    `Each of ${TRAIT_SLOTS} traits: inherited ${wholePct(Math.min(1, inheritChance(skill, care) + keepPlus))}`
+      + `, tier-up ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))}.`,
+    `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${sharePct(odds.carry[id])}`).join(', ') || 'none readable'}`
+      + `${hidden ? `; ${hidden} more unreadable` : ''}.`,
+    `Best trait tier: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
+    `Mutation: 1 in ${MUTATION_ODDS} (${sharePct(1 / MUTATION_ODDS)}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
   ];
   // How deep its line would run, on each channel either of them carries a trait on.
   const parents = [{ traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line }] as const;
   for (const ch of CHANNELS) {
     const d = lineIfCarried(parents[0], parents[1], ch.id);
     if (d > 1 && odds.on[ch.id] > 0) {
-      lines.push(`Line: ${d} generations bred for ${ch.label}, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a trait on ${ch.label} (${sharePct(odds.on[ch.id])}).`);
+      lines.push(`Line (${ch.label}): ${d} generations, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a ${ch.label} trait (${sharePct(odds.on[ch.id])}).`);
     }
   }
   const rare = rarityShares();
-  lines.push(`Its own rarity, rolled as any wildermon's: ${rare.map((p, i) => `${RARITIES[i + 1].name} ${sharePct(p)}`).join(', ')}.`);
+  lines.push(`Rarity, as any wildermon: ${rare.map((p, i) => `${RARITIES[i + 1].name} ${sharePct(p)}`).join(', ')}.`);
   return lines.join('\n');
 }
 
@@ -185,11 +185,11 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (SPECIES[c.species]?.monster) return 'Not that. Not ever.';
+      if (!c) return 'Gone.';
+      if (SPECIES[c.species]?.monster) return `${SPECIES[c.species].name}: cannot be brushed.`;
       if (!nearPlayer(g, c)) return `Stand next to ${c.name}.`;
-      if (!g.inventory.has('brush')) return 'You need a brush.';
-      if (c.care >= 0.995) return `${c.name} has been brushed to a shine already.`;
+      if (!g.inventory.has('brush')) return 'Need a brush.';
+      if (c.care >= 0.995) return `${c.name}: care full.`;
       return null;
     },
     perform: (t, g) => {
@@ -197,7 +197,6 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       const brush = g.inventory.tool('brush');
       if (!c || !brush) return;
       const skill = g.skills.get(HUSBANDRY);
-      const before = c.care;
       // More of it at a go for a Herdsman's Brushwork.
       c.care = Math.min(GROOM_CAP, c.care + groomGain(skill, workingQl(brush.ql, brush.extra)) * g.perk('groom:care', 1));
       // A brushing is also a looking-over: it finds the small hurts and sees to them, more of them for Healing Hands.
@@ -210,12 +209,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       g.gainSkill(HUSBANDRY, 0.4);
       g.note('groom');
       if (c.care >= 0.995) g.note('groomfull');
-      g.logMsg(
-        before < 0.12 && c.care >= 0.12
-          ? `You work the dust out of ${c.name}'s coat. It leans into the brush. (${careWord(c.care)})`
-          : `You brush ${c.name} down. (${careWord(c.care)})`,
-        'event',
-      );
+      g.logMsg(`Brushed ${c.name}: ${careWord(c.care)}.`, 'event');
       g.events.emit('creature');
     },
   },
@@ -241,18 +235,18 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       const mate = c && mateFor(g, c);
       if (!c || !mate || !g.deed || c.due > 0 || pairRefuses(g, c, mate)) return null;
       const dam = c.sex === 'female' ? c : mate;
-      return `${breedPreview(g, dam, dam === c ? mate : c)}\nPut them together?`;
+      return `${breedPreview(g, dam, dam === c ? mate : c)}\nPair them?`;
     },
     check: (t, g) => {
       const c = creatureOf(g, t);
-      if (!c) return 'It is gone.';
-      if (!g.deed) return 'Breeding is settled work. Found a settlement first: the young one goes to the token.';
+      if (!c) return 'Gone.';
+      if (!g.deed) return 'Need a settlement: the young go to its token.';
       if (!nearPlayer(g, c, 2.4)) return `Stand next to ${c.name}.`;
       if (c.due > 0) return `${c.name} is already in young.`;
       const mate = mateFor(g, c);
       if (!mate) {
         const def = SPECIES[c.species];
-        return `There is no ${def.name.toLowerCase()} of the other sex within ${PAIR_RANGE} tiles. ${c.name} is ${SEX_NAMES[c.sex]}.`;
+        return `No ${def.name.toLowerCase()} of the other sex within ${PAIR_RANGE} tiles. ${c.name} is ${SEX_NAMES[c.sex]}.`;
       }
       return pairRefuses(g, c, mate);
     },
@@ -271,7 +265,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
         // A failed pairing costs both of them a rest, but only half of one: half a shorter one for Short Rest.
         dam.bredAt = g.time - BREED_REST * (1 - g.perk('breed:rest', 1) / 2);
         sire.bredAt = dam.bredAt;
-        g.logMsg(`${dam.name} and ${sire.name} will have nothing to do with one another. Brush them, feed them, and try again.`, 'error');
+        g.logMsg(`Pairing failed: ${dam.name} and ${sire.name}.`, 'error');
         return;
       }
       // The sex a Herdsman with Choose the Sex asked for, and even odds without it.
@@ -279,7 +273,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       g.creatures.pair(g, dam, sire, skill, sex);
       g.note('paired');
       g.logMsg(
-        `${sire.name} is put to ${dam.name}. She is in young and will drop in about ${clockLeft(GESTATION * g.perk('breed:gestation', 1))}. Between them they carry ${traitList([...new Set([...sire.traits, ...dam.traits])])}.`,
+        `Paired: ${sire.name} with ${dam.name}. Due in ${clockLeft(GESTATION * g.perk('breed:gestation', 1))}. Traits between them: ${traitList([...new Set([...sire.traits, ...dam.traits])])}.`,
         'event',
       );
       g.events.emit('creature');
@@ -305,9 +299,9 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       // something in it; with the skill you can see what.
       const seen = c.traits.filter((id) => g.holds('knowledge_reader') || skill >= 1 + TIER_LEVEL[traitTier(id)]);
       const hidden = c.traits.length - seen.length;
-      const carrying = c.due > 0 ? ` She is in young, due in about ${clockLeft(c.due - g.time)}.` : '';
+      const carrying = c.due > 0 ? ` In young, due in ${clockLeft(c.due - g.time)}.` : '';
       g.logMsg(
-        `${c.name}, ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${ageOf(c, g.time)} and ${careWord(c.care)}. It carries ${seen.length ? traitList(seen) : 'nothing you can read'}${hidden ? `, and ${hidden === 1 ? 'one thing' : `${hidden} things`} you cannot read yet` : ''}.${carrying}`,
+        `${c.name}, ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${ageOf(c, g.time)}, ${careWord(c.care)}. Traits: ${seen.length ? traitList(seen) : 'none readable'}${hidden ? `, ${hidden} unreadable` : ''}.${carrying}`,
         'event',
       );
     },

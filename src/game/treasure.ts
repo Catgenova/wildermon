@@ -62,13 +62,18 @@ export const MAP_SNIPPET = 24;
  * "under your feet" means exactly "you may dig now".
  */
 export const MAP_BANDS: Array<{ within: number; say: string }> = [
-  { within: UNEARTH_REACH, say: 'The ground under your feet is the ground on the map.' },
-  { within: 8, say: 'This is the place. It is within a few paces of you.' },
-  { within: 25, say: 'You are close. Walk a little and look again.' },
-  { within: 70, say: 'The lie of the land is beginning to match. Keep on.' },
-  { within: 200, say: 'Something about this country is right, but not this part of it.' },
-  { within: Infinity, say: 'Nothing here looks anything like the map.' },
+  { within: UNEARTH_REACH, say: 'On the spot: dig here.' },
+  { within: 8, say: '' },
+  { within: 25, say: '' },
+  { within: 70, say: '' },
+  { within: 200, say: '' },
+  { within: Infinity, say: '' },
 ];
+// Each band past the first says its own distance; the last, past the one before it.
+for (let i = 1; i < MAP_BANDS.length; i++) {
+  const b = MAP_BANDS[i];
+  b.say = Number.isFinite(b.within) ? `Hoard within ${b.within} tiles.` : `Hoard over ${MAP_BANDS[i - 1].within} tiles away.`;
+}
 
 /**
  * What a map of a given quality is a map to.
@@ -245,8 +250,8 @@ export function buryTreasure(g: Game, ql: number, fromX: number, fromY: number):
   const map = g.inventory.add('treasure_map', { ql, extra: tier.id });
   g.hoards.push({ uid: map.uid, x: spot.x, y: spot.y, tier: tier.id });
   g.note('map');
-  g.logMsg(`Oiled hide, folded small and waxed at the edge: a ${tier.name}. (QL ${ql.toFixed(1)})`
-    + ' Read it to see what country it is a picture of.', 'skill');
+  g.logMsg(`Found: ${tier.name}, QL ${ql.toFixed(1)}.`
+    + ' Read it for the distance to its hoard.', 'skill');
   return map;
 }
 
@@ -308,9 +313,9 @@ export const TREASURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const map = g.inventory.get(t.uid);
-      if (map?.id !== 'treasure_map') return 'That is not a map.';
+      if (map?.id !== 'treasure_map') return 'Not a map.';
       const h = hoardOf(g, map.uid);
-      if (!h) return 'The hide is worn blank. Whatever was drawn on it is gone.';
+      if (!h) return 'Map is blank: its hoard is gone.';
       const warm = warmthOf(g, h);
       return warm.here ? null : warm.say;
     },
@@ -342,10 +347,10 @@ export const TREASURE_ACTIONS: ActionDef[] = [
       g.note('hoard');
       // Matching a map's picture to the ground it was drawn from is head work (`HOARD_HEAD`).
       g.gainSkill('mind_logic', tryGain(true, HOARD_HEAD));
-      g.logMsg('The spade goes through rotten board and the hoard is open — '
+      g.logMsg('Hoard opened: '
         + `${tier.lumps} lump${tier.lumps === 1 ? '' : 's'} and ${tier.things} `
-        + `thing${tier.things === 1 ? '' : 's'} lying where they fell.`
-        + ' And something was left to watch over it.', 'event');
+        + `item${tier.things === 1 ? '' : 's'}.`
+        + ' A guardian appears.', 'event');
     },
   },
 ];

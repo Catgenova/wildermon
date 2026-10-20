@@ -108,7 +108,7 @@ const named = Object.fromEntries(at('NAMED').split(' ').map((x) => x.split(':'))
 check('on the island, a dressing asked for the lesser cut is not refused', at('ASK') === 'none', at('ASK'));
 check('and goes on that cut, bound with cloth and less deep', named.arms?.dressing === '' && named.arms.sev < ARM.severity, at('NAMED'));
 check('leaving the worse cut as it was', named.legs?.dressing === 'none' && named.legs.sev === LEG.severity, at('NAMED'));
-check('asked for again, it says the arm is dressed as well as cloth would', at('AGAIN') === 'The cut on your arm is already dressed at least as well as what you carry would dress it.', at('AGAIN'));
+check('asked for again, it says the arm is dressed as well as cloth would', at('AGAIN') === 'The cut on your arm: already dressed as well or better.', at('AGAIN'));
 check('asked for neither, it goes on the worse, as before', at('PICKED').includes('legs:') && !at('PICKED').includes('legs:none'), at('PICKED'));
 
 /* ---- both sides name a wound alike ----------------------------------------------- */
@@ -155,13 +155,13 @@ const forGone = caresFor(g, gone);
 const lyeR = RECIPE_BY_ID.get('make_lye');
 check('for a wound gone bad it offers the lye, and only that', forGone.length === 1 && forGone[0].id === 'clean_wound', forGone.map((c) => c.id).join());
 check('and with none carried, says so, how lye is made, and why it cannot be done',
-  !forGone[0].holding && !!lyeR && forGone[0].make === `Lye: ${recipeWords(lyeR)}.` && forGone[0].why === 'You need a bucket of lye to clean it out with.',
+  !forGone[0].holding && !!lyeR && forGone[0].make === `Lye: ${recipeWords(lyeR)}.` && forGone[0].why === 'Need a bucket of lye.',
   `${forGone[0].make} / ${forGone[0].why}`);
 const forOpen = caresFor(g, fresh);
 const dress = forOpen.find((c) => c.id === 'bind_wound');
 check('for an open wound it offers a dressing, asked for that wound with a bandage carried',
   !!dress && dress.holding && dress.why === null && dress.target?.kind === 'item' && dress.target.wound === woundKey(fresh), JSON.stringify(dress?.target));
-check('it says what is carried and what would go on', !!dress && /You carry 1 bandage\. It would take your bandage \(QL 40\)\./.test(dress.have), dress?.have);
+check('it says what is carried and what would go on', !!dress && dress.have === 'Carried: 1 bandage. Uses: bandage (QL 40).', dress?.have);
 const coverR = RECIPE_BY_ID.get('make_cover_thyme');
 check('and how to make the cover that suits it, from the recipe', !!dress && !!coverR && (dress.make ?? '').includes(`Thyme cover: ${recipeWords(coverR)}.`), dress?.make ?? 'none');
 

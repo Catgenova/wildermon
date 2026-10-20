@@ -448,7 +448,7 @@ const parts = (k: string): string[] => island(k).split('|');
 }
 check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
 check('a Binder spell is refused with no focus of its stones in your pack, in the words its note uses',
-  island('NEEDS:NONE') === `Bind wants ${NEEDS_SAID.binding.wants}.` && island('NEEDS:GARNET') === island('NEEDS:NONE'),
+  island('NEEDS:NONE') === `Bind: needs ${NEEDS_SAID.binding.wants}.` && island('NEEDS:GARNET') === island('NEEDS:NONE'),
   `${island('NEEDS:NONE')} / ${island('NEEDS:GARNET')}`);
 check('and made with a sapphire', island('NEEDS:SAPPHIRE') === 'ready', island('NEEDS:SAPPHIRE'));
 {
@@ -460,11 +460,11 @@ check('and made with a sapphire', island('NEEDS:SAPPHIRE') === 'ready', island('
 {
   const [share, held, line] = parts('BIND');
   check(`Bind: held at ${pct(fx('bind', 'hold'))} of a Snare's hold`,
-    near(Number(share), fx('bind', 'hold'), 1e-6) && held === 'true' && new RegExp(`^Bind: the ${OX} is held where it stands for [\\d.]+ s\\.$`).test(line),
+    near(Number(share), fx('bind', 'hold'), 1e-6) && held === 'true' && new RegExp(`^Bind: ${OX} held for [\\d.]+ s\\.$`).test(line),
     island('BIND'));
   check(`and ${pct(fx('bind', 'monster'))} of that on a monster`,
     near(Number(island('BIND:MONSTER')), fx('bind', 'hold') * fx('bind', 'monster'), 1e-6), island('BIND:MONSTER'));
-  check(`and no further than ${fx('bind', 'reach')} tiles`, island('BIND:FAR') === `The ogre is more than ${fx('bind', 'reach')} tiles away.`,
+  check(`and no further than ${fx('bind', 'reach')} tiles`, island('BIND:FAR') === `Too far: max ${fx('bind', 'reach')} tiles.`,
     island('BIND:FAR'));
   const [moved, hunting] = parts('BIND:ENGAGED');
   check('a blow that turns a held creature on you does not free it', Number(moved) === 0 && hunting === 'true', island('BIND:ENGAGED'));
@@ -474,7 +474,7 @@ check(`Lock: held at ${pct(fx('lock', 'hold'))} of a Snare's hold`, near(Number(
   const [ratio, line] = parts('SHATTER');
   check(`Shatter: shatter at ${pct(fx('shatter', 'shatter'))}, and ${pct(fx('shatter', 'held'))} on one held`,
     near(Number(ratio), fx('shatter', 'shatter'), 1e-4) && near(Number(island('SHATTER:HELD')), fx('shatter', 'held'), 1e-4)
-      && /^Shatter: the shatter takes \d+ off the ogre\. It is down to \d+ of 170\.$/.test(line),
+      && /^Shatter: ogre −\d+, \d+\/170\.$/.test(line),
     `${island('SHATTER')} / ${island('SHATTER:HELD')}`);
 }
 check('the casts teach the Binder\'s trade and binding', island('LEARN') === 'true|true', island('LEARN'));
@@ -483,38 +483,38 @@ check('the casts teach the Binder\'s trade and binding', island('LEARN') === 'tr
   const [struck, stood] = parts('ROOT:STRIKES');
   check(`Root: an ogre rooted takes no step towards you, where one tied to nothing walks on`,
     near(rooted, Math.hypot(3, 3), 1e-6) && loose < Math.hypot(3, 3) - 0.5
-      && /^Root: the ogre is rooted where it stands for 8 s\.$/.test(island('ROOT:SAID')), `${island('ROOT')} / ${island('ROOT:SAID')}`);
+      && /^Root: ogre rooted for 8 s\.$/.test(island('ROOT:SAID')), `${island('ROOT')} / ${island('ROOT:SAID')}`);
   check('and still strikes what is within its reach', struck === 'true' && stood === 'true', island('ROOT:STRIKES'));
 }
 {
   const [went, line] = parts('TETHER');
   check(`Tether: no further than ${fx('tether', 'leash')} tiles from where it stood, and as far as that`,
     Number(went) <= fx('tether', 'leash') + 1e-6 && Number(went) > fx('tether', 'leash') - 0.5
-      && line === 'Tether: for 15 s the ogre cannot go more than 3 tiles from where it stands.', island('TETHER'));
+      && line === 'Tether: ogre tethered, max 3 tiles from where it stands, for 15 s.', island('TETHER'));
 }
 {
   const [ratio, line] = parts('LIMBS');
   check(`Heavy Limbs: its next blow ${(1 / fx('heavy_limbs', 'often')).toFixed(3)} times as far off`,
-    near(Number(ratio), 1 / fx('heavy_limbs', 'often'), 1e-6) && line === 'Heavy Limbs: for 10 s the ogre strikes 30% less often.', island('LIMBS'));
+    near(Number(ratio), 1 / fx('heavy_limbs', 'often'), 1e-6) && line === 'Heavy Limbs: ogre attack rate −30% for 10 s.', island('LIMBS'));
 }
 {
   const [plain, dulled, line] = parts('DULL');
   check(`Dull Claws: its blows on you ${pct(1 - fx('dull_claws', 'dealt'))} smaller`,
     near(Number(plain), 0.05, 1e-9) && near(Number(dulled), 0.05 * fx('dull_claws', 'dealt'), 1e-9)
-      && line === 'Dull Claws: for 10 s the ogre\'s blows land 30% smaller.', island('DULL'));
+      && line === 'Dull Claws: ogre blow damage −30% for 10 s.', island('DULL'));
   check('and on anything else, the same roll asked of two roxxen alike', near(Number(island('DULL:BEAST')), fx('dull_claws', 'dealt'), 1e-4),
     island('DULL:BEAST'));
 }
 {
   const [took, line] = parts('BRITTLE');
   check(`Brittle: ${pct(fx('brittle', 'taken') - 1)} more from what strikes it`, near(Number(took), 10 * fx('brittle', 'taken'), 1e-4)
-    && line === `Brittle: for 10 s the ${OX} takes 25% more from everything that strikes it.`, island('BRITTLE'));
+    && line === `Brittle: ${OX} damage taken +25% for 10 s.`, island('BRITTLE'));
 }
 {
   const [ratio, took, line] = parts('BRITTLE:SAID');
   check(`and a shatter on it says what came off, ${pct(fx('brittle', 'taken') - 1)} more included, and what it is down to`,
     near(Number(ratio), fx('brittle', 'taken'), 1e-4)
-      && line === `Shatter: the shatter takes ${Math.round(Number(took))} off the ${OX}. It is down to ${Math.ceil(80 - Number(took))} of 80.`,
+      && line === `Shatter: ${OX} −${Math.round(Number(took))}, ${Math.ceil(80 - Number(took))}/80.`,
     island('BRITTLE:SAID'));
   const [left, health, dmg] = parts('BRITTLE:BLOW');
   check('and so does a blow: what it is down to is what it has left, not what the blow was', left === health && Number(dmg) > 0,
@@ -526,26 +526,26 @@ check(`a Snare out of the school holds as the trade's do, and a Shatter is ${pct
 {
   const [plain, skin, line] = parts('SKIN');
   check(`Still Skin: ${pct(fx('still_skin', 'cut'))} less from every blow`, near(Number(plain), 0.05, 1e-9)
-    && near(Number(skin), 0.05 * (1 - fx('still_skin', 'cut')), 1e-9) && line === 'Still Skin: for 10 s you take 20% less from every blow.',
+    && near(Number(skin), 0.05 * (1 - fx('still_skin', 'cut')), 1e-9) && line === 'Still Skin: damage taken −20% for 10 s.',
     island('SKIN'));
 }
 {
   const [bleeding, wounds, line] = parts('STILL');
   check('Stillness: every wound stops bleeding, and stays open', bleeding === '0' && wounds === '2'
-    && line === 'Stillness: every wound on you stops bleeding.', island('STILL'));
-  check('and it is refused with nothing bleeding', island('STILL:NONE') === 'Nothing on you is bleeding.', island('STILL:NONE'));
+    && line === 'Stillness: all bleeding stopped.', island('STILL'));
+  check('and it is refused with nothing bleeding', island('STILL:NONE') === 'Not bleeding.', island('STILL:NONE'));
 }
 {
   const [A, B, E, G] = island('IDS').split(',');
   const mire = new Map(parts('MIRE')[0].split(',').map((x) => { const [id, slow, secs] = x.split(':'); return [id, { slow, secs }]; }));
   const slowed = (id: string): boolean => near(Number(mire.get(id)!.slow), fx('mire', 'pace'), 1e-6) && near(Number(mire.get(id)!.secs), fx('mire', 'secs'), 1e-6);
   check(`Mire: everything within ${fx('mire', 'reach')} tiles at ${pct(fx('mire', 'pace'))} of its pace for ${fx('mire', 'secs')} s, and nothing beyond`,
-    [A, B, G].every(slowed) && mire.get(E)!.slow === '-' && parts('MIRE')[1] === 'Mire: 3 creatures go at 60% of their pace for 10 s.',
+    [A, B, G].every(slowed) && mire.get(E)!.slow === '-' && parts('MIRE')[1] === 'Mire: pace 60% for 10 s, on 3 creatures.',
     island('MIRE'));
   const mass = new Map(parts('MASS')[0].split(',').map((x) => x.split(':') as [string, string]));
   check(`Mass Root: everything within ${fx('mass_root', 'reach')} tiles rooted, and nothing beyond`,
     [A, B, G].every((id) => mass.get(id) === 'true') && mass.get(E) === 'false'
-      && parts('MASS')[1] === 'Mass Root: 3 creatures are rooted where they stand for 6 s.', island('MASS'));
+      && parts('MASS')[1] === 'Mass Root: 3 creatures rooted for 6 s.', island('MASS'));
 }
 {
   const [longer, cast] = parts('LONG');
@@ -556,7 +556,7 @@ check(`a Snare out of the school holds as the trade's do, and a Shatter is ${pct
   const [cast, stamina] = parts('PAID');
   check(`the door charges ${pct(spell('still_skin').cost)} of your stamina and rests it ${spell('still_skin').rest} s`,
     cast === 'binder_still_skin' && near(Number(stamina), 1 - spell('still_skin').cost, 1e-9), island('PAID'));
-  check('and will not call it again until it has rested', /can be called again in \d+ seconds\.$/.test(island('RESTING')), island('RESTING'));
+  check('and will not call it again until it has rested', /: cooldown \d+ s\.$/.test(island('RESTING')), island('RESTING'));
 }
 check('the six passives fold on the island to what they fold to in the browser',
   island('FOLDED') === Object.keys(FOLD).filter((k) => /^(reach|chill|bind|still|ward|shatter):/.test(k)).sort()

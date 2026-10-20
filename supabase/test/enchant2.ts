@@ -90,9 +90,9 @@ check('Examine says each at its quality in the same words on both sides', saysIs
   saysIsle === saysHere ? '' : (() => { const i = [...saysIsle].findIndex((ch, k) => ch !== saysHere[k]); return `at ${i}: ${saysIsle.slice(i - 40, i + 60)} / ${saysHere.slice(i - 40, i + 60)}`; })());
 const at100 = (e: EnchantmentDef): string => enchantLineAt(e, 100);
 check('and the figures at QL 100 are the owner\'s: Venomfang 25% of hits, Gale 10% off a swing, Nightblade 5 points of critical chance, Sunstrike 25% on a monster, Leeching 10% of the damage, Tidecaller 20% of the time between blows',
-  at100(VENOM).includes('puts venom in the target 25% of the time') && at100(GALE).includes('takes 10% less time')
-    && at100(NIGHT).startsWith('5% more of its blows') && at100(SUN).includes('does 25% more damage to a hostile monster')
-    && at100(LEECH).includes('gives you back 10% of the damage') && at100(TIDE).includes('back by 20% of the time between its blows')
+  at100(VENOM).includes('Venom on 25% of hits') && at100(GALE).includes('Swing time −10%')
+    && at100(NIGHT).startsWith('Critical chance +5%') && at100(SUN).includes('Damage +25% on hostile')
+    && at100(LEECH).includes('Health back: 10% of damage dealt') && at100(TIDE).includes('delayed 20% of its attack interval')
     && near(enchantValue(GALE, 140), 0.1),
   LATER.map(at100).join(' # '));
 
@@ -389,7 +389,7 @@ check(`away from an enchanter's plinth Enchant is refused on both sides: ${ENCHA
   isle.get('R:plinth') === ENCHANT_SAID.plinth && away === ENCHANT_SAID.plinth, `${isle.get('R:plinth')} / ${away}`);
 g.addFurniture(ENCHANTERS_PLINTH, 40, 39, 0, 0, 50);
 check(`a Gale scroll is refused on a bow in words that name what it goes on, on both sides: ${wrongKind(GALE)}`,
-  isle.get('R:bow') === wrongKind(GALE) && ask(bow.uid) === wrongKind(GALE) && wrongKind(GALE) === 'Gale goes on a melee weapon, not a bow or a thrown weapon.',
+  isle.get('R:bow') === wrongKind(GALE) && ask(bow.uid) === wrongKind(GALE) && wrongKind(GALE) === 'Gale: only on melee weapons (not bows or thrown weapons).',
   `${isle.get('R:bow')} / ${ask(bow.uid)}`);
 check('and taken on a sword, on both sides', isle.get('R:sword') === 'none' && ask(sword.uid) === 'none', `${isle.get('R:sword')} / ${ask(sword.uid)}`);
 
@@ -434,7 +434,7 @@ const venomRate = maxHealth(vc, SPECIES.shaggan) * VENOM_DRAIN;
 check(`a Venomfang at QL ${HIT_QL} (${vchance * 100}%): a roll just over does nothing and just under puts venom in it, ${VENOM_DRAIN * 100}% of its full health a second, on both sides`,
   part('VOVER') !== 'true' && vover === null && vunder?.id === VENOM.id && part('VUNDER', 0) === 'true'
     && near(Number(part('VUNDER', 1)), venomRate, 1e-5) && near(vc.bleedRate, venomRate) && vc.bleedUntil > g.time
-    && part('VUNDER', 3) === said[said.length - 1] && said[said.length - 1] === 'Your Venomfang puts venom in the shaggan.',
+    && part('VUNDER', 3) === said[said.length - 1] && said[said.length - 1] === 'Venomfang: shaggan envenomed.',
   `${isle.get('VOVER')} ${isle.get('VUNDER')} / ${vc.bleedRate} ${said[said.length - 1]}`);
 
 /* 4. Leeching. */
@@ -468,7 +468,7 @@ check(`a Tidecaller at QL ${HIT_QL} puts a shaggan's next blow back ${enchantVal
 const farScroll = thing(FAR.scroll, 90);
 const askFar = (uid: number): string => act('enchant').check?.({ kind: 'item', uid, scroll: farScroll.uid } as Target, g) ?? 'none';
 check(`a Farsight scroll is refused on a sword, in words that name a bow, and taken on a bow, on both sides: ${wrongKind(FAR)}`,
-  isle.get('R:farsword') === wrongKind(FAR) && askFar(sword.uid) === wrongKind(FAR) && wrongKind(FAR) === 'Farsight goes on a bow.'
+  isle.get('R:farsword') === wrongKind(FAR) && askFar(sword.uid) === wrongKind(FAR) && wrongKind(FAR) === 'Farsight: only on bows.'
     && isle.get('R:farbow') === 'none' && askFar(bow.uid) === 'none', `${isle.get('R:farsword')} / ${askFar(sword.uid)}`);
 g.player.equipped.weapon = bow.uid;
 const bowDef = WEAPON_BY_ID.get('short_bow')!;
@@ -494,7 +494,7 @@ fc.health = 90;
 const fl = shotAt(FLAME, fc);
 check(`a Flamearrow at QL ${HIT_QL} (${enchantHitChance(FLAME, HIT_QL) * 100}%): a shot's roll just over does nothing and just under sets it burning, on both sides`,
   isle.get('FOVER') === '-' && fl.over === null && fl.under?.id === FLAME.id && part('FUNDER', 0) === 'burn' && (fc.burnUntil ?? 0) > g.time
-    && part('FUNDER', 1) === said[said.length - 1] && said[said.length - 1] === 'Your Flamearrow sets the shaggan burning.',
+    && part('FUNDER', 1) === said[said.length - 1] && said[said.length - 1] === 'Flamearrow: shaggan burning.',
   `${isle.get('FOVER')} ${isle.get('FUNDER')} / ${said[said.length - 1]}`);
 const ic = g.creatures.spawn('shaggan', 32.5, 30.5, 'wild', () => 0.5, 0);
 ic.health = 90;
@@ -505,7 +505,7 @@ check(`a Frostbite at QL ${HIT_QL} (${enchantHitChance(FROST, HIT_QL) * 100}%): 
     && near(Number(part('IUNDER', 2)), Number(isle.get('SPEED0')) * FROST_PACE)
     && near(Number((part('IUNDER', 3)).split(',')[0]), FROST_SECS, 0.2) && near(Number((part('IUNDER', 3)).split(',')[1]), FROST_PACE)
     && ic.slowPace === FROST_PACE && near((ic.slowUntil ?? 0) - g.time, FROST_SECS) && slowed(g, ic)
-    && part('IUNDER', 4) === said[said.length - 1] && said[said.length - 1] === `Your Frostbite slows the shaggan to ${FROST_PACE * 100}% of its pace for ${FROST_SECS} seconds.`,
+    && part('IUNDER', 4) === said[said.length - 1] && said[said.length - 1] === `Frostbite: shaggan slowed to ${FROST_PACE * 100}% speed for ${FROST_SECS} s.`,
   `${isle.get('IOVER')} ${isle.get('IUNDER')} / ${ic.slowPace} ${(ic.slowUntil ?? 0) - g.time} ${said[said.length - 1]}`);
 
 /* 8. What is worn: refusals by kind. */
@@ -527,7 +527,7 @@ const refusals: Array<[string, string, string]> = [
   ['R:bulwarksword', askWith(BULWARK, sword.uid), wrongKind(BULWARK)], ['R:bulwarkshield', askWith(BULWARK, shield.uid), 'none'],
 ];
 check('Featherstep goes on boots, Shadowcloak on what is worn on the chest, Bulwark on a shield, and each is refused elsewhere in words that say so, on both sides',
-  refusals.every(([k, here, want]) => isle.get(k) === want && here === want) && wrongKind(FEATHER) === 'Featherstep goes on boots or shoes.',
+  refusals.every(([k, here, want]) => isle.get(k) === want && here === want) && wrongKind(FEATHER) === 'Featherstep: only on boots or shoes.',
   refusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
 
 /* 9. Stoneskin, Emberward, Featherstep, Bulwark, Shadowcloak. */
@@ -602,7 +602,7 @@ const toolRefusals: Array<[string, string, string]> = [
   ['R:lodesickle', askWith(LODE, sickle.uid), wrongKind(LODE)], ['R:lodepick', askWith(LODE, pick.uid), 'none'],
 ];
 check('Swiftwork goes on a tool a job is done with and not on a sword, Bountiful on a sickle or a rod, Lodestone on a pickaxe, and each is refused elsewhere in words that say so, on both sides',
-  toolRefusals.every(([k, here, want]) => isle.get(k) === want && here === want) && wrongKind(LODE) === 'Lodestone goes on a pickaxe.',
+  toolRefusals.every(([k, here, want]) => isle.get(k) === want && here === want) && wrongKind(LODE) === 'Lodestone: only on pickaxes.',
   toolRefusals.map(([k, here, want]) => `${k}: ${isle.get(k)} / ${here} / ${want}`).join('; '));
 const planks = act('make_planks');
 const t0 = g.duration(planks);

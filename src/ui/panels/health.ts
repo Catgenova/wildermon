@@ -109,7 +109,7 @@ const PIN_GLYPH: Record<WoundState, string> = {
 
 /** What a wound's state is called on the legend, in the order it is drawn. */
 const STATE_NAMES: Array<[WoundState, string]> = [
-  ['bleeding', 'Bleeding'], ['bad', 'Gone bad'], ['venom', 'Venom'], ['open', 'Open'], ['dressed', 'Dressed'], ['covered', 'Right herb'],
+  ['bleeding', 'Bleeding'], ['bad', 'Infected'], ['venom', 'Venom'], ['open', 'Open'], ['dressed', 'Dressed'], ['covered', 'Right herb'],
 ];
 
 /** A drop of blood, a bubble of venom or a wisp off a wound gone bad, on the figure's stage. */
@@ -271,11 +271,11 @@ export class HealthPanel {
     this.tabs.get('wounds')?.pane.append(this.woundsPane);
     this.against = el('div', 'hp-cards');
     this.forYou = el('div', 'hp-cards');
-    this.forHead = el('div', 'hp-head', 'For you');
+    this.forHead = el('div', 'hp-head', 'Buffs');
     this.mendLine = el('div', 'hp-mend-rule');
-    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Against you'), this.against, this.mendLine, this.forHead, this.forYou,
-      el('div', 'hp-head', 'Your hands at healing'), this.hands);
-    const foodHead = el('div', 'hp-head', 'What you have been eating');
+    this.tabs.get('conditions')?.pane.append(el('div', 'hp-head', 'Debuffs'), this.against, this.mendLine, this.forHead, this.forYou,
+      el('div', 'hp-head', 'Healing skills'), this.hands);
+    const foodHead = el('div', 'hp-head', 'Nutrition');
     this.fedWord = el('span', 'hp-fed');
     this.foodBars = el('div', 'hp-food');
     this.foodWords = el('ul', 'hp-food-words') as unknown as HTMLDivElement;
@@ -372,7 +372,7 @@ export class HealthPanel {
     // The other tabs only while they show.
     if (this.tab === 'conditions') {
       // Hunger and thirst only by name and how low: what they stop is the mend checklist's to say, under them.
-      this.drawEffects(this.against, r.against.map((e) => (SAID_BELOW.has(e.id) ? { ...e, does: [], from: e.from.replace(/\.$/, '') } : e)), 'Nothing is against you.');
+      this.drawEffects(this.against, r.against.map((e) => (SAID_BELOW.has(e.id) ? { ...e, does: [], from: e.from.replace(/\.$/, '') } : e)), 'None.');
       this.drawEffects(this.forYou, r.forYou, '');
       this.forHead.hidden = this.forYou.hidden = !r.forYou.length;
       const sig = JSON.stringify(r.mend);
@@ -427,7 +427,7 @@ export class HealthPanel {
     this.sum.classList.toggle('hp-sum-bad', bits.length > 0);
     this.emptyIn.hidden = r.emptyIn === null;
     if (r.emptyIn !== null) {
-      this.emptyText.textContent = r.emptyIn <= 0 ? 'Health runs out now' : `Runs out in ${clockWords(r.emptyIn)}`;
+      this.emptyText.textContent = r.emptyIn <= 0 ? 'Health at 0 now' : `Health 0 in ${clockWords(r.emptyIn)}`;
       if (r.emptyIn > 0) this.emptyText.append(el('span', 'hp-empty-rate', ' at this rate'));
       if (r.venom > 0) this.emptyText.append(el('span', 'hp-empty-note', ' incl. venom'));
     }
@@ -693,7 +693,7 @@ export class HealthPanel {
     if (this.picked && !states.has(this.picked)) this.picked = null;
     // The worst open by itself the first time there is one, so the window opens on what wants doing.
     if (!this.picked && r.wounds.length && !this.drawn) this.picked = r.wounds[0].key;
-    this.legend.textContent = r.wounds.length ? 'Tap a pin or wound to treat' : 'Nothing open on you';
+    this.legend.textContent = r.wounds.length ? 'Tap a pin or wound to treat' : 'No wounds';
     const a = this.game.action;
     const doing = a && a.state === 'performing' && a.target.kind === 'item' && a.target.wound ? { key: a.target.wound, id: a.def.id, k: a.elapsed / Math.max(0.001, a.duration), left: Math.max(0, a.duration - a.elapsed) } : null;
     const sig = JSON.stringify([this.picked, doing && [doing.key, doing.id, Math.round(doing.k * 50)], r.wounds.map((v) => [v.key, v.state, v.title, v.tags, v.eta, v.severity.toFixed(2),
@@ -703,7 +703,7 @@ export class HealthPanel {
     this.drawn = sig;
     if (!r.wounds.length) {
       const empty = el('div', 'hp-empty');
-      empty.append(el('div', 'hp-empty-mark'), el('b', '', 'Nothing is open on you.'), el('div', '', r.rateWords.join(' ')));
+      empty.append(el('div', 'hp-empty-mark'), el('b', '', 'No wounds.'), el('div', '', r.rateWords.join(' ')));
       this.woundsPane.replaceChildren(empty);
       return;
     }
@@ -760,7 +760,7 @@ export class HealthPanel {
     const block = el('div', `hp-treat${opening ? ' hp-treat-opening' : ''}`);
     if (!v.cares.length) {
       const done = el('div', 'hp-treat-done');
-      done.append(icon('cover'), el('span', '', `Under the herb that suits it: nothing closes it faster, and it cannot go bad. ${v.eta}`));
+      done.append(icon('cover'), el('span', '', `Right herb: fastest closing, cannot fester. ${v.eta}`));
       block.append(done);
       return block;
     }
@@ -773,7 +773,7 @@ export class HealthPanel {
     const head = el('div', 'hp-care-head');
     const title = el('div', 'hp-care-title');
     title.append(el('b', '', c.title));
-    if (c.uses) title.append(el('span', 'hp-care-uses', `Uses your ${c.uses.label}, QL ${c.uses.ql.toFixed(0)}`));
+    if (c.uses) title.append(el('span', 'hp-care-uses', `Uses: ${c.uses.label}, QL ${c.uses.ql.toFixed(0)}`));
     // Locked for want of something: the button says what, since a tooltip is out of reach on a touch screen.
     const wants = c.why !== null && !c.holding ? `Needs ${c.options.length > 1 ? 'a dressing' : c.options[0].label.toLowerCase()}` : null;
     const go = el('button', 'hp-go', doing ? 'Working…' : wants ?? c.button);
@@ -825,15 +825,15 @@ export class HealthPanel {
     table.classList.toggle('hp-opts-numbers', numbers);
     const cols = el('div', 'hp-opts-head');
     cols.setAttribute('role', 'row');
-    cols.append(el('span', 'hp-opts-what', 'In your pack'));
-    if (numbers) cols.append(el('span', 'hp-opts-num', 'Heals'), el('span', 'hp-opts-num', 'Closes in'), el('span', 'hp-opts-num', 'Goes bad'));
+    cols.append(el('span', 'hp-opts-what', 'Carried'));
+    if (numbers) cols.append(el('span', 'hp-opts-num', 'Heals'), el('span', 'hp-opts-num', 'Closes in'), el('span', 'hp-opts-num', 'Fester'));
     cols.append(el('span', 'hp-opts-num', 'Have'));
     table.append(cols);
     for (const o of c.options) table.append(this.optionRow(o, many, numbers));
     box.append(table);
     if (c.recipes.length) {
       const make = el('details', 'hp-make');
-      const sum = el('summary', '', c.holding ? 'How to make more' : 'How to make one');
+      const sum = el('summary', '', 'Recipe');
       const body = el('div', 'hp-make-body');
       for (const rv of c.recipes) body.append(this.recipeRow(rv));
       make.append(sum, body);
@@ -855,23 +855,23 @@ export class HealthPanel {
     const have = el('div', `hp-opt-have${o.have ? ' hp-opt-have-yes' : many ? '' : ' hp-opt-have-need'}`);
     have.append(el('b', '', many ? String(o.have) : `${o.have} / 1`));
     have.setAttribute('role', 'cell');
-    have.title = o.have ? `You carry ${o.have}` : 'You carry none';
+    have.title = `Carried: ${o.have}`;
     row.append(icon(o.item), name);
     if (numbers) {
       const heals = el('div', 'hp-opt-num', o.heals ?? '–');
-      heals.title = 'Health it puts back on this wound, at the QL you carry (or, with none, at the QL of what would go on)';
+      heals.title = 'Health restored on this wound, at the carried QL';
       const closes = el('div', 'hp-opt-num', o.closes ?? '–');
-      closes.title = 'How long this wound would take to close under it';
+      closes.title = 'Time to close under it';
       row.append(heals);
       const turns = el('div', `hp-opt-num${o.turns === '0%' ? ' hp-opt-num-good' : ''}`, o.turns ?? '–');
-      turns.title = "How much of an open wound's chance of going bad is left under it";
+      turns.title = 'Fester chance under it, vs an open wound';
       row.append(closes, turns);
     }
     row.append(have);
     // The one that goes on: a tick on its picture. With the numbers in columns, the words are its title; alone, a line under it.
     if (o.chosen && many) {
       row.querySelector('.hp-icon')?.append(el('span', 'hp-opt-tick', '✓'));
-      row.title = `Will use this: ${o.does}`;
+      row.title = `Uses this: ${o.does}`;
     } else row.title = o.does;
     if (!numbers) row.append(el('div', 'hp-opt-does', o.does));
     return row;
@@ -898,7 +898,7 @@ export class HealthPanel {
     }
     chips.append(el('span', 'hp-rchip hp-rchip-skill', `${rv.skill.name} ${rv.skill.level.toFixed(1)}`));
     row.append(head, chips);
-    if (rv.who) row.append(el('div', 'hp-recipe-who', `Made only by ${rv.who}.`));
+    if (rv.who) row.append(el('div', 'hp-recipe-who', `Made only by: ${rv.who}.`));
     return row;
   }
 

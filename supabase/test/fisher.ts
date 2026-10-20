@@ -296,7 +296,7 @@ begin
   perform pg_temp.dice(((v_a + v_b) / 2)::text);
   ${go('fish', WX, WY)};
   ${nodice};
-  insert into said values ('ANY', v_t || '|' || ${fishCount} || ':' || ${count('cooked_fish')} || '|' || coalesce(${last('You land %')}, 'unsaid'));
+  insert into said values ('ANY', v_t || '|' || ${fishCount} || ':' || ${count('cooked_fish')} || '|' || coalesce(${last('Caught: %')}, 'unsaid'));
   ${clearAll};
 
   /* ---- Strong Bait and Big Fish: the pick itself, the dice held, and the weights it is made of. ---- */
@@ -349,7 +349,7 @@ begin
   ${hold('Rare Catch')};
   ${dice(RARE_BELOW)};
   ${go('fish', WX, WY)};
-  v_t := v_t || '#' || ${fishIds} || '#' || coalesce(${last('You land %')}, 'unsaid');
+  v_t := v_t || '#' || ${fishIds} || '#' || coalesce(${last('Caught: %')}, 'unsaid');
   ${clearFish};
   ${dice(RARE_ABOVE)};
   ${go('fish', WX, WY)};
@@ -358,7 +358,7 @@ begin
   ${dice(RARE_BELOW)};
   ${go('drag_net', WX, WY)};
   ${nodice};
-  insert into said values ('RARE', v_t || '#' || ${fishIds} || '#' || coalesce(${last('You walk the net round%')}, 'unsaid'));
+  insert into said values ('RARE', v_t || '#' || ${fishIds} || '#' || coalesce(${last('Netted: %')}, 'unsaid'));
   ${clearAll};
 
   /* ---- Rod Care and Net Care: what a cast and a drag wear, without them and with them. ---- */
@@ -384,7 +384,7 @@ begin
   v_t := ${markOfRow(newest('creel'))};
   perform perform_trap(w, u, 'set_trap', ${tile(WX, WY)});
   select id into v_p from placed where world_id = w and kind = 'trap' and sub = 'creel' and x = ${WX} and y = ${WY} order by id desc limit 1;
-  v_t := v_t || '|' || coalesce(${last('You sink the %')}, 'unsaid') || '|' || (select creel_hold(p) from placed p where p.id = v_p);
+  v_t := v_t || '|' || coalesce(${last('Set: %creel%')}, 'unsaid') || '|' || (select creel_hold(p) from placed p where p.id = v_p);
   update placed set bait = 'cooked_fish', bait_ql = 30, since = now() - make_interval(secs => ${CREEL_ROLLS} * trap_check_every()) where id = v_p;
   ${dice(BIG_ROLL)};
   perform trap_settle(v_p);
@@ -510,11 +510,11 @@ check('the Fisher stands on a settlement of theirs, beside a pond as deep as eve
 const TOO_FAR = 'You are too far away from that.';
 const [castFar, castBox, castFarYes, castBoxYes] = say('CAST').split('#');
 check(`${P('Long Cast').name}: from five tiles off, water is out of a cast's ${CAST} without it, and no water lies in the ${Math.floor(CAST)} tiles round you`,
-  castFar === TOO_FAR && castBox === 'There is no water within reach deep enough to hold anything. Walk to the bank.', `${castFar} / ${castBox}`);
+  castFar === TOO_FAR && castBox === 'No fishable water in reach: walk to the bank.', `${castFar} / ${castBox}`);
 check(`and with it both reach, to ${fx('Long Cast', 'reach:fish')} tiles`, castFarYes === 'ALLOWED' && castBoxYes === 'ALLOWED', `${castFarYes} / ${castBoxYes}`);
 const [netFar, netBox, netFarYes, netBoxYes] = say('NET').split('#');
 check(`${P('Wide Net').name}: from three tiles off, water is out of a net's ${NET_REACH} without it, and none in the ${Math.floor(NET_REACH)} round you`,
-  netFar === TOO_FAR && netBox === 'There is no water close enough to drag a net through. Wade in.', `${netFar} / ${netBox}`);
+  netFar === TOO_FAR && netBox === 'No water in net reach: wade in.', `${netFar} / ${netBox}`);
 check(`and with it both reach, to ${fx('Wide Net', 'reach:drag_net')} tiles`, netFarYes === 'ALLOWED' && netBoxYes === 'ALLOWED', `${netFarYes} / ${netBoxYes}`);
 
 /* ---- the time ---------------------------------------------------------------------------- */
@@ -539,7 +539,7 @@ const [anyNone, anyPlainGo, anyWith, anyGo, anySaid] = say('ANY').split('|');
 check(`${P('Any Bait').name}: food is no bait without it, on the hook or in a creel, and is with it`,
   anyNone === 'none:none' && anyWith === 'cooked_fish:cooked_fish', `${anyNone} / ${anyWith}`);
 check('and with the dice between the chance with no bait and with some, the fish comes off on a bare hook and stays on the food',
-  anyPlainGo === '0:1' && anyGo === '1:0' && anySaid.includes('on the cooked fish'), `${anyPlainGo} / ${anyGo} / ${anySaid}`);
+  anyPlainGo === '0:1' && anyGo === '1:0' && anySaid.includes('Bait: cooked fish.'), `${anyPlainGo} / ${anyGo} / ${anySaid}`);
 
 /* What the island picks for a roll: the fish by weight, heaviest first, as `pick_fish` walks them. */
 const islandPick = (pool: FishDef[], bait: string | null, perk: PerkOf, roll: number): string => {
@@ -587,7 +587,7 @@ check(`${P('Full Net').name}: with the dice at ${HAUL_ROLL} a QL ${NET_QL} net h
 const [rarePlain, rareRod, rareSaid, rareAbove, rareNet, rareNetSaid] = say('RARE').split('#');
 const TOP = RARITIES[RARITIES.length - 1].name;
 check(`${P('Rare Catch').name}: with the dice under ${fx('Rare Catch', 'rare:fish')} a fish is not rare without it, and is ${TOP} with it, and says so`,
-  !rarePlain.includes('/') && rareRod.endsWith(`/${TOP}`) && rareSaid.includes(`a ${TOP} `), `${rarePlain} / ${rareRod} / ${rareSaid}`);
+  !rarePlain.includes('/') && rareRod.endsWith(`/${TOP}`) && rareSaid.includes(`Caught: ${TOP} `), `${rarePlain} / ${rareRod} / ${rareSaid}`);
 check('and over it, none', !rareAbove.includes('/') && rareAbove !== 'none', rareAbove);
 check('and in a net the same, on a pile of its own, said', rareNet.endsWith(`/${TOP}`) && rareNetSaid.includes(`× ${TOP} `), `${rareNet} / ${rareNetSaid}`);
 
@@ -689,14 +689,14 @@ check('its rod and net wear their tools by the island\'s numbers, and nothing mo
 // The journal, off the same pond, the same pack and the same perks.
 for (const it of [...game.inventory.items]) if (FISH.some((f) => f.id === it.id)) game.inventory.remove(it.uid, it.count);
 const journal = say('JOURNAL').split('#');
-const tail = (s: string): string => s.split('Water laps over it.')[1] ?? 'no water';
+const tail = (s: string): string => s.split('Under water.')[1] ?? 'no water';
 game.setPerks({});
 game.inventory.add('worm', { ql: 30, count: 2 });
 check('the Fishing Journal says nothing without it, on either side', tail(journal[0]).startsWith(' Depth') === false && fishJournal(game, px + 5, py) === '',
   journal[0]);
 game.setPerks(P('Fishing Journal').fx);
 check(`${P('Fishing Journal').name}: the water's depth, each fish's share of the bites on the worm, and how often they stay on, in the browser's words`,
-  tail(journal[1]) === fishJournal(game, px + 5, py) && tail(journal[1]).startsWith(` Depth ${DEEP}. With the worms you carry,`), `${tail(journal[1])} // ${fishJournal(game, px + 5, py)}`);
+  tail(journal[1]) === fishJournal(game, px + 5, py) && tail(journal[1]).startsWith(` Depth ${DEEP}. Bites (worms): `), `${tail(journal[1])} // ${fishJournal(game, px + 5, py)}`);
 game.inventory.remove(game.inventory.find('worm')!.uid, 2);
 check('and on a bare hook', tail(journal[2]) === fishJournal(game, px + 5, py), `${tail(journal[2])} // ${fishJournal(game, px + 5, py)}`);
 game.inventory.add('worm', { ql: 30, count: 2 });

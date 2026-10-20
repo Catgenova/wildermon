@@ -157,9 +157,9 @@ const reach = workRangeOf(sedra, SPECIES.sedra);
 same(`a reed cutter with no reed bed within its ${reach} tiles`, 'SEDRA', sedra, 'range', `Idle: no reed bed within ${reach} tiles of the token.`);
 check('the range in the reason is its own at its level, on both sides',
   islandIdle('SEDRA')?.n === reach && Number((isle.get('SEDRA') ?? '').split('|')[2]) === reach && sedra.idle?.n === reach, `${isle.get('SEDRA')} / ${reach}`);
-same('a mender with nothing in the stores', 'TINKA', tinka, 'stock', 'Idle: nothing in your stores on the settlement to mend.');
+same('a mender with nothing in the stores', 'TINKA', tinka, 'stock', 'Idle: nothing in your settlement stores to mend.');
 const dist = Math.round(Math.hypot(FAR + 1, 0));
-same(`a worker ${FAR} tiles from its work`, 'FAR', far, 'far', `Idle: walking home; ${dist} tiles from its work.`);
+same(`a worker ${FAR} tiles from its work`, 'FAR', far, 'far', `Idle: walking home, ${dist} tiles from its work.`);
 check(`and only past its range and ${HOME_SLACK} more, the island's \`home_slack\``, Number(isle.get('SLACK')) === HOME_SLACK, isle.get('SLACK'));
 
 check('a reason is cleared when it sets out to work: a barrel with room, and the water carrier is off to it',
@@ -175,10 +175,10 @@ check('a reason is cleared when it sets out to work: a barrel with room, and the
 const reachN = Number(isle.get('REACH'));
 const tinkaKind = SPECIES.tinka.gathers as GatherKind;
 check('a worker whose keeper is away is not worked, and says so',
-  islandIdle('AWAY')?.why === 'away' && idleSays(islandIdle('AWAY')!, tinkaKind) === 'Idle: its keeper is away, so it is not worked.', isle.get('AWAY'));
+  islandIdle('AWAY')?.why === 'away' && idleSays(islandIdle('AWAY')!, tinkaKind) === 'Idle: keeper away.', isle.get('AWAY'));
 check(`one whose keeper is awake but more than ${reachN} tiles from it is not worked either, and says that`,
   islandIdle('UNSWEPT')?.why === 'unswept'
-    && idleSays(islandIdle('UNSWEPT')!, tinkaKind) === `Idle: nobody awake is within ${reachN} tiles of it, so it is not worked.`, isle.get('UNSWEPT'));
+    && idleSays(islandIdle('UNSWEPT')!, tinkaKind) === `Idle: nobody awake within ${reachN} tiles.`, isle.get('UNSWEPT'));
 check(`the reach is the ${reachN} tiles \`world_tick\` sweeps the tame round everybody awake: forty and \`leg_slack\``, isle.get('TICK') === 'true', isle.get('TICK'));
 check('a worker being worked is sent as it was stored, with its ledger for its keeper',
   isle.get('SENT') === `range|${reach}|true`, isle.get('SENT'));

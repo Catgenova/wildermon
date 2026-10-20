@@ -112,14 +112,14 @@ const mine = (into?: number): string =>
 // maple, which is full. This is the sentence that was reported, and it is the
 // right sentence for this ask.
 check('naming no crate takes the nearest, and says so when it is full',
-  mine() === 'The plank crate (maple) is full.' && refusal() === mine(),
+  mine() === 'Plank crate (maple) full.' && refusal() === mine(),
   `browser "${mine()}", island "${refusal()}"`);
 
 check('naming the empty pine crate goes through',
   mine(pine.id) === 'ALLOWED' && refusal(2) === 'ALLOWED');
 
 check('naming the full maple crate is refused in the maple crate\'s name',
-  mine(maple.id) === 'The plank crate (maple) is full.' && refusal(1) === mine(maple.id),
+  mine(maple.id) === 'Plank crate (maple) full.' && refusal(1) === mine(maple.id),
   `browser "${mine(maple.id)}", island "${refusal(1)}"`);
 
 /* ---- and the planks land in the crate that was named --------------------- */
@@ -131,7 +131,7 @@ check('the planks are in the crate that was named, not the one underfoot',
   `browser maple ${crateUnits(maple)} pine ${crateUnits(pine)}, island ${island}`);
 check('and both sides say the same thing about it',
   psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1`)
-    === 'You put 10 × plank in the plank crate (pine).',
+    === 'Stored: 10 × plank in plank crate (pine).',
   psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1`));
 
 for (const line of [...ok, ...bad]) console.log(line);

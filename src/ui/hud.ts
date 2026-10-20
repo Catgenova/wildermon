@@ -1,6 +1,5 @@
 import { keyName, type Keybinds } from '../game/keybinds';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
-import { share } from '../game/words';
 import { sailWord, windFrom, windWord } from '../game/wind';
 import { FURNITURE_BY_ID } from '../game/furniture';
 import { CELLAR_LEVEL, TOP_LEVELS } from '../game/building';
@@ -342,7 +341,7 @@ export class Hud {
     windows.type = 'button';
     windows.className = 'tb-btn tb-windows';
     windows.textContent = 'UI Menu';
-    windows.title = 'Every window there is';
+    windows.title = 'All windows';
     windows.addEventListener('click', (e) => {
       e.stopPropagation();
       const r = windows.getBoundingClientRect();
@@ -403,7 +402,7 @@ export class Hud {
     this.goBtn = document.createElement('button');
     this.goBtn.type = 'button';
     this.goBtn.className = 'tb-btn tb-small action-stop';
-    this.goBtn.textContent = 'Carry on';
+    this.goBtn.textContent = 'Resume';
     this.goBtn.hidden = true;
     this.goBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -457,8 +456,8 @@ export class Hud {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'tb-btn tb-small';
-    more.textContent = 'The rest of it';
-    more.title = 'Open the journal: everything anybody thought worth doing here';
+    more.textContent = 'All goals';
+    more.title = 'Open the journal goals';
     more.addEventListener('click', (e) => {
       e.stopPropagation();
       this.openJournal?.();
@@ -466,7 +465,7 @@ export class Hud {
     const hush = document.createElement('button');
     hush.type = 'button';
     hush.className = 'tb-btn tb-small';
-    hush.textContent = 'Put it away';
+    hush.textContent = 'Hide';
     this.hushBtn = hush;
     hush.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -533,12 +532,12 @@ export class Hud {
       });
       return b;
     };
-    this.storeyUp = mk('tb-btn storey-btn', '▲', 'Look at the storey above (Page Up)', () => this.stepStorey(1));
-    this.storeyLabel = mk('storey-label', 'Auto', 'Click to follow your own storey again', () => {
+    this.storeyUp = mk('tb-btn storey-btn', '▲', 'Storey up (Page Up)', () => this.stepStorey(1));
+    this.storeyLabel = mk('storey-label', 'Auto', 'Click: follow your storey', () => {
       this.game.settings.viewLevel = null;
     });
-    this.storeyDown = mk('tb-btn storey-btn', '▼', 'Look at the storey below (Page Down)', () => this.stepStorey(-1));
-    this.cutBtn = mk('tb-btn storey-cut', '◪', 'Cut away the walls facing you (X)', () => {
+    this.storeyDown = mk('tb-btn storey-btn', '▼', 'Storey down (Page Down)', () => this.stepStorey(-1));
+    this.cutBtn = mk('tb-btn storey-cut', '◪', 'Cut away facing walls (X)', () => {
       this.game.settings.cutaway = !this.game.settings.cutaway;
     });
     this.storeyEl.append(this.storeyUp, this.storeyLabel, this.storeyDown, this.cutBtn);
@@ -557,7 +556,7 @@ export class Hud {
     // something, so the belt says so rather than leaving you to find out.
     const taken = this.numbersTaken();
     this.beltEl.classList.toggle('belt-yielded', taken);
-    this.beltEl.title = taken ? 'The Tile window has the number keys while something is selected. Close it, or clear the selection, to press the belt.' : '';
+    this.beltEl.title = taken ? 'Number keys go to the Tile window while a tile is selected. Close it or clear the selection to use the belt.' : '';
     for (let i = 0; i < BELT_MAX; i += 1) {
       const el = this.loopEls[i];
       el.hidden = i >= loops;
@@ -569,14 +568,14 @@ export class Hud {
         what.textContent = pin ? pinLabel(pin, undefined) : 'empty';
         el.classList.toggle('belt-empty', !pin);
         el.classList.remove('belt-barred');
-        el.title = pin ? 'Right-click to take it off the belt.' : `Loop ${i + 1} is empty. Find a job in a menu and hang it here.`;
+        el.title = pin ? 'Right-click: remove from belt.' : `Loop ${i + 1} empty. Hang a job here from a menu.`;
         continue;
       }
       const label = pinLabel(aim.pin, aim.def);
       what.textContent = label;
       el.classList.remove('belt-empty');
       el.classList.toggle('belt-barred', !!aim.reason);
-      el.title = aim.reason ? `${label} — ${aim.reason}` : `${label}. Press ${(i + 1) % 10}, or right-click to take it off the belt.`;
+      el.title = aim.reason ? `${label} — ${aim.reason}` : `${label}. Key ${(i + 1) % 10}; right-click: remove.`;
     }
   }
 
@@ -606,27 +605,27 @@ export class Hud {
     this.targetFill.style.width = `${Math.max(0, Math.min(1, c.health / top)) * 100}%`;
     this.targetValue.textContent = `${Math.ceil(c.health)}/${top}`;
     const brawl = c.brawl !== null ? g.creatures.get(c.brawl) : undefined;
-    const intent = c.windup > 0 ? 'Drawing back for a heavy blow: step out of its reach'
+    const intent = c.windup > 0 ? 'Heavy blow coming: step out of reach'
       : brawl ? `Fighting ${brawl.name}`
-      : c.enemy === PLAYER_ATTACKER ? (d <= HUNT_REACH ? 'On you' : 'Coming for you')
-        : c.state === 'flee' ? 'Running from you'
-          : def.hunter || def.monster ? `Hunts on sight within ${def.notice ?? HUNT_SIGHT} tiles`
-            : 'Not after you';
+      : c.enemy === PLAYER_ATTACKER ? (d <= HUNT_REACH ? 'Attacking you' : 'Hunting you')
+        : c.state === 'flee' ? 'Fleeing'
+          : def.hunter || def.monster ? `Aggressive within ${def.notice ?? HUNT_SIGHT} tiles`
+            : 'Not hostile';
     // And what is on it: a bleed, a burn, a stun (`enchanting.ts`).
     const bleeding = `${(c.burnUntil ?? 0) > g.time ? ', burning' : c.bleedUntil > g.time ? ', bleeding' : ''}${(c.stunUntil ?? 0) > g.time ? ', stunned' : ''}${(c.slowUntil ?? 0) > g.time ? ', slowed' : ''}`;
     const blow = blowOf(swungWith(g).def);
     const yours = hideTakes(def.hide, blow);
     const note = [
-      def.hide ? `${HIDE_NAMES[def.hide]}: ${hideSays(def.hide)}.` : 'Takes every blow as it comes.',
-      yours !== 1 ? `Your ${blowWords(blow)} land ${percent(Math.abs(yours - 1))} ${yours > 1 ? 'harder' : 'softer'} on it.` : '',
-      def.heavy ? `Draws back for a heavy blow every ${HEAVY_EVERY} blows.` : '',
-      def.throws ? `Throws from up to ${THROW_REACH} tiles, ${percent(THROW_HIT)} of a blow; backs away inside ${KEEP_OFF - BACK_SLACK} tiles.` : '',
-      def.pack ? (c.packLead === c.id ? `Leads its pack: kill it and the rest turn tail.` : `Runs in a pack; each within ${PACK_CALL} tiles comes when one has your scent.`) : '',
-      def.hunter ? `Turns tail below ${percent(turnsAt(def))} health${def.coward ? `, or ${percent(COWARD_DRAG)} once one of its kind has run` : ''}.` : '',
+      def.hide ? `${HIDE_NAMES[def.hide]}: ${hideSays(def.hide)}.` : 'Hide: none.',
+      yours !== 1 ? `Your ${blowWords(blow)}: damage ${yours > 1 ? '+' : '−'}${percent(Math.abs(yours - 1))}.` : '',
+      def.heavy ? `Heavy blow every ${HEAVY_EVERY} blows.` : '',
+      def.throws ? `Throws: range ${THROW_REACH} tiles, ${percent(THROW_HIT)} of a blow; backs off inside ${KEEP_OFF - BACK_SLACK} tiles.` : '',
+      def.pack ? (c.packLead === c.id ? 'Pack leader: kill it and the pack flees.' : `Pack: joins within ${PACK_CALL} tiles.`) : '',
+      def.hunter ? `Flees below ${percent(turnsAt(def))} health${def.coward ? `, or ${percent(COWARD_DRAG)} once one of its kind has fled` : ''}.` : '',
     ].filter(Boolean).join(' ');
     // How a fight with it would go (`consider`), coloured by which way it leans.
     const k = consider(g, c);
-    const weigh = `About ${k.mine} of your blows to down it, about ${k.its} of its to down you.`;
+    const weigh = `Blows to kill: yours ~${k.mine}, its ~${k.its}.`;
     const said = `${def.name}|${intent}${bleeding}|${note}|${c.windup > 0}|${weigh}|${k.rating}`;
     if (said === this.targetSaid) return;
     this.targetSaid = said;
@@ -674,8 +673,8 @@ export class Hud {
     }
     const stop = this.keyWord('stop');
     const journal = this.keyWord('win_journal');
-    if (this.stopBtn) this.stopBtn.title = `Put the job down and forget what is lined up${stop ? ` (${stop})` : ''}`;
-    if (this.hushBtn) this.hushBtn.title = `Stop showing this. The journal${journal ? ` (${journal})` : ''} has all of it whenever you want it.`;
+    if (this.stopBtn) this.stopBtn.title = `Stop and clear the queue${stop ? ` (${stop})` : ''}`;
+    if (this.hushBtn) this.hushBtn.title = `Hide. All goals in the journal${journal ? ` (${journal})` : ''}.`;
   }
 
   /** The key a binding answers to just now, by name, or null when it is left unbound. */
@@ -704,7 +703,7 @@ export class Hud {
   private eatBest(): void {
     const food = this.game.bestFood();
     if (!food) {
-      this.game.logMsg('You have nothing worth eating.', 'error');
+      this.game.logMsg('No food.', 'error');
       return;
     }
     const def = ACTION_BY_ID.get('eat');
@@ -717,7 +716,7 @@ export class Hud {
     if (!c) return;
     const food = this.game.worstFoodFor(c);
     if (!food) {
-      this.game.logMsg(`You have nothing ${c.name} will eat, and no bucket of whey.`, 'error');
+      this.game.logMsg(`No food for ${c.name}, no bucket of whey.`, 'error');
       return;
     }
     const def = ACTION_BY_ID.get('feed');
@@ -807,7 +806,7 @@ export class Hud {
       text.className = point === 'in irons' ? 'wind-irons' : '';
       text.textContent = `${windWord(w.force)} out of the ${windFrom(w)} · ${point}`;
       this.windEl.append(arrow, text);
-      this.windEl.title = point === 'in irons' ? 'You are pointed into the wind and she will not go. Bear away and tack up.' : 'Across the wind is fastest; straight into it, she stops.';
+      this.windEl.title = point === 'in irons' ? 'In irons: no sailing speed. Turn off the wind.' : 'Fastest across the wind; none head-on.';
     }
     /*
      * The last track's arrow: the way it read, from where you stood when it
@@ -820,7 +819,7 @@ export class Hud {
     if (trail && left > 0) {
       this.trailArrow.style.transform = `rotate(${(trail.bearing + renderer.camera.northAngle()).toFixed(1)}deg)`;
       this.say(this.trailText, `${trail.name} · ${trail.dist}`);
-      this.trailEl.title = `Where the last track read it, from (${Math.floor(trail.x)}, ${Math.floor(trail.y)}): ${trail.bearing}\u00b0 from north. Gone in ${Math.ceil(left)} s.`;
+      this.trailEl.title = `Last track from (${Math.floor(trail.x)}, ${Math.floor(trail.y)}): bearing ${trail.bearing}\u00b0. Expires in ${Math.ceil(left)} s.`;
     }
     const mobs = this.game.creatures.ticked;
     const watched = this.game.settings.fog ? ` · ${mobs.thought}/${mobs.near + mobs.far + mobs.asleep} mobs` : '';
@@ -852,7 +851,7 @@ export class Hud {
     // What a full table is worth to you: a fifth, or more for a Cook's Balanced Diet.
     const best = this.game.tableBest();
     const worth = Math.round((tableMul(n, best) - 1) * 100);
-    this.foodEl.title = `${fedWord(n)} — skill gain +${worth}%. It reads off whichever of the four is shortest (${Math.round(balance(n) * 100)}%), so a full board is worth ${share(best)} and bread alone is worth nothing.`;
+    this.foodEl.title = `${fedWord(n)} — skill gain +${worth}%. Set by the lowest of the four (${Math.round(balance(n) * 100)}%); max +${percent(best)}.`;
     this.foodEl.classList.toggle('hud-food-full', balance(n) >= 0.999);
 
     const companion = this.game.creatures.active();
@@ -863,20 +862,20 @@ export class Hud {
       const feed = this.game.worstFoodFor(companion);
       this.feedBtn.disabled = !feed;
       this.tip(this.feedBtn, feed
-        ? `Feed ${companion.name} ${itemName(feed).toLowerCase()}: it fills ${percent(feedFill(feed.id))} of its hunger. `
-          + 'Of what it is fed, the thing that fills least, and of those the lowest quality, so the rest is kept.'
-        : `You carry nothing ${companion.name} will eat, and no bucket of whey`);
+        ? `Feed ${companion.name} ${itemName(feed).toLowerCase()}: hunger +${percent(feedFill(feed.id))}. `
+          + 'Picks the least filling, then lowest QL, food.'
+        : `No food for ${companion.name}, no bucket of whey`);
       this.companionEl.hidden = false;
     } else this.companionEl.hidden = true;
     const food = this.game.bestFood();
     this.eatBtn.disabled = !food;
-    this.tip(this.eatBtn, food ? `Eat ${itemName(food).toLowerCase()}, the best food you are carrying` : 'You are carrying nothing to eat');
+    this.tip(this.eatBtn, food ? `Eat ${itemName(food).toLowerCase()} (best food carried)` : 'No food');
     this.drawTarget();
     const stance = this.game.settings.fightStance;
     if (this.stanceBtn.dataset.stance !== stance) {
       this.stanceBtn.dataset.stance = stance;
       this.stanceBtn.textContent = `${FIGHT_STANCE_NAMES[stance]} stance`;
-      this.stanceBtn.title = `${FIGHT_STANCE_NAMES[stance]} stance: ${stanceSays(stance)} Click to change it.`;
+      this.stanceBtn.title = `${FIGHT_STANCE_NAMES[stance]} stance: ${stanceSays(stance)} Click to change.`;
     }
     if (this.gridBtn) this.gridBtn.classList.toggle('active', this.game.settings.grid);
 
@@ -908,13 +907,13 @@ export class Hud {
       }
       this.actionEl.hidden = false;
       this.goBtn.hidden = false;
-      this.actionLabel.textContent = waiting.length === 1 ? 'One job put down' : `${waiting.length} jobs put down`;
+      this.actionLabel.textContent = `Jobs paused: ${waiting.length}`;
       this.actionFill.style.width = '0%';
       this.queueEl.hidden = false;
       this.queueEl.textContent = `Waiting: ${this.queueWords(waiting)}`;
       const stop = this.keyWord('stop');
       const on = this.keyWord('carry_on');
-      this.say(this.hintEl, `Carry on${on ? ` (${on})` : ''} to take them up${stop ? ` · ${stop} to forget them` : ''}`);
+      this.say(this.hintEl, `Resume${on ? ` (${on})` : ''}${stop ? ` · clear (${stop})` : ''}`);
       return;
     }
     this.actionEl.hidden = false;
@@ -933,7 +932,7 @@ export class Hud {
       ? ` · ${at} of ${a.goes}`
       : a.left !== undefined && a.left > 1 ? ` · ${a.left} to go` : '';
     if (a.state === 'walking') {
-      this.actionLabel.textContent = `Walking over to ${a.def.label.toLowerCase()}…${count}`;
+      this.actionLabel.textContent = `Walking to: ${a.def.label.toLowerCase()}…${count}`;
       this.actionFill.style.width = '0%';
     } else {
       const pct = Math.min(100, (a.elapsed / a.duration) * 100);

@@ -34,7 +34,7 @@ export function buildRow(g: Game, def: ActionDef, target: Target, label: string,
     label,
     children: [
       ...counts.map((n) => ({ label: `Fit ${n}`, note: `${n} of the ${left} still needed`, onSelect: run(n) })),
-      { label: all === left ? `Fit all ${left}` : `Fit ${all}`, note: all === left ? 'until it is finished' : `of the ${left} still needed, the most one go takes`, onSelect: run(all) },
+      { label: all === left ? `Fit all ${left}` : `Fit ${all}`, note: all === left ? 'until finished' : `of ${left} needed; max per go`, onSelect: run(all) },
     ],
   };
 }

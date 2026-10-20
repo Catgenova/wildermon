@@ -194,16 +194,16 @@ check('at a mailbox the board lists the stall under its owner\'s name, what is f
   said('BOARD') === 'true,true,1,5,no till', said('BOARD'));
 check('a thing is bought at the counter', said('BUY').includes('"paid": 5'), said('BUY'));
 check('and its price is in the till, and the thing is the buyer\'s', said('TILL') === '5,true', said('TILL'));
-check('a thing on somebody else\'s stall is not taken', said('THEFT') === 'That is on somebody else\'s stall. Buy it at the counter.', said('THEFT'));
+check('a thing on somebody else\'s stall is not taken', said('THEFT') === 'Someone else\'s stall: buy it at the counter.', said('THEFT'));
 check('its owner takes it back', said('OWNERTAKES') === 'allowed', said('OWNERTAKES'));
 check('and it comes back without its price', said('UNPRICED') === 'null', said('UNPRICED'));
 check('a crate with a wildermon in it goes on a stall', said('ONSTALL') === 'allowed', said('ONSTALL'));
-check('and into no other store', said('INCHEST') === 'A creature crate goes on a stall, and in no other store.', said('INCHEST'));
+check('and into no other store', said('INCHEST') === 'Creature crates go on a stall only.', said('INCHEST'));
 check('it carries no price in a pack', said('PACKPRICE') === 'refused', said('PACKPRICE'));
 check('it goes into no bag', said('INBAG') === 'refused', said('INBAG'));
 check('it can be offered in a deal', said('OFFERED') === 'out', said('OFFERED'));
-check('while it is on offer it is not opened', said('OPENDEAL') === 'That crate is offered in a deal. Take the offer back first.', said('OPENDEAL'));
-check('nor what is in it let go', said('LETGO') === 'Pip\'s crate is on offer, on a stall or in the post. Take it back first.', said('LETGO'));
+check('while it is on offer it is not opened', said('OPENDEAL') === 'Crate offered in a deal: take the offer back first.', said('OPENDEAL'));
+check('nor what is in it let go', said('LETGO') === 'Pip\'s crate is on offer, on a stall or in the post: take it back first.', said('LETGO'));
 check('the deal names the wildermon in the crate', said('DEALS') === 'Pip', said('DEALS'));
 check('taken, the wildermon is the taker\'s', said('TAKEN') === 'taken,true,true', said('TAKEN'));
 check('posted, it is the recipient\'s from the moment it goes in', said('POSTED') === 'posted,true,post', said('POSTED'));
@@ -212,7 +212,7 @@ check('and it comes out into their pack', said('COLLECTED') === 'collected,playe
 check('laid on the stall', said('LAID') === 'furniture:true', said('LAID'));
 check('and priced there', said('PRICED') === 'priced', said('PRICED'));
 check('while it is on the stall what is in it is not let go',
-  said('STALLLETGO') === 'Pip\'s crate is on offer, on a stall or in the post. Take it back first.', said('STALLLETGO'));
+  said('STALLLETGO') === 'Pip\'s crate is on offer, on a stall or in the post: take it back first.', said('STALLLETGO'));
 check('the board names the wildermon on the stall', said('BOARDPIP') === 'Pip', said('BOARDPIP'));
 check('bought, the wildermon is the buyer\'s', said('BOUGHT') === 'bought,true,player:true', said('BOUGHT'));
 

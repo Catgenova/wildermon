@@ -215,7 +215,7 @@ export class EquipmentPanel {
       b.addEventListener('click', () => this.spin(by));
       return b;
     };
-    this.stage.append(plinth, this.canvas, colL, colR, turn('eq-turn-l', '↺', 'Turn the figure left', 1), turn('eq-turn-r', '↻', 'Turn the figure right', -1));
+    this.stage.append(plinth, this.canvas, colL, colR, turn('eq-turn-l', '↺', 'Turn left', 1), turn('eq-turn-r', '↻', 'Turn right', -1));
     // Let go of a thing over you and it goes on wherever it is worn.
     makeDropZone(this.canvas, (p) => this.fits(p), (p) => this.putOn(p.uid));
     let downX: number | null = null;
@@ -454,9 +454,9 @@ export class EquipmentPanel {
       s.ql.textContent = v.item ? v.item.ql.toFixed(0) : bare ? `${Math.round((v.struck ?? 0) * 100)}%` : held ? '2H' : '';
       const what = v.label ?? EMPTY_SAYS[v.slot];
       const tip = `${v.name}: ${what}${v.item ? `, QL ${v.item.ql.toFixed(1)}, ${v.wearSays}` : ''}${v.does ? `. ${v.does}` : ''}`
-        + `${v.struck !== null ? `. A blow lands here ${Math.round(v.struck * 100)}% of the time` : ''}${v.upgradeSays ? `. ${v.upgradeSays}` : ''}.`;
+        + `${v.struck !== null ? `. Hit chance here: ${Math.round(v.struck * 100)}%` : ''}${v.upgradeSays ? `. ${v.upgradeSays}` : ''}.`;
       s.box.title = tip;
-      s.box.setAttribute('aria-label', `${tip}${v.item ? ' Press Delete to take it off.' : ''}`);
+      s.box.setAttribute('aria-label', `${tip}${v.item ? ' Delete: take off.' : ''}`);
     }
   }
 
@@ -502,10 +502,10 @@ export class EquipmentPanel {
       acts.append(all);
       this.shelfHead.append(what, acts);
     } else {
-      this.shelfHead.append(el('b', '', 'In your pack'), el('span', 'eq-shelf-n', `${list.length} to put on · drag onto a socket or onto you`));
+      this.shelfHead.append(el('b', '', 'In your pack'), el('span', 'eq-shelf-n', `${list.length} wearable · drag onto a socket or the figure`));
     }
     if (!list.length) {
-      this.shelf.replaceChildren(el('div', 'eq-shelf-none', this.picked ? `Nothing in your pack goes on your ${placeName(this.picked)}.` : 'Nothing in your pack is worn or held.'));
+      this.shelf.replaceChildren(el('div', 'eq-shelf-none', this.picked ? `Nothing in your pack for: ${placeName(this.picked)}.` : 'Nothing wearable in your pack.'));
     } else this.shelf.replaceChildren(...list.map((s) => this.shelfCard(s)));
     this.fade();
   }
@@ -531,7 +531,7 @@ export class EquipmentPanel {
     if (s.why) text.append(el('span', 'eq-card-why', s.why));
     card.append(text);
     const says = [s.main?.text, ...s.effects.map((e) => e.text)].filter(Boolean).join(', ');
-    card.title = s.why ?? `${s.label}, QL ${s.item.ql.toFixed(1)}: click or drag to put it on${says ? `. ${says}` : ''}.`;
+    card.title = s.why ?? `${s.label}, QL ${s.item.ql.toFixed(1)}: click or drag to wear${says ? `. ${says}` : ''}.`;
     card.setAttribute('aria-label', card.title);
     card.disabled = !!s.why;
     card.addEventListener('click', () => this.putOn(s.item.uid));
@@ -559,9 +559,9 @@ export class EquipmentPanel {
     const words = el('div', 'eq-weapon-words');
     const hides = el('span', 'eq-hides');
     hides.append(...[...r.weapon.hides.split(' · '), 'no hide ×1'].map((h) => el('span', 'eq-hide', h)));
-    words.append(el('b', 'eq-weapon-head', `${r.weapon.blow === 'cut' ? 'A cut' : r.weapon.blow === 'pierce' ? 'A thrust' : 'A crushing blow'} against a hide`),
+    words.append(el('b', 'eq-weapon-head', `${r.weapon.blow === 'cut' ? 'Cut' : r.weapon.blow === 'pierce' ? 'Pierce' : 'Crush'} damage vs hide`),
       hides);
-    if (r.weapon.side) words.append(el('span', 'eq-weapon-side', `A blow that lands also ${r.weapon.side}.`));
+    if (r.weapon.side) words.append(el('span', 'eq-weapon-side', `On hit: ${r.weapon.side}.`));
     if (r.weapon.arrows) words.append(el('span', 'eq-weapon-side', r.weapon.arrows));
     card.append(pic, words);
     const rows = el('div', 'eq-stats');
@@ -572,7 +572,7 @@ export class EquipmentPanel {
   private drawDefence(pane: HTMLElement, r: EquipReport): void {
     // A blow on its way to you: what each thing takes off, and how much is left after it.
     const chain = el('div', 'eq-chain');
-    chain.append(el('div', 'eq-sub', 'A blow on its way to you'));
+    chain.append(el('div', 'eq-sub', 'Incoming blow'));
     let prev = 1;
     for (const [i, st] of r.chain.entries()) {
       const row = el('div', `eq-step${i ? '' : ' eq-step-first'}`);
@@ -590,7 +590,7 @@ export class EquipmentPanel {
     }
     // Where a blow lands, how often, and what is turned aside there.
     const map = el('div', 'eq-map');
-    map.append(el('div', 'eq-sub', 'Where a blow lands'));
+    map.append(el('div', 'eq-sub', 'Hit location'));
     for (const v of r.slots.filter((x) => x.struck !== null)) {
       const row = el('div', `eq-loc${v.soak === null ? ' eq-loc-bare' : ''}`);
       const bar = el('span', 'eq-bar');
@@ -605,7 +605,7 @@ export class EquipmentPanel {
     for (const s of r.defence) rows.append(this.statRow(s));
     // Of each kind of blow, what reaches you.
     const thru = el('div', 'eq-thru');
-    thru.append(el('div', 'eq-sub', 'Of each kind of blow, what gets through'));
+    thru.append(el('div', 'eq-sub', 'Damage taken by blow type'));
     for (const t of r.through) {
       const row = el('div', 'eq-thru-row');
       const bar = el('span', 'eq-bar eq-bar-thru');
@@ -616,13 +616,13 @@ export class EquipmentPanel {
       thru.append(row);
     }
     const carry = el('div', 'eq-stats eq-carry');
-    carry.append(el('div', 'eq-sub', 'What it costs to carry'));
+    carry.append(el('div', 'eq-sub', 'Burden'));
     for (const s of r.burden) carry.append(this.statRow(s));
     pane.replaceChildren(chain, map, rows, thru, carry);
   }
 
   private drawSkills(pane: HTMLElement, r: EquipReport): void {
-    pane.replaceChildren(el('div', 'eq-sub', 'Now, and at the next level'), ...r.skills.map((s) => this.skillRow(s)));
+    pane.replaceChildren(el('div', 'eq-sub', 'Now and at next level'), ...r.skills.map((s) => this.skillRow(s)));
   }
 
   private skillRow(s: SkillView): HTMLElement {
@@ -633,9 +633,9 @@ export class EquipmentPanel {
     const fill = el('span', 'eq-bar-fill');
     fill.style.width = `${Math.round(s.toNext * 100)}%`;
     bar.append(fill);
-    bar.title = `${Math.round(s.toNext * 100)}% of the way to ${Math.floor(s.level) + 1}`;
+    bar.title = `${Math.round(s.toNext * 100)}% to ${Math.floor(s.level) + 1}`;
     const gives = el('div', 'eq-gives');
-    if (!s.gives.length) gives.append(el('span', 'eq-give-none', 'Moves nothing you have on now.'));
+    if (!s.gives.length) gives.append(el('span', 'eq-give-none', 'No effect on what you wear now.'));
     for (const g of s.gives) {
       const line = el('span', 'eq-give');
       line.append(el('span', 'eq-give-what', g.what), el('b', '', g.now), el('span', 'eq-give-next', g.next ?? ''));

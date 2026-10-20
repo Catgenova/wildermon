@@ -150,15 +150,15 @@ const sire = raise('Horn', PAIRS.supreme.sire, 'male', -0.3);
   game.rand = was;
   dam.due = game.time;
   const young = game.creatures.giveBirth(game, dam);
-  const told = [...game.log].reverse().find((l) => l.text.includes(' drops a young '))?.text ?? '';
+  const told = [...game.log].reverse().find((l) => l.text.startsWith('Born to '))?.text ?? '';
   const m = mutationOf(young?.pedigree?.from);
-  check('browser: a birth that mutated says so, and what came', !!m && told.includes(mutationSaid(young?.pedigree?.from)) && told.includes(' It is born with a mutation: ')
+  check('browser: a birth that mutated says so, and what came', !!m && told.includes(mutationSaid(young?.pedigree?.from)) && told.includes(' Mutation, in neither parent: ')
     && mutationSaid(young?.pedigree?.from).length > 0, told);
   dam.due = 0;
   game.creatures.pair(game, dam, sire, 0);
   dam.due = game.time;
   const plain = game.creatures.giveBirth(game, dam);
-  const plainTold = [...game.log].reverse().find((l) => l.text.includes(' drops a young '))?.text ?? '';
+  const plainTold = [...game.log].reverse().find((l) => l.text.startsWith('Born to '))?.text ?? '';
   check('browser: and one that did not says nothing of it', !!plain && (mutationOf(plain.pedigree?.from) !== null || !plainTold.includes('mutation')), plainTold);
 }
 
@@ -234,7 +234,7 @@ for (const [name, pair] of Object.entries(PAIRS)) {
   const born = bredOf('BORN');
   const m = mutationOf(born.from as Record<string, TraitSource>);
   check('island: a birth that mutated says so and what came, in the browser\'s words', !!m && at('TOLD').includes(mutationSaid(born.from as Record<string, TraitSource>))
-    && at('TOLD').includes(' It is born with a mutation: '), `${at('BORN')} / ${at('TOLD')}`);
+    && at('TOLD').includes(' Mutation, in neither parent: '), `${at('BORN')} / ${at('TOLD')}`);
   const browser = [...TRAITS].sort((x, y) => (x.id < y.id ? -1 : x.id > y.id ? 1 : 0)).map((t) => `${t.id}=${mutationSaid({ [t.id]: 'mutation' })}`).join('|');
   const wrong = browser.split('|').filter((x) => !at('SAID').split('|').includes(x));
   check(`both sides say a mutation in the same words, for each of the ${TRAITS.length} traits`, browser === at('SAID'), wrong.slice(0, 2).join(' / '));

@@ -61,10 +61,10 @@ const named = (g: Game, t: Target): Wound | null | undefined => (t.kind === 'ite
  * as well already (`dressingHelps`). The island's `dress_refusal_for`.
  */
 export function dressRefusalFor(g: Game, w: Wound): string | null {
-  if (w.infected) return `${capital(onYou(w))} has gone bad. Clean it out before anything will hold on it.`;
+  if (w.infected) return `${capital(onYou(w))}: infected. Clean it with lye first.`;
   const use = dressingFor(g, w);
-  if (!use) return 'You have nothing to dress it with.';
-  if (!dressingHelps(w, use.herb)) return `${capital(onYou(w))} is already dressed at least as well as what you carry would dress it.`;
+  if (!use) return 'Nothing to dress it with.';
+  if (!dressingHelps(w, use.herb)) return `${capital(onYou(w))}: already dressed as well or better.`;
   return null;
 }
 
@@ -77,9 +77,12 @@ const yoursToDress = (g: Game, t?: Target): Wound | null => {
 
 const capital = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
 
+/** How much of a good dressing's healing one that goes on badly gives a creature. */
+const POOR_DRESSING = 0.35;
+
 /** What a dressing says when every open wound is already dressed as well as yours would. The island says the same. */
-export const DRESSED_AS_WELL = 'Every wound on you that has not gone bad is already dressed at least as well as what you carry would dress it. '
-  + 'A dressing only goes over one that closes the wound slower.';
+export const DRESSED_AS_WELL = 'Every uninfected wound is already dressed as well or better. '
+  + 'A dressing only replaces one that heals slower.';
 
 /**
  * Why a dressing will not go on you, or null: nothing open, nothing to dress
@@ -89,12 +92,12 @@ export const DRESSED_AS_WELL = 'Every wound on you that has not gone bad is alre
  */
 export function dressRefusal(g: Game): string | null {
   const wounds = g.player.wounds;
-  if (!wounds.length) return g.player.stats.health >= 0.999 ? 'There is nothing wrong with you.' : 'Nothing is open. You are only tired and thin.';
+  if (!wounds.length) return g.player.stats.health >= 0.999 ? 'Not hurt.' : 'No wounds to dress.';
   if (yoursToDress(g)) return null;
   // Nothing to put on a wound that could take one; with every wound gone bad, what wants doing first is the lye.
-  if (!dressingFor(g, null) && wounds.some((w) => !w.infected)) return 'You have nothing to dress it with.';
+  if (!dressingFor(g, null) && wounds.some((w) => !w.infected)) return 'Nothing to dress it with.';
   const bad = worstWound(wounds.filter((w) => w.infected));
-  if (bad) return `The ${WOUND_KINDS[bad.kind].name} on your ${PART_NAMES[bad.part] ?? bad.part} has gone bad. Clean it out before anything will hold on it.`;
+  if (bad) return `The ${WOUND_KINDS[bad.kind].name} on your ${PART_NAMES[bad.part] ?? bad.part}: infected. Clean it with lye first.`;
   return DRESSED_AS_WELL;
 }
 
@@ -123,9 +126,9 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       // What is wrong with somebody else is the island's to know; the dressing is yours.
-      if (t.kind === 'person') return dressingFor(g, null) ? null : 'You have nothing to dress it with.';
+      if (t.kind === 'person') return dressingFor(g, null) ? null : 'Nothing to dress it with.';
       if (t.kind !== 'item') return null;
-      if (!['bandage', 'cover'].includes(g.inventory.get(t.uid)?.id ?? '')) return 'That is not a dressing.';
+      if (!['bandage', 'cover'].includes(g.inventory.get(t.uid)?.id ?? '')) return 'Not a dressing.';
       const w = named(g, t);
       if (w === null) return WOUND_CLOSED;
       return w ? dressRefusalFor(g, w) : dressRefusal(g);
@@ -165,12 +168,12 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       if (suits && clean) g.note('covered');
       g.logMsg(
         !clean
-          ? `The dressing slips and you make a poor job of it. You still have ${woundText(w)}.`
+          ? `Dressing failed: ${woundText(w)} remains.`
           : suits
-            ? `You lay the ${use.herb} cover on ${onYou(w)} and bind it. The bleeding stops at once and it is already closing.`
+            ? `Dressed: ${onYou(w)}, ${use.herb} cover. Bleeding stopped; heals fast.`
             : use.herb
-              ? `You bind the ${use.herb} cover over ${onYou(w)}. It is the wrong herb for a ${WOUND_KINDS[w.kind].name}, but it holds and the bleeding stops.`
-              : `You clean ${onYou(w)} and bind it with cloth. The bleeding stops, though it will be slow to close.`,
+              ? `Dressed: ${onYou(w)}, ${use.herb} cover (wrong herb for a ${WOUND_KINDS[w.kind].name}). Bleeding stopped.`
+              : `Dressed: ${onYou(w)}, cloth. Bleeding stopped; heals slowly.`,
         'event',
       );
       // Keep going while a dressing out of the pack would still do some wound good: the one asked for, if one was.
@@ -188,9 +191,9 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const w = named(g, t);
       if (w === null) return WOUND_CLOSED;
-      if (w && !w.infected) return `${capital(onYou(w))} has not gone bad.`;
-      if (!g.player.wounds.some((x) => x.infected)) return 'Nothing on you has gone bad.';
-      if (!g.inventory.has('lye_bucket')) return 'You need a bucket of lye to clean it out with.';
+      if (w && !w.infected) return `${capital(onYou(w))}: not infected.`;
+      if (!g.player.wounds.some((x) => x.infected)) return 'No infected wounds.';
+      if (!g.inventory.has('lye_bucket')) return 'Need a bucket of lye.';
       return null;
     },
     perform: (t, g) => {
@@ -204,7 +207,7 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       const done = g.skillCheck('first_aid', 26, lye.ql, g.mindEase());
       g.gainSkill('first_aid', tryGain(done, CLEAN_GAIN));
       if (!done) {
-        g.logMsg(`You scour the ${WOUND_KINDS[w.kind].name} out and it is no better for it. The lye is gone.`, 'error');
+        g.logMsg(`Cleaning failed: ${WOUND_KINDS[w.kind].name} still infected. Lye used.`, 'error');
         return;
       }
       w.infected = false;
@@ -214,7 +217,7 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       delete w.mend;
       delete w.salved;
       g.note('cleaned');
-      g.logMsg(`You scour the ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part} out with lye. It is open and clean again, and bleeding. Dress it.`, 'event');
+      g.logMsg(`Cleaned: ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part}. Infection gone; bleeding again. Dress it.`, 'event');
     },
   },
   {
@@ -231,10 +234,10 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return 'It is gone.';
-      if (c.mode === 'wild') return 'It will not stand still for you while it is wild.';
-      if (c.health >= maxHealth(c, SPECIES[c.species])) return `${c.name} is not hurt.`;
-      if (!bestBandage(g)) return 'You have no bandages. Cut some from cloth.';
-      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > 1.9) return 'You need to be beside it.';
+      if (c.mode === 'wild') return 'Not while it is wild.';
+      if (c.health >= maxHealth(c, SPECIES[c.species])) return `${c.name}: not hurt.`;
+      if (!bestBandage(g)) return 'Need a bandage: cut one from cloth.';
+      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > 1.9) return 'Stand beside it.';
       return null;
     },
     perform: (t, g) => {
@@ -249,12 +252,12 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       // something; what it does not do is teach as much as a good one.
       if (!clean) g.missed();
       const top = maxHealth(c, def);
-      const healed = top * healAmount(g.skills.get('first_aid'), ql) * (clean ? 1 : 0.35);
+      const healed = top * healAmount(g.skills.get('first_aid'), ql) * (clean ? 1 : POOR_DRESSING);
       c.health = Math.min(top, c.health + healed);
       g.logMsg(
         clean
-          ? `You dress ${c.name}'s wounds with the ${itemName(bandage).toLowerCase()}. It is up to ${Math.ceil(c.health)} of ${top}.`
-          : `${c.name} will not hold still and the dressing goes on badly. It is up to ${Math.ceil(c.health)} of ${top}.`,
+          ? `Treated ${c.name}: ${itemName(bandage).toLowerCase()} used. Health ${Math.ceil(c.health)}/${top}.`
+          : `Treatment went badly (${Math.round(POOR_DRESSING * 100)}% effect): ${c.name} health ${Math.ceil(c.health)}/${top}.`,
         'event',
       );
     },

@@ -546,7 +546,7 @@ check(`at class level ${CLASS_LEVEL_START}`, Number(island('START')) === CLASS_L
   const want = perkRefusal(lunge, 'blade', [], CLASS_LEVEL_START);
   check(`a tier not reached is shut, in the same words on both sides`, island('SHUT') === want, `island "${island('SHUT')}", browser "${want}"`);
 }
-check('a spell not taken cannot go on the bar', island('UNKNOWN') === 'You do not have that spell.', island('UNKNOWN'));
+check('a spell not taken cannot go on the bar', island('UNKNOWN') === 'Spell not known.', island('UNKNOWN'));
 check(`a spell taken goes on the bar's first slot for the trade's spells, and is among the ones you know`,
   island('BAR') === `blade_measured_cut|blade_measured_cut|["blade_measured_cut"]`, island('BAR'));
 {
@@ -554,7 +554,7 @@ check(`a spell taken goes on the bar's first slot for the trade's spells, and is
   check('and the other two at its tier close, in the same words on both sides', island('CLOSED') === want,
     `island "${island('CLOSED')}", browser "${want}"`);
 }
-check('a trade\'s spell does not go in a patron\'s slot', island('FAITHSLOT') === 'That slot is for faith spells.', island('FAITHSLOT'));
+check('a trade\'s spell does not go in a patron\'s slot', island('FAITHSLOT') === 'Slot for faith spells only.', island('FAITHSLOT'));
 {
   const [rose, lo, hi] = parts('LEARN').map(Number);
   check(`a blow that lands teaches the trade a step of the skill curve, at ${CLASS_LEARN_BLOW} a blow`,
@@ -591,9 +591,9 @@ for (const { s } of BLOWS) {
 {
   const [off, secs, line] = parts('BASH');
   check(`Shield Bash: a heavy blow knocked off its stroke, and its next blow put back ${fx('shield_bash', 'back')} s`,
-    off === 'true' && near(Number(secs), 1 + fx('shield_bash', 'back'), 1e-6) && /knocked off its stroke/.test(line), island('BASH'));
+    off === 'true' && near(Number(secs), 1 + fx('shield_bash', 'back'), 1e-6) && line.endsWith(` Heavy blow broken. Next blow delayed ${fx('shield_bash', 'back')} s.`), island('BASH'));
 }
-check('and it wants a shield', island('NOSHIELD') === 'Shield Bash wants a shield in your off hand.' && island('SHIELD') === 'ready',
+check('and it wants a shield', island('NOSHIELD') === 'Shield Bash: needs a shield in the off hand.' && island('SHIELD') === 'ready',
   `${island('NOSHIELD')} / ${island('SHIELD')}`);
 {
   const [val, n, secs] = parts('DISARM').map(Number);
@@ -610,15 +610,15 @@ check('and it wants a shield', island('NOSHIELD') === 'Shield Bash wants a shiel
   check(`Lunge: a stride to ${short.toFixed(1)} tiles short of a creature ${cx} tiles off, and the browser told where`,
     cast === 'cast' && near(Number(putX), Number(cx) - short) && near(Number(putY), Number(cy)) && putX === atX && putY === atY,
     island('LUNGE'));
-  check(`and no further than ${fx('lunge', 'reach')} tiles`, island('LUNGE:FAR') === `The rowl is more than ${fx('lunge', 'reach')} tiles away.`, island('LUNGE:FAR'));
+  check(`and no further than ${fx('lunge', 'reach')} tiles`, island('LUNGE:FAR') === `Too far: max ${fx('lunge', 'reach')} tiles.`, island('LUNGE:FAR'));
 }
 {
   const [cast, stamina, rest, told] = parts('PAID');
   const s = spell('measured_cut');
   check(`a spell called through the door costs its ${pct(s.cost)} of a full bar, rests ${s.rest} s, and says what is left`,
     cast === s.id && near(Number(stamina), 1 - s.cost) && near(Number(rest), s.rest, 1e-6) && near(Number(told), 1 - s.cost), island('PAID'));
-  check('and is refused while it rests', island('RESTING') === `${s.name} can be called again in ${s.rest} seconds.`, island('RESTING'));
-  check('or without the stamina for it', island('TIRED') === `${s.name} costs ${pct(s.cost)} of your stamina; you have 5%.`, island('TIRED'));
+  check('and is refused while it rests', island('RESTING') === `${s.name}: cooldown ${s.rest} s.`, island('RESTING'));
+  check('or without the stamina for it', island('TIRED') === `${s.name}: need ${pct(s.cost)} stamina (have 5%).`, island('TIRED'));
 }
 {
   const [cast, stamina] = parts('BREATH2');
@@ -632,15 +632,15 @@ check('and it wants a shield', island('NOSHIELD') === 'Shield Bash wants a shiel
   check(`Challenge: it turns on you, and is not turned off you for ${fx('challenge', 'secs')} s`,
     turned === 'true' && near(Number(secs), fx('challenge', 'secs') - THREAT_HOLD, 1e-6), island('CHALLENGE'));
   check('and a blow of your own on it after does not cut that short', near(Number(island('CHALLENGE:HELD')), Number(secs), 1e-6), island('CHALLENGE:HELD'));
-  check('and something that fights nobody is refused', island('TIMID') === `The ${SPECIES.rabba.name.toLowerCase()} will not fight anybody.`, island('TIMID'));
+  check('and something that fights nobody is refused', island('TIMID') === `The ${SPECIES.rabba.name.toLowerCase()}: never fights.`, island('TIMID'));
 }
 {
   const [who, line] = parts('CALL');
   const hold = (fx('guardians_call', 'secs') - THREAT_HOLD).toFixed(3);
   check(`Guardian's Call: everything within ${fx('guardians_call', 'reach')} tiles hunting somebody turns on you for ${fx('guardians_call', 'secs')} s, and nothing else`,
-    who === `you:${hold},you:${hold},them:-,nobody:-` && line === `${spell('guardians_call').name}: 2 creatures turn on you, and hunt only you for ${fx('guardians_call', 'secs')} s.`,
+    who === `you:${hold},you:${hold},them:-,nobody:-` && line === `${spell('guardians_call').name}: 2 creatures hunt only you for ${fx('guardians_call', 'secs')} s.`,
     island('CALL'));
-  check('and with nothing to call it is refused', island('CALL:NONE') === `Nothing within ${fx('guardians_call', 'reach')} tiles of you is hunting anybody.`,
+  check('and with nothing to call it is refused', island('CALL:NONE') === `Nothing hunting within ${fx('guardians_call', 'reach')} tiles.`,
     island('CALL:NONE'));
 }
 {
@@ -652,7 +652,7 @@ check('and it wants a shield', island('NOSHIELD') === 'Shield Bash wants a shiel
 }
 {
   const [cast, stamina, secs] = parts('LAST');
-  check(`Last Stand: only below ${pct(fx('last_stand', 'below'))} of your health`, island('LAST:HIGH') === `Last Stand is only for below ${pct(fx('last_stand', 'below'))} of your health.`,
+  check(`Last Stand: only below ${pct(fx('last_stand', 'below'))} of your health`, island('LAST:HIGH') === `Last Stand: only below ${pct(fx('last_stand', 'below'))} health.`,
     island('LAST:HIGH'));
   check(`and then for ${fx('last_stand', 'secs')} s, for no stamina, ${pct(fx('last_stand', 'cut'))} less off you`,
     cast === 'blade_last_stand' && near(Number(stamina), 1) && near(Number(secs), fx('last_stand', 'secs'), 1e-6)

@@ -105,7 +105,7 @@ say('and Drink refuses it', about('drink_skin', empty), 'It is empty.');
  * same thing as not being able to fill it.
  */
 console.log('\n--- and filling it');
-say('a full skin refuses another fill', about('fill_skin', packed(row({ charges: 5 }), still)), 'It is already full.');
+say('a full skin refuses another fill', about('fill_skin', packed(row({ charges: 5 }), still)), 'Already full.');
 say('while the old map offered to fill a full one', about('fill_skin', asItWas(row({ charges: 5 }))), null);
 say('and an empty one standing at the shore fills', about('fill_skin', packed(row({ charges: 0 }), still)), null);
 
@@ -225,7 +225,7 @@ say('and room for a fifth', why('fill_skin', wet, 11), null);
 
 const brimming = packAll([row({ id: 10, def: 'backpack', ql: 50 }),
                           row({ id: 11, def: 'water_skin', charges: 5, holder: 'bag', inside: 10 })], still);
-say('a full one in the bag knows it is full', why('fill_skin', brimming, 11), 'It is already full.');
+say('a full one in the bag knows it is full', why('fill_skin', brimming, 11), 'Already full.');
 
 const bkt = packAll([row({ id: 10, def: 'backpack', ql: 50 }),
                      row({ id: 12, def: 'bucket', holder: 'bag', inside: 10 })], still);

@@ -438,7 +438,7 @@ for (const bl of BLOWS) {
 {
   const [health, line] = parts('PRICE');
   check(`Blood Price takes ${pct(fx('blood_price', 'health'))} of your health, and says so`,
-    near(Number(health), 1 - fx('blood_price', 'health')) && line.endsWith(`It costs you ${pct(fx('blood_price', 'health'))} of your health.`), island('PRICE'));
+    near(Number(health), 1 - fx('blood_price', 'health')) && line.endsWith(` Health −${pct(fx('blood_price', 'health'))}.`), island('PRICE'));
 }
 {
   const [smash, swing, plain, wild] = parts('SURE').map(Number);
@@ -449,7 +449,7 @@ for (const bl of BLOWS) {
 {
   const [secs, line] = parts('WINDUP');
   check(`and its wind-up puts your own next swing back ${fx('overhead_smash', 'wind')} s`,
-    near(Number(secs), 1 + fx('overhead_smash', 'wind'), 1e-6) && line.endsWith(`Your next swing comes ${fx('overhead_smash', 'wind')} s later.`), island('WINDUP'));
+    near(Number(secs), 1 + fx('overhead_smash', 'wind'), 1e-6) && line.endsWith(` Next swing delayed ${fx('overhead_smash', 'wind')} s.`), island('WINDUP'));
 }
 {
   const [landed, secs, still] = parts('CRACK');
@@ -462,22 +462,22 @@ for (const bl of BLOWS) {
 {
   const [who, line] = parts('SHAKE');
   check(`Earthshaker strikes and holds everything within ${fx('earthshaker', 'reach')} tiles, and nothing past them`,
-    who === 'true:true,true:true,false:false' && line === `Earthshaker: you strike at 2 creatures; 2 held where they stand for ${fx('earthshaker', 'hold')} s.`,
+    who === 'true:true,true:true,false:false' && line === `Earthshaker: 2 creatures hit, 2 held for ${fx('earthshaker', 'hold')} s.`,
     island('SHAKE'));
-  check('and with nothing in reach it is refused', island('SHAKE:NONE') === `Nothing is within ${fx('earthshaker', 'reach')} tiles of you to strike.`, island('SHAKE:NONE'));
+  check('and with nothing in reach it is refused', island('SHAKE:NONE') === `No target within ${fx('earthshaker', 'reach')} tiles.`, island('SHAKE:NONE'));
 }
 {
   const [who, line] = parts('WHIRL');
   check(`Whirlwind strikes everything within ${fx('whirlwind', 'reach')} tiles, and nothing past them`,
-    who === 'true,true,false' && line === 'Whirlwind: you strike at 2 creatures.', island('WHIRL'));
+    who === 'true,true,false' && line === 'Whirlwind: 2 creatures hit.', island('WHIRL'));
   check(`with ${fx('whirlwind', 'blows')} blows at ${pct(fx('whirlwind', 'more'))} each`, near(Number(island('WHIRL:TWICE')), 1, 1e-6), island('WHIRL:TWICE'));
-  check('and with nothing in reach it is refused', island('WHIRL:NONE') === `Nothing is within ${fx('whirlwind', 'reach')} tiles of you to strike.`, island('WHIRL:NONE'));
+  check('and with nothing in reach it is refused', island('WHIRL:NONE') === `No target within ${fx('whirlwind', 'reach')} tiles.`, island('WHIRL:NONE'));
 }
 {
   const [wounds, line] = parts('SHRUG');
   check(`Shrug It Off: the worst wound ${pct(1 - fx('shrug_it_off', 'severity'))} less severe and bleeding no more, and the others as they were`,
-    wounds === `arms:${0.3 * fx('shrug_it_off', 'severity')}:false,legs:0.1:true` && /on your arm, is 50% less severe/.test(line), island('SHRUG'));
-  check('and with no wound it is refused', island('SHRUG:NONE') === 'You have no wound to shrug off.', island('SHRUG:NONE'));
+    wounds === `arms:${0.3 * fx('shrug_it_off', 'severity')}:false,legs:0.1:true` && line === `Shrug It Off: worst wound (arm) severity −${pct(1 - fx('shrug_it_off', 'severity'))}, bleeding stopped.`, island('SHRUG'));
+  check('and with no wound it is refused', island('SHRUG:NONE') === 'No wounds.', island('SHRUG:NONE'));
 }
 {
   const [before, during, lost, secs] = parts('RAGE').map(Number);
@@ -495,22 +495,22 @@ for (const bl of BLOWS) {
 {
   const [crits, plain] = parts('LAST').map(Number);
   check(`Last Rage: only below ${pct(fx('last_rage', 'below'))} of your health`,
-    island('LAST:HIGH') === `Last Rage is only for below ${pct(fx('last_rage', 'below'))} of your health.`, island('LAST:HIGH'));
+    island('LAST:HIGH') === `Last Rage: only below ${pct(fx('last_rage', 'below'))} health.`, island('LAST:HIGH'));
   check('and then every blow you land is critical', crits === 20 && plain < 20, island('LAST'));
 }
 check('a spell that wants an axe is refused with a maul in your hand',
-  island('NEEDS:AXE') === `Rending Chop wants ${NEEDS_SAID.axes.wants}.`, island('NEEDS:AXE'));
+  island('NEEDS:AXE') === `Rending Chop: needs ${NEEDS_SAID.axes.wants}.`, island('NEEDS:AXE'));
 check('and one that wants a maul with an axe',
-  island('NEEDS:MAUL') === `Skull Crack wants ${NEEDS_SAID.mauls.wants}.|Earthshaker wants ${NEEDS_SAID.mauls.wants}.`, island('NEEDS:MAUL'));
+  island('NEEDS:MAUL') === `Skull Crack: needs ${NEEDS_SAID.mauls.wants}.|Earthshaker: needs ${NEEDS_SAID.mauls.wants}.`, island('NEEDS:MAUL'));
 check('and is called with it', island('NEEDS:HAS') === 'ready', island('NEEDS:HAS'));
 check(`Blood Price is refused when it would take the last of your health`,
-  island('PRICE:LOW') === `Blood Price costs ${pct(fx('blood_price', 'health'))} of your health; you have ${pct(fx('blood_price', 'health'))}.`, island('PRICE:LOW'));
+  island('PRICE:LOW') === `Blood Price: costs ${pct(fx('blood_price', 'health'))} health (have ${pct(fx('blood_price', 'health'))}).`, island('PRICE:LOW'));
 {
   const [cast, stamina, rest] = parts('PAID');
   const s = spell('wild_swing');
   check(`a spell called through the door costs its ${pct(s.cost)} of a full bar and rests ${s.rest} s`,
     cast === s.id && near(Number(stamina), 1 - s.cost) && near(Number(rest), s.rest, 1e-6), island('PAID'));
-  check('and is refused while it rests', island('RESTING') === `${s.name} can be called again in ${s.rest} seconds.`, island('RESTING'));
+  check('and is refused while it rests', island('RESTING') === `${s.name}: cooldown ${s.rest} s.`, island('RESTING'));
 }
 
 /* ---- The passives ------------------------------------------------------------ */

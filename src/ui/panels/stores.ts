@@ -58,7 +58,7 @@ export class StoresPanel {
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
-    this.search.placeholder = 'What are you looking for?';
+    this.search.placeholder = 'Search stores';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -76,7 +76,7 @@ export class StoresPanel {
     this.nearBtn.type = 'button';
     this.nearBtn.className = 'tb-btn tb-small';
     this.nearBtn.textContent = `Within ${CRAFT_REACH} tiles`;
-    this.nearBtn.title = `Only the stores within ${CRAFT_REACH} tiles of you, which a craft takes from with Use stores within reach on`;
+    this.nearBtn.title = `Only stores within ${CRAFT_REACH} tiles (what crafting uses with Use stores within reach on)`;
     this.nearBtn.setAttribute('aria-pressed', 'false');
     this.nearBtn.addEventListener('click', () => {
       this.near = !this.near;
@@ -150,7 +150,7 @@ export class StoresPanel {
     if (!all.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'You have no crate, chest or cart set down. Build one and set it down, and it is listed here with what it holds and how far off it is.';
+      empty.textContent = 'No placed crate, chest or cart. Placed stores are listed here with contents and distance.';
       this.list.append(empty);
       this.footer.textContent = '';
       return;
@@ -158,8 +158,8 @@ export class StoresPanel {
     if (!shown.length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = `Nothing in ${this.near ? `the ${pool.length} stores within ${CRAFT_REACH} tiles` : `any of your ${all.length} stores`} answers to “${this.search.value.trim()}”.`
-        + `${this.game.ask && !this.near ? ` On an island a store says what is in it only while you are within ${STORE_SEEN} tiles of it.` : ''} Press Escape in the box to clear it.`;
+      empty.textContent = `No match in ${this.near ? `${pool.length} stores within ${CRAFT_REACH} tiles` : `${all.length} stores`}: “${this.search.value.trim()}”.`
+        + `${this.game.ask && !this.near ? ` Island: contents shown only within ${STORE_SEEN} tiles.` : ''} Esc clears.`;
       this.list.append(empty);
     }
     for (const h of shown.slice(0, 60)) this.list.append(this.row(h));
@@ -199,7 +199,7 @@ export class StoresPanel {
     go.type = 'button';
     go.className = 'tb-btn tb-small';
     go.textContent = d < 2.4 ? 'Open' : 'Walk there';
-    go.title = d < 2.4 ? `Open the ${h.name.toLowerCase()}` : `Walk to the ${h.name.toLowerCase()}, ${Math.round(d)} tiles off`;
+    go.title = d < 2.4 ? `Open the ${h.name.toLowerCase()}` : `Walk to the ${h.name.toLowerCase()}, ${Math.round(d)} tiles`;
     go.addEventListener('click', (e) => {
       e.stopPropagation();
       if (d < 2.4) {
@@ -208,7 +208,7 @@ export class StoresPanel {
         return;
       }
       this.game.moveTo(Math.floor(h.centre[0]), Math.floor(h.centre[1]));
-      this.game.logMsg(`Walking to the ${h.name.toLowerCase()}.`, 'info');
+      this.game.logMsg(`Walking to: ${h.name.toLowerCase()}.`, 'info');
     });
     row.append(name, what, go);
     return row;

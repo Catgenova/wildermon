@@ -295,12 +295,12 @@ begin
   delete from event where uid = u;
   perform hurt_player(w, u, 0.5, 'A killing blow', 'bite');
   insert into said values ('KILL', (select (stats->>'health') || '|' || (kill_saved_at is not null)::text from player where world_id = w and uid = u)
-    || '|' || coalesce((select text from event where uid = u and text like 'You should be dead%' order by n desc limit 1), 'nothing said')
+    || '|' || coalesce((select text from event where uid = u and text like 'Hard to Kill:%' order by n desc limit 1), 'nothing said')
     || '|' || round((path_beat(w, u)->>'hardToKill')::numeric));
   update player set stats = stats || '{"health": 0.01}'::jsonb where world_id = w and uid = u;
   delete from event where uid = u;
   perform hurt_player(w, u, 0.5, 'Another killing blow', 'bite');
-  insert into said values ('KILLAGAIN', (select count(*) from event where uid = u and text like 'You should be dead%')::text);
+  insert into said values ('KILLAGAIN', (select count(*) from event where uid = u and text like 'Hard to Kill:%')::text);
 end $b$;
 select k || '=' || v from said order by k;
 rollback;
@@ -329,7 +329,7 @@ check('and takes a pick of the third', at('TOOK') === P('ironhide').id, at('TOOK
 {
   const k = P('second_wind');
   check(`Second Wind fills the wind, for ${k.cost} Calm, resting ${k.rest} seconds`, at('WIND') === `${SECOND_WIND_SAID}|${CALM - k.cost}|${k.rest}|1`, at('WIND'));
-  check('and is refused while it rests', part('RESTING', 0) === `${k.name} can be called again in ${k.rest} seconds.`, at('RESTING'));
+  check('and is refused while it rests', part('RESTING', 0) === `${k.name}: cooldown ${k.rest} s.`, at('RESTING'));
   check('and short of Calm, in the browser\'s words', part('POOR', 0) === calmRefusal(k.name, k.cost, 2), at('POOR'));
 }
 {

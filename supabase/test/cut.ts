@@ -66,11 +66,11 @@ game.player.y = 10.5;
 w.setHeight(20, 20, 100);
 w.setHeight(21, 20, 39);
 const said = slopeRefusal(game, 'digging', 20, 20, -1) ?? '';
-const slope = Number(/slope of (\d+)/.exec(said)?.[1] ?? 0);
+const slope = Number(/Slope would be (\d+)/.exec(said)?.[1] ?? 0);
 check('the slope refusal carries its numbers',
-  /^That would leave a slope of \d+\. Your digging allows 60; it would take digging \d+\.\d\.$/.test(said), said || 'nothing said');
+  /^Slope would be \d+; digging allows 60, needs digging \d+\.\d\.$/.test(said), said || 'nothing said');
 const islandSaid = psql(
-  `select 'That would leave a slope of ' || ${slope} || '. Your digging allows 60; it would take digging '`
+  `select 'Slope would be ' || ${slope} || '; digging allows 60, needs digging '`
   + ` || to_char(slope_needs(${slope}), 'FM990.0') || '.'`);
 check('and the island builds the same sentence', said === islandSaid, `island "${islandSaid}"`);
 const islandNeeds = psql('select slope_needs(62) || \' \' || slope_needs(40) || \' \' || slope_needs(41)');
@@ -83,7 +83,7 @@ game.neighbourDeeds = [{ name: 'Hildsmoor', x: 30, y: 30, radius: 1, level: 1, h
 const dig = ACTION_BY_ID.get('dig')!;
 const pack = ACTION_BY_ID.get('pack')!;
 const cut = ACTION_BY_ID.get('cut_grass');
-const THEIRS = 'That ground is part of Hildsmoor. Only its citizens may shape it.';
+const THEIRS = 'Part of Hildsmoor: citizens only.';
 // Asked at the door, which is where the rule was hung, rather than of the rule.
 const asked = (id: string, t: unknown): string => String(ACTION_BY_ID.get(id)?.check?.(t as never, game) ?? 'nothing');
 check('a corner inside a stake of somebody else\'s is refused', asked('dig', { kind: 'tile', x: 30, y: 30, cx: 30, cy: 30 }) === THEIRS, asked('dig', { kind: 'tile', x: 30, y: 30, cx: 30, cy: 30 }));
@@ -111,7 +111,7 @@ const heights = tileCorners(13, 12).map(([cx, cy]) => w.getHeight(cx, cy)).join(
 check('flattening steps round the rock and levels the rest', heights === '103, 100, 100, 100', heights);
 const last = game.log.slice(before).filter((l) => l.kind === 'error').pop();
 check('and names the rock when nothing else will move',
-  last?.text === 'What is still standing high here is bare rock. Mine it down.', last?.text ?? 'nothing said');
+  last?.text === 'High corners are bare rock: mine them.', last?.text ?? 'nothing said');
 
 /*
  * And what a piece of furniture holds, as the island hands it over.
@@ -161,10 +161,10 @@ for (let i = 0; i < 10; i++) {
 check('ten spadefuls asked for at a bank three proud of it stop on the mark',
   dug < 10 && w.getHeight(6, 6) === 100, `${dug} goes, corner at ${w.getHeight(6, 6)}`);
 check('and the door says the corner is there',
-  asked('dig', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === 'That corner is down to the level of 100 already.',
+  asked('dig', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === 'Corner already at level 100.',
   asked('dig', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }));
 check('and will not have it back either',
-  asked('drop_dirt', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === 'That corner is up to the level of 100 already.',
+  asked('drop_dirt', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }) === 'Corner already at level 100.',
   asked('drop_dirt', { kind: 'tile', x: 6, y: 6, cx: 6, cy: 6 }));
 ACTION_BY_ID.get('clear_level')!.perform({ kind: 'tile', x: 5, y: 5 } as never, game);
 check('and putting the level away clears it', game.level === null, String(game.level));

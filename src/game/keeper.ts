@@ -54,7 +54,7 @@ export const muteLabel = (secs: number | null): string => (secs === null ? 'Unti
 
 /** What a mute of that length does, for the note under its row. */
 export const muteNote = (secs: number | null): string =>
-  secs === null ? 'Lasts until you or another keeper lifts it' : `Lifts by itself after ${awayFor(secs)}`;
+  secs === null ? 'Until you or another keeper lifts it' : `Lifts after ${awayFor(secs)}`;
 
 /** How long ago the island last heard from somebody. */
 export const heardLine = (secs: number): string =>

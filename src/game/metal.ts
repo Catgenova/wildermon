@@ -99,7 +99,7 @@ export const PRECIOUS_METALS = ['silver', 'gold'];
  */
 export const COIN_QL_WEIGHT = 0.5;
 /** What the anvil says to a lump coins are not struck from. */
-export const COIN_REFUSAL = `Coins are struck from ${COIN_METALS.join(' or ')} alone.`;
+export const COIN_REFUSAL = `Coins: ${COIN_METALS.join(' or ')} only.`;
 export const coinPurity = (ql: number): number => 1 - COIN_QL_WEIGHT * (1 - Math.min(100, Math.max(0, ql)) / 100);
 /**
  * Nails: five to a filling of the nail mould, asked for, down from a hundred.

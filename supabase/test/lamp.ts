@@ -122,7 +122,7 @@ for (let x = LX - 1; x <= LX + 1; x++) for (let y = Y - 2; y <= Y + 1; y++) game
 const mineDo = (id: string, extra: Record<string, unknown> = {}): string => {
   game.log.length = 0;
   ACTION_BY_ID.get(id)?.perform?.(target(extra) as never, game);
-  return game.log.map((l) => l.text).find((t) => t.startsWith('You ')) ?? 'NOTHING SAID';
+  return game.log.find((l) => l.kind === 'event')?.text ?? 'NOTHING SAID';
 };
 
 /* ---- and on the island ------------------------------------------------------- */
@@ -280,7 +280,7 @@ const said = (key: string): string => out.split('\n').find((l) => l.startsWith(`
 same('before a lantern is in there is nothing to take down', mineCheck('take_lamp'), said('NONE_TAKE'), LAMP_NONE);
 same('nothing to put a candle in', mineCheck('candle_lamp'), said('NONE_CANDLE'), LAMP_NONE);
 same('nothing to light', mineCheck('light_lamp'), said('NONE_LIGHT'), LAMP_NONE);
-same('and nothing to put out', mineCheck('douse_lamp'), said('NONE_DOUSE'), 'It is not lit.');
+same('and nothing to put out', mineCheck('douse_lamp'), said('NONE_DOUSE'), 'Not lit.');
 
 same('the lantern goes in', mineCheck('fit_lamp'), said('FIT_CHECK'), null);
 same('said the same way on both sides', mineDo('fit_lamp'), said('FIT_SAID'));
@@ -288,16 +288,16 @@ check('and it is in the post, out of the pack, dark, with no candle, on both sid
   `${lamp.lamp?.ql},${lamp.fuel},${!!lamp.lit},${game.inventory.get(lantern.uid) ? 1 : 0}` === said('FIT_STATE'),
   `browser ${lamp.lamp?.ql},${lamp.fuel},${!!lamp.lit}, island ${said('FIT_STATE')}`);
 same('and not a second', mineCheck('fit_lamp'), said('FIT_AGAIN'), LAMP_HAS_ONE);
-same('it will not light without a candle', mineCheck('light_lamp'), said('LIGHT_DRY'), 'There is no candle in it.');
+same('it will not light without a candle', mineCheck('light_lamp'), said('LIGHT_DRY'), 'No candle in it.');
 
 same('a candle goes in, and burns what it would in that lantern in the hand', mineDo('candle_lamp'), said('CANDLE_SAID'));
 check('which is the lantern\'s own candle', lamp.fuel === Math.round(candleBurn(60)), `${lamp.fuel} against ${Math.round(candleBurn(60))}`);
-same('and not a second while it lasts', mineCheck('candle_lamp'), said('CANDLE_AGAIN'), 'There is still a candle in it.');
+same('and not a second while it lasts', mineCheck('candle_lamp'), said('CANDLE_AGAIN'), 'Candle still in it.');
 same('a post is not lifted with its lantern in it', ACTION_BY_ID.get('pick_up_furniture')?.check?.(target() as never, game) ?? null, said('LIFT'), LAMP_TAKE_FIRST);
 
 same('it is lit off the torch in hand', mineCheck('light_lamp'), said('LIGHT_CHECK'), null);
 same('said the same way on both sides', mineDo('light_lamp'), said('LIGHT_SAID'));
-same('and not lit twice', mineCheck('light_lamp'), said('LIGHT_AGAIN'), 'It is already lit.');
+same('and not lit twice', mineCheck('light_lamp'), said('LIGHT_AGAIN'), 'Already lit.');
 check('alight, with the whole candle in it, on both sides', `${Math.round(lamp.fuel ?? 0)},${!!lamp.lit}` === said('LIT_STATE'),
   `browser ${Math.round(lamp.fuel ?? 0)},${!!lamp.lit}, island ${said('LIT_STATE')}`);
 
@@ -312,12 +312,12 @@ check('alight, with the whole candle in it, on both sides', `${Math.round(lamp.f
   const keyed = asked();
   game.inventory.remove(key.uid, 1);
   delete lamp.lock;
-  const shut = 'It is locked, and you have no key to it.';
+  const shut = 'Locked: no key.';
   check('padlocked, without its key nothing is taken down, put out, given a candle, fitted or lifted, and the lock is what is said; a light is anybody\'s to strike, on both sides',
-    locked === said('LOCK') && locked === [shut, shut, shut, shut, 'It is already lit.', shut].join(';'),
+    locked === said('LOCK') && locked === [shut, shut, shut, shut, 'Already lit.', shut].join(';'),
     `browser ${locked}\n       island  ${said('LOCK')}`);
   check('and with the key, all of it, the post still not lifted with its lantern in, on both sides',
-    keyed === said('KEY') && keyed === ['ALLOWED', 'ALLOWED', 'There is still a candle in it.', LAMP_HAS_ONE, 'It is already lit.', LAMP_TAKE_FIRST].join(';'),
+    keyed === said('KEY') && keyed === ['ALLOWED', 'ALLOWED', 'Candle still in it.', LAMP_HAS_ONE, 'Already lit.', LAMP_TAKE_FIRST].join(';'),
     `browser ${keyed}\n       island  ${said('KEY')}`);
 }
 {
@@ -370,14 +370,14 @@ game.log.length = 0;
 burnLamps(game, 5000, true);
 check('an hour and more on, the candle is burned down and it is dark, on both sides',
   `${Math.round(lamp.fuel ?? 0)},${!!lamp.lit}` === said('BURNT') && said('BURNT') === '0,false', `browser ${Math.round(lamp.fuel ?? 0)},${!!lamp.lit}, island ${said('BURNT')}`);
-check('and the browser says so', game.log.some((l) => l.text === 'The candle gutters out and the lantern on the lantern post goes dark.'), game.log.map((l) => l.text).join(' | '));
-same('there is nothing to put out', mineCheck('douse_lamp'), said('BURNT_DOUSE'), 'It is not lit.');
-same('nor anything to light', mineCheck('light_lamp'), said('BURNT_LIGHT'), 'There is no candle in it.');
+check('and the browser says so', game.log.some((l) => l.text === 'Candle burnt out: the lantern on the lantern post.'), game.log.map((l) => l.text).join(' | '));
+same('there is nothing to put out', mineCheck('douse_lamp'), said('BURNT_DOUSE'), 'Not lit.');
+same('nor anything to light', mineCheck('light_lamp'), said('BURNT_LIGHT'), 'No candle in it.');
 {
   const left = game.inventory.find('candle');
   if (left) game.inventory.remove(left.uid, left.count);
   same('with no candle in the pack either, it says what candles are made of, off their recipe', mineCheck('candle_lamp'), said('NO_CANDLE'), noCandleLine());
-  check('which is what the carried lantern says', noCandleLine() === 'You have no candles. Two are drawn from two beeswax and a yarn.', noCandleLine());
+  check('which is what the carried lantern says', noCandleLine() === 'Need a candle: 2 made from 2 beeswax and a yarn.', noCandleLine());
   game.inventory.add('candle', { count: 1, ql: 30 });
 }
 
@@ -388,7 +388,7 @@ check('a brazier and a lantern post among them', /brazier/.test(noFlameLine()) &
 torch.lit = true;
 mineDo('light_lamp');
 same('a second candle, lit and put out: what was saved is said the same way', mineDo('douse_lamp'), said('DOUSE_SAID'));
-same('and what is left of that candle is still a candle: not another on top of it', mineCheck('candle_lamp'), said('STILL_IN'), 'There is still a candle in it.');
+same('and what is left of that candle is still a candle: not another on top of it', mineCheck('candle_lamp'), said('STILL_IN'), 'Candle still in it.');
 
 same('taken down', mineDo('take_lamp'), said('TAKE_SAID'));
 const back = game.inventory.items.find((it) => it.id === 'lantern');

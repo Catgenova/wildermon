@@ -322,7 +322,7 @@ begin
   insert into said values ('lift', coalesce(act_refusal(w, me, 'lift_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
   perform act_perform(w, me, 'lift_stones', '{"kind":"tile","x":3,"y":44}');
   insert into said values ('lifted', land_tile(w, 3, 44) || ',' || land_data(w, 3, 44) || ',' || pack_count(w, me, 'marble_slab'));
-  insert into said values ('liftold', (select regexp_replace(text, ' \\(QL [0-9.]+\\)', '') from event where world_id = w and uid = me order by n desc limit 1));
+  insert into said values ('liftold', (select regexp_replace(text, ', QL [0-9.]+\\.', '.') from event where world_id = w and uid = me order by n desc limit 1));
   insert into said values ('none', coalesce(act_refusal(w, me, 'lift_stones', '{"kind":"tile","x":3,"y":44}'), 'none'));
 end $b$;
 select string_agg(k || '=' || coalesce(v, 'null'), E'\\n' order by k) from said;
@@ -397,7 +397,7 @@ rollback;`);
   const none = lift.check?.(tile(3, 44), g) ?? 'none';
   say(liftOk === said.get('lift') && lifted === said.get('lifted') && none === said.get('none') && Number(lifted.split(',')[0]) === TileType.Sand,
     `taken up, the tile is the sand it was and the slab is back in the pack on both sides (${lifted}); asked again: "${none}"`);
-  say(told[told.length - 1].replace(/ \(QL [0-9.]+\)/, '') === said.get('liftold'), `in the same words: "${said.get('liftold')}"`);
+  say(told[told.length - 1].replace(/, QL [0-9.]+\./, '.') === said.get('liftold'), `in the same words: "${said.get('liftold')}"`);
 }
 
 /* ---- Water lilies and lotus, through the doors, in every season ----------------------------------- */

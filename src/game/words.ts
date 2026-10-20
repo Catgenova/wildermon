@@ -114,14 +114,6 @@ export function times(m: number): string {
   return `${Number(m.toFixed(1))} times`;
 }
 
-/** Minutes in words, with the quarters of an hour said the way they are said. */
-const minutes = (m: number): string => {
-  if (m === 15) return 'a quarter of an hour';
-  if (m === 30) return 'half an hour';
-  if (m === 45) return 'three quarters of an hour';
-  return `${numberWord(m)} minute${m === 1 ? '' : 's'}`;
-};
-
 /**
  * A stretch of time in words, from the seconds a rule is written in: 720 is
  * "twelve minutes", 150 "two and a half minutes", 1800 "half an hour", 4500
@@ -131,25 +123,18 @@ const minutes = (m: number): string => {
  */
 export function spanWords(seconds: number): string {
   const s = Math.round(seconds);
-  if (s < 90) return `${numberWord(s)} second${s === 1 ? '' : 's'}`;
-  // Under ten minutes a half minute is worth saying: "two and a half minutes".
-  if (s < 600 && s % 60 === 30) return s === 90 ? 'a minute and a half' : `${numberWord((s - 30) / 60)} and a half minutes`;
+  const unit = (n: number, one: string): string => `${n} ${one}${n === 1 ? '' : 's'}`;
+  if (s < 90) return unit(s, 'second');
+  // Under ten minutes a half minute is worth saying: "2.5 minutes".
+  if (s < 600 && s % 60 === 30) return `${s / 60} minutes`;
   const m = Math.round(s / 60);
-  if (m < 60) return minutes(m);
-  if (m % 60 === 0 || m >= 120) {
-    const q = Math.round(m / 15);
-    const h = Math.floor(q / 4);
-    const part = ['', 'a quarter', 'a half', 'three quarters'][q % 4];
-    if (!part) {
-      if (h >= 24 && h % 24 === 0) return h === 24 ? 'a day' : `${numberWord(h / 24)} days`;
-      return h === 1 ? 'an hour' : `${numberWord(h)} hours`;
-    }
-    return h === 1 ? `an hour and ${part}` : `${numberWord(h)} and ${part} hours`;
-  }
-  // Between one and two hours, to the minute where it is not a quarter.
-  const past = m - 60;
-  if (past % 15 === 0) return `an hour and ${past === 30 ? 'a half' : past === 15 ? 'a quarter' : 'three quarters'}`;
-  return `an hour and ${minutes(past)}`;
+  if (m < 60) return unit(m, 'minute');
+  // Past two hours, to the nearest quarter of an hour.
+  const q = m >= 120 ? Math.round(m / 15) * 15 : m;
+  const h = Math.floor(q / 60);
+  const rest = q % 60;
+  if (!rest && h >= 24 && h % 24 === 0) return unit(h / 24, 'day');
+  return rest ? `${unit(h, 'hour')} ${unit(rest, 'minute')}` : unit(h, 'hour');
 }
 
 /**

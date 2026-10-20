@@ -232,41 +232,41 @@ const SINGLE = { x: 19, y: 25, material: 'plank', floorKind: 'stairs', side: 'w'
 /* ---- refused ----------------------------------------------------------------- */
 same('a staircase not beside the building is no job of the building', 'plan_floor', { ...STAIR, y: 27 }, 'No building here.');
 same('one with its head turned away from the building is told to turn it', 'plan_floor', { ...STAIR, side: 'n' },
-  'Its head goes against Hall and its foot out on the ground: turn it to climb toward the building.');
+  'Must climb toward Hall: turn it.');
 same('nor turned along the wall', 'plan_floor', { ...STAIR, side: 'e' },
-  'Its head goes against Hall and its foot out on the ground: turn it to climb toward the building.');
+  'Must climb toward Hall: turn it.');
 same('one asked for on the ground floor is told the storey it climbs to', 'plan_floor', { ...STAIR, level: 0 },
-  `An outside staircase climbs from the ground to storey ${STOREY}: work on storey ${STOREY} to plan one.`);
+  `Outside staircase: ground to storey ${STOREY}. Switch to storey ${STOREY}.`);
 setLevels(1, 3, 2);
 same('and one asked for on storey 3 the same', 'plan_floor', { ...STAIR, level: 2 },
-  `An outside staircase climbs from the ground to storey ${STOREY}: work on storey ${STOREY} to plan one.`);
+  `Outside staircase: ground to storey ${STOREY}. Switch to storey ${STOREY}.`);
 setLevels(1, 1, 0);
 same('a building of one storey is told to plan the storey it climbs to', 'plan_floor', STAIR,
-  `An outside staircase climbs from the ground to storey ${STOREY}: plan storey ${STOREY} of Hall first.`);
+  `Outside staircase: ground to storey ${STOREY}. Plan Hall storey ${STOREY} first.`);
 setLevels(1, 2, 1);
 same('a ladder still goes inside the footprint', 'plan_floor', { ...STAIR, floorKind: 'ladder' },
-  'A ladder goes inside the footprint, not out on a jetty.');
+  'Ladders: inside the footprint only, not on a jetty.');
 same('a staircase on the footprint of a building of one storey beside it is that building\'s, and refused as its', 'plan_floor',
-  { ...STAIR, x: 22, y: 25, side: 'e' }, 'Stairs and ladders belong to an upper storey; plan another storey first.');
+  { ...STAIR, x: 22, y: 25, side: 'e' }, 'Stairs and ladders need an upper storey: plan one first.');
 setCorner(19, 25, -2);
 same('it stands on dry ground, not in water', 'plan_floor', { ...STAIR, x: 19, y: 25, side: 'w' },
-  'An outside staircase stands on dry ground, not in water.');
+  'Not in water.');
 setCorner(19, 25, BASE);
 setTile(20, 26, TileType.Tree, 'Tree');
-same('nor on a tree', 'plan_floor', STAIR, 'An outside staircase stands on open ground: clear the tree or the bush from it first.');
+same('nor on a tree', 'plan_floor', STAIR, 'Needs open ground: clear the tree or bush first.');
 setTile(20, 26, TileType.Grass, 'Grass');
 setCorner(21, 27, BASE + 3);
 same('nor on ground that rises above the floor its head is level with the bottom of', 'plan_floor', STAIR,
-  `The ground under it rises above the floor of storey ${OUTSIDE_STAIR_LEVEL}: dig it down first.`);
+  `Ground under it above storey ${OUTSIDE_STAIR_LEVEL} floor: dig it down first.`);
 setCorner(21, 27, BASE);
 
 /* ---- planned ----------------------------------------------------------------- */
 same('turned to climb toward the building, on open ground beside it, it is allowed on both sides', 'plan_floor', STAIR, 'ALLOWED');
 same('a single one beside it as well', 'plan_floor', SINGLE, 'ALLOWED');
 {
-  const [mine, theirs] = both('plan_floor', STAIR, 'You plan');
-  check('planned, both sides say the same', mine === theirs && mine.startsWith('You plan a plank staircase.'), `browser "${mine}", island "${theirs}"`);
-  const [mineS, theirsS] = both('plan_floor', SINGLE, 'You plan');
+  const [mine, theirs] = both('plan_floor', STAIR, 'Planned: ');
+  check('planned, both sides say the same', mine === theirs && mine.startsWith('Planned: plank staircase.'), `browser "${mine}", island "${theirs}"`);
+  const [mineS, theirsS] = both('plan_floor', SINGLE, 'Planned: ');
   check('and of the single one', mineS === theirsS && mineS.includes('single staircase'), `browser "${mineS}", island "${theirsS}"`);
 }
 {
@@ -282,11 +282,11 @@ same('a single one beside it as well', 'plan_floor', SINGLE, 'ALLOWED');
   check('and the single one, west of it and climbed from the west, with its hand and the bill of a single staircase',
     mineS === theirsS && mineS === want('w', 'l'), `browser ${mineS}; island ${theirsS}; a single staircase anywhere ${want('w', 'l')}`);
 }
-same('planned again over itself, it is already there', 'plan_floor', STAIR, 'There is already a floor planned here.');
+same('planned again over itself, it is already there', 'plan_floor', STAIR, 'Floor already planned here.');
 same('a jetty floor on its tile is refused the same way', 'plan_floor', { x: 20, y: 26, material: 'plank', floorKind: 'floor', buildingId: 1 },
-  'There is already a floor planned here.');
+  'Floor already planned here.');
 same('nothing is planned on its tile while it stands', 'plan_building', { x: 20, y: 26, name: 'Lean-to' },
-  'Hall\'s outside staircase stands on that tile.');
+  'Hall outside staircase on that tile.');
 
 /* ---- no part of the storey ------------------------------------------------- */
 {
@@ -303,7 +303,7 @@ same('nothing is planned on its tile while it stands', 'plan_building', { x: 20,
   const gap2 = gapText(hall.levels, bld.levelGaps(hall, OUTSIDE_STAIR_LEVEL, 20.5, 27.5)) ?? 'CLOSED';
   const gap2Theirs = psql(`select coalesce(level_gap(${W}, 1, ${OUTSIDE_STAIR_LEVEL}, 20.5::double precision, 27.5::double precision), 'CLOSED');`);
   check('and the one side it asks a wall on is the building\'s own, not the staircase\'s',
-    gap2 === gap2Theirs && gap2 === 'Storey 2 is not closed in: 1 side with no wall or columns, nearest the south side of 20,25.',
+    gap2 === gap2Theirs && gap2 === 'Storey 2 not enclosed: 1 side with no wall or columns, nearest the south side of 20,25.',
     `browser "${gap2}", island "${gap2Theirs}"`);
   const room = bld.room(OUTSIDE_STAIR_LEVEL, 20, 25)?.tiles.sort().join(' ') ?? 'NONE';
   const roomTheirs = psql(`select string_agg(x || ',' || y, ' ' order by x || ',' || y) from room_tiles(${W}, ${OUTSIDE_STAIR_LEVEL}, 20, 25);`);
@@ -349,11 +349,11 @@ same('nothing is planned on its tile while it stands', 'plan_building', { x: 20,
 {
   const mine = frameSays(game, 20, 26).trim();
   const theirs = psql(`select trim(frame_says(${W}, 20, 26));`);
-  const want = `On it is an outside staircase up to Hall's storey ${STOREY}, climbed from the south.`;
+  const want = `Outside staircase: up to Hall storey ${STOREY}, climbed from the south.`;
   check('Examine says what it is, the same on both sides', mine === want && theirs === want, `browser "${mine}", island "${theirs}"`);
   const single = frameSays(game, 19, 25).trim();
   const singleTheirs = psql(`select trim(frame_says(${W}, 19, 25));`);
-  check('and of one still planned', single === singleTheirs && single === `An outside staircase up to Hall's storey ${STOREY} is planned on it.`,
+  check('and of one still planned', single === singleTheirs && single === `Outside staircase planned: up to Hall storey ${STOREY}.`,
     `browser "${single}", island "${singleTheirs}"`);
 }
 
@@ -392,7 +392,7 @@ const move = (x0: number, y0: number, l0: number, x1: number, y1: number, level:
 
 /* ---- taken out --------------------------------------------------------------- */
 {
-  const [mine, theirs] = both('remove_floor', { x: 19, y: 25, buildingId: 1, level: OUTSIDE_STAIR_LEVEL, floorKind: 'stairs' }, 'You');
+  const [mine, theirs] = both('remove_floor', { x: 19, y: 25, buildingId: 1, level: OUTSIDE_STAIR_LEVEL, floorKind: 'stairs' }, 'Removed: ');
   const [rowMine, rowTheirs] = rowOf(19, 25);
   check('the single one taken out as any staircase is, in the same words, and gone on both sides',
     mine === theirs && mine !== 'NOTHING SAID' && rowMine === 'NONE' && rowTheirs === 'NONE', `browser "${mine}", island "${theirs}"`);
@@ -404,7 +404,7 @@ const move = (x0: number, y0: number, l0: number, x1: number, y1: number, level:
 /* ---- a jetty floor still as it was ------------------------------------------ */
 same('a jetty floor on the west wall is planned as before', 'plan_floor', { x: 19, y: 25, material: 'plank', floorKind: 'floor', buildingId: 1 }, 'ALLOWED');
 same('and too heavy a material for its walls refused as before', 'plan_floor', { x: 21, y: 24, material: 'marble', floorKind: 'floor', buildingId: 1 },
-  'Marble is too heavy to lay out past the walls. The walls under it carry timber, no more.');
+  'Marble too heavy past the walls: they carry timber at most.');
 
 /* ---- put the ground back -------------------------------------------------- */
 {

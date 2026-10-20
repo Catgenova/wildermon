@@ -19,7 +19,7 @@ import type { Game } from './game';
 import { waterDepth } from './fishing';
 import { describeFrom, itemDef } from './items';
 import { SWIM_DEPTH } from './player';
-import { listed, numberWord, spanWords } from './words';
+import { capital, spanWords } from './words';
 import { SLAB_BY_ITEM, SLAB_VARIANTS, STONE_BEDS, TileType, stonesBed, stonesData, stonesKind } from '../world/tiles';
 import {
   WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_PLANTS, WATER_ROOTING, waterPlantState,
@@ -53,19 +53,19 @@ const plantOn = (g: Game, x: number, y: number): WaterPlant | undefined => g.wat
 export function stonesRefusal(g: Game, x: number, y: number): string | null {
   const w = g.world;
   if (!w.inBounds(x, y)) return 'There is nothing there.';
-  if (g.buildings.buildingAt(x, y)) return 'You cannot do that inside a building.';
-  if (g.slabAt(x, y)) return 'Stepping stones stand on the bottom of the water, not on a poured slab.';
+  if (g.buildings.buildingAt(x, y)) return 'Not inside a building.';
+  if (g.slabAt(x, y)) return 'Not on a poured slab.';
   const t = w.getTile(x, y);
-  if (t === TileType.SteppingStones) return 'Stepping stones are laid here already.';
+  if (t === TileType.SteppingStones) return 'Stepping stones already here.';
   if (!w.hasWater(x, y) && !(w.water?.runsOver(x, y) ?? false)) {
-    return 'Stepping stones are laid across water: the edge of the sea, a pond, or where a stream runs.';
+    return 'Stepping stones go in water: sea edge, pond or stream.';
   }
   if (waterDepth(g, x, y) > STONES_DEPTH) {
-    return `The water here is too deep. A stepping stone stands on the bottom only where it is ${metres(STONES_DEPTH)} m deep or less.`;
+    return `Too deep: stepping stones need water ${metres(STONES_DEPTH)} m deep or less.`;
   }
-  if (!STONE_BEDS.has(t)) return 'Stepping stones go on bare ground or what grows flat on it. Clear what stands or is laid here first.';
+  if (!STONE_BEDS.has(t)) return 'Stepping stones need bare ground or flat growth: clear the tile first.';
   const p = plantOn(g, x, y);
-  if (p) return `A ${WATER_PLANT_BY_ID.get(p.kind)?.name.toLowerCase() ?? 'water plant'} grows here. Pull it up first.`;
+  if (p) return `Pull up the ${WATER_PLANT_BY_ID.get(p.kind)?.name.toLowerCase() ?? 'water plant'} first.`;
   return null;
 }
 
@@ -86,36 +86,36 @@ export function plantRefusal(g: Game, def: WaterPlantDef, x: number, y: number):
   const w = g.world;
   const name = def.name.toLowerCase();
   if (!w.inBounds(x, y)) return 'There is nothing there.';
-  if (g.buildings.buildingAt(x, y)) return 'You cannot do that inside a building.';
-  if (!w.hasWater(x, y)) return `A ${name} is planted in still water: a pond, a pool or the shallows of the sea.`;
-  if (w.water?.runsOver(x, y)) return `The water runs here. A ${name} takes root only in still water.`;
+  if (g.buildings.buildingAt(x, y)) return 'Not inside a building.';
+  if (!w.hasWater(x, y)) return `${capital(name)}: needs still water (pond, pool or sea shallows).`;
+  if (w.water?.runsOver(x, y)) return `${capital(name)}: needs still water, not running.`;
   const depth = waterDepth(g, x, y);
   if (depth < WATER_PLANT_SHALLOWEST || depth > WATER_PLANT_DEEPEST) {
-    return `A ${name} takes root where the water is ${metres(WATER_PLANT_SHALLOWEST)} to ${metres(WATER_PLANT_DEEPEST)} m deep.`;
+    return `${capital(name)}: needs water ${metres(WATER_PLANT_SHALLOWEST)} to ${metres(WATER_PLANT_DEEPEST)} m deep.`;
   }
-  if (w.stonesAt(x, y)) return 'Stepping stones are laid here.';
+  if (w.stonesAt(x, y)) return 'Stepping stones here.';
   const p = plantOn(g, x, y);
-  if (p) return `A ${WATER_PLANT_BY_ID.get(p.kind)?.name.toLowerCase() ?? 'water plant'} grows here already.`;
+  if (p) return `Already planted: ${WATER_PLANT_BY_ID.get(p.kind)?.name.toLowerCase() ?? 'water plant'}.`;
   return null;
 }
 
 /** What a water plant does in the year, in so many words: "flowers in spring and summer" -- off its own seasons. */
 export function yearSays(def: WaterPlantDef): string {
-  const parts = [`flowers in ${listed([...def.flowers])}`];
-  if (def.seeds.length) parts.push(`carries its seed heads in ${listed([...def.seeds])}`);
-  return listed(parts);
+  const parts = [`flowers: ${def.flowers.join(', ')}`];
+  if (def.seeds.length) parts.push(`seed heads: ${def.seeds.join(', ')}`);
+  return parts.join('; ');
 }
 
 /** Why a water plant's flower or seed head cannot be picked now, or null. */
 export function pickRefusal(g: Game, x: number, y: number, now: number): string | null {
   const p = plantOn(g, x, y);
   const def = p && WATER_PLANT_BY_ID.get(p.kind);
-  if (!p || !def) return 'Nothing is planted here.';
-  if (!g.world.hasWater(x, y)) return 'Its water is gone. It lies in the mud until the water comes back.';
+  if (!p || !def) return 'Nothing planted here.';
+  if (!g.world.hasWater(x, y)) return 'No water: dormant until it returns.';
   const s = waterPlantState(def, p.at, p.picked, now);
-  if (!s.rooted) return `It has not rooted yet. A ${def.name.toLowerCase()} roots ${spanWords(WATER_ROOTING)} after it is planted.`;
-  if (!s.bears) return `A ${def.name.toLowerCase()} ${yearSays(def)}, and it is ${s.season} now.`;
-  if (!s.ripe) return `Its ${s.bears === 'seed' ? 'seed head was' : 'flower was'} picked this ${s.season}. There is no other until the season turns.`;
+  if (!s.rooted) return `Not rooted yet: roots ${spanWords(WATER_ROOTING)} after planting.`;
+  if (!s.bears) return `${def.name}: ${yearSays(def)}. Now: ${s.season}.`;
+  if (!s.ripe) return `${s.bears === 'seed' ? 'Seed head' : 'Flower'} already picked this ${s.season}. Next one next season.`;
   return null;
 }
 
@@ -128,14 +128,14 @@ export function describeWaterPlant(g: Game, p: WaterPlant, now: number): string 
   const def = WATER_PLANT_BY_ID.get(p.kind);
   if (!def) return '';
   const name = def.name;
-  if (!g.world.hasWater(p.x, p.y)) return `${name}, lying in the mud: its water is gone.`;
+  if (!g.world.hasWater(p.x, p.y)) return `${name}: no water, dormant.`;
   const s = waterPlantState(def, p.at, p.picked, now);
-  if (!s.leaves) return `${name}: only its root, under the water, until its leaves come up in ${def.leaves[0]}.`;
-  if (!s.rooted) return `${name}, rooting: it roots in ${spanWords(Math.max(1, p.at + WATER_ROOTING - now))}, and then ${yearSays(def)}.`;
+  if (!s.leaves) return `${name}: root only, leaves in ${def.leaves[0]}.`;
+  if (!s.rooted) return `${name}: rooting, ${spanWords(Math.max(1, p.at + WATER_ROOTING - now))} left. Then ${yearSays(def)}.`;
   const what = s.bears === 'seed' ? 'seed head' : 'flower';
-  if (s.bears && s.ripe) return `${name} in ${s.bears === 'seed' ? 'seed' : 'flower'}: pick its ${what}.`;
-  if (s.bears) return `${name}: its ${what} was picked this ${s.season}, and there is no other until the season turns.`;
-  return `${name} in leaf: it ${yearSays(def)}.`;
+  if (s.bears && s.ripe) return `${name}: in ${s.bears === 'seed' ? 'seed' : 'flower'}, ready to pick.`;
+  if (s.bears) return `${name}: ${what} picked this ${s.season}. Next one next season.`;
+  return `${name}: in leaf. ${capital(yearSays(def))}.`;
 }
 
 /**
@@ -161,7 +161,7 @@ const planting = {
   rooting: spanWords(WATER_ROOTING),
 };
 describeFrom('lily_root', { ...planting, year: yearSays(lily) });
-describeFrom('lotus_seed', { ...planting, year: yearSays(lotus), seeds: numberWord(lotus.seedCount ?? 0) });
+describeFrom('lotus_seed', { ...planting, year: yearSays(lotus), seeds: String(lotus.seedCount ?? 0) });
 
 /* ---- The actions --------------------------------------------------------------------------------- */
 
@@ -184,9 +184,9 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       if (!at) return null;
       const why = stonesRefusal(g, at[0], at[1]);
       if (why) return why;
-      if (!g.inventory.has('trowel')) return 'You need a trowel to set a stone.';
+      if (!g.inventory.has('trowel')) return 'Need a trowel.';
       const slab = slabFor(g, t);
-      if (!slab || !SLAB_BY_ITEM.has(slab.id)) return 'You need a cut slab to break into stepping stones.';
+      if (!slab || !SLAB_BY_ITEM.has(slab.id)) return 'Need a cut stone slab.';
       return null;
     },
     perform: (t, g) => {
@@ -196,13 +196,13 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       if (!at || !slab || kind === undefined) return;
       if (!g.sureCheck('lay_stones', 'masonry', STONES_DIFFICULTY, slab.ql)) {
         g.missed();
-        g.logMsg('The stone rocks on the bottom however you set it. You leave it for now.', 'event');
+        g.logMsg('Stepping stones failed: slab kept.', 'event');
         return;
       }
       if (!g.inventory.remove(slab.uid, STONES_SLABS)) return;
       const [x, y] = at;
       g.world.setTile(x, y, TileType.SteppingStones, stonesData(kind, g.world.getTile(x, y)));
-      g.logMsg(`You break the ${itemDef(slab.id).name.toLowerCase()} into flat stones and set them on the bottom, a stride apart.`, 'event');
+      g.logMsg(`Stepping stones laid: ${itemDef(slab.id).name.toLowerCase()} used.`, 'event');
     },
   },
   {
@@ -216,8 +216,8 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const at = tileOf(t);
       if (!at) return null;
-      if (!g.world.stonesAt(at[0], at[1])) return 'There are no stepping stones here.';
-      return g.buildings.buildingAt(at[0], at[1]) ? 'You cannot do that inside a building.' : null;
+      if (!g.world.stonesAt(at[0], at[1])) return 'No stepping stones here.';
+      return g.buildings.buildingAt(at[0], at[1]) ? 'Not inside a building.' : null;
     },
     perform: (t, g) => {
       const at = tileOf(t);
@@ -229,7 +229,7 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       // The bed goes back as it was: a rock one showing its own rock again.
       g.world.setTile(x, y, bed, bed === TileType.Rock ? g.world.rockKind(x, y) : 0);
       const back = g.gather(stone.item, { ql: g.productQl('masonry'), count: STONES_SLABS });
-      g.logMsg(`You lift the stones out of the water, a ${itemDef(stone.item).name.toLowerCase()}'s worth. (QL ${back.ql.toFixed(1)})`, 'event');
+      g.logMsg(`Stepping stones removed. Got: ${itemDef(stone.item).name.toLowerCase()}, QL ${back.ql.toFixed(1)}.`, 'event');
     },
   },
   ...WATER_PLANTS.map((def): ActionDef => ({
@@ -244,13 +244,13 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const at = tileOf(t);
       if (!at) return null;
-      return plantRefusal(g, def, at[0], at[1]) ?? (g.inventory.has(def.from) ? null : `You have no ${itemDef(def.from).name.toLowerCase()} to plant.`);
+      return plantRefusal(g, def, at[0], at[1]) ?? (g.inventory.has(def.from) ? null : `Need ${itemDef(def.from).name.toLowerCase()}.`);
     },
     perform: (t, g) => {
       const at = tileOf(t);
       if (!at || !g.inventory.consume(def.from)) return;
       g.plantWater(at[0], at[1], def.id, g.wallNow());
-      g.logMsg(`You press the ${itemDef(def.from).name.toLowerCase()} into the mud under the water. It will root in ${spanWords(WATER_ROOTING)}.`, 'event');
+      g.logMsg(`Planted: ${itemDef(def.from).name.toLowerCase()}. Roots in ${spanWords(WATER_ROOTING)}.`, 'event');
     },
   })),
   {
@@ -281,10 +281,10 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       const ql = g.productQl('botanizing');
       if (s.bears === 'seed' && def.seed) {
         const got = g.gather(def.seed, { ql, count: def.seedCount ?? 1 });
-        g.logMsg(`You break the ${def.name.toLowerCase()} seed head open: ${numberWord(def.seedCount ?? 1)} ${itemDef(def.seed).name.toLowerCase()}. (QL ${got.ql.toFixed(1)})`, 'event');
+        g.logMsg(`Picked: ${def.name.toLowerCase()} seed head. Got ${def.seedCount ?? 1} ${itemDef(def.seed).name.toLowerCase()}, QL ${got.ql.toFixed(1)}.`, 'event');
       } else {
         const got = g.gather(def.flower, { ql });
-        g.logMsg(`You pick a ${itemDef(def.flower).name.toLowerCase()}. (QL ${got.ql.toFixed(1)})`, 'event');
+        g.logMsg(`Picked: ${itemDef(def.flower).name.toLowerCase()}, QL ${got.ql.toFixed(1)}.`, 'event');
       }
       g.events.emit('world', t.x, t.y);
     },
@@ -302,7 +302,7 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
     baseTime: 3,
     range: 2,
     applies: (t, g) => t.kind === 'tile' && !!g.waterPlantAt(t.x, t.y),
-    check: (t, g) => (t.kind === 'tile' && !g.waterPlantAt(t.x, t.y) ? 'Nothing is planted here.' : null),
+    check: (t, g) => (t.kind === 'tile' && !g.waterPlantAt(t.x, t.y) ? 'Nothing planted here.' : null),
     perform: (t, g) => {
       if (t.kind !== 'tile') return;
       const p = g.waterPlantAt(t.x, t.y);
@@ -310,7 +310,7 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       if (!p || !def) return;
       g.pullWater(t.x, t.y);
       g.inventory.add(def.from, { ql: g.productQl('botanizing') });
-      g.logMsg(`You pull up the ${def.name.toLowerCase()}, root and all.`, 'event');
+      g.logMsg(`Pulled up: ${def.name.toLowerCase()}.`, 'event');
     },
   },
 ];

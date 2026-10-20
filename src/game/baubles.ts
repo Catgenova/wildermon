@@ -4,8 +4,8 @@ import type { Deed, Game } from './game';
 import { deedMay, lacks } from './ranks';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import { describeWith, itemName, rarityOf, rarityStep, type Item } from './items';
-import { times } from './words';
 import { CLASS_CHANGE_COST } from './classes';
+import { times } from './words';
 
 /**
  * Baubles: small things the old people left in the ground, which a settlement
@@ -75,22 +75,21 @@ export const findKind = (roll: number, baubles = BAUBLE_SHARE): 'regret' | 'baub
 
 /** What the island says when a trade cannot be undone: `rpc_regret_class`. */
 export const REGRET_SAID = {
-  none: 'You need a Bauble of Regret to undo a trade.',
-  locked: 'Your Bauble of Regret is kept back. Put it back in the pack first.',
-  kind: 'There is no such trade.',
+  none: 'Need a Bauble of Regret.',
+  locked: 'Bauble of Regret is kept back: return it to the pack.',
+  kind: 'No such class.',
 } as const;
 const slotWord = (kind: 'craft' | 'combat'): string => (kind === 'craft' ? 'crafting' : 'fighting');
 /** Why there is nothing to undo in one of the two slots. */
-export const regretEmpty = (kind: 'craft' | 'combat'): string => `You have no ${slotWord(kind)} trade to undo.`;
+export const regretEmpty = (kind: 'craft' | 'combat'): string => `No ${slotWord(kind)} class to undo.`;
 /**
  * And what it says when one is undone: the trade by name, what goes with it --
  * the perks taken in it, or the tree of a trade not moved to perks yet -- and
  * what the next one in its slot costs.
  */
 export const regretDone = (trade: string, kind: 'craft' | 'combat', perks = false): string =>
-  `The Bauble of Regret breaks, and the ${trade.toLowerCase()}’s trade is put down as though you had never taken it up, `
-  + `its ${perks ? 'perks' : 'tree'} with it. `
-  + `The next ${slotWord(kind)} trade you take up costs nothing, not ${CLASS_CHANGE_COST} silver.`;
+  `Bauble of Regret used: ${trade} removed, with its ${perks ? 'perks' : 'tree'}. `
+  + `Next ${slotWord(kind)} class: free (base ${CLASS_CHANGE_COST} silver).`;
 
 export type BaubleTier = 'minor' | 'major' | 'ancient';
 export type BaubleKind = 'time' | 'learn' | 'double' | 'plus';
@@ -147,6 +146,8 @@ export interface BaubleKindDef {
 export const BAUBLE_KINDS: Record<Exclude<BaubleKind, 'plus'>, BaubleKindDef> = {
   time: { lead: '', tail: '% less time', cap: 50 },
   learn: { lead: '+', tail: '% skill gain', cap: 100 },
+  // Kept as it was: a bauble's words are written into the item (`extra`) and read back by this tail, on both sides
+  // (`readBauble`, `bauble_read`), so new words would unmake every bauble already found.
   double: { lead: '', tail: `% chance of ${times(YIELD_TIMES)} the yield`, cap: 50 },
 };
 
@@ -202,12 +203,12 @@ export interface AncientEffect {
 
 /** What an ancient bauble adds to: one job each, and one more of what that job gives, every time it gives anything. */
 export const ANCIENT_EFFECTS: AncientEffect[] = [
-  { id: 'mining', action: 'mine', said: 'to the output of each mining action' },
-  { id: 'felling', action: 'cut_down', said: 'to the logs from each tree felled' },
-  { id: 'digging', action: 'dig', said: 'to the output of each dig' },
-  { id: 'harvest', action: 'harvest_crop', said: 'to the crop and to the seed from each harvest' },
-  { id: 'fishing', action: 'fish', said: 'to each catch with a rod' },
-  { id: 'foraging', action: 'forage', said: 'to each find when foraging' },
+  { id: 'mining', action: 'mine', said: 'output per mining action' },
+  { id: 'felling', action: 'cut_down', said: 'logs per tree felled' },
+  { id: 'digging', action: 'dig', said: 'output per dig' },
+  { id: 'harvest', action: 'harvest_crop', said: 'crop and seed per harvest' },
+  { id: 'fishing', action: 'fish', said: 'fish per rod catch' },
+  { id: 'foraging', action: 'forage', said: 'finds per forage' },
 ];
 export const ANCIENT_BY_ID = new Map(ANCIENT_EFFECTS.map((e) => [e.id, e]));
 
@@ -334,14 +335,14 @@ export const baublesServe = (deed: Pick<Deed, 'name' | 'role' | 'perms'> | null 
 
 /** Why a bauble will not go into this altar, for the words both sides say. */
 export const BAUBLE_SAID = {
-  notAltar: 'That is not an altar.',
-  reach: 'Stand at the altar.',
-  notOurs: 'This altar does not stand on a settlement of yours.',
-  notBauble: 'That is not a bauble you can set.',
-  tarnished: 'Restore it first: tarnished, it does nothing.',
+  notAltar: 'Not an altar.',
+  reach: 'Too far from the altar.',
+  notOurs: 'Altar not on your settlement.',
+  notBauble: 'Not a settable bauble.',
+  tarnished: 'Tarnished: restore it first.',
 } as const;
 export const fullSaid = (tier: BaubleTierDef): string =>
-  `All ${tier.slots} ${tier.name.toLowerCase()} sockets are filled. Choose one to replace.`;
+  `Sockets full: ${tier.slots} of ${tier.slots} ${tier.name.toLowerCase()}. Choose one to replace.`;
 
 const pieceOf = (g: Game, t: Target): PlacedFurniture | undefined => (t.kind === 'furniture' ? g.furniture.get(t.id) : undefined);
 const atPiece = (g: Game, f: PlacedFurniture): boolean => {
@@ -406,8 +407,8 @@ export const BAUBLE_ACTIONS: ActionDef[] = [
         ...(deed.baubles ?? []).filter((b) => !(b.tier === bauble.tier && b.slot === slot)),
         { ...bauble, slot, rare: item.rare, ql: item.ql },
       ];
-      const lost = was ? ` The ${baubleText(was.kind, was.key, was.amount)} that was there crumbles away.` : '';
-      g.logMsg(`You set the ${name} into the altar, in ${bauble.tier} socket ${slot + 1}. Every citizen working on ${deed.name} has it now.${lost}`, 'event');
+      const lost = was ? ` Replaced: ${baubleText(was.kind, was.key, was.amount)}.` : '';
+      g.logMsg(`Set: ${name}, ${bauble.tier} socket ${slot + 1}, ${deed.name} (every working citizen).${lost}`, 'event');
       g.events.emit('inventory');
       g.events.emit('world', deed.x, deed.y);
     },

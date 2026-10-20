@@ -736,7 +736,7 @@ function finish(world: World, m: SaveMeta): Game {
     game.settings.follow = m.settings?.follow ?? true;
     game.settings.edgePan = m.settings?.edgePan ?? true;
   }
-  game.logMsg('Your journey continues where you left off.', 'system');
+  game.logMsg('Resumed where you left off.', 'system');
   // Older saves predate building: hand out the tools they never got.
   const granted: string[] = [];
   for (const [id, name] of [
@@ -752,12 +752,12 @@ function finish(world: World, m: SaveMeta): Game {
       granted.push(name);
     }
   }
-  if (granted.length) game.logMsg(`You find ${granted.join(', ')} among your things.`, 'system');
+  if (granted.length) game.logMsg(`Added to your pack: ${granted.join(', ')}.`, 'system');
   // Things left outside kept rotting while you were away, up to a week's worth.
   const away = Math.max(0, Math.min(7 * 86400, (Date.now() - (m.savedAt ?? Date.now())) / 1000));
   if (away > 60 && game.ground.size) {
     const lost = game.applyDecay(away);
-    if (lost) game.logMsg(`While you were away, ${lost === 1 ? 'an item' : `${lost} items`} left on the ground rotted away.`, 'event');
+    if (lost) game.logMsg(`While away: ${lost} ${lost === 1 ? 'item' : 'items'} on the ground rotted away.`, 'event');
   }
   return game;
 }

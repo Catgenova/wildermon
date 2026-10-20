@@ -7,7 +7,6 @@ import { SKILL_DEFS } from './skills';
 import {
   BAUBLE_SHARE, BAUBLE_TIER_BY_ID, BAUBLE_TIERS, findKind, readBauble, REGRET, rollBauble, rollTier, TARNISHED, type BaubleTier, type BaubleTierDef,
 } from './baubles';
-import { article } from './words';
 
 /** What one go at putting a relic back together teaches. */
 export const RESTORE_GAIN = 0.4;
@@ -175,8 +174,8 @@ function restoreBauble(g: Game, item: Item): void {
     const gentle = g.perk('harm:restore_relic', 1) <= 0;
     g.damageItem(item, restoreHarm(g));
     g.logMsg(gentle
-      ? `The tarnish will not lift from the ${found.id} bauble, and it takes no harm from the trying.`
-      : `The tarnish will not lift from the ${found.id} bauble and you mark it trying.`, 'event');
+      ? `Restore failed: ${found.id} bauble, no damage.`
+      : `Restore failed: ${found.id} bauble damaged.`, 'event');
     return;
   }
   // A tier better under the tarnish than it looked, now and then, for a Mender's Tier Up.
@@ -194,13 +193,15 @@ function restoreBauble(g: Game, item: Item): void {
   }
   g.gainSkill('mind_logic', tryGain(true, RESTORE_GAIN));
   g.logMsg(tier === found
-    ? `The tarnish comes away and the bauble is whole: ${itemName(made).toLowerCase()}. (QL ${made.ql.toFixed(1)})`
-    : `The tarnish comes away and the ${found.id} bauble is ${article(tier.id)} ${tier.id} one: ${itemName(made).toLowerCase()}. (QL ${made.ql.toFixed(1)})`,
+    ? `Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`
+    : `Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}. Tier up: ${found.id} to ${tier.id}.`,
   'event');
 }
 
 /** What studying at a lectern is worth over holding the book in one hand, and how near it has to be. */
 export const LECTERN_GAIN = 2;
+/** The damage at which a book can no longer be studied. */
+const UNREADABLE = 90;
 export const LECTERN_REACH = 2.4;
 /** The damage a go of study does to the pages: this, and up to `STUDY_WEAR_SPREAD` more. */
 export const STUDY_WEAR = 2;
@@ -227,8 +228,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
     applies: (t, g) => t.kind === 'tile' && DIGGABLE.has(g.world.getTile(t.x, t.y)) && !g.world.hasWater(t.x, t.y),
     check: (t, g) => {
       if (t.kind !== 'tile') return null;
-      if (!g.inventory.has('trowel')) return 'You need a trowel to go through the soil carefully.';
-      if (g.isForaged(t.x, t.y, 'dig')) return 'You have been over this ground already. Try somewhere else.';
+      if (!g.inventory.has('trowel')) return 'Need a trowel.';
+      if (g.isForaged(t.x, t.y, 'dig')) return 'Already searched this tile.';
       return null;
     },
     perform: (t, g) => {
@@ -238,7 +239,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       const toolQl = g.toolQl('trowel');
       if (g.rand() > findChance(skill, toolQl, g.perk('find:investigate', 0), g.perk('cap:investigate', FIND_CAP))) {
         g.missed();
-        g.logMsg('You go through the soil and turn up nothing but roots and small stones.', 'event');
+        g.logMsg('Found nothing.', 'event');
         return;
       }
       // A share of whatever comes up is a bauble, whatever the archaeologist
@@ -248,7 +249,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       if (kind === 'regret') {
         const found = g.gather(REGRET, { ql: Math.max(1, g.productQl('archaeology', toolQl) * (0.55 + g.rand() * 0.35)) });
         g.events.emit('inventory');
-        g.logMsg(`Your trowel turns up a Bauble of Regret, whole. It undoes one of your trades, in the Trades window. (QL ${found.ql.toFixed(1)})`, 'event');
+        g.logMsg(`Found: Bauble of Regret, QL ${found.ql.toFixed(1)}. Undoes one trade (Trades window).`, 'event');
         return;
       }
       if (kind === 'bauble') {
@@ -256,7 +257,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
         const found = g.gather(TARNISHED, { ql: Math.max(1, g.productQl('archaeology', toolQl) * (0.55 + g.rand() * 0.35)), extra: tier });
         found.dmg = FIND_DAMAGE + g.rand() * FIND_DAMAGE_SPREAD;
         g.events.emit('inventory');
-        g.logMsg(`Your trowel turns up a tarnished ${tier} bauble. Restore it to see what it does. (QL ${found.ql.toFixed(1)}, damage ${found.dmg.toFixed(0)})`, 'event');
+        g.logMsg(`Found: tarnished ${tier} bauble, QL ${found.ql.toFixed(1)}, damage ${found.dmg.toFixed(0)}. Restore it to use it.`, 'event');
         return;
       }
       const within = relicsWithin(skill);
@@ -269,7 +270,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
         ? unfinished[Math.floor(g.rand() * unfinished.length)] : undefined;
       if (!fit && !within.length) {
         g.missed();
-        g.logMsg('You turn up a scrap of something worked, but you cannot tell what it was and it crumbles.', 'event');
+        g.logMsg('Found nothing: no relic within your archaeology.', 'event');
         return;
       }
       // The commonplace comes up far more often than the rare, as it did when it was lost.
@@ -294,8 +295,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       item.dmg = FIND_DAMAGE + g.rand() * FIND_DAMAGE_SPREAD;
       g.events.emit('inventory');
       const left = partsMissing(g, relic).length;
-      const short = left ? ` ${left} of ${relic.parts} still missing.` : ` That is all ${relic.parts} of them.`;
-      g.logMsg(`Your trowel turns up a fragment of ${relic.name}, piece ${part} of ${relic.parts}. (QL ${item.ql.toFixed(1)}, damage ${item.dmg.toFixed(0)})${short}`, 'event');
+      const short = left ? ` Missing: ${left}/${relic.parts}.` : ` All ${relic.parts} pieces held.`;
+      g.logMsg(`Found: ${relic.name} fragment ${part}/${relic.parts}, QL ${item.ql.toFixed(1)}, damage ${item.dmg.toFixed(0)}.${short}`, 'event');
     },
   },
   {
@@ -317,9 +318,9 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       // restored (`unrestored`), so it is restored as it is or not at all.
       if (item?.id === TARNISHED) return null;
       const f = item && fragmentOf(item);
-      if (!f) return 'That is not a fragment of anything.';
+      if (!f) return 'Not a fragment.';
       const missing = partsMissing(g, f.relic);
-      if (missing.length) return `You are missing ${missing.length} of the ${f.relic.parts} pieces of the ${f.relic.name} (${missing.join(', ')}).`;
+      if (missing.length) return `${f.relic.name}: missing ${missing.length}/${f.relic.parts} pieces (${missing.join(', ')}).`;
       return null;
     },
     perform: (t, g) => {
@@ -340,8 +341,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
         const gentle = g.perk('harm:restore_relic', 1) <= 0;
         for (const p of pieces) g.damageItem(p, restoreHarm(g));
         g.logMsg(gentle
-          ? `The pieces of the ${f.relic.name} will not sit together, and they take no harm from the trying.`
-          : `The pieces of the ${f.relic.name} will not sit together and you mark them trying.`, 'event');
+          ? `Restore failed: ${f.relic.name}, no damage.`
+          : `Restore failed: ${f.relic.name} pieces damaged.`, 'event');
         return;
       }
       // What comes out is only as good as the pieces that went in, less what age took.
@@ -351,7 +352,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       const made = g.inventory.add(f.relic.result, { ql });
       g.gainSkill('mind_logic', tryGain(true, RESTORE_GAIN));
       g.note('restored');
-      g.logMsg(`The pieces go back together and the ${f.relic.name} is whole: ${itemName(made).toLowerCase()}. (QL ${made.ql.toFixed(1)})`, 'event');
+      g.logMsg(`Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`, 'event');
     },
   },
   {
@@ -364,8 +365,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
-      if (!item || !BOOKS.has(item.id)) return 'That is not a book.';
-      if (item.dmg >= 90) return 'The pages are too far gone to read. Repair it first.';
+      if (!item || !BOOKS.has(item.id)) return 'Not a book.';
+      if (item.dmg >= UNREADABLE) return `Damage ${UNREADABLE} or more: repair it first.`;
       return null;
     },
     perform: (t, g) => {
@@ -377,8 +378,8 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       // More out of a book an Artisan with Good Read bound, and less wear on one bound with Sturdy Binding.
       const gain = g.gainSkill(bookTeaches(item), (0.5 + item.ql / 90) * (lectern ? LECTERN_GAIN : 1) * markOf(item, 'teach'));
       g.damageItem(item, (STUDY_WEAR + g.rand() * STUDY_WEAR_SPREAD) * markOf(item, 'sturdy'));
-      const where = lectern ? ' The lectern holds it open at the right angle and you make good use of the hour.' : ' Held in one hand, it is hard going. A lectern would be better.';
-      g.logMsg(`You work through the ${itemName(item).toLowerCase()}.${where}${gain > 0.0005 ? '' : ' There is nothing left in it you do not already know.'}`, 'event');
+      const where = lectern ? ` Lectern: skill gain ×${LECTERN_GAIN}.` : ` No lectern (one gives ×${LECTERN_GAIN} skill gain).`;
+      g.logMsg(`Studied: ${itemName(item).toLowerCase()}.${where}${gain > 0.0005 ? '' : ' Nothing left to learn from it.'}`, 'event');
     },
   },
 ];

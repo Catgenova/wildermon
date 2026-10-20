@@ -132,19 +132,19 @@ export function lampState(f: PlacedFurniture): string {
 /** Too far from the piece to work it: how far, off the reach every store and piece is worked from. */
 export const lampTooFar = (word: string): string => `Stand within ${STORE_REACH} tiles of the ${word}.`;
 /** Said when there is no lantern in the pack to fit. */
-export const LAMP_NO_LANTERN = 'You have no lantern to fit.';
+export const LAMP_NO_LANTERN = 'Need a lantern.';
 /** When the piece already has its lantern. */
-export const LAMP_HAS_ONE = 'There is a lantern in it already. Take it down first.';
+export const LAMP_HAS_ONE = 'Already has a lantern: take it down first.';
 /** When there is nothing to take down, light or put a candle in. */
-export const LAMP_NONE = 'There is no lantern in it. Fit one first.';
+export const LAMP_NONE = 'No lantern: fit one first.';
 /** What stops a piece with a lantern in it being lifted. */
 export { LAMP_TAKE_FIRST };
 /** No candle in the pack, and no flame to strike a light from: the carried lantern's own sentences, off the candle's recipe and what `flameNear` takes a light off. */
 export { noCandleLine, noFlameLine };
 /** Setting a post down, or turning it, with its arm into a wall. */
-export const LAMP_INTO_WALL = 'The arm would go into the wall: turn it the other way.';
+export const LAMP_INTO_WALL = 'Arm would go into the wall: turn it.';
 /** And planning or raising a wall across a standing post's arm. */
-export const LAMP_ARM_CROSSES = "A lantern post's arm crosses this border: turn the post first.";
+export const LAMP_ARM_CROSSES = "Lantern post's arm crosses this border: turn the post first.";
 
 /**
  * Whether a post set at subtile (sx, sy) of tile (x, y) and facing this way
@@ -250,15 +250,15 @@ export function lampRefusal(g: Game, id: string, t: Target): string | null {
       return f.lamp ? null : LAMP_NONE;
     case 'candle_lamp':
       if (!f.lamp) return LAMP_NONE;
-      if ((f.fuel ?? 0) > 0) return 'There is still a candle in it.';
+      if ((f.fuel ?? 0) > 0) return 'Candle still in it.';
       return g.inventory.find('candle') ? null : noCandleLine();
     case 'light_lamp':
       if (!f.lamp) return LAMP_NONE;
-      if ((f.fuel ?? 0) <= 0) return 'There is no candle in it.';
-      if (f.lit) return 'It is already lit.';
+      if ((f.fuel ?? 0) <= 0) return 'No candle in it.';
+      if (f.lit) return 'Already lit.';
       return flameNear(g) ? null : noFlameLine();
     case 'douse_lamp':
-      return f.lamp && f.lit && (f.fuel ?? 0) > 0 ? null : 'It is not lit.';
+      return f.lamp && f.lit && (f.fuel ?? 0) > 0 ? null : 'Not lit.';
   }
   return null;
 }
@@ -270,13 +270,13 @@ const lanternOn = (f: PlacedFurniture): string => `the lantern on the ${pieceWor
  * gutters: the same sentences on the island, off the same numbers.
  */
 export const LAMP_SAYS = {
-  fit: (f: PlacedFurniture): string => `You fit the lantern to the ${pieceWord(f)}. It throws ${lampReach(f)} tiles, and has `
-    + ((f.fuel ?? 0) > 0 ? `${timeWords(f.fuel ?? 0)} of candle in it${f.lit ? ', alight' : ''}.` : 'no candle in it.'),
-  take: (f: PlacedFurniture): string => `You take the lantern down off the ${pieceWord(f)}.`,
-  candle: (f: PlacedFurniture): string => `You set a candle in ${lanternOn(f)}. It will burn ${timeWords(f.fuel ?? 0)}.`,
-  light: (f: PlacedFurniture, from: string): string => `You take a light off the ${from} and ${lanternOn(f)} throws it ${lampReach(f)} tiles.`,
-  douse: (f: PlacedFurniture): string => `You pinch the wick out. ${timeWords(Math.max(0, f.fuel ?? 0))} of candle saved.`,
-  gutter: (f: PlacedFurniture): string => `The candle gutters out and ${lanternOn(f)} goes dark.`,
+  fit: (f: PlacedFurniture): string => `Lantern fitted: ${pieceWord(f)}. Light ${lampReach(f)} tiles; `
+    + ((f.fuel ?? 0) > 0 ? `candle ${timeWords(f.fuel ?? 0)}${f.lit ? ', lit' : ''}.` : 'no candle.'),
+  take: (f: PlacedFurniture): string => `Lantern taken down: ${pieceWord(f)}.`,
+  candle: (f: PlacedFurniture): string => `Candle in: ${lanternOn(f)}. Burns ${timeWords(f.fuel ?? 0)}.`,
+  light: (f: PlacedFurniture, from: string): string => `Lit from the ${from}: ${lanternOn(f)}, light ${lampReach(f)} tiles.`,
+  douse: (f: PlacedFurniture): string => `Put out. Candle left: ${timeWords(Math.max(0, f.fuel ?? 0))}.`,
+  gutter: (f: PlacedFurniture): string => `Candle burnt out: ${lanternOn(f)}.`,
 };
 
 /**

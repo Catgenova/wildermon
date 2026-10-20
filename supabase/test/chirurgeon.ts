@@ -340,7 +340,7 @@ begin
              'infected', false, 'dressing', null, 'at', 0)), stats = jsonb_set(stats, '{health}', '0.5') where world_id = w.world_id and uid = w.uid;
     perform perform_fight(w.world_id, w.uid, 'bind_wound', jsonb_build_object('kind', 'self'));
   end loop;
-  select count(*) into n1 from event where uid = w.uid and text like 'The dressing slips%';
+  select count(*) into n1 from event where uid = w.uid and text like 'Dressing failed:%';
   m0 := pg_temp.dress_secs(w.world_id, w.uid);
 
   /* ---- The passives: each number, before and after ---- */
@@ -359,7 +359,7 @@ begin
              'infected', false, 'dressing', null, 'at', 0)), stats = jsonb_set(stats, '{health}', '0.5') where world_id = w.world_id and uid = w.uid;
     perform perform_fight(w.world_id, w.uid, 'bind_wound', jsonb_build_object('kind', 'self'));
   end loop;
-  select count(*) into n2 from event where uid = w.uid and text like 'The dressing slips%';
+  select count(*) into n2 from event where uid = w.uid and text like 'Dressing failed:%';
   insert into said values ('SURE', n1 || '|' || n2);
   update skill set value = 100 where world_id = w.world_id and uid = w.uid and id = 'first_aid';
   -- Clean Cloth: the wound under it marked, and half as likely to go bad as the same wound without the mark.
@@ -417,15 +417,15 @@ check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
   const [health, wounds, line] = parts('FIELD');
   check(`Field Dressing: ${pct(fx('field_dressing', 'heal'))} of their health back, and the worst bleeding wound stopped, and only it`,
     near(Number(health), 0.5 + fx('field_dressing', 'heal'), 1e-9) && wounds === '1:0.100:true,2:0.200:false'
-      && /heals [^ ]+ by 10% and stops a wound bleeding\.$/.test(line), island('FIELD'));
+      && / on [^ ]+: health \+10%, bleeding stopped\.$/.test(line), island('FIELD'));
   check('and it is refused on somebody unhurt', / is not hurt\.$/.test(island('FIELD:WHOLE')), island('FIELD:WHOLE'));
   check(`and on somebody more than ${fx('field_dressing', 'reach')} tiles off`,
-    island('FIELD:FAR').endsWith(` is more than ${fx('field_dressing', 'reach')} tiles away.`), island('FIELD:FAR'));
+    island('FIELD:FAR') === `Too far: max ${fx('field_dressing', 'reach')} tiles.`, island('FIELD:FAR'));
 }
 {
   const [wounds, line] = parts('STITCH');
   check(`Quick Stitch: the worst wound ${pct(fx('quick_stitch', 'close'))} closed, and the other as it was`,
-    wounds === `1:0.100:true,2:${(0.2 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}:true` && /closes the worst wound on/.test(line), island('STITCH'));
+    wounds === `1:0.100:true,2:${(0.2 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}:true` && line.endsWith(`: worst wound closed ${pct(fx('quick_stitch', 'close'))}.`), island('STITCH'));
   check('and on wounds as a body takes them, with no id, it closes the deep burn and not the light cut taken before it',
     island('STITCH:TAKEN') === `cut:0.030,burn:${(0.94 * (1 - fx('quick_stitch', 'close'))).toFixed(3)}`, island('STITCH:TAKEN'));
   check('and it is refused on somebody with no wound', / has no wound\.$/.test(island('STITCH:NONE')), island('STITCH:NONE'));
@@ -452,36 +452,36 @@ check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
   const [both, line] = parts('CIRCLE');
   const want = String(0.5 + fx('healing_circle', 'heal'));
   check(`Healing Circle: you and everybody within ${fx('healing_circle', 'reach')} tiles get ${pct(fx('healing_circle', 'heal'))} back`,
-    both === `${want},${want}` && line === `Healing Circle heals 2 people by ${pct(fx('healing_circle', 'heal'))}.`, island('CIRCLE'));
+    both === `${want},${want}` && line === `Healing Circle: health +${pct(fx('healing_circle', 'heal'))} on 2 people.`, island('CIRCLE'));
   check('and it is refused when nobody is hurt',
-    island('CIRCLE:WHOLE') === `Nobody within ${fx('healing_circle', 'reach')} tiles of you is hurt, you included.`, island('CIRCLE:WHOLE'));
+    island('CIRCLE:WHOLE') === `Nobody hurt within ${fx('healing_circle', 'reach')} tiles (you included).`, island('CIRCLE:WHOLE'));
 }
 {
   const [both, line] = parts('MASS');
   const each = `1:0.100:true,2:${(0.2 * (1 - fx('mass_dressing', 'close'))).toFixed(3)}:false`;
   check(`Mass Dressing: the worst wound on you and on everybody near stopped and ${pct(fx('mass_dressing', 'close'))} closed`,
     both === `${each};${each}` && /on 2 people\.$/.test(line), island('MASS'));
-  check('and it is refused when nobody has a wound', /has a wound, you included\.$/.test(island('MASS:NONE')), island('MASS:NONE'));
+  check('and it is refused when nobody has a wound', /^Nobody wounded within .+ tiles \(you included\)\.$/.test(island('MASS:NONE')), island('MASS:NONE'));
 }
 {
   const [secs, each, ten, all, wired, line] = parts('REGEN');
   check(`Regenerate: ${pct(fx('regenerate', 'each'))} of their health a second for ${fx('regenerate', 'secs')} s, settled with the body`,
     near(Number(secs), fx('regenerate', 'secs'), 1e-6) && near(Number(each), fx('regenerate', 'each'))
       && near(Number(ten), 10 * fx('regenerate', 'each'), 1e-9) && near(Number(all), fx('regenerate', 'secs') * fx('regenerate', 'each'), 1e-9)
-      && wired === 'true' && line.endsWith(`a second for ${fx('regenerate', 'secs')} s.`), island('REGEN'));
+      && wired === 'true' && line.endsWith(`: health +${pct(fx('regenerate', 'each'))} per second for ${fx('regenerate', 'secs')} s.`), island('REGEN'));
 }
 {
   const [secs, line] = parts('HANDS:SAID');
   check(`Surgeon's Hands: for ${fx('surgeons_hands', 'secs')} s a dressing puts back ${fx('surgeons_hands', 'more')} times as much, the same roll asked of both`,
     near(Number(island('HANDS')), fx('surgeons_hands', 'more'), 1e-6) && near(Number(secs), fx('surgeons_hands', 'secs'), 1e-6)
-      && line.startsWith('Surgeon’s Hands: for 20 s'), `${island('HANDS')} — ${island('HANDS:SAID')}`);
+      && line === `Surgeon’s Hands: dressings heal ×${fx('surgeons_hands', 'more')} for ${fx('surgeons_hands', 'secs')} s.`, `${island('HANDS')} — ${island('HANDS:SAID')}`);
 }
 {
   const [rate, secs, line] = parts('TOXIN');
   check(`Toxin: ${pct(fx('toxin', 'each'))} of its full health a second for ${fx('toxin', 'secs')} s`,
-    near(Number(rate), fx('toxin', 'each'), 1e-6) && near(Number(secs), fx('toxin', 'secs'), 1e-6) && line.startsWith('Toxin: the ogre bleeds'),
+    near(Number(rate), fx('toxin', 'each'), 1e-6) && near(Number(secs), fx('toxin', 'secs'), 1e-6) && line === `Toxin: ogre bleeding ${pct(fx('toxin', 'each'))} health per second for ${fx('toxin', 'secs')} s.`,
     island('TOXIN'));
-  check(`and no further than ${fx('toxin', 'reach')} tiles`, island('TOXIN:FAR') === `The ogre is more than ${fx('toxin', 'reach')} tiles away.`,
+  check(`and no further than ${fx('toxin', 'reach')} tiles`, island('TOXIN:FAR') === `Too far: max ${fx('toxin', 'reach')} tiles.`,
     island('TOXIN:FAR'));
   const [bled, line2] = parts('PLAGUE');
   const one = `${fx('plague', 'each').toFixed(6)}@${fx('plague', 'secs')}`;
@@ -492,20 +492,20 @@ check('the trade is taken up', island('TAKE') === 'took', island('TAKE'));
   const [ratio, landed, gained, took, line] = parts('LEECH');
   check(`Leech: a knife blow at ${pct(fx('leech', 'more'))} of a swing's, and back as large a share of your health as it takes of the creature's`,
     landed === 'true' && near(Number(ratio), fx('leech', 'more'), 1e-9) && near(Number(gained), Number(took), 1e-6)
-      && / You get back \d+% of your health\.$/.test(line), island('LEECH'));
+      && / Health \+\d+%\.$/.test(line), island('LEECH'));
 }
 {
   const [quiet, fought] = parts('LEARN');
   check('a heal teaches the trade while the one it is on is hunted, and not otherwise', quiet === 'true' && fought === 'true', island('LEARN'));
 }
-check('a Leech is refused with bare hands', island('NEEDS:HANDS') === `Leech wants ${NEEDS_SAID.knives.wants}.`, island('NEEDS:HANDS'));
+check('a Leech is refused with bare hands', island('NEEDS:HANDS') === `Leech: needs ${NEEDS_SAID.knives.wants}.`, island('NEEDS:HANDS'));
 check('and made with a knife', island('NEEDS:KNIFE') === 'ready', island('NEEDS:KNIFE'));
 {
   const [cast, stamina, rest, health] = parts('PAID');
   const s = spell('field_dressing');
   check(`a spell called through the door costs its ${pct(s.cost)} of a full bar and rests ${s.rest} s`,
     cast === s.id && near(Number(stamina), 1 - s.cost) && near(Number(rest), s.rest, 1e-6) && near(Number(health), 0.5 + s.fx.heal), island('PAID'));
-  check('and is refused while it rests', island('RESTING') === `${s.name} can be called again in ${s.rest} seconds.`, island('RESTING'));
+  check('and is refused while it rests', island('RESTING') === `${s.name}: cooldown ${s.rest} s.`, island('RESTING'));
 }
 
 /* ---- The passives ------------------------------------------------------------ */
@@ -514,7 +514,7 @@ check('the six passives fold on the island to what they fold to in the browser',
   island('FOLDED') === Object.keys(FOLD).filter((k) => /^(heal|fail|fester|stamina|time|triage)/.test(k)).sort()
     .map((k) => `${k}=${FOLD[k]}`).join(';'), island('FOLDED'));
 check('somebody else\'s wounds are not refused for want of Field Surgeon, only for nothing open, and dressed with it',
-  / has nothing open to dress\.$/.test(island('OTHERS:BEFORE')) && island('OTHERS') === 'dressed', `${island('OTHERS:BEFORE')} / ${island('OTHERS')}`);
+  /: no wounds to dress\.$/.test(island('OTHERS:BEFORE')) && island('OTHERS') === 'dressed', `${island('OTHERS:BEFORE')} / ${island('OTHERS')}`);
 check(`Quick Bandage: a dressing ${pct(1 - FOLD['time:bind_wound'])} quicker`, near(Number(island('QUICK')), FOLD['time:bind_wound'], 1e-4),
   island('QUICK'));
 {

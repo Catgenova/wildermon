@@ -1,7 +1,6 @@
 import { GEMS, tradeName, type GemDef } from './gems';
 import { METAL_BY_INGOT, METAL_BY_LUMP, METALS } from './metal';
 import { TREE_DEFS } from '../world/tiles';
-import { fill } from './words';
 
 /**
  * What a thing is made of, and what that is worth.
@@ -51,27 +50,27 @@ type Props = Omit<MaterialDef, 'id' | 'name' | 'kind'>;
  * springy, which is what a bow wants and a wall does not.
  */
 const WOOD_PROPS: Record<string, Props> = {
-  Birch: { difficulty: -1, weight: 0.88, wear: 1.02, decay: 1.05, edge: 1, soak: 0.96, bite: 1.04, hold: 1, note: 'Light and even-grained. The bowyer\'s wood for a medium bow.' },
-  Pine: { difficulty: -3, weight: 0.8, wear: 1.2, decay: 1.25, edge: 0.9, soak: 0.88, bite: 1.06, hold: 0.95, note: 'Soft, quick to work and quick to rot. Good for what you mean to replace.' },
-  Oak: { difficulty: 5, weight: 1.22, wear: 0.68, decay: 0.85, edge: 1.12, soak: 1.16, bite: 0.94, hold: 1.12, note: 'Hard going and worth it: an oak thing takes {wear:pct} of the knocks and holds {holdMore:share} more.' },
-  Maple: { difficulty: 1, weight: 1.05, wear: 0.9, decay: 1, edge: 1.05, soak: 1.02, bite: 1, hold: 1.05, note: 'Even-tempered. Nothing it is best at and nothing it is bad at.' },
-  Willow: { difficulty: -3, weight: 0.78, wear: 1.12, decay: 1.12, edge: 0.94, soak: 0.9, bite: 1.08, hold: 0.95, note: 'Springy and very light. The bowyer\'s wood for a short bow.' },
-  Cedar: { difficulty: 4, weight: 0.9, wear: 0.86, decay: 0.35, edge: 1, soak: 1, bite: 0.98, hold: 1, note: 'Barely rots at all. Whatever you leave out in the rain, make it of this.' },
+  Birch: { difficulty: -1, weight: 0.88, wear: 1.02, decay: 1.05, edge: 1, soak: 0.96, bite: 1.04, hold: 1, note: '' },
+  Pine: { difficulty: -3, weight: 0.8, wear: 1.2, decay: 1.25, edge: 0.9, soak: 0.88, bite: 1.06, hold: 0.95, note: '' },
+  Oak: { difficulty: 5, weight: 1.22, wear: 0.68, decay: 0.85, edge: 1.12, soak: 1.16, bite: 0.94, hold: 1.12, note: '' },
+  Maple: { difficulty: 1, weight: 1.05, wear: 0.9, decay: 1, edge: 1.05, soak: 1.02, bite: 1, hold: 1.05, note: '' },
+  Willow: { difficulty: -3, weight: 0.78, wear: 1.12, decay: 1.12, edge: 0.94, soak: 0.9, bite: 1.08, hold: 0.95, note: '' },
+  Cedar: { difficulty: 4, weight: 0.9, wear: 0.86, decay: 0.35, edge: 1, soak: 1, bite: 0.98, hold: 1, note: '' },
   // Orchard woods: little of them off any one tree, and all three are close
   // grained and hard for it.
-  Apple: { difficulty: 3, weight: 1.18, wear: 0.74, decay: 0.95, edge: 1.08, soak: 1.1, hold: 1.06, bite: 1.02, note: 'Close, hard and heavy for a small tree. Wears like oak and takes a finer edge.' },
-  Cherry: { difficulty: 2, weight: 1.02, wear: 0.82, decay: 0.9, edge: 1.06, soak: 1.06, bite: 1.1, hold: 1.04, note: 'Fine in the grain and stable with it. The best wood on the island for a tool handle.' },
-  Olive: { difficulty: 6, weight: 1.3, wear: 0.6, decay: 0.55, edge: 1.14, soak: 1.2, bite: 0.9, hold: 1.08, note: 'Wild grained, oily and nearly unsplittable. Murder to work and it outlasts everything.' },
+  Apple: { difficulty: 3, weight: 1.18, wear: 0.74, decay: 0.95, edge: 1.08, soak: 1.1, hold: 1.06, bite: 1.02, note: '' },
+  Cherry: { difficulty: 2, weight: 1.02, wear: 0.82, decay: 0.9, edge: 1.06, soak: 1.06, bite: 1.1, hold: 1.04, note: '' },
+  Olive: { difficulty: 6, weight: 1.3, wear: 0.6, decay: 0.55, edge: 1.14, soak: 1.2, bite: 0.9, hold: 1.08, note: '' },
   // And the eight held to their islands, which are orchard woods too: close
   // grained, hard for their size, and little of any of them off one tree.
-  Pear: { difficulty: 3, weight: 1.16, wear: 0.76, decay: 0.95, edge: 1.06, soak: 1.08, bite: 1.06, hold: 1.05, note: 'Close and pink-brown, and it carves cleaner than apple. The turner\'s wood.' },
-  Plum: { difficulty: 3, weight: 1.12, wear: 0.78, decay: 0.9, edge: 1.08, soak: 1.06, bite: 1.02, hold: 1.04, note: 'Hard and streaked with red. Handsome in a handle, and it holds a polish.' },
-  Peach: { difficulty: 1, weight: 1, wear: 0.94, decay: 1.05, edge: 1.02, soak: 1, bite: 1.02, hold: 1, note: 'Soft for an orchard wood and quick to rot. Good for what you mean to replace.' },
-  Fig: { difficulty: 0, weight: 0.86, wear: 1.05, decay: 1.15, edge: 0.96, soak: 0.94, bite: 1, hold: 0.98, note: 'Light, spongy and not much good for anything but the fruit. Plant it for that.' },
-  Lemon: { difficulty: 2, weight: 1.06, wear: 0.86, decay: 0.85, edge: 1.04, soak: 1.04, bite: 1.04, hold: 1.02, note: 'Pale, even and faintly scented on the saw. A fine wood for small work.' },
-  Pomegranate: { difficulty: 4, weight: 1.2, wear: 0.72, decay: 0.8, edge: 1.1, soak: 1.1, bite: 0.98, hold: 1.06, note: 'Dense and twisted, off a small tree. Stubborn to work and very hard-wearing.' },
-  Apricot: { difficulty: 2, weight: 1.08, wear: 0.84, decay: 0.9, edge: 1.06, soak: 1.04, bite: 1.04, hold: 1.02, note: 'Hard and golden, close to plum. Little of it, and worth keeping for a handle.' },
-  Quince: { difficulty: 3, weight: 1.14, wear: 0.78, decay: 0.92, edge: 1.06, soak: 1.06, bite: 1.02, hold: 1.04, note: 'Close-grained like pear and a shade harder. It takes a fine edge.' },
+  Pear: { difficulty: 3, weight: 1.16, wear: 0.76, decay: 0.95, edge: 1.06, soak: 1.08, bite: 1.06, hold: 1.05, note: '' },
+  Plum: { difficulty: 3, weight: 1.12, wear: 0.78, decay: 0.9, edge: 1.08, soak: 1.06, bite: 1.02, hold: 1.04, note: '' },
+  Peach: { difficulty: 1, weight: 1, wear: 0.94, decay: 1.05, edge: 1.02, soak: 1, bite: 1.02, hold: 1, note: '' },
+  Fig: { difficulty: 0, weight: 0.86, wear: 1.05, decay: 1.15, edge: 0.96, soak: 0.94, bite: 1, hold: 0.98, note: '' },
+  Lemon: { difficulty: 2, weight: 1.06, wear: 0.86, decay: 0.85, edge: 1.04, soak: 1.04, bite: 1.04, hold: 1.02, note: '' },
+  Pomegranate: { difficulty: 4, weight: 1.2, wear: 0.72, decay: 0.8, edge: 1.1, soak: 1.1, bite: 0.98, hold: 1.06, note: '' },
+  Apricot: { difficulty: 2, weight: 1.08, wear: 0.84, decay: 0.9, edge: 1.06, soak: 1.04, bite: 1.04, hold: 1.02, note: '' },
+  Quince: { difficulty: 3, weight: 1.14, wear: 0.78, decay: 0.92, edge: 1.06, soak: 1.06, bite: 1.02, hold: 1.04, note: '' },
 };
 
 /**
@@ -83,35 +82,51 @@ const WOOD_PROPS: Record<string, Props> = {
  * mining is for.
  */
 const METAL_PROPS: Record<string, Props> = {
-  copper: { difficulty: 0, weight: 1, wear: 1, decay: 1, edge: 0.85, soak: 0.9, bite: 0.9, hold: 1, note: 'The metal everything starts in. Soft, plentiful, forgiving.' },
-  iron: { difficulty: 2, weight: 1.1, wear: 0.75, decay: 1.35, edge: 1.12, soak: 1.12, bite: 1.1, hold: 1, note: 'What the island is really built on. Harder than copper at everything, and it rusts if you leave it out.' },
-  steel: { difficulty: 5, weight: 1.05, wear: 0.5, decay: 0.95, edge: 1.28, soak: 1.22, bite: 1.24, hold: 1, note: 'Iron with coal beaten through it. Keeps an edge {keeps:times} as long and shrugs off the weather.' },
-  tin: { difficulty: -2, weight: 0.85, wear: 1.5, decay: 1.1, edge: 0.5, soak: 0.55, bite: 0.6, hold: 1, note: 'Too soft to be anything but stock for an alloy.' },
-  zinc: { difficulty: -1, weight: 0.9, wear: 1.4, decay: 1.05, edge: 0.55, soak: 0.6, bite: 0.65, hold: 1, note: 'Brittle. It goes into brass and not into anything you swing.' },
-  lead: { difficulty: -3, weight: 1.95, wear: 1.6, decay: 0.7, edge: 0.45, soak: 0.72, bite: 0.5, hold: 1, note: 'Heavy and soft. A lead tool bends the first time you lean on it.' },
-  silver: { difficulty: 4, weight: 1.2, wear: 1.2, decay: 0.45, edge: 0.9, soak: 0.86, bite: 0.86, hold: 1, bane: true, note: 'Barely tarnishes, and bites the unnatural far harder than its edge says.' },
-  gold: { difficulty: 7, weight: 2.1, wear: 1.5, decay: 0.15, edge: 0.6, soak: 0.75, bite: 0.6, hold: 1, note: 'Rots at {decay:pct} of copper\'s pace and is no use for anything else. Wear it, do not fight in it.' },
-  bronze: { difficulty: 1, weight: 1.05, wear: 0.85, decay: 0.8, edge: 1.06, soak: 1.06, bite: 1.06, hold: 1, note: 'The first alloy worth the crucible: harder than copper in every way.' },
-  brass: { difficulty: 1, weight: 1.05, wear: 0.9, decay: 0.72, edge: 1, soak: 1, bite: 1, hold: 1, note: 'Handsome, weather-proof and middling at everything else.' },
-  pewter: { difficulty: -1, weight: 1, wear: 1.45, decay: 0.9, edge: 0.55, soak: 0.6, bite: 0.65, hold: 1, note: 'Soft enough to shape cold. Plates and cups, nothing more.' },
-  electrum: { difficulty: 5, weight: 1.5, wear: 1.3, decay: 0.25, edge: 0.8, soak: 0.86, bite: 0.76, hold: 1, note: 'Silver and gold together: it keeps the shine and neither one\'s strength.' },
-  adamantine: { difficulty: 10, weight: 0.75, wear: 0.35, decay: 0.15, edge: 1.45, soak: 1.25, bite: 1.3, hold: 1, note: 'Takes and holds the keenest edge on the island. A weaponsmith\'s metal.' },
-  glimmersteel: { difficulty: 12, weight: 0.6, wear: 0.3, decay: 0.1, edge: 1.3, soak: 1.48, bite: 1.25, hold: 1, note: 'Light and immensely tough. What plate armour ought to be made of.' },
-  mithril: { difficulty: 14, weight: 0.42, wear: 0.25, decay: 0.08, edge: 1.35, soak: 1.4, bite: 1.38, hold: 1, note: 'Lighter than the wood it is hafted to, and finer than anything but seryll.' },
-  seryll: { difficulty: 16, weight: 0.7, wear: 0.08, decay: 0.02, edge: 1.25, soak: 1.36, bite: 1.2, hold: 1, note: 'Scarcely takes a mark. A seryll thing made well is a thing made once.' },
+  copper: { difficulty: 0, weight: 1, wear: 1, decay: 1, edge: 0.85, soak: 0.9, bite: 0.9, hold: 1, note: '' },
+  iron: { difficulty: 2, weight: 1.1, wear: 0.75, decay: 1.35, edge: 1.12, soak: 1.12, bite: 1.1, hold: 1, note: '' },
+  steel: { difficulty: 5, weight: 1.05, wear: 0.5, decay: 0.95, edge: 1.28, soak: 1.22, bite: 1.24, hold: 1, note: '' },
+  tin: { difficulty: -2, weight: 0.85, wear: 1.5, decay: 1.1, edge: 0.5, soak: 0.55, bite: 0.6, hold: 1, note: '' },
+  zinc: { difficulty: -1, weight: 0.9, wear: 1.4, decay: 1.05, edge: 0.55, soak: 0.6, bite: 0.65, hold: 1, note: '' },
+  lead: { difficulty: -3, weight: 1.95, wear: 1.6, decay: 0.7, edge: 0.45, soak: 0.72, bite: 0.5, hold: 1, note: '' },
+  silver: { difficulty: 4, weight: 1.2, wear: 1.2, decay: 0.45, edge: 0.9, soak: 0.86, bite: 0.86, hold: 1, bane: true, note: '' },
+  gold: { difficulty: 7, weight: 2.1, wear: 1.5, decay: 0.15, edge: 0.6, soak: 0.75, bite: 0.6, hold: 1, note: '' },
+  bronze: { difficulty: 1, weight: 1.05, wear: 0.85, decay: 0.8, edge: 1.06, soak: 1.06, bite: 1.06, hold: 1, note: '' },
+  brass: { difficulty: 1, weight: 1.05, wear: 0.9, decay: 0.72, edge: 1, soak: 1, bite: 1, hold: 1, note: '' },
+  pewter: { difficulty: -1, weight: 1, wear: 1.45, decay: 0.9, edge: 0.55, soak: 0.6, bite: 0.65, hold: 1, note: '' },
+  electrum: { difficulty: 5, weight: 1.5, wear: 1.3, decay: 0.25, edge: 0.8, soak: 0.86, bite: 0.76, hold: 1, note: '' },
+  adamantine: { difficulty: 10, weight: 0.75, wear: 0.35, decay: 0.15, edge: 1.45, soak: 1.25, bite: 1.3, hold: 1, note: '' },
+  glimmersteel: { difficulty: 12, weight: 0.6, wear: 0.3, decay: 0.1, edge: 1.3, soak: 1.48, bite: 1.25, hold: 1, note: '' },
+  mithril: { difficulty: 14, weight: 0.42, wear: 0.25, decay: 0.08, edge: 1.35, soak: 1.4, bite: 1.38, hold: 1, note: '' },
+  seryll: { difficulty: 16, weight: 0.7, wear: 0.08, decay: 0.02, edge: 1.25, soak: 1.36, bite: 1.2, hold: 1, note: '' },
 };
 
 const wood = (name: string): MaterialDef => ({ id: name.toLowerCase(), name, kind: 'wood', ...(WOOD_PROPS[name] ?? WOOD_PROPS.Pine) });
 const metal = (id: string, name: string): MaterialDef => ({ id, name, kind: 'metal', ...(METAL_PROPS[id] ?? METAL_PROPS.copper) });
 /** A stone: nothing is made *of* one but the setting, and the rarer it is the harder it is to seat. Its line says what it favours. */
-const gem = (g: GemDef): MaterialDef => ({ id: g.id, name: g.name, kind: 'gem', difficulty: 3 * (5 - g.weight), weight: 1, wear: 1, decay: 1, edge: 1, soak: 1, bite: 1, hold: 1, note: `${g.flavour} It favours ${tradeName(g.skill)}.` });
+const gem = (g: GemDef): MaterialDef => ({ id: g.id, name: g.name, kind: 'gem', difficulty: 3 * (5 - g.weight), weight: 1, wear: 1, decay: 1, edge: 1, soak: 1, bite: 1, hold: 1, note: `Trade: ${tradeName(g.skill)}.` });
 
 export const WOODS: MaterialDef[] = TREE_DEFS.map((t) => wood(t.name));
 export const METAL_MATERIALS: MaterialDef[] = METALS.map((m) => metal(m.id, m.name));
 export const GEM_MATERIALS: MaterialDef[] = GEMS.map(gem);
 export const MATERIALS: MaterialDef[] = [...WOODS, ...METAL_MATERIALS, ...GEM_MATERIALS];
-// A material's line says what it is worth off its own numbers: `{wear:pct}` of the knocks, `{keeps:times}` as long.
-for (const m of MATERIALS) m.note = fill(m.note, { ...m, keeps: 1 / m.wear, holdMore: m.hold - 1 });
+/** Anything that carries its own light (a Lume, an Embra) takes this many times the blow from a bane metal's edge. */
+export const BANE_BONUS = 1.5;
+/** Each multiplier a material carries, by what it multiplies, in the order the examine line says them. */
+const NOTE_FACTORS: Array<[keyof Props, string]> = [
+  ['weight', 'weight'], ['wear', 'wear'], ['decay', 'decay'], ['edge', 'weapon damage'],
+  ['soak', 'armour soak'], ['bite', 'tool QL'], ['hold', 'capacity'],
+];
+/** A material's line, off its own numbers: every factor that is not ×1, its bane and the bow it is tillered into. */
+function noteOf(m: MaterialDef): string {
+  const parts: string[] = [];
+  if (m.difficulty) parts.push(`difficulty ${m.difficulty > 0 ? '+' : ''}${+m.difficulty.toFixed(2)}`);
+  for (const [k, label] of NOTE_FACTORS) if (m[k] !== 1) parts.push(`${label} ×${m[k]}`);
+  if (m.bane) parts.push(`damage ×${BANE_BONUS} to glowing creatures`);
+  const bows = Object.entries(BOW_WOOD).filter(([, w]) => w === m.name).map(([id]) => id.replace(/_/g, ' '));
+  if (bows.length) parts.push(`bow wood: ${bows.join(', ')}`);
+  const said = parts.join(', ');
+  return `${said ? `${said[0].toUpperCase()}${said.slice(1)}.` : ''}${m.note ? `${said ? ' ' : ''}${m.note}` : ''}`;
+}
 
 /** Looked up by the name written on the item, which is how it is stored. */
 const BY_NAME = new Map(MATERIALS.map((m) => [m.name.toLowerCase(), m]));
@@ -155,6 +170,8 @@ export const BOW_WOOD: Record<string, string> = {
   medium_bow: 'Birch',
   long_bow: 'Oak',
 };
+// Every material's line says what it is worth off its own numbers (`noteOf`).
+for (const m of MATERIALS) m.note = noteOf(m);
 
 /**
  * A tool's working quality is its own quality lifted or dragged by the metal

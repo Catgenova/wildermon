@@ -39,10 +39,10 @@ export { EMBERS, FIREFLIES, FLAKES, MOTES_LEAST, MOTES_MORE };
 /** What lives on which frame, and when: for the setting's words, under the frames' own names. */
 export const LIFE: Array<{ kind: string | null; what: string }> = [
   { kind: 'wicker', what: 'two butterflies by day' },
-  { kind: 'linen', what: 'a hedgehog asleep on the foot, out and about more after dark' },
+  { kind: 'linen', what: 'a hedgehog on the foot, more active after dark' },
   { kind: 'armoury', what: 'light running down the crossed swords now and then by day' },
   { kind: 'turf', what: `${FIREFLIES} fireflies after dark` },
-  { kind: 'bench', what: 'a moth round the lantern after dark, and sparks while something is being made' },
+  { kind: 'bench', what: 'a moth at the lantern after dark; sparks while crafting' },
   { kind: 'stall', what: 'a bee by day' },
   { kind: 'palisade', what: 'a ladybird on the foot beam' },
   { kind: 'burlap', what: 'a mouse looking out over the top' },
@@ -50,12 +50,12 @@ export const LIFE: Array<{ kind: string | null; what: string }> = [
   { kind: 'runestone', what: 'a snail climbing a pillar' },
   { kind: 'letter', what: 'a songbird by day' },
   { kind: 'parchment', what: 'a dragonfly by day' },
-  { kind: 'altar', what: `${MOTES_LEAST} motes, and up to ${MOTES_MORE} more as your favour fills` },
-  { kind: 'treasure', what: 'a wisp, brighter and quicker while a treasure map is in your pack, and stopping over the frame\'s X\'s and compasses' },
+  { kind: 'altar', what: `${MOTES_LEAST} motes, +${MOTES_MORE} more as favour fills` },
+  { kind: 'treasure', what: 'a wisp; brighter and faster with a treasure map in your pack' },
   { kind: 'book', what: 'dust in a sunbeam by day' },
   { kind: 'strap', what: 'glints on the crystals after dark' },
   { kind: 'toolbelt', what: 'glints on the crystals after dark' },
-  { kind: null, what: 'snow on every window in the island\'s winter' },
+  { kind: null, what: 'snow on every window in winter' },
 ];
 
 /** The life on each frame in words: "pale wood and wildflowers, two butterflies by day; …". */

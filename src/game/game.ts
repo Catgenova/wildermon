@@ -4,7 +4,7 @@ import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { deedMay, lacks, type DeedRole } from './ranks';
 import { defaultKey } from './keybinds';
-import { listed, percent, share } from './words';
+import { capital, listed, percent } from './words';
 import { brazierBurn, shoreNear } from './placeables';
 import { dyeChoice, dyeEnough, pickDyeAsks, sourceSays, type DyeSource } from './dyes';
 import type { Hoard } from './treasure';
@@ -98,7 +98,7 @@ import { isRuneLantern, runeLanternLight } from './runelantern';
 import { helpingOf, NUTRIENTS, NUTRIENT_DECAY, NUTRIENT_NAMES, TABLE_BEST, tableMul, upkeepMul, type Nutrient } from './nutrition';
 import { strokeOf } from '../audio/sound';
 import { lockRefusal, type Lockable } from './locks';
-import { sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
+import { REACH_FORCE, sailFactor, sailWord, windAt, windFrom, windWord, type Wind } from './wind';
 import { festerChance, PART_NAMES, woundClose, woundDrain, WOUND_KINDS, woundText, type Wound, type WoundKind } from './wounds';
 import { baubleLearn, baublePace, baublePlus, baublesFrom, baublesServe, baubleTwice, YIELD_TIMES, type DeedBauble, type IslandBauble } from './baubles';
 import { orderRefusal, queueDropped, seenOf, type SeenJob } from './jobqueue';
@@ -511,7 +511,7 @@ const FORAGE_COOLDOWN = world(180);
  */
 const FORAGE_KINDS = ['forage', 'botanize', 'grass', 'reed', 'dig', 'moss'];
 /** How long ore stays lit after prospecting. */
-const PROSPECT_MARK_TIME = 120;
+export const PROSPECT_MARK_TIME = 120;
 const MAX_LOG = 400;
 /** Seconds between ground decay passes while playing. */
 const DECAY_STEP = 5;
@@ -541,6 +541,8 @@ export const CARRY_PER_STRENGTH = 5;
  * line: enough to get somewhere, not enough to make carrying it worth doing.
  */
 export const CARRY_STOP = 1.5;
+/** The damage at which a post's worker is warned that it is near collapse. */
+export const POST_WARN = 85;
 
 /** What an ordinary go teaches, before the curve and everything that multiplies it. */
 export const ORDINARY_GAIN = 0.45;
@@ -850,8 +852,8 @@ export class Game {
     this.note('made');
     this.note(`made:${id}`);
     const name = itemDef(id).name.toLowerCase();
-    if (!had) this.logMsg(`The first ${name} you have ever made. (The journal's Ledger tab, J)`, 'skill');
-    else if (rec.best > before + 0.05 && rec.n > 1) this.logMsg(`The best ${name} you have made: QL ${rec.best.toFixed(1)}, over ${before.toFixed(1)}.`, 'skill');
+    if (!had) this.logMsg(`First ${name} made. (Journal: Ledger tab, J)`, 'skill');
+    else if (rec.best > before + 0.05 && rec.n > 1) this.logMsg(`Best ${name} made: QL ${rec.best.toFixed(1)}, was ${before.toFixed(1)}.`, 'skill');
   }
 
   /** What the ledger adds up to. */
@@ -1142,8 +1144,8 @@ export class Game {
     // A new island is stocked on the books; what is near the player takes a
     // body on the first streaming pass, and the rest waits to be walked to.
     game.creatures.stockIsland(game);
-    game.logMsg('Welcome to Wildermon. You wash ashore on an untouched island with a few tools and your wits.', 'system');
-    game.logMsg(`Left-click to walk — it is the only thing that moves you. Right-click a tile for actions. WASD or the arrows push the view about, scroll to zoom. Settings (O) has a Keys tab if you would rather they did something else. Press ${defaultKey('win_help')} for help.`, 'system');
+    game.logMsg('Welcome to Wildermon.', 'system');
+    game.logMsg(`Left-click: walk. Right-click a tile: actions. WASD or arrows: pan the view. Scroll: zoom. Settings (O), Keys tab: rebind. ${defaultKey('win_help')}: help.`, 'system');
     return game;
   }
 
@@ -1711,7 +1713,7 @@ export class Game {
   /** Take a pick of your path, playing by yourself: refused in the island's words, or null. */
   takePathPick(id: string): string | null {
     const k = PATH_PICK_BY_ID.get(id);
-    if (!k) return 'There is no such pick.';
+    if (!k) return 'No such pick.';
     const why = pathPickRefusal(k, this.player.way, this.player.picks, this.skills.get(MEDITATION));
     if (why) return why;
     this.player.picks = [...this.player.picks, id];
@@ -1734,9 +1736,9 @@ export class Game {
    */
   techniqueRefusal(id: string): string | null {
     const k = PATH_PICK_BY_ID.get(id);
-    if (!k || k.kind !== 'technique' || !this.holds(id)) return 'You do not have that spell.';
+    if (!k || k.kind !== 'technique' || !this.holds(id)) return 'Spell not known.';
     const left = Math.ceil(this.techniqueRest(id));
-    if (left > 0) return `${k.name} can be called again in ${left} seconds.`;
+    if (left > 0) return `${k.name}: cooldown ${left} s.`;
     if (this.player.calm < k.cost) return calmRefusal(k.name, k.cost, this.player.calm);
     return null;
   }
@@ -1750,7 +1752,7 @@ export class Game {
     const why = this.techniqueRefusal(id);
     if (why) return why;
     const k = PATH_PICK_BY_ID.get(id);
-    if (!k) return 'You do not have that spell.';
+    if (!k) return 'Spell not known.';
     const done = this.workTechnique(k.id, k.fx);
     if ('why' in done) return done.why;
     this.player.calm = Math.max(0, this.player.calm - k.cost);
@@ -1871,7 +1873,7 @@ export class Game {
         p.pathTimes.unbroken = this.time + fx.secs;
         return { said: unbrokenSaid(fx.secs) };
       default:
-        return { why: 'Nothing is written behind that spell yet.' };
+        return { why: 'Spell has no effect yet.' };
     }
   }
 
@@ -2250,9 +2252,9 @@ export class Game {
    * new plan. The island's `plan_reason` and `extend_reason`.
    */
   planReason(x: number, y: number, into?: Building): string | null {
-    if (!this.onDeed(x, y)) return 'You may only build on your own deed.';
-    if (this.isToken(x, y)) return 'The settlement token stands here.';
-    if (this.buildings.buildingAt(x, y)) return 'That tile is already part of a building.';
+    if (!this.onDeed(x, y)) return 'Only on your own deed.';
+    if (this.isToken(x, y)) return 'Settlement token here.';
+    if (this.buildings.buildingAt(x, y)) return 'Already part of a building.';
     if (this.bridgeAt(x, y)?.kind === 'aqueduct') return AQ_OVER;
     // gates: nor over the end of a bridge, whose winch or landing stands there (`gates.ts`).
     if (this.bridges.size && bridgeEndAt(this, x, y)) return BRIDGE_END_HERE;
@@ -2268,17 +2270,17 @@ export class Game {
      */
     const slab = this.foundationAt(x, y);
     if (slab) {
-      if (this.world.getTile(x, y) !== TileType.PackedDirt) return 'Buildings need flat packed dirt. Pack the tile first.';
-      if (!foundationDone(slab)) return 'The foundation here is only shuttered. Pour it first.';
-      if (slab.pool) return 'You cannot build in water.';
+      if (this.world.getTile(x, y) !== TileType.PackedDirt) return 'Needs packed dirt.';
+      if (!foundationDone(slab)) return 'Foundation not poured yet.';
+      if (slab.pool) return 'Not in a pool.';
       // And level with a deck the building already has, since a floor is.
       if (into?.deck != null && slab.top !== into.deck) {
-        return `The slab here is poured to ${slab.top} and the floor of ${into.name} stands at ${into.deck}. A floor is level.`;
+        return `Slab at ${slab.top}; ${into.name} floor at ${into.deck}. Must match.`;
       }
     } else {
       const site = this.pierSite(x, y, into);
       if (site.deck === null) {
-        if (this.world.getTile(x, y) !== TileType.PackedDirt) return 'Buildings need flat packed dirt. Pack the tile first.';
+        if (this.world.getTile(x, y) !== TileType.PackedDirt) return 'Needs packed dirt.';
       } else {
         const plant = this.waterPlantAt(x, y);
         const why = pierRefusal(site.ground, site.deck, plant ? WATER_PLANT_BY_ID.get(plant.kind)?.name.toLowerCase() ?? 'water plant' : undefined);
@@ -2288,7 +2290,7 @@ export class Game {
         if (under) return under;
       }
     }
-    if (this.groundAt(x, y).length) return 'Clear away the items lying there first.';
+    if (this.groundAt(x, y).length) return 'Items on the tile: clear them first.';
     return null;
   }
 
@@ -2302,10 +2304,10 @@ export class Game {
    * `pier_site_refusal`, in its words and order.
    */
   pierSiteRefusal(x: number, y: number): string | null {
-    if (this.bridges.size && this.bridgeEndAt(x, y)) return 'A bridge lands on this tile. Take the bridge down first.';
-    if (this.anythingPlaced(x, y)) return 'Move what stands on the tile first.';
+    if (this.bridges.size && this.bridgeEndAt(x, y)) return 'Bridge end on this tile: remove the bridge first.';
+    if (this.anythingPlaced(x, y)) return 'Something placed on the tile: move it first.';
     if (this.player.tileX === x && this.player.tileY === y) return 'Step off the tile first.';
-    if (this.peerOn(x, y)) return 'Somebody is standing on that tile.';
+    if (this.peerOn(x, y)) return 'Someone is on that tile.';
     return null;
   }
 
@@ -2438,7 +2440,7 @@ export class Game {
       c.enemy = null;
       n++;
     }
-    this.logMsg(`The wildermon of ${this.deed.name} are set to ${stance}${n ? `; ${n} of them take the word` : ''}.`, 'system');
+    this.logMsg(`${this.deed.name} wildermon stance: ${stance}${n ? ` (${n} changed)` : ''}.`, 'system');
     this.events.emit('creature');
   }
 
@@ -2548,10 +2550,10 @@ export class Game {
     if (uid !== null && slot === 'weapon' && item && WEAPON_BY_ID.get(item.id)?.twoHanded && this.worn('offhand')) {
       const shield = this.worn('offhand');
       this.player.equipped.offhand = null;
-      if (shield) this.logMsg(`You need both hands for that, so the ${itemName(shield).toLowerCase()} goes on your back.`, 'info');
+      if (shield) this.logMsg(`Needs both hands: ${itemName(shield).toLowerCase()} unequipped.`, 'info');
     }
-    if (item) this.logMsg(`You ${slot === 'weapon' || slot === 'offhand' ? 'take up' : 'put on'} the ${itemName(item).toLowerCase()}.`, 'info');
-    else if (before) this.logMsg(`You put the ${itemName(before).toLowerCase()} away.`, 'info');
+    if (item) this.logMsg(`Equipped: ${itemName(item).toLowerCase()}.`, 'info');
+    else if (before) this.logMsg(`Unequipped: ${itemName(before).toLowerCase()}.`, 'info');
     this.events.emit('inventory');
   }
 
@@ -2570,7 +2572,7 @@ export class Game {
     if (loop < 0 || loop >= BELT_MAX) return;
     this.player.belt[loop] = pin;
     const def = ACTION_BY_ID.get(pin.action);
-    this.logMsg(`${pinLabel(pin, def)} goes on loop ${loop + 1}.`, 'info');
+    this.logMsg(`Loop ${loop + 1}: ${pinLabel(pin, def)}.`, 'info');
     this.events.emit('inventory');
   }
 
@@ -2595,14 +2597,14 @@ export class Game {
     const def = ACTION_BY_ID.get(pin.action);
     if (!def) return null;
     const aim = aimPin(this, pin, def, where);
-    if (!aim) return { pin, def, target: { kind: 'tile', x: this.player.tileX, y: this.player.tileY, cx: this.player.tileX, cy: this.player.tileY }, reason: `You carry no ${itemName({ uid: 0, id: pin.item ?? '', ql: 1, dmg: 0, count: 1 }).toLowerCase()}.` };
+    if (!aim) return { pin, def, target: { kind: 'tile', x: this.player.tileX, y: this.player.tileY, cx: this.player.tileX, cy: this.player.tileY }, reason: `Need ${itemName({ uid: 0, id: pin.item ?? '', ql: 1, dmg: 0, count: 1 }).toLowerCase()}.` };
     return { pin, def, target: aim.target, reason: aim.reason };
   }
 
   /** Press a loop: do what hangs on it, where you are pointing. */
   useLoop(loop: number, where: Target | null): void {
     if (!this.beltLoops()) {
-      this.logMsg('You are wearing no toolbelt, so there is nothing to hang a job on.', 'error');
+      this.logMsg('Need a toolbelt worn.', 'error');
       return;
     }
     const aim = this.aimLoop(loop, where);
@@ -2656,7 +2658,7 @@ export class Game {
     this.marks.push(mark);
     while (this.marks.length > MARK_CAP) this.marks.shift();
     this.marksChanged?.();
-    this.logMsg(`You mark ${mark.name} on the map at (${x}, ${y}).`, 'info');
+    this.logMsg(`Marked: ${mark.name} at (${x}, ${y}).`, 'info');
     this.events.emit('world', x, y);
     return mark;
   }
@@ -2687,7 +2689,7 @@ export class Game {
     if (i < 0) return;
     const [gone] = this.marks.splice(i, 1);
     this.marksChanged?.();
-    this.logMsg(`You rub ${gone.name} off the map.`, 'info');
+    this.logMsg(`Mark removed: ${gone.name}.`, 'info');
     this.events.emit('world', gone.x, gone.y);
   }
 
@@ -2751,13 +2753,13 @@ export class Game {
   /** Walk after somebody until one of you stops it. Asking twice stops it. */
   follow(uid: string, name: string): void {
     if (this.followed?.uid === uid) {
-      this.unfollow(`You stop following ${name}.`);
+      this.unfollow(`Stopped following ${name}.`);
       return;
     }
     this.followed = { uid, name };
     this.followTile = null;
     this.followTick = FOLLOW_EVERY;
-    this.logMsg(`You follow ${name}. Move anywhere yourself, or press Escape, to stop.`, 'info');
+    this.logMsg(`Following ${name}. Move or press Escape to stop.`, 'info');
   }
 
   unfollow(why?: string): void {
@@ -2783,7 +2785,7 @@ export class Game {
     this.followTick = 0;
     const who = this.roster.list().find((p) => p.uid === f.uid);
     if (!who) {
-      this.unfollow(`You have lost sight of ${f.name}.`);
+      this.unfollow(`Lost sight of ${f.name}.`);
       return;
     }
     const away = Math.hypot(who.x - this.player.x, who.y - this.player.y);
@@ -2811,17 +2813,17 @@ export class Game {
   walkHome(): boolean {
     const h = this.home();
     if (!h) {
-      this.logMsg('You have nowhere to call home yet. Plant a settlement token, or sleep in a bed.', 'error');
+      this.logMsg('No home: found a settlement or sleep in a bed.', 'error');
       return false;
     }
     const away = Math.round(Math.hypot(h.x + 0.5 - this.player.x, h.y + 0.5 - this.player.y));
     if (away < 2) {
-      this.logMsg(`You are at ${h.name} already.`, 'info');
+      this.logMsg(`Already at ${h.name}.`, 'info');
       return true;
     }
     // moveTo says so itself when there is no way through.
     if (!this.moveTo(h.x, h.y)) return false;
-    this.logMsg(`You set off for ${h.name}, ${away} tiles off.`, 'info');
+    this.logMsg(`Heading to ${h.name}: ${away} tiles.`, 'info');
     return true;
   }
 
@@ -2934,7 +2936,7 @@ export class Game {
     if (item.dmg >= 100) {
       this.inventory.remove(item.uid, 1);
       this.player.equipped[part] = null;
-      this.logMsg(`Your ${itemName(item).toLowerCase()} is beaten to pieces and falls away.`, 'fight');
+      this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX} damage).`, 'fight');
     }
     this.events.emit('inventory');
     // And more for Power's Ironhide, as the island's `hurt_player` has it.
@@ -3037,7 +3039,7 @@ export class Game {
     if (dodge > 0 && this.rand() < dodge) {
       this.gainSkill('body_control', DODGE_GAIN);
       this.player.attackedAt = this.time;
-      this.logMsg(`You dodge the ${from ? this.creatures.species(from).name.toLowerCase() : 'blow'}.`, 'fight');
+      this.logMsg(`Dodged: ${from ? this.creatures.species(from).name.toLowerCase() : 'blow'}.`, 'fight');
       // And answer it, for a Skirmisher's Riposte (`class_riposte`).
       const share = this.perk('riposte:blow', 0);
       if (share > 0 && from) riposte(this, from, share);
@@ -3050,12 +3052,12 @@ export class Game {
       this.player.skin = skin > raw ? { ...this.player.skin, size: skin - raw } : { size: 0, mine: false, by: null };
       if (skin >= raw) {
         this.player.attackedAt = this.time;
-        this.logMsg(`The ward takes ${what.charAt(0).toLowerCase()}${what.slice(1)}, and holds.`, 'fight');
+        this.logMsg(`Ward absorbed: ${what.charAt(0).toLowerCase()}${what.slice(1)}.`, 'fight');
         this.fightBack();
         return;
       }
       raw -= skin;
-      this.logMsg('The ward goes with a sound like ice, and the rest of it reaches you.', 'fight');
+      this.logMsg('Ward broken; the rest of the blow hits.', 'fight');
     }
     // A blow that lands is answered with its share of the creature's own attack, for a Warder's Thorns (`class_owed_pay`).
     const thorns = this.perk('thorns:attack', 0);
@@ -3109,8 +3111,8 @@ export class Game {
     const wound = this.wound(kind, hit.part, hit.taken * this.perk('severity:wound', 1) * (fresh ? this.perk('severity:new', 1) : 1));
     // A venomous bite leaves venom in what it opened (`VENOM_SECS`).
     if (from && this.creatures.species(from).venom) wound.venom = VENOM_SECS;
-    const where = hit.worn ? `, though your ${itemName(hit.worn).toLowerCase()} takes the worst of it` : '';
-    this.logMsg(`${what}${where}. You have ${woundText(wound)}.`, 'fight');
+    const where = hit.worn ? ` (${itemName(hit.worn).toLowerCase()} absorbed some)` : '';
+    this.logMsg(`${what}${where}. Wound: ${woundText(wound)}.`, 'fight');
     this.fightBack();
   }
 
@@ -3178,7 +3180,7 @@ export class Game {
     const target: Target = { kind: 'creature', id };
     if (this.action) this.queue.unshift({ def: this.action.def, target: this.action.target, goes: this.action.left });
     this.action = null;
-    this.logMsg(`You turn on the ${this.creatures.species(c).name.toLowerCase()}.`, 'fight');
+    this.logMsg(`Fighting back: ${this.creatures.species(c).name.toLowerCase()}.`, 'fight');
     this.fightTarget = id;
     this.startAction(def, target, FIGHT_BACK_GOES);
   }
@@ -3269,7 +3271,7 @@ export class Game {
     const name = this.creatures.species(c).name.toLowerCase();
     if (Math.hypot(c.x - p.x, c.y - p.y) > FOLLOW_RANGE) {
       this.fightTarget = null;
-      this.logMsg(`The ${name} is away from you.`, 'fight');
+      this.logMsg(`${capital(name)} out of range.`, 'fight');
       return;
     }
     // Spent: the fight waits for your wind rather than ending.
@@ -3280,7 +3282,7 @@ export class Game {
     const arms = armsRefusal(this, def.id);
     if (arms || this.fightTries >= FIGHT_TRIES) {
       this.fightTarget = null;
-      this.logMsg(arms ?? `You cannot get at the ${name}.`, 'error');
+      this.logMsg(arms ?? `Cannot reach the ${name}.`, 'error');
       return;
     }
     // Too close to draw on: it is on you, and there is nothing to walk to.
@@ -3334,7 +3336,7 @@ export class Game {
     const learned = [...rec.skills].map(([k, v]) => `${k} +${v.toFixed(2)}`);
     // Nothing given, nothing taken, nothing learned: a scent and a walk away is not a fight to report.
     if (!dead && taken === 0 && !learned.length && (rec.foe === null || Math.abs(rec.foeAt - (c?.health ?? rec.foeAt)) < 1e-9)) return;
-    const how = rec.foe === null ? 'The fight is over' : dead ? `The ${rec.foeName} is dead` : `The fight with the ${rec.foeName} is over`;
+    const how = rec.foe === null ? 'Fight over' : dead ? `${capital(rec.foeName)} killed` : `Fight with ${rec.foeName} over`;
     this.write(`${how}: ${parts.join(', ')}.${learned.length ? ` Learned: ${learned.join(', ')}.` : ''}`, 'fight');
     // That line is the fight's last word, not the start of another.
     this.fightRec = null;
@@ -3408,11 +3410,11 @@ export class Game {
       if (this.rand() < festerChance(w) * dt) {
         w.infected = true;
         w.dressing = null;
-        this.logMsg(`The ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part} has gone bad. It wants cleaning out before anything will hold on it.`, 'error');
+        this.logMsg(`Infected: ${WOUND_KINDS[w.kind].name}, ${PART_NAMES[w.part] ?? w.part}. Clean it before dressing.`, 'error');
       }
     }
     const closed = p.wounds.filter((w) => w.severity <= 0.004 && !w.infected);
-    for (const w of closed) this.logMsg(`The ${WOUND_KINDS[w.kind].name} on your ${PART_NAMES[w.part] ?? w.part} has closed.`, 'event');
+    for (const w of closed) this.logMsg(`Healed: ${WOUND_KINDS[w.kind].name}, ${PART_NAMES[w.part] ?? w.part}.`, 'event');
     if (closed.length) p.wounds = p.wounds.filter((w) => !closed.includes(w));
     // Losing blood also means losing the wind to do anything about it.
     if (bad) p.stats.stamina = Math.max(0, p.stats.stamina - dt * 0.01);
@@ -3689,11 +3691,11 @@ export class Game {
     this.gainSkill('body_stamina', 0.3 * rest);
     // A good bed banks more of the night than a poor one, and a Dreamweave in it more again.
     const banked = this.bankRest(seconds, rest, dream);
-    const bank = banked > 1 ? ` You have ${clockLeft(this.player.rested)} of rest in you; while it burns, everything teaches you twice as much.` : '';
+    const bank = banked > 1 ? ` Rested: ${clockLeft(this.player.rested)}, skill gain ×${REST_MULT}.` : '';
     this.logMsg(
       skipped
-        ? `You sleep in the ${what} and wake at ${this.clock()}, rested.${bank}`
-        : `You doze in the ${what} and wake rested. It is still ${this.clock()} — the night runs on for everybody on the island, and it is not one sleeper's to skip.${bank}`,
+        ? `Slept in the ${what}: woke at ${this.clock()}.${bank}`
+        : `Dozed in the ${what}. Time ${this.clock()}: the night is not skipped while others are on the island.${bank}`,
       'event',
     );
     this.events.emit('world', this.player.tileX, this.player.tileY);
@@ -3815,7 +3817,7 @@ export class Game {
     this.player.knacks[id] = had + 1;
     const def = SKILL_DEFS.find((d) => d.id === id);
     this.logMsg(
-      `You have a knack for ${def?.name.toLowerCase() ?? id} now. It goes in ${Math.round(knackBonus(had + 1) * 100)}% faster.`,
+      `Knack: ${def?.name.toLowerCase() ?? id}, skill gain +${Math.round(knackBonus(had + 1) * 100)}%.`,
       'skill',
     );
     this.note('knack');
@@ -3827,7 +3829,7 @@ export class Game {
       if (before >= t.at || this.player.titles.includes(t.id)) continue;
       this.player.titles.push(t.id);
       if (!this.player.title) this.player.title = t.id;
-      this.logMsg(`They will call you ${t.name} for that. (Skills, to wear it)`, 'skill');
+      this.logMsg(`Title earned: ${t.name}. (Skills window to wear it)`, 'skill');
       this.note('title');
     }
   }
@@ -3892,14 +3894,14 @@ export class Game {
       .filter((c) => this.hostile(c) && Math.hypot(c.x - p.x, c.y - p.y) <= TARGET_RANGE)
       .sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
     if (!foes.length) {
-      this.logMsg(`Nothing within ${TARGET_RANGE} tiles is after you.`, 'info');
+      this.logMsg(`No attackers within ${TARGET_RANGE} tiles.`, 'info');
       return null;
     }
     const at = foes.findIndex((c) => c.id === this.marked);
     const next = foes[(at + 1) % foes.length];
     this.marked = next.id;
     const def = this.creatures.species(next);
-    this.logMsg(`You mark the ${def.name.toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles off, with ${Math.ceil(next.health)} health left.`, 'fight');
+    this.logMsg(`Target: ${def.name.toLowerCase()}, ${Math.round(Math.hypot(next.x - p.x, next.y - p.y))} tiles, health ${Math.ceil(next.health)}.`, 'fight');
     return next;
   }
 
@@ -3929,7 +3931,7 @@ export class Game {
     const c = this.companion();
     const def = ACTION_BY_ID.get('order_attack');
     if (!c || !def) {
-      this.logMsg('Nothing follows you.', 'info');
+      this.logMsg('Nothing following you.', 'info');
       return;
     }
     const foe = this.fightTarget ?? this.marked ?? this.nearestHostile()?.id;
@@ -3941,7 +3943,7 @@ export class Game {
     const c = this.companion();
     const def = ACTION_BY_ID.get('order_heel');
     if (!c || !def) {
-      this.logMsg('Nothing follows you.', 'info');
+      this.logMsg('Nothing following you.', 'info');
       return;
     }
     this.requestAction(def, { kind: 'creature', id: c.id });
@@ -3952,7 +3954,7 @@ export class Game {
     const c = this.marked !== null ? this.creatures.get(this.marked) : undefined;
     const foe = c && c.mode === 'wild' && c.health > 0 ? c : this.nearestHostile();
     if (!foe) {
-      this.logMsg(`Nothing within ${TARGET_RANGE} tiles is after you. Click one, or mark it first.`, 'info');
+      this.logMsg(`No attackers within ${TARGET_RANGE} tiles. Click a target or mark one first.`, 'info');
       return;
     }
     this.marked = foe.id;
@@ -4047,8 +4049,8 @@ export class Game {
     }
     if (!filled.length) return null;
     const all = NUTRIENTS.every((k) => n[k] >= 1);
-    if (all) return `You could not eat another thing. Everything you do goes in ${percent(this.tableBest())} faster while it lasts.`;
-    return `That is as much ${filled.join(' and ')} as you can hold.`;
+    if (all) return `All nutrients full: skill gain +${percent(this.tableBest())} while it lasts.`;
+    return `Full: ${filled.join(' and ')}.`;
   }
 
   /** Bank a night's sleep as rest, up to the hour that will stay banked. */
@@ -4071,11 +4073,11 @@ export class Game {
     if (isQuiet(id)) {
       if (Math.floor(now) > Math.floor(before)) {
         const room = id === 'mind_logic' && queueCapAt(now) > queueCapAt(before);
-        this.logMsg(`${def.name} is now ${Math.floor(now)}.${room ? ` You can keep ${queueCapAt(now)} jobs in your head.` : ''}`, 'skill');
+        this.logMsg(`${def.name}: ${Math.floor(now)}.${room ? ` Job queue: ${queueCapAt(now)}.` : ''}`, 'skill');
       }
     } else {
       const places = gain < 0.0001 ? 6 : 4;
-      this.logMsg(`${def.name} increased by ${gain.toFixed(places)} to ${now.toFixed(4)}.`, 'skill');
+      this.logMsg(`${def.name} ${now.toFixed(4)} (+${gain.toFixed(places)}).`, 'skill');
     }
     /*
      * A knack and a title are the island's to hand out where there is one.
@@ -4336,7 +4338,7 @@ export class Game {
     }
     if (boat && furnitureDef(boat.kind).boat?.sail && moved > 0) {
       const w = this.wind();
-      if (w.force >= 0.5 && sailWord(this.heading(), w) === 'reaching') this.note('reach');
+      if (w.force >= REACH_FORCE && sailWord(this.heading(), w) === 'reaching') this.note('reach');
       const cap = furnitureCapacity(boat);
       if (cap && furnitureUnits(boat) > cap / 2) this.note('laden');
     }
@@ -4405,8 +4407,8 @@ export class Game {
     const stuck = this.stalled();
     if (stuck !== p.stalled) {
       p.stalled = stuck;
-      if (stuck) this.logMsg(`You can barely move under ${this.inventory.totalWeight().toFixed(0)} kg. Your back takes ${this.carryLimit().toFixed(0)}; anything over ${(this.carryLimit() * CARRY_STOP).toFixed(0)} leaves you ${share(CARRY_CRAWL)} of your pace.`, 'error');
-      else this.logMsg('You can walk properly again.', 'event');
+      if (stuck) this.logMsg(`Overloaded: ${this.inventory.totalWeight().toFixed(0)} kg. Carry limit ${this.carryLimit().toFixed(0)} kg; over ${(this.carryLimit() * CARRY_STOP).toFixed(0)} kg, speed ×${CARRY_CRAWL}.`, 'error');
+      else this.logMsg('No longer overloaded.', 'event');
     }
     p.maxStep = this.climbStep();
     p.maxDrop = this.dropStep();
@@ -4438,7 +4440,7 @@ export class Game {
     if (performing && this.player.rested > 0) {
       const was = this.player.rested;
       this.player.rested = Math.max(0, was - dt);
-      if (was > 0 && this.player.rested === 0) this.logMsg('The rest goes out of you. Skills go in at their ordinary pace again.', 'system');
+      if (was > 0 && this.player.rested === 0) this.logMsg(`Rested ended: normal skill gain.`, 'system');
     }
     if (p.swimming) {
       /*
@@ -4463,7 +4465,7 @@ export class Game {
           s.health = Math.max(0, s.health - dt * DROWN_RATE);
           if (this.time - this.acting.drownWarning > DROWN_WARN) {
             this.acting.drownWarning = this.time;
-            this.logMsg('You are exhausted and swallowing water. Get to shore!', 'error');
+            this.logMsg('Drowning: no stamina. Get to shore.', 'error');
           }
         }
       }
@@ -4494,10 +4496,10 @@ export class Game {
       // one, and it will say it down the same subscription as everything else.
       if (!this.packFromIsland) {
         if (it.id === 'torch') {
-          this.logMsg('The torch burns down to your hand and you drop what is left of it.', 'event');
+          this.logMsg('Torch burnt out.', 'event');
           this.inventory.remove(it.uid, 1);
         } else {
-          this.logMsg('The candle gutters out and the lantern goes dark.', 'event');
+          this.logMsg('Lantern candle burnt out.', 'event');
         }
       }
       this.events.emit('inventory');
@@ -4590,7 +4592,7 @@ export class Game {
           lost += item.count;
           changed = true;
           if (seconds < 60 && Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) < 16) {
-            this.logMsg(`The ${itemName(item).toLowerCase()} lying on the ${level < 0 ? 'cellar floor' : 'ground'} rots away.`, 'event');
+            this.logMsg(`Rotted away: ${itemName(item).toLowerCase()}, on the ${level < 0 ? 'cellar floor' : 'ground'}.`, 'event');
           }
         }
       }
@@ -4673,7 +4675,7 @@ export class Game {
           // A called wildermon is still on its way over.
         } else {
           const pet = a.target.kind === 'creature' ? this.creatures.get(a.target.id) : undefined;
-          this.logMsg(a.waitUntil !== undefined && pet ? `${pet.name} cannot get to you.`
+          this.logMsg(a.waitUntil !== undefined && pet ? `${pet.name}: no path to you.`
             : cellarGate(this, a.def.id, a.target) ?? 'You are too far away from that.', 'error');
           this.action = null;
           this.nextInQueue();
@@ -4720,7 +4722,7 @@ export class Game {
       if (c) c.busyUntil = this.time + a.duration + 0.2;
     }
     // A job with no length to it has no start to speak of.
-    if (!a.def.instant) this.logMsg(`You start ${a.def.verb}.`, 'info');
+    if (!a.def.instant) this.logMsg(`${capital(a.def.verb)}.`, 'info');
     this.events.emit('action');
   }
 
@@ -4844,10 +4846,10 @@ export class Game {
     }
     if (counted) {
       const did = (a.goes as number) - (a.left as number);
-      if (did >= (a.goes as number)) this.logMsg(`That is ${a.goes} of them.`, 'info');
-      else if (winded) this.logMsg(`Your wind gives out after ${did} of ${a.goes}. Rest and pick it up again.`, 'info');
-      else if (barred) this.logMsg(`${barred} That was ${did} of ${a.goes}.`, 'info');
-      else this.logMsg(`That is as far as that goes: ${did} of ${a.goes}.`, 'info');
+      if (did >= (a.goes as number)) this.logMsg(`Done: ${a.goes}/${a.goes}.`, 'info');
+      else if (winded) this.logMsg(`Out of stamina: ${did}/${a.goes} done.`, 'info');
+      else if (barred) this.logMsg(`${barred} Done: ${did}/${a.goes}.`, 'info');
+      else this.logMsg(`Stopped: ${did}/${a.goes} done.`, 'info');
     } else if (barred) this.logMsg(barred, 'error');
     this.action = null;
     this.nextInQueue();
@@ -4954,7 +4956,7 @@ export class Game {
     if (!silent) this.stop?.();
     if (!a) return;
     this.action = null;
-    if (!silent && a.state === 'performing') this.logMsg(`You stop ${a.def.verb}.`, 'info');
+    if (!silent && a.state === 'performing') this.logMsg(`Stopped ${a.def.verb}.`, 'info');
     this.events.emit('action');
   }
 
@@ -5111,14 +5113,14 @@ export class Game {
   repeatLast(): void {
     const last = this.lastAsked;
     if (!last) {
-      this.logMsg('There is nothing to do again yet.', 'info');
+      this.logMsg('Nothing to repeat.', 'info');
       return;
     }
     // And the dye a dyeing drew from: that bucket may be empty now, so it is chosen again.
     const { name: _name, sure: _sure, dyeFrom: _dyeFrom, ...rest } = last.target as Target & { name?: string; sure?: boolean; dyeFrom?: string };
     const target = this.retarget({ target: rest as Target, was: last.was });
     if (!last.def.applies(target, this)) {
-      this.logMsg(`There is nothing here to ${last.def.label.toLowerCase()} now.`, 'error');
+      this.logMsg(`Nothing here to ${last.def.label.toLowerCase()}.`, 'error');
       return;
     }
     this.requestAction(last.def, target, last.goes);
@@ -5284,7 +5286,7 @@ export class Game {
         : 'itemUid' in target ? target.itemUid : undefined;
       const was = named !== undefined ? this.inventory.get(named)?.id : undefined;
       this.queue.push({ def, target, goes, was });
-      this.logMsg(`${def.label} is next, ${this.queue.length + 1} of ${this.queueCapacity()} in hand.`, 'info');
+      this.logMsg(`Queued: ${def.label} (${this.queue.length + 1}/${this.queueCapacity()}).`, 'info');
       this.events.emit('action');
       return;
     }
@@ -5296,7 +5298,7 @@ export class Game {
    * null: the island's `body_refusal`.
    */
   bodyRefusal(def: ActionDef): string | null {
-    return !def.instant && this.player.stats.stamina < EXHAUSTED ? 'You are too exhausted to do that. Rest a moment.' : null;
+    return !def.instant && this.player.stats.stamina < EXHAUSTED ? 'Too exhausted. Rest.' : null;
   }
 
   /**
@@ -5306,7 +5308,7 @@ export class Game {
    */
   queueRefusal(): string | null {
     if (!this.action || this.queueCapacity() - 1 - this.queue.length > 0) return null;
-    return `You can only keep ${this.queueCapacity()} jobs in your head at once. Mind logic is what widens that.`;
+    return `Job queue full: ${this.queueCapacity()}. Mind logic raises it.`;
   }
 
   /** Put an action in hand and either begin it or start walking to it. */
@@ -5339,8 +5341,8 @@ export class Game {
      * off says so now instead of setting out at a twentieth of a pace.
      */
     if (this.stalled()) {
-      this.logMsg(`That is too far to reach under ${this.inventory.totalWeight().toFixed(0)} kg. `
-        + 'You can still work what is beside you, or put something down.', 'error');
+      this.logMsg(`Overloaded (${this.inventory.totalWeight().toFixed(0)} kg): cannot walk there. `
+        + 'Work within reach or drop something.', 'error');
       this.action = null;
       this.nextInQueue();
       this.events.emit('action');
@@ -5352,7 +5354,7 @@ export class Game {
       this.creatures.callToPlayer(this, pet);
       this.action.waitUntil = this.time + CALL_WINDOW;
       this.player.stop();
-      this.logMsg(`You call ${pet.name} over.`, 'info');
+      this.logMsg(`Called: ${pet.name}.`, 'info');
     } else if (!this.walkToward(def, target)) {
       this.logMsg(this.noWayTo(def, target), 'error');
       this.action = null;
@@ -5368,7 +5370,7 @@ export class Game {
    * and there is no sense swinging at the grass it left behind.
    */
   private jobReason(def: ActionDef, target: Target): string | null {
-    if (!def.applies(target, this)) return `There is nothing here to ${def.label.toLowerCase()} now.`;
+    if (!def.applies(target, this)) return `Nothing here to ${def.label.toLowerCase()}.`;
     return def.check?.(target, this) ?? null;
   }
 
@@ -5411,7 +5413,7 @@ export class Game {
     if (!this.queue.length) return;
     const n = this.queue.length;
     this.queue.length = 0;
-    if (!silent) this.logMsg(`You put ${n === 1 ? 'the other job' : `the other ${n} jobs`} out of your mind.`, 'info');
+    if (!silent) this.logMsg(`Queue cleared: ${n} ${n === 1 ? 'job' : 'jobs'}.`, 'info');
     this.events.emit('action');
   }
 
@@ -5429,7 +5431,7 @@ export class Game {
     if (!quiet) this.travel = null;
     if (this.player.aboard !== null) {
       if (keepFollowing) this.unfollow();
-      else this.logMsg('You are aboard as a passenger. Step ashore first.', 'error');
+      else this.logMsg('Aboard as a passenger: step ashore first.', 'error');
       return false;
     }
     if (!keepFollowing) this.unfollow();
@@ -5449,7 +5451,7 @@ export class Game {
     const candidates = this.neighbours(x, y).filter((c) => this.world.isPassable(c.x, c.y));
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
     for (const c of candidates) if (p.walkTo(this.world, c.x, c.y, rule, levels, below, aim === CELLAR_LEVEL && !this.buildings.cellarDone(c.x, c.y) ? undefined : aim)) return true;
-    if (!quiet) this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, "You can't find a way there.") : "You can't find a way there.", 'error');
+    if (!quiet) this.logMsg(aim === CELLAR_LEVEL ? this.noWay(x, y, 'No path there.') : 'No path there.', 'error');
     return false;
   }
 
@@ -5472,15 +5474,15 @@ export class Game {
     this.travel = null;
     const away = Math.round(Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y));
     if (away < 2) {
-      this.logMsg(`You are at ${name} already.`, 'info');
+      this.logMsg(`Already at ${name}.`, 'info');
       return true;
     }
     if (!this.legToward(x, y)) {
-      this.logMsg(`You can't find a way toward ${name} from here.`, 'error');
+      this.logMsg(`No path to ${name} from here.`, 'error');
       return false;
     }
     this.travel = { x, y, name, best: away, stuck: 0 };
-    this.logMsg(`You set off for ${name}, ${away} tiles off.`, 'info');
+    this.logMsg(`Heading to ${name}: ${away} tiles.`, 'info');
     return true;
   }
 
@@ -5503,7 +5505,7 @@ export class Game {
     const away = Math.hypot(t.x + 0.5 - this.player.x, t.y + 0.5 - this.player.y);
     if (away < 1.5) {
       this.travel = null;
-      this.logMsg(`You are at ${t.name}.`, 'info');
+      this.logMsg(`Arrived: ${t.name}.`, 'info');
       return;
     }
     // Getting no nearer, leg after leg, is a way round that does not go round.
@@ -5513,7 +5515,7 @@ export class Game {
     } else t.stuck++;
     if (t.stuck >= TRAVEL_STUCK || !this.legToward(t.x, t.y)) {
       this.travel = null;
-      this.logMsg(`You can't find a way on toward ${t.name} from here, ${Math.round(away)} tiles off.`, 'error');
+      this.logMsg(`No path on to ${t.name} from here: ${Math.round(away)} tiles.`, 'error');
     }
   }
 
@@ -5533,14 +5535,14 @@ export class Game {
     const onFoot = findPath(this.world, p.tileX, p.tileY, p.level, x, y,
       { ...pathOptions(this.world, this.stepFree, TOP_LEVELS), below: -CELLAR_LEVEL, goalLevel: CELLAR_LEVEL });
     if (!onFoot) return plain;
-    if (mount) return 'Get down first: no mount goes down into a cellar.';
-    if (seat) return 'Get down first: nothing on wheels goes down into a cellar.';
-    return 'Let go of the cart first: nothing in tow goes down into a cellar.';
+    if (mount) return 'Dismount first: no mounts in a cellar.';
+    if (seat) return 'Get off first: no vehicles in a cellar.';
+    return 'Let go of the cart first: nothing towed into a cellar.';
   }
 
   /** `noWay`, for a job whose target is down in a cellar. */
   private noWayTo(def: ActionDef, target: Target): string {
-    const plain = "You can't find a way to get there.";
+    const plain = 'No path there.';
     if (targetFloor(this, def.id, target) !== CELLAR_LEVEL) return plain;
     const tile = target.kind === 'item' ? this.intoStore(def, target) : this.targetTile(target);
     return tile ? this.noWay(tile.x, tile.y, plain) : plain;
@@ -5861,7 +5863,7 @@ export class Game {
   private sayBaubleGo(): void {
     const made = this.baubleGo?.made ?? [];
     this.baubleGo = null;
-    if (made.length) this.logMsg(`The baubles in the altar make that ${listed(made)}.`, 'event');
+    if (made.length) this.logMsg(`Altar baubles: yield now ${listed(made)}.`, 'event');
   }
 
   /**
@@ -5913,9 +5915,9 @@ export class Game {
     if (item.dmg >= DAMAGE_MAX) {
       this.inventory.remove(item.uid, 1);
       for (const [slot, uid] of Object.entries(this.player.equipped)) if (uid === item.uid) this.player.equipped[slot] = null;
-      this.logMsg(`Your ${itemName(item).toLowerCase()} finally goes to pieces and is gone.`, 'error');
+      this.logMsg(`Destroyed: ${itemName(item).toLowerCase()} (${DAMAGE_MAX} damage).`, 'error');
     } else if (item.dmg >= DAMAGE_WARN && (before < DAMAGE_WARN || step(item.dmg) > step(before))) {
-      this.logMsg(`Your ${itemName(item).toLowerCase()} is at ${Math.floor(item.dmg)} damage. Repair it before it breaks.`, 'error');
+      this.logMsg(`${capital(itemName(item).toLowerCase())}: damage ${Math.floor(item.dmg)}/${DAMAGE_MAX}. Repair it.`, 'error');
     }
     this.events.emit('inventory');
   }
@@ -6090,7 +6092,7 @@ export class Game {
   /** What is said of a tile a bridge or an aqueduct is carried over, where a pour or a pool would go; null where none is. */
   carriedOver(x: number, y: number): string | null {
     const b = this.bridgeAt(x, y);
-    return b ? (b.kind === 'aqueduct' ? AQ_OVER : 'A bridge is carried over that tile.') : null;
+    return b ? (b.kind === 'aqueduct' ? AQ_OVER : 'Bridge over that tile.') : null;
   }
 
   /** The finished aqueducts, as the springs' water sees them. */
@@ -6184,12 +6186,12 @@ export class Game {
     if (kind === 'aqueduct') return AQ_NOT_THROWN;
     const w = this.world;
     if (!w.inBounds(ax, ay) || !w.inBounds(bx, by)) return 'Not there.';
-    if (ax !== bx && ay !== by) return 'A bridge runs straight. Pick an end level with this one, north, south, east or west.';
+    if (ax !== bx && ay !== by) return 'Bridges run straight: pick an end due north, south, east or west.';
     const span = spanTiles(ax, ay, bx, by);
-    if (!span.length) return 'There is nothing between those two. Bridge a gap.';
+    if (!span.length) return 'No gap between those tiles.';
     // A Mason's Bridge Mason carries a stone arch further (`span:bridge_stone`).
     const reach = this.perk(`span:bridge_${kind}`, def.span);
-    if (span.length > reach) return `A ${def.name.toLowerCase()} spans ${reach} tiles; that is ${span.length}.`;
+    if (span.length > reach) return `${def.name}: max span ${reach} tiles; this is ${span.length}.`;
     /*
      * And what each end lands on.
      *
@@ -6203,36 +6205,36 @@ export class Game {
     const ends = [this.topDeck(ax, ay), this.topDeck(bx, by)];
     for (const [i, [x, y]] of ([[ax, ay], [bx, by]] as Array<[number, number]>).entries()) {
       // A deck on piers is landed on once it is built, and is dry, solid ground whatever is under it (`piers.ts`).
-      if (this.pierBare(x, y)) return 'A bridge lands on a finished deck: build the deck at that end first.';
+      if (this.pierBare(x, y)) return 'Needs a finished deck at that end.';
       // The bank of a ravine always shares a corner with the ravine, so what
       // matters is whether you can stand in the middle of the tile, not
       // whether every corner of it is dry.
       if (!ends[i].level && !this.slabAt(x, y) && !this.onPierDeck(x, y) && (!w.isPassable(x, y) || w.centerHeight(x, y) < w.surfaceAt(x, y) && w.hasWater(x, y))) {
-        return 'Both ends want dry, solid ground to stand on.';
+        return 'Both ends need dry, solid ground.';
       }
       // gates: nor on the end of another, which the island's `bridge_at` counts as under it as it counts a span.
-      if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'One end is already under a bridge.';
+      if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'An end is already under a bridge.';
     }
     // gates: not from inside a ground floor nor through a wall, and a drawbridge outside at both ends (`gates.ts`).
     const outside = bridgeEndRefusal(this, kind, ax, ay, bx, by, [ends[0].level, ends[1].level]);
     if (outside) return outside;
     // A drawbridge goes from bank to bank: its hinge and its winch stand on the ground (`gates.ts`).
-    if (def.grounded && (ends[0].level || ends[1].level)) return `A ${def.name.toLowerCase()} goes from ground to ground, not to a storey.`;
+    if (def.grounded && (ends[0].level || ends[1].level)) return `${def.name}: ground to ground only, not to a storey.`;
     const ha = ends[0].height;
     const hb = ends[1].height;
     const apart = Math.abs(ha - hb);
     // Past `END_SLOP` a deck is a ramp, from one storey to another or from bank to bank, at `RAMP_SLOPE` a tile at most.
-    if (apart > END_SLOP && def.grounded) return `The two ends are ${apart.toFixed(0)} apart in height. One deck will not meet both; level one of them.`;
+    if (apart > END_SLOP && def.grounded) return `Ends ${apart.toFixed(0)} apart in height; max ${END_SLOP}. Level one.`;
     if (apart > END_SLOP && apart > RAMP_SLOPE * span.length) return rampRefusal(ends[0].level, ends[1].level, apart, span.length);
     const height = Math.round((ha + hb) / 2);
     const rise = rampRise(ha, hb);
     for (const [i, [x, y]] of span.entries()) {
       // gates: nor over the end of another, as the island has it (`bridge_at`).
-      if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'Something is already bridged across there.';
+      if (this.bridgeAt(x, y) || this.bridgeEndAt(x, y)) return 'Already bridged there.';
       if (this.buildings.buildingAt(x, y)) return 'Not over a building.';
       if (this.buildings.jettyAt(x, y)) return 'Not over a building\'s jetty.';
       // At the deck's height over the middle of the tile, up a ramp's slope.
-      if (rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y) < CLEARANCE) return 'That is not a gap, it is ground. Walk it.';
+      if (rampDeck(height, rise, span.length, i + 0.5) - this.surfaceHeight(x, y) < CLEARANCE) return `Ground under the span: needs ${CLEARANCE} clearance.`;
     }
     return null;
   }
@@ -6292,18 +6294,18 @@ export class Game {
    */
   poolReason(x: number, y: number): string | null {
     const f = this.slabAt(x, y);
-    if (!f) return 'Dig a pool in a poured foundation.';
-    if (f.pool) return 'There is a pool here already.';
+    if (!f) return 'Needs a poured foundation.';
+    if (f.pool) return 'Already a pool.';
     const b = this.buildings.buildingAt(x, y);
-    if (b) return `${b.name} stands on it.`;
-    if (this.isToken(x, y)) return 'The settlement token stands there.';
+    if (b) return `${b.name} is on it.`;
+    if (this.isToken(x, y)) return 'Settlement token there.';
     const over = this.carriedOver(x, y);
     if (over) return over;
-    if (this.groundAt(x, y).length) return 'Clear away the things lying there first: they would go into the water.';
+    if (this.groundAt(x, y).length) return 'Items on the tile: clear them first.';
     const p = this.placed;
     if (p.furniture.at(x, y).length || p.crates.at(x, y).length || p.campfires.at(x, y).length || p.smelters.at(x, y).length
       || p.kilns.at(x, y).length || p.anvils.at(x, y).length || p.posts.at(x, y).length || p.traps.at(x, y).length) {
-      return 'Move what stands on the slab first: it would go into the water.';
+      return 'Something placed on the slab: move it first.';
     }
     return null;
   }
@@ -6367,7 +6369,7 @@ export class Game {
   foundationReason(x: number, y: number, top: number): string | null {
     const w = this.world;
     if (!w.inBounds(x, y)) return 'Not there.';
-    if (this.foundationAt(x, y)) return 'There is already a foundation on that tile.';
+    if (this.foundationAt(x, y)) return 'Already a foundation.';
     // On bare rock and nowhere else: every spadeful of soil off all four corners first.
     const soil = w.soilOn(x, y);
     if (soil > 0) return soilSays(soil);
@@ -6375,13 +6377,13 @@ export class Game {
     const high = Math.max(...corners);
     // It fills a hole; it does not cut one. Pouring below the ground you are
     // pouring over is not a foundation, it is a trench.
-    if (top < high) return `A foundation fills a tile up, never down. Its high corner is at ${high}; sight a level at or above that.`;
+    if (top < high) return `Foundations fill up only. High corner ${high}: set a level at or above it.`;
     /*
      * And it is an answer to a slope. On ground that is already flat there is
      * nothing to fill, and the tile next to it is the flat tile you were
      * after — so a slab there is concrete spent on nothing.
      */
-    if (top === high && high === Math.min(...corners)) return 'That tile is already level. A foundation is for ground that is not.';
+    if (top === high && high === Math.min(...corners)) return 'Tile already level.';
     /*
      * Not up against a building. A wall is planned against the ground as the
      * ground was, and a slab poured at its foot is a shelf under somebody
@@ -6390,15 +6392,15 @@ export class Game {
     for (let dy = -CLEAR_OF_BUILDINGS; dy <= CLEAR_OF_BUILDINGS; dy++) {
       for (let dx = -CLEAR_OF_BUILDINGS; dx <= CLEAR_OF_BUILDINGS; dx++) {
         const b = this.buildings.buildingAt(x + dx, y + dy);
-        if (b) return `${b.name} is too close. A foundation wants a tile clear of any building or plan.`;
+        if (b) return `${b.name} too close: needs a tile clear of buildings and plans.`;
       }
     }
-    if (this.isToken(x, y)) return 'The settlement token stands there.';
+    if (this.isToken(x, y)) return 'Settlement token there.';
     const over = this.carriedOver(x, y);
     if (over) return over;
-    if (this.groundAt(x, y).length) return 'Clear away the things lying there first: the pour would bury them.';
+    if (this.groundAt(x, y).length) return 'Items on the tile: clear them first.';
     const other = this.deedAt(x, y);
-    if (other && !this.onDeed(x, y)) return `That is inside ${other.name}. Pour your concrete on your own ground.`;
+    if (other && !this.onDeed(x, y)) return `Inside ${other.name}: own ground only.`;
     /*
      * And the deepest part of the pour is what asks for the skill: shuttering
      * a step is a morning's work and shuttering a cliff is not.
@@ -6407,8 +6409,8 @@ export class Game {
     const want = masonryFor(lift);
     const have = this.skills.get('masonry');
     if (have < want) {
-      return `A pour ${lift} deep wants ${want.toFixed(1)} masonry and you have ${have.toFixed(1)}.`
-        + ` At your skill the deepest you can shutter is ${(have * LIFT_PER_MASONRY).toFixed(0)}.`;
+      return `Pour ${lift} deep needs masonry ${want.toFixed(1)}; have ${have.toFixed(1)}.`
+        + ` Your max depth: ${(have * LIFT_PER_MASONRY).toFixed(0)}.`;
     }
     return null;
   }
@@ -6443,13 +6445,13 @@ export class Game {
     if (!this.world.inBounds(x, y)) return 'Not there.';
     if (TRAPS[kind]?.water) {
       // A creel goes in the water, within reach of a bank you can stand on.
-      if (waterDepth(this, x, y) < 1) return 'A creel goes in the water. Set it off a bank with some depth to it.';
-      if (Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) > 3.6) return 'Too far out. Set it within reach of where you stand.';
+      if (waterDepth(this, x, y) < 1) return 'Creel needs water 1 deep or more.';
+      if (Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) > 3.6) return 'Too far: within 3.6 tiles.';
       if (this.trapAt(x, y, sx, sy)) return 'Something is already there.';
       return null;
     }
-    if (this.onDeed(x, y)) return 'Nothing wild comes inside your own borders. Set it out in the country.';
-    if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'A trap needs dry ground it can be covered on.';
+    if (this.onDeed(x, y)) return 'Not on your deed: wild creatures do not enter it.';
+    if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'Trap needs dry, open ground.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
     if (this.occupiedSubtile(x, y, sx, sy)) return 'Something is already there.';
     return null;
@@ -6479,9 +6481,9 @@ export class Game {
       // Slower for a Mender's Post Keeper, whose traps these all are.
       t.dmg = Math.min(100, t.dmg + dt * (trapDecayRate(t) / trapKeep(this, t.kind)));
       if (t.dmg >= 100) {
-        if (t.caught !== null) this.springTrap(t, `The ${trapName(t).toLowerCase()} rots through and whatever was in it walks away.`);
+        if (t.caught !== null) this.springTrap(t, `${trapName(t)} rotted: catch escaped.`);
         this.removeTrap(t.id);
-        this.logMsg(`A ${trapName(t).toLowerCase()} has rotted through out in the country.`, 'system');
+        this.logMsg(`Rotted away: ${trapName(t).toLowerCase()}.`, 'system');
         continue;
       }
       if (!t.bait || this.time < t.checkAt) continue;
@@ -6519,7 +6521,7 @@ export class Game {
     // Every so often the bait is worked out of it and the creel goes on empty.
     if (this.rand() < CREEL_BAIT_LOSS && t.bait) {
       t.bait = null;
-      this.logMsg(`The bait is gone out of a creel. It will take nothing more until it is baited again.`, 'system');
+      this.logMsg('Creel bait used up: rebait to catch.', 'system');
     }
     this.events.emit('world', t.x, t.y);
   }
@@ -6544,7 +6546,7 @@ export class Game {
       if (tameNeeds(c).level > holds) {
         if (this.rand() < 0.3) {
           t.bait = null;
-          this.logMsg(`Something took the bait out of your ${trapName(t).toLowerCase()} and was gone. It was too much trap for.`, 'system');
+          this.logMsg(`${trapName(t)}: bait taken, catch too big for it.`, 'system');
           return;
         }
         continue;
@@ -6565,7 +6567,7 @@ export class Game {
     t.caught = best.id;
     t.bait = null;
     this.note('caught');
-    this.logMsg(`Your ${trapName(t).toLowerCase()} has sprung. There is a ${this.creatures.species(best).name.toLowerCase()} in it.`, 'event');
+    this.logMsg(`${trapName(t)} sprung: ${this.creatures.species(best).name.toLowerCase()} caught.`, 'event');
     this.events.emit('world', t.x, t.y);
   }
 
@@ -6606,9 +6608,9 @@ export class Game {
   /** Why a post cannot go in here, or null. */
   postPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     if (!this.world.inBounds(x, y)) return 'Not there.';
-    if (this.onDeed(x, y)) return 'A post is for work away from home. Inside your own borders the token already gives the orders.';
-    if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'A post needs dry, open ground.';
-    if (this.world.slope(x, y) > 25) return 'The ground is too steep to drive a post into.';
+    if (this.onDeed(x, y)) return 'Not on your deed: the token covers it.';
+    if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'Post needs dry, open ground.';
+    if (this.world.slope(x, y) > 25) return 'Too steep: slope over 25.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
     if (this.occupiedSubtile(x, y, sx, sy)) return 'Something is already standing there.';
     return null;
@@ -6630,17 +6632,17 @@ export class Game {
     const into = emptyCrate(this);
     if (!this.creatures.active()) {
       c.mode = 'active';
-      this.logMsg(`The post ${why}. ${c.name} comes looking for you.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} returns to you.`, 'system');
     } else if (this.deed) {
       // Back to the settlement it came from, as the island has it.
       c.mode = 'deed';
-      this.logMsg(`The post ${why}. ${c.name} goes back to work on ${this.deed.name}.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} back to work at ${this.deed.name}.`, 'system');
     } else if (into) {
       shutIn(this, c, into);
-      this.logMsg(`The post ${why}. ${c.name} goes into the creature crate in your pack.`, 'system');
+      this.logMsg(`Post ${why}: ${c.name} into the creature crate in your pack.`, 'system');
     } else {
       c.mode = 'wild';
-      this.logMsg(`The post ${why}, and with no settlement to go to, you already spoken for and no empty creature crate in your pack, ${c.name} wanders off.`, 'error');
+      this.logMsg(`Post ${why}: no settlement, no empty creature crate, active slot taken. ${c.name} went wild.`, 'error');
     }
     this.events.emit('creature');
   }
@@ -6652,7 +6654,7 @@ export class Game {
     c.post = null;
   }
 
-  removePost(id: number, why = 'is gone'): void {
+  removePost(id: number, why = 'gone'): void {
     const p = this.posts.get(id);
     if (!p) return;
     this.leavePost(p, why);
@@ -6671,11 +6673,11 @@ export class Game {
       // Slower for a Mender's Post Keeper, whose posts these all are.
       p.dmg = Math.min(100, p.dmg + (postDecayRate(p.ql) / postKeep(this)) * dt);
       // One word of warning, once, when it is nearly through.
-      if (before < 85 && p.dmg >= 85 && p.worker !== null) {
+      if (before < POST_WARN && p.dmg >= POST_WARN && p.worker !== null) {
         const [cx, cy] = postCentre(p);
-        this.logMsg(`The ${postName(p).toLowerCase()} at ${Math.floor(cx)}, ${Math.floor(cy)} is leaning badly and has not long left.`, 'error');
+        this.logMsg(`${postName(p)} at ${Math.floor(cx)}, ${Math.floor(cy)}: ${POST_WARN} damage, near collapse.`, 'error');
       }
-      if (p.dmg >= 100) this.removePost(p.id, 'rots through and falls over');
+      if (p.dmg >= 100) this.removePost(p.id, 'rotted away');
     }
   }
 
@@ -7088,14 +7090,14 @@ export class Game {
   /** Why a campfire cannot go on this spot, or null when it can. */
   firePlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     const [ax, ay] = fireAnchor(sx, sy);
-    if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'A fire needs dry, open ground.';
-    if (this.world.slope(x, y) > 20) return 'The ground is too steep to lay a fire.';
+    if (!this.world.isPassable(x, y) || this.world.hasWater(x, y)) return 'Fire needs dry, open ground.';
+    if (this.world.slope(x, y) > 20) return 'Too steep: slope over 20.';
     if (this.isToken(x, y)) return 'Not on the token.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
     for (let dy = 0; dy < FIRE_SUBTILES; dy++) {
       for (let dx = 0; dx < FIRE_SUBTILES; dx++) {
-        if (this.crateAt(x, y, ax + dx, ay + dy)) return 'A crate is standing in the way.';
-        if (this.campfireAt(x, y, ax + dx, ay + dy)) return 'There is already a fire there.';
+        if (this.crateAt(x, y, ax + dx, ay + dy)) return 'A crate is in the way.';
+        if (this.campfireAt(x, y, ax + dx, ay + dy)) return 'Already a fire there.';
       }
     }
     return null;
@@ -7254,7 +7256,7 @@ export class Game {
         if ((f.fuel ?? 0) <= 0) {
           f.fuel = 0;
           f.lit = false;
-          this.logMsg('The oven burns down and goes cold.', 'event');
+          this.logMsg('Oven out of fuel.', 'event');
           this.events.emit('world', f.x, f.y);
         }
       }
@@ -7268,7 +7270,7 @@ export class Game {
         if (f.ferment === 0) {
           // By yourself, a wine ages from the moment it is done here, whatever the clock said when it was set going (`ageing.ts`).
           if (!this.islandClock && f.agedFrom !== undefined) f.agedFrom = this.wallNow();
-          this.logMsg(`The ${furnitureName(f).toLowerCase()} has stopped working. There is ${LIQUID_NAME[f.liquid ?? 'water']} in it.`, 'event');
+          this.logMsg(`${furnitureName(f)} done: ${LIQUID_NAME[f.liquid ?? 'water']}.`, 'event');
           this.events.emit('crate');
         }
       }
@@ -7470,7 +7472,7 @@ export class Game {
   private saidCartFull(cart: PlacedFurniture): void {
     if (this.time - this.cartFullSaid < 30) return;
     this.cartFullSaid = this.time;
-    this.logMsg(`The ${furnitureName(cart).toLowerCase()} is full. What does not fit goes in your pack.`, 'error');
+    this.logMsg(`${furnitureName(cart)} full: the rest goes to your pack.`, 'error');
   }
 
   /** The wildermon in the traces of a vehicle, dead ones dropped. */
@@ -7903,7 +7905,7 @@ export class Game {
     this.markProspected(found);
     if (this.time - by.noRoomAt < 30) return;
     by.noRoomAt = this.time;
-    this.logMsg(`${by.name} scratches at the ground and stands over ${[...names].join(' and ')}.`, 'event');
+    this.logMsg(`${by.name} found ore: ${[...names].join(', ')}.`, 'event');
   }
 
   /**
@@ -8152,7 +8154,7 @@ export class Game {
       if (f.fuel > 0) continue;
       f.fuel = 0;
       f.lit = false;
-      this.logMsg('A campfire burns down to ashes.', 'event');
+      this.logMsg('Campfire burnt out.', 'event');
       this.events.emit('world', f.x, f.y);
       this.events.emit('crate');
     }
@@ -8175,7 +8177,7 @@ export class Game {
         f.fuel = Math.max(0, (f.fuel ?? 0) - dt * brazierBurn(f.ql ?? 20));
         if (f.fuel <= 0) {
           f.lit = false;
-          this.logMsg('A brazier burns down and goes dark.', 'event');
+          this.logMsg('Brazier burnt out.', 'event');
           this.events.emit('world', f.x, f.y);
         } else if (!night) {
           f.lit = false;
@@ -8784,8 +8786,8 @@ export class Game {
   smelterPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     const [ax, ay] = smelterAnchor(sx, sy);
     const deck = this.deckFooting(x, y);
-    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'A smelter needs dry, solid ground.';
-    if (deck === null && this.world.slope(x, y) > 12) return 'The ground is too uneven to lay stone on.';
+    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Smelter needs dry, solid ground.';
+    if (deck === null && this.world.slope(x, y) > 12) return 'Too uneven: slope over 12.';
     if (this.isToken(x, y)) return 'Not on the token.';
     for (let dy = 0; dy < SMELTER_H; dy++) {
       for (let dx = 0; dx < SMELTER_W; dx++) {
@@ -8821,8 +8823,8 @@ export class Game {
   kilnPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     const [ax, ay] = kilnAnchor(sx, sy);
     const deck = this.deckFooting(x, y);
-    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'A kiln needs dry, solid ground.';
-    if (deck === null && this.world.slope(x, y) > 14) return 'The ground is too uneven to lay brick on.';
+    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Kiln needs dry, solid ground.';
+    if (deck === null && this.world.slope(x, y) > 14) return 'Too uneven: slope over 14.';
     if (this.isToken(x, y)) return 'Not on the token.';
     for (let dy = 0; dy < KILN_SUBTILES; dy++) {
       for (let dx = 0; dx < KILN_SUBTILES; dx++) {
@@ -8893,14 +8895,14 @@ export class Game {
     if (def.boat) {
       // A hull goes in the water and nowhere else, and you have to be able to
       // reach the water you are putting it in.
-      if (!this.launchSpot(kind, x, y)) return `There is not ${def.boat.draught} deep of water there. Launch her off a bank with some depth to it.`;
-      if (Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) > 4) return 'Stand at the water you mean to launch her into.';
-      for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something is already in the water there.';
+      if (!this.launchSpot(kind, x, y)) return `Needs water ${def.boat.draught} deep.`;
+      if (Math.hypot(x + 0.5 - this.player.x, y + 0.5 - this.player.y) > 4) return 'Too far: within 4 tiles.';
+      for (let dy = 0; dy < fh; dy++) for (let dx = 0; dx < fw; dx++) if (this.occupiedSubtile(x, y, ax + dx, ay + dy, except)) return 'Something already in the water there.';
       return null;
     }
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Furniture needs dry, solid ground.';
-    if (deck === null && this.world.slope(x, y) > 16) return 'The floor is too uneven for it to stand.';
+    if (deck === null && this.world.slope(x, y) > 16) return 'Too uneven: slope over 16.';
     if (this.isToken(x, y)) return 'Not on the token.';
     // An altar goes down on a settlement of yours, and on one that has none yet; one already standing may still be turned where it is.
     if (def.deed && except === undefined && !this.onDeed(x, y)) return DEED_PLACE;
@@ -9129,8 +9131,8 @@ export class Game {
   anvilPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
     const [ax, ay] = anvilAnchor(sx, sy);
     const deck = this.deckFooting(x, y);
-    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'An anvil needs dry, level ground.';
-    if (deck === null && this.world.slope(x, y) > 16) return 'The ground is too uneven.';
+    if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Anvil needs dry, level ground.';
+    if (deck === null && this.world.slope(x, y) > 16) return 'Too uneven: slope over 16.';
     if (this.isToken(x, y)) return 'Not on the token.';
     for (let dy = 0; dy < ANVIL_SUBTILES; dy++) {
       for (let dx = 0; dx < ANVIL_SUBTILES; dx++) {
@@ -9246,7 +9248,7 @@ export class Game {
       if (s.fuel <= 0) {
         s.fuel = 0;
         s.lit = false;
-        this.logMsg('A smelter burns through the last of its fuel and goes cold.', 'event');
+        this.logMsg('Smelter out of fuel.', 'event');
         this.events.emit('smelter');
         this.events.emit('world', s.x, s.y);
       }
@@ -9268,7 +9270,7 @@ export class Game {
           ? { uid: this.inventory.nextUid++, id: 'anvil', ql: job.ql, dmg: 0, count: 1, extra: job.item.id.replace('_lump', '') }
           : { uid: this.inventory.nextUid++, id: job.makes, ql: job.ql, dmg: 0, count: 1, extra: job.extra, piece: job.piece };
       furnaceOut(s.output, made);
-      this.logMsg(`The smelter finishes a ${itemName(made).toLowerCase()}. (QL ${made.ql.toFixed(1)})`, 'event');
+      this.logMsg(`Smelter made: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`, 'event');
       this.events.emit('smelter');
     }
   }
@@ -9284,7 +9286,7 @@ export class Game {
       if (k.fuel <= 0) {
         k.fuel = 0;
         k.lit = false;
-        this.logMsg('A kiln burns through the last of its fuel and goes cold.', 'event');
+        this.logMsg('Kiln out of fuel.', 'event');
         this.events.emit('smelter');
         this.events.emit('world', k.x, k.y);
       }
@@ -9298,7 +9300,7 @@ export class Game {
       // With its shaper's mark, which a pot, a bowl or a jar carries through the fire (an Artisan's Deep Pot and Sealed Jar).
       const made: Item = { uid: this.inventory.nextUid++, id: job.makes, ql: job.ql, dmg: 0, count: 1, ...(job.item.mark ? { mark: { ...job.item.mark } } : {}) };
       furnaceOut(k.output, made);
-      this.logMsg(`The kiln fires a ${ITEM_DEFS[made.id]?.name.toLowerCase() ?? made.id}. (QL ${made.ql.toFixed(1)})`, 'event');
+      this.logMsg(`Kiln fired: ${ITEM_DEFS[made.id]?.name.toLowerCase() ?? made.id}, QL ${made.ql.toFixed(1)}.`, 'event');
       this.events.emit('smelter');
     }
   }
@@ -9930,16 +9932,16 @@ export class Game {
         const n = rest.join(' ').trim();
         if (n) {
           this.player.name = n.slice(0, 24);
-          this.logMsg(`You are now known as ${this.player.name}.`, 'system');
+          this.logMsg(`Name: ${this.player.name}.`, 'system');
         }
         break;
       }
       case 'where':
-        this.logMsg(`You are at (${this.player.tileX}, ${this.player.tileY}), height ${this.world.heightAt(this.player.x, this.player.y).toFixed(1)}.`, 'system');
+        this.logMsg(`Position (${this.player.tileX}, ${this.player.tileY}), height ${this.world.heightAt(this.player.x, this.player.y).toFixed(1)}.`, 'system');
         break;
       case 'help':
         this.logMsg(`Commands: /name <name>, /where, ${EMOTES.map((e) => `/${e.id}`).join(', ')}, /help.`
-          + ` Press ${defaultKey('win_help')} for controls.`, 'system');
+          + ` Controls: ${defaultKey('win_help')}.`, 'system');
         break;
       default:
         // An emote is its own command, so /wave reads the way anybody would

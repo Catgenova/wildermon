@@ -81,8 +81,8 @@ export class QueueView {
     this.go = document.createElement('button');
     this.go.type = 'button';
     this.go.className = 'tb-btn tb-small';
-    this.go.textContent = 'Carry on';
-    this.go.title = 'Take the jobs put down by walking up again, from the top of the list';
+    this.go.textContent = 'Resume';
+    this.go.title = 'Resume the jobs paused by walking, from the top';
     this.go.addEventListener('click', () => this.game.resumeQueue());
     this.head.append(this.fold, this.go);
     this.list = document.createElement('ol');
@@ -214,8 +214,8 @@ export class QueueView {
     let total = a && a.state !== 'walking' ? Math.max(0, a.duration - a.elapsed) + Math.max(0, (a.left ?? 1) - 1) * a.duration : 0;
     for (const j of q) total += this.secsOf(j.def, Math.max(1, j.goes ?? 1));
     const putDown = !a && this.game.held;
-    this.title.textContent = `${this.folded ? '▸' : '▾'} ${putDown ? 'Jobs put down' : 'Jobs'} · ${held} of ${cap} held · ${clockSaid(total)} in all`;
-    this.fold.title = this.folded ? 'Show the jobs, the one in hand first' : 'Fold the jobs away';
+    this.title.textContent = `${this.folded ? '▸' : '▾'} ${putDown ? 'Jobs paused' : 'Jobs'} · ${held}/${cap} · ${clockSaid(total)} total`;
+    this.fold.title = this.folded ? 'Show jobs' : 'Hide jobs';
     this.fold.setAttribute('aria-expanded', String(!this.folded));
     this.go.hidden = !putDown;
     this.list.hidden = this.folded;
@@ -255,7 +255,7 @@ export class QueueView {
     meta.className = 'cq-meta';
     if (at < 0) {
       grip.textContent = '▶';
-      grip.title = 'In hand now: it is not moved by reordering';
+      grip.title = 'Current job: not reorderable';
       const count = of && of > 1 ? `${goes} of ${of} goes left · ` : '';
       meta.append(document.createTextNode(count));
       const t = document.createElement('span');
@@ -266,7 +266,7 @@ export class QueueView {
     } else {
       li.dataset.at = String(at);
       grip.textContent = '⠿';
-      grip.title = 'Drag to put it elsewhere in the list';
+      grip.title = 'Drag to reorder';
       meta.textContent = `${goes > 1 ? `× ${goes} · ` : ''}${clockSaid(this.secsOf(def, goes))}`;
       grip.addEventListener('pointerdown', (e) => this.grab(e, li, at));
     }

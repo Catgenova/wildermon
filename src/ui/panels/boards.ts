@@ -22,18 +22,18 @@ export const BRED_MAX = TRAIT_SLOTS * GRADE_STEP[TIERS[TIERS.length - 1]];
  * `supabase/test/boards.ts` holds them to the island's copies of those rules.
  */
 export const BOARD_RULES: Record<Tab, string> = {
-  skills: `Each skill's top ${BOARD_TOP} on the island, by skill level. Only somebody who has raised a skill is ranked in it.`,
-  wildermon: `Top ${BOARD_TOP} tamed wildermon by their traits added up, each by its grade: `
-    + `${TIERS.map((t) => `${t} ${figure(GRADE_STEP[t])}`).join(', ')}, so ${figure(BRED_MAX)} at most for ${TRAIT_SLOTS} traits. `
-    + 'A tie goes to the higher level. Wild ones are not ranked, and no trait is named.',
-  settlements: `Top ${BOARD_TOP} settlements by level (1 to ${MAX_DEED_LEVEL}), then citizens (the founder and everybody on the roll), `
+  skills: `Top ${BOARD_TOP} per skill, by level. Only players who raised the skill are ranked.`,
+  wildermon: `Top ${BOARD_TOP} tamed wildermon by trait total, per grade: `
+    + `${TIERS.map((t) => `${t} ${figure(GRADE_STEP[t])}`).join(', ')}; max ${figure(BRED_MAX)} for ${TRAIT_SLOTS} traits. `
+    + 'Tie: higher level first. Wild not ranked; traits not named.',
+  settlements: `Top ${BOARD_TOP} settlements by level (1 to ${MAX_DEED_LEVEL}), then citizens (founder and roll), `
     + 'then age, oldest first.',
 };
 
 const TABS: Array<[Tab, string, string]> = [
-  ['skills', 'Skills', 'Who holds each skill highest'],
-  ['wildermon', 'Wildermon', 'The best-bred tamed wildermon'],
-  ['settlements', 'Settlements', 'The biggest settlements'],
+  ['skills', 'Skills', 'Top players per skill'],
+  ['wildermon', 'Wildermon', 'Best-bred tamed wildermon'],
+  ['settlements', 'Settlements', 'Largest settlements'],
 ];
 
 /** The Skills window's order, so a skill is found where it always is. */
@@ -58,15 +58,15 @@ export function soloStanding(game: Game): Record<Tab, string> {
   const deed = game.deed;
   return {
     skills: skill
-      ? `Your best skill, characteristics not counted: ${SKILL_BY_ID.get(skill.id)?.name ?? skill.id} ${skill.value.toFixed(2)}.`
-      : 'You have not raised a skill yet, characteristics not counted.',
+      ? `Your best skill (characteristics excluded): ${SKILL_BY_ID.get(skill.id)?.name ?? skill.id} ${skill.value.toFixed(2)}.`
+      : 'No skill raised yet (characteristics excluded).',
     wildermon: bred
       ? `Your best-bred wildermon: ${bred.c.name}, ${SPECIES[bred.c.species]?.name ?? bred.c.species}, `
-        + `at ${figure(bred.score)} of ${figure(BRED_MAX)}, level ${creatureLevel(bred.c)}.`
-      : 'You have no tamed wildermon.',
+        + `${figure(bred.score)}/${figure(BRED_MAX)}, level ${creatureLevel(bred.c)}.`
+      : 'No tamed wildermon.',
     settlements: deed
-      ? `Your settlement: ${deed.name}, level ${deedLevel(deed)} of ${MAX_DEED_LEVEL}, ${citizens(1)}: you.`
-      : 'You have not founded a settlement.',
+      ? `Your settlement: ${deed.name}, level ${deedLevel(deed)}/${MAX_DEED_LEVEL}, ${citizens(1)}: you.`
+      : 'No settlement founded.',
   };
 }
 
@@ -175,11 +175,10 @@ export class BoardsPanel {
     }
     this.say(BOARD_RULES[this.tab]);
     if (!this.seen) {
-      this.say(this.failed ? 'The island did not answer. It is asked again every '
-        + `${REFRESH} seconds while this window is open.` : 'Asking the island…');
+      this.say(this.failed ? `No answer from the island. Retry every ${REFRESH} s while open.` : 'Loading…');
       return;
     }
-    if (this.failed) this.say(`The island did not answer just now, so this is its last answer. It is asked again every ${REFRESH} seconds.`);
+    if (this.failed) this.say(`No answer just now: showing the last answer. Retry every ${REFRESH} s.`);
     if (this.tab === 'skills') this.drawSkills(this.seen);
     else if (this.tab === 'wildermon') this.drawWildermon(this.seen);
     else this.drawSettlements(this.seen);
@@ -187,8 +186,7 @@ export class BoardsPanel {
 
   /** The game you play by yourself: what each board ranks by, and where you stand on it. */
   private drawAlone(): void {
-    this.say('Leaderboards rank the people on an island against one another. There is nobody else in '
-      + 'this game, so here is what each board ranks by and where you stand on it.');
+    this.say('Leaderboards: island only. Single-player: ranking rules and your standing.');
     const mine = soloStanding(this.game);
     for (const [id, label] of TABS) {
       this.head(label);
@@ -204,7 +202,7 @@ export class BoardsPanel {
     const known = SKILL_GROUPS.map((g) => [g, SKILL_DEFS.filter((d) => d.group === g && b.skills[d.id]?.length)] as const)
       .filter(([, defs]) => defs.length);
     if (!known.length) {
-      this.say('Nobody on this island has raised a skill yet.');
+      this.say('No skills raised yet.');
       return;
     }
     // The one you had, while it still has a board; else your own best, if it
@@ -215,7 +213,7 @@ export class BoardsPanel {
     this.skill = shown;
     const pick = document.createElement('select');
     pick.className = 'panel-select board-pick';
-    pick.title = 'Which skill to show, with who holds it highest';
+    pick.title = 'Skill to show';
     for (const [group, defs] of known) {
       const og = document.createElement('optgroup');
       og.label = group;
@@ -243,17 +241,17 @@ export class BoardsPanel {
 
   private drawWildermon(b: Boards): void {
     if (!b.wildermon.length) {
-      this.say('Nobody on this island has a tamed wildermon yet.');
+      this.say('No tamed wildermon yet.');
       return;
     }
     this.columns('Wildermon', 'Keeper', 'Traits');
     b.wildermon.forEach((w, i) => this.place(i + 1, `${w.name}, ${SPECIES[w.species]?.name ?? w.species}`,
-      w.keeper, figure(w.score), w.mine, `Its traits add up to ${figure(w.score)} of ${figure(BRED_MAX)}`));
+      w.keeper, figure(w.score), w.mine, `Trait total ${figure(w.score)}/${figure(BRED_MAX)}`));
   }
 
   private drawSettlements(b: Boards): void {
     if (!b.settlements.length) {
-      this.say('Nobody on this island has founded a settlement yet.');
+      this.say('No settlements yet.');
       return;
     }
     this.columns('Settlement', 'Founder · citizens', 'Level');

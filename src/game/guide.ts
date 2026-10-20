@@ -46,7 +46,7 @@ import { SKILL_BY_ID } from './skills';
 import { HUNTER_TRAPPED, TIMID_TRAPPED } from './traps';
 import { COMPANION_SIGHT as KEPT_EYES } from './vision';
 import { WOUND_KINDS } from './wounds';
-import { article, capital, listed, numberWord, percent, spanWords, times } from './words';
+import { article, capital, listed, percent, timeWords } from './words';
 import { lairOf, REGIONS } from '../world/regions';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
@@ -155,7 +155,7 @@ export function countsLine(guide: FieldGuide): string {
 /** What the log says the first time a kind is seen, on either side. */
 export function seenLine(def: SpeciesDef, guide: FieldGuide): string {
   const n = guideCounts(guide);
-  return `The first ${def.name.toLowerCase()} you have seen, ${n.seen} of the ${n.kinds} kinds there are. (Field guide, ${defaultKey('win_guide')})`;
+  return `First ${def.name.toLowerCase()} seen: ${n.seen}/${n.kinds} kinds. (Field guide, ${defaultKey('win_guide')})`;
 }
 
 /* ---- What a page says ------------------------------------------------------ */
@@ -192,33 +192,33 @@ export function wildShare(def: SpeciesDef): number {
  */
 export function whereItLives(def: SpeciesDef, onIsland = false): string[] {
   const lines: string[] = [];
-  if (def.onOre) lines.push('Put down over a vein or a coal seam, bare or buried');
-  else if (def.onSand) lines.push(`Put down on ${tileName(TileType.Sand)}`);
-  else if (def.onStone) lines.push(`Put down on bare ${tileName(TileType.Rock)} with no vein or seam in it`);
-  else lines.push(`Put down on ${either(Object.values(TILE_DEFS).filter((t) => t.forage).map((t) => t.name.toLowerCase()))}`);
+  if (def.onOre) lines.push('Spawns on: a vein or coal seam, bare or buried');
+  else if (def.onSand) lines.push(`Spawns on: ${tileName(TileType.Sand)}`);
+  else if (def.onStone) lines.push(`Spawns on: bare ${tileName(TileType.Rock)}, no vein or seam`);
+  else lines.push(`Spawns on: ${either(Object.values(TILE_DEFS).filter((t) => t.forage).map((t) => t.name.toLowerCase()))}`);
   const near: string[] = [];
   if (def.nearWater) near.push('water');
   if (def.nearTrees) near.push(`a ${tileName(TileType.Tree)}`);
   if (def.nearClay) near.push(tileName(TileType.Clay));
   if (def.nearTar) near.push(either([TileType.Tar, TileType.Peat, TileType.Marsh].map(tileName)));
-  if (near.length) lines.push(`Within ${WATER_RANGE} tiles of ${listed(near)}`);
-  if (def.nocturnal) lines.push('Put down only at night');
-  if (def.season) lines.push(`Found wild only from ${seasonSays(def.season)}, by the calendar in UTC, and gone from the wild on every other day`);
+  if (near.length) lines.push(`Within ${WATER_RANGE} tiles of: ${listed(near)}`);
+  if (def.nocturnal) lines.push('Spawns only at night');
+  if (def.season) lines.push(`Wild only ${seasonSays(def.season)} (UTC); gone from the wild on other days`);
   if (def.monster) {
-    lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement's token`);
-    if (onIsland) lines.push(`Never within ${PEACE_REACH} tiles of where everybody comes ashore`);
+    lines.push(`Never within ${MONSTER_KEEP_OFF[def.id] ?? 0} tiles of a settlement token`);
+    if (onIsland) lines.push(`Never within ${PEACE_REACH} tiles of the landing beach`);
   }
-  lines.push(`Keeps within ${WILD_RANGE} tiles of its home ground`);
+  lines.push(`Home range: ${WILD_RANGE} tiles`);
   lines.push(def.hunter
-    ? 'Alone: a hunter keeps a home ground of its own'
-    : `In herds: one put down within ${HERD_REACH} tiles of another's home takes that home for its own`);
+    ? 'Solitary: a home ground of its own'
+    : `Herds: one spawned within ${HERD_REACH} tiles of another's home shares that home`);
   const share = wildShare(def);
-  if (share > 0) lines.push(`1 in ${Math.round(1 / share)} of what the wild puts down`);
+  if (share > 0) lines.push(`Spawn share: 1 in ${Math.round(1 / share)}`);
   if (def.monster) {
-    lines.push(`No more than ${numberWord(MONSTER_CAP[def.id] ?? 1)} on the island at once`);
+    lines.push(`Island cap: ${MONSTER_CAP[def.id] ?? 1} at once`);
     const lair = lairOf(def.id);
-    if (lair) lines.push(`Only on ${lair.name}, and on no other island`);
-    for (const R of REGIONS) if (R.monsters && (lair ?? R) === R) lines.push(`And up to ${numberWord((MONSTER_CAP[def.id] ?? 1) * R.monsters)} more on ${R.name}, where nothing else wild stands up`);
+    if (lair) lines.push(`Only on ${lair.name}`);
+    for (const R of REGIONS) if (R.monsters && (lair ?? R) === R) lines.push(`Up to ${(MONSTER_CAP[def.id] ?? 1) * R.monsters} more on ${R.name}, where no other wild creature spawns`);
   }
   return lines;
 }
@@ -231,20 +231,20 @@ export interface GuideSection {
 
 /** Winning one over: what it asks, what it takes from the hand, and how it takes to a trap. */
 function taming(def: SpeciesDef): string[] {
-  if (def.monster) return ['It cannot be tamed, trapped, bred or kept'];
+  if (def.monster) return ['Cannot be tamed, trapped, bred or kept'];
   const lines = [
-    `Taming ${def.tameLevel} to try, and at that a base ${percent(def.tameChance)} chance an offering`,
+    `Taming ${def.tameLevel}, base chance ${percent(def.tameChance)} per offering`,
   ];
   // One that comes in already past its first stage asks more (`wildStageRoll`, `tameNeeds`).
   if (def.stages) {
-    lines.push(def.stages.map((st, i) => `${i ? 'and o' : 'O'}ne time in ${WILD_STAGE_ODDS[i]} a wild one is already ${article(st.name)} ${st.name}, `
-      + `taming ${def.tameLevel + WILD_STAGE_TAME * (i + 1)} to try at a base ${percent(def.tameChance * WILD_STAGE_CHANCE ** (i + 1))}`).join('; '));
+    lines.push(def.stages.map((st, i) => `1 in ${WILD_STAGE_ODDS[i]} wild: ${st.name}, `
+      + `taming ${def.tameLevel + WILD_STAGE_TAME * (i + 1)}, base chance ${percent(def.tameChance * WILD_STAGE_CHANCE ** (i + 1))}`).join('; '));
   }
-  lines.push(`Takes ${either(def.diet.map(itemName))} from your hand`);
+  lines.push(`Offerings: ${either(def.diet.map(itemName))}`);
   // And what its favourite is worth to one of yours (`fedOn`).
   if (favouriteSays(def)) lines.push(favouriteSays(def));
-  if (def.timid) lines.push(`Walks into a trap ${times(TIMID_TRAPPED)} as readily as most`);
-  else if (def.hunter) lines.push(`Walks into a trap ${percent(HUNTER_TRAPPED)} as readily as most`);
+  if (def.timid) lines.push(`Trap chance ×${TIMID_TRAPPED}`);
+  else if (def.hunter) lines.push(`Trap chance ×${HUNTER_TRAPPED}`);
   return lines;
 }
 
@@ -254,72 +254,72 @@ function taming(def: SpeciesDef): string[] {
  * own -- an island fills no hive from one, reads no panniers and has no temper
  * on it -- and a page read on an island says so rather than promising them.
  */
-const SOLO_ONLY = 'In a game of your own only: ';
+const SOLO_ONLY = 'Single-player only: ';
 function keeping(def: SpeciesDef, onIsland = false): string[] {
   const solo = onIsland ? SOLO_ONLY : '';
   const lines: string[] = [];
   if (def.gathers) {
     const skill = skillName(GATHER_SKILL[def.gathers]);
-    lines.push(`Set to work on a settlement it will ${GATHER_DO[def.gathers]}, learning ${skill} as it does`
+    lines.push(`Deed job: ${GATHER_DO[def.gathers]}. Learns ${skill}`
       // At its trade's own pace, which evens out every trade's time to level (`LEARN_PACE`).
-      + (LEARN_PACE[def.gathers] !== 1 ? `, each go's gain at ${percent(LEARN_PACE[def.gathers])} of the skill curve's` : ''));
+      + (LEARN_PACE[def.gathers] !== 1 ? `, learning pace ${percent(LEARN_PACE[def.gathers])}` : ''));
     for (const other of def.trades ?? []) {
-      if (other !== def.gathers) lines.push(`Or, set to it by name, ${GATHER_DO[other]}, learning ${skillName(GATHER_SKILL[other])}`);
+      if (other !== def.gathers) lines.push(`Or, chosen by name: ${GATHER_DO[other]}. Learns ${skillName(GATHER_SKILL[other])}`);
     }
-    lines.push(`It works ${def.workRange} tiles out from where it takes its orders, and ${def.rangePerStep ?? RANGE_PER_STEP} more `
-      + `for every ${SKILL_STEP} levels of ${skill}`);
-  } else lines.push('No trade of its own');
+    lines.push(`Range: ${def.workRange} tiles from its orders, +${def.rangePerStep ?? RANGE_PER_STEP} `
+      + `per ${SKILL_STEP} levels of ${skill}`);
+  } else lines.push('No trade');
   if (def.fleece) {
     const yields = def.shearYield ?? 'wool';
-    lines.push(`${yields === 'feather' ? 'Plucked' : 'Shorn'} with a ${itemName('carving_knife')} for ${itemName(yields)}`);
+    lines.push(`${yields === 'feather' ? 'Pluck' : 'Shear'} with a ${itemName('carving_knife')}: ${itemName(yields)}`);
   }
   if (def.milk) {
     const litres = milkLitres(def.id);
-    lines.push(litres >= BUCKET_LITRES ? `A female is milked into an empty ${itemName('bucket')}, for a ${itemName('milk_bucket')}`
-      : `A female is milked into an empty ${itemName('bucket')} or a ${itemName(MILK_PART)}, ${numberWord(litres)} litres a milking; `
-        + `at ${numberWord(BUCKET_LITRES)} litres it is a ${itemName('milk_bucket')}`);
+    lines.push(litres >= BUCKET_LITRES ? `Milk a female into an empty ${itemName('bucket')}: ${itemName('milk_bucket')}`
+      : `Milk a female into an empty ${itemName('bucket')} or a ${itemName(MILK_PART)}: ${litres} litres a milking, `
+        + `${BUCKET_LITRES} litres to a ${itemName('milk_bucket')}`);
   }
   if (def.fleece) {
     const grown = itemName(def.shearYield ?? 'wool');
-    const what = def.milk ? `${capital(grown)} and milk come` : `Its ${grown} ${grown.endsWith('s') ? 'come' : 'comes'}`;
-    lines.push(`${what} back in full in ${spanWords(1 / def.fleece)} on a grown one`);
+    const what = def.milk ? `${capital(grown)} and milk` : capital(grown);
+    lines.push(`${what} regrowth, grown: ${timeWords(1 / def.fleece)}`);
   }
-  if (def.hives) lines.push(`${solo}${solo ? 'kept' : 'Kept'} on your settlement, it fills a hive standing there with ${itemName('honey')} and ${itemName('wax')}`);
-  if (def.mount) lines.push(`Carries a rider once it wears ${listed(TACK.map((id) => `${article(itemName(id))} ${itemName(id)}`))}`);
-  if (def.pitch) lines.push(`Under a rider, what its climbing adds to the steepest step it takes counts ${times(def.pitch)}`);
-  if (def.swims) lines.push('Carries a rider across deep water');
+  if (def.hives) lines.push(`${solo}Kept on your settlement: fills a hive there with ${itemName('honey')} and ${itemName('wax')}`);
+  if (def.mount) lines.push(`Mount: needs ${listed(TACK.map((id) => `${article(itemName(id))} ${itemName(id)}`))}`);
+  if (def.pitch) lines.push(`Under a rider: climbing counts ×${def.pitch} toward the steepest step`);
+  if (def.swims) lines.push('Mount: crosses deep water');
   if (def.draught) {
     // A kind that learns its own skill by pulling has that skill in the traces where the rest have climbing (`tracesSkill`).
     const traces = tracesSkill(def);
-    lines.push(`In the traces it adds ${percent(def.pull ?? PULL_DEFAULT)} to a team's pull`
-      + `${def.pull !== undefined && def.pull !== PULL_DEFAULT ? `, where most add ${percent(PULL_DEFAULT)}` : ''}`
-      + (traces === HAUL_SKILL ? ', and learns climbing as it pulls'
-        : `, and its ${SKILL_BY_ID.get(traces)?.name.toLowerCase() ?? traces} counts where another's climbing does, in the team's pace and the steepest step its wheels take`));
+    lines.push(`Traces: team pull +${percent(def.pull ?? PULL_DEFAULT)}`
+      + `${def.pull !== undefined && def.pull !== PULL_DEFAULT ? ` (most: +${percent(PULL_DEFAULT)})` : ''}`
+      + (traces === HAUL_SKILL ? '; learns climbing pulling'
+        : `; its ${SKILL_BY_ID.get(traces)?.name.toLowerCase() ?? traces} counts as climbing for team pace and the steepest step`));
   }
-  if (def.pannier) lines.push(`${solo}${solo ? 'carries' : 'Carries'} ${def.pannier} things in panniers on its own back`);
-  if (def.sight) lines.push(`Sees ${def.sight} tiles for you, where most see ${KEPT_EYES}`);
+  if (def.pannier) lines.push(`${solo}Panniers: ${def.pannier} items`);
+  if (def.sight) lines.push(`Sight for you: ${def.sight} tiles (most: ${KEPT_EYES})`);
   if (def.learns) {
     // And at its own pace, which evens out every trade's time to level (`LEARN_PACE`); pulling says its own.
     const pace = LEARN_PACE[def.learns.by];
-    lines.push(`Learns ${SKILL_BY_ID.get(def.learns.skill)?.name.toLowerCase() ?? def.learns.skill}, which is its level, ${LEARNS_SAYS[def.learns.by]}`
-      + (pace !== 1 && def.learns.by !== 'pull' ? `, each go's gain at ${percent(pace)} of the skill curve's` : ''));
+    lines.push(`Level: ${SKILL_BY_ID.get(def.learns.skill)?.name.toLowerCase() ?? def.learns.skill}, learned ${LEARNS_SAYS[def.learns.by]}`
+      + (pace !== 1 && def.learns.by !== 'pull' ? `, learning pace ${percent(pace)}` : ''));
   }
-  if (def.unruly) lines.push(`${solo}${solo ? 'rounds' : 'Rounds'} on whoever stands beside it: ${percent(def.unruly)} odds every ${spanWords(NIP_EVERY)}`);
+  if (def.unruly) lines.push(`${solo}Attacks whoever stands beside it: ${percent(def.unruly)} chance every ${NIP_EVERY} seconds`);
   return lines;
 }
 
 /** What it is like to meet: its body, what it does when struck, what its blows leave, and what bites it hardest. */
 function fighting(def: SpeciesDef): string[] {
-  const lines = [`Grown: ${def.health} health, hits for ${def.attack}, ${def.speed} ${def.speed === 1 ? 'tile' : 'tiles'} a second`];
-  if (def.hunter) lines.push(`${def.monster ? 'It' : 'Wild, it'} comes for you on sight from ${def.notice ?? HUNT_SIGHT} tiles off`);
-  if (def.timid) lines.push('Wild, it bolts when struck');
-  if (def.defensive) lines.push('Strikes back every time it is struck');
-  lines.push(`Its blows leave a ${WOUND_KINDS[def.wound ?? 'bite'].name}`);
+  const lines = [`Grown: ${def.health} health, blow ${def.attack}, speed ${def.speed} ${def.speed === 1 ? 'tile' : 'tiles'} a second`];
+  if (def.hunter) lines.push(`${def.monster ? 'Attacks' : 'Wild: attacks'} on sight from ${def.notice ?? HUNT_SIGHT} tiles`);
+  if (def.timid) lines.push('Wild: flees when struck');
+  if (def.defensive) lines.push('Strikes back every time');
+  lines.push(`Wound: ${WOUND_KINDS[def.wound ?? 'bite'].name}`);
   // A light of its own, wild or kept, and the one metal that bites what carries one.
   if (def.glow) {
-    lines.push(`Lights ${def.glow} tiles round itself however dark it is`);
+    lines.push(`Lights ${def.glow} tiles round itself at any hour`);
     const bane = MATERIALS.filter((m) => m.bane).map((m) => m.name.toLowerCase());
-    lines.push(`A ${either(bane)} edge hits it ${times(BANE_BONUS)} as hard`);
+    lines.push(`${capital(either(bane))} edge: damage ×${BANE_BONUS}`);
   }
   return lines;
 }
@@ -328,9 +328,9 @@ function fighting(def: SpeciesDef): string[] {
 function carcass(def: SpeciesDef): string[] {
   // Counted as the butcher's own line counts them: "3 × meat".
   const parts = BUTCHER_PARTS.filter(([p]) => (def.butcher[p] ?? 0) > 0).map(([p, id]) => `${def.butcher[p]} \u00d7 ${itemName(id)}`);
-  const lines = parts.length ? [`A grown one butchered whole gives at most ${listed(parts)}`] : [];
+  const lines = parts.length ? [`Butchered whole, grown: up to ${listed(parts)}`] : [];
   if (def.butcher.hoard) {
-    lines.push(`And a hoard of ${HOARD_LUMPS} to ${HOARD_LUMPS + HOARD_MORE} lumps, by how much of the carcass is kept, each `
+    lines.push(`Hoard: ${HOARD_LUMPS}–${HOARD_LUMPS + HOARD_MORE} lumps by how much of the carcass is kept, each `
       + either(HOARD_METALS.map((id) => `${article(itemName(id))} ${itemName(id)}`)));
   }
   return lines;
@@ -339,10 +339,10 @@ function carcass(def: SpeciesDef): string[] {
 /** A kind's whole page, under its headings, for a kind that has been seen. */
 export function guidePage(def: SpeciesDef, onIsland = false): GuideSection[] {
   return [
-    { head: 'Where it lives', lines: whereItLives(def, onIsland) },
+    { head: 'Habitat', lines: whereItLives(def, onIsland) },
     { head: def.monster ? 'Not a wildermon' : 'Taming', lines: taming(def) },
     ...(def.monster ? [] : [{ head: 'Kept', lines: keeping(def, onIsland) }]),
-    { head: 'Meeting one', lines: fighting(def) },
+    { head: 'Combat', lines: fighting(def) },
     { head: 'Butchered', lines: carcass(def) },
   ].filter((s) => s.lines.length);
 }

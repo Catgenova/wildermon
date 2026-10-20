@@ -178,7 +178,7 @@ begin
   ${clear('plank')};
   ${hold('Clean Sawing')};
   ${craft('make_planks', 'v_log')};
-  insert into said values ('PLANKS', v_t || '|' || ${count('plank')} || '|' || coalesce(${last('You saw the log into % planks.%')}, 'unsaid'));
+  insert into said values ('PLANKS', v_t || '|' || ${count('plank')} || '|' || coalesce(${last('Made: % × plank%')}, 'unsaid'));
   ${clear('plank')};
   perform pg_temp.hold(w, u, '{}');
   ${craft('make_timbers', 'v_log')};
@@ -422,7 +422,7 @@ const planks = RECIPE_BY_ID.get('make_planks')!;
 const [pA, pB, pSaid] = say('PLANKS').split('|');
 check(`${P('Clean Sawing').name}: a log saws into ${P('Clean Sawing').fx['count:plank']} planks with it, ${planks.count} without`,
   Number(pA) === planks.count && Number(pB) === P('Clean Sawing').fx['count:plank'], say('PLANKS'));
-check('and the go says four', /^You saw the log into four planks\./.test(pSaid), pSaid);
+check('and the go says four', /^Made: 4 × plank,/.test(pSaid), pSaid);
 const [tA, tB] = say('TIMBERS').split('|');
 check(`${P('Heavy Timber').name}: a log saws into ${P('Heavy Timber').fx['count:timber']} timbers with it, ${RECIPE_BY_ID.get('make_timbers')!.count} without`,
   Number(tA) === RECIPE_BY_ID.get('make_timbers')!.count && Number(tB) === P('Heavy Timber').fx['count:timber'], say('TIMBERS'));
@@ -436,7 +436,7 @@ check(`${P('Saw Care').name}: and ${P('Saw Care').fx['wear:saw']} as much with i
   near(wearB / wearA, P('Saw Care').fx['wear:saw'], 1e-4), say('SAWCARE'));
 
 const [strA, strB, strings, yarn] = say('STRING').split('|');
-check(`${P('String Maker').name}: one yarn is refused without it, in the browser's words`, strA === 'Bowstring takes 2 yarns.', strA);
+check(`${P('String Maker').name}: one yarn is refused without it, in the browser's words`, strA === 'Need 2 yarns.', strA);
 check('and allowed with it, and a go that cannot fail makes the string out of the one', strB === 'ALLOWED' && strings === '1' && yarn === '0',
   say('STRING'));
 
@@ -506,8 +506,8 @@ check(`${P('Bridge Wright').name}: a go on a wooden and a rope bridge takes ${bw
 // Eleven tiles between the ends: too long for a plain wooden bridge, and past the span with the perk
 // (the ground under it is what refuses it then); thirteen is too long either way.
 check(`and a wooden bridge spans ${bw['span:bridge_wood']} tiles with it, ${BRIDGES.wood.span} without`,
-  spanA === `A wooden bridge spans ${BRIDGES.wood.span} tiles; that is 11.` && !spanB.includes('spans')
-    && spanC === `A wooden bridge spans ${bw['span:bridge_wood']} tiles; that is 13.`, say('BRIDGE'));
+  spanA === `Wooden bridge: max span ${BRIDGES.wood.span} tiles; this is 11.` && !spanB.includes('max span')
+    && spanC === `Wooden bridge: max span ${bw['span:bridge_wood']} tiles; this is 13.`, say('BRIDGE'));
 
 const STEP = ['-', 'rare', 'supreme', 'fantastic'];
 const holds = say('HOLDS').split(',').map((b) => b.split('|'));
@@ -547,7 +547,7 @@ const game = Game.create(2718);
 const bowstring = RECIPE_BY_ID.get('make_bow_string')!;
 game.inventory.add('yarn', { count: 1, ql: 30 });
 check('the browser refuses a bowstring from one yarn without String Maker',
-  recipeReason(bowstring, game) === 'Bowstring takes 2 yarns.', String(recipeReason(bowstring, game)));
+  recipeReason(bowstring, game) === 'Need 2 yarns.', String(recipeReason(bowstring, game)));
 game.setPerks(P('String Maker').fx);
 check('and offers it with the perk, for one', recipeReason(bowstring, game) === null && needOf(game, bowstring, bowstring.inputs[0]) === 1,
   String(recipeReason(bowstring, game)));

@@ -209,15 +209,15 @@ export function landingTile(g: Game, s: Runestone): { x: number; y: number } | n
 /** What both sides say when a journey will not be made. */
 export const TELESTONE_SAID = {
   item: 'Use a Telestone you are carrying.',
-  nowhere: 'There are no Runestones on this island.',
+  nowhere: 'No Runestones on this island.',
   stone: 'Choose a Runestone.',
-  busy: 'Finish or stop what you are doing first.',
+  busy: 'Finish or stop your current action first.',
   fight: 'Not in the middle of a fight.',
-  driving: 'Let go of what you are driving or pulling first: a Telestone takes you and nothing else.',
-  aboard: 'Step off what you are aboard first: a Telestone takes you and nothing else.',
-  mounted: 'Get down first: a Telestone takes you and not your mount.',
+  driving: 'Let go of what you drive or pull first: a Telestone takes only you.',
+  aboard: 'Step off what you are aboard first: a Telestone takes only you.',
+  mounted: 'Dismount first: a Telestone takes only you.',
   swimming: 'Not while you are swimming.',
-  heavy: 'You are carrying too much to walk. Put something down first.',
+  heavy: 'Overloaded: drop something first.',
 } as const;
 
 /** A whole number of tiles, rounded as the island rounds (`floor(x + 0.5)`). */
@@ -225,26 +225,26 @@ const tilesWord = (n: number): string => String(Math.floor(n + 0.5));
 
 /** Somebody following you, who would be left behind. */
 export const companionSaid = (name: string): string =>
-  `${name} follows you and would be left behind. Send it to your deed or into a crate first.`;
+  `${name} would be left behind: send it to your deed or into a crate first.`;
 /** A stone out of this one's reach. */
 export const farSaid = (s: Runestone, d: number, reach: number): string =>
-  `${s.name} is ${tilesWord(d)} tiles away. This Telestone reaches ${tilesWord(reach)}.`;
+  `${s.name}: ${tilesWord(d)} tiles away; this Telestone reaches ${tilesWord(reach)}.`;
 /** The wait not over. */
-export const restSaid = (secs: number): string => `You can travel by Telestone again in ${timeWords(secs)}.`;
+export const restSaid = (secs: number): string => `Telestone cooldown: ${timeWords(secs)}.`;
 /** Nowhere to arrive. */
-export const noRoomSaid = (s: Runestone): string => `There is no free ground beside ${s.name} to arrive on.`;
+export const noRoomSaid = (s: Runestone): string => `No free ground beside ${s.name} to arrive on.`;
 /** The journey made. */
 export const travelledSays = (s: Runestone, rest: number): string =>
-  `You hold up the Telestone and are standing beside ${s.name}. You can travel by Telestone again in ${timeWords(rest)}.`;
+  `Travelled to ${s.name}. Telestone cooldown: ${timeWords(rest)}.`;
 /** Any work on a stone's ground. */
 export const stoneGroundSaid = (s: Runestone): string =>
-  `That is the ground of ${s.name}. Nothing can be dug, built, planted or set down on it.`;
+  `Ground of ${s.name}: no digging, building, planting or setting down.`;
 /** What Examine says of a stone's tile. The island's `ground_says` says the same. */
-export const stoneSays = (s: Runestone): string => ` ${s.name}, a Runestone, stands here. A Telestone can take you to it.`;
+export const stoneSays = (s: Runestone): string => ` Runestone: ${s.name}. Telestone destination.`;
 
 /** What Examine adds of a Telestone of quality `ql`: exactly what this one does. */
 export const telestoneSays = (ql: number): string =>
-  ` This one reaches ${tilesWord(telestoneRange(ql))} tiles, and a journey on it makes you wait ${timeWords(telestoneRest(ql))}.`;
+  ` Reach ${tilesWord(telestoneRange(ql))} tiles; cooldown ${timeWords(telestoneRest(ql))} per journey.`;
 
 /** The wait still to run, as the menu notes it: "ready in 3 hours and 12 minutes". */
 export const timeLeftNote = (secs: number): string => `ready in ${timeWords(secs)}`;

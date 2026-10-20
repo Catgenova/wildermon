@@ -184,7 +184,7 @@ for (const side of ['n', 'e', 's', 'w'] as Side[]) {
 gb.log.length = 0;
 ACTION_BY_ID.get('plan_floor')?.perform?.(
   { kind: 'tile', x: 70, y: 70, cx: 70, cy: 70, material: 'log', floorKind: 'roof', roofShape: 'gable' } as never, gb);
-const mineSaid = gb.log.map((l) => l.text).find((t) => t.startsWith('You plan')) ?? 'NOTHING SAID';
+const mineSaid = gb.log.map((l) => l.text).find((t) => t.startsWith('Planned: ')) ?? 'NOTHING SAID';
 const theirSaid = psql(`
 begin;
 create temp table said (k text);
@@ -203,7 +203,7 @@ begin
   delete from event where world_id = w and uid = u;
   perform perform_building(w, u, 'plan_floor',
     '{"x":70,"y":70,"material":"log","floorKind":"roof","roofShape":"gable"}'::jsonb);
-  insert into said select text from event where world_id = w and uid = u and text like 'You plan%';
+  insert into said select text from event where world_id = w and uid = u and text like 'Planned: %';
 end $$;
 select k from said;
 rollback;

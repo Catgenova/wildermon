@@ -3,7 +3,6 @@ import type { Game } from './game';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import { itemName, NOT_RESTORED, unrestored, type Item } from './items';
 import { worldRate } from './pace';
-import { capital, spanWords, times } from './words';
 import { WELL_CEILING, wellCap } from './wells';
 
 /**
@@ -50,7 +49,7 @@ export const PRAYER_REST = 30 * 60;
 export const PRAYER_GAIN = 1.4;
 /** Why a prayer is not heard yet: `rest` seconds of the wait left. The island's `faith_refusal` says the same. */
 export const prayerRestWords = (rest: number): string =>
-  `You prayed less than ${PRAYER_REST / 60} minutes ago. ${Math.ceil(rest / 60)} minutes to go.`;
+  `Prayer cooldown: ${PRAYER_REST / 60} min. ${Math.ceil(rest / 60)} min left.`;
 /** The most favour anybody holds, whatever their faith. */
 export const FAVOUR_CEILING = WELL_CEILING;
 
@@ -105,7 +104,7 @@ export const CASTS: CastDef[] = [
     cost: 12,
     level: 3,
     on: 'self',
-    note: 'Whatever travels with you is beside you again, from wherever it had got to.',
+    note: 'Your active companion teleports to you.',
   },
   {
     id: 'mend',
@@ -113,7 +112,7 @@ export const CASTS: CastDef[] = [
     cost: 18,
     level: 8,
     on: 'item',
-    note: 'Every mark of use comes off one thing at once, as though it were off the bench this morning.',
+    note: 'Removes all damage from an item.',
   },
   {
     id: 'dawnlight',
@@ -121,7 +120,7 @@ export const CASTS: CastDef[] = [
     cost: 26,
     level: 16,
     on: 'self',
-    note: 'Everything open on you closes, and anything that had gone bad is clean.',
+    note: 'Heals all your wounds; cures infection.',
   },
   {
     id: 'cunning',
@@ -129,7 +128,7 @@ export const CASTS: CastDef[] = [
     cost: 34,
     level: 24,
     on: 'item',
-    note: `A tool comes out of it working ${BLESS_STEP}% better than it was ever made to, and stays that way. ${capital(times(BLESS_CAP))} is as far as anything will take it.`,
+    note: `Tool works +${BLESS_STEP}% better, permanently. Max ${BLESS_CAP} casts per tool.`,
   },
   {
     id: 'fairwind',
@@ -137,7 +136,7 @@ export const CASTS: CastDef[] = [
     cost: 30,
     level: 30,
     on: 'self',
-    note: `The wind comes round behind wherever you are pointed and holds there ${spanWords(FAIR_WIND)}.`,
+    note: `Wind turns to blow from behind you and holds ${FAIR_WIND / 60} min.`,
   },
   {
     id: 'bounty',
@@ -145,7 +144,7 @@ export const CASTS: CastDef[] = [
     cost: 44,
     level: 40,
     on: 'self',
-    note: 'Every field on the settlement comes on a stage, all at once, in front of you.',
+    note: 'Every crop on your settlement grows a stage.',
   },
 ];
 export const CAST_BY_ID = new Map(CASTS.map((c) => [c.id, c]));
@@ -172,19 +171,19 @@ export function altarNear(g: Game): PlacedFurniture | undefined {
 
 /** Why this cast will not go, or null. */
 export function castReason(g: Game, def: CastDef, item?: Item): string | null {
-  if (g.skills.get(FAITH) < def.level) return `${def.name} takes ${def.level} faith; you have ${g.skills.get(FAITH).toFixed(0)}.`;
-  if (g.player.favour < def.cost) return `${def.name} costs ${def.cost} favour; you hold ${Math.floor(g.player.favour)}. Pray at an altar.`;
-  if (def.on === 'item' && !item) return 'Choose something to lay it on.';
+  if (g.skills.get(FAITH) < def.level) return `${def.name} needs faith ${def.level}; have ${g.skills.get(FAITH).toFixed(0)}.`;
+  if (g.player.favour < def.cost) return `${def.name} costs ${def.cost} favour; have ${Math.floor(g.player.favour)}. Pray at an altar.`;
+  if (def.on === 'item' && !item) return 'Choose an item.';
   // Not on a find nobody has restored yet, which nothing mends (`unrestored`).
   if (def.id === 'mend' && item && unrestored(item)) return NOT_RESTORED;
-  if (def.id === 'mend' && item && item.dmg <= 0) return `There is nothing wrong with the ${itemName(item).toLowerCase()}.`;
+  if (def.id === 'mend' && item && item.dmg <= 0) return `${itemName(item)}: not damaged.`;
   if (def.id === 'cunning' && item) {
-    if ((item.bless ?? 0) >= BLESS_CAP) return `The ${itemName(item).toLowerCase()} has taken all it will take.`;
-    if (item.issued) return 'What you washed ashore with has nothing in it to work on.';
+    if ((item.bless ?? 0) >= BLESS_CAP) return `${itemName(item)}: max ${BLESS_CAP} casts reached.`;
+    if (item.issued) return 'Not on starting-kit tools.';
   }
-  if (def.id === 'call' && !g.creatures.active()) return 'Nothing travels with you.';
-  if (def.id === 'dawnlight' && !g.player.wounds.length) return 'Nothing is open on you.';
-  if (def.id === 'bounty' && !g.deed) return 'You have no settlement, and so no fields.';
+  if (def.id === 'call' && !g.creatures.active()) return 'No active companion.';
+  if (def.id === 'dawnlight' && !g.player.wounds.length) return 'No wounds.';
+  if (def.id === 'bounty' && !g.deed) return 'No settlement.';
   return null;
 }
 
@@ -202,38 +201,38 @@ export function doCast(g: Game, def: CastDef, item?: Item): string {
         c.state = 'idle';
         c.enemy = null;
         g.events.emit('creature');
-        return `${c.name} is beside you, and gives no sign of having travelled.`;
+        return `${c.name} is beside you.`;
       }
-      return 'Nothing comes.';
+      return 'No companion came.';
     }
     case 'mend': {
       if (!item) return 'Nothing to mend.';
       item.dmg = 0;
       g.events.emit('inventory');
-      return `Every mark of use goes out of the ${itemName(item).toLowerCase()}.`;
+      return `Repaired: ${itemName(item).toLowerCase()}, 0 damage.`;
     }
     case 'dawnlight': {
       const n = g.player.wounds.length;
       g.player.wounds = [];
       g.player.stats.health = Math.min(1, g.player.stats.health + 0.25);
-      return n === 1 ? 'The wound closes over, and what had gone bad is clean.' : `All ${n} of them close over, and what had gone bad is clean.`;
+      return `Healed: ${n} ${n === 1 ? 'wound' : 'wounds'}; infection cured.`;
     }
     case 'cunning': {
       if (!item) return 'Nothing to work on.';
       item.bless = Math.min(BLESS_CAP, (item.bless ?? 0) + 1);
       g.events.emit('inventory');
-      return `The ${itemName(item).toLowerCase()} comes out of it working ${Math.round((blessBonus(item.bless) - 1) * 100)}% better than it was made. (${item.bless} of ${BLESS_CAP})`;
+      return `${itemName(item)}: +${Math.round((blessBonus(item.bless) - 1) * 100)}% (${item.bless}/${BLESS_CAP} casts).`;
     }
     case 'fairwind': {
       g.favourWind = g.time + FAIR_WIND;
-      return 'The wind comes round behind you and settles there.';
+      return 'Wind turned to behind you.';
     }
     case 'bounty': {
       const n = g.hastenCrops();
-      return n ? `Every field on the settlement comes on a stage: ${n} of them.` : 'Nothing is in the ground to come on.';
+      return n ? `Crops grown 1 stage: ${n}.` : 'No crops to grow.';
     }
     default:
-      return 'Nothing happens.';
+      return 'No effect.';
   }
 }
 
@@ -281,7 +280,7 @@ export const FAITH_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = pieceOf(g, t);
       if (!f) return 'It is gone.';
-      if (!nearPiece(g, f)) return 'Kneel at the altar.';
+      if (!nearPiece(g, f)) return 'Stand at the altar.';
       const rest = g.player.prayedAt + PRAYER_REST - g.time;
       if (rest > 0) return prayerRestWords(rest);
       return null;
@@ -300,7 +299,7 @@ export const FAITH_ACTIONS: ActionDef[] = [
       g.note('prayed');
       const dawn = Math.abs(hour - 6) < 2 || Math.abs(hour - 20) < 2;
       g.logMsg(
-        `${dawn ? 'You kneel in the half light and it goes better than it usually does.' : 'You kneel at the stone.'} Favour ${Math.floor(g.player.favour)} of ${Math.floor(cap)}.`,
+        `Prayed${dawn ? ' (dawn or dusk bonus)' : ''}. Favour ${Math.floor(g.player.favour)}/${Math.floor(cap)}.`,
         'event',
       );
     },

@@ -258,8 +258,8 @@ const itemIsle = psql(`select d.name || '|' || d.weight || '|' || d.decay || '|'
 check('its item and its footprint are the same on both sides',
   itemIsle === `${item?.name}|${item?.weight}|${item?.decay}|${item?.description}|${piece?.w}x${piece?.h}`, itemIsle);
 check('the item says its rate, its reach, its beeswax, what it holds and its idle season off the rule',
-  !!item?.description?.includes(`a honey every ${SKEP_CLUMP_HOURS} hours for each clump of wildflowers within ${SKEP_REACH} tiles`)
-    && !!item?.description?.includes(`up to ${SKEP_HOLDS} honey; nothing in ${SKEP_IDLE}`) && !item?.description?.includes('{'), item?.description);
+  !!item?.description?.includes(`one honey every ${SKEP_CLUMP_HOURS} hours per wildflower clump within ${SKEP_REACH} tiles`)
+    && !!item?.description?.includes(`up to ${SKEP_HOLDS} honey. Nothing in ${SKEP_IDLE}`) && !item?.description?.includes('{'), item?.description);
 const jobsIsle = psql(`select string_agg(id || ':' || label || ':' || coalesce(skill, '-') || ':' || base_time || ':' || instant, '|' order by id)
   from action_def where id in ('${TAKE_HONEY}', '${LOOK_SKEP}')`);
 const jobsHere = [TAKE_HONEY, LOOK_SKEP].sort().map((id) => {

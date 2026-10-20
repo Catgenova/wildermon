@@ -118,9 +118,9 @@ check('in the browser: a go at the wall is allowed and lays a log out of somebod
 check('and a go at a bridge\'s span decks a plank out of it',
   sim.SPAN_ASK === 'ALLOWED' && sim.SPAN === '1,1', `${sim.SPAN_ASK} ${sim.SPAN}`);
 check('with stores turned off, both are refused, the span having no plank to hand',
-  sim.WALL_OFF.startsWith('You need ') && sim.SPAN_OFF === 'That span wants 1 plank; you have no plank to hand.', `${sim.WALL_OFF} / ${sim.SPAN_OFF}`);
+  sim.WALL_OFF.startsWith('Need ') && sim.SPAN_OFF === 'Span needs 1 plank; no plank to hand.', `${sim.WALL_OFF} / ${sim.SPAN_OFF}`);
 check('a wagon four tiles off is past reach: the wall is refused and nothing is taken',
-  sim.WALL_FAR.startsWith('You need ') && sim.FAR === `2,${LOGS - 1}`, `${sim.WALL_FAR} ${sim.FAR}`);
+  sim.WALL_FAR.startsWith('Need ') && sim.FAR === `2,${LOGS - 1}`, `${sim.WALL_FAR} ${sim.FAR}`);
 
 /* ---- the island ---------------------------------------------------------- */
 

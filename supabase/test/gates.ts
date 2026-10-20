@@ -50,7 +50,7 @@ import { Game, type IslandGround } from '../../src/game/game';
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { borderOf, MATERIALS, WALL_TYPE_BY_ID, WALL_TYPES, wallBill, type Side } from '../../src/game/building';
-import { BRIDGES, PULL_REACH, rampRefusal, spanBill, type BridgeKind } from '../../src/game/bridges';
+import { BRIDGES, CLEARANCE, PULL_REACH, rampRefusal, spanBill, type BridgeKind } from '../../src/game/bridges';
 import {
   BRIDGE_END_HERE, BRIDGE_END_INSIDE, bridgeEndRefusal, bridgeEndWall, DRAWBRIDGE_UNDER_JETTY, drawbridgeEndsOut, drawbridgeSaid, gateHoverLine, gatePlanRefusal,
   JETTY_OVER_WINCH,
@@ -381,10 +381,10 @@ const both = (what: string, who: Who, action: string, t: Target, want: string | 
   const theirs = islandSays(who, action, t, ...at);
   check(what, mine === theirs && (want === null ? mine === 'ALLOWED' : mine === want), `browser "${mine}", island "${theirs}"`);
 };
-const LOCKED = 'It is locked, and you have no key to it.';
+const LOCKED = 'Locked: no key.';
 // Ben is a Builder of Gil's settlement, and since ranks are the founder's own (145) a citizen is told what his rank lacks.
 const BEN_LOCKED = lacksSaid('Gatehold', 'Builder', 'locks');
-both('raising a portcullis that is up is refused in the same words', 'gil', 'raise_portcullis', PT, 'The portcullis is up already.');
+both('raising a portcullis that is up is refused in the same words', 'gil', 'raise_portcullis', PT, 'Portcullis already up.');
 // Taking it down: a builder of the settlement may take its walls down, but not a padlocked portcullis he has no key to.
 both('Ben, who builds on Gil\'s settlement but holds no key, may not take the locked portcullis down, in the lock\'s words',
   'ben', 'remove_wall', PT, BEN_LOCKED);
@@ -398,8 +398,8 @@ for (const who of WHOS) {
 both('and the same from inside the gatehouse', 'kay', 'lower_portcullis', tileT(10, 11, 's'), null, [10.5, 11.5]);
 check('the island measures the reach from either side and no further',
   islandSays('kay', 'lower_portcullis', PT, 10.5, 14.5) === 'You are too far away from that.', islandSays('kay', 'lower_portcullis', PT, 10.5, 14.5));
-check('and the hidden door is no portcullis to anybody', WHOS.every((w) => islandSays(w, 'lower_portcullis', tileT(HIDDEN.x, HIDDEN.y, HIDDEN.side), 11.5, 10.5) === 'There is no portcullis there.'
-  && browserSays(w, 'lower_portcullis', tileT(HIDDEN.x, HIDDEN.y, HIDDEN.side), 11.5, 10.5) === 'There is no portcullis there.'), 'there is no portcullis there');
+check('and the hidden door is no portcullis to anybody', WHOS.every((w) => islandSays(w, 'lower_portcullis', tileT(HIDDEN.x, HIDDEN.y, HIDDEN.side), 11.5, 10.5) === 'No portcullis there.'
+  && browserSays(w, 'lower_portcullis', tileT(HIDDEN.x, HIDDEN.y, HIDDEN.side), 11.5, 10.5) === 'No portcullis there.'), 'there is no portcullis there');
 
 /**
  * Every counter that numbers rows the island serves, as "name=last value",
@@ -453,7 +453,7 @@ both('Sim may not winch it up again', 'sim', 'raise_portcullis', PT, LOCKED);
   const c0 = psql(COUNTERS);
   const { mine, theirs, g } = doBoth('kay', 'take_off_lock', PT);
   const c1 = psql(COUNTERS);
-  check('Kay takes the padlock off it, in the same words on both sides', mine === theirs && mine.startsWith('You take the padlock off'), `browser "${mine}", island "${theirs}"`);
+  check('Kay takes the padlock off it, in the same words on both sides', mine === theirs && mine.startsWith('Padlock removed'), `browser "${mine}", island "${theirs}"`);
   const back = psql(`select def || ' ' || ql || ' ' || coalesce(keyed::text, 'keyed to nothing') from item where id = ${kayKey}`);
   const mineBack = g.inventory.items.filter((i) => i.id === 'padlock');
   check('and the key she threw in after it is the padlock handed back: the same row, a padlock of quality 40 again, and no new row numbered, on both sides',
@@ -468,7 +468,7 @@ check('the padlock is off it on the island', psql(`select coalesce(lock::text, '
 both('anybody may raise the drawbridge from its winch while it has no padlock', 'sim', 'raise_drawbridge', BT, null);
 check('but only standing at the winch end: the island measures it',
   islandSays('sim', 'raise_drawbridge', BT, 10.5, 15.5) === 'You are too far away from that.', islandSays('sim', 'raise_drawbridge', BT, 10.5, 15.5));
-both('lowering one that is down is refused in the same words', 'sim', 'lower_drawbridge', BT, 'The drawbridge is down already.');
+both('lowering one that is down is refused in the same words', 'sim', 'lower_drawbridge', BT, 'Drawbridge already down.');
 psql(`insert into item (world_id, holder, holder_uid, def, ql, count) values (${W}, 'player', '${WHO.gil}', 'padlock', 40, 1);`);
 {
   const g = browserFor('gil');
@@ -562,7 +562,7 @@ ${pack([[80, true]])}`);
   const gL = browserFor('gil', 8.5, 11.5);
   browserPack(gL, [[80, true]]);
   const fit = ACTION_BY_ID.get('fit_lock') as ActionDef;
-  const NONE = 'You have no padlock. Forge one at a smelter.';
+  const NONE = 'Need a padlock: forge one at a smelter.';
   const crateWhy = [fit.check?.(CT, gL) ?? 'ALLOWED', islandSays('gil', 'fit_lock', CT, 8.5, 11.5)];
   gL.player.x = 10.5;
   gL.player.y = 12.5;
@@ -635,7 +635,7 @@ select in_deep_water(${W}, '${WHO.sim}');`).split('\n').pop() as string;
 /* ---- 6. who may pull a bridge down ---------------------------------------------- */
 
 const PULL = (deed: string): string =>
-  `That is part of ${deed}. Only its builders may ${ACTION_BY_ID.get('demolish_bridge')?.label.toLowerCase()} there.`;
+  `Part of ${deed}: only builders may ${ACTION_BY_ID.get('demolish_bridge')?.label.toLowerCase()} there.`;
 // Down, both its ends on Gatehold, with the padlock Gil fitted to its winch in 4.
 both('a drawbridge on a settlement is not pulled down by Sim, a stranger to it, in the same words on both sides',
   'sim', 'demolish_bridge', BT, PULL('Gatehold'));
@@ -721,14 +721,14 @@ planBoth('but in stone it may be planned', 'plan_wall', NT('portcullis', MAT), n
 {
   const { mine, theirs } = doBoth('gil', 'plan_wall', NT('portcullis', MAT), [11.5, 9.5]);
   check('and planning one says what it is, in the same words on both sides',
-    mine === theirs && mine.startsWith(`${planLine('portcullis', MAT_NAME, 'north')} It needs `), `browser "${mine}", island "${theirs}"`);
+    mine === theirs && mine.startsWith(`${planLine('portcullis', MAT_NAME, 'north')} Needs `), `browser "${mine}", island "${theirs}"`);
   psql(`delete from wall where world_id = ${W} and level = 0 and dir = 'h' and x = 11 and y = 9;`);
 }
 {
   const lines = WALL_TYPES.map((d) => ({ id: d.id, mine: planLine(d.id, MAT_NAME, 'north'), theirs: psql(`select plan_line('${d.id}', '${MAT}', 'n')`) }));
   const arch = lines.find((l) => l.id === 'arch')?.mine;
   check(`and the plan line gives every one of the ${lines.length} types of wall its own article, in the same words on both sides`,
-    lines.every((l) => l.mine === l.theirs) && arch === 'You plan an arch in stone brick on the north side.',
+    lines.every((l) => l.mine === l.theirs) && arch === 'Planned: arch, stone brick, north side.',
     lines.filter((l) => l.mine !== l.theirs).map((l) => `${l.id}: "${l.mine}" and "${l.theirs}"`).join('; ') || `"${arch}"`);
 }
 
@@ -788,14 +788,14 @@ select coalesce(act, 'nothing') from player where world_id = ${W} and uid = '${W
   const g = browserSaysIron(() => {});
   const mine = g.log[g.log.length - 1]?.text;
   check('a hidden door wants a padlock in hand: refused by the one call that would plan it, in the same words on both sides, nothing started and nothing kept',
-    why === mine && why === 'A hidden door takes a padlock when it is planned. Forge one at a smelter.' && kept === '0' && act === 'nothing'
+    why === mine && why === 'Hidden door needs a padlock (cast at a smelter).' && kept === '0' && act === 'nothing'
       && g.action === null,
     `island "${why}", ${kept} kept, in hand ${act}; browser "${mine}", ${job(g)}`);
   const [why2, kept2] = islandSaysIron(1, 0);
   const g2 = browserSaysIron((x) => { x.inventory.add('padlock', { ql: 55 }); });
   const mine2 = g2.log[g2.log.length - 1]?.text;
   check('and a door\'s hinges, in the same words',
-    why2 === mine2 && why2 === `A hidden door takes ${numberWord(HIDDEN_DOOR_HINGES)} hinges when it is planned.` && kept2 === '0' && g2.action === null,
+    why2 === mine2 && why2 === `Hidden door needs ${HIDDEN_DOOR_HINGES} hinges.` && kept2 === '0' && g2.action === null,
     `island "${why2}", browser "${mine2}"`);
 }
 
@@ -867,7 +867,7 @@ check('and every counter numbering rows the island serves moves exactly as far f
   `solid wall: ${SOLID.moved}; hidden door: ${HID.moved}`);
 check('the island tells the planner the line a solid wall\'s plan says, and what it is on the end of that same line, on his own ground',
   HID.told === `${SOLID.told} ${hiddenDoorSaid({ own: true, deed: 'Gatehold' })}` && !HID.told.includes('~') && !SOLID.told.includes('~')
-    && SOLID.told.startsWith(`${planLine('solid', MAT_NAME, 'north')} It needs `),
+    && SOLID.told.startsWith(`${planLine('solid', MAT_NAME, 'north')} Needs `),
   HID.told.replace(/~/g, ' / '));
 check('nothing is left asked for', psql(ASKS) === '0');
 check('and the founder\'s own ground read tells him what it is', wallIn(groundFor('gil', 11.5, 9.5), 'h', 11, 9)?.type === 'hidden_door');
@@ -958,7 +958,7 @@ const B_LATER = 'solid, the padlock in the pack';
   planHiddenDoor(nowhere.g, PLAN_WALL, HT);
   check('and asked for beside it, it goes at once; with no way there, nothing goes at all',
     near.sent.length === 1 && near.sent[0].hidden && nowhere.sent.length === 0
-      && nowhere.g.log[nowhere.g.log.length - 1]?.text === "You can't find a way to get there.",
+      && nowhere.g.log[nowhere.g.log.length - 1]?.text === "No path there.",
     `beside: ${near.sent.length} sent; no way: ${nowhere.sent.length} sent, "${nowhere.g.log[nowhere.g.log.length - 1]?.text}"`);
 }
 
@@ -1119,7 +1119,7 @@ select ${askPlan(true, HT)} \\g /dev/null`);
     planHiddenDoor(g, PLAN_WALL, HT);
   });
   check('a plain solid wall\'s plan in hand and a hidden door\'s lined up behind it on the same side: the plain one, planned first, is the door, and the other is then refused, on both sides',
-    sameOne(I, B) && I.walls === DOOR.walls && I.state === DOOR.state && I.told === HID.told && I.refused === 'There is already a wall on that side.',
+    sameOne(I, B) && I.walls === DOOR.walls && I.state === DOOR.state && I.told === HID.told && I.refused === 'Already a wall on that side.',
     `island: ${I.walls}; ${I.state}; refused "${I.refused}". browser: ${B.walls}; ${B.state}; refused "${B.refused}"${I.told === B.told ? '' : `; told "${I.told}" and "${B.told}"`}`);
 }
 {
@@ -1133,7 +1133,7 @@ select ${askPlan(false, ST)} \\g /dev/null`);
     g.requestAction(PLAN_WALL, ST);
   });
   check('a hidden door\'s plan put down by a walk, and a plain solid wall then planned on that side: the plain one is the door, and the held one is refused when it comes up, on both sides',
-    sameOne(I, B) && I.walls === DOOR.walls && I.state === DOOR.state && I.told === HID.told && I.refused === 'There is already a wall on that side.',
+    sameOne(I, B) && I.walls === DOOR.walls && I.state === DOOR.state && I.told === HID.told && I.refused === 'Already a wall on that side.',
     `island: ${I.walls}; ${I.state}; refused "${I.refused}". browser: ${B.walls}; ${B.state}; refused "${B.refused}"${I.told === B.told ? '' : `; told "${I.told}" and "${B.told}"`}`);
 }
 {
@@ -1161,8 +1161,8 @@ delete from wall where world_id = ${W} and level = 1 and dir = 'h' and x = 11 an
 {
   const cap = Number(psql(`select queue_capacity(${W}, '${WHO.gil}')`));
   const other = NT('solid', MAT, 11, 9, 'w');
-  const FULL = `You can only keep ${cap} jobs in your head at once. Mind logic is what widens that.`;
-  const SPENT = 'You are too exhausted to do that. Rest a moment.';
+  const FULL = `Job queue full: ${cap}. Mind logic raises it.`;
+  const SPENT = 'Too exhausted. Rest.';
   const FAR = 'You are too far away from that.';
   /** The island asked, as Gil in the state `body` puts him in at `at`: its answer, what is kept, and what he has in hand. */
   const islandRefuses = (body: string, at: [number, number] = [11.5, 9.5]): string[] => psql(`${fresh(body, 'gil', at)}
@@ -1268,7 +1268,7 @@ delete from wall where world_id = ${W} and level = 0 and dir = 'h' and x = 11 an
     const refused = g.log[g.log.length - 1]?.text ?? '';
     const after = browserLater(g);
     check('lined up and refused as it came up, a wall having gone up on its border meanwhile, it goes with its job, on both sides',
-      left === '0' && later === LATER && refused.endsWith('There is already a wall on that side.') && after === B_LATER,
+      left === '0' && later === LATER && refused.endsWith('Already a wall on that side.') && after === B_LATER,
       `island ${left} kept, then ${later}; browser "${refused}", then ${after}`);
   }
   {
@@ -1374,7 +1374,7 @@ psql(`delete from wall where world_id = ${W} and level = 0 and dir = 'h' and x =
   const g = browserFor('gil', 10.5, 7.5);
   const three = g.bridgeReason('draw', 10, 12, 10, 16);
   const theirs = psql(`select coalesce(bridge_reason(${W}, '${WHO.gil}', 'draw', 10, 12, 10, 16), 'ALLOWED')`);
-  check(`a drawbridge of more than ${BRIDGES.draw.span} spans is refused, in the same words`, three === theirs && three === `A drawbridge spans ${BRIDGES.draw.span} tiles; that is 3.`,
+  check(`a drawbridge of more than ${BRIDGES.draw.span} spans is refused, in the same words`, three === theirs && three === `${BRIDGES.draw.name}: max span ${BRIDGES.draw.span} tiles; this is 3.`,
     `browser "${three}", island "${theirs}"`);
 }
 const plainT = (x: number, y: number): Target => ({ kind: 'tile', x, y, cx: x, cy: y });
@@ -1551,10 +1551,10 @@ sameBridge('nor does a drawbridge come down on one', 'draw', 20, 15, 20, 13, dra
 
 // Another bridge's end, or a span over one: refused on both sides, as the island's `bridge_at` has always counted it.
 sameBridge('no bridge ends on another\'s end: a drawbridge set out from the far end of a wooden bridge is refused in the same words on both sides',
-  'draw', 28, 15, 28, 17, 'One end is already under a bridge.');
-sameBridge('nor on an aqueduct\'s', 'wood', 26, 10, 29, 10, 'One end is already under a bridge.');
-sameBridge('nor crosses one: a drawbridge over the end of the wooden bridge', 'draw', 27, 12, 29, 12, 'Something is already bridged across there.');
-sameBridge('nor over an aqueduct\'s span', 'draw', 25, 9, 27, 9, 'Something is already bridged across there.');
+  'draw', 28, 15, 28, 17, 'An end is already under a bridge.');
+sameBridge('nor on an aqueduct\'s', 'wood', 26, 10, 29, 10, 'An end is already under a bridge.');
+sameBridge('nor crosses one: a drawbridge over the end of the wooden bridge', 'draw', 27, 12, 29, 12, 'Already bridged there.');
+sameBridge('nor over an aqueduct\'s span', 'draw', 25, 9, 27, 9, 'Already bridged there.');
 
 // A bridge's end: nothing is built on it. An aqueduct's ends are the water it draws from and the basin it pours into: its own.
 {
@@ -1594,7 +1594,7 @@ sameBridge('nor over an aqueduct\'s span', 'draw', 25, 9, 27, 9, 'Something is a
     farMine === farTheirs && farMine === 'Stand at one end of it.' && nearMine === nearTheirs && nearMine === ALLOWED,
     `out of reach: browser "${farMine}", island "${farTheirs}"; within it: browser "${nearMine}", island "${nearTheirs}"`);
   check('and on a settlement only by its builders, in the same words on both sides',
-    simMine === simTheirs && simMine === `That is part of Kayhold. Only its builders may ${label} there.`,
+    simMine === simTheirs && simMine === `Part of Kayhold: only builders may ${label} there.`,
     `browser "${simMine}", island "${simTheirs}"`);
   check('and Pull it down, which is a bridge\'s job, is not offered for one in a browser',
     !(ACTION_BY_ID.get('demolish_bridge') as ActionDef).applies(AT, kayAt(26.5, 11.5)));
@@ -1607,7 +1607,7 @@ psql(`insert into floor_tile (world_id, level, x, y, building, material, kind, n
 sameBridge('a drawbridge\'s winch is not set on the ground under a jetty, even one only planned, in the same words on both sides',
   'draw', 21, 12, 19, 12, DRAWBRIDGE_UNDER_JETTY);
 sameBridge('while its far end there is refused for what is under it, the flat ground, not for the jetty', 'draw', 19, 12, 21, 12,
-  'That is not a gap, it is ground. Walk it.');
+  `Ground under the span: needs ${CLEARANCE} clearance.`);
 // A finished jetty is a floor of the storey it is out from, which a bridge's end lands on, as the island has always had it (`top_deck`).
 {
   // Storey 2 to the ground over a tile of deck: a ramp too steep for it (`rampRefusal`), which names the jetty's storey.
@@ -1616,9 +1616,9 @@ sameBridge('while its far end there is refused for what is under it, the flat gr
   sameBridge('a bridge\'s end at a finished jetty is on the jetty\'s storey, as on any finished floor, on both sides', 'wood', 23, 11, 23, 9,
     a.level === 1 && b.level === 0 ? rampRefusal(a.level, b.level, Math.abs(a.height - b.height), 1) : `storeys ${a.level} and ${b.level}`);
 }
-sameBridge('so a drawbridge, which goes from ground to ground, ends on none', 'draw', 23, 9, 23, 11, `A ${BRIDGES.draw.name.toLowerCase()} goes from ground to ground, not to a storey.`);
+sameBridge('so a drawbridge, which goes from ground to ground, ends on none', 'draw', 23, 9, 23, 11, `${BRIDGES.draw.name}: ground to ground only, not to a storey.`);
 sameBridge('nor is set out from one, which is a storey and not the ground under a jetty', 'draw', 23, 11, 23, 9,
-  `A ${BRIDGES.draw.name.toLowerCase()} goes from ground to ground, not to a storey.`);
+  `${BRIDGES.draw.name}: ground to ground only, not to a storey.`);
 {
   const t: Target = { kind: 'tile', x: 22, y: 11, cx: 22, cy: 11, buildingId: 79, level: 1, floorKind: 'floor', material: MAT } as unknown as Target;
   const g = kayAt(21.5, 11.5);
@@ -1699,7 +1699,7 @@ update player set level = 0 where world_id = ${W} and uid = '${WHO.gil}';`).spli
   };
   const pairs = [says('raise_portcullis', PT), says('lower_drawbridge', BT), says('fit_lock', PT), says('plan_wall', ST)];
   check('from down in a cellar nobody works a portcullis, a drawbridge, a padlock or a wall\'s plan up top, in the same words on both sides',
-    pairs.every(([m, t]) => m === t && m === 'You are down in the cellar. Go up to do that.'), pairs.map(([m, t]) => `"${m}" / "${t}"`).join('; '));
+    pairs.every(([m, t]) => m === t && m === 'Go up out of the cellar first.'), pairs.map(([m, t]) => `"${m}" / "${t}"`).join('; '));
 }
 
 // A column on a corner of a portcullis, and a railing beside one on a deck.

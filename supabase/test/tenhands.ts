@@ -236,7 +236,7 @@ for (const [id] of HANDS) {
   check(`a ${id} says what it will do in the island's words`, words(deedJobLine(c)) === words(at(`LINE:${id}`)), `${deedJobLine(c)} / ${at(`LINE:${id}`)}`);
   // The seven worked at the stores or at your own bring nothing to the crate, and say where what they make goes instead.
   const errand = TEND_JOBS.has(SPECIES[id].gathers!);
-  check(`and ${errand ? 'says nothing of the crate' : 'brings what it finds to the crate'}`, deedJobLine(c).endsWith(' and bring what it finds to the crate') === !errand, deedJobLine(c));
+  check(`and ${errand ? 'says nothing of the crate' : 'brings what it finds to the crate'}`, deedJobLine(c).endsWith('; output to the crate') === !errand, deedJobLine(c));
 }
 check('the words carry the numbers the rules use',
   GATHER_DO.groom.includes(`${Math.round(CARE_WANTING * 100)}%`) && GATHER_DO.dairy.includes(`${Math.round(DAIRY_FULL * 100)}%`)

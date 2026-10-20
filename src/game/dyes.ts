@@ -102,17 +102,17 @@ export const boilCountPlain = (item: string): number => countForGrams(item, dyeG
 export function boilRefusal(g: Game, recipe: string, item: string, have: number): string | null {
   const grams = boilGrams(g, recipe);
   if (have * gramsOf(item) >= grams) return null;
-  return `It takes ${kgSaid(grams)} kg of ${stuffName(item)} for ${BOIL_LITRES} litres of lye; you have ${kgSaid(have * gramsOf(item))} kg.`;
+  return `Need ${kgSaid(grams)} kg of ${stuffName(item)} per ${BOIL_LITRES} litres of lye; have ${kgSaid(have * gramsOf(item))} kg.`;
 }
 
 /** What a dyestuff's card says it is for, off the boil itself. */
 export const dyestuffUse = (d: Dyestuff): string =>
-  `Boiled in a bucket of lye for ${d.primary} dye: ${kgSaid(dyeGrams(1, DYE_LITRES_PER_KG))} kg to every litre of lye, so ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG))} kg `
-  + `(${boilCountPlain(d.from)} of them, at ${kgSaid(gramsOf(d.from))} kg each) for the ${BOIL_LITRES} litres in a bucket, which come off as ${BOIL_LITRES} litres of dye.`;
+  `Boil in a bucket of lye for ${d.primary} dye: ${kgSaid(dyeGrams(1, DYE_LITRES_PER_KG))} kg per litre of lye, ${kgSaid(dyeGrams(BOIL_LITRES, DYE_LITRES_PER_KG))} kg `
+  + `(${boilCountPlain(d.from)} × ${kgSaid(gramsOf(d.from))} kg) per bucket of ${BOIL_LITRES} litres. Output: ${BOIL_LITRES} litres of dye.`;
 
 /** What a boil says it took: "You boil down 5 kg of raspberries, 50 of them, in 5 litres of lye." The island's `dye_boil_said`. */
 export const boilSaid = (from: string, used: number): string =>
-  `You boil down ${kgSaid(used * gramsOf(from))} kg of ${stuffName(from)}, ${used} of ${used === 1 ? 'it' : 'them'}, in ${BOIL_LITRES} litres of lye.`;
+  `Boiled: ${kgSaid(used * gramsOf(from))} kg of ${stuffName(from)} (${used}), in ${BOIL_LITRES} litres of lye.`;
 
 /**
  * A boil, come off the bench: the bucket of lye is a bucket of the
@@ -201,14 +201,14 @@ export function pickDye(g: Game, litres: number, choice?: string): DyeSource | n
 export const litresWord = (n: number): string => `${n} ${n === 1 ? 'litre' : 'litres'}`;
 /** What is said when there is no dye to dye with at all, `reach` being how far a dyeing reaches for a barrel. */
 export const noDye = (reach: number): string =>
-  `You have no dye in your pack or in a barrel within ${reach} tiles. Boil a dyestuff in a bucket of lye for red, yellow or blue dye.`;
+  `No dye in your pack or a barrel within ${reach} tiles. Boil a dyestuff in a bucket of lye for red, yellow or blue dye.`;
 /** And when there is, but no one bucket or barrel of it holds what this takes. */
 export const tooLittleDye = (litres: number, most: number): string =>
-  `It takes ${litresWord(litres)} of dye, and the most any one bucket or barrel of it holds is ${litresWord(most)}. A dyeing draws from one only.`;
+  `Need ${litresWord(litres)} of dye from one bucket or barrel; the most in one is ${litresWord(most)}.`;
 /** And when the one chosen is gone, or has too little left in it. */
-export const dyeGone = (litres: number): string => `The dye you chose is gone or holds less than ${litresWord(litres)} now. Choose again.`;
+export const dyeGone = (litres: number): string => `Chosen dye gone or under ${litresWord(litres)}. Choose again.`;
 /** A thing that is that colour already. */
-export const dyedAlready = (hex: string): string => `It is ${colourWord(hex)} already, ${hex}.`;
+export const dyedAlready = (hex: string): string => `Already ${colourWord(hex)} (${hex}).`;
 
 /**
  * Why a dyeing of `litres` will not go onto a thing that is `has` now, or
@@ -245,7 +245,7 @@ export function spendDye(g: Game, from: DyeSource, litres: number): boolean {
 /** What the picker lists for a source: where it is, and what Examine says of the dye in it. */
 export const sourceSays = (s: DyeSource): string => `${s.where}: ${dyeSays(s.liquid, s.litres)}`;
 /** What the picker asks. */
-export const pickDyeAsks = (litres: number): string => `Which dye? This takes ${litresWord(litres)}, out of one bucket or barrel.`;
+export const pickDyeAsks = (litres: number): string => `Which dye? Needs ${litresWord(litres)}, from one bucket or barrel.`;
 
 type ItemTarget = Extract<Target, { kind: 'item' }>;
 const isItem = (t: Target): t is ItemTarget => t.kind === 'item';
@@ -275,7 +275,7 @@ export const DYE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const it = itemOf(g, t);
       if (!it) return 'It is gone.';
-      if (!takesDye(it.id)) return 'Nothing will take on that.';
+      if (!takesDye(it.id)) return 'Cannot be dyed.';
       return dyeReason(g, dyeLitresFor(it.id), dyeChoice(t), it.dye, g.dyeReach());
     },
     perform: (t, g) => {
@@ -291,13 +291,13 @@ export const DYE_ACTIONS: ActionDef[] = [
       if (one !== it) g.inventory.addItem(one);
       g.gainSkill('alchemy', 0.3);
       g.note('dyed');
-      g.logMsg(`You work ${litresWord(need)} of ${colourWord(d.hex)} dye through it. It comes out ${colourWord(d.hex)}, ${d.hex}.`, 'event');
+      g.logMsg(`Dyed: ${colourWord(d.hex)} (${d.hex}). Dye used: ${litresWord(need)}.`, 'event');
       g.events.emit('inventory');
     },
   },
   {
     id: 'strip_dye',
-    label: 'Boil the colour out',
+    label: 'Remove dye',
     verb: 'boiling the colour out',
     skill: 'alchemy',
     stamina: 0.02,
@@ -308,8 +308,8 @@ export const DYE_ACTIONS: ActionDef[] = [
     },
     check: (t, g) => {
       const it = itemOf(g, t);
-      if (!it?.dye || !takesDye(it.id)) return 'It has taken no colour.';
-      if (!g.inventory.has('lye_bucket')) return 'You need a bucket of lye to strip it.';
+      if (!it?.dye || !takesDye(it.id)) return 'No colour to remove.';
+      if (!g.inventory.has('lye_bucket')) return 'Need a bucket of lye.';
       return null;
     },
     perform: (t, g) => {
@@ -320,7 +320,7 @@ export const DYE_ACTIONS: ActionDef[] = [
       g.inventory.add('bucket', { ql: lye.ql });
       delete it.dye;
       g.gainSkill('alchemy', 0.2);
-      g.logMsg(`You boil it out in lye. It is back to the colour of ${itemDef(it.id).name.toLowerCase()}.`, 'event');
+      g.logMsg(`Dye removed: plain ${itemDef(it.id).name.toLowerCase()}.`, 'event');
       g.events.emit('inventory');
     },
   },

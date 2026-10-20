@@ -145,7 +145,7 @@ check(`and what is left over is exactly the ${NOBODY_OWNS.length} that belong to
   `${said('LEFTOVER').split(',').length} left over: ${said('LEFTOVER')}`);
 
 check('a card is shut below fifty, in the island’s words',
-  said('SHUT').startsWith('You are not a terraformer yet.'), said('SHUT'));
+  said('SHUT').startsWith('Opens at 50 in one of: '), said('SHUT'));
 check('and the browser says the same sentence',
   classRefusal(CRAFT_CLASSES[0], () => 0) === said('SHUT'),
   classRefusal(CRAFT_CLASSES[0], () => 0) ?? 'nothing');
@@ -156,11 +156,11 @@ const [took, paid, why] = said('FIRST').split('|');
 check('the first trade in a slot is free', took === 'terraformer' && paid === '0', `${took}, paid ${paid}, ${why}`);
 check('and it goes in the craft slot, leaving the combat one alone',
   said('SLOTS') === 'terraformer|none', said('SLOTS'));
-check('the same trade twice is refused', said('AGAIN') === 'You are already a terraformer.', said('AGAIN'));
+check('the same trade twice is refused', said('AGAIN') === 'Already your class: Terraformer.', said('AGAIN'));
 
 const [brokeWhy, brokeStill] = said('BROKE').split('|');
 check('a swap with an empty purse is refused, and nothing changes',
-  brokeWhy.startsWith('Putting a trade down') && brokeStill === 'terraformer',
+  brokeWhy.startsWith('Class change: need ') && brokeStill === 'terraformer',
   `${brokeWhy} — still ${brokeStill}`);
 
 const [paidTook, paidSays, paidReally, paidNow] = said('PAID').split('|');

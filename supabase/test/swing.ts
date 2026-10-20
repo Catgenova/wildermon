@@ -423,9 +423,9 @@ laden(false);
     near(((islandLeather - 1) / LEATHER_KG) / ((islandPlate - 1) / PLATE_KG), ARMOUR_SWING_BY.leather / ARMOUR_SWING_BY.plate),
     `${(islandLeather - 1) / LEATHER_KG} against ${(islandPlate - 1) / PLATE_KG} a kilogram`);
   const piece = (compareLines(g, g.inventory.get(pieces.get('plate_breastplate') as number)!) ?? [])
-    .map((l) => (typeof l === 'string' ? l : l.text)).find((l) => l.startsWith('Each swing or draw'));
+    .map((l) => (typeof l === 'string' ? l : l.text)).find((l) => l.startsWith('Swing or draw time'));
   check('the card a breastplate shows says what it adds to every swing, at its counted kilograms',
-    piece === `Each swing or draw ${finePercent(countedOf(['plate_breastplate']) * armourSwingKg())} longer`, piece ?? 'no line');
+    piece === `Swing or draw time +${finePercent(countedOf(['plate_breastplate']) * armourSwingKg())}`, piece ?? 'no line');
 }
 {
   const t = timed('WAGON');
@@ -462,9 +462,9 @@ for (const k of ['ASKED', 'TURNED']) {
   const t = timed('BOTH:20');
   asTimed(t);
   const note = swingNote(g.swingTime(SWORD, sword));
-  const line = (compareLines(g, sword) ?? []).map((l) => (typeof l === 'string' ? l : l.text)).find((l) => l.startsWith('A swing every'));
+  const line = (compareLines(g, sword) ?? []).map((l) => (typeof l === 'string' ? l : l.text)).find((l) => l.startsWith('Swing time'));
   check('the card says the seconds and names armour and being overburdened with their shares',
-    (line?.startsWith(`A swing every ${g.duration(ATTACK).toFixed(2)} s`) ?? false)
+    (line?.startsWith(`Swing time ${g.duration(ATTACK).toFixed(2)} s`) ?? false)
       && note.includes(`armour ${kgOf(PLATE_IDS).toFixed(1)} kg, counting ${countedOf(PLATE_IDS).toFixed(1)} kg +${percent(full - 1)}`)
       && note.includes(`overburdened +${percent(OVERBURDEN_SWING)}`),
     `${line ?? 'no line'} / ${note}`);

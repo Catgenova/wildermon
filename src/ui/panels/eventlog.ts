@@ -28,12 +28,12 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /** The tabs along the top of the log, and which kinds of line each keeps. */
 const TABS: Array<{ id: string; label: string; title: string; kinds: LogKind[] | null }> = [
-  { id: 'all', label: 'All', title: 'Everything, as it happens', kinds: null },
-  { id: 'event', label: 'Work', title: 'What your hands have been doing', kinds: ['event', 'info'] },
-  { id: 'fight', label: 'Combat', title: 'Blows given and taken, and what is coming for you', kinds: ['fight'] },
-  { id: 'skill', label: 'Skills', title: 'What you have learned', kinds: ['skill'] },
-  { id: 'chat', label: 'Talk', title: 'What has been said', kinds: ['chat', 'system'] },
-  { id: 'error', label: 'Trouble', title: 'What went wrong, and why', kinds: ['error'] },
+  { id: 'all', label: 'All', title: 'All messages', kinds: null },
+  { id: 'event', label: 'Work', title: 'Work results', kinds: ['event', 'info'] },
+  { id: 'fight', label: 'Combat', title: 'Combat: blows dealt and taken, threats', kinds: ['fight'] },
+  { id: 'skill', label: 'Skills', title: 'Skill gains', kinds: ['skill'] },
+  { id: 'chat', label: 'Talk', title: 'Chat and system messages', kinds: ['chat', 'system'] },
+  { id: 'error', label: 'Trouble', title: 'Errors and refusals', kinds: ['error'] },
 ];
 
 export class EventLogPanel {
@@ -69,7 +69,7 @@ export class EventLogPanel {
     this.search.type = 'search';
     this.search.className = 'panel-search log-search';
     this.search.placeholder = 'Find…';
-    this.search.title = 'Show only the lines on this tab that contain what is typed here; Esc clears it';
+    this.search.title = 'Filter this tab; Esc clears';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.render();
@@ -90,7 +90,7 @@ export class EventLogPanel {
     this.input = document.createElement('input');
     this.input.type = 'text';
     this.input.className = 'log-input';
-    this.input.placeholder = 'Say something… (Enter)';
+    this.input.placeholder = 'Chat (Enter)';
     this.input.maxLength = SAY_MAX;
     this.input.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -139,7 +139,7 @@ export class EventLogPanel {
       empty.className = 'log-line log-info';
       const where = this.tab.kinds ? `on the ${this.tab.label} tab` : 'in the log';
       empty.textContent = this.query
-        ? `Nothing ${where} answers to “${this.search.value.trim()}”. Esc in the box clears it.`
+        ? `No match ${where}: “${this.search.value.trim()}”. Esc clears.`
         : `Nothing ${where} yet.`;
       this.list.append(empty);
     }

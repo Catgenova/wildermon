@@ -104,7 +104,7 @@ begin
   end loop;
   select * into c from creature where world_id = w and id = a;
   insert into said values ('CROSSED', stage_of(c) || '|' || round(c.health::numeric, 4));
-  insert into said select 'TOLD', coalesce(string_agg(text, ' / '), '-') from event where world_id = w and uid = u and text like '%evolves into%';
+  insert into said select 'TOLD', coalesce(string_agg(text, ' / '), '-') from event where world_id = w and uid = u and text like '% evolved: %';
   -- Called only its kind's name, it is called what it has become; one somebody named keeps the name.
   insert into said select 'RENAMED', name from creature where world_id = w and id = a;
   update creature set skills = jsonb_build_object('foraging', ${AT2} - 0.0001), name = 'Horn' where world_id = w and id = a;
@@ -130,7 +130,7 @@ check('the Rabba is the Snufflet now, a Snuffroot and a Snuffthorn after, on bot
 const iron = SPECIES.mola;
 check('the Mola is the Ironemole now, a Ferrodrill and an Oremander after, and an old Mola carcass is still one, on both sides',
   iron.name === 'Ironemole' && iron.stages?.map((x) => x.name).join(',') === 'Ferrodrill,Oremander'
-    && at('IRONEMOLE') === 'Ironemole|Ferrodrill,Oremander|Mola|mola' && iron.stages[1].description.startsWith('An Ironemole at level'), at('IRONEMOLE'));
+    && at('IRONEMOLE') === 'Ironemole|Ferrodrill,Oremander|Mola|mola' && iron.stages[1].description.startsWith(`Stage 3, level ${EVOLVE_AT[1]}+. Over an Ironemole:`), at('IRONEMOLE'));
 const spore = SPECIES.vola;
 check('the Vola is the Sporeling now, a Sporekin and a Sporelord after, and an old Vola carcass is still one, on both sides',
   spore.name === 'Sporeling' && spore.stages?.map((x) => x.name).join(',') === 'Sporekin,Sporelord'
@@ -197,7 +197,7 @@ check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and
 const ghost = SPECIES.whispet;
 check('the Whispet is new, a Lanternveil and a Hallowmire after, and as it keeps watch rather than working its stages are not said to work faster, on both sides',
   ghost.name === 'Whispet' && ghost.stages?.map((x) => x.name).join(',') === 'Lanternveil,Hallowmire' && !ghost.stages[1].description.includes('task')
-    && ghost.stages[1].description.startsWith('A Whispet at level') && at('WHISPET') === 'Whispet|Lanternveil,Hallowmire', at('WHISPET'));
+    && ghost.stages[1].description.startsWith(`Stage 3, level ${EVOLVE_AT[1]}+. Over a Whispet:`) && at('WHISPET') === 'Whispet|Lanternveil,Hallowmire', at('WHISPET'));
 check(`it evolves at ${AT1} and ${AT2}, and each stage is ${H}, ${T}, ${S}, ${W} and ${G} over the last, on both sides`,
   at('NUMBERS') === `${AT1}|${AT2}|${H}|${T}|${S}|${W}|${G}`, at('NUMBERS'));
 for (let i = 0; i < 3; i++) {
@@ -211,7 +211,7 @@ check(`on the island, a Cloudborne grows its fleece back ${G} squared as fast`, 
 check('a dowse, which does not evolve, is not touched at any level', at('STILL') === '0|1.0000' || at('STILL') === '0|1', at('STILL'));
 const [crossed, healthAfter] = at('CROSSED').split('|');
 check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
-  crossed === '1' && near(Number(healthAfter), 10 * H) && at('TOLD').includes('evolves into a Snuffroot'), `${at('CROSSED')} ${at('TOLD')}`);
+  crossed === '1' && near(Number(healthAfter), 10 * H) && at('TOLD').includes('evolved: Snuffroot.'), `${at('CROSSED')} ${at('TOLD')}`);
 
 check(`and called only its kind's name, it is called a ${SPECIES.rabba.stages![0].name} now; called Horn, it keeps Horn as a ${SPECIES.rabba.stages![1].name}`,
   at('RENAMED') === SPECIES.rabba.stages![0].name && at('KEPT') === '2|Horn', `${at('RENAMED')} ${at('KEPT')}`);
@@ -255,7 +255,7 @@ check('a dowse is not touched at any level', stageOf(still) === 0 && kindName(st
   for (let n = 0; n < 50 && stageOf(r) === 0; n++) g.creatures.gainSkill(g, r, 'foraging', 5);
   check(`learning across ${AT1}, it evolves, says so, and its health grows with it`,
     stageOf(r) === 1 && near(r.health, 10 * H) && evolved === 1 && acts.includes('evolve')
-      && g.log.some((e) => e.text.includes('evolves into a Snuffroot')), `${stageOf(r)} ${r.health} ${evolved} ${acts}`);
+      && g.log.some((e) => e.text.includes('evolved: Snuffroot.')), `${stageOf(r)} ${r.health} ${evolved} ${acts}`);
 }
 
 {

@@ -612,7 +612,7 @@ check('the journey is said in the same words on both sides, and the browser is t
 const againHere = ask('harrowmark');
 check('a second journey in the wait is refused with the time left, in the same words on both sides',
   part('AGAIN', 0) === restSaid(Number(part('AGAIN', 1))) && Number(part('AGAIN', 1)) > telestoneRest(50) - 5
-    && againHere.startsWith('You can travel by Telestone again in ') && againHere === restSaid(restHere),
+    && againHere.startsWith('Telestone cooldown: ') && againHere === restSaid(restHere),
   `${part('AGAIN', 0)} / ${againHere}`);
 check(`a word about walking from before the journey leaves the body where the journey put it, for ${TELE_GRACE} seconds`,
   part('GRACE', 0) === `${wx},${wy},true` && part('GRACE', 1) === `${wx},${wy}`, isle.get('GRACE'));

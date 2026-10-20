@@ -48,6 +48,7 @@
  *
  * Every refusal here is `frame_refusal` on the island, word for word.
  */
+import { capital } from './words';
 import type { Target } from './actions';
 import {
   borderOf,
@@ -141,7 +142,7 @@ export function jettyRoofRests(g: Game, b: Building, x: number, y: number): stri
     if (holds(g, top, border)) continue;
     for (const [cx, cy] of endsOf(border)) {
       if (cornerCarries(g, top, cx, cy, border)) continue;
-      return `A roof over the jetty rests on walls or columns: raise a column on its ${cornerName({ x, y }, cx, cy)} corner first. A railing carries nothing.`;
+      return `Jetty roof needs walls or columns: add a column on its ${cornerName({ x, y }, cx, cy)} corner first. Railings carry nothing.`;
     }
   }
   return null;
@@ -174,7 +175,7 @@ export const cornerName = (t: { x: number; y: number }, cx: number, cy: number):
 export function jettyOver(g: Game, x: number, y: number): string | null {
   const over = g.buildings.jettyAt(x, y);
   if (!over) return null;
-  return g.buildings.outsideStair(x, y) ? `${over.name}'s outside staircase stands on that tile.` : `That tile is under ${over.name}'s jetty.`;
+  return g.buildings.outsideStair(x, y) ? `${over.name} outside staircase on that tile.` : `Under ${over.name} jetty.`;
 }
 
 /** The tile across a side of another. */
@@ -204,26 +205,26 @@ export function outsideStairBase(g: Game, b: Building, x: number, y: number, fac
 export function outsideStairReason(g: Game, t: TileTarget, b: Building, level: number): string | null {
   const bld = g.buildings;
   const storey = OUTSIDE_STAIR_LEVEL + 1;
-  if (b.levels <= OUTSIDE_STAIR_LEVEL) return `An outside staircase climbs from the ground to storey ${storey}: plan storey ${storey} of ${b.name} first.`;
-  if (level !== OUTSIDE_STAIR_LEVEL) return `An outside staircase climbs from the ground to storey ${storey}: work on storey ${storey} to plan one.`;
+  if (b.levels <= OUTSIDE_STAIR_LEVEL) return `Outside staircase: ground to storey ${storey}. Plan ${b.name} storey ${storey} first.`;
+  if (level !== OUTSIDE_STAIR_LEVEL) return `Outside staircase: ground to storey ${storey}. Switch to storey ${storey}.`;
   // Nothing of any building's over it or on it already, at any storey; one of its own on this storey is "already planned".
   const there = bld.jettyAt(t.x, t.y);
   if (there && (there.id !== b.id || !bld.floor(level, t.x, t.y))) return jettyOver(g, t.x, t.y);
-  if (!g.onDeed(t.x, t.y)) return 'You may only build on your own deed.';
+  if (!g.onDeed(t.x, t.y)) return 'Only on your own deed.';
   const span = g.bridges.size ? g.bridgeAt(t.x, t.y) : undefined;
-  if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'A bridge crosses that tile.';
+  if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'Bridge over that tile.';
   if (g.bridges.size && drawbridgeWinchAt(g, t.x, t.y)) return JETTY_OVER_WINCH;
   const tile = g.world.getTile(t.x, t.y);
-  if (!g.world.isPassable(t.x, t.y) || tile === TileType.Bush) return 'An outside staircase stands on open ground: clear the tree or the bush from it first.';
-  if (g.world.hasWater(t.x, t.y)) return 'An outside staircase stands on dry ground, not in water.';
+  if (!g.world.isPassable(t.x, t.y) || tile === TileType.Bush) return 'Needs open ground: clear the tree or bush first.';
+  if (g.world.hasWater(t.x, t.y)) return 'Not in water.';
   if (!t.side) return 'Choose the side to climb from.';
   const base = outsideStairBase(g, b, t.x, t.y, t.side);
-  if (base === null) return `Its head goes against ${b.name} and its foot out on the ground: turn it to climb toward the building.`;
+  if (base === null) return `Must climb toward ${b.name}: turn it.`;
   // Its foot on the ground and the whole flight over it: never lower than the floor its head is level with the bottom of.
   const floorBelow = base + (level - 1) * WALL_HEIGHT;
   const w = g.world;
   const high = Math.max(w.getHeight(t.x, t.y), w.getHeight(t.x + 1, t.y), w.getHeight(t.x + 1, t.y + 1), w.getHeight(t.x, t.y + 1));
-  if (high > floorBelow) return `The ground under it rises above the floor of storey ${level}: dig it down first.`;
+  if (high > floorBelow) return `Ground under it above storey ${level} floor: dig it down first.`;
   return null;
 }
 
@@ -255,7 +256,7 @@ export function jettyBase(g: Game, b: Building, x: number, y: number): number | 
  */
 export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind, level: number): string | null {
   const bld = g.buildings;
-  if (kind === 'ladder') return 'A ladder goes inside the footprint, not out on a jetty.';
+  if (kind === 'ladder') return 'Ladders: inside the footprint only, not on a jetty.';
   // A staircase out past it is an outside staircase, up from the ground (`outsideStairReason`).
   if (kind === 'stairs') return outsideStairReason(g, t, b, level);
   if (kind === 'roof') {
@@ -263,27 +264,27 @@ export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind
     if (t.material === GLASS && (b.roof ?? t.roofShape ?? 'hip') === 'flat') return GLASS_PITCHED;
     const top = b.levels - 1;
     const f = bld.floor(top, t.x, t.y);
-    if (!f || f.building !== b.id || !isDone(f)) return `A roof goes out past the footprint only over a finished jetty of storey ${b.levels}.`;
+    if (!f || f.building !== b.id || !isDone(f)) return `Roof past the footprint: only over a finished storey ${b.levels} jetty.`;
     if (!bld.storeyArea(b, top).has(`${t.x},${t.y}`)) {
-      return `That jetty is shut off from storey ${b.levels} by a wall or a door, which makes it a balcony, and a balcony takes no roof.`;
+      return `Jetty walled off from storey ${b.levels}: balcony, no roof.`;
     }
     // And on what: walls or columns round it, never a railing.
     return jettyRoofRests(g, b, t.x, t.y);
   }
   if (level < 1) {
-    return b.levels > 1 ? 'Work on storey 2 or above to floor a jetty here.'
-      : 'A jetty is floored out from a storey above the ground: plan another storey and work on it.';
+    return b.levels > 1 ? 'Floor a jetty from storey 2 or above.'
+      : 'Jetties need an upper storey: plan one first.';
   }
   const other = bld.jettyAt(t.x, t.y);
   if (other && other.id !== b.id) return jettyOver(g, t.x, t.y);
-  if (!g.onDeed(t.x, t.y)) return 'You may only build on your own deed.';
+  if (!g.onDeed(t.x, t.y)) return 'Only on your own deed.';
   // No span of a bridge or an aqueduct goes under it (`aqueducts.ts`); a bridge's ends are its banks.
   const span = g.bridges.size ? g.bridgeAt(t.x, t.y) : undefined;
-  if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'A bridge crosses that tile.';
+  if (span) return span.kind === 'aqueduct' ? AQ_OVER : 'Bridge over that tile.';
   // gates: nor over a drawbridge's winch, whose gallows rise over that tile higher than a storey (`gates.ts`).
   if (g.bridges.size && drawbridgeWinchAt(g, t.x, t.y)) return JETTY_OVER_WINCH;
   const tile = g.world.getTile(t.x, t.y);
-  if (!g.world.isPassable(t.x, t.y) || tile === TileType.Bush) return 'A jetty is built over open ground: clear the tree or the bush from under it first.';
+  if (!g.world.isPassable(t.x, t.y) || tile === TileType.Bush) return 'Needs open ground under it: clear the tree or bush first.';
   const bears = bld.jettyBearer(b, level, t.x, t.y);
   if (bears) {
     // Clear of the ground by a storey: never lower over it than the storey under it stands.
@@ -292,15 +293,15 @@ export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind
     const floorBelow = (b.deck ?? g.world.getHeight(t.x + dx, t.y + dy)) + (level - 1) * WALL_HEIGHT;
     const w = g.world;
     const high = Math.max(w.getHeight(t.x, t.y), w.getHeight(t.x + 1, t.y), w.getHeight(t.x + 1, t.y + 1), w.getHeight(t.x, t.y + 1));
-    if (high > floorBelow) return `The ground under it rises above the floor of storey ${level}: dig it down, or floor the jetty out a storey higher.`;
+    if (high > floorBelow) return `Ground under it above storey ${level} floor: dig it down, or build the jetty a storey higher.`;
   } else if (!onJettyBelow(g, b, level, t.x, t.y)) {
     // Or over the jetty of the storey below, inside that storey, on its walls.
-    return `A jetty rests on a finished full-height wall of storey ${level}: build one on a side this tile shares with ${b.name} first.`;
+    return `Jetty needs a finished full-height storey ${level} wall on a side shared with ${b.name}.`;
   }
   const mat = t.material ? MATERIAL_BY_ID.get(t.material) : undefined;
   const carries = bld.bearing(b, level);
   if (mat && mat.heft > carries) {
-    return `${mat.name} is too heavy to lay out past the walls. The walls under it carry ${heftWord(carries)}, no more.`;
+    return `${mat.name} too heavy past the walls: they carry ${heftWord(carries)} at most.`;
   }
   return null;
 }
@@ -311,21 +312,21 @@ export function jettyReason(g: Game, t: TileTarget, b: Building, kind: FloorKind
  */
 export function wallFrameReason(g: Game, t: TileTarget, b: Building): string | null {
   if (t.terrace) {
-    if (roofShapeOf(b) !== 'flat') return 'Only a flat roof is a terrace.';
-    if (t.wallType !== 'railing') return 'Only a railing goes round a terrace.';
+    if (roofShapeOf(b) !== 'flat') return 'Terraces: flat roofs only.';
+    if (t.wallType !== 'railing') return 'Terraces: railings only.';
     const deck = g.buildings.roofAt(b.levels, t.x, t.y);
-    if (!deck || !isDone(deck)) return 'Finish the roof on this tile first.';
+    if (!deck || !isDone(deck)) return 'Finish this tile\'s roof first.';
     return null;
   }
   const level = jobLevel(b, t);
   // The ground floor of a tile on piers is its deck, whose edge is a drop as an upper floor's is (`piers.ts`).
   if (t.wallType === 'railing' && level < 1 && !g.buildings.onPiers(t.x, t.y)) {
-    return 'A railing goes on the edge of a storey above the ground, of a deck on piers, or round a terrace. On the ground, plan a fence.';
+    return 'Railings: upper storey edges, decks on piers or terraces. On the ground, plan a fence.';
   }
   // A wall shutting a roofed jetty off from its storey would make a balcony with a roof on it.
   if (t.side && t.wallType && !isLowWall(t.wallType) && level === b.levels - 1 && !g.buildings.wall(level, t.x, t.y, t.side)
       && roofCutOff(g, b, borderOf(t.x, t.y, t.side))) {
-    return 'The roof is over that jetty: take it off first. A balcony takes no roof.';
+    return 'Roof over that jetty: remove it first. Balconies take no roof.';
   }
   return null;
 }
@@ -437,12 +438,12 @@ export function jettyRoofOnWall(g: Game, wall: Wall): string | null {
       // A jetty of the storey under the roof, with the other side of the wall out of the storey.
       if (bld.tileIndex.has(`${jx},${jy}`) || !area.has(`${jx},${jy}`) || area.has(`${nx},${ny}`)) continue;
       if (bld.floor(b.levels, jx, jy)?.building === b.id) {
-        return 'The roof over the jetty rests on this wall: raise a column at each end of it, or take the roof off, first.';
+        return 'Jetty roof rests on this wall: add a column at each end, or remove the roof, first.';
       }
     }
   }
   const end = roofEndOn(g, wall);
-  return end ? `The roof over the jetty rests on the ${end} end of this wall: raise a column there, or take the roof off, first.` : null;
+  return end ? `Jetty roof rests on this wall's ${end} end: add a column there, or remove the roof, first.` : null;
 }
 
 /**
@@ -508,7 +509,7 @@ export function storeyOnWall(g: Game, wall: Wall): string | null {
   if (!b || wall.level + 1 > b.levels - 1) return null;
   const up = bld.wallOnBorder(wall.level + 1, wall);
   if (!up || up.building !== wall.building || progressOf(up) <= 0 || bld.carried(wall.level, wall)) return null;
-  return `Storey ${wall.level + 2} stands on this wall: raise a column at each end of it, or take down the wall over it, first.`;
+  return `Storey ${wall.level + 2} rests on this wall: add a column at each end, or remove the wall above, first.`;
 }
 
 /**
@@ -541,13 +542,13 @@ export function columnCarries(g: Game, c: Column): string | null {
     if (either.filter(([x, y]) => area?.has(`${x},${y}`)).length !== 1) continue;
     for (const [x, y, side] of either) {
       if (bld.floor(c.level + 1, x, y)?.building === c.building) {
-        return `The ${SIDE_NAMES[side]} side of ${x},${y} is carried on this column: wall it, or take off what is over it, first.`;
+        return `${capital(SIDE_NAMES[side])} side of ${x},${y} rests on this column: wall it, or remove what is above, first.`;
       }
     }
   }
   // And the end of a side of a roofed jetty that rests on it alone (`roofSideOn`).
   const open = roofSideOn(g, c.level, c.x, c.y);
-  if (open) return `The roof over the jetty rests on this column: wall the ${SIDE_NAMES[open.side]} side of ${open.x},${open.y}, or take the roof off, first.`;
+  if (open) return `Jetty roof rests on this column: wall the ${SIDE_NAMES[open.side]} side of ${open.x},${open.y}, or remove the roof, first.`;
   return null;
 }
 
@@ -565,15 +566,15 @@ export function floorHolds(g: Game, b: Building, level: number, x: number, y: nu
     const c = bld.column(level, cx, cy);
     if (!c || c.building !== b.id) continue;
     const footed = [[cx - 1, cy - 1], [cx, cy - 1], [cx - 1, cy], [cx, cy]].some(([fx, fy]) => (fx !== x || fy !== y) && footsColumn(g, b, level, fx, fy));
-    if (!footed) return `Take down the column on its ${cornerName({ x, y }, cx, cy)} corner first.`;
+    if (!footed) return `Remove the ${cornerName({ x, y }, cx, cy)} corner column first.`;
   }
   if (level === 0) return null;
   if (!bld.tileIndex.has(`${x},${y}`)) {
-    if (level === b.levels - 1 && bld.floor(b.levels, x, y)?.building === b.id) return 'Take the roof over it off first.';
+    if (level === b.levels - 1 && bld.floor(b.levels, x, y)?.building === b.id) return 'Remove the roof above first.';
     // A floor of the storey over it laid on this one, with no wall of its own to rest on.
     const over = level + 1 <= b.levels - 1 ? bld.floor(level + 1, x, y) : undefined;
     if (over && over.building === b.id && !bld.jettyBearer(b, level + 1, x, y)) {
-      return `The floor of storey ${level + 2} rests on it: take that up first.`;
+      return `Storey ${level + 2} floor rests on it: remove that first.`;
     }
   }
   return null;

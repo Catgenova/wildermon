@@ -3,7 +3,6 @@ import type { Game } from './game';
 import { billWords, itemDef, itemName, type Item } from './items';
 import { FURNITURE, furnitureDef } from './furniture';
 import { CANDLE_DRAWN, heldBurn, heldReachOf, HELD_LIGHTS } from './light';
-import { NumberWord } from './words';
 
 /**
  * A light you carry: a lantern with a candle in it, or a torch.
@@ -69,7 +68,7 @@ export function flameNear(g: Game, except?: Item): string | null {
 /** No candle to put in a lantern, in your hand or on a post: and what one is drawn from, off its own recipe (`CANDLE_DRAWN`). */
 export function noCandleLine(): string {
   const from = billWords(CANDLE_DRAWN.inputs.map((i): [string, number] => [i.item, i.count ?? 1]));
-  return `You have no candles. ${NumberWord(CANDLE_DRAWN.count)} ${CANDLE_DRAWN.count === 1 ? 'is' : 'are'} drawn from ${from}.`;
+  return `Need a candle: ${CANDLE_DRAWN.count} made from ${from}.`;
 }
 
 /**
@@ -84,7 +83,7 @@ export function flameSources(): string {
 
 /** Nothing burning to take a light off: and what would do. */
 export function noFlameLine(): string {
-  return `Nothing here is burning. Light it at a burning ${flameSources()} — or off something already alight in your hand.`;
+  return `Nothing burning nearby. Light it at a burning ${flameSources()}, or from a light in your hand.`;
 }
 
 export const LANTERN_ACTIONS: ActionDef[] = [
@@ -99,8 +98,8 @@ export const LANTERN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const it = lightOf(g, t);
       if (!it) return 'It is gone.';
-      if (it.id !== 'lantern') return 'Nothing goes in a torch.';
-      if (candleLeft(it) > 0) return 'There is still a candle in it.';
+      if (it.id !== 'lantern') return 'Not in a torch.';
+      if (candleLeft(it) > 0) return 'Candle still in it.';
       if (!g.inventory.has('candle')) return noCandleLine();
       return null;
     },
@@ -110,7 +109,7 @@ export const LANTERN_ACTIONS: ActionDef[] = [
       if (!it || !candle) return;
       g.inventory.remove(candle.uid, 1);
       it.charges = Math.round(heldBurn(it));
-      g.logMsg(`You set a candle in the lantern. ${Math.ceil(it.charges / 60)} minutes of it, at a guess.`, 'event');
+      g.logMsg(`Candle in: lantern. About ${Math.ceil(it.charges / 60)} minutes.`, 'event');
       g.events.emit('inventory');
     },
   },
@@ -129,7 +128,7 @@ export const LANTERN_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const it = lightOf(g, t);
       if (!it) return 'It is gone.';
-      if (it.id === 'lantern' && !candleLeft(it)) return 'There is no candle in it.';
+      if (it.id === 'lantern' && !candleLeft(it)) return 'No candle in it.';
       if (!flameNear(g, it)) return noFlameLine();
       return null;
     },
@@ -144,8 +143,8 @@ export const LANTERN_ACTIONS: ActionDef[] = [
       it.lit = true;
       g.logMsg(
         it.id === 'torch'
-          ? `You touch the torch to the ${from} and it takes. ${Math.ceil(candleLeft(it) / 60)} minutes of it, throwing ${heldReachOf(it)} tiles.`
-          : `You take a light off the ${from} and the lantern throws it ${heldReachOf(it)} tiles.`,
+          ? `Torch lit from the ${from}: ${Math.ceil(candleLeft(it) / 60)} minutes, light ${heldReachOf(it)} tiles.`
+          : `Lantern lit from the ${from}: light ${heldReachOf(it)} tiles.`,
         'event',
       );
       g.events.emit('inventory');
@@ -168,8 +167,8 @@ export const LANTERN_ACTIONS: ActionDef[] = [
       it.lit = false;
       g.logMsg(
         it.id === 'torch'
-          ? `You smother the torch. ${Math.ceil(candleLeft(it) / 60)} minutes of it left, if it will take again.`
-          : `You pinch the wick out. ${Math.ceil(candleLeft(it) / 60)} minutes of candle saved.`,
+          ? `Torch put out: ${Math.ceil(candleLeft(it) / 60)} minutes left.`
+          : `Lantern put out: ${Math.ceil(candleLeft(it) / 60)} minutes of candle left.`,
         'event',
       );
       g.events.emit('inventory');

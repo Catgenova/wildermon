@@ -102,7 +102,7 @@ begin
     insert into said values ('COMB:' || i, age_of(c.born, old_of(c), age_pace(c)) || '|' || round(extract(epoch from now() - c.born)::numeric, 3)
       || '|' || pack_count(w, u, 'ancient_comb') || '|' || coalesce(creature_refusal(w, u, 'use_ancient_comb', jsonb_build_object('kind', 'creature', 'id', a)), '-'));
   end loop;
-  insert into said select 'COMBTOLD', string_agg(text, ' / ' order by n) from event where world_id = w and uid = u and text like 'You comb%';
+  insert into said select 'COMBTOLD', string_agg(text, ' / ' order by n) from event where world_id = w and uid = u and text like 'Ancient comb used on%';
   -- At half the pace, for a keeper whose Kin ages it slower: twice as long ago, so its keeper's sum lands in the same place.
   update creature set born = now() - interval '30 days', kept = '{"kept:age": 0.5}' where world_id = w and id = a;
   perform give(w, u, 'ancient_comb', 1, 30);
@@ -121,8 +121,8 @@ begin
     end if;
   end loop;
   insert into said values ('FILE', v_steps || '|' || pack_count(w, u, 'ancient_file')
-    || '|' || (select count(*) from event where world_id = w and uid = u and text like 'You go over Ash with the ancient file, and it comes up rare:%')
-    || '|' || (select count(*) from event where world_id = w and uid = u and text like 'You go over Ash with the ancient file, and it is no rarer.%'));
+    || '|' || (select count(*) from event where world_id = w and uid = u and text like 'Ancient file used on Ash: now rare,%')
+    || '|' || (select count(*) from event where world_id = w and uid = u and text like 'Ancient file used on Ash: no change.%'));
   update creature set rare = 'supreme' where world_id = w and id = a;
   perform give(w, u, 'ancient_file', 400, 30);
   for i in 1..400 loop
@@ -142,7 +142,7 @@ begin
   perform give(w, u, 'ancient_pot', ${4 * POT_MOST + 1}, 30);
   perform perform_creature(w, u, 'use_ancient_pot', jsonb_build_object('kind', 'creature', 'id', a));
   insert into said select 'POTONE', (select boosts::text from creature where world_id = w and id = a) || '|'
-    || (select text from event where world_id = w and uid = u and text like 'You use the ancient pot%' order by n desc limit 1);
+    || (select text from event where world_id = w and uid = u and text like 'Ancient pot used on%' order by n desc limit 1);
   for i in 2..${4 * POT_MOST} loop
     perform perform_creature(w, u, 'use_ancient_pot', jsonb_build_object('kind', 'creature', 'id', a));
   end loop;
@@ -196,7 +196,7 @@ check('the three are items of their own named Ancient comb, file and pot, and a 
   at('ITEMS') === 'ancient_comb:Ancient comb,ancient_file:Ancient file,ancient_pot:Ancient pot'
     && ['ancient_comb', 'ancient_file', 'ancient_pot'].every((id) => ITEM_DEFS[id] && !ITEM_DEFS[id].description?.includes('{')) && !ITEM_DEFS.bone_comb, at('ITEMS'));
 check('their descriptions say the numbers off the rules',
-  ITEM_DEFS.ancient_file.description!.includes(`one time in ${FILE_RARITY_ODDS}`) && ITEM_DEFS.ancient_pot.description!.includes(`${Math.round(POT_STEP * 100)}% more`),
+  ITEM_DEFS.ancient_file.description!.includes(`1 in ${FILE_RARITY_ODDS}`) && ITEM_DEFS.ancient_pot.description!.includes(`${Math.round(POT_STEP * 100)}% more`),
   `${ITEM_DEFS.ancient_file.description} / ${ITEM_DEFS.ancient_pot.description}`);
 check(`a comb leaves one ${COMB_INTO} second into the stage, a file is one in ${FILE_RARITY_ODDS}, a pot point ${POT_STEP} and ${POT_MOST} a stat, on both sides`,
   at('NUMBERS') === `${COMB_INTO}|${FILE_RARITY_ODDS}|${POT_STEP}|${POT_MOST}`, at('NUMBERS'));
@@ -207,15 +207,15 @@ check('the four base stats are the same and said the same on both sides',
   at('STATS') === BASE_STATS.map((s) => `${s.id}:${s.name}:${s.says}`).join('|'), at('STATS'));
 
 // Refusals with nothing in the pack, and on a wild one.
-check('on the island, without one in the pack it is refused', at('NONE') === 'You need an ancient comb.', at('NONE'));
+check('on the island, without one in the pack it is refused', at('NONE') === 'Need an ancient comb.', at('NONE'));
 check('in the browser, without one the menu offers nothing, and it is refused in the same words',
   !comb.applies(T, g) && comb.check?.(T, g) === at('NONE'), comb.check?.(T, g) ?? '-');
 g.inventory.add('ancient_comb', { ql: 30 });
 g.inventory.add('ancient_comb', { ql: 30 });
 g.inventory.add('ancient_comb', { ql: 30 });
 check('a wild one is not yours on either side, and its menu offers nothing',
-  at('WILD') === 'It is not yours.' && !comb.applies({ kind: 'creature', id: wild.id }, g)
-    && comb.check?.({ kind: 'creature', id: wild.id }, g) === 'It is not yours.', at('WILD'));
+  at('WILD') === 'Not yours.' && !comb.applies({ kind: 'creature', id: wild.id }, g)
+    && comb.check?.({ kind: 'creature', id: wild.id }, g) === 'Not yours.', at('WILD'));
 
 // The comb.
 {
@@ -225,7 +225,7 @@ check('a wild one is not yours on either side, and its menu offers nothing',
     age0 === 'old' && why0 === '-' && steps[0][0] === 'grown' && near(Number(steps[0][1]), YOUNG_FOR + COMB_INTO, 1e-3) && steps[0][2] === '2', at('COMB:1'));
   check('on the island, a grown one combed is young, as one just born, and a young one is refused and keeps its comb',
     steps[1][0] === 'young' && Number(steps[1][1]) < COMB_INTO + 1 && steps[1][2] === '1'
-      && steps[2][2] === '1' && steps[2][3] === 'Ash is young already, and nothing is younger than young.', `${at('COMB:2')} ${at('COMB:3')}`);
+      && steps[2][2] === '1' && steps[2][3] === 'Ash is already young.', `${at('COMB:2')} ${at('COMB:3')}`);
   check('on the island, at half the pace for its keeper\'s Kin, it is put twice as long ago and is grown',
     at('COMBKIN').split('|')[0] === 'grown' && near(Number(at('COMBKIN').split('|')[1]), (YOUNG_FOR + COMB_INTO) / 0.5, 1e-3), at('COMBKIN'));
 
@@ -243,7 +243,7 @@ check('a wild one is not yours on either side, and its menu offers nothing',
   check('in the browser, a grown one combed is young, and a young one is refused in the island\'s words and keeps its comb',
     why2 === null && age2 === 'young' && left2 === 1 && why3 === steps[2][3] && count('ancient_comb') === 1, `${age2} ${left2} ${why3}`);
   check('both sides say the same when it is combed',
-    told('You comb').join(' / ') === at('COMBTOLD'), `${told('You comb').join(' / ')} | ${at('COMBTOLD')}`);
+    told('Ancient comb used on').join(' / ') === at('COMBTOLD'), `${told('Ancient comb used on').join(' / ')} | ${at('COMBTOLD')}`);
   ash.born = g.time - 3600 * 24 * 30;
   ash.kept = { 'kept:age': 0.5 };
   use(comb);
@@ -259,7 +259,7 @@ check('a wild one is not yours on either side, and its menu offers nothing',
   check(`on the island, ${FILES} files make it a step rarer about one time in ${FILE_RARITY_ODDS}, each is used, and each says which`,
     inBand(steps) && left === 0 && up === steps && none === FILES - steps, at('FILE'));
   check(`on the island, a ${TOP} one is refused and keeps its file`,
-    at('FILETOP') === `${TOP}|Ash is ${TOP} already, as rare as there is.` && at('FILEKEPT') === 'true', `${at('FILETOP')} ${at('FILEKEPT')}`);
+    at('FILETOP') === `${TOP}|Ash is already ${TOP}, the top rarity.` && at('FILEKEPT') === 'true', `${at('FILETOP')} ${at('FILEKEPT')}`);
   for (let i = 0; i < FILES; i++) g.inventory.add('ancient_file', { ql: 30 });
   let up2 = 0;
   let saidUp = 0;
@@ -268,8 +268,8 @@ check('a wild one is not yours on either side, and its menu offers nothing',
     use(file);
     // Read as each is said: the log keeps only so many lines.
     const last = g.log[g.log.length - 1]?.text ?? '';
-    if (last.startsWith('You go over Ash with the ancient file, and it comes up rare:')) saidUp += 1;
-    if (last.startsWith('You go over Ash with the ancient file, and it is no rarer.')) saidNone += 1;
+    if (last.startsWith('Ancient file used on Ash: now rare,')) saidUp += 1;
+    if (last.startsWith('Ancient file used on Ash: no change.')) saidNone += 1;
     if (ash.rare) {
       up2 += 1;
       ash.rare = 0;
@@ -291,13 +291,13 @@ check('a wild one is not yours on either side, and its menu offers nothing',
   const [h1, a1, s1, w1] = at('AFTER').split('|').map(Number);
   const full = 1 + POT_STEP * POT_MOST;
   check(`on the island, a pot puts a point in one stat and says what it is worth`,
-    /^\{"(hardy|tough|speed|work)": 1\}\|You use the ancient pot on Ash: its (health|attack|speed|work) takes a point, 1 of 10: .+ is 3% more than its kind and blood give it\. The pot is used up\.$/.test(at('POTONE')),
+    /^\{"(hardy|tough|speed|work)": 1\}\|Ancient pot used on Ash: (health|attack|speed|work) 1\/10 points, .+ \+3%\.$/.test(at('POTONE')),
     at('POTONE'));
   check(`on the island, ${4 * POT_MOST} pots put ${POT_MOST} in every stat, and health, attack, speed and work are each ${full} what they were`,
     h0 === def.health && h1 === Math.round(def.health * full) && near(a1, a0 * full, 1e-5) && near(s1, s0 * full, 1e-5) && near(w1, w0 * full, 1e-5),
     `${at('BEFORE')} -> ${at('AFTER')}`);
   check('on the island, with every stat full the next is refused and kept',
-    at('BOOSTS') === `hardy:${POT_MOST},speed:${POT_MOST},tough:${POT_MOST},work:${POT_MOST}|1|Every base stat of Ash has ${POT_MOST} points from ancient pots, the most one takes.`
+    at('BOOSTS') === `hardy:${POT_MOST},speed:${POT_MOST},tough:${POT_MOST},work:${POT_MOST}|1|Ash: every base stat at ${POT_MOST} ancient pot points, the max.`
       && at('POTKEPT') === '1', `${at('BOOSTS')} ${at('POTKEPT')}`);
   check('the island sends your own one\'s points and its age, and nobody else\'s points',
     at('SENT') === `{"work": ${POT_MOST}, "hardy": ${POT_MOST}, "speed": ${POT_MOST}, "tough": ${POT_MOST}}|old|false`, at('SENT'));
@@ -306,10 +306,10 @@ check('a wild one is not yours on either side, and its menu offers nothing',
   for (let i = 0; i < 4 * POT_MOST + 1; i++) g.inventory.add('ancient_pot', { ql: 30 });
   use(pot);
   const first = BASE_STATS.filter((s) => potPoints(ash, s.id) === 1).map((s) => s.id);
-  const firstSaid = told('You use the ancient pot on Ash')[0] ?? '';
+  const firstSaid = told('Ancient pot used on Ash')[0] ?? '';
   for (let i = 1; i < 4 * POT_MOST; i++) use(pot);
   check('in the browser, a pot puts a point in one stat and says it as the island does',
-    first.length === 1 && firstSaid.replace(/its \w+ takes a point, 1 of 10: .+ is 3% more/, 'X') === at('POTONE').split('|')[1].replace(/its \w+ takes a point, 1 of 10: .+ is 3% more/, 'X'),
+    first.length === 1 && firstSaid.replace(/: \w+ 1\/10 points, .+ \+3%/, 'X') === at('POTONE').split('|')[1].replace(/: \w+ 1\/10 points, .+ \+3%/, 'X'),
     firstSaid);
   check(`in the browser, ${4 * POT_MOST} pots put ${POT_MOST} in every stat, and health, attack, speed and work are each ${full} what they were`,
     BASE_STATS.every((s) => potPoints(ash, s.id) === POT_MOST) && before.h === def.health && maxHealth(ash, def) === Math.round(def.health * full)

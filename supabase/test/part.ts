@@ -106,7 +106,7 @@ check('and the other thirty-five are still in the pack',
 const theirLine = psql(`select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1`);
 check('and both sides say so in the same sentence',
   said[said.length - 1] === theirLine
-    && theirLine === `You put 13 × iron ore in the ${crateName(crate).toLowerCase()}. The other 35 would not fit.`,
+    && theirLine === `Stored: 13 × iron ore in ${crateName(crate).toLowerCase()}. 35 did not fit.`,
   `browser "${said[said.length - 1]}", island "${theirLine}"`);
 
 /* ---- and a crate with no room at all still refuses, by name ---- */
@@ -114,7 +114,7 @@ const full = def.check?.({ kind: 'item', uid: ore.uid, count: 35, into: crate.id
 const theirFull = psql(`select coalesce(act_refusal(${W}, ${DANE}, 'store_in_crate',
   jsonb_build_object('kind', 'item', 'uid', ${ORE}, 'count', 35, 'into', 1)), 'ALLOWED')`);
 check('a crate with no room at all refuses, and names itself',
-  full === `The ${crateName(crate).toLowerCase()} is full.` && theirFull === full,
+  full === `${crateName(crate)} full.` && theirFull === full,
   `browser "${full}", island "${theirFull}"`);
 
 for (const line of [...ok, ...bad]) console.log(line);

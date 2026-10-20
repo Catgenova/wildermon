@@ -59,28 +59,28 @@ export function chartOf(it: Pick<Item, 'id' | 'extra'> | undefined): Chart | nul
 }
 
 /** The square in words: "the 29 by 29 tiles round 512, 300". */
-const square = (c: Chart): string => `the ${chartSide(c.r)} by ${chartSide(c.r)} tiles round ${c.x}, ${c.y}`;
+const square = (c: Chart): string => `${chartSide(c.r)}×${chartSide(c.r)} tiles round ${c.x}, ${c.y}`;
 
 /** What Examine adds of a map. The island's `chart_item_says`. */
 export const chartItemSays = (it: Pick<Item, 'id' | 'extra'>): string => {
   const c = chartOf(it);
   if (!c) return '';
-  return ` It holds ${square(c)}, ${c.r} each way from where it was drawn. Study it and all ${chartSide(c.r) ** 2} of them go on your own map.`;
+  return ` Map: ${square(c)}. Study it to add all ${chartSide(c.r) ** 2} tiles to your map.`;
 };
 
 /** What drawing, studying and copying say. The island's `chart_said`. */
 export const drawnSaid = (c: Chart, ql: number): string =>
-  `You draw ${square(c)} onto the sheet. (QL ${ql.toFixed(1)}, ${c.r} tiles each way)`;
-export const studiedSaid = (c: Chart): string => `You study the map: ${square(c)} are on your own map now.`;
+  `Drawn: ${square(c)}, QL ${ql.toFixed(1)}.`;
+export const studiedSaid = (c: Chart): string => `Studied: ${square(c)} added to your map.`;
 export const copiedSaid = (c: Chart, ql: number): string =>
-  `You copy the map onto a fresh sheet: ${square(c)}. (QL ${ql.toFixed(1)}, ${c.r} tiles each way)`;
+  `Copied: ${square(c)}, QL ${ql.toFixed(1)}.`;
 
 /** Why a map job will not go. The island's `chart_said`. */
 export const CHART_SAID = {
-  noSheet: 'You need a sheet of papyrus to draw a map on.',
-  notMap: 'That is not a map.',
-  blank: 'Nothing is drawn on that map.',
-  noCopySheet: 'You need a sheet of papyrus to copy the map onto.',
+  noSheet: 'Need a sheet of papyrus.',
+  notMap: 'Not a map.',
+  blank: 'Map is blank.',
+  noCopySheet: 'Need a sheet of papyrus.',
 };
 
 /**

@@ -46,7 +46,7 @@ import { priceWords } from '../../src/game/money';
 import { couldBring, fitsOrder, ORDER_LIFE, orderWords } from '../../src/game/orders';
 import { spanWords } from '../../src/game/words';
 import { SALE_DAYS } from '../../src/game/prices';
-import { helpText } from '../../src/ui/panels/help';
+import { dur, helpText } from '../../src/ui/panels/help';
 import type { Order } from '../../src/net/island';
 
 const ENV = {
@@ -77,7 +77,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 
 /* ---- the browser ------------------------------------------------------------ */
 console.log('--- the browser');
-check('an order stands a week', ORDER_LIFE === 7 * 24 * 3600 && spanWords(ORDER_LIFE) === 'seven days', spanWords(ORDER_LIFE));
+check('an order stands a week', ORDER_LIFE === 7 * 24 * 3600 && spanWords(ORDER_LIFE) === '7 days', spanWords(ORDER_LIFE));
 check('and the island lets one stand exactly as long', psql('select order_life()::bigint;') === String(ORDER_LIFE),
   psql('select order_life();'));
 check('what one asks for, in words', orderWords('iron_ore', 15, 30) === '15 × iron ore of quality 30 or better'
@@ -114,14 +114,14 @@ const away: Away = { secs: 7200, tally: [
 ] };
 const boughtLine = awayLines(away)[1];
 check('what was brought to your orders while you were away, summed into one price',
-  boughtLine === `Brought to your buy orders: 15 × iron ore and 2 × pickaxe, paid for with ${priceWords(53)} of what they held. `
-    + 'It waits for you at any mailbox.', boughtLine);
+  boughtLine === `Buy orders filled: 15 × iron ore and 2 × pickaxe, for ${priceWords(53)} of their silver. `
+    + 'Collect at any mailbox.', boughtLine);
 check(`and it names ${AWAY_NAMED} sorts like every other line`, awayLines({ secs: 60, tally: Array.from({ length: AWAY_NAMED + 2 },
   (_, i) => ({ what: 'bought' as const, def: `thing${i}`, n: 1, silver: 1 })) })[1].includes('2 more sorts'));
 const help = helpText().replace(/\s+/g, ' ');
 check('the help says what an order does and how long one stands, and that it is counted while you are away',
   help.includes('<b>A buy order</b> is for what nobody has put out.')
-    && help.includes(`one left open for <b>${spanWords(ORDER_LIFE)}</b> lapses`)
+    && help.includes(`one left open for <b>${dur(ORDER_LIFE)}</b> lapses`)
     && help.includes('everything brought to your buy orders and the silver it cost'));
 
 /* ---- the island ------------------------------------------------------------- */
@@ -340,7 +340,7 @@ const said = (key: string): string => isle.split('\n').find((l) => l.startsWith(
 check('nobody puts an order up away from a token or a mailbox',
   said('NOBOARD') === 'Stand at a settlement token or a mailbox to put up an order.', said('NOBOARD'));
 check('nor asks for coins', said('COIN') === 'Coins are what an order pays with, not something it can ask for.', said('COIN'));
-check('nor for a thing there is not', said('NOSUCH') === 'There is no such thing to ask for.', said('NOSUCH'));
+check('nor for a thing there is not', said('NOSUCH') === 'No such item.', said('NOSUCH'));
 check('nor for none, nor for nothing each', said('ZERO') === 'Ask for at least one.|Offer at least a silver for each.', said('ZERO'));
 check('nor with coins they do not have, and nothing is taken', said('BROKE') === 'That holds 300 silver, and you are carrying 30.|30', said('BROKE'));
 check('one put up holds its whole price', said('POSTED') === 'up|15', said('POSTED'));
@@ -396,7 +396,7 @@ const row = tally?.tally.find((t) => t.what === 'bought' && t.def === 'iron_ore'
 check('brought while he was away is counted for him, with what it cost, and handed over',
   !!row && row.n === 3 && row.silver === 6 && tally?.tally.length === 1, said('JOIN'));
 check('and the browser says so', !!tally && awayLines(tally).includes(
-  `Brought to your buy orders: 3 × iron ore, paid for with ${priceWords(6)} of what they held. It waits for you at any mailbox.`),
+  `Buy orders filled: 3 × iron ore, for ${priceWords(6)} of their silver. Collect at any mailbox.`),
   tally ? awayLines(tally).join(' / ') : '');
 check('what was brought is in his post, from whoever brought it',
   said('POST') === '3 iron_ore from Cato, 3 iron_ore from Cato, 1 pickaxe from Cato, 1 pickaxe from Edda, 1 satchel from Edda', said('POST'));

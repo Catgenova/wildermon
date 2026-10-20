@@ -42,7 +42,7 @@ export function rakeAshes(g: Game, h: Hearth, what: string): void {
   if (whole <= 0) return;
   h.ash = (h.ash ?? 0) - whole;
   const got = g.inventory.add('ash', { count: whole, ql: ASH_QL });
-  g.logMsg(`You rake ${whole} ${whole === 1 ? 'lot' : 'lots'} of ashes out of the ${what}. (QL ${got.ql.toFixed(0)})`, 'event');
+  g.logMsg(`Raked out: ${whole} × ashes, QL ${got.ql.toFixed(0)}.`, 'event');
   g.events.emit('world', h.x, h.y);
 }
 
@@ -130,7 +130,13 @@ export const fireBurnsFor = (f: PlacedCampfire): string => {
   const m = Math.round(f.fuel / 60);
   return m >= 60 ? `${(m / 60).toFixed(1)} hours` : m >= 1 ? `${m} minutes` : `${Math.round(f.fuel)} seconds`;
 };
-export const fireState = (f: PlacedCampfire): string => (f.lit ? `burning, ${fireBurnsFor(f)} of fuel left` : f.fuel > 0 ? `laid and unlit, ${fireBurnsFor(f)} of fuel` : 'burnt out');
+export const fireState = (f: PlacedCampfire): string => (f.lit ? `lit, fuel ${fireBurnsFor(f)}` : f.fuel > 0 ? `unlit, fuel ${fireBurnsFor(f)}` : 'no fuel');
+/**
+ * What feeding a fire, a smelter, a kiln or an oven says: so many of what,
+ * and how long it now burns. The island's `perform_fire` says the same.
+ */
+export const fuelledSaid = (fits: number, name: string, burns: string): string =>
+  `Fuelled: ${fits > 1 ? `${fits} × ` : ''}${name.toLowerCase()}. Fuel: ${burns}.`;
 
 /** Subtiles a fire covers, for checking whether a spot is free. */
 export function fireCovers(f: { sx: number; sy: number }, sx: number, sy: number): boolean {
@@ -161,14 +167,14 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
     applies: (t) => t.kind === 'tile',
     check: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return 'Choose a spot.';
-      if (g.inventory.count('shaft') < FIRE_COST) return `A campfire takes ${FIRE_COST} shafts.`;
+      if (g.inventory.count('shaft') < FIRE_COST) return `Need ${FIRE_COST} shafts.`;
       return g.firePlaceReason(t.x, t.y, t.sx, t.sy);
     },
     perform: (t, g) => {
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return;
       if (!g.inventory.consume('shaft', FIRE_COST)) return;
       const fire = g.addCampfire(t.x, t.y, t.sx, t.sy, FIRE_LAID_FUEL);
-      g.logMsg(`You lay a campfire from ${FIRE_COST} shafts. Light it, or feed it more wood first.`, 'event');
+      g.logMsg(`Campfire built: ${FIRE_COST} × shaft. Unlit.`, 'event');
       g.events.emit('world', fire.x, fire.y);
     },
   },
@@ -182,8 +188,8 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const f = fireOf(g, t);
       if (!f) return 'It is gone.';
-      if (f.lit) return 'It is already burning.';
-      if (f.fuel <= 0) return 'There is nothing left to burn. Feed it some wood.';
+      if (f.lit) return 'Already lit.';
+      if (f.fuel <= 0) return 'No fuel.';
       return null;
     },
     perform: (t, g) => {
@@ -192,7 +198,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
       f.lit = true;
       g.events.emit('world', f.x, f.y);
       g.note('fire');
-      g.logMsg(`The kindling catches and the campfire burns. It has ${fireBurnsFor(f)} of fuel.`, 'event');
+      g.logMsg(`Lit: campfire. Fuel: ${fireBurnsFor(f)}.`, 'event');
     },
   },
   {
@@ -207,7 +213,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
       if (!f) return;
       f.lit = false;
       g.events.emit('world', f.x, f.y);
-      g.logMsg(`You smother the fire. Its ${fireBurnsFor(f)} of fuel keeps for later.`, 'event');
+      g.logMsg(`Put out: campfire. Fuel kept: ${fireBurnsFor(f)}.`, 'event');
     },
   },
   {
@@ -224,8 +230,8 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
       if (!f) return 'It is gone.';
       if (!nearFire(g, f)) return 'Stand next to the fire.';
       const item = fuelAtHand(g, t.kind === 'campfire' ? t.itemUid : undefined)?.item;
-      if (!item) return `Fires take ${FUEL_SAID}.`;
-      if (f.fuel >= FIRE_CAPACITY) return 'It is already piled as high as it will take.';
+      if (!item) return `Need fuel: ${FUEL_SAID}.`;
+      if (f.fuel >= FIRE_CAPACITY) return 'Fuel full.';
       return null;
     },
     perform: (t, g) => {
@@ -241,7 +247,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
       if (!stack.spend(fits)) return;
       f.fuel = Math.min(FIRE_CAPACITY, f.fuel + per * fits);
       g.events.emit('world', f.x, f.y);
-      g.logMsg(`You feed ${fits > 1 ? `${fits} × ` : 'a '}${itemDef(item.id).name.toLowerCase()} to the fire. ${fireBurnsFor(f)} of fuel.`, 'event');
+      g.logMsg(fuelledSaid(fits, itemDef(item.id).name, fireBurnsFor(f)), 'event');
     },
   },
   {
@@ -258,7 +264,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
       const f = fireOf(g, t);
       if (!f) return 'It is gone.';
       if (!nearFire(g, f)) return 'Stand next to the fire.';
-      return hasAshes(f) ? null : 'There are no ashes worth taking yet.';
+      return hasAshes(f) ? null : 'No ashes yet.';
     },
     perform: (t, g) => {
       const f = fireOf(g, t);
@@ -293,7 +299,7 @@ export const CAMPFIRE_ACTIONS: ActionDef[] = [
         const item = g.inventory.add(id, { count: n, ql: 20 });
         back.push(item.count > 1 && n > 1 ? `${n} × ${itemName(item).toLowerCase()}` : itemName(item).toLowerCase());
       }
-      g.logMsg(back.length ? `You take the campfire apart and recover ${back.join(', ')}.` : 'You scatter the cold ashes.', 'event');
+      g.logMsg(`Taken apart: campfire.${back.length ? ` Recovered: ${back.join(', ')}.` : ''}`, 'event');
       g.events.emit('world', f.x, f.y);
     },
   },

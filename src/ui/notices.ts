@@ -103,8 +103,9 @@ export class Notices {
     this.el.className = 'notices';
     root.append(this.el);
     game.events.on('log', (e: LogEntry) => {
-      if (e.text.startsWith('You have a knack for')) this.show('knack', e.text);
-      else if (e.text.includes(' drops a young ')) this.show('birth', e.text.replace(/:.*$/, '.'));
+      // A knack earned: a skill line that names one (`Game.knack`), whatever its words.
+      if (e.kind === 'skill' && /\bknack\b/i.test(e.text)) this.show('knack', e.text);
+      else if (e.text.startsWith('Born to ')) this.show('birth', `${e.text.split(',')[0]}.`);
     });
   }
 
@@ -134,7 +135,7 @@ export class Notices {
       if (this.rotting.has(r.item.uid)) continue;
       this.rotting.add(r.item.uid);
       const off = Math.round(Math.hypot(r.x + 0.5 - g.player.x, r.y + 0.5 - g.player.y));
-      this.show('rot', `${r.item.count > 1 ? `${r.item.count} × ` : 'The '}${itemName(r.item).toLowerCase()} on the ground ${off < 1 ? 'here' : `${off} tiles off`} rots in ${rotSaid(r.secs)}. Nothing rots in a pack or a store.`);
+      this.show('rot', `Rotting: ${r.item.count > 1 ? `${r.item.count} × ` : ''}${itemName(r.item).toLowerCase()} on the ground ${off < 1 ? 'here' : `${off} tiles away`}, gone in ${rotSaid(r.secs)}. No rot in packs or stores.`);
     }
   }
 

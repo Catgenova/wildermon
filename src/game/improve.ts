@@ -173,16 +173,16 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       const item = g.inventory.get(t.uid);
       if (!item) return 'It is gone.';
       const what = improvable(item.id);
-      if (!what) return 'That is not something you can better.';
-      if (item.issued) return 'That came ashore with you. There is nothing in it to better — make one of your own.';
-      if (item.dmg > IMPROVE_DAMAGE) return 'It is too knocked about to work on. Repair it first.';
+      if (!what) return 'Cannot be improved.';
+      if (item.issued) return 'Starting kit cannot be improved: make your own.';
+      if (item.dmg > IMPROVE_DAMAGE) return `Damage over ${IMPROVE_DAMAGE}: repair it first.`;
       const missing = missingTool(g, what.material);
-      if (missing) return `You need ${what.material.tools.map((id) => itemDef(id).name.toLowerCase()).join(' and ')} to work ${what.material.name}.`;
+      if (missing) return `Need ${what.material.tools.map((id) => itemDef(id).name.toLowerCase()).join(' and ')} for ${what.material.name}.`;
       const made = madeOf(item);
-      if (!stockFor(g, what.material, made)) return `You have no ${made ? made.toLowerCase() : what.material.name} to work into it, and nothing else will do.`;
+      if (!stockFor(g, what.material, made)) return `Need ${made ? made.toLowerCase() : what.material.name} to work into it.`;
       const ceiling = improveCeiling(g, what.skill, item);
-      if (item.ql >= ceiling) return `Your ${what.skill.replace(/_/g, ' ')} is not good enough to better it further.`;
-      if (item.ql >= 99.9) return 'It cannot be bettered.';
+      if (item.ql >= ceiling) return `QL capped by your ${what.skill.replace(/_/g, ' ')}.`;
+      if (item.ql >= 99.9) return 'Max QL.';
       /*
        * A quality to stop at, when one was asked for.
        *
@@ -199,7 +199,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
        * you", on both sides, with no change to what a pass does.
        */
       const upto = 'upto' in t && typeof t.upto === 'number' ? t.upto : null;
-      if (upto !== null && item.ql >= upto) return `The ${itemName(item).toLowerCase()} is at QL ${item.ql.toFixed(1)}, which is what you asked for.`;
+      if (upto !== null && item.ql >= upto) return `${itemName(item)}: QL ${item.ql.toFixed(1)}, target reached.`;
       return null;
     },
     perform: (t, g) => {
@@ -219,7 +219,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       g.gainSkill(what.skill, tryGain(ok, IMPROVE_GAIN));
       if (!ok) {
         g.damageItem(item, 3 + g.rand() * 5);
-        g.logMsg(`You work at the ${itemName(item).toLowerCase()} and mark it. (damage ${item.dmg.toFixed(1)})`, 'event');
+        g.logMsg(`Improve failed: ${itemName(item).toLowerCase()} damage ${item.dmg.toFixed(1)}.`, 'event');
         return item.dmg <= 10;
       }
       const ceiling = Math.min(99.9, improveCeiling(g, what.skill, item));
@@ -247,7 +247,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
         g.logMsg(RARITY_LIFT[lifted], 'skill');
       }
       g.events.emit('inventory');
-      g.logMsg(`The ${itemName(item).toLowerCase()} is better than it was. (QL ${item.ql.toFixed(1)})`, 'event');
+      g.logMsg(`Improved: ${itemName(item).toLowerCase()}, QL ${item.ql.toFixed(1)}.`, 'event');
       // Keep at it while there is room and stock of the right stuff left.
       return item.ql < ceiling && !!stockFor(g, what.material, made);
     },
@@ -273,9 +273,9 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       if (t.kind !== 'item') return null;
       const item = g.inventory.get(t.uid);
       if (!item) return 'It is gone.';
-      if (temperOf(item) <= 0) return 'There is no quench left in it.';
-      if (g.perk(`temper:${item.id}`, 0) <= 0) return 'That wants a Smith who has learned to temper.';
-      if (!waterNear(g)) return 'You need water to quench it in: stand at the water, or beside a barrel or a well of it.';
+      if (temperOf(item) <= 0) return 'Already quenched.';
+      if (g.perk(`temper:${item.id}`, 0) <= 0) return 'Needs perk: Temper Bath (Smith).';
+      if (!waterNear(g)) return 'Need water: stand at water, or beside a barrel or well of it.';
       return null;
     },
     perform: (t, g) => {
@@ -290,7 +290,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       if (Object.keys(rest).length) item.mark = rest;
       else delete item.mark;
       g.events.emit('inventory');
-      g.logMsg(`You quench the ${itemName(item).toLowerCase()} and it comes out harder. (QL ${item.ql.toFixed(1)})`, 'event');
+      g.logMsg(`Quenched: ${itemName(item).toLowerCase()}, QL ${item.ql.toFixed(1)}.`, 'event');
     },
   },
 ];

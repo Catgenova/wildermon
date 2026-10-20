@@ -225,7 +225,7 @@ begin
     into fragments, tarnished, bad_tier, bad_dmg
     from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u;
   insert into said values ('FINDS', fragments || '|' || tarnished || '|' || bad_tier || '|' || bad_dmg);
-  insert into said select 'FOUNDSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Your trowel turns up a tarnished%'
+  insert into said select 'FOUNDSAID', e.text from event e where e.world_id = w and e.uid = u and e.text like 'Found: tarnished%'
     order by e.n desc limit 1;
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('fragment', 'tarnished_bauble', 'bauble_regret');
 
@@ -419,12 +419,12 @@ const share = found / Math.max(1, frags + found);
 check(`the island turns up a bauble for about ${BAUBLE_SHARE * 100}% of finds`, near(share, BAUBLE_SHARE, 0.1),
   `${found} baubles and ${frags} fragments`);
 check('each with its tier on it and the damage of the ground', found > 0 && badTier === 0 && badDmg === 0, say('FINDS'));
-check('and says so', /^Your trowel turns up a tarnished (minor|major|ancient) bauble\. Restore it to see what it does\. \(QL [\d.]+, damage \d+\)$/.test(say('FOUNDSAID')),
+check('and says so', /^Found: tarnished (minor|major|ancient) bauble, QL [\d.]+, damage \d+\. Restore it to use it\.$/.test(say('FOUNDSAID')),
   say('FOUNDSAID'));
 check('one at 90 damage is restored as it is, since nothing repairs it first', say('FARGONE') === 'null', say('FARGONE'));
 check('one in hand may be restored', say('RESTORE') === 'null', say('RESTORE'));
 check('restored, it is a major bauble with what it gives written on it', say('RESTORED') === '0|bauble_major|double', say('RESTORED'));
-check('and says what it came out as', /^The tarnish comes away and the bauble is whole: .*major bauble \([a-z ]+: [\d.]+% chance of twice the yield\)\. \(QL [\d.]+\)$/.test(say('RESTORESAID')),
+check('and says what it came out as', /^Restored: .*major bauble \([a-z ]+: [\d.]+% chance of twice the yield\), QL [\d.]+\.$/.test(say('RESTORESAID')),
   say('RESTORESAID'));
 const [failed, failedBadly, restoredAnyway] = say('FAILED').split('|').map(Number);
 check('beyond the restorer, most stay tarnished and take the damage of a failed go', failed >= 4 && failedBadly === 0 && failed + restoredAnyway === 12,
@@ -461,7 +461,7 @@ check('nor does anybody off the settlement', say('OFFPACE') === '1|1', say('OFFP
 check('nothing is added outside a go', say('OUTSIDE') === '3', say('OUTSIDE'));
 check('inside one, the ancient bauble adds, and the go that comes up is multiplied', say('INSIDE') === `5|${5 * YIELD_TIMES}`, say('INSIDE'));
 check('through the clock a dig yields what the ancient bauble adds', say('DUG') === '2', say('DUG'));
-check('said after the go\'s own words', /^You dig up some dirt\. \(QL [\d.]+\) \/ The baubles in the altar make that 2 × dirt\.$/.test(say('DUGSAID')), say('DUGSAID'));
+check('said after the go\'s own words', /^Dug: dirt, QL [\d.]+\. \/ Altar baubles: yield now 2 × dirt\.$/.test(say('DUGSAID')), say('DUGSAID'));
 check('and the go leaves nothing behind for the next', say('FOREIGN') === 'clear', say('FOREIGN'));
 check('the next go takes the time off', near(Number(say('NEXTGO')), 0.9, 0.01), say('NEXTGO'));
 check('and so does the first', near(Number(say('FIRSTGO')), 0.9, 1e-6), say('FIRSTGO'));

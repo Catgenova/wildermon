@@ -104,8 +104,8 @@ const saysIsle = psql(`select '[' || string_agg(enchant_says(jsonb_build_object(
   from enchantments() e, unnest(array[${sayQl.join(',')}]::float8[]) with ordinality u(q, o)`);
 const saysHere = `[${ENCHANTMENT_LIST.flatMap((e) => sayQl.map((q) => enchantSays({ enchant: { id: e.id, ql: q } }))).join('#')}]`;
 check('Examine says each enchantment at its quality, with the exact share of hits from the rule, in the same words on both sides',
-  saysIsle === saysHere && saysHere.includes('Concussion at QL 100.0: a hit stuns the target for 2 seconds 10% of the time.')
-    && saysHere.includes('Emberbrand at QL 63.2: a hit sets the target burning 15.8% of the time.'), saysIsle === saysHere ? '' : (() => { const i = [...saysIsle].findIndex((ch, k) => ch !== saysHere[k]); return `at ${i}: ${saysIsle.slice(i - 40, i + 60)} / ${saysHere.slice(i - 40, i + 60)}`; })());
+  saysIsle === saysHere && saysHere.includes('Concussion at QL 100.0: Stun (2 s) on 10% of hits.')
+    && saysHere.includes('Emberbrand at QL 63.2: Burn on 15.8% of hits.'), saysIsle === saysHere ? '' : (() => { const i = [...saysIsle].findIndex((ch, k) => ch !== saysHere[k]); return `at ${i}: ${saysIsle.slice(i - 40, i + 60)} / ${saysHere.slice(i - 40, i + 60)}`; })());
 const saidIsle = psql(`select string_agg(enchant_said(k), '|' order by o) from unnest(array[${Object.keys(ENCHANT_SAID).map((k) => `'${k}'`).join(',')}]) with ordinality u(k, o)`);
 check('a refused Enchant is said in the same words', saidIsle === Object.values(ENCHANT_SAID).join('|'), saidIsle);
 const station = psql(`select station_name('paper_press') || '|' || (select station from recipe where id = 'make_papyrus')`);
@@ -391,7 +391,7 @@ begin
   perform perform_fight(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', 9110));
   perform pg_temp.nodice();
   insert into said select 'SWING', ${effects(9110)} || '|' || (select e.text from event e where e.world_id = w and e.uid = u
-    and e.text like 'Your Concussion%' order by e.n desc limit 1);
+    and e.text like 'Concussion:%' order by e.n desc limit 1);
   insert into said select 'PANEL', coalesce((select (t->>'stunned')::double precision::text from jsonb_array_elements(rpc_creatures(w, 40)) t
     where (t->>'id')::int = 9110), 'none');
 
@@ -447,7 +447,7 @@ begin
   insert into said select 'NERVE', (select (c.hunting is not distinct from u)::text || ',' || (creature_x(c) = 41.5 and creature_y(c) = 40.5 and c.to_x = 41.5 and c.to_y = 40.5)::text
                                       from creature c where c.world_id = w and c.id = 9130)
     || '|' || (select (c.hunting is null)::text || ',' || (c.to_x <> 40.5 or c.to_y <> 41.5)::text from creature c where c.world_id = w and c.id = 9131)
-    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'The ulva turns tail.');
+    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'Ulva fled.');
   update class_mark set until = until - make_interval(secs => stun_secs() + 1) where world_id = w and creature_id = 9130;
   update creature set until = until - make_interval(secs => stun_secs() + 1), settled_at = settled_at - make_interval(secs => stun_secs() + 1),
          leg_at = leg_at - make_interval(secs => stun_secs() + 1), leg_ends = leg_ends - make_interval(secs => stun_secs() + 1)
@@ -455,7 +455,7 @@ begin
   perform creature_settle(w, 9130);
   insert into said select 'NERVEOVER', (select (c.hunting is null)::text || ',' || (c.to_x <> 41.5 or c.to_y <> 40.5)::text
                                           from creature c where c.world_id = w and c.id = 9130)
-    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'The ulva turns tail.');
+    || '|' || (select count(*) from event e where e.world_id = w and e.uid = u and e.text = 'Ulva fled.');
 
   -- 13. A fright on one stunned: it runs once the stun is over, not before.
   insert into creature (world_id, id, species, name, mode, from_x, from_y, to_x, to_y, health, sex)
@@ -524,7 +524,7 @@ const reed = thing('reed', 40, 0, undefined, 8);
 thing('water_bucket', 40, 0, undefined, 2);
 const noPress = act('make_papyrus').check?.({ kind: 'item', uid: reed.uid }, g) ?? 'none';
 check(`papyrus is refused without a paper press on both sides: ${noPress}`,
-  isle.get('NOPRESS') === noPress && noPress === `You need to stand at a ${STATION_NAME.paper_press}.`, `island ${isle.get('NOPRESS')}`);
+  isle.get('NOPRESS') === noPress && noPress === `Need: ${STATION_NAME.paper_press}.`, `island ${isle.get('NOPRESS')}`);
 thing('mallet', 50);
 const plank = thing('plank', 40, 0, 'Pine', 24);
 thing('timber', 40, 0, 'Pine', 12);
@@ -597,7 +597,7 @@ dice(0.01);
 act(`make_${RAZOR.scroll}`).perform({ kind: 'item', uid: pap.uid }, g);
 act(`make_${CONC.scroll}`).perform({ kind: 'item', uid: pap.uid }, g);
 // The island's craft refusal names the input short and the browser's adds the whole bill after it, as for every recipe.
-const short = `Emberbrand scroll takes ${SCROLL_MOTES} fire motes`;
+const short = `Need ${SCROLL_MOTES} fire motes`;
 check('a Razoredge scroll is written from ice motes and a Concussion scroll from earth motes, and neither from fire motes, on both sides',
   isle.get('OTHERS') === `1|1|0|0|0` && held(RAZOR.scroll) === 1 && held(CONC.scroll) === 1 && held(RAZOR.mote) === 0 && held(CONC.mote) === 0
     && (isle.get('NOMOTE') ?? '').startsWith(short) && noMote.startsWith(short), `${isle.get('OTHERS')} ${isle.get('NOMOTE')} / ${noMote}`);
@@ -635,7 +635,7 @@ enchant.perform({ kind: 'item', uid: sword.uid, scroll: scroll.uid } as Target, 
 const tookIsle = JSON.parse(part('TOOK', 0) || '{}') as { id?: string; ql?: number };
 check(`enchanting 100 with a QL 90 scroll into a QL 34 sword comes out at the sword's QL, held to it, on both sides: ${lastHere()}`,
   tookIsle.id === EMBER.id && tookIsle.ql === 34 && sword.enchant?.id === EMBER.id && sword.enchant?.ql === 34 && part('TOOK', 2) === '0' && held(EMBER.scroll) === 0
-    && part('TOOK', 3) === lastHere() && lastHere() === enchantedSaid(EMBER, nameBefore, 'sword', 34, 'item', 90, 34) && lastHere().includes('held to the sword\'s QL 34.0'),
+    && part('TOOK', 3) === lastHere() && lastHere() === enchantedSaid(EMBER, nameBefore, 'sword', 34, 'item', 90, 34) && lastHere().includes('(capped at sword QL 34.0)'),
   `${isle.get('TOOK')} / ${JSON.stringify(sword.enchant)} ${lastHere()}`);
 check(`the name carries it on both sides: ${itemName(sword)}`, part('TOOK', 1) === itemName(sword) && itemName(sword) === 'Sword (iron) (Emberbrand)', part('TOOK', 1));
 const examined: string[] = [];
@@ -663,7 +663,7 @@ scroll = thing(EMBER.scroll, 40);
 dice(0.5);
 enchant.perform({ kind: 'item', uid: big.uid, scroll: scroll.uid } as Target, g);
 check(`a QL 40 scroll into a QL 90 sword is held to the scroll's QL, on both sides: ${lastHere()}`,
-  part('TOOKSCROLL', 0) === '40' && big.enchant?.ql === 40 && part('TOOKSCROLL', 1) === lastHere() && lastHere().includes('held to the scroll\'s QL 40.0'),
+  part('TOOKSCROLL', 0) === '40' && big.enchant?.ql === 40 && part('TOOKSCROLL', 1) === lastHere() && lastHere().includes('(capped at scroll QL 40.0)'),
   `${isle.get('TOOKSCROLL')} / ${lastHere()}`);
 g.skills.values.set('enchanting', 30);
 const axe = thing('hatchet', 90, 0, 'Iron');
@@ -736,7 +736,7 @@ for (const e of [EMBER, RAZOR, CONC]) {
   dice(0.01);
   said.length = 0;
   act('attack_creature').perform({ kind: 'creature', id: c.id }, g);
-  const swung = said.filter((m) => m.startsWith('Your Concussion'));
+  const swung = said.filter((m) => m.startsWith('Concussion: '));
   check(`a landed swing with a Concussion sword at QL 100 stuns it, and the fight log says so, on both sides: ${swung[0]}`,
     part('SWING', 0).startsWith('hold,stun') && part('SWING', 1) === swung[0] && (c.stunUntil ?? 0) > g.time && swung[0] === enchantHitSaid(CONC, 'shaggan'),
     `${isle.get('SWING')} / ${swung.join(' # ')} ${c.stunUntil}`);

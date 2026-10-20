@@ -296,7 +296,7 @@ out.push(`create table if not exists species_def (
   health real not null, attack real not null, speed real not null,
   tame_level real not null, tame_chance real not null, bait_hint text not null,
   timid boolean not null default false, gathers text, work_range real not null default 0,
-  tame_fail text not null, leaves text not null, variants int not null default 1,
+  variants int not null default 1,
   near_water boolean not null default false, near_trees boolean not null default false,
   on_ore boolean not null default false, on_sand boolean not null default false,
   near_clay boolean not null default false, near_tar boolean not null default false,
@@ -1269,7 +1269,7 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   out.push(`insert into species_def values (` + [
     q(d.id), q(d.name), q(d.description), q(d.health), q(d.attack), q(d.speed),
     q(d.tameLevel), q(d.tameChance), q(d.baitHint), q(!!d.timid), q(d.gathers),
-    q(d.workRange ?? 0), q(d.tameFail), q(d.leaves), q((d.variants as unknown[]).length),
+    q(d.workRange ?? 0), q((d.variants as unknown[]).length),
     q(!!d.nearWater), q(!!d.nearTrees), q(!!d.onOre), q(!!d.onSand), q(!!d.nearClay),
     q(!!d.nearTar), q(!!d.onStone), q(!!d.hunter), q(!!d.nocturnal), q(!!d.monster),
     q(!!d.defensive), q(!!d.milk), q(d.fleece ?? null), q(d.unruly ?? null),
@@ -1426,7 +1426,7 @@ for (const [item, content] of Object.entries(METAL_CONTENT).sort()) out.push(`in
 for (const [id, weight] of WILD_SPECIES) out.push(`insert into wild_table values (${q(id)}, ${q(weight)}, false, null);`);
 for (const [id, weight] of MONSTERS) out.push(`insert into wild_table values (${q(id)}, ${q(weight)}, true, ${q(MONSTER_CAP[id] ?? 1)});`);
 for (const t of TRAITS) {
-  out.push(`insert into trait_def values (${q(t.id)}, ${q(t.name)}, ${q(t.tier)}, ${q(!!t.aura)}, ${q(t.note)}, ${q(t.family ?? null)});`);
+  out.push(`insert into trait_def values (${q(t.id)}, ${q(t.name)}, ${q(t.tier)}, ${q(!!t.aura)}, ${q('')}, ${q(t.family ?? null)});`);
   for (const [channel, mul] of Object.entries(t.effects)) out.push(`insert into trait_effect values (${q(t.id)}, ${q(channel)}, ${q(mul)});`);
 }
 CHANNELS.forEach((ch, ord) =>

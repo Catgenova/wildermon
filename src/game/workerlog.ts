@@ -121,7 +121,7 @@ function recipeWants(kind: GatherKind): string {
 /** Seconds left, whole and never under one: "1 more second", "37 more seconds". */
 const secondsMore = (secs: number): string => {
   const n = Math.max(1, Math.ceil(secs));
-  return `${n} more second${n === 1 ? '' : 's'}`;
+  return `${n} second${n === 1 ? '' : 's'} left`;
 };
 
 /**
@@ -137,20 +137,20 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
     case 'stock': {
       const verb = (kind && IDLE_STOCK[kind]) ?? 'work';
       const wants = kind ? IDLE_STOCK_THING[kind] ?? recipeWants(kind) : '';
-      return `Idle: nothing in your stores on the settlement to ${verb}${wants ? `; it wants ${wants}` : ''}.`;
+      return `Idle: nothing in your settlement stores to ${verb}${wants ? ` (needs ${wants})` : ''}.`;
     }
     case 'room': {
       const [where, what] = (kind && IDLE_ROOM[kind]) ?? ['store', 'what it brings'];
       return `Idle: no ${where} on the settlement has room for ${what}.`;
     }
     case 'full':
-      return `Idle: holding ${carrying ? carrying.toLowerCase() : 'a load'} with nowhere on the settlement to put it.`;
+      return `Idle: holding ${carrying ? carrying.toLowerCase() : 'a load'}, settlement storage full.`;
     case 'far':
-      return `Idle: walking home; ${n} tiles from its work.`;
+      return `Idle: walking home, ${n} tiles from its work.`;
     case 'away':
-      return 'Idle: its keeper is away, so it is not worked.';
+      return 'Idle: keeper away.';
     case 'unswept':
-      return `Idle: nobody awake is within ${n} tiles of it, so it is not worked.`;
+      return `Idle: nobody awake within ${n} tiles.`;
     case 'rest':
       return `Resting: ${secondsMore(idle.n)}.`;
     case 'bed': {
@@ -159,7 +159,7 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
     }
     case 'tired': {
       const name = itemDef(idle.bed ?? '').name.toLowerCase();
-      return `Tired: walking to ${article(name)} ${name} to rest in it.`;
+      return `Tired: walking to ${article(name)} ${name}.`;
     }
   }
 }

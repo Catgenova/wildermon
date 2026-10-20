@@ -6,8 +6,8 @@ import { Repaint } from '../repaint';
 type SortKey = 'best' | 'made' | 'name' | 'rare' | 'recent';
 const SORTS: Array<[SortKey, string]> = [
   ['best', 'Best quality'],
-  ['made', 'How many'],
-  ['rare', 'Rare ones'],
+  ['made', 'Count'],
+  ['rare', 'Rare'],
   ['name', 'Name'],
   ['recent', 'Newest first'],
 ];
@@ -38,7 +38,7 @@ export class LedgerPanel {
     this.search = document.createElement('input');
     this.search.type = 'search';
     this.search.className = 'panel-search';
-    this.search.placeholder = 'What have I made?';
+    this.search.placeholder = 'Search made items';
     this.search.addEventListener('input', () => {
       this.query = this.search.value.trim().toLowerCase();
       this.repaint.force();
@@ -56,7 +56,7 @@ export class LedgerPanel {
     bar.className = 'panel-bar';
     const sel = document.createElement('select');
     sel.className = 'panel-select';
-    sel.title = 'How to order the ledger';
+    sel.title = 'Sort order';
     for (const [key, label] of SORTS) {
       const opt = document.createElement('option');
       opt.value = key;
@@ -71,15 +71,15 @@ export class LedgerPanel {
     // Named, so the box says what it changes rather than only what it is set to.
     const order = document.createElement('label');
     order.className = 'ledger-order';
-    order.append('Order by', sel);
+    order.append('Sort', sel);
     bar.append(order);
     const head = document.createElement('div');
     head.className = 'inv-head ledger-head';
     for (const [label, title] of [
-      ['Thing', 'What was made'],
-      ['Made', 'How many you have made'],
-      ['Rare', 'How many came out rare or better'],
-      ['Best', 'The best quality (QL) you have made it at'],
+      ['Thing', 'Item made'],
+      ['Made', 'Count made'],
+      ['Rare', 'Count rare or better'],
+      ['Best', 'Best QL made'],
     ]) {
       const cell = document.createElement('span');
       cell.textContent = label;
@@ -130,7 +130,7 @@ export class LedgerPanel {
     if (!Object.keys(led).length) {
       const empty = document.createElement('div');
       empty.className = 'inv-empty';
-      empty.textContent = 'You have made nothing yet. Everything that comes off a bench, an anvil or an oven is written down here.';
+      empty.textContent = 'Nothing made yet. Lists everything crafted.';
       this.list.append(empty);
       this.footer.textContent = '';
       return;
@@ -139,7 +139,7 @@ export class LedgerPanel {
     if (!ids.length) {
       const none = document.createElement('div');
       none.className = 'inv-empty';
-      none.textContent = `You have made nothing answering to “${this.search.value.trim()}”. Esc in the search box clears it.`;
+      none.textContent = `No match: “${this.search.value.trim()}”. Esc clears.`;
       this.list.append(none);
     }
     this.footer.textContent = `${totals.kinds} kinds · ${totals.made} things · ${totals.rare} rare · best ever QL ${totals.best.toFixed(1)}`;

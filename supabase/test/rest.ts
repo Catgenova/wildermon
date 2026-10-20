@@ -27,7 +27,7 @@ import {
 import { furnitureCentre, type PlacedFurniture } from '../../src/game/furniture';
 import { idleSays } from '../../src/game/workerlog';
 import { ITEM_DEFS } from '../../src/game/items';
-import { share, spanWords } from '../../src/game/words';
+import { share, spanWords, timeWords } from '../../src/game/words';
 import { TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -325,7 +325,7 @@ const worker = (sp: string, skills: Record<string, number>, x = T + 0.5, y = T +
   const c = worker('tinka', { repair: 10 }, T + 1.5, T + 0.5);
   for (let i = 0; i < TIRE_GOES - 1; i++) call('mendStep', g, c, yes);
   const card = staminaSays(c);
-  check(`in the browser, a worker after ${TIRE_GOES - 1} goes has one left, its card saying so`, c.worn === TIRE_GOES - 1 && card.includes(`1 of ${TIRE_GOES} goes left`), `${c.worn} "${card}"`);
+  check(`in the browser, a worker after ${TIRE_GOES - 1} goes has one left, its card saying so`, c.worn === TIRE_GOES - 1 && card.includes(`1/${TIRE_GOES} goes`), `${c.worn} "${card}"`);
   call('mendStep', g, c, yes);
   const goes = c.ledger?.now.goes;
   c.busyUntil = 0;
@@ -333,7 +333,7 @@ const worker = (sp: string, skills: Record<string, number>, x = T + 0.5, y = T +
   step(c);
   check(`after its ${TIRE_GOES}th it rests where it stands, there being no bed, ${REST_FOR} seconds`,
     c.state === 'rest' && c.worn === TIRE_GOES && near((c.restUntil ?? 0) - g.time, REST_FOR) && staminaOf(c) === 0, `${c.state} ${c.worn} ${(c.restUntil ?? 0) - g.time}`);
-  check('and its card says so', idleSays(c.idle!, 'mend') === `Resting: ${REST_FOR} more seconds.`, c.idle ? idleSays(c.idle, 'mend') : 'no idle');
+  check('and its card says so', idleSays(c.idle!, 'mend') === `Resting: ${REST_FOR} seconds left.`, c.idle ? idleSays(c.idle, 'mend') : 'no idle');
   g.time += REST_FOR - 1;
   step(c);
   check('still resting a second before its rest is out', c.state === 'rest', c.state);
@@ -364,7 +364,7 @@ const walkTo = (c: Creature, f: PlacedFurniture): void => {
   step(c);
   check('in the browser, with a free bed of its size it walks to the nearest one on the settlement',
     c.state === 'toBed' && c.bed === small.id && c.idle?.why === 'tired', `${c.state} ${c.bed}/${small.id}`);
-  check('and its card says so', idleSays(c.idle!, 'reed') === 'Tired: walking to a small wildermon bed to rest in it.', idleSays(c.idle!, 'reed'));
+  check('and its card says so', idleSays(c.idle!, 'reed') === 'Tired: walking to a small wildermon bed.', idleSays(c.idle!, 'reed'));
   walkTo(c, small);
   check(`there it lies in it, its sleeper, for ${BED_REST} of the rest: ${restFor(true)} seconds`,
     c.state === 'rest' && small.sleeper === c.id && near((c.restUntil ?? 0) - g.time, restFor(true)), `${c.state} ${small.sleeper} ${(c.restUntil ?? 0) - g.time}`);
@@ -438,11 +438,11 @@ for (const [sp, f] of [['bogga', medium], ['magga', small]] as const) {
 for (const [id, stage] of [['den_small', 'first'], ['den_medium', 'second'], ['den_large', 'third']] as const) {
   const words = ITEM_DEFS[id].description ?? '';
   check(`the ${ITEM_DEFS[id].name.toLowerCase()}'s words say whom it fits and what it does, off the rule`,
-    !words.includes('{') && words.includes(`its ${stage} stage`) && words.includes(`for ${share(BED_REST)} as long: ${spanWords(restFor(true))} where it would rest ${spanWords(REST_FOR)}`)
+    !words.includes('{') && words.includes(`${stage}-stage`) && words.includes(`rest ${share(BED_REST)} as long, ${spanWords(restFor(true))} instead of ${spanWords(REST_FOR)}`)
     && words.includes(`every ${TIRE_GOES} goes`) && words.includes(`${id === 'den_large' ? DEN_HEALTH[1] : DEN_HEALTH[0]} health`), words);
 }
 check('a stamina line says the goes left and both rests, off the rule',
-  staminaSays({ worn: 10 }) === `Stamina: ${TIRE_GOES - 10} of ${TIRE_GOES} goes left before it rests ${spanWords(REST_FOR)}, or ${spanWords(restFor(true))} in a bed of its size on the settlement.`,
+  staminaSays({ worn: 10 }) === `Stamina: ${TIRE_GOES - 10}/${TIRE_GOES} goes. Rest: ${timeWords(REST_FOR)}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`,
   staminaSays({ worn: 10 }));
 
 for (const line of [...ok, ...bad]) console.log(line);

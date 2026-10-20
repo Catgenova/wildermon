@@ -238,12 +238,12 @@ begin
   perform ${thing('gem', QL, 0, `'${RUBY.name}'`)};
   perform give(w, u, 'silver_lump', 1, 30);
   ${craft('set_focus')};
-  v_t := ${count('gem')} || ':' || ${count('silver_lump')} || ':' || ${last('The claw goes over%')};
+  v_t := ${count('gem')} || ':' || ${count('silver_lump')} || ':' || ${last('Failed: focus.%')};
   ${hold('Keep the Stone')};
   perform ${thing('gem', QL, 0, `'${RUBY.name}'`)};
   perform give(w, u, 'silver_lump', 1, 30);
   ${craft('set_focus')};
-  insert into said values ('STONE', v_t || '|' || ${count('gem')} || ':' || ${count('silver_lump')} || ':' || ${last('The claw goes over%')});
+  insert into said values ('STONE', v_t || '|' || ${count('gem')} || ':' || ${count('silver_lump')} || ':' || ${last('Failed: focus.%')});
   ${clearAll};
 
   /* ---- Deep Pot: a pot shaped with it, carried through the kiln, and a pottage cooked in it by anybody. ---- */
@@ -455,7 +455,7 @@ begin
   v_t := v_t || '#' || ${refused('glaze_item', 'v_it')};
   perform perform_item(w, u, 'glaze_item', ${itemT('v_it')});
   v_t := v_t || '#' || coalesce((select mark::text from item where id = v_it), 'none') || '#' || ${count('ash')}
-    || '#' || ${last('You brush an ash glaze%')} || '#' || ${refused('glaze_item', 'v_it')}
+    || '#' || ${last('Glazed: %')} || '#' || ${refused('glaze_item', 'v_it')}
     || '#' || ground_decay_rate(${row('v_it')}) || '#' || mark_says((select mark from item where id = v_it));
   update item set mark = null where id = v_it;
   v_t := v_t || '#' || ${refused('glaze_item', 'v_it')};
@@ -491,12 +491,12 @@ begin
   v_t := v_t || '#' || ${count('circlet')} || '#' || ${refused('set_in_circlet', 'v_it')};
   perform perform_item(w, u, 'set_in_circlet', ${itemT('v_it')});
   v_t := v_t || '#' || coalesce((select extra from item where id = v_c), 'empty') || '#' || ${count('gem')}
-    || '#' || ${last('You seat the%')};
+    || '#' || ${last('Set: %')};
   ${checks(false)};
   v_it := ${thing('gem', QL, 0, `'${OPAL.name}'`)};
   perform perform_item(w, u, 'set_in_circlet', ${itemT('v_it')});
   v_t := v_t || '#' || coalesce((select extra from item where id = v_c), 'empty') || '#' || ${count('gem')}
-    || '#' || ${last('The % will not seat%')};
+    || '#' || ${last('Setting failed: %')};
   ${checks(true)};
   perform perform_item(w, u, 'set_in_circlet', ${itemT('v_it')});
   v_it := ${thing('gem', QL, 0, `'${RUBY.name}'`)};
@@ -657,18 +657,18 @@ game.removeFurniture(placedWheel.id);
 const glaze = say('GLAZE').split('#');
 check(`${P('Glaze').name}: refused without it in the browser's words`, glaze[0] === GLAZE_PERK && glaze[1] === 'ALLOWED', glaze.slice(0, 2).join(' / '));
 check('glazed, the pot carries it, the ashes are spent, and it will not be glazed twice',
-  mark(glaze[2]).glaze === 0 && glaze[3] === '0' && glaze[4] === 'You brush an ash glaze over the clay pot and it takes. It will not decay now.'
-    && glaze[5] === 'It is glazed already.', glaze.slice(2, 6).join(' / '));
+  mark(glaze[2]).glaze === 0 && glaze[3] === '0' && glaze[4] === 'Glazed: clay pot. No decay.'
+    && glaze[5] === 'Already glazed.', glaze.slice(2, 6).join(' / '));
 check('a glazed pot never decays on the ground, and says so in the browser\'s words',
   Number(glaze[6]) === 0 && glaze[7] === markSays({ glaze: 0 }), glaze.slice(6, 8).join(' / '));
-check('and with no ashes left, it says so', glaze[8] === 'You need ashes to make a glaze of.', glaze[8]);
+check('and with no ashes left, it says so', glaze[8] === `Need ${GLAZE_ASH} ash.`, glaze[8]);
 
 /* ---- the trade book ---------------------------------------------------------------------- */
 
 const tbook = say('TRADEBOOK').split('#');
 const tbookRecipe = RECIPE_BY_ID.get('write_trade_book_mining')!;
 check(`${P('Trade Book').name}: refused without it, and below ${TRADE_BOOK_AT} in the trade, in the browser's words; written with both`,
-  tbook[0] === RECIPE_PERK_SAYS.trade_book && tbook[1] === `You know too little of mining to write a book on it: that wants ${TRADE_BOOK_AT}.`
+  tbook[0] === RECIPE_PERK_SAYS.trade_book && tbook[1] === `Need mining ${TRADE_BOOK_AT}.`
     && tbook[2] === 'ALLOWED' && tbook[3] === 'Mining', say('TRADEBOOK'));
 
 /* ---- the circlet ------------------------------------------------------------------------- */
@@ -678,11 +678,11 @@ check(`${P('Circlet').name}: refused without it in the browser's words, made wit
   circ[0] === RECIPE_PERK_SAYS.circlet && circ[1] === 'ALLOWED' && circ[2] === '1', circ.slice(0, 3).join(' / '));
 check('a stone set in it by anybody goes in, and says how many settings are filled',
   circ[3] === 'ALLOWED' && circ[4] === RUBY.name && circ[5] === '0'
-    && circ[6] === `You seat the ruby in the circlet and close the claws over it: 1 of its ${CIRCLET_STONES} settings are filled.`, circ.slice(3, 7).join(' / '));
+    && circ[6] === `Set: ruby. Circlet 1/${CIRCLET_STONES} settings.`, circ.slice(3, 7).join(' / '));
 check('one that will not seat comes out again whole',
-  circ[7] === RUBY.name && circ[8] === '1' && circ[9] === 'The opal will not seat, and you take it out again whole.', circ.slice(7, 10).join(' / '));
+  circ[7] === RUBY.name && circ[8] === '1' && circ[9] === 'Setting failed: opal kept.', circ.slice(7, 10).join(' / '));
 check(`and a full one takes no more, and none carried is refused, in the browser's words`,
-  circ[10] === `${RUBY.name}, ${OPAL.name}, ${RUBY.name}` && circ[11] === `You have no circlet with a setting empty: each takes ${CIRCLET_STONES} stones.`
+  circ[10] === `${RUBY.name}, ${OPAL.name}, ${RUBY.name}` && circ[11] === `Need a circlet with an empty setting (${CIRCLET_STONES} per circlet).`
     && circ[12] === circ[11], circ.slice(10).join(' / '));
 
 /* ---- the browser ------------------------------------------------------------------------- */
