@@ -7,4 +7,7 @@
  */
 declare const __DEPLOY__: number | undefined;
 
-export const VERSION: string = typeof __DEPLOY__ === 'number' ? `v${__DEPLOY__}` : 'dev';
+/** The deploy as a number, or undefined for "dev". */
+export const DEPLOY: number | undefined = typeof __DEPLOY__ === 'number' ? __DEPLOY__ : undefined;
+
+export const VERSION: string = DEPLOY !== undefined ? `v${DEPLOY}` : 'dev';

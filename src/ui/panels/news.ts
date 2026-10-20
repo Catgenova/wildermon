@@ -1,4 +1,5 @@
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
+import { UPDATE_CHECK_MS } from '../update';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { rackPutLine, STORE_REACH } from '../../game/crates';
 import { DAMAGE_WARN, TRAVEL_LEG } from '../../game/game';
@@ -2984,6 +2985,12 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: Skills window: click a skill for a slider per effect, its value now and at either end. Left end: the skill's starting value. Right end: ${SKILL_TOP}.`,
       'Effects read off the rules with your gear and perks: carry weight, blow damage, hit and crit chance, swing and draw time, block, armour, time per action, success chance, best QL and each trade\'s own.',
+    ],
+  },  {
+    n: 229,
+    day: '2026-10-20',
+    lines: () => [
+      `Added: Update to v… button (gold, bottom right): shown when a later version is on the site, checked every ${UPDATE_CHECK_MS / 60_000} min and on returning to the tab. Click: reload to it.`,
     ],
   },
 ];

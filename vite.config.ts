@@ -34,10 +34,23 @@ function deploy(): number | undefined {
  * account rules and nothing else — the landing page does not drag in a
  * renderer, and the game does not drag in a sign-up form.
  */
+const deployed = deploy();
+
 export default defineConfig({
   root: 'src',
   base: './',
-  define: { __DEPLOY__: String(deploy() ?? 'undefined') },
+  define: { __DEPLOY__: String(deployed ?? 'undefined') },
+  /*
+   * assets/version.json: which deploy is on the site now, for a page left open
+   * on an older one to notice (src/ui/update.ts). In assets/ so the "Build site"
+   * workflow commits it with the rest.
+   */
+  plugins: [{
+    name: 'deploy-file',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'assets/version.json', source: `${JSON.stringify({ deploy: deployed ?? null })}\n` });
+    },
+  }],
   server: { port: 5173, host: true },
   build: {
     outDir: '../dist',

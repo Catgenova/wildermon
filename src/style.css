@@ -987,10 +987,42 @@ button.goal-row:focus-visible {
   font-size: 11px;
 }
 
-.hud-fps {
+.hud-corner {
   position: absolute;
   right: 12px;
   bottom: 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none !important;
+}
+
+.hud-update {
+  padding: 1px 8px;
+  border: 1px solid #b8893a;
+  border-radius: 3px;
+  background: linear-gradient(var(--rc-rune-gold), #d4a43e);
+  color: #3a2608;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 0 6px rgba(255, 217, 140, 0.45);
+}
+
+.hud-update:hover,
+.hud-update:focus-visible {
+  background: linear-gradient(#ffe6ad, #e0b450);
+  outline: 1px solid #fff2cf;
+}
+
+.hud-update:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.hud-fps {
   color: rgba(217, 208, 189, 0.55);
   font-size: 11px;
   font-variant-numeric: tabular-nums;

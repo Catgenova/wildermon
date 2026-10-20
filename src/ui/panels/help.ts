@@ -1,5 +1,6 @@
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
+import { UPDATE_CHECK_MS } from '../update';
 import { JOINT_EVERY, PIN_EVERY, SOFT, STITCH_EVERY } from '../runecut-dress';
 import { FRAMES } from '../runecut-frames';
 import { lifeWords } from '../runecut-life';
@@ -1221,6 +1222,7 @@ export function helpText(): string {
       <li>Kept clear: a square ${CLEAR_CELLS} cells across round your character (fewer on a small screen). Dropped on another piece or that square: moved to
       the nearest free space of its size; resizing stops at them.</li>
       <li>Status panel and toolbar: no resize, no close. Layout is saved. No grid on a phone.</li>
+      <li><b>Update to v…</b> (gold, bottom right): a later version is on the site. Checked every ${UPDATE_CHECK_MS / 60_000} min and on returning to the tab. Click: reload to it.</li>
       <li>Runecut: shared edges get one seam capped in gold. ${softFrames()} to the same: stitched every ${STITCH_EVERY} pixels; anything else: mortar joint every
       ${JOINT_EVERY}; a brass pin every ${PIN_EVERY}.</li>
       <li><i>Frame life</i> (Settings (<kbd>O</kbd>), Display): animals and lights on Runecut frames: ${lifeWords()}. Never over window contents.

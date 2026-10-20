@@ -11,6 +11,7 @@ import { BELT_MAX, pinLabel } from '../game/belt';
 import type { Renderer } from '../render/renderer';
 import { ashore, JOURNAL, nextGoals } from '../game/journal';
 import { VERSION } from '../version';
+import { updateButton } from './update';
 import { BACK_SLACK, blowOf, blowWords, COWARD_DRAG, FIGHT_STANCE_NAMES, HEAVY_EVERY, HIDE_NAMES, hideSays, hideTakes, HUNT_REACH, KEEP_OFF, PACK_CALL, stanceSays, swungWith, TARGET_RANGE, THROW_HIT, THROW_REACH, turnsAt } from '../game/fight';
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
 import { consider } from '../game/consider';
@@ -363,9 +364,13 @@ export class Hud {
     this.drawKeys();
     root.append(toolbar);
 
+    // The bottom-right corner: the Update button, when there is a later deploy, beside the version and frame rate.
+    const corner = document.createElement('div');
+    corner.className = 'hud-corner';
     this.fpsEl = document.createElement('div');
     this.fpsEl.className = 'hud-fps';
-    root.append(this.fpsEl);
+    corner.append(updateButton(), this.fpsEl);
+    root.append(corner);
 
     this.actionEl = document.createElement('div');
     this.actionEl.className = 'action-bar';
