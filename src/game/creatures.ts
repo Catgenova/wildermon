@@ -3917,7 +3917,7 @@ sayLine('orse', `Mount, saddled and bridled: ${+(SPECIES.orse.speed * footing(0)
   'Level: climbing, learned under a rider and in the traces.');
 sayLine('roxxen', `No deed job. Traces of a large cart or wagon: team pace +${percent(SPECIES.roxxen.pull!)} (beasts not bred for it: +${percent(PULL_DEFAULT)}); its driving counts as climbing for team pace and the steepest step the wheels take.`,
   `Level: driving, learned ${LEARNS_SAYS.pull}.`);
-sayLine('tinka', `Deed job: mend damaged gear in your stores on the deed, most damaged first. Time per go: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per go: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,
+sayLine('tinka', `Deed job: mend damaged gear in your stores on the deed, most damaged first. Time per action: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}, less for care. Per action: damage −${MEND_DMG}, 1 more per ${MEND_DMG_LEVELS} levels; QL −${MEND_QL}, 0.1 less per ${MEND_QL_LEVELS / 10} levels, min ${MEND_QL_LEAST}.`,
   'Level: repair.');
 sayLine('holla', `Deed job: fill a bladder at the shore or a well ${reach('holla')}, ${BUCKET_LITRES} litres a bucket; poured into a settlement barrel with room for water.`,
   'Level: carrying.');

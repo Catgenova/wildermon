@@ -198,7 +198,7 @@ const TERRAFORMER: Seed[] = [
   {
     num: 9, name: 'Level Hand',
     fx: { 'flatten:step': 2 },
-    note: (fx) => `Flatten height units per go: ${fx['flatten:step']} (base ${FLATTEN_STEP}).`,
+    note: (fx) => `Flatten height units per action: ${fx['flatten:step']} (base ${FLATTEN_STEP}).`,
   },
   {
     num: 10, name: 'Quick Level',
@@ -452,7 +452,7 @@ const MASON: Seed[] = [
   {
     num: 2, name: 'Three from a Shard',
     fx: each(CHISELLED.map((r) => `count:${r.result}`), 3),
-    note: (fx) => `Bricks per go, ${either(stonesOf(CHISELLED.map((r) => r.result)))}: `
+    note: (fx) => `Bricks per action, ${either(stonesOf(CHISELLED.map((r) => r.result)))}: `
       + `${fx[`count:${CHISELLED[0].result}`]} (base ${CHISELLED[0].count ?? 1}).`,
   },
   {
@@ -470,7 +470,7 @@ const MASON: Seed[] = [
   {
     num: 9, name: 'Two at a Time',
     fx: { 'lay:build_stone': 2 },
-    note: (fx) => `Build wall and Build floor units per go on ${STONE_WORK}: ${fx['lay:build_stone']} if carried `
+    note: (fx) => `Build wall and Build floor units per action on ${STONE_WORK}: ${fx['lay:build_stone']} if carried `
       + `(base one; stone-brick wall: ${billOf(STONE_BRICK_WALL.bill)}).`,
   },
   {
@@ -942,7 +942,7 @@ const FORESTER: Seed[] = [
     num: 10, name: 'Sprout Picker',
     fx: { 'fail:pick_sprout': 0, 'count:sprout': 2 },
     note: (fx) => `${label('pick_sprout')} never fails (base: check at difficulty ${diff('pick_sprout')}). `
-      + `Sprouts per go: ${fx['count:sprout']} (base one).`,
+      + `Sprouts per action: ${fx['count:sprout']} (base one).`,
   },
   {
     num: 11, name: 'Nursery',
@@ -1092,7 +1092,7 @@ const FARMER: Seed[] = [
   {
     num: 22, name: 'More Meal',
     fx: { 'count:flour': 2, 'count:cornmeal': 2 },
-    note: (fx) => `${recipeLabel('make_flour')}: ${fx['count:flour']} ${itemName('flour')} per go `
+    note: (fx) => `${recipeLabel('make_flour')}: ${fx['count:flour']} ${itemName('flour')} per action `
       + `(base ${madeOf('make_flour')}). ${recipeLabel('make_cornmeal')}: ${fx['count:cornmeal']} `
       + `${itemName('cornmeal')} (base ${madeOf('make_cornmeal')}).`,
   },
@@ -1178,7 +1178,7 @@ const COOK: Seed[] = [
   {
     num: 5, name: 'Big Pot',
     fx: Object.fromEntries(BIG_POT.map((id) => [`count:${id}`, madeOfItem(id) + 1])),
-    note: (fx) => `Output per go: `
+    note: (fx) => `Output per action: `
       + `${listed(BIG_POT.map((id) => `${itemName(id)} ${fx[`count:${id}`]} (base ${madeOfItem(id)})`))}.`,
   },
   {
@@ -1529,7 +1529,7 @@ const NATURALIST: Seed[] = [
   {
     num: 2, name: 'Keen Eye',
     fx: { 'passes:forage': 1, 'passes:botanize': 1 },
-    note: (fx) => `Foraging and botanizing rolls per go +${fx['passes:forage']} `
+    note: (fx) => `Foraging and botanizing rolls per action +${fx['passes:forage']} `
       + `(base one, one more per ${PER_ROLL} skill).`,
   },
   {
@@ -1960,7 +1960,7 @@ const ARTISAN: Seed[] = [
     num: 35, name: 'Sturdy Binding',
     fx: onEach('sturdy', ['book', 'trade_book'], 0.5),
     note: (fx) => `Study damage ${mul(fx['sturdy:book'])} on books you bind (base ${STUDY_WEAR} to `
-      + `${STUDY_WEAR + STUDY_WEAR_SPREAD} per go).`,
+      + `${STUDY_WEAR + STUDY_WEAR_SPREAD} per action).`,
   },
   {
     num: 4, name: 'Bright Stone',
@@ -2010,7 +2010,7 @@ const ARTISAN: Seed[] = [
     num: 36, name: 'Trade Book',
     fx: { trade_book: 1 },
     note: () => `New papyrusmaking recipe: ${counted(TRADE_BOOK)} with a ${itemName(TRADE_BOOK.tool ?? 'needle')} make a `
-      + `book on any craft trade you have at ${TRADE_BOOK_AT}+. Study teaches that trade, as much per go as a plain book `
+      + `book on any craft trade you have at ${TRADE_BOOK_AT}+. Study teaches that trade, as much per action as a plain book `
       + 'teaches mind logic. Readable by anyone.',
   },
   {

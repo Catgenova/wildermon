@@ -183,7 +183,7 @@ function workEffects(id: string): SkillEffect[] {
   const jobs = [...done, ...MOULDS.filter((m) => m.skill === id)];
   if (!jobs.length) return [];
   const out: SkillEffect[] = timed.length
-    ? [{ label: 'Time per go', at: (g) => goSeconds(SLOW_GO, g.skills.get(id)) / goSeconds(SLOW_GO, 0), say: times }]
+    ? [{ label: 'Time per action', at: (g) => goSeconds(SLOW_GO, g.skills.get(id)) / goSeconds(SLOW_GO, 0), say: times }]
     : [];
   if (jobs.some((j) => j.difficulty)) {
     out.push({ label: 'Success chance', at: (g) => g.skillChance(id, CHANCE_AT, 0, g.mindEase()), say: percent, note: `Difficulty ${CHANCE_AT}, no tool` });
@@ -270,8 +270,8 @@ function buildEffects(): Record<string, SkillEffect[]> {
     mining: [{ label: 'Hardest ore', at: (g) => g.skills.get('mining'), say: hardestOre }],
     prospecting: [{ label: 'Prospect reach', at: (g) => prospectReach(g), say: tiles }],
     forestry: [{ label: 'Grapes per pick', at: (g) => grapesFor(g.skills.get('forestry')), say: (v) => `${v}` }],
-    foraging: [{ label: 'Looks per go', at: (g) => rollsAt(g.skills.get('foraging')), say: (v) => `${v}` }],
-    botanizing: [{ label: 'Looks per go', at: (g) => rollsAt(g.skills.get('botanizing')), say: (v) => `${v}` }],
+    foraging: [{ label: 'Looks per action', at: (g) => rollsAt(g.skills.get('foraging')), say: (v) => `${v}` }],
+    botanizing: [{ label: 'Looks per action', at: (g) => rollsAt(g.skills.get('botanizing')), say: (v) => `${v}` }],
     tracking: [
       { label: 'Track reach', at: (g) => trackRange(trackLevel(g.skills.get('tracking'))), say: (v) => `${v} tiles` },
       { label: 'Bearing error', at: (g) => trackErr(trackLevel(g.skills.get('tracking'))), say: (v) => `±${v.toFixed(0)}°` },
@@ -288,7 +288,7 @@ function buildEffects(): Record<string, SkillEffect[]> {
     praying: [{ label: 'Favour per prayer', at: (g) => prayerWorth(EXAMPLE_QL, PRAYER_PEAKS[0], g.skills.get('praying')), say: points, note: `Altar QL ${EXAMPLE_QL}, hour ${PRAYER_PEAKS[0]}` }],
     meditation: [{ label: 'Most Calm held', at: (g) => calmCap(g.skills.get('meditation')), say: (v) => `${Math.round(v)}` }],
     repair: [
-      { label: 'Damage mended per go', at: (g) => repairGo(g.skills.get('repair')).healed, say: points },
+      { label: 'Damage mended per action', at: (g) => repairGo(g.skills.get('repair')).healed, say: points },
       { label: 'QL lost per damage mended', at: (g) => repairGo(g.skills.get('repair')).cost, say: (v) => v.toFixed(3) },
     ],
     first_aid: [{ label: 'Health a dressing heals', at: (g) => healAmount(g.skills.get('first_aid'), EXAMPLE_QL), say: percent, note: `Dressing QL ${EXAMPLE_QL}` }],

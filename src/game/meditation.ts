@@ -418,7 +418,7 @@ export const PATH_PICKS: PathPickDef[] = [
   knowledge(5, 'discipline', 'night_eyes', 'Night Eyes', 0, 0, { dark: 0 },
     () => 'Darkness does not reduce sight range.'),
   knowledge(5, 'discipline', 'polymath', 'Polymath', 0, 0, { knack: 1.5 },
-    (fx) => `Knack chance per go ×${fx.knack}.`),
+    (fx) => `Knack chance per action ×${fx.knack}.`),
 
   /*
    * Love's are the living island: what follows you and what you keep, what

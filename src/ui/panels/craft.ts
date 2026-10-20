@@ -581,7 +581,7 @@ export class CraftPanel {
   /** Ask how many to put on the shopping list. */
   private async askList(r: Recipe): Promise<void> {
     const per = this.game.madeAGo(r);
-    const said = await this.game.hooks.prompt(`Count of ${lower(r.result)} for the shopping list (${per} per go):`, String(per));
+    const said = await this.game.hooks.prompt(`Count of ${lower(r.result)} for the shopping list (${per} per action):`, String(per));
     if (said === null) return;
     const n = Math.floor(Number(said.trim()));
     if (!Number.isFinite(n) || n <= 0) {

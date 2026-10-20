@@ -1782,7 +1782,7 @@ import{$l as e,$s as t,A as n,Ac as r,Ai as i,Bi as a,Bl as o,Bs as s,Co as ee,D
       ${h(_a/1)}; a steep step ${h((an+vt*Wt)/1)}
       to ${h((an+Wt)/1)}, steeper more. One knack per ${Math.round(Ui*1/aa).toLocaleString(`en`)} seconds of swimming;
       per ${Math.round(Ui*1/_a).toLocaleString(`en`)} tiles driven.</li>
-      <li>Pure chance per go: no milestones, no slowdown at high levels.</li>
+      <li>Pure chance per action: no milestones, no slowdown at high levels.</li>
       <li>Meal knack: ${P(1+wo)} instead of +${F($a)}, but expires after ${I(Hf)} to ${I(Uf)}. They stack, with rest too.</li>
     </ul>
     <h3>Dye</h3>
@@ -2010,7 +2010,7 @@ import{$l as e,$s as t,A as n,Ac as r,Ai as i,Bi as a,Bl as o,Bs as s,Co as ee,D
       <li>Starting ranks: ${u(ql.filter(e=>e.powers.includes(`set_bauble`)).map(e=>e.name))} set;
       ${u(ql.filter(e=>e.powers.includes(`replace_bauble`)).map(e=>e.name))} replace; ${u(ql.filter(e=>e.powers.includes(`served`)).map(e=>e.name))} served.</li>
       <li>Same kind, same skill: adds up, max ${h(Tn.time.cap/100)} less time, ${P(1+Tn.learn.cap/100)} skill gain, ${h(Tn.double.cap/100)} chance of
-      ${P(2)} yield (all or nothing per go). Settlement window shows the totals.</li>
+      ${P(2)} yield (all or nothing per action). Settlement window shows the totals.</li>
     </ul>
     <h3>Wildermon</h3>
     <table>

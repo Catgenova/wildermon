@@ -193,7 +193,7 @@ export class SkillsPanel {
     const bonus = Math.round(knackBonus(knacks) * 100);
     return [
       `Knacks ${knacks}/${KNACK_CAP}: skill gain +${bonus}%${short ? ` · ${short}` : ''}`,
-      `Knacks: ${knacks} of max ${KNACK_CAP}. Skill gain per go +${bonus}%.${long ? ` ${long}` : ''}`,
+      `Knacks: ${knacks} of max ${KNACK_CAP}. Skill gain per action +${bonus}%.${long ? ` ${long}` : ''}`,
     ];
   }
 

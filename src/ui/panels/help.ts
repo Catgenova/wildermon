@@ -2501,7 +2501,7 @@ export function helpText(): string {
       ${percent(DRIVING_LEARN / KNACK_GO)}${SAILING_LEARN === DRIVING_LEARN ? '' : ` and ${percent(SAILING_LEARN / KNACK_GO)}`}; a steep step ${percent((CLIMB_LEARN + CLIMB_LEARN_FROM * CLIMB_LEARN_STEEP) / KNACK_GO)}
       to ${percent((CLIMB_LEARN + CLIMB_LEARN_STEEP) / KNACK_GO)}, steeper more. One knack per ${Math.round(KNACK_ODDS * KNACK_GO / SWIM_LEARN).toLocaleString('en')} seconds of swimming;
       per ${Math.round(KNACK_ODDS * KNACK_GO / DRIVING_LEARN).toLocaleString('en')} tiles driven.</li>
-      <li>Pure chance per go: no milestones, no slowdown at high levels.</li>
+      <li>Pure chance per action: no milestones, no slowdown at high levels.</li>
       <li>Meal knack: ${mul(1 + BOON_BONUS)} instead of +${frac(KNACK_BONUS)}, but expires after ${dur(DISH_SHORTEST)} to ${dur(DISH_LONGEST)}. They stack, with rest too.</li>
     </ul>
     <h3>Dye</h3>
@@ -2733,7 +2733,7 @@ export function helpText(): string {
       <li>Starting ranks: ${listed(DEFAULT_RANKS.filter((r) => r.powers.includes('set_bauble')).map((r) => r.name))} set;
       ${listed(DEFAULT_RANKS.filter((r) => r.powers.includes('replace_bauble')).map((r) => r.name))} replace; ${listed(DEFAULT_RANKS.filter((r) => r.powers.includes('served')).map((r) => r.name))} served.</li>
       <li>Same kind, same skill: adds up, max ${percent(BAUBLE_KINDS.time.cap / 100)} less time, ${mul(1 + BAUBLE_KINDS.learn.cap / 100)} skill gain, ${percent(BAUBLE_KINDS.double.cap / 100)} chance of
-      ${mul(YIELD_TIMES)} yield (all or nothing per go). Settlement window shows the totals.</li>
+      ${mul(YIELD_TIMES)} yield (all or nothing per action). Settlement window shows the totals.</li>
     </ul>
     <h3>Wildermon</h3>
     <table>

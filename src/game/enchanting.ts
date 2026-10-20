@@ -117,7 +117,7 @@ export function enchantLine(e: EnchantmentDef): string {
     case 'bounty': return 'Sickle bush harvest or rod catch: one extra on {v} of goes.';
     case 'grace': return `Candle or struck torch burn time +{v}; light radius +${GRACE_TILES} tiles.`;
     case 'learn': return 'Worn: skill gain +{v}.';
-    case 'knack': return 'Worn: knack chance per go +{v}.';
+    case 'knack': return 'Worn: knack chance per action +{v}.';
     case 'wind': return 'Worn: stamina regeneration +{v}.';
     case 'upkeep': return 'Worn: hunger and thirst rate \u2212{v}.';
     case 'favour': return 'Worn: favour per prayer +{v}.';

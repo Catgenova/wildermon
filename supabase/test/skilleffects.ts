@@ -10,7 +10,7 @@
  *     own starting value to the top;
  *   * every value reads as a value, and no slider is the same at both ends;
  *   * reading a slider leaves the skill where it was;
- *   * a slider says what the rule says: carry weight, time per go, the
+ *   * a slider says what the rule says: carry weight, time per action, the
  *     success chance and a weapon's blow, read off the rules directly.
  */
 // The game first: `deed.ts` and `actions.ts` import each other through it, and the game is what loads them in order.
@@ -57,8 +57,8 @@ const carry = effectTracks(g, 'body_strength').find((t) => t.label === 'Carry we
 check('carry weight at either end is the rule\'s, with nothing worn and no perks',
   carry.low === `${CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH} kg` && carry.high === `${CARRY_BASE + SKILL_TOP * CARRY_PER_STRENGTH} kg`,
   `${carry.low} – ${carry.high}`);
-const time = effectTracks(g, 'mining').find((t) => t.label === 'Time per go')!;
-check('a trade\'s time per go is the rule\'s share of the time at level 0',
+const time = effectTracks(g, 'mining').find((t) => t.label === 'Time per action')!;
+check('a trade\'s time per action is the rule\'s share of the time at level 0',
   time.high === `×${(goSeconds(100, SKILL_TOP) / goSeconds(100, 0)).toFixed(2)}`, time.high);
 const chance = effectTracks(g, 'mining').find((t) => t.label === 'Success chance')!;
 check('and its success chance now is the rule\'s at the level it is at',

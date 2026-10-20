@@ -2913,7 +2913,7 @@ export const NEWS: News[] = [
         `Added: stage loads: ${STAGE_LOADS[1]} at the second stage, ${STAGE_LOADS[2]} at the third (first: ${STAGE_LOADS[0]}). `
           + 'Gatherers carry that many a trip, moving to the next tile while arms have room; errands carrying water, pieces, fuel, sprouts, candles, seed and buckets carry that many; '
           + `in-place trades handle that many a go: items mended, batches made, carcasses butchered, relics restored, pieces glazed, your wildermon brushed, milked, shorn or dressed within ${TEND_REACH} tiles. `
-          + `Second stage: ${lines.join('; ')}; third: ${STAGE_LOADS[2]} of each. Learning per go unchanged.`,
+          + `Second stage: ${lines.join('; ')}; third: ${STAGE_LOADS[2]} of each. Learning per action unchanged.`,
       ];
     },
   },
@@ -2983,7 +2983,7 @@ export const NEWS: News[] = [
     day: '2026-10-20',
     lines: () => [
       `Added: Skills window: click a skill for a slider per effect, its value now and at either end. Left end: the skill's starting value. Right end: ${SKILL_TOP}.`,
-      'Effects read off the rules with your gear and perks: carry weight, blow damage, hit and crit chance, swing and draw time, block, armour, time per go, success chance, best QL and each trade\'s own.',
+      'Effects read off the rules with your gear and perks: carry weight, blow damage, hit and crit chance, swing and draw time, block, armour, time per action, success chance, best QL and each trade\'s own.',
     ],
   },
 ];

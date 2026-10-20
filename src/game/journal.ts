@@ -269,7 +269,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'colours', text: 'Plant a dyed banner on your settlement', met: (g) => founded(g) && ours(g.furniture.values()).some((f) => f.kind === 'banner' && !!f.dye && onDeed(g, f)) },
       { id: 'title', text: 'Earn a title', hint: `Reach ${TITLE_STEPS[0]} in a skill that has titles`, met: (g) => g.player.titles.length > 0 },
       { id: 'master', text: 'Earn a master title', hint: `Reach ${MASTER_AT} in a skill that has titles`, met: (g) => g.player.titles.some((t) => TITLE_STEPS.some((at) => at >= MASTER_AT && t.endsWith(`:${at}`))) },
-      { id: 'knack', text: 'Gain a knack', hint: `Chance per go: ${+(100 / KNACK_ODDS).toFixed(2)}%, any trade`, met: did('knack') },
+      { id: 'knack', text: 'Gain a knack', hint: `Chance per action: ${+(100 / KNACK_ODDS).toFixed(2)}%, any trade`, met: did('knack') },
       { id: 'knack5', text: `Gain ${KNACK_CAP} knacks in one skill`, met: (g) => Object.values(g.player.knacks).some((n) => n >= KNACK_CAP) },
     ],
   },

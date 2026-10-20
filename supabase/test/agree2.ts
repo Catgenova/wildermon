@@ -277,7 +277,7 @@ for (const lv of REED_AT) {
 /* ---- the words ---------------------------------------------------------------------------------------------------- */
 
 check('the Stitchkit\'s words say a go\'s time off the rule, not a second and a half',
-  SPECIES.tinka.description.includes(`Time per go: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}`)
+  SPECIES.tinka.description.includes(`Time per action: ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}`)
   && !SPECIES.tinka.description.includes('a go every'), SPECIES.tinka.description);
 check('and the Reedpup\'s say its armful off the rule', SPECIES.sedra.description.includes(`Reeds per cut: 1, +1 per ${REED_LEVELS} levels`), SPECIES.sedra.description);
 
