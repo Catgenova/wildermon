@@ -11,6 +11,7 @@ import { IRON_VOICE } from './voice-iron';
 import { MEND_VOICE } from './voice-mend';
 import { SLUG_VOICE } from './voice-slug';
 import { PIG_VOICE } from './voice-pig';
+import { REED_VOICE } from './voice-reed';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
 import { SNUFF_VOICE } from './voice-snuff';
@@ -64,4 +65,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   tinka: MEND_VOICE,
   // The Thistlekit, the Bunnycourser and the Moonhare.
   orse: HARE_VOICE,
+  // The Reedpup, the Reedweaver and the Marshreaper.
+  sedra: REED_VOICE,
 };

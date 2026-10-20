@@ -741,6 +741,8 @@ export const NIP_EVERY = 25;
 
 /** What a digger's lump of sand or clay comes out at, as a share of its digging: anywhere between the two. */
 export const DIG_QL: readonly [number, number] = [0.6, 1.4];
+/** A reed cutter's armful: one reed a cut, and one more for every this many levels of its foraging (`finishReed`). */
+export const REED_LEVELS = 35;
 
 /** Writes a line's words onto its kind and its two stages, once every number they read is here. */
 function sayLine(id: string, job: string, level: string): void {
@@ -1293,8 +1295,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   sedra: {
     id: 'sedra',
-    name: 'Sedra',
-    description: 'A long-necked wader that stands in the shallows all day and cuts reeds with a bill like a pair of shears. Papyrus starts with this bird whether you keep one or not.',
+    name: 'Reedpup',
+    was: ['Sedra'],
+    // Asked for: "To replace sedra": Reedpup, Reedweaver, Marshreaper. Its words, and each stage's, are written once every
+    // number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Reedweaver', description: '' },
+      { name: 'Marshreaper', description: '' },
+    ],
     health: 22,
     attack: 3,
     speed: 2,
@@ -1306,14 +1315,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'reed',
     workRange: 10,
     variants: [
-      ['#9aa88c', '#e4e0cc'],
-      ['#7d8c9a', '#d6dce2'],
-      ['#b0a276', '#eee7cd'],
-      ['#6f7a6a', '#c8ccb8'],
+      ['#8a5a36', '#f0e2c6'],
+      ['#6e4a32', '#e8d8bc'],
+      ['#9c6a40', '#f4e8d0'],
+      ['#5e4334', '#dccbb0'],
     ],
-    butcher: { meat: 3, feather: 4, leather: 1, bone: 2 },
-    tameFail: 'lifts one foot, looks at the {food}, and goes back to the reeds',
-    leaves: 'runs three steps on the water and is away',
+    butcher: { meat: 3, fur: 2, leather: 1, bone: 2 },
+    tameFail: 'sniffs the {food}, and slips back into the reeds',
+    leaves: 'slides into the water and is away',
     nearWater: true,
   },
   holla: {
@@ -3745,6 +3754,8 @@ sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart 
   `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
 sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go every ${MEND_EVERY} seconds: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,
   'Its level is its repair.');
+sayLine('sedra', `Set to work on a settlement it cuts the reed beds within ${SPECIES.sedra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, from the bank beside them: 1 reed a cut and 1 more for every ${REED_LEVELS} levels, each at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its foraging and 1 more, never over 100, and carries them to the crate.`,
+  'Its level is its foraging.');
 sayLine('cobbe', `Set to work on a settlement it carries what a planned wall on any storey, floor, roof, staircase, ladder, column, the open span of a bridge or an aqueduct, or a foundation within ${SPECIES.cobbe.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it as a builder's go would: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, and of what that work wants whatever is furthest behind its bill.`,
   'Its level is its masonry.');
 sayLine('embra', `Set to work on a settlement it keeps your campfires, smelters and kilns within ${SPECIES.embra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, fed and lit: whenever one holds under ${HEARTH_FULL / 60} minutes of fuel, it carries a piece of fuel from your stores to the nearest such, one at a time, and lights it if it has gone out. It eats only what has been cooked.`,
@@ -6334,8 +6345,8 @@ export class Creatures {
     const skill = c.skills[GATHER_SKILL.reed] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.reed, 0.225);
     game.markForaged(c.workX, c.workY, 'reed');
-    const count = 1 + Math.floor(skill / 35);
-    return { uid: game.inventory.nextUid++, id: 'reed', ql: Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1)), dmg: 0, count };
+    const count = 1 + Math.floor(skill / REED_LEVELS);
+    return { uid: game.inventory.nextUid++, id: 'reed', ql: Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1)), dmg: 0, count };
   }
 
   /** Nose through a patch of soil for something worked and long buried. */

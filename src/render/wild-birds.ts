@@ -1,9 +1,9 @@
 import {
-  add, beat, birdBones, blush, clamp, coatPalette, cross, curve, cyc, darker, DEG, disc, dot, eyes, frac, lerp, lighter, LOOP, merge, mirrored, moved, onEgg, orb,
+  add, beat, birdBones, blush, clamp, coatPalette, cross, curve, darker, DEG, disc, dot, eyes, frac, lighter, LOOP, merge, mirrored, moved, onEgg, orb,
   orbAlong, paint, pastel, scale, taper, TAU, tube, unit, type Anim, type BirdSpec, type Bones, type Disc, type Kind, type Piece,
 } from './beasts';
 import { joint, onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
-import { birdLegPieces, blade, cut, under } from './beastkit';
+import { birdLegPieces, blade, cut } from './beastkit';
 
 /** The birds that stand tall or heavy: the sedra, the warda and the quill. */
 
@@ -36,125 +36,6 @@ export function patch(c: V3, r: V3, dir: V3, across: number, up: number, m: Mat,
   }
   return paint([{ v, m } as Disc]);
 }
-
-/* ---- the sedra --------------------------------------------------------------------- */
-
-/**
- * A sedra: a long-necked wader that stands in the shallows all day on one
- * leg. Its bill is a pair of shears -- two long steel blades on a brass
- * rivet -- and it cuts reeds with it; reed plumes sweep back from its head,
- * and its tail is three long leaves.
- */
-const SEDRA_SPEC: BirdSpec = {
-  high: 3.05,
-  leg: { at: [0.3, 0.05, -0.45], len: [0.3, 2.1, 0.08], rest: [18, -36] },
-  neck: { at: [0, 0.75, 0.35], len: 1.45, lean: 12 },
-  head: { pitch: -6 },
-  wing: { at: [0.62, 0.35, 0.28] },
-  tail: { at: [0, -1.05, 0.05], lift: -12 },
-  swing: [22, 34],
-  thrust: 14,
-  // Foraging, the body tipped well over and the long neck bowed right down in front of its feet, so that the open shears reach the
-  // water with the face still to be seen; its knees a little bent, and the legs swung forward by as much as the bend would slant them
-  // back, so they still stand straight up under it.
-  peck: 105,
-  tip: 46,
-  nose: 12,
-  crouch: 0.8,
-  stance: 1.52,
-};
-
-const SEDRA_HEAD = { c: [0, 0.12, 0.22] as V3, r: [0.6, 0.72, 0.56] as V3 };
-/** Where the two blades of the shears are riveted together, in the head's frame, just in front of the face: what the lower one turns on. */
-const SEDRA_RIVET: V3 = [0, 1.0, 0.07];
-
-function sedraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 11), k = cut(lod, 5, 7);
-  const ys = [-1.1, -0.85, -0.35, 0.25, 0.7, 0.95];
-  const body = tube(ys.map((y, q) => [0, y, [0.0, 0.04, 0.08, 0.14, 0.26, 0.36][q]] as V3), [0.2, 0.58, 0.72, 0.7, 0.52, 0.2], [0.2, 0.54, 0.66, 0.62, 0.46, 0.2], n,
-    (ring, j) => (ring > 0 && under(n, j, 1.2) ? 'mark' : 'coat'));
-  // The neck in an S, as a wader carries it, pale down the front.
-  const neck = tube([[0, 0, -0.2], [0, -0.12, 0.45], [0, 0.14, 1.0], [0, 0.04, 1.45]], [0.34, 0.26, 0.24, 0.26], [0.34, 0.26, 0.24, 0.26], n,
-    (ring, j) => (under(n, (j + n / 4) % n, 1.0) ? 'mark' : 'coat'), { seam: 'both' });
-  const H = SEDRA_HEAD;
-  const skull = orb(H.c, H.r, n + 1, k, 'coat');
-  const look = (shut: boolean): Mesh => eyes(H.c, H.r, [0.85, 0.42, 0.3], 0.24, { tall: 1.12, shut, rim: 0.16 });
-  // The shears: two pointed steel blades, flat side on, the upper on the head and the lower on the jaw, a little to either side of the
-  // middle so they pass one another as the blades of shears do, and riveted together in front of the face with a brass rivet either side.
-  const R = SEDRA_RIVET;
-  const upper = merge(
-    tube([[0.03, 0.6, 0.17], [0.03, 0.86, 0.16], [0.03, 1.25, 0.13], [0.03, 1.65, 0.1], [0.03, 2.02, 0.06]], [0.13, 0.12, 0.09, 0.055, 0.005], [0.05, 0.05, 0.042, 0.034, 0.01], n, 'bill', { up: [1, 0, 0] }),
-    paint([1, -1].map((s) => disc([s * 0.1, R[1], R[2]], [s, 0, 0], 0.18, 0.18, 8, 'crystal', { lit: true }))),
-  );
-  const lower = moved(tube([[-0.03, 0.6, -0.01], [-0.03, 0.86, -0.01], [-0.03, 1.25, -0.01], [-0.03, 1.6, 0.0], [-0.03, 1.93, 0.02]], [0.1, 0.095, 0.075, 0.045, 0.005], [0.045, 0.045, 0.04, 0.03, 0.01], n, 'billDark', { up: [1, 0, 0] }),
-    [-R[0], -R[1], -R[2]]);
-  // Reed plumes: three reeds swept back from the back of the head and fanned one behind another, each with a brown cattail at its tip.
-  const reeds = merge(...([[-0.1, 0.3, -0.8], [0.02, 0.5, -1.15], [0.12, 0.25, -1.5]] as V3[]).map(([x, up, back]) => {
-    const tip: V3 = [x * 2.2, back, 0.7 + up];
-    return merge(
-      tube(curve([x, -0.2, 0.5], [x * 1.3, back * 0.5, 0.95 + up], tip, 3), 0.05, 0.05, 4, 'stem'),
-      orbAlong(add(tip, [x * 0.2, -0.16, -0.04]), [x * 0.3, -1, -0.2], [0.1, 0.1, 0.26], 5, 3, 'bark'),
-    );
-  }));
-  // The tail: three long leaves fanned back and down, each folded down a dark rib.
-  const tail = merge(...[-0.35, 0, 0.35].map((sp) => blade(curve([0, 0, 0], [sp * 0.35, -0.55, -0.02], [sp * 0.8, -1.05, -0.18], 4), [0.05, 0.18, 0.2, 0.14, 0.02], [0, 0.2, 1], { twist: 0.2 * Math.sign(sp || 1), mat: 'leaf', rib: 'leafDark' })));
-  const hide = [{ c: H.c, r: H.r }];
-  return [
-    { key: 'body', mesh: body, bone: 'body', bias: 0, breathes: { c: [0, 0, 0.1], k: 0.05 } },
-    { key: 'tail', mesh: tail, bone: 'tail0', bias: -0.05 },
-    { key: 'neck', mesh: neck, bone: 'neck', bias: 0, under: 'head' },
-    { key: 'head', mesh: merge(skull, look(false)), shut: merge(skull, look(true)), bone: 'head', bias: 0.2 },
-    // What of either blade is up inside the head is hidden by it, so neither lies across the face.
-    { key: 'upper', mesh: upper, bone: 'head', bias: 0.21, after: 'head', hide },
-    { key: 'lower', mesh: lower, bone: 'jaw', bias: 0.205, after: 'head', hide, hideIn: 'head' },
-    { key: 'reeds', mesh: reeds, bone: 'head', bias: 0.19, hide },
-    { key: 'wing0', mesh: mirrored(foldedWing(1.7, 0.42, n)), bone: 'wing0', bias: 0.03, after: 'body', front: [-1, 0, 0] },
-    { key: 'wing1', mesh: foldedWing(1.7, 0.42, n), bone: 'wing1', bias: 0.03, after: 'body', front: [1, 0, 0] },
-    ...birdLegPieces('bl', -1, 2.1, 0.09, 5),
-    ...birdLegPieces('br', 1, 2.1, 0.09, 5),
-  ];
-}
-
-export const SEDRA: Kind = {
-  bones: (a) => {
-    let jaw = 0;
-    const b = birdBones(SEDRA_SPEC, a, (p) => {
-      const t = a.t, gz = a.graze;
-      // The shears never quite shut: the blades rest twelve degrees apart, their tips a couple of pixels apart at the island's zoom 2, so
-      // that they show as the two blades of a pair of shears rather than one bill.
-      const rest = 1.2;
-      p.jaw = Math.max(p.jaw, rest);
-      if (a.go <= 0) {
-        // Its looks about are smaller than most birds', so that its face stays turned to whoever is looking at it.
-        p.head[1] *= 0.6;
-        p.head[2] *= 0.6;
-        // On one leg for long stretches, the other drawn up under it, but not while it forages; a snip of the shears now and then, at
-        // nothing: opened wide and shut to, by turns.
-        const one = beat(t, [1.5, 13.5], 8.5) * (1 - gz);
-        p.legs[1] = [p.legs[1][0] + 18 * one, p.legs[1][1] + 1.3 * one, p.legs[1][2] + one];
-        p.roll -= 3 * one;
-        const snip = Math.sin(t * TAU * 3) * beat(t, [6.2, 19.4], 0.9);
-        p.jaw += snip > 0 ? (2.8 - rest) * snip : rest * snip;
-        // Foraging, it cuts at what is in front of it: the blades open to eighteen degrees and close to six on every other still, and
-        // that is its nibble, the long neck held steady rather than nodding the length of it.
-        if (gz > 0) p.jaw = lerp(p.jaw, 1.2 + 0.6 * cyc(t, 72), gz);
-      }
-      jaw = p.jaw;
-    });
-    // The lower blade turns on the rivet, as the blade of a pair of shears does, rather than at the back of the head.
-    b.jaw = joint(b.head, SEDRA_RIVET, -10 * jaw);
-    return b;
-  },
-  build: sedraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, {
-    bill: [206, 212, 222], billDark: [170, 178, 192], crystal: [246, 196, 70], stem: [168, 204, 116], bark: [166, 112, 80],
-    leaf: [170, 214, 120], leafDark: [120, 170, 92], claw: [236, 170, 150], feather: darker(pastel(coat), 0.08),
-  }, 150),
-  shadow: [1.4, 0.8],
-  stride: 1.0,
-  size: 2.1,
-  blinks: 5,
-};
 
 /* ---- the warda --------------------------------------------------------------------- */
 

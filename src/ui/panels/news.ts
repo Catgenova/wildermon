@@ -122,7 +122,7 @@ import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER
 import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
-import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
+import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { betterThanCommon, CHANNELS, husbandryOdds, pct as cardPct } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -2804,6 +2804,19 @@ export const NEWS: News[] = [
       return [
         `The ${d.was![0]} is the ${d.name} now, and still the mount. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1, false)} at the first, ${stageSays(2, false)} at the second, than ${article(d.name)} ${d.name}.`,
         'Each of the three is a new model, a long-eared hare that grows from a fluffy kit to a courser and a great Moonhare with a flowing mane and two plumes, with its own walk, bounding gallop, kick and voice. You sit each one where its back is: knees up on a Thistlekit, astride further back on the bigger two.',
+      ];
+    },
+  },
+  {
+    n: 218,
+    day: '2026-10-20',
+    lines: () => {
+      const d = SPECIES.sedra;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
+        `It cuts ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} reeds a cut at ${SKILL_TOP} foraging, 1 more for every ${REED_LEVELS} levels. Its carcass gives fur where the Sedra's gave feathers.`,
+        'Each of the three is a new model, a marsh otter with reeds down its back that grows into an upright Reedweaver with a bundle of pampas, then a great Marshreaper with a reed mantle, a plume fan and a sickle, with its own walk, strike, reed cutting and voice.',
       ];
     },
   },

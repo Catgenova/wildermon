@@ -52,7 +52,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -3118,7 +3118,8 @@ export function helpText(): string {
     for still in it. Neither is open to something in the traces or with you on its back.</p>
     <p><b>The working sorts.</b> More wildermon came out of the same country, and most of them
     are kept for a job. The <b>Bogga</b> wallows in the marshes and cuts <b>peat and tar</b> for the
-    deed. The <b>Sedra</b> is a long-necked wader that shears <b>reeds</b> at the water's edge, which is
+    deed. The <b>${SPECIES.sedra.name}</b> (the Sedra that was), which evolves into a ${SPECIES.sedra.stages![0].name} at level ${EVOLVE_AT[0]} and a
+    ${SPECIES.sedra.stages![1].name} at ${EVOLVE_AT[1]}, cuts <b>reeds</b> at the water's edge, ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} to a cut at ${SKILL_TOP} foraging, which is
     where papyrus starts. The <b>Holla</b> carries <b>water</b> in its throat from the shore or a well
     and pours it into your barrels. The <b>Dowse</b> will not live anywhere there is no metal under it,
     and on a deed it <b>reads the ground</b> and marks what is down there. The <b>Sappa</b> buries more
