@@ -3155,7 +3155,7 @@ export function helpText(): string {
     are kept for a job. The <b>Bogga</b> wallows in the marshes and cuts <b>peat and tar</b> for the
     deed. The <b>${SPECIES.sedra.name}</b> (the Sedra that was), which evolves into a ${SPECIES.sedra.stages![0].name} at level ${EVOLVE_AT[0]} and a
     ${SPECIES.sedra.stages![1].name} at ${EVOLVE_AT[1]}, cuts <b>reeds</b> at the water's edge, ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} to a cut at ${SKILL_TOP} foraging, which is
-    where papyrus starts. The <b>Holla</b> carries <b>water</b> in its throat from the shore or a well
+    where papyrus starts. The <b>${SPECIES.holla.name}</b> (the Holla that was), which evolves into ${article(SPECIES.holla.stages![0].name)} ${SPECIES.holla.stages![0].name} at level ${EVOLVE_AT[0]} and ${article(SPECIES.holla.stages![1].name)} ${SPECIES.holla.stages![1].name} at ${EVOLVE_AT[1]}, carries <b>water</b> in bladders on its back from the shore or a well
     and pours it into your barrels. The <b>Dowse</b> will not live anywhere there is no metal under it,
     and on a deed it <b>reads the ground</b> and marks what is down there. The <b>Sappa</b> buries more
     seed than it eats, and on a deed it <b>plants sprouts</b> where the axe has been. The <b>${SPECIES.cobbe.name}</b>

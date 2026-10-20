@@ -2916,6 +2916,19 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 225,
+    day: '2026-10-20',
+    lines: () => {
+      const d = SPECIES.holla;
+      const [one, two] = d.stages!;
+      return [
+        `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
+        `It still carries water from the shore or a well to your barrels, ${BUCKET_LITRES} litres a bucket, and as it evolves it carries ${STAGE_LOADS[1]} and then ${STAGE_LOADS[2]} buckets a trip. Its carcass gives no fur.`,
+        'Each of the three is a new model, a frog with water bladders on its back in rope rings that grows into a Springcarrier with a bladder on each flank and a great Aquavoyager with a wooden yoke pipe, spouts and a leaf canopy, with its own hop, strike, pour and voice.',
+      ];
+    },
+  },
 ];
 
 

@@ -818,7 +818,7 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // To one of yours, or to a piece of yours, with something out of the stores for some.
   groom: 0.85, dairy: 0.85, heal: 1.71, lamp: 2.11, smelt: 1.29, kiln: 1.29, patch: 1.01,
   // Carrying between the stores, the water and the work.
-  fill: 3.29, water: 2.31, hod: 0.96, stoke: 1.1, plant: 1, prospect: 0.99,
+  fill: 3.29, water: 2.15, hod: 0.96, stoke: 1.1, plant: 1, prospect: 0.99,
   // What wild things come onto the deed.
   guard: 1, hunt: 1,
   // A kind with no trade.
@@ -1593,8 +1593,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   holla: {
     id: 'holla',
-    name: 'Holla',
-    description: 'A barrel of a creature with a throat pouch that holds more water than you would credit. It carries the shore to your barrels so that you do not have to.',
+    name: 'Puddlehop',
+    was: ['Holla'],
+    // Asked for: "To replace holla": Puddlehop, Springcarrier, Aquavoyager. Its words, and each stage's, are written once
+    // every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Springcarrier', description: '' },
+      { name: 'Aquavoyager', description: '' },
+    ],
     health: 34,
     attack: 3,
     speed: 1.6,
@@ -1606,14 +1613,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'water',
     workRange: 10,
     variants: [
-      ['#6f8496', '#cfd8dd'],
-      ['#57707f', '#b6c3cb'],
-      ['#8a8f7a', '#dcdcc8'],
-      ['#4a5a66', '#9fadb6'],
+      ['#7aa04a', '#3f86b0'],
+      ['#6c9446', '#4a8fb8'],
+      ['#86a85a', '#3a7aa0'],
+      ['#5e8a44', '#5197bf'],
     ],
-    butcher: { meat: 6, fur: 2, leather: 4, bone: 4, gland: 1 },
-    tameFail: 'drinks noisily, takes the {food} as an afterthought, and lumbers off',
-    leaves: 'wades out until only the pouch shows, and then not even that',
+    butcher: { meat: 6, leather: 4, bone: 4, gland: 1 },
+    tameFail: 'gulps the {food} down, blinks, and hops off',
+    leaves: 'hops into the water and is gone',
     nearWater: true,
   },
   dowse: {
@@ -4020,6 +4027,8 @@ sayLine('roxxen', `It does no job on a deed: it is for hitching to a large cart 
   `Its level is its driving, which it learns ${LEARNS_SAYS.pull}.`);
 sayLine('tinka', `Set to work on a settlement it mends the damaged gear in your stores on the deed where it lies, the most damaged first, a go every ${MEND_EVERY} seconds: each go takes ${MEND_DMG} damage off and 1 more for every ${MEND_DMG_LEVELS} levels, and costs ${MEND_QL} of its quality, 0.1 less for every ${MEND_QL_LEVELS / 10} levels and never under ${MEND_QL_LEAST}.`,
   'Its level is its repair.');
+sayLine('holla', `Set to work on a settlement it fills a bladder at the shore or a well within ${SPECIES.holla.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, ${BUCKET_LITRES} litres a bucket, and pours it into whichever barrel on the settlement has room for water.`,
+  'Its level is its carrying.');
 sayLine('sedra', `Set to work on a settlement it cuts the reed beds within ${SPECIES.sedra.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, from the bank beside them: 1 reed a cut and 1 more for every ${REED_LEVELS} levels, each at a quality of ${percent(DIG_QL[0])} to ${percent(DIG_QL[1])} of its foraging and 1 more, never over 100, and carries them to the crate.`,
   'Its level is its foraging.');
 sayLine('cobbe', `Set to work on a settlement it carries what a planned wall on any storey, floor, roof, staircase, ladder, column, the open span of a bridge or an aqueduct, or a foundation within ${SPECIES.cobbe.workRange} tiles of the token, ${RANGE_PER_STEP} further for every ${SKILL_STEP} levels, still wants out of your stores on the deed, crates and furniture alike, one piece a trip, and fits it as a builder's go would: the piece it is carrying wherever that is wanted, otherwise the nearest work wanting something your stores hold, and of what that work wants whatever is furthest behind its bill.`,

@@ -1,6 +1,6 @@
 import {
-  add, beat, coatPalette, cross, curve, cyc, darker, DEG, disc, dot, lighter, merge, mix, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, step, sub, taper, TAU, tube, unit,
-  type Anim, type Kind, type MatOf, type Piece, type QuadSpec,
+  add, beat, coatPalette, cross, curve, cyc, darker, disc, lighter, merge, mix, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, step, taper, TAU, tube, unit,
+  type Kind, type MatOf, type Piece, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, pawMesh, quadPieces, under } from './beastkit';
 import { mesh, onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
@@ -8,7 +8,7 @@ import { pawed, trot } from './wild-paws';
 
 /**
  * The kinds of the brooks, the bogs and the hedges: the embra, the bogga,
- * the bevere, the wadd, the holla, the plucka and the middun.
+ * the bevere, the wadd, the plucka and the middun.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -307,105 +307,6 @@ export const WADD: Kind = {
       return [1, -1].map((s) => ({ p: place(b.trunk, [s * 1.1, y, 0.18]), n: [m[0] * s + m[2] * 0.25, m[3] * s + m[5] * 0.25, m[6] * s + m[8] * 0.25] as V3, r: 0.75 + 0.35 * k, c: [150, 240, 230] as RGB, a: 0.32 + 0.45 * k }));
     }));
   },
-};
-
-/* ---- the holla ----------------------------------------------------------------------- */
-
-/**
- * A holla: a barrel of a creature with a throat pouch that holds more water
- * than you would credit -- clear, so you can see it slop -- and little fins
- * for ears; it carries the shore to your barrels.
- */
-const HOLLA_BASE = pawed({ high: 1.6, len: 2.4, legs: 1.0, neck: 0.35, lean: 55, swing: [22, 36], ears: [30, 30], tail: [0.3, 10, 0] });
-/** Grazing, it puts its head down to drink: its bill to the ground, its pouch pressed on the ground under it (`HOLLA_PRESS`). */
-const HOLLA_SPEC: QuadSpec = { ...HOLLA_BASE, graze: 44, nose: 8, bow: 16 };
-const HOLLA_HEAD = { c: [0, 0.35, 0.15] as V3, r: [1.0, 0.95, 0.85] as V3 };
-/** The pouch under its chin: where its middle is and how big it is, and how high in it the water comes. */
-const HOLLA_POUCH = { c: [0, 0.74, -0.94] as V3, r: [0.8, 0.72, 0.64] as V3, level: 0.06 };
-/**
- * How much flatter the pouch is pressed as it rests on the ground while the holla drinks, and how much wider it spreads: pressed
- * straight down, which in the head's own frame is tipped back by as far as the head is carried nose-down to drink (`tip`, degrees).
- */
-const HOLLA_PRESS = { down: 0.42, out: 0.16, tip: 18 };
-
-/** How far the water in the pouch is tipped against the head, in radians: the body rolls with its waddle, and the water stays level. */
-const hollaSlop = (a: Anim): number => {
-  const w = a.u - Math.floor(a.u);
-  return -(a.go * 10 * Math.sin(w * TAU) + (1 - a.go) * 5 * cyc(a.t, 4)) * 1.3 * (Math.PI / 180);
-};
-
-function hollaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = HOLLA_HEAD, P = HOLLA_POUCH;
-  const face = merge(
-    // The face drawn out in front of the eyes, so there is coat in front of them seen side on, and out of the lower front of it a
-    // flat bill, broad and well out in front.
-    orbAlong([0, 0.95, 0.12], [0, 1, 0], [0.62, 0.48, 0.55], n, k, 'coat'),
-    orbAlong([0, 1.42, -0.1], [0, 1, -0.1], [0.56, 0.2, 0.6], n, k, 'bill'),
-    paint([1, -1].map((s) => disc([s * 0.12, 1.76, 0.04], [0, 0.2, 1], 0.045, 0.03, 5, 'nose'))),
-  );
-  // The pouch: a clear skin with a glint on it, and the water in it, whose top stays level as the head rolls.
-  const skin = merge(
-    orb(P.c, P.r, n + 1, k, 'spot'),
-    paint([disc(add(P.c, [0.36, 0.4, 0.36]), [0.45, 0.6, 0.6], 0.15, 0.1, 6, 'glint', { lit: true })]),
-  );
-  // The water: the pouch's lower part, a bowl open at the top, so the clear skin shows over it and the water's edge is its level.
-  const bottom = P.c[2] - P.r[2] * 0.97, top = P.c[2] + P.level, rings = 5;
-  const zs = Array.from({ length: rings + 1 }, (_, q) => bottom + 0.02 + ((top - bottom - 0.02) * q) / rings);
-  const across = (z: number): number => 0.97 * Math.sqrt(Math.max(0.02, 1 - ((z - P.c[2]) / P.r[2]) ** 2));
-  const water = tube(zs.map((z) => [P.c[0], P.c[1], z] as V3), zs.map((z) => P.r[0] * across(z)), zs.map((z) => P.r[1] * across(z)), n + 1, 'water', { seam: 'end' });
-  // Grazing, the pouch resting on the ground as the head goes down to it: pressed flatter and spread wider, its top where it was.
-  const up: V3 = [0, -Math.sin(HOLLA_PRESS.tip * DEG), Math.cos(HOLLA_PRESS.tip * DEG)];
-  const crown = add(P.c, scale(up, P.r[2]));
-  const pressed = (v: readonly V3[], a: Anim): V3[] => {
-    const g = a.graze;
-    if (g <= 0) return [...v];
-    const down = 1 - HOLLA_PRESS.down * g, out = 1 + HOLLA_PRESS.out * g;
-    return v.map((p) => {
-      const d = sub(p, crown), along = dot(d, up);
-      return add(crown, add(scale(up, along * down), scale(sub(d, scale(up, along)), out)));
-    });
-  };
-  // Its level tipped against the head as the head rolls, the bowl's rim going up on one side and down on the other.
-  const slop = (v: readonly V3[], a: Anim): V3[] => {
-    const t = Math.tan(hollaSlop(a));
-    return v.map((p) => [p[0], p[1], p[2] + (p[0] - P.c[0]) * t * Math.max(0, (p[2] - bottom) / (top - bottom))] as V3);
-  };
-  // A fin for an ear, broad and carried up enough to read as an ear from in front and behind as well as side on.
-  const fin = blade(curve([0, 0.04, -0.05], [0, -0.08, 0.35], [0, -0.3, 0.68], 4), [0.18, 0.26, 0.26, 0.18, 0.04], [0, 1, 0], { fold: 0.4, mat: 'water', rib: 'water', thick: 0.05 });
-  // Flat feet, webbed, a softer orange than the bill.
-  const foot = orbAlong([0, 0.26 * 0.35, -0.14 + 0.26 * 0.32], [0, 1, 0], [0.28, 0.1, 0.36], n, k, 'pad');
-  return quadPieces({
-    n, k,
-    body: { y: [-1.55, -1.3, -0.6, 0, 0.6, 1.25, 1.5], z: [0.2, 0.25, 0.3, 0.3, 0.3, 0.3, 0.3], w: [0.3, 1.0, 1.2, 1.25, 1.2, 1.0, 0.3], h: [0.3, 0.85, 1.0, 1.05, 1.0, 0.86, 0.3] },
-    // The neck shallow from front to back, so that side on its back edge stays inside the head and the back rather than showing
-    // as a dark tick over the shoulder.
-    neck: { w: 0.8, h: 0.45, len: 0.35 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.8, 0.32, 0.42], size: 0.32, rim: 0.12 }, blush: [[0.86, 0.4, -0.25], 0.2] },
-    ear: fin,
-    earTurn: 45,
-    tail: [orb([0, -0.2, 0.04], 0.28, n, k, 'mark')],
-    fore: { upper: [0.3, -0.52, 0.3, 0.26], lower: [0, -0.46, 0.26, 0.24], foot },
-    hind: { upper: [0.3, -0.56, 0.34, 0.28], lower: [0, -0.56, 0.26, 0.24], foot },
-    extras: [
-      { key: 'pouch', mesh: skin, bone: 'head', bias: 0.18, bent: pressed },
-      { key: 'water', mesh: water, bone: 'head', bias: 0.181, after: 'pouch', bent: (v, a) => pressed(slop(v, a), a) },
-    ],
-  });
-}
-
-export const HOLLA: Kind = {
-  bones: quadBonesOf(HOLLA_SPEC, (p, a) => {
-    trot(p, a);
-    // The water slopping: a waddle that rolls it from side to side.
-    p.roll += a.go * 6 * Math.sin((a.u % 1) * TAU);
-    if (a.go <= 0) p.head[2] += 5 * cyc(a.t, 4);
-  }),
-  build: hollaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, { water: [110, 180, 225], bill: [246, 186, 124], pad: [226, 176, 136], spot: [228, 244, 250], nose: [150, 96, 90] }, 205),
-  shadow: [2.0, 1.6],
-  stride: 1.1,
-  size: 2.6,
 };
 
 /* ---- the plucka ---------------------------------------------------------------------- */

@@ -3,6 +3,7 @@ import { BRICK_VOICE } from './voice-brick';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
+import { FROG_VOICE } from './voice-frog';
 import { GNAW_VOICE } from './voice-gnaw';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
@@ -67,4 +68,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   orse: HARE_VOICE,
   // The Reedpup, the Reedweaver and the Marshreaper.
   sedra: REED_VOICE,
+  // The Puddlehop, the Springcarrier and the Aquavoyager.
+  holla: FROG_VOICE,
 };
