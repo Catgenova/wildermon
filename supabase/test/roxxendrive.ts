@@ -29,7 +29,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { Game } from '../../src/game/game';
-import { creatureLevel, Creatures, HAUL_SKILL, LEARNS_GAIN, PULL_LEARN, SPECIES, tracesSkill, type Creature } from '../../src/game/creatures';
+import { creatureLevel, Creatures, HAUL_SKILL, LEARNS_GAIN, learnPace, PULL_LEARN, SPECIES, tracesSkill, type Creature } from '../../src/game/creatures';
 import { FURNITURE } from '../../src/game/furniture';
 import { PLACEABLE_ACTION_BY_ID } from '../../src/game/placeables';
 import { skillGain } from '../../src/game/skills';
@@ -144,7 +144,8 @@ const before = new Map(team.concat(parked, loose).map((c) => [c.id, c.skills[DRI
 const climbed = orse1.skills[HAUL_SKILL];
 // What each go is worth at the least and the most, at each one's learning (its blood, its care).
 const bounds = (c: Creature): [number, number] => {
-  const base = PULL_LEARN * game.creatures.learnMul(c, game.time);
+  // At what a go of its trade is worth against every other trade's (`LEARN_PACE`).
+  const base = PULL_LEARN * game.creatures.learnMul(c, game.time) * learnPace(c, DRIVING);
   return [skillGain(2, base, 0.6), skillGain(1, base, 1.4)];
 };
 check('and they take us somewhere', game.moveTo(px + 12, py));
@@ -247,8 +248,8 @@ begin
   update creature set hitched_to = v_cart, hunger = 1, traits = '{}', skills = '{}' where world_id = w and id = v_parked;
   update creature set hunger = 1, traits = '{}', skills = '{}' where world_id = w and id = v_loose;
   insert into said values ('SPEED', vehicle_speed(w, v_wagon)::text);
-  insert into said select 'BOUNDS' || c.id, skill_gain_of(1, learns_gain_pull() * beast_mul(c, 'learn'), 0.6)
-    || '|' || skill_gain_of(1, learns_gain_pull() * beast_mul(c, 'learn'), 1.4) from creature c where c.world_id = w and c.id in (r1, r2);
+  insert into said select 'BOUNDS' || c.id, skill_gain_of(1, learns_gain_pull() * beast_mul(c, 'learn') * learn_pace(c, 'driving'), 0.6)
+    || '|' || skill_gain_of(1, learns_gain_pull() * beast_mul(c, 'learn') * learn_pace(c, 'driving'), 1.4) from creature c where c.world_id = w and c.id in (r1, r2);
 
   -- Four tiles east.
   perform rpc_move(w, 24.5, 21.5, 0);
