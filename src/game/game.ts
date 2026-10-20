@@ -78,6 +78,7 @@ import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { laySwirls, swirlLight, type Swirl } from './motes';
+import type { Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
 import { blessBonus, favourCap, FAITH, FAVOUR_TRICKLE } from './faith';
@@ -1023,6 +1024,13 @@ export class Game {
    * mark in every browser you open.
    */
   level: number | null = null;
+
+  /**
+   * The last track read (`tracking.ts`), for the arrow on the screen while it
+   * is fresh: set by a go of Track here, and on an island by what the island
+   * says the go read. Not saved.
+   */
+  trail: Trail | null = null;
 
   private swingMissed = false;
   /** Whether the go in hand had its roll taken by a Foreknow, which spends one of its goes when the go is done. */

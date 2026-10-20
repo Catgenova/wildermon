@@ -2643,6 +2643,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/ancientlamp.mjs --log-level=error
           node node_modules/.cache/ancientlamp.mjs
 
+      - name: Tracking reads the way to the nearest wild one
+        run: |
+          # Asked for: a tracking skill, and a Track button in the field guide
+          # that points to the nearest wild one of a kind you have seen, more
+          # finely the higher your Tracking. Refused for a kind not seen and a
+          # monster; the nearest wild one found past kept ones and other kinds,
+          # none past the reach; the reach, spread, bands, reading and line the
+          # same on both sides; each band exact with the roll forced; a go
+          # trains Tracking; through rpc_act and the clock, arrow and all.
+          npx esbuild supabase/test/tracking.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/tracking.mjs --log-level=error
+          node node_modules/.cache/tracking.mjs
+
       - name: Rare ingredients make rare work more likely
         run: |
           # Asked for: a rare+ ingredient raises the chance a craft comes out

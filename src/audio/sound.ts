@@ -141,6 +141,8 @@ export const HUSHED: ReadonlySet<string> = new Set([
   // Winning an animal over, which is done by standing very quietly; and a
   // skep's honey, which is taken the same way (`bees.ts`).
   'tame', 'take_catch', 'pair_creature', 'take_honey',
+  // Reading a trail, which is done by standing still and looking (`tracking.ts`).
+  'track',
   // Ceremony. A stake going in has already made the noise of a stake going in.
   'found_settlement', 'upgrade_deed',
   // A lantern post's wick pinched out between finger and thumb (`lamps.ts`).

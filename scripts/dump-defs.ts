@@ -155,6 +155,9 @@ import {
   ELEMENTALISM, ISLAND_ELEMENT, LAND_ELEMENTS, MOTE_ELEMENTS, MOTES_LEAST, MOTES_MOST, MOTES_STEP, SWIRL_DARK, SWIRL_LIGHT, SWIRL_DRAWS, SWIRL_SAID, SWIRL_TRIES, SWIRLS_A_DAY,
 } from '../src/game/motes';
 import {
+  TRACK, TRACK_BANDS, TRACK_ERR_LEAST, TRACK_ERR_MOST, TRACK_FAR, TRACK_POINTS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACKING,
+} from '../src/game/tracking';
+import {
   LANDING, LANDING_STAND, RUNESTONES, STONE_CHART, STONE_GUARDED, STONE_HALF, STONE_LEAST, TELE_FAR, TELE_FAST, TELE_GRACE, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW,
   TELESTONE, TELESTONE_SAID, TRAVEL,
 } from '../src/game/runestones';
@@ -2023,6 +2026,25 @@ out.push(`create or replace function mote_elements() returns text[] language sql
 out.push(`create or replace function land_elements() returns text[] language sql immutable as $fn$ select array[${LAND_ELEMENTS.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function region_element(p_region int) returns text language sql immutable as $fn$ select case p_region ${REGIONS.map((R, i) => (ISLAND_ELEMENT[R.key] ? `when ${i} then ${q(ISLAND_ELEMENT[R.key])} ` : '')).join('')}end $fn$;`);
 out.push(`create or replace function swirl_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${Object.entries(SWIRL_SAID).map(([k, v]) => `when ${q(k)} then ${q(v)} `).join('')}end $fn$;`);
+/*
+ * Tracking (`tracking.ts`): the job and its skill, how far a track reaches and
+ * how far off its reading can be at a level, which band a level reads in and
+ * what each band says, what is far off, and the sixteen points by their place
+ * clockwise from north. `track_reading`, `track_said` and `perform_track` in the
+ * migration read these.
+ */
+out.push(`create or replace function track_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = ${q(TRACK)} $fn$;`);
+out.push(`create or replace function tracking_skill() returns text language sql immutable as $fn$ select ${q(TRACKING)} $fn$;`);
+out.push(`create or replace function track_range(p_level int) returns int language sql immutable as $fn$ select ${TRACK_RANGE_BASE} + ${TRACK_RANGE_PER} * p_level $fn$;`);
+out.push(`create or replace function track_err(p_level int) returns double precision language sql immutable as $fn$ select greatest(${q(TRACK_ERR_LEAST)}::double precision, ${q(TRACK_ERR_MOST)} * (1 - p_level::double precision / ${q(SKILL_TOP)})) $fn$;`);
+out.push(`create or replace function track_band(p_level int) returns int language sql immutable as $fn$ select case ${
+  TRACK_BANDS.map((b, i) => [b, i] as const).reverse().map(([b, i]) => `when p_level >= ${b.at} then ${i} `).join('')}else 0 end $fn$;`);
+out.push(`create or replace function track_points(p_band int) returns int language sql immutable as $fn$ select case p_band ${TRACK_BANDS.map((b, i) => `when ${i} then ${b.points} `).join('')}end $fn$;`);
+out.push(`create or replace function track_round(p_band int) returns int language sql immutable as $fn$ select case p_band ${TRACK_BANDS.map((b, i) => `when ${i} then ${b.round ?? 'null'} `).join('')}end $fn$;`);
+out.push(`create or replace function track_stage(p_band int) returns boolean language sql immutable as $fn$ select case p_band ${TRACK_BANDS.map((b, i) => `when ${i} then ${b.stage} `).join('')}end $fn$;`);
+out.push(`create or replace function track_detail(p_band int) returns boolean language sql immutable as $fn$ select case p_band ${TRACK_BANDS.map((b, i) => `when ${i} then ${b.detail} `).join('')}end $fn$;`);
+out.push(`create or replace function track_far() returns int language sql immutable as $fn$ select ${TRACK_FAR} $fn$;`);
+out.push(`create or replace function track_point(p_points int, p_i int) returns text language sql immutable as $fn$ select (array[${TRACK_POINTS.map(q).join(', ')}]::text[])[p_i * ${TRACK_POINTS.length} / p_points + 1] $fn$;`);
 /*
  * The Runestones and the Telestone (`runestones.ts`): where each stone stands
  * on the chart's own island, how far a stone reaches from its centre, the

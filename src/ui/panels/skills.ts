@@ -3,6 +3,8 @@ import { SKILL_DEFS } from '../../game/skills';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
+import { TRACKING, trackingSays } from '../../game/tracking';
+import { CULL_RANGE } from '../../game/creatures';
 
 export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
@@ -150,6 +152,9 @@ export class SkillsPanel {
         const pace = Math.round(g.player.swimSpeed * 100);
         return [`${pace}% swim speed`, `In deep water you move at ${pace}% of your walking pace.`];
       }
+      // What a go of Track reaches and reads at this level, and what each band of it says (`tracking.ts`).
+      case TRACKING:
+        return trackingSays(v, g.ask ? undefined : CULL_RANGE);
       default:
         return null;
     }

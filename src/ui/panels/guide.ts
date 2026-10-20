@@ -2,6 +2,9 @@ import type { Game } from '../../game/game';
 import { SPECIES, type SpeciesDef } from '../../game/creatures';
 import { countsLine, GUIDE_MARKS, guidePage, guidePages, keepable, MARK_NAMES, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
+import { ACTION_BY_ID } from '../../game/actions';
+import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackRange, trackTarget, TRACKING } from '../../game/tracking';
+import { CULL_RANGE } from '../../game/creatures';
 import { drawCreaturePortrait } from '../../render/sprites';
 
 /** How big a kind is drawn on the index and on its own page, in CSS pixels. */
@@ -92,7 +95,8 @@ export class GuidePanel {
 
   private draw(): void {
     const g = this.game.guide;
-    const key = `${this.page}|${this.failed}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
+    // And the Tracking the Track button's hover is read at.
+    const key = `${this.page}|${this.failed}|${trackLevel(this.game.skills.get(TRACKING))}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
     if (key === this.drawn) return;
     this.drawn = key;
     this.counts.textContent = countsLine(g);
@@ -194,6 +198,20 @@ export class GuidePanel {
         marks.append(chip);
       }
       side.append(marks);
+    }
+    // Track: a wildermon whose page is marked seen, read back to the nearest wild one (`tracking.ts`).
+    const track = ACTION_BY_ID.get(TRACK);
+    if (track && trackable(def, this.game.guide.seen)) {
+      const L = trackLevel(this.game.skills.get(TRACKING));
+      const go = document.createElement('button');
+      go.type = 'button';
+      go.className = 'tb-btn tb-small guide-track';
+      go.textContent = 'Track';
+      // Alone, no further than the wild that is out (`trackAction.ts`).
+      const reach = this.island ? trackRange(L) : Math.min(trackRange(L), CULL_RANGE);
+      go.title = `Find the nearest wild ${def.name} within ${reach} tiles of you, the way to it read to within ${degreesSays(trackErr(L))}°, at your Tracking of ${L}`;
+      go.addEventListener('click', () => this.game.requestAction(track, trackTarget(this.game, def.id)));
+      side.append(go);
     }
     head.append(side);
     this.view.append(head);

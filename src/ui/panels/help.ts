@@ -52,7 +52,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, CULL_RANGE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -101,6 +101,7 @@ import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
 import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guidePages, keepable } from '../../game/guide';
+import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { MOBS_RANGE } from '../../game/keep';
 import { KILN_CAPACITY } from '../../game/kiln';
 import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
@@ -2401,6 +2402,14 @@ export function helpText(): string {
     it is yours, what it is like to meet and what a carcass gives &mdash; all of it read off the rules. <b>Field guide</b>
     on any creature's menu opens its page. Alone, the book is kept in your save; on an island the island keeps it, and
     takes a kind you have seen only while one is standing within ${numberWord(MOBS_RANGE)} tiles of you.</p>
+    <p><b>Track</b>, on the page of a wildermon you have seen (not a monster's, and not a kind still in shadow), reads the
+    trail of the nearest wild one of that kind, at any stage, back to you: a job of <b>Tracking</b>, put down if you walk. A
+    kept one is never tracked. It reaches ${TRACK_RANGE_BASE} tiles and ${TRACK_RANGE_PER} more for each level of Tracking
+    (${trackRange(SKILL_TOP)} at ${SKILL_TOP}), and the way it reads is off the true one by ${trackErrSays()}, by an even roll. Then
+    it says only as much as your Tracking reads: ${trackBandsSays().join('; ')}. North is up the map. An arrow on the
+    screen points the way it read, from where you stood, for ${TRACK_SHOW} seconds. A go that finds one trains Tracking by a
+    go; one that finds no sign, by ${percent(TRY_LEARN)} of one. Alone, a track reaches no further than ${CULL_RANGE} tiles,
+    past which the wild is kept as a count and not as creatures.</p>
     <h3>What the island will not tell you</h3>
     <p>A handful of rules here are real, load-bearing, and findable only by being refused or by
     making a great many of something and noticing. They are worth knowing up front.</p>

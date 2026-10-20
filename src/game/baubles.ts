@@ -171,6 +171,8 @@ export const MINOR_SKILLS: string[] = [
   'alchemy', 'prayer', 'meditation', 'repair', 'first_aid', 'chirurgy', 'papyrusmaking', 'archaeology', 'restoration',
   'leatherworking', 'chainsmithing', 'platesmithing', 'jewellery', 'bowyery', 'fletching', 'glassblowing', 'praying',
   'elementalism', 'enchanting',
+  // Track, from the field guide (`tracking.ts`).
+  'tracking',
 ];
 
 /**

@@ -21,6 +21,7 @@ import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, SPRINGS_EVERY, SWIRLS_EVERY, GATE_
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
+import { trackedArrow } from '../game/tracking';
 import type { Away } from '../game/away';
 import type { Kept, KeptBody } from '../game/keeper';
 import type { Barter } from '../game/barter';
@@ -981,6 +982,8 @@ export interface IslandHooks {
    * studied is put back straight onto the world when the fog is restored.
    */
   charted?: (x: number, y: number, r: number) => void;
+  /** A trail read by a go of Track (`tracking.ts`), said live as a `tracked` line: what the arrow is labelled, and the way it points. */
+  tracked?: (name: string, bearing: number, dist: string) => void;
   /** A spell made your walk on foot this many times as quick for so many seconds. */
   paced?: (mul: number, secs: number) => void;
   /**
@@ -2466,6 +2469,12 @@ export class Island {
     if (e.kind === 'charted') {
       const c = chartedSquare(e.text);
       if (c) this.hooks.charted?.(c.x, c.y, c.r);
+      return;
+    }
+    // A trail read (`tracking.ts`): an arrow for the screen, not a line for the log, which comes on its own.
+    if (e.kind === 'tracked') {
+      const t = trackedArrow(e.text);
+      if (t) this.hooks.tracked?.(t.name, t.bearing, t.dist);
       return;
     }
     this.hooks.say(e.text, e.kind, whenSaid(e.at));

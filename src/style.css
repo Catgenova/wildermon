@@ -3707,6 +3707,8 @@ button.goal-row:focus-visible {
 .hud-wind { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; color: var(--t-info, #a8bcc4); }
 .wind-arrow { display: inline-block; font-size: 13px; line-height: 1; color: var(--t-info, #8fc8f0); }
 .wind-irons { color: var(--t-bad, #e08a72); font-weight: 600; }
+/* The way the last track read (`tracking.ts`): bigger than the wind's, and in the accent, since it is the thing to follow. */
+.trail-arrow { font-size: 17px; font-weight: 700; color: var(--ui-accent); }
 
 /* What is kept back, what is nearly worn out, and a pack that is too heavy. */
 .inv-kept { font-style: italic; }

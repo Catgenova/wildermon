@@ -18,6 +18,7 @@ import { consider } from '../game/consider';
 import { percent } from '../game/words';
 import { feedFill } from '../game/creatureActions';
 import { EffectRow } from './effects';
+import { TRACK_SHOW } from '../game/tracking';
 import type { Tooltip } from './tooltip';
 
 export interface HudCallbacks {
@@ -177,6 +178,10 @@ export class Hud {
   /** What is on you, for you and against you: rest, meals, spells, wounds, a load (`effects.ts`). */
   readonly effects: EffectRow;
   private windEl: HTMLDivElement;
+  /** The arrow the last track left, while it is fresh (`tracking.ts`). */
+  private trailEl: HTMLDivElement;
+  private trailArrow: HTMLSpanElement;
+  private trailText: HTMLSpanElement;
   private storeyEl: HTMLDivElement;
   private storeyLabel: HTMLButtonElement;
   private storeyUp: HTMLButtonElement;
@@ -295,6 +300,16 @@ export class Hud {
     this.windEl.className = 'hud-companion hud-wind';
     this.windEl.hidden = true;
     status.append(this.windEl);
+    // The way the last track read, for `TRACK_SHOW` seconds after it (`tracking.ts`).
+    this.trailEl = document.createElement('div');
+    this.trailEl.className = 'hud-companion hud-wind hud-trail';
+    this.trailEl.hidden = true;
+    this.trailArrow = document.createElement('span');
+    this.trailArrow.className = 'wind-arrow trail-arrow';
+    this.trailArrow.textContent = '\u2191';
+    this.trailText = document.createElement('span');
+    this.trailEl.append(this.trailArrow, this.trailText);
+    status.append(this.trailEl);
     this.gearEl = document.createElement('div');
     this.gearEl.className = 'hud-companion hud-gear';
     this.gearEl.hidden = true;
@@ -794,6 +809,19 @@ export class Hud {
       this.windEl.append(arrow, text);
       this.windEl.title = point === 'in irons' ? 'You are pointed into the wind and she will not go. Bear away and tack up.' : 'Across the wind is fastest; straight into it, she stops.';
     }
+    /*
+     * The last track's arrow: the way it read, from where you stood when it
+     * was read, turned with the view as the compass is and not with you or
+     * with what was tracked. Gone `TRACK_SHOW` seconds after the go.
+     */
+    const trail = this.game.trail;
+    const left = trail ? TRACK_SHOW - (this.game.time - trail.at) : 0;
+    this.trailEl.hidden = !trail || left <= 0;
+    if (trail && left > 0) {
+      this.trailArrow.style.transform = `rotate(${(trail.bearing + renderer.camera.northAngle()).toFixed(1)}deg)`;
+      this.say(this.trailText, `${trail.name} · ${trail.dist}`);
+      this.trailEl.title = `Where the last track read it, from (${Math.floor(trail.x)}, ${Math.floor(trail.y)}): ${trail.bearing}\u00b0 from north. Gone in ${Math.ceil(left)} s.`;
+    }
     const mobs = this.game.creatures.ticked;
     const watched = this.game.settings.fog ? ` · ${mobs.thought}/${mobs.near + mobs.far + mobs.asleep} mobs` : '';
     // And, asked for, a frame's length beside the time it spent drawing: much longer than its drawing is a frame waiting on the graphics chip.
@@ -909,7 +937,7 @@ export class Hud {
       this.actionFill.style.width = '0%';
     } else {
       const pct = Math.min(100, (a.elapsed / a.duration) * 100);
-      this.actionLabel.textContent = `${a.def.label} · ${Math.max(0, a.duration - a.elapsed).toFixed(1)}s${count}`;
+      this.actionLabel.textContent = `${a.def.doing?.(a.target, this.game) ?? a.def.label} · ${Math.max(0, a.duration - a.elapsed).toFixed(1)}s${count}`;
       this.actionFill.style.width = `${pct}%`;
     }
     // What is lined up behind it, and how much room is left in your head.

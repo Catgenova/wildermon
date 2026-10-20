@@ -62,6 +62,7 @@ import { BEE_ACTIONS } from './bees';
 import { SACRIFICE_ACTIONS } from './sacrifice';
 import { ENCHANT_ACTIONS, enchantSays, knowJobs } from './enchanting';
 import { MEDITATION_ACTIONS } from './meditation';
+import { TRACK_ACTIONS } from './trackAction';
 import { SPECIES, type Stance } from './creatures';
 import { BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, FORAGE_TABLE, listOf, rollsAt, rollTable } from './forage';
 import { atWaterEdge, WATER_GARDEN_ACTIONS } from './watergarden';
@@ -123,6 +124,8 @@ export type Target =
        * (`cellar.ts`).
        */
       down?: boolean;
+      /** The kind a go of Track is after, from its page in the field guide; the tile is the one you stand on (`tracking.ts`). */
+      species?: string;
     }
   | { kind: 'crate'; id: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   /** Somebody else on the island, by who they are (anybody dressing their wounds). */
@@ -220,6 +223,8 @@ export interface ActionDef {
   label: string;
   /** A label that reads off the target: "Collect clay" rather than "Collect". */
   labelFor?(t: Target, g: Game): string;
+  /** What the action bar says while it is in hand, where that reads off the target: "Tracking a Reedpup" (`tracking.ts`). */
+  doing?(t: Target, g: Game): string;
   /** Present participle used in messages: "You start digging." */
   verb: string;
   skill?: string;
@@ -3179,6 +3184,8 @@ export const ACTIONS: ActionDef[] = [
   ...SACRIFICE_ACTIONS,
   ...ENCHANT_ACTIONS,
   ...MEDITATION_ACTIONS,
+  // Reading a trail back to the nearest wild one of a kind, from the field guide (`tracking.ts`).
+  ...TRACK_ACTIONS,
   ...ARCHAEOLOGY_ACTIONS,
   ...TREASURE_ACTIONS,
   // Drawing, studying and copying a map (`cartography.ts`).

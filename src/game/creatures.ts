@@ -4527,7 +4527,8 @@ const MAX_STEP_TIME = 0.34;
  * anyone can see, so nothing is ever seen to come or go.
  */
 const LIVE_RANGE = 60;
-const CULL_RANGE = 85;
+/** Exported for a track alone, which can find only what is out (`trackAction.ts`). */
+export const CULL_RANGE = 85;
 /** Tiles to a stretch of country, for the purposes of banking. */
 const REGION = 32;
 /** How often creatures are put away and let out, in seconds. */

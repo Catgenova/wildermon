@@ -375,6 +375,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   island.hooks.charted = (x, y, r) => {
     learnChart(game, { x, y, r });
   };
+  // And a trail read by a go of Track, which puts its arrow on the screen from where you stand (`tracking.ts`).
+  island.hooks.tracked = (name, bearing, dist) => {
+    game.trail = { name, bearing, dist, x: game.player.x, y: game.player.y, at: game.time };
+  };
   /*
    * And the crates our own ask touched, which come back with the answer to it.
    *

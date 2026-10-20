@@ -160,7 +160,8 @@ export const CRAFT_CLASSES = ([
   },
   {
     id: 'naturalist', kind: 'craft', name: 'Naturalist', main: 'foraging',
-    skills: ['foraging', 'botanizing', 'alchemy', 'first_aid'],
+    // And reading a trail back to a wild one (`tracking.ts`), the other half of knowing what lives where.
+    skills: ['foraging', 'botanizing', 'alchemy', 'first_aid', 'tracking'],
   },
   {
     id: 'fisher', kind: 'craft', name: 'Fisher', main: 'fishing',
