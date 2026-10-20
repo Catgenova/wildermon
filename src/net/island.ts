@@ -433,6 +433,17 @@ export interface TreasureMap {
   why?: string;
 }
 
+/** Somebody asking to live on a settlement, from its token (`rpc_join_ask`). */
+export interface JoinRequest {
+  uid: string;
+  name: string;
+  founder: string;
+  deed: string;
+  /** How many settlements they are a citizen of already. */
+  joined: number;
+  at: number;
+}
+
 export interface Social {
   /**
    * Every settlement that is yours, the one you founded first.
@@ -460,6 +471,14 @@ export interface Social {
    * the settlement you founded.
    */
   sent: Array<{ uid: string; name: string; at: number; founder?: string; deed?: string; by?: string }>;
+  /**
+   * Asking to live on a settlement you may invite to (`rpc_join_ask`), with
+   * how many settlements each is a citizen of already. Optional: an island
+   * from before asking at the token answers without it.
+   */
+  requests?: JoinRequest[];
+  /** Your own asks, not answered yet. */
+  requesting?: Array<{ founder: string; deed: string; at: number }>;
   /**
    * Whether the island is quiet enough to be saying where everybody is.
    *
@@ -3423,6 +3442,21 @@ export class Island {
   /** Yes or no to an invitation of your own. */
   async answerInvite(founder: string, yes: boolean): Promise<string | null> {
     return this.door('rpc_invite_answer', { p_founder: founder, p_yes: yes });
+  }
+
+  /** Ask to live on the settlement whose token stands at (x, y), standing on its land. */
+  async askToJoinAt(x: number, y: number): Promise<string | null> {
+    return this.door('rpc_join_ask', { p_x: x, p_y: y });
+  }
+
+  /** Let in somebody who asked to live on a settlement, or turn them down. */
+  async answerJoin(founder: string, uid: string, yes: boolean): Promise<string | null> {
+    return this.door('rpc_join_answer', { p_founder: founder, p_uid: uid, p_yes: yes });
+  }
+
+  /** Take back your own ask. */
+  async withdrawJoin(founder: string): Promise<string | null> {
+    return this.door('rpc_join_withdraw', { p_founder: founder });
   }
 
   /**

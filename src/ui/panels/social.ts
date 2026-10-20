@@ -1,4 +1,4 @@
-import { LETTER_MAX, type Folk, type Island, type Letter, type MyDeed, type Social } from '../../net/island';
+import { LETTER_MAX, type Folk, type Island, type JoinRequest, type Letter, type MyDeed, type Social } from '../../net/island';
 import { DEEDS_JOINED, type DeedRole, type Game } from '../../game/game';
 import { DEFAULT_RANKS, deedMay, FOUNDER, lacks, NEWCOMER_RANK, permsOf, rankMay, rankName, type RankDef, type Ranked } from '../../game/ranks';
 import { leaveQuestion } from '../../game/deed';
@@ -215,6 +215,14 @@ export function moveInRefusal(s: Social): string | null {
   if (s.room > 0) return null;
   return `You are a citizen of ${DEEDS_JOINED - s.room} settlements already, which is as many as anybody may be. Leave one first.`;
 }
+
+/**
+ * Whether somebody who asked may be let in, and if not, why: the one refusal
+ * in `rpc_join_answer` past the rank, a full roll, in its words. The ask is
+ * left standing.
+ */
+export const letInRefusal = (q: Pick<JoinRequest, 'name' | 'joined'>): string | null =>
+  q.joined < DEEDS_JOINED ? null : `${q.name}: citizen of ${q.joined} settlements, the most allowed.`;
 
 /** How long an answer is trusted by somebody who is not looking at the window. */
 const STALE = 60;
@@ -527,7 +535,7 @@ export class SocialPanel {
 
   private draw(): void {
     const s = this.seen;
-    const waiting = s ? s.invites.length + s.asked.length : 0;
+    const waiting = s ? s.invites.length + s.asked.length + (s.requests?.length ?? 0) : 0;
     const unread = s ? s.unread.reduce((n, u) => n + u.n, 0) : 0;
     this.tabs.get('waiting')?.classList.toggle('log-waiting', waiting > 0);
     const wt = this.tabs.get('waiting');
@@ -556,9 +564,24 @@ export class SocialPanel {
   private drawWaiting(s: Social): void {
     const isle = this.island;
     if (!isle) return;
-    if (!s.invites.length && !s.asked.length && !s.sent.length && !s.asking.length) {
+    const requests = s.requests ?? [];
+    const requesting = s.requesting ?? [];
+    if (!s.invites.length && !s.asked.length && !s.sent.length && !s.asking.length && !requests.length && !requesting.length) {
       this.page.append(this.empty('Nothing is waiting on you. Right-click somebody on the island to invite them home or ask to be their friend.'));
       return;
+    }
+    if (requests.length) {
+      this.page.append(this.head('Asking to join'));
+      for (const q of requests) {
+        const full = letInRefusal(q);
+        const letIn = this.button('Let in', full ?? `${q.name} becomes a citizen of ${q.deed}`,
+          () => void this.did(isle.answerJoin(q.founder, q.uid, true)));
+        letIn.disabled = !!full;
+        this.page.append(this.plain(q.name, `to ${q.deed} · citizen of ${q.joined}`, [
+          letIn,
+          this.button('No', `Turn ${q.name} down`, () => void this.did(isle.answerJoin(q.founder, q.uid, false))),
+        ]));
+      }
     }
     if (s.invites.length) {
       this.page.append(this.head('Asked to live somewhere'));
@@ -587,6 +610,13 @@ export class SocialPanel {
       this.page.append(this.head('Invitations out'));
       for (const who of s.sent) {
         this.page.append(this.plain(who.name, who.deed ? `to ${who.deed}, not answered` : 'not answered', []));
+      }
+    }
+    if (requesting.length) {
+      this.page.append(this.head('Settlements you have asked to join'));
+      for (const q of requesting) {
+        this.page.append(this.plain(q.deed, 'not answered',
+          [this.button('Withdraw', 'Take the ask back', () => void this.did(isle.withdrawJoin(q.founder)))]));
       }
     }
     if (s.asking.length) {

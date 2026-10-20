@@ -905,6 +905,9 @@ export function helpText(): string {
     yourself, <b>Move in</b> on an invitation cannot be pressed until you leave one. Able to invite to more
     than one settlement, you choose at the top of the Friends tab which one Invite asks people onto, and the
     right-click menu has an Invite for each.</p>
+    <p><b>Ask to join</b>: right-click another player's settlement token, standing on its land. Answered under
+    Waiting in the Social window by its founder and any rank with <b>${POWER.invite.label}</b>: <b>Let in</b> (rank for
+    newcomers) or <b>No</b>. Your own requests: same tab, <b>Withdraw</b>. Limit: citizen of ${DEEDS_JOINED}.</p>
     <p>A citizen's <b>rank</b> is set in the Settlement window, under <b>Citizens</b>, from a list of the
     ranks you may give them. The founder gives anybody else on the roll any rank. A rank holding
     <b>${POWER.set_ranks.label}</b> gives somebody whose rank is below its own in the settlement's list a rank

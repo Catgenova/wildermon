@@ -1496,6 +1496,20 @@ jobs:
             --outfile=node_modules/.cache/mayors.mjs --log-level=error
           node node_modules/.cache/mayors.mjs
 
+      - name: Ask to join a settlement at its token
+        run: |
+          # Asked for: "Allow players to request to join a settlement at the
+          # totem." A stranger standing on a settlement asks at its token; its
+          # founder and every rank holding Invite hear it and answer it in the
+          # Social window; the one who asked may take it back. This asks every
+          # refusal on both ends, who hears it and who may answer, the rank a
+          # newcomer is let in at, and that taking up an invitation clears the
+          # ask. The browser's "Stand on X to ask." and full-roll refusal are
+          # compared word for word with the island's.
+          npx esbuild supabase/test/joinask.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/joinask.mjs --log-level=error
+          node node_modules/.cache/joinask.mjs
+
       - name: Ranks of your own, the founder's to make, in the same words on both sides
         run: |
           # "Allow the founder to establish ranks and advanced permissions for

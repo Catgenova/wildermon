@@ -67,7 +67,7 @@ import { meltable } from '../game/melt';
 import { jobName, smelterAnchor, smelterState, type PlacedSmelter } from '../game/smelter';
 import { isGreenware, kilnAnchor, kilnState, type PlacedKiln } from '../game/kiln';
 import { furnitureAnchor, furnitureCapacity, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureName, furnitureState, furnitureUnits, isFurniture, isPlanter, rackDeck, rackSpots, type PlacedFurniture, teamOf, turnedFacing, vehicleOf } from '../game/furniture';
-import { DEED_ACTION_BY_ID, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
+import { DEED_ACTION_BY_ID, joinFromAfar, leaveQuestion, standingWord, upgradeProgress, upgradeReason } from '../game/deed';
 import { CROP_BY_SEED, cropDef, describeCrop, emptyFields, growthWords, planterPace, sownPace, stageNote, type Crop, type CropDef } from '../game/farming';
 import { PLANTER_GROWTH } from '../game/growth';
 import { describeWaterPlant } from '../game/watergarden';
@@ -1487,6 +1487,8 @@ export class UI {
     // were asked onto.
     const settled = this.game.deedOfMineAt(pick.x, pick.y);
     if (settled) entries.push(isFounder(settled) ? this.deedEntry() : this.citizenEntry(settled));
+    // Somebody else's settlement, at its token: asking to live there.
+    if (!settled) entries.push(...this.askToJoinEntry(pick.x, pick.y));
     // Laying a campfire on the block of subtiles under the cursor.
     const fireDef = ACTION_BY_ID.get('build_campfire');
     if (fireDef && this.game.inventory.count('shaft') >= FIRE_COST) {
@@ -2757,6 +2759,25 @@ export class UI {
   /** Who founded a settlement you belong to, as the island names them. */
   private holderOf(d: Deed): string | null {
     return this.game.neighbourDeeds.find((n) => n.x === d.x && n.y === d.y)?.holder ?? null;
+  }
+
+  /**
+   * Ask to join a stranger's settlement, at its token (`rpc_join_ask`): its
+   * founder and every rank holding Invite answer it in the Social window.
+   */
+  private askToJoinEntry(x: number, y: number): MenuItem[] {
+    const g = this.game;
+    const d = g.tokenAt(x, y);
+    if (!d || g.isMyToken(x, y)) return [];
+    const isle = this.island;
+    const away = isle ? joinFromAfar(g, d) : 'Only on an island.';
+    return [{
+      label: `Ask to join ${d.name}`,
+      note: away ? undefined : 'Its founder answers, or a rank with Invite',
+      hint: away ?? undefined,
+      disabled: !!away,
+      onSelect: () => void isle?.askToJoinAt(x, y).then((why) => { if (why) g.logMsg(why, 'error'); }),
+    }];
   }
 
   /** Off the roll of one you were asked onto, once you have said you mean it. */

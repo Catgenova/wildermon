@@ -2949,6 +2949,16 @@ export const NEWS: News[] = [
       `Every trade's share of learning was worked out again with its rest counted, so each still takes about as long as the middle one to evolve: ${learnPaceSays()}.`,
     ],
   },
+  {
+    n: 227,
+    day: '2026-10-20',
+    lines: () => [
+      'Added: Ask to join, on another player\'s settlement token. Stand on the settlement to ask.',
+      'Answered under Social → Waiting by the founder and any rank with Invite: Let in (rank for newcomers) or No. Your own requests: same tab, Withdraw.',
+      `Limit: citizen of ${DEEDS_JOINED} settlements, checked when asking and when let in.`,
+      'Fixed: settlement totems were drawn only for settlements you belong to.',
+    ],
+  },
 ];
 
 

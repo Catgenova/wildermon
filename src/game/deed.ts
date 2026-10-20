@@ -152,3 +152,10 @@ export const DEED_ACTIONS: ActionDef[] = [
 ];
 
 export const DEED_ACTION_BY_ID = new Map(DEED_ACTIONS.map((a) => [a.id, a]));
+
+/**
+ * Why you may not ask to join this settlement from where you stand, or null:
+ * the island's `rpc_join_ask` asks that you stand on its land (`deed_covers`).
+ */
+export const joinFromAfar = (g: Game, d: Pick<Deed, 'name' | 'x' | 'y' | 'radius'>): string | null =>
+  Math.abs(g.player.tileX - d.x) <= d.radius && Math.abs(g.player.tileY - d.y) <= d.radius ? null : `Stand on ${d.name} to ask.`;
