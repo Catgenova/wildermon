@@ -2698,6 +2698,27 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/farworker.mjs --log-level=error
           node node_modules/.cache/farworker.mjs
 
+      - name: A worker says why it is idle
+        run: |
+          # Asked: a worker on a settlement often stands idle and nothing says
+          # why. Each cause is kept as a code and a number and said on its card
+          # in the same words on both sides: no barrel with room for water, no
+          # reed bed in its range, nothing in the stores, walking home, and on
+          # the island a keeper away or nobody near enough for the clock.
+          npx esbuild supabase/test/idlewhy.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/idlewhy.mjs --log-level=error
+          node node_modules/.cache/idlewhy.mjs
+
+      - name: A worker keeps a ledger of the last island day
+        run: |
+          # Asked: per deed worker, what it did over the last island day, in
+          # two buckets keyed by the island day so it stays bounded. Counted
+          # where the work is, rolled over at the day boundary, the same on
+          # both sides.
+          npx esbuild supabase/test/ledger.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/ledger.mjs --log-level=error
+          node node_modules/.cache/ledger.mjs
+
       - name: A wild thing goes after its span and the stretch is stocked afresh
         run: |
           # Asked: "I havent seen a single one of the new 60 wildermon." Country

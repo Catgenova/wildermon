@@ -11,6 +11,7 @@ import { SKILL_BY_ID } from '../../game/skills';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
 import { percent } from '../../game/words';
+import { idleSays, ledgerLines } from '../../game/workerlog';
 
 /**
  * Where a wildermon is, as the list groups it: under a rider or in a
@@ -463,7 +464,12 @@ export class WildermonPanel {
     statBox.className = 'pal-worth pal-stats';
     const info = document.createElement('div');
     info.className = 'pal-info';
-    card.append(health.row, hunger.row, care.row, statBox, pedigree, bloodBox, worthBox, info);
+    // Why a worker is standing about (`idleSays`), and what it did this island day and the one before (`ledgerLines`).
+    const idleLine = document.createElement('div');
+    idleLine.className = 'pal-idle';
+    const ledgerBox = document.createElement('div');
+    ledgerBox.className = 'pal-ledger';
+    card.append(health.row, hunger.row, care.row, statBox, pedigree, bloodBox, worthBox, info, idleLine, ledgerBox);
 
     const set = (el: { textContent: string | null; title: string }, text: string, title: string): void => {
       if (el.textContent !== text) el.textContent = text;
@@ -563,7 +569,7 @@ export class WildermonPanel {
       if (place === 'active') parts.push(`Stance: ${STANCE_NAMES[c.stance]}`);
       if (place === 'deed') {
         const verb = def.gathers ? GATHER_VERB[def.gathers] : 'working';
-        parts.push(c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the crate` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Heading out to ${def.gathers ?? 'work'}` : 'Looking for work');
+        parts.push(c.carrying ? `Carrying ${itemDef(c.carrying.id).name.toLowerCase()} to the crate` : c.state === 'forage' ? `${verb[0].toUpperCase()}${verb.slice(1)}` : c.state === 'toForage' ? `Heading out to ${def.gathers ?? 'work'}` : c.idle ? 'Idle' : 'Looking for work');
       }
       if (c.mode === 'deed' && def.gathers) {
         const toNext = SKILL_STEP - (taskSkill(c, def) % SKILL_STEP);
@@ -575,6 +581,13 @@ export class WildermonPanel {
       parts.push(`Experience ${c.xp.toFixed(1)}`);
       const said = parts.join(' · ');
       if (info.textContent !== said) info.textContent = said;
+      const job = c.trade ?? def.gathers;
+      const idle = place === 'deed' && c.idle ? idleSays(c.idle, job, c.carrying ? itemDef(c.carrying.id).name : null) : '';
+      if (idleLine.textContent !== idle) idleLine.textContent = idle;
+      idleLine.hidden = !idle;
+      const ledger = c.mode === 'deed' ? ledgerLines(c.ledger, this.game.islandDay()).join('\n') : '';
+      if (ledgerBox.textContent !== ledger) ledgerBox.textContent = ledger;
+      ledgerBox.hidden = !ledger;
     };
 
     return { el: card, refresh };

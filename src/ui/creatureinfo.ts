@@ -27,6 +27,7 @@ import { itemDef } from '../game/items';
 import { traitOf } from '../game/traits';
 import { TIER_LEVEL } from '../game/husbandry';
 import { SKILL_BY_ID } from '../game/skills';
+import { idleSays, ledgerLines } from '../game/workerlog';
 
 const pct = (v: number): number => Math.round(v * 100);
 
@@ -119,6 +120,9 @@ export function creatureLines(g: Game, c: Creature): string[] {
     if (def.gathers) lines.push(`Deed worker · ${GATHER_VERB[def.gathers]} at ${taskSkill(c, def).toFixed(1)} · reaches ${workRangeOf(c, def)} tiles`);
     else lines.push(`Deed worker · no trade of its own, so it keeps the deed company`);
     if (c.carrying) lines.push(`Carrying ${itemDef(c.carrying.id).name.toLowerCase()} home`);
+    // Why it is standing about, and what it did this island day and the one before.
+    if (c.idle) lines.push(idleSays(c.idle, c.trade ?? def.gathers, c.carrying ? itemDef(c.carrying.id).name : null));
+    lines.push(...ledgerLines(c.ledger, g.islandDay()));
   } else lines.push(`Your companion · ${STANCE_NAMES[c.stance].toLowerCase()} · hits for ${attackOf(c, def).toFixed(0)}`);
 
   // Blood, which is the whole of what breeding is for.

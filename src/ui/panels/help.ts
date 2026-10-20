@@ -53,9 +53,10 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
-  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
+  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
+import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay, STORE_LOG_CAP } from '../../game/ranks';
 import { storeMarkable } from '../../game/stores';
@@ -3199,6 +3200,18 @@ export function helpText(): string {
     ${RANGE_PER_STEP} tiles of range for every ${SKILL_STEP} levels of its task skill &mdash; ${RANGE_STEPS_SAID} &mdash; so a
     seasoned one works a wide stretch of country. Its card in the Wildermon window shows the range it
     has now and how much skill the next step needs.</p>
+    <p><b>Why a worker is idle, and what it did.</b> A deed worker that finds nothing to do says why, on its
+    card in the Wildermon window and when you point at it, until it next sets out to work. There is one
+    reason for each cause: nothing of its trade within its range of the token or its work post, at the
+    range it has at its level (&ldquo;${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}&rdquo;
+    for a ${SPECIES.sedra.name} new to the work); nothing in your stores on the settlement for it to work, with
+    what it wants there (&ldquo;${idleSays({ why: 'stock', n: 0 }, 'mend')}&rdquo;); no barrel with room
+    for the water it carries; a load in its arms with nowhere on the settlement to put it; walking home,
+    when it is more than ${HOME_SLACK} tiles past its range from the token, with how far it has to go. On an
+    island, nothing works a worker whose keeper is away, or one nobody awake is near enough to, and its
+    card says which, with how near that is. Below that the card keeps a <b>ledger</b> of this island day
+    and the one before, a day being ${spanWords(DAY_SECONDS)}: its goes at its task, the skill it gained, and
+    the ${numberWord(LEDGER_SHOWN)} things it handled most of (up to ${numberWord(LEDGER_ITEMS)} kinds a day are counted).</p>
     <p>A tamed wildermon either <b>travels with you</b> (one at a time; its stance is Passive, Defensive
     or Aggressive), is <b>assigned to your deed</b>, where a Snufflet forages around the settlement and
     drops what it finds in the settlement's storage, or is shut in a <b>creature crate</b>. Feed them

@@ -122,6 +122,7 @@ import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER
 import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
+import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
 import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { betterThanCommon, CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -2833,6 +2834,17 @@ export const NEWS: News[] = [
         `One with fewer than ${numberWord(TRAIT_SLOTS)} traits has an empty slot, which the lamp fills first, with ${article(TIERS[0])} ${TIERS[0]} trait or one time in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one.`,
       ];
     },
+  },
+  {
+    n: 220,
+    day: '2026-10-20',
+    lines: () => [
+      `A deed worker with nothing to do says why on its card and when you point at it, until it next sets out: nothing of its trade within its range of the token at its level ("${idleSays({ why: 'range', n: SPECIES.sedra.workRange }, 'reed')}"), `
+        + `nothing in your stores for it to work and what it wants there ("${idleSays({ why: 'stock', n: 0 }, 'mend')}"), "${idleSays({ why: 'room', n: 0 }, 'water')}", `
+        + `a load with nowhere on the settlement to put it, or walking home from more than ${HOME_SLACK} tiles past its range, with how far.`,
+      'On an island it also says when nothing is working it: its keeper is away, or nobody awake is near enough, with how near. And you are sent your own deed workers wherever they are, not only those near you.',
+      `Its card keeps a ledger of this island day and the one before (${spanWords(DAY_SECONDS)} each): its goes at its task, the skill it gained and the ${numberWord(LEDGER_SHOWN)} things it handled most of, of up to ${numberWord(LEDGER_ITEMS)} kinds a day.`,
+    ],
   },
 ];
 

@@ -51,6 +51,7 @@ import { auraMul, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, pct, rollTra
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
+import { IDLE_WHYS, ledgerAdd, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
 import { BACK_PACE, BACK_SLACK, BLINDSIDE, blowEvery, BODKIN_HIDE, KNIFE_BLEED, STUN_SECS, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS, circlePoint, CIRCLE_ARC, CIRCLE_R, COMPANION_BLOW, COMPANION_LEASH, COMPANION_PACE, COMPANION_REACH, COMPANION_SIGHT, COWARD_DRAG, FIGHT_GIVE_UP, FIGHT_LEASH, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HEAVY_EVERY, HEAVY_HIT, HUNT_REACH, KEEP_OFF, KNIFE_BLEED_SECS, PACK_CALL, PACK_MOST, PACK_RANGE, slotAngle, THROW_HIT, THROW_REACH, turnsAt, turnTo, WIND_UP, type Hide } from './fight';
 
 /**
@@ -4163,6 +4164,15 @@ export interface IslandCreature {
   cast?: number | null;
   carrying?: { def: string; count?: number; ql?: number } | null;
   /**
+   * Why a worker of yours last found nothing to do (`IdleWhy`) and its number, cleared when it next sets to work;
+   * null for one at work. `idlePost` is whether it works off a post rather than the token.
+   */
+  idleWhy?: string | null;
+  idleN?: number | null;
+  idlePost?: boolean;
+  /** What a worker of yours did this island day and the one before (`WorkLedger`), yours only. */
+  ledger?: WorkLedger | null;
+  /**
    * Its dam, its sire and where each trait came from, for anything bred and
    * for nothing else. Somebody else's says where a trait came from only for
    * the traits you can read.
@@ -4322,6 +4332,13 @@ export interface Creature {
   threatAt: number;
   /** When it last said it had nowhere to put a load down. */
   noRoomAt: number;
+  /**
+   * Why a worker last found nothing to do, and its number, for its card (`idleSays`); null while it has work in
+   * hand. The island's `idle_why` and `idle_n`.
+   */
+  idle?: Idle | null;
+  /** What a worker did this island day and the one before (`ledgerAdd`). Saved. The island's `ledger`. */
+  ledger?: WorkLedger | null;
   /** Time banked up while nobody was watching, spent on the next think. */
   owed: number;
   /** When the player last called it over for an action; it drops everything and comes. */
@@ -4416,6 +4433,8 @@ export interface CreatureJSON {
   unborn?: Unborn | null;
   pedigree?: Pedigree | null;
   trade?: GatherKind | null;
+  /** What it did this island day and the one before, on a worker; absent in a save from before there was a ledger. */
+  ledger?: WorkLedger | null;
   /**
    * The middle of its own ground. Saved, because a herd that scattered every
    * time somebody reloaded would not be a herd; a save from before this has
@@ -4961,6 +4980,13 @@ export class Creatures {
         if (c.islandCast !== undefined && r.cast !== null && r.cast !== c.islandCast) this.acted(c, 'cast', time);
         c.islandCast = r.cast;
       }
+      // Why it is standing about, and what it did yesterday: the island's words for both, said on its card here (`idleSays`).
+      if (r.idleWhy !== undefined) {
+        c.idle = r.idleWhy && (IDLE_WHYS as readonly string[]).includes(r.idleWhy)
+          ? { why: r.idleWhy as IdleWhy, n: r.idleN ?? 0, post: !!r.idlePost }
+          : null;
+      }
+      if (r.ledger !== undefined) c.ledger = r.ledger;
       if (r.carrying !== undefined) {
         c.carrying = r.carrying
           ? { uid: 0, id: r.carrying.def, ql: r.carrying.ql ?? 1, dmg: 0, count: r.carrying.count ?? 1 }
@@ -6484,23 +6510,23 @@ export class Creatures {
     const near = (x: number, y: number): boolean => Math.max(Math.abs(x - deed.x), Math.abs(y - deed.y)) <= range;
 
     if (kind === 'water') return this.waterStep(game, c, dt, range, goto, near);
-    if (kind === 'hod') return this.hodStep(game, c, dt, goto, near, deed);
+    if (kind === 'hod') return this.hodStep(game, c, dt, goto, near, deed, range);
     if (kind === 'mend') return this.mendStep(game, c, goto);
     if (kind === 'plant') return this.plantStep(game, c, goto, near, range, deed);
     if (kind === 'prospect') return this.prospectStep(game, c, goto, near, range, deed);
-    if (kind === 'compost') return this.compostStep(game, c, goto, near);
-    if (kind === 'groom' || kind === 'dairy' || kind === 'heal') return this.herdStep(game, c, kind, goto, near);
+    if (kind === 'compost') return this.compostStep(game, c, goto, near, range);
+    if (kind === 'groom' || kind === 'dairy' || kind === 'heal') return this.herdStep(game, c, kind, goto, near, range);
     if (kind === 'butcher') return this.butcherStep(game, c, goto);
     const atStores = STORE_RECIPES[kind];
     if (atStores) return this.recipeStep(game, c, atStores, goto);
-    if (kind === 'lamp') return this.lampStep(game, c, goto, near);
-    if (kind === 'smelt' || kind === 'kiln') return this.furnaceStep(game, c, kind, goto, near);
-    if (kind === 'ash') return this.ashStep(game, c, goto, near) || this.recipeStep(game, c, LYE_RECIPES, goto);
-    if (kind === 'brew') return this.brewStep(game, c, goto, near);
-    if (kind === 'cook') return this.cookStep(game, c, goto, near);
+    if (kind === 'lamp') return this.lampStep(game, c, goto, near, range);
+    if (kind === 'smelt' || kind === 'kiln') return this.furnaceStep(game, c, kind, goto, near, range);
+    if (kind === 'ash') return this.ashStep(game, c, goto, near) || this.recipeStep(game, c, LYE_RECIPES, goto) || this.why(c, 'range', range);
+    if (kind === 'brew') return this.brewStep(game, c, goto, near, range);
+    if (kind === 'cook') return this.cookStep(game, c, goto, near, range);
     if (kind === 'restore') return this.restoreStep(game, c, goto);
-    if (kind === 'patch') return this.planterStep(game, c, goto, near);
-    if (kind === 'paper') return this.pressStep(game, c, goto, near);
+    if (kind === 'patch') return this.planterStep(game, c, goto, near, range);
+    if (kind === 'paper') return this.pressStep(game, c, goto, near, range);
     if (kind === 'glaze') return this.glazeStep(game, c, goto);
     if (kind === 'fill') return this.fillStep(game, c, range, goto, near);
     return false;
@@ -6545,6 +6571,7 @@ export class Creatures {
     kind: GatherKind,
     goto: (x: number, y: number, reach?: number) => boolean,
     near: (x: number, y: number) => boolean,
+    range: number,
   ): boolean {
     const smelt = kind === 'smelt';
     const fits = (it: Item): boolean => (smelt ? isOreItem(it.id) : isGreenware(it.id));
@@ -6568,10 +6595,10 @@ export class Creatures {
     const holding = !!c.carrying && fits(c.carrying);
     if (c.carrying && !holding) return false;
     const to = nearest(all.filter((x) => x.room > 0));
-    if (!to) return false;
+    if (!to) return this.why(c, 'range', range);
     if (!holding) {
       const store = this.storeWhere(game, c, fits);
-      if (!store) return false;
+      if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeFrom(store, fits, to.room, game);
       return true;
@@ -6639,10 +6666,10 @@ export class Creatures {
    * nothing working, and the makings of a brew in the stores, as a person
    * sets one (`start_brew`), at the quality of what went in and its own hand.
    */
-  private brewStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean): boolean {
+  private brewStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return false;
     const brew = this.brewInStores(game);
-    if (!brew) return false;
+    if (!brew) return this.why(c, 'stock');
     let f: PlacedFurniture | undefined;
     let bestD = Infinity;
     for (const x of game.furniture.values()) {
@@ -6654,7 +6681,7 @@ export class Creatures {
         f = x;
       }
     }
-    if (!f) return false;
+    if (!f) return this.why(c, 'range', range);
     const [fx, fy] = furnitureCentre(f);
     if (!goto(fx, fy, 1.8)) return true;
     let qls = 0;
@@ -6678,10 +6705,10 @@ export class Creatures {
    * its tool kept in one of them -- worked at the nearest lit campfire or
    * oven of yours, and what it makes put in the stores.
    */
-  private cookStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean): boolean {
+  private cookStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     if (c.carrying) return false;
     const job = this.recipeInStores(game, cookRecipes());
-    if (!job) return false;
+    if (!job) return this.why(c, 'stock');
     let at: [number, number] | undefined;
     let bestD = Infinity;
     const look = (p: [number, number]): void => {
@@ -6695,7 +6722,7 @@ export class Creatures {
     };
     for (const f of game.campfires.values()) if (f.lit) look(fireCentre(f));
     for (const f of game.furniture.values()) if (f.lit && furnitureDef(f.kind).hearth) look(furnitureCentre(f));
-    if (!at) return false;
+    if (!at) return this.why(c, 'range', range);
     const spot = at as [number, number];
     if (!goto(spot[0], spot[1], 1.8)) return true;
     this.workRecipe(game, c, job.recipe, null, Math.floor(spot[0]), Math.floor(spot[1]));
@@ -6707,10 +6734,10 @@ export class Creatures {
    * for, worked at the nearest paper press of yours, and what it makes and the
    * bucket it hands back put in the stores.
    */
-  private pressStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean): boolean {
-    if (c.carrying) return false;
+  private pressStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
+    if (c.carrying) return this.why(c, 'full');
     const job = this.recipeInStores(game, PAPER_RECIPES);
-    if (!job) return false;
+    if (!job) return this.why(c, 'stock');
     let at: [number, number] | undefined;
     let bestD = Infinity;
     for (const f of game.furniture.values()) {
@@ -6722,7 +6749,7 @@ export class Creatures {
         at = p;
       }
     }
-    if (!at) return false;
+    if (!at) return this.why(c, 'range', range);
     const spot = at as [number, number];
     if (!goto(spot[0], spot[1], 1.8)) return true;
     this.workRecipe(game, c, job.recipe, null, Math.floor(spot[0]), Math.floor(spot[1]));
@@ -6740,10 +6767,11 @@ export class Creatures {
    * over it as an Artisan's glaze is (`glaze_item`), after which it never decays.
    */
   private glazeStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean): boolean {
-    if (c.carrying || this.inStores(game, 'ash') < GLAZE_ASH) return false;
+    if (c.carrying) return this.why(c, 'full');
+    if (this.inStores(game, 'ash') < GLAZE_ASH) return this.why(c, 'stock');
     const bare = (it: Item): boolean => GLAZEABLE.has(it.id) && it.mark?.glaze === undefined && !it.locked;
     const st = this.storeWhere(game, c, bare);
-    if (!st) return false;
+    if (!st) return this.why(c, 'stock');
     if (!goto(st.centre[0], st.centre[1])) return true;
     const it = st.items.find(bare);
     if (!it) return true;
@@ -6773,13 +6801,16 @@ export class Creatures {
     if (held?.id === 'water_bucket' || (held && (held.id !== 'bucket' || !source))) {
       // Home with it: the nearest store with room.
       const st = this.storeFor(game, c, held);
-      if (!st) return true;
+      if (!st) {
+        this.why(c, 'full');
+        return true;
+      }
       if (!goto(st.centre[0], st.centre[1])) return true;
       this.intoStores(game, held, st, st.x, st.y);
       c.carrying = null;
       return true;
     }
-    if (!source) return false;
+    if (!source) return this.why(c, 'range', range);
     if (held) {
       if (!goto(source.x, source.y, 1.5)) return true;
       if (source.well) game.drawFromWell(source.well, BUCKET_LITRES);
@@ -6789,7 +6820,7 @@ export class Creatures {
       return true;
     }
     const st = this.storeWith(game, c, ['bucket']);
-    if (!st) return false;
+    if (!st) return this.why(c, 'stock');
     if (!goto(st.centre[0], st.centre[1])) return true;
     c.carrying = this.takeOne(game, ['bucket'], st);
     return true;
@@ -6804,7 +6835,7 @@ export class Creatures {
   private restoreStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean): boolean {
     if (c.carrying) return false;
     const set = this.relicInStores(game);
-    if (!set) return false;
+    if (!set) return this.why(c, 'stock');
     if (!goto(set.at.centre[0], set.at.centre[1])) return true;
     let worth = 0;
     for (let part = 1; part <= set.relic.parts; part++) {
@@ -6853,7 +6884,7 @@ export class Creatures {
    * tending tended, and an empty planter sown out of the stores, as a
    * person's hands do each (`plant_seed`, `tend_crop`, `harvest_crop`).
    */
-  private planterStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean): boolean {
+  private planterStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean, near: (x: number, y: number) => boolean, range: number): boolean {
     const seed = (it: Item): boolean => CROP_BY_SEED.has(it.id);
     const holding = !!c.carrying && seed(c.carrying);
     if (c.carrying && !holding) return false;
@@ -6872,11 +6903,11 @@ export class Creatures {
         f = x;
       }
     }
-    if (!f) return false;
+    if (!f) return this.why(c, 'range', range);
     const crop = game.planted.get(f.id);
     if (!crop && !holding) {
       const store = this.storeWhere(game, c, seed);
-      if (!store) return false;
+      if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeFrom(store, seed, 1, game);
       return true;
@@ -6910,6 +6941,7 @@ export class Creatures {
   /** How long a go at an errand keeps it where it is, as it would at a tile of its trade (`workDuration`). */
   private errandWork(game: Game, c: Creature, kind: GatherKind): void {
     this.acted(c, 'work', game.time);
+    this.toLedger(game, c, { goes: 1 });
     c.busyUntil = game.time + workDuration(c.skills[GATHER_SKILL[kind]] ?? 1) / this.workMul(c);
   }
 
@@ -6995,6 +7027,7 @@ export class Creatures {
     kind: GatherKind,
     goto: (x: number, y: number, reach?: number) => boolean,
     near: (x: number, y: number) => boolean,
+    range: number,
   ): boolean {
     // Whether what it would carry to one -- a bucket, a dressing -- is in its arms or to be had, asked once for the whole herd.
     const carried = kind === 'heal' ? DRESSINGS : ['bucket'];
@@ -7010,14 +7043,14 @@ export class Creatures {
       }
     }
     // Nothing wanting it: a bucket or a dressing in its arms goes back with everything else carried.
-    if (!o) return false;
+    if (!o) return this.why(c, 'range', range);
     const def = this.species(o);
     const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
     const want = kind === 'heal' ? DRESSINGS : kind === 'dairy' && Creatures.milker(def) ? ['bucket'] : null;
     if (want && !want.includes(c.carrying?.id ?? '')) {
       if (c.carrying) return false;
       const store = this.storeWith(game, c, want);
-      if (!store) return false;
+      if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeOne(game, want, store);
       return true;
@@ -7079,7 +7112,7 @@ export class Creatures {
         corpse = it;
       }
     }
-    if (!store || !corpse) return false;
+    if (!store || !corpse) return this.why(c, 'stock');
     if (!goto(store.centre[0], store.centre[1])) return true;
     const def = corpseSpecies(corpse);
     if (!def) return false;
@@ -7133,7 +7166,7 @@ export class Creatures {
   private recipeStep(game: Game, c: Creature, recipes: readonly string[], goto: (x: number, y: number, reach?: number) => boolean): boolean {
     if (c.carrying) return false;
     const job = this.recipeInStores(game, recipes);
-    if (!job) return false;
+    if (!job) return this.why(c, 'stock');
     const { recipe: r, at } = job;
     if (!goto(at.centre[0], at.centre[1])) return true;
     this.workRecipe(game, c, r, at, at.x, at.y);
@@ -7171,6 +7204,7 @@ export class Creatures {
     c: Creature,
     goto: (x: number, y: number, reach?: number) => boolean,
     near: (x: number, y: number) => boolean,
+    range: number,
   ): boolean {
     const holding = c.carrying?.id === 'candle';
     if (c.carrying && !holding) return false;
@@ -7188,11 +7222,11 @@ export class Creatures {
         f = x;
       }
     }
-    if (!f) return false;
+    if (!f) return this.why(c, 'range', range);
     const want = this.lampWants(game, f);
     if (want === 'candle' && !holding) {
       const store = this.storeWith(game, c, ['candle']);
-      if (!store) return false;
+      if (!store) return this.why(c, 'stock');
       if (!goto(store.centre[0], store.centre[1])) return true;
       c.carrying = this.takeOne(game, ['candle'], store);
       return true;
@@ -7226,11 +7260,12 @@ export class Creatures {
   ): boolean {
     const full = c.carrying?.id === 'water_bucket';
     const vessel = game.thirstyVessel();
-    if (!vessel) return false;
+    if (!vessel) return this.why(c, 'room');
     if (full) {
       const [vx, vy] = furnitureCentre(vessel);
       if (!goto(vx, vy)) return true;
       game.pourInto(vessel, BUCKET_LITRES, 'water');
+      this.toLedger(game, c, { goes: 1 });
       c.carrying = null;
       this.gainSkill(game, c, GATHER_SKILL.water, 0.2);
       c.state = 'idle';
@@ -7238,10 +7273,12 @@ export class Creatures {
       return true;
     }
     const source = game.waterSource(c.x, c.y, range, near);
-    if (!source) return false;
+    if (!source) return this.why(c, 'range', range);
     if (!goto(source.x, source.y, 1.5)) return true;
     if (source.well) game.drawFromWell(source.well, BUCKET_LITRES);
     c.carrying = { uid: game.inventory.nextUid++, id: 'water_bucket', ql: 40, dmg: 0, count: 1 };
+    // A go, as the island's `errand_do` counts the filling as one.
+    this.toLedger(game, c, { goes: 1 });
     return true;
   }
 
@@ -7253,6 +7290,7 @@ export class Creatures {
     goto: (x: number, y: number, reach?: number) => boolean,
     near: (x: number, y: number) => boolean,
     deed: { x: number; y: number },
+    range: number,
   ): boolean {
     // What the stores hold to bring, crates and furniture alike, and never what is kept back.
     const takeable = (it: Item, item: string): boolean => it.id === item && it.count > 0 && !it.locked;
@@ -7260,7 +7298,7 @@ export class Creatures {
     const job = game.hodNeeding(near, c.carrying?.id, deed, stocked);
     if (!job) {
       c.carrying = null;
-      return false;
+      return this.why(c, 'range', range);
     }
     if (c.carrying && c.carrying.id !== job.item) c.carrying = null;
     if (!c.carrying) {
@@ -7268,7 +7306,7 @@ export class Creatures {
       const holding = game.deedStores().filter((st) => st.items.some((it: Item) => takeable(it, job.item)));
       const store = holding.sort((a, b) => Math.hypot(a.centre[0] - job.x - 0.5, a.centre[1] - job.y - 0.5) - Math.hypot(b.centre[0] - job.x - 0.5, b.centre[1] - job.y - 0.5))[0];
       const stock = store?.items.find((it: Item) => takeable(it, job.item));
-      if (!store || !stock) return false;
+      if (!store || !stock) return this.why(c, 'stock');
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;
       stock.count -= 1;
@@ -7279,6 +7317,7 @@ export class Creatures {
     }
     if (!goto(job.x + 0.5, job.y + 0.5, 1.6)) return true;
     game.fitPiece(job.target, c.carrying.id);
+    this.toLedger(game, c, { goes: 1 });
     c.carrying = null;
     this.gainSkill(game, c, GATHER_SKILL.hod, 0.25);
     return true;
@@ -7287,9 +7326,10 @@ export class Creatures {
   /** Mending: it works at the stores, on whatever in them is knocked about. */
   private mendStep(game: Game, c: Creature, goto: (x: number, y: number, reach?: number) => boolean): boolean {
     const found = game.damagedInStores();
-    if (!found) return false;
+    if (!found) return this.why(c, 'stock');
     const [sx, sy] = found.store.centre;
     if (!goto(sx, sy)) return true;
+    this.toLedger(game, c, { goes: 1 });
     const skill = c.skills[GATHER_SKILL.mend] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.mend, 0.2);
     // The same bargain the player's own repair makes: damage out, a little
@@ -7313,7 +7353,7 @@ export class Creatures {
     if (!c.carrying) {
       const store = game.deedStores().find((st) => st.items.some((it: Item) => it.id === 'sprout'));
       const sprout = store?.items.find((it: Item) => it.id === 'sprout');
-      if (!store || !sprout) return false;
+      if (!store || !sprout) return this.why(c, 'stock');
       const [sx, sy] = store.centre;
       if (!goto(sx, sy)) return true;
       sprout.count -= 1;
@@ -7325,12 +7365,13 @@ export class Creatures {
     if (c.carrying.id !== 'sprout') return false;
     if (c.workX < 0 || !game.plantableTile(c.workX, c.workY)) {
       const spot = game.plantingSpot(deed.x, deed.y, range, near, c.x, c.y);
-      if (!spot) return false;
+      if (!spot) return this.why(c, 'range', range);
       c.workX = spot.x;
       c.workY = spot.y;
     }
     if (!goto(c.workX + 0.5, c.workY + 0.5)) return true;
     game.plantSprout(c.workX, c.workY, c.carrying.extra);
+    this.toLedger(game, c, { goes: 1 });
     c.carrying = null;
     c.workX = -1;
     this.gainSkill(game, c, GATHER_SKILL.plant, 0.25);
@@ -7348,12 +7389,13 @@ export class Creatures {
   ): boolean {
     if (c.workX < 0) {
       const spot = game.unreadGround(deed.x, deed.y, range, near, c.x, c.y);
-      if (!spot) return false;
+      if (!spot) return this.why(c, 'range', range);
       c.workX = spot.x;
       c.workY = spot.y;
     }
     if (!goto(c.workX + 0.5, c.workY + 0.5)) return true;
     const skill = c.skills[GATHER_SKILL.prospect] ?? 1;
+    this.toLedger(game, c, { goes: 1 });
     this.gainSkill(game, c, GATHER_SKILL.prospect, 0.22);
     game.readGround(c, c.workX, c.workY, 2 + Math.floor(skill / 20));
     c.workX = -1;
@@ -7367,10 +7409,11 @@ export class Creatures {
     c: Creature,
     goto: (x: number, y: number, reach?: number) => boolean,
     near: (x: number, y: number) => boolean,
+    range: number,
   ): boolean {
     if (c.carrying) return false;
     const rot = game.rottingNear(near);
-    if (!rot) return false;
+    if (!rot) return this.why(c, 'range', range);
     if (!goto(rot.x + 0.5, rot.y + 0.5)) return true;
     const [taken] = game.takeFromGround(rot.x, rot.y, rot.uid);
     if (!taken) return true;
@@ -7385,11 +7428,12 @@ export class Creatures {
   private stokeStep(game: Game, c: Creature, dt: number, site: WorkSite): boolean {
     const def = this.species(c);
     const hearth = this.coldHearth(game, c, siteRange(c, def, site));
-    if (!hearth) return false;
+    if (!hearth) return this.why(c, 'range', siteRange(c, def, site));
     // Nothing to carry: go to whichever store has wood in it and take a piece.
     const store = game.deedStores().find((st) => st.items.some((it: Item) => isFuel(it.id)));
     const fuel = store?.items.find((it: Item) => isFuel(it.id));
-    if (!store || !fuel) return false;
+    if (!store || !fuel) return this.why(c, 'stock');
+    c.idle = null;
     const [cx, cy] = store.centre;
     if (Math.hypot(cx - c.x, cy - c.y) > 1.3) {
       if (this.stepToward(game, c, cx, cy, dt) === 'blocked') {
@@ -7440,6 +7484,8 @@ export class Creatures {
     }
     game.events.emit('smelter');
     game.events.emit('world', c.workX, c.workY);
+    // A go, and the piece it fed in handled, as the island's `worker_settle` counts a stoker's.
+    this.toLedger(game, c, { goes: 1, item: carrying.id, n: carrying.count });
     c.carrying = null;
     c.job = null;
     c.state = 'idle';
@@ -7755,6 +7801,8 @@ export class Creatures {
     const beforeSteps = rangeSteps(v);
     c.skills[id] = Math.min(100, v + gain);
     c.xp += gain;
+    // What a worker learns at work is counted to its ledger (`worker_learn`).
+    if (c.mode === 'deed' && c.skills[id] > v) this.toLedger(game, c, { skill: c.skills[id] - v });
     if (creatureLevel(c) > before) game.logMsg(`${c.name} reaches level ${creatureLevel(c)}.`, 'skill');
     // And evolves, at a level a stage begins at: what it can take grows with it, as full as it was (`EVOLVE_AT`).
     const stage = stageOf(c);
@@ -8248,7 +8296,37 @@ export class Creatures {
     return false;
   }
 
+  /** Nothing to do, and why (`IdleWhy`): kept on it for its card, and false, for a step to return. The island's `idle_why`. */
+  private why(c: Creature, why: IdleWhy, n = 0): false {
+    c.idle = { why, n, post: c.post !== null };
+    return false;
+  }
+
+  /** Counted to a worker's ledger for the island day it is (`ledgerAdd`), as the island's `ledger_add` counts it. */
+  private toLedger(game: Game, c: Creature, add: { goes?: number; skill?: number; item?: string; n?: number }): void {
+    if (c.mode !== 'deed') return;
+    c.ledger = ledgerAdd(c.ledger, game.islandDay(), add);
+    if (add.goes) this.went = true;
+  }
+
+  /** Set when a worker's step has just counted a go to its ledger, for what was in its arms to be counted with it. */
+  private went = false;
+
   private updateWorker(c: Creature, dt: number, game: Game): void {
+    this.workerStep(c, dt, game);
+    /*
+     * Off its ground, which is what its card says until it is back on it,
+     * whatever else it is about: the island walks it home before anything
+     * else (`worker_settle`), by the same test, and says `far` while it does.
+     */
+    const site = c.mode === 'deed' ? game.workSite(c) : null;
+    if (!site) return;
+    const off = Math.max(Math.abs(site.x + 0.5 - c.x), Math.abs(site.y + 0.5 - c.y)) > siteRange(c, this.species(c), site) + HOME_SLACK;
+    if (off) c.idle = { why: 'far', n: Math.hypot(site.x + 0.5 - c.x, site.y + 0.5 - c.y), post: c.post !== null };
+    else if (c.idle?.why === 'far') c.idle = null;
+  }
+
+  private workerStep(c: Creature, dt: number, game: Game): void {
     c.hunger = Math.max(0, c.hunger - dt * HUNGER_RATE.deed * bloodMul(c, 'appetite') * keptOf(c, 'kept:hunger', 1));
     // A post stands in for the token: the same loop, a different middle.
     const deed = game.workSite(c);
@@ -8278,12 +8356,23 @@ export class Creatures {
       if (this.packHunt(game, c, dt, deed)) return;
     }
     if (kind && ERRAND_JOBS.has(kind) && c.state !== 'forage') {
-      if (this.errandStep(game, c, dt, kind, deed)) return;
+      // Whatever it finds to do clears why it had nothing; a step that finds nothing says why (`why`).
+      c.idle = null;
+      const held = c.carrying ? { id: c.carrying.id, n: c.carrying.count } : null;
+      this.went = false;
+      const busy = this.errandStep(game, c, dt, kind, deed);
+      // What was in its arms and went into a go is what it handled, as the island's `worker_settle` counts it.
+      if (this.went && held) {
+        const left = c.carrying?.id === held.id ? c.carrying.count : 0;
+        if (left < held.n) this.toLedger(game, c, { item: held.id, n: held.n - left });
+      }
+      if (busy) return;
     }
     if (c.state === 'forage') {
       if (game.time >= c.until) {
         c.carrying = kind ? this.finishForage(game, c, kind) : null;
         if (kind) this.acted(c, 'work', game.time);
+        if (kind) this.toLedger(game, c, { goes: 1 });
         c.state = 'idle';
         c.until = game.time + 0.5;
       }
@@ -8303,6 +8392,7 @@ export class Creatures {
       if (!store) {
         // Everything on the deed is full. A worker will not tip a load out on
         // the ground: it holds on to it and waits for room.
+        this.why(c, 'full');
         if (game.time - c.noRoomAt > 60) {
           c.noRoomAt = game.time;
           game.logMsg(`${c.name} is holding ${itemDef(c.carrying.id).name.toLowerCase()} with nowhere on the deed to put it. Empty something, or build more storage.`, 'error');
@@ -8314,7 +8404,10 @@ export class Creatures {
       }
       const [dx, dy] = store.centre;
       if (Math.hypot(dx - c.x, dy - c.y) <= 1.3) {
-        if (!store.add(c.carrying)) return;
+        const load = c.carrying;
+        if (!store.add(load)) return;
+        // Brought in: counted to its ledger as the island counts a load into a store (`worker_settle`'s `home`).
+        this.toLedger(game, c, { item: load.id, n: load.count });
         c.carrying = null;
         c.state = 'idle';
         c.until = game.time + 1;
@@ -8395,6 +8488,7 @@ export class Creatures {
         const spot = kind && this.worksBeside(game, kind, t.x, t.y) ? this.beside(game, t.x, t.y, c.x, c.y) : t;
         if (kind === 'mine') c.job = null;
         if (spot) {
+          c.idle = null;
           c.job = kind === 'farm' ? this.farmJobAt(game, c, t.x, t.y) : null;
           c.workX = t.x;
           c.workY = t.y;
@@ -8405,6 +8499,9 @@ export class Creatures {
         }
       }
     }
+    // Nothing of its trade within its range of the token: the island's `find_work_tile` coming back empty. An errand
+    // trade has said its own why already.
+    if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') this.why(c, 'range', siteRange(c, def, deed));
     // Nothing to do right now: potter about near the token.
     this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
     c.until = game.time + 4;
@@ -8903,6 +9000,7 @@ export class Creatures {
         homeY: c.homeY,
         trade: c.trade,
         shodAt: c.shodAt,
+        ledger: c.ledger ?? undefined,
       })),
     };
   }
@@ -8914,7 +9012,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills) });
+      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), ledger: j.ledger ?? null });
       cs.list.set(c.id, c);
       if (c.id >= cs.nextId) cs.nextId = c.id + 1;
     }

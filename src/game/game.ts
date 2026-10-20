@@ -3732,6 +3732,11 @@ export class Game {
    * and the day is written down against the skill. The island's `skill_raise`
    * does the same.
    */
+  /** Which of the island's days it is (`DAY_SECONDS` each), on its clock when there is one: what a worker's ledger is kept by (`ledgerAdd`). The island's `island_day`. */
+  islandDay(): number {
+    return Math.floor((this.islandClock ? this.islandClock() : this.time) / DAY_SECONDS);
+  }
+
   /**
    * Love's Bloom, at the end of a sitting: every tree within its reach of you
    * a stage on (`LAND_GROWS`), once a day of the island's clock -- the first

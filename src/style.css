@@ -3560,6 +3560,9 @@ button.goal-row:focus-visible {
 .trait-chip.trait-unread { color: var(--t-dim, #6d7a72); border-style: dashed; font-style: italic; }
 /* A bred one's dam and sire, over the traits, and on each trait where it came from. */
 .pal-pedigree { margin: 4px 0 0; color: var(--ui-dim); font-size: 11px; }
+/* Why a worker is standing about, and its ledger of the last two island days. */
+.pal-idle { margin: 4px 0 0; font-size: 11px; }
+.pal-ledger { margin: 2px 0 0; color: var(--ui-dim); font-size: 11px; white-space: pre-line; }
 .pal-rarity { margin: 2px 0 4px; font-size: 11px; color: var(--ui-dim); }
 .pal-rarity-name { font-weight: 700; }
 .trait-from { font-size: 10px; color: var(--t-dim, #b8b09a); font-style: italic; }
