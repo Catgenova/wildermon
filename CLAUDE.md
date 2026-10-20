@@ -19,3 +19,7 @@
   somebody is reading it to decide how to spend a point.
 - Where the number can be derived, derive it rather than writing it out, so
   the text cannot drift from the rule it describes.
+- **No prose.** Labels, not sentences: "Boat row speed", not "A boat under
+  oars." Game text names the thing and its number and stops. No scene-setting,
+  no narration of what a creature or a person does, no clauses explaining why
+  a rule exists.
