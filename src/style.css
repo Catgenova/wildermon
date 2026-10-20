@@ -380,6 +380,15 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Said when the island cannot be reached: the one way on from the boot card. */
+.boot-retry {
+  align-self: flex-start;
+  margin-top: 0.5rem;
+  padding: 0.35rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+
 .boot-done {
   margin: 0;
   padding: 0;

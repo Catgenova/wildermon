@@ -34,7 +34,6 @@ const said = $<HTMLParagraphElement>('say');
 const tabNew = $<HTMLButtonElement>('tab-new');
 const tabBack = $<HTMLButtonElement>('tab-back');
 const peek = $<HTMLButtonElement>('peek');
-const alone = $<HTMLAnchorElement>('alone');
 const lede = $<HTMLParagraphElement>('lede');
 const maker = $<HTMLElement>('maker');
 const ashore = $<HTMLButtonElement>('ashore');
@@ -63,15 +62,8 @@ const toGame = `./index.html${carried.toString() ? `?${carried}` : ''}`;
  *
  * "Or go straight ashore with no account" was here, and everybody took it —
  * which is how every body on the island came to be an anonymous session called
- * Wanderer, with its skills hanging off a uid kept in `localStorage`. The
- * single-player game below needs no name and still has none.
+ * Wanderer, with its skills hanging off a uid kept in `localStorage`.
  */
-// And the single-player game, which is still all here and still saved in this
-// browser. It is a link rather than the default now: the front door opens on
-// the island.
-const byMyself = new URLSearchParams(carried);
-byMyself.set('alone', '1');
-alone.href = `./index.html?${byMyself}`;
 
 type Mode = 'new' | 'back';
 let mode: Mode = 'new';

@@ -101,7 +101,7 @@
  * creature | player | tile | self; `--night 1` for the dark, `--fast 1` for
  * fast graphics, `--secs` to run on past the cast for what lingers). In the
  * game, `wurm.spell('blade_lunge')` in the console plays it from you at
- * whatever is under the cursor, with no island needed (`?alone` works), and
+ * whatever is under the cursor, drawn in this browser only, and
  * `wurm.spells` lists every id.
  *
  * SPELLS.md, in this folder, is the long form of all of this for

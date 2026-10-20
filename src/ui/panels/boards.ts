@@ -1,8 +1,8 @@
 import type { Boards, Island } from '../../net/island';
-import { deedLevel, MAX_DEED_LEVEL, type Game } from '../../game/game';
-import { BOARD_TOP, bestSkill, bredScore } from '../../game/boards';
-import { creatureLevel, SPECIES, type Creature } from '../../game/creatures';
-import { SKILL_BY_ID, SKILL_DEFS, type SkillDef } from '../../game/skills';
+import { MAX_DEED_LEVEL, type Game } from '../../game/game';
+import { BOARD_TOP, bestSkill } from '../../game/boards';
+import { SPECIES } from '../../game/creatures';
+import { SKILL_DEFS, type SkillDef } from '../../game/skills';
 import { GRADE_STEP, TIERS, TRAIT_SLOTS } from '../../game/traits';
 
 /** How often the window asks the island again while it is open, in seconds. */
@@ -41,34 +41,6 @@ const SKILL_GROUPS: Array<SkillDef['group']> = ['Characteristics', 'Fighting', '
 
 /** How many people a settlement holds, as a board says it. */
 const citizens = (n: number): string => `${n} ${n === 1 ? 'citizen' : 'citizens'}`;
-
-/**
- * Your own standing on each board, for the game you play by yourself: your
- * best skill, your best-bred wildermon and your settlement, each measured the
- * way the island's board measures it.
- */
-export function soloStanding(game: Game): Record<Tab, string> {
-  const skill = bestSkill((id) => game.skills.standing(id));
-  let bred: { c: Creature; score: number } | null = null;
-  for (const c of game.creatures.list.values()) {
-    if (c.mode === 'wild') continue;
-    const score = bredScore(c.traits);
-    if (!bred || score > bred.score || (score === bred.score && creatureLevel(c) > creatureLevel(bred.c))) bred = { c, score };
-  }
-  const deed = game.deed;
-  return {
-    skills: skill
-      ? `Your best skill (characteristics excluded): ${SKILL_BY_ID.get(skill.id)?.name ?? skill.id} ${skill.value.toFixed(2)}.`
-      : 'No skill raised yet (characteristics excluded).',
-    wildermon: bred
-      ? `Your best-bred wildermon: ${bred.c.name}, ${SPECIES[bred.c.species]?.name ?? bred.c.species}, `
-        + `${figure(bred.score)}/${figure(BRED_MAX)}, level ${creatureLevel(bred.c)}.`
-      : 'No tamed wildermon.',
-    settlements: deed
-      ? `Your settlement: ${deed.name}, level ${deedLevel(deed)}/${MAX_DEED_LEVEL}, ${citizens(1)}: you.`
-      : 'No settlement founded.',
-  };
-}
 
 /**
  * Who leads the island: each skill's highest, the best-bred wildermon and the
@@ -169,10 +141,7 @@ export class BoardsPanel {
 
   private draw(): void {
     this.page.replaceChildren();
-    if (!this.island) {
-      this.drawAlone();
-      return;
-    }
+    if (!this.island) return;
     this.say(BOARD_RULES[this.tab]);
     if (!this.seen) {
       this.say(this.failed ? `No answer from the island. Retry every ${REFRESH} s while open.` : 'Loading…');
@@ -182,20 +151,6 @@ export class BoardsPanel {
     if (this.tab === 'skills') this.drawSkills(this.seen);
     else if (this.tab === 'wildermon') this.drawWildermon(this.seen);
     else this.drawSettlements(this.seen);
-  }
-
-  /** The game you play by yourself: what each board ranks by, and where you stand on it. */
-  private drawAlone(): void {
-    this.say('Leaderboards: island only. Single-player: ranking rules and your standing.');
-    const mine = soloStanding(this.game);
-    for (const [id, label] of TABS) {
-      this.head(label);
-      this.say(BOARD_RULES[id]);
-      const row = document.createElement('div');
-      row.className = 'skill-row';
-      row.textContent = mine[id];
-      this.page.append(row);
-    }
   }
 
   private drawSkills(b: Boards): void {
@@ -302,13 +257,6 @@ export class BoardsPanel {
   private say(text: string): void {
     const el = document.createElement('div');
     el.className = 'skill-note market-note board-note';
-    el.textContent = text;
-    this.page.append(el);
-  }
-
-  private head(text: string): void {
-    const el = document.createElement('div');
-    el.className = 'skill-group';
     el.textContent = text;
     this.page.append(el);
   }

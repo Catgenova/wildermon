@@ -4,7 +4,6 @@ import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
-import { CULL_RANGE } from '../../game/creatures';
 
 export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
@@ -154,7 +153,7 @@ export class SkillsPanel {
       }
       // What a go of Track reaches and reads at this level, and what each band of it says (`tracking.ts`).
       case TRACKING:
-        return trackingSays(v, g.ask ? undefined : CULL_RANGE);
+        return trackingSays(v);
       default:
         return null;
     }

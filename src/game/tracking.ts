@@ -243,21 +243,18 @@ export const trackErrSays = (): string =>
 
 /**
  * What the Skills window says Tracking is worth, short and as a sentence: the
- * reach and the spread at the level you are at, and what every band adds;
- * `solo`, alone, the most a track reaches there (`trackAction.ts`).
+ * reach and the spread at the level you are at, and what every band adds.
  */
-export function trackingSays(skill: number, solo?: number): [string, string] {
+export function trackingSays(skill: number): [string, string] {
   const L = trackLevel(skill);
   const err = trackErr(L);
   const band = TRACK_BANDS[trackBand(L)];
   const bands = trackBandsSays();
-  const reach = solo !== undefined ? Math.min(solo, trackRange(L)) : trackRange(L);
+  const reach = trackRange(L);
   return [
     `${reach} tiles · ±${fmt(err)}° · ${band.points === 360 ? 'degree' : `${band.points} points`}`,
     `Track (from a kind's field guide page): nearest wild one of a seen kind within ${TRACK_RANGE_BASE} tiles, +${TRACK_RANGE_PER} per level `
-      + `(${trackRange(L)} now). Bearing error: ${trackErrSays()} (±${fmt(err)}° now). Levels: ${bands.join('; ')}.`
-      // Alone, the wild past what is out is a count, not creatures (`trackAction.ts`).
-      + (solo !== undefined && solo < trackRange(L) ? ` Single-player: max ${solo} tiles (the wild beyond is a count, not creatures).` : ''),
+      + `(${trackRange(L)} now). Bearing error: ${trackErrSays()} (±${fmt(err)}° now). Levels: ${bands.join('; ')}.`,
   ];
 }
 

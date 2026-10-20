@@ -52,7 +52,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_I
 import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
-  AGES, BLOW_SHARE, CULL_RANGE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
   BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
@@ -93,7 +93,7 @@ import {
   ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
   DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
   footing, Game, goSeconds, hullSpeed, kitQl, MAX_DEED_LEVEL, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
-  QL_SPAN, QUEUE_PER_MIND, TWILIGHT, WAKE_AFTER_DAWN, wearPerUse,
+  QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
   QL_TOP,
 } from '../../game/game';
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
@@ -1006,7 +1006,6 @@ export function helpText(): string {
       <li><b>Skills:</b> ${BOARD_RULES.skills}</li>
       <li><b>Wildermon:</b> ${BOARD_RULES.wildermon}</li>
       <li><b>Settlements:</b> ${BOARD_RULES.settlements}</li>
-      <li>Single player: your best skill (no characteristics), your best-bred wildermon and your settlement, each measured as its board measures.</li>
     </ul>
 
     <h3>The settlement window</h3>
@@ -1207,7 +1206,7 @@ export function helpText(): string {
     <h4>Taking up and changing</h4>
     <ul>
       <li><b>What it offers</b> on every card: its ${PERK_TIER_AT.length} tiers with their opening skill or class level, and a fighting trade's
-      rite${COLUMNS ? `, or its ${COLUMNS} columns with each node's cost and effect` : ''}. Read from the rulebook; works in single player.</li>
+      rite${COLUMNS ? `, or its ${COLUMNS} columns with each node's cost and effect` : ''}. Read from the rulebook.</li>
       <li><b>Take up</b> and <b>Take this one</b> confirm first, listing what goes, the cost and which perks close.</li>
       <li>Spent points, purse and altar state are the island's answer; a disabled button's reason is the island's own.</li>
       <li>Changing a trade: <b>${CLASS_CHANGE_COST} silver</b>; ${BOUGHT} for the old one are lost. The other slot is unchanged.</li>
@@ -1234,7 +1233,6 @@ export function helpText(): string {
     <ul>
       <li>Island: <i>Customize character</i> under <b>How you look</b> (Settings, <kbd>O</kbd>) opens the account page's character creator on your current look.
       <i>Step ashore</i> saves it to your account, applies it on every island you have a body on and returns you. Nothing changes before that.</li>
-      <li>Single player: the starting look is permanent.</li>
     </ul>
     <h4>Map</h4>
     <ul>
@@ -1401,7 +1399,7 @@ export function helpText(): string {
     <ul>
       <li>${FRUIT_TREES.length} of the ${TREE_DEFS.length} trees bear. <b>Apple</b> and <b>olive</b>: wild in the warm lowlands of any island.
       The rest each grow on one island of the chart, among the apples and olives:
-      ${listed(ISLAND_FRUIT.map(({ R, trees }) => `${listed(trees.map((t) => `<b>${t}</b>`))} on ${islandName(R.name)}`))}. Single player: all of them.</li>
+      ${listed(ISLAND_FRUIT.map(({ R, trees }) => `${listed(trees.map((t) => `<b>${t}</b>`))} on ${islandName(R.name)}`))}.</li>
       ${REGIONS.filter((R) => R.treeless).map((R) => `<li>${capital(islandName(R.name))}: no trees grow or seed on their own.</li>`).join('')}
       <li>Spring flowers: ${FLOWER_KINDS.map(([family, kinds]) => `${family} on ${listed(kinds)}`).join('; ')}.</li>
       <li>A <b>sprout</b> (forestry) planted anywhere grows the tree.</li>
@@ -2014,7 +2012,7 @@ export function helpText(): string {
       <li>At each turn of the woods (dawn): the day's <b>mote swirls</b> vanish; ${SWIRLS_A_DAY} new ones appear on random tiles, land or water; never under a tree,
       inside a building, or on a tile that has one.</li>
       <li>Element: on water, <b>water</b>. On land: <b>dark</b> ${percent(SWIRL_DARK)}, <b>light</b> ${percent(SWIRL_LIGHT)}, otherwise the island's:
-      ${listed(REGIONS.map((R) => `<b>${ISLAND_ELEMENT[R.key]}</b> on ${islandName(R.name)}`))}. Single player uses the same chart.</li>
+      ${listed(REGIONS.map((R) => `<b>${ISLAND_ELEMENT[R.key]}</b> on ${islandName(R.name)}`))}.</li>
       <li><b>Collect motes</b> (bare hands, beside it; from the bank, swimming or a boat on water): motes of its element by elementalism before the go:
       ${listed(MOTE_COUNTS.map((n) => `${n} at elementalism ${n === MOTES_LEAST ? `under ${MOTES_STEP}` : `${(n - MOTES_LEAST) * MOTES_STEP}${n === MOTES_MOST ? ' and up' : ''}`}`))};
       QL = your elementalism.</li>
@@ -2218,7 +2216,7 @@ export function helpText(): string {
       tameable (monsters are not).</li>
       <li>A page: where it spawns and how far it keeps from home, its share of the wild's roll, taming needed and accepted food, its use once yours, how it fights, carcass yield.</li>
       <li><b>Field guide</b> on any creature's menu opens its page.</li>
-      <li>Single player: kept in your save. Island: kept by the island; counts a sighting only within ${MOBS_RANGE} tiles of you.</li>
+      <li>Kept by the island; a sighting counts only within ${MOBS_RANGE} tiles of you.</li>
     </ul>
     <h4>Track</h4>
     <ul>
@@ -2228,7 +2226,6 @@ export function helpText(): string {
       <li>Detail by Tracking: ${trackBandsSays().join('; ')}. North is up the map.</li>
       <li>An on-screen arrow points the read direction from where you stood for ${TRACK_SHOW} seconds.</li>
       <li>Trains Tracking: a go when it finds one; ${percent(TRY_LEARN)} of one when it finds no sign.</li>
-      <li>Single player: max ${CULL_RANGE} tiles (the wild beyond is a count, not creatures).</li>
     </ul>
     <h3>What the island will not tell you</h3>
     <ul>
@@ -2311,7 +2308,6 @@ export function helpText(): string {
     <ul>
       <li><b>Make this your home</b> (bed or cot): where you wake, whatever happens.</li>
       <li><b>Sleep until morning</b> (after dark): wind restored, some damage mended; better bed, better night.</li>
-      <li>Single player: wake at <b>${hudHour(DAWN + WAKE_AFTER_DAWN)}</b>; the world runs meanwhile (fires burn, crops grow, kilns finish, items outside age).</li>
       <li>Island: the night cannot be skipped; you wake rested at the same clock time.</li>
       <li>You wake hungry and thirsty.</li>
       <li>Tailor: <b>tent</b>, ${bill('make_tent')}, with a needle. Set down anywhere; sleeps as a bed: ${percent((furnitureDef('tent').bed ?? 0) / (furnitureDef('bed').bed ?? 1))} of a bed
@@ -2991,7 +2987,7 @@ export function helpText(): string {
       <li><b>Spell bar</b>: ${BAR_SLOTS} slots: ${listed((['class', 'faith', 'path'] as const).map((s) => `${slotsFor(s)} for ${SCHOOL_NAMES[s].toLowerCase()} spells`))}.
       New patron spells fill the first empty faith slot, fighting-trade spells the first empty class slot, techniques the path slot. Right-click a slot to change or empty it.
       Dark shading: cooldown left.</li>
-      <li>Island only: single player has no patrons or trades; path techniques are called from the Path tab or the rug.</li>
+      <li>Path techniques are called from the Path tab or the rug.</li>
       <li>Targets (each spell says): ${listedOr(SPELL_ONS.map((o) => `<b>${SPELL_ON_WORDS[o]}</b>`))}. Wildermon: any creature not after you; enemy: any wild creature
       (a peaceful wild one is both). Thing: in your pack or set down. Ground spells reach everything within their own tiles of the spot.</li>
       <li>Range: <b>${SPELL_REACH}</b> tiles for anything but you and what you carry.</li>

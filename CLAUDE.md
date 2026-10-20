@@ -5,6 +5,12 @@
   `main` with `live: true`, `found: false` and `reconcile: off`, without being asked. It pushes the
   migrations to the Supabase project and plays on the real island. Never start one while another
   live run is still going.
+- **The island is the only game.** There is no single-player mode and no offline fallback: no
+  `?alone`, no saves in the browser, no game that runs without the database. A page that cannot
+  reach the island says so and offers Retry. Build, test and describe every feature for the island
+  only: no "in a game of your own" code paths, checks, help or What's new lines. The rules in
+  `src/game` are there to show the island's game (menus, refusals, descriptions); do not extend
+  them into a game the browser runs by itself.
 - GitHub Pages serves `main` from the repository root. `index.html` and `assets/` at the root are
   generated: run `npm run build` (typecheck + bundle + copy to root) before committing and commit
   the regenerated files together with the source change. Edit `src/index.html`, never the root one.

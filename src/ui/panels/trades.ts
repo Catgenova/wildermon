@@ -196,15 +196,7 @@ export class TradesPanel {
   }
 
   private drawPage(): void {
-    if (!this.island) {
-      if (this.tab === 'tree') {
-        this.page.append(this.note('Classes: island only. Single-player: no tree. See the Trades tab.'));
-        return;
-      }
-      this.page.append(this.note('Classes: island only. Single-player: read only.'));
-      this.drawBook();
-      return;
-    }
+    if (!this.island) return;
     if (!this.said) {
       this.page.append(this.note('Loading classes…'));
       return;

@@ -427,7 +427,7 @@ export async function whoAmI(): Promise<string | null> {
   return named && nameTrouble(named) === null ? named : null;
 }
 
-/** Put the account down. The single-player game is still there without one. */
+/** Put the account down. */
 export async function signOut(): Promise<void> {
   await supabase().auth.signOut();
 }

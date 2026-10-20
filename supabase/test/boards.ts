@@ -32,10 +32,9 @@
  */
 import { execFileSync } from 'node:child_process';
 import { BOARD_TOP, bredScore } from '../../src/game/boards';
-import { Game, MAX_DEED_LEVEL } from '../../src/game/game';
-import { SPECIES } from '../../src/game/creatures';
+import { MAX_DEED_LEVEL } from '../../src/game/game';
 import { GRADE_STEP, TIERS, TRAIT_SLOTS } from '../../src/game/traits';
-import { BOARD_RULES, BRED_MAX, figure, soloStanding } from '../../src/ui/panels/boards';
+import { BOARD_RULES, BRED_MAX, figure } from '../../src/ui/panels/boards';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -277,31 +276,6 @@ check('every line gives the board the size the island cuts it at',
 const maxLevel = Number(said('MAXLEVEL'));
 check('and the settlement line the top level there is',
   maxLevel === MAX_DEED_LEVEL && BOARD_RULES.settlements.includes(`1 to ${maxLevel}`), `level ${said('MAXLEVEL')}`);
-
-/* ---- the game you play by yourself ------------------------------------------ */
-
-const game = Game.create(4242);
-const alone = soloStanding(game);
-check('alone, before anything: no skill raised, no wildermon tamed, no settlement',
-  alone.skills === 'No skill raised yet (characteristics excluded).' && alone.wildermon === 'No tamed wildermon.'
-    && alone.settlements === 'No settlement founded.',
-  Object.values(alone).join(' / '));
-game.skills.values.set('body_strength', 40);
-game.skills.values.set('mining', 12.5);
-const [x, y] = [game.player.x, game.player.y];
-for (const b of BEASTS.filter((b) => b.world === W && ['Stormcaller', 'Twin High', 'Wildking'].includes(b.name))) {
-  const c = game.creatures.spawn(b.species, x, y, b.mode === 'wild' ? 'wild' : 'active', game.rand);
-  c.name = b.name;
-  c.traits = b.traits;
-}
-game.deed = { name: 'Hearth', x: Math.floor(x), y: Math.floor(y), radius: 7, level: 2 };
-const mine = soloStanding(game);
-check('your best skill, a characteristic higher than it not counted',
-  mine.skills === 'Your best skill (characteristics excluded): Mining 12.50.', mine.skills);
-check('your best-bred wildermon, by the board\'s own score, the wild one left out',
-  mine.wildermon === `Your best-bred wildermon: Stormcaller, ${SPECIES.rabba.name}, 14/${figure(BRED_MAX)}, level 1.`, mine.wildermon);
-check('and your settlement, with its level of the most there is',
-  mine.settlements === `Your settlement: Hearth, level 2/${MAX_DEED_LEVEL}, 1 citizen: you.`, mine.settlements);
 
 for (const l of [...ok, ...bad]) console.log(l);
 if (bad.length) {

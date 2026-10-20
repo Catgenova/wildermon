@@ -35,13 +35,9 @@ import { learnChart } from '../game/cartography';
  *   (nothing)        come ashore on the island this keeper keeps
  *   ?island=<id>     come ashore on a particular one
  *   ?found=<name>    roll a small one here, hand it over, and be its first
- *   ?alone           play by yourself, in this browser, with no keeper at all
  *
- * The single-player game is still all there and still saved in this browser;
- * it is one link away rather than the default. It is also where this lands
- * when the keeper cannot be reached or keeps no island yet — a page that
- * cannot get to the island should still have a game, and should say which it
- * gave you and why.
+ * There is no single-player game. A keeper that cannot be reached or keeps no
+ * island yet is an error, said on the boot card with a Retry (`main.ts`).
  */
 
 export interface Started {
@@ -77,8 +73,8 @@ async function homeIsland(): Promise<string | null> {
    * With a clock on it, because this is the first thing the page does.
    *
    * A front door that hangs is worse than one that opens on the wrong room:
-   * the single-player game is right there, and eight seconds is already longer
-   * than anybody should spend looking at a notice. A keeper that has not
+   * eight seconds is already longer than anybody should spend looking at a
+   * notice. A keeper that has not
    * answered by then is a keeper that is not answering.
    */
   const asked = supabase().from('home').select('island').limit(1).maybeSingle();
@@ -89,17 +85,13 @@ async function homeIsland(): Promise<string | null> {
   return ((data ?? {}) as { island?: string | null }).island ?? null;
 }
 
-export async function startIsland(params: URLSearchParams, tell: Telling): Promise<Started | null> {
-  if (params.has('alone')) return null;
+export async function startIsland(params: URLSearchParams, tell: Telling): Promise<Started> {
   const founding = params.get('found');
   let joining = params.get('island');
   if (!joining && founding === null) {
     tell('Asking which island…');
     joining = await homeIsland();
-    if (!joining) {
-      tell('This keeper has no island on it yet — playing on your own instead.');
-      return null;
-    }
+    if (!joining) throw new Error('The island keeper has no island on it yet.');
   }
 
   /**
@@ -123,9 +115,6 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
    * which is a place browsers tidy up. "Just had all my skills wiped" is what
    * that looks like from inside.
    *
-   * The single-player game needs no name and is still one link away; this is
-   * only about coming ashore on somebody else's island, where being somebody
-   * is the point.
    */
   if (!account) {
     tell('Sending you to the landing page to pick a name…');
@@ -135,9 +124,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
       if (had !== null) carried.set(key, had);
     }
     location.replace(`./account.html${carried.toString() ? `?${carried}` : ''}`);
-    // And hold here rather than hand back. Handing back starts the
-    // single-player game behind the notice, which flashes up for as long as
-    // the navigation takes and is not the game anybody asked for.
+    // And hold here rather than hand back while the page navigates.
     return new Promise<never>(() => {});
   }
   const name = account;

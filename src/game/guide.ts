@@ -34,7 +34,7 @@ import { TACK } from './creatureActions';
 import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
-  favouriteSays, GATHER_DO, GATHER_SKILL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS, NIP_EVERY,
+  favouriteSays, GATHER_DO, GATHER_SKILL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS,
   HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
@@ -249,14 +249,7 @@ function taming(def: SpeciesDef): string[] {
 }
 
 /** What one is for once it is yours: its trade, what it gives, what it carries and pulls, and what it sees. */
-/**
- * What a kept one is for. Three of these rules run only in a game of your
- * own -- an island fills no hive from one, reads no panniers and has no temper
- * on it -- and a page read on an island says so rather than promising them.
- */
-const SOLO_ONLY = 'Single-player only: ';
-function keeping(def: SpeciesDef, onIsland = false): string[] {
-  const solo = onIsland ? SOLO_ONLY : '';
+function keeping(def: SpeciesDef): string[] {
   const lines: string[] = [];
   if (def.gathers) {
     const skill = skillName(GATHER_SKILL[def.gathers]);
@@ -284,7 +277,6 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
     const what = def.milk ? `${capital(grown)} and milk` : capital(grown);
     lines.push(`${what} regrowth, grown: ${timeWords(1 / def.fleece)}`);
   }
-  if (def.hives) lines.push(`${solo}Kept on your settlement: fills a hive there with ${itemName('honey')} and ${itemName('wax')}`);
   if (def.mount) lines.push(`Mount: needs ${listed(TACK.map((id) => `${article(itemName(id))} ${itemName(id)}`))}`);
   if (def.pitch) lines.push(`Under a rider: climbing counts ×${def.pitch} toward the steepest step`);
   if (def.swims) lines.push('Mount: crosses deep water');
@@ -296,7 +288,6 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
       + (traces === HAUL_SKILL ? '; learns climbing pulling'
         : `; its ${SKILL_BY_ID.get(traces)?.name.toLowerCase() ?? traces} counts as climbing for team pace and the steepest step`));
   }
-  if (def.pannier) lines.push(`${solo}Panniers: ${def.pannier} items`);
   if (def.sight) lines.push(`Sight for you: ${def.sight} tiles (most: ${KEPT_EYES})`);
   if (def.learns) {
     // And at its own pace, which evens out every trade's time to level (`LEARN_PACE`); pulling says its own.
@@ -304,7 +295,6 @@ function keeping(def: SpeciesDef, onIsland = false): string[] {
     lines.push(`Level: ${SKILL_BY_ID.get(def.learns.skill)?.name.toLowerCase() ?? def.learns.skill}, learned ${LEARNS_SAYS[def.learns.by]}`
       + (pace !== 1 && def.learns.by !== 'pull' ? `, learning pace ${percent(pace)}` : ''));
   }
-  if (def.unruly) lines.push(`${solo}Attacks whoever stands beside it: ${percent(def.unruly)} chance every ${NIP_EVERY} seconds`);
   return lines;
 }
 
@@ -341,7 +331,7 @@ export function guidePage(def: SpeciesDef, onIsland = false): GuideSection[] {
   return [
     { head: 'Habitat', lines: whereItLives(def, onIsland) },
     { head: def.monster ? 'Not a wildermon' : 'Taming', lines: taming(def) },
-    ...(def.monster ? [] : [{ head: 'Kept', lines: keeping(def, onIsland) }]),
+    ...(def.monster ? [] : [{ head: 'Kept', lines: keeping(def) }]),
     { head: 'Combat', lines: fighting(def) },
     { head: 'Butchered', lines: carcass(def) },
   ].filter((s) => s.lines.length);

@@ -535,8 +535,8 @@ thing drawn in any of them, so a tall effect over a big creature is not cut off.
 `/tmp/spell-*` bundle when done (and any other over an hour old). Write images under the scratchpad
 `anim/<your-name>/`.
 
-In the game: `?alone` mode, then in the console `wurm.spell('kindler_scorch')` plays it from you at whatever is
-under the cursor (a creature, a person, the ground) with no island; `wurm.spell(id, { kind: 'creature', id })`,
+In the game, in the console, `wurm.spell('kindler_scorch')` plays it from you at whatever is
+under the cursor (a creature, a person, the ground), drawn in this browser only; `wurm.spell(id, { kind: 'creature', id })`,
 `{ kind: 'spot', x, y }`, `{ kind: 'self' }` aim it; a third argument `{ from: { x, y }, companion: creatureId }` plays
 it as though the island had moved you from there, or with that creature as your companion; `wurm.spells` lists every
 id.

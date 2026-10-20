@@ -35,7 +35,6 @@ import { ITEM_DEFS, itemName } from './game/items';
 import { RECIPES } from './game/recipes';
 import { Game } from './game/game';
 import { Keybinds } from './game/keybinds';
-import { loadGame, saveGame, saveOnExit, warmSave } from './game/save';
 import { warmMasonry } from './render/masonry';
 import { warmMeadow } from './render/meadow';
 import { Renderer, skyWash, sunAt, type Pick } from './render/renderer';
@@ -59,8 +58,7 @@ import { candleBurn, lanternReach } from './game/light';
 import { METALS } from './game/metal';
 import { lanternState } from './game/lantern';
 import { smeltableIn } from './game/smelter';
-import { ClientSession, HostSession, bodyOf } from './net/session';
-import { loopback } from './net/transport';
+import { bodyOf } from './net/session';
 import { PROTOCOL, cleanName, cleanText, decode, encode } from './net/protocol';
 import { packLand, packWorld, unpack } from './game/save';
 import { smeltSeconds } from './game/metal';
@@ -85,7 +83,6 @@ const canvasEl = document.getElementById('game') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui') as HTMLElement;
 
 const params = new URLSearchParams(location.search);
-const seedParam = params.get('seed');
 // Raising a thousand-tile island holds the thread for a second or more, and
 // nothing painted after that point is seen until it is done. Two frames of
 // waiting is what it takes for the notice in the page to actually reach the
@@ -93,17 +90,13 @@ const seedParam = params.get('seed');
 await new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done())));
 
 /**
- * The island, which is what this page is now.
+ * The island, which is the only game there is.
  *
  * With nothing in the address bar this asks the keeper which island it keeps
- * and comes ashore on it. `?island=<id>` goes to a particular one, `?found=`
- * rolls a small one, and `?alone` is the single-player game — still all here,
- * still saved in this browser, one link away rather than the default.
- *
- * It is also the fallback. A keeper that cannot be reached, or that has no
- * island on it yet, leaves you with the game in this browser and a line saying
- * which one you got and why; a page that cannot reach the island should still
- * have a game.
+ * and comes ashore on it. `?island=<id>` goes to a particular one and `?found=`
+ * rolls a small one. There is no single-player game and no offline fallback:
+ * a keeper that cannot be reached, or that has no island on it yet, leaves the
+ * boot card saying so with a Retry, and nothing else starts.
  */
 /**
  * The boot screen, which says what it is doing and how long it has been at it.
@@ -155,24 +148,29 @@ const boot = ((): { say: (text: string, at?: number, of?: number) => void; stop:
     },
   };
 })();
+/** The keeper could not be reached, or keeps no island: said on the boot card, with a Retry. */
+function cannotReach(why: string): void {
+  const card = document.querySelector('#boot .boot-card');
+  const line = card?.querySelector('.boot-now span');
+  if (line) line.textContent = `Can't reach the island: ${why}`;
+  const clock = card?.querySelector('.boot-now b');
+  if (clock) clock.textContent = '';
+  const again = document.createElement('button');
+  again.className = 'boot-retry';
+  again.textContent = 'Retry';
+  again.addEventListener('click', () => location.reload());
+  card?.append(again);
+}
 // Before anything that could throw: what goes wrong from here on is written down (see `errors.ts`).
 watchErrors();
 const tellBoot = (text: string, done?: number, total?: number): void => boot.say(text, done, total);
-let started = null;
-let why = '';
-try {
-  started = await startIsland(params, tellBoot);
-  if (!started && !params.has('alone')) why = 'The island keeper has no island on it yet.';
-} catch (e) {
-  why = e instanceof Error ? e.message : 'The island keeper did not answer.';
-  tellBoot(`${why} — playing on your own instead.`);
-  await new Promise<void>((done) => setTimeout(done, 2500));
-}
-const island = started?.island ?? null;
-
-// Reading a saved world means reading it out of IndexedDB, which is a thing
-// that takes a turn of the loop. Nothing else can start until it is here.
-const game = started?.game ?? (seedParam ? null : await loadGame()) ?? Game.create(seedParam ? Number(seedParam) >>> 0 : (Math.random() * 0x7fffffff) >>> 0);
+const started = await startIsland(params, tellBoot).catch((e: unknown) => {
+  boot.stop();
+  cannotReach(e instanceof Error ? e.message : 'The island keeper did not answer.');
+  // Nothing past here runs without an island: the page stays on its Retry.
+  return new Promise<never>(() => {});
+});
+const { island, game } = started;
 
 const canvas = new FullscreenCanvas(canvasEl);
 // The fast graphics draw a pixel for every screen pixel (`FAST_GRAPHICS`); sized again whenever that changes.
@@ -222,8 +220,8 @@ for (const ev of ['pointerdown', 'keydown', 'touchstart']) {
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, island });
 // A window or bar moved or resized against another clicks as they join.
 ui.windows.onJoin = () => sound.join();
-// Only an island can refuse to save; a game in this browser always can.
-if (island) mountSavingBanner(uiRoot);
+// The island can refuse to save: the banner says when it has.
+mountSavingBanner(uiRoot);
 
 /*
  * The game asks in its own words, on its own canvas.
@@ -249,7 +247,7 @@ camera.focus(player.x, player.y, game.playerHeight(), null);
 declare global {
   interface Window {
     /** Console handle for poking at the running game. */
-    wurm: { game: Game; renderer: Renderer; camera: typeof camera; sound: Sound; ACTIONS: typeof ACTIONS; RECIPES: typeof RECIPES; FURNITURE: typeof FURNITURE; MATERIALS: typeof MATERIALS; RELICS: typeof RELICS; TRAITS: typeof TRAITS; TITLES: typeof TITLES; DYES: typeof DYES; WOUND_KINDS: typeof WOUND_KINDS; TRAPS: typeof TRAPS; BRIDGES: typeof BRIDGES; bridgeDone: typeof bridgeDone; BAITS: typeof BAITS; FISH_IDS: string[]; SPECIES: typeof SPECIES; WEAPON_BY_ID: typeof WEAPON_BY_ID; itemName: typeof itemName; arch: { partsMissing: typeof partsMissing; piecesHeld: typeof piecesHeld }; ui: UI; island: Island | null; save: () => Promise<boolean>;
+    wurm: { game: Game; renderer: Renderer; camera: typeof camera; sound: Sound; ACTIONS: typeof ACTIONS; RECIPES: typeof RECIPES; FURNITURE: typeof FURNITURE; MATERIALS: typeof MATERIALS; RELICS: typeof RELICS; TRAITS: typeof TRAITS; TITLES: typeof TITLES; DYES: typeof DYES; WOUND_KINDS: typeof WOUND_KINDS; TRAPS: typeof TRAPS; BRIDGES: typeof BRIDGES; bridgeDone: typeof bridgeDone; BAITS: typeof BAITS; FISH_IDS: string[]; SPECIES: typeof SPECIES; WEAPON_BY_ID: typeof WEAPON_BY_ID; itemName: typeof itemName; arch: { partsMissing: typeof partsMissing; piecesHeld: typeof piecesHeld }; ui: UI; island: Island;
       /**
        * Play a spell's drawing from you at what is under the cursor, with no island (`Renderer.playSpell`): `from` as though
        * the island had moved you there from that spot, `companion` with that creature as your companion; and every spell id.
@@ -257,8 +255,8 @@ declare global {
       spell: (id: string, at?: CastAt, opts?: { from?: { x: number; y: number }; companion?: number }) => boolean; spells: readonly string[] };
   }
 }
-Object.assign(window as unknown as Record<string, unknown>, { catchFish, windAt, windFrom, windWord, pointOfSail, sailWord, favourCap, prayerWorth, PATHS, sittingWorth, weaponDamage, loopsFor, BELT_MAX, coaxBonus, COAX_STEP, COAX_LAPSE, rollsAt, PER_ROLL, cropSprite, creatureLines, tameChance, knackLands, knackBonus, KNACK_ODDS, KNACK_CAP, KNACK_BONUS, KNACK_HOME, boonTime, boonOf, BOON_BONUS, tableMul, upkeepMul, fedness, balance, NUTRIENTS, ITEM_DEFS, TILE_DEFS, groundRoll, crateName, furnitureName, trapName, postName, lanternReach, candleBurn, lanternState, sunAt, skyWash, swayAt, SWAY_MAX, puffAge, puffOf, PUFFS, PUFF_LIFE, PUFF_RISE, DUST_LIFE, FLOAT_LIFE, FLOAT_RISE, MERGE_WINDOW, Floaters, skyAt, unknownInk, findPath, WATER_PALETTE, waterRgb, CROPS, DAY_SECONDS, TORCH_BURN, WORLD_PACE, drawPortrait, drawHeadshot, LOOK_TABLES, cleanLook, randomLook, HAZE_MAX, HAZE_REACH, ROCK_VARIANTS, METALS, smeltableIn, smeltSeconds, needsIron, creatureSkills, tileUses, HostSession, ClientSession, bodyOf, loopback, PROTOCOL, cleanName, cleanText, encode, decode, packLand, packWorld, unpack, loadGame });
-window.wurm = { game, renderer, camera, sound, ACTIONS, RECIPES, FURNITURE, MATERIALS, RELICS, TRAITS, TITLES, DYES, WOUND_KINDS, TRAPS, BRIDGES, bridgeDone, BAITS, FISH_IDS: FISH.map((f) => f.id), SPECIES, WEAPON_BY_ID, itemName, arch: { partsMissing, piecesHeld }, ui, island, save: () => saveGame(game),
+Object.assign(window as unknown as Record<string, unknown>, { catchFish, windAt, windFrom, windWord, pointOfSail, sailWord, favourCap, prayerWorth, PATHS, sittingWorth, weaponDamage, loopsFor, BELT_MAX, coaxBonus, COAX_STEP, COAX_LAPSE, rollsAt, PER_ROLL, cropSprite, creatureLines, tameChance, knackLands, knackBonus, KNACK_ODDS, KNACK_CAP, KNACK_BONUS, KNACK_HOME, boonTime, boonOf, BOON_BONUS, tableMul, upkeepMul, fedness, balance, NUTRIENTS, ITEM_DEFS, TILE_DEFS, groundRoll, crateName, furnitureName, trapName, postName, lanternReach, candleBurn, lanternState, sunAt, skyWash, swayAt, SWAY_MAX, puffAge, puffOf, PUFFS, PUFF_LIFE, PUFF_RISE, DUST_LIFE, FLOAT_LIFE, FLOAT_RISE, MERGE_WINDOW, Floaters, skyAt, unknownInk, findPath, WATER_PALETTE, waterRgb, CROPS, DAY_SECONDS, TORCH_BURN, WORLD_PACE, drawPortrait, drawHeadshot, LOOK_TABLES, cleanLook, randomLook, HAZE_MAX, HAZE_REACH, ROCK_VARIANTS, METALS, smeltableIn, smeltSeconds, needsIron, creatureSkills, tileUses, bodyOf, PROTOCOL, cleanName, cleanText, encode, decode, packLand, packWorld, unpack });
+window.wurm = { game, renderer, camera, sound, ACTIONS, RECIPES, FURNITURE, MATERIALS, RELICS, TRAITS, TITLES, DYES, WOUND_KINDS, TRAPS, BRIDGES, bridgeDone, BAITS, FISH_IDS: FISH.map((f) => f.id), SPECIES, WEAPON_BY_ID, itemName, arch: { partsMissing, piecesHeld }, ui, island,
   spell: (id: string, at?: CastAt, opts?: { from?: { x: number; y: number }; companion?: number }) => renderer.playSpell(id, at, opts), spells: ALL_SPELL_IDS };
 
 input.onClick = (x, y, button) => {
@@ -570,35 +568,9 @@ followScreen(uiRoot, () => {
 boot.stop();
 document.getElementById('boot')?.remove();
 
-/*
- * Say which game this is, when it is not the island.
- *
- * Landing in the single-player game without having asked for it used to be the
- * only thing that could happen, so it needed no explaining. Now it means
- * something went wrong or you chose it, and either way the way back is worth
- * one line rather than a shrug.
- */
-if (!island) {
-  game.write(why
-    ? `${why} This is the game kept in this browser instead — reload to try the island again.`
-    : 'You are playing by yourself, in this browser. Drop the ?alone from the address to come ashore on the island.',
-    'system');
-}
-
-// Have the store open before anything asks it to write, so that the save on
-// the way out of the page is a write rather than a request to open a database.
-if (!island) warmSave();
-// And the cobblestone painted, for the same reason: a wall of it coming into
-// view should not be the thing that pays for drawing it.
+// The cobblestone painted before it is needed: a wall of it coming into view should not be the thing that pays for drawing it.
 warmMasonry();
 warmMeadow();
-// A new island is put away early: the land only reaches the store on a full
-// save, and until one has happened there is nothing for an exit patch to be
-// laid over.
-if (!island) {
-  setTimeout(() => void saveGame(game), 3000);
-  setInterval(() => void saveGame(game), 20000);
-}
 /*
  * Three ways out of a page, and the last of them is the only one a phone
  * reliably gives you.
@@ -609,7 +581,7 @@ if (!island) {
  * over on a slow beat while playing and once more here, which is what catches
  * the last three quarters of a minute of walking.
  */
-const onExit = island ? (): void => island.fogOnExit() : (): void => saveOnExit(game);
+const onExit = (): void => island.fogOnExit();
 window.addEventListener('beforeunload', onExit);
 window.addEventListener('pagehide', onExit);
 document.addEventListener('visibilitychange', () => {

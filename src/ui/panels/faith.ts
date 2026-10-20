@@ -127,9 +127,7 @@ export class FaithPanel {
       return;
     }
     const s = this.book.said;
-    if (!this.book.island) {
-      this.page.append(note('Patrons: island only. Single-player: read only.'));
-    } else if (!s) {
+    if (!s) {
       this.page.append(note('Loading faith…'));
     } else {
       this.page.append(this.standing(s));

@@ -130,14 +130,11 @@ for (const d of KINDS) {
     ['a fleece', !!d.fleece, /(Shear|Pluck) with a carving knife: /.test(text)],
     ['what it grows back in', !!d.fleece, !!d.fleece && text.includes(`regrowth, grown: ${timeWords(1 / d.fleece)}`)],
     ['milk', !!d.milk, text.includes('Milk a female into an empty bucket')],
-    ['a hive', !!d.hives, text.includes('fills a hive')],
     ['a saddle', !!d.mount, text.includes('Mount: needs a saddle and a bridle')],
     ['deep water', !!d.swims, text.includes('crosses deep water')],
     ['the traces', !!d.draught, text.includes(`Traces: team pull +${percent(d.pull ?? PULL_DEFAULT)}`)],
-    ['panniers', !!d.pannier, text.includes(`Panniers: ${d.pannier} items`)],
     ['a watcher\'s eyes', !!d.sight, text.includes(`Sight for you: ${d.sight} tiles`)],
     ['a light', !!d.glow, text.includes(`Lights ${d.glow} tiles round itself`)],
-    ['its temper', !!d.unruly, !!d.unruly && text.includes(`${percent(d.unruly)} chance every`)],
     ['its taming', !d.monster, text.includes(`Taming ${d.tameLevel}, base chance ${percent(d.tameChance)} per offering`)],
     ['that it is not a wildermon', !!d.monster, text.includes('Cannot be tamed, trapped, bred or kept')],
     ['its body', true, text.includes(`Grown: ${d.health} health, blow ${d.attack}`)],
@@ -149,22 +146,11 @@ check('what a kind is for, and what it is like to meet, is what its definition s
   !kept.length, kept.slice(0, 6).join('; '));
 
 /*
- * And the three kept rules an island does not run -- a hive filled from a
- * kept one, panniers, a temper -- say on an island page that they are for a
- * game of your own, and say nothing of the sort in one.
+ * And the three kept rules the island does not run -- a hive filled from a
+ * kept one, panniers, a temper -- are on no page.
  */
-const soloOnly: string[] = [];
-for (const d of KINDS) {
-  const island = guidePage(d, true).flatMap((sec) => sec.lines);
-  const alone = guidePage(d).flatMap((sec) => sec.lines);
-  for (const [what, has, bit] of [['a hive', !!d.hives, 'fills a hive'], ['panniers', !!d.pannier, 'Panniers: '],
-    ['its temper', !!d.unruly, 'chance every']] as Array<[string, boolean, string]>) {
-    if (!has) continue;
-    if (!island.find((l) => l.includes(bit))?.startsWith('Single-player only: ')) soloOnly.push(`${d.id}: ${what} unmarked on an island`);
-    if (alone.find((l) => l.includes(bit))?.startsWith('Single-player')) soloOnly.push(`${d.id}: ${what} marked in a game of your own`);
-  }
-}
-check('on an island, a hive, panniers and a temper are said to be for a game of your own only', !soloOnly.length, soloOnly.slice(0, 4).join('; '));
+const unrun = KINDS.filter((d) => /fills a hive|Panniers: |chance every/.test(says(d, true))).map((d) => d.id);
+check('no page promises a hive, panniers or a temper, which the island does not run', !unrun.length, unrun.slice(0, 4).join(', '));
 
 /* ---- the browser ------------------------------------------------------------ */
 console.log('--- the browser');
