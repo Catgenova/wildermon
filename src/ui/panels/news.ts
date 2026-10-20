@@ -2775,6 +2775,14 @@ export const NEWS: News[] = [
         + 'and of what that work wants, whatever is furthest behind its bill.',
     ],
   },
+  {
+    n: 215,
+    day: '2026-10-20',
+    lines: () => [
+      'A wildermon you set to work on your settlement from far away now walks the whole way home whether or not you are near it. '
+        + 'It used to walk only while you stood near it, and stopped wherever you left it.',
+    ],
+  },
 ];
 
 

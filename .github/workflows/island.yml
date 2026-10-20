@@ -2677,6 +2677,15 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/hodwork.mjs --log-level=error
           node node_modules/.cache/hodwork.mjs
 
+      - name: A worker far from anybody still walks home
+        run: |
+          # Reported: a Tinka sent home from far away stood where its keeper
+          # left it, out of reach of the sweeps round the players. The clock
+          # walks every worker off its ground whoever is near.
+          npx esbuild supabase/test/farworker.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/farworker.mjs --log-level=error
+          node node_modules/.cache/farworker.mjs
+
       - name: A wild thing goes after its span and the stretch is stocked afresh
         run: |
           # Asked: "I havent seen a single one of the new 60 wildermon." Country
