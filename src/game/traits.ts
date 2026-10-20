@@ -461,10 +461,17 @@ export const upgradeChance = (husbandry: number, care: number): number =>
 export const nextTier = (t: TraitTier): TraitTier | null => TIERS[TIERS.indexOf(t) + 1] ?? null;
 
 /**
- * Where one of a young one's traits came from, settled at the covering and
- * kept for good as its pedigree. The island stores the same five words.
+ * One young in this many is born with a mutation: a trait neither parent
+ * carries by name, a tier above the best of theirs (`mutationTier`), in its
+ * lowest slot. The island's `mutation_odds`.
  */
-export type TraitSource = 'dam' | 'sire' | 'both' | 'roll' | 'up';
+export const MUTATION_ODDS = 200;
+
+/**
+ * Where one of a young one's traits came from, settled at the covering and
+ * kept for good as its pedigree. The island stores the same six words.
+ */
+export type TraitSource = 'dam' | 'sire' | 'both' | 'roll' | 'up' | 'mutation';
 
 /** What a card calls each of them, and what each means in the rules. */
 export const TRAIT_SOURCES: Record<TraitSource, { label: string; means: string }> = {
@@ -473,6 +480,7 @@ export const TRAIT_SOURCES: Record<TraitSource, { label: string; means: string }
   both: { label: 'from both', means: 'drawn from a trait the dam and the sire both carry' },
   roll: { label: 'fresh roll', means: 'rolled off the wild table, tilted towards the better tiers by the breeder’s husbandry' },
   up: { label: 'bred up', means: 'one tier above what its slot drew, as a grade up its own name for fighting blood and a trait of the tier above for the rest' },
+  mutation: { label: 'mutation', means: `a trait neither parent carries, one tier above the best of theirs, which 1 young in ${MUTATION_ODDS} is born with in its lowest slot` },
 };
 
 /** What a pairing throws: the traits, and where each of them came from. */
@@ -562,7 +570,150 @@ export function breedTraits(
     out.push(id);
     from[id] = 'roll';
   }
+  /*
+   * And one young in `MUTATION_ODDS` is born with something neither of them
+   * has. Asked for: "one birth in 200, the foal gets a trait that neither
+   * parent carries, at one tier above the best tier among the parents' traits.
+   * It takes the foal's lowest-tier trait slot after normal inheritance (an
+   * empty slot first)." Never a name either parent carries or the young one
+   * already does, by the rule an ancient lamp keeps (`lampTrait`).
+   */
+  if (rand() < 1 / MUTATION_ODDS) {
+    const { slot } = lowestSlot(out, rand);
+    const now = lampTrait(mutationTier(sire, dam), [...sire, ...dam, ...out], rand);
+    if (now) {
+      if (out[slot] !== undefined) delete from[out[slot]];
+      out[slot] = now;
+      from[now] = 'mutation';
+    }
+  }
   return { traits: out, from };
+}
+
+/** The tier a mutation comes in at: one above the best either parent carries, and the top tier at the top. */
+export const mutationTier = (sire: string[], dam: string[]): TraitTier => {
+  const best = bestTier([...sire, ...dam]);
+  return nextTier(best) ?? best;
+};
+
+/** The trait a mutation brought, from where each came from; null for a young one with none. */
+export const mutationOf = (from: Record<string, TraitSource> | undefined): string | null =>
+  Object.keys(from ?? {}).find((id) => from?.[id] === 'mutation') ?? null;
+
+// ---- A line ----
+
+/**
+ * How deep a line runs: on each channel (`CHANNELS`), the generations in a row,
+ * ending with the creature itself, that carried a trait on it. Asked for: "a
+ * foal's depth on a channel = 1 + max(dam's depth, sire's depth) on that
+ * channel if the foal carries a trait on that channel, else 0. Wild-caught or
+ * spawned ones: 1 on each channel they carry a trait on, else 0. Cap at
+ * PEDIGREE_MOST = 5."
+ */
+export const PEDIGREE_MOST = 5;
+/** What each generation past the first adds to a channel, as a share: `PEDIGREE_STEP` × (depth − 1). */
+export const PEDIGREE_STEP = 0.02;
+
+/**
+ * The depths a young one is born with, written down where they are past one:
+ * the pedigree's `line`. A channel it is not written for is one, where it
+ * carries a trait on it; which is what everything caught, spawned or born
+ * before lines were kept stands at, without a word written to it.
+ */
+export type Line = Partial<Record<TraitChannel, number>>;
+
+/** Whether a set of traits carries anything on a channel. */
+export const carriesOn = (traits: string[] | undefined, channel: TraitChannel): boolean =>
+  (traits ?? []).some((id) => TRAIT_BY_ID.get(id)?.effects[channel] !== undefined);
+
+/**
+ * How deep its line runs on a channel: nought where it carries no trait on it
+ * (an ancient lamp may have taken it away since), the depth written down where
+ * there is one, and one otherwise; never past `PEDIGREE_MOST`.
+ */
+export const lineDepth = (traits: string[] | undefined, line: Line | undefined, channel: TraitChannel): number =>
+  carriesOn(traits, channel) ? Math.max(1, Math.min(PEDIGREE_MOST, line?.[channel] ?? 1)) : 0;
+
+/**
+ * What its line is worth on a channel: `PEDIGREE_STEP` more for every
+ * generation past the first, and as much less on a channel where less is
+ * better, as a rarity is (`rarityMul`). One at depth one and none.
+ */
+export function lineMul(traits: string[] | undefined, line: Line | undefined, channel: TraitChannel): number {
+  const d = line?.[channel];
+  return d === undefined || d <= 1 ? 1 : depthMul(lineDepth(traits, line, channel), channel);
+}
+
+/** What a line this deep is worth on a channel. */
+export function depthMul(depth: number, channel: TraitChannel): number {
+  const k = 1 + PEDIGREE_STEP * (Math.max(1, Math.min(PEDIGREE_MOST, depth)) - 1);
+  return CHANNEL_BY_ID.get(channel)?.up === false ? 1 / k : k;
+}
+
+/** The depth a young one of this pair would have on a channel if it carries a trait on it. */
+export const lineIfCarried = (dam: { traits: string[]; line?: Line }, sire: { traits: string[]; line?: Line }, channel: TraitChannel): number =>
+  Math.min(PEDIGREE_MOST, 1 + Math.max(lineDepth(dam.traits, dam.line, channel), lineDepth(sire.traits, sire.line, channel)));
+
+/** A young one's line, settled at the covering with its traits: the channels it carries a trait on where that is past one. The island's `bred_line`. */
+export function bredLine(young: string[], dam: { traits: string[]; line?: Line }, sire: { traits: string[]; line?: Line }): Line {
+  const out: Line = {};
+  for (const ch of CHANNELS) {
+    if (!carriesOn(young, ch.id)) continue;
+    const d = lineIfCarried(dam, sire, ch.id);
+    if (d > 1) out[ch.id] = d;
+  }
+  return out;
+}
+
+/** "Line: 4 generations bred for damage, +6% damage", for each channel its line runs past one on. */
+export const lineSaid = (traits: string[] | undefined, line: Line | undefined): string[] =>
+  CHANNELS.filter((ch) => lineDepth(traits, line, ch.id) > 1)
+    .map((ch) => `Line: ${lineDepth(traits, line, ch.id)} generations bred for ${ch.label}, ${pct(depthMul(lineDepth(traits, line, ch.id), ch.id))} ${ch.label}`);
+
+// ---- What a pairing would throw ----
+
+/** How many coverings a breeding preview runs through `breedTraits` itself, from one seed, so a pair reads the same each time it is looked at. */
+export const PREVIEW_GOES = 4000;
+const PREVIEW_SEED = 20261020;
+/** A seeded roll, the same run of numbers each time. */
+export const seededRand = (seed: number): (() => number) => {
+  let s = seed % 2147483647 || 1;
+  return () => (s = (s * 48271) % 2147483647) / 2147483647;
+};
+
+/** What a pairing throws, as shares of the young it would have. */
+export interface BreedOdds {
+  /** For each trait either parent carries, the share of young born carrying that very trait. */
+  carry: Record<string, number>;
+  /** The share whose best trait is of each tier. */
+  best: Record<TraitTier, number>;
+  /** The share carrying a trait on each channel. */
+  on: Record<TraitChannel, number>;
+  /** The share born with a mutation. */
+  mutated: number;
+}
+
+/**
+ * What a pairing would throw, counted off `breedTraits` itself -- the very
+ * draw the covering makes, mutation and all -- run `goes` times. It cannot say
+ * anything the covering does not do, because it is the covering.
+ */
+export function breedOdds(sire: string[], dam: string[], husbandry: number, care: number, keepPlus = 0, upPlus = 0,
+  goes = PREVIEW_GOES, rand: () => number = seededRand(PREVIEW_SEED)): BreedOdds {
+  const carry: Record<string, number> = Object.fromEntries([...new Set([...sire, ...dam])].map((id) => [id, 0]));
+  const best = Object.fromEntries(TIERS.map((t) => [t, 0])) as Record<TraitTier, number>;
+  const on = Object.fromEntries(CHANNELS.map((ch) => [ch.id, 0])) as Record<TraitChannel, number>;
+  let mutated = 0;
+  for (let i = 0; i < goes; i++) {
+    const bred = breedTraits(sire, dam, husbandry, care, rand, keepPlus, upPlus);
+    for (const id of bred.traits) if (id in carry) carry[id]++;
+    best[bestTier(bred.traits)]++;
+    for (const ch of CHANNELS) if (carriesOn(bred.traits, ch.id)) on[ch.id]++;
+    if (mutationOf(bred.from)) mutated++;
+  }
+  const share = <K extends string>(r: Record<K, number>): Record<K, number> =>
+    Object.fromEntries(Object.entries(r).map(([k, n]) => [k, (n as number) / goes])) as Record<K, number>;
+  return { carry: share(carry), best: share(best), on: share(on), mutated: mutated / goes };
 }
 
 // ---- An ancient lamp ----
@@ -608,16 +759,22 @@ export interface Rekindled {
  * the lamp fills that as the lowest tier there is. The new set, and what
  * happened; null when nothing could be kindled. The island's `perform_artifact`.
  */
+/**
+ * The lowest-tier slot in a set, one at random of those that share the lowest
+ * tier, and its tier; an empty slot first, which is lower than any trait and
+ * counts as the lowest tier there is. What an ancient lamp rekindles and what a
+ * mutation takes.
+ */
+export function lowestSlot(traits: string[], rand: () => number): { slot: number; from: TraitTier } {
+  if (traits.length < TRAIT_SLOTS) return { slot: traits.length, from: TIERS[0] };
+  const rank = (id: string): number => TIERS.indexOf(traitTier(id));
+  const low = Math.min(...traits.map(rank));
+  const lowest = traits.flatMap((id, i) => (rank(id) === low ? [i] : []));
+  return { slot: pick(lowest, rand), from: TIERS[low] };
+}
+
 export function rekindle(traits: string[], rand: () => number): { traits: string[]; did: Rekindled } | null {
-  let slot = traits.length;
-  let from: TraitTier = TIERS[0];
-  if (traits.length >= TRAIT_SLOTS) {
-    const rank = (id: string): number => TIERS.indexOf(traitTier(id));
-    const low = Math.min(...traits.map(rank));
-    const lowest = traits.flatMap((id, i) => (rank(id) === low ? [i] : []));
-    slot = pick(lowest, rand);
-    from = TIERS[low];
-  }
+  const { slot, from } = lowestSlot(traits, rand);
   const above = rand() < 1 / LAMP_TIER_ODDS ? nextTier(from) : null;
   const tier = above ?? from;
   const now = lampTrait(tier, traits, rand);

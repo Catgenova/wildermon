@@ -18,6 +18,27 @@
  *     bred up is above common; all five words turn up, they are the same five
  *     words on both sides, and how often each turns up agrees between them;
  *   * a young one of a covering made before pedigrees were kept has none;
+ *   * a mutation (one young in `MUTATION_ODDS`) is a name neither parent
+ *     carries, a tier above the best of theirs, and says so;
+ *
+ * and of a line (asked for: "each creature carries, per trait channel, a line
+ * depth: the number of consecutive generations, ending with itself, in which
+ * the creature on that line carried a trait on that channel ... Cap at
+ * PEDIGREE_MOST"), of both sides:
+ *
+ *   * every young one's line is `bredLine` of its traits and its parents' as
+ *     they stood at the covering, and goes into its pedigree;
+ *   * six generations bred down one line deepen it by one a generation and
+ *     stop at `PEDIGREE_MOST`, and a young one carrying nothing on a channel
+ *     stands at none there;
+ *   * what a line is worth is the same on both sides, in the blood the rules
+ *     read (`bloodMul`, `beast_mul`), on a channel where more is better and one
+ *     where less is, and nothing on a channel it no longer carries;
+ *   * the backfill: nothing already on an island has a line past one, so every
+ *     one of them stands at one on each channel it carries a trait on and gains
+ *     nothing;
+ *   * somebody else is sent its line only on the channels of the traits they
+ *     can read;
  *
  * of the browser, that a pedigree and a covering in hand go through a save
  * and come back, that the tooltip names the dam and the sire of a bred one
@@ -37,7 +58,10 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { Creatures, type Creature, type IslandCreature, type Pedigree } from '../../src/game/creatures';
 import { TIER_LEVEL } from '../../src/game/husbandry';
 import { packLand, packWorld, unpack } from '../../src/game/save';
-import { TRAIT_SOURCES, traitTier, type TraitSource } from '../../src/game/traits';
+import {
+  bredLine, CHANNELS, depthMul, familyOf, lineDepth, lineMul, mutationTier, PEDIGREE_MOST, TRAIT_SOURCES, traitTier, type Line, type TraitChannel, type TraitSource,
+} from '../../src/game/traits';
+import { bloodMul } from '../../src/game/creatures';
 import { creatureLines } from '../../src/ui/creatureinfo';
 
 const psql = (sql: string): string =>
@@ -68,10 +92,14 @@ const HUSBANDRY = 50;
 const CARE = 0.5;
 const COVERINGS = 500;
 const WORDS = Object.keys(TRAIT_SOURCES).sort();
-/** A young one whose record is written by hand, for the reading of it: a common, a rare and a supreme trait. */
-const KNOWN = { traits: ['willing', 'fleet', 'swift'], from: { willing: 'both', fleet: 'dam', swift: 'up' } as Record<string, TraitSource> };
+/** The words a draw writes often enough to turn up in five hundred: all but a mutation, one young in two hundred. */
+const DRAWN = WORDS.filter((w) => w !== 'mutation');
+/** A young one whose record is written by hand, for the reading of it: a common, a rare and a supreme trait, and a line on work and on speed. */
+const KNOWN = { traits: ['willing', 'fleet', 'swift'], from: { willing: 'both', fleet: 'dam', swift: 'up' } as Record<string, TraitSource>, line: { work: 2, speed: 3 } as Line };
 
 const sorted = (xs: Iterable<string>): string => JSON.stringify([...xs].sort());
+/** What each side's blood made of each line in `BONUS`, over the same blood with none. */
+const browserBonus: Record<string, number> = {};
 /**
  * The same record, whatever order its keys were written in: jsonb keeps an
  * object's keys shortest first, so the island's `{dam, from, sire}` is the
@@ -90,6 +118,9 @@ interface Young {
   traits: string[];
   pedigree: Pedigree | null;
 }
+
+/** A parent as a line reads it: its traits and what its pedigree says of its line. */
+const asParent = (who: { traits: string[]; line?: Line }): { traits: string[]; line?: Line } => ({ traits: who.traits, line: who.line });
 
 /**
  * The same questions of a side's young ones, whichever side bred them. Hands
@@ -114,15 +145,21 @@ function judge(side: string, young: Young[], dam: { id: number; name: string; tr
         : src === 'sire' ? inSire && !inDam
         : src === 'both' ? inDam && inSire
         : src === 'up' ? traitTier(id) !== 'common'
+        : src === 'mutation' ? ![...dam.traits, ...sire.traits].some((t) => familyOf(t) === familyOf(id)) && traitTier(id) === mutationTier(sire.traits, dam.traits)
         : src === 'roll';
       if (!fits) wrong.push(`${id} said to be ${src}`);
     }
   }
   check(`${side}: every young one names its dam and its sire, by id and by name`, named === young.length, `${named} of ${young.length}`);
   check(`${side}: every trait a young one carries says where it came from, and nothing else does`, keyed === young.length, `${keyed} of ${young.length}`);
-  check(`${side}: from the dam is the dam's very trait and not the sire's, from the sire the other way about, from both theirs, bred up above common`,
-    wrong.length === 0, wrong.slice(0, 5).join('; '));
-  check(`${side}: all five words turn up, and no other`, sorted(Object.keys(count)) === JSON.stringify(WORDS), sorted(Object.keys(count)));
+  check(`${side}: from the dam is the dam's very trait and not the sire's, from the sire the other way about, from both theirs, bred up above common, `
+    + 'a mutation a name neither carries a tier above the best of theirs', wrong.length === 0, wrong.slice(0, 5).join('; '));
+  check(`${side}: the ${DRAWN.length} words of a draw all turn up, and no word but the ${WORDS.length}`,
+    DRAWN.every((w) => count[w]) && Object.keys(count).every((w) => WORDS.includes(w)), sorted(Object.keys(count)));
+  // Its line, off its traits and the parents', who carry no line of their own here: one past theirs on each channel it shares with one of them.
+  const lined = young.filter((y) => same(y.pedigree?.line ?? null, bredLine(y.traits, asParent(dam), asParent(sire)))).length;
+  check(`${side}: every young one's line is one past its parents' on each channel it carries a trait on that one of them does`, lined === young.length,
+    `${lined} of ${young.length}; ${JSON.stringify(young.find((y) => !same(y.pedigree?.line ?? null, bredLine(y.traits, asParent(dam), asParent(sire))))?.pedigree?.line)}`);
   const share: Record<string, number> = {};
   for (const w of WORDS) share[w] = (count[w] ?? 0) / Math.max(1, total);
   console.log(`   ${side}, ${young.length} young ones: ${WORDS.map((w) => `${w} ${(share[w] * 100).toFixed(1)}%`).join(', ')}`);
@@ -168,7 +205,7 @@ check('browser: the covering writes the sire, by id and by name, and where each 
 dam.due = game.time;
 const first = game.creatures.giveBirth(game, dam);
 check('browser: the young one is born with its pedigree: its dam, its sire, and where each trait came from, as the covering wrote it',
-  !!first && same(first.traits, carried?.traits) && same(first.pedigree, { dam: { id: dam.id, name: 'Snow' }, sire: { id: sire.id, name: 'Horn' }, from: carried?.from }),
+  !!first && same(first.traits, carried?.traits) && same(first.pedigree, { dam: { id: dam.id, name: 'Snow' }, sire: { id: sire.id, name: 'Horn' }, from: carried?.from, line: carried?.line }),
   JSON.stringify(first?.pedigree));
 
 const browserYoung: Young[] = [];
@@ -212,6 +249,67 @@ check('browser: a pedigree the island sends is the one the card reads', same(her
 herd.sawAll([{ ...row, pedigree: undefined }]);
 check('browser: and a creature it sends none for has none', herd.get(7)?.pedigree === null);
 
+/* ---- a line, both sides' questions ------------------------------------------- */
+
+/** Generations bred down one line: one past the cap, to see it stop there. */
+const CHAIN = PEDIGREE_MOST + 1;
+/** What each generation's line on work should come to: one past the one before, from one out of the wild, and no further than the cap. */
+const CHAIN_WANT = Array.from({ length: CHAIN }, (_, i) => Math.min(PEDIGREE_MOST, i + 2));
+/** What a line is worth, asked of each side's blood: traits, the line written, the channel, and what it should come to. */
+const BONUS: Array<[string, string[], Line, TraitChannel]> = [
+  ['work4', ['willing'], { work: 4 }, 'work'],
+  ['work9', ['willing'], { work: 9 }, 'work'],
+  ['upkeep5', ['thrifty'], { appetite: 5 }, 'appetite'],
+  ['gone', ['fleet'], { work: 4 }, 'work'],
+  ['hardy3', ['thick_coated'], { hardy: 3 }, 'hardy'],
+];
+const bonusWant = (traits: string[], line: Line, ch: TraitChannel): number => (traits.some((t) => lineDepth([t], {}, ch) > 0) ? depthMul(line[ch] ?? 1, ch) : 1);
+
+console.log('--- a line, in the browser');
+{
+  // Down one line: the last one born, put to one out of the wild carrying willing alone, until a young one carries willing too.
+  let line = raise({ name: 'Root', traits: ['willing'] }, 'female', 0.6);
+  const depths: number[] = [];
+  let none = -1;
+  for (let gen = 0; gen < CHAIN; gen++) {
+    const mate = raise({ name: `Wild${gen}`, traits: ['willing'] }, 'male', -0.6);
+    let born: Creature | null = null;
+    for (let k = 0; k < 60 && !born; k++) {
+      game.creatures.pair(game, line, mate, 0);
+      const un = line.unborn!;
+      if (!un.traits.includes('willing')) {
+        if (!CHANNELS.some((ch) => ch.id === 'work' && un.traits.some((t) => lineDepth([t], {}, 'work') > 0))) none = un.line?.work ?? 0;
+        line.unborn = null;
+        continue;
+      }
+      line.due = game.time;
+      born = game.creatures.giveBirth(game, line);
+    }
+    depths.push(born ? lineDepth(born.traits, born.pedigree?.line, 'work') : -1);
+    if (!born) break;
+    born.sex = 'female';
+    line = born;
+  }
+  check(`browser: ${CHAIN} generations bred down one line on work come to ${CHAIN_WANT.join(', ')}: one deeper a generation, and no deeper than ${PEDIGREE_MOST}`,
+    same(depths, CHAIN_WANT), depths.join(', '));
+  check('browser: a young one of that line carrying nothing on work stands at none there', none === 0, String(none));
+  // What it is worth, in the blood the rules read.
+  for (const [key, traits, ln, ch] of BONUS) {
+    const c = raise({ name: key, traits }, 'female', 1.2);
+    c.pedigree = null;
+    const plain = bloodMul(c, ch);
+    c.pedigree = { dam: { id: 1, name: 'A' }, sire: { id: 2, name: 'B' }, from: {}, line: ln };
+    browserBonus[key] = bloodMul(c, ch) / plain;
+    game.creatures.remove(c.id);
+  }
+  // Born before lines were kept: a pedigree with no line, and one out of the wild, stand at one on each channel they carry and gain nothing.
+  const oldPed: Pedigree = { dam: { id: 1, name: 'A' }, sire: { id: 2, name: 'B' }, from: {} };
+  check('browser: one bred before lines were kept, or caught, stands at one on each channel it carries a trait on and at none elsewhere, and gains nothing',
+    CHANNELS.every((ch) => lineDepth(DAM.traits, oldPed.line, ch.id) === (lineDepth(DAM.traits, { [ch.id]: 1 }, ch.id) ? 1 : 0)
+      && lineMul(DAM.traits, undefined, ch.id) === 1 && lineMul(DAM.traits, oldPed.line, ch.id) === 1)
+      && lineDepth(DAM.traits, undefined, 'work') === 1 && lineDepth(DAM.traits, undefined, 'hardy') === 0);
+}
+
 /* ---- the island ------------------------------------------------------------- */
 
 const sqlArray = (xs: string[]): string => `'{${xs.join(',')}}'::text[]`;
@@ -222,7 +320,8 @@ create temp table said (k text);
 do $b$
 declare w uuid; me uuid; them uuid; v_x double precision; v_y double precision;
         v_dam int; v_sire int; v_first int; v_young int; v_known int; v_i int; v_why text;
-        v_all jsonb := '[]'; v_seen jsonb;
+        v_all jsonb := '[]'; v_seen jsonb; v_line int; v_mate int; v_born int; v_gen int; v_k int; v_none int := -1;
+        v_b creature; v_plain double precision;
 begin
   select id into w from world where name = 'Hoarding';
   select uid into me from player where world_id = w and name = 'Dane';
@@ -245,6 +344,53 @@ begin
       from_x = to_x, from_y = to_y, leg_at = now(), leg_ends = now(), settled_at = now()
     where world_id = w and id = v_sire;
   insert into said values ('IDS|' || v_dam || ',' || v_sire);
+
+  -- The backfill: nothing born before lines were kept has one, so each stands at one on each channel it carries a trait
+  -- on, at none elsewhere, and gains nothing; and nothing at all on the island was written a line by the migration.
+  insert into said values ('BACKFILL|' || (select count(*) from creature c cross join channel_def ch
+    where not coalesce(c.pedigree ? 'line', false)
+      and (line_depth(c.traits, c.pedigree->'line', ch.id) <> case when carries_on(c.traits, ch.id) then 1 else 0 end
+           or line_mul(c.traits, c.pedigree->'line', ch.id) <> 1)) || ',' || (select count(*) from creature));
+  insert into said values ('OLDPED|' || (select string_agg(ch.id || '=' || line_depth(${sqlArray(DAM.traits)}, ('{"dam":{"id":1,"name":"A"},"sire":{"id":2,"name":"B"},"from":{}}'::jsonb)->'line', ch.id)
+      || '/' || line_mul(${sqlArray(DAM.traits)}, ('{"dam":{"id":1,"name":"A"},"sire":{"id":2,"name":"B"},"from":{}}'::jsonb)->'line', ch.id), ',' order by ch.id) from channel_def ch));
+
+  -- Down one line, as in the browser: the last one born, put to one out of the wild carrying willing alone.
+  v_line := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'deed', now() - interval '3 hours', me);
+  update creature set sex = 'female', name = 'Root', traits = '{willing}', hunger = 1, care = ${CARE} where world_id = w and id = v_line;
+  for v_gen in 1..${CHAIN} loop
+    v_mate := creature_spawn(w, 'rabba', v_x - 0.6, v_y, 'deed', now() - interval '3 hours', me);
+    update creature set sex = 'male', name = 'Wild' || v_gen, traits = '{willing}', hunger = 1, care = ${CARE} where world_id = w and id = v_mate;
+    v_born := null;
+    for v_k in 1..60 loop
+      perform pair_them(w, v_line, v_mate, 0);
+      if not ((select unborn->'traits' from creature where world_id = w and id = v_line) ? 'willing') then
+        if not carries_on(array(select jsonb_array_elements_text((select unborn->'traits' from creature where world_id = w and id = v_line))), 'work') then
+          v_none := coalesce((select (unborn->'line'->>'work')::int from creature where world_id = w and id = v_line), 0);
+        end if;
+        update creature set unborn = null, due = null where world_id = w and id = v_line;
+        continue;
+      end if;
+      update creature set due = now() - interval '1 second' where world_id = w and id = v_line;
+      v_born := give_birth(w, v_line);
+      exit;
+    end loop;
+    insert into said select 'CHAIN' || v_gen || '|' || coalesce((select line_depth(c.traits, c.pedigree->'line', 'work') from creature c
+      where c.world_id = w and c.id = v_born), -1);
+    update creature set sex = 'female', hunger = 1, care = ${CARE} where world_id = w and id = v_born;
+    v_line := v_born;
+  end loop;
+  insert into said values ('NONE|' || v_none);
+
+  -- What a line is worth, in the blood the rules read (beast_mul), over the same blood with none.
+  v_b := null;
+${BONUS.map(([key, traits, ln, ch]) => `  update creature set traits = ${sqlArray(traits)}, pedigree = null where world_id = w and id = v_dam;
+  select * into v_b from creature where world_id = w and id = v_dam;
+  v_plain := beast_mul(v_b, '${ch}');
+  update creature set pedigree = jsonb_build_object('dam', jsonb_build_object('id', 1, 'name', 'A'), 'sire', jsonb_build_object('id', 2, 'name', 'B'),
+      'from', '{}'::jsonb, 'line', '${JSON.stringify(ln)}'::jsonb) where world_id = w and id = v_dam;
+  select * into v_b from creature where world_id = w and id = v_dam;
+  insert into said values ('BONUS:${key}|' || (beast_mul(v_b, '${ch}') / v_plain)::text);`).join('\n')}
+  update creature set traits = ${sqlArray(DAM.traits)}, pedigree = null where world_id = w and id = v_dam;
 
   -- Through the door once, as a keeper does it. The pairing is a roll, so it is tried until it takes.
   for v_i in 1..12 loop
@@ -280,7 +426,8 @@ begin
 
   -- One whose record is known, working his deed where he and Crowd1 both stand, for the reading of it.
   update creature set unborn = jsonb_build_object('traits', '${JSON.stringify(KNOWN.traits)}'::jsonb, 'sex', 'female',
-        'sire', jsonb_build_object('id', v_sire, 'name', '${SIRE.name}'), 'from', '${JSON.stringify(KNOWN.from)}'::jsonb),
+        'sire', jsonb_build_object('id', v_sire, 'name', '${SIRE.name}'), 'from', '${JSON.stringify(KNOWN.from)}'::jsonb,
+        'line', '${JSON.stringify(KNOWN.line)}'::jsonb),
       due = now() - interval '1 second' where world_id = w and id = v_dam;
   v_known := give_birth(w, v_dam);
   update creature set keeper = me, mode = 'deed', from_x = v_x, from_y = v_y, to_x = v_x, to_y = v_y,
@@ -326,24 +473,43 @@ const parsed = <T>(key: string): T | null => {
 console.log('--- the island');
 const [islandDam, islandSire] = said('IDS').split(',').map(Number);
 check('island: the pair is put together through the door', said('REFUSED') === '' && said('UNBORN') !== 'null', said('REFUSED'));
-const islandCarried = parsed<{ traits: string[]; sire?: { id: number; name: string }; from?: Record<string, string> }>('UNBORN');
+const islandCarried = parsed<{ traits: string[]; sire?: { id: number; name: string }; from?: Record<string, string>; line?: Line }>('UNBORN');
 check('island: the covering writes the sire, by id and by name, and where each trait came from, into what she carries',
   same(islandCarried?.sire, { id: islandSire, name: 'Horn' }) && keyedAs(islandCarried?.from, islandCarried?.traits ?? []), said('UNBORN'));
 const islandFirst = parsed<Young>('FIRST');
 check('island: the young one is born with its pedigree: its dam, its sire, and where each trait came from, as the covering wrote it',
   !!islandFirst && same(islandFirst.traits, islandCarried?.traits)
-  && same(islandFirst.pedigree, { dam: { id: islandDam, name: 'Snow' }, sire: { id: islandSire, name: 'Horn' }, from: islandCarried?.from }),
+  && same(islandFirst.pedigree, { dam: { id: islandDam, name: 'Snow' }, sire: { id: islandSire, name: 'Horn' }, from: islandCarried?.from, line: islandCarried?.line }),
   said('FIRST'));
 const islandYoung = parsed<Young[]>('YOUNG') ?? [];
 check('island: five hundred more are born', islandYoung.length === COVERINGS, `${islandYoung.length}`);
 const islandShare = judge('island', islandYoung, { id: islandDam, ...DAM }, { id: islandSire, ...SIRE });
 check('island: a young one of a covering made before pedigrees were kept has none', said('OLD') === 'null', said('OLD'));
 
+console.log('--- a line, on the island');
+{
+  const [wrong, all] = said('BACKFILL').split(',').map(Number);
+  check(`island: of the ${all} creatures on the islands, everything without a line stands at one on each channel it carries a trait on, none elsewhere, and gains nothing`,
+    wrong === 0 && all > 0, said('BACKFILL'));
+  const want = [...CHANNELS].sort((a, b) => (a.id < b.id ? -1 : 1)).map((ch) => `${ch.id}=${lineDepth(DAM.traits, undefined, ch.id)}/1`).join(',');
+  check('island: one bred before lines were kept stands where the browser has it, and gains nothing', said('OLDPED') === want, `${said('OLDPED')} // ${want}`);
+  const depths = CHAIN_WANT.map((_, i) => Number(said(`CHAIN${i + 1}`)));
+  check(`island: ${CHAIN} generations bred down one line on work come to ${CHAIN_WANT.join(', ')}`, same(depths, CHAIN_WANT), depths.join(', '));
+  check('island: a young one of that line carrying nothing on work stands at none there', said('NONE') === '0', said('NONE'));
+}
+
 console.log('--- the two of them');
+for (const [key, traits, ln, ch] of BONUS) {
+  const isle = Number(said(`BONUS:${key}`));
+  const want = bonusWant(traits, ln, ch);
+  check(`a line of ${JSON.stringify(ln)} on ${traits.join(', ')} is worth ${want.toFixed(4)}× its ${ch} on both sides`,
+    Math.abs(browserBonus[key] - want) < 1e-9 && Math.abs(isle - want) < 1e-6, `browser ${browserBonus[key]}, island ${isle}`);
+}
 const words = (ys: Young[]): string => sorted(new Set(ys.flatMap((y) => Object.values(y.pedigree?.from ?? {}))));
-check('both sides write the same five words', words(browserYoung) === words(islandYoung) && words(islandYoung) === JSON.stringify(WORDS),
+check(`both sides write the same ${DRAWN.length} words of a draw`,
+  [browserYoung, islandYoung].every((ys) => DRAWN.every((w) => JSON.parse(words(ys)).includes(w)) && JSON.parse(words(ys)).every((w: string) => WORDS.includes(w))),
   `${words(browserYoung)} and ${words(islandYoung)}`);
-check('and the same record: a dam, a sire and where each trait came from',
+check('and the same record: a dam, a sire, where each trait came from and its line',
   sorted(Object.keys(first?.pedigree ?? {})) === sorted(Object.keys(islandFirst?.pedigree ?? {})), `${sorted(Object.keys(first?.pedigree ?? {}))} and ${sorted(Object.keys(islandFirst?.pedigree ?? {}))}`);
 for (const w of WORDS) {
   check(`how often a trait is ${TRAIT_SOURCES[w as TraitSource].label} agrees between the two sides`, Math.abs(browserShare[w] - islandShare[w]) < 0.08,
@@ -362,6 +528,13 @@ check(`island: at ${TIER_LEVEL.rare} husbandry, where a trait came from only for
 check(`island: at ${1 + TIER_LEVEL.rare}, for the rare one as well, and not yet the supreme`,
   fromOf('PAST') === sorted(readable(1 + TIER_LEVEL.rare)) && readable(1 + TIER_LEVEL.rare).length === 2, `${fromOf('PAST')}`);
 check('island: and to a reader who took Reader, all of them', fromOf('KNOWING') === sorted(KNOWN.traits), fromOf('KNOWING'));
+const lineOf = (key: string): string => JSON.stringify(canon(parsed<Pedigree>(key)?.line ?? null));
+const seenLine = (husbandry: number): string => JSON.stringify(canon(Object.fromEntries(Object.entries(KNOWN.line)
+  .filter(([ch]) => readable(husbandry).some((id) => lineDepth([id], {}, ch as TraitChannel) > 0)))));
+check('island: somebody else is sent its line only on the channels of the traits they can read, and a reader with Reader all of it',
+  lineOf('UNDER') === seenLine(TIER_LEVEL.rare) && lineOf('PAST') === seenLine(1 + TIER_LEVEL.rare) && lineOf('KNOWING') === JSON.stringify(canon(KNOWN.line))
+    && Object.keys(JSON.parse(lineOf('UNDER'))).length === 1 && Object.keys(JSON.parse(lineOf('PAST'))).length === 2,
+  `${lineOf('UNDER')} / ${lineOf('PAST')} / ${lineOf('KNOWING')}`);
 check('island: in the words the record was written in', same(parsed<Pedigree>('PAST')?.from, Object.fromEntries(readable(1 + TIER_LEVEL.rare).map((id) => [id, KNOWN.from[id]]))),
   JSON.stringify(parsed<Pedigree>('PAST')?.from));
 

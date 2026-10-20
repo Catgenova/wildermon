@@ -123,8 +123,8 @@ import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
-  betterThanCommon, CHANNELS as BLOOD, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS,
-  TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier,
+  betterThanCommon, CHANNELS as BLOOD, depthMul, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, LAMP_TIER_ODDS, lineSaid, MUTATION_ODDS, pct as cardPct,
+  PEDIGREE_MOST, PEDIGREE_STEP, TIERS, TRAIT_SLOTS, TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier,
 } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { CLEAR_OF_BUILDINGS, CONCRETE_PER_STEP, LIFT_PER_MASONRY, POOL_FILL } from '../../game/foundations';
@@ -742,6 +742,11 @@ const sailSpeeds = listed(
   [Math.PI / 2, Math.PI, NO_GO, 0].map((upwind) =>
     (SAILER.boat ? hullSpeed(SAILER.boat, SAIL_EXAMPLE.ql, CHAR_START, windWorth(SAIL_EXAMPLE.force) * pointAt(upwind), 0) : 0).toFixed(1)),
 );
+
+/** The depths of a line past the first, for the help's figures. */
+const LINE_DEPTHS = Array.from({ length: PEDIGREE_MOST - 1 }, (_, i) => i + 2);
+/** A line as the card says it (`lineSaid`), one short of the deepest, on what a creature's attack lands for. */
+const LINE_EXAMPLE = lineSaid(TRAITS.filter((t) => t.effects.tough !== undefined).slice(0, 1).map((t) => t.id), { tough: PEDIGREE_MOST - 1 })[0] ?? '';
 
 /** Where a bred one's trait can have come from, in the words its card uses: "<b>from the dam</b> (drawn from …), …". */
 const pedigreeSources = (): string => {
@@ -3497,6 +3502,21 @@ export function helpText(): string {
     <p>A young one's <b>pedigree</b> names its <b>dam</b> and <b>sire</b> on its card in the Wildermon
     window and when you point at it, and on the card each of its traits you can read says where it came
     from &mdash; ${PEDIGREE_SOURCES}.</p>
+    <p>A <b>line</b> runs on each thing a trait can lift. A wildermon caught or born in the wild stands
+    one generation deep on each one it carries a trait on. A young one that carries a trait on one stands a
+    generation deeper there than the deeper of its dam and sire, up to ${numberWord(PEDIGREE_MOST)}; one that carries none
+    there stands at none, however deep its parents ran. Each generation past the first adds
+    <b>${percent(PEDIGREE_STEP)}</b> to what its blood does there: ${listed(LINE_DEPTHS.map((d) => `${cardPct(depthMul(d, 'tough'))} at ${numberWord(d)} deep`))},
+    and on its ${listed(BLOOD.filter((ch) => !ch.up).map((ch) => ch.label))}, where less is better, ${listed(LINE_DEPTHS.map((d) => cardPct(depthMul(d, 'appetite'))))}.
+    Its card says so, a line for each: <i>${LINE_EXAMPLE}</i>.</p>
+    <p>One young in ${MUTATION_ODDS} is born with a <b>mutation</b>: a trait neither parent carries in any grade,
+    one tier above the best of theirs (${listed(TIERS.slice(1).map((t, i) => `${t} for ${TIERS[i]}`))}; ${TIERS[TIERS.length - 1]} stays ${TIERS[TIERS.length - 1]}),
+    in its lowest-tier slot. Its birth says so and what came, and its card says <b>mutation</b> where that trait came from.</p>
+    <p>Before a pairing is made, <b>Put it to a mate</b> says what it would throw, counted off the covering's own draw
+    at your husbandry, their care and your perks: how often it takes; how often each of the young's traits is drawn from their
+    blood and comes out a tier better; how often the young one is born carrying each trait either of them carries; how
+    often its best trait comes out at each tier; the chance of a mutation and its tier; how deep its line would run on each
+    thing a trait lifts and how often it carries a trait there; and the odds of its own rarity. <b>Yes</b> puts them together.</p>
     <p>A <b>Herdsman</b>'s keeping goes with every wildermon they keep, on an island and off it, and one that
     changes hands takes its new keeper's. With Lasting Care its care wears off over
     ${spanWords((herdsman('Lasting Care')['kept:care_hours'] ?? CARE_HOURS) * HOUR)} rather than ${spanWords(CARE_HOURS * HOUR)}; with Well Kept,

@@ -1,7 +1,7 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature } from '../../game/creatures';
-import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel } from '../../game/traits';
+import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
+import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { TIER_LEVEL } from '../../game/husbandry';
 
 import type { Game } from '../../game/game';
@@ -531,9 +531,10 @@ export class WildermonPanel {
       // as “a quarter”, which was a number written in prose and never checked.
       care.row.title = `${careWord(c.care)} \u2014 work and learning \u00d7${careMul(c).toFixed(2)} at this much care, up to \u00d7${(1 + CARE_BONUS).toFixed(2)} brushed to a shine, and it throws better young`;
 
-      // Who it was bred from, over the traits it had from them. Nothing at all
-      // for anything that was not bred, or was born before pedigrees were kept.
-      const bred = c.pedigree ? pedigreeLine(c.pedigree) : '';
+      // Who it was bred from, over the traits it had from them, and how deep its
+      // line runs on each channel it runs past one on (`lineLines`). Nothing at
+      // all for anything that was not bred, or was born before pedigrees were kept.
+      const bred = c.pedigree ? [pedigreeLine(c.pedigree), ...lineLines(c)].join('\n') : '';
       if (pedigree.textContent !== bred) pedigree.textContent = bred;
       pedigree.hidden = !bred;
       bloodBox.replaceChildren(...this.blood(c).childNodes);
@@ -696,6 +697,8 @@ export class WildermonPanel {
       tag.textContent = `${pct(v)} ${ch.label}`;
       // Where it came from, so a figure that moved has somewhere to have moved from.
       const parts = [`${ch.note}.`, `Blood ${traitMul(c.traits, ch.id).toFixed(2)}×`];
+      const line = lineMul(c.traits, c.pedigree?.line, ch.id);
+      if (Math.abs(line - 1) >= 0.005) parts.push(`line ${line.toFixed(2)}×`);
       if (c.rare) parts.push(`${rarityOf(c).name} ${rarityMul(c, ch.id).toFixed(2)}×`);
       if (Math.abs(potMul(c, ch.id) - 1) >= 0.005) parts.push(`ancient pots ${potMul(c, ch.id).toFixed(2)}×`);
       const herd = beasts.aura(c, ch.id);

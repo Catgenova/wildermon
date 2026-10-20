@@ -3559,7 +3559,7 @@ button.goal-row:focus-visible {
 }
 .trait-chip.trait-unread { color: var(--t-dim, #6d7a72); border-style: dashed; font-style: italic; }
 /* A bred one's dam and sire, over the traits, and on each trait where it came from. */
-.pal-pedigree { margin: 4px 0 0; color: var(--ui-dim); font-size: 11px; }
+.pal-pedigree { margin: 4px 0 0; color: var(--ui-dim); font-size: 11px; white-space: pre-line; }
 /* Why a worker is standing about, and its ledger of the last two island days. */
 .pal-idle { margin: 4px 0 0; font-size: 11px; }
 .pal-ledger { margin: 2px 0 0; color: var(--ui-dim); font-size: 11px; white-space: pre-line; }
@@ -4427,6 +4427,8 @@ button.goal-row:focus-visible {
   margin-bottom: 9px;
   color: var(--ui-text);
   line-height: 1.35;
+  /* A question of several lines, such as what a pairing would throw, keeps its lines. */
+  white-space: pre-line;
 }
 .ask-input {
   width: 100%;

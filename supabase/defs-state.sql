@@ -5350,6 +5350,9 @@ create or replace function file_rarity_odds() returns double precision language 
 create or replace function pot_step() returns double precision language sql immutable as $fn$ select 0.03::double precision $fn$;
 create or replace function pot_most() returns double precision language sql immutable as $fn$ select 10::double precision $fn$;
 create or replace function lamp_tier_odds() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
+create or replace function pedigree_most() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
+create or replace function pedigree_step() returns double precision language sql immutable as $fn$ select 0.02::double precision $fn$;
+create or replace function mutation_odds() returns double precision language sql immutable as $fn$ select 200::double precision $fn$;
 create or replace function guard_range() returns double precision language sql immutable as $fn$ select 4::double precision $fn$;
 create or replace function fall_back() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
 create or replace function arm_slow() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;

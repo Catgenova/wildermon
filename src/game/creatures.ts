@@ -47,7 +47,7 @@ import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
-import { auraMul, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, pct, rollTraits, TIERS, traitList, traitMul, traitTier, TRAIT_SLOTS, type TraitChannel, type TraitSource } from './traits';
+import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, lineMul, lineSaid, mutationOf, pct, rollTraits, TIERS, traitList, traitMul, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
@@ -84,6 +84,12 @@ export interface Pedigree {
   sire: Parent;
   /** Where each trait came from, by trait id. */
   from: Record<string, TraitSource>;
+  /**
+   * How deep its line ran on each channel when it was born, where that was past
+   * one (`bredLine`); absent on one born before lines were kept, which stands at
+   * one on every channel it carries a trait on.
+   */
+  line?: Line;
 }
 
 /** What is coming, settled at the covering so no sire need survive to the birth. */
@@ -93,12 +99,16 @@ export interface Unborn {
   /** The sire and where each trait came from; a covering made before pedigrees were kept has neither. */
   sire?: Parent;
   from?: Record<string, TraitSource>;
-  /** A second young, bred at the same covering (a Herdsman's Twins): its own traits and sex, the same sire. */
-  twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource> };
+  /** Its line, settled with its traits while both parents stood there (`bredLine`); none from a covering made before lines were kept. */
+  line?: Line;
+  /** A second young, bred at the same covering (a Herdsman's Twins): its own traits, sex and line, the same sire. */
+  twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource>; line?: Line };
 }
 
 /** What a card and a tooltip say of a pedigree: "Dam Snow · sire Horn". */
 export const pedigreeLine = (p: Pedigree): string => `Dam ${p.dam.name} · sire ${p.sire.name}`;
+/** And how deep its line runs, a line a channel it runs past one on: "Line: 4 generations bred for damage, +6% damage". */
+export const lineLines = (c: Pick<Creature, 'traits' | 'pedigree'>): string[] => lineSaid(c.traits, c.pedigree?.line);
 
 export type Stance = 'passive' | 'defensive' | 'aggressive' | 'guard';
 /** What a creature gathers from the land, as a wild grazer and as a deed job. */
@@ -4293,9 +4303,13 @@ describeWith({
   },
 });
 
-/** Its own blood on one channel, as rare as it is and with what ancient pots put into it, with nothing communal in it. */
+/**
+ * Its own blood on one channel, as rare as it is, as deep as its line runs
+ * (`lineMul`) and with what ancient pots put into it, with nothing communal in
+ * it. The island's `beast_mul`.
+ */
 export const bloodMul = (c: Creature, channel: TraitChannel): number =>
-  traitMul(c.traits, channel) * rarityMul(c, channel) * evoMul(c, channel) * potMul(c, channel);
+  traitMul(c.traits, channel) * lineMul(c.traits, c.pedigree?.line, channel) * rarityMul(c, channel) * evoMul(c, channel) * potMul(c, channel);
 
 /** What it can take, once its blood is counted, and its keeper's Thick Hide while it follows them. */
 export const maxHealth = (c: Creature, species: SpeciesDef): number =>
@@ -4308,6 +4322,29 @@ export { BLOW_SHARE };
 
 /** What a set of traits is worth, written out for a log line. */
 export const TRAIT_COUNT = TRAIT_SLOTS;
+
+/**
+ * What a breeder's perks add to a covering: more of the pair in it, and more of
+ * it a tier better, for a Herdsman's True Blood and Bred Up, and more of the
+ * latter for Love's Good Stock. What `pair` draws with and a breeding preview
+ * counts with.
+ */
+export const breedPlus = (game: Game): { keepPlus: number; upPlus: number } => ({
+  keepPlus: game.perk('breed:inherit', 0),
+  upPlus: game.perk('breed:upgrade', 0) + game.pathFx('up', 0),
+});
+
+/**
+ * What a birth says of a mutation, after its traits: " It is born with a
+ * mutation: swift (supreme), which neither parent carries: +40% speed." Nothing
+ * for a young one without one. The island's `mutation_said`.
+ */
+export function mutationSaid(from: Record<string, TraitSource> | undefined): string {
+  const id = mutationOf(from);
+  const t = id ? traitOf(id) : undefined;
+  // A fighting trait's grade is already in its name: "heavy-pawed (fantastic)".
+  return t ? ` It is born with a mutation: ${t.family ? t.name : `${t.name} (${t.tier})`}, which neither parent carries: ${traitSays(t)}.` : '';
+}
 
 /** What a draught beast trains by pulling, and a mount by being ridden. */
 export const HAUL_SKILL = 'climbing';
@@ -8111,14 +8148,14 @@ export class Creatures {
    */
   pair(game: Game, dam: Creature, sire: Creature, husbandry: number, sex?: Sex): void {
     const care = (dam.care + sire.care) / 2;
-    // More of the pair in it, and more of it a tier better, for a Herdsman's True Blood and Bred Up.
-    const keepPlus = game.perk('breed:inherit', 0);
-    // And more for Love's Good Stock.
-    const upPlus = game.perk('breed:upgrade', 0) + game.pathFx('up', 0);
-    const young = (): { traits: string[]; sex: Sex; from: Record<string, TraitSource> } => {
+    const { keepPlus, upPlus } = breedPlus(game);
+    const young = (): { traits: string[]; sex: Sex; from: Record<string, TraitSource>; line: Line } => {
       const bred = breedTraits(sire.traits, dam.traits, husbandry, care, game.rand, keepPlus, upPlus);
       // The one the breeder asked for (a Herdsman's Choose the Sex), or even odds.
-      return { traits: bred.traits, sex: sex ?? (game.rand() < 0.5 ? 'male' : 'female'), from: bred.from };
+      const born: Sex = sex ?? (game.rand() < 0.5 ? 'male' : 'female');
+      // And how deep its line runs, off both parents as they stand now.
+      const line = bredLine(bred.traits, { traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line });
+      return { traits: bred.traits, sex: born, from: bred.from, line };
     };
     dam.unborn = { ...young(), sire: { id: sire.id, name: sire.name } };
     // And a second at the same covering, now and then (a Herdsman's Twins).
@@ -8184,12 +8221,12 @@ export class Creatures {
      * of a covering made before pedigrees were kept has none, rather than
      * half of one.
      */
-    c.pedigree = coming.sire ? { dam: { id: dam.id, name: dam.name }, sire: coming.sire, from: coming.from ?? {} } : null;
+    c.pedigree = coming.sire ? { dam: { id: dam.id, name: dam.name }, sire: coming.sire, from: coming.from ?? {}, ...(coming.line ? { line: coming.line } : {}) } : null;
     c.hunger = 0.9;
     c.care = 0.5;
     c.health = maxHealth(c, def);
     if (crate) shutIn(game, c, crate);
-    game.logMsg(`${dam.name} drops a young ${def.name.toLowerCase()} (${SEX_NAMES[c.sex]}): ${traitList(c.traits)}.${where}`, 'event');
+    game.logMsg(`${dam.name} drops a young ${def.name.toLowerCase()} (${SEX_NAMES[c.sex]}): ${traitList(c.traits)}.${mutationSaid(coming.from)}${where}`, 'event');
     game.note('bred');
     // A page of the field guide, for a young one born to a dam somebody keeps:
     // one let go before her hour drops hers in the wild, and it is nobody's.

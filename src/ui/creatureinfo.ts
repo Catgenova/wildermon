@@ -10,6 +10,7 @@ import {
   GATHER_VERB,
   growsAt,
   maxHealth,
+  lineLines,
   pedigreeLine,
   rarityLine,
   SEX_NAMES,
@@ -149,8 +150,8 @@ export function creatureLines(g: Game, c: Creature): string[] {
     return t.tier === 'common' || t.family ? t.name : `${t.name} (${t.tier})`;
   }).filter(Boolean);
   if (traits.length) lines.push(`Traits: ${traits.join(', ')}`);
-  // Who it was bred from; anything not bred says nothing about it.
-  if (c.pedigree) lines.push(pedigreeLine(c.pedigree));
+  // Who it was bred from, and how deep its line runs; anything not bred says nothing about it.
+  if (c.pedigree) lines.push(pedigreeLine(c.pedigree), ...lineLines(c));
   // "In young", as the Wildermon card says it: a vola does not carry a calf.
   if (c.due > 0) lines.push(`In young · due in ${clockLeft(c.due - g.time)}`);
   return lines;

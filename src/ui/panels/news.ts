@@ -126,7 +126,7 @@ import { ALL_GOALS } from '../../game/journal';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
-import { betterThanCommon, CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS } from '../../game/traits';
+import { betterThanCommon, CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
 import { MAX_STAND, SWIM_DEPTH } from '../../game/player';
@@ -2894,6 +2894,25 @@ export const NEWS: News[] = [
           + 'A trade that brings a load home carries that many a trip, going on to the next tile with room in its arms rather than home; the errands that carry water, pieces, fuel, sprouts, candles, seed and buckets carry that many; '
           + `and a trade worked in place handles that many a go: things mended, batches made, carcasses butchered, relics restored, pieces glazed, and wildermon of yours brushed, milked or shorn, or dressed within ${TEND_REACH} tiles. `
           + `At its second stage, ${lines.join('; ')}; at its third, ${STAGE_LOADS[2]} of each. A go still teaches what one go teaches.`,
+      ];
+    },
+  },
+  {
+    n: 224,
+    day: '2026-10-20',
+    lines: () => {
+      const top = TIERS[TIERS.length - 1];
+      const deepest = depthMul(PEDIGREE_MOST, 'tough');
+      return [
+        'Put it to a mate now shows what the pairing would throw before you say yes, counted off the covering\'s own draw at your husbandry, their care and your perks: '
+          + 'how often it takes, how often the young one is born carrying each trait either parent carries, how often its best trait comes out at each tier, '
+          + 'the chance of a mutation and its tier, how deep its line would run, and the odds of its own rarity.',
+        `Each wildermon's line runs on each thing a trait can lift: a generation deep for each generation in a row, itself included, that carried a trait on it, up to ${PEDIGREE_MOST}. `
+          + `Each generation past the first adds ${Math.round(PEDIGREE_STEP * 100)}% to what its blood does there, ${cardPct(deepest)} at ${PEDIGREE_MOST}, `
+          + `and as much less where less is better. Its card says so, a line for each. Every wildermon already on an island stands at 1 on each thing it carries a trait on.`,
+        `1 young in ${MUTATION_ODDS} is born with a mutation: a trait neither parent carries in any grade, 1 tier above the best of theirs (${top} at ${top}), `
+          + 'in its lowest-tier slot. Its birth says so and what came, and its card says mutation where that trait came from.',
+        'A wild trait roll that comes up with a name the animal already carries rolls again on the island as it does in the browser, so the two throw the same blood at the same odds.',
       ];
     },
   },

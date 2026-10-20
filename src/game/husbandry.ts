@@ -3,6 +3,7 @@ import type { ActionDef, Target } from './actions';
 import {
   ageOf,
   BREED_REST,
+  breedPlus,
   careWord,
   GESTATION,
   maxHealth,
@@ -12,9 +13,12 @@ import {
 } from './creatures';
 import type { Game } from './game';
 import { clockLeft } from './boons';
-import { itemName } from './items';
+import { itemName, RARITIES, RARITY_ODDS } from './items';
 import { workingQl } from './materials';
-import { bestTier, inheritChance, traitList, traitTier, TRAIT_SLOTS, upgradeChance } from './traits';
+import {
+  bestTier, breedOdds, CHANNELS, depthMul, inheritChance, lineIfCarried, MUTATION_ODDS, mutationTier, pct, TIERS, traitList, traitName, traitTier,
+  TRAIT_SLOTS, upgradeChance,
+} from './traits';
 
 /** What one pairing teaches, whether or not it takes. */
 export const BREED_GAIN = 0.9;
@@ -111,6 +115,61 @@ export function studBook(g: Game, c: Creature): string {
     + `${TRAIT_SLOTS} traits is drawn from their blood ${wholePct(keep)} of the time and comes out a tier better ${wholePct(up)} of the time.`;
 }
 
+/** A share as a percentage, to a whole one, or to the first figure that is not nought under one. */
+const sharePct = (x: number): string => {
+  const n = x * 100;
+  return `${n >= 1 || n === 0 ? Math.round(n) : n >= 0.1 ? n.toFixed(1) : n.toFixed(2)}%`;
+};
+
+/** The share of everything born that comes into the world at each step of rarity, off `RARITY_ODDS` rolled in turn. */
+export const rarityShares = (): number[] => RARITY_ODDS.map((_, i) =>
+  RARITY_ODDS.slice(0, i + 1).reduce((p, o) => p * o, 1) * (i + 1 < RARITY_ODDS.length ? 1 - RARITY_ODDS[i + 1] : 1));
+
+/**
+ * What putting these two together would throw, in plain lines, asked before
+ * the pairing is made. Asked for: "Before a pairing is confirmed, show for that
+ * pair: each trait either parent carries, with the chance the foal inherits it;
+ * the chance the foal comes out at each tier better than common, given the
+ * pair's care and the breeder's skill; the chance of a mutation and what tier it
+ * would be; the pedigree bonus the foal would start with."
+ *
+ * Every share is counted off the covering's own draw (`breedOdds`, which runs
+ * `breedTraits`) at the husbandry, care and perks the covering would read
+ * (`breedPlus`), so it cannot say anything the covering does not do. A trait
+ * of theirs too good for your husbandry to read is counted and not named, as on
+ * the card.
+ */
+export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
+  const skill = g.skills.get(HUSBANDRY);
+  const care = (dam.care + sire.care) / 2;
+  const { keepPlus, upPlus } = breedPlus(g);
+  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus);
+  const readable = (id: string): boolean => g.holds('knowledge_reader') || skill >= 1 + TIER_LEVEL[traitTier(id)];
+  const theirs = Object.keys(odds.carry).sort((a, b) => odds.carry[b] - odds.carry[a]);
+  const hidden = theirs.filter((id) => !readable(id)).length;
+  const lines = [
+    `Put ${sire.name} to ${dam.name}, at ${Math.floor(skill)} animal husbandry and ${wholePct(care)} care between them:`,
+    `It takes ${wholePct(breedChance(skill, care))} of the time.`,
+    `Each of the young's ${TRAIT_SLOTS} traits is drawn from their blood ${wholePct(Math.min(1, inheritChance(skill, care) + keepPlus))} of the time`
+      + ` and comes out a tier better ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))} of the time.`,
+    `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${sharePct(odds.carry[id])}`).join(', ') || 'nothing you can read'}`
+      + `${hidden ? `; ${hidden} more you cannot read yet` : ''}.`,
+    `Its best trait: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
+    `Mutation: 1 in ${MUTATION_ODDS} (${sharePct(1 / MUTATION_ODDS)}), a ${mutationTier(sire.traits, dam.traits)} trait neither of them carries, in its lowest slot.`,
+  ];
+  // How deep its line would run, on each channel either of them carries a trait on.
+  const parents = [{ traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line }] as const;
+  for (const ch of CHANNELS) {
+    const d = lineIfCarried(parents[0], parents[1], ch.id);
+    if (d > 1 && odds.on[ch.id] > 0) {
+      lines.push(`Line: ${d} generations bred for ${ch.label}, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a trait on ${ch.label} (${sharePct(odds.on[ch.id])}).`);
+    }
+  }
+  const rare = rarityShares();
+  lines.push(`Its own rarity, rolled as any wildermon's: ${rare.map((p, i) => `${RARITIES[i + 1].name} ${sharePct(p)}`).join(', ')}.`);
+  return lines.join('\n');
+}
+
 export const HUSBANDRY_ACTIONS: ActionDef[] = [
   {
     id: 'groom',
@@ -175,6 +234,14 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       const mate = c && mateFor(g, c);
       return mate ? `Put it to ${mate.name}` : 'Put it to a mate';
+    },
+    // What it would throw, before it is done (`breedPreview`); nothing where it would be refused, which says why instead.
+    confirms: (t, g) => {
+      const c = creatureOf(g, t);
+      const mate = c && mateFor(g, c);
+      if (!c || !mate || !g.deed || c.due > 0 || pairRefuses(g, c, mate)) return null;
+      const dam = c.sex === 'female' ? c : mate;
+      return `${breedPreview(g, dam, dam === c ? mate : c)}\nPut them together?`;
     },
     check: (t, g) => {
       const c = creatureOf(g, t);

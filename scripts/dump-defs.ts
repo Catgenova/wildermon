@@ -36,7 +36,7 @@ import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_H
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
 import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO } from '../src/game/creatures';
-import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, TIERS } from '../src/game/traits';
+import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
 import { MILK_LITRES, MILK_READY, WHEY_BUCKET, WHEY_FEED } from '../src/game/dairy';
@@ -1633,6 +1633,8 @@ for (const [fn, v] of [
   ['comb_into', COMB_INTO], ['file_rarity_odds', FILE_RARITY_ODDS], ['pot_step', POT_STEP], ['pot_most', POT_MOST],
   /* And the odds of an ancient lamp kindling a trait a tier above the one that went out. */
   ['lamp_tier_odds', LAMP_TIER_ODDS],
+  /* Breeding: how deep a line may run and what each generation past the first adds, and the odds of a mutation. */
+  ['pedigree_most', PEDIGREE_MOST], ['pedigree_step', PEDIGREE_STEP], ['mutation_odds', MUTATION_ODDS],
   /* A companion's orders: how near a guarding one keeps a fight, and how long one fallen back starts none. */
   ['guard_range', GUARD_RANGE], ['fall_back', FALL_BACK],
   /* Wounds that slow a swing, and how far; a blow at your back, a crowd on
