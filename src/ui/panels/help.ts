@@ -117,7 +117,7 @@ import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from
 import { OVEN_CAPACITY, SHORE_REACH } from '../../game/placeables';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STAND, MAX_STEP, SWIM_DEPTH } from '../../game/player';
 import { deckBill, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
-import { POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
+import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { TREE_DEPTH } from '../recipetree';
 import { GAIN_RATE, MIN_GAIN, SKILL_BY_ID, skillGain } from '../../game/skills';
@@ -1814,7 +1814,7 @@ export function helpText(): string {
     <h3>Work posts</h3>
     <ul>
       <li><b>Work post</b>: <b>${bill('make_work_post', true)}</b>, mallet. Driven in on any tile <b>outside your own borders</b> (refused inside).</li>
-      <li>Set <b>one</b> wildermon to it from its menu: same job and skill pay as on a settlement, measured from the post.</li>
+      <li><b>Set a wildermon to it</b> (its menu): <b>one</b>, following you within ${POST_FOLLOW_REACH} tiles or in a crate in your pack or beside you (let out at the post). Same job and skill pay as on a settlement, measured from the post.</li>
       <li>Range: <b>${postRadius(1)} tiles round a rough post, ${postRadius(TOP_QL)} round the best</b>, whatever the creature's own range.</li>
       <li>Loads go into anything with room inside that circle; with nothing there, all the way home.</li>
       <li><b>Rots where it stands</b>: <b>${dur(POST_LIFE_MIN)}</b> (roughest) to <b>${dur(POST_LIFE_MAX)}</b> (best); leans as it goes; one warning near the end.</li>

@@ -2545,17 +2545,18 @@ export class UI {
       const candidates = postCandidates(g);
       if (assign) {
         entries.push({
-          label: 'Assign a wildermon',
+          label: assign.label,
           disabled: !candidates.length,
-          hint: candidates.length ? undefined : 'No free wildermon.',
+          hint: candidates.length ? undefined : 'No wildermon following you or in a crate to hand.',
           children: candidates.length
             ? candidates.map((c) => {
-                const ct: Target = { kind: 'post', id: p.id, creatureId: c.id };
+                const ct: Target = { kind: 'post', id: p.id, creature: c.id };
                 const reason = assign.check?.(ct, g) ?? null;
                 const def = SPECIES[c.species];
+                const job = def.gathers ? GATHER_DO[def.gathers].split(' and ')[0] : 'no job';
                 return {
                   label: c.name,
-                  note: def.gathers ? GATHER_DO[def.gathers].split(' and ')[0] : 'no job',
+                  note: c.mode === 'stored' ? `in a crate · ${job}` : job,
                   hint: reason ?? undefined,
                   disabled: !!reason,
                   onSelect: () => g.requestAction(assign, ct),

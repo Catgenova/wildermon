@@ -145,7 +145,7 @@ export type Target =
       scroll?: number;
     }
   | { kind: 'anvil'; id: number; itemUid?: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
-  | { kind: 'post'; id: number; creatureId?: number }
+  | { kind: 'post'; id: number; creature?: number }
   | { kind: 'trap'; id: number; /** The scroll going into it where it stands, for `enchant` (`enchanting.ts`). */ scroll?: number }
   | { kind: 'bridge'; id: number }
   | {

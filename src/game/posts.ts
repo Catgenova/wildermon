@@ -3,7 +3,7 @@ import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { matOf } from './materials';
 import { SPECIES, workRangeOf, GATHER_DO, type Creature } from './creatures';
-import { letOut } from './creaturecrate';
+import { crateToHand, letOut } from './creaturecrate';
 import { world } from './pace';
 import { describeWith } from './items';
 
@@ -90,9 +90,19 @@ const nearPost = (g: Game, p: PlacedPost): boolean => {
   return Math.hypot(cx - g.player.x, cy - g.player.y) <= 2.4;
 };
 
-/** Every tamed wildermon of yours that could be set to a post right now. */
+/** How far a wildermon following you may be from you to be set to a post, as for Hitch. */
+export const POST_FOLLOW_REACH = 4;
+
+/**
+ * Every wildermon of yours that could be set to a post right now, as Hitch
+ * lists them: those following you, then those in a crate you carry or stand
+ * beside (`crateToHand`), by name.
+ */
 export const postCandidates = (g: Game): Creature[] =>
-  g.creatures.yours().filter((c) => c.hitchedTo === null && !c.ridden && c.post === null);
+  g.creatures.yours()
+    .filter((c) => c.mine !== false && c.hitchedTo === null && !c.ridden && c.post === null
+      && ((c.mode === 'active') || (c.mode === 'stored' && !!crateToHand(g, c))))
+    .sort((a, b) => Number(a.mode === 'stored') - Number(b.mode === 'stored') || a.name.localeCompare(b.name) || a.id - b.id);
 
 export const POST_ACTIONS: ActionDef[] = [
   {
@@ -135,16 +145,20 @@ export const POST_ACTIONS: ActionDef[] = [
       if (!p) return 'It is gone.';
       if (!nearPost(g, p)) return 'Stand at the post.';
       if (p.worker !== null && g.creatures.get(p.worker)) return 'Something is already working out of it.';
-      const id = t.kind === 'post' ? t.creatureId : undefined;
+      const id = t.kind === 'post' ? t.creature : undefined;
       const c = id !== undefined ? g.creatures.get(id) : undefined;
       if (!c) return 'Choose a wildermon.';
-      if (c.mode === 'wild') return `${c.name} is not yours to set to work.`;
+      if (c.mode === 'wild' || c.mine === false) return `${c.name} is not yours to set to work.`;
       if (c.hitchedTo !== null || c.ridden) return `${c.name} is in harness.`;
+      // As Hitch: one following you, near, or one in a crate you carry or stand beside.
+      if (c.mode === 'stored') return crateToHand(g, c) ? null : `${c.name} is in a crate out of reach.`;
+      if (c.mode !== 'active' || c.post !== null) return `${c.name} is not following you.`;
+      if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > POST_FOLLOW_REACH) return `${c.name} is too far.`;
       return null;
     },
     perform: (t, g) => {
       const p = postOf(g, t);
-      const id = t.kind === 'post' ? t.creatureId : undefined;
+      const id = t.kind === 'post' ? t.creature : undefined;
       const c = id !== undefined ? g.creatures.get(id) : undefined;
       if (!p || !c) return;
       const [cx, cy] = postCentre(p);

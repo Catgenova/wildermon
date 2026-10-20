@@ -1,5 +1,6 @@
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { UPDATE_CHECK_MS } from '../update';
+import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { rackPutLine, STORE_REACH } from '../../game/crates';
 import { DAMAGE_WARN, TRAVEL_LEG } from '../../game/game';
@@ -2991,6 +2992,14 @@ export const NEWS: News[] = [
     day: '2026-10-20',
     lines: () => [
       `Added: Update to v… button (gold, bottom right): shown when a later version is on the site, checked every ${UPDATE_CHECK_MS / 60_000} min and on returning to the tab. Click: reload to it.`,
+    ],
+  },
+  {
+    n: 230,
+    day: '2026-10-20',
+    lines: () => [
+      'Fixed: work posts refused every wildermon ("Choose a wildermon.").',
+      `Set a wildermon to it (post menu), as Hitch: those following you within ${POST_FOLLOW_REACH} tiles, then those in a crate in your pack or beside you. A crated one is let out at the post.`,
     ],
   },
 ];

@@ -1522,6 +1522,18 @@ jobs:
             --outfile=node_modules/.cache/joinask.mjs --log-level=error
           node node_modules/.cache/joinask.mjs
 
+      - name: A work post takes a wildermon as Hitch does, in the same words on both sides
+        run: |
+          # "Bug: workposts aren't working. Make it work almost like a Hitch,
+          # able to select the wildermon following or held in crates in
+          # inventory in a menu on the post." One following you and one in a
+          # crate in the pack are each set to a post and work out of it; the
+          # crated one comes out at the post. Four refusals are compared word
+          # for word with the browser's.
+          npx esbuild supabase/test/workpost.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/workpost.mjs --log-level=error
+          node node_modules/.cache/workpost.mjs
+
       - name: Ranks of your own, the founder's to make, in the same words on both sides
         run: |
           # "Allow the founder to establish ranks and advanced permissions for
