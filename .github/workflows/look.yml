@@ -88,6 +88,18 @@ jobs:
                  round(greatest(abs(creature_x(c) - (my_deed(c.world_id, c.keeper)).x), abs(creature_y(c) - (my_deed(c.world_id, c.keeper)).y))::numeric) as off_token
             from creature c where c.keeper is not null and c.mode <> 'deed' and c.mode <> 'wild'
              and (my_deed(c.world_id, c.keeper)).name is not null order by c.keeper, c.id limit 40"
+          # Asked: "Farce is on my deed trying to join and my totem is gone. Its supposed to be adjacent to my altar."
+          ask "settlements within 200 tiles of 2559,3018: where each token stands" "select left(d.founded_by::text, 8) as founder,
+                 folk_name(d.world_id, d.founded_by) as by, d.name, d.x, d.y, d.radius, d.level, to_char(d.founded_at, 'YYYY-MM-DD HH24:MI') as founded
+            from deed d where abs(d.x - 2559) <= 200 and abs(d.y - 3018) <= 200 order by d.founded_at"
+          ask "altars within 200 tiles of 2559,3018" "select p.id, p.kind, p.sub, p.x, p.y from placed p
+           where p.sub ilike '%altar%' and abs(p.x - 2559) <= 200 and abs(p.y - 3018) <= 200"
+          ask "anything placed on a token tile near 2559,3018" "select d.name, p.id, p.kind, p.sub, p.x, p.y, p.sx, p.sy from deed d
+            join placed p on p.world_id = d.world_id and p.x = d.x and p.y = d.y
+           where abs(d.x - 2559) <= 200 and abs(d.y - 3018) <= 200"
+          ask "Farce: where they stand and which settlements they belong to" "select pl.name, round(pl.x::numeric, 1) as x, round(pl.y::numeric, 1) as y, pl.away,
+                 (select string_agg(d.name, ', ') from deed d where d.world_id = pl.world_id and d.founded_by = pl.uid) as founded
+            from player pl where pl.name ilike 'farce%'"
           ask "biggest tables" "select n.nspname || '.' || c.relname as relation, pg_size_pretty(pg_total_relation_size(c.oid)) as total,
                  c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
             from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid
