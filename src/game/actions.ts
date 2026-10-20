@@ -3011,7 +3011,7 @@ export const ACTIONS: ActionDef[] = [
     instant: true,
     stamina: 0,
     baseTime: 0,
-    applies: (t, g) => t.kind === 'tile' && g.isToken(t.x, t.y),
+    applies: (t, g) => t.kind === 'tile' && g.isMyToken(t.x, t.y),
     // Its founder's, and a rank's its founder let rename it: the island's `settlement_refusal`.
     check: (t, g) => {
       const d = deedAimed(g, t);
@@ -3036,7 +3036,7 @@ export const ACTIONS: ActionDef[] = [
     instant: true,
     stamina: 0,
     baseTime: 0,
-    applies: (t, g) => t.kind === 'tile' && g.isToken(t.x, t.y),
+    applies: (t, g) => t.kind === 'tile' && g.isMyToken(t.x, t.y),
     /*
      * Its founder's alone, and no rank may be given it: disbanding frees the
      * founder's wildermon and tips out the founder's deed crate, which are

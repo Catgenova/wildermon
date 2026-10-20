@@ -2215,8 +2215,24 @@ export class Game {
     return deedWorkersAt(this.deedLevel);
   }
 
-  /** The token tile of any settlement of ours — nobody builds on one. */
+  /**
+   * The settlement whose token stands on this tile, ours or anybody's we have
+   * heard of: the island's `is_token` asks every deed, so nobody builds on a
+   * stranger's token either, and a stranger's is drawn as ours is.
+   */
+  tokenAt(x: number, y: number): Deed | null {
+    for (const d of this.myDeeds()) if (d.x === x && d.y === y) return d;
+    for (const d of this.neighbourDeeds) if (d.x === x && d.y === y) return d;
+    return null;
+  }
+
+  /** Whether any settlement's token stands on this tile (`tokenAt`). */
   isToken(x: number, y: number): boolean {
+    return this.tokenAt(x, y) !== null;
+  }
+
+  /** The token tile of a settlement of ours: where it is renamed and disbanded from. */
+  isMyToken(x: number, y: number): boolean {
     return this.myDeeds().some((d) => d.x === x && d.y === y);
   }
 

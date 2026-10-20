@@ -3943,10 +3943,10 @@ export class Renderer {
           for (const it of this.game.groundAt(x, y)) if ((it.rare ?? 0) > best) best = it.rare ?? 0;
           if (best) pile.rare = best;
         }
-        if (this.game.isToken(x, y)) {
-          // The token of one of our settlements, as tall as the settlement's level has built it (`deedtotem.ts`).
+        const deed = this.game.tokenAt(x, y);
+        if (deed) {
+          // A settlement's token, ours or a neighbour's, as tall as the settlement's level has built it (`deedtotem.ts`).
           const avg = (c[0] + c[1] + c[2] + c[3]) / 4;
-          const deed = this.game.myDeeds().find((d) => d.x === x && d.y === y) ?? null;
           this.take('token', x, y, baseX, baseY + hh - avg * hs, null).totem = { level: deedLevel(deed), variant: deedTotemVariant(x, y) };
         }
         // A water plant: what lies on the water goes down after the line's water; a lotus's stalks stand up among everything else.
@@ -14455,7 +14455,7 @@ export class Renderer {
 
     const hover = this.hover;
     this.drawProspected(ctx);
-    if (game.deed && (game.settings.deedBorder || (hover && game.isToken(hover.x, hover.y)))) this.drawDeedBorder(ctx);
+    if (game.deed && (game.settings.deedBorder || (hover && game.isMyToken(hover.x, hover.y)))) this.drawDeedBorder(ctx);
     if (hover) {
       this.tilePath(ctx, hover.x, hover.y, !!hover.down);
       ctx.fillStyle = 'rgba(255,255,255,0.08)';
