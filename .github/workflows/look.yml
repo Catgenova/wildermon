@@ -83,6 +83,11 @@ jobs:
                  round(greatest(abs(creature_x(c) - (my_deed(c.world_id, c.keeper)).x), abs(creature_y(c) - (my_deed(c.world_id, c.keeper)).y))::numeric) as off_token,
                  workers_on_deed(c.world_id, c.keeper) as counted, worker_cap(c.world_id, c.keeper) as cap
             from creature c where c.mode = 'deed' and c.post is null order by c.keeper, c.id"
+          ask "every tame wildermon of a settlement's keeper that is not at work on it: what it is doing and where" "select left(c.keeper::text, 8) as keeper, c.id, c.species, c.name, c.mode, c.phase,
+                 round(creature_x(c)::numeric) as x, round(creature_y(c)::numeric) as y,
+                 round(greatest(abs(creature_x(c) - (my_deed(c.world_id, c.keeper)).x), abs(creature_y(c) - (my_deed(c.world_id, c.keeper)).y))::numeric) as off_token
+            from creature c where c.keeper is not null and c.mode <> 'deed' and c.mode <> 'wild'
+             and (my_deed(c.world_id, c.keeper)).name is not null order by c.keeper, c.id limit 40"
           ask "biggest tables" "select n.nspname || '.' || c.relname as relation, pg_size_pretty(pg_total_relation_size(c.oid)) as total,
                  c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
             from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid
