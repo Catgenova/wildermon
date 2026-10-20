@@ -2631,6 +2631,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/relicuse.mjs --log-level=error
           node node_modules/.cache/relicuse.mjs
 
+      - name: An ancient lamp rekindles a trait
+        run: |
+          # Asked for: the old lamp restores into an ancient lamp, which used on
+          # a wildermon of yours rerolls its lowest-tier trait at that tier or
+          # better, one time in twenty a tier higher, at the top tier among the
+          # top tier, never a trait it carries, and is used up. The same on both
+          # sides, with the rolls forced and sampled; an old lamp held is an
+          # ancient lamp in a save and on the island.
+          npx esbuild supabase/test/ancientlamp.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/ancientlamp.mjs --log-level=error
+          node node_modules/.cache/ancientlamp.mjs
+
       - name: Rare ingredients make rare work more likely
         run: |
           # Asked for: a rare+ ingredient raises the chance a craft comes out

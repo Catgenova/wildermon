@@ -667,9 +667,9 @@ function finish(world: World, m: SaveMeta): Game {
   // bank is rolled from the whole table, so every one of them turns up.
   game.creatures.stockIsland(game);
   // The settlement deed form became a carved stake, mosaic stained glass, the
-  // altar's mote a soul and a restored bone comb an ancient comb; rename them
-  // wherever they sit.
-  const RENAMED: Record<string, string> = { settlement_deed: 'deed_stake', mosaic_tile: 'stained_glass_pane', mote: 'soul', bone_comb: 'ancient_comb' };
+  // altar's mote a soul, a restored bone comb an ancient comb and a restored
+  // old lamp an ancient lamp; rename them wherever they sit.
+  const RENAMED: Record<string, string> = { settlement_deed: 'deed_stake', mosaic_tile: 'stained_glass_pane', mote: 'soul', bone_comb: 'ancient_comb', old_lamp: 'ancient_lamp' };
   const restake = (items: Item[] | undefined): void => {
     for (const it of items ?? []) {
       it.id = RENAMED[it.id] ?? it.id;

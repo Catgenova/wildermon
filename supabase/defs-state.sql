@@ -883,10 +883,10 @@ insert into item_def values ('bauble_major', 'Major bauble', 'misc', 0.1, false,
 insert into item_def values ('bauble_regret', 'Bauble of Regret', 'misc', 0.1, false, null, null);
 insert into item_def values ('soul', 'Soul', 'misc', 0.01, true, null, null);
 insert into item_def values ('bauble_ancient', 'Ancient bauble', 'misc', 0.1, false, null, null);
-insert into item_def values ('old_lamp', 'Old lamp', 'misc', 0.9, false, 3, null);
 insert into item_def values ('bronze_mirror', 'Bronze mirror', 'misc', 0.8, false, 3, null);
 insert into item_def values ('ancient_comb', 'Ancient comb', 'misc', 0.15, false, 3, null);
 insert into item_def values ('ancient_file', 'Ancient file', 'misc', 0.8, false, 3, null);
+insert into item_def values ('ancient_lamp', 'Ancient lamp', 'misc', 0.9, false, 3, null);
 insert into item_def values ('ancient_pot', 'Ancient pot', 'misc', 1.2, false, 3, null);
 insert into item_def values ('mixed_grass', 'Mixed grass', 'material', 0.1, true, 120, null);
 update item_def set raw = true where id = 'mixed_grass';
@@ -1413,6 +1413,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('release_creature', 'Release', 'releasing', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_comb', 'Comb it with the ancient comb', 'combing it', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_file', 'Go over it with the ancient file', 'going over it', null, null, false, null, 0.01, 3, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_lamp', 'Rekindle a trait with the ancient lamp', 'lighting the lamp', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_pot', 'Use the ancient pot on it', 'using the pot', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('crate_creature', 'Put in a crate', 'crating it', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('crate_follow', 'Let it out to follow you', 'opening the crate', null, null, false, null, 0, 0, null, true, false);
@@ -3189,10 +3190,10 @@ update item_def set description = 'Set it into one of the 5 major sockets of the
 update item_def set description = 'Undoes one of your trades. In the Trades window, Undo on your crafting or your fighting trade puts it down as though you had never taken it up, clears its tree, and uses this up; the next trade you take up in its place costs nothing, where a change costs 500 silver. Only on an island, where trades are kept.' where id = 'bauble_regret';
 update item_def set description = 'Left by 1% of sacrifices at an altar, with the rarity of what was given up. Absorb it into an ordinary thing in your pack (Absorb into, on the soul) and that thing, or one of it where it is a stack, takes the soul''s rarity. The soul is used up.' where id = 'soul';
 update item_def set description = 'Set it into one of the 3 ancient sockets of the altar of a settlement of yours. Every citizen of that settlement, while working on it, then gets what is written on it added to every yield of that one action.' where id = 'bauble_ancient';
-update item_def set description = 'A closed clay lamp with a wick hole. It still smells faintly of oil.' where id = 'old_lamp';
 update item_def set description = 'A disc of bronze polished on one face. It gives back a dim, honest likeness.' where id = 'bronze_mirror';
 update item_def set description = 'Restored from the pieces of a bone comb. Used on a wildermon of yours, from its menu, it takes one stage off its age: an old one is grown again, as old as one only just grown, and a grown one young, as one only just born. Old, it goes at 85% of its pace and pulls 80% of its share; grown, at its full figures; young, it cannot be worked, ridden or put in the traces. Nothing is younger than young. It is used up.' where id = 'ancient_comb';
 update item_def set description = 'Restored from the pieces of an old file. Used on a wildermon of yours, from its menu, it makes it one step rarer one time in 20: ordinary to rare, rare to supreme, supreme to fantastic, which is as rare as there is. Each step makes every figure its blood decides better, +20%, +40% and +60% over an ordinary one at rare, supreme and fantastic, and draws it bigger. It is used up whether or not the step comes.' where id = 'ancient_file';
+update item_def set description = 'Restored from the pieces of an old lamp. Used on a wildermon of yours, from its menu, it rerolls whichever of its three traits is of the lowest tier, one at random where several share it: the trait that goes out is replaced by one it does not carry, at that tier, or one time in 20 at the tier above (common to rare, rare to supreme and supreme to fantastic). Never lower; at fantastic, with no tier above, it is always another fantastic trait. One with fewer than three traits has an empty slot instead, which it fills with a common trait, or one time in 20 a rare one. It is used up.' where id = 'ancient_lamp';
 update item_def set description = 'Restored from the pieces of an old pot. Used on a wildermon of yours, from its menu, it puts one point into one of its base stats, chosen at random among those not yet at 10: health (the health it can carry), attack (what each of its blows lands for), speed (its pace on its feet, under a rider and in the traces) and work (the pace it gets each go of its task done at). Each point is 3% more of that stat than its kind and its blood give it, and no stat takes more than ten. It is used up.' where id = 'ancient_pot';
 update item_def set description = 'Cutting a grass tile gives two; plant 10 of it on a tile of dirt and the tile is grass.' where id = 'mixed_grass';
 update item_def set food = 0.01 where id = 'sage';
@@ -5186,6 +5187,7 @@ create or replace function comb_into() returns double precision language sql imm
 create or replace function file_rarity_odds() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function pot_step() returns double precision language sql immutable as $fn$ select 0.03::double precision $fn$;
 create or replace function pot_most() returns double precision language sql immutable as $fn$ select 10::double precision $fn$;
+create or replace function lamp_tier_odds() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function guard_range() returns double precision language sql immutable as $fn$ select 4::double precision $fn$;
 create or replace function fall_back() returns double precision language sql immutable as $fn$ select 8::double precision $fn$;
 create or replace function arm_slow() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
@@ -5770,7 +5772,7 @@ update tile_def set diggable = true where id = 7;
 insert into relic_def values ('old pot', 2, 'ancient_pot', 12);
 insert into relic_def values ('bone comb', 2, 'ancient_comb', 16);
 insert into relic_def values ('old file', 3, 'ancient_file', 22);
-insert into relic_def values ('old lamp', 3, 'old_lamp', 26);
+insert into relic_def values ('old lamp', 3, 'ancient_lamp', 26);
 insert into relic_def values ('bronze mirror', 3, 'bronze_mirror', 30);
 insert into relic_def values ('old blade', 4, 'short_sword', 34);
 insert into relic_def values ('statuette', 4, 'statuette', 38);

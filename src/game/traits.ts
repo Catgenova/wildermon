@@ -564,3 +564,65 @@ export function breedTraits(
   }
   return { traits: out, from };
 }
+
+// ---- An ancient lamp ----
+
+/**
+ * One time in this many, the trait an ancient lamp kindles is a tier above the
+ * one that went out (`TIERS`); at the top tier there is nothing above, and it
+ * is another of the top tier. The island's `lamp_tier_odds`.
+ */
+export const LAMP_TIER_ODDS = 20;
+
+/**
+ * A fresh trait of one tier that a set does not carry by name, as `rollTrait`
+ * keeps it: fighting blood `FIGHT_SHARE` of the time, a name not in the set in
+ * that grade, and otherwise a plain trait of that tier; the other where one has
+ * none left. Null with nothing of that tier left at all. The island's `lamp_trait`.
+ */
+export function lampTrait(tier: TraitTier, taken: string[], rand: () => number): string | null {
+  const fights = FIGHTING.filter((f) => !holds(taken, f.id));
+  const plain = BY_TIER[tier].filter((t) => !holds(taken, t.id));
+  if (fights.length && (!plain.length || rand() < FIGHT_SHARE)) return gradeId(pick(fights, rand).id, tier);
+  return plain.length ? pick(plain, rand).id : null;
+}
+
+/** What an ancient lamp did: which slot, what went out of it (null for an empty one), and what came in at which tier. */
+export interface Rekindled {
+  slot: number;
+  was: string | null;
+  /** The tier of what went out, or the lowest tier for an empty slot. */
+  from: TraitTier;
+  now: string;
+  tier: TraitTier;
+  /** A tier above the one that went out, the one time in `LAMP_TIER_ODDS`. */
+  up: boolean;
+}
+
+/**
+ * An ancient lamp on a wildermon's blood. It rekindles its lowest-tier trait,
+ * one at random of those that share the lowest tier, into another trait at that
+ * tier, or one time in `LAMP_TIER_ODDS` the tier above; never lower, and never
+ * one it carries by name, the one going out included. One with fewer than
+ * `TRAIT_SLOTS` traits has an empty slot, which is lower than any trait, and
+ * the lamp fills that as the lowest tier there is. The new set, and what
+ * happened; null when nothing could be kindled. The island's `perform_artifact`.
+ */
+export function rekindle(traits: string[], rand: () => number): { traits: string[]; did: Rekindled } | null {
+  let slot = traits.length;
+  let from: TraitTier = TIERS[0];
+  if (traits.length >= TRAIT_SLOTS) {
+    const rank = (id: string): number => TIERS.indexOf(traitTier(id));
+    const low = Math.min(...traits.map(rank));
+    const lowest = traits.flatMap((id, i) => (rank(id) === low ? [i] : []));
+    slot = pick(lowest, rand);
+    from = TIERS[low];
+  }
+  const above = rand() < 1 / LAMP_TIER_ODDS ? nextTier(from) : null;
+  const tier = above ?? from;
+  const now = lampTrait(tier, traits, rand);
+  if (!now) return null;
+  const out = [...traits];
+  out[slot] = now;
+  return { traits: out, did: { slot, was: traits[slot] ?? null, from, now, tier, up: !!above } };
+}

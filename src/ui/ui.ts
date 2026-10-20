@@ -2908,7 +2908,7 @@ export class UI {
       });
     } else push(pairing);
     push(item('read_blood'));
-    // An ancient comb, file or pot out of the ground, offered only while you carry one (`ARTIFACT_FOR`).
+    // An ancient comb, file, lamp or pot out of the ground, offered only while you carry one (`ARTIFACT_FOR`).
     for (const id of Object.keys(ARTIFACT_FOR)) push(item(id));
     push(item('shear'));
     push(item('milk_creature'));

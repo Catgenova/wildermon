@@ -198,6 +198,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   groom: 'cloth', make_brush: 'cloth', patch_item: 'cloth', apply_salve: 'cloth', mend_kit: 'cloth', seal_item: 'cloth',
   // An ancient comb drawn through a coat, a file over a hide and a pot's contents worked in (`creatureActions`, `use_ancient_*`).
   use_ancient_comb: 'cloth', use_ancient_file: 'cloth', use_ancient_pot: 'cloth',
+  // And an ancient lamp lit over one to rekindle a trait, as any lamp is lit.
+  use_ancient_lamp: 'fire',
   crate_take_all: 'cloth', smelter_take_all: 'cloth', kiln_take_all: 'cloth', furniture_take_all: 'cloth',
   // Leaves torn off a wall, and a brush over stone, as a groom's brush over a coat sounds.
   clear_ivy: 'cloth', scrub_moss: 'cloth',

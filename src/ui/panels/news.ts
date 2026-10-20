@@ -123,7 +123,7 @@ import { SWIM_LEARN } from '../../game/body';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
-import { betterThanCommon, CHANNELS, husbandryOdds, pct as cardPct } from '../../game/traits';
+import { betterThanCommon, CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
 import { MAX_STAND, SWIM_DEPTH } from '../../game/player';
@@ -2817,6 +2817,20 @@ export const NEWS: News[] = [
         `The ${d.was![0]} is the ${d.name} now. It evolves into ${article(one.name)} ${one.name} at level ${EVOLVE_AT[0]} and ${article(two.name)} ${two.name} at level ${EVOLVE_AT[1]}: ${stageSays(1)} at the first, ${stageSays(2)} at the second, than ${article(d.name)} ${d.name}.`,
         `It cuts ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} reeds a cut at ${SKILL_TOP} foraging, 1 more for every ${REED_LEVELS} levels. Its carcass gives fur where the Sedra's gave feathers.`,
         'Each of the three is a new model, a marsh otter with reeds down its back that grows into an upright Reedweaver with a bundle of pampas, then a great Marshreaper with a reed mantle, a plume fan and a sickle, with its own walk, strike, reed cutting and voice.',
+      ];
+    },
+  },
+  {
+    n: 219,
+    day: '2026-10-20',
+    lines: () => {
+      const lamp = itemDef(ARTIFACT_FOR.use_ancient_lamp).name.toLowerCase();
+      const top = TIERS[TIERS.length - 1];
+      return [
+        `An old lamp restores into ${article(lamp)} ${lamp}, and one you held is ${article(lamp)} ${lamp} now. Used on a wildermon of yours from its menu, it rerolls its lowest-tier trait, `
+          + `one of them at random where several share that tier, into one it does not carry: at that tier, or one time in ${LAMP_TIER_ODDS} at the tier above `
+          + `(${listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`))}), never lower. At ${top}, with no tier above, it is another ${top} trait. It is used up.`,
+        `One with fewer than ${numberWord(TRAIT_SLOTS)} traits has an empty slot, which the lamp fills first, with ${article(TIERS[0])} ${TIERS[0]} trait or one time in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one.`,
       ];
     },
   },

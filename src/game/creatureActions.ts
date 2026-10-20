@@ -5,7 +5,7 @@ import type { ActionDef, Target } from './actions';
 import { BASE_STATS, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind } from './creatures';
 import { studBook } from './husbandry';
 import { article, numberWord, percent } from './words';
-import { bestTier, pct, traitList } from './traits';
+import { bestTier, LAMP_TIER_ODDS, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
 import type { Game } from './game';
 import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
 import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET, WHEY_FEED, wheyFedSays } from './dairy';
@@ -228,18 +228,21 @@ export function riposte(g: Game, c: Creature, share: number): void {
 }
 
 /**
- * Three things put back together out of the ground, used on a wildermon of
+ * Four things put back together out of the ground, used on a wildermon of
  * yours from its menu: an ancient comb takes one stage off its age
  * (`combedBorn`), an ancient file makes it a step rarer one time in
- * `FILE_RARITY_ODDS`, and an ancient pot puts a point into one of its base
- * stats (`BASE_STATS`, `POT_STEP`, `POT_MOST`). Asked for: "restored artifacts
- * can be used on Wildermon". Each is used up whatever comes of it; one that
- * would do nothing is refused and kept. The island's `artifact_action`,
- * `artifact_refusal` and `perform_artifact`.
+ * `FILE_RARITY_ODDS`, an ancient lamp rerolls its lowest-tier trait at that
+ * tier, or one time in `LAMP_TIER_ODDS` the tier above (`rekindle`), and an
+ * ancient pot puts a point into one of its base stats (`BASE_STATS`,
+ * `POT_STEP`, `POT_MOST`). Asked for: "restored artifacts can be used on
+ * Wildermon". Each is used up whatever comes of it; one that would do nothing
+ * is refused and kept. The island's `artifact_action`, `artifact_refusal` and
+ * `perform_artifact`.
  */
 export const ARTIFACT_FOR: Readonly<Record<string, string>> = {
   use_ancient_comb: 'ancient_comb',
   use_ancient_file: 'ancient_file',
+  use_ancient_lamp: 'ancient_lamp',
   use_ancient_pot: 'ancient_pot',
 };
 const artifactName = (action: string): string => itemDef(ARTIFACT_FOR[action]).name.toLowerCase();
@@ -269,6 +272,22 @@ export function artifactRefusal(g: Game, c: Creature | undefined, action: string
 /** What the points from ancient pots in one stat come to, in the game's terms: "3 of 10: the health it can carry is 9% more than ...". */
 export const potSays = (stat: BaseStat, points: number): string =>
   `${points} of ${POT_MOST}: ${BASE_STATS.find((s) => s.id === stat)?.says ?? stat} is ${percent(POT_STEP * points)} more than its kind and blood give it`;
+
+/** A trait as an ancient lamp's line names it: "fleet, a rare trait (+20% speed)". The island's `lamp_kindled`. */
+const kindled = (id: string): string => {
+  const t = traitOf(id);
+  const says = t ? traitSays(t) : '';
+  return `${traitName(id)}, ${article(traitTier(id))} ${traitTier(id)} trait${says ? ` (${says})` : ''}`;
+};
+
+/** What an ancient lamp says it did, word for word as the island's `perform_artifact` says it. */
+export function lampSays(c: Pick<Creature, 'name'>, name: string, did: Rekindled): string {
+  const up = did.up ? `, a tier above ${did.from}` : '';
+  const odds = !did.up && nextTier(did.from) ? `; one time in ${LAMP_TIER_ODDS} it kindles one a tier above` : '';
+  return did.was
+    ? `You light the ${name} over ${c.name}: its ${traitName(did.was)}, ${article(did.from)} ${did.from} trait, goes out, and ${kindled(did.now)} is kindled in its place${up}. The lamp is used up${odds}.`
+    : `You light the ${name} over ${c.name}: ${kindled(did.now)} is kindled in an empty slot${up}. The lamp is used up${odds}.`;
+}
 
 function artifactAction(id: string, label: string, verb: string): ActionDef {
   return {
@@ -305,6 +324,11 @@ function artifactAction(id: string, label: string, verb: string): ActionDef {
         } else {
           g.logMsg(`You go over ${c.name} with the ${name}, and it is no rarer. The file is used up; one time in ${FILE_RARITY_ODDS} it makes one a step rarer.`, 'event');
         }
+      } else if (id === 'use_ancient_lamp') {
+        // Its lowest-tier trait, or an empty slot, at that tier or one time in `LAMP_TIER_ODDS` the tier above.
+        const lit = rekindle(c.traits, g.rand);
+        if (lit) c.traits = lit.traits;
+        g.logMsg(lit ? lampSays(c, name, lit.did) : `You light the ${name} over ${c.name}, and nothing is kindled. The lamp is used up.`, 'event');
       } else {
         // A stat not yet at the most it takes, any of them as likely as another.
         const room = potRoom(c);
@@ -1246,6 +1270,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
   },
   artifactAction('use_ancient_comb', 'Comb it with the ancient comb', 'combing it'),
   artifactAction('use_ancient_file', 'Go over it with the ancient file', 'going over it'),
+  artifactAction('use_ancient_lamp', 'Rekindle a trait with the ancient lamp', 'lighting the lamp'),
   artifactAction('use_ancient_pot', 'Use the ancient pot on it', 'using the pot'),
 ];
 

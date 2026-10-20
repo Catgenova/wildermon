@@ -121,7 +121,7 @@ import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
-  betterThanCommon, CHANNELS as BLOOD, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, pct as cardPct, TIERS, TRAIT_SLOTS,
+  betterThanCommon, CHANNELS as BLOOD, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS,
   TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier,
 } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -773,8 +773,8 @@ const HAND_NUMBERS: Record<string, string> = {
 };
 
 /**
- * What the three relics that restore into things of their own do on a wildermon of yours, every number read off the
- * rule (`ARTIFACT_FOR`, `combedBorn`, `FILE_RARITY_ODDS`, `POT_STEP`, `POT_MOST`).
+ * What the relics that restore into things of their own do on a wildermon of yours, every number read off the
+ * rule (`ARTIFACT_FOR`, `combedBorn`, `FILE_RARITY_ODDS`, `LAMP_TIER_ODDS`, `POT_STEP`, `POT_MOST`).
  */
 function artifactHelp(): string {
   const from = (action: string): string => {
@@ -782,7 +782,8 @@ function artifactHelp(): string {
     const relic = RELICS.find((r) => r.result === id)?.name ?? '';
     return `<b>${itemDef(id).name}</b>, restored from ${article(relic)} ${relic}`;
   };
-  return `<p>Three restore into things of their own, which are used on a wildermon of yours that is out of its crate
+  const top = TIERS[TIERS.length - 1];
+  return `<p>${capital(numberWord(Object.keys(ARTIFACT_FOR).length))} restore into things of their own, which are used on a wildermon of yours that is out of its crate
     and beside you, from its menu. Each is used up whatever comes of it; one that would do nothing is refused and kept.</p>
     <ul>
       <li>${from('use_ancient_comb')}: one stage off its age. An old one is grown again, as old as one only just grown,
@@ -791,11 +792,18 @@ function artifactHelp(): string {
       <li>${from('use_ancient_file')}: one time in ${FILE_RARITY_ODDS} it is one step rarer &mdash; ${listed(RARITIES.map((r) => r.name || 'ordinary'))}, a step at a time &mdash;
       and each step makes every figure its blood decides ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} over an ordinary one's at
       ${listed(RARITIES.slice(1).map((r) => r.name))}. Not on ${article(RARITIES[RARITIES.length - 1].name)} ${RARITIES[RARITIES.length - 1].name} one.</li>
+      <li>${from('use_ancient_lamp')}: its lowest-tier trait is rerolled &mdash; one of them at random where several of its ${numberWord(TRAIT_SLOTS)}
+      share the lowest tier &mdash; into a trait it does not carry by name, the one going out included, at that tier, or one time in ${LAMP_TIER_ODDS}
+      at the tier above (${listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`))}). Never lower; at ${top} there is no tier above,
+      and it is another ${top} trait. One with fewer than ${numberWord(TRAIT_SLOTS)} traits has an empty slot, lower than any trait, and the lamp fills
+      that with ${article(TIERS[0])} ${TIERS[0]} trait, or one time in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one. Fighting blood comes up
+      ${percent(FIGHT_SHARE)} of the time, as in the wild.</li>
       <li>${from('use_ancient_pot')}: a point in one of its ${numberWord(BASE_STATS.length)} base stats, chosen at random among those not yet at ${POT_MOST}:
       ${listed(BASE_STATS.map((st) => `${st.name.toLowerCase()} (${st.says})`))}. Each point is ${percent(POT_STEP)} more of that stat than its kind and its
       blood give it, so ${percent(POT_STEP * POT_MOST)} more at ${POT_MOST} points, which is the most a stat takes. Not on one with every stat at ${POT_MOST}.</li>
     </ul>
-    <p>An old pot or old file restored before these were their own things came back an ordinary clay pot or file, and stays one.</p>`;
+    <p>An old pot or old file restored before these were their own things came back an ordinary clay pot or file, and stays one;
+    an old lamp restored before is an ancient lamp.</p>`;
 }
 
 export function helpText(): string {
@@ -3004,7 +3012,7 @@ export function helpText(): string {
     <b>Restoration</b> skill, at any damage short of breaking: a success puts the thing back together, and a failure
     puts ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on every piece. What comes out is only as good as the pieces that went in,
     less ${percent(1 / RESTORE_AGE)} of it for each point of damage on them. Some of it is
-    treasure and nothing more &mdash; a statuette, a bronze mirror, an old lamp &mdash;
+    treasure and nothing more &mdash; a statuette, a bronze mirror &mdash;
     and an <b>old blade</b> or an <b>ancient helm</b> is a sword or a helm to fight in.</p>
     ${artifactHelp()}
     <h3>Baubles</h3>
@@ -3389,7 +3397,9 @@ export function helpText(): string {
     its <b>grade</b> is a roll of its own off the same odds, so a fanged animal may be fanged, fanged
     (rare), fanged (supreme) or fanged (fantastic), each worth steeply more than the last &mdash; ${listed(TIERS.map((t) => times(GRADE_STEP[t])).slice(1))} what
     the common grade is &mdash; and a line is bred up a grade at a time under the same husbandry.
-    ${capital(percent(FIGHT_SHARE))} of what the wild throws up is fighting blood, and no animal carries more than one grade of a name.</p>
+    ${capital(percent(FIGHT_SHARE))} of what the wild throws up is fighting blood, and no animal carries more than one grade of a name.
+    ${capital(article(itemDef(ARTIFACT_FOR.use_ancient_lamp).name.toLowerCase()))} <b>${itemDef(ARTIFACT_FOR.use_ancient_lamp).name.toLowerCase()}</b>
+    rerolls its lowest-tier trait at that tier, or one time in ${LAMP_TIER_ODDS} the tier above (see <b>Digging up the past</b>).</p>
     <p>Now and again a wildermon comes into the world <b>rare</b>, at the odds a made thing has: ${listed(RARE_STEPS.map((s) => `one in ${numberWord(Math.round(1 / rarityChance(s)))} ${RARITIES[s].name}`))}.
     A monster never does, and a young one is rolled for as it is born, whatever its parents were. A rare one is <b>${times(RARITIES[1].size)} the size</b>
     of its kind, ${listed(RARE_STEPS.slice(1).map((s) => `${article(RARITIES[s].name)} ${RARITIES[s].name} one ${times(RARITIES[s].size)}`))}, and the whole beast

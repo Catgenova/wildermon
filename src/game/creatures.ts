@@ -47,7 +47,7 @@ import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
-import { auraMul, breedTraits, channelOf, CHANNELS, pct, rollTraits, traitList, traitMul, traitTier, TRAIT_SLOTS, type TraitChannel, type TraitSource } from './traits';
+import { auraMul, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, pct, rollTraits, TIERS, traitList, traitMul, traitTier, TRAIT_SLOTS, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
@@ -4018,7 +4018,7 @@ export function combedBorn(c: Creature, now: number): number | null {
  */
 export const FILE_RARITY_ODDS = 20;
 
-// The numbers an ancient comb, file and pot quote, from the rules themselves.
+// The numbers an ancient comb, file, lamp and pot quote, from the rules themselves.
 describeWith({
   artifact: {
     oldSpeed: AGES.old.speed,
@@ -4028,6 +4028,12 @@ describeWith({
     potMost: POT_MOST,
     potStep: POT_STEP,
     stats: listed(BASE_STATS.map((s) => `${s.name.toLowerCase()} (${s.says})`)),
+    slots: TRAIT_SLOTS,
+    lampOdds: LAMP_TIER_ODDS,
+    tierSteps: listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`)),
+    topTier: TIERS[TIERS.length - 1],
+    lowTier: TIERS[0],
+    nextLowTier: TIERS[1],
   },
 });
 
