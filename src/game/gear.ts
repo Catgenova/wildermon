@@ -278,11 +278,13 @@ export const banes = (item: Item | null): boolean => !!item && !!matOf(item.extr
 export function hitChance(g: Game, def: WeaponDef, item?: Item | null): number {
   const skill = g.skills.get(def.kind);
   const fighting = g.skills.get('fighting');
-  return Math.min(HIT_CAP, (0.45 + skill / 220 + fighting / 300 + g.skills.get('body_control') / 500) * (item ? markOf(item, 'aim') : 1));
+  return Math.min(HIT_CAP, (0.45 + skill / 220 + fighting / 300 + g.skills.get('body_control') / CONTROL_HIT) * (item ? markOf(item, 'aim') : 1));
 }
 
 /** The best chance any swing has of landing. The island says the same in `hit_chance`. */
 export const HIT_CAP = 0.96;
+/** Body control adds its level over this to the hit chance (`hit_chance`). */
+export const CONTROL_HIT = 500;
 
 type ItemTarget = Extract<Target, { kind: 'item' }>;
 const itemOf = (g: Game, t: Target): Item | undefined => (t.kind === 'item' ? g.inventory.get((t as ItemTarget).uid) : undefined);

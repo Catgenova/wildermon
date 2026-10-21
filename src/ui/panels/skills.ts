@@ -1,4 +1,7 @@
-import { CARRY_PER_STRENGTH, type Game } from '../../game/game';
+import { boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
+import { staminaBarAbove } from '../../game/body';
+import { CONTROL_HIT } from '../../game/gear';
+import { percent } from '../../game/words';
 import { SKILL_DEFS } from '../../game/skills';
 import { effectTracks, hasEffects, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
@@ -212,13 +215,22 @@ export class SkillsPanel {
         return [`Carry weight +${kg} kg`, `Carry weight +${kg} kg (${CARRY_PER_STRENGTH} kg per level).`];
       }
       case 'body_stamina': {
-        const off = Math.round((1 - g.staminaCost(1)) * 100);
-        const bar = Math.round((g.staminaBar() - 1) * 100);
-        return off > 0 ? [`Stamina bar +${bar}%, cost −${off}%`, `Stamina bar +${bar}%. Stamina cost of actions and swings −${off}%.`] : null;
+        const above = v - CHAR_START;
+        const bar = Math.round((staminaBarAbove(above) - 1) * 100);
+        const off = Math.round((1 - staminaCostAbove(above)) * 100);
+        const back = Math.round((windRegenAbove(above) - 1) * 100);
+        return bar > 0
+          ? [`Stamina bar +${bar}%, cost −${off}%, recovery +${back}%`,
+            `Stamina bar +${bar}%. Stamina cost of actions and swings −${off}%. Stamina recovery +${back}%.`]
+          : null;
       }
       case 'body_control': {
-        const off = Math.round((1 - g.controlSpeed()) * 100);
-        return off > 0 ? [`Action time −${off}%`, `Time per action −${off}%.`] : null;
+        const off = Math.round((1 - controlPaceAbove(v - CHAR_START)) * 100);
+        const dodge = g.dodge();
+        const hit = v / CONTROL_HIT;
+        const sail = boatHands(true, v).toFixed(2);
+        return [`Action time −${off}%, dodge ${percent(dodge)}, hit +${percent(hit)}`,
+          `Time per action and swing −${off}%. Dodge chance ${percent(dodge)} (armour worn counted). Hit chance +${percent(hit)}. Sailing boat speed ×${sail} of her own.`];
       }
       case 'mind_logic': {
         const n = g.queueCapacity();

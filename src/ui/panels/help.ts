@@ -91,7 +91,7 @@ import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, ye
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import {
-  ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
+  ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
   DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
   footing, Game, goSeconds, hullSpeed, kitQl, MAX_DEED_LEVEL, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
@@ -133,6 +133,8 @@ import { CLEAR_OF_BUILDINGS, CONCRETE_PER_STEP, LIFT_PER_MASONRY, POOL_FILL } fr
 import { AWARENESS, awarenessReach, BASE_SIGHT, LIGHT_GIVES_BACK, NIGHT_LOSS, TREE_OPACITY } from '../../game/vision';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import { DODGE_MOST } from '../../game/fight';
+import { CONTROL_HIT } from '../../game/gear';
 import { BACK_PACE, BACK_SLACK, CIRCLE_ARC, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, FLEE_SECS, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, PACK_RANGE, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW, ARM_SLOW_MOST, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, OVERBURDEN_SWING, overburdenSwingSays } from '../../game/fight';
 import {
@@ -755,6 +757,10 @@ const riteSays = (id: string): string =>
     .join(', ');
 /** Where awareness starts, which is not where the other characteristics do. */
 const AWARE_START = SKILL_BY_ID.get(AWARENESS)?.start ?? CHAR_START;
+/** Levels from a characteristic's start to the top. */
+const TOP_ABOVE = SKILL_TOP - CHAR_START;
+/** A multiplier to two places, trailing zeros dropped. */
+const two = (x: number): number => +x.toFixed(2);
 /** The things that hold other things and go in a pack. */
 const BAGS = Object.keys(ITEM_DEFS).filter((id) => ITEM_DEFS[id].holds);
 /** The pieces a fine carpenter builds, and the ones among them that hold things. */
@@ -1110,8 +1116,8 @@ export function helpText(): string {
     </ul>
     <table>
       <tr><td><b>Body strength</b></td><td>Hit damage. Raised by ${raisedBySays('body_strength')}.</td></tr>
-      <tr><td><b>Body stamina</b></td><td>Stamina bar: ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(SKILL_TOP - CHAR_START)} at ${SKILL_TOP}; spending and recovery per second are shares of it. Stamina cost per action; stamina recovery. Raised by ${raisedBySays('body_stamina')}.</td></tr>
-      <tr><td><b>Body control</b></td><td>Time per action. Raised by ${raisedBySays('body_control')}.</td></tr>
+      <tr><td><b>Body stamina</b></td><td>Stamina bar ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(TOP_ABOVE)} at ${SKILL_TOP}. Stamina cost of actions and swings ×${two(staminaCostAbove(0))} to ×${two(staminaCostAbove(TOP_ABOVE))}. Stamina recovery ×${two(windRegenAbove(0))} to ×${two(windRegenAbove(TOP_ABOVE))}. Spending and recovery per second: shares of the bar. Raised by ${raisedBySays('body_stamina')}.</td></tr>
+      <tr><td><b>Body control</b></td><td>Time per action and swing ×${two(controlPaceAbove(0))} at ${CHAR_START}, ×${two(controlPaceAbove(TOP_ABOVE))} at ${SKILL_TOP}. Dodge chance +${percent(DODGE_PER_CONTROL)} per level over ${DODGE_FROM}, −${percent(DODGE_PER_KG)} per kg of armour worn, max ${percent(DODGE_MOST)} (${percent(dodgeChance(SKILL_TOP, 0))} at ${SKILL_TOP} unarmoured). Hit chance + level ÷ ${CONTROL_HIT} (+${percent(SKILL_TOP / CONTROL_HIT)} at ${SKILL_TOP}). Sailing boat speed ×${two(boatHands(true, CHAR_START))} to ×${two(boatHands(true, SKILL_TOP))}. Raised by ${raisedBySays('body_control')}.</td></tr>
       <tr><td><b>Mind logic</b></td><td>Queue size; success on difficult crafts. Raised by ${raisedBySays('mind_logic')}.</td></tr>
       <tr><td><b>Soul strength</b></td><td>Taming chance. Raised by ${raisedBySays('soul_strength')}.</td></tr>
     </table>

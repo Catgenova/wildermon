@@ -553,6 +553,15 @@ export const ORDINARY_GAIN = 0.45;
  * skill and tool behind it and the body doing it. `Game.duration` asks it of
  * whoever is acting, and the help asks it of somebody new to the work.
  */
+/** Body control's share of every timed action's time, this many levels over the starting mark (`control_speed`). */
+export const controlPaceAbove = (above: number): number => Math.max(0.6, 1 - above * 0.003);
+/** Body stamina's share of what an action or a swing costs, this many levels over the starting mark (`spend_wind`). */
+export const staminaCostAbove = (above: number): number => Math.max(0.45, 1 - Math.max(0, above) * 0.0045);
+/** And of how fast stamina comes back (`body_settle`). */
+export const windRegenAbove = (above: number): number => 1 + Math.max(0, above) * WIND_PER_LEVEL;
+/** The hands on a boat, as a share of her speed: body control at a sail, body strength at the oars (`hull_speed`). */
+export const boatHands = (sail: boolean, body: number): number => (sail ? 0.9 + body / 320 : 0.6 + body / 150);
+
 export const goSeconds = (baseTime: number, skill = 50, toolQl = 0, control = 1): number =>
   Math.max(ACTION_FLOOR, baseTime * ACTION_PACE * (1 - skill / 140) * (1 - toolQl / TOOL_QL_SPAN) * control);
 /** Each point of a tool's QL takes one part in this many off a go's time: a QL 100 tool, a quarter of it. */
@@ -603,7 +612,7 @@ export const BOAT_LOAD_DRAG = 0.33;
  * example, so the two cannot disagree.
  */
 export function hullSpeed(def: BoatDef, ql: number, body: number, weather: number, load: number): number {
-  const hands = def.sail ? 0.9 + body / 320 : 0.6 + body / 150;
+  const hands = boatHands(!!def.sail, body);
   const hull = 0.75 + ql / 220;
   return def.speed * hands * hull * weather * (1 - load * BOAT_LOAD_DRAG);
 }
@@ -2398,7 +2407,7 @@ export class Game {
 
   /** Body control quickens every action; the effect is small but it is always there. */
   controlSpeed(): number {
-    return Math.max(0.6, 1 - (this.skills.get('body_control') - CHAR_START) * 0.003);
+    return controlPaceAbove(this.skills.get('body_control') - CHAR_START);
   }
 
   /**
@@ -2414,7 +2423,7 @@ export class Game {
 
   /** How fast your wind comes back, as a share of its pace at the start: more for body stamina, and Steady Heart's (`windMul`). */
   windRegen(): number {
-    return (1 + Math.max(0, this.skills.get('body_stamina') - CHAR_START) * WIND_PER_LEVEL) * this.windMul();
+    return windRegenAbove(this.skills.get('body_stamina') - CHAR_START) * this.windMul();
   }
 
   /** Your pace in deep water, as a share of a walk: more for swimming and a Seal's Coat worn, never past a walk (`travel_speed`). */
@@ -2431,7 +2440,7 @@ export class Game {
   staminaCost(cost: number): number {
     // Nothing at all while Power's Unbroken holds.
     if (this.pathHolds('unbroken')) return 0;
-    const body = Math.max(0.45, 1 - (this.skills.get('body_stamina') - CHAR_START) * 0.0045);
+    const body = staminaCostAbove(this.skills.get('body_stamina') - CHAR_START);
     return cost * body * (1 + this.burden());
   }
 
@@ -4411,7 +4420,7 @@ export class Game {
        */
       const a = this.action;
       const doing = a?.state === 'performing';
-      const body = Math.max(0.45, 1 - Math.max(0, this.skills.get('body_stamina') - CHAR_START) * 0.0045);
+      const body = staminaCostAbove(this.skills.get('body_stamina') - CHAR_START);
       // And nothing while Power's Unbroken holds (`spend_wind`).
       const spend = doing && a.def.stamina > 0 && !this.pathHolds('unbroken')
         ? (a.def.stamina * body) / Math.max(0.001, a.duration) / bar
