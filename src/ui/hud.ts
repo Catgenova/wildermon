@@ -326,10 +326,26 @@ export class Hud {
     this.companionEl.append(this.feedBtn);
     status.append(this.companionEl);
     root.append(status);
+    /*
+     * On a phone the status panel is the bars at the foot of the screen, and a
+     * tap on it opens the rest of it over the strip; another tap, or a press on
+     * the island, folds it again (`#ui.phone .hud-status` in src/style.css).
+     */
+    status.addEventListener('click', (e) => {
+      if (!root.classList.contains('phone') || (e.target as Element).closest('button, input, select, a')) return;
+      status.classList.toggle('hud-open');
+    });
+    root.ownerDocument.addEventListener('pointerdown', (e) => {
+      if (status.classList.contains('hud-open') && !status.contains(e.target as Node)) status.classList.remove('hud-open');
+    }, { capture: true });
 
     const toolbar = document.createElement('div');
     toolbar.className = 'toolbar';
     this.toolbarEl = toolbar;
+    // The buttons, in a row of their own: no box anywhere but a phone, where it scrolls sideways inside the toolbar's frame.
+    const row = document.createElement('div');
+    row.className = 'tb-row';
+    toolbar.append(row);
     /*
      * One button for all thirteen windows.
      *
@@ -349,7 +365,7 @@ export class Hud {
       const r = windows.getBoundingClientRect();
       cb.windows(r.left, r.bottom + 2);
     });
-    toolbar.append(windows);
+    row.append(windows);
     for (const b of BUTTONS) {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -358,7 +374,7 @@ export class Hud {
       if (b.id === 'grid') this.gridBtn = btn;
       if (b.bind) this.keyed.push({ btn, label: b.label, bind: b.bind });
       else btn.textContent = b.label;
-      toolbar.append(btn);
+      row.append(btn);
     }
 
     this.binds = cb.keys;

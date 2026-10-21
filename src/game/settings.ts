@@ -32,6 +32,8 @@ export const FRAME_CAPS = [0, 60, 30] as const;
 /** Device pixels drawn to a screen pixel, at most: everything, and the fast graphics. */
 export const FULL_DPR = 2;
 export const FAST_DPR = 1;
+/** The most frames drawn a second with Low power on (`lowPower`), whatever the frame-rate limit says. */
+export const LOW_POWER_FPS = 30;
 
 /** Everything that is a preference, and their out-of-the-box answers. */
 export const SETTING_DEFAULTS = {
@@ -117,6 +119,13 @@ export const SETTING_DEFAULTS = {
   graphics: 'full' as 'full' | 'fast',
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
+  /**
+   * Phone only (`lowPowerOn`): at most `LOW_POWER_FPS` frames a second, the
+   * fast graphics, and no wakes or dust.
+   */
+  lowPower: false,
+  /** Phone only: the screen kept on while an action runs or one is queued (`src/ui/phone.ts`). */
+  keepAwake: true,
   /** Notices near the top of the screen (`src/ui/notices.ts`): a skill at a new whole number, a knack, a run of work done, a birth, a thing you wear or hold wearing out, food on the ground about to rot. */
   noticeLevel: true,
   noticeKnack: true,
@@ -163,6 +172,23 @@ export const SETTING_DEFAULTS = {
   /** A settlement's name near the top of the screen as you cross into its border, and a line as you leave (`src/ui/deedbanner.ts`). */
   deedBanner: true,
 };
+
+/** Whether Low power is on, which it only ever is on a phone. */
+export const lowPowerOn = (s: { lowPower: boolean }, phone: boolean): boolean => phone && s.lowPower;
+
+/** The frame-rate limit the loop keeps to: the one chosen, or `LOW_POWER_FPS` with Low power if that is lower. */
+export function frameCapOf(s: { frameCap: number; lowPower: boolean }, phone: boolean): number {
+  if (!lowPowerOn(s, phone)) return s.frameCap;
+  return s.frameCap > 0 ? Math.min(s.frameCap, LOW_POWER_FPS) : LOW_POWER_FPS;
+}
+
+/** Whether the fast graphics are drawn: chosen, or put on by Low power. */
+export const drawsFast = (s: { graphics: string; lowPower: boolean }, phone: boolean): boolean =>
+  s.graphics === 'fast' || lowPowerOn(s, phone);
+
+/** Device pixels drawn to a screen pixel, at most (`FullscreenCanvas.maxDpr`). */
+export const dprCapOf = (s: { graphics: string; lowPower: boolean }, phone: boolean): number =>
+  drawsFast(s, phone) ? FAST_DPR : FULL_DPR;
 
 export const UI_STYLES = ['runecut', 'classic'] as const;
 export type UiStyle = (typeof UI_STYLES)[number];

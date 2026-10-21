@@ -130,7 +130,7 @@ import { BarterPanel } from './panels/barter';
 import { KeeperPanel } from './panels/keeper';
 import { TrackerPanel } from './panels/tracker';
 import { Tooltip } from './tooltip';
-import { LAYOUT_SLOTS, WindowManager } from './windows';
+import { LAYOUT_SLOTS, WindowManager, type UIWindow } from './windows';
 import { CELL } from './snapgrid';
 import { seasonAt } from '../world/calendar';
 import type { Island } from '../net/island';
@@ -157,6 +157,9 @@ export interface UICallbacks {
    */
   island?: Island | null;
 }
+
+/** A phone's folded event log's rim, in interface pixels: its bar is one line high. */
+const PHONE_FOLD_RIM = 4;
 
 /** Builds and updates every HTML overlay above the canvas. */
 /** Why a job cannot be done just now, as the game will answer it: down in a cellar or up top first (`cellarGate`), then the job's own say. */
@@ -364,8 +367,10 @@ export class UI {
     // Every window as it is made is dressed in Runecut's stone, its niche and its frame; menus, tooltips, notices and the palette are there for a moment and stay plain.
     this.art = new RunecutArt(root);
     // A window's rim is narrower on a phone's screen, where every pixel across counts, and wider in a bulky frame (`FRAME_RIM`).
-    const rim = (kind: string): number => (root.classList.contains('narrow') ? RIMS.phone : FRAME_RIM[kind] ?? RIMS.window);
-    this.windows.onCreate = (win) => this.art.add(win.opts.id, win.el, rim, runeFor(win.opts.id));
+    // And on a phone's folded log, one line high, thinner again (`PHONE_FOLD_RIM`).
+    const rim = (kind: string, win?: UIWindow): number =>
+      win?.folds && win.isFolded && root.classList.contains('phone') ? PHONE_FOLD_RIM : root.classList.contains('narrow') ? RIMS.phone : FRAME_RIM[kind] ?? RIMS.window;
+    this.windows.onCreate = (win) => this.art.add(win.opts.id, win.el, (kind) => rim(kind, win), runeFor(win.opts.id));
     this.menu = new ContextMenu(root, canvas);
     this.tooltip = new Tooltip(root);
     this.hud = new Hud(root, game, {
@@ -410,8 +415,13 @@ export class UI {
       this.settings.drawLayouts();
     };
 
-    const events = this.windows.create({ id: 'events', title: 'Event', x: 12, y: 12, width: 420, height: 210, anchor: 'bl', seeThrough: true });
+    const events = this.windows.create({ id: 'events', title: 'Event', x: 12, y: 12, width: 420, height: 210, anchor: 'bl', seeThrough: true, fold: true });
     this.eventLog = new EventLogPanel(events, game);
+    // On a phone, opened from its bar at the newest line.
+    events.onFold = (folded) => {
+      const list = events.body.querySelector<HTMLElement>('.log-list');
+      if (!folded && list) list.scrollTop = list.scrollHeight;
+    };
     const inventory = this.windows.create({ id: 'inventory', title: 'Inventory', x: 12, y: 56, width: 340, height: 396, anchor: 'tr' });
     new InventoryPanel(inventory, game, this.menu, (p) => this.moveDragged(p, 'inventory'), (uid) => this.cratePanel.openBag(uid), (uid) => this.hoard.openOn(uid),
       (uid) => this.spellBar?.entriesFor({ kind: 'item', id: uid }) ?? [],

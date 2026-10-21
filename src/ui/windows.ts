@@ -24,6 +24,12 @@ export interface WindowOptions {
   seeThrough?: boolean;
   /** Put somewhere of its own each time it is made, rather than where it was left: the tally of what happened while you were away. */
   fresh?: boolean;
+  /**
+   * On a phone, a bar along the foot of the screen, one line high, that opens
+   * taller on a tap and folds again (`UIWindow.setFolded`), rather than a
+   * sheet: the event log.
+   */
+  fold?: boolean;
 }
 
 interface Geometry {
@@ -53,6 +59,8 @@ export interface Layout {
 const STORAGE_KEY = 'wurm-iso-windows';
 const LAYOUT_KEY = 'wurm-iso-layouts';
 const EXPAND_ICON = '⤢';
+const UNFOLD_ICON = '▴';
+const FOLD_ICON = '▾';
 const RESTORE_ICON = '⤡';
 const SEE_ICON = '◐';
 
@@ -73,6 +81,10 @@ const Z_TOP = 5000;
 export const LAYOUT_SLOTS = LAYOUT_NAMES.length;
 /** Windows that are never part of an arrangement, because they are opened by something happening rather than by you. */
 const NOT_LAID_OUT = new Set(['away', 'hoard', 'barter']);
+/** On a phone, the room between the things laid along the foot of the screen (`WindowManager.layFoot`). */
+const PHONE_GAP = 6;
+/** On a phone at least this wide (on its side), the log's bar and the spell bar share a row (`#ui.phone-wide`). */
+const PHONE_WIDE = 560;
 
 /** Something laid on the grid: a window, or the status panel or toolbar, which are always on screen. */
 interface Piece {
@@ -105,7 +117,10 @@ export class UIWindow implements Piece {
   readonly titleText: HTMLSpanElement;
   private readonly expandBtn: HTMLButtonElement;
   private readonly seeBtn: HTMLButtonElement | null = null;
+  private readonly foldBtn: HTMLButtonElement | null = null;
   private maximized = false;
+  /** On a phone, folded to its one-line bar (`WindowOptions.fold`). */
+  private folded = true;
   private see = false;
   /** Geometry to go back to when the window is restored from expanded. */
   private normal: Geometry | null = null;
@@ -159,6 +174,16 @@ export class UIWindow implements Piece {
       this.seeBtn = see;
       buttons.append(see);
     }
+    if (opts.fold) {
+      const fold = document.createElement('button');
+      fold.className = 'win-btn win-fold-btn';
+      fold.type = 'button';
+      fold.addEventListener('click', () => this.setFolded(!this.folded));
+      this.foldBtn = fold;
+      buttons.append(fold);
+      this.el.classList.add('win-fold');
+      this.setFolded(true, false);
+    }
     buttons.append(this.expandBtn, close);
     // The window's rune, cut at the head of the title in Runecut and not shown in Classic (src/style.css).
     const rune = runeSvg(runeFor(opts.id), 'rc-rune win-rune');
@@ -204,7 +229,8 @@ export class UIWindow implements Piece {
     // On the grid a window is moved by `WindowManager.begin`; on a phone, where windows are as wide as the screen, only up and down.
     let drag: { dx: number; dy: number } | null = null;
     title.addEventListener('pointerdown', (e) => {
-      if (buttons.contains(e.target as Node) || e.button !== 0 || this.maximized) return;
+      // A phone's sheet is where it is put, and a folded bar opens on a tap.
+      if (buttons.contains(e.target as Node) || e.button !== 0 || this.maximized || this.mgr.phone) return;
       e.preventDefault();
       if (this.mgr.grid) {
         this.mgr.bringToFront(this);
@@ -229,8 +255,14 @@ export class UIWindow implements Piece {
       this.mgr.persist();
     });
     title.addEventListener('dblclick', (e) => {
-      if (buttons.contains(e.target as Node)) return;
+      if (buttons.contains(e.target as Node) || this.mgr.phone) return;
       this.toggleMaximized();
+    });
+    // On a phone a tap on the folded bar opens it, and one on its title folds it again.
+    this.el.addEventListener('click', (e) => {
+      if (!this.opts.fold || !this.mgr.phone || buttons.contains(e.target as Node)) return;
+      if (this.folded) this.setFolded(false);
+      else if (title.contains(e.target as Node)) this.setFolded(true);
     });
     this.el.addEventListener('mousedown', () => this.mgr.bringToFront(this));
     this.el.addEventListener('mouseup', () => this.mgr.persist());
@@ -246,6 +278,38 @@ export class UIWindow implements Piece {
 
   get isSeeThrough(): boolean {
     return this.see;
+  }
+
+  /** On a phone, a bar at the foot rather than a sheet (`WindowOptions.fold`). */
+  get folds(): boolean {
+    return !!this.opts.fold;
+  }
+
+  get isFolded(): boolean {
+    return this.folded;
+  }
+
+  /** Told when it folds or opens, so what is in it can keep its newest line in view. */
+  onFold: ((folded: boolean) => void) | null = null;
+
+  /** Folded to its one-line bar, or open taller (`WindowOptions.fold`); only a phone shows the difference (`#ui.phone` in src/style.css). */
+  setFolded(on: boolean, lay = true): void {
+    if (!this.foldBtn) return;
+    this.folded = on;
+    this.el.classList.toggle('win-folded', on);
+    this.foldBtn.textContent = on ? UNFOLD_ICON : FOLD_ICON;
+    this.foldBtn.title = on ? 'Expand' : 'Collapse';
+    this.foldBtn.setAttribute('aria-label', on ? 'Expand' : 'Collapse');
+    this.foldBtn.setAttribute('aria-expanded', String(!on));
+    if (!lay) return;
+    if (!on) this.mgr.bringToFront(this);
+    this.mgr.layFoot();
+    this.onFold?.(on);
+  }
+
+  /** Shut without being remembered as shut: put away on a phone, where only one sheet is open at a time. */
+  stow(): void {
+    this.el.hidden = true;
   }
 
   get id(): string {
@@ -413,6 +477,8 @@ export class UIWindow implements Piece {
   onOpen: (() => void) | null = null;
 
   open(): void {
+    // A phone has room for one sheet: the one opened puts away the rest.
+    if (this.mgr.phone) this.mgr.oneSheet(this);
     this.el.hidden = false;
     this.mgr.bringToFront(this);
     // On a phone a window at the foot opening moves the others' foot up, so all are laid again.
@@ -440,6 +506,11 @@ export class UIWindow implements Piece {
   /** Keep every window wholly inside the interface, on every screen. */
   clamp(): void {
     if (this.el.hidden) return;
+    // A phone's sheet and bar are placed by src/style.css (`#ui.phone`), over whatever place and size it keeps for a wider screen.
+    if (this.mgr.phone) {
+      this.el.style.maxHeight = '';
+      return;
+    }
     if (this.maximized) {
       this.applyMaximized();
       return;
@@ -681,6 +752,127 @@ export class WindowManager {
     return !this.root.classList.contains('narrow');
   }
 
+  /**
+   * Whether this is a phone's interface (`isPhone`, src/ui/screen.ts): every
+   * window but the log a sheet the width of the screen, one at a time, and the
+   * log a bar along the foot. Nothing is kept from a phone: the place, size and
+   * open windows kept are a wider screen's (`persist`).
+   */
+  get phone(): boolean {
+    return this.root.classList.contains('phone');
+  }
+
+  /** Whether the windows were last laid for a phone (`syncPhone`). */
+  private wasPhone = false;
+  /** The windows open when the interface became a phone's, opened again when it stops being one. */
+  private deskOpen = new Set<string>();
+
+  /**
+   * On becoming a phone's, one sheet at most: the front one of those opened by
+   * something happening (`WindowOptions.fresh`), and none of what was open on
+   * a wider screen; and the log folded. On stopping, the windows that were open.
+   */
+  private syncPhone(): void {
+    const on = this.phone;
+    if (on === this.wasPhone) return;
+    this.wasPhone = on;
+    const all = [...this.windows.values()];
+    if (on) {
+      this.deskOpen = new Set(all.filter((w) => w.isOpen).map((w) => w.id));
+      const keep = all.filter((w) => w.isOpen && !w.folds && w.opts.fresh).sort((a, b) => Number(b.el.style.zIndex) - Number(a.el.style.zIndex))[0] ?? null;
+      for (const w of all) {
+        if (w.folds) w.setFolded(true, false);
+        else if (w.isOpen && w !== keep) w.stow();
+      }
+      return;
+    }
+    for (const w of all) {
+      const want = this.deskOpen.has(w.id) && !NOT_LAID_OUT.has(w.id);
+      if (want && !w.isOpen) {
+        w.el.hidden = false;
+        w.onOpen?.();
+      } else if (!want && w.isOpen && !w.folds) w.stow();
+    }
+  }
+
+  /** On a phone, put away every sheet but `win` (the log is a bar, and stays). */
+  oneSheet(win: UIWindow): void {
+    if (win.folds) return;
+    for (const w of this.windows.values()) if (w !== win && w.isOpen && !w.folds) w.stow();
+  }
+
+  /** On a phone, the front sheet only, after something has opened several (`useLayout`). */
+  private frontSheet(): void {
+    const front = [...this.windows.values()].filter((w) => w.isOpen && !w.folds).sort((a, b) => Number(b.el.style.zIndex) - Number(a.el.style.zIndex))[0];
+    if (front) this.oneSheet(front);
+  }
+
+  /** Things laid along a phone's foot that are not windows (`layFoot`): each watched for showing, hiding and changing height, as the log is. */
+  private static readonly PHONE_FOOT = '.spell-bar, .belt-bar, .hud-stack .guide';
+
+  /**
+   * On a phone, the foot of the screen laid from the bottom up, each over the
+   * last: the status strip (the status panel and the toolbar, along the
+   * bottom by src/style.css), the spell bar, the belt, the log's bar, and the
+   * action bar's stack. Written as `--foot-*` on the interface, in its own
+   * pixels from its bottom edge; and `--sheet-foot`, where a sheet stops: over
+   * the log's bar, and over the first-steps card while that leaves a sheet
+   * `MIN_BAND` of room.
+   */
+  layFoot(): void {
+    const s = this.root.style;
+    const names = ['--foot-spell', '--foot-belt', '--foot-log', '--foot-stack', '--sheet-foot'];
+    const { w, h } = uiBox();
+    const wide = this.phone && w >= PHONE_WIDE;
+    this.root.classList.toggle('phone-wide', wide);
+    if (!this.phone) {
+      for (const n of names) s.removeProperty(n);
+      return;
+    }
+    const k = this.root.offsetWidth ? this.root.getBoundingClientRect().width / this.root.offsetWidth : 1;
+    const rootTop = this.root.getBoundingClientRect().top;
+    const topOf = (el: Element): number => (el.getBoundingClientRect().top - rootTop) / k;
+    const shown = (el: Element | null): el is HTMLElement => !!el && el.getClientRects().length > 0;
+    const folding = [...this.windows.values()].filter((w) => w.folds).map((w) => w.el);
+    for (const el of [...this.root.querySelectorAll<HTMLElement>(WindowManager.PHONE_FOOT), ...folding]) {
+      if (this.footWatched.has(el)) continue;
+      this.footWatched.add(el);
+      new ResizeObserver(() => {
+        if (this.phone) this.layFoot();
+      }).observe(el);
+    }
+    const strip = this.bars.get('toolbar')?.el ?? this.bars.get('hud')?.el ?? null;
+    let y = (shown(strip) ? h - topOf(strip) : 0) + PHONE_GAP;
+    const put = (name: string, el: HTMLElement | null, height = el?.offsetHeight ?? 0): void => {
+      s.setProperty(name, `${Math.round(y)}px`);
+      if (shown(el)) y += height + PHONE_GAP;
+    };
+    const spell = this.root.querySelector<HTMLElement>('.spell-bar');
+    const log = [...this.windows.values()].find((w) => w.folds && w.isOpen) ?? null;
+    // Open taller, the log lies over the sheet; what is over it stays where its bar has it.
+    if (log?.isFolded) this.logBar = log.el.offsetHeight;
+    if (wide) {
+      // Side by side: the log's bar on the left, the spell bar on the right, and the belt over them.
+      s.setProperty('--foot-spell', `${Math.round(y)}px`);
+      s.setProperty('--foot-log', `${Math.round(y)}px`);
+      const row = Math.max(shown(spell) ? spell.offsetHeight : 0, log ? this.logBar : 0);
+      if (row) y += row + PHONE_GAP;
+      put('--foot-belt', this.root.querySelector<HTMLElement>('.belt-bar'));
+    } else {
+      put('--foot-spell', spell);
+      put('--foot-belt', this.root.querySelector<HTMLElement>('.belt-bar'));
+      put('--foot-log', log?.el ?? null, this.logBar);
+    }
+    s.setProperty('--foot-stack', `${Math.round(y)}px`);
+    let sheet = y;
+    const guide = this.root.querySelector<HTMLElement>('.hud-stack .guide');
+    if (shown(guide) && h - (y + guide.offsetHeight + PHONE_GAP) >= MIN_BAND) sheet = h - topOf(guide) + PHONE_GAP;
+    s.setProperty('--sheet-foot', `${Math.round(sheet)}px`);
+  }
+
+  /** The height of the log's bar folded, kept while it is open taller. */
+  private logBar = 0;
+
   /** Every piece on the grid: the bars, then the windows. */
   private pieces(): Piece[] {
     return [...this.bars.values(), ...this.windows.values()];
@@ -729,8 +921,10 @@ export class WindowManager {
   settleAll(): void {
     if (this.drag) return;
     this.root.classList.toggle('snapgrid', this.grid);
+    this.syncPhone();
     if (!this.grid) {
       this.stackBars();
+      this.layFoot();
       this.rejoin(false);
       return;
     }
@@ -915,7 +1109,8 @@ export class WindowManager {
   /** Keep the windows as they are now in a slot, under the name it has, and where the status panel and toolbar are. */
   saveLayout(slot: number): void {
     const windows: Record<string, SavedState> = {};
-    for (const [id, w] of this.windows) if (!NOT_LAID_OUT.has(id)) windows[id] = w.state();
+    // From a phone, the arrangement kept for a wider screen: a phone's sheets are not one.
+    for (const [id, w] of this.windows) if (!NOT_LAID_OUT.has(id)) windows[id] = this.phone ? this.saved[id] ?? w.state() : w.state();
     if (this.grid) for (const [id, b] of this.bars) windows[id] = { ...b.box(), open: true };
     this.layouts[slot] = { name: this.layoutName(slot), windows };
     this.putLayouts();
@@ -933,6 +1128,7 @@ export class WindowManager {
       const st = l.windows[id];
       if (st) b.put({ ...b.box(), x: st.x, y: st.y });
     }
+    if (this.phone) this.frontSheet();
     this.settleAll();
     this.persist();
     return true;
@@ -974,6 +1170,7 @@ export class WindowManager {
       const st = this.saved[id];
       if (st) win.relay(st);
     }
+    this.syncPhone();
     // On a phone the windows' floor is the foot of the bars, so the bars are laid first, and the windows at the foot before those kept above them.
     if (!this.grid) this.stackBars();
     const all = [...this.windows.values()];
@@ -1030,6 +1227,8 @@ export class WindowManager {
   private stackBars(): void {
     const bars = [...this.bars.values()];
     for (const b of bars) b.loose();
+    // A phone's are one strip along the bottom (src/style.css), side by side.
+    if (this.phone) return;
     bars.sort((a, b) => a.el.offsetTop - b.el.offsetTop);
     const laid: Box[] = [];
     for (const b of bars) {
@@ -1092,8 +1291,8 @@ export class WindowManager {
   }
 
   persist(): void {
-    // Before the interface has its size, a window is only where it was put while it was measured.
-    if (!uiFitted()) return;
+    // Before the interface has its size, a window is only where it was put while it was measured; and a phone's sheets are not kept over a wider screen's windows.
+    if (!uiFitted() || this.phone) return;
     this.touched = true;
     const out: Record<string, SavedState> = {};
     for (const [id, w] of this.windows) out[id] = w.state();

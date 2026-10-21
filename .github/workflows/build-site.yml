@@ -37,12 +37,12 @@ jobs:
       - run: npm run build
       - name: Commit the rebuilt site if it changed
         run: |
-          if git diff --quiet -- index.html assets; then
+          if git diff --quiet -- index.html assets manifest.webmanifest icons; then
             echo "Site is already up to date."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html assets
+          git add index.html assets manifest.webmanifest icons
           git commit -m "Rebuild site"
           git push

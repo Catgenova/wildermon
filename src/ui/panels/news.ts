@@ -1,5 +1,7 @@
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { UPDATE_CHECK_MS } from '../update';
+import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
+import { RECONNECTING } from '../phone';
 import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
@@ -3088,6 +3090,21 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: soul strength: favour per prayer, Calm per sitting, Beastmaster spell heal, blow and bonus +${+(SOUL_PER_LEVEL * 100).toFixed(4)}% per level over ${CHAR_START} (+${percent(soulAbove(SKILL_TOP - CHAR_START) - 1)} at ${SKILL_TOP}).`,
       `Changed: soul strength gain: prayer, sitting, sacrifice at an altar, each ${percent(SOUL_GAIN / KNACK_GO)} of an action's gain, as a taming offering.`,
+    ],
+  },
+  {
+    n: 238,
+    day: '2026-10-21',
+    lines: () => [
+      'Changed: on a phone, a window opens as a full-width sheet, one at a time; no dragging or resizing.',
+      'Changed: on a phone, status bars and toolbar in one bottom strip; tap the bars for the full status panel.',
+      'Changed: on a phone, the event log is a one-line bar; tap to open, ▾ to fold.',
+      'Added: notch and home bar room on phones (safe areas).',
+      'Added: Add to Home Screen: fullscreen, own icon.',
+      'Added: Settings, Display, Phone: Fullscreen (where the browser has it); Keep screen on while working (action running or queued).',
+      `Added: Settings, Display, Phone: Low power: frame limit ${LOW_POWER_FPS}/s, Fast graphics (${FAST_DPR} pixel per screen pixel), no wakes or dust.`,
+      `Added: nothing drawn while the page is hidden; back with the live connection cut: "${RECONNECTING}", island re-read at once.`,
+      'Added: phone text boxes: no zoom on focus; kept above the keyboard.',
     ],
   },
 ];

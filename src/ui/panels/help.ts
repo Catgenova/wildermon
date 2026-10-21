@@ -183,6 +183,8 @@ import { raisedBySays } from '../raisedBy';
 import { ENGRAVE_MAX, ENGRAVE_SKILL, ENGRAVE_TOOL, MEMORIAL } from '../../game/memorial';
 import { HOUR as SKEP_HOUR, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SKILL, SKEP_WAX_EVERY, skepRate, skepRateSaid, skepWax } from '../../game/bees';
 import { keepControlKeys } from '../controlkeys';
+import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
+import { RECONNECTING } from '../phone';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -947,6 +949,17 @@ export function helpText(): string {
       <tr><td>Pinch</td><td>Zoom</td></tr>
       <tr><td>Long press</td><td>Actions for a tile or tree</td></tr>
     </table>
+    <ul>
+      <li>Windows: full-width sheet, one at a time; × closes. No dragging or resizing.</li>
+      <li>Bottom strip: status bars (tap: full status panel) and toolbar (swipe for more).</li>
+      <li>Event log: one-line bar; tap to open, ▾ to fold.</li>
+      <li><b>Add to Home Screen</b> (browser menu): fullscreen, own icon.</li>
+      <li>Settings (<kbd>O</kbd>), Display, <b>Phone</b>: <i>Fullscreen</i> (where the browser has it; not iPhone Safari);
+      <i>Keep screen on while working</i> (${SETTING_DEFAULTS.keepAwake ? 'on' : 'off'} at first): while an action runs or one is queued;
+      <i>Low power</i> (${SETTING_DEFAULTS.lowPower ? 'on' : 'off'} at first): frame limit ${LOW_POWER_FPS}/s, Fast graphics (${FAST_DPR} pixel per screen pixel), no wakes or dust.</li>
+      <li>Page hidden: nothing drawn. Back to it with the live connection cut: <i>${RECONNECTING}</i> until the island answers; island re-read at once.</li>
+      <li>Text boxes: no zoom on focus; kept above the keyboard.</li>
+    </ul>
     <h3>Doing things</h3>
     <table>
       <tr><td><kbd>Right click</kbd></td><td>Actions for a tile or tree</td></tr>

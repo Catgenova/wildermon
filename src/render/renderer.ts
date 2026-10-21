@@ -4,6 +4,8 @@ import { Camera } from '../engine/camera';
 import { emoteAt } from '../game/emotes';
 import { ACTION_BY_ID } from '../game/actions';
 import type { FullscreenCanvas } from '../engine/canvas';
+import { onPhone } from '../engine/device';
+import { drawsFast, lowPowerOn } from '../game/settings';
 import type { Game } from '../game/game';
 import {
   borderOf,
@@ -1545,7 +1547,7 @@ export class Renderer {
     // A turn of work throws something up where the work is going: chips off
     // the rock, earth off the spade, in the colour of whatever is there.
     game.events.on('strike', (x, y) => {
-      if (this.camera.zoom < 0.6) return;
+      if (this.camera.zoom < 0.6 || this.still) return;
       const tx = Math.floor(x);
       const ty = Math.floor(y);
       const w = game.world;
@@ -3342,15 +3344,19 @@ export class Renderer {
   /** Where the drawing went, layer by layer, while `Settings.timings` is on. */
   readonly timings = new Timings();
 
-  /** The fast graphics this frame (`Settings.graphics`): no swell, no haze, no small life. */
+  /** The fast graphics this frame (`Settings.graphics`, or Low power): no swell, no haze, no small life. */
   private fast = false;
+  /** Low power this frame (`lowPowerOn`): no wakes and no dust either. */
+  private still = false;
 
   /** Frames drawn, for anything worked out once a frame and asked for more than once in it. */
   private frameNo = 0;
 
   private renderFrame(dt: number): void {
     this.frameNo++;
-    this.fast = this.game.settings.graphics === 'fast';
+    const phone = onPhone();
+    this.fast = drawsFast(this.game.settings, phone);
+    this.still = lowPowerOn(this.game.settings, phone);
     this.time += dt;
     this.frameDt = dt;
     this.poolRuns.clear();
@@ -3497,8 +3503,10 @@ export class Renderer {
       const ll = Math.hypot(lx, ly) || 1;
       this.lean = { x: lx / ll, y: ly / ll, force: wind.force };
     }
-    this.markWakes();
-    this.markDust();
+    if (!this.still) {
+      this.markWakes();
+      this.markDust();
+    }
     // Wildflowers come and go with the season, and none grow inside a building.
     {
       const season = flowerSeason(this.game.wallNow());

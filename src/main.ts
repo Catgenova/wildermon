@@ -1,7 +1,9 @@
 import { wornWire } from './game/worn';
 import type { CastAt } from './game/events';
 import { ALL_SPELL_IDS } from './render/spells/info';
-import { FAST_DPR, FULL_DPR } from './game/settings';
+import { dprCapOf, frameCapOf } from './game/settings';
+import { onPhone } from './engine/device';
+import { mountPhone } from './ui/phone';
 import { FullscreenCanvas } from './engine/canvas';
 import { Input } from './engine/input';
 import { GameLoop } from './engine/loop';
@@ -173,9 +175,9 @@ const started = await startIsland(params, tellBoot).catch((e: unknown) => {
 const { island, game } = started;
 
 const canvas = new FullscreenCanvas(canvasEl);
-// The fast graphics draw a pixel for every screen pixel (`FAST_GRAPHICS`); sized again whenever that changes.
+// The fast graphics, and Low power on a phone, draw a pixel for every screen pixel (`dprCapOf`); sized again whenever either changes.
 const fitGraphics = (): void => {
-  const most = game.settings.graphics === 'fast' ? FAST_DPR : FULL_DPR;
+  const most = dprCapOf(game.settings, onPhone());
   if (canvas.maxDpr !== most) {
     canvas.maxDpr = most;
     canvas.resize();
@@ -222,6 +224,8 @@ const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, isla
 ui.windows.onJoin = () => sound.join();
 // The island can refuse to save: the banner says when it has.
 mountSavingBanner(uiRoot);
+// Coming back from the background, the screen kept on through a queue, and the keyboard (`src/ui/phone.ts`).
+mountPhone(game, island, uiRoot);
 
 /*
  * The game asks in its own words, on its own canvas.
@@ -531,10 +535,15 @@ const loop = new GameLoop(
   (dt) => {
     renderer.render(dt);
     ui.update(loop.fps);
-    loop.maxFps = game.settings.frameCap;
+    loop.maxFps = frameCapOf(game.settings, onPhone());
   },
 );
 loop.start();
+// Nothing drawn while the page is out of sight, and started again, from a fresh clock, when it is back.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) loop.stop();
+  else loop.start();
+});
 // The island is up and the first frame is drawn; the notice can go.
 /*
  * Keep the interface on the screen it is actually on.

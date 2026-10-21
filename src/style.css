@@ -9021,3 +9021,314 @@ button.goal-row:focus-visible {
 .shop-done .shop-bar > span {
   background: var(--t-good, #8fb86a);
 }
+
+/* ---- A phone ------------------------------------------------------------- */
+
+/* The box the screen's safe-area insets are read off (`insets`, src/ui/screen.ts). */
+.safe-probe {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* The toolbar's buttons: no box of their own but on a phone, where they scroll sideways inside its frame. */
+.tb-row {
+  display: contents;
+}
+
+/*
+ * Everything from here on is a phone's (`isPhone`, src/ui/screen.ts): a
+ * finger on a narrow interface. `--sa-*` are the screen's safe-area insets,
+ * `--tap` the least a press is given, both in the interface's own pixels;
+ * `--foot-*` and `--sheet-foot` are laid by `WindowManager.layFoot`.
+ *
+ * Along the bottom, one strip: the status bars on the left, the toolbar's
+ * buttons on the right. Over it the spell bar, the belt, the event log's bar
+ * and the action bar's stack. Every window but the log is a sheet from the
+ * top of the screen down to the log's bar, one at a time.
+ */
+#ui.phone {
+  --strip-h: max(64px, calc(var(--tap) + 20px));
+  --strip-bars: calc((100% - var(--sa-l) - var(--sa-r)) * 0.5);
+}
+
+#ui.phone .hud-status {
+  top: auto;
+  right: auto;
+  bottom: var(--sa-b);
+  left: var(--sa-l);
+  width: var(--strip-bars);
+  height: var(--strip-h);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: center;
+  gap: 3px 8px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+#ui.phone .hud-status:not(.hud-open) > :is(.hud-name, .hud-food, .hud-acts, .hud-footer, .hud-fx, .hud-companion) {
+  display: none;
+}
+
+#ui.phone .hud-bar-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: 'label value' 'bar bar';
+  gap: 1px 4px;
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.15;
+}
+
+#ui.phone .hud-bar-row > .hud-bar-label {
+  grid-area: label;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#ui.phone .hud-bar-row > .hud-bar {
+  grid-area: bar;
+  height: 6px;
+}
+
+#ui.phone .hud-bar-row > .hud-bar-value {
+  grid-area: value;
+}
+
+/* Tapped: the whole of it, over the strip. */
+#ui.phone .hud-status.hud-open {
+  right: var(--sa-r);
+  width: auto;
+  height: auto;
+  max-height: calc(100% - var(--sa-t) - var(--sa-b) - 8px);
+  align-content: start;
+  overflow-y: auto;
+  z-index: 5200;
+}
+
+#ui.phone .toolbar {
+  top: auto;
+  right: var(--sa-r);
+  bottom: var(--sa-b);
+  left: calc(var(--sa-l) + var(--strip-bars));
+  width: auto;
+  max-width: none;
+  height: var(--strip-h);
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  transform: none;
+}
+
+/* On its side, the toolbar has room for all its buttons. */
+#ui.phone-wide {
+  --strip-bars: calc((100% - var(--sa-l) - var(--sa-r)) * 0.4);
+}
+
+/* What the keys do, which a finger has none of. */
+#ui.phone .action-hint {
+  display: none;
+}
+
+#ui.phone .tb-row {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+
+#ui.phone .tb-row::-webkit-scrollbar {
+  display: none;
+}
+
+#ui.phone .tb-row > .tb-btn {
+  flex: none;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  white-space: nowrap;
+}
+
+/* Over the strip, from the bottom up. */
+#ui.phone .spell-bar {
+  bottom: var(--foot-spell, 76px);
+  left: calc(var(--sa-l) + 8px);
+  right: calc(var(--sa-r) + 8px);
+}
+
+#ui.phone .belt-bar {
+  bottom: var(--foot-belt, 76px);
+  right: calc(var(--sa-r) + 8px);
+  max-width: calc(100% - var(--sa-l) - var(--sa-r) - 16px);
+}
+
+#ui.phone .hud-stack {
+  bottom: var(--foot-stack, 120px);
+  left: var(--sa-l);
+  right: var(--sa-r);
+}
+
+/* The first-steps card under the windows: a sheet stops over it where there is room (`layFoot`), and the log opened lies over it. */
+#ui.phone .guide {
+  z-index: 50;
+}
+
+/* The top corners, which the strip has left: the version and the frame rate on the right, the storey under them. */
+#ui.phone .hud-corner {
+  top: calc(var(--sa-t) + 4px);
+  right: calc(var(--sa-r) + 8px);
+  bottom: auto;
+  align-items: flex-start;
+}
+
+#ui.phone .storey {
+  top: calc(var(--sa-t) + 28px);
+  right: calc(var(--sa-r) + 8px);
+  bottom: auto;
+}
+
+#ui.phone .zoom-out {
+  top: calc(var(--sa-t) + 12px);
+  right: calc(var(--sa-r) + 12px);
+}
+
+#ui.phone :is(.notices, .deed-banner) {
+  top: calc(var(--sa-t) + 54px);
+}
+
+/* A sheet: the width of the screen, from under its top down to the log's bar. */
+#ui.phone .win:not(.win-fold) {
+  top: calc(var(--sa-t) + 4px) !important;
+  right: var(--sa-r) !important;
+  bottom: var(--sheet-foot, 120px) !important;
+  left: var(--sa-l) !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0;
+}
+
+/* Where a sheet is put and how big is not the sheet's to change: no expanding, dragging or resizing. */
+#ui.phone .win :is(.win-expand, .win-see-btn),
+#ui.phone .win-grip {
+  display: none;
+}
+
+#ui.phone .win-title {
+  cursor: default;
+  touch-action: auto;
+}
+
+#ui.phone .win-btn {
+  width: var(--tap);
+  height: var(--tap);
+  font-size: 22px;
+}
+
+/* A see-through window is solid on a phone: a finger has no Alt to hold. */
+#ui.phone > .win.win-see,
+#ui.phone > .win.win-see .win-body,
+#ui.phone > .win.win-see .win-body * {
+  pointer-events: auto;
+}
+
+#ui.phone > .win.win-see {
+  background: var(--ui-bg);
+}
+
+#ui.phone > .win.win-see .win-body,
+#ui.phone > .win.win-see .win-title {
+  opacity: 1;
+}
+
+[data-ui='runecut'] #ui.phone > .win.win-see > .rc-plate {
+  opacity: 1;
+}
+
+/* The fold button is a phone's. */
+.win-fold-btn {
+  display: none;
+}
+
+#ui.phone .win-fold-btn {
+  display: inline-block;
+}
+
+/* The event log: open, the lower half of the screen over the strip; folded, its newest line. */
+#ui.phone .win.win-fold {
+  top: auto !important;
+  right: var(--sa-r) !important;
+  bottom: var(--foot-log, 76px) !important;
+  left: var(--sa-l) !important;
+  width: auto !important;
+  height: min(55%, 420px) !important;
+  max-height: calc(100% - var(--foot-log, 76px) - var(--sa-t) - 4px) !important;
+  min-height: 0;
+}
+
+#ui.phone .win.win-fold.win-folded {
+  height: calc(var(--tap) + 2 * var(--rim, 0px) + 2px) !important;
+  cursor: pointer;
+}
+
+#ui.phone .win-folded .win-title {
+  position: absolute;
+  top: 0;
+  right: var(--rim, 0px);
+  bottom: 0;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+#ui.phone .win-folded :is(.win-head, .log-tabs, .log-input) {
+  display: none;
+}
+
+#ui.phone .win-folded .win-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: calc(var(--tap) * 2 + 8px);
+}
+
+/* Its newest line at the foot, and the rest above it out of sight. */
+#ui.phone .win-folded .log-list {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: calc(1.35em + 2px);
+  overflow: hidden;
+  padding-block: 0;
+}
+
+#ui.phone .win-folded .log-line {
+  flex: none;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* On its side: the log's bar on the left half of a row, the spell bar on the right (`layFoot`). */
+#ui.phone-wide .spell-bar {
+  left: calc(50% + var(--sa-l) / 2 - var(--sa-r) / 2 + 4px);
+}
+
+#ui.phone-wide .win.win-fold {
+  right: calc(50% - var(--sa-l) / 2 + var(--sa-r) / 2 + 4px) !important;
+}

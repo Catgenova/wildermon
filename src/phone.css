@@ -1,0 +1,21 @@
+/*
+ * A phone's own rules (src/ui/phone.ts). Layout is in src/style.css; this is
+ * the on-screen keyboard and the notice for coming back to the island.
+ */
+
+/*
+ * Writing at 16 px or more in every box that brings up the keyboard: under
+ * that, Safari on an iPhone zooms the page in on focus and leaves it zoomed.
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='button'], [type='submit']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* "Reconnecting…": the saving banner's look and place (src/ui/saving.ts), under it when both are up. */
+.reconnect-banner {
+  z-index: 9999;
+}

@@ -10,7 +10,7 @@ import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
@@ -21,6 +21,8 @@ import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner
 import { RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FIRE_CAPACITY, fireBurnsFor, type PlacedCampfire } from '../../game/campfire';
 import { keepControlKeys } from '../controlkeys';
+import { onPhone } from '../../engine/device';
+import { fullscreenOffered, isFullscreen, setFullscreen, wakeOffered } from '../phone';
 
 interface Toggle {
   input: HTMLInputElement;
@@ -93,7 +95,7 @@ export class SettingsPanel {
     win.body.append(display, winPage, keyPage);
     this.buildWindows(winPage);
 
-    const add = (label: string, hint: string, read: () => boolean, write: (v: boolean) => void): void => {
+    const add = (label: string, hint: string, read: () => boolean, write: (v: boolean) => void): HTMLLabelElement => {
       const row = document.createElement('label');
       row.className = 'setting-row';
       const input = document.createElement('input');
@@ -105,6 +107,7 @@ export class SettingsPanel {
       row.append(input, text);
       display.append(row);
       this.toggles.push({ input, read });
+      return row;
     };
     /** A heading over the run of rows after it on the Display tab. */
     const head = (text: string): void => {
@@ -347,6 +350,27 @@ export class SettingsPanel {
       go.addEventListener('click', () => game.measureDrawing?.());
       row.append(text, go);
       display.append(row);
+    }
+    // A phone's alone (`src/ui/phone.ts`): not shown on a desktop, and each only where the browser can do it.
+    if (onPhone()) {
+      head('Phone');
+      if (fullscreenOffered()) {
+        add('Fullscreen', 'No address or navigation bars.', isFullscreen, (v) => void setFullscreen(v));
+      }
+      if (wakeOffered()) {
+        add('Keep screen on while working', 'While an action runs or one is queued.',
+          () => game.settings.keepAwake, (v) => (game.settings.keepAwake = v));
+      }
+      add(
+        'Low power',
+        `Frame limit ${LOW_POWER_FPS}/s; Fast graphics (${FAST_DPR} pixel per screen pixel, no sea swell, haze or small life); no wakes or dust. `
+          + 'Overrides Graphics and a higher frame limit.',
+        () => game.settings.lowPower,
+        (v) => {
+          game.settings.lowPower = v;
+          game.graphicsChanged?.();
+        },
+      );
     }
     head('World view');
     add('Show tile grid', 'Tile outlines. Toggle: G.', () => game.settings.grid, (v) => (game.settings.grid = v));

@@ -38,6 +38,43 @@ const MAX_SCALE = 2.6;
 export const NARROW = 720;
 
 /**
+ * A touchscreen on its side lays the interface out at least this wide, and at
+ * least `TOUCH_UI_SHORT` tall where that is less: at `TOUCH_UI_WIDTH` across a
+ * phone in landscape is about 190 of its own pixels tall, twice the size it
+ * needs and no room for a window. Under `NARROW`, so it is still a phone.
+ */
+const TOUCH_UI_WIDE = 700;
+const TOUCH_UI_SHORT = 340;
+
+/** The least a press is given on a phone, in screen pixels (`--tap`). */
+const TAP = 44;
+
+/**
+ * Whether the interface is a phone's: a finger (coarse pointer) on an
+ * interface laid out narrow (`NARROW`). Everything laid out only for a phone
+ * asks this, or `#ui.phone` in src/style.css; a desk, a narrow desk window
+ * and a tablet worked with a mouse never see it.
+ */
+let phone = false;
+export const isPhone = (): boolean => phone;
+
+/** A box padded by the screen's safe-area insets, read for their size in screen pixels (`insets`). */
+let probe: HTMLElement | null = null;
+
+/** The screen's safe-area insets (a notch, a home bar, rounded corners), in screen pixels; nothing on a desk. */
+function insets(): { t: number; r: number; b: number; l: number } {
+  if (!probe) {
+    probe = document.createElement('div');
+    probe.className = 'safe-probe';
+    probe.setAttribute('aria-hidden', 'true');
+    document.body.append(probe);
+  }
+  const cs = getComputedStyle(probe);
+  const px = (v: string): number => Math.max(0, parseFloat(v) || 0);
+  return { t: px(cs.paddingTop), r: px(cs.paddingRight), b: px(cs.paddingBottom), l: px(cs.paddingLeft) };
+}
+
+/**
  * The size somebody asked for, on top of whatever the screen needed.
  *
  * Asked for as a text and window size setting, which "matters on a phone":
@@ -141,10 +178,10 @@ export function uiPoint(e: { clientX: number; clientY: number }): { x: number; y
  */
 export function fitScreen(ui: HTMLElement): number {
   const vv = window.visualViewport;
-  const w = vv?.width ?? window.innerWidth;
-  const h = vv?.height ?? window.innerHeight;
-  const left = vv?.offsetLeft ?? 0;
-  const top = vv?.offsetTop ?? 0;
+  let w = vv?.width ?? window.innerWidth;
+  let h = vv?.height ?? window.innerHeight;
+  let left = vv?.offsetLeft ?? 0;
+  let top = vv?.offsetTop ?? 0;
 
   /*
    * Scaled up only where the page is wider than a touchscreen would have made
@@ -153,17 +190,46 @@ export function fitScreen(ui: HTMLElement): number {
    * a desktop, and a desktop wants its own pixels.
    */
   const touch = matchMedia('(pointer: coarse)').matches;
-  const fit = touch && w > NARROW ? Math.min(MAX_SCALE, w / TOUCH_UI_WIDTH) : 1;
-  // Then the size asked for, as far as the screen leaves room for it. Smaller
-  // is never refused: it only ever gives the interface more room.
-  let scale = fit * chosen;
-  if (chosen > 1) scale = Math.min(scale, Math.max(fit, Math.min(w, h) / MIN_UI_SIDE));
+  const scaleFor = (w: number, h: number): { fit: number; scale: number } => {
+    let fit = touch && w > NARROW ? Math.min(MAX_SCALE, w / TOUCH_UI_WIDTH, Math.max(w / TOUCH_UI_WIDE, h / TOUCH_UI_SHORT)) : 1;
+    if (!Number.isFinite(fit) || fit <= 0) fit = 1;
+    // Then the size asked for, as far as the screen leaves room for it. Smaller
+    // is never refused, but on a touchscreen past `NARROW` it stops at a phone's width.
+    let scale = fit * chosen;
+    if (chosen > 1) scale = Math.min(scale, Math.max(fit, Math.min(w, h) / MIN_UI_SIDE));
+    if (touch && w > NARROW) scale = Math.max(scale, w / TOUCH_UI_WIDE);
+    return { fit, scale };
+  };
+  let { fit, scale } = scaleFor(w, h);
+  phone = touch && w / scale <= NARROW;
+
+  /*
+   * The page is laid under the notch and the home bar (`viewport-fit=cover`).
+   * A phone's HUD keeps its own edges in from them (`--sa-*`, in the
+   * interface's pixels); anything else is put inside them, as it was before
+   * the page went under them.
+   */
+  const sa = insets();
+  if (!phone && sa.t + sa.r + sa.b + sa.l > 0) {
+    left += sa.l;
+    top += sa.t;
+    w = Math.max(1, w - sa.l - sa.r);
+    h = Math.max(1, h - sa.t - sa.b);
+    ({ fit, scale } = scaleFor(w, h));
+  }
+  const k = phone ? 1 / scale : 0;
+  ui.style.setProperty('--sa-t', `${sa.t * k}px`);
+  ui.style.setProperty('--sa-r', `${sa.r * k}px`);
+  ui.style.setProperty('--sa-b', `${sa.b * k}px`);
+  ui.style.setProperty('--sa-l', `${sa.l * k}px`);
+  ui.style.setProperty('--tap', `${TAP / scale}px`);
 
   ui.style.transformOrigin = '0 0';
   ui.style.transform = `translate(${left}px, ${top}px) scale(${scale})`;
   ui.style.width = `${w / scale}px`;
   ui.style.height = `${h / scale}px`;
   ui.classList.toggle('narrow', w / scale <= NARROW);
+  ui.classList.toggle('phone', phone);
   box = { w: w / scale, h: h / scale, scale, left, top, fit };
   return scale;
 }
@@ -185,6 +251,9 @@ export function followScreen(ui: HTMLElement, onChange?: (scale: number) => void
   vv?.addEventListener('scroll', fit);
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', fit);
+  // The insets can change with nothing resized: a browser's bars coming and going.
+  insets();
+  if (probe) new ResizeObserver(fit).observe(probe, { box: 'border-box' });
   refit = fit;
   fit();
 }
@@ -207,7 +276,8 @@ export const pageZoom = (): number => window.visualViewport?.scale ?? 1;
 export function unzoomPage(): void {
   const meta = document.querySelector('meta[name="viewport"]');
   if (!meta) return;
-  const had = meta.getAttribute('content') ?? 'width=device-width, initial-scale=1.0';
-  meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+  const had = meta.getAttribute('content') ?? 'width=device-width, initial-scale=1.0, viewport-fit=cover';
+  // Still under the notch and the home bar meanwhile (`fitScreen`).
+  meta.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
   window.setTimeout(() => meta.setAttribute('content', had), 350);
 }

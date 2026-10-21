@@ -1918,8 +1918,9 @@ export class Island {
     this.beat = setTimeout(() => void this.pulse(), Math.max(0.5, seconds) * 1000);
   }
 
-  private async pulse(): Promise<void> {
-    if (!this.info) return;
+  /** One beat; true when the island answered it. */
+  private async pulse(): Promise<boolean> {
+    if (!this.info) return false;
     try {
       /*
        * Which island this is a beat for, which it never said.
@@ -1943,7 +1944,7 @@ export class Island {
        * door of its own: there is never any hurry about a tick.
        */
       const ticking = this.ticked.length ? this.ticked.slice() : null;
-      const { data } = await supabase().rpc('rpc_settle', {
+      const { data, error } = await supabase().rpc('rpc_settle', {
         p_seen: this.seenChange,
         p_world: this.info.id,
         p_said: this.said,
@@ -2039,12 +2040,68 @@ export class Island {
       // A quarter-second of slack, because a timer that fires a shade early
       // asks for work that is not due yet and has to ask again.
       this.armBeat(Math.min(HEARTBEAT, Math.max(0.5, due + 0.25)));
+      return !error;
     } catch {
       // A round trip that failed is not a reason to stop asking; the island is
       // the authority on whether anything happened, and it will still be there
       // in a heartbeat's time.
       this.armBeat(HEARTBEAT);
+      return false;
     }
+  }
+
+  /**
+   * Whether anything we listen on has stopped: the socket, or a channel that
+   * is not joined. A phone cuts the socket when the page goes to the
+   * background, and its own reconnect waits out a backoff after it comes back.
+   */
+  deaf(): boolean {
+    if (!this.info) return false;
+    const rt = supabase().realtime as unknown as { isConnected?: () => boolean };
+    if (rt.isConnected && !rt.isConnected()) return true;
+    const channels = this.hears ? [...this.heard.values()] : this.channel ? [this.channel] : [];
+    if (this.bodies) channels.push(this.bodies);
+    if (!channels.length) return this.channelState !== 'listening';
+    return channels.some((ch) => ch.state !== 'joined');
+  }
+
+  /**
+   * Back in front of somebody: the page shown again, or the network back.
+   *
+   * Listening again if anything stopped (`deaf`): a fresh token, the socket
+   * opened at once rather than after its backoff, and every channel joined
+   * again (`watch`; one that errored rejoins as the socket opens). Then the
+   * island read again at once rather than on the next beat: the settle, the
+   * reconcile, the creatures and the ground, as on a fresh join.
+   *
+   * Resolves true once the settle has answered, which is the first fresh word.
+   */
+  async comeBack(): Promise<boolean> {
+    if (!this.info) return false;
+    const id = this.info.id;
+    if (this.deaf()) {
+      await this.freshToken();
+      (supabase().realtime as unknown as { connect?: () => void }).connect?.();
+      // The bodies' topic is held once for the whole stay (`holdBodies`), so a closed one is joined again here.
+      if (this.bodies?.state === 'closed') this.bodies.subscribe();
+      void this.watch(id).catch((e: unknown) => {
+        this.hooks.say(`The island is not telling this machine what it does (${String(e)}).`, 'error');
+      });
+    }
+    this.lastReconcile = -Infinity;
+    this.lastMobs = -Infinity;
+    this.lastGround = -Infinity;
+    this.groundSlow = true;
+    this.swirlsOwed = true;
+    if (this.beat) clearTimeout(this.beat);
+    const now = performance.now() / 1000;
+    const [answered] = await Promise.all([
+      this.pulse(),
+      this.reconcile(now).catch(() => undefined),
+      this.refreshMobs(now).catch(() => undefined),
+      this.refreshGround(now).catch(() => undefined),
+    ]);
+    return answered;
   }
 
   /**
