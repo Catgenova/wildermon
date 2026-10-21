@@ -114,7 +114,10 @@ begin
   insert into said values ('IDS', v_old || '|' || v_out || '|' || array_to_string(v_stays, ','));
   select max(id) into v_top from creature where world_id = w;
 
-  -- Its stretch stocked.
+  -- Its stretch stocked, seeded again here: the seed above has been drawn on by the join and the spawns, by as many
+  -- calls as the database left behind them makes, so the stocking saw a different roll in the suite (43 of 87 owed,
+  -- push runs 1414 and 1444) than on its own (87).
+  perform setseed(0.5);
   perform creature_stock_block(w, 0, 0);
   insert into said select 'GONE', string_agg(q.n::text, ',' order by q.n) from unnest(array[v_old, v_out] || v_stays) q(n)
     where not exists (select 1 from creature c where c.world_id = w and c.id = q.n);
