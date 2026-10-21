@@ -149,7 +149,7 @@ const dressed = (wounds: Wound[], pack: Pack = 'bandage') => {
     for i in 1..40 loop
       ${SET_DANE(wounds, pack)}
       perform act_perform(${W}, ${DANE}, 'bind_wound', '{"kind":"item"}');
-      exit when not exists (select 1 from event where world_id = ${W} and uid = ${DANE} and text like 'The dressing slips%');
+      exit when not exists (select 1 from event where world_id = ${W} and uid = ${DANE} and text like 'Dressing failed:%');
     end loop;
   end $$;
   select text from event where world_id = ${W} and uid = ${DANE} order by n desc limit 1;`);
