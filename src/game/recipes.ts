@@ -1,4 +1,4 @@
-import { tryGain } from './learn';
+import { MIND_GAIN, tryGain } from './learn';
 import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
@@ -30,7 +30,7 @@ import { DAMAGE_MAX } from './limits';
 import { BUTTER_CHURN, BUTTER_PATS, CHURN_BUTTER, WHEY_BUCKET } from './dairy';
 
 /** What working a thing out with your hands teaches the head. */
-export const CRAFT_HEAD = 0.25;
+export const CRAFT_HEAD = MIND_GAIN;
 
 /**
  * How many tiles a craft reaches for what goes into it.

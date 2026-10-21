@@ -91,7 +91,7 @@ import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, ye
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import {
-  ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
+  ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, MIND_EASE_PER_LEVEL, MIND_EASED_SKILLS, mindEaseAt, queueCapAt, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
   DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
   footing, Game, goSeconds, hullSpeed, kitQl, MAX_DEED_LEVEL, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
@@ -1118,7 +1118,7 @@ export function helpText(): string {
       <tr><td><b>Body strength</b></td><td>Hit damage. Raised by ${raisedBySays('body_strength')}.</td></tr>
       <tr><td><b>Body stamina</b></td><td>Stamina bar ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(TOP_ABOVE)} at ${SKILL_TOP}. Stamina cost of actions and swings ×${two(staminaCostAbove(0))} to ×${two(staminaCostAbove(TOP_ABOVE))}. Stamina recovery ×${two(windRegenAbove(0))} to ×${two(windRegenAbove(TOP_ABOVE))}. Spending and recovery per second: shares of the bar. Raised by ${raisedBySays('body_stamina')}.</td></tr>
       <tr><td><b>Body control</b></td><td>Time per action and swing ×${two(controlPaceAbove(0))} at ${CHAR_START}, ×${two(controlPaceAbove(TOP_ABOVE))} at ${SKILL_TOP}. Dodge chance +${percent(DODGE_PER_CONTROL)} per level over ${DODGE_FROM}, −${percent(DODGE_PER_KG)} per kg of armour worn, max ${percent(DODGE_MOST)} (${percent(dodgeChance(SKILL_TOP, 0))} at ${SKILL_TOP} unarmoured). Hit chance + level ÷ ${CONTROL_HIT} (+${percent(SKILL_TOP / CONTROL_HIT)} at ${SKILL_TOP}). Sailing boat speed ×${two(boatHands(true, CHAR_START))} to ×${two(boatHands(true, SKILL_TOP))}. Raised by ${raisedBySays('body_control')}.</td></tr>
-      <tr><td><b>Mind logic</b></td><td>Queue size; success on difficult crafts. Raised by ${raisedBySays('mind_logic')}.</td></tr>
+      <tr><td><b>Mind logic</b></td><td>Action queue ${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} levels over ${CHAR_START} (${queueCapAt(SKILL_TOP)} at ${SKILL_TOP}). Difficulty −${MIND_EASE_PER_LEVEL} per level over ${CHAR_START}, max half (−${mindEaseAt(SKILL_TOP)} at ${SKILL_TOP}): crafts, ${listed(MIND_EASED_SKILLS.map((id) => SKILL_NAME(id).toLowerCase()))}. Raised by ${raisedBySays('mind_logic')}.</td></tr>
       <tr><td><b>Soul strength</b></td><td>Taming chance. Raised by ${raisedBySays('soul_strength')}.</td></tr>
     </table>
     <ul>

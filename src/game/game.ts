@@ -553,6 +553,12 @@ export const ORDINARY_GAIN = 0.45;
  * skill and tool behind it and the body doing it. `Game.duration` asks it of
  * whoever is acting, and the help asks it of somebody new to the work.
  */
+/** Difficulty mind logic takes off a thinking check for every level over the starting mark (`mind_ease`); never more than half the check's. */
+export const MIND_EASE_PER_LEVEL = 0.2;
+export const mindEaseAt = (mind: number): number => Math.max(0, (mind - CHAR_START) * MIND_EASE_PER_LEVEL);
+/** The thinking checks mind logic eases, and only these: every one passes `mindEase()` to its check. */
+export const MIND_EASED_SKILLS: readonly string[] = ['blacksmithing', 'brewing', 'first_aid', 'restoration', 'jewellery'];
+
 /** Body control's share of every timed action's time, this many levels over the starting mark (`control_speed`). */
 export const controlPaceAbove = (above: number): number => Math.max(0.6, 1 - above * 0.003);
 /** Body stamina's share of what an action or a swing costs, this many levels over the starting mark (`spend_wind`). */
@@ -2446,7 +2452,7 @@ export class Game {
 
   /** Mind logic takes the edge off a difficult craft, though never more than half of it. */
   mindEase(): number {
-    return Math.max(0, (this.skills.get('mind_logic') - CHAR_START) * 0.2);
+    return mindEaseAt(this.skills.get('mind_logic'));
   }
 
   /** The orders every wildermon on the deed works under. */

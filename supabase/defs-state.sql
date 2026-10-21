@@ -5540,7 +5540,7 @@ create or replace function craft_head() returns double precision language sql im
 create or replace function smith_gain() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function brew_gain() returns double precision language sql immutable as $fn$ select 0.6::double precision $fn$;
 create or replace function improve_gain() returns double precision language sql immutable as $fn$ select 0.4::double precision $fn$;
-create or replace function restore_gain() returns double precision language sql immutable as $fn$ select 0.4::double precision $fn$;
+create or replace function restore_gain() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function free_gain() returns double precision language sql immutable as $fn$ select 1.1::double precision $fn$;
 create or replace function bandage_gain() returns double precision language sql immutable as $fn$ select 0.35::double precision $fn$;
 create or replace function clean_gain() returns double precision language sql immutable as $fn$ select 0.8::double precision $fn$;
@@ -5556,8 +5556,8 @@ create or replace function net_gain() returns double precision language sql immu
 create or replace function breed_gain() returns double precision language sql immutable as $fn$ select 0.9::double precision $fn$;
 create or replace function prospect_head() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function tame_head() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
-create or replace function enchant_head() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
-create or replace function hoard_head() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
+create or replace function enchant_head() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
+create or replace function hoard_head() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function work_wind() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;
 create or replace function work_wind_spent() returns double precision language sql immutable as $fn$ select 0.6::double precision $fn$;
 create or replace function work_hand() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;

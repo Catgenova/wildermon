@@ -1,11 +1,9 @@
-import { RESTORE_GAIN } from '../game/archaeology';
 import { SWING_BODY, TAME_NERVE } from '../game/creatureActions';
 import { DODGE_GAIN } from '../game/fight';
 import {
-  DARK_HIT, DARK_SHOT, DARK_SWING, ENCHANT_HEAD, HEAVY_SKILLS, HOARD_HEAD, NIGHT_EYES_FROM, PROSPECT_HEAD, TAME_HEAD, TRY_LEARN,
+  DARK_HIT, DARK_SHOT, DARK_SWING, HEAVY_SKILLS, MIND_GAIN, NIGHT_EYES_FROM, TRY_LEARN,
   WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT,
 } from '../game/learn';
-import { CRAFT_HEAD } from '../game/recipes';
 import { SKILL_BY_ID } from '../game/skills';
 import { KNACK_GO } from '../game/titles';
 import { listed, percent } from '../game/words';
@@ -44,13 +42,10 @@ export const RAISED_BY: Readonly<Record<string, readonly Raise[]>> = {
     { what: 'action with a stamina cost or a time', base: WORK_HAND },
     { what: 'blow dodged', base: DODGE_GAIN },
   ],
+  // One gain for all of them (`MIND_GAIN`): CRAFT_HEAD, RESTORE_GAIN, TAME_HEAD, ENCHANT_HEAD, PROSPECT_HEAD, HOARD_HEAD.
   mind_logic: [
-    { what: 'craft', base: CRAFT_HEAD, tried: true },
-    { what: 'find restored', base: RESTORE_GAIN, tried: true },
-    { what: 'prospecting action', base: PROSPECT_HEAD },
-    { what: 'offering to a wild wildermon', base: TAME_HEAD, tried: true },
-    { what: 'scroll set into a weapon or placed thing', base: ENCHANT_HEAD, tried: true },
-    { what: 'treasure map hoard dug up', base: HOARD_HEAD },
+    { what: 'craft, find restored, taming offering, scroll set', base: MIND_GAIN, tried: true },
+    { what: 'prospecting action, treasure hoard dug up', base: MIND_GAIN },
     { what: 'study action at a plain book', how: 'see Reeds, papyrus and books' },
   ],
   soul_strength: [

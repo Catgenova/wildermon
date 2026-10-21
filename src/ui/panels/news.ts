@@ -51,7 +51,7 @@ import { THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
-import { ENCHANT_HEAD, HOARD_HEAD, PROSPECT_HEAD, TAME_HEAD } from '../../game/learn';
+import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
 import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
@@ -3045,6 +3045,14 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: body stamina grows the stamina bar: ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(SKILL_TOP - CHAR_START)} at ${SKILL_TOP}.`,
       'Stamina spent and regained per second: same amounts, shares of the bigger bar. Winded and exhausted marks and "+N%" restores: shares of the bar.',
+    ],
+  },
+  {
+    n: 234,
+    day: '2026-10-21',
+    lines: () => [
+      `Changed: mind logic gain, one amount for every source: ${percent(MIND_GAIN / KNACK_GO)} of an action's gain (finds restored, scrolls set and hoards dug up gave more).`,
+      'Fixed: Skills window success chance added mind logic\'s ease on skills whose checks have none (mining, digging, woodcutting and the like).',
     ],
   },
 ];

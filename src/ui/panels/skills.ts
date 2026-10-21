@@ -1,14 +1,17 @@
-import { boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
+import { boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, MIND_EASED_SKILLS, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
 import { staminaBarAbove } from '../../game/body';
 import { CONTROL_HIT } from '../../game/gear';
-import { percent } from '../../game/words';
-import { SKILL_DEFS } from '../../game/skills';
+import { listed, percent } from '../../game/words';
+import { SKILL_BY_ID, SKILL_DEFS } from '../../game/skills';
 import { effectTracks, hasEffects, type EffectTrack } from '../../game/skilleffects';
 import { knackBonus, KNACK_CAP, TITLE_BY_ID } from '../../game/titles';
 import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
 import { metres } from '../../game/piers';
+
+/** The thinking skills mind logic eases, by name. */
+const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
 
 export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
@@ -234,7 +237,8 @@ export class SkillsPanel {
       }
       case 'mind_logic': {
         const n = g.queueCapacity();
-        return [`Action queue ${n}`, `Max queued actions: ${n}.`];
+        const ease = +g.mindEase().toFixed(1);
+        return [`Action queue ${n}, difficulty −${ease}`, `Action queue ${n}. Difficulty −${ease} on crafts, ${MIND_EASED_SAID}; max half.`];
       }
       case 'soul_strength': {
         const up = g.soulBonus() * 100;

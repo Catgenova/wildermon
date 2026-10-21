@@ -1,4 +1,4 @@
-import { CHAR_START, goSeconds, hullSpeed, productQlRange, queueCapAt, type Game } from './game';
+import { CHAR_START, goSeconds, hullSpeed, MIND_EASED_SKILLS, productQlRange, queueCapAt, type Game } from './game';
 import { ACTIONS, maxDigSlope, maxMasonSlope, prospectReach, repairGo } from './actions';
 import { RECIPES } from './recipes';
 import { MOULDS } from './metal';
@@ -191,7 +191,14 @@ function workEffects(id: string): SkillEffect[] {
     ? [{ label: 'Time per action', at: (g) => goSeconds(SLOW_GO, g.skills.get(id)) / goSeconds(SLOW_GO, 0), say: ofLevel(0) }]
     : [];
   if (jobs.some((j) => j.difficulty)) {
-    out.push({ label: 'Success chance', at: (g) => g.skillChance(id, CHANCE_AT, 0, g.mindEase()), say: percent, note: `Difficulty ${CHANCE_AT}, no tool` });
+    // Mind logic's ease only where the check takes it: crafts, and the thinking skills (`MIND_EASED_SKILLS`).
+    const eased = MIND_EASED_SKILLS.includes(id) || RECIPES.some((r) => r.skill === id && r.difficulty) || MOULDS.some((m) => m.skill === id);
+    out.push({
+      label: 'Success chance',
+      at: (g) => g.skillChance(id, CHANCE_AT, 0, eased ? g.mindEase() : 0),
+      say: percent,
+      note: `Difficulty ${CHANCE_AT}, no tool${eased ? ', mind logic ease' : ''}`,
+    });
   }
   // What comes out is no better than the skill it was made with (`productQl`): for the skills that make or bring in things.
   if (RECIPES.some((r) => r.skill === id) || MOULDS.some((m) => m.skill === id) || BRINGS_IN.has(id)) {

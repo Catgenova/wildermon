@@ -1,4 +1,4 @@
-import { tryGain } from './learn';
+import { MIND_GAIN, tryGain } from './learn';
 import { TileType } from '../world/tiles';
 import type { ActionDef } from './actions';
 import type { Game } from './game';
@@ -9,7 +9,7 @@ import {
 } from './baubles';
 
 /** What one go at putting a relic back together teaches. */
-export const RESTORE_GAIN = 0.4;
+export const RESTORE_GAIN = MIND_GAIN;
 /**
  * The damage a find comes out of the ground with: `FIND_DAMAGE` and up to
  * `FIND_DAMAGE_SPREAD` more. The island's `perform_dig` rolls the same.
