@@ -6,6 +6,7 @@ import type { Game } from './game';
 import { itemDef, itemName, rarityOf, roomFor, type Item } from './items';
 import { world } from './pace';
 import type { CraftStock } from './recipes';
+import type { Plume } from './smelter';
 
 /**
  * A kiln: four subtiles of stone brick with a firebox under them. Clay is
@@ -97,6 +98,20 @@ export const fireSeconds = (def: PotteryDef, kilnQl: number): number => Math.max
  */
 export const firedQl = (greenQl: number, kilnQl: number): number => Math.max(1, Math.min(100, greenQl * (0.82 + kilnQl / 420)));
 
+/**
+ * Where its smoke comes out: the head of the vent on its dome, so high over
+ * the ground in tenths of a metre (`HEIGHT_SCALE` units) and so far back from
+ * the middle of its block toward the north, in tiles, as it is drawn
+ * (`forge.ts`).
+ */
+export const KILN_VENT_UP = 18.5;
+export const KILN_VENT_BACK = 0.07;
+/** A kiln's vent draws as a smelter's stack does (`SMELTER_PLUME`): a short, thin, pale plume; fuller, higher and denser while it fires a load. */
+export const KILN_PLUME: Plume = { rise: 0.3, size: 0.44, pale: 0.75 };
+export const KILN_PLUME_FIRING: Plume = { rise: 0.36, size: 0.48, pale: 0.7 };
+/** How strong its light is (`Game.lights`, out to `OVEN_REACH`): banked low while it is only lit, full while it fires a load. */
+export const KILN_GLOW = 0.62;
+export const KILN_GLOW_FIRING = 0.8;
 export const kilnCentre = (k: PlacedKiln): [number, number] => [k.x + (k.sx + 1) / SUBTILES, k.y + (k.sy + 1) / SUBTILES];
 
 export function kilnCovers(k: { sx: number; sy: number }, sx: number, sy: number): boolean {

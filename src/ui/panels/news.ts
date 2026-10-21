@@ -3030,6 +3030,13 @@ export const NEWS: News[] = [
       'Renamed: Tier Up perk → Grade Up.',
       'Renamed: Trade window (face to face) → Barter.',
     ],
+  },  {
+    n: 232,
+    day: '2026-10-21',
+    lines: () => [
+      'Changed: kiln model, in the smelter\'s rune pastel kit: beehive dome on a mossy plinth, stoke porch, rune band, vent.',
+      'Cold, lit and firing drawn apart: firing lights the runes and flares at the vent. Smoke from the vent while lit; glows at night.',
+    ],
   },
 ];
 

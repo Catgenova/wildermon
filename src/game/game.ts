@@ -27,7 +27,7 @@ import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateUnits, STORE_RE
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
-import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_SUBTILES, type PlacedKiln } from './kiln';
+import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
 import { crateTheRest, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
@@ -3523,8 +3523,12 @@ export class Game {
       if (f.lit) out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: 0.8 });
       else if (furnitureDef(f.kind).altar) out.push({ x: cx, y: cy, radius: ALTAR_REACH, strength: ALTAR_GLOW, steady: true, cast: ALTAR_CAST, castAlpha: ALTAR_CAST_ALPHA });
     }
-    for (const k of this.kilns.values()) if (k.lit && near(k.x, k.y)) out.push({ x: k.x + 0.5, y: k.y + 0.5, radius: OVEN_REACH, strength: 0.8 });
-    // From the middle of its block, where its mouth and its stack are.
+    // A kiln's and a smelter's from the middle of its block, where its mouth and its vent or stack are.
+    for (const k of this.kilns.values()) {
+      if (!k.lit || !near(k.x, k.y)) continue;
+      const [cx, cy] = kilnCentre(k);
+      out.push({ x: cx, y: cy, radius: OVEN_REACH, strength: k.jobs.length ? KILN_GLOW_FIRING : KILN_GLOW });
+    }
     for (const sm of this.smelters.values()) {
       if (!sm.lit || !near(sm.x, sm.y)) continue;
       const [cx, cy] = smelterCentre(sm);
@@ -3594,8 +3598,12 @@ export class Game {
       const [cx, cy] = furnitureCentre(f);
       out.push({ x: cx, y: cy, heat: 0.62 });
     }
-    for (const k of this.kilns.values()) if (k.lit && near(k.x, k.y)) out.push({ x: k.x + 0.5, y: k.y + 0.5, heat: 0.85 });
-    // Out of the head of its stack, not off the ground.
+    // Out of the head of a kiln's vent and a smelter's stack, not off the ground.
+    for (const k of this.kilns.values()) {
+      if (!k.lit || !near(k.x, k.y)) continue;
+      const [cx, cy] = kilnCentre(k);
+      out.push({ x: cx, y: cy - KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
+    }
     for (const sm of this.smelters.values()) {
       if (!sm.lit || !near(sm.x, sm.y)) continue;
       const [cx, cy] = smelterCentre(sm);

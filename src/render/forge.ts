@@ -1,3 +1,4 @@
+import { KILN_GLOW, KILN_GLOW_FIRING, KILN_VENT_BACK, KILN_VENT_UP } from '../game/kiln';
 import { SMELTER_STACK_BACK, SMELTER_STACK_UP } from '../game/smelter';
 import { UNITS_PER_TILE } from './iso';
 import { hashOf, rand } from './ivy';
@@ -8,8 +9,8 @@ import {
 } from './runestone';
 
 /**
- * The smith's two pieces -- the smelter (the furnace) and the anvil --
- * drawn as the runestones are (`runestone.ts`), from their kit: small models
+ * The smith's two pieces -- the smelter (the furnace) and the anvil -- and
+ * the potter's kiln, drawn as the runestones are (`runestone.ts`), from their kit: small models
  * of faceted solids in tenths of a metre, put on the screen through the
  * camera's turn, baked for each way they are seen and each scale, and what
  * moves laid over the bake.
@@ -39,6 +40,22 @@ import {
  * taken toward the island's pale steel so that every metal sits with the
  * stone. Its block has a rune cut in its front, lit gold as a runestone's
  * are, and a little moss and grass at its foot; it lights no night.
+ *
+ * The kiln fills its two by two subtiles, drawn a little over them
+ * (`KILN_K`) as the anvil is: a round drum of dressed stone on a mossy
+ * plinth, a band of runes round its head rimmed in gold, and over that a
+ * beehive dome of brick laid in courses closing to a short vent with a lipped
+ * cap. A stoke porch under a barrel vault stands out of its front, an arched
+ * mouth in dressed voussoirs with a gold keystone; sun panels are sunk in the
+ * drum, a draught port low in its back and four spy holes in its dome, and
+ * fired pots stand on the plinth. Cold, that is all it is. Lit, the mouth,
+ * vent and port are a bed of embers breathing slowly and its runes and spy
+ * holes warm; firing a load, the pots are gone into it and show against the
+ * fire in the mouth, all of it is bright, its heart white-hot and its runes
+ * gold even by day, and a flare, a tongue of flame and a few embers come out
+ * of its vent. Its smoke comes out of the head of its vent (`KILN_VENT_UP`,
+ * `KILN_VENT_BACK`, `Game.fires`) and its light from the middle of its block
+ * (`Game.lights`); after dark it is laid as the smelter's is (`drawKilnNight`).
  */
 
 /* ---- the kit's pieces ------------------------------------------------------- */
@@ -1268,6 +1285,1461 @@ export function smelterHit(rotation: number, zoom = 1): [number, number, number,
 /** What it is drawn over, from its footprint's middle, in pixels at zoom one: left, top, right, bottom. */
 export function smelterBounds(rotation: number, zoom = 1): [number, number, number, number] {
   return smelterBaked(rotation, zoom).bounds;
+}
+
+/* ---- the kiln --------------------------------------------------------------- */
+
+/** How a kiln is drawn: alight or not, and firing a load. */
+export interface KilnLook {
+  lit: boolean;
+  firing: boolean;
+}
+
+/** The dome's brick: the smelter's roof's cream in the light (`SHOULDER_END`), and in shade the runestones' lilac (`runestone.ts`), so its shaded side reads as the kit's. */
+const DOME_STONE: Tone = toneOf('#eedecb', '#aa9eac');
+
+/** Fired ware, bisque: the dressings' cream taken a third of the way to the embers' peach, so it reads as clay and not as stone. */
+const POT_STONE: Tone = { lit: mix(hex('#f3e2cc'), hex('#e8945e'), 0.33), shade: mix(hex('#b29da0'), hex('#a3685a'), 0.33) };
+
+/** How many sides its round solids are laid in -- the drum of its firebox, its band of runes, its dome -- and its vent. */
+const K_SIDES = 16;
+const VENT_SIDES = 8;
+/**
+ * How much bigger than it is laid out below it is drawn, as an anvil is
+ * (`ANVIL_K`): its plinth a hair over its two by two subtiles, so its dome
+ * reads at zoom one beside a smelter's three by two.
+ */
+const KILN_K = 1.22;
+/** Where its solids stand, in units before `KILN_K`: the plinth, the drum, the band of runes, the dome to its crown, the vent and its cap. */
+const K_SLAB_H = 1.6;
+const DRUM_TOP = 5.3;
+const K_BAND_TOP = 8.1;
+const DOME_CROWN = 12.6;
+const VENT_TOP = 14.3;
+const K_CAP_TOP = KILN_VENT_UP / KILN_K;
+/** The chamber's middle, back from the middle of its footprint, its stoke porch in front of it; its vent over that. */
+const K_Y = (-KILN_VENT_BACK * UNITS_PER_TILE) / KILN_K;
+/** How wide its round solids are, from their middle: the drum at its foot, the band, the dome at its foot and its crown, the vent, the vent's cap and its flue. */
+const DRUM_R = 7.0;
+const K_BAND_R = 7.35;
+const DOME_R = 6.8;
+const CROWN_R = 2.2;
+const VENT_R = 2.35;
+const VENT_CAP_R = 3.0;
+const FLUE_R = 1.65;
+/** How the dome rises, from its foot (nought) to its crown (one): the rings it is laid in, and how far each is drawn in -- a beehive's, steep and then closing. */
+const DOME_RINGS = [0, 0.14, 0.29, 0.44, 0.58, 0.71, 0.82, 0.92, 1];
+const domeR = (u: number): number => CROWN_R + (DOME_R - CROWN_R) * Math.pow(1 - Math.pow(u, 1.85), 0.72);
+/** The dome's courses, laid an even width up its curve and so closer in height as it closes over: the heights of their beds. */
+const DOME_COURSE = 2.35;
+const DOME_BEDS: number[] = (() => {
+  const out = [K_BAND_TOP - 0.05];
+  let px = domeR(0), pz = K_BAND_TOP - 0.05, run = 0;
+  for (let i = 1; i <= 400; i++) {
+    const u = i / 400, x = domeR(u), z = K_BAND_TOP - 0.05 + (DOME_CROWN - K_BAND_TOP) * u;
+    run += Math.hypot(x - px, z - pz);
+    if (run >= DOME_COURSE) { out.push(z); run = 0; }
+    px = x; pz = z;
+  }
+  out.push(DOME_CROWN + 1);
+  return out;
+})();
+/** The plinth under it: its middle, and how far it runs every way. */
+const K_PLINTH_Y = -0.6;
+const K_PLINTH_H = 8.9;
+/** The stoke porch standing out of the drum's front: half as wide as it is, how far out of the drum, and the top of its walls. */
+const PORCH_HX = 3.0;
+const PORCH_OUT = 3.1;
+const PORCH_TOP = 4.45;
+/** The barrel vault over it, how high it rises over the porch's walls. */
+const VAULT_RISE = 1.05;
+/** The stoke mouth in it: half as wide as it is, how high its jambs stand, how high the arch rises against how wide it is, and its ring of voussoirs. */
+const K_MOUTH_W = 2.05;
+const K_MOUTH_SPRING = 0.35;
+const K_MOUTH_RISE = 0.82;
+const K_RING = 0.75;
+const K_MOUTH_TOP = K_MOUTH_SPRING + K_MOUTH_W * K_MOUTH_RISE;
+/** Where the hearth before the mouth is on the plinth's top, toward its front from its middle. */
+const K_HEARTH_AT = 8.0;
+/** The draught port low in the drum's back, and the spy holes in the dome: how big, how high up their side, and which sides (counted round from the front). */
+const K_PORT_R = 0.72;
+const K_PORT_Z = 1.7;
+const SPY_R = 0.5;
+const SPY_RING = 1;
+const SPY_SIDES = [2, 14, 6, 10];
+/**
+ * The runes round its band, every other side of it, in order round from the
+ * front -- the sun over the stoke mouth first -- staves and stars with no long
+ * slant to them, as a smelter's (`BAND_RUNES`); the sides between carry a
+ * drilled dot.
+ */
+const KILN_RUNES = ['sunDot', 'algiz', 'star6', 'tiwaz', 'diamondDot', 'ingwaz', 'dagaz', 'ring'];
+/** How big a rune on the band is, in units from its middle to its top, and how wide its groove. */
+const K_RUNE_S = 1.12;
+const K_RUNE_W = 0.42;
+/** The pointed panels sunk in the drum either side of its front and of its back, a sun cut in each, as a smelter's sides have (`PANEL_RUNE`): which sides, and the panel's half-width, foot, springing, head and the sun's height and size. */
+const K_PANEL_SIDES = [3, 6, 10, 13];
+/** How far the moss climbs the drum's sides, by side counted round from the front: its shady left and back. */
+const DRUM_MOSS: Record<number, number> = { 4: 0.6, 7: 0.7, 11: 0.5 };
+const K_PANEL_HW = 0.95;
+const K_PANEL_Z0 = 0.7;
+const K_PANEL_Z1 = 2.2;
+const K_PANEL_ARCH = 0.8;
+const K_PANEL_RUNE_Z = 1.75;
+const K_PANEL_S = 0.62;
+
+/** A ring of `n` corners round the chamber's middle at height z, `r` out, its first side facing the front. */
+const ringOf = (r: number, z: number, n = K_SIDES): V3[] => Array.from({ length: n }, (_, i) => {
+  const a = Math.PI / 2 - Math.PI / n + (i * TAU) / n;
+  return [Math.cos(a) * r, K_Y + Math.sin(a) * r, z] as V3;
+});
+
+/**
+ * Stone or brick in courses round a round solid, on one of its sides (`s`,
+ * `topW` across at its head): every course at the same height all the way
+ * round, one course a stone to a side and the next a stone across each arris,
+ * as a running bond; the joints cut in and each stone a hair its own tint.
+ */
+function coursed(g: Ctx, fill: RGB, s: Side, seed: number, course: number, topW: number, joint = 0.15, tint = 1, uneven = 0, beds?: readonly number[], soft = false): void {
+  const T = rand(seed);
+  const z0 = s.o[2];
+  // The bed joints, the same all the way round: given, or every `course` up, each a hair off true by its course's number (`uneven` of a course at most).
+  const hash = (n: number): number => Math.abs(Math.sin(n * 12.9898 + 0.7) * 43758.5453) % 1;
+  const B: number[] = beds ? [...beds] : [];
+  if (!beds) for (let n = Math.floor(z0 / course) - 1; n * course < z0 + s.h + course; n++) B.push(n * course + uneven * course * (hash(n) - 0.5));
+  const wAt = (z: number): number => s.w + (topW - s.w) * Math.max(0, Math.min(1, z / Math.max(1e-6, s.h)));
+  const xAt = (f: number, z: number): number => (s.w - wAt(z)) / 2 + f * wAt(z);
+  for (let n = 0; n + 1 < B.length; n++) {
+    const a = Math.max(0, B[n] - z0), b = Math.min(s.h, B[n + 1] - z0);
+    if (b - a < 0.08) continue;
+    const zm = (a + b) / 2;
+    // One course a stone to a side, the next a stone across each arris; laid uneven, each course's joints set off by its own number, so no two line up.
+    const odd = n % 2 === 1;
+    let cuts: number[];
+    // Laid uneven, a course is a ring of long bricks: a head joint in some of its sides and not others, set off by its number, so none line up.
+    if (uneven > 0) cuts = hash(n * 13 + seed * 0.37) < 0.45 ? [0, 0.2 + 0.6 * hash(n * 7 + 3), 1] : [0, 1];
+    else cuts = odd ? [0, 0.5, 1] : [0, 1];
+    for (let j = 0; j + 1 < cuts.length; j++) {
+      const x0 = xAt(cuts[j], zm), x1 = xAt(cuts[j + 1], zm);
+      const r = T();
+      g.fillStyle = r < 0.12 * uneven * 2 ? css(mix(fill, hex('#9a8ea4'), 0.38), 0.6)
+        : r < 0.5 ? css(mix(fill, [255, 250, 240], 0.08 + 0.14 * T()), 0.5) : css(mix(fill, hex('#9a8ea4'), (0.06 + 0.12 * T()) * tint), 0.45);
+      g.fillRect(x0 + 0.12, a + 0.12, x1 - x0 - 0.24, b - a - 0.24);
+    }
+    // Soft, the joints a single line a step into the stone's shade, with no lit lip: a brick wall's mortar, not cut stone.
+    const line = (path: () => void, w: number, deep = false): void => {
+      if (!soft) { cut(g, fill, w, path); return; }
+      path();
+      g.strokeStyle = css(mix(fill, hex('#9a90a6'), deep ? 0.9 : 0.5), deep ? 0.85 : 0.42);
+      g.lineWidth = w;
+      g.stroke();
+    };
+    // Every third bed a step deeper, so the courses carry at a distance.
+    if (b < s.h - 0.05) line(() => { g.beginPath(); g.moveTo(-1, b); g.lineTo(s.w + 1, b); }, joint, n % 3 === 2);
+    const heads = uneven > 0 ? cuts.slice(1, -1) : odd ? [0.5] : [0, 1];
+    for (const f of heads) line(() => { g.beginPath(); g.moveTo(xAt(f, a), a + 0.08); g.lineTo(xAt(f, b), b - 0.08); }, joint * 0.9);
+  }
+}
+
+/** A round solid's side turned from the light washed in the kit's lilac (the runestones' shade), as the smelter's shaded faces are, so its round turns. */
+function lilacShade(g: Ctx, L: number, s: Side): void {
+  const away = Math.max(0, Math.min(1, (0.97 - L) / 0.2));
+  if (away <= 0.02) return;
+  g.fillStyle = css(hex('#aa9eac'), 0.32 * away);
+  g.fillRect(-1, -1, s.w + 2, s.h + 2);
+}
+
+/**
+ * Moss along the foot of a side, run together into one low cushion, thickest
+ * where it meets the plinth and a little way up it, `amount` of the way on,
+ * nought to one: a round solid's sides have no arrises for it to climb
+ * (`cornerMoss`).
+ */
+function footMoss(g: Ctx, k: PaintCtx, s: Side, seed: number, amount: number): void {
+  if (amount <= 0.05) return;
+  const T = rand(seed);
+  const tr = g.getTransform(), inv = k.base.inverse();
+  const across = Math.hypot(k.e.ux, k.e.uy) * 0.9;
+  const ps: Pad[] = [];
+  // Gathered into one clump on the side, not strewn along it.
+  const at0 = 0.25 * s.w + T() * 0.5 * s.w;
+  for (let j = 0; j < Math.round(6 + 6 * amount); j++) {
+    const x = at0 + (T() - 0.5) * (1.0 + 1.4 * amount), z = Math.pow(T(), 2.2) * (0.4 + 1.0 * amount);
+    const q = inv.transformPoint(tr.transformPoint(new DOMPoint(x, z)));
+    const r = (0.65 + 0.5 * T()) * (1 - 0.4 * Math.min(1, z / 1.4));
+    ps.push([q.x, q.y, r * across, r * across * 0.75]);
+  }
+  g.save();
+  g.setTransform(k.base);
+  drawPads(g, ps);
+  g.restore();
+}
+
+/** The stoke mouth's outline in the porch's front, drawn out by `d` all round: jambs up from its foot and an arch over. */
+function kilnMouthPath(g: Ctx, cx: number, d: number, foot = -0.6): void {
+  const r = K_MOUTH_W + d;
+  g.beginPath();
+  g.moveTo(cx - r, foot);
+  g.lineTo(cx - r, K_MOUTH_SPRING);
+  g.ellipse(cx, K_MOUTH_SPRING, r, K_MOUTH_W * K_MOUTH_RISE + d, 0, Math.PI, 0, true);
+  g.lineTo(cx + r, foot);
+  g.closePath();
+}
+const kilnArchAt = (cx: number, a: number, d: number): Pt => [cx + Math.cos(a) * (K_MOUTH_W + d), K_MOUTH_SPRING + Math.sin(a) * (K_MOUTH_W * K_MOUTH_RISE + d)];
+
+interface KilnModel {
+  parts: Part[];
+  slab: Part;
+  drum: Part;
+  band: Part;
+  dome: Part;
+  porch: Part;
+  coping: Part;
+  /** The porch's front, where the mouth is, and the rune over it. */
+  front: Side;
+  /** The drum's back, where the draught port is. */
+  back: Side;
+  /** The band's sides with a rune on them, each with its rune. */
+  runes: Array<{ s: Side; glyph: string }>;
+  /** The dome's sides with a spy hole in them, and the drum's with a sun panel. */
+  spies: Side[];
+  panels: Side[];
+  /** Where the mouth's light falls on its own stone: the plinth's top and front, and the porch's front and coping. */
+  warmPlinth: Face[];
+  warmPorch: Face[];
+  /** The ware on the plinth, drawn only while the kiln is not firing it; and the drum's and band's fronts, where the mouth's light falls too. */
+  pots: Part[];
+  warmDrum: Face[];
+  warmBand: Face[];
+  /** The flue in the vent's cap, as an outline in the model. */
+  flue: V3[];
+  turf: V3[];
+}
+
+let kilnModel: KilnModel | null = null;
+
+function kilnOf(): KilnModel {
+  if (kilnModel) return kilnModel;
+  const seed = 5113;
+  const parts: Part[] = [];
+  const side = (s: Side): number => (Math.round(Math.atan2(s.n[1], s.n[0]) / (TAU / K_SIDES) - K_SIDES / 4) % K_SIDES + K_SIDES) % K_SIDES;
+  const topW = (s: Side): number => Math.hypot(s.poly[2][0] - s.poly[3][0], s.poly[2][1] - s.poly[3][1]);
+
+  /* -- the plinth: square in line under it, its corners mossed, the hearth before the mouth scorched and strewn with cinders -- */
+  const slab = prism([rect(0, K_PLINTH_Y, K_PLINTH_H, K_PLINTH_H, -0.5), rect(0, K_PLINTH_Y, K_PLINTH_H, K_PLINTH_H, K_SLAB_H - 0.4), rect(0, K_PLINTH_Y, K_PLINTH_H - 0.5, K_PLINTH_H - 0.5, K_SLAB_H)], HEARTH,
+    (k, i, s) => (k !== 0 ? { crease: 0.45 } : {
+      paint: (g, kk) => {
+        skin(g, kk.fill, s.w, s.h + 0.5, seed + 3 + i);
+        cornerMoss(g, kk, s, seed + 5 + i, [1, 0.95, 1, 1][i]);
+      },
+    }),
+    {
+      paint: (g, k) => {
+        const T = rand(seed + 11);
+        // Flagged: a joint across it each way, cut.
+        cut(g, k.fill, 0.18, () => { g.beginPath(); g.moveTo(0.4 * (T() - 0.5), -K_PLINTH_H); g.lineTo(0.4 * (T() - 0.5), K_PLINTH_H); });
+        cut(g, k.fill, 0.18, () => { g.beginPath(); g.moveTo(-K_PLINTH_H, -1.2); g.lineTo(K_PLINTH_H, -1.4); });
+        // And the flags laid across those, their joints staggered.
+        for (const [x0, y0, x1, y1] of [[-K_PLINTH_H, 4.2, 0, 4.0], [0, 3.1, K_PLINTH_H, 3.3], [-4.6, -1.2, -4.4, 4.1], [4.8, -1.4, 4.6, 3.2], [-K_PLINTH_H, -5.6, 0, -5.4], [-5.2, -1.2, -5.0, -K_PLINTH_H]] as Array<[number, number, number, number]>) {
+          cut(g, k.fill, 0.14, () => { g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); });
+        }
+        skin(g, k.fill, 18, 18, seed + 13, 0.6);
+        // A scorch before the mouth, and ash and cinders raked out over it.
+        const at0 = K_HEARTH_AT - K_PLINTH_Y;
+        const gr = g.createRadialGradient(0, at0 - 0.4, 0, 0, at0 - 0.4, 3.8);
+        gr.addColorStop(0, 'rgba(92, 78, 92, 0.45)');
+        gr.addColorStop(1, 'rgba(120, 104, 116, 0)');
+        g.fillStyle = gr;
+        g.fillRect(-5, at0 - 3, 10, 5);
+        for (let i = 0; i < 16; i++) {
+          const x = (T() - 0.5) * 5.6, y = at0 - 0.5 + T() * 0.9, r = 0.12 + T() * 0.16;
+          g.fillStyle = T() < 0.6 ? 'rgba(168, 158, 166, 0.75)' : 'rgba(64, 54, 66, 0.8)';
+          g.beginPath();
+          g.ellipse(x, y, r * 1.4, r, 0, 0, TAU);
+          g.fill();
+        }
+      },
+    });
+  const slabPart: Part = { x: 0, y: K_PLINTH_Y, faces: slab, solid: true, tier: 0 };
+  parts.push(slabPart);
+
+  /* -- the drum of the firebox: dressed stone in courses round it, the draught port low in its back -- */
+  let back: Side | null = null;
+  const panels: Side[] = [];
+  const drum = prism([ringOf(DRUM_R, K_SLAB_H), ringOf(DRUM_R - 0.25, DRUM_TOP)], KILN_STONE, (_k, i, s) => {
+    const j = side(s);
+    if (K_PANEL_SIDES.includes(j)) {
+      panels.push(s);
+      const px = s.w / 2;
+      return {
+        crease: 0.16,
+        paint: (g, k) => {
+          const fill = k.fill;
+          skin(g, fill, s.w, s.h, seed + 20 + i);
+          coursed(g, fill, s, seed + 30 + i, 1.55, topW(s), 0.15, 0.5);
+          lilacShade(g, k.L, s);
+          panelArch(g, px, px, K_PANEL_HW + 0.3, K_PANEL_Z0 - 0.3, K_PANEL_Z1, K_PANEL_ARCH + 0.28, 0);
+          g.fillStyle = css(mix(fill, hex('#fbf0e2'), 0.5));
+          g.fill();
+          panelArch(g, px, px, K_PANEL_HW, K_PANEL_Z0, K_PANEL_Z1, K_PANEL_ARCH, 0);
+          g.fillStyle = css(mix(fill, hex('#9a90a6'), 0.34), 0.75);
+          g.fill();
+          cut(g, fill, 0.14, () => panelArch(g, px, px, K_PANEL_HW, K_PANEL_Z0, K_PANEL_Z1, K_PANEL_ARCH, 0));
+          // A gold line just inside it, as round the band's runes.
+          panelArch(g, px, px, K_PANEL_HW, K_PANEL_Z0, K_PANEL_Z1, K_PANEL_ARCH, 0.2);
+          g.strokeStyle = css(hex(RUNE_GOLD), 0.7);
+          g.lineWidth = 0.09;
+          g.stroke();
+          cutRune(g, mix(fill, hex('#9a90a6'), 0.34), PANEL_RUNE, px, K_PANEL_RUNE_Z, K_PANEL_S, 0.36);
+        },
+      };
+    }
+    if (j !== K_SIDES / 2) {
+      return {
+        crease: 0.16,
+        paint: (g, k) => {
+          skin(g, k.fill, s.w, s.h, seed + 20 + i);
+          coursed(g, k.fill, s, seed + 30 + i, 1.55, topW(s), 0.15, 0.5);
+          lilacShade(g, k.L, s);
+          // Moss up its foot on the shady side, back and left, as up the plinth's corners.
+          footMoss(g, k, s, seed + 140 + i, DRUM_MOSS[j] ?? 0);
+        },
+      };
+    }
+    back = s;
+    return {
+      crease: 0.16,
+      paint: (g, k) => {
+        const fill = k.fill, px = s.w / 2;
+        skin(g, fill, s.w, s.h, seed + 20 + i);
+        coursed(g, fill, s, seed + 30 + i, 1.55, topW(s), 0.15, 0.5);
+          lilacShade(g, k.L, s);
+        // The draught port, in a ring of dressed stones.
+        const dress = mix(fill, hex('#fbf0e2'), 0.62);
+        g.beginPath();
+        g.arc(px, K_PORT_Z, K_PORT_R + 0.7, 0, TAU);
+        g.fillStyle = css(dress);
+        g.fill();
+        g.strokeStyle = css(mix(fill, STONE_INK, 0.55), 0.75);
+        g.lineWidth = 0.18;
+        g.stroke();
+        for (let j2 = 0; j2 < 5; j2++) {
+          const a = (j2 / 5) * TAU + 0.3;
+          cut(g, dress, 0.12, () => { g.beginPath(); g.moveTo(px + Math.cos(a) * K_PORT_R, K_PORT_Z + Math.sin(a) * K_PORT_R); g.lineTo(px + Math.cos(a) * (K_PORT_R + 0.7), K_PORT_Z + Math.sin(a) * (K_PORT_R + 0.7)); });
+        }
+        g.beginPath();
+        g.arc(px, K_PORT_Z, K_PORT_R, 0, TAU);
+        g.fillStyle = '#2a2230';
+        g.fill();
+        const sg = g.createRadialGradient(px, K_PORT_Z + 1.8, 0.2, px, K_PORT_Z + 1.8, 2.6);
+        sg.addColorStop(0, 'rgba(86, 72, 90, 0.3)');
+        sg.addColorStop(1, 'rgba(86, 72, 90, 0)');
+        g.fillStyle = sg;
+        g.fillRect(px - 3, K_PORT_Z, 6, 5);
+      },
+    };
+  });
+  const drumPart: Part = { x: 0, y: K_Y, faces: drum, solid: true, tier: 1 };
+  parts.push(drumPart);
+
+  /* -- the band of runes round the foot of the dome: a course standing proud, a rune on every other side and a drilled dot between -- */
+  const runes: Array<{ s: Side; glyph: string }> = [];
+  const band = prism([ringOf(K_BAND_R, DRUM_TOP), ringOf(K_BAND_R, K_BAND_TOP - 0.2), ringOf(K_BAND_R - 0.3, K_BAND_TOP)], RUNE_BAND, (k, i, s) => {
+    if (k !== 0) return { crease: 0.3 };
+    const j = side(s);
+    const glyph = j % 2 ? null : KILN_RUNES[j / 2];
+    if (glyph) runes.push({ s, glyph });
+    return {
+      crease: 0.42,
+      paint: (g, kk) => {
+        const fill = kk.fill;
+        for (const z of [0.36, s.h - 0.32]) cut(g, fill, 0.13, () => { g.beginPath(); g.moveTo(-1, z); g.lineTo(s.w + 1, z); });
+        // A pale rim along its foot and its head, the light caught on its arrises, as on the vent's cap.
+        g.strokeStyle = 'rgba(255, 250, 238, 0.8)';
+        g.lineWidth = 0.12;
+        g.beginPath(); g.moveTo(-1, 0.1); g.lineTo(s.w + 1, 0.1); g.stroke();
+        // Its head rimmed in the runes' gold, where the dome sits on it, so the gold shows on it cold.
+        g.strokeStyle = css(hex(RUNE_GOLD), 0.85);
+        g.lineWidth = 0.24;
+        g.beginPath(); g.moveTo(-1, s.h - 0.1); g.lineTo(s.w + 1, s.h - 0.1); g.stroke();
+        if (glyph) cutRune(g, fill, glyph, s.w / 2, s.h / 2, K_RUNE_S, K_RUNE_W);
+        // Over the stoke porch, the band sooted from the fire under it.
+        if (j === 0 || j === 1 || j === K_SIDES - 1) {
+          const sg = g.createLinearGradient(0, 0, 0, s.h);
+          sg.addColorStop(0, `rgba(96, 80, 100, ${j === 0 ? 0.3 : 0.16})`);
+          sg.addColorStop(1, 'rgba(96, 80, 100, 0)');
+          g.fillStyle = sg;
+          g.fillRect(-1, -1, s.w + 2, s.h + 2);
+        }
+        else cut(g, fill, 0.26, () => { g.beginPath(); g.moveTo(s.w / 2, s.h / 2 + 0.03); g.lineTo(s.w / 2, s.h / 2 - 0.03); });
+        // The dome's shadow across its head, so dome and drum read apart.
+        g.fillStyle = 'rgba(90, 82, 102, 0.26)';
+        g.fillRect(-1, s.h - 0.6, s.w + 2, 1);
+      },
+    };
+  });
+  const bandPart: Part = { x: 0, y: K_Y, faces: band, solid: true, tier: 2 };
+  parts.push(bandPart);
+
+  /* -- the dome: brick in courses, closing in to its crown, sooted toward it; the spy holes in it -- */
+  const spies: Side[] = [];
+  const domeRings = DOME_RINGS.map((u) => ringOf(domeR(u), K_BAND_TOP - 0.05 + (DOME_CROWN - K_BAND_TOP) * u));
+  const dome = prism(domeRings, DOME_STONE, (k, i, s) => {
+    const spy = k === 1 && SPY_SIDES.includes(side(s));
+    if (spy) spies.push(s);
+    const zf = s.o[2];
+    return {
+      crease: 0.14,
+      paint: (g, kk) => {
+        const fill = kk.fill;
+        // Its bricks alone, no skin of pits and grit: on so many small sides that would muddy it.
+        // Its joints fainter the more of the light it catches, so the dome reads as one pale mass.
+        g.globalAlpha = 1 - 0.65 * Math.max(0, Math.min(1, kk.L));
+        coursed(g, fill, s, seed + 300 + k * 17 + i, DOME_COURSE, topW(s), 0.1, 0.3, 0.5, DOME_BEDS, true);
+        g.globalAlpha = 1;
+        // The side of it turned from the light washed in the kit's lilac, as the smelter's shaded faces are.
+        const away = Math.max(0, Math.min(1, (0.97 - kk.L) / 0.2));
+        if (away > 0.02) {
+          g.fillStyle = css(hex('#aa9eac'), 0.32 * away);
+          g.fillRect(-1, -1, s.w + 2, s.h + 2);
+          // Light thrown back up onto its shaded foot off the plinth, so the dome holds its round.
+          if (k <= 1) {
+            const bg = g.createLinearGradient(0, -zf + K_BAND_TOP, 0, -zf + K_BAND_TOP + 2.2);
+            bg.addColorStop(0, css([255, 244, 228], 0.2 * away));
+            bg.addColorStop(1, css([255, 244, 228], 0));
+            g.fillStyle = bg;
+            g.fillRect(-1, -1, s.w + 2, s.h + 2);
+          }
+        }
+        // The lit side a step paler, as a glaze of light, and the foot of it dark where it sits back on the band.
+        if (kk.L > 0.97) {
+          g.fillStyle = css([255, 250, 240], 0.16 * Math.min(1, (kk.L - 0.97) / 0.03));
+          g.fillRect(-1, -1, s.w + 2, s.h + 2);
+        }
+        // One course of paler brick round it partway up, a string course as the smelter's band is.
+        const sc = DOME_BEDS[3] - zf, sc1 = DOME_BEDS[4] - zf;
+        if (sc1 > 0 && sc < s.h) {
+          g.fillStyle = css([255, 248, 236], 0.28);
+          g.fillRect(-1, sc, s.w + 2, sc1 - sc);
+        }
+        if (k === 0) {
+          g.fillStyle = 'rgba(86, 72, 98, 0.32)';
+          g.fillRect(-1, -0.2, s.w + 2, 0.55);
+        }
+        // Sooted toward the crown, where the heat comes through: only round the vent, so the dome reads as pale stone.
+        const sg = g.createLinearGradient(0, DOME_CROWN - 2.4 - zf, 0, DOME_CROWN - zf);
+        sg.addColorStop(0, 'rgba(86, 72, 90, 0)');
+        sg.addColorStop(0.7, 'rgba(70, 58, 78, 0.16)');
+        sg.addColorStop(1, 'rgba(62, 48, 70, 0.4)');
+        g.fillStyle = sg;
+        g.fillRect(-1, -0.5, s.w + 2, s.h + 1);
+        if (spy) {
+          const px = s.w / 2, pz = s.h / 2;
+          g.beginPath();
+          g.ellipse(px, pz, SPY_R + 0.45, SPY_R + 0.38, 0, 0, TAU);
+          g.fillStyle = css(mix(fill, hex('#fbf0e2'), 0.6));
+          g.fill();
+          g.strokeStyle = css(mix(fill, STONE_INK, 0.65), 0.85);
+          g.lineWidth = 0.2;
+          g.stroke();
+          g.beginPath();
+          g.ellipse(px, pz, SPY_R, SPY_R * 0.86, 0, 0, TAU);
+          g.fillStyle = '#2a2230';
+          g.fill();
+        }
+      },
+    };
+  }, { crease: 0.3 });
+  const domePart: Part = { x: 0, y: K_Y, faces: dome, solid: true, tier: 3 };
+  parts.push(domePart);
+
+  /* -- the vent: a short collar of stone out of the crown, sooted, under a lipped cap with the flue open in it -- */
+  const vent = prism([ringOf(VENT_R, DOME_CROWN - 0.6, VENT_SIDES), ringOf(VENT_R - 0.25, VENT_TOP, VENT_SIDES)], KILN_STONE, (_k, i, s) => ({
+    crease: 0.3,
+    paint: (g, k) => {
+      skin(g, k.fill, s.w, s.h, seed + 80 + i, 1.4);
+      coursed(g, k.fill, s, seed + 85 + i, 0.95, topW(s), 0.12);
+      const sg = g.createLinearGradient(0, 0, 0, s.h);
+      sg.addColorStop(0, 'rgba(86, 72, 90, 0.12)');
+      sg.addColorStop(1, 'rgba(70, 58, 78, 0.42)');
+      g.fillStyle = sg;
+      g.fillRect(-1, 0, s.w + 2, s.h);
+      // A dark line where it stands out of the dome, so the collar keeps its shape against it at a distance.
+      g.fillStyle = 'rgba(80, 62, 84, 0.55)';
+      g.fillRect(-1, 0.5, s.w + 2, 0.32);
+    },
+  }));
+  const ventPart: Part = { x: 0, y: K_Y, faces: vent, solid: true, tier: 4 };
+  parts.push(ventPart);
+  const flue = ringOf(FLUE_R, K_CAP_TOP, 12);
+  const cap = prism([ringOf(VENT_CAP_R, VENT_TOP - 0.2, VENT_SIDES), ringOf(VENT_CAP_R, K_CAP_TOP - 0.4, VENT_SIDES), ringOf(VENT_CAP_R - 0.3, K_CAP_TOP, VENT_SIDES)], DRESSING, (_k, i, s) => ({
+    crease: 0.5,
+    paint: (g, k) => {
+      const sg = g.createLinearGradient(0, 0, 0, s.h);
+      sg.addColorStop(0, 'rgba(70, 58, 78, 0.3)');
+      sg.addColorStop(1, 'rgba(70, 58, 78, 0.12)');
+      g.fillStyle = sg;
+      g.fillRect(-1, 0, s.w + 2, s.h);
+      skin(g, k.fill, s.w, s.h, seed + 90 + i, 2);
+      // A pale rule round the head of its lip, the light caught along its arris.
+      g.strokeStyle = 'rgba(255, 250, 238, 0.85)';
+      g.lineWidth = 0.13;
+      g.beginPath();
+      g.moveTo(-1, s.h - 0.12);
+      g.lineTo(s.w + 1, s.h - 0.12);
+      g.stroke();
+    },
+  }), {
+    paint: (g, k) => {
+      // The flue: its dark open in the top, ringed, and the soot about it.
+      g.beginPath();
+      g.arc(0, 0, FLUE_R + 0.85, 0, TAU);
+      g.fillStyle = 'rgba(70, 58, 78, 0.36)';
+      g.fill();
+      // A pale ring round the head of the cap.
+      g.beginPath();
+      g.arc(0, 0, VENT_CAP_R - 0.5, 0, TAU);
+      g.strokeStyle = 'rgba(255, 250, 238, 0.85)';
+      g.lineWidth = 0.14;
+      g.stroke();
+      g.beginPath();
+      g.arc(0, 0, FLUE_R, 0, TAU);
+      g.fillStyle = '#2a2230';
+      g.fill();
+      g.strokeStyle = css(mix(k.fill, CREASE_INK, 0.7));
+      g.lineWidth = 0.18;
+      g.stroke();
+    },
+  });
+  const capPart: Part = { x: 0, y: K_Y, faces: cap, solid: true, tier: 5 };
+  parts.push(capPart);
+
+  /* -- the stoke porch out of the drum's front: dressed jambs and voussoirs round the mouth, the sun cut over it, a coping on top -- */
+  // From where the band overhangs the drum at its corners, so none of it is inside the band to be drawn over it.
+  const py0 = K_Y + Math.sqrt(K_BAND_R ** 2 - PORCH_HX ** 2) + 0.05, py1 = K_Y + DRUM_R + PORCH_OUT;
+  const pMid = (py0 + py1) / 2, pH = (py1 - py0) / 2;
+  let front: Side | null = null;
+  const porch = prism([rect(0, pMid, PORCH_HX, pH, K_SLAB_H), rect(0, pMid, PORCH_HX, pH, PORCH_TOP)], KILN_STONE, (_k, i, s) => {
+    if (i !== 2) {
+      return {
+        crease: 0.4,
+        paint: (g, k) => {
+          skin(g, k.fill, s.w, s.h, seed + 40 + i);
+          // Coursed as the drum is, at the drum's heights, so it reads as built out of it; a long stone at its outer end, a quoin.
+          coursed(g, k.fill, s, seed + 45 + i, 1.55, s.w);
+          footMoss(g, k, s, seed + 48 + i, 0.5);
+          // A draught slot low in its side, in a dressed surround.
+          const sx0 = s.w * 0.55, sz0 = 0.75;
+          g.fillStyle = css(mix(k.fill, hex('#fbf0e2'), 0.55));
+          g.fillRect(sx0 - 0.62, sz0 - 0.32, 1.24, 0.64);
+          g.fillStyle = '#3c2e3e';
+          g.fillRect(sx0 - 0.42, sz0 - 0.14, 0.84, 0.28);
+          cut(g, k.fill, 0.08, () => { g.beginPath(); g.rect(sx0 - 0.62, sz0 - 0.32, 1.24, 0.64); });
+          // Where it runs into the drum, the joint a shade deep.
+          const lx = dot(s.a, [0, 1, 0]) > 0 ? 0 : s.w;
+          g.fillStyle = 'rgba(86, 72, 90, 0.2)';
+          g.fillRect(lx - 0.35, -1, 0.7, s.h + 2);
+          const sg = g.createLinearGradient(0, s.h, 0, s.h - 1.2);
+          sg.addColorStop(0, 'rgba(86, 72, 90, 0.22)');
+          sg.addColorStop(1, 'rgba(86, 72, 90, 0)');
+          g.fillStyle = sg;
+          g.fillRect(-1, s.h - 1.2, s.w + 2, 1.4);
+        },
+      };
+    }
+    front = s;
+    const cx = s.w / 2;
+    return {
+      crease: 0.4,
+      paint: (g, k) => {
+        const fill = k.fill;
+        skin(g, fill, s.w, s.h, seed + 42);
+        ashlar(g, fill, s, seed + 47, 1.3, (x0, x1, z0) => x1 > cx - K_MOUTH_W - K_RING - 0.1 && x0 < cx + K_MOUTH_W + K_RING + 0.1 && z0 < K_MOUTH_TOP + K_RING - 0.2);
+        // Soot up the face over the mouth.
+        const sg = g.createRadialGradient(cx, K_MOUTH_TOP + 1.4, 0.4, cx, K_MOUTH_TOP + 1.4, 4.2);
+        sg.addColorStop(0, 'rgba(86, 72, 90, 0.34)');
+        sg.addColorStop(1, 'rgba(86, 72, 90, 0)');
+        g.fillStyle = sg;
+        g.fillRect(cx - 5, K_MOUTH_SPRING, 10, 8);
+        // The dressings: jamb stones and voussoirs, paler, round the mouth, and the keystone proud of them.
+        const dress = mix(fill, hex('#fbf0e2'), 0.62);
+        kilnMouthPath(g, cx, K_RING, 0);
+        g.fillStyle = css(dress);
+        g.fill();
+        g.strokeStyle = css(mix(fill, STONE_INK, 0.55), 0.75);
+        g.lineWidth = 0.18;
+        g.stroke();
+        // A gold line round the head of the voussoirs, as round the smelter's mouth, so the stoke mouth is the piece's focus.
+        kilnMouthPath(g, cx, K_RING - 0.16, 0);
+        g.strokeStyle = css(hex(RUNE_GOLD), 0.8);
+        g.lineWidth = 0.12;
+        g.stroke();
+        const kz = K_MOUTH_TOP;
+        g.beginPath();
+        g.moveTo(cx - 0.48, kz - 0.08);
+        g.lineTo(cx - 0.7, kz + K_RING + 0.25);
+        g.lineTo(cx + 0.7, kz + K_RING + 0.25);
+        g.lineTo(cx + 0.48, kz - 0.08);
+        g.closePath();
+        g.fillStyle = css(mix(dress, [255, 250, 240], 0.25));
+        g.fill();
+        g.strokeStyle = css(mix(fill, CREASE_INK, 0.55), 0.7);
+        g.stroke();
+        // A gold diamond inlaid in the keystone, as the runestones' gold, so the gold shows on it cold.
+        const kc = kz + (K_RING + 0.25) / 2;
+        g.beginPath();
+        g.moveTo(cx, kc + 0.5);
+        g.lineTo(cx + 0.34, kc);
+        g.lineTo(cx, kc - 0.5);
+        g.lineTo(cx - 0.34, kc);
+        g.closePath();
+        g.fillStyle = RUNE_GOLD;
+        g.fill();
+        g.strokeStyle = RUNE_CHANNEL;
+        g.lineWidth = 0.09;
+        g.stroke();
+        for (let j = 1; j < 7; j++) {
+          const a = Math.PI - (j / 7) * Math.PI;
+          if (Math.abs(a - Math.PI / 2) < 0.25) continue;
+          const [ax0, az0] = kilnArchAt(cx, a, 0), [ax1, az1] = kilnArchAt(cx, a, K_RING);
+          cut(g, dress, 0.12, () => { g.beginPath(); g.moveTo(ax0, az0); g.lineTo(ax1, az1); });
+        }
+        for (const sd of [-1, 1]) cut(g, dress, 0.12, () => { g.beginPath(); g.moveTo(cx + sd * K_MOUTH_W, K_MOUTH_SPRING); g.lineTo(cx + sd * (K_MOUTH_W + K_RING), K_MOUTH_SPRING); });
+        // A pale lip round the opening, so cold it still reads as a mouth and not a smudge.
+        kilnMouthPath(g, cx, 0.12, 0);
+        g.strokeStyle = css(mix(fill, [255, 250, 240], 0.7), 0.95);
+        g.lineWidth = 0.26;
+        g.stroke();
+        // The mouth: dark, a bed of ash on its floor, the jamb the eye sees into a step lighter.
+        kilnMouthPath(g, cx, 0, 0);
+        const ig = g.createLinearGradient(0, 0, 0, K_MOUTH_TOP);
+        ig.addColorStop(0, '#523e4c');
+        ig.addColorStop(1, '#30242f');
+        g.fillStyle = ig;
+        g.fill();
+        g.save();
+        kilnMouthPath(g, cx, 0, 0);
+        g.clip();
+        const look = dot(k.e.toward, s.a) / Math.max(1e-6, Math.hypot(k.e.toward[0], k.e.toward[1]));
+        const jx = look >= 0 ? cx - K_MOUTH_W : cx + K_MOUTH_W, dir = look >= 0 ? 1 : -1;
+        g.fillStyle = css(mix(fill, hex('#5a4e5e'), 0.62), 0.9);
+        g.fillRect(Math.min(jx, jx + dir * 0.7 * Math.abs(look)), -1, 0.7 * Math.abs(look), K_MOUTH_TOP + 1);
+        g.fillStyle = 'rgba(132, 120, 128, 0.85)';
+        g.fillRect(cx - K_MOUTH_W, -1, 2 * K_MOUTH_W, 1.4);
+        const A = rand(seed + 41);
+        for (let j = 0; j < 6; j++) {
+          g.fillStyle = A() < 0.5 ? 'rgba(66, 56, 66, 0.8)' : 'rgba(176, 166, 170, 0.8)';
+          g.beginPath();
+          g.ellipse(cx + (A() - 0.5) * 2 * (K_MOUTH_W - 0.4), 0.12 + A() * 0.28, 0.24 + A() * 0.22, 0.13, 0, 0, TAU);
+          g.fill();
+        }
+        g.restore();
+      },
+    };
+  });
+  const frontSide = front as unknown as Side;
+  // Over the drum and the dome where its front is seen; under them, and hidden by them, where not.
+  const porchPart: Part = { x: 0, y: py1, faces: porch, solid: true, tier: 6, order: (e) => (dot(frontSide.n, e.toward) > 0 ? 6 : 0.5) };
+  parts.push(porchPart);
+  /*
+   * Its roof a barrel vault of the dressings' stone, running back into the
+   * drum: a half-round laid along it, a hair proud of its walls, its front
+   * end a lunette with a gold keystone at its crown.
+   */
+  const vhx = PORCH_HX + 0.12;
+  const vault = (y: number): V3[] => [
+    [-vhx, y, PORCH_TOP], [vhx, y, PORCH_TOP],
+    ...Array.from({ length: 7 }, (_, j) => {
+      const th = ((j + 1) / 8) * Math.PI;
+      return [Math.cos(th) * vhx, y, PORCH_TOP + Math.sin(th) * VAULT_RISE] as V3;
+    }),
+  ];
+  const coping = prism([vault(py0), vault(py1 + 0.14)], HEARTH, (_k, _i, s) => ({
+    crease: 0.3,
+    paint: (g, k) => {
+      skin(g, k.fill, s.w, Math.max(0.5, s.h), seed + 150 + _i, 0.8);
+      // Its stones' joints along it.
+      cut(g, k.fill, 0.1, () => { g.beginPath(); g.moveTo(s.w * 0.5, -1); g.lineTo(s.w * 0.5, s.h + 1); });
+    },
+  }), {
+    crease: 0.55,
+    paint: (g, k) => {
+      // The lunette: a rim of voussoirs round its arch, a gold keystone at the crown, frame (0, 0) its middle, x across, y down.
+      // The frame's middle is the mean of the lunette's corners: so far up the rise.
+      const zc = -(PORCH_TOP + (VAULT_RISE * Array.from({ length: 7 }, (_, j) => Math.sin(((j + 1) / 8) * Math.PI)).reduce((m, v) => m + v, 0)) / 9);
+      g.save();
+      g.beginPath();
+      g.ellipse(0, -(PORCH_TOP) - zc, vhx - 0.25, VAULT_RISE - 0.22, 0, Math.PI, TAU);
+      g.strokeStyle = css(mix(k.fill, [255, 250, 238], 0.55), 0.9);
+      g.lineWidth = 0.14;
+      g.stroke();
+      g.restore();
+      const ky = -(PORCH_TOP + VAULT_RISE - 0.32) - zc;
+      g.beginPath();
+      g.moveTo(0, ky - 0.44);
+      g.lineTo(0.34, ky);
+      g.lineTo(0, ky + 0.44);
+      g.lineTo(-0.34, ky);
+      g.closePath();
+      g.fillStyle = RUNE_GOLD;
+      g.fill();
+      g.strokeStyle = RUNE_CHANNEL;
+      g.lineWidth = 0.08;
+      g.stroke();
+    },
+  });
+  // A base course along the porch's foot, as the plinth's edge and the drum's foot have, tying it to them.
+  {
+    // Laid before the porch and kept behind its front, so only its strips along the porch's sides show and never across the mouth.
+    const plinthCourse = prism([rect(0, pMid - 0.08, PORCH_HX + 0.16, pH - 0.08, K_SLAB_H), rect(0, pMid - 0.08, PORCH_HX + 0.16, pH - 0.08, K_SLAB_H + 0.42), rect(0, pMid - 0.08, PORCH_HX + 0.04, pH - 0.12, K_SLAB_H + 0.55)], HEARTH, () => ({ crease: 0.45 }));
+    parts.push({ x: 0, y: py1, faces: plinthCourse, solid: true, tier: 5.95, order: (e) => (dot(frontSide.n, e.toward) > 0 ? 5.95 : 0.52) });
+  }
+  // A cheek stone either side where it runs into the drum, standing a little proud of its sides, bonding it in.
+  for (const sd of [-1, 1]) {
+    const cx0 = sd * (PORCH_HX + 0.22), cy0 = py0 + 0.55;
+    const cheek = prism([rect(cx0, cy0, 0.3, 0.75, K_SLAB_H), rect(cx0, cy0, 0.3, 0.75, PORCH_TOP + 0.55), rect(cx0, cy0 - 0.05, 0.18, 0.6, PORCH_TOP + 0.8)], HEARTH, () => ({ crease: 0.45 }));
+    parts.push({ x: cx0, y: cy0, faces: cheek, solid: true, tier: 5.9, order: (e) => (dot(frontSide.n, e.toward) > 0 ? 5.9 : 0.55) });
+  }
+  const copingPart: Part = { x: 0, y: py1, faces: coping, solid: true, tier: 6.1, order: (e) => (dot(frontSide.n, e.toward) > 0 ? 6.1 : 0.6) };
+  parts.push(copingPart);
+
+  /* -- fired ware cooling on the plinth's side, away from the mouth: two pots and a bowl, bisque-pale; gone into the kiln while it fires a load -- */
+  const pots: Part[] = [];
+  const zp = K_SLAB_H;
+  for (const [x, y, k0, bowl] of [[6.4, 4.0, 1, false], [7.6, 1.6, 0.82, false], [7.9, 3.65, 0.7, true]] as Array<[number, number, number, boolean]>) {
+    const prof: Array<[number, number]> = bowl
+      ? [[0.45, 0], [0.95, 0.42], [1.05, 0.62]]
+      : [[0.5, 0], [0.92, 0.62], [0.8, 1.3], [0.4, 1.66], [0.52, 1.86]];
+    const n = 10;
+    const ringAt = (r: number, z: number): V3[] => Array.from({ length: n }, (_, j) => {
+      const a = (j / n) * TAU + 0.2;
+      return [x + Math.cos(a) * r * k0, y + Math.sin(a) * r * k0, zp + z * k0] as V3;
+    });
+    const top = prof[prof.length - 1];
+    const pot = prism(prof.map(([r, z]) => ringAt(r, z)), POT_STONE, () => ({ crease: 0.7 }), {
+      crease: 0.5,
+      paint: (g) => {
+        // Its mouth: the dark inside, the rim round it.
+        g.beginPath();
+        g.arc(0, 0, top[0] * k0 * 0.78, 0, TAU);
+        g.fillStyle = 'rgba(92, 70, 86, 0.85)';
+        g.fill();
+      },
+    });
+    // In front of the drum where the eye is on that side of it, behind it where not.
+    const dx = x, dy = y - K_Y;
+    const potPart: Part = { x, y, faces: pot, solid: true, tier: 7, order: (e) => (dx * e.toward[0] + dy * e.toward[1] > 0 ? 7 : 0.45) };
+    parts.push(potPart);
+    pots.push(potPart);
+  }
+
+  /* -- a few tufts of grass round the plinth's corners, and a flower at its back, kept back from its heat -- */
+  for (const [x0, y0, sd] of [[-10.0, 6.2, 1], [9.9, 7.0, 2], [-9.8, -9.8, 3], [9.3, -10.3, 4], [5.0, 9.3, 5], [-5.8, 9.1, 6], [-9.7, -2.2, 7]] as Array<[number, number, number]>) {
+    const x = x0 * KILN_K, y = y0 * KILN_K;
+    parts.push({ x, y, reach: [[x, y, 4]], draw: (g, e) => { const [px, py] = proj(e, [x, y, 0]); grassTuft(g, px, py, seed + sd * 31, 0.5); } });
+  }
+  for (const [x0, y0, sd, colour] of [[-8.6, -10.2, 8, 'cream'], [10.4, -4.0, 9, 'cream']] as Array<[number, number, number, string]>) {
+    const x = x0 * KILN_K, y = y0 * KILN_K;
+    parts.push({ x, y, reach: [[x, y, 4]], draw: (g, e) => { const [px, py] = proj(e, [x, y, 0.1]); flowerClump(g, px, py, colour, seed + sd * 31, 0.34); } });
+  }
+
+  // Cushions of moss on the plinth's front corner and its shady back one, as on the smelter's.
+  for (const [mx0, my0] of [[-7.4, 7.0], [-7.6, -8.4]]) {
+    const mx = mx0 * KILN_K, my = my0 * KILN_K;
+    parts.push({
+      x: mx, y: my, reach: [[mx, my, K_SLAB_H * KILN_K + 1]],
+      draw: (g, e) => {
+        const T = rand(seed * 9 + 2);
+        const across = Math.hypot(e.ux, e.uy);
+        const ps: Pad[] = [];
+        for (let j = 0; j < 10; j++) {
+          const [px, py] = proj(e, [mx + (T() - 0.5) * 2.8, my + (T() - 0.5) * 1.8, K_SLAB_H * KILN_K + 0.05 + T() * 0.15]);
+          const r = 0.38 + 0.32 * T();
+          ps.push([px, py, r * across, r * across * 0.6]);
+        }
+        drawPads(g, ps);
+      },
+    });
+  }
+  const turf: V3[] = Array.from({ length: 18 }, (_, i) => {
+    const a = (i / 18) * TAU, r = 1 + 0.06 * Math.sin(i * 2.7);
+    return [Math.cos(a) * 12.4 * KILN_K * r, K_PLINTH_Y * 0.5 * KILN_K + Math.sin(a) * 12.2 * KILN_K * r, 0] as V3;
+  });
+  const warmPlinth = slab.filter((f) => f.n[2] > 0.5 || f.n[1] > 0.5);
+  const warmPorch = [...porch.filter((f) => f.n[1] > 0.5), ...coping.filter((f) => f.n[1] > 0.5 || f.n[2] > 0.5)];
+  // The solids drawn up from the ground by `KILN_K`, frames and all, as an anvil's are, so what is painted on them grows with them.
+  const big = (q: V3): V3 => mul(q, KILN_K);
+  for (const p of parts) {
+    if (p.faces) for (const f of p.faces) {
+      f.pts = f.pts.map(big);
+      if (f.frame) f.frame = { o: big(f.frame.o), a: big(f.frame.a), b: big(f.frame.b) };
+    }
+    if (p.solid) { p.x *= KILN_K; p.y *= KILN_K; }
+  }
+  const grown = (s: Side): Side => ({ ...s, o: big(s.o), a: big(s.a), b: big(s.b), poly: s.poly.map(big) });
+  kilnModel = {
+    parts, slab: slabPart, drum: drumPart, band: bandPart, dome: domePart, porch: porchPart, coping: copingPart,
+    front: grown(frontSide), back: grown(back as unknown as Side), runes: runes.map((r) => ({ ...r, s: grown(r.s) })), spies: spies.map(grown), panels: panels.map(grown), warmPlinth, warmPorch, pots, warmDrum: drum.filter((f) => f.n[1] > 0.35), warmBand: band.filter((f) => f.n[1] > 0.35), flue: flue.map(big), turf,
+  };
+  return kilnModel;
+}
+
+/** The light in a kiln's mouth, vent, port and spy holes, its runes', and its own stone's after dark: everything that is laid over its bake as it burns. */
+interface KilnBake {
+  canvas: HTMLCanvasElement;
+  scale: number;
+  ox: number;
+  oy: number;
+  bounds: [number, number, number, number];
+  hit: [number, number, number, number];
+  /** The fire in the mouth, the flue and the draught port, in one: they breathe together. */
+  fire: Lamp | null;
+  /** The runes' lit grooves and the spy holes, in one: soft while it is only lit, all lit while it fires; and at the smallest scale the runes in a deeper gold. */
+  runeGold?: Lamp | null;
+  runes: Lamp | null;
+  /** The mouth's light on its plinth and porch and the runes' glow round them, as colour by day and light after dark. */
+  warm: Lamp | null;
+  /** The heart of the fire in the mouth, laid on as light while it fires, and the load of pots in it, against that. */
+  heart: Lamp | null;
+  ware: Lamp | null;
+  /** A white-gold flare at the flue and a tongue of flame out of it, while it fires. */
+  flare: Lamp;
+  tongue: Lamp;
+  /** After dark, over the night: the runes, the mouth, the vent, the port and the spy holes, and a bloom of heat round the mouth and vent, added as light. */
+  glow: Lamp | null;
+  glowRunes: Lamp | null;
+  /** Its stone in the night's colour, laid over it after dark so its own light does not lift it to white. */
+  shade: HTMLCanvasElement;
+  /** The same two with no ware on its plinth, as it is drawn while it fires (the ware is in it). */
+  bare: HTMLCanvasElement;
+  bareShade: HTMLCanvasElement;
+  /** The middle of the flue, on the screen at zoom one from the footprint's middle. */
+  flueAt: Pt;
+  area: number;
+}
+
+const kilnBakes = new Bakes<KilnBake>();
+
+function bakeKiln(rotation: number, scale: number): KilnBake {
+  const m = kilnOf();
+  const e = eyeOf(0, rotation);
+  const [x0, y0, x1, y1] = measure(m.parts, e, m.turf, 6);
+  const W = (x1 - x0) * scale, H = (y1 - y0) * scale;
+  const M0 = new DOMMatrix([scale, 0, 0, scale, -x0 * scale, -y0 * scale]);
+  const withWare = laid(m.parts, e);
+  // Its lights are kept off what stands in front of them as it fires, with the ware inside.
+  const order = withWare.filter((p) => !m.pots.includes(p));
+  const base = (ord: readonly Part[]): [HTMLCanvasElement, HTMLCanvasElement] => {
+    const [canvas, g] = sheetOf(W, H, M0);
+    /* -- its shadow and the beaten ground round its plinth -- */
+    polyPath(g, e, m.turf);
+    g.fillStyle = 'rgba(150, 138, 120, 0.12)';
+    g.fill();
+    groundShade(g, e, rect(0, K_PLINTH_Y * KILN_K, K_PLINTH_H * KILN_K, K_PLINTH_H * KILN_K, 0), 2, 1, true);
+    layParts(g, e, ord, new Set([m.slab, m.band, m.coping, m.parts.find((p) => p.tier === 5)!, ...m.pots]));
+    /* -- the night it keeps: its solids whole in the night's colour, less what grows in front -- */
+    const [shade, sg] = sheetOf(W, H, M0);
+    sg.lineJoin = 'round';
+    for (const p of ord) {
+      if (p.solid) {
+        sg.globalCompositeOperation = 'source-over';
+        sg.fillStyle = sg.strokeStyle = NIGHT_STONE;
+        sg.lineWidth = INK * 2;
+        for (const f of seenFaces(e, p)) { polyPath(sg, e, f.pts); sg.fill(); sg.stroke(); }
+      } else if (p.draw) {
+        sg.globalCompositeOperation = 'destination-out';
+        p.draw(sg, e);
+      }
+    }
+    sg.globalCompositeOperation = 'source-over';
+    return [canvas, shade];
+  };
+  const [canvas, shade] = base(withWare);
+  const [bare, bareShade] = base(order);
+
+  /* -- the mouth alight: the fire in it, its heart, and its light on its own plinth and porch -- */
+  const fs = m.front;
+  const seesFront = dot(fs.n, e.toward) / Math.hypot(...e.toward) > 0.12;
+  const keep = (l: Lamp, from: Part | null): void => {
+    const lg = l.canvas.getContext('2d') as Ctx;
+    lg.setTransform(scale, 0, 0, scale, -l.box[0] * scale, -l.box[1] * scale);
+    lessInFront(lg, e, order, from);
+  };
+  let mouth: Lamp | null = null, heart: Lamp | null = null, ware: Lamp | null = null, mouthAt: Pt | null = null, mouthTop: Pt | null = null, mouthHalf = 0;
+  const spills: Lamp[] = [], spillW: number[] = [];
+  if (seesFront) {
+    const M = sideM(e, fs);
+    const cx = fs.w / 2;
+    const corners: V3[] = [[cx - K_MOUTH_W, 0], [cx + K_MOUTH_W, 0], [cx + K_MOUTH_W, K_MOUTH_TOP], [cx - K_MOUTH_W, K_MOUTH_TOP]].map(([x, z]) => at(fs.o, [x, fs.a], [z, fs.b]));
+    const box = boxOf(e, corners, 1);
+    const inMouth = (h: Ctx): void => {
+      h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
+      kilnMouthPath(h, cx, 0, 0);
+      h.clip();
+    };
+    mouth = lamp(box, scale, (h) => {
+      h.save();
+      inMouth(h);
+      const gr = h.createRadialGradient(cx, 0.3, 0.15, cx, 0.7, K_MOUTH_W * 1.1);
+      for (const [k, c] of FIRE) gr.addColorStop(k, c);
+      h.fillStyle = gr;
+      h.fillRect(cx - K_MOUTH_W - 1, -1, 2 * K_MOUTH_W + 2, K_MOUTH_TOP + 2);
+      const T = rand(913);
+      for (let j = 0; j < 3; j++) {
+        const fx = cx + (j - 1) * 1.15 + (T() - 0.5) * 0.3, top = 1.2 + T() * 1.0, wd = 0.5 + T() * 0.25;
+        h.beginPath();
+        h.moveTo(fx - wd, 0.3);
+        h.quadraticCurveTo(fx - wd * 0.9, top * 0.55, fx + (T() - 0.5) * 0.4, top);
+        h.quadraticCurveTo(fx + wd * 0.9, top * 0.55, fx + wd, 0.3);
+        h.closePath();
+        h.fillStyle = 'rgba(255, 236, 170, 0.55)';
+        h.fill();
+      }
+      for (let j = 0; j < 9; j++) {
+        h.beginPath();
+        h.ellipse(cx + (T() - 0.5) * 2 * (K_MOUTH_W - 0.3), 0.2 + T() * 0.4, 0.22 + T() * 0.22, 0.14, 0, 0, TAU);
+        h.fillStyle = T() < 0.5 ? 'rgba(255, 244, 196, 0.95)' : 'rgba(234, 110, 60, 0.95)';
+        h.fill();
+      }
+      // A dark lip round the inside of the arch, so the fire keeps its shape against the lit porch.
+      kilnMouthPath(h, cx, 0, 0);
+      h.strokeStyle = 'rgba(92, 52, 64, 0.8)';
+      h.lineWidth = 0.32;
+      h.stroke();
+      h.restore();
+    });
+    heart = lamp(box, scale, (h) => {
+      h.save();
+      inMouth(h);
+      // A white-hot core low in the mouth, falling off before the jambs so the orange of the fire still rings it.
+      const gr = h.createRadialGradient(cx, 0.6, 0, cx, 0.6, K_MOUTH_W * 0.95);
+      gr.addColorStop(0, 'rgba(255, 250, 230, 1)');
+      gr.addColorStop(0.45, 'rgba(255, 214, 150, 0.55)');
+      gr.addColorStop(1, 'rgba(255, 140, 70, 0)');
+      h.fillStyle = gr;
+      h.fillRect(cx - K_MOUTH_W - 1, -1, 2 * K_MOUTH_W + 2, K_MOUTH_TOP + 2);
+      h.restore();
+    });
+    // The load: pots stood on the floor of the chamber, dark against the fire behind them and lit along their rims.
+    // Not at the smallest scale, where its few pixels would muddy the fire into a cool pink instead of showing a load.
+    ware = scale <= 1 ? null : lamp(box, scale, (h) => {
+      h.save();
+      inMouth(h);
+      for (const [dx, ht, wd] of [[-1.15, 1.05, 0.48], [0.1, 1.35, 0.6], [1.2, 0.95, 0.44]] as Array<[number, number, number]>) {
+        const x = cx + dx;
+        // Belly, shoulder, a short neck and a flared rim.
+        const pot = (): void => {
+          h.beginPath();
+          h.moveTo(x - wd * 0.5, 0);
+          h.bezierCurveTo(x - wd * 1.2, ht * 0.25, x - wd * 1.15, ht * 0.62, x - wd * 0.42, ht * 0.78);
+          h.lineTo(x - wd * 0.36, ht * 0.9);
+          h.lineTo(x - wd * 0.58, ht);
+          h.lineTo(x + wd * 0.58, ht);
+          h.lineTo(x + wd * 0.36, ht * 0.9);
+          h.lineTo(x + wd * 0.42, ht * 0.78);
+          h.bezierCurveTo(x + wd * 1.15, ht * 0.62, x + wd * 1.2, ht * 0.25, x + wd * 0.5, 0);
+          h.closePath();
+        };
+        pot();
+        h.fillStyle = 'rgba(64, 38, 54, 0.95)';
+        h.fill();
+        // The fire behind it catching its outline.
+        h.strokeStyle = 'rgba(255, 226, 160, 0.95)';
+        h.lineWidth = 0.13;
+        h.stroke();
+      }
+      h.restore();
+    });
+    keep(mouth, m.porch);
+    keep(heart, m.porch);
+    if (ware) keep(ware, m.porch);
+    mouthAt = proj(e, at(fs.o, [cx, fs.a], [0.3, fs.b]));
+    mouthTop = proj(e, at(fs.o, [cx, fs.a], [K_MOUTH_TOP, fs.b]));
+    mouthHalf = Math.hypot(...proj(e, mul(fs.a, K_MOUTH_W)));
+    // Its light out over the hearth on its plinth, and up the porch's dressings, warmest at the mouth; each kept off what stands in front of it.
+    const reach = 14;
+    for (const [faces, from, wgt] of [[m.warmPlinth, m.slab, 1], [m.warmDrum, m.drum, 0.75], [m.warmBand, m.band, 0.6], [m.warmPorch, m.coping, 0.2]] as Array<[Face[], Part, number]>) {
+      const sbox = boxOf(e, faces.flatMap((f) => f.pts), 1);
+      const at0 = mouthAt;
+      const l = lamp([Math.max(sbox[0], at0[0] - reach * 1.6), Math.max(sbox[1], at0[1] - reach * 1.4), Math.min(sbox[2], at0[0] + reach * 1.6), Math.min(sbox[3], at0[1] + reach * 0.9)], scale, (h) => {
+        h.save();
+        h.beginPath();
+        for (const f of faces) {
+          if (dot(f.n, e.toward) <= 1e-6) continue;
+          f.pts.map((q) => proj(e, [q[0], q[1], Math.max(0, q[2])])).forEach(([x, y], i) => (i ? h.lineTo(x, y) : h.moveTo(x, y)));
+          h.closePath();
+        }
+        h.clip();
+        h.translate(at0[0], at0[1]);
+        h.scale(1.45, 1);
+        const gr = h.createRadialGradient(0, 0, 0, 0, 0, reach);
+        gr.addColorStop(0, 'rgba(255, 196, 120, 0.85)');
+        gr.addColorStop(0.22, 'rgba(255, 160, 96, 0.4)');
+        gr.addColorStop(0.6, 'rgba(255, 150, 90, 0.1)');
+        gr.addColorStop(1, 'rgba(255, 150, 90, 0)');
+        h.fillStyle = gr;
+        h.fillRect(-reach, -reach, 2 * reach, 2 * reach);
+        h.restore();
+        h.save();
+        h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
+        kilnMouthPath(h, cx, 0, 0);
+        h.globalCompositeOperation = 'destination-out';
+        h.fill();
+        h.restore();
+      });
+      keep(l, from);
+      spills.push(l);
+      spillW.push(wgt);
+    }
+  } else {
+    // The mouth turned away, its light still out over the hearth in front of it, kept off what stands before that.
+    const hearth = proj(e, at(fs.o, [fs.w / 2, fs.a], [0.3, fs.b], [1.6 * KILN_K, [0, 1, 0]]));
+    const reach = 12;
+    const sbox = boxOf(e, m.warmPlinth.flatMap((f) => f.pts), 1);
+    const l = lamp([Math.max(sbox[0], hearth[0] - reach * 1.6), Math.max(sbox[1], hearth[1] - reach), Math.min(sbox[2], hearth[0] + reach * 1.6), Math.min(sbox[3], hearth[1] + reach * 0.9)], scale, (h) => {
+      h.save();
+      h.beginPath();
+      for (const f of m.warmPlinth) {
+        if (dot(f.n, e.toward) <= 1e-6) continue;
+        f.pts.map((q) => proj(e, [q[0], q[1], Math.max(0, q[2])])).forEach(([x, y], i) => (i ? h.lineTo(x, y) : h.moveTo(x, y)));
+        h.closePath();
+      }
+      h.clip();
+      h.translate(hearth[0], hearth[1]);
+      h.scale(1.45, 1);
+      const gr = h.createRadialGradient(0, 0, 0, 0, 0, reach);
+      gr.addColorStop(0, 'rgba(255, 186, 110, 0.7)');
+      gr.addColorStop(0.3, 'rgba(255, 160, 96, 0.3)');
+      gr.addColorStop(1, 'rgba(255, 150, 90, 0)');
+      h.fillStyle = gr;
+      h.fillRect(-reach, -reach, 2 * reach, 2 * reach);
+      h.restore();
+    });
+    keep(l, m.slab);
+    spills.push(l);
+    spillW.push(1);
+  }
+
+  /* -- the draught port alight, where the back is seen -- */
+  let port: Lamp | null = null;
+  if (dot(m.back.n, e.toward) > 1e-6) {
+    const bs = m.back, M = sideM(e, bs), px = bs.w / 2;
+    const corners: V3[] = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => at(bs.o, [px + u * K_PORT_R, bs.a], [K_PORT_Z + v * K_PORT_R, bs.b]));
+    port = lamp(boxOf(e, corners, 1), scale, (h) => {
+      h.save();
+      h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
+      h.beginPath();
+      h.arc(px, K_PORT_Z, K_PORT_R, 0, TAU);
+      const gr = h.createRadialGradient(px, K_PORT_Z - 0.15, 0, px, K_PORT_Z, K_PORT_R);
+      gr.addColorStop(0, '#fff0c0');
+      gr.addColorStop(0.45, '#ffc678');
+      gr.addColorStop(1, '#e8945e');
+      h.fillStyle = gr;
+      h.fill();
+      h.restore();
+    });
+    keep(port, m.drum);
+  }
+
+  /* -- the spy holes alight, where their sides are seen -- */
+  const spyLamps: Lamp[] = [];
+  for (const ss of m.spies) {
+    // Not seen all but edge on, where its light would be a sliver at the dome's rim.
+    if (dot(ss.n, e.toward) / Math.hypot(...e.toward) < 0.3) continue;
+    const M = sideM(e, ss), px = ss.w / 2, pz = ss.h / 2;
+    const corners: V3[] = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => at(ss.o, [px + u * SPY_R * SPY_RING, ss.a], [pz + v * SPY_R, ss.b]));
+    const l = lamp(boxOf(e, corners, 1), scale, (h) => {
+      h.save();
+      h.transform(M.a, M.b, M.c, M.d, M.e, M.f);
+      h.beginPath();
+      h.ellipse(px, pz, SPY_R, SPY_R * 0.86, 0, 0, TAU);
+      const gr = h.createRadialGradient(px, pz, 0, px, pz, SPY_R);
+      gr.addColorStop(0, '#fff4cc');
+      gr.addColorStop(0.5, '#ffc070');
+      gr.addColorStop(1, '#e8945e');
+      h.fillStyle = gr;
+      h.fill();
+      h.restore();
+    });
+    keep(l, m.dome);
+    spyLamps.push(l);
+  }
+
+  /* -- the flue alight -- */
+  const flueBox = boxOf(e, m.flue, 3);
+  const flue = lamp(flueBox, scale, (h) => {
+    polyPath(h, e, m.flue);
+    const [fx, fy] = proj(e, centre(m.flue));
+    const gr = h.createRadialGradient(fx, fy, 0, fx, fy, Math.max(flueBox[2] - flueBox[0], flueBox[3] - flueBox[1]) * 0.55);
+    gr.addColorStop(0, '#ffe2a8');
+    gr.addColorStop(0.4, '#ffa95e');
+    gr.addColorStop(1, '#c4503e');
+    h.fillStyle = gr;
+    h.fill();
+    // The inner wall of the flue a dark ring inside its lip, so it reads as fire down a hole.
+    polyPath(h, e, m.flue);
+    h.strokeStyle = 'rgba(110, 52, 58, 0.7)';
+    h.lineWidth = 0.9;
+    h.stroke();
+    // And a warm ring round it on the rim, so a lit vent shows at zoom one.
+    const c0 = centre(m.flue);
+    polyPath(h, e, m.flue.map((q) => add(c0, mul(sub(q, c0), (FLUE_R + 0.3) / FLUE_R))));
+    h.strokeStyle = 'rgba(255, 188, 104, 0.95)';
+    h.lineWidth = 1.5;
+    h.stroke();
+  });
+  /*
+   * The flue as it is added to the night: redder, as light added over the
+   * night's blue-green comes up yellow-green from a yellow, and its inner wall
+   * dark round it, so it reads as fire down a hole and not as a lemon lid.
+   */
+  const flueNight = lamp(flueBox, scale, (h) => {
+    polyPath(h, e, m.flue);
+    const [fx, fy] = proj(e, centre(m.flue));
+    const gr = h.createRadialGradient(fx, fy, 0, fx, fy, Math.max(flueBox[2] - flueBox[0], flueBox[3] - flueBox[1]) * 0.5);
+    gr.addColorStop(0, 'rgb(255, 170, 110)');
+    gr.addColorStop(0.5, 'rgb(236, 104, 60)');
+    gr.addColorStop(1, 'rgb(120, 40, 40)');
+    h.fillStyle = gr;
+    h.fill();
+  });
+  const flueAt = proj(e, centre(m.flue));
+  // The heat of it on the dome round the vent, laid with the mouth's light on its stone.
+  {
+    const reach = 11;
+    const domeSeen = seenFaces(e, m.dome);
+    const l = lamp([flueAt[0] - reach * 1.4, flueAt[1] - 2, flueAt[0] + reach * 1.4, flueAt[1] + reach * 1.2], scale, (h) => {
+      h.save();
+      h.beginPath();
+      for (const f of domeSeen) f.pts.forEach((q, i) => { const [x, y] = proj(e, q); if (i) h.lineTo(x, y); else h.moveTo(x, y); });
+      h.clip('nonzero');
+      h.translate(flueAt[0], flueAt[1] + 3);
+      h.scale(1.4, 1);
+      const gr = h.createRadialGradient(0, 0, 0, 0, 0, reach);
+      gr.addColorStop(0, 'rgba(255, 190, 120, 0.55)');
+      gr.addColorStop(0.45, 'rgba(255, 170, 110, 0.18)');
+      gr.addColorStop(1, 'rgba(255, 160, 100, 0)');
+      h.fillStyle = gr;
+      h.fillRect(-reach, -reach, 2 * reach, 2 * reach);
+      h.restore();
+    });
+    keep(l, m.dome);
+    spills.push(l);
+    spillW.push(1.2);
+  }
+
+  /* -- the runes' light, on the sides of the band the eye sees, and the sun over the mouth -- */
+  const runes: Array<{ gl: Glow; seen: number }> = [];
+  // Kept to the solid it is cut in as a whole, not to its one side: a side of it is narrower than a rune's glow, and would square it off.
+  const keepTo = (c: HTMLCanvasElement, box: readonly number[], from: Part): void => {
+    const h = c.getContext('2d') as Ctx;
+    h.setTransform(scale, 0, 0, scale, -box[0] * scale, -box[1] * scale);
+    h.globalCompositeOperation = 'destination-in';
+    h.beginPath();
+    for (const f of seenFaces(e, from)) f.pts.forEach((q, i) => { const [x, y] = proj(e, q); if (i) h.lineTo(x, y); else h.moveTo(x, y); });
+    h.fill('nonzero');
+    h.globalCompositeOperation = 'source-over';
+    lessInFront(h, e, order, from);
+  };
+  const layRune = (s: Side, glyph: string, x: number, z: number, size: number, w: number, from: Part, i: number): void => {
+    const cos = dot(s.n, e.toward) / Math.hypot(...e.toward);
+    if (cos < GLOW_SEEN) return;
+    const fade = Math.min(1, (cos - GLOW_SEEN) / GLOW_FULL);
+    const gl = bakeRune(sideM(e, s), { glyph, x, z, s: size, i, w: Math.max(w, 1.1 / scale), inner: RUNE_INNER, mid: RUNE_MID, edge: RUNE_CHANNEL }, scale);
+    for (const c of [gl.core, gl.halo, gl.dusk]) keepTo(c, gl.box, from);
+    runes.push({ gl, seen: fade * fade * (3 - 2 * fade) });
+  };
+  m.runes.forEach((r, j) => layRune(r.s, r.glyph, r.s.w / 2, r.s.h / 2, K_RUNE_S, K_RUNE_W, m.band, j));
+  m.panels.forEach((ps, j) => layRune(ps, PANEL_RUNE, ps.w / 2, K_PANEL_RUNE_Z, K_PANEL_S, 0.36, m.drum, 10 + j));
+
+  /* -- a bloom of heat round the mouth and the vent, a flare at the flue, and a tongue of flame out of it -- */
+  const bloom = (p: Pt, r: number, c0: string, c1: string): Lamp => lamp([p[0] - r, p[1] - r, p[0] + r, p[1] + r], scale, (h) => {
+    const gr = h.createRadialGradient(p[0], p[1], 0, p[0], p[1], r);
+    gr.addColorStop(0, c0);
+    gr.addColorStop(0.45, c1);
+    gr.addColorStop(1, 'rgba(255, 150, 80, 0)');
+    h.fillStyle = gr;
+    h.fillRect(p[0] - r, p[1] - r, 2 * r, 2 * r);
+  });
+  // A tongue of flame rising from `p`, `w` either side and `ht` high, in pixels at zoom one.
+  function lick(p: Pt, w: number, ht: number): Lamp {
+    return lamp([p[0] - w - 1, p[1] - ht - 1, p[0] + w + 1, p[1] + 1.5], scale, (h) => {
+      for (const [dx, k, top] of [[0, 1, ht], [-w * 0.45, 0.55, ht * 0.7], [w * 0.5, 0.5, ht * 0.6]] as Array<[number, number, number]>) {
+        const x = p[0] + dx, ww = w * k;
+        h.beginPath();
+        h.moveTo(x - ww, p[1] + 0.8);
+        h.bezierCurveTo(x - ww * 1.05, p[1] - top * 0.45, x - ww * 0.4, p[1] - top * 0.85, x, p[1] - top);
+        h.bezierCurveTo(x + ww * 0.4, p[1] - top * 0.85, x + ww * 1.05, p[1] - top * 0.45, x + ww, p[1] + 0.8);
+        h.closePath();
+        const gr = h.createLinearGradient(0, p[1] + 0.8, 0, p[1] - top);
+        gr.addColorStop(0, 'rgba(255, 244, 206, 0.85)');
+        gr.addColorStop(0.5, 'rgba(255, 186, 96, 0.7)');
+        gr.addColorStop(1, 'rgba(240, 120, 70, 0)');
+        h.fillStyle = gr;
+        h.fill();
+      }
+    });
+  }
+  const blooms = [bloom([flueAt[0], flueAt[1] - 2], 9, 'rgba(255, 196, 120, 1)', 'rgba(255, 150, 80, 0.35)'), ...(mouthAt ? [bloom([mouthAt[0], mouthAt[1] - 3], 12, 'rgba(255, 196, 120, 1)', 'rgba(255, 150, 80, 0.35)')] : [])];
+  // And a flare at the mouth with it, firing.
+  const flare = composed([
+    { c: bloom([flueAt[0], flueAt[1] - 2], 13, 'rgba(255, 252, 232, 1)', 'rgba(255, 214, 140, 0.6)'), a: 1 },
+    // And white at the lip of the collar itself.
+    { c: bloom([flueAt[0], flueAt[1] - 1], 4, 'rgba(255, 255, 250, 1)', 'rgba(255, 250, 230, 0.95)'), a: 1 },
+    ...(mouthAt ? [{ c: bloom([mouthAt[0], mouthAt[1] - 2.5], 6, 'rgba(255, 236, 190, 1)', 'rgba(255, 170, 100, 0.45)'), a: 0.35 }] : []),
+    // And flame licking out of the head of the mouth, up the porch's face.
+    ...(mouthTop && scale > 1 ? [{ c: lick(mouthTop, mouthHalf * 0.5, 5), a: 0.45 }] : []),
+  ].map(({ c, a }) => ({ c: c.canvas, box: c.box, a })), scale)!;
+  // The tongue: as wide as the flue's mouth, two soft lobes rising to a rounded crown, gold at its root.
+  const fw = (flueBox[2] - flueBox[0] - 4) * 0.5, TH = 7;
+  const tongue = lamp([flueAt[0] - fw - 1, flueAt[1] - TH - 1, flueAt[0] + fw + 1, flueAt[1] + 1.5], scale, (h) => {
+    const [fx, fy] = flueAt;
+    const lobe = (x: number, w: number, top: number, a: number): void => {
+      h.beginPath();
+      h.moveTo(x - w, fy + 0.6);
+      h.bezierCurveTo(x - w * 1.05, fy - top * 0.45, x - w * 0.45, fy - top * 0.85, x, fy - top);
+      h.bezierCurveTo(x + w * 0.45, fy - top * 0.85, x + w * 1.05, fy - top * 0.45, x + w, fy + 0.6);
+      h.closePath();
+      const gr = h.createLinearGradient(0, fy + 0.6, 0, fy - top);
+      gr.addColorStop(0, `rgba(255, 246, 214, ${a})`);
+      gr.addColorStop(0.5, `rgba(255, 196, 104, ${a * 0.85})`);
+      gr.addColorStop(1, 'rgba(240, 120, 70, 0)');
+      h.fillStyle = gr;
+      h.fill();
+    };
+    lobe(fx, fw, TH, 0.75);
+    lobe(fx - fw * 0.3, fw * 0.55, TH * 0.8, 0.8);
+    lobe(fx + fw * 0.32, fw * 0.5, TH * 0.65, 0.8);
+  });
+
+  /* -- laid together, each set as a frame lays it -- */
+  const lit = [mouth, flue, port].filter((l): l is Lamp => !!l);
+  const fire = composed(lit.map((l) => ({ c: l.canvas, box: l.box, a: 1 })), scale);
+  const runeLamp = composed([...runes.map(({ gl, seen }) => ({ c: gl.core, box: gl.box, a: seen })), ...spyLamps.map((l) => ({ c: l.canvas, box: l.box, a: 1 }))], scale);
+  /*
+   * At the smallest scale, the same in a deeper gold all through: there a
+   * rune's white heart and gold edge run together into cream on cream, and a
+   * lit rune by day must read as gold.
+   */
+  let runeGold: Lamp | null = null;
+  if (scale <= 1) {
+    runeGold = composed(runes.map(({ gl, seen }) => ({ c: gl.core, box: gl.box, a: seen })), scale);
+    if (runeGold) {
+      const h = runeGold.canvas.getContext('2d') as Ctx;
+      h.globalCompositeOperation = 'source-in';
+      h.fillStyle = '#f2b450';
+      h.fillRect(0, 0, runeGold.canvas.width, runeGold.canvas.height);
+    }
+  }
+  const warm = composed([...spills.map((l, j) => ({ c: l.canvas, box: l.box, a: spillW[j] })), ...runes.map(({ gl, seen }) => ({ c: gl.halo, box: gl.box, a: seen * gl.square * 0.35 }))], scale);
+  const glow = composed([
+    // The vent's bloom a little under the mouth's, so the two read as one fire.
+    ...blooms.map((l, j) => ({ c: l.canvas, box: l.box, a: (j === 0 ? 0.22 : 0.3) * GLOW_GAIN, op: 'lighter' as const })),
+    // The mouth a little less than the vent and port, so at night it keeps its arch and its fire's colours and does not go to white.
+    ...lit.map((l) => (l === flue ? flueNight : l)).map((l) => ({ c: l.canvas, box: l.box, a: (l === mouth ? 0.36 : 0.55) * GLOW_GAIN, op: 'lighter' as const })),
+  ], scale);
+  // The runes and spy holes after dark apart from the fire, so that only lit they can stay dim while the mouth and vent burn.
+  const glowRunes = composed([
+    ...spyLamps.map((l) => ({ c: l.canvas, box: l.box, a: 0.55 * GLOW_GAIN, op: 'lighter' as const })),
+    ...runes.map(({ gl, seen }) => ({ c: gl.core, box: gl.box, a: seen * 0.35 * GLOW_GAIN, op: 'lighter' as const })),
+  ], scale);
+  return {
+    canvas, scale, ox: -x0 * scale, oy: -y0 * scale, bounds: [x0, y0, x1, y1], hit: kilnHitOf(m.parts, e),
+    fire, runes: runeLamp, runeGold, warm, heart, ware, flare, tongue, glow, glowRunes, shade, bare, bareShade, flueAt,
+    area: [canvas, shade, bare, bareShade, fire?.canvas, runeLamp?.canvas, runeGold?.canvas, warm?.canvas, heart?.canvas, ware?.canvas, flare.canvas, tongue.canvas, glow?.canvas, glowRunes?.canvas].reduce((n, c) => n + (c ? c.width * c.height : 0), 0),
+  };
+}
+
+/** What it is clicked by: the box round its solids, as a smelter's, and round the grass and flowers at its plinth's foot, so it takes everything drawn of it. */
+function kilnHitOf(parts: readonly Part[], e: Eye): [number, number, number, number] {
+  const [l, t, r, bt] = hitOf(parts, e);
+  const flora = parts.filter((p) => !p.solid && p.reach).flatMap((p) => p.reach!.flatMap((q) => [q, [q[0], q[1], 0] as V3]));
+  const [fl, ft, fr, fb] = boxOf(e, flora, 2);
+  return [Math.floor(Math.min(l, fl)), Math.floor(Math.min(t, ft)), Math.ceil(Math.max(r, fr)), Math.ceil(Math.max(bt, fb))];
+}
+
+function kilnBaked(rotation: number, zoom: number): KilnBake {
+  const scale = scaleFor(zoom);
+  const rot = ((rotation % 8) + 8) % 8;
+  return kilnBakes.get(`${rot}|${scale}`, () => bakeKiln(rot, scale));
+}
+
+/** How hot it is drawn: nothing cold, more firing a load than only lit. */
+const kilnHeat = (look: KilnLook): number => (look.lit ? (look.firing ? 1 : 0.75) : 0);
+/**
+ * How far into its breath its fire is at `t`, nought to one, with a flicker
+ * over it: slower than a smelter's (`fireBreath`), a kiln being a slow fire,
+ * and twice as quick firing a load.
+ */
+const kilnBreath = (t: number, firing: boolean): number => {
+  const p = 0.5 + 0.5 * Math.sin((t / (firing ? 1.4 : 3.2)) * TAU + 0.9);
+  const f = 0.5 + 0.5 * (0.6 * Math.sin(t * (firing ? 13.7 : 9.1) + 0.4) + 0.4 * Math.sin(t * 5.3 + 2.1));
+  return Math.max(0, Math.min(1, (firing ? 0.6 : 0.75) * p + (firing ? 0.4 : 0.25) * f));
+};
+
+/**
+ * Draw a kiln whose footprint's middle is at (sx, sy) on the screen, from
+ * viewpoint `rotation`, at `t` seconds, under a night `night` dark: its
+ * bake, and alight the fire in its mouth, vent and port, its runes and spy
+ * holes and its light on its own stone; and unless `live` is false, the flare
+ * and the tongue of flame at its vent while it fires (`drawKilnLive`). Its
+ * glow over the night is laid after (`drawKilnNight`). Returns what it covers
+ * from (sx, sy) in screen pixels: left, top, right, bottom.
+ */
+export function drawKiln(ctx: Ctx, sx: number, sy: number, zoom: number, rotation: number, look: KilnLook, night = 0, t = performance.now() / 1000, live = true): [number, number, number, number] {
+  const b = kilnBaked(rotation, zoom);
+  const k = zoom / b.scale;
+  const X = sx - b.ox * k, Y = sy - b.oy * k, Wd = b.canvas.width * k, Ht = b.canvas.height * k;
+  ctx.drawImage(look.lit && look.firing ? b.bare : b.canvas, X, Y, Wd, Ht);
+  const heat = kilnHeat(look);
+  if (heat <= 0 && b.runes) {
+    // Cold, the gold still in its runes' grooves, faint, as a runestone's by day.
+    const wasA = ctx.globalAlpha;
+    ctx.globalAlpha = wasA * 0.4;
+    lay(ctx, b.runes, sx, sy, zoom);
+    ctx.globalAlpha = wasA;
+  }
+  if (heat > 0) {
+    const was = ctx.globalCompositeOperation, wasA = ctx.globalAlpha;
+    const p = kilnBreath(t, look.firing);
+    if (night > 0.02) {
+      // As much of the night kept as its own light takes off: less while it is only lit and its light is low (`KILN_GLOW`).
+      ctx.globalAlpha = wasA * night * 0.42 * (look.firing ? 1 : KILN_GLOW / KILN_GLOW_FIRING) ** 2;
+      ctx.drawImage(look.firing ? b.bareShade : b.shade, X, Y, Wd, Ht);
+    }
+    if (b.warm) {
+      ctx.globalAlpha = wasA * heat * heat * ((1 - night) * ((look.firing ? 0.72 : 0.4) + 0.2 * p) + night * (0.8 + 0.2 * p));
+      lay(ctx, b.warm, sx, sy, zoom);
+    }
+    if (b.fire) {
+      // Only lit, a bed of embers a little dulled; firing a load, the whole of it.
+      ctx.globalAlpha = wasA * Math.min(1, (look.firing ? 0.92 : 0.94) + 0.08 * p);
+      lay(ctx, b.fire, sx, sy, zoom);
+    }
+    if (b.ware && look.firing) {
+      ctx.globalAlpha = wasA;
+      lay(ctx, b.ware, sx, sy, zoom);
+    }
+    if (b.runes) {
+      // Only lit, its runes and spy holes warm in their grooves; firing, every one of them lit.
+      ctx.globalAlpha = wasA * (look.firing ? 0.92 + 0.08 * p : 0.38 + 0.08 * p);
+      lay(ctx, b.runes, sx, sy, zoom);
+    }
+    if (b.fire && b.scale <= 1 && look.firing) {
+      // At the smallest scale its fire laid again as light, hotter and yellower, not whitened: a few pixels of white read pale.
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = wasA * (0.7 + 0.2 * p);
+      lay(ctx, b.fire, sx, sy, zoom);
+    }
+    if (b.heart && (b.scale > 1 || !look.firing)) {
+      // Its heart: a glow at the bed while only lit, white-hot firing.
+      ctx.globalCompositeOperation = 'lighter';
+      // At the smallest scale the mouth is a few pixels: its core kept to a spark in it, so the orange of the fire still shows round it.
+      ctx.globalAlpha = wasA * (look.firing ? 0.8 + 0.2 * p : 0.5 + 0.1 * p) * (1 - 0.45 * night) * (b.scale > 1 ? 1 : 0.5);
+      lay(ctx, b.heart, sx, sy, zoom);
+    }
+    if (look.firing) {
+      // Firing, its runes lit as light over their gold, so they burn even by day.
+      ctx.globalCompositeOperation = 'lighter';
+      // Not at the smallest scale, where it would run a rune's strokes together into a block of light.
+      if (b.runes && b.scale > 1) {
+        ctx.globalAlpha = wasA * (0.18 + 0.08 * p);
+        lay(ctx, b.runes, sx, sy, zoom);
+      } else if (b.runeGold) {
+        // There its runes laid again in a deeper gold, so three or four show as gold pixels by day, not cream.
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = wasA * (0.75 - 0.5 * night);
+        lay(ctx, b.runeGold, sx, sy, zoom);
+      }
+    }
+    ctx.globalAlpha = wasA;
+    ctx.globalCompositeOperation = was;
+  }
+  if (live) drawKilnLive(ctx, sx, sy, zoom, rotation, look, night, t);
+  const [l, tp, r, bt] = b.bounds;
+  return [l * zoom, tp * zoom, r * zoom, bt * zoom];
+}
+
+/** Embers up out of the vent while it fires: how many, the seconds each takes to rise and go out, and how high it gets in pixels at zoom one. */
+const EMBERS = 7;
+const EMBER_RISE = 1.6;
+const EMBER_HIGH = 32;
+
+/**
+ * What of a kiln moves over its bake, outside the pointer's ring: firing a
+ * load, a white-gold flare at its flue, a tongue of flame licking up out of
+ * it, and a few embers. Only lit, nothing: its fire and runes breathe under
+ * the ring.
+ */
+export function drawKilnLive(ctx: Ctx, sx: number, sy: number, zoom: number, rotation: number, look: KilnLook, night = 0, t = performance.now() / 1000): void {
+  void night;
+  if (!look.lit || !look.firing) return;
+  const b = kilnBaked(rotation, zoom);
+  const p = kilnBreath(t, true);
+  const was = ctx.globalCompositeOperation, wasA = ctx.globalAlpha;
+  ctx.globalAlpha = wasA * (0.6 + 0.4 * p);
+  lay(ctx, b.flare, sx, sy, zoom);
+  // The tongue: as tall as the fire is drawing, from the flue's mouth up.
+  const [tx, ty, tw, th] = b.tongue.box;
+  const lick = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(t * 9.3) * Math.sin(t * 4.1 + 1));
+  const base = sy + (ty + th) * zoom;
+  ctx.globalAlpha = wasA * (0.7 + 0.3 * p);
+  ctx.drawImage(b.tongue.canvas, sx + tx * zoom, base - th * lick * zoom, tw * zoom, th * lick * zoom);
+  ctx.lineCap = 'round';
+  const w = Math.max(2, 1.15 * zoom ** 0.8);
+  for (let i = 0; i < EMBERS; i++) {
+    const u = ((t / (EMBER_RISE + (i % 2) * 0.3) + i * 0.437) % 1 + 1) % 1;
+    // Each from its own place across the flue's mouth, already over the tongue.
+    const sway = (((i * 0.618) % 1) - 0.5) * tw * 0.7 + Math.sin(u * 4.6 + i * 2.3) * (1.5 + 2.5 * u);
+    const x = sx + (b.flueAt[0] + sway) * zoom, y = sy + (b.flueAt[1] - 6 - u * EMBER_HIGH) * zoom;
+    const len = (0.5 + 0.9 * (1 - u)) * zoom;
+    ctx.globalAlpha = wasA * Math.pow(1 - u, 1.2) * Math.min(1, u * 8);
+    ctx.lineWidth = w * (1 - 0.35 * u);
+    ctx.strokeStyle = u < 0.3 ? 'rgb(255, 246, 214)' : 'rgb(255, 180, 96)';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x, y + len);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = was;
+  ctx.globalAlpha = wasA;
+}
+
+/**
+ * A kiln alight after dark: its runes, mouth, vent, port and spy holes and the
+ * bloom of heat round its mouth and vent added as light, laid straight after
+ * it in its own place among what is drawn, as a smelter's (`drawSmelterNight`),
+ * turned up by `over`, what the night's wash will take off it there.
+ */
+export function drawKilnNight(ctx: Ctx, sx: number, sy: number, zoom: number, rotation: number, look: KilnLook, night: number, t = performance.now() / 1000, over = 0): void {
+  const heat = kilnHeat(look);
+  if (heat <= 0 || night <= 0.02) return;
+  const b = kilnBaked(rotation, zoom);
+  const p = kilnBreath(t, look.firing);
+  const was = ctx.globalCompositeOperation, wasA = ctx.globalAlpha;
+  ctx.globalCompositeOperation = 'lighter';
+  const k = wasA * night * underWash(over) / GLOW_GAIN;
+  if (b.glow) {
+    ctx.globalAlpha = Math.min(1, k * (look.firing ? 0.85 + 0.15 * p : 0.46 + 0.08 * p));
+    lay(ctx, b.glow, sx, sy, zoom);
+  }
+  // Only lit, its runes and spy holes a glimmer; firing a load, all lit.
+  if (b.glowRunes) {
+    ctx.globalAlpha = Math.min(1, k * (look.firing ? 0.85 + 0.15 * p : 0.2 + 0.05 * p));
+    lay(ctx, b.glowRunes, sx, sy, zoom);
+  }
+  ctx.globalCompositeOperation = was;
+  ctx.globalAlpha = wasA;
+}
+
+/** What it is clicked by, from its footprint's middle, in pixels at zoom one: the box round its solids. */
+export function kilnHit(rotation: number, zoom = 1): [number, number, number, number] {
+  return kilnBaked(rotation, zoom).hit;
+}
+
+/** What it is drawn over, from its footprint's middle, in pixels at zoom one: left, top, right, bottom. */
+export function kilnBounds(rotation: number, zoom = 1): [number, number, number, number] {
+  return kilnBaked(rotation, zoom).bounds;
 }
 
 /* ---- the anvil -------------------------------------------------------------- */

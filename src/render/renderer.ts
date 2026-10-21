@@ -71,7 +71,7 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre, type PlacedCampfire } from '../game/campfire';
 import { smelterCentre, type PlacedSmelter } from '../game/smelter';
-import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawSmelter, drawSmelterLive, drawSmelterNight, smelterBounds, smelterHit } from './forge';
+import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { kilnCentre, type PlacedKiln } from '../game/kiln';
 import { furnitureCentre, furnitureDef, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
 import { UNSEEN, VISIBLE } from '../game/vision';
@@ -254,7 +254,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawKiln, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -5585,10 +5585,28 @@ export class Renderer {
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, piece.id, this.time, W * 2 * zoom, h * zoom);
       }
       if (ent.kind === 'kiln' && ent.kiln) {
-        const kiln = ent.kiln;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawKiln(g, px, py, zoom, kiln.lit, kiln.jobs.length > 0, this.time));
-        this.kilnHits.push({ x: ent.x, y: ent.y, left: ent.sx - 26 * zoom, top: ent.sy - 44 * zoom, w: 52 * zoom, h: 48 * zoom, kiln: kiln.id });
-        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.time, 52 * zoom, 36 * zoom);
+        /*
+         * A kiln, drawn as a smelter is (`forge.ts`): its bake and the fire in
+         * its mouth, vent and spy holes under the pointer's ring, and the
+         * flare and tongue of flame at its vent over it while it fires. After
+         * dark its fire and runes are added as light here, in its own place,
+         * turned up by what the wash will take off them (`nightOver`).
+         * Clicked by its solids.
+         */
+        const kiln = ent.kiln, turn = this.camera.rotation, dark = this.game.darkness();
+        const look = { lit: kiln.lit, firing: kiln.lit && kiln.jobs.length > 0 };
+        const [bl, bt, br, bb] = kilnBounds(turn, zoom);
+        const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+          drawKiln(g, px, py, zoom, turn, look, dark, this.time, false);
+        }, undefined, box);
+        drawKilnLive(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time);
+        // Its fire and runes after dark, added as light here in its own place, so what stands in front is drawn over it.
+        if (look.lit && dark > 0.02) drawKilnNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 24 * zoom, dark));
+        const [hl, ht, hr, hb] = kilnHit(turn, zoom);
+        this.kilnHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, kiln: kiln.id });
+        if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
+        continue;
       }
       if (ent.kind === 'smelter' && ent.smelter) {
         /*
@@ -13699,9 +13717,11 @@ export class Renderer {
       const [x, y] = smelterCentre(s);
       ring(x, y, 64, s.fuel, s.lit, front(s.jobs), s.output.length > 0);
     }, level);
+    // A kiln's just over the head of its vent, as it is drawn from where the camera looks (`kilnHit`), clear of the flare over it.
+    const kilnTop = 10 - kilnHit(cam.rotation)[1];
     this.game.placed.kilns.around(p.x, p.y, RING_REACH, (k) => {
       const [x, y] = kilnCentre(k);
-      ring(x, y, 64, k.fuel, k.lit, front(k.jobs), k.output.length > 0);
+      ring(x, y, kilnTop, k.fuel, k.lit, front(k.jobs), k.output.length > 0);
     }, level);
   }
 
