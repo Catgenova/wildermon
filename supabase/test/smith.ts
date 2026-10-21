@@ -302,7 +302,9 @@ begin
   select * into v_w from weapon_def where id = 'sword';
   v_plain := v_row; v_plain.mark := null;
   insert into said values ('SWING', weapon_damage(w, u, v_w, v_row) || '|' || weapon_damage(w, u, v_w, v_plain)
-    || '|' || hit_chance(w, u, 'swords', mark_of(v_row.mark, 'aim')) || '|' || hit_chance(w, u, 'swords'));
+    || '|' || hit_chance(w, u, 'swords', mark_of(v_row.mark, 'aim')) || '|' || hit_chance(w, u, 'swords')
+    -- And awareness in the dark, added after the aim (aware_share × aware_dark).
+    || '|' || aware_share(w, u) * aware_dark(w, u));
 
   /* ---- Temper Bath: a sword finished with it quenches once, at water. ---- */
   ${hold('Temper Bath')};
@@ -506,10 +508,10 @@ const swordMark = say('SWORD') === '-' ? {} : JSON.parse(say('SWORD'));
 check('and a sword fitted from it by somebody without either carries both',
   swordMark.damage === P('Keen Edge').fx['damage:sword_blade'] && swordMark.aim === P('Balanced').fx['aim:sword_blade'] && !('temper' in swordMark),
   say('SWORD'));
-const [dmgMarked, dmgPlain, hitMarked, hitPlain] = say('SWING').split('|').map(Number);
+const [dmgMarked, dmgPlain, hitMarked, hitPlain, hitDark] = say('SWING').split('|').map(Number);
 check('which hits that much harder and lands that much more often, as the island reckons it',
   near(dmgMarked / dmgPlain, P('Keen Edge').fx['damage:sword_blade'], 1e-6)
-    && near(hitMarked / hitPlain, P('Balanced').fx['aim:sword_blade'], 1e-6) && hitMarked < HIT_CAP, say('SWING'));
+    && near((hitMarked - hitDark) / (hitPlain - hitDark), P('Balanced').fx['aim:sword_blade'], 1e-6) && hitMarked < HIT_CAP, say('SWING'));
 
 const [temperMark, temperNoWater] = say('TEMPERED').split('|');
 check(`${P('Temper Bath').name}: a sword finished with it carries a quench of +${P('Temper Bath').fx['temper:sword']} QL`,
