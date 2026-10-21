@@ -1,4 +1,4 @@
-import { boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, MIND_EASED_SKILLS, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
+import { boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, goSeconds, MIND_EASED_SKILLS, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
 import { staminaBarAbove } from '../../game/body';
 import { CONTROL_HIT } from '../../game/gear';
 import { listed, percent } from '../../game/words';
@@ -9,6 +9,12 @@ import type { UIWindow } from '../windows';
 import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
 import { metres } from '../../game/piers';
+import { ACTION_BY_ID, maxDigSlope } from '../../game/actions';
+
+/** A long action, to read a skill's pace off without the floor (`goSeconds`). */
+const SLOW_GO = 100;
+/** A multiplier to two places, trailing zeros dropped. */
+const two = (x: number): number => +x.toFixed(2);
 
 /** The thinking skills mind logic eases, by name. */
 const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
@@ -243,6 +249,15 @@ export class SkillsPanel {
       case 'soul_strength': {
         const up = g.soulBonus() * 100;
         return up > 0 ? [`Tame chance +${up.toFixed(1)}%`, `Tame chance +${up.toFixed(1)} percentage points.`] : null;
+      }
+      case 'digging': {
+        const slope = metres(maxDigSlope(g));
+        const time = two(goSeconds(SLOW_GO, v) / goSeconds(SLOW_GO, 0));
+        const dig = ACTION_BY_ID.get('dig');
+        const shovel = g.toolQl('shovel');
+        const odds = percent(g.skillChance('digging', dig?.difficulty ?? 0, shovel));
+        return [`Slope ${slope} m, time ×${time}, dig ${odds}`,
+          `Steepest slope left: ${slope} m. Time per action ×${time} of level 0. Dig success ${odds} (difficulty ${dig?.difficulty ?? 0}, shovel QL ${Math.round(shovel)}).`];
       }
       case 'climbing': {
         const step = metres(g.climbStep());
