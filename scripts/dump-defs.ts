@@ -125,7 +125,7 @@ import { LECTERN_GAIN, LECTERN_REACH, STUDY_WEAR, STUDY_WEAR_SPREAD } from '../s
 import { GLAZE_ASH, GLAZEABLE } from '../src/game/actions';
 import { TRADE_BOOK_AT } from '../src/game/recipes';
 import { TRAPS } from '../src/game/traps';
-import { DEFAULT_LOOK, LOOK_TABLES } from '../src/game/look';
+import { DEFAULT_LOOK, DYED_HAIR, LOOK_TABLES } from '../src/game/look';
 import { ACTION_FLOOR, ACTION_PACE, COTTON_SECONDS, COTTON_WEIGHT, MINING_SECONDS, MINING_WEIGHT, WORKER_WEIGHT, WORLD_PACE } from '../src/game/pace';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, STAMINA_BAR_PER_LEVEL, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from '../src/game/body';
 import { SAY_A_MINUTE, SAY_MAX } from '../src/game/chat';
@@ -1264,6 +1264,8 @@ for (const [kind, table] of Object.entries(LOOK_TABLES)) {
     out.push(`insert into look_option values (${q(kind)}, ${q(o.id)}, ${n}, ${q(o.name)}, ${q(colour)}, ${q(isDefault)});`);
   });
 }
+// The dyed hair colours, which a look rolled at random never comes with (`randomLook`, `look_random`).
+out.push(`create or replace function dyed_hair() returns text[] language sql immutable as $fn$ select array[${[...DYED_HAIR].map(q).join(', ')}]::text[] $fn$;`);
 type S = Record<string, unknown>;
 for (const d of Object.values(SPECIES) as unknown as S[]) {
   out.push(`insert into species_def values (` + [

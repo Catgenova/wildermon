@@ -71,7 +71,20 @@ export const HAIR_COLOURS: Swatch[] = [
   s('ash', 'Ash', '#b9b0a3'),
   s('grey', 'Grey', '#8e8b85'),
   s('white', 'White', '#ded9d0'),
+  // Dyed: chosen, never rolled (`randomLook`).
+  s('pastel_blue', 'Pastel blue', '#9cc3ec'),
+  s('blue', 'Blue', '#3462bf'),
+  s('teal', 'Teal', '#2b8f8c'),
+  s('green', 'Green', '#4e9a48'),
+  s('purple', 'Purple', '#6c40a6'),
+  s('lavender', 'Lavender', '#b69de2'),
+  s('pink', 'Pink', '#e690bd'),
+  s('magenta', 'Magenta', '#b9367f'),
+  s('red', 'Red', '#bb2b30'),
 ];
+
+/** The dyed hair colours: in the creator, never in a look rolled at random. */
+export const DYED_HAIR = new Set(['pastel_blue', 'blue', 'teal', 'green', 'purple', 'lavender', 'pink', 'magenta', 'red']);
 
 export const EYES: Swatch[] = [
   s('dark', 'Dark', '#2a1a10'),
@@ -252,7 +265,7 @@ export function randomLook(roll: () => number = Math.random): Look {
     gender,
     skin: any(SKINS),
     hair: any(HAIRSTYLES),
-    hairColour: any(HAIR_COLOURS),
+    hairColour: any(HAIR_COLOURS.filter((c) => !DYED_HAIR.has(c.id))),
     eyes: any(EYES),
     // Among the beards, not clean-shaven again: a beard rolled is a beard.
     beard: roll() < BEARD_ODDS[gender] ? any(BEARDS.filter((b) => b.id !== 'none')) : 'none',

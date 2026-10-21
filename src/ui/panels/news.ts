@@ -1,5 +1,6 @@
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { UPDATE_CHECK_MS } from '../update';
+import { DYED_HAIR, HAIR_COLOURS } from '../../game/look';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { rackPutLine, STORE_REACH } from '../../game/crates';
@@ -3053,6 +3054,13 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: mind logic gain, one amount for every source: ${percent(MIND_GAIN / KNACK_GO)} of an action's gain (finds restored, scrolls set and hoards dug up gave more).`,
       'Fixed: Skills window success chance added mind logic\'s ease on skills whose checks have none (mining, digging, woodcutting and the like).',
+    ],
+  },
+  {
+    n: 235,
+    day: '2026-10-21',
+    lines: () => [
+      `Added: dyed hair colours in the character creator: ${listed(HAIR_COLOURS.filter((c) => DYED_HAIR.has(c.id)).map((c) => c.name.toLowerCase()))}. Never rolled at random.`,
     ],
   },
 ];

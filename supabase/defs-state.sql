@@ -2112,6 +2112,15 @@ insert into look_option values ('hairColour', 'flax', 10, 'Flax', '#e6d3a1', fal
 insert into look_option values ('hairColour', 'ash', 11, 'Ash', '#b9b0a3', false);
 insert into look_option values ('hairColour', 'grey', 12, 'Grey', '#8e8b85', false);
 insert into look_option values ('hairColour', 'white', 13, 'White', '#ded9d0', false);
+insert into look_option values ('hairColour', 'pastel_blue', 14, 'Pastel blue', '#9cc3ec', false);
+insert into look_option values ('hairColour', 'blue', 15, 'Blue', '#3462bf', false);
+insert into look_option values ('hairColour', 'teal', 16, 'Teal', '#2b8f8c', false);
+insert into look_option values ('hairColour', 'green', 17, 'Green', '#4e9a48', false);
+insert into look_option values ('hairColour', 'purple', 18, 'Purple', '#6c40a6', false);
+insert into look_option values ('hairColour', 'lavender', 19, 'Lavender', '#b69de2', false);
+insert into look_option values ('hairColour', 'pink', 20, 'Pink', '#e690bd', false);
+insert into look_option values ('hairColour', 'magenta', 21, 'Magenta', '#b9367f', false);
+insert into look_option values ('hairColour', 'red', 22, 'Red', '#bb2b30', false);
 insert into look_option values ('eyes', 'dark', 0, 'Dark', '#2a1a10', false);
 insert into look_option values ('eyes', 'brown', 1, 'Brown', '#5a3a20', true);
 insert into look_option values ('eyes', 'hazel', 2, 'Hazel', '#7a6030', false);
@@ -2159,6 +2168,7 @@ insert into look_option values ('trousers', 'verdigris', 12, 'Verdigris', '#4b7a
 insert into look_option values ('trousers', 'woad', 13, 'Woad blue', '#3d5f9c', false);
 insert into look_option values ('trousers', 'slate', 14, 'Slate', '#48525c', false);
 insert into look_option values ('trousers', 'charcoal', 15, 'Charcoal', '#2f2d2b', false);
+create or replace function dyed_hair() returns text[] language sql immutable as $fn$ select array['pastel_blue', 'blue', 'teal', 'green', 'purple', 'lavender', 'pink', 'magenta', 'red']::text[] $fn$;
 insert into species_def values ('rabba', 'Snufflet', 'Settlement task: forage within 8 tiles of the totem, +10 per 10 levels; output to the crate. Level: foraging. Evolves at level 25: Snuffroot.', 20, 3, 2.2, 1, 0.12, 'a berry or vegetable', true, 'forage', 8, 4, false, false, false, false, false, false, false, false, false, false, false, false, null, null, null, null, null, null, null);
 update species_def set stages = array['Snuffroot', 'Snuffthorn']::text[] where id = 'rabba';
 update species_def set was = array['Rabba']::text[] where id = 'rabba';
