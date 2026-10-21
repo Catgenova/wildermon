@@ -23,6 +23,7 @@
  *   * the skill is called Faith, and no door is open but the rpc ones.
  */
 import { execFileSync } from 'node:child_process';
+import { CHAR_START, soulAbove } from '../../src/game/game';
 import {
   BAR_SLOTS, FAITH_TIER_AT, faithSpellRefusal, PATRON_AT, patronRefusal, PATRONS, slotRefusal, SPELL_BAR, SPELL_ON_WORDS, SPELL_ONS,
   SPELL_REACH, SPELLS_PER_TIER, spellTargetRefusal, type FaithSpellDef, type PointedAt,
@@ -300,6 +301,8 @@ begin
   insert into said values ('REST', prayer_rest() || '|' || prayer_gain());
   insert into said values ('SKILLS', faith_skill() || '|' || praying_skill() || '|' || (select skill from action_def where id = 'pray'));
   insert into said values ('FIRST', coalesce(faith_refusal(w.world_id, w.uid, 'pray', v_at), 'HEARD'));
+  -- Soul strength as the prayer finds it: favour is banked × its share (\`soul_mul\`), and the prayer itself then raises it.
+  insert into said values ('SOUL', skill_of(w.world_id, w.uid, 'soul_strength')::text);
   perform perform_faith(w.world_id, w.uid, 'pray', v_at);
   -- Favour is kept as a real: its exact value, not the shortest text that reads back as it.
   insert into said select 'BANKED', favour::double precision || '|' || hour_of_day(w.world_id) from player where world_id = w.world_id and uid = w.uid;
@@ -329,10 +332,12 @@ check('a prayer is said with Prayer, on both sides, and faith is a skill of its 
   `island ${prayer.get('SKILLS')}, browser ${FAITH}|${PRAYER}|${prayJob?.skill}`);
 {
   const [banked, hour] = (prayer.get('BANKED') ?? '').split('|').map(Number);
-  const want = prayerWorth(ALTAR_QL, hour, PRAYER_AT);
-  check(`it banks what Prayer ${PRAYER_AT} says at a quality ${ALTAR_QL} altar, the same on both sides, and not what faith ${FAITH_AT} would`,
+  // Times soul strength's share, as the pray action banks it (\`Game.soulMul\`, \`soul_mul\`).
+  const soul = soulAbove(Number(prayer.get('SOUL')) - CHAR_START);
+  const want = prayerWorth(ALTAR_QL, hour, PRAYER_AT) * soul;
+  check(`it banks what Prayer ${PRAYER_AT} says at a quality ${ALTAR_QL} altar, times soul strength's share, the same on both sides, and not what faith ${FAITH_AT} would`,
     // To within what a real holds: one part in 2^23 of it.
-    Math.abs(banked - want) <= Math.max(1e-6, Math.abs(want) * 2 ** -23) && Math.abs(want - prayerWorth(ALTAR_QL, hour, FAITH_AT)) > 1,
+    Math.abs(banked - want) <= Math.max(1e-6, Math.abs(want) * 2 ** -23) && Math.abs(want - prayerWorth(ALTAR_QL, hour, FAITH_AT) * soul) > 1,
     `island ${banked}, browser ${want} at hour ${hour}`);
 }
 check('and trains both faith and Prayer on the island', prayer.get('TRAINED') === [FAITH, PRAYER].sort().map((id) => `${id}:true`).join('|'),
