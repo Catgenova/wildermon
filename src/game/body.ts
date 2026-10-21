@@ -42,6 +42,17 @@ export const WIND_WALK = 0.012;
 /** What a point of body stamina above the starting mark adds to that. */
 export const WIND_PER_LEVEL = 0.005;
 
+/**
+ * And to the size of the bar: a full one at the starting mark, twice that at a
+ * hundred. Stamina is kept as a share of the bar, so what is spent and what
+ * comes back each second is divided by its size, and the % marks (winded,
+ * exhausted) and the "+N%" restores stay shares of whatever bar you have.
+ */
+export const STAMINA_BAR_PER_LEVEL = 1 / 80;
+
+/** The bar at this much body stamina above the starting mark, against the one at it. */
+export const staminaBarAbove = (above: number): number => 1 + Math.max(0, above) * STAMINA_BAR_PER_LEVEL;
+
 /** An empty stomach or a dry throat gets its wind back at this share of the rate. */
 export const WIND_STARVING = 0.3;
 

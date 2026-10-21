@@ -213,7 +213,8 @@ export class SkillsPanel {
       }
       case 'body_stamina': {
         const off = Math.round((1 - g.staminaCost(1)) * 100);
-        return off > 0 ? [`Stamina cost −${off}%`, `Stamina cost of actions and swings −${off}%.`] : null;
+        const bar = Math.round((g.staminaBar() - 1) * 100);
+        return off > 0 ? [`Stamina bar +${bar}%, cost −${off}%`, `Stamina bar +${bar}%. Stamina cost of actions and swings −${off}%.`] : null;
       }
       case 'body_control': {
         const off = Math.round((1 - g.controlSpeed()) * 100);

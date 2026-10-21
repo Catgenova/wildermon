@@ -225,6 +225,7 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Rowing boat speed', at: (g) => boatPace(g, 'rowing_boat', g.skills.get('body_strength')), say: pace, note: `QL ${EXAMPLE_QL}, empty` },
     ],
     body_stamina: [
+      { label: 'Stamina bar', at: (g) => g.staminaBar(), say: ofLevel(CHAR_START) },
       { label: 'Stamina cost of actions and swings', at: (g) => g.staminaCost(1), say: ofLevel(CHAR_START) },
       { label: 'Stamina regained', at: (g) => g.windRegen(), say: ofLevel(CHAR_START) },
     ],

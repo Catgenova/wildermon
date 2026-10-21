@@ -5,7 +5,7 @@ import { FURNITURE_BY_ID } from '../game/furniture';
 import { CELLAR_LEVEL, TOP_LEVELS } from '../game/building';
 import { seasonLine } from '../world/calendar';
 import { metres } from '../world/tiles';
-import type { Game } from '../game/game';
+import { CHAR_START, type Game } from '../game/game';
 import { itemName } from '../game/items';
 import { ACTION_BY_ID } from '../game/actions';
 import { BELT_MAX, pinLabel } from '../game/belt';
@@ -788,6 +788,10 @@ export class Hud {
       bar.fill.style.width = pct;
       bar.value.textContent = pct;
     }
+    // How big the stamina bar is: body stamina grows it (`staminaBar`).
+    const size = `Stamina bar ×${this.game.staminaBar().toFixed(2)} of level ${CHAR_START}`;
+    const row = this.bars.stamina?.value.parentElement;
+    if (row && row.title !== size) row.title = size;
     const h = this.game.world.heightAt(p.x, p.y);
     const standing = this.game.deedOfMineAt(p.tileX, p.tileY);
     const deed = standing ? `  ·  ${standing.name}` : '';

@@ -18,7 +18,7 @@ import { aimPin, BELT_MAX, loopsFor, pinLabel, type BeltPin } from './belt';
 import { bodyForward } from '../net/felt';
 import type { ItemRow } from '../net/island';
 import { packed, type Aged } from '../net/packed';
-import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
+import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
 import { acrossSide, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorOf, INDOORS_DECAY, isDone, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
@@ -2422,6 +2422,11 @@ export class Game {
     return Math.min(1, Math.min(0.85, SWIM_SPEED + this.skills.get('swimming') * 0.0033) * (1 + this.wornEnchant('swim')));
   }
 
+  /** How big your stamina bar is, against the one you started with: 1 at the starting mark, 2 at a hundred (`stamina_bar`). */
+  staminaBar(): number {
+    return staminaBarAbove(this.skills.get('body_stamina') - CHAR_START);
+  }
+
   /** Body stamina makes the same work cost less wind; armour makes it dearer. */
   staminaCost(cost: number): number {
     // Nothing at all while Power's Unbroken holds.
@@ -3428,7 +3433,7 @@ export class Game {
     for (const w of closed) this.logMsg(`Healed: ${WOUND_KINDS[w.kind].name}, ${PART_NAMES[w.part] ?? w.part}.`, 'event');
     if (closed.length) p.wounds = p.wounds.filter((w) => !closed.includes(w));
     // Losing blood also means losing the wind to do anything about it.
-    if (bad) p.stats.stamina = Math.max(0, p.stats.stamina - dt * 0.01);
+    if (bad) p.stats.stamina = Math.max(0, p.stats.stamina - (dt * 0.01) / this.staminaBar());
   }
 
   /** Whether anything open is still working against you. */
@@ -4389,7 +4394,9 @@ export class Game {
        * `bodyForward` is `body_settle` to the letter and deliberately not the
        * richer version above it — see the note on it.
        */
-      const wind = this.windRegen();
+      // Both shares of the bar, which a hardy body has more of (`stamina_bar`).
+      const bar = this.staminaBar();
+      const wind = this.windRegen() / bar;
       // What the wounds are taking, by the island's own sum — `woundDrain` and
       // `wound_drain` are the same arithmetic over the same table.
       const drain = p.wounds.reduce((n, w) => n + woundDrain(w), 0);
@@ -4407,7 +4414,7 @@ export class Game {
       const body = Math.max(0.45, 1 - Math.max(0, this.skills.get('body_stamina') - CHAR_START) * 0.0045);
       // And nothing while Power's Unbroken holds (`spend_wind`).
       const spend = doing && a.def.stamina > 0 && !this.pathHolds('unbroken')
-        ? (a.def.stamina * body) / Math.max(0.001, a.duration)
+        ? (a.def.stamina * body) / Math.max(0.001, a.duration) / bar
         : 0;
       const now = bodyForward(s, dt, { acting: doing, wind, drain, spend, upkeep: this.upkeepMul() });
       s.hunger = now.hunger;
@@ -4479,7 +4486,7 @@ export class Game {
         if (!this.bodyFromIsland) this.gainSkill('swimming', SWIM_LEARN);
       }
       if (!this.bodyFromIsland) {
-        s.stamina = Math.max(0, s.stamina - dt * this.swimWind());
+        s.stamina = Math.max(0, s.stamina - (dt * this.swimWind()) / this.staminaBar());
         if (s.stamina <= 0) {
           s.health = Math.max(0, s.health - dt * DROWN_RATE);
           if (this.time - this.acting.drownWarning > DROWN_WARN) {
@@ -4490,7 +4497,7 @@ export class Game {
       }
     } else if (!performing && !this.bodyFromIsland) {
       // Body stamina is what gets your wind back between jobs.
-      const wind = this.windRegen();
+      const wind = this.windRegen() / this.staminaBar();
       const regen = (moved > 0 ? WIND_WALK : WIND_REST) * wind;
       const starving = s.hunger <= 0 || s.thirst <= 0 ? WIND_STARVING : 1;
       s.stamina = Math.min(1, s.stamina + dt * regen * starving);
@@ -4801,7 +4808,7 @@ export class Game {
     if (a.def.tool) this.wearTool(a.def.tool, a.def.wear ?? 1);
     // A swing costs what is swung: more for every kilogram in the hand (`fightWind`).
     const cost = this.staminaCost(fightWind(this, a.def) ?? a.def.stamina);
-    this.player.stats.stamina = Math.max(0, this.player.stats.stamina - cost);
+    this.player.stats.stamina = Math.max(0, this.player.stats.stamina - cost / this.staminaBar());
     /*
      * The skill for the go, whether or not the go landed.
      *

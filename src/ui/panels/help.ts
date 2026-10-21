@@ -15,7 +15,7 @@ import { SKILL_DEFS } from '../../game/skills';
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SKILL, chartReach, chartSide, COPY_TIME, DRAW_TIME, STUDY_MAP_TIME } from '../../game/cartography';
 import { ARCHAEOLOGY_ACTION_BY_ID, FIND_DAMAGE, FIND_DAMAGE_SPREAD, LECTERN_GAIN, RELICS, RESTORE_AGE, RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { BELT_MAX, QL_PER_LOOP } from '../../game/belt';
-import { HUNGER_RATE, SWIM_LEARN } from '../../game/body';
+import { HUNGER_RATE, staminaBarAbove, SWIM_LEARN } from '../../game/body';
 import { HEAL_FED } from '../../game/body';
 import { BOON_BONUS, BOON_FOODS, boonTime, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
@@ -1110,7 +1110,7 @@ export function helpText(): string {
     </ul>
     <table>
       <tr><td><b>Body strength</b></td><td>Hit damage. Raised by ${raisedBySays('body_strength')}.</td></tr>
-      <tr><td><b>Body stamina</b></td><td>Wind per action, wind recovery. Raised by ${raisedBySays('body_stamina')}.</td></tr>
+      <tr><td><b>Body stamina</b></td><td>Stamina bar: ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(SKILL_TOP - CHAR_START)} at ${SKILL_TOP}; spending and recovery per second are shares of it. Stamina cost per action; stamina recovery. Raised by ${raisedBySays('body_stamina')}.</td></tr>
       <tr><td><b>Body control</b></td><td>Time per action. Raised by ${raisedBySays('body_control')}.</td></tr>
       <tr><td><b>Mind logic</b></td><td>Queue size; success on difficult crafts. Raised by ${raisedBySays('mind_logic')}.</td></tr>
       <tr><td><b>Soul strength</b></td><td>Taming chance. Raised by ${raisedBySays('soul_strength')}.</td></tr>

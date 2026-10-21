@@ -123,7 +123,8 @@ import { improvable } from '../../game/improve';
 import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
-import { SWIM_LEARN } from '../../game/body';
+import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
+import { CHAR_START } from '../../game/game';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -3036,6 +3037,14 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: kiln model, in the smelter\'s rune pastel kit: beehive dome on a mossy plinth, stoke porch, rune band, vent.',
       'Cold, lit and firing drawn apart: firing lights the runes and flares at the vent. Smoke from the vent while lit; glows at night.',
+    ],
+  },
+  {
+    n: 233,
+    day: '2026-10-21',
+    lines: () => [
+      `Changed: body stamina grows the stamina bar: ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(SKILL_TOP - CHAR_START)} at ${SKILL_TOP}.`,
+      'Stamina spent and regained per second: same amounts, shares of the bigger bar. Winded and exhausted marks and "+N%" restores: shares of the bar.',
     ],
   },
 ];

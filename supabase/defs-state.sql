@@ -5511,6 +5511,7 @@ create or replace function say_a_minute() returns double precision language sql 
 create or replace function wind_rest() returns double precision language sql immutable as $fn$ select 0.05::double precision $fn$;
 create or replace function wind_walk() returns double precision language sql immutable as $fn$ select 0.012::double precision $fn$;
 create or replace function wind_per_level() returns double precision language sql immutable as $fn$ select 0.005::double precision $fn$;
+create or replace function stamina_bar_per_level() returns double precision language sql immutable as $fn$ select 0.0125::double precision $fn$;
 create or replace function wind_starving() returns double precision language sql immutable as $fn$ select 0.3::double precision $fn$;
 create or replace function heal_rate() returns double precision language sql immutable as $fn$ select 0.004::double precision $fn$;
 create or replace function heal_fed() returns double precision language sql immutable as $fn$ select 0.2::double precision $fn$;

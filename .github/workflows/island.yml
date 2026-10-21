@@ -1534,6 +1534,15 @@ jobs:
             --outfile=node_modules/.cache/workpost.mjs --log-level=error
           node node_modules/.cache/workpost.mjs
 
+      - name: Body stamina grows the stamina bar, the same on both sides
+        run: |
+          # "Body stamina should also increase the bar. 2x at 100". The bar is
+          # 1 at the starting mark and 2 at a hundred; a dig and a second of
+          # rest move the same share of it in the browser as on the island.
+          npx esbuild supabase/test/staminabar.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/staminabar.mjs --log-level=error
+          node node_modules/.cache/staminabar.mjs
+
       - name: Ranks of your own, the founder's to make, in the same words on both sides
         run: |
           # "Allow the founder to establish ranks and advanced permissions for
