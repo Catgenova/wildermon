@@ -1,3 +1,4 @@
+import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { UPDATE_CHECK_MS } from '../update';
 import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
@@ -3114,6 +3115,14 @@ export const NEWS: News[] = [
       'Fixed: dropped clay or sand left dirt; a spadeful now lays its own tile, on dirt too.',
       'Changed: Drop dirt and Drop (raise ground) renamed Change tile; one option per dirt, clay or sand in the pack.',
       'Changed: Change tile at your feet takes clay and sand as well as dirt.',
+    ],
+  },
+  {
+    n: 240,
+    day: '2026-10-21',
+    lines: () => [
+      `Fixed: crates, chests, carts, wagons, furnaces, kilns, anvils, work posts, traps and fires picked by their drawn shape, ±${PICK_SLACK} px (±${PICK_SLACK_TOUCH} px by touch), not a box round them.`,
+      'Fixed: where two overlap, the one drawn in front is picked.',
     ],
   },
 ];

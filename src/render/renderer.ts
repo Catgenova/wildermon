@@ -301,6 +301,7 @@ import {
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
+import { PICK_SLACK, PICK_SLACK_TOUCH } from './pickslack';
 
 /** Result of picking a screen point: the tile, the approximate world position and the nearest corner. */
 /**
@@ -513,6 +514,10 @@ interface HitRect {
   aq?: AqueductShape;
   /** Or the outlines in the box a click has to land on one of, each as x, y pairs: a bridge's deck and its lips. */
   poly?: Float64Array[];
+  /** Its place in the drawing order: the one drawn last over a point is the one picked there. */
+  seq?: number;
+  /** What it was drawn as: a point picks it only on those pixels (`PICK_SLACK`). */
+  shapes?: HitShape[];
 }
 
 
@@ -864,6 +869,19 @@ const SUN_STEPS = 48;
 
 /** How often a still cursor is told again what it is over, in milliseconds. */
 const PICK_EVERY = 90;
+
+const pickSlack = (): number => (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? PICK_SLACK_TOUCH : PICK_SLACK);
+/** Alpha a drawn pixel needs to pick its thing, out of 255. */
+const PICK_ALPHA = 40;
+
+/** One drawing of a thing, kept to test a point against its pixels (`Renderer.shapeHas`). */
+interface HitShape {
+  draw: (g: CanvasRenderingContext2D, px: number, py: number) => void;
+  sx: number;
+  sy: number;
+  /** The transform it was drawn under, relative to the screen's: a boat's roll (`swayIn`). */
+  m: DOMMatrix | null;
+}
 
 /**
  * The wash over everything at this hour: warm at the two ends of the day, cold
@@ -1297,6 +1315,13 @@ export class Renderer {
   private smelterHits: HitRect[] = [];
   private kilnHits: HitRect[] = [];
   private furnitureHits: HitRect[] = [];
+  /** The drawing order of the hit boxes this frame (`HitRect.seq`). */
+  private hitSeq = 0;
+  /** What `paint` has drawn of the entity being drawn, and the screen's own transform it is measured from. */
+  private entPaints: HitShape[] = [];
+  private paintBase: DOMMatrix | null = null;
+  /** The few pixels a pick is tested on (`shapeHas`). */
+  private hitPad: HTMLCanvasElement | null = null;
   /**
    * The pieces drawn this frame with a light of their own -- an altar's stars
    * -- and where, so the night can be taken back off them when it is laid
@@ -3638,6 +3663,7 @@ export class Renderer {
     this.smelterHits.length = 0;
     this.kilnHits.length = 0;
     this.furnitureHits.length = 0;
+    this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
     this.runeNight.begin(this.game.darkness() > 0.02);
@@ -4912,6 +4938,10 @@ export class Renderer {
     colour = '#ffffff',
     box?: [number, number, number, number],
   ): void {
+    // Kept for picking by its pixels, with any roll it is drawn under.
+    const cm = ctx.getTransform(), base = this.paintBase;
+    const rolled = base && (cm.a !== base.a || cm.b !== base.b || cm.c !== base.c || cm.d !== base.d || cm.e !== base.e || cm.f !== base.f);
+    this.entPaints.push({ draw, sx, sy, m: rolled && base ? base.inverse().multiply(cm) : null });
     /*
      * After dark, drawn after a runestone and falling on its runes (its own
      * box, left, top, width and height on the screen, when the caller knows
@@ -5165,7 +5195,9 @@ export class Renderer {
      * would be lost.
      */
     let behind = false, swayed = false;
+    this.paintBase = ctx.getTransform();
     for (const ent of ents) {
+      this.entPaints.length = 0;
       if (swayed) {
         ctx.restore();
         swayed = false;
@@ -5589,7 +5621,7 @@ export class Renderer {
           right = Math.max(right, ent.sx + drawn[2]);
           bottom = Math.max(bottom, ent.sy + drawn[3]);
         }
-        this.furnitureHits.push({ x: ent.x, y: ent.y, left, top, w: right - left, h: bottom - top, furniture: piece.id });
+        this.furnitureHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left, top, w: right - left, h: bottom - top, furniture: piece.id });
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, piece.id, this.time, W * 2 * zoom, h * zoom);
       }
       if (ent.kind === 'kiln' && ent.kiln) {
@@ -5612,7 +5644,7 @@ export class Renderer {
         // Its fire and runes after dark, added as light here in its own place, so what stands in front is drawn over it.
         if (look.lit && dark > 0.02) drawKilnNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 24 * zoom, dark));
         const [hl, ht, hr, hb] = kilnHit(turn, zoom);
-        this.kilnHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, kiln: kiln.id });
+        this.kilnHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, kiln: kiln.id });
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, kiln.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
@@ -5637,7 +5669,7 @@ export class Renderer {
         // Its fire and runes after dark, added as light here in its own place, so what stands in front is drawn over it.
         if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.time, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
         const [hl, ht, hr, hb] = smelterHit(turn, zoom);
-        this.smelterHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
+        this.smelterHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
@@ -5674,14 +5706,14 @@ export class Renderer {
           if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, anvilNight(face, shade, variant, turn, zoom), this.time);
         }
         const [hl, ht, hr, hb] = anvilHit(face, shade, variant, turn, zoom);
-        this.anvilHits.push({ x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, anvil: an.id });
+        this.anvilHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, anvil: an.id });
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, an.id, this.time, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'post' && ent.post) {
         const post = ent.post;
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawWorkPost(g, px, py, zoom, postLeft(post) / postLife(post.ql), post.worker !== null));
-        this.postHits.push({ x: ent.x, y: ent.y, left: ent.sx - 9 * zoom, top: ent.sy - 30 * zoom, w: 18 * zoom, h: 32 * zoom, post: post.id });
+        this.postHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 9 * zoom, top: ent.sy - 30 * zoom, w: 18 * zoom, h: 32 * zoom, post: post.id });
         continue;
       }
       if (ent.kind === 'waterplant' && ent.plant && this.plantFrame) {
@@ -5772,13 +5804,13 @@ export class Renderer {
       if (ent.kind === 'trap' && ent.trap) {
         const trap = ent.trap;
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null));
-        this.trapHits.push({ x: ent.x, y: ent.y, left: ent.sx - 8 * zoom, top: ent.sy - 12 * zoom, w: 16 * zoom, h: 14 * zoom, trap: trap.id });
+        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 8 * zoom, top: ent.sy - 12 * zoom, w: 16 * zoom, h: 14 * zoom, trap: trap.id });
         continue;
       }
       if (ent.kind === 'campfire' && ent.fire) {
         const fire = ent.fire;
         this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.time));
-        this.fireHits.push({ x: ent.x, y: ent.y, left: ent.sx - 22 * zoom, top: ent.sy - 20 * zoom, w: 44 * zoom, h: 30 * zoom, fire: fire.id });
+        this.fireHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 22 * zoom, top: ent.sy - 20 * zoom, w: 44 * zoom, h: 30 * zoom, fire: fire.id });
         continue;
       }
       const spr = ent.spr;
@@ -5826,7 +5858,7 @@ export class Renderer {
        */
       if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, ent.x * 4099 + ent.y, this.time, dw, spr.ay * zoom);
       if (ent.kind === 'crate' && ent.crateId !== undefined) {
-        this.crateHits.push({ x: ent.x, y: ent.y, left: left + dw * 0.15, top: top + dh * 0.2, w: dw * 0.7, h: dh * 0.75, crate: ent.crateId });
+        this.crateHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left, top, w: dw, h: dh, crate: ent.crateId });
       }
     }
     if (swayed) ctx.restore();
@@ -14735,29 +14767,30 @@ export class Renderer {
       const h = this.creatureHits[i];
       if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), creature: h.creature };
     }
-    for (let i = this.crateHits.length - 1; i >= 0; i--) {
-      const h = this.crateHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), crate: h.crate };
+    /*
+     * A thing set down -- a crate, a wagon, a furnace, a chest -- by its own
+     * pixels, give or take `PICK_SLACK`, and the one drawn last over the
+     * point first: a wagon's box no longer takes the crates beside it.
+     */
+    const things: HitRect[] = [];
+    const slack = pickSlack();
+    for (const list of [this.crateHits, this.smelterHits, this.furnitureHits, this.kilnHits, this.postHits, this.trapHits, this.anvilHits, this.fireHits]) {
+      for (const h of list) {
+        if (sx >= h.left - slack && sx <= h.left + h.w + slack && sy >= h.top - slack && sy <= h.top + h.h + slack) things.push(h);
+      }
     }
-    for (let i = this.smelterHits.length - 1; i >= 0; i--) {
-      const h = this.smelterHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), smelter: h.smelter };
-    }
-    for (let i = this.furnitureHits.length - 1; i >= 0; i--) {
-      const h = this.furnitureHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), furniture: h.furniture };
-    }
-    for (let i = this.kilnHits.length - 1; i >= 0; i--) {
-      const h = this.kilnHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), kiln: h.kiln };
-    }
-    for (let i = this.postHits.length - 1; i >= 0; i--) {
-      const h = this.postHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), post: h.post };
-    }
-    for (let i = this.trapHits.length - 1; i >= 0; i--) {
-      const h = this.trapHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), trap: h.trap };
+    things.sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0));
+    for (const h of things) {
+      if (!this.shapeHas(h, sx, sy, slack)) continue;
+      const at = this.makePick(h.x, h.y, sx, sy);
+      if (h.crate !== undefined) return { ...at, crate: h.crate };
+      if (h.smelter !== undefined) return { ...at, smelter: h.smelter };
+      if (h.furniture !== undefined) return { ...at, furniture: h.furniture };
+      if (h.kiln !== undefined) return { ...at, kiln: h.kiln };
+      if (h.post !== undefined) return { ...at, post: h.post };
+      if (h.trap !== undefined) return { ...at, trap: h.trap };
+      if (h.anvil !== undefined) return { ...at, anvil: h.anvil };
+      return { ...at, fire: h.fire };
     }
     for (let i = this.deckHits.length - 1; i >= 0; i--) {
       const h = this.deckHits[i];
@@ -14766,14 +14799,6 @@ export class Renderer {
       // An aqueduct's bay takes the click where its masonry is drawn and nothing drawn after it stands over that point.
       if (h.aq && (!this.aqueducts.hits(h.aq, sx, sy) || this.coveredAfter(sx, sy, h.x, h.y, h.bridge))) continue;
       return { ...this.makePick(h.x, h.y, sx, sy), bridge: h.bridge };
-    }
-    for (let i = this.anvilHits.length - 1; i >= 0; i--) {
-      const h = this.anvilHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), anvil: h.anvil };
-    }
-    for (let i = this.fireHits.length - 1; i >= 0; i--) {
-      const h = this.fireHits[i];
-      if (sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h) return { ...this.makePick(h.x, h.y, sx, sy), fire: h.fire };
     }
     // A Runestone or a settlement's token, by the stone standing up off its footprint: its centre tile, whose hover and Examine name it.
     for (let i = this.stoneHits.length - 1; i >= 0; i--) {
@@ -14986,6 +15011,42 @@ export class Renderer {
       at(g.line[g.line.length - 1], 0);
       if (inPolygon(out, out.length, sx, sy)) return true;
     }
+    return false;
+  }
+
+  /** This entity's hit box's place in the drawing order and what it was drawn as (`HitRect.seq`, `shapes`). */
+  private shaped(): { seq: number; shapes: HitShape[] } {
+    return { seq: this.hitSeq++, shapes: this.entPaints.slice() };
+  }
+
+  /**
+   * Whether a point lands on what a hit box's thing was drawn as, or within
+   * `PICK_SLACK` of it (`PICK_SLACK_TOUCH` by finger): its drawings again on a few pixels round the point,
+   * and any of them covered. A box with no drawing kept is all box.
+   */
+  private shapeHas(h: HitRect, sx: number, sy: number, slack: number): boolean {
+    if (!h.shapes?.length) return sx >= h.left && sx <= h.left + h.w && sy >= h.top && sy <= h.top + h.h;
+    const n = slack * 2 + 1;
+    const pad = (this.hitPad ??= document.createElement('canvas'));
+    if (pad.width !== n) pad.width = pad.height = n;
+    const g = pad.getContext('2d', { willReadFrequently: true });
+    if (!g) return true;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, n, n);
+    for (const d of h.shapes) {
+      g.save();
+      const at = new DOMMatrix([1, 0, 0, 1, slack - sx, slack - sy]);
+      g.setTransform(d.m ? at.multiply(d.m) : at);
+      try {
+        d.draw(g, d.sx, d.sy);
+      } catch {
+        g.restore();
+        return true;
+      }
+      g.restore();
+    }
+    const px = g.getImageData(0, 0, n, n).data;
+    for (let i = 3; i < px.length; i += 4) if (px[i] >= PICK_ALPHA) return true;
     return false;
   }
 
