@@ -126,6 +126,8 @@ import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
 import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
 import { CHAR_START } from '../../game/game';
+import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
+import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/learn';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -3062,6 +3064,23 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: dyed hair colours in the character creator: ${listed(HAIR_COLOURS.filter((c) => DYED_HAIR.has(c.id)).map((c) => c.name.toLowerCase()))}. Never rolled at random.`,
     ],
+  },
+  {
+    n: 236,
+    day: '2026-10-21',
+    lines: () => {
+      const start = SKILL_BY_ID.get('awareness')?.start ?? CHAR_START;
+      const rate = `${+(AWARE_PER_LEVEL * 100).toFixed(3)}%`;
+      const top = percent(awareShareAbove(SKILL_TOP - CHAR_START));
+      const gain = (base: number): string => `${percent(base / KNACK_GO)} of an action's gain`;
+      return [
+        `Changed: awareness starts at ${start}; every awareness under ${start} raised to ${start}.`,
+        `Added: awareness, per level over ${CHAR_START}: monster notice range −${rate}, tracking range +${rate}, hit chance +${rate} × darkness over ${percent(NIGHT_EYES_FROM)} dark or underground (${top} each at ${SKILL_TOP}).`,
+        `Added: animal husbandry to read a trait, one level less per ${AWARE_TRAIT_STEP} awareness over ${CHAR_START} (−${awareTraitEase(SKILL_TOP)} at ${SKILL_TOP}).`,
+        `Added: awareness raised by tile walked in the dark (${gain(DARK_WALK)}), forage or fishing action in the dark (${gain(DARK_WORK)}), each × darkness; tracking action at any hour (${gain(TRACK_AWARE)}).`,
+        'Added: Skills window line and sliders for awareness: sight range, monster notice range, tracking range, hit chance in the dark, husbandry to read a trait.',
+      ];
+    },
   },
 ];
 

@@ -1,8 +1,8 @@
 import { SWING_BODY, TAME_NERVE } from '../game/creatureActions';
 import { DODGE_GAIN } from '../game/fight';
 import {
-  DARK_HIT, DARK_SHOT, DARK_SWING, HEAVY_SKILLS, MIND_GAIN, NIGHT_EYES_FROM, TRY_LEARN,
-  WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT,
+  DARK_HIT, DARK_SHOT, DARK_SWING, DARK_WALK, DARK_WORK, HEAVY_SKILLS, MIND_GAIN, NIGHT_EYES_FROM, TRY_LEARN,
+  TRACK_AWARE, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT,
 } from '../game/learn';
 import { SKILL_BY_ID } from '../game/skills';
 import { KNACK_GO } from '../game/titles';
@@ -55,7 +55,10 @@ export const RAISED_BY: Readonly<Record<string, readonly Raise[]>> = {
     { what: 'swing in the dark', base: DARK_SWING },
     { what: 'shot in the dark', base: DARK_SHOT },
     { what: 'blow taken in the dark', base: DARK_HIT },
+    { what: 'tile walked in the dark', base: DARK_WALK },
+    { what: 'forage or fishing action in the dark', base: DARK_WORK },
     { what: `each scaled by darkness; none until over ${percent(NIGHT_EYES_FROM)} dark or underground` },
+    { what: 'tracking action, any hour', base: TRACK_AWARE },
   ],
 };
 

@@ -272,13 +272,15 @@ export const banes = (item: Item | null): boolean => !!item && !!matOf(item.extr
 
 /**
  * Chance a swing lands at all: the weapon's own skill, then fighting behind
- * it, and what the weapon's maker put into it (a Smith's Balanced) -- inside
- * the ceiling, since this is a chance and `HIT_CAP` is where it stops.
+ * it, and what the weapon's maker put into it (a Smith's Balanced), then
+ * awareness in the dark (`awareDarkHit`) -- inside the ceiling, since this is
+ * a chance and `HIT_CAP` is where it stops.
  */
 export function hitChance(g: Game, def: WeaponDef, item?: Item | null): number {
   const skill = g.skills.get(def.kind);
   const fighting = g.skills.get('fighting');
-  return Math.min(HIT_CAP, (0.45 + skill / 220 + fighting / 300 + g.skills.get('body_control') / CONTROL_HIT) * (item ? markOf(item, 'aim') : 1));
+  return Math.min(HIT_CAP, (0.45 + skill / 220 + fighting / 300 + g.skills.get('body_control') / CONTROL_HIT) * (item ? markOf(item, 'aim') : 1)
+    + g.awareDarkHit());
 }
 
 /** The best chance any swing has of landing. The island says the same in `hit_chance`. */

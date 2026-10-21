@@ -86,18 +86,18 @@ export const ENCHANT_HEAD = MIND_GAIN;
 export const HOARD_HEAD = MIND_GAIN;
 
 /**
- * How dark it has to be before a fight teaches you anything about noticing.
- *
- * Awareness is learned in one place on this island and one only: fighting in
- * the dark. Nothing teaches a person what they were not noticing like
- * something coming out of it at them — so the characteristic that decides how
- * far you see is bought with the hours when you can see least.
- *
- * Which the island did not know either. It has had `darkness()` since the
- * clock went in and never once paid anybody for being out in it.
+ * How dark it has to be before anything teaches awareness, but a track: every
+ * gain below is × darkness, and nothing at or under this (below ground: full
+ * dark at every hour). `Game.awareDark`, `aware_dark`.
  */
 export const NIGHT_EYES_FROM = 0.35;
 /** A swing taken in the dark, an arrow loosed into it, and a blow taken out of it. */
 export const DARK_SWING = 0.5;
 export const DARK_SHOT = 0.7;
 export const DARK_HIT = 0.8;
+/** Awareness for every tile walked in the dark, on foot (`rpc_move`). */
+export const DARK_WALK = 0.1;
+/** Awareness for every go of Forage and of fishing (rod or net) in the dark (`perform_gather`, `perform_fish`). */
+export const DARK_WORK = 0.5;
+/** Awareness for every go of Track, at any hour (`perform_track`). */
+export const TRACK_AWARE = 0.5;

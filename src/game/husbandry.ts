@@ -11,7 +11,7 @@ import {
   SPECIES,
   type Creature,
 } from './creatures';
-import type { Game } from './game';
+import { awareTraitEase, type Game } from './game';
 import { clockLeft } from './boons';
 import { itemName, RARITIES, RARITY_ODDS } from './items';
 import { workingQl } from './materials';
@@ -144,7 +144,7 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   const care = (dam.care + sire.care) / 2;
   const { keepPlus, upPlus } = breedPlus(g);
   const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus);
-  const readable = (id: string): boolean => g.holds('knowledge_reader') || skill >= 1 + TIER_LEVEL[traitTier(id)];
+  const readable = (id: string): boolean => readsTrait(g, id);
   const theirs = Object.keys(odds.carry).sort((a, b) => odds.carry[b] - odds.carry[a]);
   const hidden = theirs.filter((id) => !readable(id)).length;
   const lines = [
@@ -294,10 +294,9 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       const c = creatureOf(g, t);
       if (!c) return;
       const def = SPECIES[c.species];
-      const skill = g.skills.get(HUSBANDRY);
       // Blood does not read itself. Without the skill you can see that there is
       // something in it; with the skill you can see what.
-      const seen = c.traits.filter((id) => g.holds('knowledge_reader') || skill >= 1 + TIER_LEVEL[traitTier(id)]);
+      const seen = c.traits.filter((id) => readsTrait(g, id));
       const hidden = c.traits.length - seen.length;
       const carrying = c.due > 0 ? ` In young, due in ${clockLeft(c.due - g.time)}.` : '';
       g.logMsg(
@@ -314,6 +313,11 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
  * it is standing in front of them.
  */
 export const TIER_LEVEL = { common: 0, rare: 15, supreme: 35, fantastic: 60 } as const;
+/** The animal husbandry needed to read a trait of a tier, at an awareness: 1 over the tier's level, less `awareTraitEase`, never below 0 (`blood_seen`). */
+export const traitReadNeeds = (tier: keyof typeof TIER_LEVEL, aware: number): number => Math.max(0, 1 + TIER_LEVEL[tier] - awareTraitEase(aware));
+/** Whether you read a trait: a Reader's Knowledge, or the husbandry for its tier at your awareness (`blood_seen`). */
+export const readsTrait = (g: Game, id: string): boolean =>
+  g.holds('knowledge_reader') || g.skills.get(HUSBANDRY) >= traitReadNeeds(traitTier(id), g.skills.get('awareness'));
 
 /** What a herd is worth at a glance, for the journal and the panel. */
 export const herdBest = (g: Game): string => {

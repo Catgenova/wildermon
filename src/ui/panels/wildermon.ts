@@ -2,7 +2,7 @@ import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
 import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
-import { TIER_LEVEL } from '../../game/husbandry';
+import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
 import type { Game } from '../../game/game';
 import { itemDef, rarityOf } from '../../game/items';
@@ -615,13 +615,12 @@ export class WildermonPanel {
   private blood(c: Creature): HTMLDivElement {
     const row = document.createElement('div');
     row.className = 'pal-traits';
-    const skill = this.game.skills.get('animal_husbandry');
     for (const id of c.traits) {
       const t = traitOf(id);
       if (!t) continue;
       const chip = document.createElement('span');
       chip.className = 'trait-chip';
-      const known = this.game.holds('knowledge_reader') || skill >= 1 + TIER_LEVEL[t.tier];
+      const known = readsTrait(this.game, id);
       if (known) {
         chip.textContent = t.aura ? `◉ ${t.name}` : t.name;
         chip.style.color = TIER_CSS[t.tier];
@@ -652,7 +651,7 @@ export class WildermonPanel {
       } else {
         chip.textContent = 'something';
         chip.classList.add('trait-unread');
-        chip.title = `Unread: needs ${1 + TIER_LEVEL[t.tier]} animal husbandry.`;
+        chip.title = `Unread: needs ${traitReadNeeds(t.tier, this.game.skills.get('awareness'))} animal husbandry.`;
       }
       row.append(chip);
     }

@@ -8,7 +8,7 @@ import { creatureLevel, CULL_RANGE, kindName, SPECIES } from './creatures';
 import { ACTION_PACE } from './pace';
 import { article } from './words';
 import {
-  bearingTo, nearestWild, TRACK, TRACK_BANDS, TRACK_TIME, trackDistSays, trackLevel, trackRange, trackReading, trackRefusal, trackSaid,
+  bearingTo, nearestWild, TRACK, TRACK_BANDS, TRACK_TIME, trackDistSays, trackLevel, trackReach, trackReading, trackRefusal, trackSaid,
   TRACKING, type TrackFound,
 } from './tracking';
 
@@ -42,7 +42,7 @@ export const TRACK_ACTIONS: ActionDef[] = [
       if (t.kind !== 'tile' || !t.species) return;
       const def = SPECIES[t.species];
       const L = levelOf(g);
-      const range = Math.min(trackRange(L), CULL_RANGE);
+      const range = Math.min(trackReach(L, g.awareShare()), CULL_RANGE);
       const p = g.player;
       const c = nearestWild(g.creatures.list.values(), t.species, p.x, p.y, range);
       if (!c) {

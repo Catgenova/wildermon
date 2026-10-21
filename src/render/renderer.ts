@@ -4455,7 +4455,7 @@ export class Renderer {
     // How far a hunter under the cursor will notice you from.
     const hc = this.hover?.creature !== undefined ? game.creatures.get(this.hover.creature) : undefined;
     if (hc && hc.mode === 'wild' && hc.enemy !== PLAYER_ATTACKER && game.creatures.species(hc).hunter) {
-      const r = game.creatures.species(hc).notice ?? HUNT_SIGHT;
+      const r = (game.creatures.species(hc).notice ?? HUNT_SIGHT) * game.awareNotice();
       const sx = cam.worldToScreenX(hc.x, hc.y);
       const sy = cam.worldToScreenY(hc.x, hc.y, w.heightAt(hc.x, hc.y));
       ctx.setLineDash([6 * zoom, 5 * zoom]);

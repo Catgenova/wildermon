@@ -12,13 +12,12 @@ export const SKILL_DEFS: SkillDef[] = [
   { id: 'mind_logic', name: 'Mind logic', group: 'Characteristics', start: 20 },
   { id: 'soul_strength', name: 'Soul strength', group: 'Characteristics', start: 20 },
   /*
-   * How much of the world you take in, and the one characteristic that does
-   * not start where the others do. Everybody washes ashore with a body and a
-   * mind already half grown; nobody washes ashore able to read a dark hillside.
-   * It is the whole of how far you see, and it is only learned by fighting in
-   * the dark — which is where a person finds out how little they were noticing.
+   * How much of the world you take in: sight range, how close a monster comes
+   * before it notices you, tracking range, hit chance in the dark and the
+   * husbandry a trait needs (`AWARE_PER_LEVEL`, `AWARE_TRAIT_STEP`). Learned in
+   * the dark (`fought`, `DARK_WALK`, `DARK_WORK`) and by tracking (`TRACK_AWARE`).
    */
-  { id: 'awareness', name: 'Awareness', group: 'Characteristics', start: 1 },
+  { id: 'awareness', name: 'Awareness', group: 'Characteristics', start: 20 },
   { id: 'digging', name: 'Digging', group: 'Skills', start: 1 },
   { id: 'mining', name: 'Mining', group: 'Skills', start: 1 },
   { id: 'prospecting', name: 'Prospecting', group: 'Skills', start: 1 },

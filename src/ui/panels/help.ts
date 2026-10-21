@@ -131,6 +131,8 @@ import {
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { CLEAR_OF_BUILDINGS, CONCRETE_PER_STEP, LIFT_PER_MASONRY, POOL_FILL } from '../../game/foundations';
 import { AWARENESS, awarenessReach, BASE_SIGHT, LIGHT_GIVES_BACK, NIGHT_LOSS, TREE_OPACITY } from '../../game/vision';
+import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
+import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
 import { DODGE_MOST } from '../../game/fight';
@@ -755,8 +757,12 @@ const riteSays = (id: string): string =>
   Object.entries(riteDef(id)?.muls ?? {})
     .map(([ch, mul]) => `${CHANNELS[ch as Channel].note.toLowerCase()} ${channelSays(mul)}`)
     .join(', ');
-/** Where awareness starts, which is not where the other characteristics do. */
+/** Where awareness starts. */
 const AWARE_START = SKILL_BY_ID.get(AWARENESS)?.start ?? CHAR_START;
+/** Awareness's share per level, to three places: "0.125%". */
+const AWARE_RATE = `${+(AWARE_PER_LEVEL * 100).toFixed(3)}%`;
+/** And at the top: "10%". */
+const AWARE_TOP = percent(awareShareAbove(SKILL_TOP - CHAR_START));
 /** Levels from a characteristic's start to the top. */
 const TOP_ABOVE = SKILL_TOP - CHAR_START;
 /** A multiplier to two places, trailing zeros dropped. */
@@ -1140,10 +1146,13 @@ export function helpText(): string {
     </ul>
     <h4>Awareness, and how far that circle reaches</h4>
     <ul>
-      <li><b>Awareness</b>: a characteristic; sets sight range. <b>Starts at ${AWARE_START}</b> (others at ${CHAR_START}).</li>
-      <li>Top awareness: ${BASE_SIGHT} tiles on the flat. At ${AWARE_START}: ${percent(awarenessReach(AWARE_START))}
+      <li><b>Awareness</b>: a characteristic. <b>Starts at ${AWARE_START}</b>.</li>
+      <li>Sight range: ${BASE_SIGHT} tiles on the flat at ${SKILL_TOP}. At ${AWARE_START}: ${percent(awarenessReach(AWARE_START))}
       (${Math.round(BASE_SIGHT * awarenessReach(AWARE_START))} tiles against ${BASE_SIGHT}). Scales with the square root of the level.</li>
-      <li>Learned only by <b>fighting in the dark</b>, weighted by darkness (dusk worth a fraction of deep night). Taking a blow teaches more than landing one.</li>
+      <li>Per level over ${CHAR_START}: monster notice range −${AWARE_RATE} (−${AWARE_TOP} at ${SKILL_TOP}); tracking range +${AWARE_RATE} (+${AWARE_TOP} at ${SKILL_TOP});
+      hit chance +${AWARE_RATE} × darkness, over ${percent(NIGHT_EYES_FROM)} dark or underground (+${AWARE_TOP} at ${SKILL_TOP} in full dark).
+      Animal husbandry to read a trait: one level less per ${AWARE_TRAIT_STEP} levels over ${CHAR_START} (−${awareTraitEase(SKILL_TOP)} at ${SKILL_TOP}).</li>
+      <li>Raised by ${raisedBySays('awareness')}.</li>
       <li>Height adds distance; ridges hide what is behind; a wood blocks sight ${Math.ceil(1 / TREE_OPACITY)} trees deep;
       <b>darkness takes ${frac(NIGHT_LOSS)} of sight</b>.</li>
       <li>Your settlement is in sight while you hold it; your wildermon see from wherever they work.</li>
@@ -1702,7 +1711,7 @@ export function helpText(): string {
       <li>Always indoors, no walls needed, roof or none. Rot: ${frac(CELLAR_DECAY)} of the open-air rate (closed room: ${frac(INDOORS_DECAY)}); the slowest anywhere.</li>
       <li>Bed: +${percent(INDOORS_REST - 1)} rest over the same bed outdoors, as in a closed room.</li>
       <li>All furniture goes down except ${listed(CELLAR_BURNS)} (open fires), anything on wheels or afloat, and ${listed(CELLAR_NOT_DOWN)}.</li>
-      <li>Always dark; counts as deep night for Awareness learned in a fight. Sight: what a carried lantern or torch lights. A lantern or torch can be lit there only
+      <li>Always dark; counts as deep night for Awareness learned in the dark. Sight: what a carried lantern or torch lights. A lantern or torch can be lit there only
       from another alight in your hands.</li>
       <li>Daylight: ${CELLAR_DAYLIGHT} tiles round the foot of the way in, by day.</li>
     </ul>
@@ -2245,7 +2254,7 @@ export function helpText(): string {
     <ul>
       <li>On the page of a seen wildermon kind (not monsters, not shadows): reads the trail of the nearest wild one, any evolution stage. A <b>Tracking</b> action; walking pauses it.
       Kept ones are never tracked.</li>
-      <li>Reach: ${TRACK_RANGE_BASE} tiles + ${TRACK_RANGE_PER} per Tracking level (${trackRange(SKILL_TOP)} at ${SKILL_TOP}). Direction error: ${trackErrSays()}, evenly spread.</li>
+      <li>Reach: ${TRACK_RANGE_BASE} tiles + ${TRACK_RANGE_PER} per Tracking level (${trackRange(SKILL_TOP)} at ${SKILL_TOP}); +${AWARE_TOP} at awareness ${SKILL_TOP}. Direction error: ${trackErrSays()}, evenly spread.</li>
       <li>Detail by Tracking: ${trackBandsSays().join('; ')}. North is up the map.</li>
       <li>An on-screen arrow points the read direction from where you stood for ${TRACK_SHOW} seconds.</li>
       <li>Trains Tracking: an action's worth when it finds one; ${percent(TRY_LEARN)} of one when it finds no sign.</li>
@@ -3095,7 +3104,8 @@ export function helpText(): string {
       <li>${TRAIT_SLOTS} slots filled one at a time from the pair's traits. Husbandry sets <b>parent inheritance</b> (${frac(inheritChance(0, 0))} at no skill,
       ${percent(inheritChance(TOP_SKILL, 1))} at ${TOP_SKILL} with a well-brushed pair) and <b>rarity-up chance</b> (none at no skill and no care, ${percent(upgradeChance(TOP_SKILL, 1))} at ${TOP_SKILL}
       with a well-brushed pair). High husbandry also favours the pair's best traits.</li>
-      <li><b>Look it over</b> names traits your husbandry can read: common always; ${listed(TIERS.slice(1).map((t, i) => `${t} ${i === 0 ? 'needs ' : ''}${TIER_LEVEL[t] + 1}`))}.
+      <li><b>Look it over</b> names traits your husbandry can read: common always; ${listed(TIERS.slice(1).map((t, i) => `${t} ${i === 0 ? 'needs ' : ''}${TIER_LEVEL[t] + 1}`))};
+      one level less per ${AWARE_TRAIT_STEP} awareness over ${CHAR_START}.
       Unread: <i>something</i>.</li>
       <li>Only females give milk. Young and old ones do not breed.</li>
       <li><b>Pedigree</b> (card and hover): <b>dam</b>, <b>sire</b>, and each readable trait's source: ${PEDIGREE_SOURCES}.</li>

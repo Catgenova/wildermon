@@ -3,7 +3,7 @@ import { SPECIES, type SpeciesDef } from '../../game/creatures';
 import { countsLine, GUIDE_MARKS, guidePage, guidePages, keepable, MARK_NAMES, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { ACTION_BY_ID } from '../../game/actions';
-import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackRange, trackTarget, TRACKING } from '../../game/tracking';
+import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackReach, trackTarget, TRACKING } from '../../game/tracking';
 import { CULL_RANGE } from '../../game/creatures';
 import { drawCreaturePortrait } from '../../render/sprites';
 
@@ -208,7 +208,7 @@ export class GuidePanel {
       go.className = 'tb-btn tb-small guide-track';
       go.textContent = 'Track';
       // Alone, no further than the wild that is out (`trackAction.ts`).
-      const reach = this.island ? trackRange(L) : Math.min(trackRange(L), CULL_RANGE);
+      const reach = this.island ? trackReach(L, this.game.awareShare()) : Math.min(trackReach(L, this.game.awareShare()), CULL_RANGE);
       go.title = `Nearest wild ${def.name} within ${reach} tiles, bearing ±${degreesSays(trackErr(L))}° (Tracking ${L})`;
       go.addEventListener('click', () => this.game.requestAction(track, trackTarget(this.game, def.id)));
       side.append(go);

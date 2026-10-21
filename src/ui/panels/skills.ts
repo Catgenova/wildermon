@@ -1,4 +1,4 @@
-import { boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, goSeconds, MIND_EASED_SKILLS, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
+import { awareTraitEase, boatHands, CARRY_PER_STRENGTH, CHAR_START, controlPaceAbove, goSeconds, MIND_EASED_SKILLS, staminaCostAbove, type Game, windRegenAbove } from '../../game/game';
 import { staminaBarAbove } from '../../game/body';
 import { CONTROL_HIT } from '../../game/gear';
 import { listed, percent } from '../../game/words';
@@ -15,6 +15,7 @@ import { ACTION_BY_ID, maxDigSlope } from '../../game/actions';
 const SLOW_GO = 100;
 /** A multiplier to two places, trailing zeros dropped. */
 const two = (x: number): number => +x.toFixed(2);
+import { awarenessReach, BASE_SIGHT } from '../../game/vision';
 
 /** The thinking skills mind logic eases, by name. */
 const MIND_EASED_SAID = listed(MIND_EASED_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()));
@@ -267,9 +268,17 @@ export class SkillsPanel {
         const pace = Math.round(g.player.swimSpeed * 100);
         return [`Swim speed ${pace}% of walk`, `Swim speed in deep water: ${pace}% of walk speed.`];
       }
+      case 'awareness': {
+        const sight = Math.round(BASE_SIGHT * awarenessReach(v));
+        const share = percent(g.awareShare());
+        const ease = awareTraitEase(v);
+        return [`Sight ${sight} tiles, notice −${share}, tracking +${share}, dark hit +${share}, traits −${ease} levels`,
+          `Sight range ${sight} tiles (daylight, flat ground). Monster notice range −${share}. Tracking range +${share}. `
+            + `Hit chance in full dark +${share}. Animal husbandry to read a trait −${ease} levels.`];
+      }
       // What a go of Track reaches and reads at this level, and what each band of it says (`tracking.ts`).
       case TRACKING:
-        return trackingSays(v);
+        return trackingSays(v, g.awareShare());
       default:
         return null;
     }

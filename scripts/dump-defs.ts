@@ -170,6 +170,8 @@ import { EFFECT_HEAD, EFFECT_SAID, EFFECT_TAIL, ENCHANT, ENCHANT_BURN, enchantLi
 import { STATION_NAME, scrollHarmSaid } from '../src/game/recipes';
 import { STUN_SECS } from '../src/game/fight';
 import { QL_BARE, QL_LOW, QL_SPAN } from '../src/game/game';
+import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP } from '../src/game/game';
+import { DARK_WALK, DARK_WORK, TRACK_AWARE } from '../src/game/learn';
 import { DAMAGE_MAX, QL_TOP } from '../src/game/limits';
 import { BARTER_IDLE, BARTER_MOST, BARTER_REACH, BARTER_SAID } from '../src/game/barter';
 import {
@@ -1878,6 +1880,9 @@ for (const [fn, v] of [
   ['work_back', WORK_BACK],
   ['night_eyes_from', NIGHT_EYES_FROM],
   ['dark_swing', DARK_SWING], ['dark_shot', DARK_SHOT], ['dark_hit', DARK_HIT],
+  /* And what else awareness is learned by, and what it is worth (`aware_share`, `aware_trait_ease`). */
+  ['dark_walk', DARK_WALK], ['dark_work', DARK_WORK], ['track_aware', TRACK_AWARE],
+  ['aware_per_level', AWARE_PER_LEVEL], ['aware_trait_step', AWARE_TRAIT_STEP],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }

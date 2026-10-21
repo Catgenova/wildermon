@@ -1,4 +1,4 @@
-import { CHAR_START, goSeconds, hullSpeed, MIND_EASED_SKILLS, productQlRange, queueCapAt, type Game } from './game';
+import { awareTraitEase, CHAR_START, goSeconds, hullSpeed, MIND_EASED_SKILLS, productQlRange, queueCapAt, type Game } from './game';
 import { ACTIONS, maxDigSlope, maxMasonSlope, prospectReach, repairGo } from './actions';
 import { RECIPES } from './recipes';
 import { MOULDS } from './metal';
@@ -247,7 +247,13 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Craft difficulty eased', at: (g) => g.mindEase(), say: (v) => (v > 0 ? `−${+v.toFixed(1)} difficulty` : '0 difficulty'), note: 'At most half a craft\'s difficulty' },
     ],
     soul_strength: [{ label: 'Tame chance', at: (g) => g.soulBonus(), say: (v) => `+${percent(v)}` }],
-    awareness: [{ label: 'Sight range', at: (g) => BASE_SIGHT * awarenessReach(g.skills.get('awareness')), say: tiles, note: 'Daylight, flat ground' }],
+    awareness: [
+      { label: 'Sight range', at: (g) => BASE_SIGHT * awarenessReach(g.skills.get('awareness')), say: tiles, note: 'Daylight, flat ground' },
+      { label: 'Monster notice range', at: (g) => g.awareNotice(), say: ofLevel(CHAR_START) },
+      { label: 'Tracking range', at: (g) => 1 + g.awareShare(), say: ofLevel(CHAR_START) },
+      { label: 'Hit chance in the dark', at: (g) => g.awareShare(), say: (v) => `+${percent(v)}`, note: 'Full dark' },
+      { label: 'Husbandry to read a trait', at: (g) => awareTraitEase(g.skills.get('awareness')), say: (v) => `−${v} levels` },
+    ],
     climbing: [
       { label: 'Step up', at: (g) => g.climbStep(), say: height },
       { label: 'Step down', at: (g) => g.dropStep(), say: height },

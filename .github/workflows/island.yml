@@ -1543,6 +1543,15 @@ jobs:
             --outfile=node_modules/.cache/staminabar.mjs --log-level=error
           node node_modules/.cache/staminabar.mjs
 
+      - name: Awareness, more uses, more sources and a start at 20, the same on both sides
+        run: |
+          # "1 add those [uses], 2 add those [sources], 3 start at 20, 4 keep [the curve], 5 add both".
+          # Notice range, track reach, hit chance in the dark and the husbandry a trait needs at 20, 60
+          # and 100; a tile walked, a forage and a track teach the same on both sides.
+          npx esbuild supabase/test/awareness.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/awareness.mjs --log-level=error
+          node node_modules/.cache/awareness.mjs
+
       - name: Ranks of your own, the founder's to make, in the same words on both sides
         run: |
           # "Allow the founder to establish ranks and advanced permissions for

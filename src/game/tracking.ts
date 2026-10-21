@@ -44,7 +44,7 @@ import type { Target } from './actions';
 import type { Game } from './game';
 import type { Creature, SpeciesDef } from './creatures';
 import { SKILL_TOP } from './skills';
-import { listed } from './words';
+import { listed, percent } from './words';
 
 /** The skill a trail is read with, and the only thing that trains it. */
 export const TRACKING = 'tracking';
@@ -98,6 +98,8 @@ export const TRACK_POINTS = [
 export const trackLevel = (skill: number): number => Math.floor(Math.max(0, Math.min(SKILL_TOP, skill)));
 /** How far a track reaches at a level, in tiles. The island's `track_range`. */
 export const trackRange = (level: number): number => TRACK_RANGE_BASE + TRACK_RANGE_PER * level;
+/** And with awareness's share on it (`awareShare`), in whole tiles: what a go reaches (`perform_track`). */
+export const trackReach = (level: number, aware: number): number => Math.floor(trackRange(level) * (1 + aware));
 /** The most a reading is off the true bearing at a level, either way, in degrees. The island's `track_err`. */
 export const trackErr = (level: number): number => Math.max(TRACK_ERR_LEAST, TRACK_ERR_MOST * (1 - level / SKILL_TOP));
 /** Which of `TRACK_BANDS` a level reads in. The island's `track_band`. */
@@ -245,16 +247,16 @@ export const trackErrSays = (): string =>
  * What the Skills window says Tracking is worth, short and as a sentence: the
  * reach and the spread at the level you are at, and what every band adds.
  */
-export function trackingSays(skill: number): [string, string] {
+export function trackingSays(skill: number, aware = 0): [string, string] {
   const L = trackLevel(skill);
   const err = trackErr(L);
   const band = TRACK_BANDS[trackBand(L)];
   const bands = trackBandsSays();
-  const reach = trackRange(L);
+  const reach = trackReach(L, aware);
   return [
     `${reach} tiles · ±${fmt(err)}° · ${band.points === 360 ? 'degree' : `${band.points} points`}`,
     `Track (from a kind's field guide page): nearest wild one of a seen kind within ${TRACK_RANGE_BASE} tiles, +${TRACK_RANGE_PER} per level `
-      + `(${trackRange(L)} now). Bearing error: ${trackErrSays()} (±${fmt(err)}° now). Levels: ${bands.join('; ')}.`,
+      + `(${reach} now${aware > 0 ? `, awareness +${percent(aware)}` : ''}). Bearing error: ${trackErrSays()} (±${fmt(err)}° now). Levels: ${bands.join('; ')}.`,
   ];
 }
 

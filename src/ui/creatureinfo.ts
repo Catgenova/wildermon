@@ -35,7 +35,7 @@ import { crateOf } from '../game/creaturecrate';
 import type { Game } from '../game/game';
 import { itemDef } from '../game/items';
 import { traitOf } from '../game/traits';
-import { TIER_LEVEL } from '../game/husbandry';
+import { traitReadNeeds } from '../game/husbandry';
 import { SKILL_BY_ID } from '../game/skills';
 import { idleSays, ledgerLines } from '../game/workerlog';
 
@@ -158,7 +158,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
   const traits = c.traits.map((id) => {
     const t = traitOf(id);
     if (!t) return null;
-    if (husbandry < 1 + TIER_LEVEL[t.tier]) return 'unread';
+    if (husbandry < traitReadNeeds(t.tier, g.skills.get('awareness'))) return 'unread';
     // Nearly everything is common, so only what is better than common says so.
     // A fighting trait's grade is already in its name: "fanged (rare)".
     return t.tier === 'common' || t.family ? t.name : `${t.name} (${t.tier})`;

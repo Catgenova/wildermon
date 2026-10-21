@@ -565,6 +565,14 @@ export const controlPaceAbove = (above: number): number => Math.max(0.6, 1 - abo
 export const staminaCostAbove = (above: number): number => Math.max(0.45, 1 - Math.max(0, above) * 0.0045);
 /** And of how fast stamina comes back (`body_settle`). */
 export const windRegenAbove = (above: number): number => 1 + Math.max(0, above) * WIND_PER_LEVEL;
+/** Awareness's share for every level over the starting mark (`aware_per_level`): monster notice range down, tracking range up, hit chance in the dark up. */
+export const AWARE_PER_LEVEL = 0.00125;
+/** That share, this many levels of awareness over the starting mark (`aware_share`). */
+export const awareShareAbove = (above: number): number => Math.max(0, above) * AWARE_PER_LEVEL;
+/** One level less animal husbandry to read a trait per this many levels of awareness over the starting mark (`aware_trait_step`). */
+export const AWARE_TRAIT_STEP = 10;
+/** Levels of animal husbandry an awareness takes off reading a trait (`aware_trait_ease`). */
+export const awareTraitEase = (aware: number): number => Math.max(0, Math.floor((aware - CHAR_START) / AWARE_TRAIT_STEP));
 /** The hands on a boat, as a share of her speed: body control at a sail, body strength at the oars (`hull_speed`). */
 export const boatHands = (sail: boolean, body: number): number => (sail ? 0.9 + body / 320 : 0.6 + body / 150);
 
@@ -3480,20 +3488,35 @@ export class Game {
   }
 
   /**
-   * A blow struck or taken, for whatever wants to know that a fight happened.
-   *
-   * Awareness is learned in exactly one place: fighting in the dark. Nothing
-   * teaches a person what they were not noticing like something coming out of
-   * it at them, and nothing else on this island teaches it at all — so the
-   * skill that decides how far you see is bought with the hours when you can
-   * see least. Weighted by how dark it actually is, so a scuffle at dusk is
-   * worth a fraction of one at the dead of night -- and down in a cellar it is
-   * the dead of night at every hour, as it is to the eye (`cellar.ts`).
+   * A blow struck or taken, for whatever wants to know that a fight happened:
+   * awareness × darkness (`awareDark`), as `fought_in_dark`. Down in a cellar it
+   * is the dead of night at every hour, as it is to the eye (`cellar.ts`).
    */
   fought(weight = 1): void {
-    const dark = this.player.level < 0 ? 1 : this.darkness();
-    if (dark <= NIGHT_EYES_FROM) return;
+    const dark = this.awareDark();
+    if (!dark) return;
     this.gainSkill(AWARENESS, weight * dark);
+  }
+
+  /** Darkness as awareness reads it: 1 below ground, 0 at or under `NIGHT_EYES_FROM` (`aware_dark`). */
+  awareDark(): number {
+    const dark = this.player.level < 0 ? 1 : this.darkness();
+    return dark > NIGHT_EYES_FROM ? dark : 0;
+  }
+
+  /** Awareness's share over the starting mark (`aware_share`). */
+  awareShare(): number {
+    return awareShareAbove(this.skills.get(AWARENESS) - CHAR_START);
+  }
+
+  /** How far a hunter notices you from, as a share of how far it would, for your awareness (`aware_notice`). */
+  awareNotice(): number {
+    return 1 - this.awareShare();
+  }
+
+  /** What awareness adds to the hit chance, × darkness as it reads it (`hit_chance`). */
+  awareDarkHit(): number {
+    return this.awareShare() * this.awareDark();
   }
 
   /**
