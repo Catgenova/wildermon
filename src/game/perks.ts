@@ -214,7 +214,7 @@ const TERRAFORMER: Seed[] = [
   {
     num: 12, name: 'Steep Cut',
     fx: { 'slope:digging': 4 },
-    note: (fx) => `Max slope left by Dig, Drop dirt and Dredge: ${metres(fx['slope:digging'])} m per digging level `
+    note: (fx) => `Max slope left by Dig, Change tile and Dredge: ${metres(fx['slope:digging'])} m per digging level `
       + `(base ${metres(SLOPE_PER_SKILL)} m, min ${metres(SLOPE_FLOOR)} m).`,
   },
   {
@@ -277,7 +277,7 @@ const TERRAFORMER: Seed[] = [
   {
     num: 34, name: 'Long Reach',
     fx: { 'reach:soil': 5 },
-    note: (fx) => `Drop dirt and Flatten take soil from carts and containers within ${fx['reach:soil']} tiles `
+    note: (fx) => `Change tile and Flatten take soil from carts and containers within ${fx['reach:soil']} tiles `
       + `(base ${SPOIL_REACH}). Dug material goes into the nearest unlocked cart or wagon within ${fx['reach:soil']} tiles `
       + 'not pulled or driven by another player (base: your pack).',
   },

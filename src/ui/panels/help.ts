@@ -3154,9 +3154,9 @@ export function helpText(): string {
     <h4>Digging and the level</h4>
     <ul>
       <li>Every corner: soil over bedrock. <b>Digging</b> lowers the corner nearest the click (marker) and takes a spadeful of its soil; stops at rock.
-      All corners bare: the tile becomes rock (whatever lies there, possibly a seam). Dropping dirt on a corner covers rock again.</li>
+      All corners bare: the tile becomes rock (whatever lies there, possibly a seam). <b>Change tile</b> on a corner covers rock again.</li>
       <li><b>Take the level here</b> (right-click a corner): that height becomes the target. <b>Flatten</b> aims at it instead of your own tile.
-      <b>Digging</b> and <b>Chip corner</b> stop at the mark going down; <b>dropping dirt</b> and <b>concrete</b> stop at it going up (a repeat run ends when level).
+      <b>Digging</b> and <b>Chip corner</b> stop at the mark going down; <b>Change tile</b> and <b>concrete</b> stop at it going up (a repeat run ends when level).
       The Tile window shows the cursor corner's distance from it. <b>Clear the level</b> removes it.</li>
     </ul>
     <h4>Foundations</h4>
@@ -3170,7 +3170,8 @@ export function helpText(): string {
     <h4>Soil</h4>
     <ul>
       <li>Dirt, clay and sand: <b>${itemDef('dirt').weight}kg</b> each; a starting back carries ${Math.floor((CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH) / itemDef('dirt').weight)} before overload.</li>
-      <li>Dropping dirt and flattening's fill take a spadeful from any <b>crate, cart or bin within reach</b> when you carry none.</li>
+      <li><b>Change tile</b> (a corner, or an item for your feet): dirt, clay or sand raises the corner one step and lays that tile.</li>
+      <li>Change tile and flattening's fill take a spadeful from any <b>crate, cart or bin within reach</b> when you carry none.</li>
       <li><b>${capital(listed(Object.values(TILE_DEFS).filter((d) => d.collect).map((d) => d.name.toLowerCase())))}</b>: <b>Collect</b> (<i>Collect clay</i>, <i>Collect dirt</i>), standing on it:
       a shovelful off the top; tile type, corner heights and soil unchanged; slightly slower than digging a corner.</li>
       <li><b>Cut moss</b>: <b>${MOSS_PER_CUT} moss</b>; tile stays moss; regrows before the next cut. Digging its corner gives dirt.

@@ -1320,7 +1320,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('dig_tile', 'Dig whole tile', 'digging out the tile', 'digging', 'shovel', false, null, 0.12, 16, 8, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('dredge', 'Dredge', 'dredging', 'digging', 'shovel', true, null, 0.06, 7, 10, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('flatten', 'Flatten', 'flattening', 'digging', 'shovel', false, null, 0.03, 3.5, null, false, true);
-insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('drop_dirt', 'Drop dirt', 'dropping dirt', 'digging', null, true, null, 0.02, 2, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('drop_dirt', 'Change tile', 'changing tile', 'digging', null, true, null, 0.02, 2, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('take_level', 'Set level here', 'taking the level', null, null, true, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('clear_level', 'Clear level', 'clearing the level', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('rubble_fill', 'Raise rock: rubble', 'packing rubble', 'masonry', 'trowel', true, null, 0.05, 5, 10, false, false);
@@ -1964,7 +1964,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('harvest_patch', 'Harvest patch', 'harvesting a patch', 'farming', null, false, null, 0.12, 15, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('clear_ivy', 'Clear the ivy', 'clearing ivy', null, 'sickle', false, null, 0.04, 8, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('scrub_moss', 'Scrub the moss', 'scrubbing moss', null, 'brush', false, null, 0.04, 8, null, false, false);
-insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('drop_dirt_here', 'Drop (raise ground)', 'dropping dirt', 'digging', null, false, null, 0.02, 2, null, false, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('drop_dirt_here', 'Change tile', 'changing tile', 'digging', null, false, null, 0.02, 2, null, false, false);
 
 delete from recipe_input;
 delete from recipe_gives;
@@ -2818,6 +2818,7 @@ insert into plantable values (6);
 insert into plantable values (11);
 insert into plantable values (20);
 insert into buryable values (0);
+insert into buryable values (1);
 insert into buryable values (3);
 insert into buryable values (5);
 insert into buryable values (6);
@@ -6376,14 +6377,14 @@ insert into class_perk values ('terraformer_quick_paver', 'terraformer', 1, 25, 
 insert into class_perk values ('terraformer_level_hand', 'terraformer', 2, 9, 'Level Hand', 'Flatten height per action: 0.2 m (base 0.1 m).', '{"flatten:step":2}');
 insert into class_perk values ('terraformer_wader', 'terraformer', 2, 14, 'Wader', 'Dig and Flatten max water depth: 2.0 m (base 1.0 m).', '{"depth:dig":20}');
 insert into class_perk values ('terraformer_stump_puller', 'terraformer', 2, 23, 'Stump Puller', 'Dig out the stump time −50%. Output: 1 log of the tree''s kind (base: none).', '{"time:dig_stump":0.5,"stump:log":1}');
-insert into class_perk values ('terraformer_steep_cut', 'terraformer', 3, 12, 'Steep Cut', 'Max slope left by Dig, Drop dirt and Dredge: 0.4 m per digging level (base 0.3 m, min 4.0 m).', '{"slope:digging":4}');
+insert into class_perk values ('terraformer_steep_cut', 'terraformer', 3, 12, 'Steep Cut', 'Max slope left by Dig, Change tile and Dredge: 0.4 m per digging level (base 0.3 m, min 4.0 m).', '{"slope:digging":4}');
 insert into class_perk values ('terraformer_dredger', 'terraformer', 3, 15, 'Dredger', 'Dredge max depth: 6.0 m (base 3.0 m). Dredge time −20%.', '{"depth:dredge":60,"time:dredge":0.8}');
 insert into class_perk values ('terraformer_bed_true', 'terraformer', 3, 26, 'Bed True', 'Pave (slabs) never fails (base: check at difficulty 10 against the slab''s QL).', '{"fail:pave_slabs":0}');
 insert into class_perk values ('terraformer_frugal_cobbler', 'terraformer', 4, 27, 'Frugal Cobbler', 'Pave (cobblestone) uses no stone brick: 1 in 3 actions.', '{"keep:pave_cobble":0.3333333333333333}');
 insert into class_perk values ('terraformer_road_legs', 'terraformer', 4, 29, 'Road Legs', 'Walk speed +15% on packed dirt, cobblestone and stone slabs.', '{"walk:road":1.15}');
 insert into class_perk values ('terraformer_soil_porter', 'terraformer', 4, 32, 'Soil Porter', 'Dirt, sand and clay weight: 10 kg per unit (base 20 kg).', '{"weight:dirt":0.5,"weight:sand":0.5,"weight:clay":0.5}');
 insert into class_perk values ('terraformer_strong_back', 'terraformer', 5, 33, 'Strong Back', 'Carry weight +40 kg (base 120 kg, +5 kg per body strength level).', '{"carry":40}');
-insert into class_perk values ('terraformer_long_reach', 'terraformer', 5, 34, 'Long Reach', 'Drop dirt and Flatten take soil from carts and containers within 5 tiles (base 2.5). Dug material goes into the nearest unlocked cart or wagon within 5 tiles not pulled or driven by another player (base: your pack).', '{"reach:soil":5}');
+insert into class_perk values ('terraformer_long_reach', 'terraformer', 5, 34, 'Long Reach', 'Change tile and Flatten take soil from carts and containers within 5 tiles (base 2.5). Dug material goes into the nearest unlocked cart or wagon within 5 tiles not pulled or driven by another player (base: your pack).', '{"reach:soil":5}');
 insert into class_perk values ('terraformer_dig_out_the_tile', 'terraformer', 5, 44, 'Dig Out the Tile', 'New action: Dig out the tile. Lowers all 4 corners by 0.1 m in one action: 16 s base (4 digs: 24 s). Output: 4 of the material.', '{"dig_tile":1}');
 insert into class_perk values ('terraformer_clean_earth', 'terraformer', 6, 5, 'Clean Earth', 'QL +10%: dirt, sand, clay, peat and tar from Dig, Dredge, Collect and Flatten.', '{"ql:dig":1.1,"ql:dredge":1.1,"ql:collect":1.1,"ql:flatten":1.1}');
 insert into class_perk values ('terraformer_rare_earth', 'terraformer', 6, 6, 'Rare Earth', 'Rare chance on Dig, Dredge and Collect: 1 in 100 (base: none). Rare may become supreme or fantastic at crafting odds.', '{"rare:dig":0.01,"rare:dredge":0.01,"rare:collect":0.01}');

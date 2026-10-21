@@ -3107,6 +3107,15 @@ export const NEWS: News[] = [
       'Added: phone text boxes: no zoom on focus; kept above the keyboard.',
     ],
   },
+  {
+    n: 239,
+    day: '2026-10-21',
+    lines: () => [
+      'Fixed: dropped clay or sand left dirt; a spadeful now lays its own tile, on dirt too.',
+      'Changed: Drop dirt and Drop (raise ground) renamed Change tile; one option per dirt, clay or sand in the pack.',
+      'Changed: Change tile at your feet takes clay and sand as well as dirt.',
+    ],
+  },
 ];
 
 

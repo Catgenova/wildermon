@@ -207,6 +207,8 @@ export const BURYABLE: ReadonlySet<number> = new Set<number>([
   TileType.Marsh, TileType.Sand, TileType.Clay, TileType.Peat, TileType.Tar, TileType.Reed, TileType.Kelp,
   // And a trail, which is one of those five worn bare: soft ground, and buried the same.
   TileType.Trail,
+  // And dirt, under a spadeful of clay or sand.
+  TileType.Dirt,
 ]);
 
 /**

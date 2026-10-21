@@ -1298,12 +1298,8 @@ export const ACTIONS: ActionDef[] = [
   },
   {
     id: 'drop_dirt',
-    label: 'Drop dirt',
-    labelFor: (t, g) => {
-      const it = t.kind === 'tile' ? spoilFrom(g, SPOIL_ORDER, t.itemUid) : undefined;
-      return it ? `Drop ${itemDef(it.id).name.toLowerCase()}` : 'Drop dirt';
-    },
-    verb: 'dropping dirt',
+    label: 'Change tile',
+    verb: 'changing tile',
     skill: 'digging',
     corner: true,
     stamina: 0.02,
@@ -3215,20 +3211,22 @@ export const ACTIONS: ActionDef[] = [
   ...GREEN_ACTIONS,
   {
     id: 'drop_dirt_here',
-    label: 'Drop (raise ground)',
-    verb: 'dropping dirt',
+    label: 'Change tile',
+    verb: 'changing tile',
     skill: 'digging',
     stamina: 0.02,
     baseTime: 2,
-    applies: (t, g) => t.kind === 'item' && g.inventory.get(t.uid)?.id === 'dirt',
-    check: (_t, g) => {
+    applies: (t, g) => t.kind === 'item' && (g.inventory.get(t.uid)?.id ?? '') in SPOIL_TILE,
+    check: (t, g) => {
+      if (t.kind === 'item' && !((g.inventory.get(t.uid)?.id ?? '') in SPOIL_TILE)) return 'Need dirt, clay or sand.';
       const c = g.nearestCornerToPlayer();
       // Not a corner of a building: standing on a deck on piers, the ground under it (`piers.ts`), as `drop_dirt` has it.
       return cornerUnderBuilding(g, c.cx, c.cy) ?? slopeRefusal(g, 'digging', c.cx, c.cy, 1);
     },
     perform: (t, g) => {
       if (t.kind !== 'item') return;
-      if (!g.inventory.remove(t.uid, 1)) return;
+      const spoil = g.inventory.get(t.uid)?.id ?? '';
+      if (!(spoil in SPOIL_TILE) || !g.inventory.remove(t.uid, 1)) return;
       const c = g.nearestCornerToPlayer();
       const w = g.world;
       w.setHeight(c.cx, c.cy, w.getHeight(c.cx, c.cy) + 1);
@@ -3239,8 +3237,8 @@ export const ACTIONS: ActionDef[] = [
       // And the ground it covered, which is the tile under your feet — the
       // corner it raises belongs to as many as four of them.
       const [fx, fy] = [g.player.tileX, g.player.tileY];
-      if (BURYABLE.has(w.getTile(fx, fy))) w.setTile(fx, fy, TileType.Dirt);
-      g.logMsg('Dropped: dirt at your feet, corner raised.', 'event');
+      if (BURYABLE.has(w.getTile(fx, fy))) w.setTile(fx, fy, SPOIL_TILE[spoil]);
+      g.logMsg(`Dropped: ${itemDef(spoil).name.toLowerCase()} at your feet, corner raised.`, 'event');
     },
   },
 ];

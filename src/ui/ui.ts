@@ -4,7 +4,7 @@ import type { Game } from '../game/game';
 import { EMOTES } from '../game/emotes';
 import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
-import { ACTION_BY_ID, type ActionDef, type Target, fruitSprout, SPOIL_TILE } from '../game/actions';
+import { ACTION_BY_ID, type ActionDef, type Target, fruitSprout, SPOIL_ORDER } from '../game/actions';
 import { BARTER_REACH, BARTER_SAID } from '../game/barter';
 import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
 import {
@@ -1829,17 +1829,17 @@ export class UI {
           continue;
         }
       }
-      // A spadeful of dirt, clay or sand lays down the ground it was: choose
-      // which, when more than one is carried.
+      // Change tile: one option per dirt, clay or sand carried.
       if (def.id === 'drop_dirt') {
-        const spoil = this.game.inventory.items.filter((it) => it.id in SPOIL_TILE);
-        if (new Set(spoil.map((it) => it.id)).size > 1) {
+        const kinds = SPOIL_ORDER.map((id) => this.game.inventory.items.filter((it) => it.id === id && !it.locked)).filter((s) => s.length > 0);
+        if (kinds.length > 0) {
           entries.push({
             label: def.label,
-            children: spoil.map((it) => {
-              const st: Target = { ...target, itemUid: it.uid };
+            children: kinds.map((stacks) => {
+              const st: Target = { ...target, itemUid: stacks[0].uid };
               const why = def.check?.(st, this.game) ?? null;
-              return { label: `Drop ${it.count > 1 ? `${itemName(it).toLowerCase()} (${it.count})` : itemName(it).toLowerCase()}`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
+              const n = stacks.reduce((sum, it) => sum + it.count, 0);
+              return { label: `${itemName(stacks[0])} (${n})`, hint: why ?? undefined, disabled: !!why, onSelect: () => this.game.requestAction(def, st) };
             }),
           });
           continue;

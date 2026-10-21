@@ -3259,6 +3259,14 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/kelp.mjs --log-level=error
           node node_modules/.cache/kelp.mjs
 
+      - name: Change tile lays what was dropped
+        run: |
+          # Reported: clay or sand dropped on dirt left dirt. Both sides: clay,
+          # sand and dirt lay their own tile, at a corner and at your feet.
+          npx esbuild supabase/test/changetile.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/changetile.mjs --log-level=error
+          node node_modules/.cache/changetile.mjs
+
       - name: A mould is the smith's, formed and poured by blacksmithing
         run: |
           # Asked: pouring moulds should give blacksmithing experience, and a
