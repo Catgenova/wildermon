@@ -871,8 +871,15 @@ const SUN_STEPS = 48;
 const PICK_EVERY = 90;
 
 const pickSlack = (): number => (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches ? PICK_SLACK_TOUCH : PICK_SLACK);
-/** Alpha a drawn pixel needs to pick its thing, out of 255. */
+/**
+ * Alpha a drawn pixel needs to pick its thing, out of 255: `PICK_SOLID`, or
+ * `PICK_ALPHA` and lighter than `PICK_SHADE` in its brightest channel. A
+ * shadow is dark and see-through (black at 0.2 to 0.34, a piece's at 0.17)
+ * and picks nothing.
+ */
 const PICK_ALPHA = 40;
+const PICK_SOLID = 150;
+const PICK_SHADE = 100;
 
 /** One drawing of a thing, kept to test a point against its pixels (`Renderer.shapeHas`). */
 interface HitShape {
@@ -15046,7 +15053,10 @@ export class Renderer {
       g.restore();
     }
     const px = g.getImageData(0, 0, n, n).data;
-    for (let i = 3; i < px.length; i += 4) if (px[i] >= PICK_ALPHA) return true;
+    for (let i = 0; i < px.length; i += 4) {
+      const a = px[i + 3];
+      if (a >= PICK_SOLID || (a >= PICK_ALPHA && Math.max(px[i], px[i + 1], px[i + 2]) >= PICK_SHADE)) return true;
+    }
     return false;
   }
 

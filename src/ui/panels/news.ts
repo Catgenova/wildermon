@@ -3121,7 +3121,7 @@ export const NEWS: News[] = [
     n: 240,
     day: '2026-10-21',
     lines: () => [
-      `Fixed: crates, chests, carts, wagons, furnaces, kilns, anvils, work posts, traps and fires picked by their drawn shape, ±${PICK_SLACK} px (±${PICK_SLACK_TOUCH} px by touch), not a box round them.`,
+      `Fixed: crates, chests, carts, wagons, furnaces, kilns, anvils, work posts, traps and fires picked by their drawn shape, ±${PICK_SLACK} px (±${PICK_SLACK_TOUCH} px by touch); not a box round them, not their shadow.`,
       'Fixed: where two overlap, the one drawn in front is picked.',
     ],
   },
