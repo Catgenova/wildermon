@@ -1552,6 +1552,17 @@ jobs:
             --outfile=node_modules/.cache/awareness.mjs --log-level=error
           node node_modules/.cache/awareness.mjs
 
+      - name: Soul strength, its uses and its sources, the same on both sides
+        run: |
+          # "1. Add to those other uses. 2. Add those sources as well. 3. Keep
+          # small. 4. Fix text." At soul strength 20, 60 and 100: the same tame
+          # chance, favour per prayer, Calm per sitting and Beastmaster heal,
+          # blow and bonus on both sides; a prayer, a sitting and a sacrifice
+          # each teach soul strength an offering's gain.
+          npx esbuild supabase/test/soulstrength.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/soulstrength.mjs --log-level=error
+          node node_modules/.cache/soulstrength.mjs
+
       - name: Ranks of your own, the founder's to make, in the same words on both sides
         run: |
           # "Allow the founder to establish ranks and advanced permissions for

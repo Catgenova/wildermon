@@ -4,6 +4,8 @@ import { spellDef, spellForce, spellSecs } from './arcane';
 import { COMPANION_REACH, DRAW_CLOSEST, HUNT_REACH, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, TARGET_RANGE as SPELL_REACH, THROW_REACH } from './fight';
 import type { SpellOn } from './patrons';
 import { capital, percent } from './words';
+import { SOUL_PER_LEVEL } from './learn';
+import { SKILL_BY_ID, SKILL_TOP } from './skills';
 
 /**
  * What a fighting trade gives: two spells and a passive at each of six tiers.
@@ -166,6 +168,33 @@ const burns = (each: number, secs: number): string => `burn ${percent(each)} of 
 const BURN_LAST = 'burns never take the last of its health';
 
 /**
+ * The numbers soul strength raises on a Beastmaster's spells (`soul_mul`, the island's `soul_fx`): a `whole` one, a heal
+ * or a blow's share, by its multiplier; a `bonus` one, a ×1.4 that reads as +40%, on what it adds. Snarl, Guard Me,
+ * Feral Bond and Call of the Wild have no such number, and reaches, holds, delays, durations, costs and rests none.
+ */
+export const SOUL_FX: Readonly<Record<string, Readonly<Record<string, 'whole' | 'bonus'>>>> = {
+  beastmaster_sic: { more: 'whole' },
+  beastmaster_lick_wounds: { heal: 'whole' },
+  beastmaster_pounce: { more: 'whole' },
+  beastmaster_drag_down: { more: 'whole' },
+  beastmaster_disembowel: { more: 'whole' },
+  beastmaster_bloodlust: { more: 'bonus' },
+  beastmaster_vengeance: { more: 'whole' },
+  beastmaster_primal_fury: { more: 'bonus', quick: 'bonus' },
+};
+/** Where soul strength starts, which its share is counted from. */
+const SOUL_START = SKILL_BY_ID.get('soul_strength')?.start ?? 0;
+/** "0.125%": a share finer than `percent` says. */
+const finePct = (x: number): string => `${+(x * 100).toFixed(4)}%`;
+/** What a spell's note adds for soul strength: which of its numbers, by how much a level, and by how much at the top. */
+const soulSays = (id: string): string => {
+  const keys = Object.values(SOUL_FX[id] ?? {});
+  if (!keys.length) return '';
+  const what = keys.every((k) => k === 'bonus') ? (keys.length > 1 ? 'Bonuses' : 'Bonus') : id.endsWith('_lick_wounds') ? 'Heal' : 'Blow';
+  return ` ${what} +${finePct(SOUL_PER_LEVEL)} per soul strength level over ${SOUL_START} (+${percent((SKILL_TOP - SOUL_START) * SOUL_PER_LEVEL)} at ${SKILL_TOP}).`;
+};
+
+/**
  * Every class spell there is, trade by trade, by the number each was picked
  * under. Which tier each sits in is the trade's row in `perks.ts`'s `TIERS`.
  *
@@ -193,7 +222,7 @@ const BURN_LAST = 'burns never take the last of its health';
  * in hundredths of the health of whoever it is over, which takes what it can
  * out of every blow before the shield and the armour do.
  */
-export const CLASS_SPELLS: ClassSpellDef[] = [
+export const CLASS_SPELLS: ClassSpellDef[] = ([
   /* ---- The Sworn Blade ---- */
   blade(1, 'Measured Cut', 0.08, 6, ['enemy'], { more: 1.3 },
     (fx) => `Blow at ${ofBlow(fx.more)}, cannot miss. Target: enemy within reach.`),
@@ -499,8 +528,15 @@ export const CLASS_SPELLS: ClassSpellDef[] = [
     'warding'),
   warder(44, 'Unbreakable', 0.45, 900, ['self'], { secs: 6 },
     (fx) => `for ${span(fx.secs)}: no blow aimed at you lands.`, 'warding'),
-];
+] as ClassSpellDef[]).map((s) => (SOUL_FX[s.id] ? { ...s, note: s.note + soulSays(s.id) } : s));
 export const CLASS_SPELL_BY_ID = new Map(CLASS_SPELLS.map((s) => [s.id, s]));
+
+/** A spell's number at this soul strength multiplier (`soulAbove`): what the island casts it at (`soul_fx`). */
+export const soulFx = (id: string, k: string, mul: number): number => {
+  const v = CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0;
+  const how = SOUL_FX[id]?.[k];
+  return how === 'whole' ? v * mul : how === 'bonus' ? 1 + (v - 1) * mul : v;
+};
 export const classSpellsOf = (cls: string): ClassSpellDef[] => CLASS_SPELLS.filter((s) => s.class === cls);
 
 /** What a class spell costs and how long it rests, as the perk that grants it says first. */

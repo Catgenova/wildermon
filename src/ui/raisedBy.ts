@@ -1,7 +1,7 @@
-import { SWING_BODY, TAME_NERVE } from '../game/creatureActions';
+import { SWING_BODY } from '../game/creatureActions';
 import { DODGE_GAIN } from '../game/fight';
 import {
-  DARK_HIT, DARK_SHOT, DARK_SWING, DARK_WALK, DARK_WORK, HEAVY_SKILLS, MIND_GAIN, NIGHT_EYES_FROM, TRY_LEARN,
+  DARK_HIT, DARK_SHOT, DARK_SWING, DARK_WALK, DARK_WORK, HEAVY_SKILLS, MIND_GAIN, NIGHT_EYES_FROM, SOUL_GAIN, TRY_LEARN,
   TRACK_AWARE, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT,
 } from '../game/learn';
 import { SKILL_BY_ID } from '../game/skills';
@@ -48,8 +48,10 @@ export const RAISED_BY: Readonly<Record<string, readonly Raise[]>> = {
     { what: 'prospecting action, treasure hoard dug up', base: MIND_GAIN },
     { what: 'study action at a plain book', how: 'see Reeds, papyrus and books' },
   ],
+  // One gain for all of them (`SOUL_GAIN`): TAME_NERVE, and a prayer's, a sitting's and a sacrifice's.
   soul_strength: [
-    { what: 'offering to a wild wildermon', base: TAME_NERVE, tried: true },
+    { what: 'offering to a wild wildermon', base: SOUL_GAIN, tried: true },
+    { what: 'prayer, sitting, sacrifice at an altar', base: SOUL_GAIN },
   ],
   awareness: [
     { what: 'swing in the dark', base: DARK_SWING },

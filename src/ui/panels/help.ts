@@ -91,7 +91,7 @@ import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, ye
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../../game/graves';
 import {
-  ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, MIND_EASE_PER_LEVEL, MIND_EASED_SKILLS, mindEaseAt, queueCapAt, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
+  ASH_RATE, BASE_QUEUE, BOAT_LOAD_DRAG, boatHands, MIND_EASE_PER_LEVEL, MIND_EASED_SKILLS, mindEaseAt, queueCapAt, SOUL_PER_LEVEL, SOUL_TAME_PER_LEVEL, soulAbove, soulTameAbove, controlPaceAbove, staminaCostAbove, windRegenAbove, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP, CHAR_START, DAMAGE_MAX, DAMAGE_WARN,
   DAMAGE_WARN_STEP, DAWN, DAY_SECONDS, DEED_RADIUS, DEED_RADIUS_PER_LEVEL, DEEDS_JOINED, deedWorkersAt, DUSK,
   footing, Game, goSeconds, hullSpeed, kitQl, MAX_DEED_LEVEL, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
@@ -290,6 +290,10 @@ const glassJob = (id: string): string => {
   const r = recipe(id);
   return `<b>${r.label}</b>, ${bill(id)} into ${countIn(r.result, r.count ?? 1)}`;
 };
+/** Soul strength's share per level on favour, Calm and a Beastmaster's spells: "+0.125%". */
+const SOUL_PCT = `+${+(SOUL_PER_LEVEL * 100).toFixed(4)}%`;
+/** And as a label: "+0.125% per soul strength level over 20". */
+const SOUL_RATE = `${SOUL_PCT} per soul strength level over ${CHAR_START}`;
 /** What one prayer trains a skill by at `v`, for a gain of `base`, on the roll's mean: "+1.4". */
 const prayerTrains = (v: number, base: number): string => `+${skillGain(v, base, 1).toFixed(1)}`;
 /** Every count of motes a swirl can give, fewest first (`motesFor`). */
@@ -1125,7 +1129,7 @@ export function helpText(): string {
       <tr><td><b>Body stamina</b></td><td>Stamina bar ×${staminaBarAbove(0)} at ${CHAR_START}, ×${staminaBarAbove(TOP_ABOVE)} at ${SKILL_TOP}. Stamina cost of actions and swings ×${two(staminaCostAbove(0))} to ×${two(staminaCostAbove(TOP_ABOVE))}. Stamina recovery ×${two(windRegenAbove(0))} to ×${two(windRegenAbove(TOP_ABOVE))}. Spending and recovery per second: shares of the bar. Raised by ${raisedBySays('body_stamina')}.</td></tr>
       <tr><td><b>Body control</b></td><td>Time per action and swing ×${two(controlPaceAbove(0))} at ${CHAR_START}, ×${two(controlPaceAbove(TOP_ABOVE))} at ${SKILL_TOP}. Dodge chance +${percent(DODGE_PER_CONTROL)} per level over ${DODGE_FROM}, −${percent(DODGE_PER_KG)} per kg of armour worn, max ${percent(DODGE_MOST)} (${percent(dodgeChance(SKILL_TOP, 0))} at ${SKILL_TOP} unarmoured). Hit chance + level ÷ ${CONTROL_HIT} (+${percent(SKILL_TOP / CONTROL_HIT)} at ${SKILL_TOP}). Sailing boat speed ×${two(boatHands(true, CHAR_START))} to ×${two(boatHands(true, SKILL_TOP))}. Raised by ${raisedBySays('body_control')}.</td></tr>
       <tr><td><b>Mind logic</b></td><td>Action queue ${BASE_QUEUE}, one more per ${QUEUE_PER_MIND} levels over ${CHAR_START} (${queueCapAt(SKILL_TOP)} at ${SKILL_TOP}). Difficulty −${MIND_EASE_PER_LEVEL} per level over ${CHAR_START}, max half (−${mindEaseAt(SKILL_TOP)} at ${SKILL_TOP}): crafts, ${listed(MIND_EASED_SKILLS.map((id) => SKILL_NAME(id).toLowerCase()))}. Raised by ${raisedBySays('mind_logic')}.</td></tr>
-      <tr><td><b>Soul strength</b></td><td>Taming chance. Raised by ${raisedBySays('soul_strength')}.</td></tr>
+      <tr><td><b>Soul strength</b></td><td>Tame chance +${percent(SOUL_TAME_PER_LEVEL)} per level over ${CHAR_START} (+${percent(soulTameAbove(SKILL_TOP - CHAR_START))} at ${SKILL_TOP}). Favour per prayer, Calm per sitting, Beastmaster spell heal, blow and bonus: ${SOUL_PCT} per level over ${CHAR_START} (+${percent(soulAbove(SKILL_TOP - CHAR_START) - 1)} at ${SKILL_TOP}). Raised by ${raisedBySays('soul_strength')}.</td></tr>
     </table>
     <ul>
       <li><b>Climbing</b>: step between tiles from ${metres(MAX_STEP)} m and standable slope from ${metres(MAX_STAND)} m, both +${metresFine(CLIMB_PER_LEVEL)} m a level.
@@ -2972,13 +2976,13 @@ export function helpText(): string {
     </ul>
     <h3>Meditation, and the three paths</h3>
     <ul>
-      <li><b>Rug</b>: ${bill('make_rug')}, needle. Stand on the spot, <b>Sit and think about nothing</b>. Once per ${dur(SIT_REST)}.</li>
+      <li><b>Rug</b>: ${bill('make_rug')}, needle. Stand on the spot, <b>Sit and think about nothing</b>. Once per ${dur(SIT_REST)}. Trains meditation and soul strength.</li>
       <li>Calm (meditation resource) gain by place: your own yard ${percent(SIT_WORTH.yard)}; high ground off your settlement ${mul(SIT_WORTH.high)}; where the ground runs out and the air is thin <b>${mul(SIT_WORTH.thin)}</b>.</li>
       <li>Modifiers: feet in water +${percent(SIT_WORTH.water - 1)}; a mote swirl within ${SIT_WORTH.swirlReach} tiles +${percent(SIT_WORTH.swirl - 1)}; a <b>Runestone</b> within
       ${SIT_WORTH.stoneReach} tiles (to its nearest tile) <b>${mul(SIT_WORTH.stone)}</b>; within ${SIT_WORTH.staleReach} tiles of anywhere you sat since the last daily reset (${hudHour(TREE_DAWN_UTC)} UTC)
       ${percent(SIT_WORTH.stale)}.</li>
       <li>All multiply (Runestone + feet in water: ${mul(SIT_WORTH.stone * SIT_WORTH.water)}). A blow landing on you ends the sitting with nothing.</li>
-      <li><b>Calm</b> per sitting: ${SIT_CALM} Calm × the spot's multiplier. Cap follows the favour curve, off meditation: ${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m}`))}.
+      <li><b>Calm</b> per sitting: ${SIT_CALM} Calm × the spot's multiplier, ${SOUL_RATE}. Cap follows the favour curve, off meditation: ${listed(PATH_TIER_AT.filter((_, i) => i % 2 === 0).map((m) => `${Math.floor(calmCap(m))} at ${m}`))}.
       No regeneration; spent on techniques.</li>
       <li>At ${CHOOSE_AT} meditation: choose <b>one</b> of ${PATH_LIST.length} paths at the rug, permanent; earlier choices stand.</li>
       <li>Tiered paths: ${PICKS_PER_TIER} picks at each path tier (${listed(PATH_TIER_AT.map(String))} meditation): a <b>technique</b> and ${PICKS_PER_TIER - 1} <b>disciplines</b>; take one, permanently,
@@ -2994,15 +2998,15 @@ export function helpText(): string {
     <ul>
       <li><b>Altar</b>: masonry, ${bill('make_altar')}, trowel. Built and set down only on a settlement of yours (founded or citizen). One per settlement.</li>
       <li><b>Pray</b>: banks <b>favour</b>; once per ${dur(PRAYER_REST)}. Trains <b>${SKILL_NAME('praying')}</b> about ${listed([1, 20, 50].map((v) => `${prayerTrains(v, tryGain(true))} at ${v}`))};
-      <b>${SKILL_NAME('prayer')}</b> about ${listed([1, 20, 50].map((v) => `${prayerTrains(v, PRAYER_GAIN)} at ${v}`))}.</li>
-      <li><b>${SKILL_NAME('praying')}</b> sets favour per prayer (quality (QL) ${ALTAR_QL[1]} altar at ${hudHour(PRAYER_PEAKS[0])}): ${listed(PRAYER_SHOWN.map((v) => `${prayerBanks(v)} favour at ${SKILL_NAME('praying')} ${v}`))}.</li>
+      <b>${SKILL_NAME('prayer')}</b> about ${listed([1, 20, 50].map((v) => `${prayerTrains(v, PRAYER_GAIN)} at ${v}`))}; soul strength.</li>
+      <li><b>${SKILL_NAME('praying')}</b> sets favour per prayer (quality (QL) ${ALTAR_QL[1]} altar at ${hudHour(PRAYER_PEAKS[0])}): ${listed(PRAYER_SHOWN.map((v) => `${prayerBanks(v)} favour at ${SKILL_NAME('praying')} ${v}`))}; ${SOUL_RATE}.</li>
       <li><b>${SKILL_NAME('prayer')}</b> sets max favour: ${listed(PRAYER_SHOWN.map((v) => `${Math.floor(favourCap(v))} favour at ${SKILL_NAME('prayer')} ${v}`))}.</li>
       <li>Best at <b>${listed(PRAYER_PEAKS.map(hudHour))}</b>: favour ${mul((PRAYER_BASE + PRAYER_LIFT) / PRAYER_BASE)} that at ${PRAYER_TAPER} hours or more from either; tapering between.</li>
       <li>Altar QL ${ALTAR_QL[2]}: favour ${mul(prayerWorth(ALTAR_QL[2], PRAYER_PEAKS[0], 1) / prayerWorth(ALTAR_QL[0], PRAYER_PEAKS[0], 1))} that at a QL ${ALTAR_QL[0]} one.</li>
       <li>Regeneration: ${Number((FAVOUR_TRICKLE * 3600).toFixed(1))} favour an hour, up to your cap.</li>
       <li>Holds the settlement's bauble sockets (see <b>Baubles</b>).</li>
       <li><b>Sacrifice</b> (altar menu): gives up one ${RARITIES.slice(1, -1).map((r) => r.name).join(', ')} or ${RARITIES[RARITIES.length - 1].name} item from the pack (one of a stack);
-      fills ${listed(NUTRIENTS.map((k) => NUTRIENT_NAMES[k].toLowerCase()))} to the top.</li>
+      fills ${listed(NUTRIENTS.map((k) => NUTRIENT_NAMES[k].toLowerCase()))} to the top. Trains soul strength.</li>
       <li>${percent(SOUL_CHANCE)} of sacrifices leave a <b>soul</b> of the item's rarity. <b>Absorb into</b> (on the soul) an ordinary pack item (one of a stack): it takes that rarity.</li>
       <li>Not sacrificable: locked or worn items, bags with contents, occupied wildermon crates. Baubles take no soul (rarity drawn on restoring).</li>
     </ul>

@@ -5,6 +5,7 @@ import { itemName, NOT_RESTORED, unrestored, type Item } from './items';
 import { worldRate } from './pace';
 import { WELL_CEILING, wellCap } from './wells';
 import { SKILL_BY_ID } from './skills';
+import { SOUL_GAIN, tryGain } from './learn';
 
 /**
  * An altar, and what it is worth to have one.
@@ -290,8 +291,8 @@ export const FAITH_ACTIONS: ActionDef[] = [
       const f = pieceOf(g, t);
       if (!f) return;
       const hour = g.hourOfDay();
-      // And more for a Favoured worn (`perform_faith`).
-      const gained = prayerWorth(f.ql, hour, g.skills.get(PRAYER)) * (1 + g.wornEnchant('favour'));
+      // And more for a Favoured worn, and for soul strength (`perform_faith`).
+      const gained = prayerWorth(f.ql, hour, g.skills.get(PRAYER)) * (1 + g.wornEnchant('favour')) * g.soulMul();
       const cap = favourCap(g.skills.get(FAITH));
       const before = g.player.favour;
       g.player.favour = Math.min(cap, before + gained);
@@ -303,6 +304,8 @@ export const FAITH_ACTIONS: ActionDef[] = [
         `Prayed${dawn ? ' (dawn or dusk bonus)' : ''}. Favour ${Math.floor(g.player.favour)}/${Math.floor(cap)}.`,
         'event',
       );
+      // And soul strength, as every one of its sources teaches it (`SOUL_GAIN`).
+      g.gainSkill('soul_strength', tryGain(true, SOUL_GAIN));
     },
   },
 ];

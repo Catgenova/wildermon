@@ -112,7 +112,7 @@ begin
   insert into said select 'AXEGONE', count(*)::text from item where id = axe;
   insert into said select 'FED', (select string_agg(k || '=' || (nutrition->>k), ',' order by o)
     from unnest(nutrients()) with ordinality n(k, o)) from player where world_id = w and uid = u;
-  insert into said select 'AXESAID', e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1;
+  insert into said select 'AXESAID', e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' order by e.n desc limit 1;
 
   -- One of the supreme planks, and a soul left, whatever the dice say.
   create or replace function soul_chance() returns double precision language sql immutable as 'select 1::double precision';
@@ -121,7 +121,7 @@ begin
   insert into said select 'PLANKSLEFT', count::text from item where id = planks;
   insert into said select 'SOULS', string_agg(coalesce(rare, 'plain') || ' x' || count, ',' order by rare)
     from item where world_id = w and holder = 'player' and holder_uid = u and def = 'soul';
-  insert into said select 'SOULSAID', e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1;
+  insert into said select 'SOULSAID', e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' order by e.n desc limit 1;
   insert into said select 'FEDAGAIN', (select bool_and((nutrition->>k)::double precision = 1) from unnest(nutrients()) k)::text
     from player where world_id = w and uid = u;
 
@@ -139,7 +139,7 @@ begin
   insert into said select 'SPLIT', string_agg(coalesce(rare, 'plain') || ' x' || count, ',' order by coalesce(rare, 'plain'))
     from item where world_id = w and holder = 'player' and holder_uid = u and def = 'plank';
   insert into said select 'SOULUSED', count(*)::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'soul' and rare = 'supreme';
-  insert into said select 'ABSORBSAID', e.text from event e where e.world_id = w and e.uid = u order by e.n desc limit 1;
+  insert into said select 'ABSORBSAID', e.text from event e where e.world_id = w and e.uid = u and e.kind = 'event' order by e.n desc limit 1;
   -- A thing on its own takes it where it is.
   soul := give(w, u, 'soul', 1, 40, null, 'fantastic');
   single := give(w, u, 'hatchet', 1, 40);
@@ -192,7 +192,8 @@ const chest = game.addFurniture('chest', 39, 40, 0, 0, 50);
 const sac = ACTION_BY_ID.get('sacrifice')!;
 const absorb = ACTION_BY_ID.get('absorb_soul')!;
 const at = (id: number, itemUid?: number): Target => ({ kind: 'furniture', id, ...(itemUid === undefined ? {} : { itemUid }) } as Target);
-const lastSaid = (): string => game.log[game.log.length - 1]?.text ?? '';
+// The last event line: a sacrifice teaches soul strength, which may land a knack after it (`earnKnacks`).
+const lastSaid = (): string => game.log.filter((l) => l.kind === 'event').pop()?.text ?? '';
 const rare = (id: string, step: number, count = 1) => {
   const it = game.inventory.add(id, { ql: 40, count });
   const one = game.inventory.take(it.uid, count)!;

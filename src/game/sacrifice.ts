@@ -5,6 +5,7 @@ import { describeWith, itemName, RARITIES, type Item } from './items';
 import { NUTRIENTS, NUTRIENT_NAMES } from './nutrition';
 import { BAUBLE_TIERS, TARNISHED } from './baubles';
 import { capital, listed } from './words';
+import { SOUL_GAIN, tryGain } from './learn';
 
 /**
  * Giving a rare thing up at the altar, and the souls it now and again leaves.
@@ -144,6 +145,8 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
         g.inventory.addItem({ uid: g.inventory.nextUid++, id: SOUL, ql, dmg: 0, count: 1, rare });
         g.logMsg(`Got: ${RARITIES[rare].name} soul.`, 'event');
       }
+      // And soul strength, as every one of its sources teaches it (`SOUL_GAIN`).
+      g.gainSkill('soul_strength', tryGain(true, SOUL_GAIN));
       g.events.emit('inventory');
     },
   },

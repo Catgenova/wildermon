@@ -196,8 +196,9 @@ begin
   perform perform_faith(w, u, 'pray', v_at);
   insert into said select 'FAVOUR0', favour::double precision::text from player where world_id = w and uid = u;
   update item set enchant = '{"id": "favoured", "ql": 100}'::jsonb where id = v_pend;
-  -- The first prayer trained Faith and Prayer; the second reads them where the first did.
+  -- The first prayer trained Faith, Prayer and soul strength; the second reads them where the first did.
   update skill set value = 50 where world_id = w and uid = u and id in (faith_skill(), praying_skill());
+  update skill set value = char_start() where world_id = w and uid = u and id = 'soul_strength';
   update player set equipped = jsonb_build_object('jewel', v_pend), prayed_at = null, favour = 0, favour_at = now() where world_id = w and uid = u;
   perform perform_faith(w, u, 'pray', v_at);
   insert into said select 'FAVOUR', favour::double precision::text from player where world_id = w and uid = u;

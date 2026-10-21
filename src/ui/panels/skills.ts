@@ -249,7 +249,11 @@ export class SkillsPanel {
       }
       case 'soul_strength': {
         const up = g.soulBonus() * 100;
-        return up > 0 ? [`Tame chance +${up.toFixed(1)}%`, `Tame chance +${up.toFixed(1)} percentage points.`] : null;
+        const more = percent(g.soulMul() - 1);
+        return up > 0
+          ? [`Tame +${up.toFixed(1)}%, favour +${more}, Calm +${more}, Beastmaster +${more}`,
+            `Tame chance +${up.toFixed(1)} percentage points. Favour per prayer +${more}. Calm per sitting +${more}. Beastmaster spell heal, blow and bonus +${more}.`]
+          : null;
       }
       case 'digging': {
         const slope = metres(maxDigSlope(g));

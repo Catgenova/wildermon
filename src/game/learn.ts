@@ -86,6 +86,19 @@ export const ENCHANT_HEAD = MIND_GAIN;
 export const HOARD_HEAD = MIND_GAIN;
 
 /**
+ * What soul strength gains from each of its sources, one gain for all of
+ * them: an offering to a wild wildermon (`TAME_NERVE`), a prayer, a sitting
+ * and a sacrifice at an altar (`soul_gain`).
+ */
+export const SOUL_GAIN = 0.4;
+/**
+ * Soul strength's share, per level over the starting mark, on favour per
+ * prayer, Calm per sitting and a Beastmaster spell's heal, blow and bonus
+ * (`soulAbove`, the island's `soul_mul`): +10% at a hundred.
+ */
+export const SOUL_PER_LEVEL = 0.00125;
+
+/**
  * How dark it has to be before anything teaches awareness, but a track: every
  * gain below is × darkness, and nothing at or under this (below ground: full
  * dark at every hour). `Game.awareDark`, `aware_dark`.

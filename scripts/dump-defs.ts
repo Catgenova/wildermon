@@ -111,7 +111,7 @@ import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
 import { RELICS, DIGGABLE } from '../src/game/archaeology';
 import { isSeam } from '../src/world/tiles';
 import { CHIP_CHANCE, GRASS_PLANT, KIT_MEND, MOSS_PLANT, TRY_LEARN } from '../src/game/actions';
-import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GUARDIAN_REACH } from '../src/game/talents';
+import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GUARDIAN_REACH, SOUL_FX } from '../src/game/talents';
 import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY } from '../src/game/placeables';
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
@@ -136,7 +136,7 @@ import { REGIONS } from '../src/world/regions';
 import { FUELS, FUEL_SAID } from '../src/game/campfire';
 import { GRAVE_KEEPS, GRAVE_REACH } from '../src/game/graves';
 import { spanWords } from '../src/game/words';
-import { DARK_HIT, DARK_SHOT, DARK_SWING, ENCHANT_HEAD, HEAVY_SKILLS, HOARD_HEAD, NIGHT_EYES_FROM, PROSPECT_HEAD, TAME_HEAD, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT } from '../src/game/learn';
+import { DARK_HIT, DARK_SHOT, DARK_SWING, ENCHANT_HEAD, HEAVY_SKILLS, HOARD_HEAD, NIGHT_EYES_FROM, PROSPECT_HEAD, SOUL_GAIN, SOUL_PER_LEVEL, TAME_HEAD, WORK_BACK, WORK_HAND, WORK_WIND, WORK_WIND_SPENT } from '../src/game/learn';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, MAJOR_SKILLS, MINOR_SKILLS, REGRET_SHARE, YIELD_TIMES } from '../src/game/baubles';
 import { SOUL_CHANCE } from '../src/game/sacrifice';
 import { GLASSHOUSE_GROWTH, HAND_WINTER, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_GROWTH, YEAR_SECONDS, YEARLESS_GROWTH } from '../src/game/growth';
@@ -1863,9 +1863,13 @@ for (const [fn, v] of [
   /* And what the head work beside a trade teaches mind logic: a go of
      prospecting, an offering, a scroll set, a hoard dug up. */
   ['prospect_head', PROSPECT_HEAD], ['tame_head', TAME_HEAD], ['enchant_head', ENCHANT_HEAD], ['hoard_head', HOARD_HEAD],
+  /* And soul strength: one gain for an offering, a prayer, a sitting and a sacrifice, and its share per level (`soul_mul`). */
+  ['soul_gain', SOUL_GAIN], ['soul_per_level', SOUL_PER_LEVEL],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
+/* Which numbers of a Beastmaster's spells soul strength raises, and how: 'whole' or 'bonus', null for the rest (`SOUL_FX`). */
+out.push(`create or replace function soul_fx_how(p_spell text, p_key text) returns text language sql immutable as $fn$ select ${q(JSON.stringify(SOUL_FX))}::jsonb -> p_spell ->> p_key $fn$;`);
 /*
  * What a go of work teaches the body, and how dark it has to be before a fight
  * teaches you anything about noticing.

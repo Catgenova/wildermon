@@ -1,4 +1,4 @@
-import { DARK_SHOT, DARK_SWING, TAME_HEAD, tryGain } from './learn';
+import { DARK_SHOT, DARK_SWING, SOUL_GAIN, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
@@ -25,7 +25,8 @@ import { defaultKey } from './keybinds';
  * the gains sat above the roll.
  */
 export const TAME_GAIN = 0.7;
-export const TAME_NERVE = 0.4;
+/** Soul strength's from an offering: the one gain all its sources pay (`SOUL_GAIN`). */
+export const TAME_NERVE = SOUL_GAIN;
 export const SWING_FIGHT = 0.3;
 export const SWING_ARM = 0.45;
 export const SWING_BODY = 0.05;

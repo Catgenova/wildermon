@@ -2,6 +2,7 @@ import type { ActionDef } from './actions';
 import type { Game } from './game';
 import { DAY_SECONDS, world } from './pace';
 import { wellCap } from './wells';
+import { SOUL_GAIN, tryGain } from './learn';
 import { windAt, windFrom, windWord } from './wind';
 import { listed, listedOr, percent, timeWords } from './words';
 import { durationSaid } from './boons';
@@ -302,8 +303,8 @@ export function sitFacts(g: Game): SitFacts {
 /** What a sitting where you stand is worth: the meditation it trains and the Calm it banks. */
 export function sittingWorth(g: Game): { gain: number; calm: number; place: number; where: string } {
   const { place, where } = sitPlace(sitFacts(g));
-  // And more Calm banked for a Stillwater worn (`sitting_worth`).
-  return { gain: SIT_GAIN * place, calm: SIT_CALM * place * (1 + g.wornEnchant('calm')), place, where };
+  // And more Calm banked for a Stillwater worn, and for soul strength (`sitting_worth`).
+  return { gain: SIT_GAIN * place, calm: SIT_CALM * place * (1 + g.wornEnchant('calm')) * g.soulMul(), place, where };
 }
 
 /** What a sitting says when a blow lands in the middle of it (`stillness`). The island's `sitting_struck` says the same. */
@@ -693,6 +694,7 @@ export const MEDITATION_ACTIONS: ActionDef[] = [
       g.player.satAt = g.time;
       g.satHere();
       g.gainSkill(MEDITATION, gain);
+      g.gainSkill('soul_strength', tryGain(true, SOUL_GAIN));
       g.note('sat');
       const now = g.skills.get(MEDITATION);
       const cap = g.calmCap();

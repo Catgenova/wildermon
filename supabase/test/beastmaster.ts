@@ -8,7 +8,8 @@
  *   * both sides hold the same twelve spells, field for field, what each wants
  *     -- a companion following you -- included, and the same tiers;
  *   * every blow a spell has your companion strike is its own blow at the
- *     share the spell names -- the same roll asked twice, of two creatures
+ *     share the spell names, at the caster's soul strength (`soulFx`) -- the
+ *     same roll asked twice, of two creatures
  *     alike -- only within its reach, or as far as a Pounce leaps, and no
  *     further; a creature it leaps on put back, held, or bled; every wild
  *     thing near it, or everything hunting you, turned on it; its health back;
@@ -30,7 +31,8 @@ import { companionMul, SPECIES } from '../../src/game/creatures';
 import { COMPANION_BLOW, COMPANION_LEASH, COMPANION_SIGHT } from '../../src/game/fight';
 import { SPELL_BAR } from '../../src/game/patrons';
 import { foldPerks, perksOf, PERK_BY_ID, TIERS } from '../../src/game/perks';
-import { CLASS_SPELL_BY_ID, classSpellsOf, NEEDS_SAID, type ClassSpellDef } from '../../src/game/talents';
+import { CLASS_SPELL_BY_ID, classSpellsOf, NEEDS_SAID, soulFx, type ClassSpellDef } from '../../src/game/talents';
+import { CHAR_START, soulAbove } from '../../src/game/game';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -61,6 +63,9 @@ const spell = (slug: string): ClassSpellDef => {
   return s;
 };
 const fx = (slug: string, k: string): number => spell(slug).fx[k];
+/** The soul strength the island half casts at, and a spell's heal, blow or bonus as cast at it (`soulFx`, `soul_fx`). */
+const SOUL = 100;
+const sfx = (slug: string, k: string): number => soulFx(`beastmaster_${slug}`, k, soulAbove(SOUL - CHAR_START));
 const PASSIVES = perksOf('beastmaster').filter((p) => !CLASS_SPELL_BY_ID.has(p.id));
 /** What the six passives fold to, which is what the browser reads a Beastmaster's numbers from. */
 const FOLD = foldPerks(PASSIVES.map((p) => p.id));
@@ -122,7 +127,7 @@ begin
   update player set x = v_px - 60 where world_id = w.world_id and uid <> w.uid;
   insert into skill (world_id, uid, id, value)
     select w.world_id, w.uid, s, v from
-      (values ('soul_strength', 100::double precision), ('taming', 100), ('fighting', 100), ('body_control', 1)) sv(s, v)
+      (values ('soul_strength', ${SOUL}::double precision), ('taming', 100), ('fighting', 100), ('body_control', 1)) sv(s, v)
     on conflict (world_id, uid, id) do update set value = excluded.value;
   delete from event where uid = w.uid;
   delete from player_node where world_id = w.world_id and uid = w.uid;
@@ -484,8 +489,8 @@ check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD
   `${island('NEEDS:KIN')} / ${island('NEEDS:WILD')}`);
 {
   const [ratio, line] = parts('SIC');
-  check(`Sic: its own blow at ${pct(fx('sic', 'more'))}, the same roll asked of two ogres alike`,
-    near(Number(ratio), fx('sic', 'more'), 1e-4) && /^Sic: .+ hit ogre \d+\/170\.$/.test(line), island('SIC'));
+  check(`Sic: its own blow at ${pct(sfx('sic', 'more'))} at soul strength ${SOUL}, the same roll asked of two ogres alike`,
+    near(Number(ratio), sfx('sic', 'more'), 1e-4) && /^Sic: .+ hit ogre \d+\/170\.$/.test(line), island('SIC'));
   check('and only on what is within its reach', /: out of reach of the ogre\.$/.test(island('SIC:FAR')), island('SIC:FAR'));
 }
 {
@@ -495,41 +500,41 @@ check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD
 }
 {
   const [share, line] = parts('LICK');
-  check(`Lick Wounds: ${pct(fx('lick_wounds', 'heal'))} of its health back`, near(Number(share), 0.5 + fx('lick_wounds', 'heal'), 0.02)
-    && /^Lick Wounds: .+ health \+15%\.$/.test(line), island('LICK'));
+  check(`Lick Wounds: ${pct(sfx('lick_wounds', 'heal'))} of its health back at soul strength ${SOUL}`, near(Number(share), 0.5 + sfx('lick_wounds', 'heal'), 0.02)
+    && /^Lick Wounds: .+ health \+1[67]%\.$/.test(line), island('LICK'));
   check('and refused on one unhurt', /: not hurt\.$/.test(island('LICK:WHOLE')), island('LICK:WHOLE'));
 }
 {
   const [ratio, beside, onIt, back, line] = parts('POUNCE');
-  check(`Pounce: a leap onto it, its own blow at ${pct(fx('pounce', 'more'))}, and its next blow put back ${fx('pounce', 'back')} s`,
-    near(Number(ratio), fx('pounce', 'more'), 1e-4) && beside === 'true' && onIt === 'true' && near(Number(back), fx('pounce', 'back'), 1e-6)
+  check(`Pounce: a leap onto it, its own blow at ${pct(sfx('pounce', 'more'))}, and its next blow put back ${fx('pounce', 'back')} s`,
+    near(Number(ratio), sfx('pounce', 'more'), 1e-4) && beside === 'true' && onIt === 'true' && near(Number(back), fx('pounce', 'back'), 1e-6)
       && / Next blow delayed 0\.5 s\.$/.test(line), island('POUNCE'));
   check(`and no further than ${fx('pounce', 'reach')} tiles`, /: over 5 tiles from the ogre\.$/.test(island('POUNCE:FAR')), island('POUNCE:FAR'));
 }
 {
   const [ratio, held, still, line] = parts('DRAG');
-  check(`Drag Down: its own blow at ${pct(fx('drag_down', 'more'))}, and held where it stands for ${fx('drag_down', 'hold')} s`,
-    near(Number(ratio), fx('drag_down', 'more'), 1e-4) && near(Number(held), fx('drag_down', 'hold'), 1e-6) && still === 'true'
+  check(`Drag Down: its own blow at ${pct(sfx('drag_down', 'more'))}, and held where it stands for ${fx('drag_down', 'hold')} s`,
+    near(Number(ratio), sfx('drag_down', 'more'), 1e-4) && near(Number(held), fx('drag_down', 'hold'), 1e-6) && still === 'true'
       && / Held for 4 s\.$/.test(line), island('DRAG'));
 }
 {
   const [ratio, bleed, secs, line] = parts('GUT');
   check(`Disembowel: its own blow, and ${pct(fx('disembowel', 'each'))} of the blow a second for ${fx('disembowel', 'secs')} s`,
-    near(Number(ratio), fx('disembowel', 'more'), 1e-4) && near(Number(bleed), fx('disembowel', 'each'), 1e-6)
+    near(Number(ratio), sfx('disembowel', 'more'), 1e-4) && near(Number(bleed), fx('disembowel', 'each'), 1e-6)
       && near(Number(secs), fx('disembowel', 'secs'), 1e-6) && / Bleeding: 30% of the blow per second for 8 s\.$/.test(line), island('GUT'));
 }
 {
   const [ratio, secs, line] = parts('LUST');
-  check(`Bloodlust: its blows ${pct(fx('bloodlust', 'more') - 1)} larger for ${fx('bloodlust', 'secs')} s, the same roll asked with and without`,
-    near(Number(ratio), fx('bloodlust', 'more'), 1e-4) && near(Number(secs), fx('bloodlust', 'secs'), 1e-6)
-      && / damage \+40% for 15 s\.$/.test(line), island('LUST'));
+  check(`Bloodlust: its blows ${pct(sfx('bloodlust', 'more') - 1)} larger for ${fx('bloodlust', 'secs')} s, the same roll asked with and without`,
+    near(Number(ratio), sfx('bloodlust', 'more'), 1e-4) && near(Number(secs), fx('bloodlust', 'secs'), 1e-6)
+      && line.endsWith(` damage +${pct(sfx('bloodlust', 'more') - 1)} for 15 s.`), island('LUST'));
 }
 {
   const [ratio, next, secs, line] = parts('FURY');
-  check(`Primal Fury: its blows ${pct(fx('primal_fury', 'more') - 1)} larger, and its next one ${COMPANION_BLOW / fx('primal_fury', 'quick')} s off `
+  check(`Primal Fury: its blows ${pct(sfx('primal_fury', 'more') - 1)} larger, and its next one ${COMPANION_BLOW / sfx('primal_fury', 'quick')} s off `
     + `rather than ${COMPANION_BLOW}`,
-    near(Number(ratio), fx('primal_fury', 'more'), 1e-4) && near(Number(next), COMPANION_BLOW / fx('primal_fury', 'quick'), 1e-6)
-      && near(Number(secs), fx('primal_fury', 'secs'), 1e-6) && / damage \+75%, attack rate \+50%, for 20 s\.$/.test(line), island('FURY'));
+    near(Number(ratio), sfx('primal_fury', 'more'), 1e-4) && near(Number(next), COMPANION_BLOW / sfx('primal_fury', 'quick'), 1e-6)
+      && near(Number(secs), fx('primal_fury', 'secs'), 1e-6) && / damage \+8[23]%, attack rate \+55%, for 20 s\.$/.test(line), island('FURY'));
   check('and as often as ever once it is over', near(Number(island('PACE')), COMPANION_BLOW, 1e-6), island('PACE'));
 }
 {
@@ -549,8 +554,8 @@ check('and made with one', island('NEEDS:KIN') === 'ready' && island('NEEDS:WILD
 {
   const [owed, val] = parts('VENGE:OWED');
   const [ratio, secs, line] = parts('VENGE');
-  check(`Vengeance: a blow that lands on you is owed an answer, and paid at ${pct(fx('vengeance', 'more'))} of its own blow once its turn is written`,
-    owed === '1' && near(Number(val), fx('vengeance', 'more'), 1e-9) && near(Number(ratio), fx('vengeance', 'more'), 1e-4)
+  check(`Vengeance: a blow that lands on you is owed an answer, and paid at ${pct(sfx('vengeance', 'more'))} of its own blow once its turn is written`,
+    owed === '1' && near(Number(val), sfx('vengeance', 'more'), 1e-9) && near(Number(ratio), sfx('vengeance', 'more'), 1e-4)
       && near(Number(secs), fx('vengeance', 'secs'), 1e-6) && / strikes back at every creature that hits you, for 20 s\.$/.test(line),
     `${island('VENGE:OWED')} / ${island('VENGE')}`);
   check(`and not from more than ${fx('vengeance', 'reach')} tiles off`, island('VENGE:FAR') === '0', island('VENGE:FAR'));

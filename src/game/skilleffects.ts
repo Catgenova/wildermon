@@ -246,7 +246,12 @@ function buildEffects(): Record<string, SkillEffect[]> {
       { label: 'Action queue', at: (g) => queueCapAt(g.skills.get('mind_logic')) + g.perk('jobs', 0), say: count('action', 'actions') },
       { label: 'Craft difficulty eased', at: (g) => g.mindEase(), say: (v) => (v > 0 ? `−${+v.toFixed(1)} difficulty` : '0 difficulty'), note: 'At most half a craft\'s difficulty' },
     ],
-    soul_strength: [{ label: 'Tame chance', at: (g) => g.soulBonus(), say: (v) => `+${percent(v)}` }],
+    soul_strength: [
+      { label: 'Tame chance', at: (g) => g.soulBonus(), say: (v) => `+${percent(v)}` },
+      { label: 'Favour per prayer', at: (g) => g.soulMul(), say: ofLevel(CHAR_START) },
+      { label: 'Calm per sitting', at: (g) => g.soulMul(), say: ofLevel(CHAR_START) },
+      { label: 'Beastmaster spell heal, blow and bonus', at: (g) => g.soulMul(), say: ofLevel(CHAR_START) },
+    ],
     awareness: [
       { label: 'Sight range', at: (g) => BASE_SIGHT * awarenessReach(g.skills.get('awareness')), say: tiles, note: 'Daylight, flat ground' },
       { label: 'Monster notice range', at: (g) => g.awareNotice(), say: ofLevel(CHAR_START) },
@@ -304,7 +309,7 @@ function buildEffects(): Record<string, SkillEffect[]> {
     ],
     butchering: [{ label: 'Carcass kept', at: (g) => butcherYield(g.skills.get('butchering'), EXAMPLE_QL), say: percent, note: `Knife QL ${EXAMPLE_QL}` }],
     prayer: [{ label: 'Most favour held', at: (g) => favourCap(g.skills.get('prayer')), say: (v) => `${Math.round(v)} favour` }],
-    praying: [{ label: 'Favour per prayer', at: (g) => prayerWorth(EXAMPLE_QL, PRAYER_PEAKS[0], g.skills.get('praying')), say: favour, note: `Altar QL ${EXAMPLE_QL}, hour ${PRAYER_PEAKS[0]}` }],
+    praying: [{ label: 'Favour per prayer', at: (g) => prayerWorth(EXAMPLE_QL, PRAYER_PEAKS[0], g.skills.get('praying')) * g.soulMul(), say: favour, note: `Altar QL ${EXAMPLE_QL}, hour ${PRAYER_PEAKS[0]}, your soul strength` }],
     meditation: [{ label: 'Most Calm held', at: (g) => calmCap(g.skills.get('meditation')), say: (v) => `${Math.round(v)} Calm` }],
     repair: [
       { label: 'Damage mended per action', at: (g) => repairGo(g.skills.get('repair')).healed, say: damage },

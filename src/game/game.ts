@@ -76,7 +76,7 @@ import { Skills, SKILL_BY_ID, SKILL_DEFS, isQuiet } from './skills';
 import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, keyX, keyY, tileKey } from './tileindex';
-import { DARK_HIT, NIGHT_EYES_FROM, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
+import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { laySwirls, swirlLight, type Swirl } from './motes';
 import type { Trail } from './tracking';
@@ -573,6 +573,12 @@ export const awareShareAbove = (above: number): number => Math.max(0, above) * A
 export const AWARE_TRAIT_STEP = 10;
 /** Levels of animal husbandry an awareness takes off reading a trait (`aware_trait_ease`). */
 export const awareTraitEase = (aware: number): number => Math.max(0, Math.floor((aware - CHAR_START) / AWARE_TRAIT_STEP));
+/** Soul strength's points of tame chance per level over the starting mark (`tame_chance`). */
+export const SOUL_TAME_PER_LEVEL = 0.002;
+export const soulTameAbove = (above: number): number => Math.max(0, above) * SOUL_TAME_PER_LEVEL;
+/** Soul strength's multiplier on favour per prayer, Calm per sitting and a Beastmaster spell's heal, blow and bonus, this many levels over the starting mark (`soul_mul`). */
+export const soulAbove = (above: number): number => 1 + Math.max(0, above) * SOUL_PER_LEVEL;
+export { SOUL_PER_LEVEL };
 /** The hands on a boat, as a share of her speed: body control at a sail, body strength at the oars (`hull_speed`). */
 export const boatHands = (sail: boolean, body: number): number => (sail ? 0.9 + body / 320 : 0.6 + body / 150);
 
@@ -3763,9 +3769,14 @@ export class Game {
     this.events.emit('world', this.player.tileX, this.player.tileY);
   }
 
-  /** Soul strength is what a wild animal reads in you when you hold out food. */
+  /** Soul strength's points of tame chance (`tame_chance`). */
   soulBonus(): number {
-    return Math.max(0, (this.skills.get('soul_strength') - CHAR_START) * 0.002);
+    return soulTameAbove(this.skills.get('soul_strength') - CHAR_START);
+  }
+
+  /** Soul strength's multiplier on favour per prayer, Calm per sitting and a Beastmaster spell's heal, blow and bonus (`soul_mul`). */
+  soulMul(): number {
+    return soulAbove(this.skills.get('soul_strength') - CHAR_START);
   }
 
   /** Steepest step the player can take, which climbing raises, and Power's Sure Feet on top of it. */

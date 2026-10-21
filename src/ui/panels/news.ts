@@ -52,7 +52,7 @@ import { THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
-import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, TAME_HEAD } from '../../game/learn';
+import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
 import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
@@ -125,7 +125,7 @@ import { weaponCarry } from '../../render/figure';
 import { TRY_LEARN } from '../../game/learn';
 import { BASE_SPEED, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STEP, strideAt } from '../../game/player';
 import { staminaBarAbove, SWIM_LEARN } from '../../game/body';
-import { CHAR_START } from '../../game/game';
+import { CHAR_START, SOUL_PER_LEVEL, soulAbove } from '../../game/game';
 import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } from '../../game/game';
 import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/learn';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
@@ -3081,6 +3081,14 @@ export const NEWS: News[] = [
         'Added: Skills window line and sliders for awareness: sight range, monster notice range, tracking range, hit chance in the dark, husbandry to read a trait.',
       ];
     },
+  },
+  {
+    n: 237,
+    day: '2026-10-21',
+    lines: () => [
+      `Changed: soul strength: favour per prayer, Calm per sitting, Beastmaster spell heal, blow and bonus +${+(SOUL_PER_LEVEL * 100).toFixed(4)}% per level over ${CHAR_START} (+${percent(soulAbove(SKILL_TOP - CHAR_START) - 1)} at ${SKILL_TOP}).`,
+      `Changed: soul strength gain: prayer, sitting, sacrifice at an altar, each ${percent(SOUL_GAIN / KNACK_GO)} of an action's gain, as a taming offering.`,
+    ],
   },
 ];
 
