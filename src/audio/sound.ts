@@ -202,6 +202,9 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   use_ancient_comb: 'cloth', use_ancient_file: 'cloth', use_ancient_pot: 'cloth',
   // And an ancient lamp lit over one to rekindle a trait, as any lamp is lit.
   use_ancient_lamp: 'fire',
+  // A collar, bridle and brace strapped on, a whetstone along an edge, a jar unstopped and a tablet's runes read (`relicuse.ts`).
+  use_ancient_collar: 'cloth', use_ancient_bridle: 'cloth', use_ancient_brace: 'cloth',
+  hone_whetstone: 'stone', open_seed_jar: 'cloth', read_rune_tablet: 'cloth',
   crate_take_all: 'cloth', smelter_take_all: 'cloth', kiln_take_all: 'cloth', furniture_take_all: 'cloth',
   // Leaves torn off a wall, and a brush over stone, as a groom's brush over a coat sounds.
   clear_ivy: 'cloth', scrub_moss: 'cloth',
