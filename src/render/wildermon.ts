@@ -34,7 +34,8 @@ import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
 import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
 import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
-import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands';
+import { BRAMBO, CARRA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands';
+import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
 import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, WURLA } from './wild-hands2';
 import { CHISSA, CORDRA, DIPPA, FLECHA, GLOSSA, MUDDA, PAPRA, RIPPA } from './wild-hands3';
@@ -106,7 +107,7 @@ export const WILDERMON: Record<string, Kind> = {
   grista: GRISTA,
   wicka: GLIMMOTH,
   brambo: BRAMBO,
-  grazza: GRAZZA,
+  grazza: SPRIGMANT,
   siffa: SIFFA,
   forga: FORGA,
   potta: POTTA,
@@ -188,6 +189,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   sprigga: [LEMLEAF, LEMORIAN],
   lungra: [BRIARPOUNCE, THORNLANCE],
   magga: [LOOTVENT, HOARDBACK],
+  grazza: [PETALBLADE, BLOOMREAPER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

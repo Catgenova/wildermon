@@ -16,6 +16,7 @@ import { HAUL_VOICE } from './voice-haul';
 import { HARE_VOICE } from './voice-hare';
 import { IRON_VOICE } from './voice-iron';
 import { LEMUR_VOICE } from './voice-lemur';
+import { MANTIS_VOICE } from './voice-mantis';
 import { MEND_VOICE } from './voice-mend';
 import { MOTH_VOICE } from './voice-moth';
 import { SLUG_VOICE } from './voice-slug';
@@ -100,4 +101,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   thumpa: CRAG_VOICE,
   // The Chestkit, the Lootvent and the Hoardback.
   magga: CHEST_VOICE,
+  // The Sprigmant, the Petalblade and the Bloomreaper.
+  grazza: MANTIS_VOICE,
 };

@@ -8,7 +8,7 @@ import { pawed, trot } from './wild-paws';
 
 /**
  * The settlement's own hands: the kemma, the sheela, the salva, the carra,
- * the tanna, the grista, the brambo, the grazza and the siffa.
+ * the tanna, the grista, the brambo and the siffa.
  * Each carries the tool of its trade on its body, as every wildermon carries
  * something no field guide has: a brush for a tail, shears for teeth, a
  * cleaver for a beak, millstones for cheeks, a pan for a bill.
@@ -423,57 +423,6 @@ export const BRAMBO: Kind = {
   shadow: [1.5, 1.25],
   stride: 1.4,
   size: 1.65,
-};
-
-/* ---- the grazza: a crest of grass and a scythe of a tail -------------------------- */
-
-/**
- * A grazza: a low, wide grazer, flat as the blade of a scythe. A crest of
- * long grass grows along its back, and its tail is a scythe blade, curved
- * and bright, that it carries low over the ground.
- */
-const GRAZZA_SPEC: QuadSpec = { ...pawed({ high: 1.1, len: 2.8, legs: 0.6, neck: 0.4, lean: 75, swing: [20, 32], ears: [60, 20], tail: [0.5, -8, -2] }), nose: 10, graze: 40 };
-const GRAZZA_HEAD = { c: [0, 0.4, 0.05] as V3, r: [1.1, 1.0, 0.82] as V3 };
-
-function grazzaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = GRAZZA_HEAD;
-  const face = snout(1.1, -0.15, [0.5, 0.3, 0.42], 0.12, n, k);
-  // The crest: tufts of long grass blades in a row down the middle of the back.
-  const crest = merge(...[-0.9, -0.5, -0.1, 0.3, 0.7].flatMap((y, q) => [-0.18, 0, 0.18].map((x, j) => {
-    const lean = (j - 1) * 0.18;
-    return blade(curve([x * 0.5, y, 0.68], [x + lean * 0.5, y - 0.1, 1.05], [x + lean, y - 0.25, 1.35 + (q % 2) * 0.1], 3), [0.04, 0.08, 0.05, 0.01], [1, 0, 0], { mat: j === 1 ? 'leaf' : 'leafDark' });
-  })));
-  // The scythe: a long curved steel blade off a short snath, carried low.
-  const scythe = merge(
-    taper([[0, 0.05, 0], [0, -0.3, 0]], 0.1, 0.08, 6, 'wood'),
-    tube(curve([0, -0.3, 0], [0.3, -0.75, -0.05], [0.85, -0.95, -0.1], 5), [0.06, 0.12, 0.14, 0.12, 0.08, 0.01], [0.03, 0.035, 0.035, 0.03, 0.02, 0.01], 4, 'blade', { up: [0, 0, 1] }),
-  );
-  return quadPieces({
-    n, k,
-    body: { y: [-1.5, -1.25, -0.6, 0.0, 0.6, 1.15, 1.4], z: [0.05, 0.06, 0.08, 0.1, 0.1, 0.12, 0.14], w: [0.3, 1.15, 1.3, 1.32, 1.28, 1.12, 0.32], h: [0.22, 0.58, 0.66, 0.68, 0.66, 0.58, 0.22], belly: true },
-    neck: { w: 0.66, h: 0.56, len: 0.4 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.72, 0.56, 0.36], size: 0.3, rim: 0.12 }, blush: [[0.86, 0.38, -0.26], 0.18] },
-    ear: earMesh(0.42, 0.26, n),
-    earTurn: 40,
-    tail: [scythe],
-    fore: { upper: [0.24, -0.3, 0.26, 0.24], lower: [0, -0.28, 0.24, 0.22], foot: pawMesh(0.24, n, k, 'coatDark') },
-    hind: { upper: [0.26, -0.32, 0.28, 0.26], lower: [0, -0.3, 0.24, 0.22], foot: pawMesh(0.24, n, k, 'coatDark') },
-    extras: [{ key: 'crest', mesh: crest, bone: 'trunk', bias: 0.05, after: ['body'], thin: true, airy: true }],
-  });
-}
-
-export const GRAZZA: Kind = {
-  bones: quadBonesOf(GRAZZA_SPEC, (p, a) => {
-    trot(p, a);
-    // The scythe swung from side to side as it grazes, as a mower's is.
-    p.tail[1] += 26 * a.graze * Math.sin(a.t * TAU * 0.6);
-  }),
-  build: grazzaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ leaf: [170, 210, 110], leafDark: [124, 170, 84], blade: [214, 220, 228], wood: [160, 116, 76] }), 90),
-  shadow: [1.9, 1.4],
-  stride: 1.45,
-  size: 1.8,
 };
 
 /* ---- the siffa: a pan for a bill ---------------------------------------------------- */

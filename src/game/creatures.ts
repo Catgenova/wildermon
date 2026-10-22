@@ -2263,8 +2263,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   grazza: {
     id: 'grazza',
-    name: 'Grazza',
+    name: 'Sprigmant',
+    was: ['Grazza'],
+    // Sprigmant, Petalblade, Bloomreaper.
     description: 'Settlement task: cut grass, {grassPerCut} mixed grass a cut, and moss, {mossPerCut} a cut; output home. Grass it keeps cut on your settlement turns to lawn.',
+    stages: [
+      { name: 'Petalblade', description: '' },
+      { name: 'Bloomreaper', description: '' },
+    ],
     health: 24,
     attack: 2,
     speed: 1.8,
@@ -2275,11 +2281,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'grass',
     workRange: 8,
+    // Its green and its pink: sage with blush, mint with coral, lime with rose, and celery with peach. Its feelers and the blue
+    // in its hindwings are the same on every one.
     variants: [
-      ['#8a9a5c', '#d8e2b0'],
-      ['#7d8a6a', '#cdd6bd'],
-      ['#9a8a5a', '#e2d6a8'],
-      ['#6a7a5a', '#bfcaae'],
+      ['#a8c47a', '#f2a0b4'],
+      ['#9cc08a', '#f4a88e'],
+      ['#b6c870', '#ee9ac8'],
+      ['#c0c890', '#f0b0a0'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3 },
   },
