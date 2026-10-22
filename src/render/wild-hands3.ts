@@ -9,11 +9,11 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Seven more of the settlement's hands: the rippa, the chissa, the cordra, the
- * flecha, the papra, the glossa and the dippa. As with the others
- * (`./wild-hands`, `./wild-hands2`), each wears the tool of its trade: a saw
- * for a tail, a chisel, a rope, an arrow, a scroll, a glazing brush and a
- * bucket. The mudda is the Sliplet now (`./wild-clayroll`).
+ * Six more of the settlement's hands: the rippa, the chissa, the cordra, the
+ * flecha, the papra and the glossa. As with the others (`./wild-hands`,
+ * `./wild-hands2`), each wears the tool of its trade: a saw for a tail, a
+ * chisel, a rope, an arrow, a scroll and a glazing brush. The mudda is the
+ * Sliplet now (`./wild-clayroll`) and the dippa the Pailbara (`./wild-capy`).
  */
 
 /** A tail's root, out of the body, before the tool on the end of it. */
@@ -262,42 +262,3 @@ export const GLOSSA: Kind = {
   stride: 1.35,
   size: 1.65,
 };
-
-/* ---- the dippa: a pouch of a chin, a bucket on its tail ------------------------------- */
-
-const DIPPA_SPEC: QuadSpec = { ...pawed({ high: 1.2, len: 2.2, legs: 0.6, neck: 0.32, lean: 60, swing: [20, 32], ears: [40, 20], tail: [0.45, 24, 6] }), nose: 10 };
-const DIPPA_HEAD = { c: [0, 0.35, 0.12] as V3, r: [1.06, 1.0, 0.9] as V3 };
-
-function dippaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = DIPPA_HEAD;
-  // The pouch under its chin, full.
-  const pouch = orb([0, 0.72, -0.72], [0.46, 0.42, 0.38], n, k, 'belly');
-  // A small bucket hung off the end of the tail, water to its brim.
-  const bucket = merge(
-    root(n),
-    tube(curve([0, -0.25, 0], [0, -0.55, 0.12], [0, -0.75, 0.02], 3), 0.05, 0.05, 5, 'coat'),
-    tube([[0, -0.82, -0.02], [0, -0.82, -0.4]], [0.2, 0.17], [0.2, 0.17], 8, 'wood', { up: [0, 1, 0] }),
-    paint([disc([0, -0.82, -0.03], [0, 0, 1], 0.17, 0.17, 8, 'water')]),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.3, 1.25, 0.95, 0.08),
-    neck: { w: 0.7, h: 0.7, len: 0.32 },
-    head: { c: H.c, r: H.r, face: merge(snout(1.02, -0.2, [0.44, 0.34, 0.34], 0.12, n, k), pouch), eye: { dir: [0.74, 0.52, 0.34], size: 0.3, rim: 0.12 } },
-    ear: earMesh(0.32, 0.26, n),
-    earTurn: 35,
-    tail: [bucket],
-    ...paws(n, k, 0.6, 0.3, 0.32, 'coatDark'),
-  });
-}
-
-export const DIPPA: Kind = {
-  bones: quadBonesOf(DIPPA_SPEC, trot),
-  build: dippaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ wood: [150, 104, 70], water: [96, 150, 196] }), 200),
-  shadow: [1.6, 1.3],
-  stride: 1.3,
-  size: 1.65,
-};
-

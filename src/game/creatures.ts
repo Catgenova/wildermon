@@ -2767,8 +2767,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   dippa: {
     id: 'dippa',
-    name: 'Dippa',
+    name: 'Pailbara',
+    was: ['Dippa'],
+    // Asked for, with a reference sheet: Pailbara, Caskybara, Reservara.
     description: 'Settlement task: fill empty buckets from your settlement stores with water at the shore or a well; output to your settlement stores. Never spills.',
+    stages: [
+      { name: 'Caskybara', description: '' },
+      { name: 'Reservara', description: '' },
+    ],
     health: 22,
     attack: 2,
     speed: 1.8,
@@ -2780,10 +2786,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'fill',
     workRange: 8,
     variants: [
-      ['#6c94a4', '#c8dce4'],
-      ['#5c8494', '#bcd0dc'],
-      ['#7ca0ac', '#d4e4ec'],
-      ['#4c7484', '#acc4d0'],
+      ['#c8945e', '#b89ad8'],
+      ['#b8845a', '#e8a0b4'],
+      ['#d4a676', '#f0e6c8'],
+      ['#a87a56', '#a8b8e8'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 2 },
   },

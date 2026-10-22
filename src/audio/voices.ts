@@ -2,6 +2,7 @@ import type { BeastAct } from '../game/events';
 import { BADGER_VOICE } from './voice-badger';
 import { BRICK_VOICE } from './voice-brick';
 import { CHEST_VOICE } from './voice-chest';
+import { CAPY_VOICE } from './voice-capy';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
@@ -112,4 +113,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   grubba: PETAL_VOICE,
   // The Sliplet, the Wheelmote and the Rollterra.
   mudda: CLAYROLL_VOICE,
+  // The Pailbara, the Caskybara and the Reservara.
+  dippa: CAPY_VOICE,
 };

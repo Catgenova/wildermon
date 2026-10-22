@@ -41,6 +41,7 @@ import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
 import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, WURLA } from './wild-hands2';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
 import { CHISSA, CORDRA, DIPPA, FLECHA, GLOSSA, MUDDA, PAPRA, RIPPA } from './wild-hands3';
+import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
 import { AWLA, GASHA, SKULKA, SPARRA, SPITTA, TESTA } from './wild-fighters';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
 import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, MARKA, ROOTLE, SCORCHA, SHOVA, WARDO, WHIRLA } from './wild-abilities';
@@ -130,7 +131,7 @@ export const WILDERMON: Record<string, Kind> = {
   flecha: FLECHA,
   papra: PAPRA,
   glossa: GLOSSA,
-  dippa: DIPPA,
+  dippa: PAILBARA,
   testa: TESTA,
   skulka: SKULKA,
   gasha: GASHA,
@@ -195,6 +196,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   wurla: [SOILWHISTLE, WORMHERON],
   grubba: [BLOSSOMHORN, FLORANTLER],
   mudda: [WHEELMOTE, ROLLTERRA],
+  dippa: [CASKYBARA, RESERVARA],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
