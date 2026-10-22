@@ -4710,8 +4710,12 @@ select '609. an island Ivar has never been to: he can see '
      || (select count(*) from placed where world_id = :'faraway') || ' of its fires and '
      || (select count(*) from tile_change where world_id = :'faraway') || ' of its dug tiles'
      || ' — all three were the whole service before';
-select '610. and the land itself is still open on purpose: '
-     || (select count(*) from land_tile where world_id = :'faraway') || ' rows, because it is a pure function of a seed anybody is handed';
+-- The land was left open once as a pure function of the seed. It is not one
+-- any more: every dig keeps `land_tile` and `land_corner` current, so they say
+-- what `tile_change` says, and are shut with it.
+select '610. and the land itself, kept current by every dig: '
+     || (select count(*) from land_tile where world_id = :'faraway') || ' of its rows, '
+     || (select count(*) from land_corner where world_id = :'faraway') || ' of its corners';
 do $$ begin
   begin perform land_window((select id from world where name = 'Faraway'), 0, 8);
     raise notice '611. pull the land down wholesale: ALLOWED';
