@@ -152,6 +152,8 @@ begin
   insert into player (world_id, uid, name, x, y) values (w, cato, 'Cato', ax, ay), (w, edda, 'Edda', ax, ay);
 
   perform set_config('request.jwt.claims', json_build_object('sub', dane)::text, true);
+  -- Forty-odd asks in no time at all: Dane's knocks start from none (\`private.pace\`), whatever ran before.
+  delete from caller where uid = dane;
   insert into said values ('DANE', folk_name(w, dane));
   insert into said values ('TILE', tx || ',' || ty);
   update player set x = ox where world_id = w and uid = dane;

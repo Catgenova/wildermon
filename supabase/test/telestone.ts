@@ -389,7 +389,8 @@ begin
   insert into said values ('WALK', walk_share(w, u, 0, ${BESIDE[0]}, ${BESIDE[1]}, ${BESIDE[0]}, ${crown.y - 3.5})::text
     || '|' || walk_share(w, u, 0, ${BESIDE[0]}, ${BESIDE[1]}, ${BESIDE[0] + 4}, ${BESIDE[1]})::text);
   delete from caller where uid = u;
-  update player set moved_at = now() - interval '2 seconds' where world_id = w and uid = u;
+  -- Ten seconds since the last word: time enough at a walk's pace for the tiles up to the stone (\`walk_ahead\`).
+  update player set moved_at = now() - interval '10 seconds' where world_id = w and uid = u;
   j := rpc_move(w, ${BESIDE[0]}, ${crown.y + 0.5}, 0);
   insert into said values ('MOVE', (j->>'y') || ',' || (j->>'blocked'));
   insert into said values ('WILD', creature_tile_ok(w, ${crown.x}, ${crown.y + 1}) || '|' || creature_tile_ok(w, ${crown.x}, ${crown.y + 2})

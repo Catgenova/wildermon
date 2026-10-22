@@ -172,6 +172,15 @@ for (const [door, call] of DOORS) {
     check(`${door}: refused to ${who}`, r.err.includes(REFUSED), r.err || r.out);
   }
 }
+// Before anybody asks `rpc_owner_am_i`, which answers everybody, and so counts their knock as every door does (`private.pace`).
+const touched = psql(`
+select (select count(*) from caller where uid in (${list([NOBODY, PLAYER, STRANGER, OTHER, OWNER])})) || '|'
+    || (select count(*) from item where world_id = '${KEEP}' and holder = 'ground' and gx = 15 and gy = 16) || '|'
+    || (select x || ',' || y from player where world_id = '${KEEP}' and uid = '${STUCK}') || '|'
+    || (select count(*) from private.island_mute where world_id = '${KEEP}') || '|'
+    || (select count(*) from private.owner_log where world_id = '${KEEP}');`);
+check('refused before anything else: no call counted, nothing cleared, moved, muted or written down',
+  touched === '0|3|3.5,28.5|0|0', touched);
 const amI = (who: string | null, world: string): string => {
   const r = as(who, `select rpc_owner_am_i('${world}');`);
   return r.err ? `error: ${r.err}` : r.out;
@@ -181,14 +190,6 @@ check('asking whether you keep it: nobody signed in may not ask',
 check('and everybody who does not keep it is told no',
   [null, NOBODY, PLAYER, STRANGER, OTHER, OWNER].every((who) => amI(who, KEEP) === 'f'),
   [null, NOBODY, PLAYER, STRANGER, OTHER, OWNER].map((who) => amI(who, KEEP)).join(' '));
-const touched = psql(`
-select (select count(*) from caller where uid in (${list([NOBODY, PLAYER, STRANGER, OTHER, OWNER])})) || '|'
-    || (select count(*) from item where world_id = '${KEEP}' and holder = 'ground' and gx = 15 and gy = 16) || '|'
-    || (select x || ',' || y from player where world_id = '${KEEP}' and uid = '${STUCK}') || '|'
-    || (select count(*) from private.island_mute where world_id = '${KEEP}') || '|'
-    || (select count(*) from private.owner_log where world_id = '${KEEP}');`);
-check('refused before anything else: no call counted, nothing cleared, moved, muted or written down',
-  touched === '0|3|3.5,28.5|0|0', touched);
 
 /* ---- who keeps what ----------------------------------------------------------- */
 console.log('--- who keeps what');

@@ -3666,6 +3666,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/watch.mjs --log-level=error
           node node_modules/.cache/watch.mjs
 
+      - name: Every door paced, and a walk held to its pace
+        run: |
+          # A per-player rate limit on every rpc_* door, by class, with budgets
+          # three times what the browser itself sends; a class's burst and then
+          # one line, nothing done. And rpc_move over time as well as a word at
+          # a time: 1.3 and 1.6 times the pace in tenth-of-a-second steps end at
+          # the pace and the slack, a walk at its pace is never pulled, lag,
+          # a late word and a hole included, and stone slabs at their own pace.
+          npx esbuild supabase/test/ratelimit.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/ratelimit.mjs --log-level=error
+          node node_modules/.cache/ratelimit.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

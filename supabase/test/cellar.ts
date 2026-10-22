@@ -416,17 +416,19 @@ const moves: Array<[string, number, number, number, number, number, number, stri
  * of a walk (`carry_crawl`): at the pace his legs carry him that is less than a
  * tile in the ten seconds the island counts at most, and every step below would
  * be pulled short of the flight. These are about the way down and not the
- * load, so his back is made strong enough for them, and put back after.
+ * load, so his back is made strong enough for them, and put back after: a
+ * Strong Back's `carry` on his perks, since Body Strength stops at the top of
+ * a skill (`skill_of`), short of what this load wants. Until the island held
+ * a walk to its pace over time, the crawl's 60% slack carried him far enough.
  */
-const strength = val(`coalesce((select value::text from skill where world_id = ${W} and uid = ${DANE} and id = 'body_strength'), 'none')`);
-psql(`delete from skill where world_id = ${W} and uid = ${DANE} and id = 'body_strength';
-      insert into skill (world_id, uid, id, value) values (${W}, ${DANE}, 'body_strength', 10000);`);
+const perks = val(`coalesce((select class_mul::text from player where world_id = ${W} and uid = ${DANE}), 'none')`);
+psql(`update player set class_mul = jsonb_set(coalesce(class_mul, '{}'::jsonb), '{fx}',
+        coalesce(class_mul->'fx', '{}'::jsonb) || '{"carry": 100000}'::jsonb) where world_id = ${W} and uid = ${DANE};`);
 const wrongMoves = moves.filter(([, x0, y0, l0, x1, y1, l1, want]) => theirMove(x0, y0, l0, x1, y1, l1) !== want);
 check('the island holds a body to the cellar floor and its way down the same way', wrongMoves.length === 0,
   wrongMoves.length ? wrongMoves.map(([s, x0, y0, l0, x1, y1, l1]) => `${s}: ${theirMove(x0, y0, l0, x1, y1, l1)}`).join('; ')
     : moves.map(([s]) => s).join('; '));
-psql(`delete from skill where world_id = ${W} and uid = ${DANE} and id = 'body_strength';
-      ${strength === 'none' ? '' : `insert into skill (world_id, uid, id, value) values (${W}, ${DANE}, 'body_strength', ${strength});`}`);
+psql(`update player set class_mul = ${perks === 'none' ? 'null' : `'${perks}'::jsonb`} where world_id = ${W} and uid = ${DANE};`);
 
 /* ---- nothing let go of over the stairwell ------------------------------------------ */
 const plank = { kind: 'item', uid: Number(psql(`insert into item (world_id, holder, holder_uid, def, ql, count)
