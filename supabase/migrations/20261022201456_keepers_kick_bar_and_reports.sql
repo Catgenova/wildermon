@@ -49,7 +49,8 @@
  * deletes what is past keeping -- handled ones after
  * `private.report_handled_days()`, every one after `private.report_open_days()`.
  *
- * Every keeper door writes `private.owner_log`. No browser reads either table.
+ * Every keeper door asks `private.keeper_code_ok` straight after the keeper
+ * check, and writes `private.owner_log`. No browser reads either table.
  */
 set local lock_timeout = '3s';
 
@@ -84,6 +85,20 @@ select private.shut('create index if not exists player_report_at on private.play
 select private.shut('alter table private.player_report enable row level security');
 
 revoke all on table private.island_bar, private.player_report from public, anon, authenticated;
+
+/*
+ * Whether a keeper has given the authenticator code their account asks for.
+ * The real rule is another migration's; this stands in only where it is not
+ * there yet, so whichever lands first, the real one is what stays.
+ */
+do $do$
+begin
+  if to_regprocedure('private.keeper_code_ok(uuid)') is null then
+    execute $f$create function private.keeper_code_ok(p uuid) returns boolean
+      language sql stable set search_path = '' as $b$ select true $b$$f$;
+    execute 'revoke all on function private.keeper_code_ok(uuid) from public, anon, authenticated';
+  end if;
+end $do$;
 
 /* The numbers, which `src/game/keeper.ts` holds too and supabase/test/kick.ts holds them together. */
 create or replace function private.report_reasons() returns text[]
@@ -206,6 +221,9 @@ begin
   if not private.is_island_owner(p_world, me) then
     raise exception 'only a keeper of this island may do that';
   end if;
+  if not private.keeper_code_ok(me) then
+    return jsonb_build_object('why', 'Authenticator code needed: Island keeper window.');
+  end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   if not exists (select 1 from player where world_id = p_world and uid = p_uid) then
     return jsonb_build_object('why', 'That person has no body on this island.');
@@ -284,6 +302,9 @@ declare me uuid := auth.uid(); v_until timestamptz; v_live boolean;
 begin
   if not private.is_island_owner(p_world, me) then
     raise exception 'only a keeper of this island may do that';
+  end if;
+  if not private.keeper_code_ok(me) then
+    return jsonb_build_object('why', 'Authenticator code needed: Island keeper window.');
   end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   delete from private.island_bar b where b.world_id = p_world and b.uid = p_uid
@@ -382,6 +403,9 @@ begin
   if not private.is_island_owner(p_world, me) then
     raise exception 'only a keeper of this island may do that';
   end if;
+  if not private.keeper_code_ok(me) then
+    return jsonb_build_object('why', 'Authenticator code needed: Island keeper window.');
+  end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   select coalesce(jsonb_agg(jsonb_build_object(
            'n', r.n,
@@ -408,6 +432,9 @@ declare me uuid := auth.uid(); r private.player_report;
 begin
   if not private.is_island_owner(p_world, me) then
     raise exception 'only a keeper of this island may do that';
+  end if;
+  if not private.keeper_code_ok(me) then
+    return jsonb_build_object('why', 'Authenticator code needed: Island keeper window.');
   end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   update private.player_report o set handled_by = me, handled_at = now()

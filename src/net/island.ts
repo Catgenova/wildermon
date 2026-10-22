@@ -3651,7 +3651,8 @@ export class Island {
   async keptReports(): Promise<KeptReport[] | null> {
     if (!this.info) return null;
     const { data, error } = await supabase().rpc('rpc_owner_reports', { p_world: this.info.id });
-    if (error || !data || typeof data !== 'object') return null;
+    // A refusal (`why`, an authenticator code wanted) is no answer, not an empty list.
+    if (error || !data || typeof data !== 'object' || 'why' in data) return null;
     return rowsIn<KeptReport>((data as { reports?: unknown }).reports);
   }
 
