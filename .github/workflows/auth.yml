@@ -1,0 +1,31 @@
+# Auth settings the Security Advisor asks for, set on the project through the
+# Management API and read back. Run by hand; it changes nothing else.
+#
+# Asked for: "Discover and address any red or yellow security concerns on
+# supabase". The advisor's `auth_leaked_password_protection`: a password found
+# in a known breach (HaveIBeenPwned) is refused at sign-up and at a change.
+name: Auth settings
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  auth:
+    name: Set the advisor's auth switches
+    runs-on: ubuntu-latest
+    environment: AI
+    steps:
+      - name: Leaked password protection on
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          code=$(curl -s -o patch.json -w '%{http_code}' -X PATCH -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                   -H 'Content-Type: application/json' -d '{"password_hibp_enabled": true}' "$api")
+          echo "PATCH answered $code"
+          if [ "$code" -ge 300 ]; then jq -r '.message // .' patch.json; echo "::error::The project refused the setting (above)."; exit 1; fi
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "$api" | jq -c '{password_hibp_enabled, password_min_length}'
