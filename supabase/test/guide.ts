@@ -49,7 +49,7 @@ import {
   HERD_REACH, MONSTER_CAP, MONSTER_KEEP_OFF, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
 import {
-  countsLine, FieldGuide, guideCounts, guidePage, guidePages, seenLine, whereItLives, wildShare,
+  countsLine, FieldGuide, guideCounts, guideEntries, guideEntry, guidePage, guidePages, seenLine, stageKey, whereItLives, wildShare,
 } from '../../src/game/guide';
 import { GUIDE_BATCH, MOBS_RANGE, PEACE_REACH } from '../../src/game/keep';
 import { packLand, packWorld, unpack } from '../../src/game/save';
@@ -82,9 +82,15 @@ const KINDS = Object.values(SPECIES);
 const KEEPABLE = KINDS.filter((d) => !d.monster);
 check('a page for every kind there is, in the order they are written', sorted(guidePages().map((d) => d.id)) === sorted(Object.keys(SPECIES))
   && guidePages().map((d) => d.id).join() === Object.keys(SPECIES).join(), `${guidePages().length} pages`);
+// And a page for each stage after its kind's, under `species:stage` (asked for: "so that every wildermon is shown").
+const ENTRIES = guideEntries();
+const STAGED = KINDS.flatMap((d) => [d.id, ...(d.stages ?? []).map((_, i) => `${d.id}:${i + 1}`)]);
+check('a page for every stage after its kind\'s, named for the stage', ENTRIES.map((e) => e.key).join() === STAGED.join()
+  && ENTRIES.length > KINDS.length && guideEntry('woola:1')?.name === SPECIES.woola.stages?.[0].name && stageKey('woola', 0) === 'woola'
+  && !guideEntry('woola:3') && !guideEntry('woola:0') && !guideEntry('nosuch:1'), `${ENTRIES.length} pages`);
 const empty = guideCounts(new FieldGuide());
-check('seen is counted over every kind, tamed and bred over all but the monsters',
-  empty.kinds === KINDS.length && empty.keepable === KEEPABLE.length && KEEPABLE.length < KINDS.length,
+check('seen is counted over every page, tamed and bred over all kinds but the monsters',
+  empty.kinds === ENTRIES.length && empty.keepable === KEEPABLE.length && KEEPABLE.length < KINDS.length,
   `${empty.kinds} and ${empty.keepable}`);
 
 /** Every line a page has, flattened, for asking whether something is said. */
@@ -217,8 +223,17 @@ wildDam.due = game.time;
 game.creatures.giveBirth(game, wildDam);
 check('and one born to a dam that is nobody\'s does not', !game.guide.bred.has('sedra') && !game.guide.seen.has('sedra'), sorted(game.guide.bred));
 
-check('the counts over the index are the book\'s', countsLine(game.guide) === `Seen 4 of ${KINDS.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`,
+check('the counts over the index are the book\'s', countsLine(game.guide) === `Seen 4 of ${ENTRIES.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`,
   countsLine(game.guide));
+
+// One at its second stage in view marks its stage's page seen as well, said as its stage.
+const cloudram = put('woola', px + 1, py - 1);
+cloudram.skills = { foraging: 30 };
+game.log.length = 0;
+game.update(1.1);
+check('one at its second stage in view marks its stage\'s page seen, and says so as its stage', game.guide.seen.has('woola:1')
+  && game.log.some((l) => l.text === seenLine(guideEntry('woola:1')!, game.guide)), game.log.map((l) => l.text).join(' | '));
+game.creatures.remove(cloudram.id);
 
 // A save, and back.
 const back = await unpack(await packLand(game), JSON.parse(JSON.stringify(packWorld(game))));
@@ -277,6 +292,12 @@ begin
   update creature set mode = 'stored' where world_id = w and id = v_id;
   insert into said values ('FIRST', rpc_guide_seen(w, array['woola', 'woola', 'lume', 'quill', 'nosuch'])::text);
   insert into said values ('AGAIN', rpc_guide_seen(w, array['woola'])::text);
+  -- A stage's page: taken while one at that stage stands near; then put back as it was.
+  v_id := creature_spawn(w, 'woola', v_x + 2, v_y, 'wild', now() - interval '3 hours');
+  update creature set skills = '{"foraging": 30}'::jsonb where world_id = w and id = v_id;
+  insert into said values ('STAGE', rpc_guide_seen(w, array['woola:1', 'woola:2', 'woola:9'])::text);
+  delete from guide where world_id = w and uid = dane and species = 'woola:1';
+  delete from creature where world_id = w and id = v_id;
   insert into said values ('ROWS', (select string_agg(species || ':' || tamed || ':' || bred, ',' order by species)
     from guide where world_id = w and uid = dane));
   begin
@@ -378,6 +399,8 @@ check(`and one further off than the ${MOBS_RANGE} tiles a browser is told about,
   first.absent?.join() === 'lume,nosuch,quill', answer('FIRST'));
 check('handed over again, it is had rather than added, and nothing more is written', answer('AGAIN') === '{"had": ["woola"], "added": [], "absent": []}'
   && answer('ROWS') === 'woola:false:false', `${answer('AGAIN')} ${answer('ROWS')}`);
+check('a stage\'s page is taken while one at that stage stands near, and one at no stage there is or not near is absent',
+  answer('STAGE') === '{"had": [], "added": ["woola:1"], "absent": ["woola:2", "woola:9"]}', answer('STAGE'));
 check(`more kinds than one look may name, which is ${GUIDE_BATCH}, are refused`, answer('TOO_MANY').startsWith('that is more kinds than one look hands over'),
   answer('TOO_MANY'));
 check('and so is somebody not signed in, handing over or reading', answer('NOBODY') === 'not signed in' && answer('NOBODY_READS') === 'not signed in',
@@ -394,7 +417,7 @@ check('and only its owner\'s: somebody else on the island reads theirs, and neit
   answer('THEIRS') === '{"bred": [], "seen": ["dragon"], "tamed": []}', answer('THEIRS'));
 const read = FieldGuide.fromJSON(book);
 check('and the browser takes it as it comes', sorted(read.seen) === 'cudda,rabba,vola,woola' && sorted(read.tamed) === 'rabba,vola' && sorted(read.bred) === 'cudda'
-  && countsLine(read) === `Seen 4 of ${KINDS.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`, countsLine(read));
+  && countsLine(read) === `Seen 4 of ${ENTRIES.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`, countsLine(read));
 check('nobody reads or writes the table but through the two doors', answer('LOCKED') === 'on|0|nothing', answer('LOCKED'));
 check('and those two are a signed-in browser\'s to call, and the mark itself is nobody\'s', answer('DOORS') === 'true|true|false|false',
   answer('DOORS'));

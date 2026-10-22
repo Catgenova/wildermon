@@ -1,11 +1,11 @@
 import type { Game } from '../../game/game';
-import { SPECIES, type SpeciesDef } from '../../game/creatures';
-import { countsLine, GUIDE_MARKS, guidePage, guidePages, keepable, MARK_NAMES, type GuideMark } from '../../game/guide';
+import { countsLine, guideEntries, guideEntry, GUIDE_MARKS, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
 import { ACTION_BY_ID } from '../../game/actions';
 import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackReach, trackTarget, TRACKING } from '../../game/tracking';
 import { CULL_RANGE } from '../../game/creatures';
 import { drawCreaturePortrait } from '../../render/sprites';
+import { drawWildermonPortrait } from '../../render/wildermon';
 
 /** How big a kind is drawn on the index and on its own page, in CSS pixels. */
 const CARD = { w: 76, h: 56 };
@@ -31,7 +31,7 @@ export class GuidePanel {
   private readonly counts: HTMLDivElement;
   private readonly bar: HTMLDivElement;
   private readonly view: HTMLDivElement;
-  /** The kind whose page is open, or null for the index. */
+  /** The page open (a kind, or `species:stage` for one of its stages), or null for the index. */
   private page: string | null = null;
   /** Pictures already drawn, by kind and by whether it has been seen, since a drawing does not change. */
   private readonly pictures = new Map<string, HTMLCanvasElement>();
@@ -71,9 +71,9 @@ export class GuidePanel {
     void this.refresh();
   }
 
-  /** Open the book at a kind's page. */
+  /** Open the book at a kind's page, or a stage's. */
   openAt(species: string): void {
-    this.page = SPECIES[species] ? species : null;
+    this.page = guideEntry(species) ? species : null;
     if (this.showing()) this.draw();
     this.turnHere();
   }
@@ -104,8 +104,8 @@ export class GuidePanel {
     this.bar.replaceChildren();
     this.view.replaceChildren();
     if (this.failed) this.say('Island did not answer: showing its last reply. Asked again each time this tab opens.');
-    const def = this.page ? SPECIES[this.page] : undefined;
-    if (def) this.drawPage(def);
+    const entry = this.page ? guideEntry(this.page) : undefined;
+    if (entry) this.drawPage(entry);
     else this.drawIndex();
   }
 
@@ -116,43 +116,45 @@ export class GuidePanel {
     grid.className = 'guide-grid';
     const g = this.game.guide;
     // How a shadow becomes a page, while there are shadows left.
-    if (guidePages().some((def) => !g.seen.has(def.id))) {
+    if (guideEntries().some((e) => !g.seen.has(e.key))) {
       const how = document.createElement('div');
       how.className = 'guide-how';
-      how.textContent = 'A kind is added the first time one is in sight. Click a card for its page.';
+      how.textContent = 'A kind, and each stage of one, is added the first time one is in sight. Click a card for its page.';
       this.view.append(how);
     }
-    guidePages().forEach((def, i) => {
-      const seen = g.seen.has(def.id);
+    guideEntries().forEach((entry, i) => {
+      const { def } = entry;
+      const seen = g.seen.has(entry.key);
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = `guide-card${seen ? '' : ' guide-unseen'}`;
-      card.append(this.picture(def, seen, CARD.w, CARD.h));
+      card.className = `guide-card${seen ? '' : ' guide-unseen'}${entry.stage ? ' guide-stage' : ''}`;
+      card.append(this.picture(entry, seen, CARD.w, CARD.h));
       const name = document.createElement('span');
       name.className = 'guide-name';
-      name.textContent = seen ? def.name : `No. ${i + 1}`;
+      name.textContent = seen ? entry.name : `No. ${i + 1}`;
       card.append(name);
       const tags = document.createElement('span');
       tags.className = 'guide-tags';
       for (const m of ['tamed', 'bred'] as const) {
-        if (!g.has(def.id, m)) continue;
+        if (entry.stage || !g.has(def.id, m)) continue;
         const tag = document.createElement('span');
         tag.className = 'guide-tag';
         tag.textContent = MARK_NAMES[m].toLowerCase();
         tags.append(tag);
       }
       card.append(tags);
-      card.title = seen ? `${def.name}: ${this.marksSaid(def)}` : 'Not seen yet';
-      card.addEventListener('click', () => this.turnTo(def.id));
+      card.title = seen ? `${entry.name}${entry.stage ? ` (${def.name}, stage ${entry.stage + 1})` : ''}: ${this.marksSaid(entry)}` : 'Not seen yet';
+      card.addEventListener('click', () => this.turnTo(entry.key));
       grid.append(card);
     });
     this.view.append(grid);
   }
 
-  /** One kind's page: its picture and marks, and then what the book says of it, once it has been seen. */
-  private drawPage(def: SpeciesDef): void {
-    const pages = guidePages();
-    const at = pages.findIndex((d) => d.id === def.id);
+  /** One page: its picture and marks, and then what the book says of it, once it has been seen. */
+  private drawPage(entry: GuideEntry): void {
+    const { def } = entry;
+    const pages = guideEntries();
+    const at = pages.findIndex((e) => e.key === entry.key);
     this.bar.hidden = false;
     const button = (text: string, title: string, go: () => void): HTMLButtonElement => {
       const b = document.createElement('button');
@@ -170,28 +172,29 @@ export class GuidePanel {
     where.textContent = `No. ${at + 1} of ${pages.length}`;
     this.bar.append(
       button('Index', 'All kinds', () => this.turnTo(null)),
-      button('‹', 'Previous page', () => this.turnTo(back.id)),
-      button('›', 'Next page', () => this.turnTo(next.id)),
+      button('‹', 'Previous page', () => this.turnTo(back.key)),
+      button('›', 'Next page', () => this.turnTo(next.key)),
       where,
     );
 
-    const seen = this.game.guide.seen.has(def.id);
+    const seen = this.game.guide.seen.has(entry.key);
     const head = document.createElement('div');
     head.className = 'guide-head';
-    head.append(this.picture(def, seen, PAGE.w, PAGE.h));
+    head.append(this.picture(entry, seen, PAGE.w, PAGE.h));
     const side = document.createElement('div');
     side.className = 'guide-side';
     const name = document.createElement('div');
     name.className = 'guide-title';
-    name.textContent = seen ? def.name : 'Not seen yet';
+    name.textContent = seen ? entry.name : 'Not seen yet';
     side.append(name);
     if (seen) {
       const marks = document.createElement('div');
       marks.className = 'guide-marks';
+      // A stage's page is marked seen and nothing else: taming and breeding are its kind's.
       for (const m of GUIDE_MARKS) {
-        if (m !== 'seen' && !keepable(def)) continue;
+        if (m !== 'seen' && (!keepable(def) || entry.stage)) continue;
         const chip = document.createElement('span');
-        const has = this.game.guide.has(def.id, m);
+        const has = this.game.guide.has(entry.key, m);
         chip.className = `guide-mark${has ? ' guide-mark-on' : ''}`;
         chip.textContent = MARK_NAMES[m];
         chip.title = has ? `${MARK_NAMES[m]}` : `Not ${MARK_NAMES[m].toLowerCase()} yet`;
@@ -201,7 +204,7 @@ export class GuidePanel {
     }
     // Track: a wildermon whose page is marked seen, read back to the nearest wild one (`tracking.ts`).
     const track = ACTION_BY_ID.get(TRACK);
-    if (track && trackable(def, this.game.guide.seen)) {
+    if (track && !entry.stage && trackable(def, this.game.guide.seen)) {
       const L = trackLevel(this.game.skills.get(TRACKING));
       const go = document.createElement('button');
       go.type = 'button';
@@ -217,7 +220,7 @@ export class GuidePanel {
     this.view.append(head);
     // A kind nobody has seen is its shape and nothing else.
     if (!seen) return;
-    for (const s of guidePage(def, !!this.island)) {
+    for (const s of guidePage(def, !!this.island, entry.stage)) {
       const h = document.createElement('div');
       h.className = 'skill-group';
       h.textContent = s.head;
@@ -233,9 +236,9 @@ export class GuidePanel {
   }
 
   /** "seen, tamed, not bred yet", for a card's hover. */
-  private marksSaid(def: SpeciesDef): string {
-    const marks: GuideMark[] = keepable(def) ? GUIDE_MARKS : ['seen'];
-    return marks.map((m) => (this.game.guide.has(def.id, m) ? MARK_NAMES[m].toLowerCase() : `not ${MARK_NAMES[m].toLowerCase()} yet`)).join(', ');
+  private marksSaid(entry: GuideEntry): string {
+    const marks: GuideMark[] = keepable(entry.def) && !entry.stage ? GUIDE_MARKS : ['seen'];
+    return marks.map((m) => (this.game.guide.has(entry.key, m) ? MARK_NAMES[m].toLowerCase() : `not ${MARK_NAMES[m].toLowerCase()} yet`)).join(', ');
   }
 
   private turnTo(species: string | null): void {
@@ -249,8 +252,9 @@ export class GuidePanel {
    * A kind's picture, drawn once at this size and kept: in its own colours
    * once seen, and as a shadow of its shape until then.
    */
-  private picture(def: SpeciesDef, seen: boolean, w: number, h: number): HTMLCanvasElement {
-    const key = `${def.id}|${seen}|${w}x${h}`;
+  private picture(entry: GuideEntry, seen: boolean, w: number, h: number): HTMLCanvasElement {
+    const { def } = entry;
+    const key = `${entry.key}|${seen}|${w}x${h}`;
     let pic = this.pictures.get(key);
     if (!pic) {
       pic = document.createElement('canvas');
@@ -261,7 +265,9 @@ export class GuidePanel {
       pic.style.height = `${h}px`;
       pic.className = 'guide-picture';
       const ctx = pic.getContext('2d');
-      if (ctx) drawCreaturePortrait(ctx, pic.width, pic.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW);
+      // A stage is drawn as its stage's model (`WILDERMON_STAGES`).
+      if (ctx && entry.stage) drawWildermonPortrait(ctx, pic.width, pic.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW, entry.stage);
+      else if (ctx) drawCreaturePortrait(ctx, pic.width, pic.height, def.id, def.variants[0], FACING, seen ? undefined : SHADOW);
       this.pictures.set(key, pic);
     }
     // Put in its new place, which takes it out of the old one: the index and a

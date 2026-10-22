@@ -34,7 +34,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, bridleTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, stageOf, bridleTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -51,7 +51,7 @@ import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceBurden, pieceSoak, SH
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { ALL_GOALS } from './journal';
-import { FieldGuide, GUIDE_LOOK, seenLine, type GuideBook, type GuideMark } from './guide';
+import { FieldGuide, GUIDE_LOOK, guideEntry, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
 import { matOf, rollEase, workingQl } from './materials';
 import { postCentre, postDecayRate, postKeep, postName, postRadius, postSite, type PlacedPost } from './posts';
 import {
@@ -817,10 +817,12 @@ export class Game {
    * guest's, and it is not written into the host's book.
    */
   guideMark(species: string, what: GuideMark): void {
-    if (this.acting !== this.local || !SPECIES[species]) return;
+    // A kind's page, or a stage's (`species:stage`), which is only ever marked seen.
+    const entry = guideEntry(species);
+    if (this.acting !== this.local || !entry || (entry.stage > 0 && what !== 'seen')) return;
     const fresh = this.guide.mark(species, what);
     if (!fresh.length) return;
-    if (fresh.includes('seen')) this.logMsg(seenLine(SPECIES[species], this.guide), 'event');
+    if (fresh.includes('seen')) this.logMsg(seenLine(entry, this.guide), 'event');
     this.events.emit('guide');
   }
 
@@ -831,11 +833,12 @@ export class Game {
    */
   guideHeard(added: string[], had: string[]): void {
     let changed = false;
-    for (const id of had) if (SPECIES[id] && this.guide.mark(id, 'seen').length) changed = true;
+    for (const id of had) if (guideEntry(id) && this.guide.mark(id, 'seen').length) changed = true;
     for (const id of added) {
-      if (!SPECIES[id] || !this.guide.mark(id, 'seen').length) continue;
+      const entry = guideEntry(id);
+      if (!entry || !this.guide.mark(id, 'seen').length) continue;
       changed = true;
-      this.logMsg(seenLine(SPECIES[id], this.guide), 'event');
+      this.logMsg(seenLine(entry, this.guide), 'event');
     }
     if (changed) this.events.emit('guide');
   }
@@ -862,11 +865,16 @@ export class Game {
     this.guideClock = 0;
     let asked: Set<string> | null = null;
     for (const c of this.creatures.list.values()) {
-      if (c.mode === 'stored' || this.guide.seen.has(c.species) || asked?.has(c.species)) continue;
-      if (!this.vision.isWatched(c.x, c.y)) continue;
-      (asked ??= new Set()).add(c.species);
-      if (this.guideSaw) this.guideSaw(c.species);
-      else this.guideMark(c.species, 'seen');
+      if (c.mode === 'stored') continue;
+      // Its kind's page, and its stage's where it is past its first (`stageKey`).
+      const keys = [c.species, stageKey(c.species, stageOf(c))].filter((k, i, all) => all.indexOf(k) === i
+        && !this.guide.seen.has(k) && !asked?.has(k));
+      if (!keys.length || !this.vision.isWatched(c.x, c.y)) continue;
+      for (const k of keys) {
+        (asked ??= new Set()).add(k);
+        if (this.guideSaw) this.guideSaw(k);
+        else this.guideMark(k, 'seen');
+      }
     }
   }
 

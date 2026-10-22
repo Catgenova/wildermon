@@ -122,7 +122,7 @@ import { RESTORE_HARM, RESTORE_HARM_SPREAD } from '../../game/archaeology';
 import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, deedWorkersAt, goSeconds, MAX_DEED_LEVEL, NIGHT_ENDS, NIGHT_STARTS, QL_TOP } from '../../game/game';
 import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
 import { defaultKey } from '../../game/keybinds';
-import { guidePages } from '../../game/guide';
+import { guideEntries, guidePages } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS } from '../../game/keeper';
 import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
@@ -3192,6 +3192,13 @@ export const NEWS: News[] = [
       `Added: old brace relic (${BRACE.parts} pieces, archaeology ${BRACE.difficulty}): ancient brace, on your wildermon: action speed +${percent(BRACE_STEP)} a use, up to ${BRACE_MOST} uses (+${percent(BRACE_STEP * BRACE_MOST)}).`,
       'Added: a wildermon on a work post, hungry, eats its diet from a container you made inside the post\'s range.',
       `Changed: farming seed per harvest: ${seedSays()}, tended or not (was one, or two tended twice); settlement workers too.`,
+    ],
+  },
+  {
+    n: 247,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: Field guide page for every evolution stage, after its kind's: ${guideEntries().length - guidePages().length} pages, each with its model; seen once one at that stage is in sight.`,
     ],
   },
 ];

@@ -34,7 +34,7 @@ import { TACK } from './creatureActions';
 import { MILK_PART, milkLitres } from './dairy';
 import { BUCKET_LITRES } from './furniture';
 import {
-  favouriteSays, GATHER_DO, GATHER_SKILL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS,
+  EVOLVE_AT, favouriteSays, GATHER_DO, GATHER_SKILL, STAGE_MUL, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, HERD_REACH, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF, MONSTER_SHARE, MONSTERS,
   HAUL_SKILL, LEARNS_SAYS, PULL_DEFAULT, RANGE_PER_STEP, seasonSays, SKILL_STEP, SPECIES, tracesSkill, WATER_RANGE, WILD_RANGE, WILD_SPECIES, type SpeciesDef, LEARN_PACE,
 } from './creatures';
 import { BANE_BONUS } from './gear';
@@ -73,6 +73,36 @@ export const guidePages = (): SpeciesDef[] => Object.values(SPECIES);
 /** Whether a kind can be tamed and bred at all: everything but a monster. */
 export const keepable = (def: SpeciesDef): boolean => !def.monster;
 
+/**
+ * A page of the book: a kind, or one of its later stages.
+ *
+ * Asked for: "Add entries to the Field Guide for each evolution stage, so that every wildermon is shown". A stage has
+ * a page of its own after its kind's, under its own key, `species:stage` (`stageKey`), and is marked seen when one at
+ * that stage is in sight (`stageOf`); taming and breeding are the kind's, and stay on the kind's page. The island's
+ * `guide_kind`.
+ */
+export interface GuideEntry {
+  key: string;
+  def: SpeciesDef;
+  /** Nought for the kind itself, one and two for its stages. */
+  stage: number;
+  name: string;
+}
+export const stageKey = (species: string, stage: number): string => (stage > 0 ? `${species}:${stage}` : species);
+/** The page a key is for, or undefined for a key there is no page for. */
+export function guideEntry(key: string): GuideEntry | undefined {
+  const [id, n] = key.split(':');
+  const def = SPECIES[id];
+  if (!def) return undefined;
+  if (n === undefined) return { key, def, stage: 0, name: def.name };
+  const stage = Number(n);
+  const st = Number.isInteger(stage) && stage >= 1 ? def.stages?.[stage - 1] : undefined;
+  return st ? { key, def, stage, name: st.name } : undefined;
+}
+/** Every page in the book's order: each kind, and after it each of its stages. */
+export const guideEntries = (): GuideEntry[] =>
+  guidePages().flatMap((def) => [0, ...(def.stages ?? []).map((_, i) => i + 1)].map((st) => guideEntry(stageKey(def.id, st))!));
+
 export class FieldGuide {
   readonly seen = new Set<string>();
   readonly tamed = new Set<string>();
@@ -108,7 +138,8 @@ export class FieldGuide {
     for (const m of GUIDE_MARKS) {
       const kinds = book?.[m];
       if (!Array.isArray(kinds)) continue;
-      for (const id of kinds) if (typeof id === 'string' && SPECIES[id]) this.mark(id, m);
+      // A stage's page is marked seen and nothing else.
+      for (const id of kinds) if (typeof id === 'string' && guideEntry(id) && (m === 'seen' || SPECIES[id])) this.mark(id, m);
     }
   }
 
@@ -128,17 +159,17 @@ export interface GuideCounts {
   seen: number;
   tamed: number;
   bred: number;
-  /** Every kind there is a page for. */
+  /** Every page there is: each kind and each of its stages. */
   kinds: number;
   /** And the ones that can be tamed and bred, which the monsters are not. */
   keepable: number;
 }
 
 export function guideCounts(guide: FieldGuide): GuideCounts {
-  const pages = guidePages();
-  const kept = pages.filter(keepable);
+  const pages = guideEntries();
+  const kept = guidePages().filter(keepable);
   return {
-    seen: pages.filter((d) => guide.seen.has(d.id)).length,
+    seen: pages.filter((e) => guide.seen.has(e.key)).length,
     tamed: kept.filter((d) => guide.tamed.has(d.id)).length,
     bred: kept.filter((d) => guide.bred.has(d.id)).length,
     kinds: pages.length,
@@ -152,10 +183,10 @@ export function countsLine(guide: FieldGuide): string {
   return `${MARK_NAMES.seen} ${n.seen} of ${n.kinds} · ${MARK_NAMES.tamed} ${n.tamed} of ${n.keepable} · ${MARK_NAMES.bred} ${n.bred} of ${n.keepable}`;
 }
 
-/** What the log says the first time a kind is seen, on either side. */
-export function seenLine(def: SpeciesDef, guide: FieldGuide): string {
+/** What the log says the first time a kind, or a stage of one, is seen, on either side. */
+export function seenLine(entry: Pick<GuideEntry, 'name'>, guide: FieldGuide): string {
   const n = guideCounts(guide);
-  return `First ${def.name.toLowerCase()} seen: ${n.seen}/${n.kinds} kinds. (Field guide, ${defaultKey('win_guide')})`;
+  return `First ${entry.name.toLowerCase()} seen: ${n.seen}/${n.kinds} kinds. (Field guide, ${defaultKey('win_guide')})`;
 }
 
 /* ---- What a page says ------------------------------------------------------ */
@@ -298,9 +329,13 @@ function keeping(def: SpeciesDef): string[] {
   return lines;
 }
 
-/** What it is like to meet: its body, what it does when struck, what its blows leave, and what bites it hardest. */
-function fighting(def: SpeciesDef): string[] {
-  const lines = [`Grown: ${def.health} health, blow ${def.attack} damage, speed ${def.speed} ${def.speed === 1 ? 'tile' : 'tiles'} a second`];
+/** What it is like to meet: its body, what it does when struck, what its blows leave, and what bites it hardest. At a stage, its stage's body (`STAGE_MUL`). */
+function fighting(def: SpeciesDef, stage = 0): string[] {
+  const at = (ch: 'hardy' | 'tough' | 'speed'): number => (STAGE_MUL[ch] ?? 1) ** stage;
+  const health = Math.round(def.health * at('hardy'));
+  const blow = +(def.attack * at('tough')).toFixed(1);
+  const speed = +(def.speed * at('speed')).toFixed(2);
+  const lines = [`Grown: ${health} health, blow ${blow} damage, speed ${speed} ${speed === 1 ? 'tile' : 'tiles'} a second`];
   if (def.hunter) lines.push(`${def.monster ? 'Attacks' : 'Wild: attacks'} on sight from ${def.notice ?? HUNT_SIGHT} tiles`);
   if (def.timid) lines.push('Wild: flees when struck');
   if (def.defensive) lines.push('Strikes back every time');
@@ -326,8 +361,27 @@ function carcass(def: SpeciesDef): string[] {
   return lines;
 }
 
-/** A kind's whole page, under its headings, for a kind that has been seen. */
-export function guidePage(def: SpeciesDef, onIsland = false): GuideSection[] {
+/** What a stage is: where it comes in, what it is over the one before, and how often the wild puts one down at it. */
+function staging(def: SpeciesDef, stage: number): string[] {
+  const st = def.stages?.[stage - 1];
+  if (!st) return [];
+  const lines = [`Stage ${stage + 1} of ${(def.stages?.length ?? 0) + 1}: ${def.name} at level ${EVOLVE_AT[stage - 1]}`];
+  if (st.description) lines.push(st.description);
+  lines.push(`Over the stage before: health, blow and speed ×${STAGE_MUL.hardy}, task speed ×${STAGE_MUL.work}`);
+  lines.push(`Wild: 1 in ${WILD_STAGE_ODDS[stage - 1]} ${def.name.toLowerCase()} spawns at this stage; taming ${def.tameLevel + WILD_STAGE_TAME * stage}, `
+    + `base chance ${percent(def.tameChance * WILD_STAGE_CHANCE ** stage)}`);
+  return lines;
+}
+
+/** A kind's whole page, under its headings, for a kind that has been seen; or one of its stages'. */
+export function guidePage(def: SpeciesDef, onIsland = false, stage = 0): GuideSection[] {
+  if (stage > 0) {
+    return [
+      { head: 'Stage', lines: staging(def, stage) },
+      { head: 'Habitat', lines: whereItLives(def, onIsland) },
+      { head: 'Combat', lines: fighting(def, stage) },
+    ].filter((s) => s.lines.length);
+  }
   return [
     { head: 'Habitat', lines: whereItLives(def, onIsland) },
     { head: def.monster ? 'Not a wildermon' : 'Taming', lines: taming(def) },
