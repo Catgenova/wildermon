@@ -260,8 +260,10 @@ export interface BoatDef {
   deck?: Array<[number, number]>;
 }
 
-/** Litres a well holds when it is full, and a tiered fountain the same. */
-export const WELL_HOLDS = 50;
+/** Litres a well holds when it is full. */
+export const WELL_HOLDS = 200;
+/** Litres a tiered fountain holds when it is full. */
+export const FOUNTAIN_HOLDS = 50;
 /**
  * What a well draws in a second: this much at the least, and this much more
  * the better it was built, all of it at quality 100 (`Game.wellRate`). The
@@ -500,7 +502,7 @@ export const FURNITURE: FurnitureDef[] = [
    * the whole of what makes a thing a well, on both sides. Its cost is a
    * well's, in dressed stone rather than a windlass.
    */
-  piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: WELL_HOLDS }),
+  piece('fountain', 'Tiered fountain', 3, 3, [['stone_brick', 32], ['stone_slab', 3], ['mortar', 16]], 32, 26, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
   // Storage of a different sort: raw materials, rubbish, and something to pull it in.
   piece('bulk_bin', 'Raw material bin', 2, 2, [['plank', 48], ['timber', 16], ['nail', 48]], 20, 16, '', 400, { takes: 'raw' }),
   /*

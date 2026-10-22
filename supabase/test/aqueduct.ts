@@ -48,7 +48,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTIONS, type ActionDef, type Target } from '../../src/game/actions';
 import { BRIDGES } from '../../src/game/bridges';
-import { WELL_HOLDS } from '../../src/game/furniture';
+import { FOUNTAIN_HOLDS } from '../../src/game/furniture';
 import { TileType } from '../../src/world/tiles';
 import { NOTHING_YET } from '../../src/game/greening';
 import { AQ_OVER, AQUEDUCT, aqueductPlan, fillWords, footSays } from '../../src/game/aqueducts';
@@ -652,9 +652,9 @@ rollback;`));
   g.update(0.05);
   const fed = f.litres ?? 0;
   const own = g.wellRate(f) * 0.05;
-  say(Math.abs(fed - Number(r('fed'))) < 1e-3 && Math.abs(fed - Math.min(WELL_HOLDS, (g.wellRate(f) + AQUEDUCT_LPS) * 0.05)) < 1e-6,
+  say(Math.abs(fed - Number(r('fed'))) < 1e-3 && Math.abs(fed - Math.min(FOUNTAIN_HOLDS, (g.wellRate(f) + AQUEDUCT_LPS) * 0.05)) < 1e-6,
     `emptied, a fountain an aqueduct keeps takes ${AQUEDUCT_LPS} litres a second on top of its own ${g.wellRate(f).toFixed(4)}: ${fed.toFixed(3)} litres in a twentieth of a second on both sides (island ${Number(r('fed')).toFixed(3)}), `
-    + `full again in ${(WELL_HOLDS / (g.wellRate(f) + AQUEDUCT_LPS)).toFixed(3)} s`);
+    + `full again in ${(FOUNTAIN_HOLDS / (g.wellRate(f) + AQUEDUCT_LPS)).toFixed(3)} s`);
   act('demolish_aqueduct').perform({ kind: 'bridge', id: b.id }, g);
   g.update(0.01);
   f.litres = 0;

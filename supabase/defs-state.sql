@@ -3507,7 +3507,7 @@ update item_def set description = 'Press reed into papyrus, at one set on the gr
 update item_def set description = 'Smelts ore into lumps; mixes alloys. Set down on your own settlement.' where id = 'smelter';
 update item_def set description = 'Fires clay. Set down on dry, flat ground. Take up when cold and empty.' where id = 'kiln';
 update item_def set description = 'Fuel with wood, light, cook as at a fire: food does not burn.' where id = 'oven';
-update item_def set description = 'Draws its own water, faster by QL. Holds 50 litres.' where id = 'well';
+update item_def set description = 'Draws its own water, faster by QL. Holds 200 litres.' where id = 'well';
 update item_def set description = 'A well: draws 0.7 litres a minute at the least, 4.0 at QL 100; holds 50 litres. Fill a bucket or waterskin at it, or drink from it.' where id = 'fountain';
 update item_def set description = 'Raw materials only (ore, logs, dirt, shards, hides). Holds 400.' where id = 'bulk_bin';
 update item_def set description = 'Worked materials only (planks, nails, ribbons, hinges, lumps, bricks). Holds 2500 kg, by weight.' where id = 'craft_bin';
@@ -6161,7 +6161,7 @@ update furniture_def set roses = true where id = 'rose_arch';
 insert into furniture_def values ('stone_rose_arch', 'Stone rose arch', 4, 1, null, false, false);
 update furniture_def set roses = true where id = 'stone_rose_arch';
 insert into furniture_def values ('well', 'Well', 2, 2, null, false, false);
-update furniture_def set well = 50 where id = 'well';
+update furniture_def set well = 200 where id = 'well';
 insert into furniture_def values ('fountain', 'Tiered fountain', 3, 3, null, false, false);
 update furniture_def set well = 50 where id = 'fountain';
 insert into furniture_def values ('bulk_bin', 'Raw material bin', 2, 2, 400, false, false);

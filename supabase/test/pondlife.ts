@@ -36,7 +36,7 @@ import { ACTIONS, type ActionDef, type Target } from '../../src/game/actions';
 import { STONES_DEPTH, atWaterEdge, plantRefusal, stonesRefusal } from '../../src/game/watergarden';
 import { BOTANIZE_WATER_TABLE } from '../../src/game/forage';
 import { SWIM_DEPTH, BASE_SPEED } from '../../src/game/player';
-import { WELL_HOLDS } from '../../src/game/furniture';
+import { FOUNTAIN_HOLDS } from '../../src/game/furniture';
 import { sourceFor } from '../../src/game/placeables';
 import { TileType, stonesData } from '../../src/world/tiles';
 import { SEASONS, SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../src/world/calendar';
@@ -599,7 +599,7 @@ rollback;`);
   const fillAct = act('fill_bucket');
   const before = fillAct.check?.({ kind: 'item', uid: bucket.uid }, g) ?? 'none';
   const f = g.addFurniture('fountain', 12, 39, 0, 0, 80);
-  f.litres = Math.min(WELL_HOLDS, g.wellRate(f) * 300);
+  f.litres = Math.min(FOUNTAIN_HOLDS, g.wellRate(f) * 300);
   f.liquid = 'water';
   const five = f.litres;
   const src = sourceFor(g);
@@ -609,8 +609,8 @@ rollback;`);
   g.logMsg = (text, kind) => { told.push(text); hear(text, kind); };
   fillAct.perform({ kind: 'item', uid: bucket.uid }, g);
   const [isWell, liquid, holds, rate] = (said.get('well') ?? '').split(',');
-  say(before === said.get('before') && isWell === 'true' && liquid === 'water' && Number(holds) === WELL_HOLDS && Math.abs(Number(rate) - g.wellRate(f)) < 1e-5,
-    `a fountain is a well on the island (${said.get('well')}) and in the browser: water, ${WELL_HOLDS} litres, ${g.wellRate(f).toFixed(5)} a second at QL 80; before it stood there was no water: "${before}"`);
+  say(before === said.get('before') && isWell === 'true' && liquid === 'water' && Number(holds) === FOUNTAIN_HOLDS && Math.abs(Number(rate) - g.wellRate(f)) < 1e-5,
+    `a fountain is a well on the island (${said.get('well')}) and in the browser: water, ${FOUNTAIN_HOLDS} litres, ${g.wellRate(f).toFixed(5)} a second at QL 80; before it stood there was no water: "${before}"`);
   say(Math.abs(Number(said.get('five')) - five) < 1e-3 && src?.from === f && fill === said.get('fill') && fill === 'none',
     `five minutes left alone it holds ${five.toFixed(3)} litres on both sides, and a bucket is filled from it`);
   const [filledText, buckets] = (said.get('filled') ?? '').split(' | ');

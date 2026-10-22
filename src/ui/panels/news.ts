@@ -159,7 +159,7 @@ import {
 } from '../../game/dyestuffs';
 import { BOIL_LITRES, boilCountPlain, gramsOf } from '../../game/dyes';
 import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
-import { BUCKET_LITRES, FURNITURE, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BRIDGES, CLEARANCE, END_SLOP, PULL_REACH, RAMP_SLOPE, rampTiles } from '../../game/bridges';
 import { AQUEDUCT } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
@@ -3205,6 +3205,11 @@ export const NEWS: News[] = [
     n: 248,
     day: '2026-10-22',
     lines: () => ['Changed: Investigate works on a trail.'],
+  },
+  {
+    n: 249,
+    day: '2026-10-22',
+    lines: () => [`Changed: well holds ${WELL_HOLDS} litres (was 50).`],
   },
 ];
 
