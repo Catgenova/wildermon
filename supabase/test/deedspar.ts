@@ -7,8 +7,9 @@
  *   * that the numbers are the same (`SPAR_REACH`, `GUARD_LEARN`, and the guard's factor in `LEARN_PACE`);
  *   * that a Sparra on a settlement with no guard of yours there says so (`nospar`), and with one picks it, and the
  *     guard walks to it and spars: a go at its task (`workDuration` over its pace), a blow each way at the end of it;
- *   * that the go teaches the guard its level skill at `GUARD_LEARN` and the Sparra its fighting at `LEARNS_GAIN.spar`,
- *     each at its own factor, and counts a go of stamina and of the ledger to each;
+ *   * that the go teaches the guard its level skill at `GUARD_LEARN` and the Sparra its fighting at `LEARNS_GAIN.bout`,
+ *     the guard at its trade's factor and the Sparra at a spar on a settlement's (`LEARN_PACE.bout`), not your spar's,
+ *     and counts a go of stamina and of the ledger to each;
  *   * that nobody goes below `SPAR_YIELD` of its health, and one at it has yielded and stands, its card saying until
  *     when (`sparBack`), and spars again once it has its breath back;
  *   * that a guard drops a spar at once for something wild on the settlement;
@@ -28,6 +29,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { idleSays } from '../../src/game/workerlog';
 import { skillGain } from '../../src/game/skills';
 import { TileType } from '../../src/world/tiles';
+import { percent } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -74,7 +76,8 @@ begin
   perform rpc_join(w, 'Mira');
   update player set x = ${T} + 0.5, y = ${T} + 0.5, seen_at = now() where world_id = w and uid = u;
   insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Sparstead', ${T}, ${T}, 10, 5, u);
-  insert into said values ('NUMS', spar_reach() || '|' || guard_learn() || '|' || (select pace from learn_pace_def where id = 'guard'));
+  insert into said values ('NUMS', spar_reach() || '|' || guard_learn() || '|' || (select pace from learn_pace_def where id = 'guard')
+    || '|' || learns_gain_bout() || '|' || (select pace from learn_pace_def where id = 'bout'));
   insert into said select 'WORDS', description from species_def where id = 'sparra';
   insert into said select 'GUARDWORDS', description from species_def where id = 'thumpa';
 
@@ -198,8 +201,11 @@ const isle = new Map(out.split('\n').filter((l) => l.includes('=')).map((l) => [
 const at = (k: string): string => isle.get(k) ?? '(not said)';
 const byId = (prefix: string): string[] => [...isle.keys()].filter((k) => k.startsWith(prefix)).sort((x, y) => Number(x.slice(prefix.length)) - Number(y.slice(prefix.length))).map((k) => isle.get(k)!);
 
-check(`the numbers are the same on both sides: reach ${SPAR_REACH}, a guard's lesson ${GUARD_LEARN}, its factor ${LEARN_PACE.guard}`,
-  at('NUMS') === `${SPAR_REACH}|${GUARD_LEARN}|${LEARN_PACE.guard}`, at('NUMS'));
+check(`the numbers are the same on both sides: reach ${SPAR_REACH}, a guard's lesson ${GUARD_LEARN} and factor ${LEARN_PACE.guard}, the Sparra's ${LEARNS_GAIN.bout} and ${LEARN_PACE.bout}`,
+  at('NUMS') === `${SPAR_REACH}|${GUARD_LEARN}|${LEARN_PACE.guard}|${LEARNS_GAIN.bout}|${LEARN_PACE.bout}`, at('NUMS'));
+check(`a Sparra learns on a settlement at a factor of its own, and from your spar at its own still (${LEARN_PACE.spar}), its words saying both`,
+  LEARN_PACE.bout !== LEARN_PACE.spar && SPECIES.sparra.description.includes(percent(LEARN_PACE.bout)) && SPECIES.sparra.description.includes(percent(LEARN_PACE.spar)),
+  SPECIES.sparra.description);
 check('the Sparra\'s words are the same on both sides, its settlement task in them', at('WORDS') === SPECIES.sparra.description && SPECIES.sparra.description.includes(sparTaskSays()), at('WORDS'));
 check('a guard\'s level line says it learns sparring with a Sparra, on both sides', at('GUARDWORDS') === SPECIES.thumpa.description && SPECIES.thumpa.description.includes(GUARD_LEVEL), at('GUARDWORDS'));
 
@@ -226,8 +232,8 @@ check('the island says who is sparring with whom', /^\d+>\d+,\d+>\d+$/.test(at('
     && Number(sh) >= Number(smax) * SPAR_YIELD && Number(ah) >= Number(amax) * SPAR_YIELD, `${sAfter} / ${aAfter} from ${at('BEFORE')}`);
   // The gain at a roll between the least and the most: what the browser's `gainSkill` makes of the same base and factor.
   const within = (v: number, base: number, pace: number): boolean => v - LEVEL >= skillGain(LEVEL, base * pace, 0.6) - 1e-9 && v - LEVEL <= skillGain(LEVEL, base * pace, 1.4) + 1e-9;
-  check(`the guard learns its ${SKILL} at ${GUARD_LEARN} × ${LEARN_PACE.guard}, the Sparra its fighting at ${LEARNS_GAIN.spar} × ${LEARN_PACE.spar}`,
-    within(Number(askill), GUARD_LEARN, learnPace({ species: GUARD, trade: null }, SKILL)) && within(Number(sskill), LEARNS_GAIN.spar, learnPace({ species: 'sparra', trade: null }, 'fighting')),
+  check(`the guard learns its ${SKILL} at ${GUARD_LEARN} × ${LEARN_PACE.guard}, the Sparra its fighting at ${LEARNS_GAIN.bout} × ${LEARN_PACE.bout}`,
+    within(Number(askill), GUARD_LEARN, learnPace({ species: GUARD, trade: null }, SKILL)) && within(Number(sskill), LEARNS_GAIN.bout, LEARN_PACE.bout),
     `${askill} / ${sskill}`);
   check('a go of stamina and of the ledger each', sworn === '1' && aworn === '1' && sgoes === '1' && agoes === '1', `${sworn} ${aworn} ${sgoes} ${agoes}`);
   check('both strike, and the Sparra is free to pick again', sphase === 'strike' && aphase === 'strike' && swith === '-' && awith === '-', `${sphase} ${aphase} ${swith} ${awith}`);
@@ -292,6 +298,11 @@ check(`and the guard walks to within ${SPAR_REACH} of it and spars, a go at its 
   step([a], 0.25);
   check('a go is a blow each way, neither below where it yields, and each learns', s.health < s0 && a.health < a0 && s.health >= sparFloor(s) && a.health >= sparFloor(a)
     && s.skills.fighting > sk[0] && a.skills[SKILL] > sk[1], `${s.health} ${a.health} ${s.skills.fighting} ${a.skills[SKILL]}`);
+  // At the factor of a spar on a settlement, its learning at its care and meal as the island reads them (`learnMul`).
+  const mul = g.creatures.learnMul(s, g.time);
+  const gs = s.skills.fighting - sk[0];
+  check(`the Sparra learns at ${LEARNS_GAIN.bout} × ${LEARN_PACE.bout} in the browser too`,
+    gs >= skillGain(LEVEL, LEARNS_GAIN.bout * mul * LEARN_PACE.bout, 0.6) - 1e-9 && gs <= skillGain(LEVEL, LEARNS_GAIN.bout * mul * LEARN_PACE.bout, 1.4) + 1e-9, `${gs}`);
   check('a go of stamina and of the ledger each, and the Sparra free to pick again', s.worn === 1 && a.worn === 1 && s.ledger?.now.goes === 1 && a.ledger?.now.goes === 1 && s.sparWith == null,
     `${s.worn} ${a.worn} ${s.ledger?.now.goes} ${a.ledger?.now.goes} ${s.sparWith}`);
   check('both strike as they do', s.act === 'strike' && a.act === 'strike', `${s.act} ${a.act}`);

@@ -20,7 +20,8 @@
  * kept (care full), with no traits, grown, fed, and with all it needs to work on at hand. A kind with no trade: out
  * all the time, out after dark at the share of the day that is night, tended by a Sheela each time its fleece is
  * `DAIRY_FULL` back, sparred with by somebody swinging the median weapon at 20, and pulling a large cart alone, fed,
- * with a driver of no skill. A guard: sparring with a Sparra beside it on the settlement, go after go (`sparTaskSays`).
+ * with a driver of no skill. A guard: sparring with a Sparra beside it on the settlement, go after go (`sparTaskSays`); and
+ * the Sparra the other side of the same spar (`bout`), the guard taken to be at its level.
  *
  * Checked: each trade's factor is what this model makes of it, to within `DRIFT`; and with it, each trade's minutes
  * to the first stage and to the second are within `WITHIN` of the median's, unless its factor is held at
@@ -88,7 +89,8 @@ const S = STAGE_MUL.speed ?? 1;
 const G = STAGE_MUL.grow ?? 1;
 /** The kind that works each trade, or learns each way: its pace, and whether it evolves. */
 const kindOf = (at: GatherKind | LearnsBy): string => {
-  const all = Object.values(SPECIES).filter((d) => d.gathers === at || (!d.gathers && d.learns?.by === at));
+  // A spar on a settlement is the Sparra's, whose own way of learning is your spar (`bout`).
+  const all = Object.values(SPECIES).filter((d) => d.gathers === at || (!d.gathers && (d.learns?.by === at || (at === 'bout' && d.style === 'spar'))));
   return (all.find((d) => d.stages) ?? all[0])?.id ?? 'rabba';
 };
 const work = (skill: number, stage: number): number => workDuration(skill) / (CARE * W ** stage);
@@ -204,6 +206,9 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   tended: every((_s, stage) => DAIRY_FULL / ((SPECIES[kindOf('tended')].fleece ?? 1) * G ** stage), LEARNS_GAIN.tended),
   spar: every((s) => swingSeconds(MEDIAN_SWING, 20), LEARNS_GAIN.spar),
   pull: every((s, stage) => 1 / towing(s, stage), PULL_LEARN),
+  // A Sparra sparring a guard of its own level on a settlement: the guard's go at its task and the second after it, a
+  // go of the Sparra's stamina.
+  bout: (skill, stage) => [{ secs: work(skill, stage) + REST, base: LEARNS_GAIN.bout, go: true }],
 };
 const MEASURED = Object.keys(ROUNDS) as Array<GatherKind | LearnsBy>;
 /** Whether the kind that works it evolves, and so works at its stage, and carries its stage's loads, past the first. */

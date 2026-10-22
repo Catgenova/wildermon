@@ -1645,6 +1645,7 @@ for (const [fn, v] of [
   /* A kind that learns its own skill: the seconds of being out that are one go at it, and what each kind of go teaches. */
   ['out_every', OUT_EVERY], ['learns_gain_tended', LEARNS_GAIN.tended], ['learns_gain_spar', LEARNS_GAIN.spar],
   ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark], ['learns_gain_pull', LEARNS_GAIN.pull],
+  ['learns_gain_bout', LEARNS_GAIN.bout],
   /* Evolving: the levels a kind that evolves does so at, and what each stage multiplies over the one before. */
   ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]], ['perk_stage', PERK_STAGE],
   ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],

@@ -982,9 +982,11 @@ export function stageTameSays(c: Pick<Creature, 'species' | 'skills'>): string {
  * every `OUT_EVERY` of it (`out`), or for every `OUT_EVERY` of it after dark (`dark`); or pulling, a go for every tile
  * a large cart or a wagon it is hitched to goes into while you drive it (`pull`). Asked for: "Give skill-less
  * wildermon a skill that levels as they complete tasks", and "Roxxen need to have the Driving trade and gain
- * experience in it when pulling a large cart or wagon". The island's `beast_learns`.
+ * experience in it when pulling a large cart or wagon". The island's `beast_learns`. And a Sparra's spar with a guard
+ * of yours on a settlement (`bout`, `sparTaskSays`), which teaches the skill its spar does at a factor of its own, as
+ * that spar comes round at a worker's go rather than at your swing.
  */
-export type LearnsBy = 'tended' | 'spar' | 'out' | 'dark' | 'pull';
+export type LearnsBy = 'tended' | 'spar' | 'out' | 'dark' | 'pull' | 'bout';
 /** Seconds of being out that count as one go at its task, for a kind that learns by being out. */
 export const OUT_EVERY = 30;
 /**
@@ -995,8 +997,10 @@ export const OUT_EVERY = 30;
  * same time.
  */
 export const PULL_LEARN = DRIVING_LEARN;
-/** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, a spell of being out, and a tile pulled. */
-export const LEARNS_GAIN: Record<LearnsBy, number> = { tended: 0.3, spar: 0.05, out: 0.2, dark: 0.2, pull: PULL_LEARN };
+/** What a spar teaches a Sparra, as the base of a gain: your swing that lands on it, and a spar with a guard on a settlement. */
+const SPAR_GAIN = 0.05;
+/** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, a spell of being out, a tile pulled, and a spar on a settlement. */
+export const LEARNS_GAIN: Record<LearnsBy, number> = { tended: 0.3, spar: SPAR_GAIN, out: 0.2, dark: 0.2, pull: PULL_LEARN, bout: SPAR_GAIN };
 /** The least and the most a trade's learning is multiplied by (`LEARN_PACE`). */
 export const LEARN_PACE_LEAST = 0.25;
 export const LEARN_PACE_MOST = 4;
@@ -1032,6 +1036,8 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   guard: 2.02, hunt: 1,
   // A kind with no trade.
   out: 0.94, dark: 3.66, tended: LEARN_PACE_MOST, spar: 0.26, pull: 1.53,
+  // A Sparra's spar with a guard on a settlement.
+  bout: LEARN_PACE_MOST,
 };
 /** What its level is learned by: its trade, or for a kind with no trade what teaches it; null for neither. */
 export function learnsAt(c: Pick<Creature, 'species' | 'trade'>): GatherKind | LearnsBy | null {
@@ -1049,16 +1055,19 @@ export function learnPace(c: Pick<Creature, 'species' | 'trade'>, skill: string)
   return own === skill ? LEARN_PACE[at] : 1;
 }
 /** What a kind that learns its own skill does to learn it, for its card and the help. */
+const BOUT_SAYS = 'per spar with a guard of yours on the settlement';
 export const LEARNS_SAYS: Record<LearnsBy, string> = {
   tended: 'per shearing, plucking or milking',
-  spar: 'per spar swing of yours that lands on it, or per spar with a guard of yours on the settlement',
+  spar: `per spar swing of yours that lands on it, learning ${percent(LEARN_PACE.spar)}; ${BOUT_SAYS}, learning ${percent(LEARN_PACE.bout)}`,
+  bout: BOUT_SAYS,
   out: `per ${OUT_EVERY} seconds out at your heel or keeping a settlement`,
   dark: `per ${OUT_EVERY} seconds out at your heel or keeping a settlement after dark`,
   pull: `per tile driven in the traces of a large cart or wagon, ${percent(LEARN_PACE.pull)} of what the tile teaches you at the reins`,
 };
 /** What a kind with no trade learns by, as a trade is named (`GATHER_VERB`), for the help. */
 const LEARNS_VERB: Record<LearnsBy, string> = {
-  tended: 'shorn, plucked or milked', spar: 'sparring', out: 'out', dark: 'out after dark', pull: 'pulling a cart or wagon',
+  tended: 'shorn, plucked or milked', spar: 'sparred with by you', out: 'out', dark: 'out after dark', pull: 'pulling a cart or wagon',
+  bout: 'sparring a guard on a settlement',
 };
 /** And the two trades `GATHER_VERB` calls the same, told apart. */
 const PACE_VERB: Partial<Record<GatherKind, string>> = { fetch: 'fetching', compost: 'composting', dairy: 'milking or shearing' };
@@ -1199,7 +1208,8 @@ export const sparSaid = (c: Creature): string =>
  * second after a go, a blow each way at the end of it. Neither blow takes anybody below `SPAR_YIELD` of its health,
  * and neither wounds, bleeds or kills (`sparBlow`); one that has yielded stands until it is above it again
  * (`SPAR_SLACK`). Each go teaches the guard its level skill `GUARD_LEARN`, as an attack on a wild creature does, and the
- * Sparra its fighting (`LEARNS_GAIN.spar`), and spends a go of each one's stamina (`TIRE_GOES`). After every go the
+ * Sparra its fighting (`LEARNS_GAIN.bout`, the base your spar swing teaches it) at its own factor (`LEARN_PACE.bout`,
+ * measured as every trade's is), and spends a go of each one's stamina (`TIRE_GOES`). After every go the
  * Sparra picks again, so two guards take turns. A guard drops it at once for something wild on the settlement. The
  * island's `worker_settle`, off `spar_with` and `spar_at`.
  */
@@ -1218,7 +1228,7 @@ export function sparTaskSays(): string {
   const level = GATHER_SKILL.guard.replace(/_/g, ' ');
   return `Settlement task: spar with a guard of yours on the settlement, 1 at a time, the one that sparred longest ago first. `
     + `Time per spar: the guard's time per action, ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}. `
-    + `Per spar: 1 blow each; guard ${level} as per attack on a wild creature; Sparra fighting as per spar swing of yours; 1 action of each one's stamina. `
+    + `Per spar: 1 blow each; guard ${level} as per attack on a wild creature; Sparra fighting as per spar swing of yours, learning ${percent(LEARN_PACE.bout)} (${percent(LEARN_PACE.spar)} when you spar it); 1 action of each one's stamina. `
     + `Blows stop at ${percent(SPAR_YIELD)} of health, on both; a yielded one stands until above it.`;
 }
 
@@ -8743,7 +8753,9 @@ export class Creatures {
     }
     g.sparAt = game.time;
     this.gainSkill(game, g, GATHER_SKILL.guard, GUARD_LEARN);
-    this.learnBy(game, s, 'spar');
+    // The Sparra its own skill, at what a spar on a settlement is worth (`bout`).
+    const l = this.species(s).learns;
+    if (l) this.gainSkill(game, s, l.skill, LEARNS_GAIN.bout, LEARN_PACE.bout);
     this.toLedger(game, g, { goes: 1 });
     this.toLedger(game, s, { goes: 1 });
     this.sparOff(s);
@@ -8757,11 +8769,12 @@ export class Creatures {
   }
 
   /** Same diminishing curve as the player's skills. */
-  gainSkill(game: Game, c: Creature, id: string, base: number): number {
+  gainSkill(game: Game, c: Creature, id: string, base: number, pace = learnPace(c, id)): number {
     const v = c.skills[id] ?? 1;
     // A beast learns on the same curve a player does, and crawls the same last
-    // stretch of it; its level skill at what its trade's goes are worth against every other trade's (`LEARN_PACE`).
-    const gain = skillGain(v, base * this.learnMul(c, game.time) * learnPace(c, id), 0.6 + 0.8 * game.rand());
+    // stretch of it; its level skill at what its trade's goes are worth against every other trade's (`LEARN_PACE`),
+    // or at the factor of what taught it, where that is not its own (a Sparra's spar on a settlement, `bout`).
+    const gain = skillGain(v, base * this.learnMul(c, game.time) * pace, 0.6 + 0.8 * game.rand());
     const before = creatureLevel(c);
     const beforeSteps = rangeSteps(v);
     c.skills[id] = Math.min(100, v + gain);
