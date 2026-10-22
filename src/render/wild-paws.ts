@@ -1,8 +1,8 @@
 import { beat, cyc, TAU, type Anim, type QuadPose, type QuadSpec } from './beasts';
 
 /**
- * What the kinds on four paws in `./wild-wild` and `./wild-brook` are built
- * from: a body on four paws from a few numbers, and a trot.
+ * What the kinds on four paws in `./wild-brook` are built from: a body on
+ * four paws from a few numbers, and a trot.
  */
 
 /** A body on four paws: `len` shoulder to hip, `legs` long, the neck `neck` long and carried at `lean`. */

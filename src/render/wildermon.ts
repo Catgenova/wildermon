@@ -29,7 +29,7 @@ import { LEMLEAF, LEMLET, LEMORIAN } from './wild-lemur';
 import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
 import { HALLOWMIRE, LANTERNVEIL, WHISPET } from './wild-ghost';
 import { LOGCHEWER, SAPGNAW, TIMBERLORD } from './wild-gnaw';
-import { GRUBBA } from './wild-wild';
+import { BLOSSOMHORN, BUDSCARAB, FLORANTLER } from './wild-petal';
 import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
 import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
 import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
@@ -80,7 +80,7 @@ export const WILDERMON: Record<string, Kind> = {
   snedda: SNEDDA,
   sappa: PIPSEED,
   rowl: SNAREPUP,
-  grubba: GRUBBA,
+  grubba: BUDSCARAB,
   cobbe: BRICKLING,
   quarra: CHIPTAIL,
   embra: SLUGLOW,
@@ -192,6 +192,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   magga: [LOOTVENT, HOARDBACK],
   grazza: [PETALBLADE, BLOOMREAPER],
   wurla: [SOILWHISTLE, WORMHERON],
+  grubba: [BLOSSOMHORN, FLORANTLER],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

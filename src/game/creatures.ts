@@ -1944,8 +1944,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   grubba: {
     id: 'grubba',
-    name: 'Grubba',
+    name: 'Budscarab',
+    was: ['Grubba'],
+    // Budscarab, Blossomhorn, Florantler.
     description: 'Settlement task: dig out stumps.',
+    stages: [
+      { name: 'Blossomhorn', description: '' },
+      { name: 'Florantler', description: '' },
+    ],
     health: 30,
     attack: 4,
     speed: 1.4,
@@ -1957,10 +1963,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'stump',
     workRange: 8,
     variants: [
-      ['#5a4a3a', '#a08a6a'],
-      ['#6b5040', '#b89a7a'],
-      ['#4a4640', '#948c80'],
-      ['#7a5a3e', '#c9a880'],
+      ['#7a7448', '#f2a2b4'],
+      ['#86684a', '#f6b496'],
+      ['#64785a', '#ea8eb6'],
+      ['#706258', '#cfa4e0'],
     ],
     butcher: { meat: 4, fur: 2, leather: 3, bone: 3, gland: 1 },
     nearTrees: true,

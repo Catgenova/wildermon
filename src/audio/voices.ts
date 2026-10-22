@@ -21,6 +21,7 @@ import { MANTIS_VOICE } from './voice-mantis';
 import { MEND_VOICE } from './voice-mend';
 import { MOTH_VOICE } from './voice-moth';
 import { SLUG_VOICE } from './voice-slug';
+import { PETAL_VOICE } from './voice-petal';
 import { PIG_VOICE } from './voice-pig';
 import { PIP_VOICE } from './voice-pip';
 import { REED_VOICE } from './voice-reed';
@@ -106,4 +107,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   grazza: MANTIS_VOICE,
   // The Pebblebeak, the Soilwhistle and the Wormheron.
   wurla: CURLEW_VOICE,
+  // The Budscarab, the Blossomhorn and the Florantler.
+  grubba: PETAL_VOICE,
 };
