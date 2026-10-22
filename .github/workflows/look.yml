@@ -9,14 +9,18 @@ name: Look at the island
 on:
   workflow_dispatch:
 
+# Reads the repository and nothing else; the project is reached with the AI environment's secrets.
+permissions:
+  contents: read
+
 jobs:
   look:
     name: What the live database is doing
     runs-on: ubuntu-latest
     environment: AI
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         id: cli
         continue-on-error: true
         with:

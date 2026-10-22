@@ -1,0 +1,10 @@
+# Gitleaks, run by .github/workflows/secrets.yml on every push.
+# Gitleaks' own rules, less what is public by design.
+title = "Wurm"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "The Supabase publishable key: in the browser by design (src/net/supabase.ts, and the built assets/)."
+regexes = ['''^sb_publishable_[A-Za-z0-9_-]+$''']

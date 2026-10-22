@@ -53,6 +53,11 @@ on:
         options: ['off', 'report', 'write']
         default: 'off'
 
+# Reads the repository and nothing else: no job here pushes, deploys or comments.
+# The project is reached with the AI environment's secrets, not this token.
+permissions:
+  contents: read
+
 jobs:
   rules:
     name: The rules, against a Postgres of our own
@@ -74,10 +79,10 @@ jobs:
       PGPASSWORD: wurm
       PGDATABASE: postgres
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -95,6 +100,15 @@ jobs:
           # green. This opens the committed build in Chrome, starts the game
           # on its own and the landing page, and fails on anything thrown.
           node scripts/boot-check.mjs
+      - name: Every HTML sink in src has been looked at
+        run: |
+          # innerHTML and its kin run whatever markup they are handed, so a
+          # player's name or a line of chat that reaches one unescaped runs in
+          # everybody's browser. This lists every such sink in src/ and fails
+          # on one that is not in scripts/html-sinks.allow, the list of sinks
+          # somebody has read: new text goes through esc() (src/ui/esc.ts) or
+          # in as textContent, and then onto the list.
+          node scripts/html-sinks.mjs
       - name: No migration has been deleted or renamed
         run: |
           # A migration the project has already run is a fact about its
@@ -3623,8 +3637,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: AI
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
         id: cli
         continue-on-error: true
         with:
@@ -3840,7 +3854,7 @@ jobs:
             fi
           done
           echo "::warning::Could not reach the database to add the island owner. The next deploy tries again."
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -4151,8 +4165,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: AI
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -4186,8 +4200,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: AI
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
@@ -4223,8 +4237,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: AI
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: '22'
           cache: npm
