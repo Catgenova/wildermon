@@ -42,6 +42,24 @@ jobs:
                    "https://api.supabase.com/v1/projects/$PROJECT_REF/config/disk/util" \
                  | jq -r '.metrics | "\(.fs_used_bytes) \(.fs_size_bytes)"' 2>/dev/null || true)
           echo "== disk (used, size in bytes): $disk"
+          # The project's own security advisors (the dashboard's Security Advisor), red and yellow only.
+          echo "== security advisors (ERROR, WARN)"
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+               "https://api.supabase.com/v1/projects/$PROJECT_REF/advisors/security" \
+            | jq -r '.lints[] | select(.level == "ERROR" or .level == "WARN") | [.level, .name, .detail] | @tsv' \
+            | sort | uniq -c | sort -rn | head -80 \
+            || echo "::warning::could not read the security advisors"
+          # Auth settings the advisors judge, and nothing secret: names and switches only.
+          echo "== auth settings"
+          curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+               "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+            | jq -c '{password_hibp_enabled, password_min_length, password_required_characters, mfa_totp_enroll_enabled,
+                      mfa_totp_verify_enabled, mfa_phone_enroll_enabled, mfa_web_authn_enroll_enabled, external_anonymous_users_enabled,
+                      security_captcha_enabled, security_captcha_provider, mailer_otp_exp, sms_otp_exp, jwt_exp,
+                      rate_limit_anonymous_users, rate_limit_otp, rate_limit_verify, rate_limit_token_refresh, rate_limit_email_sent,
+                      sessions_timebox, sessions_inactivity_timeout, refresh_token_rotation_enabled, security_refresh_token_reuse_interval,
+                      mailer_autoconfirm, disable_signup}' \
+            || echo "::warning::could not read the auth settings"
           ask "mode and size" "select current_setting('transaction_read_only') as read_only,
                  pg_size_pretty(pg_database_size(current_database())) as database, now() as at"
           ask "what is running, longest first" "select pid, state, wait_event_type || ':' || coalesce(wait_event, '') as waiting,
