@@ -107,6 +107,15 @@ begin
     || (select sum(count) from item where world_id = w and holder = 'crate' and crate = v_theirs) || '|'
     || (select sum(count) from item where world_id = w and holder = 'crate' and crate = v_far));
 
+  -- And one on a settlement, with no post: as ever, the settlement's containers (this was an error once, every round).
+  insert into deed (world_id, name, x, y, radius, level, founded_by) values (w, 'Bracehold', floor(px)::int + 40, floor(py)::int, 5, 1, u);
+  update creature set post = null, hunger = 0.1, from_x = floor(px) + 40.5, from_y = py, to_x = floor(px) + 40.5, to_y = py,
+      leg_at = now(), leg_ends = now()
+    where world_id = w and id = a;
+  v_ate := worker_feed(w, a);
+  insert into said values ('DEED', coalesce(v_ate, 'nothing') || '|'
+    || (select sum(count) from item where world_id = w and holder = 'crate' and crate = v_far));
+
   -- Seed: one, about seed_chance() of the time.
   for i in 1 .. ${HARVESTS} loop v_n := v_n + harvest_seeds(); end loop;
   insert into said values ('SEEDS', v_n || '|' || array_to_string(crop_yield(0), ',') || '|' || array_to_string(crop_yield(3), ','));
@@ -160,6 +169,7 @@ check('on a post, nothing from a container somebody else made, nor one out of it
     ate !== 'nothing' && fed === 'true' && mine === '2' && theirs === '3' && far === '3', at('MINE'));
 }
 
+check('on a settlement with no post, it eats from the settlement\'s containers, as ever', /^[a-z_]+\|2$/.test(at('DEED')) && !at('DEED').startsWith('nothing'), at('DEED'));
 {
   const [n, untended, tended] = at('SEEDS').split('|');
   let browser = 0;
