@@ -33,7 +33,7 @@ import { ACTION_BY_ID, ACTIONS, type Target } from '../../src/game/actions';
 import { RECIPES } from '../../src/game/recipes';
 import { SKILL_DEFS } from '../../src/game/skills';
 import {
-  ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SAID, BAUBLE_SHARE, BAUBLE_TIER_BY_ID,
+  baublePlus, ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_KINDS, BAUBLE_LOW, BAUBLE_SAID, BAUBLE_SHARE, BAUBLE_TIER_BY_ID,
   BAUBLE_TIERS, baubleText, baubleTimes, fullSaid, MAJOR_SKILLS, MINOR_SKILLS, readBauble, rollBauble, rollTier,
   REGRET, TARNISHED, YIELD_TIMES, type BaubleKind, type BaubleTier,
 } from '../../src/game/baubles';
@@ -344,6 +344,7 @@ begin
   insert into said values ('LEARN', bauble_learn(w, u, 'cooking')::text);
   insert into said values ('DOUBLE', bauble_sum(w, u, 'double', 'butchering')::text);
   insert into said values ('PLUS', bauble_plus(w, u, 'cut_down') || '|' || bauble_plus(w, u, 'mine'));
+  insert into said values ('COLLECT', bauble_plus(w, u, 'dig') || '|' || bauble_plus(w, u, 'collect'));
   m1 := skill_mult(w, u, 'cooking');
   delete from deed_bauble where world_id = w and kind = 'learn';
   m0 := skill_mult(w, u, 'cooking');
@@ -454,6 +455,8 @@ check(`times add up, to the cap of ${BAUBLE_KINDS.time.cap}%`, near(Number(say('
 check('a learning bauble is a multiplier on skill gain', near(Number(say('LEARN')), 1.1, 1e-9), say('LEARN'));
 check('doubling chances add up', near(Number(say('DOUBLE')), 20, 1e-9), say('DOUBLE'));
 check('an ancient bauble adds to its own job and to no other', say('PLUS') === '2|0', say('PLUS'));
+check('and a digging one adds to Collect as to Dig, on both sides', say('COLLECT') === '1|1'
+  && baublePlus([{ tier: 'ancient', slot: 0, kind: 'plus', key: 'digging', amount: 1 }], 'collect') === 1, say('COLLECT'));
 check('what a go teaches is multiplied by it', near(Number(say('SKILLMULT')), 1.1, 1e-9), say('SKILLMULT'));
 check('a builder is a citizen, and has it', near(Number(say('BUILDERPACE')), 0.5, 1e-9), say('BUILDERPACE'));
 check('a guest is not, and has none of it', say('GUESTPACE') === '1|1', say('GUESTPACE'));

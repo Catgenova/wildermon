@@ -205,7 +205,7 @@ export interface AncientEffect {
 export const ANCIENT_EFFECTS: AncientEffect[] = [
   { id: 'mining', action: 'mine', said: 'output per mining action' },
   { id: 'felling', action: 'cut_down', said: 'logs per tree felled' },
-  { id: 'digging', action: 'dig', said: 'output per dig' },
+  { id: 'digging', action: 'dig', said: 'output per dig or collect' },
   { id: 'harvest', action: 'harvest_crop', said: 'crop and seed per harvest' },
   { id: 'fishing', action: 'fish', said: 'fish per rod catch' },
   { id: 'foraging', action: 'forage', said: 'finds per forage' },
@@ -312,8 +312,11 @@ export const baubleTwice = (list: readonly DeedBauble[] | undefined, skill: stri
 };
 
 /** What the baubles add to a yield of this job. */
-/** The job a job counts as for an ancient bauble: a Farmer's patch harvest is so many harvests. */
-const BAUBLE_JOB_AS: Record<string, string> = { harvest_patch: 'harvest_crop' };
+/**
+ * The job a job counts as for an ancient bauble: a Farmer's patch harvest is so many harvests, and a shovel filled off
+ * a bed of sand, clay, peat or tar is a dig. The island's `bauble_plus`.
+ */
+export const BAUBLE_JOB_AS: Record<string, string> = { harvest_patch: 'harvest_crop', collect: 'dig' };
 export const baublePlus = (list: readonly DeedBauble[] | undefined, action: string | undefined): number => {
   const job = action ? BAUBLE_JOB_AS[action] ?? action : undefined;
   const effect = job ? ANCIENT_EFFECTS.find((e) => e.action === job) : undefined;

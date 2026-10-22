@@ -8463,7 +8463,7 @@ insert into bauble_skill values ('enchanting', true, true);
 insert into bauble_skill values ('tracking', true, false);
 insert into bauble_ancient values ('mining', 0, 'mine', 'output per mining action');
 insert into bauble_ancient values ('felling', 1, 'cut_down', 'logs per tree felled');
-insert into bauble_ancient values ('digging', 2, 'dig', 'output per dig');
+insert into bauble_ancient values ('digging', 2, 'dig', 'output per dig or collect');
 insert into bauble_ancient values ('harvest', 3, 'harvest_crop', 'crop and seed per harvest');
 insert into bauble_ancient values ('fishing', 4, 'fish', 'fish per rod catch');
 insert into bauble_ancient values ('foraging', 5, 'forage', 'finds per forage');
