@@ -33,7 +33,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import type { Target } from '../../src/game/actions';
-import { CROPS, cropSteps, cropWhen, cropYield, RIPE, settleCrop, sownSaid, STAGE_NAMES, type Crop } from '../../src/game/farming';
+import { CROPS, cropSteps, cropWhen, cropYield, RIPE, seedSays, settleCrop, sownSaid, STAGE_NAMES, type Crop } from '../../src/game/farming';
 import { fieldClock, fieldMoment, fieldRate, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../src/game/growth';
 import { PLANTER_GROWING } from '../../src/game/furniture';
 import { perksOf } from '../../src/game/perks';
@@ -340,6 +340,8 @@ const ROTATE = perk('Crop Rotation');
 const BOX = { x: 10, y: 9, sx: 0, sy: 0, cx: 10 + 1 / 4, cy: 9 + 0.5 / 4 };
 const island = psql(`
 begin;
+-- Seed every harvest, as this was written for: the odds themselves are bracefeedseed's.
+create or replace function harvest_seeds(p_chance double precision default seed_chance()) returns integer language sql volatile as $pin$ select (crop_yield(0))[1] $pin$;
 create temp table said (k text, v text);
 create function pg_temp.hold(w uuid, u uuid, ids text[]) returns jsonb language plpgsql as $f$
 begin
@@ -490,7 +492,7 @@ check('and refuses a second sowing, an early harvest and lifting it while it gro
   `${say('AGAIN')} / ${say('EARLY')} / ${say('LIFT')}`);
 check('and tends it once a stage, as a field is tended',
   // The seed's fifty and the hands' forty, averaged over the care it was given.
-  say('TENDED') === '1:true:45.00' && say('TENDSAID') === `Tended: wheat. Expected yield: ${cropYield(1).produce} wheat, ${cropYield(1).seeds} seed.`
+  say('TENDED') === '1:true:45.00' && say('TENDSAID') === `Tended: wheat. Expected yield: ${cropYield(1).produce} wheat, ${seedSays()}.`
     && say('TENDAGAIN') === 'Already tended at this growth stage.', `${say('TENDED')} / ${say('TENDSAID')}`);
 {
   const [id, stage, grown, hasNow, nowRight] = say('GROUND').split(':');
@@ -560,6 +562,8 @@ if (growing) growing.stageAt -= 3 * wheatPer + PLANTER_GROWTH;
 game.update(0.01);
 check('ripened by the planter\'s clock, it wants harvesting and not tending, as on the island', `${ask('tend_crop', ft)}|${ask('harvest_crop', ft)}` === say('RIPE'),
   `${ask('tend_crop', ft)}|${ask('harvest_crop', ft)}`);
+// Seed every harvest, as the island is pinned to above: the odds themselves are bracefeedseed's.
+game.setPerks({ ...game.perkFx, 'seed:harvest_crop': 1 });
 run('harvest_crop', ft);
 check('and harvests to the same yield and the same line',
   `${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')}:${game.planted.has(box.id) ? 1 : 0}` === say('HARVEST')

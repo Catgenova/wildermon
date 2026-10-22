@@ -55,7 +55,7 @@ import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
-  BASE_STATS, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
+  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -71,7 +71,7 @@ import {
 } from '../../game/dyestuffs';
 import { BOIL_LITRES, boilCountPlain, gramsOf, litresWord, TINTED_PANE } from '../../game/dyes';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
-import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
+import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, seedSays, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../game/growth';
 import { CASTS, FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
 import { tryGain } from '../../game/learn';
@@ -928,6 +928,8 @@ function artifactHelp(): string {
       ${listed(BASE_STATS.map((st) => `${st.name.toLowerCase()} (${st.says})`))}. Each point: +${percent(POT_STEP)} of that stat over kind and blood;
       max ${POT_MOST} points (+${percent(POT_STEP * POT_MOST)}). Not on one with every stat at ${POT_MOST}.</li>
       <li>${from('use_ancient_collar')}: upkeep (hunger rate) −${percent(COLLAR_CUT)}, for good. Once per wildermon. Shown on its card.</li>
+      <li>${from('use_ancient_brace')}: action (task) speed +${percent(BRACE_STEP)} a use, up to ${BRACE_MOST} uses (+${percent(BRACE_STEP * BRACE_MOST)}).
+      Shown on its card.</li>
       <li>${from('use_ancient_bridle')}: speed ridden +${percent(BRIDLE_PACE)}, past the speed cap; in a team, +${percent(BRIDLE_PACE)} × its share of the team.
       For good. Once per wildermon. Shown on its card.</li>
     </ul>
@@ -1521,7 +1523,8 @@ export function helpText(): string {
       <li><b>Till</b> (rake in pack): grass or dirt into a field.</li>
       <li>Seeds: foraging (vegetables, starches) and botanizing (spices, fibres)${SEEDS_ALL_YEAR ? ', every season' : ''}. A field's menu offers <b>Sow</b> for each carried.</li>
       <li>${STAGE_NAMES.length} growth stages: ${listed(STAGE_NAMES)}. Time per growth stage by crop (mint fastest, corn slowest).</li>
-      <li><b>Tend</b>: once per growth stage. Untended: ${cropYield(0).produce} crop, ${cropYield(0).seeds} seed. Tended every growth stage: <b>${cropYield(RIPE).produce} crops, ${cropYield(RIPE).seeds} seeds</b>.</li>
+      <li><b>Tend</b>: once per growth stage. Untended: ${cropYield(0).produce} crop. Tended every growth stage: <b>${cropYield(RIPE).produce} crops</b>.
+      Seed, either way: ${seedSays()} per harvest (settlement workers too).</li>
       <li>Tending and tilling train <b>Farming</b>; farming sets harvest quality (QL).</li>
       <li>Harvesting leaves the field tilled (resowable; a ${SPECIES.seavic.name} can run one alone).</li>
     </ul>
@@ -1894,6 +1897,7 @@ export function helpText(): string {
       <li><b>Set a wildermon to it</b> (its menu): <b>one</b>, following you within ${POST_FOLLOW_REACH} tiles or in a crate in your pack or beside you (let out at the post). Same task and skill pay as on a settlement, measured from the post.</li>
       <li>Range: <b>${postRadius(1)} tiles round a rough post, ${postRadius(TOP_QL)} round the best</b>, whatever the wildermon's own range.</li>
       <li>Loads go into anything with room inside that circle; with nothing there, all the way home.</li>
+      <li>Hungry: it eats the lowest-QL thing of its diet from a container <b>you made</b> inside that circle, as a settlement worker does from its settlement's.</li>
       <li><b>Rots where it stands</b>: <b>${dur(POST_LIFE_MIN)}</b> (roughest) to <b>${dur(POST_LIFE_MAX)}</b> (best); leans as it goes; one warning near the end.</li>
       <li>When it falls, its worker: <b>returns to you</b> if you walk alone; otherwise <b>goes to work on your settlement</b>; with no settlement, into an empty
       <b>wildermon crate</b> in your pack; with neither, back to the wild.</li>

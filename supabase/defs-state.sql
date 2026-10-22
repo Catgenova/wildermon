@@ -894,6 +894,7 @@ insert into item_def values ('ancient_lamp', 'Ancient lamp', 'misc', 0.9, false,
 insert into item_def values ('ancient_pot', 'Ancient pot', 'misc', 1.2, false, 3, null);
 insert into item_def values ('ancient_collar', 'Ancient collar', 'misc', 0.4, false, 3, null);
 insert into item_def values ('ancient_bridle', 'Ancient bridle', 'misc', 0.6, false, 3, null);
+insert into item_def values ('ancient_brace', 'Ancient brace', 'misc', 0.7, false, 3, null);
 insert into item_def values ('ancient_whetstone', 'Ancient whetstone', 'misc', 0.5, false, 3, null);
 insert into item_def values ('ancient_seed_jar', 'Ancient seed jar', 'misc', 0.7, false, 3, null);
 insert into item_def values ('ancient_stamp', 'Ancient stamp', 'misc', 0.3, false, 3, null);
@@ -1425,6 +1426,7 @@ insert into action_def (id, label, verb, skill, tool, corner, range, stamina, ba
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('unhitch_creature', 'Take out of the traces', 'unhitching', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('cull_creature', 'Cull', 'culling', null, null, false, null, 0, 0, null, true, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('release_creature', 'Release', 'releasing', null, null, false, null, 0, 0, null, true, false);
+insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_brace', 'Brace it with the ancient brace', 'bracing it', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_collar', 'Fit the ancient collar', 'fitting the collar', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_bridle', 'Fit the ancient bridle', 'fitting the bridle', null, null, false, null, 0.01, 3, null, false, false);
 insert into action_def (id, label, verb, skill, tool, corner, range, stamina, base_time, difficulty, instant, repeatable) values ('use_ancient_comb', 'Comb it with the ancient comb', 'combing it', null, null, false, null, 0.01, 3, null, false, false);
@@ -3312,6 +3314,7 @@ update item_def set description = 'Use on your wildermon (its menu): rerolls its
 update item_def set description = 'Use on your wildermon (its menu): one point to a random base stat under 10: health (max health), attack (blow damage), speed (pace on foot, under a rider and in the traces) and work (task speed). Each point: 3% more of that stat over its kind and blood. Max 10 per stat. Used up.' where id = 'ancient_pot';
 update item_def set description = 'Use on your wildermon (its menu): upkeep (hunger rate) −20%, for good. Once per wildermon. Used up.' where id = 'ancient_collar';
 update item_def set description = 'Use on your wildermon (its menu): speed ridden and in a team +10%, past the speed cap, for good. Once per wildermon. Used up.' where id = 'ancient_bridle';
+update item_def set description = 'Use on your wildermon (its menu): action (task) speed +1% a use, up to 50 uses (+50%). Used up.' where id = 'ancient_brace';
 update item_def set description = 'Hone with it (on a damaged tool or weapon in your pack): all damage off, QL kept. Used up.' where id = 'ancient_whetstone';
 update item_def set description = 'Open: 5 seeds of one of 13 crops at random, at the jar''s QL. Used up.' where id = 'ancient_seed_jar';
 update item_def set description = 'Carried: rare chance ×2 on your next 5 crafts and forgings. One go each; used up after the last.' where id = 'ancient_stamp';
@@ -5546,6 +5549,9 @@ create or replace function lye_use() returns double precision language sql immut
 create or replace function drink_litres() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;
 create or replace function collar_cut() returns double precision language sql immutable as $fn$ select 0.2::double precision $fn$;
 create or replace function bridle_pace() returns double precision language sql immutable as $fn$ select 0.1::double precision $fn$;
+create or replace function brace_step() returns double precision language sql immutable as $fn$ select 0.01::double precision $fn$;
+create or replace function brace_most() returns double precision language sql immutable as $fn$ select 50::double precision $fn$;
+create or replace function seed_chance() returns double precision language sql immutable as $fn$ select 0.3::double precision $fn$;
 create or replace function jar_seeds() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
 create or replace function stamp_goes() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
 create or replace function stamp_rare() returns double precision language sql immutable as $fn$ select 2::double precision $fn$;
@@ -5999,6 +6005,7 @@ insert into relic_def values ('old collar', 3, 'ancient_collar', 24);
 insert into relic_def values ('old lamp', 3, 'ancient_lamp', 26);
 insert into relic_def values ('old bridle', 3, 'ancient_bridle', 28);
 insert into relic_def values ('bronze mirror', 3, 'bronze_mirror', 30);
+insert into relic_def values ('old brace', 5, 'ancient_brace', 32);
 insert into relic_def values ('old blade', 4, 'short_sword', 34);
 insert into relic_def values ('statuette', 4, 'statuette', 38);
 insert into relic_def values ('maker''s stamp', 3, 'ancient_stamp', 40);

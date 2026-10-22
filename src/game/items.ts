@@ -425,6 +425,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
    */
   ancient_collar: { name: 'Ancient collar', category: 'misc', weight: 0.4, decay: 3, description: 'Use on your wildermon (its menu): upkeep (hunger rate) −{relicFit.collar:pct}, for good. Once per wildermon. Used up.' },
   ancient_bridle: { name: 'Ancient bridle', category: 'misc', weight: 0.6, decay: 3, description: 'Use on your wildermon (its menu): speed ridden and in a team +{relicFit.bridle:pct}, past the speed cap, for good. Once per wildermon. Used up.' },
+  ancient_brace: { name: 'Ancient brace', category: 'misc', weight: 0.7, decay: 3, description: 'Use on your wildermon (its menu): action (task) speed +{relicFit.braceStep:pct} a use, up to {relicFit.braceMost} uses (+{relicFit.braceTop:pct}). Used up.' },
   ancient_whetstone: { name: 'Ancient whetstone', category: 'misc', weight: 0.5, decay: 3, description: 'Hone with it (on a damaged tool or weapon in your pack): all damage off, QL kept. Used up.' },
   ancient_seed_jar: { name: 'Ancient seed jar', category: 'misc', weight: 0.7, decay: 3, description: 'Open: {relicUse.jarSeeds} seeds of one of {relicUse.crops} crops at random, at the jar\'s QL. Used up.' },
   ancient_stamp: { name: 'Ancient stamp', category: 'misc', weight: 0.3, decay: 3, description: 'Carried: rare chance ×{relicUse.stampRare} on your next {relicUse.stampGoes} crafts and forgings. One go each; used up after the last.' },

@@ -57,6 +57,7 @@ export const RELICS: RelicDef[] = [
   { name: 'old lamp', parts: 3, result: 'ancient_lamp', difficulty: 26 },
   { name: 'old bridle', parts: 3, result: 'ancient_bridle', difficulty: 28 },
   { name: 'bronze mirror', parts: 3, result: 'bronze_mirror', difficulty: 30 },
+  { name: 'old brace', parts: 5, result: 'ancient_brace', difficulty: 32 },
   { name: 'old blade', parts: 4, result: 'short_sword', difficulty: 34 },
   { name: 'statuette', parts: 4, result: 'statuette', difficulty: 38 },
   { name: "maker's stamp", parts: 3, result: 'ancient_stamp', difficulty: 40 },

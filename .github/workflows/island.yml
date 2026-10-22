@@ -1555,6 +1555,15 @@ jobs:
             --outfile=node_modules/.cache/sixrelics.mjs --log-level=error
           node node_modules/.cache/sixrelics.mjs
 
+      - name: An ancient brace, a post worker's meal and scarcer seed, the same on both sides
+        run: |
+          # "Ancient Brace ... action speed by 1% per, up to 50 uses",
+          # "wildermon on a workpost will feed themselves ... from containers
+          # in work range", "30% chance of getting 1 [seed] per harvest".
+          npx esbuild supabase/test/bracefeedseed.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/bracefeedseed.mjs --log-level=error
+          node node_modules/.cache/bracefeedseed.mjs
+
       - name: Body stamina grows the stamina bar, the same on both sides
         run: |
           # "Body stamina should also increase the bar. 2x at 100". The bar is

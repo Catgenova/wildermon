@@ -98,7 +98,8 @@ import { BOARD_TOP } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { RELICS } from '../../game/archaeology';
-import { BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
+import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
+import { seedSays } from '../../game/farming';
 import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
@@ -3184,7 +3185,19 @@ export const NEWS: News[] = [
       `Added: rune tablet: Skills window, a skill under ${TABLET_BELOW}: +${TABLET_GAIN.toFixed(1)}.`,
     ],
   },
+  {
+    n: 246,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: old brace relic (${BRACE.parts} pieces, archaeology ${BRACE.difficulty}): ancient brace, on your wildermon: action speed +${percent(BRACE_STEP)} a use, up to ${BRACE_MOST} uses (+${percent(BRACE_STEP * BRACE_MOST)}).`,
+      'Added: a wildermon on a work post, hungry, eats its diet from a container you made inside the post\'s range.',
+      `Changed: farming seed per harvest: ${seedSays()}, tended or not (was one, or two tended twice); settlement workers too.`,
+    ],
+  },
 ];
+
+/** The old brace, as What's new 246 gives it. */
+const BRACE = RELICS.find((r) => r.result === 'ancient_brace') ?? { parts: 0, difficulty: 0 };
 
 /** The six relics What's new 245 added, by what they restore into. */
 const SIX_RELICS = RELICS.filter((r) => [WHETSTONE, SEED_JAR, STAMP, TABLET, 'ancient_collar', 'ancient_bridle'].includes(r.result));

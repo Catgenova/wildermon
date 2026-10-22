@@ -322,6 +322,8 @@ const tileT = (x: number, y: number, extra: Record<string, unknown> = {}): strin
 
 const island = psql(`
 begin;
+-- Seed every harvest, as this was written for: the odds themselves are bracefeedseed's.
+create or replace function harvest_seeds(p_chance double precision default seed_chance()) returns integer language sql volatile as $pin$ select (crop_yield(0))[1] $pin$;
 create temp table said (k text, v text);
 create function pg_temp.hold(w uuid, u uuid, ids text[]) returns jsonb language plpgsql as $f$
 begin
@@ -837,6 +839,8 @@ if (crop) { crop.stage = 0; crop.tended = 1; crop.tendedNow = false; delete crop
 game.update(0.01);
 const ripe = `${ask('tend_crop', at(20, 26))}|${ask('harvest_crop', at(20, 26))}`;
 for (const id of ['wheat', 'wheat_seed']) for (const it of game.inventory.items.filter((i) => i.id === id)) game.inventory.remove(it.uid, it.count);
+// Seed every harvest, as the island is pinned to above: the odds themselves are bracefeedseed's.
+game.setPerks({ ...game.perkFx, 'seed:harvest_crop': 1 });
 run('harvest_crop', at(20, 26));
 check('ripe by the glass clock, it harvests to the same yield and the same line',
   ripe === say('RIPE') && `${game.inventory.count('wheat')}:${game.inventory.count('wheat_seed')}:${game.cropAt(20, 26) ? 1 : 0}:${game.world.getTile(20, 26) === TileType.Field}` === say('HARVEST')

@@ -1,6 +1,6 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { ageDef, BASE_STATS, BRIDLE_PACE, COLLAR_CUT, fitted, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
+import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
@@ -87,10 +87,12 @@ export function baseStatTags(g: Game, c: Creature): Array<{ stat: BaseStat; text
   });
 }
 
-/** An ancient collar and bridle fitted on it, for the Stats row: "Collar: upkeep −20%". */
+/** An ancient collar and bridle fitted on it, and its brace uses, for the Stats row: "Collar: upkeep −20%". */
 export function fittedTags(c: Creature): Array<{ text: string; title: string }> {
   const out: Array<{ text: string; title: string }> = [];
   if (fitted(c, 'collar')) out.push({ text: `Collar: upkeep −${percent(COLLAR_CUT)}`, title: `Ancient collar: hunger rate −${percent(COLLAR_CUT)}.` });
+  const brace = bracePoints(c);
+  if (brace) out.push({ text: `Brace: action speed +${percent(BRACE_STEP * brace)} (${brace}/${BRACE_MOST})`, title: `Ancient brace: ${brace} of ${BRACE_MOST} uses, action speed +${percent(BRACE_STEP)} each.` });
   if (fitted(c, 'bridle')) out.push({ text: `Bridle: ridden and team speed +${percent(BRIDLE_PACE)}`, title: `Ancient bridle: speed ridden and in a team +${percent(BRIDLE_PACE)}, past the speed cap.` });
   return out;
 }

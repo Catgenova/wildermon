@@ -2,7 +2,7 @@ import { DARK_SHOT, DARK_SWING, SOUL_GAIN, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
-import { fedOn, tameNeeds, BASE_STATS, BRIDLE_PACE, COLLAR_CUT, fitted, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
+import { fedOn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -231,9 +231,10 @@ export function riposte(g: Game, c: Creature, share: number): void {
 }
 
 /**
- * Six things put back together out of the ground, used on a wildermon of
+ * Seven things put back together out of the ground, used on a wildermon of
  * yours from its menu: an ancient collar and an ancient bridle are fitted for
- * good (`fitted`, `COLLAR_CUT`, `BRIDLE_PACE`), an ancient comb takes one stage off its age
+ * good (`fitted`, `COLLAR_CUT`, `BRIDLE_PACE`), an ancient brace adds a step of
+ * action speed a use (`BRACE_STEP`, `BRACE_MOST`), an ancient comb takes one stage off its age
  * (`combedBorn`), an ancient file makes it a step rarer one time in
  * `FILE_RARITY_ODDS`, an ancient lamp rerolls its lowest-tier trait at that
  * tier, or one time in `LAMP_TIER_ODDS` the tier above (`rekindle`), and an
@@ -244,6 +245,7 @@ export function riposte(g: Game, c: Creature, share: number): void {
  * `perform_artifact`.
  */
 export const ARTIFACT_FOR: Readonly<Record<string, string>> = {
+  use_ancient_brace: 'ancient_brace',
   use_ancient_bridle: 'ancient_bridle',
   use_ancient_collar: 'ancient_collar',
   use_ancient_comb: 'ancient_comb',
@@ -269,6 +271,7 @@ export function artifactRefusal(g: Game, c: Creature | undefined, action: string
   if (action === 'use_ancient_file' && c.rare >= RARITIES.length - 1) {
     return `${c.name} is already ${RARITIES[RARITIES.length - 1].name}, the top rarity.`;
   }
+  if (action === 'use_ancient_brace' && bracePoints(c) >= BRACE_MOST) return `${c.name}: ${BRACE_MOST} ancient brace uses, the max.`;
   if (action === 'use_ancient_collar' && fitted(c, 'collar')) return `${c.name}: ancient collar already fitted.`;
   if (action === 'use_ancient_bridle' && fitted(c, 'bridle')) return `${c.name}: ancient bridle already fitted.`;
   if (action === 'use_ancient_pot' && !potRoom(c).length) {
@@ -334,6 +337,11 @@ function artifactAction(id: string, label: string, verb: string): ActionDef {
         } else {
           g.logMsg(`${capital(name)} used on ${c.name}: no change. Rarity-up chance: ${percent(1 / FILE_RARITY_ODDS)}.`, 'event');
         }
+      } else if (id === 'use_ancient_brace') {
+        // One more use, `BRACE_STEP` more action speed, up to `BRACE_MOST`.
+        const n = bracePoints(c) + 1;
+        c.boosts = { ...c.boosts, brace: n };
+        g.logMsg(`${capital(name)} used on ${c.name}: action speed +${percent(BRACE_STEP * n)} (${n}/${BRACE_MOST}).`, 'event');
       } else if (id === 'use_ancient_collar' || id === 'use_ancient_bridle') {
         // Fitted once and for good, beside the pot points (`fitted`).
         const collar = id === 'use_ancient_collar';
@@ -1292,6 +1300,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       g.logMsg(`Released: ${was}.`, 'system');
     },
   },
+  artifactAction('use_ancient_brace', 'Brace it with the ancient brace', 'bracing it'),
   artifactAction('use_ancient_collar', 'Fit the ancient collar', 'fitting the collar'),
   artifactAction('use_ancient_bridle', 'Fit the ancient bridle', 'fitting the bridle'),
   artifactAction('use_ancient_comb', 'Comb it with the ancient comb', 'combing it'),

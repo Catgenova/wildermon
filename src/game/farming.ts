@@ -136,15 +136,24 @@ export const glassTillable = (g: Game, x: number, y: number): boolean =>
   && glazing(g.buildings, g.buildings.buildingAt(x, y));
 
 /**
- * What a harvest gives. An untended field returns the seed it was sown from
- * and a single crop; tending every stage doubles the seed and quadruples the
- * crop. `bumper` is a Farmer's Bumper Crop: that many more on a crop tended at
- * every stage, and nothing on one that was not.
+ * What a harvest gives. An untended field gives a single crop, and tending
+ * every stage quadruples it. `bumper` is a Farmer's Bumper Crop: that many
+ * more on a crop tended at every stage, and nothing on one that was not.
+ *
+ * Seed: `seeds` (one), `SEED_CHANCE` of the time, however it was tended
+ * (`harvestSeeds`). Asked for: "Reduce standard seed yield when farming to 30%
+ * chance of getting 1 per harvest"; it was one, or two tended twice. The
+ * island's `seed_chance` and `crop_yield`.
  */
+export const SEED_CHANCE = 0.3;
 export function cropYield(tended: number, bumper = 0): { seeds: number; produce: number } {
   const t = Math.max(0, Math.min(CROP_STAGES - 1, tended));
-  return { seeds: t >= 2 ? 2 : 1, produce: 1 + t + (t >= RIPE ? bumper : 0) };
+  return { seeds: 1, produce: 1 + t + (t >= RIPE ? bumper : 0) };
 }
+/** The seed one harvest gives: `cropYield`'s `seeds` `SEED_CHANCE` of the time (or `chance`), and none the rest. */
+export const harvestSeeds = (rand: () => number, chance = SEED_CHANCE): number => (rand() < chance ? cropYield(0).seeds : 0);
+/** The seed a harvest would give, as a field and a tend say it: "1 seed at 30%". */
+export const seedSays = (): string => `${cropYield(0).seeds} seed at ${Math.round(SEED_CHANCE * 100)}%`;
 
 export const cropDef = (id: string): CropDef => CROPS[id] ?? CROPS.onion;
 export const cropReady = (c: Crop): boolean => c.stage >= RIPE;
@@ -273,7 +282,7 @@ export function describeCrop(c: Crop, per: number, now: number, wall: number, bu
   const def = cropDef(c.id);
   const when = cropReady(c) ? 'ready to harvest' : cropWhen(STAGE_NAMES[c.stage + 1], cropGrowthLeft(c, per, now), cropClockOf(c), wall);
   const y = cropYield(c.tended, bumper);
-  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${y.seeds} seed${y.seeds > 1 ? 's' : ''}`;
+  return `${def.name}${c.glass ? ' under glass' : ''}, ${cropStageName(c)} · ${when} · tended ${c.tended}/${RIPE}: yield ${y.produce} ${itemDef(def.produce).name.toLowerCase()}, ${seedSays()}`;
 }
 
 // The planter says what it grows at, off the rule.
@@ -379,11 +388,13 @@ function reapOne(g: Game, c: Crop): { produce: Item; got: number; seeds: number;
   const more = g.pathFx('harvest', 1);
   const got = Math.max(1, Math.round(y.produce * more)) + g.perk(`plus:${def.produce}`, 0);
   const produce = g.gather(def.produce, { count: got, ql });
-  g.gather(def.seed, { count: y.seeds, ql });
+  // At `SEED_CHANCE`, or what the harvester's perks make of it (`seed:harvest_crop`).
+  const seeds = harvestSeeds(g.rand, g.perk('seed:harvest_crop', SEED_CHANCE));
+  if (seeds > 0) g.gather(def.seed, { count: seeds, ql });
   const grass = g.perk('fodder:harvest_crop', 0);
   if (grass > 0) g.inventory.add('mixed_grass', { count: grass, ql });
   g.uproot(c);
-  return { produce, got, seeds: y.seeds, ql };
+  return { produce, got, seeds, ql };
 }
 
 /** "That wants a Farmer who has learned to sow a patch." */
@@ -482,7 +493,7 @@ export const FARM_ACTIONS: ActionDef[] = [
       tendOne(g, c);
       const y = cropYield(c.tended, g.perk('bumper:harvest_crop', 0));
       const what = itemDef(cropDef(c.id).produce).name.toLowerCase();
-      g.logMsg(`Tended: ${cropDef(c.id).name.toLowerCase()}. Expected yield: ${y.produce} ${what}, ${y.seeds} seed${y.seeds > 1 ? 's' : ''}.`, 'event');
+      g.logMsg(`Tended: ${cropDef(c.id).name.toLowerCase()}. Expected yield: ${y.produce} ${what}, ${seedSays()}.`, 'event');
     },
   },
   {

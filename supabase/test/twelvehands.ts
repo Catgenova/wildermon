@@ -57,6 +57,8 @@ const MIRA = '7e5b0000-0000-4000-8000-0000000000c3';
 const out = psql(`
 discard temp;
 begin;
+-- Seed every harvest, as this was written for: the odds themselves are bracefeedseed's.
+create or replace function harvest_seeds(p_chance double precision default seed_chance()) returns integer language sql volatile as $pin$ select (crop_yield(0))[1] $pin$;
 create temp table said (k text, v text);
 create temp table hand (species text, id int);
 do $t$
@@ -166,7 +168,7 @@ begin
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by) values (w, 'furniture', 'planter', 19, 16, 0, 0, 19.25, 16.25, 30, u) returning id into v_p;
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by) values (w, 'furniture', 'planter', 15, 16, 0, 0, 15.25, 16.25, 30, u) returning id into v_q;
   insert into planter_crop (placed, world_id, id, stage, tended, ql, sown_by) values (v_q, w, 'wheat', crop_ripe(), 2, 40, u);
-  insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7201, '${SEED}', 30, 1);
+  insert into item (world_id, holder, crate, def, ql, count) values (w, 'crate', 7201, '${SEED}', 30, 2);
   select id into v_id from hand where species = 'bedda';
   update creature set mode = 'deed', until = now() - interval '600 seconds', settled_at = now() - interval '600 seconds', phase = 'idle' where world_id = w and id = v_id;
   perform worker_settle(w, v_id);
@@ -254,8 +256,9 @@ check('a hoppa sets ale going in a barrel of water with the wheat from the store
 check('a simma cooks the meat at a lit campfire and puts it back in the stores', at('COOK') === 'cooked_meat 1', at('COOK'));
 check('a relka puts a bone comb back together out of both its pieces', at('RESTORE') === 'ancient_comb 1', at('RESTORE'));
 const [sown, ripeLeft, planterStores] = at('PLANTER').split('|');
-check('a bedda sows an empty planter with the seed from the stores, harvests the ripe one into them, and sows that again with the seed it gave',
-  sown === 'wheat' && ripeLeft === '0' && /wheat \d/.test(planterStores) && planterStores.includes(SEED), at('PLANTER'));
+// Two seeds in the stores: one a harvest at most now (`SEED_CHANCE`), so the second sowing need not wait on the roll.
+check('a bedda sows an empty planter with the seed from the stores, harvests the ripe one into them, and sows that again',
+  sown === 'wheat' && ripeLeft === '0' && /wheat \d/.test(planterStores), at('PLANTER'));
 const [wormDef, , wormAgain] = at('WORM').split('|');
 check('a wurla digs a marsh for worms and leaves it to rest', at('WORMTILE') === 'true' && wormDef === 'worm' && wormAgain === 'false', at('WORM'));
 const [sproutDef, sproutTree, sproutAgain] = at('SPROUT').split('|');
@@ -352,7 +355,7 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
 }
 {
   const g = body();
-  const crate = stock(g, [[SEED, 1]]);
+  const crate = stock(g, [[SEED, 2]]);
   const empty = g.addFurniture('planter', 23, 21, 0, 0, 30);
   const ripe = g.addFurniture('planter', 18, 21, 0, 0, 30);
   const c = g.sowPlanter(ripe, 'wheat', 40);
@@ -360,8 +363,8 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   c.tended = 2;
   worker(g, 'bedda');
   run(g, 120);
-  check('a bedda sows an empty planter with the seed from the stores, harvests the ripe one into them, and sows that again with the seed it gave',
-    g.planted.get(empty.id)?.id === 'wheat' && g.planted.get(ripe.id)?.stage === 0 && /wheat \d/.test(held(crate)) && held(crate).includes(SEED), held(crate));
+  check('a bedda sows an empty planter with the seed from the stores, harvests the ripe one into them, and sows that again',
+    g.planted.get(empty.id)?.id === 'wheat' && g.planted.get(ripe.id)?.stage === 0 && /wheat \d/.test(held(crate)), held(crate));
 }
 {
   const g = body();

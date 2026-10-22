@@ -100,6 +100,8 @@ const SPACE = 'between 4 and 15';
 
 const out = psql(`
 begin;
+-- Seed every harvest, as this was written for: the odds themselves are bracefeedseed's.
+create or replace function harvest_seeds(p_chance double precision default seed_chance()) returns integer language sql volatile as $pin$ select (crop_yield(0))[1] $pin$;
 -- Every field here grows in spring, whatever day of the year the suite is run on: a crop's pace is
 -- what is measured below, and a summer would bring the plain one on too and a winter neither.
 set local wurm.season = 'spring';

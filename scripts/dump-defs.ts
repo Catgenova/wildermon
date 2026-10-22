@@ -116,7 +116,8 @@ import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE } from '../src/game/placeables';
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
-import { BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
+import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
+import { SEED_CHANCE } from '../src/game/farming';
 import { JAR_SEEDS, STAMP_GOES, STAMP_RARE, TABLET_BELOW, TABLET_GAIN } from '../src/game/relicuse';
 import {
   MAP_BANDS, MAP_KILL_CAP, MAP_KILL_SCALE, MAP_ODDS, MAP_RANGE, MAP_SNIPPET, TREASURE_TIERS,
@@ -1820,7 +1821,7 @@ for (const [fn, v] of [
   // Litres (`items.ts`, `placeables.ts`).
   ['litre_kg', LITRE_KG], ['lye_use', LYE_USE], ['drink_litres', DRINK_LITRES],
   // Six more relics (`creatures.ts`, `relicuse.ts`).
-  ['collar_cut', COLLAR_CUT], ['bridle_pace', BRIDLE_PACE], ['jar_seeds', JAR_SEEDS], ['stamp_goes', STAMP_GOES],
+  ['collar_cut', COLLAR_CUT], ['bridle_pace', BRIDLE_PACE], ['brace_step', BRACE_STEP], ['brace_most', BRACE_MOST], ['seed_chance', SEED_CHANCE], ['jar_seeds', JAR_SEEDS], ['stamp_goes', STAMP_GOES],
   ['stamp_rare', STAMP_RARE], ['tablet_gain', TABLET_GAIN], ['tablet_below', TABLET_BELOW],
   ['wind_starving', WIND_STARVING], ['heal_rate', HEAL_RATE], ['heal_fed', HEAL_FED],
   /*
