@@ -3,13 +3,14 @@ import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import {
-  countOf, describeFrom, describeWith, itemDef, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
+  countOf, describeFrom, describeWith, itemDef, litresOf, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
   serveOf, type Item,
 } from './items';
 import { QL_PER_LOOP } from './belt';
 import { campfireFood, describeGoals } from './journal';
 import { fill, listed } from './words';
-import { FURNITURE, ONE_ALTAR, VESSELS } from './furniture';
+import { FURNITURE, LIQUID_NAME, ONE_ALTAR, VESSELS } from './furniture';
+import { litresAtHand, litreSources, takeLitres } from './placeables';
 import { trellisWallWords } from './building';
 import { SUBTILES } from './crates';
 import { castWhole, INGOT_LUMPS, ingotOf, METAL_BY_LUMP, MOULD_BY_MAKES, MOULD_SKILL, MOULDS } from './metal';
@@ -55,6 +56,10 @@ export interface CraftStock {
   store?: string;
   /** Use up `n` of it; false when there are not that many. */
   spend(n: number): boolean;
+  /** The list it lies in, for a vessel drawn off a litre at a time (`litreSources`). */
+  list?: Item[];
+  /** Said when it changes in place. */
+  touched?: () => void;
 }
 
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
@@ -79,6 +84,14 @@ export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire',
 export interface RecipeInput {
   item: string;
   count?: number;
+  /**
+   * Litres of a liquid rather than a whole thing: `item` is the full vessel of
+   * it (a Bucket of water for water), and the litres come out of any vessel of
+   * it carried or in the stores within reach, or any barrel, well or fountain
+   * of it within reach (`litreSources`). The bucket stays, empty at its last
+   * litre. The island's `recipe_input.litres`.
+   */
+  litres?: number;
 }
 
 export interface Recipe {
@@ -171,7 +184,7 @@ export interface Recipe {
 export const MARKED_PARTS: ReadonlySet<string> = new Set(['yoke']);
 
 /** What a Tailor's Lye Saver says when the vessel's liquid is left in it. The island says the same. */
-export const VESSEL_KEPT = 'Lye Saver: bucket not used up.';
+export const VESSEL_KEPT = 'Lye Saver: lye kept.';
 
 /** What somebody without the perk a recipe wants is told, by the perk's key. The island says the same. */
 export const RECIPE_PERK_SAYS: Record<string, string> = {
@@ -326,11 +339,11 @@ export const RECIPES: Recipe[] = [
   { id: 'make_blunt_arrows', category: 'Woodwork', result: 'blunt_arrow', count: 3, inputs: [{ item: 'shaft' }, { item: 'feather', count: 3 }], tool: 'carving_knife', skill: 'fletching', material: 'wood', label: 'Fletch blunt arrows', verb: 'fletching', baseTime: 6, stamina: 0.02, difficulty: 6, done: '', consumeOnFail: true },
   // Alchemy: ashes leached in water, and what lye is for.
   { id: 'make_lye', category: 'Alchemy', result: 'lye_bucket', inputs: [{ item: 'water_bucket' }, { item: 'ash', count: 2 }], skill: 'alchemy', label: 'Leach into lye', verb: 'making lye', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', consumeOnFail: true, salvage: [['bucket', 1]] },
-  { id: 'tan_hide', category: 'Alchemy', result: 'leather', inputs: [{ item: 'hide' }, { item: 'lye_bucket' }], tool: 'carving_knife', skill: 'leatherworking', returns: [['bucket', 1]], label: 'Tan in lye', verb: 'tanning a hide', baseTime: 14, stamina: 0.05, difficulty: 16, done: '', consumeOnFail: true },
+  { id: 'tan_hide', category: 'Alchemy', result: 'leather', inputs: [{ item: 'hide' }, { item: 'lye_bucket', litres: TAN_LYE }], tool: 'carving_knife', skill: 'leatherworking', label: 'Tan in lye', verb: 'tanning a hide', baseTime: 14, stamina: 0.05, difficulty: 16, done: '', consumeOnFail: true },
   // Writing: reed beds into paper, and what is written on it.
   // Pressed standing at a paper press, as cloth is woven at a loom (`enchant.ts`).
-  { id: 'make_papyrus', category: 'Writing', result: 'papyrus', count: 3, inputs: [{ item: 'reed', count: 4 }, { item: 'water_bucket' }], station: PAPER_PRESS, skill: 'papyrusmaking', returns: [['bucket', 1]], label: 'Press into papyrus', verb: 'pressing papyrus', baseTime: 13, stamina: 0.04, difficulty: 16, done: '', consumeOnFail: true },
-  { id: 'make_ink', category: 'Writing', result: 'ink', count: 2, inputs: [{ item: 'gland' }, { item: 'ash', count: 2 }, { item: 'water_bucket' }], skill: 'alchemy', returns: [['bucket', 1]], label: 'Grind into ink', verb: 'grinding ink', baseTime: 11, stamina: 0.03, difficulty: 20, done: '', consumeOnFail: true },
+  { id: 'make_papyrus', category: 'Writing', result: 'papyrus', count: 3, inputs: [{ item: 'reed', count: 4 }, { item: 'water_bucket', litres: 3 }], station: PAPER_PRESS, skill: 'papyrusmaking', label: 'Press into papyrus', verb: 'pressing papyrus', baseTime: 13, stamina: 0.04, difficulty: 16, done: '', consumeOnFail: true },
+  { id: 'make_ink', category: 'Writing', result: 'ink', count: 2, inputs: [{ item: 'gland' }, { item: 'ash', count: 2 }, { item: 'water_bucket', litres: 2 }], skill: 'alchemy', label: 'Grind into ink', verb: 'grinding ink', baseTime: 11, stamina: 0.03, difficulty: 20, done: '', consumeOnFail: true },
   /*
    * An enchantment scroll, one to each enchantment there is (`enchant.ts`):
    * papyrus and motes, rolled on enchanting. A scroll that fails loses its
@@ -361,15 +374,15 @@ export const RECIPES: Recipe[] = [
   { id: 'make_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'strawberry', count: 2 }, { item: 'raspberry', count: 2 }], tool: 'clay_jar', station: 'campfire', skill: 'cooking', label: 'Put up preserves', verb: 'putting up preserves', baseTime: 12, stamina: 0.02, difficulty: 10, done: '', consumeOnFail: true },
   { id: 'make_flour', category: 'Cooking', result: 'flour', inputs: [{ item: 'wheat', count: 2 }], tool: 'quern', skill: 'milling', label: 'Grind into flour', verb: 'grinding flour', baseTime: 9, stamina: 0.05, difficulty: 10, done: '', consumeOnFail: true },
   { id: 'make_cornmeal', category: 'Cooking', result: 'cornmeal', inputs: [{ item: 'corn', count: 2 }], tool: 'quern', skill: 'milling', label: 'Grind into cornmeal', verb: 'grinding cornmeal', baseTime: 9, stamina: 0.05, difficulty: 12, done: '', consumeOnFail: true },
-  { id: 'make_dough', category: 'Cooking', result: 'dough', count: 2, inputs: [{ item: 'flour', count: 2 }, { item: 'water_bucket' }], skill: 'cooking', returns: [['bucket', 1]], label: 'Work into dough', verb: 'working dough', baseTime: 8, stamina: 0.04, difficulty: 6, done: '', consumeOnFail: true },
+  { id: 'make_dough', category: 'Cooking', result: 'dough', count: 2, inputs: [{ item: 'flour', count: 2 }, { item: 'water_bucket', litres: 2 }], skill: 'cooking', label: 'Work into dough', verb: 'working dough', baseTime: 8, stamina: 0.04, difficulty: 6, done: '', consumeOnFail: true },
   { id: 'bake_bread', category: 'Cooking', result: 'bread', inputs: [{ item: 'dough' }], station: 'campfire', skill: 'cooking', label: 'Bake on the stone', verb: 'baking bread', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
-  { id: 'make_porridge', category: 'Cooking', result: 'porridge', count: 2, inputs: [{ item: 'cornmeal' }, { item: 'water_bucket' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', returns: [['bucket', 1]], label: 'Boil into porridge', verb: 'boiling porridge', baseTime: 10, stamina: 0.03, difficulty: 8, done: '', consumeOnFail: true },
+  { id: 'make_porridge', category: 'Cooking', result: 'porridge', count: 2, inputs: [{ item: 'cornmeal' }, { item: 'water_bucket', litres: 2 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Boil into porridge', verb: 'boiling porridge', baseTime: 10, stamina: 0.03, difficulty: 8, done: '', consumeOnFail: true },
   { id: 'make_fishing_rod', category: 'Woodwork', result: 'fishing_rod', inputs: [{ item: 'shaft', count: 2 }, { item: 'bow_string' }, { item: 'ribbon' }], tool: 'carving_knife', skill: 'carpentry', material: 'wood', label: 'Splice a fishing rod', verb: 'splicing a rod', baseTime: 10, stamina: 0.03, difficulty: 14, done: '' },
   { id: 'bake_pastry', category: 'Cooking', result: 'pastry', count: 2, inputs: [{ item: 'dough' }, { item: 'butter', count: 2 }], station: 'campfire', skill: 'cooking', label: 'Bake pastry', verb: 'baking pastry', baseTime: 12, stamina: 0.03, difficulty: 14, done: '', consumeOnFail: true },
   { id: 'make_apple_pie', category: 'Cooking', result: 'apple_pie', count: 2, inputs: [{ item: 'dough' }, { item: 'apple', count: 4 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Bake an apple pie', verb: 'baking a pie', baseTime: 18, stamina: 0.03, difficulty: 20, done: '', consumeOnFail: true },
   { id: 'make_cherry_preserves', category: 'Cooking', result: 'preserves', count: 2, inputs: [{ item: 'cherry', count: 12 }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Preserve cherries', verb: 'preserving cherries', baseTime: 14, stamina: 0.03, difficulty: 14, done: '', consumeOnFail: true },
   { id: 'press_olives', category: 'Cooking', result: 'olive_oil', count: 2, inputs: [{ item: 'olive', count: 10 }], tool: 'quern', skill: 'milling', label: 'Press into oil', verb: 'pressing olives', baseTime: 16, stamina: 0.05, difficulty: 18, done: '', consumeOnFail: true },
-  { id: 'make_broth', category: 'Cooking', result: 'broth', count: 2, inputs: [{ item: 'bone', count: 2 }, { item: 'water_bucket' }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', returns: [['bucket', 1]], label: 'Boil a broth', verb: 'boiling a broth', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true, perk: 'broth' },
+  { id: 'make_broth', category: 'Cooking', result: 'broth', count: 2, inputs: [{ item: 'bone', count: 2 }, { item: 'water_bucket', litres: 2 }], tool: 'clay_pot', station: 'campfire', skill: 'cooking', label: 'Boil a broth', verb: 'boiling a broth', baseTime: 12, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true, perk: 'broth' },
   { id: 'make_stew', category: 'Cooking', result: 'stew', inputs: [{ item: 'cooked_meat' }, { item: 'potato' }, { item: 'onion' }], tool: 'clay_bowl', station: 'campfire', skill: 'cooking', label: 'Simmer a stew', verb: 'simmering a stew', baseTime: 16, stamina: 0.03, difficulty: 10, done: '', consumeOnFail: true },
   // A stone goes into a plain casting with a file. The piece takes the stone's name, the way a chest takes its wood, and the rarer the stone the harder the seating.
   { id: 'set_focus', category: 'Jewellery', result: 'focus', inputs: [{ item: 'gem' }, { item: 'silver_lump' }], tool: 'file', skill: 'jewellery', material: 'gem', label: 'Set a focus', verb: 'setting a focus', baseTime: 14, stamina: 0.04, difficulty: 20, done: '', consumeOnFail: true },
@@ -689,7 +702,7 @@ RECIPES.push(...COVER_RECIPES);
 const REMEDY_RECIPES: Recipe[] = HERBS.flatMap((herb): Recipe[] => [
   {
     id: `brew_tea_${herb}`, category: 'Alchemy', result: 'herb_tea', count: 3,
-    inputs: [{ item: herb, count: 2 }, { item: 'water_bucket' }], skill: 'alchemy', returns: [['bucket', 1]],
+    inputs: [{ item: herb, count: 2 }, { item: 'water_bucket', litres: 3 }], skill: 'alchemy',
     label: `Steep ${herb} into tea`, verb: 'steeping tea', baseTime: 8, stamina: 0.02, difficulty: 10,
     done: '', consumeOnFail: true, perk: 'herb_tea',
   },
@@ -779,7 +792,7 @@ const failSaid = (r: Recipe, own?: string): string => {
 /** What a Mason's or a Tailor's Nothing Wasted says when it keeps what a failed go would have lost. The island says the same. */
 export const SPARED = 'Nothing Wasted: inputs kept.';
 
-const inputsOf = (r: Recipe): Record<string, number> => Object.fromEntries(r.inputs.map((i) => [i.item, i.count ?? 1]));
+const inputsOf = (r: Recipe): Record<string, number> => Object.fromEntries(r.inputs.map((i) => [i.item, i.litres ?? i.count ?? 1]));
 for (const r of RECIPES) {
   const said = { ...r, count: r.count ?? 1, inputs: inputsOf(r) };
   r.done = fill(r.done, said);
@@ -817,7 +830,7 @@ export interface RecipeStatus {
   /** It is an altar, and the settlement you stand on has one already (`ONE_ALTAR`). */
   second: boolean;
   /** Each input: how many a go takes, how many are at hand, and how many of those are on you rather than stored nearby. */
-  inputs: Array<{ item: string; need: number; have: number; carried: number }>;
+  inputs: Array<{ item: string; litres: boolean; need: number; have: number; carried: number }>;
   /** Everything is at hand for at least one craft. */
   ready: boolean;
   /** How many times it can be made with what is carried and stored within reach. */
@@ -911,10 +924,23 @@ export function prospect(r: Recipe, g: Game, stock: readonly CraftStock[] = g.cr
  * for a perk on the recipe (a Carpenter's String Maker), and never under one,
  * as `recipe_need` has it on the island.
  */
-export const needOf = (g: Game, r: Recipe, i: { item?: string; count?: number }): number =>
+export const needOf = (g: Game, r: Recipe, i: { item?: string; count?: number; litres?: number }): number =>
   // A boil's dyestuff by its weight, the fewest whole items over it (`boilCount`); the island's `recipe_need` the same.
   (i.item && isBoilStuff(r.id, i.item) ? boilCount(g, r.id, i.item)
-    : Math.max(1, Math.ceil((i.count ?? 1) * g.perk(`need:${r.id}`, 1))));
+    : Math.max(1, Math.ceil((i.litres ?? i.count ?? 1) * g.perk(`need:${r.id}`, 1))));
+
+/** The liquid a litre input is of, by name: "water". */
+export const liquidWord = (vessel: string): string => LIQUID_NAME[VESSELS[vessel].liquid];
+
+/** How an input reads where a recipe lists what it takes: "2 flour", "2 L water". */
+export const inputSaid = (i: RecipeInput, n: number): string => (i.litres ? `${n} L ${liquidWord(i.item)}` : `${n} ${plural(i.item, n)}`);
+
+/**
+ * Whether a vessel serves as a whole input (a Bucket of water leached into lye,
+ * of milk pressed into cheese): only full, since what it becomes is a full
+ * bucket of something else. Anything that is not a vessel serves as it is.
+ */
+const whole = (it: Item): boolean => !VESSELS[it.id] || !itemDef(it.id).charges || litresOf(it) >= (itemDef(it.id).charges ?? 0);
 
 /**
  * What a recipe needs against what is at hand.
@@ -929,12 +955,13 @@ export function recipeStatus(r: Recipe, g: Game, want?: string, stock: readonly 
   const deed = !r.deed || g.onDeed(g.player.tileX, g.player.tileY);
   const second = secondAltar(r, g);
   const material = chooseMaterial(g, r, undefined, want, stock);
-  const inputs = r.inputs.map((i) => ({
-    item: i.item,
-    need: needOf(g, r, i),
-    have: countFor(stock, r, i.item, material),
-    carried: countFor(stock, r, i.item, material, true),
-  }));
+  const inputs = r.inputs.map((i) => {
+    if (i.litres) {
+      const at = litreSources(g, i.item, reachFor(g, r), stock);
+      return { item: i.item, litres: true, need: needOf(g, r, i), have: litresAtHand(at), carried: litresAtHand(at.filter((s) => s.carried)) };
+    }
+    return { item: i.item, litres: false, need: needOf(g, r, i), have: countFor(stock, r, i.item, material), carried: countFor(stock, r, i.item, material, true) };
+  });
   const max = tool && station && deed && !second ? Math.min(...inputs.map((i) => Math.floor(i.have / i.need))) : 0;
   return { tool, station, deed, second, inputs, ready: max >= 1, max, material };
 }
@@ -961,7 +988,7 @@ function countFor(stock: readonly CraftStock[], r: Recipe, id: string, mat: stri
   for (const s of stock) {
     const it = s.item;
     const per = it.id === id ? 1 : it.id === bar ? INGOT_LUMPS : 0;
-    if (!per) continue;
+    if (!per || !whole(it)) continue;
     if (mat && isMaterialKind(it.extra, r.material as MaterialKind)) strict = true;
     if (onYou && !s.carried) continue;
     all += it.count * per;
@@ -1051,14 +1078,20 @@ export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: read
     const need = needOf(g, r, i);
     if (countFor(stock, r, i.item, r.wood) < need) return `Need ${need} ${plural(i.item, need)} of ${r.wood.toLowerCase()} only.`;
   }
+  const list = r.inputs.length > 1 ? ` (${r.inputs.map((x) => inputSaid(x, needOf(g, r, x))).join(', ')})` : '';
   for (const i of r.inputs) {
     const need = needOf(g, r, i);
+    // Litres of a liquid, out of any vessel or barrel of it at hand (`litreSources`).
+    if (i.litres) {
+      if (litresAtHand(litreSources(g, i.item, reachFor(g, r), stock)) < need) return `Need ${inputSaid(i, need)}${list}.`;
+      continue;
+    }
     // A boil says the weight it takes and the weight there is (`boilRefusal`).
     const short = isBoilStuff(r.id, i.item) ? boilRefusal(g, r.id, i.item, countFor(stock, r, i.item, mat)) : null;
     if (short) return short;
     if (countFor(stock, r, i.item, mat) < need) {
       const of = mat && strictInput(stock, r, i.item) ? ` of ${mat.toLowerCase()}` : '';
-      return `Need ${need} ${plural(i.item, need)}${of}${r.inputs.length > 1 ? ` (${r.inputs.map((x) => `${needOf(g, r, x)} ${plural(x.item, needOf(g, r, x))}`).join(', ')})` : ''}.`;
+      return `Need ${need} ${plural(i.item, need)}${of}${list}.`;
     }
   }
   return null;
@@ -1066,7 +1099,7 @@ export function recipeReason(r: Recipe, g: Game, preferUid?: number, stock: read
 
 /** Human readable list of what a recipe needs: "clay bowl · 1 cooked meat · 1 potato". */
 export function recipeNeeds(r: Recipe): string {
-  const parts = r.inputs.map((i) => `${i.count ?? 1} ${plural(i.item, i.count ?? 1)}`);
+  const parts = r.inputs.map((i) => inputSaid(i, i.litres ?? i.count ?? 1));
   return (r.tool ? [lower(r.tool), ...parts] : parts).join(' · ');
 }
 
@@ -1091,6 +1124,7 @@ function inputQl(stock: readonly CraftStock[], r: Recipe, preferUid?: number, ma
   let total = 0;
   let mass = 0;
   for (const i of r.inputs) {
+    if (i.litres) continue;
     const stack = drawFor(stock, i.item, i.count ?? 1, preferUid, mat)?.[0]?.item
       ?? stock.find((s) => s.item.id === i.item)?.item;
     if (!stack) continue;
@@ -1110,10 +1144,10 @@ function inputQl(stock: readonly CraftStock[], r: Recipe, preferUid?: number, ma
  * pine. Null when there is not enough of it at all.
  */
 function drawFor(stock: readonly CraftStock[], id: string, n: number, preferUid?: number, mat?: string, strict = false): CraftStock[] | null {
-  const pool = stock.filter((s) => s.item.id === id && (!mat || s.item.extra === mat));
+  const pool = stock.filter((s) => s.item.id === id && whole(s.item) && (!mat || s.item.extra === mat));
   const enough = pool.reduce((sum, s) => sum + s.item.count, 0) >= n;
   if (strict && !enough) return null;
-  const from = enough ? pool : stock.filter((s) => s.item.id === id);
+  const from = enough ? pool : stock.filter((s) => s.item.id === id && whole(s.item));
   if (from.reduce((sum, s) => sum + s.item.count, 0) < n) return null;
   // A stable sort: the clicked stack to the front, everything else where it was.
   return [...from].sort((a, b) => Number(b.item.uid === preferUid) - Number(a.item.uid === preferUid));
@@ -1255,7 +1289,8 @@ export function recipeAction(r: Recipe): ActionDef {
         if (r.consumeOnFail && !spared) {
           for (const i of r.inputs) {
             if (stone && i.item === 'gem') continue;
-            consumeAcross(stock, i.item, needOf(g, r, i), t.uid, mat, strict.get(i.item));
+            if (i.litres) takeLitres(litreSources(g, i.item, reachFor(g, r), stock), needOf(g, r, i));
+            else consumeAcross(stock, i.item, needOf(g, r, i), t.uid, mat, strict.get(i.item));
           }
           // The batch is wasted, not the vessel: you tip the ruin out and keep
           // the bucket.
@@ -1298,6 +1333,10 @@ export function recipeAction(r: Recipe): ActionDef {
       const used = rarityTally();
       for (const i of r.inputs) {
         if (vesselKept && VESSELS[i.item]) continue;
+        if (i.litres) {
+          if (!takeLitres(litreSources(g, i.item, reachFor(g, r), stock), needOf(g, r, i))) return;
+          continue;
+        }
         if (!consumeAcross(stock, i.item, needOf(g, r, i), t.uid, mat, strict.get(i.item), VESSELS[i.item] ? undefined : used)) return;
       }
       carryOn(t, g, was, mat);

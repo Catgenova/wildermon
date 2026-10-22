@@ -74,7 +74,7 @@ import { boonOf, boonTime, clockLeft } from './boons';
 import { helpingOf, NUTRIENTS } from './nutrition';
 import { SKILL_DEFS } from './skills';
 import {
-  describeFrom, itemDef, itemName, itemWeight, markOf, markSays, rarityOf, bagAdd, bagRefuses, bagSpare, isBag, storedLine, RARITIES, RARITY_WORD, rollRarity,
+  describeFrom, DRINK_LITRES, itemDef, itemName, itemWeight, litresOf, markOf, VESSELS, markSays, rarityOf, bagAdd, bagRefuses, bagSpare, isBag, storedLine, RARITIES, RARITY_WORD, rollRarity,
   NOT_RESTORED, unrestored, type Item,
 } from './items';
 import { capital } from './words';
@@ -285,6 +285,9 @@ export interface ActionDef {
  * it, and a trail feet have half done the job on -- which is how a path
  * people wore becomes a road: pack it, then pave it. The island's `packable`.
  */
+/** What "Fill with water" tops up: a skin, and a bucket of water with room in it. The island's `water_holder`. */
+export const WATER_HOLDERS: ReadonlySet<string> = new Set(['water_skin', 'water_bucket']);
+
 const PACKABLE = new Set<number>([TileType.Dirt, TileType.Grass, TileType.Lawn, TileType.Steppe, TileType.Tundra, TileType.Moss, TileType.Trail]);
 
 const DIGGABLE_PLANT_TILES = new Set<number>([TileType.Grass, TileType.Dirt, TileType.Moss, TileType.Lawn, TileType.Steppe, TileType.Tundra]);
@@ -2682,20 +2685,26 @@ export const ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const item = g.inventory.held(t.uid);
-      return item && (item.charges ?? 0) > 0 ? null : 'It is empty.';
+      return item && litresOf(item) > 0 ? null : 'It is empty.';
     },
     perform: (t, g) => {
       if (t.kind !== 'item') return;
       const item = g.inventory.held(t.uid);
-      if (!item || !(item.charges ?? 0)) return;
-      item.charges = (item.charges ?? 1) - 1;
-      g.player.stats.thirst = Math.min(1, g.player.stats.thirst + (itemDef(item.id).drink ?? 0));
+      if (!item || litresOf(item) <= 0) return;
+      // A litre a drink; a bucket drunk dry is an empty bucket.
+      const id = item.id;
+      const ql = item.ql;
+      const knack = markOf(item, 'knack');
+      const feed = markOf(item, 'feed');
+      if (litresOf(item) - DRINK_LITRES <= 0 && VESSELS[id]) vesselBecomes(g, item, VESSELS[id].empty);
+      else item.charges = Math.max(0, litresOf(item) - DRINK_LITRES);
+      g.player.stats.thirst = Math.min(1, g.player.stats.thirst + (itemDef(id).drink ?? 0));
       g.inventory.onChange?.();
       // Milk and anything brewed favour a trade the way a cooked dish does,
       // and for longer for its brewer's hand in it (a Cook's Strong Brew).
-      const favour = g.grantBoon(item.id, item.ql, markOf(item, 'knack'));
-      const full = g.nourish(item.id, item.ql, markOf(item, 'feed'));
-      g.logMsg(`Drank: ${itemDef(item.id).name.toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');
+      const favour = g.grantBoon(id, ql, knack);
+      const full = g.nourish(id, ql, feed);
+      g.logMsg(`Drank: ${itemDef(id).name.toLowerCase()}.${favour ? ` ${favour}` : ''}${full ? ` ${full}` : ''}`, 'event');
     },
   },
   {
@@ -2778,12 +2787,13 @@ export const ACTIONS: ActionDef[] = [
     applies: (t, g) => {
       if (t.kind !== 'item') return false;
       const item = g.inventory.held(t.uid);
-      return !!item && !!itemDef(item.id).charges;
+      // A skin, or a bucket of water with room in it: nothing else is topped up with water.
+      return !!item && WATER_HOLDERS.has(item.id);
     },
     check: (t, g) => {
       if (t.kind !== 'item') return null;
       const item = g.inventory.held(t.uid);
-      if (item && (item.charges ?? 0) >= (itemDef(item.id).charges ?? 0)) return 'Already full.';
+      if (item && litresOf(item) >= (itemDef(item.id).charges ?? 0)) return 'Already full.';
       return waterNear(g) ? null : 'Need water: shore, well, or a barrel of water.';
     },
     perform: (t, g) => {
@@ -2792,7 +2802,7 @@ export const ACTIONS: ActionDef[] = [
       if (!item) return;
       item.charges = itemDef(item.id).charges ?? 0;
       g.inventory.onChange?.();
-      g.logMsg(`Filled: ${itemDef(item.id).name.toLowerCase()}, water.`, 'event');
+      g.logMsg(`Filled: ${itemDef(item.id).name.toLowerCase()}, ${litresOf(item)} L water.`, 'event');
     },
   },
   {

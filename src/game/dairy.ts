@@ -79,6 +79,7 @@ ITEM_DEFS[WHEY_BUCKET] ??= {
   name: 'Bucket of whey',
   category: 'food',
   weight: 6,
+  charges: BUCKET_LITRES,
   decay: itemDef('milk_bucket').decay,
   description: `${BUCKET_LITRES} litres of whey (left over from pressing a bucket of milk into cheese). `
     + `Feed to any wildermon you keep: hunger +${percent(WHEY_FEED)}; bucket emptied. `

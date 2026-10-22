@@ -262,8 +262,8 @@ const [healed, bleeding, bandages] = at('HEAL').split('|');
 check('a salva dresses a bleeding woola of yours with the bandage out of the stores: the bleeding stops and its health comes up',
   Number(healed) > 1 && bleeding === 'stopped' && bandages === '0', at('HEAL'));
 check('a carra butchers the rabba in the stores and puts its meat back in', !at('BUTCHER').includes('corpse') && at('BUTCHER').includes('meat'), at('BUTCHER'));
-check('a tanna tans the hide in the lye, and the leather and the bucket go back in beside the knife',
-  at('TAN') === 'bucket 1,carving_knife 1,leather 1', at('TAN'));
+check('a tanna tans the hide in the lye, and the leather goes back in beside the knife and what lye is left',
+  at('TAN') === 'carving_knife 1,leather 1,lye_bucket 1', at('TAN'));
 check('a grista with no quern in the stores grinds nothing', at('NOQUERN') === 'wheat 4', at('NOQUERN'));
 check('and with one, grinds the wheat into flour, two to a flour', at('MILL') === 'flour 2,quern 1', at('MILL'));
 const [fuelled, litRight, candlesLeft] = at('LAMP').split('|');
@@ -359,7 +359,7 @@ const held = (crate: ReturnType<Game['addCrate']>): string => crate.items.map((i
   const crate = stock(g, 21, 20, [['hide', 1], ['lye_bucket', 1], ['carving_knife', 1]]);
   worker(g, 'tanna');
   run(g, 60);
-  check('a tanna tans the hide in the lye, and the leather and the bucket go back in beside the knife', held(crate) === 'bucket 1,carving_knife 1,leather 1', held(crate));
+  check('a tanna tans the hide in the lye, and the leather goes back in beside the knife and what lye is left', held(crate) === 'carving_knife 1,leather 1,lye_bucket 1', held(crate));
 }
 {
   const g = body();

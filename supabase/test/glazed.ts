@@ -16,6 +16,8 @@
  *
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it.
  */
+import { BUCKET_LITRES, litresOf } from '../../src/game/items';
+import { LYE_USE } from '../../src/game/placeables';
 import { execFileSync } from 'node:child_process';
 import { ACTION_BY_ID, ACTIONS } from '../../src/game/actions';
 import { WALL_TYPE_BY_ID, wallBill, type Side } from '../../src/game/building';
@@ -162,9 +164,10 @@ commit;
 `).split('\n').map((s) => s.trim()).filter(Boolean)[0] ?? 'NOTHING SAID';
 check('and lye scrubs it back to bare wood, said the same way on both sides',
   mineStrip === theirStrip && !wall.dye, `browser "${mineStrip}", island "${theirStrip}"`);
-check('the empty bucket comes back, on both sides',
-  game.inventory.has('bucket') && Number(psql(`select coalesce(sum(count), 0) from item where world_id = ${W} and holder = 'player' and holder_uid = ${U} and def = 'bucket';`)) > 0,
-  'one bucket of lye, one bucket back');
+check(`a litre of lye goes, the rest stays in the bucket, on both sides: ${BUCKET_LITRES - LYE_USE} L`,
+  game.inventory.items.some((it) => it.id === 'lye_bucket' && litresOf(it) === BUCKET_LITRES - LYE_USE)
+    && psql(`select string_agg(item_litres(i)::text, ',') from item i where world_id = ${W} and holder = 'player' and holder_uid = ${U} and def = 'lye_bucket';`) === String(BUCKET_LITRES - LYE_USE),
+  'a bucket of lye, a litre used');
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {

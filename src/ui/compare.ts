@@ -1,7 +1,7 @@
 import type { Game } from '../game/game';
 import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
 import { armourSwingKg, blockChance, blockNote, reachOf, SWING_FLOOR, swingByOf, swingKgOf, THROWN_PAST } from '../game/fight';
-import { bagRoom, bagUnits, isBag, itemDef, itemName, itemWeight, unitWeight, type Item } from '../game/items';
+import { bagRoom, bagUnits, DRINK_LITRES, isBag, itemDef, itemName, itemWeight, litresOf, unitWeight, type Item } from '../game/items';
 import { finePercent, listed, percent } from '../game/words';
 import { ACTIONS, tasteSays } from '../game/actions';
 import { RECIPES } from '../game/recipes';
@@ -203,7 +203,7 @@ export function itemCard(g: Game, item: Item): TipLine[] {
     lines.push({ text: `Holds ${bagRoom(item)} things; ${bagUnits(item)} in it now` });
     if (def.shelter !== undefined) lines.push(`Rot rate of contents on the ground ×${def.shelter}.`);
   }
-  if (def.charges) lines.push({ text: `Holds ${def.charges} drinks; ${item.charges ?? 0} left` });
+  if (def.charges) lines.push({ text: `Holds ${def.charges} L; ${litresOf(item)} L in it${def.drink ? `; ${DRINK_LITRES} L a drink` : ''}` });
   const taste = g.perk('taste', 0) > 0 ? tasteSays(g, item).trim() : '';
   if (taste) lines.push(taste);
   else {

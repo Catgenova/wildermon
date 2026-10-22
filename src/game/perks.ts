@@ -70,7 +70,7 @@ import {
 import { CROP_LIST, cropYield, RIPE, type CropDef } from './farming';
 import { IMPROVE_FLOOR, improveStepAt } from './improve';
 import { POST_LIFE_MAX, POST_LIFE_MIN } from './posts';
-import { billWords, countOf, ITEM_DEFS, RARITY_ODDS, type Item } from './items';
+import { billWords, countOf, ITEM_DEFS, RARITY_ODDS, TAN_LYE, type Item } from './items';
 import { MELT_KEEP, MELT_SHARE, meltLumps } from './melt';
 import {
   castWhole, COIN_DIFFICULTY, FORGE_WORK, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_BY_MAKES, MOULD_DENT, mouldLumps, MOULDS,
@@ -1346,7 +1346,7 @@ const TAILOR: Seed[] = [
   {
     num: 19, name: 'Lye Saver',
     fx: { 'lye:tan_hide': 0.5 },
-    note: (fx) => `Tanning keeps the lye in the bucket: ${oneIn(fx['lye:tan_hide'])} actions (base: bucket returned empty).`,
+    note: (fx) => `Tanning uses no lye: ${oneIn(fx['lye:tan_hide'])} actions (base: ${TAN_LYE} L a hide).`,
   },
   {
     num: 21, name: 'Sure Awl',
@@ -1621,7 +1621,7 @@ const NATURALIST: Seed[] = [
   {
     num: 43, name: 'Herb Tea',
     fx: { herb_tea: 1 },
-    note: () => `New recipe: ${ofOneHerb(TEA)} and a bucket of water make ${TEA.count ?? 1} cups of herb tea. `
+    note: () => `New recipe: ${ofOneHerb(TEA)} and ${TEA.inputs.find((i) => i.litres)?.litres ?? 0} L water make ${TEA.count ?? 1} cups of herb tea. `
       + `Per cup: stamina +${percent(ITEM_DEFS.herb_tea.stamina ?? 0)}.`,
   },
   {

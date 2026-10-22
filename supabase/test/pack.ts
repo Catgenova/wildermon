@@ -86,7 +86,8 @@ console.log('--- a water skin, which is what was reported');
 const full = row({ charges: 5 });
 say('the island says a full skin has', full.charges, 5);
 say('and the six-field map made of that', asItWas(full).charges, undefined);
-say('so Drink said', about('drink_skin', asItWas(full)), 'It is empty.');
+// Since vessels hold litres, a skin with no litres on it at all is full (`litresOf`), so the old map's loss no longer empties it.
+say('so Drink now offers it', about('drink_skin', asItWas(full)), null);
 say('the whole row makes of it', packed(full, still).charges, 5);
 say('and Drink says', about('drink_skin', packed(full, still)), null);
 
@@ -106,7 +107,7 @@ say('and Drink refuses it', about('drink_skin', empty), 'It is empty.');
  */
 console.log('\n--- and filling it');
 say('a full skin refuses another fill', about('fill_skin', packed(row({ charges: 5 }), still)), 'Already full.');
-say('while the old map offered to fill a full one', about('fill_skin', asItWas(row({ charges: 5 }))), null);
+say('and the old map reads full too', about('fill_skin', asItWas(row({ charges: 5 }))), 'Already full.');
 say('and an empty one standing at the shore fills', about('fill_skin', packed(row({ charges: 0 }), still)), null);
 
 /*
@@ -119,9 +120,9 @@ say('and an empty one standing at the shore fills', about('fill_skin', packed(ro
  * silent.
  */
 console.log('\n--- and what the pack window called it');
-say('a full skin', itemName(packed(full, still)), 'Water skin (5/5)');
-say('under the old map, after every fill', itemName(asItWas(full)), 'Water skin (0/5)');
-say('two drinks gone', itemName(packed(row({ charges: 3 }), still)), 'Water skin (3/5)');
+say('a full skin', itemName(packed(full, still)), 'Water skin (5 L)');
+say('under the old map, read full', itemName(asItWas(full)), 'Water skin (5 L)');
+say('two drinks gone', itemName(packed(row({ charges: 3 }), still)), 'Water skin (3 L)');
 say('a blue supreme tunic',
   itemName(packed(row({ def: 'cloth_tunic', rare: 'supreme', dye: 'woad' }), still)),
   'Blue supreme cloth tunic');

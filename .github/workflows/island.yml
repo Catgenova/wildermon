@@ -3267,6 +3267,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/changetile.mjs --log-level=error
           node node_modules/.cache/changetile.mjs
 
+      - name: Every vessel holds litres, and a liquid is used by the litre
+        run: |
+          # Asked for: a bucket of 5 L of water down a litre a dough, lye by the
+          # litre, L for what a vessel holds. Both sides: litres out of a bucket,
+          # a barrel making up the rest, names and weights by the litre, a full
+          # bucket for lye, tanning, a drink, a pour.
+          npx esbuild supabase/test/litres.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/litres.mjs --log-level=error
+          node node_modules/.cache/litres.mjs
+
       - name: A mould is the smith's, formed and poured by blacksmithing
         run: |
           # Asked: pouring moulds should give blacksmithing experience, and a

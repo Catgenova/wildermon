@@ -35,7 +35,8 @@ import { chartRegion } from '../world/chart';
 import { lairOf, REGIONS } from '../world/regions';
 import { DIGGABLE, findChance, relicsWithin } from './archaeology';
 import { fishable, fishHere, waterDepth } from './fishing';
-import { describeWith, itemDef, markOf, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
+import { describeWith, itemDef, litresOf, markOf, TAN_LYE, RARITIES, rarityOf, rarityStep, rollRarity, type Item, type Mark } from './items';
+import { drainVessel } from './placeables';
 import { FROST_PACE, FROST_SECS, PAPER_PRESS, swingEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { CLASS_SPELL_BY_ID } from './talents';
 import type { BeastAct } from './events';
@@ -319,6 +320,8 @@ export const PAPER_RECIPES = ['make_papyrus'];
 /** How many a recipe makes, and how many of one of its inputs it takes: the numbers a trade's words give. */
 const recipeMakes = (id: string): number => RECIPE_BY_ID.get(id)?.count ?? 1;
 const recipeTakes = (id: string, item: string): number => RECIPE_BY_ID.get(id)?.inputs.find((i) => i.item === item)?.count ?? 1;
+/** The litres of liquid a recipe takes, for saying so. */
+const recipeLitres = (id: string): number => RECIPE_BY_ID.get(id)?.inputs.find((i) => i.litres)?.litres ?? 0;
 /**
  * What a simma cooks, in the order it tries them: every recipe worked at a lit campfire or oven that no perk
  * gates, as the recipes are listed. The island's `tend_recipes('cook')` names the same.
@@ -344,7 +347,7 @@ export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botaniz
   get brick() { return `shape clay in your settlement stores into unfired clay brick, ${recipeMakes('make_clay_brick')} a lump`; },
   get rope() { return `make rope from wemp in your settlement stores, ${recipeTakes('make_rope', 'wemp')} fibres a rope; needs a rope tool in your settlement stores`; },
   get fletch() { return `fletch arrows from shafts, arrowheads and feathers in your settlement stores, ${recipeMakes('make_arrows')} a shaft, ${recipeTakes('make_arrows', 'arrow_head')} heads and ${recipeTakes('make_arrows', 'feather')} feathers; needs a carving knife in your settlement stores`; },
-  get paper() { return `press reeds in your settlement stores into papyrus at your paper presses, ${recipeMakes('make_papyrus')} sheets per ${recipeTakes('make_papyrus', 'reed')} reeds and a bucket of water; the empty bucket goes back to your settlement stores`; },
+  get paper() { return `press reeds in your settlement stores into papyrus at your paper presses, ${recipeMakes('make_papyrus')} sheets per ${recipeTakes('make_papyrus', 'reed')} reeds and ${recipeLitres('make_papyrus')} L water from your settlement stores`; },
   get glaze() { return `glaze fired pots, bowls, jars and amphorae in your settlement stores with ${GLAZE_ASH} ${GLAZE_ASH === 1 ? 'ash' : 'ashes'} each from your settlement stores; glazed pottery never decays`; },
   fill: 'fill empty buckets from your settlement stores with water at the shore or a well; output to your settlement stores',
 };
@@ -1960,7 +1963,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   tanna: {
     id: 'tanna',
     name: 'Tanna',
-    description: 'Settlement task: tan hides in your settlement stores, a hide and a bucket of lye per leather; needs a carving knife in your settlement stores. The bucket goes back with the leather.',
+    description: 'Settlement task: tan hides in your settlement stores, a hide and {tanLye} L lye per leather; needs a carving knife in your settlement stores.',
     health: 22,
     attack: 3,
     speed: 2,
@@ -3606,7 +3609,7 @@ export const MEND_QL_LEAST = 0.05;
 // A species says what it carries and pulls off its own row.
 for (const s of Object.values(SPECIES)) {
   s.description = fill(s.description, {
-    ...s, pullDefault: PULL_DEFAULT, careWanting: CARE_WANTING, dairyFull: DAIRY_FULL, healBelow: HEAL_BELOW,
+    ...s, pullDefault: PULL_DEFAULT, careWanting: CARE_WANTING, dairyFull: DAIRY_FULL, healBelow: HEAL_BELOW, tanLye: TAN_LYE,
     grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP, resinTapped: RESIN_TAPPED,
   });
 }
@@ -7053,6 +7056,24 @@ export class Creatures {
     return true;
   }
 
+  /**
+   * Litres of a liquid out of its vessels in the stores, the emptiest first, each left an empty bucket at its last
+   * litre. The island's `errand_do`, by `drain_vessel`.
+   */
+  private takeLitres(game: Game, vessel: string, litres: number): void {
+    let left = litres;
+    const piles = game.deedStores().flatMap((st) => st.items.filter((x: Item) => x.id === vessel && !x.locked).map((x: Item) => ({ st, x })))
+      .sort((a, b) => litresOf(a.x) - litresOf(b.x));
+    for (const { st, x } of piles) {
+      while (left > 0 && x.id === vessel && x.count > 0) {
+        const m = Math.min(left, litresOf(x));
+        if (!drainVessel(game, st.items, x, m, () => game.events.emit('crate'))) break;
+        left -= m;
+      }
+      if (left <= 0) return;
+    }
+  }
+
   /** How many of a thing the stores hold between them, leaving out what is locked. */
   private inStores(game: Game, id: string): number {
     return game.deedStores().reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + x.count, 0), 0);
@@ -7545,9 +7566,12 @@ export class Creatures {
     const stores = game.deedStores();
     const has = (id: string, n: number): boolean =>
       stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + x.count, 0), 0) >= n;
+    // Litres of a liquid, in its vessels in the stores (`RecipeInput.litres`).
+    const hasLitres = (id: string, n: number): boolean =>
+      stores.reduce((sum, st) => sum + st.items.filter((x: Item) => x.id === id && !x.locked).reduce((a, x) => a + litresOf(x) * x.count, 0), 0) >= n;
     for (const id of recipes) {
       const r = RECIPE_BY_ID.get(id);
-      if (!r || (r.tool && !has(r.tool, 1)) || !r.inputs.every((i) => has(i.item, i.count ?? 1))) continue;
+      if (!r || (r.tool && !has(r.tool, 1)) || !r.inputs.every((i) => (i.litres ? hasLitres(i.item, i.litres) : has(i.item, i.count ?? 1)))) continue;
       const at = stores.find((st) => st.items.some((x: Item) => x.id === r.inputs[0].item && !x.locked));
       if (at) return { recipe: r, at };
     }
@@ -7589,7 +7613,10 @@ export class Creatures {
    * for a batch after the first in the same go, which teaches nothing more and takes no more time.
    */
   private workRecipe(game: Game, c: Creature, r: Recipe, at: DeedStore | null, x: number, y: number, go = true): void {
-    for (const i of r.inputs) for (let n = 0; n < (i.count ?? 1); n++) this.takeOne(game, [i.item], at ?? undefined);
+    for (const i of r.inputs) {
+      if (i.litres) this.takeLitres(game, i.item, i.litres);
+      else for (let n = 0; n < (i.count ?? 1); n++) this.takeOne(game, [i.item], at ?? undefined);
+    }
     const kind = this.species(c).gathers ?? 'mill';
     const skill = c.skills[GATHER_SKILL[kind]] ?? 1;
     this.intoStores(game, { uid: game.inventory.nextUid++, id: r.result, ql: this.madeQl(game, c, skill), dmg: 0, count: r.count ?? 1 }, at, x, y);

@@ -1,3 +1,4 @@
+import { litresAtHand, lyeCarried, lyeVessel, LYE_USE, NEED_LYE } from '../game/placeables';
 /**
  * What the Health window says, worked out from the game and nothing else, so
  * it can be read in a test as well as drawn (`src/ui/panels/health.ts`).
@@ -224,23 +225,23 @@ export function caresFor(g: Game, w: Wound): Care[] {
   const out: Care[] = [];
   if (w.infected) {
     // Gone bad: nothing holds on it until the lye has been through it.
-    const lye = g.inventory.find('lye_bucket');
-    const n = carried(g, 'lye_bucket');
-    const target: Target | null = lye ? { kind: 'item', uid: lye.uid, wound: key } : null;
+    const lye = lyeVessel(g);
+    const n = litresAtHand(lyeCarried(g));
+    const target: Target | null = lye && n >= LYE_USE ? { kind: 'item', uid: lye.uid, wound: key } : null;
     const r = RECIPE_BY_ID.get('make_lye');
     const clean = g.skillChance('first_aid', CLEAN_CHECK, lye?.ql ?? 0, g.mindEase());
     out.push({
       id: 'clean_wound',
       title: 'Clean out',
       button: 'Clean',
-      needs: 'Needs a bucket of lye. Effect: stops health loss, wound can close; left open and bleeding until dressed.',
-      have: `Carried: ${n} ${n === 1 ? 'bucket' : 'buckets'} of lye.`,
-      holding: n > 0,
-      make: n ? null : r ? `Lye: ${recipeWords(r)}.` : null,
+      needs: `Needs ${LYE_USE} L lye. Effect: stops health loss, wound can close; left open and bleeding until dressed.`,
+      have: `Carried: ${n} L lye.`,
+      holding: n >= LYE_USE,
+      make: n >= LYE_USE ? null : r ? `Lye: ${recipeWords(r)}.` : null,
       target,
-      why: target ? ask(g, ACTION_BY_ID.get('clean_wound'), target) : 'Need a bucket of lye.',
-      options: [{ item: 'lye_bucket', label: 'Bucket of lye', does: 'Lye used either way; bucket kept', heals: null, closes: null, turns: null, have: n, chosen: !!lye, best: true }],
-      uses: lye ? { item: 'lye_bucket', label: 'bucket of lye', ql: lye.ql } : null,
+      why: target ? ask(g, ACTION_BY_ID.get('clean_wound'), target) : NEED_LYE,
+      options: [{ item: 'lye_bucket', label: 'Lye', does: `${LYE_USE} L used either way`, heals: null, closes: null, turns: null, have: n, chosen: !!lye, best: true }],
+      uses: lye ? { item: 'lye_bucket', label: 'lye', ql: lye.ql } : null,
       effect: null,
       odds: [
         { ok: true, chance: percent(clean), text: `Stops −${perMinute(woundDrain(w) * 60)}/min, can close; bleeds −${perMinute(woundDrain({ ...w, infected: false, bleeding: true }) * 60)}/min until dressed` },

@@ -1,3 +1,4 @@
+import { litresAtHand, lyeCarried, lyeVessel, LYE_USE, NEED_LYE, takeLitres } from './placeables';
 import { tryGain } from './learn';
 import type { ActionDef, Target } from './actions';
 import { maxHealth, SPECIES, type Creature } from './creatures';
@@ -193,18 +194,18 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       if (w === null) return WOUND_CLOSED;
       if (w && !w.infected) return `${capital(onYou(w))}: not infected.`;
       if (!g.player.wounds.some((x) => x.infected)) return 'No infected wounds.';
-      if (!g.inventory.has('lye_bucket')) return 'Need a bucket of lye.';
+      if (litresAtHand(lyeCarried(g)) < LYE_USE) return NEED_LYE;
       return null;
     },
     perform: (t, g) => {
       // The one asked for, or the first gone bad.
       const asked = named(g, t);
       const w = asked?.infected ? asked : g.player.wounds.find((x) => x.infected);
-      const lye = g.inventory.find('lye_bucket');
+      const lye = lyeVessel(g);
       if (!w || !lye) return;
-      g.inventory.remove(lye.uid, 1);
-      g.inventory.add('bucket', { ql: lye.ql });
-      const done = g.skillCheck('first_aid', 26, lye.ql, g.mindEase());
+      const ql = lye.ql;
+      if (!takeLitres(lyeCarried(g), LYE_USE)) return;
+      const done = g.skillCheck('first_aid', 26, ql, g.mindEase());
       g.gainSkill('first_aid', tryGain(done, CLEAN_GAIN));
       if (!done) {
         g.logMsg(`Cleaning failed: ${WOUND_KINDS[w.kind].name} still infected. Lye used.`, 'error');

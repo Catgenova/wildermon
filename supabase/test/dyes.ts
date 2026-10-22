@@ -496,7 +496,7 @@ const bT: Target = { kind: 'furniture', id: barrel.id };
     asked === 'ALLOWED' && at('FILL_ASK') === 'ALLOWED' && `${now}#${there}#${filled}` === at('FILLED') && now === `dye_bucket:${PURPLE4}` && there === 'none:none:0',
     `island ${at('FILLED')}, browser ${now}#${there}#${filled}`);
   const b = g.inventory.items[0];
-  check('and the bucket is called by its colour and its litres, the same on both sides', itemName(b) === at('NAME') && itemName(b) === 'Bucket of purple dye (4 litres)',
+  check('and the bucket is called by its colour and its litres, the same on both sides', itemName(b) === at('NAME') && itemName(b) === 'Bucket of purple dye (4 L)',
     `island ${at('NAME')}, browser ${itemName(b)}`);
   const look = act('examine_item', itemT(b));
   check('and Examine on it says the hex, QL, litres and mix, in the island\'s words', look === at('LOOK_BUCKET') && look.includes(dyeSays(dyeIn(b)!.liquid, 4)),

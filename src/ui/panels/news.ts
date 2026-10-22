@@ -85,7 +85,7 @@ import { BEARD_ODDS } from '../../game/look';
 import { EMOTE_BY_ID } from '../../game/emotes';
 import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, type PlacedFurniture } from '../../game/furniture';
-import { billWords, countOf, type Item } from '../../game/items';
+import { billWords, countOf, DRINK_LITRES, LITRE_KG, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL } from '../../game/metal';
 import { meltLumps } from '../../game/melt';
@@ -100,7 +100,7 @@ import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
-import { SHORE_REACH } from '../../game/placeables';
+import { LYE_USE, SHORE_REACH } from '../../game/placeables';
 import { DEFAULT_RANKS, lacksSaid, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay } from '../../game/ranks';
 import { DRESSING_RANK } from '../../game/wounds';
 import { ANCIENT_EFFECTS, ANCIENT_PLUS, BAUBLE_HIGH, BAUBLE_LOW, BAUBLE_SHARE, BAUBLE_TIERS, baubleTimes, REGRET_SHARE, YIELD_TIMES } from '../../game/baubles';
@@ -3124,6 +3124,24 @@ export const NEWS: News[] = [
       `Fixed: crates, chests, carts, wagons, furnaces, kilns, anvils, work posts, traps and fires picked by their drawn shape, ±${PICK_SLACK} px (±${PICK_SLACK_TOUCH} px by touch); not a box round them, not their shadow.`,
       'Fixed: where two overlap, the one drawn in front is picked.',
     ],
+  },
+  {
+    n: 241,
+    day: '2026-10-22',
+    lines: () => {
+      const water = (id: string): number => RECIPE_BY_ID.get(id)?.inputs.find((i) => i.litres)?.litres ?? 0;
+      return [
+        `Changed: buckets and skins hold litres: a bucket ${BUCKET_LITRES} L; its name says what is in it (Bucket of water (${BUCKET_LITRES - water('make_dough')} L)).`,
+        `Changed: water by the litre: dough ${water('make_dough')} L, porridge ${water('make_porridge')} L, broth ${water('make_broth')} L, ink ${water('make_ink')} L, papyrus ${water('make_papyrus')} L, herb tea ${water('brew_tea_thyme')} L; the bucket is kept.`,
+        'Changed: a recipe\'s water, lye or milk: from buckets carried, then in stores, then barrels, wells and fountains within its reach.',
+        `Changed: tanning ${TAN_LYE} L lye a hide; cleaning a wound, removing dye or paint ${LYE_USE} L lye.`,
+        'Changed: lye, cheese, dye boils and distilling take a full bucket.',
+        `Changed: a drink ${DRINK_LITRES} L; a bucket drunk dry is an empty bucket. Pour into the barrel pours what is in the bucket.`,
+        'Changed: Fill with water tops up a part bucket of water.',
+        `Changed: a bucket weighs ${itemDef('bucket').weight} kg + ${LITRE_KG} kg a litre.`,
+        'Changed: thick rope recipe: Lay up thick rope.',
+      ];
+    },
   },
 ];
 

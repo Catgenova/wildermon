@@ -10,7 +10,7 @@
  * turns them into rows. What Postgres holds is generated, never hand-edited —
  * the algorithms are ported, the constants are not.
  */
-import { CATEGORY_DECAY, ITEM_DEFS } from '../src/game/items';
+import { CATEGORY_DECAY, DRINK_LITRES, ITEM_DEFS, LITRE_KG } from '../src/game/items';
 import { BURYABLE, STONE_BEDS, BUSH_DEFS, ROAD_TILES, ROCK_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TREE_ROOM_ONE, TREE_ROOM_TWO, TREE_SEEDS, TREE_SEED_BOTH, TREE_SEED_NONE, TREE_SEED_REACH, TREE_DAWN_UTC } from '../src/world/tiles';
 import { STEPS_BRICKS, STEPS_LEAST, STEPS_MORTAR, STEPS_MOST, STEPS_NAILS, STEPS_PLANKS, STEPS_SLABS, STEPS_TIMBER, STEPS_TWIST, TileType } from '../src/world/tiles';
 import { STEPS_BACK } from '../src/game/steps';
@@ -113,7 +113,7 @@ import { isSeam } from '../src/world/tiles';
 import { CHIP_CHANCE, GRASS_PLANT, KIT_MEND, MOSS_PLANT, TRY_LEARN } from '../src/game/actions';
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GUARDIAN_REACH, SOUL_FX } from '../src/game/talents';
 import { BLOCK_MOST } from '../src/game/fight';
-import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY } from '../src/game/placeables';
+import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE } from '../src/game/placeables';
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
 import {
@@ -993,6 +993,8 @@ out.push(`create table if not exists recipe_input (
   ord int not null, item text not null, count int not null default 1,
   primary key (recipe, ord)
 );`);
+/* Litres of a liquid rather than whole things, out of any vessel or barrel of it at hand (`RecipeInput.litres`). */
+out.push(`alter table recipe_input add column if not exists litres int;`);
 /* What a craft hands back besides the thing itself: the bucket the lye was
  * mixed in on success, and what is left of a spoiled batch on failure. */
 out.push(`create table if not exists recipe_gives (
@@ -1813,6 +1815,8 @@ for (const [fn, v] of [
   ['hunger_rate', HUNGER_RATE], ['thirst_rate', THIRST_RATE],
   ['say_max', SAY_MAX], ['say_a_minute', SAY_A_MINUTE],
   ['wind_rest', WIND_REST], ['wind_walk', WIND_WALK], ['wind_per_level', WIND_PER_LEVEL], ['stamina_bar_per_level', STAMINA_BAR_PER_LEVEL],
+  // Litres (`items.ts`, `placeables.ts`).
+  ['litre_kg', LITRE_KG], ['lye_use', LYE_USE], ['drink_litres', DRINK_LITRES],
   ['wind_starving', WIND_STARVING], ['heal_rate', HEAL_RATE], ['heal_fed', HEAL_FED],
   /*
    * And deep water, which the island kept two numbers for and never spent.
@@ -2340,7 +2344,7 @@ for (const r of RECIPES) {
      q(!!r.consumeOnFail), q(!!r.qlFromInputs), q(r.material), q(r.wood), q(r.extra), q(r.done), q(r.fail)].join(', ') + `);`);
   if (r.deed) out.push(`update recipe set deed = true where id = ${q(r.id)};`);
   r.inputs.forEach((i, n) => {
-    out.push(`insert into recipe_input values (${q(r.id)}, ${n}, ${q(i.item)}, ${q(i.count ?? 1)});`);
+    out.push(`insert into recipe_input (recipe, ord, item, count, litres) values (${q(r.id)}, ${n}, ${q(i.item)}, ${q(i.count ?? 1)}, ${q(i.litres ?? null)});`);
   });
   for (const [item, count] of r.returns ?? []) {
     out.push(`insert into recipe_gives values (${q(r.id)}, ${q(item)}, ${q(count)}, 'return');`);

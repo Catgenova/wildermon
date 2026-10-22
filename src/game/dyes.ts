@@ -3,7 +3,7 @@ import type { Game } from './game';
 import { ARMOUR_BY_ID } from './gear';
 import { describeWith, ITEM_DEFS, itemDef, type Item } from './items';
 import { BUCKET_LITRES, furnitureName, holdsLiquid, isWell, litresIn, type PlacedFurniture } from './furniture';
-import { drawFrom, dyeInPiece, vesselBecomes } from './placeables';
+import { drawFrom, dyeInPiece, litresAtHand, lyeCarried, LYE_USE, NEED_LYE, takeLitres, vesselBecomes } from './placeables';
 import {
   colourWord, DYE_BUCKET, DYE_LITRES, DYE_LITRES_PER_KG, DYE_PANE_LITRES, DYE_QL_BLACK, DYE_QL_PURE, DYE_QL_WHITE, dyeGrams, dyeHex, dyeIn, dyeLitresFor,
   dyeRecipeId, dyeSays, DYESTUFF_OF, DYESTUFFS, dyeText, isHex, kgSaid, pureDye, type DyeLiquid, type Dyestuff,
@@ -309,15 +309,12 @@ export const DYE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       const it = itemOf(g, t);
       if (!it?.dye || !takesDye(it.id)) return 'No colour to remove.';
-      if (!g.inventory.has('lye_bucket')) return 'Need a bucket of lye.';
+      if (litresAtHand(lyeCarried(g)) < LYE_USE) return NEED_LYE;
       return null;
     },
     perform: (t, g) => {
       const it = itemOf(g, t);
-      const lye = g.inventory.find('lye_bucket');
-      if (!it || !lye) return;
-      g.inventory.remove(lye.uid, 1);
-      g.inventory.add('bucket', { ql: lye.ql });
+      if (!it || !takeLitres(lyeCarried(g), LYE_USE)) return;
       delete it.dye;
       g.gainSkill('alchemy', 0.2);
       g.logMsg(`Dye removed: plain ${itemDef(it.id).name.toLowerCase()}.`, 'event');

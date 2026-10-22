@@ -214,7 +214,7 @@ begin
   insert into said values ('GATES', v_t || '|' || ${count('broth')} || ':' || ${count('bone')} || ':' || ${count('water_bucket')} || ':'
     || ${count('ale_bucket')} || ':' || ${count('spirit_bucket')} || ':' || ${count('bucket')} || ':'
     || coalesce((select charges::text from item where id = ${newest('spirit_bucket')}), 'none'));
-  ${clear('broth', 'bucket', 'spirit_bucket')};
+  ${clear('broth', 'bucket', 'spirit_bucket', 'water_bucket')};
   ${hold('Broth', 'Frugal Cook')};
   perform give(w, u, 'bone', 2, 35); perform give(w, u, 'water_bucket', 1, 30);
   ${craft('make_broth')};
@@ -339,8 +339,9 @@ begin
   ${item('pour_into_barrel', 'v_u::bigint')};
   v_t := v_t || '|' || (select coalesce(knack::text, 'none') from placed where id = v_barrel)
     || ':' || (select def || ':' || ${markOfRow('v_u::bigint')} from item where id = v_u::bigint);
-  -- The strong bucket into an empty barrel makes it strong again.
+  -- The strong bucket into an empty barrel makes it strong again: full again first, a drink having gone out of it.
   update placed set litres = 0, liquid = null, knack = null where id = v_barrel;
+  update item set charges = null where id = v_it;
   ${item('pour_into_barrel', 'v_it')};
   v_t := v_t || '|' || (select coalesce(liquid, 'none') || ':' || litres || ':' || coalesce(knack::text, 'none') from placed where id = v_barrel)
     || ':' || (select def || ':' || ${markOfRow('v_it')} from item where id = v_it);
@@ -452,12 +453,12 @@ check(`${P('Broth').name} and ${P('Distil').name}: refused without them, in the 
   brothNo === RECIPE_PERK_SAYS.broth && distilNo === RECIPE_PERK_SAYS.distil && brothYes === 'ALLOWED' && distilYes === 'ALLOWED', gates);
 const broth = RECIPES.find((r) => r.id === 'make_broth')!;
 const distil = RECIPES.find((r) => r.id === 'distil_ale')!;
-check('a broth takes its two bones and the water, and gives back the bucket; a spirit takes three buckets of ale and gives back two, full',
-  gatesMade === `${broth.count}:0:0:0:1:${(broth.returns?.[0]?.[1] ?? 0) + (distil.returns?.[0]?.[1] ?? 0)}:${ITEM_DEFS.spirit_bucket.charges}`,
+check('a broth takes its two bones and its litres of water, the bucket kept with the rest; a spirit takes three buckets of ale and gives back two, full',
+  gatesMade === `${broth.count}:0:1:0:1:${distil.returns?.[0]?.[1] ?? 0}:${ITEM_DEFS.spirit_bucket.charges}`,
   gatesMade);
 const [frugalBroth, frugalBrothSaid] = say('FRUGALBROTH').split('|');
 check('and Frugal Cook gives back a bone from a broth, never the water',
-  frugalBroth === '1:35.00:0:1' && frugalBrothSaid === 'Frugal Cook: a bone kept.', say('FRUGALBROTH'));
+  frugalBroth === '1:35.00:1:0' && frugalBrothSaid === 'Frugal Cook: a bone kept.', say('FRUGALBROTH'));
 
 /* ---- Eating ------------------------------------------------------------------------------ */
 

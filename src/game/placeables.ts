@@ -28,7 +28,8 @@ import {
   type PlacedFurniture,
 } from './furniture';
 import type { Game } from './game';
-import { itemDef, markOf, type Item } from './items';
+import { describeWith, itemDef, litresOf, markOf, type Item } from './items';
+import type { CraftStock } from './recipes';
 import { swingEnchant } from './enchant';
 import { world } from './pace';
 import { DYE_BUCKET, dyeIn, dyeSays, dyeText, mixDye, readDye, type DyeLiquid } from './dyestuffs';
@@ -242,6 +243,112 @@ export function drawFrom(g: Game, f: PlacedFurniture, litres: number): boolean {
   g.events.emit('crate');
   g.events.emit('world', f.x, f.y);
   return true;
+}
+
+/** Litres of one liquid somewhere to hand, and how to take some of them (`litreSources`). */
+export interface LitreSource {
+  litres: number;
+  carried: boolean;
+  take(n: number): boolean;
+}
+
+/**
+ * Litres off one vessel of a pile, in place: the vessel comes off the top of
+ * its pile first where there are more of it, and is the empty one it leaves
+ * once its last litre is taken (a bucket). The island's `drain_vessel`.
+ */
+export function drainVessel(g: Game, list: Item[], item: Item, n: number, touched?: () => void): boolean {
+  const have = litresOf(item);
+  if (n <= 0 || have < n || item.count < 1) return false;
+  let one = item;
+  if (item.count > 1) {
+    item.count -= 1;
+    one = { ...item, uid: g.inventory.nextUid++, count: 1 };
+    list.push(one);
+  }
+  if (have - n > 0) one.charges = have - n;
+  else {
+    one.id = VESSELS[one.id]?.empty ?? 'bucket';
+    delete one.charges;
+    delete one.dye;
+    // What the knack of what it held was goes with the last of it.
+    const { knack: _was, ...rest } = one.mark ?? {};
+    if (Object.keys(rest).length) one.mark = rest;
+    else delete one.mark;
+  }
+  touched?.();
+  return true;
+}
+
+/**
+ * Every place a litre of one liquid can be had from for a craft or a job, in
+ * the order it is taken: the vessels of it carried, the emptiest first so a
+ * part bucket is finished before a full one is started; then the vessels of it
+ * in the stores within reach; then the barrels, wells and fountains holding it
+ * within `reach` tiles, the fullest first, none still working. `vessel` is the
+ * full vessel of that liquid, a Bucket of water for water. The island's
+ * `litre_sources`.
+ */
+export function litreSources(g: Game, vessel: string, reach: number | null, stock: readonly CraftStock[]): LitreSource[] {
+  const liquid = VESSELS[vessel]?.liquid;
+  if (!liquid) return [];
+  const out: Array<LitreSource & { order: number }> = [];
+  for (const s of stock) {
+    if (s.item.id !== vessel || !s.list || litresOf(s.item) <= 0) continue;
+    const { item, list, touched } = s;
+    out.push({
+      litres: litresOf(item) * item.count,
+      carried: s.carried,
+      order: (s.carried ? 0 : 1000) + litresOf(item),
+      take: (n) => {
+        let left = n;
+        while (left > 0 && item.count > 0 && item.id === vessel) {
+          const m = Math.min(left, litresOf(item));
+          if (!drainVessel(g, list, item, m, touched)) return false;
+          left -= m;
+        }
+        return left <= 0;
+      },
+    });
+  }
+  out.sort((a, b) => a.order - b.order);
+  // No reach: what is carried, and nothing standing.
+  if (reach === null) return out;
+  const placed = g.furnitureWithin(Math.ceil(reach) + 1)
+    .filter((f) => holdsLiquid(f) && f.liquid === liquid && !isWorking(f) && litresIn(f) > 0 && nearPiece(g, f, reach))
+    .sort((a, b) => litresIn(b) - litresIn(a));
+  for (const f of placed) out.push({ litres: litresIn(f), carried: false, order: 2000, take: (n) => drawFrom(g, f, n) });
+  return out;
+}
+
+/**
+ * Litres of lye a wound cleaned out, a colour boiled out of a thing or paint
+ * scrubbed off a wall takes, out of the lye carried. The island's `lye_use()`.
+ */
+export const LYE_USE = 1;
+describeWith({ lyeUse: LYE_USE });
+/** The lye carried, in the pack or a bag, as `litreSources` takes it. */
+export const lyeCarried = (g: Game): LitreSource[] =>
+  litreSources(g, 'lye_bucket', null, g.craftStock(undefined, true, 0).filter((s) => s.carried));
+/** The first vessel of lye carried, whose QL a cleaning is done at. */
+export const lyeVessel = (g: Game): Item | undefined =>
+  g.craftStock(undefined, true, 0).find((s) => s.carried && s.item.id === 'lye_bucket' && litresOf(s.item) > 0)?.item;
+/** What a job that takes lye says without it. */
+export const NEED_LYE = `Need ${LYE_USE} L lye.`;
+
+/** The litres all of them hold between them. */
+export const litresAtHand = (sources: readonly LitreSource[]): number => sources.reduce((n, s) => n + s.litres, 0);
+
+/** Take `n` litres across them, in their order; false, and nothing taken, when there are not that many. */
+export function takeLitres(sources: readonly LitreSource[], n: number): boolean {
+  if (litresAtHand(sources) < n) return false;
+  let left = n;
+  for (const s of sources) {
+    if (left <= 0) break;
+    const m = Math.min(left, s.litres);
+    if (m > 0 && s.take(m)) left -= m;
+  }
+  return left <= 0;
 }
 
 export const PLACEABLE_ACTIONS: ActionDef[] = [
@@ -746,13 +853,17 @@ export const PLACEABLE_ACTIONS: ActionDef[] = [
         if (t.count !== undefined) t.count -= 1;
         return nextVessel(g, t.uid) !== undefined;
       }
-      const poured = Math.min(BUCKET_LITRES, room);
+      // What is in the bucket, as much of it as there is room for; what does not fit stays in the bucket.
+      const had = litresOf(item);
+      const poured = Math.min(had, Math.floor(room));
       // What is poured in is only as good as the worst of what it goes into
       // (a Cook's Strong Brew): nothing plain is made better by the barrel.
       const knack = litresIn(barrel) > 0 ? Math.min(barrel.knack ?? 1, markOf(item, 'knack')) : markOf(item, 'knack');
       // Every liquid but water keeps its QL poured: the bucket's into an empty barrel, the average by litres into one of the same (`pouredQl`).
       const ql = keepsQl(vessel.liquid) ? pouredQl(barrel, g.wallNow(), poured, item.ql) : undefined;
-      if (poured <= 0 || !vesselBecomes(g, item, vessel.empty)) return;
+      if (poured <= 0) return;
+      if (poured >= had ? !vesselBecomes(g, item, vessel.empty)
+        : !drainVessel(g, g.inventory.bagWith(item.uid)?.inside ?? g.inventory.items, item, poured, () => { g.inventory.onChange?.(); g.events.emit('inventory'); })) return;
       // And a barrel poured into does not age: what went in was kept somewhere else (`ageing.ts`).
       delete barrel.agedFrom;
       if (ql !== undefined) barrel.ql = ql;

@@ -22,6 +22,7 @@
  * Runs against the database the suite leaves behind, in one transaction that
  * is rolled back.
  */
+import { NEED_LYE } from '../../src/game/placeables';
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
@@ -155,7 +156,7 @@ const forGone = caresFor(g, gone);
 const lyeR = RECIPE_BY_ID.get('make_lye');
 check('for a wound gone bad it offers the lye, and only that', forGone.length === 1 && forGone[0].id === 'clean_wound', forGone.map((c) => c.id).join());
 check('and with none carried, says so, how lye is made, and why it cannot be done',
-  !forGone[0].holding && !!lyeR && forGone[0].make === `Lye: ${recipeWords(lyeR)}.` && forGone[0].why === 'Need a bucket of lye.',
+  !forGone[0].holding && !!lyeR && forGone[0].make === `Lye: ${recipeWords(lyeR)}.` && forGone[0].why === NEED_LYE,
   `${forGone[0].make} / ${forGone[0].why}`);
 const forOpen = caresFor(g, fresh);
 const dress = forOpen.find((c) => c.id === 'bind_wound');

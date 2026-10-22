@@ -433,7 +433,8 @@ begin
   ${craft('brew_tea_thyme')};
   ${craft('make_salve_thyme')};
   ${craft('make_tincture_thyme')};
-  insert into said values ('REMEDY', v_t || '|' || ${count('herb_tea')} || ':' || ${count('salve')} || ':' || ${count('tincture')} || ':' || ${count('bucket')});
+  insert into said values ('REMEDY', v_t || '|' || ${count('herb_tea')} || ':' || ${count('salve')} || ':' || ${count('tincture')} || ':'
+    || coalesce((select string_agg(item_litres(i)::text, ',') from item i where i.world_id = w and i.holder_uid = u and i.def = 'water_bucket'), 'none'));
 
   /* ---- Herb tea: stamina back, and refused when there is none to put back. ---- */
   perform pg_temp.hold(w, u, '{}');
@@ -629,9 +630,10 @@ const [refusals, made] = say('REMEDY').split('|');
 const r = refusals.split('#');
 check('the three remedies are refused without their perks, in the browser\'s words',
   r[0] === RECIPE_PERK_SAYS.herb_tea && r[1] === RECIPE_PERK_SAYS.salve && r[2] === RECIPE_PERK_SAYS.tincture, r.slice(0, 3).join(' / '));
-check(`${P('Herb Tea').name}, ${P('Salve').name}, ${P('Tincture').name}: and made with them, the tea's bucket back`,
+const teaWater = RECIPE_BY_ID.get('brew_tea_thyme')?.inputs.find((i) => i.litres)?.litres ?? 0;
+check(`${P('Herb Tea').name}, ${P('Salve').name}, ${P('Tincture').name}: and made with them, the tea's ${teaWater} L of water out of its bucket`,
   r[3] === 'ALLOWED' && r[4] === 'ALLOWED' && r[5] === 'ALLOWED'
-    && made === `${RECIPE_BY_ID.get('brew_tea_thyme')?.count}:1:1:1`, `${r.slice(3).join(' / ')} | ${made}`);
+    && made === `${RECIPE_BY_ID.get('brew_tea_thyme')?.count}:1:1:${5 - teaWater}`, `${r.slice(3).join(' / ')} | ${made}`);
 const stamina = ITEM_DEFS.herb_tea.stamina ?? 0;
 const [teaFull, teaAfter, teaSaid] = say('TEA').split('|');
 check(`a cup of herb tea puts back ${percent(stamina)} of your stamina, and is refused when you are not tired`,

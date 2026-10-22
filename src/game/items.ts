@@ -57,7 +57,7 @@ export interface ItemDef {
    * without a line here feeds nothing but the food bar.
    */
   feeds?: Partial<Record<Nutrient, number>>;
-  /** Container capacity in drinks; the item carries `charges` of them. */
+  /** What it holds when full, in litres for a vessel or a skin (one drink a litre); the item carries `charges` of them (`litresOf`). */
   charges?: number;
   /**
    * Litres it holds when it is full, for a vessel that fills a little at a
@@ -202,8 +202,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   crate_plank: { name: 'Plank crate', category: 'misc', weight: 15, decay: 6, description: 'Holds {capacity} things. Placed on any spot of a tile.' },
   water_skin: { name: 'Water skin', category: 'misc', weight: 0.5, drink: 0.35, charges: 5, description: 'Holds water. Fill at any shore.' },
   bucket: { name: 'Bucket', category: 'tool', weight: 1.6, decay: 8, description: 'Fill at any shore. Ashes and water make lye in it.' },
-  water_bucket: { name: 'Bucket of water', category: 'tool', weight: 6, decay: 8, description: 'Leaches ashes into lye.' },
-  lye_bucket: { name: 'Bucket of lye', category: 'tool', weight: 6, decay: 10, description: 'Tans one hide.' },
+  water_bucket: { name: 'Bucket of water', category: 'tool', weight: 6, decay: 8, charges: 5, description: '{bucketLitres} L. Full: leaches ashes into lye.' },
+  lye_bucket: { name: 'Bucket of lye', category: 'tool', weight: 6, decay: 10, charges: 5, description: '{bucketLitres} L. Tanning a hide: {recipe.tan_hide.lye_bucket} L. Cleaning a wound, removing dye or paint: {lyeUse} L.' },
   dirt: { name: 'Dirt', category: 'material', weight: 20, stackable: true, raw: true, description: 'Drop to raise the ground.' },
   moss: { name: 'Moss', category: 'material', weight: 0.5, stackable: true, raw: true, description: 'Cutting a moss tile gives {moss.cut}. Plant {moss.plant} on a dirt tile: the tile becomes moss.' },
   sand: { name: 'Sand', category: 'material', weight: 20, stackable: true, raw: true },
@@ -779,7 +779,7 @@ export interface Item {
   count: number;
   /** Free text qualifier such as a wood or tree species. */
   extra?: string;
-  /** Remaining drinks in a container, or seconds of candle left in a lantern. */
+  /** Litres left in a vessel or a skin (`litresOf`), or seconds of candle left in a lantern. */
   charges?: number;
   /** Alight, for the things that burn. */
   lit?: boolean;
@@ -1252,6 +1252,55 @@ export const billWords = (bill: ReadonlyArray<readonly [string, number]>, figure
  * Mender's sealant is on does not decay at all (`seal`), nor a pot an
  * Artisan has glazed (`glaze`).
  */
+/** What a barrel or a bucket may hold. */
+export type LiquidKind = 'water' | 'lye' | 'milk' | 'ale' | 'cider' | 'mead' | 'wine' | 'grape_wine' | 'juice' | 'spirit' | 'dye' | 'whey';
+export const LIQUID_NAME: Record<LiquidKind, string> = { water: 'water', lye: 'lye', milk: 'milk', ale: 'ale', cider: 'cider', mead: 'mead', wine: 'wine', grape_wine: 'grape wine', juice: 'juice', spirit: 'spirit', dye: 'dye', whey: 'whey' };
+/** A bucket holds five litres, whichever way it is going. */
+export const BUCKET_LITRES = 5;
+/** Which liquid a full vessel is carrying, and which empty vessel it leaves. */
+export const VESSELS: Record<string, { liquid: LiquidKind; empty: string }> = {
+  water_bucket: { liquid: 'water', empty: 'bucket' },
+  lye_bucket: { liquid: 'lye', empty: 'bucket' },
+  milk_bucket: { liquid: 'milk', empty: 'bucket' },
+  ale_bucket: { liquid: 'ale', empty: 'bucket' },
+  cider_bucket: { liquid: 'cider', empty: 'bucket' },
+  mead_bucket: { liquid: 'mead', empty: 'bucket' },
+  wine_bucket: { liquid: 'wine', empty: 'bucket' },
+  grape_wine_bucket: { liquid: 'grape_wine', empty: 'bucket' },
+  juice_bucket: { liquid: 'juice', empty: 'bucket' },
+  spirit_bucket: { liquid: 'spirit', empty: 'bucket' },
+  // Dye, which says what is in it on the bucket itself (`dyestuffs.ts`).
+  dye_bucket: { liquid: 'dye', empty: 'bucket' },
+  // Whey, which a bucket of milk pressed into cheese leaves in the bucket (`dairy.ts`).
+  whey_bucket: { liquid: 'whey', empty: 'bucket' },
+};
+/** Which full vessel a litre of each liquid fills an empty bucket into. */
+export const BUCKET_OF: Record<LiquidKind, string> = { water: 'water_bucket', lye: 'lye_bucket', milk: 'milk_bucket', ale: 'ale_bucket', cider: 'cider_bucket', mead: 'mead_bucket', wine: 'wine_bucket', grape_wine: 'grape_wine_bucket', juice: 'juice_bucket', spirit: 'spirit_bucket', dye: 'dye_bucket', whey: 'whey_bucket' };
+
+/** Litres a drink out of a skin or a bucket takes. The island's `drink_litres()`. */
+export const DRINK_LITRES = 1;
+/** Litres of lye tanning a hide takes (`tan_hide`). */
+export const TAN_LYE = 1;
+
+/**
+ * A litre of what a vessel holds, in kilograms: what a full bucket of water
+ * weighs over an empty one, by its litres. The island's `litre_kg`.
+ */
+export const LITRE_KG = Math.round((ITEM_DEFS.water_bucket.weight - ITEM_DEFS.bucket.weight) / (ITEM_DEFS.water_bucket.charges ?? BUCKET_LITRES) * 1000) / 1000;
+
+/**
+ * The litres in a vessel or a skin: its `charges`, full where it has none
+ * (one made before vessels held litres); a bucket of dye, its dye's. The
+ * island's `item_litres`.
+ */
+export function litresOf(item: { id: string; charges?: number; dye?: string }): number {
+  if (item.id === 'dye_bucket') return dyeIn(item as Item)?.litres ?? 0;
+  const def = ITEM_DEFS[item.id];
+  // A part bucket is as full as it was milked (`dairy.ts`).
+  if (def?.fills) return item.charges ?? 0;
+  return item.charges ?? def?.charges ?? 0;
+}
+
 export function groundDecayRate(item: Item): number {
   const def = itemDef(item.id);
   const base = def.decay ?? CATEGORY_DECAY[def.category];
@@ -1259,10 +1308,14 @@ export function groundDecayRate(item: Item): number {
     * markOf(item, 'glaze') * (item.cool ?? 1);
 }
 
-/** What one of a thing weighs, which is its make and what it is made of. */
-export const unitWeight = (item: { id: string; extra?: string }): number => itemDef(item.id).weight * matOfItem(item).weight;
+/**
+ * What one of a thing weighs, which is its make and what it is made of; a
+ * vessel, its empty make and the litres in it (`LITRE_KG`).
+ */
+export const unitWeight = (item: { id: string; extra?: string; charges?: number; dye?: string }): number =>
+  (VESSELS[item.id] ? itemDef(VESSELS[item.id].empty).weight + litresOf(item) * LITRE_KG : itemDef(item.id).weight) * matOfItem(item).weight;
 /** What a whole stack of it weighs, and everything it has inside it. */
-export const itemWeight = (item: { id: string; extra?: string; count: number; inside?: Item[] }): number =>
+export const itemWeight = (item: { id: string; extra?: string; charges?: number; dye?: string; count: number; inside?: Item[] }): number =>
   unitWeight(item) * item.count + (item.inside ?? []).reduce((n, it) => n + itemWeight(it), 0);
 
 // ---- Bags: the things that hold other things. ----
@@ -1426,9 +1479,9 @@ export function itemName(item: Item): string {
     : held ? `${def.name.replace(/ dye$/, '')} ${colourWord(dyeHex(held.liquid))} dye` : def.name;
   const base = words ? `${words.charAt(0).toUpperCase()}${words.slice(1)} ${plain.toLowerCase()}` : plain;
   let name = item.extra ? `${base} (${item.extra.toLowerCase()})` : base;
-  if (held) name += ` (${held.litres} ${held.litres === 1 ? 'litre' : 'litres'})`;
-  if (def.charges) name += ` (${item.charges ?? 0}/${def.charges})`;
-  else if (def.fills) name += ` (${item.charges ?? 0} of ${def.fills} litres)`;
+  // What a vessel holds, in litres: a Bucket of water (3 L).
+  if (held) name += ` (${held.litres} L)`;
+  else if (def.charges || def.fills) name += ` (${litresOf(item)} L)`;
   // And what is enchanted into it: a Sword (iron) (Emberbrand).
   return name + enchantMarker(item.enchant);
 }

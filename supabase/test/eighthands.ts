@@ -162,7 +162,7 @@ check('the words give the numbers the recipes use',
 
 for (const [id, , after] of AT_STORES) check(`on the island, a ${id} works its makings into what the recipe makes: ${after}`, at(`MADE:${id}`) === after, at(`MADE:${id}`));
 check('a papra presses nothing with no paper press on the settlement', at('NOPRESS') === 'reed 4,water_bucket 1', at('NOPRESS'));
-check('and at one, presses the reeds into papyrus and puts the bucket back', at('PAPER') === 'bucket 1,papyrus 3', at('PAPER'));
+check('and at one, presses the reeds into papyrus, its water out of the bucket', at('PAPER') === 'papyrus 3,water_bucket 1', at('PAPER'));
 check('a glossa glazes the bare pot with the ash and leaves the glazed bowl as it was', at('GLAZE') === 'clay_bowl 1,clay_pot 1|clay_bowl:0,clay_pot:0', at('GLAZE'));
 const [fillStores, wellDrawn, fillHeld] = at('FILL').split('|');
 check('a dippa fills the empty bucket at the well and puts it back full', fillStores === 'water_bucket 1' && wellDrawn === 'true' && fillHeld === 'empty-handed', at('FILL'));
@@ -216,8 +216,8 @@ for (const [id, items, after] of AT_STORES) {
   const before = inCrate(crate);
   g.addFurniture(PAPER_PRESS, 23, 21, 0, 0, 30);
   run(g, 60);
-  check('a papra presses nothing with no paper press, and at one presses the reeds into papyrus and puts the bucket back',
-    before === 'reed 4,water_bucket 1' && inCrate(crate) === 'bucket 1,papyrus 3', `${before} / ${inCrate(crate)}`);
+  check('a papra presses nothing with no paper press, and at one presses the reeds into papyrus, its water out of the bucket',
+    before === 'reed 4,water_bucket 1' && inCrate(crate) === 'papyrus 3,water_bucket 1', `${before} / ${inCrate(crate)}`);
 }
 {
   const g = body();

@@ -32,9 +32,9 @@ import type { Target } from '../../src/game/actions';
 import { SHEAR_WOOL } from '../../src/game/creatureActions';
 import { tackSpeed } from '../../src/game/creatures';
 import { furnitureDef } from '../../src/game/furniture';
-import { bagRoom, ITEM_DEFS, markSays, RARITY_ODDS, type Item, type Mark } from '../../src/game/items';
+import { bagRoom, ITEM_DEFS, markSays, RARITY_ODDS, TAN_LYE, type Item, type Mark } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
-import { CRAFT_REACH, madeSaid, SPARED, needOf, RECIPE_BY_ID, RECIPE_PERK_SAYS, reachFor, recipeReason } from '../../src/game/recipes';
+import { CRAFT_REACH, madeSaid, SPARED, VESSEL_KEPT, needOf, RECIPE_BY_ID, RECIPE_PERK_SAYS, reachFor, recipeReason } from '../../src/game/recipes';
 import { creelOdds, TRAPS } from '../../src/game/traps';
 
 const psql = (sql: string): string =>
@@ -362,20 +362,20 @@ ${SURE.map(([name, recipe, makes], i) => `
   perform pg_temp.hold(w, u, '{}');
   perform give(w, u, 'hide', 1, 30); perform give(w, u, 'lye_bucket', 1, 30);
   ${craft('tan_hide')};
-  v_t := ${count('leather')} || ':' || ${count('lye_bucket')} || ':' || ${count('bucket')};
+  v_t := ${count('leather')} || ':' || coalesce((select string_agg(item_litres(i)::text, ',') from item i where i.world_id = w and i.holder_uid = u and i.def = 'lye_bucket'), '0');
   ${clear('leather', 'lye_bucket', 'bucket', 'hide')};
   ${hold('Lye Saver')};
   perform give(w, u, 'hide', 1, 30); perform give(w, u, 'lye_bucket', 1, 30);
   ${dice(LYE - 0.01)};
   ${craft('tan_hide')};
-  v_t := v_t || '|' || ${count('leather')} || ':' || ${count('lye_bucket')} || ':' || ${count('bucket')}
+  v_t := v_t || '|' || ${count('leather')} || ':' || coalesce((select string_agg(item_litres(i)::text, ',') from item i where i.world_id = w and i.holder_uid = u and i.def = 'lye_bucket'), '0')
     || '|' || coalesce(${last('Lye Saver:%')}, 'unsaid');
   ${nodice};
   ${clear('leather', 'lye_bucket', 'bucket', 'hide')};
   perform give(w, u, 'hide', 1, 30); perform give(w, u, 'lye_bucket', 1, 30);
   ${dice(LYE)};
   ${craft('tan_hide')};
-  insert into said values ('LYE', v_t || '|' || ${count('leather')} || ':' || ${count('lye_bucket')} || ':' || ${count('bucket')});
+  insert into said values ('LYE', v_t || '|' || ${count('leather')} || ':' || coalesce((select string_agg(item_litres(i)::text, ',') from item i where i.world_id = w and i.holder_uid = u and i.def = 'lye_bucket'), '0'));
   ${nodice};
   ${clear('leather', 'lye_bucket', 'bucket', 'hide')};
 
@@ -661,9 +661,9 @@ check(`${P('Sack Maker').name} and ${P('Deep Pockets').name}: marked ${sackHold}
     && bags1.sack?.room === Math.round((ITEM_DEFS.sack.holds ?? 0) * sackHold),
   `${say('BAGS1')} (browser ${['sack', 'satchel', 'backpack'].map((b) => roomOf(b, bags1[b]?.mark ?? null)).join(',')})`);
 const [lyePlain, lyeKept, lyeSaid, lyeOver] = say('LYE').split('|');
-check('a hide tanned without it takes the lye and gives back the bucket', lyePlain === '1:0:1', lyePlain);
+check(`a hide tanned without it takes ${TAN_LYE} L of the lye`, lyePlain === `1:${5 - TAN_LYE}`, lyePlain);
 check(`${P('Lye Saver').name}: with the dice under ${LYE}, the lye is still in the bucket, and said; at ${LYE}, it is spent`,
-  lyeKept === '1:1:0' && lyeSaid === 'Lye Saver: bucket not used up.' && lyeOver === '1:0:1', say('LYE'));
+  lyeKept === '1:5' && lyeSaid === VESSEL_KEPT && lyeOver === `1:${5 - TAN_LYE}`, say('LYE'));
 
 /* ---- Tack and yokes ------------------------------------------------------------------------ */
 

@@ -1,3 +1,4 @@
+import { litresAtHand, lyeCarried, LYE_USE, NEED_LYE, takeLitres } from './placeables';
 import type { ActionDef, Target } from './actions';
 import {
   borderOf,
@@ -504,16 +505,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t) || !t.side) return 'Choose a side.';
       const wall = wallAt(g, t);
       if (!wall?.dye) return 'No colour to remove.';
-      if (!g.inventory.has('lye_bucket')) return 'Need a bucket of lye.';
+      if (litresAtHand(lyeCarried(g)) < LYE_USE) return NEED_LYE;
       return null;
     },
     perform: (t, g) => {
       if (!isTile(t) || !t.side) return;
       const wall = wallAt(g, t);
-      const lye = g.inventory.find('lye_bucket');
-      if (!wall || !lye) return;
-      g.inventory.remove(lye.uid, 1);
-      g.inventory.add('bucket', { ql: lye.ql });
+      if (!wall || !takeLitres(lyeCarried(g), LYE_USE)) return;
       delete wall.dye;
       g.gainSkill('alchemy', 0.2);
       g.logMsg(`Paint removed: bare ${material(wall.material)?.name.toLowerCase() ?? 'stone'}.`, 'event');

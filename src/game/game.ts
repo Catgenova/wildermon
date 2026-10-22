@@ -6945,7 +6945,7 @@ export class Game {
     const spare = this.settings.spareRare && !every;
     const kept = (it: Item): boolean => !spare || !(it.rare ?? 0) || it.uid === chosen;
     for (const it of pack.items) {
-      if (pack.loose(it) && kept(it)) out.push({ item: it, carried: true, spend: (n) => pack.remove(it.uid, n) });
+      if (pack.loose(it) && kept(it)) out.push({ item: it, carried: true, spend: (n) => pack.remove(it.uid, n), list: pack.items, touched: () => { pack.onChange?.(); this.events.emit('inventory'); } });
     }
     for (const bag of pack.items) {
       const inside = bag.inside;
@@ -6960,6 +6960,8 @@ export class Game {
             pack.onChange?.();
             return true;
           },
+          list: inside,
+          touched: () => { pack.onChange?.(); this.events.emit('inventory'); },
         });
       }
     }
@@ -6975,6 +6977,8 @@ export class Game {
             this.events.emit('crate');
             return true;
           },
+          list: store.items,
+          touched: () => this.events.emit('crate'),
         });
       }
     }

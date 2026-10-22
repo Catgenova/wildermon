@@ -85,7 +85,7 @@ import { butcherYield } from '../../game/butcher';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
 import { FRUITING, fruitingSeasons, fruitsIn } from '../../game/fruiting';
-import { BUCKET_LITRES, FURNITURE, furnitureDef, LIQUID_NAME, type LiquidKind, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
+import { BUCKET_LITRES, FURNITURE, furnitureDef, LIQUID_NAME, type LiquidKind, VESSELS, POND_EVERY, STATION_REACH, teamSaid, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BUTTER_CHURN, CHURN_BUTTER, MILK_READY, milkLitres, WHEY_FEED } from '../../game/dairy';
 import { STONES_DEPTH, STONES_DIFFICULTY, STONES_SLABS, WATER_GARDEN_ACTIONS, yearSays } from '../../game/watergarden';
 import { WATER_PLANT_BY_ID, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING, type WaterPlantDef } from '../../world/waterplants';
@@ -100,7 +100,7 @@ import {
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
-import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { guidePages, keepable } from '../../game/guide';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -114,7 +114,7 @@ import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, I
 import { COIN_WORTH } from '../../game/money';
 import { ORDER_LIFE } from '../../game/orders';
 import { KEPT_BEST, NUTRIENT_HOURS, NUTRIENT_NAMES, NUTRIENTS, TABLE_BEST } from '../../game/nutrition';
-import { OVEN_CAPACITY, SHORE_REACH } from '../../game/placeables';
+import { LYE_USE, OVEN_CAPACITY, SHORE_REACH } from '../../game/placeables';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, MAX_STAND, MAX_STEP, SWIM_DEPTH } from '../../game/player';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
@@ -527,7 +527,13 @@ const bill = (id: string, figures = true): string =>
 const need = (id: string, item: string): number => {
   const input = recipe(id).inputs.find((i) => i.item === item);
   if (!input) throw new Error(`The help says ${id} takes ${item}, and it does not.`);
-  return input.count ?? 1;
+  return input.litres ?? input.count ?? 1;
+};
+/** The litres of liquid a recipe takes: "2 L water". */
+const litresOf = (id: string): string => {
+  const input = recipe(id).inputs.find((i) => i.litres);
+  if (!input) throw new Error(`The help says ${id} takes a liquid, and it does not.`);
+  return `${input.litres} L ${LIQUID_NAME[VESSELS[input.item].liquid]}`;
 };
 /** How many a recipe makes. */
 const made = (id: string): number => recipe(id).count ?? 1;
@@ -1531,7 +1537,7 @@ export function helpText(): string {
     <ul>
       <li><b>Quern</b>: ${bill('make_quern')}, stonecutting. Use trains <b>Milling</b>.</li>
       <li>${capital(countIn('wheat', need('make_flour', 'wheat')))}: a lot of <b>flour</b>. ${capital(countIn('corn', need('make_cornmeal', 'corn')))}: <b>cornmeal</b>. Failed grinding: grit.</li>
-      <li><b>Dough</b>: flour + a bucket of water: ${made('make_dough')} rounds; bucket back empty.</li>
+      <li><b>Dough</b>: ${need('make_dough', 'flour')} flour + ${litresOf('make_dough')}: ${made('make_dough')} rounds.</li>
       <li><b>Bread</b>: a round of dough on a hot stone at a lit fire. Keeps and travels.</li>
       <li><b>Porridge</b>: cornmeal boiled in a clay bowl: ${made('make_porridge')} bowls.</li>
       <li>Dough, bread and porridge are cooking, not milling.</li>
@@ -2436,7 +2442,7 @@ export function helpText(): string {
     <h4>Naturalist remedies</h4>
     <ul>
       <li>Made from any of the ${KINDS.length} healing herbs; usable by anybody.</li>
-      <li><b>Herb tea</b> (${recipe(`brew_tea_${KINDS[0].herb}`).inputs[0].count ?? 1} herb + a bucket of water, ${made(`brew_tea_${KINDS[0].herb}`)} cups):
+      <li><b>Herb tea</b> (${recipe(`brew_tea_${KINDS[0].herb}`).inputs[0].count ?? 1} herb + ${litresOf(`brew_tea_${KINDS[0].herb}`)}, ${made(`brew_tea_${KINDS[0].herb}`)} cups):
       ${percent(itemDef('herb_tea').stamina ?? 0)} stamina a cup.</li>
       <li><b>Salve</b> (${recipe(`make_salve_${KINDS[0].herb}`).inputs[0].count ?? 1} herb + beeswax): on the worst dressed wound that could still go bad; while on, it never does.
       Goes over a dressing, not instead; scouring removes it.</li>
@@ -2511,16 +2517,19 @@ export function helpText(): string {
     <ul>
       <li><b>Ashes</b>: a <b>campfire</b>, <b>smelter</b> or <b>kiln</b> leaves one lot per ${dur(1 / ASH_RATE)} of burning. <b>Take ashes</b>, lit or cold; they accumulate.</li>
       <li><b>Bucket</b>: ${bill('make_bucket')}, mallet. <b>Fill</b> at any shore (not on dry land). <b>Empty</b> any time.</li>
-      <li><b>Bucket of lye</b>: ${need('make_lye', 'ash')} lots of ashes + a bucket of water; <b>Alchemy</b>. One bucket tans one hide.</li>
-      <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + bucket of lye + carving knife: <b>leather</b>; the bucket comes back empty. Failure spoils the hide.</li>
+      <li><b>Litres</b>: a bucket holds ${BUCKET_LITRES} L; weight ${itemDef('bucket').weight} kg + ${LITRE_KG} kg a litre. A recipe's liquid comes out of the buckets carried, then buckets in stores,
+      then barrels, wells and fountains within its reach; a bucket at its last litre is an empty bucket. <b>Fill with water</b> tops up a part bucket of water.</li>
+      <li><b>Bucket of lye</b>: ${need('make_lye', 'ash')} lots of ashes + a full bucket of water; <b>Alchemy</b>. ${BUCKET_LITRES} L.</li>
+      <li><b>Tanning</b> (leatherworking): raw <b>hide</b> + ${litresOf('tan_hide')} + carving knife: <b>leather</b>. Failure spoils the hide.</li>
+      <li>Cleaning a wound, removing dye or paint: ${LYE_USE} L lye.</li>
       <li>Leather: cap, jerkin, sleeves, trousers, boots; improving leather pieces.</li>
     </ul>
     <h3>Reeds, papyrus and books</h3>
     <ul>
       <li><b>Reed beds</b> (shallows): cut with a knife for reeds; regrows before it can be cut again.</li>
-      <li><b>Papyrus</b>: ${countIn('reed', need('make_papyrus', 'reed'))} + a bucket of water: ${made('make_papyrus')} sheets; <b>Papyrusmaking</b>; only standing at a <b>paper press</b>
+      <li><b>Papyrus</b>: ${countIn('reed', need('make_papyrus', 'reed'))} + ${litresOf('make_papyrus')}: ${made('make_papyrus')} sheets; <b>Papyrusmaking</b>; only standing at a <b>paper press</b>
       on the ground (${bill('make_paper_press')}, mallet, ${workedAt('make_paper_press')}).</li>
-      <li><b>Ink</b> (alchemy): a gland + ${need('make_ink', 'ash')} lots of ashes + a bucket of water: ${made('make_ink')} lots of ink.</li>
+      <li><b>Ink</b> (alchemy): a gland + ${need('make_ink', 'ash')} lots of ashes + ${litresOf('make_ink')}: ${made('make_ink')} lots of ink.</li>
       <li><b>Book</b>: ${need('make_book', 'papyrus')} sheets, ${need('make_book', 'leather')} leather boards, a lot of ink, a needle.</li>
       <li><b>Study</b>: ${dur(goSeconds(STUDY_TIME))} an action; trains <b>mind logic</b> (queue size); wears the pages. At a <b>lectern</b>: skill gain ${mul(LECTERN_GAIN)}.</li>
       <li>Artisan <b>trade book</b> (${bill(`write_trade_book_${TRADE_BOOK_SKILLS[0]}`)}, needle): on any skill they have at ${TRADE_BOOK_AT}; studying trains that skill instead of

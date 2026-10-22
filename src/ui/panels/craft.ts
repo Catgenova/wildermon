@@ -2,7 +2,7 @@ import { capital } from '../../game/words';
 import { ACTION_BY_ID } from '../../game/actions';
 import type { Game } from '../../game/game';
 import { itemDef } from '../../game/items';
-import { CRAFT_REACH, DEED_ONLY, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
+import { CRAFT_REACH, DEED_ONLY, liquidWord, RECIPE_BY_ID, RECIPE_CATEGORIES, RECIPES, materialChoices, prospect, reachFor, recipeReason, recipeStatus, stationName, type CraftStock, type Recipe, type RecipeStatus } from '../../game/recipes';
 import { isFurniture, ONE_ALTAR } from '../../game/furniture';
 import { SKILL_DEFS } from '../../game/skills';
 import type { UIWindow } from '../windows';
@@ -440,16 +440,18 @@ export class CraftPanel {
     for (const i of st.inputs) {
       const span = document.createElement('span');
       span.className = i.have >= i.need ? 'have' : 'lack';
-      span.textContent = `${i.need} ${lower(i.item)}`;
+      // Litres of a liquid by the litre: "2 L water (12 L)".
+      const l = i.litres ? ' L' : '';
+      span.textContent = i.litres ? `${i.need} L ${liquidWord(i.item)}` : `${i.need} ${lower(i.item)}`;
       // Where they are, so a crate that empties itself into a chest is never
       // a surprise: what is on you goes first, then the nearest store.
       const stored = i.have - i.carried;
       span.title = stored > 0
-        ? `Have ${i.have}: ${i.carried} carried, ${stored} in stores within ${reachFor(this.game, r)} tiles. Carried used first.`
-        : `Have ${i.have}, carried`;
+        ? `Have ${i.have}${l}: ${i.carried}${l} carried, ${stored}${l} in stores${i.litres ? ', barrels, wells and fountains' : ''} within ${reachFor(this.game, r)} tiles. Carried used first.`
+        : `Have ${i.have}${l}, carried`;
       // How many, and how many of those are in a store rather than on you.
       const have = document.createElement('em');
-      have.textContent = stored <= 0 ? ` (${i.have})` : i.carried ? ` (${i.carried} + ${stored} stored)` : ` (${stored} stored)`;
+      have.textContent = stored <= 0 ? ` (${i.have}${l})` : i.carried ? ` (${i.carried}${l} + ${stored}${l} stored)` : ` (${stored}${l} stored)`;
       span.append(have);
       /*
        * Short of something: click it to see what makes it. Asked for as "click
