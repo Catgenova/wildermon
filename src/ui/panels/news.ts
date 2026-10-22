@@ -3143,6 +3143,14 @@ export const NEWS: News[] = [
       ];
     },
   },
+  {
+    n: 242,
+    day: '2026-10-22',
+    lines: () => [
+      'Fixed: a quarry worker (Chiptail and its stages) cuts rock under snow: a mountain top\'s marble.',
+      'Fixed: a quarry worker brings up the stone it cuts: marble shards off marble, not rock shards.',
+    ],
+  },
 ];
 
 
