@@ -1,7 +1,7 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
-import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
+import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
+import { CHANNELS, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
 import type { Game } from '../../game/game';
@@ -87,9 +87,15 @@ export function baseStatTags(g: Game, c: Creature): Array<{ stat: BaseStat; text
   });
 }
 
-/** An ancient collar and bridle fitted on it, and its brace uses, for the Stats row: "Collar: upkeep −20%". */
-export function fittedTags(c: Creature): Array<{ text: string; title: string }> {
+/** An ancient collar and bridle fitted on it, its brace uses and a bronze mirror's mark, for the Stats row: "Collar: upkeep −20%". */
+export function fittedTags(g: Game, c: Creature): Array<{ text: string; title: string }> {
   const out: Array<{ text: string; title: string }> = [];
+  // A bronze mirror's mark: the trait it would copy, named where your husbandry reads it, as on the card.
+  const copy = mirrored(c) ? mirrorTrait(c.traits) : null;
+  if (copy) {
+    const what = readsTrait(g, copy) ? mirrorNames(copy) : 'best trait (unreadable)';
+    out.push({ text: `Mirror: ${what} to its next young`, title: `Bronze mirror: its next covering's young get ${what}, in place of a draw. Mark used up at that covering.` });
+  }
   if (fitted(c, 'collar')) out.push({ text: `Collar: upkeep −${percent(COLLAR_CUT)}`, title: `Ancient collar: hunger rate −${percent(COLLAR_CUT)}.` });
   const brace = bracePoints(c);
   if (brace) out.push({ text: `Brace: action speed +${percent(BRACE_STEP * brace)} (${brace}/${BRACE_MOST})`, title: `Ancient brace: ${brace} of ${BRACE_MOST} uses, action speed +${percent(BRACE_STEP)} each.` });
@@ -551,7 +557,7 @@ export class WildermonPanel {
       const w = this.worth(c);
       worthBox.replaceChildren(...(w ? [...w.childNodes] : []));
       worthBox.hidden = !w;
-      const tags = [...baseStatTags(this.game, c), ...fittedTags(c)];
+      const tags = [...baseStatTags(this.game, c), ...fittedTags(this.game, c)];
       const statKey = tags.map((t) => t.text).join('|');
       if (statBox.dataset.says !== statKey) {
         statBox.dataset.says = statKey;

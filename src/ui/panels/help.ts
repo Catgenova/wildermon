@@ -933,6 +933,9 @@ function artifactHelp(): string {
       <li>${from('use_ancient_collar')}: upkeep (hunger rate) −${percent(COLLAR_CUT)}, for good. Once per wildermon. Shown on its card.</li>
       <li>${from('use_ancient_brace')}: action (task) speed +${percent(BRACE_STEP)} a use, up to ${BRACE_MOST} uses (+${percent(BRACE_STEP * BRACE_MOST)}).
       Shown on its card.</li>
+      <li>${from('use_bronze_mirror')}: its next covering's young (twins: both) get its best trait (highest rarity; first listed on a tie) at that rarity,
+      in place of a draw; never taken by a mutation. Both parents mirrored: the dam's, then the sire's unless the young already carries that name.
+      One mark at a time; used up at that covering. Not on one already mirrored or with no traits. Shown on its card and in the pairing preview.</li>
       <li>${from('use_ancient_bridle')}: speed ridden +${percent(BRIDLE_PACE)}, past the speed cap; in a team, +${percent(BRIDLE_PACE)} × its share of the team.
       For good. Once per wildermon. Shown on its card.</li>
     </ul>
@@ -2826,7 +2829,7 @@ export function helpText(): string {
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
       <li><b>Restore</b> (all pieces in hand, right-click one): <b>Restoration</b>, at any damage short of breaking. Failure: ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on
       every piece. Result quality (QL): the pieces' worth, less ${percent(1 / RESTORE_AGE)} per point of their damage.</li>
-      <li>Some are treasure only (statuette, bronze mirror); an <b>old blade</b> is a sword and an <b>ancient helm</b> a helm.</li>
+      <li>A statuette is treasure only; an <b>old blade</b> is a sword and an <b>ancient helm</b> a helm.</li>
     </ul>
     ${artifactHelp()}
     <h3>Baubles</h3>

@@ -5,6 +5,9 @@ import {
   BREED_REST,
   breedPlus,
   careWord,
+  mirrorCopy,
+  mirrored,
+  mirrorNames,
   GESTATION,
   maxHealth,
   SEX_NAMES,
@@ -16,7 +19,7 @@ import { clockLeft } from './boons';
 import { itemName, RARITIES, RARITY_ODDS } from './items';
 import { workingQl } from './materials';
 import {
-  bestTier, breedOdds, CHANNELS, depthMul, inheritChance, lineIfCarried, MUTATION_ODDS, mutationTier, pct, TIERS, traitList, traitName, traitTier,
+  bestTier, breedOdds, CHANNELS, depthMul, inheritChance, lineIfCarried, mirrorTrait, MUTATION_ODDS, mutationTier, pct, TIERS, traitList, traitName, traitTier,
   TRAIT_SLOTS, upgradeChance,
 } from './traits';
 
@@ -143,7 +146,9 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   const skill = g.skills.get(HUSBANDRY);
   const care = (dam.care + sire.care) / 2;
   const { keepPlus, upPlus } = breedPlus(g);
-  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus);
+  // A bronze mirror's copies, as the covering would make them (`mirrorCopy`).
+  const copy = mirrorCopy(dam, sire);
+  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus, undefined, undefined, copy);
   const readable = (id: string): boolean => readsTrait(g, id);
   const theirs = Object.keys(odds.carry).sort((a, b) => odds.carry[b] - odds.carry[a]);
   const hidden = theirs.filter((id) => !readable(id)).length;
@@ -157,6 +162,13 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
     `Best trait rarity: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
     `Mutation: 1 in ${MUTATION_ODDS} (${sharePct(1 / MUTATION_ODDS)}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
   ];
+  // Each mirrored parent: which trait it copies, at what rarity, and its share (all, but where the dam's copy has its name).
+  for (const c of [dam, sire]) {
+    const id = mirrored(c) ? mirrorTrait(c.traits) : null;
+    if (!id) continue;
+    const what = readable(id) ? mirrorNames(id) : 'best trait (unreadable)';
+    lines.push(`Bronze mirror (${c.name}): ${what} copied, ${sharePct(odds.carry[id] ?? 0)}. Mark used up.`);
+  }
   // How deep its line would run, on each channel either of them carries a trait on.
   const parents = [{ traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line }] as const;
   for (const ch of CHANNELS) {

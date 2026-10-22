@@ -426,6 +426,17 @@ export function traitList(traits: string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }
 
+/**
+ * The trait a bronze mirror copies: the highest-tier one it carries, the first
+ * of them in its own order (as its card lists them) where two or more share
+ * that tier; null with none. The island's `mirror_trait`.
+ */
+export function mirrorTrait(traits: string[] | undefined): string | null {
+  let best: string | null = null;
+  for (const id of traits ?? []) if (best === null || TIERS.indexOf(traitTier(id)) > TIERS.indexOf(traitTier(best))) best = id;
+  return best;
+}
+
 /** The best tier in a set, for sorting a herd by its blood. */
 export function bestTier(traits: string[] | undefined): TraitTier {
   let best: TraitTier = 'common';
@@ -510,6 +521,7 @@ export function breedTraits(
   rand: () => number,
   keepPlus = 0,
   upPlus = 0,
+  copy: readonly string[] = [],
 ): Bred {
   const pool = [...new Set([...sire, ...dam])];
   // More of the pair and more of it a tier better, for a Herdsman's True Blood and Bred Up; never past certain.
@@ -518,7 +530,18 @@ export function breedTraits(
   const lift = Math.max(0, Math.min(100, husbandry)) / 100;
   const out: string[] = [];
   const from: Record<string, TraitSource> = {};
-  for (let slot = 0; slot < TRAIT_SLOTS; slot++) {
+  /*
+   * A bronze mirror's copies first, as the mirrored parent carries them (`copy`,
+   * the dam's before the sire's, a name once): those slots are not drawn, and
+   * no mutation takes them. Whose each was, as a draw from the pair says it.
+   */
+  for (const id of copy) {
+    if (out.length >= TRAIT_SLOTS || holds(out, id)) continue;
+    out.push(id);
+    from[id] = dam.includes(id) ? (sire.includes(id) ? 'both' : 'dam') : 'sire';
+  }
+  const fixed = out.length;
+  for (let slot = fixed; slot < TRAIT_SLOTS; slot++) {
     // What the pair carry that the foal does not, by name: two grades of one name are one name.
     const left = pool.filter((id) => !holds(out, id));
     let id: string | null = null;
@@ -577,7 +600,7 @@ export function breedTraits(
    * already does, by the rule an ancient lamp keeps (`lampTrait`).
    */
   if (rand() < 1 / MUTATION_ODDS) {
-    const { slot } = lowestSlot(out, rand);
+    const { slot } = lowestSlot(out, rand, fixed);
     const now = lampTrait(mutationTier(sire, dam), [...sire, ...dam, ...out], rand);
     if (now) {
       if (out[slot] !== undefined) delete from[out[slot]];
@@ -697,13 +720,13 @@ export interface BreedOdds {
  * anything the covering does not do, because it is the covering.
  */
 export function breedOdds(sire: string[], dam: string[], husbandry: number, care: number, keepPlus = 0, upPlus = 0,
-  goes = PREVIEW_GOES, rand: () => number = seededRand(PREVIEW_SEED)): BreedOdds {
+  goes = PREVIEW_GOES, rand: () => number = seededRand(PREVIEW_SEED), copy: readonly string[] = []): BreedOdds {
   const carry: Record<string, number> = Object.fromEntries([...new Set([...sire, ...dam])].map((id) => [id, 0]));
   const best = Object.fromEntries(TIERS.map((t) => [t, 0])) as Record<TraitTier, number>;
   const on = Object.fromEntries(CHANNELS.map((ch) => [ch.id, 0])) as Record<TraitChannel, number>;
   let mutated = 0;
   for (let i = 0; i < goes; i++) {
-    const bred = breedTraits(sire, dam, husbandry, care, rand, keepPlus, upPlus);
+    const bred = breedTraits(sire, dam, husbandry, care, rand, keepPlus, upPlus, copy);
     for (const id of bred.traits) if (id in carry) carry[id]++;
     best[bestTier(bred.traits)]++;
     for (const ch of CHANNELS) if (carriesOn(bred.traits, ch.id)) on[ch.id]++;
@@ -761,13 +784,13 @@ export interface Rekindled {
  * The lowest-tier slot in a set, one at random of those that share the lowest
  * tier, and its tier; an empty slot first, which is lower than any trait and
  * counts as the lowest tier there is. What an ancient lamp rekindles and what a
- * mutation takes.
+ * mutation takes; a mutation never the first `skip`, a bronze mirror's copies.
  */
-export function lowestSlot(traits: string[], rand: () => number): { slot: number; from: TraitTier } {
+export function lowestSlot(traits: string[], rand: () => number, skip = 0): { slot: number; from: TraitTier } {
   if (traits.length < TRAIT_SLOTS) return { slot: traits.length, from: TIERS[0] };
   const rank = (id: string): number => TIERS.indexOf(traitTier(id));
-  const low = Math.min(...traits.map(rank));
-  const lowest = traits.flatMap((id, i) => (rank(id) === low ? [i] : []));
+  const low = Math.min(...traits.slice(skip).map(rank));
+  const lowest = traits.flatMap((id, i) => (i >= skip && rank(id) === low ? [i] : []));
   return { slot: pick(lowest, rand), from: TIERS[low] };
 }
 

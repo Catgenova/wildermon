@@ -405,7 +405,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   // What a sacrifice at the altar now and again leaves (`sacrifice.ts`).
   soul: { name: 'Soul', category: 'misc', weight: 0.01, stackable: true, description: 'Left by {sacrifice.soul:pct} of altar sacrifices, at the rarity of what was given. Absorb into (on the soul): an ordinary thing in your pack, or one of a stack, takes its rarity. Used up.' },
   bauble_ancient: { name: 'Ancient bauble', category: 'misc', weight: 0.1, description: 'Set in one of the {bauble.ancient.slots} ancient sockets of your settlement\'s altar. Citizens working there get its bonus added to every yield of that one action.' },
-  bronze_mirror: { name: 'Bronze mirror', category: 'misc', weight: 0.8, decay: 3 },
+  // A relic's restored thing, used on a wildermon of yours (`creatureActions.ts`, `mirrored`).
+  bronze_mirror: { name: 'Bronze mirror', category: 'misc', weight: 0.8, decay: 3, description: 'Use on your wildermon (its menu): its next covering\'s young get its best trait (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Used up.' },
   /*
    * What four relics are restored into, and good for on a wildermon of yours
    * (`creatureActions.ts`, `{artifact.*}`): a bone comb, an old file, an old

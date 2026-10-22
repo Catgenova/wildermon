@@ -3245,6 +3245,14 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 253,
+    day: '2026-10-22',
+    lines: () => [
+      `Changed: bronze mirror (relic, ${MIRROR.parts} pieces, archaeology ${MIRROR.difficulty}), was treasure only: use on your wildermon; its next covering's young get its best trait`
+        + ' (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Shown on its card and in the pairing preview.',
+    ],
+  },
+  {
     n: 261,
     day: '2026-10-22',
     lines: () => [
@@ -3256,6 +3264,9 @@ export const NEWS: News[] = [
 
 /** The nine kinds What's new 251 gives new lines. */
 const NINE_LINES = ['sappa', 'sprigga', 'rowl', 'snout', 'wicka', 'thumpa', 'stona', 'lungra', 'bogga'];
+
+/** The bronze mirror, as What's new 253 gives it. */
+const MIRROR = RELICS.find((r) => r.result === 'bronze_mirror') ?? { parts: 0, difficulty: 0 };
 
 /** The old brace, as What's new 246 gives it. */
 const BRACE = RELICS.find((r) => r.result === 'ancient_brace') ?? { parts: 0, difficulty: 0 };

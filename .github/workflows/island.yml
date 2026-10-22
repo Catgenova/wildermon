@@ -1580,6 +1580,16 @@ jobs:
             --outfile=node_modules/.cache/sixrelics.mjs --log-level=error
           node node_modules/.cache/sixrelics.mjs
 
+      - name: A bronze mirror copies a parent's best trait to its young, the same on both sides
+        run: |
+          # "Copy a trait to a newborn: at breeding, the newborn gets the
+          # parent's best trait at that parent's value instead of rolling it.
+          # Used up on the birth." The mark, its refusals, the best trait and
+          # its tie, the draw with copies, the covering and the birth.
+          npx esbuild supabase/test/bronzemirror.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/bronzemirror.mjs --log-level=error
+          node node_modules/.cache/bronzemirror.mjs
+
       - name: An ancient brace, a post worker's meal and scarcer seed, the same on both sides
         run: |
           # "Ancient Brace ... action speed by 1% per, up to 50 uses",

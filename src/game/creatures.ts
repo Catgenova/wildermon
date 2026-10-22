@@ -48,7 +48,7 @@ import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
-import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, lineMul, lineSaid, mutationOf, pct, rollTraits, TIERS, traitList, traitMul, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type TraitChannel, type TraitSource } from './traits';
+import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, TIERS, traitList, traitMul, traitName, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
@@ -4248,10 +4248,27 @@ export const BRIDLE_PACE = 0.1;
  */
 export const BRACE_STEP = 0.01;
 export const BRACE_MOST = 50;
-/** What `boosts` keeps: pot points by stat, a collar and a bridle fitted, and brace uses. */
-export type BoostKey = BaseStat | RelicFit | 'brace';
+/** What `boosts` keeps: pot points by stat, a collar and a bridle fitted, brace uses, and a bronze mirror's mark. */
+export type BoostKey = BaseStat | RelicFit | 'brace' | 'mirror';
 export const bracePoints = (c: Pick<Creature, 'boosts'>): number => Math.max(0, Math.min(BRACE_MOST, Math.floor(c.boosts?.brace ?? 0)));
 export const fitted = (c: Pick<Creature, 'boosts'>, fit: RelicFit): boolean => (c.boosts?.[fit] ?? 0) > 0;
+/**
+ * A bronze mirror's mark, one at a time, kept in `boosts.mirror`: the young of
+ * its next covering get its best trait (`mirrorTrait`) as it carries it, in
+ * place of a draw, and the mark is used up at that covering. Asked for: "Copy a
+ * trait to a newborn: at breeding, the newborn gets the parent's best trait at
+ * that parent's value instead of rolling it. Used up on the birth." The
+ * island's `mirrored` and `mirror_copy`.
+ */
+export const mirrored = (c: Pick<Creature, 'boosts'>): boolean => (c.boosts?.mirror ?? 0) > 0;
+/** What a covering copies: each mirrored parent's best trait, the dam's first. */
+export const mirrorCopy = (dam: Pick<Creature, 'boosts' | 'traits'>, sire: Pick<Creature, 'boosts' | 'traits'>): string[] =>
+  [dam, sire].filter(mirrored).map((c) => mirrorTrait(c.traits)).filter((id): id is string => id !== null);
+/** A trait as a bronze mirror names it: "fleet (rare)", a fighting trait's grade already in its name. The island's `mirror_names`. */
+export const mirrorNames = (id: string): string => {
+  const t = traitOf(id);
+  return t?.family ? t.name : `${traitName(id)} (${traitTier(id)})`;
+};
 /** A team's bridles on its pace: the share of it bridled, each at `BRIDLE_PACE` more. The island's `bridle_team`. */
 export const bridleTeam = (team: ReadonlyArray<Pick<Creature, 'boosts'>>): number =>
   (team.length ? 1 + (BRIDLE_PACE * team.filter((c) => fitted(c, 'bridle')).length) / team.length : 1);
@@ -8264,8 +8281,10 @@ export class Creatures {
   pair(game: Game, dam: Creature, sire: Creature, husbandry: number, sex?: Sex): void {
     const care = (dam.care + sire.care) / 2;
     const { keepPlus, upPlus } = breedPlus(game);
+    // A bronze mirror's copies (`mirrorCopy`), in every young of this covering.
+    const copy = mirrorCopy(dam, sire);
     const young = (): { traits: string[]; sex: Sex; from: Record<string, TraitSource>; line: Line } => {
-      const bred = breedTraits(sire.traits, dam.traits, husbandry, care, game.rand, keepPlus, upPlus);
+      const bred = breedTraits(sire.traits, dam.traits, husbandry, care, game.rand, keepPlus, upPlus, copy);
       // The one the breeder asked for (a Herdsman's Choose the Sex), or even odds.
       const born: Sex = sex ?? (game.rand() < 0.5 ? 'male' : 'female');
       // And how deep its line runs, off both parents as they stand now.
@@ -8280,6 +8299,14 @@ export class Creatures {
     // And both ready again sooner (a Herdsman's Short Rest): the rest left is the perk's share of it.
     dam.bredAt = game.time - BREED_REST * (1 - game.perk('breed:rest', 1));
     sire.bredAt = dam.bredAt;
+    // And each mirror's mark used up, and said.
+    for (const c of [dam, sire]) {
+      if (!mirrored(c)) continue;
+      const { mirror: _, ...rest } = c.boosts ?? {};
+      c.boosts = Object.keys(rest).length ? rest : undefined;
+      const id = mirrorTrait(c.traits);
+      if (id) game.logMsg(`Bronze mirror: ${mirrorNames(id)} from ${c.name} to the young. Mark used up.`, 'event');
+    }
   }
 
   /** The hour comes: one young, or two from a covering that threw twins, each placed as a tamed one is. */
