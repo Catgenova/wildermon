@@ -56,7 +56,8 @@ interface Bill {
   bill: { at: V3; len: number; w: number; drop: number; arch: number };
   /** The crest: its root on the crown, its feathers, and whether they are spikes (the Wormheron's) rather than soft feathers. */
   crest: { at: V3; plumes: Plume[]; spikes: boolean } | null;
-  wing: { at: V3; pinions: Pinion[] };
+  /** The wing: its shoulder, which way its feathers face out folded (out and up a little by default), and its feathers. */
+  wing: { at: V3; face?: V3; pointed?: boolean; pinions: Pinion[] };
   tail: Plume[];
   /** The Wormheron's shag: plumes hanging down the front of its neck (how far up it, length), and down its breast and flanks. */
   shag: { neck: Array<[number, number]>; breast: Plume[]; flank: Array<[number, number]> } | null;
@@ -157,10 +158,10 @@ const WORMHERON_LOOK: Bill = {
   spec: {
     high: 2.9,
     leg: { at: [0.42, -0.16, -0.7], len: [0.8, 1.3, 0.1], rest: [12, -30] },
-    neck: { at: [0, 1.3, 0.62], len: 1.75, lean: 36 },
-    head: { pitch: -22 },
+    neck: { at: [0, 1.3, 0.62], len: 2.8, lean: 28 },
+    head: { pitch: -30 },
     wing: { at: [0.84, 0.5, 0.42] },
-    tail: { at: [0, -1.5, -0.1], lift: -26 },
+    tail: { at: [0, -1.5, 0.05], lift: -12 },
     swing: [22, 30],
     thrust: 16,
     waddle: 1.5,
@@ -169,31 +170,35 @@ const WORMHERON_LOOK: Bill = {
   body: { c: [0, -0.1, 0], r: [1.16, 1.66, 1.08], pitch: 14 },
   back: 0,
   specks: [0, 0],
-  neck: { w: [0.74, 0.4], len: 1.75, bow: 0.34 },
+  neck: { w: [0.52, 0.24], len: 2.8, bow: 1.0 },
   head: { c: [0, 0.18, 0.12], r: [0.46, 0.6, 0.44] },
   eye: { dir: [0.76, 0.44, 0.34], size: 0.12 },
   bill: { at: [0, 0.66, 0.0], len: 2.3, w: 0.13, drop: 34, arch: 0.12 },
   crest: {
     at: [0, -0.34, 0.22],
-    plumes: [[1.2, 0.07, 98, 0], [1.05, 0.065, 90, -14], [1.05, 0.065, 90, 14], [0.9, 0.06, 108, -24], [0.9, 0.06, 108, 24], [0.75, 0.055, 80, 0]],
+    plumes: [[1.45, 0.08, 96, 0], [1.3, 0.075, 88, -12], [1.3, 0.075, 88, 12], [1.1, 0.07, 104, -24], [1.1, 0.07, 104, 24], [0.9, 0.065, 76, -6], [0.9, 0.065, 76, 8], [0.8, 0.06, 114, 0]],
     spikes: true,
   },
+  // Folded flat against the flank, its feathers nearly in one plane, so it is a long blade tapering to the primaries from every side.
   wing: {
-    at: [1.0, 1.0, 0.62],
+    at: [1.3, 1.05, 0.72],
+    face: [1, 0, 0.25],
+    pointed: true,
     pinions: [
-      { at: 0.3, len: 3.0, w: 0.4, fold: -12, open: 104, layer: 0, mat: 'featherDark' },
-      { at: 0.42, len: 2.85, w: 0.42, fold: -15, open: 84, layer: 0.03, mat: 'featherDark' },
-      { at: 0.12, len: 2.5, w: 0.5, fold: -8, open: 62, layer: 0.06, mat: 'feather', tip: 'featherDark', tipFrom: 0.74 },
-      { at: 0.2, len: 2.15, w: 0.52, fold: -11, open: 38, layer: 0.09, mat: 'feather', tip: 'featherDark', tipFrom: 0.8 },
-      { at: 0.04, len: 1.7, w: 0.5, fold: -5, open: 12, layer: 0.12, mat: 'feather' },
-      { at: 0.1, len: 1.3, w: 0.46, fold: -8, open: -6, layer: 0.15, mat: 'feather' },
+      { at: 0.4, len: 3.5, w: 0.22, fold: -9, open: 104, layer: 0, mat: 'featherDark' },
+      { at: 0.5, len: 3.2, w: 0.24, fold: -10, open: 86, layer: 0.025, mat: 'featherDark' },
+      { at: 0.2, len: 2.6, w: 0.32, fold: -7, open: 64, layer: 0.05, mat: 'feather', tip: 'featherDark', tipFrom: 0.7 },
+      { at: 0.26, len: 2.0, w: 0.36, fold: -8, open: 40, layer: 0.075, mat: 'feather', tip: 'featherDark', tipFrom: 0.8 },
+      { at: 0.06, len: 1.4, w: 0.38, fold: -6, open: 14, layer: 0.1, mat: 'feather' },
+      { at: 0.1, len: 0.85, w: 0.36, fold: -7, open: -6, layer: 0.125, mat: 'feather' },
     ],
   },
-  tail: [[1.7, 0.26, 4, 0], [1.6, 0.24, 8, -18], [1.6, 0.24, 8, 18], [1.4, 0.22, 14, -34], [1.4, 0.22, 14, 34]],
+  // Long slate plumes fanned out past the wingtips.
+  tail: [[2.4, 0.24, 4, 0], [2.3, 0.22, 8, -14], [2.3, 0.22, 8, 14], [2.05, 0.2, 14, -28], [2.05, 0.2, 14, 28], [1.7, 0.18, 20, -40], [1.7, 0.18, 20, 40]],
   shag: {
-    neck: [[0.12, 0.62], [0.26, 0.6], [0.4, 0.56], [0.54, 0.52], [0.68, 0.46], [0.82, 0.38]],
+    neck: [[0.08, 0.8], [0.2, 0.76], [0.32, 0.72], [0.44, 0.66], [0.56, 0.6], [0.68, 0.52], [0.8, 0.44]],
     flank: [[0.55, 0.8], [0.3, 0.9], [0.05, 0.95], [-0.2, 0.9], [-0.45, 0.8]],
-    breast: [[1.0, 0.3, 12, 0], [0.92, 0.28, 16, -28], [0.92, 0.28, 16, 28], [0.8, 0.26, 24, -52], [0.8, 0.26, 24, 52], [0.7, 0.24, 30, -74], [0.7, 0.24, 30, 74]],
+    breast: [[1.35, 0.3, 10, 0], [1.25, 0.28, 14, -22], [1.25, 0.28, 14, 22], [1.1, 0.27, 20, -44], [1.1, 0.27, 20, 44], [0.95, 0.25, 26, -66], [0.95, 0.25, 26, 66], [0.8, 0.22, 32, -86], [0.8, 0.22, 32, 86]],
   },
   leg: { shank: 1.4, w: 0.11 },
   worm: { len: 2.0, r: 0.15 },
@@ -771,7 +776,7 @@ function wingOf(s: Bill): { mesh: Mesh; spans: Array<[number, number, V3, number
     const root = add(scale(arm, P.at), [P.layer, 0, 0]);
     const a = P.fold * DEG;
     const dir: V3 = [0, -Math.cos(a), Math.sin(a)];
-    const m = featherMesh(root, dir, [1, 0, 0.5], P.len, P.w, P.mat, { tip: P.tip, tipFrom: P.tipFrom, fold: 0.16, arch: 0.05, dots: P.dots, seed: q * 3 });
+    const m = featherMesh(root, dir, s.wing.face ?? [1, 0, 0.5], P.len, P.w, P.mat, { tip: P.tip, tipFrom: P.tipFrom, fold: s.wing.face ? 0.06 : 0.16, arch: s.wing.face ? 0.01 : 0.05, dots: P.dots, seed: q * 3, vane: s.wing.pointed ? LANCE : VANE });
     parts.push(m);
     spans.push([count, count + m.v.length, root, (P.open - P.fold) * DEG]);
     count += m.v.length;
@@ -853,8 +858,14 @@ function billBuild(s: Bill, lod: number): Piece[] {
   const body = tilt(merge(egg, specks));
   // The neck: up from the shoulders, bowed back in its middle for the heron's S; brown at its back on the two speckled ones.
   const N = s.neck;
-  const neckPts: V3[] = [[0, 0, -0.3], [0, -N.bow * 0.6, N.len * 0.2], [0, -N.bow, N.len * 0.45], [0, -N.bow * 0.2, N.len * 0.7], [0, N.bow * 0.4, N.len * 0.88], [0, 0.04, N.len + 0.05]];
-  const neckW = [1, 0.96, 0.8, 0.55, 0.25, 0].map((f) => lerp(N.w[1], N.w[0], f));
+  // Along a curve of two bends: out forward low down, back high up, and forward again into the back of the head.
+  const P0: V3 = [0, 0, -0.3], P1: V3 = [0, N.bow * 0.5, N.len * 0.35], P2: V3 = [0, -N.bow * 1.2, N.len * 0.65], P3: V3 = [0, 0.04, N.len + 0.05];
+  const links = N.bow > 0.3 ? 10 : 4;
+  const neckPts: V3[] = Array.from({ length: links }, (_, q) => {
+    const u = q / (links - 1), v = 1 - u;
+    return add(add(scale(P0, v * v * v), scale(P1, 3 * v * v * u)), add(scale(P2, 3 * v * u * u), scale(P3, u * u * u)));
+  });
+  const neckW = neckPts.map((_, q) => lerp(N.w[0], N.w[1], smooth(q / (neckPts.length - 1))));
   const neck = tube(neckPts, neckW, neckW, n,
     (_r, j) => (s.back > 0 && Math.sin(((j + 1) / n) * TAU) < -0.35 ? 'feather' : 'coat'), { seam: 'both', up: [0, 1, 0] });
   // The head: an egg of cream, a brown cap over the crown and nape, a pale brow and a dark stripe through the eye, a pale ring round it.
@@ -912,10 +923,20 @@ function billBuild(s: Bill, lod: number): Piece[] {
   if (s.shag) {
     // The heron's shag: long cream plumes hanging down the front of its neck, and down over its breast and flanks.
     const S = s.shag;
-    const neckShag = merge(...S.neck.map(([up, len], q) => {
-      const z = up * N.len, sd = q % 2 ? 1 : -1, w = lerp(N.w[0], N.w[1], up);
-      return featherMesh([sd * w * 0.3, w * 0.8, z], unit([sd * 0.2, 0.25, -1]), unit([sd * 0.5, 1, 0.1]), len, 0.2, q % 2 ? 'muzzle' : 'coat', { vane: LANCE, arch: 0.12, fold: 0.3 });
-    }));
+    // Tufts all round the neck, following its S: one down the front and one each side at every height, hanging and splayed a little.
+    const neckAt = (u: number): V3 => {
+      const z = u * (N.len + 0.35) - 0.3;
+      for (let q = 0; q < neckPts.length - 1; q++) {
+        const a = neckPts[q], b = neckPts[q + 1];
+        if (z <= b[2] || q === neckPts.length - 2) return add(a, scale(sub(b, a), clamp((z - a[2]) / (b[2] - a[2]))));
+      }
+      return neckPts[0];
+    };
+    const neckShag = merge(...S.neck.flatMap(([up, len], q) => [0, -62, 62].map((round, r) => {
+      const c = neckAt(up), w = lerp(neckW[0], neckW[neckW.length - 1], up) * 0.92, a = (round + (q % 2 ? 12 : -12)) * DEG;
+      const out: V3 = [Math.sin(a), Math.cos(a), 0];
+      return featherMesh(add(c, scale(out, w)), unit(add([0, 0, -1], scale(out, 0.42))), out, len * (r ? 0.7 : 1), 0.2, (q + r) % 3 === 1 ? 'muzzle' : (q + r) % 3 === 2 ? 'mark' : 'coat', { vane: LANCE, arch: 0.14, fold: 0.3 });
+    })));
     const breast = plumes([0, B.c[1] + B.r[1] * 0.8, B.c[2] + B.r[2] * 0.3], S.breast, [0, 0.35, -1], [0, -1, 0], 'coat', { vane: LANCE, arch: 0.14, alt: 'muzzle' });
     // A fringe of plumes hanging from each flank under the wing, ragged along the belly.
     const fringe = merge(...S.flank.flatMap(([along, len], q) => [1, -1].map((sd) => {
