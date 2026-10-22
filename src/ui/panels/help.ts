@@ -1093,6 +1093,13 @@ export function helpText(): string {
       <li>${BANNER_DEPTH} tile${BANNER_DEPTH === 1 ? '' : 's'} back out: <i>Leaving</i> and the name for ${LEAVING_MS / 1000} seconds.</li>
       <li>Re-entering within ${BANNER_AGAIN} seconds of leaving: nothing shown. Off switch: Settings, Interface.</li>
     </ul>
+    <h4>Logged on and off</h4>
+    <ul>
+      <li>Somebody logs on: their name and <i>Logged on</i> for ${BANNER_MS / 1000} seconds; logs off: <i>Logged off</i> for ${LEAVING_MS / 1000} seconds.
+      Off switch: Settings, Interface.</li>
+      <li>Talk, either way: <i>Logged on: name</i> or <i>Logged off: name</i>.</li>
+      <li>Logged off: ${awayAfter()} after their browser was last heard from.</li>
+    </ul>
     <h3>What a tool is worth</h3>
     <ul>
       <li>A tool's working value is its quality (QL) changed by damage (down), its head metal (up or down), rarity and blessing (up).</li>

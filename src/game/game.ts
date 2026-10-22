@@ -1064,6 +1064,9 @@ export class Game {
    */
   trail: Trail | null = null;
 
+  /** The last log on or off the island said (`src/net/presence.ts`), for the banner: who, which, and when it came in. Not saved. */
+  loggedSaid: { name: string; on: boolean; at: number } | null = null;
+
   private swingMissed = false;
   /** Whether the go in hand had its roll taken by a Foreknow, which spends one of its goes when the go is done. */
   private foreknown = false;

@@ -26,6 +26,7 @@ import type { Away } from '../game/away';
 import type { Kept, KeptBody } from '../game/keeper';
 import type { Barter } from '../game/barter';
 import type { Notice, SettleBoard } from '../game/noticeboard';
+import { presenceOf } from './presence';
 
 /**
  * The jobs whose work shows only on the ground's slow half: Clear the ivy and
@@ -1003,6 +1004,8 @@ export interface IslandHooks {
   charted?: (x: number, y: number, r: number) => void;
   /** A trail read by a go of Track (`tracking.ts`), said live as a `tracked` line: what the arrow is labelled, and the way it points. */
   tracked?: (name: string, bearing: number, dist: string) => void;
+  /** Somebody logged on or off (`presence.ts`), said to everybody as a `presence` line, with when. */
+  presence?: (name: string, on: boolean, at: number | undefined) => void;
   /** A spell made your walk on foot this many times as quick for so many seconds. */
   paced?: (mul: number, secs: number) => void;
   /**
@@ -1985,7 +1988,7 @@ export class Island {
       for (const line of said.said ?? []) {
         if (line.n <= this.said) continue;
         this.said = line.n;
-        this.hooks.say(line.text, line.kind, whenSaid(line.at));
+        this.sayLine(line.text, line.kind, line.at);
       }
       /*
        * And, on the first beat, where the talk had got to before we arrived.
@@ -2517,6 +2520,17 @@ export class Island {
     else this.pack.delete(it.id);
   }
 
+  /** A line into the log; logged on or off goes into Talk, and to the banner. */
+  private sayLine(text: string, kind: string, at: unknown): void {
+    if (kind === 'presence') {
+      const p = presenceOf(text);
+      if (p) this.hooks.presence?.(p.name, p.on, whenSaid(at));
+      this.hooks.say(text, 'system', whenSaid(at));
+      return;
+    }
+    this.hooks.say(text, kind, whenSaid(at));
+  }
+
   /** A line the island said, from either way of listening. */
   private hearLine(e: HeardLine): void {
     if (e.uid && e.uid !== this.uid) return;
@@ -2553,7 +2567,7 @@ export class Island {
       if (t) this.hooks.tracked?.(t.name, t.bearing, t.dist);
       return;
     }
-    this.hooks.say(e.text, e.kind, whenSaid(e.at));
+    this.sayLine(e.text, e.kind, e.at);
     // And over the speaker's head, which only a line arriving live gets.
     if (e.kind === 'chat' && e.said_by) this.hooks.spoke?.(e.said_by, e.text);
     /*

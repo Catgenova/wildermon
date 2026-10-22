@@ -6,6 +6,7 @@ import { cleanLook } from '../game/look';
 import { whoAmI } from './accounts';
 import { supabase } from './supabase';
 import { toldOf, toldWire } from './told';
+import { PRESENCE_FRESH_MS } from './presence';
 import { Island, type CastMore, type CastWire, type HeldSaid, type ItemRow, type PlayerRow, type SkinSaid } from './island';
 import { heldFrom } from '../ui/effects';
 import { isSpell } from '../render/spells/info';
@@ -361,6 +362,11 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   // And a map studied, which puts its square on your map (`cartography.ts`).
   island.hooks.charted = (x, y, r) => {
     learnChart(game, { x, y, r });
+  };
+  // And somebody logging on or off, for the banner while the line is fresh; not your own (`presence.ts`).
+  island.hooks.presence = (name, on, at) => {
+    if (name === game.player.name || (at !== undefined && Date.now() - at > PRESENCE_FRESH_MS)) return;
+    game.loggedSaid = { name, on, at: performance.now() };
   };
   // And a trail read by a go of Track, which puts its arrow on the screen from where you stand (`tracking.ts`).
   island.hooks.tracked = (name, bearing, dist) => {

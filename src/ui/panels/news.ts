@@ -95,6 +95,7 @@ import { ACTION_BY_ID, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP } from '../../game/boards';
+import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
@@ -3156,6 +3157,15 @@ export const NEWS: News[] = [
     day: '2026-10-22',
     lines: () => [
       'Fixed: a wildermon on a work post pulled up, rotted away or called off comes back: to you if nothing follows you, else to your settlement, else into an empty wildermon crate in your pack; wild only with none of these.',
+    ],
+  },
+  {
+    n: 244,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: a banner as somebody logs on (${BANNER_MS / 1000} s) or off (${LEAVING_MS / 1000} s), as at a settlement border; off switch in Settings, Interface.`,
+      `Added: Talk line as somebody logs on or off: Logged on: name, Logged off: name. Logged off is ${IDLE_LOGOUT / 60} min after their browser was last heard from.`,
+      'Changed: "has gone home." is now "Logged off: name", in Talk.',
     ],
   },
 ];

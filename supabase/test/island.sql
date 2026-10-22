@@ -4667,7 +4667,7 @@ select '604. hild left her tab open three hours ago: away is now '
      || (select away from player where world_id = :'world2' and uid = :'hild')
      || ', and the island heard "'
      || coalesce((select text from event where world_id = :'world2' and uid is null
-                  and text like '% has gone home.' order by n desc limit 1), 'nothing') || '"';
+                  and text like 'Logged off: %' order by n desc limit 1), 'nothing') || '"';
 select '605. ivar, who was here a moment ago, is still on his feet: away is '
      || (select away from player where world_id = :'world2' and uid = :'ivar');
 select '606. and nobody can turn the handle for anybody else: rpc_sweep is '

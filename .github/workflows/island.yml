@@ -1534,6 +1534,16 @@ jobs:
             --outfile=node_modules/.cache/workpost.mjs --log-level=error
           node node_modules/.cache/workpost.mjs
 
+      - name: Logged on and off, said to everybody, in the words the browser reads
+        run: |
+          # "Add a banner like when entering a deed when a player logs on or
+          # off. Add a text line in Talk when a player logs on or off." Washing
+          # ashore, coming back and logging out idle each say it once, to the
+          # whole island; a step says nothing; the browser reads who and which.
+          npx esbuild supabase/test/presence.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/presence.mjs --log-level=error
+          node node_modules/.cache/presence.mjs
+
       - name: Body stamina grows the stamina bar, the same on both sides
         run: |
           # "Body stamina should also increase the bar. 2x at 100". The bar is

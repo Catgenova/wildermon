@@ -171,6 +171,8 @@ export const SETTING_DEFAULTS = {
   pointerRing: true,
   /** A settlement's name near the top of the screen as you cross into its border, and a line as you leave (`src/ui/deedbanner.ts`). */
   deedBanner: true,
+  /** Somebody's name near the top of the screen as they log on or off (`src/ui/deedbanner.ts`). */
+  presenceBanner: true,
 };
 
 /** Whether Low power is on, which it only ever is on a phone. */

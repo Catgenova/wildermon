@@ -4,7 +4,8 @@ import { underTopBars } from './notices';
 
 /**
  * A settlement's name near the top of the screen as you walk into it, and a
- * smaller "Leaving" line as you walk out.
+ * smaller "Leaving" line as you walk out. Somebody's name the same way as they
+ * log on, and as the smaller line as they log off (`src/net/presence.ts`).
  *
  * Read off what the browser already holds: your own settlement (`Game.deed`)
  * and every other one in view with its border (`Game.neighbourDeeds`, which the
@@ -68,6 +69,8 @@ export class DeedBanner {
   /** When the banner up starts to fade, and when it is gone; 0 with none up. */
   private fadeAt = 0;
   private goneAt = 0;
+  /** The last log on or off put up (`Game.loggedSaid`). */
+  private logged: Game['loggedSaid'] = null;
   /** Nothing is said in the first moments ashore, while the island's lists arrive and you are put where you were. */
   private readonly settledAt = performance.now() + 3000;
 
@@ -98,6 +101,12 @@ export class DeedBanner {
         this.fadeAt = 0;
         this.el.classList.add('deed-banner-going');
       }
+    }
+    // Somebody logging on or off: their name, as a settlement's is, and which under it.
+    const said = this.game.loggedSaid;
+    if (said !== this.logged) {
+      this.logged = said;
+      if (said && this.game.settings.presenceBanner) this.show(said.name, said.on ? 'Logged on' : 'Logged off', !said.on);
     }
     if (now - this.lookedAt < LOOK_EVERY) return;
     this.lookedAt = now;
