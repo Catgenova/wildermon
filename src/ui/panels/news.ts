@@ -3151,6 +3151,13 @@ export const NEWS: News[] = [
       'Fixed: a quarry worker brings up the stone it cuts: marble shards off marble, not rock shards.',
     ],
   },
+  {
+    n: 243,
+    day: '2026-10-22',
+    lines: () => [
+      'Fixed: a wildermon on a work post pulled up, rotted away or called off comes back: to you if nothing follows you, else to your settlement, else into an empty wildermon crate in your pack; wild only with none of these.',
+    ],
+  },
 ];
 
 

@@ -110,6 +110,20 @@ begin
   select * into c from creature where world_id = w and id = v_crated;
   insert into said values ('crated-after', c.mode || ',' || coalesce(c.post = v_post2, false) || ',' || round(c.to_x::numeric, 1) || ',' || round(c.to_y::numeric, 1));
   insert into said values ('crate-empty', (select (creature is null)::text from item where id = v_crate));
+
+  -- The post pulled up, with nobody else following you: the one on it follows you again.
+  delete from creature where world_id = w and id in (v_far, v_theirs, v_worker, v_lost);
+  perform act_perform(w, a, 'pick_up_post', jsonb_build_object('kind', 'post', 'id', v_post));
+  select * into c from creature where world_id = w and id = v_pet;
+  insert into said values ('pulled', c.mode || ',' || coalesce(c.post::text, 'none') || ',' || c.keeper::text);
+  insert into said values ('pulled-said', coalesce((select e.text from event e where e.world_id = w and e.uid = a and e.text like 'Post pulled up:%'
+    order by e.n desc limit 1), 'unsaid'));
+  -- The other rotted away, with one following you now: to your settlement, or into the empty crate in your pack.
+  update placed set dmg = 100, since = now() where id = v_post2;
+  perform post_settle(v_post2);
+  select * into c from creature where world_id = w and id = v_crated;
+  insert into said values ('rotted', c.mode || ',' || coalesce(c.post::text, 'none') || ','
+    || case when c.mode = 'stored' then (select (creature = v_crated)::text from item where id = v_crate) else 'deed' end);
 end $$;
 select k || '=' || v from said order by k;
 rollback;
@@ -121,6 +135,10 @@ check('and it works out of the post', island.get('near-after') === 'deed,true', 
 check('the island lets one in a crate in your pack go to the post', island.get('crated') === 'none', island.get('crated'));
 check('and it comes out of the crate at the post and works out of it', island.get('crated-after') === 'deed,true,101.4,101.0', island.get('crated-after'));
 check('and the crate in the pack is empty', island.get('crate-empty') === 'true', island.get('crate-empty'));
+check('pulled up, the one on it follows you again, not lost', island.get('pulled') === 'active,none,11111111-1111-1111-1111-111111111111', island.get('pulled'));
+check('and says so, in the browser\'s words', island.get('pulled-said') === 'Post pulled up: Pip returns to you.', island.get('pulled-said'));
+check('rotted away with one following you: back to your settlement, or into the empty crate in your pack',
+  ['deed,none,deed', 'stored,none,true'].includes(island.get('rotted') ?? ''), island.get('rotted'));
 for (const k of ['stranger', 'worker', 'far', 'lost'] as const) {
   const b = browser[k];
   check(`refused, in the browser's words: ${k}`, !!b && island.get(k) === b, `browser "${b}", island "${island.get(k)}"`);
