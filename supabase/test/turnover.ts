@@ -139,6 +139,9 @@ begin
   update world_stocked set at = '-infinity' where world_id = w;
   insert into said values ('DUE', stock_due(w, 0, 0)::text);
   select max(id) into v_top from creature where world_id = w;
+  -- Seeded again, as above: what the passes before it drew (the wild forms' two rolls a spawn among them) moves this
+  -- one's roll, and a monster rolled at its cap eight times ends a stocking early.
+  perform setseed(0.5);
   perform creature_stock_block(w, 0, 0);
   insert into said select 'REFILLED', count(*) filter (where id > v_top) || '|' || count(*) from creature where world_id = w and mode = 'wild';
 
