@@ -1962,8 +1962,9 @@ export class Island {
         p_ticked: ticking,
       });
       // Only what went up in this answer, so a tick made while it was in
-      // flight is still waiting on the next one.
-      if (ticking) this.ticked = this.ticked.slice(ticking.length);
+      // flight is still waiting on the next one. And none of it when the
+      // island refused the beat (`error`, not a throw): nothing was kept.
+      if (ticking && !error) this.ticked = this.ticked.slice(ticking.length);
       const said = (data ?? {}) as {
         settled?: number; act?: string | null; ends?: string | null;
         left?: number | null; secs?: number | null; total?: number | null; queued?: number;

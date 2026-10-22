@@ -100,7 +100,7 @@ import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELO
 import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { seedSays } from '../../game/farming';
-import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
+import { HEARTBEAT, IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
@@ -3242,6 +3242,14 @@ export const NEWS: News[] = [
       'Added: authenticator sign-in on the account page; keeper tools ask for the code when it is on.',
       `Changed: new characters per connection a day: ${NEW_BODIES_A_DAY}.`,
       'Changed: other islands\' players, wildermon, settlements, trades and island talk no longer readable.',
+    ],
+  },
+  {
+    n: 261,
+    day: '2026-10-22',
+    lines: () => [
+      `Fixed: Journal Goals tab showing no goals done when the journal opened before the first heartbeat (up to ${HEARTBEAT} s after coming ashore), as it does at What's new.`,
+      'Fixed: goals ticked during a refused heartbeat now kept for the next one.',
     ],
   },
 ];

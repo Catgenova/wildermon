@@ -566,10 +566,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
       for (const k of Object.keys(game.ledger)) delete game.ledger[k];
       Object.assign(game.ledger, what.ledger);
     }
-    if (what.ticked) {
-      for (const id of what.ticked) game.ticked.add(id);
-      game.journalReady = true;
-    }
+    if (what.ticked) game.heardTicked(what.ticked);
   };
 
   island.hooks.doing = (what) => {

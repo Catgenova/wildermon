@@ -933,6 +933,23 @@ export class Game {
     }
   }
 
+  /**
+   * The island's record of the goals done, as a beat brings it (`rpc_settle`).
+   *
+   * Merged in, and the journal read from now on. And the Goals page told when
+   * the record holds any this side did not, which on coming ashore is every
+   * one: the page was drawn before the first beat, and the journal opens by
+   * itself at What's new on coming ashore whenever there is news, so it was
+   * drawn with nothing done and stayed so. Not `journal`: these were done
+   * before, so there is no line and no chime.
+   */
+  heardTicked(ids: readonly unknown[]): void {
+    const had = this.ticked.size;
+    for (const id of ids) if (typeof id === 'string') this.ticked.add(id);
+    this.journalReady = true;
+    if (this.ticked.size > had) this.events.emit('goals');
+  }
+
   /** Placed crates by id; each sits on one subtile. */
   readonly crates = new Map<number, PlacedCrate>();
   nextCrateId = 1;

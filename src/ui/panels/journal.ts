@@ -169,6 +169,8 @@ export class JournalPanel {
       this.onShow?.(this.tab);
     };
     game.events.on('journal', () => this.refresh());
+    // And the island's record landing, which comes up to a heartbeat after the page was drawn.
+    game.events.on('goals', () => this.refresh());
   }
 
   /** Open or shut one goal's how-to. */
@@ -198,6 +200,7 @@ export class JournalPanel {
     this.tab = tab;
     for (const [id, b] of this.tabs) b.classList.toggle('tb-on', id === tab);
     for (const [id, page] of this.pages) page.hidden = id !== tab;
+    if (tab === 'goals') this.refresh();
     if (tab === 'ledger') this.ledger.refresh();
     if (tab === 'news' && this.win.isOpen) this.news.draw();
     if (this.win.isOpen) this.onShow?.(tab);

@@ -3454,6 +3454,17 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/journal.mjs --log-level=error
           node node_modules/.cache/journal.mjs
 
+      - name: Goals done show as done
+        run: |
+          # Reported: goals done never show, not after a refresh either. The
+          # island's record comes on the first beat, after the journal has
+          # opened by itself at What's new; it now redraws the Goals page, a
+          # tab turned to Goals is drawn as it stands, a refused beat keeps its
+          # ticks, and the island keeps every tick and hands it back.
+          npx esbuild supabase/test/goals.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/goals.mjs --log-level=error
+          node node_modules/.cache/goals.mjs
+
       - name: Ten conveniences hold to what they say
         run: |
           # Put away into the stores within reach that hold the like of it,

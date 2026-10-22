@@ -90,6 +90,8 @@ export type GameEvents = {
   skill: [id: string, gain: number];
   /** A journal goal has just been ticked off. */
   journal: [];
+  /** The island's record of the goals done has come in holding one or more this side did not: redraw, but nothing is news. */
+  goals: [];
   action: [];
   stats: [];
   world: [x: number, y: number];
@@ -171,7 +173,7 @@ export class Emitter<E extends Record<string, unknown[]>> {
  * The island's own news — a tile changed, a crate changed, a creature moved —
  * is everybody's and goes out whoever is acting.
  */
-const PERSONAL = new Set(['log', 'inventory', 'skill', 'action', 'stats', 'journal']);
+const PERSONAL = new Set(['log', 'inventory', 'skill', 'action', 'stats', 'journal', 'goals']);
 
 /**
  * An emitter that knows the difference. One gate here rather than a condition
