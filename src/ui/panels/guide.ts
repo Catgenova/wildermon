@@ -1,6 +1,7 @@
 import type { Game } from '../../game/game';
 import { countsLine, guideEntries, guideEntry, GUIDE_MARKS, guidePage, keepable, MARK_NAMES, type GuideEntry, type GuideMark } from '../../game/guide';
 import type { Island } from '../../net/island';
+import { recordSaid, RECORD_STATS, type BredRecord } from '../../game/boards';
 import { ACTION_BY_ID } from '../../game/actions';
 import { degreesSays, TRACK, trackable, trackErr, trackLevel, trackReach, trackTarget, TRACKING } from '../../game/tracking';
 import { CULL_RANGE } from '../../game/creatures';
@@ -40,6 +41,8 @@ export class GuidePanel {
   /** Whether the island's answer is on its way, and whether the last ask came back empty. */
   private asking = false;
   private failed = false;
+  /** The island's bred records (`rpc_bred_records`), asked with the book. */
+  private records: BredRecord[] = [];
 
   /**
    * Drawn into `host`, the journal's Field guide tab (`JournalPanel`), and
@@ -84,9 +87,10 @@ export class GuidePanel {
     if (!this.island || this.asking) return;
     this.asking = true;
     try {
-      const book = await this.island.guide();
+      const [book, records] = await Promise.all([this.island.guide(), this.island.bredRecords()]);
       this.failed = !book;
       if (book) this.game.guideRead(book);
+      if (records) this.records = records;
     } finally {
       this.asking = false;
     }
@@ -96,7 +100,7 @@ export class GuidePanel {
   private draw(): void {
     const g = this.game.guide;
     // And the Tracking the Track button's hover is read at.
-    const key = `${this.page}|${this.failed}|${trackLevel(this.game.skills.get(TRACKING))}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
+    const key = `${this.page}|${this.failed}|${JSON.stringify(this.records)}|${trackLevel(this.game.skills.get(TRACKING))}|${[...g.seen].sort()}|${[...g.tamed].sort()}|${[...g.bred].sort()}`;
     if (key === this.drawn) return;
     this.drawn = key;
     this.counts.textContent = countsLine(g);
@@ -220,6 +224,22 @@ export class GuidePanel {
     this.view.append(head);
     // A kind nobody has seen is its shape and nothing else.
     if (!seen) return;
+    // The island's best bred of it, a line a stat (`RECORD_STATS`), on a kind's own page.
+    if (keepable(def) && !entry.stage) {
+      const order = RECORD_STATS.map((r) => r.id);
+      const its = this.records.filter((r) => r.species === def.id).sort((a, b) => order.indexOf(a.stat) - order.indexOf(b.stat));
+      const h = document.createElement('div');
+      h.className = 'skill-group';
+      h.textContent = 'Bred records';
+      const list = document.createElement('ul');
+      list.className = 'guide-lines';
+      for (const text of its.length ? its.map(recordSaid) : ['Record: none bred yet']) {
+        const li = document.createElement('li');
+        li.textContent = text;
+        list.append(li);
+      }
+      this.view.append(h, list);
+    }
     for (const s of guidePage(def, !!this.island, entry.stage, this.game.guide)) {
       const h = document.createElement('div');
       h.className = 'skill-group';

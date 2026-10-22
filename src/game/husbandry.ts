@@ -20,7 +20,7 @@ import { itemName, RARITIES, RARITY_ODDS } from './items';
 import { workingQl } from './materials';
 import {
   bestTier, breedOdds, CHANNELS, depthMul, inheritChance, lineIfCarried, mirrorTrait, MUTATION_ODDS, mutationTier, pct, TIERS, traitList, traitName, traitTier,
-  TRAIT_SLOTS, upgradeChance,
+  TRAIT_SLOTS, upgradeChance, type TraitTier,
 } from './traits';
 
 /** What one pairing teaches, whether or not it takes. */
@@ -129,39 +129,88 @@ export const rarityShares = (): number[] => RARITY_ODDS.map((_, i) =>
   RARITY_ODDS.slice(0, i + 1).reduce((p, o) => p * o, 1) * (i + 1 < RARITY_ODDS.length ? 1 - RARITY_ODDS[i + 1] : 1));
 
 /**
+ * How much of a pairing's odds a breeder reads, by the gate a trait is read
+ * through (`readsTier`: the animal husbandry for a tier at your awareness, or
+ * a Reader's Knowledge). Short of what reads a trait of `ODDS_BANDS_AT`, each
+ * trait is `likely` (`ODDS_LIKELY` or better) or `unlikely`; from there, the
+ * band of `ODDS_BAND` it falls in; from what reads a trait of `ODDS_EXACT_AT`,
+ * to `ODDS_PLACES` places of a percent, with the odds of a mutation and of each best tier.
+ */
+export const ODDS_BANDS_AT: TraitTier = 'rare';
+export const ODDS_EXACT_AT: TraitTier = 'supreme';
+export const ODDS_LIKELY = 0.5;
+export const ODDS_BAND = 0.1;
+/** Decimal places of a percentage read exactly. */
+export const ODDS_PLACES = 1;
+export type OddsDetail = 'rough' | 'bands' | 'exact';
+export const oddsDetail = (g: Game): OddsDetail => (readsTier(g, ODDS_EXACT_AT) ? 'exact' : readsTier(g, ODDS_BANDS_AT) ? 'bands' : 'rough');
+
+/** A chance as a breeder at that detail reads it: "likely", "30–40%" or "34.7%". */
+export function oddsSaid(p: number, detail: OddsDetail): string {
+  if (detail === 'rough') return p >= ODDS_LIKELY ? 'likely' : 'unlikely';
+  if (detail === 'exact') return `${(p * 100).toFixed(ODDS_PLACES)}%`;
+  const steps = Math.round(1 / ODDS_BAND);
+  const lo = Math.min(steps - 1, Math.floor(p * steps + 1e-9));
+  return `${(lo * 100) / steps}–${((lo + 1) * 100) / steps}%`;
+}
+
+/** "Odds: likely or unlikely; 10% bands at 16 animal husbandry, exact at 36", for the head of a preview and the help. */
+export function oddsDetailSaid(g: Game): string {
+  const aware = g.skills.get('awareness');
+  const bands = `${Math.round(ODDS_BAND * 100)}% bands`;
+  const at = (tier: TraitTier): string => `${traitReadNeeds(tier, aware)} animal husbandry`;
+  const detail = oddsDetail(g);
+  if (detail === 'exact') return 'Odds: exact';
+  if (detail === 'bands') return `Odds: ${bands}; exact at ${at(ODDS_EXACT_AT)}`;
+  return `Odds: likely (${Math.round(ODDS_LIKELY * 100)}%+) or unlikely; ${bands} at ${at(ODDS_BANDS_AT)}, exact at ${at(ODDS_EXACT_AT)}`;
+}
+
+/**
  * What putting these two together would throw, in plain lines, asked before
  * the pairing is made. Asked for: "Before a pairing is confirmed, show for that
  * pair: each trait either parent carries, with the chance the foal inherits it;
  * the chance the foal comes out at each tier better than common, given the
  * pair's care and the breeder's skill; the chance of a mutation and what tier it
- * would be; the pedigree bonus the foal would start with."
+ * would be; the pedigree bonus the foal would start with." And since: each
+ * trait's chance read as closely as your husbandry reads (`oddsDetail`), the
+ * odds of a mutation and of each best tier only where it reads them exactly.
  *
- * Every share is counted off the covering's own draw (`breedOdds`, which runs
- * `breedTraits`) at the husbandry, care and perks the covering would read
- * (`breedPlus`), so it cannot say anything the covering does not do. A trait
- * of theirs too good for your husbandry to read is counted and not named, as on
- * the card.
+ * Every share is worked out exactly from the covering's own draw (`breedOdds`,
+ * off `breedTraits`' rule) at the husbandry, care and perks the covering would
+ * read (`breedPlus`), so it cannot say anything the covering does not do. A
+ * trait of theirs too good for your husbandry to read is counted and not
+ * named, as on the card.
  */
 export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   const skill = g.skills.get(HUSBANDRY);
   const care = (dam.care + sire.care) / 2;
   const { keepPlus, upPlus } = breedPlus(g);
+  // How deep its line would run, on each channel either of them carries a trait on.
+  const parents = [{ traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line }] as const;
+  const lineOn = CHANNELS.filter((ch) => lineIfCarried(parents[0], parents[1], ch.id) > 1);
   // A bronze mirror's copies, as the covering would make them (`mirrorCopy`).
   const copy = mirrorCopy(dam, sire);
-  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus, undefined, undefined, copy);
+  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus, lineOn.map((ch) => ch.id), copy);
+  const detail = oddsDetail(g);
+  const said = (p: number): string => oddsSaid(p, detail);
   const readable = (id: string): boolean => readsTrait(g, id);
   const theirs = Object.keys(odds.carry).sort((a, b) => odds.carry[b] - odds.carry[a]);
   const hidden = theirs.filter((id) => !readable(id)).length;
   const lines = [
     `Pair ${sire.name} with ${dam.name} (animal husbandry ${Math.floor(skill)}, care ${wholePct(care)}):`,
+    `${oddsDetailSaid(g)}.`,
     `Success: ${wholePct(breedChance(skill, care))}.`,
     `Each of ${TRAIT_SLOTS} traits: inherited ${wholePct(Math.min(1, inheritChance(skill, care) + keepPlus))}`
       + `, rarity-up ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))}.`,
-    `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${sharePct(odds.carry[id])}`).join(', ') || 'none readable'}`
+    `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${said(odds.carry[id])}`).join(', ') || 'none readable'}`
       + `${hidden ? `; ${hidden} more unreadable` : ''}.`,
-    `Best trait rarity: ${TIERS.map((t) => `${t} ${sharePct(odds.best[t])}`).join(', ')}.`,
-    `Mutation: 1 in ${MUTATION_ODDS} (${sharePct(1 / MUTATION_ODDS)}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
   ];
+  if (detail === 'exact') {
+    lines.push(
+      `Best trait rarity: ${TIERS.map((t) => `${t} ${said(odds.best[t])}`).join(', ')}.`,
+      `Mutation: ${said(odds.mutated)} (1 in ${MUTATION_ODDS}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
+    );
+  }
   // Each mirrored parent: which trait it copies, at what rarity, and its share (all, but where the dam's copy has its name).
   for (const c of [dam, sire]) {
     const id = mirrored(c) ? mirrorTrait(c.traits) : null;
@@ -169,13 +218,10 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
     const what = readable(id) ? mirrorNames(id) : 'best trait (unreadable)';
     lines.push(`Bronze mirror (${c.name}): ${what} copied, ${sharePct(odds.carry[id] ?? 0)}. Mark used up.`);
   }
-  // How deep its line would run, on each channel either of them carries a trait on.
-  const parents = [{ traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line }] as const;
-  for (const ch of CHANNELS) {
+  for (const ch of lineOn) {
     const d = lineIfCarried(parents[0], parents[1], ch.id);
-    if (d > 1 && odds.on[ch.id] > 0) {
-      lines.push(`Line (${ch.label}): ${d} generations, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a ${ch.label} trait (${sharePct(odds.on[ch.id])}).`);
-    }
+    const on = odds.on[ch.id] ?? 0;
+    if (on > 0) lines.push(`Line (${ch.label}): ${d} generations, ${pct(depthMul(d, ch.id))} ${ch.label}, if it carries a ${ch.label} trait (${said(on)}).`);
   }
   const rare = rarityShares();
   lines.push(`Rarity, as any wildermon: ${rare.map((p, i) => `${RARITIES[i + 1].name} ${sharePct(p)}`).join(', ')}.`);
@@ -327,9 +373,11 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
 export const TIER_LEVEL = { common: 0, rare: 15, supreme: 35, fantastic: 60 } as const;
 /** The animal husbandry needed to read a trait of a tier, at an awareness: 1 over the tier's level, less `awareTraitEase`, never below 0 (`blood_seen`). */
 export const traitReadNeeds = (tier: keyof typeof TIER_LEVEL, aware: number): number => Math.max(0, 1 + TIER_LEVEL[tier] - awareTraitEase(aware));
-/** Whether you read a trait: a Reader's Knowledge, or the husbandry for its tier at your awareness (`blood_seen`). */
-export const readsTrait = (g: Game, id: string): boolean =>
-  g.holds('knowledge_reader') || g.skills.get(HUSBANDRY) >= traitReadNeeds(traitTier(id), g.skills.get('awareness'));
+/** Whether you read a trait of a tier: a Reader's Knowledge, or the husbandry for it at your awareness (`blood_seen`). */
+export const readsTier = (g: Game, tier: TraitTier): boolean =>
+  g.holds('knowledge_reader') || g.skills.get(HUSBANDRY) >= traitReadNeeds(tier, g.skills.get('awareness'));
+/** Whether you read a trait: `readsTier` for its tier. */
+export const readsTrait = (g: Game, id: string): boolean => readsTier(g, traitTier(id));
 
 /** What a herd is worth at a glance, for the journal and the panel. */
 export const herdBest = (g: Game): string => {

@@ -11,6 +11,7 @@ import { generateAtlasWindow, loadAtlas, type Atlas } from '../world/atlas-world
 import { PROJECT, supabase, signIn } from './supabase';
 import type { IslandCreature } from '../game/creatures';
 import type { IslandSpring } from '../game/springs';
+import type { BredRecord } from '../game/boards';
 import { cleanLook, type Look } from '../game/look';
 import type { IslandCrate, IslandGround } from '../game/game';
 import type { DeedRole, PowerId, RankDef } from '../game/ranks';
@@ -513,6 +514,8 @@ export interface Boards {
   wildermon: Array<{ keeper: string; name: string; species: string; score: number; mine: boolean }>;
   /** By level, then citizens (the founder and the roll), then age. */
   settlements: Array<{ name: string; founder: string; level: number; citizens: number; mine: boolean }>;
+  /** Each kind's bred records (`RECORD_STATS`), by kind and then stat. */
+  records: BredRecord[];
 }
 
 /** One line of a conversation. */
@@ -3137,7 +3140,16 @@ export class Island {
       skills: got.skills && typeof got.skills === 'object' && !Array.isArray(got.skills) ? got.skills : {},
       wildermon: rowsIn<Boards['wildermon'][number]>(got.wildermon),
       settlements: rowsIn<Boards['settlements'][number]>(got.settlements),
+      records: rowsIn<BredRecord>(got.records),
     };
+  }
+
+  /** Each kind's bred records (`rpc_bred_records`), for the Field guide; null when the island did not answer. */
+  async bredRecords(): Promise<BredRecord[] | null> {
+    if (!this.info) return null;
+    const { data, error } = await supabase().rpc('rpc_bred_records', { p_world: this.info.id });
+    if (error || !Array.isArray(data)) return null;
+    return rowsIn<BredRecord>(data);
   }
 
   /**

@@ -271,8 +271,10 @@ check('and the most a wildermon can score is its third stage\'s trait slots at t
   slots === stageSlots(2) && most === BRED_MAX && BOARD_RULES.wildermon.includes(`max ${figure(most)} for ${slots} traits`),
   `${figure(most)} of ${slots} slots`);
 const top = Number(said('TOP'));
+// Bred records are a row a kind and a stat, not places cut at the top.
 check('every line gives the board the size the island cuts it at',
-  top === BOARD_TOP && Object.values(BOARD_RULES).every((l) => new RegExp(`\\btop ${top}\\b`, 'i').test(l)), `${said('TOP')} places`);
+  top === BOARD_TOP && Object.entries(BOARD_RULES).filter(([tab]) => tab !== 'records').every(([, l]) => new RegExp(`\\btop ${top}\\b`, 'i').test(l)),
+  `${said('TOP')} places`);
 const maxLevel = Number(said('MAXLEVEL'));
 check('and the settlement line the top level there is',
   maxLevel === MAX_DEED_LEVEL && BOARD_RULES.settlements.includes(`1 to ${maxLevel}`), `level ${said('MAXLEVEL')}`);

@@ -23,7 +23,7 @@ import { Game } from '../../src/game/game';
 import { RELICS } from '../../src/game/archaeology';
 import { CREATURE_ACTION_BY_ID } from '../../src/game/creatureActions';
 import { mirrorCopy, mirrored, mirrorNames, type Creature } from '../../src/game/creatures';
-import { breedPreview } from '../../src/game/husbandry';
+import { breedPreview, oddsSaid } from '../../src/game/husbandry';
 import { ITEM_DEFS } from '../../src/game/items';
 import { breedTraits, familyOf, MUTATION_ODDS, mirrorTrait, mutationOf, TRAITS, TRAIT_SLOTS, type TraitSource } from '../../src/game/traits';
 import { fittedTags } from '../../src/ui/panels/wildermon';
@@ -266,7 +266,7 @@ const told = (from: number): string => g.log.slice(from).map((e) => e.text).join
   const preview = breedPreview(g, snow, horn);
   check('the pairing preview says which trait each copies, at what rarity, all of the time',
     preview.includes('Bronze mirror (Snow): diligent (rare) copied, 100%. Mark used up.') && preview.includes('Bronze mirror (Horn): fanged (supreme) copied, 100%.')
-      && preview.includes('diligent 100%') && preview.includes('fanged (supreme) 100%'), preview);
+      && preview.includes(`diligent ${oddsSaid(1, 'exact')}`) && preview.includes(`fanged (supreme) ${oddsSaid(1, 'exact')}`), preview);
   g.skills.values.set('animal_husbandry', 0);
   check('a trait your husbandry cannot read is not named on the card or in the preview',
     fittedTags(g, snow).some((t) => t.text === 'Mirror: best trait (unreadable) to its next young') && breedPreview(g, snow, horn).includes('Bronze mirror (Snow): best trait (unreadable) copied'),

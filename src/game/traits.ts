@@ -283,6 +283,9 @@ export function husbandryOdds(husbandry = 0, rare = 0): Record<TraitTier, number
 export const betterThanCommon = (odds: Record<TraitTier, number>): number =>
   1 - odds.common / TIERS.reduce((n, t) => n + odds[t], 0);
 
+/** How many goes a wild roll has at a name not already carried, before it takes any row not carried, all alike. */
+export const ROLL_GOES = 12;
+
 /**
  * One fresh trait out of the wild, avoiding what is already there. Husbandry
  * tilts the table: a keeper who knows what they are looking at finds better
@@ -292,7 +295,7 @@ export const betterThanCommon = (odds: Record<TraitTier, number>): number =>
  */
 export function rollTrait(rand: () => number, taken: string[] = [], husbandry = 0, rare = 0): string | null {
   const odds = husbandryOdds(husbandry, rare);
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < ROLL_GOES; i++) {
     const id = rand() < FIGHT_SHARE
       ? gradeId(pick(FIGHTING, rand).id, rollTier(odds, rand))
       : pick(BY_TIER[rollTier(odds, rand)], rand).id;
@@ -466,6 +469,9 @@ export const inheritChance = (husbandry: number, care: number): number =>
 export const upgradeChance = (husbandry: number, care: number): number =>
   (Math.max(0, Math.min(100, husbandry)) / 100) * 0.22 + Math.max(0, Math.min(1, care)) * 0.08;
 
+/** How heavily the draw from a pair's blood falls on a trait of a tier (its place in `TIERS`), at a husbandry's lift (0 to 1). */
+export const drawWeight = (tier: number, lift: number): number => 1 + tier * lift * 2.4;
+
 /** One tier up, or null at the top. */
 export const nextTier = (t: TraitTier): TraitTier | null => TIERS[TIERS.indexOf(t) + 1] ?? null;
 
@@ -548,7 +554,7 @@ export function breedTraits(
     let source: TraitSource = 'roll';
     if (left.length && rand() < keep) {
       // A good keeper's eye falls on the best of what the pair carry.
-      const weights = left.map((t) => 1 + TIERS.indexOf(traitTier(t)) * lift * 2.4);
+      const weights = left.map((t) => drawWeight(TIERS.indexOf(traitTier(t)), lift));
       let r = rand() * weights.reduce((a, b) => a + b, 0);
       id = left[left.length - 1];
       for (let i = 0; i < left.length; i++) {
@@ -693,48 +699,453 @@ export const lineSaid = (traits: string[] | undefined, line: Line | undefined): 
 
 // ---- What a pairing would throw ----
 
-/** How many coverings a breeding preview runs through `breedTraits` itself, from one seed, so a pair reads the same each time it is looked at. */
-export const PREVIEW_GOES = 4000;
-const PREVIEW_SEED = 20261020;
-/** A seeded roll, the same run of numbers each time. */
-export const seededRand = (seed: number): (() => number) => {
-  let s = seed % 2147483647 || 1;
-  return () => (s = (s * 48271) % 2147483647) / 2147483647;
-};
-
 /** What a pairing throws, as shares of the young it would have. */
 export interface BreedOdds {
   /** For each trait either parent carries, the share of young born carrying that very trait. */
   carry: Record<string, number>;
+  /** For every trait a young one of theirs can be born with, the share carrying it; they add up to `TRAIT_SLOTS`. */
+  every: Record<string, number>;
   /** The share whose best trait is of each tier. */
   best: Record<TraitTier, number>;
-  /** The share carrying a trait on each channel. */
-  on: Record<TraitChannel, number>;
+  /** The share carrying a trait on each channel asked about. */
+  on: Partial<Record<TraitChannel, number>>;
   /** The share born with a mutation. */
   mutated: number;
 }
 
+/** Every trait as a row number, with what the draw asks of it, worked out once. */
+interface Rows {
+  n: number;
+  index: Map<string, number>;
+  tier: Int8Array;
+  fam: Int16Array;
+  fight: Uint8Array;
+  /** The channels it carries anything on, a bit each in `CHANNELS` order; one for every grade of a fighting name. */
+  mask: Int32Array;
+  /** The rows of each family. */
+  famRows: number[][];
+}
+let rowsMade: Rows | null = null;
+const rows = (): Rows => {
+  if (rowsMade) return rowsMade;
+  const fams = [...new Set(TRAITS.map((t) => familyOf(t.id)))];
+  const famIx = new Map(fams.map((f, i) => [f, i]));
+  const r: Rows = {
+    n: TRAITS.length,
+    index: new Map(TRAITS.map((t, i) => [t.id, i])),
+    tier: Int8Array.from(TRAITS, (t) => TIERS.indexOf(t.tier)),
+    fam: Int16Array.from(TRAITS, (t) => famIx.get(familyOf(t.id)) as number),
+    fight: Uint8Array.from(TRAITS, (t) => (t.family ? 1 : 0)),
+    mask: Int32Array.from(TRAITS, (t) => CHANNELS.reduce((m, ch, b) => (t.effects[ch.id] !== undefined ? m | (1 << b) : m), 0)),
+    famRows: fams.map(() => []),
+  };
+  TRAITS.forEach((_, i) => r.famRows[r.fam[i]].push(i));
+  return (rowsMade = r);
+};
+
 /**
- * What a pairing would throw, counted off `breedTraits` itself -- the very
- * draw the covering makes, mutation and all -- run `goes` times. It cannot say
- * anything the covering does not do, because it is the covering.
+ * What a pairing would throw, worked out exactly from `breedTraits` -- every
+ * way its rolls can fall, each at its own odds, rather than a count of draws.
+ *
+ * The draw goes slot by slot, and what a slot can come out as hangs only on
+ * the names already in the young (`holds`), so the young's first two traits
+ * are walked as a set with the odds of reaching it, and the third slot and a
+ * mutation are counted off each. One slot, as `breedTraits` makes it:
+ *
+ *   * `keep` of the time, where the pair carry a name the young does not, the
+ *     draw is from that blood, each name weighted by `drawWeight`;
+ *   * otherwise a wild roll (`rollTrait`): a single go lands on a row at the
+ *     share fighting blood or not, its tier (`husbandryOdds`) and its pick
+ *     among the rows like it give; up to `ROLL_GOES` goes, a go on a name the
+ *     young carries thrown again, and after the last any row not carried, all
+ *     alike;
+ *   * then `up` of the time it is one tier better: a fighting name's own grade
+ *     above, a plain trait any plain trait of the tier above it does not carry,
+ *     all alike, and as it was where there is none or no tier above.
+ *
+ * And one young in `MUTATION_ODDS` has its lowest-tier trait (one of the lowest
+ * alike) swapped for a trait of `mutationTier` neither parent nor it carries,
+ * as `lampTrait` picks it.
+ *
+ * Fighting names neither parent carries are alike to every one of those rules
+ * where they lift the same channels, so they are walked as one: a unit is a
+ * row, or a grade of any of the fighting names on one set of channels that
+ * the parents do not carry, and what lands on it is shared among them equally.
+ *
+ * `on` is counted for the channels in `channels` alone, which is all the
+ * preview asks of it. `copy` is a bronze mirror's copies (`mirrorCopy`), as
+ * `breedTraits` takes them: in the young before the draw, the slots left
+ * drawn as ever, and none of them the slot a mutation takes.
  */
 export function breedOdds(sire: string[], dam: string[], husbandry: number, care: number, keepPlus = 0, upPlus = 0,
-  goes = PREVIEW_GOES, rand: () => number = seededRand(PREVIEW_SEED), copy: readonly string[] = []): BreedOdds {
-  const carry: Record<string, number> = Object.fromEntries([...new Set([...sire, ...dam])].map((id) => [id, 0]));
-  const best = Object.fromEntries(TIERS.map((t) => [t, 0])) as Record<TraitTier, number>;
-  const on = Object.fromEntries(CHANNELS.map((ch) => [ch.id, 0])) as Record<TraitChannel, number>;
-  let mutated = 0;
-  for (let i = 0; i < goes; i++) {
-    const bred = breedTraits(sire, dam, husbandry, care, rand, keepPlus, upPlus, copy);
-    for (const id of bred.traits) if (id in carry) carry[id]++;
-    best[bestTier(bred.traits)]++;
-    for (const ch of CHANNELS) if (carriesOn(bred.traits, ch.id)) on[ch.id]++;
-    if (mutationOf(bred.from)) mutated++;
+  channels: readonly TraitChannel[] = [], copy: readonly string[] = []): BreedOdds {
+  const R = rows();
+  const T = TIERS.length;
+  const pool = [...new Set([...sire, ...dam])].filter((id) => R.index.has(id)).map((id) => R.index.get(id) as number);
+  const parentFams = new Set(pool.map((i) => R.fam[i]));
+  const keep = Math.min(1, inheritChance(husbandry, care) + keepPlus);
+  const up = Math.min(1, upgradeChance(husbandry, care) + upPlus);
+  const lift = Math.max(0, Math.min(100, husbandry)) / 100;
+  const odds = husbandryOdds(husbandry);
+  const sum = TIERS.reduce((a, t) => a + odds[t], 0);
+  /** One go of a wild roll at one row of a tier: fighting or plain. */
+  const goAt = (fight: boolean, t: number): number => fight
+    ? (FIGHT_SHARE / FIGHTING.length) * (odds[TIERS[t]] / sum)
+    : ((1 - FIGHT_SHARE) * (odds[TIERS[t]] / sum)) / BY_TIER[TIERS[t]].length;
+
+  // Groups: a family that is its own unit, or the fighting names off the parents on one set of channels. `size` names in
+  // each, every one with `perName` rows, at `nameGo` a go.
+  const gSize: number[] = [];
+  const gPerName: number[] = [];
+  const gGo: number[] = [];
+  const gFight: boolean[] = [];
+  const gMask: number[] = [];
+  const groupOfFam = new Map<number, number>();
+  const groupOfMask = new Map<number, number>();
+  for (let f = 0; f < R.famRows.length; f++) {
+    const r0 = R.famRows[f][0];
+    const pooled = !R.fight[r0] || parentFams.has(f);
+    let g = pooled ? undefined : groupOfMask.get(R.mask[r0]);
+    if (g === undefined) {
+      g = gSize.length;
+      gSize.push(0);
+      gPerName.push(R.famRows[f].length);
+      gGo.push(R.famRows[f].reduce((a, i) => a + goAt(!!R.fight[i], R.tier[i]), 0));
+      gFight.push(!!R.fight[r0]);
+      gMask.push(R.mask[r0]);
+      if (!pooled) groupOfMask.set(R.mask[r0], g);
+    }
+    gSize[g]++;
+    groupOfFam.set(f, g);
   }
-  const share = <K extends string>(r: Record<K, number>): Record<K, number> =>
-    Object.fromEntries(Object.entries(r).map(([k, n]) => [k, (n as number) / goes])) as Record<K, number>;
-  return { carry: share(carry), best: share(best), on: share(on), mutated: mutated / goes };
+  // Units: a row of a family that is its own group, or a tier of a group of fighting names.
+  const uGroup: number[] = [];
+  const uTier: number[] = [];
+  const uRows: number[][] = [];
+  const unitOf = new Map<string, number>();
+  for (let i = 0; i < R.n; i++) {
+    const g = groupOfFam.get(R.fam[i]) as number;
+    const key = `${g}:${R.tier[i]}`;
+    let u = unitOf.get(key);
+    if (u === undefined) {
+      u = uGroup.length;
+      unitOf.set(key, u);
+      uGroup.push(g);
+      uTier.push(R.tier[i]);
+      uRows.push([]);
+    }
+    uRows[u].push(i);
+  }
+  const U = uGroup.length;
+  const unitAt = (g: number, t: number): number => unitOf.get(`${g}:${t}`) ?? -1;
+  const uFight = uGroup.map((g) => gFight[g]);
+  const uMask = Int32Array.from(uGroup, (g) => gMask[g]);
+  const uGo = uGroup.map((g, u) => goAt(gFight[g], uTier[u]));
+  /** A fighting unit's grade above; -1 for a plain one, or at the top. */
+  const uUp = uGroup.map((g, u) => (gFight[g] && uTier[u] + 1 < T ? unitAt(g, uTier[u] + 1) : -1));
+  const plainUnits = TIERS.map((_, t) => uGroup.flatMap((g, u) => (!gFight[g] && uTier[u] === t ? [u] : [])));
+  const poolUnits = pool.map((i) => unitAt(groupOfFam.get(R.fam[i]) as number, R.tier[i]));
+
+  /** What one slot comes out as after the units in `out`, the share at each unit, written into `end`. */
+  const pre = new Float64Array(U);
+  const held = new Int32Array(gSize.length);
+  const climb = new Float64Array(T);
+  const slot = (out: number[], end: Float64Array): Float64Array => {
+    pre.fill(0);
+    end.fill(0);
+    for (const u of out) held[uGroup[u]]++;
+    const left = poolUnits.filter((u) => held[uGroup[u]] < gSize[uGroup[u]]);
+    let wild = 1;
+    if (left.length) {
+      const w = left.map((u) => drawWeight(uTier[u], lift));
+      const tw = w.reduce((a, b) => a + b, 0);
+      left.forEach((u, k) => (pre[u] += (keep * w[k]) / tw));
+      wild = 1 - keep;
+    }
+    if (wild > 0) {
+      let r = 0;
+      let rest = R.n;
+      for (const u of out) {
+        r += gGo[uGroup[u]];
+        rest -= gPerName[uGroup[u]];
+      }
+      const goes = r < 1 ? (1 - r ** ROLL_GOES) / (1 - r) : ROLL_GOES;
+      const last = r ** ROLL_GOES / rest;
+      for (let u = 0; u < U; u++) {
+        const free = gSize[uGroup[u]] - held[uGroup[u]];
+        if (free) pre[u] += wild * free * (uGo[u] * goes + last);
+      }
+    }
+    // A plain trait bred up is any plain trait of the tier above not carried, all alike: what that adds up to, by tier.
+    climb.fill(0);
+    for (let u = 0; u < U; u++) {
+      const p = pre[u];
+      if (!p) continue;
+      end[u] += p * (1 - up);
+      if (uUp[u] >= 0) end[uUp[u]] += p * up;
+      else if (!uFight[u] && uTier[u] + 1 < T) climb[uTier[u] + 1] += p * up;
+      else end[u] += p * up;
+    }
+    for (let t = 1; t < T; t++) {
+      if (!climb[t]) continue;
+      const room = plainUnits[t].filter((u) => !held[uGroup[u]]);
+      if (room.length) for (const u of room) end[u] += climb[t] / room.length;
+      else for (const u of plainUnits[t - 1]) end[u] += pre[u] * up;
+    }
+    for (const u of out) held[uGroup[u]]--;
+    return end;
+  };
+
+  // A bronze mirror's copies, put in first as `breedTraits` puts them (the dam's before the sire's, a name once): not drawn.
+  const fixed: number[] = [];
+  for (const id of copy) {
+    const i = R.index.get(id);
+    if (i === undefined || fixed.length >= TRAIT_SLOTS || fixed.some((u) => uGroup[u] === groupOfFam.get(R.fam[i]))) continue;
+    fixed.push(unitAt(groupOfFam.get(R.fam[i]) as number, R.tier[i]));
+  }
+
+  // The young's first two, as a set (the lower unit first: one unit twice is two names of one group), and the odds of
+  // each; with a copy in, the slots left are walked one by one below instead.
+  const two = new Float64Array(U * U);
+  if (!fixed.length) {
+    const first = slot([], new Float64Array(U));
+    const second = new Float64Array(U);
+    for (let a = 0; a < U; a++) {
+      if (!first[a]) continue;
+      slot([a], second);
+      for (let b = 0; b < U; b++) if (second[b]) two[a <= b ? a * U + b : b * U + a] += first[a] * second[b];
+    }
+  }
+
+  // A mutation: its tier, and what a lamp could pick there once the parents' names are out of it. `lamp` is 1 for a
+  // unit whose fighting name a lamp could take, 2 for a plain one of that tier it could; each brings its channels.
+  const mTier = TIERS.indexOf(mutationTier(sire, dam));
+  const lamp = Int8Array.from(uGroup, (g, u) => {
+    if (gFight[g]) return groupOfMask.has(gMask[g]) && groupOfMask.get(gMask[g]) === g ? 1 : 0;
+    return uTier[u] === mTier && !uRows[u].some((i) => parentFams.has(R.fam[i])) ? 2 : 0;
+  });
+  const lampGroups = gSize.flatMap((_, g) => (gFight[g] && groupOfMask.get(gMask[g]) === g ? [g] : []));
+  const plainT = plainUnits[mTier].filter((u) => lamp[u] === 2);
+  const lampFights = lampGroups.reduce((a, g) => a + gSize[g], 0);
+  const chans = channels.map((id) => CHANNELS.findIndex((ch) => ch.id === id)).filter((k) => k >= 0);
+  const baseF = chans.map((k) => lampGroups.reduce((a, g) => a + (gMask[g] >> k & 1 ? gSize[g] : 0), 0));
+  const baseP = chans.map((k) => plainT.filter((u) => uMask[u] >> k & 1).length);
+  const m = 1 / MUTATION_ODDS;
+
+  const every = new Float64Array(U);
+  const best = new Float64Array(T);
+  const on = new Float64Array(chans.length);
+  let mutated = 0;
+  // What the mutations themselves are: a lamp's pick spread over every name it could take, less, young by young,
+  // the names that young carries.
+  let fightAll = 0;
+  let plainAll = 0;
+  const fightLess = new Float64Array(gSize.length);
+  const plainLess = new Float64Array(U);
+
+  // Past the first two, a young one's lot hangs on its third only through what a lamp could take of it (`lamp`) and
+  // its tier: so for each first two, those twelve kinds of third are worked out once, as group `k`.
+  const K = 3 * T;
+  const kindOf = Int32Array.from(uTier, (t, u) => lamp[u] * T + t);
+  const swapOf = new Float64Array(K);
+  const keepA = new Float64Array(K);
+  const keepB = new Float64Array(K);
+  const keepC = new Float64Array(K);
+  const perF = new Float64Array(K);
+  const perP = new Float64Array(K);
+  const pFOf = new Float64Array(K);
+  const nFOf = new Int32Array(K);
+  const nPOf = new Int32Array(K);
+  const mass = new Float64Array(K);
+  const third = new Float64Array(U);
+  const trio = [0, 0, 0];
+  for (let a = 0; a < U; a++) {
+    for (let b = a; b < U; b++) {
+      const p2 = two[a * U + b];
+      if (!p2) continue;
+      slot([a, b], third);
+      const ta = uTier[a];
+      const tb = uTier[b];
+      for (let lc = 0; lc < 3; lc++) {
+        for (let tc = 0; tc < T; tc++) {
+          const k = lc * T + tc;
+          // What a lamp has to pick from once the young's own names are out too.
+          const nF = lampFights - +(lamp[a] === 1) - +(lamp[b] === 1) - +(lc === 1);
+          const nP = plainT.length - +(lamp[a] === 2) - +(lamp[b] === 2) - +(lc === 2);
+          const pF = nF ? (nP ? FIGHT_SHARE : 1) : 0;
+          const pP = nP ? 1 - pF : 0;
+          const swap = m * (pF + pP);
+          // Its lowest trait, one of the lowest alike, swapped: each of the three is kept where another is the one swapped.
+          const low = Math.min(ta, tb, tc);
+          const lows = +(ta === low) + +(tb === low) + +(tc === low);
+          const w = swap / lows;
+          swapOf[k] = swap;
+          keepA[k] = 1 - swap + w * (lows - +(ta === low));
+          keepB[k] = 1 - swap + w * (lows - +(tb === low));
+          keepC[k] = 1 - swap + w * (lows - +(tc === low));
+          perF[k] = nF ? (m * pF) / nF : 0;
+          perP[k] = nP ? (m * pP) / nP : 0;
+          pFOf[k] = pF;
+          nFOf[k] = nF;
+          nPOf[k] = nP;
+          mass[k] = 0;
+        }
+      }
+      for (let c = 0; c < U; c++) {
+        const pc = third[c];
+        if (!pc) continue;
+        const k = kindOf[c];
+        mass[k] += pc;
+        every[c] += p2 * pc * keepC[k];
+        if (lamp[c] === 1) fightLess[uGroup[c]] += p2 * pc * perF[k];
+        else if (lamp[c] === 2) plainLess[c] += p2 * pc * perP[k];
+        if (!chans.length) continue;
+        // Each channel asked about: carried as drawn, and, swapped, by the two kept or by the lamp's pick.
+        const p = p2 * pc;
+        const swap = swapOf[k];
+        const mask = uMask[a] | uMask[b] | uMask[c];
+        trio[0] = a;
+        trio[1] = b;
+        trio[2] = c;
+        const low = Math.min(ta, tb, uTier[c]);
+        const lows = +(ta === low) + +(tb === low) + +(uTier[c] === low);
+        const pF = pFOf[k];
+        const pP = swap ? 1 - pF : 0;
+        const nF = nFOf[k];
+        const nP = nPOf[k];
+        for (let j = 0; j < chans.length; j++) {
+          const ch = chans[j];
+          if (mask >> ch & 1) on[j] += p * (1 - swap);
+          if (!swap) continue;
+          let f = baseF[j];
+          let h = baseP[j];
+          for (const u of trio) {
+            if (lamp[u] && uMask[u] >> ch & 1) {
+              if (lamp[u] === 1) f--;
+              else h--;
+            }
+          }
+          const picked = (pF * (nF ? f / nF : 0) + pP * (nP ? h / nP : 0)) / (pF + pP);
+          for (let x = 0; x < 3; x++) {
+            if (uTier[trio[x]] !== low) continue;
+            const rest = uMask[trio[(x + 1) % 3]] | uMask[trio[(x + 2) % 3]];
+            on[j] += ((p * swap) / lows) * (rest >> ch & 1 ? 1 : picked);
+          }
+        }
+      }
+      for (let k = 0; k < K; k++) {
+        if (!mass[k]) continue;
+        const p = p2 * mass[k];
+        const tc = k % T;
+        const swap = swapOf[k];
+        every[a] += p * keepA[k];
+        every[b] += p * keepB[k];
+        best[Math.max(ta, tb, tc)] += p * (1 - swap);
+        mutated += p * swap;
+        const low = Math.min(ta, tb, tc);
+        const lows = +(ta === low) + +(tb === low) + +(tc === low);
+        if (ta === low) best[Math.max(mTier, tb, tc)] += (p * swap) / lows;
+        if (tb === low) best[Math.max(mTier, ta, tc)] += (p * swap) / lows;
+        if (tc === low) best[Math.max(mTier, ta, tb)] += (p * swap) / lows;
+        fightAll += p * perF[k];
+        plainAll += p * perP[k];
+        for (const u of [a, b]) {
+          if (lamp[u] === 1) fightLess[uGroup[u]] += p * perF[k];
+          else if (lamp[u] === 2) plainLess[u] += p * perP[k];
+        }
+      }
+    }
+  }
+  /*
+   * With a bronze mirror's copies in, a young one as it comes out of every way the slots left can fall, `p` the odds of
+   * it: the copies first, never the slot a mutation takes. One or two slots left, so a few thousand young at most.
+   */
+  const young = (units: number[], p: number): void => {
+    let nF = lampFights;
+    let nP = plainT.length;
+    for (const u of units) {
+      if (lamp[u] === 1) nF--;
+      else if (lamp[u] === 2) nP--;
+    }
+    const pF = nF ? (nP ? FIGHT_SHARE : 1) : 0;
+    const pP = nP ? 1 - pF : 0;
+    const free = units.map((_, x) => x).filter((x) => x >= fixed.length);
+    const swap = free.length ? m * (pF + pP) : 0;
+    const asIs = p * (1 - swap);
+    let mask = 0;
+    let top = 0;
+    for (const u of units) {
+      every[u] += asIs;
+      mask |= uMask[u];
+      top = Math.max(top, uTier[u]);
+    }
+    best[top] += asIs;
+    chans.forEach((ch, j) => {
+      if (mask >> ch & 1) on[j] += asIs;
+    });
+    if (!swap) return;
+    mutated += p * swap;
+    fightAll += nF ? (p * m * pF) / nF : 0;
+    plainAll += nP ? (p * m * pP) / nP : 0;
+    for (const u of units) {
+      if (lamp[u] === 1) fightLess[uGroup[u]] += (p * m * pF) / nF;
+      else if (lamp[u] === 2) plainLess[u] += (p * m * pP) / nP;
+    }
+    const low = Math.min(...free.map((x) => uTier[units[x]]));
+    const lows = free.filter((x) => uTier[units[x]] === low);
+    for (const x of lows) {
+      const w = (p * swap) / lows.length;
+      const rest = units.filter((_, y) => y !== x);
+      let restMask = 0;
+      let restTop = mTier;
+      for (const u of rest) {
+        every[u] += w;
+        restMask |= uMask[u];
+        restTop = Math.max(restTop, uTier[u]);
+      }
+      best[restTop] += w;
+      chans.forEach((ch, j) => {
+        if (restMask >> ch & 1) {
+          on[j] += w;
+          return;
+        }
+        let f = baseF[j];
+        let h = baseP[j];
+        for (const u of units) {
+          if (lamp[u] === 1 && uMask[u] >> ch & 1) f--;
+          else if (lamp[u] === 2 && uMask[u] >> ch & 1) h--;
+        }
+        on[j] += (w * (pF * (nF ? f / nF : 0) + pP * (nP ? h / nP : 0))) / (pF + pP);
+      });
+    }
+  };
+  const walk = (out: number[], p: number): void => {
+    if (out.length >= TRAIT_SLOTS) {
+      young(out, p);
+      return;
+    }
+    const next = slot(out, new Float64Array(U));
+    for (let u = 0; u < U; u++) if (next[u]) walk([...out, u], p * next[u]);
+  };
+  if (fixed.length) walk(fixed, 1);
+
+  // Back to rows: a unit's share split evenly over the names it stands for, and each mutation's pick added in.
+  const byRow = new Float64Array(R.n);
+  for (let u = 0; u < U; u++) for (const i of uRows[u]) byRow[i] += every[u] / uRows[u].length;
+  for (const g of lampGroups) {
+    const u = unitAt(g, mTier);
+    for (const i of uRows[u]) byRow[i] += fightAll - fightLess[g] / gSize[g];
+  }
+  for (const u of plainT) byRow[uRows[u][0]] += plainAll - plainLess[u];
+  const everyOut: Record<string, number> = {};
+  for (let i = 0; i < R.n; i++) if (byRow[i] > 0) everyOut[TRAITS[i].id] = byRow[i];
+  return {
+    carry: Object.fromEntries(pool.map((i) => [TRAITS[i].id, byRow[i]])),
+    every: everyOut,
+    best: Object.fromEntries(TIERS.map((t, i) => [t, best[i]])) as Record<TraitTier, number>,
+    on: Object.fromEntries(chans.map((k, j) => [CHANNELS[k].id, on[j]])),
+    mutated,
+  };
 }
 
 // ---- An ancient lamp ----

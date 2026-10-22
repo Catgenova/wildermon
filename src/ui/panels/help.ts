@@ -105,7 +105,7 @@ import {
   QL_TOP,
 } from '../../game/game';
 import { ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
-import { PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
+import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FLOOR } from '../../game/improve';
 import { billWords, countOf, DEED_DECAY, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, RARITIES, RARITY_ROOM, rarityBands, rarityChance, roomFor } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
@@ -177,6 +177,7 @@ import { IDLE_LOGOUT } from '../../game/keep';
 import { awayFor } from '../../game/away';
 import { BAR_FOR, BAR_SHUTS, barLabel, KICK_DOES, MUTE_FOR, MUTE_SHUTS, muteLabel, REPORT_HANDLED_DAYS, REPORT_NOTE_MAX, REPORT_OPEN_DAYS, REPORT_REASONS, REPORTS_A_DAY, REPORTS_PER_PERSON } from '../../game/keeper';
 import { BOARD_RULES, REFRESH as BOARD_REFRESH } from './boards';
+import { RECORD_STATS } from '../../game/boards';
 import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
@@ -1107,6 +1108,7 @@ export function helpText(): string {
       <li><b>Skills:</b> ${BOARD_RULES.skills}</li>
       <li><b>Wildermon:</b> ${BOARD_RULES.wildermon}</li>
       <li><b>Settlements:</b> ${BOARD_RULES.settlements}</li>
+      <li><b>Bred records:</b> ${BOARD_RULES.records} Updated at each birth; also on each kind's Field guide page.</li>
     </ul>
 
     <h3>The settlement window</h3>
@@ -2339,6 +2341,7 @@ export function helpText(): string {
       <li>A page: where it spawns and how far it keeps from home, its % of wild spawns, taming needed and accepted food, its use once yours, how it fights, carcass yield.</li>
       <li><b>Field guide</b> on any creature's menu opens its page.</li>
       <li><b>Forms</b> (a tameable kind's page): its colour form, large form and small form, each with its wild odds and effect, marked seen (one in it in your sight) and tamed. Not counted in the progress.</li>
+      <li>A kind's page: <b>Bred records</b>, the island's best bred of it (${RECORD_STATS.map((s) => s.name.toLowerCase()).join(', ')}), as on the Leaderboards.</li>
       <li>Kept by the island; a sighting counts only within ${MOBS_RANGE} tiles of you.</li>
     </ul>
     <h4>Track</h4>
@@ -3242,8 +3245,10 @@ export function helpText(): string {
       ${percent(PALE_AT)} lightness, dark for the rest). Size form: 1 in ${SIZE_FORM_ODDS}, half each: ${formName(SPECIES.rabba, 'large').toLowerCase()} (${formGives('large')}),
       ${formName(SPECIES.rabba, 'small').toLowerCase()} (${formGives('small')}). Kept when tamed. Young: each form at ${percent(FORM_PASS)} per parent that has it.
       Card names it; the Field guide page marks each form seen and tamed.</li>
-      <li>Preview (<b>Put it to a mate</b>, before <b>Yes</b>), from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
-      chance of each parent trait; best-trait rarity odds; mutation chance and rarity; line depth and carry chance per thing; rarity odds.</li>
+      <li>Preview (<b>Put it to a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
+      chance of each parent trait; line depth and carry chance per thing; rarity odds.</li>
+      <li>Preview odds by the husbandry to read a trait (above): under ${ODDS_BANDS_AT} (${TIER_LEVEL[ODDS_BANDS_AT] + 1}), <b>likely</b> (${percent(ODDS_LIKELY)}+) or <b>unlikely</b>;
+      from ${ODDS_BANDS_AT}, ${percent(ODDS_BAND)} bands; from ${ODDS_EXACT_AT} (${TIER_LEVEL[ODDS_EXACT_AT] + 1}), to ${1 / 10 ** ODDS_PLACES}%, plus best-trait rarity odds and mutation chance and rarity. Reader's Knowledge: exact.</li>
     </ul>
     <h4>Herdsman</h4>
     <ul>

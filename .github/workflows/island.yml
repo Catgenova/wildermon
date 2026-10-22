@@ -2393,6 +2393,16 @@ jobs:
             --outfile=node_modules/.cache/boards.mjs --log-level=error
           node node_modules/.cache/boards.mjs
 
+      - name: Bred records, per kind, the best ever bred
+        run: |
+          # Each base stat at birth and the trait total, with the young one's
+          # name, breeder and day, written at a birth only where it beats what
+          # stands, kept when it dies or is let go, and read back the same
+          # through rpc_bred_records and the boards, on both sides.
+          npx esbuild supabase/test/linerecords.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/linerecords.mjs --log-level=error
+          node node_modules/.cache/linerecords.mjs
+
       - name: A young one knows its dam, its sire and where each trait came from
         run: |
           # "A pedigree on the creature window. Show the dam, the sire and
@@ -2418,9 +2428,11 @@ jobs:
           # either parent carries, with the chance the foal inherits it; the
           # chance the foal comes out at each tier better than common; the
           # chance of a mutation and its tier; the pedigree bonus the foal would
-          # start with." The preview is the covering's own draw, lands where
-          # the birth and the island's breed_traits land, says those numbers,
-          # and the island rolls a wild trait by the browser's one rule.
+          # start with." The odds are worked out exactly from the covering's
+          # rule, add up, land where a hundred thousand draws, the birth and
+          # the island's breed_traits land, are said as closely as the
+          # breeder's husbandry reads, and the island rolls a wild trait by the
+          # browser's one rule.
           npx esbuild supabase/test/breedpreview.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/breedpreview.mjs --log-level=error
           node node_modules/.cache/breedpreview.mjs

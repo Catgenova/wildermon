@@ -97,7 +97,7 @@ import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
-import { BOARD_TOP } from '../../game/boards';
+import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { RELICS } from '../../game/archaeology';
@@ -116,7 +116,7 @@ import { CLASS_AT, CLASS_CHANGE_COST, CLASS_TIER_AT, CLASSES, PERK_CLASSES, PERK
 import { spellDef, spellForce, spellsOf } from '../../game/arcane';
 import { PERK_BY_ID, perksOf } from '../../game/perks';
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_ID, CLASS_SPELLS, classSpellsOf, FIRE_LOW, FIRE_TOP, skinOf, spellTerms } from '../../game/talents';
-import { HUSBANDRY_ACTIONS } from '../../game/husbandry';
+import { HUSBANDRY_ACTIONS, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES } from '../../game/husbandry';
 import { TINCTURE_BONUS, TINCTURE_SECONDS } from '../../game/boons';
 import { TINCTURE_NAMES } from '../../game/remedies';
 import { FED_SAID, SOUL_CHANCE } from '../../game/sacrifice';
@@ -3274,6 +3274,16 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: bronze mirror (relic, ${MIRROR.parts} pieces, archaeology ${MIRROR.difficulty}), was treasure only: use on your wildermon; its next covering's young get its best trait`
         + ' (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Shown on its card and in the pairing preview.',
+    ],
+  },
+  {
+    n: 255,
+    day: '2026-10-22',
+    lines: () => [
+      `Changed: pairing preview odds exact, by animal husbandry to read a trait: below ${ODDS_BANDS_AT}, likely (${percent(ODDS_LIKELY)}+) or unlikely; `
+        + `${ODDS_BANDS_AT}, ${percent(ODDS_BAND)} bands; ${ODDS_EXACT_AT}, to ${1 / 10 ** ODDS_PLACES}% with best-trait rarity and mutation odds.`,
+      `Added: Leaderboards, Bred records: per kind, best ever bred (${RECORD_STATS.map((r) => r.name.toLowerCase()).join(', ')}), wildermon, breeder, day; `
+        + 'kept after death or release. Also on each kind\'s Field guide page.',
     ],
   },
   {

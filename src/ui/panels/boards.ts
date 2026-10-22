@@ -1,6 +1,6 @@
 import type { Boards, Island } from '../../net/island';
 import { MAX_DEED_LEVEL, type Game } from '../../game/game';
-import { BOARD_TOP, bestSkill } from '../../game/boards';
+import { BOARD_TOP, bestSkill, dayOf, RECORD_STATS, recordFigure, recordName, type BredRecord } from '../../game/boards';
 import { SPECIES } from '../../game/creatures';
 import { SKILL_DEFS, type SkillDef } from '../../game/skills';
 import { GRADE_STEP, stageSlots, TIERS } from '../../game/traits';
@@ -8,7 +8,7 @@ import { GRADE_STEP, stageSlots, TIERS } from '../../game/traits';
 /** How often the window asks the island again while it is open, in seconds. */
 export const REFRESH = 30;
 
-type Tab = 'skills' | 'wildermon' | 'settlements';
+type Tab = 'skills' | 'wildermon' | 'settlements' | 'records';
 
 /** A figure as a board prints it: a whole number bare, anything else to one place. */
 export const figure = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(1));
@@ -30,12 +30,15 @@ export const BOARD_RULES: Record<Tab, string> = {
     + 'Tie: higher level first. Wild not ranked; traits not named.',
   settlements: `Top ${BOARD_TOP} settlements by level (1 to ${MAX_DEED_LEVEL}), then citizens (founder and member list), `
     + 'then age, oldest first.',
+  records: `Best ever bred, per kind: ${RECORD_STATS.map((s) => s.name.toLowerCase()).join(', ')}. `
+    + 'Base stats: blood at birth (traits, line, rarity) over the kind. Kept after death or release; a tie keeps the first.',
 };
 
 const TABS: Array<[Tab, string, string]> = [
   ['skills', 'Skills', 'Top players per skill'],
   ['wildermon', 'Wildermon', 'Best-bred tamed wildermon'],
   ['settlements', 'Settlements', 'Largest settlements'],
+  ['records', 'Bred records', 'Best ever bred, per kind'],
 ];
 
 /** The Skills window's order, so a skill is found where it always is. */
@@ -152,6 +155,7 @@ export class BoardsPanel {
     if (this.failed) this.say(`No answer just now: showing the last answer. Retry every ${REFRESH} s.`);
     if (this.tab === 'skills') this.drawSkills(this.seen);
     else if (this.tab === 'wildermon') this.drawWildermon(this.seen);
+    else if (this.tab === 'records') this.drawRecords(this.seen.records);
     else this.drawSettlements(this.seen);
   }
 
@@ -216,6 +220,27 @@ export class BoardsPanel {
       String(s.level), s.mine, `Level ${s.level} of ${MAX_DEED_LEVEL}`));
   }
 
+  /** Each kind's bred records, a heading a kind and a row a stat, in `RECORD_STATS` order. */
+  private drawRecords(records: BredRecord[]): void {
+    if (!records.length) {
+      this.say('Nothing bred yet.');
+      return;
+    }
+    const kinds = [...new Set(records.map((r) => r.species))]
+      .sort((a, b) => (SPECIES[a]?.name ?? a).localeCompare(SPECIES[b]?.name ?? b));
+    const order = RECORD_STATS.map((s) => s.id);
+    this.columns('Record', 'Wildermon · breeder · born', 'Best');
+    for (const kind of kinds) {
+      const head = document.createElement('div');
+      head.className = 'skill-group';
+      head.textContent = SPECIES[kind]?.name ?? kind;
+      this.page.append(head);
+      for (const r of records.filter((x) => x.species === kind).sort((a, b) => order.indexOf(a.stat) - order.indexOf(b.stat))) {
+        this.place(0, recordName(r.stat), `${r.name} · ${r.breeder} · ${dayOf(r.at)}`, recordFigure(r.stat, r.value), r.mine);
+      }
+    }
+  }
+
   /** What each column of a board is, over its first place. */
   private columns(who: string, note: string, fig: string): void {
     const row = document.createElement('div');
@@ -235,7 +260,8 @@ export class BoardsPanel {
     row.className = `skill-row board-row${mine ? ' board-mine' : ''}`;
     const rank = document.createElement('span');
     rank.className = 'board-rank';
-    rank.textContent = `${n}.`;
+    // A record has no place to number.
+    rank.textContent = n ? `${n}.` : '';
     const name = document.createElement('span');
     name.className = 'board-who';
     name.textContent = who;
