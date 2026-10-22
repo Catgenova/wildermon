@@ -11,11 +11,11 @@
     <title>Wildermon — your account</title>
     <meta name="description" content="A username and a password, and nothing else." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 30 11 16 19 2 11z' fill='%235c9a3e'/%3E%3Cpath d='M2 11v8l14 8v-8z' fill='%23795c3c'/%3E%3Cpath d='M30 11v8l-14 8v-8z' fill='%234f3c27'/%3E%3C/svg%3E" />
-    <script type="module" crossorigin src="./assets/account.js?v=7fb998f3"></script>
-    <link rel="modulepreload" crossorigin href="./assets/supabase.js?v=44c37cd1">
-    <link rel="modulepreload" crossorigin href="./assets/accounts.js?v=ce2ace60">
-    <link rel="stylesheet" crossorigin href="./assets/accounts.css?v=71b4cb54">
-    <link rel="stylesheet" crossorigin href="./assets/account.css?v=e1803f56">
+    <script type="module" crossorigin src="./assets/account.js?v=330c6417"></script>
+    <link rel="modulepreload" crossorigin href="./assets/supabase.js?v=4d05d8df">
+    <link rel="modulepreload" crossorigin href="./assets/mfa.js?v=e2ee1a40">
+    <link rel="stylesheet" crossorigin href="./assets/mfa.css?v=71b4cb54">
+    <link rel="stylesheet" crossorigin href="./assets/account.css?v=b1830582">
   </head>
   <body>
     <!-- Edit src/account.html, not the generated account.html at the repository root. -->
@@ -59,6 +59,25 @@
       </form>
 
       <p id="say" class="say" role="status" aria-live="polite"></p>
+
+      <!-- Two-step sign-in, for whoever is signed in with a name (src/net/mfa.ts). -->
+      <section id="mfa" hidden>
+        <h2>Two-step sign-in</h2>
+        <p class="note" id="mfa-state"></p>
+        <div id="mfa-qr" hidden>
+          <img id="mfa-img" alt="QR code for an authenticator app" />
+          <p class="note">Key: <code id="mfa-secret"></code></p>
+        </div>
+        <div id="mfa-code-row" hidden>
+          <label for="mfa-code">Authenticator code</label>
+          <input id="mfa-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" spellcheck="false" />
+        </div>
+        <div class="mfa-row">
+          <button type="button" id="mfa-go">Turn on</button>
+          <button type="button" id="mfa-cancel" hidden>Cancel</button>
+        </div>
+        <p class="say" id="mfa-say" role="status" aria-live="polite"></p>
+      </section>
 
       <!-- Step two. Hidden until there is an account to hang a face on. The
            creator itself is src/ui/creator.ts, put in ahead of the button. The
