@@ -10,6 +10,7 @@ import { raisedBySays } from '../raisedBy';
 import { TRACKING, trackingSays } from '../../game/tracking';
 import { metres } from '../../game/piers';
 import { ACTION_BY_ID, maxDigSlope } from '../../game/actions';
+import { TABLET, TABLET_BELOW, TABLET_GAIN } from '../../game/relicuse';
 
 /** A long action, to read a skill's pace off without the floor (`goSeconds`). */
 const SLOW_GO = 100;
@@ -24,6 +25,8 @@ export class SkillsPanel {
   private values = new Map<string, HTMLSpanElement>();
   private notes = new Map<string, HTMLSpanElement>();
   private rows = new Map<string, HTMLDivElement>();
+  /** Each skill's Rune tablet button, shown with a tablet carried and the skill under `TABLET_BELOW` (`relicuse.ts`). */
+  private tablets = new Map<string, HTMLButtonElement>();
   /** Each skill's sliders, under its row, and which are open. */
   private effects = new Map<string, HTMLDivElement>();
   private open = new Set<string>();
@@ -53,7 +56,21 @@ export class SkillsPanel {
         note.className = 'skill-note';
         const value = document.createElement('span');
         value.className = 'skill-value';
-        row.append(name, note, value);
+        // A rune tablet read into this skill, chosen here.
+        const tablet = document.createElement('button');
+        tablet.type = 'button';
+        tablet.className = 'skill-tablet';
+        tablet.textContent = `Rune tablet +${TABLET_GAIN.toFixed(1)}`;
+        tablet.title = `Read a rune tablet into ${def.name}: +${TABLET_GAIN.toFixed(1)}. Under ${TABLET_BELOW} only. Uses up the tablet.`;
+        tablet.hidden = true;
+        tablet.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const it = game.inventory.find(TABLET);
+          const read = ACTION_BY_ID.get('read_rune_tablet');
+          if (it && read) game.requestAction(read, { kind: 'item', uid: it.uid, skill: def.id }, 1);
+        });
+        this.tablets.set(def.id, tablet);
+        row.append(name, note, value, tablet);
         win.body.append(row);
         // A skill with numbers behind it opens onto a slider for each (`skilleffects.ts`).
         if (hasEffects(def.id)) {
@@ -85,6 +102,7 @@ export class SkillsPanel {
     }
     this.refresh();
     win.onOpen = () => this.refresh();
+    game.events.on('inventory', () => this.drawTablets());
     game.events.on('skill', (id) => {
       this.refresh();
       const row = this.rows.get(id);
@@ -108,6 +126,13 @@ export class SkillsPanel {
     for (const def of SKILL_DEFS) this.rows.get(def.id)?.classList.toggle('skill-raw', this.game.skills.get(def.id) <= def.start);
     for (const id of this.open) this.drawEffects(id);
     this.drawTitles();
+    this.drawTablets();
+  }
+
+  /** The Rune tablet buttons: on every skill under `TABLET_BELOW` while one is carried. */
+  private drawTablets(): void {
+    const has = !!this.game.inventory.find(TABLET);
+    for (const [id, b] of this.tablets) b.hidden = !has || this.game.skills.standing(id) >= TABLET_BELOW;
   }
 
   /** A skill's sliders, drawn afresh when it is open: one track per effect, from its starting value to the top. */

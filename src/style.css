@@ -3199,6 +3199,17 @@ button.goal-row:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* A rune tablet read into this skill (`relicuse.ts`): on the row, while one is carried. */
+.skill-tablet {
+  font-size: 0.85em;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.skill-tablet[hidden] {
+  display: none;
+}
+
 /* A skill that opens onto its sliders (`skilleffects.ts`): a caret, and the row it belongs to marked while open. */
 .skill-book .skill-opens {
   cursor: pointer;

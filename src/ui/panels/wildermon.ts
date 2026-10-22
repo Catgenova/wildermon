@@ -1,6 +1,6 @@
 import { clockLeft } from '../../game/boons';
 import { DAY_SECONDS } from '../../game/game';
-import { ageDef, BASE_STATS, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
+import { ageDef, BASE_STATS, BRIDLE_PACE, COLLAR_CUT, fitted, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
 import { CHANNELS, isGain, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
@@ -85,6 +85,14 @@ export function baseStatTags(g: Game, c: Creature): Array<{ stat: BaseStat; text
         + ` Ancient pot: +1 point to a random base stat, +${percent(POT_STEP)} each, max ${POT_MOST} a stat.`,
     };
   });
+}
+
+/** An ancient collar and bridle fitted on it, for the Stats row: "Collar: upkeep −20%". */
+export function fittedTags(c: Creature): Array<{ text: string; title: string }> {
+  const out: Array<{ text: string; title: string }> = [];
+  if (fitted(c, 'collar')) out.push({ text: `Collar: upkeep −${percent(COLLAR_CUT)}`, title: `Ancient collar: hunger rate −${percent(COLLAR_CUT)}.` });
+  if (fitted(c, 'bridle')) out.push({ text: `Bridle: ridden and team speed +${percent(BRIDLE_PACE)}`, title: `Ancient bridle: speed ridden and in a team +${percent(BRIDLE_PACE)}, past the speed cap.` });
+  return out;
 }
 
 /** Your tamed wildermon with their condition, progress and actions. Wild ones are not listed. */
@@ -541,7 +549,7 @@ export class WildermonPanel {
       const w = this.worth(c);
       worthBox.replaceChildren(...(w ? [...w.childNodes] : []));
       worthBox.hidden = !w;
-      const tags = baseStatTags(this.game, c);
+      const tags = [...baseStatTags(this.game, c), ...fittedTags(c)];
       const statKey = tags.map((t) => t.text).join('|');
       if (statBox.dataset.says !== statKey) {
         statBox.dataset.says = statKey;

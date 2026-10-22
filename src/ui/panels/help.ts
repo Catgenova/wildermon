@@ -55,7 +55,7 @@ import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
-  BASE_STATS, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
+  BASE_STATS, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -71,7 +71,7 @@ import {
 } from '../../game/dyestuffs';
 import { BOIL_LITRES, boilCountPlain, gramsOf, litresWord, TINTED_PANE } from '../../game/dyes';
 import { SIGN_MAX, SIGN_QL } from '../../game/signing';
-import { CROP_BY_SEED, CROPS, cropYield, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
+import { CROP_BY_SEED, CROP_LIST, CROPS, cropYield, growthWords, PATCH_TIME, RIPE, STAGE_NAMES } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS, YEARLESS_GROWTH } from '../../game/growth';
 import { CASTS, FAVOUR_TRICKLE, favourCap, PRAYER_BASE, PRAYER_GAIN, PRAYER_LIFT, PRAYER_PEAKS, PRAYER_REST, PRAYER_TAPER, prayerWorth } from '../../game/faith';
 import { tryGain } from '../../game/learn';
@@ -81,6 +81,7 @@ import { SOUL_CHANCE } from '../../game/sacrifice';
 import { HERB_HEAL, healAmount, SUITS_HEAL } from '../../game/firstaid';
 import { groomGain } from '../../game/husbandry';
 import { ARTIFACT_FOR, SHEAR_FEATHERS, SHEAR_WOOL } from '../../game/creatureActions';
+import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
 import { butcherYield } from '../../game/butcher';
 import { BAIT_BY_ID, biteShare, FISH, LINE_REACH } from '../../game/fishing';
 import { BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, FORAGE_TABLE, PER_ROLL, rollsAt, watersideOdds } from '../../game/forage';
@@ -926,8 +927,25 @@ function artifactHelp(): string {
       <li>${from('use_ancient_pot')}: +1 point in a random one of its ${BASE_STATS.length} base stats under ${POT_MOST}:
       ${listed(BASE_STATS.map((st) => `${st.name.toLowerCase()} (${st.says})`))}. Each point: +${percent(POT_STEP)} of that stat over kind and blood;
       max ${POT_MOST} points (+${percent(POT_STEP * POT_MOST)}). Not on one with every stat at ${POT_MOST}.</li>
+      <li>${from('use_ancient_collar')}: upkeep (hunger rate) −${percent(COLLAR_CUT)}, for good. Once per wildermon. Shown on its card.</li>
+      <li>${from('use_ancient_bridle')}: speed ridden +${percent(BRIDLE_PACE)}, past the speed cap; in a team, +${percent(BRIDLE_PACE)} × its share of the team.
+      For good. Once per wildermon. Shown on its card.</li>
     </ul>
-    <p>Old pots and files restored before these existed stay a plain clay pot or file; an old lamp restored before is an ancient lamp.</p>`;
+    <p>Old pots and files restored before these existed stay a plain clay pot or file; an old lamp restored before is an ancient lamp.</p>
+    <p>Four relics restore into items used on you and your things:</p>
+    <ul>
+      <li>${fromRelic(WHETSTONE)}: Hone with it, on a damaged tool or weapon in your pack: all damage off, QL kept. Not on an unrestored find. Used up.</li>
+      <li>${fromRelic(SEED_JAR)}: Open: ${JAR_SEEDS} seeds of one of ${CROP_LIST.length} crops at random, at the jar's QL. Used up.</li>
+      <li>${fromRelic(STAMP)}: carried: rare chance ×${STAMP_RARE} on your next ${STAMP_GOES} crafts and forgings (an anvil's casting work). One go each;
+      its name says the goes left; used up after the last.</li>
+      <li>${fromRelic(TABLET)}: Skills window, <i>Rune tablet +${TABLET_GAIN.toFixed(1)}</i> on a skill under ${TABLET_BELOW}: that skill +${TABLET_GAIN.toFixed(1)}. Used up.</li>
+    </ul>`;
+}
+
+/** A relic's restored item and the relic it comes from, for the lists above. */
+function fromRelic(id: string): string {
+  const relic = RELICS.find((r) => r.result === id)?.name ?? '';
+  return `<b>${itemDef(id).name}</b> (restored from ${article(relic)} ${relic})`;
 }
 
 export function helpText(): string {

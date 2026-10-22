@@ -1544,6 +1544,17 @@ jobs:
             --outfile=node_modules/.cache/presence.mjs --log-level=error
           node node_modules/.cache/presence.mjs
 
+      - name: Six more relics put to use, the same on both sides
+        run: |
+          # "Old collar, old bridle, seed jar, old whetstone, makers stamp,
+          # rune tablet." Each restores into a thing of its own; the collar
+          # and bridle fitted once on a wildermon, the whetstone honing, the
+          # jar opening to seeds, the tablet read into a skill, the stamp
+          # pressed for its goes; refusals and lines word for word.
+          npx esbuild supabase/test/sixrelics.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/sixrelics.mjs --log-level=error
+          node node_modules/.cache/sixrelics.mjs
+
       - name: Body stamina grows the stamina bar, the same on both sides
         run: |
           # "Body stamina should also increase the bar. 2x at 100". The bar is

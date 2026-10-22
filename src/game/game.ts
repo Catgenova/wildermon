@@ -34,7 +34,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, bridleTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, SPECIES, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -7596,8 +7596,9 @@ export class Game {
     // The builder's mark goes on after the cap, as the island has it, so a
     // Carpenter's Smooth Axle is its whole share at the top of the range too;
     // and so does the driver's hand on the reins (`drivingPace`), and how well the thing was built (`vehicleQlPace`).
+    // And the team's ancient bridles (`bridleTeam`), past the cap as tack is.
     return Math.min(MAX_VEHICLE_SPEED, mean * pull * worst * footing(this.teamClimb(f)) * rollEase(f.material)) * markOf(f, 'speed')
-      * drivingPace(this.skills.get(DRIVING)) * vehicleQlPace(f.ql);
+      * drivingPace(this.skills.get(DRIVING)) * vehicleQlPace(f.ql) * bridleTeam(team);
   }
 
   /** How full a vehicle is, 0..1. An empty one rolls over anything. */

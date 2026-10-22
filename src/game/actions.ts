@@ -26,6 +26,7 @@ import { IMPROVE_ACTIONS, improvable } from './improve';
 import { FARM_ACTIONS, glassSays } from './farming';
 import { BUTCHER_ACTIONS } from './butcher';
 import { ARCHAEOLOGY_ACTIONS } from './archaeology';
+import { RELIC_USE_ACTIONS } from './relicuse';
 import { CIRCLET, CIRCLET_SET, CIRCLET_STONES, circletSays, circletWithRoom, gemOf, maybeGem, stonesOf } from './gems';
 import { TREASURE_ACTIONS, maybeMap } from './treasure';
 import { LOCK_ACTIONS } from './locks';
@@ -188,6 +189,8 @@ export type Target =
        * naming why not, never another. Left out, each picks its own.
        */
       wound?: string;
+      /** The skill a rune tablet goes into, for `read_rune_tablet` (`relicuse.ts`), chosen in the Skills window. */
+      skill?: string;
     }
   /** What is lying on a tile; `down` for what lies on the cellar's floor under it. */
   | { kind: 'ground'; x: number; y: number; uid: number | null; down?: boolean }
@@ -3193,6 +3196,7 @@ export const ACTIONS: ActionDef[] = [
   // Reading a trail back to the nearest wild one of a kind, from the field guide (`tracking.ts`).
   ...TRACK_ACTIONS,
   ...ARCHAEOLOGY_ACTIONS,
+  ...RELIC_USE_ACTIONS,
   ...TREASURE_ACTIONS,
   // Drawing, studying and copying a map (`cartography.ts`).
   ...CHART_ACTIONS,

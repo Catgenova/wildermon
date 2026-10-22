@@ -116,6 +116,8 @@ import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE } from '../src/game/placeables';
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
+import { BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
+import { JAR_SEEDS, STAMP_GOES, STAMP_RARE, TABLET_BELOW, TABLET_GAIN } from '../src/game/relicuse';
 import {
   MAP_BANDS, MAP_KILL_CAP, MAP_KILL_SCALE, MAP_ODDS, MAP_RANGE, MAP_SNIPPET, TREASURE_TIERS,
   UNEARTH_REACH,
@@ -1817,6 +1819,9 @@ for (const [fn, v] of [
   ['wind_rest', WIND_REST], ['wind_walk', WIND_WALK], ['wind_per_level', WIND_PER_LEVEL], ['stamina_bar_per_level', STAMINA_BAR_PER_LEVEL],
   // Litres (`items.ts`, `placeables.ts`).
   ['litre_kg', LITRE_KG], ['lye_use', LYE_USE], ['drink_litres', DRINK_LITRES],
+  // Six more relics (`creatures.ts`, `relicuse.ts`).
+  ['collar_cut', COLLAR_CUT], ['bridle_pace', BRIDLE_PACE], ['jar_seeds', JAR_SEEDS], ['stamp_goes', STAMP_GOES],
+  ['stamp_rare', STAMP_RARE], ['tablet_gain', TABLET_GAIN], ['tablet_below', TABLET_BELOW],
   ['wind_starving', WIND_STARVING], ['heal_rate', HEAL_RATE], ['heal_fed', HEAL_FED],
   /*
    * And deep water, which the island kept two numbers for and never spent.

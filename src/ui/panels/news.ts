@@ -96,6 +96,9 @@ import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
 import { CRAFT_REACH, RECIPE_BY_ID, RECIPES, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOARD_TOP } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
+import { JAR_SEEDS, SEED_JAR, STAMP, STAMP_GOES, STAMP_RARE, TABLET, TABLET_BELOW, TABLET_GAIN, WHETSTONE } from '../../game/relicuse';
+import { RELICS } from '../../game/archaeology';
+import { BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
@@ -3168,7 +3171,23 @@ export const NEWS: News[] = [
       'Changed: "has gone home." is now "Logged off: name", in Talk.',
     ],
   },
+  {
+    n: 245,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: ${SIX_RELICS.length} relics: ${SIX_RELICS.map((r) => `${r.name} (${r.parts} pieces, archaeology ${r.difficulty})`).join(', ')}.`,
+      `Added: ancient collar, on your wildermon: upkeep −${percent(COLLAR_CUT)}, for good, once per wildermon.`,
+      `Added: ancient bridle, on your wildermon: speed ridden +${percent(BRIDLE_PACE)}, and its share of a team's, past the speed cap; for good, once per wildermon.`,
+      'Added: ancient whetstone: Hone a damaged tool or weapon: all damage off, QL kept.',
+      `Added: ancient seed jar: Open: ${JAR_SEEDS} seeds of a random crop at the jar's QL.`,
+      `Added: ancient stamp, carried: rare chance ×${STAMP_RARE} on your next ${STAMP_GOES} crafts and forgings.`,
+      `Added: rune tablet: Skills window, a skill under ${TABLET_BELOW}: +${TABLET_GAIN.toFixed(1)}.`,
+    ],
+  },
 ];
+
+/** The six relics What's new 245 added, by what they restore into. */
+const SIX_RELICS = RELICS.filter((r) => [WHETSTONE, SEED_JAR, STAMP, TABLET, 'ancient_collar', 'ancient_bridle'].includes(r.result));
 
 
 /** The wildermon with an ability of their own, as What's new 177 gives them. */

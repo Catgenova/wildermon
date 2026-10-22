@@ -4160,9 +4160,26 @@ const BASE_STAT_IDS: ReadonlySet<string> = new Set(BASE_STATS.map((s) => s.id));
 /** The points ancient pots have put into one of its stats, as many as there may be. */
 export const potPoints = (c: Pick<Creature, 'boosts'>, stat: BaseStat): number =>
   Math.max(0, Math.min(POT_MOST, Math.floor(c.boosts?.[stat] ?? 0)));
-/** What they make of one channel: `POT_STEP` more for each point, on the four base stats and nothing else. */
+/**
+ * An ancient collar and an ancient bridle, each fitted once and for good, kept
+ * in `boosts` beside the pot points (`collar`, `bridle`): the collar takes
+ * `COLLAR_CUT` off its upkeep (`appetite`), and the bridle puts `BRIDLE_PACE`
+ * on its speed ridden and in a team, past the cap as tack is (`tackSpeed`,
+ * `bridleTeam`). Asked for: "Old collar, old bridle". The island's
+ * `collar_cut`, `bridle_pace` and `fitted`.
+ */
+export type RelicFit = 'collar' | 'bridle';
+export const COLLAR_CUT = 0.2;
+export const BRIDLE_PACE = 0.1;
+export const fitted = (c: Pick<Creature, 'boosts'>, fit: RelicFit): boolean => (c.boosts?.[fit] ?? 0) > 0;
+/** A team's bridles on its pace: the share of it bridled, each at `BRIDLE_PACE` more. The island's `bridle_team`. */
+export const bridleTeam = (team: ReadonlyArray<Pick<Creature, 'boosts'>>): number =>
+  (team.length ? 1 + (BRIDLE_PACE * team.filter((c) => fitted(c, 'bridle')).length) / team.length : 1);
+
+/** What they make of one channel: `POT_STEP` more for each point, on the four base stats; and a collar's upkeep. */
 export const potMul = (c: Pick<Creature, 'boosts'>, channel: TraitChannel): number =>
-  (BASE_STAT_IDS.has(channel) ? 1 + POT_STEP * potPoints(c, channel as BaseStat) : 1);
+  (BASE_STAT_IDS.has(channel) ? 1 + POT_STEP * potPoints(c, channel as BaseStat)
+    : channel === 'appetite' && fitted(c, 'collar') ? 1 - COLLAR_CUT : 1);
 /** The stats an ancient pot could still put a point into. */
 export const potRoom = (c: Pick<Creature, 'boosts'>): BaseStat[] => BASE_STATS.filter((s) => potPoints(c, s.id) < POT_MOST).map((s) => s.id);
 
@@ -4207,6 +4224,7 @@ describeWith({
     lowTier: TIERS[0],
     nextLowTier: TIERS[1],
   },
+  relicFit: { collar: COLLAR_CUT, bridle: BRIDLE_PACE },
 });
 
 /**
@@ -4332,7 +4350,7 @@ export interface IslandCreature {
   /** How old it is, as the island reckons it ('young', 'grown', 'old'). */
   age?: string;
   /** What ancient pots have put into its base stats, by the stat: sent for your own only, and null for one that has had none. */
-  boosts?: Partial<Record<BaseStat, number>> | null;
+  boosts?: Partial<Record<BaseStat | RelicFit, number>> | null;
   /** Shod, by the island's clock. */
   shod?: boolean;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
@@ -4448,7 +4466,7 @@ export interface Creature {
    * It is its own, as its rarity is, and nothing breeds true for it. The
    * island keeps the same map in the creature's `boosts` column.
    */
-  boosts?: Partial<Record<BaseStat, number>>;
+  boosts?: Partial<Record<BaseStat | RelicFit, number>>;
   /** How well it has been looked after lately, 0..1. Brushing puts it up; time takes it down. */
   care: number;
   /** The learning its last good meal put on it (`fedOn`), and the game time that runs out; absent before its first. */
@@ -4659,7 +4677,7 @@ export interface CreatureJSON {
   /** How rare it came into the world; absent in a save from before there were rare ones, which were all ordinary. */
   rare?: number;
   /** What ancient pots have put into its base stats; absent on one that has had none, and in a save from before there were any. */
-  boosts?: Partial<Record<BaseStat, number>>;
+  boosts?: Partial<Record<BaseStat | RelicFit, number>>;
   care?: number;
   /** A meal's learning and when it runs out (`fedOn`); absent in a save from before meals were worth any. */
   fedBonus?: number;
@@ -4727,10 +4745,12 @@ export const TACK = ['saddle', 'bridle'];
  * makers' marks (a Tailor's Saddler), after the cap, as the island's
  * `tack_speed` has it. One for plain tack.
  */
-export const tackSpeed = (c: { tack?: Record<string, Mark>; tackEnchant?: Record<string, Enchant> }): number =>
+export const tackSpeed = (c: { tack?: Record<string, Mark>; tackEnchant?: Record<string, Enchant>; boosts?: Creature['boosts'] }): number =>
   Math.max(1, ...TACK.map((id) => markOf({ mark: c.tack?.[id] }, 'speed')))
   // And a Fleetfoot in its saddle on top.
-  * (1 + tackEnchant(c, 'fleet'));
+  * (1 + tackEnchant(c, 'fleet'))
+  // And an ancient bridle on it (`BRIDLE_PACE`).
+  * (fitted(c, 'bridle') ? 1 + BRIDLE_PACE : 1);
 /** What the enchantments in the tack on it come to for this effect: the most of any one piece. The island's `tack_enchant_of`. */
 export const tackEnchant = (c: { tackEnchant?: Record<string, Enchant> }, effect: EnchantEffect): number =>
   Math.max(0, ...TACK.map((id) => swingEnchant({ enchant: c.tackEnchant?.[id] }, effect)));

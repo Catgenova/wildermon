@@ -4,6 +4,7 @@ import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
 import { madeBy } from './signing';
+import { pressStamp } from './relicuse';
 import { itemDef, makersMark, rareInputSaid, rarityOf, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD } from './items';
 import { matOf, matOfItem, workingQl } from './materials';
 import { metalOfItem } from './melt';
@@ -288,7 +289,8 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       const made = g.inventory.add(def.makes, { ql, extra: casting.extra, count: per, mark });
       // Rarer odds for a Smith's Master's Mark, as `rare:smith` has it on the
       // island, and for a rare casting.
-      const rare = rollRarityFrom(g.rand, used, g.perk('rare:smith', RARITY_ODDS[0]));
+      // And twice the chance of the first step with an ancient stamp carried, which a go comes off (`pressStamp`).
+      const rare = rollRarityFrom(g.rand, used, pressStamp(g, g.perk('rare:smith', RARITY_ODDS[0])));
       const rareIn = rareInputSaid(used);
       if (rareIn) g.logMsg(rareIn, 'event');
       // One thing beaten out at the signing QL carries its maker's name as rare work does (`signing.ts`).

@@ -2,6 +2,7 @@ import { MIND_GAIN, tryGain } from './learn';
 import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
+import { pressStamp } from './relicuse';
 import {
   countOf, describeFrom, describeWith, itemDef, litresOf, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
   serveOf, type Item,
@@ -1383,7 +1384,8 @@ export function recipeAction(r: Recipe): ActionDef {
       // Rolled before it goes into the pack, and rare work carries its maker's
       // name, so that it starts a pile of its own: set after, it made the whole
       // pile it went onto rare.
-      const rare = rollRarityFrom(g.rand, used, g.perk(`rare:${r.id}`, RARITY_ODDS[0]));
+      // And twice the chance of the first step with an ancient stamp carried, which a go comes off (`pressStamp`).
+      const rare = rollRarityFrom(g.rand, used, pressStamp(g, g.perk(`rare:${r.id}`, RARITY_ODDS[0])));
       const rareIn = rareInputSaid(used);
       const item = g.inventory.add(r.result, {
         count, ql, extra: r.extra ?? mat, ...(stackable && marked ? { mark: marked } : {}), ...(rare ? { rare } : {}),
