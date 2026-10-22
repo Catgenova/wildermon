@@ -147,6 +147,8 @@ export const REPORT_REASONS: ReadonlyArray<{ id: string; label: string }> = [
 export const REPORT_NOTE_MAX = 200;
 /** Reports one body may send on an island in any 24 hours (`private.reports_a_day`). */
 export const REPORTS_A_DAY = 5;
+/** Reports one body may send about the same person in any 24 hours, as `rpc_report_player` holds it. */
+export const REPORTS_PER_PERSON = 1;
 /** Days a report is kept after a keeper marks it handled; an open one is kept `REPORT_OPEN_DAYS` (`private.report_kept_days`). */
 export const REPORT_HANDLED_DAYS = 30;
 export const REPORT_OPEN_DAYS = 90;
@@ -166,3 +168,6 @@ export interface KeptReport {
   /** Open reports against the same body, this one included. */
   against: number;
 }
+
+/** New characters one connection may make across the project in 24 hours. The island's `private.ip_body_cap`. */
+export const NEW_BODIES_A_DAY = 3;

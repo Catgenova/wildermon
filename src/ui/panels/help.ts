@@ -170,7 +170,7 @@ import { COUNTS } from '../beltmenu';
 import { DAMAGE_BREAKING } from '../itemcells';
 import { IDLE_LOGOUT } from '../../game/keep';
 import { awayFor } from '../../game/away';
-import { BAR_FOR, BAR_SHUTS, barLabel, KICK_DOES, MUTE_FOR, MUTE_SHUTS, muteLabel, REPORT_HANDLED_DAYS, REPORT_NOTE_MAX, REPORT_OPEN_DAYS, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
+import { BAR_FOR, BAR_SHUTS, barLabel, KICK_DOES, MUTE_FOR, MUTE_SHUTS, muteLabel, REPORT_HANDLED_DAYS, REPORT_NOTE_MAX, REPORT_OPEN_DAYS, REPORT_REASONS, REPORTS_A_DAY, REPORTS_PER_PERSON } from '../../game/keeper';
 import { BOARD_RULES, REFRESH as BOARD_REFRESH } from './boards';
 import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
@@ -1069,7 +1069,7 @@ export function helpText(): string {
     <h4>Reports and the island's keepers</h4>
     <ul>
       <li><b>Report</b> (right-click a person): reason ${REPORT_REASONS.map((r) => `<b>${r.label}</b>`).join(', ')}; note optional, up to ${REPORT_NOTE_MAX} characters.
-      Limit: ${REPORTS_A_DAY} reports in 24 hours; 1 about the same person in 24 hours. The one reported is not told.</li>
+      Limit a day: ${REPORTS_A_DAY} reports; ${REPORTS_PER_PERSON} about the same person. The one reported is not told.</li>
       <li>Kept: ${REPORT_OPEN_DAYS} days open; ${REPORT_HANDLED_DAYS} days after a keeper marks it handled.</li>
       <li>Keepers (founder of the island, and project owners): <b>Island keeper</b> window. Open reports first: <b>Mute</b>, <b>Kick</b>, <b>Handled</b>.</li>
       <li><b>Mute</b> (${MUTE_FOR.map(muteLabel).join(', ')}): refuses ${MUTE_SHUTS}.</li>

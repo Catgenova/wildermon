@@ -147,7 +147,7 @@ export class KeeperPanel {
   /** Two-step sign-in is on: the code, before any keeper door opens. */
   private codeForm(): void {
     this.head('Authenticator code');
-    this.say(`Two-step sign-in: on. Keeper tools: the ${CODE_DIGITS}-digit code from your authenticator app, once per sign-in.`);
+    this.say(`Authenticator sign-in: on. Keeper tools: the ${CODE_DIGITS}-digit code from your authenticator app, once per sign-in.`);
     const form = document.createElement('form');
     form.className = 'keeper-code';
     const box = document.createElement('input');

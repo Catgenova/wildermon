@@ -123,7 +123,7 @@ import { CARRY_BASE, CARRY_PER_STRENGTH, DAMAGE_MAX, DAY_SECONDS, DEEDS_JOINED, 
 import { UI_SIZE_MAX, UI_SIZE_MIN } from '../screen';
 import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages } from '../../game/guide';
-import { MUTE_FOR, MUTE_SHUTS } from '../../game/keeper';
+import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
 import { ARMOUR, BANE_BONUS, SHIELDS, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
@@ -3231,6 +3231,17 @@ export const NEWS: News[] = [
       }),
       `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
       'Changed: Mosskip line butchers no fur; Pebbletooth line gives scales, not fur.',
+    ],
+  },
+  {
+    n: 252,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: Report a player (right-click a person): ${REPORT_REASONS.map((r) => r.label.toLowerCase()).join(', ')}; ${REPORTS_A_DAY} a day.`,
+      'Added: island keepers kick and bar, see reports, and see flags for shared connections, all-day play and fast skill gain.',
+      'Added: authenticator sign-in on the account page; keeper tools ask for the code when it is on.',
+      `Changed: new characters per connection a day: ${NEW_BODIES_A_DAY}.`,
+      'Changed: other islands\' players, wildermon, settlements, trades and island talk no longer readable.',
     ],
   },
 ];

@@ -25,7 +25,7 @@
  * Makes and removes everything it uses.
  */
 import { execFileSync } from 'node:child_process';
-import { KEEPER_CODE } from '../../src/game/keeper';
+import { KEEPER_CODE, NEW_BODIES_A_DAY } from '../../src/game/keeper';
 
 const ENV = {
   ...process.env,
@@ -151,6 +151,7 @@ console.log('--- new bodies per connection');
 const CAP = Number(psql('select private.ip_body_cap();'));
 const HOURS = Number(psql('select extract(epoch from private.ip_body_window())::int / 3600;'));
 const CROWD = '198.51.100.9';
+check('the browser says the same cap as the island', CAP === NEW_BODIES_A_DAY, `island ${CAP}, browser ${NEW_BODIES_A_DAY}`);
 const makers = [DORA, EMIL, FINN];
 check('the cap is three in 24 h', CAP === 3 && HOURS === 24 && makers.length === CAP, `${CAP} in ${HOURS} h`);
 const made = makers.map((u) => join(u, { headers: xff(CROWD) }));
