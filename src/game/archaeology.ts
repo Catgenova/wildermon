@@ -65,7 +65,7 @@ export const RELICS: RelicDef[] = [
   { name: 'ancient helm', parts: 5, result: 'helm', difficulty: 44 },
 ];
 
-/** Ground worth turning over: soil and sand, not bare rock or standing water. */
+/** Ground worth turning over: soil, sand and trails, not bare rock or standing water. */
 export const DIGGABLE: ReadonlySet<number> = new Set<number>([
   TileType.Grass,
   TileType.Dirt,
@@ -77,6 +77,7 @@ export const DIGGABLE: ReadonlySet<number> = new Set<number>([
   TileType.Lawn,
   TileType.Clay,
   TileType.Marsh,
+  TileType.Trail,
 ]);
 
 /** "old lamp 2/3" on the end of a fragment says what it is a piece of. */

@@ -31,6 +31,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
+import { DIGGABLE } from '../../src/game/archaeology';
 import { TILE_DEFS, TileType, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS, lastDawn } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -72,6 +73,9 @@ const iDef = psql(`select speed || '|' || coalesce(dig_yield, '-') || '|' || pav
 check('a trail walks and rolls as packed dirt does, is dug for dirt, packs, is buried and takes paving, on both sides',
   trail.speed === packed.speed && trail.roll === packed.roll && iDef === `${packed.speed}|dirt|true|true|true|true`,
   `browser pace ${trail.speed} and roll ${trail.roll} against packed dirt's ${packed.speed} and ${packed.roll}; island ${iDef}`);
+const iDig = psql(`select diggable from tile_def where id = ${TileType.Trail}`);
+check('a trail is investigated as the ground it was, on both sides', DIGGABLE.has(TileType.Trail) && iDig === 't',
+  `browser ${DIGGABLE.has(TileType.Trail)}, island ${iDig}`);
 
 /* ---- the ground, on both sides ---------------------------------------------
  * Flat at four, rows 30 to 36 and x 5 to 22: one row of each ground that

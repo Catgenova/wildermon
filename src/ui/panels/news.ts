@@ -3201,6 +3201,11 @@ export const NEWS: News[] = [
       `Added: Field guide page for every evolution stage, after its kind's: ${guideEntries().length - guidePages().length} pages, each with its model; seen once one at that stage is in sight.`,
     ],
   },
+  {
+    n: 248,
+    day: '2026-10-22',
+    lines: () => ['Changed: Investigate works on a trail.'],
+  },
 ];
 
 /** The old brace, as What's new 246 gives it. */

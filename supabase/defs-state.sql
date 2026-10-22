@@ -5996,6 +5996,7 @@ update tile_def set diggable = true where id = 11;
 update tile_def set diggable = true where id = 20;
 update tile_def set diggable = true where id = 8;
 update tile_def set diggable = true where id = 7;
+update tile_def set diggable = true where id = 24;
 insert into relic_def values ('old pot', 2, 'ancient_pot', 12);
 insert into relic_def values ('bone comb', 2, 'ancient_comb', 16);
 insert into relic_def values ('seed jar', 2, 'ancient_seed_jar', 16);
