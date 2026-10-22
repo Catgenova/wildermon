@@ -67,11 +67,10 @@ insert into said select 'NOPATH', coalesce(string_agg(p.oid::regprocedure::text,
   ${PUBLIC_FNS} where p.prosecdef
    and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) s where s like 'search\\_path=%');
 -- And every other function of the island too, as the advisors read it (\`function_search_path_mutable\`): an
--- extension's own excepted, which the advisors skip, and a \`language sql\` one, which must stay foldable (\`folded\`).
+-- extension's own excepted, which the advisors skip.
 insert into said select 'MUTABLE', coalesce(string_agg(p.oid::regprocedure::text, ',' order by 1), '')
   from pg_proc p join pg_namespace s on s.oid = p.pronamespace
  where s.nspname in ('public', 'private') and p.prokind in ('f', 'p')
-   and p.prolang <> (select l.oid from pg_language l where l.lanname = 'sql')
    and not exists (select 1 from pg_depend d where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')
    and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search\\_path=%');
 insert into said select 'PRIVS', coalesce(string_agg(distinct r || ':' || pr || ':' || c.relname, ',' order by r || ':' || pr || ':' || c.relname), '')
@@ -247,7 +246,7 @@ const none = (k: string): [boolean, string] => [said.get(k) === '', said.get(k) 
 
 check('every table in public has row level security', ...none('NORLS'));
 check('every SECURITY DEFINER function in public has a fixed search_path', ...none('NOPATH'));
-check('and every function of the island, an extension\'s own and a foldable sql one excepted, has one', ...none('MUTABLE'));
+check('and every function of the island, an extension\'s own excepted, has one', ...none('MUTABLE'));
 check('anon and authenticated hold nothing on a table or view but SELECT', ...none('PRIVS'));
 check('no function but an rpc_* is executable by anon or authenticated', ...none('FNS'));
 check(`anon may call ${ANON_RPCS.join(', ')} and nothing else`, ...none('ANONFNS'));
