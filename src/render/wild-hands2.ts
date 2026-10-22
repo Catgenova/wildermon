@@ -8,11 +8,12 @@ import { pawed, trot } from './wild-paws';
 import { links, snout } from './wild-hands';
 
 /**
- * Eleven more of the settlement's hands: the forga, the potta, the cindra,
- * the hoppa, the simma, the relka, the bedda, the wurla, the ambra, the
- * petta and the scurra (the sprigga is the Lemlet now, `./wild-lemur`). As
- * with the first ten (`./wild-hands`), each wears the tool of its trade:
- * tongs for a tail, a spoon, a lens, a spade for a snout, a scrubbing brush.
+ * Ten more of the settlement's hands: the forga, the potta, the cindra,
+ * the hoppa, the simma, the relka, the bedda, the ambra, the petta and the
+ * scurra (the sprigga is the Lemlet now, `./wild-lemur`, and the wurla the
+ * Pebblebeak, `./wild-curlew`). As with the first ten (`./wild-hands`), each
+ * wears the tool of its trade: tongs for a tail, a spoon, a lens, a trowel,
+ * a scrubbing brush.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -341,46 +342,6 @@ export const BEDDA: Kind = {
   shadow: [1.4, 1.15],
   stride: 1.4,
   size: 1.5,
-};
-
-/* ---- the wurla: a spade for a snout ------------------------------------------------- */
-
-const WURLA_SPEC: QuadSpec = { ...pawed({ high: 1.0, len: 2.8, legs: 0.5, neck: 0.45, lean: 75, swing: [20, 32], ears: [60, 20], tail: [0.5, -6, 2] }), nose: 8 };
-const WURLA_HEAD = { c: [0, 0.4, 0.05] as V3, r: [0.95, 0.95, 0.8] as V3 };
-
-function wurlaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = WURLA_HEAD;
-  // A spade's blade on the end of its snout, square and a little dished.
-  const spade = merge(
-    tube([[0, 1.0, -0.15], [0, 1.25, -0.2]], 0.07, 0.07, 6, 'wood'),
-    tube([[0, 1.25, -0.2], [0, 1.65, -0.32]], [0.24, 0.26], [0.03, 0.03], 6, 'metal', { up: [0, 0, 1] }),
-  );
-  // A tail in pink rings, like a worm's.
-  const tail = links([0.13, 0.12, 0.1, 0.07, 0.03], 0.24, n, (ring) => (ring % 2 ? 'inner' : 'nose'));
-  return quadPieces({
-    n, k,
-    body: { y: [-1.4, -1.15, -0.55, 0.05, 0.65, 1.15, 1.4], z: [0.05, 0.06, 0.08, 0.1, 0.1, 0.12, 0.14], w: [0.25, 0.8, 0.9, 0.92, 0.9, 0.8, 0.26], h: [0.22, 0.62, 0.7, 0.72, 0.7, 0.6, 0.22], belly: true },
-    neck: { w: 0.58, h: 0.54, len: 0.45 },
-    head: { c: H.c, r: H.r, face: merge(snout(0.95, -0.12, [0.4, 0.28, 0.36], 0.12, n, k, 'inner'), spade), eye: { dir: [0.7, 0.58, 0.36], size: 0.26, rim: 0.12 }, blush: [[0.86, 0.38, -0.26], 0.16] },
-    ear: earMesh(0.22, 0.2, n),
-    earTurn: 40,
-    tail,
-    ...paws(n, k, 0.5, 0.22, 0.22, 'claw'),
-  });
-}
-
-export const WURLA: Kind = {
-  bones: quadBonesOf(WURLA_SPEC, (p, a) => {
-    trot(p, a);
-    // Grazing, it digs: the head bobbing down into the ground.
-    if (a.graze > 0) p.head[0] += 14 * Math.max(0, Math.sin(a.t * TAU * 1.4)) * a.graze;
-  }),
-  build: wurlaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ metal: [176, 182, 190], wood: [150, 108, 72], claw: [110, 90, 80], nose: [214, 120, 130], inner: [236, 160, 168] }), 20),
-  shadow: [1.8, 1.0],
-  stride: 1.5,
-  size: 1.6,
 };
 
 /* ---- the ambra: amber on its back, a pine cone for a tail --------------------------- */

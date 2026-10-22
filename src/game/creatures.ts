@@ -2475,8 +2475,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   wurla: {
     id: 'wurla',
-    name: 'Wurla',
+    name: 'Pebblebeak',
+    was: ['Wurla'],
+    // Pebblebeak, Soilwhistle, Wormheron.
     description: 'Settlement task: dig worms on dry grass, dirt, marsh and moss as your spade would, more in marsh or moss, sometimes none; output home. A dug tile rests as long as a forage bed.',
+    stages: [
+      { name: 'Soilwhistle', description: '' },
+      { name: 'Wormheron', description: '' },
+    ],
     health: 18,
     attack: 2,
     speed: 1.8,
@@ -2488,10 +2494,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'worm',
     workRange: 8,
     variants: [
-      ['#8a6a5a', '#e0c4b4'],
-      ['#7a6458', '#d4bcae'],
-      ['#946c58', '#e8c8b4'],
-      ['#6c5c52', '#c8b4a8'],
+      ['#8a6248', '#efe2c8'],
+      ['#a0583e', '#f2dcc0'],
+      ['#6e6456', '#e6e2d6'],
+      ['#94784c', '#f4e8cc'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
     nearWater: true,

@@ -6,6 +6,7 @@ import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
 import { CRAG_VOICE } from './voice-crag';
+import { CURLEW_VOICE } from './voice-curlew';
 import { FROG_VOICE } from './voice-frog';
 import { TOAD_VOICE } from './voice-toad';
 import { VINE_VOICE } from './voice-vine';
@@ -103,4 +104,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   magga: CHEST_VOICE,
   // The Sprigmant, the Petalblade and the Bloomreaper.
   grazza: MANTIS_VOICE,
+  // The Pebblebeak, the Soilwhistle and the Wormheron.
+  wurla: CURLEW_VOICE,
 };
