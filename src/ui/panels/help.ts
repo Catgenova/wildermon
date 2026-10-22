@@ -2880,7 +2880,9 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.quarra.name}</b> (was Quarra)</td><td>On bare rock; eats clay. Cuts rock, slate, marble and sandstone shards. Evolves: ${evolves('quarra')}.</td></tr>
       <tr><td><b>${SPECIES.embra.name}</b> (was Embra)</td><td>Marsh peat and tar; eats cooked food only. Keeps every fire, smelter and kiln on the settlement fuelled and lit from the crate.
       Evolves: ${evolves('embra')}.</td></tr>
-      <tr><td><b>Magga</b></td><td>Collects everything dropped on the settlement into the crate. Wild ones steal items left near their trees.</td></tr>
+      <tr><td><b>Magga</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range, sorts: a stack a load
+      from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, padlocked or marked stores or locked items,
+      and not off a work post. Card when idle: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange }, 'fetch')}&rdquo; Wild ones steal items left near their trees.</td></tr>
       <tr><td><b>${SPECIES.woola.name}</b> (was Woola)</td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${dur(1 / (SPECIES.woola.fleece ?? 1))}.
       Evolves: ${evolves('woola')}.</td></tr>
       <tr><td><b>Ulva</b></td><td>Hunts by scent from ${SPECIES.ulva.notice ?? HUNT_SIGHT} tiles, until you are well away or it is badly hurt. Taming ${SPECIES.ulva.tameLevel}.

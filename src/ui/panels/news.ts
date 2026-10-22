@@ -3250,6 +3250,15 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 259,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: ${SPECIES.magga.name} sorts bins: with nothing dropped in range, a stack a load from a settlement crate, chest or other store into the `
+        + `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()} that takes it, up to the bin's room. `
+        + 'Not from bins, padlocked or marked stores, or off a work post.',
+    ],
+  },
+  {
     n: 258,
     day: '2026-10-22',
     lines: () => [

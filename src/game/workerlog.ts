@@ -135,6 +135,11 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
   const n = Math.round(idle.n);
   switch (idle.why) {
     case 'range':
+      // A magga with nothing lying about sorts the stores (`sortStack`), off a work post nothing but what lies about.
+      if (kind === 'fetch') {
+        const bins = `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()}`;
+        return `Idle: nothing lying on the ground within ${n} tiles of ${idle.post ? 'its work post.' : `the totem; nothing in your settlement stores for a ${bins} with room.`}`;
+      }
       return `Idle: no ${(kind && IDLE_SOURCE[kind]) ?? 'work of its task'} within ${n} tiles of ${idle.post ? 'its work post' : 'the totem'}.`;
     case 'stock': {
       const verb = (kind && IDLE_STOCK[kind]) ?? 'work';

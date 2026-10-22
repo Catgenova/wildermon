@@ -2951,6 +2951,16 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/workstats.mjs --log-level=error
           node node_modules/.cache/workstats.mjs
 
+      - name: A magga sorts the bins
+        run: |
+          # Asked: the Magga "now also sorts raw material bins and craft
+          # material bins". With nothing lying about it takes a stack out of a
+          # settlement store into the bin that takes it and has room, never out
+          # of a bin or a padlocked or marked store, and says why when idle.
+          npx esbuild supabase/test/magsort.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/magsort.mjs --log-level=error
+          node node_modules/.cache/magsort.mjs
+
       - name: A wild thing goes after its span and the stretch is stocked afresh
         run: |
           # Asked: "I havent seen a single one of the new 60 wildermon." Country

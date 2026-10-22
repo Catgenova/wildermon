@@ -16,7 +16,9 @@ import { smelterCapacity, smelterCentre, type PlacedSmelter } from './smelter';
 import { fireSeconds, firedQl, kilnCapacity, kilnCentre, POTTERY_BY_UNFIRED, isGreenware, type PlacedKiln } from './kiln';
 import { BREWS, isWorking, type BrewDef } from './brewing';
 import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
-import { fitsDen, furnitureDef, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
+import { fitsDen, furnitureDef, furnitureRefuses, furnitureRoom, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
+import { crateCentre } from './crates';
+import { storeMarkable } from './stores';
 
 import { milkLitres } from './dairy';
 import { COMPANION_SIGHT as KEPT_SIGHT, NIGHT_LOSS as KEPT_NIGHT_LOSS, SHEAR_FEATHERS, SHEAR_FROM, SHEAR_WOOL } from './limits';
@@ -348,7 +350,7 @@ const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow])
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying' };
 export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'tend the hives', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye; needs a carving knife in your settlement stores', mill: 'grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'tend the hives', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye; needs a carving knife in your settlement stores', mill: 'grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log; needs a saw in your settlement stores`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard; needs a chisel in your settlement stores`; },
@@ -1576,7 +1578,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     id: 'magga',
     wound: 'cut',
     name: 'Magga',
-    description: 'Settlement task: carry items lying on the settlement home.',
+    description: 'Settlement task: carry items lying on the settlement home; sort raw and worked materials from the settlement stores into raw and craft material bins.',
     health: 16,
     attack: 3,
     speed: 2,
@@ -7053,10 +7055,19 @@ export class Creatures {
     };
   }
 
-  /** Pick up one thing lying on the tile a fetcher walked to. */
+  /**
+   * Pick up one thing lying on the tile a fetcher walked to; with nothing lying there, the stack it sorts out of the
+   * store standing on it (`sortStack`), as many of it as the roomiest bin that takes it has room for. The island's
+   * `worker_do` and `sort_take`.
+   */
   private finishFetch(game: Game, c: Creature): Item | null {
     const pile = game.groundAt(c.workX, c.workY);
-    if (!pile.length) return null;
+    if (!pile.length) {
+      const sort = this.sortStack(game, c, c.workX, c.workY);
+      if (!sort) return null;
+      this.gainSkill(game, c, GATHER_SKILL.fetch, 0.225);
+      return this.takeFrom(sort.store, (it) => it === sort.item, sort.n, game);
+    }
     this.gainSkill(game, c, GATHER_SKILL.fetch, 0.225);
     const [item] = game.takeFromGround(c.workX, c.workY, pile[0].uid);
     return item ?? null;
@@ -9600,10 +9611,11 @@ export class Creatures {
     if (c.state === 'toForage') {
       const r = this.stepToward(game, c, c.tx, c.ty, dt);
       if (r === 'arrived') {
-        const apart = !!kind && this.worksBeside(game, kind, c.workX, c.workY);
+        // A fetcher works the tile it was sent to: what lies on it, or the store standing on it it sorts (`sortStack`).
+        const apart = !!kind && (kind === 'fetch' || this.worksBeside(game, kind, c.workX, c.workY));
         const wx = apart ? c.workX : Math.floor(c.x);
         const wy = apart ? c.workY : Math.floor(c.y);
-        if (kind && this.gatherable(game, wx, wy, kind, c)) this.beginForage(game, c, kind);
+        if (kind && (this.gatherable(game, wx, wy, kind, c) || (kind === 'fetch' && this.sortStack(game, c, wx, wy)))) this.beginForage(game, c, kind);
         else c.state = 'idle';
       } else if (r === 'blocked') {
         c.state = 'idle';
@@ -9638,6 +9650,18 @@ export class Creatures {
           c.state = 'toForage';
           return;
         }
+      }
+      // Nothing lying about: a magga on its settlement sorts the stores into the bins (`sortStack`), the island's
+      // `worker_settle` off `sort_stack`.
+      const sort = kind === 'fetch' && c.post === null ? this.sortStack(game, c) : null;
+      if (sort) {
+        c.idle = null;
+        c.job = null;
+        c.workX = sort.x;
+        c.workY = sort.y;
+        [c.tx, c.ty] = sort.centre;
+        c.state = 'toForage';
+        return;
       }
       // Nothing more to be had and loads in its arms: home with what it has.
       if (c.carrying) {
@@ -9706,6 +9730,60 @@ export class Creatures {
     const own = near.length ? undefined : stores.find((s) => s.deed);
     if (own) return own;
     return nearest(stores) ?? stores[0];
+  }
+
+  /**
+   * The stack a magga sorts next (`GATHER_DO.fetch`): out of the store standing on (`atX`, `atY`) when given, the
+   * nearest to it otherwise; with how many of it the roomiest raw or craft material bin on the settlement that takes it
+   * (`furnitureRefuses`) has room for (`furnitureRoom`). Out of a crate, or furniture that may be marked a store
+   * (`storeMarkable`) and takes anything; never out of a bin, a padlocked or marked store, or a locked item. Null
+   * when there is none, or no such bin. The island's `sort_stack`.
+   */
+  sortStack(game: Game, c: Creature, atX?: number, atY?: number):
+    { x: number; y: number; centre: [number, number]; store: DeedStore; item: Item; n: number } | null {
+    const bins: PlacedFurniture[] = [];
+    for (const f of game.furniture.values()) {
+      const takes = furnitureDef(f.kind).takes;
+      if ((takes === 'raw' || takes === 'worked') && game.onDeed(f.x, f.y)) bins.push(f);
+    }
+    if (!bins.length) return null;
+    const rooms = new Map<string, number>();
+    const roomFor = (it: Item): number => {
+      let n = rooms.get(it.id);
+      if (n === undefined) {
+        n = 0;
+        for (const b of bins) if (!furnitureRefuses(b, it)) n = Math.max(n, furnitureRoom(b, it));
+        rooms.set(it.id, n);
+      }
+      return n;
+    };
+    type Source = { kind: 0 | 1; id: number; x: number; y: number; centre: [number, number]; store: DeedStore };
+    const sources: Source[] = [];
+    const stores = game.deedStores();
+    const storeAt = (x: number, y: number, items: Item[]): DeedStore | undefined => stores.find((s) => s.x === x && s.y === y && s.items === items);
+    const at = (x: number, y: number): boolean => atX === undefined || (x === atX && y === atY);
+    for (const cr of game.crates.values()) {
+      if (cr.lock || cr.storeOf || !at(cr.x, cr.y) || !game.onDeed(cr.x, cr.y)) continue;
+      const store = storeAt(cr.x, cr.y, cr.items);
+      if (store) sources.push({ kind: 0, id: cr.id, x: cr.x, y: cr.y, centre: crateCentre(cr), store });
+    }
+    for (const f of game.furniture.values()) {
+      const def = furnitureDef(f.kind);
+      if (def.takes || f.lock || f.storeOf || !storeMarkable(f.kind, def) || !at(f.x, f.y) || !game.onDeed(f.x, f.y)) continue;
+      const store = storeAt(f.x, f.y, f.items);
+      if (store) sources.push({ kind: 1, id: f.id, x: f.x, y: f.y, centre: furnitureCentre(f), store });
+    }
+    const [fx, fy] = atX === undefined ? [c.x, c.y] : [atX + 0.5, (atY ?? 0) + 0.5];
+    const d2 = (s: Source): number => (s.centre[0] - fx) ** 2 + (s.centre[1] - fy) ** 2;
+    sources.sort((a, b) => d2(a) - d2(b) || a.kind - b.kind || a.id - b.id);
+    for (const s of sources) {
+      for (const item of s.store.items) {
+        if (item.count <= 0 || item.locked) continue;
+        const room = roomFor(item);
+        if (room > 0) return { x: s.x, y: s.y, centre: s.centre, store: s.store, item, n: Math.min(item.count, room) };
+      }
+    }
+    return null;
   }
 
   /**

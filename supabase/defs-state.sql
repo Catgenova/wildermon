@@ -2301,7 +2301,7 @@ insert into species_def values ('ulva', 'Ulva', 'Wild: attacks on sight. Settlem
 insert into species_diet values ('ulva', 'meat');
 insert into species_diet values ('ulva', 'cooked_meat');
 update species_def set favourite = 'meat' where id = 'ulva';
-insert into species_def values ('magga', 'Magga', 'Settlement task: carry items lying on the settlement home.', 16, 3, 2, 5, 0.14, 'a berry or a handful of nuts', true, 'fetch', 12, 4, false, true, false, false, false, false, false, false, false, false, false, false, null, null, null, null, 'cut', null, null);
+insert into species_def values ('magga', 'Magga', 'Settlement task: carry items lying on the settlement home; sort raw and worked materials from the settlement stores into raw and craft material bins.', 16, 3, 2, 5, 0.14, 'a berry or a handful of nuts', true, 'fetch', 12, 4, false, true, false, false, false, false, false, false, false, false, false, false, null, null, null, null, 'cut', null, null);
 insert into species_diet values ('magga', 'blueberry');
 insert into species_diet values ('magga', 'raspberry');
 insert into species_diet values ('magga', 'strawberry');
@@ -4613,7 +4613,7 @@ insert into gather_def values ('sand', 'digging', 'digging sand', 'dig sand');
 insert into gather_def values ('clay', 'digging', 'digging clay', 'dig clay');
 insert into gather_def values ('quarry', 'mining', 'cutting stone', 'cut stone');
 insert into gather_def values ('stoke', 'smelting', 'stoking', 'keep fires and furnaces fuelled');
-insert into gather_def values ('fetch', 'foraging', 'fetching', 'pick up dropped items');
+insert into gather_def values ('fetch', 'foraging', 'fetching', 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins');
 insert into gather_def values ('guard', 'body_strength', 'guarding', 'guard the settlement');
 insert into gather_def values ('hunt', 'fighting', 'hunting', 'hunt round the settlement and bring carcasses home');
 insert into gather_def values ('peat', 'digging', 'cutting peat', 'cut peat and tar');
