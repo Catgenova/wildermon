@@ -26,9 +26,18 @@ const json = execFileSync('node', ['node_modules/.cache/dump-wildermon.mjs'], { 
 const safe = json.replace(/</g, '\\u003c');
 const stamp = createHash('sha256').update(json).digest('hex').slice(0, 8);
 
-const page = readFileSync('scripts/wildermon.html', 'utf8')
+const filled = readFileSync('scripts/wildermon.html', 'utf8')
   .replace('__WILDERMON_DATA__', () => safe)
   .replace('__WILDERMON_STAMP__', stamp);
+/*
+ * The page's Content-Security-Policy lets no script run but its own, named by
+ * hash: every bare <script> element, as it stands once filled in. The JSON one
+ * is data, not script, and needs none.
+ */
+const hashes = [...filled.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+  .map(([, code]) => `'sha256-${createHash('sha256').update(code).digest('base64')}'`);
+if (!hashes.length) throw new Error('scripts/wildermon.html: no <script> to hash for its Content-Security-Policy.');
+const page = filled.replace('__WILDERMON_SCRIPT_HASHES__', hashes.join(' '));
 if (page.includes('__WILDERMON_')) throw new Error('scripts/wildermon.html: a placeholder was left unfilled.');
 
 const before = (() => { try { return readFileSync(OUT, 'utf8'); } catch { return null; } })();

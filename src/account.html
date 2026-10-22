@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark" />
+    <!-- What the page may load and talk to: itself, the island (src/net/supabase.ts PROJECT.url, https and wss), Google Fonts,
+         Cloudflare Turnstile (script and frame), the leaked-password list (src/net/accounts.ts). No inline or eval'd script.
+         Inline styles are allowed: markup sets style attributes. scripts/boot-check.mjs fails on any violation. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://glebtboagnafcgwjjvfy.supabase.co wss://glebtboagnafcgwjjvfy.supabase.co https://api.pwnedpasswords.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'" />
     <title>Wildermon — your account</title>
     <meta name="description" content="A username and a password, and nothing else." />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 30 11 16 19 2 11z' fill='%235c9a3e'/%3E%3Cpath d='M2 11v8l14 8v-8z' fill='%23795c3c'/%3E%3Cpath d='M30 11v8l-14 8v-8z' fill='%234f3c27'/%3E%3C/svg%3E" />

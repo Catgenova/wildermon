@@ -17,9 +17,14 @@
  *   * `index.html` must load every module without throwing and, with no
  *     island to reach, stop on the boot card's "Can't reach the island" with
  *     its Retry. There is no single-player game to come up instead;
- *   * `account.html`, the landing page, must load without throwing.
+ *   * `account.html`, the landing page, must load without throwing;
+ *   * `wildermon.html`, the stud book, must load without throwing.
  *
- * Anything thrown on the way is a failure, with the error and where it was.
+ * Anything thrown on the way is a failure, with the error and where it was,
+ * and so is anything the page's Content-Security-Policy refuses or ignores:
+ * the policy in each page's <meta> has to name everything the page loads and
+ * talks to, the island included (its requests are refused here only after the
+ * policy has let them through).
  *
  * It needs a Chromium. It uses `CHROME_PATH` if that is set, then the one
  * Playwright keeps under `PLAYWRIGHT_BROWSERS_PATH`, then an installed Google
@@ -100,6 +105,8 @@ async function open(path, ready) {
   const page = await browser.newPage();
   await page.route('**/*', (route) => (new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort()));
   const thrown = [];
+  const refused = [];
+  page.on('console', (m) => { if (/Content Security Policy/i.test(m.text())) refused.push(m.text()); });
   page.on('pageerror', (e) => thrown.push(`${e.message}\n    ${(e.stack ?? '').split('\n').slice(1, 4).map((l) => l.trim()).join('\n    ')}`));
   try {
     await page.goto(`${base}/${path}`, { waitUntil: 'load' });
@@ -115,19 +122,22 @@ async function open(path, ready) {
     up = false;
   }
   for (const t of thrown) bad.push(`${path}: threw ${t}`);
+  for (const r of refused) bad.push(`${path}: Content-Security-Policy: ${r}`);
   if (!up && !thrown.length) {
     const now = await page.evaluate(() => document.querySelector('#boot .boot-now')?.textContent ?? '').catch(() => '');
     bad.push(`${path}: did not come up within ${BOOT_WAIT / 1000}s${now ? `; the boot screen says "${now.trim()}"` : ''}`);
   }
   await page.close();
-  return up && !thrown.length;
+  return up && !thrown.length && !refused.length;
 }
 
 const game = await open('index.html', (page) => page.waitForSelector('#boot .boot-retry', { timeout: BOOT_WAIT }));
 const landing = await open('account.html', (page) => page.waitForTimeout(2000));
+const book = existsSync(join(ROOT, 'wildermon.html')) ? await open('wildermon.html', (page) => page.waitForTimeout(1000)) : null;
 await browser.close();
 server.close();
 
-console.log(`boot check: the game page ${game ? 'loads and says it cannot reach the island' : 'DOES NOT load'}; the landing page ${landing ? 'loads' : 'DOES NOT load'}.`);
+console.log(`boot check: the game page ${game ? 'loads and says it cannot reach the island' : 'DOES NOT load'}; the landing page ${landing ? 'loads' : 'DOES NOT load'}`
+  + `${book === null ? '' : `; the stud book ${book ? 'loads' : 'DOES NOT load'}`}; ${bad.some((b) => b.includes('Content-Security-Policy')) ? 'Content-Security-Policy violations' : 'no Content-Security-Policy violations'}.`);
 for (const b of bad) console.error(`  ${b}`);
 if (bad.length) process.exit(1);

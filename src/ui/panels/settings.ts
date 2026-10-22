@@ -9,6 +9,7 @@ import { RARITIES } from '../../game/items';
 import { CRAFT_REACH } from '../../game/recipes';
 import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
+import { esc } from '../esc';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, uiSizeShown } from '../screen';
 import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM, RIMS } from '../runecut-art';
@@ -590,7 +591,7 @@ export class SettingsPanel {
         row.className = 'keys-row';
         const text = document.createElement('span');
         text.className = 'keys-what';
-        text.innerHTML = `<b>${bind.label}</b><small>${bind.hint}</small>`;
+        text.innerHTML = `<b>${esc(bind.label)}</b><small>${esc(bind.hint)}</small>`;
         const slots = document.createElement('span');
         slots.className = 'keys-slots';
         const btns: HTMLButtonElement[] = [];
@@ -705,7 +706,7 @@ export class SettingsPanel {
       input.checked = w.isSeeThrough;
       input.addEventListener('change', () => w.setSeeThrough(input.checked));
       const text = document.createElement('span');
-      text.innerHTML = `<b>${w.opts.title}</b>`;
+      text.innerHTML = `<b>${esc(w.opts.title)}</b>`;
       row.append(input, text);
       page.append(row);
       this.seeRows.push({ input, win: w });

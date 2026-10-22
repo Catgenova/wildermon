@@ -13,6 +13,7 @@ import type { Renderer } from '../render/renderer';
 import { ashore, JOURNAL, nextGoals } from '../game/journal';
 import { VERSION } from '../version';
 import { updateButton } from './update';
+import { esc } from './esc';
 import { BACK_SLACK, blowOf, blowWords, COWARD_DRAG, FIGHT_STANCE_NAMES, HEAVY_EVERY, HIDE_NAMES, hideSays, hideTakes, HUNT_REACH, KEEP_OFF, PACK_CALL, stanceSays, swungWith, TARGET_RANGE, THROW_HIT, THROW_REACH, turnsAt } from '../game/fight';
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER } from '../game/creatures';
 import { consider } from '../game/consider';
@@ -691,7 +692,7 @@ export class Hud {
   drawKeys(): void {
     for (const k of this.keyed) {
       const codes = this.binds.codes(k.bind);
-      k.btn.innerHTML = codes.length ? `${k.label} <kbd>${keyName(codes[0])}</kbd>` : k.label;
+      k.btn.innerHTML = codes.length ? `${esc(k.label)} <kbd>${esc(keyName(codes[0]))}</kbd>` : esc(k.label);
     }
     const stop = this.keyWord('stop');
     const journal = this.keyWord('win_journal');
