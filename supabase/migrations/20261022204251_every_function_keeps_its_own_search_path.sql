@@ -9,7 +9,10 @@
  *
  * `private.pin_paths` pins `public, extensions` -- the path every door already gives what it calls, and the schema the
  * project keeps its extensions in -- on every function and procedure of `public` and `private` that has none, and leaves
- * an extension's own alone. `lock_doors` calls it last, so a function made or remade by a later migration is pinned by
+ * an extension's own alone. And a `language sql` one: Postgres folds those into the query that calls them, which is
+ * what keeps `max_health` and its like cheap (the `folded` test), and a function with a setting of its own is never
+ * folded -- pinned, `max_health` cost 8 times what its body does. Folded, such a function runs on its caller's path,
+ * and every caller that a browser can reach pins its own. `lock_doors` calls it last, so a function made or remade by a later migration is pinned by
  * the end of that migration.
  */
 
@@ -22,6 +25,7 @@ begin
   for f in
     select p.oid::regprocedure as sig from pg_proc p join pg_namespace s on s.oid = p.pronamespace
      where s.nspname in ('public', 'private') and p.prokind in ('f', 'p') and p.proconfig is null
+       and p.prolang <> (select l.oid from pg_language l where l.lanname = 'sql')
        and not exists (select 1 from pg_depend d where d.classid = 'pg_proc'::regclass and d.objid = p.oid and d.deptype = 'e')
   loop
     execute format('alter routine %s set search_path = public, extensions', f.sig);
