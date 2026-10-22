@@ -70,6 +70,7 @@ import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
+import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
@@ -3260,6 +3261,17 @@ export const NEWS: News[] = [
       `Added: wild forms. Colour form, 1 in ${COLOUR_FORM_ODDS} wild spawns: a palette none of its variants has, pale or dark by kind. Size form, 1 in ${SIZE_FORM_ODDS}: `
         + `large (${formGives('large')}) or small (${formGives('small')}). Kept when tamed; young: ${percent(FORM_PASS)} per parent with it. On the card and the Field guide page (seen, tamed).`,
       `Added: Work on your wildermon's card: lifetime cycles, skill and things handled, best island day, time working, idle (top reason) and resting.`,
+    ],
+  },
+  {
+    n: 257,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: wildermon gear, ${GEAR_SIZES.length} sizes each (${listed([...GEAR_SIZES])}, as the beds), its size only; Fit and Remove from its menu, one per slot. Crafting window: pack and harness leatherworking, barding blacksmithing.`,
+      `Added: pack: loads a trip +${PACK_LOADS}, on a task that carries loads.`,
+      `Added: harness: team pace in the traces +${percent(HARNESS_PACE * GEAR_FLOOR)} at QL ${GEAR_QL_LEAST} to +${percent(HARNESS_PACE)} at QL ${QL_TOP}, its share of the team.`,
+      `Added: barding: damage taken −${percent(BARDING_CUT * GEAR_FLOOR)} at QL ${GEAR_QL_LEAST} to −${percent(BARDING_CUT)} at QL ${QL_TOP}.`,
+      'Added: gear wears as a tool of its QL: pack a cycle, harness a tile pulled, barding a blow taken. Remove to repair; released or culled, back to your pack. Shown on its card.',
     ],
   },
   {

@@ -44,6 +44,7 @@ import { article, capital, daySays, fill, listed, percent, share, timeWords } fr
 import { groundStep, standsOn } from './player';
 import { skillGain } from './skills';
 import { DRIVING, DRIVING_LEARN } from './travel';
+import { BARDING_CUT, gearGoneSays, gearOn, gearShare, HARNESS_PACE, PACK_LOADS, wearGear, type GearSlot } from './wildgear';
 import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
@@ -586,8 +587,18 @@ export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitCh
  * its arms or a thing more in its hands is no more gain. The island's `stage_loads`.
  */
 export const STAGE_LOADS = [1, 2, 3] as const;
-/** How many loads a trip, or things a go, it takes at the stage it is at. */
-export const stageLoads = (c: Pick<Creature, 'species' | 'skills'>): number => STAGE_LOADS[stageOf(c)];
+/** How many loads a trip, or things a go, it takes at the stage it is at, and a pack on it on a trade that carries loads (`packLoads`). */
+export const stageLoads = (c: Pick<Creature, 'species' | 'skills'> & Partial<Pick<Creature, 'gear' | 'trade'>>): number =>
+  STAGE_LOADS[stageOf(c)] + packLoads(c);
+/**
+ * A wildermon pack's loads a trip (`PACK_LOADS`, `wildgear.ts`), for a trade that carries loads (`LOAD_TRADES`) and a
+ * pack of its size. The island's `pack_loads_of`, in `stage_loads`.
+ */
+export function packLoads(c: Pick<Creature, 'species' | 'skills'> & Partial<Pick<Creature, 'gear' | 'trade'>>): number {
+  if (!c.gear?.pack) return 0;
+  const kind = c.trade ?? SPECIES[c.species]?.gathers;
+  return kind && LOAD_TRADES.has(kind) && gearOn(c, 'pack', denClass(c)) ? PACK_LOADS : 0;
+}
 /** The loads in its arms: the one it is carrying and the ones gathered before it this trip (`Creature.laden`). */
 export const loadsIn = (c: Pick<Creature, 'carrying' | 'laden'>): number => (c.carrying ? 1 : 0) + (c.laden?.length ?? 0);
 
@@ -4278,6 +4289,25 @@ export const mirrorNames = (id: string): string => {
 export const bridleTeam = (team: ReadonlyArray<Pick<Creature, 'boosts'>>): number =>
   (team.length ? 1 + (BRIDLE_PACE * team.filter((c) => fitted(c, 'bridle')).length) / team.length : 1);
 
+/**
+ * A team's wildermon harnesses on its pace: `HARNESS_PACE` at each one's share (`gearShare`), over the team, as the
+ * bridles' (`wildgear.ts`). The island's `harness_team`.
+ */
+export function harnessTeam(team: ReadonlyArray<Pick<Creature, 'species' | 'skills' | 'gear'>>): number {
+  if (!team.length) return 1;
+  let sum = 0;
+  for (const c of team) {
+    const it = c.gear?.harness && gearOn(c, 'harness', denClass(c));
+    if (it) sum += HARNESS_PACE * gearShare(it);
+  }
+  return 1 + sum / team.length;
+}
+/** What wildermon barding of its size makes of a blow on it: `BARDING_CUT` at its share (`wildgear.ts`). The island's `barding_mul`. */
+export function bardingMul(c: Pick<Creature, 'species' | 'skills' | 'gear'>): number {
+  const it = c.gear?.barding && gearOn(c, 'barding', denClass(c));
+  return it ? 1 - BARDING_CUT * gearShare(it) : 1;
+}
+
 /** What they make of one channel: `POT_STEP` more for each point, on the four base stats; and a collar's upkeep. */
 export const potMul = (c: Pick<Creature, 'boosts'>, channel: TraitChannel): number =>
   (BASE_STAT_IDS.has(channel) ? 1 + POT_STEP * potPoints(c, channel as BaseStat)
@@ -4460,6 +4490,8 @@ export interface IslandCreature {
   age?: string;
   /** What ancient pots have put into its base stats, by the stat: sent for your own only, and null for one that has had none. */
   boosts?: Partial<Record<BoostKey, number>> | null;
+  /** The wildermon gear fitted on it, by the slot (`wildgear.ts`): sent for your own only, and null for one with none. */
+  gear?: Partial<Record<GearSlot, { def: string; ql: number; dmg: number }>> | null;
   /** Shod, by the island's clock. */
   shod?: boolean;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
@@ -4583,6 +4615,8 @@ export interface Creature {
    * island keeps the same map in the creature's `boosts` column.
    */
   boosts?: Partial<Record<BoostKey, number>>;
+  /** The wildermon gear fitted on it, the whole item a slot (`wildgear.ts`); absent with none. The island's `creature.gear`. */
+  gear?: Partial<Record<GearSlot, Item>>;
   /** How well it has been looked after lately, 0..1. Brushing puts it up; time takes it down. */
   care: number;
   /** The learning its last good meal put on it (`fedOn`), and the game time that runs out; absent before its first. */
@@ -4798,6 +4832,8 @@ export interface CreatureJSON {
   rare?: number;
   /** What ancient pots have put into its base stats; absent on one that has had none, and in a save from before there were any. */
   boosts?: Partial<Record<BoostKey, number>>;
+  /** The wildermon gear fitted on it, by the slot (`wildgear.ts`). */
+  gear?: Partial<Record<GearSlot, Item>>;
   care?: number;
   /** A meal's learning and when it runs out (`fedOn`); absent in a save from before meals were worth any. */
   fedBonus?: number;
@@ -5313,6 +5349,12 @@ export class Creatures {
       c.islandAge = r.age === 'young' || r.age === 'grown' || r.age === 'old' ? r.age : undefined;
       // What ancient pots have put into it, which comes for yours and for nobody else's.
       if (r.boosts !== undefined) c.boosts = r.boosts ?? undefined;
+      // And the gear fitted on it, which comes for yours and for nobody else's (`wildgear.ts`).
+      if (r.gear !== undefined) {
+        c.gear = r.gear && Object.keys(r.gear).length
+          ? Object.fromEntries(Object.entries(r.gear).map(([slot, g]) => [slot, { uid: 0, id: g.def, ql: g.ql, dmg: g.dmg, count: 1 }]))
+          : undefined;
+      }
       // The island sends a pedigree with anything bred and with nothing else.
       c.pedigree = r.pedigree ?? null;
       // The island says `hunting` only of one that is after you (`rpc_creatures`), and that is what `PLAYER_ATTACKER` means here.
@@ -8947,6 +8989,8 @@ export class Creatures {
     if (add.goes) {
       this.went = true;
       c.worn = (c.worn ?? 0) + add.goes;
+      // And a wildermon pack that carries for it wears a cycle (`packLoads`, `wildgear.ts`).
+      if (packLoads(c)) this.wearGear(game, c, 'pack');
     }
   }
 
@@ -9662,6 +9706,12 @@ export class Creatures {
     if (by.mode === 'active') game.logMsg(`${this.species(t).name} attacks ${by.name}.`, 'fight');
   }
 
+  /** A use's wear on the wildermon gear in a slot (`wearGear`), said to its keeper when it falls apart. The island's `gear_wear`. */
+  wearGear(game: Game, c: Creature, slot: GearSlot): void {
+    const it = c.gear?.[slot];
+    if (it && wearGear(c, slot) && c.mine !== false) game.logMsg(gearGoneSays(c, it), 'event');
+  }
+
   /** Deal damage from a creature or the player; timid wild creatures bolt, and a kill leaves a corpse. */
   hurt(game: Game, t: Creature, dmg: number, by: Creature | 'player', crit = false): void {
     const from = by === 'player' ? game.player : by;
@@ -9669,7 +9719,9 @@ export class Creatures {
     // What a blow costs it is its blood's to say, and its herd's.
     // And less on your companion inside a Heart of the Herd (`herd_heart`).
     // And more while it is brittle, and less inside a stone skin (`binder_brittle`, `warder_stoneskin`; the island's `class_brittle`).
-    t.health -= dmg * this.mul(t, 'soak') * game.herdMul(t, 'taken') * markOn(game, t, 'brittle') * markOn(game, t, 'stone');
+    // And less for wildermon barding on it (`bardingMul`), which wears a blow (`wearGear`).
+    t.health -= dmg * this.mul(t, 'soak') * game.herdMul(t, 'taken') * markOn(game, t, 'brittle') * markOn(game, t, 'stone') * bardingMul(t);
+    if (t.gear?.barding) this.wearGear(game, t, 'barding');
     t.attackedBy = by === 'player' ? PLAYER_ATTACKER : by.id;
     t.attackedAt = game.time;
     game.events.emit('hit', t.x, t.y, Math.max(0, before - Math.max(0, t.health)), crit ? 'crit' : 'dealt');
@@ -9788,6 +9840,7 @@ export class Creatures {
         traits: c.traits,
         rare: c.rare,
         boosts: c.boosts,
+        gear: c.gear,
         care: c.care,
         fedBonus: c.fedBonus,
         fedUntil: c.fedUntil,
@@ -9817,6 +9870,7 @@ export class Creatures {
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
       Object.assign(c, { name: j.name, variant: j.variant, formColour: j.formColour, formSize: j.formSize, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null, work: j.work ?? null, worn: j.worn, restUntil: j.restUntil, bed: j.bed, unfed: j.unfed });
+      if (j.gear) c.gear = j.gear;
       // A rest it was taking when the game was saved goes on where it left off, or the walk to its bed (`restStep`).
       if (c.restUntil !== undefined) c.state = 'rest';
       else if (c.bed !== undefined) c.state = 'toBed';

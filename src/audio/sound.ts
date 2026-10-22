@@ -207,6 +207,9 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   // A bronze mirror held up to one, bronze as a bell is.
   use_bronze_mirror: 'metal',
   hone_whetstone: 'stone', open_seed_jar: 'cloth', read_rune_tablet: 'cloth',
+  // Wildermon gear buckled on and off (`wildgearActions.ts`), as tack is.
+  fit_gear_pack: 'cloth', remove_gear_pack: 'cloth', fit_gear_harness: 'cloth', remove_gear_harness: 'cloth',
+  fit_gear_barding: 'cloth', remove_gear_barding: 'cloth',
   crate_take_all: 'cloth', smelter_take_all: 'cloth', kiln_take_all: 'cloth', furniture_take_all: 'cloth',
   // Leaves torn off a wall, and a brush over stone, as a groom's brush over a coat sounds.
   clear_ivy: 'cloth', scrub_moss: 'cloth',

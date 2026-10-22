@@ -1,4 +1,5 @@
 import { clockLeft } from '../../game/boons';
+import { gearTags } from '../../game/wildgearActions';
 import { DAY_SECONDS } from '../../game/game';
 import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
 import { CHANNELS, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
@@ -563,7 +564,7 @@ export class WildermonPanel {
       const w = this.worth(c);
       worthBox.replaceChildren(...(w ? [...w.childNodes] : []));
       worthBox.hidden = !w;
-      const tags = [...baseStatTags(this.game, c), ...fittedTags(this.game, c)];
+      const tags = [...baseStatTags(this.game, c), ...fittedTags(this.game, c), ...gearTags(c)];
       const statKey = tags.map((t) => t.text).join('|');
       if (statBox.dataset.says !== statKey) {
         statBox.dataset.says = statKey;

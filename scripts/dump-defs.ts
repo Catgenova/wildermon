@@ -119,6 +119,8 @@ import { COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED 
 import { WORK_ITEMS } from '../src/game/workstats';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
+import { BARDING_CUT, GEAR_FLOOR, HARNESS_PACE, PACK_LOADS } from '../src/game/wildgear';
+import { WORN_FLOOR, WORN_SPAN } from '../src/game/limits';
 import { SEED_CHANCE } from '../src/game/farming';
 import { JAR_SEEDS, STAMP_GOES, STAMP_RARE, TABLET_BELOW, TABLET_GAIN } from '../src/game/relicuse';
 import {
@@ -1828,6 +1830,9 @@ for (const [fn, v] of [
   // Litres (`items.ts`, `placeables.ts`).
   ['litre_kg', LITRE_KG], ['lye_use', LYE_USE], ['drink_litres', DRINK_LITRES],
   // Six more relics (`creatures.ts`, `relicuse.ts`).
+  // Wildermon gear (`wildgear.ts`), and the tool rule's damage drag it shares (`limits.ts`).
+  ['pack_loads', PACK_LOADS], ['harness_pace', HARNESS_PACE], ['barding_cut', BARDING_CUT], ['gear_floor', GEAR_FLOOR],
+  ['worn_span', WORN_SPAN], ['worn_floor', WORN_FLOOR],
   ['collar_cut', COLLAR_CUT], ['bridle_pace', BRIDLE_PACE], ['brace_step', BRACE_STEP], ['brace_most', BRACE_MOST], ['seed_chance', SEED_CHANCE], ['jar_seeds', JAR_SEEDS], ['stamp_goes', STAMP_GOES],
   ['stamp_rare', STAMP_RARE], ['tablet_gain', TABLET_GAIN], ['tablet_below', TABLET_BELOW],
   ['wind_starving', WIND_STARVING], ['heal_rate', HEAL_RATE], ['heal_fed', HEAL_FED],

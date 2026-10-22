@@ -1,5 +1,5 @@
 import { Springs, type SpringSave } from './springs';
-import { DAMAGE_MAX, PLACED_REACH, QL_TOP } from './limits';
+import { DAMAGE_MAX, PLACED_REACH, QL_TOP, wearPerUse, wornShare } from './limits';
 import { generateWorld } from '../world/generate';
 import { EMOTES, EMOTE_BY_ID } from './emotes';
 import { deedMay, lacks, type DeedRole } from './ranks';
@@ -34,7 +34,7 @@ import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './g
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH } from './growth';
 import { glassResync, underGlass } from './glasshouse';
-import { ageDef, stageOf, bridleTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
+import { ageDef, stageOf, bridleTeam, harnessTeam, tameNeeds, attackOf, bloodMul, BLOW_SHARE, markOn, CALL_WINDOW, Creatures, setLocalKept, FIGHT_BACK_GOES, footing, HAUL_SKILL, MAX_MOUNT_SPEED, isBaitFor, tracesSkill, isShod, maxHealth, PLAYER_ATTACKER, PULL_DEFAULT, SHOE_PACE, SHOE_STEP, tackSpeed, type Creature, type CreatureJSON, type Stance } from './creatures';
 import { CRAFT_REACH, knackable, type CraftStock, type Station } from './recipes';
 import { Actor, type ActiveAction, type GuestSave } from './actor';
 import { HOST_ID, type PeerId } from '../net/protocol';
@@ -414,11 +414,8 @@ export const TRAVEL_STUCK = 3;
 export const DAMAGE_WARN_STEP = 5;
 /** Damage a thing goes to pieces at (`limits.ts`). */
 export { DAMAGE_MAX };
-/**
- * Damage one use puts on a tool of this quality, before what it is made of
- * and its rarity: a poor tool goes to pieces far faster than a good one.
- */
-export const wearPerUse = (ql: number): number => 0.06 + 3 / (10 + ql);
+/** Damage one use puts on a tool of this quality (`limits.ts`). */
+export { wearPerUse };
 /** No team takes a vehicle faster than this, whatever is in the traces. */
 export const MAX_VEHICLE_SPEED = 4;
 /** How far ahead of the shafts a hitched team walks. */
@@ -4448,7 +4445,11 @@ export class Game {
        * off the same walk (`rpc_move`).
        */
       if (!this.bodyFromIsland && driven && !boat && furnitureDef(driven.kind).vehicle) {
-        for (const c of this.team(driven)) this.creatures.learnBy(this, c, 'pull');
+        for (const c of this.team(driven)) {
+          this.creatures.learnBy(this, c, 'pull');
+          // And a wildermon harness on it wears a tile (`wildgear.ts`).
+          if (c.gear?.harness) this.creatures.wearGear(this, c, 'harness');
+        }
       }
       p.steppedX = -1;
       p.steppedY = -1;
@@ -6003,7 +6004,7 @@ export class Game {
    */
   toolWorth(tool: Item): number {
     // A battered tool works like a poorer one than it was.
-    return Math.min(100, workingQl(tool.ql, tool.extra) * rarityOf(tool).boost * blessBonus(tool.bless)) * Math.max(0.3, 1 - tool.dmg / 160);
+    return Math.min(100, workingQl(tool.ql, tool.extra) * rarityOf(tool).boost * blessBonus(tool.bless)) * wornShare(tool.dmg);
   }
 
   /**
@@ -7637,9 +7638,9 @@ export class Game {
     // The builder's mark goes on after the cap, as the island has it, so a
     // Carpenter's Smooth Axle is its whole share at the top of the range too;
     // and so does the driver's hand on the reins (`drivingPace`), and how well the thing was built (`vehicleQlPace`).
-    // And the team's ancient bridles (`bridleTeam`), past the cap as tack is.
+    // And the team's ancient bridles (`bridleTeam`), past the cap as tack is, and its wildermon harnesses (`harnessTeam`).
     return Math.min(MAX_VEHICLE_SPEED, mean * pull * worst * footing(this.teamClimb(f)) * rollEase(f.material)) * markOf(f, 'speed')
-      * drivingPace(this.skills.get(DRIVING)) * vehicleQlPace(f.ql) * bridleTeam(team);
+      * drivingPace(this.skills.get(DRIVING)) * vehicleQlPace(f.ql) * bridleTeam(team) * harnessTeam(team);
   }
 
   /** How full a vehicle is, 0..1. An empty one rolls over anything. */

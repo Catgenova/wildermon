@@ -3,6 +3,7 @@ import { madeBy } from './signing';
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { pressStamp } from './relicuse';
+import { GEAR_RECIPES } from './wildgear';
 import {
   countOf, describeFrom, describeWith, itemDef, litresOf, TAN_LYE, makersMark, markOf, overParts, partsMark, rareInputSaid, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD,
   serveOf, type Item,
@@ -300,6 +301,8 @@ export const RECIPES: Recipe[] = [
   { id: 'make_saddle', category: 'Cloth', result: 'saddle', inputs: [{ item: 'leather', count: 6 }, { item: 'plank', count: 2 }, { item: 'ribbon', count: 1 }, { item: 'nail', count: 8 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a saddle', verb: 'stitching a saddle', baseTime: 18, stamina: 0.05, difficulty: 26, done: '', consumeOnFail: true },
   { id: 'make_bridle', category: 'Cloth', result: 'bridle', inputs: [{ item: 'leather', count: 3 }, { item: 'rope', count: 1 }, { item: 'ribbon', count: 1 }], tool: 'awl', skill: 'leatherworking', label: 'Stitch a bridle', verb: 'stitching a bridle', baseTime: 10, stamina: 0.03, difficulty: 18, done: '', consumeOnFail: true },
   { id: 'make_yoke', category: 'Cloth', result: 'yoke', inputs: [{ item: 'shaft', count: 1 }, { item: 'leather', count: 2 }, { item: 'nail', count: 4 }], tool: 'awl', skill: 'leatherworking', material: 'wood', label: 'Stitch a yoke', verb: 'stitching a yoke', baseTime: 12, stamina: 0.04, difficulty: 18, done: '', consumeOnFail: true },
+  // Wildermon gear: a pack, a harness and barding in each of three sizes (`wildgear.ts`).
+  ...GEAR_RECIPES,
   { id: 'make_cheese', category: 'Cooking', result: 'cheese', count: 3, inputs: [{ item: 'milk_bucket' }], tool: 'clay_bowl', skill: 'cooking', returns: [[WHEY_BUCKET, 1]], salvage: [['bucket', 1]], label: 'Press into cheese', verb: 'pressing cheese', baseTime: 14, stamina: 0.03, difficulty: 14, done: 'Whey left in the bucket.', consumeOnFail: true },
   // Churned standing at a butter churn (`dairy.ts`), and the bucket comes back.
   { id: CHURN_BUTTER, category: 'Cooking', result: 'butter', count: BUTTER_PATS, inputs: [{ item: 'milk_bucket' }], station: BUTTER_CHURN, skill: 'cooking', returns: [['bucket', 1]], label: 'Churn butter', verb: 'churning butter', baseTime: 12, stamina: 0.04, difficulty: 12, done: '', consumeOnFail: true },

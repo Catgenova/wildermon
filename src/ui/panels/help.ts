@@ -52,6 +52,8 @@ import {
 import { PERK_BY_ID, PERKS, perksOf } from '../../game/perks';
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELL_BY_ID, spellTerms } from '../../game/talents';
 import { CREATURE_CRATE } from '../../game/creaturecrate';
+import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_BILL, GEAR_SIZES, GEAR_SLOTS, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
+import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
@@ -3024,6 +3026,19 @@ export function helpText(): string {
       <li>Sizes: small for first evolution stage (under level ${EVOLVE_AT[0]}), medium for second (to ${EVOLVE_AT[1] - 1}), large for third. Non-evolving kinds: small under ${DEN_HEALTH[0]} health,
       medium under ${DEN_HEALTH[1]}, large at ${DEN_HEALTH[1]} and over. Its own size only; one per bed.</li>
       <li>Card: stamina, and rest left while resting (&ldquo;${idleSays({ why: 'bed', n: restFor(true), bed: 'den_small' }, 'forage')}&rdquo;).</li>
+    </ul>
+    <h4>Wildermon gear</h4>
+    <ul>
+      <li>${listed(GEAR_SLOTS.map((slot) => slot))}, one per slot, on your wildermon: Fit and Remove from its menu. Sizes: ${listed([...GEAR_SIZES])}, as the beds; its own size only.
+      Grown out of it: no effect until refitted with its new size.</li>
+      <li>Pack: loads a trip +${PACK_LOADS}, on a task that carries loads (fetching tasks and the carrying errands above), on top of its evolution stage.</li>
+      <li>Harness: team pace in the traces of a cart or wagon +${percent(HARNESS_PACE * GEAR_FLOOR)} at QL ${GEAR_QL_LEAST} to +${percent(HARNESS_PACE)} at QL ${QL_TOP}, its share of the team; on top of an ancient bridle.</li>
+      <li>Barding: damage taken −${percent(BARDING_CUT * GEAR_FLOOR)} at QL ${GEAR_QL_LEAST} to −${percent(BARDING_CUT)} at QL ${QL_TOP}.</li>
+      <li>Damage, as on a tool: worth falls by its damage ÷ ${WORN_SPAN}, to ×${WORN_FLOOR} at the least. Wear a use as a tool of its QL: pack a cycle at a task it carries for, harness a tile pulled,
+      barding a blow taken. Damage ${DAMAGE_MAX}: gone. Remove it to repair it. Released or culled: back to your pack.</li>
+      <li>Made in the crafting window: ${listed(GEAR_SLOTS.map((slot) => `${slot} ${listed(gearBill(slot, 0).map(([id, n]) => `${n} ${itemDef(id).name.toLowerCase()}`))}`))} for small;
+      ×${GEAR_SIZE_BILL[1]} medium, ×${GEAR_SIZE_BILL[2]} large. Pack and harness: leatherworking; barding: blacksmithing.</li>
+      <li>Card: each piece and what it does now (&ldquo;Harness: ${gearSays('harness', { ql: QL_TOP / 2, dmg: 0 })}&rdquo; at QL ${QL_TOP / 2}).</li>
     </ul>
     <h4>Upkeep and specialties</h4>
     <ul>

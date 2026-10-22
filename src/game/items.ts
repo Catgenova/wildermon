@@ -16,6 +16,7 @@ import {
 export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 
 import type { Nutrient } from './nutrition';
+import { GEAR_ITEMS } from './wildgear';
 
 export interface ItemDef {
   name: string;
@@ -431,6 +432,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   ancient_seed_jar: { name: 'Ancient seed jar', category: 'misc', weight: 0.7, decay: 3, description: 'Open: {relicUse.jarSeeds} seeds of one of {relicUse.crops} crops at random, at the jar\'s QL. Used up.' },
   ancient_stamp: { name: 'Ancient stamp', category: 'misc', weight: 0.3, decay: 3, description: 'Carried: rare chance ×{relicUse.stampRare} on your next {relicUse.stampGoes} crafts and forgings. One go each; used up after the last.' },
   rune_tablet: { name: 'Rune tablet', category: 'misc', weight: 1.1, decay: 3, description: 'Read (Skills window, Rune tablet on a skill under {relicUse.tabletBelow}): that skill +{relicUse.tabletGain}. Used up.' },
+  // Wildermon gear, a slot and a size each, fitted from its menu (`wildgear.ts`).
+  ...GEAR_ITEMS,
   mixed_grass: { name: 'Mixed grass', category: 'material', weight: 0.1, stackable: true, raw: true, decay: 120, description: 'Cutting a grass tile gives {grass.cut}. Plant {grass.plant} on a dirt tile: the tile becomes grass.' },
   sage: { name: 'Sage', category: 'plant', weight: 0.05, stackable: true, food: 0.01, feeds: { greens: 0.01 } },
   basil: { name: 'Basil', category: 'plant', weight: 0.05, stackable: true, food: 0.01, feeds: { greens: 0.01 } },

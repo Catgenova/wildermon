@@ -10,6 +10,20 @@
 export const QL_TOP = 100;
 /** Damage a thing goes to pieces at. */
 export const DAMAGE_MAX = 100;
+/**
+ * Damage one use puts on a tool of this quality, before what it is made of
+ * and its rarity: a poor tool goes to pieces far faster than a good one.
+ * The island's `wear_per_use`.
+ */
+export const wearPerUse = (ql: number): number => 0.06 + 3 / (10 + ql);
+/**
+ * What damage makes of a tool's worth at the work (`toolWorth`): a share of it
+ * off for each point of damage over this many, and never under the floor.
+ */
+export const WORN_SPAN = 160;
+export const WORN_FLOOR = 0.3;
+/** What is left of a thing's worth at this damage. */
+export const wornShare = (dmg: number): number => Math.max(WORN_FLOOR, 1 - dmg / WORN_SPAN);
 
 /** What a creature's attack takes off a player it lands on, as a share of a life, before armour (`creatures.ts`). */
 export const BLOW_SHARE = 0.012;

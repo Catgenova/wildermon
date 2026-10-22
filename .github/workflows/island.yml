@@ -1599,6 +1599,15 @@ jobs:
             --outfile=node_modules/.cache/bracefeedseed.mjs --log-level=error
           node node_modules/.cache/bracefeedseed.mjs
 
+      - name: Wildermon gear, a pack, a harness and barding, the same on both sides
+        run: |
+          # "wildermon gear (#17)": fitted and removed from its menu, its size
+          # only; a pack's load a trip, a harness's team pace and barding's
+          # damage taken, scaled by QL; worn a use, repaired once taken off.
+          npx esbuild supabase/test/wildgear.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/wildgear.mjs --log-level=error
+          node node_modules/.cache/wildgear.mjs
+
       - name: Body stamina grows the stamina bar, the same on both sides
         run: |
           # "Body stamina should also increase the bar. 2x at 100". The bar is

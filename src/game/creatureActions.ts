@@ -15,6 +15,7 @@ import { itemDef, itemName, RARITIES, rarityOf, type Mark } from './items';
 import { BANE_BONUS, banes, hitChance, isBow, WEAPON_BY_ID, weaponDamage } from './gear';
 import { ARROWS, armsRefusal, beastReach, BLINDSIDE, blowOf, bowReach, critMul, drawClosest, FALL_BACK, FIST, headBlow, headHide, headSide, hideTakes, nockedArrow, KNIFE_BLEED, KNIFE_BLEED_SECS, meleeReach, myCritChance, STAGGER_MAUL, STAGGER_POLE, stanceDealt, swungWith } from './fight';
 import { matOfItem } from './materials';
+import { takeGear } from './wildgearActions';
 import { defaultKey } from './keybinds';
 
 /**
@@ -1262,8 +1263,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (c.mode === 'stored') letOut(g, c);
       const x = Math.floor(c.x);
       const y = Math.floor(c.y);
-      // Whatever it was holding is not buried with it.
+      // Whatever it was holding is not buried with it, and its gear comes back to you (`takeGear`).
       for (const it of takeArms(c)) g.dropOnGround(x, y, it);
+      takeGear(g, c);
       if (c.pouch) g.dropOnGround(x, y, c.pouch);
       c.pouch = null;
       const name = c.name;
@@ -1301,6 +1303,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!c) return;
       if (c.mode === 'stored') letOut(g, c);
       for (const it of takeArms(c)) g.dropOnGround(Math.floor(c.x), Math.floor(c.y), it);
+      // Its gear comes back to you (`takeGear`).
+      takeGear(g, c);
       c.mode = 'wild';
       c.stance = 'passive';
       c.enemy = null;
