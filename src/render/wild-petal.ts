@@ -187,11 +187,11 @@ const FLORANTLER_LOOK: Petal = {
   jawMat: 'moss',
   nose: 0.14,
   eye: { y: 0.26, up: 0.6, size: 0.16, tall: 0.95, lid: 0.38 },
-  horn: { at: [0.55, 1.1], len: 3.7, w: 1.25, out: 0.28, back: 0.7, fronds: 3, antler: true },
-  plates: { from: 1.9, to: -2.2, rows: 5, per: 4, spread: 1.18, a: 0.98, b: 0.98, t: 0.17, lift: 0.12 },
-  leaves: { n: 36, len: 2.3, from: 2.0, to: -2.4 },
+  horn: { at: [0.55, 1.1], len: 3.6, w: 1.25, out: 0.28, back: 0.7, fronds: 3, antler: true },
+  plates: { from: 1.9, to: -2.2, rows: 6, per: 4, spread: 1.15, a: 1.0, b: 1.0, t: 0.22, lift: 0.2 },
+  leaves: { n: 45, len: 2.3, from: 2.0, to: -2.4 },
   mane: 9,
-  blossoms: [[0.62, 1.2, 0.55], [0.34, 1.75, 0.5], [0.8, 0.75, 0.42], [0.18, 1.0, 0.4]],
+  blossoms: [[0.62, 1.2, 0.55], [0.34, 1.75, 0.5], [0.8, 0.75, 0.42], [0.18, 1.0, 0.4], [0.5, 2.1, 0.45], [0.7, 1.75, 0.4]],
   crown: 0.42,
   armour: true,
   tail: { len: 1.4, w: 0.56, lift: -6, leaves: 4 },
@@ -1032,7 +1032,7 @@ function leavesOf(s: Petal, ridge: boolean): Bit[] {
     const th = Math.PI / 2 - sd * row[0] * s.plates.spread * (0.9 + 0.2 * jitter(id + 1));
     const at = onRings(B, y, th);
     const L = Lf.len * (0.75 + 0.5 * f) * (0.85 + 0.3 * jitter(id + 2)) * (q % 3 === 2 ? 1.15 : 1);
-    const dir = unit([sd * (row[1] + 0.15 * jitter(id + 5)), -1, row[2] + 0.12 * jitter(id + 6)]);
+    const dir = unit([sd * (row[1] + 0.15 * jitter(id + 5)), -1, row[2] + 0.12 * jitter(id + 6) + (s.stage === 2 && q % 3 < 2 ? 0.3 : 0)]);
     const root = add(at.p, scale(at.n, s.plates.t * 0.4));
     const up = unit(add(at.n, [0, 0, 0.8]));
     const face = unit(sub(up, scale(dir, dot(up, dir))));
@@ -1098,26 +1098,31 @@ function hornsOf(s: Petal, side: number): Bit[] {
     }
     return out;
   }
-  // The beam: thick and peach at the root, curving up and then back, tapering.
-  const back = upright ? 0.7 : 1.6, reach = upright ? 0.85 : 1;
-  const B0 = root, B1 = add(root, scale([side * Hn.out, -0.35 * back, 0.9], Hn.len * 0.3 * reach)), B2 = add(root, scale([side * Hn.out * 1.5, -1.25 * back, upright ? 0.85 : 0.6], Hn.len * 0.6 * reach));
-  const beamPts = curve(B0, B1, B2, 8), wb = beamPts.map((_, k) => Hn.w * lerp(0.42, 0.12, k / 8));
-  const meshes: Mesh[] = [tube(beamPts, wb, wb, 6, (ring) => (ring < 2 ? 'horn' : 'membrane'), { seam: 'start' })];
-  // The tines: off the top of the beam, standing up and a little forward, each a short peach spike going on into a pink frond.
-  [[0.32, 0.5, 0.72], [0.56, 0.42, 0.85], [0.8, 0.34, 0.75]].forEach(([u, lean, k], q) => {
-    const at = beamPts[Math.round(u * 8)];
-    const dir = unit([side * 0.35, lean - 0.5 * back * u, 1]);
-    const L = Hn.len * 0.56 * k * reach;
-    const pts = sweep(at, dir, [side * 0.1, -1, 0], L, 8);
-    const wt = pts.slice(0, 4).map((_, j) => Hn.w * lerp(0.13, 0.05, j / 3));
-    meshes.push(tube(pts.slice(0, 4), wt, wt, 5, 'membrane', { seam: 'start' }));
-    // Each turned a little differently, as the leaves of a spray are, so from any side some are seen flat.
-    meshes.push(frondMesh(pts, unit([side, q % 2 ? 0.5 : -0.5, 0.4]), Hn.w * 1.1 * k, q ? 'petal' : 'membrane', { stalk: 0.25, stalkMat: 'membrane', tipMat: 'feather' }));
+  // The beam: thick and peach at the root, splayed out to its side a third of a right angle off the middle as it rises and
+  // curves back, so no side of it sees it end on; the left swept back a little further than the right.
+  // Laid out as it stands, then turned back by as far as its head is carried nose down, so it stands up and back off the head
+  // as the head is carried rather than tipped forward with it.
+  const tilt = (v: V3): V3 => rotX(v, 42);
+  const back = upright ? 0.35 : 0.7, Lb = Hn.len * 0.8;
+  const B0 = root, B1 = add(root, scale(tilt([side * 0.45, -0.2 * back, 0.65]), Lb)), B2 = add(root, scale(tilt([side * 0.85, -0.85 * back, 0.75]), Lb));
+  const beamPts = curve(B0, B1, B2, 8), wb = beamPts.map((_, k) => Hn.w * lerp(0.26, 0.1, k / 8));
+  const meshes: Mesh[] = [tube(beamPts, wb, wb, 6, 'membrane', { seam: 'start' })];
+  // Clothed the length of it in feathery fronds, overlapping, peach near the head and pink out along it: one standing up off
+  // the top of the beam, the next out to its side, and so on, each turned its own way so from any side some are seen flat.
+  const U = [0.08, 0.2, 0.32, 0.44, 0.56, 0.68, 0.8, 0.92];
+  U.forEach((u, q) => {
+    const i = Math.min(7, Math.round(u * 8)), at = beamPts[i], along = unit(sub(beamPts[i + 1], beamPts[i]));
+    const off: V3 = tilt(q % 2 ? [side * 1, -0.6, -0.15] : [side * 0.65, 0.05, 0.85]);
+    const dir = unit(add(scale(along, 0.2), off));
+    const L = Hn.len * (0.3 + 0.2 * Math.sin(Math.PI * (0.15 + 0.85 * u)));
+    const pts = sweep(at, dir, tilt([side * 0.1, -1, -0.2]), L, 7);
+    const pink = u > 0.35;
+    meshes.push(frondMesh(pts, q % 2 ? [0, 0, 1] : unit([side * 0.4, q % 4 ? 1 : -1, 0.5]), Hn.w * 0.8, pink ? 'petal' : 'membrane', { stalk: 0.08, stalkMat: 'membrane', tipMat: pink ? 'feather' : 'petal' }));
   });
-  // The beam's end: the biggest frond, swept on back.
-  const end = beamPts[8], endDir = unit(sub(beamPts[8], beamPts[6]));
-  const endPts = sweep(end, unit(add(endDir, [0, -0.6, 0])), [side * 0.1, -1, -0.4], Hn.len * 0.6 * reach, 10);
-  meshes.push(frondMesh([beamPts[5], beamPts[6], beamPts[7], ...endPts], unit([side, -0.5, 0.5]), Hn.w * 1.0, 'petal', { stalk: 0.2, stalkMat: 'membrane', tipMat: 'feather' }));
+  // The beam's end: the biggest frond, swept on out and back.
+  const endDir = unit(sub(beamPts[8], beamPts[6]));
+  const endPts = sweep(beamPts[8], unit(add(endDir, tilt([side * 0.2, -0.3, 0.1]))), tilt([side * 0.1, -1, -0.3]), Hn.len * 0.42, 9);
+  meshes.push(frondMesh([beamPts[6], beamPts[7], ...endPts], unit([side, -0.4, 0.6]), Hn.w * 0.75, 'petal', { stalk: 0.12, stalkMat: 'membrane', tipMat: 'feather' }));
   out.push({ mesh: merge(...meshes), root, id: id0 + 10, k: 0.25 });
   return out;
 }
