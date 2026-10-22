@@ -242,6 +242,7 @@ game.hooks = {
   confirm: (question) => asker.sure(question),
   choose: (question, choices) => asker.choose(question, choices),
   count: (question, most, fallback) => asker.count(question, most, fallback),
+  note: (question, max) => asker.name(question, '', max),
 };
 
 const player = game.player;

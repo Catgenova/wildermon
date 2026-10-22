@@ -2516,6 +2516,20 @@ jobs:
             --outfile=node_modules/.cache/keeper.mjs --log-level=error
           node node_modules/.cache/keeper.mjs
 
+      - name: A keeper kicks and bars, and anybody reports
+        run: |
+          # Only keepers kick, unbar, read the open reports and mark them
+          # handled. A kick logs the body off as the idle log-out does and sends
+          # its browser `kicked`; a barred body is refused by move, act, say, a
+          # letter and coming back ashore, on that island only, until a keeper
+          # lifts the bar or its time is up. Reports: a reason from the list, a
+          # note cut to the most kept, one about the same body and five in all a
+          # day, the one reported never told, and what is past keeping deleted.
+          # Prints what rpc_move costs with nobody barred.
+          npx esbuild supabase/test/kick.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/kick.mjs --log-level=error
+          node node_modules/.cache/kick.mjs
+
       - name: What everybody on an island has on
         run: |
           # A body is drawn in its gear, and somebody else's pack is not yours to

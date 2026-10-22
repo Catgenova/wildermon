@@ -23,8 +23,8 @@ import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
 import { trackedArrow } from '../game/tracking';
 import type { Away } from '../game/away';
-import type { Kept, KeptBody } from '../game/keeper';
 import type { WatchFlag, WatchFlags } from '../game/watch';
+import { isBarred, type Kept, type KeptBody, type KeptReport } from '../game/keeper';
 import type { Barter } from '../game/barter';
 import type { Notice, SettleBoard } from '../game/noticeboard';
 import { presenceOf } from './presence';
@@ -997,6 +997,12 @@ export interface IslandHooks {
   travelled?: (until: number) => void;
   /** A trade you are in changed, or was asked of you (`barter_send`, Broadcast `barter`): look again with `barter()`. */
   barter?: () => void;
+  /**
+   * A keeper of the island logged this body off, and may have barred it
+   * (`rpc_owner_kick`, Broadcast `kicked`); or a door refused it as barred.
+   * Every door of the island now refuses it until the bar ends.
+   */
+  kicked?: () => void;
   /**
    * A square to put on the map without walking it: a map studied
    * (`cartography.ts`), said live as a `charted` line. Every square ever
@@ -2382,6 +2388,8 @@ export class Island {
         .on('broadcast', { event: 'said' }, (m) => this.heardLines(heardBody(m)))
         .on('broadcast', { event: 'pack' }, (m) => this.heardPack(heardBody(m)))
         .on('broadcast', { event: 'moved' }, (m) => this.heardMoved(heardBody(m)))
+        // Logged off by a keeper, and perhaps barred (`rpc_owner_kick`): off to the landing page.
+        .on('broadcast', { event: 'kicked' }, () => this.hooks.kicked?.())
         // A trade we are in changed, on either side: the window asks again (`barter_send`).
         .on('broadcast', { event: 'barter' }, () => this.hooks.barter?.())
         // Something of one of our spells fired after its cast (`fx_fired`): drawn here, and passed on for everybody watching.
@@ -3009,7 +3017,9 @@ export class Island {
   private async sayTo(world: string, x: number, y: number, level: number): Promise<MoveAnswer | null> {
     const word = {};
     this.newest = word;
-    const { data } = await supabase().rpc('rpc_move', { p_world: world, p_x: x, p_y: y, p_level: level });
+    const { data, error } = await supabase().rpc('rpc_move', { p_world: world, p_x: x, p_y: y, p_level: level });
+    // Barred while the `kicked` word was missed (a tab asleep, a channel down): the step says so instead.
+    if (error && isBarred(error.message)) this.hooks.kicked?.();
     if (this.newest !== word) return null;
     const went = data as MoveAnswer | null;
     if (went && typeof went.x === 'number' && typeof went.y === 'number') {
@@ -3626,6 +3636,33 @@ export class Island {
   /** One flag marked seen, or with `null` every open one on the island. */
   async keeperFlagSeen(n: number | null): Promise<string | null> {
     return this.door('rpc_owner_flag_seen', { p_n: n });
+  }
+
+  /** Log somebody off now, and bar them for so many seconds (0: not at all; `null`: until a keeper lifts it). */
+  async keeperKick(uid: string, secs: number | null): Promise<string | null> {
+    return this.door('rpc_owner_kick', { p_uid: uid, p_seconds: secs });
+  }
+
+  async keeperUnbar(uid: string): Promise<string | null> {
+    return this.door('rpc_owner_unbar', { p_uid: uid });
+  }
+
+  /** The open reports, newest first, as the island's keepers see them. Null when the island did not answer. */
+  async keptReports(): Promise<KeptReport[] | null> {
+    if (!this.info) return null;
+    const { data, error } = await supabase().rpc('rpc_owner_reports', { p_world: this.info.id });
+    if (error || !data || typeof data !== 'object') return null;
+    return rowsIn<KeptReport>((data as { reports?: unknown }).reports);
+  }
+
+  /** A report marked handled: off the open list. */
+  async reportHandled(n: number): Promise<string | null> {
+    return this.door('rpc_owner_report_handled', { p_n: n });
+  }
+
+  /** Report somebody to the island's keepers, for one of `REPORT_REASONS`, with an optional note. They are not told. */
+  async report(uid: string, reason: string, note: string): Promise<string | null> {
+    return this.door('rpc_report_player', { p_uid: uid, p_reason: reason, p_note: note });
   }
 
   /** Delete everything lying on the ground on one tile, and read the ground again at the quick pace. */

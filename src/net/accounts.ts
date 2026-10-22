@@ -432,6 +432,18 @@ export async function whoAmI(): Promise<string | null> {
   return named && nameTrouble(named) === null ? named : null;
 }
 
+/**
+ * Why this account was sent off an island (`rpc_barred`): the bar's line and
+ * until when, or the plain log-off line when there is no bar. Null when the
+ * island did not answer.
+ */
+export async function sentOffLine(island: string): Promise<string | null> {
+  const { data, error } = await supabase().rpc('rpc_barred', { p_world: island });
+  if (error || !data || typeof data !== 'object') return null;
+  const line = (data as { line?: unknown }).line;
+  return typeof line === 'string' ? line : null;
+}
+
 /** Put the account down. */
 export async function signOut(): Promise<void> {
   await supabase().auth.signOut();

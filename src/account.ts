@@ -1,7 +1,7 @@
 import {
   PASSWORD_MIN, Unchecked, breachCount, breachWord, createAccount, foldName, writtenName,
   myLook, nameEmail, nameFree, nameTrouble, passwordTrouble, passwordVerdict,
-  setLook, signInAs, signOut, whoAmI,
+  sentOffLine, setLook, signInAs, signOut, whoAmI,
 } from './net/accounts';
 import { LOOK_TABLES, cleanLook, randomLook, type Look } from './game/look';
 import { Creator } from './ui/creator';
@@ -343,6 +343,12 @@ async function onArrival(): Promise<void> {
   creator.look = had;
   card.classList.add('settled');
   say(`Signed in as ${name}.`, 'good');
+  // Sent here off the island by a keeper (`play.ts`): the island's own line for it, never words from the link.
+  const offFrom = new URLSearchParams(location.search).has('off') ? carried.get('island') : null;
+  if (offFrom) {
+    const line = await sentOffLine(offFrom).catch(() => null);
+    say(line ?? 'Logged off by a keeper of the island.', 'bad');
+  }
   const row = document.createElement('p');
   row.className = 'fine';
   const on = document.createElement('a');

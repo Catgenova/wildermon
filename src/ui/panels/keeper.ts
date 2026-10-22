@@ -1,7 +1,11 @@
 import type { Island } from '../../net/island';
 import type { Game } from '../../game/game';
 import { codeNeeded, giveCode } from '../../net/mfa';
-import { CODE_DIGITS, heardLine, KEEPER_CODE, KEEPER_REFRESH, moveHint, moveTarget, MUTE_FOR, MUTE_SHUTS, muteLabel, muteLine, muteNote, type Kept, type KeptBody } from '../../game/keeper';
+import { awayFor } from '../../game/away';
+import {
+  BAR_FOR, BAR_SHUTS, barLabel, barLine, barNote, CODE_DIGITS, heardLine, KEEPER_CODE, KEEPER_REFRESH, KICK_DOES, moveHint, moveTarget,
+  MUTE_FOR, MUTE_SHUTS, muteLabel, muteLine, muteNote, reportReason, type Kept, type KeptBody, type KeptReport,
+} from '../../game/keeper';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
 import { KeeperFlags } from './keeperflags';
@@ -27,6 +31,7 @@ const clockIn = (secs: number): string =>
 export class KeeperPanel {
   private readonly page: HTMLDivElement;
   private seen: Kept | null = null;
+  private reports: KeptReport[] = [];
   private failed = false;
   private asking = false;
   private lastAsk = -1e9;
@@ -64,6 +69,7 @@ export class KeeperPanel {
     if (this.asking) return;
     this.asking = true;
     let got: Kept | null = null;
+    let reports: KeptReport[] | null = null;
     try {
       const was = this.needCode;
       if (!this.codeKnown) {
@@ -77,7 +83,7 @@ export class KeeperPanel {
       // Not drawn again while it waits, so a code half typed stays.
       if (this.needCode) return was ? undefined : this.draw();
       void this.flags.refresh();
-      got = await this.island.kept();
+      [got, reports] = await Promise.all([this.island.kept(), this.island.keptReports()]);
       if (!got && this.island.keptWhy === KEEPER_CODE) {
         this.needCode = true;
         this.codeKnown = false;
@@ -86,8 +92,9 @@ export class KeeperPanel {
     } finally {
       this.asking = false;
     }
-    this.failed = !got;
+    this.failed = !got || !reports;
     if (got) this.seen = got;
+    if (reports) this.reports = reports;
     this.draw();
   }
 
@@ -114,6 +121,9 @@ export class KeeperPanel {
         : 'Loading…', this.failed);
     } else {
       if (this.failed) this.say(`No answer just now: showing the last answer. Retry every ${KEEPER_REFRESH} s.`, true);
+      this.head(`Open reports (${this.reports.length})`);
+      if (!this.reports.length) this.empty('No open reports.');
+      for (const r of this.reports) this.page.append(this.reportRow(r, kept));
       const ashore = kept.people.filter((b) => !b.away);
       const away = kept.people.filter((b) => b.away);
       this.head(`Ashore (${ashore.length})`);
@@ -127,7 +137,8 @@ export class KeeperPanel {
     this.head('Actions');
     this.say('Move: to their settlement totem, or the newcomer landing; stops their action, empties their queue, '
       + 'dismounts them from anything ridden, driven, pulled or boarded. '
-      + `Mute: refuses ${MUTE_SHUTS}. Clear a ground pile: right-click its tile.`);
+      + `Mute: refuses ${MUTE_SHUTS}. Kick: ${KICK_DOES}; a bar then refuses ${BAR_SHUTS}. `
+      + 'Handled: off the open reports. Clear a ground pile: right-click its tile.');
     this.page.append(this.flags.el);
     // Asked again every so often: the list stays where it was being read.
     this.page.scrollTop = top;
@@ -186,8 +197,8 @@ export class KeeperPanel {
     name.textContent = b.you ? `${b.name} (you)` : b.keeper ? `${b.name} (keeper)` : b.name;
     name.title = b.name;
     const facts = document.createElement('span');
-    facts.className = `social-where keeper-facts${b.muted ? ' keeper-muted' : ''}`;
-    facts.textContent = [`${b.x}, ${b.y}`, heardLine(b.heard), muteLine(b, clockIn)].filter((s) => s).join(' · ');
+    facts.className = `social-where keeper-facts${b.muted || b.barred ? ' keeper-muted' : ''}`;
+    facts.textContent = [`${b.x}, ${b.y}`, heardLine(b.heard), muteLine(b, clockIn), barLine(b, clockIn)].filter((s) => s).join(' · ');
     who.append(name, facts);
     const acts = document.createElement('span');
     acts.className = 'social-acts';
@@ -196,6 +207,26 @@ export class KeeperPanel {
         if (yes) void this.did(this.island.keeperMove(b.uid));
       });
     }));
+    acts.append(this.muteButton(b));
+    // Unmute keeps its place, hidden, on a row with no mute, so Move and Mute stand in one column down the list.
+    acts.append(this.gapped(this.button('Unmute', `Unmute: ${MUTE_SHUTS} allowed again`,
+      () => void this.did(this.island.keeperUnmute(b.uid))), b.muted));
+    // Kick is not offered on a keeper (the island refuses it), but keeps its place.
+    if (!b.you && !b.keeper) acts.append(this.kickButton(b));
+    else {
+      const none = this.gapped(this.button('Kick', '', () => {}), false);
+      none.classList.add('keeper-mute');
+      acts.append(none);
+    }
+    acts.append(this.gapped(this.button('Unbar', `Unbar: ${BAR_SHUTS} open again`,
+      () => void this.did(this.island.keeperUnbar(b.uid))), b.barred));
+    el.title = `Move to: ${moveTarget(b, kept.spawn)}.`;
+    el.append(dot, who, acts);
+    return el;
+  }
+
+  /** Mute, and a menu of how long. */
+  private muteButton(b: KeptBody): HTMLButtonElement {
     const mute = this.button(b.muted ? 'Mute again' : 'Mute',
       `Choose duration. Refuses ${MUTE_SHUTS} until then; muting again replaces the time left.`, () => {
         const r = mute.getBoundingClientRect();
@@ -206,19 +237,60 @@ export class KeeperPanel {
         })));
       });
     mute.classList.add('keeper-mute');
-    acts.append(mute);
-    // Unmute keeps its place, hidden, on a row with no mute, so Move and Mute stand in one column down the list.
-    const unmute = this.button('Unmute', `Unmute: ${MUTE_SHUTS} allowed again`,
-      () => void this.did(this.island.keeperUnmute(b.uid)));
-    if (!b.muted) {
-      unmute.classList.add('keeper-gap');
-      unmute.disabled = true;
-      unmute.tabIndex = -1;
-      unmute.setAttribute('aria-hidden', 'true');
+    return mute;
+  }
+
+  /** Kick, and a menu of how long a bar comes with it. Not offered on a keeper: the island refuses it. */
+  private kickButton(b: KeptBody): HTMLButtonElement {
+    const kick = this.button(b.barred ? 'Kick again' : 'Kick',
+      `Choose: log off only, or a bar. Kick: ${KICK_DOES}. A bar refuses ${BAR_SHUTS}; kicking again replaces the time left.`, () => {
+        const r = kick.getBoundingClientRect();
+        this.showMenu(r.left, r.bottom + 2, `Kick ${b.name}`, BAR_FOR.map((secs) => ({
+          label: barLabel(secs),
+          note: barNote(secs),
+          onSelect: () => void this.did(this.island.keeperKick(b.uid, secs)),
+        })));
+      });
+    kick.classList.add('keeper-mute');
+    return kick;
+  }
+
+  /** A button that keeps its place, hidden, where it does not apply, so the columns stay straight down the list. */
+  private gapped(btn: HTMLButtonElement, shown: boolean): HTMLButtonElement {
+    if (!shown) {
+      btn.classList.add('keeper-gap');
+      btn.disabled = true;
+      btn.tabIndex = -1;
+      btn.setAttribute('aria-hidden', 'true');
     }
-    acts.append(unmute);
-    el.title = `Move to: ${moveTarget(b, kept.spawn)}.`;
-    el.append(dot, who, acts);
+    return btn;
+  }
+
+  /** One open report: who sent it about whom, why, when, the note, and Mute, Kick and Handled for the one reported. */
+  private reportRow(r: KeptReport, kept: Kept): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = 'social-row keeper-row';
+    const who = document.createElement('span');
+    who.className = 'keeper-who';
+    const name = document.createElement('span');
+    name.className = 'social-name';
+    name.textContent = `${r.whom.name}: ${reportReason(r.reason)}`;
+    name.title = `Reported by ${r.by.name}`;
+    const facts = document.createElement('span');
+    facts.className = 'social-where keeper-facts';
+    facts.textContent = [`by ${r.by.name}`, r.ago < 60 ? 'just now' : `${awayFor(r.ago)} ago`,
+      r.against > 1 ? `${r.against} open on them` : '', r.note ? `“${r.note}”` : ''].filter((s) => s).join(' · ');
+    who.append(name, facts);
+    const acts = document.createElement('span');
+    acts.className = 'social-acts';
+    const body = kept.people.find((b) => b.uid === r.whom.uid);
+    if (body) {
+      acts.append(this.muteButton(body));
+      if (!body.you && !body.keeper) acts.append(this.kickButton(body));
+    }
+    acts.append(this.button('Handled', 'Off the open reports. The reporter is not told.',
+      () => void this.did(this.island.reportHandled(r.n))));
+    el.append(who, acts);
     return el;
   }
 

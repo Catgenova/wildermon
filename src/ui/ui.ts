@@ -135,7 +135,7 @@ import { CELL } from './snapgrid';
 import { seasonAt } from '../world/calendar';
 import type { Island } from '../net/island';
 import { awayLines } from '../game/away';
-import { clearQuestion } from '../game/keeper';
+import { clearQuestion, REPORT_NOTE_MAX, REPORT_REASONS, REPORTS_A_DAY } from '../game/keeper';
 import { uiBox } from './screen';
 import { capital } from '../game/words';
 import { applyLook, runeFor } from './theme';
@@ -3133,6 +3133,21 @@ export class UI {
       onSelect: () => this.social.openOn(uid, 'letters'),
     });
     entries.push({ label: 'Everybody…', onSelect: () => this.social.openOn(uid, 'friends') });
+    // To the island's keepers, who see it in the Island keeper window; the one reported is not told.
+    entries.push({
+      label: `Report ${name}`,
+      note: `To the island's keepers; ${REPORTS_A_DAY} a day`,
+      children: REPORT_REASONS.map((r) => ({
+        label: r.label,
+        onSelect: () => void (async () => {
+          const ask = this.game.hooks.note ?? ((q: string) => this.game.hooks.prompt(q, ''));
+          const note = await ask(`Report ${name}: ${r.label}. Note, optional, up to ${REPORT_NOTE_MAX} characters:`, REPORT_NOTE_MAX);
+          if (note === null) return;
+          const why = await isle.report(uid, r.id, note);
+          this.game.logMsg(why ?? `Reported ${name}: ${r.label}.`, why ? 'error' : 'event');
+        })(),
+      })),
+    });
     return {
       title: name,
       facts: [who ? `${name}: at ${Math.floor(who.x)}, ${Math.floor(who.y)}.` : `${name}: on this island.`],

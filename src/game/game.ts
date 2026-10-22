@@ -317,6 +317,8 @@ export interface GameHooks {
   choose: (question: string, choices: ReadonlyArray<{ key: string; colour?: string; text: string }>) => Promise<string | null>;
   /** How many, from 1 to `most`, with `fallback` offered: a part of a stack to move. Resolves with the number, or null. */
   count?: (question: string, most: number, fallback: number) => Promise<number | null>;
+  /** A line of free text up to `max` characters, the box empty: a report's note. Resolves with what was typed, or null. */
+  note?: (question: string, max: number) => Promise<string | null>;
 }
 
 export interface GameInit {

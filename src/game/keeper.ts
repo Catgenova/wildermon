@@ -45,6 +45,10 @@ export interface KeptBody {
   muted: boolean;
   /** Seconds of the mute left; null while it lasts until a keeper lifts it, or when there is none. */
   muted_for: number | null;
+  /** Whether every door of the island refuses them (`rpc_owner_kick`). */
+  barred: boolean;
+  /** Seconds of the bar left; null while it lasts until a keeper lifts it, or when there is none. */
+  barred_for: number | null;
   /** The token of the settlement they founded, which Move puts them on. */
   home: { x: number; y: number; name: string } | null;
   /** Whether they keep this island too. */
@@ -93,3 +97,72 @@ export const moveHint = (b: KeptBody, spawn: Kept['spawn']): string =>
 export const clearQuestion = (x: number, y: number, stacks: number, things: number): string =>
   `Delete everything lying on the ground at (${x}, ${y}): ${things} ${things === 1 ? 'thing' : 'things'} in `
   + `${stacks} ${stacks === 1 ? 'stack' : 'stacks'}, and whatever is inside them? Nobody can get it back.`;
+
+/**
+ * How long a keeper may bar somebody for, in seconds, shortest first: 0 logs
+ * them off and bars nothing, `null` bars until a keeper lifts it. The island
+ * takes any number of seconds; these are the ones offered.
+ */
+export const BAR_FOR: ReadonlyArray<number | null> = [0, 60 * 60, 24 * 60 * 60, null];
+
+/** What a kick does, for the button's title and the Actions note. */
+export const KICK_DOES = 'logs them off now: away, action stopped, queue emptied, off anything ridden, driven, pulled or boarded';
+
+/** What a bar shuts, which the island's refusal names. */
+export const BAR_SHUTS = 'every door of this island: joining, moving, acting, talking';
+
+/** How every door's refusal of a barred body begins (`private.barred_why`). */
+export const BARRED_SAYS = 'Barred from this island';
+
+/** Whether a door's refusal is a bar's. */
+export const isBarred = (why: string | null | undefined): boolean => !!why && why.startsWith(BARRED_SAYS);
+
+/** A kick's menu row: "Log off only", "Bar for 1 hour", "Bar until lifted". */
+export const barLabel = (secs: number | null): string =>
+  secs === 0 ? 'Log off only' : secs === null ? 'Bar until lifted' : `Bar for ${awayFor(secs)}`;
+
+/** What a kick of that length does, for the note under its row. */
+export const barNote = (secs: number | null): string =>
+  secs === 0 ? 'May come back at once' : secs === null ? 'Until you or another keeper lifts it' : `Lifts after ${awayFor(secs)}`;
+
+/** The bar on somebody, as their row says it; empty when there is none. */
+export const barLine = (b: KeptBody, until?: (secs: number) => string): string => {
+  if (!b.barred) return '';
+  if (b.barred_for === null) return 'barred until lifted';
+  return `barred for ${awayFor(b.barred_for)} more${until ? `, until ${until(b.barred_for)}` : ''}`;
+};
+
+/**
+ * Why somebody may report somebody else, in the order the menu offers them.
+ * The island takes these ids and no others (`private.report_reasons`).
+ */
+export const REPORT_REASONS: ReadonlyArray<{ id: string; label: string }> = [
+  { id: 'cheating', label: 'Cheating' },
+  { id: 'abuse', label: 'Abuse in chat' },
+  { id: 'griefing', label: 'Griefing' },
+  { id: 'other', label: 'Other' },
+];
+
+/** The most characters a report's note keeps (`private.report_note_max`). */
+export const REPORT_NOTE_MAX = 200;
+/** Reports one body may send on an island in any 24 hours (`private.reports_a_day`). */
+export const REPORTS_A_DAY = 5;
+/** Days a report is kept after a keeper marks it handled; an open one is kept `REPORT_OPEN_DAYS` (`private.report_kept_days`). */
+export const REPORT_HANDLED_DAYS = 30;
+export const REPORT_OPEN_DAYS = 90;
+
+/** A reason's label, from its id. */
+export const reportReason = (id: string): string => REPORT_REASONS.find((r) => r.id === id)?.label ?? id;
+
+/** One open report, as `rpc_owner_reports` sends it. */
+export interface KeptReport {
+  n: number;
+  /** Seconds since it was sent. */
+  ago: number;
+  by: { uid: string; name: string };
+  whom: { uid: string; name: string };
+  reason: string;
+  note: string | null;
+  /** Open reports against the same body, this one included. */
+  against: number;
+}

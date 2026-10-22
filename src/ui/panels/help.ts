@@ -170,6 +170,7 @@ import { COUNTS } from '../beltmenu';
 import { DAMAGE_BREAKING } from '../itemcells';
 import { IDLE_LOGOUT } from '../../game/keep';
 import { awayFor } from '../../game/away';
+import { BAR_FOR, BAR_SHUTS, barLabel, KICK_DOES, MUTE_FOR, MUTE_SHUTS, muteLabel, REPORT_HANDLED_DAYS, REPORT_NOTE_MAX, REPORT_OPEN_DAYS, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { BOARD_RULES, REFRESH as BOARD_REFRESH } from './boards';
 import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
@@ -1064,6 +1065,16 @@ export function helpText(): string {
     <ul>
       <li>Friendship is mutual (ask, they accept). Friends see each other's location while at the keyboard; otherwise "away".</li>
       <li>Letters are kept: delivered to an open tab at once, otherwise waiting until read.</li>
+    </ul>
+    <h4>Reports and the island's keepers</h4>
+    <ul>
+      <li><b>Report</b> (right-click a person): reason ${REPORT_REASONS.map((r) => `<b>${r.label}</b>`).join(', ')}; note optional, up to ${REPORT_NOTE_MAX} characters.
+      Limit: ${REPORTS_A_DAY} reports in 24 hours; 1 about the same person in 24 hours. The one reported is not told.</li>
+      <li>Kept: ${REPORT_OPEN_DAYS} days open; ${REPORT_HANDLED_DAYS} days after a keeper marks it handled.</li>
+      <li>Keepers (founder of the island, and project owners): <b>Island keeper</b> window. Open reports first: <b>Mute</b>, <b>Kick</b>, <b>Handled</b>.</li>
+      <li><b>Mute</b> (${MUTE_FOR.map(muteLabel).join(', ')}): refuses ${MUTE_SHUTS}.</li>
+      <li><b>Kick</b> (${BAR_FOR.map(barLabel).join(', ')}): ${KICK_DOES}; their page goes to the sign-in page with the reason.
+      A bar refuses ${BAR_SHUTS}, until it ends or <b>Unbar</b>. Not on a keeper.</li>
     </ul>
     <h4>While you were away</h4>
     <ul>

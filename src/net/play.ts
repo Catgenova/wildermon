@@ -24,6 +24,17 @@ import { skillRises, tookOff } from './felt';
 import { packAll } from './packed';
 import { reportErrorsTo } from './errors';
 import { learnChart } from '../game/cartography';
+import { isBarred } from '../game/keeper';
+
+/**
+ * Off to the landing page, logged off by a keeper of the island or barred from
+ * it. Only the island's id and a bare `off` travel: the landing page asks the
+ * island for the line itself (`rpc_barred`), so no link can put words there.
+ */
+function sentOff(island: string): Promise<never> {
+  location.replace(`./account.html?${new URLSearchParams({ island, off: '1' })}`);
+  return new Promise<never>(() => {});
+}
 
 /**
  * Starting on an island that lives in Postgres rather than in this tab.
@@ -186,7 +197,13 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   }
 
   tell('Coming ashore…');
-  await island.join(id, name);
+  try {
+    await island.join(id, name);
+  } catch (e) {
+    // Barred: the landing page says until when, rather than a Retry that cannot work.
+    if (e instanceof Error && isBarred(e.message.replace(/^The island would not have us: /, ''))) return sentOff(id);
+    throw e;
+  }
   const world = island.world;
   const info = island.info;
   const me = island.me;
@@ -351,6 +368,8 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   // it ourselves: dying does, and so does a keeper of the island moving a
   // stuck body, which takes it off whatever it was on as well.
   island.hooks.paced = (mul, secs) => game.spedUp(mul, secs);
+  // Logged off by a keeper, and perhaps barred: every door now refuses this body, so the page goes too.
+  island.hooks.kicked = () => void sentOff(id);
   island.hooks.moved = (x, y, level, letGo) => {
     if (letGo) game.letGoOfAll();
     game.putBody(x, y, level);
