@@ -1558,6 +1558,17 @@ jobs:
             --outfile=node_modules/.cache/presence.mjs --log-level=error
           node node_modules/.cache/presence.mjs
 
+      - name: Accounts - addresses noted, new bodies per connection, keeper doors want the code
+        run: |
+          # The join and the beat note the caller's address (once per 10 min
+          # when known), the clock forgets one unseen 90 days; one connection
+          # makes 3 new bodies in 24 h and is refused the 4th, a keeper never;
+          # with a verified second factor every keeper door but am_i refuses
+          # aal1 in the browser's words and opens to aal2.
+          npx esbuild supabase/test/accounts.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/accounts.mjs --log-level=error
+          node node_modules/.cache/accounts.mjs
+
       - name: Six more relics put to use, the same on both sides
         run: |
           # "Old collar, old bridle, seed jar, old whetstone, makers stamp,

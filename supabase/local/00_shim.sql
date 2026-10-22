@@ -96,3 +96,33 @@ end $$;
 grant usage on schema realtime to anon, authenticated;
 grant select on realtime.messages to anon, authenticated;
 grant execute on function realtime.topic() to anon, authenticated;
+
+/**
+ * The signed token's claims, as Supabase's own `auth.jwt()` reads them, and
+ * Auth's table of second factors (MFA), enough of it for the keeper doors'
+ * two-step rule to be tested: a test sets `request.jwt.claims` with `aal`, and
+ * puts a row here with `status = 'verified'`. The types are Auth's enums, so a
+ * comparison that works here works there.
+ */
+create or replace function auth.jwt() returns jsonb language sql stable as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claim', true), ''),
+    nullif(current_setting('request.jwt.claims', true), '')
+  )::jsonb
+$$;
+grant execute on function auth.jwt() to anon, authenticated;
+do $$ begin
+  if to_regtype('auth.factor_type') is null then create type auth.factor_type as enum ('totp', 'webauthn', 'phone'); end if;
+  if to_regtype('auth.factor_status') is null then create type auth.factor_status as enum ('unverified', 'verified'); end if;
+end $$;
+create table if not exists auth.mfa_factors (
+  id uuid primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  friendly_name text,
+  factor_type auth.factor_type not null,
+  status auth.factor_status not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  secret text
+);
+create index if not exists factor_id_created_at_idx on auth.mfa_factors (user_id, created_at);

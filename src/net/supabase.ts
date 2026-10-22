@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { captchaOptions } from './captcha';
 
 /**
  * Which island keeper to talk to.
@@ -95,7 +96,7 @@ export async function signIn(): Promise<string> {
   const sb = supabase();
   const had = await sb.auth.getSession();
   if (had.data.session?.user?.id) return had.data.session.user.id;
-  const { data, error } = await sb.auth.signInAnonymously();
+  const { data, error } = await sb.auth.signInAnonymously({ options: await captchaOptions() });
   if (error || !data.user) throw new Error(`Could not reach the island keeper: ${error?.message ?? 'no account'}`);
   return data.user.id;
 }

@@ -5,6 +5,7 @@ import {
 } from './net/accounts';
 import { LOOK_TABLES, cleanLook, randomLook, type Look } from './game/look';
 import { Creator } from './ui/creator';
+import { CODE_DIGITS, CODE_SECONDS, finishEnrol, myFactor, removeFactor, startEnrol } from './net/mfa';
 
 /**
  * The landing page: a username, a password, and a way back in.
@@ -366,11 +367,107 @@ async function onArrival(): Promise<void> {
   row.append(on, document.createTextNode(' — or '), again, document.createTextNode(', or '), out,
              document.createTextNode(' and be somebody else.'));
   card.insertBefore(row, said.nextSibling);
+  void showMfa();
   if (lookAgain) {
     say(`Signed in as ${name}. Change whatever you like, then step ashore.`, 'good');
     toMaker(had);
   }
 }
+
+/* ---- Two-step sign-in ------------------------------------------------------ */
+
+const mfa = $<HTMLElement>('mfa');
+const mfaState = $<HTMLParagraphElement>('mfa-state');
+const mfaQr = $<HTMLDivElement>('mfa-qr');
+const mfaImg = $<HTMLImageElement>('mfa-img');
+const mfaSecret = $<HTMLElement>('mfa-secret');
+const mfaCodeRow = $<HTMLDivElement>('mfa-code-row');
+const mfaCode = $<HTMLInputElement>('mfa-code');
+const mfaGo = $<HTMLButtonElement>('mfa-go');
+const mfaCancel = $<HTMLButtonElement>('mfa-cancel');
+const mfaSaid = $<HTMLParagraphElement>('mfa-say');
+
+/** Off, on, or a step of turning it on or off. */
+type MfaStep = { s: 'off' } | { s: 'on' } | { s: 'enrol'; id: string } | { s: 'remove' };
+let mfaStep: MfaStep = { s: 'off' };
+
+const MFA_ON = `On: authenticator app, ${CODE_DIGITS}-digit code, new every ${CODE_SECONDS} s. Island keeper tools: code once per sign-in.`;
+const MFA_OFF = 'Off. Island keeper tools: no code.';
+
+function mfaSay(text: string, tone: '' | 'bad' | 'good' = ''): void {
+  mfaSaid.textContent = text;
+  mfaSaid.className = `say${tone ? ` ${tone}` : ''}`;
+}
+
+function drawMfa(): void {
+  const st = mfaStep.s;
+  mfaState.textContent = st === 'on' || st === 'remove' ? MFA_ON : st === 'enrol' ? 'Authenticator app: scan the QR code or type the key, then enter its code.' : MFA_OFF;
+  mfaQr.hidden = st !== 'enrol';
+  mfaCodeRow.hidden = st !== 'enrol' && st !== 'remove';
+  mfaCancel.hidden = st !== 'enrol' && st !== 'remove';
+  mfaGo.textContent = st === 'off' ? 'Turn on' : st === 'on' ? 'Turn off' : st === 'enrol' ? 'Confirm' : 'Confirm turn off';
+  if (!mfaCodeRow.hidden) mfaCode.focus();
+}
+
+/** For a signed-in named account: whether two-step sign-in is on, and the button to change it. */
+async function showMfa(): Promise<void> {
+  try {
+    mfaStep = (await myFactor()) ? { s: 'on' } : { s: 'off' };
+  } catch (e) {
+    mfa.hidden = false;
+    mfaGo.hidden = true;
+    mfaSay(`Two-step sign-in: no answer (${e instanceof Error ? e.message : 'error'}). Reload to retry.`, 'bad');
+    return;
+  }
+  mfa.hidden = false;
+  drawMfa();
+}
+
+mfaGo.addEventListener('click', () => {
+  void (async () => {
+    mfaGo.disabled = true;
+    mfaSay('');
+    try {
+      if (mfaStep.s === 'off') {
+        const e = await startEnrol();
+        mfaImg.src = e.qr;
+        mfaSecret.textContent = e.secret;
+        mfaCode.value = '';
+        mfaStep = { s: 'enrol', id: e.id };
+      } else if (mfaStep.s === 'enrol') {
+        await finishEnrol(mfaStep.id, mfaCode.value);
+        mfaStep = { s: 'on' };
+        mfaSay('Two-step sign-in on.', 'good');
+      } else if (mfaStep.s === 'on') {
+        mfaCode.value = '';
+        mfaStep = { s: 'remove' };
+      } else {
+        await removeFactor(mfaCode.value);
+        mfaStep = { s: 'off' };
+        mfaSay('Two-step sign-in off.', 'good');
+      }
+      if (mfaStep.s === 'on' || mfaStep.s === 'off') mfaCode.value = '';
+      drawMfa();
+    } catch (e) {
+      mfaSay(e instanceof Error ? e.message : 'Refused.', 'bad');
+    } finally {
+      mfaGo.disabled = false;
+    }
+  })();
+});
+
+mfaCancel.addEventListener('click', () => {
+  mfaStep = mfaStep.s === 'remove' ? { s: 'on' } : { s: 'off' };
+  mfaImg.removeAttribute('src');
+  mfaSecret.textContent = '';
+  mfaCode.value = '';
+  mfaSay('');
+  drawMfa();
+});
+
+mfaCode.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter') { ev.preventDefault(); mfaGo.click(); }
+});
 
 setMode('new');
 void onArrival();

@@ -9,6 +9,7 @@ import {
   ACTION_BY_ID, CHIP_CHANCE, CLEARED_TO, FRUIT_MATURE, FRUIT_OLD, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MINE_COLLAPSE, MINE_DEPTH, MOSS_PER_CUT, MOSS_PLANT,
   PROSPECT_REACH, PROSPECT_STEP, REPAIR_FLOOR, repairGo, RESIN_TREE,
 } from '../../game/actions';
+import { CODE_DIGITS, CODE_SECONDS } from '../../game/keeper';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEM_ODDS, GEMS, JEWEL_BONUS, tradeName } from '../../game/gems';
 import { ANVIL_SUBTILES } from '../../game/anvil';
 import { SKILL_DEFS } from '../../game/skills';
@@ -1326,6 +1327,12 @@ export function helpText(): string {
     <ul>
       <li>Island: <i>Customize character</i> under <b>How you look</b> (Settings, <kbd>O</kbd>) opens the account page's character creator on your current look.
       <i>Step ashore</i> saves it to your account, applies it on every island you have a body on and returns you. Nothing changes before that.</li>
+    </ul>
+    <h4>Two-step sign-in</h4>
+    <ul>
+      <li>Account page, signed in with a name: <b>Turn on</b>, scan the QR code or type the key into an authenticator app, enter its ${CODE_DIGITS}-digit code
+      (new every ${CODE_SECONDS} s). <b>Turn off</b>: the current code.</li>
+      <li>On: the <b>Island keeper</b> window asks for the code once per sign-in; keeper tools are refused until then. Playing never asks.</li>
     </ul>
     <h4>Map</h4>
     <ul>

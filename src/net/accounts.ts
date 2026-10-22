@@ -1,5 +1,6 @@
 import { cleanLook, type Look } from '../game/look';
 import { supabase } from './supabase';
+import { captchaOptions } from './captcha';
 
 /**
  * Accounts: a username, a password, and nothing else.
@@ -247,6 +248,7 @@ function inOurWords(message: string, address: string): string {
   if (m.includes('rate limit') && (m.includes('email') || m.includes('security purposes'))) {
     return 'The island keeper tried to send a confirmation mail, and it has run out of its allowance for the hour. It should not be sending any at all — a username here has no mailbox behind it. "Confirm email" is on in the project\'s Auth settings and needs to be off: Authentication → Sign In / Providers.';
   }
+  if (m.includes('captcha')) return 'CAPTCHA refused. Try again.';
   if (m.includes('rate limit') || m.includes('too many')) return 'That is a lot of tries in a short time. Wait a minute and go again.';
   if (m.includes('signups not allowed') || m.includes('signup is disabled')) return 'The island keeper is not taking new accounts at the moment.';
   return message;
@@ -307,7 +309,9 @@ export async function createAccount(rawName: string, password: string): Promise<
     }
   }
 
-  const { data, error } = await sb.auth.signUp({ email: nameEmail(name), password, options: { data: { display: shown } } });
+  const { data, error } = await sb.auth.signUp({
+    email: nameEmail(name), password, options: { data: { display: shown }, ...(await captchaOptions()) },
+  });
   if (error) throw new Error(inOurWords(error.message, nameEmail(name)));
   /**
    * The quiet duplicate.
@@ -342,7 +346,8 @@ export async function signInAs(rawName: string, password: string): Promise<strin
    */
   let refusal = '';
   for (const email of everyEmail(name)) {
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    // A CAPTCHA token is good for one request: a fresh one for every address tried.
+    const { error } = await sb.auth.signInWithPassword({ email, password, options: await captchaOptions() });
     if (!error) {
       /*
        * Signed in as the capitals you typed: they are your name from here on,

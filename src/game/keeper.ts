@@ -22,6 +22,16 @@ export const MUTE_FOR: ReadonlyArray<number | null> = [60 * 60, 24 * 60 * 60, nu
 /** What a mute shuts, which the island's refusal names in the same three. */
 export const MUTE_SHUTS = 'what they say aloud, write in a letter or put in a parcel note';
 
+/**
+ * What every keeper door but `rpc_owner_am_i` refuses with when the account has
+ * a verified authenticator (two-step sign-in) and this session has not given
+ * its code. The island raises the same words (`private.keeper_code_ok`).
+ */
+export const KEEPER_CODE = 'Authenticator code needed: Island keeper window.';
+/** Digits in an authenticator code, and the seconds each lasts, in Supabase Auth's TOTP. */
+export const CODE_DIGITS = 6;
+export const CODE_SECONDS = 30;
+
 /** One body on the island, as `rpc_owner_online` sends it. */
 export interface KeptBody {
   uid: string;

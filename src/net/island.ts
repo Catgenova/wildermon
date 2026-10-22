@@ -3587,10 +3587,14 @@ export class Island {
     return !error && data === true;
   }
 
+  /** Why the island last refused `kept()`, in its words; null when it answered. */
+  keptWhy: string | null = null;
+
   /** Everybody with a body on the island, as its keepers see them. Null when the island did not answer. */
   async kept(): Promise<Kept | null> {
     if (!this.info) return null;
     const { data, error } = await supabase().rpc('rpc_owner_online', { p_world: this.info.id });
+    this.keptWhy = error?.message ?? null;
     if (error || !data || typeof data !== 'object') return null;
     const got = data as Partial<Kept>;
     return { people: rowsIn<KeptBody>(got.people), spawn: got.spawn ?? { x: 0, y: 0 } };

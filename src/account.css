@@ -223,3 +223,28 @@ a { color: var(--ui-accent); }
 #ashore:hover:not(:disabled) { border-color: var(--ui-accent); color: #fff; }
 #ashore:disabled { opacity: 0.55; cursor: progress; }
 #ashore:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+
+/* ---- Two-step sign-in ------------------------------------------------------ */
+#mfa {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(107, 88, 54, 0.4);
+}
+#mfa h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--ui-accent); }
+#mfa-qr img { display: block; width: 180px; height: 180px; margin: 8px 0; padding: 6px; background: #fff; border-radius: 4px; }
+#mfa-secret { word-break: break-all; color: var(--ui-text); }
+#mfa-code { margin-bottom: 8px; letter-spacing: 0.2em; }
+.mfa-row { display: flex; gap: 8px; }
+.mfa-row button {
+  flex: 1;
+  padding: 9px;
+  border: 1px solid var(--ui-border-light);
+  border-radius: 4px;
+  background: linear-gradient(rgba(90, 74, 44, 0.95), rgba(62, 51, 31, 0.95));
+  color: var(--ui-text);
+  font: inherit;
+  cursor: pointer;
+}
+.mfa-row button:hover:not(:disabled) { border-color: var(--ui-accent); color: #fff; }
+.mfa-row button:disabled { opacity: 0.55; cursor: progress; }
+.card.making #mfa { display: none; }

@@ -1,6 +1,7 @@
 import type { Island } from '../../net/island';
 import type { Game } from '../../game/game';
-import { heardLine, KEEPER_REFRESH, moveHint, moveTarget, MUTE_FOR, MUTE_SHUTS, muteLabel, muteLine, muteNote, type Kept, type KeptBody } from '../../game/keeper';
+import { codeNeeded, giveCode } from '../../net/mfa';
+import { CODE_DIGITS, heardLine, KEEPER_CODE, KEEPER_REFRESH, moveHint, moveTarget, MUTE_FOR, MUTE_SHUTS, muteLabel, muteLine, muteNote, type Kept, type KeptBody } from '../../game/keeper';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
 import { KeeperFlags } from './keeperflags';
@@ -18,6 +19,10 @@ const clockIn = (secs: number): string =>
  * somebody who does not keep the island would be refused at the first click.
  * One ask fills it (`rpc_owner_online`): when it opens, every `KEEPER_REFRESH`
  * seconds while it stays open, and after anything done from it.
+ *
+ * An account with two-step sign-in on (`src/net/mfa.ts`) is asked for its
+ * authenticator code here first, once per sign-in: until then every keeper
+ * door refuses with `KEEPER_CODE`.
  */
 export class KeeperPanel {
   private readonly page: HTMLDivElement;
@@ -27,6 +32,11 @@ export class KeeperPanel {
   private lastAsk = -1e9;
   /** The watch's flags: a section of its own, asked for whenever the list is. */
   private readonly flags: KeeperFlags;
+  /** The island wants the authenticator code before it opens any keeper door. */
+  private needCode = false;
+  private codeSaid = '';
+  /** Auth said no code is needed this session; asked again only when a door says otherwise. */
+  private codeKnown = false;
 
   constructor(
     private readonly win: UIWindow,
@@ -53,10 +63,26 @@ export class KeeperPanel {
     this.lastAsk = now;
     if (this.asking) return;
     this.asking = true;
-    void this.flags.refresh();
     let got: Kept | null = null;
     try {
+      const was = this.needCode;
+      if (!this.codeKnown) {
+        try {
+          this.needCode = await codeNeeded();
+          this.codeKnown = !this.needCode;
+        } catch {
+          // Auth did not answer: the island still decides, and says KEEPER_CODE if it wants the code.
+        }
+      }
+      // Not drawn again while it waits, so a code half typed stays.
+      if (this.needCode) return was ? undefined : this.draw();
+      void this.flags.refresh();
       got = await this.island.kept();
+      if (!got && this.island.keptWhy === KEEPER_CODE) {
+        this.needCode = true;
+        this.codeKnown = false;
+        return this.draw();
+      }
     } finally {
       this.asking = false;
     }
@@ -69,12 +95,19 @@ export class KeeperPanel {
   private async did(what: Promise<string | null>): Promise<void> {
     const why = await what;
     if (why) this.game.logMsg(why, 'error');
+    if (why === KEEPER_CODE) {
+      this.needCode = true;
+      this.codeKnown = false;
+      this.draw();
+      return;
+    }
     await this.refresh(performance.now() / 1000);
   }
 
   private draw(): void {
     const top = this.page.scrollTop;
     this.page.replaceChildren();
+    if (this.needCode) return this.codeForm();
     const kept = this.seen;
     if (!kept) {
       this.say(this.failed ? `No answer from the island. Retry every ${KEEPER_REFRESH} s while open.`
@@ -98,6 +131,45 @@ export class KeeperPanel {
     this.page.append(this.flags.el);
     // Asked again every so often: the list stays where it was being read.
     this.page.scrollTop = top;
+  }
+
+  /** Two-step sign-in is on: the code, before any keeper door opens. */
+  private codeForm(): void {
+    this.head('Authenticator code');
+    this.say(`Two-step sign-in: on. Keeper tools: the ${CODE_DIGITS}-digit code from your authenticator app, once per sign-in.`);
+    const form = document.createElement('form');
+    form.className = 'keeper-code';
+    const box = document.createElement('input');
+    box.type = 'text';
+    box.inputMode = 'numeric';
+    box.autocomplete = 'one-time-code';
+    box.maxLength = 8;
+    box.className = 'panel-select';
+    box.setAttribute('aria-label', 'Authenticator code');
+    const go = document.createElement('button');
+    go.type = 'submit';
+    go.className = 'tb-btn tb-small';
+    go.textContent = 'Confirm';
+    form.append(box, go);
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      go.disabled = true;
+      void giveCode(box.value).then(
+        () => {
+          this.needCode = false;
+          this.codeKnown = true;
+          this.codeSaid = '';
+          void this.refresh(performance.now() / 1000);
+        },
+        (e: unknown) => {
+          this.codeSaid = e instanceof Error ? e.message : 'Refused.';
+          this.draw();
+        },
+      );
+    });
+    this.page.append(form);
+    if (this.codeSaid) this.say(this.codeSaid, true);
+    box.focus();
   }
 
   /** One body: whether they are ashore, who, where and how lately heard from, and the three things to do. */
