@@ -1577,8 +1577,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   magga: {
     id: 'magga',
     wound: 'cut',
-    name: 'Magga',
+    name: 'Chestkit',
+    was: ['Magga'],
+    // Chestkit, Lootvent, Hoardback.
     description: 'Settlement task: carry items lying on the settlement home; sort raw and worked materials from the settlement stores into raw and craft material bins.',
+    stages: [
+      { name: 'Lootvent', description: '' },
+      { name: 'Hoardback', description: '' },
+    ],
     health: 16,
     attack: 3,
     speed: 2,
@@ -1590,11 +1596,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'fetch',
     workRange: 12,
     rangePerStep: 12,
+    // Its oak and its green hide: oak with moss, walnut with fern, honey oak with lichen, and weathered grey oak with sage.
     variants: [
-      ['#26282e', '#f2f0ea'],
-      ['#2e2a33', '#e6e3dc'],
-      ['#20262c', '#dfe6ea'],
-      ['#332a26', '#efe6d8'],
+      ['#8a5a32', '#6f8f4a'],
+      ['#6e4630', '#5f8a5a'],
+      ['#a87444', '#86994a'],
+      ['#7a5a48', '#5d7f6e'],
     ],
     butcher: { meat: 1, leather: 1, bone: 1, gland: 1, feather: 6 },
     nearTrees: true,

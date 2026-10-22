@@ -1,6 +1,7 @@
 import type { BeastAct } from '../game/events';
 import { BADGER_VOICE } from './voice-badger';
 import { BRICK_VOICE } from './voice-brick';
+import { CHEST_VOICE } from './voice-chest';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
@@ -97,4 +98,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   lungra: BRIAR_VOICE,
   // The Pebbletooth, the Shaleclaw and the Cragjaws.
   thumpa: CRAG_VOICE,
+  // The Chestkit, the Lootvent and the Hoardback.
+  magga: CHEST_VOICE,
 };

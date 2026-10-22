@@ -12,7 +12,7 @@ import { BURA, CUDDA, GORRAL, SHAGGAN, SNEDDA } from './wild-herd';
 import { ARBORCREST, PIPSEED, SPRIGWING } from './wild-pip';
 import { CARTLING, HAULHORN, WAGONOX } from './wild-haul';
 import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THISTLEKIT } from './wild-hare';
-import { MAGGA } from './wild-odd';
+import { CHESTKIT, HOARDBACK, LOOTVENT } from './wild-chest';
 import { CLAYBURROW, MUDLET, TERRAMOLE } from './wild-clay';
 import { SANDPINCHER, SANDPINNACLE, SANDPIP } from './wild-sand';
 import { ULVA } from './wild-hunters';
@@ -60,7 +60,7 @@ import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 export const WILDERMON: Record<string, Kind> = {
   rabba: SNUFFLET,
   woola: CLOUDLET,
-  magga: MAGGA,
+  magga: CHESTKIT,
   noot: MUDLET,
   crawler: SANDPIP,
   ulva: ULVA,
@@ -187,6 +187,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   rowl: [LASHRUNNER, VINEHUNTER],
   sprigga: [LEMLEAF, LEMORIAN],
   lungra: [BRIARPOUNCE, THORNLANCE],
+  magga: [LOOTVENT, HOARDBACK],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */
