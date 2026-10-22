@@ -12,8 +12,10 @@
  *   thin at the first step, thicker at the second, full from the third. Every
  *   tree that bears fruit is in flower the whole spring -- white, pale pink
  *   or deep pink by its kind, the cherry the pinkest -- over the new leaf.
- * - **Summer.** The look the island has always had: the canopies in
- *   `TREE_DEFS` are summer's.
+ * - **Summer.** The look the island has always had: each species' `leaf`
+ *   in `./trees/species` is summer's. The painter works spring's new leaf
+ *   and an evergreen's winter out of that with `fresh` and `wintry`; the
+ *   palettes below only say which of them a day calls for.
  * - **Autumn.** Each broadleaf turns a colour of its own: patches of it in
  *   the green at the first two steps, the whole crown from the third to the
  *   fifth, and at the last two the crown thinning as the leaves come down.
@@ -199,7 +201,7 @@ const mix = (a: string, b: string, k: number): string => {
  * since its new leaf is its own colour paler, not somebody else's.
  */
 const FRESH = ['#e2eaa6', '#b8ce7a', '#809c5a'] as const;
-function fresh(canopy: readonly [string, string, string]): [string, string, string] {
+export function fresh(canopy: readonly [string, string, string]): [string, string, string] {
   const [r, g] = hex(canopy[1]);
   const k = g > r ? 0.42 : 0.14;
   return canopy.map((c, i) => mix(mix(c, FRESH[i], k), '#ffffff', 0.1)) as [string, string, string];
@@ -215,7 +217,7 @@ export function newLeaf(canopy: readonly [string, string, string]): [string, str
 }
 
 /** An evergreen in winter: darker and cooler. */
-function wintry(canopy: readonly [string, string, string]): [string, string, string] {
+export function wintry(canopy: readonly [string, string, string]): [string, string, string] {
   return canopy.map((c) => mix(c, '#34505c', 0.2)) as [string, string, string];
 }
 

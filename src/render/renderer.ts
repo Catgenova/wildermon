@@ -44,6 +44,7 @@ import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARI
 import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
+import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
 import { isRuneLantern } from '../game/runelantern';
 import { drawRuneGate, gateVariant, RUNE_GATE_OPENING } from './runegate';
 import { gateMiddle, gateTiles, isRuneGate, RUNE_GATE_RISE, runeGateLit } from '../game/runegate';
@@ -248,7 +249,7 @@ import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
 import { CROWD, DROWNS, hemOf, ruffle, strew, strewLook, WADES, WADE_DEPTH, type Lobe } from './meadow';
-import { seam } from './seam';
+import { SEAM_FROM, seam, seamWash } from './seams';
 import { SWAY_MAX, swayAt } from './sway';
 import { Timings } from './timings';
 import { ColourPages, MarkPages } from './pages';
@@ -256,7 +257,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawWorkPost, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -2324,14 +2325,14 @@ export class Renderer {
     let shade = 0.48 + 0.6 * Math.max(0, dot);
     /*
      * A tile of ore is stone with a wash of the metal through it, not the
-     * metal. The seam itself is drawn on top of this as a shape (`seam.ts`);
-     * what the wash is for is the other end of the telescope -- from far
+     * metal. The seam itself is drawn on top of this (`seams/`), and the wash
+     * is in its look's own colour. What the wash is for is the other end of the telescope -- from far
      * enough out that the shapes are two pixels, a prospector still has to be
      * able to see that there is something in that hillside.
      */
     const base =
       ground === TileType.Rock
-        ? oreWash(ROCK_VARIANTS[w.rockFace(x, y)].color, this.oreBuf)
+        ? oreWash(seamWash(w.rockFace(x, y)), this.oreBuf)
         : ground === TileType.Slabs
           ? SLAB_VARIANTS[slabVariant(data)].color
           : def.color;
@@ -3610,7 +3611,7 @@ export class Renderer {
      * milliseconds a frame at zoom one against one and a half for the rich
      * hillside that actually occurs. Below here it costs nothing at all.
      */
-    const seamed = zoom >= 0.9;
+    const seamed = zoom >= SEAM_FROM;
     // Grass is flat colour with things growing in it, and a clump of grass
     // painted at a quarter of a tile to the screen is three pixels of green
     // on green. Below this the field says what it has to say with its colour.
@@ -3929,18 +3930,10 @@ export class Renderer {
           drawSteps({ ctx, cam, world, zoom, season: this.season, light: this.stepsLight, dpr: this.canvas.dpr }, x, y);
         }
         // And the metal in the stone, where there is any. Plain rock is plain.
+        // It keeps to its own tile without a clip: see `seams/paint.ts`.
         if (seamed && !wet && t0 === TileType.Rock) {
           const kind = world.rockFace(x, y);
-          if (kind > 0) {
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(pts[0], pts[1]);
-            for (let k = 1; k < 4; k++) ctx.lineTo(pts[k * 2], pts[k * 2 + 1]);
-            ctx.closePath();
-            ctx.clip();
-            seam(ctx, x, y, ROCK_VARIANTS[kind].color, pts, paveRot, zoom);
-            ctx.restore();
-          }
+          if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
         }
 
         const t = here;
@@ -5718,9 +5711,34 @@ export class Renderer {
         continue;
       }
       if (ent.kind === 'post' && ent.post) {
-        const post = ent.post;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawWorkPost(g, px, py, zoom, postLeft(post) / postLife(post.ql), post.worker !== null));
-        this.postHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 9 * zoom, top: ent.sy - 30 * zoom, w: 18 * zoom, h: 32 * zoom, post: post.id });
+        /*
+         * A work post, drawn as an anvil is (`workpost.ts`): its bake and its
+         * ribbon in the wind under the pointer's ring, and its rune's light over
+         * it while a wildermon works from it. After dark that light goes in
+         * here in its own place, turned up by what the wash will take off it;
+         * out of any light, the night is taken off the rune in its own shape as
+         * well, as an anvil's is (`ANVIL_UNDER_WASH`). Clicked by the post and
+         * its ribbon.
+         */
+        const post = ent.post, turn = this.camera.rotation, dark = this.game.darkness();
+        const look: WorkPostLook = {
+          wood: post.material, left: postLeft(post) / postLife(post.ql), worked: post.worker !== null,
+          variant: workPostVariant(post.x, post.y, post.sx, post.sy), seed: post.id, wind: { x: this.surf.dirX, y: this.surf.dirY, force: this.surf.force },
+        };
+        const [bl, bt, br, bb] = workPostBounds(look, turn, zoom);
+        const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
+          drawWorkPost(g, px, py, zoom, look, turn, dark, this.time, false);
+        }, undefined, box);
+        drawWorkPostLive(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time);
+        if (look.worked && dark > 0.02) {
+          const over = this.nightOver(ent.sx, ent.sy - 26 * zoom, dark);
+          const dim = over > ANVIL_UNDER_WASH;
+          drawWorkPostNight(ctx, ent.sx, ent.sy, zoom, look, turn, dark, this.time, dim ? 0 : over);
+          if (dim) this.runeNight.source(ctx, ent.sx, ent.sy, zoom, workPostNight(look, turn, zoom), this.time);
+        }
+        const [hl, ht, hr, hb] = workPostHit(look, turn, zoom);
+        this.postHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, post: post.id });
         continue;
       }
       if (ent.kind === 'waterplant' && ent.plant && this.plantFrame) {

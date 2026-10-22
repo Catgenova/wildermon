@@ -257,7 +257,7 @@ export function earthFace(c: CellarCanvas, f: EarthFace): void {
       // A vein runs along its bedding: a band of the ore set into the rock.
       if (f.ore) {
         /*
-         * As a seam is drawn in a face of rock up top (`seam.ts`): lobes of
+         * As a seam used to be drawn in a face of rock up top: lobes of
          * the metal laid well inside one another's width, so they fill as one
          * ribbon with a lumpy edge and a darker rim, and not a row of stones.
          * Up in the face, half way up the rock or a little over, at one height

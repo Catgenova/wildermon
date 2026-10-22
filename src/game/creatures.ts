@@ -4374,6 +4374,8 @@ export interface IslandCreature {
   kept?: Record<string, number> | null;
   /** The vehicle it is in the traces of; absent from older islands. */
   hitchedTo?: number | null;
+  /** The work post it works out of, when it does; absent from older islands. */
+  post?: number | null;
   /** The trade a worker was set to, which is its species' own unless it was told otherwise. */
   job?: string | null;
   /*
@@ -5236,6 +5238,8 @@ export class Creatures {
        * and never to take it out, and the wagon's yokes read empty.
        */
       if (r.hitchedTo !== undefined) c.hitchedTo = r.hitchedTo;
+      // And which work post it works out of, which the island kept and never said: every worked post read as idle.
+      if (r.post !== undefined) c.post = r.post;
       // The working life, which comes for yours and for nobody else's.
       if (r.care !== undefined) {
         c.care = r.care;

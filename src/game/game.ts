@@ -8727,7 +8727,9 @@ export class Game {
    * second from the first: every wagon read as having empty yokes whatever
    * was backed into them. Asked after either half arrives, because a ground
    * read rebuilds every vehicle from nothing and a creature read is the only
-   * thing that knows who is hitched.
+   * thing that knows who is hitched. And who works out of which work post, the
+   * same way round (`creature.post`, `PlacedPost.worker`): every worked post
+   * read as having nobody on it.
    */
   teamsFromCreatures(): void {
     for (const f of this.furniture.values()) if (f.team?.length) f.team = [];
@@ -8735,6 +8737,11 @@ export class Game {
     for (const c of hitched) {
       const f = this.furniture.get(c.hitchedTo as number);
       if (f) f.team = [...teamOf(f), c.id];
+    }
+    for (const p of this.posts.values()) p.worker = null;
+    for (const c of this.creatures.list.values()) {
+      const p = c.post !== null ? this.posts.get(c.post) : undefined;
+      if (p) p.worker = c.id;
     }
   }
 

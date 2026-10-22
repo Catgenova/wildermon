@@ -762,7 +762,7 @@ export interface RockVariantDef {
 /**
  * How much of the metal shows in the colour of a tile of it.
  *
- * The seam itself is shapes drawn in the stone (`render/seam.ts`) and that is
+ * The seam itself is shapes drawn in the stone (`render/seams/`) and that is
  * the picture. This is the long view, for the zoom the shapes are too small to
  * draw at: a tile filled with the ore outright was a coloured rectangle, and a
  * tile filled with plain stone would be a seam nobody could see from the top

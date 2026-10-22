@@ -3211,6 +3211,15 @@ export const NEWS: News[] = [
     day: '2026-10-22',
     lines: () => [`Changed: well holds ${WELL_HOLDS} litres (was 50).`],
   },
+  {
+    n: 250,
+    day: '2026-10-22',
+    lines: () => [
+      `Changed: trees redrawn, all ${TREE_DEFS.length} kinds, every age and season; fruit sized down.`,
+      `Changed: ore and stone seams redrawn, ${ROCK_VARIANTS.length - 1} kinds; each by its own shape, precious and rare ones with glints and crystals.`,
+      'Changed: work post redrawn; ribbon flies and rune lights while a wildermon works from it. Island now says which post each worker is on.',
+    ],
+  },
 ];
 
 /** The old brace, as What's new 246 gives it. */
