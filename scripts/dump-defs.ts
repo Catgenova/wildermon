@@ -115,6 +115,8 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GU
 import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE } from '../src/game/placeables';
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
+import { COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED } from '../src/game/wildforms';
+import { WORK_ITEMS } from '../src/game/workstats';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
 import { SEED_CHANCE } from '../src/game/farming';
@@ -1646,6 +1648,11 @@ for (const [fn, v] of [
   ['lamp_tier_odds', LAMP_TIER_ODDS],
   /* Breeding: how deep a line may run and what each generation past the first adds, and the odds of a mutation. */
   ['pedigree_most', PEDIGREE_MOST], ['pedigree_step', PEDIGREE_STEP], ['mutation_odds', MUTATION_ODDS],
+  /* Wild forms: one wild spawn in how many in its colour form and in a size form, what a large one's health and a
+     small one's speed are worth, and a young one's chance of a form for each parent that has it. And a worker's
+     lifetime at work: how many kinds of thing it counts. */
+  ['colour_form_odds', COLOUR_FORM_ODDS], ['size_form_odds', SIZE_FORM_ODDS], ['large_health', LARGE_HEALTH], ['small_speed', SMALL_SPEED],
+  ['form_pass', FORM_PASS], ['work_items', WORK_ITEMS],
   /* A deed worker's rest: the goes it has in it, how long it rests, what a bed of its size makes of that, and the
      health bands that size a kind that does not evolve (`den_class`). Its upkeep: how long at work without a meal
      before it slows, and to what share of its pace. A settlement's specialty: the workers of a trade that make one,

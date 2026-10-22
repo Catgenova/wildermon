@@ -53,6 +53,8 @@ import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
 import { IDLE_WHYS, ledgerAdd, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
+import { workFromLedger, workTime, type WorkStats } from './workstats';
+import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
 import { BACK_PACE, BACK_SLACK, BLINDSIDE, blowEvery, BODKIN_HIDE, KNIFE_BLEED, STUN_SECS, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS, circlePoint, CIRCLE_ARC, CIRCLE_R, COMPANION_BLOW, COMPANION_LEASH, COMPANION_PACE, COMPANION_REACH, COMPANION_SIGHT, COWARD_DRAG, FIGHT_GIVE_UP, FIGHT_LEASH, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HEAVY_EVERY, HEAVY_HIT, HUNT_REACH, KEEP_OFF, KNIFE_BLEED_SECS, PACK_CALL, PACK_MOST, PACK_RANGE, slotAngle, THROW_HIT, THROW_REACH, turnsAt, turnTo, WIND_UP, type Hide } from './fight';
 
 /**
@@ -102,8 +104,11 @@ export interface Unborn {
   from?: Record<string, TraitSource>;
   /** Its line, settled with its traits while both parents stood there (`bredLine`); none from a covering made before lines were kept. */
   line?: Line;
+  /** Its forms, off its parents' (`bredForm`); none from a covering made before forms were kept, or with none. */
+  formColour?: boolean;
+  formSize?: SizeForm;
   /** A second young, bred at the same covering (a Herdsman's Twins): its own traits, sex and line, the same sire. */
-  twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource>; line?: Line };
+  twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource>; line?: Line; formColour?: boolean; formSize?: SizeForm };
 }
 
 /** What a card and a tooltip say of a pedigree: "Dam Snow · sire Horn". */
@@ -4332,7 +4337,9 @@ describeWith({
  * it. The island's `beast_mul`.
  */
 export const bloodMul = (c: Creature, channel: TraitChannel): number =>
-  traitMul(c.traits, channel) * lineMul(c.traits, c.pedigree?.line, channel) * rarityMul(c, channel) * evoMul(c, channel) * potMul(c, channel);
+  traitMul(c.traits, channel) * lineMul(c.traits, c.pedigree?.line, channel) * rarityMul(c, channel) * evoMul(c, channel) * potMul(c, channel)
+  // And its size form, a large one's health and a small one's speed (`formMul`).
+  * formMul(c, channel);
 
 /** What it can take, once its blood is counted, and its keeper's Thick Hide while it follows them. */
 export const maxHealth = (c: Creature, species: SpeciesDef): number =>
@@ -4402,6 +4409,9 @@ export interface IslandCreature {
   species: string;
   name: string;
   variant: number;
+  /** Its wild forms (`wildforms.ts`): the island's `form_colour` and `form_size`. */
+  formColour?: boolean;
+  formSize?: SizeForm | null;
   mode: string;
   stance: string;
   x: number;
@@ -4492,6 +4502,8 @@ export interface IslandCreature {
   idlePost?: boolean;
   /** What a worker of yours did this island day and the one before (`WorkLedger`), yours only. */
   ledger?: WorkLedger | null;
+  /** Its lifetime at work (`WorkStats`), yours only. */
+  work?: WorkStats | null;
   /** For a rest in a wildermon bed, the bed's kind (`Idle.bed`). */
   idleBed?: string | null;
   /**
@@ -4528,6 +4540,9 @@ export interface Creature {
   species: string;
   name: string;
   variant: number;
+  /** Its kind's colour form, and a size form, rolled in the wild and bred on (`wildforms.ts`). Saved. The island's `form_colour`, `form_size`. */
+  formColour?: boolean;
+  formSize?: SizeForm | null;
   x: number;
   y: number;
   mode: CreatureMode;
@@ -4678,6 +4693,8 @@ export interface Creature {
   idle?: Idle | null;
   /** What a worker did this island day and the one before (`ledgerAdd`). Saved. The island's `ledger`. */
   ledger?: WorkLedger | null;
+  /** Its lifetime at work (`workFromLedger`, `workTime`). Saved. The island's `work_stats`, sent to its keeper only. */
+  work?: WorkStats | null;
   /** Goes at its task since it last rested (`TIRE_GOES`, `staminaOf`). Saved. The island's `worn`. */
   worn?: number;
   /**
@@ -4753,6 +4770,8 @@ export interface CreatureJSON {
   species: string;
   name: string;
   variant: number;
+  formColour?: boolean;
+  formSize?: SizeForm | null;
   x: number;
   y: number;
   mode: CreatureMode;
@@ -4790,6 +4809,8 @@ export interface CreatureJSON {
   trade?: GatherKind | null;
   /** What it did this island day and the one before, on a worker; absent in a save from before there was a ledger. */
   ledger?: WorkLedger | null;
+  /** Its lifetime at work; absent in a save from before it was kept. */
+  work?: WorkStats | null;
   /** Its goes since it rested, when it rests and the bed it is in, and its work since it ate; absent from a save from before. */
   worn?: number;
   restUntil?: number;
@@ -5263,6 +5284,8 @@ export class Creatures {
       }
       c.name = r.name ?? c.name;
       c.variant = r.variant ?? c.variant;
+      if (r.formColour !== undefined) c.formColour = !!r.formColour;
+      if (r.formSize !== undefined) c.formSize = r.formSize;
       c.mode = r.mode as CreatureMode;
       c.stance = r.stance as Stance;
       c.health = r.health;
@@ -5359,6 +5382,7 @@ export class Creatures {
           : null;
       }
       if (r.ledger !== undefined) c.ledger = r.ledger;
+      if (r.work !== undefined) c.work = r.work;
       // Its stamina, its time since it ate and its settlement's specialty, the island's words for each (`staminaOf`, `unfedNow`, `specialtyMul`).
       if (r.worn !== undefined) c.worn = r.worn;
       if (r.unfed !== undefined) c.unfed = r.unfed;
@@ -5716,6 +5740,13 @@ export class Creatures {
       const [lo, hi] = stageLevels(stage);
       c.skills[skill] = lo + game.rand() * (hi - lo);
       c.name = kindName(c);
+      c.health = maxHealth(c, def);
+    }
+    // And now and then in its colour form, or a size form, each off a roll of its own (`wildFormRoll`, `wild_form_put`).
+    const form = wildFormRoll(def, game.rand(), game.rand());
+    if (form.formColour) c.formColour = true;
+    if (form.formSize) {
+      c.formSize = form.formSize;
       c.health = maxHealth(c, def);
     }
     return c;
@@ -8289,7 +8320,9 @@ export class Creatures {
       const born: Sex = sex ?? (game.rand() < 0.5 ? 'male' : 'female');
       // And how deep its line runs, off both parents as they stand now.
       const line = bredLine(bred.traits, { traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line });
-      return { traits: bred.traits, sex: born, from: bred.from, line };
+      // And its parents' forms, at `FORM_PASS` for each that has one (`bredForm`).
+      const form = bredForm(dam, sire, game.rand(), game.rand());
+      return { traits: bred.traits, sex: born, from: bred.from, line, ...(form.formColour ? { formColour: true } : {}), ...(form.formSize ? { formSize: form.formSize } : {}) };
     };
     dam.unborn = { ...young(), sire: { id: sire.id, name: sire.name } };
     // And a second at the same covering, now and then (a Herdsman's Twins).
@@ -8357,6 +8390,8 @@ export class Creatures {
     const c = this.spawn(dam.species, at[0], at[1], mode, game.rand, game.time);
     c.traits = coming.traits;
     c.sex = coming.sex;
+    if (coming.formColour) c.formColour = true;
+    if (coming.formSize) c.formSize = coming.formSize;
     /*
      * And its pedigree, for good: the dam as she is now, and the sire and
      * where each trait came from as the covering wrote them down. A young one
@@ -8904,7 +8939,11 @@ export class Creatures {
    */
   private toLedger(game: Game, c: Creature, add: { goes?: number; skill?: number; item?: string; n?: number }): void {
     if (c.mode !== 'deed') return;
+    // As it stood, since `ledgerAdd` writes into the day it is on.
+    const was = c.ledger ? { ...c.ledger, now: { ...c.ledger.now, made: { ...c.ledger.now.made } } } : null;
     c.ledger = ledgerAdd(c.ledger, game.islandDay(), add);
+    // And onto its lifetime, what that write added (`workFromLedger`), as the island's `work_stats_keep` puts it on.
+    c.work = workFromLedger(c.work, was, c.ledger);
     if (add.goes) {
       this.went = true;
       c.worn = (c.worn ?? 0) + add.goes;
@@ -9025,6 +9064,8 @@ export class Creatures {
   private went = false;
 
   private updateWorker(c: Creature, dt: number, game: Game): void {
+    // The time onto its lifetime, by why it stood about for it, or at work for nothing (`workTime`).
+    if (c.mode === 'deed') c.work = workTime(c.work, dt, c.idle?.why);
     this.workerStep(c, dt, game);
     /*
      * Off its ground, which is what its card says until it is back on it,
@@ -9722,6 +9763,8 @@ export class Creatures {
         species: c.species,
         name: c.name,
         variant: c.variant,
+        formColour: c.formColour || undefined,
+        formSize: c.formSize ?? undefined,
         x: c.x,
         y: c.y,
         mode: c.mode,
@@ -9757,6 +9800,7 @@ export class Creatures {
         trade: c.trade,
         shodAt: c.shodAt,
         ledger: c.ledger ?? undefined,
+        work: c.work ?? undefined,
         worn: c.worn || undefined,
         restUntil: c.restUntil,
         bed: c.bed,
@@ -9772,7 +9816,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null, worn: j.worn, restUntil: j.restUntil, bed: j.bed, unfed: j.unfed });
+      Object.assign(c, { name: j.name, variant: j.variant, formColour: j.formColour, formSize: j.formSize, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null, work: j.work ?? null, worn: j.worn, restUntil: j.restUntil, bed: j.bed, unfed: j.unfed });
       // A rest it was taking when the game was saved goes on where it left off, or the walk to its bed (`restStep`).
       if (c.restUntil !== undefined) c.state = 'rest';
       else if (c.bed !== undefined) c.state = 'toBed';

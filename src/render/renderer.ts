@@ -97,6 +97,9 @@ import { cropDef, type CropLook } from '../game/farming';
 import { crateCentre, crateKindOfItem, subtileOf, SUBTILES } from '../game/crates';
 import { HUNT_SIGHT, maxHealth, PLAYER_ATTACKER, SPECIES, threatens, type Creature } from '../game/creatures';
 import { rarityOf } from '../game/items';
+import { coatOf, formScale } from '../game/wildforms';
+/** How big a creature is drawn for how rare it is and its size form (`formScale`). */
+const bodySize = (c: { rare?: number; formSize?: 'large' | 'small' | null }): number => rarityOf(c).size * formScale(c);
 import { CREST_ALPHA, FOAM_WIDTH, foamAlpha, LONG_WAVE, SHORT_WAVE, SPRING_EDGE, SPRING_PALETTE, springLevel, SWELL_RATE, SWELL_SPEED, swellAt, swellShow, TROUGH_ALPHA, WATER_LIT, WATER_PALETTE, waterLevel } from './water';
 import { Wakes } from './wake';
 import { foamTexture, SpringWater } from './ponds';
@@ -4212,7 +4215,7 @@ export class Renderer {
         // A rider, astride.
         else if (up) {
           // The reins out to its bit, where its model has it, drawn up as the mount is; the legs drawn up as far as it says.
-          const own = wildermonSaddle(up.species, stageOf(up)), k = ageDef(up, this.game.time).scale * rarityOf(up).size;
+          const own = wildermonSaddle(up.species, stageOf(up)), k = ageDef(up, this.game.time).scale * bodySize(up);
           pe.seat = own ? { ...SADDLE, grip: [own.grip[0] * k, own.grip[1] * k, own.grip[2] * k], tuck: own.tuck } : SADDLE;
         }
       }
@@ -4850,7 +4853,7 @@ export class Renderer {
     const up = this.game.mounted();
     if (!up) return 0;
     // On its saddle: where its model has it at the stage it has come to, drawn up as the mount is by its age and rarity.
-    return (wildermonSeat(up.species, stageOf(up)) ?? SPECIES[up.species]?.mount ?? 0) * ageDef(up, this.game.time).scale * rarityOf(up).size;
+    return (wildermonSeat(up.species, stageOf(up)) ?? SPECIES[up.species]?.mount ?? 0) * ageDef(up, this.game.time).scale * bodySize(up);
   }
 
   /**
@@ -5071,10 +5074,10 @@ export class Renderer {
     const cr = game.creatures.get(w.id);
     if (!cr || cr.health <= 0 || cr.mode === 'stored') return null;
     const def = SPECIES[cr.species] ?? SPECIES.rabba;
-    const big = ageDef(cr, game.time).scale * rarityOf(cr).size;
-    const tall = Math.max(22 * rarityOf(cr).size, (wildermonTop(def.id) ?? 0) * big) / HEIGHT_SCALE;
+    const big = ageDef(cr, game.time).scale * bodySize(cr);
+    const tall = Math.max(22 * bodySize(cr), (wildermonTop(def.id) ?? 0) * big) / HEIGHT_SCALE;
     return {
-      x: cr.x, y: cr.y, z: game.laidOver(Math.floor(cr.x), Math.floor(cr.y)) ?? this.footAt(cr.x, cr.y), tall, wide: creatureWide(def.id) * rarityOf(cr).size,
+      x: cr.x, y: cr.y, z: game.laidOver(Math.floor(cr.x), Math.floor(cr.y)) ?? this.footAt(cr.x, cr.y), tall, wide: creatureWide(def.id) * bodySize(cr),
       facing: this.beastFacing.get(cr.id) ?? 0, kind: 'creature', species: def.id, reach: beastReach(def),
       tame: cr.mode !== 'wild', companion: cr.mode === 'active', hostile: cr.enemy !== null,
       // What is on it that the payload says: a burn or a bleed still running, a trap holding it.
@@ -5369,7 +5372,7 @@ export class Renderer {
         this.beastFacing.set(cr.id, turned);
         // Its age, and how rare it came into the world: a fantastic one stands three times the height of its kind.
         // And in the traces at draught size: a team that came up to the driver's chest read as foals next to the wagon (`TRACES_SCALE`).
-        const big = ageDef(cr, this.game.time).scale * rarityOf(cr).size * (cr.hitchedTo !== null ? TRACES_SCALE : 1);
+        const big = ageDef(cr, this.game.time).scale * bodySize(cr) * (cr.hitchedTo !== null ? TRACES_SCALE : 1);
         const hit = this.flashOf(cr.attackedAt);
         // Drawing back for a heavy blow: its reach on the ground under it, filling as the blow comes (`WIND_UP`).
         if (cr.windup > 0) this.drawWindupReach(ctx, ent.sx, ent.sy, zoom, cr.windup);
@@ -5378,7 +5381,7 @@ export class Renderer {
         // Tinted by a spell on it (sick, marked: `FxScene.tint`), on the creature itself, as a blow's flash is but in its colour.
         const tint = hit > 0 || hovering ? undefined : this.spells.tintOf({ kind: 'creature', id: cr.id });
         // As tall and as wide as it is drawn: a big one, or a rare one, is clicked by its head as well as its feet.
-        const size = rarityOf(cr).size;
+        const size = bodySize(cr);
         // The stage it has evolved to, which may be drawn as another body.
         const stage = stageOf(cr);
         const tall = Math.max(22 * size, (wildermonTop(def.id, stage) ?? 0) * big);
@@ -5393,7 +5396,7 @@ export class Renderer {
           phase: cr.walkPhase,
           moving: cr.moving,
           gait: this.gaits.of('c' + cr.id, cr.x, cr.y, this.frameDt, BEAST_WALK),
-          colors: def.variants[cr.variant] ?? def.variants[0],
+          colors: coatOf(cr, def),
           health: cr.health / maxHealth(cr, def),
           fleece: cr.fleece,
           scale: big,
@@ -5460,7 +5463,7 @@ export class Renderer {
               facing: turned,
               phase: 0,
               moving: false,
-              colors: def.variants[inside.variant] ?? def.variants[0],
+              colors: coatOf(inside, def),
               health: 1,
               fleece: inside.fleece,
               scale: ageDef(inside, this.game.time).scale * CRATE_SCALE,
@@ -14636,7 +14639,7 @@ export class Renderer {
     const cr = f.sleeper !== undefined ? this.game.creatures.get(f.sleeper) : undefined;
     if (!cr) return {};
     const def = SPECIES[cr.species];
-    return { sleeper: { colors: def?.variants[cr.variant] ?? def?.variants[0] ?? ['#c8b49a', '#8a7060'], seed: cr.id, species: cr.species, stage: stageOf(cr) } };
+    return { sleeper: { colors: def ? coatOf(cr, def) : ['#c8b49a', '#8a7060'], seed: cr.id, species: cr.species, stage: stageOf(cr) } };
   }
 
   private runeLook(f: PlacedFurniture): RuneLanternLook {

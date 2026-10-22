@@ -2425,6 +2425,20 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/mutation.mjs --log-level=error
           node node_modules/.cache/mutation.mjs
 
+      - name: A wild one now and then comes in a pale or dark form, or large or small
+        run: |
+          # A colour form at one wild spawn in five hundred, a fifth palette per
+          # kind, and a size form at one in two hundred, large or small, each off
+          # its own roll and never a monster. Both sides roll it the same way and
+          # over a large seeded draw as often as it says; the stocking puts them
+          # out through it; a large one's health and a small one's speed are its
+          # blood; taming keeps them; a young one has each at a quarter for each
+          # parent with it; the field guide marks each form seen and tamed; the
+          # island sends them and the browser draws them.
+          npx esbuild supabase/test/wildforms.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/wildforms.mjs --log-level=error
+          node node_modules/.cache/wildforms.mjs
+
       - name: Live updates over Broadcast
         run: |
           # The island sends land, lines and packs itself, once a statement,
@@ -2904,6 +2918,17 @@ jobs:
           npx esbuild supabase/test/ledger.ts --bundle --platform=node --format=esm \
             --external:typescript --outfile=node_modules/.cache/ledger.mjs --log-level=error
           node node_modules/.cache/ledger.mjs
+
+      - name: A wildermon keeps its lifetime at work
+        run: |
+          # Off the day's ledger as it is written: what it handled by the thing,
+          # its cycles and skill, its best island day, and its time working, idle
+          # by the reason and resting, kept by the row write that writes the
+          # ledger. The same on both sides, across days, sent to its keeper only,
+          # said on its card, and what it costs a worker's step measured.
+          npx esbuild supabase/test/workstats.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/workstats.mjs --log-level=error
+          node node_modules/.cache/workstats.mjs
 
       - name: A wild thing goes after its span and the stretch is stocked afresh
         run: |

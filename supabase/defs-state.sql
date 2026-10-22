@@ -5387,6 +5387,12 @@ create or replace function lamp_tier_odds() returns double precision language sq
 create or replace function pedigree_most() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
 create or replace function pedigree_step() returns double precision language sql immutable as $fn$ select 0.02::double precision $fn$;
 create or replace function mutation_odds() returns double precision language sql immutable as $fn$ select 200::double precision $fn$;
+create or replace function colour_form_odds() returns double precision language sql immutable as $fn$ select 500::double precision $fn$;
+create or replace function size_form_odds() returns double precision language sql immutable as $fn$ select 200::double precision $fn$;
+create or replace function large_health() returns double precision language sql immutable as $fn$ select 1.1::double precision $fn$;
+create or replace function small_speed() returns double precision language sql immutable as $fn$ select 1.1::double precision $fn$;
+create or replace function form_pass() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
+create or replace function work_items() returns double precision language sql immutable as $fn$ select 12::double precision $fn$;
 create or replace function tire_goes() returns double precision language sql immutable as $fn$ select 30::double precision $fn$;
 create or replace function rest_for() returns double precision language sql immutable as $fn$ select 240::double precision $fn$;
 create or replace function bed_rest() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;

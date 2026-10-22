@@ -363,7 +363,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
       g.note('trapped');
       // Won over as surely as by hand, and by the same taming: the field guide
       // counts it as tamed.
-      g.guideMark(c.species, 'tamed');
+      g.guideMarkKind(c, 'tamed');
       g.events.emit('creature');
       g.events.emit('world', trap.x, trap.y);
     },

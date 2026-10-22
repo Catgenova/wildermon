@@ -48,6 +48,7 @@ import { COMPANION_SIGHT as KEPT_EYES } from './vision';
 import { WOUND_KINDS } from './wounds';
 import { article, capital, listed, percent, timeWords } from './words';
 import { lairOf, REGIONS } from '../world/regions';
+import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './wildforms';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
 export const GUIDE_MARKS: GuideMark[] = ['seen', 'tamed', 'bred'];
@@ -103,6 +104,26 @@ export function guideEntry(key: string): GuideEntry | undefined {
 export const guideEntries = (): GuideEntry[] =>
   guidePages().flatMap((def) => [0, ...(def.stages ?? []).map((_, i) => i + 1)].map((st) => guideEntry(stageKey(def.id, st))!));
 
+/**
+ * The marks a key in the book may carry: all three on a kind's page, seen on a stage's, and seen and tamed on a wild
+ * form of a kind (`formKey`, `species/form`), which is marked on its kind's page rather than having one of its own.
+ * None for a key there is no such thing as. The island's `guide_kind` and `guide_mark`.
+ */
+export function guideMarks(key: string): GuideMark[] {
+  const form = formOfKey(key);
+  if (form) return SPECIES[form.species] && keepable(SPECIES[form.species]) ? ['seen', 'tamed'] : [];
+  const entry = guideEntry(key);
+  return !entry ? [] : entry.stage ? ['seen'] : GUIDE_MARKS;
+}
+
+/** What a key is called in the log: a kind's name, a stage's, or a form's and its kind's ("Pale form rabba"). */
+export function guideName(key: string): string | undefined {
+  const form = formOfKey(key);
+  const def = form && SPECIES[form.species];
+  if (form && def) return `${formName(def, form.form)} ${def.name.toLowerCase()}`;
+  return guideEntry(key)?.name;
+}
+
 export class FieldGuide {
   readonly seen = new Set<string>();
   readonly tamed = new Set<string>();
@@ -138,8 +159,10 @@ export class FieldGuide {
     for (const m of GUIDE_MARKS) {
       const kinds = book?.[m];
       if (!Array.isArray(kinds)) continue;
-      // A stage's page is marked seen and nothing else.
-      for (const id of kinds) if (typeof id === 'string' && guideEntry(id) && (m === 'seen' || SPECIES[id])) this.mark(id, m);
+      // A stage's page is marked seen and nothing else; a form (`formKey`) seen and tamed.
+      for (const id of kinds) {
+        if (typeof id === 'string' && guideMarks(id).includes(m)) this.mark(id, m);
+      }
     }
   }
 
@@ -187,6 +210,22 @@ export function countsLine(guide: FieldGuide): string {
 export function seenLine(entry: Pick<GuideEntry, 'name'>, guide: FieldGuide): string {
   const n = guideCounts(guide);
   return `First ${entry.name.toLowerCase()} seen: ${n.seen}/${n.kinds} kinds. (Field guide, ${defaultKey('win_guide')})`;
+}
+
+/** And the first time a wild form of a kind is seen (`formKey`): "First pale form rabba seen. (Field guide, G)". */
+export const formSeenLine = (name: string): string => `First ${name.toLowerCase()} seen. (Field guide, ${defaultKey('win_guide')})`;
+
+/**
+ * A kind's wild forms on its page, one line each, with how often the wild puts one out, what it does, and the marks
+ * the book has for it: "Pale form: 1 in 500 wild, colours only · seen · not tamed yet".
+ */
+export function formLines(def: SpeciesDef, guide?: FieldGuide): string[] {
+  if (!keepable(def)) return [];
+  return FORM_IDS.map((f) => {
+    const key = formKey(def.id, f);
+    const marks = guide ? ` · ${(['seen', 'tamed'] as const).map((m) => (guide.has(key, m) ? MARK_NAMES[m].toLowerCase() : `not ${MARK_NAMES[m].toLowerCase()} yet`)).join(' · ')}` : '';
+    return `${formName(def, f)}: 1 in ${formOdds(f)} wild, ${formGives(f)}${marks}`;
+  });
 }
 
 /* ---- What a page says ------------------------------------------------------ */
@@ -374,7 +413,7 @@ function staging(def: SpeciesDef, stage: number): string[] {
 }
 
 /** A kind's whole page, under its headings, for a kind that has been seen; or one of its stages'. */
-export function guidePage(def: SpeciesDef, onIsland = false, stage = 0): GuideSection[] {
+export function guidePage(def: SpeciesDef, onIsland = false, stage = 0, guide?: FieldGuide): GuideSection[] {
   if (stage > 0) {
     return [
       { head: 'Stage', lines: staging(def, stage) },
@@ -388,5 +427,7 @@ export function guidePage(def: SpeciesDef, onIsland = false, stage = 0): GuideSe
     ...(def.monster ? [] : [{ head: 'Kept', lines: keeping(def) }]),
     { head: 'Combat', lines: fighting(def) },
     { head: 'Butchered', lines: carcass(def) },
+    // Its wild forms, each with the marks the book has for it (`formLines`).
+    { head: 'Forms', lines: formLines(def, guide) },
   ].filter((s) => s.lines.length);
 }

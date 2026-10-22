@@ -51,7 +51,8 @@ import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceBurden, pieceSoak, SH
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { ALL_GOALS } from './journal';
-import { FieldGuide, GUIDE_LOOK, guideEntry, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
+import { FieldGuide, formSeenLine, GUIDE_LOOK, guideEntry, guideMarks, guideName, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
+import { formKey, formsOf } from './wildforms';
 import { matOf, rollEase, workingQl } from './materials';
 import { postCentre, postDecayRate, postKeep, postName, postRadius, postSite, type PlacedPost } from './posts';
 import {
@@ -819,13 +820,24 @@ export class Game {
    * guest's, and it is not written into the host's book.
    */
   guideMark(species: string, what: GuideMark): void {
-    // A kind's page, or a stage's (`species:stage`), which is only ever marked seen.
-    const entry = guideEntry(species);
-    if (this.acting !== this.local || !entry || (entry.stage > 0 && what !== 'seen')) return;
+    // A kind's page, or a stage's (`species:stage`), which is only ever marked seen, or a wild form's (`species/form`), seen and tamed.
+    if (this.acting !== this.local || !guideMarks(species).includes(what)) return;
     const fresh = this.guide.mark(species, what);
     if (!fresh.length) return;
-    if (fresh.includes('seen')) this.logMsg(seenLine(entry, this.guide), 'event');
+    if (fresh.includes('seen')) this.logMsg(this.guideSeenLine(species), 'event');
     this.events.emit('guide');
+  }
+
+  /** What the log says of a key first seen: a page's line, or a wild form's (`formSeenLine`). */
+  private guideSeenLine(key: string): string {
+    const entry = guideEntry(key);
+    return entry ? seenLine(entry, this.guide) : formSeenLine(guideName(key) ?? key);
+  }
+
+  /** A creature's kind marked, and each wild form it is in (`formKey`), as the island's taming marks them. */
+  guideMarkKind(c: Pick<Creature, 'species' | 'formColour' | 'formSize'>, what: GuideMark): void {
+    this.guideMark(c.species, what);
+    for (const f of formsOf(c)) this.guideMark(formKey(c.species, f), what);
   }
 
   /**
@@ -835,12 +847,11 @@ export class Game {
    */
   guideHeard(added: string[], had: string[]): void {
     let changed = false;
-    for (const id of had) if (guideEntry(id) && this.guide.mark(id, 'seen').length) changed = true;
+    for (const id of had) if (guideMarks(id).length && this.guide.mark(id, 'seen').length) changed = true;
     for (const id of added) {
-      const entry = guideEntry(id);
-      if (!entry || !this.guide.mark(id, 'seen').length) continue;
+      if (!guideMarks(id).length || !this.guide.mark(id, 'seen').length) continue;
       changed = true;
-      this.logMsg(seenLine(entry, this.guide), 'event');
+      this.logMsg(this.guideSeenLine(id), 'event');
     }
     if (changed) this.events.emit('guide');
   }
@@ -869,7 +880,8 @@ export class Game {
     for (const c of this.creatures.list.values()) {
       if (c.mode === 'stored') continue;
       // Its kind's page, and its stage's where it is past its first (`stageKey`).
-      const keys = [c.species, stageKey(c.species, stageOf(c))].filter((k, i, all) => all.indexOf(k) === i
+      // And each wild form it is in (`formKey`).
+      const keys = [c.species, stageKey(c.species, stageOf(c)), ...formsOf(c).map((f) => formKey(c.species, f))].filter((k, i, all) => all.indexOf(k) === i
         && !this.guide.seen.has(k) && !asked?.has(k));
       if (!keys.length || !this.vision.isWatched(c.x, c.y)) continue;
       for (const k of keys) {

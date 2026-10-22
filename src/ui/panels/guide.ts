@@ -220,7 +220,7 @@ export class GuidePanel {
     this.view.append(head);
     // A kind nobody has seen is its shape and nothing else.
     if (!seen) return;
-    for (const s of guidePage(def, !!this.island, entry.stage)) {
+    for (const s of guidePage(def, !!this.island, entry.stage, this.game.guide)) {
       const h = document.createElement('div');
       h.className = 'skill-group';
       h.textContent = s.head;

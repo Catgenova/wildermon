@@ -60,6 +60,8 @@ import {
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
+import { IDLE_STALE, WORK_ITEMS, WORK_SHOWN } from '../../game/workstats';
+import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, PALE_AT, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay, STORE_LOG_CAP } from '../../game/ranks';
 import { storeMarkable } from '../../game/stores';
@@ -2992,6 +2994,8 @@ export function helpText(): string {
       its range, with the distance. Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Ledger</b> (card): this island day and the previous (a day = ${dur(DAY_SECONDS)}): cycles at its task, skill gained, the ${LEDGER_SHOWN} items it handled most
       (up to ${LEDGER_ITEMS} kinds counted a day).</li>
+      <li><b>Work</b> (card, your own wildermon only): lifetime cycles, skill gained and things handled (top ${WORK_SHOWN}; up to ${WORK_ITEMS} kinds counted), best island day by things handled,
+      time working, idle (with the reason idle longest) and resting. Island: time past its turn by over ${IDLE_STALE} s while the clock does not settle it counts as idle.</li>
       <li>A tamed wildermon: <b>travels with you</b> (one at a time; stance Passive, Defensive or Aggressive), <b>assigned to your settlement</b> (a Snufflet forages and drops finds in storage),
       or in a <b>wildermon crate</b>. Feed from your pack; settlement workers feed from storage.</li>
       <li><b>Wildermon</b> window (<kbd>P</kbd>): condition, level and skills of every one you own (not wild ones). Level = its skill.</li>
@@ -3207,6 +3211,10 @@ export function helpText(): string {
       Card line: <i>${LINE_EXAMPLE}</i>.</li>
       <li><b>Mutation</b>: one young in ${MUTATION_ODDS}: a trait neither parent has in any grade, one rarity above their best (${listed(TIERS.slice(1).map((t, i) => `${t} for ${TIERS[i]}`))};
       ${TIERS[TIERS.length - 1]} stays ${TIERS[TIERS.length - 1]}), in its lowest-rarity slot. Announced at birth; card marks it <b>mutation</b>.</li>
+      <li><b>Wild forms</b>: rolled at each wild spawn, independently, never on monsters. Colour form: 1 in ${COLOUR_FORM_ODDS}, a palette none of its variants has (pale for a kind with no coat lighter than
+      ${percent(PALE_AT)} lightness, dark for the rest). Size form: 1 in ${SIZE_FORM_ODDS}, half each: ${formName(SPECIES.rabba, 'large').toLowerCase()} (${formGives('large')}),
+      ${formName(SPECIES.rabba, 'small').toLowerCase()} (${formGives('small')}). Kept when tamed. Young: each form at ${percent(FORM_PASS)} per parent that has it.
+      Card names it; the Field guide page marks each form seen and tamed.</li>
       <li>Preview (<b>Put it to a mate</b>, before <b>Yes</b>), from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
       chance of each parent trait; best-trait rarity odds; mutation chance and rarity; line depth and carry chance per thing; rarity odds.</li>
     </ul>

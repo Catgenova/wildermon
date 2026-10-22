@@ -1,4 +1,5 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
+import { COLOUR_FORM_ODDS, FORM_PASS, formGives, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { UPDATE_CHECK_MS } from '../update';
 import { FAST_DPR, LOW_POWER_FPS } from '../../game/settings';
@@ -3250,6 +3251,15 @@ export const NEWS: News[] = [
     lines: () => [
       `Changed: bronze mirror (relic, ${MIRROR.parts} pieces, archaeology ${MIRROR.difficulty}), was treasure only: use on your wildermon; its next covering's young get its best trait`
         + ' (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Shown on its card and in the pairing preview.',
+    ],
+  },
+  {
+    n: 256,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: wild forms. Colour form, 1 in ${COLOUR_FORM_ODDS} wild spawns: a palette none of its variants has, pale or dark by kind. Size form, 1 in ${SIZE_FORM_ODDS}: `
+        + `large (${formGives('large')}) or small (${formGives('small')}). Kept when tamed; young: ${percent(FORM_PASS)} per parent with it. On the card and the Field guide page (seen, tamed).`,
+      `Added: Work on your wildermon's card: lifetime cycles, skill and things handled, best island day, time working, idle (top reason) and resting.`,
     ],
   },
   {

@@ -12,6 +12,8 @@ import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
 import { percent } from '../../game/words';
 import { idleSays, ledgerLines } from '../../game/workerlog';
+import { workLines } from '../../game/workstats';
+import { formLabels } from '../../game/wildforms';
 
 /**
  * Where a wildermon is, as the list groups it: under a rider or in a
@@ -486,6 +488,10 @@ export class WildermonPanel {
     const ledgerBox = document.createElement('div');
     ledgerBox.className = 'pal-ledger';
     card.append(health.row, hunger.row, care.row, statBox, pedigree, bloodBox, worthBox, info, idleLine, ledgerBox);
+    // Its lifetime at work (`workLines`), which the island sends its keeper only.
+    const workBox = document.createElement('div');
+    workBox.className = 'pal-ledger pal-work';
+    card.append(workBox);
 
     const set = (el: { textContent: string | null; title: string }, text: string, title: string): void => {
       if (el.textContent !== text) el.textContent = text;
@@ -575,6 +581,8 @@ export class WildermonPanel {
       }
 
       const parts: string[] = [];
+      // Its wild forms, and what each does (`formLabels`).
+      parts.push(...formLabels(c, def));
       // Which vehicle, since a herd can be spread over more than one.
       const vehicle = this.game.vehicleOfCreature(c);
       const place = placeOf(c);
@@ -609,6 +617,10 @@ export class WildermonPanel {
       const ledger = c.mode === 'deed' ? ledgerLines(c.ledger, this.game.islandDay()).join('\n') : '';
       if (ledgerBox.textContent !== ledger) ledgerBox.textContent = ledger;
       ledgerBox.hidden = !ledger;
+      const work = workLines(c.work, c.ledger);
+      const worked = work.length ? ['Work', ...work].join('\n') : '';
+      if (workBox.textContent !== worked) workBox.textContent = worked;
+      workBox.hidden = !worked;
     };
 
     return { el: card, refresh };
