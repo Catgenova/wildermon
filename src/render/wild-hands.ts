@@ -1,14 +1,14 @@
 import {
-  add, beat, birdBones, coatPalette, curve, cyc, darker, disc, eyes, lerp, merge, mirrored, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, taper, TAU, tube,
+  add, beat, birdBones, coatPalette, curve, cyc, disc, eyes, lerp, merge, mirrored, moved, orb, orbAlong, paint, quadBonesOf, scale, smile, taper, TAU, tube,
   type BirdSpec, type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { birdLegPieces, blade, cut, earMesh, pawMesh, quadPieces, under } from './beastkit';
-import { place, type Mat, type Mesh, type RGB, type V3 } from './figure';
+import { type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
  * The settlement's own hands: the kemma, the sheela, the salva, the carra,
- * the tanna, the grista, the wicka, the brambo, the grazza and the siffa.
+ * the tanna, the grista, the brambo, the grazza and the siffa.
  * Each carries the tool of its trade on its body, as every wildermon carries
  * something no field guide has: a brush for a tail, shears for teeth, a
  * cleaver for a beak, millstones for cheeks, a pan for a bill.
@@ -371,69 +371,6 @@ export const GRISTA: Kind = {
   shadow: [1.7, 1.3],
   stride: 1.4,
   size: 1.75,
-};
-
-/* ---- the wicka: moth wings and a candle-flame tail -------------------------------- */
-
-/**
- * A wicka: a small, soft thing on four little legs with a moth's wings
- * folded along its back -- eyed like a moth's -- and two feathered feelers,
- * and the tuft of its tail is a candle flame that is always alight.
- */
-const WICKA_SPEC: QuadSpec = { ...pawed({ high: 1.05, len: 1.6, legs: 0.6, neck: 0.3, lean: 40, swing: [26, 42], ears: [20, 30], tail: [0.35, 40, 20] }), nose: 12 };
-const WICKA_HEAD = { c: [0, 0.3, 0.2] as V3, r: [1.0, 0.92, 0.9] as V3 };
-
-function wickaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = WICKA_HEAD;
-  const face = snout(0.95, -0.24, [0.34, 0.28, 0.3], 0.1, n, k);
-  // A feeler: a thin curved stalk with a fringe of fine barbs, like a moth's.
-  const feeler = merge(
-    tube(curve([0, 0, 0], [0, 0.25, 0.5], [0, 0.55, 0.75], 4), 0.035, 0.03, 4, 'stem'),
-    ...[0.2, 0.35, 0.5, 0.65].map((t) => {
-      const p: V3 = [0, 0.55 * t * 1.2, 0.75 * Math.min(1, t * 1.4)];
-      return merge(taper([p, add(p, [0.14, 0.04, 0.04])], 0.02, 0.01, 3, 'stem'), taper([p, add(p, [-0.14, 0.04, 0.04])], 0.02, 0.01, 3, 'stem'));
-    }),
-  );
-  // A wing: a broad rounded membrane folded back along the flank, an eye-spot painted on it.
-  const wing = (s: number): Mesh => merge(
-    blade(curve([s * 0.4, 0.5, 0.75], [s * 0.95, -0.2, 0.95], [s * 0.7, -1.1, 0.6], 4), [0.12, 0.5, 0.6, 0.45, 0.08], [s, 0, 0.5], { mat: 'membrane', thick: 0.03 }),
-    paint([disc([s * 0.86, -0.3, 0.88], [s, 0, 0.5], 0.16, 0.2, 8, 'spot'), disc([s * 0.89, -0.3, 0.885], [s, 0, 0.5], 0.07, 0.09, 6, 'lid')]),
-  );
-  // The tail's tuft: a candle flame, yellow at the heart.
-  const flame = merge(orbAlong([0, -0.4, 0.15], [0, -0.4, 1], [0.13, 0.13, 0.26], 6, 4, 'flame'), orbAlong([0, -0.4, 0.1], [0, -0.4, 1], [0.07, 0.07, 0.14], 5, 3, 'ember'));
-  return quadPieces({
-    n, k,
-    body: { y: [-0.85, -0.7, -0.3, 0.1, 0.45, 0.7, 0.85], z: [0.1, 0.12, 0.16, 0.2, 0.24, 0.27, 0.3], w: [0.24, 0.72, 0.84, 0.86, 0.82, 0.7, 0.24], h: [0.24, 0.66, 0.78, 0.8, 0.76, 0.64, 0.24], belly: true },
-    neck: { w: 0.5, h: 0.5, len: 0.3 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.72, 0.55, 0.36], size: 0.36, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.17] },
-    ear: feeler,
-    earTurn: 10,
-    tail: [merge(taper([[0, 0.05, 0], [0, -0.35, 0]], 0.12, 0.06, n, 'coat'), flame)],
-    fore: { upper: [0.24, -0.32, 0.18, 0.16], lower: [0, -0.28, 0.16, 0.14], foot: pawMesh(0.17, n, k, 'mark') },
-    hind: { upper: [0.24, -0.32, 0.2, 0.17], lower: [0, -0.3, 0.17, 0.15], foot: pawMesh(0.17, n, k, 'mark') },
-    extras: [
-      { key: 'wing0', mesh: wing(-1), bone: 'trunk', bias: 0.06, after: ['body'], thin: true },
-      { key: 'wing1', mesh: wing(1), bone: 'trunk', bias: 0.06, after: ['body'], thin: true },
-    ],
-  }).map((pc) => (pc.key === 'ear0' || pc.key === 'ear1' ? { ...pc, thin: true, airy: true } : pc));
-}
-
-export const WICKA: Kind = {
-  bones: quadBonesOf(WICKA_SPEC, (p, a) => {
-    trot(p, a);
-    // The feelers always moving a little; standing, a flutter of the wings now and then lifts it on its toes.
-    p.ears[0][0] += 10 * cyc(a.t, 6);
-    p.ears[1][0] += 10 * cyc(a.t, 6, 1.3);
-    if (a.go <= 0) p.lift += 0.08 * beat(a.t, [7.4, 19.0], 0.8) * Math.abs(Math.sin(a.t * TAU * 4));
-  }),
-  build: wickaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ membrane: darker(pastel(mark), 0.08), spot: darker(pastel(coat), 0.3), stem: [150, 130, 100], flame: [255, 200, 90], ember: [255, 244, 190] }), 40),
-  // The flame at the tip of its tail throws a little light, flickering.
-  glow: (b, a) => (b.tail0 ? [{ p: place(b.tail0, [0, -0.4, 0.2]), r: 0.6, c: [255, 196, 110] as RGB, a: 0.22 + 0.06 * Math.sin(a.t * Math.PI * 6) }] : []),
-  shadow: [1.0, 0.8],
-  stride: 1.4,
-  size: 1.35,
 };
 
 /* ---- the brambo: a coat of burrs and berries --------------------------------------- */

@@ -1,32 +1,17 @@
 import {
-  beat, clamp, coatPalette, curve, cyc, DEG, disc, frac, lerp, lighter, merge, moved, onEgg, orb, orbAlong, paint, pastel, quadBones, quadPose, smile, smooth, taper, TAU, tube,
-  type Anim, type Bones, type Disc, type Kind, type Piece, type QuadPose, type QuadSpec,
+  beat, clamp, coatPalette, curve, DEG, disc, merge, moved, orbAlong, paint, pastel, quadBones, quadPose, smile, taper, tube,
+  type Anim, type Bones, type Kind, type Piece, type QuadPose, type QuadSpec,
 } from './beasts';
-import { blade, cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
+import { cut, earMesh, pawMesh, quadPieces, type QuadLook } from './beastkit';
 import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 import { pawed, trot } from './wild-paws';
 
 /**
- * The wild ones and the workers: the rowl and the grubba. (The cobbe is the
- * brick line now, in `./wild-brick`.)
+ * The wild ones and the workers: the grubba. (The cobbe is the brick line
+ * now, in `./wild-brick`, and the rowl the vine line, in `./wild-vine`.)
  */
 
 /* ---- what they share ----------------------------------------------------------------- */
-
-/**
- * A muzzle, a nose and a mouth for a round face, carried at `z` rather
- * than under the eyes: up at their height, so that side on there
- * is face in front of the eye and not just the curve of the head. `r` is
- * across, up and forward, as `orbAlong` takes it.
- */
-function muzzleAt(o: { at: number; z: number; r: V3; nose?: number; mouth?: number; mat?: Mat }, n: number, k: number): Mesh {
-  const nose = o.nose ?? 0.14;
-  return merge(
-    orbAlong([0, o.at, o.z], [0, 1, -0.2], o.r, n, k, o.mat ?? 'muzzle'),
-    orbAlong([0, o.at + o.r[2] * 0.9, o.z + o.r[1] * 0.35], [0, 1, 0.3], [nose, nose * 0.7, nose * 0.75], 6, 3, 'nose'),
-    smile([0, o.at + o.r[2] * 0.72, o.z - o.r[1] * 0.45], [0, 1, -0.5], o.mouth ?? 0.24),
-  );
-}
 
 /**
  * `quadPieces`, with each eye left out once the head is turned so far from
@@ -133,201 +118,6 @@ function grazing(s: QuadSpec, own: (p: QuadPose, a: Anim) => void, tuck = 0): (a
     return pose(back, more, e);
   };
 }
-
-/** A point on a trunk's tube (`QuadLook.body`) cut `n` round, at `y` along it and `t` radians round from its left side over its back, on its facets. */
-function onTrunk(B: QuadLook['body'], n: number, y: number, t: number): V3 {
-  let q = 0;
-  while (q < B.y.length - 2 && y > B.y[q + 1]) q++;
-  const f = clamp((y - B.y[q]) / (B.y[q + 1] - B.y[q]));
-  const w = lerp(B.w[q], B.w[q + 1], f), h = lerp(B.h[q], B.h[q + 1], f), z = lerp(B.z[q], B.z[q + 1], f);
-  const s = (t / TAU) * n - 0.5, j = Math.floor(s), e = s - j;
-  const at = (i: number): V3 => { const u = ((i + 0.5) / n) * TAU; return [-Math.cos(u) * w, y, z + Math.sin(u) * h]; };
-  const p = at(j), p2 = at(j + 1);
-  return [lerp(p[0], p2[0], e), y, lerp(p[2], p2[2], e)];
-}
-
-/** A quad's corners wound so it faces along `out`, as a painted shape must be to be seen from that side. */
-function facing(q: V3[], out: V3): V3[] {
-  let nx = 0, ny = 0, nz = 0;
-  for (let i = 0; i < q.length; i++) {
-    const a = q[i], b = q[(i + 1) % q.length];
-    nx += (a[1] - b[1]) * (a[2] + b[2]);
-    ny += (a[2] - b[2]) * (a[0] + b[0]);
-    nz += (a[0] - b[0]) * (a[1] + b[1]);
-  }
-  return nx * out[0] + ny * out[1] + nz * out[2] < 0 ? [...q].reverse() : q;
-}
-
-/**
- * A band painted round a trunk at `y`, from `t0` to `t1` radians round it
- * (a quarter turn is the top of the back), laid flat on each facet it
- * crosses, so it never stands off the body's curve as a flat disc does: its
- * half-width `half[0]` over the back going to `half[1]` at its ends, and each
- * side slanting back by `slant` along the body for each radian down from the
- * top.
- */
-function band(B: QuadLook['body'], n: number, y: number, t0: number, t1: number, half: [number, number], mat: Mat, slant = 0): Disc[] {
-  const cuts = [t0];
-  for (let j = Math.ceil((t0 / TAU) * n - 0.5); ((j + 0.5) / n) * TAU < t1; j++) if (((j + 0.5) / n) * TAU > t0) cuts.push(((j + 0.5) / n) * TAU);
-  cuts.push(t1);
-  const reach = Math.max(Math.abs(t0 - Math.PI / 2), Math.abs(t1 - Math.PI / 2)) || 1;
-  const wide = (t: number): number => lerp(half[0], half[1], Math.abs(t - Math.PI / 2) / reach);
-  const along = (t: number): number => y - slant * Math.abs(t - Math.PI / 2);
-  const out: Disc[] = [];
-  for (let i = 0; i < cuts.length - 1; i++) {
-    const ta = cuts[i], tb = cuts[i + 1];
-    const q = [onTrunk(B, n, along(ta) - wide(ta), ta), onTrunk(B, n, along(tb) - wide(tb), tb), onTrunk(B, n, along(tb) + wide(tb), tb), onTrunk(B, n, along(ta) + wide(ta), ta)];
-    const mid = (ta + tb) / 2;
-    out.push({ v: facing(q, [-Math.cos(mid), 0, Math.sin(mid)]), m: mat });
-  }
-  return out;
-}
-
-/* ---- the rowl ------------------------------------------------------------------------ */
-
-/**
- * A rowl: a deep-chested hunter that runs the treeline in the half-light.
- * Dusk-violet, striped, with two glowing marks over its eyes, leaves for ear
- * tufts, and a tail that ends in a small light like a firefly's.
- */
-const ROWL_SPEC = { ...pawed({ high: 2.1, len: 3.4, legs: 1.5, neck: 0.55, lean: 40, swing: [26, 46], ears: [16, 4], tail: [0.55, -30, 28] }), graze: 55, nose: 6, bow: 20 };
-const ROWL_HEAD = { c: [0, 0.3, 0.2] as V3, r: [1.05, 0.95, 0.88] as V3 };
-/** Its trunk: a rump rounded off behind, a waist a little tucked up, and a deep chest. */
-const ROWL_BODY: QuadLook['body'] = {
-  y: [-2.12, -1.98, -1.7, -1.0, 0, 0.9, 1.55, 1.85, 2.0], z: [0.16, 0.14, 0.13, 0.16, 0.12, 0.12, 0.24, 0.3, 0.34],
-  w: [0.3, 0.64, 0.86, 0.9, 0.94, 1.05, 1.0, 0.8, 0.36], h: [0.3, 0.58, 0.76, 0.72, 0.8, 0.92, 0.86, 0.7, 0.34], belly: true,
-};
-/** Where the glowing marks over its eyes are, on the head's egg: brow dashes above the inner corner of each eye. */
-const ROWL_BROW = onEgg(ROWL_HEAD.c, ROWL_HEAD.r, [0.42, 0.55, 0.75]);
-
-function rowlBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = ROWL_HEAD;
-  const face = merge(
-    muzzleAt({ at: 1.0, z: 0.14, r: [0.5, 0.4, 0.46], nose: 0.13 }, n, k),
-    // The marks over its eyes, which glow in the half-light: a dash on each brow, slanting up and out.
-    paint([1, -1].map((s) => disc([s * ROWL_BROW.p[0], ROWL_BROW.p[1], ROWL_BROW.p[2]], [s * ROWL_BROW.n[0], ROWL_BROW.n[1], ROWL_BROW.n[2]], 0.3, 0.1, 6, 'flame', { lit: true, spin: -0.35 * s }))),
-  );
-  // Tabby stripes over the back and down each flank, flat on the body.
-  const stripes = paint([-1.5, -0.9, -0.3, 0.3].flatMap((y) => band(ROWL_BODY, n, y, -0.35, Math.PI + 0.35, [0.12, 0.03], 'coatDark', 0.12)));
-  // A leaf for a tuft at the tip of each ear, and a smaller one behind it.
-  const ear = merge(
-    earMesh(0.62, 0.42, n, { point: true }),
-    blade(curve([0, -0.02, 0.44], [0.05, 0.01, 0.8], [0.13, -0.15, 1.14], 3), [0.05, 0.24, 0.2, 0.03], [0.5, 1, 0.1], { twist: 0.6, fold: 0.26, mat: 'leaf', rib: 'leafDark' }),
-    blade(curve([0.02, -0.06, 0.4], [0.12, -0.24, 0.66], [0.15, -0.53, 0.82], 3), [0.045, 0.18, 0.15, 0.03], [1, 0.1, 0.3], { twist: -0.4, fold: 0.26, mat: 'leaf', rib: 'leafDark' }),
-  );
-  const tail = [
-    taper([[0, 0, 0], [0, -0.55, 0]], 0.2, 0.17, 6, 'coat'),
-    taper([[0, 0, 0], [0, -0.55, 0]], 0.17, 0.15, 6, 'coatDark'),
-    merge(taper([[0, 0, 0], [0, -0.4, 0]], 0.15, 0.12, 6, 'coat'), orb([0, -0.52, 0], 0.18, 6, 4, 'crystal')),
-  ];
-  const pieces = quadWithEyes({
-    n, k,
-    body: ROWL_BODY,
-    neck: { w: 0.72, h: 0.7, len: 0.55 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.76, 0.52, 0.3], size: 0.3, iris: 'bloom', pupil: 0.55, rim: 0.08 }, blush: [[0.78, 0.5, -0.25], 0.18] },
-    ear,
-    earTurn: 50,
-    tail,
-    fore: { upper: [0.3, -0.8, 0.34, 0.26], lower: [0, -0.7, 0.24, 0.22], foot: pawMesh(0.26, n, k, 'mark') },
-    hind: { upper: [0.35, -0.85, 0.42, 0.28], lower: [0, -0.85, 0.24, 0.22], foot: pawMesh(0.26, n, k, 'mark') },
-    extras: [{ key: 'stripes', mesh: stripes, bone: 'trunk', bias: 0.005, after: 'body', breathes: { c: [0, 0, 0], k: 0.05 } }],
-  });
-  // The back arched and let out through the bound (`rowlFlex`), stripes and all.
-  for (const pc of pieces) if (pc.key === 'body' || pc.key === 'stripes') pc.bent = rowlFlex;
-  return pieces;
-}
-
-/**
- * A rowl's spine through its bound: arched as its hind legs come up under
- * it, and let out long as it stretches through the air, the middle of its
- * back rising and falling between its shoulders and its hips.
- */
-function rowlFlex(v: readonly V3[], a: Anim): V3[] {
-  const g = a.go * smooth(a.gait);
-  if (g <= 0) return v as V3[];
-  const arch = g * (0.1 + 0.28 * Math.cos(TAU * (frac(a.u) - 0.87)));
-  return v.map((p) => [p[0], p[1], p[2] + arch * Math.max(0, 1 - (p[1] / 2.05) ** 2)] as V3);
-}
-
-/**
- * A rowl's run: a bound, as a cat runs, not the trot the others break
- * into. The hind feet come down together and drive, the body goes out long
- * through the air with the fore legs reaching, the fore feet come down one
- * after the other and it rocks over them, and the hind legs swing up under
- * its chest to come down again ahead of where they left. The head is held
- * level through it all, on whatever it is running down.
- */
-function rowlBound(p: QuadPose, a: Anim): void {
-  const g = a.go * smooth(a.gait);
-  if (g <= 0) return;
-  const w = frac(a.u);
-  const bump = (x: number, x0: number, x1: number): number => (x > x0 && x < x1 ? Math.sin((Math.PI * (x - x0)) / (x1 - x0)) : 0);
-  // A leg through a bound, as `step` has a leg through a trot but for its time off the ground: it trails out behind first, then
-  // swings through folded (between `fold`'s two moments of its time up), and reaches out ahead before it comes down. Down for three
-  // tenths of the stride, sweeping `amp` either way, `u` into it counted from when it comes down.
-  const leg = (u: number, amp: number, trail: number, reach: number, fold: [number, number]): [number, number, number] => {
-    const q = frac(u), duty = 0.3;
-    if (q < duty) return [amp * (1 - (2 * q) / duty), 0, 0];
-    const t = (q - duty) / (1 - duty);
-    return [-amp + 2 * amp * smooth(t) - trail * bump(t, 0, 0.35) + reach * bump(t, 0.6, 1), 1.3 * bump(t, fold[0], fold[1]) ** 2, t];
-  };
-  // When each foot comes down -- fore left, fore right, hind left, hind right -- and how far it sweeps while it is down, the shorter
-  // fore legs a little further, so that fore and hind carry it along the ground at the same pace. The fore legs reach far ahead
-  // while it is stretched out in the air; the hind legs trail out behind then, and come up under its chest while it is gathered.
-  const fore: [number, number] = [0.05, 0.72], hind: [number, number] = [0.2, 1.05];
-  const legs = [leg(a.u - 0.44, 32, 4, 24, fore), leg(a.u - 0.47, 32, 4, 24, fore), leg(a.u, 28, 20, 16, hind), leg(a.u - 0.03, 28, 20, 16, hind)];
-  p.legs = p.legs.map((l, i) => [lerp(l[0], legs[i][0], g), lerp(l[1], legs[i][1], g), lerp(l[2], legs[i][2], g)] as [number, number, number]);
-  // Nose up while the hind legs drive, down while the fore feet take it, and turning from one to the other in the air, so that
-  // a foot on the ground is only carried back by its own leg.
-  const turn = (w0: number, w1: number): number => smooth((w - w0) / (w1 - w0));
-  const rock = 7 * (w < 0.5 ? 1 - 2 * turn(0.33, 0.44) : -1 + 2 * turn(0.77, 1));
-  p.pitch = lerp(p.pitch, rock, g);
-  p.head[0] = lerp(p.head[0], -rock - 2, g);
-  // In the air twice a stride: stretched out after the drive, and gathered after the fore feet push off.
-  p.lift = lerp(p.lift, 0.3 * bump(w, 0.33, 0.44) + 0.5 * bump(w, 0.77, 1), g);
-  p.squash = lerp(p.squash, -0.04 * Math.max(0, Math.sin(TAU * (w - 0.25))), g);
-  p.roll *= 1 - g;
-  // The tail streams out straight behind, a little under level, and rises and falls a beat behind the back; still swung out to one
-  // side, so that seen head on the light at its tip is beside the back and not stood up over the head on the tail like a stalk.
-  p.tail[0] = lerp(p.tail[0], 12 - 10 * Math.cos(TAU * (w - 0.1)), g);
-  p.tail[1] = lerp(p.tail[1], 40 + 8 * Math.sin(TAU * w), g);
-  p.tail[2] = lerp(p.tail[2], -26, g);
-}
-
-export const ROWL: Kind = {
-  bones: grazing(ROWL_SPEC, (p, a) => {
-    trot(p, a);
-    // The tail hung low, its tip curled up, and swung out to one side, so seen head on the light at its tip is beside the body and not
-    // stood up over the head.
-    p.tail[1] += 50;
-    // Low and level at a run, a stretch now and then standing.
-    p.neck[0] += 14 * a.gait * a.go;
-    const stretch = a.go > 0 ? 0 : beat(a.t, [11.5], 1.8) * (1 - a.graze);
-    p.pitch -= 10 * stretch;
-    p.head[0] += 10 * stretch;
-    p.legs[0][0] += 25 * stretch;
-    p.legs[1][0] += 25 * stretch;
-    // Grazing, its sniff at the grass made three degrees deeper than the nod every kind makes there (`quadStill`, on the same beat),
-    // so that a head this small still moves a pixel.
-    p.head[0] -= 3 * a.graze * cyc(a.t, 72) * (0.45 + 0.55 * Math.max(0, cyc(a.t, 8)));
-    rowlBound(p, a);
-  }, 45),
-  build: rowlBuild,
-  // Its coat lifted a little toward the pale, so even its darkest stands off the grass it hunts through.
-  palette: (coat, mark) => coatPalette(lighter(coat, 0.22), mark, { crystal: [252, 230, 130], flame: [255, 226, 120], bloom: [248, 196, 90], leaf: [150, 204, 104], leafDark: [104, 160, 86] }, 250),
-  shadow: [2.4, 1.1],
-  stride: 0.9,
-  size: 1.56,
-  leaps: [false, true],
-  glow: (b) => {
-    const t = b.tail2, h = b.head;
-    const out: Array<{ p: V3; r: number; c: RGB; a: number }> = [];
-    if (t) out.push({ p: place(t, [0, -0.52, 0]), r: 1.5, c: [255, 240, 150], a: 0.35 });
-    if (h) for (const s of [1, -1]) out.push({ p: place(h, [s * ROWL_BROW.p[0], ROWL_BROW.p[1], ROWL_BROW.p[2] + 0.03]), r: 0.9, c: [255, 214, 120], a: 0.45 });
-    return out;
-  },
-};
 
 /* ---- the grubba ---------------------------------------------------------------------- */
 

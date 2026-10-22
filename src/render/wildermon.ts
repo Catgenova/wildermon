@@ -5,9 +5,11 @@ import { QUILL } from './wild-birds';
 import { MARSHREAPER, REEDPUP, REEDWEAVER } from './wild-reed';
 import { SKYLOOKLET, SKYRANGE, SKYWARDEN } from './wild-sky';
 import { DRAGON } from './wild-dragon';
-import { DOWSE, SNOUT } from './wild-diggers';
+import { DOWSE } from './wild-diggers';
+import { DIRTLET, EARTHREND, TUNNELCLAW } from './wild-badger';
 import { FERRODRILL, IRONEMOLE, OREMANDER } from './wild-iron';
-import { BURA, CUDDA, GORRAL, SAPPA, SHAGGAN, SNEDDA } from './wild-herd';
+import { BURA, CUDDA, GORRAL, SHAGGAN, SNEDDA } from './wild-herd';
+import { ARBORCREST, PIPSEED, SPRIGWING } from './wild-pip';
 import { CARTLING, HAULHORN, WAGONOX } from './wild-haul';
 import { BUNNYCOURSER, HARE_TACKED, HARE_TUCK, hareGrip, hareSeat, MOONHARE, THISTLEKIT } from './wild-hare';
 import { MAGGA } from './wild-odd';
@@ -20,19 +22,26 @@ import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
 import { GOBLIN, OGRE, ORC } from './wild-upright';
 import { MENDERMASK, PATCHCOON, STITCHKIT } from './wild-mend';
-import { BOGGA, MIDDUN, PLUCKA, WADD } from './wild-brook';
+import { MIDDUN, PLUCKA, WADD } from './wild-brook';
+import { BASTIONTOAD, CRAGHOPPER, MOSSKIP } from './wild-toad';
 import { AQUAVOYAGER, PUDDLEHOP, SPRINGCARRIER } from './wild-frog';
+import { LEMLEAF, LEMLET, LEMORIAN } from './wild-lemur';
 import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
 import { HALLOWMIRE, LANTERNVEIL, WHISPET } from './wild-ghost';
 import { LOGCHEWER, SAPGNAW, TIMBERLORD } from './wild-gnaw';
-import { GRUBBA, ROWL } from './wild-wild';
+import { GRUBBA } from './wild-wild';
+import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
+import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
 import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
-import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA, WICKA } from './wild-hands';
-import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, SPRIGGA, WURLA } from './wild-hands2';
+import { BRAMBO, CARRA, GRAZZA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands';
+import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
+import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, WURLA } from './wild-hands2';
 import { CHISSA, CORDRA, DIPPA, FLECHA, GLOSSA, MUDDA, PAPRA, RIPPA } from './wild-hands3';
-import { AWLA, GASHA, SKULKA, SPARRA, SPITTA, TESTA, THUMPA } from './wild-fighters';
-import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, LUNGRA, MARKA, ROOTLE, SCORCHA, SHOVA, STONA, WARDO, WHIRLA } from './wild-abilities';
+import { AWLA, GASHA, SKULKA, SPARRA, SPITTA, TESTA } from './wild-fighters';
+import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
+import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, MARKA, ROOTLE, SCORCHA, SHOVA, WARDO, WHIRLA } from './wild-abilities';
+import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
 
 /**
  * The wildermon, each as a body of its own (`./beasts` for what they are all
@@ -59,7 +68,7 @@ export const WILDERMON: Record<string, Kind> = {
   vola: SPORELING,
   mola: IRONEMOLE,
   dowse: DOWSE,
-  snout: SNOUT,
+  snout: DIRTLET,
   roxxen: CARTLING,
   orse: THISTLEKIT,
   cudda: CUDDA,
@@ -67,13 +76,13 @@ export const WILDERMON: Record<string, Kind> = {
   gorral: GORRAL,
   shaggan: SHAGGAN,
   snedda: SNEDDA,
-  sappa: SAPPA,
-  rowl: ROWL,
+  sappa: PIPSEED,
+  rowl: SNAREPUP,
   grubba: GRUBBA,
   cobbe: BRICKLING,
   quarra: CHIPTAIL,
   embra: SLUGLOW,
-  bogga: BOGGA,
+  bogga: MOSSKIP,
   bevere: SAPGNAW,
   wadd: WADD,
   holla: PUDDLEHOP,
@@ -95,7 +104,7 @@ export const WILDERMON: Record<string, Kind> = {
   carra: CARRA,
   tanna: TANNA,
   grista: GRISTA,
-  wicka: WICKA,
+  wicka: GLIMMOTH,
   brambo: BRAMBO,
   grazza: GRAZZA,
   siffa: SIFFA,
@@ -107,7 +116,7 @@ export const WILDERMON: Record<string, Kind> = {
   relka: RELKA,
   bedda: BEDDA,
   wurla: WURLA,
-  sprigga: SPRIGGA,
+  sprigga: LEMLET,
   ambra: AMBRA,
   petta: PETTA,
   scurra: SCURRA,
@@ -122,11 +131,11 @@ export const WILDERMON: Record<string, Kind> = {
   testa: TESTA,
   skulka: SKULKA,
   gasha: GASHA,
-  thumpa: THUMPA,
+  thumpa: PEBBLETOOTH,
   spitta: SPITTA,
   awla: AWLA,
   sparra: SPARRA,
-  lungra: LUNGRA,
+  lungra: BLUSHKIT,
   hamma: HAMMA,
   crakka: CRAKKA,
   bashka: BASHKA,
@@ -141,7 +150,7 @@ export const WILDERMON: Record<string, Kind> = {
   howla: HOWLA,
   marka: MARKA,
   wardo: WARDO,
-  stona: STONA,
+  stona: ZEPHLET,
   leecha: LEECHA,
   whispet: WHISPET,
 };
@@ -169,6 +178,15 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   orse: [BUNNYCOURSER, MOONHARE],
   sedra: [REEDWEAVER, MARSHREAPER],
   holla: [SPRINGCARRIER, AQUAVOYAGER],
+  stona: [GALECREST, TEMPESTWYRM],
+  bogga: [CRAGHOPPER, BASTIONTOAD],
+  wicka: [LUREWING, NOCTILURE],
+  sappa: [SPRIGWING, ARBORCREST],
+  snout: [TUNNELCLAW, EARTHREND],
+  thumpa: [SHALECLAW, CRAGJAWS],
+  rowl: [LASHRUNNER, VINEHUNTER],
+  sprigga: [LEMLEAF, LEMORIAN],
+  lungra: [BRIARPOUNCE, THORNLANCE],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

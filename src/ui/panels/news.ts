@@ -3220,7 +3220,23 @@ export const NEWS: News[] = [
       'Changed: work post redrawn; ribbon flies and rune lights while a wildermon works from it. Island now says which post each worker is on.',
     ],
   },
+  {
+    n: 251,
+    day: '2026-10-22',
+    lines: () => [
+      ...NINE_LINES.map((id) => {
+        const d = SPECIES[id];
+        const [one, two] = d.stages!;
+        return `Replaced: ${d.was![0]} with ${d.name}; evolves to ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task, stats and ability.`;
+      }),
+      `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
+      'Changed: Mosskip line butchers no fur; Pebbletooth line gives scales, not fur.',
+    ],
+  },
 ];
+
+/** The nine kinds What's new 251 gives new lines. */
+const NINE_LINES = ['sappa', 'sprigga', 'rowl', 'snout', 'wicka', 'thumpa', 'stona', 'lungra', 'bogga'];
 
 /** The old brace, as What's new 246 gives it. */
 const BRACE = RELICS.find((r) => r.result === 'ancient_brace') ?? { parts: 0, difficulty: 0 };

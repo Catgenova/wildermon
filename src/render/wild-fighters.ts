@@ -9,14 +9,11 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Seven that fight: the testa, the skulka, the gasha, the thumpa, the spitta,
- * the awla and the sparra. Each wears how it fights (`FightStyle`): a shell
- * to take what it draws, a low slinking body, hooked teeth, a club of a tail,
- * bands and a forked tongue, a horn, and a pair of raised fists.
+ * Six that fight: the testa, the skulka, the gasha, the spitta, the awla and
+ * the sparra. Each wears how it fights (`FightStyle`): a shell to take what it
+ * draws, a low slinking body, hooked teeth, bands and a forked tongue, a horn,
+ * and a pair of raised fists. The thumpa is the crag line (`./wild-crag`).
  */
-
-/** A tail's root, out of the body, before what is on the end of it. */
-const root = (n: number): ReturnType<typeof taper> => taper([[0, 0.05, 0], [0, -0.25, 0]], 0.12, 0.09, n, 'coat');
 
 /* ---- the testa: a domed shell over a broad low body ---------------------------------- */
 
@@ -118,46 +115,6 @@ export const GASHA: Kind = {
   shadow: [1.5, 1.15],
   stride: 1.5,
   size: 1.65,
-};
-
-/* ---- the thumpa: heavy shoulders, a club for a tail --------------------------------- */
-
-const THUMPA_SPEC: QuadSpec = { ...pawed({ high: 1.45, len: 2.5, legs: 0.75, neck: 0.32, lean: 55, swing: [18, 30], ears: [40, 18], tail: [0.55, 12, 4] }), nose: 10 };
-const THUMPA_HEAD = { c: [0, 0.35, 0.1] as V3, r: [1.08, 1.0, 0.92] as V3 };
-
-function thumpaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = THUMPA_HEAD;
-  // A club on the end of the tail: a knob of bone with blunt studs round it.
-  const club = merge(
-    root(n),
-    tube([[0, -0.2, 0], [0, -0.75, 0.04]], 0.11, 0.11, 6, 'coat'),
-    orb([0, -0.95, 0.06], [0.3, 0.32, 0.28], n, k, 'hornDark'),
-    ...[0, 1, 2, 3].map((q) => orb([Math.cos(q * TAU / 4) * 0.28, -0.95, 0.06 + Math.sin(q * TAU / 4) * 0.26], 0.08, 4, 3, 'horn')),
-  );
-  return quadPieces({
-    n, k,
-    body: barrel(2.5, 1.4, 1.1, 0.22),
-    neck: { w: 0.78, h: 0.78, len: 0.32 },
-    head: { c: H.c, r: H.r, face: snout(1.02, -0.22, [0.46, 0.32, 0.38], 0.12, n, k), eye: { dir: [0.74, 0.52, 0.3], size: 0.26, rim: 0.12 } },
-    ear: earMesh(0.3, 0.26, n),
-    earTurn: 40,
-    tail: [club],
-    ...paws(n, k, 0.75, 0.34, 0.3, 'coatDark'),
-  });
-}
-
-export const THUMPA: Kind = {
-  bones: quadBonesOf(THUMPA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it swings the club now and then.
-    if (a.go <= 0) p.tail[1] += 24 * Math.sin(a.t * TAU * 1.2) * beat(a.t, [4.2, 13.4], 2.2);
-  }),
-  build: thumpaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ horn: [200, 190, 168], hornDark: [130, 118, 98] }), 30),
-  shadow: [1.75, 1.4],
-  stride: 1.3,
-  size: 1.8,
 };
 
 /* ---- the spitta: bands down its back, a forked tongue -------------------------------- */

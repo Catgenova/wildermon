@@ -8,11 +8,11 @@ import { pawed, trot } from './wild-paws';
 import { links, snout } from './wild-hands';
 
 /**
- * Twelve more of the settlement's hands: the forga, the potta, the cindra,
- * the hoppa, the simma, the relka, the bedda, the wurla, the sprigga, the
- * ambra, the petta and the scurra. As with the first ten (`./wild-hands`),
- * each wears the tool of its trade: tongs for a tail, a spoon, a lens, a
- * spade for a snout, a scrubbing brush.
+ * Eleven more of the settlement's hands: the forga, the potta, the cindra,
+ * the hoppa, the simma, the relka, the bedda, the wurla, the ambra, the
+ * petta and the scurra (the sprigga is the Lemlet now, `./wild-lemur`). As
+ * with the first ten (`./wild-hands`), each wears the tool of its trade:
+ * tongs for a tail, a spoon, a lens, a spade for a snout, a scrubbing brush.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -381,44 +381,6 @@ export const WURLA: Kind = {
   shadow: [1.8, 1.0],
   stride: 1.5,
   size: 1.6,
-};
-
-/* ---- the sprigga: twigs with shoots for antlers -------------------------------------- */
-
-const SPRIGGA_SPEC: QuadSpec = { ...pawed({ high: 1.45, len: 1.9, legs: 0.9, neck: 0.35, lean: 30, swing: [26, 42], ears: [30, 25], tail: [0.45, 20, 24] }), nose: 12 };
-const SPRIGGA_HEAD = { c: [0, 0.28, 0.22] as V3, r: [0.98, 0.94, 0.9] as V3 };
-
-function spriggaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SPRIGGA_HEAD;
-  // Two twigs for antlers, each with a fresh shoot of two leaves at its tip.
-  const twig = (s: number): Mesh => merge(
-    tube(curve([s * 0.3, 0.1, 0.8], [s * 0.45, 0.0, 1.15], [s * 0.6, -0.1, 1.4], 3), 0.05, 0.035, 5, 'bark'),
-    blade(curve([s * 0.6, -0.1, 1.38], [s * 0.72, -0.1, 1.5], [s * 0.85, -0.12, 1.55], 3), [0.02, 0.08, 0.06, 0.01], [0, 1, 0.2], { mat: 'leaf', rib: 'leafDark' }),
-    blade(curve([s * 0.6, -0.1, 1.38], [s * 0.55, -0.1, 1.55], [s * 0.5, -0.12, 1.65], 3), [0.02, 0.08, 0.06, 0.01], [0, 1, 0.2], { mat: 'leaf', rib: 'leafDark' }),
-  );
-  return thinEars(quadPieces({
-    n, k,
-    body: barrel(1.95, 0.85, 0.8, 0.18),
-    neck: { w: 0.54, h: 0.54, len: 0.35 },
-    head: { c: H.c, r: H.r, face: merge(snout(0.98, -0.22, [0.34, 0.26, 0.32], 0.1, n, k), twig(-1), twig(1)), eye: { dir: [0.74, 0.52, 0.34], size: 0.32, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.17] },
-    ear: leafEar(0.55, 0.2),
-    earTurn: 25,
-    tail: links([0.16, 0.14, 0.11, 0.05], 0.3, n, (ring) => (ring % 2 ? 'coat' : 'leaf')),
-    ...paws(n, k, 0.9, 0.2, 0.19, 'mark'),
-  }));
-}
-
-export const SPRIGGA: Kind = {
-  bones: quadBonesOf(SPRIGGA_SPEC, (p, a) => {
-    trot(p, a);
-    if (a.go <= 0) p.tail[2] += 10 * cyc(a.t, 5);
-  }),
-  build: spriggaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ leaf: [150, 210, 110], leafDark: [100, 160, 80], stem: [120, 150, 90], bark: [130, 100, 72] }), 110),
-  shadow: [1.2, 0.95],
-  stride: 1.25,
-  size: 1.5,
 };
 
 /* ---- the ambra: amber on its back, a pine cone for a tail --------------------------- */

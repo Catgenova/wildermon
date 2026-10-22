@@ -89,7 +89,7 @@ import {
   SHRUG_SAID, gatherSpot, skySaid, STRUCK_SAID, surgeSaid, TECHNIQUE_GAIN, tookSaid, traceNone, traceSaid, unbrokenSaid, type PathBeat, type PathId, type PathSaid,
 } from './meditation';
 import { ledgerTotals, record, type Ledger } from './ledger';
-import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, memorialLight, OVEN_REACH, plinthLight, runestoneLight, type LightSource } from './light';
+import { ALTAR_CAST, ALTAR_CAST_ALPHA, ALTAR_GLOW, ALTAR_REACH, FIRE_REACH, heldReachOf, HELD_LIGHTS, memorialLight, MOTH_LIGHT, OVEN_REACH, plinthLight, runestoneLight, type LightSource } from './light';
 import { plinthBusy } from './plinth';
 import { MEMORIAL } from './memorial';
 import { counterFinished, counterInto, counterMiddle, Counters, type CountersJSON, type CounterWire } from './counters';
@@ -3598,6 +3598,8 @@ export class Game {
     for (const c of this.creatures.list.values()) {
       const glow = this.creatures.species(c).glow;
       if (glow && near(c.x, c.y)) out.push({ x: c.x, y: c.y, radius: glow, strength: 0.7, steady: true });
+      // The Glimmoth line's lantern belly: a light to see it by, and nothing else (`glow` is silver's bane on the island).
+      else if (c.species === 'wicka' && near(c.x, c.y)) out.push({ x: c.x, y: c.y, radius: MOTH_LIGHT, strength: 0.5, steady: true });
     }
     for (const l of this.spellLights) out.push(l);
     // A mote swirl's own small glow, soft as a spell's (`swirlLight`).

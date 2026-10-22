@@ -7,8 +7,8 @@ import { mesh, place, type Mat, type Mesh, type RGB, type V3 } from './figure';
 
 /**
  * The herd: the big grazers and beasts of burden -- the cudda, the bura,
- * the gorral, the shaggan, the snedda and the sappa (the roxxen is its own
- * line now, `./wild-haul`, and the orse `./wild-hare`).
+ * the gorral, the shaggan and the snedda (the roxxen is its own line now,
+ * `./wild-haul`, the orse `./wild-hare`, and the sappa `./wild-pip`).
  * Hooves, deep bodies, and heads still a size too big for them.
  */
 
@@ -576,93 +576,4 @@ export const SNEDDA: Kind = {
   shadow: [2.2, 1.2],
   stride: 0.8,
   size: 1.3,
-};
-
-/* ---- the sappa ----------------------------------------------------------------------- */
-
-/**
- * A sappa: a moss-backed browser of the deep woods that buries more seed
- * than it eats and forgets where. A sapling is growing out of the moss on its
- * back, with toadstools round its foot, and its nose is long and soft.
- */
-const SAPPA_SPEC: QuadSpec = {
-  ...hoofed({ high: 2.1, len: 3.0, legs: 1.4, neck: 0.7, lean: 60, swing: [20, 34], ears: [70, 15], crop: [60, 8, 16] }),
-  // The ears up on the crown rather than on the cheeks.
-  ears: { at: [0.66, -0.15, 0.65], out: 70, back: 15 },
-};
-const SAPPA_HEAD = { c: [0, 0.45, 0.05] as V3, r: [0.95, 0.92, 0.82] as V3 };
-/** Where the sapling stands up out of the moss, in the trunk's frame: what it sways about. */
-const SAPLING_FOOT: V3 = [0, -0.3, 1.1];
-
-function sappaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SAPPA_HEAD;
-  // The long soft nose, the colour of its coat, its bridge a little over the height of the eyes so side on there is a face ahead
-  // of them even with the head turned half away or down at the ground, curving down to a blunt pink end; and the mouth under it.
-  const nose = merge(
-    taper(curve([0, 0.8, 0.14], [0, 1.45, 0.12], [0, 1.78, -0.5], 3), 0.34, 0.24, n, 'coat'),
-    orbAlong([0, 1.8, -0.58], [0, 0.4, -1], [0.22, 0.22, 0.2], n, 3, 'nose'),
-    smile([0, 1.15, -0.6], [0, 1, -0.4], 0.24),
-  );
-  // The moss on its back, and two toadstools growing in it.
-  const moss = merge(
-    orb([0, -0.2, 0.85], [1.0, 1.6, 0.42], n + 1, k, 'moss'),
-    orb([0.4, 0.8, 0.8], [0.55, 0.6, 0.3], n, k, 'moss'),
-    orb([-0.45, -1.2, 0.75], [0.55, 0.6, 0.3], n, k, 'moss'),
-    ...([[0.5, 0.3, 1.05], [-0.5, -0.8, 1.02]] as V3[]).map((c) => merge(taper([c, add(c, [0, 0, 0.2])], 0.06, 0.05, 5, 'spot'), orbAlong(add(c, [0, 0, 0.22]), [0, 0, 1], [0.18, 0.18, 0.1], 6, 3, 'cap'))),
-  );
-  // The sapling: a thin trunk and a round crown of leaves.
-  const sapling = merge(
-    taper(curve(SAPLING_FOOT, [0.1, -0.35, 1.8], [0.05, -0.3, 2.5], 3), 0.1, 0.06, 6, 'bark'),
-    orb([0.05, -0.3, 2.75], [0.55, 0.55, 0.45], n, k, 'leaf'),
-    orb([0.3, -0.1, 2.55], [0.32, 0.32, 0.28], n, k, 'leafDark'),
-    orb([-0.25, -0.5, 2.6], [0.3, 0.3, 0.26], n, k, 'leafDark'),
-  );
-  // It sways from its foot: slowly to and fro and side to side as the sappa stands, and at a trot a moment behind the rock of the
-  // back, so it nods after each stride rather than with it.
-  const sway = (v: readonly V3[], a: Anim): V3[] => {
-    const w = a.u - Math.floor(a.u), still = 1 - a.go;
-    const fore = (still * 4 * cyc(a.t, 8) + a.go * a.gait * 6 * Math.sin(w * TAU - 1.2)) * (Math.PI / 180);
-    const side = (still * 3 * cyc(a.t, 6, 1) + a.go * 2.5 * Math.sin(w * TAU - 0.8)) * (Math.PI / 180);
-    const cf = Math.cos(fore), sf = Math.sin(fore), cs = Math.cos(side), ss = Math.sin(side);
-    const [bx, by, bz] = SAPLING_FOOT;
-    return v.map((p) => {
-      const x = p[0] - bx, y = p[1] - by, z = p[2] - bz;
-      const y1 = y * cf - z * sf, z1 = y * sf + z * cf;
-      return [bx + x * cs + z1 * ss, by + y1, bz - x * ss + z1 * cs] as V3;
-    });
-  };
-  return quadPieces({
-    n, k,
-    // Round at the rump and the chest rather than cut square.
-    body: { y: [-2.1, -1.95, -1.7, -0.9, 0, 0.9, 1.6, 1.82, 1.95], z: [0.3, 0.25, 0.25, 0.3, 0.3, 0.3, 0.35, 0.35, 0.35], w: [0.25, 0.7, 0.95, 1.15, 1.2, 1.15, 1.0, 0.75, 0.3], h: [0.25, 0.6, 0.8, 0.92, 0.95, 0.9, 0.82, 0.62, 0.28], belly: true },
-    neck: { w: 0.7, h: 0.68, len: 0.7 },
-    head: { c: H.c, r: H.r, face: nose, eye: { dir: [0.8, 0.5, 0.25], size: 0.32, rim: 0.12 }, blush: [[0.8, 0.45, -0.3], 0.2] },
-    ear: earMesh(0.5, 0.3, n),
-    tail: [taper([[0, 0, 0], [0, -0.25, 0]], 0.14, 0.06, 5, 'coat')],
-    fore: { upper: [0.3, -0.75, 0.34, 0.26], lower: [0, -0.65, 0.24, 0.22], foot: hoofMesh(0.26, 0.18, n) },
-    hind: { upper: [0.3, -0.8, 0.4, 0.28], lower: [0, -0.75, 0.24, 0.22], foot: hoofMesh(0.26, 0.18, n) },
-    extras: [
-      { key: 'moss', mesh: moss, bone: 'trunk', bias: 0.03, after: 'body', lines: false },
-      { key: 'sapling', mesh: sapling, bone: 'trunk', bias: 0.06, after: ['body', 'moss'], bent: sway },
-    ],
-  });
-}
-
-export const SAPPA: Kind = {
-  bones: quadBonesOf(SAPPA_SPEC, (p, a) => {
-    plod(p, a);
-    // Standing, now and then its nose right down to the ground to snuffle, and then a look round with the soft nose up.
-    if (a.go <= 0) {
-      const snuffle = beat(a.t, [2.2, 9.9, 16.4], 2.0) * (1 - a.graze);
-      p.neck[0] += 30 * snuffle;
-      p.head[0] -= 15 * snuffle;
-    }
-  }),
-  build: sappaBuild,
-  // A moss deeper than the grass it walks on, so the back is not the pasture seen through it.
-  palette: (coat, mark) => coatPalette(lit(coat, 40), mark, { moss: [104, 158, 78], leaf: [150, 206, 110], leafDark: [110, 170, 90], bark: [140, 104, 82], cap: [220, 110, 100], spot: [250, 244, 232], nose: [200, 130, 140] }, 40),
-  shadow: [2.3, 1.5],
-  stride: 0.85,
-  size: 1.55,
 };

@@ -1561,8 +1561,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   rowl: {
     id: 'rowl',
     wound: 'cut',
-    name: 'Rowl',
-    description: 'Wild: attacks on sight. Settlement task: hunt round the settlement and bring carcasses home; range grows with its fighting.',
+    name: 'Snarepup',
+    was: ['Rowl'],
+    // Snarepup, Lashrunner, Vinehunter. Its words, and each stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Lashrunner', description: '' },
+      { name: 'Vinehunter', description: '' },
+    ],
     health: 46,
     attack: 14,
     speed: 2.5,
@@ -1575,10 +1581,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     workRange: 12,
     rangePerStep: 12,
     variants: [
-      ['#575450', '#b5aea3'],
-      ['#2f2c2a', '#6f6862'],
-      ['#c8c2b6', '#eee9df'],
-      ['#7a5b40', '#c8ac8c'],
+      ['#dcc8a0', '#6f8f3e'],
+      ['#d2b98c', '#8a963a'],
+      ['#cfd0bc', '#4f7a4a'],
+      ['#d9b48c', '#a86a34'],
     ],
     butcher: { meat: 8, fur: 6, leather: 5, bone: 6, gland: 2 },
     nearTrees: true,
@@ -1591,8 +1597,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   // ---- The working sorts. ----
   bogga: {
     id: 'bogga',
-    name: 'Bogga',
+    name: 'Mosskip',
+    was: ['Bogga'],
+    // Mosskip, Craghopper, Bastiontoad.
     description: 'Settlement task: cut peat and tar from the bog; output home.',
+    stages: [
+      { name: 'Craghopper', description: '' },
+      { name: 'Bastiontoad', description: '' },
+    ],
     health: 30,
     attack: 4,
     speed: 1.4,
@@ -1604,12 +1616,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'peat',
     workRange: 9,
     variants: [
-      ['#3a332c', '#7a6c58'],
-      ['#2b2a28', '#645f56'],
-      ['#4a3b2c', '#8b7458'],
-      ['#221f1d', '#4f4a44'],
+      ['#86a85e', '#eaa0a0'],
+      ['#7a9e66', '#f0b49a'],
+      ['#94a855', '#e892b4'],
+      ['#6e9a74', '#c8a0d8'],
     ],
-    butcher: { meat: 4, fur: 3, leather: 3, bone: 3, gland: 1 },
+    butcher: { meat: 4, leather: 3, bone: 3, gland: 1 },
     nearTar: true,
   },
   sedra: {
@@ -1698,8 +1710,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   sappa: {
     id: 'sappa',
-    name: 'Sappa',
-    description: 'Settlement task: plant sprouts where trees were cut.',
+    name: 'Pipseed',
+    was: ['Sappa'],
+    // Asked for: Pipseed, Sprigwing, Arborcrest. Its words, and each stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Sprigwing', description: '' },
+      { name: 'Arborcrest', description: '' },
+    ],
     health: 26,
     attack: 3,
     speed: 1.7,
@@ -1711,12 +1729,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'plant',
     workRange: 10,
     variants: [
-      ['#5d6b45', '#b6bd94'],
-      ['#6f5a3c', '#c4ab80'],
-      ['#47533c', '#9aa585'],
-      ['#7a6f4e', '#d3c8a0'],
+      ['#f2e8d6', '#d9572e'],
+      ['#efe2c4', '#e0a030'],
+      ['#f4ece0', '#b8323a'],
+      ['#e8d9c0', '#c7703a'],
     ],
-    butcher: { meat: 3, fur: 3, leather: 2, bone: 2, gland: 1 },
+    butcher: { meat: 3, feather: 3, leather: 2, bone: 2, gland: 1 },
     nearTrees: true,
   },
   snedda: {
@@ -2009,8 +2027,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   wicka: {
     id: 'wicka',
-    name: 'Wicka',
-    description: 'Settlement task: put a candle from your settlement stores in each of your lantern posts and pillars without one; lights them after dark, puts them out by day.',
+    name: 'Glimmoth',
+    was: ['Wicka'],
+    // Asked for: a moth family to replace the wicka: Glimmoth, Lurewing, Noctilure. Its words, and each stage's, are written
+    // elsewhere once every number is here.
+    description: '',
+    stages: [
+      { name: 'Lurewing', description: '' },
+      { name: 'Noctilure', description: '' },
+    ],
     health: 10,
     attack: 1,
     speed: 2.6,
@@ -2021,11 +2046,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: 'lamp',
     workRange: 8,
+    // The coat is its fur and the moss of its wings; the markings, the light of its lantern.
     variants: [
-      ['#6e6354', '#f0d58a'],
-      ['#5a5a66', '#e9d9a8'],
-      ['#7d6a52', '#f5c77a'],
-      ['#4f5b56', '#dfe3a0'],
+      ['#7d9a3e', '#ffcf4a'],
+      ['#5f8a4a', '#ffe596'],
+      ['#8f8445', '#ffaa48'],
+      ['#6f8a72', '#e6f07a'],
     ],
     butcher: { meat: 1, fur: 1, leather: 1, gland: 2 },
     nocturnal: true,
@@ -2282,8 +2308,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   sprigga: {
     id: 'sprigga',
-    name: 'Sprigga',
-    description: 'Settlement task: pick sprouts off living trees, each named for its tree; output home. A picked tree rests as long as a forage bed.',
+    name: 'Lemlet',
+    was: ['Sprigga'],
+    // Lemlet, Lemleaf, Lemorian. Its words, and each stage's, are written once every number is here (`sayLine`).
+    description: '',
+    stages: [
+      { name: 'Lemleaf', description: '' },
+      { name: 'Lemorian', description: '' },
+    ],
     health: 16,
     attack: 2,
     speed: 2.2,
@@ -2295,10 +2327,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'sprout',
     workRange: 8,
     variants: [
-      ['#6a8a5a', '#d4e6c4'],
-      ['#7a7a4a', '#e2e2b4'],
-      ['#5a7a6a', '#c4dccf'],
-      ['#8a8a5a', '#e6e6c0'],
+      ['#8e7466', '#f3e3c8'],
+      ['#9a7e68', '#f4e0c0'],
+      ['#7c7c84', '#eeeae2'],
+      ['#6a5c58', '#e8d6b8'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 1 },
     nearTrees: true,
@@ -2625,8 +2657,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   thumpa: {
     id: 'thumpa',
-    name: 'Thumpa',
+    name: 'Pebbletooth',
+    was: ['Thumpa'],
     description: `Tamed: ${STYLE_SAYS.stun}.`,
+    stages: [
+      { name: 'Shaleclaw', description: '' },
+      { name: 'Cragjaws', description: '' },
+    ],
     health: 44,
     attack: 9,
     speed: 1.6,
@@ -2638,12 +2675,12 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'guard',
     workRange: 10,
     variants: [
-      ['#6c5c4c', '#c8b8a4'],
-      ['#5c5c54', '#bcbcb0'],
-      ['#7c644c', '#d8c0a0'],
-      ['#4c4840', '#aca89c'],
+      ['#a08a6c', '#e2d2b4'],
+      ['#7a7e84', '#cfcbc0'],
+      ['#9c7650', '#e4cca8'],
+      ['#55504c', '#b4aa9a'],
     ],
-    butcher: { meat: 6, fur: 3, leather: 4, bone: 5 },
+    butcher: { meat: 6, scale: 3, leather: 4, bone: 5 },
     wound: 'crush',
     defensive: true,
     style: 'stun',
@@ -2726,8 +2763,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   lungra: {
     id: 'lungra',
-    name: 'Lungra',
+    name: 'Blushkit',
+    was: ['Lungra'],
     description: `Tamed, ${abilityName('beastmaster_pounce')}: ${abilitySays('beastmaster_pounce')}.`,
+    stages: [
+      { name: 'Briarpounce', description: '' },
+      { name: 'Thornlance', description: '' },
+    ],
     health: 30,
     attack: 8,
     speed: 2.3,
@@ -2738,11 +2780,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'guard',
     workRange: 10,
+    // Its fur and its sage patches: cream with sage, blush with mint, white with fern, and fawn with olive. Its pink leaves are
+    // the same blush on every one.
     variants: [
-      ['#8c6c4c', '#e0c8a8'],
-      ['#7c5c40', '#d4b898'],
-      ['#9c7c58', '#ecd4b4'],
-      ['#6c5038', '#c8ac8c'],
+      ['#f0dcc2', '#9cb07a'],
+      ['#f0c8bc', '#8fb39a'],
+      ['#fbf6ee', '#7fa068'],
+      ['#e2c6a4', '#a6ab6c'],
     ],
     butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
     wound: 'bite',
@@ -3101,8 +3145,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   stona: {
     id: 'stona',
-    name: 'Stona',
+    name: 'Zephlet',
+    was: ['Stona'],
     description: `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('warder_stoneskin')}.`,
+    stages: [
+      { name: 'Galecrest', description: '' },
+      { name: 'Tempestwyrm', description: '' },
+    ],
     health: 46,
     attack: 6,
     speed: 1.5,
@@ -3113,11 +3162,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: false,
     gathers: 'guard',
     workRange: 10,
+    // Its back and blue feathers, and its peach ones: powder blue with peach, lilac with rose, seafoam with apricot, and dusk
+    // blue with sand.
     variants: [
-      ['#8c8c84', '#d4d4cc'],
-      ['#7c7c78', '#c8c8c0'],
-      ['#94948c', '#dcdcd4'],
-      ['#6c6c68', '#bcbcb4'],
+      ['#8fb0d6', '#f4b496'],
+      ['#ac9ed8', '#f0a2b2'],
+      ['#8ec6c0', '#f4c48e'],
+      ['#8492b8', '#eec09e'],
     ],
     butcher: { meat: 5, scale: 4, leather: 3, bone: 4 },
     wound: 'crush',
@@ -3416,8 +3467,15 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   snout: {
     id: 'snout',
-    name: 'Snout',
-    description: 'Settlement task: find buried relics and mark dig sites.',
+    name: 'Dirtlet',
+    was: ['Snout'],
+    // Asked for: a badger line to replace the snout: Dirtlet, Tunnelclaw, Earthrend. Its words, and each stage's, are written
+    // once every number is here.
+    description: '',
+    stages: [
+      { name: 'Tunnelclaw', description: '' },
+      { name: 'Earthrend', description: '' },
+    ],
     health: 24,
     attack: 4,
     speed: 1.6,
@@ -3430,10 +3488,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     workRange: 10,
     rangePerStep: 12,
     variants: [
-      ['#8a7a6a', '#d8c8b4'],
-      ['#6a5a50', '#b6a294'],
-      ['#a08878', '#e6d2c0'],
-      ['#4f4844', '#98908a'],
+      ['#6b5444', '#f1ead9'],
+      ['#4d4744', '#ebe7e0'],
+      ['#8c6440', '#f3e2c2'],
+      ['#34302c', '#d9d2c3'],
     ],
     butcher: { meat: 4, fur: 3, leather: 3, bone: 3, gland: 3 },
   },
@@ -3940,6 +3998,17 @@ sayLine('whispet', `Tamed, ${abilityName('fear')}: ${abilitySays('fear')}. Strik
   'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
 sayLine('warda', `Sight for you, at your heel or keeping a settlement: ${SPECIES.warda.sight} tiles (most: ${KEPT_SIGHT}), −${percent(KEPT_NIGHT_LOSS / 2)} at the dead of night. Strikes back every time.`,
   `Level: awareness, learned ${LEARNS_SAYS.out}.`);
+sayLine('rowl', `Wild: attacks on sight. Settlement task: hunt ${reach('rowl')}; carcasses home.`, 'Level: fighting.');
+sayLine('bogga', `Settlement task: cut peat and tar from the bog ${reach('bogga')}; output home.`, 'Level: digging.');
+sayLine('sappa', `Settlement task: plant sprouts where trees were cut, ${reach('sappa')}.`, 'Level: forestry.');
+sayLine('wicka', `Settlement task: put a candle from your settlement stores in each of your lantern posts and pillars without one, ${reach('wicka')}; lights them after dark, puts them out by day.`,
+  'Level: carrying.');
+sayLine('sprigga', `Settlement task: pick sprouts off living trees ${reach('sprigga')}, each named for its tree; output home. A picked tree rests as long as a forage bed.`,
+  'Level: forestry.');
+sayLine('snout', `Settlement task: find buried relics and mark dig sites ${reach('snout')}.`, 'Level: archaeology.');
+sayLine('thumpa', `Tamed: ${STYLE_SAYS.stun}.`, 'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
+sayLine('lungra', `Tamed, ${abilityName('beastmaster_pounce')}: ${abilitySays('beastmaster_pounce')}.`, 'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
+sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('warder_stoneskin')}.`, 'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {

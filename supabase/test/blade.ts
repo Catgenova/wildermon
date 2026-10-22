@@ -720,7 +720,7 @@ check('and of an axe, no cheaper', near(Number(island('LIGHT:AXE')), 1), island(
   const share = FOLD['cover:share'];
   check(`Guardian: about ${pct(share)} of the blows at somebody within ${GUARDIAN_REACH} tiles land on your shield instead`,
     Number(guarded) >= 200 * share * 0.5 && Number(guarded) <= 200 * share * 1.6, `${guarded} of 200`);
-  check('and they are told whose shield', /^.+ takes the rowl’s blow on a shield\.$/.test(line), line);
+  check('and they are told whose shield', /^.+ takes the snarepup’s blow on a shield\.$/.test(line), line);
   const [far, bare] = parts('GUARDIAN:NOT').map(Number);
   check(`but none beyond ${GUARDIAN_REACH} tiles, and none without a shield`, far === 0 && bare === 0, island('GUARDIAN:NOT'));
   const beast = Number(island('GUARDIAN:BEAST'));

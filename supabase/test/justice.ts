@@ -249,7 +249,7 @@ check(`Mark of Judgment: ${pct(fx('mark', 'more'))} more from a blow`,
     Number(count) > 0 ? marked === count && near(Number(secs), fx('assay', 'secs'), 1)
                       : line === `There is no ore under the ground within ${R('assay')} tiles.`, island('ASSAY'));
 }
-check('Sentence is refused on a creature unhurt', island('SENT:WHOLE') === 'The rowl is unhurt.', island('SENT:WHOLE'));
+check('Sentence is refused on a creature unhurt', island('SENT:WHOLE') === 'The snarepup is unhurt.', island('SENT:WHOLE'));
 check(`and takes ${pct(fx('sentence', 'share'))} of what it has lost`,
   near(Number(island('SENT')), 0.5 - 0.5 * fx('sentence', 'share'), 1e-3), island('SENT'));
 {

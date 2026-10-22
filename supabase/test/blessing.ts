@@ -293,12 +293,12 @@ check(`Steady Hands takes ${fx('steady', 'cut') * 100}% off a job wanting that t
 check('and is refused on what no job wants', island('STEADY:LOG') === 'The log is not a tool any job wants.', island('STEADY:LOG'));
 check(`Tend heals a wildermon ${fx('tend', 'heal') * 100}% and stops it bleeding`,
   near(Number(parts('TEND')[0]), 0.5 + fx('tend', 'heal'), 1e-3) && parts('TEND')[1] === 'true', island('TEND'));
-check('and is refused on one that is whole', island('TEND:WHOLE') === 'The rowl is not hurt.', island('TEND:WHOLE'));
+check('and is refused on one that is whole', island('TEND:WHOLE') === 'The snarepup is not hurt.', island('TEND:WHOLE'));
 check(`Kinship adds its ${Math.round(fx('kinship', 'points') * 100)} points to the next taming`,
   near(Number(parts('KIN')[1]), Math.min(0.95, Number(parts('KIN')[0]) + fx('kinship', 'points')), 1e-4), island('KIN'));
 check('and the taming spends it', near(Number(island('KIN:SPENT')), Number(parts('KIN')[0]), 1e-4), island('KIN:SPENT'));
 check('not on a monster', island('KIN:MONSTER') === 'Monsters cannot be tamed.', island('KIN:MONSTER'));
-check('nor on a tame one', island('KIN:TAME') === 'The rowl is tame already.', island('KIN:TAME'));
+check('nor on a tame one', island('KIN:TAME') === 'The snarepup is tame already.', island('KIN:TAME'));
 check(`Calm drops the hunt and keeps it off ${fx('calm', 'secs')} s`, island('CALM') === `none|${fx('calm', 'secs')}`, island('CALM'));
 check('and is refused on a monster', island('CALM:MONSTER') === 'Monsters are not calmed.', island('CALM:MONSTER'));
 {

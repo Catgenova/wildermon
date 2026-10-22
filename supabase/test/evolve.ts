@@ -69,6 +69,15 @@ begin
   insert into said select 'BRICKLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Cobbe')).id from species_def where id = 'cobbe';
   insert into said select 'REEDPUP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Sedra')).id from species_def where id = 'sedra';
   insert into said select 'PUDDLEHOP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Holla')).id from species_def where id = 'holla';
+  insert into said select 'PIPSEED', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Sappa')).id from species_def where id = 'sappa';
+  insert into said select 'LEMLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Sprigga')).id from species_def where id = 'sprigga';
+  insert into said select 'SNAREPUP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Rowl')).id from species_def where id = 'rowl';
+  insert into said select 'DIRTLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Snout')).id from species_def where id = 'snout';
+  insert into said select 'GLIMMOTH', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Wicka')).id from species_def where id = 'wicka';
+  insert into said select 'PEBBLETOOTH', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Thumpa')).id from species_def where id = 'thumpa';
+  insert into said select 'ZEPHLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Stona')).id from species_def where id = 'stona';
+  insert into said select 'BLUSHKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Lungra')).id from species_def where id = 'lungra';
+  insert into said select 'MOSSKIP', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Bogga')).id from species_def where id = 'bogga';
   insert into said select 'THISTLEKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Orse')).id from species_def where id = 'orse';
   insert into said select 'STITCHKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Tinka')).id from species_def where id = 'tinka';
   insert into said select 'CARTLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Roxxen')).id from species_def where id = 'roxxen';
@@ -171,6 +180,33 @@ const frog = SPECIES.holla;
 check('the Holla is the Puddlehop now, a Springcarrier and an Aquavoyager after, and an old Holla carcass is still one, on both sides',
   frog.name === 'Puddlehop' && frog.stages?.map((x) => x.name).join(',') === 'Springcarrier,Aquavoyager'
     && at('PUDDLEHOP') === 'Puddlehop|Springcarrier,Aquavoyager|Holla|holla', at('PUDDLEHOP'));
+check('the Sappa is the Pipseed now, a Sprigwing and an Arborcrest after, and an old Sappa carcass is still one, on both sides',
+  SPECIES.sappa.name === 'Pipseed' && SPECIES.sappa.stages?.map((x) => x.name).join(',') === 'Sprigwing,Arborcrest'
+    && at('PIPSEED') === 'Pipseed|Sprigwing,Arborcrest|Sappa|sappa', at('PIPSEED'));
+check('the Sprigga is the Lemlet now, a Lemleaf and a Lemorian after, and an old Sprigga carcass is still one, on both sides',
+  SPECIES.sprigga.name === 'Lemlet' && SPECIES.sprigga.stages?.map((x) => x.name).join(',') === 'Lemleaf,Lemorian'
+    && at('LEMLET') === 'Lemlet|Lemleaf,Lemorian|Sprigga|sprigga', at('LEMLET'));
+check('the Rowl is the Snarepup now, a Lashrunner and a Vinehunter after, and an old Rowl carcass is still one, on both sides',
+  SPECIES.rowl.name === 'Snarepup' && SPECIES.rowl.stages?.map((x) => x.name).join(',') === 'Lashrunner,Vinehunter'
+    && at('SNAREPUP') === 'Snarepup|Lashrunner,Vinehunter|Rowl|rowl', at('SNAREPUP'));
+check('the Snout is the Dirtlet now, a Tunnelclaw and an Earthrend after, and an old Snout carcass is still one, on both sides',
+  SPECIES.snout.name === 'Dirtlet' && SPECIES.snout.stages?.map((x) => x.name).join(',') === 'Tunnelclaw,Earthrend'
+    && at('DIRTLET') === 'Dirtlet|Tunnelclaw,Earthrend|Snout|snout', at('DIRTLET'));
+check('the Wicka is the Glimmoth now, a Lurewing and a Noctilure after, and an old Wicka carcass is still one, on both sides',
+  SPECIES.wicka.name === 'Glimmoth' && SPECIES.wicka.stages?.map((x) => x.name).join(',') === 'Lurewing,Noctilure'
+    && at('GLIMMOTH') === 'Glimmoth|Lurewing,Noctilure|Wicka|wicka', at('GLIMMOTH'));
+check('the Thumpa is the Pebbletooth now, a Shaleclaw and a Cragjaws after, and an old Thumpa carcass is still one, on both sides',
+  SPECIES.thumpa.name === 'Pebbletooth' && SPECIES.thumpa.stages?.map((x) => x.name).join(',') === 'Shaleclaw,Cragjaws'
+    && at('PEBBLETOOTH') === 'Pebbletooth|Shaleclaw,Cragjaws|Thumpa|thumpa', at('PEBBLETOOTH'));
+check('the Stona is the Zephlet now, a Galecrest and a Tempestwyrm after, and an old Stona carcass is still one, on both sides',
+  SPECIES.stona.name === 'Zephlet' && SPECIES.stona.stages?.map((x) => x.name).join(',') === 'Galecrest,Tempestwyrm'
+    && at('ZEPHLET') === 'Zephlet|Galecrest,Tempestwyrm|Stona|stona', at('ZEPHLET'));
+check('the Lungra is the Blushkit now, a Briarpounce and a Thornlance after, and an old Lungra carcass is still one, on both sides',
+  SPECIES.lungra.name === 'Blushkit' && SPECIES.lungra.stages?.map((x) => x.name).join(',') === 'Briarpounce,Thornlance'
+    && at('BLUSHKIT') === 'Blushkit|Briarpounce,Thornlance|Lungra|lungra', at('BLUSHKIT'));
+check('the Bogga is the Mosskip now, a Craghopper and a Bastiontoad after, and an old Bogga carcass is still one, on both sides',
+  SPECIES.bogga.name === 'Mosskip' && SPECIES.bogga.stages?.map((x) => x.name).join(',') === 'Craghopper,Bastiontoad'
+    && at('MOSSKIP') === 'Mosskip|Craghopper,Bastiontoad|Bogga|bogga', at('MOSSKIP'));
 const reed = SPECIES.sedra;
 check('the Sedra is the Reedpup now, a Reedweaver and a Marshreaper after, and an old Sedra carcass is still one, on both sides',
   reed.name === 'Reedpup' && reed.stages?.map((x) => x.name).join(',') === 'Reedweaver,Marshreaper'

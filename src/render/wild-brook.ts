@@ -1,5 +1,5 @@
 import {
-  add, beat, coatPalette, cross, curve, cyc, darker, disc, lighter, merge, mix, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, step, taper, TAU, tube, unit,
+  add, beat, coatPalette, cross, curve, cyc, darker, disc, lighter, merge, moved, orb, orbAlong, paint, pastel, quadBonesOf, scale, smile, step, taper, TAU, tube, unit,
   type Kind, type MatOf, type Piece, type QuadSpec,
 } from './beasts';
 import { blade, cut, earMesh, pawMesh, quadPieces, under } from './beastkit';
@@ -7,8 +7,8 @@ import { mesh, onScreen, place, type Mat, type Mesh, type RGB, type V3, type Vie
 import { pawed, trot } from './wild-paws';
 
 /**
- * The kinds of the brooks, the bogs and the hedges: the embra, the bogga,
- * the bevere, the wadd, the plucka and the middun.
+ * The kinds of the brooks, the bogs and the hedges: the embra, the bevere,
+ * the wadd, the plucka and the middun.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -46,21 +46,6 @@ function muzzle(o: { at: number; z?: number; r: V3; nose: number; mouth?: number
   );
 }
 
-/** A mesh from corners and faces, each face wound so it faces the way it is meant to (`want`), whichever way round it was listed. */
-function wound(v: V3[], faces: Array<{ i: number[]; m: Mat; want: V3; soft?: boolean; decal?: boolean }>): Mesh {
-  return mesh(v, faces.map((q) => {
-    let nx = 0, ny = 0, nz = 0;
-    for (let a = 0; a < q.i.length; a++) {
-      const p = v[q.i[a]], r = v[q.i[(a + 1) % q.i.length]];
-      nx += (p[1] - r[1]) * (p[2] + r[2]);
-      ny += (p[2] - r[2]) * (p[0] + r[0]);
-      nz += (p[0] - r[0]) * (p[1] + r[1]);
-    }
-    const i = nx * q.want[0] + ny * q.want[1] + nz * q.want[2] < 0 ? [...q.i].reverse() : q.i;
-    return { i, m: q.m, soft: q.soft, decal: q.decal };
-  }));
-}
-
 /**
  * Lights drawn over a body, each only while the side it is on is toward the
  * viewer: bright in the middle, gone at the edge, added to what is under it.
@@ -84,42 +69,7 @@ function flankLights(g: CanvasRenderingContext2D, view: View, list: ReadonlyArra
   g.restore();
 }
 
-/* ---- the bogga ----------------------------------------------------------------------- */
-
-/**
- * A bogga: a flat-tailed wallower, dark to the shoulder from the black
- * ground it works. A lily pad sits on its head like a hat, a flower in it;
- * its legs are dipped in mud, and its tail is a paddle.
- */
-const BOGGA_BASE = pawed({ high: 1.3, len: 3.0, legs: 0.75, neck: 0.35, lean: 75, swing: [20, 34], ears: [70, 20], tail: [0.5, 20, 0] });
-const BOGGA_SPEC: QuadSpec = { ...BOGGA_BASE, ears: { at: [0.8, -0.3, 0.5], out: 42, back: 26 }, graze: 21, nose: 10 };
-const BOGGA_HEAD = { c: [0, 0.4, 0.05] as V3, r: [1.2, 1.1, 0.95] as V3 };
-/** The trunk's rings: short and round, a barrel on four stout legs. */
-const BOGGA_BODY = { y: [-1.55, -1.3, -0.7, 0, 0.7, 1.25, 1.5], z: [0.1, 0.15, 0.2, 0.2, 0.2, 0.22, 0.25], w: [0.3, 1.15, 1.32, 1.35, 1.32, 1.15, 0.3], h: [0.25, 0.72, 0.82, 0.85, 0.82, 0.72, 0.25] };
-
-/** A lily pad: a round leaf `r` across with a slit cut to its middle, lying flat, its veins running out from the middle. */
-function lilyPad(r: number, n: number): Mesh {
-  const notch = 0.52, th = 0.06;
-  const v: V3[] = [[0, 0, th / 2], [0, 0, -th / 2]];
-  const rim = (j: number): number => notch / 2 + ((TAU - notch) * j) / n;
-  for (let j = 0; j <= n; j++) v.push([Math.cos(rim(j)) * r, Math.sin(rim(j)) * r, th / 2]);
-  for (let j = 0; j <= n; j++) v.push([Math.cos(rim(j)) * r, Math.sin(rim(j)) * r, -th / 2]);
-  const T = (j: number): number => 2 + j, B = (j: number): number => 3 + n + j;
-  const faces: Array<{ i: number[]; m: Mat; want: V3 }> = [];
-  for (let j = 0; j < n; j++) {
-    const a = (rim(j) + rim(j + 1)) / 2;
-    faces.push({ i: [0, T(j), T(j + 1)], m: 'leaf', want: [0, 0, 1] });
-    faces.push({ i: [1, B(j), B(j + 1)], m: 'leafDark', want: [0, 0, -1] });
-    faces.push({ i: [T(j), T(j + 1), B(j + 1), B(j)], m: 'leafDark', want: [Math.cos(a), Math.sin(a), 0] });
-  }
-  faces.push({ i: [0, 1, B(0), T(0)], m: 'leafDark', want: [Math.sin(rim(0)), -Math.cos(rim(0)), 0] });
-  faces.push({ i: [0, T(n), B(n), 1], m: 'leafDark', want: [-Math.sin(rim(n)), Math.cos(rim(n)), 0] });
-  const veins = paint([1, 2, 3, 4, 5].map((q) => {
-    const a = notch / 2 + ((TAU - notch) * q) / 6, d: V3 = [Math.cos(a), Math.sin(a), 0], s: V3 = [-Math.sin(a) * 0.025, Math.cos(a) * 0.025, 0];
-    return { v: [add(scale(d, r * 0.12), s), add(scale(d, r * 0.8), scale(s, 0.4)), add(scale(d, r * 0.8), scale(s, -0.4)), add(scale(d, r * 0.12), scale(s, -1))].map((p) => add(p, [0, 0, th / 2 + 0.005])), m: 'leafDark' as Mat };
-  }));
-  return merge(wound(v, faces), veins);
-}
+/* ---- what the middun's pond weed flowers with ------------------------------------- */
 
 /** A water lily at `at`: five petals opening upward and out, a cup round a yellow heart. */
 function waterLily(at: V3, len: number): Mesh {
@@ -129,78 +79,6 @@ function waterLily(at: V3, len: number): Mesh {
   });
   return merge(...petals, orb(add(at, [0, 0, len * 0.3]), [len * 0.36, len * 0.36, len * 0.26], 6, 3, 'bloom'));
 }
-
-function boggaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = BOGGA_HEAD, B = BOGGA_BODY;
-  // A broad, round hippo's muzzle, well out in front of the eyes.
-  const face = muzzle({ at: 1.32, z: -0.2, r: [0.78, 0.55, 0.58], nose: 0.2, mouth: 0.36 }, n, k);
-  const pad = moved(lilyPad(0.78, lod ? 12 : 9), [0, 0.02, 0.95], 64, -8, 7);
-  // The lily grows out of the pad toward its back, on the right, where it shows from the side.
-  const lily = moved(waterLily([0.14, -0.3, 0.03], 0.36), [0, 0.02, 0.95], 0, -8, 7);
-  // The mud: the lower third of it, to a wavy line along each flank, laid over the trunk.
-  const ring = (y: number): [number, number, number] => {
-    let q = 0;
-    while (q < B.y.length - 2 && B.y[q + 1] < y) q++;
-    const t = (y - B.y[q]) / (B.y[q + 1] - B.y[q]);
-    return [B.z[q] + (B.z[q + 1] - B.z[q]) * t, B.w[q] + (B.w[q + 1] - B.w[q]) * t, B.h[q] + (B.h[q + 1] - B.h[q]) * t];
-  };
-  const rows = lod ? 16 : 11, cols = lod ? 8 : 6;
-  const mv: V3[] = [];
-  const mf: Array<{ i: number[]; m: Mat; want: V3; soft?: boolean }> = [];
-  for (let q = 0; q <= rows; q++) {
-    const y = -1.5 + (2.96 * q) / rows, [z, w, h] = ring(y);
-    // The line the mud comes up to rises and falls along the flank, a splash's width at a time.
-    const edge = -0.02 + 0.22 * Math.sin(y * 3.4 + 0.6);
-    for (let j = 0; j <= cols; j++) {
-      const a = Math.PI + edge + ((Math.PI - 2 * edge) * j) / cols;
-      mv.push([Math.cos(a) * -w * 1.02, y, z + Math.sin(a) * h * 1.02]);
-    }
-  }
-  for (let q = 0; q < rows; q++) for (let j = 0; j < cols; j++) {
-    const i = q * (cols + 1) + j;
-    const p = mv[i];
-    mf.push({ i: [i, i + 1, i + cols + 2, i + cols + 1], m: 'coatDark', want: [p[0], 0, p[2] - 0.2], soft: true });
-  }
-  const mud = wound(mv, mf);
-  // The tail: one broad paddle, flat and a little thick, lifted off the ground behind.
-  const paddle = tube([[0, 0.12, 0], [0, 0, 0], [0, -0.3, 0], [0, -0.62, 0], [0, -0.9, 0], [0, -1.04, 0]], [0.24, 0.24, 0.36, 0.42, 0.34, 0.12], [0.11, 0.11, 0.1, 0.09, 0.08, 0.05], n, 'coatDark', { up: [0, 0, 1], seam: 'start' });
-  const paw = pawMesh(0.3, n, k, 'coatDark');
-  const pieces = quadPieces({
-    n, k,
-    body: { ...B, belly: false },
-    neck: { w: 0.85, h: 0.75, len: 0.35 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.7, 0.47, 0.42], size: 0.3, rim: 0.12 }, blush: [[0.84, 0.36, -0.2], 0.2] },
-    ear: earMesh(0.32, 0.26, n),
-    tail: [paddle],
-    fore: { upper: [0.3, -0.39, 0.36, 0.33], lower: [0, -0.34, 0.32, 0.3], foot: paw, mat: 'coatDark' },
-    hind: { upper: [0.3, -0.42, 0.4, 0.34], lower: [0, -0.42, 0.32, 0.3], foot: paw, mat: 'coatDark' },
-    extras: [
-      { key: 'mud', mesh: mud, bone: 'trunk', bias: 0.003, after: 'body' },
-      { key: 'pad', mesh: pad, bone: 'head', bias: 0.24, after: ['head', 'ear0', 'ear1'] },
-      { key: 'lily', mesh: lily, bone: 'head', bias: 0.25, after: 'pad', thin: true, airy: true },
-    ],
-  });
-  return pieces;
-}
-
-export const BOGGA: Kind = {
-  bones: quadBonesOf(BOGGA_SPEC, (p, a) => {
-    trot(p, a);
-    p.roll += a.go * 4 * Math.sin((a.u % 1) * TAU);
-    // A contented wallow: a slow roll from side to side.
-    if (a.go <= 0) p.roll += 5 * cyc(a.t, 2);
-  }),
-  build: boggaBuild,
-  palette: (coat, mark) => {
-    // The coat a shade lighter than its variant says, so it stands off the grass; its dark is the mud it wallows in.
-    const base = coatPalette(coat, mark, {}, 30), c = lighter(base.coat, 0.18);
-    return { ...base, coat: c, coatLight: lighter(c, 0.2), coatDark: [104, 86, 80], lid: darker(c, 0.42), muzzle: lighter(mix(c, base.mark, 0.5), 0.14), leaf: [156, 212, 128], leafDark: [104, 160, 96], petal: [248, 196, 220], bloom: [250, 224, 120] };
-  },
-  shadow: [2.1, 1.5],
-  stride: 1.0,
-  size: 2.05,
-};
 
 /* ---- the wadd ------------------------------------------------------------------------ */
 

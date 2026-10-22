@@ -2850,7 +2850,7 @@ export function helpText(): string {
       Green: ${mul(ORSE_GREEN / BASE_SPEED)} your pace on the same ground; climbing maxed: ${mul(ORSE_WORKED / ORSE_GREEN)} a green one, up slopes you must walk round.
       Tailor Saddler tack: +${percent((tailor('Saddler')['speed:saddle'] ?? 1) - 1)} mount speed, past the usual ${MAX_MOUNT_SPEED} tiles a second; their yokes do the same for carts
       and wagons. Evolves: ${evolves('orse')}.</td></tr>
-      <tr><td><b>Rowl</b></td><td>Hunts on sight; taming ${SPECIES.rowl.tameLevel}; unruly when tamed. On a settlement: patrols round the totem, kills anything wild inside,
+      <tr><td><b>${SPECIES.rowl.name}</b></td><td>Hunts on sight; taming ${SPECIES.rowl.tameLevel}; unruly when tamed. On a settlement: patrols round the totem, kills anything wild inside,
       carcasses to storage. <b>Fighting</b> sets damage (${mul(trainedHit(TOP_SKILL))} at mastery) and patrol radius (${SPECIES.rowl.workRange} to
       ${SPECIES.rowl.workRange + rangeSteps(TOP_SKILL) * (SPECIES.rowl.rangePerStep ?? RANGE_PER_STEP)} tiles).</td></tr>
       <tr><td><b>${SPECIES.noot.name}</b> (was Noot)</td><td>Beside clay pits; eats root vegetables. Digs <b>clay</b> to the crate. Evolves: ${evolves('noot')}.</td></tr>
@@ -2886,16 +2886,16 @@ export function helpText(): string {
     </ul>
     <h4>The working sorts</h4>
     <ul>
-      <li><b>Bogga</b>: marshes; cuts <b>peat and tar</b>.</li>
+      <li><b>${SPECIES.bogga.name}</b>: marshes; cuts <b>peat and tar</b>.</li>
       <li><b>${SPECIES.sedra.name}</b> (was Sedra): cuts <b>reeds</b>, ${1 + Math.floor(SKILL_TOP / REED_LEVELS)} a cut at ${SKILL_TOP} foraging. Evolves: ${evolves('sedra')}.</li>
       <li><b>${SPECIES.holla.name}</b> (was Holla): carries <b>water</b> from the shore or a well into your barrels. Evolves: ${evolves('holla')}.</li>
       <li><b>Dowse</b>: only over metal; on a settlement <b>reads the ground</b> and marks ore.</li>
-      <li><b>Sappa</b>: <b>plants sprouts</b> where trees were felled.</li>
+      <li><b>${SPECIES.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
       <li><b>${SPECIES.cobbe.name}</b> (was Cobbe): <b>hod</b>: carries what a planned wall (any storey), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip. Evolves: ${evolves('cobbe')}.</li>
       <li><b>${SPECIES.tinka.name}</b> (was Tinka): <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${evolves('tinka')}.</li>
       <li><b>Middun</b>: turns rotting things on the ground into <b>compost</b>.</li>
-      <li><b>Snout</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
+      <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
       <li><b>Bura</b>: no task; panniers hold <b>${SPECIES.bura.pannier} things</b> (open from its menu).</li>
       <li><b>Gorral</b>: saddle mount; climbs ground ${article(SPECIES.orse.name)} ${SPECIES.orse.name} refuses.</li>
       <li><b>Wadd</b>: the only mount that swims deep water with a rider.</li>

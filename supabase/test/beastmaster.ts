@@ -613,7 +613,7 @@ check('the six passives fold on the island to what they fold to in the browser',
 }
 check('Call of the Wild: never a monster', island('WILD:MONSTER') === 'The ogre: untameable.', island('WILD:MONSTER'));
 check(`and no further than ${fx('call_of_the_wild', 'reach')} tiles`, island('WILD:FAR') === 'Too far: max 4 tiles.', island('WILD:FAR'));
-check('and never above your taming', island('WILD:SKILL') === 'The rowl: need 35 taming (have 10).', island('WILD:SKILL'));
+check('and never above your taming', island('WILD:SKILL') === 'The snarepup: need 35 taming (have 10).', island('WILD:SKILL'));
 check('and never without room for it', /already follows you\. Need an empty wildermon crate\.$/.test(island('WILD:ROOM')),
   island('WILD:ROOM'));
 {

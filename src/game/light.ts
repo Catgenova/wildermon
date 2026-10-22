@@ -92,6 +92,8 @@ export const heldBurn = (it: { id: string; ql: number; enchant?: Enchant }): num
 /** What a lit fire throws, by what it is. */
 export const FIRE_REACH = 5;
 export const OVEN_REACH = 4;
+/** The lantern belly of a Glimmoth, Lurewing or Noctilure: a small light to see it by after dark, in tiles. */
+export const MOTH_LIGHT = 1.5;
 export const FORGE_REACH = 6;
 /**
  * And an altar's stars: a small pool of lavender round the stone, steady, and

@@ -9,9 +9,9 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Seventeen with an ability of their own (`AbilityId`): each wears what it
- * does -- a coiled spring of a tail for a pounce, a boulder of a skull for a
- * skull crack, a scythe for an execute, embers, icicles, tendrils, a ring of
+ * Fifteen with an ability of their own (`AbilityId`): each wears what it
+ * does -- a boulder of a skull for a skull crack, a scythe for an execute,
+ * sickles, embers, icicles, tendrils, a ring of
  * shimmer for a ward, a round sucking mouth for a leech.
  */
 
@@ -72,19 +72,6 @@ function kindOf(l: Look): Kind {
 }
 
 const HEAD = (y: number, z: number, r: V3): { c: V3; r: V3 } => ({ c: [0, y, z], r });
-
-/* ---- the lungra: a coiled spring of a tail ------------------------------------------- */
-
-export const LUNGRA = kindOf({
-  spec: { ...pawed({ high: 1.45, len: 2.3, legs: 0.9, neck: 0.38, lean: 35, swing: [26, 44], ears: [20, 30], tail: [0.5, 10, 6] }), nose: 12 },
-  head: HEAD(0.3, 0.18, [0.98, 0.96, 0.88]), body: [2.3, 1.0, 0.9], neck: [0.6, 0.6, 0.38], ear: [0.42, 0.22, 20], legs: [0.9, 0.26, 0.24, 'coatDark'],
-  snout: [1.0, -0.18, [0.38, 0.32, 0.34], 0.11],
-  tail: (n) => merge(root(n), tube(Array.from({ length: 13 }, (_, i): V3 => {
-    const a = (i / 12) * TAU * 2.5;
-    return [Math.cos(a) * 0.16, -0.2 - i * 0.07, Math.sin(a) * 0.16 + 0.05];
-  }), 0.06, 0.06, 5, 'coat')),
-  own: {}, mark: 30, shadow: [1.5, 1.15], stride: 1.55, size: 1.7,
-});
 
 /* ---- the hamma: sickle hooks on its tail --------------------------------------------- */
 
@@ -251,18 +238,6 @@ export const WARDO = kindOf({
   thin: true,
   tail: (n, k) => merge(root(n), taper([[0, -0.2, 0], [0, -0.65, 0.2]], 0.12, 0.04, n, 'coat'), orb([0, -0.7, 0.24], 0.1, n, k, 'crystal')),
   own: { crystal: [200, 186, 250] }, mark: 30, shadow: [1.5, 1.2], stride: 1.4, size: 1.65,
-});
-
-/* ---- the stona: plates of stone on its back ------------------------------------------- */
-
-export const STONA = kindOf({
-  spec: { ...pawed({ high: 1.1, len: 2.3, legs: 0.58, neck: 0.32, lean: 60, swing: [16, 26], ears: [45, 15], tail: [0.35, 4, 2] }), nose: 10 },
-  head: HEAD(0.36, 0.08, [1.04, 0.98, 0.88]), body: [2.3, 1.4, 0.95, 0.04], neck: [0.7, 0.68, 0.32], ear: [0.24, 0.22, 45], legs: [0.58, 0.34, 0.3, 'stoneDark'],
-  snout: [1.0, -0.22, [0.42, 0.3, 0.34], 0.11],
-  back: (n, k) => merge(...[[-0.65, 0], [-0.2, -0.35], [-0.2, 0.35], [0.25, 0], [0.6, -0.3], [0.6, 0.3]].map(([y, x]) =>
-    orb([x, y, 0.72], [0.3, 0.28, 0.14], n, k, 'stone'))),
-  tail: (n) => taper([[0, 0.05, 0], [0, -0.35, 0.02]], 0.16, 0.06, n, 'stoneDark'),
-  own: { stone: [150, 148, 140], stoneDark: [104, 102, 96] }, mark: 30, shadow: [1.65, 1.35], stride: 1.2, size: 1.7,
 });
 
 /* ---- the leecha: a round sucking mouth ------------------------------------------------- */

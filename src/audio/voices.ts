@@ -1,22 +1,31 @@
 import type { BeastAct } from '../game/events';
+import { BADGER_VOICE } from './voice-badger';
 import { BRICK_VOICE } from './voice-brick';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
+import { CRAG_VOICE } from './voice-crag';
 import { FROG_VOICE } from './voice-frog';
+import { TOAD_VOICE } from './voice-toad';
+import { VINE_VOICE } from './voice-vine';
+import { BRIAR_VOICE } from './voice-briar';
 import { GNAW_VOICE } from './voice-gnaw';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
 import { HARE_VOICE } from './voice-hare';
 import { IRON_VOICE } from './voice-iron';
+import { LEMUR_VOICE } from './voice-lemur';
 import { MEND_VOICE } from './voice-mend';
+import { MOTH_VOICE } from './voice-moth';
 import { SLUG_VOICE } from './voice-slug';
 import { PIG_VOICE } from './voice-pig';
+import { PIP_VOICE } from './voice-pip';
 import { REED_VOICE } from './voice-reed';
 import { SAND_VOICE } from './voice-sand';
 import { SKY_VOICE } from './voice-sky';
 import { SNUFF_VOICE } from './voice-snuff';
 import { SPORE_VOICE } from './voice-spore';
+import { ZEPHYR_VOICE } from './voice-zephyr';
 
 /**
  * Wildermon voices.
@@ -70,4 +79,22 @@ export const VOICES: Partial<Record<string, Voice>> = {
   sedra: REED_VOICE,
   // The Puddlehop, the Springcarrier and the Aquavoyager.
   holla: FROG_VOICE,
+  // The Zephlet, the Galecrest and the Tempestwyrm.
+  stona: ZEPHYR_VOICE,
+  // The Mosskip, the Craghopper and the Bastiontoad.
+  bogga: TOAD_VOICE,
+  // The Glimmoth, the Lurewing and the Noctilure.
+  wicka: MOTH_VOICE,
+  // The Pipseed, the Sprigwing and the Arborcrest.
+  sappa: PIP_VOICE,
+  // The Lemlet, the Lemleaf and the Lemorian.
+  sprigga: LEMUR_VOICE,
+  // The Dirtlet, the Tunnelclaw and the Earthrend.
+  snout: BADGER_VOICE,
+  // The Snarepup, the Lashrunner and the Vinehunter.
+  rowl: VINE_VOICE,
+  // The Blushkit, the Briarpounce and the Thornlance.
+  lungra: BRIAR_VOICE,
+  // The Pebbletooth, the Shaleclaw and the Cragjaws.
+  thumpa: CRAG_VOICE,
 };
