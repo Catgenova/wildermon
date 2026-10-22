@@ -131,6 +131,19 @@ jobs:
             from event e left join player p on p.world_id = e.world_id and p.uid = e.uid
            where e.at > now() - interval '3 days' and (e.text ilike '%post%' or e.text ilike '%comes home%' or e.text ilike '%runs wild%')
            order by e.at desc limit 40"
-          ask "chiptails and their keepers" "select c.id, c.species, c.name, c.mode, c.post, coalesce(p.name, '?') as keeper
+          ask "stored wildermon no crate holds" "select c.id, c.species, c.name, coalesce(p.name, '?') as keeper,
+                 round(c.to_x) as x, round(c.to_y) as y, to_char(c.settled_at, 'MM-DD HH24:MI') as settled
             from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
-           where c.species ilike '%chiptail%' or c.species in ('quarrybash', 'monolithump') order by c.mode, p.name limit 60"
+           where c.mode = 'stored'
+             and not exists (select 1 from item i where i.world_id = c.world_id and i.creature = c.id)
+             and not exists (select 1 from placed q where q.world_id = c.world_id and q.creature = c.id)
+           order by p.name, c.id limit 60"
+          ask "where the quarra and mola of the settlement keepers are held" "select c.id, c.species, c.name, c.mode, c.phase, c.post,
+                 round(c.to_x) as x, round(c.to_y) as y, coalesce(p.name, '?') as keeper,
+                 (select i.holder || ':' || coalesce(i.holder_uid::text, '') || ':' || coalesce(i.inside::text, '') from item i
+                   where i.world_id = c.world_id and i.creature = c.id limit 1) as in_item,
+                 (select q.id from placed q where q.world_id = c.world_id and q.creature = c.id limit 1) as in_placed
+            from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
+           where c.keeper is not null and c.species in ('quarra', 'mola') order by p.name, c.id limit 60"
+          ask "where each settlement keeper stands" "select p.name, round(p.x) as x, round(p.y) as y from player p
+           where exists (select 1 from deed d where d.world_id = p.world_id and d.founded_by = p.uid)"
