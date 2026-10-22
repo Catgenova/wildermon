@@ -144,6 +144,8 @@ import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
 import { betterThanCommon, CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
+import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
+import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
 import { MAX_STAND, SWIM_DEPTH } from '../../game/player';
@@ -3244,6 +3246,16 @@ export const NEWS: News[] = [
       'Added: authenticator sign-in on the account page; keeper tools ask for the code when it is on.',
       `Changed: new characters per connection a day: ${NEW_BODIES_A_DAY}.`,
       'Changed: other islands\' players, wildermon, settlements, trades and island talk no longer readable.',
+    ],
+  },
+  {
+    n: 254,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: a skill per evolving line from evolution stage ${PERK_STAGE + 1} (level ${EVOLVE_AT[PERK_STAGE - 1]}): `
+        + `${Object.keys(STAGE_PERKS).filter((id) => SPECIES[id]?.stages).map((id) => `${SPECIES[id].stages![PERK_STAGE - 1].name} ${perkSays(id)}`).join('; ')}.`,
+      `Added: trait slots by evolution stage: ${stageSlots(0)}, ${stageSlots(1)}, ${stageSlots(2)}. Evolving: +${SLOTS_PER_STAGE} trait, a fresh draw by its keeper's husbandry, `
+        + `1 in ${MUTATION_ODDS} a mutation. Wild ones at a later stage: their stage's slots. Evolved ones on the island given their missing slots.`,
     ],
   },
   {

@@ -49,7 +49,7 @@ import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
-import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, TIERS, traitList, traitMul, traitName, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type TraitChannel, type TraitSource } from './traits';
+import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, slotDraw, SLOTS_PER_STAGE, stageSlots, TIERS, traitList, traitMul, traitName, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
@@ -577,7 +577,8 @@ export function stageOf(c: Pick<Creature, 'species' | 'skills'>): 0 | 1 | 2 {
   return level >= EVOLVE_AT[1] ? 2 : level >= EVOLVE_AT[0] ? 1 : 0;
 }
 /** What its stage makes of one channel of its blood. */
-export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitChannel): number => (STAGE_MUL[channel] ?? 1) ** stageOf(c);
+export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitChannel): number =>
+  (STAGE_MUL[channel] ?? 1) ** stageOf(c) * perkBlood(c, channel);
 /**
  * What each stage lets a deed worker do at once, by the stage it is at (`stageOf`): a trade that carries a load
  * between where it gets it and where it goes carries this many loads a trip, and a trade worked in place on things in
@@ -587,9 +588,115 @@ export const evoMul = (c: Pick<Creature, 'species' | 'skills'>, channel: TraitCh
  * its arms or a thing more in its hands is no more gain. The island's `stage_loads`.
  */
 export const STAGE_LOADS = [1, 2, 3] as const;
-/** How many loads a trip, or things a go, it takes at the stage it is at, and a pack on it on a trade that carries loads (`packLoads`). */
+/**
+ * How many loads a trip, or things a go, it takes at the stage it is at, with its line's own third-stage loads
+ * (`perkN`) and a pack on it on a trade that carries loads (`packLoads`).
+ */
 export const stageLoads = (c: Pick<Creature, 'species' | 'skills'> & Partial<Pick<Creature, 'gear' | 'trade'>>): number =>
-  STAGE_LOADS[stageOf(c)] + packLoads(c);
+  STAGE_LOADS[stageOf(c)] + perkN(c, 'loads') + packLoads(c);
+
+/*
+ * A skill of each line's own at its third stage. Asked for: "every evolving line gains one perk of its own at its
+ * third stage ... concrete and modest, with a number". One to a line (`STAGE_PERKS`, by its kind), from the stage at
+ * `PERK_STAGE` on, over what every stage gives (`STAGE_MUL`, `STAGE_LOADS`):
+ *
+ *   more   +n to what one action of its trade brings in, a worker's gather (`perkMore`)
+ *   loads  +n loads a trip or things a cycle (`stageLoads`)
+ *   rest   its ability's cooldown −n (`abilityRestOf`)
+ *   stun   its stun n seconds longer (`styleBlow`)
+ *   wool   +n wool a shearing, by you or a worker
+ *   blood  one channel of its blood ×n (`evoMul`)
+ *
+ * The island's `species_def.perk`, `perk_n` and `perk_channel`, read by `perk_n(c, kind)` and `evo_mul`.
+ */
+export type PerkKind = 'more' | 'loads' | 'rest' | 'stun' | 'wool' | 'blood';
+export interface StagePerk {
+  kind: PerkKind;
+  n: number;
+  /** The channel a `blood` one is on. */
+  channel?: TraitChannel;
+  /** What it is more of, as a label: "reeds per cut", "blow". */
+  what?: string;
+}
+/** The stage (`stageOf`) a line's own skill comes in at: its third. */
+export const PERK_STAGE = 2;
+export const STAGE_PERKS: Record<string, StagePerk> = {
+  rabba: { kind: 'more', n: 1, what: 'finds per forage' },
+  vola: { kind: 'more', n: 1, what: 'finds per botanize' },
+  bevere: { kind: 'more', n: 1, what: 'logs per tree felled' },
+  crawler: { kind: 'more', n: 1, what: 'sand per dig' },
+  noot: { kind: 'more', n: 1, what: 'clay per dig' },
+  quarra: { kind: 'more', n: 1, what: 'stone per cut' },
+  mola: { kind: 'more', n: 1, what: 'ore per action' },
+  seavic: { kind: 'more', n: 1, what: 'produce per harvest' },
+  bogga: { kind: 'more', n: 1, what: 'peat or tar per cut' },
+  sedra: { kind: 'more', n: 1, what: 'reeds per cut' },
+  sprigga: { kind: 'more', n: 1, what: 'sprouts per pick' },
+  embra: { kind: 'loads', n: 1, what: 'fuel per trip' },
+  holla: { kind: 'loads', n: 1, what: 'buckets of water per trip' },
+  sappa: { kind: 'loads', n: 1, what: 'sprouts per trip' },
+  cobbe: { kind: 'loads', n: 1, what: 'pieces per trip' },
+  tinka: { kind: 'loads', n: 1, what: 'items mended per cycle' },
+  wicka: { kind: 'loads', n: 1, what: 'candles per trip' },
+  woola: { kind: 'wool', n: 1, what: 'wool per shearing' },
+  orse: { kind: 'blood', n: 1.05, channel: 'speed', what: 'speed' },
+  roxxen: { kind: 'blood', n: 1.1, channel: 'haul', what: 'hauling' },
+  rowl: { kind: 'blood', n: 1.1, channel: 'tough', what: 'blow' },
+  warda: { kind: 'blood', n: 1.1, channel: 'sight', what: 'sight' },
+  snout: { kind: 'blood', n: 1.2, channel: 'range', what: 'work range' },
+  thumpa: { kind: 'stun', n: 1 },
+  lungra: { kind: 'rest', n: 0.2 },
+  stona: { kind: 'rest', n: 0.2 },
+  whispet: { kind: 'rest', n: 0.2 },
+};
+/** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
+export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
+  (stageOf(c) >= PERK_STAGE ? STAGE_PERKS[c.species] ?? null : null);
+/** What its line's skill of a kind comes to now: its number at `PERK_STAGE` and over, nought below it or of another kind. */
+export function perkN(c: Pick<Creature, 'species' | 'skills'>, kind: Exclude<PerkKind, 'blood'>): number {
+  const p = stagePerk(c);
+  return p && p.kind === kind ? p.n : 0;
+}
+/** What its line's skill makes of one channel of its blood: its `blood` one's number, or one. */
+export function perkBlood(c: Pick<Creature, 'species' | 'skills'>, channel: TraitChannel): number {
+  const p = stagePerk(c);
+  return p && p.kind === 'blood' && p.channel === channel ? p.n : 1;
+}
+/** One action's gather, with its line's `more` on it, but for seed carried off a field: the island's `perk_more`. */
+export function perkMore<T extends { id: string; count: number }>(c: Pick<Creature, 'species' | 'skills'>, got: T | null): T | null {
+  const n = perkN(c, 'more');
+  if (got && n > 0 && !CROP_BY_SEED.has(got.id)) got.count += n;
+  return got;
+}
+/** A line's own skill, in words, for its stage's words, its card and the Field guide: "reeds per cut +1". */
+export function perkSays(species: string): string {
+  const p = STAGE_PERKS[species];
+  const def = SPECIES[species];
+  if (!p || !def) return '';
+  if (p.kind === 'blood') return `${p.what ?? channelOf(p.channel!)?.label ?? p.channel} +${percent(p.n - 1)}`;
+  if (p.kind === 'rest') {
+    const id = def.ability!;
+    return `${abilityName(id)} cooldown −${percent(p.n)} (${abilityRest(id)} to ${+(abilityRest(id) * (1 - p.n)).toFixed(1)} seconds)`;
+  }
+  if (p.kind === 'stun') return `stun +${p.n} ${p.n === 1 ? 'second' : 'seconds'} (${STUN_SECS} to ${STUN_SECS + p.n})`;
+  return `${p.what} +${p.n}`;
+}
+/** Its line's skill as a label with the stage it comes in at: "Stage 3 skill: reeds per cut +1". */
+export const perkLine = (species: string): string => (STAGE_PERKS[species] ? `Stage ${PERK_STAGE + 1} skill: ${perkSays(species)}` : '');
+
+/**
+ * A trait for each slot its stages from `from` to `to` open (`stageSlots`), each drawn by `slotDraw`, up to the slots it
+ * has at `to`: one that evolves gains one trait a stage, and one put out in the wild at a later stage has that stage's.
+ * Where each came from goes into its pedigree, on one that has one. The island's `open_slots`.
+ */
+export function openSlots(c: Pick<Creature, 'traits' | 'pedigree'>, from: number, to: number, husbandry: number, rand: () => number): void {
+  for (let n = 0; n < (to - from) * SLOTS_PER_STAGE && c.traits.length < stageSlots(to); n++) {
+    const got = slotDraw(c.traits, husbandry, rand);
+    if (!got) return;
+    c.traits = [...c.traits, got.id];
+    if (c.pedigree) c.pedigree.from = { ...c.pedigree.from, [got.id]: got.from };
+  }
+}
 /**
  * A wildermon pack's loads a trip (`PACK_LOADS`, `wildgear.ts`), for a trade that carries loads (`LOAD_TRADES`) and a
  * pack of its size. The island's `pack_loads_of`, in `stage_loads`.
@@ -1026,6 +1133,8 @@ export const WARD_SKIN = 0.1;
 /** Seconds between goes at an ability. */
 export const abilityRest = (id: AbilityId): number =>
   (id === 'frost_breath' ? FROST_BREATH_REST : id === 'fear' ? FEAR_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
+/** Seconds between one wildermon's goes at its ability: its line's third-stage `rest` off it (`perkN`). The island's `beast_ability`. */
+export const abilityRestOf = (c: Pick<Creature, 'species' | 'skills'>, id: AbilityId): number => abilityRest(id) * (1 - perkN(c, 'rest'));
 /** A number an ability is used at: its spell's own. */
 export const abilityFx = (id: AbilityId, k: string): number => (id === 'fear' ? ({ secs: FEAR_SECS } as Record<string, number>)[k] ?? 0 : CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0);
 /** An ability's name: its spell's. */
@@ -1094,13 +1203,17 @@ export function stageSays(stage: number, task = true, fleece = false): string {
  * The words of a kind that evolves, at each stage: what it does, what its level is, and what each stage is and adds,
  * every number read off the rule it describes.
  */
-function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null): string {
+function lineSays(names: readonly [string, string, string], job: string, level: string, stage: 0 | 1 | 2, task: boolean, fleece: boolean, kind: GatherKind | null = null, id = ''): string {
   if (stage === 0) return `${job} ${level} Evolves at level ${EVOLVE_AT[0]}: ${names[1]}.`;
   const next = stage === 1 ? ` Evolves at level ${EVOLVE_AT[1]}: ${names[2]}.` : '';
-  // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of.
-  const work = stageWorkSays(kind, STAGE_LOADS[stage]);
+  // And what its stage lets it do at once (`STAGE_LOADS`), for a trade that has something to do more of, its line's
+  // own third-stage loads with it (`stageLoads`).
+  const own = stage >= PERK_STAGE && STAGE_PERKS[id]?.kind === 'loads' ? STAGE_PERKS[id].n : 0;
+  const work = stageWorkSays(kind, STAGE_LOADS[stage] + own);
   const more = work ? ` It ${work[0]} ${work[1]} (${names[0]}: ${STAGE_LOADS[0]}).` : '';
-  return `Evolution stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more} ${job}${next}`;
+  // And its line's own skill, at the stage it comes in at (`STAGE_PERKS`).
+  const skill = stage >= PERK_STAGE && STAGE_PERKS[id] ? ` ${perkLine(id)}.` : '';
+  return `Evolution stage ${stage + 1}, level ${EVOLVE_AT[stage - 1]}+. Over ${article(names[0])} ${names[0]}: ${stageSays(stage, task, fleece)}.${more}${skill} ${job}${next}`;
 }
 
 /** Seconds between chances for an unruly companion to turn on its keeper. */
@@ -1122,7 +1235,7 @@ function sayLine(id: string, job: string, level: string): void {
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
     { name: names[1], description: lineSays(names, job, level, 1, task, fleece, d.gathers) },
-    { name: names[2], description: lineSays(names, job, level, 2, task, fleece, d.gathers) },
+    { name: names[2], description: lineSays(names, job, level, 2, task, fleece, d.gathers, id) },
   ];
 }
 
@@ -5782,6 +5895,8 @@ export class Creatures {
       const [lo, hi] = stageLevels(stage);
       c.skills[skill] = lo + game.rand() * (hi - lo);
       c.name = kindName(c);
+      // And the trait slots its stage has opened, each drawn as at an evolution, by nobody's husbandry (`openSlots`).
+      openSlots(c, 0, stage, 0, game.rand);
       c.health = maxHealth(c, def);
     }
     // And now and then in its colour form, or a size form, each off a roll of its own (`wildFormRoll`, `wild_form_put`).
@@ -7689,7 +7804,8 @@ export class Creatures {
       } else {
         // A full fleece is three, a full crop of feathers six, and quality follows what was there.
         const yields = def.shearYield ?? 'wool';
-        const n = Math.max(1, Math.round(o.fleece * (yields === 'wool' ? SHEAR_WOOL : SHEAR_FEATHERS)));
+        // And its line's third-stage `wool` (`perkN`).
+        const n = Math.max(1, Math.round(o.fleece * (yields === 'wool' ? SHEAR_WOOL : SHEAR_FEATHERS))) + perkN(o, 'wool');
         const ql = Math.max(1, Math.min(100, 15 + o.fleece * 45 + skill * 0.4));
         this.intoStores(game, { uid: game.inventory.nextUid++, id: yields, ql, dmg: 0, count: n }, null, x, y);
       }
@@ -8477,8 +8593,11 @@ export class Creatures {
     if (creatureLevel(c) > before) game.logMsg(`${c.name}: level ${creatureLevel(c)}.`, 'skill');
     // And evolves, at a level a stage begins at: what it can take grows with it, as full as it was (`EVOLVE_AT`).
     const stage = stageOf(c);
-    if (stage > stageOf({ species: c.species, skills: { ...c.skills, [id]: v } })) {
+    const was = stageOf({ species: c.species, skills: { ...c.skills, [id]: v } });
+    if (stage > was) {
       c.health *= STAGE_MUL.hardy ?? 1;
+      // And a trait for each slot the stage opens (`stageSlots`), by its keeper's husbandry: you, for one of yours.
+      openSlots(c, was, stage, c.mode === 'wild' ? 0 : game.skills.get('animal_husbandry'), game.rand);
       if (c.mode !== 'wild') game.logMsg(`${c.name} evolved: ${kindName(c)}.`, 'skill');
       // And one nobody has named is called what it has become (`kindNamed`).
       if (kindNamed(c)) c.name = kindName(c);
@@ -9180,7 +9299,8 @@ export class Creatures {
     if (c.state === 'forage') {
       if (game.time >= c.until) {
         // What it got goes into its arms with whatever it has gathered already this trip (`stageLoads`).
-        const got = kind ? this.finishForage(game, c, kind) : null;
+        // And its line's third-stage `more` on it (`perkMore`).
+        const got = kind ? perkMore(c, this.finishForage(game, c, kind)) : null;
         if (got) {
           if (c.carrying) (c.laden ??= []).push(c.carrying);
           c.carrying = got;
@@ -9614,7 +9734,7 @@ export class Creatures {
         break;
       }
     }
-    putMark(game, a, 'ability', 1, abilityRest(id));
+    putMark(game, a, 'ability', 1, abilityRestOf(a, id));
     this.acted(a, 'cast', game.time);
     if (a.mode === 'active') game.logMsg(`${a.name} uses ${abilityName(id)}.`, 'fight');
     return spent;
@@ -9641,7 +9761,7 @@ export class Creatures {
       e.windup = 0;
       e.cooldown = Math.max(0, e.cooldown) + abilityFx(id, 'back');
     }
-    putMark(game, c, 'ability', 1, abilityRest(id));
+    putMark(game, c, 'ability', 1, abilityRestOf(c, id));
     this.acted(c, 'cast', game.time);
     if (c.mode === 'active') game.logMsg(`${c.name} uses ${abilityName(id)}.`, 'fight');
     return true;
@@ -9670,7 +9790,8 @@ export class Creatures {
       a.blows += 1;
       // As a Concussion stuns it (`stun` in `enchanting.ts`).
       if (a.blows % HEAVY_EVERY === 0) {
-        t.stunUntil = Math.max(t.stunUntil ?? 0, game.time + STUN_SECS);
+        // And its line's third-stage `stun` longer (`perkN`).
+        t.stunUntil = Math.max(t.stunUntil ?? 0, game.time + STUN_SECS + perkN(a, 'stun'));
         t.windup = 0;
         t.moving = false;
       }

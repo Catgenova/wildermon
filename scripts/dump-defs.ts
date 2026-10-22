@@ -36,7 +36,7 @@ import { FAMILY_OF, KNACK_BONUS, KNACK_BY_LEARNING, KNACK_CAP, KNACK_GO, KNACK_H
 import { KEPT_BEST, NUTRIENT_DECAY, TABLE_BEST } from '../src/game/nutrition';
 import { SPECIES, WILD_SPECIES, MONSTERS, MONSTER_CAP, MONSTER_SHARE, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO } from '../src/game/creatures';
-import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
+import { CHANNELS, TRAITS, WILD_ODDS, TRAIT_SLOTS, SLOTS_PER_STAGE, FIGHT_SHARE, GRADE_STEP, LAMP_TIER_ODDS, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP, TIERS } from '../src/game/traits';
 import { BOARD_TOP } from '../src/game/boards';
 import { CRAFT_HEAD, CRAFT_REACH } from '../src/game/recipes';
 import { MILK_LITRES, MILK_READY, WHEY_BUCKET, WHEY_FEED } from '../src/game/dairy';
@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
+import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -553,6 +553,10 @@ out.push(`alter table species_def add column if not exists learns text;`);
 out.push(`alter table species_def add column if not exists learns_by text;`);
 /* What a kind that evolves is called at each stage after its first (\`SpeciesDef.stages\`). */
 out.push(`alter table species_def add column if not exists stages text[];`);
+/* A line's own skill at its third stage (\`STAGE_PERKS\`): what kind of skill, its number, and the channel a blood one is on. */
+out.push(`alter table species_def add column if not exists perk text;`);
+out.push(`alter table species_def add column if not exists perk_n double precision;`);
+out.push(`alter table species_def add column if not exists perk_channel text;`);
 /* Its favourite food, the first of its diet (\`favouriteOf\`), which a meal's learning doubles for. */
 out.push(`alter table species_def add column if not exists favourite text;`);
 /* What a kind used to be called, which a carcass from before can still say (\`SpeciesDef.was\`). */
@@ -1307,6 +1311,8 @@ for (const d of Object.values(SPECIES) as unknown as S[]) {
   if (learns) out.push(`update species_def set learns = ${q(learns.skill)}, learns_by = ${q(learns.by)} where id = ${q(d.id)};`);
   const stages = (d as unknown as { stages?: Array<{ name: string }> }).stages;
   if (stages) out.push(`update species_def set stages = array[${stages.map((x) => q(x.name)).join(', ')}]::text[] where id = ${q(d.id)};`);
+  const perk = STAGE_PERKS[d.id];
+  if (perk) out.push(`update species_def set perk = ${q(perk.kind)}, perk_n = ${q(perk.n)}, perk_channel = ${perk.channel ? q(perk.channel) : 'null'} where id = ${q(d.id)};`);
   const was = (d as unknown as { was?: string[] }).was;
   if (was) out.push(`update species_def set was = array[${was.map((x) => q(x)).join(', ')}]::text[] where id = ${q(d.id)};`);
   const season = (d as unknown as { season?: WildSeason }).season;
@@ -1465,6 +1471,7 @@ out.push(`create or replace function region_middle(p_region int) returns double 
 out.push(`create or replace function monster_isle(p_species text) returns int language sql immutable as $fn$ select case p_species ${REGIONS.flatMap((R, i) => (R.lair ?? []).map((id) => `when ${q(id)} then ${i} `)).join('')}else null end $fn$;`);
 out.push(`create or replace function region_treeless(p_region int) returns boolean language sql immutable as $fn$ select coalesce(p_region = any(array[${REGIONS.map((R, i) => (R.treeless ? i : -1)).filter((i) => i >= 0).join(', ') || '-1'}]::int[]), false) $fn$;`);
 out.push(`create or replace function trait_slots() returns int language sql immutable as $fn$ select ${q(TRAIT_SLOTS)} $fn$;`);
+out.push(`create or replace function slots_per_stage() returns int language sql immutable as $fn$ select ${q(SLOTS_PER_STAGE)} $fn$;`);
 /* And the share of a wild roll that is fighting blood, which then rolls its own grade. */
 out.push(`create or replace function fight_share() returns double precision language sql immutable as $fn$ select ${q(FIGHT_SHARE)}::double precision $fn$;`);
 /*
@@ -1636,7 +1643,7 @@ for (const [fn, v] of [
   ['out_every', OUT_EVERY], ['learns_gain_tended', LEARNS_GAIN.tended], ['learns_gain_spar', LEARNS_GAIN.spar],
   ['learns_gain_out', LEARNS_GAIN.out], ['learns_gain_dark', LEARNS_GAIN.dark], ['learns_gain_pull', LEARNS_GAIN.pull],
   /* Evolving: the levels a kind that evolves does so at, and what each stage multiplies over the one before. */
-  ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]],
+  ['evolve_at_1', EVOLVE_AT[0]], ['evolve_at_2', EVOLVE_AT[1]], ['perk_stage', PERK_STAGE],
   ['stage_mul_hardy', STAGE_MUL.hardy ?? 1], ['stage_mul_tough', STAGE_MUL.tough ?? 1],
   ['stage_mul_speed', STAGE_MUL.speed ?? 1], ['stage_mul_work', STAGE_MUL.work ?? 1], ['stage_mul_grow', STAGE_MUL.grow ?? 1],
   /* And one put out in the wild already evolved: one time in how many at its second stage and at its third, and the

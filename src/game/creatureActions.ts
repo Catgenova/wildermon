@@ -2,6 +2,7 @@ import { DARK_SHOT, DARK_SWING, SOUL_GAIN, TAME_HEAD, tryGain } from './learn';
 import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting';
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
+import { perkN } from './creatures';
 import { fedOn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
@@ -522,7 +523,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       // A full fleece is three, a half-grown one is one, and quality follows the fleece.
       const yields = SPECIES[c.species].shearYield ?? 'wool';
       // And more of it for a perk on what comes off (a Tailor's Full Fleece), as the island has it.
-      const n = Math.max(1, Math.round(c.fleece * (yields === 'wool' ? SHEAR_WOOL : SHEAR_FEATHERS))) + Math.floor(g.perk(`plus:${yields}`, 0));
+      // And its line's own third-stage `wool` (`perkN`).
+      const n = Math.max(1, Math.round(c.fleece * (yields === 'wool' ? SHEAR_WOOL : SHEAR_FEATHERS))) + Math.floor(g.perk(`plus:${yields}`, 0)) + perkN(c, 'wool');
       const ql = Math.max(1, Math.min(100, 15 + c.fleece * 45 + g.skills.get('tailoring') * 0.4));
       const wool = g.gather(yields, { count: n, ql });
       c.fleece = 0;

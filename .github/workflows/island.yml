@@ -3648,6 +3648,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/stagework.mjs --log-level=error
           node node_modules/.cache/stagework.mjs
 
+      - name: A skill of each line's own at its third stage, and a trait slot more at each stage
+        run: |
+          # Asked for: "every evolving line gains one perk of its own at its
+          # third stage", and "reaching stage 2 opens one more trait slot, and
+          # stage 3 one more". STAGE_PERKS the same table on both sides and
+          # nothing of it below the third stage; a reed cutter, a water
+          # carrier, a Stoneskin's rest, a stun, a shearing and a blow at it;
+          # the words; slots 3, 4 and 5, a trait drawn at each evolution, in
+          # the wild at a later stage, and the once-over of the island.
+          npx esbuild supabase/test/stagethree.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/stagethree.mjs --log-level=error
+          node node_modules/.cache/stagethree.mjs
+
       - name: Deed workers tire, rest, and sleep in a bed of their size
         run: |
           # TIRE_GOES goes and no more, REST_FOR where it stands, BED_REST of it

@@ -1,6 +1,7 @@
 import { clockLeft } from '../../game/boons';
 import { gearTags } from '../../game/wildgearActions';
 import { DAY_SECONDS } from '../../game/game';
+import { perkLine, stagePerk } from '../../game/creatures';
 import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
 import { CHANNELS, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
@@ -605,6 +606,8 @@ export class WildermonPanel {
         const toNext = SKILL_STEP - (taskSkill(c, def) % SKILL_STEP);
         parts.push(`Range ${workRangeOf(c, def)} tiles (+${def.rangePerStep ?? RANGE_PER_STEP} in ${toNext.toFixed(1)} skill)`);
       }
+      // Its line's own skill, once it is at the stage that has it (`STAGE_PERKS`).
+      if (stagePerk(c)) parts.push(perkLine(c.species));
       // By the skill's own name, as the creature's note and your skills window say it, not its id.
       const skills = Object.entries(c.skills).map(([id, v]) => `${SKILL_BY_ID.get(id)?.name ?? id} ${v.toFixed(2)}`);
       parts.push(...skills);

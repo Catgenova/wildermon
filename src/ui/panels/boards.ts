@@ -3,7 +3,7 @@ import { MAX_DEED_LEVEL, type Game } from '../../game/game';
 import { BOARD_TOP, bestSkill } from '../../game/boards';
 import { SPECIES } from '../../game/creatures';
 import { SKILL_DEFS, type SkillDef } from '../../game/skills';
-import { GRADE_STEP, TIERS, TRAIT_SLOTS } from '../../game/traits';
+import { GRADE_STEP, stageSlots, TIERS } from '../../game/traits';
 
 /** How often the window asks the island again while it is open, in seconds. */
 export const REFRESH = 30;
@@ -13,8 +13,10 @@ type Tab = 'skills' | 'wildermon' | 'settlements';
 /** A figure as a board prints it: a whole number bare, anything else to one place. */
 export const figure = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
+/** The most trait slots a wildermon has: at its third evolution stage (`stageSlots`). */
+export const SLOTS_MOST = stageSlots(2);
 /** The most a wildermon can score: every trait it carries at the top grade. */
-export const BRED_MAX = TRAIT_SLOTS * GRADE_STEP[TIERS[TIERS.length - 1]];
+export const BRED_MAX = SLOTS_MOST * GRADE_STEP[TIERS[TIERS.length - 1]];
 
 /**
  * What each board ranks by: the line the window prints over it, which the
@@ -24,7 +26,7 @@ export const BRED_MAX = TRAIT_SLOTS * GRADE_STEP[TIERS[TIERS.length - 1]];
 export const BOARD_RULES: Record<Tab, string> = {
   skills: `Top ${BOARD_TOP} per skill, by level. Only players who raised the skill are ranked.`,
   wildermon: `Top ${BOARD_TOP} tamed wildermon by trait total, points per trait rarity: `
-    + `${TIERS.map((t) => `${t} ${figure(GRADE_STEP[t])}`).join(', ')}; max ${figure(BRED_MAX)} for ${TRAIT_SLOTS} traits. `
+    + `${TIERS.map((t) => `${t} ${figure(GRADE_STEP[t])}`).join(', ')}; max ${figure(BRED_MAX)} for ${SLOTS_MOST} traits. `
     + 'Tie: higher level first. Wild not ranked; traits not named.',
   settlements: `Top ${BOARD_TOP} settlements by level (1 to ${MAX_DEED_LEVEL}), then citizens (founder and member list), `
     + 'then age, oldest first.',

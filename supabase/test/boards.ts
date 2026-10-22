@@ -33,7 +33,7 @@
 import { execFileSync } from 'node:child_process';
 import { BOARD_TOP, bredScore } from '../../src/game/boards';
 import { MAX_DEED_LEVEL } from '../../src/game/game';
-import { GRADE_STEP, TIERS, TRAIT_SLOTS } from '../../src/game/traits';
+import { GRADE_STEP, stageSlots, TIERS } from '../../src/game/traits';
 import { BOARD_RULES, BRED_MAX, figure } from '../../src/ui/panels/boards';
 
 const psql = (sql: string): string =>
@@ -159,7 +159,7 @@ ${ask('CAP', ANN, "->'skills'->'mining'")}
 select 'STEPS|' || string_agg(tier || '=' || grade_step(tier), ',' order by ord) from tier_odds;
 select 'TOP|' || board_top();
 select 'MAXLEVEL|' || max_deed_level();
-select 'SLOTS|' || trait_slots();
+select 'SLOTS|' || stage_slots(2);
 select 'TRAITS|' || json_agg(json_build_array(id, name, tier))::text from trait_def;
 rollback;
 `);
@@ -267,8 +267,8 @@ check('and the wildermon line prints each of them as the island counts it',
   TIERS.every((t) => BOARD_RULES.wildermon.includes(`${t} ${figure(Number(steps.get(t)))}`)), BOARD_RULES.wildermon);
 const slots = Number(said('SLOTS'));
 const most = slots * Number(steps.get(TIERS[TIERS.length - 1]));
-check('and the most a wildermon can score is its trait slots at the top grade',
-  slots === TRAIT_SLOTS && most === BRED_MAX && BOARD_RULES.wildermon.includes(`max ${figure(most)} for ${slots} traits`),
+check('and the most a wildermon can score is its third stage\'s trait slots at the top grade',
+  slots === stageSlots(2) && most === BRED_MAX && BOARD_RULES.wildermon.includes(`max ${figure(most)} for ${slots} traits`),
   `${figure(most)} of ${slots} slots`);
 const top = Number(said('TOP'));
 check('every line gives the board the size the island cuts it at',

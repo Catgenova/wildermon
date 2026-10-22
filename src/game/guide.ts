@@ -49,6 +49,8 @@ import { WOUND_KINDS } from './wounds';
 import { article, capital, listed, percent, timeWords } from './words';
 import { lairOf, REGIONS } from '../world/regions';
 import { FORM_IDS, formGives, formKey, formName, formOdds, formOfKey } from './wildforms';
+import { PERK_STAGE, STAGE_PERKS } from './creatures';
+import { stageSlots } from './traits';
 
 export type GuideMark = 'seen' | 'tamed' | 'bred';
 export const GUIDE_MARKS: GuideMark[] = ['seen', 'tamed', 'bred'];
@@ -370,7 +372,9 @@ function keeping(def: SpeciesDef): string[] {
 
 /** What it is like to meet: its body, what it does when struck, what its blows leave, and what bites it hardest. At a stage, its stage's body (`STAGE_MUL`). */
 function fighting(def: SpeciesDef, stage = 0): string[] {
-  const at = (ch: 'hardy' | 'tough' | 'speed'): number => (STAGE_MUL[ch] ?? 1) ** stage;
+  // And its line's own skill on one of them, at the stage that has it (`perkBlood`).
+  const own = stage >= PERK_STAGE ? STAGE_PERKS[def.id] : undefined;
+  const at = (ch: 'hardy' | 'tough' | 'speed'): number => (STAGE_MUL[ch] ?? 1) ** stage * (own?.kind === 'blood' && own.channel === ch ? own.n : 1);
   const health = Math.round(def.health * at('hardy'));
   const blow = +(def.attack * at('tough')).toFixed(1);
   const speed = +(def.speed * at('speed')).toFixed(2);
@@ -407,6 +411,8 @@ function staging(def: SpeciesDef, stage: number): string[] {
   const lines = [`Stage ${stage + 1} of ${(def.stages?.length ?? 0) + 1}: ${def.name} at level ${EVOLVE_AT[stage - 1]}`];
   if (st.description) lines.push(st.description);
   lines.push(`Over the stage before: health, blow and speed ×${STAGE_MUL.hardy}, task speed ×${STAGE_MUL.work}`);
+  // The trait slots it has at this stage (`stageSlots`). Its line's own skill, at the stage that has one, is in its words.
+  lines.push(`Trait slots: ${stageSlots(stage)} (stage 1: ${stageSlots(0)})`);
   lines.push(`Wild: 1 in ${WILD_STAGE_ODDS[stage - 1]} ${def.name.toLowerCase()} spawns at this stage; taming ${def.tameLevel + WILD_STAGE_TAME * stage}, `
     + `base chance ${percent(def.tameChance * WILD_STAGE_CHANCE ** stage)}`);
   return lines;

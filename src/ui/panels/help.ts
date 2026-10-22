@@ -55,6 +55,7 @@ import { CREATURE_CRATE } from '../../game/creaturecrate';
 import { BARDING_CUT, gearBill, gearSays, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZE_BILL, GEAR_SIZES, GEAR_SLOTS, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
+import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
@@ -132,7 +133,7 @@ import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, 
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
   betterThanCommon, CHANNELS as BLOOD, depthMul, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, LAMP_TIER_ODDS, lineSaid, MUTATION_ODDS, pct as cardPct,
-  PEDIGREE_MOST, PEDIGREE_STEP, TIERS, TRAIT_SLOTS, TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier,
+  PEDIGREE_MOST, PEDIGREE_STEP, TIERS, TRAIT_SLOTS, TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier, SLOTS_PER_STAGE, stageSlots,
 } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { CLEAR_OF_BUILDINGS, CONCRETE_PER_STEP, LIFT_PER_MASONRY, POOL_FILL } from '../../game/foundations';
@@ -927,7 +928,7 @@ function artifactHelp(): string {
       <li>${from('use_ancient_file')}: 1 in ${FILE_RARITY_ODDS}: one rarity step up (${listed(RARITIES.map((r) => r.name || 'ordinary'))}).
       Every blood figure over an ordinary one's: ${listed(RARITIES.slice(1).map((r) => cardPct(r.blood)))} at ${listed(RARITIES.slice(1).map((r) => r.name))}.
       Not on ${article(RARITIES[RARITIES.length - 1].name)} ${RARITIES[RARITIES.length - 1].name} one.</li>
-      <li>${from('use_ancient_lamp')}: replaces its lowest-rarity trait (random among ties of its ${TRAIT_SLOTS}) with a random trait it does not carry
+      <li>${from('use_ancient_lamp')}: replaces its lowest-rarity trait (random among ties) with a random trait it does not carry
       (the outgoing one included), same rarity; 1 in ${LAMP_TIER_ODDS}: the rarity above (${listed(TIERS.slice(1).map((t, i) => `${TIERS[i]} to ${t}`))}).
       Never lower; at ${top}: another ${top} trait. Fewer than ${TRAIT_SLOTS} traits: fills the empty slot with ${article(TIERS[0])} ${TIERS[0]} trait,
       1 in ${LAMP_TIER_ODDS} ${article(TIERS[1])} ${TIERS[1]} one. Fighting blood: ${percent(FIGHT_SHARE)} chance, as in the wild.</li>
@@ -3018,6 +3019,11 @@ export function helpText(): string {
       from the settlement stores for each).</li>
       <li>A cycle still teaches one cycle's gain. No multiples: keeping watch, hunting, pruning, stump digging, scrubbing, tending hives, reading the ground, charging smelters and kilns, brewing.</li>
     </ul>
+    <h4>Stage ${PERK_STAGE + 1} skills</h4>
+    <ul>
+      <li>From evolution stage ${PERK_STAGE + 1} (level ${EVOLVE_AT[PERK_STAGE - 1]}), one skill per line, on top of its stage:</li>
+      ${Object.keys(STAGE_PERKS).filter((id) => SPECIES[id]?.stages).map((id) => `<li>${SPECIES[id].stages![PERK_STAGE - 1].name} (${SPECIES[id].name}): ${perkSays(id)}.</li>`).join('')}
+    </ul>
     <h4>Rest and wildermon beds</h4>
     <ul>
       <li>${TIRE_GOES} cycles at its task (one cycle = one gain) before it tires; extra loads cost nothing more.</li>
@@ -3171,7 +3177,9 @@ export function helpText(): string {
     <h3>Blood, the brush and breeding</h3>
     <h4>Traits</h4>
     <ul>
-      <li>Every wildermon: <b>male</b> or <b>female</b>, <b>${TRAIT_SLOTS} traits</b>.</li>
+      <li>Every wildermon: <b>male</b> or <b>female</b>, <b>${TRAIT_SLOTS} traits</b>; an evolving kind: ${EVOLVE_AT.map((lv, i) => `${stageSlots(i + 1)} from level ${lv}`).join(', ')}.</li>
+      <li>Each evolution: +${SLOTS_PER_STAGE} trait, a fresh draw (wild table, weighted by its keeper's husbandry), or 1 in ${MUTATION_ODDS} a mutation
+      (one rarity above its best trait). Wild ones at a later stage: their stage's slots. Young: ${TRAIT_SLOTS} at birth.</li>
       <li>${TIERS.length} rarities: ${listed(TIERS.map((t) => `<b>${t}</b>`))}. Common: ${percent(TIER_SPAN.common[0])} to ${percent(TIER_SPAN.common[1])} on its number;
       fantastic: ${percent(TIER_SPAN.fantastic[0])} to ${percent(TIER_SPAN.fantastic[1])}.</li>
       <li>What traits change: <b>move</b> speed, <b>work</b> speed, <b>skill</b> gain, <b>carry and pull</b>, <b>yield</b>, <b>food</b> needed, <b>health</b>, <b>hit</b> damage,

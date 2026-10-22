@@ -804,3 +804,29 @@ export function rekindle(traits: string[], rand: () => number): { traits: string
   out[slot] = now;
   return { traits: out, did: { slot, was: traits[slot] ?? null, from, now, tier, up: !!above } };
 }
+
+// ---- Slots by stage ----
+
+/**
+ * Trait slots by evolution stage. Asked for: "reaching stage 2 opens one more trait slot, and stage 3 one more". A
+ * wildermon of a kind that evolves has `TRAIT_SLOTS` at its first stage and `SLOTS_PER_STAGE` more at each stage after
+ * it; one of a kind that does not, `TRAIT_SLOTS`. The island's `slots_per_stage` and `stage_slots`.
+ */
+export const SLOTS_PER_STAGE = 1;
+/** The trait slots at a stage (`stageOf`): nought, one or two. */
+export const stageSlots = (stage: number): number => TRAIT_SLOTS + SLOTS_PER_STAGE * Math.max(0, stage);
+
+/**
+ * The trait for a slot a stage opens: drawn as a young one's draw is topped up, a fresh roll on the wild table tilted
+ * by its keeper's husbandry (`rollTrait`), a name it does not carry; and 1 time in `MUTATION_ODDS` a mutation instead,
+ * a name it does not carry one rarity above the best it carries (`mutationTier`, `lampTrait`). Null with nothing left
+ * to draw. The island's `slot_draw`.
+ */
+export function slotDraw(traits: string[], husbandry: number, rand: () => number): { id: string; from: TraitSource } | null {
+  if (rand() < 1 / MUTATION_ODDS) {
+    const id = lampTrait(mutationTier(traits, []), traits, rand);
+    if (id) return { id, from: 'mutation' };
+  }
+  const id = rollTrait(rand, traits, husbandry);
+  return id ? { id, from: 'roll' } : null;
+}
