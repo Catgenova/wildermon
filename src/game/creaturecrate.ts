@@ -264,7 +264,7 @@ export function deedJobLine(c: Creature): string {
   const tail = gathers === 'hive' || gathers === 'scrub' || TEND_JOBS.has(gathers ?? 'forage') ? '' : '; output to the crate';
   return gathers
     ? `${GATHER_DO[gathers]} within ${workRangeOf(c, SPECIES[c.species])} tiles of the totem${tail}`
-    : 'no task';
+    : SPECIES[c.species].style === 'spar' ? 'spar with a guard of yours on the settlement' : 'no task';
 }
 
 export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
@@ -346,7 +346,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       if (shut) return shut;
       if (!g.deed) return 'No settlement.';
       const def = at.c ? SPECIES[at.c.species] : undefined;
-      if (def && !def.gathers) return `${def.name}: no task.`;
+      if (def && !def.gathers && def.style !== 'spar') return `${def.name}: no task.`;
       if (g.creatures.workers().length >= g.workerCap) {
         return `${g.deed.name} full: ${g.workerCap} workers at level ${g.deedLevel}.`;
       }

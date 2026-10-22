@@ -28,6 +28,7 @@ import {
   workRangeOf,
   wellFedSays,
   workSkill,
+  sparsAsGuard,
   type Creature,
 } from '../game/creatures';
 import { baitHint, coaxStep, tameChance } from '../game/creatureActions';
@@ -137,14 +138,16 @@ export function creatureLines(g: Game, c: Creature): string[] {
   } else if (c.mode === 'deed') {
     // A reach means nothing to something with no trade to range out and do.
     if (def.gathers) lines.push(`Settlement worker · ${GATHER_VERB[def.gathers]} ${taskSkill(c, def).toFixed(1)} · range ${workRangeOf(c, def)} tiles`);
-    else lines.push(`Settlement worker · no task`);
+    else lines.push(`Settlement worker · ${def.style === 'spar' ? 'sparring' : 'no task'}`);
+    // Who it is sparring with on the settlement (`sparTaskSays`).
+    const partner = c.sparWith != null ? g.creatures.get(c.sparWith) : undefined;
+    if (partner && partner.mode === 'deed') lines.push(`Sparring with ${partner.name}`);
     if (c.carrying) lines.push(`Carrying: ${itemDef(c.carrying.id).name.toLowerCase()}`);
-    // Its stamina and its settlement's specialty in its trade, for a trade with goes to tire it and to quicken.
+    // Its stamina and its settlement's specialty in its trade, for a trade with goes to tire it and to quicken; a spar
+    // tires a guard and a Sparra as a go does, and quickens nothing.
     const kind = c.trade ?? def.gathers;
-    if (specialtyTrade(kind)) {
-      lines.push(`${staminaSays(c)} ${bar(staminaOf(c))}`);
-      lines.push(specialtySays(kind, g.creatures.specialtyOf(c)));
-    }
+    if (specialtyTrade(kind) || sparsAsGuard(c) || def.style === 'spar') lines.push(`${staminaSays(c)} ${bar(staminaOf(c))}`);
+    if (specialtyTrade(kind)) lines.push(specialtySays(kind, g.creatures.specialtyOf(c)));
     // And what a day without a meal makes of its pace (`UPKEEP_FOR`).
     const unfed = unfedSays(c);
     if (unfed) lines.push(unfed);

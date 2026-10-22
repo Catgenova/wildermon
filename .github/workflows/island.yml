@@ -3562,6 +3562,19 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/fightstyles.mjs --log-level=error
           node node_modules/.cache/fightstyles.mjs
 
+      - name: A Sparra on a settlement spars with your guards
+        run: |
+          # A Sparra set to a settlement picks a guard of yours there, the
+          # one that sparred longest ago first, and the guard walks to it and
+          # spars: a go at its task, a blow each way, neither below where it
+          # yields, the guard learning its level skill and the Sparra its
+          # fighting. Yielded ones stand until they have their breath back, a
+          # guard drops it for anything wild, and two take turns: the same on
+          # both sides, and the words.
+          npx esbuild supabase/test/deedspar.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/deedspar.mjs --log-level=error
+          node node_modules/.cache/deedspar.mjs
+
       - name: Abilities on a cooldown
         run: |
           # Seventeen wildermon each use a fighting trade's spell, or a frost

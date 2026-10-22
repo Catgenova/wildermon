@@ -1012,7 +1012,8 @@ export const LEARN_PACE_MOST = 4;
  * `EVOLVE_AT` and from there to the second, takes the median trade as the mark, and divides each trade's time by it
  * (the two spans' ratios multiplied and the root taken), held to between `LEARN_PACE_LEAST` and `LEARN_PACE_MOST`.
  * That test recomputes these and fails when one has drifted from what the rule now makes. Rerun it with `--table` to
- * see the minutes. A keeping watch and a hunt are 1: what they learn by is what wild things come onto the deed, which
+ * see the minutes. A keeping watch is measured by its spar with a Sparra on the settlement (`sparTaskSays`), the one
+ * go of its that comes round at a rate. A hunt is 1: what it learns by is what wild things come onto the deed, which
  * no deed sets. The island's `learn_pace`, off `learn_pace_def`.
  */
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
@@ -1027,8 +1028,8 @@ export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   groom: 0.87, dairy: 0.87, heal: 1.75, lamp: 2.16, smelt: 1.32, kiln: 1.32, patch: 1.04,
   // Carrying between the stores, the water and the work.
   fill: 3.34, water: 2.2, hod: 0.96, stoke: 1.12, plant: 0.99, prospect: 1.01,
-  // What wild things come onto the deed.
-  guard: 1, hunt: 1,
+  // A spar with a Sparra on the settlement; and what wild things come onto the deed.
+  guard: 2.02, hunt: 1,
   // A kind with no trade.
   out: 0.94, dark: 3.66, tended: LEARN_PACE_MOST, spar: 0.26, pull: 1.53,
 };
@@ -1050,7 +1051,7 @@ export function learnPace(c: Pick<Creature, 'species' | 'trade'>, skill: string)
 /** What a kind that learns its own skill does to learn it, for its card and the help. */
 export const LEARNS_SAYS: Record<LearnsBy, string> = {
   tended: 'per shearing, plucking or milking',
-  spar: 'per spar swing of yours that lands on it',
+  spar: 'per spar swing of yours that lands on it, or per spar with a guard of yours on the settlement',
   out: `per ${OUT_EVERY} seconds out at your heel or keeping a settlement`,
   dark: `per ${OUT_EVERY} seconds out at your heel or keeping a settlement after dark`,
   pull: `per tile driven in the traces of a large cart or wagon, ${percent(LEARN_PACE.pull)} of what the tile teaches you at the reins`,
@@ -1063,12 +1064,12 @@ const LEARNS_VERB: Record<LearnsBy, string> = {
 const PACE_VERB: Partial<Record<GatherKind, string>> = { fetch: 'fetching', compost: 'composting', dairy: 'milking or shearing' };
 /**
  * Every trade's factor and every way of learning's (`LEARN_PACE`), the ones at the same factor together, least first:
- * "33% for sparring; 67% for butchering and restoring; ...". Leaves out a keeping watch and a hunt, which are 1.
+ * "33% for sparring; 67% for butchering and restoring; ...". Leaves out a hunt, which is 1.
  */
 export function learnPaceSays(): string {
   const by = new Map<number, string[]>();
   for (const [at, f] of Object.entries(LEARN_PACE) as Array<[GatherKind | LearnsBy, number]>) {
-    if (at === 'guard' || at === 'hunt') continue;
+    if (at === 'hunt') continue;
     by.set(f, [...(by.get(f) ?? []), PACE_VERB[at as GatherKind] ?? (at in GATHER_VERB ? GATHER_VERB[at as GatherKind] : LEARNS_VERB[at as LearnsBy])]);
   }
   return [...by].sort((a, b) => a[0] - b[0]).map(([f, names]) => `${listed(names)} ${percent(f)}`).join('; ');
@@ -1186,6 +1187,40 @@ export const yielded = (c: Creature): boolean => c.health <= sparFloor(c) + SPAR
 /** What a blow that lands on a sparring partner says. The island's `spar_said`. */
 export const sparSaid = (c: Creature): string =>
   `Hit: ${c.name} ${Math.max(0, Math.ceil(c.health))}/${maxHealth(c, SPECIES[c.species])}${yielded(c) ? ', yields' : ''}.`;
+/**
+ * A Sparra kept on a settlement spars with your guards there. Asked for: "Fighting only type wildermon have no real way
+ * to gain experience. If paired with Sparra on deed, both fight and gain experience for doing so."
+ *
+ * It takes a worker's place and has no other task. It picks a guard of yours on the same settlement (`sparsAsGuard`:
+ * a worker whose trade is keeping watch, which is every wildermon that fights for a living but the hunter) that is not
+ * resting or tired, not after an intruder, not yielded and not sparring with another Sparra, standing where the guard's
+ * work range of the totem reaches, the one that sparred longest ago first; the guard walks to within `SPAR_REACH` of
+ * it and they spar: a go at the guard's task (`workDuration` at its level skill, over its `taskMul`) and then the
+ * second after a go, a blow each way at the end of it. Neither blow takes anybody below `SPAR_YIELD` of its health,
+ * and neither wounds, bleeds or kills (`sparBlow`); one that has yielded stands until it is above it again
+ * (`SPAR_SLACK`). Each go teaches the guard its level skill `GUARD_LEARN`, as an attack on a wild creature does, and the
+ * Sparra its fighting (`LEARNS_GAIN.spar`), and spends a go of each one's stamina (`TIRE_GOES`). After every go the
+ * Sparra picks again, so two guards take turns. A guard drops it at once for something wild on the settlement. The
+ * island's `worker_settle`, off `spar_with` and `spar_at`.
+ */
+/** The base of what a guard's level skill learns from an attack on a wild creature, and from a spar. The island's `guard_learn`. */
+export const GUARD_LEARN = 0.1;
+/** How near a guard comes to a Sparra to spar with it, in tiles. */
+export const SPAR_REACH = 1;
+/** Whether one of yours is a guard a Sparra on a settlement may spar with: its trade is keeping watch. */
+export const sparsAsGuard = (c: Pick<Creature, 'species' | 'trade'>): boolean => (c.trade ?? SPECIES[c.species]?.gathers) === 'guard';
+/** The health a yielded one has its breath back above, whole. */
+export const sparBack = (c: Creature): number => Math.ceil(sparFloor(c) + SPAR_SLACK);
+/** A guard's level line: what teaches it, wild creatures and a Sparra on the settlement. */
+export const GUARD_LEVEL = `Level: ${GATHER_SKILL.guard.replace(/_/g, ' ')}, learned per attack on a wild creature while guarding a settlement or sparring with a Sparra on the settlement.`;
+/** What a Sparra kept on a settlement does, every number read off the rule, for its words and the help. */
+export function sparTaskSays(): string {
+  const level = GATHER_SKILL.guard.replace(/_/g, ' ');
+  return `Settlement task: spar with a guard of yours on the settlement, 1 at a time, the one that sparred longest ago first. `
+    + `Time per spar: the guard's time per action, ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}. `
+    + `Per spar: 1 blow each; guard ${level} as per attack on a wild creature; Sparra fighting as per spar swing of yours; 1 action of each one's stamina. `
+    + `Blows stop at ${percent(SPAR_YIELD)} of health, on both; a yielded one stands until above it.`;
+}
 
 /**
  * What a stage adds over a kind's first, in words: its health, its blow, its pace and, for a kind with a task, its task,
@@ -1228,9 +1263,8 @@ export const REED_LEVELS = 35;
 function sayLine(id: string, job: string, level: string): void {
   const d = SPECIES[id];
   const names = [d.name, d.stages![0].name, d.stages![1].name] as const;
-  // Its stages work faster only at a task, so a kind with none is not told they do; and keeping watch is not a task
-  // anything is quicker at, as a guard's goes are not timed.
-  const task = !!d.gathers && d.gathers !== 'guard';
+  // Its stages work faster only at a task, so a kind with none is not told they do; a guard's spar is timed as a task's go.
+  const task = !!d.gathers;
   const fleece = !!d.fleece;
   d.description = lineSays(names, job, level, 0, task, fleece);
   d.stages = [
@@ -4124,7 +4158,7 @@ sayLine('noot', `Settlement task: dig clay off clay ground ${reach('noot')}, 1 l
 sayLine('crawler', `Settlement task: dig sand off sandy ground ${reach('crawler')}, 1 heap a dig. QL: ${yieldQl('digging')}. Output to the crate. Wild bite: venom, ${percent(VENOM_DRAIN)} of your health a second for ${VENOM_SECS} seconds unless dressed. Kept: ${percent(SPECIES.crawler.unruly!)} chance every ${NIP_EVERY} seconds to attack you when beside you. Strikes back every time.`,
   'Level: digging.');
 sayLine('whispet', `Tamed, ${abilityName('fear')}: ${abilitySays('fear')}. Strikes back every time. Wild: after dark only, ${seasonSays(SPECIES.whispet.season!)} (UTC); none wild on other days. Tamed, kept or bred ones stay all year.`,
-  'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
+  GUARD_LEVEL);
 sayLine('warda', `Sight for you, at your heel or keeping a settlement: ${SPECIES.warda.sight} tiles (most: ${KEPT_SIGHT}), −${percent(KEPT_NIGHT_LOSS / 2)} at the dead of night. Strikes back every time.`,
   `Level: awareness, learned ${LEARNS_SAYS.out}.`);
 sayLine('rowl', `Wild: attacks on sight. Settlement task: hunt ${reach('rowl')}; carcasses home.`, 'Level: fighting.');
@@ -4135,9 +4169,11 @@ sayLine('wicka', `Settlement task: put a candle from your settlement stores in e
 sayLine('sprigga', `Settlement task: pick sprouts off living trees ${reach('sprigga')}, each named for its tree; output home. A picked tree rests as long as a forage bed.`,
   'Level: forestry.');
 sayLine('snout', `Settlement task: find buried relics and mark dig sites ${reach('snout')}.`, 'Level: archaeology.');
-sayLine('thumpa', `Tamed: ${STYLE_SAYS.stun}.`, 'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
-sayLine('lungra', `Tamed, ${abilityName('beastmaster_pounce')}: ${abilitySays('beastmaster_pounce')}.`, 'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
-sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('warder_stoneskin')}.`, 'Level: body strength, learned per attack on a wild creature while guarding a settlement.');
+sayLine('thumpa', `Tamed: ${STYLE_SAYS.stun}.`, GUARD_LEVEL);
+sayLine('lungra', `Tamed, ${abilityName('beastmaster_pounce')}: ${abilitySays('beastmaster_pounce')}.`, GUARD_LEVEL);
+sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('warder_stoneskin')}.`, GUARD_LEVEL);
+// And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
+SPECIES.sparra.description = `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()} Level: fighting, learned ${LEARNS_SAYS.spar}.`;
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {
@@ -4658,6 +4694,8 @@ export interface IslandCreature {
   worn?: number;
   unfed?: number;
   specialty?: number;
+  /** A Sparra or a guard of yours on a settlement: the one it is sparring with, by id (`sparTaskSays`). */
+  sparWith?: number | null;
   /**
    * Its dam, its sire and where each trait came from, for anything bred and
    * for nothing else. Somebody else's says where a trait came from only for
@@ -4854,6 +4892,12 @@ export interface Creature {
   unfed?: number;
   /** On an island, how many deed workers of its trade its settlement has, as the island counts them (`deed_trade_workers`). */
   specialty?: number;
+  /**
+   * Sparring on a settlement (`sparTaskSays`): the Sparra or the guard it is sparring with, by id, and for a guard the
+   * game time it last sparred, which picks whose turn it is. The island's `spar_with` and `spar_at`.
+   */
+  sparWith?: number | null;
+  sparAt?: number;
   /** Time banked up while nobody was watching, spent on the next think. */
   owed: number;
   /** When the player last called it over for an action; it drops everything and comes. */
@@ -5542,6 +5586,8 @@ export class Creatures {
       if (r.worn !== undefined) c.worn = r.worn;
       if (r.unfed !== undefined) c.unfed = r.unfed;
       if (r.specialty !== undefined) c.specialty = r.specialty;
+      // And who it is sparring with on its settlement, said on its card (`sparTaskSays`).
+      if (r.sparWith !== undefined) c.sparWith = r.sparWith;
       if (r.carrying !== undefined) {
         c.carrying = r.carrying
           ? { uid: 0, id: r.carrying.def, ql: r.carrying.ql ?? 1, dmg: 0, count: r.carrying.count ?? 1 }
@@ -8419,6 +8465,8 @@ export class Creatures {
       const gone = !e || !quarry(e) || Math.max(Math.abs(e.x - deed.x), Math.abs(e.y - deed.y)) > range + 3;
       if (gone) c.enemy = null;
       else {
+        // Something wild on the settlement: a spar is dropped at once for it.
+        this.sparOff(c);
         const d = Math.hypot(e.x - c.x, e.y - c.y);
         if (d <= 1) {
           if (c.cooldown <= 0) {
@@ -8443,11 +8491,14 @@ export class Creatures {
         }
       }
       if (best) {
+        this.sparOff(c);
         c.enemy = best.id;
-        this.gainSkill(game, c, GATHER_SKILL.guard, 0.1);
+        this.gainSkill(game, c, GATHER_SKILL.guard, GUARD_LEARN);
         return;
       }
     }
+    // Nothing about: a spar with a Sparra of yours on the settlement, when one has picked it (`sparTaskSays`).
+    if (this.sparGo(game, c, dt)) return;
     // Nothing about: walk the border.
     if (c.state === 'wander') {
       if (this.stepToward(game, c, c.tx, c.ty, dt, 0.8) !== 'moving') {
@@ -8570,6 +8621,133 @@ export class Creatures {
     if (c.traits.some((t) => traitTier(t) === 'fantastic')) game.note('fantasticblood');
     game.events.emit('creature');
     return c;
+  }
+
+  /** Off whatever spar it was in, and the one it was sparring with off it too (`sparTaskSays`). */
+  private sparOff(c: Creature): void {
+    if (c.sparWith == null) return;
+    const o = this.list.get(c.sparWith);
+    if (o && o.sparWith === c.id) {
+      o.sparWith = null;
+      if (o.state === 'spar') o.state = 'idle';
+    }
+    c.sparWith = null;
+    if (c.state === 'spar') c.state = 'idle';
+  }
+
+  /**
+   * Whether a guard may spar with a Sparra of yours on a settlement (`sparTaskSays`): a worker of yours there whose trade
+   * is keeping watch, after nothing wild, not called over, resting or tired, not yielded, not sparring with another
+   * Sparra, and with the Sparra inside its work range of the totem. The island's `spar_may`.
+   */
+  private sparMay(game: Game, g: Creature, s: Creature, site: WorkSite): boolean {
+    return g.mode === 'deed' && g.post === null && g.mine !== false && sparsAsGuard(g) && g.enemy === null
+      && g.state !== 'rest' && g.state !== 'toBed' && (g.worn ?? 0) < TIRE_GOES && !yielded(g)
+      && (g.sparWith == null || g.sparWith === s.id) && game.time - g.calledAt >= CALL_WINDOW
+      && Math.max(Math.abs(site.x + 0.5 - s.x), Math.abs(site.y + 0.5 - s.y)) <= workRangeOf(g, this.species(g));
+  }
+
+  /**
+   * A Sparra on a settlement (`sparTaskSays`): true while it is sparring or has yielded, which is all it does then.
+   * Yielded, it stands until it has its breath back (`sparBack`). Otherwise it keeps to the guard it is sparring with
+   * while that one may, or picks the guard whose turn it is -- the one that sparred longest ago -- and stands for it to
+   * come; with none, it says so and goes about as any worker with nothing to do. The island's `worker_settle`.
+   */
+  private sparraStep(game: Game, c: Creature, site: WorkSite): boolean {
+    if (yielded(c)) {
+      this.sparOff(c);
+      c.state = 'idle';
+      c.moving = false;
+      this.why(c, 'yielded', sparBack(c));
+      return true;
+    }
+    if (c.idle?.why === 'yielded') c.idle = null;
+    let g = c.sparWith != null ? this.list.get(c.sparWith) : undefined;
+    if (g && !this.sparMay(game, g, c, site)) {
+      this.sparOff(c);
+      g = undefined;
+    }
+    if (!g && (c.state === 'idle' || c.state === 'wander') && game.time >= c.until) {
+      let best: Creature | undefined;
+      const turn = (o: Creature): number => o.sparAt ?? -Infinity;
+      for (const o of this.list.values()) {
+        if (!this.sparMay(game, o, c, site)) continue;
+        if (!best || turn(o) < turn(best) || (turn(o) === turn(best) && o.id < best.id)) best = o;
+      }
+      if (best) {
+        g = best;
+        c.sparWith = g.id;
+        g.sparWith = c.id;
+      } else this.why(c, 'nospar');
+    }
+    if (!g) return false;
+    c.idle = null;
+    c.state = 'idle';
+    c.moving = false;
+    c.until = game.time;
+    return true;
+  }
+
+  /**
+   * A guard picked by a Sparra on the settlement (`sparTaskSays`): it walks to within `SPAR_REACH` of it and spars, a
+   * go at its task and a blow each way at the end of it, and then the second after a go. True while it is about it,
+   * and while it stands yielded. The island's `worker_settle`.
+   */
+  private sparGo(game: Game, c: Creature, dt: number): boolean {
+    const s = c.sparWith != null ? this.list.get(c.sparWith) : undefined;
+    if (!s || s.sparWith !== c.id || s.mode !== 'deed' || yielded(s) || s.state === 'rest' || s.state === 'toBed') {
+      this.sparOff(c);
+      // Yielded, it stands until it has its breath back.
+      if (c.idle?.why === 'yielded') {
+        if (yielded(c)) {
+          c.moving = false;
+          return true;
+        }
+        c.idle = null;
+      }
+      return false;
+    }
+    c.idle = null;
+    if (c.state === 'spar') {
+      if (game.time < c.until) return true;
+      this.sparBlows(game, c, s);
+      c.state = 'idle';
+      c.until = game.time + 1;
+      return true;
+    }
+    if (c.state === 'idle' && game.time < c.until) return true;
+    if (Math.hypot(s.x - c.x, s.y - c.y) > SPAR_REACH) {
+      if (this.stepToward(game, c, s.x, s.y, dt) === 'blocked') this.sparOff(c);
+      return true;
+    }
+    c.state = 'spar';
+    c.until = game.time + workDuration(c.skills[GATHER_SKILL.guard] ?? 1) / this.taskMul(c, 'guard');
+    return true;
+  }
+
+  /** One blow in a spar, as one of yours strikes, and nothing besides: no style, no ability, no wound. The island's `spar_blow`. */
+  private sparBlow(game: Game, a: Creature): number {
+    return this.species(a).attack * this.mul(a, 'tough') * trainedHit(a.skills[FIGHT_SKILL] ?? 0) * (0.7 + game.rand() * 0.6);
+  }
+
+  /**
+   * A go of a spar (`sparTaskSays`): a blow each way, neither taking anybody below where it yields (`sparFloor`); the
+   * guard its level skill as an attack on a wild creature teaches it, the Sparra its fighting, and a go of stamina and
+   * of the ledger each; then the Sparra picks again, so the guards take turns. The island's `spar_go`.
+   */
+  private sparBlows(game: Game, g: Creature, s: Creature): void {
+    for (const [a, t] of [[g, s], [s, g]] as const) {
+      t.health = Math.min(t.health, Math.max(sparFloor(t), t.health - this.sparBlow(game, a)));
+      t.attackedAt = game.time;
+      this.acted(a, 'strike', game.time);
+    }
+    g.sparAt = game.time;
+    this.gainSkill(game, g, GATHER_SKILL.guard, GUARD_LEARN);
+    this.learnBy(game, s, 'spar');
+    this.toLedger(game, g, { goes: 1 });
+    this.toLedger(game, s, { goes: 1 });
+    this.sparOff(s);
+    for (const o of [g, s]) if (yielded(o)) this.why(o, 'yielded', sparBack(o));
   }
 
   /** A go at its own task, for a kind that learns its own skill this way (`LearnsBy`). The island's `beast_learns`. */
@@ -9210,6 +9388,8 @@ export class Creatures {
     }
     if ((c.worn ?? 0) < TIRE_GOES || c.state !== 'idle' || game.time < c.until) return false;
     if (c.carrying && !(kind && (ERRAND_JOBS.has(kind) || kind === 'stoke'))) return false;
+    // Done sparring for now (`sparTaskSays`).
+    this.sparOff(c);
     const f = this.freeBed(game, c);
     if (f) {
       c.bed = f.id;
@@ -9271,12 +9451,18 @@ export class Creatures {
     const kind = c.trade ?? def.gathers;
     // Resting, or too tired to do anything else (`TIRE_GOES`).
     if (this.restStep(game, c, dt, kind)) return;
-    // Standing orders come before any job: an intruder is everyone's business.
-    if (this.defendDeed(game, c, dt, deed)) return;
+    // Standing orders come before any job: an intruder is everyone's business. A guard's trade is meeting it, whatever
+    // its stance, as the island's `fight_target` has it for a trade that fights: its own step looks (`guardStep`).
+    if (kind !== 'guard' && this.defendDeed(game, c, dt, deed)) {
+      this.sparOff(c);
+      return;
+    }
     if (kind === 'guard') {
       this.guardStep(game, c, dt, deed);
       return;
     }
+    // A Sparra on the settlement spars with a guard of yours there (`sparTaskSays`), or eats and potters about as any.
+    if (def.style === 'spar' && c.post === null && this.sparraStep(game, c, deed)) return;
     if (kind === 'stoke' && !c.carrying && c.state !== 'forage') {
       if (this.stokeStep(game, c, dt, deed)) return;
     }

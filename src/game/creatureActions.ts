@@ -656,6 +656,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     check: (t, g) => {
       if (!g.deed) return 'No settlement.';
       const c = creatureOf(g, t);
+      // A kind with no task has nothing to do there; a Sparra's is sparring with your guards (`sparTaskSays`).
+      if (c && !SPECIES[c.species].gathers && SPECIES[c.species].style !== 'spar') return `${SPECIES[c.species].name}: no task.`;
       // One off a post takes a place as much as one off the road, since a post costs none.
       const working = g.creatures.workers().length;
       if (c && (c.mode !== 'deed' || c.post !== null) && working >= g.workerCap) {

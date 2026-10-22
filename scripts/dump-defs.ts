@@ -104,7 +104,7 @@ import { BRIDGES, CLEARANCE, END_SLOP, RAMP_SLOPE } from '../src/game/bridges';
 import { BREWS } from '../src/game/brewing';
 import { BOIL_IN, BOIL_LITRES, DYEABLE_ITEMS } from '../src/game/dyes';
 import { PAIR_RANGE, GROOM_CAP, GROOM_HEAL, TIER_LEVEL } from '../src/game/husbandry';
-import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason } from '../src/game/creatures';
+import { BED_REST, DEN_HEALTH, REED_LEVELS, REST_FOR, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, BLOW_SHARE, BREED_REST, COMB_INTO, EVOLVE_AT, PERK_STAGE, STAGE_PERKS, FILE_RARITY_ODDS, LEARN_PACE, POT_MOST, POT_STEP, FEAR_REST, FEAR_SECS, FROST_BREATH_REST, GESTATION, LEARNS_GAIN, OUT_EVERY, seasonDay, SPAR_SLACK, SPAR_YIELD, STAGE_MUL, WARD_SKIN, type WildSeason, GUARD_LEARN, SPAR_REACH } from '../src/game/creatures';
 import { REST_CAP, REST_MULT, REST_PER_SECOND } from '../src/game/boons';
 import { DAWN, DUSK, DAY_SECONDS, CARRY_BASE, CARRY_PER_STRENGTH, CARRY_STOP } from '../src/game/game';
 import { BASE_SPEED, CARRY_CRAWL } from '../src/game/player';
@@ -1636,6 +1636,9 @@ for (const [fn, v] of [
   ['threat_hold', THREAT_HOLD],
   /* A sparring partner of yours: the share of its health it yields at, and how near that it has yielded. */
   ['spar_yield', SPAR_YIELD], ['spar_slack', SPAR_SLACK],
+  /* And a Sparra kept on a settlement: how near a guard comes to spar with it, and what a guard's attack on a wild
+     creature, and a spar, teach its level skill. */
+  ['spar_reach', SPAR_REACH], ['guard_learn', GUARD_LEARN],
   /* A wildermon's own ability: the seconds between frost breaths, and the skin a wardo lays over you; and a Fear's
      run, and its rest. */
   ['frost_breath_rest', FROST_BREATH_REST], ['ward_skin', WARD_SKIN], ['fear_secs', FEAR_SECS], ['fear_rest', FEAR_REST],

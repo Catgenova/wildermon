@@ -57,7 +57,7 @@ import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
   BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
@@ -2961,6 +2961,9 @@ export function helpText(): string {
         const d = SPECIES[id];
         return `<li><b>${d.name}</b> (taming ${d.tameLevel}): ${STYLE_SAYS[d.style!]}.</li>`;
       }).join('')}
+      <li><b>${SPECIES.sparra.name} on a settlement</b> (takes a worker place): ${sparTaskSays().replace(/^Settlement task: /, '')}
+      Guard: any worker set to guarding. Card: &ldquo;Sparring with&rdquo; its partner; idle: &ldquo;${idleSays({ why: 'nospar', n: 0 }, null)}&rdquo;,
+      &ldquo;${idleSays({ why: 'yielded', n: Math.ceil(SPECIES.sparra.health * SPAR_YIELD + SPAR_SLACK) }, null)}&rdquo; (a new ${SPECIES.sparra.name}).</li>
     </ul>
     <h4>Wildermon with an ability</h4>
     <ul>
@@ -3006,7 +3009,7 @@ export function helpText(): string {
       <li>Settlement workers learn at half a player's pace and work at half a player's speed; higher skill: better finds, faster work.</li>
       <li>Kinds with no work learn their skill otherwise: ${listed(Object.values(SPECIES).filter((d) => d.learns).map((d) => `${d.name} its ${(SKILL_BY_ID.get(d.learns!.skill)?.name ?? d.learns!.skill).toLowerCase()}, ${LEARNS_SAYS[d.learns!.by]}`))}.</li>
       <li><b>Learning pace by task</b>: each gain at its level skill × its task's multiplier, set so every task reaches level ${EVOLVE_AT[0]} and then ${EVOLVE_AT[1]} in about the middle task's time:
-      ${learnPaceSays()}. Keeping watch, hunting and anything else: the skill curve's own gain.</li>
+      ${learnPaceSays()}. Hunting and anything else: the skill curve's own gain.</li>
     </ul>
     <h4>Loads per evolution stage</h4>
     <ul>

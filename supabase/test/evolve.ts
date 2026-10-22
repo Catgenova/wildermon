@@ -231,8 +231,8 @@ check('the Quarra is the Chiptail now, a Quarrybash and a Monolithump after, and
   chip.name === 'Chiptail' && chip.stages?.map((x) => x.name).join(',') === 'Quarrybash,Monolithump'
     && at('CHIPTAIL') === 'Chiptail|Quarrybash,Monolithump|Quarra|quarra', at('CHIPTAIL'));
 const ghost = SPECIES.whispet;
-check('the Whispet is new, a Lanternveil and a Hallowmire after, and as it keeps watch rather than working its stages are not said to work faster, on both sides',
-  ghost.name === 'Whispet' && ghost.stages?.map((x) => x.name).join(',') === 'Lanternveil,Hallowmire' && !ghost.stages[1].description.includes('task')
+check('the Whispet is new, a Lanternveil and a Hallowmire after, and as a guard\'s spar with a Sparra is a go at its task its stages are said to work faster, on both sides',
+  ghost.name === 'Whispet' && ghost.stages?.map((x) => x.name).join(',') === 'Lanternveil,Hallowmire' && ghost.stages[1].description.includes('task speed')
     && ghost.stages[1].description.startsWith(`Evolution stage 3, level ${EVOLVE_AT[1]}+. Over a Whispet:`) && at('WHISPET') === 'Whispet|Lanternveil,Hallowmire', at('WHISPET'));
 check(`it evolves at ${AT1} and ${AT2}, and each stage is ${H}, ${T}, ${S}, ${W} and ${G} over the last, on both sides`,
   at('NUMBERS') === `${AT1}|${AT2}|${H}|${T}|${S}|${W}|${G}`, at('NUMBERS'));

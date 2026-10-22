@@ -20,7 +20,7 @@
  * kept (care full), with no traits, grown, fed, and with all it needs to work on at hand. A kind with no trade: out
  * all the time, out after dark at the share of the day that is night, tended by a Sheela each time its fleece is
  * `DAIRY_FULL` back, sparred with by somebody swinging the median weapon at 20, and pulling a large cart alone, fed,
- * with a driver of no skill.
+ * with a driver of no skill. A guard: sparring with a Sparra beside it on the settlement, go after go (`sparTaskSays`).
  *
  * Checked: each trade's factor is what this model makes of it, to within `DRIFT`; and with it, each trade's minutes
  * to the first stage and to the second are within `WITHIN` of the median's, unless its factor is held at
@@ -35,7 +35,7 @@
  */
 import { execFileSync } from 'node:child_process';
 import {
-  CARE_BONUS, DAIRY_FULL, EVOLVE_AT, footing, LEARN_PACE, LEARN_PACE_LEAST, LEARN_PACE_MOST, learnPace,
+  CARE_BONUS, DAIRY_FULL, EVOLVE_AT, footing, GUARD_LEARN, LEARN_PACE, LEARN_PACE_LEAST, LEARN_PACE_MOST, learnPace,
   LEARNS_GAIN, OUT_EVERY, PULL_LEARN, restFor, SPECIES, STAGE_LOADS, STAGE_MUL, TIRE_GOES, workDuration, type GatherKind, type LearnsBy,
 } from '../../src/game/creatures';
 import { skillGain } from '../../src/game/skills';
@@ -124,7 +124,7 @@ const rox = SPECIES.roxxen;
 const towing = (skill: number, stage: number): number =>
   Math.min(MAX_VEHICLE_SPEED, rox.speed * S ** stage * (0.75 + (rox.pull ?? 0)) * footing(skill));
 
-/** Every trade and every way of learning, as the island takes it; a keeping watch and a hunt are left out (`LEARN_PACE`). */
+/** Every trade and every way of learning, as the island takes it; a hunt is left out (`LEARN_PACE`). */
 const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   forage: gathers('forage', 0.225, forageChance),
   botanize: gathers('botanize', 0.225, forageChance),
@@ -196,6 +196,9 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   plant: errand('plant', [[FIELD, 'fetch', 0], [FIELD, 'work', 0.25]]),
   // The ground read round it, and on past what it read.
   prospect: errand('prospect', [[(s) => 3 + Math.floor(s / 20), 'work', 0.22]]),
+  // A guard sparring with a Sparra on the settlement, beside it: a go at its task, a blow each way, what an attack on a
+  // wild creature teaches it. What wild things come onto the deed besides, no deed sets.
+  guard: errand('guard', [[0, 'work', GUARD_LEARN]]),
   out: every(() => OUT_EVERY, LEARNS_GAIN.out),
   dark: every(() => OUT_EVERY / NIGHT, LEARNS_GAIN.dark),
   tended: every((_s, stage) => DAIRY_FULL / ((SPECIES[kindOf('tended')].fleece ?? 1) * G ** stage), LEARNS_GAIN.tended),
@@ -270,8 +273,8 @@ for (const r of ROWS) {
     held ? Math.abs(r.after[0] / MARK[0] - 1) < Math.abs(r.before[0] / MARK[0] - 1) || near : near,
     `${r.after.map((m) => Math.round(m)).join(' and ')} minutes against ${MARK.map((m) => Math.round(m)).join(' and ')}`);
 }
-check('every trade and way of learning is measured but a keeping watch and a hunt, which are 1',
-  (Object.keys(LEARN_PACE) as Array<GatherKind | LearnsBy>).every((at) => MEASURED.includes(at) || ((at === 'guard' || at === 'hunt') && LEARN_PACE[at] === 1)),
+check('every trade and way of learning is measured but a hunt, which is 1',
+  (Object.keys(LEARN_PACE) as Array<GatherKind | LearnsBy>).every((at) => MEASURED.includes(at) || (at === 'hunt' && LEARN_PACE[at] === 1)),
   (Object.keys(LEARN_PACE) as Array<GatherKind | LearnsBy>).filter((at) => !MEASURED.includes(at)).join(', '));
 
 /* ---- the same on both sides ------------------------------------------------------------------------------------ */

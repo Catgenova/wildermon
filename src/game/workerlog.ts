@@ -33,16 +33,18 @@ import { article, listed, listedOr } from './words';
  *   * `full`: holding a load with nowhere on the settlement to put it;
  *   * `far`: walking home, so many tiles (the number) from its work;
  *   * `away`: on the island, its keeper is away, so nothing works it;
- *   * `unswept`: on the island, nobody awake is within the number of tiles of it, so nothing works it.
+ *   * `unswept`: on the island, nobody awake is within the number of tiles of it, so nothing works it;
+ *   * `nospar`: a Sparra on a settlement with no guard of yours there free to spar with (`sparsAsGuard`).
  *
  * And three that are not idleness but rest, which its card says in the same place (`TIRE_GOES`, `REST_FOR`):
  *
  *   * `rest`: resting where it stands, the number the seconds of it left;
  *   * `bed`: asleep in a wildermon bed (`bed`, the piece's kind), the number the seconds left;
- *   * `tired`: walking to a wildermon bed (`bed`) to rest in it.
+ *   * `tired`: walking to a wildermon bed (`bed`) to rest in it;
+ *   * `yielded`: a Sparra or a guard that has yielded a spar, standing until it is above the number in health (`sparBack`).
  */
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired'];
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded'];
 
 /**
  * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token;
@@ -161,6 +163,10 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       const name = itemDef(idle.bed ?? '').name.toLowerCase();
       return `Tired: walking to ${article(name)} ${name}.`;
     }
+    case 'nospar':
+      return 'Idle: no guard of yours on the settlement free to spar.';
+    case 'yielded':
+      return `Yielded: spars again above ${n} health.`;
   }
 }
 

@@ -102,6 +102,7 @@ export function workTime(s: WorkStats | null | undefined, secs: number, why: Idl
 export const IDLE_LABEL: Record<IdleWhy, string> = {
   range: 'nothing in range', stock: 'stores empty', room: 'no room to store', full: 'storage full', far: 'walking home',
   away: 'not settled: keeper away or nobody near', unswept: 'not settled: nobody near', rest: 'resting', bed: 'asleep', tired: 'walking to bed',
+  nospar: 'no guard free to spar', yielded: 'yielded a spar',
 };
 
 /** The reason it has been idle longest for, and how long; null with no idle time. */

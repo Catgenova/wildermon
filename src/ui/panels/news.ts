@@ -69,6 +69,7 @@ import { GRAPE_WINE_GRAPES } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
 import { WHEY_FEED } from '../../game/dairy';
+import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/creatures';
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
 import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
@@ -3246,6 +3247,15 @@ export const NEWS: News[] = [
       'Added: authenticator sign-in on the account page; keeper tools ask for the code when it is on.',
       `Changed: new characters per connection a day: ${NEW_BODIES_A_DAY}.`,
       'Changed: other islands\' players, wildermon, settlements, trades and island talk no longer readable.',
+    ],
+  },
+  {
+    n: 258,
+    day: '2026-10-22',
+    lines: () => [
+      `Added: ${SPECIES.sparra.name} on a settlement (takes a worker place): ${sparTaskSays().replace(/^Settlement task: /, '')}`,
+      `Changed: learning factor for guarding ${percent(PACE_258.guard)} on ${GATHER_SKILL.guard.replace(/_/g, ' ')}, from wild creatures and from spars.`,
+      'Added: card: "Sparring with" its partner; stamina for guards and the Sparra; idle when no guard is free, or yielded.',
     ],
   },
   {
