@@ -9,11 +9,11 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Eight more of the settlement's hands: the rippa, the chissa, the mudda, the
- * cordra, the flecha, the papra, the glossa and the dippa. As with the others
+ * Seven more of the settlement's hands: the rippa, the chissa, the cordra, the
+ * flecha, the papra, the glossa and the dippa. As with the others
  * (`./wild-hands`, `./wild-hands2`), each wears the tool of its trade: a saw
- * for a tail, a chisel, a brick on its back, a rope, an arrow, a scroll, a
- * glazing brush and a bucket.
+ * for a tail, a chisel, a rope, an arrow, a scroll, a glazing brush and a
+ * bucket. The mudda is the Sliplet now (`./wild-clayroll`).
  */
 
 /** A tail's root, out of the body, before the tool on the end of it. */
@@ -101,38 +101,6 @@ export const CHISSA: Kind = {
   shadow: [1.55, 1.3],
   stride: 1.3,
   size: 1.65,
-};
-
-/* ---- the mudda: a brick on its back, broad flat paws ---------------------------------- */
-
-const MUDDA_SPEC: QuadSpec = { ...pawed({ high: 1.1, len: 2.1, legs: 0.55, neck: 0.3, lean: 60, swing: [18, 30], ears: [45, 20], tail: [0.3, 2, 2] }), nose: 10 };
-const MUDDA_HEAD = { c: [0, 0.35, 0.1] as V3, r: [1.1, 1.02, 0.92] as V3 };
-
-function muddaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = MUDDA_HEAD;
-  // A clay brick it carries square on its back, still wet.
-  const brick = moved(tube([[0, -0.32, 0], [0, 0.32, 0]], 0.36, 0.2, 4, 'stone', { up: [0, 0, 1] }), [0, -0.1, 0.92], 45);
-  return quadPieces({
-    n, k,
-    body: barrel(2.2, 1.35, 1.0, 0.06),
-    neck: { w: 0.74, h: 0.72, len: 0.3 },
-    head: { c: H.c, r: H.r, face: snout(1.0, -0.22, [0.46, 0.32, 0.38], 0.12, n, k), eye: { dir: [0.74, 0.52, 0.32], size: 0.3, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.2] },
-    ear: earMesh(0.3, 0.28, n),
-    earTurn: 35,
-    tail: [taper([[0, 0.05, 0], [0, -0.35, -0.02]], 0.14, 0.05, n, 'coat')],
-    ...paws(n, k, 0.55, 0.32, 0.34, 'stoneDark'),
-    extras: [{ key: 'brick', mesh: brick, bone: 'trunk', bias: 0.05, after: ['body'] }],
-  });
-}
-
-export const MUDDA: Kind = {
-  bones: quadBonesOf(MUDDA_SPEC, trot),
-  build: muddaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ stone: [184, 104, 74], stoneDark: [128, 72, 52] }), 20),
-  shadow: [1.6, 1.35],
-  stride: 1.25,
-  size: 1.6,
 };
 
 /* ---- the cordra: a tail of two strands laid up into a rope --------------------------- */

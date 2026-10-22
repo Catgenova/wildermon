@@ -2651,8 +2651,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   mudda: {
     id: 'mudda',
-    name: 'Mudda',
+    name: 'Sliplet',
+    was: ['Mudda'],
+    // Sliplet, Wheelmote, Rollterra.
     description: 'Settlement task: shape each lump of clay in your settlement stores into an unfired clay brick. Output: your settlement stores. Never spoils a brick.',
+    stages: [
+      { name: 'Wheelmote', description: '' },
+      { name: 'Rollterra', description: '' },
+    ],
     health: 20,
     attack: 2,
     speed: 1.8,
@@ -2664,10 +2670,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'brick',
     workRange: 6,
     variants: [
-      ['#b06a4c', '#e8c0a8'],
-      ['#a05c40', '#dcb098'],
-      ['#bc7858', '#f0ccb4'],
-      ['#8c5038', '#d0a088'],
+      ['#7894c0', '#cc7c50'],
+      ['#6c88b4', '#c06c44'],
+      ['#8aa0bc', '#d8946a'],
+      ['#7484a8', '#b46848'],
     ],
     butcher: { meat: 3, fur: 2, leather: 2, bone: 2 },
   },

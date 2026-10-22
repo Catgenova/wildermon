@@ -5,6 +5,7 @@ import { CHEST_VOICE } from './voice-chest';
 import { CHIP_VOICE } from './voice-chip';
 import { CLOUD_VOICE } from './voice-cloud';
 import { CLAY_VOICE } from './voice-clay';
+import { CLAYROLL_VOICE } from './voice-clayroll';
 import { CRAG_VOICE } from './voice-crag';
 import { CURLEW_VOICE } from './voice-curlew';
 import { FROG_VOICE } from './voice-frog';
@@ -109,4 +110,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   wurla: CURLEW_VOICE,
   // The Budscarab, the Blossomhorn and the Florantler.
   grubba: PETAL_VOICE,
+  // The Sliplet, the Wheelmote and the Rollterra.
+  mudda: CLAYROLL_VOICE,
 };
