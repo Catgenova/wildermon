@@ -119,3 +119,18 @@ jobs:
                  c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
             from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid
            where c.relkind in ('r', 'm') order by pg_total_relation_size(c.oid) desc limit 8"
+          ask "kept wildermon with no post, no settlement to work for, or gone wild with a keeper" "select c.id, c.species, c.name,
+                 c.mode, c.post, coalesce(p.name, '?') as keeper, (deed_of(c.world_id, c.keeper)).name as keeper_deed,
+                 c.idle_why, to_char(c.settled_at, 'MM-DD HH24:MI') as settled, to_char(c.idle_since, 'MM-DD HH24:MI') as idle_since
+            from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
+           where c.keeper is not null and (c.mode = 'wild'
+              or (c.mode = 'deed' and (deed_of(c.world_id, c.keeper)).world_id is null)
+              or (c.post is not null and not exists (select 1 from placed q where q.id = c.post)))
+           order by p.name, c.id limit 60"
+          ask "post messages, last 3 days" "select to_char(e.at, 'MM-DD HH24:MI') as at, coalesce(p.name, '?') as who, left(e.text, 140) as text
+            from event e left join player p on p.world_id = e.world_id and p.uid = e.uid
+           where e.at > now() - interval '3 days' and (e.text ilike '%post%' or e.text ilike '%comes home%' or e.text ilike '%runs wild%')
+           order by e.at desc limit 40"
+          ask "chiptails and their keepers" "select c.id, c.species, c.name, c.mode, c.post, coalesce(p.name, '?') as keeper
+            from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
+           where c.species ilike '%chiptail%' or c.species in ('quarrybash', 'monolithump') order by c.mode, p.name limit 60"
