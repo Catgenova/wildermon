@@ -2335,6 +2335,7 @@ export function helpText(): string {
       tameable (monsters are not).</li>
       <li>A page: where it spawns and how far it keeps from home, its % of wild spawns, taming needed and accepted food, its use once yours, how it fights, carcass yield.</li>
       <li><b>Field guide</b> on any creature's menu opens its page.</li>
+      <li><b>Forms</b> (a tameable kind's page): its colour form, large form and small form, each with its wild odds and effect, marked seen (one in it in your sight) and tamed. Not counted in the progress.</li>
       <li>Kept by the island; a sighting counts only within ${MOBS_RANGE} tiles of you.</li>
     </ul>
     <h4>Track</h4>
