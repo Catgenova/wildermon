@@ -46,9 +46,11 @@ jobs:
           echo "== security advisors (ERROR, WARN)"
           curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
                "https://api.supabase.com/v1/projects/$PROJECT_REF/advisors/security" \
-            | jq -r '.lints[] | select(.level == "ERROR" or .level == "WARN") | [.level, .name, .detail] | @tsv' \
-            | sort | uniq -c | sort -rn | head -80 \
-            || echo "::warning::could not read the security advisors"
+            > advisors.json || echo "::warning::could not read the security advisors"
+          jq -r '.lints[] | select(.level == "ERROR" or .level == "WARN") | [.level, .name] | @tsv' advisors.json | sort | uniq -c | sort -rn || true
+          echo "== security advisors in full, but for the search path one"
+          jq -r '.lints[] | select((.level == "ERROR" or .level == "WARN") and .name != "function_search_path_mutable") | [.level, .name, .detail] | @tsv' advisors.json \
+            | sort | uniq -c | sort -rn | head -150 || true
           # Auth settings the advisors judge, and nothing secret: names and switches only.
           echo "== auth settings"
           curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
