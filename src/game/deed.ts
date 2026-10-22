@@ -133,8 +133,13 @@ export const DEED_ACTIONS: ActionDef[] = [
     verb: 'marking out the new boundary',
     stamina: 0.05,
     baseTime: 8,
-    // Offered on every tile to whoever founded one; to a rank allowed it, on its token.
-    applies: (t, g) => !lacks(deedAimed(g, t), 'upgrade') && !!deedAimed(g, t),
+    // Offered inside the settlement it aims at (its founder's, or the one whose token it is), to a rank allowed it,
+    // until the settlement is at its last level.
+    applies: (t, g) => {
+      const d = deedAimed(g, t);
+      return t.kind === 'tile' && !!d && !lacks(d, 'upgrade') && nextDeedLevel(d) !== null
+        && Math.abs(t.x - d.x) <= d.radius && Math.abs(t.y - d.y) <= d.radius;
+    },
     check: (t, g) => upgradeReason(g, deedAimed(g, t)),
     perform: (t, g) => {
       const d = deedAimed(g, t);

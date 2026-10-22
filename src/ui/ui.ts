@@ -2753,10 +2753,10 @@ export class UI {
     const t: Target = { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y };
     const out: MenuItem[] = [];
     const upgrade = DEED_ACTION_BY_ID.get('upgrade_deed');
-    if (upgrade && !lacks(d, 'upgrade')) {
+    if (upgrade && !lacks(d, 'upgrade') && (d.level ?? 1) < MAX_DEED_LEVEL) {
       const reason = upgradeReason(g, d);
       out.push({
-        label: (d.level ?? 1) < MAX_DEED_LEVEL ? `Upgrade to level ${(d.level ?? 1) + 1}` : `Level ${d.level ?? 1} (max)`,
+        label: `Upgrade to level ${(d.level ?? 1) + 1}`,
         hint: reason ?? undefined,
         disabled: !!reason,
         onSelect: () => g.requestAction(upgrade, t),
@@ -2817,13 +2817,13 @@ export class UI {
       children: kept.length ? kept.map((c) => ({ label: `${c.name} (${g.creatures.describe(c)})`, children: this.creatureEntries(c.id) })) : undefined,
     });
     const upgrade = DEED_ACTION_BY_ID.get('upgrade_deed');
-    if (upgrade) {
+    if (upgrade && level < MAX_DEED_LEVEL) {
       const reason = upgradeReason(g);
       const progress = upgradeProgress(g);
       const t: Target = { kind: 'tile', x: d.x, y: d.y, cx: d.x, cy: d.y };
       children.push({
-        label: level < MAX_DEED_LEVEL ? `Upgrade to level ${level + 1}` : `Level ${level} (max)`,
-        note: level < MAX_DEED_LEVEL ? `Border ${d.radius + 2} tiles, ${deedWorkersAt(level + 1)} workers` : undefined,
+        label: `Upgrade to level ${level + 1}`,
+        note: `Border ${d.radius + 2} tiles, ${deedWorkersAt(level + 1)} workers`,
         hint: reason ?? undefined,
         disabled: !!reason,
         onSelect: () => g.requestAction(upgrade, t),
