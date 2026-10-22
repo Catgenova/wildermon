@@ -119,6 +119,10 @@ jobs:
               raise exception 'GROUND deed=%, deeds=%', j->'deed', jsonb_array_length(coalesce(j->'deeds', '[]'::jsonb));
             end \$\$"
           ask "Solara's altar baubles as rpc_ground reads them" "select deed_baubles_json(d.world_id, d.founded_by) from deed d where d.name = 'Solara'"
+          ask "the watch: open flags, newest first" "select to_char(f.at, 'MM-DD HH24:MI') as at, w.name as island, f.kind,
+                 coalesce(folk_name(f.world_id, f.uid), '') as who, left((f.detail - 'key')::text, 200) as detail
+            from private.watch_flag f join world w on w.id = f.world_id
+           where not f.seen order by f.n desc limit 40"
           ask "biggest tables" "select n.nspname || '.' || c.relname as relation, pg_size_pretty(pg_total_relation_size(c.oid)) as total,
                  c.reltuples::bigint as rows, coalesce(s.n_dead_tup, 0) as dead
             from pg_class c join pg_namespace n on n.oid = c.relnamespace left join pg_stat_all_tables s on s.relid = c.oid

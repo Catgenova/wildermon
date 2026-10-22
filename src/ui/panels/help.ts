@@ -186,6 +186,7 @@ import { HOUR as SKEP_HOUR, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_
 import { keepControlKeys } from '../controlkeys';
 import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
 import { RECONNECTING } from '../phone';
+import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
@@ -1069,6 +1070,16 @@ export function helpText(): string {
       <li>Counted while away: loads your workers put in the settlement stores (by item); young born to your wildermon, and any that went wild with no empty wildermon crate
       because something already followed you; stall sales and silver; everything brought to your buy orders and the silver it cost; parcels posted to you, by sender.</li>
       <li>On return: a window lists it all; the same lines go into the event log.</li>
+    </ul>
+    <h4>Island keeper: Flags</h4>
+    <ul>
+      <li>Keepers only, foot of the Island keeper window. Kept ${WATCH_KEEP_DAYS} days. <b>Seen</b>: one flag; <b>All seen</b>: every open one.</li>
+      <li>Shared IP: things or silver passed by trade, deal, parcel, stall or drop-and-pick-up between accounts seen on one IP; once a day per giver and getter.</li>
+      <li>No break: moving or acting for over ${WATCH_AWAKE_HOURS} h with no ${WATCH_BREAK_MINS} min gap.</li>
+      <li>Skill rate: a skill's rise over ${WATCH_SKILL_MINS} min above ${WATCH_SKILL_TIMES}× the most that many minutes of its fastest go teach at the best roll.</li>
+      <li>Stock off ledger: each night, an item's island-wide count against yesterday's plus everything made minus everything gone;
+      off by more than ${WATCH_STOCK_PER_MILLE / 10}% of the ledger's count, rounded down to whole items.</li>
+      <li>Made outside any door: items written straight into the island, not by a player's action, a door or the clock.</li>
     </ul>
     <h3>Leaderboards</h3>
     <ul>

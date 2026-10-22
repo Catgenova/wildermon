@@ -3,6 +3,7 @@ import type { Game } from '../../game/game';
 import { heardLine, KEEPER_REFRESH, moveHint, moveTarget, MUTE_FOR, MUTE_SHUTS, muteLabel, muteLine, muteNote, type Kept, type KeptBody } from '../../game/keeper';
 import type { MenuItem } from '../contextmenu';
 import type { UIWindow } from '../windows';
+import { KeeperFlags } from './keeperflags';
 
 /** When so many seconds from now is, by this machine's clock: "Fri 15:05". */
 const clockIn = (secs: number): string =>
@@ -24,6 +25,8 @@ export class KeeperPanel {
   private failed = false;
   private asking = false;
   private lastAsk = -1e9;
+  /** The watch's flags: a section of its own, asked for whenever the list is. */
+  private readonly flags: KeeperFlags;
 
   constructor(
     private readonly win: UIWindow,
@@ -35,6 +38,7 @@ export class KeeperPanel {
     this.page = document.createElement('div');
     this.page.className = 'social-page';
     win.body.append(this.page);
+    this.flags = new KeeperFlags(game, island);
     win.onOpen = () => void this.refresh(performance.now() / 1000);
     this.draw();
   }
@@ -49,6 +53,7 @@ export class KeeperPanel {
     this.lastAsk = now;
     if (this.asking) return;
     this.asking = true;
+    void this.flags.refresh();
     let got: Kept | null = null;
     try {
       got = await this.island.kept();
@@ -90,6 +95,7 @@ export class KeeperPanel {
     this.say('Move: to their settlement totem, or the newcomer landing; stops their action, empties their queue, '
       + 'dismounts them from anything ridden, driven, pulled or boarded. '
       + `Mute: refuses ${MUTE_SHUTS}. Clear a ground pile: right-click its tile.`);
+    this.page.append(this.flags.el);
     // Asked again every so often: the list stays where it was being read.
     this.page.scrollTop = top;
   }

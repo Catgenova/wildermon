@@ -3618,6 +3618,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/pasttop.mjs --log-level=error
           node node_modules/.cache/pasttop.mjs
 
+      - name: The island's watch keeps its ledger and raises its flags
+        run: |
+          # Every thing made or unmade is counted per day, item and door; the
+          # night holds the count against the ledger and flags a forged
+          # duplicate or a leak; a sweep flags things passed between accounts
+          # on one IP, a body with no break for 20 hours and a skill risen 3
+          # times past what an hour can teach; only a keeper reads them. And
+          # what the ledger's triggers add to a craft, a forage and a step.
+          npx esbuild supabase/test/watch.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/watch.mjs --log-level=error
+          node node_modules/.cache/watch.mjs
+
       - name: The exact benefit, and where its number comes from
         run: |
           # Text the player reads says what changes and by how much, and where

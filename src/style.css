@@ -4838,6 +4838,18 @@ button.goal-row:focus-visible {
   visibility: hidden;
 }
 
+/* The Flags section of the Island keeper window: All seen at the right of its head, and a flag already seen dimmed. */
+.keeper-flags-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.keeper-flag-seen {
+  opacity: 0.6;
+}
+
 /*
  * A window made narrow from its grip: a row's buttons go to a line of their
  * own under the name, still in one place on every row, rather than past the edge.

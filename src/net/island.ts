@@ -24,6 +24,7 @@ import { chartedSquare } from '../game/cartography';
 import { trackedArrow } from '../game/tracking';
 import type { Away } from '../game/away';
 import type { Kept, KeptBody } from '../game/keeper';
+import type { WatchFlag, WatchFlags } from '../game/watch';
 import type { Barter } from '../game/barter';
 import type { Notice, SettleBoard } from '../game/noticeboard';
 import { presenceOf } from './presence';
@@ -3607,6 +3608,20 @@ export class Island {
 
   async keeperUnmute(uid: string): Promise<string | null> {
     return this.door('rpc_owner_unmute', { p_uid: uid });
+  }
+
+  /** What the island's watch has flagged, newest first. Null when the island did not answer. */
+  async keeperFlags(): Promise<WatchFlags | null> {
+    if (!this.info) return null;
+    const { data, error } = await supabase().rpc('rpc_owner_flags', { p_world: this.info.id });
+    if (error || !data || typeof data !== 'object') return null;
+    const got = data as Partial<WatchFlags>;
+    return { flags: rowsIn<WatchFlag>(got.flags), open: got.open ?? 0 };
+  }
+
+  /** One flag marked seen, or with `null` every open one on the island. */
+  async keeperFlagSeen(n: number | null): Promise<string | null> {
+    return this.door('rpc_owner_flag_seen', { p_n: n });
   }
 
   /** Delete everything lying on the ground on one tile, and read the ground again at the quick pace. */
