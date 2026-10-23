@@ -2906,7 +2906,7 @@ export function helpText(): string {
       a failure has no lasting effect.</li>
       <li><b>Keep at it</b>: after a refused offering, <b>+${percent(COAX_STEP)} chance</b> per attempt in a row, capped only by the overall cap. Lapses after ${dur(COAX_LAPSE)};
       <b>hitting it ends the run</b>. Examine shows progress.</li>
-      <li><b>Taming gained</b> per attempt (offering, taking a catch out of a trap, Call of the Wild): <b>×(1 + taming needed / ${TAME_HARD})</b>.
+      <li><b>Taming gained</b> per attempt (offering, taking a catch out of a trap, Call of the Wild): <b>+${percent(1 / TAME_HARD)} per point of taming needed</b>.
       ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mul(tameLearn({ species: id, skills: {} }))}`).join(', ')}.</li>
       <li><b>Evolved in the wild</b>: ${((): string => {
         const [a, b] = stageLevels(1);

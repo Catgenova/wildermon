@@ -3462,7 +3462,7 @@ export const NEWS: News[] = [
     n: 279,
     day: '2026-10-23',
     lines: () => [
-      `Changed: taming gained per attempt ×(1 + taming needed / ${TAME_HARD}): offering (taken or refused), taking a catch out of a trap, Call of the Wild. ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mult(tameLearn({ species: id, skills: {} }))}`).join(', ')}.`,
+      `Changed: taming gained per attempt +${percent(1 / TAME_HARD)} per point of taming needed: offering (taken or refused), taking a catch out of a trap, Call of the Wild. ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mult(tameLearn({ species: id, skills: {} }))}`).join(', ')}.`,
     ],
   },
   {
