@@ -96,9 +96,7 @@ declare r record; v_def text; v_n int;
 begin
   for r in select * from (values
     -- Nothing lying about within its range: a magga on its settlement goes to the nearest stack it can sort.
-    ('worker_settle', $$        v_day int; v_held jsonb; v_left int; v_bed placed;
-$$, $$        v_day int; v_held jsonb; v_left int; v_bed placed; v_sort record;
-$$),
+    ('worker_settle', $$v_held jsonb; v_left int; v_bed placed;$$, $$v_held jsonb; v_left int; v_bed placed; v_sort record;$$),
     ('worker_settle', $$      select * into spot from find_work_tile(p_world, v_site.x, v_site.y, v_site.radius, kind, c);
 $$, $$      select * into spot from find_work_tile(p_world, v_site.x, v_site.y, v_site.radius, kind, c);
       if spot.x is null and kind = 'fetch' and v_site.post is null then

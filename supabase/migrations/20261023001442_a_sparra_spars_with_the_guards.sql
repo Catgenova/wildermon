@@ -99,10 +99,10 @@ declare v_def text;
 $a$, $a$        v_day int; v_held jsonb; v_left int; v_bed placed; v_spar creature;
 $a$],
     -- The row written before a strike reads it back: whom it spars with, too.
-    [$a$          idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, bed = c.bed, settled_at = now()
+    [$a$          idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, gear = c.gear, bed = c.bed, settled_at = now()
         where world_id = p_world and id = p_id;
       if c.enemy is not null and creature_attack(p_world, p_id, c.enemy) then done := done + 1; end if;$a$,
-     $a$          idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, bed = c.bed,
+     $a$          idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, gear = c.gear, bed = c.bed,
           spar_with = c.spar_with, spar_at = c.spar_at, settled_at = now()
         where world_id = p_world and id = p_id;
       if c.enemy is not null and creature_attack(p_world, p_id, c.enemy) then done := done + 1; end if;$a$],
@@ -254,9 +254,9 @@ $a$],
     if kind = 'hunt' and c.phase = 'idle' and c.carrying is null then
       if c.work_x is not null and not exists$a$],
     -- And the row written at the end: whom it spars with, and when it last did.
-    [$a$      idle_since = c.idle_since, idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, bed = c.bed,
+    [$a$      idle_since = c.idle_since, idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, gear = c.gear, bed = c.bed,
       enemy = c.enemy, settled_at = now()$a$,
-     $a$      idle_since = c.idle_since, idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, bed = c.bed,
+     $a$      idle_since = c.idle_since, idle_why = c.idle_why, idle_n = c.idle_n, ledger = c.ledger, worn = c.worn, gear = c.gear, bed = c.bed,
       enemy = c.enemy, spar_with = c.spar_with, spar_at = c.spar_at, settled_at = now()$a$]
   ];
   i int;
