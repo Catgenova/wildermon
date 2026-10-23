@@ -3372,7 +3372,17 @@ export const NEWS: News[] = [
       'Fixed: shade at a wall\'s foot drawn down the slope below it at some view angles; now on the ground at the foot, every angle.',
     ],
   },
+  {
+    n: 268,
+    day: '2026-10-23',
+    lines: () => [
+      `Changed: dragon scales from a dragon only; none from ${listed(UNSCALED.map((id) => SPECIES[id].name))}.`,
+    ],
+  },
 ];
+
+/** The kinds that butchered into dragon scales until What's new 268. */
+const UNSCALED = ['glossa', 'testa', 'thumpa', 'spitta', 'scorcha', 'brittla', 'stona'];
 
 /** The nine kinds What's new 251 gives new lines. */
 const NINE_LINES = ['sappa', 'sprigga', 'rowl', 'snout', 'wicka', 'thumpa', 'stona', 'lungra', 'bogga'];
