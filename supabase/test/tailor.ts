@@ -391,6 +391,9 @@ ${SURE.map(([name, recipe, makes], i) => `
          leg_at = now(), leg_ends = now(), settled_at = now(), name = 'Greyfell' where world_id = w and id = v_c;
   perform pg_temp.hold(w, u, '{}');
   ${beast('tack_creature')};
+  -- And the browser is told it is saddled and bridled, which its Mount asks.
+  insert into said values ('TACKEDSENT', coalesce((select x->>'tacked' from jsonb_array_elements(rpc_creatures(w, 20)) x
+    where (x->>'id')::int = v_c), 'unsent'));
   v_t := v_t || '|' || coalesce((select tack::text from creature where world_id = w and id = v_c), 'none')
     || '|' || ${count('saddle')} || ':' || ${count('bridle')};
   ${beast('mount_creature')};
@@ -667,6 +670,7 @@ check(`${P('Lye Saver').name}: with the dice under ${LYE}, the lye is still in t
 
 /* ---- Tack and yokes ------------------------------------------------------------------------ */
 
+check('a saddled and bridled one is sent saddled and bridled (rpc_creatures tacked), which Mount asks', say('TACKEDSENT') === 'true', say('TACKEDSENT'));
 const saddle = say('SADDLE').split('|');
 /** Tack as the island keeps it: each piece's mark, by the piece. */
 const tackJson = (s: string | undefined): Record<string, Record<string, number>> | null => (!s || s === 'none' || s === 'unsent' ? null : JSON.parse(s));

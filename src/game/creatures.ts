@@ -4783,6 +4783,8 @@ export interface IslandCreature {
   gear?: Partial<Record<GearSlot, { def: string; ql: number; dmg: number }>> | null;
   /** Shod, by the island's clock. */
   shod?: boolean;
+  /** Saddled and bridled, by the island's word: what Mount asks. */
+  tacked?: boolean | null;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
   tack?: Record<string, Mark> | null;
   /** The enchantments in the tack on it, by the piece, when any (Fleetfoot, Tamer's Bridle). */
@@ -5672,6 +5674,9 @@ export class Creatures {
       if (r.job !== undefined) c.trade = r.job && r.job !== SPECIES[c.species]?.gathers && (SPECIES[c.species]?.trades ?? []).includes(r.job as GatherKind) ? (r.job as GatherKind) : null;
       // Shod or not is the island's word; the browser keeps its own clock of it.
       if (r.shod !== undefined) c.shodAt = r.shod ? (isShod(time, c) ? c.shodAt : time) : -1e9;
+      // Saddled and bridled is the island's word too. Reported: a Thistlekit saddled and bridled, and Mount
+      // refused "no saddle and bridle": the island never sent it, so this side's stayed as the crate let it out.
+      if (r.tacked !== undefined && r.tacked !== null) c.tacked = r.tacked;
       if (r.tack !== undefined) {
         if (r.tack) c.tack = r.tack;
         else delete c.tack;

@@ -3513,6 +3513,13 @@ export const NEWS: News[] = [
       `Fixed: frame rate with 14 wildermon of 10 kinds standing about close in on a 2× screen: pictures kept ${num(BEAST_BUDGET / 1e6)} million pixels (was 14 million), loops in view never dropped for new ones. 322 → 33 ms a frame.`,
     ],
   },
+  {
+    n: 285,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: Mount refused "no saddle and bridle" on a saddled and bridled wildermon.',
+    ],
+  },
 ];
 
 /**
