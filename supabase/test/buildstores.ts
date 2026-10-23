@@ -138,7 +138,8 @@ begin
    where not exists (select 1 from deed d where d.world_id = w
                       and abs(d.x - gx) <= d.radius + 8 and abs(d.y - gy) <= d.radius + 8)
    order by gx, gy limit 1;
-  update player set x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb, craft_from_stores = true,
+  -- Standing there now (body_at): a body last settled long ago is read where it was, whatever else ran before this.
+  update player set x = v_x + 0.5, y = v_y + 0.5, act = null, act_queue = '[]'::jsonb, craft_from_stores = true, body_at = now(),
       stats = jsonb_set(coalesce(stats, '{}'::jsonb), '{stamina}', '1')
    where world_id = w and uid = me;
   perform set_config('request.jwt.claims', json_build_object('sub', me)::text, true);
