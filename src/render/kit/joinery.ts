@@ -26,10 +26,12 @@ export const topGrain = (seed: number, along: 'x' | 'y' = 'x', k = 0.6) => (g: C
  * deeper with the grain up it, the frame's shade along its head and left
  * (the light is from the upper left), a lit lip along its foot and right,
  * and, `raised`, a fielded middle standing proud with its own lit edges.
+ * `deep` sinks it further: a wider, darker shade, for a panel that must read
+ * from far off.
  */
-export function panel(g: Ctx, fill: RGB, x0: number, y0: number, x1: number, y1: number, seed: number, raised = true): void {
+export function panel(g: Ctx, fill: RGB, x0: number, y0: number, x1: number, y1: number, seed: number, raised = true, deep = 1): void {
   const w = x1 - x0, h = y1 - y0;
-  g.fillStyle = css(mix(fill, hex('#5c4458'), 0.28));
+  g.fillStyle = css(mix(fill, hex('#5c4458'), Math.min(0.42, 0.28 * deep)));
   g.fillRect(x0, y0, w, h);
   g.save();
   g.beginPath();
@@ -38,8 +40,8 @@ export function panel(g: Ctx, fill: RGB, x0: number, y0: number, x1: number, y1:
   g.translate(x0, y0);
   grain(g, fill, w, h, seed, 'y', 0.55);
   g.restore();
-  const d = Math.min(0.36, w * 0.14, h * 0.14);
-  g.fillStyle = css(mix(fill, hex('#4a3640'), 0.6), 0.9);
+  const d = Math.min(0.36 * deep, w * 0.14, h * 0.14);
+  g.fillStyle = css(mix(fill, hex('#4a3640'), Math.min(0.72, 0.6 * deep)), 0.9);
   g.fillRect(x0, y1 - d, w, d);
   g.fillRect(x0, y0, d, h - d);
   g.fillStyle = css(mix(fill, [255, 248, 232], 0.5), 0.8);

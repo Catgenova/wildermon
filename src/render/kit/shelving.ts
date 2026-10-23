@@ -1,5 +1,5 @@
 import {
-  boards, clothTone, css, deeper, faceColour, hex, mix, paler, seam, slab, TAU, toneOf, turned, woodTone,
+  boards, clothTone, css, deeper, KIT_INK_W, nail, faceColour, hex, mix, paler, slab, TAU, toneOf, turned, woodTone,
   type Ctx, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type PaintCtx, type RGB, type Side, type Tone,
 } from './core';
 import { GLAZE, hollow, STONEWARE, turnedWith } from './cases';
@@ -222,20 +222,52 @@ function bookshelfOf(look: KitLook, hw: number, hd: number): KitModel {
 
 /* ---- the crate shelf ------------------------------------------------------------------ */
 
-/** A crate's planks: a shade paler than any frame it stands on, so a crate on a rack of the same wood still stands out from it. */
+/** A crate's planks: planed pale, a step paler than any frame it stands on, so a crate on a rack of the same wood still stands out from it. */
 const CRATE_BOARD = hex('#c9a46c');
-const CRATE: Tone = { lit: mix(CRATE_BOARD, hex('#fff2dc'), 0.2), shade: mix(CRATE_BOARD, hex('#6a5468'), 0.55) };
+const CRATE: Tone = { lit: mix(CRATE_BOARD, hex('#fff2dc'), 0.32), shade: mix(CRATE_BOARD, hex('#6a5468'), 0.5) };
 
-/** A plank crate's side: three boards, a batten up each end, a brace across. */
+/** A batten from (x0, y0) to (x1, y1), `w` wide, standing proud of the boards: paler, a lit lip along its upper side, its shade on the boards under it. */
+function batten(g: Ctx, fill: RGB, x0: number, y0: number, x1: number, y1: number, w: number): void {
+  const dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy) || 1;
+  const nx = (-dy / l) * (w / 2), ny = (dx / l) * (w / 2);
+  const strip = (o: number, k: number): void => {
+    g.beginPath();
+    g.moveTo(x0 + nx * (k + o), y0 + ny * (k + o));
+    g.lineTo(x1 + nx * (k + o), y1 + ny * (k + o));
+    g.lineTo(x1 - nx * (k - o), y1 - ny * (k - o));
+    g.lineTo(x0 - nx * (k - o), y0 - ny * (k - o));
+    g.closePath();
+  };
+  g.save();
+  g.translate(0.12, -0.12);
+  strip(0, 1);
+  g.fillStyle = css(mix(fill, hex('#3e2c38'), 0.55), 0.8);
+  g.fill();
+  g.restore();
+  strip(0, 1);
+  g.fillStyle = css(mix(fill, [255, 248, 232], 0.18));
+  g.fill();
+  strip(0.82, 0.18);
+  g.fillStyle = css(mix(fill, [255, 250, 240], 0.5), 0.75);
+  g.fill();
+}
+
+/** A plank crate's side: three boards, a batten up each end and a brace across, nailed, and a merchant's mark stencilled on it. */
 function crateSide(seed: number) {
   return (g: Ctx, k: PaintCtx, s: Side): void => {
     boards(g, k.fill, s.w, s.h, 3, seed);
-    const dark = css(mix(k.fill, hex('#5a4050'), 0.28));
-    g.fillStyle = dark;
-    g.fillRect(0, 0, 0.75, s.h);
-    g.fillRect(s.w - 0.75, 0, 0.75, s.h);
-    seam(g, k.fill, 0.75, 0, 0.75, s.h, 0.12);
-    seam(g, k.fill, s.w - 0.75, 0, s.w - 0.75, s.h, 0.12);
+    // The mark: a ring with a bar through it, in paint gone grey.
+    g.strokeStyle = css(mix(k.fill, hex('#3e2c38'), 0.6), 0.6);
+    g.lineWidth = 0.22;
+    g.beginPath();
+    g.arc(s.w * 0.3, s.h * 0.7, 0.55, 0, TAU);
+    g.moveTo(s.w * 0.3 - 0.8, s.h * 0.7);
+    g.lineTo(s.w * 0.3 + 0.8, s.h * 0.7);
+    g.stroke();
+    batten(g, k.fill, 0.75, 0.45, s.w - 0.75, s.h - 0.45, 0.6);
+    batten(g, k.fill, 0.38, 0, 0.38, s.h, 0.76);
+    batten(g, k.fill, s.w - 0.38, 0, s.w - 0.38, s.h, 0.76);
+    for (const [x, y] of [[0.38, 0.4], [0.38, s.h - 0.4], [s.w - 0.38, 0.4], [s.w - 0.38, s.h - 0.4]]) nail(g, k.fill, x, y, 0.11);
   };
 }
 
@@ -248,8 +280,7 @@ function crate(x0: number, x1: number, y0: number, y1: number, z0: number, z1: n
         g.save();
         g.translate(-s.w / 2, -s.h / 2);
         boards(g, k.fill, s.w, s.h, 4, 75, 'x');
-        g.fillStyle = css(mix(k.fill, hex('#5a4050'), 0.22));
-        for (const t of [0.7, s.w - 1.5]) g.fillRect(t, 0, 0.8, s.h);
+        for (const t of [0.75, s.w - 0.75]) batten(g, k.fill, t, 0, t, s.h, 0.8);
         g.restore();
       },
     },
@@ -261,8 +292,8 @@ const TIERS = [2.2, 9.0];
 
 function crateShelfOf(look: KitLook, hw: number, hd: number): KitModel {
   // The frame a step deeper than the wood, so the crates (paler) stand out on it.
-  const WOOD = deeper(woodTone(look.material, look.tint, 0.75), 0.2);
-  const DECK = paler(WOOD, 0.06);
+  const WOOD = deeper(woodTone(look.material, look.tint, 0.75), 0.32);
+  const DECK = deeper(WOOD, 0.05);
   const x = hw - 4.2, y = hd - 0.8, H = 14.6;
   const bay = (2 * y) / 4;
   const mask = Math.round(look.trim ?? 0);
@@ -313,7 +344,8 @@ function crateShelfOf(look: KitLook, hw: number, hd: number): KitModel {
   for (let k = 0; k < 8; k++) {
     if (!(mask & (1 << k))) continue;
     const z = TIERS[k >> 2], cy = y - ((k & 3) + 0.5) * bay;
-    add(crate(-4.3, 4.3, cy - 4.1, cy + 4.1, z, z + 5), { edges: true });
+    // Each ruled round in a firmer ink of its own, so it reads as a crate on the rack and not as more rack.
+    add(crate(-4.3, 4.3, cy - 4.1, cy + 4.1, z, z + 5), { edges: true, ink: KIT_INK_W * 1.2 });
   }
   return { parts, shade: [[-x - 0.6, -y - 0.6, 0], [x + 0.6, -y - 0.6, 0], [x + 0.6, y + 0.6, 0], [-x - 0.6, y + 0.6, 0]] };
 }

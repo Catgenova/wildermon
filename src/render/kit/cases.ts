@@ -113,17 +113,22 @@ function caseOf(look: KitLook, c: CaseSpec): KitModel {
 }
 
 /** Two doors meeting in the middle of a front from `y0` to `y1`: a joint round each, their panels (`inner` lays each door's), and knobs at the meeting stiles. */
-function pairOfDoors(g: Ctx, k: PaintCtx, w: number, y0: number, y1: number, inner: (x0: number, x1: number, d: number) => void, knobY: number): void {
-  const m = 0.32, mid = w / 2;
+function pairOfDoors(g: Ctx, k: PaintCtx, w: number, y0: number, y1: number, inner: (x0: number, x1: number, d: number) => void, knobY: number, bold = false): void {
+  const m = 0.32, mid = w / 2, seam = bold ? 0.36 : undefined, r = bold ? 0.36 : 0.28;
   for (const [d, a, b] of [[0, m, mid - 0.05], [1, mid + 0.05, w - m]] as Array<[number, number, number]>) {
-    joint(g, k.fill, a, y0, a, y1);
-    joint(g, k.fill, b, y0, b, y1);
-    joint(g, k.fill, a, y1, b, y1);
-    joint(g, k.fill, a, y0, b, y0);
+    joint(g, k.fill, a, y0, a, y1, seam);
+    joint(g, k.fill, b, y0, b, y1, seam);
+    joint(g, k.fill, a, y1, b, y1, seam);
+    joint(g, k.fill, a, y0, b, y0, seam);
     inner(a, b, d);
   }
-  knob(g, k, mid - 0.55, knobY, 0.28);
-  knob(g, k, mid + 0.55, knobY, 0.28);
+  // Bold: the gap where the two doors meet, a dark slot down the middle.
+  if (bold) {
+    g.fillStyle = css(mix(k.fill, hex('#3e2c38'), 0.72));
+    g.fillRect(mid - 0.2, y0, 0.4, y1 - y0);
+  }
+  knob(g, k, mid - 0.55 - (r - 0.28), knobY, r);
+  knob(g, k, mid + 0.55 + (r - 0.28), knobY, r);
   keyhole(g, k, mid + 0.6, knobY - 1.35, 0.8);
 }
 
@@ -160,20 +165,20 @@ function wardrobeOf(look: KitLook, hw: number, hd: number): KitModel {
       grained(32, 'y', 0.5)(g, k, s);
       // The long drawer at its foot, its two knobs.
       const d0 = 0.4, d1 = 2.6;
-      joint(g, k.fill, 0.32, d0, s.w - 0.32, d0);
-      joint(g, k.fill, 0.32, d1, s.w - 0.32, d1);
-      joint(g, k.fill, 0.32, d0, 0.32, d1);
-      joint(g, k.fill, s.w - 0.32, d0, s.w - 0.32, d1);
-      panel(g, k.fill, 0.95, d0 + 0.45, s.w - 0.95, d1 - 0.45, 94, false);
-      knob(g, k, s.w * 0.27, (d0 + d1) / 2, 0.3);
-      knob(g, k, s.w * 0.73, (d0 + d1) / 2, 0.3);
+      joint(g, k.fill, 0.32, d0, s.w - 0.32, d0, 0.36);
+      joint(g, k.fill, 0.32, d1, s.w - 0.32, d1, 0.36);
+      joint(g, k.fill, 0.32, d0, 0.32, d1, 0.36);
+      joint(g, k.fill, s.w - 0.32, d0, s.w - 0.32, d1, 0.36);
+      panel(g, k.fill, 0.95, d0 + 0.45, s.w - 0.95, d1 - 0.45, 94, false, 1.3);
+      knob(g, k, s.w * 0.27, (d0 + d1) / 2, 0.36);
+      knob(g, k, s.w * 0.73, (d0 + d1) / 2, 0.36);
       // The doors over it, each a tall panel over a short one.
       const y0 = 3.0, y1 = s.h - 0.4;
       pairOfDoors(g, k, s.w, y0, y1, (a, b, d) => {
         const split = y0 + (y1 - y0) * 0.36;
-        panel(g, k.fill, a + 0.75, y0 + 0.8, b - 0.75, split - 0.4, 96 + d);
-        panel(g, k.fill, a + 0.75, split + 0.4, b - 0.75, y1 - 0.85, 98 + d);
-      }, y0 + (y1 - y0) * 0.36);
+        panel(g, k.fill, a + 0.75, y0 + 0.8, b - 0.75, split - 0.4, 96 + d, true, 1.5);
+        panel(g, k.fill, a + 0.75, split + 0.4, b - 0.75, y1 - 0.85, 98 + d, true, 1.5);
+      }, y0 + (y1 - y0) * 0.36, true);
     },
     side: (g, k, s) => sideBoards(82)(g, k, s),
     crest: 1.2,
