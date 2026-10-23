@@ -657,6 +657,7 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   mudda: { kind: 'loads', n: 1, what: 'bricks per cycle' },
   dippa: { kind: 'loads', n: 1, what: 'buckets per trip' },
   middun: { kind: 'loads', n: 1, what: 'items per trip' },
+  sparra: { kind: 'blood', n: 1.1, channel: 'tough', what: 'blow' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -1230,14 +1231,12 @@ export const SPAR_REACH = 1;
 export const sparsAsGuard = (c: Pick<Creature, 'species' | 'trade'>): boolean => (c.trade ?? SPECIES[c.species]?.gathers) === 'guard';
 /** The health a yielded one has its breath back above, whole. */
 export const sparBack = (c: Creature): number => Math.ceil(sparFloor(c) + SPAR_SLACK);
-/** A guard's level line: what teaches it, wild creatures and a Sparra on the settlement. */
-export const GUARD_LEVEL = `Level: ${GATHER_SKILL.guard.replace(/_/g, ' ')}, learned per attack on a wild creature while guarding a settlement or sparring with a Sparra on the settlement.`;
 /** What a Sparra kept on a settlement does, every number read off the rule, for its words and the help. */
 export function sparTaskSays(): string {
   const level = GATHER_SKILL.guard.replace(/_/g, ' ');
   return `Settlement task: spar with a guard of yours on the settlement, 1 at a time, the one that sparred longest ago first. `
     + `Time per spar: the guard's time per action, ${Math.round(workDuration(1))} seconds at level 1, ${Math.round(workDuration(SKILL_TOP))} at level ${SKILL_TOP}. `
-    + `Per spar: 1 blow each; guard ${level} as per attack on a wild creature; Sparra fighting as per spar swing of yours, learning ${percent(LEARN_PACE.bout)} (${percent(LEARN_PACE.spar)} when you spar it); 1 action of each one's stamina. `
+    + `Per spar: 1 blow each; guard ${level} as per attack on a wild creature; ${SPECIES.sparra.name} fighting as per spar swing of yours, learning ${percent(LEARN_PACE.bout)} (${percent(LEARN_PACE.spar)} when you spar it); 1 action of each one's stamina. `
     + `Blows stop at ${percent(SPAR_YIELD)} of health, on both; a yielded one stands until above it.`;
 }
 
@@ -1610,7 +1609,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a87444', '#86994a'],
       ['#7a5a48', '#5d7f6e'],
     ],
-    butcher: { meat: 1, leather: 1, bone: 1, gland: 1, scale: 2 },
+    butcher: { meat: 1, leather: 1, bone: 1, gland: 1 },
     nearTrees: true,
   },
   mola: {
@@ -2689,7 +2688,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#8aa0bc', '#d8946a'],
       ['#7484a8', '#b46848'],
     ],
-    butcher: { meat: 3, scale: 2, leather: 2, bone: 2 },
+    butcher: { meat: 3, leather: 2, bone: 2 },
   },
   cordra: {
     id: 'cordra',
@@ -2991,7 +2990,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
       ['#a87850', '#cf6680'],
       ['#d6c08e', '#88a8cc'],
     ],
-    butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
+    butcher: { meat: 5, leather: 3, bone: 3 },
     wound: 'crush',
     style: 'spar',
     learns: { skill: 'fighting', by: 'spar' },
@@ -4196,6 +4195,8 @@ export function taskSkill(c: Creature, species: SpeciesDef): number {
   const id = workSkill(species);
   return id ? (c.skills[id] ?? 1) : 0;
 }
+/** A guard's level line: what teaches it, wild creatures and a Sparra's line on the settlement. */
+export const GUARD_LEVEL = `Level: ${GATHER_SKILL.guard.replace(/_/g, ' ')}, learned per attack on a wild creature while guarding a settlement or sparring with ${article(SPECIES.sparra.name)} ${SPECIES.sparra.name} on the settlement.`;
 // The words of each line that evolves, and its stages', now that every number they read is here.
 const reach = (id: string): string =>
   `within ${SPECIES[id].workRange} tiles of the totem, +${SPECIES[id].rangePerStep ?? RANGE_PER_STEP} per ${SKILL_STEP} levels`;
@@ -4249,7 +4250,7 @@ for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grub
   ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
-SPECIES.sparra.description = `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()} Level: fighting, learned ${LEARNS_SAYS.spar}.`;
+sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);
 
 /** How far from the token this worker may range right now. */
 export function workRangeOf(c: Creature, species: SpeciesDef): number {

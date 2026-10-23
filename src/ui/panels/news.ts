@@ -3305,7 +3305,7 @@ export const NEWS: News[] = [
     lines: () => [
       `Added: ${SPECIES.sparra.name} on a settlement (takes a worker place): ${sparTaskSays().replace(/^Settlement task: /, '')}`,
       `Changed: learning factor for guarding ${percent(PACE_258.guard)} on ${GATHER_SKILL.guard.replace(/_/g, ' ')}, from wild creatures and from spars.`,
-      'Added: card: "Sparring with" its partner; stamina for guards and the Sparra; idle when no guard is free, or yielded.',
+      `Added: card: "Sparring with" its partner; stamina for guards and the ${SPECIES.sparra.name}; idle when no guard is free, or yielded.`,
     ],
   },
   {
@@ -3339,13 +3339,13 @@ export const NEWS: News[] = [
     n: 262,
     day: '2026-10-23',
     lines: () => [
-      ...SEVEN_LINES.map((id) => {
+      ...EIGHT_LINES.map((id) => {
         const d = SPECIES[id];
         const [one, two] = d.stages!;
         return `Replaced: ${d.was![0]} with ${d.name}; evolves to ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats.`;
       }),
       `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
-      `Changed: butchered, ${SPECIES.magga.name} and ${SPECIES.mudda.name} lines give scales; ${SPECIES.wurla.name} line feathers; ${SPECIES.grazza.name}, ${SPECIES.grubba.name} and ${SPECIES.middun.name} lines no fur.`,
+      `Changed: butchered, ${SPECIES.wurla.name} line gives feathers, not fur; ${SPECIES.magga.name} line no feathers; ${SPECIES.grazza.name}, ${SPECIES.grubba.name}, ${SPECIES.mudda.name}, ${SPECIES.middun.name} and ${SPECIES.sparra.name} lines no fur.`,
     ],
   },
 ];
@@ -3353,8 +3353,8 @@ export const NEWS: News[] = [
 /** The nine kinds What's new 251 gives new lines. */
 const NINE_LINES = ['sappa', 'sprigga', 'rowl', 'snout', 'wicka', 'thumpa', 'stona', 'lungra', 'bogga'];
 
-/** The seven kinds What's new 262 gives new lines. */
-const SEVEN_LINES = ['magga', 'grazza', 'grubba', 'wurla', 'mudda', 'dippa', 'middun'];
+/** The eight kinds What's new 262 gives new lines. */
+const EIGHT_LINES = ['magga', 'grazza', 'grubba', 'wurla', 'mudda', 'dippa', 'middun', 'sparra'];
 
 /** The bronze mirror, as What's new 253 gives it. */
 const MIRROR = RELICS.find((r) => r.result === 'bronze_mirror') ?? { parts: 0, difficulty: 0 };

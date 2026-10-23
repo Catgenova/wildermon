@@ -85,6 +85,7 @@ begin
   insert into said select 'SLIPLET', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Mudda')).id from species_def where id = 'mudda';
   insert into said select 'PAILBARA', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Dippa')).id from species_def where id = 'dippa';
   insert into said select 'SNAILEAF', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Middun')).id from species_def where id = 'middun';
+  insert into said select 'DUMMICUB', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Sparra')).id from species_def where id = 'sparra';
   insert into said select 'THISTLEKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Orse')).id from species_def where id = 'orse';
   insert into said select 'STITCHKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Tinka')).id from species_def where id = 'tinka';
   insert into said select 'CARTLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Roxxen')).id from species_def where id = 'roxxen';
@@ -235,6 +236,9 @@ check('the Dippa is the Pailbara now, a Caskybara and a Reservara after, and an 
 check('the Middun is the Snaileaf now, a Middunsnail and a Hearthsnail after, and an old Middun carcass is still one, on both sides',
   SPECIES.middun.name === 'Snaileaf' && SPECIES.middun.stages?.map((x) => x.name).join(',') === 'Middunsnail,Hearthsnail'
     && at('SNAILEAF') === 'Snaileaf|Middunsnail,Hearthsnail|Middun|middun', at('SNAILEAF'));
+check('the Sparra is the Dummicub now, a Dummibear and a Dummititan after, and an old Sparra carcass is still one, on both sides',
+  SPECIES.sparra.name === 'Dummicub' && SPECIES.sparra.stages?.map((x) => x.name).join(',') === 'Dummibear,Dummititan'
+    && at('DUMMICUB') === 'Dummicub|Dummibear,Dummititan|Sparra|sparra', at('DUMMICUB'));
 const reed = SPECIES.sedra;
 check('the Sedra is the Reedpup now, a Reedweaver and a Marshreaper after, and an old Sedra carcass is still one, on both sides',
   reed.name === 'Reedpup' && reed.stages?.map((x) => x.name).join(',') === 'Reedweaver,Marshreaper'

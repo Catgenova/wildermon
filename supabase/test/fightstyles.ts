@@ -123,7 +123,7 @@ begin
   insert into said select 'SHIELD', string_agg(case when brawl = a then 'on' else 'off' end, ',' order by id) from creature where world_id = w and id in (t, t2, t3);
   delete from creature where world_id = w and id in (a, t, t2, t3);
 
-  -- Sparra: yours may be sparred with, down to where it yields and no further; another tame thing may not.
+  -- Dummicub (was Sparra): yours may be sparred with, down to where it yields and no further; another tame thing may not.
   a := creature_spawn(w, 'sparra', 17.2, 16.5, 'active', now() - interval '30 days', u);
   t := creature_spawn(w, 'gasha', 16.5, 17.2, 'active', now() - interval '30 days', u);
   insert into said select 'SPARASK', coalesce(act_refusal(w, u, 'attack_creature', jsonb_build_object('kind', 'creature', 'id', a)), 'none')
