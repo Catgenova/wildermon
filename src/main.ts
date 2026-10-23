@@ -6,7 +6,7 @@ import { onPhone } from './engine/device';
 import { mountPhone } from './ui/phone';
 import { FullscreenCanvas } from './engine/canvas';
 import { Input } from './engine/input';
-import { GameLoop } from './engine/loop';
+import { clockSteps, GameLoop } from './engine/loop';
 import { partsMissing, piecesHeld, RELICS } from './game/archaeology';
 import { cropSprite } from './render/sprites';
 import { creatureLines, creatureSkills } from './ui/creatureinfo';
@@ -488,11 +488,12 @@ const loop = new GameLoop(
       camera.panBy((px / len) * step, (py / len) * step);
     }
 
-    game.update(dt);
+    // The whole of the frame's wall time, a tenth of a second at a time (`clockSteps`).
+    for (const step of clockSteps(dt)) game.update(step);
 
-    // Where we have walked to, told rarely and never twice for standing still.
-    // The island believes it only as far as its own clock allows.
-    if (island) void island.move(player.x, player.y, player.level, performance.now() / 1000, wornWire((slot) => game.worn(slot)), game.atStairs());
+    // Where we have walked to, told rarely and never twice for standing still, with the turns of the path
+    // walked since: the island believes it only as far as its own clock allows, and walks it leg by leg.
+    if (island) void island.move(player.x, player.y, player.level, performance.now() / 1000, wornWire((slot) => game.worn(slot)), game.atStairs(), player.takeTurns());
 
     /*
      * The view at the screen edge. Resting the cursor in the outer band slides

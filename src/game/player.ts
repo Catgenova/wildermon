@@ -155,7 +155,10 @@ export const CARRY_CRAWL = 0.05;
 /** Under this much stamina you are winded, and walk at `WINDED_PACE` of your pace on your own feet (the status panel's Winded). */
 export const WINDED_AT = 0.1;
 export const WINDED_PACE = 0.5;
-const ARRIVE = 0.06;
+/** How near the middle of a step of the path is arriving at it, in tiles: a walk ends a step exactly, so only rounding. */
+const ARRIVE = 1e-6;
+/** The most steps of a path a body keeps for the island between asks (`Player.turns`); the oldest go first. */
+const TURNS_KEPT = 256;
 
 export class Player {
   x: number;
@@ -365,6 +368,18 @@ export class Player {
   }
 
   /**
+   * Every step of a path arrived at since the last ask, oldest first, and
+   * forgotten: what the island walks a word to `rpc_move` along
+   * (`Island.move`), so it measures the path walked rather than a straight
+   * line across whatever the path went round.
+   */
+  turns: PathPoint[] = [];
+
+  takeTurns(): PathPoint[] {
+    return this.turns.splice(0);
+  }
+
+  /**
    * Returns the distance actually moved this frame (tiles). `decked` says
    * whether a tile is the finished deck of a building on piers (`piers.ts`):
    * nobody on one is in the water under it, and a step onto one or off it is
@@ -399,6 +414,8 @@ export class Player {
         if (!this.path.length) this.path = null;
         this.x = wp.x + 0.5;
         this.y = wp.y + 0.5;
+        if (this.turns.length >= TURNS_KEPT) this.turns.shift();
+        this.turns.push({ x: this.x, y: this.y, level: this.level });
       } else {
         vx = dx / dist;
         vy = dy / dist;
@@ -468,9 +485,18 @@ export class Player {
       this.dirY = vy;
     }
     this.moving = moved > 0;
+    /*
+     * Arrived at a step of the path with time to spare: the rest of the frame
+     * goes on to the next step, at the pace of the ground there. It used to be
+     * lost, and the body was let off what it had left of the step before
+     * instead (`ARRIVE` was six hundredths of a tile, and a step ended short
+     * of it went the rest at once): a few per cent over its pace on a path of
+     * many steps, which the island holds a long walk to (`walk_ahead`).
+     */
+    const rest = moved > 0 && moved === len && len < speed * dt && this.path ? dt - len / speed : 0;
     // On your own feet, a stride for every stride's worth of ground, so a planted foot stays planted (`phasePerTile`).
-    if (this.moving) this.walkPhase += dt * speed * (this.carried || this.speedMul !== 1 ? RIDE_PHASE : phasePerTile(speed));
-    return moved;
+    if (this.moving) this.walkPhase += (dt - rest) * speed * (this.carried || this.speedMul !== 1 ? RIDE_PHASE : phasePerTile(speed));
+    return rest > 1e-6 ? moved + this.update(rest, world, rule, decked) : moved;
   }
 
   /** Move to a point if the tile it lies on can be entered from here; updates the storey. */

@@ -105,6 +105,8 @@ import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/crea
 import { seedSays } from '../../game/farming';
 import { HEARTBEAT, IDLE_LOGOUT, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
+import { VIA_MAX } from '../../net/island';
+import { CATCH_UP, MAX_STEP as CLOCK_STEP } from '../../engine/loop';
 import { ALIGNMENT_NAMES, BAR_SLOTS, FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SCHOOL_NAMES, slotsFor, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../../game/patrons';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -3313,6 +3315,16 @@ export const NEWS: News[] = [
       `Added: harness: team pace in the traces +${percent(HARNESS_PACE * GEAR_FLOOR)} at QL ${GEAR_QL_LEAST} to +${percent(HARNESS_PACE)} at QL ${QL_TOP}, its share of the team.`,
       `Added: barding: damage taken −${percent(BARDING_CUT * GEAR_FLOOR)} at QL ${GEAR_QL_LEAST} to −${percent(BARDING_CUT)} at QL ${QL_TOP}.`,
       'Added: gear wears as a tool of its QL: pack a cycle, harness a tile pulled, barding a blow taken. Remove to repair; released or culled, back to your pack. Shown on its card.',
+    ],
+  },
+  {
+    n: 260,
+    day: '2026-10-23',
+    lines: () => [
+      `Fixed: action bar behind the island on slow frames (zoomed out): runs on the wall clock. Game clock per frame: up to ${CATCH_UP} s, was ${CLOCK_STEP} s.`,
+      `Fixed: long walks round trees, rock, water or slopes pulled back and stopped: position reports carry the path's turns (up to ${VIA_MAX} each), checked leg by leg, not as a straight line.`,
+      'Fixed: path walking over its pace (end of each step skipped); long walks pulled back.',
+      'Changed: a walk held to its pace by the island goes on to its goal, was stopped.',
     ],
   },
   {

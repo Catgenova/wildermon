@@ -370,9 +370,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling): Promi
   island.hooks.paced = (mul, secs) => game.spedUp(mul, secs);
   // Logged off by a keeper, and perhaps barred: every door now refuses this body, so the page goes too.
   island.hooks.kicked = () => void sentOff(id);
-  island.hooks.moved = (x, y, level, letGo) => {
+  island.hooks.moved = (x, y, level, letGo, resume) => {
     if (letGo) game.letGoOfAll();
-    game.putBody(x, y, level);
+    game.putBody(x, y, level, resume);
   };
   // And a journey by Telestone, which says when the next may be made (`runestones.ts`).
   island.hooks.travelled = (until) => {

@@ -1,4 +1,33 @@
-/** requestAnimationFrame driven loop with a capped variable timestep. */
+/** The longest single step of the game's clock, in seconds: a walk or a fire moved further at once is not to be trusted. */
+export const MAX_STEP = 0.1;
+/** The most wall time one frame makes up, in seconds; past it (a tab asleep, a debugger) the rest is let go. */
+export const CATCH_UP = 2;
+
+/**
+ * The steps of the game's clock for a frame `gap` seconds after the last: the
+ * whole of it, up to `CATCH_UP`, in steps of at most `MAX_STEP`.
+ *
+ * One step of at most a tenth a frame left the game's clock behind the wall's
+ * on any frame longer than that: zoomed out on a slow machine, a frame of a
+ * fifth of a second ran everything at half speed -- the walk, and the action
+ * bar against the island's own clock.
+ */
+export function clockSteps(gap: number): number[] {
+  let left = Math.min(CATCH_UP, Math.max(0, gap));
+  const out: number[] = [];
+  while (left > 1e-9) {
+    const dt = Math.min(MAX_STEP, left);
+    out.push(dt);
+    left -= dt;
+  }
+  return out;
+}
+
+/**
+ * requestAnimationFrame driven loop. `update` is handed the frame's wall time,
+ * up to `CATCH_UP`, to walk the game's clock through in `clockSteps`; `render`
+ * the same, held to `MAX_STEP`.
+ */
 export class GameLoop {
   fps = 0;
   /**
@@ -49,10 +78,10 @@ export class GameLoop {
       }
       this.due = (this.due > now - every ? this.due : now) + every;
     }
-    const dt = Math.min(0.1, Math.max(0, (now - this.last) / 1000));
+    const dt = Math.min(CATCH_UP, Math.max(0, (now - this.last) / 1000));
     this.last = now;
     this.update(dt);
-    this.render(dt);
+    this.render(Math.min(MAX_STEP, dt));
     this.frames++;
     this.fpsClock += dt;
     if (this.fpsClock >= 0.5) {

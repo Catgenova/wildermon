@@ -47,6 +47,8 @@ export interface ActiveAction {
   state: 'walking' | 'performing';
   elapsed: number;
   duration: number;
+  /** The wall second (`Game.wallNow`) a go the island is doing began, for its bar to run off the wall clock. */
+  began?: number;
   /** Standing still until this time, waiting for a called wildermon to arrive. */
   waitUntil?: number;
   /** Goes left, when a number was asked for; undefined runs until the wind goes. */

@@ -3766,9 +3766,26 @@ jobs:
           # a time: 1.3 and 1.6 times the pace in tenth-of-a-second steps end at
           # the pace and the slack, a walk at its pace is never pulled, lag,
           # a late word and a hole included, and stone slabs at their own pace.
+          # And a word carries the turns of its path (p_via), walked leg by
+          # leg: the browser's own walk through a wood, a word every 1, 3 and 5
+          # s, is never held short, where the straight line was held at a tree
+          # and put back; the turns are held to the pace along them, and more
+          # than walk_via_max of them is refused.
           npx esbuild supabase/test/ratelimit.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/ratelimit.mjs --log-level=error
           node node_modules/.cache/ratelimit.mjs
+
+      - name: The game's clock against the wall's, and a walk's turns
+        run: |
+          # A frame's whole wall time walked in tenths (clockSteps), up to two
+          # seconds; the island's go on the action bar runs off the wall clock,
+          # four seconds on after one frame of four seconds; a walk goes at its
+          # pace and no faster, at sixty frames a second and at a frame every
+          # 0.3 s (a step's end is no longer let off); a path's steps kept and
+          # its turns only the corners. No database.
+          npx esbuild supabase/test/frames.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/frames.mjs --log-level=error
+          node node_modules/.cache/frames.mjs
 
       - name: The exact benefit, and where its number comes from
         run: |

@@ -289,15 +289,15 @@ check('and forgets a tile with no wear left', psql(`select count(*) from tile_we
 
 /* ---- what the walk costs ----------------------------------------------------------
  * What the wear adds to `rpc_move` is `wear_walk`, called only when the walk
- * left the tile it started in. Timed on its own, three hundred goes, best of
+ * left the tile it started in, leg by leg (`p_via`). Timed on its own, three hundred goes, best of
  * three: a step into grass that wears (one keyed row written), a step into a
  * tile already at the most (a row read and nothing written) and a step into
  * dirt (nothing looked up past the ground). And `rpc_move` itself, staying in
  * its tile and stepping into grass, to set it beside.
  */
-const guard = psql(`select pg_get_functiondef('public.rpc_move(uuid, double precision, double precision, integer)'::regprocedure)
-  like '%if floor(p_x) <> floor(p.x) or floor(p_y) <> floor(p.y) then%perform wear_walk(%'`);
-check('rpc_move asks after wear only when the walk has left the tile it started in', guard === 't');
+const guard = psql(`select pg_get_functiondef('public.rpc_move'::regproc)
+  like '%if floor(v_xs[v_leg]) <> floor(v_xs[v_leg - 1]) or floor(v_ys[v_leg]) <> floor(v_ys[v_leg - 1]) then%perform wear_walk(%'`);
+check('rpc_move asks after wear only for a leg of the walk that left the tile it started in', guard === 't');
 const cost = psql(`
 begin;
 select set_config('request.jwt.claims', json_build_object('sub', ${IVAR})::text, true) \\g /dev/null

@@ -102,14 +102,80 @@ export const MOVE_LOST = 5;
  */
 export const STAIRS_AGAIN = 3;
 
-/** What `rpc_move` answers: where the island has the body, and its bars and wounds. */
+/** What `rpc_move` answers: where the island has the body, whether it held it short, and its bars and wounds. */
 type MoveAnswer = {
-  x?: number; y?: number; level?: number;
+  x?: number; y?: number; level?: number; pulled?: boolean; blocked?: boolean;
   stats?: Record<string, number> | null; wounds?: unknown[];
 };
 
 /** Where a body is, and on which storey. */
 type Spot = { x: number; y: number; level: number };
+
+/**
+ * The most turns of a path one word to `rpc_move` carries (`p_via`); the
+ * island refuses more. A word a second at the quickest pace there is turns a
+ * few times; this is a word five seconds late (`MOVE_LOST`) through the
+ * twistiest wood several times over.
+ */
+export const VIA_MAX = 64;
+
+/**
+ * The turns of a walk from `from` through `steps` to `to`: the steps where the
+ * way changes direction, and none where it goes straight on, so a walk down a
+ * row or a diagonal is one leg however long it is. The island walks a word
+ * leg by leg (`walk_share` on each), along the path rather than across
+ * whatever the path went round; with `from` unknown the first step is kept.
+ * The latest `VIA_MAX` at most.
+ */
+export function turnsOf(from: { x: number; y: number } | null, steps: Array<{ x: number; y: number }>, to: { x: number; y: number }): Array<{ x: number; y: number }> {
+  const out: Array<{ x: number; y: number }> = [];
+  let prev = from;
+  for (let i = 0; i < steps.length; i++) {
+    const b = steps[i];
+    const c = i + 1 < steps.length ? steps[i + 1] : to;
+    if (prev) {
+      const ax = b.x - prev.x;
+      const ay = b.y - prev.y;
+      const bx = c.x - b.x;
+      const by = c.y - b.y;
+      const la = Math.hypot(ax, ay);
+      const lb = Math.hypot(bx, by);
+      // Standing on the last turn, or going straight on through it: not a turn.
+      if (la < 1e-6) continue;
+      if (lb < 1e-6 || (Math.abs(ax * by - ay * bx) <= 1e-6 * la * lb && ax * bx + ay * by > 0)) continue;
+    }
+    out.push(b);
+    prev = b;
+  }
+  return out.slice(-VIA_MAX);
+}
+
+/**
+ * Of a word's turns, the ones still ahead of where the island held the body
+ * short (`at`): the turns after the leg of `from` → turns → `to` that `at` is
+ * nearest, and `to` itself. The next word walks on from there along the same
+ * path rather than straight across from `at`.
+ */
+export function turnsAhead(from: { x: number; y: number } | null, turns: Array<{ x: number; y: number }>, to: { x: number; y: number }, at: { x: number; y: number }): Array<{ x: number; y: number }> {
+  const pts = [...(from ? [from] : []), ...turns, to];
+  let best = Infinity;
+  let leg = 0;
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const a = pts[i];
+    const b = pts[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const l2 = dx * dx + dy * dy;
+    const t = l2 > 0 ? Math.max(0, Math.min(1, ((at.x - a.x) * dx + (at.y - a.y) * dy) / l2)) : 0;
+    const d = Math.hypot(a.x + dx * t - at.x, a.y + dy * t - at.y);
+    if (d < best - 1e-9) {
+      best = d;
+      leg = i;
+    }
+  }
+  // `pts[leg + 1]` is the end of the leg it stands on: that and every point after it.
+  return pts.slice(leg + 1);
+}
 
 /** True once `p` has settled, false if `secs` went by first; never a rejection. */
 const waitAtMost = (p: Promise<unknown>, secs: number): Promise<boolean> => {
@@ -994,8 +1060,11 @@ export interface IslandHooks {
    *
    * `letGo` when a keeper of the island put the body there: it is off
    * whatever it rode, drove, pulled or was aboard as well.
+   *
+   * `resume` when the island only held a walk to its pace (`pulled`): the
+   * walk goes on from there to where it was going, rather than stopping.
    */
-  moved?: (x: number, y: number, level: number, letGo?: boolean) => void;
+  moved?: (x: number, y: number, level: number, letGo?: boolean, resume?: boolean) => void;
   /** A journey by Telestone made, and the wall-clock second the traveller may make another (`runestones.ts`). */
   travelled?: (until: number) => void;
   /** A trade you are in changed, or was asked of you (`barter_send`, Broadcast `barter`): look again with `barter()`. */
@@ -1160,6 +1229,14 @@ export class Island {
    * next went without it.
    */
   private islandHas: Spot | null = null;
+  /**
+   * The steps of a path walked and not yet told (`Player.turns`), each with
+   * the count of the last one taken when it was walked: a word takes the ones
+   * walked before it was said (`tellWhere`), and a word dropped for a newer
+   * one leaves its own to that one.
+   */
+  private walked: Array<Spot & { n: number }> = [];
+  private walkedN = 0;
   /**
    * The last word said on the stairs of a cellar's way down: on a flight's
    * head up top, or on the tile at its foot below (`Game.atStairs`). Said
@@ -2517,6 +2594,7 @@ export class Island {
     this.lastSaid = '';
     // A word still waiting to go claims the old ground too, and goes unsaid.
     this.putGen += 1;
+    this.walked.length = 0;
     this.islandHas = { x, y, level: lvl };
     this.stairsSaid = null;
     this.crossed = null;
@@ -2819,8 +2897,11 @@ export class Island {
    * back rather than refusing when the claim is too large. So this is not
    * where we are, it is what the island will let us have been.
    */
-  async move(x: number, y: number, level: number, now: number, wearing?: WornWire, stairs = false): Promise<void> {
+  async move(x: number, y: number, level: number, now: number, wearing?: WornWire, stairs = false, steps: Spot[] = []): Promise<void> {
     if (!this.info) return;
+    for (const s of steps) this.walked.push({ x: s.x, y: s.y, level: s.level, n: ++this.walkedN });
+    // Held to a few words' worth: a walk longer than that untold goes from the latest of it.
+    if (this.walked.length > 4 * VIA_MAX) this.walked.splice(0, this.walked.length - 4 * VIA_MAX);
     void this.reconcile(now);
     void this.refreshMobs(now);
     void this.refreshGround(now);
@@ -2950,6 +3031,8 @@ export class Island {
     const world = this.info?.id;
     const before = this.telling;
     const gen = this.putGen;
+    // The steps walked up to this word, which it carries if it goes.
+    const upto = this.walkedN;
     const word = { overtaken: false };
     if (this.unsent) this.unsent.overtaken = true;
     this.unsent = mustGo ? null : word;
@@ -2970,7 +3053,7 @@ export class Island {
         await this.sayTo(world, again.to.x, again.to.y, again.to.level);
         if (gen !== this.putGen || this.info?.id !== world) return null;
       }
-      const went = await this.sayTo(world, x, y, level);
+      const went = await this.sayTo(world, x, y, level, upto);
       /*
        * And what the island made of it, which nothing has ever read.
        *
@@ -2997,7 +3080,9 @@ export class Island {
       if (typeof went.x === 'number' && typeof went.y === 'number' && gen === this.putGen
           && (Math.hypot(went.x - x, went.y - y) > SNAP_GAP || there !== level)) {
         this.putGen += 1;
-        this.hooks.moved?.(went.x, went.y, there);
+        this.walked.length = 0;
+        // Held to its pace and nothing else, on the same storey: the walk goes on from there, to where it was going.
+        this.hooks.moved?.(went.x, went.y, there, false, went.pulled === true && went.blocked !== true && there === level);
         this.lastSaid = '';
         this.lastLevel = there;
         this.lastTile = `${Math.floor(went.x)},${Math.floor(went.y)},${there}`;
@@ -3018,14 +3103,46 @@ export class Island {
    * word that a newer one went after, unanswered: it says where the island
    * had the body before the newer one, and changes nothing.
    */
-  private async sayTo(world: string, x: number, y: number, level: number): Promise<MoveAnswer | null> {
+  private async sayTo(world: string, x: number, y: number, level: number, upto?: number): Promise<MoveAnswer | null> {
     const word = {};
     this.newest = word;
-    const { data, error } = await supabase().rpc('rpc_move', { p_world: world, p_x: x, p_y: y, p_level: level });
+    /*
+     * And the turns of the path walked since the last word, for a walk word
+     * (`upto`): the island walks it leg by leg rather than in a straight line
+     * from where it last had the body, which went straight through the trees,
+     * the rock and the water the path went round, and held the body at the
+     * first of them (`walk_share`). Steps on another storey go unsaid.
+     */
+    const gen = this.putGen;
+    let taken: Array<Spot & { n: number }> = [];
+    if (upto !== undefined) {
+      let k = 0;
+      while (k < this.walked.length && this.walked[k].n <= upto) k++;
+      taken = this.walked.splice(0, k);
+    }
+    const from = this.islandHas && this.islandHas.level === level ? this.islandHas : null;
+    const via = turnsOf(from, taken.filter((s) => s.level === level), { x, y });
+    const plain = { p_world: world, p_x: x, p_y: y, p_level: level };
+    let { data, error } = await supabase().rpc('rpc_move', via.length ? { ...plain, p_via: via.map((p) => [p.x, p.y]) } : plain);
+    // An island a migration behind this page has no `p_via` (PostgREST: no such function): the word goes as it used to.
+    if (error && via.length && (error.code === 'PGRST202' || /p_via/.test(error.message))) {
+      ({ data, error } = await supabase().rpc('rpc_move', plain));
+    }
     // Barred while the `kicked` word was missed (a tab asleep, a channel down): the step says so instead.
     if (error && isBarred(error.message)) this.hooks.kicked?.();
+    const answered = data as MoveAnswer | null;
+    if (gen === this.putGen && via.length) {
+      if (!answered || typeof answered.x !== 'number' || typeof answered.y !== 'number') {
+        // Unanswered: whether the island walked them is not known, so the next word walks them again.
+        this.walked.unshift(...taken);
+      } else if (Math.hypot(answered.x - x, answered.y - y) > 1e-3) {
+        // Held short of the word: the next word walks on from there along the turns still ahead, this word's spot among them.
+        const ahead = turnsAhead(from, via, { x, y }, { x: answered.x, y: answered.y });
+        this.walked.unshift(...ahead.map((p) => ({ x: p.x, y: p.y, level, n: upto ?? 0 })));
+      }
+    }
     if (this.newest !== word) return null;
-    const went = data as MoveAnswer | null;
+    const went = answered;
     if (went && typeof went.x === 'number' && typeof went.y === 'number') {
       this.islandHas = { x: went.x, y: went.y, level: typeof went.level === 'number' ? went.level : level };
       if (this.crossed?.to.level === this.islandHas.level) this.crossed = null;
@@ -3268,6 +3385,7 @@ export class Island {
     const level = typeof put.level === 'number' ? put.level : 0;
     if (this.me) this.me = { ...this.me, x, y, level };
     this.putGen += 1;
+    this.walked.length = 0;
     this.islandHas = { x, y, level };
     this.lastSaid = '';
     this.lastLevel = level;

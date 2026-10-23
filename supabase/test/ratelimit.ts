@@ -26,7 +26,13 @@
  *   * 1.3 and 1.6 times its pace in tenth-of-a-second steps end at most the
  *     pace and the slack along, where the old rule let both through;
  *   * on stone slabs, 1.3 times `travel_speed` is the browser's own pace
- *     there and is let through, and 1.6 is held to 1.3.
+ *     there and is let through, and 1.6 is held to 1.3;
+ *   * the browser's own walk through a wood, a word every one, three and five
+ *     seconds with the turns of its path since the last (`p_via`), walks to
+ *     its end and is never held short, where the same words as straight
+ *     lines were held at a tree and put back;
+ *   * turns are held to the pace along them, and more than `walk_via_max`
+ *     (the browser's `VIA_MAX`) of them in a word are refused.
  *
  * Against the database the suite leaves behind, in transactions that are
  * rolled back.
@@ -34,9 +40,11 @@
 import { readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import {
-  FOG_EVERY, GATE_FOLK_EVERY, GROUND_EVERY, GUIDE_EVERY, MOBS_EVERY, RECONCILE_EVERY, SPRINGS_EVERY, SWIRLS_EVERY,
+  FOG_EVERY, GATE_FOLK_EVERY, GROUND_EVERY, GUIDE_EVERY, MOBS_EVERY, RECONCILE_EVERY, SNAP_GAP, SPRINGS_EVERY, SWIRLS_EVERY,
 } from '../../src/game/keep';
-import { MOVE_EVERY, STAIRS_AGAIN } from '../../src/net/island';
+import { MOVE_EVERY, STAIRS_AGAIN, turnsOf, VIA_MAX } from '../../src/net/island';
+import { Game } from '../../src/game/game';
+import { clockSteps } from '../../src/engine/loop';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
 
 const psql = (sql: string): string =>
@@ -198,14 +206,13 @@ begin
   insert into said values ('after', (select count(*)::text from event where world_id = '${W}' and kind = 'chat'));
   -- Nobody signed in: rpc_name_free, three times its class's burst, all of them answered.
   perform set_config('request.jwt.claims', '', true);
-  -- Its own cap on name checks a window from one address (name_free_most) is not what this asks, so the
-  -- checks come from a fresh address every name_free_most of them.
   delete from private.name_free_ask;
   v_from := 0;
+  -- Each from an address of its own: the door's own count is 20 a minute per client IP (\`name_free_most\`), not this.
   for i in 1 .. 3 * private.pace_burst('look') loop
-    perform set_config('request.headers', json_build_object('cf-connecting-ip',
-      '10.9.' || ((i - 1) / private.name_free_most()) || '.1')::text, true);
-    perform rpc_name_free('nobody in particular'); v_from := v_from + 1;
+    perform set_config('request.headers', json_build_object('cf-connecting-ip', '10.9.' || (i / 256) || '.' || (i % 256))::text, true);
+    perform rpc_name_free('nobody in particular');
+    v_from := v_from + 1;
   end loop;
   insert into said values ('anon', v_from::text);
 end $$;
@@ -307,6 +314,154 @@ check(`on stone slabs the browser walks at ${ground} times travel_speed, and tha
 check(`and 1.6 times travel_speed there is held to ${ground} and the slack`,
   pastSlabs.got <= 20 * pastSlabs.pace + pastSlabs.slack + 1e-6 && pastSlabs.pulls > 0,
   `${pastSlabs.got.toFixed(2)} of ${pastSlabs.claimed.toFixed(2)}, against ${(20 * pastSlabs.pace).toFixed(2)} and ${pastSlabs.slack.toFixed(2)}`);
+
+/* ---- a long walk through a wood ------------------------------------------------------------- */
+
+/*
+ * Reported: "pathfinding on longer/more complicated routes, especially while zoomed out, tends to move me part
+ * of the way there then rubber band back ... and then cancels the movement." The island walked each word as a
+ * straight line from where it last had the body (`walk_share`), and a straight line across a bend in a path
+ * through a wood goes through the trees the path went round: held at the first tree, and every word after it
+ * measured from there, until the browser was further off than `SNAP_GAP` and was put back and stopped. A word
+ * a second at a walk is under a tile and seldom cuts a tree; but a word waits for the answer to the one before
+ * (`tellWhere`, up to `MOVE_LOST`), so a slow round trip -- a busy island, a poor link, a page whose frames are
+ * a fifth of a second apart zoomed out -- makes the words seconds apart, and five seconds apart they cut trees.
+ *
+ * The browser's own walk, by its own pathfinder, through the same wood here and there: 80 tiles on a side, a
+ * third of it trees, round its edge a ring of them. Walked on frames a quarter of a second apart, told every
+ * one, three and five seconds; each word as the browser said it before (where it is) and now (and the turns of
+ * the path since the last, `turnsOf`).
+ */
+const X0 = 10;
+const Y0 = 60;
+const SIDE = 80;
+const woodGame = Game.create(4242);
+{
+  const w = woodGame.world;
+  let seed = 7;
+  const rnd = (): number => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  for (let y = Y0; y <= Y0 + SIDE; y++) for (let x = X0; x <= X0 + SIDE; x++) w.setHeight(x, y, 60);
+  for (let y = Y0; y < Y0 + SIDE; y++) {
+    for (let x = X0; x < X0 + SIDE; x++) {
+      const edge = x === X0 || y === Y0 || x === X0 + SIDE - 1 || y === Y0 + SIDE - 1;
+      const clear = (x < X0 + 5 && y < Y0 + 5) || (x > X0 + SIDE - 6 && y > Y0 + SIDE - 6);
+      w.setTile(x, y, edge || (!clear && rnd() < 0.33) ? TileType.Tree : TileType.Grass, 0);
+    }
+  }
+  for (const c of [...woodGame.creatures.list.values()]) woodGame.creatures.remove(c.id);
+}
+type Word = { x: number; y: number; via: number[][] };
+const woodWalk = (every: number): { words: Word[]; plain: Word[]; tiles: number } => {
+  const g = woodGame;
+  g.putBody(X0 + 2.5, Y0 + 2.5, 0);
+  g.player.stats.stamina = 1;
+  if (!g.moveTo(X0 + SIDE - 3, Y0 + SIDE - 3)) throw new Error('no way through the wood');
+  const tiles = g.player.path?.length ?? 0;
+  const words: Word[] = [];
+  let told = { x: g.player.x, y: g.player.y };
+  let since = 0;
+  for (let i = 0; i < 4000 && (g.player.path || since > 0); i++) {
+    for (const step of clockSteps(0.25)) g.update(step);
+    since += 0.25;
+    if (since >= every - 1e-9 || !g.player.path) {
+      since = 0;
+      const at = { x: g.player.x, y: g.player.y };
+      words.push({ ...at, via: turnsOf(told, g.player.takeTurns(), at).map((p) => [p.x, p.y]) });
+      told = at;
+    }
+  }
+  return { words, plain: words.map((w) => ({ ...w, via: [] })), tiles };
+};
+const rowsOf = (): string => {
+  const rows: string[] = [];
+  for (let y = 0; y < 256; y++) {
+    const b = Buffer.alloc(256, TileType.Grass);
+    if (y >= Y0 && y < Y0 + SIDE) for (let x = X0; x < X0 + SIDE; x++) b[x] = woodGame.world.getTile(x, y);
+    rows.push(`decode('${b.toString('hex')}', 'hex')`);
+  }
+  return `(array[${rows.join(',')}])[g + 1]`;
+};
+/** Each walk's words to `rpc_move`, `every` seconds apart by the island's clock: how many held short, how far behind at most, and the first word put back. */
+const replay = (walks: Array<{ every: number; words: Word[] }>): Array<{ short: number; blocked: number; behind: number; back: number; end: number }> => {
+  const out = psql(`
+begin;
+${flat(rowsOf())}
+update player set x = ${X0 + 2.5}, y = ${Y0 + 2.5}, level = 0 where world_id = '${W}' and uid = '${U}';
+create temp table said (n int, v text);
+create function pg_temp.walk(p_every double precision, p_words jsonb) returns text language plpgsql as $f$
+declare w jsonb; a jsonb; short int := 0; blocked int := 0; behind double precision := 0; back int := 0; i int := 0; d double precision;
+begin
+  update player set x = ${X0 + 2.5}, y = ${Y0 + 2.5}, level = 0, walk_ahead = null where world_id = '${W}' and uid = '${U}';
+  for w in select * from jsonb_array_elements(p_words) loop
+    i := i + 1;
+    update player set moved_at = now() - make_interval(secs => p_every) where world_id = '${W}' and uid = '${U}';
+    delete from caller where uid = '${U}';
+    a := rpc_move('${W}', (w->>'x')::double precision, (w->>'y')::double precision, 0,
+                  case when jsonb_array_length(w->'via') > 0 then w->'via' end);
+    d := sqrt(power((a->>'x')::double precision - (w->>'x')::double precision, 2) + power((a->>'y')::double precision - (w->>'y')::double precision, 2));
+    if d > 1e-6 then short := short + 1; end if;
+    if (a->>'blocked')::boolean then blocked := blocked + 1; end if;
+    behind := greatest(behind, d);
+    if d > ${SNAP_GAP} and back = 0 then back := i; end if;
+  end loop;
+  return short || ',' || blocked || ',' || behind || ',' || back || ',' || d;
+end $f$;
+${walks.map((w, i) => `insert into said values (${i}, pg_temp.walk(${w.every}, '${JSON.stringify(w.words)}'::jsonb));`).join('\n')}
+select n || '=' || v from said order by n;
+rollback;`);
+  return [...kv(out).values()].map((v) => {
+    const [short, blocked, behind, back, end] = v.split(',').map(Number);
+    return { short, blocked, behind, back, end };
+  });
+};
+const woodWalks = [1, 3, 5].map((every) => ({ every, ...woodWalk(every) }));
+const woodSaid = replay([...woodWalks.map((w) => ({ every: w.every, words: w.plain })), ...woodWalks.map((w) => ({ every: w.every, words: w.words }))]);
+for (const [i, w] of woodWalks.entries()) {
+  const before = woodSaid[i];
+  const now = woodSaid[woodWalks.length + i];
+  const turns = w.words.reduce((n, x) => n + x.via.length, 0);
+  const straight = `as straight lines ${before.blocked} of ${w.words.length} words blocked, ${before.behind.toFixed(2)} tiles behind at most`
+    + `${before.back ? `, put back at word ${before.back}` : ''}`;
+  check(`through the wood (${w.tiles} steps), a word every ${w.every} s with ${turns} turns between them: walked to its end, never held short`,
+    now.short === 0 && now.blocked === 0 && now.end < 1e-6,
+    `${now.short} held short, ${now.blocked} blocked, ${now.behind.toFixed(2)} tiles behind at most; ${straight}`);
+  if (w.every === 5) {
+    check('and as straight lines from the last word, as it was walked before: held at a tree and put back',
+      before.blocked > 0 && before.back > 0, straight);
+  }
+}
+
+/*
+ * And the turns are no way round the pace: a word whose turns go further than the pace allows is held to the
+ * pace along them, and more than `VIA_MAX` of them is refused.
+ */
+const viaPace = kv(psql(`
+begin;
+${flat(grass)}
+create temp table said (k text, v text);
+do $$
+declare a jsonb; v double precision; v_why text;
+begin
+  update player set x = 10.5, y = 100.5, level = 0, walk_ahead = null, moved_at = now() - interval '1 second'
+   where world_id = '${W}' and uid = '${U}';
+  v := travel_speed('${W}', '${U}');
+  -- Ten tiles east and ten back, in one second: where it ends is where it began, the walk is twenty tiles.
+  a := rpc_move('${W}', 10.5, 100.5, 0, '[[20.5, 100.5]]'::jsonb);
+  insert into said values ('x', a->>'x'), ('pulled', a->>'pulled'), ('room', (v * 1.6 + 1.5)::text), ('max', walk_via_max()::text);
+  delete from caller where uid = '${U}';
+  begin
+    perform rpc_move('${W}', 11.5, 100.5, 0, (select jsonb_agg(jsonb_build_array(10.5 + g * 0.01, 100.5)) from generate_series(1, ${VIA_MAX + 1}) g));
+    insert into said values ('many', 'through');
+  exception when others then insert into said values ('many', sqlerrm);
+  end;
+end $$;
+select k || '=' || coalesce(v, 'nothing') from said order by k;
+rollback;`));
+check('ten tiles out and ten back in a second: held to the pace along the turns, not let off as no distance at all',
+  viaPace.get('pulled') === 'true' && Math.abs(Number(viaPace.get('x')) - (10.5 + Number(viaPace.get('room')))) < 1e-6,
+  `at ${viaPace.get('x')}, ${viaPace.get('room')} tiles of room`);
+check(`the island takes the browser's ${VIA_MAX} turns a word`, viaPace.get('max') === String(VIA_MAX), viaPace.get('max'));
+check(`more than ${VIA_MAX} turns in a word: refused`, viaPace.get('many') !== 'through', viaPace.get('many'));
 
 for (const l of [...ok, ...bad]) console.log(l);
 console.log(bad.length ? `\n${bad.length} wrong` : '\nall as they should be');

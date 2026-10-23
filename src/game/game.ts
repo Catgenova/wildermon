@@ -4750,9 +4750,16 @@ export class Game {
      * A job being watched rather than done. The clock runs so the bar moves
      * between one answer from the island and the next; nothing else happens,
      * because nothing else here is entitled to.
+     *
+     * The wall clock, from the moment the island's answer put the go at
+     * (`began`), and not the frames: frames came a fifth of a second apart
+     * zoomed out on a slow machine, each moved the bar a tenth, and the bar
+     * fell further behind the island with every one of them.
      */
     if (this.watching) {
-      a.elapsed = Math.min(a.duration, a.elapsed + dt);
+      a.elapsed = a.began !== undefined
+        ? Math.max(0, Math.min(a.duration, this.wallNow() - a.began))
+        : Math.min(a.duration, a.elapsed + dt);
       return;
     }
     /*
@@ -5190,6 +5197,8 @@ export class Game {
       state: 'performing',
       duration: Math.max(0.001, total),
       elapsed: Math.max(0, Math.min(total, total - secs)),
+      // The wall second the go began, as the island counted it: the bar runs off the wall clock from here.
+      began: this.wallNow() - Math.max(0, Math.min(total, total - secs)),
       left,
       /*
        * What the island says was asked for, and nothing else.
@@ -8837,12 +8846,21 @@ export class Game {
    * queued behind it are the beat's to say, and the beat is asked for as this
    * lands.
    */
-  putBody(x: number, y: number, level: number): void {
+  putBody(x: number, y: number, level: number, resume = false): void {
+    // Held to its pace on the way somewhere (`resume`): the walk goes on from where the island has it.
+    const path = this.player.path;
+    const goal = resume && path?.length ? path[path.length - 1] : null;
     this.player.stop();
+    // The steps walked to where it was are not steps from where it is.
+    this.player.turns.length = 0;
     this.player.x = x;
     this.player.y = y;
     this.player.level = level;
     this.player.visualLevel = level;
+    if (goal) {
+      const { rule, levels, below } = this.movement();
+      this.player.walkTo(this.world, goal.x, goal.y, rule, levels, below, goal.level);
+    }
     this.events.emit('world', Math.floor(x), Math.floor(y));
     this.events.emit('stats');
   }
