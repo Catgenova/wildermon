@@ -1,7 +1,7 @@
 import type { Tint } from '../../game/dyestuffs';
 import { materialOf } from '../../game/materials';
 import { WOOD_TONE } from '../materials';
-import { ANVIL_METALS } from '../forge';
+import { ANVIL_METALS } from '../metals';
 import { rand } from '../ivy';
 import {
   add, area2, at, CREASE_INK, css, cut, dot, faceColour, glyphPath, hex, mix, mul, newell, plate, proj, RUNE_GOLD, RUNE_WHITE, STONE_INK, sub, TAU, toneOf, unit,

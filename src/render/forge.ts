@@ -3,6 +3,9 @@ import { KILN_GLOW, KILN_GLOW_FIRING, KILN_VENT_BACK, KILN_VENT_UP } from '../ga
 import { SMELTER_STACK_BACK, SMELTER_STACK_UP } from '../game/smelter';
 import { UNITS_PER_TILE } from './iso';
 import { hashOf, rand } from './ivy';
+import { ANVIL_METALS } from './metals';
+
+export { ANVIL_METALS };
 import {
   add, at, bakeRune, breath, canvasOf, glowMasks, CREASE_INK, css, cut, dot, drawFaces, drawPads, eyeOf, flowerClump, glyphPath, grassTuft,
   hex, lichen, mix, mul, newell, noise2, panelArch, proj, RUNE_GOLD, RUNE_WHITE, scaleFor, STONE_INK, sub, TAU, toneOf, unit,
@@ -2753,30 +2756,6 @@ export function kilnBounds(rotation: number, zoom = 1): [number, number, number,
 /** The block it stands on: the rune lantern's cream stone; and the rune cut in its front. */
 const BLOCK: Tone = toneOf('#eadbc2', '#a89794');
 const BLOCK_RUNE = 'thurisaz';
-/**
- * Each metal an anvil is cast from, as the colour of a face full in the light
- * and one turned away from it: every one its own hue, kept in the island's
- * pastels so it sits with the stone, and far enough from the next that an
- * anvil says what it is made of from across a deed.
- */
-export const ANVIL_METALS: Readonly<Record<string, readonly [string, string]>> = {
-  iron: ['#a6b2c6', '#535d78'],
-  steel: ['#c6ccd8', '#5e6476'],
-  copper: ['#eba48a', '#8c4c4a'],
-  bronze: ['#d8a878', '#7a5440'],
-  brass: ['#e6cf86', '#87703c'],
-  gold: ['#f6dc7a', '#a07a2e'],
-  electrum: ['#ece4a6', '#88814e'],
-  tin: ['#d2c6ac', '#7a6f5c'],
-  pewter: ['#bcb8ae', '#6c6862'],
-  zinc: ['#b6c8c2', '#5d716c'],
-  lead: ['#9894aa', '#4c4862'],
-  silver: ['#eaeef6', '#8a94ac'],
-  adamantine: ['#8cc0a6', '#3c6a5c'],
-  glimmersteel: ['#ace8ee', '#4a8c9e'],
-  mithril: ['#b6cbf4', '#566ca6'],
-  seryll: ['#d2baee', '#6c5894'],
-};
 /** The face and shade an anvil of a metal is drawn in, where that metal has its own (\`ANVIL_METALS\`). */
 export const anvilTone = (metal: string): readonly [string, string] | undefined => ANVIL_METALS[metal];
 /**

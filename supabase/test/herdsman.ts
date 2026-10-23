@@ -493,8 +493,8 @@ game.setPerks(P('Stud Book').fx);
 game.skills.values.set('animal_husbandry', SKILL);
 const dam = game.creatures.spawn('rabba', game.player.x + 0.5, game.player.y, 'active', game.rand, game.time) as Creature;
 const sire = game.creatures.spawn('rabba', game.player.x + 1, game.player.y, 'deed', game.rand, game.time) as Creature;
-Object.assign(dam, { sex: 'female', care, name: 'Snow', due: 0 });
-Object.assign(sire, { sex: 'male', care, name: 'Horn', due: 0 });
+Object.assign(dam, { sex: 'female', care, name: 'Snow', due: 0, traits: [...DAM] });
+Object.assign(sire, { sex: 'male', care, name: 'Horn', due: 0, traits: [...SIRE] });
 for (const c of [...game.creatures.list.values()]) if (c !== dam && c !== sire && c.sex === 'male' && c.species === 'rabba') c.mode = 'wild';
 check('the browser\'s Stud Book says what the island\'s does', studBook(game, dam) === studWant, `${studBook(game, dam)} // ${studWant}`);
 
