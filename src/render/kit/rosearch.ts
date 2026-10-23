@@ -125,7 +125,7 @@ function climbingRoses(side: (q: number) => V3, face: number, trim: number, clea
       }));
       const caneReach = canes.flat().map(([x, , z]) => [x, out * 0.99, z] as V3);
       parts.push({
-        reach: caneReach, solid: false,
+        reach: caneReach, solid: true,
         draw: (g, e) => {
           g.lineCap = 'round';
           g.lineJoin = 'round';
@@ -154,8 +154,8 @@ function climbingRoses(side: (q: number) => V3, face: number, trim: number, clea
         const seed = i * 7 + salt;
         const yy = out;
         parts.push({
-          reach: [[c[0] - r, yy, c[2] - r - trail], [c[0] + r, yy, c[2] + r]],
-          solid: false,
+          reach: [[c[0] - r * 1.5, yy, c[2] - r * 1.5 - trail], [c[0] + r * 1.5, yy, c[2] + r * 1.5]],
+          solid: true,
           draw: (g, e) => {
             const [px, py] = proj(e, c);
             const R = r * Math.hypot(e.ux, e.vx);
