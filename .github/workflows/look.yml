@@ -30,6 +30,38 @@ jobs:
       - name: Get the CLI another way if that did not work
         if: steps.cli.outcome != 'success'
         run: npm i -g supabase && supabase --version
+      - name: The front doors, and what the services in front of the database said
+        # Asked about: "Players still unable to log in", after "Could not query the database for the schema cache.
+        # Retrying." with the database itself answering. Whether Auth and the API answer from outside, with the
+        # public key every browser carries, and the last half hour of the API's, Auth's and Postgres's own logs.
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          PUBLIC_KEY: sb_publishable_10_lQyHkKqBQ9F6rYuJehw_9rNaCtz3
+        run: |
+          base="https://$PROJECT_REF.supabase.co"
+          door() { echo "== $1"; curl -s -m 30 -o body.txt -w "status %{http_code}, %{time_total} s\n" "${@:2}"; head -c 400 body.txt; echo; }
+          door "auth health" -H "apikey: $PUBLIC_KEY" "$base/auth/v1/health"
+          door "auth settings (public)" -H "apikey: $PUBLIC_KEY" "$base/auth/v1/settings"
+          door "the API's root" -H "apikey: $PUBLIC_KEY" "$base/rest/v1/"
+          door "an anonymous sign-in's door, refused or not (no body: nothing is made)" -X POST -H "apikey: $PUBLIC_KEY" \
+            -H "Content-Type: application/json" "$base/auth/v1/token?grant_type=refresh_token" -d '{"refresh_token":"none"}'
+          logs() {
+            echo "== $1, last 30 minutes"
+            local start end
+            start=$(date -u -d '30 minutes ago' +%Y-%m-%dT%H:%M:%SZ); end=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+            curl -s -m 60 -G -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$PROJECT_REF/analytics/endpoints/logs.all" \
+              --data-urlencode "sql=$2" --data-urlencode "iso_timestamp_start=$start" --data-urlencode "iso_timestamp_end=$end" \
+              | jq -r '(.result // [])[] | [(.timestamp / 1000000 | strftime("%H:%M:%S")), (.msg // .event_message | tostring | .[0:220])] | @tsv' 2>/dev/null \
+              | head -60 || echo "::warning::could not read $1"
+          }
+          logs "the API (PostgREST)" "select timestamp, event_message as msg from postgrest_logs order by timestamp desc limit 60"
+          logs "Auth" "select timestamp, event_message as msg from auth_logs order by timestamp desc limit 60"
+          logs "Postgres errors" "select timestamp, event_message as msg from postgres_logs cross join unnest(metadata) m cross join unnest(m.parsed) p where p.error_severity in ('ERROR', 'FATAL', 'PANIC') order by timestamp desc limit 60"
+          logs "the edge: status counts by minute" "select timestamp_trunc(timestamp, minute) as timestamp, concat(cast(r.status_code as string), ' x', cast(count(*) as string)) as msg from edge_logs cross join unnest(metadata) m cross join unnest(m.response) r group by 1, r.status_code order by 1 desc limit 60"
+
       - name: Look
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
