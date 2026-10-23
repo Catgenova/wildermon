@@ -84,7 +84,8 @@ begin
   -- The rule, at each level asked about, and which trades it carries for and which it handles for.
   ${LEVELS.map(([sp, skill, lv], n) => `
   a := creature_spawn(w, '${sp}', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '30 days', u);
-  update creature set skills = jsonb_build_object('${skill}', ${lv}) where world_id = w and id = a;
+  -- No blood: a deep-pocketed one carries a load more (\`trait_add\`).
+  update creature set skills = jsonb_build_object('${skill}', ${lv}), traits = '{}' where world_id = w and id = a;
   select * into c from creature where world_id = w and id = a;
   insert into said values ('LOADS${n}', stage_loads(c)::text);
   delete from creature where world_id = w and id = a;`).join('')}

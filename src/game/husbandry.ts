@@ -8,8 +8,9 @@ import {
   mirrorCopy,
   mirrored,
   mirrorNames,
-  GESTATION,
+  gestationOf,
   maxHealth,
+  pairBlood,
   SEX_NAMES,
   SPECIES,
   type Creature,
@@ -19,7 +20,7 @@ import { clockLeft } from './boons';
 import { itemName, RARITIES, RARITY_ODDS } from './items';
 import { workingQl } from './materials';
 import {
-  bestTier, breedOdds, CHANNELS, depthMul, inheritChance, lineIfCarried, mirrorTrait, MUTATION_ODDS, mutationTier, pct, TIERS, traitList, traitName, traitTier,
+  bestTier, BLOOD_CHANNELS, breedOdds, depthMul, keepChance, lineIfCarried, mirrorTrait, mutationChance, mutationTier, pct, TIERS, traitList, traitName, traitTier,
   TRAIT_SLOTS, upgradeChance, type TraitTier,
 } from './traits';
 
@@ -112,11 +113,19 @@ export function studBook(g: Game, c: Creature): string {
   if (!mate) return '';
   const skill = g.skills.get(HUSBANDRY);
   const care = (c.care + mate.care) / 2;
-  const keep = Math.min(1, inheritChance(skill, care) + g.perk('breed:inherit', 0));
+  const keep = keepChance(skill, care, g.perk('breed:inherit', 0), pairBlood(c, mate).fresh);
   const up = Math.min(1, upgradeChance(skill, care) + g.perk('breed:upgrade', 0));
   return ` Paired with ${mate.name}: success ${wholePct(breedChance(skill, care))}; each of ${TRAIT_SLOTS} traits `
     + `inherited ${wholePct(keep)}, rarity-up ${wholePct(up)}.`;
 }
+
+/**
+ * Traits by their share of the young, the likeliest first; shares equal to nine places (a common trait of the dam's
+ * and one of the sire's are the same odds, give or take the float) by name, so the order is the same at every
+ * husbandry.
+ */
+export const byShare = (carry: Record<string, number>) => (a: string, b: string): number =>
+  Math.round((carry[b] - carry[a]) * 1e9) || traitName(a).localeCompare(traitName(b));
 
 /** A share as a percentage, to a whole one, or to the first figure that is not nought under one. */
 const sharePct = (x: number): string => {
@@ -187,20 +196,22 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   const { keepPlus, upPlus } = breedPlus(g);
   // How deep its line would run, on each channel either of them carries a trait on.
   const parents = [{ traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line }] as const;
-  const lineOn = CHANNELS.filter((ch) => lineIfCarried(parents[0], parents[1], ch.id) > 1);
+  const lineOn = BLOOD_CHANNELS.filter((ch) => lineIfCarried(parents[0], parents[1], ch.id) > 1);
   // A bronze mirror's copies, as the covering would make them (`mirrorCopy`).
   const copy = mirrorCopy(dam, sire);
-  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus, lineOn.map((ch) => ch.id), copy);
+  // And what the pair's blood does to the draw (`pairBlood`).
+  const pb = pairBlood(dam, sire);
+  const odds = breedOdds(sire.traits, dam.traits, skill, care, keepPlus, upPlus, lineOn.map((ch) => ch.id), copy, pb);
   const detail = oddsDetail(g);
   const said = (p: number): string => oddsSaid(p, detail);
   const readable = (id: string): boolean => readsTrait(g, id);
-  const theirs = Object.keys(odds.carry).sort((a, b) => odds.carry[b] - odds.carry[a]);
+  const theirs = Object.keys(odds.carry).sort(byShare(odds.carry));
   const hidden = theirs.filter((id) => !readable(id)).length;
   const lines = [
     `Pair ${sire.name} with ${dam.name} (animal husbandry ${Math.floor(skill)}, care ${wholePct(care)}):`,
     `${oddsDetailSaid(g)}.`,
     `Success: ${wholePct(breedChance(skill, care))}.`,
-    `Each of ${TRAIT_SLOTS} traits: inherited ${wholePct(Math.min(1, inheritChance(skill, care) + keepPlus))}`
+    `Each of ${TRAIT_SLOTS} traits: inherited ${wholePct(keepChance(skill, care, keepPlus, pb.fresh))}`
       + `, rarity-up ${wholePct(Math.min(1, upgradeChance(skill, care) + upPlus))}.`,
     `Born carrying: ${theirs.filter(readable).map((id) => `${traitName(id)} ${said(odds.carry[id])}`).join(', ') || 'none readable'}`
       + `${hidden ? `; ${hidden} more unreadable` : ''}.`,
@@ -208,7 +219,7 @@ export function breedPreview(g: Game, dam: Creature, sire: Creature): string {
   if (detail === 'exact') {
     lines.push(
       `Best trait rarity: ${TIERS.map((t) => `${t} ${said(odds.best[t])}`).join(', ')}.`,
-      `Mutation: ${said(odds.mutated)} (1 in ${MUTATION_ODDS}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
+      `Mutation: ${said(odds.mutated)} (1 in ${Number((1 / mutationChance(pb.mutate)).toFixed(1))}): a ${mutationTier(sire.traits, dam.traits)} trait in neither parent, in its lowest slot.`,
     );
   }
   // Each mirrored parent: which trait it copies, at what rarity, and its share (all, but where the dam's copy has its name).
@@ -331,7 +342,7 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
       g.creatures.pair(g, dam, sire, skill, sex);
       g.note('paired');
       g.logMsg(
-        `Paired: ${sire.name} with ${dam.name}. Due in ${clockLeft(GESTATION * g.perk('breed:gestation', 1))}. Traits between them: ${traitList([...new Set([...sire.traits, ...dam.traits])])}.`,
+        `Paired: ${sire.name} with ${dam.name}. Due in ${clockLeft(gestationOf(g.perk('breed:gestation', 1), dam))}. Traits between them: ${traitList([...new Set([...sire.traits, ...dam.traits])])}.`,
         'event',
       );
       g.events.emit('creature');

@@ -40,10 +40,12 @@ function seeded(seed: number): () => number {
 }
 
 console.log('--- the table');
-say('thirty names', FIGHTING.length, 30);
-say('in four grades each', FIGHTING_TRAITS.length, 120);
+// Thirty, and What's new 276's four: thorned (part A), quick-clotting, crushing and ripping (part D).
+say('thirty-four names', FIGHTING.length, 30 + 1 + 3);
+say('in four grades each', FIGHTING_TRAITS.length, FIGHTING.length * 4);
 say('and no two rows share an id', new Set(TRAITS.map((t) => t.id)).size, TRAITS.length);
-say('the plain traits are still what they were', Object.values(BY_TIER).reduce((a, b) => a + b.length, 0), 31);
+// Thirty-one, and What's new 276's plain ones: eleven (part A), eight (B), four (C) and three (D).
+say('the plain traits are still what they were', Object.values(BY_TIER).reduce((a, b) => a + b.length, 0), 31 + 11 + 8 + 4 + 3);
 say('and none of them is a grade of anything', Object.values(BY_TIER).flat().filter((t) => t.family).length, 0);
 say('every grade names its family', FIGHTING_TRAITS.filter((t) => familyOf(t.id) !== t.family).length, 0);
 say('common is the bare name and the rest wear their grade', FIGHTING.map((f) => TIERS.map((tier) => traitOf(gradeId(f.id, tier))?.name)).flat().filter((name, i) => {

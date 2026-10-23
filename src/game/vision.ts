@@ -48,6 +48,17 @@ export { COMPANION_SIGHT, NIGHT_LOSS };
 /** How much of what the night took a light in your hand gives back. */
 export const LIGHT_GIVES_BACK = 0.75;
 /**
+ * How far one of yours sees for you, in tiles, at a darkness (0 to 1): its kind's sight, or `COMPANION_SIGHT`, by its
+ * blood's `keen`, less half of `NIGHT_LOSS` of it at the dead of night; a kind that glows the whole of it, with its glow
+ * a floor; and what the dark takes by its blood's `night` (`night-eyed`, nought); three tiles at the least.
+ */
+export function keptSight(def: { glow?: number; sight?: number }, keen: number, dark: number, night = 1): number {
+  const range = def.glow
+    ? Math.max(def.glow, COMPANION_SIGHT * (1 - NIGHT_LOSS * dark * night)) * keen
+    : (def.sight ?? COMPANION_SIGHT) * keen * (1 - NIGHT_LOSS * dark * 0.5 * night);
+  return Math.max(3, range);
+}
+/**
  * What awareness is worth.
  *
  * Everything above is what somebody at **100** sees. At 1 you see a little
@@ -241,8 +252,7 @@ export class Vision {
       // A watcher is worth a hill; a Lume carries its own daylight about with
       // it, so what it lights is lit whatever the hour.
       const keen = bloodMul(c, 'sight');
-      const range = def.glow ? Math.max(def.glow, COMPANION_SIGHT * (1 - NIGHT_LOSS * g.darkness())) * keen : (def.sight ?? COMPANION_SIGHT) * keen * (1 - NIGHT_LOSS * g.darkness() * 0.5);
-      this.cast(next, c.x, c.y, Math.max(3, range), mark);
+      this.cast(next, c.x, c.y, keptSight(def, keen, g.darkness(), bloodMul(c, 'night')), mark);
     }
     const deed = g.deed;
     if (deed) {

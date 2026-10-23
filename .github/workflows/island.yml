@@ -1265,15 +1265,63 @@ jobs:
             --outfile=node_modules/.cache/orchard.mjs --log-level=error
           node node_modules/.cache/orchard.mjs
 
-      - name: Thirty traits for a fight, each in four grades
+      - name: Thirty-four traits for a fight, each in four grades
         if: matrix.shard == 1
         run: |
-          # Fighting blood is a name and a grade rolled for it: thirty names in
+          # Fighting blood is a name and a grade rolled for it: thirty-four names in
           # all four tiers, a share of the wild's rolls, never two grades of one
           # name on an animal, and a line that climbs a grade of its own name.
           npx esbuild supabase/test/blood.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/blood.mjs --log-level=error
           node node_modules/.cache/blood.mjs
+
+      - name: Twelve more traits on the channels there were, hearth-bred healing the herd
+        if: matrix.shard == 6
+        run: |
+          # Traits part A: eleven plain traits and thorned, a fighting name in
+          # four grades. Each at its rarity with its figures and card the same
+          # on both sides, each rolled in the wild at its rarity on both, and
+          # hearth-bred's communal healing the same in the island's settle and
+          # the browser's.
+          npx esbuild supabase/test/traits-a.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/traits-a.mjs --log-level=error
+          node node_modules/.cache/traits-a.mjs
+
+      - name: Traits part B, stamina, rest, breeding, care and food, on both sides
+        if: matrix.shard == 6
+        run: |
+          # Eight traits on eight new channels: each card the same words on both
+          # sides, each rolled at its tier, and each channel changing its rule by
+          # the same number: goes before a worker tires, its rest, a dam's time,
+          # a second young, a mutation, a slot drawn from the pair, care lost and
+          # what a meal counts for.
+          npx esbuild supabase/test/traits-b.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/traits-b.mjs --log-level=error
+          node node_modules/.cache/traits-b.mjs
+
+      - name: Night-eyed, deep-pocketed, lucky finder and settler, the same on both sides
+        if: matrix.shard == 6
+        run: |
+          # Four traits on four new channels: what the night takes of a kept
+          # one's sight, a load more a trip, a seek go's relic find chance and
+          # an idle worker's wait, communal. Each card, each rolled at its
+          # tier, and each rule caused on the island and read in the browser.
+          npx esbuild supabase/test/traits-c.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/traits-c.mjs --log-level=error
+          node node_modules/.cache/traits-c.mjs
+
+      - name: Six traits for a fight, on six channels of their own
+        if: matrix.shard == 6
+        run: |
+          # Venom-proof, quick-clotting, fearless, crushing, ripping and
+          # quick-recovering: on the table at their tiers, their cards the same
+          # on both sides, rolled in the wild, and each channel changing its
+          # rule by the same number on both sides: venom taken, what a bleed
+          # takes, a Fear's running, an ability's rest, and the chances a blow
+          # lands heavy or bleeds, counted over a few hundred blows.
+          npx esbuild supabase/test/traits-d.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/traits-d.mjs --log-level=error
+          node node_modules/.cache/traits-d.mjs
 
       - name: A quarter of the cycle dark, on both sides
         if: matrix.shard == 1

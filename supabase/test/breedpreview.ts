@@ -49,7 +49,7 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { breedPlus, type Creature } from '../../src/game/creatures';
 import {
-  breedChance, breedPreview, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, oddsDetail, oddsSaid, rarityShares, traitReadNeeds,
+  breedChance, breedPreview, byShare, ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, oddsDetail, oddsSaid, rarityShares, traitReadNeeds,
 } from '../../src/game/husbandry';
 import { RARITIES } from '../../src/game/items';
 import {
@@ -209,9 +209,9 @@ check('and how often each trait is drawn from their blood and comes out a tier b
   line('Each of ').includes(`inherited ${Math.round(inheritChance(HUSBANDRY, CARE) * 100)}%`)
     && line('Each of ').includes(`rarity-up ${Math.round(upgradeChance(HUSBANDRY, CARE) * 100)}%`), line('Each of '));
 /** Each trait either parent carries, by its odds, as a breeder at this detail reads them. */
-const carrying = (detail: 'rough' | 'bands' | 'exact', read: (id: string) => boolean = () => true): string =>
-  Object.keys(preview.carry).sort((a, b) => preview.carry[b] - preview.carry[a]).filter(read)
-    .map((id) => `${traitName(id)} ${oddsSaid(preview.carry[id], detail)}`).join(', ');
+const carrying = (detail: 'rough' | 'bands' | 'exact', read: (id: string) => boolean = () => true, odds = preview): string =>
+  Object.keys(odds.carry).sort(byShare(odds.carry)).filter(read)
+    .map((id) => `${traitName(id)} ${oddsSaid(odds.carry[id], detail)}`).join(', ');
 {
   check('each trait either parent carries, with its exact share of the young born carrying it, to a tenth of a percent',
     line('Born carrying: ') === `Born carrying: ${carrying('exact')}.` && line('Born carrying: ').includes(`${traitName('fleet')} ${(preview.carry.fleet * 100).toFixed(1)}%`),
@@ -245,7 +245,7 @@ const carrying = (detail: 'rough' | 'bands' | 'exact', read: (id: string) => boo
   };
   const readable = (id: string): boolean => EXACT_AT - 1 >= traitReadNeeds(traitTier(id), aware);
   check(`at ${EXACT_AT - 1} husbandry each trait is read to its ${Math.round(ODDS_BAND * 100)}% band, with nothing of mutations or tiers`,
-    oddsDetail(game) === 'bands' && line('Born carrying: ', banded).startsWith(`Born carrying: ${Object.keys(preview.carry).sort((a, b) => preview.carry[b] - preview.carry[a]).filter(readable).map((id) => `${traitName(id)} ${band(preview.carry[id])}`).join(', ')}`)
+    oddsDetail(game) === 'bands' && line('Born carrying: ', banded).startsWith(`Born carrying: ${Object.keys(preview.carry).sort(byShare(preview.carry)).filter(readable).map((id) => `${traitName(id)} ${band(preview.carry[id])}`).join(', ')}`)
       && line('Born carrying: ', banded).includes(`${traitName('fleet')} ${band(preview.carry.fleet)}`)
       && !banded.some((l) => l.startsWith('Mutation') || l.startsWith('Best trait')) && line('Odds: ', banded) === `Odds: ${Math.round(ODDS_BAND * 100)}% bands; exact at ${EXACT_AT} animal husbandry.`,
     `${line('Born carrying: ', banded)} | ${line('Odds: ', banded)}`);
@@ -260,7 +260,8 @@ const carrying = (detail: 'rough' | 'bands' | 'exact', read: (id: string) => boo
   const blind = line('Born carrying: ', rough);
   const unread = [...new Set([...SIRE, ...DAM])].filter((id) => BANDS_AT - 1 < traitReadNeeds(traitTier(id), aware)).length;
   check(`at ${BANDS_AT - 1} husbandry each trait is likely (${Math.round(ODDS_LIKELY * 100)}% or better) or unlikely, the rare ones counted and not named`,
-    oddsDetail(game) === 'rough' && blind === `Born carrying: ${carrying('rough', (id) => traitTier(id) === 'common')}; ${unread} more unreadable.`
+    // In the order the odds at that husbandry put them: a pair carried at shares a hair apart can change places.
+    oddsDetail(game) === 'rough' && blind === `Born carrying: ${carrying('rough', (id) => traitTier(id) === 'common', breedOdds(SIRE, DAM, BANDS_AT - 1, CARE, 0, 0, ALL_CHANNELS))}; ${unread} more unreadable.`
       && !blind.includes('fanged (rare)') && !blind.includes('fleet') && unread === 2 && blind.includes('willing unlikely')
       && !rough.some((l) => l.startsWith('Mutation') || l.startsWith('Best trait')) && !rough.some((l) => /\d\.\d%/.test(l) && l.startsWith('Line')),
     blind);

@@ -428,8 +428,9 @@ export const enchantHitSaid = (e: EnchantmentDef, creature: string): string =>
  * one hurt that runs on in it, so that is where it goes.
  */
 export function venom(g: Game, c: Creature): void {
-  if (c.health <= 0) return;
-  const rate = maxHealth(c, SPECIES[c.species]) * VENOM_DRAIN;
+  // As much as its blood's `venom` lets in: none, for one that is venom-proof.
+  const rate = maxHealth(c, SPECIES[c.species]) * VENOM_DRAIN * g.creatures.mul(c, 'venom');
+  if (c.health <= 0 || rate <= 0) return;
   const running = c.bleedUntil > g.time;
   c.bleedRate = running ? Math.max(c.bleedRate, rate) : rate;
   if (!running) c.bleedFrom = g.time;

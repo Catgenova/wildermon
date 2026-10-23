@@ -871,6 +871,10 @@ out.push(`create table if not exists channel_def (
   id text primary key, ord int not null, label text not null, note text not null,
   up boolean not null default true
 );`);
+/* A channel that counts rather than multiplies (`ChannelDef.add`): its traits add up (`trait_add`). */
+out.push(`alter table channel_def add column if not exists adds boolean not null default false;`);
+/* A channel a rarity and a line move (`ChannelDef.blood`): false where only a trait's own figure does. */
+out.push(`alter table channel_def add column if not exists blood boolean not null default true;`);
 out.push(`create table if not exists age_def (
   id text primary key, name text not null, speed real not null, pull real not null,
   yield real not null, growth real not null, tame real not null, works boolean not null
@@ -1449,7 +1453,7 @@ for (const t of TRAITS) {
   for (const [channel, mul] of Object.entries(t.effects)) out.push(`insert into trait_effect values (${q(t.id)}, ${q(channel)}, ${q(mul)});`);
 }
 CHANNELS.forEach((ch, ord) =>
-  out.push(`insert into channel_def values (${q(ch.id)}, ${q(ord)}, ${q(ch.label)}, ${q(ch.note)}, ${q(ch.up)});`));
+  out.push(`insert into channel_def values (${q(ch.id)}, ${q(ord)}, ${q(ch.label)}, ${q(ch.note)}, ${q(ch.up)}, ${q(!!ch.add)}, ${q(ch.blood !== false)});`));
 for (const a of Object.values(AGES)) {
   out.push(`insert into age_def values (${q(a.id)}, ${q(a.name)}, ${q(a.speed)}, ${q(a.pull)}, ${q(a.yield)}, ${q(a.growth)}, ${q(a.tame)}, ${q(a.works)});`);
 }

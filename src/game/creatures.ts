@@ -52,7 +52,8 @@ import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUEL_VALUES, isFuel } from './campfire';
 import { BUCKET_LITRES, furnitureCentre, type PlacedFurniture } from './furniture';
 import type { WoundKind } from './wounds';
-import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, slotDraw, SLOTS_PER_STAGE, stageSlots, TIERS, traitList, traitMul, traitName, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type TraitChannel, type TraitSource } from './traits';
+import { WORKER_REST_FIRST } from './keep';
+import { auraMul, BLOOD_CHANNELS, bredLine, breedTraits, channelOf, LAMP_TIER_ODDS, lineMul, lineSaid, mirrorTrait, mutationOf, pct, rollTraits, slotDraw, SLOTS_PER_STAGE, stageSlots, TIERS, traitList, traitMul, traitName, traitAdd, traitSays, traitOf, traitTier, TRAIT_SLOTS, type Line, type PairBlood, type TraitChannel, type TraitSource } from './traits';
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
@@ -596,8 +597,10 @@ export const STAGE_LOADS = [1, 2, 3] as const;
  * How many loads a trip, or things a go, it takes at the stage it is at, with its line's own third-stage loads
  * (`perkN`) and a pack on it on a trade that carries loads (`packLoads`).
  */
-export const stageLoads = (c: Pick<Creature, 'species' | 'skills'> & Partial<Pick<Creature, 'gear' | 'trade'>>): number =>
-  STAGE_LOADS[stageOf(c)] + perkN(c, 'loads') + packLoads(c);
+export const stageLoads = (c: Pick<Creature, 'species' | 'skills'> & Partial<Pick<Creature, 'gear' | 'trade' | 'traits'>>): number =>
+  STAGE_LOADS[stageOf(c)] + perkN(c, 'loads') + packLoads(c)
+  // And its blood's loads a trip (`deep-pocketed`).
+  + traitAdd(c.traits, 'loads');
 
 /*
  * A skill of each line's own at its third stage. Asked for: "every evolving line gains one perk of its own at its
@@ -737,10 +740,18 @@ export const TIRE_GOES = 30;
 export const REST_FOR = 4 * 60;
 /** What a bed of its size on its settlement makes of that rest. */
 export const BED_REST = 0.5;
-/** How long it rests, in a bed or not. */
-export const restFor = (inBed: boolean): number => REST_FOR * (inBed ? BED_REST : 1);
-/** Its stamina, a share of full: what is left of its `TIRE_GOES` goes since it last rested (`Creature.worn`). */
-export const staminaOf = (c: Pick<Creature, 'worn'>): number => Math.max(0, 1 - (c.worn ?? 0) / TIRE_GOES);
+/** How long it rests, in a bed or not; one of yours as long as its blood makes it (`rest`). The island's `rest_of`. */
+export const restFor = (inBed: boolean, c?: Creature): number => REST_FOR * (inBed ? BED_REST : 1) * (c ? bloodMul(c, 'rest') : 1);
+/**
+ * Its goes before it tires: `TIRE_GOES` as its blood makes it (`stamina`), to the nearest whole go, read to four places
+ * first so that the island's figures, kept as `real`, round the same way. The island's `tire_of`.
+ */
+export const tireOf = (c: Creature): number => Math.round(Math.round(TIRE_GOES * bloodMul(c, 'stamina') * 1e4) / 1e4);
+/** Its goes and its rest, as its blood makes them where there is a beast to read them off, and the rule's without. */
+const tireOrRule = (c: Creature | Pick<Creature, 'worn'>): number => ('traits' in c ? tireOf(c) : TIRE_GOES);
+const restOrRule = (c: Creature | Pick<Creature, 'worn'>, inBed: boolean): number => ('traits' in c ? restFor(inBed, c) : restFor(inBed));
+/** Its stamina, a share of full: what is left of its goes (`tireOf`) since it last rested (`Creature.worn`). */
+export const staminaOf = (c: Creature | Pick<Creature, 'worn'>): number => Math.max(0, 1 - (c.worn ?? 0) / tireOrRule(c));
 /**
  * The base health under which a kind that does not evolve sleeps in a small bed, and then in a medium one; at the
  * second and over, a large one. One that evolves sleeps in the bed of its stage. The island's `den_health_1` and
@@ -784,8 +795,8 @@ export const specialtyMul = (n: number): number => (n >= SPECIALTY_AT ? 1 + SPEC
 /** Whether a trade is one a specialty speeds: one with a go to take less time over, which a watch and a hunt have not. */
 export const specialtyTrade = (kind: GatherKind | null | undefined): kind is GatherKind => !!kind && kind !== 'guard' && kind !== 'hunt';
 /** Its stamina, for its card: "Stamina: 21 of 30 goes left before it rests." */
-export const staminaSays = (c: Pick<Creature, 'worn'>): string =>
-  `Stamina: ${Math.max(0, TIRE_GOES - (c.worn ?? 0))}/${TIRE_GOES} cycles. Rest: ${timeWords(restFor(false))}, ${timeWords(restFor(true))} in a bed of its size on the settlement.`;
+export const staminaSays = (c: Creature | Pick<Creature, 'worn'>): string =>
+  `Stamina: ${Math.max(0, tireOrRule(c) - (c.worn ?? 0))}/${tireOrRule(c)} cycles. Rest: ${timeWords(restOrRule(c, false))}, ${timeWords(restOrRule(c, true))} in a bed of its size on the settlement.`;
 /** For its card, once it has gone `UPKEEP_FOR` without a meal: "Unfed for 1 hour and 12 minutes: works at 50% until it eats." */
 export function unfedSays(c: Pick<Creature, 'unfed' | 'species'>): string {
   if (!unfedNow(c)) return '';
@@ -955,6 +966,12 @@ export const favouriteOf = (def: SpeciesDef): string | undefined => def.diet[0];
 /** The learning a meal of something at a quality is worth to a kind: `FED_LEARN` at quality 100, twice that for its favourite. */
 export const fedBonus = (def: SpeciesDef, item: string, ql: number): number =>
   FED_LEARN * Math.max(0, Math.min(QL_TOP, ql)) / QL_TOP * (item === favouriteOf(def) ? FED_FAVOURITE : 1);
+/**
+ * The quality a meal counts for to one of yours: what it falls short of the top by, as its blood makes that (`food`).
+ * The island's `meal_ql`.
+ */
+export const mealQuality = (c: Creature, ql: number): number =>
+  QL_TOP - (QL_TOP - Math.max(0, Math.min(QL_TOP, ql))) * bloodMul(c, 'food');
 /** The learning a meal is putting on it now, nought once its hour is out. */
 export const fedNow = (c: Pick<Creature, 'fedBonus' | 'fedUntil'>, time: number): number =>
   (c.fedUntil ?? -Infinity) > time ? c.fedBonus ?? 0 : 0;
@@ -966,7 +983,7 @@ export const fedNow = (c: Pick<Creature, 'fedBonus' | 'fedUntil'>, time: number)
 export function fedOn(c: Creature, item: string, ql: number, time: number): void {
   const def = SPECIES[c.species];
   if (!def || c.mode === 'wild') return;
-  const q = Math.max(0, Math.min(QL_TOP, ql));
+  const q = mealQuality(c, ql);
   const bonus = fedBonus(def, item, q);
   if (bonus > 0 && bonus >= fedNow(c, time)) {
     c.fedBonus = bonus;
@@ -1164,8 +1181,11 @@ export const WARD_SKIN = 0.1;
 /** Seconds between goes at an ability. */
 export const abilityRest = (id: AbilityId): number =>
   (id === 'frost_breath' ? FROST_BREATH_REST : id === 'fear' ? FEAR_REST : CLASS_SPELL_BY_ID.get(id)?.rest ?? 0);
-/** Seconds between one wildermon's goes at its ability: its line's third-stage `rest` off it (`perkN`). The island's `beast_ability`. */
-export const abilityRestOf = (c: Pick<Creature, 'species' | 'skills'>, id: AbilityId): number => abilityRest(id) * (1 - perkN(c, 'rest'));
+/**
+ * Seconds between one wildermon's goes at its ability: its line's third-stage `rest` off it (`perkN`), and its blood's
+ * `cooldown`. The island's `beast_ability`.
+ */
+export const abilityRestOf = (c: Creature, id: AbilityId): number => abilityRest(id) * (1 - perkN(c, 'rest')) * bloodMul(c, 'cooldown');
 /** A number an ability is used at: its spell's own. */
 export const abilityFx = (id: AbilityId, k: string): number => (id === 'fear' ? ({ secs: FEAR_SECS } as Record<string, number>)[k] ?? 0 : CLASS_SPELL_BY_ID.get(id)?.fx[k] ?? 0);
 /** An ability's name: its spell's. */
@@ -4345,6 +4365,19 @@ export const OLD_AT = world(6 * 60 * 60);
 export const GESTATION = world(12 * 60);
 /** How long after a covering either parent will look at another. */
 export const BREED_REST = world(20 * 60);
+// ---- Traits part B ----
+/** How long a dam carries: `GESTATION`, a breeder's Quick Gestation and her blood (`gestation`). The island's `gestation_of`. */
+export const gestationOf = (perk: number, dam: Creature): number => GESTATION * perk * bloodMul(dam, 'gestation');
+/**
+ * The chance a covering throws a second young: young per birth are one and a breeder's Twins, times the dam's blood
+ * (`twins`), and what is past one is the chance. The island's `twin_chance`.
+ */
+export const twinChance = (perk: number, dam: Creature): number => Math.max(0, Math.min(1, (1 + perk) * bloodMul(dam, 'twins') - 1));
+/** What a pair's blood does to the draw: the better parent's on each channel (`PairBlood`). The island's `pair_fresh` and `pair_mutate`. */
+export const pairBlood = (dam: Creature, sire: Creature): PairBlood => ({
+  fresh: Math.min(bloodMul(dam, 'fresh'), bloodMul(sire, 'fresh')),
+  mutate: Math.max(bloodMul(dam, 'mutate'), bloodMul(sire, 'mutate')),
+});
 
 export interface AgeDef {
   id: Age;
@@ -4439,8 +4472,11 @@ export const careWord = (care: number): string =>
  * which is multiplied in where more is better and divided in where less is.
  */
 export const rarityMul = (c: Pick<Creature, 'rare'>, channel: TraitChannel): number => {
+  const ch = channelOf(channel);
+  // Nothing on a channel out of the blood (`ChannelDef.blood`): only its traits' own figure moves it.
+  if (!c.rare || ch?.blood === false) return 1;
   const k = rarityOf(c).blood;
-  return channelOf(channel)?.up === false ? 1 / k : k;
+  return ch?.up === false ? 1 / k : k;
 };
 
 /**
@@ -4451,8 +4487,8 @@ export const rarityMul = (c: Pick<Creature, 'rare'>, channel: TraitChannel): num
  */
 export function rarityEffects(c: Pick<Creature, 'rare'>): string {
   const k = rarityOf(c).blood;
-  const up = CHANNELS.filter((ch) => ch.up).map((ch) => ch.label);
-  const down = CHANNELS.filter((ch) => !ch.up).map((ch) => ch.label);
+  const up = BLOOD_CHANNELS.filter((ch) => ch.up).map((ch) => ch.label);
+  const down = BLOOD_CHANNELS.filter((ch) => !ch.up).map((ch) => ch.label);
   return `${pct(k)} ${listed(up)}, ${pct(1 / k)} ${listed(down)}`;
 }
 
@@ -5808,6 +5844,14 @@ export class Creatures {
     return m;
   }
 
+  /**
+   * How long a worker with nothing to do waits before it looks again: `WORKER_REST_FIRST`, by its blood and its
+   * herd's (`settler`). The island's `worker_rest` times `beast_mul(c, 'idle')`.
+   */
+  idleRest(c: Creature): number {
+    return WORKER_REST_FIRST * this.mul(c, 'idle');
+  }
+
   /** Everything that bears on how fast it moves: and its keeper's Fleet while it follows them. */
   speedMul(c: Creature): number {
     return bloodMul(c, 'speed') * this.aura(c, 'speed') * companionMul(c, 'speed');
@@ -5831,6 +5875,16 @@ export class Creatures {
   /** Its blood and its herd together on one channel: what a fight rule reads; and its keeper's trade while it follows them. */
   mul(c: Creature, channel: TraitChannel): number {
     return bloodMul(c, channel) * this.aura(c, channel) * companionMul(c, channel);
+  }
+
+  /**
+   * A chance its traits give on a channel that is a chance (`heavy`, `rip`): the points their figure is over one, as
+   * the rest of its blood lifts that figure (`mul` over the traits alone); nought where its traits put it at one or
+   * below. The island's `beast_chance`.
+   */
+  chance(c: Creature, channel: TraitChannel): number {
+    const t = traitMul(c.traits, channel);
+    return t > 1 ? ((t - 1) * this.mul(c, channel)) / t : 0;
   }
 
   /**
@@ -6423,19 +6477,21 @@ export class Creatures {
     const from = Math.max(game.time - elapsed, c.bleedFrom ?? c.bleedUntil - KNIFE_BLEED_SECS);
     const secs = Math.min(game.time, c.bleedUntil) - from;
     if (secs > 0) {
-      if (c.health > 1) c.health = Math.max(1, c.health - c.bleedRate * secs);
+      // As much of it as its blood's `bleed` lets out.
+      if (c.health > 1) c.health = Math.max(1, c.health - c.bleedRate * this.mul(c, 'bleed') * secs);
       // And while it bleeds it is hurt, so it mends nothing.
       c.attackedAt = Math.max(c.attackedAt, from + secs);
     }
     c.moving = false;
     const top = maxHealth(c, def);
     if (c.health > top) c.health = top;
-    else if (c.health < top && game.time - c.attackedAt > 6) c.health = Math.min(top, c.health + elapsed * (c.mode === 'wild' ? 0.25 : 0.6) * bloodMul(c, 'mend'));
+    // Its blood and its herd's communal healing (`aura`), as the island's `beast_mul`.
+    else if (c.health < top && game.time - c.attackedAt > 6) c.health = Math.min(top, c.health + elapsed * (c.mode === 'wild' ? 0.25 : 0.6) * bloodMul(c, 'mend') * this.aura(c, 'mend'));
     // A yearling grows no fleece and gives no milk; an old one is slower at both.
     const growth = ageDef(c, game.time).growth;
     if (def.fleece && growth > 0 && c.fleece < 1) c.fleece = Math.min(1, c.fleece + elapsed * def.fleece * growth * bloodMul(c, 'grow'));
     // A brushing wears off over a few hours of being left to itself: longer for a Herdsman's Lasting Care.
-    if (c.care > 0) c.care = Math.max(0, c.care - elapsed / (keptOf(c, 'kept:care_hours', CARE_HOURS) * 3600));
+    if (c.care > 0) c.care = Math.max(0, c.care - elapsed * bloodMul(c, 'carefade') / (keptOf(c, 'kept:care_hours', CARE_HOURS) * 3600));
     return def;
   }
 
@@ -7172,7 +7228,8 @@ export class Creatures {
     const skill = c.skills[GATHER_SKILL.seek] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.seek, 0.225);
     game.markForaged(c.workX, c.workY, 'dig');
-    if (game.rand() > findChance(skill, 30)) return null;
+    // Its blood and its herd's on the find (`lucky finder`).
+    if (game.rand() > findChance(skill, 30) * this.mul(c, 'find')) return null;
     const within = relicsWithin(skill);
     if (!within.length) return null;
     const relic = within[Math.floor(game.rand() * within.length)];
@@ -8663,7 +8720,7 @@ export class Creatures {
     }
     if (game.time < c.until) return;
     this.wanderTarget(game, c, Math.max(2, deed.radius), deed.x + 0.5, deed.y + 0.5);
-    c.until = game.time + 4;
+    c.until = game.time + this.idleRest(c);
   }
 
   /**
@@ -8677,8 +8734,10 @@ export class Creatures {
     const { keepPlus, upPlus } = breedPlus(game);
     // A bronze mirror's copies (`mirrorCopy`), in every young of this covering.
     const copy = mirrorCopy(dam, sire);
+    // And what the pair's blood does to the draw (`pairBlood`).
+    const pb = pairBlood(dam, sire);
     const young = (): { traits: string[]; sex: Sex; from: Record<string, TraitSource>; line: Line } => {
-      const bred = breedTraits(sire.traits, dam.traits, husbandry, care, game.rand, keepPlus, upPlus, copy);
+      const bred = breedTraits(sire.traits, dam.traits, husbandry, care, game.rand, keepPlus, upPlus, copy, pb);
       // The one the breeder asked for (a Herdsman's Choose the Sex), or even odds.
       const born: Sex = sex ?? (game.rand() < 0.5 ? 'male' : 'female');
       // And how deep its line runs, off both parents as they stand now.
@@ -8688,10 +8747,10 @@ export class Creatures {
       return { traits: bred.traits, sex: born, from: bred.from, line, ...(form.formColour ? { formColour: true } : {}), ...(form.formSize ? { formSize: form.formSize } : {}) };
     };
     dam.unborn = { ...young(), sire: { id: sire.id, name: sire.name } };
-    // And a second at the same covering, now and then (a Herdsman's Twins).
-    if (game.rand() < game.perk('breed:twins', 0)) dam.unborn.twin = young();
-    // Carried for less of the time (a Herdsman's Quick Gestation).
-    dam.due = game.time + GESTATION * game.perk('breed:gestation', 1);
+    // And a second at the same covering, now and then (a Herdsman's Twins, and the dam's blood: `twinChance`).
+    if (game.rand() < twinChance(game.perk('breed:twins', 0), dam)) dam.unborn.twin = young();
+    // Carried for less of the time (a Herdsman's Quick Gestation, and the dam's blood: `gestationOf`).
+    dam.due = game.time + gestationOf(game.perk('breed:gestation', 1), dam);
     // And both ready again sooner (a Herdsman's Short Rest): the rest left is the perk's share of it.
     dam.bredAt = game.time - BREED_REST * (1 - game.perk('breed:rest', 1));
     sire.bredAt = dam.bredAt;
@@ -8807,7 +8866,7 @@ export class Creatures {
    */
   private sparMay(game: Game, g: Creature, s: Creature, site: WorkSite): boolean {
     return g.mode === 'deed' && g.post === null && g.mine !== false && sparsAsGuard(g) && g.enemy === null
-      && g.state !== 'rest' && g.state !== 'toBed' && (g.worn ?? 0) < TIRE_GOES && !yielded(g)
+      && g.state !== 'rest' && g.state !== 'toBed' && (g.worn ?? 0) < tireOf(g) && !yielded(g)
       && (g.sparWith == null || g.sparWith === s.id) && game.time - g.calledAt >= CALL_WINDOW
       && Math.max(Math.abs(site.x + 0.5 - s.x), Math.abs(site.y + 0.5 - s.y)) <= workRangeOf(g, this.species(g));
   }
@@ -9535,11 +9594,11 @@ export class Creatures {
           c.x = bx;
           c.y = by;
           game.events.emit('world', f.x, f.y);
-          c.restUntil = game.time + restFor(true);
+          c.restUntil = game.time + restFor(true, c);
         } else {
           // No way through to it: it rests where it stands.
           c.bed = undefined;
-          c.restUntil = game.time + restFor(false);
+          c.restUntil = game.time + restFor(false, c);
         }
       }
     }
@@ -9560,7 +9619,7 @@ export class Creatures {
         : { why: 'rest', n: (c.restUntil ?? 0) - game.time, post };
       return true;
     }
-    if ((c.worn ?? 0) < TIRE_GOES || c.state !== 'idle' || game.time < c.until) return false;
+    if ((c.worn ?? 0) < tireOf(c) || c.state !== 'idle' || game.time < c.until) return false;
     if (c.carrying && !(kind && (ERRAND_JOBS.has(kind) || kind === 'stoke'))) return false;
     // Done sparring for now (`sparTaskSays`).
     this.sparOff(c);
@@ -9571,8 +9630,8 @@ export class Creatures {
       c.idle = { why: 'tired', n: 0, post, bed: f.kind };
     } else {
       c.state = 'rest';
-      c.restUntil = game.time + restFor(false);
-      c.idle = { why: 'rest', n: restFor(false), post };
+      c.restUntil = game.time + restFor(false, c);
+      c.idle = { why: 'rest', n: restFor(false, c), post };
     }
     return true;
   }
@@ -9805,7 +9864,7 @@ export class Creatures {
       }
       this.why(c, trip.why, trip.n);
       this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
-      c.until = game.time + 4;
+      c.until = game.time + this.idleRest(c);
       return;
     }
     // An errand worker never walks out to a tile to work it, so it does not
@@ -9851,7 +9910,7 @@ export class Creatures {
     if (kind && !ERRAND_JOBS.has(kind) && kind !== 'stoke') this.why(c, 'range', siteRange(c, def, deed));
     // Nothing to do right now: potter about near the token.
     this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
-    c.until = game.time + 4;
+    c.until = game.time + this.idleRest(c);
   }
 
   /**
@@ -10016,13 +10075,24 @@ export class Creatures {
     // Its blood has a say in what it lands for, as it does in what it bites you for.
     // And more by your companion inside a Heart of the Herd (`herd_heart`).
     // And harder for how it fights (`FightStyle`): a borer on a hide, a flanker on one whose mind is elsewhere.
-    const dmg = this.species(a).attack * this.mul(a, 'tough') * trained * (0.7 + game.rand() * 0.6) * game.herdMul(a, 'dealt')
+    let dmg = this.species(a).attack * this.mul(a, 'tough') * trained * (0.7 + game.rand() * 0.6) * game.herdMul(a, 'dealt')
       * (style === 'bore' && this.species(t).hide ? BODKIN_HIDE : 1)
       * (style === 'flank' && this.elsewhere(t, a) ? BLINDSIDE : 1)
       // And smaller while its claws are dulled (`binder_dull_claws`).
       * markOn(game, a, 'dull');
-    this.hurt(game, t, dmg, a);
+    // A heavy blow, at its blood's chance (`heavy`): `HEAVY_HIT` as hard. The dice are thrown only for one that has a chance.
+    const heavy = this.chance(a, 'heavy');
+    const big = heavy > 0 && game.rand() < heavy;
+    if (big) dmg *= HEAVY_HIT;
+    this.hurt(game, t, dmg, a, big);
     if (style && t.health > 0 && this.list.has(t.id)) this.styleBlow(game, a, t, style, dmg);
+    // And a bleed, at its blood's chance (`rip`), as a knife opens it; a kind whose bites bleed already bleeds it.
+    const rip = style === 'bleed' ? 0 : this.chance(a, 'rip');
+    if (rip > 0 && game.rand() < rip && t.health > 0 && this.list.has(t.id)) {
+      t.bleedRate = Math.max(t.bleedRate, dmg * KNIFE_BLEED);
+      t.bleedFrom = game.time;
+      t.bleedUntil = game.time + KNIFE_BLEED_SECS;
+    }
     // And pushed off while a keep-away holds on what struck it (`pikeman_keep_away`).
     const push = markOn(game, a, 'keep_away', 0);
     if (push > 0 && t.health > 0 && this.list.has(t.id)) this.shove(game, t, a.x, a.y, push);
@@ -10174,12 +10244,15 @@ export class Creatures {
         game.player.skin = { size: WARD_SKIN, mine: false, by: a.name };
         spent = false;
         break;
-      case 'fear':
+      case 'fear': {
         // Monsters are not frightened, as a Fright does not frighten them; and one already running from it is left to run.
-        if (tdef.monster || markOn(game, t, 'fear', 0) > 0 || t.mode !== 'wild') return false;
-        this.fleeFrom(game, t, a.x, a.y, f('secs'));
-        putMark(game, t, 'fear', 1, f('secs'));
+        // As long as its blood's `fear` lets it run: never, for one that is fearless.
+        const secs = f('secs') * this.mul(t, 'fear');
+        if (tdef.monster || secs <= 0 || markOn(game, t, 'fear', 0) > 0 || t.mode !== 'wild') return false;
+        this.fleeFrom(game, t, a.x, a.y, secs);
+        putMark(game, t, 'fear', 1, secs);
         break;
+      }
       case 'chirurgeon_leech': {
         const was = t.health;
         const top = maxHealth(t, tdef);
@@ -10235,7 +10308,9 @@ export class Creatures {
       t.bleedUntil = game.time + KNIFE_BLEED_SECS;
     } else if (style === 'venom') {
       // As a Venom enchantment leaves it (`venom` in `enchanting.ts`): the stronger of it and a bleed already running, to the later end.
-      const rate = maxHealth(t, this.species(t)) * VENOM_DRAIN;
+      // As much as its blood's `venom` lets in: none, for one that is venom-proof.
+      const rate = maxHealth(t, this.species(t)) * VENOM_DRAIN * this.mul(t, 'venom');
+      if (rate <= 0) return;
       const running = t.bleedUntil > game.time;
       t.bleedRate = running ? Math.max(t.bleedRate, rate) : rate;
       if (!running) t.bleedFrom = game.time;

@@ -19,7 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { Game, DAY_SECONDS } from '../../src/game/game';
 import { BUTCHER_PARTS } from '../../src/game/butcher';
 import {
-  Creatures, EVOLVE_AT, FEAR_REST, FEAR_SECS, HALLOW_SEASON, markOn, seasonDay, seasonHolds, SPECIES, wildInSeason, type Creature,
+  Creatures, EVOLVE_AT, FEAR_REST, FEAR_SECS, HALLOW_SEASON, markOn, maxHealth, seasonDay, seasonHolds, SPECIES, wildInSeason, type Creature,
   type IslandCreature,
 } from '../../src/game/creatures';
 import { whereItLives } from '../../src/game/guide';
@@ -134,6 +134,8 @@ ${MOMENTS.map(([m], i) => `  insert into said select 'HOLDS:${i}', season_holds(
   a := creature_spawn(w, 'whispet', 16.5, 16.5, 'active', now() - interval '30 days', u);
   t := creature_spawn(w, 'ulva', 17.5, 16.5, 'wild', now() - interval '30 days', null);
   update creature set health = 5000, brawl = a, threat_at = now() - interval '1 hour' where world_id = w and id = t;
+  -- No blood and no rarity, which would lift the Fear and its rest (\`fear\`, \`cooldown\`).
+  update creature set traits = '{}', rare = null where world_id = w and id in (a, t);
   select * into c from creature where world_id = w and id = t;
   v_d := sqrt((creature_x(c) - 16.5) ^ 2 + (creature_y(c) - 16.5) ^ 2);
   -- What its keeper is told of it before and after: when the rest after its ability runs out.
@@ -308,11 +310,17 @@ const py = g.player.y;
 const mine = (): Creature => {
   const c = g.creatures.spawn('whispet', px + 2, py, 'active', g.rand, g.time - 3600 * 24 * 30);
   c.stance = 'passive';
+  c.traits = [];
+  c.rare = 0;
+  // At the health it has without them, or its first settle takes off what its blood had put on.
+  c.health = maxHealth(c, SPECIES.whispet);
   return c;
 };
 const wildOne = (id: string, health = 5000): Creature => {
   const c = g.creatures.spawn(id, px + 3, py, 'wild', g.rand, g.time - 3600 * 24 * 30);
   c.health = health;
+  c.traits = [];
+  c.rare = 0;
   return c;
 };
 {

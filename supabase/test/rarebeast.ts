@@ -27,7 +27,7 @@ import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
 import { attackOf, bloodMul, Creatures, maxHealth, rarityLine, rarityMul, raritySays, SPECIES, workRangeOf, type IslandCreature } from '../../src/game/creatures';
 import { RARITIES, RARITY_ODDS, rarityChance } from '../../src/game/items';
-import { CHANNELS, husbandryOdds, rollTraits, traitMul, traitTier, TIERS, type TraitChannel } from '../../src/game/traits';
+import { BLOOD_CHANNELS, CHANNELS, husbandryOdds, rollTraits, traitMul, traitTier, TIERS, type ChannelDef, type TraitChannel } from '../../src/game/traits';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -104,15 +104,16 @@ let figuresRight = 0;
 for (let step = 0; step < RARITIES.length; step++) {
   one.rare = step;
   const k = RARITIES[step].blood;
-  const right = CHANNELS.every((ch) => near(bloodMul(one, ch.id), traitMul(one.traits, ch.id) * (upFor(ch.id) ? k : 1 / k))
-    && near(rarityMul(one, ch.id), upFor(ch.id) ? k : 1 / k));
+  // A channel out of the blood (`ChannelDef.blood`) its rarity leaves alone.
+  const want = (ch: ChannelDef): number => (ch.blood === false ? 1 : upFor(ch.id) ? k : 1 / k);
+  const right = CHANNELS.every((ch) => near(bloodMul(one, ch.id), traitMul(one.traits, ch.id) * want(ch)) && near(rarityMul(one, ch.id), want(ch)));
   if (right) channelsRight++;
   const health = Math.round(def.health * traitMul(one.traits, 'hardy') * k);
   if (maxHealth(one, def) === health && near(attackOf(one, def), def.attack * traitMul(one.traits, 'tough') * k)
     && near(beasts.speedMul(one), bloodMul(one, 'speed') * beasts.aura(one, 'speed'))) figuresRight++;
 }
 say(channelsRight === RARITIES.length,
-  `every one of the ${CHANNELS.length} channels of its blood is its step's blood better at each of the ${RARITIES.length} steps: multiplied on the ${CHANNELS.filter((c) => c.up).length} where more is better, divided on the ${CHANNELS.filter((c) => !c.up).length} where less is`);
+  `every one of the ${BLOOD_CHANNELS.length} channels of its blood is its step's blood better at each of the ${RARITIES.length} steps: multiplied on the ${BLOOD_CHANNELS.filter((c) => c.up).length} where more is better, divided on the ${BLOOD_CHANNELS.filter((c) => !c.up).length} where less is; the ${CHANNELS.length - BLOOD_CHANNELS.length} out of the blood untouched`);
 say(figuresRight === RARITIES.length, 'and so is what it can take, what it bites for and how fast it goes');
 one.rare = 3;
 const reach = workRangeOf(one, def);

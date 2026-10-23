@@ -424,6 +424,9 @@ check(`a Sunstrike at QL 100 does ${enchantValue(SUN, 100) * 100}% more to a gob
 sword.enchant = { id: VENOM.id, ql: HIT_QL };
 const vc = g.creatures.spawn('shaggan', 30.5, 30.5, 'wild', () => 0.5, 0);
 vc.health = 90;
+// No blood and no rarity, as the island's shaggan has none: what a fixed roll draws moves as the trait table grows.
+vc.traits = [];
+vc.rare = 0;
 const vchance = enchantHitChance(VENOM, HIT_QL);
 dice(vchance + 0.001);
 const vover = enchantRoll(g, sword, vc);

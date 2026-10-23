@@ -53,6 +53,8 @@ const MIRA = '7e5b0000-0000-4000-8000-0000000000e7';
 const pair = (kind: string, dx = 1): string => `
   a := creature_spawn(w, '${kind}', 16.5, 16.5, 'active', now() - interval '30 days', u);
   t := creature_spawn(w, 'ulva', 16.5 + ${dx}, 16.5, 'wild', now() - interval '30 days', null);
+  -- No blood and no rarity, which would lift its rest and what it does (\`cooldown\`, \`fear\`).
+  update creature set traits = '{}', rare = null where world_id = w and id in (a, t);
   update creature set health = 5000 where world_id = w and id = t;`;
 // Creature ids are handed out again once the last is gone, so the marks go with them.
 const tidy = `delete from creature where world_id = w; delete from class_mark where world_id = w;`;
@@ -264,11 +266,15 @@ const py = g.player.y;
 const mine = (id: string): Creature => {
   const c = g.creatures.spawn(id, px + 2, py, 'active', g.rand, g.time - 3600 * 24 * 30);
   c.stance = 'passive';
+  c.traits = [];
+  c.rare = 0;
   return c;
 };
 const wild = (id: string, dx = 1, dy = 0, health = 5000): Creature => {
   const c = g.creatures.spawn(id, px + 2 + dx, py + dy, 'wild', g.rand, g.time - 3600 * 24 * 30);
   c.health = health;
+  c.traits = [];
+  c.rare = 0;
   return c;
 };
 const near = (x: number, y: number): boolean => Math.abs(x - y) < 1e-6;

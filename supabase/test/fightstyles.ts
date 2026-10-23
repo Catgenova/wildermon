@@ -84,7 +84,9 @@ begin
   -- Spitta: venom, a share of its health a second.
   a := creature_spawn(w, 'spitta', 18.5, 16.5, 'active', now() - interval '30 days', u);
   t := creature_spawn(w, 'ulva', 19, 16.5, 'wild', now() - interval '30 days', null);
-  update creature set health = 500 where world_id = w and id = t;
+  -- No blood and no rarity, which would lift the venom it takes (\`venom\`).
+  update creature set health = 500, traits = '{}', rare = null where world_id = w and id = t;
+  update creature set traits = '{}', rare = null where world_id = w and id = a;
   perform creature_attack(w, a, t);
   select * into c from creature where world_id = w and id = t;
   insert into said values ('VENOM', round((c.bleed_rate / max_health(c))::numeric, 4) || '|' || round(extract(epoch from c.bleed_until - now())::numeric));
@@ -182,6 +184,8 @@ const mine = (id: string, dx = 1, dy = 0): Creature => {
 const wild = (id: string, dx = 1.5, dy = 0, health = 500): Creature => {
   const c = g.creatures.spawn(id, px + dx, py + dy, 'wild', g.rand, g.time - 3600 * 24 * 30);
   c.health = health;
+  c.traits = [];
+  c.rare = 0;
   return c;
 };
 const clear = (): void => { for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id); };

@@ -54,7 +54,46 @@ export type TraitChannel =
   /** How quickly its blows come. */
   | 'haste'
   /** How fast its wounds close. */
-  | 'mend';
+  | 'mend'
+  // ---- Traits part B ----
+  /** Goes at its task before it tires (`TIRE_GOES`). */
+  | 'stamina'
+  /** How long it rests once tired (`REST_FOR`); below one is a short rest. */
+  | 'rest'
+  /** How long a dam carries (`GESTATION`); below one is a short wait. */
+  | 'gestation'
+  /** A dam's young per birth: above one is the chance of a second (`twinChance`). */
+  | 'twins'
+  /** The chance of a mutation in its young (`MUTATION_ODDS`), the better of the pair's. */
+  | 'mutate'
+  /** The chance a young one's trait is a fresh draw rather than the pair's (`inheritChance`), the better of the pair's; below one breeds true. */
+  | 'fresh'
+  /** How fast a brushing wears off (`CARE_HOURS`); below one keeps it longer. */
+  | 'carefade'
+  /** What a meal below the top quality loses of its learning and care (`fedOn`); below one is less lost. */
+  | 'food'
+  // ---- Traits part C ----
+  /** How much of its sight for you the dark takes. */
+  | 'night'
+  /** Loads it carries a trip, or things it handles a go: a count added (`ChannelDef.add`). */
+  | 'loads'
+  /** The chance a go at finding buried relics turns one up. */
+  | 'find'
+  /** How long it waits, idle, before it looks for work again. */
+  | 'idle'
+  // ---- Traits part D ----
+  /** Venom drain on it; nought is none. */
+  | 'venom'
+  /** Health it loses a second to a bleed, venom and burns included. */
+  | 'bleed'
+  /** How long a Fear makes it flee; nought is never. */
+  | 'fear'
+  /** Its chance a blow lands as a heavy blow: the points over one. */
+  | 'heavy'
+  /** Its chance a blow bleeds what it hits: the points over one. */
+  | 'rip'
+  /** Seconds between goes at its ability. */
+  | 'cooldown';
 
 export interface TraitDef {
   id: string;
@@ -132,6 +171,39 @@ const PLAIN_TRAITS: TraitDef[] = [
   { id: 'old_blood', name: 'old blood', tier: 'fantastic', effects: { learn: 2, yield: 1.2 } },
   { id: 'pack_leader', name: 'pack leader', tier: 'fantastic', effects: { work: 1.25, learn: 1.25, speed: 1.1 }, aura: true },
   { id: 'ironsides', name: 'ironsides', tier: 'fantastic', effects: { hardy: 2, tough: 1.6 } },
+
+  // ---- Traits part A ----
+  { id: 'steady_handed', name: 'steady-handed', tier: 'common', effects: { yield: 1.05, work: 1.03 } },
+  { id: 'ox_necked', name: 'ox-necked', tier: 'rare', effects: { haul: 1.2, hardy: 1.1 } },
+  { id: 'hawk_eyed', name: 'hawk-eyed', tier: 'supreme', effects: { sight: 1.5, range: 1.15 } },
+  { id: 'lean', name: 'lean', tier: 'common', effects: { appetite: 0.95, speed: 1.04 } },
+  { id: 'bookish', name: 'bookish', tier: 'rare', effects: { learn: 1.2, work: 0.95 } },
+  { id: 'glutton', name: 'glutton', tier: 'common', effects: { work: 1.1, appetite: 1.15 } },
+  { id: 'sure_footed', name: 'sure-footed', tier: 'rare', effects: { speed: 1.1, evade: 0.9 } },
+  { id: 'hearth_bred', name: 'hearth-bred', tier: 'common', effects: { mend: 1.04 }, aura: true },
+  { id: 'gentle_mouthed', name: 'gentle-mouthed', tier: 'rare', effects: { yield: 1.15 } },
+  { id: 'dense_boned', name: 'dense-boned', tier: 'fantastic', effects: { hardy: 1.5, soak: 0.8, speed: 0.9 } },
+  { id: 'fleece_heavy', name: 'fleece-heavy', tier: 'rare', effects: { grow: 1.4 } },
+
+  // ---- Traits part B ----
+  { id: 'enduring', name: 'enduring', tier: 'rare', effects: { stamina: 1.25 } },
+  { id: 'light_sleeper', name: 'light sleeper', tier: 'common', effects: { rest: 0.75 } },
+  { id: 'fertile', name: 'fertile', tier: 'common', effects: { gestation: 0.85 } },
+  { id: 'twin_bearing', name: 'twin-bearing', tier: 'supreme', effects: { twins: 1.1 } },
+  { id: 'mutable', name: 'mutable', tier: 'rare', effects: { mutate: 2 } },
+  { id: 'true_breeding', name: 'true-breeding', tier: 'rare', effects: { fresh: 0.7 } },
+  { id: 'long_memoried', name: 'long-memoried', tier: 'common', effects: { carefade: 0.8 } },
+  { id: 'iron_stomached', name: 'iron-stomached', tier: 'common', effects: { food: 0.5 } },
+
+  // ---- Traits part C ----
+  { id: 'night_eyed', name: 'night-eyed', tier: 'rare', effects: { night: 0 } },
+  { id: 'deep_pocketed', name: 'deep-pocketed', tier: 'rare', effects: { loads: 1 } },
+  { id: 'lucky_finder', name: 'lucky finder', tier: 'supreme', effects: { find: 1.5 } },
+  { id: 'settler', name: 'settler', tier: 'supreme', effects: { idle: 0.8 }, aura: true },
+  // ---- Traits part D ----
+  { id: 'venom_proof', name: 'venom-proof', tier: 'rare', effects: { venom: 0 } },
+  { id: 'fearless', name: 'fearless', tier: 'rare', effects: { fear: 0 } },
+  { id: 'quick_recovering', name: 'quick-recovering', tier: 'rare', effects: { cooldown: 0.85 } },
 ];
 
 // ---- Fighting blood ----
@@ -199,12 +271,25 @@ export const FIGHTING: FightingTraitDef[] = [
   // And two that fight for the herd.
   { id: 'war_leader', name: 'war leader', gains: { tough: 0.04, haste: 0.02 }, aura: true },
   { id: 'shield_wall', name: 'shield wall', gains: { soak: 0.04 }, aura: true },
+
+  // ---- Traits part A ----
+  { id: 'thorned', name: 'thorned', gains: { soak: 0.05, tough: 0.05 } },
+  // ---- Traits part D ----
+  { id: 'quick_clotting', name: 'quick-clotting', gains: { bleed: 0.25 } },
+  { id: 'crushing', name: 'crushing', gains: { heavy: 0.03 } },
+  { id: 'ripping', name: 'ripping', gains: { rip: 0.05 } },
 ];
 
 /** What each grade multiplies the common gain by: the same steep climb the plain tiers keep. */
 export const GRADE_STEP: Record<TraitTier, number> = { common: 1, rare: 2.5, supreme: 4.5, fantastic: 7 };
 /** The channels where less is better. `CHANNELS` says the same of each, and the blood test checks they agree. */
 export const DOWN_CHANNELS = new Set<TraitChannel>(['appetite', 'soak', 'evade']);
+// ---- Traits part B ----
+for (const ch of ['rest', 'gestation', 'fresh', 'carefade', 'food'] as TraitChannel[]) DOWN_CHANNELS.add(ch);
+// ---- Traits part C ----
+for (const ch of ['night', 'idle'] as TraitChannel[]) DOWN_CHANNELS.add(ch);
+// ---- Traits part D ----
+for (const ch of ['venom', 'bleed', 'fear', 'cooldown'] as TraitChannel[]) DOWN_CHANNELS.add(ch);
 /** The row id of one grade of a name: the plain name for common, and the tier hung on it above that. */
 export const gradeId = (family: string, tier: TraitTier): string => tier === 'common' ? family : `${family}_${tier}`;
 /** What a gain is worth at a grade: a tenth more, or on a channel where less is better, a tenth less of it. */
@@ -328,6 +413,16 @@ export function traitMul(traits: string[] | undefined, channel: TraitChannel): n
   return m;
 }
 
+/**
+ * One creature's own traits added together on a channel that counts (`ChannelDef.add`): `deep-pocketed` is a load
+ * more a trip. The island's `trait_add`.
+ */
+export function traitAdd(traits: string[] | undefined, channel: TraitChannel): number {
+  let n = 0;
+  for (const id of traits ?? []) n += TRAIT_BY_ID.get(id)?.effects[channel] ?? 0;
+  return n;
+}
+
 /** The communal part alone: what one creature's aura traits give everyone. */
 export function auraMul(traits: string[] | undefined, channel: TraitChannel): number {
   let m = 1;
@@ -347,7 +442,7 @@ export const hasAura = (traits: string[] | undefined): boolean => (traits ?? [])
 // ---- What a channel is, in the words a card uses ----
 
 /**
- * The fifteen things a trait can lift, written out.
+ * Every thing a trait can lift, written out.
  *
  * Every one of these was already declared on `TraitChannel` with a line of
  * comment above it, and a comment is not something a card can print. Reported
@@ -369,6 +464,16 @@ export interface ChannelDef {
   note: string;
   /** Whether more of it is better. False for appetite, and for the two fighting channels where less is better: what a blow costs and how often one lands. */
   up: boolean;
+  /**
+   * A count added rather than a multiplier: a trait's figure on it is how many more, traits on it add up
+   * (`traitAdd`). Always out of the blood (`blood`).
+   */
+  add?: boolean;
+  /**
+   * False where its rarity and its line move nothing: only a trait's own figure does (`BLOOD_CHANNELS`). The island's
+   * `channel_def.blood`.
+   */
+  blood?: false;
 }
 
 export const CHANNELS: ChannelDef[] = [
@@ -387,10 +492,35 @@ export const CHANNELS: ChannelDef[] = [
   { id: 'evade', label: 'chance to be hit', up: false, note: 'chance a swing at it lands' },
   { id: 'haste', label: 'speed of blows', up: true, note: 'blow rate' },
   { id: 'mend', label: 'healing', up: true, note: 'wound healing rate' },
+  // ---- Traits part B ----
+  { id: 'stamina', label: 'stamina', up: true, blood: false, note: 'cycles at its task before it rests' },
+  { id: 'rest', label: 'rest time', up: false, blood: false, note: 'rest once out of stamina' },
+  { id: 'gestation', label: 'gestation time', up: false, blood: false, note: 'time from covering to birth, as the dam' },
+  { id: 'twins', label: 'young per birth', up: true, blood: false, note: 'young per birth as the dam; past one, chance of a second young' },
+  { id: 'mutate', label: 'mutation chance', up: true, blood: false, note: 'chance of a mutation in its young, the better parent of a pair' },
+  { id: 'fresh', label: 'fresh-draw chance', up: false, blood: false, note: 'chance each trait of its young is a fresh draw, not from the pair; the better parent of a pair' },
+  { id: 'carefade', label: 'care loss', up: false, blood: false, note: 'care lost per hour' },
+  { id: 'food', label: 'meal quality loss', up: false, blood: false, note: 'learning and care a meal loses below the top quality' },
+  // ---- Traits part C ----
+  { id: 'night', label: 'sight lost at night', up: false, blood: false, note: 'share of its sight for you the dark takes' },
+  { id: 'loads', label: 'loads per trip', up: true, blood: false, add: true, note: 'loads a settlement trip, or things handled a go' },
+  { id: 'find', label: 'relic find chance', up: true, blood: false, note: 'chance a go at finding buried relics turns one up' },
+  { id: 'idle', label: 'idle wait', up: false, blood: false, note: 'wait between looks for work while idle on a settlement' },
+  // ---- Traits part D ----
+  { id: 'venom', label: 'venom taken', up: false, blood: false, note: 'venom drain on it per second' },
+  { id: 'bleed', label: 'bleeding taken', up: false, blood: false, note: 'health lost per second to bleeding, venom and burns' },
+  { id: 'fear', label: 'fear time', up: false, blood: false, note: 'seconds a Fear makes it flee' },
+  { id: 'heavy', label: 'heavy blow chance', up: true, blood: false, note: 'chance its blow lands as a heavy blow' },
+  { id: 'rip', label: 'bleed chance', up: true, blood: false, note: 'chance its blow bleeds the target as a knife does' },
+  { id: 'cooldown', label: 'ability cooldown', up: false, blood: false, note: 'seconds between goes at its ability' },
 ];
 
 export const CHANNEL_BY_ID = new Map(CHANNELS.map((c) => [c.id, c]));
+/** The channels a rarity and a line multiply (`ChannelDef.blood`). */
+export const BLOOD_CHANNELS: ChannelDef[] = CHANNELS.filter((ch) => ch.blood !== false);
 export const channelOf = (id: TraitChannel): ChannelDef | undefined => CHANNEL_BY_ID.get(id);
+/** Whether a rarity and a line move a channel (`ChannelDef.blood`). */
+export const inBlood = (id: TraitChannel): boolean => CHANNEL_BY_ID.get(id)?.blood !== false;
 
 /**
  * A multiplier as a card prints it: `1.32` is `+32%`, `0.8` is `-20%`.
@@ -405,18 +535,25 @@ export function pct(mul: number): string {
 
 /** Whether a figure on a channel is a gain, for the colour a card gives it. */
 export const isGain = (channel: TraitChannel, mul: number): boolean =>
-  (CHANNEL_BY_ID.get(channel)?.up ?? true) ? mul > 1 : mul < 1;
+  CHANNEL_BY_ID.get(channel)?.add ? mul > 0 : (CHANNEL_BY_ID.get(channel)?.up ?? true) ? mul > 1 : mul < 1;
+
+/** A trait's figure on a channel as a card prints it: `pct`, or on a count (`ChannelDef.add`) the count, "+1". The island's `trait_fig`. */
+export function figSays(channel: TraitChannel, v: number): string {
+  if (!CHANNEL_BY_ID.get(channel)?.add) return pct(v);
+  const n = Math.round(v);
+  return `${n >= 0 ? '+' : '−'}${Math.abs(n)}`;
+}
 
 /** "+32% learning", or "+32% learning, +20% yield" for a trait that does two things. */
 export function traitSays(t: TraitDef): string {
   return CHANNELS.filter((ch) => t.effects[ch.id] !== undefined)
-    .map((ch) => `${pct(t.effects[ch.id] as number)} ${ch.label}`)
+    .map((ch) => `${figSays(ch.id, t.effects[ch.id] as number)} ${ch.label}`)
     .join(', ');
 }
 
 /** Every channel a set of traits touches at all, in the order a card reads them. */
 export const channelsOf = (traits: string[] | undefined): ChannelDef[] =>
-  CHANNELS.filter((ch) => traitMul(traits, ch.id) !== 1);
+  CHANNELS.filter((ch) => (ch.add ? traitAdd(traits, ch.id) !== 0 : traitMul(traits, ch.id) !== 1));
 
 /** A trait written out for a log line or a card. */
 export const traitName = (id: string): string => TRAIT_BY_ID.get(id)?.name ?? id;
@@ -482,6 +619,25 @@ export const nextTier = (t: TraitTier): TraitTier | null => TIERS[TIERS.indexOf(
  */
 export const MUTATION_ODDS = 200;
 
+// ---- Traits part B ----
+/**
+ * What a pair's blood does to a covering: the better parent's `fresh` (the share of the slots drawn fresh that stay
+ * fresh) and the better parent's `mutate` (what the mutation chance is multiplied by). One each for a pair with neither.
+ * The island's `p_fresh` and `p_mutate` on `breed_traits`.
+ */
+export interface PairBlood {
+  fresh: number;
+  mutate: number;
+}
+export const NO_PAIR_BLOOD: PairBlood = { fresh: 1, mutate: 1 };
+/** The chance a slot is drawn from the pair: what husbandry, care and perks give, with the pair's `fresh` on the rest. */
+export function keepChance(husbandry: number, care: number, keepPlus = 0, fresh = 1): number {
+  const keep = Math.min(1, inheritChance(husbandry, care) + keepPlus);
+  return fresh === 1 ? keep : Math.min(1, 1 - (1 - keep) * fresh);
+}
+/** The chance a young one is born with a mutation, with the pair's `mutate` on it. */
+export const mutationChance = (mutate = 1): number => Math.min(1, mutate / MUTATION_ODDS);
+
 /**
  * Where one of a young one's traits came from, settled at the covering and
  * kept for good as its pedigree. The island stores the same six words.
@@ -528,10 +684,11 @@ export function breedTraits(
   keepPlus = 0,
   upPlus = 0,
   copy: readonly string[] = [],
+  pair: PairBlood = NO_PAIR_BLOOD,
 ): Bred {
   const pool = [...new Set([...sire, ...dam])];
   // More of the pair and more of it a tier better, for a Herdsman's True Blood and Bred Up; never past certain.
-  const keep = Math.min(1, inheritChance(husbandry, care) + keepPlus);
+  const keep = keepChance(husbandry, care, keepPlus, pair.fresh);
   const up = Math.min(1, upgradeChance(husbandry, care) + upPlus);
   const lift = Math.max(0, Math.min(100, husbandry)) / 100;
   const out: string[] = [];
@@ -605,7 +762,7 @@ export function breedTraits(
    * empty slot first)." Never a name either parent carries or the young one
    * already does, by the rule an ancient lamp keeps (`lampTrait`).
    */
-  if (rand() < 1 / MUTATION_ODDS) {
+  if (rand() < mutationChance(pair.mutate)) {
     const { slot } = lowestSlot(out, rand, fixed);
     const now = lampTrait(mutationTier(sire, dam), [...sire, ...dam, ...out], rand);
     if (now) {
@@ -668,7 +825,8 @@ export const lineDepth = (traits: string[] | undefined, line: Line | undefined, 
  */
 export function lineMul(traits: string[] | undefined, line: Line | undefined, channel: TraitChannel): number {
   const d = line?.[channel];
-  return d === undefined || d <= 1 ? 1 : depthMul(lineDepth(traits, line, channel), channel);
+  // Never on a channel out of the blood (`inBlood`), where none is written either (`bredLine`).
+  return d === undefined || d <= 1 || !inBlood(channel) ? 1 : depthMul(lineDepth(traits, line, channel), channel);
 }
 
 /** What a line this deep is worth on a channel. */
@@ -684,7 +842,7 @@ export const lineIfCarried = (dam: { traits: string[]; line?: Line }, sire: { tr
 /** A young one's line, settled at the covering with its traits: the channels it carries a trait on where that is past one. The island's `bred_line`. */
 export function bredLine(young: string[], dam: { traits: string[]; line?: Line }, sire: { traits: string[]; line?: Line }): Line {
   const out: Line = {};
-  for (const ch of CHANNELS) {
+  for (const ch of BLOOD_CHANNELS) {
     if (!carriesOn(young, ch.id)) continue;
     const d = lineIfCarried(dam, sire, ch.id);
     if (d > 1) out[ch.id] = d;
@@ -694,7 +852,7 @@ export function bredLine(young: string[], dam: { traits: string[]; line?: Line }
 
 /** "Line: 4 generations bred for damage, +6% damage", for each channel its line runs past one on. */
 export const lineSaid = (traits: string[] | undefined, line: Line | undefined): string[] =>
-  CHANNELS.filter((ch) => lineDepth(traits, line, ch.id) > 1)
+  BLOOD_CHANNELS.filter((ch) => lineDepth(traits, line, ch.id) > 1)
     .map((ch) => `Line (${ch.label}): ${lineDepth(traits, line, ch.id)} generations, ${pct(depthMul(lineDepth(traits, line, ch.id), ch.id))} ${ch.label}`);
 
 // ---- What a pairing would throw ----
@@ -726,8 +884,11 @@ interface Rows {
   tier: Int8Array;
   fam: Int16Array;
   fight: Uint8Array;
-  /** The channels it carries anything on, a bit each in `CHANNELS` order; one for every grade of a fighting name. */
-  mask: Int32Array;
+  /**
+   * The channels it carries anything on, by id in `CHANNELS` order (`' '`-joined); one for every grade of a fighting
+   * name. A key, not a bitmask: there are more channels than an int has bits.
+   */
+  key: string[];
   /** The rows of each family. */
   famRows: number[][];
 }
@@ -742,7 +903,7 @@ const rows = (): Rows => {
     tier: Int8Array.from(TRAITS, (t) => TIERS.indexOf(t.tier)),
     fam: Int16Array.from(TRAITS, (t) => famIx.get(familyOf(t.id)) as number),
     fight: Uint8Array.from(TRAITS, (t) => (t.family ? 1 : 0)),
-    mask: Int32Array.from(TRAITS, (t) => CHANNELS.reduce((m, ch, b) => (t.effects[ch.id] !== undefined ? m | (1 << b) : m), 0)),
+    key: TRAITS.map((t) => CHANNELS.filter((ch) => t.effects[ch.id] !== undefined).map((ch) => ch.id).join(' ')),
     famRows: fams.map(() => []),
   };
   TRAITS.forEach((_, i) => r.famRows[r.fam[i]].push(i));
@@ -784,12 +945,12 @@ const rows = (): Rows => {
  * drawn as ever, and none of them the slot a mutation takes.
  */
 export function breedOdds(sire: string[], dam: string[], husbandry: number, care: number, keepPlus = 0, upPlus = 0,
-  channels: readonly TraitChannel[] = [], copy: readonly string[] = []): BreedOdds {
+  channels: readonly TraitChannel[] = [], copy: readonly string[] = [], pair: PairBlood = NO_PAIR_BLOOD): BreedOdds {
   const R = rows();
   const T = TIERS.length;
   const pool = [...new Set([...sire, ...dam])].filter((id) => R.index.has(id)).map((id) => R.index.get(id) as number);
   const parentFams = new Set(pool.map((i) => R.fam[i]));
-  const keep = Math.min(1, inheritChance(husbandry, care) + keepPlus);
+  const keep = keepChance(husbandry, care, keepPlus, pair.fresh);
   const up = Math.min(1, upgradeChance(husbandry, care) + upPlus);
   const lift = Math.max(0, Math.min(100, husbandry)) / 100;
   const odds = husbandryOdds(husbandry);
@@ -805,21 +966,24 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
   const gPerName: number[] = [];
   const gGo: number[] = [];
   const gFight: boolean[] = [];
-  const gMask: number[] = [];
+  const gKey: string[] = [];
+  /** A row of each group, for the channels it carries. */
+  const gRow: number[] = [];
   const groupOfFam = new Map<number, number>();
-  const groupOfMask = new Map<number, number>();
+  const groupOfKey = new Map<string, number>();
   for (let f = 0; f < R.famRows.length; f++) {
     const r0 = R.famRows[f][0];
     const pooled = !R.fight[r0] || parentFams.has(f);
-    let g = pooled ? undefined : groupOfMask.get(R.mask[r0]);
+    let g = pooled ? undefined : groupOfKey.get(R.key[r0]);
     if (g === undefined) {
       g = gSize.length;
       gSize.push(0);
       gPerName.push(R.famRows[f].length);
       gGo.push(R.famRows[f].reduce((a, i) => a + goAt(!!R.fight[i], R.tier[i]), 0));
       gFight.push(!!R.fight[r0]);
-      gMask.push(R.mask[r0]);
-      if (!pooled) groupOfMask.set(R.mask[r0], g);
+      gKey.push(R.key[r0]);
+      gRow.push(r0);
+      if (!pooled) groupOfKey.set(R.key[r0], g);
     }
     gSize[g]++;
     groupOfFam.set(f, g);
@@ -845,7 +1009,6 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
   const U = uGroup.length;
   const unitAt = (g: number, t: number): number => unitOf.get(`${g}:${t}`) ?? -1;
   const uFight = uGroup.map((g) => gFight[g]);
-  const uMask = Int32Array.from(uGroup, (g) => gMask[g]);
   const uGo = uGroup.map((g, u) => goAt(gFight[g], uTier[u]));
   /** A fighting unit's grade above; -1 for a plain one, or at the top. */
   const uUp = uGroup.map((g, u) => (gFight[g] && uTier[u] + 1 < T ? unitAt(g, uTier[u] + 1) : -1));
@@ -927,16 +1090,22 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
   // unit whose fighting name a lamp could take, 2 for a plain one of that tier it could; each brings its channels.
   const mTier = TIERS.indexOf(mutationTier(sire, dam));
   const lamp = Int8Array.from(uGroup, (g, u) => {
-    if (gFight[g]) return groupOfMask.has(gMask[g]) && groupOfMask.get(gMask[g]) === g ? 1 : 0;
+    if (gFight[g]) return groupOfKey.get(gKey[g]) === g ? 1 : 0;
     return uTier[u] === mTier && !uRows[u].some((i) => parentFams.has(R.fam[i])) ? 2 : 0;
   });
-  const lampGroups = gSize.flatMap((_, g) => (gFight[g] && groupOfMask.get(gMask[g]) === g ? [g] : []));
+  const lampGroups = gSize.flatMap((_, g) => (gFight[g] && groupOfKey.get(gKey[g]) === g ? [g] : []));
   const plainT = plainUnits[mTier].filter((u) => lamp[u] === 2);
   const lampFights = lampGroups.reduce((a, g) => a + gSize[g], 0);
   const chans = channels.map((id) => CHANNELS.findIndex((ch) => ch.id === id)).filter((k) => k >= 0);
-  const baseF = chans.map((k) => lampGroups.reduce((a, g) => a + (gMask[g] >> k & 1 ? gSize[g] : 0), 0));
-  const baseP = chans.map((k) => plainT.filter((u) => uMask[u] >> k & 1).length);
-  const m = 1 / MUTATION_ODDS;
+  // Whether each unit carries each channel asked about: `uOn[u * J + j]`, one or nought.
+  const J = chans.length;
+  const gOn = new Uint8Array(gSize.length * J);
+  gRow.forEach((r0, g) => chans.forEach((k, j) => (gOn[g * J + j] = TRAITS[r0].effects[CHANNELS[k].id] !== undefined ? 1 : 0)));
+  const uOn = new Uint8Array(U * J);
+  uGroup.forEach((g, u) => uOn.set(gOn.subarray(g * J, g * J + J), u * J));
+  const baseF = chans.map((_, j) => lampGroups.reduce((a, g) => a + (gOn[g * J + j] ? gSize[g] : 0), 0));
+  const baseP = chans.map((_, j) => plainT.filter((u) => uOn[u * J + j]).length);
+  const m = mutationChance(pair.mutate);
 
   const every = new Float64Array(U);
   const best = new Float64Array(T);
@@ -1009,7 +1178,6 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
         // Each channel asked about: carried as drawn, and, swapped, by the two kept or by the lamp's pick.
         const p = p2 * pc;
         const swap = swapOf[k];
-        const mask = uMask[a] | uMask[b] | uMask[c];
         trio[0] = a;
         trio[1] = b;
         trio[2] = c;
@@ -1019,14 +1187,13 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
         const pP = swap ? 1 - pF : 0;
         const nF = nFOf[k];
         const nP = nPOf[k];
-        for (let j = 0; j < chans.length; j++) {
-          const ch = chans[j];
-          if (mask >> ch & 1) on[j] += p * (1 - swap);
+        for (let j = 0; j < J; j++) {
+          if (uOn[a * J + j] | uOn[b * J + j] | uOn[c * J + j]) on[j] += p * (1 - swap);
           if (!swap) continue;
           let f = baseF[j];
           let h = baseP[j];
           for (const u of trio) {
-            if (lamp[u] && uMask[u] >> ch & 1) {
+            if (lamp[u] && uOn[u * J + j]) {
               if (lamp[u] === 1) f--;
               else h--;
             }
@@ -1034,8 +1201,8 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
           const picked = (pF * (nF ? f / nF : 0) + pP * (nP ? h / nP : 0)) / (pF + pP);
           for (let x = 0; x < 3; x++) {
             if (uTier[trio[x]] !== low) continue;
-            const rest = uMask[trio[(x + 1) % 3]] | uMask[trio[(x + 2) % 3]];
-            on[j] += ((p * swap) / lows) * (rest >> ch & 1 ? 1 : picked);
+            const rest = uOn[trio[(x + 1) % 3] * J + j] | uOn[trio[(x + 2) % 3] * J + j];
+            on[j] += ((p * swap) / lows) * (rest ? 1 : picked);
           }
         }
       }
@@ -1078,17 +1245,15 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
     const free = units.map((_, x) => x).filter((x) => x >= fixed.length);
     const swap = free.length ? m * (pF + pP) : 0;
     const asIs = p * (1 - swap);
-    let mask = 0;
     let top = 0;
     for (const u of units) {
       every[u] += asIs;
-      mask |= uMask[u];
       top = Math.max(top, uTier[u]);
     }
     best[top] += asIs;
-    chans.forEach((ch, j) => {
-      if (mask >> ch & 1) on[j] += asIs;
-    });
+    /** Whether any of these units carries asked channel `j`. */
+    const carry = (us: number[], j: number): boolean => us.some((u) => uOn[u * J + j]);
+    for (let j = 0; j < J; j++) if (carry(units, j)) on[j] += asIs;
     if (!swap) return;
     mutated += p * swap;
     fightAll += nF ? (p * m * pF) / nF : 0;
@@ -1102,27 +1267,25 @@ export function breedOdds(sire: string[], dam: string[], husbandry: number, care
     for (const x of lows) {
       const w = (p * swap) / lows.length;
       const rest = units.filter((_, y) => y !== x);
-      let restMask = 0;
       let restTop = mTier;
       for (const u of rest) {
         every[u] += w;
-        restMask |= uMask[u];
         restTop = Math.max(restTop, uTier[u]);
       }
       best[restTop] += w;
-      chans.forEach((ch, j) => {
-        if (restMask >> ch & 1) {
+      for (let j = 0; j < J; j++) {
+        if (carry(rest, j)) {
           on[j] += w;
-          return;
+          continue;
         }
         let f = baseF[j];
         let h = baseP[j];
         for (const u of units) {
-          if (lamp[u] === 1 && uMask[u] >> ch & 1) f--;
-          else if (lamp[u] === 2 && uMask[u] >> ch & 1) h--;
+          if (lamp[u] === 1 && uOn[u * J + j]) f--;
+          else if (lamp[u] === 2 && uOn[u * J + j]) h--;
         }
         on[j] += (w * (pF * (nF ? f / nF : 0) + pP * (nP ? h / nP : 0))) / (pF + pP);
-      });
+      }
     }
   };
   const walk = (out: number[], p: number): void => {

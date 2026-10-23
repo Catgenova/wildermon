@@ -150,8 +150,9 @@ import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
-import { betterThanCommon, CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
+import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
+import { CHANNELS, FIGHTING, gradeId, traitOf, traitSays, type TraitDef } from '../../game/traits';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POOL_DEPTH, POOL_LIP, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
 import { POOL_FILL } from '../../game/foundations';
@@ -829,8 +830,8 @@ export const NEWS: News[] = [
         const n = Math.round(100 * betterThanCommon(husbandryOdds(0, s)));
         return n === 100 ? 'all' : `${n}%`;
       };
-      const up = CHANNELS.filter((ch) => ch.up).map((ch) => ch.label);
-      const down = CHANNELS.filter((ch) => !ch.up).map((ch) => ch.label);
+      const up = BLOOD_CHANNELS.filter((ch) => ch.up).map((ch) => ch.label);
+      const down = BLOOD_CHANNELS.filter((ch) => !ch.up).map((ch) => ch.label);
       return [
         `Added: rare wildermon, at made-item odds: ${listed(steps.map((s) => `1 in ${num(Math.round(1 / rarityChance(s)))} ${name(s)}`))}. Never monsters. Newborns' rarity set by chance at birth regardless of parents.`,
         `Added: size vs its kind: ${name(1)} ${mult(RARITIES[1].size)}, ${listed(steps.slice(1).map((s) => `${name(s)} ${mult(RARITIES[s].size)}`))}.`,
@@ -3443,6 +3444,16 @@ export const NEWS: News[] = [
     ],
   },
   {
+    n: 276,
+    day: '2026-10-23',
+    lines: () => [
+      ...TRAITS_276.flatMap(newTraitLines),
+      `Added: heavy blow chance: blow ×${HEAVY_HIT}. Bleed chance: target bleeds ${percent(KNIFE_BLEED)} of the blow per second for ${KNIFE_BLEED_SECS} seconds, as a knife. Bleeding taken: bleeding, venom and burns.`,
+      'Added: young per birth past 1: chance of a second young, (1 + Twins) × the dam\'s young per birth − 1. Mutation chance, fresh-draw chance: the better parent of the pair.',
+      `Rarity and breeding lines: no effect on ${listed(CHANNELS.filter((ch) => ch.blood === false).map((ch) => ch.label))}; trait figures only.`,
+    ],
+  },
+  {
     n: 277,
     day: '2026-10-23',
     lines: () => [
@@ -3502,6 +3513,28 @@ export const NEWS: News[] = [
       `Fixed: frame rate with 14 wildermon of 10 kinds standing about close in on a 2× screen: pictures kept ${num(BEAST_BUDGET / 1e6)} million pixels (was 14 million), loops in view never dropped for new ones. 322 → 33 ms a frame.`,
     ],
   },
+];
+
+/**
+ * New traits as What's new 276 gives them: the plain ones on one line, by name, rarity and what each lifts; each
+ * fighting blood name on a line of its own, by grade.
+ */
+function newTraitLines(ids: readonly string[]): string[] {
+  const plain = ids.map((id) => traitOf(id)).filter((t): t is TraitDef => !!t && !t.family);
+  const fights = FIGHTING.filter((f) => ids.includes(f.id));
+  return [
+    ...(plain.length ? [`Added: traits: ${plain.map((t) => `${t.name} (${t.tier}${t.aura ? ', communal' : ''}) ${traitSays(t)}`).join('; ')}.`] : []),
+    ...fights.map((f) => `Added: fighting blood: ${f.name}${f.aura ? ' (communal)' : ''}, by grade: ${TIERS.map((tier) => `${tier} ${traitSays(traitOf(gradeId(f.id, tier)) as TraitDef)}`).join('; ')}.`),
+  ];
+}
+
+/** The traits What's new 276 adds, a line each part. */
+const TRAITS_276: readonly (readonly string[])[] = [
+  ['steady_handed', 'ox_necked', 'hawk_eyed', 'lean', 'bookish', 'glutton', 'sure_footed', 'hearth_bred', 'thorned',
+    'gentle_mouthed', 'dense_boned', 'fleece_heavy'],
+  ['enduring', 'light_sleeper', 'fertile', 'twin_bearing', 'mutable', 'true_breeding', 'long_memoried', 'iron_stomached'],
+  ['night_eyed', 'deep_pocketed', 'lucky_finder', 'settler'],
+  ['venom_proof', 'fearless', 'quick_recovering', 'quick_clotting', 'crushing', 'ripping'],
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */

@@ -379,6 +379,16 @@ begin
     update creature set sex = 'female', hunger = 1, care = ${CARE} where world_id = w and id = v_born;
     v_line := v_born;
   end loop;
+  -- And where the chain's own draws threw no young carrying nothing on work (one a generation is bred until it carries
+  -- willing, so a few at most are looked at), the last of the line is covered again until one comes, never born.
+  for v_k in 1..2000 loop
+    exit when v_none <> -1;
+    perform pair_them(w, v_line, v_mate, 0);
+    if not carries_on(array(select jsonb_array_elements_text((select unborn->'traits' from creature where world_id = w and id = v_line))), 'work') then
+      v_none := coalesce((select (unborn->'line'->>'work')::int from creature where world_id = w and id = v_line), 0);
+    end if;
+    update creature set unborn = null, due = null where world_id = w and id = v_line;
+  end loop;
   insert into said values ('NONE|' || v_none);
 
   -- What a line is worth, in the blood the rules read (beast_mul), over the same blood with none.

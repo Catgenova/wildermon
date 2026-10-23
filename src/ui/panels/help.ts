@@ -132,7 +132,7 @@ import { SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { KNACK_BONUS, KNACK_CAP, KNACK_GO, KNACK_HOME, KNACK_ODDS, TITLE_STEPS, titlesFor } from '../../game/titles';
 import { CATCH_MOST, CHECK_EVERY, CREEL_BAIT_LOSS, creelOdds, HUNTER_TRAPPED, TIMID_TRAPPED, TRAPS } from '../../game/traps';
 import {
-  betterThanCommon, CHANNELS as BLOOD, depthMul, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, LAMP_TIER_ODDS, lineSaid, MUTATION_ODDS, pct as cardPct,
+  betterThanCommon, BLOOD_CHANNELS as BLOOD, CHANNELS as TRAIT_CHANNELS, depthMul, FIGHT_SHARE, FIGHTING, GRADE_STEP, husbandryOdds, inheritChance, LAMP_TIER_ODDS, lineSaid, MUTATION_ODDS, pct as cardPct,
   PEDIGREE_MOST, PEDIGREE_STEP, TIERS, TRAIT_SLOTS, TRAIT_SOURCES, TRAITS, upgradeChance, type TraitTier, SLOTS_PER_STAGE, stageSlots,
 } from '../../game/traits';
 import { CHAIN_MOST, FALL_DROP, FILL_RATE, POND_MOST, POOL_DEPTH, POOL_LIP, RUN_MOST, RUN_RATE, SPRING_DEPTH, SPRINGS_EACH } from '../../world/springs';
@@ -872,6 +872,8 @@ const sailSpeeds = listed(
 /** The depths of a line past the first, for the help's figures. */
 const LINE_DEPTHS = Array.from({ length: PEDIGREE_MOST - 1 }, (_, i) => i + 2);
 /** A line as the card says it (`lineSaid`), one short of the deepest, on what a creature's attack lands for. */
+/** The channels a rarity and a line leave alone (`ChannelDef.blood`), by label. */
+const OUT_OF_BLOOD = (): string[] => TRAIT_CHANNELS.filter((ch) => ch.blood === false).map((ch) => ch.label);
 const LINE_EXAMPLE = lineSaid(TRAITS.filter((t) => t.effects.tough !== undefined).slice(0, 1).map((t) => t.id), { tough: PEDIGREE_MOST - 1 })[0] ?? '';
 
 /** Where a bred one's trait can have come from, in the words its card uses: "<b>from the dam</b> (drawn from …), …". */
@@ -3212,6 +3214,7 @@ export function helpText(): string {
       <li>${listed(BLOOD.filter((ch) => ch.up).map((ch) => ch.label))}: up ${listed(RARE_STEPS.map((s) => `<b>${cardPct(RARITIES[s].blood).slice(1)}</b> ${RARITIES[s].name}`))};
       ${listed(BLOOD.filter((ch) => !ch.up).map((ch) => ch.label))}: down ${listed(RARE_STEPS.map((s) => `<b>${cardPct(1 / RARITIES[s].blood).slice(1)}</b> ${RARITIES[s].name}`))};
       on top of traits.</li>
+      <li>No effect on ${listed(OUT_OF_BLOOD())}: trait figures only.</li>
       <li>Wild rare ones draw better traits: better than common ${listed(RARE_STEPS.map((s) => `${percent(Math.round(100 * betterThanCommon(husbandryOdds(0, s))) / 100)} for ${RARITIES[s].name}`))}
       (ordinary ${percent(Math.round(100 * betterThanCommon(husbandryOdds(0, 0))) / 100)}).</li>
       <li>Rarity shown on its card, the Wildermon window and <b>Look it over</b>.</li>
@@ -3247,6 +3250,7 @@ export function helpText(): string {
       <li>Each generation past the first: <b>+${percent(PEDIGREE_STEP)}</b> on its blood there: ${listed(LINE_DEPTHS.map((d) => `${cardPct(depthMul(d, 'tough'))} at depth ${d}`))};
       for ${listed(BLOOD.filter((ch) => !ch.up).map((ch) => ch.label))} (lower is better): ${listed(LINE_DEPTHS.map((d) => cardPct(depthMul(d, 'appetite'))))}.
       Card line: <i>${LINE_EXAMPLE}</i>.</li>
+      <li>No line on ${listed(OUT_OF_BLOOD())}.</li>
       <li><b>Mutation</b>: one young in ${MUTATION_ODDS}: a trait neither parent has in any grade, one rarity above their best (${listed(TIERS.slice(1).map((t, i) => `${t} for ${TIERS[i]}`))};
       ${TIERS[TIERS.length - 1]} stays ${TIERS[TIERS.length - 1]}), in its lowest-rarity slot. Announced at birth; card marks it <b>mutation</b>.</li>
       <li><b>Wild forms</b>: rolled at each wild spawn, independently, never on monsters. Colour form: 1 in ${COLOUR_FORM_ODDS}, a palette none of its variants has (pale for a kind with no coat lighter than

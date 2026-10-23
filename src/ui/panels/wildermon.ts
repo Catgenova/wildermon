@@ -3,7 +3,7 @@ import { gearTags } from '../../game/wildgearActions';
 import { DAY_SECONDS } from '../../game/game';
 import { perkLine, stagePerk } from '../../game/creatures';
 import { ageDef, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, POT_MOST, POT_STEP, potMul, potPoints, type BaseStat, CARE_WANTING, GESTATION, isShod, SHOE_DAYS, ageOf, attackOf, bloodMul, CARE_BONUS, careMul, careWord, favouriteSays, fedNow, wellFedSays, growsAt, creatureLevel, kindName, GATHER_VERB, maxHealth, pedigreeLine, RANGE_PER_STEP, rarityLine, rarityMul, SEX_MARK, SEX_NAMES, SKILL_STEP, SPECIES, STANCE_NAMES, taskSkill, workRangeOf, type Creature, lineLines } from '../../game/creatures';
-import { CHANNELS, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
+import { CHANNELS, figSays, isGain, mirrorTrait, pct, TIER_CSS, TRAIT_SOURCES, traitAdd, traitMul, traitOf, type TraitChannel, lineMul } from '../../game/traits';
 import { readsTrait, TIER_LEVEL, traitReadNeeds } from '../../game/husbandry';
 
 import type { Game } from '../../game/game';
@@ -664,7 +664,7 @@ export class WildermonPanel {
           if (v === undefined) continue;
           const fig = document.createElement('span');
           fig.className = `trait-fig ${isGain(ch.id, v) ? 'trait-up' : 'trait-down'}`;
-          fig.textContent = `${pct(v)} ${ch.label}`;
+          fig.textContent = `${figSays(ch.id, v)} ${ch.label}`;
           chip.append(' ', fig);
         }
         const src = c.pedigree?.from?.[id];
@@ -676,7 +676,7 @@ export class WildermonPanel {
           chip.append(' ', from);
         }
         const says = CHANNELS.filter((ch) => t.effects[ch.id] !== undefined)
-          .map((ch) => `${pct(t.effects[ch.id] as number)} ${ch.label}: ${ch.note}`);
+          .map((ch) => `${figSays(ch.id, t.effects[ch.id] as number)} ${ch.label}: ${ch.note}`);
         if (came) says.push(`${came.label[0].toUpperCase()}${came.label.slice(1)}: ${came.means}.`);
         chip.title = `Rarity: ${t.tier}${t.aura ? ', communal: applies to every wildermon on the same settlement or post, itself included' : ''}`
           + `\n${says.join('\n')}`;
@@ -712,6 +712,9 @@ export class WildermonPanel {
       : ch === 'work' ? beasts.workMul(c)
       : ch === 'learn' ? beasts.learnMul(c, this.game.time)
       : ch === 'yield' ? beasts.yieldMul(c)
+      : ch === 'mend' ? bloodMul(c, ch) * beasts.aura(c, ch)
+      // Its herd's as well as its own, as the rules read them (`find`: a seek go; `idle`: a worker's wait).
+      : ch === 'find' || ch === 'idle' ? beasts.mul(c, ch)
       : bloodMul(c, ch);
     const row = document.createElement('div');
     row.className = 'pal-worth';
@@ -722,6 +725,18 @@ export class WildermonPanel {
     row.append(label);
     let any = false;
     for (const ch of CHANNELS) {
+      // A count adds up off its traits alone (`traitAdd`): no rarity, line or herd on it.
+      if (ch.add) {
+        const n = traitAdd(c.traits, ch.id);
+        if (!n) continue;
+        any = true;
+        const tag = document.createElement('span');
+        tag.className = `worth-tag ${isGain(ch.id, n) ? 'trait-up' : 'trait-down'}`;
+        tag.textContent = `${figSays(ch.id, n)} ${ch.label}`;
+        tag.title = `${ch.note}.`;
+        row.append(tag);
+        continue;
+      }
       const v = net(ch.id);
       if (Math.abs(v - 1) < 0.005) continue;
       any = true;
@@ -732,7 +747,7 @@ export class WildermonPanel {
       const parts = [`${ch.note}.`, `Blood ${traitMul(c.traits, ch.id).toFixed(2)}×`];
       const line = lineMul(c.traits, c.pedigree?.line, ch.id);
       if (Math.abs(line - 1) >= 0.005) parts.push(`line ${line.toFixed(2)}×`);
-      if (c.rare) parts.push(`${rarityOf(c).name} ${rarityMul(c, ch.id).toFixed(2)}×`);
+      if (c.rare && ch.blood !== false) parts.push(`${rarityOf(c).name} ${rarityMul(c, ch.id).toFixed(2)}×`);
       if (Math.abs(potMul(c, ch.id) - 1) >= 0.005) parts.push(`ancient pots ${potMul(c, ch.id).toFixed(2)}×`);
       const herd = beasts.aura(c, ch.id);
       if (Math.abs(herd - 1) >= 0.005) parts.push(`herd ${herd.toFixed(2)}×`);
