@@ -110,8 +110,9 @@ begin
   insert into said values ('PAIRS|' || (v_beasts * v_chan) || ' over ' || v_chan || ' channels');
 
   -- One worked out straight from the tables, owing nothing to either body: its blood, a rare one's rarity, and the
-  -- stage it has evolved to (a wild one can come in evolved now: wild_stage_roll).
+  -- stage it has evolved to (a wild one can come in evolved now: wild_stage_roll), and a large form's health.
   select count(*) filter (where max_health(c) is distinct from round(s.health
+      * case when c.form_size = 'large' then large_health() else 1 end
       * coalesce((select exp(sum(ln(e.mul))) from trait_effect e
                    where e.channel = 'hardy' and e.trait = any(coalesce(c.traits, '{}'))), 1)
       * coalesce((select r.blood from rarity_def r where r.id = c.rare), 1)

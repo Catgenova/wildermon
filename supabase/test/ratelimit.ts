@@ -198,8 +198,15 @@ begin
   insert into said values ('after', (select count(*)::text from event where world_id = '${W}' and kind = 'chat'));
   -- Nobody signed in: rpc_name_free, three times its class's burst, all of them answered.
   perform set_config('request.jwt.claims', '', true);
+  -- Its own cap on name checks a window from one address (name_free_most) is not what this asks, so the
+  -- checks come from a fresh address every name_free_most of them.
+  delete from private.name_free_ask;
   v_from := 0;
-  for i in 1 .. 3 * private.pace_burst('look') loop perform rpc_name_free('nobody in particular'); v_from := v_from + 1; end loop;
+  for i in 1 .. 3 * private.pace_burst('look') loop
+    perform set_config('request.headers', json_build_object('cf-connecting-ip',
+      '10.9.' || ((i - 1) / private.name_free_most()) || '.1')::text, true);
+    perform rpc_name_free('nobody in particular'); v_from := v_from + 1;
+  end loop;
   insert into said values ('anon', v_from::text);
 end $$;
 select k || '=' || coalesce(v, 'nothing') from said order by k;
