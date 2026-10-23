@@ -39,11 +39,12 @@ import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
 import { BRAMBO, CARRA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
-import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA } from './wild-hands2';
+import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA, WURLA } from './wild-hands2';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
-import { CHISSA, CORDRA, FLECHA, GLOSSA, PAPRA, RIPPA } from './wild-hands3';
+import { CHISSA, CORDRA, FLECHA, GLOSSA, PAPRA, RIPPA, DIPPA, MUDDA } from './wild-hands3';
 import { CASKYBARA, PAILBARA, RESERVARA } from './wild-capy';
 import { AWLA, GASHA, SKULKA, SPARRA, SPITTA, TESTA } from './wild-fighters';
+import { DUMMIBEAR, DUMMICUB, DUMMITITAN } from './wild-dummy';
 import { CRAGJAWS, PEBBLETOOTH, SHALECLAW } from './wild-crag';
 import { BASHKA, BRITTLA, CRAKKA, DULLA, EXECUTA, FROSTA, HAMMA, HOWLA, LEECHA, MARKA, ROOTLE, SCORCHA, SHOVA, WARDO, WHIRLA } from './wild-abilities';
 import { GALECREST, TEMPESTWYRM, ZEPHLET } from './wild-zephyr';
@@ -139,7 +140,7 @@ export const WILDERMON: Record<string, Kind> = {
   thumpa: PEBBLETOOTH,
   spitta: SPITTA,
   awla: AWLA,
-  sparra: SPARRA,
+  sparra: DUMMICUB,
   lungra: BLUSHKIT,
   hamma: HAMMA,
   crakka: CRAKKA,
@@ -199,6 +200,7 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   mudda: [WHEELMOTE, ROLLTERRA],
   dippa: [CASKYBARA, RESERVARA],
   middun: [MIDDUNSNAIL, HEARTHSNAIL],
+  sparra: [DUMMIBEAR, DUMMITITAN],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

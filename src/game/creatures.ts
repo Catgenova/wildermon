@@ -2966,8 +2966,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   sparra: {
     id: 'sparra',
-    name: 'Sparra',
+    name: 'Dummicub',
+    was: ['Sparra'],
     description: `Tamed: ${STYLE_SAYS.spar}.`,
+    stages: [
+      { name: 'Dummibear', description: '' },
+      { name: 'Dummititan', description: '' },
+    ],
     health: 60,
     attack: 2,
     speed: 1.9,
@@ -2978,11 +2983,13 @@ export const SPECIES: Record<string, SpeciesDef> = {
     timid: true,
     gathers: null,
     workRange: 0,
+    // Its straw-fur and the pink of its target and wraps: caramel with rose, honey with coral, russet with raspberry, and flax
+    // with a blue target. Its cream patches, dark pads, leaves and rope are the same on every one.
     variants: [
-      ['#c49c74', '#f0dcc4'],
-      ['#b48c64', '#e8d0b4'],
-      ['#cca884', '#f4e4cc'],
-      ['#a07c58', '#dcc4a8'],
+      ['#c99a62', '#e2808c'],
+      ['#dcb478', '#e98f74'],
+      ['#a87850', '#cf6680'],
+      ['#d6c08e', '#88a8cc'],
     ],
     butcher: { meat: 5, fur: 3, leather: 3, bone: 3 },
     wound: 'crush',

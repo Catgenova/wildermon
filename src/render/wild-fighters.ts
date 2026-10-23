@@ -1,5 +1,5 @@
 import {
-  beat, coatPalette, curve, merge, moved, orb, quadBonesOf, taper, TAU, tube,
+  coatPalette, curve, merge, moved, orb, quadBonesOf, taper, tube,
   type Kind, type Piece, type QuadSpec,
 } from './beasts';
 import { cut, earMesh, quadPieces } from './beastkit';
@@ -9,10 +9,11 @@ import { snout } from './wild-hands';
 import { barrel, OWN, paws } from './wild-hands2';
 
 /**
- * Six that fight: the testa, the skulka, the gasha, the spitta, the awla and
- * the sparra. Each wears how it fights (`FightStyle`): a shell to take what it
- * draws, a low slinking body, hooked teeth, bands and a forked tongue, a horn,
- * and a pair of raised fists. The thumpa is the crag line (`./wild-crag`).
+ * Five that fight: the testa, the skulka, the gasha, the spitta and the awla.
+ * Each wears how it fights (`FightStyle`): a shell to take what it draws, a
+ * low slinking body, hooked teeth, bands and a forked tongue, and a horn. The
+ * thumpa is the crag line (`./wild-crag`), the sparra the dummy line
+ * (`./wild-dummy`).
  */
 
 /* ---- the testa: a domed shell over a broad low body ---------------------------------- */
@@ -185,44 +186,5 @@ export const AWLA: Kind = {
   palette: (coat, mark) => coatPalette(coat, mark, OWN({ horn: [222, 214, 196], hornDark: [150, 140, 120] }), 30),
   shadow: [1.5, 1.15],
   stride: 1.45,
-  size: 1.65,
-};
-
-/* ---- the sparra: fists up ------------------------------------------------------------ */
-
-const SPARRA_SPEC: QuadSpec = { ...pawed({ high: 1.35, len: 2.0, legs: 0.75, neck: 0.32, lean: 35, swing: [22, 38], ears: [30, 24], tail: [0.35, 20, 8] }), nose: 12 };
-const SPARRA_HEAD = { c: [0, 0.3, 0.18] as V3, r: [1.04, 0.98, 0.9] as V3 };
-
-function sparraBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = SPARRA_HEAD;
-  // Two padded fists held up in front of its chest, as a boxer holds them.
-  const fists = merge(...[-1, 1].map((s) => merge(
-    tube([[s * 0.5, 0.9, 0.1], [s * 0.88, 1.15, 0.2]], 0.15, 0.15, 6, 'coatLight'),
-    orb([s * 1.0, 1.25, 0.22], [0.26, 0.26, 0.26], n, k, 'leather'),
-  )));
-  return quadPieces({
-    n, k,
-    body: barrel(2.0, 1.15, 0.95, 0.16),
-    neck: { w: 0.66, h: 0.66, len: 0.32 },
-    head: { c: H.c, r: H.r, face: snout(1.02, -0.2, [0.42, 0.32, 0.36], 0.12, n, k), eye: { dir: [0.74, 0.52, 0.36], size: 0.31, rim: 0.12 }, blush: [[0.86, 0.36, -0.28], 0.18] },
-    ear: earMesh(0.34, 0.24, n),
-    earTurn: 30,
-    tail: [taper([[0, 0.05, 0], [0, -0.3, 0.1]], 0.13, 0.05, n, 'coat')],
-    ...paws(n, k, 0.75, 0.27, 0.24, 'coatDark'),
-    extras: [{ key: 'fists', mesh: fists, bone: 'trunk', bias: 0.05, after: ['body'] }],
-  });
-}
-
-export const SPARRA: Kind = {
-  bones: quadBonesOf(SPARRA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it bobs on its feet.
-    if (a.go <= 0) p.squash += 0.04 * Math.max(0, Math.sin(a.t * TAU * 2)) * beat(a.t, [3.6, 9.8, 15.2], 2.4);
-  }),
-  build: sparraBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ leather: [176, 52, 46] }), 30),
-  shadow: [1.5, 1.2],
-  stride: 1.4,
   size: 1.65,
 };

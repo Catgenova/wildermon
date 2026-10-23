@@ -9,6 +9,7 @@ import { CLAY_VOICE } from './voice-clay';
 import { CLAYROLL_VOICE } from './voice-clayroll';
 import { CRAG_VOICE } from './voice-crag';
 import { CURLEW_VOICE } from './voice-curlew';
+import { DUMMY_VOICE } from './voice-dummy';
 import { FROG_VOICE } from './voice-frog';
 import { TOAD_VOICE } from './voice-toad';
 import { VINE_VOICE } from './voice-vine';
@@ -118,4 +119,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   dippa: CAPY_VOICE,
   // The Snaileaf, the Middunsnail and the Hearthsnail.
   middun: SNAIL_VOICE,
+  // The Dummicub, the Dummibear and the Dummititan.
+  sparra: DUMMY_VOICE,
 };
