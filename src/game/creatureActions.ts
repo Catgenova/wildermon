@@ -1146,7 +1146,12 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     instant: true,
     stamina: 0,
     baseTime: 0,
-    applies: (t, g) => !!creatureOf(g, t)?.ridden,
+    // And on any saddled one of yours out and about: reported stuck up on a Thistlekit with no Get down, the island
+    // seating the rider while this side never heard so (`ridden`). Getting down off one you are not on does nothing.
+    applies: (t, g) => {
+      const c = creatureOf(g, t);
+      return !!c && (c.ridden || (!!c.mine && c.tacked && c.mode !== 'wild' && c.mode !== 'stored'));
+    },
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return;
