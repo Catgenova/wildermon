@@ -45,6 +45,12 @@ export interface KitPart {
   draw?: (g: Ctx, e: Eye) => void;
   /** Points a loose drawing reaches, for its box (solids are measured off their faces). */
   reach?: V3[];
+  /**
+   * Pixels at zoom one a loose drawing may run past the screen box of its
+   * reach -- the leaves round a vine's line, a halo round a lamp -- for the
+   * size of the picture only, never for the order it is laid in.
+   */
+  pad?: number;
   /** Clicked by: solids are unless they say otherwise; loose drawings never are. */
   solid?: boolean;
   /** Light caught along the near arrises of its tops, as on the smith's pieces. */

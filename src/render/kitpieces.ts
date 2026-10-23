@@ -210,6 +210,16 @@ interface KitBake {
   area: number;
 }
 
+/** A picture's box grown to take in what its loose drawings run past their reach (`KitPart.pad`). */
+function grownBy(box: Box, parts: readonly KitPart[], e: Eye): Box {
+  for (const p of parts) {
+    if (!p.pad || !p.reach?.length) continue;
+    const [x0, y0, x1, y1] = screenBox(e, p.reach, p.pad);
+    box[0] = Math.min(box[0], x0); box[1] = Math.min(box[1], y0); box[2] = Math.max(box[2], x1); box[3] = Math.max(box[3], y1);
+  }
+  return box;
+}
+
 function screenBox(e: Eye, pts: readonly V3[], pad: number): Box {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of pts) {
@@ -385,7 +395,7 @@ function bake(kind: string, look: KitLook, view: KitView, scale: number): KitBak
   mine.forEach((ps, L) => {
     const pts = ps.flatMap(ptsOf);
     all.push(...pts);
-    const box = screenBox(e, L === 0 ? [...pts, ...footPts] : pts, pad);
+    const box = grownBy(screenBox(e, L === 0 ? [...pts, ...footPts] : pts, pad), ps, e);
     // The shade's offset toward the bottom right, and room for it.
     if (L === 0 && foot) { box[2] += 3; box[3] += 2; }
     boxes.push(box);
@@ -394,7 +404,7 @@ function bake(kind: string, look: KitLook, view: KitView, scale: number): KitBak
     hits.push(screenBox(e, solid, 1));
   });
   for (const p of order) if (layers > 1 && p.wholeOnly) all.push(...ptsOf(p));
-  const bounds = screenBox(e, all, pad);
+  const bounds = grownBy(screenBox(e, all, pad), order, e);
   bounds[2] += 3; bounds[3] += 2;
   /*
    * Each picture made the first time it is wanted: a piece drawn in layers

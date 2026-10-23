@@ -89,6 +89,8 @@ function lantern(parts: KitPart[], at: V3, k: number, lit: boolean, frame = 0): 
     const R = 9 * k;
     const halo: KitPart = {
       reach: [[cx - r, cy - r, z0], [cx + r, cy + r, capTop]],
+      // The halo is `R` round the lantern's middle on the screen, wider than the lantern.
+      pad: R,
       draw: (g, e) => {
         const [x, y] = proj(e, at);
         glow(g, x, y, R, 0.5, '255, 206, 130');

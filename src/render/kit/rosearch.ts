@@ -155,6 +155,8 @@ function climbingRoses(side: (q: number) => V3, face: number, trim: number, clea
         const yy = out;
         parts.push({
           reach: [[c[0] - r * 1.5, yy, c[2] - r * 1.5 - trail], [c[0] + r * 1.5, yy, c[2] + r * 1.5]],
+          // Round on the screen however the arch is turned: seen end on, it stands out of the line of its reach (laid by that line still).
+          pad: r * 1.5 * 1.75,
           solid: true,
           draw: (g, e) => {
             const [px, py] = proj(e, c);

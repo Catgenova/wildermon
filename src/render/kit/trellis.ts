@@ -305,6 +305,8 @@ function trellisOf(look: KitLook): KitModel {
   if (stage % 4) {
     parts.push({
       reach: [[X0, LY - 1.0, 0], [X1, LY - 0.53, H + 1]],
+      // The leaf masses round the line of the vine: as far out as the biggest of them and its leaves (`mass`).
+      pad: 3.1 * 1.6 * 1.75,
       solid: false,
       draw: (g, e) => vine(g, e, stage, X0, X1, LY - 0.5),
     });
