@@ -253,6 +253,12 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 
 /* ---- the table, on both sides ------------------------------------------------------------------------------------ */
 
+// The island's `evo_mul` reads no line's skill on health, growth or work, so that it folds into `max_health` (`folded`).
+const UNREAD = ['hardy', 'grow', 'work'];
+check('no line\'s skill is on health, growth or work, which the island\'s evo_mul does not look up',
+  Object.values(STAGE_PERKS).every((p) => p.kind !== 'blood' || !UNREAD.includes(p.channel as string)),
+  Object.entries(STAGE_PERKS).filter(([, p]) => p.kind === 'blood' && UNREAD.includes(p.channel as string)).map(([id]) => id).join(', '));
+
 check('every line that evolves has a third-stage skill of its own, and no other kind has one',
   LINES.every((id) => STAGE_PERKS[id]) && Object.keys(STAGE_PERKS).every((id) => SPECIES[id]?.stages),
   LINES.filter((id) => !STAGE_PERKS[id]).join(', ') || Object.keys(STAGE_PERKS).filter((id) => !SPECIES[id]?.stages).join(', '));
