@@ -1033,8 +1033,8 @@ export const LEARN_PACE_MOST = 4;
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
   forage: 0.94, botanize: 0.95, woodcut: 0.92, farm: 0.91, mine: 1.01, quarry: 1.04, sand: 1, clay: 1.01, peat: 1.04,
-  reed: 0.98, fetch: 1.06, compost: 1.11, fruit: 1.09, bush: 1.06, grass: 1.08, sprout: 0.99, resin: 1.06, flower: 1.04,
-  worm: 1.04, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.95, hive: 0.93,
+  reed: 0.98, fetch: 1, compost: 1.03, fruit: 1.09, bush: 1.06, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
+  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.95, hive: 0.93,
   // At the stores, a fire, a press or a barrel, one thing after another.
   mend: 1, butcher: 0.7, restore: 0.7, glaze: 1.05, tan: 0.84, mill: 0.84, saw: 0.84, chisel: 0.84, brick: 0.84,
   rope: 0.84, fletch: 0.84, cook: 0.84, paper: 0.84, ash: 0.97, brew: 0.71,
