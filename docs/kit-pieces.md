@@ -37,6 +37,7 @@ interface KitModel { parts: KitPart[]; shade?: V3[] | null }   // shade: footpri
 interface KitPart {
   faces?: Face[];                     // a solid, inked round as one
   draw?: (g, e) => void; reach?: V3[];  // or something loose (coins, moss), px at zoom 1 from the footprint middle
+  pad?: number;                       // px a loose drawing runs past its reach (a halo, leaves): sizes the picture, never the order
   solid?: boolean;                    // part of the click box (solids default true)
   edges?: boolean;                    // light caught along its near top arrises
   first?: boolean;                    // laid before everything (a rug)
