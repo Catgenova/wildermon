@@ -42,6 +42,9 @@
  * rather than 3 now: against a measured 0.98 that is ample headroom on a
  * shared runner, and it catches the next drift while it is still small.
  *
+ * It drifted again when `beast_mul` took the stage, line, pot and form
+ * factors: 2.03x on a CI runner, 1.04x once the written-out half took them too.
+ *
  * Runs against the database the suite leaves behind.
  */
 import { execFileSync } from 'node:child_process';
@@ -128,7 +131,12 @@ begin
     v_fn := least(v_fn, extract(epoch from (clock_timestamp() - t0)) * 1000);
     t0 := clock_timestamp();
     perform sum(round(species_health(c.species) * trait_mul(c.traits, 'hardy') * deed_aura(c, 'hardy')
+                    * case when c.pedigree is null or not coalesce(c.pedigree->'line' ? 'hardy', false) then 1
+                           else line_mul(c.traits, c.pedigree->'line', 'hardy') end
+                    * evo_mul(c, 'hardy')
                     * case when c.rare is null then 1 else rarity_blood(c.rare, 'hardy') end
+                    * case when c.boosts is null then 1 else pot_mul(c, 'hardy') end
+                    * case when c.form_size is null then 1 else form_mul(c, 'hardy') end
                     * class_mul(c.world_id, c.keeper, 'hide', 'soul_strength')))
       from creature c;
     v_body := least(v_body, extract(epoch from (clock_timestamp() - t0)) * 1000);
