@@ -1,5 +1,5 @@
 import { materialOf } from '../../game/materials';
-import { ANVIL_METALS } from '../forge';
+import { ANVIL_METALS } from '../metals';
 import {
   css, deeper, faceColour, grain, hex, IRON, KIT_INK, lathe, metalTone, mix, proj, sheen, slab, toneOf, woodTone,
   type Ctx, type Face, type KitLook, type KitModel, type KitPart, type KitPiece, type PaintCtx, type Side, type Tone, type V3,
