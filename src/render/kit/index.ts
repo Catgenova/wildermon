@@ -7,18 +7,23 @@ import { BED, COT, TENT } from './beds';
 import { BELL } from './bell';
 import { BULK_BIN, CRAFT_BIN, SEED_BIN, SPROUT_BIN } from './bins';
 import { BRAZIER } from './brazier';
+import { CUPBOARD, LARDER, WARDROBE } from './cases';
 import { CHAIR } from './chair';
 import { CHEST } from './chest';
+import { COFFER } from './coffer';
 import { BUTTER_CHURN, LOOM, PAPER_PRESS, POTTERS_WHEEL, SPINDLE } from './crafts';
+import { CREATURE_CRATE } from './creature-crate';
 import { FIREWOOD_RACK } from './firewood';
 import { FOUNTAIN } from './fountain';
 import { GRAVE } from './grave';
 import { LAMP_PILLAR, LAMP_POST } from './lamps';
+import { MAILBOX } from './mailbox';
 import { OVEN } from './oven';
 import { PLANTER } from './planter';
 import { FISH_POND } from './pond';
 import { ROSE_ARCH, STONE_ROSE_ARCH } from './rosearch';
 import { BENCH, STOOL } from './seating';
+import { BOOKSHELF, CRATE_SHELF, SHELVES } from './shelving';
 import { GREAT_SIGN, SIGN } from './signs';
 import { STALL } from './stall';
 import { COAT_RACK, LECTERN } from './stands';
@@ -83,4 +88,13 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   trellis: TRELLIS,
   rose_arch: ROSE_ARCH,
   stone_rose_arch: STONE_ROSE_ARCH,
+  coffer: COFFER,
+  cupboard: CUPBOARD,
+  wardrobe: WARDROBE,
+  shelves: SHELVES,
+  bookshelf: BOOKSHELF,
+  larder: LARDER,
+  crate_shelf: CRATE_SHELF,
+  creature_crate: CREATURE_CRATE,
+  mailbox: MAILBOX,
 };
