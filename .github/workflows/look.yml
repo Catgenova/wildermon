@@ -175,3 +175,28 @@ jobs:
            where c.keeper is not null and c.species in ('quarra', 'mola') order by p.name, c.id limit 60"
           ask "where each settlement keeper stands" "select p.name, round(p.x) as x, round(p.y) as y from player p
            where exists (select 1 from deed d where d.world_id = p.world_id and d.founded_by = p.uid)"
+          # Asked: why Solara does not reach above 10 fps at any zoom. What stands on and round it, by kind, within
+          # its radius and a view's width past it, so the client's frame can be costed against what it draws.
+          S="with d as (select world_id, x, y, radius + 24 as r from deed where name ilike 'solara' limit 1)"
+          ask "Solara" "select name, x, y, radius, level from deed where name ilike 'solara'"
+          ask "Solara: pieces by kind" "$S select p.kind, count(*) as n, count(*) filter (where p.lit) as lit
+            from placed p, d where p.world_id = d.world_id and abs(p.x - d.x) <= d.r and abs(p.y - d.y) <= d.r
+           group by p.kind order by n desc limit 80"
+          ask "Solara: wildermon by mode" "$S select c.mode, count(*) as n, count(distinct c.species) as kinds
+            from creature c, d where c.world_id = d.world_id and abs(c.to_x - d.x) <= d.r and abs(c.to_y - d.y) <= d.r
+           group by c.mode order by n desc"
+          ask "Solara: wildermon by kind" "$S select c.species, count(*) as n from creature c, d
+           where c.world_id = d.world_id and abs(c.to_x - d.x) <= d.r and abs(c.to_y - d.y) <= d.r
+           group by c.species order by n desc limit 40"
+          ask "Solara: building" "$S select (select count(*) from wall w where w.world_id = d.world_id and abs(w.x - d.x) <= d.r and abs(w.y - d.y) <= d.r) as walls,
+            (select count(*) from wall w where w.world_id = d.world_id and abs(w.x - d.x) <= d.r and abs(w.y - d.y) <= d.r and w.glass is not null) as glass_walls,
+            (select count(*) from floor_tile f where f.world_id = d.world_id and abs(f.x - d.x) <= d.r and abs(f.y - d.y) <= d.r) as floors,
+            (select max(f.level) from floor_tile f where f.world_id = d.world_id and abs(f.x - d.x) <= d.r and abs(f.y - d.y) <= d.r) as top_level,
+            (select count(*) from foundation f where f.world_id = d.world_id and abs(f.x - d.x) <= d.r and abs(f.y - d.y) <= d.r) as foundations,
+            (select count(*) from bridge b where b.world_id = d.world_id and abs(b.ax - d.x) <= d.r and abs(b.ay - d.y) <= d.r) as bridges,
+            (select count(*) from crop c where c.world_id = d.world_id and abs(c.x - d.x) <= d.r and abs(c.y - d.y) <= d.r) as crops,
+            (select count(*) from crate c where c.world_id = d.world_id and abs(c.x - d.x) <= d.r and abs(c.y - d.y) <= d.r) as crates
+           from d"
+          ask "Solara: things on the ground" "$S select count(*) as items, count(distinct (i.gx, i.gy)) as tiles, coalesce(sum(i.count), 0) as units
+            from item i, d where i.world_id = d.world_id and i.gx is not null
+             and abs(i.gx - d.x) <= d.r and abs(i.gy - d.y) <= d.r"

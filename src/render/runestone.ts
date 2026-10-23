@@ -2760,6 +2760,12 @@ interface Lit {
   over: Kept;
   /** Whether anything has been; until it has, its canvas is not even cleared. */
   touched: boolean;
+  /**
+   * Whether what is drawn after it is kept off its shapes. An altar's stars
+   * are not (`glowing`'s `keeps`): their night was always cut away over
+   * whatever stood in front of them, and still is.
+   */
+  keeps: boolean;
 }
 
 /**
@@ -2859,21 +2865,24 @@ export class RunestoneNight {
    * (an enchanter's plinth, `plinth.ts`) has just been drawn on `ctx`, its
    * shapes inside the box left, top, right, bottom in `ctx`'s units: kept as
    * a stone is. `holes` and `masks` give its soft light and its runes' shapes
-   * as it was drawn, moved by (dx, dy).
+   * as it was drawn, moved by (dx, dy). Without `keeps`, what stands in front
+   * of it is not kept off them. False when the night is not open.
    */
-  glowing(ctx: Ctx, L: number, T: number, R: number, B: number, holes: Lit['holes'], masks: Lit['masks']): void {
-    if (!this.open || !(R > L && B > T)) return;
+  glowing(ctx: Ctx, L: number, T: number, R: number, B: number, holes: Lit['holes'], masks: Lit['masks'], keeps = true): boolean {
+    if (!this.open || !(R > L && B > T)) return false;
     const m = ctx.getTransform();
     const dev = devBox(m, L, T, R - L, B - T);
     const i = this.lit.length;
-    const over = (this.pool[i] = keep(this.pool[i], dev[2] - dev[0], dev[3] - dev[1]));
-    this.lit.push({ holes, masks, m, dev, over, touched: false });
+    const over = (this.pool[i] = keep(this.pool[i], keeps ? dev[2] - dev[0] : 1, keeps ? dev[3] - dev[1] : 1));
+    this.lit.push({ holes, masks, m, dev, over, touched: false, keeps });
+    return true;
   }
 
-  /** The stones a box in the canvas's pixels falls on. */
+  /** The stones a box in the canvas's pixels falls on: those that keep what stands in front of them. */
   private under(dev: [number, number, number, number]): Lit[] | null {
     let out: Lit[] | null = null;
     for (const s of this.lit) {
+      if (!s.keeps) continue;
       const [L, T, R, B] = s.dev;
       if (dev[0] < R && dev[2] > L && dev[1] < B && dev[3] > T) (out ??= []).push(s);
     }

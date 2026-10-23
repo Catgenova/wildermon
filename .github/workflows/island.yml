@@ -884,6 +884,20 @@ jobs:
           npx esbuild supabase/test/turned.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/turned.mjs --log-level=error
           node node_modules/.cache/turned.mjs
+      - name: A settlement full of wildermon draws them once, not every sixth of a second
+        env:
+          # A check that cannot open a browser here fails rather than passes.
+          CROWD_STRICT: '1'
+        run: |
+          # Solara stood under ten frames a second at any zoom: its wildermon's
+          # standing pictures came to five times what was kept, so each was
+          # drawn again just before it was wanted, and an altar in view after
+          # dark had the night mixed at four times the pixels. Drawn in Chrome
+          # on the page's own clock: a second loop round must make next to no
+          # canvases, and the night must be mixed at the lights' share.
+          npx esbuild supabase/test/crowd.ts --bundle --platform=node --format=esm --packages=external \
+            --outfile=node_modules/.cache/crowd.mjs --log-level=error
+          node node_modules/.cache/crowd.mjs
       - name: The island heard from where the camera is standing
         run: |
           # There was no sound in this game at all — no AudioContext anywhere

@@ -41,7 +41,7 @@ import {
 import { foundationDone } from '../game/foundations';
 import { hash2 } from '../world/noise';
 import { bareRock, DAMP_SAND, dustiness, FLAT, growth, oreWash, PAVED, ROCK_VARIANTS, SLAB_VARIANTS, STREWN, TileType, TILE_DEFS, COVERED, bushSpecies, slabVariant, trailGround, stonesBed, treeSpecies, treeVariant } from '../world/tiles';
-import { drawRunestone, runestoneHit, RunestoneNight, type OccluderClip } from './runestone';
+import { drawRunestone, runestoneHit, RunestoneNight, type NightHole, type OccluderClip } from './runestone';
 import { drawRuneLantern, drawRuneLanternBloom, drawRuneLanternLive, runeLanternHit, runeLanternNight, runeLanternPool, runeLanternVariant, type RuneLanternLook } from './runelantern';
 import { deedTotemBounds, deedTotemHits, deedTotemNight, deedTotemVariant, drawDeedTotem, drawDeedTotemBloom, drawDeedTotemLive, type DeedTotemLook } from './deedtotem';
 import { drawWorkPost, drawWorkPostLive, drawWorkPostNight, workPostBounds, workPostHit, workPostNight, workPostVariant, type WorkPostLook } from './workpost';
@@ -246,6 +246,54 @@ const POND_SHORE = `rgba(${SPRING_EDGE.join(',')},0.6)`;
 const CRATE_FLOOR = 0.7 * HEIGHT_SCALE;
 /** How big a wildermon is drawn in a crate against out in the world, so a grown one stands inside it. */
 const CRATE_SCALE = 0.8;
+
+/**
+ * A wildermon shut in a crate is drawn still: one picture of it for each look,
+ * facing and size, kept and laid down every frame, rather than its model posed
+ * afresh. Asked for: "Do not animate wildermon in crates when placed in the
+ * world, leave them still. Having many out hinders fps immensely." Sizes go in
+ * quarter-octave steps, so zooming makes a few pictures rather than one a frame.
+ */
+const STILLS = new Map<string, { canvas: HTMLCanvasElement; ax: number; ay: number; k: number }>();
+/** Pictures kept before the lot is let go and drawn again as they are wanted. */
+const STILLS_MOST = 256;
+function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: number, pose: CreaturePose): void {
+  const t = g.getTransform();
+  const dev = Math.hypot(t.a, t.b) || 1;
+  const k = 2 ** (Math.round(Math.log2(zoom * dev) * 4) / 4);
+  const key = `${pose.species}|${pose.stage ?? 0}|${pose.colors.join(',')}|${pose.facing}|${pose.rare ?? 0}|${pose.fleece}|${pose.scale ?? 1}|${k}`;
+  let still = STILLS.get(key);
+  if (!still) {
+    if (STILLS.size >= STILLS_MOST) STILLS.clear();
+    // Drawn on a pad wide enough for the biggest, then cut to what it covers.
+    const side = Math.min(2048, Math.ceil(260 * k * (pose.scale ?? 1)));
+    const pad = document.createElement('canvas');
+    pad.width = side;
+    pad.height = side;
+    const p = pad.getContext('2d') as CanvasRenderingContext2D;
+    const fx = side / 2, fy = side * 0.8;
+    drawCreature(p, fx, fy, k, { ...pose, id: undefined });
+    const d = p.getImageData(0, 0, side, side).data;
+    let x0 = side, y0 = side, x1 = -1, y1 = -1;
+    for (let y = 0; y < side; y++) {
+      for (let x = 0; x < side; x++) {
+        if (d[(y * side + x) * 4 + 3] === 0) continue;
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, x1 - x0 + 1);
+    canvas.height = Math.max(1, y1 - y0 + 1);
+    if (x1 >= 0) (canvas.getContext('2d') as CanvasRenderingContext2D).drawImage(pad, -x0, -y0);
+    still = { canvas, ax: fx - x0, ay: fy - y0, k };
+    STILLS.set(key, still);
+  }
+  const m = zoom / still.k;
+  g.drawImage(still.canvas, px - still.ax * m, py - still.ay * m, still.canvas.width * m, still.canvas.height * m);
+}
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
 import { drawSpeech } from './bubble';
@@ -260,7 +308,7 @@ import { trailMask, trailShape, type TrailShape } from './trails';
 import { clumpOf, FLOWER_COLOURS, flowerSprite, swayFrame, tileColour } from './flowers';
 import { flowerSeason, flowersOn } from '../world/flowers';
 import { drawFace, EDGES, ROCK_MOSS, topEdges, type Face } from './outcrops';
-import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
+import { forgetTrees, grownAt, spriteScaleFor, bushSprite, crateSprite, cropSprite, drawCampfire, drawCreature, type CreaturePose, drawPlayer, facingOf, lyingSprite, treeSprite, type Sprite, drawTrap, drawDeck, stumpSprite, type DeckShape } from './sprites';
 import { wildermonHead, wildermonSaddle, wildermonSeat, wildermonTop } from './wildermon';
 import {
   drawChains, drawDrawbridgeSpan, drawGallows, drawGatewayDressing, drawGrille, drawGrooves, drawHiddenMark, drawHingeCrib, drawLandingCrib,
@@ -841,7 +889,7 @@ const ROOF_CAP = 2.5;
 /** What nothing that grows on a wall goes over on a shop counter's face: its opening, the board under it and the awning over it. */
 const COUNTER_KEEP = { t0: BAY.t0 - 0.06, t1: BAY.t1 + 0.06, k0: BAY.k0 - 0.2, k1: BAY.k1 + 0.14 } as const;
 /** The share of the screen's size the lights' holes in the night and their casts are worked out at: soft enough not to show it. */
-const LIGHT_RES = 0.5;
+export const LIGHT_RES = 0.5;
 /** A rectangle: x, y, width, height. */
 type Box = [number, number, number, number];
 /** How far the eaves hang out past the wall's line, and the verge past a gable end, in tiles. */
@@ -5458,7 +5506,7 @@ export class Renderer {
           const tint = dyeOf(piece) ?? undefined;
           this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => {
             drawFurniture(g, px, py, zoom, piece.kind, false, tint, 0, view, piece.material);
-            drawCreature(g, px, py - CRATE_FLOOR * zoom, zoom, {
+            drawStill(g, px, py - CRATE_FLOOR * zoom, zoom, {
               species: def.id,
               facing: turned,
               phase: 0,
@@ -5469,6 +5517,7 @@ export class Renderer {
               scale: ageDef(inside, this.game.time).scale * CRATE_SCALE,
               id: inside.id,
               rare: inside.rare,
+              stage: stageOf(inside),
             });
             drawFurniture(g, px, py, zoom, piece.kind, false, tint, 1, view, piece.material);
           }, undefined, pieceBox);
@@ -5592,7 +5641,22 @@ export class Renderer {
           }
           // Not indoors: a roof or a wall stands in front of it there, and the night cut away at its stars would be cut out of that.
           if (glowsAtNight(piece.kind) && !this.game.buildings.buildingAt(Math.floor(piece.x), Math.floor(piece.y))) {
-            this.glows.push({ sx: ent.sx, sy: ent.sy, kind: piece.kind, view });
+            /*
+             * After dark, cut out of a copy of their own box at the screen's
+             * pixels as the night goes down, as a runestone's runes are
+             * (`RunestoneNight.lay`), and over whatever stands in front of
+             * them, as they always were. An altar in view used to have the
+             * whole night mixed at the screen's full size for the sake of its
+             * stars: four times the pixels, every frame, at any zoom.
+             */
+            const holes = furnitureHoles(ent.sx, ent.sy, zoom, piece.kind, view);
+            let L = Infinity, T = Infinity, R = -Infinity, B = -Infinity;
+            for (const h of holes) {
+              L = Math.min(L, h.x - h.r); T = Math.min(T, h.y - h.r);
+              R = Math.max(R, h.x + h.r); B = Math.max(B, h.y + h.r);
+            }
+            const moved = (dx: number, dy: number): NightHole[] => holes.map((h) => ({ x: h.x + dx, y: h.y + dy, r: h.r, a: h.a }));
+            if (!this.runeNight.glowing(ctx, L, T, R, B, moved, () => [], false)) this.glows.push({ sx: ent.sx, sy: ent.sy, kind: piece.kind, view });
           }
         }
         // A sign is a board made to be read, so what is written on it stands
@@ -7230,11 +7294,12 @@ export class Renderer {
       const p = this.shadeOf(level, b, V);
       if (!p) continue;
       any = true;
+      // Four corners to a piece, each piece on one tile (`shadeOf`).
       for (let i = 0; i < p.length; i += 3) {
         const sx = cam.worldToScreenX(p[i], p[i + 1]), sy = cam.worldToScreenY(p[i], p[i + 1], p[i + 2]);
-        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        if (i % 12 === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        if (i % 12 === 9) ctx.closePath();
       }
-      ctx.closePath();
     }
     if (!any) return;
     const rise = level * WALL_HEIGHT;
@@ -7257,8 +7322,9 @@ export class Renderer {
   }
 
   /**
-   * The ground a finished wall throws its shade on, as a polygon of world
-   * points with their heights, or null for a wall that throws none.
+   * The ground a finished wall throws its shade on, as quads of world points
+   * with their heights, four points to a quad and each quad on one tile, or
+   * null for a wall that throws none.
    *
    * A garden wall shades both sides of itself, a distance out that goes with
    * how thick it is. A house wall on a masonry with a plinth shades the side
@@ -7336,13 +7402,32 @@ export class Renderer {
       return t + i * Math.max(reachOf(met[0]), halfOf(met[0]));
     };
     const t0 = end(-1), t1 = end(1);
-    const h = ((wall.building ? bld.list.get(wall.building)?.deck : undefined) ?? world.getHeight(fx, fy)) + level * WALL_HEIGHT;
-    const out = new Float64Array(12);
-    [[t0, s0], [t1, s0], [t1, s1], [t0, s1]].forEach(([t, s], k) => {
-      out[k * 3] = ax + dx * t + nx * s;
-      out[k * 3 + 1] = ay + dy * t + ny * s;
-      out[k * 3 + 2] = h;
-    });
+    /*
+     * Laid on the ground it falls on, point by point: one height for the
+     * whole of it put the half out of doors at the height of the wall's foot
+     * over a slope falling away from it, and, looked at from the side the
+     * tile in front is the one out of doors, at the height of that tile's far
+     * corner -- a dark line a tile down the slope from the wall. Cut where
+     * the run and the line of the wall cross a tile's edge, so each piece is
+     * on one tile, and on a deck on piers at the deck's height.
+     */
+    const ts = [t0, ...[0, 1].filter((t) => t > t0 && t < t1), t1];
+    const ss = s0 < 0 && s1 > 0 ? [s0, 0, s1] : [s0, s1];
+    const rise = level * WALL_HEIGHT;
+    const out = new Float64Array((ts.length - 1) * (ss.length - 1) * 12);
+    let k = 0;
+    for (let i = 0; i + 1 < ts.length; i++) {
+      for (let j = 0; j + 1 < ss.length; j++) {
+        const tm = (ts[i] + ts[i + 1]) / 2, sm = (ss[j] + ss[j + 1]) / 2;
+        const deck = bld.buildingAt(Math.floor(ax + dx * tm + nx * sm), Math.floor(ay + dy * tm + ny * sm))?.deck;
+        for (const [t, s] of [[ts[i], ss[j]], [ts[i + 1], ss[j]], [ts[i + 1], ss[j + 1]], [ts[i], ss[j + 1]]]) {
+          const px = ax + dx * t + nx * s, py = ay + dy * t + ny * s;
+          out[k++] = px;
+          out[k++] = py;
+          out[k++] = (deck ?? world.heightAt(px, py)) + rise;
+        }
+      }
+    }
     return done(out);
   }
 
