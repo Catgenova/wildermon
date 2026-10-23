@@ -12,9 +12,8 @@
  * Runs against the database the suite leaves behind: Hoarding, and Dane on it.
  */
 import { execFileSync } from 'node:child_process';
-import { AGE_SCALE, ageOf, OLD_AT, OLD_FOR, YOUNG_FOR, type Creature } from '../../src/game/creatures';
+import { AGE_SCALE, ageOf, OLD_AT, OLD_FOR, REAL_DAY, YOUNG_FOR, type Creature } from '../../src/game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS } from '../../src/world/calendar';
-import { DAY_SECONDS } from '../../src/game/pace';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -38,7 +37,7 @@ const check = (what: string, passed: boolean, detail = ''): void => {
 /* ---- the browser ----------------------------------------------------------- */
 
 check(`stages are scaled with the seasons, ×${AGE_SCALE}`, AGE_SCALE === SEASON_DAYS / SHORT_SEASON_DAYS);
-check(`old age lasts 90 island days (${OLD_FOR} s)`, OLD_FOR === 90 * DAY_SECONDS);
+check(`old age lasts 90 days (${OLD_FOR} s)`, OLD_FOR === 90 * REAL_DAY);
 const at = (lived: number): string => ageOf({ born: 1000, kept: null } as unknown as Creature, 1000 + lived);
 check('young until YOUNG_FOR, grown until OLD_AT, old after', at(YOUNG_FOR - 1) === 'young' && at(YOUNG_FOR + 1) === 'grown'
   && at(OLD_AT - 1) === 'grown' && at(OLD_AT + 1) === 'old', `${at(YOUNG_FOR - 1)} ${at(YOUNG_FOR + 1)} ${at(OLD_AT - 1)} ${at(OLD_AT + 1)}`);

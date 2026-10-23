@@ -104,7 +104,7 @@ begin
   end loop;
   insert into said select 'COMBTOLD', string_agg(text, ' / ' order by n) from event where world_id = w and uid = u and text like 'Ancient comb used on%';
   -- At half the pace, for a keeper whose Kin ages it slower: twice as long ago, so its keeper's sum lands in the same place.
-  update creature set born = now() - interval '60 days', kept = '{"kept:age": 0.5}' where world_id = w and id = a;
+  update creature set born = now() - interval '120 days', kept = '{"kept:age": 0.5}' where world_id = w and id = a;
   perform give(w, u, 'ancient_comb', 1, 30);
   perform perform_creature(w, u, 'use_ancient_comb', jsonb_build_object('kind', 'creature', 'id', a));
   select * into c from creature where world_id = w and id = a;
@@ -167,10 +167,10 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 /* ---- in the browser ---------------------------------------------------------------- */
 
 const g = Game.create(2051);
-// Far enough on that one born a month ago was born after the clock started, and so has an age at all.
-g.time = 3600 * 24 * 60;
+// Far enough on that one born two months ago (old) was born after the clock started, and so has an age at all.
+g.time = 3600 * 24 * 200;
 for (const c of [...g.creatures.list.values()]) g.creatures.list.delete(c.id);
-const ash = g.creatures.spawn('rabba', g.player.x + 1, g.player.y, 'active', g.rand, g.time - 3600 * 24 * 30);
+const ash = g.creatures.spawn('rabba', g.player.x + 1, g.player.y, 'active', g.rand, g.time - 3600 * 24 * 60);
 ash.traits = [];
 ash.rare = 0;
 ash.name = 'Ash';
@@ -244,13 +244,13 @@ check('a wild one is not yours on either side, and its menu offers nothing',
     why2 === null && age2 === 'young' && left2 === 1 && why3 === steps[2][3] && count('ancient_comb') === 1, `${age2} ${left2} ${why3}`);
   check('both sides say the same when it is combed',
     told('Ancient comb used on').join(' / ') === at('COMBTOLD'), `${told('Ancient comb used on').join(' / ')} | ${at('COMBTOLD')}`);
-  ash.born = g.time - 3600 * 24 * 30;
+  ash.born = g.time - 3600 * 24 * 120;
   ash.kept = { 'kept:age': 0.5 };
   use(comb);
   check('in the browser, at half the pace it is put twice as long ago and is grown',
     ageOf(ash, g.time) === 'grown' && near(g.time - ash.born, (YOUNG_FOR + COMB_INTO) / 0.5), `${g.time - ash.born}`);
   ash.kept = undefined;
-  ash.born = g.time - 3600 * 24 * 30;
+  ash.born = g.time - 3600 * 24 * 60;
 }
 
 // The file.
