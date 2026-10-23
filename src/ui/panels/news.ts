@@ -3269,6 +3269,13 @@ export const NEWS: News[] = [
       `Fixed: frame rate after dark with an altar in view: night mixed at ${Math.round(LIGHT_RES * LIGHT_RES * 100)}% of the screen's pixels, as without one (was 100%).`,
     ],
   },
+  {
+    n: 267,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: shade at a wall\'s foot drawn down the slope below it at some view angles; now on the ground at the foot, every angle.',
+    ],
+  },
 ];
 
 /** The nine kinds What's new 251 gives new lines. */

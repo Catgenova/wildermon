@@ -7291,11 +7291,12 @@ export class Renderer {
       const p = this.shadeOf(level, b, V);
       if (!p) continue;
       any = true;
+      // Four corners to a piece, each piece on one tile (`shadeOf`).
       for (let i = 0; i < p.length; i += 3) {
         const sx = cam.worldToScreenX(p[i], p[i + 1]), sy = cam.worldToScreenY(p[i], p[i + 1], p[i + 2]);
-        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        if (i % 12 === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+        if (i % 12 === 9) ctx.closePath();
       }
-      ctx.closePath();
     }
     if (!any) return;
     const rise = level * WALL_HEIGHT;
@@ -7318,8 +7319,9 @@ export class Renderer {
   }
 
   /**
-   * The ground a finished wall throws its shade on, as a polygon of world
-   * points with their heights, or null for a wall that throws none.
+   * The ground a finished wall throws its shade on, as quads of world points
+   * with their heights, four points to a quad and each quad on one tile, or
+   * null for a wall that throws none.
    *
    * A garden wall shades both sides of itself, a distance out that goes with
    * how thick it is. A house wall on a masonry with a plinth shades the side
@@ -7397,13 +7399,32 @@ export class Renderer {
       return t + i * Math.max(reachOf(met[0]), halfOf(met[0]));
     };
     const t0 = end(-1), t1 = end(1);
-    const h = ((wall.building ? bld.list.get(wall.building)?.deck : undefined) ?? world.getHeight(fx, fy)) + level * WALL_HEIGHT;
-    const out = new Float64Array(12);
-    [[t0, s0], [t1, s0], [t1, s1], [t0, s1]].forEach(([t, s], k) => {
-      out[k * 3] = ax + dx * t + nx * s;
-      out[k * 3 + 1] = ay + dy * t + ny * s;
-      out[k * 3 + 2] = h;
-    });
+    /*
+     * Laid on the ground it falls on, point by point: one height for the
+     * whole of it put the half out of doors at the height of the wall's foot
+     * over a slope falling away from it, and, looked at from the side the
+     * tile in front is the one out of doors, at the height of that tile's far
+     * corner -- a dark line a tile down the slope from the wall. Cut where
+     * the run and the line of the wall cross a tile's edge, so each piece is
+     * on one tile, and on a deck on piers at the deck's height.
+     */
+    const ts = [t0, ...[0, 1].filter((t) => t > t0 && t < t1), t1];
+    const ss = s0 < 0 && s1 > 0 ? [s0, 0, s1] : [s0, s1];
+    const rise = level * WALL_HEIGHT;
+    const out = new Float64Array((ts.length - 1) * (ss.length - 1) * 12);
+    let k = 0;
+    for (let i = 0; i + 1 < ts.length; i++) {
+      for (let j = 0; j + 1 < ss.length; j++) {
+        const tm = (ts[i] + ts[i + 1]) / 2, sm = (ss[j] + ss[j + 1]) / 2;
+        const deck = bld.buildingAt(Math.floor(ax + dx * tm + nx * sm), Math.floor(ay + dy * tm + ny * sm))?.deck;
+        for (const [t, s] of [[ts[i], ss[j]], [ts[i + 1], ss[j]], [ts[i + 1], ss[j + 1]], [ts[i], ss[j + 1]]]) {
+          const px = ax + dx * t + nx * s, py = ay + dy * t + ny * s;
+          out[k++] = px;
+          out[k++] = py;
+          out[k++] = (deck ?? world.heightAt(px, py)) + rise;
+        }
+      }
+    }
     return done(out);
   }
 
