@@ -26,6 +26,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import { Game } from '../../src/game/game';
+import { sightedLine } from '../../src/game/sighted';
+import { RARITIES } from '../../src/game/items';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { bloodMul, Creatures, maxHealth, SPECIES, type IslandCreature } from '../../src/game/creatures';
 import { FieldGuide, formLines, guidePage } from '../../src/game/guide';
@@ -410,6 +412,15 @@ check('island: and out of a trap', answer('TRAPPED') === 'active|small', answer(
     u.length === COVERINGS && about(colour, COVERINGS, 2 * FORM_PASS) && about(large, COVERINGS, FORM_PASS) && small === 0);
 }
 check('island: and born with them, at its health', answer('BORN') === 'true/small/true', answer('BORN'));
+
+// "Add a text line when the player comes into view of a rare or variant wild wildermon": what the log says of one.
+{
+  const def = SPECIES.sparra;
+  const said = sightedLine({ species: 'sparra', skills: {}, rare: 2, formColour: true, formSize: 'large', x: 20, y: 0 }, 10, 10);
+  check(`a rare one in a form in view is said with what it is, how far and which way: ${said}`,
+    said === `Sighted: ${def.name} (${RARITIES[2].name.toLowerCase()}, ${formName(def, 'colour').toLowerCase()}, ${formName(def, 'large').toLowerCase()}), 14 tiles north-east.`);
+  check('and one straight below you is south', sightedLine({ species: 'sparra', skills: {}, rare: 0, formSize: 'small', x: 10, y: 15 }, 10, 10).endsWith('5 tiles south.'));
+}
 
 for (const line of [...ok, ...bad]) console.log(line);
 console.log(`\nwild forms — ${ok.length} of ${ok.length + bad.length}`);

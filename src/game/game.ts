@@ -57,6 +57,7 @@ import * as creatureRules from './creatures';
 import * as guideRules from './guide';
 import { FieldGuide, formSeenLine, GUIDE_LOOK, guideEntry, guideMarks, guideName, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
 import { formKey, formsOf } from './wildforms';
+import { sightedLine } from './sighted';
 import { matOf, rollEase, workingQl } from './materials';
 import { postCentre, postDecayRate, postKeep, postName, postRadius, postSite, type PlacedPost } from './posts';
 import {
@@ -777,6 +778,8 @@ export class Game {
    */
   guideSaw?: (species: string) => void;
   private guideClock = 0;
+  /** The wild ones already said in the log as rare or in a form (`sightedLine`), by id, so each is said once. */
+  private sighted = new Set<number>();
   /**
    * Who to tell when one is ticked, on an island. Nothing here off one.
    *
@@ -883,6 +886,11 @@ export class Game {
     let asked: Set<string> | null = null;
     for (const c of this.creatures.list.values()) {
       if (c.mode === 'stored') continue;
+      // A wild one that is rare or in a wild form, said once as it comes into view.
+      if (c.mode === 'wild' && (c.rare || formsOf(c).length) && !this.sighted.has(c.id) && this.vision.isWatched(c.x, c.y)) {
+        this.sighted.add(c.id);
+        this.logMsg(sightedLine(c, this.player.x, this.player.y), 'event');
+      }
       // Its kind's page, and its stage's where it is past its first (`stageKey`).
       // And each wild form it is in (`formKey`).
       const keys = [c.species, stageKey(c.species, stageOf(c)), ...formsOf(c).map((f) => formKey(c.species, f))].filter((k, i, all) => all.indexOf(k) === i

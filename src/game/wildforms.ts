@@ -163,3 +163,4 @@ export function formOfKey(key: string): { species: string; form: FormId } | null
   const [species, form, more] = key.split('/');
   return more === undefined && form !== undefined && (FORM_IDS as readonly string[]).includes(form) ? { species, form: form as FormId } : null;
 }
+

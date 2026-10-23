@@ -3486,6 +3486,13 @@ export const NEWS: News[] = [
       `Changed: season ${num(SHORT_SEASON_DAYS)} → ${num(SEASON_DAYS)} days (${dur(SEASON_SECONDS)}); year ${num(YEAR_DAYS)} days (${dur(YEAR_SECONDS)}). The spring begun ${new Date(YEAR_FROM * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC runs to ${num(SEASON_DAYS)} days; field crops keep what they have grown.`,
     ],
   },
+  {
+    n: 283,
+    day: '2026-10-23',
+    lines: () => [
+      'Added: log line when a rare or wild-form wild wildermon comes into view: kind, rarity and forms, distance, direction. Once each.',
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */
