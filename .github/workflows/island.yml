@@ -1774,6 +1774,15 @@ jobs:
           npx esbuild supabase/test/toolwear.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/toolwear.mjs --log-level=error
           node node_modules/.cache/toolwear.mjs
+      - name: A wildermon nobody has named is called what it is
+        run: |
+          # Reported: old names after the visual overhauls, and stages not named
+          # for what they evolved into once tamed. One that goes only by one of
+          # its kind's own names is called its kind at its stage on any change
+          # to it; one its keeper named keeps the name.
+          npx esbuild supabase/test/kindname.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/kindname.mjs --log-level=error
+          node node_modules/.cache/kindname.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         run: |
           # Asked for: "Wildermon can be tamed to be set to active if currently

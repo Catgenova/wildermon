@@ -8,9 +8,15 @@ set local lock_timeout = '3s';
 -- repoint_wall (trowel), clear_ivy and scrub_moss (sickle, brush), and the foundation's plan_foundation (mallet),
 -- dig_pool (pickaxe), fill_pool and pour_foundation (trowel). Each now wears the best of its tool in the pack
 -- (`wear_tool`, `held_tool`), once its go is under way.
+-- The tool an action names (`ActionDef.tool`), off the table; a function of its own, so a performer with a local named
+-- like the table's alias reads it all the same.
+create or replace function action_tool(p_action text) returns text language sql stable as $fn$
+  select ad.tool from action_def ad where ad.id = p_action
+$fn$;
+
 do $do$
 declare r record; v_def text; v_n int;
-  v_wear constant text := 'perform wear_tool(held_tool(p_world, p_uid, (select a.tool from action_def a where a.id = p_action)));';
+  v_wear constant text := 'perform wear_tool(held_tool(p_world, p_uid, action_tool(p_action)));';
 begin
   for r in select * from (values
     ('perform_fight', $a$    perform skill_raise(p_world, p_uid, 'butchering', 1);

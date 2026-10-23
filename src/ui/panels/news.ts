@@ -3442,6 +3442,13 @@ export const NEWS: News[] = [
       'Fixed: tool damage per action, as every other tool, for: butchering knife (butcher), carving knife (shear), rake (till), trowel (investigate, repoint wall, fill pool, pour foundation), sickle (clear ivy), brush (scrub moss), mallet (plan foundation), pickaxe (dig pool). Was none.',
     ],
   },
+  {
+    n: 278,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: a wildermon nobody named shown by an old kind name, or by its first stage once evolved or tamed evolved; now its kind at its stage, on every change. Named ones keep their names.',
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */
