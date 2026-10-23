@@ -75,7 +75,7 @@ import { WHEY_FEED } from '../../game/dairy';
 import { GATHER_SKILL, LEARN_PACE as PACE_258, sparTaskSays } from '../../game/creatures';
 import { BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, UPKEEP_FOR, workDuration } from '../../game/creatures';
 import { BARDING_CUT, GEAR_FLOOR, GEAR_QL_LEAST, GEAR_SIZES, HARNESS_PACE, PACK_LOADS } from '../../game/wildgear';
-import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
+import { favouriteOf, fedBonus, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME } from '../../game/creatures';
 import { abilityName, abilitySays, BASE_STATS, EVOLVE_AT, FILE_RARITY_ODDS, POT_MOST, POT_STEP, GATHER_DO, GATHER_VERB, GRAZE_FILL, LEARNS_SAYS, seasonSays, stageSays, STYLE_SAYS, learnPaceSays, STAGE_LOADS, stageWorkSays, TEND_REACH } from '../../game/creatures';
 import { DELIVER_REACH, NOTICE_KEEP, NOTICE_MAIL_DAYS, NOTICE_MAX, WORK_OPEN_MAX } from '../../game/noticeboard';
 import { STORE_LOG_CAP } from '../../game/ranks';
@@ -3456,6 +3456,13 @@ export const NEWS: News[] = [
     day: '2026-10-23',
     lines: () => [
       'Fixed: a wildermon nobody named shown by an old kind name, or by its first stage once evolved or tamed evolved; now its kind at its stage, on every change. Named ones keep their names.',
+    ],
+  },
+  {
+    n: 279,
+    day: '2026-10-23',
+    lines: () => [
+      `Changed: taming gained per attempt ×(1 + taming needed / ${TAME_HARD}): offering (taken or refused), taking a catch out of a trap, Call of the Wild. ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mult(tameLearn({ species: id, skills: {} }))}`).join(', ')}.`,
     ],
   },
 ];

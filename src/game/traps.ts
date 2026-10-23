@@ -3,7 +3,7 @@ import { enchantTail, swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
-import { isBaitFor, SPECIES, tameNeeds, type Creature } from './creatures';
+import { isBaitFor, SPECIES, tameLearn, tameNeeds, type Creature } from './creatures';
 import { emptyCrate, shutIn } from './creaturecrate';
 import { tameRoomRefusal } from './creatureActions';
 import { itemDef, itemName, markOf, type Item, type Mark } from './items';
@@ -342,7 +342,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
       }
       // It is held, not willing. Getting it out without being bitten is the skill.
       const clean = g.skillCheck('taming', s ? tameNeeds(c).level + 10 : 10, trap.ql, g.mindEase());
-      g.gainSkill('taming', tryGain(clean, FREE_GAIN));
+      g.gainSkill('taming', tryGain(clean, FREE_GAIN * (s ? tameLearn(c) : 1)));
       if (!clean) {
         g.logMsg(`Handling failed: ${s?.name.toLowerCase() ?? 'catch'} still held.`, 'error');
         return;

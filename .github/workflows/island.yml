@@ -1783,6 +1783,15 @@ jobs:
           npx esbuild supabase/test/kindname.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/kindname.mjs --log-level=error
           node node_modules/.cache/kindname.mjs
+      - name: A harder tame teaches more taming
+        run: |
+          # Asked for: "Taming attempts on harder to tame wildermon should grant
+          # more experience". An offering, a trap's catch taken out and the Call
+          # of the Wild teach their gain times 1 + taming needed / tame_hard(),
+          # the same for every kind at every stage on both sides.
+          npx esbuild supabase/test/tamelearn.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/tamelearn.mjs --log-level=error
+          node node_modules/.cache/tamelearn.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         run: |
           # Asked for: "Wildermon can be tamed to be set to active if currently

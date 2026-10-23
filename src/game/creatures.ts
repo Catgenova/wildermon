@@ -931,6 +931,13 @@ export function tameNeeds(c: Pick<Creature, 'species' | 'skills'>): { level: num
 }
 
 /**
+ * Taming an attempt teaches, by how hard the one tried is: its gain once over, and once more for every `TAME_HARD`
+ * taming it needs (`tameNeeds`). The island's `tame_hard` and `tame_learn`.
+ */
+export const TAME_HARD = 20;
+export const tameLearn = (c: Pick<Creature, 'species' | 'skills'>): number => 1 + tameNeeds(c).level / TAME_HARD;
+
+/**
  * Food quality matters. Asked for: "when a tame wildermon eats a food item of quality q (0–100), it gets a learning
  * bonus of FED_LEARN (= 0.2) × q/100 for FED_FOR (= one island hour) ... If the food is the FIRST item of its diet list
  * (its favourite), the bonus is doubled. Grazing grass counts as quality 0 (no bonus)", and "each food item eaten adds

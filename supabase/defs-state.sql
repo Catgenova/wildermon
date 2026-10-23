@@ -5464,6 +5464,7 @@ create or replace function stage_mul_grow() returns double precision language sq
 create or replace function wild_stage_odds_1() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function wild_stage_odds_2() returns double precision language sql immutable as $fn$ select 200::double precision $fn$;
 create or replace function wild_stage_tame() returns double precision language sql immutable as $fn$ select 15::double precision $fn$;
+create or replace function tame_hard() returns double precision language sql immutable as $fn$ select 20::double precision $fn$;
 create or replace function wild_stage_chance() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function wild_stage_span() returns double precision language sql immutable as $fn$ select 10::double precision $fn$;
 create or replace function comb_into() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;

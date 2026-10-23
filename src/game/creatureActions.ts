@@ -3,7 +3,7 @@ import { ENCHANT_BURN, enchantRoll, enchantWorks, shotRoll } from './enchanting'
 import { swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { perkN } from './creatures';
-import { fedOn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
+import { fedOn, tameLearn, tameNeeds, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, sparFloor, sparring, sparSaid, yielded, isShod, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
 import { bestTier, LAMP_TIER_ODDS, mirrorTrait, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
@@ -471,7 +471,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         forgetCoaxing(c);
         g.note('tamed');
         g.guideMarkKind(c, 'tamed');
-        g.gainSkill('taming', tryGain(true, TAME_GAIN));
+        g.gainSkill('taming', tryGain(true, TAME_GAIN * tameLearn(c)));
         g.gainSkill('soul_strength', tryGain(true, TAME_NERVE));
         g.gainSkill('mind_logic', tryGain(true, TAME_HEAD));
       } else {
@@ -482,7 +482,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         const won = coaxBonus(c, g.time, coaxStep(g));
         const warming = won > 0 ? ` Next offering +${(won * 100).toFixed(0)}% chance.` : '';
         g.logMsg(`Taming failed.${warming}`, 'event');
-        g.gainSkill('taming', tryGain(false, TAME_GAIN));
+        g.gainSkill('taming', tryGain(false, TAME_GAIN * tameLearn(c)));
         g.gainSkill('soul_strength', tryGain(false, TAME_NERVE));
         g.gainSkill('mind_logic', tryGain(false, TAME_HEAD));
         c.state = 'idle';

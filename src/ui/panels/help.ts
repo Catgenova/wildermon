@@ -59,7 +59,7 @@ import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
   AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
-  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
+  BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, TAME_HARD, tameLearn, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
 import { DEED_UPGRADES } from '../../game/deed';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
@@ -2905,6 +2905,8 @@ export function helpText(): string {
       a failure has no lasting effect.</li>
       <li><b>Keep at it</b>: after a refused offering, <b>+${percent(COAX_STEP)} chance</b> per attempt in a row, capped only by the overall cap. Lapses after ${dur(COAX_LAPSE)};
       <b>hitting it ends the run</b>. Examine shows progress.</li>
+      <li><b>Taming gained</b> per attempt (offering, taking a catch out of a trap, Call of the Wild): <b>×(1 + taming needed / ${TAME_HARD})</b>.
+      ${['rabba', 'lume'].map((id) => `${SPECIES[id].name} ${mul(tameLearn({ species: id, skills: {} }))}`).join(', ')}.</li>
       <li><b>Evolved in the wild</b>: ${((): string => {
         const [a, b] = stageLevels(1);
         const [c, d] = stageLevels(2);

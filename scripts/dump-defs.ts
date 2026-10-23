@@ -114,7 +114,7 @@ import { CHIP_CHANCE, GRASS_PLANT, KIT_MEND, MOSS_PLANT, TRY_LEARN } from '../sr
 import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GUARDIAN_REACH, SOUL_FX } from '../src/game/talents';
 import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE } from '../src/game/placeables';
-import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME } from '../src/game/creatures';
+import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME, TAME_HARD } from '../src/game/creatures';
 import { COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED } from '../src/game/wildforms';
 import { WORK_ITEMS } from '../src/game/workstats';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, WILD_TARGET } from '../src/game/creatures';
@@ -1653,7 +1653,7 @@ for (const [fn, v] of [
   /* And one put out in the wild already evolved: one time in how many at its second stage and at its third, and the
      taming and the share of the chance each stage past its first asks of it. */
   ['wild_stage_odds_1', WILD_STAGE_ODDS[0]], ['wild_stage_odds_2', WILD_STAGE_ODDS[1]],
-  ['wild_stage_tame', WILD_STAGE_TAME], ['wild_stage_chance', WILD_STAGE_CHANCE], ['wild_stage_span', WILD_STAGE_SPAN],
+  ['wild_stage_tame', WILD_STAGE_TAME], ['tame_hard', TAME_HARD], ['wild_stage_chance', WILD_STAGE_CHANCE], ['wild_stage_span', WILD_STAGE_SPAN],
   /* Restored relics on a wildermon: the seconds into the younger stage an ancient comb leaves one, the odds of an ancient
      file's step of rarity, and what each ancient pot's point in a base stat is worth and how many a stat takes. */
   ['comb_into', COMB_INTO], ['file_rarity_odds', FILE_RARITY_ODDS], ['pot_step', POT_STEP], ['pot_most', POT_MOST],
