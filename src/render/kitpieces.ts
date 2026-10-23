@@ -104,7 +104,7 @@ function boxOf3(p: KitPart): Box6 {
  * furniture.ts, from the eye's own way in) -- and `after` where a part says
  * so, the ones furthest back first where nothing says.
  */
-function laid(parts: readonly KitPart[], e: Eye): KitPart[] {
+function laid(parts: readonly KitPart[], e: Eye, loops?: (left: KitPart[]) => void): KitPart[] {
   const first = parts.filter((p) => p.first);
   const ps = parts.filter((p) => !p.first);
   const n = ps.length;
@@ -120,45 +120,76 @@ function laid(parts: readonly KitPart[], e: Eye): KitPart[] {
   const depth = boxes.map((b) => centre([[b[0], b[2], b[4]], [b[1], b[3], b[5]]]).reduce((s, v, i) => s + v * e.toward[i], 0));
   const E = 1e-3;
   const [tx, ty] = e.toward;
-  /** Less than nought when `a` goes before `b`, more when after, nought when the boxes do not say. */
+  /**
+   * Less than nought when `a` goes before `b`, more when after, nought when
+   * the boxes do not say; two for a box wholly under the other, which is
+   * never wrong whichever way it is seen from.
+   */
   const before = (a: Box6, b: Box6): number => {
     if (tx > E) { if (a[1] <= b[0] + E) return -1; if (b[1] <= a[0] + E) return 1; }
     else if (tx < -E) { if (a[0] >= b[1] - E) return -1; if (b[0] >= a[1] - E) return 1; }
     if (ty > E) { if (a[3] <= b[2] + E) return -1; if (b[3] <= a[2] + E) return 1; }
     else if (ty < -E) { if (a[2] >= b[3] - E) return -1; if (b[2] >= a[3] - E) return 1; }
-    if (a[5] <= b[4] + E) return -1;
-    if (b[5] <= a[4] + E) return 1;
+    if (a[5] <= b[4] + E) return -2;
+    if (b[5] <= a[4] + E) return 2;
     return 0;
   };
   const after: number[][] = ps.map(() => []);
+  // What each waits for, and of that what it must wait for: a part said to come after it (`after`), or one wholly under it.
   const need = new Array<number>(n).fill(0);
+  const must = new Array<number>(n).fill(0);
+  const hard = ps.map(() => new Set<number>());
   const index = new Map(ps.map((p, i) => [p, i]));
   const told = new Set<string>();
   for (let j = 0; j < n; j++) for (const q of ps[j].after ?? []) {
     const i = index.get(q);
     if (i === undefined) continue;
-    after[i].push(j); need[j]++; told.add(`${i},${j}`); told.add(`${j},${i}`);
+    after[i].push(j); need[j]++; must[j]++; hard[i].add(j); told.add(`${i},${j}`); told.add(`${j},${i}`);
   }
   for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
     if (told.has(`${i},${j}`)) continue;
     const a = rects[i], b = rects[j];
     if (a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1]) continue;
     const o = before(boxes[i], boxes[j]);
-    if (o < 0) { after[i].push(j); need[j]++; }
-    else if (o > 0) { after[j].push(i); need[i]++; }
+    const [x, y] = o < 0 ? [i, j] : [j, i];
+    if (!o) continue;
+    after[x].push(y); need[y]++;
+    if (Math.abs(o) === 2) { must[y]++; hard[x].add(y); }
   }
   const done = new Array<boolean>(n).fill(false);
   const out = first.slice();
   for (let k = 0; k < n; k++) {
     let pick = -1;
     for (let i = 0; i < n; i++) if (!done[i] && need[i] === 0 && (pick < 0 || depth[i] < depth[pick])) pick = i;
-    // A ring of parts each behind the next: broken at the one furthest back.
-    if (pick < 0) for (let i = 0; i < n; i++) if (!done[i] && (pick < 0 || depth[i] < depth[pick])) pick = i;
+    if (pick < 0) {
+      /*
+       * A ring of parts each in front of the next, which boxes can say of
+       * parts that reach round each other: broken at the one furthest back
+       * of those waiting on nothing they must -- never at a top over what it
+       * stands on, or a part told to come after another.
+       */
+      loops?.(ps.filter((_, i) => !done[i]));
+      for (let i = 0; i < n; i++) if (!done[i] && must[i] === 0 && (pick < 0 || depth[i] < depth[pick])) pick = i;
+      if (pick < 0) for (let i = 0; i < n; i++) if (!done[i] && (pick < 0 || depth[i] < depth[pick])) pick = i;
+    }
     done[pick] = true;
-    for (const j of after[pick]) need[j]--;
+    for (const j of after[pick]) { need[j]--; if (hard[pick].has(j)) must[j]--; }
     out.push(ps[pick]);
   }
   return out;
+}
+
+/**
+ * For a harness: how many times laying a piece's parts from a view had to
+ * break a ring of parts each in front of the next (`laid`), and which parts
+ * were left in the ring each time, by their index in the model.
+ */
+export function kitLoops(kind: string, look: KitLook, view: KitView): { rings: number[][]; order: number[]; parts: readonly KitPart[]; e: Eye } {
+  const m = modelOf(kind, look);
+  const rings: number[][] = [];
+  const e = eyeOfView(view);
+  const order = laid(m.parts, e, (left) => rings.push(left.map((p) => m.parts.indexOf(p)))).map((p) => m.parts.indexOf(p));
+  return { rings, order, parts: m.parts, e };
 }
 
 /* ---- baking ------------------------------------------------------------------------- */
