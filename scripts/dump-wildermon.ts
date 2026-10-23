@@ -19,6 +19,7 @@ import {
   CHANNELS, FIGHT_SHARE, FIGHTING, GRADE_STEP, HUSBANDRY_LIFT, TIER_COLOUR, TIERS, TRAIT_SLOTS, TRAITS,
   WILD_ODDS, husbandryOdds, isGain, pct, type TraitChannel, type TraitDef,
 } from '../src/game/traits';
+import { SKEP_CLUMP_HOURS, SKEP_REACH } from '../src/game/bees';
 import { BUTCHER_PARTS } from '../src/game/butcher';
 import { itemDef } from '../src/game/items';
 import { SKILL_DEFS } from '../src/game/skills';
@@ -63,7 +64,7 @@ function roles(d: SpeciesDef): Array<{ id: string; name: string; note: string }>
   if (d.swims) add('swims', 'Swimmer', 'It crosses deep water with a rider on its back.');
   if (d.fleece) add('fleece', d.shearYield === 'feather' ? 'Feathers' : 'Fleece', `Shear it every ${Math.round(1 / d.fleece / 60)} minutes.`);
   if (d.milk) add('milk', 'Dairy', 'It can be milked into an empty bucket.');
-  if (d.hives) add('hives', 'Bees', 'It keeps a hive of its own going while one stands on the deed.');
+  if (d.hives) add('hives', 'Bees', `Honey into a hive: a honey per ${SKEP_CLUMP_HOURS} hours worked per wildflower clump within ${SKEP_REACH} tiles of it, as a skep.`);
   if (d.glow) add('glow', 'Lantern', `It lights ${d.glow} tiles of ground at any hour.`);
   if ((d.sight ?? COMPANION_SIGHT) > COMPANION_SIGHT) add('sight', 'Watcher', `It sees ${d.sight} tiles for you.`);
   if (d.hunter && !d.monster) add('hunter', 'Hunter', 'It comes for you on sight rather than waiting to be struck.');

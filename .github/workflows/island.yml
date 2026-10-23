@@ -3545,6 +3545,36 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/goals.mjs --log-level=error
           node node_modules/.cache/goals.mjs
 
+      - name: Goals of the wildermon and of a settlement count on the island
+        run: |
+          # Thirty-eight goals: bred, evolved, geared and worked wildermon, the
+          # Field guide, and what a settlement is built into. Each count is
+          # noted on the island for whoever did the thing, and each goal reads
+          # it; every goal id is unique and every line filled in.
+          npx esbuild supabase/test/goals-a.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/goals-a.mjs --log-level=error
+          node node_modules/.cache/goals-a.mjs
+
+      - name: Thirty-six goals in the crafts, the land and the water
+        run: |
+          # Each count a new goal reads is noted on the island for whoever does
+          # the thing, where it is done (a walk's through journal_move), and for
+          # nobody else; each goal is met by its count or by a state of your
+          # own and not before; every goal id in the journal is once.
+          npx esbuild supabase/test/goals-b.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/goals-b.mjs --log-level=error
+          node node_modules/.cache/goals-b.mjs
+
+      - name: The island's goals, fighting and faith, people and trade
+        run: |
+          # Each of the journal's goals for the island, for fighting and faith
+          # and for people and trade: the thing done on the island counts for
+          # whoever did it, the browser's goal is met on that count and not
+          # before, every goal id is unique, and no goal types out a number.
+          npx esbuild supabase/test/goals-c.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/goals-c.mjs --log-level=error
+          node node_modules/.cache/goals-c.mjs
+
       - name: Ten conveniences hold to what they say
         run: |
           # Put away into the stores within reach that hold the like of it,

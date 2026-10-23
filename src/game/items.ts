@@ -574,7 +574,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   repair_kit: { name: 'Repair kit', category: 'misc', weight: 1.5, stackable: true, decay: 3, description: 'Use on anything damaged: -{mend} damage, no QL lost. Used up.' },
   sealant: { name: 'Sealant', category: 'material', weight: 0.3, stackable: true, decay: 1, description: 'Seals a thing: it never decays. One per thing; a stack takes one per item.' },
   skep: { name: 'Skep', category: 'misc', weight: 3, decay: 4, description: 'Set down: one honey every {hours} hours per wildflower clump within {reach} tiles; one beeswax per {wax} honey; up to {holds} honey. Nothing in {idle}. Take honey empties it.' },
-  hive: { name: 'Hive', category: 'misc', weight: 10, decay: 4, description: 'Set on your settlement with a Vesp there: fills with honey and beeswax. Holds {hive}.' },
+  hive: { name: 'Hive', category: 'misc', weight: 10, decay: 4, description: 'Set on your settlement. Vesp set to tend it: a honey per {vespHours} hours worked per wildflower clump within {vespReach} tiles, as a skep; a beeswax per {vespWax} honey; none in {vespIdle}. Holds {hive}.' },
   rope_tool: { name: 'Rope tool', category: 'tool', weight: 1.2, description: 'Needed to make rope.' },
   spindle: { name: 'Spindle', category: 'misc', weight: 5, decay: 4, description: 'Spins wool, cotton and wemp into yarn. Stand at it.' },
   loom: { name: 'Loom', category: 'misc', weight: 30, decay: 4, description: 'Weaves yarn into cloth. Stand at it.' },

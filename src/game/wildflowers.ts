@@ -89,6 +89,7 @@ export const FLOWER_ACTIONS: ActionDef[] = [
       const w = g.world;
       g.gather('wildflowers', { count: n, ql: g.productQl('foraging') });
       w.setTile(t.x, t.y, TileType.Grass, w.getData(t.x, t.y) | FLOWERS_PICKED);
+      g.note(`flowers:${flowerSeason(Date.now() / 1000)}`);
       g.logMsg(pickedSays(n), 'event');
     },
   },

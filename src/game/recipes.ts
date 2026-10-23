@@ -10,6 +10,7 @@ import {
 } from './items';
 import { QL_PER_LOOP } from './belt';
 import { campfireFood, describeGoals } from './journal';
+import { cookedDishes } from './journal-b';
 import { fill, listed } from './words';
 import { FURNITURE, LIQUID_NAME, ONE_ALTAR, VESSELS } from './furniture';
 import { litresAtHand, litreSources, takeLitres } from './placeables';
@@ -807,6 +808,7 @@ describeWith(RECIPE_SAID);
 describeGoals(RECIPE_SAID);
 // What the journal counts as cooking on a campfire: whatever Crafting cooks at one.
 campfireFood(RECIPES.filter((r) => r.station === 'campfire' && r.category === 'Cooking').map((r) => r.result));
+cookedDishes(RECIPES.filter((r) => r.station === 'campfire' && r.category === 'Cooking').map((r) => r.result));
 
 /** Why a recipe that is worked on a settlement is refused anywhere else; the island says the same (`craft_refusal`). */
 export const DEED_ONLY = 'Build only on a settlement of yours.';

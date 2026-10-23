@@ -442,6 +442,8 @@ export const BUILD_ACTIONS: ActionDef[] = [
         const what = low ? WALL_TYPE_BY_ID.get(wall.type)?.name.toLowerCase() : 'wall';
         // A wall of a building finished, for the journal; a fence is not one (the island's `perform_building` the same).
         if (!low) g.note('walled');
+        // And which type, for the journal's rune gate, portcullis and hidden door (the island's the same).
+        g.note(`built:${wall.type}`);
         g.logMsg(`Built: ${mat.name.toLowerCase()} ${what}.`, 'event');
         return false;
       }
@@ -804,6 +806,10 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (isDone(floor)) {
         // A floor finished on a second storey or higher, for the journal (the island's `perform_building` the same).
         if (kind === 'floor' && slotLevel(t, b) >= 1) g.note('storey');
+        // And for the journal's third storey, pier and outside staircase (the island's the same).
+        if (kind === 'floor' && slotLevel(t, b) >= 1) g.note(`storey:${slotLevel(t, b) + 1}`);
+        if (kind === 'floor' && slotLevel(t, b) === 0 && b.piers?.includes(`${t.x},${t.y}`)) g.note('pier');
+        if (g.buildings.outsideStair(t.x, t.y, slotLevel(t, b)) === floor) g.note('outstair');
         g.logMsg(`Built: ${what}.`, 'event');
         return false;
       }

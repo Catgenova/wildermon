@@ -364,6 +364,8 @@ function artifactAction(id: string, label: string, verb: string): ActionDef {
         // Its lowest-tier trait, or an empty slot, at that tier or one time in `LAMP_TIER_ODDS` the tier above.
         const lit = rekindle(c.traits, g.rand);
         if (lit) c.traits = lit.traits;
+        // A trait rekindled, for the journal (the island's `perform_artifact` the same).
+        if (lit) g.note('rekindled');
         g.logMsg(lit ? lampSays(c, name, lit.did) : `${capital(name)} used on ${c.name}: nothing kindled.`, 'event');
       } else {
         // A stat not yet at the most it takes, any of them as likely as another.
@@ -528,6 +530,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const ql = Math.max(1, Math.min(100, 15 + c.fleece * 45 + g.skills.get('tailoring') * 0.4));
       const wool = g.gather(yields, { count: n, ql });
       c.fleece = 0;
+      g.note('sheared');
       g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('tailoring', 0.4);
       g.gainSkill('taming', 0.1);
@@ -989,6 +992,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
           g.inventory.add(MILK_PART, { ql: made }).charges = now;
         }
         c.fleece = 0;
+        g.note(`milked:${c.species}`);
         g.creatures.learnBy(g, c, 'tended');
         g.gainSkill('farming', 0.3);
         g.logMsg(milkedSays(c.name, now, made), 'event');
@@ -1005,6 +1009,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
         g.inventory.add('milk_bucket', { ql });
       }
       c.fleece = 0;
+      g.note(`milked:${c.species}`);
       g.creatures.learnBy(g, c, 'tended');
       g.gainSkill('farming', 0.3);
       g.logMsg(milkedSays(c.name, litres, ql, !!spare), 'event');

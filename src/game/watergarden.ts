@@ -203,6 +203,8 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       const [x, y] = at;
       g.world.setTile(x, y, TileType.SteppingStones, stonesData(kind, g.world.getTile(x, y)));
       g.logMsg(`Stepping stones laid: ${itemDef(slab.id).name.toLowerCase()} used.`, 'event');
+      // For the journal's water garden (the island's `perform_water_garden` the same).
+      g.note('stones');
     },
   },
   {
@@ -250,6 +252,7 @@ export const WATER_GARDEN_ACTIONS: ActionDef[] = [
       const at = tileOf(t);
       if (!at || !g.inventory.consume(def.from)) return;
       g.plantWater(at[0], at[1], def.id, g.wallNow());
+      g.note('waterplant');
       g.logMsg(`Planted: ${itemDef(def.from).name.toLowerCase()}. Roots in ${spanWords(WATER_ROOTING)}.`, 'event');
     },
   })),

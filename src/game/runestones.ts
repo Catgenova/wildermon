@@ -180,6 +180,13 @@ export const LANDING: ReadonlyArray<readonly [number, number]> = (() => {
 })();
 
 /**
+ * How near a stone's centre tile, each way, counts as standing beside it for
+ * the journal: the outermost ring a Telestone sets a traveller down on. The
+ * island's `stone_visit`, read off its `landing_ring` the same way.
+ */
+export const STONE_VISIT = Math.max(...LANDING.map(([dx, dy]) => Math.max(Math.abs(dx), Math.abs(dy))));
+
+/**
  * Steepest a tile may be, highest corner less lowest, to arrive on: what a
  * body stands on unaided, `MAX_STAND` in `player.ts`, which this leaf may not
  * import (the player reaches the items, which read this);
@@ -324,6 +331,8 @@ export const TELESTONE_ACTIONS: ActionDef[] = [
       const rest = telestoneRest(it.ql);
       g.putBody(land.x + 0.5, land.y + 0.5, 0);
       g.player.usedAt[TELESTONE_KEY] = g.wallNow() + rest;
+      g.note('telestone');
+      g.note(`stone:${s.id}`);
       g.logMsg(travelledSays(s, rest), 'event');
     },
   },

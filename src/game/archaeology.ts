@@ -301,6 +301,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       });
       // Nothing comes out of the ground sound.
       item.dmg = FIND_DAMAGE + g.rand() * FIND_DAMAGE_SPREAD;
+      g.note('fragment');
       g.events.emit('inventory');
       const left = partsMissing(g, relic).length;
       const short = left ? ` Missing: ${left}/${relic.parts}.` : ` All ${relic.parts} pieces held.`;
@@ -360,6 +361,7 @@ export const ARCHAEOLOGY_ACTIONS: ActionDef[] = [
       const made = g.inventory.add(f.relic.result, { ql });
       g.gainSkill('mind_logic', tryGain(true, RESTORE_GAIN));
       g.note('restored');
+      g.note(`restored:${f.relic.result}`);
       g.logMsg(`Restored: ${itemName(made).toLowerCase()}, QL ${made.ql.toFixed(1)}.`, 'event');
     },
   },

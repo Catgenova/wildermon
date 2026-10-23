@@ -20,6 +20,8 @@ import type { GatherKind } from './creatures';
 import { STORE_RECIPES, LYE_RECIPES, PAPER_RECIPES } from './creatures';
 import { countOf, itemDef } from './items';
 import { RECIPE_BY_ID } from './recipes';
+import { SKEP_IDLE } from './bees';
+import { SEASONS } from '../world/calendar';
 import { SKILL_BY_ID } from './skills';
 import { article, listed, listedOr } from './words';
 
@@ -34,7 +36,9 @@ import { article, listed, listedOr } from './words';
  *   * `far`: walking home, so many tiles (the number) from its work;
  *   * `away`: on the island, its keeper is away, so nothing works it;
  *   * `unswept`: on the island, nobody awake is within the number of tiles of it, so nothing works it;
- *   * `nospar`: a Sparra on a settlement with no guard of yours there free to spar with (`sparsAsGuard`).
+ *   * `nospar`: a Sparra on a settlement with no guard of yours there free to spar with (`sparsAsGuard`);
+ *   * `season`: a Vesp at its hive in `SKEP_IDLE`, when nothing is in flower for it (`vespTrip`);
+ *   * `flowers`: a Vesp whose hive has no wildflowers within the number of tiles (`SKEP_REACH`) of it.
  *
  * And three that are not idleness but rest, which its card says in the same place (`TIRE_GOES`, `REST_FOR`):
  *
@@ -43,8 +47,8 @@ import { article, listed, listedOr } from './words';
  *   * `tired`: walking to a wildermon bed (`bed`) to rest in it;
  *   * `yielded`: a Sparra or a guard that has yielded a spar, standing until it is above the number in health (`sparBack`).
  */
-export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded';
-export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded'];
+export type IdleWhy = 'range' | 'stock' | 'room' | 'full' | 'far' | 'away' | 'unswept' | 'rest' | 'bed' | 'tired' | 'nospar' | 'yielded' | 'season' | 'flowers';
+export const IDLE_WHYS: readonly IdleWhy[] = ['range', 'stock', 'room', 'full', 'far', 'away', 'unswept', 'rest', 'bed', 'tired', 'nospar', 'yielded', 'season', 'flowers'];
 
 /**
  * Why a worker is idle, as kept on it: the code, its number, and whether it works off a post rather than the token;
@@ -101,6 +105,7 @@ const IDLE_STOCK_THING: Partial<Record<GatherKind, string>> = {
 /** Where what it brings would go, and what it brings, for a trade whose work ends somewhere other than a store. */
 const IDLE_ROOM: Partial<Record<GatherKind, readonly [string, string]>> = {
   water: ['barrel', 'water'],
+  hive: ['hive', 'honey'],
 };
 
 /**
@@ -172,6 +177,10 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       return 'Idle: no guard of yours on the settlement free to spar.';
     case 'yielded':
       return `Yielded: spars again above ${n} health.`;
+    case 'season':
+      return `Idle: ${SKEP_IDLE}, no honey until ${SEASONS[(SEASONS.indexOf(SKEP_IDLE) + 1) % SEASONS.length]}.`;
+    case 'flowers':
+      return `Idle: no wildflowers within ${n} tiles of its hive.`;
   }
 }
 

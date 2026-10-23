@@ -8,10 +8,10 @@ import { pawed, trot } from './wild-paws';
 
 /**
  * The settlement's own hands: the kemma, the sheela, the salva, the carra,
- * the tanna, the grista, the brambo and the siffa.
+ * the tanna, the brambo and the siffa.
  * Each carries the tool of its trade on its body, as every wildermon carries
  * something no field guide has: a brush for a tail, shears for teeth, a
- * cleaver for a beak, millstones for cheeks, a pan for a bill.
+ * cleaver for a beak, a pan for a bill.
  */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
@@ -304,73 +304,6 @@ export const TANNA: Kind = {
   shadow: [1.9, 1.0],
   stride: 1.4,
   size: 1.7,
-};
-
-/* ---- the grista: millstones for cheeks, a broom for a tail ------------------------- */
-
-/**
- * A grista: a stout, dusty creature whose cheeks are a pair of millstones,
- * grooved and grey, and whose tail is a straw broom it sweeps the floor
- * with. It is always a little floury.
- */
-const GRISTA_SPEC: QuadSpec = { ...pawed({ high: 1.3, len: 2.4, legs: 0.7, neck: 0.35, lean: 65, swing: [20, 34], ears: [45, 20], tail: [0.5, -10, 4] }), nose: 10 };
-const GRISTA_HEAD = { c: [0, 0.35, 0.1] as V3, r: [1.15, 1.0, 0.95] as V3 };
-
-function gristaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = GRISTA_HEAD;
-  // A millstone on each cheek: a thick grey disc, its face cut with grooves, its eye in the middle.
-  const stone = (s: number): Mesh => {
-    const c: V3 = [s * 0.98, 0.55, -0.15];
-    const d: V3 = [s, 0.25, 0];
-    return merge(
-      tube([c, add(c, scale(d, 0.16))], 0.42, 0.42, 10, 'stone', { up: [0, 0, 1] }),
-      paint([
-        disc(add(c, scale(d, 0.17)), d, 0.42, 0.42, 10, 'stone'),
-        ...[0, 1, 2, 3].map((q) => disc(add(c, scale(d, 0.175)), d, 0.4, 0.035, 4, 'stoneDark', { spin: (q / 4) * Math.PI })),
-        disc(add(c, scale(d, 0.18)), d, 0.08, 0.08, 6, 'stoneDark'),
-      ]),
-    );
-  };
-  const face = merge(snout(1.08, -0.18, [0.44, 0.34, 0.36], 0.12, n, k), stone(-1), stone(1));
-  // The broom: a short handle and a fan of straw bound round with a band.
-  const broom = merge(
-    taper([[0, 0.05, 0], [0, -0.3, 0]], 0.08, 0.07, 6, 'wood'),
-    tube([[0, -0.28, 0], [0, -0.36, 0]], 0.12, 0.12, 6, 'leatherDark'),
-    ...[-0.18, -0.09, 0, 0.09, 0.18].map((x) => taper([[x * 0.4, -0.34, 0], [x, -0.85, 0]], 0.05, 0.04, 4, 'stem')),
-  );
-  // Flour dusted on its back and its feet.
-  const dust = paint(([[0, -0.4, 0.98], [0.3, 0.2, 0.92], [-0.35, 0.5, 0.88], [0.1, 0.75, 0.86], [-0.2, -0.85, 0.85]] as V3[]).map((c) => disc(c, [c[0] * 0.5, 0, 1], 0.2, 0.16, 7, 'coatLight')));
-  return quadPieces({
-    n, k,
-    body: { y: [-1.35, -1.1, -0.55, 0.05, 0.65, 1.05, 1.25], z: [0.08, 0.1, 0.12, 0.14, 0.16, 0.18, 0.2], w: [0.3, 1.08, 1.25, 1.28, 1.22, 1.05, 0.32], h: [0.26, 0.8, 0.92, 0.95, 0.9, 0.78, 0.26], belly: true },
-    neck: { w: 0.7, h: 0.68, len: 0.35 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.66, 0.6, 0.34], size: 0.28, rim: 0.12 } },
-    ear: earMesh(0.36, 0.24, n),
-    earTurn: 35,
-    tail: [broom],
-    fore: { upper: [0.26, -0.36, 0.28, 0.24], lower: [0, -0.32, 0.24, 0.22], foot: pawMesh(0.24, n, k, 'coatLight') },
-    hind: { upper: [0.28, -0.38, 0.3, 0.26], lower: [0, -0.34, 0.24, 0.22], foot: pawMesh(0.24, n, k, 'coatLight') },
-    extras: [{ key: 'dust', mesh: dust, bone: 'trunk', bias: 0.03, after: ['body'] }],
-  });
-}
-
-export const GRISTA: Kind = {
-  bones: quadBonesOf(GRISTA_SPEC, (p, a) => {
-    trot(p, a);
-    // Standing, it grinds: the jaw going round, which is the head nodding and turning a little in a circle; and the broom sweeps.
-    if (a.go <= 0) {
-      const g = beat(a.t, [3.1, 11.4, 18.8], 2.6) * (1 - a.graze);
-      p.head[0] += 4 * Math.sin(a.t * TAU * 1.5) * g;
-      p.head[1] += 4 * Math.cos(a.t * TAU * 1.5) * g;
-      p.tail[1] += 22 * cyc(a.t, 4);
-    }
-  }),
-  build: gristaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, OWN({ stone: [170, 166, 160], stoneDark: [118, 114, 110], wood: [164, 118, 76], stem: [222, 192, 120], leatherDark: [120, 84, 60] }), 40),
-  shadow: [1.7, 1.3],
-  stride: 1.4,
-  size: 1.75,
 };
 
 /* ---- the brambo: a coat of burrs and berries --------------------------------------- */

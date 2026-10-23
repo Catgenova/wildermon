@@ -22,10 +22,11 @@ import { SNUFFLET, SNUFFROOT, SNUFFTHORN } from './wild-snuff';
 import { SPOREKIN, SPORELING, SPORELORD } from './wild-spore';
 import { GOBLIN, OGRE, ORC } from './wild-upright';
 import { MENDERMASK, PATCHCOON, STITCHKIT } from './wild-mend';
-import { PLUCKA, WADD } from './wild-brook';
+import { WADD } from './wild-brook';
 import { HEARTHSNAIL, SNAILEAF, MIDDUNSNAIL } from './wild-snail';
 import { BASTIONTOAD, CRAGHOPPER, MOSSKIP } from './wild-toad';
 import { ROLLTERRA, SLIPLET, WHEELMOTE } from './wild-clayroll';
+import { ARBOANARI, ORCHIBELLE, VANARI } from './wild-vanari';
 import { AQUAVOYAGER, PUDDLEHOP, SPRINGCARRIER } from './wild-frog';
 import { LEMLEAF, LEMLET, LEMORIAN } from './wild-lemur';
 import { SLUGEMBER, SLUGFERNO, SLUGLOW } from './wild-slug';
@@ -36,8 +37,9 @@ import { LASHRUNNER, SNAREPUP, VINEHUNTER } from './wild-vine';
 import { BLUSHKIT, BRIARPOUNCE, THORNLANCE } from './wild-briar';
 import { BASTIONDRAKE, BRICKLING, MORTARBACK } from './wild-brick';
 import { CHIPTAIL, MONOLITHUMP, QUARRYBASH } from './wild-chip';
-import { BRAMBO, CARRA, GRISTA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands';
+import { BRAMBO, CARRA, KEMMA, SALVA, SHEELA, SIFFA, TANNA } from './wild-hands';
 import { BLOOMREAPER, PETALBLADE, SPRIGMANT } from './wild-mantis';
+import { WHEATCHEEKS, WHEATLEY, WHEATWHIRL } from './wild-hamster';
 import { GLIMMOTH, LUREWING, NOCTILURE } from './wild-moth';
 import { AMBRA, BEDDA, CINDRA, FORGA, HOPPA, PETTA, POTTA, RELKA, SCURRA, SIMMA } from './wild-hands2';
 import { PEBBLEBEAK, SOILWHISTLE, WORMHERON } from './wild-curlew';
@@ -92,7 +94,7 @@ export const WILDERMON: Record<string, Kind> = {
   bevere: SAPGNAW,
   wadd: WADD,
   holla: PUDDLEHOP,
-  plucka: PLUCKA,
+  plucka: VANARI,
   middun: SNAILEAF,
   sedra: REEDPUP,
   warda: SKYLOOKLET,
@@ -109,7 +111,7 @@ export const WILDERMON: Record<string, Kind> = {
   salva: SALVA,
   carra: CARRA,
   tanna: TANNA,
-  grista: GRISTA,
+  grista: WHEATLEY,
   wicka: GLIMMOTH,
   brambo: BRAMBO,
   grazza: SPRIGMANT,
@@ -201,6 +203,8 @@ export const WILDERMON_STAGES: Partial<Record<string, readonly [Kind, Kind]>> = 
   dippa: [CASKYBARA, RESERVARA],
   middun: [MIDDUNSNAIL, HEARTHSNAIL],
   sparra: [DUMMIBEAR, DUMMITITAN],
+  plucka: [ORCHIBELLE, ARBOANARI],
+  grista: [WHEATWHIRL, WHEATCHEEKS],
 };
 
 /** What a kind that is ridden is drawn as saddled and bridled, at each of its stages; and how high its rider sits on each, in pixels at zoom one. */

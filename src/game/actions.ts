@@ -19,7 +19,7 @@ import { BREWING_ACTIONS } from './brewing';
 import { CAMPFIRE_ACTIONS } from './campfire';
 import { SMELTER_ACTIONS } from './smelter';
 import { KILN_ACTIONS } from './kiln';
-import { BUCKET_LITRES, FURNITURE_ACTIONS, furnitureCentre, LIQUID_NAME } from './furniture';
+import { BUCKET_LITRES, FURNITURE_ACTIONS, furnitureCentre, isWell, LIQUID_NAME } from './furniture';
 import { crateCentre } from './crates';
 import { GEAR_ACTIONS } from './gear';
 import { IMPROVE_ACTIONS, improvable } from './improve';
@@ -1478,7 +1478,10 @@ export const ACTIONS: ActionDef[] = [
       const type = w.getTile(t.x, t.y);
       const rock = bedrockAt(w, t.x, t.y);
       const yieldId = type === TileType.Rock ? rock.yields : 'rock_shards';
-      if (yieldId.endsWith('_ore')) g.note('ore');
+      if (yieldId.endsWith('_ore')) {
+        g.note('ore');
+        g.note(`ore:${yieldId}`);
+      }
       // No seam gives up more quality than it holds, however good the miner.
       const item = g.gather(yieldId, { ql: Math.min(rock.maxQl, g.productQl('mining', pickQl)) });
       const what = itemDef(yieldId).name.toLowerCase();
@@ -1535,7 +1538,10 @@ export const ACTIONS: ActionDef[] = [
       // What broke away is yours, which is the only thing this shares with mining.
       const rock = bedrockAt(w, t.x, t.y);
       const yieldId = w.getTile(t.x, t.y) === TileType.Rock ? rock.yields : 'rock_shards';
-      if (yieldId.endsWith('_ore')) g.note('ore');
+      if (yieldId.endsWith('_ore')) {
+        g.note('ore');
+        g.note(`ore:${yieldId}`);
+      }
       const item = g.gather(yieldId, { ql: Math.min(rock.maxQl, g.productQl('mining', g.toolQl('pickaxe'))) });
       g.logMsg(`Cut: ${cornerName(t)} corner lowered. Got ${itemDef(yieldId).name.toLowerCase()}, QL ${item.ql.toFixed(1)}.`, 'event');
     },
@@ -1877,6 +1883,7 @@ export const ACTIONS: ActionDef[] = [
       const made = g.gather(def.fruit, { count, ql: g.productQl('forestry'), });
       g.markForaged(t.x, t.y, 'forage');
       g.gainSkill('forestry', 0.35);
+      g.note(`fruit:${def.fruit}`);
       g.logMsg(`Picked: ${count} ${itemDef(def.fruit).name.toLowerCase()}${count === 1 ? '' : 's'}, QL ${made.ql.toFixed(1)}.`, 'event');
     },
   },
@@ -2671,6 +2678,7 @@ export const ACTIONS: ActionDef[] = [
       if (!item || !GLAZEABLE.has(item.id) || item.mark?.glaze !== undefined || g.perk('glaze_item', 0) <= 0) return;
       if (!g.inventory.consume('ash', GLAZE_ASH)) return;
       item.mark = { ...(item.mark ?? {}), glaze: 0 };
+      g.note('glazed');
       g.events.emit('inventory');
       g.logMsg(`Glazed: ${itemName(item).toLowerCase()}. No decay.`, 'event');
     },
@@ -2759,6 +2767,8 @@ export const ACTIONS: ActionDef[] = [
       const got = fillFromSource(g, item);
       if (!got) return;
       g.logMsg(source?.from ? `Filled: bucket of ${LIQUID_NAME[got]}, from the ${itemDef(source.from.kind).name.toLowerCase()}.` : 'Filled: bucket of water.', 'event');
+      // Out of a well of yours, for the journal (the island's `perform_vessel` the same).
+      if (source?.from && isWell(source.from) && source.from.mine !== false) g.note('well:own');
     },
   },
   {
@@ -3159,6 +3169,7 @@ export const ACTIONS: ActionDef[] = [
       // Never fewer than a Naturalist's Reed Cutter says, whatever the roll.
       const count = Math.max(g.perk('count:reed', 0), REED_CUT + (g.rand() < g.skills.get('foraging') / REED_EXTRA_AT ? 1 : 0));
       g.gather('reed', { count, ql: g.productQl('foraging', g.toolQl('carving_knife')) });
+      g.note('reeds');
       g.logMsg(`Cut: ${count} reeds.`, 'event');
     },
   },

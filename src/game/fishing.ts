@@ -104,6 +104,9 @@ export const staysOn = (skill: number, rodQl: number, baited: boolean, plus = 0)
 export const waterDepth = (g: Game, x: number, y: number): number =>
   (g.world.hasWater(x, y) ? Math.max(0, g.world.surfaceAt(x, y) - g.world.bedCenter(x, y)) : 0);
 
+/** Which water a tile is, for the journal: the sea, or a pond a spring has filled (the island's `perform_fish`). */
+export const waterKind = (g: Game, x: number, y: number): 'sea' | 'pond' => (g.world.hasSea(x, y) ? 'sea' : 'pond');
+
 /** Water worth putting a line into: deep enough to hold anything at all. */
 export const fishable = (g: Game, x: number, y: number): boolean => g.world.inBounds(x, y) && waterDepth(g, x, y) >= 1;
 
@@ -328,12 +331,14 @@ export const FISHING_ACTIONS: ActionDef[] = [
       const parts: string[] = [];
       const ql = g.productQl('fishing', netQl);
       g.note('netted');
+      g.note(`fished:${waterKind(g, spot.x, spot.y)}`);
       for (const { id, n, rare } of got.values()) {
         g.gather(id, { count: n, ql, rare });
         g.note(`fish:${id}`);
         parts.push(said(id, n, rare));
         if (rare) {
           g.note(RARITIES[rare].name);
+          g.note(`catch:${RARITIES[rare].name}`);
           g.logMsg(RARITY_WORD[rare], 'skill');
         }
       }
@@ -399,6 +404,8 @@ export const FISHING_ACTIONS: ActionDef[] = [
       const rare = odds > 0 ? rollRarity(() => g.rand(), odds) : 0;
       const item = g.gather(got.id, { ql: g.productQl('fishing', rodQl), rare });
       g.note(`fish:${got.id}`);
+      g.note(`fished:${waterKind(g, spot.x, spot.y)}`);
+      if (rare) g.note(`catch:${RARITIES[rare].name}`);
       if (bait) g.note('baited');
       g.logMsg(
         `Caught: ${rare ? `${RARITIES[rare].name} ` : ''}${got.name.toLowerCase()}, QL ${item.ql.toFixed(1)}.`

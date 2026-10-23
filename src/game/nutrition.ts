@@ -64,10 +64,13 @@ export const upkeepMul = (n: Record<Nutrient, number>): number => 1 - KEPT_BEST 
  */
 export const tableMul = (n: Record<Nutrient, number>, best = TABLE_BEST): number => 1 + best * balance(n);
 
+/** The worst of the four a body has to stand at to be wanting for nothing. */
+export const WANTING_NOTHING = 0.95;
+
 /** How well a body is doing, in a word. */
 export const fedWord = (n: Record<Nutrient, number>): string => {
   const b = balance(n);
-  if (b >= 0.95) return 'wanting for nothing';
+  if (b >= WANTING_NOTHING) return 'wanting for nothing';
   if (b >= 0.7) return 'eating well';
   if (b >= 0.4) return 'eating plainly';
   if (b >= 0.15) return 'living on scraps';

@@ -417,6 +417,8 @@ export const SPRING_ACTIONS: ActionDef[] = [
       const s = g.springs.dig(t.x, t.y, null, Date.now());
       if (!s) return;
       g.gainSkill('digging');
+      // For the journal (the island's `perform_spring` the same).
+      g.note('spring');
       g.logMsg(springSays(s), 'event');
       g.events.emit('world', t.x, t.y);
     },

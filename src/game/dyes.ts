@@ -291,6 +291,7 @@ export const DYE_ACTIONS: ActionDef[] = [
       if (one !== it) g.inventory.addItem(one);
       g.gainSkill('alchemy', 0.3);
       g.note('dyed');
+      g.note(`dyed:${one.id}`);
       g.logMsg(`Dyed: ${colourWord(d.hex)} (${d.hex}). Dye used: ${litresWord(need)}.`, 'event');
       g.events.emit('inventory');
     },

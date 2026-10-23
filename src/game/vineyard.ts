@@ -403,6 +403,7 @@ export const VINEYARD_ACTIONS: ActionDef[] = [
       const made = g.gather(GRAPE, { count: n, ql: g.productQl(VINE_SKILL) });
       f.pickedAt = g.wallNow();
       g.gainSkill(VINE_SKILL, VINE_GAIN);
+      g.note('grapes');
       g.logMsg(grapesSaid(n, made.ql), 'event');
       g.events.emit('world', f.x, f.y);
     },

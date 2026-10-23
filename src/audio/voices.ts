@@ -12,11 +12,13 @@ import { CURLEW_VOICE } from './voice-curlew';
 import { DUMMY_VOICE } from './voice-dummy';
 import { FROG_VOICE } from './voice-frog';
 import { TOAD_VOICE } from './voice-toad';
+import { VANARI_VOICE } from './voice-vanari';
 import { VINE_VOICE } from './voice-vine';
 import { BRIAR_VOICE } from './voice-briar';
 import { GNAW_VOICE } from './voice-gnaw';
 import { GHOST_VOICE } from './voice-ghost';
 import { HAUL_VOICE } from './voice-haul';
+import { HAMSTER_VOICE } from './voice-hamster';
 import { HARE_VOICE } from './voice-hare';
 import { IRON_VOICE } from './voice-iron';
 import { LEMUR_VOICE } from './voice-lemur';
@@ -103,6 +105,8 @@ export const VOICES: Partial<Record<string, Voice>> = {
   rowl: VINE_VOICE,
   // The Blushkit, the Briarpounce and the Thornlance.
   lungra: BRIAR_VOICE,
+  // The Vanari, the Orchibelle and the Arboanari.
+  plucka: VANARI_VOICE,
   // The Pebbletooth, the Shaleclaw and the Cragjaws.
   thumpa: CRAG_VOICE,
   // The Chestkit, the Lootvent and the Hoardback.
@@ -121,4 +125,6 @@ export const VOICES: Partial<Record<string, Voice>> = {
   middun: SNAIL_VOICE,
   // The Dummicub, the Dummibear and the Dummititan.
   sparra: DUMMY_VOICE,
+  // The Wheatley, the Wheatwhirl and the Wheatcheeks.
+  grista: HAMSTER_VOICE,
 };

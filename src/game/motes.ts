@@ -261,6 +261,7 @@ export const MOTE_ACTIONS: ActionDef[] = [
       const n = motesFor(g.skills.get(ELEMENTALISM)) + g.pathFx('motes', 0);
       g.takeSwirl(s.id);
       g.gather(moteItem(s.element), { count: n, ql: g.productQl(ELEMENTALISM) });
+      g.note('swirl');
       g.logMsg(collectedSays(n, s.element), 'event');
     },
   },

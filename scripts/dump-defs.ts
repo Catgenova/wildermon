@@ -63,7 +63,7 @@ import { POTTERY } from '../src/game/kiln';
 import { MATERIALS as IMPROVE_MATERIALS, improvable, canImprove } from '../src/game/improve';
 import { NUTRIENTS } from '../src/game/nutrition';
 import { BOON_SKILLS, BOON_SECONDS, BOON_BONUS, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS } from '../src/game/boons';
-import { HIVE_BASE, HIVE_PER_QL, HIVE_SWARMS, HIVE_WAX, POND_EVERY } from '../src/game/furniture';
+import { POND_EVERY } from '../src/game/furniture';
 import { GRASS_PER_CUT, MOSS_PER_CUT, REED_CUT, REED_EXTRA_AT } from '../src/game/actions';
 import { CROWD_HIDES, DEEDS_JOINED, PLANTABLE } from '../src/game/game';
 import { FAITH_SPELLS, FAITH_TIER_AT, PATRON_AT, PATRONS, SPELL_BAR, SPELL_ON_WORDS, SPELL_ONS, SPELL_REACH, SPELLS_PER_TIER } from '../src/game/patrons';
@@ -193,7 +193,7 @@ import {
   trellisAgainstSaid, trellisReturnedSaid, VINE_BEARS, VINE_GAIN, VINE_REST, VINE_SAID, VINE_SKILL, VINE_SOIL, vinePlantedSaid, vineSeasonWords, WILD_VINE,
 } from '../src/game/vineyard';
 import { CELLAR_AGEING, keepsQl } from '../src/game/ageing';
-import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY } from '../src/game/bees';
+import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY, VESP_REST } from '../src/game/bees';
 
 const q = (v: unknown): string => {
   if (v === undefined || v === null) return 'null';
@@ -1758,8 +1758,6 @@ for (const [fn, v] of [
   ['grass_per_cut', GRASS_PER_CUT], ['moss_per_cut', MOSS_PER_CUT], ['reed_cut', REED_CUT], ['reed_extra_at', REED_EXTRA_AT],
   /* How hard a dressing is to put on well. */
   ['dress_check', DRESS_CHECK],
-  /* How a hive fills: comb a second at the roughest and for its quality, swarms to a hive, and the share that is wax. */
-  ['hive_base', HIVE_BASE], ['hive_per_ql', HIVE_PER_QL], ['hive_swarms', HIVE_SWARMS], ['hive_wax', HIVE_WAX],
   /* How hard a bait draws the fish it favours and how shy the rest are of it, what goes into a fish staying on, the least
      and the most a net brings up before the roll, and how often a Fisher's pond stocks itself. */
   ['bait_pull', BAIT_PULL], ['bait_shy', BAIT_SHY], ['hook_base', HOOK_BASE], ['hook_bait', HOOK_BAIT], ['hook_most', HOOK_MOST],
@@ -2660,6 +2658,8 @@ out.push(`create or replace function skep_idle() returns text language sql immut
 out.push(`create or replace function skep_skill() returns text language sql immutable as $fn$ select ${q(SKEP_SKILL)} $fn$;`);
 out.push(`create or replace function skep_said(p_key text) returns text language sql immutable as $fn$ select case p_key ${
   (['notYours', 'empty'] as const).map((k) => `when ${q(k)} then ${q(SKEP_SAID[k])} `).join('')}end $fn$;`);
+/* And a Vesp at its trade, working a hive as bees work a skep: the seconds it stands at the hive after a trip (`VESP_REST`). */
+out.push(`create or replace function vesp_rest() returns double precision language sql immutable as $fn$ select ${VESP_REST}::double precision $fn$;`);
 /*
  * A settlement's notices, work and ledger (`noticeboard.ts`): how long a
  * notice is and how many are kept, how long a citizen is away before one is

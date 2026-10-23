@@ -140,6 +140,7 @@ export const SACRIFICE_ACTIONS: ActionDef[] = [
       const ql = item.ql;
       if (!g.inventory.remove(item.uid, 1)) return;
       for (const k of NUTRIENTS) g.player.nutrition[k] = 1;
+      g.note('sacrificed');
       g.logMsg(`Sacrificed: ${name}. ${FED_SAID}`, 'event');
       if (g.rand() < SOUL_CHANCE) {
         g.inventory.addItem({ uid: g.inventory.nextUid++, id: SOUL, ql, dmg: 0, count: 1, rare });

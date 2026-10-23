@@ -129,5 +129,6 @@ export function maybeGem(g: Game, skill: string, tool: string, job = 'mine'): vo
   if (g.rand() >= g.perk(`gem:${job}`, GEM_ODDS)) return;
   const gem = rollGem(g.rand, g.perk('more_stones', 0) > 0);
   const item = g.gather('gem', { ql: g.productQl(skill, g.toolQl(tool)), extra: gem.name });
+  g.note(`gem:${gem.id}`);
   g.logMsg(`Something glints in the rubble: a ${gem.name.toLowerCase()}. (QL ${item.ql.toFixed(1)})`, 'event');
 }

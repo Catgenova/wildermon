@@ -53,6 +53,8 @@ export const TRACK_ACTIONS: ActionDef[] = [
       const r = trackReading(L, bearingTo(p.x, p.y, c.x, c.y), Math.hypot(c.x - p.x, c.y - p.y), g.rand());
       const found: TrackFound = { stageName: kindName(c), level: creatureLevel(c), moving: c.moving };
       g.logMsg(trackSaid(def.name, range, found, r), 'event');
+      // A trail read, for the journal (the island's `perform_track` the same).
+      g.note('tracked');
       g.trail = { name: TRACK_BANDS[r.band].stage ? found.stageName : def.name, bearing: r.bearing, dist: trackDistSays(r), x: p.x, y: p.y, at: g.time };
     },
   },

@@ -86,6 +86,8 @@ begin
   insert into said select 'PAILBARA', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Dippa')).id from species_def where id = 'dippa';
   insert into said select 'SNAILEAF', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Middun')).id from species_def where id = 'middun';
   insert into said select 'DUMMICUB', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Sparra')).id from species_def where id = 'sparra';
+  insert into said select 'VANARI', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Plucka')).id from species_def where id = 'plucka';
+  insert into said select 'WHEATLEY', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Grista')).id from species_def where id = 'grista';
   insert into said select 'THISTLEKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Orse')).id from species_def where id = 'orse';
   insert into said select 'STITCHKIT', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Tinka')).id from species_def where id = 'tinka';
   insert into said select 'CARTLING', name || '|' || array_to_string(stages, ',') || '|' || array_to_string(was, ',') || '|' || (corpse_species('Roxxen')).id from species_def where id = 'roxxen';
@@ -239,6 +241,12 @@ check('the Middun is the Snaileaf now, a Middunsnail and a Hearthsnail after, an
 check('the Sparra is the Dummicub now, a Dummibear and a Dummititan after, and an old Sparra carcass is still one, on both sides',
   SPECIES.sparra.name === 'Dummicub' && SPECIES.sparra.stages?.map((x) => x.name).join(',') === 'Dummibear,Dummititan'
     && at('DUMMICUB') === 'Dummicub|Dummibear,Dummititan|Sparra|sparra', at('DUMMICUB'));
+check('the Plucka is the Vanari now, an Orchibelle and an Arboanari after, and an old Plucka carcass is still one, on both sides',
+  SPECIES.plucka.name === 'Vanari' && SPECIES.plucka.stages?.map((x) => x.name).join(',') === 'Orchibelle,Arboanari'
+    && at('VANARI') === 'Vanari|Orchibelle,Arboanari|Plucka|plucka', at('VANARI'));
+check('the Grista is the Wheatley now, a Wheatwhirl and a Wheatcheeks after, and an old Grista carcass is still one, on both sides',
+  SPECIES.grista.name === 'Wheatley' && SPECIES.grista.stages?.map((x) => x.name).join(',') === 'Wheatwhirl,Wheatcheeks'
+    && at('WHEATLEY') === 'Wheatley|Wheatwhirl,Wheatcheeks|Grista|grista', at('WHEATLEY'));
 const reed = SPECIES.sedra;
 check('the Sedra is the Reedpup now, a Reedweaver and a Marshreaper after, and an old Sedra carcass is still one, on both sides',
   reed.name === 'Reedpup' && reed.stages?.map((x) => x.name).join(',') === 'Reedweaver,Marshreaper'

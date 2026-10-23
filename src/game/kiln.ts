@@ -264,6 +264,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       if (!stack.spend(n)) return;
       const seconds = fireSeconds(def, k.ql);
       for (let i = 0; i < n; i++) k.jobs.push({ item: { ...taken, count: 1 }, makes: def.fired, left: seconds, total: seconds, ql: firedQl(taken.ql, k.ql) });
+      g.note(`fired:${def.fired}`, n);
       g.events.emit('smelter');
       g.logMsg(`Packed: ${n > 1 ? `${n} × ` : ''}${itemDef(taken.id).name.toLowerCase()}. About ${Math.round(seconds)} seconds of heat each.`, 'event');
     },

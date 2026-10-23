@@ -26,6 +26,7 @@ import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS } from '../../game/prices';
 import { RECENT } from './craft';
+import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
 import { PLACED_REACH, QL_TOP as NEWS_QL_TOP } from '../../game/limits';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
@@ -59,6 +60,7 @@ import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, T
 import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
+import { GOALS_B } from '../../game/journal-b';
 import { FRUITING } from '../../game/fruiting';
 import { SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY } from '../../game/bees';
 import { BUTTER_PATS, GORRAL_MILK } from '../../game/dairy';
@@ -144,6 +146,7 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase } fr
 import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/learn';
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS } from '../../game/journal';
+import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
 import { idleSays, LEDGER_ITEMS, LEDGER_SHOWN } from '../../game/workerlog';
 import { CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HEARTH_FULL, HOME_LEG, HOME_SLACK, MONSTER_CAP, MONSTERS, REED_LEVELS, SPECIES, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
 import { TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -3400,6 +3403,38 @@ export const NEWS: News[] = [
       'Fixed: a guard after something wild stopping at the edge of its reach, never striking, never letting go; with it, a Sparra on the settlement idle, no guard free to spar. Its chase now ends half its reach off.',
     ],
   },
+  {
+    n: 272,
+    day: '2026-10-23',
+    lines: () => [
+      `Changed: Vesp task ${GATHER_VERB.hive}: the nearest hive with room in its reach of the totem; per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back.`,
+      `Changed: Vesp honey into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked per clump within ${SKEP_REACH} tiles, per Vesp; a beeswax per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Was comb every second, whatever was in flower.`,
+      `Changed: Vesp ledger: trips as goes, honey and beeswax made. Learning factor ${percent(PACE_258.hive)} on ${GATHER_SKILL.hive.replace(/_/g, ' ')}, for its trips.`,
+      'Changed: a Vesp following you fills no hive. Was comb every second on your settlement.',
+      `Added: Vesp idle reasons: hives full; no wildflowers within ${SKEP_REACH} tiles of its hive; ${SKEP_IDLE}.`,
+      `Changed: wildflower pickers leave tiles within ${SKEP_REACH} of a hive, as of a skep.`,
+    ],
+  },
+  {
+    n: 273,
+    day: '2026-10-23',
+    lines: () => [
+      `Added: ${WILDERMON_A.length + STANDING_A.length + GOALS_B + ISLAND_GOALS.length + WILDERMON_GOALS_C.length + TRADE_GOALS.length} goals in the journal: The wildermon, Standing, The crafts, The land, The water, The island, People and trade.`,
+    ],
+  },
+  {
+    n: 274,
+    day: '2026-10-23',
+    lines: () => [
+      ...TWO_LINES.map((id) => {
+        const d = SPECIES[id];
+        const [one, two] = d.stages!;
+        return `Replaced: ${d.was![0]} with ${d.name}; evolves to ${one.name} at level ${EVOLVE_AT[0]}, ${two.name} at ${EVOLVE_AT[1]}. Same task and stats.`;
+      }),
+      `Each stage: own model, animations and voice. Stage 2: ${stageSays(1)}; stage 3: ${stageSays(2)}.`,
+      `Added: stage 3 skill: ${TWO_LINES.map((id) => `${SPECIES[id].stages![PERK_STAGE - 1].name} ${perkSays(id)}`).join('; ')}.`,
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */
@@ -3407,6 +3442,9 @@ const UNSCALED = ['glossa', 'testa', 'thumpa', 'spitta', 'scorcha', 'brittla', '
 
 /** The nine kinds What's new 251 gives new lines. */
 const NINE_LINES = ['sappa', 'sprigga', 'rowl', 'snout', 'wicka', 'thumpa', 'stona', 'lungra', 'bogga'];
+
+/** The two kinds What's new 274 gives new lines. */
+const TWO_LINES = ['plucka', 'grista'];
 
 /** The eight kinds What's new 262 gives new lines. */
 const EIGHT_LINES = ['magga', 'grazza', 'grubba', 'wurla', 'mudda', 'dippa', 'middun', 'sparra'];

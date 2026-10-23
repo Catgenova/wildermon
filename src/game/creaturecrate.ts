@@ -259,7 +259,7 @@ function swapRefusal(g: Game): string | null {
 /** What a worker set to the deed will do, said the same way whether it came off a leash or out of a crate. */
 export function deedJobLine(c: Creature): string {
   const gathers = c.trade ?? SPECIES[c.species].gathers;
-  // A swarm at the hives brings nothing to the crate: the hives fill themselves while it keeps them. Nor does
+  // A Vesp brings nothing to the crate: what it gathers goes into its hive (`vespTrip`). Nor does
   // a trade worked at the stores or at your own (`TEND_JOBS`): its words already say where what it makes goes; nor a scurra's scrubbing.
   const tail = gathers === 'hive' || gathers === 'scrub' || TEND_JOBS.has(gathers ?? 'forage') ? '' : '; output to the crate';
   return gathers

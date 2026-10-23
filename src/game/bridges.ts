@@ -444,6 +444,8 @@ export const BRIDGE_ACTIONS: ActionDef[] = [
         if (left) g.logMsg(`Span decked. ${left} open.`, 'event');
         else {
           g.note('bridged');
+          // And which kind, for the journal's drawbridge (the island's the same).
+          g.note(`bridged:${b.kind}`);
           g.logMsg(`Last span decked: ${bridgeName(b).toLowerCase()} open. ${def.carts ? 'Carts may cross.' : 'Foot traffic only.'}`, 'system');
         }
       } else {

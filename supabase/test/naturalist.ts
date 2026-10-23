@@ -17,7 +17,6 @@
  *   * the remedies, made only with the perk and used by anybody: herb tea's
  *     stamina, a salve's wound that never goes bad, and a tincture's four
  *     trades, beside a dish's knack rather than in its place;
- *   * a hive filling at last on an island, which is where a salve's wax is;
  *   * the Naturalist's tree gone;
  *   * and the browser reckons and says the same.
  *
@@ -29,7 +28,6 @@ import { ACTION_BY_ID, GRASS_PER_CUT, REED_CUT, type Target } from '../../src/ga
 import { TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS } from '../../src/game/boons';
 import { DRESS_CHECK } from '../../src/game/firstaid';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, rollsAt } from '../../src/game/forage';
-import { hiveRate, HIVE_WAX } from '../../src/game/furniture';
 import { ITEM_DEFS, RARITIES } from '../../src/game/items';
 import { perksOf, type PerkDef } from '../../src/game/perks';
 import { RECIPE_BY_ID, RECIPE_PERK_SAYS } from '../../src/game/recipes';
@@ -118,8 +116,6 @@ const DYE_STUFF = RECIPE_BY_ID.get(DYE)?.inputs[0].item ?? 'blueberry';
 const DOUBLE_NEED = countForGrams(DYE_STUFF, dyeGrams(BOIL_LITRES, fx('Double Boil', 'litres:dye')));
 /** The litres of dye in the bucket a boil leaves. */
 const dyeLitres = `(select coalesce(sum((dye_in(i)).litres), 0) from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'dye_bucket')`;
-const HIVE_QL = 50;
-const HIVE_AGO = 600;
 
 const out = psql(`
 begin;
@@ -483,32 +479,6 @@ begin
   update player set boons = '[]'::jsonb where world_id = w and uid = u;
   ${clearAll};
 
-  /* ---- A hive on the settlement with a Vesp kept by it, ten minutes on: wax under the dice, honey over. ---- */
-  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, material, made_by)
-    values (w, 'furniture', 'hive', 9, 10, 0, 0, 9.5, 10.5, ${HIVE_QL}, 'Pine', u) returning id into v_hive;
-  v_c := creature_spawn(w, 'vesp', 8.5, 10.5, 'deed', now() - interval '3 hours', u);
-  update creature set hunger = 1, from_x = 8.5, from_y = 10.5, to_x = 8.5, to_y = 10.5, leg_at = now(), leg_ends = now(),
-         settled_at = now() where world_id = w and id = v_c;
-  update placed set state = jsonb_build_object('comb', 0, 'hive_at', now() - make_interval(secs => ${HIVE_AGO})) where id = v_hive;
-  ${dice(HIVE_WAX / 2)};
-  perform hive_sweep(w);
-  v_t := (select coalesce(string_agg(def || ':' || count, ',' order by def), 'empty') from item where world_id = w and holder = 'furniture' and placed = v_hive);
-  delete from item where world_id = w and holder = 'furniture' and placed = v_hive;
-  update placed set state = jsonb_build_object('comb', 0, 'hive_at', now() - make_interval(secs => ${HIVE_AGO})) where id = v_hive;
-  ${dice(HIVE_WAX + (1 - HIVE_WAX) / 2)};
-  perform hive_sweep(w);
-  ${nodice};
-  v_t := v_t || '|' || (select coalesce(string_agg(def || ':' || count, ',' order by def), 'empty') from item where world_id = w and holder = 'furniture' and placed = v_hive);
-  -- And none without a swarm kept by it.
-  delete from item where world_id = w and holder = 'furniture' and placed = v_hive;
-  update creature set keeper = null, mode = 'wild' where world_id = w and id = v_c;
-  update placed set state = jsonb_build_object('comb', 0, 'hive_at', now() - make_interval(secs => ${HIVE_AGO})) where id = v_hive;
-  perform hive_sweep(w);
-  insert into said values ('HIVE', v_t || '|' || (select count(*) from item where world_id = w and holder = 'furniture' and placed = v_hive)
-    || '|' || hive_rate(${HIVE_QL}) || '|' || sweep_every());
-  delete from creature where world_id = w and id = v_c;
-  delete from placed where id = v_hive;
-
   /* ---- Gold coins in the grass: found when the dice fall under the odds, no more than a day's worth for one person. ---- */
   delete from item where world_id = w and holder = 'player' and holder_uid = u and def = 'coin';
   delete from coin_found where world_id = w and uid = u;
@@ -659,13 +629,6 @@ check('and it says so, in the browser\'s words',
 check('and a dish of one of its trades puts back the clock on the dish\'s knack, not on the tincture\'s', Number(say('DISH')) <= 10, say('DISH'));
 void want;
 
-/* ---- the hive -------------------------------------------------------------------------- */
-
-const [hiveWax, hiveHoney, hiveNone, rate, every] = say('HIVE').split('|');
-const combs = Math.floor(hiveRate(HIVE_QL) * Math.min(HIVE_AGO, 2 * Number(every)));
-check(`a hive of QL ${HIVE_QL} with one swarm kept by it draws ${combs} comb in ${HIVE_AGO} seconds, as the browser reckons it`,
-  near(Number(rate), hiveRate(HIVE_QL)) && hiveWax === `wax:${combs}` && hiveHoney === `honey:${combs}`, say('HIVE'));
-check('and none with no swarm kept by it', hiveNone === '0', hiveNone);
 check('and the Naturalist\'s tree is gone', say('NODES') === '0:0', say('NODES'));
 
 /* ---- the browser's half ---------------------------------------------------------------- */

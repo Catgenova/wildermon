@@ -57,7 +57,7 @@ import { WORN_FLOOR, WORN_SPAN } from '../../game/limits';
 import { CRATE_DEFS, SUBTILES } from '../../game/crates';
 import { PERK_STAGE, perkSays, STAGE_PERKS } from '../../game/creatures';
 import {
-  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
+  AGES, BLOW_SHARE, BREED_REST, CARE_BONUS, CARE_HOURS, COAX_LAPSE, COAX_STEP, COMPANION_LEASH, COMPANION_SIGHT, cookRecipes, restoredMul, STYLE_SAYS, sparTaskSays, SPAR_SLACK, SPAR_YIELD, abilityName, abilitySays, GATHER_DO, GATHER_SKILL, GATHER_VERB, panFind, REED_LEVELS, RESIN_TAPPED, SKILL_TOP, TEND_JOBS, GESTATION, GRAZE_FILL, HUNGRY, HUNT_REST, HUNT_SIGHT, MONSTER_CAP, MONSTER_KEEP_OFF,
   BED_REST, DEN_HEALTH, restFor, SPECIALTY_AT, SPECIALTY_BONUS, TIRE_GOES, UNFED_PACE, unfedSays, UPKEEP_FOR,
   BASE_STATS, BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT, BLOW_MEMORY, EVOLVE_AT, FILE_RARITY_ODDS, HOME_SLACK, LEARNS_SAYS, PULL_LEARN, MONSTER_SHARE, MONSTERS, OLD_AT, WILD_STAY, POT_MOST, POT_STEP, PULL_DEFAULT, RANGE_PER_STEP, rangeSteps, seasonSays, SKILL_STEP, SPECIES, stageSays, trainedHit, YOUNG_FOR, FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, levelSkill, stageLevels, tameNeeds, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_TAME, LEARN_PACE, learnPaceSays, STAGE_LOADS, TEND_REACH,
 } from '../../game/creatures';
@@ -907,7 +907,7 @@ const HAND_NUMBERS: Record<string, string> = {
   simma: `it tries ${cookRecipes().length} recipes in the order the recipes are listed, from ${itemDef(RECIPE_BY_ID.get(cookRecipes()[0])!.result).name.toLowerCase()} on`,
   relka: `a relic comes out at what its pieces were worth less their damage, times ${percent(restoredMul(1))} at no restoration and ${percent(restoredMul(SKILL_TOP))} at ${SKILL_TOP}`,
   ambra: `${RESIN_TAPPED} tar a pine a day`,
-  petta: `it leaves every tile within ${SKEP_REACH} of a skep to the skep`,
+  petta: `it leaves every tile within ${SKEP_REACH} of a skep or a hive to the bees`,
 };
 
 /**
@@ -2129,6 +2129,7 @@ export function helpText(): string {
       <li>Who may take: whoever set it down, and anybody of the settlement it stands on.</li>
       <li><b>Examine</b>: clumps in reach this season, honey an hour, contents, capacity.</li>
       <li>Picked up and set down: restarts empty. Not allowed in a cellar.</li>
+      <li><b>Hive</b> worked by a Vesp (its settlement task): the skep's rate for the clumps within ${SKEP_REACH} tiles of the hive, per Vesp, for its hours at work; take out like a store.</li>
     </ul>
     <h3>Mote swirls and elementalism</h3>
     <ul>
@@ -2946,8 +2947,10 @@ export function helpText(): string {
       <li><b>${SPECIES.warda.name}</b> (was Warda): sees ${SPECIES.warda.sight} tiles for you wherever it stands. Evolves: ${evolves('warda')}.</li>
       <li><b>Quill</b>: <b>pluck</b> for <b>feathers</b>.</li>
       <li><b>Cudda</b>: <b>milked</b> into an empty bucket; a bucket of milk makes ${made('make_cheese')} <b>cheeses</b>.</li>
-      <li><b>Vesp</b>: a swarm. Build a <b>hive</b> (${bill('make_hive', true)}) on your settlement; a tamed Vesp set to work the settlement (task <b>${GATHER_VERB.hive}</b>) goes to the nearest hive in reach
-      and fills it with <b>honey</b> and <b>beeswax</b>. Brings nothing to the crate; reports when no hive is in reach. ${capital(bill('make_candle'))}: ${made('make_candle')} <b>candles</b>.</li>
+      <li><b>Vesp</b>: a swarm. Build a <b>hive</b> (${bill('make_hive', true)}) on your settlement. Task <b>${GATHER_VERB.hive}</b>: the nearest hive with room within its reach of the totem;
+      per go, out to one wildflower tile within ${SKEP_REACH} tiles of the hive, in turn, and back. <b>Honey</b> into the hive: a skep's rate there, a honey per ${SKEP_CLUMP_HOURS} hours worked
+      per clump within ${SKEP_REACH} tiles, per Vesp; a <b>beeswax</b> per ${SKEP_WAX_EVERY} honey; none in ${SKEP_IDLE}. Quality (QL): as a gathered load, its ${SKILL_NAME(GATHER_SKILL.hive).toLowerCase()}.
+      Idle: no hive in reach, hives full, no wildflowers within ${SKEP_REACH} tiles of its hive, ${SKEP_IDLE}. Following you: fills no hive. ${capital(bill('make_candle'))}: ${made('make_candle')} <b>candles</b>.</li>
       <li><b>Lume</b>: out only after dark; lights ${SPECIES.lume.glow ?? 0} tiles round itself.</li>
     </ul>
     <h4>The settlement's hands</h4>

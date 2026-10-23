@@ -346,6 +346,7 @@ export const CELLAR_ACTIONS: ActionDef[] = [
       g.logMsg(`Dug: dirt, QL ${item.ql.toFixed(1)}. Cellar ${downSaid(dug)}.`, 'event');
       maybeMap(g, 'digging', 'shovel');
       if (dug >= CELLAR_DEPTH) {
+        g.note('cellar');
         g.logMsg(`Cellar fully dug: ${metres(CELLAR_DEPTH)} m down.`, 'event');
         return false;
       }
@@ -395,13 +396,17 @@ export const CELLAR_ACTIONS: ActionDef[] = [
       const dug = slice(g, site.x, site.y, site.b.id);
       // What the rock under the building gives, as a face of it would: shards, or the ore of a seam.
       const rock = bedrockAt(g.world, site.x, site.y);
-      if (rock.yields.endsWith('_ore')) g.note('ore');
+      if (rock.yields.endsWith('_ore')) {
+        g.note('ore');
+        g.note(`ore:${rock.yields}`);
+      }
       const item = g.gather(rock.yields, { ql: Math.min(rock.maxQl, g.productQl('mining', pickQl)) });
       const what = itemDef(rock.yields).name.toLowerCase();
       g.logMsg(`Mined: ${what}, QL ${item.ql.toFixed(1)}. Cellar ${downSaid(dug)}.`, 'event');
       maybeMap(g, 'mining', 'pickaxe');
       maybeGem(g, 'mining', 'pickaxe');
       if (dug >= CELLAR_DEPTH) {
+        g.note('cellar');
         g.logMsg(`Cellar fully dug: ${metres(CELLAR_DEPTH)} m down.`, 'event');
         return false;
       }

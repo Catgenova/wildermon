@@ -108,6 +108,7 @@ export const SIGN_ACTIONS: ActionDef[] = [
       if (!it || signRefusal(g, t)) return;
       const text = cleanSignature(String((t as { name?: unknown }).name ?? ''));
       it.engraving = text;
+      g.note('signed');
       g.inventory.onChange?.();
       g.logMsg(signedSaid(text), 'event');
       g.events.emit('inventory');

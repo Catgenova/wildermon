@@ -10,8 +10,11 @@ import { BLESS_CAP } from './faith';
 import { FURNITURE_BY_ID } from './furniture';
 import { ENCHANTMENTS } from './enchant';
 import { GOAL_HOW } from './journalhow';
+import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from './journal-c';
 import { capital, fill, listed } from './words';
 import { REACH_FORCE } from './wind';
+import { STANDING_A, WILDERMON_A } from './journal-a';
+import { CRAFTS_B, LAND_B, WATER_B } from './journal-b';
 
 /**
  * A journal of goals. There is a great deal to do on this island and nothing
@@ -141,6 +144,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'improve90', text: 'Improve an item to quality 90', met: did('improved90') },
       { id: 'rare', text: 'Make a rare item', met: did('rare') },
       { id: 'supreme', text: 'Make a supreme item', met: did('supreme') },
+      ...CRAFTS_B,
     ],
   },
   {
@@ -153,6 +157,7 @@ export const JOURNAL: Chapter[] = [
       { id: 'oil', text: 'Press olive oil', met: did('made:olive_oil') },
       { id: 'brew', text: 'Start a brew in a barrel', met: did('brew') },
       { id: 'fourbrews', text: 'Brew ale, cider, mead and wine', met: (g) => ['ale', 'cider', 'mead', 'wine'].every((b) => (g.tally[`brew:${b}`] ?? 0) > 0) },
+      ...LAND_B,
     ],
   },
   {
@@ -164,8 +169,10 @@ export const JOURNAL: Chapter[] = [
       { id: 'allfish', text: 'Catch every kind of fish', hint: FISH.map((f) => f.name.toLowerCase()).join(', '), met: (g) => FISH.every((f) => (g.tally[`fish:${f.id}`] ?? 0) > 0) },
       // Any boat of yours with a sail: a caravel is one too.
       { id: 'sail', text: 'Build a sailing boat', met: (g) => ours(g.furniture.values()).some((f) => !!FURNITURE_BY_ID.get(f.kind)?.boat?.sail) },
+      ...WATER_B,
     ],
   },
+  { name: 'The island', goals: ISLAND_GOALS },
   {
     name: 'The wildermon',
     goals: [
@@ -231,6 +238,9 @@ export const JOURNAL: Chapter[] = [
       // Born to a dam of yours, as the line says: a bought or traded one with the trait is not bred.
       { id: 'fantastic_blood', text: 'Breed a wildermon with a fantastic trait', met: did('fantasticblood') },
       { id: 'husbandry', text: 'Reach animal husbandry 50', met: skill('animal_husbandry', 50) },
+      ...WILDERMON_A,
+
+      ...WILDERMON_GOALS_C,
     ],
   },
   {
@@ -250,8 +260,10 @@ export const JOURNAL: Chapter[] = [
       { id: 'relic', text: 'Restore an ancient relic from its pieces', met: did('restored') },
       // In a bed you built, as it says: anybody's bed did.
       { id: 'rest', text: 'Sleep in a bed you built', met: did('slept:own') },
+      ...STANDING_A,
     ],
   },
+  { name: 'People and trade', goals: TRADE_GOALS },
   {
     name: 'A lifetime',
     goals: [

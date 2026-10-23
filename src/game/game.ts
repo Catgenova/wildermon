@@ -28,7 +28,8 @@ import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type 
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
 import { smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume, type SmeltJob } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
-import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRate, hiveRoom, HIVE_SWARMS, HIVE_WAX, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, STATION_REACH, type BoatDef, pieceShut } from './furniture';
+import { hiveTakes } from './bees';
 import { crateTheRest, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
 import { cropStageSeconds, RIPE, settleCrop, type Crop } from './farming';
@@ -51,6 +52,9 @@ import { ARMOUR_BY_ID, ARMOUR_CLASSES, HIT_LOCATIONS, pieceBurden, pieceSoak, SH
 import { boonOf, boonTime, BOON_BONUS, clockLeft, REST_CAP, REST_MULT, REST_PER_SECOND, TINCTURE_BONUS, TINCTURE_SECONDS, TINCTURE_SKILLS, type Boon } from './boons';
 import { cleanSaid } from './chat';
 import { ALL_GOALS } from './journal';
+import { journalRulesA } from './journal-a';
+import * as creatureRules from './creatures';
+import * as guideRules from './guide';
 import { FieldGuide, formSeenLine, GUIDE_LOOK, guideEntry, guideMarks, guideName, seenLine, stageKey, type GuideBook, type GuideMark } from './guide';
 import { formKey, formsOf } from './wildforms';
 import { matOf, rollEase, workingQl } from './materials';
@@ -300,6 +304,8 @@ export const BROWSER_TALLY: ReadonlySet<string> = new Set(['reach', 'laden']);
 export const deedLevel = (d: Deed | null): number => Math.max(1, Math.min(MAX_DEED_LEVEL, d?.level ?? 1));
 export const deedRadiusAt = (level: number): number => DEED_RADIUS + (level - 1) * DEED_RADIUS_PER_LEVEL;
 export const deedWorkersAt = (level: number): number => DEED_WORKERS_AT_LEVEL_ONE + (level - 1);
+// The journal's goals of the wildermon and of a settlement read these, handed over now the game is running (`journal-a.ts`).
+journalRulesA(creatureRules, guideRules, { most: MAX_DEED_LEVEL, workersAt: deedWorkersAt });
 
 /**
  * UI questions the game needs; main.ts wires them to the interface.
@@ -4438,6 +4444,8 @@ export class Game {
        * walk it is told about (`rpc_move`), as it pays climbing.
        */
       if (!this.bodyFromIsland && driven) this.gainSkill(boat ? SAILING : DRIVING, boat ? SAILING_LEARN : DRIVING_LEARN);
+      // And a tile sailed, for the journal (the island's `rpc_move` the same).
+      if (driven && boat) this.note('sailed');
       /*
        * And the same tile is a go for every beast in the traces of a large
        * cart or a wagon that learns its own skill by pulling, a Roxxen its
@@ -7317,39 +7325,17 @@ export class Game {
     return WELL_TRICKLE + (f.ql / WELL_TRICKLE_AT) * WELL_TRICKLE_QL;
   }
 
-  /** Comb a hive draws in a second for each swarm keeping it. */
-  hiveRate(f: PlacedFurniture): number {
-    return hiveRate(f.ql);
-  }
-
   /**
-   * Swarms kept on the deed. A Vesp is not put to work like the other
-   * wildermon: all it does is live here, and a hive within reach of where it
-   * lives fills itself. Three of them is as much as one hive can hold with.
+   * What a Vesp brought from its trip, into its hive (`hiveTakes`): the whole honey and beeswax it made, which go in
+   * at the quality of the honey toward them. The island's `vesp_put`.
    */
-  private swarms(): number {
-    let n = 0;
-    for (const c of this.creatures.list.values()) {
-      if (c.mode !== 'deed' && c.mode !== 'active') continue;
-      if (!this.creatures.species(c).hives || !this.onDeed(c.x, c.y)) continue;
-      if (++n >= HIVE_SWARMS) break;
-    }
-    return n;
-  }
-
-  /** Three parts honey to one of wax, which is about what a comb is. */
-  private fillHive(f: PlacedFurniture, swarms: number, dt: number): void {
-    let comb = (f.comb ?? 0) + this.hiveRate(f) * swarms * dt;
-    let made = 0;
-    while (comb >= 1 && hiveRoom(f) > 0) {
-      comb -= 1;
-      const id = this.rand() < HIVE_WAX ? 'wax' : 'honey';
-      const ql = Math.min(100, Math.max(1, f.ql * (0.7 + this.rand() * 0.6)));
-      this.furnitureAdd(f, { uid: this.inventory.nextUid++, id, ql, dmg: 0, count: 1 });
-      made++;
-    }
-    f.comb = comb;
-    if (made) this.events.emit('crate');
+  hivePut(f: PlacedFurniture, honey: number, ql: number): { honey: number; wax: number } {
+    const made = hiveTakes(f, honey, ql);
+    const q = Math.min(100, Math.max(1, made.ql));
+    if (made.honey) this.furnitureAdd(f, { uid: this.inventory.nextUid++, id: 'honey', ql: q, dmg: 0, count: made.honey });
+    if (made.wax) this.furnitureAdd(f, { uid: this.inventory.nextUid++, id: 'wax', ql: q, dmg: 0, count: made.wax });
+    if (made.honey || made.wax) this.events.emit('crate');
+    return made;
   }
 
   /**
@@ -7378,9 +7364,6 @@ export class Game {
    * grave whose hour is up crumbling.
    */
   private runPlaceables(dt: number): void {
-    // Counted the first time a hive with room in it asks, and not at all
-    // when there is no hive on the deed.
-    let swarms = -1;
     // Graves keep real time, like the woods; an island crumbles its own.
     const now = Date.now() / 1000;
     const crumbled: PlacedFurniture[] = [];
@@ -7396,10 +7379,6 @@ export class Game {
           this.logMsg('Oven out of fuel.', 'event');
           this.events.emit('world', f.x, f.y);
         }
-      }
-      if (def.hive && hiveRoom(f) > 0 && this.onDeed(f.x, f.y)) {
-        if (swarms < 0) swarms = this.swarms();
-        if (swarms > 0) this.fillHive(f, swarms, dt);
       }
       if (def.pond && hiveRoom(f) > 0 && this.onDeed(f.x, f.y)) this.stockPond(f, dt);
       if (f.ferment !== undefined && f.ferment > 0) {
@@ -9882,7 +9861,10 @@ export class Game {
     const had = w.wear.get(i) ?? 0;
     if (had >= WEAR_MOST) return;
     w.wear.set(i, had + 1);
-    if (had + 1 >= WEAR_TRAIL && here !== TileType.Trail) w.setTile(x, y, TileType.Trail, here);
+    if (had + 1 >= WEAR_TRAIL && here !== TileType.Trail) {
+      w.setTile(x, y, TileType.Trail, here);
+      this.note('trail');
+    }
   }
 
   /**

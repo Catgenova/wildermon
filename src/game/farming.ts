@@ -388,11 +388,14 @@ function reapOne(g: Game, c: Crop): { produce: Item; got: number; seeds: number;
   const more = g.pathFx('harvest', 1);
   const got = Math.max(1, Math.round(y.produce * more)) + g.perk(`plus:${def.produce}`, 0);
   const produce = g.gather(def.produce, { count: got, ql });
+  g.note(`harvest:${def.produce}`);
   // At `SEED_CHANCE`, or what the harvester's perks make of it (`seed:harvest_crop`).
   const seeds = harvestSeeds(g.rand, g.perk('seed:harvest_crop', SEED_CHANCE));
   if (seeds > 0) g.gather(def.seed, { count: seeds, ql });
   const grass = g.perk('fodder:harvest_crop', 0);
   if (grass > 0) g.inventory.add('mixed_grass', { count: grass, ql });
+  // Grown under glass, for the journal (the island's `harvest_crop` the same).
+  if (c.glass) g.note('harvest:glass');
   g.uproot(c);
   return { produce, got, seeds, ql };
 }

@@ -147,6 +147,7 @@ export const CHART_ACTIONS: ActionDef[] = [
       const c: Chart = { x: g.player.tileX, y: g.player.tileY, r: chartReach(ql) };
       g.inventory.remove(sheet.uid, 1);
       g.inventory.add(CHART_ITEM, { ql, extra: chartExtra(c) });
+      g.note('charted');
       g.logMsg(drawnSaid(c, ql), 'event');
     },
   },

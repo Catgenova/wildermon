@@ -28,7 +28,8 @@ import { GRAPE, grapesFor, isTrellis, vineStage } from './vineyard';
 import { BUSH_DEFS, bushSpecies, FLOWERS_PICKED, mownDays, MOWN_TODAY } from '../world/tiles';
 import { besideWater, CUT_GRASS, PAN_ORES, RESIN_TREE, RICH_WORMS, tappable, WORMY } from './actions';
 import { flowersHere } from './wildflowers';
-import { SKEP, SKEP_REACH } from './bees';
+import { SKEP, SKEP_CLUMP_HOURS, SKEP_IDLE, SKEP_REACH, SKEP_WAX_EVERY, skepFlowers, VESP_REST, vespHoney, vespTrip } from './bees';
+import { seasonAt } from '../world/calendar';
 import { greenNow, greenOnTile, scrubTile } from './greening';
 import { GRASS_PER_CUT, MOSS_PER_CUT, QL_TOP } from './limits';
 import { PIER_SHOO } from './piers';
@@ -55,7 +56,8 @@ import { auraMul, bredLine, breedTraits, channelOf, CHANNELS, LAMP_TIER_ODDS, li
 import { ACTION_FLOOR, ACTION_PACE, WORKER_WEIGHT } from './pace';
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './creaturecrate';
-import { IDLE_WHYS, ledgerAdd, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
+import { IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerlog';
+import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
 import { BACK_PACE, BACK_SLACK, BLINDSIDE, blowEvery, BODKIN_HIDE, KNIFE_BLEED, STUN_SECS, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS, circlePoint, CIRCLE_ARC, CIRCLE_R, COMPANION_BLOW, COMPANION_LEASH, COMPANION_PACE, COMPANION_REACH, COMPANION_SIGHT, COWARD_DRAG, FIGHT_GIVE_UP, FIGHT_LEASH, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HEAVY_EVERY, HEAVY_HIT, HUNT_REACH, KEEP_OFF, KNIFE_BLEED_SECS, PACK_CALL, PACK_MOST, PACK_RANGE, slotAngle, THROW_HIT, THROW_REACH, turnsAt, turnTo, WIND_UP, type Hide } from './fight';
@@ -149,7 +151,7 @@ export type GatherKind =
   | 'stump'
   // A plucka picks what a bearing tree has on it and carries it home.
   | 'fruit'
-  // A vesp tends the hives on the deed, which fill with honey and beeswax while it does (`HIVE_SWARMS`).
+  // A vesp works a hive on the deed as bees work a skep: out to the wildflowers in reach of it and back with honey (`vespTrip`).
   | 'hive'
   // The settlement's own hands (`TEND_JOBS`): a kemma brushes the herd, a sheela milks and shears it, a salva
   // dresses its hurts, a carra butchers the carcasses in the stores, a tanna tans the hides, a grista mills
@@ -350,7 +352,7 @@ const STONE_FACES: ReadonlySet<number> = new Set([TileType.Rock, TileType.Snow])
 export const GATHER_SKILL: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'woodcutting', farm: 'farming', mine: 'mining', sand: 'digging', clay: 'digging', quarry: 'mining', stoke: 'smelting', fetch: 'foraging', guard: 'body_strength', hunt: 'fighting', peat: 'digging', reed: 'foraging', water: 'carrying', prospect: 'prospecting', plant: 'forestry', hod: 'masonry', mend: 'repair', compost: 'farming', seek: 'archaeology', fish: 'fishing', prune: 'forestry', stump: 'digging', fruit: 'forestry' , hive: 'animal_husbandry', groom: 'animal_husbandry', dairy: 'animal_husbandry', heal: 'first_aid', butcher: 'butchering', tan: 'leatherworking', mill: 'milling', lamp: 'carrying', bush: 'forestry', grass: 'foraging', pan: 'prospecting', smelt: 'smelting', kiln: 'pottery', ash: 'alchemy', brew: 'brewing', cook: 'cooking', restore: 'restoration', patch: 'farming', worm: 'digging', sprout: 'forestry', resin: 'forestry', flower: 'foraging', scrub: 'masonry', saw: 'carpentry', chisel: 'stonecutting', brick: 'pottery', rope: 'ropemaking', fletch: 'fletching', paper: 'papyrusmaking', glaze: 'pottery', fill: 'carrying' };
 export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', botanize: 'botanizing', woodcut: 'felling trees', farm: 'farming', mine: 'mining ore', sand: 'digging sand', clay: 'digging clay', quarry: 'cutting stone', stoke: 'stoking', fetch: 'fetching', guard: 'guarding', hunt: 'hunting', peat: 'cutting peat', reed: 'cutting reeds', water: 'carrying water', prospect: 'prospecting', plant: 'planting', hod: 'hod carrying', mend: 'mending', compost: 'composting', seek: 'seeking relics', fish: 'fishing', prune: 'pruning', stump: 'digging out stumps', fruit: 'picking fruit' , hive: 'tending hives', groom: 'grooming', dairy: 'milking and shearing', heal: 'healing', butcher: 'butchering', tan: 'tanning hides', mill: 'milling', lamp: 'lamplighting', bush: 'picking bushes and vines', grass: 'cutting grass and moss', pan: 'panning', smelt: 'charging smelters', kiln: 'loading kilns', ash: 'raking ashes', brew: 'brewing', cook: 'cooking', restore: 'restoring', patch: 'tending planters', worm: 'digging worms', sprout: 'picking sprouts', resin: 'tapping pines', flower: 'picking wildflowers', scrub: 'scrubbing stone', saw: 'sawing planks', chisel: 'chiselling stone brick', brick: 'shaping clay brick', rope: 'making rope', fletch: 'fletching arrows', paper: 'pressing papyrus', glaze: 'glazing pottery', fill: 'filling buckets' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'tend the hives', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye; needs a carving knife in your settlement stores', mill: 'grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'dig sand', clay: 'dig clay', quarry: 'cut stone', stoke: 'keep fires and furnaces fuelled', fetch: 'pick up dropped items; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'cut peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls on any storey, floors, roofs, staircases, ladders, columns, bridge or aqueduct spans, foundations', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, dairy: `milk your cudda into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, butcher: 'butcher carcasses in your settlement stores; output to your settlement stores', tan: 'tan hides in your settlement stores with lye; needs a carving knife in your settlement stores', mill: 'grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', kiln: 'load your kilns with unfired pottery from your settlement stores and empty them', ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations and statues and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log; needs a saw in your settlement stores`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard; needs a chisel in your settlement stores`; },
@@ -477,7 +479,7 @@ export interface SpeciesDef {
   shearYield?: string;
   /** Can be milked into an empty bucket. */
   milk?: boolean;
-  /** Keeps a hive of its own going, so long as one stands on the deed. */
+  /** Works hives: its trade fills them with honey off the wildflowers in reach (`vespTrip`). */
   hives?: boolean;
   /** Only ever found out of doors after dark. */
   nocturnal?: boolean;
@@ -658,6 +660,8 @@ export const STAGE_PERKS: Record<string, StagePerk> = {
   dippa: { kind: 'loads', n: 1, what: 'buckets per trip' },
   middun: { kind: 'loads', n: 1, what: 'items per trip' },
   sparra: { kind: 'blood', n: 1.1, channel: 'tough', what: 'blow' },
+  plucka: { kind: 'more', n: 1, what: 'fruit per pick' },
+  grista: { kind: 'loads', n: 1, what: 'batches per cycle' },
 };
 /** Its line's own skill, once it is at `PERK_STAGE`; null below it, and for a kind that has none. */
 export const stagePerk = (c: Pick<Creature, 'species' | 'skills'>): StagePerk | null =>
@@ -821,10 +825,10 @@ export const LOAD_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
  * went to, with a bucket or a dressing for each out of what it fetched. The island's `hands_trade`.
  *
  * Left as they were, as no step of theirs is something a stage could do more of at once: a keeping watch and a hunt,
- * which carry nothing but a carcass on a walk of its own; pruning, digging out stumps, scrubbing and tending a hive,
- * which bring nothing home; reading the ground, which carries nothing and reads where it stands; charging a smelter
- * or a kiln, whose every go already moves a whole stack, as much as the furnace has room for; and brewing, where each
- * barrel is a walk of its own.
+ * which carry nothing but a carcass on a walk of its own; pruning, digging out stumps and scrubbing, which bring
+ * nothing home; a Vesp's trip, one flower and back to its hive; reading the ground, which carries nothing and reads
+ * where it stands; charging a smelter or a kiln, whose every go already moves a whole stack, as much as the furnace
+ * has room for; and brewing, where each barrel is a walk of its own.
  */
 export const HANDS_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
   'mend', 'butcher', 'restore', 'glaze', 'tan', 'mill', 'saw', 'chisel', 'brick', 'rope', 'fletch', 'cook', 'paper', 'ash',
@@ -1033,10 +1037,10 @@ export const LEARN_PACE_MOST = 4;
 export const LEARN_PACE: Record<GatherKind | LearnsBy, number> = {
   // Out to the ground and home with a load.
   forage: 0.94, botanize: 0.95, woodcut: 0.92, farm: 0.91, mine: 1.01, quarry: 1.04, sand: 1, clay: 1.01, peat: 1.04,
-  reed: 0.98, fetch: 1, compost: 1.03, fruit: 1.09, bush: 1.06, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
-  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.95, hive: 0.93,
+  reed: 0.98, fetch: 1, compost: 1.03, fruit: 1.01, bush: 1.06, grass: 1.01, sprout: 0.99, resin: 1.06, flower: 1.04,
+  worm: 0.98, fish: 0.99, seek: 0.99, pan: 0.95, prune: 0.95, stump: 0.96, scrub: 0.95, hive: 1.01,
   // At the stores, a fire, a press or a barrel, one thing after another.
-  mend: 1, butcher: 0.7, restore: 0.7, glaze: 1.05, tan: 0.84, mill: 0.84, saw: 0.84, chisel: 0.84, brick: 0.84,
+  mend: 1, butcher: 0.7, restore: 0.7, glaze: 1.05, tan: 0.84, mill: 0.81, saw: 0.84, chisel: 0.84, brick: 0.84,
   rope: 0.84, fletch: 0.84, cook: 0.84, paper: 0.84, ash: 0.97, brew: 0.71,
   // To one of yours, or to a piece of yours, with something out of the stores for some.
   groom: 0.87, dairy: 0.87, heal: 1.75, lamp: 2.16, smelt: 1.32, kiln: 1.32, patch: 1.04,
@@ -1979,8 +1983,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   plucka: {
     id: 'plucka',
-    name: 'Plucka',
+    name: 'Vanari',
+    was: ['Plucka'],
+    // Asked for, with a reference sheet: Vanari, Orchibelle, Arboanari.
     description: 'Settlement task: pick what the fruit trees bear; output to the crate.',
+    stages: [
+      { name: 'Orchibelle', description: '' },
+      { name: 'Arboanari', description: '' },
+    ],
     health: 18,
     attack: 1,
     speed: 1.7,
@@ -1992,10 +2002,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'fruit',
     workRange: 8,
     variants: [
-      ['#7a5a3a', '#e0c79a'],
-      ['#5c4a3c', '#c9b58e'],
-      ['#8a6a44', '#efd9ac'],
-      ['#4e4238', '#b8a88a'],
+      ['#5e3c28', '#f4ead6'],
+      ['#6e4a30', '#f2e4c8'],
+      ['#4e3a32', '#ece6da'],
+      ['#86603e', '#f8eedc'],
     ],
     butcher: { meat: 2, fur: 2, leather: 1, bone: 2, gland: 1 },
     nearTrees: true,
@@ -2206,8 +2216,14 @@ export const SPECIES: Record<string, SpeciesDef> = {
   },
   grista: {
     id: 'grista',
-    name: 'Grista',
+    name: 'Wheatley',
+    was: ['Grista'],
+    // Wheatley, Wheatwhirl, Wheatcheeks.
     description: 'Settlement task: grind wheat and corn and press olives in your settlement stores; needs a quern in your settlement stores. Output: flour, cornmeal and oil to your settlement stores.',
+    stages: [
+      { name: 'Wheatwhirl', description: '' },
+      { name: 'Wheatcheeks', description: '' },
+    ],
     health: 26,
     attack: 3,
     speed: 1.6,
@@ -2219,10 +2235,10 @@ export const SPECIES: Record<string, SpeciesDef> = {
     gathers: 'mill',
     workRange: 6,
     variants: [
-      ['#d8cfbf', '#9b8b72'],
-      ['#c2b49a', '#7f6e55'],
-      ['#e4dccb', '#a69677'],
-      ['#b7aa94', '#6e604c'],
+      ['#d9a35a', '#f6ead2'],
+      ['#c8804a', '#f4e4cc'],
+      ['#e2bd7a', '#fbf3e4'],
+      ['#a88c6c', '#efe6d6'],
     ],
     butcher: { meat: 4, fur: 3, leather: 2, bone: 3 },
   },
@@ -2576,7 +2592,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
   petta: {
     id: 'petta',
     name: 'Petta',
-    description: 'Settlement task: pick wildflowers, a flower per clump on a tile; output home. Flowers within a skep\'s reach are left to the skep.',
+    description: 'Settlement task: pick wildflowers, a flower per clump on a tile; output home. Not within {skepReach} tiles of a skep or a hive.',
     health: 12,
     attack: 1,
     speed: 2.4,
@@ -3677,7 +3693,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     wound: 'pierce',
     venom: true,
     name: 'Vesp',
-    description: 'Settlement task: tend a hive on your settlement; fills it with honey and wax and defends it.',
+    description: 'Settlement task: the nearest hive with room within its reach of the totem. Per go: one wildflower tile within {skepReach} tiles of the hive, in turn, and back. Honey into the hive: a honey per {skepHours} hours worked per wildflower clump within {skepReach} tiles, as a skep there; a beeswax per {skepWax} honey; none in {skepIdle}. Defends it.',
     health: 12,
     attack: 3,
     speed: 2.4,
@@ -3686,7 +3702,7 @@ export const SPECIES: Record<string, SpeciesDef> = {
     diet: ['blueberry', 'raspberry', 'strawberry', 'honey'],
     baitHint: 'berries or honey',
     timid: false,
-    // Its trade: set to work the deed, it tends the hives there (asked: "vesp should work beehives as their trade").
+    // Its trade: set to work the deed, it works the hives there as bees work a skep (asked: "Vesp work hives like bees for their deed trade, producing honey").
     gathers: 'hive',
     workRange: 8,
     variants: [
@@ -3882,6 +3898,8 @@ export const SPECIES: Record<string, SpeciesDef> = {
     defaultStance: 'aggressive',
   },
 };
+// The journal's goals name kinds by what they are called (`journal-b.ts`).
+kindNames(SPECIES);
 
 /** A beast's share of a team's pull when it was not bred for the traces. */
 export const PULL_DEFAULT = 0.25;
@@ -3905,6 +3923,7 @@ for (const s of Object.values(SPECIES)) {
   s.description = fill(s.description, {
     ...s, pullDefault: PULL_DEFAULT, careWanting: CARE_WANTING, dairyFull: DAIRY_FULL, healBelow: HEAL_BELOW, tanLye: TAN_LYE,
     grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP, resinTapped: RESIN_TAPPED,
+    skepReach: SKEP_REACH, skepHours: SKEP_CLUMP_HOURS, skepWax: SKEP_WAX_EVERY, skepIdle: SKEP_IDLE,
   });
 }
 
@@ -4248,6 +4267,7 @@ sayLine('stona', `Tamed, ${abilityName('warder_stoneskin')}: ${abilitySays('ward
 // The seven lines asked for on 22–23 October: each one's words as its kind already says them, at every stage.
 for (const [id, level] of [['magga', 'foraging'], ['grazza', 'foraging'], ['grubba', 'digging'], ['wurla', 'digging'],
   ['mudda', 'pottery'], ['dippa', 'carrying'], ['middun', 'farming']] as const) sayLine(id, SPECIES[id].description, `Level: ${level}.`);
+for (const id of ['plucka', 'grista']) sayLine(id, SPECIES[id].description, `Level: ${GATHER_SKILL[SPECIES[id].gathers!]}.`);
 describeFrom('compost', { compostMaker: `${article(SPECIES.middun.name)} ${SPECIES.middun.name}` });
 // And the Sparra, which does not evolve: how it fights, its settlement task, and its level (`sparTaskSays`).
 sayLine('sparra', `Tamed: ${STYLE_SAYS.spar}. ${sparTaskSays()}`, `Level: fighting, learned ${LEARNS_SAYS.spar}.`);
@@ -4817,6 +4837,8 @@ export interface Creature {
   laden?: Item[];
   /** Walking home with what it has gathered, however few loads that is: no more is to be had, or its arms are full. */
   homeward?: boolean;
+  /** A Vesp at its trade: the game time it set off from its hive on the trip it is on (`vespTrip`). */
+  tripAt?: number;
   /** Total experience earned from work. */
   xp: number;
   /** How much fleece has grown back, 0..1, for the species that carry one. */
@@ -6635,9 +6657,11 @@ export class Creatures {
       return treeSpecies(data) === RESIN_TREE && tappable(data) && !game.tappedToday(x, y);
     }
     if (kind === 'flower') {
-      // In flower, and not where a skep gathers (`SKEP_REACH`): its honey is the flowers in reach of it.
+      // In flower, and not where a skep or a Vesp's hive gathers (`SKEP_REACH`): its honey is the flowers in reach of it.
       if (flowersHere(game, x, y, game.wallNow()) <= 0 || !this.tileOk(game, x, y) || this.claimed(x, y, c)) return false;
-      for (const f of game.furniture.values()) if (f.kind === SKEP && Math.max(Math.abs(f.x - x), Math.abs(f.y - y)) <= SKEP_REACH) return false;
+      for (const f of game.furniture.values()) {
+        if ((f.kind === SKEP || f.kind === 'hive') && Math.max(Math.abs(f.x - x), Math.abs(f.y - y)) <= SKEP_REACH) return false;
+      }
       return true;
     }
     if (kind === 'scrub') return this.tileOk(game, x, y) && !this.claimed(x, y, c) && greenOnTile(game, x, y, greenNow()) > 0;
@@ -6815,8 +6839,8 @@ export class Creatures {
     if (kind === 'mine') return this.finishMining(game, c);
     if (kind === 'sand' || kind === 'clay') return this.finishDigging(game, c, kind === 'sand' ? 'sand' : 'clay');
     if (kind === 'stoke' || kind === 'guard') return null;
-    // Tending a hive brings nothing home: the hive fills itself while a swarm keeps it (`Game.fillHive`).
-    if (kind === 'hive') return null;
+    // A Vesp works the flower and flies back to its hive with what it gathered (`vespTrip`), the island's `worker_do`.
+    if (kind === 'hive') return this.finishNectar(game, c);
     if (kind === 'bush' || kind === 'grass' || kind === 'pan') return this.finishHands(game, c, kind, x, y);
     if (kind === 'worm' || kind === 'flower' || kind === 'scrub') return this.finishHands(game, c, kind, x, y);
     if (kind === 'sprout' || kind === 'resin') return this.finishHands(game, c, kind, c.workX, c.workY);
@@ -6848,6 +6872,43 @@ export class Creatures {
     const id = rollTable(table, game.rand());
     const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1) * careful);
     return { uid: game.inventory.nextUid++, id, ql, dmg: 0, count: 1 };
+  }
+
+  /**
+   * A Vesp's go at a flower: it learns, as any go, and has in its arms what it flies back to the hive, at the quality
+   * of its skill (`madeQl`). How much honey that is, is the trip's (`vespHoney`), worked out at the hive.
+   */
+  private finishNectar(game: Game, c: Creature): Item | null {
+    if (c.mode !== 'deed') return null;
+    const skillId = GATHER_SKILL.hive;
+    const skill = c.skills[skillId] ?? 1;
+    this.gainSkill(game, c, skillId, 0.225);
+    return { uid: game.inventory.nextUid++, id: 'honey', ql: this.madeQl(game, c, skill), dmg: 0, count: 0 };
+  }
+
+  /**
+   * A Vesp back at its hive with what it gathered (`vespTrip`): into the hive, as much honey as a skep there would
+   * have made over the trip (`vespHoney`, `Game.hivePut`), and what it made to its ledger; and it stands `VESP_REST`
+   * before it sets off again. Its hive gone, what it gathered is lost. The island's `worker_settle`, at `home`.
+   */
+  private vespHome(game: Game, c: Creature, dt: number): void {
+    const f = hiveAt(game, c.workX, c.workY);
+    const done = (wait: number): void => {
+      c.carrying = null;
+      c.tripAt = undefined;
+      c.state = 'idle';
+      c.until = game.time + wait;
+    };
+    if (!f || !c.carrying) return done(VESP_REST);
+    const [hx, hy] = furnitureCentre(f);
+    if (Math.hypot(hx - c.x, hy - c.y) <= 1.3) {
+      const now = game.wallNow();
+      const secs = game.time - (c.tripAt ?? game.time) + VESP_REST;
+      const made = game.hivePut(f, vespHoney(skepFlowers(game, f.x, f.y, now), seasonAt(now).season, secs), c.carrying.ql);
+      if (made.honey) this.toLedger(game, c, { item: 'honey', n: made.honey });
+      if (made.wax) this.toLedger(game, c, { item: 'wax', n: made.wax });
+      done(VESP_REST);
+    } else if (this.stepToward(game, c, hx, hy, dt) === 'blocked') done(2);
   }
 
   /**
@@ -8633,7 +8694,11 @@ export class Creatures {
       const { mirror: _, ...rest } = c.boosts ?? {};
       c.boosts = Object.keys(rest).length ? rest : undefined;
       const id = mirrorTrait(c.traits);
-      if (id) game.logMsg(`Bronze mirror: ${mirrorNames(id)} from ${c.name} to the young. Mark used up.`, 'event');
+      if (id) {
+        game.logMsg(`Bronze mirror: ${mirrorNames(id)} from ${c.name} to the young. Mark used up.`, 'event');
+        // A mirror used on a pairing, for the journal (the island's `pair_them` the same).
+        game.note('mirrored');
+      }
     }
   }
 
@@ -8705,6 +8770,13 @@ export class Creatures {
     if (dam.mode !== 'wild') game.guideMark(dam.species, 'bred');
     if (c.traits.some((t) => traitTier(t) === 'supreme' || traitTier(t) === 'fantastic')) game.note('goodblood');
     if (c.traits.some((t) => traitTier(t) === 'fantastic')) game.note('fantasticblood');
+    // A mutation, the depth of its line and a wild form, for the journal (the island's `drop_young` the same).
+    if (dam.mode !== 'wild') {
+      if (mutationOf(coming.from)) game.note('mutated');
+      const depth = Math.max(0, ...Object.values(coming.line ?? {}).map((d) => d ?? 0));
+      if (depth > 1) game.note(`line:${depth}`);
+      if (c.formColour || c.formSize) game.note('bred:form');
+    }
     game.events.emit('creature');
     return c;
   }
@@ -8834,6 +8906,8 @@ export class Creatures {
     if (l) this.gainSkill(game, s, l.skill, LEARNS_GAIN.bout, LEARN_PACE.bout);
     this.toLedger(game, g, { goes: 1 });
     this.toLedger(game, s, { goes: 1 });
+    // A spar on your settlement, for the journal (the island's `spar_go` the same).
+    if (s.mine !== false) game.note('sparred');
     this.sparOff(s);
     for (const o of [g, s]) if (yielded(o)) this.why(o, 'yielded', sparBack(o));
   }
@@ -8866,6 +8940,8 @@ export class Creatures {
       // And a trait for each slot the stage opens (`stageSlots`), by its keeper's husbandry: you, for one of yours.
       openSlots(c, was, stage, c.mode === 'wild' ? 0 : game.skills.get('animal_husbandry'), game.rand);
       if (c.mode !== 'wild') game.logMsg(`${c.name} evolved: ${kindName(c)}.`, 'skill');
+      // Each stage reached by one of yours, for the journal (the island's `worker_learn_paced` the same).
+      if (c.mode !== 'wild' && c.mine !== false) for (let st = was + 1; st <= stage; st++) game.note(`evolved:${st}`);
       // And one nobody has named is called what it has become (`kindNamed`).
       if (kindNamed(c)) c.name = kindName(c);
       game.events.emit('evolve', c.id, stage);
@@ -9447,6 +9523,8 @@ export class Creatures {
         c.state = 'rest';
         if (r === 'arrived') {
           f.sleeper = c.id;
+          // In a bed you built, for the journal (the island's `worker_settle` the same).
+          if (c.mine !== false && f.mine !== false) game.note('bedded:own');
           c.x = bx;
           c.y = by;
           game.events.emit('world', f.x, f.y);
@@ -9575,7 +9653,7 @@ export class Creatures {
       if (game.time >= c.until) {
         // What it got goes into its arms with whatever it has gathered already this trip (`stageLoads`).
         // And its line's third-stage `more` on it (`perkMore`).
-        const got = kind ? perkMore(c, this.finishForage(game, c, kind)) : null;
+        const got = kind === 'hive' ? this.finishForage(game, c, kind) : kind ? perkMore(c, this.finishForage(game, c, kind)) : null;
         if (got) {
           if (c.carrying) (c.laden ??= []).push(c.carrying);
           c.carrying = got;
@@ -9583,12 +9661,18 @@ export class Creatures {
         if (kind) this.acted(c, 'work', game.time);
         if (kind) this.toLedger(game, c, { goes: 1 });
         c.state = 'idle';
-        c.until = game.time + 0.5;
+        // A Vesp is off back to its hive at once, as the island sends it.
+        c.until = game.time + (kind === 'hive' ? 0 : 0.5);
       }
       return;
     }
     if (c.carrying && kind === 'stoke') {
       this.feedFire(game, c, dt);
+      return;
+    }
+    // A Vesp with what it gathered flies it to its hive, not to the stores (`vespHome`).
+    if (c.carrying && kind === 'hive') {
+      this.vespHome(game, c, dt);
       return;
     }
     // With room in its arms for another load of its trade (`stageLoads`), it goes on to the next tile rather than home.
@@ -9680,7 +9764,9 @@ export class Creatures {
         const apart = !!kind && (kind === 'fetch' || this.worksBeside(game, kind, c.workX, c.workY));
         const wx = apart ? c.workX : Math.floor(c.x);
         const wy = apart ? c.workY : Math.floor(c.y);
-        if (kind && (this.gatherable(game, wx, wy, kind, c) || (kind === 'fetch' && this.sortStack(game, c, wx, wy)))) this.beginForage(game, c, kind);
+        // A Vesp works the flower it flew to, its hive being its work (`vespTrip`), as the island's `out` does.
+        if (kind === 'hive') this.beginForage(game, c, kind);
+        else if (kind && (this.gatherable(game, wx, wy, kind, c) || (kind === 'fetch' && this.sortStack(game, c, wx, wy)))) this.beginForage(game, c, kind);
         else c.state = 'idle';
       } else if (r === 'blocked') {
         c.state = 'idle';
@@ -9696,6 +9782,25 @@ export class Creatures {
       return;
     }
     if (game.time < c.until) return;
+    // A Vesp: out from the nearest hive in its range with room to the next flower in reach of it, or why not (`vespTrip`).
+    if (kind === 'hive') {
+      const trip = vespTrip(game, c.x, c.y, deed.x, deed.y, siteRange(c, def, deed), ledgerRoll(c.ledger, game.islandDay()).now.goes, game.wallNow());
+      if ('hive' in trip) {
+        c.idle = null;
+        c.job = null;
+        c.workX = trip.hive.x;
+        c.workY = trip.hive.y;
+        c.tx = trip.x + 0.5;
+        c.ty = trip.y + 0.5;
+        c.tripAt = game.time;
+        c.state = 'toForage';
+        return;
+      }
+      this.why(c, trip.why, trip.n);
+      this.wanderTarget(game, c, 3, deed.x + 0.5, deed.y + 0.5);
+      c.until = game.time + 4;
+      return;
+    }
     // An errand worker never walks out to a tile to work it, so it does not
     // join the search below: when its errand has nothing in it, it waits.
     if (kind && !ERRAND_JOBS.has(kind)) {
@@ -10227,6 +10332,8 @@ export class Creatures {
     this.list.delete(t.id);
     for (const o of this.list.values()) if (o.enemy === t.id) o.enemy = null;
     const def = this.species(t);
+    // A rare wildermon killed: the island counts it, as it counts every kill.
+    if (t.rare && killer === 'player') game.note('slewrare');
     // Killing one of the bad things is worth writing down.
     if (def.monster && killer === 'player') {
       game.note(`slew:${def.id}`);

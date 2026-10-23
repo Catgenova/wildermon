@@ -128,9 +128,10 @@ export interface FurnitureDef {
   /** What the piece is of, when it is not the wood it was built from. */
   material?: 'wood' | 'metal';
   /**
-   * A swarm's own house. Nobody puts anything into a hive: a tamed Vesp on
-   * the deed fills it with comb, and the number is how much it will hold
-   * before the swarm stops and waits for it to be emptied.
+   * A swarm's own house. Nobody puts anything into a hive: a Vesp set to work
+   * the settlement fills it with honey and beeswax off the wildflowers in
+   * reach of it (`bees.ts`), and the number is how much it holds before the
+   * swarm stops and waits for it to be emptied.
    */
   hive?: number;
   /**
@@ -660,8 +661,10 @@ export interface PlacedFurniture {
   riders?: Array<{ who: string; seat: number }>;
   /** Who has the reins, by who they are on the wire. Absent means whoever is local. */
   driverId?: number;
-  /** Comb drawn but not yet capped, for a hive. */
-  comb?: number;
+  /** Honey a hive has toward its next whole one, off its Vesps' trips (`hiveTakes`); its quality; and the honey it has made, for its beeswax. */
+  nectar?: number;
+  nectarQl?: number;
+  honeys?: number;
   /** How far a pond is toward its next fish, a whole one being a fish. */
   stock?: number;
   /** Seconds a brew still has to work before it can be drawn off. */
@@ -974,20 +977,9 @@ export const holdsLiquid = (f: PlacedFurniture): boolean => liquidCapacity(f) > 
 export const litresIn = (f: PlacedFurniture): number => f.litres ?? 0;
 /** A well draws its own water; a barrel only holds what is poured into it. */
 export const isWell = (f: PlacedFurniture): boolean => (furnitureDef(f.kind).well ?? 0) > 0;
-/** A hive fills itself, and takes nothing from anyone's hands. */
+/** Room left in a hive, which takes nothing from anyone's hands: its Vesps fill it (`hiveTakes`). */
 export const hiveRoom = (f: PlacedFurniture): number => furnitureCapacity(f) - furnitureUnits(f);
 
-/**
- * How a hive fills: comb a second for each swarm keeping it, more for a
- * better-made hive; no more swarms than three to a hive's worth; and one comb
- * in four is wax, the rest honey. The island's `hive_sweep` reads the same.
- */
-export const HIVE_BASE = 0.004;
-export const HIVE_PER_QL = 0.012;
-export const HIVE_SWARMS = 3;
-export const HIVE_WAX = 0.25;
-/** Comb a hive draws in a second for each swarm keeping it. */
-export const hiveRate = (ql: number): number => HIVE_BASE + (ql / 100) * HIVE_PER_QL;
 export const isHive = (f: { kind: string }): boolean => (furnitureDef(f.kind).hive ?? 0) > 0;
 
 /**
@@ -1310,6 +1302,8 @@ export const FURNITURE_ACTIONS: ActionDef[] = [
       for (const it of items) g.inventory.addItem(it);
       // Honey out of a hive, for the journal (the island's `perform_holding` the same).
       if (f.kind === 'hive' && items.some((it) => it.id === 'honey')) g.note('honey');
+      // Your own grave emptied, for the journal (the island's `perform_holding` the same).
+      if (f.kind === 'grave' && (f.mine ?? f.grave?.who === g.actor.who)) g.note('grave');
       g.events.emit('crate');
       const names = items.map((it) => (it.count > 1 ? `${it.count} × ${itemName(it).toLowerCase()}` : itemName(it).toLowerCase()));
       g.logMsg(`Taken from ${furnitureName(f).toLowerCase()}: ${names.join(', ')}.`, 'event');

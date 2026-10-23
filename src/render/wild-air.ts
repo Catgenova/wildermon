@@ -84,10 +84,16 @@ function vespBuild(lod: number): Piece[] {
  * as it goes, so that however the swarm is seen no two of them are ever on
  * top of each other. Whole turns a loop standing and a stride going, so both
  * are loops.
+ *
+ * At a go at its task -- a flower, between flying out from its hive and back
+ * -- it settles low over the tile and draws its ring in, and each of the six
+ * in turn drops down into the flower and up again, one after another round
+ * the ring through the go.
  */
 function vespBones(a: Anim): Bones {
   const t = a.t, go = smooth(a.go), w = frac(a.u);
-  const hover = 1.7 + 0.12 * cyc(t, 6) * (1 - go);
+  const work = a.act?.kind === 'work' ? 1 - go : 0, k = a.act?.kind === 'work' ? a.act.t : 0;
+  const hover = lerp(1.7 + 0.12 * cyc(t, 6) * (1 - go), 0.95, work);
   const body = joint(ROOT, [0, 0, hover], 0, 0, 0);
   const b: Bones = { body };
   // The queen a little above the middle of them, drifting.
@@ -95,9 +101,12 @@ function vespBones(a: Anim): Bones {
   for (let q = 1; q < VESP_BEES; q++) {
     const far = q % 2 === 0, ph = ((q - 1) / (VESP_BEES - 1)) * TAU;
     // Standing: round and round her, seven times a loop, with a small wander of each one's own.
-    const u = (t * 7 * TAU) / LOOP + ph, r = far ? 2.7 : 2.1;
+    const u = (t * 7 * TAU) / LOOP + ph, r = (far ? 2.7 : 2.1) * lerp(1, 0.55, work);
     const sx = r * Math.sin(u) + 0.15 * cyc(t, 12, q), sy = r * 0.8 * Math.cos(u) + 0.15 * cyc(t, 10, q * 2);
-    const sz = 0.9 * Math.sin(u + q * 1.3) + 0.1 * cyc(t, 15, q);
+    // At the flower, its turn to drop into it: down to the petals and up again, a sixth of the go each.
+    const turn = frac(k - (q - 1) / (VESP_BEES - 1)) * (VESP_BEES - 1);
+    const dip = turn < 1 ? work * Math.sin(Math.PI * turn) : 0;
+    const sz = lerp(0.9 * Math.sin(u + q * 1.3) + 0.1 * cyc(t, 15, q), 0.25 * Math.sin(u + q * 1.3), work) - 0.8 * dip;
     // Going: the same ring drawn in and trailed out behind her, once round a stride.
     const v = w * TAU + ph, rg = far ? 2.1 : 1.55;
     const gx = rg * Math.sin(v), gy = -1.4 + rg * 0.7 * Math.cos(v), gz = 0.7 * Math.sin(v + q * 1.3);

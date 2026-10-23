@@ -1,15 +1,12 @@
 import {
-  add, beat, coatPalette, cross, curve, cyc, disc, merge, moved, orb, orbAlong, paint, quadBonesOf, scale, smile, step, taper, TAU, tube, unit,
-  type Kind, type MatOf, type Piece, type QuadSpec,
+  add, beat, coatPalette, cross, curve, disc, merge, orbAlong, paint, quadBonesOf, scale, smile, step, TAU, tube, unit,
+  type Kind, type MatOf, type Piece,
 } from './beasts';
 import { blade, cut, pawMesh, quadPieces } from './beastkit';
-import { mesh, onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
+import { onScreen, place, type Mat, type Mesh, type RGB, type V3, type View } from './figure';
 import { pawed, trot } from './wild-paws';
 
-/**
- * The kinds of the brooks, the bogs and the hedges: the wadd and the
- * plucka.
- */
+/** The kinds of the brooks, the bogs and the hedges: the wadd. */
 
 /* ---- shared by these kinds ---------------------------------------------------------- */
 
@@ -176,109 +173,3 @@ export const WADD: Kind = {
   },
 };
 
-/* ---- the plucka ---------------------------------------------------------------------- */
-
-/**
- * A plucka: a long-armed climber of the orchard's edge with hands like a
- * child's and a tail it hangs by. Its ears are leaves, its tail is ringed
- * with leaf-green, and the tuft at the end of it is a bunch of berries.
- */
-const PLUCKA_BASE = pawed({ high: 1.55, len: 2.0, legs: 0.95, neck: 0.3, lean: 18, swing: [26, 42], ears: [30, 25], tail: [0.4, 5, 24] });
-/** Carried nose-up on arms longer than its legs, as a thing that climbs does on the ground. */
-const PLUCKA_TILT = 14;
-const PLUCKA_SPEC: QuadSpec = {
-  ...PLUCKA_BASE,
-  // Its arms long, carried a little forward of straight down and bent at the elbow.
-  fore: { ...PLUCKA_BASE.fore, len: [0.8, 0.72, 0.14], rest: [15 - PLUCKA_TILT, -35, 0] },
-  hind: { ...PLUCKA_BASE.hind, rest: [22 - PLUCKA_TILT, -44, 0] },
-  // Its tail carried out behind and curling up at the end, low enough that from in front the berries stay behind its head.
-  tail: { ...PLUCKA_BASE.tail!, links: 4, len: 0.36 },
-  ears: { at: [0.55, -0.2, 0.85], out: 30, back: 25 },
-  // Foraging, it crouches to pick at the ground (`PLUCKA_CROUCH`): the chest let down a little and the short neck bent right down,
-  // rather than the body tipped over onto its long arms.
-  graze: 90,
-  bow: 12,
-  nose: 10,
-};
-/**
- * How it crouches to forage: each arm swung forward (degrees) and folded under the chest (as a leg folds at the top of a
- * stride), so its long arms let the chest down to where the head reaches the grass; and the hind legs folded a little more,
- * so the haunches come down too and all four feet stay on the ground.
- */
-const PLUCKA_CROUCH = { arm: 79, fold: 1.39, haunch: 0.25 };
-const PLUCKA_HEAD = { c: [0, 0.25, 0.25] as V3, r: [1.1, 1.0, 1.0] as V3 };
-
-function pluckaBuild(lod: number): Piece[] {
-  const n = cut(lod, 8, 10), k = cut(lod, 5, 6);
-  const H = PLUCKA_HEAD;
-  const face = merge(
-    // A pale heart of a face, as a little climber has, standing out in front of the eyes, and a nub of a muzzle out in front of
-    // that with the nose on its end.
-    orbAlong([0, 0.72, 0.12], [0, 1, 0], [0.7, 0.62, 0.78], n, k, 'mark'),
-    muzzle({ at: 1.3, z: -0.16, r: [0.42, 0.32, 0.42], nose: 0.11, mouth: 0.2, mat: 'mark' }, n, k),
-  );
-  // A leaf for an ear, on a short stalk, twisted along its length so it shows its face from the side and from in front.
-  const ear = merge(
-    tube([[0, 0, -0.05], [0, 0, 0.14]], 0.06, 0.06, 5, 'stem', { seam: 'start' }),
-    blade(curve([0, 0, 0.12], [0, -0.04, 0.42], [0, 0, 0.72], 4), [0.06, 0.18, 0.2, 0.15, 0.02], [0, 1, 0], { twist: -0.87, fold: 0.26, mat: 'leaf', rib: 'leafDark' }),
-  );
-  const ring = (q: number): 'leaf' | 'coat' => (q % 2 ? 'leaf' : 'coat');
-  const tail = [
-    taper([[0, 0, 0], [0, -0.36, 0]], 0.13, 0.12, 6, (r) => ring(r)),
-    taper([[0, 0, 0], [0, -0.36, 0]], 0.12, 0.11, 6, (r) => ring(r + 1)),
-    taper([[0, 0, 0], [0, -0.36, 0]], 0.11, 0.1, 6, (r) => ring(r)),
-    // The tuft at the end is a bunch of berries.
-    merge(taper([[0, 0, 0], [0, -0.26, 0]], 0.1, 0.08, 6, 'leaf'), ...([[0, -0.4, 0], [0.16, -0.32, 0.1], [-0.15, -0.33, 0.1], [0.02, -0.3, 0.24]] as V3[]).map((c) => orb(c, 0.16, 6, 3, 'petal'))),
-  ];
-  // A hand: a small palm, turned out a little, with two fat fingers in front of it.
-  const hand = (out: number): Mesh => moved(merge(
-    orbAlong([0, 0.1, -0.08], [0, 1, 0], [0.3, 0.16, 0.36], n, k, 'mark'),
-    ...[-0.1, 0.1].map((x) => orb([x, 0.44, -0.1], 0.1, 5, 3, 'mark')),
-  ), [0, 0, 0], out);
-  const pieces = quadPieces({
-    n, k,
-    body: { y: [-1.15, -0.95, -0.45, 0.1, 0.6, 0.95, 1.12], z: [0.1, 0.15, 0.22, 0.3, 0.4, 0.48, 0.52], w: [0.25, 0.82, 0.98, 1.0, 0.96, 0.8, 0.25], h: [0.25, 0.72, 0.84, 0.86, 0.82, 0.7, 0.25], belly: true },
-    neck: { w: 0.6, h: 0.6, len: 0.3 },
-    head: { c: H.c, r: H.r, face, eye: { dir: [0.78, 0.45, 0.3], size: 0.36, rim: 0.12 }, blush: [[0.86, 0.4, -0.24], 0.2] },
-    ear,
-    earTurn: 20,
-    tail,
-    fore: { upper: [0.3, -0.8, 0.22, 0.18], lower: [0, -0.72, 0.18, 0.16], foot: hand(-30) },
-    hind: { upper: [0.3, -0.53, 0.36, 0.28], lower: [0, -0.53, 0.26, 0.22], foot: hand(0) },
-  });
-  // The leaf ears lined lightly, in a dark of their own green, so they read as leaves and not as ink; the forearms in the darker
-  // coat, so the pale hands at the ends of them read as hands and not as socks.
-  return pieces.map((pc) => (pc.key === 'ear0' || pc.key === 'ear1' ? { ...pc, thin: true, airy: true }
-    : pc.key === 'fl1' || pc.key === 'fr1' ? { ...pc, mesh: mesh(pc.mesh.v, pc.mesh.f.map((f) => ({ ...f, m: 'coatDark' as Mat }))) } : pc));
-}
-
-export const PLUCKA: Kind = {
-  bones: quadBonesOf(PLUCKA_SPEC, (p, a) => {
-    trot(p, a);
-    // Nose-up on its long arms, but not while it is down picking at the ground.
-    p.pitch += PLUCKA_TILT * (1 - a.graze);
-    // Foraging, crouched, and its tail carried out behind rather than up over its back.
-    const gz = a.graze;
-    for (const i of [0, 1]) {
-      p.legs[i][0] += (PLUCKA_CROUCH.arm - p.legs[i][0]) * gz;
-      p.legs[i][1] += (PLUCKA_CROUCH.fold - p.legs[i][1]) * gz;
-    }
-    p.legs[2][1] += PLUCKA_CROUCH.haunch * gz;
-    p.legs[3][1] += PLUCKA_CROUCH.haunch * gz;
-    p.tail[0] -= 35 * gz;
-    // Standing, up on its haunches now and then to look round, the tail's berries swinging.
-    if (a.go <= 0) {
-      const up = beat(a.t, [7.5, 18.2], 2.4) * (1 - a.graze);
-      p.pitch += 30 * up;
-      p.legs[0][0] += 30 * up;
-      p.legs[1][0] += 30 * up;
-      p.neck[0] -= 20 * up;
-      p.tail[2] += 10 * cyc(a.t, 5);
-    }
-  }),
-  build: pluckaBuild,
-  palette: (coat, mark) => coatPalette(coat, mark, { leaf: [168, 216, 112], leafDark: [112, 170, 80], stem: [130, 150, 90], petal: [214, 70, 110], nose: [150, 90, 100] }, 30),
-  shadow: [1.6, 1.1],
-  stride: 1.2,
-  size: 1.75,
-};

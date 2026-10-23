@@ -15,6 +15,8 @@ export const IMPROVE_GAIN = 0.4;
 export const IMPROVE_FLOOR = 10;
 /** Damage past which a thing is too knocked about to work on until it is repaired. */
 export const IMPROVE_DAMAGE = 10;
+/** The QL a pass of yours takes a thing past that the journal counts, once a thing (`improved70`; the island's `perform_item`). */
+export const IMPROVED_TO = 70;
 
 /**
  * Improving: taking a finished thing and making it better than it was made.
@@ -223,10 +225,13 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
         return item.dmg <= 10;
       }
       const ceiling = Math.min(99.9, improveCeiling(g, what.skill, item));
+      const was = item.ql;
       item.ql = Math.max(item.ql, Math.min(ceiling, item.ql + improveStep(g, item, what.skill)));
       // The journal's two Improve goals, at the quality a pass of yours leaves it at (the island's `perform_item` the same).
       if (item.ql >= 50) g.note('improved50');
       if (item.ql >= 90) g.note('improved90');
+      // A thing a pass of yours takes past QL 70, once a thing (the island's `perform_item` the same).
+      if (was < IMPROVED_TO && item.ql >= IMPROVED_TO) g.note('improved70');
       /*
        * And now and again the thing itself comes on, not just its quality.
        *

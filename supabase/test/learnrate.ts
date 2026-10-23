@@ -48,6 +48,7 @@ import { NIGHT_ENDS, NIGHT_STARTS } from '../../src/game/game';
 import { WEAPONS } from '../../src/game/gear';
 import { swingSeconds } from '../../src/game/fight';
 import { MAX_VEHICLE_SPEED } from '../../src/game/game';
+import { SKEP_REACH } from '../../src/game/bees';
 
 const ok: string[] = [];
 const bad: string[] = [];
@@ -62,6 +63,13 @@ const FIELD = 5;
 const NEXT = 1.5;
 const NEAR = 3;
 const SHORE = 6;
+/** A Vesp's hive to a flower in reach of it: the mean of the tiles within `SKEP_REACH` each way. */
+const HIVE_FLOWER = (() => {
+  let n = 0;
+  let d = 0;
+  for (let y = -SKEP_REACH; y <= SKEP_REACH; y++) for (let x = -SKEP_REACH; x <= SKEP_REACH; x++) { n++; d += Math.hypot(x, y); }
+  return d / n;
+})();
 /** What the island's `worker_settle` adds after a go at work, and after a fetch out of the stores. */
 const REST = 1;
 const FETCH = 0.5;
@@ -157,7 +165,8 @@ const ROUNDS: Partial<Record<GatherKind | LearnsBy, Round>> = {
   prune: gathers('prune', 0.225, () => 0),
   stump: gathers('stump', 0.225, () => 0),
   scrub: gathers('scrub', 0.225, () => 0),
-  hive: gathers('hive', 0.225, () => 0, 0),
+  // Out from its hive to a flower within `SKEP_REACH` of it, a go there, and back with what it gathered, a trip a go.
+  hive: (skill, stage) => [{ secs: walk('hive', 2 * HIVE_FLOWER, skill, stage) + work(skill, stage) + REST, base: 0.225, go: true }],
   // At the stores, one thing after another where it stands.
   mend: errand('mend', [[0, 'work', 0.2]]),
   butcher: errand('butcher', [[0, 'work', 0.3]]),

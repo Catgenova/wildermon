@@ -154,6 +154,8 @@ export const FIRST_AID_ACTIONS: ActionDef[] = [
       w.severity = Math.max(0, w.severity - healed);
       w.dressing = clean ? use.herb : w.dressing;
       if (clean) {
+        // A bleeding wound stopped, for the journal (the island's `perform_fight` the same).
+        if (w.bleeding) g.note('staunched');
         w.bleeding = false;
         // And closes faster for the hands that dressed it (a Naturalist's Quick Mend),
         const mend = g.perk('mend:bind_wound', 1);

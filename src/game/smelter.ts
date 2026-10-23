@@ -350,6 +350,7 @@ export const SMELTER_ACTIONS: ActionDef[] = [
       for (let i = 0; i < lumps; i++) {
         s.jobs.push({ item: { ...taken, count: n }, makes: metal.lump, left: seconds, total: seconds, ql });
       }
+      g.note('melted');
       g.events.emit('smelter');
       g.logMsg(`Melting: ${n > 1 ? `${n} × ` : ''}${itemDef(item.id).name.toLowerCase()}.`
         + ` Gives ${lumps} × ${metal.name.toLowerCase()} lump, about QL ${Math.round(ql)}.`, 'event');

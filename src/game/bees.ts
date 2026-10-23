@@ -1,5 +1,5 @@
 import type { ActionDef, Target } from './actions';
-import { furnitureDef, type PlacedFurniture } from './furniture';
+import { furnitureCentre, furnitureDef, hiveRoom, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { describeFrom, itemDef } from './items';
 import { lampTooFar } from './lamps';
@@ -144,6 +144,95 @@ export function skepSays(flowers: number, season: Season, made: number): string 
     + `(1 ${waxWord()} per ${SKEP_WAX_EVERY} ${honeyWord()}).`;
 }
 
+/* ---- a Vesp at its trade ------------------------------------------------------------------------------- */
+
+/**
+ * A Vesp set to work a settlement (its trade, `hive`) works a hive the way bees
+ * work a skep, trip by trip:
+ *
+ *   * it takes the nearest hive within its range of the token that has room,
+ *     and of the tiles within `SKEP_REACH` of that hive's tile that are in
+ *     flower (`flowersHere`, as a skep counts them), the next in its turn: in
+ *     rows from the corner, its goes today (its ledger's) on from the first;
+ *   * it flies out to that tile, works the flower a go, and flies back with
+ *     what it gathered, into the hive;
+ *   * what it brings is what a skep there would have made over the trip:
+ *     `skepRate` for the clumps in reach of the hive and the season, for the
+ *     time from setting off to setting off again (`VESP_REST` after it is back);
+ *     so a Vesp at work fills its hive at a skep's rate there, and a beeswax
+ *     goes in with every `SKEP_WAX_EVERY`th honey;
+ *   * nothing in `SKEP_IDLE`, and nothing where no hive in range has room or
+ *     no flower is in reach of one, which it says (`VespIdle`).
+ *
+ * The island's `vesp_trip`, `worker_settle` and `vesp_put`, step for step.
+ */
+export type VespIdle = 'range' | 'season' | 'room' | 'flowers';
+export type VespTrip = { hive: PlacedFurniture; x: number; y: number } | { why: VespIdle; n: number };
+
+/** Seconds it stands at the hive after putting in what it brought, before it sets off again: the island's `vesp_rest`. */
+export const VESP_REST = 1;
+
+/**
+ * Where a Vesp at `cx, cy` goes next, working a settlement at `sx, sy` to `range` tiles, on its `turn`th go of the
+ * day; or why it goes nowhere: no hive in range (`range`, the number its range), `SKEP_IDLE`, every hive in range
+ * full (`room`), or no wildflowers within `SKEP_REACH` of one with room (`flowers`, the number the reach).
+ */
+export function vespTrip(g: Game, cx: number, cy: number, sx: number, sy: number, range: number, turn: number, now: number): VespTrip {
+  const hives: Array<{ f: PlacedFurniture; d: number }> = [];
+  for (const f of g.furniture.values()) {
+    if (f.kind !== 'hive' || Math.max(Math.abs(f.x - sx), Math.abs(f.y - sy)) > range) continue;
+    const [hx, hy] = furnitureCentre(f);
+    hives.push({ f, d: (hx - cx) ** 2 + (hy - cy) ** 2 });
+  }
+  if (!hives.length) return { why: 'range', n: range };
+  if (seasonAt(now).season === SKEP_IDLE) return { why: 'season', n: 0 };
+  hives.sort((a, b) => a.d - b.d || a.f.id - b.f.id);
+  let room = false;
+  for (const { f } of hives) {
+    if (hiveRoom(f) <= 0) continue;
+    room = true;
+    const tiles: Array<[number, number]> = [];
+    for (let ty = f.y - SKEP_REACH; ty <= f.y + SKEP_REACH; ty++) {
+      for (let tx = f.x - SKEP_REACH; tx <= f.x + SKEP_REACH; tx++) if (flowersHere(g, tx, ty, now) > 0) tiles.push([tx, ty]);
+    }
+    if (tiles.length) {
+      const [x, y] = tiles[turn % tiles.length];
+      return { hive: f, x, y };
+    }
+  }
+  return room ? { why: 'flowers', n: SKEP_REACH } : { why: 'room', n: 0 };
+}
+
+/** Honey a Vesp brings its hive off a trip of `secs` seconds, with so many clumps in reach of it in this season: a skep's. */
+export const vespHoney = (flowers: number, season: Season, secs: number): number => (skepRate(flowers, season) * secs) / HOUR;
+
+/**
+ * What a Vesp brought, into a hive: onto the honey it has toward its next whole one, at the quality of all of it
+ * together; every whole honey made while it has room, and a beeswax with every `SKEP_WAX_EVERY`th it has made. What
+ * is left waits for the next trip, no more than a honey of it while the hive is full. The island's `vesp_put`.
+ */
+export function hiveTakes(f: PlacedFurniture, honey: number, ql: number): { honey: number; wax: number; ql: number } {
+  const was = f.nectar ?? 0;
+  let part = was + honey;
+  const q = part > 0 ? ((f.nectarQl ?? ql) * was + ql * honey) / part : ql;
+  let room = hiveRoom(f);
+  let made = 0;
+  let wax = 0;
+  while (part >= 1 && room > 0) {
+    part -= 1;
+    made++;
+    room--;
+    f.honeys = (f.honeys ?? 0) + 1;
+    if (f.honeys % SKEP_WAX_EVERY === 0 && room > 0) {
+      wax++;
+      room--;
+    }
+  }
+  f.nectar = Math.min(part, 1);
+  f.nectarQl = q;
+  return { honey: made, wax, ql: q };
+}
+
 type PieceTarget = Extract<Target, { kind: 'furniture' }>;
 const skepOf = (g: Game, t: Target): PlacedFurniture | undefined => {
   if (t.kind !== 'furniture') return undefined;
@@ -189,6 +278,7 @@ export const BEE_ACTIONS: ActionDef[] = [
       g.gather('honey', { count: honey, ql });
       // A skep is a hive too, for the journal (the island's `perform_skep` the same).
       g.note('honey');
+      g.note(`skep:${seasonAt(now).season}`);
       if (wax > 0) g.gather('wax', { count: wax, ql });
       f.skepAt = now;
       g.logMsg(skepTookSaid(honey, wax), 'event');
@@ -215,3 +305,4 @@ export const BEE_ACTIONS: ActionDef[] = [
 ];
 
 describeFrom(SKEP, { reach: SKEP_REACH, hours: SKEP_CLUMP_HOURS, holds: SKEP_HOLDS, wax: SKEP_WAX_EVERY, idle: SKEP_IDLE });
+describeFrom('hive', { vespReach: SKEP_REACH, vespHours: SKEP_CLUMP_HOURS, vespWax: SKEP_WAX_EVERY, vespIdle: SKEP_IDLE });
