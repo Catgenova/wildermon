@@ -1764,6 +1764,16 @@ jobs:
           npx esbuild supabase/test/butchery.ts --bundle --platform=node --format=esm \
             --outfile=node_modules/.cache/butchery.mjs --log-level=error
           node node_modules/.cache/butchery.mjs
+      - name: Every tool wears with its action
+        run: |
+          # "Butchering knife should take dmg from butchering", then "sweep other
+          # tools for missing actions". The browser wears every action's tool; on
+          # the island the butcher, shear, till, investigate, repoint, ivy, moss
+          # and the foundation's four wore nothing. Asked of every action with a
+          # tool, off the island's own performers.
+          npx esbuild supabase/test/toolwear.ts --bundle --platform=node --format=esm \
+            --outfile=node_modules/.cache/toolwear.mjs --log-level=error
+          node node_modules/.cache/toolwear.mjs
       - name: A wildermon past the first goes into a creature crate, and out of it again
         run: |
           # Asked for: "Wildermon can be tamed to be set to active if currently

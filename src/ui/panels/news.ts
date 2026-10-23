@@ -3435,6 +3435,13 @@ export const NEWS: News[] = [
       `Added: stage 3 skill: ${TWO_LINES.map((id) => `${SPECIES[id].stages![PERK_STAGE - 1].name} ${perkSays(id)}`).join('; ')}.`,
     ],
   },
+  {
+    n: 275,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: tool damage per action, as every other tool, for: butchering knife (butcher), carving knife (shear), rake (till), trowel (investigate, repoint wall, fill pool, pour foundation), sickle (clear ivy), brush (scrub moss), mallet (plan foundation), pickaxe (dig pool). Was none.',
+    ],
+  },
 ];
 
 /** The kinds that butchered into dragon scales until What's new 268. */

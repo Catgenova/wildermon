@@ -26,6 +26,7 @@ import { execFileSync } from 'node:child_process';
 import { Game, productQlRange } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { butcherPreview } from '../../src/game/butcher';
+import { wearPerUse } from '../../src/game/limits';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -133,6 +134,9 @@ begin
   perform act_perform(w, me, 'butcher', aim);
   insert into said values ('MASTER|' || coalesce((select string_agg(distinct round(ql::numeric, 1)::text, ',') from item
     where world_id = w and holder = 'player' and holder_uid = me and def in ('meat', 'fur', 'hide', 'bone', 'gland')), 'nothing'));
+  -- The knife, after three goes, from new.
+  insert into said values ('KNIFE|' || coalesce((select round(dmg::numeric, 4)::text from item where world_id = w and holder = 'player'
+    and holder_uid = me and def = 'butchering_knife'), 'none'));
   insert into said values ('SAID|' || coalesce((select e.text from event e where e.world_id = w and e.uid = me
     and e.text like 'Butchered: %' order by e.n desc limit 1), 'nothing'));
 end $$;
@@ -148,6 +152,8 @@ check('what comes off a carcass of QL 10 comes off at the skill, 40', said('LOW'
 check('and off a carcass of QL 90, the same', said('HIGH') === '40.0', said('HIGH'));
 check('a butcher at 80 takes it off at 80', said('MASTER') === '80.0', said('MASTER'));
 check('the log line says the QL, as the browser\'s does', /, QL 80\.0\./.test(said('SAID')), said('SAID'));
+check('the knife takes a go\'s wear on every butcher, three goes from new, as the browser\'s every tool does',
+  Math.abs(Number(said('KNIFE')) - 3 * wearPerUse(100)) < 0.001, `${said('KNIFE')} against ${(3 * wearPerUse(100)).toFixed(4)}`);
 
 for (const line of [...ok, ...bad]) console.log(line);
 if (bad.length) {
