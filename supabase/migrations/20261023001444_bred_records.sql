@@ -99,7 +99,7 @@ $fn$;
 
 /* The island's bred records, for anybody on it: the Field guide's. */
 create or replace function rpc_bred_records(p_world uuid) returns jsonb
-language plpgsql security definer as $fn$
+language plpgsql security definer set search_path = public as $fn$
 declare me uuid := auth.uid();
 begin
   if me is null then raise exception 'not signed in'; end if;
