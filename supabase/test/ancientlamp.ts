@@ -116,7 +116,7 @@ begin
   insert into said values ('ODDS', lamp_tier_odds()::text || '|' || trait_slots()::text);
   insert into said values ('PORTED', act_ported('use_ancient_lamp') || ':' || exists (select 1 from action_def d where d.id = 'use_ancient_lamp')
     || ':' || coalesce(artifact_item('use_ancient_lamp'), '-'));
-  insert into said select 'SAYS', string_agg(d.id || '=' || coalesce(trait_says(d.id), ''), '|' order by d.id) from trait_def d;
+  insert into said select 'SAYS', string_agg(d.id || '=' || coalesce(trait_says(d.id), ''), '|' order by d.id collate "C") from trait_def d;
   -- Nowhere an old lamp lies or is counted.
   insert into said values ('OLDROWS', ((select count(*) from item where def = 'old_lamp') + (select count(*) from away_tally where def = 'old_lamp')
     + (select count(*) from barter_item where def = 'old_lamp') + (select count(*) from buy_order where def = 'old_lamp')

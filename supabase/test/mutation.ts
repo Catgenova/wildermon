@@ -186,7 +186,7 @@ begin
   select x, y into px, py from player where world_id = w and uid = u;
 
   -- Every trait, as a mutation, in the island's words.
-  insert into said select 'SAID', string_agg(d.id || '=' || mutation_said(jsonb_build_object(d.id, 'mutation')), '|' order by d.id) from trait_def d;
+  insert into said select 'SAID', string_agg(d.id || '=' || mutation_said(jsonb_build_object(d.id, 'mutation')), '|' order by d.id collate "C") from trait_def d;
   insert into said values ('NONE', mutation_said('{"willing": "dam"}'::jsonb) || '#' || mutation_said(null));
 
   perform set_config('search_path', 'dice, public, pg_catalog', true);
