@@ -397,6 +397,9 @@ ${SURE.map(([name, recipe, makes], i) => `
   v_t := v_t || '|' || coalesce((select tack::text from creature where world_id = w and id = v_c), 'none')
     || '|' || ${count('saddle')} || ':' || ${count('bridle')};
   ${beast('mount_creature')};
+  -- And the browser is told it is up on it, which is what rides it there.
+  insert into said values ('RIDDENSENT', coalesce((select x->>'ridden' from jsonb_array_elements(rpc_creatures(w, 20)) x
+    where (x->>'id')::int = v_c), 'unsent'));
   v_t := v_t || '|' || travel_speed(w, u) || ':' || (select tack_speed(c) from creature c where c.world_id = w and c.id = v_c)
     || '|' || coalesce((select (x->'tack')::text from jsonb_array_elements(rpc_creatures(w, 20)) x where (x->>'id')::int = v_c), 'unsent');
   ${beast('dismount_creature')};
@@ -671,6 +674,7 @@ check(`${P('Lye Saver').name}: with the dice under ${LYE}, the lye is still in t
 /* ---- Tack and yokes ------------------------------------------------------------------------ */
 
 check('a saddled and bridled one is sent saddled and bridled (rpc_creatures tacked), which Mount asks', say('TACKEDSENT') === 'true', say('TACKEDSENT'));
+check('mounted, the browser is told its rider is up (rpc_creatures ridden), which is what rides it', say('RIDDENSENT') === 'true', say('RIDDENSENT'));
 const saddle = say('SADDLE').split('|');
 /** Tack as the island keeps it: each piece's mark, by the piece. */
 const tackJson = (s: string | undefined): Record<string, Record<string, number>> | null => (!s || s === 'none' || s === 'unsent' ? null : JSON.parse(s));

@@ -4791,6 +4791,8 @@ export interface IslandCreature {
   shod?: boolean;
   /** Saddled and bridled, by the island's word: what Mount asks. */
   tacked?: boolean | null;
+  /** Whether the one asking is up on it, by the island's word: what rides it (`Game.mounted`). */
+  ridden?: boolean;
   /** What the tack on it carries of its makers' marks, when anything (a Tailor's Saddler). */
   tack?: Record<string, Mark> | null;
   /** The enchantments in the tack on it, by the piece, when any (Fleetfoot, Tamer's Bridle). */
@@ -5685,6 +5687,9 @@ export class Creatures {
       // Saddled and bridled is the island's word too. Reported: a Thistlekit saddled and bridled, and Mount
       // refused "no saddle and bridle": the island never sent it, so this side's stayed as the crate let it out.
       if (r.tacked !== undefined && r.tacked !== null) c.tacked = r.tacked;
+      // And whether you are up on it. Reported: "Mounting a wildermon doesnt actually mount it": the island seated the
+      // rider and never said so, so this side never read the body as mounted.
+      if (r.ridden !== undefined) c.ridden = r.ridden;
       if (r.tack !== undefined) {
         if (r.tack) c.tack = r.tack;
         else delete c.tack;

@@ -95,7 +95,8 @@ const arr = (xs: string[]): string => `'{${xs.join(',')}}'::text[]`;
 const KEEP_AT = inheritChance(0, 0) + fx('True Blood', 'breed:inherit') / 2;
 /** Under Bred Up's odds a slot comes out a tier better, at no husbandry and no care, where the plain odds are none. */
 const UP_AT = fx('Bred Up', 'breed:upgrade') / 2;
-const AGED = 20 * 3600;
+/** Old by the rule, and not yet by a Long-lived keeper's: between OLD_AT and its perk's. */
+const AGED = OLD_AT * 4 / 3;
 /** A tick long enough to measure and short enough that a kept one is not yet hungry enough to go to the stores. */
 const TICK = 1200;
 
@@ -219,7 +220,7 @@ begin
   v_t := v_t || ':' || care_mul(${row('v_c')});
   update creature set kept = null where world_id = w and id = v_c;
   v_t := v_t || ':' || care_mul(${row('v_c')});
-  -- Long-lived: twenty hours old, grown for the perk and old without it; and the browser told both.
+  -- Long-lived: AGED old, grown for the perk and old without it; and the browser told both.
   update creature set born = now() - make_interval(secs => ${AGED}), kept = kept_of(w, u) where world_id = w and id = v_c;
   v_t := v_t || '|' || age_of((select born from creature where world_id = w and id = v_c), old_of(${row('v_c')}))
     || '#' || coalesce((select x->>'age' from jsonb_array_elements(rpc_creatures(w, 20)) x where (x->>'id')::int = v_c), 'unsent')
@@ -393,7 +394,7 @@ check(`${P('Well Kept').name}: a shine is worth ${bonus} on work and learning, a
   near(careShine, 1 + bonus) && near(workShine, 1 + bonus, 1e-3) && near(careHalf, 1 + bonus / 2) && near(carePlainShine, 1 + CARE_BONUS / 2),
   careMuls);
 const [ageKept, ageSent, keptSent, agePlain] = ages.split('#');
-check(`${P('Long-lived').name}: twenty hours old is grown to its keeper and old without, and the browser is told both the age and the numbers`,
+check(`${P('Long-lived').name}: ${AGED / 3600} hours old is grown to its keeper and old without, and the browser is told both the age and the numbers`,
   ageKept === 'grown' && agePlain === 'old' && ageSent === 'grown' && sameMark(json(keptSent), keptWant), ages);
 
 /* ---- The brush ---------------------------------------------------------------------------- */

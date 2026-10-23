@@ -3536,6 +3536,13 @@ export const NEWS: News[] = [
       `Changed: wildermon life stages ×${AGE_SCALE_287}, with the seasons: grown after ${dur(YOUNG_FOR_287)}, old after ${dur(OLD_AT_287)}. Dies of old age ${dur(OLD_FOR_287)} after turning old. Every old wildermon set back to grown.`,
     ],
   },
+  {
+    n: 288,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: Mount said "Mounted" and left you on foot beside the wildermon.',
+    ],
+  },
 ];
 
 /**
