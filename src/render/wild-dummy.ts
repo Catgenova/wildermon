@@ -106,7 +106,7 @@ const DUMMIBEAR_LOOK: Dummy = {
   target: 0.78,
   neck: { at: [0, 0.2, 1.56], len: 0.06 },
   arm: { at: [1.16, 0.22, 1.24], len: [0.48, 0.46], w: [0.34, 0.41], paw: 0.43 },
-  hold: [[72, 8, 40, 0], [30, 22, 124, 0]],
+  hold: [[72, 8, 40, 0], [20, 46, 128, 56]],
   head: { c: [0, 0.08, 0.7], r: [0.92, 0.72, 0.8], pitch: 8, eye: 0.19, ear: 0.31, open: false },
   mantle: [[24, 0.42, 0.45, 1.5, 0.82], [18, 0.36, 0.68, 1.3, 0.62]],
   skirt: [],
@@ -679,7 +679,7 @@ function collarOf(s: Dummy): Mesh {
  * A limb: a tube down its bone `len` long from `w0` across to `w1`, in bands: cream and caramel by turns; or, wrapped, pink cloth
  * over the middle of it, a little proud of it, a cross stitched on its front.
  */
-function limbOf(len: number, w0: number, w1: number, n: number, o: { bands: number; wrap?: boolean; top?: number }): Mesh {
+function limbOf(len: number, w0: number, w1: number, n: number, o: { bands: number; wrap?: boolean; top?: number; side?: boolean }): Mesh {
   const top = o.top ?? 0.08;
   const B = Math.max(1, o.bands);
   const zs = [top, ...Array.from({ length: B }, (_, q) => -len * ((q + 1) / B))];
@@ -696,7 +696,7 @@ function limbOf(len: number, w0: number, w1: number, n: number, o: { bands: numb
     });
     const body = tube(pts, wd, wd, n, (ring) => (ring >= 2 && ring <= 3 ? 'cloth' : ring === 1 || ring === 4 ? 'clothDark' : ring === 0 ? 'coat' : 'coatLight'), { seam: 'both' });
     const mid = -len * 0.5, wm = lerp(w0, w1, 0.5) * 1.1;
-    return merge(body, paint([...crossStitch([0, wm, mid], [0, 1, 0], wm * 0.55, 'string'), ...crossStitch([wm, 0, mid], [1, 0, 0], wm * 0.55, 'string')]));
+    return merge(body, paint([...crossStitch([0, wm, mid], [0, 1, 0], wm * 0.55, 'string'), ...(o.side === false ? [] : crossStitch([wm, 0, mid], [1, 0, 0], wm * 0.55, 'string'))]));
   }
   return tube(zs.map((z) => [0, 0, z] as V3), ws, ws, n, (ring) => (ring % 2 ? 'coatLight' : 'coat'), { seam: 'both' });
 }
@@ -741,7 +741,9 @@ function limbs(s: Dummy, n: number): Piece[] {
   for (const [key, sd] of [['ll', -1], ['lr', 1]] as Array<[string, number]>) {
     const front: V3 = [sd * 0.8, 0.5, 0];
     const foot = footOf(L.w[1] * 1.12, L.foot, L.len[2], n);
-    const shin = limbOf(L.len[1], L.w[1], L.w[1] * 0.92, n, { bands: 2, wrap: s.wraps, top: 0.05 });
+    // The Dummibear's legs kept plain under the patch on its knee: one wrap on each shin, one cross on its front.
+    const plain = s.stage === 1;
+    const shin = limbOf(L.len[1], L.w[1], L.w[1] * 0.92, n, { bands: 2, wrap: s.wraps, top: 0.05, side: !plain });
     // The Dummibear's patch on its left knee.
     const knee = s.knee && sd < 0 ? paint([
       disc([0, L.w[1] * 1.08, -0.02], [0, 1, 0.25], L.w[1] * 0.62, L.w[1] * 0.58, 10, 'cloth'),
@@ -749,7 +751,7 @@ function limbs(s: Dummy, n: number): Piece[] {
     ]) : null;
     out.push(
       { key: `${key}0`, mesh: merge(
-        limbOf(L.len[0], L.w[0], L.w[1] * 1.05, n, { bands: 3, top: 0.14 }),
+        limbOf(L.len[0], L.w[0], L.w[1] * 1.05, n, { bands: plain ? 1 : 3, top: 0.14 }),
         orbAlong([0, 0.02, -L.len[0] * 0.3], [0, 0, 1], [L.w[0] * 1.06, L.w[0] * 1.1, L.len[0] * 0.5 + L.w[0] * 0.3], n, 4, 'coat'),
       ), bone: `${key}0`, bias: 0.01, after: ['body', 'hips'], front },
       { key: `${key}1`, mesh: merge(shin, knee), bone: `${key}1`, bias: 0.015, after: 'body', front, convex: true },
