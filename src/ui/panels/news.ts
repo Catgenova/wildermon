@@ -3580,6 +3580,13 @@ export const NEWS: News[] = [
       `Added: Back and Side slots. Backpack worn on the back: carry limit +${percent(BAG_CARRY_293.backpack)}; sack at the side: +${percent(BAG_CARRY_293.sack)}. Each × QL%; both at once.`,
     ],
   },
+  {
+    n: 294,
+    day: '2026-10-23',
+    lines: () => [
+      'Fixed: settlement workers left idle beside their keeper ("nobody awake within 104 tiles"). The island\'s clock settles everybody\'s own wildermon first, every round; each player\'s area then gets a share of the rest.',
+    ],
+  },
 ];
 
 /**

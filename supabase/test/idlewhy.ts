@@ -107,7 +107,7 @@ begin
 
   v_reach := sweep_reach()::int;
   insert into said values ('REACH', v_reach::text);
-  insert into said values ('TICK', (v_reach = 40 + leg_slack() and position('creature_sweep(w.id, p.x, p.y, 40, v_deadline, null, true)'
+  insert into said values ('TICK', (v_reach = 40 + leg_slack() and position('creature_sweep(w.id, p.x, p.y, 40, v_share, null, true)'
     in pg_get_functiondef('world_tick'::regproc)) > 0)::text);
   insert into said values ('SLACK', home_slack()::text);
 end $t$;

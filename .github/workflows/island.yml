@@ -3286,6 +3286,18 @@ jobs:
             --external:typescript --outfile=node_modules/.cache/farworker.mjs --log-level=error
           node node_modules/.cache/farworker.mjs
 
+      - name: Every awake player gets a share of the round
+        if: matrix.shard == 4
+        run: |
+          # Reported: "Mortarbacks still not working when I log in", their card
+          # saying nobody awake was near. One player's country full of wildlife
+          # coming due spent the whole of every round. A keeper's own wildermon
+          # first on a budget of their own (`kept_sweep`), each awake tile a fair
+          # share of the rest in a different order each round, tame before wild.
+          npx esbuild supabase/test/sweepshare.ts --bundle --platform=node --format=esm \
+            --external:typescript --outfile=node_modules/.cache/sweepshare.mjs --log-level=error
+          node node_modules/.cache/sweepshare.mjs
+
       - name: A worker says why it is idle
         if: matrix.shard == 4
         run: |
