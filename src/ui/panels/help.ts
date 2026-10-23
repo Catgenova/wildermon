@@ -2418,7 +2418,7 @@ export function helpText(): string {
     <ul>
       <li>${SEASONS.length} seasons (${listed([...SEASONS])}) of <b>${SEASON_DAYS} days</b>, ${YEAR_DAYS} days a year.
       A year day = a clock day (<b>${dur(DAY_SECONDS)}</b>): a season <b>${dur(SEASON_SECONDS)}</b>, a year ${dur(YEAR_SECONDS)}.</li>
-      <li>Counted from the first daily reset (<b>${hudHour(TREE_DAWN_UTC)} UTC</b>) of the first spring, on
+      <li>Counted from the daily reset (<b>${hudHour(TREE_DAWN_UTC)} UTC</b>) that began the first ${SEASON_DAYS}-day spring, on
       ${new Date(YEAR_FROM * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })}, the same on every island (not from the clock's midnight,
       which sleeping moves). The clock line shows season and day.</li>
       <li>Evergreen: ${listed(TREE_DEFS.filter((_, i) => evergreen(i)).map((t) => t.name.toLowerCase()))} (darker in winter). Other trees: leaf out over the first

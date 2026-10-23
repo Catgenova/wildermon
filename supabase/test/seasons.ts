@@ -40,6 +40,7 @@ import { perksOf } from '../../src/game/perks';
 import { packLand, packWorld, unpack } from '../../src/game/save';
 import { SEASONS, YEAR_FROM, seasonAt, type Season } from '../../src/world/calendar';
 import { DAY_SECONDS } from '../../src/game/pace';
+import { timeWords } from '../../src/game/words';
 
 const psql = (sql: string): string =>
   execFileSync('psql', ['-v', 'ON_ERROR_STOP=1', '-X', '-q', '-t', '-A', '-f', '-'], {
@@ -262,15 +263,15 @@ select sown_said('Wheat', false, 'waiting for spring, in 2 days, then sprouting 
   });
   check(`when the next stage comes is said in the same words on both sides, ${saids.length} times over`,
     same === saids.length && kinds.size === 4, differ.join('; ') || `${same} of ${saids.length}: ${[...kinds].join(', ')}`);
-  // Two days into a winter of thirty, each a day and night of the clock: twenty-eight of them to wait, a day and four hours.
+  // Two days into a winter, each a day and night of the clock: the rest of the winter to wait.
   const winter = YEAR_FROM + 3 * SEASON_SECONDS + 2 * YEAR_DAY;
   const lateAutumn = YEAR_FROM + 3 * SEASON_SECONDS - HOUR;
   check('a field in winter says it waits for spring and how long that is, and when the stage then comes',
-    cropWhen('sprouting', CROPS.wheat.stageSeconds, false, winter) === `waiting for spring, in 1 day and 4 hours, then sprouting 5 minutes after`,
+    cropWhen('sprouting', CROPS.wheat.stageSeconds, false, winter) === `waiting for spring, in ${timeWords(SEASON_SECONDS - 2 * YEAR_DAY)}, then sprouting 5 minutes after`,
     cropWhen('sprouting', CROPS.wheat.stageSeconds, false, winter));
   check('and a stage that runs into a winter says when it will come, and that the winter is in it',
-    // An hour of autumn at half pace, the winter's thirty hours, and the hour and a half left at spring's.
-    cropWhen('ripe', 2 * HOUR, false, lateAutumn) === 'ripe in 1 day and 8 hours, after the winter',
+    // An hour of autumn at half pace, the winter, and the hour and a half left at spring's.
+    cropWhen('ripe', 2 * HOUR, false, lateAutumn) === `ripe in ${timeWords(HOUR + SEASON_SECONDS + 1.5 * HOUR)}, after the winter`,
     cropWhen('ripe', 2 * HOUR, false, lateAutumn));
   check('and a planter never waits: the same wait in every season',
     SEASONS.every((s) => cropWhen('sprouting', CROPS.wheat.stageSeconds, true, YEAR_FROM + (SEASONS.indexOf(s) + 0.5) * SEASON_SECONDS)

@@ -57,7 +57,7 @@ import { LIGHT_RES, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/rend
 import { STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
-import { SEASON_DAYS, seasonLine, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
+import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { ENCHANT_HEAD, HOARD_HEAD, MIND_GAIN, PROSPECT_HEAD, SOUL_GAIN, TAME_HEAD } from '../../game/learn';
 import { BARTER_IDLE, BARTER_REACH } from '../../game/barter';
 import { GOALS_B } from '../../game/journal-b';
@@ -899,7 +899,7 @@ export const NEWS: News[] = [
         `${family} on ${listed(TREE_DEFS.filter((t) => BLOOMS[t.fruit ?? '']?.family === family).map((t) => t.name.toLowerCase()))}`);
       return [
         `Added: seasonal foliage. Evergreen: ${listed(keep)}. Others leaf over the first ${num(LEAF_DAYS)} days of spring, colour over the first ${num(TURN_DAYS)} days of autumn, drop over the last ${num(SHED_DAYS)}, bare in winter. Roses and thorns likewise; lavender evergreen.`,
-        `Added: fruiting-age trees flower all ${num(SEASON_DAYS)} days of spring (${bloom.join('; ')}), shedding petals on wind and water. Roses and lavender flower from spring day ${BUSH_FLOWER_FROM} to end of summer. Visual only; yields unchanged.`,
+        `Added: fruiting-age trees flower all ${num(SHORT_SEASON_DAYS)} days of spring (${bloom.join('; ')}), shedding petals on wind and water. Roses and lavender flower from spring day ${BUSH_FLOWER_FROM} to end of summer. Visual only; yields unchanged.`,
         `Added: butterflies at flowers by day, dragonflies over ponds, pools and streams morning to dusk, fireflies over grass near trees and water at night: ${lifeSeasons()}. Visual only.`,
       ];
     },
@@ -985,8 +985,8 @@ export const NEWS: News[] = [
     n: 62,
     day: '2026-09-28',
     lines: () => [
-      `Changed: island year day from 1 real day to 1 clock day and night, ${dur(DAY_SECONDS)}. Season: ${num(SEASON_DAYS)} days, ${dur(SEASON_SECONDS)}. Year: ${num(YEAR_DAYS)} days, ${dur(YEAR_SECONDS)}. Shown beside your position: "${seasonLine(YEAR_FROM + DAY_SECONDS)}".`,
-      `Changed: seasonal timings now in those days: leaf over the first ${num(LEAF_DAYS)} days of spring, turn over the first ${num(TURN_DAYS)} of autumn, drop over the last ${num(SHED_DAYS)}; roses and lavender flower from spring day ${BUSH_FLOWER_FROM}; arch roses, days after set down: leaf ${num(ROSE_LEAFY)}, bud ${num(ROSE_BUD)}, flower ${num(ROSE_FLOWER)}; water plants root in ${dur(WATER_ROOTING)}; field crops ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}, ${dur(SEASON_SECONDS)} each.`,
+      `Changed: island year day from 1 real day to 1 clock day and night, ${dur(DAY_SECONDS)}. Season: ${num(SHORT_SEASON_DAYS)} days, ${dur(SHORT_SEASON_DAYS * DAY_SECONDS)}. Year: ${num(SEASONS.length * SHORT_SEASON_DAYS)} days, ${dur(SEASONS.length * SHORT_SEASON_DAYS * DAY_SECONDS)}. Shown beside your position: "Spring, day 2 of ${SHORT_SEASON_DAYS}".`,
+      `Changed: seasonal timings now in those days: leaf over the first ${num(LEAF_DAYS)} days of spring, turn over the first ${num(TURN_DAYS)} of autumn, drop over the last ${num(SHED_DAYS)}; roses and lavender flower from spring day ${BUSH_FLOWER_FROM}; arch roses, days after set down: leaf ${num(ROSE_LEAFY)}, bud ${num(ROSE_BUD)}, flower ${num(ROSE_FLOWER)}; water plants root in ${dur(WATER_ROOTING)}; field crops ${listed(SEASONS.map((s) => `${growthWords(SEASON_GROWTH[s])} in ${s}`))}, ${dur(SHORT_SEASON_DAYS * DAY_SECONDS)} each.`,
     ],
   },
   {
@@ -3477,6 +3477,13 @@ export const NEWS: News[] = [
     day: '2026-10-23',
     lines: () => [
       `Changed: foraging finds ${listed(['strawberry', 'raspberry', 'blueberry', 'lingonberry', 'acorn', 'nuts'].filter((id) => FRUITING[id]?.includes('spring')).map((id) => itemDef(id).name.toLowerCase()))} in spring too.`,
+    ],
+  },
+  {
+    n: 282,
+    day: '2026-10-23',
+    lines: () => [
+      `Changed: season ${num(SHORT_SEASON_DAYS)} → ${num(SEASON_DAYS)} days (${dur(SEASON_SECONDS)}); year ${num(YEAR_DAYS)} days (${dur(YEAR_SECONDS)}). The spring begun ${new Date(YEAR_FROM * 1000).toLocaleString('en-GB', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })} UTC runs to ${num(SEASON_DAYS)} days; field crops keep what they have grown.`,
     ],
   },
 ];

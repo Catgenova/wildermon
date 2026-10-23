@@ -1,5 +1,5 @@
 /**
- * The island's year: four seasons of thirty days each.
+ * The island's year: four seasons of `SEASON_DAYS` days each.
  *
  * Asked for along with wildflowers that come up in spring and summer, trees
  * that blossom in spring and lilies that flower in their season. There was no
@@ -20,12 +20,23 @@ import { TREE_DAWN_UTC } from './tiles';
 /** The seasons, in the order they come round. */
 export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
 export type Season = (typeof SEASONS)[number];
-/** Days in a season. */
-export const SEASON_DAYS = 30;
+/** Days in a season. Asked for: "Increase season time to 90 game days". */
+export const SEASON_DAYS = 90;
 /** Days in a year. */
 export const YEAR_DAYS = SEASONS.length * SEASON_DAYS;
 /** The first dawn of the first spring, in epoch seconds: 13:00 UTC on 28 September 2026. */
-export const YEAR_FROM = Date.UTC(2026, 8, 28, TREE_DAWN_UTC) / 1000;
+export const FIRST_SPRING = Date.UTC(2026, 8, 28, TREE_DAWN_UTC) / 1000;
+/** Days in a season from the first spring until they were lengthened. */
+export const SHORT_SEASON_DAYS = 30;
+/** The years of short seasons there were. */
+export const SHORT_YEARS = 5;
+/**
+ * The dawn the year is counted from, in epoch seconds: the first spring of `SEASON_DAYS` days, which began where the
+ * last of the short years ended (13:00 UTC on 23 October 2026), so the spring then begun went on rather than the year
+ * jumping on to wherever the longer seasons would have had it. Before it there are no seasons, as before the first
+ * spring; a field's growth up to it is carried over (`20261023150000_seasons_of_ninety_days`).
+ */
+export const YEAR_FROM = FIRST_SPRING + SHORT_YEARS * SEASONS.length * SHORT_SEASON_DAYS * DAY_SECONDS;
 
 /** Whole days of the year since the first dawn of the first spring at `now` (epoch seconds), below nought before it. */
 const dayOf = (now: number): number => Math.floor((now - YEAR_FROM) / DAY_SECONDS);
